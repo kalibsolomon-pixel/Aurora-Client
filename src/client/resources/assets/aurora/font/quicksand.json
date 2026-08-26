@@ -1,0 +1,14 @@
+﻿{
+    "providers":  [
+                      {
+                          "shift":  [
+                                        0,
+                                        0
+                                    ],
+                          "size":  11,
+                          "oversample":  8,
+                          "file":  "aurora:quicksand-variable.ttf",
+                          "type":  "ttf"
+                      }
+                  ]
+}

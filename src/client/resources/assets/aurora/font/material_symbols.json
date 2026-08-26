@@ -1,0 +1,14 @@
+{
+  "providers": [
+    {
+      "type": "ttf",
+      "file": "aurora:material_symbols_rounded.ttf",
+      "shift": [
+        0,
+        0
+      ],
+      "size": 11.0,
+      "oversample": 8.0
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "id": "aurora",
+  "version": "${version}",
+  "name": "Aurora Client",
+  "description": "A lightweight Fabric client with QoL features, zoom, full bright, and a custom title screen.",
+  "authors": [
+    "Kalib"
+  ],
+  "contact": {
+    "homepage": "https://example.com",
+    "sources": "https://example.com"
+  },
+  "license": "MIT",
+  "icon": "assets/aurora/textures/gui/logo.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "com.aurora.client.AuroraClient",
+      "you.jass.betterhitreg.BetterHitreg"
+    ]
+  },
+  "mixins": [
+    "aurora.mixins.json",
+    "betterhitreg.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": "~1.21.8",
+    "java": ">=21",
+    "fabric-api": "*"
+  },
+  "suggests": {
+    "modmenu": "*",
+    "cloth-config": "*"
+  }
+}
