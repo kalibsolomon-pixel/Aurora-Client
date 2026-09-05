@@ -71,15 +71,18 @@ public class WaypointManagerScreen extends Screen implements ThemedScreen {
     private int editingIndex = -1;
     private EditBox nameField;
 
-    // Shared per-row widgets, keyed by waypoint index. Invalidated whenever
-    // list membership changes — any add/remove changes the count, so a count
-    // guard is sufficient (indices are otherwise stable; color edits mutate
-    // the captured Waypoint object in place, keeping the getters live).
-    private final Map<Integer, Button> rowCopyBtns = new HashMap<>();
-    private final Map<Integer, Button> rowColorBtns = new HashMap<>();
-    private final Map<Integer, Button> rowDeleteBtns = new HashMap<>();
-    private final Map<Integer, ColorSwatch> rowSwatches = new HashMap<>();
-    private int lastRowCount = -1;
+    // Shared per-row widgets, keyed by the waypoint INSTANCE — the same
+    // identity WaypointFeature.remove() matches, and the objects in the
+    // live list are stable across frames (edits mutate in place). Keying
+    // by position (the old scheme) let a remove-then-add between frames
+    // reuse a stale entry for a different waypoint; keying by identity and
+    // reconciling against the live list every frame (see render) can never
+    // point an action at the wrong object. Waypoint does not override
+    // equals/hashCode, so HashMap compares by identity — exactly right.
+    private final Map<Waypoint, Button> rowCopyBtns = new HashMap<>();
+    private final Map<Waypoint, Button> rowColorBtns = new HashMap<>();
+    private final Map<Waypoint, Button> rowDeleteBtns = new HashMap<>();
+    private final Map<Waypoint, ColorSwatch> rowSwatches = new HashMap<>();
     /**
      * Fitted (ellipsis-truncated) row names, keyed by the raw name. The
      * truncation loop runs {@code font.width()} once per removed character
@@ -144,15 +147,16 @@ public class WaypointManagerScreen extends Screen implements ThemedScreen {
         ctx.enableScissor(listX - 4, listClipTop(), listX + LIST_W + 4, listClipBottom());
 
         List<Waypoint> all = currentList();
-        // Row-widget cache hygiene: membership changed (add/remove) → rebuild.
-        if (all.size() != lastRowCount) {
-            rowCopyBtns.clear();
-            rowColorBtns.clear();
-            rowDeleteBtns.clear();
-            rowSwatches.clear();
-            nameFitCache.clear();
-            lastRowCount = all.size();
-        }
+        // Row-widget cache hygiene: reconcile against the LIVE list every
+        // frame (the ProfileManagerScreen pattern) — entries for removed
+        // waypoints drop immediately, new waypoints lazily create theirs.
+        // The old count-only guard missed remove-then-add sequences that
+        // kept the count identical.
+        boolean membershipChanged = rowCopyBtns.keySet().retainAll(all);
+        membershipChanged |= rowColorBtns.keySet().retainAll(all);
+        membershipChanged |= rowDeleteBtns.keySet().retainAll(all);
+        membershipChanged |= rowSwatches.keySet().retainAll(all);
+        if (membershipChanged) nameFitCache.clear();
         if (all.isEmpty()) {
             ctx.drawString(this.font,
                     Component.literal("No waypoints in this world. Press Drop to add one."),
@@ -237,7 +241,7 @@ public class WaypointManagerScreen extends Screen implements ThemedScreen {
         // alpha-carrying waypoint colors read correctly). Not clickable; the
         // Color button beside it owns the edit action. Stays opaque: it
         // displays user color content at full fidelity.
-        ColorSwatch swatch = rowSwatches.computeIfAbsent(index,
+        ColorSwatch swatch = rowSwatches.computeIfAbsent(wp,
                 k -> new ColorSwatch(() -> wp.color, null).checkerboard(true));
         swatch.layout(cx, cy, SWATCH_W, SWATCH_W);
         swatch.render(ctx, cx, cy, SWATCH_W, SWATCH_W, mouseX, mouseY);
@@ -262,7 +266,7 @@ public class WaypointManagerScreen extends Screen implements ThemedScreen {
         cx += COORDS_W + CONTROL_GAP;
 
         // Copy — the shared themed Button in neutral raised glass.
-        Button copyBtn = rowCopyBtns.computeIfAbsent(index, k -> new Button("Copy", () -> {
+        Button copyBtn = rowCopyBtns.computeIfAbsent(wp, k -> new Button("Copy", () -> {
             commitNameEdit();
             copyToClipboard(wp.x + " " + wp.y + " " + wp.z);
             flash("Copied: " + wp.x + " " + wp.y + " " + wp.z);
@@ -273,14 +277,18 @@ public class WaypointManagerScreen extends Screen implements ThemedScreen {
 
         // Color — shared themed Button in neutral raised glass; opens the
         // shared color picker.
-        Button colorBtn = rowColorBtns.computeIfAbsent(index, k -> new Button("Color", () -> {
+        Button colorBtn = rowColorBtns.computeIfAbsent(wp, k -> new Button("Color", () -> {
             commitNameEdit();
             if (this.minecraft != null) {
                 this.minecraft.setScreen(new ColorPickerScreen(WaypointManagerScreen.this,
-                        "Waypoint Color", wp.color, argb -> {
+                        "Waypoint Color", k.color, argb -> {
+                            // k IS the waypoint instance (identity-keyed), so
+                            // resolve it in the live list by identity — never
+                            // by position, which could target a different
+                            // waypoint after any add/remove.
                             List<Waypoint> live = currentList();
-                            if (k < live.size()) {
-                                live.get(k).color = argb;
+                            if (live.contains(k)) {
+                                k.color = argb;
                                 WaypointFeature feat = WaypointFeature.get();
                                 if (feat != null) feat.touch();
                             }
@@ -295,7 +303,7 @@ public class WaypointManagerScreen extends Screen implements ThemedScreen {
         // variant. Destructive keeps the flat look by design (the shared
         // Button skips glass for destructive) — error semantics must not
         // read as glass chrome.
-        Button delBtn = rowDeleteBtns.computeIfAbsent(index, k -> new Button("Delete", () -> {
+        Button delBtn = rowDeleteBtns.computeIfAbsent(wp, k -> new Button("Delete", () -> {
             commitNameEdit();
             WaypointFeature feat = WaypointFeature.get();
             if (feat != null) feat.remove(wp);
@@ -344,9 +352,9 @@ public class WaypointManagerScreen extends Screen implements ThemedScreen {
                 // Shared row buttons see the click first — each hit-tests its
                 // own (per-frame-laid-out) bounds and runs its own action.
                 Button rowBtn;
-                if ((rowBtn = rowCopyBtns.get(i)) != null && rowBtn.mouseClicked(mouseX, mouseY, 0)) return true;
-                if ((rowBtn = rowColorBtns.get(i)) != null && rowBtn.mouseClicked(mouseX, mouseY, 0)) return true;
-                if ((rowBtn = rowDeleteBtns.get(i)) != null && rowBtn.mouseClicked(mouseX, mouseY, 0)) return true;
+                if ((rowBtn = rowCopyBtns.get(wp)) != null && rowBtn.mouseClicked(mouseX, mouseY, 0)) return true;
+                if ((rowBtn = rowColorBtns.get(wp)) != null && rowBtn.mouseClicked(mouseX, mouseY, 0)) return true;
+                if ((rowBtn = rowDeleteBtns.get(wp)) != null && rowBtn.mouseClicked(mouseX, mouseY, 0)) return true;
 
                 // Name area → enter inline edit mode for this row.
                 int nameLeft = listX + ROW_INSET + SWATCH_W + CONTROL_GAP;
