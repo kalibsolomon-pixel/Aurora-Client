@@ -116,8 +116,6 @@ public class ProfileManagerScreen extends Screen implements ThemedScreen {
     @Override
     public void render(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
         int listX = (this.width - LIST_W) / 2;
-        int listH = this.height - LIST_TOP - LIST_BOTTOM_PAD;
-        int listClipBottom = LIST_TOP + listH;
 
         // ---- Glass pilot: row glass BEFORE the dim ----
         // Same layering contract as every glass surface so far: the deferred
@@ -130,7 +128,7 @@ public class ProfileManagerScreen extends Screen implements ThemedScreen {
         createRowGlassDrawn = false;
         if (liveWorldBackdrop()) {
             List<String> profiles = ProfileManager.getInstance().listProfileNames();
-            ctx.enableScissor(listX - 4, LIST_TOP - 2, listX + LIST_W + 4, listClipBottom);
+            ctx.enableScissor(listX - 4, listClipTop(), listX + LIST_W + 4, listClipBottom());
             int gy = LIST_TOP - (int) scrollY;
             if (creatingNew && createField != null) {
                 createRowGlassDrawn = drawRowGlass(ctx, listX, gy, LIST_W);
@@ -149,7 +147,7 @@ public class ProfileManagerScreen extends Screen implements ThemedScreen {
         // Title.
         ctx.drawString(this.font, this.title, 16, 42, ThemeManager.color(ThemeToken.ON_OVERLAY), false);
 
-        ctx.enableScissor(listX - 4, LIST_TOP - 2, listX + LIST_W + 4, listClipBottom);
+        ctx.enableScissor(listX - 4, listClipTop(), listX + LIST_W + 4, listClipBottom());
 
         List<String> profiles = ProfileManager.getInstance().listProfileNames();
         String active = ProfileManager.getInstance().currentProfile();
@@ -173,7 +171,7 @@ public class ProfileManagerScreen extends Screen implements ThemedScreen {
 
         for (int i = 0; i < profiles.size(); i++) {
             String name = profiles.get(i);
-            if (y + ROW_H > LIST_TOP - ROW_H && y < listClipBottom) {
+            if (y + ROW_H > LIST_TOP - ROW_H && y < listClipBottom()) {
                 renderRow(ctx, listX, y, LIST_W, name, i, active, mouseX, mouseY);
             }
             y += ROW_H + ROW_GAP;
@@ -195,7 +193,7 @@ public class ProfileManagerScreen extends Screen implements ThemedScreen {
             int rowY = LIST_TOP - (int) scrollY
                     + (creatingNew ? ROW_H + ROW_GAP : 0)
                     + editingIndex * (ROW_H + ROW_GAP);
-            if (rowY >= LIST_TOP - ROW_H && rowY < listClipBottom) {
+            if (rowY >= LIST_TOP - ROW_H && rowY < listClipBottom()) {
                 int fieldX = listX + ROW_INSET + ACTIVE_BADGE_W + CONTROL_GAP;
                 int fieldY = rowY + (ROW_H - 16) / 2;
                 nameField.setX(fieldX);
@@ -379,6 +377,15 @@ public class ProfileManagerScreen extends Screen implements ThemedScreen {
         return this.minecraft != null && this.minecraft.level != null;
     }
 
+    /**
+     * Vertical band the row list is scissored to at render time (both
+     * enableScissor calls in {@link #render}). Hit-testing clamps row
+     * geometry to this same band so rows (or row parts) that are clipped
+     * away are never clickable — the render clip is the source of truth.
+     */
+    private int listClipTop() { return LIST_TOP - 2; }
+    private int listClipBottom() { return LIST_TOP + (this.height - LIST_TOP - LIST_BOTTOM_PAD); }
+
     // ------------------------------------------------------------------
     //  Input
     // ------------------------------------------------------------------
@@ -403,12 +410,21 @@ public class ProfileManagerScreen extends Screen implements ThemedScreen {
         if (creatingNew && createBtn != null && createBtn.mouseClicked(mouseX, mouseY, 0)) return true;
 
         int y = LIST_TOP - (int) scrollY + (creatingNew ? ROW_H + ROW_GAP : 0);
+        int clipTop = listClipTop();
+        int clipBot = listClipBottom();
         for (int i = 0; i < profiles.size(); i++) {
             String name = profiles.get(i);
             int rowTop = y;
             int rowBot = y + ROW_H;
 
-            if (mouseY >= rowTop && mouseY < rowBot) {
+            // Hit-testing agrees with the render scissor: only the VISIBLE
+            // part of the row is clickable (rows scrolled above the clip —
+            // or below it — are not), and only within the row's horizontal
+            // extent. The X bound also fixes the switch-profile body click,
+            // which previously had no horizontal check at all — a click at
+            // this row's height anywhere on screen would switch profiles.
+            if (mouseY >= Math.max(rowTop, clipTop) && mouseY < Math.min(rowBot, clipBot)
+                    && mouseX >= listX && mouseX < listX + LIST_W) {
                 // Shared row buttons see the click first.
                 Button rowBtn;
                 if ((rowBtn = dupBtns.get(name)) != null && rowBtn.mouseClicked(mouseX, mouseY, 0)) return true;
