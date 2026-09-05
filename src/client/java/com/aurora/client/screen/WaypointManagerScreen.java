@@ -8,8 +8,8 @@ import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.component.Button;
 import com.aurora.client.ui.component.ButtonWidget;
 import com.aurora.client.ui.component.ColorSwatch;
+import com.aurora.client.ui.component.GlassSurface;
 import com.aurora.client.ui.component.ThemedScreen;
-import com.aurora.client.ui.render.blur.BlurPanelRenderer;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.util.WorldScope;
@@ -220,16 +220,12 @@ public class WaypointManagerScreen extends Screen implements ThemedScreen {
         // squished parent rect), neutral tint (WINDOW_FILL, whose alpha is
         // the Background Opacity — single application point). The glass rim
         // replaces the hairline border; the glow rings above stay (they
-        // read as a drop shadow). On decline the flat surface fill + border
-        // return unchanged.
-        boolean rowGlass = BlurPanelRenderer.renderPanel(ctx, x, y, w, ROW_H, radius,
-                BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX,
-                BlurPanelRenderer.Lighting.raised());
-        if (rowGlass) {
-            RenderUtil.drawRoundedRectAA(ctx, x, y, w, ROW_H, radius,
-                    ThemeManager.color(ThemeToken.WINDOW_FILL));
-            BlurPanelRenderer.drawRimFinish(ctx, x, y, w, ROW_H, radius);
-        } else {
+        // read as a drop shadow). R1 pilot: the whole gate → blur → tint →
+        // rim sequence is the shared GlassSurface material; this screen
+        // only owns its flat fallback (surface fill + border), which
+        // returns unchanged on decline.
+        boolean rowGlass = GlassSurface.control(ctx, x, y, w, ROW_H, radius);
+        if (!rowGlass) {
             RenderUtil.drawRoundedRectAA(ctx, x, y, w, ROW_H, radius, ThemeManager.surfaceColor(ThemeToken.SURFACE));
             RenderUtil.drawRoundedOutlineAA(ctx, x, y, w, ROW_H, radius, 1.0f, ThemeManager.color(ThemeToken.BORDER));
         }

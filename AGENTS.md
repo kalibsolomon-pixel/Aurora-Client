@@ -311,7 +311,11 @@ painter), `ToggleSwitch`, `Slider`, `SegmentedControl` (glass track; neutral uns
 accent-stained selected), `RoundedPanel` (themed window panel), `ColorSwatch`
 (transparent-color checkerboard, corner-clipped to the rounded rect), `ThemedScreen`
 (marker — opts a screen's vanilla `EditBox`es into the mod-wide themed/glass search bar
-via `EditBoxMixin`).
+via `EditBoxMixin`), `GlassSurface` (**R1 pilot, 2026-09-05** — the shared glass-material
+painter: `container` / `control` / `stainedControl`, each = live-world gate → `renderPanel`
+with the role's lighting → tint → `drawRimFinish`, returning whether glass drew; used by
+`WaypointManagerScreen` rows only, signature pending approval before the other ~9 copies
+of the idiom migrate — §6).
 
 Rendering utilities: `RenderUtil` (float-precision AA rounded rects/circles/outlines +
 `beginCapture`/`RectSink` used by `UiLayerCache`), `AuroraShapes` (chamfered-octagon
@@ -363,6 +367,10 @@ Straight (non-premultiplied) alpha; RGBA8 intermediates on purpose. Readback ~1�
 panel — accepted for simplicity/robustness.
 
 ### The conventions (violating these has caused real bugs)
+
+> Conventions 1–4 and 9 are centralized (not changed) by `ui/component/GlassSurface`
+> (R1 pilot — Waypoint rows only so far; see §5). The pre-dim layering (6) and the
+> `renderBackground` world-gate (5) remain call-site conventions the helper cannot enforce.
 
 1. **Single opacity application point.** The theme's Background Opacity exists ONLY as the
    alpha of the `WINDOW_FILL` token (stamped by `ThemeResolver`). The glass pipeline adds
