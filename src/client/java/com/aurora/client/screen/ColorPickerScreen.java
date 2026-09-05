@@ -2,6 +2,7 @@ package com.aurora.client.screen;
 
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
+import com.aurora.client.ui.component.Button;
 import com.aurora.client.ui.component.ButtonWidget;
 import com.aurora.client.ui.component.ThemedScreen;
 import com.aurora.client.util.ColorEntryHelper;
@@ -26,6 +27,13 @@ import java.util.function.IntConsumer;
  * the user's color, not theme chrome), so their white marker/outline rings are
  * structural neutrals — the same convention as every knob/thumb in the
  * framework.
+ *
+ * <p>Glass rollout — chrome only: Apply takes accent-STAINED raised glass
+ * (the screen's single primary action) and Cancel neutral raised glass. The
+ * color-picking surfaces (saturation/lightness pad, hue strip, alpha strip,
+ * preview swatch) remain <b>untinted, full-fidelity color</b> — glass on
+ * them would blur and tint the very values the user is editing. The hex
+ * field stays opaque (text entry is never glass).
  */
 public class ColorPickerScreen extends Screen implements ThemedScreen {
 
@@ -99,12 +107,12 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
                     onApply.accept(currentArgb());
                     this.minecraft.setScreen(parent);
                 },
-                true));
+                true).glassStyle(Button.GlassStyle.STAINED));
 
         this.addRenderableWidget(new ButtonWidget(
                 cw / 2 + 10, btnY, 100, 20,
                 Component.literal("Cancel"),
-                () -> this.minecraft.setScreen(parent)));
+                () -> this.minecraft.setScreen(parent)).glassBackground(true));
     }
 
     private int currentArgb() {
@@ -115,14 +123,14 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
         return String.format("#%08X", argb);
     }
 
-    private void onHexChanged(String Component) {
+    private void onHexChanged(String s) {
         if (syncingHex) return;
-        String s = Component.trim();
-        if (s.startsWith("#")) s = s.substring(1);
-        if (s.length() != 8 && s.length() != 6) return;
+        String v = s.trim();
+        if (v.startsWith("#")) v = v.substring(1);
+        if (v.length() != 8 && v.length() != 6) return;
         try {
-            long parsed = Long.parseLong(s, 16);
-            int argb = (int) (s.length() == 6 ? (0xFF000000L | parsed) : parsed);
+            long parsed = Long.parseLong(v, 16);
+            int argb = (int) (v.length() == 6 ? (0xFF000000L | parsed) : parsed);
             float[] hsla = ColorEntryHelper.argbToHsla(argb);
             hue = hsla[0]; sat = hsla[1]; lit = hsla[2]; alpha = hsla[3];
         } catch (NumberFormatException ignored) {}
@@ -136,6 +144,18 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
         } finally {
             syncingHex = false;
         }
+    }
+
+    /**
+     * Glass rollout: with a live world behind the screen, skip vanilla's
+     * background sandwich — the glass buttons must sample the LIVE world.
+     * With no level loaded the renderer declines anyway and the opaque
+     * fallback wants the vanilla backdrop as before.
+     */
+    @Override
+    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float delta) {
+        if (this.minecraft != null && this.minecraft.level != null) return;
+        super.renderBackground(g, mouseX, mouseY, delta);
     }
 
     @Override

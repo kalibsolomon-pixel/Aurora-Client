@@ -1,5 +1,6 @@
 package com.aurora.client.screen;
 
+import com.aurora.client.ui.util.MaterialIconRenderer;
 import com.aurora.client.util.AuroraAnim;
 import com.aurora.client.util.AuroraShapes;
 import com.aurora.client.util.AuroraTheme;
@@ -27,11 +28,6 @@ import net.minecraft.util.Mth;
  * over 140 ms — barely visible but enough to communicate focus.
  */
 public class FeatureTile extends AbstractButton {
-
-    private static final net.minecraft.network.chat.Style SYMBOL_STYLE = net.minecraft.network.chat.Style.EMPTY
-            .withFont(new net.minecraft.network.chat.FontDescription.Resource(
-                    net.minecraft.resources.Identifier.fromNamespaceAndPath("aurora", "material_symbols")
-            ));
 
     private static final long HOVER_MS = 140L;
     private static final long PRESS_DOWN_MS = 90L;
@@ -65,12 +61,6 @@ public class FeatureTile extends AbstractButton {
     private String fittedTitle;
     private String fittedDesc;
     private int fittedForWidth = -1;
-
-    // Pre-computed icon/glyph metrics for rendering optimization
-    private Component cachedSymbolComp;
-    private int cachedGlyphWidth = -1;
-    private int cachedGlyphHeight = -1;
-    private net.minecraft.util.FormattedCharSequence cachedVisualOrderText;
 
     public FeatureTile(int x, int y, int width, int height, FeatureMetadata meta) {
         super(x, y, width, height, Component.literal(meta.displayName));
@@ -305,32 +295,18 @@ public class FeatureTile extends AbstractButton {
 
             String icon = FeatureIcons.get(meta.id);
             if (!icon.isEmpty()) {
-                if (cachedSymbolComp == null) {
-                    cachedSymbolComp = Component.literal(icon).withStyle(SYMBOL_STYLE);
-                    cachedGlyphWidth = Math.max(1, tr.width(cachedSymbolComp));
-                    cachedGlyphHeight = Math.max(1, tr.lineHeight);
-                    cachedVisualOrderText = cachedSymbolComp.getVisualOrderText();
-                }
-
-                int gw = cachedGlyphWidth;
-                int gh = cachedGlyphHeight;
-                final float MAX_SCALE = 16f;
-                float glyphTarget = Mth.clamp(iconArea * 0.55f, 16f, 48f);
-                float iconScale = Math.min(MAX_SCALE,
-                        Math.min(glyphTarget / gw, glyphTarget / gh));
-
                 int glyphAccent = ModuleAccentColors.get(meta.id);
                 if (glyphAccent == 0) glyphAccent = AuroraTheme.MODULE_ACCENT_ON;
                 int iconColor = on
                         ? glyphAccent
                         : AuroraTheme.IOS_TERTIARY_LABEL;
 
-                ctx.pose().pushMatrix();
-                ctx.pose().translate(cxF, cyF);
-                ctx.pose().scale(iconScale, iconScale);
-                
-                ctx.drawString(tr, cachedVisualOrderText, -gw / 2, -gh / 2, iconColor, false);
-                ctx.pose().popMatrix();
+                // Crisp native-resolution glyph via MaterialIconRenderer (the
+                // shared font atlas is point-sampled and rescales badly at
+                // these sizes). em size = the box the old glyph-scaling math
+                // targeted, so the icon occupies the same footprint as before.
+                float glyphTarget = Mth.clamp(iconArea * 0.55f, 16f, 48f);
+                MaterialIconRenderer.drawIcon(ctx, tr, icon, cxF, cyF, glyphTarget, iconColor);
             }
         }
 

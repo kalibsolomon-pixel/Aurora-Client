@@ -79,9 +79,9 @@ public class SegmentedSetting<E extends Enum<E>> extends FeatureSetting {
     @Override public SegmentedSetting<E> description(Supplier<String> desc) { super.description(desc); return this; }
 
     /**
-     * Glass pilot (Theme screen only): every segment renders as raised glass
-     * — neutral tint unselected, accent-stained tint selected. Forwarded to
-     * the shared control; instances on other screens are unaffected.
+     * Glass: every segment renders as raised glass by default — neutral
+     * tint unselected, accent-stained tint selected. Forwarded to the
+     * shared control. Pass {@code false} to force the flat track.
      */
     public SegmentedSetting<E> glassSegments(boolean g) {
         control.glassEnabled(g);
@@ -103,6 +103,7 @@ public class SegmentedSetting<E extends Enum<E>> extends FeatureSetting {
         lastTrackX = x + TRACK_PAD_X;
         lastTrackW = width - TRACK_PAD_X * 2;
         lastTrackY = y + 16;
+        control.glassEnabled(true);
         control.layout(lastTrackX, lastTrackY, lastTrackW, TRACK_H);
         control.renderShapes(ctx, lastTrackX, lastTrackY, lastTrackW, TRACK_H);
     }

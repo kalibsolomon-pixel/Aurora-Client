@@ -1,7 +1,11 @@
 package com.aurora.client.screen.setting;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
+import com.aurora.client.ui.render.blur.BlurPanelRenderer;
+import com.aurora.client.ui.util.ItemSpriteRenderer;
 import com.aurora.client.ui.util.AuroraFontRenderer;
+import com.aurora.client.ui.util.MaterialIconRenderer;
+import com.aurora.client.ui.util.RenderUtil;
 
 import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.util.AuroraShapes;
@@ -21,8 +25,31 @@ import java.util.*;
 /**
  * Smart search and custom item scaling configuration UI row.
  * Extends FeatureSetting to act as a single setting container inside FeatureDetailScreen.
+ *
+ * <p>Glass rollout: the "+" add button renders as RAISED glass with the
+ * neutral {@code WINDOW_FILL} tint (flat pill on decline), matching the
+ * keybind pills and every other interactive control.
+ *
+ * <p>Icon rendering: each item tab renders its real item icon through
+ * {@link ItemSpriteRenderer} — the crisp flat-sprite path (resolved GUI
+ * sprite blitted pixel-aligned from the block atlas), falling back to the
+ * 3D {@link GuiGraphics#renderItem} for tinted/multi-layer models. The
+ * expand/collapse chevrons use the Material Symbols glyphs already in the
+ * font subset (the {@code EnumSetting} dropdown convention), not ASCII
+ * stand-ins.
  */
 public class ItemScaleSetting extends FeatureSetting {
+
+    private static final net.minecraft.network.chat.Style SYMBOL_STYLE = net.minecraft.network.chat.Style.EMPTY
+            .withFont(new net.minecraft.network.chat.FontDescription.Resource(
+                    net.minecraft.resources.Identifier.fromNamespaceAndPath("aurora", "material_symbols")
+            ));
+
+    /** Material Symbols chevrons — already in the font subset (EnumSetting). */
+    private static final String CHEV_UP = "\uE5C6";    // expand_less
+    private static final String CHEV_DOWN = "\uE5CF";  // expand_more
+
+    private static final int ICON_SIZE = 16;
 
     private final EditBox searchField;
     private Item foundItem = null;
@@ -36,7 +63,7 @@ public class ItemScaleSetting extends FeatureSetting {
         Font font = Minecraft.getInstance().font;
         this.searchField = new EditBox(font, 0, 0, 150, 18, Component.literal("Search Items..."));
         this.searchField.setHint(Component.literal("Search items... (e.g. sword)"));
-        // Disable the vanilla border â€” we draw our own hi-res AA rounded
+        // Disable the vanilla border — we draw our own hi-res AA rounded
         // outline on top (see render()) so the vanilla hairline border
         // doesn't double-stroke behind it.
         this.searchField.setBordered(false);
@@ -100,7 +127,7 @@ public class ItemScaleSetting extends FeatureSetting {
         Font tr = Minecraft.getInstance().font;
         AuroraConfig cfg = AuroraConfig.get();
 
-        // 1. Search bar â€” the themed background, centered text, and
+        // 1. Search bar — the themed background, centered text, and
         // outline are all drawn by EditBoxMixin (which fully replaces
         // the vanilla EditBox render on FeatureDetailScreen), so we
         // just position the field and let it render itself.
@@ -110,23 +137,34 @@ public class ItemScaleSetting extends FeatureSetting {
         searchField.setWidth(searchW);
         searchField.render(ctx, mouseX, mouseY, 0f);
 
-        // Draw "+" add button
+        // Draw "+" add button — raised glass (flat pill on decline).
         int plusX = x + width - 36;
         int plusY = y + 5;
         boolean plusHover = mouseX >= plusX && mouseX < plusX + 24 && mouseY >= plusY && mouseY < plusY + 20;
         int plusBg = ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_BACKGROUND),
                 plusHover ? 0x66 : 0x2E);
         int plusBorder = plusHover ? AuroraTheme.BORDER_ON_HOVER : AuroraTheme.BORDER_OFF;
-        AuroraShapes.panel(ctx, plusX, plusY, 24, 20, plusBg, AuroraTheme.RADIUS_SMALL);
-        AuroraShapes.outline(ctx, plusX, plusY, 24, 20, plusBorder, AuroraTheme.RADIUS_SMALL);
+        float plusR = Math.min(20 / 2f, ThemeManager.current().roundness().radiusSmall());
+        boolean plusGlass = BlurPanelRenderer.renderPanel(ctx, plusX, plusY, 24, 20, plusR,
+                BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX, BlurPanelRenderer.Lighting.raised());
+        if (plusGlass) {
+            RenderUtil.drawRoundedRectAA(ctx, plusX, plusY, 24, 20, plusR,
+                    ThemeManager.color(ThemeToken.WINDOW_FILL));
+            BlurPanelRenderer.drawRimFinish(ctx, plusX, plusY, 24, 20, plusR);
+        } else {
+            AuroraShapes.panel(ctx, plusX, plusY, 24, 20, plusBg, AuroraTheme.RADIUS_SMALL);
+            AuroraShapes.outline(ctx, plusX, plusY, 24, 20, plusBorder, AuroraTheme.RADIUS_SMALL);
+        }
         AuroraFontRenderer.drawCentered(ctx, tr, "+", plusX + 12, plusY + 6,
                 plusHover ? 0xFFFFFFFF : AuroraTheme.TEXT_SECONDARY);
 
-        // Draw "suggested item" preview if found
+        // Draw "suggested item" preview if found — with its real icon
+        // (crisp flat-sprite path) beside the text.
         int currentY = y + 32;
         if (foundItem != null) {
             String name = foundItem.getName(foundItem.getDefaultInstance()).getString();
-            ctx.drawString(tr, "Add: " + name, x + 12, currentY,
+            ItemSpriteRenderer.renderIcon(ctx, foundItem.getDefaultInstance(), x + 12, currentY - 2);
+            ctx.drawString(tr, "Add: " + name, x + 12 + ICON_SIZE + 4, currentY,
                     ThemeManager.color(ThemeToken.SEMANTIC_SUCCESS), false);
             currentY += 12;
         }
@@ -148,12 +186,19 @@ public class ItemScaleSetting extends FeatureSetting {
                 AuroraShapes.outline(ctx, x + 10, rowY, width - 20, 26, AuroraTheme.BORDER_OFF, AuroraTheme.RADIUS_SMALL);
             }
 
-            // Humanize item id for label
+            // Real item icon (crisp flat-sprite path, 3D fallback), then
+            // the humanized label beside it.
+            Item item = BuiltInRegistries.ITEM.getValue(Identifier.parse(idStr));
+            int textPadX = x + 20;
+            if (item != null && item != net.minecraft.world.item.Items.AIR) {
+                ItemStack stack = item.getDefaultInstance();
+                ItemSpriteRenderer.renderIcon(ctx, stack, x + 14, rowY + 5);
+                textPadX = x + 20 + ICON_SIZE + 4;
+            }
             String labelStr = humanizeItemId(idStr);
-            ctx.drawString(tr, labelStr, x + 20, rowY + 9, AuroraTheme.IOS_LABEL, false);
+            ctx.drawString(tr, labelStr, textPadX, rowY + 9, AuroraTheme.IOS_LABEL, false);
 
             // chevron and trash icon
-            String chev = expanded ? "v" : ">";
             int rightX = x + width - 24;
             // Draw Delete Button (Red cross/Trash)
             boolean trashHover = mouseX >= rightX - 16 && mouseX < rightX && mouseY >= rowY + 5 && mouseY < rowY + 21;
@@ -161,8 +206,16 @@ public class ItemScaleSetting extends FeatureSetting {
                     trashHover ? ThemeManager.color(ThemeToken.SEMANTIC_ERROR)
                                 : AuroraTheme.IOS_TERTIARY_LABEL, false);
 
-            // Draw Chevron
-            ctx.drawString(tr, chev, rightX - 30, rowY + 8, AuroraTheme.IOS_SECONDARY_LABEL, false);
+            // Draw Chevron — Material Symbols glyph (the EnumSetting
+            // convention; already in the font subset). Rasterized at the
+            // device's true pixel grid via MaterialIconRenderer so thin
+            // chevron strokes don't wash out under the point-sampled atlas.
+            String chev = expanded ? CHEV_UP : CHEV_DOWN;
+            Component chevComp = Component.literal(chev).withStyle(SYMBOL_STYLE);
+            int chevW = Math.max(1, tr.width(chevComp));
+            MaterialIconRenderer.drawIcon(ctx, tr, chev,
+                    rightX - 34 + chevW / 2f, rowY + 8 + tr.lineHeight / 2f,
+                    MaterialIconRenderer.NATURAL_EM_GUI, AuroraTheme.IOS_SECONDARY_LABEL);
 
             currentY += 30;
 

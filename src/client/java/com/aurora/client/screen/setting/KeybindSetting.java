@@ -1,5 +1,8 @@
 package com.aurora.client.screen.setting;
 
+import com.aurora.client.theme.ThemeManager;
+import com.aurora.client.theme.ThemeToken;
+import com.aurora.client.ui.render.blur.BlurPanelRenderer;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.util.AuroraKey;
 import com.aurora.client.util.AuroraTheme;
@@ -28,6 +31,14 @@ import java.util.function.Supplier;
  * <p>Listen mode uses the existing {@link FeatureSetting#requestFocus()}
  * focus pipeline so the screen routes all key presses here until the
  * binding completes.
+ *
+ * <p>Glass rollout: the pill renders as RAISED glass — neutral
+ * {@code WINDOW_FILL} tint at rest, accent-STAINED tint while listening
+ * (the active state reads through the tint, never through the lighting
+ * orientation; the stained alpha follows the Background Opacity slider
+ * through {@link ThemeManager#stainedTint()}'s fixed floor — single
+ * application point). On decline (menu context, screenshot suppression,
+ * failure) the complete flat pill returns unchanged.
  */
 public class KeybindSetting extends FeatureSetting {
     private static final int CONTROL_H = 28;
@@ -73,21 +84,31 @@ public class KeybindSetting extends FeatureSetting {
                 && mouseY >= btnY && mouseY < btnY + BTN_H;
         float hT = hoverAnim.update(hover || listening);
 
-        int fillTint, borderTint, textColor;
-        if (listening) {
-            // Active accent fill so the user sees clearly that the next
-            // key press will be captured.
-            fillTint   = AuroraTheme.IOS_BLUE_PRESSED;
-            borderTint = AuroraTheme.IOS_BLUE;
-            textColor  = 0xFFFFFFFF;
-        } else {
-            fillTint   = lerpColor(AuroraTheme.PANEL_OFF, AuroraTheme.PANEL_OFF_HOVER, hT);
-            borderTint = lerpColor(AuroraTheme.BORDER_OFF, AuroraTheme.BORDER_OFF_HOVER, hT);
-            textColor  = lerpColor(AuroraTheme.TEXT_SECONDARY, AuroraTheme.TEXT_PRIMARY, hT);
-        }
+        int fillTint   = lerpColor(AuroraTheme.PANEL_OFF, AuroraTheme.PANEL_OFF_HOVER, hT);
+        int borderTint = lerpColor(AuroraTheme.BORDER_OFF, AuroraTheme.BORDER_OFF_HOVER, hT);
+        int textColor  = lerpColor(AuroraTheme.TEXT_SECONDARY, AuroraTheme.TEXT_PRIMARY, hT);
 
-        RenderUtil.drawSquircle(ctx, btnX, btnY, BTN_W, BTN_H, AuroraTheme.RADIUS_SMALL, fillTint);
-        RenderUtil.drawSquircleOutline(ctx, btnX, btnY, BTN_W, BTN_H, AuroraTheme.RADIUS_SMALL, 1.0f, borderTint);
+        // Glass: raised glass replaces the flat fill + outline (the glass
+        // rim replaces the border — no double outline). Neutral tint at
+        // rest; the ACCENT-STAINED tint while listening is the "next key
+        // press will be captured" cue (the same selected-control tint the
+        // segmented controls use). On decline the complete flat pill
+        // (fill + outline) returns. Hover keeps the text-color cue; the
+        // tint stays constant, exactly like every other glass control.
+        float glassR = Math.min(BTN_H / 2f, ThemeManager.current().roundness().radiusSmall());
+        boolean glassOk = BlurPanelRenderer.renderPanel(ctx, btnX, btnY, BTN_W, BTN_H, glassR,
+                BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX, BlurPanelRenderer.Lighting.raised());
+        if (glassOk) {
+            RenderUtil.drawRoundedRectAA(ctx, btnX, btnY, BTN_W, BTN_H, glassR,
+                    listening ? ThemeManager.stainedTint()
+                              : ThemeManager.color(ThemeToken.WINDOW_FILL));
+            BlurPanelRenderer.drawRimFinish(ctx, btnX, btnY, BTN_W, BTN_H, glassR);
+        } else {
+            RenderUtil.drawSquircle(ctx, btnX, btnY, BTN_W, BTN_H, AuroraTheme.RADIUS_SMALL,
+                    listening ? AuroraTheme.IOS_BLUE_PRESSED : fillTint);
+            RenderUtil.drawSquircleOutline(ctx, btnX, btnY, BTN_W, BTN_H, AuroraTheme.RADIUS_SMALL, 1.0f,
+                    listening ? AuroraTheme.IOS_BLUE : borderTint);
+        }
 
         String labelText = listening ? "> press key <" : keyName(getter.getAsInt());
         // Trim long names so they fit in the pill.
@@ -98,10 +119,11 @@ public class KeybindSetting extends FeatureSetting {
             labelText = labelText + "\u2026";
         }
         int labelW = tr.width(labelText);
+        int textCol = listening ? ThemeManager.color(ThemeToken.ON_ACCENT) : textColor;
         ctx.drawString(tr, labelText,
                 btnX + (BTN_W - labelW) / 2,
                 btnY + (BTN_H - tr.lineHeight) / 2 + 1,
-                textColor, false);
+                textCol, false);
 
         renderDescription(ctx, x, y + CONTROL_H, width);
     }

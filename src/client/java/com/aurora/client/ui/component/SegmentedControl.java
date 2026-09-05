@@ -104,6 +104,7 @@ public class SegmentedControl extends Widget {
                 RenderUtil.drawRoundedRectAA(g, sx, y, sw, trackH, radius,
                         isSelected ? ThemeManager.stainedTint()
                                    : ThemeManager.color(ThemeToken.WINDOW_FILL));
+                BlurPanelRenderer.drawRimFinish(g, sx, y, sw, trackH, radius);
             }
             if (!glassOk) {
                 // Flat fallback: track base first (it was suppressed from the

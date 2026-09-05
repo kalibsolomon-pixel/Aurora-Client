@@ -175,6 +175,7 @@ public class Button extends Widget {
                         ? ThemeManager.stainedTint()
                         : ThemeManager.color(ThemeToken.WINDOW_FILL);
                 RenderUtil.drawRoundedRectAA(g, x, y, w, h, radius, tint);
+                BlurPanelRenderer.drawRimFinish(g, x, y, w, h, radius);
             } else {
                 RenderUtil.drawRoundedRectAA(g, x, y, w, h, radius, bg);
                 RenderUtil.drawRoundedOutlineAA(g, x, y, w, h, radius, 1.0f, border);

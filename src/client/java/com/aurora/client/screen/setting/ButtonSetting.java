@@ -8,7 +8,7 @@ import net.minecraft.client.gui.GuiGraphics;
 
 /**
  * Single-action button row. Used for things like a "Preview" sound button
- * sitting next to a sound selector â€” the button does its work and returns
+ * sitting next to a sound selector — the button does its work and returns
  * (no state change tracked here).
  */
 public class ButtonSetting extends FeatureSetting {
@@ -23,7 +23,7 @@ public class ButtonSetting extends FeatureSetting {
 
     public ButtonSetting(String label, Runnable onPress) {
         super(label);
-        this.button = new Button("Preview", onPress);
+        this.button = new Button("Preview", onPress).glassBackground(true);
     }
 
     @Override public int baseHeight() { return CONTROL_H; }

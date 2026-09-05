@@ -1,6 +1,9 @@
 package com.aurora.client.ui.render.blur;
 
 import com.aurora.client.AuroraClient;
+import com.aurora.client.theme.GlassStyle;
+import com.aurora.client.theme.ThemeManager;
+import com.aurora.client.ui.util.RenderUtil;
 import com.mojang.blaze3d.opengl.GlTexture;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.pipeline.RenderTarget;
@@ -65,6 +68,20 @@ import java.util.concurrent.atomic.AtomicLong;
  * translucent panel fill uses when tinting on top of this blur. Do NOT
  * multiply any opacity factor into this pipeline — a second application
  * point here is precisely the bug class that broke the previous attempt.
+ *
+ * <p>The rim highlight is a TWO-HALF system driven by the one Background
+ * Opacity value. IN-GLASS half: the composite pass blends the stroke's
+ * target color toward the panel's own per-pixel base as opacity rises
+ * ({@code uRimBlend}) — the bright glass light catch owns the translucent
+ * end and retires as the fill takes over the read. ABOVE-FILL half:
+ * {@link #drawRimFinish} draws a DIRECTIONAL pastel border of the current
+ * accent ({@code ResolvedTheme#rimPastel()}) on top of the caller's fill —
+ * brightest facing the light, fading around the perimeter, exactly like
+ * the in-glass stroke — with alpha ramping to fully opaque at 100% opacity
+ * (a solid pastel rim is the only rim that can survive an opaque fill).
+ * Both halves are lighting-term
+ * derivations, NOT second opacity applications — no alpha in this pipeline
+ * is multiplied by them. Never add others.
  *
  * <h2>Intermediate precision</h2>
  * Every intermediate target (capture, both blur-chain textures, the
@@ -156,7 +173,13 @@ public final class BlurPanelRenderer {
     public static final class Lighting {
         /** Depressed (recessed panel) treatment — both terms inverted vs raised. */
         public final boolean depressed;
-        /** Border stroke strength, 0..1. 0.45 reads bold at a glance, per the "too subtle is a real failure mode" lesson. */
+        /**
+         * Border stroke strength, 0..1. 0.45 reads bold at a glance, per the
+         * "too subtle is a real failure mode" lesson. The LOW-opacity paint
+         * weight; at high Background Opacity the shader ramps the weight
+         * toward full and the target color toward the accent pastel (see
+         * the composite shader).
+         */
         public final float edgeStrength;
         /** Face gradient strength, 0..1 — the panel brightens/darkens by up to ±this at the two corners. */
         public final float gradStrength;
@@ -293,9 +316,110 @@ public final class BlurPanelRenderer {
     // ---- uniform locations ----
     private static int uBlurInput, uBlurDir, uBlurTexel, uBlurScale, uBlurSigma;
     private static int uCompInput, uCompUvRect, uCompHalfSize, uCompRadius;
-    private static int uLight, uEdgeWidth, uEdgeStrength, uGradStrength, uDepressed;
+    private static int uLight, uEdgeWidth, uEdgeStrength, uGradStrength, uDepressed, uRimBlend;
 
     private static String lastOutcome = "not run";
+
+    // ==================================================================================
+    // Perf instrumentation — opt-in via -Daurora.glassStats=true, zero cost otherwise
+    // ==================================================================================
+
+    /**
+     * Per-phase wall-clock timing and pool accounting for the glass
+     * pipeline, aggregated per frame and reported as one log line per
+     * {@link #REPORT_EVERY_FRAMES} frames while the property is set. GL
+     * calls are asynchronous, so the phase numbers are CPU wall time —
+     * EXCEPT readback, where the synchronous {@code glReadPixels} stalls
+     * until the GPU has finished everything previously submitted (which is
+     * precisely why per-panel readback is the suspected scaling cost: it
+     * serializes CPU and GPU once per panel).
+     *
+     * <p>Readback is further split into its three real components:
+     * {@code readGl} (the glReadPixels stall), {@code loop} (the per-pixel
+     * RGBA→ARGB Java conversion) and {@code upload} (the DynamicTexture
+     * re-upload of the full panel).
+     */
+    static final class GlassStats {
+        static final boolean ENABLED = Boolean.getBoolean("aurora.glassStats");
+        static final int REPORT_EVERY_FRAMES = 60;
+
+        // ---- current frame (reset at beginFrame) ----
+        static int panels;          // pool claims (panels actually rendered)
+        static int declines;        // Declined outcomes (any reason)
+        static int poolExhausted;   // Declined("output pool exhausted")
+        static long frameTotalNs;   // wall time inside renderPanel, all attempts
+        static long captureNs, blurNs, compositeNs, otherNs, blitNs;
+        static long readGlNs, readLoopNs, uploadNs;
+        static long readPixels;     // device pixels read back this frame
+
+        // ---- reporting interval accumulators ----
+        static int framesWithPanels, framesSinceReport, sumDeclines, sumPoolExhausted;
+        static long sumPanels, maxPanels, sumFrameNs, maxFrameNs;
+        static long sumCaptureNs, sumBlurNs, sumCompositeNs, sumOtherNs, sumBlitNs;
+        static long sumReadGlNs, sumReadLoopNs, sumUploadNs, sumReadPixels;
+        static long lastPoolWarnMs;
+
+        static void claim() { panels++; }
+
+        static void decline(String reason) {
+            declines++;
+            if (reason != null && reason.contains("pool exhausted")) poolExhausted++;
+        }
+
+        static void panelDone(long totalNs) { frameTotalNs += totalNs; }
+
+        /** Called from {@link #beginFrame()} — closes out the frame that just finished. */
+        static void flushFrame() {
+            if (panels > 0) {
+                framesWithPanels++;
+                sumPanels += panels;
+                if (panels > maxPanels) maxPanels = panels;
+                sumFrameNs += frameTotalNs;
+                if (frameTotalNs > maxFrameNs) maxFrameNs = frameTotalNs;
+                sumCaptureNs += captureNs;
+                sumBlurNs += blurNs;
+                sumCompositeNs += compositeNs;
+                sumOtherNs += otherNs;
+                sumBlitNs += blitNs;
+                sumReadGlNs += readGlNs;
+                sumReadLoopNs += readLoopNs;
+                sumUploadNs += uploadNs;
+                sumReadPixels += readPixels;
+            }
+            sumDeclines += declines;
+            sumPoolExhausted += poolExhausted;
+            panels = declines = poolExhausted = 0;
+            frameTotalNs = captureNs = blurNs = compositeNs = otherNs = blitNs = 0;
+            readGlNs = readLoopNs = uploadNs = readPixels = 0;
+            if (++framesSinceReport >= REPORT_EVERY_FRAMES) report();
+        }
+
+        private static void report() {
+            try {
+                if (ENABLED && framesWithPanels > 0) {
+                    double f = framesWithPanels;
+                    double p = sumPanels;
+                    AuroraClient.LOGGER.info(String.format(
+                            "[GlassStats] frames=%d panels/frame avg=%.1f max=%d | ms/frame total=%.2f max=%.2f"
+                                    + " | ms/panel capture=%.3f blur=%.3f comp=%.3f readGL=%.3f loop=%.3f upload=%.3f blit=%.3f other=%.3f"
+                                    + " | declines=%d poolExhausted=%d readback=%.2fMpx/frame",
+                            framesWithPanels, sumPanels / f, (int) maxPanels,
+                            sumFrameNs / 1e6 / f, maxFrameNs / 1e6,
+                            sumCaptureNs / 1e6 / p, sumBlurNs / 1e6 / p, sumCompositeNs / 1e6 / p,
+                            sumReadGlNs / 1e6 / p, sumReadLoopNs / 1e6 / p, sumUploadNs / 1e6 / p,
+                            sumBlitNs / 1e6 / p, sumOtherNs / 1e6 / p,
+                            sumDeclines, sumPoolExhausted, sumReadPixels / 1e6 / f));
+                }
+            } finally {
+                framesSinceReport = 0;
+                framesWithPanels = 0;
+                sumPanels = maxPanels = sumFrameNs = maxFrameNs = 0;
+                sumCaptureNs = sumBlurNs = sumCompositeNs = sumOtherNs = sumBlitNs = 0;
+                sumReadGlNs = sumReadLoopNs = sumUploadNs = sumReadPixels = 0;
+                sumDeclines = sumPoolExhausted = 0;
+            }
+        }
+    }
 
     private BlurPanelRenderer() {}
 
@@ -354,11 +478,222 @@ public final class BlurPanelRenderer {
     }
 
     /**
+     * Draws the rim's high-opacity finish ON TOP of the caller's panel fill:
+     * a DIRECTIONAL border stroke — brightest on the light-facing edge
+     * (top, ~14° right), tapering around the perimeter to near-zero on the
+     * far sides — in the current accent's pastel tone
+     * ({@code ResolvedTheme#rimPastel()}), with alpha following Background
+     * Opacity in the SAME direction (opacity²): negligible while the panel
+     * is translucent (the in-glass light catch owns that end of the range),
+     * rising to a SOLID, fully-opaque pastel stroke at 100% opacity. This
+     * gives the tile its cohesive "flat and pastel" read at high opacity
+     * while keeping the established directional glass character; it never
+     * covers the interior.
+     *
+     * <p>Why above the fill: the glass texture (with its embedded rim) is
+     * blitted BEFORE the caller's translucent fill, so at high opacity the
+     * opaque fill occludes it completely — no in-texture rim can survive
+     * there. This pass is the rim's above-fill half; call it right after
+     * drawing the panel's tint fill, with the same rect and corner radius
+     * the fill used. Like every rim consumer this is a lighting-term
+     * finish driven by the one opacity value — NOT an opacity application
+     * point (it changes no fill alpha).
+     */
+    public static void drawRimFinish(GuiGraphics g, float x, float y, float w, float h, float cornerRadiusGui) {
+        double opacity = ThemeManager.current().backgroundOpacity();
+        int alpha = Math.round((float) (opacity * opacity) * 255f);
+        if (alpha <= 0) return;
+        Minecraft mc = Minecraft.getInstance();
+        if (mc == null || mc.getTextureManager() == null) return;
+        int scale = Math.max(1, (int) mc.getWindow().getGuiScale());
+        int devX = Math.round(x * scale);
+        int devY = Math.round(y * scale);
+        int devW = Math.round(w * scale);
+        int devH = Math.round(h * scale);
+        if (devW < 8 || devH < 8) return;
+        float devRadiusF = Math.min(cornerRadiusGui * scale, Math.min(devW, devH) / 2f - 1f);
+        int devRadius = Math.max(0, Math.round(devRadiusF));
+
+        RimMask mask = rimMask(devW, devH, devRadius, scale);
+        if (mask == null) return;
+
+        int pastel = ThemeManager.current().rimPastel();
+        int tint = (alpha << 24) | (pastel & 0x00FFFFFF);
+        // Device-space placement under the 1/scale pose — the exact pattern
+        // RenderUtil's fills use — so the mask lands pixel-aligned with the
+        // fill drawn beneath it.
+        g.pose().pushMatrix();
+        g.pose().scale(1f / scale, 1f / scale);
+        g.blit(RenderPipelines.GUI_TEXTURED, mask.id, devX, devY, 0f, 0f,
+                devW, devH, devW, devH, devW, devH, tint);
+        g.pose().popMatrix();
+    }
+
+    /** Cached directional rim masks, keyed by device rect + radius. */
+    private static final java.util.HashMap<Long, RimMask> rimMasks = new java.util.HashMap<>();
+    /**
+     * Cache cap. Enforced by evicting only masks NOT used in the current
+     * frame, and even those are destroyed one frame later — see
+     * {@link #evictColdRimMasks()} for why deleting a mask mid-frame is a
+     * GL error and a session-ending one at that.
+     */
+    private static final int RIM_MASK_CACHE_CAP = 16;
+    /**
+     * Masks evicted from {@link #rimMasks} but not yet destroyed. Drained at
+     * the next {@link #beginFrame()}, i.e. only once the frame that could
+     * still have had a pending blit of them has been fully submitted.
+     */
+    private static final java.util.ArrayList<RimMask> pendingRimRelease = new java.util.ArrayList<>();
+    private static final java.util.concurrent.atomic.AtomicLong RIM_MASK_SEQ =
+            new java.util.concurrent.atomic.AtomicLong();
+
+    private static final class RimMask {
+        NativeImage image;
+        DynamicTexture texture;
+        Identifier id;
+        int w = -1, h = -1;
+        /** Frame epoch this mask was last handed to a caller for blitting. */
+        long lastEpoch = -1L;
+    }
+
+    private static RimMask rimMask(int devW, int devH, int devRadius, int scale) {
+        long key = ((long) devW << 42) | ((long) devH << 16) | devRadius;
+        RimMask mask = rimMasks.get(key);
+        if (mask != null) { mask.lastEpoch = poolEpoch; return mask; }
+        if (rimMasks.size() >= RIM_MASK_CACHE_CAP) evictColdRimMasks();
+        mask = rasterizeRimMask(devW, devH, devRadius, scale);
+        if (mask == null) return null;
+        mask.lastEpoch = poolEpoch;
+        rimMasks.put(key, mask);
+        return mask;
+    }
+
+    /**
+     * Cap enforcement that can never destroy a texture a pending blit still
+     * references — the same deferred-GuiRenderState rule the output pool
+     * documents, which this cache used to violate.
+     *
+     * <p>HISTORY (the "Reset kills glass for the session" bug): this used to
+     * be a wholesale {@code releaseRimMasks()} on overflow, called from the
+     * middle of a frame's rendering. 1.21.11's {@code GuiGraphics} RECORDS
+     * blits into a deferred {@code GuiRenderState} and there is no flush API,
+     * so masks already blitted earlier in that same frame were still pending
+     * when their {@code DynamicTexture} was closed. At submit time the driver
+     * bound deleted texture names and raised
+     * {@code GL_INVALID_OPERATION in glBindTexture(non-gen name)} — one per
+     * dangling blit. That error then sat in the GL error queue until the next
+     * frame's {@link Frame#capture()} polled {@code glGetError} and
+     * misattributed it to its own {@code glBlitFramebuffer}, throwing and
+     * latching {@link #permanentlyDisabled} for the rest of the session.
+     * Theme "Reset" reproduced it reliably because it changes the corner
+     * roundness: every cached key is radius-derived, so a whole new
+     * generation of shapes is inserted on top of the existing set and crosses
+     * the cap mid-frame.
+     *
+     * <p>Two rules keep that from recurring: only masks NOT used in the
+     * current frame are evictable, and even those are merely queued —
+     * {@link #beginFrame()} destroys them once the frame that could have
+     * referenced them is fully submitted. If every entry is in use this
+     * frame, the cache is simply allowed to run over the cap; it drains on
+     * the next frame that has cold entries. Correctness beats the cap.
+     */
+    private static void evictColdRimMasks() {
+        var it = rimMasks.entrySet().iterator();
+        while (it.hasNext()) {
+            RimMask m = it.next().getValue();
+            if (m.lastEpoch == poolEpoch) continue; // blitted this frame — blit still pending
+            pendingRimRelease.add(m);
+            it.remove();
+        }
+    }
+
+    /**
+     * Rasterizes the directional stroke mask at device resolution: white RGB
+     * everywhere, alpha = SDF band × light-facing term — the composite
+     * shader's border-stroke math (rounded-rect SDF band with its soft
+     * internal taper, multiplied by the facing smoothstep against the one
+     * fixed light) evaluated per pixel. Rasterized ONCE per shape; opacity
+     * and hue are applied later via the blit tint, so they act as a modifier
+     * ON the directional falloff, never a replacement for it.
+     */
+    private static RimMask rasterizeRimMask(int devW, int devH, int devRadius, int scale) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc == null || mc.getTextureManager() == null) return null;
+        NativeImage image = new NativeImage(NativeImage.Format.RGBA, devW, devH, false);
+        float hx = devW * 0.5f, hy = devH * 0.5f;
+        float innerX = hx - devRadius, innerY = hy - devRadius;
+        float edgeWidth = Math.max(3f, 2f * scale);
+        for (int py = 0; py < devH; py++) {
+            for (int px = 0; px < devW; px++) {
+                float dx = px + 0.5f - hx, dy = py + 0.5f - hy;
+                float qx = Math.abs(dx) - innerX;
+                float qy = Math.abs(dy) - innerY;
+                float ox = Math.max(qx, 0f), oy = Math.max(qy, 0f);
+                float d = (float) Math.sqrt(ox * ox + oy * oy)
+                        + Math.min(Math.max(qx, qy), 0f) - devRadius;
+                float coverage = Math.max(0f, Math.min(1f, 0.5f - d));
+                float band = smoothstep(-edgeWidth, 0f, d) * coverage;
+                int alpha = 0;
+                if (band > 0f) {
+                    float plen = (float) Math.sqrt(dx * dx + dy * dy);
+                    float facing = plen > 0.5f
+                            ? (dx * LIGHT_DIR_X + dy * LIGHT_DIR_Y) / plen
+                            : 0f;
+                    alpha = (int) (band * smoothstep(-0.35f, 0.55f, facing) * 255f + 0.5f);
+                }
+                image.setPixel(px, py, (alpha << 24) | 0x00FFFFFF);
+            }
+        }
+        RimMask mask = new RimMask();
+        mask.image = image;
+        mask.w = devW;
+        mask.h = devH;
+        long seq = RIM_MASK_SEQ.incrementAndGet();
+        mask.id = Identifier.fromNamespaceAndPath(AuroraClient.MOD_ID, "rim_mask/" + seq);
+        mask.texture = new DynamicTexture(() -> "aurora_rim_mask_" + seq, image);
+        mc.getTextureManager().register(mask.id, mask.texture);
+        mask.texture.upload();
+        return mask;
+    }
+
+    private static float smoothstep(float a, float b, float v) {
+        float t = Math.max(0f, Math.min(1f, (v - a) / (b - a)));
+        return t * t * (3f - 2f * t);
+    }
+
+    /**
+     * Destroys one mask's texture/image. Only ever called where no blit of
+     * it can still be pending: {@link #beginFrame()} (queued evictions) and
+     * {@link #shutdown()}.
+     */
+    private static void destroyRimMask(RimMask mask) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc != null && mc.getTextureManager() != null && mask.id != null) {
+            try { mc.getTextureManager().release(mask.id); } catch (Throwable ignored) { }
+        }
+        try { if (mask.texture != null) mask.texture.close(); } catch (Throwable ignored) { }
+        try { if (mask.image != null) mask.image.close(); } catch (Throwable ignored) { }
+        mask.texture = null;
+        mask.image = null;
+        mask.id = null;
+        mask.w = -1;
+        mask.h = -1;
+    }
+
+    /** Destroys every rim mask, queued or live. Shutdown/reload only. */
+    private static void releaseRimMasks() {
+        for (RimMask mask : pendingRimRelease) destroyRimMask(mask);
+        pendingRimRelease.clear();
+        for (RimMask mask : rimMasks.values()) destroyRimMask(mask);
+        rimMasks.clear();
+    }
+
+    /**
      * Full variant with the lighting impression and an optional synthetic
      * capture source (test harness only — see {@link CaptureSource}).
      * Returns {@code true} when the panel was drawn.
      *
-     * @param lighting      lighting parameters, or null to disable lighting
+     * @param lighting lighting parameters, or null to disable lighting
      * @param captureSource synthetic backdrop FBO, or null to capture the
      *                      live framebuffer behind the panel
      */
@@ -367,6 +702,21 @@ public final class BlurPanelRenderer {
                                       CaptureSource captureSource) {
         lastOutcome = "rendered";
         if (permanentlyDisabled) { lastOutcome = "disabled (earlier failure)"; return false; }
+        // Glass Style: the user's Transparent choice is expressed through the
+        // SAME fallback contract every glass consumer already implements —
+        // decline, and the caller draws its flat translucent fill (§6's
+        // fallback contract). That is why this is one guard here instead of a
+        // branch at ~20 call sites, and why Corner Style and Background
+        // Opacity keep their exact meanings in both styles: they live in the
+        // caller's fill, which this renderer never touches. Placed before any
+        // GL state is read or written, so Transparent also pays none of the
+        // capture/blur/readback cost.
+        // The synthetic harness (BlurTestScreen) is exempt, like the
+        // menu-context guard below: it exists to exercise this pipeline.
+        if (captureSource == null && ThemeManager.current().glassStyle() == GlassStyle.TRANSPARENT) {
+            lastOutcome = "transparent style (glass off)";
+            return false;
+        }
         if (System.currentTimeMillis() < suppressGlassUntilMs) {
             // Screenshot interlock (see suppressGlassUntilMs): fall back to
             // the caller's opaque rendering while vanilla's grab machinery
@@ -394,6 +744,7 @@ public final class BlurPanelRenderer {
         if (radius < MIN_EFFECTIVE_RADIUS_PX) { lastOutcome = "radius below minimum"; return false; }
         if (!ensureReady()) { lastOutcome = "init failed (see log)"; return false; }
 
+        long perfStart = GlassStats.ENABLED ? System.nanoTime() : 0L;
         try {
             int scale = Math.max(1, (int) mc.getWindow().getGuiScale());
 
@@ -441,6 +792,7 @@ public final class BlurPanelRenderer {
             // Declines escaping Frame.run before its own catch (e.g. pool
             // exhausted in nextOutput, before any GL state is touched) are
             // the same expected-transient path — never disable the renderer.
+            if (GlassStats.ENABLED) GlassStats.decline(d.getMessage());
             lastOutcome = d.getMessage();
             return false;
         } catch (Throwable t) {
@@ -448,6 +800,8 @@ public final class BlurPanelRenderer {
             permanentlyDisabled = true;
             lastOutcome = "failed (see log)";
             return false;
+        } finally {
+            if (GlassStats.ENABLED) GlassStats.panelDone(System.nanoTime() - perfStart);
         }
     }
 
@@ -540,18 +894,39 @@ public final class BlurPanelRenderer {
                 GL11.glPixelStorei(GL11.GL_UNPACK_SKIP_PIXELS, 0);
                 GL11.glPixelStorei(GL11.GL_UNPACK_SKIP_ROWS, 0);
                 GL11.glPixelStorei(GL12.GL_UNPACK_SKIP_IMAGES, 0);
+                // Error-queue hygiene — the attribution half of the same
+                // lesson. glGetError reports the OLDEST error still queued
+                // from ANY GL call, not just ours, and this pipeline treats
+                // a GL error after its capture blit as a defect worth
+                // disabling the renderer for the session. Without draining
+                // first, an error raised by foreign code (or by an earlier
+                // frame) is misattributed to our blit and costs glass until
+                // restart — exactly how the rim-mask eviction bug manifested.
+                // Drain here so every glGetError check below reports only
+                // errors OUR calls produced; the latch keeps its full value
+                // and stops guessing.
+                drainGlErrors();
+                final boolean perf = GlassStats.ENABLED;
+                long t = perf ? System.nanoTime() : 0L;
                 ensureChainTextures(cw, ch);
                 ensureCompositeTarget(panW, panH);
+                if (perf) { GlassStats.otherNs += System.nanoTime() - t; t = System.nanoTime(); }
                 capture();
+                if (perf) { GlassStats.captureNs += System.nanoTime() - t; t = System.nanoTime(); }
                 blur();
+                if (perf) { GlassStats.blurNs += System.nanoTime() - t; t = System.nanoTime(); }
                 composite();
+                if (perf) { GlassStats.compositeNs += System.nanoTime() - t; t = System.nanoTime(); }
                 readback();
+                if (perf) { t = System.nanoTime(); }
                 blit(g, guiX, guiY, guiW, guiH);
+                if (perf) { GlassStats.blitNs += System.nanoTime() - t; }
                 return true;
             } catch (Declined d) {
                 // Expected, transient decline (reader unavailable, pool
                 // exhausted): restore below, then let the caller draw its
                 // opaque fallback. Never disables the renderer.
+                if (GlassStats.ENABLED) GlassStats.decline(d.getMessage());
                 lastOutcome = d.getMessage();
                 return false;
             } finally {
@@ -747,6 +1122,16 @@ public final class BlurPanelRenderer {
             GL20.glUniform1f(uEdgeStrength, lighting != null ? lighting.edgeStrength : 0f);
             GL20.glUniform1f(uGradStrength, lighting != null ? lighting.gradStrength : 0f);
             GL20.glUniform1f(uDepressed, lighting != null && lighting.depressed ? 1f : 0f);
+            // In-glass rim retirement: follows Background Opacity — as the
+            // fill takes over the read, the glass-embedded rim blends into
+            // the panel base. The rim that stays VISIBLE at high opacity is
+            // the over-fill pastel border drawn by {@link #drawRimFinish}
+            // (this texture is occluded by the opaque fill there). Both
+            // values ride the cached ResolvedTheme; these are cached field
+            // reads per panel, and NOT opacity application points — no
+            // alpha in this pipeline is multiplied by them.
+            GL20.glUniform1f(uRimBlend,
+                    (float) ThemeManager.current().backgroundOpacity());
             GL30.glBindVertexArray(emptyVao);
             GL11.glDrawArrays(GL11.GL_TRIANGLES, 0, 3);
         }
@@ -763,10 +1148,17 @@ public final class BlurPanelRenderer {
             if (readBuffer == null || readBuffer.capacity() < cap) {
                 readBuffer = ByteBuffer.allocateDirect(cap).order(ByteOrder.nativeOrder());
             }
+            final boolean perf = GlassStats.ENABLED;
+            long t = perf ? System.nanoTime() : 0L;
             readBuffer.clear();
             GL11.glReadPixels(0, 0, panW, panH, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, readBuffer);
             ByteBuffer buf = readBuffer;
             buf.rewind();
+            if (perf) {
+                GlassStats.readGlNs += System.nanoTime() - t;
+                GlassStats.readPixels += (long) panW * panH;
+                t = System.nanoTime();
+            }
             for (int row = 0; row < panH; row++) {
                 int base = (panH - 1 - row) * panW * 4; // flip to top-down
                 for (int col = 0; col < panW; col++) {
@@ -778,7 +1170,9 @@ public final class BlurPanelRenderer {
                     out.image.setPixel(col, row, (a << 24) | (r << 16) | (gg << 8) | b);
                 }
             }
+            if (perf) { GlassStats.readLoopNs += System.nanoTime() - t; t = System.nanoTime(); }
             out.texture.upload();
+            if (perf) { GlassStats.uploadNs += System.nanoTime() - t; }
         }
 
         // --- 5. Blit through the normal GUI path (straight-alpha texture,
@@ -804,6 +1198,7 @@ public final class BlurPanelRenderer {
     /** Releases GPU/texture resources. Idempotent; safe on shutdown/reload. */
     public static void shutdown() {
         releaseOutputs();
+        releaseRimMasks();
         deleteChain();
         if (worldReaderFbo != 0) { GL30.glDeleteFramebuffers(worldReaderFbo); worldReaderFbo = 0; }
         if (compositeFbo != 0) { GL30.glDeleteFramebuffers(compositeFbo); compositeFbo = 0; }
@@ -839,6 +1234,7 @@ public final class BlurPanelRenderer {
             uEdgeStrength = GL20.glGetUniformLocation(compositeProgram, "uEdgeStrength");
             uGradStrength = GL20.glGetUniformLocation(compositeProgram, "uGradStrength");
             uDepressed = GL20.glGetUniformLocation(compositeProgram, "uDepressed");
+            uRimBlend = GL20.glGetUniformLocation(compositeProgram, "uRimBlend");
             emptyVao = GL30.glGenVertexArrays();
             AuroraClient.LOGGER.info("[BlurPanel] programs ready (blur={}, composite={}).", blurProgram, compositeProgram);
             return true;
@@ -972,6 +1368,17 @@ public final class BlurPanelRenderer {
      * exhausting the pool within one epoch declines the extra panel (one
      * frame of opaque fallback) rather than stomping a live slot.
      */
+    /**
+     * Empties the GL error queue so a later {@code glGetError} can only
+     * report errors raised after this point. Bounded so a driver that keeps
+     * returning an error can never spin the render thread.
+     */
+    private static void drainGlErrors() {
+        for (int i = 0; i < 64; i++) {
+            if (GL11.glGetError() == GL11.GL_NO_ERROR) return;
+        }
+    }
+
     private static PanelOutput nextOutput() {
         long nowMs = System.currentTimeMillis();
         if (slotEpoch != poolEpoch || nowMs - lastOutputCallMs > 250L) {
@@ -981,9 +1388,19 @@ public final class BlurPanelRenderer {
         }
         lastOutputCallMs = nowMs;
         if (claimsThisFrame >= OUTPUT_POOL) {
+            // Pool exhaustion is a real diagnosable condition (a screen
+            // denser than the pool was sized for), not a transient hiccup:
+            // surface it in the log, rate-limited so a permanently-dense
+            // screen logs one line per interval instead of one per frame.
+            if (nowMs - GlassStats.lastPoolWarnMs > 10_000L) {
+                GlassStats.lastPoolWarnMs = nowMs;
+                AuroraClient.LOGGER.warn("[BlurPanel] output pool exhausted ({} concurrent panels) - extra panels render their flat fallback this frame",
+                        OUTPUT_POOL);
+            }
             throw new Declined("output pool exhausted this frame");
         }
         claimsThisFrame++;
+        if (GlassStats.ENABLED) GlassStats.claim();
         PanelOutput out = outputs[outputCursor];
         if (out == null) {
             out = new PanelOutput();
@@ -999,6 +1416,16 @@ public final class BlurPanelRenderer {
      * render-tick mixin, before any GUI rendering. Deliberately trivial.
      */
     public static void beginFrame() {
+        GlassStats.flushFrame();
+        // Drain queued rim-mask evictions FIRST. Everything in the queue was
+        // last blitted in an epoch older than the frame that just finished,
+        // so no GuiRenderState can still reference it (see
+        // evictColdRimMasks). Destroying them anywhere inside a frame is the
+        // bug this ordering exists to prevent.
+        if (!pendingRimRelease.isEmpty()) {
+            for (RimMask mask : pendingRimRelease) destroyRimMask(mask);
+            pendingRimRelease.clear();
+        }
         poolEpoch++;
     }
 
@@ -1170,6 +1597,7 @@ public final class BlurPanelRenderer {
             uniform float uEdgeStrength; // 0 disables the border stroke term
             uniform float uGradStrength; // 0 disables the face gradient term
             uniform float uDepressed;    // 0 = raised, 1 = depressed (both terms inverted)
+            uniform float uRimBlend;     // 0 = full glass rim .. 1 = rim retired into the panel base (Background Opacity)
             void main() {
                 vec2 uv = mix(uUvRect.xy, uUvRect.zw, vUv);
                 vec3 blurred = texture(uInput, uv).rgb;
@@ -1213,11 +1641,27 @@ public final class BlurPanelRenderer {
                 float plen = length(p);
                 float facing = (plen > 0.5) ? dot(p, uLight) / plen : 0.0; // -1 far .. +1 light
                 float edgeAmt = smoothstep(-0.35, 0.55, facing);
+                // The stroke is a TARGET-COLOR composite. At full glass
+                // (uRimBlend = 0) the band is pulled toward a distinct
+                // light/shadow color — the established translucent look. As
+                // Background Opacity rises the TARGET COLOR blends toward
+                // the panel's OWN per-pixel base (litBase), so the in-glass
+                // rim gently retires as the fill takes over the read. The
+                // rim that stays VISIBLE at high opacity is drawn ABOVE the
+                // caller's fill by drawRimFinish (the caller's fill is
+                // opaque there and would occlude anything in this texture).
+                // (uEdgeStrength lives in the TARGET, not the weight, so at
+                // uRimBlend = 0 this is bit-equivalent to the old
+                // `lit += band * edgeAmt * uEdgeStrength` form.)
+                vec3 litBase = lit;
                 if (uDepressed < 0.5) {
-                    lit += vec3(band * edgeAmt * uEdgeStrength);
+                    vec3 hi = clamp(litBase + vec3(uEdgeStrength), 0.0, 1.0);
+                    lit = mix(litBase, mix(hi, litBase, uRimBlend), band * edgeAmt);
                 } else {
-                    lit -= vec3(band * edgeAmt * uEdgeStrength);
-                    lit += vec3(band * (1.0 - edgeAmt) * uEdgeStrength * 0.45);
+                    vec3 lo = clamp(litBase - vec3(uEdgeStrength), 0.0, 1.0);
+                    vec3 far = clamp(litBase + vec3(uEdgeStrength * 0.45), 0.0, 1.0);
+                    lit = mix(litBase, mix(lo, litBase, uRimBlend), band * edgeAmt);
+                    lit = mix(lit, mix(far, litBase, uRimBlend), band * (1.0 - edgeAmt));
                 }
 
                 lit = clamp(lit, 0.0, 1.0);
@@ -1235,28 +1679,41 @@ public final class BlurPanelRenderer {
      * Package-visible: {@link BlurTestScreen}'s synthetic-backdrop pass uses
      * the same hygiene (see HISTORY there — a blend-state leak from that pass
      * once made the whole end-of-frame GUI batch flush render opaque).
+     *
+     * <p>Instances are POOLED: dense screens run {@code renderPanel} ~30× per
+     * frame, and each save used to allocate a fresh direct ByteBuffer for the
+     * color-write mask (plus an int[4]) — ~2000 direct-buffer allocations per
+     * second on the pack browser, pure churn for four bytes of state. All
+     * users are strictly sequential on the render thread (save … restore,
+     * never nested across panels), so a free-list is safe; a user that fails
+     * to restore simply leaks one instance back to GC, never to another
+     * caller.
      */
     static final class SavedGlState {
-        final int program;
-        final int texture;
-        final int readFbo;
-        final int drawFbo;
-        final int vao;
+        private static final java.util.ArrayDeque<SavedGlState> POOL = new java.util.ArrayDeque<>();
+        int program;
+        int texture;
+        int readFbo;
+        int drawFbo;
+        int vao;
         final int[] viewport = new int[4];
         final java.nio.ByteBuffer colorMask = java.nio.ByteBuffer.allocateDirect(4);
-        final boolean blend;
-        final boolean depthTest;
-        final boolean cullFace;
-        final boolean scissorTest;
-        final int sampler0;
+        boolean blend;
+        boolean depthTest;
+        boolean cullFace;
+        boolean scissorTest;
+        int sampler0;
 
-        private SavedGlState() {
+        private SavedGlState() {}
+
+        private void capture() {
             program = GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM);
             texture = GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D);
             readFbo = GL11.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING);
             drawFbo = GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING);
             vao = GL11.glGetInteger(GL30.GL_VERTEX_ARRAY_BINDING);
             GL11.glGetIntegerv(GL11.GL_VIEWPORT, viewport);
+            colorMask.clear();
             GL11.glGetBooleanv(GL11.GL_COLOR_WRITEMASK, colorMask);
             blend = GL11.glGetBoolean(GL11.GL_BLEND);
             depthTest = GL11.glGetBoolean(GL11.GL_DEPTH_TEST);
@@ -1265,7 +1722,12 @@ public final class BlurPanelRenderer {
             sampler0 = GL11.glGetInteger(GL33.GL_SAMPLER_BINDING);
         }
 
-        static SavedGlState save() { return new SavedGlState(); }
+        static SavedGlState save() {
+            SavedGlState s = POOL.pollFirst();
+            if (s == null) s = new SavedGlState();
+            s.capture();
+            return s;
+        }
 
         void restore() {
             GL20.glUseProgram(program);
@@ -1282,6 +1744,7 @@ public final class BlurPanelRenderer {
             GL30.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, readFbo);
             GL30.glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, drawFbo);
             GL11.glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+            POOL.addLast(this);
         }
     }
 

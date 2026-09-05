@@ -1,0 +1,611 @@
+# Aurora UI Engine — Project Guide
+
+A reference for humans and AI agent sessions working on this repo. Everything below was
+verified by reading the code on **2026-08-29** (working tree state, including uncommitted
+changes — see §8). If you change the glass rollout status, theme architecture, or feature
+set, update the relevant section here in the same change.
+
+---
+
+## 1. What this is
+
+**Aurora** (`com.aurora.client`, mod id `aurora`) is a **client-side-only Fabric mod** for
+Minecraft: a large QoL/performance feature set (30+ features) wrapped in a fully custom,
+themeable GUI framework (COSMIC/iOS-flavored) with a glass/blur "material" system.
+
+There is also a **second, complete, third-party mod vendored into the source tree**:
+*Better Hitreg* by Jass (`you.jass.betterhitreg`, ~4k lines, 14 mixins, its own entrypoint
+and `betterhitreg.mixins.json`, own `config/hitreg.properties`). It shares nothing with
+Aurora's framework. **No license/attribution headers exist in its tree** — do not
+redistribute without resolving that (see §9). When exploring, ignore that package unless
+tasked with it.
+
+### Build & target facts
+
+| Fact | Value |
+|---|---|
+| Build | Gradle + Fabric Loom (`fabric-loom-remap` 1.16-SNAPSHOT), `splitEnvironmentSourceSets()` — all code lives in the **client** source set |
+| Java | 21 |
+| Minecraft | **1.21.11** (`gradle.properties`) with official Mojang mappings |
+| Fabric API | 0.141.4+1.21.11; loader 0.19.2 |
+| Other deps | Cloth Config (`modApi`, used only by `util/ColorEntryHelper`); ModMenu in `suggests` only |
+| Entrypoints | `com.aurora.client.AuroraClient` + `you.jass.betterhitreg.BetterHitreg` |
+| Mixin configs | `aurora.mixins.json` (~57 entries), `betterhitreg.mixins.json` |
+| Run dir | `run/` at repo root is a live dev client dir (`run/config/aurora.json`, `run/config/aurora-worldmap/`, `run/config/profiles/`, `run/config/hitreg.properties`) |
+
+**Known version drift (harmless but confusing):** `gradle.properties` targets 1.21.11,
+`fabric.mod.json` declares `minecraft: "~1.21.8"`, and `build.gradle` run configs pin
+`-Dfabric.modVersion.minecraft=1.21.7`. Also the repo `LICENSE` is CC0 while
+`fabric.mod.json` says MIT. Don't "fix" these casually — ask.
+
+`build.gradle` deliberately disables `withSourcesJar()` — a sources jar in `mods/` crashes
+Mixin at preLaunch (this caused a real startup crash once; comment in build.gradle).
+
+---
+
+## 2. Package map
+
+All paths below are relative to `src/client/java/com/aurora/client/`.
+
+```
+AuroraClient.java          Mod entrypoint: registers keybinds, HUD callbacks, feature
+                           managers, HUD modules, tooltip component, shutdown-save hook.
+├── feature/               Feature SYSTEM (see §3). Feature.java = interface;
+│   └── impl/              29 runtime Feature singletons + helper classes (TickSync,
+│                           ThrottleDetector, EntityMovementSmoother, …).
+├── module/                PRESENTATION-ONLY view-models for the settings grid
+│                           (Module, ModuleManager). NOT runtime logic. Hardcoded
+│                           list of 33 ids — can drift from FeatureRegistry (§3).
+├── hud/                   HUD layer: HudRenderer (top-level callback), HudAnchor,
+│                           CrosshairRenderer, HitboxRenderer, BlockOverlayRenderer,
+│                           WorldLineRenderer (shared thick lines), WaypointRenderer,
+│                           SaturationOverlay (AppleSkin port), AlertManager/AlertRenderer,
+│                           CpsTracker, HudBackgrounds is in util/.
+│   ├── module/            13 draggable HUD modules + HudModule base + HudModuleManager.
+│   └── preview/           Container-preview tooltip components (shulker/ender chest).
+├── screen/                Aurora's own Screens + the feature UI registry:
+│   │                      AuroraScreen (main settings screen), AuroraTitleScreen,
+│   │                      FeatureDetailScreen, HudEditorScreen, WaypointManagerScreen,
+│   │                      ProfileManagerScreen, ColorPickerScreen,
+│   │                      ResourcePackBrowserScreen (Modrinth browser), FeatureRegistry
+│   │                      (UI metadata + settings widgets), FeatureTile, FeatureIcons,
+│   │                      FeatureMetadata, ModuleAccentColors, ModuleIconRegistry,
+│   │                      AuroraModMenuApi.
+│   └── setting/           ~20 FeatureSetting widget types (BooleanSetting, EnumSetting,
+│                           KeybindSetting, sliders, color pickers, PixelCanvasSetting for
+│                           the custom crosshair, ParticleConfigSetting, ThemePreview…).
+├── theme/                 THEME ENGINE (see §5): ThemeManager, ThemeResolver,
+│                          PaletteEngine, ResolvedTheme, ThemeToken (enum), ThemeDefinition,
+│                          ThemeMode, ThemeRoundness, ThemePresets, ThemeMigrator.
+├── ui/
+│   ├── component/         Shared themed widgets: Button (glass styles), ButtonWidget,
+│   │                      ToggleSwitch, Slider, SegmentedControl, RoundedPanel,
+│   │                      ColorSwatch, Widget base, ThemedScreen (marker interface).
+│   ├── render/blur/       Glass material: BlurPanelRenderer + BlurTestScreen (§6).
+│   └── util/              RenderUtil (AA primitives + capture), AuroraFontRenderer,
+│                          ItemSpriteRenderer (flat item icons), UiLayerCache (static-layer
+│                          raster cache), MaterialIconRenderer (native-res icon glyphs —
+│                          FreeType-rasterizes material-symbols codepoints at the exact
+│                          device-pixel size and blits 1:1; MC 1.21.11's font atlas is
+│                          point-sampled NEAREST and degrades when pose-scaled),
+│                          Animation (exponential approach animator).
+├── mixin/                 ~57 client mixins (features + UI infra; see §4/§6).
+├── config/                AuroraConfig (GSON → config/aurora.json, public fields = schema)
+│   └── profile/           ProfileManager: full-config snapshots as JSON per profile.
+├── modrinth/              Keyless Modrinth v2 REST client + WebP→PNG icon cache
+│                          (feeds ResourcePackBrowserScreen).
+├── worldmap/              World Map pipeline: WorldMapClient (orchestrator),
+│   ├── capture/           CaptureQueue + ChunkCapturer (budgeted, map-color + hillshade).
+│   ├── cache/             RegionCache (512×512 tiles, LRU DynamicTextures), OverviewCache.
+│   ├── storage/           WorldMapStorage (GZIP .wmr files, async IO, strict path sanitize).
+│   └── screen/            WorldMapScreen (pan/zoom viewer, waypoint creation).
+├── util/                  AuroraShapes (chamfered panels/gradients), AuroraSquircle +
+│                          RoundedRect (rounded AA), AuroraTheme (LEGACY static facade —
+│                          still the read path for ~30 files, written only by theme/),
+│                          AuroraKeybinds + AuroraKey, AnimationCurves, AuroraAnim,
+│                          HoverAnim, CachedValue, FramePacer, WorldScope, ColorEntryHelper,
+│                          AttackedPlayerTracker, render-state snapshot bridges, and
+│   └── reflex/            NVIDIA-Reflex-style latency reduction (CpuTimeCollector,
+│                           GpuTimeCollector, ReflexScheduler).
+you/jass/betterhitreg/     VENDORED third-party mod (§1) — separate world.
+```
+
+Resources: `assets/aurora/font/` (9 bundled TTFs incl. `material_symbols_rounded.ttf` icon
+font + JSON providers), `assets/aurora/textures/gui/module_icons/` (22 PNGs — plus two
+dev scripts and an SVG that shouldn't ship), `assets/aurora/lang/en_us.json` (only
+localization), `assets/minecraft/models/item/totem_of_undying.json` (fixes totem
+orientation in item frames). Root-level `subset_script.py` regenerates the icon font
+subset; `inspect_font3.py` is a stale one-off with a hardcoded Windows path.
+
+---
+
+## 3. How the feature system works — three parallel registries
+
+There is **no single registry**. Three structures must stay conceptually in sync:
+
+1. **`feature/FeatureManager`** — ~29 long-lived `Feature` singletons with
+   `onRegister()`/`onTick(Minecraft)` (interface `feature/Feature.java`).
+   `Feature.enabledByDefault()` exists but is **never read anywhere** (dead API).
+2. **`screen/FeatureRegistry`** — static UI metadata: **34 MODULES-tab + 11 SETTINGS-tab
+   tiles** (`FeatureMetadata`: id, display name, marketing description, enable
+   getter/setter, list of `FeatureSetting` widgets, `reset()`).
+3. **`module/ModuleManager`** — 33 hardcoded grid cards consumed by `AuroraScreen`.
+   A typo'd id here silently returns null metadata. (Counts already differ: 33 vs 34.)
+
+**Critical rule:** the *enabled state of every feature is a public boolean field on
+`AuroraConfig`* (e.g. `zoomEnabled`), read fresh each tick — never a flag on the Feature
+object. `FeatureMetadata` wraps `() -> cfg.xEnabled` / `v -> cfg.xEnabled = v`. Per-feature
+"Reset to defaults" works via `AuroraConfig.resetByPrefix("zoom")` (reflection over a
+`DEFAULTS` snapshot taken at class init).
+
+Several shipped features have **no Feature object at all** (pure mixin + config field):
+No Fog, Hit Color, Item Scale, Resourcepack Browser, Reflex, Hotbar Bounce, Keystrokes.
+
+**Persistence:** `AuroraConfig` — one pretty-printed GSON file at `<config>/aurora.json`.
+All state is public non-static fields; the class *is* the schema. Saves are **async** on a
+daemon executor (`Aurora-ConfigSave`) — blocking the tick thread on disk I/O caused real
+multiplayer disconnects once; `saveBlocking()` exists for the shutdown hook. Atomic writes
+(`.tmp` + `ATOMIC_MOVE`). Load runs `ThemeMigrator.migrateConfigJson` first and never throws.
+
+**Profiles:** `config/profile/ProfileManager` snapshots *every* profile-scoped config field
+(reflection; only `activeProfile` + playtime telemetry are excluded) into
+`<config>/profiles/<name>.json`; switch = save outgoing → apply → save pointer. Listeners
+(`onProfileApplied`) re-apply HUD layouts.
+
+**Keybinds** (`util/AuroraKeybinds` + raw `util/AuroraKey`): zoom **C**, FreeLook **V**,
+toggle sprint **J**, toggle sneak **K**, HUD editor **RShift**, world map **M** (all
+rebindable, synced two-way with the vanilla Controls screen). Unbound-by-default: hitbox
+toggle, totem reset, waypoint drop/manager, minimap toggle, blur test.
+
+**HUD modules** (`hud/module/`): 13 registered in `AuroraClient` — Info, CPS, Armor, Reach,
+ToggleSprintSneak, ToggleIndividual ×2 (sprint/sneak), Potion, Ping, TotemPop, Stats,
+Keystrokes, Minimap. Base class `HudModule`: 9-point anchor + offset + scale 0.5–3.0 +
+enabled/locked, mirrored into `cfg.moduleLayouts`. `HudEditorScreen` (RShift in-world):
+drag = move, corner-drag = resize, shift+click = settings, right-click = hide,
+shift+right-click = lock, X = disable.
+
+---
+
+## 4. Feature catalog
+
+### MODULES tab (34 tiles) — behavior + where the code lives
+
+| Feature (id) | What it does | Implementation |
+|---|---|---|
+| World Map (`world_map`) | Fullscreen pannable map; chunks captured in background (budgeted), stitched into persistent 512×512 region tiles that survive restarts; per-dimension browsing; waypoint creation on click | `feature/impl/WorldMapFeature`, `worldmap/*` (§2), mixin `ClientLevelWorldMapMixin` |
+| Theme (`theme`) | Single-accent theming engine (§5) | `theme/*`, `feature/impl/ThemeFeature` (per-tick `ThemeManager.sync()`) |
+| Zoom (`zoom`) | Hold-C FOV zoom with easing; scroll adjusts level (max 8×); sensitivity scaled inversely; all scrolling consumed while zoomed | `ZoomFeature`, `GameRendererMixin` (FOV), `MouseMixin` (scroll) |
+| Full Bright (`full_bright`) | Gamma 100–1500% via private backing value; saves/restores user gamma, re-asserts each tick | `FullBrightFeature`, `SimpleOptionMixin` (`@Accessor` force-set) |
+| No Fog (`no_fog`) | Multiplies atmospheric fog distance 1–100× | `NoFogMixin` only (no Feature object) |
+| Pack Tweaks (`pack_tweaks`) | Bundle: totem particle size 25–100%; first-person shield styles (VANILLA/LOWERED/SIDE/COMPACT); shield-status tints; water & lava clarity fog; hide lava orange overlay | `TotemParticleMixin`, `HeldItemRendererTweaksMixin`, `UnderwaterClarityMixin`, `LavaClarityMixin`, `LavaOverlayMixin` |
+| Entity Health (`player_health`) | HP above nearby entities (number or heart row); "only attacked" mode | `PlayerHealthLabelMixin` + `LivingEntityRendererExtractMixin` + `ClientPlayerAttackMixin` + `util/AttackedPlayerTracker` + `util/AuroraHealthSnapshots` |
+| FreeLook (`free_look`) | Hold-V detached camera (3rd-person forced); adapted from Freelook++ (MIT, credited in-file) | `FreeLookFeature`, `EntityMixin`, `CameraUpdateMixin` |
+| Saturation Bar (`saturation_bar`) | Hidden saturation pips over hunger bar; AppleSkin port (Unlicense, credited) | `hud/SaturationOverlay`, `InGameHudFoodMixin` |
+| Block Overlay (`block_overlay`) | Custom block-selection outline (color, 1–6px width, see-through, face fill; SOLID or RAINBOW) | `hud/BlockOverlayRenderer` (Fabric `BEFORE_BLOCK_OUTLINE`), `BlockOverlayFeature`, `VertexRenderingMixin` (vanilla outline) |
+| Toggle Sprint/Sneak (`toggle_sprint_sneak`) | Press-once sprint/sneak; holds vanilla keys down each tick; 3 HUD display modes | `ToggleSprintFeature`, `hud/module/ToggleSprintSneakModule` + `ToggleIndividualModule`×2 |
+| Alerts (`alerts`) | Popup warnings: low durability (per-slot edge), low hunger, effect expiry; optional sound + test | `ArmorAlertFeature` + `StatusAlertFeature` → `hud/AlertManager`/`AlertRenderer` |
+| Crosshair (`crosshair`) | Preset or CUSTOM painted crosshair with a **free-form canvas** (any W×H up to 128; dims live in `crosshairCustom{Width,Height}` + flat `boolean[]` pixels, resolved via `util/GridDims`); indicator crosshair when entity attackable; deliberate half-pixel centering fix. Canvas editor renders through a cached `DynamicTexture` (`ui/util/CanvasTexture` — one blit/frame, re-raster only on edit; replaced a per-cell fill loop that cost ~12.8 ms/frame at 33×33), HUD path merges lit cells into run-length fills, and growing the grid first runs a **measured** cost benchmark on the player's machine (`[canvas-cost]` log) with an apply-anyway warning — never hardware-name heuristics | `hud/CrosshairRenderer`, `PixelCanvasSetting`, `CanvasTexture`, `InGameHudMixin` (vanilla suppression) |
+| Hitbox (`hitbox`) | Custom entity hitboxes (self/target colors, eye-line, look line, width, see-through). Renders at plain vanilla interpolation — the smoother was **deliberately reverted** (desynced from model) | `hud/HitboxRenderer` (AFTER_ENTITIES) + `WorldLineRenderer`, `HitboxFeature`, `EntityRenderDispatcherMixin` |
+| Hit Color (`hit_color`) | Recolors hurt flash (port of harimasa/HitColor, MIT, credited) | `MixinOverlayTexture`, `EquipmentLayerRendererMixin`, `util/OverlayReloadListener` |
+| Info HUD (`info_module`) | Corner readout, 13 individually toggleable rows (FPS/XYZ/time/facing/biome/light/memory/ping/CPS/playtime…) | `hud/module/InfoModule`, `PlaytimeFeature` (per-world buckets) |
+| CPS (`cps`) | L/R clicks-per-second; counts from raw GLFW callback (polling caps at 20) | `CpsModule`, `CpsTracker`, `ClickTrackerFeature`, `MouseClickTrackerMixin` |
+| Armor HUD (`armor_hud`) | 4 pieces + durability text/bar, horizontal/vertical, VANILLA slot background | `hud/module/ArmorModule` |
+| Reach Display (`reach_display`) | Last attack distance; holds value through smoothstep fade. Polls attack key — no mixin | `ReachModule`, `ReachTrackerFeature` |
+| Potion HUD (`potion_hud`) | Replaces vanilla status strip: icon/name/Roman level/countdown rows; panel fades after expiry | `PotionModule`, `InGameHudPotionOverlayMixin` |
+| Ping (`ping`) | Corner ping HUD + numeric ping in tab list + colored ping under nametags (one toggle, three sub-flags) | `PingModule`, `PlayerListHudMixin`, `PlayerEntityRendererMixin` (also appends totem pops to nametags) |
+| Totem Pop Counter (`totem_pop`) | Your (and optionally others') totem activations; reset keybind; nametag counts | `TotemPopFeature`, `ClientPacketListenerEntityEventMixin`, `TotemPopModule` |
+| Stats Overlay (`stats`) | Session kills/deaths/K/D/time; kills are heuristic (strike → 4s death window) | `StatsTrackerFeature`, `StatsModule` |
+| Waypoints (`waypoints`) | Per-world persistent markers: beacon beam and/or highlight slab + billboard labels; auto death waypoints (replace-previous or capped) | `WaypointFeature`, `hud/WaypointRenderer` (two passes), `WaypointManagerScreen` |
+| Minimap (`minimap`) | HUD minimap; rotation baked into the sampling pass (cheap); biome tint, hillshade, depth water; waypoint/entity dots, compass; can read World Map's region cache instead of live chunks | `hud/module/MinimapModule` (805 lines), `MinimapFeature`, `worldmap/WorldMapClient.sampleSurfaceAbgr` |
+| Container Preview (`container_preview`) | Tooltip grid for shulker contents + ender chest (snapshot while chest screen open — 1.21.x limitation) | `ItemTooltipImageMixin`, `ItemContainerContentsTooltipMixin`, `hud/preview/*` |
+| Item Physics (`item_physics`) | Dropped items lie flat, tumble by motion | `ItemEntityRendererExtractMixin` + `ItemEntityRendererSubmitMixin` + `util/AuroraItemPhysicsSnapshots` |
+| Particles (`particles`) | Per-particle-type visibility/scale/ARGB tint with search. Visibility gated at HEAD of `createParticle` (RETURN is too late) | `ParticleControlFeature`, `ParticleEngineMixin`, `ParticleAccessor` |
+| Item Scale (`item_scale`) | Per-item held scale/rotation/translation; per-hand defaults | `HeldItemRendererTweaksMixin`, `setting/ItemScaleSetting`, new `ui/util/ItemSpriteRenderer` + `mixin/ItemStackRenderStateAccessor` (untracked, uncommitted — see §8) |
+| Resourcepack Browser (`resourcepack_browser`) | Modrinth search/install for resource packs into `resourcepacks/` (never auto-enables) | `ResourcePackBrowserScreen`, `modrinth/ModrinthApi`, `modrinth/PackIconCache` |
+| Minecraft Reflex (`reflex`) | Reflex-style latency reduction: GL timer-query GPU time + EWMA CPU frame time → hold CPU before input sampling | `ReflexMinecraftMixin`, `util/reflex/*` |
+| Animations (`animations`) | Swing curve + 1.8 swing arc, view-bob curve/amplitude, 1.7/1.8 damage tilt, idle held-item sway, frame-rate-independent entity movement smoothing (tau scales with server packet bundling) | `HeldItemRendererMixin`, `GameRendererBobMixin`, `DamageTiltMixin`, `LivingEntityRendererExtractMixin` + `EntityMovementSmoother`, `util/AnimationCurves`, cross-cutting `ThrottleDetector` |
+| Hotbar Bounce (`hotbar_bounce`) | White pulse outline on hotbar slot when stack count grows | `HotbarItemBounceMixin` → `HotbarBounceTracker` |
+| Keystrokes (`keystrokes`) | Key-panel overlay: WASD/mouse/CPS/space/sneak/sprint + up to 12 custom keys; animated accent press | `hud/module/KeystrokesModule` |
+
+### SETTINGS tab (11 tiles)
+
+Custom Title (`custom_title` — themed title screen + starfield + themed vanilla buttons on
+multiplayer/world-select via `TitleScreenMixin`, `AuroraTitleScreen`,
+`SelectionScreenBackgroundMixin`, `AbstractButtonMixin`), Text & Fonts (`text_fonts` —
+bundled Google fonts scoped OFF/Aurora-only/ALL via `MixinFont` + `AuroraFontRenderer`),
+Interface (`interface` — FPS cap for Aurora screens), Smooth Camera, Frame Pacer
+(`RenderSystemMixin` + `util/FramePacer`, replaces vanilla `limitDisplayFPS`),
+Low Latency (VSync-off, zero-latency camera, adaptive render sleep; **`highFrequencyInput`
+is advertised but has no implementation**), Tick Sync (retunes client tick rate to entity
+packet arrival; `TickSyncNetworkMixin`), Decoupled Input (per-frame cursor delta),
+Drag-to-Reorder Servers (`ServerListDragReorderMixin` — 3-phase animated drag),
+Compliance Mode, Accessibility (colorblind LMS daltonization matrices).
+
+### Cross-cutting systems worth knowing
+
+- **`ThrottleDetector`**: measures server movement-packet bundling (median inter-move tick
+  gap, 32 samples) → factor 1–6. Feeds `EntityMovementSmoother` only. Was also feeding
+  hitbox smoothing, which was reverted (§9).
+- **`ComplianceModeFeature`**: auto-disables reach/toggle-sprint/hitbox/keystrokes/particles
+  on a built-in list of strict servers (hypixel etc.); restores on leave; user safe-list
+  overrides.
+- **`TickSyncFeature`**: adapts *client* tick rate toward server packet timing; resets on
+  join/disconnect.
+- **WorldScope** (`util/WorldScope`): stable per-world id (`mp:<ip>` / `sp:<level>`) keys
+  waypoints, playtime, and worldmap storage folders.
+
+---
+
+## 5. Theme/token architecture (COSMIC-style)
+
+**The one-sentence model:** the user picks ONE accent color (+ mode, roundness, opacity);
+`PaletteEngine` derives every UI color from it; tokens are read through a cached
+`ResolvedTheme`; legacy statics are a write-only-from-one-place facade.
+
+### Data flow (who writes what)
+
+```
+AuroraConfig.theme : ThemeDefinition   (accent int, ThemeMode, ThemeRoundness, GlassStyle, backgroundOpacity)
+        │  ThemeFeature.onTick → ThemeManager.sync()   (6-field dirty-check per tick)
+        ▼
+ThemeManager.reload()  →  ThemeResolver.resolve(def, cfg.themeEnabled)
+        ▼                                     │
+PaletteEngine.derive(accent, mode)  ←─────────┘   pure function, no MC imports
+        ▼
+ResolvedTheme  (immutable ordinal-indexed int[]; volatile static in ThemeManager)
+   ├─ color(ThemeToken)      — one array access, zero alloc, safe from any thread
+   ├─ surfaceColor(token)    — token RGB with WINDOW_FILL's opacity-driven alpha
+   ├─ stainedTint()          — accent RGB at max(WINDOW_FILL alpha, floor 140)
+   ├─ generation()           — AtomicLong stamp; key any theme-derived pixel cache off this
+   └─ project()  ──────────► AuroraTheme statics (util/AuroraTheme.java)
+```
+
+- **`ThemeToken`** (enum, ~40 tokens): named by *role* — `ACCENT` family, surfaces
+  (`SURFACE`, `WINDOW_FILL`, …), tiles, backdrop, `ON_*` text tokens (Material convention),
+  `BORDER*`, fixed-hue `SEMANTIC_ERROR/SUCCESS/WARNING` (deliberately NOT accent-derived),
+  `OVERLAY_DIM`/`ON_OVERLAY`, `HUD_BACKDROP_*`.
+- **`ThemeManager.reload()`** re-reads config → resolve → project → bump generation. Call
+  on config load, profile apply, and any theme edit. **`sync()`** is the per-tick cheap
+  dirty-check (accent/mode/roundness/opacity/enabled) that also catches profile switches.
+- **`PaletteEngine`** rules: backgrounds take accent *hue only* with mode-locked lightness
+  (dark ~6–15%, light ~90–97% — a near-white accent can't wash out the UI); text is
+  contrast-checked via relative luminance; simple HSL, never throws on any input.
+- **`ThemeResolver`** has two paths: derived palette (`themeEnabled`) and a verbatim fixed
+  *factory palette* (theme off — intentionally not the derived form of the defaults).
+  **`applyBackgroundOpacity` stamps the opacity onto the `WINDOW_FILL` token's ALPHA ONLY —
+  this is the single opacity application point for the whole UI (§6).**
+- **`ThemeRoundness`** (Stage 3's non-color token): ROUND/SLIGHTLY_ROUND/SQUARE →
+  `RADIUS` 10/6/0, `RADIUS_LARGE` 14/8/0, `RADIUS_SMALL` 6/3/0, projected like colors.
+  Knobs/thumbs stay circular in every mode.
+- **`GlassStyle`** (the second non-color token): FROSTED (default) / TRANSPARENT.
+  A *rendering-technique* switch, not a look of its own — TRANSPARENT makes
+  `BlurPanelRenderer.renderPanel` decline in a single early-return guard, so every
+  glass consumer takes the flat fallback it is already required to draw (§6
+  fallback contract). No call site knows the setting exists. Corner Style and
+  Background Opacity keep their exact meanings in both styles (they live in the
+  caller's fill, which the renderer never touches), and TRANSPARENT pays none of
+  the capture/blur/readback cost. Surfaced as a `SegmentedSetting` ("Glass Style")
+  between Corner Style and Background Opacity on the Theme screen.
+- **`ThemePresets`**: 9 curated accents (Blue…Teal; RED `0xFFEB0029` "OnePlus Red" is
+  factory default). No preset ids stored — just RGB values.
+- **`ThemeMigrator`**: one-way sanitize/migrate of legacy JSON (`themePrimaryColor` →
+  structured `theme` object; drops the obsolete secondary seed). Used by config load AND
+  profile apply. Never throws.
+- **`util/AuroraTheme` is NOT a legacy dead system** — it's the *Stage 1 projection
+  facade*: ~30 render files still read `AuroraTheme.X` statics for pixel-identical output,
+  and `ResolvedTheme.project()` is **the only writer** of those statics. Migrating readers
+  to `ThemeManager.color(token)` is future work. Gotcha: the `IOS_BLUE`/`ACCENT_*` names
+  actually hold OnePlus **Red**; `GREEN_ACCENTS_ENABLED` is hardcoded `false`.
+
+### Stage history (useful context in javadocs)
+
+Stage 1 = token enum + projection facade; Stage 2 = single-accent `PaletteEngine` +
+light mode; Stage 3 = roundness token; Stage 4 = screen consolidation (`AuroraScreen` is
+the single canonical Modules+Settings screen).
+
+### Shared component framework (`ui/component/`)
+
+`Widget` base; `Button` (painter-based, hover/press spring scale, `GlassStyle` OFF /
+NEUTRAL / STAINED — §6), `ButtonWidget` (Screen-widget wrapper forwarding the same
+painter), `ToggleSwitch`, `Slider`, `SegmentedControl` (glass track; neutral unselected /
+accent-stained selected), `RoundedPanel` (themed window panel), `ColorSwatch`
+(transparent-color checkerboard, corner-clipped to the rounded rect), `ThemedScreen`
+(marker — opts a screen's vanilla `EditBox`es into the mod-wide themed/glass search bar
+via `EditBoxMixin`).
+
+Rendering utilities: `RenderUtil` (float-precision AA rounded rects/circles/outlines +
+`beginCapture`/`RectSink` used by `UiLayerCache`), `AuroraShapes` (chamfered-octagon
+iOS-style panels, gradients, shadows — note: *chamfered*, not truly rounded),
+`RoundedRect`/`AuroraSquircle` (true rounded AA fills/masks; profiling said rounded fills
+were the biggest GUI cost), `UiLayerCache` (rasterizes static screen chrome once into a
+`DynamicTexture`, blits per frame; version-keyed dirty), `AuroraFontRenderer` (applies
+bundled TTFs as text `Style`; `isRenderingAuroraUI` flag scopes the custom font),
+`ItemSpriteRenderer` (crisp flat item icons via `ItemStackRenderStateAccessor`, with 3D
+fallback for tinted/multi-layer models).
+
+**Toggles and sliders are always opaque** (theme tokens, never glass) — deliberate, part
+of the glass conventions in §6.
+
+---
+
+## 6. Glass material system — how it works, conventions, rollout status
+
+`ui/render/blur/BlurPanelRenderer` (+ test harness `BlurTestScreen`, opened via the
+unbound `blur_test` keybind in-world). Read that class's javadoc before touching anything
+in it — it encodes hard-won lessons.
+
+**History:** an earlier, more ambitious glass attempt (SDF-normal lighting, specular,
+refraction/distortion, dome/bevel geometry) *failed and was removed*. The current renderer
+is a deliberately conservative rebuild. Refraction in particular was "never once cleanly
+confirmed working" and is explicitly deferred to a standalone future task — **not built,
+by decision**. What exists is a two-term *lighting impression*: a directional face
+gradient + a fixed-width directional border stroke against one fixed light
+(`normalize(0.25, -1.0)`, i.e. up and ~14° right). Raised vs depressed = simple inversion
+of both terms. The rim is a TWO-HALF system driven by the one Background Opacity value:
+the IN-GLASS stroke (composite pass, `uRimBlend` = resolved opacity) is the bright light
+catch at low opacity and retires into the panel's own per-pixel base as opacity rises;
+the ABOVE-FILL half, `BlurPanelRenderer.drawRimFinish` (call right after each glass tint
+fill), draws a DIRECTIONAL rounded border in the current accent's pastel
+(`ResolvedTheme.rimPastel()`
+— accent lightened 65% toward white, derived once per resolve) with alpha = opacity² —
+negligible while translucent, a SOLID fully-opaque pastel stroke at 100% opacity, because
+an opaque fill occludes anything left inside the glass texture. The finish's directionality
+is the composite shader's own border-stroke math (SDF band with soft internal taper ×
+light-facing smoothstep), rasterized once per shape into a cached white mask texture and
+tinted with pastel × opacity at blit time — the opacity behavior modifies the directional
+falloff, never replaces it. The face gradient is
+deliberately NOT part of either half.
+
+**Pipeline:** blit-capture a padded region of the main render target (`glBlitFramebuffer`)
+→ quarter-res two-pass separable Gaussian → composite pass (rounded-rect coverage +
+lighting) → `glReadPixels` → `NativeImage`/`DynamicTexture` → ordinary `GuiGraphics.blit`.
+Straight (non-premultiplied) alpha; RGBA8 intermediates on purpose. Readback ~1–2 ms per
+panel — accepted for simplicity/robustness.
+
+### The conventions (violating these has caused real bugs)
+
+1. **Single opacity application point.** The theme's Background Opacity exists ONLY as the
+   alpha of the `WINDOW_FILL` token (stamped by `ThemeResolver`). The glass pipeline adds
+   no opacity of its own; the caller tints the blur with an ordinary translucent
+   `WINDOW_FILL` fill. Never multiply a second opacity factor anywhere in this pipeline —
+   a second application point is *the* bug class that killed the previous attempt.
+   (The rim stroke's convergence target is the one deliberate consumer of that same
+   single value — a lighting-term derivation, not an alpha change; see the pipeline
+   paragraph above.)
+2. **Raised vs depressed.** Windows/main containers = DEPRESSED (recessed); interactive
+   controls (buttons, rows, chips, segments, search fields) = RAISED. Same two lighting
+   terms, inverted.
+3. **Neutral vs stained.** Neutral glass tints with `WINDOW_FILL` (tracks the opacity
+   slider). Accent-stained glass (`Button.GlassStyle.STAINED` /
+   `ThemeManager.stainedTint()`) is ONLY for selected/primary elements (toggle-ON track,
+   slider fill, selected segment, primary button, selected row). Stained alpha =
+   `max(windowAlpha, 140)` — a fixed visibility floor so the tint reads at low opacity;
+   it is a style constant, **not** a second opacity control. Content drawn ON a stained
+   surface (labels, icons) takes `ON_ACCENT` — the token `PaletteEngine.pickOnColor`
+   contrast-derives against that same accent reference — never the accent itself
+   (raw-accent glyphs were invisible on stained tiles; fixed 2026-08-29 in
+   `AuroraScreen.drawTileIcon`/`drawLayoutButton`). Scope note (user ruling, 2026-08-29):
+   a full-width list row reads as a CONTAINER, not a selected control — the Profiles
+   screen's active row took a whole-row `stainedTint` and was twice flagged as an
+   accent-tinted container. On container-like rows, mark selection with a compact accent
+   element (the Active badge), never a whole-row tint.
+4. **Always opaque, never glass:** toggles, sliders, text entry that isn't a search field
+   (e.g. the hex field), and the color picker's editing surfaces (pad/strips/swatch —
+   glass would blur/tint the very values being edited).
+5. **World vs no-world capture.** With no level loaded the main render target holds no
+   valid world, so `renderPanel` **declines** (menu-context guard) and the caller must
+   draw its flat themed fallback + keep the vanilla backdrop. Screens that want glass
+   over the live world override `renderBackground` to skip the vanilla backdrop sandwich
+   when `minecraft.level != null` (see `AuroraScreen.liveWorldBackdrop()` and copies in
+   `ProfileManagerScreen`, `ColorPickerScreen`, `HudEditorScreen`,
+   `FeatureDetailScreen`). Every glass integration follows the same **fallback contract**:
+   decline (menu, screenshot suppression, failure) ⇒ complete flat look returns.
+6. **Layering contract.** Glass draws BEFORE the screen's `OVERLAY_DIM` fill (a "pre-dim
+   pass"), so the dim veils the glass like it veils the world; the recorded boolean
+   switches post-dim content between glass and flat fallback paths.
+7. **Per-element UV mapping.** Each panel samples only its own sub-rect of the shared
+   blur chain (`uUvRect`); a full `[0..1]` UV sweep would put the whole capture into a
+   small element — "the UV bug" this contract exists to prevent (see comments near the
+   composite shader).
+8. **Screenshot (F2) interlock.** Vanilla's grab path leaks `GL_PACK_*` state; a stale
+   `PACK_ROW_LENGTH` turned this pipeline's `glReadPixels` into an out-of-bounds native
+   write (real JVM crashes). Fixes, all in place: neutral pixel-store state at pipeline
+   entry/exit, pack-buffer bindings forced to 0, and `ScreenshotMixin` →
+   `noteScreenshotGrab()` suppressing all glass for 400 ms around a grab (callers fall
+   back opaque for that frame). `[S]` on `BlurTestScreen` is a permanent crash canary.
+9. **Focus/hover on glass** is carried by the caret/text color/hairline focus ring/scale —
+   never by changing the tint. The glass rim REPLACES the outline (no double outline).
+10. **Never destroy a texture mid-frame.** 1.21.11's `GuiGraphics` RECORDS blits into a
+   deferred `GuiRenderState` and there is no flush API, so a texture blitted earlier in
+   the frame is still pending when you close it — the driver then binds a deleted name
+   (`GL_INVALID_OPERATION in glBindTexture(non-gen name)`) at submit. This is the same
+   rule the output pool documents; the rim-mask cache violated it and cost a whole
+   session of glass (see §9, "Reset kills glass"). Queue evictions and free them in
+   `beginFrame()`.
+11. **Never poll `glGetError` without draining first.** It reports the OLDEST queued
+   error from ANY GL call, so an error raised by foreign code (or an earlier frame) is
+   misattributed to yours. This pipeline treats a GL error after its capture blit as
+   session-ending, so `Frame.run` drains the queue before touching GL.
+
+### Per-screen rollout status — verified in code, 2026-08-29
+
+Enrollment history: glass started as a Theme-screen pilot, then a staged
+`GLASS_PILOT_IDS` set (`theme`, `block_overlay`, `pack_tweaks`) in
+`FeatureDetailScreen`. **The uncommitted working tree retires that mechanism** — glass
+flags now default ON mod-wide (see §8). Status below is the *working tree*, with the
+commit state noted where it differs.
+
+| Screen | Status | Detail |
+|---|---|---|
+| `AuroraScreen` (main settings) | **Full** (committed) | Depressed glass window + raised glass tiles, search chip, profile button, bottom buttons; world-gated |
+| `FeatureDetailScreen` (all 45 detail views) | **Full** (uncommitted) | Retires `GLASS_PILOT_IDS`; depressed glass window + glass Done/Reset for every feature |
+| `ProfileManagerScreen` | **Full** (uncommitted changes) | Rows are this screen's containers: DEPRESSED neutral glass (`WINDOW_FILL` only; the committed active-row `stainedTint` read as an accent-tinted container — user-flagged twice). Selection shown solely by the accent Active badge; New Profile/Done/Duplicate/Create all neutral raised |
+| Theme screen widgets (`ThemePreviewSetting`, `SegmentedControl`) | **Full** (committed; the original pilot) | Preview card/chips/buttons glass; segments neutral-unselected/stained-selected |
+| `EditBoxMixin` search fields (Particles, Item Scale, ResourcePacks, Modules grid, + themed vanilla screens) | **Full** (uncommitted) | Raised glass, focus = caret + accent hairline ring, tint constant; flat fallback without a world |
+| Setting widgets: `EnumSetting` (button + expanded popup), `KeybindSetting`, `KeyListSetting`, `ItemScaleSetting`, `ButtonSetting`, `SegmentedSetting` | **Full** (uncommitted — defaults flipped opt-in → default-on) | `FeatureRegistry` still contains now-redundant `.glassButton(true)`/`.glassSegments(true)` "pilot" calls (lines ~86, 96, 180, 292) — harmless cleanup candidates |
+| `ColorPickerScreen` | **Chrome-only, by design** (uncommitted additions) | Apply = STAINED, Cancel = neutral raised; editing surfaces + hex field deliberately opaque |
+| `HudEditorScreen` | **Chrome-only** (uncommitted additions) | Two floating action buttons, neutral raised ("navigation action, not a primary state") |
+| `WaypointManagerScreen` | **Full** (uncommitted) | Raised glass rows + header/add buttons |
+| `ResourcePackBrowserScreen` | **Full** (uncommitted, 2026-09-04) | Depressed glass sidebar (pre-dim pass, `SURFACE` tint, `sidebarGlass` flag) + detail modal; raised glass cards (per-card `renderPanel`, hover-lerp tint kept, manual shadow + `topSheen` dropped); active category tab = accent-stained raised glass (inactive tabs stay flat by design — small transient rows inside an already-glass container); install/Retry/Close buttons are the shared `Button` painter (Install = stained primary, Retry = destructive, progress/Done = neutral; **success-green is not expressible through `Button` — mapped to stained/neutral, flagged**); `renderBackground` world-gating added; every radius now a token (`RADIUS_LARGE`/`RADIUS`/`RADIUS_SMALL`; only scrollbar-thumb capsule literals remain). Title removed + count moved below the search bar (was overlapping it). Thumbnails, search field, toast, scrollbars stay opaque/unchanged per convention. Verified in-client at ~7/25/93% opacity (rim directional throughout), ROUND + SQUARE |
+| `WorldMapScreen` | **Not started** | Flat `RoundedPanel` prompt; only the name field is themed (via `EditBoxMixin`) |
+| `AuroraTitleScreen` | **Not started** | Zero glass references |
+| Toggles, sliders, HUD modules, tooltips/dropdowns-as-tooltips | **Never glass, by convention** | Opaque token surfaces |
+
+`BlurTestScreen` is the development harness (A/B radius toggles, synthetic capture FBO,
+`CaptureSource` override, lighting presets) — not user-facing.
+
+---
+
+## 7. On-disk artifacts (dev run dir: `run/`)
+
+- `config/aurora.json` — the entire config (§3).
+- `config/profiles/*.json` — profile snapshots.
+- `config/aurora-worldmap/<scope>/<dim>/r.X.Z.wmr` — GZIP region tiles (magic `AWMR`,
+  per-chunk timestamps + 512×512 ABGR pixels). Paths pass a strict `[a-z0-9_.-]` sanitize
+  — raw `WorldScope` names with spaces once crashed Windows (`InvalidPathException`) and
+  killed the previous world-map implementation.
+- `config/hitreg.properties` — the vendored BetterHitreg mod's separate config.
+
+---
+
+## 8. Current in-flight work (uncommitted, as of 2026-08-29)
+
+The repo has a single commit ("Initial commit"); **all current work is the uncommitted
+working tree** (~15 files, +415/−157) plus untracked files. The working tree IS the
+"glass everywhere" rollout wave:
+
+- `FeatureDetailScreen` — retires `GLASS_PILOT_IDS`, glass window + buttons for all
+  detail screens.
+- `EditBoxMixin` — search fields become raised glass (the one canonical search-bar
+  implementation).
+- `EnumSetting`, `KeybindSetting`, `KeyListSetting`, `ItemScaleSetting`, `ButtonSetting`,
+  `SegmentedSetting` — glass defaults flipped on (popups/keys/add-buttons/segments).
+- `ColorPickerScreen`, `HudEditorScreen`, `WaypointManagerScreen` — glass chrome added
+  (buttons/rows) + `renderBackground` world-gating.
+- `ColorSwatch` — checkerboard now clipped to rounded-rect corners (bled at any non-zero
+  radius before).
+- `BlurPanelRenderer` (+ `ResolvedTheme.rimPastel()`, wired at ~15 glass call sites) — the
+  rim is a two-half system: the in-glass light catch (real composite shader, `uRimBlend`)
+  retires into the panel base as opacity rises, and `drawRimFinish` draws a DIRECTIONAL
+  pastel-of-accent stroke (shader-identical SDF-band × facing math, rasterized into a
+  cached mask texture, tinted pastel × opacity² at blit time) ABOVE the caller's fill —
+  fully opaque at 100% Background Opacity, brightest facing the light (verified offscreen
+  at 5/25/50/75/100% in Dark + Light × red/blue/green; edge profile T≫R≫L≈B=0).
+- `ProfileManagerScreen` — rows switched to neutral DEPRESSED glass; selection carried
+  only by the Active badge; New Profile/Duplicate/Create demoted STAINED → neutral
+  raised. Investigation (2026-08-29): the twice-flagged active-row tint had **never been
+  fixed** — the file was byte-identical across every dangling checkpoint and the initial
+  commit; the earlier round only ever neutralized the row's action buttons.
+- `AuroraScreen` — sidebar tabs repositioned onto one shared pitch (`TAB_FIRST_Y`/
+  `TAB_PITCH`; the pre-Profiles gap was double) and the scrollbar track re-anchored to
+  the shared content viewport (`viewTop()`/`viewBot()`; it previously ran to
+  `mainY() + BOX_H - 10`, 2px past the window border).
+- `aurora.mixins.json` — registers the new `ItemStackRenderStateAccessor`; companion new
+  file `ui/util/ItemSpriteRenderer.java` (flat item icons for `ItemScaleSetting`) — both
+  **untracked**.
+- `ResourcePackBrowserScreen` — full glass rollout applied 2026-09-04 (see §6 table);
+  the old staged `ResourcePackBrowserScreen-part1.txt` + `STAGING-NOTES-…txt` were an
+  earlier partial approach (pre-`drawRimFinish`, hardcoded radii) and have been **deleted**
+  — the applied implementation supersedes them.
+- `gradlew` shows a permission-bit-only modification.
+- Crosshair canvas rework (2026-08-29, later the same day): `PixelCanvasSetting` now renders
+  through a cached `DynamicTexture` (`ui/util/CanvasTexture`; measured fix for a per-cell fill
+  loop costing ~12.8 ms/frame at 33×33 → ~0.006 ms/frame), the 5/11/25/33 preset tabs are
+  replaced by free-form W×H fields (cap 128, hard-rejected with a message) plus a Default
+  button that restores the vanilla 15×15 crosshair shape (pattern replicated from
+  `hud/crosshair.png`), `CrosshairRenderer.drawCustom` takes explicit W×H (`util/GridDims`
+  resolves legacy perfect-square arrays) and merges lit cells into run-length fills, and
+  growing the grid runs a measured-on-this-machine cost benchmark with an apply-anyway
+  warning (`[canvas-cost]` log lines). New config fields:
+  `crosshairCustom{Width,Height}`, `crosshairIndicatorCustom{Width,Height}`.
+
+Before starting new work, decide with the user whether to commit/land this wave first.
+
+---
+
+## 9. Known outstanding work, dead code, and hazards
+
+**Incomplete / follow-up candidates**
+- The shared `Button` has no success variant, so `ResourcePackBrowserScreen`'s
+  Install/Installed states render accent-stained/neutral instead of success-green
+  (§6 table). A `Button.success`-style variant would restore the old semantics.
+- FeatureRegistry's redundant `.glassButton(true)`/`.glassSegments(true)` pilot calls.
+- `highFrequencyInput` (Low Latency) is advertised in the UI with no implementation.
+- Accessibility colorblind correction: matrices are computed but the screen-reader item is
+  deferred and the scroll-remap tick is a documented no-op.
+- ModMenu integration is minimal (reflective shim; "Mods" button retired as duplicating
+  Aurora Settings).
+
+**Fixed, with a standing judgment call**
+- *"Reset kills glass for the session"* (fixed 2026-09-04): `BlurPanelRenderer`'s
+  rim-mask cache enforced its 16-entry cap with a wholesale `releaseRimMasks()` called
+  mid-frame. Masks already blitted into the deferred `GuiRenderState` were destroyed
+  while pending → `GL_INVALID_OPERATION in glBindTexture(non-gen name)` at submit → the
+  error sat in the queue until the next frame's `Frame.capture()` polled `glGetError`,
+  misattributed it to its own `glBlitFramebuffer`, threw, and latched
+  `permanentlyDisabled` for the session (every panel mod-wide then took its flat
+  fallback — "the UI went flat and stayed flat"). Theme **Reset** reproduced it because
+  it changes `roundness`, and every mask key is radius-derived: a whole new generation
+  of shapes is inserted on top of the existing set and crosses the cap mid-frame.
+  Fix: cold-only eviction + destruction deferred to `beginFrame()`, plus an error-queue
+  drain so the latch can only ever fire on our own errors. The latch itself was
+  deliberately left intact.
+- **Open judgment call:** `permanentlyDisabled` still has no recovery short of a full
+  client restart (`shutdown()` clears it, but that only runs on shutdown/resource
+  reload). One transient failure anywhere costs glass for the rest of the session. A
+  world-load/leave reset is the obvious candidate; it was NOT implemented unilaterally
+  because re-arming a latch that exists to stop a misbehaving GL call from corrupting
+  renderer state trades a known-safe degraded mode for a possible crash loop. Decide
+  before adding one.
+
+**Deliberate reverts (don't "restore" casually)**
+- Hitbox positional smoothing: `HitboxPositionSmoother` exists but `HitboxRenderer`
+  deliberately renders at vanilla interpolation — the smoother desynced boxes from models.
+  `ThrottleDetector.sample()` still runs; its output now only scales entity-model smoothing.
+- `WindowMixin` / `RenderTargetMixin` are registered but intentionally EMPTY (abandoned FSR
+  idea; 1.21.11 GPU API rewrite crash) — kept for config compatibility.
+- `MixinGuiGraphics` is an unregistered stub (superseded by `MixinFont`).
+
+**Dead code / drift hazards**
+- `MultiplayerScreenMixin` (refresh-all + auto-ping) and `MultiplayerServerListWidgetMixin`
+  (numeric ping on server list rows) are complete but **not listed in `aurora.mixins.json`**
+  — they never load. Adding them is a behavior change, not a no-op fix.
+- `timeChangerEnabled` + `TimeOfDayPreset` in config: no consumers.
+- `Feature.enabledByDefault()`: never read. `AutoSprintFeature`: dormant stub.
+  `FpsDisplayFeature`: no-op marker (FPS lives in Info HUD).
+- `ColorEntryHelper.addPickerButton`: builds nothing (stub).
+- `module/ModuleManager` (33 hardcoded cards) vs `FeatureRegistry` (34) — already off by
+  one; ids here silently fail. Consider deriving one from the other someday.
+- ComplianceMode's `hitboxFeatureEnabled` config field is an orphan (force-false path
+  writes fields renderers don't read for that one).
+- Four different animation helpers (`util/AnimationCurves`, `util/AuroraAnim`,
+  `util/HoverAnim`, `ui/util/Animation`) — pick the right one per context.
+- `AuroraTheme`'s `IOS_*`/`ACCENT_*` names hold OnePlus Red (§5).
+- Naming collision: `module/ModuleManager` (settings grid) vs `hud/module/HudModuleManager`
+  (draggable HUD panels) are unrelated.
+
+**Hygiene**
+- Vendored BetterHitreg has no license/attribution headers; repo LICENSE (CC0) ≠
+  fabric.mod.json (`MIT`). Resolve before any redistribution.
+- `assets/aurora/textures/gui/module_icons/` ships two dev scripts + `settings.svg`;
+  root-level `inspect_font3.py` has a hardcoded Windows path; font `license.txt` covers a
+  removed font (Source Sans Pro).
+- No TODO/FIXME comments exist in `com/aurora` — intent lives in long javadocs. Read them;
+  they record 1.21.11 API renames (`setupFog`, `swingArm`, `EntityHitboxDebugRenderer.
+  emitGizmos`, …) and the reasons behind the conventions above.
+
+---
+
+## 10. Quick orientation for a new session
+
+- To add a **feature toggle**: config boolean field → `FeatureRegistry` tile (+ optional
+  `FeatureManager` Feature) → settings widgets → mixin/renderer reads the field per tick.
+  Remember `resetByPrefix` naming and a ModuleManager card if it should appear in the grid.
+- To theme a new screen: implement `ThemedScreen`, use `ui/component` widgets +
+  `ThemeManager.color(token)` (or `AuroraTheme.*` statics), radius from
+  `ThemeManager.current().roundness()`.
+- To add **glass** to a surface: follow §6 conventions exactly — pre-dim pass, world-gate,
+  flat fallback, `WINDOW_FILL` tint only, raised vs depressed, stained only for
+  selected/primary, and update the rollout table in §6.
+- To debug glass: `BlurTestScreen` (bind `blur_test`), `[S]` crash canary, renderer logs
+  `[BlurPanel]` decline reasons (`lastOutcome`).

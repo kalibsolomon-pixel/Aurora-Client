@@ -1,10 +1,9 @@
 package com.aurora.client.mixin;
 
 import com.aurora.client.config.AuroraConfig;
-import com.aurora.client.screen.AuroraScreen;
-import com.aurora.client.screen.FeatureDetailScreen;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
+import com.aurora.client.ui.render.blur.BlurPanelRenderer;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.Minecraft;
@@ -23,9 +22,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /**
  * Fully replaces the vanilla {@link EditBox} rendering on every screen
  * that contains a search bar (world-selection, multiplayer, main menu,
- * module detail) with Aurora's themed search bar: a hi-res AA rounded-
- * rect background + outline whose colors come from {@link AuroraTheme},
- * with the typed text (or placeholder hint) vertically centered.
+ * module detail) with Aurora's themed search bar, with the typed text
+ * (or placeholder hint) vertically centered.
  *
  * <p>The injection fires at {@code HEAD} and {@code cancel()}s the
  * vanilla {@code renderWidget} so the default dark box + hairline
@@ -40,6 +38,17 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * caret uses {@link System#currentTimeMillis()} instead of shadowing the
  * vanilla {@code frame} counter, avoiding a fragile private-field
  * dependency.
+ *
+ * <p><b>Glass rollout:</b> on a screen with a live world behind it, the
+ * field renders as RAISED glass (search fields are interactive controls
+ * floating above the depressed window) with the neutral
+ * {@code WINDOW_FILL} tint — whose alpha IS the Background Opacity
+ * slider, the single opacity application point. Focus reads through the
+ * caret + a subtle focus-ring outline only; the tint stays constant.
+ * On decline (menu context, screenshot suppression, glass disabled) the
+ * flat themed fill + outline below returns unchanged. This is the ONE
+ * canonical search-bar implementation — Particles, Item Scale,
+ * ResourcePacks and the Modules grid all render through it.
  */
 @Mixin(EditBox.class)
 public abstract class EditBoxMixin {
@@ -73,15 +82,35 @@ public abstract class EditBoxMixin {
         boolean focused = self.isFocused();
         String value = self.getValue();
 
-        // --- 1. Themed background (fully replaces vanilla box) ---
-        // Token-driven translucent surface, tracking the panel's opacity so
-        // the field matches the rest of the themed UI in both modes.
+        // --- 1. Background (fully replaces vanilla box) ---
+        // Glass first: raised panel + neutral WINDOW_FILL tint. The glass
+        // rim replaces the outline (no double outline). The focus cue is
+        // the caret plus a subtle focus-ring outline drawn on top — focus
+        // never changes the tint (the same contract as every glass control).
+        // With no live world the renderer declines and the flat themed
+        // fill + outline below draws instead, exactly as before glass.
         int fillCol = ThemeManager.surfaceColor(focused ? ThemeToken.SURFACE_VARIANT : ThemeToken.SURFACE);
         int borderCol = focused ? AuroraTheme.BORDER_ON_HOVER : AuroraTheme.BORDER_OFF;
-        RenderUtil.drawRoundedRectAA(ctx, x, y, w, h, AuroraTheme.RADIUS_SMALL, fillCol);
+
+        float radius = ThemeManager.current().roundness().radiusSmall();
+        boolean glassOk = BlurPanelRenderer.renderPanel(ctx, x, y, w, h, radius,
+                BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX, BlurPanelRenderer.Lighting.raised());
+        if (glassOk) {
+            RenderUtil.drawRoundedRectAA(ctx, x, y, w, h, radius,
+                    ThemeManager.color(ThemeToken.WINDOW_FILL));
+            BlurPanelRenderer.drawRimFinish(ctx, x, y, w, h, radius);
+            // Focus ring on glass — a translucent hairline that brightens
+            // the rim without stacking a second surface.
+            if (focused) {
+                RenderUtil.drawRoundedOutlineAA(ctx, x, y, w, h, radius, 1.0f,
+                        ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
+            }
+        } else {
+            RenderUtil.drawRoundedRectAA(ctx, x, y, w, h, radius, fillCol);
+        }
 
         // --- 2. Text / hint rendering, vertically centered ---
-        int textCol = AuroraTheme.IOS_LABEL;
+        int textCol = ThemeManager.color(ThemeToken.ON_BACKGROUND);
         int innerX = (int) x + 8;           // 8px left padding
         int innerRight = (int) (x + w) - 4; // 4px right padding
         int textY = (int) (y + (h - font.lineHeight) / 2) + 1; // +1 nudges past baseline offset
@@ -90,7 +119,8 @@ public abstract class EditBoxMixin {
         if (value.isEmpty()) {
             // Placeholder hint text
             if (hint != null) {
-                ctx.drawString(font, hint, innerX, textY, AuroraTheme.IOS_TERTIARY_LABEL, false);
+                ctx.drawString(font, hint, innerX, textY,
+                        ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED), false);
             }
         } else {
             // Render the value text, scrolled by displayPos so long
@@ -119,8 +149,10 @@ public abstract class EditBoxMixin {
             ctx.fill(caretX, caretY1, caretX + 1, caretY2, textCol);
         }
 
-        // --- 4. Outline on top (after text) ---
-        RenderUtil.drawRoundedOutlineAA(ctx, x, y, w, h, AuroraTheme.RADIUS_SMALL, 1.0f, borderCol);
+        // --- 4. Flat-path outline on top (after text) ---
+        if (!glassOk) {
+            RenderUtil.drawRoundedOutlineAA(ctx, x, y, w, h, radius, 1.0f, borderCol);
+        }
 
         // Cancel the vanilla render so its background/border never appear.
         ci.cancel();

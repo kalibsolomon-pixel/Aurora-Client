@@ -9,6 +9,7 @@ import com.aurora.client.ui.component.ThemedScreen;
 import com.aurora.client.ui.component.ToggleSwitch;
 import com.aurora.client.ui.render.blur.BlurPanelRenderer;
 import com.aurora.client.ui.util.AuroraFontRenderer;
+import com.aurora.client.ui.util.MaterialIconRenderer;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.ui.util.UiLayerCache;
 import net.minecraft.client.gui.Font;
@@ -36,13 +37,15 @@ import java.util.Map;
  */
 public class AuroraScreen extends Screen implements ThemedScreen {
 
-    private static final net.minecraft.network.chat.Style SYMBOL_STYLE = net.minecraft.network.chat.Style.EMPTY
-            .withFont(new net.minecraft.network.chat.FontDescription.Resource(
-                    net.minecraft.resources.Identifier.fromNamespaceAndPath("aurora", "material_symbols")
-            ));
-
     private static final float BOX_W = 360;
     private static final float BOX_H = 240;
+
+    // Sidebar nav tabs: one pitch drives every tab's Y (22px tab + 6px gap),
+    // so the three gaps cannot drift apart. TAB_H must stay in sync with the
+    // painted chip height below.
+    private static final float TAB_FIRST_Y = 48;
+    private static final float TAB_PITCH = 28;
+    private static final float TAB_H = 22;
 
     private int selectedCategory = 0; // 0: Mods, 1: Settings
     private boolean gridLayout = true; // false: list, true: grid
@@ -87,6 +90,17 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     private float boxY() { return (this.height - BOX_H) / 2.0f; }
     private float mainX() { return boxX() + 90; }
     private float mainY() { return boxY() + 12; }
+
+    /**
+     * The scroll viewport every scroll-related number must agree on: the
+     * scissor content window's resting bounds, the card cull, maxScroll's
+     * 180px visible height, and the scrollbar track. Anchored to mainY()'s
+     * own +36/+216 content offsets — never re-derived from BOX_H here, or
+     * the +12 main-area offset gets counted twice and the track (thumb
+     * included) slides below the window border.
+     */
+    private float viewTop() { return mainY() + 36; }
+    private float viewBot() { return mainY() + 216; }
 
     @Override
     public void onClose() {
@@ -158,6 +172,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             if (glassWindow) {
                 RenderUtil.drawRoundedRectAA(g, boxX(), boxY(), BOX_W, BOX_H, radius,
                         ThemeManager.color(ThemeToken.WINDOW_FILL));
+                BlurPanelRenderer.drawRimFinish(g, boxX(), boxY(), BOX_W, BOX_H, radius);
             }
         }
 
@@ -229,7 +244,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             cx = mx;
             cy = (float) (my + 38 + i * (ch + 6) - scrollY[0]);
         }
-        if (cy + ch < my + 36 || cy > my + 216) return null;
+        if (cy + ch < viewTop() || cy > viewBot()) return null;
         return new float[]{cx, cy, cw, ch};
     }
 
@@ -241,8 +256,8 @@ public class AuroraScreen extends Screen implements ThemedScreen {
 
         String[] cats = {"Mods", "Settings"};
         for (int i = 0; i < 2; i++) {
-            float catY = by + 48 + i * 28;
-            boolean hover = mouseX >= bx + 8 && mouseX <= bx + 72 && mouseY >= catY && mouseY <= catY + 22;
+            float catY = by + TAB_FIRST_Y + i * TAB_PITCH;
+            boolean hover = mouseX >= bx + 8 && mouseX <= bx + 72 && mouseY >= catY && mouseY <= catY + TAB_H;
             boolean sel = selectedCategory == i;
             // Glass pilot: the category pair is a segmented control — every
             // chip is RAISED glass, neutral when unselected and
@@ -250,13 +265,14 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             // tint alone, exactly like the Theme screen's segments). On
             // decline the flat wash/hover fills return unchanged.
             boolean chipGlass = liveWorldBackdrop() && BlurPanelRenderer.renderPanel(
-                    g, bx + 8, catY, 64, 22, 5,
+                    g, bx + 8, catY, 64, TAB_H, 5,
                     BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX,
                     BlurPanelRenderer.Lighting.raised());
             if (chipGlass) {
-                RenderUtil.drawRoundedRectAA(g, bx + 8, catY, 64, 22, 5,
+                RenderUtil.drawRoundedRectAA(g, bx + 8, catY, 64, TAB_H, 5,
                         sel ? ThemeManager.stainedTint()
                              : ThemeManager.color(ThemeToken.WINDOW_FILL));
+                BlurPanelRenderer.drawRimFinish(g, bx + 8, catY, 64, TAB_H, 5);
             } else if (sel) {
                 RenderUtil.drawRoundedRectAA(g, bx + 8, catY, 64, 22, 5, alpha(ThemeToken.ACCENT, 0x26 / 255f));
             } else if (hover) {
@@ -269,17 +285,18 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             g.drawString(tr, cats[i], (int) (bx + 16), (int) (catY + 7), txt, false);
         }
 
-        float profY = by + 48 + 2 * 28 + 6;
-        boolean pHover = mouseX >= bx + 8 && mouseX <= bx + 72 && mouseY >= profY && mouseY <= profY + 22;
+        float profY = by + TAB_FIRST_Y + 2 * TAB_PITCH;
+        boolean pHover = mouseX >= bx + 8 && mouseX <= bx + 72 && mouseY >= profY && mouseY <= profY + TAB_H;
         // Glass pilot: Profiles is a plain action button — neutral raised
         // glass (never stained: it is not a selected/primary state).
         boolean profGlass = liveWorldBackdrop() && BlurPanelRenderer.renderPanel(
-                g, bx + 8, profY, 64, 22, 5,
+                g, bx + 8, profY, 64, TAB_H, 5,
                 BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX,
                 BlurPanelRenderer.Lighting.raised());
         if (profGlass) {
-            RenderUtil.drawRoundedRectAA(g, bx + 8, profY, 64, 22, 5,
+            RenderUtil.drawRoundedRectAA(g, bx + 8, profY, 64, TAB_H, 5,
                     ThemeManager.color(ThemeToken.WINDOW_FILL));
+            BlurPanelRenderer.drawRimFinish(g, bx + 8, profY, 64, TAB_H, 5);
         } else if (pHover) {
             RenderUtil.drawRoundedRectAA(g, bx + 8, profY, 64, 22, 5, surfaceFill(ThemeToken.SURFACE_VARIANT));
         }
@@ -339,6 +356,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 RenderUtil.drawRoundedRectAA(g, cx, cy, cw, ch, 6,
                         on ? ThemeManager.stainedTint()
                            : ThemeManager.color(ThemeToken.WINDOW_FILL));
+                BlurPanelRenderer.drawRimFinish(g, cx, cy, cw, ch, 6);
                 if (hover) {
                     RenderUtil.drawRoundedRectAA(g, cx, cy, cw, ch, 6,
                             alpha(ThemeToken.ON_BACKGROUND, 0x1A / 255f));
@@ -356,12 +374,12 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             }
 
             if (gridLayout) {
-                drawTileIcon(g, tr, m, cx + cw / 2f, cy + 30, 28f, on);
+                drawTileIcon(g, tr, m, cx + cw / 2f, cy + 30, 28f, on, tileGlass);
                 String name = fit(tr, m.name, (int) cw - 8);
                 g.drawString(tr, name, (int) (cx + (cw - tr.width(name)) / 2f), (int) (cy + ch - 20),
                         ThemeManager.color(ThemeToken.ON_BACKGROUND), false);
             } else {
-                drawTileIcon(g, tr, m, cx + 20, cy + ch / 2f, 16f, on);
+                drawTileIcon(g, tr, m, cx + 20, cy + ch / 2f, 16f, on, tileGlass);
                 String name = fit(tr, m.name, 130);
                 g.drawString(tr, name, (int) (cx + 40), (int) (cy + 8),
                         ThemeManager.color(ThemeToken.ON_BACKGROUND), false);
@@ -422,6 +440,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             RenderUtil.drawRoundedRectAA(g, x, y, size, size, 4,
                     selected ? ThemeManager.stainedTint()
                              : ThemeManager.color(ThemeToken.WINDOW_FILL));
+            BlurPanelRenderer.drawRimFinish(g, x, y, size, size, 4);
             if (hover && !selected) {
                 // Hover cue preserved on glass (the tint stays constant, like
                 // every glass control): a faint mode-aware wash.
@@ -434,7 +453,12 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             RenderUtil.drawRoundedRectAA(g, x, y, size, size, 4, bg);
             RenderUtil.drawRoundedOutlineAA(g, x, y, size, size, 4, 1.0f, border);
         }
-        int iconCol = selected ? ThemeManager.color(ThemeToken.ACCENT) : alpha(ThemeToken.ON_BACKGROUND, 0x53f);
+        // Same contract as the tiles: on stained glass the icon takes the
+        // contrast-derived ON_ACCENT; the flat fallback's ~15% accent wash is
+        // dark enough that the accent glyph still reads there.
+        int iconCol = selected && btnGlass ? ThemeManager.color(ThemeToken.ON_ACCENT)
+                : selected ? ThemeManager.color(ThemeToken.ACCENT)
+                : alpha(ThemeToken.ON_BACKGROUND, 0x53f);
         if (list) {
             for (int i = 0; i < 3; i++) {
                 float dy = y + 5 + i * 4.5f;
@@ -473,21 +497,31 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     }
 
     /** Render a module's icon (FeatureIcons glyph via the material-symbols font). */
-    private void drawTileIcon(GuiGraphics g, Font tr, Module m, float cx, float cy, float targetPx, boolean on) {
+    private void drawTileIcon(GuiGraphics g, Font tr, Module m, float cx, float cy, float targetPx,
+                              boolean on, boolean stainedGlass) {
         String glyph = FeatureIcons.get(m.id);
         if (glyph.isEmpty()) return;
-        Component comp = Component.literal(glyph).withStyle(SYMBOL_STYLE);
-        int gw = Math.max(1, tr.width(comp));
-        int gh = Math.max(1, tr.lineHeight);
-        float scale = Math.min(8f, Math.min(targetPx / gw, targetPx / gh));
-        int accent = ModuleAccentColors.get(m.id);
-        if (accent == 0) accent = ThemeManager.color(ThemeToken.ACCENT);
-        int color = on ? accent : ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED);
-        g.pose().pushMatrix();
-        g.pose().translate(cx, cy);
-        g.pose().scale(scale, scale);
-        g.drawString(tr, comp.getVisualOrderText(), -gw / 2, -gh / 2, color, false);
-        g.pose().popMatrix();
+        // Same contrast contract as the sidebar chips' text: a stained glass
+        // tile's dominant tint IS the accent (stainedTint's reference), so the
+        // glyph takes ON_ACCENT — the token PaletteEngine contrast-derives
+        // against that same accent — never the accent itself. On the flat
+        // fallback the wash is only ~8% accent over the surface, so the accent
+        // glyph (per-module override honored) and the muted off-state glyph
+        // still read and are kept unchanged.
+        int color;
+        if (on && stainedGlass) {
+            color = ThemeManager.color(ThemeToken.ON_ACCENT);
+        } else if (on) {
+            int accent = ModuleAccentColors.get(m.id);
+            color = accent != 0 ? accent : ThemeManager.color(ThemeToken.ACCENT);
+        } else {
+            color = ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED);
+        }
+        // Crisp native-resolution glyph (the shared font atlas is
+        // point-sampled and degrades badly at these sizes); em size = the
+        // box the old glyph-scaling math targeted, so the footprint is
+        // unchanged.
+        MaterialIconRenderer.drawIcon(g, tr, glyph, cx, cy, targetPx, color);
     }
 
     private FeatureMetadata findMeta(String id) {
@@ -534,8 +568,8 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     private void drawScrollbar(GuiGraphics g) {
         double maxScroll = computeMaxScroll();
         if (maxScroll <= 0) return;
-        float mx = mainX(), my = mainY();
-        float viewTop = my + 36, viewBot = my + 240 - 10;
+        float mx = mainX();
+        float viewTop = viewTop(), viewBot = viewBot();
         float trackH = viewBot - viewTop;
         double viewRatio = trackH / (trackH + maxScroll);
         int thumbH = Math.max(24, (int) (trackH * viewRatio));
@@ -554,14 +588,14 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         if (super.mouseClicked(_ev, _dbl)) return true;
 
         for (int i = 0; i < 2; i++) {
-            float catY = by + 48 + i * 28;
-            if (mouseX >= bx + 8 && mouseX <= bx + 72 && mouseY >= catY && mouseY <= catY + 22) {
+            float catY = by + TAB_FIRST_Y + i * TAB_PITCH;
+            if (mouseX >= bx + 8 && mouseX <= bx + 72 && mouseY >= catY && mouseY <= catY + TAB_H) {
                 selectedCategory = i;
                 return true;
             }
         }
-        float profY = by + 48 + 2 * 28 + 6;
-        if (mouseX >= bx + 8 && mouseX <= bx + 72 && mouseY >= profY && mouseY <= profY + 22) {
+        float profY = by + TAB_FIRST_Y + 2 * TAB_PITCH;
+        if (mouseX >= bx + 8 && mouseX <= bx + 72 && mouseY >= profY && mouseY <= profY + TAB_H) {
             if (this.minecraft != null) this.minecraft.setScreen(new ProfileManagerScreen(this));
             return true;
         }
@@ -607,13 +641,13 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         }
 
         double maxScroll = computeMaxScroll();
-        if (maxScroll > 0 && button == 0 && mouseX >= mx + 255 && mouseX <= mx + 262 && mouseY >= my + 36 && mouseY <= my + 216) {
+        if (maxScroll > 0 && button == 0 && mouseX >= mx + 255 && mouseX <= mx + 262 && mouseY >= viewTop() && mouseY <= viewBot()) {
             scrollbarDragging = true;
-            float trackH = (my + 240 - 10) - (my + 36);
+            float trackH = viewBot() - viewTop();
             double viewRatio = trackH / (trackH + maxScroll);
             int thumbH = Math.max(24, (int) (trackH * viewRatio));
             double scrollRatio = scrollY[selectedCategory] / maxScroll;
-            int thumbY = (int) (my + 36) + (int) ((trackH - thumbH) * scrollRatio);
+            int thumbY = (int) viewTop() + (int) ((trackH - thumbH) * scrollRatio);
             scrollbarDragGrabOffset = mouseY - thumbY;
             return true;
         }
@@ -624,13 +658,12 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     public boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent _ev, double dx, double dy) {
         double mouseX = _ev.x(); double mouseY = _ev.y(); int button = _ev.button();
         if (scrollbarDragging) {
-            float my = mainY();
-            float trackH = (my + 240 - 10) - (my + 36);
+            float trackH = viewBot() - viewTop();
             double maxScroll = computeMaxScroll();
             double viewRatio = trackH / (trackH + maxScroll);
             int thumbH = Math.max(24, (int) (trackH * viewRatio));
             double thumbY = mouseY - scrollbarDragGrabOffset;
-            double t = (thumbY - (my + 36)) / Math.max(1, trackH - thumbH);
+            double t = (thumbY - viewTop()) / Math.max(1, trackH - thumbH);
             scrollTarget[selectedCategory] = t * maxScroll;
             if (scrollTarget[selectedCategory] < 0) scrollTarget[selectedCategory] = 0;
             if (scrollTarget[selectedCategory] > maxScroll) scrollTarget[selectedCategory] = maxScroll;

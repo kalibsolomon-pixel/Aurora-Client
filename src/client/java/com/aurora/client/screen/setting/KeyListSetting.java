@@ -5,6 +5,7 @@ import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.hud.module.KeystrokesModule;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
+import com.aurora.client.ui.render.blur.BlurPanelRenderer;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.util.AuroraTheme;
 import com.aurora.client.util.HoverAnim;
@@ -28,6 +29,11 @@ import java.util.function.Supplier;
  *
  * <p>Follows the {@link KeybindSetting} focus pipeline: while listening,
  * the owning screen routes key events here via {@code requestFocus()}.
+ *
+ * <p>Glass rollout: the "Add Key" pill matches {@link KeybindSetting}'s
+ * pill — RAISED glass with the neutral {@code WINDOW_FILL} tint at rest
+ * and the accent-STAINED tint while listening (the same contract as
+ * every glass control; complete flat pill on decline).
  */
 public class KeyListSetting extends FeatureSetting {
     private static final int ROW_H = 18;
@@ -105,25 +111,35 @@ public class KeyListSetting extends FeatureSetting {
                 && mouseY >= addY && mouseY < addY + ADD_H;
         float hT = hoverAnim.update(addHover || listening);
 
-        int fillTint, borderTint, textColor;
-        if (listening) {
-            fillTint = AuroraTheme.IOS_BLUE_PRESSED;
-            borderTint = AuroraTheme.IOS_BLUE;
-            textColor = 0xFFFFFFFF;
+        int fillTint   = lerpColor(AuroraTheme.PANEL_OFF, AuroraTheme.PANEL_OFF_HOVER, hT);
+        int borderTint = lerpColor(AuroraTheme.BORDER_OFF, AuroraTheme.BORDER_ON_HOVER, hT);
+        int textColor  = lerpColor(AuroraTheme.TEXT_SECONDARY, AuroraTheme.TEXT_PRIMARY, hT);
+
+        // Glass: same contract as KeybindSetting's pill — raised glass,
+        // neutral tint at rest, accent-stained tint while listening, and
+        // the complete flat pill on decline.
+        float glassR = Math.min(ADD_H / 2f, ThemeManager.current().roundness().radiusSmall());
+        boolean glassOk = BlurPanelRenderer.renderPanel(ctx, addX, addY, addW, ADD_H, glassR,
+                BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX, BlurPanelRenderer.Lighting.raised());
+        if (glassOk) {
+            RenderUtil.drawRoundedRectAA(ctx, addX, addY, addW, ADD_H, glassR,
+                    listening ? ThemeManager.stainedTint()
+                              : ThemeManager.color(ThemeToken.WINDOW_FILL));
+            BlurPanelRenderer.drawRimFinish(ctx, addX, addY, addW, ADD_H, glassR);
         } else {
-            fillTint = lerpColor(AuroraTheme.PANEL_OFF, AuroraTheme.PANEL_OFF_HOVER, hT);
-            borderTint = lerpColor(AuroraTheme.BORDER_OFF, AuroraTheme.BORDER_ON_HOVER, hT);
-            textColor = lerpColor(AuroraTheme.TEXT_SECONDARY, AuroraTheme.TEXT_PRIMARY, hT);
+            RenderUtil.drawSquircle(ctx, addX, addY, addW, ADD_H, AuroraTheme.RADIUS_SMALL,
+                    listening ? AuroraTheme.IOS_BLUE_PRESSED : fillTint);
+            RenderUtil.drawSquircleOutline(ctx, addX, addY, addW, ADD_H, AuroraTheme.RADIUS_SMALL, 1.0f,
+                    listening ? AuroraTheme.IOS_BLUE : borderTint);
         }
-        RenderUtil.drawSquircle(ctx, addX, addY, addW, ADD_H, AuroraTheme.RADIUS_SMALL, fillTint);
-        RenderUtil.drawSquircleOutline(ctx, addX, addY, addW, ADD_H, AuroraTheme.RADIUS_SMALL, 1.0f, borderTint);
 
         String addText = listening ? "> press key <"
                 : items.size() >= KeystrokesModule.MAX_EXTRA_KEYS ? "List full (12 max)"
                 : "+ Add Key";
         int addTextW = tr.width(addText);
+        int textCol = listening ? ThemeManager.color(ThemeToken.ON_ACCENT) : textColor;
         ctx.drawString(tr, addText, addX + (addW - addTextW) / 2,
-                addY + (ADD_H - tr.lineHeight) / 2 + 1, textColor, false);
+                addY + (ADD_H - tr.lineHeight) / 2 + 1, textCol, false);
     }
 
     @Override

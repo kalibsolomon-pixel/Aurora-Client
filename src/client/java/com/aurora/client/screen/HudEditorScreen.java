@@ -37,6 +37,13 @@ import net.minecraft.network.chat.Component;
  * label plates, grid, dim) resolves through theme tokens — the semantic
  * status tokens carry the enabled/disabled/dragging/locked meanings, so
  * they read correctly in Dark and Light mode alike.
+ *
+ * <p>Glass rollout: the top-level chrome (the two floating action buttons)
+ * is NEUTRAL raised glass — "Aurora Settings" is a navigation action, not a
+ * primary/selected state, so it takes the neutral tint like the Theme
+ * screen's Profiles button. The editor's overlay chrome (module outlines,
+ * badges, label plates) is editor CONTENT — status semantics carried by the
+ * semantic tokens — and stays opaque exactly where it is.
  */
 public class HudEditorScreen extends Screen implements ThemedScreen {
 
@@ -99,12 +106,12 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
                     if (this.minecraft != null) {
                         this.minecraft.setScreen(AuroraScreen.create());
                     }
-                }));
+                }).glassBackground(true));
 
         this.addRenderableWidget(new ButtonWidget(
                 this.width - w - 8, 8, w, h,
                 Component.literal("Reset Positions"),
-                this::resetLayouts));
+                this::resetLayouts).glassBackground(true));
     }
 
     private void resetLayouts() {
@@ -112,6 +119,19 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
         HudModuleManager mgr = AuroraClient.modules();
         if (mgr == null) return;
         mgr.all().forEach(HudModule::resetLayoutToDefaults);
+    }
+
+    /**
+     * Glass rollout: with a live world behind the screen, skip vanilla's
+     * background sandwich — the glass buttons must sample the LIVE world.
+     * The editor is only ever opened in-game, but the guard mirrors the
+     * renderer's own menu-context check so the fallback keeps its vanilla
+     * backdrop in any context where glass cannot engage.
+     */
+    @Override
+    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float delta) {
+        if (this.minecraft != null && this.minecraft.level != null) return;
+        super.renderBackground(g, mouseX, mouseY, delta);
     }
 
     @Override

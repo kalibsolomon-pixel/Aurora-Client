@@ -3,6 +3,7 @@ package com.aurora.client.screen.setting;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.render.blur.BlurPanelRenderer;
+import com.aurora.client.ui.util.MaterialIconRenderer;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.util.AuroraTheme;
 import com.aurora.client.util.HoverAnim;
@@ -32,15 +33,16 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
     private Function<E, String> labelFn = null;
 
     /**
-     * Glass pilot: the closed dropdown button renders as NEUTRAL raised
-     * glass — the button family's secondary look, the same contract as
-     * {@code Button#glassBackground} (the glass rim replaces the outline;
-     * the tint is {@code WINDOW_FILL}, whose alpha carries the theme's
-     * Background Opacity). Only enrolled screens' instances turn this on.
-     * The expanded dropdown stays opaque — a transient popup, the same
-     * family as tooltips.
+     * Glass rollout: the closed dropdown button renders as NEUTRAL raised
+     * glass by default — the button family's secondary look, the same
+     * contract as {@code Button#glassBackground} (the glass rim replaces
+     * the outline; the tint is {@code WINDOW_FILL}, whose alpha carries the
+     * theme's Background Opacity). Pass {@code false} to force the flat
+     * look. The expanded option popup is also raised
+     * glass (a floating panel above other content) with the same neutral
+     * tint — see the expanded block in {@link #render}.
      */
-    private boolean glassButton = false;
+    private boolean glassButton = true;
 
     private int lastBtnX, lastBtnY;
     private int lastWidth = 240;
@@ -83,7 +85,7 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
         return this;
     }
 
-    /** Glass pilot — see {@link #glassButton}. */
+    /** Glass — see {@link #glassButton}. Default on; {@code false} forces flat. */
     public EnumSetting<E> glassButton(boolean g) {
         this.glassButton = g;
         return this;
@@ -150,13 +152,13 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
                                   : lerpColor(AuroraTheme.BORDER_OFF, AuroraTheme.BORDER_OFF_HOVER, hT);
         int textColor  = disabled ? AuroraTheme.TEXT_DIM : lerpColor(AuroraTheme.TEXT_SECONDARY, AuroraTheme.TEXT_PRIMARY, hT);
 
-        // Glass pilot (enrolled screens only): raised glass + neutral tint
-        // replace the fill + outline — the glass rim replaces the border, no
-        // double outline. Disabled rows keep the flat look. On decline
-        // (menu context, screenshot suppression, failure) the complete flat
-        // button returns — the same fallback contract every glass
-        // integration uses. Hover keeps the text-color cue; the tint stays
-        // constant, exactly like every other glass control.
+        // Glass: raised glass + neutral tint replace the fill + outline —
+        // the glass rim replaces the border, no double outline. Disabled
+        // rows keep the flat look. On decline (menu context, screenshot
+        // suppression, failure) the complete flat button returns — the same
+        // fallback contract every glass integration uses. Hover keeps the
+        // text-color cue; the tint stays constant, exactly like every other
+        // glass control.
         boolean glassOk = false;
         if (glassButton && !disabled) {
             float glassR = Math.min(BTN_H / 2f, ThemeManager.current().roundness().radiusSmall());
@@ -165,6 +167,7 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
             if (glassOk) {
                 RenderUtil.drawRoundedRectAA(ctx, btnX, btnY, BTN_W, BTN_H, glassR,
                         ThemeManager.color(ThemeToken.WINDOW_FILL));
+                BlurPanelRenderer.drawRimFinish(ctx, btnX, btnY, BTN_W, BTN_H, glassR);
             }
         }
         if (!glassOk) {
@@ -177,20 +180,45 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
         int textY = btnY + (BTN_H - tr.lineHeight) / 2 + 1;
         ctx.drawString(tr, name, textX, textY, textColor, false);
 
-        // Draw the Material Symbols arrow icon on the right (using per pixel matching styled rendering)
-        net.minecraft.util.FormattedCharSequence arrowGlyph = expanded ? cachedUpArrow : cachedDownArrow;
+        // Draw the Material Symbols arrow icon on the right. Rendered at the
+        // font's natural em size, but through MaterialIconRenderer so the
+        // glyph is rasterized at the device's true pixel grid (the shared
+        // atlas is point-sampled and washes chevron strokes out at GUI
+        // scales where 11 GUI units ≠ a texel multiple). Slot metrics are
+        // unchanged, so layout and hit area are identical.
         int arrowW = expanded ? cachedUpArrowWidth : cachedDownArrowWidth;
         int arrowX = btnX + BTN_W - arrowW - 4; // 4px margin from right edge
         int arrowY = btnY + (BTN_H - tr.lineHeight) / 2 + 1; // centered vertically exactly with text
-        ctx.drawString(tr, arrowGlyph, arrowX, arrowY, textColor, false);
+        MaterialIconRenderer.drawIcon(ctx, tr, expanded ? "\uE5C6" : "\uE5CF",
+                arrowX + arrowW / 2f, arrowY + tr.lineHeight / 2f,
+                MaterialIconRenderer.NATURAL_EM_GUI, textColor);
 
         if (expanded) {
             int dropdownY = btnY + BTN_H + 2;
             int visibleCount = Math.min(5, values.length);
             int dropdownH = visibleCount * OPT_H + 4;
 
-            RenderUtil.drawSquircle(ctx, btnX, dropdownY, BTN_W, dropdownH, AuroraTheme.RADIUS_SMALL, ThemeManager.surfaceColor(ThemeToken.SURFACE));
-            RenderUtil.drawSquircleOutline(ctx, btnX, dropdownY, BTN_W, dropdownH, AuroraTheme.RADIUS_SMALL, 1.0f, borderTint);
+            // Glass: the expanded option list is a floating panel above other
+            // content — RAISED glass with the neutral WINDOW_FILL tint (never
+            // stained: no individual list row is a selected/primary element;
+            // the current value reads through its accent text color, hover
+            // through the plain SURFACE_VARIANT wash — no per-row glass). The
+            // popup renders live (EnumSetting draws entirely in the overlay
+            // pass), so it captures its own backdrop slice above the cached
+            // window like the trigger does. On decline (menu context,
+            // screenshot suppression, failure) the flat panel returns — the
+            // same fallback contract every glass integration uses.
+            float popR = Math.min(dropdownH / 2f, ThemeManager.current().roundness().radiusSmall());
+            boolean popGlass = glassButton && BlurPanelRenderer.renderPanel(ctx, btnX, dropdownY, BTN_W, dropdownH, popR,
+                    BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX, BlurPanelRenderer.Lighting.raised());
+            if (popGlass) {
+                RenderUtil.drawRoundedRectAA(ctx, btnX, dropdownY, BTN_W, dropdownH, popR,
+                        ThemeManager.color(ThemeToken.WINDOW_FILL));
+                BlurPanelRenderer.drawRimFinish(ctx, btnX, dropdownY, BTN_W, dropdownH, popR);
+            } else {
+                RenderUtil.drawSquircle(ctx, btnX, dropdownY, BTN_W, dropdownH, AuroraTheme.RADIUS_SMALL, ThemeManager.surfaceColor(ThemeToken.SURFACE));
+                RenderUtil.drawSquircleOutline(ctx, btnX, dropdownY, BTN_W, dropdownH, AuroraTheme.RADIUS_SMALL, 1.0f, borderTint);
+            }
 
             for (int vIdx = 0; vIdx < visibleCount; vIdx++) {
                 int actualIdx = scrollOffset + vIdx;

@@ -717,9 +717,13 @@ public class AuroraConfig {
     public int crosshairIndicatorGap = 2;
     public int crosshairIndicatorColor = 0xFFFF5555; // default reddish so it visibly differs
     public boolean[] crosshairCustomPixels = defaultCustomPixels();
+    public int crosshairCustomWidth = 11;
+    public int crosshairCustomHeight = 11;
     public boolean[] crosshairIndicatorCustomPixels = defaultCustomPixels();
+    public int crosshairIndicatorCustomWidth = 11;
+    public int crosshairIndicatorCustomHeight = 11;
 
-    /** Default custom-canvas pattern: single lit pixel dead-center of the 11Ã—11 grid. */
+    /** Default custom-canvas pattern: single lit pixel dead-center of the 11×11 grid. */
     private static boolean[] defaultCustomPixels() {
         boolean[] out = new boolean[121];
         out[5 * 11 + 5] = true;  // center pixel

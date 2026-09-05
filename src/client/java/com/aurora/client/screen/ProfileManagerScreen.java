@@ -74,6 +74,14 @@ public class ProfileManagerScreen extends Screen implements ThemedScreen {
     private final Map<String, Button> delBtns = new HashMap<>();
     /** The create-row's confirm button (recreated per create session). */
     private Button createBtn;
+    /**
+     * Fitted (ellipsis-truncated) profile names, keyed by the raw name —
+     * memoizes the per-character {@code font.width()} truncation loop that
+     * otherwise runs every row, every frame (the same cost the pack browser
+     * memoizes via its text-fit cache). Keyed by content, so renames miss
+     * once and repopulate; bounded by distinct names seen this screen-open.
+     */
+    private final Map<String, String> nameFitCache = new HashMap<>();
 
     // Glass pilot: which rows' glass drew this frame (pre-dim pass), so the
     // flat row body can be skipped for exactly those rows.
@@ -93,8 +101,7 @@ public class ProfileManagerScreen extends Screen implements ThemedScreen {
         this.addRenderableWidget(new ButtonWidget(
                 16, btnY, 120, btnH,
                 Component.literal("New Profile"),
-                this::beginCreate,
-                true).glassStyle(com.aurora.client.ui.component.Button.GlassStyle.STAINED));
+                this::beginCreate).glassBackground(true));
 
         this.addRenderableWidget(new ButtonWidget(
                 this.width - 80 - 16, btnY, 80, btnH,
@@ -123,15 +130,14 @@ public class ProfileManagerScreen extends Screen implements ThemedScreen {
         createRowGlassDrawn = false;
         if (liveWorldBackdrop()) {
             List<String> profiles = ProfileManager.getInstance().listProfileNames();
-            String active = ProfileManager.getInstance().currentProfile();
             ctx.enableScissor(listX - 4, LIST_TOP - 2, listX + LIST_W + 4, listClipBottom);
             int gy = LIST_TOP - (int) scrollY;
             if (creatingNew && createField != null) {
-                createRowGlassDrawn = drawRowGlass(ctx, listX, gy, LIST_W, false);
+                createRowGlassDrawn = drawRowGlass(ctx, listX, gy, LIST_W);
                 gy += ROW_H + ROW_GAP;
             }
             for (String name : profiles) {
-                rowGlassDrawn.put(name, drawRowGlass(ctx, listX, gy, LIST_W, name.equals(active)));
+                rowGlassDrawn.put(name, drawRowGlass(ctx, listX, gy, LIST_W));
                 gy += ROW_H + ROW_GAP;
             }
             ctx.disableScissor();
@@ -213,6 +219,27 @@ public class ProfileManagerScreen extends Screen implements ThemedScreen {
         }
     }
 
+    /**
+     * Ellipsis-truncates a profile name to the name column, memoized per
+     * raw name (see {@link #nameFitCache}). The underlying loop calls
+     * {@code font.width()} once per removed character; without the cache
+     * every long-named profile pays it every frame.
+     */
+    private String fitName(String raw) {
+        String cached = nameFitCache.get(raw);
+        if (cached != null) return cached;
+        String fitted = raw;
+        if (this.font.width(fitted) > NAME_W - 6) {
+            String ell = "…";
+            while (fitted.length() > 1 && this.font.width(fitted + ell) > NAME_W - 6) {
+                fitted = fitted.substring(0, fitted.length() - 1);
+            }
+            fitted = fitted + ell;
+        }
+        nameFitCache.put(raw, fitted);
+        return fitted;
+    }
+
     private void renderRow(GuiGraphics ctx, int x, int y, int w,
                             String name, int index, String active,
                             int mouseX, int mouseY) {
@@ -226,29 +253,26 @@ public class ProfileManagerScreen extends Screen implements ThemedScreen {
             RenderUtil.drawRoundedOutlineAA(ctx, x - i, y - i, w + i * 2, ROW_H + i * 2, radius + i, 1.0f, (shadowAlpha << 24));
         }
 
-        // Glass pilot: each profile row is a control-holding CARD, so it uses
-        // the RAISED treatment (same rule as the Theme screen's preview
-        // card) — its own correctly-cropped backdrop slice, never a shared
-        // capture. The ACTIVE row is the one genuinely-selected element, so
-        // it takes the accent-STAINED tint; every other row stays NEUTRAL.
-        // The glass itself drew in the pre-dim pass (see render); this only
-        // applies the tint on top, or the complete flat row when that row's
-        // glass declined (menu context, screenshot suppression, failure).
+        // Glass pilot: each profile row is this screen's CONTAINER, so it
+        // takes the same treatment as every other screen's window — DEPRESSED
+        // neutral glass tinted only by WINDOW_FILL. Accent never tints the
+        // row surface: a whole-row stain read as an accent-tinted container
+        // (flagged twice), so selection is carried solely by the compact
+        // accent Active badge below. The glass itself drew in the pre-dim
+        // pass (see render); this applies the one neutral tint, or the
+        // complete flat row when that row's glass declined.
         boolean rowGlass = rowGlassDrawn.getOrDefault(name, false);
         if (rowGlass) {
             RenderUtil.drawRoundedRectAA(ctx, x, y, w, ROW_H, radius,
-                    isActive ? ThemeManager.stainedTint()
-                             : ThemeManager.color(ThemeToken.WINDOW_FILL));
+                    ThemeManager.color(ThemeToken.WINDOW_FILL));
+            BlurPanelRenderer.drawRimFinish(ctx, x, y, w, ROW_H, radius);
         } else {
-            // Row body. The active row uses the theme's selected-card tokens
-            // (translucent accent tile fill + strong accent outline); other rows
-            // use the opacity-tracked surface + hairline border.
+            // Row body — identical for every row (active included): the
+            // opacity-tracked surface + hairline border.
             RenderUtil.drawRoundedRectAA(ctx, x, y, w, ROW_H, radius,
-                    isActive ? ThemeManager.color(ThemeToken.TILE_FILL)
-                             : ThemeManager.surfaceColor(ThemeToken.SURFACE));
+                    ThemeManager.surfaceColor(ThemeToken.SURFACE));
             RenderUtil.drawRoundedOutlineAA(ctx, x, y, w, ROW_H, radius, 1.0f,
-                    isActive ? ThemeManager.color(ThemeToken.TILE_OUTLINE_STRONG)
-                             : ThemeManager.color(ThemeToken.BORDER));
+                    ThemeManager.color(ThemeToken.BORDER));
         }
 
         int cx = x + ROW_INSET;
@@ -265,13 +289,7 @@ public class ProfileManagerScreen extends Screen implements ThemedScreen {
 
         // Name (or inline editor).
         if (index != editingIndex) {
-            String display = name;
-            if (this.font.width(display) > NAME_W - 6) {
-                while (display.length() > 1 && this.font.width(display + "…") > NAME_W - 6) {
-                    display = display.substring(0, display.length() - 1);
-                }
-                display = display + "…";
-            }
+            String display = fitName(name);
             ctx.drawString(this.font, display,
                     cx, y + (ROW_H - this.font.lineHeight) / 2,
                     ThemeManager.color(ThemeToken.ON_OVERLAY), false);
@@ -308,19 +326,17 @@ public class ProfileManagerScreen extends Screen implements ThemedScreen {
     private void renderCreateRow(GuiGraphics ctx, int x, int y, int w,
                                   int mouseX, int mouseY) {
         float radius = ThemeManager.current().roundness().radiusSmall();
-        // Glass pilot: the create editor is a raised NEUTRAL card (same
-        // treatment as the other rows; its "primary" reading comes from the
-        // STAINED Create button, not from the card). The glass drew in the
-        // pre-dim pass; flat fallback keeps the accent-hinted outline that
-        // signals an open editor.
+        // Glass pilot: the create editor is a neutral card, identical to the
+        // other rows (the hint text and the Create button signal the open
+        // editor; no accent on the container surface in either path).
         if (createRowGlassDrawn) {
             RenderUtil.drawRoundedRectAA(ctx, x, y, w, ROW_H, radius,
                     ThemeManager.color(ThemeToken.WINDOW_FILL));
         } else {
             RenderUtil.drawRoundedRectAA(ctx, x, y, w, ROW_H, radius,
-                    ThemeManager.surfaceColor(ThemeToken.SURFACE_VARIANT));
+                    ThemeManager.surfaceColor(ThemeToken.SURFACE));
             RenderUtil.drawRoundedOutlineAA(ctx, x, y, w, ROW_H, radius, 1.0f,
-                    ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x44));
+                    ThemeManager.color(ThemeToken.BORDER));
         }
         // Hint label in the name area (field draws over it).
         int cx = x + ROW_INSET + ACTIVE_BADGE_W + CONTROL_GAP;
@@ -328,28 +344,29 @@ public class ProfileManagerScreen extends Screen implements ThemedScreen {
                 cx + 4, y + (ROW_H - this.font.lineHeight) / 2,
                 ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_OVERLAY), 0x66), false);
 
-        // "Create" confirm button (shared primary Button) where Duplicate
-        // usually sits. Glass pilot: STAINED — the row's one primary action.
+        // "Create" confirm button where Duplicate usually sits — neutral
+        // raised glass like every other action button on this screen.
         int bx = x + ROW_INSET + ACTIVE_BADGE_W + CONTROL_GAP + NAME_W + CONTROL_GAP;
         if (createBtn == null) {
-            createBtn = new Button("Create", this::commitCreate)
-                    .glassStyle(Button.GlassStyle.STAINED);
+            createBtn = new Button("Create", this::commitCreate).glassBackground(true);
         }
         createBtn.layout(bx, y + 4, BTN_DUP_W, ROW_H - 8);
         createBtn.render(ctx, bx, y + 4, BTN_DUP_W, ROW_H - 8, mouseX, mouseY);
     }
 
     /**
-     * Glass pilot — one raised-glass row surface, drawn in the pre-dim pass.
-     * Selection state is carried by the TINT (applied later over the glass),
-     * never by the lighting orientation, matching every other glass control.
-     * Returns whether the glass drew (false = caller's flat fallback).
+     * Glass pilot — one DEPRESSED-glass row surface, drawn in the pre-dim
+     * pass. Rows are this screen's containers, so they take the window
+     * treatment (depressed lighting, WINDOW_FILL tint) rather than the
+     * raised control treatment; selection is never carried here at all —
+     * the accent Active badge in {@link #renderRow} marks it. Returns
+     * whether the glass drew (false = caller's flat fallback).
      */
-    private boolean drawRowGlass(GuiGraphics ctx, int x, int y, int w, boolean selected) {
+    private boolean drawRowGlass(GuiGraphics ctx, int x, int y, int w) {
         float radius = ThemeManager.current().roundness().radiusSmall();
         return BlurPanelRenderer.renderPanel(ctx, x, y, w, ROW_H, radius,
                 BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX,
-                BlurPanelRenderer.Lighting.raised());
+                BlurPanelRenderer.Lighting.depressed());
     }
 
     /**

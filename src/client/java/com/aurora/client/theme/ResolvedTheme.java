@@ -25,11 +25,31 @@ public final class ResolvedTheme {
     private final ThemeDefinition source;
     private final boolean accentsEnabled;
     private final int[] colors;
+    private final int rimPastel;
+
+    /** How far the rim's high-opacity pastel tone is lightened toward white (0..1). */
+    public static final float RIM_PASTEL_TOWARD_WHITE = 0.65f;
 
     ResolvedTheme(ThemeDefinition source, boolean accentsEnabled, int[] colors) {
         this.source = source;
         this.accentsEnabled = accentsEnabled;
         this.colors = colors;
+        // Derived once per resolve from the resolved ACCENT token: lightened
+        // and desaturated by mixing toward white — a pastel of whatever hue
+        // is currently selected. Consumed by the glass renderer as the rim
+        // stroke's target color at high Background Opacity (see
+        // BlurPanelRenderer's composite shader).
+        this.rimPastel = rimPastel(colors[ThemeToken.ACCENT.ordinal()]);
+    }
+
+    /** Mix an ARGB color toward white by {@link #RIM_PASTEL_TOWARD_WHITE}. */
+    private static int rimPastel(int argb) {
+        float t = RIM_PASTEL_TOWARD_WHITE;
+        int r = (argb >> 16) & 0xFF, g = (argb >> 8) & 0xFF, b = argb & 0xFF;
+        r = Math.round(r + (255 - r) * t);
+        g = Math.round(g + (255 - g) * t);
+        b = Math.round(b + (255 - b) * t);
+        return 0xFF000000 | (r << 16) | (g << 8) | b;
     }
 
     /** The resolved color for a token (ARGB). Never recomputed — cached array read. */
@@ -51,6 +71,23 @@ public final class ResolvedTheme {
 
     /** Panel/window background alpha, 0..1 (always normalized). */
     public double backgroundOpacity() { return source.backgroundOpacity; }
+
+    /**
+     * Whether panels render as blurred glass or flat translucent fills
+     * (never null — normalized). Read by {@code BlurPanelRenderer} as an
+     * early-return guard; see {@link GlassStyle}.
+     */
+    public GlassStyle glassStyle() { return source.glassStyle; }
+
+    /**
+     * Pastel tone (opaque ARGB) of the currently selected accent — the
+     * accent lightened/desaturated {@link #RIM_PASTEL_TOWARD_WHITE} of the
+     * way toward white, derived ONCE per resolve. This is the glass rim
+     * stroke's target color at high Background Opacity: a solid pastel
+     * border, hue-agnostic by construction — never the vivid accent, never
+     * pure white, and deliberately NOT the panel's interior fill color.
+     */
+    public int rimPastel() { return rimPastel; }
 
     /**
      * Publish the resolved values onto the legacy {@link AuroraTheme}

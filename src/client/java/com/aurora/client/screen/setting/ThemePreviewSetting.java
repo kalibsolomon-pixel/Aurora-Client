@@ -158,6 +158,7 @@ public class ThemePreviewSetting extends FeatureSetting {
             // Opacity (its single application point).
             RenderUtil.drawRoundedRectAA(ctx, cardX, cardY, cardW, cardH, radius,
                     ThemeManager.color(ThemeToken.WINDOW_FILL));
+            BlurPanelRenderer.drawRimFinish(ctx, cardX, cardY, cardW, cardH, radius);
         } else {
             card.renderShapes(ctx, cardX, cardY, cardW, cardH);
         }
@@ -170,6 +171,7 @@ public class ThemePreviewSetting extends FeatureSetting {
                     BlurPanelRenderer.Lighting.raised())) {
                 RenderUtil.drawRoundedRectAA(ctx, chipX, chipY, CHIP_W, CHIP_H, chipR,
                         ThemeManager.stainedTint());
+                BlurPanelRenderer.drawRimFinish(ctx, chipX, chipY, CHIP_W, CHIP_H, chipR);
             } else {
                 RenderUtil.drawRoundedRectAA(ctx, chipX, chipY, CHIP_W, CHIP_H, chipR,
                         AuroraTheme.IOS_BLUE);

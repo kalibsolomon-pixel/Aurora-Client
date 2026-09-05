@@ -57,7 +57,8 @@
     "ServerListDragReorderMixin",
     "TickSyncNetworkMixin",
     "ClientLevelWorldMapMixin",
-    "ReflexMinecraftMixin"
+    "ReflexMinecraftMixin",
+    "ItemStackRenderStateAccessor"
   ],
   "injectors": {
     "defaultRequire": 1

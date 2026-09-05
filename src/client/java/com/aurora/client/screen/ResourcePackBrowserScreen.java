@@ -7,11 +7,12 @@ import com.aurora.client.modrinth.ModrinthVersion;
 import com.aurora.client.modrinth.PackIconCache;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
+import com.aurora.client.ui.component.Button;
 import com.aurora.client.ui.component.ButtonWidget;
 import com.aurora.client.ui.component.ThemedScreen;
+import com.aurora.client.ui.render.blur.BlurPanelRenderer;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.util.AuroraAnim;
-import com.aurora.client.util.AuroraShapes;
 import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -49,8 +50,15 @@ import java.util.concurrent.atomic.AtomicReference;
  *   <li>Smooth (target-based) scrolling for both the card grid and the
  *       category sidebar — wheel input sets a target offset and the render
  *       loop lerps toward it, so scrolling glides instead of snapping.</li>
- *   <li>Material cards — drop shadow + top sheen via {@link AuroraShapes}
- *       give tiles depth; thumbnails are framed with a rounded inset.</li>
+ *   <li>Glass material — the sidebar and detail modal render as DEPRESSED
+ *       glass containers, cards and the selected category tab as RAISED
+ *       glass tiles (each element's renderPanel call captures its own
+ *       backdrop slice — per-element UV), and the install/close buttons are
+ *       the shared glass {@link Button} painter, the same pixels
+ *       {@link ButtonWidget} wraps for the Done button. Thumbnails and the
+ *       search field stay opaque per the mod-wide glass conventions; every
+ *       glass element falls back to its flat fill when the renderer
+ *       declines (no world, screenshot in flight, failure).</li>
  *   <li>Animated loading spinner instead of static "Loading…" text.</li>
  *   <li>Pack detail modal — clicking a card body opens a centered detail
  *       sheet (Resourcify's signature affordance) showing a large preview,
@@ -168,6 +176,16 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         static final int IDLE = 0, RESOLVING = 1, DOWNLOADING = 2, DONE = 3, FAILED = 4;
         volatile int phase = IDLE;
         String message = "";
+
+        /**
+         * Lazily-created shared install buttons, indexed by the phase they
+         * render — card-sized (80×18) and modal-sized (130×24) variants are
+         * separate instances because both surfaces can show the same pack at
+         * once. Held here (not a screen-level map) so they are pruned
+         * together with the state when the result set changes.
+         */
+        final Button[] cardPhaseButtons = new Button[5];
+        final Button[] modalPhaseButtons = new Button[5];
     }
 
     // ---- Smooth scroll (target-based lerp) ----
@@ -202,7 +220,16 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
     private ModrinthProject detailProject = null;
     private float detailOpenT = 0f;       // 0..1 open animation
     private boolean detailOpenTarget = false;
-    private float detailSpinnerAngle = 0f;
+    /** Modal Close button — shared glass Button painter, laid out per frame. */
+    private Button detailCloseButton;
+
+    /**
+     * Whether the sidebar's depressed glass panel engaged this frame. Set by
+     * the glass pass at the top of {@link #render} (which runs BEFORE the
+     * overlay dim, per the layering contract) and consulted by
+     * {@link #renderSidebar} to suppress the flat panel fill + outline.
+     */
+    private boolean sidebarGlass = false;
 
     // ---- Loading spinner animation ----
     private float spinnerAngle = 0f;
@@ -226,7 +253,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
 
         this.addRenderableWidget(new ButtonWidget(
                 this.width - 80 - 16, 12, 80, 22,
-                Component.literal("Done"), this::onClose));
+                Component.literal("Done"), this::onClose).glassBackground(true));
 
         // Focus the search field immediately so typing works without a click.
         this.setInitialFocus(searchField);
@@ -270,7 +297,6 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
 
         // Spinner advance.
         spinnerAngle = (spinnerAngle + 18f) % 360f;
-        detailSpinnerAngle = (detailSpinnerAngle + 18f) % 360f;
 
         // Detail modal open/close easing.
         float detailTarget = detailOpenTarget ? 1f : 0f;
@@ -342,6 +368,27 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         sidebarScroll += (sidebarScrollTarget - sidebarScroll) * scrollAlpha;
         if (Math.abs(sidebarScrollTarget - sidebarScroll) < 0.25) sidebarScroll = sidebarScrollTarget;
 
+        // ---- Sidebar glass panel — UNDER the dim, per the layering contract ----
+        // The sidebar is a main container: DEPRESSED glass with the ordinary
+        // SURFACE tint (whose alpha already carries the theme's Background
+        // Opacity — the single application point). Drawn before the overlay
+        // dim so the dim veils the panel and its surroundings equally;
+        // renderSidebar then suppresses the flat fill + outline when this
+        // engaged. With no live world the renderer declines and the flat
+        // panel returns, exactly as before glass.
+        int panelH = this.height - TOP_BAR_H - 16;
+        int panelY = TOP_BAR_H;
+        int panelW = SIDEBAR_W - SIDEBAR_PAD * 2;
+        int panelX = SIDEBAR_PAD;
+        sidebarGlass = liveWorldBackdrop() && BlurPanelRenderer.renderPanel(
+                g, panelX, panelY, panelW, panelH, AuroraTheme.RADIUS_LARGE,
+                BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX, BlurPanelRenderer.Lighting.depressed());
+        if (sidebarGlass) {
+            RenderUtil.drawRoundedRectAA(g, panelX, panelY, panelW, panelH, AuroraTheme.RADIUS_LARGE,
+                    ThemeManager.surfaceColor(ThemeToken.SURFACE));
+            BlurPanelRenderer.drawRimFinish(g, panelX, panelY, panelW, panelH, AuroraTheme.RADIUS_LARGE);
+        }
+
         // Themed backdrop — OVERLAY_DIM RGB at this screen's original 0x55
         // strength, so mode/accent derivation reaches even the dim layer.
         g.fill(0, 0, this.width, this.height,
@@ -350,15 +397,17 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         // ---- Sidebar ----
         renderSidebar(g, mouseX, mouseY);
 
-        // ---- Title ----
-        g.drawString(this.font, this.title, SIDEBAR_W + 16, 16, AuroraTheme.TEXT_PRIMARY, false);
-
-        // Result count subtitle
+        // Result count subtitle — BELOW the search bar (which occupies
+        // y 12..34), not inside it. The previous screen title (drawn at
+        // y 16) and count (y 28) both sat inside the search field's
+        // rectangle, stacking over its placeholder and typed text. The
+        // redundant title is dropped — the search bar + category sidebar
+        // already establish the context.
         int count = results.size();
         if (count > 0) {
             String countText = count + " pack" + (count == 1 ? "" : "s");
             g.drawString(this.font, Component.literal(countText),
-                    SIDEBAR_W + 16, 28, AuroraTheme.TEXT_SECONDARY, false);
+                    SIDEBAR_W + 16, 38, AuroraTheme.TEXT_SECONDARY, false);
         }
 
         // ---- Grid region ----
@@ -427,7 +476,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
             int tw = this.font.width(toastText) + 16;
             int tx = (this.width - tw) / 2;
             int ty = this.height - 32;
-            RenderUtil.drawRoundedRectAA(g, tx, ty, tw, 18, 4, bgColor);
+            RenderUtil.drawRoundedRectAA(g, tx, ty, tw, 18, AuroraTheme.RADIUS_SMALL, bgColor);
             AuroraFontRenderer.drawCentered(g, this.font, Component.literal(toastText),
                     this.width / 2, ty + 5, textColor);
         }
@@ -444,10 +493,16 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         int panelW = SIDEBAR_W - SIDEBAR_PAD * 2;
         int panelX = SIDEBAR_PAD;
 
-        // Sidebar panel — opacity-tracked themed surface.
-        RenderUtil.drawRoundedRectAA(g, panelX, panelY, panelW, panelH, 8,
-                ThemeManager.surfaceColor(ThemeToken.SURFACE));
-        RenderUtil.drawRoundedOutlineAA(g, panelX, panelY, panelW, panelH, 8, 1.0f, AuroraTheme.WINDOW_OUTLINE);
+        // Sidebar panel — the live glass material was already rendered above
+        // the dim (see render()); when it engaged, the flat fill + outline
+        // are suppressed here (the glass rim replaces the outline — no
+        // double outline).
+        if (!sidebarGlass) {
+            RenderUtil.drawRoundedRectAA(g, panelX, panelY, panelW, panelH, AuroraTheme.RADIUS_LARGE,
+                    ThemeManager.surfaceColor(ThemeToken.SURFACE));
+            RenderUtil.drawRoundedOutlineAA(g, panelX, panelY, panelW, panelH, AuroraTheme.RADIUS_LARGE,
+                    1.0f, AuroraTheme.WINDOW_OUTLINE);
+        }
 
         // "Categories" header
         g.drawString(this.font, Component.literal("Categories"),
@@ -506,11 +561,25 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
                 textCol = AuroraAnim.lerpArgb(AuroraTheme.TEXT_SECONDARY, AuroraTheme.TEXT_PRIMARY, t);
             }
 
-            if ((fill >>> 24) != 0) {
-                RenderUtil.drawRoundedRectAA(g, tabX, tabY, tabW, TAB_H, 4, fill);
-            }
+            float tabR = Math.min(TAB_H / 2f, AuroraTheme.RADIUS_SMALL);
             if (isActive) {
-                RenderUtil.drawRoundedOutlineAA(g, tabX, tabY, tabW, TAB_H, 4, 1.0f, outlineCol);
+                // Selected/primary element → accent-STAINED glass, raised
+                // (the tint is the existing accent lerp on top of the glass
+                // panel; the rim replaces the flat outline). Inactive tabs —
+                // including their hover state — deliberately stay flat
+                // neutral: they are small transient rows inside an
+                // already-glass sidebar container, not genuine surfaces.
+                boolean tabGlass = liveWorldBackdrop() && BlurPanelRenderer.renderPanel(
+                        g, tabX, tabY, tabW, TAB_H, tabR,
+                        BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX, BlurPanelRenderer.Lighting.raised());
+                RenderUtil.drawRoundedRectAA(g, tabX, tabY, tabW, TAB_H, tabR, fill);
+                if (tabGlass) {
+                    BlurPanelRenderer.drawRimFinish(g, tabX, tabY, tabW, TAB_H, tabR);
+                } else {
+                    RenderUtil.drawRoundedOutlineAA(g, tabX, tabY, tabW, TAB_H, tabR, 1.0f, outlineCol);
+                }
+            } else if ((fill >>> 24) != 0) {
+                RenderUtil.drawRoundedRectAA(g, tabX, tabY, tabW, TAB_H, tabR, fill);
             }
 
             String label = tab.displayName;
@@ -548,36 +617,37 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
                 && mouseY >= y && mouseY < y + CARD_H;
         float t = updateHover("card:" + p.projectId, cardHover);
 
-        // Cheap two-layer card shadow (2 fills). The full
-        // AuroraShapes.dropShadow ramp emits ~100 fills/card which dominates
-        // frame time at 40 results; two soft offsets read nearly identically
-        // at card scale and keep per-card draw count low.
-        renderCardShadow(g, x, y, CARD_W, CARD_H);
-
-        // Card body — theme surface, lifted slightly on hover.
+        // Card body — RAISED glass tile, per-element (each card's renderPanel
+        // call captures that card's own backdrop slice — per-element UV).
+        // The hover fill lerp survives as the tint on top of the glass; the
+        // manual two-layer drop shadow + top sheen are gone — the glass
+        // system supplies its own depth via the rim/lighting terms. On
+        // decline the plain flat fill + hover outline return unchanged.
         int fill = AuroraAnim.lerpArgb(AuroraTheme.IOS_SECONDARY_BG, AuroraTheme.IOS_TERTIARY_BG, t);
-        RenderUtil.drawRoundedRectAA(g, x, y, CARD_W, CARD_H, 8, fill);
-
-        // Top-edge sheen — material cue.
-        AuroraShapes.topSheen(g, x, y, CARD_W, CARD_H, 8, (int) (40 + 40 * t));
-
-        // Outline brightens with hover.
-        int outline = AuroraAnim.lerpArgb(AuroraTheme.TILE_OUTLINE_OFF, AuroraTheme.TILE_OUTLINE_ON, t);
-        RenderUtil.drawRoundedOutlineAA(g, x, y, CARD_W, CARD_H, 8, 1.0f, outline);
+        boolean cardGlass = liveWorldBackdrop() && BlurPanelRenderer.renderPanel(
+                g, x, y, CARD_W, CARD_H, AuroraTheme.RADIUS,
+                BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX, BlurPanelRenderer.Lighting.raised());
+        RenderUtil.drawRoundedRectAA(g, x, y, CARD_W, CARD_H, AuroraTheme.RADIUS, fill);
+        if (cardGlass) {
+            BlurPanelRenderer.drawRimFinish(g, x, y, CARD_W, CARD_H, AuroraTheme.RADIUS);
+        } else {
+            int outline = AuroraAnim.lerpArgb(AuroraTheme.TILE_OUTLINE_OFF, AuroraTheme.TILE_OUTLINE_ON, t);
+            RenderUtil.drawRoundedOutlineAA(g, x, y, CARD_W, CARD_H, AuroraTheme.RADIUS, 1.0f, outline);
+        }
 
         // Thumbnail
         int tx = x + THUMB_PAD;
         int ty = y + (CARD_H - THUMB_SIZE) / 2;
         // Framed thumbnail: dark inset behind the icon so non-square icons
         // read cleanly, plus a subtle border.
-        RenderUtil.drawRoundedRectAA(g, tx - 1, ty - 1, THUMB_SIZE + 2, THUMB_SIZE + 2, 7,
-                ThemeManager.color(ThemeToken.SURFACE_INSET));
+        RenderUtil.drawRoundedRectAA(g, tx - 1, ty - 1, THUMB_SIZE + 2, THUMB_SIZE + 2,
+                AuroraTheme.RADIUS_SMALL, ThemeManager.color(ThemeToken.SURFACE_INSET));
         Identifier icon = PackIconCache.getIfLoaded(p.iconUrl);
         if (icon != null) {
             PackIconCache.blitIcon(g, icon, tx, ty, THUMB_SIZE);
         } else {
             int bg = letterPlaceholderColor(p.title);
-            RenderUtil.drawRoundedRectAA(g, tx, ty, THUMB_SIZE, THUMB_SIZE, 6, bg);
+            RenderUtil.drawRoundedRectAA(g, tx, ty, THUMB_SIZE, THUMB_SIZE, AuroraTheme.RADIUS_SMALL, bg);
             String letter = (p.title == null || p.title.isEmpty()) ? "?"
                     : String.valueOf(Character.toUpperCase(p.title.charAt(0)));
             AuroraFontRenderer.drawCentered(g, this.font, Component.literal(letter),
@@ -586,7 +656,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
             PackIconCache.requestAsync(p.iconUrl);
         }
         // Thumbnail frame outline.
-        RenderUtil.drawRoundedOutlineAA(g, tx, ty, THUMB_SIZE, THUMB_SIZE, 6, 1.0f,
+        RenderUtil.drawRoundedOutlineAA(g, tx, ty, THUMB_SIZE, THUMB_SIZE, AuroraTheme.RADIUS_SMALL, 1.0f,
                 AuroraAnim.scaleAlpha(AuroraTheme.TEXT_PRIMARY, 0.10f + 0.10f * t));
 
         // Text
@@ -601,48 +671,51 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         g.drawString(this.font, fitText("d:" + p.projectId, p.description, textW),
                 textX, y + 12 + (this.font.lineHeight + 2) * 3, AuroraTheme.TEXT_SECONDARY, false);
 
-        // Install button
+        // Install button — the shared glass Button painter (the same
+        // implementation ButtonWidget wraps for the Done button), laid out
+        // imperatively per frame like ProfileManagerScreen's row buttons.
+        // Clicks still route through this screen's own rect hit-testing
+        // (see mouseClicked), so the painter is constructed with a no-op
+        // action — the ButtonWidget discipline.
         CardState st = cardStates.computeIfAbsent(p.projectId, k -> new CardState());
         int btnW = 80, btnH = 18;
         int btnX = x + CARD_W - btnW - THUMB_PAD;
         int btnY = y + CARD_H - btnH - 8;
-        boolean hover = mouseX >= btnX && mouseX < btnX + btnW
-                && mouseY >= btnY && mouseY < btnY + btnH;
-        float bt = updateHover("btn:" + p.projectId, hover && st.phase != CardState.DOWNLOADING);
-
-        switch (st.phase) {
-            case CardState.IDLE -> {
-                // Install affordance = success semantics — the semantic token
-                // replaces the stale (unprojected) legacy IOS_GREEN statics.
-                int fillBase = AuroraAnim.scaleAlpha(AuroraTheme.SEMANTIC_SUCCESS, 0.22f);
-                int fillHover = AuroraAnim.scaleAlpha(AuroraTheme.SEMANTIC_SUCCESS, 0.40f);
-                RenderUtil.drawRoundedRectAA(g, btnX, btnY, btnW, btnH, 4, AuroraAnim.lerpArgb(fillBase, fillHover, bt));
-                RenderUtil.drawRoundedOutlineAA(g, btnX, btnY, btnW, btnH, 4, 1.0f,
-                        AuroraAnim.scaleAlpha(AuroraTheme.SEMANTIC_SUCCESS, 0.45f));
-                AuroraFontRenderer.drawCentered(g, this.font, Component.literal("Install"),
-                        btnX + btnW / 2, btnY + (btnH - this.font.lineHeight) / 2 + 1, AuroraTheme.TEXT_PRIMARY);
-            }
-            case CardState.RESOLVING, CardState.DOWNLOADING -> {
-                RenderUtil.drawRoundedRectAA(g, btnX, btnY, btnW, btnH, 4, AuroraTheme.TILE_FILL);
-                String label = st.phase == CardState.RESOLVING ? "Resolving…" : "Downloading…";
-                AuroraFontRenderer.drawCentered(g, this.font, Component.literal(label),
-                        btnX + btnW / 2, btnY + (btnH - this.font.lineHeight) / 2 + 1, AuroraTheme.TEXT_PRIMARY);
-            }
-            case CardState.DONE -> {
-                RenderUtil.drawRoundedRectAA(g, btnX, btnY, btnW, btnH, 4,
-                        AuroraAnim.scaleAlpha(AuroraTheme.SEMANTIC_SUCCESS, 0.30f));
-                AuroraFontRenderer.drawCentered(g, this.font, Component.literal("Installed ✓"),
-                        btnX + btnW / 2, btnY + (btnH - this.font.lineHeight) / 2 + 1,
-                        AuroraAnim.lerpArgb(AuroraTheme.SEMANTIC_SUCCESS, 0xFFFFFFFF, 0.65f));
-            }
-            case CardState.FAILED -> {
-                int fillBase = AuroraAnim.scaleAlpha(AuroraTheme.SEMANTIC_ERROR, 0.40f);
-                int fillHover = AuroraAnim.scaleAlpha(AuroraTheme.SEMANTIC_ERROR, 0.60f);
-                RenderUtil.drawRoundedRectAA(g, btnX, btnY, btnW, btnH, 4, AuroraAnim.lerpArgb(fillBase, fillHover, bt));
-                AuroraFontRenderer.drawCentered(g, this.font, Component.literal("Retry"),
-                        btnX + btnW / 2, btnY + (btnH - this.font.lineHeight) / 2 + 1, AuroraTheme.TEXT_PRIMARY);
-            }
+        Button installBtn = st.cardPhaseButtons[st.phase];
+        if (installBtn == null) {
+            installBtn = newPhaseButton(st.phase);
+            st.cardPhaseButtons[st.phase] = installBtn;
         }
+        installBtn.layout(btnX, btnY, btnW, btnH);
+        installBtn.render(g, btnX, btnY, btnW, btnH, mouseX, mouseY);
+    }
+
+    /**
+     * Shared install-phase button factory. The shared {@link Button} has no
+     * success variant, so the phases map onto its variant language: Install
+     * is the primary action → accent-STAINED glass (the glass conventions
+     * reserve stained for primary/selected elements; the detail modal's old
+     * hand-rolled Install was already an accent gradient); Resolving…/
+     * Downloading…/Installed ✓ are neutral glass; Retry is the component's
+     * destructive treatment (semantic-error fill + outline + white label —
+     * Button deliberately pins destructive to the flat look). The previous
+     * success-green fills are not expressible through the shared painter
+     * without modifying it, which this change is forbidden to do.
+     */
+    private static Button newPhaseButton(int phase) {
+        return switch (phase) {
+            case CardState.IDLE -> new Button(Component.literal("Install"), () -> {}, true)
+                    .glassStyle(Button.GlassStyle.STAINED);
+            case CardState.RESOLVING -> new Button(Component.literal("Resolving…"), () -> {})
+                    .glassBackground(true);
+            case CardState.DOWNLOADING -> new Button(Component.literal("Downloading…"), () -> {})
+                    .glassBackground(true);
+            case CardState.DONE -> new Button(Component.literal("Installed ✓"), () -> {})
+                    .glassBackground(true);
+            case CardState.FAILED -> new Button(Component.literal("Retry"), () -> {})
+                    .destructive(true);
+            default -> throw new IllegalArgumentException("phase " + phase);
+        };
     }
 
     private void renderDetailModal(GuiGraphics g, int mouseX, int mouseY) {
@@ -659,13 +732,23 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         int modalY = (this.height - modalH) / 2 + (int) ((1f - openT) * 16);
 
         g.enableScissor(0, 0, this.width, this.height);
-        // Shadow + body.
-        AuroraShapes.dropShadow(g, modalX, modalY, modalW, modalH, AuroraTheme.RADIUS_LARGE);
+        // Modal body — same treatment as the sidebar: DEPRESSED glass behind
+        // the existing SURFACE tint, rim finish above it. The manual drop
+        // shadow + top sheen are gone — the glass system replaces them. The
+        // modal's own dim backdrop has already been filled, so the glass
+        // correctly captures the dimmed screen as its backdrop. On decline
+        // the flat fill + outline return.
+        boolean modalGlass = liveWorldBackdrop() && BlurPanelRenderer.renderPanel(
+                g, modalX, modalY, modalW, modalH, AuroraTheme.RADIUS_LARGE,
+                BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX, BlurPanelRenderer.Lighting.depressed());
         RenderUtil.drawRoundedRectAA(g, modalX, modalY, modalW, modalH,
                 AuroraTheme.RADIUS_LARGE, ThemeManager.surfaceColor(ThemeToken.SURFACE));
-        RenderUtil.drawRoundedOutlineAA(g, modalX, modalY, modalW, modalH,
-                AuroraTheme.RADIUS_LARGE, 1.0f, AuroraTheme.WINDOW_OUTLINE);
-        AuroraShapes.topSheen(g, modalX, modalY, modalW, modalH, AuroraTheme.RADIUS_LARGE, 80);
+        if (modalGlass) {
+            BlurPanelRenderer.drawRimFinish(g, modalX, modalY, modalW, modalH, AuroraTheme.RADIUS_LARGE);
+        } else {
+            RenderUtil.drawRoundedOutlineAA(g, modalX, modalY, modalW, modalH,
+                    AuroraTheme.RADIUS_LARGE, 1.0f, AuroraTheme.WINDOW_OUTLINE);
+        }
 
         if (detailProject != null) {
             renderDetailContent(g, detailProject, modalX, modalY, modalW, modalH, mouseX, mouseY);
@@ -679,14 +762,15 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
 
         // Large preview thumbnail (inset surface token — the old IOS_GRAY_6
         // static was never theme-projected).
-        RenderUtil.drawRoundedRectAA(g, mx + pad, my + pad, thumbSize, thumbSize, 10,
+        RenderUtil.drawRoundedRectAA(g, mx + pad, my + pad, thumbSize, thumbSize, AuroraTheme.RADIUS_SMALL,
                 ThemeManager.color(ThemeToken.SURFACE_INSET));
         Identifier icon = PackIconCache.getIfLoaded(p.iconUrl);
         if (icon != null) {
             PackIconCache.blitIcon(g, icon, mx + pad, my + pad, thumbSize);
         } else {
             int bg = letterPlaceholderColor(p.title);
-            RenderUtil.drawRoundedRectAA(g, mx + pad, my + pad, thumbSize, thumbSize, 10, bg);
+            RenderUtil.drawRoundedRectAA(g, mx + pad, my + pad, thumbSize, thumbSize,
+                    AuroraTheme.RADIUS_SMALL, bg);
             String letter = (p.title == null || p.title.isEmpty()) ? "?"
                     : String.valueOf(Character.toUpperCase(p.title.charAt(0)));
             AuroraFontRenderer.drawCentered(g, this.font, Component.literal(letter),
@@ -697,8 +781,12 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
 
         int textX = mx + pad + thumbSize + 14;
         int textW = mw - (textX - mx) - pad;
-        g.drawString(this.font, truncateToWidth(p.title, textW), textX, my + pad + 2, AuroraTheme.TEXT_PRIMARY, false);
-        g.drawString(this.font, "by " + truncateToWidth(p.author, textW),
+        // Routed through the memoized fitText cache (distinct field keys) —
+        // the modal re-renders every frame while open, and the raw
+        // truncateToWidth loop is exactly the per-frame font.width() cost
+        // the cache exists to avoid.
+        g.drawString(this.font, fitText("dt:" + p.projectId, p.title, textW), textX, my + pad + 2, AuroraTheme.TEXT_PRIMARY, false);
+        g.drawString(this.font, "by " + fitText("da:" + p.projectId, p.author, textW),
                 textX, my + pad + 4 + this.font.lineHeight, AuroraTheme.TEXT_SECONDARY, false);
         g.drawString(this.font, formatCount(p.downloads) + " downloads  ·  "
                         + formatCount(p.followers) + " followers",
@@ -712,72 +800,34 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
                 mx + pad, descY, descW, (descBottom - descY) / (this.font.lineHeight + 2),
                 AuroraTheme.TEXT_SECONDARY);
 
-        // Install button row.
+        // Install button row — the shared glass Button painter at this
+        // modal's larger size (a separate instance from the card's, so both
+        // surfaces can show the same pack simultaneously). Clicks route
+        // through handleDetailClick's rect test; the painter's action is a
+        // no-op (the ButtonWidget discipline).
         CardState st = cardStates.computeIfAbsent(p.projectId, k -> new CardState());
         int btnW = 130, btnH = 24;
         int btnX = mx + pad;
         int btnY = my + mh - pad - btnH;
-        boolean hover = mouseX >= btnX && mouseX < btnX + btnW
-                && mouseY >= btnY && mouseY < btnY + btnH;
-        float bt = updateHover("detailbtn:" + p.projectId, hover && st.phase != CardState.DOWNLOADING);
-
-        switch (st.phase) {
-            case CardState.IDLE -> {
-                int fillBase = AuroraTheme.IOS_BLUE_GRAD_BOT;
-                int fillHover = AuroraTheme.IOS_BLUE_GRAD_TOP_HOVER;
-                RenderUtil.drawRoundedRectAA(g, btnX, btnY, btnW, btnH, 6, AuroraAnim.lerpArgb(fillBase, fillHover, bt));
-                RenderUtil.drawRoundedOutlineAA(g, btnX, btnY, btnW, btnH, 6, 1.0f,
-                        AuroraAnim.scaleAlpha(0xFFFFFFFF, 0.25f));
-                AuroraFontRenderer.drawCentered(g, this.font, Component.literal("Install"),
-                        btnX + btnW / 2, btnY + (btnH - this.font.lineHeight) / 2 + 1, 0xFFFFFFFF);
-            }
-            case CardState.RESOLVING, CardState.DOWNLOADING -> {
-                RenderUtil.drawRoundedRectAA(g, btnX, btnY, btnW, btnH, 6, AuroraTheme.TILE_FILL);
-                renderSpinner(g, btnX + 14, btnY + btnH / 2, detailSpinnerAngle);
-                String label = st.phase == CardState.RESOLVING ? "Resolving…" : "Downloading…";
-                g.drawString(this.font, Component.literal(label),
-                        btnX + 30, btnY + (btnH - this.font.lineHeight) / 2 + 1, AuroraTheme.TEXT_PRIMARY, false);
-            }
-            case CardState.DONE -> {
-                RenderUtil.drawRoundedRectAA(g, btnX, btnY, btnW, btnH, 6,
-                        AuroraAnim.scaleAlpha(AuroraTheme.SEMANTIC_SUCCESS, 0.45f));
-                AuroraFontRenderer.drawCentered(g, this.font, Component.literal("Installed ✓"),
-                        btnX + btnW / 2, btnY + (btnH - this.font.lineHeight) / 2 + 1,
-                        AuroraAnim.lerpArgb(AuroraTheme.SEMANTIC_SUCCESS, 0xFFFFFFFF, 0.65f));
-            }
-            case CardState.FAILED -> {
-                RenderUtil.drawRoundedRectAA(g, btnX, btnY, btnW, btnH, 6,
-                        AuroraAnim.lerpArgb(AuroraAnim.scaleAlpha(AuroraTheme.SEMANTIC_ERROR, 0.55f),
-                                AuroraAnim.scaleAlpha(AuroraTheme.SEMANTIC_ERROR, 0.75f), bt));
-                AuroraFontRenderer.drawCentered(g, this.font, Component.literal("Retry Install"),
-                        btnX + btnW / 2, btnY + (btnH - this.font.lineHeight) / 2 + 1, 0xFFFFFFFF);
-            }
+        Button detailInstallBtn = st.modalPhaseButtons[st.phase];
+        if (detailInstallBtn == null) {
+            detailInstallBtn = newPhaseButton(st.phase);
+            st.modalPhaseButtons[st.phase] = detailInstallBtn;
         }
+        detailInstallBtn.layout(btnX, btnY, btnW, btnH);
+        detailInstallBtn.render(g, btnX, btnY, btnW, btnH, mouseX, mouseY);
 
-        // Close button (top-right of modal).
+        // Close button (top-right of modal) — shared glass Button painter,
+        // neutral raised like every other chrome action on this screen.
+        // Clicks route through handleDetailClick's rect test (no-op action).
         int cbW = 60, cbH = 22;
         int cbX = mx + mw - cbW - pad;
         int cbY = my + pad;
-        boolean cbHover = mouseX >= cbX && mouseX < cbX + cbW
-                && mouseY >= cbY && mouseY < cbY + cbH;
-        float cbt = updateHover("detailclose", cbHover);
-        RenderUtil.drawRoundedRectAA(g, cbX, cbY, cbW, cbH, 6,
-                AuroraAnim.lerpArgb(AuroraTheme.TILE_FILL, AuroraTheme.TILE_FILL_HOVER, cbt));
-        RenderUtil.drawRoundedOutlineAA(g, cbX, cbY, cbW, cbH, 6, 1.0f, AuroraTheme.TILE_OUTLINE_OFF);
-        AuroraFontRenderer.drawCentered(g, this.font, Component.literal("Close"),
-                cbX + cbW / 2, cbY + (cbH - this.font.lineHeight) / 2 + 1, AuroraTheme.TEXT_PRIMARY);
-    }
-
-    /**
-     * Two-layer rounded drop shadow — a tight darker layer immediately under
-     * the card and a softer wider layer one pixel further down. Visually
-     * equivalent to a short ambient-occlusion halo at card scale but only
-     * costs two rounded fills instead of {@link AuroraShapes#dropShadow}'s
-     * six layers (~100 fills). Used per-card where draw-call count matters.
-     */
-    private void renderCardShadow(GuiGraphics g, int x, int y, int w, int h) {
-        RenderUtil.drawRoundedRectAA(g, x + 1, y + 2, w, h, 8, 0x55000000);
-        RenderUtil.drawRoundedRectAA(g, x, y + 4, w, h, 9, 0x22000000);
+        if (detailCloseButton == null) {
+            detailCloseButton = new Button(Component.literal("Close"), () -> {}).glassBackground(true);
+        }
+        detailCloseButton.layout(cbX, cbY, cbW, cbH);
+        detailCloseButton.render(g, cbX, cbY, cbW, cbH, mouseX, mouseY);
     }
 
     /** Small animated circular spinner, used by the loading + install-in-progress states. */
@@ -793,6 +843,31 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
             int col = AuroraAnim.scaleAlpha(AuroraTheme.TEXT_PRIMARY, fade * 0.9f);
             g.fill(x, y, x + 2, y + 2, col);
         }
+    }
+
+    /**
+     * True when the main render target holds a live world — i.e. the glass
+     * capture source is valid. Mirrors {@code BlurPanelRenderer}'s own
+     * menu-context guard so this screen never asks for glass (or drops the
+     * vanilla backdrop) in a context where glass cannot engage (no level
+     * loaded: the renderer declines and the flat fallback wants the vanilla
+     * backdrop).
+     */
+    private boolean liveWorldBackdrop() {
+        return this.minecraft != null && this.minecraft.level != null;
+    }
+
+    @Override
+    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float delta) {
+        // With a live world behind the screen, skip vanilla's background
+        // sandwich (full-screen blur + dark gradient) — the glass panels
+        // must sample the LIVE world, not an already-darkened,
+        // already-blurred backdrop. With no level loaded the glass renderer
+        // declines anyway (its menu-context guard) and the opaque fallback
+        // wants the vanilla backdrop as before, so the override is
+        // conditional on the same validity check the renderer uses.
+        if (liveWorldBackdrop()) return;
+        super.renderBackground(g, mouseX, mouseY, delta);
     }
 
     // ------------------------------------------------------------------

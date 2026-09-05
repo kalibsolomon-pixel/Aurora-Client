@@ -37,6 +37,13 @@ public class ThemeDefinition {
     public ThemeRoundness roundness = ThemeRoundness.ROUND;
 
     /**
+     * Whether panel backgrounds render as blurred glass or as flat
+     * translucent fills (see {@link GlassStyle}). Defaults to
+     * {@link GlassStyle#FROSTED} so upgrading users see no change.
+     */
+    public GlassStyle glassStyle = GlassStyle.FROSTED;
+
+    /**
      * Alpha (0..1) of the theme's panel/window background fill. Applied by
      * {@link ThemeResolver} to the {@code WINDOW_FILL} token's alpha channel
      * only — hue and lightness stay derived, so this slider adjusts
@@ -74,6 +81,7 @@ public class ThemeDefinition {
      * Null-safe copy: a null input yields factory defaults, and every
      * nullable/fragile field is normalized (null mode →
      * {@link ThemeMode#DARK}, null roundness → {@link ThemeRoundness#ROUND},
+     * null glassStyle → {@link GlassStyle#FROSTED},
      * opacity → {@link #normalizedOpacity}), so callers can never observe
      * a half-invalid definition.
      */
@@ -83,6 +91,7 @@ public class ThemeDefinition {
             copy.mode = other.mode != null ? other.mode : ThemeMode.DARK;
             copy.accent = other.accent;
             copy.roundness = other.roundness != null ? other.roundness : ThemeRoundness.ROUND;
+            copy.glassStyle = other.glassStyle != null ? other.glassStyle : GlassStyle.FROSTED;
             copy.backgroundOpacity = normalizedOpacity(other.backgroundOpacity);
         }
         return copy;

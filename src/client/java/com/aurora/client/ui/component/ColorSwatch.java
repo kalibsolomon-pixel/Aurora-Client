@@ -55,7 +55,7 @@ public class ColorSwatch extends Widget {
         float radius = Math.min(h / 2f, ThemeManager.current().roundness().radiusSmall());
 
         if (checkerboard) {
-            drawCheckerboard(g, x, y, w, h);
+            drawCheckerboard(g, x, y, w, h, radius);
         }
 
         int drawColor = disabled ? (color & 0x55FFFFFF) : (color | 0xFF000000);
@@ -86,15 +86,55 @@ public class ColorSwatch extends Widget {
         return true;
     }
 
-    private static void drawCheckerboard(GuiGraphics g, float x, float y, float w, float h) {
+    /**
+     * Checkerboard clipped to the rounded-rect geometry. The old version drew
+     * plain square cells across the full bounds, so at any non-zero radius
+     * the square checker corners bled past the rounded color fill drawn on
+     * top (invisible at Square only because the fill is square too). Each
+     * row now skips cells outside the arc span using the same corner math as
+     * {@code RenderUtil.drawRoundedRectAA}, so the checker silhouette matches
+     * the fill exactly.
+     */
+    private static void drawCheckerboard(GuiGraphics g, float x, float y, float w, float h, float radius) {
         int cell = 4;
-        for (int dy = 0; dy < h; dy += cell) {
-            for (int dx = 0; dx < w; dx += cell) {
-                boolean dark = ((dx / cell) + (dy / cell)) % 2 == 0;
+        float r = Math.min(radius, Math.min(w, h) / 2f);
+        float cyTop = y + r;
+        float cyBot = y + h - r;
+        for (float dy = 0; dy < h; dy += cell) {
+            float rowY = y + dy;
+            // Clip conservatively: a checker row covers up to `cell` one-pixel
+            // fill rows, each with its own arc span. Clip to the NARROWEST
+            // span the row covers — the fill sub-row nearest the shape edge
+            // (center at rowY+0.5 for a top corner row, rowY+cell-0.5 for a
+            // bottom one) — mirroring drawRoundedRectAA's per-row math
+            // (dy = cornerY - (rowY + 0.5); dx = sqrt(r² - dy²)). No checker
+            // pixel can then fall outside the fill's boundary.
+            float inset;
+            if (r <= 0 || rowY >= cyTop && rowY + cell <= cyBot) {
+                inset = 0f; // body row — full span
+            } else if (rowY < cyTop) {
+                float d = cyTop - (rowY + 0.5f);
+                inset = d >= r ? r : Math.max(0f, (float) (r - Math.sqrt(r * r - d * d)));
+            } else {
+                float d = (rowY + cell - 0.5f) - cyBot;
+                inset = d >= r ? r : Math.max(0f, (float) (r - Math.sqrt(r * r - d * d)));
+            }
+            float left = x + inset;
+            float right = x + w - inset;
+            if (right <= left) continue;
+            // Absolute-grid cell indices keep the checker phase identical in
+            // every row regardless of the row's arc inset.
+            int i0 = (int) Math.floor((left - x) / cell);
+            int i1 = (int) Math.ceil((right - x) / cell);
+            int j = (int) (rowY - y) / cell;
+            for (int i = i0; i < i1; i++) {
+                float cellL = Math.max(x + i * cell, left);
+                float cellR = Math.min(x + (i + 1) * cell, right);
+                if (cellR <= cellL) continue;
+                boolean dark = (i + j) % 2 == 0;
                 int col = dark ? 0xFF555555 : 0xFFAAAAAA;
-                g.fill(Math.round(x + dx), Math.round(y + dy),
-                        Math.round(Math.min(x + dx + cell, x + w)),
-                        Math.round(Math.min(y + dy + cell, y + h)),
+                g.fill(Math.round(cellL), Math.round(rowY),
+                        Math.round(cellR), Math.round(Math.min(rowY + cell, y + h)),
                         col);
             }
         }

@@ -82,7 +82,9 @@ public final class CrosshairRenderer {
             case SQUARE -> drawSquare(ctx, cx, cy, size, thick, gap, color);
             case CROSS  -> drawCross(ctx, cx, cy, size, thick, gap, color);
             case CUSTOM -> drawCustom(ctx, cx, cy, size, color,
-                    useIndicator ? cfg.crosshairIndicatorCustomPixels : cfg.crosshairCustomPixels);
+                    useIndicator ? cfg.crosshairIndicatorCustomPixels : cfg.crosshairCustomPixels,
+                    useIndicator ? cfg.crosshairIndicatorCustomWidth : cfg.crosshairCustomWidth,
+                    useIndicator ? cfg.crosshairIndicatorCustomHeight : cfg.crosshairCustomHeight);
         }
 
         ctx.pose().popMatrix();
@@ -232,38 +234,60 @@ public final class CrosshairRenderer {
     }
 
     /**
-     * Renders a user-painted 11Ãƒâ€”11 grid. The grid's center cell (gx=5, gy=5)
-     * lands on screen column {@code cx} at any zoom; combined with the
-     * matrix translate, that means the center cell visually straddles the
-     * screen seam.
+     * Renders the user-painted custom grid (free-form width×height; the
+     * dims come from the config fields, with a legacy perfect-square
+     * fallback for old configs — see {@link com.aurora.client.util.GridDims}).
+     * The grid's center cell lands on screen column {@code cx} at any
+     * zoom; combined with the matrix translate, that means the center of
+     * the canvas visually straddles the screen seam.
      *
-     * <p>Defensive: if the array is null or the wrong length, draws nothing
-     * rather than crashing.
+     * <p>Lit cells are merged into horizontal runs before submission —
+     * one {@code fill()} per run of consecutive lit cells instead of one
+     * per cell (a solid 33×33 block costs 33 fills, not 1089; each fill
+     * allocates a render state, so this matters at high resolutions).
+     * Merged runs produce the identical pixel coverage as the per-cell
+     * fills they replace.
+     *
+     * <p>Defensive: if the array is null or matches no valid dims, draws
+     * nothing rather than crashing.
      */
-    private static void drawCustom(GuiGraphics ctx, int cx, int cy, int size, int color, boolean[] pixels) {
+    private static void drawCustom(GuiGraphics ctx, int cx, int cy, int size, int color,
+                                   boolean[] pixels, int cfgW, int cfgH) {
         if (pixels == null || pixels.length == 0) return;
-        
-        int gridLen = (int) Math.round(Math.sqrt(pixels.length));
-        if (gridLen * gridLen != pixels.length) return; // not a perfect square
 
-        // Scale the canvas so it occupies the same physical space regardless of grid resolution.
-        // A size of 5 results in a 15-logical-pixel wide crosshair (matching vanilla).
-        float totalLogicalWidth = size * 3.0f;
-        float scaleFactor = totalLogicalWidth / gridLen;
+        com.aurora.client.util.GridDims dims =
+                com.aurora.client.util.GridDims.resolve(pixels.length, cfgW, cfgH);
+        if (!dims.matches(pixels)) return;
+        int gridW = dims.w;
+        int gridH = dims.h;
+
+        // Scale the canvas so it occupies the same physical space regardless
+        // of grid resolution: the LARGER axis spans size*3 logical pixels
+        // (a size of 5 ⇒ 15-px crosshair, matching vanilla), keeping cells
+        // square for non-square grids.
+        float totalLogical = size * 3.0f;
+        float scaleFactor = totalLogical / Math.max(gridW, gridH);
 
         ctx.pose().pushMatrix();
         ctx.pose().translate(cx, cy);
         ctx.pose().scale(scaleFactor, scaleFactor);
-        ctx.pose().translate(-gridLen / 2.0f, -gridLen / 2.0f);
+        ctx.pose().translate(-gridW / 2.0f, -gridH / 2.0f);
 
-        for (int gy = 0; gy < gridLen; gy++) {
-            for (int gx = 0; gx < gridLen; gx++) {
-                if (!pixels[gy * gridLen + gx]) continue;
+        for (int gy = 0; gy < gridH; gy++) {
+            int rowBase = gy * gridW;
+            int gx = 0;
+            while (gx < gridW) {
+                if (!pixels[rowBase + gx]) {
+                    gx++;
+                    continue;
+                }
+                int runStart = gx;
+                while (gx < gridW && pixels[rowBase + gx]) gx++;
                 // GPU matrix perfectly aligns integer vertices, preventing subpixel seams.
-                ctx.fill(gx, gy, gx + 1, gy + 1, color);
+                ctx.fill(runStart, gy, gx, gy + 1, color);
             }
         }
-        
+
         ctx.pose().popMatrix();
     }
 }

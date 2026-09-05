@@ -4,6 +4,7 @@ import com.aurora.client.AuroraClient;
 import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.config.profile.ProfileManager;
 import com.aurora.client.screen.setting.*;
+import com.aurora.client.theme.GlassStyle;
 import com.aurora.client.theme.ThemeMode;
 import com.aurora.client.theme.ThemeRoundness;
 import net.minecraft.core.particles.ParticleType;
@@ -95,6 +96,16 @@ public final class FeatureRegistry {
                                 ThemeRoundness::displayName)
                                 .glassSegments(true) // glass pilot: Theme screen only
                                 .description("How round Aurora's panels and buttons are: Round (the classic look), Slightly Round, or Square. Applies everywhere corners are drawn — including this screen."),
+                        new SegmentedSetting<>("Glass Style", GlassStyle.class,
+                                () -> cfg.themeOrDefault().glassStyle != null ? cfg.themeOrDefault().glassStyle : GlassStyle.FROSTED,
+                                v -> {
+                                    cfg.themeOrDefault().glassStyle = v;
+                                    com.aurora.client.theme.ThemeManager.reload();
+                                    persistThemeChange();
+                                },
+                                GlassStyle::displayName)
+                                .glassSegments(true)
+                                .description("How Aurora draws panel backgrounds. Frosted blurs whatever is behind each panel; Transparent skips the blur and uses a flat translucent fill, which is cheaper to render and suits lower-end hardware. Corner Style and Background Opacity apply to both."),
                         new ThemeOpacitySetting("Background Opacity",
                                 () -> cfg.themeOrDefault().backgroundOpacity,
                                 v -> {
@@ -406,8 +417,11 @@ public final class FeatureRegistry {
                                 .disabled(() -> cfg.crosshairStyle != AuroraConfig.CrosshairStyle.CIRCLE && cfg.crosshairStyle != AuroraConfig.CrosshairStyle.SQUARE),
                         new ColorSetting("Color", () -> cfg.crosshairColor, v -> cfg.crosshairColor = v),
                         new PixelCanvasSetting("Custom Canvas (used when style = CUSTOM)",
-                                () -> cfg.crosshairCustomPixels, v -> cfg.crosshairCustomPixels = v)
-                                .description("Left-click to paint, right-click to erase, drag to stroke. Use tabs to resize.")
+                                () -> cfg.crosshairCustomPixels, v -> cfg.crosshairCustomPixels = v,
+                                () -> cfg.crosshairCustomWidth, v -> cfg.crosshairCustomWidth = v,
+                                () -> cfg.crosshairCustomHeight, v -> cfg.crosshairCustomHeight = v)
+                                .description("Left-click to paint, right-click to erase, drag to stroke. Enter any width × height up to "
+                                        + PixelCanvasSetting.MAX_DIM + " and press Apply — growing the grid first measures the real render cost on your machine. Default restores the vanilla 15×15 crosshair shape.")
                                 .disabled(() -> cfg.crosshairStyle != AuroraConfig.CrosshairStyle.CUSTOM),
                         new BooleanSetting("Indicator (entity in reach)",
                                 () -> cfg.crosshairIndicatorEnabled, v -> cfg.crosshairIndicatorEnabled = v),
@@ -427,7 +441,9 @@ public final class FeatureRegistry {
                                 () -> cfg.crosshairIndicatorColor, v -> cfg.crosshairIndicatorColor = v)
                                 .disabled(() -> !cfg.crosshairIndicatorEnabled),
                         new PixelCanvasSetting("Indicator Custom Canvas",
-                                () -> cfg.crosshairIndicatorCustomPixels, v -> cfg.crosshairIndicatorCustomPixels = v)
+                                () -> cfg.crosshairIndicatorCustomPixels, v -> cfg.crosshairIndicatorCustomPixels = v,
+                                () -> cfg.crosshairIndicatorCustomWidth, v -> cfg.crosshairIndicatorCustomWidth = v,
+                                () -> cfg.crosshairIndicatorCustomHeight, v -> cfg.crosshairIndicatorCustomHeight = v)
                                 .description("Drawn when aiming at a targetable entity. Left-click paints, right-click erases.")
                                 .disabled(() -> !cfg.crosshairIndicatorEnabled || cfg.crosshairIndicatorStyle != AuroraConfig.CrosshairStyle.CUSTOM)
                 ));

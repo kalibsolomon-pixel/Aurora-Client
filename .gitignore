@@ -14,3 +14,7 @@ logs/
 # Large source font consumed by subset_script.py — the generated
 # subset it produces already lives under src/client/resources
 full_material.ttf
+
+# Agent tooling state and local scratch downloads — not project files
+.mimosa/
+archive-*/

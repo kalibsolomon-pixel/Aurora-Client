@@ -21,6 +21,11 @@ import net.minecraft.network.chat.Component;
  * rows. Reachable via right-click on a tile that has settings.
  *
  * <p>Modernized to use the high-performance 'new' renderer, matching AuroraScreen.
+ *
+ * <p>Glass rollout: every detail screen now uses the glass material (the
+ * former {@code GLASS_PILOT_IDS} staged set is retired — glass is the
+ * default look mod-wide). Per-setting glass flags default to on as well;
+ * the registry's historical pilot flags are redundant no-ops.
  */
 public class FeatureDetailScreen extends Screen implements ThemedScreen {
 
@@ -69,29 +74,13 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         this.meta = meta;
     }
 
-    /**
-     * Feature ids enrolled in the glass-material pilot. The Theme screen was
-     * the original pilot (one screen first, tune before wider rollout); the
-     * staged rollout enrolls further screens here as each passes the full
-     * checklist — "block_overlay" (settings-list family) and "pack_tweaks"
-     * (section headers + dropdown + color swatches + sliders in one screen)
-     * are the second wave. Every other feature detail screen keeps its
-     * existing opaque look — nothing keys off anything but this set.
-     */
-    private static final java.util.Set<String> GLASS_PILOT_IDS =
-            java.util.Set.of("theme", "block_overlay", "pack_tweaks");
-
-    private boolean usesGlass() {
-        return GLASS_PILOT_IDS.contains(meta.id);
-    }
-
     @Override
     protected void init() {
         this.addRenderableWidget(new ButtonWidget(
                 this.width - DONE_W - DONE_RIGHT_MARGIN, DONE_TOP_MARGIN,
                 DONE_W, DONE_H,
                 Component.literal("Done"),
-                this::onClose).glassBackground(usesGlass()));
+                this::onClose).glassBackground(true));
 
         // Reset-to-defaults button immediately to the left of Done. Persists
         // immediately so the change is visible to other open screens.
@@ -104,7 +93,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
                 () -> {
                     meta.reset();
                     AuroraConfig.save();
-                }).glassBackground(usesGlass()));
+                }).glassBackground(true));
 
         // Notify every setting the first time this screen instance is
         // initialized (i.e. on open) so stateful settings (e.g. a search
@@ -138,14 +127,27 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         }
     }
 
+    /**
+     * True when the main render target holds a live world — i.e. the glass
+     * capture source is valid. Mirrors {@code BlurPanelRenderer}'s own
+     * menu-context guard so this screen never drops the vanilla backdrop in
+     * a context where glass cannot engage (no level loaded: the renderer
+     * declines and the opaque fallback wants the vanilla backdrop).
+     */
+    private boolean liveWorldBackdrop() {
+        return this.minecraft != null && this.minecraft.level != null;
+    }
+
     @Override
     public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float delta) {
-        // Glass pilot (theme screen only): vanilla's background sandwich
-        // (full-screen blur + dark gradient) would put an already-darkened,
-        // already-blurred backdrop under the glass — the panel must sample
-        // the LIVE world (same reasoning as BlurTestScreen's no-op
-        // override). Non-theme screens keep the vanilla behavior.
-        if (usesGlass()) return;
+        // With a live world behind the screen, skip vanilla's background
+        // sandwich (full-screen blur + dark gradient) — the glass panels
+        // must sample the LIVE world, not an already-darkened,
+        // already-blurred backdrop. With no level loaded the glass renderer
+        // declines anyway (its menu-context guard) and the opaque fallback
+        // wants the vanilla backdrop as before, so the override is
+        // conditional on the same validity check the renderer uses.
+        if (liveWorldBackdrop()) return;
         super.renderBackground(g, mouseX, mouseY, delta);
     }
 
@@ -167,20 +169,20 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         int windowY = TOP_PAD - (int) scrollY - WINDOW_PAD_TOP;
         int windowH = totalRowsH + WINDOW_PAD_TOP + WINDOW_PAD_BOTTOM;
 
-        // ---- Glass pilot (theme screen only): live GPU glass UNDER the ----
-        // cached layer. Drawn before the overlay dim so the dim veils the
-        // panel and its surroundings equally — the backdrop must not read
-        // brighter inside the panel than outside it (the alignment work's
-        // core principle). The window panel uses the depressed treatment
-        // (main containers read as recessed); its tint is the ordinary
-        // WINDOW_FILL fill, whose alpha already carries the theme's
-        // Background Opacity — still exactly one application point. When
-        // the renderer declines (screenshot suppression, tiny/clipped
-        // panel, failure) glassWindow is false and the cached layer below
-        // carries the old opaque fill+outline instead (see the glass bit in
-        // the version hash, which forces the re-raster on the switch).
+        // ---- Live GPU glass UNDER the cached layer. Drawn before the ----
+        // overlay dim so the dim veils the panel and its surroundings
+        // equally — the backdrop must not read brighter inside the panel
+        // than outside it (the alignment work's core principle). The window
+        // panel uses the depressed treatment (main containers read as
+        // recessed); its tint is the ordinary WINDOW_FILL fill, whose alpha
+        // already carries the theme's Background Opacity — still exactly
+        // one application point. When the renderer declines (no world,
+        // screenshot suppression, tiny/clipped panel, failure) glassWindow
+        // is false and the cached layer below carries the old opaque
+        // fill+outline instead (see the glass bit in the version hash,
+        // which forces the re-raster on the switch).
         boolean glassWindow = false;
-        if (usesGlass()) {
+        {
             float radius = ThemeManager.current().roundness().radius();
             glassWindow = BlurPanelRenderer.renderPanel(ctx, listX, windowY, LIST_W, windowH,
                     radius, BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX,
@@ -188,6 +190,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
             if (glassWindow) {
                 RenderUtil.drawRoundedRectAA(ctx, listX, windowY, LIST_W, windowH, radius,
                         ThemeManager.color(ThemeToken.WINDOW_FILL));
+                BlurPanelRenderer.drawRimFinish(ctx, listX, windowY, LIST_W, windowH, radius);
             }
         }
 
@@ -235,14 +238,12 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         // Preview-card glass — after the capture pass above (which is what
         // refreshes the remembered rects) and before the dim + cached blit,
         // so the mock controls rasterized into the cache stack on top of the
-        // glass. Glass pilot: this is now the generic per-setting glass pass
+        // glass. This is the generic per-setting glass pass
         // (FeatureSetting.renderGlassPass) — the preview card + toggle track
         // + accent chip override it; segments and buttons glass inside their
         // own overlay draws. Falls back per element when declined.
-        if (usesGlass()) {
-            for (FeatureSetting s : meta.settings) {
-                s.renderGlassPass(ctx);
-            }
+        for (FeatureSetting s : meta.settings) {
+            s.renderGlassPass(ctx);
         }
 
         // Themed overlay dim — token-driven (OVERLAY_DIM), so mode/accent
@@ -272,10 +273,10 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
 
     /**
      * Window glow + fill + outline — the screen's static chrome, captured
-     * into the cache. On the glass pilot the fill + outline are omitted
-     * (the glass material supplies its own directional rim; stacking the
-     * old outline on top would read as a double border). The glow rings
-     * stay — they read as a drop shadow, not an outline.
+     * into the cache. On glass the fill + outline are omitted (the glass
+     * material supplies its own directional rim; stacking the old outline
+     * on top would read as a double border). The glow rings stay — they
+     * read as a drop shadow, not an outline.
      */
     private void drawWindowChromeShapes(GuiGraphics ctx, int listX, int windowY, int windowH,
                                         boolean glassActive) {

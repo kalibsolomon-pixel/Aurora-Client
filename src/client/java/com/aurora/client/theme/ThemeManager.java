@@ -13,7 +13,7 @@ import org.slf4j.LoggerFactory;
  *   <li>{@link #reload()} — config load, profile apply, and any setting
  *       edit that touches the theme (the color pickers).</li>
  *   <li>{@link #sync()} — once per client tick (from
- *       {@code ThemeFeature}); a cheap 3-field dirty-check that replaces
+ *       {@code ThemeFeature}); a cheap 6-field dirty-check that replaces
  *       the legacy system's unconditional per-tick recompute, while still
  *       catching profile switches that bypass the setters.</li>
  *   <li>{@link #color}/{@link #current} — read the cached theme. A volatile
@@ -153,8 +153,10 @@ public final class ThemeManager {
         boolean roundnessChanged = roundness != last.roundness();
         double opacity = ThemeDefinition.normalizedOpacity(def.backgroundOpacity);
         boolean opacityChanged = Double.compare(opacity, last.backgroundOpacity()) != 0;
+        GlassStyle glassStyle = def.glassStyle != null ? def.glassStyle : GlassStyle.FROSTED;
+        boolean glassStyleChanged = glassStyle != last.glassStyle();
         if (enabledChanged || accentChanged || modeChanged
-                || roundnessChanged || opacityChanged) {
+                || roundnessChanged || opacityChanged || glassStyleChanged) {
             reload();
         }
     }
