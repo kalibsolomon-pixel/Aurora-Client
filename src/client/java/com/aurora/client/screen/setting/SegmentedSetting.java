@@ -84,9 +84,13 @@ public class SegmentedSetting<E extends Enum<E>> extends FeatureSetting {
      * shared control. Pass {@code false} to force the flat track.
      */
     public SegmentedSetting<E> glassSegments(boolean g) {
+        this.glass = g;
         control.glassEnabled(g);
         return this;
     }
+
+    /** Whether segments render as glass; glass is the mod-wide default look. */
+    private boolean glass = true;
 
     @Override public int baseHeight() { return CONTROL_H; }
     @Override public int height() { return CONTROL_H + descriptionHeight(lastWidth); }
@@ -103,7 +107,7 @@ public class SegmentedSetting<E extends Enum<E>> extends FeatureSetting {
         lastTrackX = x + TRACK_PAD_X;
         lastTrackW = width - TRACK_PAD_X * 2;
         lastTrackY = y + 16;
-        control.glassEnabled(true);
+        control.glassEnabled(glass);
         control.layout(lastTrackX, lastTrackY, lastTrackW, TRACK_H);
         control.renderShapes(ctx, lastTrackX, lastTrackY, lastTrackW, TRACK_H);
     }
