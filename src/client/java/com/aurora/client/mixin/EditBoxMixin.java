@@ -33,11 +33,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * lets us vertically center it precisely against the theme box.
  *
  * <p>Only {@code displayPos} (the horizontal scroll offset of the visible
- * text) is shadowed — it's confirmed by the LiquidBounce reference mixin
- * and is needed to correctly clip/scroll long queries. The blinking
- * caret uses {@link System#currentTimeMillis()} instead of shadowing the
- * vanilla {@code frame} counter, avoiding a fragile private-field
- * dependency.
+ * text) and {@code cursorPos} (the caret index) are shadowed — both are
+ * confirmed by the LiquidBounce reference mixin; {@code displayPos} is
+ * needed to correctly clip/scroll long queries, {@code cursorPos} to place
+ * the caret where the user's cursor actually is (mid-string included).
+ * The blinking caret uses {@link System#currentTimeMillis()} instead of
+ * shadowing the vanilla {@code frame} counter, avoiding a fragile
+ * private-field dependency.
  *
  * <p><b>Glass rollout:</b> on a screen with a live world behind it, the
  * field renders as RAISED glass (search fields are interactive controls
@@ -55,6 +57,8 @@ public abstract class EditBoxMixin {
 
     /** Horizontal scroll offset of the first visible character. */
     @Shadow private int displayPos;
+    /** Caret index within the value string. */
+    @Shadow private int cursorPos;
     /** Placeholder hint text shown when the field is empty. */
     @Shadow private Component hint;
 
@@ -135,13 +139,12 @@ public abstract class EditBoxMixin {
         // Use wall-clock time for the blink cycle (~530ms on, ~530ms off)
         // instead of shadowing the vanilla `frame` counter.
         if (focused && (System.currentTimeMillis() / 530L) % 2L == 0L) {
-            // Approximate caret X from the cursor position. EditBox doesn't
-            // expose cursorPos publicly, so we fall back to placing the
-            // caret at the end of the visible text — accurate when typing
-            // at the tail (the common case for a search field).
+            // Caret X from the ACTUAL cursor position (mid-string included),
+            // measured over the visible window: width of the text between
+            // the scroll offset and the cursor.
             int safeDisp = Math.min(displayPos, value.length());
-            String visible = value.substring(safeDisp);
-            int caretX = innerX + font.width(visible);
+            int safeCursor = Math.max(safeDisp, Math.min(cursorPos, value.length()));
+            int caretX = innerX + font.width(value.substring(safeDisp, safeCursor));
             int caretY1 = textY - 1;
             int caretY2 = textY + font.lineHeight;
             // Clamp caret inside the box
