@@ -31,7 +31,10 @@ public abstract class MinecraftClientRenderMixin {
         // run once per frame BEFORE any GUI rendering (see BlurPanelRenderer
         // .beginFrame / nextOutput for why an exact signal is required).
         com.aurora.client.ui.render.blur.BlurPanelRenderer.beginFrame();
-        
+        // Same boundary for the glass-surface phase stamp (glass pass → dim →
+        // content): resets "dim painted" so every frame starts in the pass.
+        com.aurora.client.ui.component.GlassSurface.beginFrame();
+
         if (cfg.smoothFramePacer && cfg.adaptiveRenderSleeping && cfg.framePacingStrategy != AuroraConfig.PacingStrategy.VANILLA) {
             int fps = self.options.framerateLimit().get();
             if (fps > 0) {

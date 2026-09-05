@@ -69,6 +69,20 @@ public class ButtonWidget extends AbstractButton {
         return super.mouseClicked(ev, dbl);
     }
 
+    /**
+     * Glass pass — paint this button's surface BEFORE the screen's overlay
+     * dim (see {@link Widget#renderGlassPass}). Vanilla renders the widget
+     * itself (via {@code Screen.render}) after the dim, so a screen on the
+     * pre-dim discipline calls this from its glass pass; the later
+     * {@link #renderContents} then paints content only.
+     */
+    public void renderGlassPass(GuiGraphics g) {
+        if (!this.visible) return;
+        painter.disabled(!this.active);
+        painter.layout(getX(), getY(), getWidth(), getHeight());
+        painter.renderGlassPass(g, getX(), getY(), getWidth(), getHeight());
+    }
+
     @Override
     protected void renderContents(GuiGraphics g, int mouseX, int mouseY, float delta) {
         painter.disabled(!this.active);

@@ -305,17 +305,21 @@ the single canonical Modules+Settings screen).
 
 ### Shared component framework (`ui/component/`)
 
-`Widget` base; `Button` (painter-based, hover/press spring scale, `GlassStyle` OFF /
-NEUTRAL / STAINED — §6), `ButtonWidget` (Screen-widget wrapper forwarding the same
-painter), `ToggleSwitch`, `Slider`, `SegmentedControl` (glass track; neutral unselected /
-accent-stained selected), `RoundedPanel` (themed window panel), `ColorSwatch`
+`Widget` base (shapes / glass pass / overlay split — `renderGlassPass` is the pre-dim
+surface hook, §6); `Button` (painter-based, hover/press spring scale, `GlassStyle` OFF /
+NEUTRAL / STAINED — §6; paints its surface in `renderGlassPass` when the screen runs one,
+else in place), `ButtonWidget` (Screen-widget wrapper forwarding the same painter, incl.
+`renderGlassPass(g)`), `ToggleSwitch`, `Slider`, `SegmentedControl` (glass track; neutral
+unselected / accent-stained selected), `RoundedPanel` (themed window panel), `ColorSwatch`
 (transparent-color checkerboard, corner-clipped to the rounded rect), `ThemedScreen`
 (marker — opts a screen's vanilla `EditBox`es into the mod-wide themed/glass search bar
-via `EditBoxMixin`), `GlassSurface` (**R1 pilot, 2026-09-05** — the shared glass-material
-painter: `container` / `control` / `stainedControl`, each = live-world gate → `renderPanel`
-with the role's lighting → tint → `drawRimFinish`, returning whether glass drew; used by
-`WaypointManagerScreen` rows only, signature pending approval before the other ~9 copies
-of the idiom migrate — §6).
+via `EditBoxMixin`), `GlassEditBox` (glass-pass hook `EditBoxMixin` implements onto every
+`EditBox`), `GlassSurface` (the shared glass-material painter: `container` / `control` /
+`stainedControl`, each = live-world gate → `renderPanel` with the role's lighting → tint →
+`drawRimFinish`, returning whether glass drew; plus the frame-phase guard
+`beginFrame`/`overlayDim` that makes the pre-dim layering rule structural — §6. Adopted by
+`ProfileManagerScreen`, `WaypointManagerScreen`, `Button`, `EditBoxMixin` (2026-09-05); the
+~8 remaining inline copies of the idiom migrate in the approved follow-up).
 
 Rendering utilities: `RenderUtil` (float-precision AA rounded rects/circles/outlines +
 `beginCapture`/`RectSink` used by `UiLayerCache`), `AuroraShapes` (chamfered-octagon
@@ -368,9 +372,12 @@ panel — accepted for simplicity/robustness.
 
 ### The conventions (violating these has caused real bugs)
 
-> Conventions 1–4 and 9 are centralized (not changed) by `ui/component/GlassSurface`
-> (R1 pilot — Waypoint rows only so far; see §5). The pre-dim layering (6) and the
-> `renderBackground` world-gate (5) remain call-site conventions the helper cannot enforce.
+> Conventions 1–4 and 9 are centralized (not changed) by `ui/component/GlassSurface`; the
+> layering contract (6) is enforced by its frame-phase guard (`GlassSurface.overlayDim`) on
+> the screens that have adopted it — `ProfileManagerScreen` and `WaypointManagerScreen` as of
+> 2026-09-05, the rest pending a separate, explicitly approved rollout (see 6 below). The
+> `renderBackground` world-gate (5) is still a per-screen override; use
+> `GlassSurface.liveWorldBackdrop()` for it.
 
 1. **Single opacity application point.** The theme's Background Opacity exists ONLY as the
    alpha of the `WINDOW_FILL` token (stamped by `ThemeResolver`). The glass pipeline adds
@@ -404,13 +411,31 @@ panel — accepted for simplicity/robustness.
    valid world, so `renderPanel` **declines** (menu-context guard) and the caller must
    draw its flat themed fallback + keep the vanilla backdrop. Screens that want glass
    over the live world override `renderBackground` to skip the vanilla backdrop sandwich
-   when `minecraft.level != null` (see `AuroraScreen.liveWorldBackdrop()` and copies in
-   `ProfileManagerScreen`, `ColorPickerScreen`, `HudEditorScreen`,
-   `FeatureDetailScreen`). Every glass integration follows the same **fallback contract**:
-   decline (menu, screenshot suppression, failure) ⇒ complete flat look returns.
-6. **Layering contract.** Glass draws BEFORE the screen's `OVERLAY_DIM` fill (a "pre-dim
-   pass"), so the dim veils the glass like it veils the world; the recorded boolean
-   switches post-dim content between glass and flat fallback paths.
+   when `minecraft.level != null` — the shared test is `GlassSurface.liveWorldBackdrop()`
+   (used by `ProfileManagerScreen`, `WaypointManagerScreen`); `AuroraScreen`,
+   `FeatureDetailScreen`, `ColorPickerScreen`, `HudEditorScreen` and
+   `ResourcePackBrowserScreen` still carry private copies. Every glass integration follows
+   the same **fallback contract**: decline (menu, screenshot suppression, failure) ⇒
+   complete flat look returns.
+6. **Layering contract — universal, structural.** EVERY glass surface — containers AND
+   controls (rows, buttons, chips, pills, search/rename fields) — is painted in the screen's
+   **glass pass**, BEFORE the screen's `OVERLAY_DIM` fill, so the dim veils the glass like
+   it veils the world; content (text, icons, badges, hover washes, focus rings, carets) and
+   any flat fallback are painted after the dim. Structurally: a screen fills its dim ONLY
+   through `GlassSurface.overlayDim`, which stamps the frame; any glass painted later in
+   that frame is reported (`ERROR` + stack trace in a dev environment, one-shot `WARN` per
+   screen class otherwise — the surface still paints, so a mis-ordered screen keeps its
+   glass and the log shows the defect on frame one). Widgets split accordingly:
+   `Widget.renderGlassPass` (`Button`, forwarded by `ButtonWidget`) and
+   `GlassEditBox.aurora$renderGlassPass` (every `EditBox`, via `EditBoxMixin`) paint the
+   surface pre-dim and stamp the frame; the widget's normal render then paints content
+   only — or, on a screen that never ran the pass, the surface in place (the legacy order).
+   **Rollout status (2026-09-05):** enforced on `ProfileManagerScreen` and
+   `WaypointManagerScreen` (closing audit B3/B4). `AuroraScreen`, `FeatureDetailScreen`,
+   `ResourcePackBrowserScreen` and the setting widgets still fill a raw dim and paint their
+   controls AFTER it — the historical, unguarded order (only their window/container surface
+   was ever pre-dim) — pending a separate, explicitly approved follow-up. Until then the
+   rule above is true only on the two migrated screens.
 7. **Per-element UV mapping.** Each panel samples only its own sub-rect of the shared
    blur chain (`uUvRect`); a full `[0..1]` UV sweep would put the whole capture into a
    small element — "the UV bug" this contract exists to prevent (see comments near the

@@ -6,8 +6,9 @@ import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.component.Button;
 import com.aurora.client.ui.component.ButtonWidget;
+import com.aurora.client.ui.component.GlassEditBox;
+import com.aurora.client.ui.component.GlassSurface;
 import com.aurora.client.ui.component.ThemedScreen;
-import com.aurora.client.ui.render.blur.BlurPanelRenderer;
 import com.aurora.client.ui.util.RenderUtil;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
@@ -83,10 +84,19 @@ public class ProfileManagerScreen extends Screen implements ThemedScreen {
      */
     private final Map<String, String> nameFitCache = new HashMap<>();
 
-    // Glass pilot: which rows' glass drew this frame (pre-dim pass), so the
-    // flat row body can be skipped for exactly those rows.
+    // Which rows' glass drew this frame (glass pass), so the flat row body
+    // is drawn for exactly the rows whose glass declined.
     private final Map<String, Boolean> rowGlassDrawn = new HashMap<>();
     private boolean createRowGlassDrawn = false;
+
+    /** Toolbar buttons — kept so the glass pass can paint their surfaces pre-dim. */
+    private ButtonWidget newBtn;
+    private ButtonWidget doneBtn;
+
+    // Row-control offsets from the row's left edge, shared by the glass pass
+    // and the content pass so the two can never disagree on where a button is.
+    private static final int DUP_DX = ROW_INSET + ACTIVE_BADGE_W + CONTROL_GAP + NAME_W + CONTROL_GAP;
+    private static final int DEL_DX = DUP_DX + BTN_DUP_W + CONTROL_GAP;
 
     public ProfileManagerScreen(Screen parent) {
         super(Component.literal("Profiles"));
@@ -98,12 +108,12 @@ public class ProfileManagerScreen extends Screen implements ThemedScreen {
         int btnY = 16;
         int btnH = 22;
 
-        this.addRenderableWidget(new ButtonWidget(
+        newBtn = this.addRenderableWidget(new ButtonWidget(
                 16, btnY, 120, btnH,
                 Component.literal("New Profile"),
                 this::beginCreate).glassBackground(true));
 
-        this.addRenderableWidget(new ButtonWidget(
+        doneBtn = this.addRenderableWidget(new ButtonWidget(
                 this.width - 80 - 16, btnY, 80, btnH,
                 Component.literal("Done"),
                 this::onClose).glassBackground(true));
@@ -113,47 +123,79 @@ public class ProfileManagerScreen extends Screen implements ThemedScreen {
     //  Render
     // ------------------------------------------------------------------
 
+    /**
+     * Glass rollout: with a live world behind the screen, skip vanilla's
+     * background sandwich — the glass rows must sample the LIVE world. With
+     * no level loaded the renderer declines anyway (its menu-context guard)
+     * and the opaque fallback wants the vanilla backdrop as before. (The
+     * audit's B3: this override was missing here.)
+     */
+    @Override
+    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float delta) {
+        if (GlassSurface.liveWorldBackdrop()) return;
+        super.renderBackground(g, mouseX, mouseY, delta);
+    }
+
+    /**
+     * Frame order — the layering contract (AGENTS.md §6), structural here:
+     * <ol>
+     *   <li><b>Glass pass</b>: EVERY glass surface on the screen — the rows
+     *       (this screen's containers: depressed), the create row, the
+     *       Duplicate/Create buttons, the toolbar's New Profile/Done, and
+     *       the inline rename/create field — paints its surface first.</li>
+     *   <li><b>Dim</b>: {@link GlassSurface#overlayDim} veils the glass
+     *       exactly as it veils the world, and from here on any glass call
+     *       is reported as an ordering violation.</li>
+     *   <li><b>Content</b>: title, badges, names, button labels, the caret
+     *       — and the flat fallback for any surface whose glass declined.</li>
+     * </ol>
+     */
     @Override
     public void render(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
         int listX = (this.width - LIST_W) / 2;
+        List<String> profiles = ProfileManager.getInstance().listProfileNames();
+        String active = ProfileManager.getInstance().currentProfile();
+        // Row-widget cache hygiene: drop buttons for profiles that no longer
+        // exist — before either pass so both see the same instances.
+        dupBtns.keySet().retainAll(profiles);
+        delBtns.keySet().retainAll(profiles);
 
-        // ---- Glass pilot: row glass BEFORE the dim ----
-        // Same layering contract as every glass surface so far: the deferred
-        // OVERLAY_DIM fill must veil the glass like it veils the world —
-        // otherwise the blurred backdrop inside a row would read brighter
-        // than the same world outside it. The per-row results are remembered
-        // so renderRow/renderCreateRow skip their flat fills for exactly the
-        // rows whose glass drew this frame (declines fall back per row).
+        // ---- 1. Glass pass (before the dim) ----
         rowGlassDrawn.clear();
         createRowGlassDrawn = false;
-        if (liveWorldBackdrop()) {
-            List<String> profiles = ProfileManager.getInstance().listProfileNames();
-            ctx.enableScissor(listX - 4, listClipTop(), listX + LIST_W + 4, listClipBottom());
-            int gy = LIST_TOP - (int) scrollY;
-            if (creatingNew && createField != null) {
-                createRowGlassDrawn = drawRowGlass(ctx, listX, gy, LIST_W);
-                gy += ROW_H + ROW_GAP;
-            }
-            for (String name : profiles) {
-                rowGlassDrawn.put(name, drawRowGlass(ctx, listX, gy, LIST_W));
-                gy += ROW_H + ROW_GAP;
-            }
-            ctx.disableScissor();
+        ctx.enableScissor(listX - 4, listClipTop(), listX + LIST_W + 4, listClipBottom());
+        int gy = LIST_TOP - (int) scrollY;
+        if (creatingNew && createField != null) {
+            createRowGlassDrawn = renderRowSurface(ctx, listX, gy, LIST_W);
+            Button cb = createBtn();
+            cb.layout(listX + DUP_DX, gy + 4, BTN_DUP_W, ROW_H - 8);
+            cb.renderGlassPass(ctx, listX + DUP_DX, gy + 4, BTN_DUP_W, ROW_H - 8);
+            gy += ROW_H + ROW_GAP;
         }
+        for (String name : profiles) {
+            if (gy + ROW_H > LIST_TOP - ROW_H && gy < listClipBottom()) {
+                rowGlassDrawn.put(name, renderRowSurface(ctx, listX, gy, LIST_W));
+                // Duplicate is neutral raised glass; Delete is destructive and
+                // never glass, so it has nothing to paint here.
+                Button db = dupBtn(name);
+                db.layout(listX + DUP_DX, gy + 4, BTN_DUP_W, ROW_H - 8);
+                db.renderGlassPass(ctx, listX + DUP_DX, gy + 4, BTN_DUP_W, ROW_H - 8);
+            }
+            gy += ROW_H + ROW_GAP;
+        }
+        ctx.disableScissor();
+        if (newBtn != null) newBtn.renderGlassPass(ctx);
+        if (doneBtn != null) doneBtn.renderGlassPass(ctx);
+        EditBox field = layoutEditField(profiles, listX);
+        if (field != null) ((GlassEditBox) field).aurora$renderGlassPass(ctx);
 
-        // Themed overlay dim (token-driven; dark in both modes by design).
-        ctx.fill(0, 0, this.width, this.height, ThemeManager.color(ThemeToken.OVERLAY_DIM));
+        // ---- 2. Dim — end of the glass pass (token-driven; dark in both modes by design) ----
+        GlassSurface.overlayDim(ctx, this.width, this.height);
 
-        // Title.
+        // ---- 3. Content ----
         ctx.drawString(this.font, this.title, 16, 42, ThemeManager.color(ThemeToken.ON_OVERLAY), false);
 
         ctx.enableScissor(listX - 4, listClipTop(), listX + LIST_W + 4, listClipBottom());
-
-        List<String> profiles = ProfileManager.getInstance().listProfileNames();
-        String active = ProfileManager.getInstance().currentProfile();
-        // Row-widget cache hygiene: drop buttons for profiles that no longer exist.
-        dupBtns.keySet().retainAll(profiles);
-        delBtns.keySet().retainAll(profiles);
 
         if (profiles.isEmpty()) {
             ctx.drawString(this.font,
@@ -182,25 +224,9 @@ public class ProfileManagerScreen extends Screen implements ThemedScreen {
         super.render(ctx, mouseX, mouseY, delta);
 
         // Inline editors render on top so the caret draws above row fills.
-        if (creatingNew && createField != null) {
-            int rowY = LIST_TOP - (int) scrollY;
-            int fieldX = listX + ROW_INSET + ACTIVE_BADGE_W + CONTROL_GAP;
-            int fieldY = rowY + (ROW_H - 16) / 2;
-            createField.setX(fieldX);
-            createField.setY(fieldY);
-            createField.render(ctx, mouseX, mouseY, delta);
-        } else if (nameField != null && editingIndex >= 0 && editingIndex < profiles.size()) {
-            int rowY = LIST_TOP - (int) scrollY
-                    + (creatingNew ? ROW_H + ROW_GAP : 0)
-                    + editingIndex * (ROW_H + ROW_GAP);
-            if (rowY >= LIST_TOP - ROW_H && rowY < listClipBottom()) {
-                int fieldX = listX + ROW_INSET + ACTIVE_BADGE_W + CONTROL_GAP;
-                int fieldY = rowY + (ROW_H - 16) / 2;
-                nameField.setX(fieldX);
-                nameField.setY(fieldY);
-                nameField.render(ctx, mouseX, mouseY, delta);
-            }
-        }
+        // Their surface was painted in the glass pass; this is content only.
+        EditBox editor = layoutEditField(profiles, listX);
+        if (editor != null) editor.render(ctx, mouseX, mouseY, delta);
 
         // Toast.
         if (flashText != null && System.currentTimeMillis() < flashUntilMs) {
@@ -245,28 +271,12 @@ public class ProfileManagerScreen extends Screen implements ThemedScreen {
         boolean isDefault = "default".equals(name);
         float radius = ThemeManager.current().roundness().radiusSmall();
 
-        // Soft glow — structural black.
-        for (int i = 1; i <= 6; i++) {
-            int shadowAlpha = Math.max(0, 30 - i * 5);
-            RenderUtil.drawRoundedOutlineAA(ctx, x - i, y - i, w + i * 2, ROW_H + i * 2, radius + i, 1.0f, (shadowAlpha << 24));
-        }
-
-        // Glass pilot: each profile row is this screen's CONTAINER, so it
-        // takes the same treatment as every other screen's window — DEPRESSED
-        // neutral glass tinted only by WINDOW_FILL. Accent never tints the
-        // row surface: a whole-row stain read as an accent-tinted container
-        // (flagged twice), so selection is carried solely by the compact
-        // accent Active badge below. The glass itself drew in the pre-dim
-        // pass (see render); this applies the one neutral tint, or the
-        // complete flat row when that row's glass declined.
-        boolean rowGlass = rowGlassDrawn.getOrDefault(name, false);
-        if (rowGlass) {
-            RenderUtil.drawRoundedRectAA(ctx, x, y, w, ROW_H, radius,
-                    ThemeManager.color(ThemeToken.WINDOW_FILL));
-            BlurPanelRenderer.drawRimFinish(ctx, x, y, w, ROW_H, radius);
-        } else {
-            // Row body — identical for every row (active included): the
-            // opacity-tracked surface + hairline border.
+        // The row surface (shadow + depressed glass) was painted in the
+        // glass pass, under the dim — see renderRowSurface. Only the flat
+        // fallback is drawn here, for a row whose glass declined: the
+        // opacity-tracked surface + hairline border, identical for every
+        // row (active included — selection is the Active badge alone).
+        if (!rowGlassDrawn.getOrDefault(name, false)) {
             RenderUtil.drawRoundedRectAA(ctx, x, y, w, ROW_H, radius,
                     ThemeManager.surfaceColor(ThemeToken.SURFACE));
             RenderUtil.drawRoundedOutlineAA(ctx, x, y, w, ROW_H, radius, 1.0f,
@@ -294,21 +304,14 @@ public class ProfileManagerScreen extends Screen implements ThemedScreen {
         }
         cx += NAME_W + CONTROL_GAP;
 
-        // Duplicate — the shared themed Button (glass pilot: neutral raised
-        // glass — a plain action, never a selected state).
-        Button dupBtn = dupBtns.computeIfAbsent(name, k -> new Button("Duplicate", () -> {
-            commitAllEdits();
-            String dupName = uniqueName(k + " Copy");
-            if (ProfileManager.getInstance().duplicate(k, dupName)) {
-                flash("Duplicated → " + dupName);
-            }
-        }).glassBackground(true));
-        dupBtn.layout(cx, y + 4, BTN_DUP_W, ROW_H - 8);
-        dupBtn.render(ctx, cx, y + 4, BTN_DUP_W, ROW_H - 8, mouseX, mouseY);
-        cx += BTN_DUP_W + CONTROL_GAP;
+        // Duplicate — surface already painted in the glass pass; this draws
+        // the label (or the flat fallback where glass declined).
+        Button dupBtn = dupBtn(name);
+        dupBtn.layout(x + DUP_DX, y + 4, BTN_DUP_W, ROW_H - 8);
+        dupBtn.render(ctx, x + DUP_DX, y + 4, BTN_DUP_W, ROW_H - 8, mouseX, mouseY);
 
-        // Delete — shared Button, destructive variant; hidden for the
-        // default + active profiles (non-deletable).
+        // Delete — shared Button, destructive variant (never glass); hidden
+        // for the default + active profiles (non-deletable).
         if (!isDefault && !isActive) {
             Button dBtn = delBtns.computeIfAbsent(name, k -> new Button("Delete", () -> {
                 commitAllEdits();
@@ -316,21 +319,66 @@ public class ProfileManagerScreen extends Screen implements ThemedScreen {
                     flash("Deleted " + k);
                 }
             }).destructive(true));
-            dBtn.layout(cx, y + 4, BTN_DEL_W, ROW_H - 8);
-            dBtn.render(ctx, cx, y + 4, BTN_DEL_W, ROW_H - 8, mouseX, mouseY);
+            dBtn.layout(x + DEL_DX, y + 4, BTN_DEL_W, ROW_H - 8);
+            dBtn.render(ctx, x + DEL_DX, y + 4, BTN_DEL_W, ROW_H - 8, mouseX, mouseY);
         }
+    }
+
+    /** Duplicate — the shared themed Button in neutral raised glass (a plain action, never a selected state). */
+    private Button dupBtn(String name) {
+        return dupBtns.computeIfAbsent(name, k -> new Button("Duplicate", () -> {
+            commitAllEdits();
+            String dupName = uniqueName(k + " Copy");
+            if (ProfileManager.getInstance().duplicate(k, dupName)) {
+                flash("Duplicated → " + dupName);
+            }
+        }).glassBackground(true));
+    }
+
+    /** The create-row's confirm button — neutral raised glass like every other action button here. */
+    private Button createBtn() {
+        if (createBtn == null) {
+            createBtn = new Button("Create", this::commitCreate).glassBackground(true);
+        }
+        return createBtn;
+    }
+
+    /**
+     * Positions the inline editor (the create field, else the rename
+     * field) over its row for this frame and returns it, or {@code null}
+     * when none is visible. Shared by the glass pass (which paints the
+     * field's surface at that position) and the content pass (which
+     * renders it), so the two can never disagree.
+     */
+    private EditBox layoutEditField(List<String> profiles, int listX) {
+        int fieldX = listX + ROW_INSET + ACTIVE_BADGE_W + CONTROL_GAP;
+        if (creatingNew && createField != null) {
+            int rowY = LIST_TOP - (int) scrollY;
+            createField.setX(fieldX);
+            createField.setY(rowY + (ROW_H - 16) / 2);
+            return createField;
+        }
+        if (nameField != null && editingIndex >= 0 && editingIndex < profiles.size()) {
+            int rowY = LIST_TOP - (int) scrollY
+                    + (creatingNew ? ROW_H + ROW_GAP : 0)
+                    + editingIndex * (ROW_H + ROW_GAP);
+            if (rowY >= LIST_TOP - ROW_H && rowY < listClipBottom()) {
+                nameField.setX(fieldX);
+                nameField.setY(rowY + (ROW_H - 16) / 2);
+                return nameField;
+            }
+        }
+        return null;
     }
 
     private void renderCreateRow(GuiGraphics ctx, int x, int y, int w,
                                   int mouseX, int mouseY) {
         float radius = ThemeManager.current().roundness().radiusSmall();
-        // Glass pilot: the create editor is a neutral card, identical to the
-        // other rows (the hint text and the Create button signal the open
-        // editor; no accent on the container surface in either path).
-        if (createRowGlassDrawn) {
-            RenderUtil.drawRoundedRectAA(ctx, x, y, w, ROW_H, radius,
-                    ThemeManager.color(ThemeToken.WINDOW_FILL));
-        } else {
+        // The create editor is a neutral card identical to the other rows
+        // (the hint text and the Create button signal the open editor; no
+        // accent on the container surface in either path). Its surface was
+        // painted in the glass pass; only the flat fallback is drawn here.
+        if (!createRowGlassDrawn) {
             RenderUtil.drawRoundedRectAA(ctx, x, y, w, ROW_H, radius,
                     ThemeManager.surfaceColor(ThemeToken.SURFACE));
             RenderUtil.drawRoundedOutlineAA(ctx, x, y, w, ROW_H, radius, 1.0f,
@@ -342,39 +390,31 @@ public class ProfileManagerScreen extends Screen implements ThemedScreen {
                 cx + 4, y + (ROW_H - this.font.lineHeight) / 2,
                 ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_OVERLAY), 0x66), false);
 
-        // "Create" confirm button where Duplicate usually sits — neutral
-        // raised glass like every other action button on this screen.
-        int bx = x + ROW_INSET + ACTIVE_BADGE_W + CONTROL_GAP + NAME_W + CONTROL_GAP;
-        if (createBtn == null) {
-            createBtn = new Button("Create", this::commitCreate).glassBackground(true);
-        }
-        createBtn.layout(bx, y + 4, BTN_DUP_W, ROW_H - 8);
-        createBtn.render(ctx, bx, y + 4, BTN_DUP_W, ROW_H - 8, mouseX, mouseY);
+        // "Create" confirm button where Duplicate usually sits — surface
+        // painted in the glass pass; this draws the label.
+        Button cb = createBtn();
+        cb.layout(x + DUP_DX, y + 4, BTN_DUP_W, ROW_H - 8);
+        cb.render(ctx, x + DUP_DX, y + 4, BTN_DUP_W, ROW_H - 8, mouseX, mouseY);
     }
 
     /**
-     * Glass pilot — one DEPRESSED-glass row surface, drawn in the pre-dim
-     * pass. Rows are this screen's containers, so they take the window
-     * treatment (depressed lighting, WINDOW_FILL tint) rather than the
-     * raised control treatment; selection is never carried here at all —
-     * the accent Active badge in {@link #renderRow} marks it. Returns
-     * whether the glass drew (false = caller's flat fallback).
+     * Glass pass for one row surface: the soft glow (the row's drop shadow,
+     * so part of the surface) plus one DEPRESSED glass panel. Rows are this
+     * screen's containers, so they take the window treatment (depressed
+     * lighting, WINDOW_FILL tint) rather than the raised control treatment;
+     * selection is never carried here at all — the accent Active badge in
+     * {@link #renderRow} marks it (a whole-row stain read as an
+     * accent-tinted container, flagged twice). Returns whether the glass
+     * drew (false = the content pass draws the flat row).
      */
-    private boolean drawRowGlass(GuiGraphics ctx, int x, int y, int w) {
+    private boolean renderRowSurface(GuiGraphics ctx, int x, int y, int w) {
         float radius = ThemeManager.current().roundness().radiusSmall();
-        return BlurPanelRenderer.renderPanel(ctx, x, y, w, ROW_H, radius,
-                BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX,
-                BlurPanelRenderer.Lighting.depressed());
-    }
-
-    /**
-     * True when the main render target holds a live world — i.e. the glass
-     * capture source is valid. Mirrors {@code BlurPanelRenderer}'s own
-     * menu-context guard so this screen never asks for glass in a context
-     * where it cannot engage (the flat rows render unchanged there).
-     */
-    private boolean liveWorldBackdrop() {
-        return this.minecraft != null && this.minecraft.level != null;
+        // Soft glow — structural black.
+        for (int i = 1; i <= 6; i++) {
+            int shadowAlpha = Math.max(0, 30 - i * 5);
+            RenderUtil.drawRoundedOutlineAA(ctx, x - i, y - i, w + i * 2, ROW_H + i * 2, radius + i, 1.0f, (shadowAlpha << 24));
+        }
+        return GlassSurface.container(ctx, x, y, w, ROW_H, radius);
     }
 
     /**

@@ -2,7 +2,6 @@ package com.aurora.client.ui.component;
 
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
-import com.aurora.client.ui.render.blur.BlurPanelRenderer;
 import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.util.AuroraAnim;
@@ -60,6 +59,17 @@ public class Button extends Widget {
 
     private long pressDownStartMs = -1L;
 
+    /**
+     * Glass-pass bookkeeping: the frame in which {@link #renderGlassPass}
+     * last painted this button's surface, and whether the glass drew. When
+     * {@link #renderOverlay} runs in that same frame it paints content
+     * only (label, or the flat fallback if the glass declined); otherwise —
+     * a screen not yet on the pre-dim discipline — it paints the surface in
+     * place as it always did.
+     */
+    private long glassPassFrame = -1L;
+    private boolean glassPassDrew = false;
+
     public Button(String label, Runnable onPress) {
         this(Component.literal(label), onPress, false);
     }
@@ -107,6 +117,30 @@ public class Button extends Widget {
 
     public Component label() {
         return label;
+    }
+
+    /**
+     * Glass is only the standard raised surface: never while a press
+     * animation runs (renderPanel places its quad from raw GUI coordinates
+     * and could not follow the pose's press scaling), never disabled, never
+     * destructive (error semantics must not read as glass chrome).
+     */
+    private boolean glassEligible(float scale) {
+        return glassStyle != GlassStyle.OFF && scale == 1.0f && !disabled && !destructive;
+    }
+
+    /**
+     * Pre-dim surface: NEUTRAL → raised {@code WINDOW_FILL} glass, STAINED
+     * → raised accent-stained glass (both raised — selection/primacy reads
+     * through the tint, never the lighting orientation). See
+     * {@link Widget#renderGlassPass}.
+     */
+    @Override
+    public void renderGlassPass(GuiGraphics g, float x, float y, float w, float h) {
+        glassPassFrame = GlassSurface.frame();
+        float radius = ThemeManager.current().roundness().radiusSmall();
+        glassPassDrew = glassEligible(currentScale())
+                && GlassSurface.control(g, x, y, w, h, radius, glassStyle == GlassStyle.STAINED);
     }
 
     @Override
@@ -157,30 +191,20 @@ public class Button extends Widget {
             text = ThemeManager.color(ThemeToken.ON_BACKGROUND);
         }
 
-        if (glassStyle != GlassStyle.OFF && scale == 1.0f && !disabled && !destructive) {
-            // Glass pilot: blur + raised lighting replace the fill + outline
-            // (the glass rim replaces the border — no double outline). The
-            // tint keeps the hierarchy rule: NEUTRAL (secondary) uses
-            // WINDOW_FILL, whose alpha carries the theme's Background
-            // Opacity — single application point; STAINED (primary) uses
-            // ThemeManager.stainedTint() (accent RGB, same opacity
-            // discipline). While a press animation runs (scale != 1) or the
-            // look is not the standard surface, the plain token fill is
-            // drawn instead: renderPanel places its quad from raw GUI
-            // coordinates, which would not follow the pose's press scaling.
-            if (BlurPanelRenderer.renderPanel(g, x, y, w, h, radius,
-                    BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX,
-                    BlurPanelRenderer.Lighting.raised())) {
-                int tint = glassStyle == GlassStyle.STAINED
-                        ? ThemeManager.stainedTint()
-                        : ThemeManager.color(ThemeToken.WINDOW_FILL);
-                RenderUtil.drawRoundedRectAA(g, x, y, w, h, radius, tint);
-                BlurPanelRenderer.drawRimFinish(g, x, y, w, h, radius);
-            } else {
-                RenderUtil.drawRoundedRectAA(g, x, y, w, h, radius, bg);
-                RenderUtil.drawRoundedOutlineAA(g, x, y, w, h, radius, 1.0f, border);
-            }
+        // Surface. Glass (blur + raised lighting + tint + rim) replaces the
+        // fill + outline — the glass rim replaces the border, no double
+        // outline. If the screen ran this button's glass pass this frame
+        // the surface is already on screen UNDER the dim and only its
+        // result matters here; otherwise (legacy screens) it is painted in
+        // place now. Either way a decline means the complete flat button.
+        boolean glassDrew;
+        if (glassPassFrame == GlassSurface.frame()) {
+            glassDrew = glassPassDrew;
         } else {
+            glassDrew = glassEligible(scale)
+                    && GlassSurface.control(g, x, y, w, h, radius, glassStyle == GlassStyle.STAINED);
+        }
+        if (!glassDrew) {
             RenderUtil.drawRoundedRectAA(g, x, y, w, h, radius, bg);
             RenderUtil.drawRoundedOutlineAA(g, x, y, w, h, radius, 1.0f, border);
         }

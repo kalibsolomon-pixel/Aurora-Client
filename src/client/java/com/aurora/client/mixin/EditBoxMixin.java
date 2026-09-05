@@ -3,7 +3,8 @@ package com.aurora.client.mixin;
 import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
-import com.aurora.client.ui.render.blur.BlurPanelRenderer;
+import com.aurora.client.ui.component.GlassEditBox;
+import com.aurora.client.ui.component.GlassSurface;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.Minecraft;
@@ -15,6 +16,7 @@ import net.minecraft.client.gui.screens.worldselection.SelectWorldScreen;
 import net.minecraft.network.chat.Component;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -53,7 +55,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * ResourcePacks and the Modules grid all render through it.
  */
 @Mixin(EditBox.class)
-public abstract class EditBoxMixin {
+public abstract class EditBoxMixin implements GlassEditBox {
 
     /** Horizontal scroll offset of the first visible character. */
     @Shadow private int displayPos;
@@ -62,20 +64,49 @@ public abstract class EditBoxMixin {
     /** Placeholder hint text shown when the field is empty. */
     @Shadow private Component hint;
 
-    @Inject(method = "renderWidget", at = @At("HEAD"), cancellable = true)
-    private void aurora$renderCustomStyle(GuiGraphics ctx, int mouseX, int mouseY, float delta, CallbackInfo ci) {
-        if (!AuroraConfig.get().customTitleScreen) return;
-        Minecraft mc = Minecraft.getInstance();
-        if (mc == null || mc.screen == null) return;
-        // Take over rendering on vanilla screens that got Aurora search bars
-        // via mixins, and on every Aurora screen marked with ThemedScreen —
-        // so ALL of the mod's text fields (search bars, hex fields, inline
-        // rename rows, the map's waypoint prompt) share this one canonical
-        // themed text-field implementation.
-        boolean isThemedScreen = mc.screen instanceof JoinMultiplayerScreen
+    /**
+     * Glass-pass bookkeeping (same scheme as {@code Button}): the frame in
+     * which {@link #aurora$renderGlassPass} painted this field's surface and
+     * whether the glass drew. In that frame {@code renderWidget} paints
+     * content only; otherwise it paints the surface in place (legacy order).
+     */
+    @Unique private long aurora$glassPassFrame = -1L;
+    @Unique private boolean aurora$glassPassDrew = false;
+
+    /**
+     * Take over rendering on vanilla screens that got Aurora search bars
+     * via mixins, and on every Aurora screen marked with ThemedScreen — so
+     * ALL of the mod's text fields (search bars, hex fields, inline rename
+     * rows, the map's waypoint prompt) share this one canonical themed
+     * text-field implementation.
+     */
+    @Unique
+    private static boolean aurora$themedScreen(Minecraft mc) {
+        if (!AuroraConfig.get().customTitleScreen) return false;
+        if (mc == null || mc.screen == null) return false;
+        return mc.screen instanceof JoinMultiplayerScreen
                 || mc.screen instanceof SelectWorldScreen
                 || mc.screen instanceof com.aurora.client.ui.component.ThemedScreen;
-        if (!isThemedScreen) return;
+    }
+
+    /**
+     * Pre-dim surface: the field is a RAISED glass control with the neutral
+     * {@code WINDOW_FILL} tint (see {@link GlassEditBox}). Painted at the
+     * field's current bounds — the screen positions it before calling.
+     */
+    @Override
+    public void aurora$renderGlassPass(GuiGraphics ctx) {
+        EditBox self = (EditBox) (Object) this;
+        aurora$glassPassFrame = GlassSurface.frame();
+        aurora$glassPassDrew = self.visible && aurora$themedScreen(Minecraft.getInstance())
+                && GlassSurface.control(ctx, self.getX(), self.getY(), self.getWidth(), self.getHeight(),
+                        ThemeManager.current().roundness().radiusSmall());
+    }
+
+    @Inject(method = "renderWidget", at = @At("HEAD"), cancellable = true)
+    private void aurora$renderCustomStyle(GuiGraphics ctx, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+        Minecraft mc = Minecraft.getInstance();
+        if (!aurora$themedScreen(mc)) return;
 
         EditBox self = (EditBox) (Object) this;
         Font font = mc.font;
@@ -87,22 +118,23 @@ public abstract class EditBoxMixin {
         String value = self.getValue();
 
         // --- 1. Background (fully replaces vanilla box) ---
-        // Glass first: raised panel + neutral WINDOW_FILL tint. The glass
-        // rim replaces the outline (no double outline). The focus cue is
-        // the caret plus a subtle focus-ring outline drawn on top — focus
-        // never changes the tint (the same contract as every glass control).
-        // With no live world the renderer declines and the flat themed
-        // fill + outline below draws instead, exactly as before glass.
+        // Raised glass + neutral WINDOW_FILL tint (the shared GlassSurface
+        // material). The glass rim replaces the outline (no double outline).
+        // The focus cue is the caret plus a subtle focus-ring outline drawn
+        // on top — focus never changes the tint (the same contract as every
+        // glass control). If the screen ran this field's glass pass this
+        // frame, the surface already sits UNDER the overlay dim and only its
+        // result matters here; otherwise it is painted in place now. With no
+        // live world the renderer declines and the flat themed fill +
+        // outline below draws instead, exactly as before glass.
         int fillCol = ThemeManager.surfaceColor(focused ? ThemeToken.SURFACE_VARIANT : ThemeToken.SURFACE);
         int borderCol = focused ? AuroraTheme.BORDER_ON_HOVER : AuroraTheme.BORDER_OFF;
 
         float radius = ThemeManager.current().roundness().radiusSmall();
-        boolean glassOk = BlurPanelRenderer.renderPanel(ctx, x, y, w, h, radius,
-                BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX, BlurPanelRenderer.Lighting.raised());
+        boolean glassOk = aurora$glassPassFrame == GlassSurface.frame()
+                ? aurora$glassPassDrew
+                : GlassSurface.control(ctx, x, y, w, h, radius);
         if (glassOk) {
-            RenderUtil.drawRoundedRectAA(ctx, x, y, w, h, radius,
-                    ThemeManager.color(ThemeToken.WINDOW_FILL));
-            BlurPanelRenderer.drawRimFinish(ctx, x, y, w, h, radius);
             // Focus ring on glass — a translucent hairline that brightens
             // the rim without stacking a second surface.
             if (focused) {
