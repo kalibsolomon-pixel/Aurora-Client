@@ -354,6 +354,10 @@ public class ItemScaleSetting extends FeatureSetting {
                             cfg.itemScales.put(idStr, new AuroraConfig.ItemScaleData());
                             expandedStates.put(idStr, true);
                             searchField.setValue("");
+                            // Persist immediately — matches how sibling widgets
+                            // save at commit; relying on a later save loses
+                            // the change on a crash.
+                            AuroraConfig.save();
                         }
                     }
                 }
@@ -382,6 +386,7 @@ public class ItemScaleSetting extends FeatureSetting {
                     cfg.itemScales.remove(idStr);
                     itemSliders.remove(idStr);
                     expandedStates.remove(idStr);
+                    AuroraConfig.save();
                     return true;
                 }
 

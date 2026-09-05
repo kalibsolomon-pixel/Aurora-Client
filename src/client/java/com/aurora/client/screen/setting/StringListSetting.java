@@ -190,6 +190,8 @@ public class StringListSetting extends FeatureSetting {
         copy.add(text);
         setter.accept(copy);
         inputField.setValue("");
+        // Persist immediately — matches how sibling widgets save at commit.
+        com.aurora.client.config.AuroraConfig.save();
     }
 
     /**
