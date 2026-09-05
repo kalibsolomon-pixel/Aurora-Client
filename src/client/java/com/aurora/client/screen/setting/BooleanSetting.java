@@ -139,6 +139,7 @@ public class BooleanSetting extends FeatureSetting {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button, int rowX, int rowY, int rowWidth) {
+        if (isDisabled()) return false;
         if (button != 0) return false;
         int controlH = baseHeight();
         if (mouseY < rowY || mouseY > rowY + controlH) return false;

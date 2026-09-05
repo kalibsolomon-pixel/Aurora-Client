@@ -62,8 +62,9 @@ public class DoubleSliderSetting extends FeatureSetting {
         lastWidth = width;
         Font tr = Minecraft.getInstance().font;
         double value = getter.getAsDouble();
+        boolean disabled = isDisabled();
 
-        renderLabelWithTooltip(ctx, label, x + 12, y + 6, AuroraTheme.IOS_LABEL, mouseX, mouseY);
+        renderLabelWithTooltip(ctx, label, x + 12, y + 6, AuroraTheme.IOS_LABEL, mouseX, mouseY, disabled);
 
         long key = Math.round(value * 100.0);
         if (key != cachedValueKey) {
@@ -76,8 +77,8 @@ public class DoubleSliderSetting extends FeatureSetting {
 
         // Highlight value Component in accent color when this slider holds focus,
         // so the user can see at a glance which slider scroll/keys go to.
-        boolean focused = (FeatureSetting.getFocused() == this);
-        int valueColor = focused ? AuroraTheme.IOS_BLUE : AuroraTheme.IOS_SECONDARY_LABEL;
+        boolean focused = (!disabled && FeatureSetting.getFocused() == this);
+        int valueColor = disabled ? AuroraTheme.TEXT_DIM : (focused ? AuroraTheme.IOS_BLUE : AuroraTheme.IOS_SECONDARY_LABEL);
         ctx.drawString(tr, cachedValueStr,
                 x + width - cachedValueStrW - 14, y + 6, valueColor, false);
 
@@ -86,6 +87,7 @@ public class DoubleSliderSetting extends FeatureSetting {
         lastTrackX = trackX;
         lastTrackW = trackW;
 
+        slider.disabled(disabled);
         slider.layout(trackX, y, trackW, CONTROL_H);
         slider.renderShapes(ctx, trackX, y, trackW, CONTROL_H);
         slider.renderOverlay(ctx, trackX, y, trackW, CONTROL_H, mouseX, mouseY);
@@ -95,6 +97,7 @@ public class DoubleSliderSetting extends FeatureSetting {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button, int rowX, int rowY, int rowWidth) {
+        if (isDisabled()) return false;
         boolean handled = slider.mouseClicked(mouseX, mouseY, button);
         if (handled) requestFocus();
         return handled;
@@ -121,6 +124,7 @@ public class DoubleSliderSetting extends FeatureSetting {
 
     @Override
     public boolean onKeyPress(int keyCode, int modifiers) {
+        if (isDisabled()) return false;
         if (slider.onKeyPress(keyCode, modifiers)) {
             com.aurora.client.config.AuroraConfig.save();
             return true;
