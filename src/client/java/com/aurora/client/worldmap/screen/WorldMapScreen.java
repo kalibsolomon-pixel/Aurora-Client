@@ -139,10 +139,16 @@ public class WorldMapScreen extends Screen implements ThemedScreen {
         if (promptOpen) {
             promptPanelX = Mth.clamp(promptX, 4, Math.max(4, this.width - PROMPT_W - 4));
             promptPanelY = Mth.clamp(promptY, 4, Math.max(4, this.height - PROMPT_H - 4));
+            // init() re-runs on window resize while the prompt stays open —
+            // seed the recreated field with what was already typed instead
+            // of resetting to the default (the old widget still holds its
+            // value even though it belonged to the previous widget list).
+            String prevTyped = promptName != null ? promptName.getValue() : null;
             promptName = new EditBox(this.font, promptPanelX + 10, promptPanelY + 26,
                     PROMPT_W - 20, 16, Component.literal("Name"));
             promptName.setMaxLength(48);
-            promptName.setValue("Waypoint " + promptWorldX + ", " + promptWorldZ);
+            promptName.setValue(prevTyped != null ? prevTyped
+                    : "Waypoint " + promptWorldX + ", " + promptWorldZ);
             promptName.setFocused(true);
             promptName.moveCursorToEnd(false);
             addRenderableWidget(promptName);
