@@ -567,9 +567,10 @@ Before starting new work, decide with the user whether to commit/land this wave 
 - `MixinGuiGraphics` is an unregistered stub (superseded by `MixinFont`).
 
 **Dead code / drift hazards**
-- `MultiplayerScreenMixin` (refresh-all + auto-ping) and `MultiplayerServerListWidgetMixin`
-  (numeric ping on server list rows) are complete but **not listed in `aurora.mixins.json`**
-  — they never load. Adding them is a behavior change, not a no-op fix.
+- `MultiplayerScreenMixin` was deleted 2026-09-05 (abandoned refresh-all feature; never
+  registered), and `MultiplayerServerListWidgetMixin` (numeric ping on server list rows)
+  was registered the same day — the former "complete but not listed in aurora.mixins.json"
+  pair no longer exists.
 - `timeChangerEnabled` + `TimeOfDayPreset` in config: no consumers.
 - `Feature.enabledByDefault()`: never read. `AutoSprintFeature`: dormant stub.
   `FpsDisplayFeature`: no-op marker (FPS lives in Info HUD).

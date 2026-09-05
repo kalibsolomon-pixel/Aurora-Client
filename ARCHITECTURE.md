@@ -243,11 +243,10 @@ a launch crash, not a silent skip):
 - `RenderSystemMixin` — replaces vanilla frame pacer for Aurora screens (`guiFpsLimit`) via
   `FramePacer`; uses a `com.aurora.client.screen` class-prefix predicate.
 - `InGameHudMixin` (crosshair suppression), `SimpleOptionMixin` (force-set gamma), `MouseMixin`
-  (zoom scroll), empty-but-registered `WindowMixin`/`RenderTargetMixin` (deliberate).
-- **Present but NOT registered (dead at runtime):** `MultiplayerScreenMixin` (refresh-all;
-  bodies gutted, comment wrongly claims it still applies) and
-  `MultiplayerServerListWidgetMixin` (numeric ping on server rows — fully implemented, almost
-  certainly an accidental omission). `MixinGuiGraphics` is an intentional comment-only stub.
+  (zoom scroll), `MultiplayerServerListWidgetMixin` (numeric ping "42ms" on server rows,
+  replacing vanilla's ping-bars icon — registered 2026-09-05 after target verification),
+  empty-but-registered `WindowMixin`/`RenderTargetMixin` (deliberate).
+- `MixinGuiGraphics` is an intentional comment-only stub, not registered.
 
 ## 6. Input & interaction patterns
 
