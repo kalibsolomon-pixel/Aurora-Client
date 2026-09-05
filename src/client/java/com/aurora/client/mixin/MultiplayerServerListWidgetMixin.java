@@ -4,6 +4,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.multiplayer.ServerSelectionList;
 import net.minecraft.client.multiplayer.ServerData;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -21,11 +22,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(ServerSelectionList.OnlineServerEntry.class)
 public abstract class MultiplayerServerListWidgetMixin {
 
-    @Shadow private ServerData serverData;
-
-    @Shadow public abstract int getContentX();
-    @Shadow public abstract int getContentY();
-    @Shadow public abstract int getContentWidth();
+    @Shadow @Final private ServerData serverData;
 
     @Inject(method = "renderContent", at = @At("TAIL"), require = 0)
     private void aurora$replacePingIcon(
@@ -37,10 +34,16 @@ public abstract class MultiplayerServerListWidgetMixin {
         if (client == null || client.font == null) return;
 
         // Pull row geometry from the Entry's own layout getters (1.21.11 stopped
-        // passing top/left/width/height into renderContent).
-        int x = getContentX();
-        int y = getContentY();
-        int entryWidth = getContentWidth();
+        // passing top/left/width/height into renderContent). The getters live
+        // on AbstractSelectionList.Entry, two levels above OnlineServerEntry, and
+        // Mixin only resolves @Shadow methods against the target class's own
+        // method table, so shadowing them fails at apply time. Call the public
+        // inherited methods through a cast to the public ServerSelectionList.Entry
+        // superclass instead (AbstractSelectionList.Entry itself is protected).
+        ServerSelectionList.Entry self = (ServerSelectionList.Entry) (Object) this;
+        int x = self.getContentX();
+        int y = self.getContentY();
+        int entryWidth = self.getContentWidth();
 
         long ping = serverData.ping;
 
