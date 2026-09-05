@@ -31,6 +31,8 @@ public abstract class AbstractButtonMixin {
     @Unique private static final long PRESS_UP_MS = 180L;
 
     @Unique private int aurora$cachedLabelW = -1;
+    /** Message the width was measured for; the cache invalidates when the label changes. */
+    @Unique private String aurora$cachedLabelMsg = null;
 
     @Unique
     private boolean aurora$shouldApplyStyle() {
@@ -94,7 +96,12 @@ public abstract class AbstractButtonMixin {
             RenderUtil.drawRoundedOutlineAA(ctx, x, y, w, h, radius, 1.0f, borderCol);
 
             Font tr = Minecraft.getInstance().font;
-            if (aurora$cachedLabelW < 0) aurora$cachedLabelW = tr.width(self.getMessage());
+            var label = self.getMessage();
+            String labelStr = label.getString();
+            if (aurora$cachedLabelMsg == null || !aurora$cachedLabelMsg.equals(labelStr)) {
+                aurora$cachedLabelMsg = labelStr;
+                aurora$cachedLabelW = tr.width(label);
+            }
             int textX = x + (w - aurora$cachedLabelW) / 2;
             int textY = y + (h - tr.lineHeight) / 2 + 1;
 
