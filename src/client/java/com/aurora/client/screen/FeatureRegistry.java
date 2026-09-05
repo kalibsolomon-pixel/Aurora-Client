@@ -890,9 +890,13 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                         new DoubleSliderSetting("Off-Hand Default Scale",
                                 () -> (double) cfg.offHandDefaultScale,
                                 v -> cfg.offHandDefaultScale = (float) v, 0.5, 1.5).percent()
-                                .description("Fallback scale for any item held in the off-hand that doesn't have a specific scale override below."),
+                                .description("Fallback scale for any item held in the off hand that doesn't have a specific scale override below."),
                         new ItemScaleSetting()
-                ));
+                ),
+                // "itemScale" covers itemScaleEnabled + the itemScales overrides map;
+                // the per-hand defaults have their own field names and need their own
+                // prefixes (the FeatureMetadata javadoc's reason resetPrefixes exist).
+                List.of("itemScale", "mainHandDefaultScale", "offHandDefaultScale"));
 
         add(SETTINGS, "custom_title", "Custom Title",
                 "Replaces Minecraft's default main menu with Aurora's themed title screen — the diamond emblem, starfield backdrop, and restyled buttons. Purely cosmetic; turn it off to restore the vanilla menu. Takes effect the next time you return to the main menu.",
