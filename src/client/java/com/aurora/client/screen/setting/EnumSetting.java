@@ -132,7 +132,10 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
         String raw = current == null ? "—" : displayName(current);
         int arrowReserve = (expanded ? cachedUpArrowWidth : cachedDownArrowWidth) + 8;
         String name = fit(tr, raw, BTN_W - arrowReserve);
-        if (name != cachedName) {
+        // Value equality, not reference equality — fit() builds a fresh
+        // trimmed string every frame, so != never hit and the width was
+        // re-measured per frame.
+        if (!name.equals(cachedName)) {
             cachedNameW = tr.width(name);
             cachedName = name;
         }

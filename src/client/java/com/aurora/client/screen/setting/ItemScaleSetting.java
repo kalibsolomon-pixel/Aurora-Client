@@ -177,8 +177,9 @@ public class ItemScaleSetting extends FeatureSetting {
             boolean expanded = expandedStates.getOrDefault(idStr, false);
             int rowY = currentY;
 
-            // Header Background Panel
-            boolean rowHover = mouseX >= x + 10 && mouseX < x + width - 10 && mouseY >= rowY && mouseY < rowY + 28;
+            // Header Background Panel (26px tall — the hover band matches so
+            // there is no hover-without-click strip at the row's bottom edge).
+            boolean rowHover = mouseX >= x + 10 && mouseX < x + width - 10 && mouseY >= rowY && mouseY < rowY + 26;
             AuroraShapes.panel(ctx, x + 10, rowY, width - 20, 26,
                     ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_BACKGROUND), 0x1A),
                     AuroraTheme.RADIUS_SMALL);
@@ -345,20 +346,20 @@ public class ItemScaleSetting extends FeatureSetting {
             // Click on "+" button
             int plusX = rowX + rowWidth - 36;
             if (mouseX >= plusX && mouseX < plusX + 24) {
-                if (foundItem != null) {
-                    Identifier id = BuiltInRegistries.ITEM.getKey(foundItem);
-                    if (id != null) {
-                        String idStr = id.toString();
-                        AuroraConfig cfg = AuroraConfig.get();
-                        if (!cfg.itemScales.containsKey(idStr)) {
-                            cfg.itemScales.put(idStr, new AuroraConfig.ItemScaleData());
-                            expandedStates.put(idStr, true);
-                            searchField.setValue("");
-                            // Persist immediately — matches how sibling widgets
-                            // save at commit; relying on a later save loses
-                            // the change on a crash.
-                            AuroraConfig.save();
-                        }
+                // Nothing to add (no matching item) — don't consume the click.
+                if (foundItem == null) return false;
+                Identifier id = BuiltInRegistries.ITEM.getKey(foundItem);
+                if (id != null) {
+                    String idStr = id.toString();
+                    AuroraConfig cfg = AuroraConfig.get();
+                    if (!cfg.itemScales.containsKey(idStr)) {
+                        cfg.itemScales.put(idStr, new AuroraConfig.ItemScaleData());
+                        expandedStates.put(idStr, true);
+                        searchField.setValue("");
+                        // Persist immediately — matches how sibling widgets
+                        // save at commit; relying on a later save loses
+                        // the change on a crash.
+                        AuroraConfig.save();
                     }
                 }
                 return true;

@@ -87,7 +87,10 @@ public class StringListSetting extends FeatureSetting {
             AuroraFontRenderer.drawCentered(ctx, tr, "\u2212", btnX + BTN_SIZE / 2,
                     btnY + (BTN_SIZE - tr.lineHeight) / 2, 0xFFFFFFFF);
 
-            String display = entry.length() > 40 ? entry.substring(0, 37) + "..." : entry;
+            // Width-based truncation (a char count overflows with wide glyphs).
+            int maxTextW = (btnX - 6) - (x + 16);
+            String display = tr.width(entry) <= maxTextW ? entry
+                    : tr.plainSubstrByWidth(entry, maxTextW - tr.width("...")) + "...";
             ctx.drawString(tr, display, x + 16, iy + (ROW_H - tr.lineHeight) / 2,
                     AuroraTheme.TEXT_SECONDARY, false);
 

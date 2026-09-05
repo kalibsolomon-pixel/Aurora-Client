@@ -70,7 +70,10 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
         int cw = this.width;
         int ch = this.height;
 
-        padSize = Math.min(240, Math.min(cw - 200, ch - 160));
+        // Clamped to a sane minimum: on a very short window cw/ch can shrink
+        // the computed size to zero or below, which inverts the pad's fill
+        // loops. Below the clamp the picker gets cramped, never broken.
+        padSize = Math.max(60, Math.min(240, Math.min(cw - 200, ch - 160)));
         padX = (cw - padSize - 80) / 2;
         padY = 48;
 

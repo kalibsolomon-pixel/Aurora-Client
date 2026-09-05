@@ -165,7 +165,7 @@ public class ThemePreviewSetting extends FeatureSetting {
 
         // Accent chip — stained family; draws its own flat fallback on decline.
         if (chipX >= 0) {
-            float chipR = Math.min(BTN_H / 2.0f, ThemeManager.current().roundness().radiusSmall());
+            float chipR = Math.min(CHIP_H / 2.0f, ThemeManager.current().roundness().radiusSmall());
             if (BlurPanelRenderer.renderPanel(ctx, chipX, chipY, CHIP_W, CHIP_H, chipR,
                     BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX,
                     BlurPanelRenderer.Lighting.raised())) {
@@ -185,10 +185,6 @@ public class ThemePreviewSetting extends FeatureSetting {
         int px = x + PAD_X;
         int py = y + PAD_Y;
         int pw = width - PAD_X * 2;
-        int b1x = px + pw - BTN_W - 12;
-        int b1y = py + 10;
-        int b2x = b1x;
-        int b2y = b1y + BTN_H + 8;
 
         int tx = px + 12;
         int ty = py + 10;
@@ -196,10 +192,8 @@ public class ThemePreviewSetting extends FeatureSetting {
         ctx.drawString(tr, "Secondary text", tx, ty + 12, AuroraTheme.IOS_SECONDARY_LABEL, false);
         ctx.drawString(tr, "Muted text", tx, ty + 24, AuroraTheme.IOS_TERTIARY_LABEL, false);
 
-        AuroraFontRenderer.drawCentered(ctx, tr, "Button", b1x + BTN_W / 2, b1y + (BTN_H - tr.lineHeight) / 2,
-                AuroraTheme.ON_ACCENT);
-        AuroraFontRenderer.drawCentered(ctx, tr, "Button", b2x + BTN_W / 2, b2y + (BTN_H - tr.lineHeight) / 2,
-                AuroraTheme.IOS_LABEL);
+        // The mock buttons draw their own "Button" labels inside their
+        // renderOverlay calls above — nothing extra to draw here.
     }
 
     @Override

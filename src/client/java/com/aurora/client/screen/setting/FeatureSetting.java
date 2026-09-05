@@ -364,7 +364,9 @@ public abstract class FeatureSetting {
                 fadeColor(ThemeManager.surfaceColor(ThemeToken.SURFACE), fade), radius);
         AuroraShapes.outline(ctx, bx, by, boxW, boxH,
                 fadeColor(AuroraTheme.WINDOW_OUTLINE, fade), radius);
-        int textColor = fadeColor(0xFFE6E9F0, fade);
+        // ON_OVERLAY is the tooltip-text role every other tooltip in the
+        // codebase reads (Profile/Waypoint rows, the pack-browser toast).
+        int textColor = fadeColor(ThemeManager.color(ThemeToken.ON_OVERLAY), fade);
         int ty = by + 4;
         for (var l : lines) {
             ctx.drawString(tr, l, bx + 6, ty, textColor, false);

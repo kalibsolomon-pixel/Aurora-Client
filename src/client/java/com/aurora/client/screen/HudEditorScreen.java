@@ -452,6 +452,10 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
             // corner handles that sit slightly outside the AABB.
             if (x >= mx - CORNER_HIT_RADIUS && x < mx + w + CORNER_HIT_RADIUS
                     && y >= my - CORNER_HIT_RADIUS && y < my + h + CORNER_HIT_RADIUS) {
+                // Keep overwriting: the render loop draws mgr.all() in this
+                // same order (later entries overdraw earlier ones), so the
+                // LAST hit is the visually topmost module — exactly what a
+                // click should select.
                 found = m;
             }
         }
