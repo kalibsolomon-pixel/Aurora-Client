@@ -140,10 +140,8 @@ public class WaypointManagerScreen extends Screen implements ThemedScreen {
 
         // List region.
         int listX = (this.width - LIST_W) / 2;
-        int listH = this.height - LIST_TOP - LIST_BOTTOM_PAD;
-        int listClipBottom = LIST_TOP + listH;
 
-        ctx.enableScissor(listX - 4, LIST_TOP - 2, listX + LIST_W + 4, listClipBottom);
+        ctx.enableScissor(listX - 4, listClipTop(), listX + LIST_W + 4, listClipBottom());
 
         List<Waypoint> all = currentList();
         // Row-widget cache hygiene: membership changed (add/remove) → rebuild.
@@ -165,7 +163,7 @@ public class WaypointManagerScreen extends Screen implements ThemedScreen {
         int y = LIST_TOP - (int) scrollY;
         for (int i = 0; i < all.size(); i++) {
             Waypoint w = all.get(i);
-            if (y + ROW_H > LIST_TOP - ROW_H && y < listClipBottom) {
+            if (y + ROW_H > LIST_TOP - ROW_H && y < listClipBottom()) {
                 renderRow(ctx, listX, y, LIST_W, w, i, mouseX, mouseY);
             }
             y += ROW_H + ROW_GAP;
@@ -194,7 +192,7 @@ public class WaypointManagerScreen extends Screen implements ThemedScreen {
         // so its caret and selection draw above the row swatches.
         if (nameField != null && editingIndex >= 0 && editingIndex < all.size()) {
             int rowY = LIST_TOP - (int) scrollY + editingIndex * (ROW_H + ROW_GAP);
-            if (rowY >= LIST_TOP - ROW_H && rowY < listClipBottom) {
+            if (rowY >= LIST_TOP - ROW_H && rowY < listClipBottom()) {
                 int fieldX = listX + ROW_INSET + SWATCH_W + CONTROL_GAP;
                 int fieldY = rowY + (ROW_H - 16) / 2;
                 nameField.setX(fieldX);
@@ -307,6 +305,15 @@ public class WaypointManagerScreen extends Screen implements ThemedScreen {
         delBtn.render(ctx, cx, y + 4, BTN_DEL_W, ROW_H - 8, mouseX, mouseY);
     }
 
+    /**
+     * Vertical band the row list is scissored to at render time (the
+     * enableScissor call in {@link #render}). Hit-testing clamps row
+     * geometry to this same band so rows (or row parts) that are clipped
+     * away are never clickable — the render clip is the source of truth.
+     */
+    private int listClipTop() { return LIST_TOP - 2; }
+    private int listClipBottom() { return LIST_TOP + (this.height - LIST_TOP - LIST_BOTTOM_PAD); }
+
     @Override
     public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent _ev, boolean _doubleClicked) {
         double mouseX = _ev.x();
@@ -321,12 +328,19 @@ public class WaypointManagerScreen extends Screen implements ThemedScreen {
         int listX = (this.width - LIST_W) / 2;
         List<Waypoint> all = currentList();
         int y = LIST_TOP - (int) scrollY;
+        int clipTop = listClipTop();
+        int clipBot = listClipBottom();
         for (int i = 0; i < all.size(); i++) {
             Waypoint wp = all.get(i);
             int rowTop = y;
             int rowBot = y + ROW_H;
 
-            if (mouseY >= rowTop && mouseY < rowBot) {
+            // Hit-testing agrees with the render scissor: only the VISIBLE
+            // part of the row is clickable, and only within the row's
+            // horizontal extent (the name click below keeps its own tighter
+            // bounds; the row buttons self-bound).
+            if (mouseY >= Math.max(rowTop, clipTop) && mouseY < Math.min(rowBot, clipBot)
+                    && mouseX >= listX && mouseX < listX + LIST_W) {
                 // Shared row buttons see the click first — each hit-tests its
                 // own (per-frame-laid-out) bounds and runs its own action.
                 Button rowBtn;
