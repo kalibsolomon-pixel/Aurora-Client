@@ -104,13 +104,23 @@ public class ToggleSwitch extends Widget {
         RenderUtil.drawCircleAA(g, knobX, knobY, thumbD, thumbD, 0xFFFFFFFF);
     }
 
+    /** Wall-clock stamp of the previous advance() call; drives real-dt animation. */
+    private long lastAdvanceNs = 0L;
+
     private float advance(boolean on) {
         if (slideAnim == null) {
             slideAnim = new Animation(on ? 1f : 0f, 12.0f);
             slideAnim.setCurrentValue(on ? 1f : 0f);
         }
+        // Real per-frame delta, not a hardcoded 60fps assumption — the old
+        // 0.016f constant made the slide run ~2x fast at 120fps and ~2x slow
+        // at 30. Animation.update clamps the step internally, so a hitch or
+        // an idle gap cannot produce a jump.
+        long nowNs = System.nanoTime();
+        float dt = lastAdvanceNs == 0L ? 0.016f : (nowNs - lastAdvanceNs) / 1_000_000_000f;
+        lastAdvanceNs = nowNs;
         slideAnim.setTargetValue(on ? 1f : 0f);
-        slideAnim.update(0.016f);
+        slideAnim.update(dt);
         if (slideAnim.getCurrentValue() == slideAnim.getTargetValue()) {
             slideInProgress = false;
         }
