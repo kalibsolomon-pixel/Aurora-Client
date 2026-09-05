@@ -148,6 +148,17 @@ public class KeybindSetting extends FeatureSetting {
         return true;
     }
 
+    /**
+     * Closing the detail screen while listening must not leave this row
+     * holding the static focus registry into the next screen — same
+     * lifecycle contract as KeyListSetting.
+     */
+    @Override
+    public void onDetailScreenClose() {
+        listening = false;
+        releaseFocus();
+    }
+
     @Override
     public boolean onKeyPress(int keyCode, int modifiers) {
         if (!listening) return false;

@@ -192,6 +192,21 @@ public class StringListSetting extends FeatureSetting {
         inputField.setValue("");
     }
 
+    /**
+     * Reset the input state on screen close so reopening starts clean and
+     * this row cannot hold the static focus registry across screens — same
+     * lifecycle contract as ParticleConfigSetting.
+     */
+    @Override
+    public void onDetailScreenClose() {
+        if (inputField != null) {
+            inputField.setValue("");
+            inputField.setFocused(false);
+            inputField.moveCursorToEnd(false);
+        }
+        releaseFocus();
+    }
+
     private List<String> safeList() {
         List<String> list = getter.get();
         return list != null ? list : new ArrayList<>();

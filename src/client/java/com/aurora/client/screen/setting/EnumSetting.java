@@ -303,12 +303,28 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
                 releaseFocus();
                 return true;
             } else {
+                // Outside click collapses the popup AND consumes the click —
+                // letting it fall through would act on whatever renders
+                // underneath the now-dismissed dropdown.
                 expanded = false;
                 releaseFocus();
+                return true;
             }
         }
 
         return false;
+    }
+
+    /**
+     * Reset popup state on screen close so the next visit starts collapsed
+     * and this row cannot hold the static focus registry across screens —
+     * same lifecycle contract as KeyListSetting/ParticleConfigSetting.
+     */
+    @Override
+    public void onDetailScreenClose() {
+        expanded = false;
+        scrollOffset = 0;
+        releaseFocus();
     }
 
     @Override

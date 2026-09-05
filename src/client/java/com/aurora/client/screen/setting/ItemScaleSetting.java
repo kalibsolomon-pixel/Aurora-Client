@@ -480,4 +480,18 @@ public class ItemScaleSetting extends FeatureSetting {
         }
         return false;
     }
+
+    /**
+     * Reset the search state on screen close so reopening starts clean and
+     * this row cannot hold the static focus registry across screens — same
+     * lifecycle contract as ParticleConfigSetting.
+     */
+    @Override
+    public void onDetailScreenClose() {
+        searchField.setValue("");
+        searchField.setFocused(false);
+        searchField.moveCursorToEnd(false);
+        releaseFocus();
+        foundItem = null;
+    }
 }
