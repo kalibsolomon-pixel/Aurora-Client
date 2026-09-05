@@ -45,6 +45,7 @@ public class ModuleManager {
         modules.add(new Module("minimap", "Minimap", "A top-down map of the world around you, shown as a HUD overlay. Renders terrain, waypoints, and nearby entities as colored dots.", Module.Category.HUD));
         modules.add(new Module("world_map", "World Map", "A full-screen, pannable world map of your explored terrain.", Module.Category.HUD));
         modules.add(new Module("resourcepack_browser", "Resourcepack Browser", "Browse and install community resource packs directly from Modrinth. Search, preview, and one-click install straight into your resourcepacks folder.", Module.Category.HUD));
+        modules.add(new Module("reflex", "Minecraft Reflex", "Uses the Nvidia Reflex principle to reduce rendering latency — locks frame pacing by estimating CPU and GPU time so input is sampled as late as possible.", Module.Category.HUD));
     }
 
     public List<Module> getModules() {
