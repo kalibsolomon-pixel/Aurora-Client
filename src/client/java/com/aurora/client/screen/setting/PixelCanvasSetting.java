@@ -286,6 +286,12 @@ public class PixelCanvasSetting extends FeatureSetting {
             heightField.render(ctx, mouseX, mouseY, 0f);
         }
 
+        // Canvas origin — assigned BEFORE anything reads it this frame
+        // (the status line below draws under the canvas; reading a stale
+        // first-frame/previous-frame canvasY mispositioned it).
+        canvasX = x + (width - getCanvasW()) / 2;
+        canvasY = sizeRowY + SIZE_ROW_H + 8;
+
         // Status line — drawn under the canvas (never overlaps the fields
         // or buttons; transient until the next action).
         if (status != null) {
@@ -294,9 +300,6 @@ public class PixelCanvasSetting extends FeatureSetting {
         }
 
         // ---- Canvas ----
-        canvasX = x + (width - getCanvasW()) / 2;
-        canvasY = sizeRowY + SIZE_ROW_H + 8;
-
         AuroraShapes.panel(ctx, canvasX, canvasY, getCanvasW(), getCanvasH(), AuroraTheme.PANEL_INSET, 0);
         AuroraShapes.outline(ctx, canvasX, canvasY, getCanvasW(), getCanvasH(), disabled ? 0x33FFFFFF : AuroraTheme.BORDER_OFF, 0);
 
@@ -464,7 +467,15 @@ public class PixelCanvasSetting extends FeatureSetting {
             // in decideBenchmark with the locally measured per-fill cost.
             double regenMs = CanvasTexture.measureRasterMs(w, h, cellPx, BENCH_ITERATIONS);
             double[] scan = CanvasTexture.measureHudScan(w, h, BENCH_ITERATIONS);
-            benchResult = new double[]{w, h, regenMs, scan[0], scan[1]};
+            // Lifecycle guard: a benchmark that outlives its screen (closed
+            // mid-run, or finishing after a reopen) must not publish into a
+            // session that never asked for it — onDetailScreenClose clears
+            // the state under the same lock, making check+write atomic
+            // against the close.
+            synchronized (this) {
+                if (!detailScreenLive) return;
+                benchResult = new double[]{w, h, regenMs, scan[0], scan[1]};
+            }
         }, "Aurora-CanvasCostProbe");
         t.setDaemon(true);
         t.start();
@@ -472,6 +483,16 @@ public class PixelCanvasSetting extends FeatureSetting {
 
     /** Off-thread benchmark results awaiting a decision, or null. */
     private double[] pendingDecision = null;
+
+    /**
+     * True between {@link #onDetailScreenOpen} and {@link #onDetailScreenClose}.
+     * The benchmark thread checks it (under this instance's monitor, paired
+     * with the close-side clear) before publishing, so a run that outlives
+     * its screen — closed mid-run, or finishing after a reopen — is
+     * discarded instead of being attributed to a session that never
+     * started it.
+     */
+    private volatile boolean detailScreenLive = false;
 
     /** Render-thread handoff of the off-thread benchmark result. */
     private void consumeBenchmarkResult() {
@@ -736,6 +757,7 @@ public class PixelCanvasSetting extends FeatureSetting {
 
     @Override
     public void onDetailScreenOpen() {
+        detailScreenLive = true;
         // Normalize legacy configs: if the dim fields don't describe the
         // pixel array (old perfect-square data), adopt the resolved dims
         // so the schema converges on first visit.
@@ -765,6 +787,14 @@ public class PixelCanvasSetting extends FeatureSetting {
 
     @Override
     public void onDetailScreenClose() {
+        // Invalidate any in-flight benchmark atomically against the
+        // thread's guarded publish (same monitor): the result is discarded,
+        // never silently consumed by the next screen session.
+        synchronized (this) {
+            detailScreenLive = false;
+            benchResult = null;
+            pendingDecision = null;
+        }
         widthField.setFocused(false);
         heightField.setFocused(false);
         releaseFocus();
