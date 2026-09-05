@@ -55,6 +55,7 @@
     "AbstractButtonMixin",
     "EditBoxMixin",
     "ServerListDragReorderMixin",
+    "MultiplayerServerListWidgetMixin",
     "TickSyncNetworkMixin",
     "ClientLevelWorldMapMixin",
     "ReflexMinecraftMixin",
