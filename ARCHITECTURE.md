@@ -302,3 +302,8 @@ FeatureRegistry's and has already diverged (audit D-note).
 - No TODO/FIXME comments exist in `com/aurora` — intent lives in long javadocs. Read them.
 - `run/` at repo root is a live dev client (its `logs/latest.log` is where `[BlurPanel]` /
   `[GlassStats]` / `[canvas-cost]` evidence lands).
+- The `analyze_image` vision tool is unreliable in this environment: across several
+  verification sessions (2026-09-05) its results repeatedly came back echoing corrupted,
+  duplicated tokens and destabilized the agent's entire output stream. Prefer
+  config-file/log oracles and pixel-diff checks; treat any single vision read as suspect
+  and never paste its raw output onward.
