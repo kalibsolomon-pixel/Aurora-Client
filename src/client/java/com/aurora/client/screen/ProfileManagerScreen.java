@@ -161,9 +161,13 @@ public class ProfileManagerScreen extends Screen implements ThemedScreen {
         delBtns.keySet().retainAll(profiles);
 
         // ---- 1. Glass pass (before the dim) ----
+        // Opened explicitly so each surface's rim finish is deferred past
+        // the dim (painted by overlayDim); the tracked scissor lets the
+        // deferred row rims keep the list clip.
+        GlassSurface.beginGlassPass();
         rowGlassDrawn.clear();
         createRowGlassDrawn = false;
-        ctx.enableScissor(listX - 4, listClipTop(), listX + LIST_W + 4, listClipBottom());
+        GlassSurface.enableScissor(ctx, listX - 4, listClipTop(), listX + LIST_W + 4, listClipBottom());
         int gy = LIST_TOP - (int) scrollY;
         if (creatingNew && createField != null) {
             createRowGlassDrawn = renderRowSurface(ctx, listX, gy, LIST_W);
@@ -183,7 +187,7 @@ public class ProfileManagerScreen extends Screen implements ThemedScreen {
             }
             gy += ROW_H + ROW_GAP;
         }
-        ctx.disableScissor();
+        GlassSurface.disableScissor(ctx);
         if (newBtn != null) newBtn.renderGlassPass(ctx);
         if (doneBtn != null) doneBtn.renderGlassPass(ctx);
         EditBox field = layoutEditField(profiles, listX);

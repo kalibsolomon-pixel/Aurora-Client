@@ -179,8 +179,12 @@ public class WaypointManagerScreen extends Screen implements ThemedScreen {
         if (membershipChanged) nameFitCache.clear();
 
         // ---- 1. Glass pass (before the dim) ----
+        // Opened explicitly so each surface's rim finish is deferred past
+        // the dim (painted by overlayDim); the tracked scissor lets the
+        // deferred row rims keep the list clip.
+        GlassSurface.beginGlassPass();
         rowGlassDrawn.clear();
-        ctx.enableScissor(listX - 4, listClipTop(), listX + LIST_W + 4, listClipBottom());
+        GlassSurface.enableScissor(ctx, listX - 4, listClipTop(), listX + LIST_W + 4, listClipBottom());
         int gy = LIST_TOP - (int) scrollY;
         for (Waypoint w : all) {
             if (gy + ROW_H > LIST_TOP - ROW_H && gy < listClipBottom()) {
@@ -188,7 +192,7 @@ public class WaypointManagerScreen extends Screen implements ThemedScreen {
             }
             gy += ROW_H + ROW_GAP;
         }
-        ctx.disableScissor();
+        GlassSurface.disableScissor(ctx);
         if (dropBtn != null) dropBtn.renderGlassPass(ctx);
         if (doneBtn != null) doneBtn.renderGlassPass(ctx);
         if (layoutNameField(all, listX)) ((GlassEditBox) nameField).aurora$renderGlassPass(ctx);
