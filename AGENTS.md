@@ -386,7 +386,15 @@ panel — accepted for simplicity/robustness.
    a second application point is *the* bug class that killed the previous attempt.
    (The rim stroke's convergence target is the one deliberate consumer of that same
    single value — a lighting-term derivation, not an alpha change; see the pipeline
-   paragraph above.)
+   paragraph above.) The **frost radius** is the other such derivation (2026-09-07):
+   the blur a panel is rendered with is `requested × max(1/6, √opacity)` —
+   `BlurPanelRenderer.frostRadiusPx` — so the slider's bottom is clear glass (4 px at the
+   default 24) and full frost arrives from ~70% up. Before this the blur was a constant,
+   which is why a 0% panel still read as a solid slab even though its fill alpha was
+   already 0: the frost, not the alpha, was the "opacity" at the low end. Slider → alpha
+   itself is linear, 0..1 in 0.01 steps, no floor (`ThemeResolver.applyBackgroundOpacity`);
+   the only floor anywhere is the stained tint's 140 (convention 3, primary/selected
+   elements only).
 2. **Raised vs depressed.** Windows/main containers = DEPRESSED (recessed); interactive
    controls (buttons, rows, chips, segments, search fields) = RAISED. Same two lighting
    terms, inverted.

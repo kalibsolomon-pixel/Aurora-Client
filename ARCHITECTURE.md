@@ -175,7 +175,11 @@ if (!glass) { /* flat token fill + outline — the screen's own fallback chrome 
 ```
 
 Conventions (violating these has caused real bugs — full list in AGENTS.md §6):
-1. Single opacity application point (above).
+1. Single opacity application point (above). Two derivations ride that one value without
+   being alpha applications: the rim's two halves, and (2026-09-07) the **frost radius** —
+   `BlurPanelRenderer.frostRadiusPx` = requested × max(1/6, √opacity), so 0% is clear glass
+   (4 px blur) and full 24 px frost arrives from ~70% up. The slider → fill alpha mapping is
+   linear with no floor.
 2. Containers DEPRESSED, controls RAISED (opposite of their container).
 3. Neutral glass tints `WINDOW_FILL`; stained glass (accent, `stainedTint()`) ONLY for
    selected/primary elements. Full-width list rows are containers — mark selection with a
