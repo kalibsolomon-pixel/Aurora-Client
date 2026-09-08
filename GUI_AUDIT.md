@@ -61,6 +61,12 @@ join. The pool (`BlurPanelRenderer.OUTPUT_POOL = 24`) exists because 1.21.11's d
 Consequence per the renderer's own design: extra panels decline → glass/flat flicker on the
 overflow elements. Note the pool cap is also functioning as an accidental FPS brake — without
 it, these screens would pay full pipeline cost for every panel (see P-note 1).
+**[Partially resolved 2026-09-08, R9]** Card bodies no longer render glass (the 2-panels-per-
+card term is halved: only each card's install button remains). Panel math post-fix:
+~4 chrome (sidebar + active tab + Done + search) + 1 per visible card + 3 with the detail
+modal open. Comfortably under 24 on ≤1080p-class viewports (~15 cards → ~19 panels); a full
+6-column grid on a 4K-class window (~50 cards) still exceeds the cap via install buttons
+alone — see R10 (budget policy) for the structural half.
 
 **B2. The pack browser's per-card glass is invisible — cards pay full glass cost for
 nothing.** [verified] Card tint =
@@ -75,6 +81,10 @@ capture→blur→composite→readback for a result the user cannot see — while
 pool-exhaustion driver (B1). Verify in-client to confirm the visual, but the alpha math is
 unambiguous. (Fix direction — make the tint translucent like the sidebar, or drop per-card
 glass — is R9, a user-visible look decision, not a silent cleanup.)
+**[CLOSED 2026-09-08, via R9 option (b)]** Cards are now flat (fill + hover outline, the
+screen's own decline-path look); per-card renderPanel/drawRimFinish removed. The one visible
+delta: at high Background Opacity the cards' thin pastel rim stroke (the only glass artifact
+that survived the opaque tint) is gone too — accepted with the R9 ruling.
 
 **B3. `ProfileManagerScreen` is the only glass screen without a `renderBackground`
 world-gate override.** [verified] All sibling screens override `renderBackground` to skip
@@ -403,15 +413,18 @@ fix — if R7 is deferred, fix B5 by adding the entry by hand). Scope: small-med
 re-raster only on value change). User-facing result: none (same pixels). Perf: removes ~2000
 fills/frame. Scope: small-medium.
 
-**R9. Decide the pack-browser card glass policy** — either (a) make card tints translucent
+**R9. Decide the pack-browser card glass policy — RESOLVED 2026-09-08: option (b), flat
+cards (user decision).** The original fork: either (a) make card tints translucent
 (`surfaceColor`-style) so the existing per-card glass becomes visible and then confront the
 panel budget, or (b) drop per-card glass (flat cards inside an already-glass screen — matching
 the sidebar-tabs precedent: "small transient rows inside an already-glass container stay
-flat"), keeping glass for sidebar/modal/tab/chrome. User-facing result differs per option:
-(a) frosted cards (new look, heavier), (b) flat cards (current look, since the blur is
-currently invisible anyway per B2 — this option is close to a no-op visually and a large perf
-win). **Either way it's a look decision + protected-system adjacent — needs GlassStats numbers
-and explicit sign-off.**
+flat"), keeping glass for sidebar/modal/tab/chrome. **(b) landed**: cards draw the hover-lerp
+fill + outline only; sidebar, detail modal, active category tab, and all chrome (Done, search
+field, install/Retry/Close buttons via the shared `Button` painter) stay glass. Per B2 the
+blur was invisible under the opaque tint, so the practical visual delta is the loss of the
+thin rim stroke at high opacity. Panel-count effect on B1: halved per card, but a 6-column
+full grid on a very large window can still exceed the 24-panel pool through the install
+buttons alone — R10 (budget policy) remains open for that half.
 
 **R10. Glass budget policy** (system-level): instead of pool-exhaustion flicker (B1), define a
 per-screen priority order (window > primary buttons > rows > cards) so overflow degrades

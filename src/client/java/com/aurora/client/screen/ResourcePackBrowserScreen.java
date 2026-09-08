@@ -51,14 +51,19 @@ import java.util.concurrent.atomic.AtomicReference;
  *       category sidebar — wheel input sets a target offset and the render
  *       loop lerps toward it, so scrolling glides instead of snapping.</li>
  *   <li>Glass material — the sidebar and detail modal render as DEPRESSED
- *       glass containers, cards and the selected category tab as RAISED
- *       glass tiles (each element's renderPanel call captures its own
- *       backdrop slice — per-element UV), and the install/close buttons are
- *       the shared glass {@link Button} painter, the same pixels
- *       {@link ButtonWidget} wraps for the Done button. Thumbnails and the
- *       search field stay opaque per the mod-wide glass conventions; every
- *       glass element falls back to its flat fill when the renderer
- *       declines (no world, screenshot in flight, failure).</li>
+ *       glass containers, the selected category tab as a RAISED glass tile
+ *       (its renderPanel call captures its own backdrop slice — per-element
+ *       UV), and the install/close buttons are the shared glass {@link
+ *       Button} painter, the same pixels {@link ButtonWidget} wraps for the
+ *       Done button. Cards are deliberately FLAT (audit R9, 2026-09-08):
+ *       their hover-lerp tint is fully opaque, so a glass card's blur was
+ *       completely occluded — every card paid capture→blur→readback for
+ *       pixels identical to the flat fill, and a full grid of them plus
+ *       their install buttons could exhaust the 24-panel output pool
+ *       (audit B1/B2). Thumbnails, the search field and cards stay opaque
+ *       per the mod-wide glass conventions; every glass element falls back
+ *       to its flat fill when the renderer declines (no world, screenshot
+ *       in flight, failure).</li>
  *   <li>Animated loading spinner instead of static "Loading…" text.</li>
  *   <li>Pack detail modal — clicking a card body opens a centered detail
  *       sheet (Resourcify's signature affordance) showing a large preview,
@@ -617,23 +622,19 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
                 && mouseY >= y && mouseY < y + CARD_H;
         float t = updateHover("card:" + p.projectId, cardHover);
 
-        // Card body — RAISED glass tile, per-element (each card's renderPanel
-        // call captures that card's own backdrop slice — per-element UV).
-        // The hover fill lerp survives as the tint on top of the glass; the
-        // manual two-layer drop shadow + top sheen are gone — the glass
-        // system supplies its own depth via the rim/lighting terms. On
-        // decline the plain flat fill + hover outline return unchanged.
+        // Card body — deliberately FLAT (audit R9/B1/B2, 2026-09-08): the
+        // hover-lerp tint below is fully opaque, so when this was a per-card
+        // renderPanel the captured blur was 100% occluded — pure wasted
+        // capture→blur→readback per card, and a full grid of glass cards +
+        // install buttons could exceed the 24-panel output pool (glass/flat
+        // flicker). The flat look is the exact fill + hover outline this
+        // screen always drew on renderer decline, so nothing changes
+        // visually. Glass on this screen lives on the sidebar, detail modal,
+        // active category tab and the shared-painter buttons.
         int fill = AuroraAnim.lerpArgb(AuroraTheme.IOS_SECONDARY_BG, AuroraTheme.IOS_TERTIARY_BG, t);
-        boolean cardGlass = liveWorldBackdrop() && BlurPanelRenderer.renderPanel(
-                g, x, y, CARD_W, CARD_H, AuroraTheme.RADIUS,
-                BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX, BlurPanelRenderer.Lighting.raised());
         RenderUtil.drawRoundedRectAA(g, x, y, CARD_W, CARD_H, AuroraTheme.RADIUS, fill);
-        if (cardGlass) {
-            BlurPanelRenderer.drawRimFinish(g, x, y, CARD_W, CARD_H, AuroraTheme.RADIUS);
-        } else {
-            int outline = AuroraAnim.lerpArgb(AuroraTheme.TILE_OUTLINE_OFF, AuroraTheme.TILE_OUTLINE_ON, t);
-            RenderUtil.drawRoundedOutlineAA(g, x, y, CARD_W, CARD_H, AuroraTheme.RADIUS, 1.0f, outline);
-        }
+        int outline = AuroraAnim.lerpArgb(AuroraTheme.TILE_OUTLINE_OFF, AuroraTheme.TILE_OUTLINE_ON, t);
+        RenderUtil.drawRoundedOutlineAA(g, x, y, CARD_W, CARD_H, AuroraTheme.RADIUS, 1.0f, outline);
 
         // Thumbnail
         int tx = x + THUMB_PAD;
