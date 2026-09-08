@@ -33,6 +33,12 @@
   "key.aurora.waypoint_manager": "Waypoint Manager",
   "key.aurora.world_map": "Open World Map",
   "key.aurora.minimap_toggle": "Toggle Minimap",
-  "key.aurora.blur_test": "Blur Panel Test"
+  "key.aurora.blur_test": "Blur Panel Test",
+  "key.aurora.hitreg_settings": "Better Hitreg Settings",
+  "key.aurora.hitreg_switch_hand": "Hitreg: Switch Hand",
+  "key.aurora.hitreg_score_left": "Hitreg: Increase Left Score",
+  "key.aurora.hitreg_score_right": "Hitreg: Increase Right Score",
+  "key.aurora.hitreg_score_send": "Hitreg: Send Score to Chat",
+  "key.aurora.hitreg_score_reset": "Hitreg: Reset Score"
 }
 

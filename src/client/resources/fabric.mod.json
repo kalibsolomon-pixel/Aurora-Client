@@ -16,13 +16,11 @@
   "environment": "client",
   "entrypoints": {
     "client": [
-      "com.aurora.client.AuroraClient",
-      "you.jass.betterhitreg.BetterHitreg"
+      "com.aurora.client.AuroraClient"
     ]
   },
   "mixins": [
-    "aurora.mixins.json",
-    "betterhitreg.mixins.json"
+    "aurora.mixins.json"
   ],
   "depends": {
     "fabricloader": ">=0.16.0",

@@ -870,6 +870,27 @@ public class AuroraConfig {
     /** Minimap pixel size (edge length — the map is square). */
     public int minimapSize = 128;
 
+    // ---- Better Hitreg (BetterHitreg by Jass, integrated) ----
+    /**
+     * Master enable for the whole Better Hitreg feature card. Distinct from
+     * the original mod's "custom hitreg" switch (which only gates the
+     * client-side hit feedback): when this is off every hitreg mixin,
+     * overlay, sound filter and keybind is dormant.
+     */
+    public boolean hitregEnabled = true;
+    /** Opens the Better Hitreg detail screen. -1 = unbound (the original bound H). */
+    public int hitregSettingsKey   = -1;
+    /** Swaps the main hand (5-tick cooldown). -1 = unbound. */
+    public int hitregSwitchHandKey = -1;
+    /** Practice scoreboard: +1 left. -1 = unbound (the original bound LEFT). */
+    public int hitregScoreLeftKey  = -1;
+    /** Practice scoreboard: +1 right. -1 = unbound (the original bound RIGHT). */
+    public int hitregScoreRightKey = -1;
+    /** Practice scoreboard: send "L-R" to chat. -1 = unbound (the original bound UP). */
+    public int hitregScoreSendKey  = -1;
+    /** Practice scoreboard: reset both scores. -1 = unbound (the original bound DOWN). */
+    public int hitregScoreResetKey = -1;
+
     // ---- Blur panel test harness ----
     /**
      * Press to open the isolated blur-panel test screen. -1 = unbound by

@@ -59,7 +59,20 @@
     "TickSyncNetworkMixin",
     "ClientLevelWorldMapMixin",
     "ReflexMinecraftMixin",
-    "ItemStackRenderStateAccessor"
+    "ItemStackRenderStateAccessor",
+    "hitreg.ArmorMixin",
+    "hitreg.AttackMixin",
+    "hitreg.ChunkMixin",
+    "hitreg.DamageMixin",
+    "hitreg.EntityAccessor",
+    "hitreg.GlowMixin",
+    "hitreg.NetworkMixin",
+    "hitreg.ParticleMixin",
+    "hitreg.PlayerMixin",
+    "hitreg.RenderMixin",
+    "hitreg.ServerMixin",
+    "hitreg.SoundMixin",
+    "hitreg.SourceMixin"
   ],
   "injectors": {
     "defaultRequire": 1
