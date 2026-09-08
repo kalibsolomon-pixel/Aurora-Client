@@ -701,3 +701,12 @@ on the target screens but a real side effect on every other raised control mod-w
   selected/primary, and update the rollout table in §6.
 - To debug glass: `BlurTestScreen` (bind `blur_test`), `[S]` crash canary, renderer logs
   `[BlurPanel]` decline reasons (`lastOutcome`).
+- **Before calling any UI or feature change complete, check whether it could scale badly.**
+  Widget-cache reconciliation patterns, per-frame allocations, anything that could be O(n²)
+  or worse — especially on screens whose lists can grow large (Profiles, Waypoints, the
+  Modules grid, anything similar). This is a standing rule, not a one-off instruction: a
+  real O(rows²) widget-cache reconciliation on the Profile/Waypoint manager screens (fixed
+  in `0a0caaa`) shipped invisibly since the 2026-09-05 glass rollout because no one had
+  exercised a large list. Reconcile per-row caches against a `Set`, not a `List`; fetch
+  lists once per frame; memoize per-frame text fitting; and when you find a pattern like
+  this, fix it proactively instead of waiting for it to be reported as user-visible lag.
