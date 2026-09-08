@@ -268,6 +268,43 @@ public final class BlurPanelRenderer {
         }
     }
 
+    /**
+     * Degradation priority of a panel when a frame asks for more concurrent
+     * glass panels than the output pool holds ({@link #OUTPUT_POOL}). Under
+     * pressure the pool declines panels LOWEST priority first — the same
+     * panels every frame — instead of whichever panels happen to render
+     * after the pool ran dry (render order, which on a list screen meant the
+     * bottom rows AND the toolbar's Done button flickered flat while the top
+     * rows' Copy/Color buttons kept their glass). Declared highest first:
+     * <ol>
+     *   <li>{@link #WINDOW} — the screen's surface: windows, main panels,
+     *       sidebars, modals, preview cards. One or two per screen, the
+     *       largest element, and the one whose flat fallback changes the
+     *       whole screen's read.</li>
+     *   <li>{@link #CONTROL} — standalone interactive controls: toolbar and
+     *       Done/Reset buttons, chips, segments, search fields, setting
+     *       widgets, popups. Bounded per screen and individually
+     *       noticeable. The default for every call that names no priority.</li>
+     *   <li>{@link #ROW} — repeated list rows, tiles and cards, whose count
+     *       scales with the list and the viewport. Within a tier the pool is
+     *       first-come, so rows degrade from the bottom of the list up.</li>
+     *   <li>{@link #DETAIL} — repeated small elements INSIDE rows and cards
+     *       (per-row Copy/Color/Duplicate, per-card Install): the most
+     *       numerous, smallest, and least missed when flat. Declined first.</li>
+     * </ol>
+     * The mechanism is a reservation, not a sort (see {@link #nextOutput}):
+     * a claim of tier {@code t} is refused while the slots still expected by
+     * every HIGHER tier this frame — last frame's demand, less what that tier
+     * has already claimed — would not fit alongside it. Frames whose total
+     * demand fits the pool are untouched by the rule.
+     */
+    public enum Priority {
+        WINDOW, CONTROL, ROW, DETAIL;
+
+        /** Number of tiers — sizes the per-tier accounting arrays. */
+        static final int COUNT = values().length;
+    }
+
 
     /** Blur-chain resolution relative to the capture region's screen size. */
     private static final float CHAIN_SCALE = 0.25f;
@@ -329,9 +366,18 @@ public final class BlurPanelRenderer {
     // Reset, 2 preview buttons, 5 segments, toggle track, chip); the Mods
     // grid pilot reaches ~15 (window, 2 category chips + Profiles chip, 2
     // layout toggles, up to 9 visible tiles). 24 leaves headroom for both —
-    // exhaustion declines per frame, which would read as glass/flat flicker.
+    // exhaustion declines per frame, which would read as glass/flat flicker
+    // (now by Priority, lowest first — see nextOutput).
     private static final int OUTPUT_POOL = 24;
     private static final PanelOutput[] outputs = new PanelOutput[OUTPUT_POOL];
+
+    // ---- over-subscription accounting (see Priority / nextOutput) ----
+    /** Claims that reached {@link #nextOutput} LAST frame, per tier — the forecast the reservation works from. */
+    private static final int[] demandLastFrame = new int[Priority.COUNT];
+    /** Claims that reached {@link #nextOutput} so far THIS frame, per tier (declined ones included). */
+    private static final int[] demandThisFrame = new int[Priority.COUNT];
+    /** Slots actually claimed so far this frame, per tier. */
+    private static final int[] claimedThisFrame = new int[Priority.COUNT];
 
     /** Current frame epoch — bumped by {@link #beginFrame()} once per frame. */
     private static volatile long poolEpoch = 0;
@@ -396,6 +442,10 @@ public final class BlurPanelRenderer {
         static long readGlNs, readLoopNs, uploadNs;
         static long readPixels;     // device pixels read back this frame
 
+        // ---- per-tier pool accounting (claims / pool declines, per interval) ----
+        static final int[] tierClaims = new int[Priority.COUNT];
+        static final int[] tierPoolDeclines = new int[Priority.COUNT];
+
         // ---- reporting interval accumulators ----
         static int framesWithPanels, framesSinceReport, sumDeclines, sumPoolExhausted;
         static long sumPanels, maxPanels, sumFrameNs, maxFrameNs;
@@ -403,7 +453,9 @@ public final class BlurPanelRenderer {
         static long sumReadGlNs, sumReadLoopNs, sumUploadNs, sumReadPixels;
         static long lastPoolWarnMs;
 
-        static void claim() { panels++; }
+        static void claim(Priority p) { panels++; tierClaims[p.ordinal()]++; }
+
+        static void poolDecline(Priority p) { tierPoolDeclines[p.ordinal()]++; }
 
         static void decline(String reason) {
             declines++;
@@ -443,18 +495,27 @@ public final class BlurPanelRenderer {
                 if (ENABLED && framesWithPanels > 0) {
                     double f = framesWithPanels;
                     double p = sumPanels;
+                    // Per-tier claims/poolDeclines over the interval (W=window C=control R=row D=detail).
+                    StringBuilder tiers = new StringBuilder();
+                    for (Priority t : Priority.values()) {
+                        tiers.append(t.name().charAt(0)).append('=')
+                                .append(tierClaims[t.ordinal()]).append('/')
+                                .append(tierPoolDeclines[t.ordinal()]).append(' ');
+                    }
                     AuroraClient.LOGGER.info(String.format(
                             "[GlassStats] frames=%d panels/frame avg=%.1f max=%d | ms/frame total=%.2f max=%.2f"
                                     + " | ms/panel capture=%.3f blur=%.3f comp=%.3f readGL=%.3f loop=%.3f upload=%.3f blit=%.3f other=%.3f"
-                                    + " | declines=%d poolExhausted=%d readback=%.2fMpx/frame",
+                                    + " | declines=%d poolExhausted=%d readback=%.2fMpx/frame | tiers claims/poolDeclines %s",
                             framesWithPanels, sumPanels / f, (int) maxPanels,
                             sumFrameNs / 1e6 / f, maxFrameNs / 1e6,
                             sumCaptureNs / 1e6 / p, sumBlurNs / 1e6 / p, sumCompositeNs / 1e6 / p,
                             sumReadGlNs / 1e6 / p, sumReadLoopNs / 1e6 / p, sumUploadNs / 1e6 / p,
                             sumBlitNs / 1e6 / p, sumOtherNs / 1e6 / p,
-                            sumDeclines, sumPoolExhausted, sumReadPixels / 1e6 / f));
+                            sumDeclines, sumPoolExhausted, sumReadPixels / 1e6 / f, tiers.toString().trim()));
                 }
             } finally {
+                java.util.Arrays.fill(tierClaims, 0);
+                java.util.Arrays.fill(tierPoolDeclines, 0);
                 framesSinceReport = 0;
                 framesWithPanels = 0;
                 sumPanels = maxPanels = sumFrameNs = maxFrameNs = 0;
@@ -518,7 +579,23 @@ public final class BlurPanelRenderer {
      */
     public static boolean renderPanel(GuiGraphics g, float guiX, float guiY, float guiW, float guiH,
                                       float cornerRadiusGui, float blurRadiusPx, Lighting lighting) {
-        return renderPanel(g, guiX, guiY, guiW, guiH, cornerRadiusGui, blurRadiusPx, lighting, null);
+        return renderPanel(g, guiX, guiY, guiW, guiH, cornerRadiusGui, blurRadiusPx, lighting,
+                Priority.CONTROL, null);
+    }
+
+    /**
+     * {@link #renderPanel(GuiGraphics, float, float, float, float, float, float, Lighting)}
+     * with an explicit degradation {@link Priority}. The lighting-only
+     * variants default to {@link Priority#CONTROL}; windows/containers pass
+     * {@link Priority#WINDOW}, repeated rows/tiles/cards {@link Priority#ROW},
+     * and repeated small elements inside them {@link Priority#DETAIL}. Only
+     * consulted on frames whose demand exceeds the output pool.
+     */
+    public static boolean renderPanel(GuiGraphics g, float guiX, float guiY, float guiW, float guiH,
+                                      float cornerRadiusGui, float blurRadiusPx, Lighting lighting,
+                                      Priority priority) {
+        return renderPanel(g, guiX, guiY, guiW, guiH, cornerRadiusGui, blurRadiusPx, lighting,
+                priority, null);
     }
 
     /**
@@ -744,6 +821,21 @@ public final class BlurPanelRenderer {
     public static boolean renderPanel(GuiGraphics g, float guiX, float guiY, float guiW, float guiH,
                                       float cornerRadiusGui, float blurRadiusPx, Lighting lighting,
                                       CaptureSource captureSource) {
+        return renderPanel(g, guiX, guiY, guiW, guiH, cornerRadiusGui, blurRadiusPx, lighting,
+                Priority.CONTROL, captureSource);
+    }
+
+    /**
+     * The complete variant: lighting, degradation priority and (harness
+     * only) a synthetic capture source. Every other overload lands here.
+     *
+     * @param priority degradation priority under pool pressure (null =
+     *                 {@link Priority#CONTROL}); see {@link Priority}
+     */
+    public static boolean renderPanel(GuiGraphics g, float guiX, float guiY, float guiW, float guiH,
+                                      float cornerRadiusGui, float blurRadiusPx, Lighting lighting,
+                                      Priority priority, CaptureSource captureSource) {
+        if (priority == null) priority = Priority.CONTROL;
         lastOutcome = "rendered";
         if (permanentlyDisabled) { lastOutcome = "disabled (earlier failure)"; return false; }
         // Glass Style: the user's Transparent choice is expressed through the
@@ -836,7 +928,7 @@ public final class BlurPanelRenderer {
             int panH = y1 - y0;
 
             Frame frame = new Frame(main, x0, y0, regX, regY, regW, regH,
-                    cw, ch, panW, panH, scale, radius, cornerRadiusGui, lighting, captureSource);
+                    cw, ch, panW, panH, scale, radius, cornerRadiusGui, lighting, priority, captureSource);
             return frame.run(g, guiX, guiY, guiW, guiH);
         } catch (Declined d) {
             // Declines escaping Frame.run before its own catch (e.g. pool
@@ -872,6 +964,8 @@ public final class BlurPanelRenderer {
         final float cornerRadiusGui;
         /** Lighting params, or null for the plain blur+tint look. */
         final Lighting lighting;
+        /** Degradation priority under pool pressure (see {@link Priority}). */
+        final Priority priority;
         /** Synthetic capture source (test harness), or null for live capture. */
         final CaptureSource capture;
         /** Pooled output texture for this call — one per concurrent panel per frame. */
@@ -881,7 +975,8 @@ public final class BlurPanelRenderer {
 
         Frame(RenderTarget main, int x0, int y0, int regX, int regY,
               int regW, int regH, int cw, int ch, int panW, int panH,
-              int scale, float radius, float cornerRadiusGui, Lighting lighting, CaptureSource capture) {
+              int scale, float radius, float cornerRadiusGui, Lighting lighting,
+              Priority priority, CaptureSource capture) {
             this.main = main; this.x0 = x0; this.y0 = y0;
             this.regX = regX; this.regY = regY;
             this.regW = regW; this.regH = regH;
@@ -890,6 +985,7 @@ public final class BlurPanelRenderer {
             this.scale = scale; this.radius = radius;
             this.cornerRadiusGui = cornerRadiusGui;
             this.lighting = lighting;
+            this.priority = priority;
             this.capture = capture;
         }
 
@@ -899,7 +995,7 @@ public final class BlurPanelRenderer {
             // own texture object, because 1.21.11's GuiGraphics defers all
             // blits and a shared texture would show the LAST upload in
             // every pending blit.
-            out = nextOutput();
+            out = nextOutput(priority);
             // Snapshot the source target BEFORE any of our own GL calls can
             // change the binding — this is the framebuffer holding everything
             // visually behind the panel right now.
@@ -1417,6 +1513,25 @@ public final class BlurPanelRenderer {
      * as a safety net for any path that renders without the epoch signal;
      * exhausting the pool within one epoch declines the extra panel (one
      * frame of opaque fallback) rather than stomping a live slot.
+     *
+     * <p>OVER-SUBSCRIPTION (R10): which panel is declined is a
+     * {@link Priority} decision, not a render-order accident. Rendering is
+     * immediate-mode, so a panel cannot know how many more important
+     * panels the frame still has to draw after it; the forecast is LAST
+     * frame's per-tier demand ({@link #demandLastFrame} — every call that
+     * reached this point, declined or not), which is stable frame to frame
+     * on a static screen. A claim of tier {@code t} is refused while
+     * {@code claimsThisFrame + reserved >= OUTPUT_POOL}, where
+     * {@code reserved} is the sum over every HIGHER tier of
+     * {@code max(0, demandLastFrame - claimedThisFrame)} — the slots those
+     * tiers are still expected to take. The reservation shrinks as the
+     * higher tiers claim, so an over-estimate never strands a slot for
+     * long, and within a tier the pool stays first-come (rows degrade from
+     * the bottom of the list up). The first frame of a screen (no
+     * forecast) and any frame whose total demand fits the pool behave
+     * exactly as before: the rule only refuses a claim when the pool is
+     * genuinely short. The slot ASSIGNMENT (round-robin cursor) is
+     * unchanged; only admission is.
      */
     /**
      * Empties the GL error queue so a later {@code glGetError} can only
@@ -1429,28 +1544,43 @@ public final class BlurPanelRenderer {
         }
     }
 
-    private static PanelOutput nextOutput() {
+    private static PanelOutput nextOutput(Priority priority) {
         long nowMs = System.currentTimeMillis();
         if (slotEpoch != poolEpoch || nowMs - lastOutputCallMs > 250L) {
+            // A staleness reset with no epoch signal is a frame boundary
+            // this code has to infer; roll the demand forecast here too so
+            // the epoch-less path degrades by priority as well.
+            if (slotEpoch == poolEpoch) rollDemand();
             slotEpoch = poolEpoch;
             outputCursor = 0;
             claimsThisFrame = 0;
+            java.util.Arrays.fill(claimedThisFrame, 0);
         }
         lastOutputCallMs = nowMs;
-        if (claimsThisFrame >= OUTPUT_POOL) {
+        final int tier = priority.ordinal();
+        demandThisFrame[tier]++;
+        // Slots the higher tiers are still expected to take this frame
+        // (last frame's demand, less what they have already claimed).
+        int reserved = 0;
+        for (int u = 0; u < tier; u++) {
+            reserved += Math.max(0, demandLastFrame[u] - claimedThisFrame[u]);
+        }
+        if (claimsThisFrame + reserved >= OUTPUT_POOL) {
             // Pool exhaustion is a real diagnosable condition (a screen
             // denser than the pool was sized for), not a transient hiccup:
             // surface it in the log, rate-limited so a permanently-dense
             // screen logs one line per interval instead of one per frame.
             if (nowMs - GlassStats.lastPoolWarnMs > 10_000L) {
                 GlassStats.lastPoolWarnMs = nowMs;
-                AuroraClient.LOGGER.warn("[BlurPanel] output pool exhausted ({} concurrent panels) - extra panels render their flat fallback this frame",
-                        OUTPUT_POOL);
+                AuroraClient.LOGGER.warn("[BlurPanel] output pool exhausted ({} slots; demand last frame W={} C={} R={} D={}) - lowest-priority panels render their flat fallback",
+                        OUTPUT_POOL, demandLastFrame[0], demandLastFrame[1], demandLastFrame[2], demandLastFrame[3]);
             }
-            throw new Declined("output pool exhausted this frame");
+            if (GlassStats.ENABLED) GlassStats.poolDecline(priority);
+            throw new Declined("output pool exhausted this frame (" + priority + ")");
         }
         claimsThisFrame++;
-        if (GlassStats.ENABLED) GlassStats.claim();
+        claimedThisFrame[tier]++;
+        if (GlassStats.ENABLED) GlassStats.claim(priority);
         PanelOutput out = outputs[outputCursor];
         if (out == null) {
             out = new PanelOutput();
@@ -1476,7 +1606,19 @@ public final class BlurPanelRenderer {
             for (RimMask mask : pendingRimRelease) destroyRimMask(mask);
             pendingRimRelease.clear();
         }
+        rollDemand();
         poolEpoch++;
+    }
+
+    /**
+     * Frame boundary for the over-subscription forecast: the frame that
+     * just finished becomes {@link #demandLastFrame}. A frame with no
+     * panels forecasts zero, so the next screen's first frame is plain
+     * first-come (there is nothing better to forecast from).
+     */
+    private static void rollDemand() {
+        System.arraycopy(demandThisFrame, 0, demandLastFrame, 0, Priority.COUNT);
+        java.util.Arrays.fill(demandThisFrame, 0);
     }
 
     /**

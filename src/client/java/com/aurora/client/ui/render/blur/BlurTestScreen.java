@@ -65,6 +65,27 @@ public class BlurTestScreen extends Screen {
     private static float edgeStrength = 0.45f;
     private static float gradStrength = 0.10f;
 
+    // ---- R10: output-pool over-subscription stress (harness only) ----
+    // stress=N (state file) / [G] renders N extra small panels in a
+    // deliberately ADVERSARIAL render order — the first quarter DETAIL,
+    // then ROW, then CONTROL, and WINDOW LAST — so render order and
+    // priority disagree and the two admission policies are told apart at
+    // a glance: first-come keeps the early DETAIL tiles and drops the late
+    // WINDOW tiles; the priority reservation does the reverse. Each tile
+    // is labelled with its tier letter; a declined tile draws its flat
+    // fallback with a red outline and an "x". One log line per second
+    // reports drew/asked per tier. Doubles as the per-panel cost curve
+    // (fps line + GlassStats at N = 8 … 96).
+    private static int stressN = 0;
+    // Cost isolation knobs (state tokens stressglass=/stressfill=): with
+    // glass off the tiles are drawn flat only (harness overhead); with fill
+    // off only the glass blit is drawn (pipeline + blit cost alone).
+    private static boolean stressGlass = true;
+    private static boolean stressFill = true;
+    private long lastStressLogMs;
+    private static final int STRESS_COLS = 12;
+    private static final float STRESS_W = 56f, STRESS_H = 14f;
+
     // Theme state captured on open so [C]/[N]/[O][P] mutations can be restored.
     private ThemeRoundness originalRoundness;
     private ThemeMode originalMode;
@@ -187,6 +208,12 @@ public class BlurTestScreen extends Screen {
                 // waits for this screen's "[BlurTest] state:" echo, proving
                 // the line was consumed (and the screen is on top).
                 case "ping" -> { }
+                // R10 stress: number of extra priority-tagged panels (0 = off).
+                case "stress" -> {
+                    try { stressN = Math.max(0, Math.min(200, Integer.parseInt(v))); } catch (NumberFormatException ignored) {}
+                }
+                case "stressglass" -> stressGlass = v.equalsIgnoreCase("on");
+                case "stressfill" -> stressFill = v.equalsIgnoreCase("on");
                 default -> { }
             }
         }
@@ -218,6 +245,10 @@ public class BlurTestScreen extends Screen {
                 : null;
         boolean ok = BlurPanelRenderer.renderPanel(g, px, py, PANEL_W, PANEL_H, radius, blurRadius,
                 lighting, captureSource);
+
+        // 2b. R10 stress tiles — AFTER the main panel (which is a CONTROL
+        //     claim, first-come), so the tiles are the over-subscribing part.
+        if (stressN > 0) renderStress(g, captureSource);
 
         // 3. THE TINT — and the single place Background Opacity is applied.
         //    WINDOW_FILL's alpha already carries the Background Opacity
@@ -330,6 +361,16 @@ public class BlurTestScreen extends Screen {
                     (char) keyCode, String.format(java.util.Locale.ROOT, "%.2f", next));
             return true;
         }
+        if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_G) {
+            // R10 stress: cycle the extra panel count through the pool sizes
+            // of interest (0 = off).
+            int[] steps = {0, 24, 32, 48, 64, 96, 120};
+            int idx = 0;
+            for (int i = 0; i < steps.length; i++) if (steps[i] == stressN) idx = i;
+            stressN = steps[(idx + 1) % steps.length];
+            com.aurora.client.AuroraClient.LOGGER.info("[BlurTest] G: stress={}", stressN);
+            return true;
+        }
         if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_S) {
             // Crash CANARY, deliberately re-enabled now that the screenshot
             // interlock exists (see BlurPanelRenderer's screenshot-interlock
@@ -372,8 +413,48 @@ public class BlurTestScreen extends Screen {
         }
     }
 
+    /**
+     * R10 stress tiles (see {@link #stressN}): {@code stressN} small raised
+     * panels in a 12-column grid at the top-left, tier assigned by position
+     * in RENDER order — first quarter DETAIL, then ROW, CONTROL, WINDOW last.
+     */
+    private void renderStress(GuiGraphics g, BlurPanelRenderer.CaptureSource captureSource) {
+        BlurPanelRenderer.Priority[] order = BlurPanelRenderer.Priority.values();
+        int[] asked = new int[order.length];
+        int[] drew = new int[order.length];
+        float r = ThemeManager.current().roundness().radiusSmall();
+        int tint = ThemeManager.color(ThemeToken.WINDOW_FILL);
+        for (int i = 0; i < stressN; i++) {
+            int tier = order.length - 1 - (int) ((long) i * order.length / stressN);
+            BlurPanelRenderer.Priority p = order[tier];
+            float x = 16 + (i % STRESS_COLS) * (STRESS_W + 4);
+            float y = 16 + (i / STRESS_COLS) * (STRESS_H + 4);
+            asked[tier]++;
+            boolean drewGlass = stressGlass && BlurPanelRenderer.renderPanel(g, x, y, STRESS_W, STRESS_H, r,
+                    blurRadius, BlurPanelRenderer.Lighting.raised(), p, captureSource);
+            if (drewGlass) drew[tier]++;
+            if (!stressFill) continue;
+            RenderUtil.drawRoundedRectAA(g, x, y, STRESS_W, STRESS_H, r, drewGlass ? tint : 0xE0202020);
+            RenderUtil.drawRoundedOutlineAA(g, x, y, STRESS_W, STRESS_H, r, 1.0f,
+                    drewGlass ? 0xFF40D080 : 0xFFE05050);
+            g.drawString(this.font, p.name().charAt(0) + (drewGlass ? "" : " x"),
+                    (int) x + 3, (int) y + 3, drewGlass ? 0xFFFFFFFF : 0xFFFF8080, false);
+        }
+        long now = System.currentTimeMillis();
+        if (now - lastStressLogMs >= 1000) {
+            lastStressLogMs = now;
+            int fps = Minecraft.getInstance().getFps();
+            com.aurora.client.AuroraClient.LOGGER.info(
+                    "[BlurTest] stress N={} glass={} fill={} drew/asked W={}/{} C={}/{} R={}/{} D={}/{} fps={} ({} ms/frame)",
+                    stressN, stressGlass, stressFill,
+                    drew[0], asked[0], drew[1], asked[1], drew[2], asked[2], drew[3], asked[3],
+                    fps, String.format(java.util.Locale.ROOT, "%.1f", 1000.0 / Math.max(1, fps)));
+        }
+    }
+
     @Override
     public void removed() {
+        stressN = 0;
         // Restore the theme values this screen may have cycled in memory —
         // [C]/[N] deliberately never persist, so the user's saved theme is
         // exactly what it was before the harness opened.

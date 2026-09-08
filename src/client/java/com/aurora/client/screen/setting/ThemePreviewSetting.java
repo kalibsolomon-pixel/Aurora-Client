@@ -151,7 +151,7 @@ public class ThemePreviewSetting extends FeatureSetting {
         float radius = ThemeManager.current().roundness().radius();
         boolean ok = BlurPanelRenderer.renderPanel(ctx, cardX, cardY, cardW, cardH,
                 radius, BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX,
-                BlurPanelRenderer.Lighting.raised());
+                BlurPanelRenderer.Lighting.raised(), BlurPanelRenderer.Priority.WINDOW);
         if (ok) {
             // Tint: the same translucent-fill model every glass surface
             // uses — WINDOW_FILL's alpha carries the theme's Background

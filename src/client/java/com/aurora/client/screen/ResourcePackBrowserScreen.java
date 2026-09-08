@@ -389,7 +389,8 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         int panelX = SIDEBAR_PAD;
         sidebarGlass = liveWorldBackdrop() && BlurPanelRenderer.renderPanel(
                 g, panelX, panelY, panelW, panelH, AuroraTheme.RADIUS_LARGE,
-                BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX, BlurPanelRenderer.Lighting.depressed());
+                BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX, BlurPanelRenderer.Lighting.depressed(),
+                BlurPanelRenderer.Priority.WINDOW);
         if (sidebarGlass) {
             RenderUtil.drawRoundedRectAA(g, panelX, panelY, panelW, panelH, AuroraTheme.RADIUS_LARGE,
                     ThemeManager.surfaceColor(ThemeToken.SURFACE));
@@ -693,15 +694,18 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
      * without modifying it, which this change is forbidden to do.
      */
     private static Button newPhaseButton(int phase) {
+        // Per-card buttons: DETAIL priority — one per visible card, the
+        // pool's largest repeated demand on a big grid (R10), and the first
+        // surfaces to go flat when a frame over-subscribes the pool.
         return switch (phase) {
             case CardState.IDLE -> new Button(Component.literal("Install"), () -> {}, true)
-                    .glassStyle(Button.GlassStyle.STAINED);
+                    .glassStyle(Button.GlassStyle.STAINED).priority(BlurPanelRenderer.Priority.DETAIL);
             case CardState.RESOLVING -> new Button(Component.literal("Resolving…"), () -> {})
-                    .glassBackground(true);
+                    .glassBackground(true).priority(BlurPanelRenderer.Priority.DETAIL);
             case CardState.DOWNLOADING -> new Button(Component.literal("Downloading…"), () -> {})
-                    .glassBackground(true);
+                    .glassBackground(true).priority(BlurPanelRenderer.Priority.DETAIL);
             case CardState.DONE -> new Button(Component.literal("Installed ✓"), () -> {})
-                    .glassBackground(true);
+                    .glassBackground(true).priority(BlurPanelRenderer.Priority.DETAIL);
             case CardState.FAILED -> new Button(Component.literal("Retry"), () -> {})
                     .destructive(true);
             default -> throw new IllegalArgumentException("phase " + phase);
@@ -730,7 +734,8 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         // the flat fill + outline return.
         boolean modalGlass = liveWorldBackdrop() && BlurPanelRenderer.renderPanel(
                 g, modalX, modalY, modalW, modalH, AuroraTheme.RADIUS_LARGE,
-                BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX, BlurPanelRenderer.Lighting.depressed());
+                BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX, BlurPanelRenderer.Lighting.depressed(),
+                BlurPanelRenderer.Priority.WINDOW);
         RenderUtil.drawRoundedRectAA(g, modalX, modalY, modalW, modalH,
                 AuroraTheme.RADIUS_LARGE, ThemeManager.surfaceColor(ThemeToken.SURFACE));
         if (modalGlass) {

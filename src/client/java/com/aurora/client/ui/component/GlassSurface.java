@@ -281,8 +281,20 @@ public final class GlassSurface {
      * @return whether glass drew; {@code false} ⇒ caller paints its flat look
      */
     public static boolean container(GuiGraphics g, float x, float y, float w, float h, float radius) {
+        return container(g, x, y, w, h, radius, BlurPanelRenderer.Priority.WINDOW);
+    }
+
+    /**
+     * {@link #container(GuiGraphics, float, float, float, float, float)}
+     * with an explicit degradation priority — for container-styled ROWS
+     * (the Profiles list), which are repeated and must degrade before the
+     * screen's real window under output-pool pressure
+     * ({@link BlurPanelRenderer.Priority#ROW}).
+     */
+    public static boolean container(GuiGraphics g, float x, float y, float w, float h, float radius,
+                                    BlurPanelRenderer.Priority priority) {
         return paint(g, x, y, w, h, radius, BlurPanelRenderer.Lighting.depressed(),
-                ThemeManager.color(ThemeToken.WINDOW_FILL));
+                ThemeManager.color(ThemeToken.WINDOW_FILL), priority);
     }
 
     /**
@@ -297,7 +309,7 @@ public final class GlassSurface {
     public static boolean container(GuiGraphics g, float x, float y, float w, float h, float radius,
                                     ThemeToken surface) {
         return paint(g, x, y, w, h, radius, BlurPanelRenderer.Lighting.depressed(),
-                ThemeManager.surfaceColor(surface));
+                ThemeManager.surfaceColor(surface), BlurPanelRenderer.Priority.WINDOW);
     }
 
     /**
@@ -308,8 +320,17 @@ public final class GlassSurface {
      * @return whether glass drew; {@code false} ⇒ caller paints its flat look
      */
     public static boolean control(GuiGraphics g, float x, float y, float w, float h, float radius) {
-        return paint(g, x, y, w, h, radius, BlurPanelRenderer.Lighting.raised(),
-                ThemeManager.color(ThemeToken.WINDOW_FILL));
+        return control(g, x, y, w, h, radius, false, BlurPanelRenderer.Priority.CONTROL);
+    }
+
+    /**
+     * {@link #control(GuiGraphics, float, float, float, float, float)} with
+     * an explicit degradation priority — for control-styled ROWS (the
+     * Waypoints list, {@link BlurPanelRenderer.Priority#ROW}).
+     */
+    public static boolean control(GuiGraphics g, float x, float y, float w, float h, float radius,
+                                  BlurPanelRenderer.Priority priority) {
+        return control(g, x, y, w, h, radius, false, priority);
     }
 
     /**
@@ -321,8 +342,7 @@ public final class GlassSurface {
      * @return whether glass drew; {@code false} ⇒ caller paints its flat look
      */
     public static boolean stainedControl(GuiGraphics g, float x, float y, float w, float h, float radius) {
-        return paint(g, x, y, w, h, radius, BlurPanelRenderer.Lighting.raised(),
-                ThemeManager.stainedTint());
+        return control(g, x, y, w, h, radius, true, BlurPanelRenderer.Priority.CONTROL);
     }
 
     /**
@@ -334,7 +354,20 @@ public final class GlassSurface {
      */
     public static boolean control(GuiGraphics g, float x, float y, float w, float h, float radius,
                                   boolean stained) {
-        return stained ? stainedControl(g, x, y, w, h, radius) : control(g, x, y, w, h, radius);
+        return control(g, x, y, w, h, radius, stained, BlurPanelRenderer.Priority.CONTROL);
+    }
+
+    /**
+     * The general control surface: neutral or stained, with an explicit
+     * degradation priority (see {@link BlurPanelRenderer.Priority}). Every
+     * other control entry point lands here. Repeated small controls inside
+     * rows/cards pass {@link BlurPanelRenderer.Priority#DETAIL}.
+     */
+    public static boolean control(GuiGraphics g, float x, float y, float w, float h, float radius,
+                                  boolean stained, BlurPanelRenderer.Priority priority) {
+        return paint(g, x, y, w, h, radius, BlurPanelRenderer.Lighting.raised(),
+                stained ? ThemeManager.stainedTint() : ThemeManager.color(ThemeToken.WINDOW_FILL),
+                priority);
     }
 
     /**
@@ -356,14 +389,15 @@ public final class GlassSurface {
      * with the rim deferred past the dim while a glass pass is open.
      */
     private static boolean paint(GuiGraphics g, float x, float y, float w, float h, float radius,
-                                 BlurPanelRenderer.Lighting lighting, int tint) {
+                                 BlurPanelRenderer.Lighting lighting, int tint,
+                                 BlurPanelRenderer.Priority priority) {
         if (!liveWorldBackdrop()) return false;
         if (dimPainted()) {
             report("glass surface body painted AFTER the overlay dim — every glass surface belongs "
                     + "in the glass pass, before GlassSurface.overlayDim");
         }
         if (!BlurPanelRenderer.renderPanel(g, x, y, w, h, radius,
-                BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX, lighting)) {
+                BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX, lighting, priority)) {
             return false;
         }
         RenderUtil.drawRoundedRectAA(g, x, y, w, h, radius, tint);

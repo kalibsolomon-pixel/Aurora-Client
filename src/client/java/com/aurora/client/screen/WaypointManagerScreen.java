@@ -10,6 +10,7 @@ import com.aurora.client.ui.component.ButtonWidget;
 import com.aurora.client.ui.component.ColorSwatch;
 import com.aurora.client.ui.component.GlassEditBox;
 import com.aurora.client.ui.component.GlassSurface;
+import com.aurora.client.ui.render.blur.BlurPanelRenderer;
 import com.aurora.client.util.WorldScope;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -163,7 +164,7 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
     protected void paintRowGlassPass(GuiGraphics ctx, int x, int y, int w, Waypoint wp) {
         paintRowShadow(ctx, x, y, w);
         rowGlassDrawn.put(wp, GlassSurface.control(ctx, x, y, w, ROW_H,
-                ThemeManager.current().roundness().radiusSmall()));
+                ThemeManager.current().roundness().radiusSmall(), BlurPanelRenderer.Priority.ROW));
 
         int by = y + 4;
         int bh = ROW_H - 8;
@@ -241,7 +242,7 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
             commitEditors();
             copyToClipboard(k.x + " " + k.y + " " + k.z);
             flash("Copied: " + k.x + " " + k.y + " " + k.z);
-        }).glassBackground(true));
+        }).glassBackground(true).priority(BlurPanelRenderer.Priority.DETAIL));
     }
 
     /** Color — shared themed Button in neutral raised glass; opens the shared color picker. */
@@ -263,7 +264,7 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
                             }
                         }));
             }
-        }).glassBackground(true));
+        }).glassBackground(true).priority(BlurPanelRenderer.Priority.DETAIL));
     }
 
     /**

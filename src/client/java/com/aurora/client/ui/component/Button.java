@@ -2,6 +2,7 @@ package com.aurora.client.ui.component;
 
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
+import com.aurora.client.ui.render.blur.BlurPanelRenderer;
 import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.util.AuroraAnim;
@@ -70,6 +71,14 @@ public class Button extends Widget {
     private long glassPassFrame = -1L;
     private boolean glassPassDrew = false;
 
+    /**
+     * Degradation priority of this button's glass under output-pool
+     * pressure (see {@link BlurPanelRenderer.Priority}). CONTROL for a
+     * standalone button; per-row / per-card buttons set DETAIL so they are
+     * the first surfaces to go flat on an over-subscribed frame.
+     */
+    private BlurPanelRenderer.Priority priority = BlurPanelRenderer.Priority.CONTROL;
+
     public Button(String label, Runnable onPress) {
         this(Component.literal(label), onPress, false);
     }
@@ -109,6 +118,12 @@ public class Button extends Widget {
         return glassStyle(g ? GlassStyle.NEUTRAL : GlassStyle.OFF);
     }
 
+    /** Degradation priority under output-pool pressure — see {@link #priority}. */
+    public Button priority(BlurPanelRenderer.Priority p) {
+        this.priority = p != null ? p : BlurPanelRenderer.Priority.CONTROL;
+        return this;
+    }
+
     /** Glass pilot — full variant selector (neutral vs accent-stained). */
     public Button glassStyle(GlassStyle s) {
         this.glassStyle = s;
@@ -140,7 +155,7 @@ public class Button extends Widget {
         glassPassFrame = GlassSurface.frame();
         float radius = ThemeManager.current().roundness().radiusSmall();
         glassPassDrew = glassEligible(currentScale())
-                && GlassSurface.control(g, x, y, w, h, radius, glassStyle == GlassStyle.STAINED);
+                && GlassSurface.control(g, x, y, w, h, radius, glassStyle == GlassStyle.STAINED, priority);
     }
 
     @Override
@@ -202,7 +217,7 @@ public class Button extends Widget {
             glassDrew = glassPassDrew;
         } else {
             glassDrew = glassEligible(scale)
-                    && GlassSurface.control(g, x, y, w, h, radius, glassStyle == GlassStyle.STAINED);
+                    && GlassSurface.control(g, x, y, w, h, radius, glassStyle == GlassStyle.STAINED, priority);
         }
         if (!glassDrew) {
             RenderUtil.drawRoundedRectAA(g, x, y, w, h, radius, bg);

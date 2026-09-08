@@ -169,7 +169,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
             float radius = ThemeManager.current().roundness().radius();
             glassWindow = BlurPanelRenderer.renderPanel(ctx, listX, windowY, LIST_W, windowH,
                     radius, BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX,
-                    BlurPanelRenderer.Lighting.depressed());
+                    BlurPanelRenderer.Lighting.depressed(), BlurPanelRenderer.Priority.WINDOW);
             if (glassWindow) {
                 RenderUtil.drawRoundedRectAA(ctx, listX, windowY, LIST_W, windowH, radius,
                         ThemeManager.color(ThemeToken.WINDOW_FILL));

@@ -174,7 +174,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             float radius = ThemeManager.current().roundness().radius();
             glassWindow = BlurPanelRenderer.renderPanel(g, boxX(), boxY(), BOX_W, BOX_H,
                     radius, BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX,
-                    BlurPanelRenderer.Lighting.depressed());
+                    BlurPanelRenderer.Lighting.depressed(), BlurPanelRenderer.Priority.WINDOW);
             if (glassWindow) {
                 RenderUtil.drawRoundedRectAA(g, boxX(), boxY(), BOX_W, BOX_H, radius,
                         ThemeManager.color(ThemeToken.WINDOW_FILL));
@@ -357,7 +357,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             boolean tileGlass = liveWorldBackdrop() && BlurPanelRenderer.renderPanel(
                     g, cx, cy, cw, ch, 6,
                     BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX,
-                    BlurPanelRenderer.Lighting.raised());
+                    BlurPanelRenderer.Lighting.raised(), BlurPanelRenderer.Priority.ROW);
             if (tileGlass) {
                 RenderUtil.drawRoundedRectAA(g, cx, cy, cw, ch, 6,
                         on ? ThemeManager.stainedTint()

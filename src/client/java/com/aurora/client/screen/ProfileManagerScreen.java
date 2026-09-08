@@ -6,6 +6,7 @@ import com.aurora.client.ui.component.Button;
 import com.aurora.client.ui.component.ButtonWidget;
 import com.aurora.client.ui.component.GlassEditBox;
 import com.aurora.client.ui.component.GlassSurface;
+import com.aurora.client.ui.render.blur.BlurPanelRenderer;
 import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.ui.util.RenderUtil;
 import net.minecraft.client.gui.GuiGraphics;
@@ -220,13 +221,14 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
             if (ProfileManager.getInstance().duplicate(k, dupName)) {
                 flash("Duplicated → " + dupName);
             }
-        }).glassBackground(true));
+        }).glassBackground(true).priority(BlurPanelRenderer.Priority.DETAIL));
     }
 
     /** The create-row's confirm button — neutral raised glass like every other action button here. */
     private Button createBtn() {
         if (createBtn == null) {
-            createBtn = new Button("Create", this::commitCreate).glassBackground(true);
+            createBtn = new Button("Create", this::commitCreate).glassBackground(true)
+                    .priority(BlurPanelRenderer.Priority.DETAIL);
         }
         return createBtn;
     }
@@ -283,7 +285,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
     private boolean renderRowSurface(GuiGraphics ctx, int x, int y, int w) {
         paintRowShadow(ctx, x, y, w);
         return GlassSurface.container(ctx, x, y, w, ROW_H,
-                ThemeManager.current().roundness().radiusSmall());
+                ThemeManager.current().roundness().radiusSmall(), BlurPanelRenderer.Priority.ROW);
     }
 
     // ------------------------------------------------------------------
