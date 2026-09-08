@@ -253,9 +253,11 @@ shift+right-click = lock, X = disable.
 
 ### SETTINGS tab (11 tiles)
 
-Custom Title (`custom_title` — themed title screen + starfield + themed vanilla buttons on
-multiplayer/world-select via `TitleScreenMixin`, `AuroraTitleScreen`,
-`SelectionScreenBackgroundMixin`, `AbstractButtonMixin`), Text & Fonts (`text_fonts` —
+Custom Title (`custom_title` — themed title screen: vanilla panorama + 5 glass buttons
+(§6 rollout table; the custom logo/starfield blits were removed 2026-09-08) via
+`TitleScreenMixin`/`AuroraTitleScreen`; starfield + themed vanilla buttons on
+multiplayer/world-select via `SelectionScreenBackgroundMixin`, `AbstractButtonMixin`),
+Text & Fonts (`text_fonts` —
 bundled Google fonts scoped OFF/Aurora-only/ALL via `MixinFont` + `AuroraFontRenderer`),
 Interface (`interface` — FPS cap for Aurora screens), Smooth Camera, Frame Pacer
 (`RenderSystemMixin` + `util/FramePacer`, replaces vanilla `limitDisplayFPS`),
@@ -407,6 +409,40 @@ byte-identical across accents. The remaining hard calls stay deferred: Minimap
 Armor's durability bar, `WorldMapScreen`, `AuroraTitleScreen` — each has
 data-vs-chrome or fixed-hue questions the pilot sessions deferred on purpose.
 
+Landed 2026-09-08 after that: **glass on the title screen, over the vanilla panorama**
+(two commits — mechanism, then adoption). Investigation first established what the
+panorama IS at the GL level on 1.21.11: `Screen.renderPanorama` → `CubeMap.render` is
+an *eager* Blaze3D render pass straight into `getMainRenderTarget()`'s color texture
+(not a recorded/deferred `GuiGraphics` command), i.e. the exact texture the glass
+pipeline's world reader wraps — so the panorama is capturable by the *existing*
+capture path the moment `renderPanorama` returns, and the only blocker was the
+menu-context guard. The mechanism (`BlurPanelRenderer`):
+`noteMenuBackdropDrawn()` / `menuBackdropValid()` — a declaration stamped with the
+current `poolEpoch` that the guard (and `GlassSurface.paint`'s capture-validity gate,
+which previously short-circuited on `liveWorldBackdrop()` alone) reads as its one
+exemption: `mc.level == null && !menuBackdropValid()`. Frame-scoped by construction
+(expires at the next `beginFrame()`), declaration-not-detection (no content probe;
+only the code that just drew a full-viewport backdrop can say so), single-observer
+(one screen renders per frame) — see §6 convention 5 for the full reasoning. The
+adoption (`AuroraTitleScreen`): the custom logo/backdrop/starfield blits and their
+PNGs are gone (`logo.png`, `logo_backdrop.png` deleted; `title_background.png`
+retained for `SelectionScreenBackgroundMixin`), the screen calls `renderPanorama`
++ `noteMenuBackdropDrawn()` and renders its 5 buttons as the standard glass
+`ButtonWidget`s (4 neutral, Aurora Settings stained), chrome-only depth, stack
+re-centered now that the logo block is gone. Verified by five DevPilot `title`-mode
+boots (all clean exits, no `[BlurPanel]` errors): GlassStats shows exactly 5
+CONTROL panels/frame on the title screen (~1.6–2.5 ms/frame, 0 declines); the
+world-capture probe read real panorama pixels (non-black RGB) from the main target;
+the F2 interlock observed directly (`lastOutcome='suppressed (screenshot in
+flight)'` through the real `Screenshot.takeScreenshot` path while panels were
+active); and the guard was tested DIRECTLY, not by inspection — a harness probe
+calling `renderPanel` mid-menu declined `'no level (menu context)'` both on the
+title screen sampled between frames (proving the stamp does not outlive its frame)
+and on `AuroraScreen` opened from the title (where the vanilla panorama genuinely
+IS in the main target via its `renderBackground`, yet non-declaring screens still
+decline — confirmed quantitatively by zero glass panels across ~9 s there and
+pixel-uniform flat tile fills in the capture).
+
 Rendering utilities: `RenderUtil` (float-precision AA rounded rects/circles/outlines +
 `beginCapture`/`RectSink` used by `UiLayerCache` — plus `DISCARD_SINK` and the
 capture-aware `fillLogical` for plain integer-cell fills), `AuroraShapes` (chamfered-octagon
@@ -532,7 +568,15 @@ claims/declines.
    `FeatureDetailScreen`, `ColorPickerScreen`, `HudEditorScreen` and
    `ResourcePackBrowserScreen` still carry private copies. Every glass integration follows
    the same **fallback contract**: decline (menu, screenshot suppression, failure) ⇒
-   complete flat look returns.
+   complete flat look returns. The ONE exemption (2026-09-08): the menu-context guard (and
+   `GlassSurface.paint`'s capture-validity gate, which co-declines with it) admits a
+   caller that has DECLARED a valid menu backdrop for the current frame —
+   `BlurPanelRenderer.noteMenuBackdropDrawn()`, stamped by `AuroraTitleScreen` right
+   after `renderPanorama` (on 1.21.11 `CubeMap.render` is an eager Blaze3D pass straight
+   into the main target's color texture, so the panorama is genuinely capturable by the
+   existing world-reader path). The stamp is frame-scoped (`poolEpoch` — expires at the
+   next `beginFrame()`), so it cannot leak to any other screen or frame; `liveWorldBackdrop()`
+   itself is unchanged (its `renderBackground`-skip meaning is a separate question).
 6. **Layering contract — universal, structural.** EVERY glass surface — containers AND
    controls (rows, buttons, chips, pills, search/rename fields) — is painted in the screen's
    **glass pass**, BEFORE the screen's `OVERLAY_DIM` fill, so the dim veils the glass like
@@ -613,7 +657,7 @@ flags now default ON mod-wide. Status below is committed `master`.
 | `WaypointManagerScreen` | **Full** | Raised glass rows + header/add buttons |
 | `ResourcePackBrowserScreen` | **Full** (2026-09-04; cards flat 2026-09-08) | Depressed glass sidebar (pre-dim pass, `SURFACE` tint, `sidebarGlass` flag) + detail modal; **cards FLAT by decision (audit R9/B2)** — their opaque hover-lerp tint fully occluded the blur, so per-card glass was pure cost and the main output-pool driver (B1 halved; each card's install button is still a glass `Button`); active category tab = accent-stained raised glass (inactive tabs stay flat by design — small transient rows inside an already-glass container); install/Retry/Close buttons are the shared `Button` painter (Install = stained primary, Retry = destructive, progress/Done = neutral; **success-green is not expressible through `Button` — mapped to stained/neutral, flagged**); `renderBackground` world-gating added; every radius now a token (`RADIUS_LARGE`/`RADIUS`/`RADIUS_SMALL`; only scrollbar-thumb capsule literals remain). Title removed + count moved below the search bar (was overlapping it). Thumbnails, search field, toast, scrollbars stay opaque/unchanged per convention. (The 2026-09-04 in-client verification at ~7/25/93% opacity, ROUND + SQUARE, predates the flat-cards change; the flat look is the screen's own long-standing decline-path appearance.) |
 | `WorldMapScreen` | **Not started** | Flat `RoundedPanel` prompt; only the name field is themed (via `EditBoxMixin`) |
-| `AuroraTitleScreen` | **Not started** | Zero glass references |
+| `AuroraTitleScreen` | **Chrome-only** (2026-09-08) | 5 floating glass buttons over the live vanilla panorama (4 neutral raised, Aurora Settings accent-stained — the ColorPicker-Apply convention); custom logo/backdrop/starfield blits and their PNGs removed (`title_background.png` stays — `SelectionScreenBackgroundMixin` still uses it). The screen calls `renderPanorama` then `BlurPanelRenderer.noteMenuBackdropDrawn()` — the frame-scoped declaration that is the one menu-context-guard exemption (§6 convention 5) — so the buttons blur the panorama through the ordinary world-reader capture; flat fallback whenever glass declines |
 | Toggles, sliders, HUD modules, tooltips/dropdowns-as-tooltips | **Never glass, by convention** | Opaque token surfaces |
 
 `BlurTestScreen` is the development harness (A/B radius toggles, synthetic capture FBO,

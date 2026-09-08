@@ -1,90 +1,63 @@
 package com.aurora.client.screen;
 
-import com.aurora.client.AuroraClient;
+import com.aurora.client.ui.component.Button;
 import com.aurora.client.ui.component.ButtonWidget;
 import com.aurora.client.ui.component.ThemedScreen;
-import net.minecraft.client.renderer.RenderPipelines;
+import com.aurora.client.ui.render.blur.BlurPanelRenderer;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
 import net.minecraft.client.gui.screens.options.OptionsScreen;
 import net.minecraft.client.gui.screens.worldselection.SelectWorldScreen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
 
 /**
- * Aurora's title screen.
+ * Aurora's title screen: vanilla's own panorama underneath, Aurora's glass
+ * buttons floating over it.
  *
- * <p>The Aurora emblem replaces the previous Component wordmark. Source PNG is
- * 256x256; rendered at 96x96 on screen via the scaling drawTexture overload.
+ * <p>The screen draws NO custom branding — the former emblem, diamond
+ * backdrop and starfield blits were removed outright (their PNGs deleted;
+ * only {@code title_background.png} survives, still shared by
+ * {@code SelectionScreenBackgroundMixin} on the two selection screens). The
+ * backdrop is vanilla's rotating title panorama, drawn by
+ * {@code Screen.renderPanorama} exactly as vanilla's own title screen draws
+ * it (vanilla {@code TitleScreen.renderBackground} is empty and
+ * {@code render} calls {@code renderPanorama} directly — mirrored here
+ * rather than going through {@code renderBackground}, which would stack the
+ * menu-background texture and the accessibility blur on top of it).
  *
- * <p>Layout is centered around the screen midpoint, scaling cleanly across
- * resolutions. The 6-button stack uses the shared themed {@link ButtonWidget}
- * (the canonical {@code ui.component.Button} under the hood) — Aurora Settings
- * is rendered as the {@code primary} variant for a subtle brand emphasis.
+ * <p><b>Glass over the panorama.</b> On 1.21.11 {@code CubeMap.render}
+ * issues an eager Blaze3D render pass straight into the main render
+ * target's color texture — the same texture the glass pipeline's world
+ * reader wraps — so right after {@code renderPanorama} returns, the
+ * panorama pixels are genuinely capturable. The screen says so the one
+ * sanctioned way: {@link BlurPanelRenderer#noteMenuBackdropDrawn()}, a
+ * frame-scoped declaration that is the only exemption from the renderer's
+ * menu-context guard (see that method for why the exemption cannot leak to
+ * any other caller). The buttons are then ordinary shared
+ * {@link ButtonWidget}s on the standard glass treatment — chrome-only
+ * depth, like {@code ColorPickerScreen}/{@code HudEditorScreen}: no
+ * window, no dim, just glass controls over the live panorama, with the
+ * complete flat look whenever glass declines (Transparent style, F2
+ * suppression, a frame the panorama did not draw).
+ *
+ * <p>The 5-button stack uses the shared themed {@link ButtonWidget}
+ * (the canonical {@code ui.component.Button} under the hood) — Aurora
+ * Settings is the {@code primary} variant, which on glass is the
+ * accent-STAINED treatment (the ColorPicker Apply convention).
  */
 public class AuroraTitleScreen extends Screen implements ThemedScreen {
-
-    // Logo
-    private static final Identifier LOGO_TEX =
-            Identifier.fromNamespaceAndPath(AuroraClient.MOD_ID, "textures/gui/logo.png");
-    /** Native dimensions of {@code logo.png}. Used as the UV normalization
-     *  base in the blit call so the sampler always covers the full texture
-     *  regardless of {@link #LOGO_SIZE}. */
-    private static final int LOGO_TEX_W = 875;
-    private static final int LOGO_TEX_H = 875;
-    /**
-     * Rendered size of the logo in logical GUI pixels. Scaled down ~15 %
-     * from the previous 120 px to 102 px so the new diamond backdrop
-     * (see {@link #LOGO_BACKDROP_TEX}) has visible breathing room
-     * around the emblem.
-     */
-    private static final int LOGO_SIZE = 82;
-
-    /**
-     * Diamond emblem frame drawn behind {@link #LOGO_TEX}. Native
-     * texture is square; on screen we render it as a square AABB whose
-     * inscribed dark inner diamond is sized to host the logo with even
-     * padding on every side.
-     */
-    private static final Identifier LOGO_BACKDROP_TEX =
-            Identifier.fromNamespaceAndPath(AuroraClient.MOD_ID, "textures/gui/logo_backdrop.png");
-    private static final int LOGO_BACKDROP_TEX_W = 1024;
-    private static final int LOGO_BACKDROP_TEX_H = 1024;
-    /**
-     * On-screen size of the backdrop. The diamond's inner dark region
-     * is roughly a 45°-rotated square inscribed in this AABB. Sizing
-     * the backdrop to ~1.85× the logo leaves the logo comfortably
-     * inside the dark inner zone with the blue frame visible around
-     * every side.
-     */
-    private static final int LOGO_BACKDROP_SIZE = 162;
-
-    /**
-     * Starfield background that replaces the previous animated aurora
-     * gradient. Stretched to fill the full screen each frame; the source
-     * image is a near-black night sky so any aspect-ratio distortion is
-     * imperceptible.
-     */
-    private static final Identifier BG_TEX =
-            Identifier.fromNamespaceAndPath(AuroraClient.MOD_ID, "textures/gui/title_background.png");
 
     // Button stack
     private static final int BUTTON_W = 220;
     private static final int BUTTON_H = 30;
     private static final int BUTTON_GAP = 6;
-
-    // Layout offsets relative to screen center
-    private static final int LOGO_BLOCK_OFFSET = -150;
     /**
-     * Vertical nudge of the logo relative to the backdrop's geometric
-     * center. Negative = up. The diamond reads more balanced when the
-     * emblem sits a few px above true center.
+     * Vertical offset of the stack's top from screen center. The 5-button
+     * stack is 5*30 + 4*6 = 174 px tall, so -87 centers it exactly — the
+     * logo block is gone and nothing else anchors the layout.
      */
-    private static final int LOGO_NUDGE_Y = -5;
-    /** Horizontal nudge of the logo relative to the backdrop center. Negative = left. */
-    private static final int LOGO_NUDGE_X = 0;
-    private static final int BUTTON_STACK_OFFSET = -50;
+    private static final int BUTTON_STACK_OFFSET = -87;
 
     public AuroraTitleScreen() {
         super(Component.translatable("aurora.title"));
@@ -122,74 +95,26 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
 
     private ButtonWidget addBtn(int x, int y, Component label, Runnable onPress, boolean primary) {
         ButtonWidget btn = new ButtonWidget(x, y, BUTTON_W, BUTTON_H, label, onPress, primary);
+        // Standard glass treatment: neutral raised for actions, accent-
+        // stained for the primary (selected/primary is the only stained
+        // scope — §6 convention 3).
+        btn.glassStyle(primary ? Button.GlassStyle.STAINED : Button.GlassStyle.NEUTRAL);
         this.addRenderableWidget(btn);
         return btn;
     }
 
     @Override
     public void render(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
-        // Starfield backdrop. Setting (regionW, regionH, texW, texH) all
-        // equal to the destination size makes the GPU sample UVs 0..1
-        // across the entire texture and stretch it to fill the screen,
-        // independent of the PNG's actual native pixel dimensions.
-        ctx.blit(
-                RenderPipelines.GUI_TEXTURED,
-                BG_TEX,
-                0, 0,
-                0f, 0f,
-                this.width, this.height,
-                this.width, this.height,
-                this.width, this.height
-        );
+        // Vanilla's rotating panorama, the same way the vanilla title screen
+        // draws it. CubeMap.render lands it in the main render target
+        // synchronously (an eager render pass against the main target's
+        // color texture), so once this returns the panorama is capturable —
+        // declared here, the one frame-scoped menu-backdrop opt-in.
+        renderPanorama(ctx, delta);
+        BlurPanelRenderer.noteMenuBackdropDrawn();
 
         // Buttons (and other drawable children)
         super.render(ctx, mouseX, mouseY, delta);
-
-        // Logo
-        renderLogo(ctx);
-    }
-
-    private void renderLogo(GuiGraphics ctx) {
-        // Logo center, clamped so it doesn't overflow the top edge on small
-        // window heights. Clamp uses the backdrop size since it's the
-        // larger of the two and sets the actual top extent.
-        int logoCenterY = Math.max(LOGO_BACKDROP_SIZE / 2 + 20,
-                this.height / 2 + LOGO_BLOCK_OFFSET);
-
-        // Backdrop diamond — drawn first so the logo composes on top.
-        int backdropX = (this.width - LOGO_BACKDROP_SIZE) / 2;
-        int backdropY = logoCenterY - LOGO_BACKDROP_SIZE / 2;
-        ctx.blit(
-                RenderPipelines.GUI_TEXTURED,
-                LOGO_BACKDROP_TEX,
-                backdropX, backdropY,
-                0f, 0f,
-                LOGO_BACKDROP_SIZE, LOGO_BACKDROP_SIZE,
-                LOGO_BACKDROP_TEX_W, LOGO_BACKDROP_TEX_H,
-                LOGO_BACKDROP_TEX_W, LOGO_BACKDROP_TEX_H
-        );
-
-        int logoX = (this.width - LOGO_SIZE) / 2 + LOGO_NUDGE_X;
-        int logoY = logoCenterY - LOGO_SIZE / 2 + LOGO_NUDGE_Y;
-
-        // Scaling overload of drawTexture: source u/v/regionW/regionH match
-        // the texture's full native size, dst width/height set the on-screen
-        // size, and the GPU bilinearly samples between them — i.e., it draws
-        // the entire texture scaled to fit LOGO_SIZE x LOGO_SIZE.
-        //
-        // Parameter order: (pipeline, identifier, x, y, u, v, width, height,
-        //                   regionWidth, regionHeight, textureWidth, textureHeight)
-        // — but with width==regionWidth and height==regionHeight, we get
-        // a clean 1:1 scaling of the whole texture into the destination AABB.
-        ctx.blit(
-                RenderPipelines.GUI_TEXTURED,
-                LOGO_TEX,
-                logoX, logoY,
-                0f, 0f,
-                LOGO_SIZE, LOGO_SIZE,
-                LOGO_TEX_W, LOGO_TEX_H,
-                LOGO_TEX_W, LOGO_TEX_H
-        );
     }
 
     @Override
@@ -200,7 +125,7 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
     /**
      * Report as a non-pause screen so MC's inactivity-FPS limiter (which
      * kicks in on pause screens after a few seconds of no input) does not
-     * throttle the animated backdrop down below 30 fps.
+     * throttle the animated panorama down below 30 fps.
      */
     @Override
     public boolean isPauseScreen() {
