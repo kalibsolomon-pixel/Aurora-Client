@@ -14,6 +14,7 @@ import com.aurora.client.ui.component.Toast;
 import com.aurora.client.ui.component.Widget;
 import com.aurora.client.ui.render.blur.BlurPanelRenderer;
 import com.aurora.client.ui.util.RenderUtil;
+import com.aurora.client.ui.util.UiLayerCache;
 import com.aurora.client.util.AuroraAnim;
 import com.aurora.client.util.AuroraTheme;
 import com.aurora.client.util.SmoothScroll;
@@ -243,6 +244,48 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
 
     // ---- Loading spinner animation ----
     private float spinnerAngle = 0f;
+
+    // ---- P2 static card template (see renderCard's comment) ----
+    private UiLayerCache cardTpl;
+
+    /** The at-rest card shape raster (body + outline + thumb inset + frame), lazily captured, version-keyed. */
+    private UiLayerCache ensureCardTemplate(GuiGraphics g) {
+        long version = cardTemplateVersion();
+        if (cardTpl == null) cardTpl = new UiLayerCache();
+        if (!cardTpl.isCurrent(version)) {
+            int scale = Math.max(1, (int) Minecraft.getInstance().getWindow().getGuiScale());
+            cardTpl.ensureSize(CARD_W * scale, CARD_H * scale);
+            cardTpl.clear();
+            RenderUtil.RectSink prev = RenderUtil.beginCapture(cardTpl.sink());
+            try {
+                // The t == 0 colors of the live branch in renderCard — keep
+                // the two in lockstep (theme-projected statics; the version
+                // key's generation stamp re-rasterizes on any theme change).
+                RenderUtil.drawRoundedRectAA(g, 0, 0, CARD_W, CARD_H, AuroraTheme.RADIUS,
+                        AuroraTheme.IOS_SECONDARY_BG);
+                RenderUtil.drawRoundedOutlineAA(g, 0, 0, CARD_W, CARD_H, AuroraTheme.RADIUS, 1.0f,
+                        AuroraTheme.TILE_OUTLINE_OFF);
+                int tx = THUMB_PAD;
+                int ty = (CARD_H - THUMB_SIZE) / 2;
+                RenderUtil.drawRoundedRectAA(g, tx - 1, ty - 1, THUMB_SIZE + 2, THUMB_SIZE + 2,
+                        AuroraTheme.RADIUS_SMALL, ThemeManager.color(ThemeToken.SURFACE_INSET));
+                RenderUtil.drawRoundedOutlineAA(g, tx, ty, THUMB_SIZE, THUMB_SIZE, AuroraTheme.RADIUS_SMALL, 1.0f,
+                        AuroraAnim.scaleAlpha(AuroraTheme.TEXT_PRIMARY, 0.10f));
+            } finally {
+                RenderUtil.endCapture(prev);
+            }
+            cardTpl.commit(version);
+        }
+        return cardTpl;
+    }
+
+    private long cardTemplateVersion() {
+        int scale = Math.max(1, (int) Minecraft.getInstance().getWindow().getGuiScale());
+        return ThemeManager.generation() * 1_000_003L
+                ^ (long) scale * 65537L
+                ^ (long) CARD_W * 7919L
+                ^ (long) CARD_H * 104729L;
+    }
 
     public ResourcePackBrowserScreen(Screen parent) {
         super(Component.literal("Resource Packs — Modrinth"));
@@ -621,18 +664,36 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         // screen always drew on renderer decline, so nothing changes
         // visually. Glass on this screen lives on the sidebar, detail modal,
         // active category tab and the shared-painter buttons.
-        int fill = AuroraAnim.lerpArgb(AuroraTheme.IOS_SECONDARY_BG, AuroraTheme.IOS_TERTIARY_BG, t);
-        RenderUtil.drawRoundedRectAA(g, x, y, CARD_W, CARD_H, AuroraTheme.RADIUS, fill);
-        int outline = AuroraAnim.lerpArgb(AuroraTheme.TILE_OUTLINE_OFF, AuroraTheme.TILE_OUTLINE_ON, t);
-        RenderUtil.drawRoundedOutlineAA(g, x, y, CARD_W, CARD_H, AuroraTheme.RADIUS, 1.0f, outline);
+        //
+        // P2 (same audit): at rest (hover t == 0) every card's static shape
+        // layer — body fill + outline, thumbnail inset + frame — is IDENTICAL,
+        // so it comes from a one-shot template raster blitted per card (one
+        // O(1) submission each) instead of ~350 AA strip fills per card per
+        // frame; a full grid of those is what made GuiRenderState's per-fill
+        // intersection search the screen's dominant cost. A hovered card
+        // (t > 0, animating or settled) paints the live shapes for those
+        // frames — one card's worth, bounded.
+        if (t == 0f) {
+            ensureCardTemplate(g).blitAt(g, x, y, CARD_W, CARD_H);
+        } else {
+            int fill = AuroraAnim.lerpArgb(AuroraTheme.IOS_SECONDARY_BG, AuroraTheme.IOS_TERTIARY_BG, t);
+            RenderUtil.drawRoundedRectAA(g, x, y, CARD_W, CARD_H, AuroraTheme.RADIUS, fill);
+            int outline = AuroraAnim.lerpArgb(AuroraTheme.TILE_OUTLINE_OFF, AuroraTheme.TILE_OUTLINE_ON, t);
+            RenderUtil.drawRoundedOutlineAA(g, x, y, CARD_W, CARD_H, AuroraTheme.RADIUS, 1.0f, outline);
 
-        // Thumbnail
+            // Thumbnail inset (the frame outline below is hover-tinted).
+            int tx = x + THUMB_PAD;
+            int ty = y + (CARD_H - THUMB_SIZE) / 2;
+            RenderUtil.drawRoundedRectAA(g, tx - 1, ty - 1, THUMB_SIZE + 2, THUMB_SIZE + 2,
+                    AuroraTheme.RADIUS_SMALL, ThemeManager.color(ThemeToken.SURFACE_INSET));
+            RenderUtil.drawRoundedOutlineAA(g, tx, ty, THUMB_SIZE, THUMB_SIZE, AuroraTheme.RADIUS_SMALL, 1.0f,
+                    AuroraAnim.scaleAlpha(AuroraTheme.TEXT_PRIMARY, 0.10f + 0.10f * t));
+        }
+
+        // Thumbnail (icon blit, or per-title letter placeholder — both live;
+        // neither is template-identical across cards).
         int tx = x + THUMB_PAD;
         int ty = y + (CARD_H - THUMB_SIZE) / 2;
-        // Framed thumbnail: dark inset behind the icon so non-square icons
-        // read cleanly, plus a subtle border.
-        RenderUtil.drawRoundedRectAA(g, tx - 1, ty - 1, THUMB_SIZE + 2, THUMB_SIZE + 2,
-                AuroraTheme.RADIUS_SMALL, ThemeManager.color(ThemeToken.SURFACE_INSET));
         Identifier icon = PackIconCache.getIfLoaded(p.iconUrl);
         if (icon != null) {
             PackIconCache.blitIcon(g, icon, tx, ty, THUMB_SIZE);
@@ -646,9 +707,6 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
                     0xFFFFFFFF);
             PackIconCache.requestAsync(p.iconUrl);
         }
-        // Thumbnail frame outline.
-        RenderUtil.drawRoundedOutlineAA(g, tx, ty, THUMB_SIZE, THUMB_SIZE, AuroraTheme.RADIUS_SMALL, 1.0f,
-                AuroraAnim.scaleAlpha(AuroraTheme.TEXT_PRIMARY, 0.10f + 0.10f * t));
 
         // Text
         int textX = tx + THUMB_SIZE + THUMB_PAD;
@@ -1285,6 +1343,12 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         // re-downloading every icon. Earlier versions called clear() here,
         // which made every re-open pay the full network cost again.
         if (this.minecraft != null) this.minecraft.setScreen(parent);
+    }
+
+    @Override
+    public void removed() {
+        super.removed();
+        if (cardTpl != null) { cardTpl.dispose(); cardTpl = null; }
     }
 
     @Override

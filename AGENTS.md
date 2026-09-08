@@ -365,11 +365,13 @@ and defers each surface's rim finish past the dim — §6. Adopted by
 the ~8 remaining inline copies of the idiom migrate in the approved follow-up).
 
 Rendering utilities: `RenderUtil` (float-precision AA rounded rects/circles/outlines +
-`beginCapture`/`RectSink` used by `UiLayerCache`), `AuroraShapes` (chamfered-octagon
+`beginCapture`/`RectSink` used by `UiLayerCache` — plus `DISCARD_SINK` and the
+capture-aware `fillLogical` for plain integer-cell fills), `AuroraShapes` (chamfered-octagon
 iOS-style panels, gradients, shadows — note: *chamfered*, not truly rounded),
 `RoundedRect`/`AuroraSquircle` (true rounded AA fills/masks; profiling said rounded fills
 were the biggest GUI cost), `UiLayerCache` (rasterizes static screen chrome once into a
-`DynamicTexture`, blits per frame; version-keyed dirty), `AuroraFontRenderer` (applies
+`DynamicTexture`, blits per frame; version-keyed dirty; `blitAt` is the positional form
+behind the row/card TEMPLATE pattern — see §10), `AuroraFontRenderer` (applies
 bundled TTFs as text `Style`; `isRenderingAuroraUI` flag scopes the custom font),
 `ItemSpriteRenderer` (crisp flat item icons via `ItemStackRenderStateAccessor`, with 3D
 fallback for tinted/multi-layer models).
@@ -640,6 +642,23 @@ order (Profile draws editor-then-toast, Waypoint toast-then-editor; observable o
 the bottom row's editor overlaps the toast band), Profile's create row + switch-on-body-
 click, rename-apply semantics, and the nameFitCache clearing policy.
 
+Landed 2026-09-08 after that (audit P2/R8, the 2-3 fps fix): the manager screens' shared
+**row-surface template** — both lists' rows are geometrically identical, so each row's
+static shape layer (six shadow-ring outlines + the row's glass tint fill, ~1k AA fills)
+rasterizes ONCE into a small `UiLayerCache` and blits per row
+(`ManagerListScreen.paintTemplatedRowSurface`: the row's ordinary glass pass still runs
+live for the live-world panels and deferred rims, but its shape fills are redirected to
+`DISCARD_SINK`; two variants — tinted vs shadow-only — chosen per row by whether its glass
+drew). The row BUTTONS self-template inside the shared `Button` (resting glass-tint and
+flat surfaces, per size/variant, session-static like the rim-mask cache), and row
+color swatches self-template per color in `ColorSwatch` (LRU-capped). Root cause was
+volume × MC 1.21.11's quadratic per-fill record cost — measured and closed with numbers
+in GUI_AUDIT.md P2 (Waypoints 30 rows: 2 fps / ~29k fills → 28-47 fps / 19 fills). Same
+pattern on the pack browser's flat cards (one at-rest card template, hovered card live)
+and the color picker's four per-surface caches (R8; a drag re-rasterizes only the surfaces
+whose values changed). Pixel parity verified by A/B screenshot diff (≤0.11% beyond ±8/255,
+world-blur noise only).
+
 ---
 
 ## 9. Known outstanding work, dead code, and hazards
@@ -755,3 +774,20 @@ click, rename-apply semantics, and the nameFitCache clearing policy.
   exercised a large list. Reconcile per-row caches against a `Set`, not a `List`; fetch
   lists once per frame; memoize per-frame text fitting; and when you find a pattern like
   this, fix it proactively instead of waiting for it to be reported as user-visible lag.
+- **Count shape-fill volume, not just algorithmic complexity.** MC 1.21.11's
+  `GuiRenderState` runs an intersection search over every element recorded SO FAR for each
+  submitted `GuiGraphics.fill`, so N disjoint fills per frame — exactly what the AA
+  rounded-rect strip fills produce — cost O(N²) at record time (~29k fills/frame = 2 fps;
+  ~2k = imperceptible). One list row's static shapes (six shadow-ring outlines + tint
+  fills) are ~1k fills, so a screen re-submitting them live per row is the same bug class
+  as the O(rows²) reconciliation above — that was audit P2, fixed 2026-09-08: Waypoints
+  with 30 rows went 2 fps / ~29.3k fills → 28-47 fps / 19 fills (Profiles 2-4 → 41-53,
+  pack browser 3-7 → 35-49, picker 33-43 → 73-103) via the manager screens' shared row
+  TEMPLATE (`ManagerListScreen.paintTemplatedRowSurface`: raster once via
+  `RenderUtil.beginCapture`, `DISCARD_SINK`-wrap the live surface pass, blit per row so
+  scrolling never re-rasterizes), per-button resting-surface templates inside the shared
+  `Button`, a per-color template in `ColorSwatch`, a card template on the pack browser
+  grid, and per-surface caches on the color picker (R8). Measure with
+  `RenderUtil.fillsSubmitted()`/`[ui-perf]` before/after any shape-heavy UI change; static
+  per-row-identical shapes belong in a template raster (`UiLayerCache.blitAt`) or the
+  full-screen layer cache, never re-submitted live.

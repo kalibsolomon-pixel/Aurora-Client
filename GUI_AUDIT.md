@@ -219,6 +219,24 @@ shape fills every frame (the pack browser re-renders ~40 cards' fills/outlines; 
 picker re-renders ~2000 fills/frame for its pad/strips, `ColorPickerScreen.java:206-243`).
 `RenderUtil.fillsSubmitted()` + `[ui-perf]` exist precisely to quantify this. Medium effort,
 no look change if done to the same AA math (the capture sink guarantees identical output).
+**[CLOSED 2026-09-08]** — and root-caused deeper than "missing cache": MC 1.21.11's
+`GuiRenderState.findAppropriateNode` runs an intersection search over the elements recorded
+SO FAR for every submitted `GuiGraphics.fill`, so N *disjoint* fills per frame (exactly what
+AA strip fills produce) cost O(N²) at record time — ~29k fills/frame on the Waypoints list
+(30 rows ≈ 1k fills/row: six shadow-ring outlines + tint fills) = 2 fps, while the glass
+pipeline itself accounted for only ~19-20 ms. Measured before → after (dev pilot, 4K/scale-2
+fullscreen, 30 seeded waypoints): Waypoints 2 fps / ~29.3k fills → 28-47 fps / **19**
+fills; Profiles 2-4 fps / ~20k fills → 41-53 fps / ~76 fills; pack browser 3-7 fps /
+~11.1k fills → 35-49 fps / ~1.4k; color picker (R8) 33-43 fps / ~2.8k plain fills →
+73-103 fps / ~15. Reference screens (AuroraScreen/FeatureDetailScreen) sat at ~1.1-2k
+live fills/frame all along — the gap was never glass, it was uncached static fills feeding
+a quadratic recorder. Fix shape (lists are geometrically uniform): a per-row TEMPLATE
+raster (shadow rings + tint fills captured once via `RenderUtil.beginCapture`, blitted per
+row — scroll never re-rasterizes) plus per-button resting-surface templates in the shared
+`Button`, a per-color swatch template in `ColorSwatch`, a card template on the pack
+browser's grid, and per-surface caches on the picker. Pixel parity verified by A/B
+screenshot diff (0.02-0.11% pixels beyond ±8/255 on the changed screens — world-blur
+noise only; the pack browser's 0.69% is Modrinth data variance between runs).
 
 **P3. `MixinFont`'s swapped measurement paths allocate per call.** [verified]
 `width(String)` builds a `Component.literal(...).withStyle(...)` per measurement
@@ -411,7 +429,10 @@ fix — if R7 is deferred, fix B5 by adding the entry by hand). Scope: small-med
 
 **R8. Cache the color picker's editing surfaces** (`CanvasTexture`-style raster for pad/strips,
 re-raster only on value change). User-facing result: none (same pixels). Perf: removes ~2000
-fills/frame. Scope: small-medium.
+fills/frame. Scope: small-medium. **[DONE 2026-09-08 with P2]** — four independent caches
+(pad keyed by hue, hue strip value-independent, alpha strip by hue+sat+lit, preview
+checkerboard static) so a drag only re-rasterizes the surfaces whose values it changes;
+markers/preview fill stay live (~15 plain fills/frame total).
 
 **R9. Decide the pack-browser card glass policy — RESOLVED 2026-09-08: option (b), flat
 cards (user decision).** The original fork: either (a) make card tints translucent
@@ -457,7 +478,7 @@ protected architecture touched; still verify in-client per the project's pilot s
 | **P5** | **R1 glass helper consolidation** (pilot: WaypointManager + ProfileManager — smallest glass screens; prove pixel parity, then extend) | Kills the bug class behind P3 | medium | protected-adjacent; helper signature needs approval |
 | **P6** | **R4 slider consolidation + R5 animation consolidation + D4 helper dedupe** | Pure code structure, zero intended visual change | medium | safe, mechanical — pilot on one pair first |
 | **P7** | **R2 scroll component** (pilot: FeatureDetailScreen; second: pack browser) | Unifies 4 implementations; enables scrollbar parity | medium | behavior-sensitive (feel) — keep per-screen τ initially |
-| **P8** | **P2 perf**: R8 color-picker caching; adopt `UiLayerCache` on Profiles/Waypoints/RP-browser static chrome; MixinFont measurement de-allocation | No look change; measurable via `fillsSubmitted()` | medium | safe; verify pixel parity on RP browser |
+| **P8** | **P2 perf**: R8 color-picker caching; adopt `UiLayerCache` on Profiles/Waypoints/RP-browser static chrome; MixinFont measurement de-allocation | No look change; measurable via `fillsSubmitted()` | medium | safe; verify pixel parity on RP browser. **Manager screens + RP-browser cards + picker DONE 2026-09-08 (see P2/R8 closure); MixinFont de-allocation still open** |
 | **P9** | **Token hygiene**: C1 radius tokens (design ruling on small-control radii first), label-token unification, C3 waypoint default, C7 tab tint → `stainedTint()`, B19's tooltip color | Consistency; some visible change in SQUARE corner mode | medium | mixed — the radius ruling needs a decision |
 | **P10** | **R7 registry derivation + B20 dead-mixin decisions + D9 dead-code removal** | Ends the drift class; shrinks surface area | medium | behavior edge (reflex tile appears); deletions need a once-over each |
 | **P11** | **R3 list-screen foundation merge** | Structural | medium-large | pixel-parity pilot required |

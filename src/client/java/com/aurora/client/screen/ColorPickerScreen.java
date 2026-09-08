@@ -8,6 +8,8 @@ import com.aurora.client.ui.component.ThemedScreen;
 import com.aurora.client.util.ColorEntryHelper;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.ui.util.AuroraFontRenderer;
+import com.aurora.client.ui.util.UiLayerCache;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -50,6 +52,25 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
     private DragTarget dragging = DragTarget.NONE;
     private EditBox hexField;
     private boolean syncingHex;
+
+    // ---- R8 (audit): cached editing surfaces ----
+    // The pad, hue strip, alpha strip and preview checkerboard are ~2800
+    // plain fill submissions EVERY frame at rest — pure static cost through
+    // the same GuiRenderState path that made the list screens crawl. Each
+    // surface rasterizes once into its own small buffer (identical output:
+    // the integer-cell loops and AA outlines go through the capture sink at
+    // exact device alignment) and blits per frame; the version keys are
+    // deliberately INDEPENDENT so a drag only re-rasterizes the surfaces
+    // whose values it actually changes:
+    //   pad   ← hue only (sat/lit move the live markers, not the pad)
+    //   hue   ← nothing  (value-independent gradient)
+    //   alpha ← hue+sat+lit (alpha itself only moves the live marker)
+    //   preview base ← nothing (checker + frame; the color fill stays live,
+    //                   one plain fill)
+    private final UiLayerCache padCache = new UiLayerCache();
+    private final UiLayerCache hueCache = new UiLayerCache();
+    private final UiLayerCache alphaCache = new UiLayerCache();
+    private final UiLayerCache previewCache = new UiLayerCache();
 
     private enum DragTarget { NONE, PAD, HUE, ALPHA }
 
@@ -174,7 +195,10 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
 
         AuroraFontRenderer.drawCentered(ctx, tr, this.title, this.width / 2, 20, onOverlay);
 
-        drawSaturationLightnessPad(ctx);
+        int scale = Math.max(1, (int) Minecraft.getInstance().getWindow().getGuiScale());
+        drawCachedSurface(ctx, padCache,
+                scale * 31L ^ padSize ^ bits(hue), padX, padY, padSize, padSize,
+                () -> drawPadInto(ctx, 0, 0));
 
         int markX = padX + (int)(sat * padSize);
         int markY = padY + (int)((1f - lit) * padSize);
@@ -183,15 +207,21 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
         ctx.fill(markX - 3, markY - 3, markX + 3, markY + 3, 0xFFFFFFFF);
         ctx.fill(markX - 2, markY - 2, markX + 2, markY + 2, currentArgb() | 0xFF000000);
 
-        drawHueSlider(ctx);
+        drawCachedSurface(ctx, hueCache,
+                scale * 31L ^ hueW * 7919L ^ hueH * 17L, hueX, hueY, hueW, hueH,
+                () -> drawHueInto(ctx, 0, 0));
         int hueMark = hueY + (int)(hue * hueH);
         ctx.fill(hueX - 2, hueMark - 1, hueX + hueW + 2, hueMark + 1, 0xFFFFFFFF);
 
-        drawAlphaSlider(ctx);
+        drawCachedSurface(ctx, alphaCache,
+                scale * 31L ^ bits(hue) * 31L ^ bits(sat) * 17L ^ bits(lit), alphaX, alphaY, alphaW, alphaH,
+                () -> drawAlphaInto(ctx, 0, 0));
         int alphaMark = alphaY + (int)((1f - alpha) * alphaH);
         ctx.fill(alphaX - 2, alphaMark - 1, alphaX + alphaW + 2, alphaMark + 1, 0xFFFFFFFF);
 
-        drawCheckerboard(ctx, previewX, previewY, previewW, previewH);
+        drawCachedSurface(ctx, previewCache,
+                scale * 31L ^ previewW * 7919L ^ previewH * 17L, previewX, previewY, previewW, previewH,
+                () -> drawCheckerboard(ctx, 0, 0, previewW, previewH));
         ctx.fill(previewX, previewY, previewX + previewW, previewY + previewH, currentArgb());
         // Content-frame white on the preview — structural neutral (see class javadoc).
         RenderUtil.drawRoundedOutlineAA(ctx, previewX, previewY, previewW, previewH, 4, 1.0f, 0xFFFFFFFF);
@@ -206,43 +236,72 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
         // this screen's ThemedScreen marker. One implementation, no overlay.)
     }
 
-    private void drawSaturationLightnessPad(GuiGraphics ctx) {
+    /** Version helper: stable key contribution for a float. */
+    private static long bits(float f) { return Float.floatToIntBits(f) & 0xFFFFFFFFL; }
+
+    /**
+     * The cache discipline for one editing surface: if the buffer is not
+     * current for {@code version}, rasterize {@code raster} (drawing at
+     * LOCAL coordinates — the capture sink maps them to the buffer's
+     * physical pixels) and commit; then one positional blit at {@code (x,y)}.
+     */
+    private static void drawCachedSurface(GuiGraphics ctx, UiLayerCache cache, long version,
+                                          int x, int y, int wLogical, int hLogical, Runnable raster) {
+        if (!cache.isCurrent(version)) {
+            int scale = Math.max(1, (int) Minecraft.getInstance().getWindow().getGuiScale());
+            cache.ensureSize(wLogical * scale, hLogical * scale);
+            cache.clear();
+            RenderUtil.RectSink prev = RenderUtil.beginCapture(cache.sink());
+            try {
+                raster.run();
+            } finally {
+                RenderUtil.endCapture(prev);
+            }
+            cache.commit(version);
+        }
+        cache.blitAt(ctx, x, y, wLogical, hLogical);
+    }
+
+    /** Saturation/lightness pad at local coordinates (capture-aware cells + the fixed white frame). */
+    private void drawPadInto(GuiGraphics ctx, int ox, int oy) {
         int steps = 40;
         for (int sx = 0; sx < steps; sx++) {
             float s = sx / (float)(steps - 1);
-            int x0 = padX + (sx * padSize) / steps;
-            int x1 = padX + ((sx + 1) * padSize) / steps;
+            int x0 = ox + (sx * padSize) / steps;
+            int x1 = ox + ((sx + 1) * padSize) / steps;
             for (int sy = 0; sy < steps; sy++) {
                 float l = 1f - (sy / (float)(steps - 1));
                 int argb = ColorEntryHelper.hslaToArgb(hue, s, l, 1f);
-                int y0 = padY + (sy * padSize) / steps;
-                int y1 = padY + ((sy + 1) * padSize) / steps;
-                ctx.fill(x0, y0, x1, y1, argb);
+                int y0 = oy + (sy * padSize) / steps;
+                int y1 = oy + ((sy + 1) * padSize) / steps;
+                RenderUtil.fillLogical(ctx, x0, y0, x1, y1, argb);
             }
         }
         // Content-frame white around the pad — structural neutral (see class javadoc).
-        RenderUtil.drawRoundedOutlineAA(ctx, padX, padY, padSize, padSize, 6, 1.0f, 0xFFFFFFFF);
+        RenderUtil.drawRoundedOutlineAA(ctx, ox, oy, padSize, padSize, 6, 1.0f, 0xFFFFFFFF);
     }
 
-    private void drawHueSlider(GuiGraphics ctx) {
+    /** Hue strip at local coordinates. */
+    private void drawHueInto(GuiGraphics ctx, int ox, int oy) {
         for (int py = 0; py < hueH; py++) {
             float h = py / (float) hueH;
             int argb = ColorEntryHelper.hslaToArgb(h, 1f, 0.5f, 1f);
-            ctx.fill(hueX, hueY + py, hueX + hueW, hueY + py + 1, argb);
+            RenderUtil.fillLogical(ctx, ox, oy + py, ox + hueW, oy + py + 1, argb);
         }
         // Content-frame white around the hue strip — structural neutral.
-        RenderUtil.drawRoundedOutlineAA(ctx, hueX, hueY, hueW, hueH, 6, 1.0f, 0xFFFFFFFF);
+        RenderUtil.drawRoundedOutlineAA(ctx, ox, oy, hueW, hueH, 6, 1.0f, 0xFFFFFFFF);
     }
 
-    private void drawAlphaSlider(GuiGraphics ctx) {
-        drawCheckerboard(ctx, alphaX, alphaY, alphaW, alphaH);
+    /** Alpha strip (checkerboard + gradient) at local coordinates. */
+    private void drawAlphaInto(GuiGraphics ctx, int ox, int oy) {
+        drawCheckerboard(ctx, ox, oy, alphaW, alphaH);
         for (int py = 0; py < alphaH; py++) {
             float a = 1f - (py / (float) alphaH);
             int argb = ColorEntryHelper.hslaToArgb(hue, sat, lit, a);
-            ctx.fill(alphaX, alphaY + py, alphaX + alphaW, alphaY + py + 1, argb);
+            RenderUtil.fillLogical(ctx, ox, oy + py, ox + alphaW, oy + py + 1, argb);
         }
         // Content-frame white around the alpha strip — structural neutral.
-        RenderUtil.drawRoundedOutlineAA(ctx, alphaX, alphaY, alphaW, alphaH, 6, 1.0f, 0xFFFFFFFF);
+        RenderUtil.drawRoundedOutlineAA(ctx, ox, oy, alphaW, alphaH, 6, 1.0f, 0xFFFFFFFF);
     }
 
     private void drawCheckerboard(GuiGraphics ctx, int x, int y, int w, int h) {
@@ -252,12 +311,21 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
                 boolean dark = ((dx / cell) + (dy / cell)) % 2 == 0;
                 // Checkerboard convention shared with the ColorSwatch component.
                 int col = dark ? 0xFF555555 : 0xFFAAAAAA;
-                ctx.fill(x + dx, y + dy,
+                RenderUtil.fillLogical(ctx, x + dx, y + dy,
                         Math.min(x + dx + cell, x + w),
                         Math.min(y + dy + cell, y + h),
                         col);
             }
         }
+    }
+
+    @Override
+    public void removed() {
+        super.removed();
+        padCache.dispose();
+        hueCache.dispose();
+        alphaCache.dispose();
+        previewCache.dispose();
     }
 
     @Override
