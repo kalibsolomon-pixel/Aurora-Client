@@ -361,14 +361,30 @@ public final class BlurPanelRenderer {
     // there is no flush API. Two glass panels blitted in the same frame
     // therefore cannot share one texture object — the second upload would
     // retroactively change the first (still-pending) blit. Each concurrent
-    // panel per frame takes its own pooled output texture instead. The full
-    // Theme screen treatment is 13 concurrent panels (window, card, Done,
-    // Reset, 2 preview buttons, 5 segments, toggle track, chip); the Mods
-    // grid pilot reaches ~15 (window, 2 category chips + Profiles chip, 2
-    // layout toggles, up to 9 visible tiles). 24 leaves headroom for both —
-    // exhaustion declines per frame, which would read as glass/flat flicker
-    // (now by Priority, lowest first — see nextOutput).
-    private static final int OUTPUT_POOL = 24;
+    // panel per frame takes its own pooled output texture instead.
+    //
+    // SIZE (R10, 2026-09-08). Slots are allocated lazily and sized to the
+    // panel that lands in them, so the constant itself costs nothing (an
+    // unclaimed slot is null; a claimed one is panel area x 4 bytes native
+    // + the same in VRAM — ~0.8 MB for a full-width list row at GUI scale
+    // 4, ~50 KB for a button). What the cap really bounds is the per-frame
+    // pipeline bill. Measured with GlassStats on this machine (4096x2304,
+    // scale 4): the cost is LINEAR in panel count — ~0.2 ms per small
+    // panel (button-sized: 0.19 ms/panel at 65 panels/frame, 12.5 ms
+    // total) and ~0.55 ms per full-width row (13.3 ms for 24 rows+buttons
+    // on the Waypoints list); the synchronous glReadPixels stall is per
+    // panel, not per pixel, and shrinks as the frame fills (0.7 -> 0.25
+    // ms). Demand today: Theme screen 13; Mods grid ~15; a detail screen
+    // <= ~20; the Profiles list 2 per row + 2 (28 at 13 visible rows); the
+    // Waypoints list 3 per row + 2 (47 at 15 visible rows, 104 at 34 rows
+    // on a 4K/scale-2 window); the pack browser 4 + 1 per visible card (19
+    // at 1080p, 54 on a 6-column 4K grid). 64 admits every measured
+    // demand except the tallest 4K lists, for at most ~15-20 ms of glass
+    // work on a frame that actually uses all of it (a static list screen)
+    // and nothing on frames that don't; the rest degrades through the
+    // Priority order below. The old 24 dropped the Waypoints toolbar's Done
+    // button and half the rows on an ordinary 1080p window.
+    private static final int OUTPUT_POOL = 64;
     private static final PanelOutput[] outputs = new PanelOutput[OUTPUT_POOL];
 
     // ---- over-subscription accounting (see Priority / nextOutput) ----

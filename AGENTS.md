@@ -412,8 +412,26 @@ deliberately NOT part of either half.
 **Pipeline:** blit-capture a padded region of the main render target (`glBlitFramebuffer`)
 → quarter-res two-pass separable Gaussian → composite pass (rounded-rect coverage +
 lighting) → `glReadPixels` → `NativeImage`/`DynamicTexture` → ordinary `GuiGraphics.blit`.
-Straight (non-premultiplied) alpha; RGBA8 intermediates on purpose. Readback ~1–2 ms per
-panel — accepted for simplicity/robustness.
+Straight (non-premultiplied) alpha; RGBA8 intermediates on purpose. Readback is per panel,
+measured 2026-09-08 with `GlassStats` at ~0.2 ms per button-sized panel and ~0.55 ms per
+full-width list row, linear in panel count — accepted for simplicity/robustness.
+
+**Output pool + degradation priority (R10, 2026-09-08):** every concurrent panel in a frame
+takes its own pooled output texture (`OUTPUT_POOL = 64`, was 24; slots are lazily sized so
+the constant is free — it caps the per-frame pipeline bill, ~15–20 ms when a static list
+screen actually fills it). A frame that asks for more declines panels by
+`BlurPanelRenderer.Priority` — lowest first, the same panels every frame — instead of
+render order: `WINDOW` (windows, sidebars, modals, preview card) > `CONTROL` (toolbar/Done/
+Reset buttons, chips, fields, setting widgets — the default) > `ROW` (repeated rows, tiles,
+cards) > `DETAIL` (per-row Copy/Color/Duplicate, per-card Install). The mechanism is a
+reservation from LAST frame's per-tier demand (`nextOutput`), so it costs nothing on frames
+that fit and needs one warm-up frame after a screen opens; within a tier the pool stays
+first-come (rows degrade from the bottom of the list up). Measured demand: Theme 13, Mods
+grid ~15, detail ≤ ~20, Profiles 2/row + 2, Waypoints 3/row + 2 (47 on a 1080p window — the
+old pool went flat from row 9 down AND dropped the Done button), pack browser 4 + 1/card (54
+on a 6-column 4K grid). `BlurTestScreen`'s `stress=N` state token renders N tagged panels in
+adversarial order to check the policy; `-Daurora.glassStats=true` reports per-tier
+claims/declines.
 
 ### The conventions (violating these has caused real bugs)
 
@@ -524,6 +542,11 @@ panel — accepted for simplicity/robustness.
    error from ANY GL call, so an error raised by foreign code (or an earlier frame) is
    misattributed to yours. This pipeline treats a GL error after its capture blit as
    session-ending, so `Frame.run` drains the queue before touching GL.
+12. **Name a `Priority` for repeated glass.** Windows/containers pass `WINDOW`
+   (`GlassSurface.container` does), repeated rows/tiles/cards pass `ROW`, and repeated
+   small controls inside them pass `DETAIL` (`Button.priority(...)`). Anything unnamed is
+   `CONTROL`. A new list screen that leaves its rows at the default makes them compete
+   with the toolbar's Done button the moment the list outgrows the pool.
 
 ### Per-screen rollout status — verified in code on master, 2026-09-07
 

@@ -430,6 +430,15 @@ buttons alone — R10 (budget policy) remains open for that half.
 per-screen priority order (window > primary buttons > rows > cards) so overflow degrades
 deterministically, and/or raise the pool. Touches the renderer's pool machinery — protected
 territory; propose only with measurements from P1's GlassStats run.
+**[CLOSED 2026-09-08]** Both levers landed (AGENTS.md §6 "Output pool + degradation
+priority"): `OUTPUT_POOL` 24 → 64, and `BlurPanelRenderer.Priority` (WINDOW > CONTROL > ROW >
+DETAIL) enforced by a last-frame-demand reservation in `nextOutput`. P1's measurement finally
+ran (GlassStats via the dev pilot hook): ~0.2 ms per button-sized panel, ~0.55 ms per
+full-width row, linear; the pool's "FPS brake" role was overstated — the quadratic frame cost
+seen in the stress harness came from `RenderUtil.drawRoundedRectAA` fills, not glass (a P2/P4
+follow-up). B1's live case turned out to be the Waypoints list, not only the pack browser: 3
+panels/row + 2 = 47 on a 1080p window, which under the old pool went flat from row 9 down and
+dropped the toolbar's Done button.
 
 ---
 
