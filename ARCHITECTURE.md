@@ -1,34 +1,27 @@
 # Aurora GUI System — Architecture Snapshot
 
-A code-verified snapshot of Aurora's GUI system **as it exists on 2026-09-04**, written for a
-new session getting oriented. Companion documents: `AGENTS.md` (on the
-`fix/glass-session-latch-and-glass-style` branch — the broader project guide: feature catalog,
-build facts, config/profile system, known-work list) and `GUI_AUDIT.md` (this repo root —
-findings and prioritized plan from the 2026-09-04 full GUI audit).
+A code-verified snapshot of Aurora's GUI system, written for a new session getting
+oriented. Companion documents: `AGENTS.md` (repo root — the broader project guide: feature
+catalog, build facts, config/profile system, known-work list) and `GUI_AUDIT.md` (this repo
+root — findings and prioritized plan from the 2026-09-04 full GUI audit).
 
 ---
 
-## 0. READ THIS FIRST — repo state (verified from git, 2026-09-04)
+## 0. READ THIS FIRST — repo state (verified from git, 2026-09-07)
 
-**The current GUI code does NOT live on `master`.** The working tree is `master`, which holds
-only the initial commit and is **stale**: it still contains the retired `GLASS_PILOT_IDS`
-mechanism, has no `drawRimFinish`, no two-half rim system, no ResourcePack-browser glass, and
-no `GlassStyle` (Frosted/Transparent) setting.
-
-Everything current — the mod-wide "glass everywhere" rollout, the ResourcePack browser glass
-wave (2026-09-04), the **"Reset kills glass" session-latch fix** (cold-only rim-mask eviction +
-deferred destruction + GL error-queue drain), and the **Frosted/Transparent GlassStyle** — is a
-single commit (`395b406`) on the unmerged branch **`fix/glass-session-latch-and-glass-style`**
-(37 files, +3581/−640). That branch also adds the 611-line `AGENTS.md`, which does not exist
-on master.
-
-**Consequence for any future agent:** check out (or worktree) the branch before reading or
-patching GUI code, or you will be working against a snapshot that predates every glass
-convention listed below. Recommendation #0 in `GUI_AUDIT.md` is to land this branch on master
-before any other GUI work.
+**`master` is the canonical, current branch.** Everything the GUI work depends on is committed
+there: the mod-wide "glass everywhere" rollout, the ResourcePack browser glass wave, the
+**"Reset kills glass" session-latch fix**, the **Frosted/Transparent GlassStyle**, the
+2026-09-04 GUI-audit deliverables and their B5–B19 fix wave, the `GlassSurface` helper with
+structural pre-dim layering on Profiles/Waypoints, frost-radius-follows-opacity, and the
+Multiplayer `@Shadow` crash fix (merged 2026-09-07). The working tree is clean. The formerly
+unmerged `fix/glass-session-latch-and-glass-style` branch landed long since (its `AGENTS.md`
+now lives at the repo root); only three rim/lighting *experiment candidates* remain unmerged
+locally (`cand-a-rim-post-dim`, `cand-b-lighting-boost`, `cand-c-rim-plus-boost`) — none of
+them is canonical.
 
 The live dev config (`run/config/aurora.json`) currently runs `glassStyle: TRANSPARENT` with
-`backgroundOpacity: 0.0` — the user is actively exercising the flat-style escape hatch.
+`backgroundOpacity: 0.1` — the user is actively exercising the flat-style escape hatch.
 
 ---
 
@@ -70,7 +63,7 @@ screen/setting/    ~20 FeatureSetting row widgets (the settings vocabulary)
 
 GUI-adjacent mixins (mixin/) — see §5
 config/AuroraConfig   public fields = schema; async GSON saves; resetByPrefix reflection
-module/ModuleManager  33 hardcoded presentation cards for the Mods grid (drifts from FeatureRegistry — see audit)
+module/ModuleManager  34 hardcoded presentation cards for the Mods grid (drifts from FeatureRegistry — see audit)
 modrinth/             keyless REST client + icon cache (feeds pack browser)
 ```
 
@@ -199,7 +192,7 @@ Conventions (violating these has caused real bugs — full list in AGENTS.md §6
 9. Hover/focus on glass = caret/color/hairline ring/scale/wash — never a tint change; the
    glass rim replaces the outline.
 
-## 4. Screen inventory (glass status verified in branch code, 2026-09-04)
+## 4. Screen inventory (glass status verified in code, 2026-09-04)
 
 | Screen | Glass status | Notes |
 |---|---|---|
@@ -262,7 +255,11 @@ a launch crash, not a silent skip):
   `FramePacer`; uses a `com.aurora.client.screen` class-prefix predicate.
 - `InGameHudMixin` (crosshair suppression), `SimpleOptionMixin` (force-set gamma), `MouseMixin`
   (zoom scroll), `MultiplayerServerListWidgetMixin` (numeric ping "42ms" on server rows,
-  replacing vanilla's ping-bars icon — registered 2026-09-05 after target verification),
+  replacing vanilla's ping-bars icon — registered 2026-09-05 after target verification;
+  fixed 2026-09-07 in merge `6726079`: as first registered it crashed the Multiplayer screen,
+  because its `@Shadow`s for `getContentX/Y/Width` targeted getters that live on
+  `AbstractSelectionList.Entry` two levels up, which Mixin cannot resolve — the fix drops the
+  method shadows and calls the inherited public getters through a cast),
   empty-but-registered `WindowMixin`/`RenderTargetMixin` (deliberate).
 - `MixinGuiGraphics` is an intentional comment-only stub, not registered.
 
@@ -289,17 +286,17 @@ Three parallel structures with no single source of truth:
 2. `screen/FeatureRegistry` — 34 MODULES + 11 SETTINGS `FeatureMetadata` (UI metadata +
    settings widgets + `reset()` via `AuroraConfig.resetByPrefix` reflection over a DEFAULTS
    snapshot).
-3. `module/ModuleManager` — 33 hardcoded presentation cards consumed by `AuroraScreen`'s grid;
+3. `module/ModuleManager` — 34 hardcoded presentation cards consumed by `AuroraScreen`'s grid;
    silently null for unknown ids.
 
 **Enabled state of every feature is a public boolean on `AuroraConfig`**, read fresh each
-tick. Known drift: `reflex` is in FeatureRegistry's modules bucket but not ModuleManager →
-unreachable in the UI (audit B5); grid name/description text is maintained separately from
-FeatureRegistry's and has already diverged (audit D-note).
+tick. Known drift: the missing `reflex` card was added 2026-09-05 (audit B5 fix), so the
+counts now match (34/34) — but the two lists are still maintained by hand and can drift
+again; grid name/description text is maintained separately from FeatureRegistry's and has
+already diverged (audit D-note).
 
 ## 8. Gotchas a new session should know
 
-- The branch-vs-master split (§0) — the single easiest way to waste a session.
 - `AuroraTheme` statics are the legacy projection facade, not a dead system: reading them is
   correct; writing them anywhere but `ResolvedTheme.project()` is not. `IOS_BLUE` etc. hold
   OnePlus Red.

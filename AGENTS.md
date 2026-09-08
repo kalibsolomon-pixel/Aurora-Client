@@ -1,8 +1,9 @@
 # Aurora UI Engine — Project Guide
 
 A reference for humans and AI agent sessions working on this repo. Everything below was
-verified by reading the code on **2026-08-29** (working tree state, including uncommitted
-changes — see §8). If you change the glass rollout status, theme architecture, or feature
+verified by reading the code on **2026-09-07** (`master` at the multiplayer crash-fix merge
+`6726079`, clean working tree; §8 records what landed since the previous 2026-08-29 pass).
+If you change the glass rollout status, theme architecture, or feature
 set, update the relevant section here in the same change.
 
 ---
@@ -55,7 +56,7 @@ AuroraClient.java          Mod entrypoint: registers keybinds, HUD callbacks, fe
 │                           ThrottleDetector, EntityMovementSmoother, …).
 ├── module/                PRESENTATION-ONLY view-models for the settings grid
 │                           (Module, ModuleManager). NOT runtime logic. Hardcoded
-│                           list of 33 ids — can drift from FeatureRegistry (§3).
+│                           list of 34 ids — can drift from FeatureRegistry (§3).
 ├── hud/                   HUD layer: HudRenderer (top-level callback), HudAnchor,
 │                           CrosshairRenderer, HitboxRenderer, BlockOverlayRenderer,
 │                           WorldLineRenderer (shared thick lines), WaypointRenderer,
@@ -129,8 +130,9 @@ There is **no single registry**. Three structures must stay conceptually in sync
 2. **`screen/FeatureRegistry`** — static UI metadata: **34 MODULES-tab + 11 SETTINGS-tab
    tiles** (`FeatureMetadata`: id, display name, marketing description, enable
    getter/setter, list of `FeatureSetting` widgets, `reset()`).
-3. **`module/ModuleManager`** — 33 hardcoded grid cards consumed by `AuroraScreen`.
-   A typo'd id here silently returns null metadata. (Counts already differ: 33 vs 34.)
+3. **`module/ModuleManager`** — 34 hardcoded grid cards consumed by `AuroraScreen`.
+   A typo'd id here silently returns null metadata. (The missing `reflex` card landed
+   2026-09-05, audit B5 — counts now match, but the list is still maintained by hand.)
 
 **Critical rule:** the *enabled state of every feature is a public boolean field on
 `AuroraConfig`* (e.g. `zoomEnabled`), read fresh each tick — never a flag on the Feature
@@ -200,7 +202,7 @@ shift+right-click = lock, X = disable.
 | Container Preview (`container_preview`) | Tooltip grid for shulker contents + ender chest (snapshot while chest screen open — 1.21.x limitation) | `ItemTooltipImageMixin`, `ItemContainerContentsTooltipMixin`, `hud/preview/*` |
 | Item Physics (`item_physics`) | Dropped items lie flat, tumble by motion | `ItemEntityRendererExtractMixin` + `ItemEntityRendererSubmitMixin` + `util/AuroraItemPhysicsSnapshots` |
 | Particles (`particles`) | Per-particle-type visibility/scale/ARGB tint with search. Visibility gated at HEAD of `createParticle` (RETURN is too late) | `ParticleControlFeature`, `ParticleEngineMixin`, `ParticleAccessor` |
-| Item Scale (`item_scale`) | Per-item held scale/rotation/translation; per-hand defaults | `HeldItemRendererTweaksMixin`, `setting/ItemScaleSetting`, new `ui/util/ItemSpriteRenderer` + `mixin/ItemStackRenderStateAccessor` (untracked, uncommitted — see §8) |
+| Item Scale (`item_scale`) | Per-item held scale/rotation/translation; per-hand defaults | `HeldItemRendererTweaksMixin`, `setting/ItemScaleSetting`, `ui/util/ItemSpriteRenderer` + `mixin/ItemStackRenderStateAccessor` |
 | Resourcepack Browser (`resourcepack_browser`) | Modrinth search/install for resource packs into `resourcepacks/` (never auto-enables) | `ResourcePackBrowserScreen`, `modrinth/ModrinthApi`, `modrinth/PackIconCache` |
 | Minecraft Reflex (`reflex`) | Reflex-style latency reduction: GL timer-query GPU time + EWMA CPU frame time → hold CPU before input sampling | `ReflexMinecraftMixin`, `util/reflex/*` |
 | Animations (`animations`) | Swing curve + 1.8 swing arc, view-bob curve/amplitude, 1.7/1.8 damage tilt, idle held-item sway, frame-rate-independent entity movement smoothing (tau scales with server packet bundling) | `HeldItemRendererMixin`, `GameRendererBobMixin`, `DamageTiltMixin`, `LivingEntityRendererExtractMixin` + `EntityMovementSmoother`, `util/AnimationCurves`, cross-cutting `ThrottleDetector` |
@@ -468,26 +470,25 @@ panel — accepted for simplicity/robustness.
    misattributed to yours. This pipeline treats a GL error after its capture blit as
    session-ending, so `Frame.run` drains the queue before touching GL.
 
-### Per-screen rollout status — verified in code, 2026-08-29
+### Per-screen rollout status — verified in code on master, 2026-09-07
 
 Enrollment history: glass started as a Theme-screen pilot, then a staged
 `GLASS_PILOT_IDS` set (`theme`, `block_overlay`, `pack_tweaks`) in
-`FeatureDetailScreen`. **The uncommitted working tree retires that mechanism** — glass
-flags now default ON mod-wide (see §8). Status below is the *working tree*, with the
-commit state noted where it differs.
+`FeatureDetailScreen`. That mechanism is retired (landed 2026-09-05) — glass
+flags now default ON mod-wide. Status below is committed `master`.
 
 | Screen | Status | Detail |
 |---|---|---|
-| `AuroraScreen` (main settings) | **Full** (committed) | Depressed glass window + raised glass tiles, search chip, profile button, bottom buttons; world-gated |
-| `FeatureDetailScreen` (all 45 detail views) | **Full** (uncommitted) | Retires `GLASS_PILOT_IDS`; depressed glass window + glass Done/Reset for every feature |
-| `ProfileManagerScreen` | **Full** (uncommitted changes) | Rows are this screen's containers: DEPRESSED neutral glass (`WINDOW_FILL` only; the committed active-row `stainedTint` read as an accent-tinted container — user-flagged twice). Selection shown solely by the accent Active badge; New Profile/Done/Duplicate/Create all neutral raised |
-| Theme screen widgets (`ThemePreviewSetting`, `SegmentedControl`) | **Full** (committed; the original pilot) | Preview card/chips/buttons glass; segments neutral-unselected/stained-selected |
-| `EditBoxMixin` search fields (Particles, Item Scale, ResourcePacks, Modules grid, + themed vanilla screens) | **Full** (uncommitted) | Raised glass, focus = caret + accent hairline ring, tint constant; flat fallback without a world |
-| Setting widgets: `EnumSetting` (button + expanded popup), `KeybindSetting`, `KeyListSetting`, `ItemScaleSetting`, `ButtonSetting`, `SegmentedSetting` | **Full** (uncommitted — defaults flipped opt-in → default-on) | `FeatureRegistry` still contains now-redundant `.glassButton(true)`/`.glassSegments(true)` "pilot" calls (lines ~86, 96, 180, 292) — harmless cleanup candidates |
-| `ColorPickerScreen` | **Chrome-only, by design** (uncommitted additions) | Apply = STAINED, Cancel = neutral raised; editing surfaces + hex field deliberately opaque |
-| `HudEditorScreen` | **Chrome-only** (uncommitted additions) | Two floating action buttons, neutral raised ("navigation action, not a primary state") |
-| `WaypointManagerScreen` | **Full** (uncommitted) | Raised glass rows + header/add buttons |
-| `ResourcePackBrowserScreen` | **Full** (uncommitted, 2026-09-04) | Depressed glass sidebar (pre-dim pass, `SURFACE` tint, `sidebarGlass` flag) + detail modal; raised glass cards (per-card `renderPanel`, hover-lerp tint kept, manual shadow + `topSheen` dropped); active category tab = accent-stained raised glass (inactive tabs stay flat by design — small transient rows inside an already-glass container); install/Retry/Close buttons are the shared `Button` painter (Install = stained primary, Retry = destructive, progress/Done = neutral; **success-green is not expressible through `Button` — mapped to stained/neutral, flagged**); `renderBackground` world-gating added; every radius now a token (`RADIUS_LARGE`/`RADIUS`/`RADIUS_SMALL`; only scrollbar-thumb capsule literals remain). Title removed + count moved below the search bar (was overlapping it). Thumbnails, search field, toast, scrollbars stay opaque/unchanged per convention. Verified in-client at ~7/25/93% opacity (rim directional throughout), ROUND + SQUARE |
+| `AuroraScreen` (main settings) | **Full** | Depressed glass window + raised glass tiles, search chip, profile button, bottom buttons; world-gated |
+| `FeatureDetailScreen` (all 45 detail views) | **Full** | Retires `GLASS_PILOT_IDS`; depressed glass window + glass Done/Reset for every feature |
+| `ProfileManagerScreen` | **Full** | Rows are this screen's containers: DEPRESSED neutral glass (`WINDOW_FILL` only; the active-row `stainedTint` read as an accent-tinted container — user-flagged twice). Selection shown solely by the accent Active badge; New Profile/Done/Duplicate/Create all neutral raised |
+| Theme screen widgets (`ThemePreviewSetting`, `SegmentedControl`) | **Full** (the original pilot) | Preview card/chips/buttons glass; segments neutral-unselected/stained-selected |
+| `EditBoxMixin` search fields (Particles, Item Scale, ResourcePacks, Modules grid, + themed vanilla screens) | **Full** | Raised glass, focus = caret + accent hairline ring, tint constant; flat fallback without a world |
+| Setting widgets: `EnumSetting` (button + expanded popup), `KeybindSetting`, `KeyListSetting`, `ItemScaleSetting`, `ButtonSetting`, `SegmentedSetting` | **Full** (defaults flipped opt-in → default-on) | `FeatureRegistry` still contains now-redundant `.glassButton(true)`/`.glassSegments(true)` "pilot" calls (lines ~86, 96, 180, 292) — harmless cleanup candidates |
+| `ColorPickerScreen` | **Chrome-only, by design** | Apply = STAINED, Cancel = neutral raised; editing surfaces + hex field deliberately opaque |
+| `HudEditorScreen` | **Chrome-only** | Two floating action buttons, neutral raised ("navigation action, not a primary state") |
+| `WaypointManagerScreen` | **Full** | Raised glass rows + header/add buttons |
+| `ResourcePackBrowserScreen` | **Full** (2026-09-04) | Depressed glass sidebar (pre-dim pass, `SURFACE` tint, `sidebarGlass` flag) + detail modal; raised glass cards (per-card `renderPanel`, hover-lerp tint kept, manual shadow + `topSheen` dropped); active category tab = accent-stained raised glass (inactive tabs stay flat by design — small transient rows inside an already-glass container); install/Retry/Close buttons are the shared `Button` painter (Install = stained primary, Retry = destructive, progress/Done = neutral; **success-green is not expressible through `Button` — mapped to stained/neutral, flagged**); `renderBackground` world-gating added; every radius now a token (`RADIUS_LARGE`/`RADIUS`/`RADIUS_SMALL`; only scrollbar-thumb capsule literals remain). Title removed + count moved below the search bar (was overlapping it). Thumbnails, search field, toast, scrollbars stay opaque/unchanged per convention. Verified in-client at ~7/25/93% opacity (rim directional throughout), ROUND + SQUARE |
 | `WorldMapScreen` | **Not started** | Flat `RoundedPanel` prompt; only the name field is themed (via `EditBoxMixin`) |
 | `AuroraTitleScreen` | **Not started** | Zero glass references |
 | Toggles, sliders, HUD modules, tooltips/dropdowns-as-tooltips | **Never glass, by convention** | Opaque token surfaces |
@@ -509,58 +510,27 @@ commit state noted where it differs.
 
 ---
 
-## 8. Current in-flight work (uncommitted, as of 2026-08-29)
+## 8. Repo state & recent history (updated 2026-09-07)
 
-The repo has a single commit ("Initial commit"); **all current work is the uncommitted
-working tree** (~15 files, +415/−157) plus untracked files. The working tree IS the
-"glass everywhere" rollout wave:
+Nothing is in flight — the working tree is clean and `master` is the canonical branch. The
+section formerly here described the 2026-08-29 *uncommitted* "glass everywhere" wave; all of
+it landed on `master` (2026-09-05) and is documented as the normal state in §5/§6:
+`FeatureDetailScreen`'s `GLASS_PILOT_IDS` retirement, glass search fields via `EditBoxMixin`,
+glass defaults on in the setting widgets, glass chrome on
+`ColorPickerScreen`/`HudEditorScreen`/`WaypointManagerScreen`, the `ColorSwatch` corner clip,
+the two-half rim (`drawRimFinish` + `ResolvedTheme.rimPastel()`), `ProfileManagerScreen`'s
+neutral depressed rows, the `AuroraScreen` tab-pitch/scrollbar fixes, the
+`ResourcePackBrowserScreen` glass rollout, the crosshair canvas rework, and
+`ItemStackRenderStateAccessor` + `ui/util/ItemSpriteRenderer` (both registered and tracked).
+Landed after that wave: the 2026-09-04 GUI audit (`GUI_AUDIT.md` + `ARCHITECTURE.md`) and its
+B5–B19 fix commits; B20 (numeric-ping `MultiplayerServerListWidgetMixin` registered,
+`MultiplayerScreenMixin` deleted); the `GlassSurface` helper adopted on
+`ProfileManagerScreen`/`WaypointManagerScreen`/`Button`/`EditBoxMixin` with structural
+pre-dim layering (closes B3/B4); frost-radius-follows-opacity (`0c7c416`); and the
+`MultiplayerServerListWidgetMixin` `@Shadow` crash fix (merged 2026-09-07, `6726079`).
 
-- `FeatureDetailScreen` — retires `GLASS_PILOT_IDS`, glass window + buttons for all
-  detail screens.
-- `EditBoxMixin` — search fields become raised glass (the one canonical search-bar
-  implementation).
-- `EnumSetting`, `KeybindSetting`, `KeyListSetting`, `ItemScaleSetting`, `ButtonSetting`,
-  `SegmentedSetting` — glass defaults flipped on (popups/keys/add-buttons/segments).
-- `ColorPickerScreen`, `HudEditorScreen`, `WaypointManagerScreen` — glass chrome added
-  (buttons/rows) + `renderBackground` world-gating.
-- `ColorSwatch` — checkerboard now clipped to rounded-rect corners (bled at any non-zero
-  radius before).
-- `BlurPanelRenderer` (+ `ResolvedTheme.rimPastel()`, wired at ~15 glass call sites) — the
-  rim is a two-half system: the in-glass light catch (real composite shader, `uRimBlend`)
-  retires into the panel base as opacity rises, and `drawRimFinish` draws a DIRECTIONAL
-  pastel-of-accent stroke (shader-identical SDF-band × facing math, rasterized into a
-  cached mask texture, tinted pastel × opacity² at blit time) ABOVE the caller's fill —
-  fully opaque at 100% Background Opacity, brightest facing the light (verified offscreen
-  at 5/25/50/75/100% in Dark + Light × red/blue/green; edge profile T≫R≫L≈B=0).
-- `ProfileManagerScreen` — rows switched to neutral DEPRESSED glass; selection carried
-  only by the Active badge; New Profile/Duplicate/Create demoted STAINED → neutral
-  raised. Investigation (2026-08-29): the twice-flagged active-row tint had **never been
-  fixed** — the file was byte-identical across every dangling checkpoint and the initial
-  commit; the earlier round only ever neutralized the row's action buttons.
-- `AuroraScreen` — sidebar tabs repositioned onto one shared pitch (`TAB_FIRST_Y`/
-  `TAB_PITCH`; the pre-Profiles gap was double) and the scrollbar track re-anchored to
-  the shared content viewport (`viewTop()`/`viewBot()`; it previously ran to
-  `mainY() + BOX_H - 10`, 2px past the window border).
-- `aurora.mixins.json` — registers the new `ItemStackRenderStateAccessor`; companion new
-  file `ui/util/ItemSpriteRenderer.java` (flat item icons for `ItemScaleSetting`) — both
-  **untracked**.
-- `ResourcePackBrowserScreen` — full glass rollout applied 2026-09-04 (see §6 table);
-  the old staged `ResourcePackBrowserScreen-part1.txt` + `STAGING-NOTES-…txt` were an
-  earlier partial approach (pre-`drawRimFinish`, hardcoded radii) and have been **deleted**
-  — the applied implementation supersedes them.
-- `gradlew` shows a permission-bit-only modification.
-- Crosshair canvas rework (2026-08-29, later the same day): `PixelCanvasSetting` now renders
-  through a cached `DynamicTexture` (`ui/util/CanvasTexture`; measured fix for a per-cell fill
-  loop costing ~12.8 ms/frame at 33×33 → ~0.006 ms/frame), the 5/11/25/33 preset tabs are
-  replaced by free-form W×H fields (cap 128, hard-rejected with a message) plus a Default
-  button that restores the vanilla 15×15 crosshair shape (pattern replicated from
-  `hud/crosshair.png`), `CrosshairRenderer.drawCustom` takes explicit W×H (`util/GridDims`
-  resolves legacy perfect-square arrays) and merges lit cells into run-length fills, and
-  growing the grid runs a measured-on-this-machine cost benchmark with an apply-anyway
-  warning (`[canvas-cost]` log lines). New config fields:
-  `crosshairCustom{Width,Height}`, `crosshairIndicatorCustom{Width,Height}`.
-
-Before starting new work, decide with the user whether to commit/land this wave first.
+Unmerged local branches: only the three rim/lighting experiment candidates
+`cand-a-rim-post-dim`, `cand-b-lighting-boost`, `cand-c-rim-plus-boost` — none is canonical.
 
 ---
 
@@ -616,8 +586,9 @@ Before starting new work, decide with the user whether to commit/land this wave 
 - `Feature.enabledByDefault()`: never read. `AutoSprintFeature`: dormant stub.
   `FpsDisplayFeature`: no-op marker (FPS lives in Info HUD).
 - `ColorEntryHelper.addPickerButton`: builds nothing (stub).
-- `module/ModuleManager` (33 hardcoded cards) vs `FeatureRegistry` (34) — already off by
-  one; ids here silently fail. Consider deriving one from the other someday.
+- `module/ModuleManager` (34 hardcoded cards; count-matched with `FeatureRegistry` since
+  the missing `reflex` card landed 2026-09-05, audit B5) — ids here still silently fail
+  on typos. Consider deriving one from the other someday.
 - ComplianceMode's `hitboxFeatureEnabled` config field is an orphan (force-false path
   writes fields renderers don't read for that one).
 - Four different animation helpers (`util/AnimationCurves`, `util/AuroraAnim`,
