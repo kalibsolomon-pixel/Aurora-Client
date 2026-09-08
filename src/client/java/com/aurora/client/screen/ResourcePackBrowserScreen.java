@@ -16,6 +16,7 @@ import com.aurora.client.ui.render.blur.BlurPanelRenderer;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.util.AuroraAnim;
 import com.aurora.client.util.AuroraTheme;
+import com.aurora.client.util.SmoothScroll;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
@@ -93,8 +94,8 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
     private static final int TAB_GAP        = 4;
     private static final int HEADER_H       = 16;       // sidebar section header row height
     private static final int HOVER_MS       = 150;      // eased-hover duration
-    // (removed SCROLL_EASE — scroll easing is now delta-time based in render(),
-    //  see the lastFrameMs / scrollAlpha block at the top of render().)
+    // (removed SCROLL_EASE — scroll easing is delta-time based in render(),
+    //  via the shared SmoothScroll advanced at the top of render().)
 
     /**
      * Category tabs matching Modrinth's resourcepack category API
@@ -195,24 +196,17 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         final Button[] modalPhaseButtons = new Button[5];
     }
 
-    // ---- Smooth scroll (target-based lerp) ----
-    private double scrollY = 0;
-    private double scrollTargetY = 0;
-    private boolean scrollbarDragging = false;
+    // ---- Smooth scroll (target-based lerp, shared SmoothScroll) ----
     /**
-     * Wall-clock millis of the previous frame, used to drive frame-rate-
-     * independent scroll easing in {@link #render}. The previous design eased
-     * scroll in {@code tick()} (20 Hz), which caused visible stepping on
-     * high-refresh displays because the rendered scroll position only changed
-     * ~20×/s. Easing in render with a real dt keeps motion silky at 60 / 120 /
-     * 240 Hz alike.
+     * Grid scroll — the screen's exact pre-R2 feel: τ = 80 ms, snap 0.25,
+     * wheel step 40, center-on-cursor thumb (min 30) with no easing while
+     * dragging. The shared component's 80 ms dt clamp replaces this
+     * screen's old 64 ms (decided: only observable below ~15 fps) and its
+     * nanoTime clock replaces currentTimeMillis (established unobservable).
      */
-    private long lastFrameMs = 0L;
-
-    // ---- Sidebar scroll ----
-    private double sidebarScroll = 0;
-    private double sidebarScrollTarget = 0;
-    private boolean sidebarDragging = false;
+    private final SmoothScroll gridScroll = new SmoothScroll(80.0);
+    /** Sidebar scroll — same glide; wheel step 28, thumb min 24. */
+    private final SmoothScroll sidebarScroll = new SmoothScroll(80.0);
 
     // ---- Eased hover state (keyed by stable index: tab slug / project id / "card"+i) ----
     // One state object per key instead of three parallel maps. Deliberately
@@ -341,13 +335,13 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
             results = cached;
             loading = false;
             loadError = null;
-            scrollY = scrollTargetY = 0;
+            gridScroll.set(0);
             return;
         }
 
         loading = true;
         loadError = null;
-        scrollY = scrollTargetY = 0;
+        gridScroll.set(0);
         final String q = query;
         final String cat = category;
         final CompletableFuture<List<ModrinthProject>> future = ModrinthApi.search(q, cat);
@@ -371,18 +365,15 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float delta) {
-        // Frame-rate-independent scroll easing. Advance toward the target every
-        // rendered frame using the real elapsed wall-clock dt, so wheel scrolls
-        // glide smoothly at any refresh rate (60/120/240 Hz) instead of stepping
-        // at the 20 Hz tick rate. tau ≈ 80 ms reads as snappy but still eased.
-        long nowMs = System.currentTimeMillis();
-        long dtMs = lastFrameMs == 0L ? 16L : Math.min(64L, nowMs - lastFrameMs);
-        lastFrameMs = nowMs;
-        double scrollAlpha = 1.0 - Math.exp(-dtMs / 80.0);
-        scrollY += (scrollTargetY - scrollY) * scrollAlpha;
-        if (Math.abs(scrollTargetY - scrollY) < 0.25) scrollY = scrollTargetY;
-        sidebarScroll += (sidebarScrollTarget - sidebarScroll) * scrollAlpha;
-        if (Math.abs(sidebarScrollTarget - sidebarScroll) < 0.25) sidebarScroll = sidebarScrollTarget;
+        // Frame-rate-independent scroll easing (the shared SmoothScroll —
+        // same tau = 80 ms glide). Advance toward the target every rendered
+        // frame using the real elapsed wall-clock dt, so wheel scrolls glide
+        // smoothly at any refresh rate (60/120/240 Hz) instead of stepping
+        // at the 20 Hz tick rate. Eased in render(), not tick(), for exactly
+        // that reason. The component also re-clamps each target against the
+        // current maxScroll every frame (window resizes shrinking the grid).
+        gridScroll.advance(maxScroll());
+        sidebarScroll.advance(sidebarMaxScroll());
 
         // ---- Sidebar glass panel — UNDER the dim, per the layering contract ----
         // The sidebar is a main container: DEPRESSED glass with the ordinary
@@ -461,7 +452,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         if (!list.isEmpty() && cols > 0) {
             int rowH = CARD_H + CARD_GAP;
             int colW = CARD_W + CARD_GAP;
-            double topRow0 = LIST_TOP - scrollY;
+            double topRow0 = LIST_TOP - gridScroll.current();
             int firstRow = Math.max(0, (int) Math.floor((LIST_TOP - CARD_H - topRow0) / rowH));
             int lastRow = (int) Math.floor((listBottom - topRow0) / rowH);
             lastRow = Math.min(lastRow, (list.size() - 1) / cols);
@@ -470,7 +461,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
                     int i = row * cols + col;
                     if (i >= list.size()) break;
                     int x = gridLeft + col * colW;
-                    int y = LIST_TOP + row * rowH - (int) scrollY;
+                    int y = LIST_TOP + row * rowH - (int) gridScroll.current();
                     renderCard(g, list.get(i), x, y, mouseX, mouseY);
                 }
             }
@@ -519,7 +510,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         g.enableScissor(panelX, clipTop, panelX + panelW, clipBot);
 
         // Tabs
-        int tabY = clipTop - (int) sidebarScroll;
+        int tabY = clipTop - (int) sidebarScroll.current();
         int tabX = panelX + 4;
         int tabW = panelW - 8;
 
@@ -599,18 +590,18 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
 
         g.disableScissor();
 
-        // Sidebar scroll indicator (only if content overflows).
+        // Sidebar scroll indicator (only if content overflows) — painted
+        // exactly as before R2; SmoothScroll supplies geometry/drag state.
         double sbMax = sidebarMaxScroll();
         if (sbMax > 0) {
             int trackTop = clipTop;
             int trackH = clipBot - clipTop;
-            double thumbH = Math.max(24, trackH * (trackH / (trackH + sbMax)));
-            double ratio = sidebarScroll / sbMax;
-            int thumbY = trackTop + (int) ((trackH - thumbH) * ratio);
+            double thumbH = sidebarScroll.thumbHeight(trackH, sbMax, 24);
+            int thumbY = trackTop + (int) ((trackH - thumbH) * sidebarScroll.ratio(sbMax));
             int trackX = panelX + panelW - 5;
             boolean sHover = mouseX >= trackX - 2 && mouseX <= trackX + 5
                     && mouseY >= thumbY && mouseY <= thumbY + thumbH;
-            int col = (sHover || sidebarDragging) ? AuroraAnim.scaleAlpha(AuroraTheme.TEXT_PRIMARY, 0.55f)
+            int col = (sHover || sidebarScroll.isDragging()) ? AuroraAnim.scaleAlpha(AuroraTheme.TEXT_PRIMARY, 0.55f)
                     : AuroraAnim.scaleAlpha(AuroraTheme.TEXT_PRIMARY, 0.30f);
             RenderUtil.drawRoundedRectAA(g, trackX, thumbY, 3, (int) thumbH, 2, col);
         }
@@ -891,7 +882,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         int clipBot = panelY + panelH - 6;
         int tabX = SIDEBAR_PAD + 4;
         int tabW = (SIDEBAR_W - SIDEBAR_PAD * 2) - 8;
-        int tabY = clipTop - (int) sidebarScroll;
+        int tabY = clipTop - (int) sidebarScroll.current();
         for (int i = 0; i < CATEGORIES.length; i++) {
             CategoryTab tab = CATEGORIES[i];
             int rowH = tab.section == Section.HEADER ? HEADER_H : TAB_H;
@@ -906,23 +897,23 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
             tabY += tab.section == Section.HEADER ? HEADER_H : TAB_H + TAB_GAP;
         }
 
-        // Sidebar scrollbar drag start.
+        // Sidebar scrollbar drag start (center-on-cursor — the grab offset
+        // is half the thumb, the screen's historical drag math).
         double sbMax = sidebarMaxScroll();
         if (sbMax > 0) {
             int trackTop = clipTop;
             int trackH = clipBot - clipTop;
-            double thumbH = Math.max(24, trackH * (trackH / (trackH + sbMax)));
-            double ratio = sidebarScroll / sbMax;
-            int thumbY = trackTop + (int) ((trackH - thumbH) * ratio);
+            double thumbH = sidebarScroll.thumbHeight(trackH, sbMax, 24);
+            int thumbY = trackTop + (int) ((trackH - thumbH) * sidebarScroll.ratio(sbMax));
             int trackX = SIDEBAR_PAD + (SIDEBAR_W - SIDEBAR_PAD * 2) - 5;
             if (mouseX >= trackX - 2 && mouseX <= trackX + 5
                     && mouseY >= thumbY - 4 && mouseY <= thumbY + thumbH + 4) {
-                sidebarDragging = true;
+                sidebarScroll.beginThumbDrag(thumbH / 2.0);
                 return true;
             }
         }
 
-        // Grid scrollbar drag start.
+        // Grid scrollbar drag start (center-on-cursor, likewise).
         double ms = maxScroll();
         if (ms > 0) {
             int cols = columns();
@@ -931,13 +922,11 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
             int trackX = gridRight + 8;
             int trackTop = LIST_TOP;
             int trackH = (this.height - LIST_BOTTOM_PAD) - LIST_TOP;
-            double thumbH = Math.max(30, trackH * ((double) (this.height - LIST_TOP - LIST_BOTTOM_PAD)
-                    / (trackH + ms)));
-            double ratio = scrollY / ms;
-            int thumbY = trackTop + (int) ((trackH - thumbH) * ratio);
+            double thumbH = gridScroll.thumbHeight(trackH, ms, 30);
+            int thumbY = trackTop + (int) ((trackH - thumbH) * gridScroll.ratio(ms));
             if (mouseX >= trackX - 4 && mouseX <= trackX + 8
                     && mouseY >= thumbY - 4 && mouseY <= thumbY + thumbH + 4) {
-                scrollbarDragging = true;
+                gridScroll.beginThumbDrag(thumbH / 2.0);
                 return true;
             }
         }
@@ -954,7 +943,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
             int row = i / cols;
             int x = gridLeft + col * (CARD_W + CARD_GAP);
             int yBase = LIST_TOP + row * (CARD_H + CARD_GAP);
-            int y = yBase - (int) scrollY;
+            int y = yBase - (int) gridScroll.current();
             int btnW = 80, btnH = 18;
             int btnX = x + CARD_W - btnW - THUMB_PAD;
             int btnY = y + CARD_H - btnH - 8;
@@ -1043,14 +1032,15 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         int trackTop = LIST_TOP;
         int trackH = listBottom - LIST_TOP;
 
-        double ratio = scrollY / ms;
-        double thumbH = Math.max(30, trackH * ((double) (this.height - LIST_TOP - LIST_BOTTOM_PAD)
-                / (trackH + ms)));
-        int thumbY = trackTop + (int) ((trackH - thumbH) * ratio);
+        // Painted exactly as before R2; SmoothScroll supplies geometry/drag
+        // state (the old inline thumb-height math reduced to the same
+        // trackH / (trackH + maxScroll) product the component computes).
+        double thumbH = gridScroll.thumbHeight(trackH, ms, 30);
+        int thumbY = trackTop + (int) ((trackH - thumbH) * gridScroll.ratio(ms));
 
         boolean hover = mouseX >= trackX - 2 && mouseX <= trackX + trackW + 2
                 && mouseY >= thumbY && mouseY <= thumbY + thumbH;
-        int thumbCol = (hover || scrollbarDragging)
+        int thumbCol = (hover || gridScroll.isDragging())
                 ? AuroraAnim.scaleAlpha(AuroraTheme.TEXT_PRIMARY, 0.55f)
                 : AuroraAnim.scaleAlpha(AuroraTheme.TEXT_PRIMARY, 0.30f);
         RenderUtil.drawRoundedRectAA(g, trackX, thumbY, trackW, (int) thumbH, 2, thumbCol);
@@ -1063,39 +1053,28 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
 
         // Route wheel over the sidebar to the sidebar scroll, else to the grid.
         if (mouseX < SIDEBAR_W) {
-            double sbMax = sidebarMaxScroll();
-            sidebarScrollTarget -= vertical * 28;
-            if (sidebarScrollTarget < 0) sidebarScrollTarget = 0;
-            if (sidebarScrollTarget > sbMax) sidebarScrollTarget = sbMax;
+            sidebarScroll.wheel(vertical, 28, sidebarMaxScroll());
         } else {
-            double ms = maxScroll();
-            scrollTargetY -= vertical * 40;
-            if (scrollTargetY < 0) scrollTargetY = 0;
-            if (scrollTargetY > ms) scrollTargetY = ms;
+            gridScroll.wheel(vertical, 40, maxScroll());
         }
         return true;
     }
 
     @Override
     public boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent ev, double dx, double dy) {
-        if (scrollbarDragging && ev.button() == 0) {
+        if (gridScroll.isDragging() && ev.button() == 0) {
             double mouseY = ev.y();
             double ms = maxScroll();
             if (ms <= 0) return true;
             int trackTop = LIST_TOP;
             int trackH = (this.height - LIST_BOTTOM_PAD) - LIST_TOP;
-            double thumbH = Math.max(30, trackH * ((double) (this.height - LIST_TOP - LIST_BOTTOM_PAD)
-                    / (trackH + ms)));
-            double usable = trackH - thumbH;
-            if (usable <= 0) return true;
-            double relY = mouseY - trackTop - thumbH / 2.0;
-            double v = (relY / usable) * ms;
-            if (v < 0) v = 0;
-            if (v > ms) v = ms;
-            scrollY = scrollTargetY = v;
+            if (trackH - gridScroll.thumbHeight(trackH, ms, 30) <= 0) return true;
+            // jumpCurrent = true: no easing while dragging (the screen's
+            // historical center-on-cursor feel).
+            gridScroll.dragThumb(mouseY, trackTop, trackH, ms, 30, true);
             return true;
         }
-        if (sidebarDragging && ev.button() == 0) {
+        if (sidebarScroll.isDragging() && ev.button() == 0) {
             double mouseY = ev.y();
             double sbMax = sidebarMaxScroll();
             if (sbMax <= 0) return true;
@@ -1103,14 +1082,8 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
             int panelH = this.height - TOP_BAR_H - 16;
             int trackTop = panelY + 26;
             int trackH = panelH - 26 - 6;
-            double thumbH = Math.max(24, trackH * (trackH / (trackH + sbMax)));
-            double usable = trackH - thumbH;
-            if (usable <= 0) return true;
-            double relY = mouseY - trackTop - thumbH / 2.0;
-            double v = (relY / usable) * sbMax;
-            if (v < 0) v = 0;
-            if (v > sbMax) v = sbMax;
-            sidebarScroll = sidebarScrollTarget = v;
+            if (trackH - sidebarScroll.thumbHeight(trackH, sbMax, 24) <= 0) return true;
+            sidebarScroll.dragThumb(mouseY, trackTop, trackH, sbMax, 24, true);
             return true;
         }
         return super.mouseDragged(ev, dx, dy);
@@ -1119,8 +1092,8 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
     @Override
     public boolean mouseReleased(net.minecraft.client.input.MouseButtonEvent ev) {
         if (ev.button() == 0) {
-            scrollbarDragging = false;
-            sidebarDragging = false;
+            gridScroll.endThumbDrag();
+            sidebarScroll.endThumbDrag();
         }
         return super.mouseReleased(ev);
     }

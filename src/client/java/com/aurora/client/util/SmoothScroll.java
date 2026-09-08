@@ -73,9 +73,12 @@ import java.util.function.DoubleSupplier;
  *       snap 0.1, wheel step 30, grab-where-clicked thumb that keeps
  *       easing during drags; one instance per tab, the inactive one's
  *       clock stamped via {@link #touchClock()}.</li>
+ *   <li>{@code ResourcePackBrowserScreen} (2026-09-08, R2): two tracks
+ *       (grid + sidebar), τ = 80, snap 0.25, wheel steps 40/28, both
+ *       thumbs center-on-cursor with the rendered position pinned during
+ *       drags; accepted the component's 80 ms dt clamp over the screen's
+ *       old 64 (decided — sub-15fps-only observable).</li>
  *   <li><b>Pending, deliberately not folded into the pilot</b>:
- *       {@code ResourcePackBrowserScreen} (τ = 80, wheel steps 28/40, TWO
- *       tracks — grid + sidebar — so two instances), and
  *       {@code ProfileManagerScreen}/{@code WaypointManagerScreen}, which
  *       currently have NO easing and NO thumb at all — adopting this class
  *       there is a functional improvement, not a refactor, and deserves
