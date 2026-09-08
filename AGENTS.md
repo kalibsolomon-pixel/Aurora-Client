@@ -122,7 +122,10 @@ AuroraClient.java          Mod entrypoint: registers keybinds, HUD callbacks, fe
 │                          RoundedRect (rounded AA), AuroraTheme (LEGACY static facade —
 │                          still the read path for ~30 files, written only by theme/),
 │                          AuroraKeybinds + AuroraKey, AnimationCurves, AuroraAnim,
-│                          HoverAnim, CachedValue, FramePacer, WorldScope, ColorEntryHelper,
+│                          HoverAnim, SmoothScroll (shared scroll easing + thumb
+│                          geometry, R2; piloted on FeatureDetailScreen only — the
+│                          other scroll screens still have their own math), CachedValue,
+│                          FramePacer, WorldScope, ColorEntryHelper,
 │                          AttackedPlayerTracker, render-state snapshot bridges, and
 │   └── reflex/            NVIDIA-Reflex-style latency reduction (CpuTimeCollector,
 │                           GpuTimeCollector, ReflexScheduler).

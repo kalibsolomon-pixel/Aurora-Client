@@ -10,6 +10,7 @@ import com.aurora.client.ui.component.RoundedPanel;
 import com.aurora.client.ui.component.ThemedScreen;
 import com.aurora.client.ui.render.blur.BlurPanelRenderer;
 import com.aurora.client.ui.util.RenderUtil;
+import com.aurora.client.util.SmoothScroll;
 import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.ui.util.UiLayerCache;
 import net.minecraft.client.gui.GuiGraphics;
@@ -44,9 +45,8 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
 
     private final Screen parent;
     private final FeatureMetadata meta;
-    private double scrollY = 0;
-    private double scrollTarget = 0;
-    private double lastScrollTickMs = 0.0;
+    /** τ = 60 ms, snap 0.25, wheel step 30, no thumb — the screen's exact pre-R2 feel. */
+    private final SmoothScroll scroll = new SmoothScroll(60.0);
     private FeatureSetting activeDragSetting = null;
 
     /** Static-layer cache: window chrome + rows' cacheable shapes, blitted once per clean frame. */
@@ -110,23 +110,6 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         }
     }
 
-    private void tickSmoothScroll(double maxScroll) {
-        double now = System.nanoTime() / 1_000_000.0;
-        double dt = (lastScrollTickMs == 0.0) ? 16.0 : Math.min(80.0, now - lastScrollTickMs);
-        lastScrollTickMs = now;
-
-        if (scrollTarget < 0) scrollTarget = 0;
-        if (scrollTarget > maxScroll) scrollTarget = maxScroll;
-
-        double alpha = 1.0 - Math.exp(-dt / 60.0);
-        double diff = scrollTarget - scrollY;
-        scrollY += diff * alpha;
-
-        if (Math.abs(diff) < 0.25) {
-            scrollY = scrollTarget;
-        }
-    }
-
     /**
      * True when the main render target holds a live world — i.e. the glass
      * capture source is valid. Mirrors {@code BlurPanelRenderer}'s own
@@ -158,7 +141,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         if (totalRowsH > 0) totalRowsH -= ROW_GAP; // trailing gap not drawn
         double maxScroll = Math.max(0, totalRowsH - (this.height - TOP_PAD - 40));
 
-        tickSmoothScroll(maxScroll);
+        scroll.advance(maxScroll);
 
         int listX = (this.width - LIST_W) / 2;
 
@@ -166,7 +149,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         final int WINDOW_PAD_TOP    = 10;
         final int WINDOW_PAD_BOTTOM = 10;
 
-        int windowY = TOP_PAD - (int) scrollY - WINDOW_PAD_TOP;
+        int windowY = TOP_PAD - (int) scroll.current() - WINDOW_PAD_TOP;
         int windowH = totalRowsH + WINDOW_PAD_TOP + WINDOW_PAD_BOTTOM;
 
         // ---- Live GPU glass UNDER the cached layer. Drawn before the ----
@@ -207,7 +190,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         int fingerprint = 0;
         for (FeatureSetting s : meta.settings) fingerprint = fingerprint * 31 + s.shapeFingerprint();
         long version = ThemeManager.generation() * 1_000_003L
-                ^ ((long) (int) scrollY * 104729L)
+                ^ ((long) (int) scroll.current() * 104729L)
                 ^ ((long) totalRowsH * 31L)
                 ^ ((long) fbW * 7919L)
                 ^ ((long) fbH * 17L)
@@ -221,7 +204,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
             RenderUtil.RectSink prev = RenderUtil.beginCapture(layerCache.sink());
             try {
                 drawWindowChromeShapes(ctx, listX, windowY, windowH, glassWindow);
-                int yy = TOP_PAD - (int) scrollY;
+                int yy = TOP_PAD - (int) scroll.current();
                 for (FeatureSetting s : meta.settings) {
                     int h = s.height();
                     if (yy + h > 0 && yy < this.height) {
@@ -253,7 +236,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         layerCache.blit(ctx, this.width, this.height);
 
         // Live overlay: text, hover feedback, animated values.
-        int y = TOP_PAD - (int) scrollY;
+        int y = TOP_PAD - (int) scroll.current();
         for (FeatureSetting s : meta.settings) {
             int h = s.height();
             if (y + h > 0 && y < this.height) {
@@ -318,7 +301,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         if (super.mouseClicked(_ev, _doubleClicked)) return true;
         
         int listX = (this.width - LIST_W) / 2;
-        int y = TOP_PAD - (int) scrollY;
+        int y = TOP_PAD - (int) scroll.current();
         for (FeatureSetting s : meta.settings) {
             int h = s.height();
             if (s.mouseClicked(mouseX, mouseY, button, listX, y, LIST_W)) {
@@ -355,13 +338,13 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         FeatureSetting focused = FeatureSetting.getFocused();
         if (focused != null && focused.onScroll(vertical)) return true;
 
+        // Input-time bound deliberately computed as before (no trailing-gap
+        // subtraction) — the render-time advance() re-clamps each frame.
         int totalH = 0;
         for (FeatureSetting s : meta.settings) totalH += s.height() + ROW_GAP;
         double maxScroll = Math.max(0, totalH - (this.height - TOP_PAD - 40));
 
-        scrollTarget -= vertical * 30;
-        if (scrollTarget < 0) scrollTarget = 0;
-        if (scrollTarget > maxScroll) scrollTarget = maxScroll;
+        scroll.wheel(vertical, 30, maxScroll);
         return true;
     }
 
