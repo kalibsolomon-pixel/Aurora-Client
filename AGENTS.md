@@ -1,8 +1,8 @@
 # Aurora UI Engine — Project Guide
 
 A reference for humans and AI agent sessions working on this repo. Everything below was
-verified by reading the code on **2026-09-07** (`master` at the multiplayer crash-fix merge
-`6726079`, clean working tree; §8 records what landed since the previous 2026-08-29 pass).
+verified by reading the code on **2026-09-08** (`master` at the cand-a rim-post-dim merge,
+clean working tree; §8 records what landed since the previous 2026-09-07 pass).
 If you change the glass rollout status, theme architecture, or feature
 set, update the relevant section here in the same change.
 
@@ -157,7 +157,11 @@ multiplayer disconnects once; `saveBlocking()` exists for the shutdown hook. Ato
 **Keybinds** (`util/AuroraKeybinds` + raw `util/AuroraKey`): zoom **C**, FreeLook **V**,
 toggle sprint **J**, toggle sneak **K**, HUD editor **RShift**, world map **M** (all
 rebindable, synced two-way with the vanilla Controls screen). Unbound-by-default: hitbox
-toggle, totem reset, waypoint drop/manager, minimap toggle, blur test.
+toggle, totem reset, waypoint drop/manager, minimap toggle, blur test. Gotcha (observed
+2026-09-08): binding one of these by editing `aurora.json` alone does NOT stick — the
+two-way sync sees vanilla's still-unbound KeyMapping at boot and writes -1 back into the
+config. The vanilla-side binding in `options.txt` (`key_key.aurora.<id>:key.keyboard.x`)
+must be set too (that is what the in-game UIs do).
 
 **HUD modules** (`hud/module/`): 13 registered in `AuroraClient` — Info, CPS, Armor, Reach,
 ToggleSprintSneak, ToggleIndividual ×2 (sprint/sneak), Potion, Ping, TotemPop, Stats,
@@ -318,10 +322,11 @@ unselected / accent-stained selected), `RoundedPanel` (themed window panel), `Co
 via `EditBoxMixin`), `GlassEditBox` (glass-pass hook `EditBoxMixin` implements onto every
 `EditBox`), `GlassSurface` (the shared glass-material painter: `container` / `control` /
 `stainedControl`, each = live-world gate → `renderPanel` with the role's lighting → tint →
-`drawRimFinish`, returning whether glass drew; plus the frame-phase guard
-`beginFrame`/`overlayDim` that makes the pre-dim layering rule structural — §6. Adopted by
-`ProfileManagerScreen`, `WaypointManagerScreen`, `Button`, `EditBoxMixin` (2026-09-05); the
-~8 remaining inline copies of the idiom migrate in the approved follow-up).
+rim, returning whether glass drew; plus the frame-phase machinery
+`beginFrame`/`beginGlassPass`/`overlayDim` that makes the pre-dim layering rule structural
+and defers each surface's rim finish past the dim — §6. Adopted by
+`ProfileManagerScreen`, `WaypointManagerScreen`, `Button`, `EditBoxMixin` (2026-09-05);
+the ~8 remaining inline copies of the idiom migrate in the approved follow-up).
 
 Rendering utilities: `RenderUtil` (float-precision AA rounded rects/circles/outlines +
 `beginCapture`/`RectSink` used by `UiLayerCache`), `AuroraShapes` (chamfered-octagon
@@ -354,8 +359,10 @@ gradient + a fixed-width directional border stroke against one fixed light
 of both terms. The rim is a TWO-HALF system driven by the one Background Opacity value:
 the IN-GLASS stroke (composite pass, `uRimBlend` = resolved opacity) is the bright light
 catch at low opacity and retires into the panel's own per-pixel base as opacity rises;
-the ABOVE-FILL half, `BlurPanelRenderer.drawRimFinish` (call right after each glass tint
-fill), draws a DIRECTIONAL rounded border in the current accent's pastel
+the ABOVE-FILL half, `BlurPanelRenderer.drawRimFinish` (in place right after each glass
+tint fill, or — inside a declared glass pass — deferred by `GlassSurface` to just after the
+dim so the highlight is not veiled with the body, see convention 6), draws a DIRECTIONAL
+rounded border in the current accent's pastel
 (`ResolvedTheme.rimPastel()`
 — accent lightened 65% toward white, derived once per resolve) with alpha = opacity² —
 negligible while translucent, a SOLID fully-opaque pastel stroke at 100% opacity, because
@@ -431,15 +438,27 @@ panel — accepted for simplicity/robustness.
    controls (rows, buttons, chips, pills, search/rename fields) — is painted in the screen's
    **glass pass**, BEFORE the screen's `OVERLAY_DIM` fill, so the dim veils the glass like
    it veils the world; content (text, icons, badges, hover washes, focus rings, carets) and
-   any flat fallback are painted after the dim. Structurally: a screen fills its dim ONLY
-   through `GlassSurface.overlayDim`, which stamps the frame; any glass painted later in
-   that frame is reported (`ERROR` + stack trace in a dev environment, one-shot `WARN` per
-   screen class otherwise — the surface still paints, so a mis-ordered screen keeps its
-   glass and the log shows the defect on frame one). Widgets split accordingly:
+   any flat fallback are painted after the dim. Structurally: a screen brackets the pass
+   with `GlassSurface.beginGlassPass()` at the top of render and fills its dim ONLY through
+   `GlassSurface.overlayDim`, which stamps the frame and then flushes the deferred rims
+   (below). Any glass body painted later in that frame is reported (`ERROR` + stack trace
+   in a dev environment, one-shot `WARN` per screen class otherwise — the surface still
+   paints, so a mis-ordered screen keeps its glass and the log shows the defect on frame
+   one; `overlayDim` without a pass, a pass never closed by `overlayDim`, and a surface
+   painted under a raw scissor the pass isn't tracking are reported the same way).
+   **Rim timing (2026-09-08, the landed cand-a approach):** inside a declared pass the
+   surface BODY (capture, blur, lighting, tint) is painted pre-dim, but each surface's
+   above-fill rim finish is QUEUED and painted by `overlayDim` right after the dim fill —
+   the body is veiled like the world while the highlight stays crisp above it, so raised
+   controls keep their gloss. Because the flush happens outside whatever scissor the
+   surface was painted under, screens wrap clipped surfaces in
+   `GlassSurface.enableScissor`/`disableScissor` (thin wrappers) so each deferred rim
+   re-applies its clip. Surfaces painted with no pass open paint their rim in place (the
+   legacy order). Widgets split accordingly:
    `Widget.renderGlassPass` (`Button`, forwarded by `ButtonWidget`) and
    `GlassEditBox.aurora$renderGlassPass` (every `EditBox`, via `EditBoxMixin`) paint the
-   surface pre-dim and stamp the frame; the widget's normal render then paints content
-   only — or, on a screen that never ran the pass, the surface in place (the legacy order).
+   surface pre-dim; the widget's normal render then paints content only — or, on a screen
+   that never ran the pass, the surface in place (the legacy order).
    **Rollout status (2026-09-05):** enforced on `ProfileManagerScreen` and
    `WaypointManagerScreen` (closing audit B3/B4). `AuroraScreen`, `FeatureDetailScreen`,
    `ResourcePackBrowserScreen` and the setting widgets still fill a raw dim and paint their
@@ -526,17 +545,26 @@ Landed after that wave: the 2026-09-04 GUI audit (`GUI_AUDIT.md` + `ARCHITECTURE
 B5–B19 fix commits; B20 (numeric-ping `MultiplayerServerListWidgetMixin` registered,
 `MultiplayerScreenMixin` deleted); the `GlassSurface` helper adopted on
 `ProfileManagerScreen`/`WaypointManagerScreen`/`Button`/`EditBoxMixin` with structural
-pre-dim layering (closes B3/B4); frost-radius-follows-opacity (`0c7c416`); and the
-`MultiplayerServerListWidgetMixin` `@Shadow` crash fix (merged 2026-09-07, `6726079`).
+pre-dim layering (closes B3/B4); frost-radius-follows-opacity (`0c7c416`); the
+`MultiplayerServerListWidgetMixin` `@Shadow` crash fix (merged 2026-09-07, `6726079`); and
+the deferred post-dim rim finish (candidate A, merged 2026-09-08 — §6 convention 6).
 
-Unmerged local branches: only the three rim/lighting experiment candidates
-`cand-a-rim-post-dim`, `cand-b-lighting-boost`, `cand-c-rim-plus-boost` — none is canonical.
+Unmerged local branches: none. The three rim/lighting experiment candidates were resolved
+2026-09-08: `cand-a-rim-post-dim` (post-dim rim finish via a deferred queue in
+`GlassSurface`) was chosen and merged; `cand-b-lighting-boost` and `cand-c-rim-plus-boost`
+were discarded — B boosted the shared `Lighting.raised()` preset, which had no real effect
+on the target screens but a real side effect on every other raised control mod-wide.
 
 ---
 
 ## 9. Known outstanding work, dead code, and hazards
 
 **Incomplete / follow-up candidates**
+- The deferred-rim queue in `GlassSurface` (§6 convention 6) has no opt-out for surfaces
+  deliberately meant to render ABOVE an already-dimmed screen — e.g. the pack browser's
+  detail modal or `EnumSetting`'s expanded popup. Not blocking today (those screens haven't
+  adopted the glass pass; their surfaces paint with no pass open, so rims paint in place),
+  but whoever migrates them needs a "render above the dim, rim included" escape hatch.
 - The shared `Button` has no success variant, so `ResourcePackBrowserScreen`'s
   Install/Installed states render accent-stained/neutral instead of success-green
   (§6 table). A `Button.success`-style variant would restore the old semantics.

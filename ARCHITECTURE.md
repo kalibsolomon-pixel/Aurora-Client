@@ -7,18 +7,21 @@ root — findings and prioritized plan from the 2026-09-04 full GUI audit).
 
 ---
 
-## 0. READ THIS FIRST — repo state (verified from git, 2026-09-07)
+## 0. READ THIS FIRST — repo state (verified from git, 2026-09-08)
 
 **`master` is the canonical, current branch.** Everything the GUI work depends on is committed
 there: the mod-wide "glass everywhere" rollout, the ResourcePack browser glass wave, the
 **"Reset kills glass" session-latch fix**, the **Frosted/Transparent GlassStyle**, the
 2026-09-04 GUI-audit deliverables and their B5–B19 fix wave, the `GlassSurface` helper with
-structural pre-dim layering on Profiles/Waypoints, frost-radius-follows-opacity, and the
-Multiplayer `@Shadow` crash fix (merged 2026-09-07). The working tree is clean. The formerly
-unmerged `fix/glass-session-latch-and-glass-style` branch landed long since (its `AGENTS.md`
-now lives at the repo root); only three rim/lighting *experiment candidates* remain unmerged
-locally (`cand-a-rim-post-dim`, `cand-b-lighting-boost`, `cand-c-rim-plus-boost`) — none of
-them is canonical.
+structural pre-dim layering on Profiles/Waypoints, frost-radius-follows-opacity, the
+Multiplayer `@Shadow` crash fix (merged 2026-09-07), and the **deferred post-dim rim
+finish** (2026-09-08, §3/§6). The working tree is clean. The formerly unmerged
+`fix/glass-session-latch-and-glass-style` branch landed long since (its `AGENTS.md`
+now lives at the repo root). The three rim/lighting *experiment candidates* were resolved
+2026-09-08: **A (`cand-a-rim-post-dim`) was chosen and merged** (rim finish deferred past
+the dim via a queue in `GlassSurface`); **B and C were discarded** — B boosted the shared
+`Lighting.raised()` preset with no real effect on the target screens but a real side
+effect on every other raised control mod-wide. No unmerged local branches remain.
 
 The live dev config (`run/config/aurora.json`) currently runs `glassStyle: TRANSPARENT` with
 `backgroundOpacity: 0.1` — the user is actively exercising the flat-style escape hatch.
@@ -127,9 +130,11 @@ depressed = inversion of both terms. SDF-normal lighting, specular, refraction, 
 **The rim is a two-half system** driven by the one Background Opacity value:
 - IN-GLASS half: composite-pass stroke blends its target color toward the panel's own base as
   opacity rises (`uRimBlend`).
-- ABOVE-FILL half: `drawRimFinish(g, x, y, w, h, radius)` — call it right after the caller's
-  tint fill — draws a DIRECTIONAL pastel-of-accent stroke (cached SDF-band mask texture per
-  device rect+radius, 16-entry cap) with alpha = opacity². Solid pastel at 100% opacity.
+- ABOVE-FILL half: `drawRimFinish(g, x, y, w, h, radius)` — right after the caller's
+  tint fill, or (inside a declared glass pass, 2026-09-08) deferred by `GlassSurface` to
+  just after the dim — draws a DIRECTIONAL pastel-of-accent stroke (cached SDF-band mask
+  texture per device rect+radius, 16-entry cap) with alpha = opacity². Solid pastel at
+  100% opacity.
 
 **Reliability machinery** (each entry fixed a real crash/bug — do not "simplify"):
 - `permanentlyDisabled` latch: any unexpected GL failure disables glass for the session
@@ -157,15 +162,21 @@ rollout):
 
 ```java
 // ---- glass pass: EVERY glass surface, before the dim ----
+GlassSurface.beginGlassPass();                     // opens the pass: rims defer from here
 boolean glass = GlassSurface.control(g, x, y, w, h, radius);   // raised, WINDOW_FILL tint
 //              GlassSurface.stainedControl(...)                // raised, stainedTint()
 //              GlassSurface.container(...)                     // depressed, WINDOW_FILL
-//   each = live-world gate → renderPanel(role lighting) → tint → drawRimFinish → boolean
+//   each = live-world gate → renderPanel(role lighting) → tint → (rim queued, not drawn)
+//   clipped surfaces go through GlassSurface.enableScissor/disableScissor (not the raw
+//   calls) so the deferred rim re-applies the clip
 // ---- dim: the guarded phase boundary ----
-GlassSurface.overlayDim(g, width, height);   // stamps the frame; glass after this is reported
+GlassSurface.overlayDim(g, width, height);   // dim fill, then flushes the queued rims
 // ---- content pass ----
 if (!glass) { /* flat token fill + outline — the screen's own fallback chrome */ }
 ```
+
+Surfaces painted with NO pass open (screens still on the legacy order) draw their rim in
+place, exactly as before — the pass is what switches rim timing.
 
 Conventions (violating these has caused real bugs — full list in AGENTS.md §6):
 1. Single opacity application point (above). Two derivations ride that one value without
@@ -181,12 +192,17 @@ Conventions (violating these has caused real bugs — full list in AGENTS.md §6
    surfaces are ALWAYS opaque.
 5. Glass needs a live world; `renderBackground` overrides skip vanilla's backdrop sandwich
    when `GlassSurface.liveWorldBackdrop()`; decline ⇒ complete flat look (fallback contract).
-6. EVERY glass surface — containers and controls — draws in the glass pass BEFORE the
-   screen's `OVERLAY_DIM` fill; content after. Structural where adopted: the dim goes through
+6. EVERY glass surface — containers and controls — draws its BODY in the glass pass BEFORE
+   the screen's `OVERLAY_DIM` fill; content after. Structural where adopted: the screen
+   brackets the pass with `GlassSurface.beginGlassPass()`, the dim goes through
    `GlassSurface.overlayDim`, and glass painted after it in the same frame is reported
-   (dev: ERROR + stack trace; prod: one-shot WARN). Widgets split via `Widget.renderGlassPass`
-   / `GlassEditBox`. **Enforced on Profiles + Waypoints only (2026-09-05)**; the other glass
-   screens still paint controls after a raw dim fill, pending the approved rollout.
+   (dev: ERROR + stack trace; prod: one-shot WARN) — as are `overlayDim` with no pass, a
+   pass never closed by `overlayDim`, and a surface under an untracked raw scissor. Inside
+   a pass the rim finish is deferred and flushed right AFTER the dim (bodies veiled,
+   highlights crisp). Widgets split via `Widget.renderGlassPass`
+   / `GlassEditBox`. **Enforced on Profiles + Waypoints only (2026-09-05; post-dim rims
+   2026-09-08)**; the other glass screens still paint controls after a raw dim fill,
+   pending the approved rollout.
 7. Per-element UV: each panel samples only its own sub-rect (`uUvRect` / sub-rect contracts).
 8. Content on stained glass uses `ON_ACCENT` (contrast-derived), never the accent itself.
 9. Hover/focus on glass = caret/color/hairline ring/scale/wash — never a tint change; the
@@ -224,8 +240,9 @@ detail-screen lifecycle hooks.
 Screens split drawing into: **shapes** (cacheable static geometry → rasterized once into
 `UiLayerCache`, version = theme generation + content fingerprint + fb size + scale + glass
 state), **glass pass** (live per-frame `GlassSurface` calls — ALL glass surfaces, containers
-and controls alike, before the dim), **dim** (`GlassSurface.overlayDim` — the guarded phase
-boundary; glass after it is reported), and **overlay** (text/hover/animation/flat fallbacks,
+and controls alike, before the dim; rims queue for post-dim), **dim** (`GlassSurface.overlayDim`
+— the guarded phase boundary; glass after it is reported, then the queued rims flush), and
+**overlay** (text/hover/animation/flat fallbacks,
 live). `ProfileManagerScreen` and `WaypointManagerScreen` implement this order structurally
 (2026-09-05); `AuroraScreen`, `FeatureDetailScreen` and the pack browser still paint only
 their window/container surface pre-dim and every control after a raw dim fill (pending the
@@ -313,6 +330,10 @@ already diverged (audit D-note).
   updates surface as launch crashes — version bumps are not mechanical here.
 - 1.21.11 `GuiGraphics` records blits into a deferred `GuiRenderState` with no flush API:
   never destroy a texture mid-frame (output pool, rim masks, `UiLayerCache` all obey this).
+- The deferred-rim queue in `GlassSurface` (§3/§6) has no opt-out for surfaces meant to
+  render ABOVE an already-dimmed screen (the pack browser's detail modal, `EnumSetting`'s
+  popup). Harmless today — those screens haven't adopted the glass pass, so their rims
+  paint in place — but their migration needs a "above the dim, rim included" escape hatch.
 - No TODO/FIXME comments exist in `com/aurora` — intent lives in long javadocs. Read them.
 - `run/` at repo root is a live dev client (its `logs/latest.log` is where `[BlurPanel]` /
   `[GlassStats]` / `[canvas-cost]` evidence lands).
