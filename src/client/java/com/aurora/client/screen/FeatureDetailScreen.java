@@ -265,6 +265,16 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         // Children: Done button.
         super.render(ctx, mouseX, mouseY, delta);
 
+        // Optional credit line (FeatureMetadata.subtitle) at the title
+        // position, vertically centered on the Done/Reset row. The detail
+        // screen draws no title of its own, so this reads as the screen's
+        // small caption; only Better Hitreg sets one today.
+        if (meta.subtitle != null && !meta.subtitle.isEmpty() && this.font != null) {
+            int ty = DONE_TOP_MARGIN + (DONE_H - this.font.lineHeight) / 2;
+            ctx.drawString(this.font, meta.subtitle, TITLE_X, ty,
+                    com.aurora.client.util.AuroraTheme.TEXT_SECONDARY, false);
+        }
+
         // Label-hover description tooltip floats above the rows.
         FeatureSetting.drawPendingTooltip(ctx, this.width, this.height);
 

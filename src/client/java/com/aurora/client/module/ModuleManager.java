@@ -25,6 +25,7 @@ public class ModuleManager {
         modules.add(new Module("alerts", "Alerts", "On-screen popup warnings for low armor durability, low hunger, and potion effects about to expire. All alerts share the same popup and sound system.", Module.Category.HUD));
         modules.add(new Module("crosshair", "Crosshair", "Replaces the vanilla crosshair with a fully customizable one.", Module.Category.HUD));
         modules.add(new Module("hitbox", "Hitbox", "Draws entity hitboxes with your own color, line width, and optional eye-level and look-direction lines.", Module.Category.HUD));
+        modules.add(new Module("better_hitreg", "Better Hitreg", "Client-side hit registration feedback for PvP — plays your hit sound and hurt animation the instant you swing instead of waiting for the server, tracks ghosted and misplaced hits, and adds reach rings, target hitboxes and a practice arena. Original project by Jass.", Module.Category.HUD));
         modules.add(new Module("hit_color", "Hit Color", "Recolors the red flash that overlays an entity when it takes damage.", Module.Category.HUD));
         modules.add(new Module("info_module", "Info HUD", "A configurable corner readout of useful at-a-glance info — FPS, coordinates, time of day, facing, biome, dimension, light level, playtime and more.", Module.Category.HUD));
         modules.add(new Module("cps", "CPS", "Shows your current clicks-per-second as a HUD counter.", Module.Category.HUD));

@@ -22,9 +22,17 @@ public class ButtonSetting extends FeatureSetting {
     private int lastWidth = 240;
 
     public ButtonSetting(String label, Runnable onPress) {
-        super(label);
-        this.button = new Button("Preview", onPress).glassBackground(true);
+        this(label, "Preview", onPress);
     }
+
+    /** Variant with an explicit button caption (the default reads "Preview"). */
+    public ButtonSetting(String label, String buttonText, Runnable onPress) {
+        super(label);
+        this.button = new Button(buttonText, onPress).glassBackground(true);
+    }
+
+    @Override public ButtonSetting description(String desc) { super.description(desc); return this; }
+    @Override public ButtonSetting description(java.util.function.Supplier<String> desc) { super.description(desc); return this; }
 
     @Override public int baseHeight() { return CONTROL_H; }
     @Override public int height() { return CONTROL_H + descriptionHeight(lastWidth); }

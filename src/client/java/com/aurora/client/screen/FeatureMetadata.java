@@ -29,6 +29,13 @@ public final class FeatureMetadata {
      */
     public final List<String> resetPrefixes;
 
+    /**
+     * Optional one-line credit/subtitle drawn by {@code FeatureDetailScreen}
+     * under the title position. {@code null} (the default) draws nothing.
+     * Set only by the Better Hitreg entry ("Original project by Jass").
+     */
+    public String subtitle;
+
     public FeatureMetadata(String id, String displayName, String description,
                            BooleanSupplier getEnabled, Consumer<Boolean> setEnabled) {
         this(id, displayName, description, getEnabled, setEnabled, new ArrayList<>(), Collections.emptyList());
@@ -51,6 +58,12 @@ public final class FeatureMetadata {
         this.setEnabled = setEnabled;
         this.settings = settings;
         this.resetPrefixes = resetPrefixes;
+    }
+
+    /** Fluent setter for {@link #subtitle}. */
+    public FeatureMetadata subtitle(String subtitle) {
+        this.subtitle = subtitle;
+        return this;
     }
 
     public boolean isEnabled() { return getEnabled.getAsBoolean(); }
