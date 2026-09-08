@@ -30,7 +30,7 @@ public final class FeatureIcons {
         ICONS.put("crosshair",             "\uE55C"); // gps_fixed (target)
         ICONS.put("hitbox",                "\uE3C2"); // crop_free (box outline)
         ICONS.put("hit_color",             "\uE3B8"); // colorize (dropper)
-        ICONS.put("better_hitreg",         "\uE55C"); // gps_fixed (target) — shared with crosshair: the bundled font is a subset of exactly these codepoints and full_material.ttf is a 0-byte placeholder, so no new glyph could be added
+        ICONS.put("better_hitreg",         "\uF889"); // swords — crossed blades, melee PvP; subsetting requires the real full_material.ttf (see subset_script.py)
         ICONS.put("info_module",           "\uE88E"); // info
         ICONS.put("cps",                   "\uE323"); // mouse
         ICONS.put("armor_hud",             "\uF014"); // gpp_maybe (shield / alert)

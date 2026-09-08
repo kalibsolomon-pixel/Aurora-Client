@@ -665,10 +665,14 @@ on the target screens but a real side effect on every other raised control mod-w
   integration, the code is integrated (not vendored), and credit is preserved in-file on
   every moved class, in `hitreg/BetterHitreg.java`'s notes, and as the detail screen's
   subtitle. Still open and unrelated: repo LICENSE (CC0) ≠ fabric.mod.json (`MIT`).
-- Better Hitreg's card icon reuses Crosshair's `gps_fixed` glyph — the bundled
-  `material_symbols_rounded.ttf` is a subset of exactly the `FeatureIcons` codepoints and
-  root-level `full_material.ttf` is a 0-byte placeholder, so no new glyph can be subset
-  until a real full font is dropped in.
+- Better Hitreg's card icon is the distinct `swords` glyph (U+F889, resolved 2026-09-08;
+  it previously reused Crosshair's `gps_fixed`). The subset was regenerated from the real
+  Material Symbols Rounded variable font placed at root-level `full_material.ttf`
+  (gitignored by design; if missing, re-download
+  `variablefont/MaterialSymbolsRounded[FILL,GRAD,opsz,wght].ttf` from
+  google/material-design-icons and run `subset_script.py`'s fontTools command — the script
+  itself still hardcodes a Windows path). The bundled `material_symbols_rounded.ttf`
+  remains a subset of exactly the `FeatureIcons` codepoints.
 - `assets/aurora/textures/gui/module_icons/` ships two dev scripts + `settings.svg`;
   root-level `inspect_font3.py` has a hardcoded Windows path; font `license.txt` covers a
   removed font (Source Sans Pro).
