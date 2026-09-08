@@ -9,6 +9,7 @@ import com.aurora.client.ui.component.ButtonWidget;
 import com.aurora.client.ui.component.GlassEditBox;
 import com.aurora.client.ui.component.GlassSurface;
 import com.aurora.client.ui.component.ThemedScreen;
+import com.aurora.client.ui.component.Toast;
 import com.aurora.client.ui.util.RenderUtil;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
@@ -53,8 +54,7 @@ public class ProfileManagerScreen extends Screen implements ThemedScreen {
     private final Screen parent;
 
     /** Toast feedback ("Switched to X", "Created Y", …). */
-    private String flashText = null;
-    private long flashUntilMs = 0L;
+    private final Toast toast = new Toast();
 
     /** Inline rename editor state. {@code -1} = not editing. */
     private int editingIndex = -1;
@@ -233,18 +233,7 @@ public class ProfileManagerScreen extends Screen implements ThemedScreen {
         if (editor != null) editor.render(ctx, mouseX, mouseY, delta);
 
         // Toast.
-        if (flashText != null && System.currentTimeMillis() < flashUntilMs) {
-            long remaining = flashUntilMs - System.currentTimeMillis();
-            int alpha = (int) Math.min(255, remaining > 250 ? 220 : remaining * 220 / 250);
-            int textColor = (alpha << 24) | (ThemeManager.color(ThemeToken.ON_OVERLAY) & 0x00FFFFFF);
-            int bgColor = ThemeManager.withAlpha(ThemeManager.color(ThemeToken.OVERLAY_DIM), alpha * 160 / 255);
-            int tw = this.font.width(flashText) + 16;
-            int tx = (this.width - tw) / 2;
-            int ty = this.height - 32;
-            RenderUtil.drawRoundedRectAA(ctx, tx, ty, tw, 18, 4, bgColor);
-            AuroraFontRenderer.drawCentered(ctx, this.font, Component.literal(flashText),
-                    this.width / 2, ty + 5, textColor);
-        }
+        toast.render(ctx, this.font, this.width, this.height, 4);
     }
 
     /**
@@ -625,8 +614,7 @@ public class ProfileManagerScreen extends Screen implements ThemedScreen {
     }
 
     private void flash(String text) {
-        flashText = text;
-        flashUntilMs = System.currentTimeMillis() + 1500L;
+        toast.flash(text, 1500L);
     }
 
     @Override

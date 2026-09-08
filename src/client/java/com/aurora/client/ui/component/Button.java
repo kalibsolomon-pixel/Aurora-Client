@@ -5,6 +5,7 @@ import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.util.AuroraAnim;
+import com.aurora.client.util.HoverAnim;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -53,9 +54,8 @@ public class Button extends Widget {
 
     private GlassStyle glassStyle = GlassStyle.OFF;
 
-    private long hoverStartMs = 0;
-    private boolean wasActive = false;
-    private float hoverT = 0f;
+    /** Hover crossfade, on the same easeOutCubic curve the hand-rolled version used. */
+    private final HoverAnim hoverAnim = new HoverAnim(HOVER_MS, HoverAnim.EASE_OUT_CUBIC);
 
     private long pressDownStartMs = -1L;
 
@@ -149,7 +149,7 @@ public class Button extends Widget {
         if (tr == null) return;
 
         boolean active = !disabled && inBounds(mouseX, mouseY, x, y, w, h);
-        advanceHover(active);
+        float hoverT = hoverAnim.update(active);
         float scale = currentScale();
 
         float cx = x + w / 2f;
@@ -222,21 +222,6 @@ public class Button extends Widget {
         pressDownStartMs = System.currentTimeMillis();
         if (onPress != null) onPress.run();
         return true;
-    }
-
-    private void advanceHover(boolean active) {
-        if (active != wasActive) {
-            hoverStartMs = System.currentTimeMillis() - (long) ((1f - hoverT) * HOVER_MS);
-            wasActive = active;
-        }
-        float target = active ? 1f : 0f;
-        if (hoverT != target) {
-            long elapsed = System.currentTimeMillis() - hoverStartMs;
-            float raw = Math.min(1f, Math.max(0f, elapsed / (float) HOVER_MS));
-            float t = active ? raw : (1f - raw);
-            hoverT = AuroraAnim.easeOutCubic(t);
-            if (raw >= 1f) hoverT = target;
-        }
     }
 
     private float currentScale() {

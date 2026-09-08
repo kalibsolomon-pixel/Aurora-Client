@@ -10,6 +10,7 @@ import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.component.Button;
 import com.aurora.client.ui.component.ButtonWidget;
 import com.aurora.client.ui.component.ThemedScreen;
+import com.aurora.client.ui.component.Toast;
 import com.aurora.client.ui.render.blur.BlurPanelRenderer;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.util.AuroraAnim;
@@ -213,13 +214,22 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
     private boolean sidebarDragging = false;
 
     // ---- Eased hover state (keyed by stable index: tab slug / project id / "card"+i) ----
-    private final Map<String, Float> hoverT = new HashMap<>();
-    private final Map<String, Long> hoverStart = new HashMap<>();
-    private final Map<String, Boolean> hoverActive = new HashMap<>();
+    // One state object per key instead of three parallel maps. Deliberately
+    // NOT util/HoverAnim: these hovers EASE IN from zero on first hover,
+    // while HoverAnim (locked at 0 at rest) settles instantly on its first
+    // target=true frame — adopting it would visibly change every card's
+    // first hover-in. Same easing curve (easeOutCubic) as HoverAnim's
+    // EASE_OUT_CUBIC.
+    private final Map<String, HoverEase> hovers = new HashMap<>();
+
+    private static final class HoverEase {
+        float t;
+        Long start;
+        boolean active;
+    }
 
     // ---- Toast feedback ----
-    private String toastText = null;
-    private long toastUntilMs = 0L;
+    private final Toast toast = new Toast();
 
     // ---- Pack detail modal ----
     private ModrinthProject detailProject = null;
@@ -473,18 +483,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         super.render(g, mouseX, mouseY, delta);
 
         // Toast
-        if (toastText != null && System.currentTimeMillis() < toastUntilMs) {
-            long remaining = toastUntilMs - System.currentTimeMillis();
-            int alpha = (int) Math.min(255, remaining > 250 ? 220 : remaining * 220 / 250);
-            int textColor = (alpha << 24) | (ThemeManager.color(ThemeToken.ON_OVERLAY) & 0x00FFFFFF);
-            int bgColor = ThemeManager.withAlpha(ThemeManager.color(ThemeToken.OVERLAY_DIM), alpha * 160 / 255);
-            int tw = this.font.width(toastText) + 16;
-            int tx = (this.width - tw) / 2;
-            int ty = this.height - 32;
-            RenderUtil.drawRoundedRectAA(g, tx, ty, tw, 18, AuroraTheme.RADIUS_SMALL, bgColor);
-            AuroraFontRenderer.drawCentered(g, this.font, Component.literal(toastText),
-                    this.width / 2, ty + 5, textColor);
-        }
+        toast.render(g, this.font, this.width, this.height, AuroraTheme.RADIUS_SMALL);
 
         // Detail modal (drawn last so it overlays everything).
         if (detailProject != null || detailOpenT > 0f) {
@@ -1208,22 +1207,19 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
      * transitions so a hover-out plays the reverse curve smoothly.
      */
     private float updateHover(String key, boolean active) {
-        boolean wasActive = hoverActive.getOrDefault(key, false);
-        if (active != wasActive) {
-            hoverStart.put(key, System.currentTimeMillis());
-            hoverActive.put(key, active);
+        HoverEase h = hovers.computeIfAbsent(key, k -> new HoverEase());
+        if (active != h.active) {
+            h.start = System.currentTimeMillis();
+            h.active = active;
         }
-        float cur = hoverT.getOrDefault(key, 0f);
-        if (active && cur >= 1f) return 1f;
-        if (!active && cur <= 0f) return 0f;
+        if (active && h.t >= 1f) return 1f;
+        if (!active && h.t <= 0f) return 0f;
 
-        Long start = hoverStart.get(key);
-        if (start == null) return active ? 1f : 0f;
-        float raw = AuroraAnim.clamp01((System.currentTimeMillis() - start) / (float) HOVER_MS);
+        if (h.start == null) return active ? 1f : 0f;
+        float raw = AuroraAnim.clamp01((System.currentTimeMillis() - h.start) / (float) HOVER_MS);
         float t = active ? raw : (1f - raw);
-        float eased = AuroraAnim.easeOutCubic(t);
-        hoverT.put(key, eased);
-        return eased;
+        h.t = AuroraAnim.easeOutCubic(t);
+        return h.t;
     }
 
     // ------------------------------------------------------------------
@@ -1309,8 +1305,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
     }
 
     private void flashToast(String text) {
-        toastText = text;
-        toastUntilMs = System.currentTimeMillis() + 3000L;
+        toast.flash(text, 3000L);
     }
 
     @Override

@@ -11,6 +11,7 @@ import com.aurora.client.ui.component.ColorSwatch;
 import com.aurora.client.ui.component.GlassEditBox;
 import com.aurora.client.ui.component.GlassSurface;
 import com.aurora.client.ui.component.ThemedScreen;
+import com.aurora.client.ui.component.Toast;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.util.WorldScope;
@@ -63,8 +64,7 @@ public class WaypointManagerScreen extends Screen implements ThemedScreen {
     private static final int ROW_INSET    = 8;
 
     /** Toast-style transient feedback for clipboard copy. */
-    private String flashText = null;
-    private long   flashUntilMs = 0L;
+    private final Toast toast = new Toast();
 
     private final Screen parent;
     private double scrollY = 0;
@@ -226,18 +226,7 @@ public class WaypointManagerScreen extends Screen implements ThemedScreen {
 
         // Transient toast for clipboard copies. Fades over the last 250ms
         // of its lifetime so the visual confirmation isn't jarring.
-        if (flashText != null && System.currentTimeMillis() < flashUntilMs) {
-            long remaining = flashUntilMs - System.currentTimeMillis();
-            int alpha = (int) Math.min(255, remaining > 250 ? 220 : remaining * 220 / 250);
-            int textColor = (alpha << 24) | (ThemeManager.color(ThemeToken.ON_OVERLAY) & 0x00FFFFFF);
-            int bgColor   = ThemeManager.withAlpha(ThemeManager.color(ThemeToken.OVERLAY_DIM), alpha * 160 / 255);
-            int tw = this.font.width(flashText) + 16;
-            int tx = (this.width - tw) / 2;
-            int ty = this.height - 32;
-            RenderUtil.drawRoundedRectAA(ctx, tx, ty, tw, 18, 4, bgColor);
-            AuroraFontRenderer.drawCentered(ctx, this.font, Component.literal(flashText),
-                    this.width / 2, ty + 5, textColor);
-        }
+        toast.render(ctx, this.font, this.width, this.height, 4);
 
         // Inline name editor sits on top of its row — render after super
         // so its caret and selection draw above the row swatches. Its
@@ -559,8 +548,7 @@ public class WaypointManagerScreen extends Screen implements ThemedScreen {
     }
 
     private void flash(String text) {
-        flashText = text;
-        flashUntilMs = System.currentTimeMillis() + 1500L;
+        toast.flash(text, 1500L);
     }
 
     @Override
