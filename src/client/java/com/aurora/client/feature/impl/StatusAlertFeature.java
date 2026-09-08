@@ -63,7 +63,8 @@ public class StatusAlertFeature implements Feature {
         if (nowLow && !wasLowHunger) {
             AlertManager.fire("LOW HUNGER",
                     level + " / 20 drumsticks",
-                    null, 0xFFFFAA00, AlertManager.Priority.WARNING, 3_000L);
+                    null, com.aurora.client.theme.HudStatus.ALERT_CAUTION,
+                    AlertManager.Priority.WARNING, 3_000L);
         }
         wasLowHunger = nowLow;
     }

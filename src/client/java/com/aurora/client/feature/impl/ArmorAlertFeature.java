@@ -63,7 +63,8 @@ public class ArmorAlertFeature implements Feature {
                         : "Boots";
                 AlertManager.fire("LOW DURABILITY",
                         slotName + " · " + pct + "%",
-                        s, 0xFFFF5555, AlertManager.Priority.WARNING, 3_000L);
+                        s, com.aurora.client.theme.HudStatus.ALERT_URGENT,
+                        AlertManager.Priority.WARNING, 3_000L);
             }
             wasLowArmor.put(slot, nowLow);
         }
@@ -96,7 +97,8 @@ public class ArmorAlertFeature implements Feature {
             String label = slot == EquipmentSlot.MAINHAND ? "Main Hand" : "Off Hand";
             AlertManager.fire("LOW DURABILITY",
                     label + " · " + pct + "%",
-                    s, 0xFFFF5555, AlertManager.Priority.WARNING, 3_000L);
+                    s, com.aurora.client.theme.HudStatus.ALERT_URGENT,
+                    AlertManager.Priority.WARNING, 3_000L);
         }
         if (slot == EquipmentSlot.MAINHAND) wasLowMainHand = nowLow;
         else wasLowOffHand = nowLow;

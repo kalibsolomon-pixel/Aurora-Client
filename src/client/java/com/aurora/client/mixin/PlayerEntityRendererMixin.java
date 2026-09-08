@@ -66,7 +66,7 @@ public abstract class PlayerEntityRendererMixin {
             if (entry != null) {
                 int ms = entry.getLatency();
                 String pingText = ms < 0 ? "?" : ms + "ms";
-                int color = ms < 0 ? 0xFFAAAAAA : PingModule.pingColor(ms);
+                int color = ms < 0 ? com.aurora.client.theme.HudStatus.OFF : PingModule.pingColor(ms);
                 decorated.append(Component.literal("  "))
                          .append(Component.literal(pingText).withColor(color));
                 changed = true;

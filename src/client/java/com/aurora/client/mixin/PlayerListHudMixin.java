@@ -44,7 +44,7 @@ public abstract class PlayerListHudMixin {
         }
 
         String Component = Integer.toString(latency);
-        int color = colorFor(latency);
+        int color = com.aurora.client.hud.module.PingModule.pingColor(latency);
         int textW = client.font.width(Component);
 
         // Right-align the number within the icon slot so it sits where the
@@ -60,13 +60,5 @@ public abstract class PlayerListHudMixin {
         }
 
         ci.cancel();
-    }
-
-    private static int colorFor(int ms) {
-        if (ms < 80)  return 0xFF55FF55;
-        if (ms < 150) return 0xFFCCFF55;
-        if (ms < 250) return 0xFFFFFF55;
-        if (ms < 400) return 0xFFFFAA33;
-        return 0xFFFF5555;
     }
 }

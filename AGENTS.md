@@ -364,6 +364,18 @@ and defers each surface's rim finish past the dim — §6. Adopted by
 `ProfileManagerScreen`, `WaypointManagerScreen`, `Button`, `EditBoxMixin` (2026-09-05);
 the ~8 remaining inline copies of the idiom migrate in the approved follow-up).
 
+**HUD status colors — `theme/HudStatus`** (R6 Part 1, 2026-09-08): every red/green/amber the
+in-game HUD paints (latency tiers, toggle ON/OFF text, potion minutes, minimap entity dots,
+alert severities) reads from this one fixed-hue, mode-independent palette — NOT from the
+`SEMANTIC_*` tokens. That split is deliberate, not an oversight: the HUD's legacy hexes were
+never value-identical to the token values, the semantic tokens are UI-mode-locked (they
+darken in light mode — wrong for text floating over a bright world), and the 5-tier latency
+ladder can't collapse into 3 tokens. Unifying the VALUES with `SEMANTIC_*` would be a
+visible restyle and belongs to a screenshot-gated decision, not a casual refactor; until
+then `HudStatus` is the single place to change HUD status colors. Also in the HUD color
+story: `util/HudBackgrounds`' `AURORA` background mode is what reads the
+`HUD_BACKDROP_TOP/BOT` tokens (the audit's "exist unused" was stale).
+
 Rendering utilities: `RenderUtil` (float-precision AA rounded rects/circles/outlines +
 `beginCapture`/`RectSink` used by `UiLayerCache` — plus `DISCARD_SINK` and the
 capture-aware `fillLogical` for plain integer-cell fills), `AuroraShapes` (chamfered-octagon

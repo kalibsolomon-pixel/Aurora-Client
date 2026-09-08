@@ -715,13 +715,13 @@ import java.util.List;
                 color = 0xFFFFFFFF;
                 show = cfg.minimapShowPlayers;
             } else if (e instanceof Monster) {
-                color = 0xFFFF453A;
+                color = com.aurora.client.theme.HudStatus.DOT_HOSTILE;
                 show = cfg.minimapShowHostiles;
             } else if (e instanceof Animal) {
-                color = 0xFF30D158;
+                color = com.aurora.client.theme.HudStatus.DOT_PASSIVE;
                 show = cfg.minimapShowPassives;
             } else {
-                color = 0xFF8E8E93;
+                color = com.aurora.client.theme.HudStatus.DOT_NEUTRAL;
                 show = cfg.minimapShowPassives;
             }
             if (!show) continue;

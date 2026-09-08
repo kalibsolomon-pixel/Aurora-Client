@@ -71,13 +71,14 @@ public class PingModule extends HudModule {
         ctx.drawString(tr, buildText(), x, y, color, false);
     }
 
-    /** Same color algorithm as the tab-list ping — green→yellow→red. */
+    /**
+     * Same color algorithm as the tab-list ping — green→yellow→red. Values
+     * live in {@link com.aurora.client.theme.HudStatus} (the HUD layer's
+     * shared status palette); kept as a static here because the nametag and
+     * tab-list mixins call it too.
+     */
     public static int pingColor(int ms) {
-        if (ms < 80)  return 0xFF55FF55;
-        if (ms < 150) return 0xFFCCFF55;
-        if (ms < 250) return 0xFFFFFF55;
-        if (ms < 400) return 0xFFFFAA33;
-        return 0xFFFF5555;
+        return com.aurora.client.theme.HudStatus.latencyColor(ms);
     }
     @Override public String featureRegistryId() { return "ping_hud"; }
 }

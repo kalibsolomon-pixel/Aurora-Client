@@ -22,8 +22,10 @@ public class ToggleIndividualModule extends HudModule {
     public static final String SPRINT_ID = "toggle_sprint";
     public static final String SNEAK_ID  = "toggle_sneak";
 
-    private static final int COLOR_ON    = 0xFF55FF55;
-    private static final int COLOR_OFF   = 0xFFAAAAAA;
+    // State colors come from the HUD layer's shared status palette
+    // (com.aurora.client.theme.HudStatus); label text stays plain white.
+    private static final int COLOR_ON    = com.aurora.client.theme.HudStatus.ON;
+    private static final int COLOR_OFF   = com.aurora.client.theme.HudStatus.OFF;
     private static final int COLOR_LABEL = 0xFFFFFFFF;
 
     /** Which toggle this instance renders. */

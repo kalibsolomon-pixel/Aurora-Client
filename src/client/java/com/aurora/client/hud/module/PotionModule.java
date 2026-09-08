@@ -213,7 +213,8 @@ public class PotionModule extends HudModule {
         String secs = secondsString(e);
         int cx = x;
         if (mins != null) {
-            ctx.drawString(tr, mins, cx, y, 0xFF55FF55, false); // minutes — green
+            // Green minutes — the HUD's shared "plentiful time" status color.
+            ctx.drawString(tr, mins, cx, y, com.aurora.client.theme.HudStatus.ON, false);
             cx += tr.width(mins);
         }
         ctx.drawString(tr, secs, cx, y, 0xFFFFFFFF, false);     // seconds / infinity — white

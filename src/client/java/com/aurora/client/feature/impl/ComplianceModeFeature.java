@@ -93,7 +93,8 @@ public class ComplianceModeFeature implements Feature {
             if (cfg.complianceModeToast) {
                 AlertManager.fire("COMPLIANCE MODE",
                         "Strict features disabled for this server",
-                        null, 0xFFFFAA00, AlertManager.Priority.INFO, 4_000L);
+                        null, com.aurora.client.theme.HudStatus.ALERT_CAUTION,
+                        AlertManager.Priority.INFO, 4_000L);
             }
         } else if (!shouldComply && wasComplianceActive) {
             restoreFeatures(cfg);
@@ -101,7 +102,8 @@ public class ComplianceModeFeature implements Feature {
             if (cfg.complianceModeToast) {
                 AlertManager.fire("COMPLIANCE MODE",
                         "All features restored",
-                        null, 0xFF30D158, AlertManager.Priority.INFO, 4_000L);
+                        null, com.aurora.client.theme.HudStatus.RESTORED,
+                        AlertManager.Priority.INFO, 4_000L);
             }
         }
     }

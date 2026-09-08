@@ -26,8 +26,10 @@ import net.minecraft.network.chat.Component;
 public class ToggleSprintSneakModule extends HudModule {
     public static final String ID = "toggle_sprint_sneak";
 
-    private static final int COLOR_ON    = 0xFF55FF55;
-    private static final int COLOR_OFF   = 0xFFAAAAAA;
+    // State colors come from the HUD layer's shared status palette
+    // (com.aurora.client.theme.HudStatus); label text stays plain white.
+    private static final int COLOR_ON    = com.aurora.client.theme.HudStatus.ON;
+    private static final int COLOR_OFF   = com.aurora.client.theme.HudStatus.OFF;
     private static final int COLOR_LABEL = 0xFFFFFFFF;
 
     // Pre-built strings and Component instances — these never change at runtime.
