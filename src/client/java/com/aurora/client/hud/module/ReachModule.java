@@ -66,7 +66,7 @@ public class ReachModule extends HudModule {
         long age = System.currentTimeMillis() - ReachTrackerFeature.lastReachTime;
         if (age >= TOTAL_MS) return;
 
-        int baseColor = AuroraConfig.get().hudColor;
+        int baseColor = com.aurora.client.theme.HudText.color(AuroraConfig.get().hudColor);
         int baseAlpha = (baseColor >>> 24) & 0xFF;
         float fade = computeFade(age);
         int alpha = Math.round(baseAlpha * fade);

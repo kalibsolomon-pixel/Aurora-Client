@@ -211,7 +211,7 @@ public class InfoModule extends HudModule {
         if (!cfg.infoEnabled) return;
         Font tr = client.font;
         if (tr == null) return;
-        int color = cfg.hudColor;
+        int color = com.aurora.client.theme.HudText.color(cfg.hudColor);
         int lh = tr.lineHeight + 1;
         List<String> lines = linesCache.get();
         for (int i = 0; i < lines.size(); i++) {

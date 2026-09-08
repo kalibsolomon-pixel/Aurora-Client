@@ -303,7 +303,15 @@ public class AuroraConfig {
     public boolean showFps    = true;
     public boolean showCoords = true;
     public boolean showTime   = true;
-    public int     hudColor   = 0xFFFFFFFF;
+    /**
+     * Shared informational-text color for the plain-readout HUD modules
+     * (Info, CPS, Stats, Totem Pops, Reach, Armor text, Ping fallback,
+     * Keystrokes labels). 0 = follow the theme accent (factory default,
+     * resolved via {@link com.aurora.client.theme.HudText}); any non-zero
+     * ARGB is an explicit override and wins verbatim — including legacy
+     * configs that persisted the old white default 0xFFFFFFFF.
+     */
+    public int     hudColor   = 0;
 
     // ---- Info module — extended survival/QoL rows ----
     /** "Facing: N (-12°)" — cardinal direction + yaw degrees. */

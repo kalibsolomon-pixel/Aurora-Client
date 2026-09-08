@@ -68,7 +68,6 @@ public class KeystrokesModule extends HudModule {
     // ---- Palette ----
     /** Idle key fill: ~18% white glass over the backing panel. */
     private static final int KEY_IDLE_BG = 0x2EFFFFFF;
-    private static final int LABEL_FALLBACK = 0xFFFFFFFF;
 
     // ---- Press animation speeds (lerp factors, per second) ----
     private static final float PRESS_SPEED = 26f;
@@ -380,10 +379,15 @@ public class KeystrokesModule extends HudModule {
                 com.aurora.client.theme.ThemeToken.ACCENT) : c;
     }
 
-    /** Key labels follow the mod-wide HUD text color (default white). */
+    /**
+     * Key labels follow the mod-wide HUD text color — the same sentinel
+     * contract as every other hudColor reader ({@link
+     * com.aurora.client.theme.HudText}): 0 follows the theme accent, an
+     * explicit color wins. Before the sentinel this guard fell back to white,
+     * which was dead code in practice (hudColor's old default was white).
+     */
     private static int labelColor(AuroraConfig cfg) {
-        int c = cfg.hudColor;
-        return c == 0 ? LABEL_FALLBACK : c;
+        return com.aurora.client.theme.HudText.color(cfg.hudColor);
     }
 
     private static int extraCount(AuroraConfig cfg) {

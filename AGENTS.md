@@ -98,7 +98,9 @@ AuroraClient.java          Mod entrypoint: registers keybinds, HUD callbacks, fe
 │                           the custom crosshair, ParticleConfigSetting, ThemePreview…).
 ├── theme/                 THEME ENGINE (see §5): ThemeManager, ThemeResolver,
 │                          PaletteEngine, ResolvedTheme, ThemeToken (enum), ThemeDefinition,
-│                          ThemeMode, ThemeRoundness, ThemePresets, ThemeMigrator.
+│                          ThemeMode, ThemeRoundness, ThemePresets, ThemeMigrator,
+│                          HudStatus + HudText (HUD color policy: fixed-hue status
+│                          palette; follow-accent text-color sentinel).
 ├── ui/
 │   ├── component/         Shared themed widgets: Button (glass styles), ButtonWidget,
 │   │                      ToggleSwitch, Slider, SegmentedControl, RoundedPanel,
@@ -229,7 +231,7 @@ shift+right-click = lock, X = disable.
 | Hitbox (`hitbox`) | Custom entity hitboxes (self/target colors, eye-line, look line, width, see-through). Renders at plain vanilla interpolation — the smoother was **deliberately reverted** (desynced from model) | `hud/HitboxRenderer` (AFTER_ENTITIES) + `WorldLineRenderer`, `HitboxFeature`, `EntityRenderDispatcherMixin` |
 | Hit Color (`hit_color`) | Recolors hurt flash (port of harimasa/HitColor, MIT, credited) | `MixinOverlayTexture`, `EquipmentLayerRendererMixin`, `util/OverlayReloadListener` |
 | Better Hitreg (`better_hitreg`) | BetterHitreg by Jass, integrated with permission (credited in-file + screen subtitle). Client-side hit feedback: on your swing the target's hurt animation, the correct attack sound and crit/sharpness particles play locally after `hitregDelayMs` (0 = next frame) while the server's late copy is cancelled (`ServerMixin`/`NetworkMixin`→`DontAnimate` marker→`DamageMixin`); "Safe Regs Only"/shield rules; ghost + misplace detection over a rolling 100-hit window (surfaced as live tooltips on the Alert Delays/Ghosts/Misplaces toggles + "Reset Tracked Stats"); audio (mute other fights/self/them/non-hits, 1.8 sounds, OpenAL EFX muffle/sharpen via `SourceMixin`, metronome); render (hide other fights/animations/armor/particles, target + server hitbox, target cross, reach + jump rings, perfect-hit / jump-reset flash); practice arena (Unrender World via `ChunkMixin`, solid floor, floor grid); 19 ARGB overlay colors; six keybinds incl. the practice scoreboard. Fight tracking feeds the Stats Overlay (`Settings.addFight`). No chat/alert output at all (removed at integration). Card toggle = `hitregEnabled` master (ANDed into every `Toggle.toggled()` read); "Custom Hitreg" inside is upstream's own switch | `hitreg/*` (§2), `mixin/hitreg/*` (13), `AuroraConfig.hitreg*` (Reset prefix `hitreg`) |
-| Info HUD (`info_module`) | Corner readout, 13 individually toggleable rows (FPS/XYZ/time/facing/biome/light/memory/ping/CPS/playtime…); default background is the theme-derived `AURORA` gradient (`HUD_BACKDROP_*`, R6 P2 — was `NONE`) | `hud/module/InfoModule`, `PlaytimeFeature` (per-world buckets) |
+| Info HUD (`info_module`) | Corner readout, 13 individually toggleable rows (FPS/XYZ/time/facing/biome/light/memory/ping/CPS/playtime…); default background is the theme-derived `AURORA` gradient (`HUD_BACKDROP_*`, R6 P2 — was `NONE`); text follows the theme accent by default (shared `hudColor` sentinel, R6 ext — `theme/HudText`) | `hud/module/InfoModule`, `PlaytimeFeature` (per-world buckets) |
 | CPS (`cps`) | L/R clicks-per-second; counts from raw GLFW callback (polling caps at 20) | `CpsModule`, `CpsTracker`, `ClickTrackerFeature`, `MouseClickTrackerMixin` |
 | Armor HUD (`armor_hud`) | 4 pieces + durability text/bar, horizontal/vertical, VANILLA slot background | `hud/module/ArmorModule` |
 | Reach Display (`reach_display`) | Last attack distance; holds value through smoothstep fade. Polls attack key — no mixin | `ReachModule`, `ReachTrackerFeature` |
@@ -247,7 +249,7 @@ shift+right-click = lock, X = disable.
 | Minecraft Reflex (`reflex`) | Reflex-style latency reduction: GL timer-query GPU time + EWMA CPU frame time → hold CPU before input sampling | `ReflexMinecraftMixin`, `util/reflex/*` |
 | Animations (`animations`) | Swing curve + 1.8 swing arc, view-bob curve/amplitude, 1.7/1.8 damage tilt, idle held-item sway, frame-rate-independent entity movement smoothing (tau scales with server packet bundling) | `HeldItemRendererMixin`, `GameRendererBobMixin`, `DamageTiltMixin`, `LivingEntityRendererExtractMixin` + `EntityMovementSmoother`, `util/AnimationCurves`, cross-cutting `ThrottleDetector` |
 | Hotbar Bounce (`hotbar_bounce`) | White pulse outline on hotbar slot when stack count grows | `HotbarItemBounceMixin` → `HotbarBounceTracker` |
-| Keystrokes (`keystrokes`) | Key-panel overlay: WASD/mouse/CPS/space/sneak/sprint + up to 12 custom keys; pressed-key accent follows the theme accent by default (`keystrokesAccentColor == 0`, R6 P2; explicit color overrides) | `hud/module/KeystrokesModule` |
+| Keystrokes (`keystrokes`) | Key-panel overlay: WASD/mouse/CPS/space/sneak/sprint + up to 12 custom keys; pressed-key accent follows the theme accent by default (`keystrokesAccentColor == 0`, R6 P2; explicit color overrides); key labels follow the shared `hudColor` sentinel (R6 ext) | `hud/module/KeystrokesModule` |
 
 ### SETTINGS tab (11 tiles)
 
@@ -380,7 +382,30 @@ following the theme accent (`keystrokesAccentColor == 0` → `ThemeManager.color
 explicit color overrides; the pre-R6 hardcoded azure `0xFF30A5FF` is gone) and the Info
 HUD's default background mode is `AURORA` (was `NONE`), so the corner readout's panel is the
 theme-derived HUD_BACKDROP gradient out of the box. Both stay never-glass — color-token
-wiring only. The remaining 11 HUD modules' accent pass is a deliberate follow-up.
+wiring only.
+
+**HUD informational text — the `hudColor` sentinel, `theme/HudText`** (R6 extension,
+2026-09-08): the shared `AuroraConfig.hudColor` field read by every plain-readout HUD
+module — Info, CPS, Stats, Totem Pops, Reach, Armor durability text, Ping's
+unknown-latency fallback ("Ping: —"), and Keystrokes key labels (8 modules, 10 read
+sites) — now defaults to `0`, a follow-accent sentinel resolved through
+`HudText.color()` → `ThemeManager.color(ACCENT)`, the same resolution the Part 2 pilot
+gave `keystrokesAccentColor`. Any non-zero ARGB wins verbatim, including legacy configs
+that persisted the old white default `-1` — existing users see no change until they
+reset the field; the only reinterpreted value is a literal `0`, which previously drew
+fully-transparent (invisible) text. Keystrokes' key labels are part of the family (its
+old `c == 0 → white` guard was dead code); the pressed-key FILL stays the independent
+`keystrokesAccentColor`, so override + accent coexist on one panel. Deliberately NOT
+`HudStatus` (that palette is fixed-hue, never accent); both live in `theme/` as the
+HUD color policy pair. Verified by DevPilot `p3*` boots: sentinel text tracks the
+accent (OnePlus Red / Blue preset) across all 8 modules, explicit white overrides in
+every one of them while keystrokes fills + the Info panel's AURORA backdrop still
+track the theme, a key-absent config resolves to the accent, and the fixed-hue
+elements (HudStatus alert card, armor durability bars, minimap entity dots) are
+byte-identical across accents. The remaining hard calls stay deferred: Minimap
+(terrain/biome tint, frame ring), Crosshair/Hitbox/BlockOverlay, SaturationOverlay,
+Armor's durability bar, `WorldMapScreen`, `AuroraTitleScreen` — each has
+data-vs-chrome or fixed-hue questions the pilot sessions deferred on purpose.
 
 Rendering utilities: `RenderUtil` (float-precision AA rounded rects/circles/outlines +
 `beginCapture`/`RectSink` used by `UiLayerCache` — plus `DISCARD_SINK` and the
@@ -676,6 +701,20 @@ pattern on the pack browser's flat cards (one at-rest card template, hovered car
 and the color picker's four per-surface caches (R8; a drag re-rasterizes only the surfaces
 whose values changed). Pixel parity verified by A/B screenshot diff (≤0.11% beyond ±8/255,
 world-blur noise only).
+
+Landed 2026-09-08 after that (R6 extension of the Part 2 pilot): the shared
+`AuroraConfig.hudColor` field gained the follow-accent sentinel (default `0` →
+`theme/HudText.color()` → `ACCENT`; any non-zero value, including the pre-sentinel
+persisted white `-1`, wins verbatim). Its 8 consumer modules — Info, CPS, Stats, Totem
+Pops, Reach, Armor durability text, Ping's unknown-latency fallback, Keystrokes key
+labels — now render accent text out of the box; Keystrokes' `LABEL_FALLBACK` (dead
+code) was removed and its labels route through `HudText` while the pressed-key fill
+stays on the independent `keystrokesAccentColor`. Verified with the extended DevPilot
+`hud`-mode `p3*` variants (which now place every consumer at once, force the
+unknown-ping state, poke the totem/reach trackers, equip armor, and capture via
+vanilla `Screenshot.takeScreenshot` — framebuffer-exact, no desktop-grab geometry),
+across red/blue accents and explicit-white/fresh-config overrides; fixed-hue elements
+(alert card, armor bars, minimap dots) verified byte-stable. §5 has the full story.
 
 ---
 

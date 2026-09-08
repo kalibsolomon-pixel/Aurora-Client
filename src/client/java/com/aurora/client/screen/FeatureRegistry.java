@@ -552,7 +552,8 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                         new BooleanSetting("Playtime per-World",
                                 () -> cfg.infoPlaytimePerWorld, v -> cfg.infoPlaytimePerWorld = v)
                                 .description("On = show time spent in the current world / server only. Off = show the global lifetime total."),
-                        new ColorSetting("HUD Component Color", () -> cfg.hudColor, v -> cfg.hudColor = v),
+                        new ColorSetting("HUD Component Color", () -> cfg.hudColor, v -> cfg.hudColor = v)
+                                .description("Text color shared by the plain-readout HUD modules (this one, CPS, Stats, Totem Pops, Reach, Armor text, Keystrokes labels and Ping's unknown state). Defaults to following your theme accent; pick an explicit color to override it."),
                         new EnumSetting<>("Background", AuroraConfig.HudBackground.class,
                                 () -> cfg.infoBgMode, v -> cfg.infoBgMode = v)
                                 .description("Backdrop drawn behind the HUD text. NONE is transparent; SOLID fills a panel with the color below (best for readability over bright scenery); other modes use the theme's blurred/translucent styles."),

@@ -83,7 +83,7 @@ public class TotemPopModule extends HudModule {
         if (!AuroraConfig.get().totemPopEnabled) return;
         Font tr = client.font;
         if (tr == null) return;
-        int color = AuroraConfig.get().hudColor;
+        int color = com.aurora.client.theme.HudText.color(AuroraConfig.get().hudColor);
         int lh = tr.lineHeight + 1;
         List<String> lines = linesCache.get();
         for (int i = 0; i < lines.size(); i++) {

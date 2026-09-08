@@ -57,6 +57,7 @@ public class CpsModule extends HudModule {
         if (!AuroraConfig.get().cpsEnabled) return;
         Font tr = client.font;
         if (tr == null) return;
-        ctx.drawString(tr, textCache.get(), x, y, AuroraConfig.get().hudColor, false);
+        ctx.drawString(tr, textCache.get(), x, y,
+                com.aurora.client.theme.HudText.color(AuroraConfig.get().hudColor), false);
     }
 }

@@ -67,7 +67,9 @@ public class PingModule extends HudModule {
         Font tr = client.font;
         if (tr == null) return;
         int ms = cachedLatency.get();
-        int color = ms < 0 ? AuroraConfig.get().hudColor : pingColor(ms);
+        int color = ms < 0
+                ? com.aurora.client.theme.HudText.color(AuroraConfig.get().hudColor)
+                : pingColor(ms);
         ctx.drawString(tr, buildText(), x, y, color, false);
     }
 

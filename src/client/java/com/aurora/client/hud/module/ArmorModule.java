@@ -181,7 +181,7 @@ public class ArmorModule extends HudModule {
         AuroraConfig.ArmorDurabilityFormat fmt = cfg.armorDurabilityFormat;
         if (fmt == null) fmt = AuroraConfig.ArmorDurabilityFormat.REMAINING;
         ItemStack[] stacks = pieces(client);
-        int color = cfg.hudColor;
+        int color = com.aurora.client.theme.HudText.color(cfg.hudColor);
         boolean drawBars = cfg.armorShowDurabilityBars;
 
         if (cfg.armorHorizontal) {
@@ -249,7 +249,7 @@ public class ArmorModule extends HudModule {
         AuroraConfig cfg = AuroraConfig.get();
         AuroraConfig.ArmorDurabilityFormat fmt = cfg.armorDurabilityFormat;
         if (fmt == null) fmt = AuroraConfig.ArmorDurabilityFormat.REMAINING;
-        int textColor = cfg.hudColor;
+        int textColor = com.aurora.client.theme.HudText.color(cfg.hudColor);
         boolean drawBars = cfg.armorShowDurabilityBars;
         boolean horizontal = cfg.armorHorizontal;
 
