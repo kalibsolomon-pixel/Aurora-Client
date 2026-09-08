@@ -406,8 +406,11 @@ track the theme, a key-absent config resolves to the accent, and the fixed-hue
 elements (HudStatus alert card, armor durability bars, minimap entity dots) are
 byte-identical across accents. The remaining hard calls stay deferred: Minimap
 (terrain/biome tint, frame ring), Crosshair/Hitbox/BlockOverlay, SaturationOverlay,
-Armor's durability bar, `WorldMapScreen`, `AuroraTitleScreen` — each has
+Armor's durability bar, `AuroraTitleScreen` — each has
 data-vs-chrome or fixed-hue questions the pilot sessions deferred on purpose.
+(`WorldMapScreen` left this list 2026-09-08: its chrome got the chrome-only glass
+treatment — §6 table — and its map content/readouts were ruled content, hardcoded
+neutrals over map data.)
 
 Landed 2026-09-08 after that: **glass on the title screen, over the vanilla panorama**
 (two commits — mechanism, then adoption). Investigation first established what the
@@ -656,7 +659,7 @@ flags now default ON mod-wide. Status below is committed `master`.
 | `HudEditorScreen` | **Chrome-only** | Two floating action buttons, neutral raised ("navigation action, not a primary state") |
 | `WaypointManagerScreen` | **Full** | Raised glass rows + header/add buttons |
 | `ResourcePackBrowserScreen` | **Full** (2026-09-04; cards flat 2026-09-08) | Depressed glass sidebar (pre-dim pass, `SURFACE` tint, `sidebarGlass` flag) + detail modal; **cards FLAT by decision (audit R9/B2)** — their opaque hover-lerp tint fully occluded the blur, so per-card glass was pure cost and the main output-pool driver (B1 halved; each card's install button is still a glass `Button`); active category tab = accent-stained raised glass (inactive tabs stay flat by design — small transient rows inside an already-glass container); install/Retry/Close buttons are the shared `Button` painter (Install = stained primary, Retry = destructive, progress/Done = neutral; **success-green is not expressible through `Button` — mapped to stained/neutral, flagged**); `renderBackground` world-gating added; every radius now a token (`RADIUS_LARGE`/`RADIUS`/`RADIUS_SMALL`; only scrollbar-thumb capsule literals remain). Title removed + count moved below the search bar (was overlapping it). Thumbnails, search field, toast, scrollbars stay opaque/unchanged per convention. (The 2026-09-04 in-client verification at ~7/25/93% opacity, ROUND + SQUARE, predates the flat-cards change; the flat look is the screen's own long-standing decline-path appearance.) |
-| `WorldMapScreen` | **Not started** | Flat `RoundedPanel` prompt; only the name field is themed (via `EditBoxMixin`) |
+| `WorldMapScreen` | **Chrome-only** (2026-09-08) | The 3 toolbar buttons + the prompt's Cancel in NEUTRAL raised glass (`ButtonWidget.glassBackground`), prompt Create in STAINED (primary-action convention), and the create-waypoint prompt itself on DEPRESSED `GlassSurface.container` glass (WINDOW priority, `WINDOW_FILL` tint — the pack-browser detail-modal treatment; flat `RoundedPanel` fallback on decline); the name field was already raised glass via `EditBoxMixin`. `renderBackground` world-gate added (skip vanilla backdrop sandwich in-world — also saves its blur post-chain under a viewport the map fills anyway). Map content — void, tiles, waypoint markers, player arrow, bottom readouts — deliberately untouched; the readouts keep hardcoded white/gray because they float over map data where a mode-locked `ON_*` text token could go dark-on-dark in light mode. Glass samples the live backdrop behind the screen, NOT the map tiles: 1.21.11's deferred `GuiRenderState` means tile blits never reach the main target before the blur pass reads it — the same physics every glass surface has (only eager passes, like the title screen's panorama, are capturable) |
 | `AuroraTitleScreen` | **Chrome-only** (2026-09-08) | 5 floating glass buttons over the live vanilla panorama (4 neutral raised, Aurora Settings accent-stained — the ColorPicker-Apply convention); custom logo/backdrop/starfield blits and their PNGs removed (`title_background.png` stays — `SelectionScreenBackgroundMixin` still uses it). The screen calls `renderPanorama` then `BlurPanelRenderer.noteMenuBackdropDrawn()` — the frame-scoped declaration that is the one menu-context-guard exemption (§6 convention 5) — so the buttons blur the panorama through the ordinary world-reader capture; flat fallback whenever glass declines |
 | Toggles, sliders, HUD modules, tooltips/dropdowns-as-tooltips | **Never glass, by convention** | Opaque token surfaces |
 
@@ -759,6 +762,34 @@ unknown-ping state, poke the totem/reach trackers, equip armor, and capture via
 vanilla `Screenshot.takeScreenshot` — framebuffer-exact, no desktop-grab geometry),
 across red/blue accents and explicit-white/fresh-config overrides; fixed-hue elements
 (alert card, armor bars, minimap dots) verified byte-stable. §5 has the full story.
+
+Landed 2026-09-08 after that: **`WorldMapScreen` joined the glass rollout at
+chrome-only depth** (the `HudEditorScreen`/`ColorPickerScreen` tier — a few glass
+elements, no window treatment, no glass pass/overlay dim; surfaces paint in place,
+legacy order). The screen had already been migrated to shared components in an
+earlier pass (its §6 row said "Not started" but the buttons were `ButtonWidget`s and
+the prompt a token `RoundedPanel` — flat, since `Button.glassStyle` defaults OFF);
+this change opted the chrome into glass: the 3 toolbar buttons + prompt Cancel as
+NEUTRAL raised, prompt Create as STAINED (primary-action convention), the prompt
+panel itself as DEPRESSED `GlassSurface.container` glass (WINDOW priority — the
+pack-browser detail-modal treatment, chosen over "raised" per convention 2: a
+floating prompt that contains controls is a container/window, and windows recess),
+flat `RoundedPanel` fallback on decline, plus the standard `renderBackground`
+world-gate (also skips vanilla's blur post-chain, pure waste under a viewport the
+map fills). The map area is untouched by decision — tiles, void, waypoint markers,
+player arrow, pan/zoom logic all render through their existing path, and the bottom
+readouts keep hardcoded white/gray (content floating over map data; a mode-locked
+`ON_*` text token could go dark-on-dark in light mode). Noted openly: the glass
+samples the live backdrop, not the map tiles — tile blits are recorded into 1.21.11's
+deferred `GuiRenderState`, so they are never in the main target when the blur pass
+reads it; this is the same physics every glass surface has (the title screen's
+panorama is the one exception, being an eager pass). Verified by two DevPilot
+map-mode boots (pre/post change, same forced world state, tiles from the same
+saved regions, capture budget 0): chrome visibly changed to glass (GlassStats: 3
+CONTROL panels with the toolbar, +1 WINDOW/3 CONTROL with the prompt open,
+declines=0), and an A/B framebuffer diff confined to the chrome rects — map
+pixels byte-identical outside them (the player arrow's AA edge shifts with frame
+phase; documented, not a rendering change).
 
 ---
 

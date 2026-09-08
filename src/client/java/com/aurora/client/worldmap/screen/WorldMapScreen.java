@@ -6,7 +6,9 @@ import com.aurora.client.feature.impl.WaypointFeature;
 import com.aurora.client.screen.WaypointManagerScreen;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
+import com.aurora.client.ui.component.Button;
 import com.aurora.client.ui.component.ButtonWidget;
+import com.aurora.client.ui.component.GlassSurface;
 import com.aurora.client.ui.component.RoundedPanel;
 import com.aurora.client.ui.component.ThemedScreen;
 import com.aurora.client.worldmap.WorldMapClient;
@@ -56,13 +58,29 @@ import java.util.HashSet;
  * (the void background shows through). The screen is not a pause screen.
  *
  * <h2>Theming</h2>
- * On the shared component framework: toolbar/prompt buttons are the canonical
- * themed {@link ButtonWidget}, the create-waypoint prompt floats on a shared
- * {@link RoundedPanel}, and the prompt's name field is themed by the mod-wide
- * {@code EditBoxMixin} via {@link ThemedScreen}. Map-content colors (the void
- * backdrop, waypoint markers and the player arrow) are deliberately NOT theme
- * chrome — they render map data and structural shadows, following the same
- * content-vs-chrome convention as the color picker's pad.
+ * Chrome-only glass (the {@code HudEditorScreen}/{@code ColorPickerScreen}
+ * depth): the toolbar buttons and the prompt's Create/Cancel are the shared
+ * {@link ButtonWidget} in NEUTRAL raised glass (Create, the primary action,
+ * STAINED — the ColorPicker Apply convention), the create-waypoint prompt
+ * floats on DEPRESSED glass via {@link GlassSurface#container} (the pack
+ * browser's detail-modal treatment — a floating container is a window, and
+ * convention 2 makes windows recessed), and the prompt's name field is
+ * raised glass through the mod-wide {@code EditBoxMixin} via
+ * {@link ThemedScreen}. No glass pass / overlay dim — the map IS this
+ * screen's background, so the chrome paints in place (the legacy order
+ * every not-yet-migrated screen uses) and falls back to the flat token
+ * chrome on any decline. One physical note, shared with every glass surface
+ * in the mod: the capture samples the eagerly-rendered live world behind
+ * the screen, not the map tiles — 1.21.11's {@code GuiGraphics} records
+ * blits into a deferred render state, so tile pixels are never in the main
+ * target when the blur pass reads it (the same reason the title screen
+ * needed the panorama's eager pass). Map-content colors (the void backdrop,
+ * waypoint markers, the player arrow, the bottom readouts) are deliberately
+ * NOT theme chrome — they render map data and structural neutrals, following
+ * the same content-vs-chrome convention as the color picker's pad; the
+ * readouts keep hardcoded white/gray because they float over arbitrary
+ * terrain colors, where a mode-locked {@code ON_*} text token would go
+ * dark-on-dark in light mode.
  */
 public class WorldMapScreen extends Screen implements ThemedScreen {
 
@@ -85,7 +103,7 @@ public class WorldMapScreen extends Screen implements ThemedScreen {
 
     private ButtonWidget dimButton;
 
-    /** Themed chrome for the floating create-waypoint prompt (shared component). */
+    /** Flat-fallback chrome for the create-waypoint prompt (glass path: {@link #drawPromptPanel}). */
     private final RoundedPanel promptPanel = new RoundedPanel(false, ThemeToken.WINDOW_FILL);
 
     // ---- Inline "add waypoint" prompt (right-click on the map) ----
@@ -121,11 +139,12 @@ public class WorldMapScreen extends Screen implements ThemedScreen {
 
         dimButton = new ButtonWidget(12, 12, 176, 22,
                 Component.literal("Dimension: " + shortDim(currentDim())),
-                this::cycleDimension);
+                this::cycleDimension).glassBackground(true);
         addRenderableWidget(dimButton);
 
         addRenderableWidget(new ButtonWidget(12 + 176 + 8, 12, 140, 22,
-                Component.literal("Center on Player"), () -> followPlayer = true));
+                Component.literal("Center on Player"), () -> followPlayer = true)
+                .glassBackground(true));
 
         // Opens the existing Waypoint feature's own manager screen — the
         // single list stays owned and persisted there, never copied here.
@@ -134,7 +153,7 @@ public class WorldMapScreen extends Screen implements ThemedScreen {
                     if (this.minecraft != null) {
                         this.minecraft.setScreen(new WaypointManagerScreen(this));
                     }
-                }));
+                }).glassBackground(true));
 
         if (promptOpen) {
             promptPanelX = Mth.clamp(promptX, 4, Math.max(4, this.width - PROMPT_W - 4));
@@ -152,10 +171,14 @@ public class WorldMapScreen extends Screen implements ThemedScreen {
             promptName.setFocused(true);
             promptName.moveCursorToEnd(false);
             addRenderableWidget(promptName);
+            // Create = the primary action → STAINED glass (ColorPicker Apply
+            // convention); Cancel neutral, like every secondary control.
             addRenderableWidget(new ButtonWidget(promptPanelX + 10, promptPanelY + 48,
-                    96, 20, Component.literal("Create"), this::createFromPrompt, true));
+                    96, 20, Component.literal("Create"), this::createFromPrompt, true)
+                    .glassStyle(Button.GlassStyle.STAINED));
             addRenderableWidget(new ButtonWidget(promptPanelX + PROMPT_W - 106, promptPanelY + 48,
-                    96, 20, Component.literal("Cancel"), this::closePrompt));
+                    96, 20, Component.literal("Cancel"), this::closePrompt)
+                    .glassBackground(true));
         }
     }
 
@@ -321,6 +344,21 @@ public class WorldMapScreen extends Screen implements ThemedScreen {
     //  Rendering
     // ================================================================
 
+    /**
+     * Glass rollout: with a live world behind the screen, skip vanilla's
+     * background sandwich — the glass chrome samples the live backdrop, not
+     * an already-blurred one, and the vanilla blur post-chain would be pure
+     * wasted cost under a screen that fills the viewport with the map
+     * anyway. The map screen is only ever opened in-world, but the guard
+     * mirrors the renderer's own menu-context check so the fallback keeps
+     * its vanilla backdrop in any context where glass cannot engage.
+     */
+    @Override
+    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float delta) {
+        if (GlassSurface.liveWorldBackdrop()) return;
+        super.renderBackground(g, mouseX, mouseY, delta);
+    }
+
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float delta) {
         g.fill(0, 0, this.width, this.height, VOID_COLOR);
@@ -334,11 +372,17 @@ public class WorldMapScreen extends Screen implements ThemedScreen {
 
     /** Backdrop + caption for the create-waypoint prompt (widgets render in super). */
     private void drawPromptPanel(GuiGraphics g) {
-        // Shared themed panel chrome: WINDOW_FILL (tracks Background Opacity),
-        // WINDOW_OUTLINE ring, theme roundness — identical to every other
-        // floating panel in the mod, replacing the old hardcoded near-black
-        // fill + white top-edge highlight.
-        promptPanel.renderShapes(g, promptPanelX, promptPanelY, PROMPT_W, PROMPT_H);
+        // Floating modal-style container: DEPRESSED glass (the pack browser's
+        // detail-modal convention) with the WINDOW_FILL tint — the same token
+        // the flat RoundedPanel fallback below tints with, so Background
+        // Opacity means the same thing on both paths. The glass rim replaces
+        // the WINDOW_OUTLINE ring (renderShapes omits it when glass drew); on
+        // any decline (menu context, screenshot interlock, TRANSPARENT style)
+        // the flat panel returns unchanged.
+        float radius = ThemeManager.current().roundness().radius();
+        boolean glassDrew = GlassSurface.container(g, promptPanelX, promptPanelY,
+                PROMPT_W, PROMPT_H, radius);
+        promptPanel.renderShapes(g, promptPanelX, promptPanelY, PROMPT_W, PROMPT_H, glassDrew);
         g.drawString(this.font, "Add waypoint at " + promptWorldX + ", " + promptWorldZ,
                 promptPanelX + 10, promptPanelY + 12,
                 ThemeManager.color(ThemeToken.ON_SURFACE), false);
