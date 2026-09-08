@@ -1336,7 +1336,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                         new ColorSetting("Accent Color",
                                 () -> cfg.keystrokesAccentColor,
                                 v -> cfg.keystrokesAccentColor = v)
-                                .description("The color a key turns while pressed. Pick something that stands out over your usual game backgrounds."),
+                                .description("The color a key turns while pressed. Defaults to following your theme accent; pick an explicit color to override it. Reset via \"Reset to defaults\"."),
                         SliderSetting.of("Panel Opacity",
                                 () -> cfg.keystrokesBgOpacity,
                                 v -> cfg.keystrokesBgOpacity = v, 0.0, 1.0).percent()

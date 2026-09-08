@@ -548,7 +548,13 @@ public class AuroraConfig {
     public boolean lavaHideOverlay = false;   // true = cancel orange overlay entirely
 
     // Per-module background settings
-    public HudBackground infoBgMode = HudBackground.NONE;
+    /**
+     * Info HUD background mode. Defaults to {@code AURORA} (R6 Part 2): the
+     * corner readout's panel is the theme-derived HUD_BACKDROP gradient —
+     * near-black hued toward the accent at the top, accent at the bottom —
+     * so the panel follows the theme like the rest of the HUD accents.
+     */
+    public HudBackground infoBgMode = HudBackground.AURORA;
     public int infoBgColor = 0x80000000;
 
     public HudBackground keystrokesBgMode = HudBackground.SOLID;
@@ -859,8 +865,13 @@ public class AuroraConfig {
     public boolean keystrokesShowSpacebar = true;
     /** Show the sneak/sprint key row. */
     public boolean keystrokesShowExtra = true;
-    /** ARGB accent color used for the pressed state of a key. */
-    public int keystrokesAccentColor = 0xFF30A5FF;
+    /**
+     * ARGB accent color used for the pressed state of a key. {@code 0} (the
+     * default, R6 Part 2) means "follow the theme accent" — the pressed-key
+     * highlight tracks {@code ThemeManager.color(ACCENT)}; any explicit ARGB
+     * value overrides it.
+     */
+    public int keystrokesAccentColor = 0;
     /** Backing panel opacity, 0..1. Key labels are unaffected. */
     public double keystrokesBgOpacity = 0.55;
     /**

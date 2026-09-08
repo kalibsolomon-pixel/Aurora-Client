@@ -69,8 +69,6 @@ public class KeystrokesModule extends HudModule {
     /** Idle key fill: ~18% white glass over the backing panel. */
     private static final int KEY_IDLE_BG = 0x2EFFFFFF;
     private static final int LABEL_FALLBACK = 0xFFFFFFFF;
-    /** Default pressed accent: soft azure, legible over varied backgrounds. */
-    private static final int DEFAULT_ACCENT = 0xFF30A5FF;
 
     // ---- Press animation speeds (lerp factors, per second) ----
     private static final float PRESS_SPEED = 26f;
@@ -370,9 +368,16 @@ public class KeystrokesModule extends HudModule {
         };
     }
 
+    /**
+     * The pressed-key accent. An explicit {@code keystrokesAccentColor}
+     * (non-zero) wins; the default {@code 0} follows the theme accent, so
+     * the highlight matches whatever accent the user picked (R6 Part 2 —
+     * this used to be a hardcoded azure no theme setting could reach).
+     */
     private static int accentColor(AuroraConfig cfg) {
         int c = cfg.keystrokesAccentColor;
-        return c == 0 ? DEFAULT_ACCENT : c;
+        return c == 0 ? com.aurora.client.theme.ThemeManager.color(
+                com.aurora.client.theme.ThemeToken.ACCENT) : c;
     }
 
     /** Key labels follow the mod-wide HUD text color (default white). */

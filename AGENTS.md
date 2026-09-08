@@ -229,7 +229,7 @@ shift+right-click = lock, X = disable.
 | Hitbox (`hitbox`) | Custom entity hitboxes (self/target colors, eye-line, look line, width, see-through). Renders at plain vanilla interpolation — the smoother was **deliberately reverted** (desynced from model) | `hud/HitboxRenderer` (AFTER_ENTITIES) + `WorldLineRenderer`, `HitboxFeature`, `EntityRenderDispatcherMixin` |
 | Hit Color (`hit_color`) | Recolors hurt flash (port of harimasa/HitColor, MIT, credited) | `MixinOverlayTexture`, `EquipmentLayerRendererMixin`, `util/OverlayReloadListener` |
 | Better Hitreg (`better_hitreg`) | BetterHitreg by Jass, integrated with permission (credited in-file + screen subtitle). Client-side hit feedback: on your swing the target's hurt animation, the correct attack sound and crit/sharpness particles play locally after `hitregDelayMs` (0 = next frame) while the server's late copy is cancelled (`ServerMixin`/`NetworkMixin`→`DontAnimate` marker→`DamageMixin`); "Safe Regs Only"/shield rules; ghost + misplace detection over a rolling 100-hit window (surfaced as live tooltips on the Alert Delays/Ghosts/Misplaces toggles + "Reset Tracked Stats"); audio (mute other fights/self/them/non-hits, 1.8 sounds, OpenAL EFX muffle/sharpen via `SourceMixin`, metronome); render (hide other fights/animations/armor/particles, target + server hitbox, target cross, reach + jump rings, perfect-hit / jump-reset flash); practice arena (Unrender World via `ChunkMixin`, solid floor, floor grid); 19 ARGB overlay colors; six keybinds incl. the practice scoreboard. Fight tracking feeds the Stats Overlay (`Settings.addFight`). No chat/alert output at all (removed at integration). Card toggle = `hitregEnabled` master (ANDed into every `Toggle.toggled()` read); "Custom Hitreg" inside is upstream's own switch | `hitreg/*` (§2), `mixin/hitreg/*` (13), `AuroraConfig.hitreg*` (Reset prefix `hitreg`) |
-| Info HUD (`info_module`) | Corner readout, 13 individually toggleable rows (FPS/XYZ/time/facing/biome/light/memory/ping/CPS/playtime…) | `hud/module/InfoModule`, `PlaytimeFeature` (per-world buckets) |
+| Info HUD (`info_module`) | Corner readout, 13 individually toggleable rows (FPS/XYZ/time/facing/biome/light/memory/ping/CPS/playtime…); default background is the theme-derived `AURORA` gradient (`HUD_BACKDROP_*`, R6 P2 — was `NONE`) | `hud/module/InfoModule`, `PlaytimeFeature` (per-world buckets) |
 | CPS (`cps`) | L/R clicks-per-second; counts from raw GLFW callback (polling caps at 20) | `CpsModule`, `CpsTracker`, `ClickTrackerFeature`, `MouseClickTrackerMixin` |
 | Armor HUD (`armor_hud`) | 4 pieces + durability text/bar, horizontal/vertical, VANILLA slot background | `hud/module/ArmorModule` |
 | Reach Display (`reach_display`) | Last attack distance; holds value through smoothstep fade. Polls attack key — no mixin | `ReachModule`, `ReachTrackerFeature` |
@@ -247,7 +247,7 @@ shift+right-click = lock, X = disable.
 | Minecraft Reflex (`reflex`) | Reflex-style latency reduction: GL timer-query GPU time + EWMA CPU frame time → hold CPU before input sampling | `ReflexMinecraftMixin`, `util/reflex/*` |
 | Animations (`animations`) | Swing curve + 1.8 swing arc, view-bob curve/amplitude, 1.7/1.8 damage tilt, idle held-item sway, frame-rate-independent entity movement smoothing (tau scales with server packet bundling) | `HeldItemRendererMixin`, `GameRendererBobMixin`, `DamageTiltMixin`, `LivingEntityRendererExtractMixin` + `EntityMovementSmoother`, `util/AnimationCurves`, cross-cutting `ThrottleDetector` |
 | Hotbar Bounce (`hotbar_bounce`) | White pulse outline on hotbar slot when stack count grows | `HotbarItemBounceMixin` → `HotbarBounceTracker` |
-| Keystrokes (`keystrokes`) | Key-panel overlay: WASD/mouse/CPS/space/sneak/sprint + up to 12 custom keys; animated accent press | `hud/module/KeystrokesModule` |
+| Keystrokes (`keystrokes`) | Key-panel overlay: WASD/mouse/CPS/space/sneak/sprint + up to 12 custom keys; pressed-key accent follows the theme accent by default (`keystrokesAccentColor == 0`, R6 P2; explicit color overrides) | `hud/module/KeystrokesModule` |
 
 ### SETTINGS tab (11 tiles)
 
@@ -374,7 +374,13 @@ ladder can't collapse into 3 tokens. Unifying the VALUES with `SEMANTIC_*` would
 visible restyle and belongs to a screenshot-gated decision, not a casual refactor; until
 then `HudStatus` is the single place to change HUD status colors. Also in the HUD color
 story: `util/HudBackgrounds`' `AURORA` background mode is what reads the
-`HUD_BACKDROP_TOP/BOT` tokens (the audit's "exist unused" was stale).
+`HUD_BACKDROP_TOP/BOT` tokens (the audit's "exist unused" was stale), and — R6 Part 2
+(2026-09-08), the accent-theming pilot — Keystrokes' pressed-key highlight defaults to
+following the theme accent (`keystrokesAccentColor == 0` → `ThemeManager.color(ACCENT)`; any
+explicit color overrides; the pre-R6 hardcoded azure `0xFF30A5FF` is gone) and the Info
+HUD's default background mode is `AURORA` (was `NONE`), so the corner readout's panel is the
+theme-derived HUD_BACKDROP gradient out of the box. Both stay never-glass — color-token
+wiring only. The remaining 11 HUD modules' accent pass is a deliberate follow-up.
 
 Rendering utilities: `RenderUtil` (float-precision AA rounded rects/circles/outlines +
 `beginCapture`/`RectSink` used by `UiLayerCache` — plus `DISCARD_SINK` and the
