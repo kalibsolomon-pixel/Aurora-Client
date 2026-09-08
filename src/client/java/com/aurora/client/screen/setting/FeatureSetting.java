@@ -281,14 +281,13 @@ public abstract class FeatureSetting {
      * Every label renderer calls this each frame; dwell timing and claim
      * bookkeeping are centralized here so callers stay one-liners.
      * Leaving the region (or losing the description) resets the dwell.
+     * The description arrives as a supplier and is only evaluated once the
+     * label is actually hovered — dynamic descriptions (live stats,
+     * per-value enum text) must not be built every frame for every row.
      */
-    protected static void trackLabelHover(String key, String desc, int x, int y,
+    protected static void trackLabelHover(String key, Supplier<String> desc, int x, int y,
                                           int textW, int lineH,
                                           int mouseX, int mouseY, boolean disabled) {
-        if (desc == null || desc.isEmpty()) {
-            HOVER_DWELL.remove(key);
-            return;
-        }
         boolean hovered = !disabled
                 && mouseX >= x && mouseX < x + Math.max(1, textW)
                 && mouseY >= y - 1 && mouseY < y + lineH + 1;
@@ -296,11 +295,16 @@ public abstract class FeatureSetting {
             HOVER_DWELL.remove(key);
             return;
         }
+        String text = desc.get();
+        if (text == null || text.isEmpty()) {
+            HOVER_DWELL.remove(key);
+            return;
+        }
         long now = System.currentTimeMillis();
         long start = HOVER_DWELL.computeIfAbsent(key, k -> now);
         if (now - start >= HOVER_DWELL_MS) {
             tooltipClaimed = true;
-            tooltipContent = desc;
+            tooltipContent = text;
             tooltipX = mouseX;
             tooltipY = mouseY;
         }
@@ -323,7 +327,7 @@ public abstract class FeatureSetting {
         if (tr == null) return;
         int finalColor = disabled ? com.aurora.client.util.AuroraTheme.TEXT_DIM : color;
         ctx.drawString(tr, text, x, y, finalColor, false);
-        trackLabelHover(tooltipKey(), currentDescription(), x, y,
+        trackLabelHover(tooltipKey(), this::currentDescription, x, y,
                 tr.width(text), tr.lineHeight, mouseX, mouseY, disabled);
     }
 

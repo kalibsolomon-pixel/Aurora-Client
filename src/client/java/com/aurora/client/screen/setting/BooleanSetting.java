@@ -117,14 +117,14 @@ public class BooleanSetting extends FeatureSetting {
         int textBlockH = cachedLines.size() * (tr.lineHeight + 1);
         int textY = y + (controlH - textBlockH) / 2;
         String key = tooltipKey();
-        String desc = currentDescription();
         boolean disabled = isDisabled();
         for (int li = 0; li < cachedLines.size(); li++) {
             var line = cachedLines.get(li);
             ctx.drawString(tr, line, x + LABEL_PAD, textY, AuroraTheme.IOS_LABEL, false);
             // Each wrapped line of the label text is a dwell region for
             // the description tooltip — hover the label itself, no badge.
-            trackLabelHover(key, desc, x + LABEL_PAD, textY,
+            // The description supplier is only evaluated while hovered.
+            trackLabelHover(key, this::currentDescription, x + LABEL_PAD, textY,
                     tr.width(line), tr.lineHeight, mouseX, mouseY, disabled);
             textY += tr.lineHeight + 1;
         }
