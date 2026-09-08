@@ -8,7 +8,9 @@ import com.aurora.client.ui.component.ThemedScreen;
 import com.aurora.client.ui.component.Toast;
 import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.ui.util.RenderUtil;
+import com.aurora.client.ui.util.UiLayerCache;
 import com.aurora.client.util.SmoothScroll;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
@@ -21,6 +23,7 @@ import org.lwjgl.glfw.GLFW;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BooleanSupplier;
 
 /**
  * The shared foundation under Aurora's two "manager list" screens (audit R3):
@@ -127,6 +130,39 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
     /** Toolbar buttons — kept so the glass pass can paint their surfaces pre-dim. */
     private ButtonWidget toolbarActionBtn;
     private ButtonWidget doneBtn;
+
+    // ---- Static row-surface template (P2: kill the per-row fill volume) ----
+    //
+    // Both manager screens paint, per visible row and per frame, a large
+    // number of small AA strip fills: six shadow-ring outlines plus the
+    // rounded tint fills of the row surface and its glass buttons — on the
+    // order of a thousand GuiGraphics.fill submissions per row. MC 1.21.11's
+    // GuiRenderState runs an intersection search over the elements recorded
+    // SO FAR for every submitted fill, so a frame of N disjoint fills costs
+    // O(N²) — 15 rows ≈ 15–20k fills ≈ 300+ ms/frame (the 2–3 fps bug), while
+    // the glass pipeline itself only accounts for ~15–20 ms.
+    //
+    // Rows on these screens are geometrically IDENTICAL, so the fix is a
+    // row TEMPLATE: the row's static shape layer is rasterized ONCE — same
+    // AA math, through RenderUtil.beginCapture into a small buffer — and
+    // blitted per row (one O(1) texture submission each). Scroll never
+    // re-rasterizes (rows differ only by blit position); a theme or
+    // GUI-scale change re-rasterizes via the version key. Two variants:
+    // with the glass tint fills (rows whose glass drew) and shadow-only
+    // (declined rows, whose flat body paints live in the content pass as
+    // before). Per frame the row's ordinary glass pass still runs — the
+    // live-world panels and deferred rims are NOT cacheable — with its
+    // RenderUtil fills redirected to DISCARD so they are not double-painted.
+    //
+    // Z-order parity: the template blits right after its row's glass pass,
+    // before the next row's. The only overlaps are (a) adjacent rows' rings
+    // and tints across the 4px row gap, which the per-row blit order keeps
+    // identical to the live per-shape order, and (b) a ring against its OWN
+    // panel, which never overlap (rings hug 1+px outside the panel rect).
+    /** Ring overhang beyond the row rect (largest ring i=6 + AA edge). */
+    private static final int ROW_TPL_PAD = 8;
+    private UiLayerCache rowTplTinted;
+    private UiLayerCache rowTplBare;
 
     protected ManagerListScreen(Component title, Screen parent) {
         super(title);
@@ -284,6 +320,30 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         super.render(ctx, mouseX, mouseY, delta);
 
         paintTail(ctx, mouseX, mouseY, delta, rows, listX);
+
+        logFramePerf(rows.size());
+    }
+
+    /** Debug-only per-frame cost log: fill submissions + row count, every 2 s (matches FeatureDetailScreen's harness). */
+    private long lastPerfLogMs;
+    private long lastPerfFills = -1L;
+    private void logFramePerf(int rows) {
+        if (!com.aurora.client.AuroraClient.LOGGER.isDebugEnabled()) return;
+        long now = System.currentTimeMillis();
+        if (lastPerfLogMs == 0L) {
+            lastPerfLogMs = now;
+            lastPerfFills = RenderUtil.fillsSubmitted();
+            return;
+        }
+        long dt = now - lastPerfLogMs;
+        if (dt < 2000L) return;
+        long fills = RenderUtil.fillsSubmitted();
+        double fillsPerSec = lastPerfFills < 0 ? 0 : (fills - lastPerfFills) * 1000.0 / dt;
+        com.aurora.client.AuroraClient.LOGGER.debug(
+                "[ui-perf] {}: {} rows, {} fills submitted/sec ({} total)",
+                getClass().getSimpleName(), rows, (long) fillsPerSec, fills);
+        lastPerfLogMs = now;
+        lastPerfFills = fills;
     }
 
     /**
@@ -373,7 +433,102 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
     }
 
     // ------------------------------------------------------------------
-    //  Scrolling & scrollbar (the R2 Part C treatment, shared verbatim)
+    // Static row-surface template (see field comment block)
+    // ------------------------------------------------------------------
+
+    /**
+     * Runs one row's glass pass with its static shape fills template-supplied.
+     * The row's surface part ({@code rowSurfacePass}: shadow rings + the row's
+     * own glass panel) executes under a discard capture — its fills come from
+     * the shared template blit right after, which must land BETWEEN the row
+     * surface and the row's buttons so the row tint stays under the button
+     * surfaces exactly as the live order painted them. {@code rowButtonsPass}
+     * then runs unwrapped: the shared {@code Button} templates its own tint
+     * (or flat) surface internally, per button and per state.
+     * {@code glassDrew} is read after the surface pass to pick the template
+     * variant (tinted vs shadow-only; declined rows paint their flat body
+     * live in the content pass as before).
+     */
+    protected final void paintTemplatedRowSurface(GuiGraphics ctx, int x, int y,
+                                                  Runnable rowSurfacePass, Runnable rowButtonsPass,
+                                                  BooleanSupplier glassDrew) {
+        RenderUtil.RectSink prev = RenderUtil.beginCapture(RenderUtil.DISCARD_SINK);
+        try {
+            rowSurfacePass.run();
+        } finally {
+            RenderUtil.endCapture(prev);
+        }
+        ensureRowTemplate(ctx, glassDrew.getAsBoolean()).blitAt(ctx,
+                x - ROW_TPL_PAD, y - ROW_TPL_PAD,
+                listWidth() + 2 * ROW_TPL_PAD, rowHeight() + 2 * ROW_TPL_PAD);
+        rowButtonsPass.run();
+    }
+
+    /**
+     * Version of the row template — everything that can change its pixels:
+     * theme (generation bumps on every reload: colors, radius, opacity, glass
+     * style), GUI scale (device resolution of the raster), and the row
+     * geometry (constant per screen, but cheap to include). Scroll is
+     * deliberately absent: rows differ only by blit position.
+     */
+    private long rowTemplateVersion() {
+        int guiScale = Math.max(1, (int) Minecraft.getInstance().getWindow().getGuiScale());
+        return ThemeManager.generation() * 1_000_003L
+                ^ (long) guiScale * 65537L
+                ^ (long) listWidth() * 7919L
+                ^ (long) rowHeight() * 104729L;
+    }
+
+    /** The (lazily rasterized, version-keyed) row template for either variant. */
+    private UiLayerCache ensureRowTemplate(GuiGraphics ctx, boolean tinted) {
+        UiLayerCache cache = tinted ? rowTplTinted : rowTplBare;
+        long version = rowTemplateVersion();
+        if (cache == null) cache = new UiLayerCache();
+        if (!cache.isCurrent(version)) {
+            int scale = Math.max(1, (int) Minecraft.getInstance().getWindow().getGuiScale());
+            cache.ensureSize((listWidth() + 2 * ROW_TPL_PAD) * scale,
+                    (rowHeight() + 2 * ROW_TPL_PAD) * scale);
+            cache.clear();
+            RenderUtil.RectSink prev = RenderUtil.beginCapture(cache.sink());
+            try {
+                captureRowSurfaceShapes(ctx, ROW_TPL_PAD, ROW_TPL_PAD, listWidth(), tinted);
+            } finally {
+                RenderUtil.endCapture(prev);
+            }
+            cache.commit(version);
+        }
+        if (tinted) rowTplTinted = cache; else rowTplBare = cache;
+        return cache;
+    }
+
+    /**
+     * The row's cacheable static shapes at template-local coordinates: the
+     * shadow rings plus, for the tinted variant, the row surface's neutral
+     * fill — the SAME call {@code GlassSurface.container/control} makes after
+     * a successful panel (WINDOW_FILL, whose alpha is the single opacity
+     * application point; keep the two in lockstep). Row BUTTONS are not in
+     * the template: the shared {@code Button} supplies its own resting
+     * surface per size/variant, so per-button state (press, decline) never
+     * invalidates the row raster.
+     */
+    protected void captureRowSurfaceShapes(GuiGraphics ctx, float x, float y, float w, boolean tinted) {
+        paintRowShadow(ctx, (int) x, (int) y, (int) w);
+        if (tinted) {
+            RenderUtil.drawRoundedRectAA(ctx, x, y, w, rowHeight(),
+                    ThemeManager.current().roundness().radiusSmall(),
+                    ThemeManager.color(ThemeToken.WINDOW_FILL));
+        }
+    }
+
+    @Override
+    public void removed() {
+        super.removed();
+        if (rowTplTinted != null) { rowTplTinted.dispose(); rowTplTinted = null; }
+        if (rowTplBare != null) { rowTplBare.dispose(); rowTplBare = null; }
+    }
+
+    // ------------------------------------------------------------------
+    // Scrolling & scrollbar (the R2 Part C treatment, shared verbatim)
     // ------------------------------------------------------------------
 
     /** Total scrollable overflow of the row list (input-event path refetches). */

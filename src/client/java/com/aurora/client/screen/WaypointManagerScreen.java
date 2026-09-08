@@ -162,21 +162,29 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
      */
     @Override
     protected void paintRowGlassPass(GuiGraphics ctx, int x, int y, int w, Waypoint wp) {
-        paintRowShadow(ctx, x, y, w);
-        rowGlassDrawn.put(wp, GlassSurface.control(ctx, x, y, w, ROW_H,
-                ThemeManager.current().roundness().radiusSmall(), BlurPanelRenderer.Priority.ROW));
-
-        int by = y + 4;
-        int bh = ROW_H - 8;
-        Button b = copyBtn(wp);
-        b.layout(x + COPY_DX, by, BTN_COPY_W, bh);
-        b.renderGlassPass(ctx, x + COPY_DX, by, BTN_COPY_W, bh);
-        b = colorBtn(wp);
-        b.layout(x + COLOR_DX, by, BTN_COLOR_W, bh);
-        b.renderGlassPass(ctx, x + COLOR_DX, by, BTN_COLOR_W, bh);
-        b = deleteBtn(wp);
-        b.layout(x + DEL_DX, by, BTN_DEL_W, bh);
-        b.renderGlassPass(ctx, x + DEL_DX, by, BTN_DEL_W, bh);
+        // Static shapes (rings + row tint) come from the shared row template
+        // (see ManagerListScreen); the row panel still renders live below, and
+        // the Copy/Color/Delete buttons supply their own surfaces.
+        paintTemplatedRowSurface(ctx, x, y,
+                () -> {
+                    paintRowShadow(ctx, x, y, w);
+                    rowGlassDrawn.put(wp, GlassSurface.control(ctx, x, y, w, ROW_H,
+                            ThemeManager.current().roundness().radiusSmall(), BlurPanelRenderer.Priority.ROW));
+                },
+                () -> {
+                    int by = y + 4;
+                    int bh = ROW_H - 8;
+                    Button b = copyBtn(wp);
+                    b.layout(x + COPY_DX, by, BTN_COPY_W, bh);
+                    b.renderGlassPass(ctx, x + COPY_DX, by, BTN_COPY_W, bh);
+                    b = colorBtn(wp);
+                    b.layout(x + COLOR_DX, by, BTN_COLOR_W, bh);
+                    b.renderGlassPass(ctx, x + COLOR_DX, by, BTN_COLOR_W, bh);
+                    b = deleteBtn(wp);
+                    b.layout(x + DEL_DX, by, BTN_DEL_W, bh);
+                    b.renderGlassPass(ctx, x + DEL_DX, by, BTN_DEL_W, bh);
+                },
+                () -> rowGlassDrawn.getOrDefault(wp, false));
     }
 
     @Override

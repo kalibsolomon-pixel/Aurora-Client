@@ -128,10 +128,16 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
 
     @Override
     protected void paintLeadingRowGlassPass(GuiGraphics ctx, int x, int y, int w, int leadIndex) {
-        createRowGlassDrawn = renderRowSurface(ctx, x, y, w);
-        Button cb = createBtn();
-        cb.layout(x + DUP_DX, y + 4, BTN_DUP_W, ROW_H - 8);
-        cb.renderGlassPass(ctx, x + DUP_DX, y + 4, BTN_DUP_W, ROW_H - 8);
+        // Same template treatment as normal rows (the create row shares the
+        // row geometry; its Create button sits at Duplicate's offset).
+        paintTemplatedRowSurface(ctx, x, y,
+                () -> createRowGlassDrawn = renderRowSurface(ctx, x, y, w),
+                () -> {
+                    Button cb = createBtn();
+                    cb.layout(x + DUP_DX, y + 4, BTN_DUP_W, ROW_H - 8);
+                    cb.renderGlassPass(ctx, x + DUP_DX, y + 4, BTN_DUP_W, ROW_H - 8);
+                },
+                () -> createRowGlassDrawn);
     }
 
     @Override
@@ -142,12 +148,18 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
 
     @Override
     protected void paintRowGlassPass(GuiGraphics ctx, int x, int y, int w, String name) {
-        rowGlassDrawn.put(name, renderRowSurface(ctx, x, y, w));
-        // Duplicate is neutral raised glass; Delete is destructive and
-        // never glass, so it has nothing to paint here.
-        Button db = dupBtn(name);
-        db.layout(x + DUP_DX, y + 4, BTN_DUP_W, ROW_H - 8);
-        db.renderGlassPass(ctx, x + DUP_DX, y + 4, BTN_DUP_W, ROW_H - 8);
+        // Static shapes (rings + row tint) come from the shared row template
+        // (see ManagerListScreen); the row panel renders live below, and the
+        // Duplicate button supplies its own surface. Delete is destructive
+        // (flat) and paints in the content pass via the same shared Button.
+        paintTemplatedRowSurface(ctx, x, y,
+                () -> rowGlassDrawn.put(name, renderRowSurface(ctx, x, y, w)),
+                () -> {
+                    Button db = dupBtn(name);
+                    db.layout(x + DUP_DX, y + 4, BTN_DUP_W, ROW_H - 8);
+                    db.renderGlassPass(ctx, x + DUP_DX, y + 4, BTN_DUP_W, ROW_H - 8);
+                },
+                () -> rowGlassDrawn.getOrDefault(name, false));
     }
 
     @Override
