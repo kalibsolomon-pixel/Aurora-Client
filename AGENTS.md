@@ -85,7 +85,11 @@ AuroraClient.java          Mod entrypoint: registers keybinds, HUD callbacks, fe
 │   │                      AuroraScreen (main settings screen), AuroraTitleScreen,
 │   │                      FeatureDetailScreen, HudEditorScreen, WaypointManagerScreen,
 │   │                      ProfileManagerScreen, ColorPickerScreen,
-│   │                      ResourcePackBrowserScreen (Modrinth browser), FeatureRegistry
+│   │                      ResourcePackBrowserScreen (Modrinth browser), ManagerListScreen
+│   │                      (shared Profile/Waypoint list-screen foundation, R3: frame
+│   │                      skeleton, scroll+thumb, rename editor, toolbar — the two
+│   │                      manager screens extend it, keeping only row content/actions),
+│   │                      FeatureRegistry
 │   │                      (UI metadata + settings widgets), FeatureTile, FeatureIcons,
 │   │                      FeatureMetadata, ModuleAccentColors, ModuleIconRegistry,
 │   │                      AuroraModMenuApi.
@@ -563,7 +567,7 @@ flags now default ON mod-wide. Status below is committed `master`.
 
 ---
 
-## 8. Repo state & recent history (updated 2026-09-07)
+## 8. Repo state & recent history (updated 2026-09-08)
 
 Nothing is in flight — the working tree is clean and `master` is the canonical branch. The
 section formerly here described the 2026-08-29 *uncommitted* "glass everywhere" wave; all of
@@ -594,6 +598,24 @@ Unmerged local branches: none. The three rim/lighting experiment candidates were
 `GlassSurface`) was chosen and merged; `cand-b-lighting-boost` and `cand-c-rim-plus-boost`
 were discarded — B boosted the shared `Lighting.raised()` preset, which had no real effect
 on the target screens but a real side effect on every other raised control mod-wide.
+
+Landed 2026-09-08 after that (audit R3/D6 + a standing perf note): AGENTS.md §10 gained
+the scale-check rule ("before calling a UI change complete, check whether it could scale
+badly"), prompted by the O(rows²) reconciliation fix `0a0caaa`. Then the
+Profile/Waypoint manager screens' duplicated machinery — frame skeleton (glass pass → dim
+→ content), `SmoothScroll` + the R2-C scrollbar/thumb treatment, inline-rename editor
+lifecycle, toolbar row, `fitName` memoization, flat-row/shadow painters, thumb input
+handling — was merged into `screen/ManagerListScreen<T>`, an abstract screen template
+(the utilities `GlassSurface`/`SmoothScroll` stay composition-based; what was duplicated
+here was control flow, which composition cannot absorb honestly). Zero intended
+visual/behavioral change, verified by a standalone differential harness (176,892
+comparisons over scroll bounds, visibility predicates, editor layout, thumb geometry,
+hit zones and the commit state machine — 0 diffs), compile, and a dev-client boot smoke.
+Deliberately kept screen-side as genuine differences: row glass role (Profile rows
+depressed containers, Waypoint rows raised controls — both §6 rulings), the tail paint
+order (Profile draws editor-then-toast, Waypoint toast-then-editor; observable only when
+the bottom row's editor overlaps the toast band), Profile's create row + switch-on-body-
+click, rename-apply semantics, and the nameFitCache clearing policy.
 
 ---
 
