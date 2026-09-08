@@ -23,10 +23,17 @@ import java.util.Set;
  * not change them):
  *
  * <ol>
- *   <li><b>Live-world gate.</b> Glass needs a valid world in the main render
- *       target; with no level loaded every entry point declines up front
- *       (the same test {@link #liveWorldBackdrop()} makes for the screens'
- *       {@code renderBackground} overrides).</li>
+ *   <li><b>Live-world gate.</b> Glass needs a valid capture source in the
+ *       main render target: a live world ({@link #liveWorldBackdrop()}), or
+ *       — the one declared exception — a menu backdrop a caller has stamped
+ *       for this frame via {@code BlurPanelRenderer.noteMenuBackdropDrawn()}
+ *       (the title screen, right after {@code renderPanorama} draws the
+ *       panorama into the main target). With neither, every entry point
+ *       declines up front (the same test the renderer's menu-context guard
+ *       makes). Note {@link #liveWorldBackdrop()} itself answers only the
+ *       world question — screens' {@code renderBackground} overrides use it
+ *       to decide whether to skip the vanilla backdrop sandwich, and that
+ *       meaning is deliberately unchanged.</li>
  *   <li><b>Blur pass</b> — {@link BlurPanelRenderer#renderPanel} with the
  *       default blur radius and the lighting preset the surface's ROLE
  *       dictates: containers are DEPRESSED (recessed), controls are RAISED.
@@ -391,7 +398,13 @@ public final class GlassSurface {
     private static boolean paint(GuiGraphics g, float x, float y, float w, float h, float radius,
                                  BlurPanelRenderer.Lighting lighting, int tint,
                                  BlurPanelRenderer.Priority priority) {
-        if (!liveWorldBackdrop()) return false;
+        // Capture validity: a live world, OR a menu backdrop a caller has
+        // DECLARED for this frame (BlurPanelRenderer.noteMenuBackdropDrawn —
+        // the title screen, right after renderPanorama puts the panorama in
+        // the main target). NOT liveWorldBackdrop() alone: that test also
+        // serves screens deciding whether to skip the vanilla backdrop
+        // sandwich, a different question whose meaning must not move.
+        if (!liveWorldBackdrop() && !BlurPanelRenderer.menuBackdropValid()) return false;
         if (dimPainted()) {
             report("glass surface body painted AFTER the overlay dim — every glass surface belongs "
                     + "in the glass pass, before GlassSurface.overlayDim");

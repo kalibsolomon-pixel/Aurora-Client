@@ -342,6 +342,13 @@ public final class BlurPanelRenderer {
      */
     private static volatile long suppressGlassUntilMs = 0L;
 
+    /**
+     * Menu-backdrop declaration: the {@link #poolEpoch} in which a caller
+     * last called {@link #noteMenuBackdropDrawn()} (-1 = never). See the
+     * menu-context guard in {@code renderPanel} for the contract.
+     */
+    private static volatile long menuBackdropEpoch = -1L;
+
     /** Helper FBO that wraps the main target's color texture for live-world capture. */
     private static int worldReaderFbo;
     /** One-shot diagnostic guard for the live-world capture path. */
@@ -555,6 +562,54 @@ public final class BlurPanelRenderer {
      */
     public static void noteScreenshotGrab() {
         suppressGlassUntilMs = System.currentTimeMillis() + SCREENSHOT_SUPPRESS_MS;
+    }
+
+    /**
+     * Declares that THIS frame's main render target holds valid capturable
+     * menu content despite no level being loaded. Call immediately after
+     * synchronously drawing a full-viewport backdrop into the main target —
+     * concretely, right after {@code Screen.renderPanorama}, whose
+     * {@code CubeMap.render} issues an eager Blaze3D render pass straight
+     * into {@code getMainRenderTarget()}'s color texture (the exact texture
+     * this pipeline's world reader wraps), so the pixels are already there
+     * when the declaring screen's widgets capture later in the same frame.
+     *
+     * <p>This is the ONE sanctioned exception to the menu-context guard,
+     * and it is built so it cannot leak:
+     * <ul>
+     *   <li><b>Frame-scoped.</b> The stamp records the current
+     *       {@link #poolEpoch}, which {@link #beginFrame()} bumps once per
+     *       frame before any GUI rendering; {@link #menuBackdropValid()}
+     *       compares against the live epoch, so the declaration expires at
+     *       the very next frame boundary with no reset code to forget.</li>
+     *   <li><b>Declaration, not detection.</b> There is no content probe or
+     *       heuristic deciding "this looks capturable". The distinction
+     *       between "no world but valid content (the panorama)" and "no
+     *       world, no valid content (empty target or a stale frame left by a
+     *       disconnected world)" is made by the only code that can know it:
+     *       the code that just drew a full backdrop into the target. Every
+     *       menu-context screen that does not declare keeps the exact
+     *       historical decline — including the stale-frame hazard the guard
+     *       exists for.</li>
+     *   <li><b>Single-observer scope.</b> One screen renders per frame, so
+     *       the only {@code renderPanel} calls that can observe a stamp are
+     *       the declaring screen's own surfaces, after the declaration.</li>
+     * </ul>
+     */
+    public static void noteMenuBackdropDrawn() {
+        menuBackdropEpoch = poolEpoch;
+    }
+
+    /**
+     * True when a caller declared a valid menu backdrop THIS frame (see
+     * {@link #noteMenuBackdropDrawn()}). Read by the menu-context guard
+     * here and by {@code GlassSurface.paint}'s capture-validity gate; every
+     * other gate ({@code liveWorldBackdrop} and its per-screen copies) is
+     * deliberately unchanged — their screen-sandwich semantics are a
+     * different question from capture validity.
+     */
+    public static boolean menuBackdropValid() {
+        return menuBackdropEpoch == poolEpoch;
     }
 
     // ==================================================================================
@@ -887,7 +942,16 @@ public final class BlurPanelRenderer {
         // run the capture/blur pipeline against an unvalidated backdrop:
         // decline, and the caller draws its opaque fallback. The synthetic
         // harness CaptureSource is exempt (it supplies its own valid FBO).
-        if (captureSource == null && mc.level == null) {
+        //
+        // The ONE other exemption is by explicit per-frame DECLARATION (see
+        // noteMenuBackdropDrawn): a caller that has just synchronously drawn
+        // a full-viewport backdrop into the main target — the title screen
+        // right after renderPanorama, whose CubeMap pass lands in the main
+        // target's color texture — asserts "no level, but valid capturable
+        // content" for this frame only. The stamp cannot survive the frame
+        // boundary, and every menu context that does not declare takes the
+        // exact historical decline below, term for term.
+        if (captureSource == null && mc.level == null && !menuBackdropValid()) {
             lastOutcome = "no level (menu context)";
             return false;
         }
