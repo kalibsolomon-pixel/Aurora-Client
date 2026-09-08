@@ -9,6 +9,7 @@ import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.component.ButtonWidget;
 import com.aurora.client.ui.component.ThemedScreen;
+import com.aurora.client.ui.component.Widget;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -353,8 +354,7 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
             if (hit.enabled) {
                 int xIconX = x + sw - X_ICON_SIZE - 2;
                 int xIconY = y + 2;
-                if (mx >= xIconX && mx < xIconX + X_ICON_SIZE
-                        && my >= xIconY && my < xIconY + X_ICON_SIZE) {
+                if (Widget.inBounds(mx, my, xIconX, xIconY, X_ICON_SIZE, X_ICON_SIZE)) {
                     disableViaRegistry(hit);
                     return true;
                 }

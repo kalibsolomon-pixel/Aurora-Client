@@ -1,6 +1,7 @@
 package com.aurora.client.screen.setting;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
+import com.aurora.client.ui.component.Widget;
 import com.aurora.client.ui.util.AuroraFontRenderer;
 
 import com.aurora.client.util.AuroraTheme;
@@ -80,8 +81,7 @@ public class StringListSetting extends FeatureSetting {
             ctx.fill(x + 10, iy, x + width - 10, iy + ROW_H,
                     ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_BACKGROUND), 0x22));
 
-            boolean btnHover = mouseX >= btnX && mouseX < btnX + BTN_SIZE
-                    && mouseY >= btnY && mouseY < btnY + BTN_SIZE;
+            boolean btnHover = Widget.inBounds(mouseX, mouseY, btnX, btnY, BTN_SIZE, BTN_SIZE);
             ctx.fill(btnX, btnY, btnX + BTN_SIZE, btnY + BTN_SIZE,
                     ThemeManager.withAlpha(err, btnHover ? 0x66 : 0x33));
             AuroraFontRenderer.drawCentered(ctx, tr, "\u2212", btnX + BTN_SIZE / 2,
@@ -112,8 +112,7 @@ public class StringListSetting extends FeatureSetting {
 
         int addBtnX = x + width - BTN_SIZE - 14;
         int addBtnY = inputY + (INPUT_H - BTN_SIZE) / 2;
-        boolean addHover = mouseX >= addBtnX && mouseX < addBtnX + BTN_SIZE
-                && mouseY >= addBtnY && mouseY < addBtnY + BTN_SIZE;
+        boolean addHover = Widget.inBounds(mouseX, mouseY, addBtnX, addBtnY, BTN_SIZE, BTN_SIZE);
         ctx.fill(addBtnX, addBtnY, addBtnX + BTN_SIZE, addBtnY + BTN_SIZE,
                 ThemeManager.withAlpha(ok, addHover ? 0x66 : 0x33));
         AuroraFontRenderer.drawCentered(ctx, tr, "+", addBtnX + BTN_SIZE / 2,
@@ -131,8 +130,7 @@ public class StringListSetting extends FeatureSetting {
         for (int i = 0; i < items.size(); i++) {
             int btnX = lastX + lastW - BTN_SIZE - 14;
             int btnY = iy + (ROW_H - BTN_SIZE) / 2;
-            if (mouseX >= btnX && mouseX < btnX + BTN_SIZE
-                    && mouseY >= btnY && mouseY < btnY + BTN_SIZE) {
+            if (Widget.inBounds(mouseX, mouseY, btnX, btnY, BTN_SIZE, BTN_SIZE)) {
                 List<String> copy = new ArrayList<>(items);
                 if (i < copy.size()) {
                     copy.remove(i);
@@ -146,14 +144,14 @@ public class StringListSetting extends FeatureSetting {
         int inputY = iy + 4;
         int addBtnX = lastX + lastW - BTN_SIZE - 14;
         int addBtnY = inputY + (INPUT_H - BTN_SIZE) / 2;
-        if (mouseX >= addBtnX && mouseX < addBtnX + BTN_SIZE
-                && mouseY >= addBtnY && mouseY < addBtnY + BTN_SIZE) {
+        if (Widget.inBounds(mouseX, mouseY, addBtnX, addBtnY, BTN_SIZE, BTN_SIZE)) {
             addEntry();
             return true;
         }
 
-        if (inputField.getX() > 0 && mouseX >= inputField.getX() && mouseX < inputField.getX() + inputField.getWidth()
-                && mouseY >= inputField.getY() && mouseY < inputField.getY() + inputField.getHeight()) {
+        if (inputField.getX() > 0
+                && Widget.inBounds(mouseX, mouseY, inputField.getX(), inputField.getY(),
+                        inputField.getWidth(), inputField.getHeight())) {
             inputField.setFocused(true);
             requestFocus();
             return true;

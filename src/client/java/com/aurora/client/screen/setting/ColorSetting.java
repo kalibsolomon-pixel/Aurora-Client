@@ -1,8 +1,10 @@
 package com.aurora.client.screen.setting;
 
 import com.aurora.client.ui.component.ColorSwatch;
+import com.aurora.client.ui.component.Widget;
 import com.aurora.client.util.AuroraShapes;
 import com.aurora.client.util.AuroraTheme;
+import com.aurora.client.util.ColorEntryHelper;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 
@@ -99,7 +101,7 @@ public class ColorSetting extends FeatureSetting {
         ctx.fill(cx - 1, padY, cx + 1, padY + PAD_SIZE, 0x80000000);
         ctx.fill(padX, cy - 1, padX + PAD_SIZE, cy + 1, 0x80000000);
         ctx.fill(cx - 3, cy - 3, cx + 3, cy + 3, 0xFFFFFFFF);
-        ctx.fill(cx - 2, cy - 2, cx + 2, cy + 2, hslaToArgb(h, s, l, 1f));
+        ctx.fill(cx - 2, cy - 2, cx + 2, cy + 2, ColorEntryHelper.hslaToArgb(h, s, l, 1f));
 
         drawHueStrip(ctx);
         int hueMark = hueY + Math.round(h * PAD_SIZE);
@@ -110,7 +112,7 @@ public class ColorSetting extends FeatureSetting {
         ctx.fill(alphaX - 2, alphaMark - 1, alphaX + STRIP_W + 2, alphaMark + 1, 0xFFFFFFFF);
 
         drawCheckerboard(ctx, previewX, previewY, previewW, PREVIEW_H);
-        ctx.fill(previewX, previewY, previewX + previewW, previewY + PREVIEW_H, hslaToArgb(h, s, l, a));
+        ctx.fill(previewX, previewY, previewX + previewW, previewY + PREVIEW_H, ColorEntryHelper.hslaToArgb(h, s, l, a));
         AuroraShapes.outline(ctx, previewX, previewY, previewW, PREVIEW_H,
                 AuroraTheme.ACCENT_BLUE, 0);
     }
@@ -128,17 +130,17 @@ public class ColorSetting extends FeatureSetting {
         }
         if (!expanded) return false;
 
-        if (inBounds(mouseX, mouseY, padX, padY, PAD_SIZE, PAD_SIZE)) {
+        if (Widget.inBounds(mouseX, mouseY, padX, padY, PAD_SIZE, PAD_SIZE)) {
             dragging = DragTarget.PAD;
             updateFromPad(mouseX, mouseY);
             return true;
         }
-        if (inBounds(mouseX, mouseY, hueX, hueY, STRIP_W, PAD_SIZE)) {
+        if (Widget.inBounds(mouseX, mouseY, hueX, hueY, STRIP_W, PAD_SIZE)) {
             dragging = DragTarget.HUE;
             updateFromHue(mouseY);
             return true;
         }
-        if (inBounds(mouseX, mouseY, alphaX, alphaY, STRIP_W, PAD_SIZE)) {
+        if (Widget.inBounds(mouseX, mouseY, alphaX, alphaY, STRIP_W, PAD_SIZE)) {
             dragging = DragTarget.ALPHA;
             updateFromAlpha(mouseY);
             return true;
@@ -170,11 +172,11 @@ public class ColorSetting extends FeatureSetting {
 
     private void seedFromCurrent() {
         int argb = getter.getAsInt();
-        float[] hsla = argbToHsla(argb);
+        float[] hsla = ColorEntryHelper.argbToHsla(argb);
         h = hsla[0]; s = hsla[1]; l = hsla[2]; a = hsla[3];
     }
 
-    private void commit() { setter.accept(hslaToArgb(h, s, l, a)); }
+    private void commit() { setter.accept(ColorEntryHelper.hslaToArgb(h, s, l, a)); }
 
     private void updateFromPad(double mouseX, double mouseY) {
         s = clamp01((float) ((mouseX - padX) / PAD_SIZE));
@@ -198,7 +200,7 @@ public class ColorSetting extends FeatureSetting {
                 float ss = sx / (float) (PAD_STEPS - 1);
                 for (int sy = 0; sy < PAD_STEPS; sy++) {
                     float ll = 1f - (sy / (float) (PAD_STEPS - 1));
-                    padCache[sy * PAD_STEPS + sx] = hslaToArgb(h, ss, ll, 1f);
+                    padCache[sy * PAD_STEPS + sx] = ColorEntryHelper.hslaToArgb(h, ss, ll, 1f);
                 }
             }
             cachedHueForPad = h;
@@ -218,7 +220,7 @@ public class ColorSetting extends FeatureSetting {
     private void drawHueStrip(GuiGraphics ctx) {
         for (int py = 0; py < PAD_SIZE; py++) {
             float hh = py / (float) PAD_SIZE;
-            ctx.fill(hueX, hueY + py, hueX + STRIP_W, hueY + py + 1, hslaToArgb(hh, 1f, 0.5f, 1f));
+            ctx.fill(hueX, hueY + py, hueX + STRIP_W, hueY + py + 1, ColorEntryHelper.hslaToArgb(hh, 1f, 0.5f, 1f));
         }
         AuroraShapes.outline(ctx, hueX, hueY, STRIP_W, PAD_SIZE, AuroraTheme.ACCENT_BLUE, 0);
     }
@@ -227,7 +229,7 @@ public class ColorSetting extends FeatureSetting {
         drawCheckerboard(ctx, alphaX, alphaY, STRIP_W, PAD_SIZE);
         for (int py = 0; py < PAD_SIZE; py++) {
             float aa = 1f - (py / (float) PAD_SIZE);
-            ctx.fill(alphaX, alphaY + py, alphaX + STRIP_W, alphaY + py + 1, hslaToArgb(h, s, l, aa));
+            ctx.fill(alphaX, alphaY + py, alphaX + STRIP_W, alphaY + py + 1, ColorEntryHelper.hslaToArgb(h, s, l, aa));
         }
         AuroraShapes.outline(ctx, alphaX, alphaY, STRIP_W, PAD_SIZE, AuroraTheme.ACCENT_BLUE, 0);
     }
@@ -246,51 +248,6 @@ public class ColorSetting extends FeatureSetting {
         }
     }
 
-    private static float[] argbToHsla(int argb) {
-        float a = ((argb >>> 24) & 0xFF) / 255f;
-        float r = ((argb >>> 16) & 0xFF) / 255f;
-        float g = ((argb >>> 8) & 0xFF) / 255f;
-        float b = (argb & 0xFF) / 255f;
-        float max = Math.max(r, Math.max(g, b));
-        float min = Math.min(r, Math.min(g, b));
-        float l = (max + min) / 2f;
-        float h = 0, s = 0;
-        float d = max - min;
-        if (d != 0) {
-            s = l > 0.5f ? d / (2f - max - min) : d / (max + min);
-            if (max == r) h = ((g - b) / d) % 6f;
-            else if (max == g) h = (b - r) / d + 2f;
-            else h = (r - g) / d + 4f;
-            h /= 6f;
-            if (h < 0) h += 1f;
-        }
-        return new float[] { h, s, l, a };
-    }
-
-    private static int hslaToArgb(float h, float s, float l, float a) {
-        float c = (1f - Math.abs(2f * l - 1f)) * s;
-        float hp = (h * 6f) % 6f;
-        if (hp < 0) hp += 6f;
-        float x = c * (1f - Math.abs(hp % 2f - 1f));
-        float r1 = 0, g1 = 0, b1 = 0;
-        if (hp < 1) { r1 = c; g1 = x; }
-        else if (hp < 2) { r1 = x; g1 = c; }
-        else if (hp < 3) { g1 = c; b1 = x; }
-        else if (hp < 4) { g1 = x; b1 = c; }
-        else if (hp < 5) { r1 = x; b1 = c; }
-        else             { r1 = c; b1 = x; }
-        float m = l - c / 2f;
-        int ri = clampByte(Math.round((r1 + m) * 255f));
-        int gi = clampByte(Math.round((g1 + m) * 255f));
-        int bi = clampByte(Math.round((b1 + m) * 255f));
-        int ai = clampByte(Math.round(a * 255f));
-        return (ai << 24) | (ri << 16) | (gi << 8) | bi;
-    }
-
-    private static int clampByte(int v) { return Math.max(0, Math.min(255, v)); }
     private static float clamp01(float v) { return Math.max(0f, Math.min(1f, v)); }
     private static float clamp(float v, float lo, float hi) { return Math.max(lo, Math.min(hi, v)); }
-    private static boolean inBounds(double x, double y, int bx, int by, int bw, int bh) {
-        return x >= bx && x < bx + bw && y >= by && y < by + bh;
-    }
 }

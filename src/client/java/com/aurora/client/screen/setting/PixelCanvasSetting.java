@@ -1,8 +1,10 @@
 package com.aurora.client.screen.setting;
 
 import com.aurora.client.config.AuroraConfig;
+import com.aurora.client.ui.component.Widget;
 import com.aurora.client.ui.util.CanvasTexture;
 import com.aurora.client.ui.util.RenderUtil;
+import com.aurora.client.util.AuroraAnim;
 import com.aurora.client.util.AuroraShapes;
 import com.aurora.client.util.AuroraTheme;
 import com.aurora.client.util.GridDims;
@@ -242,13 +244,12 @@ public class PixelCanvasSetting extends FeatureSetting {
         // Clear button
         clearBtnX = x + width - CLEAR_BTN_W - 14;
         clearBtnY = y + (LABEL_H - CLEAR_BTN_H) / 2;
-        boolean clearHover = !disabled && mouseX >= clearBtnX && mouseX < clearBtnX + CLEAR_BTN_W
-                && mouseY >= clearBtnY && mouseY < clearBtnY + CLEAR_BTN_H;
+        boolean clearHover = !disabled && Widget.inBounds(mouseX, mouseY, clearBtnX, clearBtnY, CLEAR_BTN_W, CLEAR_BTN_H);
         float chT = clearHoverAnim.update(clearHover);
 
-        int clearFill   = disabled ? 0x22FFFFFF : lerpColor(AuroraTheme.PANEL_OFF, AuroraTheme.PANEL_OFF_HOVER, chT);
-        int clearBorder = disabled ? 0x33FFFFFF : lerpColor(AuroraTheme.BORDER_OFF, AuroraTheme.BORDER_OFF_HOVER, chT);
-        int clearText   = disabled ? AuroraTheme.TEXT_DIM : lerpColor(AuroraTheme.TEXT_SECONDARY, AuroraTheme.TEXT_PRIMARY, chT);
+        int clearFill   = disabled ? 0x22FFFFFF : AuroraAnim.lerpArgb(AuroraTheme.PANEL_OFF, AuroraTheme.PANEL_OFF_HOVER, chT);
+        int clearBorder = disabled ? 0x33FFFFFF : AuroraAnim.lerpArgb(AuroraTheme.BORDER_OFF, AuroraTheme.BORDER_OFF_HOVER, chT);
+        int clearText   = disabled ? AuroraTheme.TEXT_DIM : AuroraAnim.lerpArgb(AuroraTheme.TEXT_SECONDARY, AuroraTheme.TEXT_PRIMARY, chT);
 
         RenderUtil.drawSquircle(ctx, clearBtnX, clearBtnY, CLEAR_BTN_W, CLEAR_BTN_H, AuroraTheme.RADIUS_SMALL, clearFill);
         RenderUtil.drawSquircleOutline(ctx, clearBtnX, clearBtnY, CLEAR_BTN_W, CLEAR_BTN_H, AuroraTheme.RADIUS_SMALL, 1.0f, clearBorder);
@@ -354,12 +355,11 @@ public class PixelCanvasSetting extends FeatureSetting {
     }
 
     private void drawApplyButton(GuiGraphics ctx, Font tr, int mouseX, int mouseY, boolean disabled) {
-        boolean hover = !disabled && mouseX >= applyBtnX && mouseX < applyBtnX + APPLY_W
-                && mouseY >= applyBtnY && mouseY < applyBtnY + CLEAR_BTN_H;
+        boolean hover = !disabled && Widget.inBounds(mouseX, mouseY, applyBtnX, applyBtnY, APPLY_W, CLEAR_BTN_H);
         float t = applyHoverAnim.update(hover);
-        int fill   = disabled ? 0x22FFFFFF : lerpColor(AuroraTheme.PANEL_OFF, AuroraTheme.PANEL_OFF_HOVER, t);
-        int border = disabled ? 0x33FFFFFF : lerpColor(AuroraTheme.BORDER_OFF, AuroraTheme.BORDER_OFF_HOVER, t);
-        int text   = disabled ? AuroraTheme.TEXT_DIM : lerpColor(AuroraTheme.TEXT_SECONDARY, AuroraTheme.TEXT_PRIMARY, t);
+        int fill   = disabled ? 0x22FFFFFF : AuroraAnim.lerpArgb(AuroraTheme.PANEL_OFF, AuroraTheme.PANEL_OFF_HOVER, t);
+        int border = disabled ? 0x33FFFFFF : AuroraAnim.lerpArgb(AuroraTheme.BORDER_OFF, AuroraTheme.BORDER_OFF_HOVER, t);
+        int text   = disabled ? AuroraTheme.TEXT_DIM : AuroraAnim.lerpArgb(AuroraTheme.TEXT_SECONDARY, AuroraTheme.TEXT_PRIMARY, t);
         RenderUtil.drawSquircle(ctx, applyBtnX, applyBtnY, APPLY_W, CLEAR_BTN_H, AuroraTheme.RADIUS_SMALL, fill);
         RenderUtil.drawSquircleOutline(ctx, applyBtnX, applyBtnY, APPLY_W, CLEAR_BTN_H, AuroraTheme.RADIUS_SMALL, 1.0f, border);
         String lbl = "Apply";
@@ -368,12 +368,11 @@ public class PixelCanvasSetting extends FeatureSetting {
     }
 
     private void drawDefaultButton(GuiGraphics ctx, Font tr, int mouseX, int mouseY, boolean disabled) {
-        boolean hover = !disabled && mouseX >= defaultBtnX && mouseX < defaultBtnX + DEFAULT_W
-                && mouseY >= defaultBtnY && mouseY < defaultBtnY + CLEAR_BTN_H;
+        boolean hover = !disabled && Widget.inBounds(mouseX, mouseY, defaultBtnX, defaultBtnY, DEFAULT_W, CLEAR_BTN_H);
         float t = defaultHoverAnim.update(hover);
-        int fill   = disabled ? 0x22FFFFFF : lerpColor(AuroraTheme.PANEL_OFF, AuroraTheme.PANEL_OFF_HOVER, t);
-        int border = disabled ? 0x33FFFFFF : lerpColor(AuroraTheme.BORDER_OFF, AuroraTheme.BORDER_OFF_HOVER, t);
-        int text   = disabled ? AuroraTheme.TEXT_DIM : lerpColor(AuroraTheme.TEXT_SECONDARY, AuroraTheme.TEXT_PRIMARY, t);
+        int fill   = disabled ? 0x22FFFFFF : AuroraAnim.lerpArgb(AuroraTheme.PANEL_OFF, AuroraTheme.PANEL_OFF_HOVER, t);
+        int border = disabled ? 0x33FFFFFF : AuroraAnim.lerpArgb(AuroraTheme.BORDER_OFF, AuroraTheme.BORDER_OFF_HOVER, t);
+        int text   = disabled ? AuroraTheme.TEXT_DIM : AuroraAnim.lerpArgb(AuroraTheme.TEXT_SECONDARY, AuroraTheme.TEXT_PRIMARY, t);
         RenderUtil.drawSquircle(ctx, defaultBtnX, defaultBtnY, DEFAULT_W, CLEAR_BTN_H, AuroraTheme.RADIUS_SMALL, fill);
         RenderUtil.drawSquircleOutline(ctx, defaultBtnX, defaultBtnY, DEFAULT_W, CLEAR_BTN_H, AuroraTheme.RADIUS_SMALL, 1.0f, border);
         String lbl = "Default";
@@ -383,7 +382,7 @@ public class PixelCanvasSetting extends FeatureSetting {
 
     private void drawWarnButton(GuiGraphics ctx, Font tr, int bx, int by, int bw, int bh,
                                 String lbl, int mouseX, int mouseY, boolean enabled) {
-        boolean hover = enabled && mouseX >= bx && mouseX < bx + bw && mouseY >= by && mouseY < by + bh;
+        boolean hover = enabled && Widget.inBounds(mouseX, mouseY, bx, by, bw, bh);
         int fill = enabled ? (hover ? 0x66FFFFFF : 0x44FFFFFF) : 0x22FFFFFF;
         int text = enabled ? AuroraTheme.TEXT_PRIMARY : AuroraTheme.TEXT_DIM;
         RenderUtil.drawSquircle(ctx, bx, by, bw, bh, AuroraTheme.RADIUS_SMALL, fill);
@@ -654,8 +653,7 @@ public class PixelCanvasSetting extends FeatureSetting {
             widthField.setFocused(false);
             heightField.setFocused(false);
 
-            if (mouseX >= applyBtnX && mouseX < applyBtnX + APPLY_W
-                    && mouseY >= applyBtnY && mouseY < applyBtnY + CLEAR_BTN_H) {
+            if (Widget.inBounds(mouseX, mouseY, applyBtnX, applyBtnY, APPLY_W, CLEAR_BTN_H)) {
                 onApplyClicked();
                 return true;
             }
@@ -663,16 +661,14 @@ public class PixelCanvasSetting extends FeatureSetting {
 
         // Default button: restore the vanilla 15×15 pattern.
         if (button == 0
-                && mouseX >= defaultBtnX && mouseX < defaultBtnX + DEFAULT_W
-                && mouseY >= defaultBtnY && mouseY < defaultBtnY + CLEAR_BTN_H) {
+                && Widget.inBounds(mouseX, mouseY, defaultBtnX, defaultBtnY, DEFAULT_W, CLEAR_BTN_H)) {
             applyVanillaDefault();
             return true;
         }
 
         // Clear button.
         if (button == 0
-                && mouseX >= clearBtnX && mouseX < clearBtnX + CLEAR_BTN_W
-                && mouseY >= clearBtnY && mouseY < clearBtnY + CLEAR_BTN_H) {
+                && Widget.inBounds(mouseX, mouseY, clearBtnX, clearBtnY, CLEAR_BTN_W, CLEAR_BTN_H)) {
             boolean[] pixels = pixels();
             if (pixels != null) {
                 for (int i = 0; i < pixels.length; i++) pixels[i] = false;
@@ -844,20 +840,9 @@ public class PixelCanvasSetting extends FeatureSetting {
             applyCell(cx, cy, setOn);
             if (cx == x1 && cy == y1) break;
             int e2 = 2 * err;
-            if (e2 > -dy) { err -= dy; cx += sx; }
+            if (e2 > -dy) { err -= dx; cx += sx; }
             if (e2 < dx)  { err += dx; cy += sy; }
         }
     }
-
-    private static int lerpColor(int from, int to, float t) {
-        if (t <= 0f) return from;
-        if (t >= 1f) return to;
-        int af = (from >>> 24) & 0xFF, ar = (from >>> 16) & 0xFF, ag = (from >>> 8) & 0xFF, ab = from & 0xFF;
-        int bf = (to   >>> 24) & 0xFF, br = (to   >>> 16) & 0xFF, bg = (to   >>> 8) & 0xFF, bb = to   & 0xFF;
-        int a = Math.round(af + (bf - af) * t);
-        int r = Math.round(ar + (br - ar) * t);
-        int g = Math.round(ag + (bg - ag) * t);
-        int b = Math.round(ab + (bb - ab) * t);
-        return (a << 24) | (r << 16) | (g << 8) | b;
-    }
 }
+

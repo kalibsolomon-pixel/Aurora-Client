@@ -245,14 +245,7 @@ public class ProfileManagerScreen extends Screen implements ThemedScreen {
     private String fitName(String raw) {
         String cached = nameFitCache.get(raw);
         if (cached != null) return cached;
-        String fitted = raw;
-        if (this.font.width(fitted) > NAME_W - 6) {
-            String ell = "…";
-            while (fitted.length() > 1 && this.font.width(fitted + ell) > NAME_W - 6) {
-                fitted = fitted.substring(0, fitted.length() - 1);
-            }
-            fitted = fitted + ell;
-        }
+        String fitted = AuroraFontRenderer.ellipsize(this.font, raw, NAME_W - 6, 1);
         nameFitCache.put(raw, fitted);
         return fitted;
     }

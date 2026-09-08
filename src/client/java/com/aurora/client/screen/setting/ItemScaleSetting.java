@@ -1,6 +1,7 @@
 package com.aurora.client.screen.setting;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
+import com.aurora.client.ui.component.Widget;
 import com.aurora.client.ui.render.blur.BlurPanelRenderer;
 import com.aurora.client.ui.util.ItemSpriteRenderer;
 import com.aurora.client.ui.util.AuroraFontRenderer;
@@ -140,7 +141,7 @@ public class ItemScaleSetting extends FeatureSetting {
         // Draw "+" add button — raised glass (flat pill on decline).
         int plusX = x + width - 36;
         int plusY = y + 5;
-        boolean plusHover = mouseX >= plusX && mouseX < plusX + 24 && mouseY >= plusY && mouseY < plusY + 20;
+        boolean plusHover = Widget.inBounds(mouseX, mouseY, plusX, plusY, 24, 20);
         int plusBg = ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_BACKGROUND),
                 plusHover ? 0x66 : 0x2E);
         int plusBorder = plusHover ? AuroraTheme.BORDER_ON_HOVER : AuroraTheme.BORDER_OFF;
@@ -179,7 +180,7 @@ public class ItemScaleSetting extends FeatureSetting {
 
             // Header Background Panel (26px tall — the hover band matches so
             // there is no hover-without-click strip at the row's bottom edge).
-            boolean rowHover = mouseX >= x + 10 && mouseX < x + width - 10 && mouseY >= rowY && mouseY < rowY + 26;
+            boolean rowHover = Widget.inBounds(mouseX, mouseY, x + 10, rowY, width - 20, 26);
             AuroraShapes.panel(ctx, x + 10, rowY, width - 20, 26,
                     ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_BACKGROUND), 0x1A),
                     AuroraTheme.RADIUS_SMALL);
@@ -202,7 +203,7 @@ public class ItemScaleSetting extends FeatureSetting {
             // chevron and trash icon
             int rightX = x + width - 24;
             // Draw Delete Button (Red cross/Trash)
-            boolean trashHover = mouseX >= rightX - 16 && mouseX < rightX && mouseY >= rowY + 5 && mouseY < rowY + 21;
+            boolean trashHover = Widget.inBounds(mouseX, mouseY, rightX - 16, rowY + 5, 16, 16);
             ctx.drawString(tr, "x", rightX - 12, rowY + 8,
                     trashHover ? ThemeManager.color(ThemeToken.SEMANTIC_ERROR)
                                 : AuroraTheme.IOS_TERTIARY_LABEL, false);

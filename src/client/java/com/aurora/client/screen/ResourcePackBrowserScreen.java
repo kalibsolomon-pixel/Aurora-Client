@@ -11,6 +11,7 @@ import com.aurora.client.ui.component.Button;
 import com.aurora.client.ui.component.ButtonWidget;
 import com.aurora.client.ui.component.ThemedScreen;
 import com.aurora.client.ui.component.Toast;
+import com.aurora.client.ui.component.Widget;
 import com.aurora.client.ui.render.blur.BlurPanelRenderer;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.util.AuroraAnim;
@@ -539,8 +540,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
 
             boolean isActive = (tab.slug == null && activeCategory == null)
                     || (tab.slug != null && tab.slug.equals(activeCategory));
-            boolean hover = mouseX >= tabX && mouseX < tabX + tabW
-                    && mouseY >= tabY && mouseY < tabY + TAB_H
+            boolean hover = Widget.inBounds(mouseX, mouseY, tabX, tabY, tabW, TAB_H)
                     && mouseY >= clipTop && mouseY < clipBot;
 
             // Eased hover / active transition.
@@ -617,8 +617,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
     }
 
     private void renderCard(GuiGraphics g, ModrinthProject p, int x, int y, int mouseX, int mouseY) {
-        boolean cardHover = mouseX >= x && mouseX < x + CARD_W
-                && mouseY >= y && mouseY < y + CARD_H;
+        boolean cardHover = Widget.inBounds(mouseX, mouseY, x, y, CARD_W, CARD_H);
         float t = updateHover("card:" + p.projectId, cardHover);
 
         // Card body — deliberately FLAT (audit R9/B1/B2, 2026-09-08): the
@@ -897,8 +896,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
             CategoryTab tab = CATEGORIES[i];
             int rowH = tab.section == Section.HEADER ? HEADER_H : TAB_H;
             if (tab.section != Section.HEADER
-                    && mouseX >= tabX && mouseX < tabX + tabW
-                    && mouseY >= tabY && mouseY < tabY + rowH
+                    && Widget.inBounds(mouseX, mouseY, tabX, tabY, tabW, rowH)
                     && mouseY >= clipTop && mouseY < clipBot) {
                 activeCategory = tab.slug;
                 pendingQuery = searchField != null ? searchField.getValue() : "";
@@ -960,13 +958,11 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
             int btnW = 80, btnH = 18;
             int btnX = x + CARD_W - btnW - THUMB_PAD;
             int btnY = y + CARD_H - btnH - 8;
-            if (mouseX >= btnX && mouseX < btnX + btnW
-                    && mouseY >= btnY && mouseY < btnY + btnH) {
+            if (Widget.inBounds(mouseX, mouseY, btnX, btnY, btnW, btnH)) {
                 handleInstallClick(list.get(i));
                 return true;
             }
-            if (mouseX >= x && mouseX < x + CARD_W
-                    && mouseY >= y && mouseY < y + CARD_H) {
+            if (Widget.inBounds(mouseX, mouseY, x, y, CARD_W, CARD_H)) {
                 openDetail(list.get(i));
                 return true;
             }
@@ -993,7 +989,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         int cbW = 60, cbH = 22;
         int cbX = modalX + modalW - cbW - pad;
         int cbY = modalY + pad;
-        if (mouseX >= cbX && mouseX < cbX + cbW && mouseY >= cbY && mouseY < cbY + cbH) {
+        if (Widget.inBounds(mouseX, mouseY, cbX, cbY, cbW, cbH)) {
             closeDetail();
             return true;
         }
@@ -1002,7 +998,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         int btnW = 130, btnH = 24;
         int btnX = modalX + pad;
         int btnY = modalY + modalH - pad - btnH;
-        if (mouseX >= btnX && mouseX < btnX + btnW && mouseY >= btnY && mouseY < btnY + btnH) {
+        if (Widget.inBounds(mouseX, mouseY, btnX, btnY, btnW, btnH)) {
             if (detailProject != null) handleInstallClick(detailProject);
             return true;
         }
@@ -1244,12 +1240,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
 
     private String truncateToWidth(String s, int maxW) {
         if (s == null) return "";
-        if (this.font.width(s) <= maxW) return s;
-        String ell = "…";
-        while (s.length() > 1 && this.font.width(s + ell) > maxW) {
-            s = s.substring(0, s.length() - 1);
-        }
-        return s + ell;
+        return AuroraFontRenderer.ellipsize(this.font, s, maxW, 1);
     }
 
     /**

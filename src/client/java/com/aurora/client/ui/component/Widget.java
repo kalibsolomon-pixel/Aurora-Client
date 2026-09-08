@@ -74,8 +74,15 @@ public abstract class Widget {
     public boolean onScroll(double vertical) { return false; }
     public boolean onKeyPress(int keyCode, int modifiers) { return false; }
 
-    /** Axis-aligned hit test, exclusive of the far edges. */
-    protected static boolean inBounds(double mx, double my, float bx, float by, float bw, float bh) {
+    /**
+     * Axis-aligned hit test, exclusive of the far edges — the canonical
+     * form of the inline {@code mx >= x && mx < x + w && …} hover checks.
+     * Public static so screens and setting rows share it too; keep
+     * genuinely different hit-test shapes (closed intervals, single-axis
+     * bands, circles, clipped regions) inline rather than forcing them
+     * through this.
+     */
+    public static boolean inBounds(double mx, double my, float bx, float by, float bw, float bh) {
         return mx >= bx && mx < bx + bw && my >= by && my < by + bh;
     }
 }

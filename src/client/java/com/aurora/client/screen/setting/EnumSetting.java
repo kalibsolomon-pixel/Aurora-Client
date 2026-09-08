@@ -2,9 +2,11 @@ package com.aurora.client.screen.setting;
 
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
+import com.aurora.client.ui.component.Widget;
 import com.aurora.client.ui.render.blur.BlurPanelRenderer;
 import com.aurora.client.ui.util.MaterialIconRenderer;
 import com.aurora.client.ui.util.RenderUtil;
+import com.aurora.client.util.AuroraAnim;
 import com.aurora.client.util.AuroraTheme;
 import com.aurora.client.util.HoverAnim;
 import net.minecraft.client.Minecraft;
@@ -145,15 +147,14 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
         lastBtnX = btnX;
         lastBtnY = btnY;
 
-        boolean hover = !disabled && mouseX >= btnX && mouseX < btnX + BTN_W
-                && mouseY >= btnY && mouseY < btnY + BTN_H;
+        boolean hover = !disabled && Widget.inBounds(mouseX, mouseY, btnX, btnY, BTN_W, BTN_H);
         float hT = hoverAnim.update((hover || expanded) && !disabled);
 
         int fillTint   = disabled ? ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_BACKGROUND), 0x22)
-                                  : lerpColor(AuroraTheme.PANEL_OFF, AuroraTheme.PANEL_OFF_HOVER, hT);
+                                  : AuroraAnim.lerpArgb(AuroraTheme.PANEL_OFF, AuroraTheme.PANEL_OFF_HOVER, hT);
         int borderTint = disabled ? ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_BACKGROUND), 0x33)
-                                  : lerpColor(AuroraTheme.BORDER_OFF, AuroraTheme.BORDER_OFF_HOVER, hT);
-        int textColor  = disabled ? AuroraTheme.TEXT_DIM : lerpColor(AuroraTheme.TEXT_SECONDARY, AuroraTheme.TEXT_PRIMARY, hT);
+                                  : AuroraAnim.lerpArgb(AuroraTheme.BORDER_OFF, AuroraTheme.BORDER_OFF_HOVER, hT);
+        int textColor  = disabled ? AuroraTheme.TEXT_DIM : AuroraAnim.lerpArgb(AuroraTheme.TEXT_SECONDARY, AuroraTheme.TEXT_PRIMARY, hT);
 
         // Glass: raised glass + neutral tint replace the fill + outline —
         // the glass rim replaces the border, no double outline. Disabled
@@ -230,8 +231,7 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
                     String optName = fit(tr, displayName(val), BTN_W - 10);
                     int optY = dropdownY + 2 + vIdx * OPT_H;
 
-                    boolean optHover = mouseX >= btnX && mouseX < btnX + BTN_W
-                            && mouseY >= optY && mouseY < optY + OPT_H;
+                    boolean optHover = Widget.inBounds(mouseX, mouseY, btnX, optY, BTN_W, OPT_H);
 
                     if (optHover) {
                         ctx.fill(btnX + 2, optY, btnX + BTN_W - 2, optY + OPT_H, ThemeManager.surfaceColor(ThemeToken.SURFACE_VARIANT));
@@ -272,8 +272,7 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
         int btnX = rowX + rowWidth - BTN_W - 14;
         int btnY = rowY + (CONTROL_H - BTN_H) / 2;
 
-        boolean clickedButton = mouseX >= btnX && mouseX < btnX + BTN_W
-                && mouseY >= btnY && mouseY < btnY + BTN_H;
+        boolean clickedButton = Widget.inBounds(mouseX, mouseY, btnX, btnY, BTN_W, BTN_H);
 
         if (clickedButton) {
             expanded = !expanded;
@@ -290,8 +289,7 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
             int visibleCount = Math.min(5, values.length);
             int dropdownH = visibleCount * OPT_H + 4;
 
-            boolean clickedDropdown = mouseX >= btnX && mouseX < btnX + BTN_W
-                    && mouseY >= dropdownY && mouseY < dropdownY + dropdownH;
+            boolean clickedDropdown = Widget.inBounds(mouseX, mouseY, btnX, dropdownY, BTN_W, dropdownH);
 
             if (clickedDropdown) {
                 int clickedIndex = (int) ((mouseY - (dropdownY + 2)) / OPT_H);
@@ -341,17 +339,5 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
         int maxScroll = values.length - maxVisible;
         if (scrollOffset > maxScroll) scrollOffset = maxScroll;
         return true;
-    }
-
-    private static int lerpColor(int from, int to, float t) {
-        if (t <= 0f) return from;
-        if (t >= 1f) return to;
-        int af = (from >>> 24) & 0xFF, ar = (from >>> 16) & 0xFF, ag = (from >>> 8) & 0xFF, ab = from & 0xFF;
-        int bf = (to   >>> 24) & 0xFF, br = (to   >>> 16) & 0xFF, bg = (to   >>> 8) & 0xFF, bb = to   & 0xFF;
-        int a = Math.round(af + (bf - af) * t);
-        int r = Math.round(ar + (br - ar) * t);
-        int g = Math.round(ag + (bg - ag) * t);
-        int b = Math.round(ab + (bb - ab) * t);
-        return (a << 24) | (r << 16) | (g << 8) | b;
     }
 }

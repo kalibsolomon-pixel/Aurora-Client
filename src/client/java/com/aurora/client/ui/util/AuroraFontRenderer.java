@@ -192,6 +192,26 @@ public class AuroraFontRenderer {
         drawCentered(graphics, font, text.getVisualOrderText(), cx, y, color);
     }
 
+    /**
+     * Ellipsis-truncates {@code s} to {@code maxW} pixels: drops trailing
+     * characters (never below {@code minLen}) until {@code s + "…"} fits,
+     * then appends the ellipsis. Returns {@code s} unchanged if it already
+     * fits. The canonical form of the trim loop the manager screens, the
+     * pack browser and the keybind pill previously each carried; callers
+     * with per-frame text wrap their own memo cache around it (the loop's
+     * {@code font.width()} per removed character is the expensive part).
+     * Not to be confused with the {@code plainSubstrByWidth + "..."}
+     * three-dot idiom some rows use — that spelling stays theirs.
+     */
+    public static String ellipsize(Font font, String s, int maxW, int minLen) {
+        if (font.width(s) <= maxW) return s;
+        String ell = "…";
+        while (s.length() > minLen && font.width(s + ell) > maxW) {
+            s = s.substring(0, s.length() - 1);
+        }
+        return s + ell;
+    }
+
     // Keep compatibility wrappers
     public float draw(GuiGraphics graphics, String text, float x, float y, int color, boolean dropShadow) {
         return drawString(graphics, Minecraft.getInstance().font, text, x, y, color, dropShadow);

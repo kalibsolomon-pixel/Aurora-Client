@@ -6,7 +6,9 @@ import com.aurora.client.hud.module.KeystrokesModule;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.render.blur.BlurPanelRenderer;
+import com.aurora.client.ui.component.Widget;
 import com.aurora.client.ui.util.RenderUtil;
+import com.aurora.client.util.AuroraAnim;
 import com.aurora.client.util.AuroraTheme;
 import com.aurora.client.util.HoverAnim;
 import com.mojang.blaze3d.platform.InputConstants;
@@ -82,8 +84,7 @@ public class KeyListSetting extends FeatureSetting {
 
             int btnX = x + width - BTN_SIZE - 14;
             int btnY = iy + (ROW_H - BTN_SIZE) / 2;
-            boolean btnHover = mouseX >= btnX && mouseX < btnX + BTN_SIZE
-                    && mouseY >= btnY && mouseY < btnY + BTN_SIZE;
+            boolean btnHover = Widget.inBounds(mouseX, mouseY, btnX, btnY, BTN_SIZE, BTN_SIZE);
             ctx.fill(btnX, btnY, btnX + BTN_SIZE, btnY + BTN_SIZE,
                     ThemeManager.withAlpha(err, btnHover ? 0x66 : 0x33));
             AuroraFontRenderer.drawCentered(ctx, tr, "\u2212", btnX + BTN_SIZE / 2,
@@ -92,12 +93,7 @@ public class KeyListSetting extends FeatureSetting {
             Integer boxed = items.get(i);
             String display = boxed == null ? "?" : keyName(boxed);
             int maxW = width - BTN_SIZE - 44;
-            if (tr.width(display) > maxW) {
-                while (display.length() > 3 && tr.width(display + "\u2026") > maxW) {
-                    display = display.substring(0, display.length() - 1);
-                }
-                display = display + "\u2026";
-            }
+            display = AuroraFontRenderer.ellipsize(tr, display, maxW, 3);
             ctx.drawString(tr, display, x + 16, iy + (ROW_H - tr.lineHeight) / 2,
                     AuroraTheme.TEXT_SECONDARY, false);
             iy += ROW_H + 2;
@@ -107,13 +103,12 @@ public class KeyListSetting extends FeatureSetting {
         int addX = x + 14;
         int addW = width - 28;
         int addY = iy + 4;
-        boolean addHover = mouseX >= addX && mouseX < addX + addW
-                && mouseY >= addY && mouseY < addY + ADD_H;
+        boolean addHover = Widget.inBounds(mouseX, mouseY, addX, addY, addW, ADD_H);
         float hT = hoverAnim.update(addHover || listening);
 
-        int fillTint   = lerpColor(AuroraTheme.PANEL_OFF, AuroraTheme.PANEL_OFF_HOVER, hT);
-        int borderTint = lerpColor(AuroraTheme.BORDER_OFF, AuroraTheme.BORDER_ON_HOVER, hT);
-        int textColor  = lerpColor(AuroraTheme.TEXT_SECONDARY, AuroraTheme.TEXT_PRIMARY, hT);
+        int fillTint   = AuroraAnim.lerpArgb(AuroraTheme.PANEL_OFF, AuroraTheme.PANEL_OFF_HOVER, hT);
+        int borderTint = AuroraAnim.lerpArgb(AuroraTheme.BORDER_OFF, AuroraTheme.BORDER_ON_HOVER, hT);
+        int textColor  = AuroraAnim.lerpArgb(AuroraTheme.TEXT_SECONDARY, AuroraTheme.TEXT_PRIMARY, hT);
 
         // Glass: same contract as KeybindSetting's pill — raised glass,
         // neutral tint at rest, accent-stained tint while listening, and
@@ -151,8 +146,7 @@ public class KeyListSetting extends FeatureSetting {
         for (int i = 0; i < items.size(); i++) {
             int btnX = lastX + lastW - BTN_SIZE - 14;
             int btnY = iy + (ROW_H - BTN_SIZE) / 2;
-            if (mouseX >= btnX && mouseX < btnX + BTN_SIZE
-                    && mouseY >= btnY && mouseY < btnY + BTN_SIZE) {
+            if (Widget.inBounds(mouseX, mouseY, btnX, btnY, BTN_SIZE, BTN_SIZE)) {
                 List<Integer> copy = new ArrayList<>(items);
                 if (i < copy.size()) {
                     copy.remove(i);
@@ -167,8 +161,7 @@ public class KeyListSetting extends FeatureSetting {
         int addX = lastX + 14;
         int addW = lastW - 28;
         int addY = iy + 4;
-        if (mouseX >= addX && mouseX < addX + addW
-                && mouseY >= addY && mouseY < addY + ADD_H) {
+        if (Widget.inBounds(mouseX, mouseY, addX, addY, addW, ADD_H)) {
             listening = !listening;
             if (listening) requestFocus(); else releaseFocus();
             return true;
@@ -218,17 +211,5 @@ public class KeyListSetting extends FeatureSetting {
         } catch (Exception e) {
             return "Key " + glfwKey;
         }
-    }
-
-    private static int lerpColor(int from, int to, float t) {
-        if (t <= 0f) return from;
-        if (t >= 1f) return to;
-        int af = (from >>> 24) & 0xFF, ar = (from >>> 16) & 0xFF, ag = (from >>> 8) & 0xFF, ab = from & 0xFF;
-        int bf = (to   >>> 24) & 0xFF, br = (to   >>> 16) & 0xFF, bg = (to   >>> 8) & 0xFF, bb = to   & 0xFF;
-        int a = Math.round(af + (bf - af) * t);
-        int r = Math.round(ar + (br - ar) * t);
-        int g = Math.round(ag + (bg - ag) * t);
-        int b = Math.round(ab + (bb - ab) * t);
-        return (a << 24) | (r << 16) | (g << 8) | b;
     }
 }

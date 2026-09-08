@@ -276,7 +276,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             } else if (sel) {
                 RenderUtil.drawRoundedRectAA(g, bx + 8, catY, 64, 22, 5, alpha(ThemeToken.ACCENT, 0x26 / 255f));
             } else if (hover) {
-                RenderUtil.drawRoundedRectAA(g, bx + 8, catY, 64, 22, 5, surfaceFill(ThemeToken.SURFACE_VARIANT));
+                RenderUtil.drawRoundedRectAA(g, bx + 8, catY, 64, 22, 5, ThemeManager.surfaceColor(ThemeToken.SURFACE_VARIANT));
             }
             int txt = chipGlass && sel ? ThemeManager.color(ThemeToken.ON_ACCENT)
                     : sel ? ThemeManager.color(ThemeToken.ON_BACKGROUND)
@@ -298,7 +298,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                     ThemeManager.color(ThemeToken.WINDOW_FILL));
             BlurPanelRenderer.drawRimFinish(g, bx + 8, profY, 64, TAB_H, 5);
         } else if (pHover) {
-            RenderUtil.drawRoundedRectAA(g, bx + 8, profY, 64, 22, 5, surfaceFill(ThemeToken.SURFACE_VARIANT));
+            RenderUtil.drawRoundedRectAA(g, bx + 8, profY, 64, 22, 5, ThemeManager.surfaceColor(ThemeToken.SURFACE_VARIANT));
         }
         g.drawString(tr, "Profiles", (int) (bx + 16), (int) (profY + 7),
                 pHover ? ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY) : ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED), false);
@@ -365,7 +365,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 // Tile surface — same dark/translucent character as the panel
                 // (surface RGB + the panel's opacity-driven alpha), hover lifts it.
                 RenderUtil.drawRoundedRectAA(g, cx, cy, cw, ch, 6,
-                        hover ? surfaceFill(ThemeToken.SURFACE_VARIANT) : surfaceFill(ThemeToken.SURFACE));
+                        hover ? ThemeManager.surfaceColor(ThemeToken.SURFACE_VARIANT) : ThemeManager.surfaceColor(ThemeToken.SURFACE));
                 if (on) {
                     // Accent wash + border = the enabled indicator (no switch widget).
                     RenderUtil.drawRoundedRectAA(g, cx, cy, cw, ch, 6, alpha(ThemeToken.ACCENT, 0x14 / 255f));
@@ -448,7 +448,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                         alpha(ThemeToken.ON_BACKGROUND, 0x1A / 255f));
             }
         } else {
-            int bg = selected ? alpha(ThemeToken.ACCENT, 0x26 / 255f) : (hover ? surfaceFill(ThemeToken.SURFACE_VARIANT) : surfaceFill(ThemeToken.SURFACE));
+            int bg = selected ? alpha(ThemeToken.ACCENT, 0x26 / 255f) : (hover ? ThemeManager.surfaceColor(ThemeToken.SURFACE_VARIANT) : ThemeManager.surfaceColor(ThemeToken.SURFACE));
             int border = selected ? ThemeManager.color(ThemeToken.ACCENT) : alpha(ThemeToken.ON_BACKGROUND, 0x08f);
             RenderUtil.drawRoundedRectAA(g, x, y, size, size, 4, bg);
             RenderUtil.drawRoundedOutlineAA(g, x, y, size, size, 4, 1.0f, border);
@@ -487,13 +487,6 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     private static String fit(Font tr, String text, int maxW) {
         if (tr.width(text) <= maxW) return text;
         return tr.plainSubstrByWidth(text, maxW - tr.width("...")) + "...";
-    }
-
-    /** Surface RGB with the panel's opacity-driven alpha — tiles track the panel's translucency. */
-    private int surfaceFill(ThemeToken surface) {
-        int panel = ThemeManager.color(ThemeToken.WINDOW_FILL);
-        int rgb = ThemeManager.color(surface);
-        return (panel & 0xFF000000) | (rgb & 0x00FFFFFF);
     }
 
     /** Render a module's icon (FeatureIcons glyph via the material-symbols font). */

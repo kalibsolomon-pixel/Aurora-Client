@@ -1,4 +1,5 @@
 package com.aurora.client.screen.setting;
+import com.aurora.client.ui.component.Widget;
 import com.aurora.client.ui.util.AuroraFontRenderer;
 
 import com.aurora.client.config.AuroraConfig;
@@ -240,7 +241,7 @@ public class AccentSetting extends FeatureSetting {
     }
 
     private static boolean hoverAt(double mouseX, double mouseY, int x, int y, int w) {
-        return mouseX >= x && mouseX < x + w && mouseY >= y && mouseY < y + SWATCH_H;
+        return Widget.inBounds(mouseX, mouseY, x, y, w, SWATCH_H);
     }
 
     // ------------------------------------------------------------------
@@ -267,7 +268,7 @@ public class AccentSetting extends FeatureSetting {
             for (int i = 0; i <= ThemePresets.ALL.size(); i++) {
                 int sx = cellX(i, lastW);
                 int sy = cellY(i);
-                if (mouseX >= sx && mouseX < sx + sw && mouseY >= sy && mouseY < sy + SWATCH_H) {
+                if (Widget.inBounds(mouseX, mouseY, sx, sy, sw, SWATCH_H)) {
                     if (i < ThemePresets.ALL.size()) {
                         ThemePresets.Entry e = ThemePresets.ALL.get(i);
                         if ((e.argb | 0xFF000000) != (currentAccent() | 0xFF000000)) {
@@ -285,8 +286,7 @@ public class AccentSetting extends FeatureSetting {
         }
 
         // Click inside our row but outside any control: drop focus.
-        if (mouseX >= lastX && mouseX < lastX + lastW
-                && mouseY >= lastY && mouseY < lastY + height()) {
+        if (Widget.inBounds(mouseX, mouseY, lastX, lastY, lastW, height())) {
             releaseFocus();
         }
         return false;

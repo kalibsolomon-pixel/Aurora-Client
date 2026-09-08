@@ -380,7 +380,6 @@ public abstract class FeatureSetting {
 
     /** Scales the alpha byte of {@code argb} by {@code t} (0..1). */
     private static int fadeColor(int argb, float t) {
-        int a = Math.round(((argb >>> 24) & 0xFF) * t);
-        return (a << 24) | (argb & 0x00FFFFFF);
+        return com.aurora.client.util.AuroraAnim.scaleAlpha(argb, t);
     }
 }
