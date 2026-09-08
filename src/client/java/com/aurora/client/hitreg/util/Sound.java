@@ -10,6 +10,11 @@ import com.aurora.client.hitreg.settings.Toggle;
 
 import static com.aurora.client.hitreg.Hitreg.*;
 
+/**
+ * From BetterHitreg by Jass (modrinth.com/mod/betterhitreg), integrated into
+ * Aurora with the author's permission. Logic is upstream's, moved verbatim —
+ * see {@link com.aurora.client.hitreg.BetterHitreg} for the integration notes.
+ */
 public class Sound {
     public ClientboundSoundPacket packet;
     public String sound;

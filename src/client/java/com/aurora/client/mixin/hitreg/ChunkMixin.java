@@ -21,6 +21,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import com.aurora.client.hitreg.Hitreg;
 import com.aurora.client.hitreg.settings.Toggle;
 
+/**
+ * From BetterHitreg by Jass (modrinth.com/mod/betterhitreg), integrated into
+ * Aurora with the author's permission. Logic is upstream's, moved verbatim —
+ * see {@link com.aurora.client.hitreg.BetterHitreg} for the integration notes.
+ */
 @Mixin(LevelRenderer.class)
 public class ChunkMixin {
     //version 26+

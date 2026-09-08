@@ -18,6 +18,11 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import com.aurora.client.hitreg.settings.Toggle;
 
+/**
+ * From BetterHitreg by Jass (modrinth.com/mod/betterhitreg), integrated into
+ * Aurora with the author's permission. Logic is upstream's, moved verbatim —
+ * see {@link com.aurora.client.hitreg.BetterHitreg} for the integration notes.
+ */
 @Mixin(HumanoidArmorLayer.class)
 public abstract class ArmorMixin {
     //version 1.21.1-

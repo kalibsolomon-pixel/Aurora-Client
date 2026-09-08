@@ -12,6 +12,11 @@ import com.aurora.client.hitreg.settings.Toggle;
 
 import static com.aurora.client.hitreg.Hitreg.client;
 
+/**
+ * From BetterHitreg by Jass (modrinth.com/mod/betterhitreg), integrated into
+ * Aurora with the author's permission. Logic is upstream's, moved verbatim —
+ * see {@link com.aurora.client.hitreg.BetterHitreg} for the integration notes.
+ */
 @Mixin(ParticleEngine.class)
 public class ParticleMixin {
     @Inject(method = "makeParticle(Lnet/minecraft/core/particles/ParticleOptions;DDDDDD)Lnet/minecraft/client/particle/Particle;", at = @At("HEAD"), cancellable = true)

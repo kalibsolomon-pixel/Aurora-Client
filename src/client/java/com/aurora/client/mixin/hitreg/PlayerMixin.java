@@ -11,6 +11,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import com.aurora.client.hitreg.Hitreg;
 
 
+/**
+ * From BetterHitreg by Jass (modrinth.com/mod/betterhitreg), integrated into
+ * Aurora with the author's permission. Logic is upstream's, moved verbatim —
+ * see {@link com.aurora.client.hitreg.BetterHitreg} for the integration notes.
+ */
 @Mixin(LocalPlayer.class)
 public abstract class PlayerMixin {
     @Inject(method = "crit", at = @At("HEAD"), cancellable = true)

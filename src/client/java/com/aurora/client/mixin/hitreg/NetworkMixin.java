@@ -10,6 +10,11 @@ import com.aurora.client.hitreg.util.DontAnimate;
 
 import static com.aurora.client.hitreg.Hitreg.*;
 
+/**
+ * From BetterHitreg by Jass (modrinth.com/mod/betterhitreg), integrated into
+ * Aurora with the author's permission. Logic is upstream's, moved verbatim —
+ * see {@link com.aurora.client.hitreg.BetterHitreg} for the integration notes.
+ */
 @Mixin(ClientPacketListener.class)
 public abstract class NetworkMixin {
     @ModifyArg(method = "handleDamageEvent(Lnet/minecraft/network/protocol/game/ClientboundDamageEventPacket;)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/Entity;handleDamageEvent(Lnet/minecraft/world/damagesource/DamageSource;)V"))

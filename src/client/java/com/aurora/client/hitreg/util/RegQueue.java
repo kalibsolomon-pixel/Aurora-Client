@@ -3,6 +3,11 @@ package com.aurora.client.hitreg.util;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
+/**
+ * From BetterHitreg by Jass (modrinth.com/mod/betterhitreg), integrated into
+ * Aurora with the author's permission. Logic is upstream's, moved verbatim —
+ * see {@link com.aurora.client.hitreg.BetterHitreg} for the integration notes.
+ */
 public class RegQueue {
     private final int capacity;
     private final Deque<Integer> delayQueue;

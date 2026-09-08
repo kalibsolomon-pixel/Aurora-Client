@@ -20,6 +20,11 @@ import com.aurora.client.hitreg.util.*;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * From BetterHitreg by Jass (modrinth.com/mod/betterhitreg), integrated into
+ * Aurora with the author's permission. Logic is upstream's, moved verbatim —
+ * see {@link com.aurora.client.hitreg.BetterHitreg} for the integration notes.
+ */
 public class Hitreg {
     private static final Logger log = LoggerFactory.getLogger(Hitreg.class);
     public static Minecraft client;

@@ -1,8 +1,9 @@
 # Aurora UI Engine — Project Guide
 
 A reference for humans and AI agent sessions working on this repo. Everything below was
-verified by reading the code on **2026-09-08** (`master` at the cand-a rim-post-dim merge,
-clean working tree; §8 records what landed since the previous 2026-09-07 pass).
+verified by reading the code on **2026-09-08** (`master` after the Better Hitreg integration
+landed in five commits on top of the cand-a rim-post-dim merge; §8 records what landed since
+the previous 2026-09-07 pass).
 If you change the glass rollout status, theme architecture, or feature
 set, update the relevant section here in the same change.
 
@@ -14,12 +15,17 @@ set, update the relevant section here in the same change.
 Minecraft: a large QoL/performance feature set (30+ features) wrapped in a fully custom,
 themeable GUI framework (COSMIC/iOS-flavored) with a glass/blur "material" system.
 
-There is also a **second, complete, third-party mod vendored into the source tree**:
-*Better Hitreg* by Jass (`you.jass.betterhitreg`, ~4k lines, 14 mixins, its own entrypoint
-and `betterhitreg.mixins.json`, own `config/hitreg.properties`). It shares nothing with
-Aurora's framework. **No license/attribution headers exist in its tree** — do not
-redistribute without resolving that (see §9). When exploring, ignore that package unless
-tasked with it.
+One feature has a third-party origin: **Better Hitreg** (`feature id better_hitreg`) is
+*BetterHitreg by Jass* (modrinth.com/mod/betterhitreg), **integrated into Aurora with the
+author's explicit permission** (2026-09-08). It used to be vendored as a separate mod
+(`you.jass.betterhitreg`, own entrypoint, own mixin config, own `hitreg.properties`); it is
+now ordinary Aurora code — `com.aurora.client.hitreg` (+ `util/`, `settings/`) and
+`com.aurora.client.mixin.hitreg` — configured through `AuroraConfig` (`hitreg…` fields), with
+an Aurora feature card + detail screen, and credited in-file on every moved class plus a
+"Original project by Jass" subtitle on its screen. Its PvP-timing core (attack capture,
+packet processing, sound attribution windows, the `DontAnimate`/`OnlyAnimate` marker trick,
+the fight state machine) was moved **verbatim** and must stay that way — treat those classes
+like the glass renderer: read `hitreg/BetterHitreg.java`'s notes before touching them.
 
 ### Build & target facts
 
@@ -30,9 +36,9 @@ tasked with it.
 | Minecraft | **1.21.11** (`gradle.properties`) with official Mojang mappings |
 | Fabric API | 0.141.4+1.21.11; loader 0.19.2 |
 | Other deps | Cloth Config (`modApi`, used only by `util/ColorEntryHelper`); ModMenu in `suggests` only |
-| Entrypoints | `com.aurora.client.AuroraClient` + `you.jass.betterhitreg.BetterHitreg` |
-| Mixin configs | `aurora.mixins.json` (~57 entries), `betterhitreg.mixins.json` |
-| Run dir | `run/` at repo root is a live dev client dir (`run/config/aurora.json`, `run/config/aurora-worldmap/`, `run/config/profiles/`, `run/config/hitreg.properties`) |
+| Entrypoints | `com.aurora.client.AuroraClient` (Better Hitreg is wired from it via `hitreg/BetterHitreg.initialize()`) |
+| Mixin configs | `aurora.mixins.json` only (~70 `client` entries, of which 13 are `hitreg.*`) |
+| Run dir | `run/` at repo root is a live dev client dir (`run/config/aurora.json`, `run/config/aurora-worldmap/`, `run/config/profiles/`) |
 
 **Known version drift (harmless but confusing):** `gradle.properties` targets 1.21.11,
 `fabric.mod.json` declares `minecraft: "~1.21.8"`, and `build.gradle` run configs pin
@@ -50,7 +56,18 @@ All paths below are relative to `src/client/java/com/aurora/client/`.
 
 ```
 AuroraClient.java          Mod entrypoint: registers keybinds, HUD callbacks, feature
-                           managers, HUD modules, tooltip component, shutdown-save hook.
+                           managers, HUD modules, tooltip component, shutdown-save hook,
+                           runs HitregMigrator after the profile apply, and calls
+                           hitreg/BetterHitreg.initialize().
+├── hitreg/                BETTER HITREG (from BetterHitreg by Jass, integrated with
+│   │                      permission): BetterHitreg (init/keybind dispatch/score HUD),
+│   │                      Hitreg (fight state machine), Hit, HitType — timing core,
+│   │                      VERBATIM upstream.
+│   ├── util/              PacketProcessor, Sound, HitTracker, RegQueue, Scheduler,
+│   │                      Render (Gizmos overlays), MultiVersion (1.21.11 shim),
+│   │                      Animation + DontAnimate/OnlyAnimate DamageSource markers.
+│   └── settings/          Settings (facade over AuroraConfig), Toggle/Color enums
+│                          (config-backed), HitregMigrator (one-shot Properties import).
 ├── feature/               Feature SYSTEM (see §3). Feature.java = interface;
 │   └── impl/              29 runtime Feature singletons + helper classes (TickSync,
 │                           ThrottleDetector, EntityMovementSmoother, …).
@@ -91,6 +108,7 @@ AuroraClient.java          Mod entrypoint: registers keybinds, HUD callbacks, fe
 │                          point-sampled NEAREST and degrades when pose-scaled),
 │                          Animation (exponential approach animator).
 ├── mixin/                 ~57 client mixins (features + UI infra; see §4/§6).
+│   └── hitreg/            13 Better Hitreg mixins (registered as "hitreg.X"), verbatim.
 ├── config/                AuroraConfig (GSON → config/aurora.json, public fields = schema)
 │   └── profile/           ProfileManager: full-config snapshots as JSON per profile.
 ├── modrinth/              Keyless Modrinth v2 REST client + WebP→PNG icon cache
@@ -108,7 +126,6 @@ AuroraClient.java          Mod entrypoint: registers keybinds, HUD callbacks, fe
 │                          AttackedPlayerTracker, render-state snapshot bridges, and
 │   └── reflex/            NVIDIA-Reflex-style latency reduction (CpuTimeCollector,
 │                           GpuTimeCollector, ReflexScheduler).
-you/jass/betterhitreg/     VENDORED third-party mod (§1) — separate world.
 ```
 
 Resources: `assets/aurora/font/` (9 bundled TTFs incl. `material_symbols_rounded.ttf` icon
@@ -127,10 +144,10 @@ There is **no single registry**. Three structures must stay conceptually in sync
 1. **`feature/FeatureManager`** — ~29 long-lived `Feature` singletons with
    `onRegister()`/`onTick(Minecraft)` (interface `feature/Feature.java`).
    `Feature.enabledByDefault()` exists but is **never read anywhere** (dead API).
-2. **`screen/FeatureRegistry`** — static UI metadata: **34 MODULES-tab + 11 SETTINGS-tab
+2. **`screen/FeatureRegistry`** — static UI metadata: **35 MODULES-tab + 11 SETTINGS-tab
    tiles** (`FeatureMetadata`: id, display name, marketing description, enable
    getter/setter, list of `FeatureSetting` widgets, `reset()`).
-3. **`module/ModuleManager`** — 34 hardcoded grid cards consumed by `AuroraScreen`.
+3. **`module/ModuleManager`** — 35 hardcoded grid cards consumed by `AuroraScreen`.
    A typo'd id here silently returns null metadata. (The missing `reflex` card landed
    2026-09-05, audit B5 — counts now match, but the list is still maintained by hand.)
 
@@ -141,23 +158,31 @@ object. `FeatureMetadata` wraps `() -> cfg.xEnabled` / `v -> cfg.xEnabled = v`. 
 `DEFAULTS` snapshot taken at class init).
 
 Several shipped features have **no Feature object at all** (pure mixin + config field):
-No Fog, Hit Color, Item Scale, Resourcepack Browser, Reflex, Hotbar Bounce, Keystrokes.
+No Fog, Hit Color, Item Scale, Resourcepack Browser, Reflex, Hotbar Bounce, Keystrokes,
+Better Hitreg (its own tick/render/HUD hooks are registered by `hitreg/BetterHitreg`).
 
 **Persistence:** `AuroraConfig` — one pretty-printed GSON file at `<config>/aurora.json`.
 All state is public non-static fields; the class *is* the schema. Saves are **async** on a
 daemon executor (`Aurora-ConfigSave`) — blocking the tick thread on disk I/O caused real
 multiplayer disconnects once; `saveBlocking()` exists for the shutdown hook. Atomic writes
 (`.tmp` + `ATOMIC_MOVE`). Load runs `ThemeMigrator.migrateConfigJson` first and never throws.
+`hitreg/settings/HitregMigrator.runOnce()` (one-shot import of the legacy
+`config/hitreg.properties`, guarded by `migratedHitregProperties`) runs from `AuroraClient`
+**after** `ProfileManager.load()` — `applyProfile` resets profile-scoped fields to defaults
+before overlaying, so a migration inside `AuroraConfig.load()` would be wiped.
 
 **Profiles:** `config/profile/ProfileManager` snapshots *every* profile-scoped config field
-(reflection; only `activeProfile` + playtime telemetry are excluded) into
+(reflection; excluded: `activeProfile`, playtime telemetry, the lifetime fight counters
+`fightStatsTotalFights`/`fightStatsPlaytimeSeconds`, and `migratedHitregProperties`) into
 `<config>/profiles/<name>.json`; switch = save outgoing → apply → save pointer. Listeners
 (`onProfileApplied`) re-apply HUD layouts.
 
 **Keybinds** (`util/AuroraKeybinds` + raw `util/AuroraKey`): zoom **C**, FreeLook **V**,
 toggle sprint **J**, toggle sneak **K**, HUD editor **RShift**, world map **M** (all
 rebindable, synced two-way with the vanilla Controls screen). Unbound-by-default: hitbox
-toggle, totem reset, waypoint drop/manager, minimap toggle, blur test. Gotcha (observed
+toggle, totem reset, waypoint drop/manager, minimap toggle, blur test, and Better Hitreg's six
+(open settings, switch hand, four practice-scoreboard keys — upstream bound H + the arrow
+keys; unbound here on purpose). Gotcha (observed
 2026-09-08): binding one of these by editing `aurora.json` alone does NOT stick — the
 two-way sync sees vanilla's still-unbound KeyMapping at boot and writes -1 back into the
 config. The vanilla-side binding in `options.txt` (`key_key.aurora.<id>:key.keyboard.x`)
@@ -174,7 +199,7 @@ shift+right-click = lock, X = disable.
 
 ## 4. Feature catalog
 
-### MODULES tab (34 tiles) — behavior + where the code lives
+### MODULES tab (35 tiles) — behavior + where the code lives
 
 | Feature (id) | What it does | Implementation |
 |---|---|---|
@@ -193,6 +218,7 @@ shift+right-click = lock, X = disable.
 | Crosshair (`crosshair`) | Preset or CUSTOM painted crosshair with a **free-form canvas** (any W×H up to 128; dims live in `crosshairCustom{Width,Height}` + flat `boolean[]` pixels, resolved via `util/GridDims`); indicator crosshair when entity attackable; deliberate half-pixel centering fix. Canvas editor renders through a cached `DynamicTexture` (`ui/util/CanvasTexture` — one blit/frame, re-raster only on edit; replaced a per-cell fill loop that cost ~12.8 ms/frame at 33×33), HUD path merges lit cells into run-length fills, and growing the grid first runs a **measured** cost benchmark on the player's machine (`[canvas-cost]` log) with an apply-anyway warning — never hardware-name heuristics | `hud/CrosshairRenderer`, `PixelCanvasSetting`, `CanvasTexture`, `InGameHudMixin` (vanilla suppression) |
 | Hitbox (`hitbox`) | Custom entity hitboxes (self/target colors, eye-line, look line, width, see-through). Renders at plain vanilla interpolation — the smoother was **deliberately reverted** (desynced from model) | `hud/HitboxRenderer` (AFTER_ENTITIES) + `WorldLineRenderer`, `HitboxFeature`, `EntityRenderDispatcherMixin` |
 | Hit Color (`hit_color`) | Recolors hurt flash (port of harimasa/HitColor, MIT, credited) | `MixinOverlayTexture`, `EquipmentLayerRendererMixin`, `util/OverlayReloadListener` |
+| Better Hitreg (`better_hitreg`) | BetterHitreg by Jass, integrated with permission (credited in-file + screen subtitle). Client-side hit feedback: on your swing the target's hurt animation, the correct attack sound and crit/sharpness particles play locally after `hitregDelayMs` (0 = next frame) while the server's late copy is cancelled (`ServerMixin`/`NetworkMixin`→`DontAnimate` marker→`DamageMixin`); "Safe Regs Only"/shield rules; ghost + misplace detection over a rolling 100-hit window (surfaced as live tooltips on the Alert Delays/Ghosts/Misplaces toggles + "Reset Tracked Stats"); audio (mute other fights/self/them/non-hits, 1.8 sounds, OpenAL EFX muffle/sharpen via `SourceMixin`, metronome); render (hide other fights/animations/armor/particles, target + server hitbox, target cross, reach + jump rings, perfect-hit / jump-reset flash); practice arena (Unrender World via `ChunkMixin`, solid floor, floor grid); 19 ARGB overlay colors; six keybinds incl. the practice scoreboard. Fight tracking feeds the Stats Overlay (`Settings.addFight`). No chat/alert output at all (removed at integration). Card toggle = `hitregEnabled` master (ANDed into every `Toggle.toggled()` read); "Custom Hitreg" inside is upstream's own switch | `hitreg/*` (§2), `mixin/hitreg/*` (13), `AuroraConfig.hitreg*` (Reset prefix `hitreg`) |
 | Info HUD (`info_module`) | Corner readout, 13 individually toggleable rows (FPS/XYZ/time/facing/biome/light/memory/ping/CPS/playtime…) | `hud/module/InfoModule`, `PlaytimeFeature` (per-world buckets) |
 | CPS (`cps`) | L/R clicks-per-second; counts from raw GLFW callback (polling caps at 20) | `CpsModule`, `CpsTracker`, `ClickTrackerFeature`, `MouseClickTrackerMixin` |
 | Armor HUD (`armor_hud`) | 4 pieces + durability text/bar, horizontal/vertical, VANILLA slot background | `hud/module/ArmorModule` |
@@ -200,7 +226,7 @@ shift+right-click = lock, X = disable.
 | Potion HUD (`potion_hud`) | Replaces vanilla status strip: icon/name/Roman level/countdown rows; panel fades after expiry | `PotionModule`, `InGameHudPotionOverlayMixin` |
 | Ping (`ping`) | Corner ping HUD + numeric ping in tab list + colored ping under nametags (one toggle, three sub-flags) | `PingModule`, `PlayerListHudMixin`, `PlayerEntityRendererMixin` (also appends totem pops to nametags) |
 | Totem Pop Counter (`totem_pop`) | Your (and optionally others') totem activations; reset keybind; nametag counts | `TotemPopFeature`, `ClientPacketListenerEntityEventMixin`, `TotemPopModule` |
-| Stats Overlay (`stats`) | Session kills/deaths/K/D/time; kills are heuristic (strike → 4s death window) | `StatsTrackerFeature`, `StatsModule` |
+| Stats Overlay (`stats`) | Session kills/deaths/K/D/time (kills heuristic: strike → 4s death window) **plus Better Hitreg's fight stats**: Fights (session + lifetime total), Fight Time (session + lifetime), Last Fight (duration + both accuracies). Lifetime totals persist in `fightStatsTotalFights`/`fightStatsPlaytimeSeconds` (profile-excluded); session values reset with "Reset Stats"; lifetime totals only via the separate "Reset Lifetime Fight Totals" button | `StatsTrackerFeature` (`recordFight`), `StatsModule`, fed by `hitreg/settings/Settings.addFight` |
 | Waypoints (`waypoints`) | Per-world persistent markers: beacon beam and/or highlight slab + billboard labels; auto death waypoints (replace-previous or capped) | `WaypointFeature`, `hud/WaypointRenderer` (two passes), `WaypointManagerScreen` |
 | Minimap (`minimap`) | HUD minimap; rotation baked into the sampling pass (cheap); biome tint, hillshade, depth water; waypoint/entity dots, compass; can read World Map's region cache instead of live chunks | `hud/module/MinimapModule` (805 lines), `MinimapFeature`, `worldmap/WorldMapClient.sampleSurfaceAbgr` |
 | Container Preview (`container_preview`) | Tooltip grid for shulker contents + ender chest (snapshot while chest screen open — 1.21.x limitation) | `ItemTooltipImageMixin`, `ItemContainerContentsTooltipMixin`, `hud/preview/*` |
@@ -525,7 +551,9 @@ flags now default ON mod-wide. Status below is committed `master`.
   per-chunk timestamps + 512×512 ABGR pixels). Paths pass a strict `[a-z0-9_.-]` sanitize
   — raw `WorldScope` names with spaces once crashed Windows (`InvalidPathException`) and
   killed the previous world-map implementation.
-- `config/hitreg.properties` — the vendored BetterHitreg mod's separate config.
+- `config/hitreg.properties` — legacy BetterHitreg file. Read exactly once by
+  `HitregMigrator` (2026-09-08) and never written again; deleted from the dev run dir after
+  the migration was verified. A user's copy is harmless and can be removed.
 
 ---
 
@@ -548,6 +576,12 @@ B5–B19 fix commits; B20 (numeric-ping `MultiplayerServerListWidgetMixin` regis
 pre-dim layering (closes B3/B4); frost-radius-follows-opacity (`0c7c416`); the
 `MultiplayerServerListWidgetMixin` `@Shadow` crash fix (merged 2026-09-07, `6726079`); and
 the deferred post-dim rim finish (candidate A, merged 2026-09-08 — §6 convention 6).
+
+Landed 2026-09-08 after that: the **Better Hitreg integration** in five revertible commits
+(entrypoint + mixin fold → `hitreg.properties` migration → feature card/detail screen → fight
+stats merged into Stats Overlay → cleanup/attribution/docs). `you.jass.betterhitreg`,
+`betterhitreg.mixins.json`, the second entrypoint, the `/hitreg` command tree, every chat
+alert, the hand-drawn `ui/` menu and the dead `WorldMixin` are gone.
 
 Unmerged local branches: none. The three rim/lighting experiment candidates were resolved
 2026-09-08: `cand-a-rim-post-dim` (post-dim rim finish via a deferred queue in
@@ -614,9 +648,9 @@ on the target screens but a real side effect on every other raised control mod-w
 - `Feature.enabledByDefault()`: never read. `AutoSprintFeature`: dormant stub.
   `FpsDisplayFeature`: no-op marker (FPS lives in Info HUD).
 - `ColorEntryHelper.addPickerButton`: builds nothing (stub).
-- `module/ModuleManager` (34 hardcoded cards; count-matched with `FeatureRegistry` since
-  the missing `reflex` card landed 2026-09-05, audit B5) — ids here still silently fail
-  on typos. Consider deriving one from the other someday.
+- `module/ModuleManager` (35 hardcoded cards; count-matched with `FeatureRegistry` since
+  the missing `reflex` card landed 2026-09-05, audit B5; `better_hitreg` added 2026-09-08) —
+  ids here still silently fail on typos. Consider deriving one from the other someday.
 - ComplianceMode's `hitboxFeatureEnabled` config field is an orphan (force-false path
   writes fields renderers don't read for that one).
 - Four different animation helpers (`util/AnimationCurves`, `util/AuroraAnim`,
@@ -626,8 +660,15 @@ on the target screens but a real side effect on every other raised control mod-w
   (draggable HUD panels) are unrelated.
 
 **Hygiene**
-- Vendored BetterHitreg has no license/attribution headers; repo LICENSE (CC0) ≠
-  fabric.mod.json (`MIT`). Resolve before any redistribution.
+- The former "vendored BetterHitreg has no license/attribution headers — do not
+  redistribute" flag is **resolved** (2026-09-08): Jass granted explicit permission for the
+  integration, the code is integrated (not vendored), and credit is preserved in-file on
+  every moved class, in `hitreg/BetterHitreg.java`'s notes, and as the detail screen's
+  subtitle. Still open and unrelated: repo LICENSE (CC0) ≠ fabric.mod.json (`MIT`).
+- Better Hitreg's card icon reuses Crosshair's `gps_fixed` glyph — the bundled
+  `material_symbols_rounded.ttf` is a subset of exactly the `FeatureIcons` codepoints and
+  root-level `full_material.ttf` is a 0-byte placeholder, so no new glyph can be subset
+  until a real full font is dropped in.
 - `assets/aurora/textures/gui/module_icons/` ships two dev scripts + `settings.svg`;
   root-level `inspect_font3.py` has a hardcoded Windows path; font `license.txt` covers a
   removed font (Source Sans Pro).
