@@ -31,7 +31,27 @@ import java.util.List;
  *   <li><b>Totem pops</b> — not stored here; the module reads
  *       {@link TotemPopFeature#selfPops()} directly.</li>
  *   <li><b>Session time</b> — wall-clock since the last reset.</li>
+ *   <li><b>Fights</b> — fed by Better Hitreg's fight state machine
+ *       ({@code Hitreg.tick} → {@code Settings.addFight} →
+ *       {@link #recordFight}): a fight is an exchange of 10 s–10 min with
+ *       at least one landed hit, ended by the two players separating by
+ *       more than 30 blocks. Per fight it carries the duration and both
+ *       players' swing/hit counts (accuracy). Session fight count, session
+ *       fight seconds and the last-fight snapshot live here and reset with
+ *       the session; the lifetime totals live on {@code AuroraConfig}
+ *       ({@code fightStatsTotalFights} / {@code fightStatsPlaytimeSeconds}),
+ *       are excluded from profiles like playtime, and are only cleared by
+ *       {@link #resetLifetimeFightTotals()}.</li>
  * </ul>
+ *
+ * <p><b>Overlap policy (merge of BetterHitreg's stats, 2026-09-08):</b> the
+ * two systems measure different things and nothing here was replaced.
+ * Kills/deaths/K-D have no hitreg counterpart (hitreg tracks fights, hits
+ * and accuracy, never kills). "Session time" is wall-clock since reset;
+ * hitreg's "fight playtime" is the sum of tracked fight durations only —
+ * both are kept, side by side, under distinct labels. Accuracy and fight
+ * counts are hitreg-only and were added as new rows. Had a genuine
+ * overlap existed, hitreg's computation would have won.
  */
 public class StatsTrackerFeature implements Feature {
     public static final String ID = "stats_tracker";
@@ -45,6 +65,28 @@ public class StatsTrackerFeature implements Feature {
     private int kills = 0;
     private int deaths = 0;
     private long sessionStartMs = System.currentTimeMillis();
+
+    /** Tracked fights since the session began / last reset. */
+    private int sessionFights = 0;
+    /** Seconds spent in tracked fights since the session began / last reset. */
+    private long sessionFightSeconds = 0L;
+    /** Snapshot of the last tracked fight, or {@code null} until one completes. */
+    private volatile LastFight lastFight = null;
+
+    /** Immutable record of one completed, tracked fight. */
+    public record LastFight(long durationSeconds, int yourHits, int yourSwings,
+                            int theirHits, int theirSwings, long endedAtMs) {
+        /** Your landed-hit percentage, or -1 when no swing was counted. */
+        public int yourAccuracyPct() { return pct(yourHits, yourSwings); }
+        /** Their landed-hit percentage, or -1 when no swing was counted. */
+        public int theirAccuracyPct() { return pct(theirHits, theirSwings); }
+        private static int pct(int hits, int swings) {
+            // Same rule the original chat summary used: only shown when both
+            // counts are non-zero.
+            if (hits == 0 || swings == 0) return -1;
+            return Math.round(((float) hits / swings) * 100);
+        }
+    }
 
     private boolean wasAlive = true;
     private boolean lastAttack = false;
@@ -142,11 +184,51 @@ public class StatsTrackerFeature implements Feature {
         return System.currentTimeMillis() - sessionStartMs;
     }
 
-    /** Manual reset (config button / keybind). Clears counters and the clock. */
+    public int sessionFights() { return sessionFights; }
+    public long sessionFightSeconds() { return sessionFightSeconds; }
+    public LastFight lastFight() { return lastFight; }
+
+    /**
+     * Called by Better Hitreg's {@code Settings.addFight} on the client
+     * thread when a tracked fight ends (after the lifetime counters on
+     * {@code AuroraConfig} have been bumped). Updates the session counters
+     * and the last-fight snapshot.
+     */
+    public void recordFight(long durationSeconds, int yourHits, int yourSwings,
+                            int theirHits, int theirSwings) {
+        sessionFights++;
+        sessionFightSeconds += Math.max(0L, durationSeconds);
+        lastFight = new LastFight(durationSeconds, yourHits, yourSwings,
+                theirHits, theirSwings, System.currentTimeMillis());
+    }
+
+    /**
+     * Manual reset (config button / keybind). Clears the SESSION counters
+     * and the clock — kills, deaths, session fights, session fight time and
+     * the last-fight snapshot. Lifetime fight totals are deliberately not
+     * touched; see {@link #resetLifetimeFightTotals()}.
+     */
     public void resetAll() {
         kills = 0;
         deaths = 0;
         sessionStartMs = System.currentTimeMillis();
         pending.clear();
+        sessionFights = 0;
+        sessionFightSeconds = 0L;
+        lastFight = null;
+    }
+
+    /**
+     * Zero the persisted lifetime fight totals inherited from BetterHitreg
+     * ({@code total_fights} / {@code fight_playtime_(seconds)}). A separate,
+     * explicit action from {@link #resetAll()} because these are per-machine
+     * telemetry (like playtime) rather than session state; the Stats
+     * screen exposes it as its own button.
+     */
+    public void resetLifetimeFightTotals() {
+        AuroraConfig cfg = AuroraConfig.get();
+        cfg.fightStatsTotalFights = 0;
+        cfg.fightStatsPlaytimeSeconds = 0L;
+        AuroraConfig.save();
     }
 }

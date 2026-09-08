@@ -817,7 +817,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
         }
 
         addWithSettings(MODULES, "stats", "Stats Overlay",
-                "A per-session combat readout — kills, deaths, K/D and session time. Counters reset when you choose, so you can see how a session or a fight is going at a glance. (Totem pops have their own dedicated counter module.)",
+                "A combat readout — kills, deaths, K/D and session time, plus fight statistics from Better Hitreg: fights this session and lifetime, time spent fighting, and the last fight's duration with both players' accuracy. Session counters reset when you choose; lifetime fight totals persist across sessions and profiles. (Totem pops have their own dedicated counter module.)",
                 () -> cfg.statsEnabled, v -> cfg.statsEnabled = v,
                 List.of(
                         new BooleanSetting("Show Kills",
@@ -832,13 +832,31 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                         new BooleanSetting("Show Session Time",
                                 () -> cfg.statsShowSession, v -> cfg.statsShowSession = v)
                                 .description("Wall-clock time since the session began or you last reset the counters."),
-                        new ButtonSetting("Reset Stats",
+                        new SectionHeaderSetting("Fights"),
+                        new BooleanSetting("Show Fights",
+                                () -> cfg.statsShowFights, v -> cfg.statsShowFights = v)
+                                .description("Tracked fights this session and your lifetime total. A fight is an exchange of 10 seconds to 10 minutes with at least one landed hit, ended by the two of you separating by more than 30 blocks (Better Hitreg's tracker; needs its Track Fight Statistics toggle on)."),
+                        new BooleanSetting("Show Fight Time",
+                                () -> cfg.statsShowFightTime, v -> cfg.statsShowFightTime = v)
+                                .description("Time spent inside tracked fights, this session and lifetime. Different from Session time, which is plain wall-clock since your last reset."),
+                        new BooleanSetting("Show Last Fight",
+                                () -> cfg.statsShowLastFight, v -> cfg.statsShowLastFight = v)
+                                .description("Duration of the last tracked fight and both players' accuracy (landed hits over swings), the same figures the original mod printed after a fight."),
+                        new ButtonSetting("Reset Lifetime Fight Totals", "Reset",
+                                () -> {
+                                    com.aurora.client.feature.impl.StatsTrackerFeature feat =
+                                            com.aurora.client.feature.impl.StatsTrackerFeature.get();
+                                    if (feat != null) feat.resetLifetimeFightTotals();
+                                })
+                                .description("Zeroes the persisted lifetime fight count and fight time. Separate from Reset Stats on purpose: these survive sessions and profile switches like playtime, so a session reset never touches them. Better Hitreg's own Reset Tracked Stats clears something else again — its rolling delay/ghost/misplace sample."),
+                        new SectionHeaderSetting("Session"),
+                        new ButtonSetting("Reset Stats", "Reset",
                                 () -> {
                                     com.aurora.client.feature.impl.StatsTrackerFeature feat =
                                             com.aurora.client.feature.impl.StatsTrackerFeature.get();
                                     if (feat != null) feat.resetAll();
                                 })
-                                .description("Clears kills, deaths and the session timer back to zero."),
+                                .description("Clears the session counters back to zero: kills, deaths, the session timer, session fights and the last-fight readout. Lifetime fight totals are kept."),
                         new KeybindSetting("Reset Key",
                                 () -> cfg.statsResetKey, v -> cfg.statsResetKey = v)
                                 .description("Press to reset the Stats overlay counters. Defaults to unbound."),

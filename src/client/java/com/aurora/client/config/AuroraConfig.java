@@ -592,6 +592,15 @@ public class AuroraConfig {
     public boolean statsShowKd      = true;
     /** Wall-clock time since the session began / last reset. */
     public boolean statsShowSession = true;
+    // Fight rows — data comes from Better Hitreg's fight tracker (see
+    // StatsTrackerFeature#recordFight): a fight is 10 s–10 min of exchange
+    // with at least one landed hit, ended by leaving the 30-block radius.
+    /** "Fights: N (M total)" — fights this session and the lifetime total. */
+    public boolean statsShowFights  = true;
+    /** "Fight Time: Xm Ys (Zh total)" — time spent in tracked fights, session and lifetime. */
+    public boolean statsShowFightTime = true;
+    /** "Last Fight: 1m 12s · You 62% · Them 45%" — duration and both accuracies of the last tracked fight. */
+    public boolean statsShowLastFight = true;
     public HudBackground statsBgMode = HudBackground.NONE;
     public int statsBgColor = 0x80000000;
 

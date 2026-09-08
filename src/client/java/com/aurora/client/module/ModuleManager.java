@@ -34,7 +34,7 @@ public class ModuleManager {
         modules.add(new Module("potion_hud", "Potion HUD", "A cleaner replacement for the default status-effect icons, listing your active potion effects with a readable countdown timer.", Module.Category.HUD));
         modules.add(new Module("ping", "Ping", "Surfaces connection latency as real numbers — as a HUD readout, as a value in the tab list, and optionally under player nametags.", Module.Category.HUD));
         modules.add(new Module("totem_pop", "Totem Pop Counter", "Counts how many Totems of Undying you've popped, and optionally tracks nearby players' pops too.", Module.Category.HUD));
-        modules.add(new Module("stats", "Stats Overlay", "A per-session combat readout — kills, deaths, K/D and session time.", Module.Category.HUD));
+        modules.add(new Module("stats", "Stats Overlay", "A combat readout — kills, deaths, K/D and session time, plus Better Hitreg's fight statistics: fights, fight time and last-fight accuracy.", Module.Category.HUD));
         modules.add(new Module("waypoints", "Waypoints", "Place persistent world markers rendered as beacon beams and/or block highlights.", Module.Category.HUD));
         modules.add(new Module("container_preview", "Container Preview", "Hover over a shulker box (or your ender chest) in any inventory to see its full contents in a grid tooltip.", Module.Category.HUD));
         modules.add(new Module("item_physics", "Item Physics", "Gives dropped items more natural physics — they lie flat where they land instead of hovering and spinning.", Module.Category.HUD));
