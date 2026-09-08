@@ -12,6 +12,7 @@ import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.ui.util.MaterialIconRenderer;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.ui.util.UiLayerCache;
+import com.aurora.client.util.SmoothScroll;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
@@ -53,11 +54,16 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     private EditBox searchField;
     private String searchQuery = "";
 
-    private final double[] scrollY = {0.0, 0.0};
-    private final double[] scrollTarget = {0.0, 0.0};
-    private double lastScrollTickMs = 0.0;
-    private boolean scrollbarDragging = false;
-    private double scrollbarDragGrabOffset = 0;
+    /**
+     * One scroll per tab — τ from the fps-keyed table below, snap 0.1,
+     * wheel step 30, grab-where-clicked thumb that keeps easing toward the
+     * moving target during drags (the screen's exact pre-R2 tuning; only
+     * the active tab's position advances, the inactive one stays frozen).
+     */
+    private final SmoothScroll[] scrolls = {
+            new SmoothScroll(AuroraScreen::scrollTauMs).setSnapEpsilon(0.1),
+            new SmoothScroll(AuroraScreen::scrollTauMs).setSnapEpsilon(0.1),
+    };
     private FeatureSetting activeDragSetting = null;
 
     private final Map<String, ToggleSwitch> sectionToggles = new HashMap<>();
@@ -71,7 +77,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     @Override
     protected void init() {
         super.init();
-        lastScrollTickMs = 0.0;
+        for (SmoothScroll s : scrolls) s.resetClock();
         sectionToggles.clear();
 
         for (FeatureMetadata m : FeatureRegistry.settings()) {
@@ -238,11 +244,11 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         if (gridLayout) {
             cw = 80; ch = 80;
             cx = mx + 4 + (i % 3) * (cw + 4);
-            cy = (float) (my + 38 + (i / 3) * (ch + 4) - scrollY[0]);
+            cy = (float) (my + 38 + (i / 3) * (ch + 4) - scrolls[0].current());
         } else {
             cw = 250; ch = 48;
             cx = mx;
-            cy = (float) (my + 38 + i * (ch + 6) - scrollY[0]);
+            cy = (float) (my + 38 + i * (ch + 6) - scrolls[0].current());
         }
         if (cy + ch < viewTop() || cy > viewBot()) return null;
         return new float[]{cx, cy, cw, ch};
@@ -399,7 +405,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         searchField.visible = false;
 
         g.enableScissor((int) mx, (int) (boxY() + 36), (int) (mx + 254), (int) (boxY() + BOX_H - 10));
-        float y = my + 38 - (float) scrollY[1];
+        float y = my + 38 - (float) scrolls[1].current();
         for (FeatureMetadata m : FeatureRegistry.settings()) {
             int headerH = 22;
             if (y + headerH > my + 36 && y < my + 216) {
@@ -542,35 +548,51 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     }
 
     private void tickSmoothScroll() {
-        double now = System.nanoTime() / 1_000_000.0;
-        double dt = (lastScrollTickMs == 0.0) ? 16.0 : Math.min(80.0, now - lastScrollTickMs);
-        lastScrollTickMs = now;
-        double maxScroll = computeMaxScroll();
-        if (scrollTarget[selectedCategory] < 0) scrollTarget[selectedCategory] = 0;
-        if (scrollTarget[selectedCategory] > maxScroll) scrollTarget[selectedCategory] = maxScroll;
+        // Only the active tab's position moves (the other tab's glide stays
+        // frozen mid-switch, as before); the inactive instance's clock is
+        // still stamped so resuming it sees a fresh dt — the behavior the
+        // old single shared clock gave.
+        scrolls[1 - selectedCategory].touchClock();
+        scrolls[selectedCategory].advance(computeMaxScroll());
+    }
 
+    /**
+     * τ (ms) for the scroll glide, keyed off the GUI fps cap — the screen's
+     * historical table (snappier easing at low caps, lazier when uncapped).
+     */
+    private static double scrollTauMs() {
         int fps = com.aurora.client.config.AuroraConfig.get().guiFpsLimit;
-        double tau = 45.0;
-        if (fps <= 15) tau = 24.0; else if (fps <= 25) tau = 32.0; else if (fps <= 30) tau = 38.0; else if (fps <= 60) tau = 54.0; else tau = 65.0;
-        double alpha = 1.0 - Math.exp(-dt / tau);
-        double diff = scrollTarget[selectedCategory] - scrollY[selectedCategory];
-        scrollY[selectedCategory] += diff * alpha;
-        if (Math.abs(diff) < 0.1) scrollY[selectedCategory] = scrollTarget[selectedCategory];
+        if (fps <= 15) return 24.0;
+        if (fps <= 25) return 32.0;
+        if (fps <= 30) return 38.0;
+        if (fps <= 60) return 54.0;
+        return 65.0;
+    }
+
+    /** The scrollbar thumb's int-truncated geometry — the exact pre-R2 cast pattern. */
+    private int thumbHeightPx(double maxScroll) {
+        SmoothScroll scroll = scrolls[selectedCategory];
+        float trackH = viewBot() - viewTop();
+        return Math.max(24, (int) scroll.thumbHeight(trackH, maxScroll, 24));
+    }
+
+    private int thumbYPx(double maxScroll, int thumbH) {
+        SmoothScroll scroll = scrolls[selectedCategory];
+        float trackH = viewBot() - viewTop();
+        return (int) viewTop() + (int) ((trackH - thumbH) * scroll.ratio(maxScroll));
     }
 
     private void drawScrollbar(GuiGraphics g) {
         double maxScroll = computeMaxScroll();
         if (maxScroll <= 0) return;
-        float mx = mainX();
-        float viewTop = viewTop(), viewBot = viewBot();
-        float trackH = viewBot - viewTop;
-        double viewRatio = trackH / (trackH + maxScroll);
-        int thumbH = Math.max(24, (int) (trackH * viewRatio));
-        double scrollRatio = scrollY[selectedCategory] / maxScroll;
-        int thumbY = (int) viewTop + (int) ((trackH - thumbH) * scrollRatio);
+        int thumbH = thumbHeightPx(maxScroll);
+        int thumbY = thumbYPx(maxScroll, thumbH);
+        // Painted exactly as before R2 — SmoothScroll supplies geometry and
+        // drag state only: ON_BACKGROUND at 0x30 (0x55 while dragging), no
+        // hover highlight.
         int col = ThemeManager.color(ThemeToken.ON_BACKGROUND) & 0x00FFFFFF;
-        int a = scrollbarDragging ? 0x55 : 0x30;
-        RenderUtil.drawRoundedRectAA(g, mx + 258, thumbY, 3, thumbH, 2, (a << 24) | col);
+        int a = scrolls[selectedCategory].isDragging() ? 0x55 : 0x30;
+        RenderUtil.drawRoundedRectAA(g, mainX() + 258, thumbY, 3, thumbH, 2, (a << 24) | col);
     }
 
     @Override
@@ -613,7 +635,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 }
             }
         } else {
-            float y = my + 38 - (float) scrollY[1];
+            float y = my + 38 - (float) scrolls[1].current();
             for (FeatureMetadata m : FeatureRegistry.settings()) {
                 if (button == 0 && mouseX >= mx + 254 - 40 && mouseX <= mx + 254 && mouseY >= y + 4 && mouseY <= y + 19) {
                     m.setEnabled(!m.isEnabled());
@@ -635,13 +657,10 @@ public class AuroraScreen extends Screen implements ThemedScreen {
 
         double maxScroll = computeMaxScroll();
         if (maxScroll > 0 && button == 0 && mouseX >= mx + 255 && mouseX <= mx + 262 && mouseY >= viewTop() && mouseY <= viewBot()) {
-            scrollbarDragging = true;
-            float trackH = viewBot() - viewTop();
-            double viewRatio = trackH / (trackH + maxScroll);
-            int thumbH = Math.max(24, (int) (trackH * viewRatio));
-            double scrollRatio = scrollY[selectedCategory] / maxScroll;
-            int thumbY = (int) viewTop() + (int) ((trackH - thumbH) * scrollRatio);
-            scrollbarDragGrabOffset = mouseY - thumbY;
+            // Grab-where-clicked: the grab offset is the cursor's distance
+            // from the thumb's top at click time — the screen's historical
+            // drag semantics.
+            scrolls[selectedCategory].beginThumbDrag(mouseY - thumbYPx(maxScroll, thumbHeightPx(maxScroll)));
             return true;
         }
         return false;
@@ -650,16 +669,12 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     @Override
     public boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent _ev, double dx, double dy) {
         double mouseX = _ev.x(); double mouseY = _ev.y(); int button = _ev.button();
-        if (scrollbarDragging) {
-            float trackH = viewBot() - viewTop();
-            double maxScroll = computeMaxScroll();
-            double viewRatio = trackH / (trackH + maxScroll);
-            int thumbH = Math.max(24, (int) (trackH * viewRatio));
-            double thumbY = mouseY - scrollbarDragGrabOffset;
-            double t = (thumbY - viewTop()) / Math.max(1, trackH - thumbH);
-            scrollTarget[selectedCategory] = t * maxScroll;
-            if (scrollTarget[selectedCategory] < 0) scrollTarget[selectedCategory] = 0;
-            if (scrollTarget[selectedCategory] > maxScroll) scrollTarget[selectedCategory] = maxScroll;
+        SmoothScroll scroll = scrolls[selectedCategory];
+        if (scroll.isDragging()) {
+            // jumpCurrent = false: only the target moves, the rendered
+            // position keeps easing toward it while dragging (the screen's
+            // historical feel).
+            scroll.dragThumb(mouseY, viewTop(), viewBot() - viewTop(), computeMaxScroll(), 24, false);
             return true;
         }
         if (activeDragSetting != null && activeDragSetting.mouseDragged(mouseX, mouseY, button, dx, dy, 0, 0, 246)) {
@@ -671,7 +686,8 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     @Override
     public boolean mouseReleased(net.minecraft.client.input.MouseButtonEvent _ev) {
         double mouseX = _ev.x(); double mouseY = _ev.y(); int button = _ev.button();
-        if (scrollbarDragging) { scrollbarDragging = false; return true; }
+        SmoothScroll scroll = scrolls[selectedCategory];
+        if (scroll.isDragging()) { scroll.endThumbDrag(); return true; }
         if (activeDragSetting != null) {
             activeDragSetting.mouseReleased(mouseX, mouseY, button);
             activeDragSetting = null;
@@ -683,10 +699,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontal, double vertical) {
         FeatureSetting focused = FeatureSetting.getFocused();
         if (focused != null && focused.onScroll(vertical)) return true;
-        double maxScroll = computeMaxScroll();
-        scrollTarget[selectedCategory] -= vertical * 30;
-        if (scrollTarget[selectedCategory] < 0) scrollTarget[selectedCategory] = 0;
-        if (scrollTarget[selectedCategory] > maxScroll) scrollTarget[selectedCategory] = maxScroll;
+        scrolls[selectedCategory].wheel(vertical, 30, computeMaxScroll());
         return true;
     }
 

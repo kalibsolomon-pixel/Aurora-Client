@@ -69,8 +69,11 @@ import java.util.function.DoubleSupplier;
  * <ul>
  *   <li><b>Piloted</b> on {@code FeatureDetailScreen} (2026-09-08, R2):
  *       fixed τ = 60 ms, snap 0.25, wheel step 30, no thumb.</li>
+ *   <li>{@code AuroraScreen} (2026-09-08, R2): fps-adaptive τ table,
+ *       snap 0.1, wheel step 30, grab-where-clicked thumb that keeps
+ *       easing during drags; one instance per tab, the inactive one's
+ *       clock stamped via {@link #touchClock()}.</li>
  *   <li><b>Pending, deliberately not folded into the pilot</b>:
- *       {@code AuroraScreen} (fps-adaptive τ table, draggable thumb),
  *       {@code ResourcePackBrowserScreen} (τ = 80, wheel steps 28/40, TWO
  *       tracks — grid + sidebar — so two instances), and
  *       {@code ProfileManagerScreen}/{@code WaypointManagerScreen}, which
@@ -138,6 +141,22 @@ public final class SmoothScroll {
      */
     public void resetClock() {
         lastTickMs = 0.0;
+    }
+
+    /**
+     * Stamps the frame clock WITHOUT moving the position — for multi-track
+     * screens whose inactive track stays frozen but must resume with a
+     * fresh dt (AuroraScreen stamps its inactive tab's instance every
+     * frame, reproducing its old single shared clock). Injectable-clock
+     * variant for differential testing.
+     */
+    void touchClock(double nowMs) {
+        lastTickMs = nowMs;
+    }
+
+    /** {@link #touchClock(double)} against the real clock. */
+    public void touchClock() {
+        touchClock(System.nanoTime() / 1_000_000.0);
     }
 
     /**
