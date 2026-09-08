@@ -1,258 +1,92 @@
 package com.aurora.client.hitreg.settings;
 
-import net.fabricmc.loader.api.FabricLoader;
-import com.aurora.client.hitreg.util.Render;
+import com.aurora.client.config.AuroraConfig;
+import com.aurora.client.hitreg.Hitreg;
 
-import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.*;
+/**
+ * Settings facade for the Better Hitreg core (from BetterHitreg by Jass,
+ * integrated with permission). Upstream this class owned a
+ * {@code java.util.Properties} file and rewrote it synchronously on the
+ * main thread on every change; here every value lives on
+ * {@link AuroraConfig} (fields prefixed {@code hitreg…}) and the only
+ * runtime write — a completed fight — goes through Aurora's async save.
+ *
+ * <p>The string-keyed {@link #getInt}/{@link #getFloat} accessors survive
+ * only so the timing-critical body of {@link Hitreg#tick()} stays
+ * byte-identical to upstream; new code should use the named getters.
+ *
+ * <p>Master gate: every gameplay-affecting read (including
+ * {@link Toggle#toggled()}) is ANDed with {@link AuroraConfig#hitregEnabled},
+ * so turning the feature card off makes every mixin, overlay and sound
+ * filter dormant without touching their code.
+ */
+public final class Settings {
+    private Settings() {}
 
-public class Settings {
-    private static final Path settings = FabricLoader.getInstance().getConfigDir().resolve("hitreg.properties");
-    private static final Properties properties = new Properties();
-    private static final Properties defaults = new Properties();
-    private static final Map<String, String> categories = new HashMap<>();
-
-    static {
-        for (Setting setting : Setting.values()) {
-            categories.put(setting.key(), setting.category());
-            defaults.setProperty(setting.key(), setting.defaultValue());
-        }
-
-        for (Toggle toggle : Toggle.values()) {
-            categories.put(toggle.key(), "toggle");
-            defaults.setProperty(toggle.key(), String.valueOf(toggle.defaultValue()));
-        }
-
-        for (Color color : Color.values()) {
-            categories.put(color.colorKey(), color.category());
-            defaults.setProperty(color.colorKey(), color.hex());
-            categories.put(color.opacityKey(), color.category());
-            defaults.setProperty(color.opacityKey(), String.valueOf(color.opacity()));
-        }
-
-        properties.putAll(defaults);
-        load();
-        Render.updateColors();
+    static AuroraConfig cfg() {
+        return AuroraConfig.get();
     }
 
+    /** The feature card's master switch. */
+    public static boolean masterEnabled() {
+        return cfg().hitregEnabled;
+    }
+
+    /** {@code hitreg} — feedback delay in ms; 0 means "next frame", not "off". */
     public static int getHitreg() {
-        return Integer.parseInt(get("hitreg"));
-    }
-    public static boolean isTutorial() {
-        return Boolean.parseBoolean(get("tutorial"));
+        return Math.max(0, cfg().hitregDelayMs);
     }
 
-    public static String get(String key) {
-        return properties.getProperty(key);
+    /** {@code metronome} — click interval in ticks; the caller treats values below 10 as off. */
+    public static int getMetronome() {
+        return masterEnabled() ? cfg().hitregMetronome : 0;
     }
 
-    public static void set(String key, String value) {
-        properties.setProperty(key, value);
-        save();
+    /** {@code muffle_amount} — 0..1 (clamped again by the caller). */
+    public static float getMuffleAmount() {
+        return masterEnabled() ? (float) cfg().hitregMuffleAmount : 0f;
     }
 
-    public static boolean toggle(String key) {
-        boolean toggled = !getBoolean(key);
-        setBoolean(key, toggled);
-        return toggled;
+    /** {@code sharpen_amount} — 0..1 (clamped again by the caller). */
+    public static float getSharpenAmount() {
+        return masterEnabled() ? (float) cfg().hitregSharpenAmount : 0f;
     }
 
-    public static void addFight(long duration) {
-        setInt("total_fights", getInt("total_fights") + 1);
-        setLong("fight_playtime_(seconds)", getLong("fight_playtime_(seconds)") + duration);
+    /** {@code floor_grid_size} — blocks between grid lines; 0 = off. */
+    public static int getFloorGridSize() {
+        return masterEnabled() ? Math.max(0, cfg().hitregFloorGridSize) : 0;
     }
 
-    public static void load() {
-        if (!Files.exists(settings)) {
-            save();
-            return;
-        }
-
-        try (InputStream input = Files.newInputStream(settings)) {
-            properties.load(input);
-            for (String key : defaults.stringPropertyNames()) {
-                if (!properties.containsKey(key)) properties.setProperty(key, defaults.getProperty(key));
-            }
-        } catch (IOException e) {
-            System.err.println("Couldn't load file: " + e.getMessage());
-            properties.putAll(defaults);
-        }
-    }
-
-    public static void save() {
-        try {
-            Files.createDirectories(settings.getParent());
-            try (BufferedWriter writer = Files.newBufferedWriter(settings)) {
-                writer.write("#Hitreg Settings");
-                writer.newLine();
-                writer.newLine();
-
-                Map<String, List<String>> grouped = new HashMap<>();
-                for (String key : properties.stringPropertyNames()) {
-                    String cat = categories.get(key);
-                    if (cat == null) cat = "Other";
-                    grouped.computeIfAbsent(cat, k -> new ArrayList<>()).add(key);
-                }
-
-                for (List<String> list : grouped.values()) {
-                    list.sort(String.CASE_INSENSITIVE_ORDER);
-                }
-
-                writeCategory(writer, "Configure", grouped.get("configure"));
-                writeCategory(writer, "Render", grouped.get("render"));
-                writeCategory(writer, "UI", grouped.get("ui"));
-                writeCategory(writer, "Tracked", grouped.get("tracked"));
-                writeCategory(writer, "Toggle", grouped.get("toggle"));
-            }
-        } catch (IOException e) {
-            System.err.println("Couldn't save file: " + e.getMessage());
-        }
-    }
-
-    public static void writeCategory(BufferedWriter writer, String name, List<String> keys) throws IOException {
-        if (keys == null || keys.isEmpty()) return;
-        writer.write("#" + name);
-        writer.newLine();
-        for (String key : keys) {
-            writer.write(key + "=" + properties.getProperty(key));
-            writer.newLine();
-        }
-        writer.newLine();
-    }
-
-    public static String getString(String key) {
-        String v = get(key);
-        if (v == null || v.trim().isEmpty()) {
-            String d = defaults.getProperty(key);
-            if (d != null && !d.trim().isEmpty()) v = d;
-            else v = "0";
-            set(key, d);
-        } return v;
-    }
-
-    public static boolean getBoolean(String key) {
-        String v = get(key);
-        if (v == null || v.trim().isEmpty()) { String d = defaults.getProperty(key);
-            if (d != null && !d.trim().isEmpty()) {
-                set(key, d);
-                return Boolean.parseBoolean(d.trim());
-            }
-
-            set(key, "false");
-            return false;
-        }
-        return Boolean.parseBoolean(v.trim());
-    }
-
+    /** String-keyed shim for the verbatim {@link Hitreg#tick()} body. */
     public static int getInt(String key) {
-        String v = get(key);
-        if (v != null) try { return Integer.parseInt(v.trim()); } catch (NumberFormatException ignored) {}
-        String d = defaults.getProperty(key);
-        if (d != null) try {
-            set(key, d);
-            return Integer.parseInt(d.trim());
-        } catch (NumberFormatException ignored) {}
-
-        set(key, "0");
-        return 0;
+        return switch (key) {
+            case "metronome" -> getMetronome();
+            case "floor_grid_size" -> getFloorGridSize();
+            case "hitreg" -> getHitreg();
+            default -> throw new IllegalArgumentException("Unknown hitreg int setting: " + key);
+        };
     }
 
-    public static long getLong(String key) {
-        String v = get(key);
-        if (v != null) try { return Long.parseLong(v.trim()); } catch (NumberFormatException ignored) {}
-        String d = defaults.getProperty(key);
-        if (d != null) try {
-            set(key, d);
-            return Long.parseLong(d.trim());
-        } catch (NumberFormatException ignored) {}
-
-        set(key, "0");
-        return 0L;
-    }
-
-    public static double getDouble(String key) {
-        String v = get(key);
-        if (v != null) try { return Double.parseDouble(v.trim()); } catch (NumberFormatException ignored) {}
-        String d = defaults.getProperty(key);
-        if (d != null) try {
-            set(key, d);
-            return Double.parseDouble(d.trim());
-        } catch (NumberFormatException ignored) {}
-
-        set(key, "0");
-        return 0d;
-    }
-
+    /** String-keyed shim for the verbatim {@link Hitreg#tick()} body. */
     public static float getFloat(String key) {
-        String v = get(key);
-        if (v != null) try { return Float.parseFloat(v.trim()); } catch (NumberFormatException ignored) {}
-        String d = defaults.getProperty(key);
-        if (d != null) try {
-            set(key, d);
-            return Float.parseFloat(d.trim());
-        } catch (NumberFormatException ignored) {}
-
-        set(key, "0");
-        return 0f;
+        return switch (key) {
+            case "muffle_amount" -> getMuffleAmount();
+            case "sharpen_amount" -> getSharpenAmount();
+            default -> throw new IllegalArgumentException("Unknown hitreg float setting: " + key);
+        };
     }
 
-    public static short getShort(String key) {
-        String v = get(key);
-        if (v != null) try { return Short.parseShort(v.trim()); } catch (NumberFormatException ignored) {}
-        String d = defaults.getProperty(key);
-        if (d != null) try {
-            set(key, d);
-            return Short.parseShort(d.trim());
-        } catch (NumberFormatException ignored) {}
-
-        set(key, "0");
-        return (short) 0;
-    }
-
-    public static byte getByte(String key) {
-        String v = get(key);
-        if (v != null) try { return Byte.parseByte(v.trim()); } catch (NumberFormatException ignored) {}
-        String d = defaults.getProperty(key);
-        if (d != null) try {
-            set(key, d);
-            return Byte.parseByte(d.trim());
-        } catch (NumberFormatException ignored) {}
-
-        set(key, "0");
-        return (byte) 0;
-    }
-
-    public static void setString(String key, String value) {
-        set(key, String.valueOf(value));
-    }
-
-    public static void setBoolean(String key, boolean value) {
-        set(key, String.valueOf(value));
-    }
-
-    public static void setInt(String key, int value) {
-        set(key, String.valueOf(value));
-    }
-
-    public static void setLong(String key, long value) {
-        set(key, String.valueOf(value));
-    }
-
-    public static void setDouble(String key, double value) {
-        set(key, String.valueOf(value));
-    }
-
-    public static void setFloat(String key, float value) {
-        set(key, String.valueOf(value));
-    }
-
-    public static void setShort(String key, short value) {
-        set(key, String.valueOf(value));
-    }
-
-    public static void setByte(String key, byte value) {
-        set(key, String.valueOf(value));
+    /**
+     * Record a completed, tracked fight (called from {@link Hitreg#tick()}
+     * once a fight of 10 s–10 min with at least one landed hit ends).
+     * Increments the lifetime counters and persists asynchronously. Gated
+     * on the master enable and the "track fight statistics" toggle.
+     */
+    public static void addFight(long duration) {
+        AuroraConfig cfg = cfg();
+        if (!cfg.hitregEnabled || !cfg.hitregTrackFights) return;
+        cfg.fightStatsTotalFights++;
+        cfg.fightStatsPlaytimeSeconds += Math.max(0L, duration);
+        AuroraConfig.save();
     }
 }

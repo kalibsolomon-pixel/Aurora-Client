@@ -11,14 +11,27 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 import com.aurora.client.hitreg.Hitreg;
-import com.aurora.client.hitreg.settings.Setting;
+import com.aurora.client.hitreg.settings.Color;
 import com.aurora.client.hitreg.settings.Settings;
 import com.aurora.client.hitreg.settings.Toggle;
 
-import java.awt.*;
-
 import static com.aurora.client.hitreg.Hitreg.*;
 
+/**
+ * World-space overlays of the Better Hitreg core (from BetterHitreg by Jass,
+ * integrated with permission): target hitbox / cross, server hitbox, reach
+ * and jump-range rings, solid floor and floor grid, via the 1.21.11 Gizmos
+ * API. Geometry is upstream's; only the color plumbing changed — colors are
+ * read from {@link Color} (AuroraConfig-backed ARGB) and refreshed once per
+ * frame so the settings screen's color pickers apply live.
+ *
+ * <p>Integration fix, deliberately: upstream read the cross-with-hitbox and
+ * server-hitbox colors under keys that never existed in its own file
+ * ({@code cross_far_color_with_hitbox}, {@code server_hitbox_far_color}…),
+ * so those overlays rendered fully transparent, and the grid / floor colors
+ * were defined but never read (hard-coded white / black). All four now use
+ * the configured values.
+ */
 public class Render {
     private static int FAR_HITBOX = 0xFFFFFFFF;
     private static int NEAR_HITBOX = 0xFFFFFFFF;
@@ -39,39 +52,35 @@ public class Render {
     public static int JUMP_RESET_GLOW = 0xFFFFFFFF;
     public static int PERFECT_HIT_GLOW = 0xFFFFFFFF;
 
-    public static void updateColors() {
-        FAR_HITBOX = getColor("hitbox_far_color", "hitbox_far_opacity");
-        NEAR_HITBOX = getColor("hitbox_near_color", "hitbox_near_opacity");
-        FAR_CROSS = getColor("cross_far_color", "cross_far_opacity");
-        NEAR_CROSS = getColor("cross_near_color", "cross_near_opacity");
-        FAR_CROSS_WITH_HITBOX = getColor("cross_far_color_with_hitbox", "cross_with_hitbox_far_opacity");
-        NEAR_CROSS_WITH_HITBOX = getColor("cross_near_color_with_hitbox", "cross_with_hitbox_near_opacity");
-        FAR_SERVER_HITBOX = getColor("server_hitbox_far_color", "server_hitbox_far_opacity");
-        NEAR_SERVER_HITBOX = getColor("server_hitbox_near_color", "server_hitbox_near_opacity");
-        FAR_YOUR_REACH = getColor("your_reach_far_color", "your_reach_far_opacity");
-        NEAR_YOUR_REACH = getColor("your_reach_near_color", "your_reach_near_opacity");
-        FAR_THEIR_REACH = getColor("their_reach_far_color", "their_reach_far_opacity");
-        NEAR_THEIR_REACH = getColor("their_reach_near_color", "their_reach_near_opacity");
-        FAR_THEIR_JUMP_RANGE = getColor("their_jump_far_color", "their_jump_far_opacity");
-        NEAR_THEIR_JUMP_RANGE = getColor("their_jump_near_color", "their_jump_near_opacity");
-        NEAR_YOUR_JUMP_RANGE = getColor("your_jump_near_color", "your_jump_near_opacity");
-        FAR_YOUR_JUMP_RANGE = getColor("your_jump_far_color", "your_jump_far_opacity");
-        JUMP_RESET_GLOW = getColor("jump_reset_color", "jump_reset_opacity");
-        PERFECT_HIT_GLOW = getColor("perfect_hit_color", "perfect_hit_opacity");
-    }
+    private static int GRID = 0xFFFFFFFF;
+    private static int FLOOR = 0xFF000000;
 
-    public static int getColor(String colorKey, String opacityKey) {
-        String hex = Settings.get(colorKey);
-        int opacity = Settings.getInt(opacityKey);
-        if (hex == null) hex = "FFFFFF";
-        int alpha = Math.max(0, Math.min(255, opacity));
-        Color rgb = Color.decode("#" + hex.replace("#", ""));
-        Color argb = new Color(rgb.getRed(), rgb.getGreen(), rgb.getBlue(), alpha);
-        return argb.getRGB();
+    public static void updateColors() {
+        FAR_HITBOX = Color.HITBOX_FAR.argb();
+        NEAR_HITBOX = Color.HITBOX_NEAR.argb();
+        FAR_CROSS = Color.CROSS_FAR.argb();
+        NEAR_CROSS = Color.CROSS_NEAR.argb();
+        FAR_CROSS_WITH_HITBOX = Color.CROSS_FAR_WITH_HITBOX.argb();
+        NEAR_CROSS_WITH_HITBOX = Color.CROSS_NEAR_WITH_HITBOX.argb();
+        FAR_SERVER_HITBOX = Color.SERVER_HITBOX.argb();
+        NEAR_SERVER_HITBOX = Color.SERVER_HITBOX.argb();
+        FAR_YOUR_REACH = Color.YOUR_REACH_FAR.argb();
+        NEAR_YOUR_REACH = Color.YOUR_REACH_NEAR.argb();
+        FAR_THEIR_REACH = Color.THEIR_REACH_FAR.argb();
+        NEAR_THEIR_REACH = Color.THEIR_REACH_NEAR.argb();
+        FAR_THEIR_JUMP_RANGE = Color.THEIR_JUMP_FAR.argb();
+        NEAR_THEIR_JUMP_RANGE = Color.THEIR_JUMP_NEAR.argb();
+        NEAR_YOUR_JUMP_RANGE = Color.YOUR_JUMP_NEAR.argb();
+        FAR_YOUR_JUMP_RANGE = Color.YOUR_JUMP_FAR.argb();
+        JUMP_RESET_GLOW = Color.JUMP_RESET.argb();
+        PERFECT_HIT_GLOW = Color.PERFECT_HIT.argb();
+        GRID = Color.GRID.argb();
+        FLOOR = Color.FLOOR.argb();
     }
 
     public static void render(Camera camera) {
         if (client.player == null || client.level == null) return;
+        updateColors();
         boolean isHitbox = Toggle.RENDER_HITBOX.toggled();
         boolean isCross = Toggle.RENDER_CROSS.toggled();
         boolean isServerHitbox = Toggle.RENDER_SERVER_HITBOX.toggled();
@@ -145,10 +154,10 @@ public class Render {
             Vec3 v1 = new Vec3(position.x - size, y, position.z + size);
             Vec3 v2 = new Vec3(position.x + size, y, position.z + size);
             Vec3 v3 = new Vec3(position.x + size, y, position.z - size);
-            Gizmos.rect(v0, v1, v2, v3, GizmoStyle.fill(0xFF000000));
+            Gizmos.rect(v0, v1, v2, v3, GizmoStyle.fill(FLOOR));
         }
 
-        int step = (int) Setting.GRID_FLOOR.get();
+        int step = Settings.getFloorGridSize();
         if (step == 0) return;
 
         //version 1.21.10-
@@ -178,8 +187,8 @@ public class Render {
         if (distToSeg > fadeEnd) return;
         double fadeProgress = Math.max(0, Math.min(1, (distToSeg - fadeStart) / (fadeEnd - fadeStart)));
         fadeProgress = fadeProgress * fadeProgress * (3 - 2 * fadeProgress); // smoothstep
-        int alpha = (int) (255 * (1 - fadeProgress));
-        int color = (alpha << 24) | 0xFFFFFF;
+        int alpha = (int) (((GRID >>> 24) & 0xFF) * (1 - fadeProgress));
+        int color = (alpha << 24) | (GRID & 0xFFFFFF);
         line(camera, start, end, 3, color);
     }
 

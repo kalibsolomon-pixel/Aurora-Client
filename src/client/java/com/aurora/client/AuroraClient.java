@@ -34,6 +34,15 @@ public class AuroraClient implements ClientModInitializer {
         // profile's values.
         ProfileManager.getInstance().load();
 
+        // One-time migration of the vendored BetterHitreg config
+        // (config/hitreg.properties) into AuroraConfig. It runs HERE, after
+        // the active profile is applied, rather than inside
+        // AuroraConfig.load(): applyProfile resets every profile-scoped
+        // field to its default before overlaying the profile, which would
+        // silently wipe values migrated any earlier. Never throws; guarded
+        // by cfg.migratedHitregProperties so it fires exactly once.
+        com.aurora.client.hitreg.settings.HitregMigrator.runOnce();
+
         registerAuroraKeybinds();
 
         // Better Hitreg (Jass's BetterHitreg, integrated): sets Hitreg.client

@@ -30,12 +30,21 @@ public final class ProfileFieldSet {
      *   <li>{@code playtimeTotalMs} / {@code playtimePerWorld} — cumulative
      *       telemetry accumulators, not user configuration. Switching a
      *       profile must never zero out or overwrite playtime.</li>
+     *   <li>{@code fightStatsTotalFights} / {@code fightStatsPlaytimeSeconds}
+     *       — the lifetime fight counters inherited from BetterHitreg; the
+     *       same kind of per-machine telemetry as playtime.</li>
+     *   <li>{@code migratedHitregProperties} — the one-shot guard for the
+     *       hitreg.properties migration. Resetting it through a profile
+     *       apply would re-run the migration over the user's edits.</li>
      * </ul>
      */
     public static final Set<String> EXCLUDED = Set.of(
             "activeProfile",
             "playtimeTotalMs",
-            "playtimePerWorld"
+            "playtimePerWorld",
+            "fightStatsTotalFights",
+            "fightStatsPlaytimeSeconds",
+            "migratedHitregProperties"
     );
 
     private ProfileFieldSet() {}

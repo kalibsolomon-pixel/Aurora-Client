@@ -891,6 +891,104 @@ public class AuroraConfig {
     /** Practice scoreboard: reset both scores. -1 = unbound (the original bound DOWN). */
     public int hitregScoreResetKey = -1;
 
+    // Better Hitreg settings — one field per key of the original
+    // hitreg.properties (migrated once by HitregMigrator; the property key
+    // is noted on each field). All share the "hitreg" prefix so the card's
+    // Reset covers them as one group. Semantics preserved from upstream:
+    // hitregDelayMs 0 is NOT "off" (hitregCustomHitreg is the switch),
+    // hitregMetronome below 10 means off, muffle/sharpen are 0..1.
+    /** {@code toggle} — the original "custom hitreg" master: replaces the server's hit feedback with the client's own. */
+    public boolean hitregCustomHitreg = true;
+    /** {@code hitreg} — ms the client waits before playing its own hit feedback (0 = next frame). */
+    public int hitregDelayMs = 0;
+    /** {@code muffle_amount} — OpenAL low-pass strength on your hit sounds, 0..1. */
+    public double hitregMuffleAmount = 0.0;
+    /** {@code sharpen_amount} — OpenAL high-pass strength on your hit sounds, 0..1. */
+    public double hitregSharpenAmount = 0.0;
+    /** {@code metronome} — click every N ticks; values below 10 disable it. */
+    public int hitregMetronome = 0;
+    /** {@code floor_grid_size} — ground grid spacing in blocks (0 = off). */
+    public int hitregFloorGridSize = 0;
+
+    /** {@code safeRegsOnly} */          public boolean hitregSafeRegsOnly = true;
+    /** {@code ignoreShieldHolders} */   public boolean hitregIgnoreShieldHolders = false;
+    /** {@code alertDelays} — retained as a plain toggle; its tooltip shows the rolling average delay. */
+    public boolean hitregAlertDelays = false;
+    /** {@code alertGhosts} — retained as a plain toggle; its tooltip shows the rolling ghost ratio. */
+    public boolean hitregAlertGhosts = false;
+    /** {@code alertInconsistencies} — retained as a plain toggle; its tooltip shows the rolling misplace ratio. */
+    public boolean hitregAlertInconsistencies = false;
+    /**
+     * Repurposed from {@code alertFights} (which only gated the retired
+     * post-fight chat summary): whether a completed fight is recorded into
+     * the fight statistics at all. Defaults ON and is deliberately NOT
+     * migrated from the old key — upstream recorded every fight regardless
+     * of the alert toggle, and this keeps that behavior.
+     */
+    public boolean hitregTrackFights = true;
+    /** {@code legacySounds} */          public boolean hitregLegacySounds = false;
+    /** {@code hideAnimations} */        public boolean hitregHideAnimations = false;
+    /** {@code hideArmor} */             public boolean hitregHideArmor = false;
+    /** {@code hideAllParticles} */      public boolean hitregHideAllParticles = false;
+    /** {@code hideOtherParticles} */    public boolean hitregHideOtherParticles = false;
+    /** {@code particlesEveryHit} */     public boolean hitregParticlesEveryHit = false;
+    /** {@code silenceOtherFights} */    public boolean hitregSilenceOtherFights = false;
+    /** {@code silenceSelf} */           public boolean hitregSilenceSelf = false;
+    /** {@code silenceThem} */           public boolean hitregSilenceThem = false;
+    /** {@code silenceNonHits} */        public boolean hitregSilenceNonHits = false;
+    /** {@code hideOtherFights} */       public boolean hitregHideOtherFights = false;
+    /** {@code renderHitbox} */          public boolean hitregRenderHitbox = false;
+    /** {@code renderCross} */           public boolean hitregRenderCross = false;
+    /** {@code RenderServerHitbox} */    public boolean hitregRenderServerHitbox = false;
+    /** {@code RenderYourReach} */       public boolean hitregRenderYourReach = false;
+    /** {@code RenderTheirReach} */      public boolean hitregRenderTheirReach = false;
+    /** {@code RenderYourJump} */        public boolean hitregRenderYourJump = false;
+    /** {@code RenderTheirJump} */       public boolean hitregRenderTheirJump = false;
+    /** {@code PerfectHitColor} */       public boolean hitregPerfectHitColor = false;
+    /** {@code JumpResetColor} */        public boolean hitregJumpResetColor = false;
+    /** {@code VoidWorld} — clears every visible chunk section (practice-arena "void"); extremely invasive. */
+    public boolean hitregVoidWorld = false;
+    /** {@code SolidFloor} */            public boolean hitregSolidFloor = false;
+
+    // Overlay colors, ARGB (the original stored "<name>_color" as bare hex
+    // plus "<name>_opacity" 0..255; both fold into one int here).
+    public int hitregColorCrossFar            = 0xFFFFFFFF;
+    public int hitregColorCrossNear           = 0xFFFF0000;
+    public int hitregColorCrossFarWithHitbox  = 0xFF0000FF;
+    public int hitregColorCrossNearWithHitbox = 0xFF0000FF;
+    public int hitregColorHitboxFar           = 0xFFFFFFFF;
+    public int hitregColorHitboxNear          = 0xFFFF0000;
+    public int hitregColorServerHitbox        = 0x7D7F00FF; // opacity 125
+    public int hitregColorYourReachFar        = 0xFFFFFFFF;
+    public int hitregColorYourReachNear       = 0xFFFF0000;
+    public int hitregColorTheirReachFar       = 0xFFFFFFFF;
+    public int hitregColorTheirReachNear      = 0xFFFF0000;
+    public int hitregColorYourJumpFar         = 0xFF007FFF;
+    public int hitregColorYourJumpNear        = 0xFF007FFF;
+    public int hitregColorTheirJumpFar        = 0xFF007FFF;
+    public int hitregColorTheirJumpNear       = 0xFF007FFF;
+    public int hitregColorJumpReset           = 0xFFFFFF00;
+    public int hitregColorPerfectHit          = 0xFF00FF00;
+    public int hitregColorGrid                = 0xFFFFFFFF;
+    public int hitregColorFloor               = 0xFF000000;
+
+    // ---- Fight statistics (lifetime telemetry, from BetterHitreg) ----
+    // Deliberately outside the "hitreg" and "stats" reset prefixes and
+    // excluded from profile snapshots (ProfileFieldSet), like playtime:
+    // a per-machine lifetime record that neither a card Reset nor a
+    // profile switch may wipe.
+    /** {@code total_fights} — lifetime tracked fights (10 s–10 min with at least one landed hit). */
+    public int fightStatsTotalFights = 0;
+    /** {@code fight_playtime_(seconds)} — lifetime seconds spent in tracked fights. */
+    public long fightStatsPlaytimeSeconds = 0L;
+    /**
+     * Set once {@code HitregMigrator} has run (whether or not a
+     * hitreg.properties file existed), so the one-way migration can never
+     * fire twice and overwrite settings edited since. Excluded from profile
+     * snapshots and from every reset prefix on purpose.
+     */
+    public boolean migratedHitregProperties = false;
+
     // ---- Blur panel test harness ----
     /**
      * Press to open the isolated blur-panel test screen. -1 = unbound by
