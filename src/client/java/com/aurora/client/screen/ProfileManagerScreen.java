@@ -11,6 +11,7 @@ import com.aurora.client.ui.component.GlassSurface;
 import com.aurora.client.ui.component.ThemedScreen;
 import com.aurora.client.ui.component.Toast;
 import com.aurora.client.ui.util.RenderUtil;
+import com.aurora.client.util.SmoothScroll;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
@@ -67,7 +68,17 @@ public class ProfileManagerScreen extends Screen implements ThemedScreen {
     private boolean creatingNew = false;
     private EditBox createField;
 
-    private double scrollY = 0;
+    /**
+     * List scrolling — new with R2 Part C (approved): this screen and
+     * {@link WaypointManagerScreen} previously had hard-clamped direct
+     * {@code scrollY} manipulation with no easing and no scrollbar. Now the
+     * wheel feeds the shared component's target (τ = 60 ms — the same glide
+     * FeatureDetailScreen's plain settings list ships with; wheel step 30
+     * unchanged) and a draggable, hover-responsive thumb shares one visual
+     * treatment with the Waypoint screen: a 3px {@code ON_OVERLAY} capsule
+     * at 0x30 alpha (0x55 hovered/dragged) beside the list.
+     */
+    private final SmoothScroll scroll = new SmoothScroll(60.0);
 
     // Shared themed row buttons, keyed by profile NAME — unique and stable,
     // so a rename simply produces a fresh entry instead of a stale capture.
@@ -152,6 +163,9 @@ public class ProfileManagerScreen extends Screen implements ThemedScreen {
      */
     @Override
     public void render(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
+        // Easing step first, so the glass pass and the content pass below
+        // both read the same this-frame position.
+        scroll.advance(maxScroll());
         int listX = (this.width - LIST_W) / 2;
         List<String> profiles = ProfileManager.getInstance().listProfileNames();
         String active = ProfileManager.getInstance().currentProfile();
@@ -168,7 +182,7 @@ public class ProfileManagerScreen extends Screen implements ThemedScreen {
         rowGlassDrawn.clear();
         createRowGlassDrawn = false;
         GlassSurface.enableScissor(ctx, listX - 4, listClipTop(), listX + LIST_W + 4, listClipBottom());
-        int gy = LIST_TOP - (int) scrollY;
+        int gy = LIST_TOP - (int) scroll.current();
         if (creatingNew && createField != null) {
             createRowGlassDrawn = renderRowSurface(ctx, listX, gy, LIST_W);
             Button cb = createBtn();
@@ -209,7 +223,7 @@ public class ProfileManagerScreen extends Screen implements ThemedScreen {
         }
 
         // Inline "new profile" editor row at the top.
-        int y = LIST_TOP - (int) scrollY;
+        int y = LIST_TOP - (int) scroll.current();
         if (creatingNew && createField != null) {
             renderCreateRow(ctx, listX, y, LIST_W, mouseX, mouseY);
             y += ROW_H + ROW_GAP;
@@ -224,6 +238,10 @@ public class ProfileManagerScreen extends Screen implements ThemedScreen {
         }
 
         ctx.disableScissor();
+
+        // The list's scrollbar thumb — after the content scissor (it is
+        // content, painted opaque over the dim like every other thumb).
+        drawScrollbar(ctx, mouseX, mouseY, listX);
 
         super.render(ctx, mouseX, mouseY, delta);
 
@@ -339,13 +357,13 @@ public class ProfileManagerScreen extends Screen implements ThemedScreen {
     private EditBox layoutEditField(List<String> profiles, int listX) {
         int fieldX = listX + ROW_INSET + ACTIVE_BADGE_W + CONTROL_GAP;
         if (creatingNew && createField != null) {
-            int rowY = LIST_TOP - (int) scrollY;
+            int rowY = LIST_TOP - (int) scroll.current();
             createField.setX(fieldX);
             createField.setY(rowY + (ROW_H - 16) / 2);
             return createField;
         }
         if (nameField != null && editingIndex >= 0 && editingIndex < profiles.size()) {
-            int rowY = LIST_TOP - (int) scrollY
+            int rowY = LIST_TOP - (int) scroll.current()
                     + (creatingNew ? ROW_H + ROW_GAP : 0)
                     + editingIndex * (ROW_H + ROW_GAP);
             if (rowY >= LIST_TOP - ROW_H && rowY < listClipBottom()) {
@@ -412,6 +430,49 @@ public class ProfileManagerScreen extends Screen implements ThemedScreen {
     private int listClipTop() { return LIST_TOP - 2; }
     private int listClipBottom() { return LIST_TOP + (this.height - LIST_TOP - LIST_BOTTOM_PAD); }
 
+    /** Total scrollable overflow of the row list (create row included when open). */
+    private double maxScroll() {
+        List<String> profiles = ProfileManager.getInstance().listProfileNames();
+        int total = (profiles.size() + (creatingNew ? 1 : 0)) * (ROW_H + ROW_GAP);
+        return Math.max(0, total - (this.height - LIST_TOP - LIST_BOTTOM_PAD));
+    }
+
+    /** The thumb's current top/height in screen coordinates (int-truncated for painting). */
+    private int thumbHeightPx(double maxScroll, int trackH) {
+        return (int) scroll.thumbHeight(trackH, maxScroll, 24);
+    }
+
+    private int thumbYPx(double maxScroll, int trackH, int thumbH) {
+        return listClipTop() + (int) ((trackH - thumbH) * scroll.ratio(maxScroll));
+    }
+
+    /**
+     * The list's scrollbar thumb — the shared-look treatment this screen and
+     * {@link WaypointManagerScreen} adopted together (R2 Part C): a 3px
+     * capsule ({@code ON_OVERLAY} at 0x30 alpha, 0x55 on hover/drag — the
+     * pack browser's hover-responsive idiom in these screens' token
+     * vocabulary, since everything here draws over the dim) running down the
+     * clip band, six pixels right of the list. Geometry and drag state come
+     * from {@link SmoothScroll}; painting stays screen-owned like every
+     * other thumb in the mod. Never glass — thumbs are opaque token
+     * surfaces by the mod-wide conventions.
+     */
+    private void drawScrollbar(GuiGraphics ctx, int mouseX, int mouseY, int listX) {
+        double maxScroll = maxScroll();
+        if (maxScroll <= 0) return;
+        int trackTop = listClipTop();
+        int trackH = listClipBottom() - trackTop;
+        int trackX = listX + LIST_W + 6;
+        int thumbH = thumbHeightPx(maxScroll, trackH);
+        int thumbY = thumbYPx(maxScroll, trackH, thumbH);
+        boolean hover = mouseX >= trackX - 2 && mouseX <= trackX + 5
+                && mouseY >= thumbY && mouseY <= thumbY + thumbH;
+        int col = (hover || scroll.isDragging())
+                ? ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_OVERLAY), 0x55)
+                : ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_OVERLAY), 0x30);
+        RenderUtil.drawRoundedRectAA(ctx, trackX, thumbY, 3, thumbH, 2, col);
+    }
+
     // ------------------------------------------------------------------
     //  Input
     // ------------------------------------------------------------------
@@ -435,7 +496,7 @@ public class ProfileManagerScreen extends Screen implements ThemedScreen {
         // its own per-frame-laid-out bounds).
         if (creatingNew && createBtn != null && createBtn.mouseClicked(mouseX, mouseY, 0)) return true;
 
-        int y = LIST_TOP - (int) scrollY + (creatingNew ? ROW_H + ROW_GAP : 0);
+        int y = LIST_TOP - (int) scroll.current() + (creatingNew ? ROW_H + ROW_GAP : 0);
         int clipTop = listClipTop();
         int clipBot = listClipBottom();
         for (int i = 0; i < profiles.size(); i++) {
@@ -474,19 +535,56 @@ public class ProfileManagerScreen extends Screen implements ThemedScreen {
             y += ROW_H + ROW_GAP;
         }
 
+        // Scrollbar thumb grab — checked before the fallthrough commit so
+        // grabbing the scroll never cancels an open editor (wheel scrolling
+        // doesn't either; the thumb is a list control, not an outside click).
+        double maxScroll = maxScroll();
+        if (maxScroll > 0) {
+            int trackTop = listClipTop();
+            int trackH = listClipBottom() - trackTop;
+            int trackX = listX + LIST_W + 6;
+            int thumbH = thumbHeightPx(maxScroll, trackH);
+            int thumbY = thumbYPx(maxScroll, trackH, thumbH);
+            if (mouseX >= trackX - 3 && mouseX <= trackX + 6
+                    && mouseY >= thumbY - 4 && mouseY <= thumbY + thumbH + 4) {
+                // Grab-where-clicked, with the grab offset clamped into the
+                // thumb so clicking the generous hit-padding grabs the
+                // nearest edge instead of jumping the thumb.
+                int grab = (int) Math.max(0, Math.min(thumbH, mouseY - thumbY));
+                scroll.beginThumbDrag(grab);
+                return true;
+            }
+        }
+
         // Click outside any row/field commits/cancels editors.
         commitAllEdits();
         return super.mouseClicked(_ev, _doubleClicked);
     }
 
     @Override
+    public boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent _ev, double dx, double dy) {
+        if (scroll.isDragging() && _ev.button() == 0) {
+            // Direct manipulation: the position pins to the cursor while
+            // dragging and eases again on release.
+            scroll.dragThumb(_ev.y(), listClipTop(), listClipBottom() - listClipTop(),
+                    maxScroll(), 24, true);
+            return true;
+        }
+        return super.mouseDragged(_ev, dx, dy);
+    }
+
+    @Override
+    public boolean mouseReleased(net.minecraft.client.input.MouseButtonEvent _ev) {
+        if (scroll.isDragging()) {
+            scroll.endThumbDrag();
+            return true;
+        }
+        return super.mouseReleased(_ev);
+    }
+
+    @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontal, double vertical) {
-        List<String> profiles = ProfileManager.getInstance().listProfileNames();
-        int total = (profiles.size() + (creatingNew ? 1 : 0)) * (ROW_H + ROW_GAP);
-        double maxScroll = Math.max(0, total - (this.height - LIST_TOP - LIST_BOTTOM_PAD));
-        scrollY -= vertical * 30;
-        if (scrollY < 0) scrollY = 0;
-        if (scrollY > maxScroll) scrollY = maxScroll;
+        scroll.wheel(vertical, 30, maxScroll());
         return true;
     }
 
@@ -535,7 +633,7 @@ public class ProfileManagerScreen extends Screen implements ThemedScreen {
         createField = new EditBox(this.font, 0, 0, NAME_W, 16, Component.literal("Name"));
         createField.setMaxLength(48);
         createField.setFocused(true);
-        scrollY = 0;
+        scroll.set(0);
     }
 
     private void commitCreate() {

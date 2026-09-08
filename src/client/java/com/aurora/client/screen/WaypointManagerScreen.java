@@ -14,6 +14,7 @@ import com.aurora.client.ui.component.ThemedScreen;
 import com.aurora.client.ui.component.Toast;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.ui.util.AuroraFontRenderer;
+import com.aurora.client.util.SmoothScroll;
 import com.aurora.client.util.WorldScope;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -67,7 +68,16 @@ public class WaypointManagerScreen extends Screen implements ThemedScreen {
     private final Toast toast = new Toast();
 
     private final Screen parent;
-    private double scrollY = 0;
+    /**
+     * List scrolling — new with R2 Part C (approved): this screen and
+     * {@link ProfileManagerScreen} previously had hard-clamped direct
+     * {@code scrollY} manipulation with no easing and no scrollbar. Now the
+     * wheel feeds the shared component's target (τ = 60 ms, wheel step 30
+     * unchanged) and a draggable, hover-responsive thumb shares one visual
+     * treatment with the Profile screen: a 3px {@code ON_OVERLAY} capsule
+     * at 0x30 alpha (0x55 hovered/dragged) beside the list.
+     */
+    private final SmoothScroll scroll = new SmoothScroll(60.0);
 
     private int editingIndex = -1;
     private EditBox nameField;
@@ -163,6 +173,9 @@ public class WaypointManagerScreen extends Screen implements ThemedScreen {
      */
     @Override
     public void render(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
+        // Easing step first, so the glass pass and the content pass below
+        // both read the same this-frame position.
+        scroll.advance(maxScroll());
         int listX = (this.width - LIST_W) / 2;
         List<Waypoint> all = currentList();
 
@@ -185,7 +198,7 @@ public class WaypointManagerScreen extends Screen implements ThemedScreen {
         GlassSurface.beginGlassPass();
         rowGlassDrawn.clear();
         GlassSurface.enableScissor(ctx, listX - 4, listClipTop(), listX + LIST_W + 4, listClipBottom());
-        int gy = LIST_TOP - (int) scrollY;
+        int gy = LIST_TOP - (int) scroll.current();
         for (Waypoint w : all) {
             if (gy + ROW_H > LIST_TOP - ROW_H && gy < listClipBottom()) {
                 renderRowGlassPass(ctx, listX, gy, LIST_W, w);
@@ -211,7 +224,7 @@ public class WaypointManagerScreen extends Screen implements ThemedScreen {
                     ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_OVERLAY), 0x88), false);
         }
 
-        int y = LIST_TOP - (int) scrollY;
+        int y = LIST_TOP - (int) scroll.current();
         for (int i = 0; i < all.size(); i++) {
             Waypoint w = all.get(i);
             if (y + ROW_H > LIST_TOP - ROW_H && y < listClipBottom()) {
@@ -221,6 +234,10 @@ public class WaypointManagerScreen extends Screen implements ThemedScreen {
         }
 
         ctx.disableScissor();
+
+        // The list's scrollbar thumb — after the content scissor (it is
+        // content, painted opaque over the dim like every other thumb).
+        drawScrollbar(ctx, mouseX, mouseY, listX);
 
         super.render(ctx, mouseX, mouseY, delta);
 
@@ -244,7 +261,7 @@ public class WaypointManagerScreen extends Screen implements ThemedScreen {
      */
     private boolean layoutNameField(List<Waypoint> all, int listX) {
         if (nameField == null || editingIndex < 0 || editingIndex >= all.size()) return false;
-        int rowY = LIST_TOP - (int) scrollY + editingIndex * (ROW_H + ROW_GAP);
+        int rowY = LIST_TOP - (int) scroll.current() + editingIndex * (ROW_H + ROW_GAP);
         if (rowY < LIST_TOP - ROW_H || rowY >= listClipBottom()) return false;
         nameField.setX(listX + ROW_INSET + SWATCH_W + CONTROL_GAP);
         nameField.setY(rowY + (ROW_H - 16) / 2);
@@ -396,6 +413,48 @@ public class WaypointManagerScreen extends Screen implements ThemedScreen {
     private int listClipTop() { return LIST_TOP - 2; }
     private int listClipBottom() { return LIST_TOP + (this.height - LIST_TOP - LIST_BOTTOM_PAD); }
 
+    /** Total scrollable overflow of the row list. */
+    private double maxScroll() {
+        int totalH = currentList().size() * (ROW_H + ROW_GAP);
+        return Math.max(0, totalH - (this.height - LIST_TOP - LIST_BOTTOM_PAD));
+    }
+
+    /** The thumb's current top/height in screen coordinates (int-truncated for painting). */
+    private int thumbHeightPx(double maxScroll, int trackH) {
+        return (int) scroll.thumbHeight(trackH, maxScroll, 24);
+    }
+
+    private int thumbYPx(double maxScroll, int trackH, int thumbH) {
+        return listClipTop() + (int) ((trackH - thumbH) * scroll.ratio(maxScroll));
+    }
+
+    /**
+     * The list's scrollbar thumb — the shared-look treatment this screen and
+     * {@link ProfileManagerScreen} adopted together (R2 Part C): a 3px
+     * capsule ({@code ON_OVERLAY} at 0x30 alpha, 0x55 on hover/drag — the
+     * pack browser's hover-responsive idiom in these screens' token
+     * vocabulary, since everything here draws over the dim) running down the
+     * clip band, six pixels right of the list. Geometry and drag state come
+     * from {@link SmoothScroll}; painting stays screen-owned like every
+     * other thumb in the mod. Never glass — thumbs are opaque token
+     * surfaces by the mod-wide conventions.
+     */
+    private void drawScrollbar(GuiGraphics ctx, int mouseX, int mouseY, int listX) {
+        double maxScroll = maxScroll();
+        if (maxScroll <= 0) return;
+        int trackTop = listClipTop();
+        int trackH = listClipBottom() - trackTop;
+        int trackX = listX + LIST_W + 6;
+        int thumbH = thumbHeightPx(maxScroll, trackH);
+        int thumbY = thumbYPx(maxScroll, trackH, thumbH);
+        boolean hover = mouseX >= trackX - 2 && mouseX <= trackX + 5
+                && mouseY >= thumbY && mouseY <= thumbY + thumbH;
+        int col = (hover || scroll.isDragging())
+                ? ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_OVERLAY), 0x55)
+                : ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_OVERLAY), 0x30);
+        RenderUtil.drawRoundedRectAA(ctx, trackX, thumbY, 3, thumbH, 2, col);
+    }
+
     @Override
     public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent _ev, boolean _doubleClicked) {
         double mouseX = _ev.x();
@@ -409,7 +468,7 @@ public class WaypointManagerScreen extends Screen implements ThemedScreen {
         // Iterate visible rows.
         int listX = (this.width - LIST_W) / 2;
         List<Waypoint> all = currentList();
-        int y = LIST_TOP - (int) scrollY;
+        int y = LIST_TOP - (int) scroll.current();
         int clipTop = listClipTop();
         int clipBot = listClipBottom();
         for (int i = 0; i < all.size(); i++) {
@@ -440,19 +499,56 @@ public class WaypointManagerScreen extends Screen implements ThemedScreen {
             y += ROW_H + ROW_GAP;
         }
 
+        // Scrollbar thumb grab — checked before the fallthrough commit so
+        // grabbing the scroll never cancels an open rename (wheel scrolling
+        // doesn't either; the thumb is a list control, not an outside click).
+        double maxScroll = maxScroll();
+        if (maxScroll > 0) {
+            int trackTop = listClipTop();
+            int trackH = listClipBottom() - trackTop;
+            int trackX = listX + LIST_W + 6;
+            int thumbH = thumbHeightPx(maxScroll, trackH);
+            int thumbY = thumbYPx(maxScroll, trackH, thumbH);
+            if (mouseX >= trackX - 3 && mouseX <= trackX + 6
+                    && mouseY >= thumbY - 4 && mouseY <= thumbY + thumbH + 4) {
+                // Grab-where-clicked, with the grab offset clamped into the
+                // thumb so clicking the generous hit-padding grabs the
+                // nearest edge instead of jumping the thumb.
+                int grab = (int) Math.max(0, Math.min(thumbH, mouseY - thumbY));
+                scroll.beginThumbDrag(grab);
+                return true;
+            }
+        }
+
         // Click outside any row commits / cancels editing.
         commitNameEdit();
         return super.mouseClicked(_ev, _doubleClicked);
     }
 
     @Override
+    public boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent _ev, double dx, double dy) {
+        if (scroll.isDragging() && _ev.button() == 0) {
+            // Direct manipulation: the position pins to the cursor while
+            // dragging and eases again on release.
+            scroll.dragThumb(_ev.y(), listClipTop(), listClipBottom() - listClipTop(),
+                    maxScroll(), 24, true);
+            return true;
+        }
+        return super.mouseDragged(_ev, dx, dy);
+    }
+
+    @Override
+    public boolean mouseReleased(net.minecraft.client.input.MouseButtonEvent _ev) {
+        if (scroll.isDragging()) {
+            scroll.endThumbDrag();
+            return true;
+        }
+        return super.mouseReleased(_ev);
+    }
+
+    @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontal, double vertical) {
-        List<Waypoint> all = currentList();
-        int totalH = all.size() * (ROW_H + ROW_GAP);
-        double maxScroll = Math.max(0, totalH - (this.height - LIST_TOP - LIST_BOTTOM_PAD));
-        scrollY -= vertical * 30;
-        if (scrollY < 0) scrollY = 0;
-        if (scrollY > maxScroll) scrollY = maxScroll;
+        scroll.wheel(vertical, 30, maxScroll());
         return true;
     }
 

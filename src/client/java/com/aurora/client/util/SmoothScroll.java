@@ -45,8 +45,8 @@ import java.util.function.DoubleSupplier;
  *
  * <h2>The thumb is opt-in</h2>
  *
- * <p>Screens with no visible scrollbar (FeatureDetailScreen today,
- * ProfileManagerScreen/WaypointManagerScreen) simply never call the thumb
+ * <p>Screens with no visible scrollbar (FeatureDetailScreen today) simply
+ * never call the thumb
  * methods. Screens with one get the shared geometry (thumb height from the
  * view/content ratio, minimum height, y position) and the shared drag
  * state machine; the <b>painting stays with the screen</b> because the two
@@ -78,11 +78,13 @@ import java.util.function.DoubleSupplier;
  *       thumbs center-on-cursor with the rendered position pinned during
  *       drags; accepted the component's 80 ms dt clamp over the screen's
  *       old 64 (decided — sub-15fps-only observable).</li>
- *   <li><b>Pending, deliberately not folded into the pilot</b>:
- *       {@code ProfileManagerScreen}/{@code WaypointManagerScreen}, which
- *       currently have NO easing and NO thumb at all — adopting this class
- *       there is a functional improvement, not a refactor, and deserves
- *       its own explicit decision rather than a silent behavior change.</li>
+ *   <li>{@code ProfileManagerScreen}/{@code WaypointManagerScreen}
+ *       (2026-09-08, R2 Part C — approved new behavior, not a refactor):
+ *       these previously had hard-clamped direct scrollY and NO scrollbar;
+ *       they gained τ = 60 easing (wheel step 30 unchanged) plus their
+ *       first visible thumbs — one shared look for both screens: 3px
+ *       ON_OVERLAY capsule, 0x30/0x55(hover+drag) alpha, grab-where-clicked
+ *       with the position pinned during drags.</li>
  * </ul>
  */
 public final class SmoothScroll {
