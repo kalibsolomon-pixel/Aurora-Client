@@ -5,12 +5,16 @@ import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.render.blur.BlurPanelRenderer;
 import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.ui.util.RenderUtil;
+import com.aurora.client.ui.util.UiLayerCache;
 import com.aurora.client.util.AuroraAnim;
 import com.aurora.client.util.HoverAnim;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Themed squircle button — the single shared implementation for every
@@ -150,12 +154,111 @@ public class Button extends Widget {
      * through the tint, never the lighting orientation). See
      * {@link Widget#renderGlassPass}.
      */
+    // ---- Resting-surface templates (audit P2 residue) ----
+    //
+    // A button's SURFACE at rest is one small rounded fill (+ outline on the
+    // flat variants) — but a grid/list full of buttons re-submitting that
+    // per frame was the surviving fill volume after the row templates landed
+    // (per-card Install tints on the pack browser, per-row Delete flats on
+    // the manager lists). At rest the surface is fully determined by
+    // (size, variant, theme, GUI scale), so each distinct combination
+    // rasterizes once into a shared session cache and blits per button —
+    // the same discipline as the row/card templates, one level down.
+    // Session-static and bounded by distinct (size × variant) pairs, like
+    // the renderer's rim-mask cache; re-raster keyed off the theme
+    // generation stamp (in-place re-upload, no mid-frame texture release).
+    private static final int KIND_FLAT_SECONDARY = 0;
+    private static final int KIND_FLAT_PRIMARY = 1;
+    private static final int KIND_FLAT_DESTRUCTIVE = 2;
+    private static final int KIND_GLASS_TINT = 3;
+    private static final int KIND_GLASS_STAINED = 4;
+    private static final Map<Long, UiLayerCache> SURFACE_TEMPLATES = new HashMap<>();
+
+    private static long templateKey(float w, float h, int kind) {
+        int scale = Math.max(1, (int) Minecraft.getInstance().getWindow().getGuiScale());
+        return ThemeManager.generation() * 1_000_003L
+                ^ (long) scale * 65537L
+                ^ (long) Math.round(w) * 7919L
+                ^ (long) Math.round(h) * 104729L
+                ^ (long) kind * 31L;
+    }
+
+    /**
+     * Blits the resting surface for {@code (w, h, kind)}, rasterizing it
+     * first if needed. The raster draws the same calls the live paths draw
+     * (keep the color expressions below in lockstep with
+     * {@link #renderOverlay}'s flat branch and {@code GlassSurface.paint}'s
+     * tints).
+     */
+    private static void blitSurfaceTemplate(GuiGraphics g, float x, float y, float w, float h,
+                                            float radius, int kind) {
+        long key = templateKey(w, h, kind);
+        UiLayerCache cache = SURFACE_TEMPLATES.get(key);
+        if (cache == null) {
+            cache = new UiLayerCache();
+            SURFACE_TEMPLATES.put(key, cache);
+        }
+        if (!cache.isCurrent(key)) {
+            int scale = Math.max(1, (int) Minecraft.getInstance().getWindow().getGuiScale());
+            int iw = Math.round(w) + 2, ih = Math.round(h) + 2; // +1 logical AA margin
+            cache.ensureSize(iw * scale, ih * scale);
+            cache.clear();
+            RenderUtil.RectSink prev = RenderUtil.beginCapture(cache.sink());
+            try {
+                switch (kind) {
+                    case KIND_FLAT_SECONDARY -> {
+                        RenderUtil.drawRoundedRectAA(g, 1, 1, w, h, radius,
+                                ThemeManager.color(ThemeToken.SURFACE));
+                        RenderUtil.drawRoundedOutlineAA(g, 1, 1, w, h, radius, 1.0f,
+                                ThemeManager.color(ThemeToken.BORDER));
+                    }
+                    case KIND_FLAT_PRIMARY -> {
+                        RenderUtil.drawRoundedRectAA(g, 1, 1, w, h, radius,
+                                ThemeManager.color(ThemeToken.ACCENT_GRAD_BOT));
+                        RenderUtil.drawRoundedOutlineAA(g, 1, 1, w, h, radius, 1.0f, 0x22FFFFFF);
+                    }
+                    case KIND_FLAT_DESTRUCTIVE -> {
+                        int err = ThemeManager.color(ThemeToken.SEMANTIC_ERROR);
+                        RenderUtil.drawRoundedRectAA(g, 1, 1, w, h, radius,
+                                ThemeManager.withAlpha(err, 0x44));
+                        RenderUtil.drawRoundedOutlineAA(g, 1, 1, w, h, radius, 1.0f, err);
+                    }
+                    default -> RenderUtil.drawRoundedRectAA(g, 1, 1, w, h, radius,
+                            kind == KIND_GLASS_STAINED
+                                    ? ThemeManager.stainedTint()
+                                    : ThemeManager.color(ThemeToken.WINDOW_FILL));
+                }
+            } finally {
+                RenderUtil.endCapture(prev);
+            }
+            cache.commit(key);
+        }
+        cache.blitAt(g, Math.round(x) - 1, Math.round(y) - 1, Math.round(w) + 2, Math.round(h) + 2);
+    }
+
     @Override
     public void renderGlassPass(GuiGraphics g, float x, float y, float w, float h) {
         glassPassFrame = GlassSurface.frame();
         float radius = ThemeManager.current().roundness().radiusSmall();
-        glassPassDrew = glassEligible(currentScale())
-                && GlassSurface.control(g, x, y, w, h, radius, glassStyle == GlassStyle.STAINED, priority);
+        boolean eligible = glassEligible(currentScale());
+        if (eligible) {
+            // The tint fill comes from the resting-surface template (one blit)
+            // while the panel and the deferred rim stay live — so the discard
+            // wrap suppresses only GlassSurface's live tint submission.
+            RenderUtil.RectSink prev = RenderUtil.beginCapture(RenderUtil.DISCARD_SINK);
+            try {
+                glassPassDrew = GlassSurface.control(g, x, y, w, h, radius,
+                        glassStyle == GlassStyle.STAINED, priority);
+            } finally {
+                RenderUtil.endCapture(prev);
+            }
+            if (glassPassDrew) {
+                blitSurfaceTemplate(g, x, y, w, h, radius,
+                        glassStyle == GlassStyle.STAINED ? KIND_GLASS_STAINED : KIND_GLASS_TINT);
+            }
+        } else {
+            glassPassDrew = false;
+        }
     }
 
     @Override
@@ -212,16 +315,34 @@ public class Button extends Widget {
         // the surface is already on screen UNDER the dim and only its
         // result matters here; otherwise (legacy screens) it is painted in
         // place now. Either way a decline means the complete flat button.
+        // At rest the surface comes from the shared resting-surface template
+        // (see the template block above); hover/press/disabled paint live.
         boolean glassDrew;
         if (glassPassFrame == GlassSurface.frame()) {
             glassDrew = glassPassDrew;
+        } else if (glassEligible(scale)) {
+            RenderUtil.RectSink prev = RenderUtil.beginCapture(RenderUtil.DISCARD_SINK);
+            try {
+                glassDrew = GlassSurface.control(g, x, y, w, h, radius,
+                        glassStyle == GlassStyle.STAINED, priority);
+            } finally {
+                RenderUtil.endCapture(prev);
+            }
+            if (glassDrew) {
+                blitSurfaceTemplate(g, x, y, w, h, radius,
+                        glassStyle == GlassStyle.STAINED ? KIND_GLASS_STAINED : KIND_GLASS_TINT);
+            }
         } else {
-            glassDrew = glassEligible(scale)
-                    && GlassSurface.control(g, x, y, w, h, radius, glassStyle == GlassStyle.STAINED, priority);
+            glassDrew = false;
         }
         if (!glassDrew) {
-            RenderUtil.drawRoundedRectAA(g, x, y, w, h, radius, bg);
-            RenderUtil.drawRoundedOutlineAA(g, x, y, w, h, radius, 1.0f, border);
+            if (scale == 1.0f && hoverT == 0f && !disabled) {
+                blitSurfaceTemplate(g, x, y, w, h, radius, destructive ? KIND_FLAT_DESTRUCTIVE
+                        : primary ? KIND_FLAT_PRIMARY : KIND_FLAT_SECONDARY);
+            } else {
+                RenderUtil.drawRoundedRectAA(g, x, y, w, h, radius, bg);
+                RenderUtil.drawRoundedOutlineAA(g, x, y, w, h, radius, 1.0f, border);
+            }
         }
 
         int textX = Math.round(x + w / 2f);

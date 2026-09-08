@@ -3,9 +3,13 @@ package com.aurora.client.ui.component;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.util.RenderUtil;
+import com.aurora.client.ui.util.UiLayerCache;
 import com.aurora.client.util.HoverAnim;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.function.IntSupplier;
 
 /**
@@ -54,22 +58,34 @@ public class ColorSwatch extends Widget {
         int color = getter.getAsInt();
         float radius = Math.min(h / 2f, ThemeManager.current().roundness().radiusSmall());
 
-        if (checkerboard) {
-            drawCheckerboard(g, x, y, w, h, radius);
-        }
-
-        int drawColor = disabled ? (color & 0x55FFFFFF) : (color | 0xFF000000);
-        RenderUtil.drawRoundedRectAA(g, x, y, w, h, radius, drawColor);
-
         boolean hover = !disabled && inBounds(mouseX, mouseY, x, y, w, h);
         float hT = hoverAnim.update(hover);
+        boolean rest = !disabled && !selected && hT <= 0f;
+
+        if (rest) {
+            // Audit P2 residue: a grid/list of swatches re-submitting the
+            // checkerboard + color fill + border per frame is the same
+            // fill-volume class as the rows/cards — at rest the whole stack
+            // is determined by (color, size, theme, scale), so it comes from
+            // a shared per-color template (one blit). Hover/selection paint
+            // the live shapes for those frames.
+            blitSwatchTemplate(g, x, y, w, h, color, radius, checkerboard);
+        } else {
+            if (checkerboard) {
+                drawCheckerboard(g, x, y, w, h, radius);
+            }
+            int drawColor = disabled ? (color & 0x55FFFFFF) : (color | 0xFF000000);
+            RenderUtil.drawRoundedRectAA(g, x, y, w, h, radius, drawColor);
+        }
 
         if (selected) {
             RenderUtil.drawRoundedOutlineAA(g, x - 2, y - 2, w + 4, h + 4, radius + 2, 1.5f,
                     ThemeManager.color(ThemeToken.ACCENT));
         } else {
-            RenderUtil.drawRoundedOutlineAA(g, x, y, w, h, radius, 1.0f,
-                    ThemeManager.color(ThemeToken.BORDER));
+            if (!rest) {
+                RenderUtil.drawRoundedOutlineAA(g, x, y, w, h, radius, 1.0f,
+                        ThemeManager.color(ThemeToken.BORDER));
+            }
             if (hT > 0f) {
                 int haloA = Math.round(90 * hT);
                 int onBg = ThemeManager.color(ThemeToken.ON_BACKGROUND) & 0x00FFFFFF;
@@ -77,6 +93,62 @@ public class ColorSwatch extends Widget {
                         (haloA << 24) | onBg);
             }
         }
+    }
+
+    // ---- Per-color resting template (see renderOverlay's rest branch) ----
+    // Session-static, LRU-capped: distinct colors are bounded by what the
+    // user actually sees. Eviction only ever removes the least-recently-USED
+    // entry, which by definition was not blitted this frame — so disposing
+    // it mid-frame cannot destroy a texture with pending GuiRenderState
+    // blits (AGENTS.md §6 convention 10).
+    private static final int SWATCH_TPL_CAP = 24;
+    private static final Map<Long, UiLayerCache> SWATCH_TEMPLATES =
+            new LinkedHashMap<>(16, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<Long, UiLayerCache> eldest) {
+                    if (size() > SWATCH_TPL_CAP) {
+                        eldest.getValue().dispose();
+                        return true;
+                    }
+                    return false;
+                }
+            };
+
+    private static void blitSwatchTemplate(GuiGraphics g, float x, float y, float w, float h,
+                                           int color, float radius, boolean checkerboard) {
+        int scale = Math.max(1, (int) Minecraft.getInstance().getWindow().getGuiScale());
+        long key = ThemeManager.generation() * 1_000_003L
+                ^ (long) scale * 65537L
+                ^ (long) Math.round(w) * 7919L
+                ^ (long) Math.round(h) * 104729L
+                ^ (color & 0xFFFFFFFFL) * 31L
+                ^ (checkerboard ? 1L : 0L);
+        UiLayerCache cache = SWATCH_TEMPLATES.get(key);
+        if (cache == null) {
+            cache = new UiLayerCache();
+            SWATCH_TEMPLATES.put(key, cache);
+        }
+        if (!cache.isCurrent(key)) {
+            int iw = Math.round(w) + 2, ih = Math.round(h) + 2;
+            cache.ensureSize(iw * scale, ih * scale);
+            cache.clear();
+            RenderUtil.RectSink prev = RenderUtil.beginCapture(cache.sink());
+            try {
+                // The live at-rest stack — keep in lockstep with the else
+                // branch above (checkerboard clipped to the same geometry,
+                // opaque color fill, BORDER ring).
+                if (checkerboard) {
+                    drawCheckerboard(g, 1, 1, w, h, radius);
+                }
+                RenderUtil.drawRoundedRectAA(g, 1, 1, w, h, radius, color | 0xFF000000);
+                RenderUtil.drawRoundedOutlineAA(g, 1, 1, w, h, radius, 1.0f,
+                        ThemeManager.color(ThemeToken.BORDER));
+            } finally {
+                RenderUtil.endCapture(prev);
+            }
+            cache.commit(key);
+        }
+        cache.blitAt(g, Math.round(x) - 1, Math.round(y) - 1, Math.round(w) + 2, Math.round(h) + 2);
     }
 
     @Override
@@ -133,7 +205,9 @@ public class ColorSwatch extends Widget {
                 if (cellR <= cellL) continue;
                 boolean dark = (i + j) % 2 == 0;
                 int col = dark ? 0xFF555555 : 0xFFAAAAAA;
-                g.fill(Math.round(cellL), Math.round(rowY),
+                // fillLogical: capture-aware so the resting template can
+                // rasterize the checker identically (integer cells, no AA).
+                RenderUtil.fillLogical(g, Math.round(cellL), Math.round(rowY),
                         Math.round(cellR), Math.round(Math.min(rowY + cell, y + h)),
                         col);
             }

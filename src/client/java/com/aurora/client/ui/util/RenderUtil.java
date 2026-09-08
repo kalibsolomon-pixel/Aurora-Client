@@ -67,6 +67,41 @@ public class RenderUtil {
     }
 
     /**
+     * Sink that discards every submission. Paired with a cached template
+     * blit: the screen runs its ordinary paint path inside
+     * {@code beginCapture(DISCARD_SINK)} so the static shape fills are
+     * suppressed from the live batch while the template (rasterized from
+     * the identical calls) supplies their pixels. Unlike the live sink this
+     * does not count toward {@link #fillsSubmitted()} — those submissions
+     * are the ones being eliminated.
+     */
+    public static final RectSink DISCARD_SINK = new RectSink() {
+        @Override public void rect(int x1, int y1, int x2, int y2, int argb) {}
+    };
+
+    /**
+     * Capture-aware plain logical-pixel fill for hard-edged integer grids
+     * (checkerboards, gradient cells): during a capture pass the rect goes
+     * to the active sink in physical pixels ({@code ·guiScale}; integer
+     * input, so device alignment is exact), live it is an ordinary
+     * {@link GuiGraphics#fill}. Output is identical through both
+     * destinations — a GUI fill at integer logical coordinates and a
+     * sink-rect at the scaled integers cover the same device pixels, and a
+     * 1:1 blit of the captured buffer lands them back on those pixels.
+     */
+    public static void fillLogical(GuiGraphics g, int x1, int y1, int x2, int y2, int argb) {
+        RectSink capture = CAPTURE_SINK.get();
+        if (capture == null) {
+            g.fill(x1, y1, x2, y2, argb);
+        } else if (capture != DISCARD_SINK) {
+            float scale = (float) Minecraft.getInstance().getWindow().getGuiScale();
+            capture.rect(Math.round(x1 * scale), Math.round(y1 * scale),
+                    Math.round(x2 * scale), Math.round(y2 * scale), argb);
+        }
+        // DISCARD_SINK: swallowed — same suppression semantics as the AA paths.
+    }
+
+    /**
      * Instrumentation counter â€” GUI fill submissions issued through this
      * class per process lifetime. Lets a live session quantify the frame
      * cost of pixel-heavy screens (and verify the static-layer cache is

@@ -88,9 +88,21 @@ public final class UiLayerCache implements RenderUtil.RectSink {
 
     /** One textured draw covering the logical screen at native resolution. */
     public void blit(GuiGraphics g, int logicalW, int logicalH) {
+        blitAt(g, 0, 0, logicalW, logicalH);
+    }
+
+    /**
+     * Positional variant of {@link #blit}: one textured draw of the captured
+     * buffer's full content at {@code (x, y)}, sized {@code logicalW × logicalH}
+     * (the buffer's device resolution divided by the GUI scale). Used by the
+     * row/card <em>template</em> pattern — a small buffer rasterized once at
+     * template-local coordinates, blitted per row at each row's position, so
+     * scrolling never re-rasterizes.
+     */
+    public void blitAt(GuiGraphics g, int x, int y, int logicalW, int logicalH) {
         if (tex == null || w <= 0 || h <= 0) return;
         g.blit(RenderPipelines.GUI_TEXTURED, texId,
-                0, 0, 0f, 0f, logicalW, logicalH, w, h, w, h, -1);
+                x, y, 0f, 0f, logicalW, logicalH, w, h, w, h, -1);
     }
 
     /**
