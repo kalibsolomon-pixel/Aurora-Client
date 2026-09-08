@@ -23,8 +23,10 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Lists the current world's waypoints. Each row exposes: color swatch,
@@ -173,22 +175,32 @@ public class WaypointManagerScreen extends Screen implements ThemedScreen {
      */
     @Override
     public void render(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
-        // Easing step first, so the glass pass and the content pass below
-        // both read the same this-frame position.
-        scroll.advance(maxScroll());
         int listX = (this.width - LIST_W) / 2;
         List<Waypoint> all = currentList();
+        // One list fetch per frame drives everything below — the easing
+        // bound, the row passes and the scrollbar.
+        double maxScroll = maxScrollOf(all);
+        // Easing step before either pass, so the glass pass and the content
+        // pass below both read the same this-frame position.
+        scroll.advance(maxScroll);
 
         // Row-widget cache hygiene: reconcile against the LIVE list every
         // frame (the ProfileManagerScreen pattern) — entries for removed
         // waypoints drop immediately, new waypoints lazily create theirs.
         // The old count-only guard missed remove-then-add sequences that
-        // kept the count identical. Runs before either pass so both see
-        // the same button/swatch instances.
-        boolean membershipChanged = rowCopyBtns.keySet().retainAll(all);
-        membershipChanged |= rowColorBtns.keySet().retainAll(all);
-        membershipChanged |= rowDeleteBtns.keySet().retainAll(all);
-        membershipChanged |= rowSwatches.keySet().retainAll(all);
+        // kept the count identical. Runs before either pass so both see the
+        // same button/swatch instances.
+        //
+        // Reconciled against a SET: retainAll(List) costs O(rows²) per map
+        // (a List.contains scan per key) and FOUR maps ran it every frame —
+        // with a large waypoint list that alone dominated the frame (~1.5 ms
+        // at 2000 rows). Same semantics: Waypoint does not override equals,
+        // so set membership and List.contains agree (both identity).
+        Set<Waypoint> live = new HashSet<>(all);
+        boolean membershipChanged = rowCopyBtns.keySet().retainAll(live);
+        membershipChanged |= rowColorBtns.keySet().retainAll(live);
+        membershipChanged |= rowDeleteBtns.keySet().retainAll(live);
+        membershipChanged |= rowSwatches.keySet().retainAll(live);
         if (membershipChanged) nameFitCache.clear();
 
         // ---- 1. Glass pass (before the dim) ----
@@ -237,7 +249,7 @@ public class WaypointManagerScreen extends Screen implements ThemedScreen {
 
         // The list's scrollbar thumb — after the content scissor (it is
         // content, painted opaque over the dim like every other thumb).
-        drawScrollbar(ctx, mouseX, mouseY, listX);
+        drawScrollbar(ctx, mouseX, mouseY, listX, maxScroll);
 
         super.render(ctx, mouseX, mouseY, delta);
 
@@ -413,9 +425,14 @@ public class WaypointManagerScreen extends Screen implements ThemedScreen {
     private int listClipTop() { return LIST_TOP - 2; }
     private int listClipBottom() { return LIST_TOP + (this.height - LIST_TOP - LIST_BOTTOM_PAD); }
 
-    /** Total scrollable overflow of the row list. */
+    /** Total scrollable overflow of the row list (input-event path refetches). */
     private double maxScroll() {
-        int totalH = currentList().size() * (ROW_H + ROW_GAP);
+        return maxScrollOf(currentList());
+    }
+
+    /** {@link #maxScroll()} against an already-fetched list (the per-frame path). */
+    private double maxScrollOf(List<Waypoint> all) {
+        int totalH = all.size() * (ROW_H + ROW_GAP);
         return Math.max(0, totalH - (this.height - LIST_TOP - LIST_BOTTOM_PAD));
     }
 
@@ -439,8 +456,7 @@ public class WaypointManagerScreen extends Screen implements ThemedScreen {
      * other thumb in the mod. Never glass — thumbs are opaque token
      * surfaces by the mod-wide conventions.
      */
-    private void drawScrollbar(GuiGraphics ctx, int mouseX, int mouseY, int listX) {
-        double maxScroll = maxScroll();
+    private void drawScrollbar(GuiGraphics ctx, int mouseX, int mouseY, int listX, double maxScroll) {
         if (maxScroll <= 0) return;
         int trackTop = listClipTop();
         int trackH = listClipBottom() - trackTop;

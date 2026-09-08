@@ -18,8 +18,10 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Lists configuration profiles and exposes create / rename / duplicate /
@@ -163,16 +165,24 @@ public class ProfileManagerScreen extends Screen implements ThemedScreen {
      */
     @Override
     public void render(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
-        // Easing step first, so the glass pass and the content pass below
-        // both read the same this-frame position.
-        scroll.advance(maxScroll());
         int listX = (this.width - LIST_W) / 2;
         List<String> profiles = ProfileManager.getInstance().listProfileNames();
         String active = ProfileManager.getInstance().currentProfile();
+        // One list fetch per frame drives everything below — the easing
+        // bound, the row passes and the scrollbar (listProfileNames returns
+        // a fresh copy per call, so hoisting matters on large lists).
+        double maxScroll = maxScrollOf(profiles);
+        // Easing step before either pass, so the glass pass and the content
+        // pass below both read the same this-frame position.
+        scroll.advance(maxScroll);
         // Row-widget cache hygiene: drop buttons for profiles that no longer
         // exist — before either pass so both see the same instances.
-        dupBtns.keySet().retainAll(profiles);
-        delBtns.keySet().retainAll(profiles);
+        // Reconciled against a SET: retainAll(List) costs O(rows²) per map
+        // (a List.contains scan per key) and ran every frame — with a large
+        // profile list that alone dominated the frame (~5 ms at 2000 rows).
+        Set<String> live = new HashSet<>(profiles);
+        dupBtns.keySet().retainAll(live);
+        delBtns.keySet().retainAll(live);
 
         // ---- 1. Glass pass (before the dim) ----
         // Opened explicitly so each surface's rim finish is deferred past
@@ -241,7 +251,7 @@ public class ProfileManagerScreen extends Screen implements ThemedScreen {
 
         // The list's scrollbar thumb — after the content scissor (it is
         // content, painted opaque over the dim like every other thumb).
-        drawScrollbar(ctx, mouseX, mouseY, listX);
+        drawScrollbar(ctx, mouseX, mouseY, listX, maxScroll);
 
         super.render(ctx, mouseX, mouseY, delta);
 
@@ -432,7 +442,11 @@ public class ProfileManagerScreen extends Screen implements ThemedScreen {
 
     /** Total scrollable overflow of the row list (create row included when open). */
     private double maxScroll() {
-        List<String> profiles = ProfileManager.getInstance().listProfileNames();
+        return maxScrollOf(ProfileManager.getInstance().listProfileNames());
+    }
+
+    /** {@link #maxScroll()} against an already-fetched list (the per-frame path). */
+    private double maxScrollOf(List<String> profiles) {
         int total = (profiles.size() + (creatingNew ? 1 : 0)) * (ROW_H + ROW_GAP);
         return Math.max(0, total - (this.height - LIST_TOP - LIST_BOTTOM_PAD));
     }
@@ -457,8 +471,7 @@ public class ProfileManagerScreen extends Screen implements ThemedScreen {
      * other thumb in the mod. Never glass — thumbs are opaque token
      * surfaces by the mod-wide conventions.
      */
-    private void drawScrollbar(GuiGraphics ctx, int mouseX, int mouseY, int listX) {
-        double maxScroll = maxScroll();
+    private void drawScrollbar(GuiGraphics ctx, int mouseX, int mouseY, int listX, double maxScroll) {
         if (maxScroll <= 0) return;
         int trackTop = listClipTop();
         int trackH = listClipBottom() - trackTop;
