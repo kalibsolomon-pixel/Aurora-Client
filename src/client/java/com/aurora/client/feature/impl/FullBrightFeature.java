@@ -14,7 +14,7 @@ import net.minecraft.client.OptionInstance;
  * percentage (100..1500). 100% = vanilla full-bright (gamma 1.0), 500% =
  * the legacy hardcoded value, 1500% = brightest available. The slider
  * stores percent rather than the raw double so the UI can display whole
- * numbers and keep the IntSliderSetting widget reusable.
+ * numbers and keep the SliderSetting widget reusable.
  */
 public class FullBrightFeature implements Feature {
     public static final String ID = "full_bright";

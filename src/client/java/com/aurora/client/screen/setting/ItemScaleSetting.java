@@ -55,8 +55,8 @@ public class ItemScaleSetting extends FeatureSetting {
     private Item foundItem = null;
     private final Map<String, Boolean> expandedStates = new HashMap<>();
 
-    // Keep active DoubleSliderSetting instances per item and per field to handle drag events cleanly
-    private final Map<String, List<DoubleSliderSetting>> itemSliders = new HashMap<>();
+    // Keep active SliderSetting instances per item and per field to handle drag events cleanly
+    private final Map<String, List<SliderSetting>> itemSliders = new HashMap<>();
 
     public ItemScaleSetting() {
         super("Item Scale Configurator");
@@ -222,8 +222,8 @@ public class ItemScaleSetting extends FeatureSetting {
 
             if (expanded) {
                 // Get or create sliders for this item
-                List<DoubleSliderSetting> sliders = getOrCreateSliders(idStr);
-                for (DoubleSliderSetting s : sliders) {
+                List<SliderSetting> sliders = getOrCreateSliders(idStr);
+                for (SliderSetting s : sliders) {
                     s.render(ctx, x + 8, currentY, width - 16, mouseX, mouseY);
                     currentY += s.height();
                 }
@@ -252,11 +252,11 @@ public class ItemScaleSetting extends FeatureSetting {
         return sb.toString();
     }
 
-    private List<DoubleSliderSetting> getOrCreateSliders(String idStr) {
+    private List<SliderSetting> getOrCreateSliders(String idStr) {
         return itemSliders.computeIfAbsent(idStr, id -> {
-            List<DoubleSliderSetting> list = new ArrayList<>();
+            List<SliderSetting> list = new ArrayList<>();
             // Getter and setters referencing config directly
-            list.add(new DoubleSliderSetting("Scale",
+            list.add(SliderSetting.of("Scale",
                     () -> {
                         AuroraConfig.ItemScaleData d = AuroraConfig.get().itemScales.get(id);
                         return d != null ? d.scale : 1.0;
@@ -266,7 +266,7 @@ public class ItemScaleSetting extends FeatureSetting {
                         if (d != null) d.scale = (float) v;
                     }, 0.1, 2.0));
 
-            list.add(new DoubleSliderSetting("Translation X",
+            list.add(SliderSetting.of("Translation X",
                     () -> {
                         AuroraConfig.ItemScaleData d = AuroraConfig.get().itemScales.get(id);
                         return d != null ? d.translationX : 0.0;
@@ -276,7 +276,7 @@ public class ItemScaleSetting extends FeatureSetting {
                         if (d != null) d.translationX = (float) v;
                     }, -2.0, 2.0));
 
-            list.add(new DoubleSliderSetting("Translation Y",
+            list.add(SliderSetting.of("Translation Y",
                     () -> {
                         AuroraConfig.ItemScaleData d = AuroraConfig.get().itemScales.get(id);
                         return d != null ? d.translationY : 0.0;
@@ -286,7 +286,7 @@ public class ItemScaleSetting extends FeatureSetting {
                         if (d != null) d.translationY = (float) v;
                     }, -2.0, 2.0));
 
-            list.add(new DoubleSliderSetting("Translation Z",
+            list.add(SliderSetting.of("Translation Z",
                     () -> {
                         AuroraConfig.ItemScaleData d = AuroraConfig.get().itemScales.get(id);
                         return d != null ? d.translationZ : 0.0;
@@ -296,7 +296,7 @@ public class ItemScaleSetting extends FeatureSetting {
                         if (d != null) d.translationZ = (float) v;
                     }, -2.0, 2.0));
 
-            list.add(new DoubleSliderSetting("Pitch",
+            list.add(SliderSetting.of("Pitch",
                     () -> {
                         AuroraConfig.ItemScaleData d = AuroraConfig.get().itemScales.get(id);
                         return d != null ? d.pitch : 0.0;
@@ -306,7 +306,7 @@ public class ItemScaleSetting extends FeatureSetting {
                         if (d != null) d.pitch = (float) v;
                     }, -180.0, 180.0));
 
-            list.add(new DoubleSliderSetting("Yaw",
+            list.add(SliderSetting.of("Yaw",
                     () -> {
                         AuroraConfig.ItemScaleData d = AuroraConfig.get().itemScales.get(id);
                         return d != null ? d.yaw : 0.0;
@@ -316,7 +316,7 @@ public class ItemScaleSetting extends FeatureSetting {
                         if (d != null) d.yaw = (float) v;
                     }, -180.0, 180.0));
 
-            list.add(new DoubleSliderSetting("Roll",
+            list.add(SliderSetting.of("Roll",
                     () -> {
                         AuroraConfig.ItemScaleData d = AuroraConfig.get().itemScales.get(id);
                         return d != null ? d.roll : 0.0;
@@ -402,8 +402,8 @@ public class ItemScaleSetting extends FeatureSetting {
             currentY += 30;
 
             if (expanded) {
-                List<DoubleSliderSetting> sliders = getOrCreateSliders(idStr);
-                for (DoubleSliderSetting s : sliders) {
+                List<SliderSetting> sliders = getOrCreateSliders(idStr);
+                for (SliderSetting s : sliders) {
                     int h = s.height();
                     if (mouseY >= currentY && mouseY < currentY + h) {
                         if (s.mouseClicked(mouseX, mouseY, button, rowX + 8, currentY, rowWidth - 16)) {
@@ -434,8 +434,8 @@ public class ItemScaleSetting extends FeatureSetting {
             currentY += 30;
 
             if (expanded) {
-                List<DoubleSliderSetting> sliders = getOrCreateSliders(idStr);
-                for (DoubleSliderSetting s : sliders) {
+                List<SliderSetting> sliders = getOrCreateSliders(idStr);
+                for (SliderSetting s : sliders) {
                     int h = s.height();
                     if (s.mouseDragged(mouseX, mouseY, button, deltaX, deltaY, rowX + 8, currentY, rowWidth - 16)) {
                         return true;
@@ -450,8 +450,8 @@ public class ItemScaleSetting extends FeatureSetting {
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
         AuroraConfig cfg = AuroraConfig.get();
-        for (List<DoubleSliderSetting> sliders : itemSliders.values()) {
-            for (DoubleSliderSetting s : sliders) {
+        for (List<SliderSetting> sliders : itemSliders.values()) {
+            for (SliderSetting s : sliders) {
                 if (s.mouseReleased(mouseX, mouseY, button)) {
                     return true;
                 }

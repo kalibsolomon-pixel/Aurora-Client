@@ -15,7 +15,7 @@ import net.minecraft.client.gui.GuiGraphics;
  * to toggle.
  *
  * <p>Body (only when expanded): an embedded {@link BooleanSetting} for
- * visibility, an embedded {@link DoubleSliderSetting} (0–1.5,
+ * visibility, an embedded {@link SliderSetting} (0–1.5,
  * percent-formatted) for scale, and an embedded {@link ColorSetting}
  * for the ARGB color overlay tint. Mouse / drag / release events are
  * forwarded to the embedded settings at translated row offsets. Scroll
@@ -32,7 +32,7 @@ public class ParticleRowSetting extends FeatureSetting {
      *  the humanized display label. */
     String particleId() { return particleId; }
     private final BooleanSetting toggleRow;
-    private final DoubleSliderSetting scaleRow;
+    private final SliderSetting scaleRow;
     private final ColorSetting colorRow;
     private boolean expanded = false;
 
@@ -47,7 +47,7 @@ public class ParticleRowSetting extends FeatureSetting {
                 v -> {
                     AuroraConfig.get().particleVisibility.put(particleId, v);
                 });
-        this.scaleRow = new DoubleSliderSetting("Scale",
+        this.scaleRow = SliderSetting.of("Scale",
                 () -> {
                     Float s = AuroraConfig.get().particleScale.get(particleId);
                     return s == null ? 1.0 : s.doubleValue();

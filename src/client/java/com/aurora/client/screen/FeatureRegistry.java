@@ -57,10 +57,10 @@ public final class FeatureRegistry {
                         new KeybindSetting("Open Key",
                                 () -> cfg.worldMapKey, v -> cfg.worldMapKey = v)
                                 .description("The key that opens the fullscreen world map. Drag to pan, scroll to zoom, and use the dimension button to browse other dimensions' saved terrain. Press ESC or Backspace while rebinding to clear it."),
-                        new IntSliderSetting("Capture Budget",
+                        SliderSetting.ofInt("Capture Budget",
                                 () -> cfg.worldMapCaptureBudget, v -> cfg.worldMapCaptureBudget = v, 1, 8)
                                 .description("How many chunks the map may re-sample per game tick. Higher values fill the map faster but use more frame time; 2 keeps the cost under ~1-2ms per tick."),
-                        new IntSliderSetting("Region Cache",
+                        SliderSetting.ofInt("Region Cache",
                                 () -> cfg.worldMapCacheRegions, v -> cfg.worldMapCacheRegions = v, 8, 192)
                                 .description("How many 512x512 region tiles (32x32 chunks each) stay in memory at full zoom detail. 64 covers a fully zoomed-out 1080p viewport; far zoom-out uses a separate lightweight overview layer and is not limited by this.")
                 ));
@@ -125,10 +125,10 @@ public final class FeatureRegistry {
                         new KeybindSetting("Hold Key",
                                 () -> cfg.zoomKey, v -> cfg.zoomKey = v)
                                 .description("The key you hold to activate zoom. Release to return to normal view instantly. Press ESC or Backspace while rebinding to clear it."),
-                        new DoubleSliderSetting("Zoom Level",
+                        SliderSetting.of("Zoom Level",
                                 () -> cfg.zoomLevel, v -> cfg.zoomLevel = v, 1.5, 50.0)
                                 .description("How far the zoom magnifies. Higher values pull distant objects much closer but make the view more sensitive to mouse movement and harder to hold steady. 4-8x suits general spotting; 20x+ is for scouting far terrain."),
-                        new DoubleSliderSetting("Smoothness",
+                        SliderSetting.of("Smoothness",
                                 () -> cfg.zoomSmoothness, v -> cfg.zoomSmoothness = v, 0.01, 2.0)
                                 .description("How gradually the zoom eases in and out when you press/release the key. Low values snap instantly; higher values give a smooth cinematic glide. Purely a feel preference — no effect on performance.")
                 ));
@@ -137,7 +137,7 @@ public final class FeatureRegistry {
                 "Overrides Minecraft's gamma so dark areas become fully visible. Caves, the underwater, and night-time terrain light up as if you had permanent Night Vision — without the screen-edge pulsing of the real potion effect.",
                 () -> cfg.fullBright, v -> cfg.fullBright = v,
                 List.of(
-                        new IntSliderSetting("Brightness %",
+                        SliderSetting.ofInt("Brightness %",
                                 () -> cfg.fullBrightGamma,
                                 v -> cfg.fullBrightGamma = v, 100, 1500)
                                 .description("How aggressively darkness is lifted. 100% is vanilla 'Bright'; higher values flatten shadows further until even unlit caves are clearly readable. Very high values wash out the world's contrast — most players prefer 500-1000%.")
@@ -147,7 +147,7 @@ public final class FeatureRegistry {
                 "Pushes back the distance fog that normally hides far terrain. You see further across oceans and open landscapes, but the game has to render more of the world each frame — so higher settings cost FPS.",
                 () -> cfg.noFogEnabled, v -> cfg.noFogEnabled = v,
                 List.of(
-                        new DoubleSliderSetting("Distance Multiplier",
+                        SliderSetting.of("Distance Multiplier",
                                 () -> cfg.fogDistanceMultiplier,
                                 v -> cfg.fogDistanceMultiplier = v, 1.0, 100.0)
                                 .description("Multiplies how far the fog starts. 1x is vanilla; higher values progressively clear the haze for a longer view distance. The visible range is still capped by your Render Distance, so increases beyond that point only reduce fog density, not draw distance.")
@@ -174,7 +174,7 @@ public final class FeatureRegistry {
                 },
                 java.util.Arrays.asList(
                         new SectionHeaderSetting("Totem"),
-                        new IntSliderSetting("Particle Size %",
+                        SliderSetting.ofInt("Particle Size %",
                                 () -> cfg.totemParticleScale,
                                 v -> cfg.totemParticleScale = v, 25, 100)
                                 .description("Shrinks the burst of totem particles that erupts when you pop a Totem of Undying. Lower values clear the screen faster so you can see the fight again sooner after a pop — a common competitive preference. 100% is vanilla size."),
@@ -211,11 +211,11 @@ public final class FeatureRegistry {
                                 .description("Applied to your shield only during the cooldown that follows an axe disabling it (the 'rendered unusable' window). Note: the alpha channel controls tint strength, not transparency — lower alpha gives a subtler tint."),
 
                         new SectionHeaderSetting("Water & Lava"),
-                        new DoubleSliderSetting("Underwater Fog Multiplier",
+                        SliderSetting.of("Underwater Fog Multiplier",
                                 () -> cfg.underwaterFogMultiplier,
                                 v -> cfg.underwaterFogMultiplier = v, 1.0, 50.0)
                                 .description("Free in lakes/rivers. May cost FPS in deep ocean — tune down to 4-8x there."),
-                        new DoubleSliderSetting("Lava Fog Multiplier",
+                        SliderSetting.of("Lava Fog Multiplier",
                                 () -> cfg.lavaFogMultiplier,
                                 v -> cfg.lavaFogMultiplier = v, 1.0, 50.0)
                                 .description("Pushes back the thick orange fog when your head is submerged in lava, letting you see further through it. Invaluable for spotting ancient debris or an exit while swimming lava in the Nether. Higher = clearer."),
@@ -261,7 +261,7 @@ public final class FeatureRegistry {
                         new KeybindSetting("Hold Key",
                                 () -> cfg.freeLookKey, v -> cfg.freeLookKey = v)
                                 .description("Hold this key to detach the camera so you can look around freely; release to restore your original view. Press ESC or Backspace while rebinding to clear it."),
-                        new DoubleSliderSetting("Camera Sensitivity",
+                        SliderSetting.of("Camera Sensitivity",
                                 () -> cfg.freeLookSensitivity,
                                 v -> cfg.freeLookSensitivity = v,
                                 0.1, 3.0)
@@ -283,7 +283,7 @@ public final class FeatureRegistry {
                         new ColorSetting("Outline Color",
                                 () -> cfg.blockOverlayOutlineColor,
                                 v -> cfg.blockOverlayOutlineColor = v),
-                        new DoubleSliderSetting("Outline Width",
+                        SliderSetting.of("Outline Width",
                                 () -> cfg.blockOverlayLineWidth,
                                 v -> cfg.blockOverlayLineWidth = v, 1.0, 6.0)
                                 .description("Thickness of the outline in screen pixels. Uses a GPU-side line expansion shader, so lines render cleanly at any width on all GPUs."),
@@ -302,7 +302,7 @@ public final class FeatureRegistry {
                                 () -> cfg.blockOverlayMode, v -> cfg.blockOverlayMode = v)
                                 .glassButton(true) // glass pilot: block_overlay detail screen
                                 .description("STATIC uses the fixed colors you picked above; RAINBOW cycles the hue automatically over time for a lively animated highlight. Rainbow ignores the manual color pickers."),
-                        new DoubleSliderSetting("Rainbow Speed",
+                        SliderSetting.of("Rainbow Speed",
                                 () -> (double) cfg.blockOverlayRainbowSpeed,
                                 v -> cfg.blockOverlayRainbowSpeed = (float) v, 0.1, 10.0)
                                 .description("How fast the hue cycles when Color Mode is RAINBOW. Low values drift slowly through the spectrum; high values strobe quickly. Has no effect in STATIC mode.")
@@ -360,7 +360,7 @@ public final class FeatureRegistry {
                                 () -> cfg.toolDurabilityAlertEnabled,
                                 v -> cfg.toolDurabilityAlertEnabled = v)
                                 .description("When on, low-durability warnings also fire for the item in your main and off hands (sword, pickaxe, etc.), not just armor."),
-                        new IntSliderSetting("Threshold (%)",
+                        SliderSetting.ofInt("Threshold (%)",
                                 () -> cfg.armorAlertThresholdPct,
                                 v -> cfg.armorAlertThresholdPct = v, 1, 100)
                                 .description("Durability percentage at which the warning fires. Higher values warn you earlier (more lead time to react); lower values only alert at the last moment. Around 10-15% gives a good balance."),
@@ -370,7 +370,7 @@ public final class FeatureRegistry {
                                 () -> cfg.hungerAlertEnabled,
                                 v -> cfg.hungerAlertEnabled = v)
                                 .description("Fires a popup when your hunger drumsticks drop below the threshold."),
-                        new IntSliderSetting("Hunger Threshold",
+                        SliderSetting.ofInt("Hunger Threshold",
                                 () -> cfg.hungerAlertThreshold,
                                 v -> cfg.hungerAlertThreshold = v, 1, 20)
                                 .description("Hunger level (in drumsticks) at which the alert fires. 6 is a good default — it gives you time to eat before you start starving."),
@@ -380,7 +380,7 @@ public final class FeatureRegistry {
                                 () -> cfg.effectExpiryAlertEnabled,
                                 v -> cfg.effectExpiryAlertEnabled = v)
                                 .description("Fires a popup when an active potion effect is about to run out, so you can re-apply it before it's gone."),
-                        new IntSliderSetting("Expiry Threshold (seconds)",
+                        SliderSetting.ofInt("Expiry Threshold (seconds)",
                                 () -> cfg.effectExpiryThresholdSeconds,
                                 v -> cfg.effectExpiryThresholdSeconds = v, 1, 60)
                                 .description("How many seconds before an effect expires the alert should fire. 10 seconds gives you time to re-buff; lower values alert closer to the wire."),
@@ -407,12 +407,12 @@ public final class FeatureRegistry {
                         new EnumSetting<>("Style", AuroraConfig.CrosshairStyle.class,
                                 () -> cfg.crosshairStyle, v -> cfg.crosshairStyle = v)
                                 .description("The crosshair shape. Presets include classic cross, dot, and others; CUSTOM uses the pixel canvas you draw below. Size/Thickness/Gap apply to the presets."),
-                        new IntSliderSetting("Size", () -> cfg.crosshairSize, v -> cfg.crosshairSize = v, 1, 20)
+                        SliderSetting.ofInt("Size", () -> cfg.crosshairSize, v -> cfg.crosshairSize = v, 1, 20)
                                 .description("Overall scale, length, or radius of the crosshair."),
-                        new IntSliderSetting("Thickness", () -> cfg.crosshairThickness, v -> cfg.crosshairThickness = v, 1, 6)
+                        SliderSetting.ofInt("Thickness", () -> cfg.crosshairThickness, v -> cfg.crosshairThickness = v, 1, 6)
                                 .description("Thickness of the crosshair. Ignored for CIRCLE and CUSTOM styles.")
                                 .disabled(() -> cfg.crosshairStyle == AuroraConfig.CrosshairStyle.CIRCLE || cfg.crosshairStyle == AuroraConfig.CrosshairStyle.CUSTOM),
-                        new IntSliderSetting("Gap", () -> cfg.crosshairGap, v -> cfg.crosshairGap = v, 0, 10)
+                        SliderSetting.ofInt("Gap", () -> cfg.crosshairGap, v -> cfg.crosshairGap = v, 0, 10)
                                 .description("Creates broken shapes. Only enabled for CIRCLE or SQUARE.")
                                 .disabled(() -> cfg.crosshairStyle != AuroraConfig.CrosshairStyle.CIRCLE && cfg.crosshairStyle != AuroraConfig.CrosshairStyle.SQUARE),
                         new ColorSetting("Color", () -> cfg.crosshairColor, v -> cfg.crosshairColor = v),
@@ -428,13 +428,13 @@ public final class FeatureRegistry {
                         new EnumSetting<>("Indicator Style", AuroraConfig.CrosshairStyle.class,
                                 () -> cfg.crosshairIndicatorStyle, v -> cfg.crosshairIndicatorStyle = v)
                                 .disabled(() -> !cfg.crosshairIndicatorEnabled),
-                        new IntSliderSetting("Indicator Size",
+                        SliderSetting.ofInt("Indicator Size",
                                 () -> cfg.crosshairIndicatorSize, v -> cfg.crosshairIndicatorSize = v, 1, 20)
                                 .disabled(() -> !cfg.crosshairIndicatorEnabled),
-                        new IntSliderSetting("Indicator Thickness",
+                        SliderSetting.ofInt("Indicator Thickness",
                                 () -> cfg.crosshairIndicatorThickness, v -> cfg.crosshairIndicatorThickness = v, 1, 6)
                                 .disabled(() -> !cfg.crosshairIndicatorEnabled || cfg.crosshairIndicatorStyle == AuroraConfig.CrosshairStyle.CIRCLE || cfg.crosshairIndicatorStyle == AuroraConfig.CrosshairStyle.CUSTOM),
-                        new IntSliderSetting("Indicator Gap",
+                        SliderSetting.ofInt("Indicator Gap",
                                 () -> cfg.crosshairIndicatorGap, v -> cfg.crosshairIndicatorGap = v, 0, 10)
                                 .disabled(() -> !cfg.crosshairIndicatorEnabled || (cfg.crosshairIndicatorStyle != AuroraConfig.CrosshairStyle.CIRCLE && cfg.crosshairIndicatorStyle != AuroraConfig.CrosshairStyle.SQUARE)),
                         new ColorSetting("Indicator Color",
@@ -462,12 +462,12 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                         new BooleanSetting("Show Look Direction",
                                 () -> cfg.hitboxLookDirection, v -> cfg.hitboxLookDirection = v)
                                 .description("Draws a line from the entity's eye showing which way it's facing."),
-                        new DoubleSliderSetting("Look Length",
+                        SliderSetting.of("Look Length",
                                 () -> cfg.hitboxLookLength, v -> cfg.hitboxLookLength = v, 0.1, 20.0)
                                 .description("Length of the look-direction line, in blocks."),
 
                         new SectionHeaderSetting("Appearance"),
-                        new DoubleSliderSetting("Line Width",
+                        SliderSetting.of("Line Width",
                                 () -> cfg.hitboxLineWidth,
                                 v -> cfg.hitboxLineWidth = v, 0.1, 6.0)
                                 .description("Thickness of the hitbox outline in screen pixels. Uses a GPU-side line expansion shader, so lines render cleanly at any width on all GPUs."),
@@ -484,7 +484,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                 .description("Toggle a separate color specifically for projectile hitboxes (arrows, fireballs, etc.)."),
                         new ColorSetting("Projectile Color",
                                 () -> cfg.hitboxProjectileColor, v -> cfg.hitboxProjectileColor = v),
-                        new DoubleSliderSetting("Projectile Line Width",
+                        SliderSetting.of("Projectile Line Width",
                                 () -> cfg.hitboxProjectileLineWidth,
                                 v -> cfg.hitboxProjectileLineWidth = v, 0.1, 6.0),
 
@@ -653,7 +653,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                         new BooleanSetting("Show Other Players",
                                 () -> cfg.totemShowOthers, v -> cfg.totemShowOthers = v)
                                 .description("Adds extra HUD lines for nearby players' pop counts."),
-                        new IntSliderSetting("Top N Others",
+                        SliderSetting.ofInt("Top N Others",
                                 () -> cfg.totemTopOthers, v -> cfg.totemTopOthers = v, 1, 10),
                         new BooleanSetting("Reset On Death",
                                 () -> cfg.totemResetOnDeath, v -> cfg.totemResetOnDeath = v)
@@ -678,7 +678,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
             hitregRows.add(new SectionHeaderSetting("Hitreg"));
             hitregRows.add(hitregToggle(com.aurora.client.hitreg.settings.Toggle.TOGGLE, "Custom Hitreg")
                     .description("Plays your own hit feedback — the attack sound, the target's hurt animation and crit/sharpness particles — the moment you swing, instead of waiting for the server to confirm the hit. The server's own feedback for that hit is suppressed so you never hear it twice. This is the original mod's master switch; the card toggle above it turns the whole feature off."));
-            hitregRows.add(new IntSliderSetting("Hitreg Delay (ms)",
+            hitregRows.add(SliderSetting.ofInt("Hitreg Delay (ms)",
                     () -> cfg.hitregDelayMs, v -> cfg.hitregDelayMs = v, 0, 300)
                     .description("How long to wait after your swing before playing the client-side feedback. 0 plays it on the very next frame; raise it to approximate a server's typical registration delay. This is a delay, not a switch — Custom Hitreg controls whether it plays at all."));
             hitregRows.add(hitregToggle(com.aurora.client.hitreg.settings.Toggle.SAFE_REGS_ONLY, "Safe Regs Only")
@@ -716,13 +716,13 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                     .description("Play no sound for the hits you land (client-side feedback and the server's confirmation alike)."));
             hitregRows.add(hitregToggle(com.aurora.client.hitreg.settings.Toggle.SILENCE_THEM, "Mute Their Hits")
                     .description("Play no sound when your target hits you — including your own hurt sound."));
-            hitregRows.add(new DoubleSliderSetting("Hit Muffling",
+            hitregRows.add(SliderSetting.of("Hit Muffling",
                     () -> cfg.hitregMuffleAmount, v -> cfg.hitregMuffleAmount = v, 0.0, 1.0).percent()
                     .description("Low-pass filter strength applied to your hit sounds through OpenAL EFX — higher values sound duller and further away. 0% leaves them untouched."));
-            hitregRows.add(new DoubleSliderSetting("Hit Sharpening",
+            hitregRows.add(SliderSetting.of("Hit Sharpening",
                     () -> cfg.hitregSharpenAmount, v -> cfg.hitregSharpenAmount = v, 0.0, 1.0).percent()
                     .description("High-pass filter strength applied to your hit sounds — higher values sound thinner and crisper. 0% leaves them untouched."));
-            hitregRows.add(new IntSliderSetting("Metronome (ticks)",
+            hitregRows.add(SliderSetting.ofInt("Metronome (ticks)",
                     () -> cfg.hitregMetronome, v -> cfg.hitregMetronome = (v < 10 ? 0 : v), 0, 25)
                     .description("Play a click every N game ticks (20 ticks = 1 second) as a rhythm reference for combos. Values below 10 switch it off, matching the original mod."));
 
@@ -763,7 +763,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                     .description("Stop rendering every chunk so only entities remain — a blank practice arena. Extremely invasive: the world is still there, you just cannot see it. Pair with Solid Floor or a grid. Was only reachable via /hitreg VoidWorld before."));
             hitregRows.add(hitregToggle(com.aurora.client.hitreg.settings.Toggle.SOLID_FLOOR, "Solid Floor")
                     .description("Draw a large flat plane at your ground level (color below) — gives Unrender World a floor to stand on."));
-            hitregRows.add(new IntSliderSetting("Floor Grid Size (blocks)",
+            hitregRows.add(SliderSetting.ofInt("Floor Grid Size (blocks)",
                     () -> cfg.hitregFloorGridSize, v -> cfg.hitregFloorGridSize = v, 0, 32)
                     .description("Spacing of a ground grid drawn around you (fades out at 16 blocks). 0 turns it off."));
 
@@ -895,15 +895,15 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                         new EnumSetting<>("Display Style", AuroraConfig.WaypointDisplay.class,
                                 () -> cfg.waypointDisplay, v -> cfg.waypointDisplay = v)
                                 .description("BEAM = beacon column. BLOCK = highlight the exact block(s). BOTH = both."),
-                        new DoubleSliderSetting("Beam Width",
+                        SliderSetting.of("Beam Width",
                                 () -> cfg.waypointBeamWidth, v -> cfg.waypointBeamWidth = v, 0.1, 1.0),
-                        new IntSliderSetting("Block Highlight Radius",
+                        SliderSetting.ofInt("Block Highlight Radius",
                                 () -> cfg.waypointBlockRadius, v -> cfg.waypointBlockRadius = v, 0, 4)
                                 .description("Widens the floor slab on the horizontal plane only — the highlight is always one block tall. 0 = single block, 1 = 3×3 slab, etc. Only used when display style includes BLOCK."),
                         new BooleanSetting("Show Label",
                                 () -> cfg.waypointShowLabel, v -> cfg.waypointShowLabel = v)
                                 .description("Billboarded name + distance above the beam."),
-                        new DoubleSliderSetting("Label Scale",
+                        SliderSetting.of("Label Scale",
                                 () -> cfg.waypointLabelScale, v -> cfg.waypointLabelScale = v, 0.5, 2.5),
                         new BooleanSetting("Death Waypoint",
                                 () -> cfg.deathWaypointEnabled, v -> cfg.deathWaypointEnabled = v)
@@ -912,7 +912,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                 () -> cfg.deathWaypointReplacesPrevious,
                                 v -> cfg.deathWaypointReplacesPrevious = v)
                                 .description("When on, only the most recent death waypoint is kept."),
-                        new IntSliderSetting("Max Death Waypoints",
+                        SliderSetting.ofInt("Max Death Waypoints",
                                 () -> cfg.deathWaypointMaxCount, v -> cfg.deathWaypointMaxCount = v, 1, 20)
                                 .description("How many death waypoints to keep when Replace Previous is off; the oldest is pruned automatically. Death waypoints live in the Waypoints feature's list and also appear on the World Map as X markers."),
                         new ColorSetting("Death Waypoint Color",
@@ -928,7 +928,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                 .description("Press to show or hide the minimap HUD overlay, independently of the fullscreen World Map. Defaults to unbound."),
 
                         new SectionHeaderSetting("Shape & Size"),
-                        new IntSliderSetting("Size (px)",
+                        SliderSetting.ofInt("Size (px)",
                                 () -> cfg.minimapSize, v -> cfg.minimapSize = v, 64, 256)
                                 .description("Edge length of the minimap in pixels. Larger shows more detail but takes more screen space. 128 is a good default for most resolutions."),
                         new BooleanSetting("Circular",
@@ -942,7 +942,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                         new BooleanSetting("Show Terrain",
                                 () -> cfg.minimapShowTerrain, v -> cfg.minimapShowTerrain = v)
                                 .description("Draws block colors sampled from loaded chunks. Turn off for a blank map with just the overlays."),
-                        new DoubleSliderSetting("Terrain Alpha",
+                        SliderSetting.of("Terrain Alpha",
                                 () -> cfg.minimapTerrainAlpha, v -> cfg.minimapTerrainAlpha = v, 0.0, 1.0)
                                 .description("Opacity of the terrain layer. Lower values make the terrain translucent so the background shows through."),
                         new BooleanSetting("Use World Map Cache",
@@ -979,7 +979,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                 .description("Shows your current X/Y/Z below the minimap."),
 
                         new SectionHeaderSetting("Zoom"),
-                        new IntSliderSetting("Zoom (blocks across)",
+                        SliderSetting.ofInt("Zoom (blocks across)",
                                 () -> cfg.minimapZoom, v -> cfg.minimapZoom = v, 16, 256)
                                 .description("How many blocks fit across the minimap's diameter. Lower = more zoomed in (more detail per pixel); higher = wider view of the surrounding area."),
 
@@ -1017,7 +1017,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                 () -> cfg.itemPhysicsFlatOnGround,
                                 v -> cfg.itemPhysicsFlatOnGround = v)
                                 .description("When the item touches the ground, kill the bob and lay the sprite face-up."),
-                        new DoubleSliderSetting("Air Tumble Strength",
+                        SliderSetting.of("Air Tumble Strength",
                                 () -> cfg.itemPhysicsTumbleStrength,
                                 v -> cfg.itemPhysicsTumbleStrength = v, 0.0, 2.0)
                                 .description("Adds an X-axis flip scaled by motion while the item is airborne. 0 disables.")
@@ -1050,11 +1050,11 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                 "Customize the scale, rotation (pitch, yaw, roll), and screen translation of individual item models. Type any item name in the search bar and click '+' to start customizing its model to fit your visual preferences.",
                 () -> cfg.itemScaleEnabled, v -> cfg.itemScaleEnabled = v,
                 List.of(
-                        new DoubleSliderSetting("Main-Hand Default Scale",
+                        SliderSetting.of("Main-Hand Default Scale",
                                 () -> (double) cfg.mainHandDefaultScale,
                                 v -> cfg.mainHandDefaultScale = (float) v, 0.5, 1.5).percent()
                                 .description("Fallback scale for any item held in the main hand that doesn't have a specific scale override below."),
-                        new DoubleSliderSetting("Off-Hand Default Scale",
+                        SliderSetting.of("Off-Hand Default Scale",
                                 () -> (double) cfg.offHandDefaultScale,
                                 v -> cfg.offHandDefaultScale = (float) v, 0.5, 1.5).percent()
                                 .description("Fallback scale for any item held in the off hand that doesn't have a specific scale override below."),
@@ -1117,7 +1117,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                 "Adds inertia to your mouse look so the camera eases into and out of movement instead of stopping instantly. Gives panning a weighty, cinematic feel — great for recording or relaxed play. Note: it adds aim latency, so competitive players usually leave it off.",
                 () -> cfg.smoothCamera, v -> cfg.smoothCamera = v,
                 List.of(
-                        new DoubleSliderSetting("Strength",
+                        SliderSetting.of("Strength",
                                 () -> cfg.smoothCameraStrength, v -> cfg.smoothCameraStrength = v, 0.05, 1.0)
                                 .description("How much smoothing is applied. Low values add a barely-there glide that still feels responsive; high values produce heavy, floaty camera drift with noticeable lag between your mouse and the view. Start around 0.2-0.3 if you want subtle smoothing.")
                 ));
@@ -1141,11 +1141,11 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                 () -> cfg.framePacerLowCpuMode,
                                 v -> cfg.framePacerLowCpuMode = v)
                                 .description("Pushes the sleep window further out for ~1-2ms less precision in exchange for cooler CPU. Great for laptops on battery."),
-                        new IntSliderSetting("Spin Threshold (Âµs)",
+                        SliderSetting.ofInt("Spin Threshold (Âµs)",
                                 () -> cfg.framePacerSpinThresholdMicros,
                                 v -> cfg.framePacerSpinThresholdMicros = v, 100, 2000)
                                 .description("Microseconds before the frame deadline to switch to pure spin. Lower = lower CPU, higher = more precise timing."),
-                        new IntSliderSetting("Park Threshold (Âµs)",
+                        SliderSetting.ofInt("Park Threshold (Âµs)",
                                 () -> cfg.framePacerParkThresholdMicros,
                                 v -> cfg.framePacerParkThresholdMicros = v, 1000, 8000)
                                 .description("When to switch from coarse OS-level sleep to fine yield-spin. Higher = lower CPU, lower = more stable timing.")
@@ -1155,7 +1155,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                 "Uses the Nvidia Reflex principle to reduce rendering latency in Minecraft, automatically locking the frame by estimating the CPU and GPU time. Allows any GPU to use.",
                 () -> cfg.reflexEnabled, v -> cfg.reflexEnabled = v,
                 List.of(
-                        new IntSliderSetting("Wait Time Offset",
+                        SliderSetting.ofInt("Wait Time Offset",
                                 () -> cfg.reflexWaitTimeOffset, v -> cfg.reflexWaitTimeOffset = v, -5000000, 5000000)
                                 .description("Wait time offset in nanoseconds. Increase if GPU utilization drops, decrease (negative) if latency increases.")
                 ));
@@ -1243,7 +1243,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                     case CUBIC_OUT -> "Ease-out distorts the bob wave. Not recommended for view bob.";
                                     case QUARTIC_OUT -> "Strong ease-out. Causes weird wave shape on bob — not recommended.";
                                 }),
-                        new DoubleSliderSetting("View Bob Amplitude",
+                        SliderSetting.of("View Bob Amplitude",
                                 () -> cfg.viewBobAmplitude,
                                 v -> cfg.viewBobAmplitude = v, 0.0, 2.0).percent()
                                 .description("Scales the camera head-bob strength. 100% is vanilla, 0% cancels the bob, 200% doubles it. Requires vanilla View Bobbing to be on."),
@@ -1252,7 +1252,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                         new BooleanSetting("Enable Damage Tilt",
                                 () -> cfg.damageTiltEnabled, v -> cfg.damageTiltEnabled = v)
                                 .description("Enable classic 1.7/1.8-style damage camera roll. The roll direction follows where the hit came from."),
-                        new DoubleSliderSetting("Damage Tilt Strength",
+                        SliderSetting.of("Damage Tilt Strength",
                                 () -> cfg.damageTiltStrength,
                                 v -> cfg.damageTiltStrength = v, 0.0, 1.0).percent()
                                 .description("How far the camera rolls on each hit. 100% matches the pronounced 1.8 tilt."),
@@ -1274,7 +1274,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                     case CIRCULAR -> "Circular orbit — the item traces a clean circle (very dramatic at high intensity).";
                                 })
                                 .description("Movement curve shaping the idle sway oscillation. Some curves look far more dramatic at high intensity than others."),
-                        new DoubleSliderSetting("Idle Sway Strength",
+                        SliderSetting.of("Idle Sway Strength",
                                 () -> cfg.idleSwayStrength,
                                 v -> cfg.idleSwayStrength = v, 0.0, 10.0)
                                 .description("How pronounced the idle sway is. 1.0 is a gentle breath; 5.0+ is dramatic drift. Some curves (Circular, Lissajous) shine at high values."),
@@ -1284,7 +1284,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                 () -> cfg.entityMovementSmoothingEnabled,
                                 v -> cfg.entityMovementSmoothingEnabled = v)
                                 .description("Eases other entities' rendered positions toward their tick-interpolated targets every frame. This smooths out the per-tick \"kinks\" that make knockback arcs look disjointed (velocity changes abruptly between ticks), and absorbs the freeze-then-leap jitter of multiplayer servers that bundle or throttle movement packets. Strength auto-scales with the detected server throttle. Your own player is never smoothed."),
-                        new DoubleSliderSetting("Smoothing Strength",
+                        SliderSetting.of("Smoothing Strength",
                                 () -> cfg.entityMovementSmoothingStrength,
                                 v -> cfg.entityMovementSmoothingStrength = v, 0.0, 1.0).percent()
                                 .description("How aggressively entity positions are eased. 0% is a barely-there rounding of per-tick kinks (great for singleplayer); 100% is a very smooth glide that masks heavy server-side throttling. On throttled PvP servers the effective smoothing is automatically increased beyond this setting.")
@@ -1337,11 +1337,11 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                 () -> cfg.keystrokesAccentColor,
                                 v -> cfg.keystrokesAccentColor = v)
                                 .description("The color a key turns while pressed. Pick something that stands out over your usual game backgrounds."),
-                        new DoubleSliderSetting("Panel Opacity",
+                        SliderSetting.of("Panel Opacity",
                                 () -> cfg.keystrokesBgOpacity,
                                 v -> cfg.keystrokesBgOpacity = v, 0.0, 1.0).percent()
                                 .description("Opacity of the backing panel only — key labels stay fully legible even at 0%."),
-                        new DoubleSliderSetting("Scale",
+                        SliderSetting.of("Scale",
                                 () -> {
                                     var mgr = com.aurora.client.AuroraClient.modules();
                                     var m = mgr == null ? null : mgr.get(com.aurora.client.hud.module.KeystrokesModule.ID);
@@ -1397,7 +1397,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                 () -> cfg.colorblindMode,
                                 v -> cfg.colorblindMode = v)
                                 .description("Select the type of color vision deficiency to correct. The filter shifts colors into ranges you can distinguish. OFF disables the filter."),
-                        new IntSliderSetting("Correction Strength",
+                        SliderSetting.ofInt("Correction Strength",
                                 () -> cfg.colorblindStrength,
                                 v -> cfg.colorblindStrength = v, 0, 100)
                                 .description("How strongly the correction is applied. 100% is full correction; lower values blend toward the original colors for a subtler effect.")

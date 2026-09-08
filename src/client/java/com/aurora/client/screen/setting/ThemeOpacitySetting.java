@@ -2,9 +2,6 @@ package com.aurora.client.screen.setting;
 
 import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.ui.component.Slider;
-import com.aurora.client.util.AuroraTheme;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import org.lwjgl.glfw.GLFW;
 
@@ -13,17 +10,19 @@ import java.util.function.DoubleSupplier;
 
 /**
  * Slider for the theme's panel-background <b>opacity</b> (alpha only — hue
- * and lightness are untouched). Visually identical to
- * {@link DoubleSliderSetting} (percent readout, thin track, circular knob)
- * but with drag-aware commit discipline, because unlike a gameplay slider
- * every applied value triggers a theme re-resolve:
+ * and lightness are untouched). Visually identical to the plain
+ * {@link SliderSetting} percent row (inherited unchanged: label, cached
+ * value readout, track geometry, description tooltip) but with drag-aware
+ * commit discipline, because unlike a gameplay slider every applied value
+ * triggers a theme re-resolve:
  *
  * <ul>
  *   <li><b>During drag:</b> the pending value is applied through the
  *       standard setter (config write + one {@code ThemeManager.reload()})
- *       at most once per {@link #LIVE_RELOAD_MIN_MS} — live preview without
- *       reload spam. A deferred apply is flushed from {@link #render} once
- *       the interval elapses (a single timestamp comparison when idle).</li>
+ *       at most once per {@link #LIVE_RELOAD_MIN_MS} (see
+ *       {@link LiveReloadThrottle}) — live preview without reload spam. A
+ *       deferred apply is flushed from {@link #renderOverlay} once the
+ *       interval elapses (a single timestamp comparison when idle).</li>
  *   <li><b>On release:</b> the final value is applied only if it still
  *       differs from the live config, then persisted — zero extra reloads
  *       when nothing changed since the last throttled apply.</li>
@@ -32,13 +31,15 @@ import java.util.function.DoubleSupplier;
  * <p>Because the setter writes the config before reloading, the per-tick
  * {@code ThemeManager.sync()} dirty-check never sees a stale gap: it only
  * reloads on values this slider did not apply itself.
+ *
+ * <p>Rendering is split for the owning screen's static-layer cache
+ * ({@link #renderShapes} = track only, {@link #renderOverlay} = label,
+ * readout, live track), and the interaction is owned here rather than
+ * delegated to the shared {@code Slider} control: drag writes go through
+ * the throttle, never straight to the setter.
  */
-public class ThemeOpacitySetting extends FeatureSetting {
+public class ThemeOpacitySetting extends SliderSetting {
 
-    private static final int CONTROL_H = 36;
-    /** iOS UISlider track height — matches the other slider rows. */
-    private static final int TRACK_H = 4;
-    private static final int KNOB_R = 7;
     private static final double STEP = 0.01;
     /** Minimum spacing between live (mid-drag) reloads. */
     private static final long LIVE_RELOAD_MIN_MS = 100L;
@@ -46,36 +47,33 @@ public class ThemeOpacitySetting extends FeatureSetting {
     private final DoubleSupplier getter;
     private final DoubleConsumer setter;
 
-    /** Shared themed slider — owns the track/fill/knob drawing (value read through the display lambda). */
-    private final Slider slider;
+    private final LiveReloadThrottle throttle = new LiveReloadThrottle(LIVE_RELOAD_MIN_MS);
 
     private boolean dragging = false;
     private double pendingValue;
-    private boolean liveApplyPending = false;
-    private long lastLiveReloadMs = 0L;
-    private long nextLiveReloadMs = 0L;
-
-    private int lastTrackX, lastTrackW;
-    private int lastWidth = 240;
-
-    private long cachedValueKey = Long.MIN_VALUE;
-    private String cachedValueStr = "";
-    private int cachedValueStrW = 0;
 
     public ThemeOpacitySetting(String label, DoubleSupplier getter, DoubleConsumer setter) {
-        super(label);
+        super(label, getter, setter, 0.0, 1.0, false);
         this.getter = getter;
         this.setter = setter;
-        // Display value = the pending drag value while dragging (smooth),
-        // otherwise the committed config value.
-        this.slider = new Slider(() -> dragging ? pendingValue : getter.getAsDouble(), setter, 0, 1, STEP);
+        percent();
+    }
+
+    /**
+     * The renderer's slider reads the pending drag value while dragging
+     * (smooth), otherwise the committed config value — the base row's value
+     * readout and the fill/knob all read through it.
+     */
+    @Override
+    protected Slider createSlider(DoubleSupplier getter, DoubleConsumer setter, double min, double max) {
+        return new Slider(() -> clamp01(dragging ? pendingValue : getter.getAsDouble()), setter, min, max, STEP);
     }
 
     @Override public ThemeOpacitySetting description(String desc) { super.description(desc); return this; }
     @Override public ThemeOpacitySetting description(java.util.function.Supplier<String> desc) { super.description(desc); return this; }
 
-    @Override public int baseHeight() { return CONTROL_H; }
-    @Override public int height() { return CONTROL_H + descriptionHeight(lastWidth); }
+    /** Historical track inset of this row — 2 px tighter than the generic rows; kept for pixel parity. */
+    @Override protected int trackInset() { return 26; }
 
     @Override
     public void render(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
@@ -85,51 +83,18 @@ public class ThemeOpacitySetting extends FeatureSetting {
 
     @Override
     public void renderShapes(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
-        lastWidth = width;
         // Track only — static given the roundness token, so it lives in the
         // cached static layer (drawn through the shared themed slider).
-        int trackX = x + 12;
-        int trackW = width - 26;
-        lastTrackX = trackX;
-        lastTrackW = trackW;
-        slider.layout(trackX, y, trackW, CONTROL_H);
-        slider.renderShapes(ctx, trackX, y, trackW, CONTROL_H);
+        drawTrackShapes(ctx, x, y, width);
     }
 
     @Override
     public void renderOverlay(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
-        lastWidth = width;
-        Font tr = Minecraft.getInstance().font;
-        boolean disabled = isDisabled();
-
         // Flush a deferred live apply once the throttle interval elapsed.
-        if (liveApplyPending && System.currentTimeMillis() >= nextLiveReloadMs) {
-            flushPending();
-        }
+        if (throttle.due()) flushPending();
 
-        double value = clamp01(dragging ? pendingValue : getter.getAsDouble());
-
-        renderLabelWithTooltip(ctx, label, x + 12, y + 6, AuroraTheme.IOS_LABEL, mouseX, mouseY, disabled);
-
-        long key = Math.round(value * 100.0);
-        if (key != cachedValueKey) {
-            cachedValueStr = Math.round(value * 100.0) + "%";
-            cachedValueStrW = tr.width(cachedValueStr);
-            cachedValueKey = key;
-        }
-
-        boolean focused = FeatureSetting.getFocused() == this;
-        int valueColor = focused ? AuroraTheme.IOS_BLUE : AuroraTheme.IOS_SECONDARY_LABEL;
-        ctx.drawString(tr, cachedValueStr, x + width - cachedValueStrW - 14, y + 6, valueColor, false);
-
-        int trackX = x + 12;
-        int trackW = width - 26;
-        lastTrackX = trackX;
-        lastTrackW = trackW;
-
-        slider.disabled(disabled);
-        slider.layout(trackX, y, trackW, CONTROL_H);
-        slider.renderOverlay(ctx, trackX, y, trackW, CONTROL_H, mouseX, mouseY);
+        drawLabelRow(ctx, x, y, width, mouseX, mouseY);
+        drawTrackOverlay(ctx, x, y, width, mouseX, mouseY);
     }
 
     @Override
@@ -196,24 +161,16 @@ public class ThemeOpacitySetting extends FeatureSetting {
         if (Double.compare(pendingValue, getter.getAsDouble()) == 0) {
             return; // no genuine change — must not fire a reload
         }
-        long now = System.currentTimeMillis();
-        if (now - lastLiveReloadMs >= LIVE_RELOAD_MIN_MS) {
-            setter.accept(pendingValue);
-            lastLiveReloadMs = now;
-            liveApplyPending = false;
-        } else {
-            liveApplyPending = true;
-            nextLiveReloadMs = lastLiveReloadMs + LIVE_RELOAD_MIN_MS;
-        }
+        throttle.apply(() -> setter.accept(pendingValue));
     }
 
     /** Apply the pending value if it still differs from the live config. */
     private void flushPending() {
-        if (Double.compare(pendingValue, getter.getAsDouble()) != 0) {
-            setter.accept(pendingValue);
-        }
-        lastLiveReloadMs = System.currentTimeMillis();
-        liveApplyPending = false;
+        throttle.flush(() -> {
+            if (Double.compare(pendingValue, getter.getAsDouble()) != 0) {
+                setter.accept(pendingValue);
+            }
+        });
     }
 
     private static double clamp01(double v) {

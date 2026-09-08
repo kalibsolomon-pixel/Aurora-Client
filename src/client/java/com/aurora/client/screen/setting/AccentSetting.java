@@ -56,9 +56,7 @@ public class AccentSetting extends FeatureSetting {
 
     /** Deferred live-apply value while the throttle window rides out. */
     private int pendingRgb;
-    private boolean liveApplyPending = false;
-    private long lastLiveReloadMs = 0L;
-    private long nextLiveReloadMs = 0L;
+    private final LiveReloadThrottle throttle = new LiveReloadThrottle(LIVE_RELOAD_MIN_MS);
 
     private int lastX, lastY, lastW;
 
@@ -134,28 +132,18 @@ public class AccentSetting extends FeatureSetting {
         if (v == (currentAccent() & 0x00FFFFFF)) {
             return; // no genuine change — must not fire a reload
         }
-        long now = System.currentTimeMillis();
-        if (now - lastLiveReloadMs >= LIVE_RELOAD_MIN_MS) {
-            setter.accept(0xFF000000 | v);
-            lastLiveReloadMs = now;
-            liveApplyPending = false;
-        } else {
-            pendingRgb = v;
-            liveApplyPending = true;
-            nextLiveReloadMs = lastLiveReloadMs + LIVE_RELOAD_MIN_MS;
-        }
+        pendingRgb = v;
+        throttle.apply(() -> setter.accept(0xFF000000 | pendingRgb));
     }
 
     /** Flush a deferred live apply if it still differs from the live config. */
     private void flushPendingLive() {
-        if (liveApplyPending) {
+        throttle.flush(() -> {
             int v = 0xFF000000 | (pendingRgb & 0x00FFFFFF);
             if (v != (currentAccent() | 0xFF000000)) {
                 setter.accept(v);
             }
-            lastLiveReloadMs = System.currentTimeMillis();
-            liveApplyPending = false;
-        }
+        });
     }
 
     // ------------------------------------------------------------------
@@ -191,7 +179,7 @@ public class AccentSetting extends FeatureSetting {
         boolean disabled = isDisabled();
 
         // Flush a deferred live apply once the throttle interval elapsed.
-        if (liveApplyPending && System.currentTimeMillis() >= nextLiveReloadMs) {
+        if (throttle.due()) {
             flushPendingLive();
         }
 
