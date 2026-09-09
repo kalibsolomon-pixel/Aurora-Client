@@ -499,6 +499,20 @@ lighting) → `glReadPixels` → `NativeImage`/`DynamicTexture` → ordinary `Gu
 Straight (non-premultiplied) alpha; RGBA8 intermediates on purpose. Readback is per panel,
 measured 2026-09-08 with `GlassStats` at ~0.2 ms per button-sized panel and ~0.55 ms per
 full-width list row, linear in panel count — accepted for simplicity/robustness.
+**The capture downsample is TWO ~2× `GL_LINEAR` blit steps through a half-res
+intermediate, never one 4× blit** (2026-09-09, the shimmer fix). A single 4× LINEAR blit
+is a point-ish sample — on the dev machine's Mesa driver it reads ~1 of every 16 source
+texels (driver-probe measured: bit-identical output under a 1.05 px shift; on other
+drivers it is a 2×2 center tap = 4 of 16), so any content moving against the sample grid
+(world camera motion, the title panorama, a scrolling panel sliding the grid over a
+static world) aliased into low-frequency blotches that changed every frame and that the
+chain Gaussian cannot remove — the "flicker/waver across the whole panel on moving
+backdrops" bug, measured at 2.3–3.7× the temporal change of a noiseless area-average
+reference on every motion scenario (title panorama, camera pan, list scroll; bit-stable
+on a frozen world, so the pipeline itself is deterministic). At an exact 2× ratio a
+LINEAR blit's sample point lands on texel corners and weights the 4 neighbors equally —
+an exact 2×2 box — so two steps are a 4×4 area average (driver-probe verified; the extra
+blit costs ~0.005 ms/panel).
 
 **Output pool + degradation priority (R10, 2026-09-08):** every concurrent panel in a frame
 takes its own pooled output texture (`OUTPUT_POOL = 64`, was 24; slots are lazily sized so
@@ -790,6 +804,22 @@ CONTROL panels with the toolbar, +1 WINDOW/3 CONTROL with the prompt open,
 declines=0), and an A/B framebuffer diff confined to the chrome rects — map
 pixels byte-identical outside them (the player arrow's AA edge shifts with frame
 phase; documented, not a rendering change).
+
+Landed 2026-09-09: **the glass shimmer fix** — "every glass panel flickers/wavers
+across its whole surface whenever the backdrop behind it moves" (title-screen
+panorama, camera motion in-world, scrolling lists over a static world). Root cause:
+the capture step's single 4× `GL_LINEAR` minification blit is a point-ish sample (the
+dev machine's Mesa driver reads ~1 of every 16 source texels; the GL bilinear model is
+4 of 16), so content moving against the sample grid aliased into per-frame low-frequency
+blotches the chain Gaussian cannot remove. Fix: two ~2× LINEAR blit steps through a
+half-res intermediate = a 4×4 area average (§6 pipeline paragraph has the full story,
+including the driver probe and the DevPilot frame-sequence harness that measured
+2.3–3.7× temporal noise pre-fix, bit-stable static, and the post-fix collapse of the
+popping — the old kernel's per-pair delta distribution had p90/median ≈ 7.6× (violent
+phase pops), the new one ≈ 1.3× (smooth tracking). `BlurTestScreen` gained the
+`slide=`/`slideamp=` state tokens (deterministic known-motion stripes + uint32-hash
+detail, phase logged per frame) that made the pipeline measurable against an analytically
+computable ideal. One commit, renderer + harness + this doc.
 
 ---
 

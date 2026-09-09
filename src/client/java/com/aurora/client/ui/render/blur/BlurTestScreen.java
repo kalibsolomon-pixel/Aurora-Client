@@ -107,6 +107,30 @@ public class BlurTestScreen extends Screen {
     private int uBackdropMode = -1;
     private int uBackdropSize = -1;
     private int uBackdropScale = -1;
+    private int uBackdropSlide = -1;
+    private int uBackdropDetailAmp = -1;
+
+    // ---- Controlled-motion experiment (2026-09-09 shimmer investigation) ----
+    // slide=<float device px/frame> scrolls the synthetic STRIPES pattern
+    // vertically by a known sub-pixel amount per rendered frame, so the REAL
+    // pipeline can be driven with a KNOWN input signal and its output
+    // compared against an analytically computed ideal (area-average +
+    // Gaussian + bilinear upscale of the same pattern) — a noise measurement
+    // with no backdrop-content variance and no vanilla post-chain dither in
+    // the loop. slideAccum is the live phase in device px, advanced once per
+    // rendered frame; the DevPilot sampler logs it per capture so the offline
+    // reference can reproduce each sample's exact pattern phase.
+    // slideamp=<0..0.12> adds a deterministic integer-hash per-pixel detail
+    // term to the pattern — aliasing-RICH content (energy well above the
+    // quarter-res chain's Nyquist), still bit-reproducible offline because
+    // the hash is plain uint32 wraparound arithmetic mirrored in the
+    // analyzer.
+    private static volatile float slidePxPerFrame = 0f;
+    private static volatile float slideAccum = 0f;
+    private static volatile float slideDetailAmp = 0f;
+
+    /** Live stripe-slide phase in device px (0 when not sliding). Harness read. */
+    public static float slideAccum() { return slideAccum; }
 
     public BlurTestScreen() {
         super(Component.literal("Blur Panel Test"));
@@ -214,6 +238,17 @@ public class BlurTestScreen extends Screen {
                 }
                 case "stressglass" -> stressGlass = v.equalsIgnoreCase("on");
                 case "stressfill" -> stressFill = v.equalsIgnoreCase("on");
+                // Controlled-motion experiment (see slidePxPerFrame): known
+                // sub-pixel stripe scroll through the real pipeline.
+                case "slide" -> {
+                    try {
+                        slidePxPerFrame = Math.max(0f, Math.min(8f, Float.parseFloat(v)));
+                        slideAccum = 0f;
+                    } catch (NumberFormatException ignored) { }
+                }
+                case "slideamp" -> {
+                    try { slideDetailAmp = Math.max(0f, Math.min(0.12f, Float.parseFloat(v))); } catch (NumberFormatException ignored) { }
+                }
                 default -> { }
             }
         }
@@ -232,6 +267,7 @@ public class BlurTestScreen extends Screen {
         BlurPanelRenderer.CaptureSource captureSource = null;
         if (mode != Backdrop.WORLD) {
             drawBackdrop(g);
+            if (slidePxPerFrame != 0f) slideAccum += slidePxPerFrame; // once per rendered frame
             captureSource = renderSyntheticBackdrop();
         }
 
@@ -455,6 +491,9 @@ public class BlurTestScreen extends Screen {
     @Override
     public void removed() {
         stressN = 0;
+        slidePxPerFrame = 0f;
+        slideAccum = 0f;
+        slideDetailAmp = 0f;
         // Restore the theme values this screen may have cycled in memory —
         // [C]/[N] deliberately never persist, so the user's saved theme is
         // exactly what it was before the harness opened.
@@ -509,6 +548,8 @@ public class BlurTestScreen extends Screen {
                 GL20.glUniform2f(uBackdropSize, backdropW, backdropH);
                 GL20.glUniform1f(uBackdropScale,
                         (float) Minecraft.getInstance().getWindow().getGuiScale());
+                if (uBackdropSlide >= 0) GL20.glUniform1f(uBackdropSlide, slideAccum);
+                if (uBackdropDetailAmp >= 0) GL20.glUniform1f(uBackdropDetailAmp, slideDetailAmp);
                 GL30.glBindVertexArray(backdropVao);
                 GL11.glDrawArrays(GL11.GL_TRIANGLES, 0, 3);
             } finally {
@@ -565,6 +606,18 @@ public class BlurTestScreen extends Screen {
                     uniform int uMode;
                     uniform vec2 uSize;   // device px (main target size)
                     uniform float uScale; // GUI scale factor
+                    uniform float uSlide; // stripe scroll phase, device px (0 = static)
+                    uniform float uDetailAmp; // per-pixel hash detail amplitude (0 = off)
+                    // Deterministic uint32 hash of a pixel coordinate — plain
+                    // wraparound arithmetic, bit-identical to the offline
+                    // analyzer's numpy uint32 mirror (shimmer experiment).
+                    float detailHash(uint x, uint y) {
+                        uint h = (x * 73856093u) ^ (y * 19349663u);
+                        h ^= h >> 13;
+                        h *= 1274126177u;
+                        h ^= h >> 16;
+                        return float(h & 255u) / 255.0;
+                    }
                     void main() {
                         if (uMode == 0) {
                             // SOLID — same flat gray as the batched fill (0xFF85878C).
@@ -592,13 +645,23 @@ public class BlurTestScreen extends Screen {
                             // fract(rc / (16*uScale)) < 0.5. Column center
                             // cc = uSize.x * vUv.x; accent iff
                             // fract(cc / (64*uScale)) < 2/64.
-                            float rc = uSize.y * (1.0 - vUv.y);
+                            // uSlide offsets rc — the pattern scrolls DOWNWARD on
+                            // screen as the phase grows (known sub-pixel motion for
+                            // the shimmer experiment; see slidePxPerFrame).
+                            float rc = uSize.y * (1.0 - vUv.y) + uSlide;
                             float band = 1.0 - step(0.5, fract(rc / (16.0 * uScale)));
                             vec3 col = mix(vec3(0.161, 0.173, 0.200),
                                            vec3(0.800, 0.812, 0.839), band);
                             float cc = uSize.x * vUv.x;
                             float accent = 1.0 - step(2.0 / 64.0, fract(cc / (64.0 * uScale)));
-                            fragColor = vec4(mix(col, vec3(0.549, 0.290, 0.314), accent), 1.0);
+                            vec3 outc = mix(col, vec3(0.549, 0.290, 0.314), accent);
+                            if (uDetailAmp > 0.0) {
+                                // Aliasing-rich detail: +-uDetailAmp hash noise on
+                                // the LUMINANCE axis, sliding with the bands.
+                                float det = detailHash(uint(floor(cc)), uint(floor(rc))) - 0.5;
+                                outc = clamp(outc + vec3(det * 2.0 * uDetailAmp), 0.0, 1.0);
+                            }
+                            fragColor = vec4(outc, 1.0);
                         }
                     }
                     """;
@@ -622,6 +685,8 @@ public class BlurTestScreen extends Screen {
             uBackdropMode = GL20.glGetUniformLocation(p, "uMode");
             uBackdropSize = GL20.glGetUniformLocation(p, "uSize");
             uBackdropScale = GL20.glGetUniformLocation(p, "uScale");
+            uBackdropSlide = GL20.glGetUniformLocation(p, "uSlide");
+            uBackdropDetailAmp = GL20.glGetUniformLocation(p, "uDetailAmp");
             backdropVao = GL30.glGenVertexArrays();
         }
     }

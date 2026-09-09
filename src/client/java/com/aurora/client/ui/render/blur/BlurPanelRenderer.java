@@ -359,6 +359,14 @@ public final class BlurPanelRenderer {
     private static final int[] blurFbo = new int[2];
     private static final int[] blurTex = new int[2];
     private static int chainW, chainH;
+    /**
+     * Half-resolution capture intermediate — step 1 of the two-step
+     * downsample in {@code Frame.capture()} (the 2026-09-09 shimmer fix;
+     * see the comment there). Grow-only like the chain textures.
+     */
+    private static int halfFbo;
+    private static int halfTex;
+    private static int halfW, halfH;
     private static int compositeFbo;
     private static int compositeTex;
     private static int outW, outH;
@@ -1180,6 +1188,36 @@ public final class BlurPanelRenderer {
         // the stored texture is top-down — the orientation every later
         // step assumes. GL errors fail loudly here rather than capturing
         // garbage/black silently.
+        //
+        // DOWNSAMPLE FILTER (the 2026-09-09 shimmer fix): the region is
+        // minified to chain resolution in TWO ~2x GL_LINEAR steps through a
+        // half-resolution intermediate, never in one 4x blit. HISTORY: the
+        // single 4x GL_LINEAR blit is a bilinear POINT sample — a 2x2 tap
+        // at each destination texel center — while each quarter-res texel
+        // represents a 4x4 footprint of source texels; 12 of every 16 are
+        // never sampled. Any content that moves relative to the sample
+        // grid (world camera motion, the title panorama's slow rotation,
+        // a scrolling panel sliding the grid over a static world) then
+        // aliases: high-frequency detail folds below the chain's Nyquist
+        // as low-frequency blotches that change every frame and that the
+        // subsequent Gaussian CANNOT remove (they are legitimately
+        // low-frequency by then). Measured as "flicker/wavering across
+        // the whole panel" on every moving backdrop (DevPilot frame
+        // sequences: glass content changed 2.3x-3.7x more frame-to-frame
+        // than a noiseless area-average reference; bit-stable on a frozen
+        // world, so the pipeline itself is deterministic — the noise is
+        // entirely this sampling). At an exact 2x ratio a GL_LINEAR blit's
+        // sample point lands on texel corners and weights the four
+        // neighbors equally — i.e. each step is an exact 2x2 box filter,
+        // and two such steps are a 4x4 area average (verified numerically
+        // identical to a direct area kernel in simulation, and by a driver
+        // probe in-game: the two-step path's response matches a CPU box
+        // filter, while the single 4x blit on the dev machine's Mesa
+        // driver degenerated all the way to a ~1-texel point sample —
+        // bit-identical output under a 1.05 px shift, popping when the
+        // sampled texel finally jumped). The rounding in hw/hh makes
+        // ratios 2±ε, so the average is near-uniform — vastly better than
+        // a 25%-area point sample either way.
         private void capture() {
             int readFbo, srcW, srcH;
             if (capture != null) {
@@ -1212,8 +1250,6 @@ public final class BlurPanelRenderer {
                 srcW = main.width;
                 srcH = main.height;
             }
-            GL30.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, readFbo);
-            GL30.glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, blurFbo[0]);
             int pad = Math.min((int) Math.ceil(radius), Math.min(main.width, main.height) / 4);
             int regX1 = Math.min(main.width, x0 + panW + pad);
             int regY1 = Math.min(main.height, y0 + panH + pad);
@@ -1224,14 +1260,33 @@ public final class BlurPanelRenderer {
             int sX1 = Math.round((float) regX1 * srcW / main.width);
             int sY0 = Math.round((float) rY * srcH / main.height);
             int sY1 = Math.round((float) regY1 * srcH / main.height);
+
+            // Step 1: source -> half resolution (2x box).
+            int hw = Math.max(cw, Math.round(regW * 0.5f));
+            int hh = Math.max(ch, Math.round(regH * 0.5f));
+            ensureHalfTarget(hw, hh);
+            GL30.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, readFbo);
+            GL30.glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, halfFbo);
             GL30.glBlitFramebuffer(
                     sX0, srcH - sY1, sX1, srcH - sY0,
-                    0, 0, cw, ch,
+                    0, 0, hw, hh,
                     GL11.GL_COLOR_BUFFER_BIT, GL11.GL_LINEAR);
             int err = GL11.glGetError();
             if (err != GL11.GL_NO_ERROR) {
-                throw new IllegalStateException("capture blit failed (GL error 0x"
+                throw new IllegalStateException("half-res capture blit failed (GL error 0x"
                         + Integer.toHexString(err) + ", srcFbo " + readFbo + ")");
+            }
+            // Step 2: half -> chain resolution (another 2x box).
+            GL30.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, halfFbo);
+            GL30.glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, blurFbo[0]);
+            GL30.glBlitFramebuffer(
+                    0, 0, hw, hh,
+                    0, 0, cw, ch,
+                    GL11.GL_COLOR_BUFFER_BIT, GL11.GL_LINEAR);
+            err = GL11.glGetError();
+            if (err != GL11.GL_NO_ERROR) {
+                throw new IllegalStateException("quarter-res capture blit failed (GL error 0x"
+                        + Integer.toHexString(err) + ", halfFbo " + halfFbo + ")");
             }
         }
 
@@ -1524,8 +1579,39 @@ public final class BlurPanelRenderer {
             if (blurFbo[i] != 0) { GL30.glDeleteFramebuffers(blurFbo[i]); blurFbo[i] = 0; }
             if (blurTex[i] != 0) { GL11.glDeleteTextures(blurTex[i]); blurTex[i] = 0; }
         }
+        if (halfFbo != 0) { GL30.glDeleteFramebuffers(halfFbo); halfFbo = 0; }
+        if (halfTex != 0) { GL11.glDeleteTextures(halfTex); halfTex = 0; }
+        halfW = 0;
+        halfH = 0;
         chainW = 0;
         chainH = 0;
+    }
+
+    /**
+     * GROW-ONLY capacity for the half-resolution capture intermediate —
+     * same rationale as {@link #ensureChainTextures}: one shared sequential
+     * target, sub-rect viewport per panel, no per-size reallocation churn.
+     * LINEAR filtering is what makes each blit step a box filter at ~2x
+     * (see {@code Frame.capture()}).
+     */
+    private static void ensureHalfTarget(int w, int h) {
+        if (w <= halfW && h <= halfH && halfFbo != 0) return;
+        if (halfFbo != 0) GL30.glDeleteFramebuffers(halfFbo);
+        if (halfTex != 0) GL11.glDeleteTextures(halfTex);
+        halfTex = GL11.glGenTextures();
+        GL11.glBindTexture(GL11.GL_TEXTURE_2D, halfTex);
+        GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA8, w, h, 0,
+                GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, (ByteBuffer) null);
+        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR);
+        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_LINEAR);
+        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL30.GL_CLAMP_TO_EDGE);
+        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL30.GL_CLAMP_TO_EDGE);
+        halfFbo = GL30.glGenFramebuffers();
+        GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, halfFbo);
+        GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, GL30.GL_COLOR_ATTACHMENT0,
+                GL11.GL_TEXTURE_2D, halfTex, 0);
+        halfW = w;
+        halfH = h;
     }
 
     private static void ensureCompositeTarget(int w, int h) {
