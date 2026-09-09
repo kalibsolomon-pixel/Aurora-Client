@@ -73,7 +73,7 @@ AuroraClient.java          Mod entrypoint: registers keybinds, HUD callbacks, fe
 │                           ThrottleDetector, EntityMovementSmoother, …).
 ├── module/                PRESENTATION-ONLY view-models for the settings grid
 │                           (Module, ModuleManager). NOT runtime logic. Hardcoded
-│                           list of 34 ids — can drift from FeatureRegistry (§3).
+│                           list of 35 ids — can drift from FeatureRegistry (§3).
 ├── hud/                   HUD layer: HudRenderer (top-level callback), HudAnchor,
 │                           CrosshairRenderer, HitboxRenderer, BlockOverlayRenderer,
 │                           WorldLineRenderer (shared thick lines), WaypointRenderer,
@@ -156,7 +156,7 @@ There is **no single registry**. Three structures must stay conceptually in sync
 1. **`feature/FeatureManager`** — ~29 long-lived `Feature` singletons with
    `onRegister()`/`onTick(Minecraft)` (interface `feature/Feature.java`).
    `Feature.enabledByDefault()` exists but is **never read anywhere** (dead API).
-2. **`screen/FeatureRegistry`** — static UI metadata: **35 MODULES-tab + 11 SETTINGS-tab
+2. **`screen/FeatureRegistry`** — static UI metadata: **35 MODULES-tab + 4 SETTINGS-tab
    tiles** (`FeatureMetadata`: id, display name, marketing description, enable
    getter/setter, list of `FeatureSetting` widgets, `reset()`).
 3. **`module/ModuleManager`** — 35 hardcoded grid cards consumed by `AuroraScreen`.
@@ -251,7 +251,7 @@ shift+right-click = lock, X = disable.
 | Hotbar Bounce (`hotbar_bounce`) | White pulse outline on hotbar slot when stack count grows | `HotbarItemBounceMixin` → `HotbarBounceTracker` |
 | Keystrokes (`keystrokes`) | Key-panel overlay: WASD/mouse/CPS/space/sneak/sprint + up to 12 custom keys; pressed-key accent follows the theme accent by default (`keystrokesAccentColor == 0`, R6 P2; explicit color overrides); key labels follow the shared `hudColor` sentinel (R6 ext) | `hud/module/KeystrokesModule` |
 
-### SETTINGS tab (11 tiles)
+### SETTINGS tab (4 tiles)
 
 Custom Title (`custom_title` — themed title screen: vanilla panorama + 5 glass buttons
 (§6 rollout table; the custom logo/starfield blits were removed 2026-09-08) via
@@ -259,13 +259,23 @@ Custom Title (`custom_title` — themed title screen: vanilla panorama + 5 glass
 multiplayer/world-select via `SelectionScreenBackgroundMixin`, `AbstractButtonMixin`),
 Text & Fonts (`text_fonts` —
 bundled Google fonts scoped OFF/Aurora-only/ALL via `MixinFont` + `AuroraFontRenderer`),
-Interface (`interface` — FPS cap for Aurora screens), Smooth Camera, Frame Pacer
-(`RenderSystemMixin` + `util/FramePacer`, replaces vanilla `limitDisplayFPS`),
-Low Latency (VSync-off, zero-latency camera, adaptive render sleep; **`highFrequencyInput`
-is advertised but has no implementation**), Tick Sync (retunes client tick rate to entity
-packet arrival; `TickSyncNetworkMixin`), Decoupled Input (per-frame cursor delta),
-Drag-to-Reorder Servers (`ServerListDragReorderMixin` — 3-phase animated drag),
-Compliance Mode, Accessibility (colorblind LMS daltonization matrices).
+Interface (`interface` — FPS cap for Aurora screens), and Miscellaneous
+(`miscellaneous` — the 2026-09-09 consolidation of the eight tiles that used to sit
+below Interface: Smooth Camera, Frame Pacer (`RenderSystemMixin` + `util/FramePacer`,
+replaces vanilla `limitDisplayFPS`), Low Latency (VSync-off, zero-latency camera,
+adaptive render sleep; **`highFrequencyInput` is advertised but has no
+implementation**), Tick Sync (retunes client tick rate to entity packet arrival;
+`TickSyncNetworkMixin`), Decoupled Input (per-frame cursor delta), Drag-to-Reorder
+Servers (`ServerListDragReorderMixin` — 3-phase animated drag), Compliance Mode, and
+Accessibility (colorblind LMS daltonization matrices) — each preserved verbatim under
+its own `SectionHeaderSetting` with its original master toggle as the section's
+"Enabled" row; an explicit "for now" grouping, not a taxonomy decision).
+
+Settings-tab presentation: every entry renders as header + toggle (+ inline settings
+rows); a header click opens the entry's detail screen (chevron affordance;
+`FeatureMetadata.settingsDetailOnly` opts an entry out of inline rows entirely —
+Miscellaneous is the only one, its 33-row list lives on its detail screen with one
+unified Reset whose prefix list is the union of the eight tiles' fields).
 
 ### Cross-cutting systems worth knowing
 
@@ -820,6 +830,26 @@ phase pops), the new one ≈ 1.3× (smooth tracking). `BlurTestScreen` gained th
 `slide=`/`slideamp=` state tokens (deterministic known-motion stripes + uint32-hash
 detail, phase logged per frame) that made the pipeline measurable against an analytically
 computable ideal. One commit, renderer + harness + this doc.
+
+Landed 2026-09-09 after that: **Settings-tab consolidation — the "Miscellaneous"
+entry**. The eight Settings-tab tiles below "Interface" (Smooth Camera, Frame Pacer,
+Low Latency, Tick Sync, Decoupled Input, Drag-to-Reorder Servers, Compliance Mode,
+Accessibility — everything from Smooth Camera down; Interface itself stays standalone)
+merged into one `miscellaneous` SETTINGS entry. Settings rows moved byte-verbatim under
+per-tile `SectionHeaderSetting`s (the Better Hitreg multi-section pattern), each tile's
+master toggle becoming that section's "Enabled" row with the original getter/setter —
+config fields and behavior untouched. The Settings tab gained detail-screen navigation:
+a header click on any entry with settings opens its `FeatureDetailScreen` (chevron
+affordance; previously Settings-tab entries had NO reachable detail screen, hence no
+reachable reset — Miscellaneous's unified Reset, prefix list = union of the eight
+tiles' fields, is new capability). `FeatureMetadata.settingsDetailOnly` (Miscellaneous
+is the only user) opts an entry out of inline rows: header + toggle + "Click to
+configure" hint on the tab, the 33-row list on the detail screen. Master toggle =
+Pack Tweaks/Alerts pattern (OR of the eight sub-flags; setter flips all). Verified by
+a DevPilot `tabs`-mode boot: Settings tab shows Custom Title / Text & Fonts /
+Interface / Miscellaneous only; the detail screen's 33 rows enumerate every original
+setting by label; master-toggle flip and reset roundtrip logged correct with fields
+restored. SETTINGS count 11 → 4 (MODULES unchanged at 35).
 
 ---
 

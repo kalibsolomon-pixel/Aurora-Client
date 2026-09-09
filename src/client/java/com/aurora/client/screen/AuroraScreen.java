@@ -48,6 +48,13 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     private static final float TAB_PITCH = 28;
     private static final float TAB_H = 22;
 
+    /**
+     * Height of the muted "Click to configure" hint row drawn under a
+     * settingsDetailOnly entry on the Settings tab (Miscellaneous). The
+     * render, scroll-height, and click walks must all count it.
+     */
+    private static final int SETTINGS_HINT_H = 14;
+
     private int selectedCategory = 0; // 0: Mods, 1: Settings
     private boolean gridLayout = true; // false: list, true: grid
 
@@ -410,6 +417,15 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             int headerH = 22;
             if (y + headerH > my + 36 && y < my + 216) {
                 g.drawString(tr, m.displayName, (int) (mx + 4), (int) (y + 6), ThemeManager.color(ThemeToken.ON_BACKGROUND), false);
+                // Detail-screen affordance: a header click opens the entry's
+                // detail screen (the Settings tab's counterpart of the
+                // Modules tab's right-click-to-detail) — the chevron marks
+                // the row as navigable.
+                if (m.hasDetail()) {
+                    MaterialIconRenderer.drawIcon(g, tr, FeatureIcons.get("_dropdown_expand_more"),
+                            mx + 254 - 40 - 12, y + 11, 9,
+                            ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED));
+                }
                 ToggleSwitch t = sectionToggles.get(m.id);
                 if (t != null) {
                     float tw = 28, th = 15;
@@ -420,12 +436,24 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 }
             }
             y += headerH;
-            for (FeatureSetting s : m.settings) {
-                int rh = s.height();
-                if (y + rh > my + 36 && y < my + 216) {
-                    s.render(g, (int) (mx + 4), (int) y, 246, mouseX, mouseY);
+            if (m.settingsDetailOnly) {
+                // Detail-only entry (Miscellaneous): one muted hint line in
+                // place of the inline rows — the merged list lives behind
+                // the header click. The hint height must match the walks in
+                // computeMaxScroll and mouseClicked.
+                if (y + SETTINGS_HINT_H > my + 36 && y < my + 216) {
+                    g.drawString(tr, "Click to configure", (int) (mx + 4), (int) (y + 1),
+                            ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED), false);
                 }
-                y += rh + 4;
+                y += SETTINGS_HINT_H;
+            } else {
+                for (FeatureSetting s : m.settings) {
+                    int rh = s.height();
+                    if (y + rh > my + 36 && y < my + 216) {
+                        s.render(g, (int) (mx + 4), (int) y, 246, mouseX, mouseY);
+                    }
+                    y += rh + 4;
+                }
             }
             y += 8;
         }
@@ -541,7 +569,8 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         double h = 0;
         for (FeatureMetadata m : FeatureRegistry.settings()) {
             h += 22;
-            for (FeatureSetting s : m.settings) h += s.height() + 4;
+            if (m.settingsDetailOnly) h += SETTINGS_HINT_H;
+            else for (FeatureSetting s : m.settings) h += s.height() + 4;
             h += 8;
         }
         return Math.max(0, h - 180);
@@ -642,14 +671,27 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                     com.aurora.client.config.AuroraConfig.save();
                     return true;
                 }
+                // Header (and, for detail-only entries, the hint line under
+                // it) opens the detail screen — the toggle zone above keeps
+                // priority. Walk must mirror renderSettingsLive.
+                if (button == 0 && m.hasDetail() && this.minecraft != null
+                        && mouseX >= mx + 4 && mouseX <= mx + 254 - 42
+                        && mouseY >= y && mouseY <= y + 22 + (m.settingsDetailOnly ? SETTINGS_HINT_H : 0)) {
+                    this.minecraft.setScreen(new FeatureDetailScreen(this, m));
+                    return true;
+                }
                 y += 22;
-                for (FeatureSetting s : m.settings) {
-                    int rh = s.height();
-                    if (s.mouseClicked(mouseX, mouseY, button, (int) (mx + 4), (int) y, 246)) {
-                        activeDragSetting = s;
-                        return true;
+                if (m.settingsDetailOnly) {
+                    y += SETTINGS_HINT_H;
+                } else {
+                    for (FeatureSetting s : m.settings) {
+                        int rh = s.height();
+                        if (s.mouseClicked(mouseX, mouseY, button, (int) (mx + 4), (int) y, 246)) {
+                            activeDragSetting = s;
+                            return true;
+                        }
+                        y += rh + 4;
                     }
-                    y += rh + 4;
                 }
                 y += 8;
             }

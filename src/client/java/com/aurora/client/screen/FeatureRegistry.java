@@ -21,9 +21,11 @@ import java.util.function.Consumer;
  * Registry of feature metadata. Features are split into two tabs:
  * <ul>
  *   <li><b>Modules</b> â€” Aurora's gameplay/visual features (the grid)</li>
- *   <li><b>Settings</b> â€” global client improvements (camera, frame pacer,
- *       latency, input, animations, smooth-feel polish) that don't need
- *       their own detail screen</li>
+ *   <li><b>Settings</b> - global client settings: title screen, fonts, the
+ *       UI fps limit, and the combined "Miscellaneous" entry that groups
+ *       the smaller settings (camera, frame pacer, latency, tick sync,
+ *       input, servers, compliance, accessibility) behind one detail
+ *       screen - an explicit "for now" grouping</li>
  * </ul>
  */
 public final class FeatureRegistry {
@@ -1114,19 +1116,57 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                 .description("The framerate Aurora screens run at. 'Unlimited' removes the cap so the GUI matches your main FPS.")
                 ));
 
-        addWithSettings(SETTINGS, "smooth_camera", "Smooth Camera",
-                "Adds inertia to your mouse look so the camera eases into and out of movement instead of stopping instantly. Gives panning a weighty, cinematic feel — great for recording or relaxed play. Note: it adds aim latency, so competitive players usually leave it off.",
-                () -> cfg.smoothCamera, v -> cfg.smoothCamera = v,
+        // ---- Miscellaneous ----
+        // Consolidates the eight former standalone Settings-tab tiles that
+        // sat below "Interface" (Smooth Camera, Frame Pacer, Low Latency,
+        // Tick Sync, Decoupled Input, Drag-to-Reorder Servers, Compliance
+        // Mode, Accessibility) into one entry - an explicit "for now"
+        // grouping, not a permanent taxonomy decision. Every original
+        // setting row is preserved verbatim under its own SectionHeader,
+        // and each section's "Enabled" row carries the exact getter/setter
+        // that tile's header toggle used (config fields and behavior are
+        // unchanged). settingsDetailOnly: the Settings tab shows header +
+        // toggle + hint; the merged row list lives on the detail screen
+        // (header click opens it). Master toggle follows the Pack
+        // Tweaks/Alerts pattern: ON if ANY sub-feature is on, and the
+        // setter flips all sub-flags together. Reset is one unified reset
+        // whose prefix list is exactly the union of the original tiles'
+        // config fields - none of these had a reachable reset before
+        // (Settings-tab entries had no detail screen), so this is new
+        // capability, consistent with the other combined features.
+        addWithSettings(SETTINGS, "miscellaneous", "Miscellaneous",
+                "A temporary home for smaller settings that have not been given a dedicated feature screen of their own yet: smooth camera, frame pacing, latency, tick sync, input handling, server-list dragging, compliance and accessibility. Each keeps its own enable toggle and settings under its section; open the feature to configure them.",
+                () -> cfg.smoothCamera || cfg.smoothFramePacer || cfg.lowLatencyRender
+                        || cfg.tickSyncEnabled || cfg.inputSamplingDecoupled
+                        || cfg.serverListDragReorder || cfg.complianceModeEnabled
+                        || cfg.colorblindMode != AuroraConfig.ColorblindMode.OFF,
+                v -> {
+                    cfg.smoothCamera = v;
+                    cfg.smoothFramePacer = v;
+                    cfg.lowLatencyRender = v;
+                    cfg.tickSyncEnabled = v;
+                    cfg.inputSamplingDecoupled = v;
+                    cfg.serverListDragReorder = v;
+                    cfg.complianceModeEnabled = v;
+                    if (!v) cfg.colorblindMode = AuroraConfig.ColorblindMode.OFF;
+                    else if (cfg.colorblindMode == AuroraConfig.ColorblindMode.OFF)
+                        cfg.colorblindMode = AuroraConfig.ColorblindMode.DEUTERANOMALY;
+                },
                 List.of(
+                        new SectionHeaderSetting("Smooth Camera"),
+                        new BooleanSetting("Enabled",
+                                () -> cfg.smoothCamera,
+                                v -> cfg.smoothCamera = v)
+                                .description("Adds inertia to your mouse look so the camera eases into and out of movement instead of stopping instantly. Gives panning a weighty, cinematic feel — great for recording or relaxed play. Note: it adds aim latency, so competitive players usually leave it off."),
                         SliderSetting.of("Strength",
                                 () -> cfg.smoothCameraStrength, v -> cfg.smoothCameraStrength = v, 0.05, 1.0)
-                                .description("How much smoothing is applied. Low values add a barely-there glide that still feels responsive; high values produce heavy, floaty camera drift with noticeable lag between your mouse and the view. Start around 0.2-0.3 if you want subtle smoothing.")
-                ));
+                                .description("How much smoothing is applied. Low values add a barely-there glide that still feels responsive; high values produce heavy, floaty camera drift with noticeable lag between your mouse and the view. Start around 0.2-0.3 if you want subtle smoothing."),
 
-        addWithSettings(SETTINGS, "smooth_pacer", "Frame Pacer",
-                "A high-precision replacement for Minecraft's built-in FPS cap. Vanilla's limiter spaces frames unevenly, which you feel as micro-stutter even at high FPS. The Frame Pacer holds each frame to a near-exact interval, so motion looks visibly smoother at the same average framerate. Set your FPS cap in vanilla Video Settings; this controls *how* that cap is enforced.",
-                () -> cfg.smoothFramePacer, v -> cfg.smoothFramePacer = v,
-                List.of(
+                        new SectionHeaderSetting("Frame Pacer"),
+                        new BooleanSetting("Enabled",
+                                () -> cfg.smoothFramePacer,
+                                v -> cfg.smoothFramePacer = v)
+                                .description("A high-precision replacement for Minecraft's built-in FPS cap. Vanilla's limiter spaces frames unevenly, which you feel as micro-stutter even at high FPS. The Frame Pacer holds each frame to a near-exact interval, so motion looks visibly smoother at the same average framerate. Set your FPS cap in vanilla Video Settings; this controls *how* that cap is enforced."),
                         new EnumSetting<>("Strategy",
                                 AuroraConfig.PacingStrategy.class,
                                 () -> cfg.framePacingStrategy,
@@ -1149,22 +1189,13 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                         SliderSetting.ofInt("Park Threshold (Âµs)",
                                 () -> cfg.framePacerParkThresholdMicros,
                                 v -> cfg.framePacerParkThresholdMicros = v, 1000, 8000)
-                                .description("When to switch from coarse OS-level sleep to fine yield-spin. Higher = lower CPU, lower = more stable timing.")
-                ));
+                                .description("When to switch from coarse OS-level sleep to fine yield-spin. Higher = lower CPU, lower = more stable timing."),
 
-        addWithSettings(MODULES, "reflex", "Minecraft Reflex",
-                "Uses the Nvidia Reflex principle to reduce rendering latency in Minecraft, automatically locking the frame by estimating the CPU and GPU time. Allows any GPU to use.",
-                () -> cfg.reflexEnabled, v -> cfg.reflexEnabled = v,
-                List.of(
-                        SliderSetting.ofInt("Wait Time Offset",
-                                () -> cfg.reflexWaitTimeOffset, v -> cfg.reflexWaitTimeOffset = v, -5000000, 5000000)
-                                .description("Wait time offset in nanoseconds. Increase if GPU utilization drops, decrease (negative) if latency increases.")
-                ));
-
-        addWithSettings(SETTINGS, "low_latency", "Low Latency",
-                "Shrinks the GPU's render-ahead queue so the frame you see reflects your most recent input. Reduces the delay between moving your mouse and the screen updating — the world feels more 'connected' to your hand. For the biggest effect, also disable VSync below.",
-                () -> cfg.lowLatencyRender, v -> cfg.lowLatencyRender = v,
-                List.of(
+                        new SectionHeaderSetting("Low Latency"),
+                        new BooleanSetting("Enabled",
+                                () -> cfg.lowLatencyRender,
+                                v -> cfg.lowLatencyRender = v)
+                                .description("Shrinks the GPU's render-ahead queue so the frame you see reflects your most recent input. Reduces the delay between moving your mouse and the screen updating — the world feels more 'connected' to your hand. For the biggest effect, also disable VSync below."),
                         new BooleanSetting("Disable VSync (causes tearing without VRR)",
                                 () -> cfg.disableVSync, v -> cfg.disableVSync = v)
                                 .description("Turns off vertical sync, removing the frame-buffering delay it adds for the lowest possible input lag. The trade-off is screen tearing (a horizontal seam during fast motion) unless your monitor has a variable refresh rate like G-Sync or FreeSync. Leave on if you see tearing."),
@@ -1176,13 +1207,13 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                 .description("Flushes the GLFW event queue right before camera setup to fetch the latest cursor coordinates with sub-millisecond precision."),
                         new BooleanSetting("Adaptive Render Sleeping (Reflex-style)",
                                 () -> cfg.adaptiveRenderSleeping, v -> cfg.adaptiveRenderSleeping = v)
-                                .description("Dynamically aligns the CPU thread sleep with the render pipeline, sleeping immediately before input polling to minimize the rendering queue.")
-                ));
+                                .description("Dynamically aligns the CPU thread sleep with the render pipeline, sleeping immediately before input polling to minimize the rendering queue."),
 
-        addWithSettings(SETTINGS, "tick_sync", "Tick Sync",
-                "Reduces the delay between server packets and client ticks by dynamically adjusting the client tick rate to match the server's packet delivery. Helps minimize delay when working with command blocks or fast entity updates. Only shifts ticks when a desync is detected.",
-                () -> cfg.tickSyncEnabled, v -> cfg.tickSyncEnabled = v,
-                List.of(
+                        new SectionHeaderSetting("Tick Sync"),
+                        new BooleanSetting("Enabled",
+                                () -> cfg.tickSyncEnabled,
+                                v -> cfg.tickSyncEnabled = v)
+                                .description("Reduces the delay between server packets and client ticks by dynamically adjusting the client tick rate to match the server's packet delivery. Helps minimize delay when working with command blocks or fast entity updates. Only shifts ticks when a desync is detected."),
                         new BooleanSetting("Auto Margin",
                                 () -> cfg.tickSyncUseAutoMargin, v -> cfg.tickSyncUseAutoMargin = v)
                                 .description("Automatically adjust the sync margin based on connection stability."),
@@ -1191,16 +1222,74 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                 .description("Allow accelerating client ticks (pull) to catch up, rather than only delaying (push)."),
                         new BooleanSetting("Use Netty Thread (Experimental)",
                                 () -> cfg.tickSyncUseNettyCriteria, v -> cfg.tickSyncUseNettyCriteria = v)
-                                .description("Use the time packets arrive on the Netty network thread instead of the Render thread.")
+                                .description("Use the time packets arrive on the Netty network thread instead of the Render thread."),
+
+                        new SectionHeaderSetting("Decoupled Input"),
+                        new BooleanSetting("Enabled",
+                                () -> cfg.inputSamplingDecoupled,
+                                v -> cfg.inputSamplingDecoupled = v)
+                                .description("Samples your mouse every rendered frame instead of on Minecraft's fixed 20-per-second schedule. Vanilla's coarse sampling makes aim feel like it snaps in tiny steps at high FPS; decoupling it makes mouse movement perfectly fluid and 1:1 with your hand. Recommended for anyone playing above 60 FPS."),
+
+                        new SectionHeaderSetting("Drag-to-Reorder Servers"),
+                        new BooleanSetting("Enabled",
+                                () -> cfg.serverListDragReorder,
+                                v -> cfg.serverListDragReorder = v)
+                                .description("Lets you reorder servers in the Multiplayer server list by click-and-drag instead of vanilla's up/down arrow buttons. Click and hold a server, drag it to a new position, and release — the new order is saved instantly. Normal clicks still select and join servers as usual."),
+
+                        new SectionHeaderSetting("Compliance Mode"),
+                        new BooleanSetting("Enabled",
+                                () -> cfg.complianceModeEnabled,
+                                v -> cfg.complianceModeEnabled = v)
+                                .description("Automatically disables Aurora features that strict server anti-cheats may flag when you join known-strict servers (Hypixel, CubeCraft, etc.). Protects you from false-positive bans without manually toggling features every time you switch servers. Aurora restores your features when you leave."),
+                        new BooleanSetting("Show Activation Toast",
+                                () -> cfg.complianceModeToast,
+                                v -> cfg.complianceModeToast = v)
+                                .description("Pops a brief on-screen notification when compliance mode turns on or off."),
+                        new StringListSetting("Safe Servers (override)",
+                                () -> cfg.complianceSafeServers,
+                                v -> cfg.complianceSafeServers = v)
+                                .description("Server address patterns treated as always-safe. Entries here override built-in strict detection — useful for private servers with custom anti-cheat that you trust. One address per line; substring match (e.g. 'myserver.com' matches any subdomain)."),
+                        new StringListSetting("Strict Servers (custom)",
+                                () -> cfg.complianceStrictServers,
+                                v -> cfg.complianceStrictServers = v)
+                                .description("Additional server address patterns to treat as strict (compliance on). One address per line; substring match."),
+
+                        new SectionHeaderSetting("Accessibility"),
+                        new BooleanSetting("Enabled",
+                                () -> cfg.colorblindMode != AuroraConfig.ColorblindMode.OFF,
+                                v -> { if (!v) cfg.colorblindMode = AuroraConfig.ColorblindMode.OFF;
+                                                       else if (cfg.colorblindMode == AuroraConfig.ColorblindMode.OFF)
+                                                           cfg.colorblindMode = AuroraConfig.ColorblindMode.DEUTERANOMALY; })
+                                .description("Colorblind correction filters and scroll-wheel remapping for players who need them. Colorblind modes apply a daltonization color matrix to the whole screen so reds, greens, and blues are distinguishable for each type of deficiency."),
+                        new EnumSetting<>("Colorblind Mode",
+                                AuroraConfig.ColorblindMode.class,
+                                () -> cfg.colorblindMode,
+                                v -> cfg.colorblindMode = v)
+                                .description("Select the type of color vision deficiency to correct. The filter shifts colors into ranges you can distinguish. OFF disables the filter."),
+                        SliderSetting.ofInt("Correction Strength",
+                                () -> cfg.colorblindStrength,
+                                v -> cfg.colorblindStrength = v, 0, 100)
+                                .description("How strongly the correction is applied. 100% is full correction; lower values blend toward the original colors for a subtler effect.")
+                ),
+                // Union of the eight tiles' config fields (see the
+                // resetByPrefix comment on pack_tweaks for prefix rules).
+                List.of(
+                        "smoothCamera",
+                        "smoothFramePacer", "framePacer", "framePacing",
+                        "lowLatencyRender", "disableVSync", "zeroLatencyCamera",
+                        "highFrequencyInput", "adaptiveRenderSleeping",
+                        "tickSync", "inputSamplingDecoupled", "serverListDragReorder",
+                        "compliance", "colorblind"));
+        SETTINGS.get(SETTINGS.size() - 1).settingsDetailOnly(true);
+
+        addWithSettings(MODULES, "reflex", "Minecraft Reflex",
+                "Uses the Nvidia Reflex principle to reduce rendering latency in Minecraft, automatically locking the frame by estimating the CPU and GPU time. Allows any GPU to use.",
+                () -> cfg.reflexEnabled, v -> cfg.reflexEnabled = v,
+                List.of(
+                        SliderSetting.ofInt("Wait Time Offset",
+                                () -> cfg.reflexWaitTimeOffset, v -> cfg.reflexWaitTimeOffset = v, -5000000, 5000000)
+                                .description("Wait time offset in nanoseconds. Increase if GPU utilization drops, decrease (negative) if latency increases.")
                 ));
-
-        add(SETTINGS, "decoupled_input", "Decoupled Input",
-                "Samples your mouse every rendered frame instead of on Minecraft's fixed 20-per-second schedule. Vanilla's coarse sampling makes aim feel like it snaps in tiny steps at high FPS; decoupling it makes mouse movement perfectly fluid and 1:1 with your hand. Recommended for anyone playing above 60 FPS.",
-                () -> cfg.inputSamplingDecoupled, v -> cfg.inputSamplingDecoupled = v);
-
-        add(SETTINGS, "server_drag_reorder", "Drag-to-Reorder Servers",
-                "Lets you reorder servers in the Multiplayer server list by click-and-drag instead of vanilla's up/down arrow buttons. Click and hold a server, drag it to a new position, and release — the new order is saved instantly. Normal clicks still select and join servers as usual.",
-                () -> cfg.serverListDragReorder, v -> cfg.serverListDragReorder = v);
 
         addWithSettings(MODULES, "animations", "Animations",
                 "Animation & movement polish: swing & view-bob curves, classic 1.8-style damage camera tilt, configurable idle held-item sway with multiple movement curves, and frame-rate-independent entity movement smoothing that rounds off per-tick knockback kinks and absorbs multiplayer server throttle jitter.",
@@ -1366,44 +1455,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                 ));
 
         // ---- Compliance Mode ----
-        addWithSettings(SETTINGS, "compliance_mode", "Compliance Mode",
-                "Automatically disables Aurora features that strict server anti-cheats may flag when you join known-strict servers (Hypixel, CubeCraft, etc.). Protects you from false-positive bans without manually toggling features every time you switch servers. Aurora restores your features when you leave.",
-                () -> cfg.complianceModeEnabled, v -> cfg.complianceModeEnabled = v,
-                List.of(
-                        new BooleanSetting("Show Activation Toast",
-                                () -> cfg.complianceModeToast,
-                                v -> cfg.complianceModeToast = v)
-                                .description("Pops a brief on-screen notification when compliance mode turns on or off."),
-                        new StringListSetting("Safe Servers (override)",
-                                () -> cfg.complianceSafeServers,
-                                v -> cfg.complianceSafeServers = v)
-                                .description("Server address patterns treated as always-safe. Entries here override built-in strict detection — useful for private servers with custom anti-cheat that you trust. One address per line; substring match (e.g. 'myserver.com' matches any subdomain)."),
-                        new StringListSetting("Strict Servers (custom)",
-                                () -> cfg.complianceStrictServers,
-                                v -> cfg.complianceStrictServers = v)
-                                .description("Additional server address patterns to treat as strict (compliance on). One address per line; substring match.")
-                ),
-                List.of("compliance"));
-
         // ---- Accessibility ----
-        addWithSettings(SETTINGS, "accessibility", "Accessibility",
-                "Colorblind correction filters and scroll-wheel remapping for players who need them. Colorblind modes apply a daltonization color matrix to the whole screen so reds, greens, and blues are distinguishable for each type of deficiency.",
-                () -> cfg.colorblindMode != AuroraConfig.ColorblindMode.OFF,
-                v -> { if (!v) cfg.colorblindMode = AuroraConfig.ColorblindMode.OFF;
-                       else if (cfg.colorblindMode == AuroraConfig.ColorblindMode.OFF)
-                           cfg.colorblindMode = AuroraConfig.ColorblindMode.DEUTERANOMALY; },
-                List.of(
-                        new EnumSetting<>("Colorblind Mode",
-                                AuroraConfig.ColorblindMode.class,
-                                () -> cfg.colorblindMode,
-                                v -> cfg.colorblindMode = v)
-                                .description("Select the type of color vision deficiency to correct. The filter shifts colors into ranges you can distinguish. OFF disables the filter."),
-                        SliderSetting.ofInt("Correction Strength",
-                                () -> cfg.colorblindStrength,
-                                v -> cfg.colorblindStrength = v, 0, 100)
-                                .description("How strongly the correction is applied. 100% is full correction; lower values blend toward the original colors for a subtler effect.")
-                ),
-                List.of("colorblind"));
     }
 
 

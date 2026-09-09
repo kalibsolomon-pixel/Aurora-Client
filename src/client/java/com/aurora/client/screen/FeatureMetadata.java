@@ -36,6 +36,15 @@ public final class FeatureMetadata {
      */
     public String subtitle;
 
+    /**
+     * When true, the Settings tab renders this entry as a header + toggle
+     * (plus a click-to-open affordance) instead of inlining its settings
+     * rows — the settings list lives on the entry's detail screen. Used by
+     * combined entries whose merged row list would dominate the tab
+     * (Miscellaneous). The detail screen itself is unaffected.
+     */
+    public boolean settingsDetailOnly;
+
     public FeatureMetadata(String id, String displayName, String description,
                            BooleanSupplier getEnabled, Consumer<Boolean> setEnabled) {
         this(id, displayName, description, getEnabled, setEnabled, new ArrayList<>(), Collections.emptyList());
@@ -63,6 +72,12 @@ public final class FeatureMetadata {
     /** Fluent setter for {@link #subtitle}. */
     public FeatureMetadata subtitle(String subtitle) {
         this.subtitle = subtitle;
+        return this;
+    }
+
+    /** Fluent setter for {@link #settingsDetailOnly}. */
+    public FeatureMetadata settingsDetailOnly(boolean v) {
+        this.settingsDetailOnly = v;
         return this;
     }
 

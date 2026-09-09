@@ -48,19 +48,18 @@ public final class FeatureIcons {
         ICONS.put("keystrokes",            "\uE312"); // keyboard
         ICONS.put("minimap",               "\uE2C5"); // file_map
         ICONS.put("world_map",             "\uF3CA"); // map_search
-        ICONS.put("server_drag_reorder",   "\uE877"); // drag_handle (reorder)
         ICONS.put("resourcepack_browser",  "\uE8B0"); // browse_gallery (grid of tiles)
         ICONS.put("reflex",                "\uE4E3"); // flash_on
 
         // ============ SETTINGS TAB ============
         ICONS.put("custom_title",          "\uE264"); // title
-        ICONS.put("smooth_camera",         "\uE04B"); // videocam
-        ICONS.put("smooth_pacer",          "\uE019"); // av_timer
-        ICONS.put("low_latency",           "\uE4E3"); // flash_on
-        ICONS.put("decoupled_input",       "\uE312"); // keyboard
-        ICONS.put("hotbar_bounce",         "\uE8D5"); // swap_vert
-        ICONS.put("compliance_mode",       "\uE8E8"); // verified_user (shield check)
-        ICONS.put("accessibility",         "\uE92E"); // accessibility_new
+        ICONS.put("hotbar_bounce",         "\uE8D5"); // swap_vert (a Modules-grid card)
+        // The eight former Settings-tab tiles merged into "miscellaneous"
+        // (2026-09-09) had their own glyphs (videocam, av_timer, flash_on,
+        // keyboard, drag_handle, verified_user, accessibility_new); they
+        // were removed with the tiles. flash_on/keyboard remain in use by
+        // other ids above.
+        ICONS.put("miscellaneous",         "\uE574"); // category (three shapes) - shared with item_physics, already in the font subset
 
         // Dropdown chevrons (EnumSetting) — referenced by codepoint here so
         // subset_script.py includes them in the material-symbols font subset.
