@@ -21,8 +21,9 @@ import java.util.function.Consumer;
  * Registry of feature metadata. Features are split into two tabs:
  * <ul>
  *   <li><b>Modules</b> â€” Aurora's gameplay/visual features (the grid)</li>
- *   <li><b>Settings</b> - global client settings: title screen, fonts, the
- *       UI fps limit, and the combined "Miscellaneous" entry that groups
+ *   <li><b>Settings</b> - global client settings: title screen, fonts,
+ *       theme (moved here from Modules 2026-09-09), the UI fps limit, and
+ *       the combined "Miscellaneous" entry that groups
  *       the smaller settings (camera, frame pacer, latency, tick sync,
  *       input, servers, compliance, accessibility) behind one detail
  *       screen - an explicit "for now" grouping</li>
@@ -65,59 +66,6 @@ public final class FeatureRegistry {
                         SliderSetting.ofInt("Region Cache",
                                 () -> cfg.worldMapCacheRegions, v -> cfg.worldMapCacheRegions = v, 8, 192)
                                 .description("How many 512x512 region tiles (32x32 chunks each) stay in memory at full zoom detail. 64 covers a fully zoomed-out 1080p viewport; far zoom-out uses a separate lightweight overview layer and is not limited by this.")
-                ));
-
-        addWithSettings(MODULES, "theme", "Theme",
-                "Customize Aurora Client's appearance, COSMIC-style: pick one accent color and the whole palette — backgrounds, surfaces, text — is derived automatically and stays legible. Light and dark mode, corner roundness, and background opacity included.",
-                () -> cfg.themeEnabled, v -> cfg.themeEnabled = v,
-                List.of(
-                        new AccentSetting("Accent Color",
-                                () -> cfg.themeOrDefault().accent,
-                                v -> {
-                                    cfg.themeOrDefault().accent = v;
-                                    com.aurora.client.theme.ThemeManager.reload();
-                                    persistThemeChange();
-                                })
-                                .description("The one color the whole theme is built from. Pick a preset swatch, or open Custom to use the color picker — every background, border, and text color is derived from it automatically."),
-                        new SegmentedSetting<>("Mode", ThemeMode.class,
-                                () -> cfg.themeOrDefault().mode != null ? cfg.themeOrDefault().mode : ThemeMode.DARK,
-                                v -> {
-                                    cfg.themeOrDefault().mode = v;
-                                    com.aurora.client.theme.ThemeManager.reload();
-                                    persistThemeChange();
-                                })
-                                .glassSegments(true) // glass pilot: Theme screen only
-                                .description("Whether Aurora's UI renders in a dark or light palette. Both are derived from your accent, with text contrast checked automatically. There is no Auto mode — Minecraft has no reliable OS dark-mode signal."),
-                        new SegmentedSetting<>("Corner Style", ThemeRoundness.class,
-                                () -> cfg.themeOrDefault().roundness != null ? cfg.themeOrDefault().roundness : ThemeRoundness.ROUND,
-                                v -> {
-                                    cfg.themeOrDefault().roundness = v;
-                                    com.aurora.client.theme.ThemeManager.reload();
-                                    persistThemeChange();
-                                },
-                                ThemeRoundness::displayName)
-                                .glassSegments(true) // glass pilot: Theme screen only
-                                .description("How round Aurora's panels and buttons are: Round (the classic look), Slightly Round, or Square. Applies everywhere corners are drawn — including this screen."),
-                        new SegmentedSetting<>("Glass Style", GlassStyle.class,
-                                () -> cfg.themeOrDefault().glassStyle != null ? cfg.themeOrDefault().glassStyle : GlassStyle.FROSTED,
-                                v -> {
-                                    cfg.themeOrDefault().glassStyle = v;
-                                    com.aurora.client.theme.ThemeManager.reload();
-                                    persistThemeChange();
-                                },
-                                GlassStyle::displayName)
-                                .glassSegments(true)
-                                .description("How Aurora draws panel backgrounds. Frosted blurs whatever is behind each panel; Transparent skips the blur and uses a flat translucent fill, which is cheaper to render and suits lower-end hardware. Corner Style and Background Opacity apply to both."),
-                        new ThemeOpacitySetting("Background Opacity",
-                                () -> cfg.themeOrDefault().backgroundOpacity,
-                                v -> {
-                                    cfg.themeOrDefault().backgroundOpacity = v;
-                                    com.aurora.client.theme.ThemeManager.reload();
-                                    persistThemeChange();
-                                })
-                                .description("How transparent Aurora's panel backgrounds are. 100% is fully opaque; lower values let the world behind show through. Only transparency changes — the colors stay derived from your accent. Drag updates the look live; the change is saved when you release."),
-                        new ThemePreviewSetting("Live Preview")
-                                .description("A live mock-up using the exact colors and corner style the UI will use — changes apply here instantly, before you leave this screen.")
                 ));
 
         addWithSettings(MODULES, "zoom", "Zoom",
@@ -1105,6 +1053,59 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                 .description("The Google Font applied to text. SansSerif restores Minecraft's default font.")
                 ));
 
+        addWithSettings(SETTINGS, "theme", "Theme",
+                "Customize Aurora Client's appearance, COSMIC-style: pick one accent color and the whole palette — backgrounds, surfaces, text — is derived automatically and stays legible. Light and dark mode, corner roundness, and background opacity included.",
+                () -> cfg.themeEnabled, v -> cfg.themeEnabled = v,
+                List.of(
+                        new AccentSetting("Accent Color",
+                                () -> cfg.themeOrDefault().accent,
+                                v -> {
+                                    cfg.themeOrDefault().accent = v;
+                                    com.aurora.client.theme.ThemeManager.reload();
+                                    persistThemeChange();
+                                })
+                                .description("The one color the whole theme is built from. Pick a preset swatch, or open Custom to use the color picker — every background, border, and text color is derived from it automatically."),
+                        new SegmentedSetting<>("Mode", ThemeMode.class,
+                                () -> cfg.themeOrDefault().mode != null ? cfg.themeOrDefault().mode : ThemeMode.DARK,
+                                v -> {
+                                    cfg.themeOrDefault().mode = v;
+                                    com.aurora.client.theme.ThemeManager.reload();
+                                    persistThemeChange();
+                                })
+                                .glassSegments(true) // glass pilot: Theme screen only
+                                .description("Whether Aurora's UI renders in a dark or light palette. Both are derived from your accent, with text contrast checked automatically. There is no Auto mode — Minecraft has no reliable OS dark-mode signal."),
+                        new SegmentedSetting<>("Corner Style", ThemeRoundness.class,
+                                () -> cfg.themeOrDefault().roundness != null ? cfg.themeOrDefault().roundness : ThemeRoundness.ROUND,
+                                v -> {
+                                    cfg.themeOrDefault().roundness = v;
+                                    com.aurora.client.theme.ThemeManager.reload();
+                                    persistThemeChange();
+                                },
+                                ThemeRoundness::displayName)
+                                .glassSegments(true) // glass pilot: Theme screen only
+                                .description("How round Aurora's panels and buttons are: Round (the classic look), Slightly Round, or Square. Applies everywhere corners are drawn — including this screen."),
+                        new SegmentedSetting<>("Glass Style", GlassStyle.class,
+                                () -> cfg.themeOrDefault().glassStyle != null ? cfg.themeOrDefault().glassStyle : GlassStyle.FROSTED,
+                                v -> {
+                                    cfg.themeOrDefault().glassStyle = v;
+                                    com.aurora.client.theme.ThemeManager.reload();
+                                    persistThemeChange();
+                                },
+                                GlassStyle::displayName)
+                                .glassSegments(true)
+                                .description("How Aurora draws panel backgrounds. Frosted blurs whatever is behind each panel; Transparent skips the blur and uses a flat translucent fill, which is cheaper to render and suits lower-end hardware. Corner Style and Background Opacity apply to both."),
+                        new ThemeOpacitySetting("Background Opacity",
+                                () -> cfg.themeOrDefault().backgroundOpacity,
+                                v -> {
+                                    cfg.themeOrDefault().backgroundOpacity = v;
+                                    com.aurora.client.theme.ThemeManager.reload();
+                                    persistThemeChange();
+                                })
+                                .description("How transparent Aurora's panel backgrounds are. 100% is fully opaque; lower values let the world behind show through. Only transparency changes — the colors stay derived from your accent. Drag updates the look live; the change is saved when you release."),
+                        new ThemePreviewSetting("Live Preview")
+                                .description("A live mock-up using the exact colors and corner style the UI will use — changes apply here instantly, before you leave this screen.")
+                ));
+
         addWithSettings(SETTINGS, "interface", "Interface",
                 "Caps the framerate while an Aurora screen is open, independent of Minecraft's main FPS cap. A lower limit keeps the UI smooth while freeing GPU time for the world behind it.",
                 () -> cfg.guiFpsLimit != 1000,
@@ -1517,8 +1518,15 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                 new ArrayList<>(settings), resetPrefixes));
     }
 
+    /**
+     * Every registered feature across both tabs, modules first then
+     * settings. Id lookups by callers that should not care which tab a
+     * feature lives on (e.g. the dev harness) use this.
+     */
     public static List<FeatureMetadata> all() {
-        return modules();
+        List<FeatureMetadata> out = new ArrayList<>(MODULES);
+        out.addAll(SETTINGS);
+        return out;
     }
 
     /**

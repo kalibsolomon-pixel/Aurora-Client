@@ -73,7 +73,7 @@ AuroraClient.java          Mod entrypoint: registers keybinds, HUD callbacks, fe
 │                           ThrottleDetector, EntityMovementSmoother, …).
 ├── module/                PRESENTATION-ONLY view-models for the settings grid
 │                           (Module, ModuleManager). NOT runtime logic. Hardcoded
-│                           list of 35 ids — can drift from FeatureRegistry (§3).
+│                           list of 34 ids — can drift from FeatureRegistry (§3).
 ├── hud/                   HUD layer: HudRenderer (top-level callback), HudAnchor,
 │                           CrosshairRenderer, HitboxRenderer, BlockOverlayRenderer,
 │                           WorldLineRenderer (shared thick lines), WaypointRenderer,
@@ -156,10 +156,10 @@ There is **no single registry**. Three structures must stay conceptually in sync
 1. **`feature/FeatureManager`** — ~29 long-lived `Feature` singletons with
    `onRegister()`/`onTick(Minecraft)` (interface `feature/Feature.java`).
    `Feature.enabledByDefault()` exists but is **never read anywhere** (dead API).
-2. **`screen/FeatureRegistry`** — static UI metadata: **35 MODULES-tab + 4 SETTINGS-tab
+2. **`screen/FeatureRegistry`** — static UI metadata: **34 MODULES-tab + 5 SETTINGS-tab
    tiles** (`FeatureMetadata`: id, display name, marketing description, enable
    getter/setter, list of `FeatureSetting` widgets, `reset()`).
-3. **`module/ModuleManager`** — 35 hardcoded grid cards consumed by `AuroraScreen`.
+3. **`module/ModuleManager`** — 34 hardcoded grid cards consumed by `AuroraScreen`.
    A typo'd id here silently returns null metadata. (The missing `reflex` card landed
    2026-09-05, audit B5 — counts now match, but the list is still maintained by hand.)
 
@@ -211,12 +211,12 @@ shift+right-click = lock, X = disable.
 
 ## 4. Feature catalog
 
-### MODULES tab (35 tiles) — behavior + where the code lives
+### MODULES tab (34 tiles) — behavior + where the code lives
 
 | Feature (id) | What it does | Implementation |
 |---|---|---|
 | World Map (`world_map`) | Fullscreen pannable map; chunks captured in background (budgeted), stitched into persistent 512×512 region tiles that survive restarts; per-dimension browsing; waypoint creation on click | `feature/impl/WorldMapFeature`, `worldmap/*` (§2), mixin `ClientLevelWorldMapMixin` |
-| Theme (`theme`) | Single-accent theming engine (§5) | `theme/*`, `feature/impl/ThemeFeature` (per-tick `ThemeManager.sync()`) |
+| Theme (`theme`) — **moved to the SETTINGS tab 2026-09-09** | Single-accent theming engine (§5); presentation unchanged — Settings-tab header + toggle + inline settings, detail screen reachable via header click | `theme/*`, `feature/impl/ThemeFeature` (per-tick `ThemeManager.sync()`) |
 | Zoom (`zoom`) | Hold-C FOV zoom with easing; scroll adjusts level (max 8×); sensitivity scaled inversely; all scrolling consumed while zoomed | `ZoomFeature`, `GameRendererMixin` (FOV), `MouseMixin` (scroll) |
 | Full Bright (`full_bright`) | Gamma 100–1500% via private backing value; saves/restores user gamma, re-asserts each tick | `FullBrightFeature`, `SimpleOptionMixin` (`@Accessor` force-set) |
 | No Fog (`no_fog`) | Multiplies atmospheric fog distance 1–100× | `NoFogMixin` only (no Feature object) |
@@ -251,7 +251,7 @@ shift+right-click = lock, X = disable.
 | Hotbar Bounce (`hotbar_bounce`) | White pulse outline on hotbar slot when stack count grows | `HotbarItemBounceMixin` → `HotbarBounceTracker` |
 | Keystrokes (`keystrokes`) | Key-panel overlay: WASD/mouse/CPS/space/sneak/sprint + up to 12 custom keys; pressed-key accent follows the theme accent by default (`keystrokesAccentColor == 0`, R6 P2; explicit color overrides); key labels follow the shared `hudColor` sentinel (R6 ext) | `hud/module/KeystrokesModule` |
 
-### SETTINGS tab (4 tiles)
+### SETTINGS tab (5 tiles)
 
 Custom Title (`custom_title` — themed title screen: vanilla panorama + 5 glass buttons
 (§6 rollout table; the custom logo/starfield blits were removed 2026-09-08) via
@@ -259,12 +259,14 @@ Custom Title (`custom_title` — themed title screen: vanilla panorama + 5 glass
 multiplayer/world-select via `SelectionScreenBackgroundMixin`, `AbstractButtonMixin`),
 Text & Fonts (`text_fonts` —
 bundled Google fonts scoped OFF/Aurora-only/ALL via `MixinFont` + `AuroraFontRenderer`),
-Interface (`interface` — FPS cap for Aurora screens), and Miscellaneous
-(`miscellaneous` — the 2026-09-09 consolidation of the eight tiles that used to sit
-below Interface: Smooth Camera, Frame Pacer (`RenderSystemMixin` + `util/FramePacer`,
-replaces vanilla `limitDisplayFPS`), Low Latency (VSync-off, zero-latency camera,
-adaptive render sleep; **`highFrequencyInput` is advertised but has no
-implementation**), Tick Sync (retunes client tick rate to entity packet arrival;
+Theme (`theme` — moved here from the Modules tab 2026-09-09; the single-accent theming
+engine of §5 with all its settings and its detail screen unchanged, reached from this
+tab instead of the grid), Interface (`interface` — FPS cap for Aurora screens), and
+Miscellaneous (`miscellaneous` — the 2026-09-09 consolidation of the eight tiles that
+used to sit below Interface: Smooth Camera, Frame Pacer (`RenderSystemMixin` +
+`util/FramePacer`, replaces vanilla `limitDisplayFPS`), Low Latency (VSync-off,
+zero-latency camera, adaptive render sleep; **`highFrequencyInput` is advertised but
+has no implementation**), Tick Sync (retunes client tick rate to entity packet arrival;
 `TickSyncNetworkMixin`), Decoupled Input (per-frame cursor delta), Drag-to-Reorder
 Servers (`ServerListDragReorderMixin` — 3-phase animated drag), Compliance Mode, and
 Accessibility (colorblind LMS daltonization matrices) — each preserved verbatim under
@@ -851,6 +853,21 @@ Interface / Miscellaneous only; the detail screen's 33 rows enumerate every orig
 setting by label; master-toggle flip and reset roundtrip logged correct with fields
 restored. SETTINGS count 11 → 4 (MODULES unchanged at 35).
 
+Landed 2026-09-09 after that: **Theme moved from the Modules tab to the Settings tab**
+(second, independent commit). The `theme` `FeatureRegistry` entry moved from the
+MODULES bucket to SETTINGS (placed after Text & Fonts — the appearance cluster:
+Custom Title, Text & Fonts, Theme, Interface, Miscellaneous); its metadata, six
+settings, reset behavior, and detail screen are untouched. The Modules grid lost the
+theme card (`ModuleManager`, 35 → 34; `Module.meta()` always searched both buckets so
+no other lookup changed), and `FeatureRegistry.all()` now returns both buckets — it
+previously returned MODULES only, which would have broken id-based lookups (the dev
+harness's theme-detail opener) after the move. Theme's Settings-tab presentation is
+the tab's standard one: header + toggle + inline settings, detail screen one header
+click away. Verified by A/B DevPilot boots: the Theme detail screen is pixel-identical
+to the pre-move baseline (same world, same capture path; diff noise confined to glass
+frame-phase AA at panel edges), and both tabs' screenshots show the new arrangement.
+MODULES 35 → 34, SETTINGS 4 → 5.
+
 ---
 
 ## 9. Known outstanding work, dead code, and hazards
@@ -910,8 +927,9 @@ restored. SETTINGS count 11 → 4 (MODULES unchanged at 35).
 - `Feature.enabledByDefault()`: never read. `AutoSprintFeature`: dormant stub.
   `FpsDisplayFeature`: no-op marker (FPS lives in Info HUD).
 - `ColorEntryHelper.addPickerButton`: builds nothing (stub).
-- `module/ModuleManager` (35 hardcoded cards; count-matched with `FeatureRegistry` since
-  the missing `reflex` card landed 2026-09-05, audit B5; `better_hitreg` added 2026-09-08) —
+- `module/ModuleManager` (34 hardcoded cards; count-matched with `FeatureRegistry` since
+  the missing `reflex` card landed 2026-09-05, audit B5; `better_hitreg` added 2026-09-08;
+  the `theme` card removed 2026-09-09 when Theme moved to the Settings tab) —
   ids here still silently fail on typos. Consider deriving one from the other someday.
 - ComplianceMode's `hitboxFeatureEnabled` config field is an orphan (force-false path
   writes fields renderers don't read for that one).

@@ -66,7 +66,7 @@ screen/setting/    ~20 FeatureSetting row widgets (the settings vocabulary)
 
 GUI-adjacent mixins (mixin/) — see §5
 config/AuroraConfig   public fields = schema; async GSON saves; resetByPrefix reflection
-module/ModuleManager  35 hardcoded presentation cards for the Mods grid (drifts from FeatureRegistry — see audit)
+module/ModuleManager  34 hardcoded presentation cards for the Mods grid (drifts from FeatureRegistry — see audit)
 modrinth/             keyless REST client + icon cache (feeds pack browser)
 ```
 
@@ -300,11 +300,12 @@ a launch crash, not a silent skip):
 
 Three parallel structures with no single source of truth:
 1. `FeatureManager` — ~29 runtime `Feature` singletons (tick logic).
-2. `screen/FeatureRegistry` — 35 MODULES + 4 SETTINGS `FeatureMetadata` (UI metadata +
+2. `screen/FeatureRegistry` — 34 MODULES + 5 SETTINGS `FeatureMetadata` (UI metadata +
    settings widgets + `reset()` via `AuroraConfig.resetByPrefix` reflection over a DEFAULTS
-   snapshot; SETTINGS includes the combined "Miscellaneous" entry — the eight former
-   tiles below Interface, one detail screen, one unified reset).
-3. `module/ModuleManager` — 35 hardcoded presentation cards consumed by `AuroraScreen`'s grid;
+   snapshot; SETTINGS includes Theme — moved from MODULES 2026-09-09 — and the combined
+   "Miscellaneous" entry: the eight former tiles below Interface, one detail screen,
+   one unified reset).
+3. `module/ModuleManager` — 34 hardcoded presentation cards consumed by `AuroraScreen`'s grid;
    silently null for unknown ids.
 
 **Enabled state of every feature is a public boolean on `AuroraConfig`**, read fresh each

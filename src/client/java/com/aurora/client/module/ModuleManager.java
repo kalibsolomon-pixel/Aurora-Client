@@ -12,7 +12,6 @@ public class ModuleManager {
     private final List<Module> modules = new ArrayList<>();
 
     private ModuleManager() {
-        modules.add(new Module("theme", "Theme", "Customize Aurora Client's UI style. Choose your preferred primary and secondary theme colors, and select from clean Google Fonts.", Module.Category.HUD));
         modules.add(new Module("zoom", "Zoom", "Optical-style zoom bound to a key. Hold it to narrow your field of view and magnify whatever you're looking at.", Module.Category.HUD));
         modules.add(new Module("full_bright", "Full Bright", "Overrides Minecraft's gamma so dark areas become fully visible. Caves, the underwater, and night-time terrain light up.", Module.Category.HUD));
         modules.add(new Module("no_fog", "No Fog", "Pushes back the distance fog that normally hides far terrain. You see further across oceans and open landscapes.", Module.Category.HUD));
