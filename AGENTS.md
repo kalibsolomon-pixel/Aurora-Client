@@ -83,7 +83,9 @@ AuroraClient.java          Mod entrypoint: registers keybinds, HUD callbacks, fe
 │   └── preview/           Container-preview tooltip components (shulker/ender chest).
 ├── screen/                Aurora's own Screens + the feature UI registry:
 │   │                      AuroraScreen (main settings screen), AuroraTitleScreen,
-│   │                      FeatureDetailScreen, HudEditorScreen, WaypointManagerScreen,
+│   │                      FeatureDetailScreen (per-feature settings list; carries the
+│   │                      design-language title + attached-credit-subtitle chrome,
+│   │                      DESIGN_LANGUAGE.md §1), HudEditorScreen, WaypointManagerScreen,
 │   │                      ProfileManagerScreen, ColorPickerScreen,
 │   │                      ResourcePackBrowserScreen (Modrinth browser), ManagerListScreen
 │   │                      (shared Profile/Waypoint list-screen foundation, R3: frame
@@ -93,9 +95,12 @@ AuroraClient.java          Mod entrypoint: registers keybinds, HUD callbacks, fe
 │   │                      (UI metadata + settings widgets), FeatureTile, FeatureIcons,
 │   │                      FeatureMetadata, ModuleAccentColors, ModuleIconRegistry,
 │   │                      AuroraModMenuApi.
-│   └── setting/           ~20 FeatureSetting widget types (BooleanSetting, EnumSetting,
-│                           KeybindSetting, sliders, color pickers, PixelCanvasSetting for
-│                           the custom crosshair, ParticleConfigSetting, ThemePreview…).
+│   └── setting/           ~21 FeatureSetting widget types (BooleanSetting — carries the
+│                           design-language §4 `valueLine` live-state subtitle, EnumSetting,
+│                           KeybindSetting, KeyListSetting, sliders, color pickers,
+│                           PixelCanvasSetting for the custom crosshair, ParticleConfigSetting,
+│                           ThemePreview, SectionFooterSetting — the design language's §3
+│                           group footer…).
 ├── theme/                 THEME ENGINE (see §5): ThemeManager, ThemeResolver,
 │                          PaletteEngine, ResolvedTheme, ThemeToken (enum), ThemeDefinition,
 │                          ThemeMode, ThemeRoundness, ThemePresets, ThemeMigrator,
@@ -230,7 +235,7 @@ shift+right-click = lock, X = disable.
 | Crosshair (`crosshair`) | Preset or CUSTOM painted crosshair with a **free-form canvas** (any W×H up to 128; dims live in `crosshairCustom{Width,Height}` + flat `boolean[]` pixels, resolved via `util/GridDims`); indicator crosshair when entity attackable; deliberate half-pixel centering fix. Canvas editor renders through a cached `DynamicTexture` (`ui/util/CanvasTexture` — one blit/frame, re-raster only on edit; replaced a per-cell fill loop that cost ~12.8 ms/frame at 33×33), HUD path merges lit cells into run-length fills, and growing the grid first runs a **measured** cost benchmark on the player's machine (`[canvas-cost]` log) with an apply-anyway warning — never hardware-name heuristics | `hud/CrosshairRenderer`, `PixelCanvasSetting`, `CanvasTexture`, `InGameHudMixin` (vanilla suppression) |
 | Hitbox (`hitbox`) | Custom entity hitboxes (self/target colors, eye-line, look line, width, see-through). Renders at plain vanilla interpolation — the smoother was **deliberately reverted** (desynced from model) | `hud/HitboxRenderer` (AFTER_ENTITIES) + `WorldLineRenderer`, `HitboxFeature`, `EntityRenderDispatcherMixin` |
 | Hit Color (`hit_color`) | Recolors hurt flash (port of harimasa/HitColor, MIT, credited) | `MixinOverlayTexture`, `EquipmentLayerRendererMixin`, `util/OverlayReloadListener` |
-| Better Hitreg (`better_hitreg`) | BetterHitreg by Jass, integrated with permission (credited in-file + screen subtitle). Client-side hit feedback: on your swing the target's hurt animation, the correct attack sound and crit/sharpness particles play locally after `hitregDelayMs` (0 = next frame) while the server's late copy is cancelled (`ServerMixin`/`NetworkMixin`→`DontAnimate` marker→`DamageMixin`); "Safe Regs Only"/shield rules; ghost + misplace detection over a rolling 100-hit window (surfaced as live tooltips on the Alert Delays/Ghosts/Misplaces toggles + "Reset Tracked Stats"); audio (mute other fights/self/them/non-hits, 1.8 sounds, OpenAL EFX muffle/sharpen via `SourceMixin`, metronome); render (hide other fights/animations/armor/particles, target + server hitbox, target cross, reach + jump rings, perfect-hit / jump-reset flash); practice arena (Unrender World via `ChunkMixin`, solid floor, floor grid); 19 ARGB overlay colors; six keybinds incl. the practice scoreboard. Fight tracking feeds the Stats Overlay (`Settings.addFight`). No chat/alert output at all (removed at integration). Card toggle = `hitregEnabled` master (ANDed into every `Toggle.toggled()` read); "Custom Hitreg" inside is upstream's own switch | `hitreg/*` (§2), `mixin/hitreg/*` (13), `AuroraConfig.hitreg*` (Reset prefix `hitreg`) |
+| Better Hitreg (`better_hitreg`) | BetterHitreg by Jass, integrated with permission (credited in-file + screen subtitle). Client-side hit feedback: on your swing the target's hurt animation, the correct attack sound and crit/sharpness particles play locally after `hitregDelayMs` (0 = next frame) while the server's late copy is cancelled (`ServerMixin`/`NetworkMixin`→`DontAnimate` marker→`DamageMixin`); "Safe Regs Only"/shield rules; ghost + misplace detection over a rolling 100-hit window (surfaced as live value lines under the Alert Delays/Ghosts/Misplaces toggles via `BooleanSetting.valueLine`, plus tooltips; "Reset Tracked Stats" isolated in a trailing Maintenance section per DESIGN_LANGUAGE §7.3); audio (mute other fights/self/them/non-hits, 1.8 sounds, OpenAL EFX muffle/sharpen via `SourceMixin`, metronome); render (hide other fights/animations/armor/particles, target + server hitbox, target cross, reach + jump rings, perfect-hit / jump-reset flash); practice arena (Unrender World via `ChunkMixin`, solid floor, floor grid); 19 ARGB overlay colors; six keybinds incl. the practice scoreboard. Fight tracking feeds the Stats Overlay (`Settings.addFight`). No chat/alert output at all (removed at integration). Card toggle = `hitregEnabled` master (ANDed into every `Toggle.toggled()` read); "Custom Hitreg" inside is upstream's own switch | `hitreg/*` (§2), `mixin/hitreg/*` (13), `AuroraConfig.hitreg*` (Reset prefix `hitreg`) |
 | Info HUD (`info_module`) | Corner readout, 13 individually toggleable rows (FPS/XYZ/time/facing/biome/light/memory/ping/CPS/playtime…); default background is the theme-derived `AURORA` gradient (`HUD_BACKDROP_*`, R6 P2 — was `NONE`); text follows the theme accent by default (shared `hudColor` sentinel, R6 ext — `theme/HudText`) | `hud/module/InfoModule`, `PlaytimeFeature` (per-world buckets) |
 | CPS (`cps`) | L/R clicks-per-second; counts from raw GLFW callback (polling caps at 20) | `CpsModule`, `CpsTracker`, `ClickTrackerFeature`, `MouseClickTrackerMixin` |
 | Armor HUD (`armor_hud`) | 4 pieces + durability text/bar, horizontal/vertical, VANILLA slot background | `hud/module/ArmorModule` |
@@ -268,7 +273,9 @@ Settings-tab presentation: every entry renders as header + toggle (+ inline sett
 rows); a header click opens the entry's detail screen (chevron affordance;
 `FeatureMetadata.settingsDetailOnly` opts an entry out of inline rows entirely —
 no entry sets it since Miscellaneous moved to the Modules grid 2026-09-10, but the
-machinery stays; see §9).
+machinery stays; see §9). Entries separate at `SETTINGS_ENTRY_GAP` (16px, the
+design language's §6 group rhythm — render, scroll-height, and click walks share
+the constant; `385e704`).
 
 ### Cross-cutting systems worth knowing
 
@@ -875,6 +882,29 @@ DevPilot `tabs`-mode boot: `rows=33` with every original label, master-toggle fl
 reset roundtrip correct with fields restored, the Settings tab shows Custom Title /
 Text & Fonts / Theme / Interface only, and the Modules grid's last tile is
 Miscellaneous with its "?" icon. MODULES 34 → 35, SETTINGS 5 → 4.
+
+Landed 2026-09-10 after that: **the design-language pilot** — the first application
+of `DESIGN_LANGUAGE.md` (repo root, this revision) to three deliberately different
+screens, in three revertible commits. Shared chrome, mod-wide on every
+`FeatureDetailScreen` (`28d8aca`): the screen title the spec's §1 believed existed
+but never did (feature name, `ON_BACKGROUND`, at the window's content-column
+indent) with the optional credit subtitle attached beneath it in
+`ON_BACKGROUND_SECONDARY`, plus `SectionHeaderSetting`'s new rhythm (10px blank
+above the caption — §2 — and its token moved off a legacy tertiary static to
+`ON_BACKGROUND_MUTED`, pixel-identical in both factory palettes). Better Hitreg
+(`764c891`): new `SectionFooterSetting` (§3 body text; exactly one use — the
+Tracking footer), `BooleanSetting.valueLine` (§4 live-state subtitle, on the three
+alert toggles; deliberately toggle-only since every other control already shows
+its state at a glance), and "Reset Tracked Stats" isolated into a trailing
+Maintenance section (§7.3). `AuroraScreen` (`385e704`): Settings-tab
+`SETTINGS_ENTRY_GAP` 8 → 16 (§6 group rhythm — measured 40→56 / 61→77 device px
+with row gaps unchanged); every other spec rule is a documented grid exemption
+(the spec's "Grid screens" section). Verified by four DevPilot `pilot3` boots
+(framebuffer-exact before/after captures in `.devpilot-pilot/`; functional
+spot-checks incl. the hitreg reset firing through the real Button wiring).
+Rollout posture from here is per-screen, per the spec's rollout section — known
+next candidates: Stats Overlay's two interleaved resets (§7.3), a crosshair shape
+preview (§5).
 
 ---
 
