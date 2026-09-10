@@ -638,23 +638,32 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                     .description("Never use custom hitreg against players holding a shield, raised or not — shield desync is the most common cause of a confidently-played hit that the server then rejects."));
 
             hitregRows.add(new SectionHeaderSetting("Tracking"));
+            // §4 live-value subtitles: these three toggles no longer alert
+            // (chat output was retired at integration) — their whole
+            // remaining purpose is the live figure, so it surfaces under
+            // the label instead of behind the 1.5 s description tooltip.
             hitregRows.add(hitregToggle(com.aurora.client.hitreg.settings.Toggle.ALERT_DELAYS, "Alert Delays")
                     .description(() -> "Average server registration delay over the last 100 tracked hits: "
                             + com.aurora.client.hitreg.Hitreg.last100Regs.getAverageDelay() + " ms. "
-                            + "Measured from your swing to the server's damage packet for that target; hits over 500 ms are not counted. Chat alerts were retired — this toggle is kept for the live figure."));
+                            + "Measured from your swing to the server's damage packet for that target; hits over 500 ms are not counted. Chat alerts were retired — this toggle is kept for the live figure.")
+                    .valueLine(() -> com.aurora.client.hitreg.Hitreg.last100Regs.getAverageDelay() + " ms average"));
             hitregRows.add(hitregToggle(com.aurora.client.hitreg.settings.Toggle.ALERT_GHOSTS, "Alert Ghosts")
                     .description(() -> "Ghosted share of the last 100 tracked hits: "
                             + com.aurora.client.hitreg.Hitreg.last100Regs.getGhostRatio() + "%. "
-                            + "A ghost is a hit the server never animated within 500 ms. New-target, blocked, invisible-target and contested hits are excluded from the sample. Chat alerts were retired — this toggle is kept for the live figure."));
+                            + "A ghost is a hit the server never animated within 500 ms. New-target, blocked, invisible-target and contested hits are excluded from the sample. Chat alerts were retired — this toggle is kept for the live figure.")
+                    .valueLine(() -> com.aurora.client.hitreg.Hitreg.last100Regs.getGhostRatio() + "% ghosted"));
             hitregRows.add(hitregToggle(com.aurora.client.hitreg.settings.Toggle.ALERT_INCONSISTENCIES, "Alert Misplaces")
                     .description(() -> "Misplaced share of the last 100 tracked knockback/critical hits: "
                             + com.aurora.client.hitreg.Hitreg.last100Regs.getInconsistencyRatio() + "%. "
-                            + "A misplace is a hit the server registered as a different type than the one you landed (judged from the sound it sent back). Chat alerts were retired — this toggle is kept for the live figure."));
-            hitregRows.add(new ButtonSetting("Reset Tracked Stats", "Reset",
-                    () -> com.aurora.client.hitreg.Hitreg.last100Regs = new com.aurora.client.hitreg.util.RegQueue(100))
-                    .description("Clears the rolling last-100-hits sample behind the three figures above (delay, ghosts, misplaces). Does not touch fight statistics — those live in the Stats Overlay."));
+                            + "A misplace is a hit the server registered as a different type than the one you landed (judged from the sound it sent back). Chat alerts were retired — this toggle is kept for the live figure.")
+                    .valueLine(() -> com.aurora.client.hitreg.Hitreg.last100Regs.getInconsistencyRatio() + "% misplaced"));
             hitregRows.add(hitregToggle(com.aurora.client.hitreg.settings.Toggle.TRACK_FIGHTS, "Track Fight Statistics")
                     .description("Record each completed fight (10 seconds to 10 minutes long, with at least one landed hit) into the Stats Overlay: fight count, time spent fighting, and both players' accuracy for the last fight. Defaults on; the old post-fight chat summary is gone."));
+            // §3 footer: the only group on this screen whose purpose the
+            // header + labels genuinely don't convey (the "Alert" toggles
+            // no longer alert anything — chat output was retired; the
+            // figures are the point now).
+            hitregRows.add(new SectionFooterSetting("The alert toggles surface live figures from your rolling hit sample under their labels; Track Fight Statistics records completed fights into the Stats Overlay."));
 
             hitregRows.add(new SectionHeaderSetting("Audio"));
             hitregRows.add(hitregToggle(com.aurora.client.hitreg.settings.Toggle.SILENCE_OTHER_FIGHTS, "Mute Other Fights")
@@ -758,6 +767,15 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
             hitregRows.add(new KeybindSetting("Score: Reset",
                     () -> cfg.hitregScoreResetKey, v -> cfg.hitregScoreResetKey = v)
                     .description("Resets both scores to zero. Defaults to unbound."));
+
+            // §7.3: destructive actions go last, isolated in their own
+            // section — never interleaved with adjustable settings. The
+            // reset used to sit between Alert Misplaces and Track Fight
+            // Statistics inside Tracking.
+            hitregRows.add(new SectionHeaderSetting("Maintenance"));
+            hitregRows.add(new ButtonSetting("Reset Tracked Stats", "Reset",
+                    () -> com.aurora.client.hitreg.Hitreg.last100Regs = new com.aurora.client.hitreg.util.RegQueue(100))
+                    .description("Clears the rolling last-100-hits sample behind the delay/ghost/misplace figures in Tracking. Does not touch fight statistics — those live in the Stats Overlay."));
 
             addWithSettings(MODULES, com.aurora.client.hitreg.BetterHitreg.FEATURE_ID, "Better Hitreg",
                     "Client-side hit registration feedback for PvP, from BetterHitreg by Jass: your hit sound, the target's hurt animation and particles play the instant you swing instead of after the server's round trip, while the server's late copy is suppressed. Also tracks ghosted and misplaced hits, records fight statistics into the Stats Overlay, and adds reach/jump rings, target and server hitboxes, sound muffling, and a practice arena.",
