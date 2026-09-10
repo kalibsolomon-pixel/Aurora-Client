@@ -904,8 +904,42 @@ with row gaps unchanged); every other spec rule is a documented grid exemption
 (framebuffer-exact before/after captures in `.devpilot-pilot/`; functional
 spot-checks incl. the hitreg reset firing through the real Button wiring).
 Rollout posture from here is per-screen, per the spec's rollout section — known
-next candidates: Stats Overlay's two interleaved resets (§7.3), a crosshair shape
-preview (§5).
+next candidates: a crosshair shape preview (§5).
+
+Landed 2026-09-10 after that: **the §7.3 destructive-isolation sweep, mod-wide**
+(two revertible commits, completing the pilot's first named next candidate).
+Every `ButtonSetting` across `FeatureRegistry` plus the composite widgets'
+internal actions were audited against §7.3; three violations existed and all
+three are fixed. Stats Overlay (`4cf5b6b`): "Reset Lifetime Fight Totals"
+(left mid-Fights, under "Show Last Fight") and "Reset Stats" (first row of
+Session, above the Reset Key keybind) both moved into a new trailing
+"Maintenance" section (same naming as Better Hitreg's), ordered least-to-most
+destructive; button bodies and descriptions byte-verbatim. Totem Pop Counter
+(`7406655`): "Reset Now" moved from row 2 (between a keybind and a toggle) to
+the screen's last row, deliberately WITHOUT a new section — that screen is a
+flat sectionless 8-row list where a lone section header would do no grouping
+work (§7.3's own-section clause is conditional on "more than a couple of
+groups"; the trailing position satisfies the rule's intent on a screen this
+size). Audited and cleared, for the record: Alerts' "Test Sound" (preview,
+not destructive), Waypoints' "Manage Waypoints…"/"Drop at Player Position"
+(navigation/additive), Resourcepack Browser's "Open Browser…" (navigation),
+the detail screen's bottom-bar Reset (shared chrome button band, isolated by
+construction), `PixelCanvasSetting`'s internal Clear/Default (widget-internal
+editing surface — the spec's "no change to any control widget's own
+rendering" clause), the per-item "−" removes inside KeyList/StringList/
+ItemScale (per-entry editing), and the manager screens' per-row Delete plus
+HudEditorScreen's floating "Reset Positions" (management/editor UIs, not
+settings sections). Verified by three DevPilot `s73` boots (baseline + one
+per commit; framebuffer-exact captures in `.devpilot-pilot/s73-*`, functional
+spot-checks driving every moved reset through the real
+`ButtonSetting` → `Button` → `onPress` wiring with seeded counters and
+persisted lifetime fields restored afterwards). Operational note for future
+harness boots: nothing in the tracked tree wires `DevPilot` in — add a
+temporary uncommitted `DevPilot.install();` at the end of
+`AuroraClient.onInitializeClient`, boot, and revert it before committing;
+and never SIGKILL a running dev client (a hard kill once left kwin/XWayland
+wedged so every subsequent boot hung inside `glfwCreateWindow`; a minimal
+GLFW create/destroy/terminate cycle from a plain JVM cleared it).
 
 ---
 
