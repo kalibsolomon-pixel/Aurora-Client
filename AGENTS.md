@@ -95,12 +95,13 @@ AuroraClient.java          Mod entrypoint: registers keybinds, HUD callbacks, fe
 │   │                      (UI metadata + settings widgets), FeatureTile, FeatureIcons,
 │   │                      FeatureMetadata, ModuleAccentColors, ModuleIconRegistry,
 │   │                      AuroraModMenuApi.
-│   └── setting/           ~21 FeatureSetting widget types (BooleanSetting — carries the
-│                           design-language §4 `valueLine` live-state subtitle, EnumSetting,
-│                           KeybindSetting, KeyListSetting, sliders, color pickers,
-│                           PixelCanvasSetting for the custom crosshair, ParticleConfigSetting,
-│                           ThemePreview, SectionFooterSetting — the design language's §3
-│                           group footer…).
+│   └── setting/           ~21 FeatureSetting widget types (the design-language §4
+│                           `valueLine` live-state subtitle lives on the FeatureSetting
+│                           base, opt-in — BooleanSetting is its only user so far;
+│                           EnumSetting, KeybindSetting, KeyListSetting, sliders, color
+│                           pickers, PixelCanvasSetting for the custom crosshair,
+│                           ParticleConfigSetting, ThemePreview, SectionFooterSetting —
+│                           the design language's §3 group footer…).
 ├── theme/                 THEME ENGINE (see §5): ThemeManager, ThemeResolver,
 │                          PaletteEngine, ResolvedTheme, ThemeToken (enum), ThemeDefinition,
 │                          ThemeMode, ThemeRoundness, ThemePresets, ThemeMigrator,

@@ -43,15 +43,6 @@ public class BooleanSetting extends FeatureSetting {
 
     private int lastWidth = 240;
 
-    /**
-     * Design language §4 row subtitle: an optional small
-     * {@code ON_BACKGROUND_SECONDARY} line directly beneath the label,
-     * for live values/state the control itself does not show (a toggle's
-     * own position never needs one — the spec's exclusion). Evaluated at
-     * render time; keep suppliers cheap.
-     */
-    private Supplier<String> valueLine = null;
-
     private int cachedLabelArea = -1;
     private List<FormattedCharSequence> cachedLines;
     private int cachedBaseHeight;
@@ -70,9 +61,14 @@ public class BooleanSetting extends FeatureSetting {
     @Override public BooleanSetting description(String desc) { super.description(desc); return this; }
     @Override public BooleanSetting description(Supplier<String> desc) { super.description(desc); return this; }
 
-    /** Fluent setter for the §4 live-value subtitle; see {@link #valueLine}. */
-    public BooleanSetting valueLine(Supplier<String> supplier) {
-        this.valueLine = supplier;
+    /**
+     * §4 live-value subtitle — the mechanism lives on the
+     * {@link FeatureSetting} base; this override only restores the
+     * covariant return type and re-invalidates this widget's label
+     * layout cache (the subtitle line changes the row's height).
+     */
+    @Override public BooleanSetting valueLine(Supplier<String> supplier) {
+        super.valueLine(supplier);
         cachedLabelArea = -1; // force a height re-layout
         return this;
     }
@@ -81,8 +77,7 @@ public class BooleanSetting extends FeatureSetting {
         int labelArea = Math.max(40, lastWidth - LABEL_PAD - RIGHT_RESERVE);
         if (labelArea == cachedLabelArea && cachedLines != null) return;
         cachedLines = tr.split(labelText, labelArea);
-        int blockH = cachedLines.size() * (tr.lineHeight + 1)
-                + (valueLine != null ? tr.lineHeight + 3 : 0);
+        int blockH = cachedLines.size() * (tr.lineHeight + 1) + valueLineHeight(tr);
         cachedBaseHeight = cachedLines.isEmpty()
                 ? MIN_ROW_H
                 : Math.max(MIN_ROW_H, blockH + 12);
@@ -132,8 +127,7 @@ public class BooleanSetting extends FeatureSetting {
         ensureLayout(tr);
 
         int controlH = cachedBaseHeight;
-        int textBlockH = cachedLines.size() * (tr.lineHeight + 1)
-                + (valueLine != null ? tr.lineHeight + 3 : 0);
+        int textBlockH = cachedLines.size() * (tr.lineHeight + 1) + valueLineHeight(tr);
         int textY = y + (controlH - textBlockH) / 2;
         String key = tooltipKey();
         boolean disabled = isDisabled();
@@ -147,16 +141,9 @@ public class BooleanSetting extends FeatureSetting {
                     tr.width(line), tr.lineHeight, mouseX, mouseY, disabled);
             textY += tr.lineHeight + 1;
         }
-        // §4 live-value subtitle: one small secondary line under the label
-        // block. Built per frame (few rows per screen; suppliers must stay
-        // cheap) — hidden on disabled rows, like the label's dim treatment.
-        if (valueLine != null && !disabled) {
-            String v = valueLine.get();
-            if (v != null && !v.isEmpty()) {
-                ctx.drawString(tr, v, x + LABEL_PAD, textY + 2,
-                        AuroraTheme.TEXT_SECONDARY, false);
-            }
-        }
+        // §4 live-value subtitle (base mechanism): one small secondary
+        // line under the label block.
+        drawValueLine(ctx, x + LABEL_PAD, textY + 2, disabled);
 
         float switchX = x + width - 28 - 14;
         float switchY = y + (controlH - 15) / 2.0f;

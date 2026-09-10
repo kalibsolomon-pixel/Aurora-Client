@@ -235,6 +235,55 @@ public abstract class FeatureSetting {
         // no-op — see class note above.
     }
 
+    // ===== Design-language §4 live-value subtitle (opt-in) =====
+
+    /**
+     * Design language §4 row subtitle: an optional small
+     * {@code ON_BACKGROUND_SECONDARY} line beneath the label, for live
+     * values/state the control itself does not show. Opt-in by design —
+     * the spec's exclusion clause governs: never add one to a widget that
+     * already surfaces its state at a glance (sliders/enums/keybinds all
+     * do), which is why the mechanism lives here unused by most widgets.
+     * First and so far only user: Better Hitreg's three alert toggles.
+     */
+    private Supplier<String> valueLine = null;
+
+    /**
+     * Fluent setter for the §4 live-value subtitle. The supplier is
+     * evaluated at render time (once per frame while the row is visible
+     * and enabled) — keep it cheap: a small string build is fine, no
+     * lookups or per-frame recomputation of the underlying figure.
+     */
+    public FeatureSetting valueLine(Supplier<String> supplier) {
+        this.valueLine = supplier;
+        return this;
+    }
+
+    /** The configured §4 subtitle supplier, or null when the row has none. */
+    protected Supplier<String> valueLine() {
+        return valueLine;
+    }
+
+    /** Height the §4 subtitle contributes inside the row (0 when absent). */
+    protected int valueLineHeight(net.minecraft.client.gui.Font tr) {
+        return valueLine != null ? tr.lineHeight + 3 : 0;
+    }
+
+    /**
+     * Draws the §4 subtitle at {@code (x, y)} when one is configured and
+     * the row isn't disabled; hidden entirely on disabled rows, matching
+     * the label's dim treatment. Subclasses call this after their label
+     * block and fold {@link #valueLineHeight} into their row height.
+     */
+    protected void drawValueLine(GuiGraphics ctx, int x, int y, boolean disabled) {
+        if (valueLine == null || disabled) return;
+        String v = valueLine.get();
+        if (v != null && !v.isEmpty()) {
+            ctx.drawString(Minecraft.getInstance().font, v, x, y,
+                    com.aurora.client.util.AuroraTheme.TEXT_SECONDARY, false);
+        }
+    }
+
     // ===== Label-hover description tooltip =====
     //
     // There is no separate help badge anymore: the setting's label text
