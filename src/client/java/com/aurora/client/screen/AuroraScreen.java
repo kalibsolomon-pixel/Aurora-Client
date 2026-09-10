@@ -57,6 +57,15 @@ public class AuroraScreen extends Screen implements ThemedScreen {
      */
     private static final int SETTINGS_HINT_H = 14;
 
+    /**
+     * Blank band after each Settings-tab entry, before the next entry's
+     * header (design language §6: spacing between groups must clearly
+     * exceed the 4px row-to-row gap inside a group, so entries read as
+     * distinct clusters — was a bare 8, only twice the row gap). The
+     * render, scroll-height, and click walks must all use this.
+     */
+    private static final int SETTINGS_ENTRY_GAP = 16;
+
     private int selectedCategory = 0; // 0: Mods, 1: Settings
     private boolean gridLayout = true; // false: list, true: grid
 
@@ -457,7 +466,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                     y += rh + 4;
                 }
             }
-            y += 8;
+            y += SETTINGS_ENTRY_GAP;
         }
         g.disableScissor();
     }
@@ -573,7 +582,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             h += 22;
             if (m.settingsDetailOnly) h += SETTINGS_HINT_H;
             else for (FeatureSetting s : m.settings) h += s.height() + 4;
-            h += 8;
+            h += SETTINGS_ENTRY_GAP;
         }
         return Math.max(0, h - 180);
     }
@@ -695,7 +704,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                         y += rh + 4;
                     }
                 }
-                y += 8;
+                y += SETTINGS_ENTRY_GAP;
             }
         }
 
