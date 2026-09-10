@@ -595,12 +595,6 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                         new KeybindSetting("Reset Counter Key",
                                 () -> cfg.totemResetKey, v -> cfg.totemResetKey = v)
                                 .description("Press to clear self pops and all tracked players. Defaults to unbound."),
-                        new ButtonSetting("Reset Now",
-                                () -> {
-                                    com.aurora.client.feature.impl.TotemPopFeature f =
-                                            com.aurora.client.feature.impl.TotemPopFeature.get();
-                                    if (f != null) f.resetAll();
-                                }),
                         new BooleanSetting("Show Other Players",
                                 () -> cfg.totemShowOthers, v -> cfg.totemShowOthers = v)
                                 .description("Adds extra HUD lines for nearby players' pop counts."),
@@ -615,7 +609,22 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                         new EnumSetting<>("Background", AuroraConfig.HudBackground.class,
                                 () -> cfg.totemPopBgMode, v -> cfg.totemPopBgMode = v),
                         new ColorSetting("Background Color (when SOLID)",
-                                () -> cfg.totemPopBgColor, v -> cfg.totemPopBgColor = v)
+                                () -> cfg.totemPopBgColor, v -> cfg.totemPopBgColor = v),
+                        // §7.3: destructive actions go last, never interleaved with
+                        // adjustable settings. Deliberately NO new section here,
+                        // unlike Stats/Hitreg: this screen is a single flat 8-row
+                        // list with no sections at all — minting its first section
+                        // header around one button would make the header do no
+                        // grouping work. The trailing position satisfies the rule's
+                        // intent (nothing harmless sits below it to mis-click).
+                        // The reset used to sit between Reset Counter Key and
+                        // Show Other Players.
+                        new ButtonSetting("Reset Now",
+                                () -> {
+                                    com.aurora.client.feature.impl.TotemPopFeature f =
+                                            com.aurora.client.feature.impl.TotemPopFeature.get();
+                                    if (f != null) f.resetAll();
+                                })
                 ));
 
         // ---- Better Hitreg (BetterHitreg by Jass, integrated with permission) ----
