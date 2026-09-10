@@ -56,4 +56,16 @@ public class RegQueue {
         if (inconsistencyQueue.isEmpty()) return 0;
         return (int) ((inconsistencyCount * 100L) / inconsistencyQueue.size());
     }
+
+    // ---- Aurora integration additions (surface-level, read-only) ----
+    // Per-metric sample sizes so UI rows (Better Hitreg's §4 live value
+    // lines) can tell "no data yet" apart from a genuine zero figure —
+    // getAverageDelay() returns 0 both ways. Pure reads of the verbatim
+    // queues above; the tracking internals stay exactly as upstream
+    // wrote them. The three queues fill independently (delays per reg,
+    // ghosts per tracked hit, misplaces per knockback/crit hit), hence
+    // one accessor per metric rather than a single size().
+    public int delaySampleSize()         { return delayQueue.size(); }
+    public int ghostSampleSize()         { return ghostQueue.size(); }
+    public int inconsistencySampleSize() { return inconsistencyQueue.size(); }
 }

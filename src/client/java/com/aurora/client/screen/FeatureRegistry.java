@@ -646,17 +646,26 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                     .description(() -> "Average server registration delay over the last 100 tracked hits: "
                             + com.aurora.client.hitreg.Hitreg.last100Regs.getAverageDelay() + " ms. "
                             + "Measured from your swing to the server's damage packet for that target; hits over 500 ms are not counted. Chat alerts were retired — this toggle is kept for the live figure.")
-                    .valueLine(() -> com.aurora.client.hitreg.Hitreg.last100Regs.getAverageDelay() + " ms average"));
+                    .valueLine(() -> {
+                        var q = com.aurora.client.hitreg.Hitreg.last100Regs;
+                        return q.delaySampleSize() == 0 ? "no hits tracked yet" : q.getAverageDelay() + " ms average";
+                    }));
             hitregRows.add(hitregToggle(com.aurora.client.hitreg.settings.Toggle.ALERT_GHOSTS, "Alert Ghosts")
                     .description(() -> "Ghosted share of the last 100 tracked hits: "
                             + com.aurora.client.hitreg.Hitreg.last100Regs.getGhostRatio() + "%. "
                             + "A ghost is a hit the server never animated within 500 ms. New-target, blocked, invisible-target and contested hits are excluded from the sample. Chat alerts were retired — this toggle is kept for the live figure.")
-                    .valueLine(() -> com.aurora.client.hitreg.Hitreg.last100Regs.getGhostRatio() + "% ghosted"));
+                    .valueLine(() -> {
+                        var q = com.aurora.client.hitreg.Hitreg.last100Regs;
+                        return q.ghostSampleSize() == 0 ? "no hits tracked yet" : q.getGhostRatio() + "% ghosted";
+                    }));
             hitregRows.add(hitregToggle(com.aurora.client.hitreg.settings.Toggle.ALERT_INCONSISTENCIES, "Alert Misplaces")
                     .description(() -> "Misplaced share of the last 100 tracked knockback/critical hits: "
                             + com.aurora.client.hitreg.Hitreg.last100Regs.getInconsistencyRatio() + "%. "
                             + "A misplace is a hit the server registered as a different type than the one you landed (judged from the sound it sent back). Chat alerts were retired — this toggle is kept for the live figure.")
-                    .valueLine(() -> com.aurora.client.hitreg.Hitreg.last100Regs.getInconsistencyRatio() + "% misplaced"));
+                    .valueLine(() -> {
+                        var q = com.aurora.client.hitreg.Hitreg.last100Regs;
+                        return q.inconsistencySampleSize() == 0 ? "no hits tracked yet" : q.getInconsistencyRatio() + "% misplaced";
+                    }));
             hitregRows.add(hitregToggle(com.aurora.client.hitreg.settings.Toggle.TRACK_FIGHTS, "Track Fight Statistics")
                     .description("Record each completed fight (10 seconds to 10 minutes long, with at least one landed hit) into the Stats Overlay: fight count, time spent fighting, and both players' accuracy for the last fight. Defaults on; the old post-fight chat summary is gone."));
             // §3 footer: the only group on this screen whose purpose the
