@@ -73,7 +73,7 @@ AuroraClient.java          Mod entrypoint: registers keybinds, HUD callbacks, fe
 │                           ThrottleDetector, EntityMovementSmoother, …).
 ├── module/                PRESENTATION-ONLY view-models for the settings grid
 │                           (Module, ModuleManager). NOT runtime logic. Hardcoded
-│                           list of 34 ids — can drift from FeatureRegistry (§3).
+│                           list of 35 ids — can drift from FeatureRegistry (§3).
 ├── hud/                   HUD layer: HudRenderer (top-level callback), HudAnchor,
 │                           CrosshairRenderer, HitboxRenderer, BlockOverlayRenderer,
 │                           WorldLineRenderer (shared thick lines), WaypointRenderer,
@@ -156,10 +156,10 @@ There is **no single registry**. Three structures must stay conceptually in sync
 1. **`feature/FeatureManager`** — ~29 long-lived `Feature` singletons with
    `onRegister()`/`onTick(Minecraft)` (interface `feature/Feature.java`).
    `Feature.enabledByDefault()` exists but is **never read anywhere** (dead API).
-2. **`screen/FeatureRegistry`** — static UI metadata: **34 MODULES-tab + 5 SETTINGS-tab
+2. **`screen/FeatureRegistry`** — static UI metadata: **35 MODULES-tab + 4 SETTINGS-tab
    tiles** (`FeatureMetadata`: id, display name, marketing description, enable
    getter/setter, list of `FeatureSetting` widgets, `reset()`).
-3. **`module/ModuleManager`** — 34 hardcoded grid cards consumed by `AuroraScreen`.
+3. **`module/ModuleManager`** — 35 hardcoded grid cards consumed by `AuroraScreen`.
    A typo'd id here silently returns null metadata. (The missing `reflex` card landed
    2026-09-05, audit B5 — counts now match, but the list is still maintained by hand.)
 
@@ -211,7 +211,7 @@ shift+right-click = lock, X = disable.
 
 ## 4. Feature catalog
 
-### MODULES tab (34 tiles) — behavior + where the code lives
+### MODULES tab (35 tiles) — behavior + where the code lives
 
 | Feature (id) | What it does | Implementation |
 |---|---|---|
@@ -250,8 +250,9 @@ shift+right-click = lock, X = disable.
 | Animations (`animations`) | Swing curve + 1.8 swing arc, view-bob curve/amplitude, 1.7/1.8 damage tilt, idle held-item sway, frame-rate-independent entity movement smoothing (tau scales with server packet bundling) | `HeldItemRendererMixin`, `GameRendererBobMixin`, `DamageTiltMixin`, `LivingEntityRendererExtractMixin` + `EntityMovementSmoother`, `util/AnimationCurves`, cross-cutting `ThrottleDetector` |
 | Hotbar Bounce (`hotbar_bounce`) | White pulse outline on hotbar slot when stack count grows | `HotbarItemBounceMixin` → `HotbarBounceTracker` |
 | Keystrokes (`keystrokes`) | Key-panel overlay: WASD/mouse/CPS/space/sneak/sprint + up to 12 custom keys; pressed-key accent follows the theme accent by default (`keystrokesAccentColor == 0`, R6 P2; explicit color overrides); key labels follow the shared `hudColor` sentinel (R6 ext) | `hud/module/KeystrokesModule` |
+| Miscellaneous (`miscellaneous`) — **moved to the MODULES grid 2026-09-10** | The 2026-09-09 consolidation of the eight tiles that used to sit below Interface (Smooth Camera, Frame Pacer, Low Latency, Tick Sync, Decoupled Input, Drag-to-Reorder Servers, Compliance Mode, Accessibility) behind one tile + detail screen; grid right-click opens the same detail screen as every other tile — an explicit "for now" grouping, not a taxonomy decision | `FeatureRegistry` MODULES entry (byte-verbatim settings + unified reset), `ModuleManager` grid card, "?" (`question_mark` U+EB8B) icon |
 
-### SETTINGS tab (5 tiles)
+### SETTINGS tab (4 tiles)
 
 Custom Title (`custom_title` — themed title screen: vanilla panorama + 5 glass buttons
 (§6 rollout table; the custom logo/starfield blits were removed 2026-09-08) via
@@ -261,23 +262,13 @@ Text & Fonts (`text_fonts` —
 bundled Google fonts scoped OFF/Aurora-only/ALL via `MixinFont` + `AuroraFontRenderer`),
 Theme (`theme` — moved here from the Modules tab 2026-09-09; the single-accent theming
 engine of §5 with all its settings and its detail screen unchanged, reached from this
-tab instead of the grid), Interface (`interface` — FPS cap for Aurora screens), and
-Miscellaneous (`miscellaneous` — the 2026-09-09 consolidation of the eight tiles that
-used to sit below Interface: Smooth Camera, Frame Pacer (`RenderSystemMixin` +
-`util/FramePacer`, replaces vanilla `limitDisplayFPS`), Low Latency (VSync-off,
-zero-latency camera, adaptive render sleep; **`highFrequencyInput` is advertised but
-has no implementation**), Tick Sync (retunes client tick rate to entity packet arrival;
-`TickSyncNetworkMixin`), Decoupled Input (per-frame cursor delta), Drag-to-Reorder
-Servers (`ServerListDragReorderMixin` — 3-phase animated drag), Compliance Mode, and
-Accessibility (colorblind LMS daltonization matrices) — each preserved verbatim under
-its own `SectionHeaderSetting` with its original master toggle as the section's
-"Enabled" row; an explicit "for now" grouping, not a taxonomy decision).
+tab instead of the grid), and Interface (`interface` — FPS cap for Aurora screens).
 
 Settings-tab presentation: every entry renders as header + toggle (+ inline settings
 rows); a header click opens the entry's detail screen (chevron affordance;
 `FeatureMetadata.settingsDetailOnly` opts an entry out of inline rows entirely —
-Miscellaneous is the only one, its 33-row list lives on its detail screen with one
-unified Reset whose prefix list is the union of the eight tiles' fields).
+no entry sets it since Miscellaneous moved to the Modules grid 2026-09-10, but the
+machinery stays; see §9).
 
 ### Cross-cutting systems worth knowing
 
@@ -868,11 +859,33 @@ to the pre-move baseline (same world, same capture path; diff noise confined to 
 frame-phase AA at panel edges), and both tabs' screenshots show the new arrangement.
 MODULES 35 → 34, SETTINGS 4 → 5.
 
+Landed 2026-09-10 after that: **Miscellaneous moved from the Settings tab back to the
+Modules grid** (the reverse of the Theme move, mirroring `3c213d2`). The `miscellaneous`
+`FeatureRegistry` entry moved from the SETTINGS bucket to MODULES — byte-verbatim
+metadata, all 33 setting rows, master toggle, and unified reset untouched — and
+`ModuleManager` regained a grid card for it (35 cards, tail position). The tile's icon
+is the `question_mark` glyph (U+EB8B, newly added to the material-symbols subset —
+regenerated from the real `full_material.ttf`, so the subset is again exactly the
+`FeatureIcons` codepoint set; the regeneration also dropped five orphan glyphs
+(album/videocam/done_all/verified_user/delete) left over from the pre-consolidation
+tiles). The Settings-tab-only `settingsDetailOnly` presentation did not travel with the
+move: on the grid the card's right-click opens the same detail screen as every other
+tile, so the flag now has no registered user (machinery kept — see §9). Verified by a
+DevPilot `tabs`-mode boot: `rows=33` with every original label, master-toggle flip +
+reset roundtrip correct with fields restored, the Settings tab shows Custom Title /
+Text & Fonts / Theme / Interface only, and the Modules grid's last tile is
+Miscellaneous with its "?" icon. MODULES 34 → 35, SETTINGS 5 → 4.
+
 ---
 
 ## 9. Known outstanding work, dead code, and hazards
 
 **Incomplete / follow-up candidates**
+- `FeatureIcons` codepoint U+E4E3 ("flash_on", used by `tab_ping` and `reflex`) does not
+  exist in the material-symbols font at all — `flash_on` is U+E3E7 there — so both icons
+  render the .notdef box (visible on the Reflex grid card). Pre-existing, found while
+  regenerating the subset for the Miscellaneous move (2026-09-10); the fix is a two-line
+  codepoint change + subset regen.
 - The deferred-rim queue in `GlassSurface` (§6 convention 6) has no opt-out for surfaces
   deliberately meant to render ABOVE an already-dimmed screen — e.g. the pack browser's
   detail modal or `EnumSetting`'s expanded popup. Not blocking today (those screens haven't
@@ -919,6 +932,10 @@ MODULES 35 → 34, SETTINGS 4 → 5.
 - `MixinGuiGraphics` is an unregistered stub (superseded by `MixinFont`).
 
 **Dead code / drift hazards**
+- `FeatureMetadata.settingsDetailOnly` (+ the `SETTINGS_HINT_H` walks in `AuroraScreen`)
+  has had no registered user since Miscellaneous moved to the Modules grid (2026-09-10);
+  the flag is inert off the Settings tab. Kept as Settings-tab presentation machinery —
+  remove it if no user materializes.
 - `MultiplayerScreenMixin` was deleted 2026-09-05 (abandoned refresh-all feature; never
   registered), and `MultiplayerServerListWidgetMixin` (numeric ping on server list rows)
   was registered the same day — the former "complete but not listed in aurora.mixins.json"

@@ -39,9 +39,11 @@ public final class FeatureMetadata {
     /**
      * When true, the Settings tab renders this entry as a header + toggle
      * (plus a click-to-open affordance) instead of inlining its settings
-     * rows — the settings list lives on the entry's detail screen. Used by
-     * combined entries whose merged row list would dominate the tab
-     * (Miscellaneous). The detail screen itself is unaffected.
+     * rows — the settings list lives on the entry's detail screen. For
+     * combined entries whose merged row list would dominate the tab; it
+     * has no registered user since Miscellaneous moved to the Modules
+     * grid (2026-09-10). Inert on Modules-tab entries (the grid never
+     * inlines settings rows), and the detail screen itself is unaffected.
      */
     public boolean settingsDetailOnly;
 

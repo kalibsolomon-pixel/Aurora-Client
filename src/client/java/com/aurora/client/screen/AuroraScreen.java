@@ -50,8 +50,10 @@ public class AuroraScreen extends Screen implements ThemedScreen {
 
     /**
      * Height of the muted "Click to configure" hint row drawn under a
-     * settingsDetailOnly entry on the Settings tab (Miscellaneous). The
-     * render, scroll-height, and click walks must all count it.
+     * settingsDetailOnly entry on the Settings tab (no entry sets the flag
+     * since Miscellaneous moved to the Modules grid 2026-09-10, but the
+     * walk support stays). The render, scroll-height, and click walks must
+     * all count it.
      */
     private static final int SETTINGS_HINT_H = 14;
 
@@ -437,9 +439,9 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             }
             y += headerH;
             if (m.settingsDetailOnly) {
-                // Detail-only entry (Miscellaneous): one muted hint line in
-                // place of the inline rows — the merged list lives behind
-                // the header click. The hint height must match the walks in
+                // Detail-only entry: one muted hint line in place of the
+                // inline rows — the merged list lives behind the header
+                // click. The hint height must match the walks in
                 // computeMaxScroll and mouseClicked.
                 if (y + SETTINGS_HINT_H > my + 36 && y < my + 216) {
                     g.drawString(tr, "Click to configure", (int) (mx + 4), (int) (y + 1),

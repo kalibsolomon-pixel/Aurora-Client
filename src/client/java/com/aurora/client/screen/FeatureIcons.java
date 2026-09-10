@@ -50,16 +50,17 @@ public final class FeatureIcons {
         ICONS.put("world_map",             "\uF3CA"); // map_search
         ICONS.put("resourcepack_browser",  "\uE8B0"); // browse_gallery (grid of tiles)
         ICONS.put("reflex",                "\uE4E3"); // flash_on
-
-        // ============ SETTINGS TAB ============
-        ICONS.put("custom_title",          "\uE264"); // title
-        ICONS.put("hotbar_bounce",         "\uE8D5"); // swap_vert (a Modules-grid card)
+        // Moved to the Modules grid 2026-09-10 (was a Settings-tab entry).
         // The eight former Settings-tab tiles merged into "miscellaneous"
         // (2026-09-09) had their own glyphs (videocam, av_timer, flash_on,
         // keyboard, drag_handle, verified_user, accessibility_new); they
         // were removed with the tiles. flash_on/keyboard remain in use by
         // other ids above.
-        ICONS.put("miscellaneous",         "\uE574"); // category (three shapes) - shared with item_physics, already in the font subset
+        ICONS.put("miscellaneous",         "\uEB8B"); // question_mark — the "no dedicated screen yet" grab-bag; subsetting requires the real full_material.ttf (see subset_script.py)
+
+        // ============ SETTINGS TAB ============
+        ICONS.put("custom_title",          "\uE264"); // title
+        ICONS.put("hotbar_bounce",         "\uE8D5"); // swap_vert (a Modules-grid card)
 
         // Dropdown chevrons (EnumSetting) — referenced by codepoint here so
         // subset_script.py includes them in the material-symbols font subset.
