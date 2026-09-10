@@ -149,12 +149,18 @@ public final class AuroraTheme {
 
     /**
      * Green-tinted section caption color (when accents are on) or the
-     * default tertiary-label gray (when accents are off). Used by
-     * {@link com.aurora.client.screen.setting.SectionHeaderSetting}.
+     * {@code ON_BACKGROUND_MUTED} token projection (when accents are off).
+     * Used by {@link com.aurora.client.screen.setting.SectionHeaderSetting}.
+     *
+     * <p>Design language §2: section captions must read one of the two
+     * sanctioned de-emphasis tokens (SECONDARY or MUTED), never a third
+     * ad-hoc level. The old tertiary-label static happened to carry the
+     * same 0x4D alpha as the MUTED projection in both factory palettes,
+     * so this is token correctness, not a visible change.
      */
     public static int sectionCaption() {
-        // 60 % alpha green when enabled; tertiary-label gray when not.
-        return GREEN_ACCENTS_ENABLED ? 0x9930D158 : IOS_TERTIARY_LABEL;
+        // 60 % alpha green when enabled; ON_BACKGROUND_MUTED when not.
+        return GREEN_ACCENTS_ENABLED ? 0x9930D158 : TEXT_DIM;
     }
 
     /**

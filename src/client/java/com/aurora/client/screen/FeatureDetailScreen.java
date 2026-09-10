@@ -39,9 +39,12 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
     private static final int DONE_RIGHT_MARGIN = 16;
     private static final int DONE_TOP_MARGIN = 14;
 
-    private static final int TITLE_X = 20;
-    private static final int TITLE_Y = 18;
-    private static final int TITLE_ACCENT_W = 100;
+    /**
+     * Title band: the feature name sits above the window, left-aligned at
+     * the content column's text margin (window left + the 12px indent every
+     * row label uses). Vertically it shares the Done/Reset row's band.
+     */
+    private static final int TITLE_Y = 16;
 
     private final Screen parent;
     private final FeatureMetadata meta;
@@ -248,14 +251,29 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         // Children: Done button.
         super.render(ctx, mouseX, mouseY, delta);
 
-        // Optional credit line (FeatureMetadata.subtitle) at the title
-        // position, vertically centered on the Done/Reset row. The detail
-        // screen draws no title of its own, so this reads as the screen's
-        // small caption; only Better Hitreg sets one today.
-        if (meta.subtitle != null && !meta.subtitle.isEmpty() && this.font != null) {
-            int ty = DONE_TOP_MARGIN + (DONE_H - this.font.lineHeight) / 2;
-            ctx.drawString(this.font, meta.subtitle, TITLE_X, ty,
-                    com.aurora.client.util.AuroraTheme.TEXT_SECONDARY, false);
+        // Design language §1 — screen title + attached subtitle. One title
+        // per detail screen: the feature's name, full-strength
+        // ON_BACKGROUND, left-aligned above the window at the content
+        // column's text margin. The spec believed this title already
+        // existed ("no change to its existing token or position") — it
+        // never did; the TITLE_* constants this implements were reserved
+        // in the initial commit and never drawn, so the first clause (one
+        // title per screen) is the evident intent being implemented. The
+        // optional credit line (FeatureMetadata.subtitle) is ATTACHED
+        // directly beneath the title in ON_BACKGROUND_SECONDARY, no extra
+        // margin — replacing the old placement vertically centered on the
+        // Done row. "Smaller" collapses to the app's single 9px type size;
+        // Aurora has no large/bold text idiom and inventing one (pose-
+        // scaled glyphs) would violate the no-new-visual-style constraint.
+        if (this.font != null) {
+            int titleX = listX + 12;
+            ctx.drawString(this.font, meta.displayName, titleX, TITLE_Y,
+                    ThemeManager.color(ThemeToken.ON_BACKGROUND), false);
+            if (meta.subtitle != null && !meta.subtitle.isEmpty()) {
+                ctx.drawString(this.font, meta.subtitle, titleX,
+                        TITLE_Y + this.font.lineHeight + 1,
+                        ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
+            }
         }
 
         // Label-hover description tooltip floats above the rows.
