@@ -820,14 +820,23 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                         new BooleanSetting("Show Last Fight",
                                 () -> cfg.statsShowLastFight, v -> cfg.statsShowLastFight = v)
                                 .description("Duration of the last tracked fight and both players' accuracy (landed hits over swings), the same figures the original mod printed after a fight."),
-                        new ButtonSetting("Reset Lifetime Fight Totals", "Reset",
-                                () -> {
-                                    com.aurora.client.feature.impl.StatsTrackerFeature feat =
-                                            com.aurora.client.feature.impl.StatsTrackerFeature.get();
-                                    if (feat != null) feat.resetLifetimeFightTotals();
-                                })
-                                .description("Zeroes the persisted lifetime fight count and fight time. Separate from Reset Stats on purpose: these survive sessions and profile switches like playtime, so a session reset never touches them. Better Hitreg's own Reset Tracked Stats clears something else again — its rolling delay/ghost/misplace sample."),
                         new SectionHeaderSetting("Session"),
+                        new KeybindSetting("Reset Key",
+                                () -> cfg.statsResetKey, v -> cfg.statsResetKey = v)
+                                .description("Press to reset the Stats overlay counters. Defaults to unbound."),
+                        new EnumSetting<>("Background", AuroraConfig.HudBackground.class,
+                                () -> cfg.statsBgMode, v -> cfg.statsBgMode = v),
+                        new ColorSetting("Background Color (when SOLID)",
+                                () -> cfg.statsBgColor, v -> cfg.statsBgColor = v),
+
+                        // §7.3: destructive actions go last, isolated in their own
+                        // section — never interleaved with adjustable settings. The
+                        // resets used to sit inside their data sections (Reset
+                        // Lifetime Fight Totals mid-Fights, Reset Stats as the
+                        // first Session row). Order within the section runs
+                        // least-to-most destructive: session counters, then the
+                        // persisted lifetime totals.
+                        new SectionHeaderSetting("Maintenance"),
                         new ButtonSetting("Reset Stats", "Reset",
                                 () -> {
                                     com.aurora.client.feature.impl.StatsTrackerFeature feat =
@@ -835,13 +844,13 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                     if (feat != null) feat.resetAll();
                                 })
                                 .description("Clears the session counters back to zero: kills, deaths, the session timer, session fights and the last-fight readout. Lifetime fight totals are kept."),
-                        new KeybindSetting("Reset Key",
-                                () -> cfg.statsResetKey, v -> cfg.statsResetKey = v)
-                                .description("Press to reset the Stats overlay counters. Defaults to unbound."),
-                        new EnumSetting<>("Background", AuroraConfig.HudBackground.class,
-                                () -> cfg.statsBgMode, v -> cfg.statsBgMode = v),
-                        new ColorSetting("Background Color (when SOLID)",
-                                () -> cfg.statsBgColor, v -> cfg.statsBgColor = v)
+                        new ButtonSetting("Reset Lifetime Fight Totals", "Reset",
+                                () -> {
+                                    com.aurora.client.feature.impl.StatsTrackerFeature feat =
+                                            com.aurora.client.feature.impl.StatsTrackerFeature.get();
+                                    if (feat != null) feat.resetLifetimeFightTotals();
+                                })
+                                .description("Zeroes the persisted lifetime fight count and fight time. Separate from Reset Stats on purpose: these survive sessions and profile switches like playtime, so a session reset never touches them. Better Hitreg's own Reset Tracked Stats clears something else again — its rolling delay/ghost/misplace sample.")
                 ));
 
         addWithSettings(MODULES, "waypoints", "Waypoints",
