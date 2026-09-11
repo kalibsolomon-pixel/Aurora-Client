@@ -40,9 +40,11 @@ like the glass renderer: read `hitreg/BetterHitreg.java`'s notes before touching
 | Mixin configs | `aurora.mixins.json` only (~70 `client` entries, of which 13 are `hitreg.*`) |
 | Run dir | `run/` at repo root is a live dev client dir (`run/config/aurora.json`, `run/config/aurora-worldmap/`, `run/config/profiles/`) |
 
-**Known version drift (harmless but confusing):** `gradle.properties` targets 1.21.11,
-`fabric.mod.json` declares `minecraft: "~1.21.8"`, and `build.gradle` run configs pin
-`-Dfabric.modVersion.minecraft=1.21.7`. Don't "fix" these casually — ask.
+**Version metadata (aligned 2026-09-11):** the former drift is resolved — `gradle.properties`,
+`fabric.mod.json` (`minecraft: "~1.21.11"`; verified against the Loader 0.19.2 jar to mean
+`>=1.21.11 <1.22.0`), and `build.gradle`'s run-config `-Dfabric.modVersion.minecraft`
+(no code reads it; the dev sandbox skips Loader's dependency check anyway) all declare
+1.21.11.
 (The former LICENSE-CC0-vs-fabric.mod.json-MIT drift was resolved 2026-09-11 — the
 repo `LICENSE` is now the standard MIT text, per user decision.)
 
@@ -1156,6 +1158,19 @@ glass component in `renderGlassPass` (`ButtonSetting`, `SegmentedSetting`,
 four Part A pills, `EnumSetting`) or embeds only opaque components
 (toggles, sliders, `ColorSwatch`) — `ThemePreviewSetting` was the only
 instance.
+
+Landed 2026-09-11 after that: **version metadata alignment** — the §1 "known version
+drift" is resolved (user decision). `fabric.mod.json`'s `minecraft` constraint went
+`~1.21.8` → `~1.21.11` (tilde semantics verified empirically against the cached Loader
+0.19.2 jar: `~1.21.11` = `>=1.21.11 <1.22.0`; the old `~1.21.8` range already admitted
+1.21.11, which is why the drift never bit), and the run-config
+`-Dfabric.modVersion.minecraft` pin went `1.21.7` → `1.21.11` (three spots in
+`build.gradle`; no code reads the property). The dead `aurora.subtitle` lang entry
+(`"1.21.8"`, referenced by no code) was aligned too. Deliberately untouched: the
+verbatim upstream `hitreg/` comments and `CrosshairRenderer`'s javadoc that mention
+1.21.8 API behavior (factual code-path notes, not metadata). Verified by a clean
+build, a DevPilot boot smoke, and Fabric API 0.141.4+1.21.11's own
+`>=1.21.11- <1.21.12-` constraint still being satisfied by 1.21.11.
 
 ---
 

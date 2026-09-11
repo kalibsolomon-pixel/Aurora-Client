@@ -33,8 +33,8 @@ loom {
 		// Disables the strict version validation check inside the development sandbox env
 		property "fabric.skipDependencyCheck", "true"
 		vmArg "-Dfabric.skipDependencyCheck=true"
-		property "fabric.modVersion.minecraft", "1.21.7"
-		vmArg "-Dfabric.modVersion.minecraft=1.21.7"
+		property "fabric.modVersion.minecraft", "1.21.11"
+		vmArg "-Dfabric.modVersion.minecraft=1.21.11"
 	}
 
 	mods {
@@ -76,7 +76,7 @@ tasks.withType(JavaCompile).configureEach {
 
 afterEvaluate {
 	runClient {
-		jvmArgs "-Dfabric.skipDependencyCheck=true", "-Dfabric.modVersion.minecraft=1.21.7"
+		jvmArgs "-Dfabric.skipDependencyCheck=true", "-Dfabric.modVersion.minecraft=1.21.11"
 	}
 }
 
