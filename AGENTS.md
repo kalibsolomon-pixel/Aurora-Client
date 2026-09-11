@@ -941,6 +941,29 @@ and never SIGKILL a running dev client (a hard kill once left kwin/XWayland
 wedged so every subsequent boot hung inside `glfwCreateWindow`; a minimal
 GLFW create/destroy/terminate cycle from a plain JVM cleared it).
 
+Landed 2026-09-10 after that: **the §4 subtitle audit** (`082d97f`) — a
+sweep for further `valueLine` candidates plus the first check of the rev-2
+"state hidden behind a nested screen" clause. Part 1 came up empty: the
+supplier-description pattern that identified hitreg's three alert toggles
+matches nothing else, and every other live figure in the feature set
+(kills/fights, totem pops, ping, CPS, playtime) is already surfaced at a
+glance by its own HUD module — the exclusion clause covers them all, so the
+hitreg three remain the only `FeatureSetting.valueLine` users. Part 2 found
+exactly one genuine nested-state case, in `ItemScaleSetting`: collapsed
+per-item rows hid all seven configured values behind the expand chevron, so
+each collapsed row now carries an in-widget §4 subtitle ("Scale 1.40×",
+`TEXT_SECONDARY` beneath the label — the drawValueLine idiom, drawn in-widget
+because the item rows aren't FeatureSettings; row header 26→38 / stride
+30→42 across render/baseHeight/click/drag). Expanded rows drop the subtitle
+(the scale slider's readout then shows it — exclusion clause); the other six
+values stay expand-only deliberately. `PixelCanvasSetting` is a clean
+negative — no collapsed state exists; the canvas renders inline at all times
+and IS the state — and EnumSetting/ColorSetting/KeybindSetting/
+KeyList/StringList/ParticleConfigSetting all already show state inline.
+Verified by DevPilot `s4` boots (stashed baseline + post-change captures +
+functional hit-test clicks proving the new 38/42 geometry in
+`.devpilot-pilot/s4-*`).
+
 ---
 
 ## 9. Known outstanding work, dead code, and hazards
