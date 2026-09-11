@@ -146,8 +146,7 @@ public class ComplianceModeFeature implements Feature {
         savedReach = cfg.reachEnabled;
         savedToggleSprint = cfg.toggleSprintSneakEnabled;
         // Save both hitbox sub-toggles — these are the fields the renderer
-        // and EntityRenderDispatcherMixin actually read. The legacy
-        // hitboxFeatureEnabled field is an orphan no renderer consults.
+        // and EntityRenderDispatcherMixin actually read.
         savedHitbox = cfg.hitboxEnabled;
         savedHitboxTarget = cfg.hitboxTargetEnabled;
         savedKeystrokes = cfg.keystrokesEnabled;

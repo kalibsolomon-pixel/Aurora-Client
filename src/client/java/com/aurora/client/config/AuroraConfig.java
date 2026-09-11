@@ -614,7 +614,8 @@ public class AuroraConfig {
     public int toggleSprintKey = org.lwjgl.glfw.GLFW.GLFW_KEY_J;
     public int toggleSneakKey  = org.lwjgl.glfw.GLFW.GLFW_KEY_K;
     public int hudEditorKey    = org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_SHIFT;
-    /** Press to toggle {@link #hitboxFeatureEnabled} on/off. -1 = unbound. */
+    /** Press to toggle the hitbox sub-toggles ({@link #hitboxEnabled} +
+     *  {@link #hitboxTargetEnabled}) on/off together. -1 = unbound. */
     public int hitboxToggleKey = -1;
     /** Press to call {@code TotemPopFeature.resetAll()}. -1 = unbound. */
     public int totemResetKey   = -1;
@@ -740,15 +741,6 @@ public class AuroraConfig {
     }
 
    // ----Hitboxes----
-   /**
-    * Master enable for the entire hitbox feature. When this is
-    * {@code false} Aurora's mixin no longer suppresses vanilla F3+B
-    * hitbox rendering, and Aurora's renderer is fully dormant. The
-    * legacy {@link #hitboxEnabled} / {@link #hitboxTargetEnabled}
-    * fields remain as fine-grained sub-toggles for self/targeted entity
-    * AABBs but only take effect while this master is on.
-    */
-   public boolean hitboxFeatureEnabled = false;
    public boolean hitboxEnabled = true;
     public boolean hitboxEyeLine = true;
     public boolean hitboxLookDirection = true;
