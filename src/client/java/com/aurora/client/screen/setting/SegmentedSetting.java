@@ -31,7 +31,6 @@ public class SegmentedSetting<E extends Enum<E>> extends FeatureSetting {
     private static final int TRACK_H = 20;
     /** Track indent — label above, full-width control below (slider row layout). */
     private static final int TRACK_PAD_X = 12;
-    private static final int SEG_GAP = 2;
 
     private final Supplier<E> getter;
     private final Consumer<E> setter;

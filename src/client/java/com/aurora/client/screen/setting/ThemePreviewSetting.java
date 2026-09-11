@@ -42,7 +42,6 @@ public class ThemePreviewSetting extends FeatureSetting {
     private static final int BTN_H = 18;
     private static final int TOGGLE_W = 28;
     private static final int TOGGLE_H = 16;
-    private static final int KNOB_R = 5;
     private static final int CHIP_W = 26;
     private static final int CHIP_H = 10;
 

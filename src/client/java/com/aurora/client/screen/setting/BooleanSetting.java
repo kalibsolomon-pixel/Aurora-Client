@@ -33,7 +33,6 @@ import java.util.function.Supplier;
 public class BooleanSetting extends FeatureSetting {
     private static final int MIN_ROW_H = 28;
     private static final int TRACK_W = 36;
-    private static final int TRACK_H = 20;
     private static final int LABEL_PAD = 12;
     private static final int RIGHT_RESERVE = TRACK_W + 28;
 

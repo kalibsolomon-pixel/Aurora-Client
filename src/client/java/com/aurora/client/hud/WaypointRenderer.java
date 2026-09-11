@@ -45,9 +45,6 @@ public final class WaypointRenderer {
     private static final float BEAM_BOTTOM = -64f;
     private static final float BEAM_TOP    = 320f;
 
-    /** How tall above the beam top the label floats, in blocks. */
-    private static final float LABEL_LIFT = 1.2f;
-
     /** Padding from screen edges when a waypoint is off-screen. */
     private static final int LABEL_EDGE_MARGIN = 24;
 
