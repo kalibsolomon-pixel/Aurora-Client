@@ -38,10 +38,6 @@ public abstract class FeatureSetting {
     private String staticDescription;
     private Supplier<String> dynamicDescription;
 
-    private String lastWrapText;
-    private int lastWrapWidth = -1;
-    private List<FormattedCharSequence> lastWrapLines;
-
     private java.util.function.BooleanSupplier disableCondition = () -> false;
 
     /** The setting currently claiming scroll/key focus, or null. */
@@ -54,14 +50,12 @@ public abstract class FeatureSetting {
     public FeatureSetting description(String desc) {
         this.staticDescription = desc;
         this.dynamicDescription = null;
-        invalidateWrapCache();
         return this;
     }
 
     public FeatureSetting description(Supplier<String> desc) {
         this.dynamicDescription = desc;
         this.staticDescription = null;
-        invalidateWrapCache();
         return this;
     }
 
@@ -79,15 +73,8 @@ public abstract class FeatureSetting {
         return staticDescription;
     }
 
-    private void invalidateWrapCache() {
-        lastWrapText = null;
-        lastWrapWidth = -1;
-        lastWrapLines = null;
-    }
-
     public int height() {
-        int total = baseHeight();
-        return total + descriptionHeight(lastWrapWidth > 0 ? lastWrapWidth : 240);
+        return baseHeight() + descriptionHeight(240);
     }
 
     public abstract int baseHeight();

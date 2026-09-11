@@ -18,7 +18,6 @@ public class ButtonSetting extends FeatureSetting {
 
     private final Button button;
 
-    private int lastBtnX, lastBtnY;
     private int lastWidth = 240;
 
     public ButtonSetting(String label, Runnable onPress) {
@@ -66,8 +65,6 @@ public class ButtonSetting extends FeatureSetting {
 
         int btnX = x + width - BTN_W - 14;
         int btnY = y + (CONTROL_H - BTN_H) / 2;
-        lastBtnX = btnX;
-        lastBtnY = btnY;
 
         button.layout(btnX, btnY, BTN_W, BTN_H);
         button.render(ctx, btnX, btnY, BTN_W, BTN_H, mouseX, mouseY);
