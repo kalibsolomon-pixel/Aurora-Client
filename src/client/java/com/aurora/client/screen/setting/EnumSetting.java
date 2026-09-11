@@ -242,14 +242,15 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
             // stained: no individual list row is a selected/primary element;
             // the current value reads through its accent text color, hover
             // through the plain SURFACE_VARIANT wash — no per-row glass). The
-            // popup renders live (EnumSetting draws entirely in the overlay
-            // pass), so it captures its own backdrop slice above the cached
-            // window like the trigger does. On decline (menu context,
-            // screenshot suppression, failure) the flat panel returns — the
-            // same fallback contract every glass integration uses.
+            // popup is an ABOVE-THE-DIM surface by design (§9's named case:
+            // it must float above the dimmed screen), so it paints here in
+            // the content pass through GlassSurface.aboveDimControl — the
+            // identical idiom, in place, exempt from the glass-pass ordering
+            // — on migrated and legacy screens alike. On decline the flat
+            // panel returns — the same fallback contract every glass
+            // integration uses.
             float popR = Math.min(dropdownH / 2f, ThemeManager.current().roundness().radiusSmall());
-            boolean popGlass = glassButton && BlurPanelRenderer.renderPanel(ctx, btnX, dropdownY, BTN_W, dropdownH, popR,
-                    BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX, BlurPanelRenderer.Lighting.raised());
+            boolean popGlass = glassButton && GlassSurface.aboveDimControl(ctx, btnX, dropdownY, BTN_W, dropdownH, popR);
             if (popGlass) {
                 RenderUtil.drawRoundedRectAA(ctx, btnX, dropdownY, BTN_W, dropdownH, popR,
                         ThemeManager.color(ThemeToken.WINDOW_FILL));

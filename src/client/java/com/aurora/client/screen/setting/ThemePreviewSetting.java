@@ -147,17 +147,17 @@ public class ThemePreviewSetting extends FeatureSetting {
         int cardH = PREVIEW_H - PAD_Y;
         if (cardW <= 0 || cardH <= 0) return;
         float radius = ThemeManager.current().roundness().radius();
-        boolean ok = BlurPanelRenderer.renderPanel(ctx, cardX, cardY, cardW, cardH,
-                radius, BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX,
-                BlurPanelRenderer.Lighting.raised(), BlurPanelRenderer.Priority.WINDOW);
-        if (ok) {
-            // Tint: the same translucent-fill model every glass surface
-            // uses — WINDOW_FILL's alpha carries the theme's Background
-            // Opacity (its single application point).
-            RenderUtil.drawRoundedRectAA(ctx, cardX, cardY, cardW, cardH, radius,
-                    ThemeManager.color(ThemeToken.WINDOW_FILL));
-            BlurPanelRenderer.drawRimFinish(ctx, cardX, cardY, cardW, cardH, radius);
-        } else {
+        // Through the shared GlassSurface helper since the §6-convention-6
+        // rollout: identical gate/tint/lighting, and on a screen running the
+        // structural pass the rim finish defers past the dim like every
+        // other surface's (previously the raw idiom painted it in place,
+        // which a veiled rim on a migrated screen would betray). The card
+        // is RAISED at WINDOW priority (a control-holding card floating
+        // above the recessed window); the chip is accent-STAINED raised.
+        boolean ok = com.aurora.client.ui.component.GlassSurface.control(ctx,
+                cardX, cardY, cardW, cardH, radius, false,
+                BlurPanelRenderer.Priority.WINDOW);
+        if (!ok) {
             card.renderShapes(ctx, cardX, cardY, cardW, cardH);
         }
 
@@ -165,13 +165,8 @@ public class ThemePreviewSetting extends FeatureSetting {
         int chipX = cardX + cardW - 12 - 26;
         int chipY = cardY + cardH - 16;
         float chipR = Math.min(CHIP_H / 2.0f, ThemeManager.current().roundness().radiusSmall());
-        if (BlurPanelRenderer.renderPanel(ctx, chipX, chipY, CHIP_W, CHIP_H, chipR,
-                BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX,
-                BlurPanelRenderer.Lighting.raised())) {
-            RenderUtil.drawRoundedRectAA(ctx, chipX, chipY, CHIP_W, CHIP_H, chipR,
-                    ThemeManager.stainedTint());
-            BlurPanelRenderer.drawRimFinish(ctx, chipX, chipY, CHIP_W, CHIP_H, chipR);
-        } else {
+        if (!com.aurora.client.ui.component.GlassSurface.stainedControl(ctx,
+                chipX, chipY, CHIP_W, CHIP_H, chipR)) {
             RenderUtil.drawRoundedRectAA(ctx, chipX, chipY, CHIP_W, CHIP_H, chipR,
                     AuroraTheme.IOS_BLUE);
         }

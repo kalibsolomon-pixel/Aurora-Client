@@ -55,6 +55,40 @@ public class StringListSetting extends FeatureSetting {
         return baseHeight();
     }
 
+    /**
+     * The input field's rect, derived from the row geometry — shared by the
+     * glass pass and render so the two can never drift (the field itself is
+     * lazily constructed; the pass creates it on first call so a migrated
+     * screen never renders a first frame with an undriven, in-place field).
+     */
+    private void positionInputField(int x, int y, int width) {
+        int inputY = y + ROW_H + 2 + safeList().size() * (ROW_H + 2) + 4;
+        int fw = width - 14 - BTN_SIZE - 18;
+        if (inputField == null) {
+            Font tr = Minecraft.getInstance().font;
+            inputField = new EditBox(tr, x + 14, inputY, fw, INPUT_H,
+                    net.minecraft.network.chat.Component.literal(""));
+            inputField.setMaxLength(100);
+            inputField.setHint(net.minecraft.network.chat.Component.literal("Add address..."));
+        } else {
+            inputField.setX(x + 14);
+            inputField.setY(inputY);
+            inputField.setWidth(fw);
+        }
+    }
+
+    /**
+     * Pre-dim surface (§6 convention 6): drives the input field's own glass
+     * pass (EditBoxMixin carries the frame-stamp scheme). Geometry derives
+     * from the row params — the walk render's item loop performs.
+     */
+    @Override
+    public void renderGlassPass(GuiGraphics ctx, int x, int y, int width) {
+        if (!com.aurora.client.ui.component.GlassSurface.passOpen()) return; // legacy frame order
+        positionInputField(x, y, width);
+        ((com.aurora.client.ui.component.GlassEditBox) inputField).aurora$renderGlassPass(ctx);
+    }
+
     @Override
     public void render(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
         lastX = x;
@@ -98,16 +132,7 @@ public class StringListSetting extends FeatureSetting {
         }
 
         int inputY = iy + 4;
-        if (inputField == null) {
-            inputField = new EditBox(tr, x + 14, inputY, width - 14 - BTN_SIZE - 18,
-                    INPUT_H, net.minecraft.network.chat.Component.literal(""));
-            inputField.setMaxLength(100);
-            inputField.setHint(net.minecraft.network.chat.Component.literal("Add address..."));
-        } else {
-            inputField.setX(x + 14);
-            inputField.setY(inputY);
-            inputField.setWidth(width - 14 - BTN_SIZE - 18);
-        }
+        positionInputField(x, y, width);
         inputField.render(ctx, mouseX, mouseY, 0);
 
         int addBtnX = x + width - BTN_SIZE - 14;

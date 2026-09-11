@@ -378,6 +378,31 @@ public final class GlassSurface {
     }
 
     /**
+     * ABOVE-DIM control surface — the deliberate exception to the layering
+     * rule, for floating elements that must read ABOVE an already-dimmed
+     * screen: {@code EnumSetting}'s expanded option popup (and, when that
+     * screen migrates, the pack browser's detail modal — §9's named
+     * above-the-dim cases). Paints the identical idiom — gate, panel,
+     * WINDOW_FILL tint, rim — but entirely IN PLACE: no rim deferral, no
+     * ordering report, regardless of frame phase. Callers keep painting it
+     * in their content pass, after the dim, where it already lived. A
+     * caller that is NOT floating above the screen has no business here;
+     * everything else belongs in the glass pass like every other surface.
+     *
+     * @return whether glass drew; {@code false} ⇒ caller paints its flat look
+     */
+    public static boolean aboveDimControl(GuiGraphics g, float x, float y, float w, float h, float radius) {
+        if (!liveWorldBackdrop() && !BlurPanelRenderer.menuBackdropValid()) return false;
+        if (!BlurPanelRenderer.renderPanel(g, x, y, w, h, radius,
+                BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX, BlurPanelRenderer.Lighting.raised())) {
+            return false;
+        }
+        RenderUtil.drawRoundedRectAA(g, x, y, w, h, radius, ThemeManager.color(ThemeToken.WINDOW_FILL));
+        BlurPanelRenderer.drawRimFinish(g, x, y, w, h, radius);
+        return true;
+    }
+
+    /**
      * True when glass can engage at all this frame: a level is loaded, so
      * the main render target holds a live world for the capture. The same
      * test gates every surface here, and it is the test a glass screen's

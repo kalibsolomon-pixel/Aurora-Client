@@ -6,9 +6,9 @@ import com.aurora.client.screen.setting.ThemePreviewSetting;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.component.ButtonWidget;
+import com.aurora.client.ui.component.GlassSurface;
 import com.aurora.client.ui.component.RoundedPanel;
 import com.aurora.client.ui.component.ThemedScreen;
-import com.aurora.client.ui.render.blur.BlurPanelRenderer;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.util.SmoothScroll;
 import com.aurora.client.ui.util.AuroraFontRenderer;
@@ -27,6 +27,14 @@ import net.minecraft.network.chat.Component;
  * former {@code GLASS_PILOT_IDS} staged set is retired — glass is the
  * default look mod-wide). Per-setting glass flags default to on as well;
  * the registry's historical pilot flags are redundant no-ops.
+ *
+ * <p>§6 convention 6, structural (2026-09-10): this screen runs the guarded
+ * frame skeleton — {@code GlassSurface.beginGlassPass} → every surface
+ * (window, pills, segments, buttons, fields) → {@code GlassSurface.overlayDim}
+ * → cached chrome blit + content — the same discipline
+ * {@code ManagerListScreen} enforced first. The one deliberate exemption:
+ * {@code EnumSetting}'s expanded popup is an above-the-dim surface and
+ * paints in the content pass through {@code GlassSurface.aboveDimControl}.
  */
 public class FeatureDetailScreen extends Screen implements ThemedScreen {
 
@@ -58,6 +66,14 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
     /** Shared themed window panel (glow + fill + outline), drawn into the static cache. */
     private final RoundedPanel windowPanel = new RoundedPanel(true);
 
+    /**
+     * The Done/Reset chrome buttons — kept as fields so the glass pass can
+     * drive their surfaces pre-dim (ButtonWidget.renderGlassPass), the same
+     * way ManagerListScreen drives its toolbar pair.
+     */
+    private ButtonWidget doneBtn;
+    private ButtonWidget resetBtn;
+
     // Transient frame-timing instrumentation (debug level only).
     private long lastPerfLogMs = 0L;
     private long lastPerfFills = 0L;
@@ -79,24 +95,26 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
 
     @Override
     protected void init() {
-        this.addRenderableWidget(new ButtonWidget(
+        this.doneBtn = new ButtonWidget(
                 this.width - DONE_W - DONE_RIGHT_MARGIN, DONE_TOP_MARGIN,
                 DONE_W, DONE_H,
                 Component.literal("Done"),
-                this::onClose).glassBackground(true));
+                this::onClose).glassBackground(true);
+        this.addRenderableWidget(this.doneBtn);
 
         // Reset-to-defaults button immediately to the left of Done. Persists
         // immediately so the change is visible to other open screens.
         int resetW = 70;
         int resetX = this.width - DONE_W - DONE_RIGHT_MARGIN - resetW - 6;
-        this.addRenderableWidget(new ButtonWidget(
+        this.resetBtn = new ButtonWidget(
                 resetX, DONE_TOP_MARGIN,
                 resetW, DONE_H,
                 Component.literal("Reset"),
                 () -> {
                     meta.reset();
                     AuroraConfig.save();
-                }).glassBackground(true));
+                }).glassBackground(true);
+        this.addRenderableWidget(this.resetBtn);
 
         // Notify every setting the first time this screen instance is
         // initialized (i.e. on open) so stateful settings (e.g. a search
@@ -155,29 +173,26 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         int windowY = TOP_PAD - (int) scroll.current() - WINDOW_PAD_TOP;
         int windowH = totalRowsH + WINDOW_PAD_TOP + WINDOW_PAD_BOTTOM;
 
-        // ---- Live GPU glass UNDER the cached layer. Drawn before the ----
-        // overlay dim so the dim veils the panel and its surroundings
-        // equally — the backdrop must not read brighter inside the panel
-        // than outside it (the alignment work's core principle). The window
+        // ---- 1. Glass pass — every glass surface paints BEFORE the dim ----
+        // (§6 convention 6, structural: the ManagerListScreen skeleton.) The
+        // pass opens here so each surface's rim finish defers past the dim;
+        // GlassSurface.overlayDim below closes it, paints the dim, and
+        // flushes the deferred rims. Live GPU glass UNDER the cached layer:
+        // the dim veils the panel and its surroundings equally — the backdrop
+        // must not read brighter inside the panel than outside it. The window
         // panel uses the depressed treatment (main containers read as
         // recessed); its tint is the ordinary WINDOW_FILL fill, whose alpha
-        // already carries the theme's Background Opacity — still exactly
-        // one application point. When the renderer declines (no world,
-        // screenshot suppression, tiny/clipped panel, failure) glassWindow
-        // is false and the cached layer below carries the old opaque
-        // fill+outline instead (see the glass bit in the version hash,
-        // which forces the re-raster on the switch).
+        // already carries the theme's Background Opacity — still exactly one
+        // application point. When the renderer declines (no world, screenshot
+        // suppression, tiny/clipped panel, failure) glassWindow is false and
+        // the cached layer below carries the old opaque fill+outline instead
+        // (see the glass bit in the version hash, which forces the re-raster
+        // on the switch).
+        GlassSurface.beginGlassPass();
         boolean glassWindow = false;
         {
             float radius = ThemeManager.current().roundness().radius();
-            glassWindow = BlurPanelRenderer.renderPanel(ctx, listX, windowY, LIST_W, windowH,
-                    radius, BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX,
-                    BlurPanelRenderer.Lighting.depressed(), BlurPanelRenderer.Priority.WINDOW);
-            if (glassWindow) {
-                RenderUtil.drawRoundedRectAA(ctx, listX, windowY, LIST_W, windowH, radius,
-                        ThemeManager.color(ThemeToken.WINDOW_FILL));
-                BlurPanelRenderer.drawRimFinish(ctx, listX, windowY, LIST_W, windowH, radius);
-            }
+            glassWindow = GlassSurface.container(ctx, listX, windowY, LIST_W, windowH, radius);
         }
 
         // ---- Static-layer cache: window chrome + rows' cacheable shapes ----
@@ -221,19 +236,23 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
             layerCache.commit(version);
         }
 
-        // Preview-card glass — after the capture pass above and before the
-        // dim + cached blit, so the mock controls rasterized into the cache
-        // stack on top of the glass. This is the generic per-setting glass
-        // pass (FeatureSetting.renderGlassPass): the screen walks each row's
-        // CURRENT geometry (same walk the overlay loop below uses, so a
-        // scroll frame's pass paints exactly where the content will) and
-        // settings that paint glass take it from there — the preview card
-        // paints here on every screen, and since the §6-convention-6 widget
-        // split the pill widgets (enum/keybind/key-list/item-scale) paint
-        // their surfaces here too, but ONLY while a structural glass pass is
-        // open; this screen's dim is still the legacy raw fill, so on it
-        // those widgets keep painting in place inside renderOverlay exactly
-        // as before. Falls back per element when declined.
+        // Per-setting glass pass — after the capture pass above (a tint fill
+        // painted during capture would rasterize into the cache) and before
+        // the dim + cached blit, so cached content rasterized into the cache
+        // stacks on top of the glass. The screen walks each row's CURRENT
+        // geometry (same walk the overlay loop below uses, so a scroll
+        // frame's pass paints exactly where the content will) and every
+        // glass-painting setting takes it from there: the preview card, the
+        // pill widgets (enum trigger/keybind/key-list/item-scale "+"), the
+        // segmented tracks and ButtonSetting rows via their embedded shared
+        // components, and the search/numeric fields via EditBoxMixin's
+        // frame-stamp split. Widgets gate on GlassSurface.passOpen()
+        // themselves — which is now open — so on screens still on the legacy
+        // frame order (AuroraScreen's inline Settings rows) the same widgets
+        // keep painting in place inside render, unchanged. Falls back per
+        // element when declined. EnumSetting's expanded popup is the one
+        // deliberate above-the-dim surface (§9): it keeps painting in the
+        // content pass through GlassSurface.aboveDimControl.
         int gy = TOP_PAD - (int) scroll.current();
         for (FeatureSetting s : meta.settings) {
             int gh = s.height();
@@ -243,10 +262,18 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
             gy += gh + ROW_GAP;
         }
 
-        // Themed overlay dim — token-driven (OVERLAY_DIM), so mode/accent
-        // changes and any future opacity work apply here like everywhere else.
-        ctx.fill(0, 0, this.width, this.height, ThemeManager.color(ThemeToken.OVERLAY_DIM));
-        // Cached chrome — one textured blit.
+        // Chrome buttons' surfaces — the ButtonWidget discipline from
+        // ManagerListScreen; their super.render below then paints labels only.
+        if (doneBtn != null) doneBtn.renderGlassPass(ctx);
+        if (resetBtn != null) resetBtn.renderGlassPass(ctx);
+
+        // ---- 2. Dim — closes the glass pass, veils every surface like it ----
+        // veils the world, flushes the deferred rim finishes, and from here
+        // on any glass body paint is reported as an ordering violation.
+        GlassSurface.overlayDim(ctx, this.width, this.height);
+
+        // Cached chrome — one textured blit (a content layer above the dim,
+        // exactly where it always sat).
         layerCache.blit(ctx, this.width, this.height);
 
         // Live overlay: text, hover feedback, animated values.

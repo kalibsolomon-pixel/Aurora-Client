@@ -226,6 +226,33 @@ public class PixelCanvasSetting extends FeatureSetting {
     @Override public int baseHeight() { return getControlH(); }
     @Override public int height()    { return getControlH() + descriptionHeight(lastWidth); }
 
+    /**
+     * Pre-dim surface (§6 convention 6): drives the W/H numeric fields' own
+     * glass passes (EditBoxMixin carries the frame-stamp scheme), positioned
+     * from the row geometry — the same rects render computes. The fields
+     * only render when not disabled (render guards them), so the pass
+     * guards identically.
+     */
+    @Override
+    public void renderGlassPass(GuiGraphics ctx, int x, int y, int width) {
+        if (!com.aurora.client.ui.component.GlassSurface.passOpen()) return; // legacy frame order
+        if (isDisabled()) return;
+        Font tr = Minecraft.getInstance().font;
+        if (tr == null) return;
+        int sizeRowY = y + LABEL_H;
+        int fieldY = sizeRowY + (SIZE_ROW_H - FIELD_H) / 2;
+        int wx = x + 14;
+        widthField.setX(wx);
+        widthField.setY(fieldY);
+        widthField.setWidth(FIELD_W);
+        int hx = wx + FIELD_W + 2 + tr.width("×") + 4;
+        heightField.setX(hx);
+        heightField.setY(fieldY);
+        heightField.setWidth(FIELD_W);
+        ((com.aurora.client.ui.component.GlassEditBox) widthField).aurora$renderGlassPass(ctx);
+        ((com.aurora.client.ui.component.GlassEditBox) heightField).aurora$renderGlassPass(ctx);
+    }
+
     @Override
     public void render(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
         lastWidth = width;

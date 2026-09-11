@@ -2,7 +2,6 @@ package com.aurora.client.ui.component;
 
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
-import com.aurora.client.ui.render.blur.BlurPanelRenderer;
 import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.ui.util.RenderUtil;
 import net.minecraft.client.Minecraft;
@@ -57,6 +56,17 @@ public class SegmentedControl extends Widget {
         return this;
     }
 
+    /**
+     * Glass-pass bookkeeping (the {@code Button} scheme, §6 convention 6):
+     * the frame in which {@link #renderGlassPass} painted the segments
+     * pre-dim, and whether every one of them drew. In that frame
+     * {@link #renderOverlay} paints labels only (or the complete flat track
+     * if any segment declined); otherwise it paints the surfaces in place —
+     * the legacy order, pixel-identical.
+     */
+    private long glassPassFrame = -1L;
+    private boolean passDrewSegments = false;
+
     public SegmentedControl disabled(boolean d) {
         this.disabled = d;
         return this;
@@ -76,6 +86,29 @@ public class SegmentedControl extends Widget {
                 ThemeManager.color(ThemeToken.SURFACE_VARIANT));
     }
 
+    /**
+     * Pre-dim surface (the split's surface half): every segment's raised
+     * glass, tint carrying the selection state. The selection index is read
+     * here so the tint can never disagree with the label pass.
+     */
+    @Override
+    public void renderGlassPass(GuiGraphics g, float x, float y, float w, float h) {
+        glassPassFrame = GlassSurface.frame();
+        passDrewSegments = false;
+        if (!glassEnabled) return;
+        float radius = Math.min(trackH / 2f, ThemeManager.current().roundness().radiusSmall());
+        int selected = Math.max(0, Math.min(options.length - 1, selectedIndex.getAsInt()));
+        passDrewSegments = true;
+        for (int i = 0; i < options.length; i++) {
+            int sx = segStart(i, x, w);
+            int sw = segWidth(i, x, w);
+            if (!GlassSurface.control(g, sx, y, sw, trackH, radius, i == selected)) {
+                passDrewSegments = false;
+                break;
+            }
+        }
+    }
+
     @Override
     public void renderOverlay(GuiGraphics g, float x, float y, float w, float h, int mouseX, int mouseY) {
         Font tr = Minecraft.getInstance().font;
@@ -88,23 +121,26 @@ public class SegmentedControl extends Widget {
         // the tint carrying the selection state. Hover feedback stays in the
         // LABEL color only — a flat hover fill would occlude the glass. On
         // decline, fall back to the complete flat look (track base + fills).
+        // If the screen ran this control's glass pass this frame the
+        // surfaces are already on screen UNDER the dim and only the combined
+        // result matters here; otherwise (legacy frame order) they are
+        // painted in place now through the shared GlassSurface helper
+        // (identical calls).
         boolean glassOk = false;
         if (glassEnabled) {
-            glassOk = true;
-            for (int i = 0; i < options.length; i++) {
-                int sx = segStart(i, x, w);
-                int sw = segWidth(i, x, w);
-                boolean isSelected = i == selected;
-                if (!BlurPanelRenderer.renderPanel(g, sx, y, sw, trackH, radius,
-                        BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX,
-                        BlurPanelRenderer.Lighting.raised())) {
-                    glassOk = false;
-                    break;
+            if (glassPassFrame == GlassSurface.frame()) {
+                glassOk = passDrewSegments;
+            } else {
+                glassOk = true;
+                for (int i = 0; i < options.length; i++) {
+                    int sx = segStart(i, x, w);
+                    int sw = segWidth(i, x, w);
+                    boolean isSelected = i == selected;
+                    if (!GlassSurface.control(g, sx, y, sw, trackH, radius, isSelected)) {
+                        glassOk = false;
+                        break;
+                    }
                 }
-                RenderUtil.drawRoundedRectAA(g, sx, y, sw, trackH, radius,
-                        isSelected ? ThemeManager.stainedTint()
-                                   : ThemeManager.color(ThemeToken.WINDOW_FILL));
-                BlurPanelRenderer.drawRimFinish(g, sx, y, sw, trackH, radius);
             }
             if (!glassOk) {
                 // Flat fallback: track base first (it was suppressed from the

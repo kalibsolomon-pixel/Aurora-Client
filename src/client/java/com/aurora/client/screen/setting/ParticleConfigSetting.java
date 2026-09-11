@@ -128,6 +128,20 @@ public class ParticleConfigSetting extends FeatureSetting {
     @Override
     public int height() { return baseHeight(); }
 
+    /**
+     * Pre-dim surface (§6 convention 6): drives the search field's own glass
+     * pass (EditBoxMixin carries the frame-stamp scheme), positioned from
+     * the row geometry the screen passes — the same rect render computes.
+     */
+    @Override
+    public void renderGlassPass(GuiGraphics ctx, int x, int y, int width) {
+        if (!com.aurora.client.ui.component.GlassSurface.passOpen()) return; // legacy frame order
+        searchField.setX(x + 12);
+        searchField.setY(y + 6);
+        searchField.setWidth(width - 24);
+        ((com.aurora.client.ui.component.GlassEditBox) searchField).aurora$renderGlassPass(ctx);
+    }
+
     @Override
     public void render(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
         recomputeFiltered();

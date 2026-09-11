@@ -95,6 +95,20 @@ public class SegmentedSetting<E extends Enum<E>> extends FeatureSetting {
     @Override public int baseHeight() { return CONTROL_H; }
     @Override public int height() { return CONTROL_H + descriptionHeight(lastWidth); }
 
+    /**
+     * Pre-dim surface (§6 convention 6): drives the shared control's glass
+     * pass at the track rect derived from the row geometry — the same rect
+     * renderShapes/renderOverlay compute, so a scroll frame's pass lands
+     * exactly where the labels will.
+     */
+    @Override
+    public void renderGlassPass(GuiGraphics ctx, int x, int y, int width) {
+        if (!com.aurora.client.ui.component.GlassSurface.passOpen()) return; // legacy frame order
+        control.glassEnabled(glass);
+        control.layout(x + TRACK_PAD_X, y + 16, width - TRACK_PAD_X * 2, TRACK_H);
+        control.renderGlassPass(ctx, x + TRACK_PAD_X, y + 16, width - TRACK_PAD_X * 2, TRACK_H);
+    }
+
     @Override
     public void render(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
         renderShapes(ctx, x, y, width, mouseX, mouseY);

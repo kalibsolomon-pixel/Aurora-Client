@@ -37,6 +37,23 @@ public class ButtonSetting extends FeatureSetting {
     @Override public int baseHeight() { return CONTROL_H; }
     @Override public int height() { return CONTROL_H + descriptionHeight(lastWidth); }
 
+    /**
+     * Pre-dim surface (§6 convention 6): the embedded shared Button already
+     * carries the split — this drives its glass pass at the row's live
+     * geometry (the same rect render computes), so on a screen running the
+     * structural pass the button's surface paints pre-dim and its
+     * renderOverlay paints the label only. The Button itself stamps the
+     * frame; when no pass ran, it keeps painting in place (legacy order).
+     */
+    @Override
+    public void renderGlassPass(GuiGraphics ctx, int x, int y, int width) {
+        if (!com.aurora.client.ui.component.GlassSurface.passOpen()) return; // legacy frame order
+        int btnX = x + width - BTN_W - 14;
+        int btnY = y + (CONTROL_H - BTN_H) / 2;
+        button.layout(btnX, btnY, BTN_W, BTN_H);
+        button.renderGlassPass(ctx, btnX, btnY, BTN_W, BTN_H);
+    }
+
     @Override
     public void render(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
         lastWidth = width;
