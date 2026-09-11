@@ -9,6 +9,8 @@ import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.component.Button;
 import com.aurora.client.ui.component.ButtonWidget;
+import com.aurora.client.ui.component.GlassEditBox;
+import com.aurora.client.ui.component.GlassSurface;
 import com.aurora.client.ui.component.ThemedScreen;
 import com.aurora.client.ui.component.Toast;
 import com.aurora.client.ui.component.Widget;
@@ -68,6 +70,15 @@ import java.util.concurrent.atomic.AtomicReference;
  *       per the mod-wide glass conventions; every glass element falls back
  *       to its flat fill when the renderer declines (no world, screenshot
  *       in flight, failure).</li>
+ *   <li>§6 convention 6, structural (2026-09-10 — completing the mod-wide
+ *       pre-dim rollout): beginGlassPass → every surface (sidebar, active
+ *       tab under the tracked sidebar clip, card install buttons under the
+ *       tracked grid clip, search field, Done) → GlassSurface.overlayDim at
+ *       this screen's original 0x55 strength of the OVERLAY_DIM token →
+ *       content. The detail modal is the screen's one ABOVE-the-dim layer
+ *       (§9): its panel paints through GlassSurface.aboveDimContainer and
+ *       its buttons drive their surfaces inside a GlassSurface above-dim
+ *       zone, in the content phase, rims in place.</li>
  *   <li>Animated loading spinner instead of static "Loading…" text.</li>
  *   <li>Pack detail modal — clicking a card body opens a centered detail
  *       sheet (Resourcify's signature affordance) showing a large preview,
@@ -187,6 +198,17 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         String message = "";
 
         /**
+         * The phase whose button the glass pass drove THIS frame (−1 = none
+         * yet). The content render looks its button up by THIS value, not the
+         * live phase: a download thread flipping {@code phase} between the
+         * pass and the render would otherwise hand the render an undriven
+         * button instance, whose in-place surface paint is a post-dim
+         * ordering violation. Both walks run in the same frame over the same
+         * visible cards, so this is always fresh where it is read.
+         */
+        int drivenPhase = -1;
+
+        /**
          * Lazily-created shared install buttons, indexed by the phase they
          * render — card-sized (80×18) and modal-sized (130×24) variants are
          * separate instances because both surfaces can show the same pack at
@@ -235,12 +257,27 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
     private Button detailCloseButton;
 
     /**
+     * The Done chrome button — kept as a field so the glass pass drives its
+     * surface pre-dim (the ButtonWidget discipline, as on every migrated
+     * screen).
+     */
+    private ButtonWidget doneBtn;
+
+    /**
      * Whether the sidebar's depressed glass panel engaged this frame. Set by
-     * the glass pass at the top of {@link #render} (which runs BEFORE the
-     * overlay dim, per the layering contract) and consulted by
-     * {@link #renderSidebar} to suppress the flat panel fill + outline.
+     * the glass pass (paintGlassPass, before the overlay dim — the layering
+     * contract) and consulted by {@link #renderSidebar} to suppress the flat
+     * panel fill + outline.
      */
     private boolean sidebarGlass = false;
+
+    /**
+     * The ACTIVE category tab's glass + hover-lerp state from the glass pass
+     * (the tab's accent wash is its glass tint, so the lerp is evaluated in
+     * the pass; the content pass reads these for its flat fallback + label).
+     */
+    private boolean activeTabGlass = false;
+    private float activeTabT = 0f;
 
     // ---- Loading spinner animation ----
     private float spinnerAngle = 0f;
@@ -304,9 +341,10 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         searchField.setResponder(s -> { lastTypedMs = System.currentTimeMillis(); });
         this.addRenderableWidget(searchField);
 
-        this.addRenderableWidget(new ButtonWidget(
+        doneBtn = new ButtonWidget(
                 this.width - 80 - 16, 12, 80, 22,
-                Component.literal("Done"), this::onClose).glassBackground(true));
+                Component.literal("Done"), this::onClose).glassBackground(true);
+        this.addRenderableWidget(doneBtn);
 
         // Focus the search field immediately so typing works without a click.
         this.setInitialFocus(searchField);
@@ -418,33 +456,29 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         gridScroll.advance(maxScroll());
         sidebarScroll.advance(sidebarMaxScroll());
 
-        // ---- Sidebar glass panel — UNDER the dim, per the layering contract ----
-        // The sidebar is a main container: DEPRESSED glass with the ordinary
-        // SURFACE tint (whose alpha already carries the theme's Background
-        // Opacity — the single application point). Drawn before the overlay
-        // dim so the dim veils the panel and its surroundings equally;
-        // renderSidebar then suppresses the flat fill + outline when this
-        // engaged. With no live world the renderer declines and the flat
-        // panel returns, exactly as before glass.
-        int panelH = this.height - TOP_BAR_H - 16;
-        int panelY = TOP_BAR_H;
-        int panelW = SIDEBAR_W - SIDEBAR_PAD * 2;
-        int panelX = SIDEBAR_PAD;
-        sidebarGlass = liveWorldBackdrop() && BlurPanelRenderer.renderPanel(
-                g, panelX, panelY, panelW, panelH, AuroraTheme.RADIUS_LARGE,
-                BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX, BlurPanelRenderer.Lighting.depressed(),
-                BlurPanelRenderer.Priority.WINDOW);
-        if (sidebarGlass) {
-            RenderUtil.drawRoundedRectAA(g, panelX, panelY, panelW, panelH, AuroraTheme.RADIUS_LARGE,
-                    ThemeManager.surfaceColor(ThemeToken.SURFACE));
-            BlurPanelRenderer.drawRimFinish(g, panelX, panelY, panelW, panelH, AuroraTheme.RADIUS_LARGE);
-        }
+        // ---- 1. Glass pass — every surface BEFORE the dim (§6 convention 6 ----
+        // structural; this screen completed the mod-wide rollout 2026-09-10).
+        // The sidebar panel (a DEPRESSED container with the SURFACE-token
+        // tint) was already pre-dim; its rim now defers past the dim like
+        // every other surface's. The ACTIVE category tab is a selected
+        // control — its historical accent-lerp wash IS its glass tint (the
+        // explicit-tint GlassSurface.control), evaluated in the pass so the
+        // hover lerp can never disagree with the label pass. Card install
+        // buttons drive their shared-Button surfaces under the tracked grid
+        // scissor (deferred rims keep the clip); the search field and Done
+        // drive their own splits. The detail modal stays ABOVE the dim by
+        // design (§9) and paints in the content phase through the above-dim
+        // escape hatches.
+        GlassSurface.beginGlassPass();
+        paintGlassPass(g, mouseX, mouseY);
 
-        // Themed backdrop — OVERLAY_DIM RGB at this screen's original 0x55
-        // strength, so mode/accent derivation reaches even the dim layer.
-        g.fill(0, 0, this.width, this.height,
+        // ---- 2. Dim — this screen's original 0x55 strength of the OVERLAY_DIM ----
+        // token, through the argb overload built for exactly this; it closes
+        // the glass pass and flushes the deferred rims.
+        GlassSurface.overlayDim(g, this.width, this.height,
                 ThemeManager.withAlpha(ThemeManager.color(ThemeToken.OVERLAY_DIM), 0x55));
 
+        // ---- 3. Content ----
         // ---- Sidebar ----
         renderSidebar(g, mouseX, mouseY);
 
@@ -488,28 +522,15 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         }
 
         // Viewport culling: compute the first/last visible row from the
-        // scroll offset so off-screen cards never enter renderCard. The GPU
-        // scissor only discards pixels at the rasterizer — those cards would
-        // still cost CPU draw-call submissions + state setup. Skipping them
-        // outright is strictly cheaper and is the dominant perf win when a
-        // search returns many results.
-        if (!list.isEmpty() && cols > 0) {
-            int rowH = CARD_H + CARD_GAP;
-            int colW = CARD_W + CARD_GAP;
-            double topRow0 = LIST_TOP - gridScroll.current();
-            int firstRow = Math.max(0, (int) Math.floor((LIST_TOP - CARD_H - topRow0) / rowH));
-            int lastRow = (int) Math.floor((listBottom - topRow0) / rowH);
-            lastRow = Math.min(lastRow, (list.size() - 1) / cols);
-            for (int row = firstRow; row <= lastRow; row++) {
-                for (int col = 0; col < cols; col++) {
-                    int i = row * cols + col;
-                    if (i >= list.size()) break;
-                    int x = gridLeft + col * colW;
-                    int y = LIST_TOP + row * rowH - (int) gridScroll.current();
-                    renderCard(g, list.get(i), x, y, mouseX, mouseY);
-                }
-            }
-        }
+        // scroll offset so off-screen cards never enter renderCard (or the
+        // glass pass's button walk — forEachVisibleCard, the one shared
+        // culling walk). The GPU scissor only discards pixels at the
+        // rasterizer — those cards would still cost CPU draw-call
+        // submissions + state setup. Skipping them outright is strictly
+        // cheaper and is the dominant perf win when a search returns many
+        // results.
+        forEachVisibleCard(list, cols, gridLeft, listBottom, (p, x, y) ->
+                renderCard(g, p, x, y, mouseX, mouseY));
 
         g.disableScissor();
 
@@ -525,6 +546,135 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         if (detailProject != null || detailOpenT > 0f) {
             renderDetailModal(g, mouseX, mouseY);
         }
+    }
+
+    /** One visible card in the grid walk — see {@link #forEachVisibleCard}. */
+    private interface CardVisitor {
+        void visit(ModrinthProject p, int x, int y);
+    }
+
+    /**
+     * The grid's viewport-culling walk — the ONE walk, shared by the content
+     * render and the glass pass's per-card button driving so the two can
+     * never drift apart.
+     */
+    private void forEachVisibleCard(List<ModrinthProject> list, int cols, int gridLeft, int listBottom,
+                                    CardVisitor visitor) {
+        if (list.isEmpty() || cols <= 0) return;
+        int rowH = CARD_H + CARD_GAP;
+        int colW = CARD_W + CARD_GAP;
+        double topRow0 = LIST_TOP - gridScroll.current();
+        int firstRow = Math.max(0, (int) Math.floor((LIST_TOP - CARD_H - topRow0) / rowH));
+        int lastRow = (int) Math.floor((listBottom - topRow0) / rowH);
+        lastRow = Math.min(lastRow, (list.size() - 1) / cols);
+        for (int row = firstRow; row <= lastRow; row++) {
+            for (int col = 0; col < cols; col++) {
+                int i = row * cols + col;
+                if (i >= list.size()) break;
+                visitor.visit(list.get(i), gridLeft + col * colW,
+                        LIST_TOP + row * rowH - (int) gridScroll.current());
+            }
+        }
+    }
+
+    /**
+     * The glass pass (§6 convention 6) — every surface except the modal's,
+     * painted between beginGlassPass and overlayDim. The active tab and the
+     * card buttons paint under their tracked scissors so their deferred rims
+     * re-apply the clips after the dim.
+     */
+    private void paintGlassPass(GuiGraphics g, int mouseX, int mouseY) {
+        int panelH = this.height - TOP_BAR_H - 16;
+        int panelY = TOP_BAR_H;
+        int panelW = SIDEBAR_W - SIDEBAR_PAD * 2;
+        int panelX = SIDEBAR_PAD;
+        // Sidebar — DEPRESSED container, SURFACE-token tint (whose alpha
+        // carries the Background Opacity via surfaceColor — the single
+        // application point). Flat panel returns in renderSidebar on decline.
+        sidebarGlass = GlassSurface.container(g, panelX, panelY, panelW, panelH,
+                AuroraTheme.RADIUS_LARGE, ThemeToken.SURFACE);
+        paintActiveTabPass(g, mouseX, mouseY, panelX, panelY, panelW, panelH);
+        paintCardButtonsPass(g);
+        ((GlassEditBox) searchField).aurora$renderGlassPass(g);
+        if (doneBtn != null) doneBtn.renderGlassPass(g);
+    }
+
+    /**
+     * The ACTIVE category tab's surface. Its historical look is a raised
+     * glass panel tinted by an accent wash whose strength lerps with hover
+     * (0.30→0.40) — the wash IS the tint, so it paints here, in the pass,
+     * through the explicit-tint GlassSurface.control; the hover ease for the
+     * active tab's key advances here (once per frame — renderSidebar skips
+     * it for the active tab and reads activeTabT). Under the tracked sidebar
+     * clip so the deferred rim keeps it. Inactive tabs stay flat by design
+     * (small transient rows inside an already-glass container).
+     */
+    private void paintActiveTabPass(GuiGraphics g, int mouseX, int mouseY,
+                                    int panelX, int panelY, int panelW, int panelH) {
+        activeTabGlass = false;
+        int clipTop = panelY + 26;
+        int clipBot = panelY + panelH - 6;
+        int tabY = clipTop - (int) sidebarScroll.current();
+        int tabX = panelX + 4;
+        int tabW = panelW - 8;
+        for (int i = 0; i < CATEGORIES.length; i++) {
+            CategoryTab tab = CATEGORIES[i];
+            if (tab.section == Section.HEADER) {
+                tabY += HEADER_H;
+                continue;
+            }
+            boolean isActive = (tab.slug == null && activeCategory == null)
+                    || (tab.slug != null && tab.slug.equals(activeCategory));
+            if (isActive) {
+                boolean hover = Widget.inBounds(mouseX, mouseY, tabX, tabY, tabW, TAB_H)
+                        && mouseY >= clipTop && mouseY < clipBot;
+                activeTabT = updateHover("tab:" + i, hover || isActive);
+                if (tabY + TAB_H > clipTop && tabY < clipBot) {
+                    float tabR = Math.min(TAB_H / 2f, AuroraTheme.RADIUS_SMALL);
+                    int fill = AuroraAnim.lerpArgb(
+                            AuroraAnim.scaleAlpha(AuroraTheme.IOS_BLUE, 0.30f),
+                            AuroraAnim.scaleAlpha(AuroraTheme.IOS_BLUE_HOVER, 0.40f), activeTabT);
+                    GlassSurface.enableScissor(g, panelX, clipTop, panelX + panelW, clipBot);
+                    activeTabGlass = GlassSurface.control(g, tabX, tabY, tabW, TAB_H, tabR, fill);
+                    GlassSurface.disableScissor(g);
+                }
+                return;
+            }
+            tabY += TAB_H + TAB_GAP;
+        }
+    }
+
+    /**
+     * Per-card install buttons — the shared Button's own split, driven here
+     * under the tracked grid scissor (the same culling walk the content
+     * render uses); renderCard's button render then paints labels only.
+     * Nothing bespoke: the buttons are ordinary shared-painter Buttons with
+     * DETAIL priority. drivenPhase is stamped per card so a download thread
+     * flipping the phase mid-frame cannot hand the content render an
+     * undriven (post-dim-painting) button instance.
+     */
+    private void paintCardButtonsPass(GuiGraphics g) {
+        int gridLeft = gridLeft();
+        int cols = columns();
+        int listBottom = this.height - LIST_BOTTOM_PAD;
+        List<ModrinthProject> list = results;
+        GlassSurface.enableScissor(g, gridLeft - 4, LIST_TOP - 2,
+                gridLeft + cols * (CARD_W + CARD_GAP) - CARD_GAP + 4, listBottom);
+        forEachVisibleCard(list, cols, gridLeft, listBottom, (p, x, y) -> {
+            CardState st = cardStates.computeIfAbsent(p.projectId, k -> new CardState());
+            int btnW = 80, btnH = 18;
+            int btnX = x + CARD_W - btnW - THUMB_PAD;
+            int btnY = y + CARD_H - btnH - 8;
+            Button installBtn = st.cardPhaseButtons[st.phase];
+            if (installBtn == null) {
+                installBtn = newPhaseButton(st.phase);
+                st.cardPhaseButtons[st.phase] = installBtn;
+            }
+            installBtn.layout(btnX, btnY, btnW, btnH);
+            installBtn.renderGlassPass(g, btnX, btnY, btnW, btnH);
+            st.drivenPhase = st.phase;
+        });
+        GlassSurface.disableScissor(g);
     }
 
     private void renderSidebar(GuiGraphics g, int mouseX, int mouseY) {
@@ -578,9 +728,11 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
             boolean hover = Widget.inBounds(mouseX, mouseY, tabX, tabY, tabW, TAB_H)
                     && mouseY >= clipTop && mouseY < clipBot;
 
-            // Eased hover / active transition.
+            // Eased hover / active transition. The ACTIVE tab's ease is
+            // advanced by the glass pass (its tint is the accent wash, so
+            // the lerp is evaluated there); inactive tabs advance here.
             String key = "tab:" + i;
-            float t = updateHover(key, hover || isActive);
+            float t = isActive ? activeTabT : updateHover(key, hover || isActive);
 
             int fill;
             int textCol;
@@ -602,19 +754,15 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
 
             float tabR = Math.min(TAB_H / 2f, AuroraTheme.RADIUS_SMALL);
             if (isActive) {
-                // Selected/primary element → accent-STAINED glass, raised
-                // (the tint is the existing accent lerp on top of the glass
-                // panel; the rim replaces the flat outline). Inactive tabs —
-                // including their hover state — deliberately stay flat
-                // neutral: they are small transient rows inside an
-                // already-glass sidebar container, not genuine surfaces.
-                boolean tabGlass = liveWorldBackdrop() && BlurPanelRenderer.renderPanel(
-                        g, tabX, tabY, tabW, TAB_H, tabR,
-                        BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX, BlurPanelRenderer.Lighting.raised());
-                RenderUtil.drawRoundedRectAA(g, tabX, tabY, tabW, TAB_H, tabR, fill);
-                if (tabGlass) {
-                    BlurPanelRenderer.drawRimFinish(g, tabX, tabY, tabW, TAB_H, tabR);
-                } else {
+                // Selected/primary element — its glass surface (panel +
+                // accent-wash tint + rim) was painted pre-dim by the glass
+                // pass; only the label renders here. On decline the flat
+                // accent fill + outline return. Inactive tabs — including
+                // their hover state — deliberately stay flat neutral: they
+                // are small transient rows inside an already-glass sidebar
+                // container, not genuine surfaces.
+                if (!activeTabGlass) {
+                    RenderUtil.drawRoundedRectAA(g, tabX, tabY, tabW, TAB_H, tabR, fill);
                     RenderUtil.drawRoundedOutlineAA(g, tabX, tabY, tabW, TAB_H, tabR, 1.0f, outlineCol);
                 }
             } else if ((fill >>> 24) != 0) {
@@ -723,17 +871,24 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         // Install button — the shared glass Button painter (the same
         // implementation ButtonWidget wraps for the Done button), laid out
         // imperatively per frame like ProfileManagerScreen's row buttons.
-        // Clicks still route through this screen's own rect hit-testing
-        // (see mouseClicked), so the painter is constructed with a no-op
-        // action — the ButtonWidget discipline.
+        // Its SURFACE was painted pre-dim by paintCardButtonsPass (the same
+        // culling walk drove the shared split); this render paints the label
+        // only. The lookup uses the pass's drivenPhase, not the live phase:
+        // a download thread flipping the phase between the two walks would
+        // otherwise hand this render an undriven instance, whose in-place
+        // surface paint is a post-dim ordering violation. Clicks still route
+        // through this screen's own rect hit-testing (see mouseClicked), so
+        // the painter is constructed with a no-op action — the ButtonWidget
+        // discipline.
         CardState st = cardStates.computeIfAbsent(p.projectId, k -> new CardState());
         int btnW = 80, btnH = 18;
         int btnX = x + CARD_W - btnW - THUMB_PAD;
         int btnY = y + CARD_H - btnH - 8;
-        Button installBtn = st.cardPhaseButtons[st.phase];
+        int renderPhase = st.drivenPhase >= 0 ? st.drivenPhase : st.phase;
+        Button installBtn = st.cardPhaseButtons[renderPhase];
         if (installBtn == null) {
-            installBtn = newPhaseButton(st.phase);
-            st.cardPhaseButtons[st.phase] = installBtn;
+            installBtn = newPhaseButton(renderPhase);
+            st.cardPhaseButtons[renderPhase] = installBtn;
         }
         installBtn.layout(btnX, btnY, btnW, btnH);
         installBtn.render(g, btnX, btnY, btnW, btnH, mouseX, mouseY);
@@ -784,29 +939,72 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         int modalY = (this.height - modalH) / 2 + (int) ((1f - openT) * 16);
 
         g.enableScissor(0, 0, this.width, this.height);
-        // Modal body — same treatment as the sidebar: DEPRESSED glass behind
-        // the existing SURFACE tint, rim finish above it. The manual drop
-        // shadow + top sheen are gone — the glass system replaces them. The
-        // modal's own dim backdrop has already been filled, so the glass
-        // correctly captures the dimmed screen as its backdrop. On decline
-        // the flat fill + outline return.
-        boolean modalGlass = liveWorldBackdrop() && BlurPanelRenderer.renderPanel(
-                g, modalX, modalY, modalW, modalH, AuroraTheme.RADIUS_LARGE,
-                BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX, BlurPanelRenderer.Lighting.depressed(),
-                BlurPanelRenderer.Priority.WINDOW);
-        RenderUtil.drawRoundedRectAA(g, modalX, modalY, modalW, modalH,
-                AuroraTheme.RADIUS_LARGE, ThemeManager.surfaceColor(ThemeToken.SURFACE));
-        if (modalGlass) {
-            BlurPanelRenderer.drawRimFinish(g, modalX, modalY, modalW, modalH, AuroraTheme.RADIUS_LARGE);
-        } else {
+        // Modal body — ABOVE the dim by design (§9's other named case: the
+        // modal must float over the dimmed screen, its own translucent
+        // backdrop already darkening what is behind it), so it paints here
+        // in the content phase through the container-shaped above-dim escape
+        // hatch: DEPRESSED glass behind the SURFACE-token tint, rim finish in
+        // place, exempt from the glass-pass ordering. The manual drop shadow
+        // + top sheen are gone — the glass system replaces them. The glass
+        // captures the already-dimmed screen as its backdrop, exactly as it
+        // did before this screen migrated. On decline the flat fill + outline
+        // return.
+        boolean modalGlass = GlassSurface.aboveDimContainer(g, modalX, modalY, modalW, modalH,
+                AuroraTheme.RADIUS_LARGE, ThemeToken.SURFACE);
+        if (!modalGlass) {
+            RenderUtil.drawRoundedRectAA(g, modalX, modalY, modalW, modalH,
+                    AuroraTheme.RADIUS_LARGE, ThemeManager.surfaceColor(ThemeToken.SURFACE));
             RenderUtil.drawRoundedOutlineAA(g, modalX, modalY, modalW, modalH,
                     AuroraTheme.RADIUS_LARGE, 1.0f, AuroraTheme.WINDOW_OUTLINE);
         }
 
         if (detailProject != null) {
+            // The modal's own buttons are component-driven surfaces that must
+            // stay WITH the modal above the dim (driving them in the screen's
+            // glass pass would bury their glass under the modal's backdrop
+            // fill + panel). The above-dim zone bracket exempts their
+            // in-place painting from the ordering report; renderDetailContent
+            // then renders labels only (the frame stamps match).
+            GlassSurface.beginAboveDim();
+            try {
+                driveModalButtonsGlassPass(g, detailProject, modalX, modalY, modalW, modalH);
+            } finally {
+                GlassSurface.endAboveDim();
+            }
             renderDetailContent(g, detailProject, modalX, modalY, modalW, modalH, mouseX, mouseY);
         }
         g.disableScissor();
+    }
+
+    /**
+     * Drives the modal's install + Close button surfaces in place (above the
+     * dim, inside the caller's above-dim zone). The geometry is the exact
+     * math {@link #renderDetailContent} uses for its renders — keep the two
+     * in lockstep.
+     */
+    private void driveModalButtonsGlassPass(GuiGraphics g, ModrinthProject p,
+                                            int mx, int my, int mw, int mh) {
+        int pad = 18;
+        CardState st = cardStates.computeIfAbsent(p.projectId, k -> new CardState());
+        int btnW = 130, btnH = 24;
+        int btnX = mx + pad;
+        int btnY = my + mh - pad - btnH;
+        Button detailInstallBtn = st.modalPhaseButtons[st.phase];
+        if (detailInstallBtn == null) {
+            detailInstallBtn = newPhaseButton(st.phase);
+            st.modalPhaseButtons[st.phase] = detailInstallBtn;
+        }
+        detailInstallBtn.layout(btnX, btnY, btnW, btnH);
+        detailInstallBtn.renderGlassPass(g, btnX, btnY, btnW, btnH);
+
+        int cbW = 60, cbH = 22;
+        int cbX = mx + mw - cbW - pad;
+        int cbY = my + pad;
+        if (detailCloseButton == null) {
+            detailCloseButton = new Button(Component.literal("Close"), () -> {}).glassBackground(true);
+        }
+        detailCloseButton.layout(cbX, cbY, cbW, cbH);
+        detailCloseButton.renderGlassPass(g, cbX, cbY, cbW, cbH);
     }
 
     private void renderDetailContent(GuiGraphics g, ModrinthProject p, int mx, int my, int mw, int mh, int mouseX, int mouseY) {

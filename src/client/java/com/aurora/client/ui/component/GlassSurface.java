@@ -162,6 +162,10 @@ public final class GlassSurface {
                     + pendingRims.size() + " deferred rim finish(es) were painted nowhere");
             pendingRims.clear();
         }
+        if (aboveDimDepth > 0) {
+            report("above-dim zone (beginAboveDim) left open across the frame boundary");
+            aboveDimDepth = 0;
+        }
         trackedClip = null;
         frame++;
     }
@@ -383,6 +387,20 @@ public final class GlassSurface {
     }
 
     /**
+     * RAISED control surface with an explicit tint ARGB — for the rare
+     * control whose historical tint is neither {@code WINDOW_FILL} nor
+     * {@link ThemeManager#stainedTint()} (the pack browser's active category
+     * tab: an accent wash that predates this helper and must keep its exact
+     * strength). Same discipline as every other entry point: the tint is the
+     * caller's one application of a theme-derived strength — never a second
+     * multiplier stacked on another tint.
+     */
+    public static boolean control(GuiGraphics g, float x, float y, float w, float h, float radius, int tint) {
+        return paint(g, x, y, w, h, radius, BlurPanelRenderer.Lighting.raised(), tint,
+                BlurPanelRenderer.Priority.CONTROL);
+    }
+
+    /**
      * ABOVE-DIM control surface — the deliberate exception to the layering
      * rule, for floating elements that must read ABOVE an already-dimmed
      * screen: {@code EnumSetting}'s expanded option popup (and, when that
@@ -406,6 +424,55 @@ public final class GlassSurface {
         BlurPanelRenderer.drawRimFinish(g, x, y, w, h, radius);
         return true;
     }
+
+    /**
+     * ABOVE-DIM container surface — {@link #aboveDimControl}'s
+     * container-shaped sibling (the pack browser's detail modal): DEPRESSED,
+     * WINDOW priority, tinted from a surface token's RGB with
+     * {@code WINDOW_FILL}'s alpha ({@link ThemeManager#surfaceColor}) so the
+     * single opacity application point holds. Same contract as
+     * {@link #aboveDimControl}: painted entirely in place in the content
+     * pass, exempt from the pass ordering, rims included.
+     *
+     * @return whether glass drew; {@code false} ⇒ caller paints its flat look
+     */
+    public static boolean aboveDimContainer(GuiGraphics g, float x, float y, float w, float h, float radius,
+                                            ThemeToken surface) {
+        if (!liveWorldBackdrop() && !BlurPanelRenderer.menuBackdropValid()) return false;
+        if (!BlurPanelRenderer.renderPanel(g, x, y, w, h, radius,
+                BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX, BlurPanelRenderer.Lighting.depressed(),
+                BlurPanelRenderer.Priority.WINDOW)) {
+            return false;
+        }
+        RenderUtil.drawRoundedRectAA(g, x, y, w, h, radius, ThemeManager.surfaceColor(surface));
+        BlurPanelRenderer.drawRimFinish(g, x, y, w, h, radius);
+        return true;
+    }
+
+    /**
+     * Opens an ABOVE-DIM ZONE — a short bracket inside the content pass for
+     * a floating layer that sits deliberately above the dimmed screen (the
+     * pack browser's detail modal) and whose embedded COMPONENTS (shared
+     * {@code Button}s, fields) drive their own glass passes right there.
+     * While open, {@code paint} skips the ordering report: the zone's
+     * surfaces are exempt by declaration, exactly like the one-shot
+     * {@link #aboveDimControl}/{@link #aboveDimContainer} surfaces — but the
+     * bracket covers component-driven surfaces whose painters the caller
+     * does not own. Rims still paint in place (the glass pass is closed by
+     * then). Must be closed in the same frame ({@code finally});
+     * {@link #beginFrame()} reports a zone left open.
+     */
+    public static void beginAboveDim() {
+        aboveDimDepth++;
+    }
+
+    /** Closes one {@link #beginAboveDim} bracket. */
+    public static void endAboveDim() {
+        if (aboveDimDepth > 0) aboveDimDepth--;
+    }
+
+    /** Depth of the open above-dim zone; 0 = paints follow the layering rule. */
+    private static int aboveDimDepth = 0;
 
     /**
      * True when glass can engage at all this frame: a level is loaded, so
@@ -435,7 +502,7 @@ public final class GlassSurface {
         // serves screens deciding whether to skip the vanilla backdrop
         // sandwich, a different question whose meaning must not move.
         if (!liveWorldBackdrop() && !BlurPanelRenderer.menuBackdropValid()) return false;
-        if (dimPainted()) {
+        if (dimPainted() && aboveDimDepth == 0) {
             report("glass surface body painted AFTER the overlay dim — every glass surface belongs "
                     + "in the glass pass, before GlassSurface.overlayDim");
         }
