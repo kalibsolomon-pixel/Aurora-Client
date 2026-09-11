@@ -53,7 +53,9 @@ public class ThemePreviewSetting extends FeatureSetting {
     // The preview is literally the shared components themselves — a mock
     // card holding the four control archetypes, so any theme change shows
     // up instantly with zero separate color logic. Glass pilot: the card
-    // body and the accent chip are LIVE glass (renderGlassPass) — the
+    // body, the accent chip, and the two mock buttons' surfaces are LIVE
+    // glass (renderGlassPass — the buttons follow ButtonSetting's embedded
+    // Button discipline, surface pre-dim + label in renderOverlay); the
     // RoundedPanel here is only the opaque FALLBACK; the primary button
     // uses accent-STAINED glass (selected/primary family) and the secondary
     // button NEUTRAL glass (raised, like every control on this screen).
@@ -110,11 +112,15 @@ public class ThemePreviewSetting extends FeatureSetting {
 
         int b1x = px + pw - BTN_W - 12;
         int b1y = py + 10;
-        primaryBtn.renderOverlay(ctx, b1x, b1y, BTN_W, BTN_H, -1, -1);
-
-        int b2x = b1x;
         int b2y = b1y + BTN_H + 8;
-        secondaryBtn.renderOverlay(ctx, b2x, b2y, BTN_W, BTN_H, -1, -1);
+        // The mock buttons' SURFACES are live glass driven by renderGlassPass
+        // (same split as ButtonSetting's embedded Button); their labels draw
+        // in renderOverlay below. Never here: Button.renderOverlay called
+        // from this cacheable-shapes phase takes its in-place surface branch
+        // on any screen whose pass didn't drive the button — on a structural
+        // screen that paints a glass body wherever renderShapes runs (on
+        // AuroraScreen's Settings tab: after the dim — the §6 layering
+        // violation this file once shipped).
 
         // Accent chip — rect derived in the glass pass from the same row
         // geometry; the chip itself is live stained glass in renderGlassPass
@@ -170,6 +176,15 @@ public class ThemePreviewSetting extends FeatureSetting {
             RenderUtil.drawRoundedRectAA(ctx, chipX, chipY, CHIP_W, CHIP_H, chipR,
                     AuroraTheme.IOS_BLUE);
         }
+
+        // The mock buttons' glass surfaces — the ButtonSetting discipline:
+        // driven HERE (pre-dim, under the screen's tracked scissor like the
+        // card) so their renderOverlay calls paint the label only. Same
+        // geometry renderShapes/renderOverlay derive from the row params.
+        int b1x = cardX + cardW - BTN_W - 12;
+        int b1y = cardY + 10;
+        primaryBtn.renderGlassPass(ctx, b1x, b1y, BTN_W, BTN_H);
+        secondaryBtn.renderGlassPass(ctx, b1x, b1y + BTN_H + 8, BTN_W, BTN_H);
     }
 
     @Override
@@ -179,14 +194,20 @@ public class ThemePreviewSetting extends FeatureSetting {
         int py = y + PAD_Y;
         int pw = width - PAD_X * 2;
 
+        // Mock buttons — content only: the pass stamped their frames, so
+        // these renderOverlay calls draw each Button's label (and its flat
+        // fallback when the glass declined). On a screen that never drove
+        // the pass they would paint the surface in place (the legacy order).
+        int b1x = px + pw - BTN_W - 12;
+        int b1y = py + 10;
+        primaryBtn.renderOverlay(ctx, b1x, b1y, BTN_W, BTN_H, -1, -1);
+        secondaryBtn.renderOverlay(ctx, b1x, b1y + BTN_H + 8, BTN_W, BTN_H, -1, -1);
+
         int tx = px + 12;
         int ty = py + 10;
         ctx.drawString(tr, "Primary text", tx, ty, AuroraTheme.IOS_LABEL, false);
         ctx.drawString(tr, "Secondary text", tx, ty + 12, AuroraTheme.IOS_SECONDARY_LABEL, false);
         ctx.drawString(tr, "Muted text", tx, ty + 24, AuroraTheme.IOS_TERTIARY_LABEL, false);
-
-        // The mock buttons draw their own "Button" labels inside their
-        // renderOverlay calls above — nothing extra to draw here.
     }
 
     @Override

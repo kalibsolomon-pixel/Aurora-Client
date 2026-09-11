@@ -1105,6 +1105,57 @@ reports in normal operation; and the guard negative-tested IN-FRAME on
 each screen via the `ScreenEvents` afterRender probe (`drew=true
 dimPainted=true`; exactly one report per boot, the probe's own). Captures
 in `.devpilot-pilot/predim-aurora-*` and `.devpilot-pilot/predim-packs-*`.
+**(Correction, same day — that "one report, the probe's own" was this
+entry's own blind spot, see the next entry: the report the phase-c boots
+logged was almost certainly the `ThemePreviewSetting` violation below,
+not the probe's.)**
+
+Landed 2026-09-11 after that: **the AuroraScreen pre-dim regression —
+`ThemePreviewSetting`'s mock buttons painted post-dim** (found by an
+unrelated boot-smoke, stash-verified pre-existing on `1e170eb`'s master).
+Root cause: `ThemePreviewSetting` was the one composite widget that never
+wired its embedded `Button`s into the structural pass — its
+`renderGlassPass` drove only the card + accent chip, while the buttons
+were invoked as full `Button.renderOverlay` calls from **`renderShapes`**
+(the cacheable-static-geometry phase). `Button.renderOverlay` takes its
+in-place surface branch whenever its own `renderGlassPass` didn't stamp
+the frame — so the buttons painted a glass body wherever `renderShapes`
+happened to run. Screen-order decided legality: on
+`FeatureDetailScreen` `renderShapes` runs inside the cache-raster block
+(between `beginGlassPass` and `overlayDim`) → pre-dim → silent; on
+`AuroraScreen`'s Settings tab it runs in the content phase, post-dim →
+the `[GlassSurface]` ordering ERROR, plus a visible symptom (the two
+buttons floated UNVEILED above the dim while the card was veiled). The
+same wrong phase had a second visible defect on the detail screen: the
+buttons' surfaces AND labels only painted on cache-raster frames, so a
+settled (cache-hit) theme detail screen rendered the preview card with
+its two buttons entirely missing. Fix: the `ButtonSetting` discipline —
+`renderGlassPass` now drives `primaryBtn`/`secondaryBtn.renderGlassPass`
+(same geometry `renderShapes` derives), and the button calls moved from
+`renderShapes` to `renderOverlay` (content only: label + flat fallback).
+Why phase-c missed it: its Settings-tab scroll (-42px) DID reveal the
+Theme preview row (a -16px notch is enough), so its boot fired this
+violation once — but the guard reports once per (screen class, message)
+per session, and the later same-key probe report was suppressed as the
+duplicate, so the log's single report looked exactly like the expected
+negative-test result. Lesson now part of the standing method: read the
+report's STACK, don't count reports (the probe's report carries the
+probe's own stack), and the `gfix` DevPilot mode exists as the broader
+harness — a six-depth bidirectional Settings-tab scroll sweep with
+settles, the settled theme detail screen, and every structural screen
+(Waypoints/Profiles/pack browser incl. modal), no probe armed, so ANY
+report is a real defect. Verified pre/post with it: pre-fix fires the
+ERROR at the first scroll depth (captures `g2` unveiled buttons, `g7`
+buttons missing on the settled detail screen); post-fix ZERO reports
+across all twelve captures, buttons veiled with the card (`g2`),
+present with labels when settled (`g7`), `declines=0 poolExhausted=0`
+throughout. Captures in `.devpilot-pilot/gfix-{pre,post}/`. Same-gap
+audit: every other composite `FeatureSetting` either drives its embedded
+glass component in `renderGlassPass` (`ButtonSetting`, `SegmentedSetting`,
+`ParticleConfigSetting`, `PixelCanvasSetting`, `StringListSetting`, the
+four Part A pills, `EnumSetting`) or embeds only opaque components
+(toggles, sliders, `ColorSwatch`) — `ThemePreviewSetting` was the only
+instance.
 
 ---
 
