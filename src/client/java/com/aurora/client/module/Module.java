@@ -19,21 +19,14 @@ public class Module {
     public final String id;
     public final String name;
     public final String description;
-    public final Category category;
-
-    public enum Category {
-        HUD,
-        SETTINGS
-    }
 
     /** Lazily-resolved metadata handle; cached after first lookup. */
     private FeatureMetadata cachedMeta;
 
-    public Module(String id, String name, String description, Category category) {
+    public Module(String id, String name, String description) {
         this.id = id;
         this.name = name;
         this.description = description;
-        this.category = category;
     }
 
     /**
