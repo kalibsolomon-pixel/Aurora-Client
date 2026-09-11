@@ -221,15 +221,26 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
             layerCache.commit(version);
         }
 
-        // Preview-card glass — after the capture pass above (which is what
-        // refreshes the remembered rects) and before the dim + cached blit,
-        // so the mock controls rasterized into the cache stack on top of the
-        // glass. This is the generic per-setting glass pass
-        // (FeatureSetting.renderGlassPass) — the preview card + toggle track
-        // + accent chip override it; segments and buttons glass inside their
-        // own overlay draws. Falls back per element when declined.
+        // Preview-card glass — after the capture pass above and before the
+        // dim + cached blit, so the mock controls rasterized into the cache
+        // stack on top of the glass. This is the generic per-setting glass
+        // pass (FeatureSetting.renderGlassPass): the screen walks each row's
+        // CURRENT geometry (same walk the overlay loop below uses, so a
+        // scroll frame's pass paints exactly where the content will) and
+        // settings that paint glass take it from there — the preview card
+        // paints here on every screen, and since the §6-convention-6 widget
+        // split the pill widgets (enum/keybind/key-list/item-scale) paint
+        // their surfaces here too, but ONLY while a structural glass pass is
+        // open; this screen's dim is still the legacy raw fill, so on it
+        // those widgets keep painting in place inside renderOverlay exactly
+        // as before. Falls back per element when declined.
+        int gy = TOP_PAD - (int) scroll.current();
         for (FeatureSetting s : meta.settings) {
-            s.renderGlassPass(ctx);
+            int gh = s.height();
+            if (gy + gh > 0 && gy < this.height) {
+                s.renderGlassPass(ctx, listX, gy, LIST_W);
+            }
+            gy += gh + ROW_GAP;
         }
 
         // Themed overlay dim — token-driven (OVERLAY_DIM), so mode/accent

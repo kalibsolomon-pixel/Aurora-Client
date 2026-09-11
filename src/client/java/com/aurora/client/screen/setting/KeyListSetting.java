@@ -5,7 +5,9 @@ import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.hud.module.KeystrokesModule;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
-import com.aurora.client.ui.render.blur.BlurPanelRenderer;
+import com.aurora.client.theme.ThemeManager;
+import com.aurora.client.theme.ThemeToken;
+import com.aurora.client.ui.component.GlassSurface;
 import com.aurora.client.ui.component.Widget;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.util.AuroraAnim;
@@ -45,6 +47,15 @@ public class KeyListSetting extends FeatureSetting {
     private final Supplier<List<Integer>> getter;
     private final Consumer<List<Integer>> setter;
 
+    /**
+     * Glass-pass bookkeeping (the {@code Button} scheme, §6 convention 6):
+     * frame stamp + result for the "Add Key" pill. In the stamped frame
+     * {@link #render} paints content only (flat pill on decline);
+     * otherwise the surface paints in place — legacy, pixel-identical.
+     */
+    private long glassPassFrame = -1L;
+    private boolean passDrewPill = false;
+
     private boolean listening = false;
     private int lastX, lastY, lastW;
     private final HoverAnim hoverAnim = new HoverAnim(140L);
@@ -62,6 +73,23 @@ public class KeyListSetting extends FeatureSetting {
     }
 
     @Override public int height() { return baseHeight(); }
+
+    /**
+     * Pre-dim surface (the split's surface half): the Add pill's raised
+     * glass, neutral at rest / accent-stained while listening. The Y walk
+     * mirrors {@link #render}'s item loop (header + one stride per existing
+     * entry) — keep the two in lockstep.
+     */
+    @Override
+    public void renderGlassPass(GuiGraphics ctx, int x, int y, int width) {
+        if (!GlassSurface.passOpen()) return; // legacy frame order — render paints in place
+        glassPassFrame = GlassSurface.frame();
+        int addX = x + 14;
+        int addW = width - 28;
+        int addY = y + ROW_H + 2 + safeList().size() * (ROW_H + 2) + 4;
+        float glassR = Math.min(ADD_H / 2f, ThemeManager.current().roundness().radiusSmall());
+        passDrewPill = GlassSurface.control(ctx, addX, addY, addW, ADD_H, glassR, listening);
+    }
 
     @Override
     public void render(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
@@ -112,16 +140,19 @@ public class KeyListSetting extends FeatureSetting {
 
         // Glass: same contract as KeybindSetting's pill — raised glass,
         // neutral tint at rest, accent-stained tint while listening, and
-        // the complete flat pill on decline.
+        // the complete flat pill on decline. If the screen ran this row's
+        // glass pass this frame the surface is already on screen UNDER the
+        // dim and only its result matters here; otherwise (legacy frame
+        // order) it is painted in place now through the shared GlassSurface
+        // helper (identical calls).
         float glassR = Math.min(ADD_H / 2f, ThemeManager.current().roundness().radiusSmall());
-        boolean glassOk = BlurPanelRenderer.renderPanel(ctx, addX, addY, addW, ADD_H, glassR,
-                BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX, BlurPanelRenderer.Lighting.raised());
-        if (glassOk) {
-            RenderUtil.drawRoundedRectAA(ctx, addX, addY, addW, ADD_H, glassR,
-                    listening ? ThemeManager.stainedTint()
-                              : ThemeManager.color(ThemeToken.WINDOW_FILL));
-            BlurPanelRenderer.drawRimFinish(ctx, addX, addY, addW, ADD_H, glassR);
+        boolean glassOk;
+        if (glassPassFrame == GlassSurface.frame()) {
+            glassOk = passDrewPill;
         } else {
+            glassOk = GlassSurface.control(ctx, addX, addY, addW, ADD_H, glassR, listening);
+        }
+        if (!glassOk) {
             RenderUtil.drawSquircle(ctx, addX, addY, addW, ADD_H, AuroraTheme.RADIUS_SMALL,
                     listening ? AuroraTheme.IOS_BLUE_PRESSED : fillTint);
             RenderUtil.drawSquircleOutline(ctx, addX, addY, addW, ADD_H, AuroraTheme.RADIUS_SMALL, 1.0f,

@@ -67,10 +67,10 @@ public class ThemePreviewSetting extends FeatureSetting {
             .glassStyle(Button.GlassStyle.STAINED);
     private final Button secondaryBtn = new Button("Button", () -> {}).glassBackground(true);
 
-    // Rects remembered by the (cache-dirty-only) renderShapes pass so the
-    // per-frame glass pass can draw at the right place; -1 = not yet laid out.
-    private int cardX = -1, cardY = -1, cardW = -1, cardH = -1;
-    private int chipX = -1, chipY = -1;
+    // (The glass pass used to remember the card/chip rects here from the
+    // cache-dirty-only renderShapes run; the screen now passes the row's
+    // live geometry into renderGlassPass, so the rects derive directly —
+    // no stale-rect dependency, same values renderShapes computes.)
 
     @Override public int baseHeight() { return PREVIEW_H; }
     @Override public int height() { return PREVIEW_H; }
@@ -94,13 +94,8 @@ public class ThemePreviewSetting extends FeatureSetting {
         // are NOT drawn into the cached layer — they are live glass drawn
         // each frame by renderGlassPass (before the cached layer blit, so
         // the mock controls rasterized into the cache still stack on top of
-        // them). Only the rects are remembered here, because this method
-        // runs solely when the static cache is dirty. The toggle and slider
-        // render fully into the cache (opaque by design).
-        cardX = px;
-        cardY = py;
-        cardW = pw;
-        cardH = ph;
+        // them); that pass receives the row's live geometry from the screen.
+        // The toggle and slider render fully into the cache (opaque by design).
 
         int togX = px + 12;
         int togY = py + 52;
@@ -121,19 +116,18 @@ public class ThemePreviewSetting extends FeatureSetting {
         int b2y = b1y + BTN_H + 8;
         secondaryBtn.renderOverlay(ctx, b2x, b2y, BTN_W, BTN_H, -1, -1);
 
-        // Accent chip — rect remembered only; the chip itself is live
-        // stained glass in renderGlassPass (flat accent = the fallback).
-        int swY = py + ph - 16;
-        int swX = px + pw - 12 - 26;
-        this.chipX = swX;
-        this.chipY = swY;
+        // Accent chip — rect derived in the glass pass from the same row
+        // geometry; the chip itself is live stained glass in renderGlassPass
+        // (flat accent = the fallback).
     }
 
     /**
      * Live glass pass (Glass pilot) — called every frame by the theme detail
      * screen right after the window's own glass and the static-cache capture
-     * pass (which refreshes the rects), and before the overlay dim + cached
-     * blit so cached content (texts, thumbs, knobs) stacks above the glass.
+     * pass, and before the overlay dim + cached blit so cached content
+     * (texts, thumbs, knobs) stacks above the glass. The screen passes the
+     * row's live geometry (same values renderShapes derives), so a scroll
+     * frame paints at the position the cached layer blits to.
      *
      * <p>Treatments per the catalog: the card container is NEUTRAL RAISED
      * glass (a control-holding card reads as floating above the recessed
@@ -146,8 +140,12 @@ public class ThemePreviewSetting extends FeatureSetting {
      * glass integration uses.
      */
     @Override
-    public void renderGlassPass(GuiGraphics ctx) {
-        if (cardX < 0 || cardY < 0 || cardW <= 0 || cardH <= 0) return; // not laid out yet
+    public void renderGlassPass(GuiGraphics ctx, int x, int y, int width) {
+        int cardX = x + PAD_X;
+        int cardY = y + PAD_Y;
+        int cardW = width - PAD_X * 2;
+        int cardH = PREVIEW_H - PAD_Y;
+        if (cardW <= 0 || cardH <= 0) return;
         float radius = ThemeManager.current().roundness().radius();
         boolean ok = BlurPanelRenderer.renderPanel(ctx, cardX, cardY, cardW, cardH,
                 radius, BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX,
@@ -164,18 +162,18 @@ public class ThemePreviewSetting extends FeatureSetting {
         }
 
         // Accent chip — stained family; draws its own flat fallback on decline.
-        if (chipX >= 0) {
-            float chipR = Math.min(CHIP_H / 2.0f, ThemeManager.current().roundness().radiusSmall());
-            if (BlurPanelRenderer.renderPanel(ctx, chipX, chipY, CHIP_W, CHIP_H, chipR,
-                    BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX,
-                    BlurPanelRenderer.Lighting.raised())) {
-                RenderUtil.drawRoundedRectAA(ctx, chipX, chipY, CHIP_W, CHIP_H, chipR,
-                        ThemeManager.stainedTint());
-                BlurPanelRenderer.drawRimFinish(ctx, chipX, chipY, CHIP_W, CHIP_H, chipR);
-            } else {
-                RenderUtil.drawRoundedRectAA(ctx, chipX, chipY, CHIP_W, CHIP_H, chipR,
-                        AuroraTheme.IOS_BLUE);
-            }
+        int chipX = cardX + cardW - 12 - 26;
+        int chipY = cardY + cardH - 16;
+        float chipR = Math.min(CHIP_H / 2.0f, ThemeManager.current().roundness().radiusSmall());
+        if (BlurPanelRenderer.renderPanel(ctx, chipX, chipY, CHIP_W, CHIP_H, chipR,
+                BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX,
+                BlurPanelRenderer.Lighting.raised())) {
+            RenderUtil.drawRoundedRectAA(ctx, chipX, chipY, CHIP_W, CHIP_H, chipR,
+                    ThemeManager.stainedTint());
+            BlurPanelRenderer.drawRimFinish(ctx, chipX, chipY, CHIP_W, CHIP_H, chipR);
+        } else {
+            RenderUtil.drawRoundedRectAA(ctx, chipX, chipY, CHIP_W, CHIP_H, chipR,
+                    AuroraTheme.IOS_BLUE);
         }
     }
 

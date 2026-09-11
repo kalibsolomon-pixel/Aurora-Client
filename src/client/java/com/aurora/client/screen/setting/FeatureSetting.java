@@ -115,14 +115,28 @@ public abstract class FeatureSetting {
     }
 
     /**
-     * Glass pilot (Theme screen only): per-frame live glass pass, called by
-     * the owning screen AFTER the static-cache capture pass and BEFORE the
-     * overlay dim + cached blit — so cached content (text, thumbs, knobs)
-     * stacks above the glass. Used for elements whose glass replaces a
-     * cached flat fill (preview card, toggle track, accent chip). Default
-     * no-op: only Theme-pilot settings override it.
+     * Per-frame live glass pass, called by the owning screen AFTER the
+     * static-cache capture pass and BEFORE the overlay dim + cached blit —
+     * so cached content (text, thumbs, knobs) stacks above the glass. The
+     * row's current geometry is passed in (the screen computes it fresh
+     * from its scroll state, so a pass on a scrolling frame paints at the
+     * same position the content pass will use — remembered-from-last-frame
+     * rects would lag one frame behind the eased scroll).
+     *
+     * <p>Split discipline (the {@code Button}/{@code EditBoxMixin} scheme,
+     * AGENTS.md §6 convention 6): a widget that paints glass implements
+     * this to paint its SURFACE while a structural glass pass is open
+     * ({@code GlassSurface.passOpen()} — the widget itself checks, because
+     * screens like {@code FeatureDetailScreen} call this hook on the
+     * legacy frame order too, where the surface must keep painting in
+     * place inside {@link #render}), stamps the frame
+     * ({@code GlassSurface.frame()}) and remembers whether the glass drew;
+     * {@link #render} then paints content only — or the flat fallback when
+     * the glass declined, or the full in-place surface when the stamp says
+     * no pass ran this frame (the exact legacy look, pixel for pixel).
+     * Default no-op.
      */
-    public void renderGlassPass(GuiGraphics ctx) {
+    public void renderGlassPass(GuiGraphics ctx, int x, int y, int width) {
     }
 
     /**

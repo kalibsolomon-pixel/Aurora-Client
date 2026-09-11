@@ -1,8 +1,9 @@
 package com.aurora.client.screen.setting;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
+import com.aurora.client.ui.component.GlassEditBox;
+import com.aurora.client.ui.component.GlassSurface;
 import com.aurora.client.ui.component.Widget;
-import com.aurora.client.ui.render.blur.BlurPanelRenderer;
 import com.aurora.client.ui.util.ItemSpriteRenderer;
 import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.ui.util.MaterialIconRenderer;
@@ -71,6 +72,18 @@ public class ItemScaleSetting extends FeatureSetting {
 
     private final EditBox searchField;
     private Item foundItem = null;
+
+    /**
+     * Glass-pass bookkeeping (the {@code Button} scheme, §6 convention 6):
+     * frame stamp + result for the "+" add button. In the stamped frame
+     * {@link #render} paints content only (flat button on decline);
+     * otherwise the surface paints in place — legacy, pixel-identical.
+     * The search field carries its own stamp inside {@code EditBoxMixin}
+     * and is driven from {@link #renderGlassPass} below.
+     */
+    private long glassPassFrame = -1L;
+    private boolean passDrewPlus = false;
+
     private final Map<String, Boolean> expandedStates = new HashMap<>();
 
     // Keep active SliderSetting instances per item and per field to handle drag events cleanly
@@ -140,6 +153,29 @@ public class ItemScaleSetting extends FeatureSetting {
         return h;
     }
 
+    /**
+     * Pre-dim surface (the split's surface half): the "+" add button's
+     * raised glass, plus the search field's own pre-dim surface (driven
+     * through {@link GlassEditBox} — {@code EditBoxMixin} carries the same
+     * frame-stamp scheme). The field's geometry is set HERE as well because
+     * the pass runs before {@link #render} positions it; a scroll frame
+     * would otherwise drive the field's surface at a one-frame-stale rect.
+     */
+    @Override
+    public void renderGlassPass(GuiGraphics ctx, int x, int y, int width) {
+        if (!GlassSurface.passOpen()) return; // legacy frame order — render paints in place
+        glassPassFrame = GlassSurface.frame();
+        int searchW = width - 56;
+        searchField.setX(x + 12);
+        searchField.setY(y + 6);
+        searchField.setWidth(searchW);
+        ((GlassEditBox) searchField).aurora$renderGlassPass(ctx);
+        int plusX = x + width - 36;
+        int plusY = y + 5;
+        float plusR = Math.min(20 / 2f, ThemeManager.current().roundness().radiusSmall());
+        passDrewPlus = GlassSurface.control(ctx, plusX, plusY, 24, 20, plusR);
+    }
+
     @Override
     public void render(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
         Font tr = Minecraft.getInstance().font;
@@ -155,7 +191,11 @@ public class ItemScaleSetting extends FeatureSetting {
         searchField.setWidth(searchW);
         searchField.render(ctx, mouseX, mouseY, 0f);
 
-        // Draw "+" add button — raised glass (flat pill on decline).
+        // Draw "+" add button — raised glass (flat pill on decline). If the
+        // screen ran this row's glass pass this frame the surface is already
+        // on screen UNDER the dim and only its result matters here;
+        // otherwise (legacy frame order) it is painted in place now through
+        // the shared GlassSurface helper (identical calls).
         int plusX = x + width - 36;
         int plusY = y + 5;
         boolean plusHover = Widget.inBounds(mouseX, mouseY, plusX, plusY, 24, 20);
@@ -163,13 +203,13 @@ public class ItemScaleSetting extends FeatureSetting {
                 plusHover ? 0x66 : 0x2E);
         int plusBorder = plusHover ? AuroraTheme.BORDER_ON_HOVER : AuroraTheme.BORDER_OFF;
         float plusR = Math.min(20 / 2f, ThemeManager.current().roundness().radiusSmall());
-        boolean plusGlass = BlurPanelRenderer.renderPanel(ctx, plusX, plusY, 24, 20, plusR,
-                BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX, BlurPanelRenderer.Lighting.raised());
-        if (plusGlass) {
-            RenderUtil.drawRoundedRectAA(ctx, plusX, plusY, 24, 20, plusR,
-                    ThemeManager.color(ThemeToken.WINDOW_FILL));
-            BlurPanelRenderer.drawRimFinish(ctx, plusX, plusY, 24, 20, plusR);
+        boolean plusGlass;
+        if (glassPassFrame == GlassSurface.frame()) {
+            plusGlass = passDrewPlus;
         } else {
+            plusGlass = GlassSurface.control(ctx, plusX, plusY, 24, 20, plusR);
+        }
+        if (!plusGlass) {
             AuroraShapes.panel(ctx, plusX, plusY, 24, 20, plusBg, AuroraTheme.RADIUS_SMALL);
             AuroraShapes.outline(ctx, plusX, plusY, 24, 20, plusBorder, AuroraTheme.RADIUS_SMALL);
         }

@@ -2,6 +2,7 @@ package com.aurora.client.screen.setting;
 
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
+import com.aurora.client.ui.component.GlassSurface;
 import com.aurora.client.ui.component.Widget;
 import com.aurora.client.ui.render.blur.BlurPanelRenderer;
 import com.aurora.client.ui.util.MaterialIconRenderer;
@@ -45,6 +46,20 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
      * tint — see the expanded block in {@link #render}.
      */
     private boolean glassButton = true;
+
+    /**
+     * Glass-pass bookkeeping (the {@code Button} scheme, §6 convention 6):
+     * the frame in which {@link #renderGlassPass} painted this row's trigger
+     * pill pre-dim, and whether it drew. In that frame {@link #render}
+     * paints content only (or the flat pill if the glass declined);
+     * otherwise it paints the surface in place — the legacy order screens
+     * not on the structural pass still use, pixel-identical. The expanded
+     * popup is deliberately NOT part of the split: it floats above the
+     * dimmed screen by design (§9's named above-the-dim case) and keeps
+     * painting in place in {@link #render} on every screen.
+     */
+    private long glassPassFrame = -1L;
+    private boolean passDrewButton = false;
 
     private int lastBtnX, lastBtnY;
     private int lastWidth = 240;
@@ -103,7 +118,7 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
         return tr.plainSubstrByWidth(text, maxW - tr.width("...")) + "...";
     }
 
-    @Override public int baseHeight() { 
+    @Override public int baseHeight() {
         int h = CONTROL_H;
         if (expanded) {
             h += Math.min(5, values.length) * OPT_H + 6;
@@ -111,6 +126,24 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
         return h;
     }
     @Override public int height() { return baseHeight() + descriptionHeight(lastWidth); }
+
+    /**
+     * Pre-dim surface (the split's surface half — see the glass-pass
+     * bookkeeping field). Only the trigger pill: the popup stays a
+     * render-painted above-the-dim surface. Geometry derives from the row
+     * params the screen passes (the same formula {@link #render} uses), so
+     * a pass on a scrolling frame lands exactly where the content will.
+     */
+    @Override
+    public void renderGlassPass(GuiGraphics ctx, int x, int y, int width) {
+        if (!GlassSurface.passOpen()) return; // legacy frame order — render paints in place
+        glassPassFrame = GlassSurface.frame();
+        int btnX = x + width - BTN_W - 14;
+        int btnY = y + (CONTROL_H - BTN_H) / 2;
+        float glassR = Math.min(BTN_H / 2f, ThemeManager.current().roundness().radiusSmall());
+        passDrewButton = glassButton && !isDisabled()
+                && GlassSurface.control(ctx, btnX, btnY, BTN_W, BTN_H, glassR);
+    }
 
     @Override
     public void render(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
@@ -162,17 +195,19 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
         // suppression, failure) the complete flat button returns — the same
         // fallback contract every glass integration uses. Hover keeps the
         // text-color cue; the tint stays constant, exactly like every other
-        // glass control.
-        boolean glassOk = false;
-        if (glassButton && !disabled) {
+        // glass control. If the screen ran this row's glass pass this frame
+        // the surface is already on screen UNDER the dim and only its
+        // result matters here; otherwise (legacy frame order) it is painted
+        // in place now — through the shared GlassSurface helper, whose
+        // no-pass path makes the identical calls the raw idiom made.
+        boolean glassOk;
+        if (glassPassFrame == GlassSurface.frame()) {
+            glassOk = passDrewButton;
+        } else if (glassButton && !disabled) {
             float glassR = Math.min(BTN_H / 2f, ThemeManager.current().roundness().radiusSmall());
-            glassOk = BlurPanelRenderer.renderPanel(ctx, btnX, btnY, BTN_W, BTN_H, glassR,
-                    BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX, BlurPanelRenderer.Lighting.raised());
-            if (glassOk) {
-                RenderUtil.drawRoundedRectAA(ctx, btnX, btnY, BTN_W, BTN_H, glassR,
-                        ThemeManager.color(ThemeToken.WINDOW_FILL));
-                BlurPanelRenderer.drawRimFinish(ctx, btnX, btnY, BTN_W, BTN_H, glassR);
-            }
+            glassOk = GlassSurface.control(ctx, btnX, btnY, BTN_W, BTN_H, glassR);
+        } else {
+            glassOk = false;
         }
         if (!glassOk) {
             RenderUtil.drawSquircle(ctx, btnX, btnY, BTN_W, BTN_H, AuroraTheme.RADIUS_SMALL, fillTint);
