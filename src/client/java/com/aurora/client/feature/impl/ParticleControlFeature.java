@@ -17,7 +17,6 @@ public class ParticleControlFeature implements Feature {
 
     @Override public String id() { return ID; }
     @Override public String displayName() { return "Particles"; }
-    @Override public boolean enabledByDefault() { return true; }
 
     /** Returns true if a particle id should render. Absent key ⇒ visible. */
     public static boolean isVisible(String particleId) {

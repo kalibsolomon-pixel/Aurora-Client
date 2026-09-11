@@ -18,11 +18,6 @@ public class AutoSprintFeature implements Feature {
     }
 
     @Override
-    public boolean enabledByDefault() {
-        return false;
-    }
-
-    @Override
     public void onTick(Minecraft client) {
         if (!active) return;
         if (client == null || client.player == null || client.options == null) return;

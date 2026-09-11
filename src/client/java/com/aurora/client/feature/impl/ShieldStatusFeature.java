@@ -48,7 +48,6 @@ public class ShieldStatusFeature implements Feature {
 
     @Override public String id() { return ID; }
     @Override public String displayName() { return "Shield Statuses"; }
-    @Override public boolean enabledByDefault() { return false; }
 
     /** Push the entity-id of the shield holder before vanilla shield render. */
     public static void pushHolder(int entityId) { CURRENT_HOLDER_ID.set(entityId); }

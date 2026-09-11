@@ -14,10 +14,6 @@ public interface Feature {
         return id();
     }
 
-    default boolean enabledByDefault() {
-        return true;
-    }
-
     /** Called once at client init, after config load. */
     default void onRegister() {}
 
