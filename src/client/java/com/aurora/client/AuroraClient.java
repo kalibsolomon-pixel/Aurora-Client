@@ -80,15 +80,6 @@ public class AuroraClient implements ClientModInitializer {
         BlockOverlayRenderer blockOverlayRenderer = new BlockOverlayRenderer();
         WorldRenderEvents.BEFORE_BLOCK_OUTLINE.register(blockOverlayRenderer::onBeforeBlockOutline);
 
-        // Module icon PNGs — scan the resource manager so the tile grid
-        // can blit per-module artwork as the user ships PNGs into
-        // assets/aurora/textures/gui/module_icons/<id>.png.
-        net.fabricmc.fabric.api.resource.v1.ResourceLoader
-                .get(net.minecraft.server.packs.PackType.CLIENT_RESOURCES)
-                .registerReloader(
-                        Identifier.fromNamespaceAndPath("aurora", "module_icons"),
-                        new com.aurora.client.screen.ModuleIconRegistry());
-
         // Container preview — map Aurora's tooltip data to its renderer.
         net.fabricmc.fabric.api.client.rendering.v1.TooltipComponentCallback.EVENT.register(data -> {
             if (data instanceof com.aurora.client.hud.preview.AuroraContainerTooltipData acd) {
