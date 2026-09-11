@@ -42,8 +42,9 @@ like the glass renderer: read `hitreg/BetterHitreg.java`'s notes before touching
 
 **Known version drift (harmless but confusing):** `gradle.properties` targets 1.21.11,
 `fabric.mod.json` declares `minecraft: "~1.21.8"`, and `build.gradle` run configs pin
-`-Dfabric.modVersion.minecraft=1.21.7`. Also the repo `LICENSE` is CC0 while
-`fabric.mod.json` says MIT. Don't "fix" these casually — ask.
+`-Dfabric.modVersion.minecraft=1.21.7`. Don't "fix" these casually — ask.
+(The former LICENSE-CC0-vs-fabric.mod.json-MIT drift was resolved 2026-09-11 — the
+repo `LICENSE` is now the standard MIT text, per user decision.)
 
 `build.gradle` deliberately disables `withSourcesJar()` — a sources jar in `mods/` crashes
 Mixin at preLaunch (this caused a real startup crash once; comment in build.gradle).
@@ -1196,7 +1197,10 @@ in `.devpilot-pilot/predim-aurora-*` and `.devpilot-pilot/predim-packs-*`.
   redistribute" flag is **resolved** (2026-09-08): Jass granted explicit permission for the
   integration, the code is integrated (not vendored), and credit is preserved in-file on
   every moved class, in `hitreg/BetterHitreg.java`'s notes, and as the detail screen's
-  subtitle. Still open and unrelated: repo LICENSE (CC0) ≠ fabric.mod.json (`MIT`).
+  subtitle. The formerly-still-open license mismatch is also **resolved** (2026-09-11,
+  user decision): the repo `LICENSE` is now the standard MIT text —
+  `Copyright (c) 2026 Kalib` (holder from `fabric.mod.json`'s authors), matching the
+  `MIT` license `fabric.mod.json` has always declared.
 - Better Hitreg's card icon is the distinct `swords` glyph (U+F889, resolved 2026-09-08;
   it previously reused Crosshair's `gps_fixed`). The subset was regenerated from the real
   Material Symbols Rounded variable font placed at root-level `full_material.ttf`
