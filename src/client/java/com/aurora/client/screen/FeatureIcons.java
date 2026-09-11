@@ -23,7 +23,7 @@ public final class FeatureIcons {
         ICONS.put("player_health",         "\uE87D"); // favorite (heart)
         ICONS.put("free_look",             "\uE8F4"); // visibility (eye)
         ICONS.put("saturation_bar",        "\uEAAC"); // cookie
-        ICONS.put("tab_ping",              "\uE4E3"); // flash_on
+        ICONS.put("tab_ping",              "\uE3E7"); // flash_on
         ICONS.put("block_overlay",         "\uF720"); // deployed_code
         ICONS.put("toggle_sprint_sneak",   "\uE566"); // directions_run
         ICONS.put("alerts",                "\uE002"); // warning
@@ -49,7 +49,7 @@ public final class FeatureIcons {
         ICONS.put("minimap",               "\uE2C5"); // file_map
         ICONS.put("world_map",             "\uF3CA"); // map_search
         ICONS.put("resourcepack_browser",  "\uE8B0"); // browse_gallery (grid of tiles)
-        ICONS.put("reflex",                "\uE4E3"); // flash_on
+        ICONS.put("reflex",                "\uE3E7"); // flash_on
         // Moved to the Modules grid 2026-09-10 (was a Settings-tab entry).
         // The eight former Settings-tab tiles merged into "miscellaneous"
         // (2026-09-09) had their own glyphs (videocam, av_timer, flash_on,

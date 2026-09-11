@@ -1110,11 +1110,13 @@ in `.devpilot-pilot/predim-aurora-*` and `.devpilot-pilot/predim-packs-*`.
 ## 9. Known outstanding work, dead code, and hazards
 
 **Incomplete / follow-up candidates**
-- `FeatureIcons` codepoint U+E4E3 ("flash_on", used by `tab_ping` and `reflex`) does not
+- ~~`FeatureIcons` codepoint U+E4E3 ("flash_on", used by `tab_ping` and `reflex`) does not
   exist in the material-symbols font at all — `flash_on` is U+E3E7 there — so both icons
-  render the .notdef box (visible on the Reflex grid card). Pre-existing, found while
-  regenerating the subset for the Miscellaneous move (2026-09-10); the fix is a two-line
-  codepoint change + subset regen.
+  render the .notdef box (visible on the Reflex grid card).~~ **Fixed (2026-09-11)**: both
+  entries now reference U+E3E7 (verified against the full font's cmap: `flash_on` lives at
+  U+E3E7; U+E4E3 does not exist), and the bundled subset was regenerated from the real
+  `full_material.ttf` — it is again exactly the `FeatureIcons` codepoint set (39 glyphs).
+  Verified on the Modules grid (Reflex tile renders the lightning bolt).
 - ~~The deferred-rim queue in `GlassSurface` (§6 convention 6) has no opt-out for surfaces
   deliberately meant to render ABOVE an already-dimmed screen~~ **Built, complete (2026-09-11)**:
   `GlassSurface.aboveDimControl` (neutral raised, `WINDOW_FILL` tint — `EnumSetting`'s expanded
