@@ -440,20 +440,6 @@ public class AuroraConfig {
 
     public enum HudBackground { NONE, SOLID, AURORA, VANILLA }
 
-    // Time Changer
-    public boolean timeChangerEnabled = false;
-    public TimeOfDayPreset timeOfDay = TimeOfDayPreset.NOON;
-
-    public enum TimeOfDayPreset {
-        DAWN(23000),
-        NOON(6000),
-        DUSK(13000),
-        MIDNIGHT(18000);
-
-        public final long ticks;
-        TimeOfDayPreset(long ticks) { this.ticks = ticks; }
-    }
-
     // ---- Totem tweaks ----
     public boolean totemTweaksEnabled = false;
     public int totemParticleScale = 100; // 25..100, percentage
