@@ -70,7 +70,7 @@ import java.util.concurrent.atomic.AtomicReference;
  *       per the mod-wide glass conventions; every glass element falls back
  *       to its flat fill when the renderer declines (no world, screenshot
  *       in flight, failure).</li>
- *   <li>§6 convention 6, structural (2026-09-10 — completing the mod-wide
+ *   <li>§6 convention 6, structural (2026-09-11 — completing the mod-wide
  *       pre-dim rollout): beginGlassPass → every surface (sidebar, active
  *       tab under the tracked sidebar clip, card install buttons under the
  *       tracked grid clip, search field, Done) → GlassSurface.overlayDim at

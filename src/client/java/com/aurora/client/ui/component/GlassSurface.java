@@ -113,16 +113,17 @@ import java.util.Set;
  *       would escape the clip).</li>
  * </ul>
  *
- * <p>Rollout status (2026-09-10): the guarded discipline is live on
- * {@code ProfileManagerScreen}, {@code WaypointManagerScreen} and
- * {@code FeatureDetailScreen} (the pilot for screens beyond the manager
- * pair). {@code AuroraScreen} and the pack browser still paint controls
- * after a raw dim (the legacy order) — pending their own follow-up; the
- * widget side is ready for both (the pill widgets, {@code SegmentedControl},
+ * <p>Rollout status (2026-09-11): COMPLETE — every glass screen runs the
+ * guarded discipline: {@code ProfileManagerScreen},
+ * {@code WaypointManagerScreen}, {@code FeatureDetailScreen},
+ * {@code AuroraScreen} and {@code ResourcePackBrowserScreen}. The widget
+ * side carried it throughout (pill widgets, {@code SegmentedControl},
  * {@code ButtonSetting} and the settings' {@code EditBox}es carry the
- * surface/content split, inert until a screen opens the pass). The one
- * sanctioned above-the-dim exception, {@code EnumSetting}'s expanded popup,
- * paints through {@link #aboveDimControl}.
+ * surface/content split). The two sanctioned above-the-dim exceptions:
+ * {@code EnumSetting}'s expanded popup paints through
+ * {@link #aboveDimControl}, and the pack browser's detail modal through
+ * {@link #aboveDimContainer} plus a {@link #beginAboveDim} zone for its
+ * component-driven buttons.
  */
 public final class GlassSurface {
 

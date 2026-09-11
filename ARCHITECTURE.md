@@ -13,7 +13,8 @@ root — findings and prioritized plan from the 2026-09-04 full GUI audit).
 there: the mod-wide "glass everywhere" rollout, the ResourcePack browser glass wave, the
 **"Reset kills glass" session-latch fix**, the **Frosted/Transparent GlassStyle**, the
 2026-09-04 GUI-audit deliverables and their B5–B19 fix wave, the `GlassSurface` helper with
-structural pre-dim layering on Profiles/Waypoints, frost-radius-follows-opacity, the
+structural pre-dim layering — COMPLETE on every glass screen as of 2026-09-11
+(Profiles/Waypoints → FeatureDetailScreen → AuroraScreen + pack browser), frost-radius-follows-opacity, the
 Multiplayer `@Shadow` crash fix (merged 2026-09-07), and the **deferred post-dim rim
 finish** (2026-09-08, §3/§6). The working tree is clean. The formerly unmerged
 `fix/glass-session-latch-and-glass-style` branch landed long since (its `AGENTS.md`
@@ -193,16 +194,17 @@ Conventions (violating these has caused real bugs — full list in AGENTS.md §6
 5. Glass needs a live world; `renderBackground` overrides skip vanilla's backdrop sandwich
    when `GlassSurface.liveWorldBackdrop()`; decline ⇒ complete flat look (fallback contract).
 6. EVERY glass surface — containers and controls — draws its BODY in the glass pass BEFORE
-   the screen's `OVERLAY_DIM` fill; content after. Structural where adopted: the screen
-   brackets the pass with `GlassSurface.beginGlassPass()`, the dim goes through
-   `GlassSurface.overlayDim`, and glass painted after it in the same frame is reported
-   (dev: ERROR + stack trace; prod: one-shot WARN) — as are `overlayDim` with no pass, a
-   pass never closed by `overlayDim`, and a surface under an untracked raw scissor. Inside
-   a pass the rim finish is deferred and flushed right AFTER the dim (bodies veiled,
-   highlights crisp). Widgets split via `Widget.renderGlassPass`
-   / `GlassEditBox`. **Enforced on Profiles + Waypoints only (2026-09-05; post-dim rims
-   2026-09-08)**; the other glass screens still paint controls after a raw dim fill,
-   pending the approved rollout.
+   the screen's `OVERLAY_DIM` fill; content after. Structural everywhere (rollout complete
+   2026-09-11): the screen brackets the pass with `GlassSurface.beginGlassPass()`, the dim
+   goes through `GlassSurface.overlayDim`, and glass painted after it in the same frame is
+   reported (dev: ERROR + stack trace; prod: one-shot WARN) — as are `overlayDim` with no
+   pass, a pass never closed by `overlayDim`, and a surface under an untracked raw scissor.
+   Inside a pass the rim finish is deferred and flushed right AFTER the dim (bodies veiled,
+   highlights crisp). Widgets split via `Widget.renderGlassPass` / `GlassEditBox`. The two
+   sanctioned above-the-dim exemptions (§9): `EnumSetting`'s expanded popup
+   (`GlassSurface.aboveDimControl`) and the pack browser's detail modal
+   (`GlassSurface.aboveDimContainer` + a `beginAboveDim`/`endAboveDim` zone bracket for its
+   component-driven buttons).
 7. Per-element UV: each panel samples only its own sub-rect (`uUvRect` / sub-rect contracts).
 8. Content on stained glass uses `ON_ACCENT` (contrast-derived), never the accent itself.
 9. Hover/focus on glass = caret/color/hairline ring/scale/wash — never a tint change; the
@@ -212,9 +214,9 @@ Conventions (violating these has caused real bugs — full list in AGENTS.md §6
 
 | Screen | Glass status | Notes |
 |---|---|---|
-| `AuroraScreen` (main Mods+Settings) | Full | Depressed window + raised tiles/chips/layout buttons; `UiLayerCache` static chrome; fps-adaptive smooth scroll; own scrollbar. Sidebar chips/tiles use literal radii 5/6/4 (audit D-note) |
-| `FeatureDetailScreen` (all 45 detail views) | Full | Depressed window (content-height-sized, scrolls with rows); per-setting glass via `FeatureSetting.renderGlassPass`; Done/Reset shared glass buttons; `UiLayerCache`; fixed-τ=60 smooth scroll |
-| `ResourcePackBrowserScreen` | Full (2026-09-04 wave; cards flat 2026-09-08) | Depressed glass sidebar (`surfaceColor(SURFACE)` tint) + detail modal; active tab stained; tokenized radii; `EditBox` search; own toast/spinner/hover-map/scroll; cards deliberately FLAT (audit R9/B2 closed 2026-09-08: their opaque hover-lerp tint hid the blur, so per-card glass was pure cost + the main pool-exhaustion driver, B1 now halved — install buttons remain glass) |
+| `AuroraScreen` (main Mods+Settings) | Full | Depressed window + raised tiles/chips/layout buttons; `UiLayerCache` static chrome; fps-adaptive smooth scroll; own scrollbar. Sidebar chips/tiles use literal radii 5/6/4 (audit D-note). **Structural pre-dim pass (2026-09-11)**: window + chrome + tiles (tracked scissor, ROW priority) / Settings-tab inline `renderGlassPass` walk → `overlayDim` → cached blit + content; the cache never holds glass |
+| `FeatureDetailScreen` (all 45 detail views) | Full | Depressed window (content-height-sized, scrolls with rows); per-setting glass via `FeatureSetting.renderGlassPass` (geometry-passing); Done/Reset shared glass buttons; `UiLayerCache`; fixed-τ=60 smooth scroll. **Structural pre-dim pass (2026-09-10, the pilot beyond the manager pair)**; `EnumSetting`'s popup above-dim via `aboveDimControl` |
+| `ResourcePackBrowserScreen` | Full (2026-09-04 wave; cards flat 2026-09-08; structural pass 2026-09-11 — rollout complete) | Depressed glass sidebar (`surfaceColor(SURFACE)` tint) + detail modal; active tab's accent-lerp wash IS its glass tint (explicit-tint `control` overload, painted in the pass); tokenized radii; `EditBox` search; own toast/spinner/hover-map/scroll; cards deliberately FLAT (audit R9/B2 closed 2026-09-08: their opaque hover-lerp tint hid the blur, so per-card glass was pure cost + the main pool-exhaustion driver, B1 now halved — install buttons remain glass, DETAIL priority, driven in the pass via the shared `forEachVisibleCard` walk); dim at `0x55` strength via `overlayDim`'s argb overload; modal = above-the-dim layer (`aboveDimContainer` + `beginAboveDim` zone for its buttons) |
 | `ProfileManagerScreen` | Full | Depressed neutral glass rows (selection = Active badge only), glass toolbar buttons; structural glass pass → `overlayDim` → content, `renderBackground` world-gated (audit B3 closed 2026-09-05); row glass pass still uncapped |
 | `WaypointManagerScreen` | Full | Raised glass rows + header buttons; structural glass pass → `overlayDim` → content (audit B4 closed 2026-09-05) |
 | `ColorPickerScreen` | Chrome-only, by design | Apply=stained / Cancel=neutral glass; editing surfaces + hex field opaque; literal radii 4/6; ~2000 fills/frame uncached |
@@ -243,10 +245,10 @@ state), **glass pass** (live per-frame `GlassSurface` calls — ALL glass surfac
 and controls alike, before the dim; rims queue for post-dim), **dim** (`GlassSurface.overlayDim`
 — the guarded phase boundary; glass after it is reported, then the queued rims flush), and
 **overlay** (text/hover/animation/flat fallbacks,
-live). `ProfileManagerScreen` and `WaypointManagerScreen` implement this order structurally
-(2026-09-05); `AuroraScreen`, `FeatureDetailScreen` and the pack browser still paint only
-their window/container surface pre-dim and every control after a raw dim fill (pending the
-approved rollout). `AuroraScreen` and `FeatureDetailScreen` use the full cache discipline;
+live). Every glass screen implements this order structurally (rollout complete 2026-09-11:
+Profiles/Waypoints 2026-09-05 → FeatureDetailScreen 2026-09-10 → AuroraScreen + pack
+browser 2026-09-11). `AuroraScreen` and `FeatureDetailScreen` use the full cache discipline
+(the cache never holds glass — panels are texture blits that bypass the fill-capture sink);
 ProfileManager, WaypointManager, and the pack browser currently re-render all shapes live
 every frame (perf opportunity, audit P-note).
 

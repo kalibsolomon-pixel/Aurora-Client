@@ -630,22 +630,24 @@ claims/declines.
    `GlassEditBox.aurora$renderGlassPass` (every `EditBox`, via `EditBoxMixin`) paint the
    surface pre-dim; the widget's normal render then paints content only — or, on a screen
    that never ran the pass, the surface in place (the legacy order).
-   **Rollout status (2026-09-10):** enforced on `ProfileManagerScreen`,
-   `WaypointManagerScreen` and `FeatureDetailScreen` (the pilot for screens
-   beyond the manager pair, landed with the Part A/Part B pre-dim rollout).
-   `AuroraScreen` and `ResourcePackBrowserScreen` still fill a raw dim and
-   paint their controls AFTER it — the historical, unguarded order — pending
-   their own follow-up. The widget side is ready for both: the four pill
-   widgets (`EnumSetting`/`KeybindSetting`/`KeyListSetting`/
-   `ItemScaleSetting`), `SegmentedControl` (driven by `SegmentedSetting`),
-   `ButtonSetting`'s embedded Button, the settings' search/numeric `EditBox`es,
-   `Button`/`ButtonWidget` and `EditBoxMixin` all carry the surface/content
-   split — surface in `renderGlassPass` while a structural pass is open
-   (widgets gate on `GlassSurface.passOpen()` themselves, so screens on the
-   legacy order keep in-place painting, pixel-identical), content in render.
-   The one sanctioned exemption: `EnumSetting`'s expanded popup is an
-   above-the-dim surface, painted in the content pass through
-   `GlassSurface.aboveDimControl` (§9's escape hatch, built 2026-09-10).
+   **Rollout status (2026-09-11): COMPLETE — every glass screen enforces the
+   structural pass.** Enforced on `ProfileManagerScreen`,
+   `WaypointManagerScreen`, `FeatureDetailScreen`, `AuroraScreen` and
+   `ResourcePackBrowserScreen` (the last two landed back-to-back, closing
+   the rollout tracked here since 2026-09-05). The widget side carried the
+   load throughout: the four pill widgets
+   (`EnumSetting`/`KeybindSetting`/`KeyListSetting`/`ItemScaleSetting`),
+   `SegmentedControl` (driven by `SegmentedSetting`), `ButtonSetting`'s
+   embedded Button, the settings' search/numeric `EditBox`es,
+   `Button`/`ButtonWidget` and `EditBoxMixin` all paint surface in
+   `renderGlassPass` while a pass is open (widgets gate on
+   `GlassSurface.passOpen()` themselves) and content in render. The two
+   sanctioned above-the-dim exemptions (§9): `EnumSetting`'s expanded popup
+   (`GlassSurface.aboveDimControl`) and the pack browser's detail modal
+   (`GlassSurface.aboveDimContainer` for the panel; a
+   `beginAboveDim`/`endAboveDim` zone bracket around its component-driven
+   buttons, whose in-place painting the ordering guard exempts by
+   declaration).
 7. **Per-element UV mapping.** Each panel samples only its own sub-rect of the shared
    blur chain (`uUvRect`); a full `[0..1]` UV sweep would put the whole capture into a
    small element — "the UV bug" this contract exists to prevent (see comments near the
@@ -684,7 +686,7 @@ flags now default ON mod-wide. Status below is committed `master`.
 
 | Screen | Status | Detail |
 |---|---|---|
-| `AuroraScreen` (main settings) | **Full** (legacy frame order) | Depressed glass window + raised glass tiles, search chip, profile button, bottom buttons; world-gated. Still fills a raw dim and paints controls after it — the one remaining big screen not on the structural pre-dim pass (§6 convention 6) |
+| `AuroraScreen` (main settings) | **Full** | Depressed glass window + raised glass tiles, search chip, profile button, layout buttons; world-gated. **Structural pre-dim pass (2026-09-11)**: `beginGlassPass` → window + chips/Profiles/layout/search field + tiles (tracked scissor, ROW priority) or the Settings tab's inline `renderGlassPass` walk (same scissor) → `overlayDim` → cached blit + content. `UiLayerCache` never holds glass (panels are texture blits bypassing the fill-capture sink); the Theme preview card gained its glass surface here for the first time |
 | `FeatureDetailScreen` (all 45 detail views) | **Full** | Retires `GLASS_PILOT_IDS`; depressed glass window + glass Done/Reset for every feature. **Structural pre-dim pass (2026-09-10, the Part B pilot)**: `beginGlassPass` → every surface (window via `GlassSurface.container`, the four pill widgets, segments, `ButtonSetting`, the search/numeric fields, preview card, Done/Reset) → `GlassSurface.overlayDim` → cached blit + content. UiLayerCache unaffected: panels are texture blits that bypass the fill-capture sink, and the cached chrome stays a content layer above the dim. `EnumSetting`'s expanded popup stays above the dim via `GlassSurface.aboveDimControl` |
 | `ProfileManagerScreen` | **Full** | Rows are this screen's containers: DEPRESSED neutral glass (`WINDOW_FILL` only; the active-row `stainedTint` read as an accent-tinted container — user-flagged twice). Selection shown solely by the accent Active badge; New Profile/Done/Duplicate/Create all neutral raised |
 | Theme screen widgets (`ThemePreviewSetting`, `SegmentedControl`) | **Full** (the original pilot) | Preview card/chips/buttons glass; segments neutral-unselected/stained-selected |
@@ -693,7 +695,7 @@ flags now default ON mod-wide. Status below is committed `master`.
 | `ColorPickerScreen` | **Chrome-only, by design** | Apply = STAINED, Cancel = neutral raised; editing surfaces + hex field deliberately opaque |
 | `HudEditorScreen` | **Chrome-only** | Two floating action buttons, neutral raised ("navigation action, not a primary state") |
 | `WaypointManagerScreen` | **Full** | Raised glass rows + header/add buttons |
-| `ResourcePackBrowserScreen` | **Full** (2026-09-04; cards flat 2026-09-08) | Depressed glass sidebar (pre-dim pass, `SURFACE` tint, `sidebarGlass` flag) + detail modal; **cards FLAT by decision (audit R9/B2)** — their opaque hover-lerp tint fully occluded the blur, so per-card glass was pure cost and the main output-pool driver (B1 halved; each card's install button is still a glass `Button`); active category tab = accent-stained raised glass (inactive tabs stay flat by design — small transient rows inside an already-glass container); install/Retry/Close buttons are the shared `Button` painter (Install = stained primary, Retry = destructive, progress/Done = neutral; **success-green is not expressible through `Button` — mapped to stained/neutral, flagged**); `renderBackground` world-gating added; every radius now a token (`RADIUS_LARGE`/`RADIUS`/`RADIUS_SMALL`; only scrollbar-thumb capsule literals remain). Title removed + count moved below the search bar (was overlapping it). Thumbnails, search field, toast, scrollbars stay opaque/unchanged per convention. (The 2026-09-04 in-client verification at ~7/25/93% opacity, ROUND + SQUARE, predates the flat-cards change; the flat look is the screen's own long-standing decline-path appearance.) |
+| `ResourcePackBrowserScreen` | **Full** (2026-09-04; cards flat 2026-09-08; structural pass 2026-09-11 — closing the rollout) | Depressed glass sidebar (SURFACE-token tint via `GlassSurface.container`) + detail modal; **cards FLAT by decision (audit R9/B2)** — their opaque hover-lerp tint fully occluded the blur, so per-card glass was pure cost and the main output-pool driver (B1 halved; each card's install button is still a glass `Button`, DETAIL priority, driven in the pass under the tracked grid clip via the shared `forEachVisibleCard` culling walk with `drivenPhase` stamping); active category tab = raised glass whose accent-lerp wash IS its tint (the explicit-tint `GlassSurface.control` overload, evaluated in the pass); the dim runs at this screen's original `0x55` strength through `overlayDim`'s argb overload; the detail modal is the screen's one ABOVE-the-dim layer — panel via `GlassSurface.aboveDimContainer`, its buttons driven inside a `beginAboveDim`/`endAboveDim` zone; inactive tabs stay flat by design — small transient rows inside an already-glass container; install/Retry/Close buttons are the shared `Button` painter (Install = stained primary, Retry = destructive, progress/Done = neutral; **success-green is not expressible through `Button` — mapped to stained/neutral, flagged**); `renderBackground` world-gating; tokenized radii. Thumbnails, toast, scrollbars stay opaque/unchanged per convention |
 | `WorldMapScreen` | **Chrome-only** (2026-09-08) | The 3 toolbar buttons + the prompt's Cancel in NEUTRAL raised glass (`ButtonWidget.glassBackground`), prompt Create in STAINED (primary-action convention), and the create-waypoint prompt itself on DEPRESSED `GlassSurface.container` glass (WINDOW priority, `WINDOW_FILL` tint — the pack-browser detail-modal treatment; flat `RoundedPanel` fallback on decline); the name field was already raised glass via `EditBoxMixin`. `renderBackground` world-gate added (skip vanilla backdrop sandwich in-world — also saves its blur post-chain under a viewport the map fills anyway). Map content — void, tiles, waypoint markers, player arrow, bottom readouts — deliberately untouched; the readouts keep hardcoded white/gray because they float over map data where a mode-locked `ON_*` text token could go dark-on-dark in light mode. Glass samples the live backdrop behind the screen, NOT the map tiles: 1.21.11's deferred `GuiRenderState` means tile blits never reach the main target before the blur pass reads it — the same physics every glass surface has (only eager passes, like the title screen's panorama, are capturable) |
 | `AuroraTitleScreen` | **Chrome-only** (2026-09-08) | 5 floating glass buttons over the live vanilla panorama (4 neutral raised, Aurora Settings accent-stained — the ColorPicker-Apply convention); custom logo/backdrop/starfield blits and their PNGs removed (`title_background.png` stays — `SelectionScreenBackgroundMixin` still uses it). The screen calls `renderPanorama` then `BlurPanelRenderer.noteMenuBackdropDrawn()` — the frame-scoped declaration that is the one menu-context-guard exemption (§6 convention 5) — so the buttons blur the panorama through the ordinary world-reader capture; flat fallback whenever glass declines |
 | Toggles, sliders, HUD modules, tooltips/dropdowns-as-tooltips | **Never glass, by convention** | Opaque token surfaces |
@@ -1053,6 +1055,56 @@ browser stay on the legacy order; both are now unblocked mechanically
 scissor/`UiLayerCache`/modal decisions to make — the same per-screen
 handoff every prior pilot made.
 
+Landed 2026-09-11: **the pre-dim rollout's final two screens — the rollout
+is COMPLETE** (two revertible commits; every glass screen in the mod now
+enforces the structural pre-dim layering rule, §6 convention 6).
+`AuroraScreen` (`1e170eb`): the `ManagerListScreen` skeleton across the
+whole screen — window via `GlassSurface.container`, the sidebar
+chips/Profiles/layout buttons/search field driven by a new
+`paintGlassPass`, the Modules grid's tiles painted under the TRACKED
+scissor (`GlassSurface.enableScissor`, deferred rims keep the list clip,
+ROW priority), and the Settings tab's inline rows driven through the
+settings' own `renderGlassPass` under the same tracked scissor (the same
+walk `renderSettingsLive` performs; the Theme preview card gained its
+glass surface here for the first time — its hook was never called on this
+screen before, +1 panel on the GlassStats line vs baseline, everything
+else count-identical). The `UiLayerCache` question was re-verified for
+this screen specifically rather than assumed: `RenderUtil`'s capture sink
+redirects only its own AA fills, so glass panels (texture blits) can never
+enter the cache; the capture block runs after the window glass and before
+the pass's tint fills; and this screen's cache holds only static window
+chrome (no scroll term), so the live pass never interacts with it.
+`ResourcePackBrowserScreen` (`d3b4bfd`): the dim through `overlayDim`'s
+argb overload at the screen's original `0x55` strength; the sidebar via
+`GlassSurface.container`; the ACTIVE category tab through a NEW
+explicit-tint `GlassSurface.control` overload (its historical
+accent-lerp wash IS its tint — evaluated in the pass so the hover ease
+cannot disagree with the label pass); the per-card Install buttons driven
+under the tracked grid clip through a `forEachVisibleCard` culling walk
+now shared by pass and content, with a `drivenPhase` stamp so a download
+thread flipping a card's phase mid-frame cannot hand the content render
+an undriven (post-dim-painting) button; and the detail modal — §9's other
+named above-the-dim case, confirmed still intended — served by TWO new
+`GlassSurface` pieces: `aboveDimContainer` (the container-shaped sibling
+of `aboveDimControl`: depressed, `SURFACE`-token tint, rim in place) for
+the panel, and a `beginAboveDim`/`endAboveDim` ZONE bracket for
+component-driven surfaces the caller doesn't own (the modal's shared
+Buttons drive their passes in place inside it — driving them in the main
+pass would bury their glass under the modal's backdrop + panel; `paint()`
+skips the ordering report inside a zone, `beginFrame()` reports a leak).
+Verified per the standing standard: DevPilot `predim` phase-c/phase-d A/B
+boots on the frozen-world fixture at Background Opacity 0.85 + 0.25 —
+AuroraScreen: glass bodies (35-tile grid included) now veiled with rims
+above, content pixel-stable; pack browser: card bodies/text byte-stable,
+the veiled Install buttons + active tab the only >32/255 deltas, and the
+modal capture at 0.25 differing by ZERO pixels beyond ±11/255 (the
+above-dim layer preserved its look); `declines=0`, `poolExhausted=0` on
+every GlassStats line of both screens' boots; ZERO `[GlassSurface]`
+reports in normal operation; and the guard negative-tested IN-FRAME on
+each screen via the `ScreenEvents` afterRender probe (`drew=true
+dimPainted=true`; exactly one report per boot, the probe's own). Captures
+in `.devpilot-pilot/predim-aurora-*` and `.devpilot-pilot/predim-packs-*`.
+
 ---
 
 ## 9. Known outstanding work, dead code, and hazards
@@ -1064,14 +1116,14 @@ handoff every prior pilot made.
   regenerating the subset for the Miscellaneous move (2026-09-10); the fix is a two-line
   codepoint change + subset regen.
 - ~~The deferred-rim queue in `GlassSurface` (§6 convention 6) has no opt-out for surfaces
-  deliberately meant to render ABOVE an already-dimmed screen~~ **Built (2026-09-10, the
-  Part B pilot)**: `GlassSurface.aboveDimControl` paints the identical idiom (gate →
-  panel → `WINDOW_FILL` tint → rim) entirely IN PLACE in the content pass — no deferral,
-  no ordering report — for floating elements that must read above the dimmed screen.
-  `EnumSetting`'s expanded popup uses it (verified on the migrated
-  `FeatureDetailScreen`); the pack browser's detail modal can adopt it when that screen
-  migrates. It is deliberately control-shaped (neutral raised); a container variant
-  (depressed, `SURFACE` tint — the modal's look) would be added then if needed.
+  deliberately meant to render ABOVE an already-dimmed screen~~ **Built, complete (2026-09-11)**:
+  `GlassSurface.aboveDimControl` (neutral raised, `WINDOW_FILL` tint — `EnumSetting`'s expanded
+  popup) and `GlassSurface.aboveDimContainer` (depressed, `SURFACE`-token tint, WINDOW priority —
+  the pack browser's detail modal) paint the identical idiom entirely in place in the content
+  pass, exempt from the pass ordering; and `beginAboveDim`/`endAboveDim` brackets an above-dim
+  ZONE for component-driven surfaces the caller doesn't own (the modal's shared Buttons drive
+  their own passes in place inside it) — `paint()` skips the ordering report inside a zone, and
+  `beginFrame()` reports one left open.
 - The shared `Button` has no success variant, so `ResourcePackBrowserScreen`'s
   Install/Installed states render accent-stained/neutral instead of success-green
   (§6 table). A `Button.success`-style variant would restore the old semantics.

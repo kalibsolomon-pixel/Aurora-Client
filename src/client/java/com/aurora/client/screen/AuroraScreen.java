@@ -38,7 +38,7 @@ import java.util.Map;
  * once into an off-screen cache and blitted each frame, so only live
  * overlays (hover, animated toggles, text, search glow) re-render per frame.
  *
- * <p>§6 convention 6, structural (2026-09-10 — the last of the big screens):
+ * <p>§6 convention 6, structural (2026-09-11 — the last of the big screens):
  * {@code GlassSurface.beginGlassPass} → every surface (window, sidebar
  * chips, layout buttons, search field, tiles / inline Settings rows under
  * the tracked scissor) → {@code GlassSurface.overlayDim} → cached chrome
