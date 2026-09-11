@@ -68,8 +68,6 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
     private int lockIconFg()      { return ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY); }
     /** Module label plate — overlay-dim RGB at the original 0xA0 strength. */
     private int labelBg()         { return (0xA0 << 24) | (ThemeManager.color(ThemeToken.OVERLAY_DIM) & 0x00FFFFFF); }
-    /** Alignment grid — ON_BACKGROUND RGB at a faint 0x20 alpha (mode-aware). */
-    private int grid()            { return (0x20 << 24) | (ThemeManager.color(ThemeToken.ON_BACKGROUND) & 0x00FFFFFF); }
 
     private static final int CORNER_HIT_RADIUS = 6;
     private static final int X_ICON_SIZE       = 9;
@@ -207,13 +205,6 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
     private boolean grabbedTopLeft, grabbedTopRight, grabbedBottomLeft;
     private boolean pivotIsRight()  { return grabbedTopLeft   || grabbedBottomLeft; }
     private boolean pivotIsBottom() { return grabbedTopLeft   || grabbedTopRight; }
-
-    private void drawGrid(GuiGraphics ctx) {
-        for (int x = 0; x < this.width; x += 32)
-            ctx.fill(x, 0, x + 1, this.height, grid());
-        for (int y = 0; y < this.height; y += 32)
-            ctx.fill(0, y, this.width, y + 1, grid());
-    }
 
     private void drawOutlines(GuiGraphics ctx, int mouseX, int mouseY) {
         HudModuleManager mgr = AuroraClient.modules();
