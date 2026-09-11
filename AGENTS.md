@@ -35,7 +35,7 @@ like the glass renderer: read `hitreg/BetterHitreg.java`'s notes before touching
 | Java | 21 |
 | Minecraft | **1.21.11** (`gradle.properties`) with official Mojang mappings |
 | Fabric API | 0.141.4+1.21.11; loader 0.19.2 |
-| Other deps | Cloth Config (`modApi`, used only by `util/ColorEntryHelper`); ModMenu in `suggests` only |
+| Other deps | None at runtime (the former Cloth Config `modApi` was dropped 2026-09-11 — its only consumer was `ColorEntryHelper`'s dead Cloth Config half); ModMenu in `suggests` only |
 | Entrypoints | `com.aurora.client.AuroraClient` (Better Hitreg is wired from it via `hitreg/BetterHitreg.initialize()`) |
 | Mixin configs | `aurora.mixins.json` only (~70 `client` entries, of which 13 are `hitreg.*`) |
 | Run dir | `run/` at repo root is a live dev client dir (`run/config/aurora.json`, `run/config/aurora-worldmap/`, `run/config/profiles/`) |
@@ -95,8 +95,8 @@ AuroraClient.java          Mod entrypoint: registers keybinds, HUD callbacks, fe
 │   │                      skeleton, scroll+thumb, rename editor, toolbar — the two
 │   │                      manager screens extend it, keeping only row content/actions),
 │   │                      FeatureRegistry
-│   │                      (UI metadata + settings widgets), FeatureTile, FeatureIcons,
-│   │                      FeatureMetadata, ModuleAccentColors, ModuleIconRegistry,
+│   │                      (UI metadata + settings widgets), FeatureIcons,
+│   │                      FeatureMetadata, ModuleAccentColors,
 │   │                      AuroraModMenuApi.
 │   └── setting/           ~21 FeatureSetting widget types (the design-language §4
 │                           `valueLine` live-state subtitle lives on the FeatureSetting
@@ -150,11 +150,11 @@ AuroraClient.java          Mod entrypoint: registers keybinds, HUD callbacks, fe
 ```
 
 Resources: `assets/aurora/font/` (9 bundled TTFs incl. `material_symbols_rounded.ttf` icon
-font + JSON providers), `assets/aurora/textures/gui/module_icons/` (22 PNGs — plus two
-dev scripts and an SVG that shouldn't ship), `assets/aurora/lang/en_us.json` (only
+font + JSON providers), `assets/aurora/lang/en_us.json` (only
 localization), `assets/minecraft/models/item/totem_of_undying.json` (fixes totem
 orientation in item frames). Root-level `subset_script.py` regenerates the icon font
-subset; `inspect_font3.py` is a stale one-off with a hardcoded Windows path.
+subset. (The former `module_icons/` PNG set + stray design-source SVGs + the stale
+`inspect_font3.py` were removed by the 2026-09-11 dead-code sweep, audit D9.)
 
 ---
 
@@ -164,7 +164,7 @@ There is **no single registry**. Three structures must stay conceptually in sync
 
 1. **`feature/FeatureManager`** — ~29 long-lived `Feature` singletons with
    `onRegister()`/`onTick(Minecraft)` (interface `feature/Feature.java`).
-   `Feature.enabledByDefault()` exists but is **never read anywhere** (dead API).
+   (The never-read `Feature.enabledByDefault()` was removed 2026-09-11, audit D9.)
 2. **`screen/FeatureRegistry`** — static UI metadata: **35 MODULES-tab + 4 SETTINGS-tab
    tiles** (`FeatureMetadata`: id, display name, marketing description, enable
    getter/setter, list of `FeatureSetting` widgets, `reset()`).
@@ -1172,6 +1172,34 @@ verbatim upstream `hitreg/` comments and `CrosshairRenderer`'s javadoc that ment
 build, a DevPilot boot smoke, and Fabric API 0.141.4+1.21.11's own
 `>=1.21.11- <1.21.12-` constraint still being satisfied by 1.21.11.
 
+Landed 2026-09-11 after that: **the dead-code sweep (audit item D9)** — one
+revertible commit per deleted subsystem, every item re-verified for references
+(including reflection, resource/mixin configs, and dynamic path building) before
+deletion. Removed: `ModuleIconRegistry` + its registration + the 22-PNG
+`module_icons/` assets and their two dev scripts + stray SVG; `FeatureTile`;
+`SliderFocus`; the Time Changer config trio (`timeChangerEnabled`/`timeOfDay`/
+`TimeOfDayPreset`); the orphan `hitboxFeatureEnabled` (+ two stale javadocs that
+pointed at it); `Feature.enabledByDefault()` + 3 overrides; `ColorEntryHelper`'s
+uncalled Cloth Config half (`add`/`addPickerButton`) and with it the Cloth Config
+dependency itself; dead constants (`BooleanSetting.TRACK_H`,
+`ThemePreviewSetting.KNOB_R`, `SegmentedSetting.SEG_GAP`, `WaypointRenderer.
+LABEL_LIFT`); `HudEditorScreen.drawGrid`/`grid`; the comment-only unregistered
+`MixinGuiGraphics`; `Module.Category` + its field + the uncalled
+`getModulesByCategory` (audit D8's stale-taxonomy finding); write-only fields
+(`FeatureSetting`'s vestigial wrap cache, `ButtonSetting.lastBtnX/lastBtnY`);
+unreferenced textures (`icons.png`, `gui/knob.png`, `gui/panel.png`,
+`gui/panel_outline.png`); the four unreferenced design-source SVGs in
+`textures/gui/`; stale `inspect_font3.py`; and the dangling `fabric.mod.json`
+icon reference (logo.png was deleted with the title-screen rework, `9ce08dd`).
+Deliberately NOT deleted: `AuroraModMenuApi` — `openOrFallback()` has zero
+callers, but `AuroraTitleScreen` carries an explicit 2026-09-08 retention
+comment ("stays in place for a future re-enable once Mod Menu ships a stable
+1.21.11 release"), which outranks the audit; and the documented-deliberate
+items (empty `WindowMixin`/`RenderTargetMixin`, `FeatureSetting`'s no-op
+description hooks, `settingsDetailOnly`, `HitboxPositionSmoother`).
+Verified per deletion by `compileClientJava`, at the end by a full `build`
++ jar-content audit (no removed assets ship), and by a DevPilot boot smoke.
+
 ---
 
 ## 9. Known outstanding work, dead code, and hazards
@@ -1242,16 +1270,22 @@ build, a DevPilot boot smoke, and Fabric API 0.141.4+1.21.11's own
   registered), and `MultiplayerServerListWidgetMixin` (numeric ping on server list rows)
   was registered the same day — the former "complete but not listed in aurora.mixins.json"
   pair no longer exists.
-- `timeChangerEnabled` + `TimeOfDayPreset` in config: no consumers.
-- `Feature.enabledByDefault()`: never read. `AutoSprintFeature`: dormant stub.
+- ~~`timeChangerEnabled` + `TimeOfDayPreset` in config: no consumers~~ **Removed
+  (2026-09-11, audit D9)**; old configs deserialize cleanly (GSON ignores unknown fields).
+- ~~`Feature.enabledByDefault()`: never read~~ **Removed (2026-09-11, audit D9)** with its
+  three never-read overrides. `AutoSprintFeature`: dormant stub.
   `FpsDisplayFeature`: no-op marker (FPS lives in Info HUD).
-- `ColorEntryHelper.addPickerButton`: builds nothing (stub).
+- ~~`ColorEntryHelper.addPickerButton`: builds nothing (stub)~~ **Removed (2026-09-11,
+  audit D9)** along with the equally-uncalled `add()` — the class keeps only the
+  `hslaToArgb`/`argbToHsla` math ColorSetting/ColorPickerScreen use, and the now-orphaned
+  Cloth Config dependency was dropped from build.gradle + fabric.mod.json.
 - `module/ModuleManager` (34 hardcoded cards; count-matched with `FeatureRegistry` since
   the missing `reflex` card landed 2026-09-05, audit B5; `better_hitreg` added 2026-09-08;
   the `theme` card removed 2026-09-09 when Theme moved to the Settings tab) —
   ids here still silently fail on typos. Consider deriving one from the other someday.
-- ComplianceMode's `hitboxFeatureEnabled` config field is an orphan (force-false path
-  writes fields renderers don't read for that one).
+- ~~ComplianceMode's `hitboxFeatureEnabled` config field is an orphan~~ **Removed
+  (2026-09-11, audit D9)**; ComplianceMode and the hitbox keybind flip the real
+  `hitboxEnabled`/`hitboxTargetEnabled` sub-toggles.
 - Four different animation helpers (`util/AnimationCurves`, `util/AuroraAnim`,
   `util/HoverAnim`, `ui/util/Animation`) — pick the right one per context.
 - `AuroraTheme`'s `IOS_*`/`ACCENT_*` names hold OnePlus Red (§5).
@@ -1275,9 +1309,11 @@ build, a DevPilot boot smoke, and Fabric API 0.141.4+1.21.11's own
   google/material-design-icons and run `subset_script.py`'s fontTools command — the script
   itself still hardcodes a Windows path). The bundled `material_symbols_rounded.ttf`
   remains a subset of exactly the `FeatureIcons` codepoints.
-- `assets/aurora/textures/gui/module_icons/` ships two dev scripts + `settings.svg`;
-  root-level `inspect_font3.py` has a hardcoded Windows path; font `license.txt` covers a
-  removed font (Source Sans Pro).
+- ~~`assets/aurora/textures/gui/module_icons/` ships two dev scripts + `settings.svg`~~
+  **Resolved (2026-09-11, audit D9)**: the whole unused PNG mechanism
+  (`ModuleIconRegistry` + the 22 PNGs + the scripts + the SVG) was deleted, along with the
+  four design-source SVGs in `textures/gui/` and root-level `inspect_font3.py`. Font
+  `license.txt` still covers a removed font (Source Sans Pro).
 - No TODO/FIXME comments exist in `com/aurora` — intent lives in long javadocs. Read them;
   they record 1.21.11 API renames (`setupFog`, `swingArm`, `EntityHitboxDebugRenderer.
   emitGizmos`, …) and the reasons behind the conventions above.

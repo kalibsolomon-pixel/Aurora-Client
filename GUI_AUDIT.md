@@ -321,6 +321,9 @@ config-compat), `FeatureSetting`'s write-only wrap-cache fields + always-0
 `descriptionHeight`, `ButtonSetting`'s unused geometry fields, dead `TRACK_H/KNOB_R` in the
 slider settings, `HudEditorScreen.drawGrid/grid` (never drawn), `Feature.enabledByDefault()`
 (never read), config orphans (`timeChangerEnabled`, compliance `hitboxFeatureEnabled`).
+**Executed 2026-09-11** — every item re-verified then removed, one commit per subsystem
+(the deliberate-retention items — `AuroraModMenuApi`, the empty registered mixins, the
+no-op description hooks — stayed; see AGENTS.md §8 for the full list and commit order).
 
 **D10. Inconsistent conventions inside the settings package.** [verified] Label token split:
 `AuroraTheme.TEXT_PRIMARY` (8 widgets) vs `AuroraTheme.IOS_LABEL` (8 widgets) for the same
