@@ -955,6 +955,14 @@ temporary uncommitted `DevPilot.install();` at the end of
 and never SIGKILL a running dev client (a hard kill once left kwin/XWayland
 wedged so every subsequent boot hung inside `glfwCreateWindow`; a minimal
 GLFW create/destroy/terminate cycle from a plain JVM cleared it).
+Recurred 2026-09-11 (D9 sweep boots, no SIGKILL involved): the wedge is
+specific to VISIBLE + CORE-profile window creation — hidden and/or compat
+windows and `glxinfo`'s core context all work, which is why the plain-JVM
+clear cycle no longer clears it. **Working bypass: run the boot inside
+gamescope** (`gamescope -W 1280 -H 720 -- ./gradlew --no-daemon runClient`;
+its nested XWayland is fresh, `--no-daemon` so the game JVM inherits
+gamescope's DISPLAY) — the D9 smoke ran full-speed under it and exited
+cleanly. Terminating a wedged boot with SIGTERM is safe; SIGKILL is not.
 
 Landed 2026-09-10 after that: **the §4 subtitle audit** (`082d97f`) — a
 sweep for further `valueLine` candidates plus the first check of the rev-2
