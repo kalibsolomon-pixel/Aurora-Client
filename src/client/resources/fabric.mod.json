@@ -12,7 +12,6 @@
     "sources": "https://example.com"
   },
   "license": "MIT",
-  "icon": "assets/aurora/textures/gui/logo.png",
   "environment": "client",
   "entrypoints": {
     "client": [
