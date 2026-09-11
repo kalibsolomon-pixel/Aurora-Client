@@ -38,6 +38,14 @@ import java.util.*;
  * expand/collapse chevrons use the Material Symbols glyphs already in the
  * font subset (the {@code EnumSetting} dropdown convention), not ASCII
  * stand-ins.
+ *
+ * <p>Design language §4: collapsed item rows hide all seven configured
+ * values behind the expand chevron — exactly the "state not visible at a
+ * glance from the control itself" case — so each collapsed row carries a
+ * small {@code ON_BACKGROUND_SECONDARY} subtitle beneath the label
+ * surfacing the headline figure ("Scale 1.40×"). Expanded rows drop the
+ * subtitle: the scale slider's own readout then shows the value at a
+ * glance, and the spec's exclusion clause governs.
  */
 public class ItemScaleSetting extends FeatureSetting {
 
@@ -51,6 +59,15 @@ public class ItemScaleSetting extends FeatureSetting {
     private static final String CHEV_DOWN = "\uE5CF";  // expand_more
 
     private static final int ICON_SIZE = 16;
+
+    /**
+     * Collapsed item-row header height and stride. Grew from 26/30 when the
+     * §4 live-value subtitle ("Scale 1.40×") was added beneath each item
+     * label — the label block is 9 (label) + 2 (gap) + 9 (subtitle) = 20px,
+     * so 38 keeps the same breathing room the 26px single-line row had.
+     */
+    private static final int ITEM_ROW_H = 38;
+    private static final int ITEM_ROW_STRIDE = 42;
 
     private final EditBox searchField;
     private Item foundItem = null;
@@ -115,7 +132,7 @@ public class ItemScaleSetting extends FeatureSetting {
         int h = 38;
         AuroraConfig cfg = AuroraConfig.get();
         for (String id : cfg.itemScales.keySet()) {
-            h += 30; // Row header height
+            h += ITEM_ROW_STRIDE; // Row header height
             if (expandedStates.getOrDefault(id, false)) {
                 h += 7 * 36; // 7 sliders, each is 36px tall
             }
@@ -178,14 +195,14 @@ public class ItemScaleSetting extends FeatureSetting {
             boolean expanded = expandedStates.getOrDefault(idStr, false);
             int rowY = currentY;
 
-            // Header Background Panel (26px tall — the hover band matches so
-            // there is no hover-without-click strip at the row's bottom edge).
-            boolean rowHover = Widget.inBounds(mouseX, mouseY, x + 10, rowY, width - 20, 26);
-            AuroraShapes.panel(ctx, x + 10, rowY, width - 20, 26,
+            // Header Background Panel — the hover band matches so there is
+            // no hover-without-click strip at the row's bottom edge.
+            boolean rowHover = Widget.inBounds(mouseX, mouseY, x + 10, rowY, width - 20, ITEM_ROW_H);
+            AuroraShapes.panel(ctx, x + 10, rowY, width - 20, ITEM_ROW_H,
                     ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_BACKGROUND), 0x1A),
                     AuroraTheme.RADIUS_SMALL);
             if (rowHover) {
-                AuroraShapes.outline(ctx, x + 10, rowY, width - 20, 26, AuroraTheme.BORDER_OFF, AuroraTheme.RADIUS_SMALL);
+                AuroraShapes.outline(ctx, x + 10, rowY, width - 20, ITEM_ROW_H, AuroraTheme.BORDER_OFF, AuroraTheme.RADIUS_SMALL);
             }
 
             // Real item icon (crisp flat-sprite path, 3D fallback), then
@@ -194,17 +211,38 @@ public class ItemScaleSetting extends FeatureSetting {
             int textPadX = x + 20;
             if (item != null && item != net.minecraft.world.item.Items.AIR) {
                 ItemStack stack = item.getDefaultInstance();
-                ItemSpriteRenderer.renderIcon(ctx, stack, x + 14, rowY + 5);
+                ItemSpriteRenderer.renderIcon(ctx, stack, x + 14, rowY + (ITEM_ROW_H - ICON_SIZE) / 2);
                 textPadX = x + 20 + ICON_SIZE + 4;
             }
             String labelStr = humanizeItemId(idStr);
-            ctx.drawString(tr, labelStr, textPadX, rowY + 9, AuroraTheme.IOS_LABEL, false);
+            // §4 subtitle block: the label sits at the top of a 20px block
+            // (label + gap + subtitle) centered in the row, mirroring
+            // FeatureSetting.drawValueLine's beneath-label placement.
+            int textTop = rowY + (ITEM_ROW_H - 20) / 2;
+            ctx.drawString(tr, labelStr, textPadX, textTop, AuroraTheme.IOS_LABEL, false);
+
+            // §4 live-value subtitle: collapsed rows hide all seven
+            // configured values behind the expand chevron, so the headline
+            // figure — the scale this feature is named for — surfaces under
+            // the label (same idiom/color as FeatureSetting.drawValueLine,
+            // drawn in-widget because these rows aren't FeatureSettings).
+            // Only on COLLAPSED rows: expanded, the scale slider's own
+            // readout shows it at a glance and the exclusion clause governs.
+            // One map lookup + string build per row per frame — the same
+            // cost class as the hitreg alert suppliers.
+            if (!expanded) {
+                AuroraConfig.ItemScaleData d = cfg.itemScales.get(idStr);
+                if (d != null) {
+                    ctx.drawString(tr, String.format(java.util.Locale.ROOT, "Scale %.2f\u00d7", d.scale),
+                            textPadX, textTop + tr.lineHeight + 2, AuroraTheme.TEXT_SECONDARY, false);
+                }
+            }
 
             // chevron and trash icon
             int rightX = x + width - 24;
             // Draw Delete Button (Red cross/Trash)
-            boolean trashHover = Widget.inBounds(mouseX, mouseY, rightX - 16, rowY + 5, 16, 16);
-            ctx.drawString(tr, "x", rightX - 12, rowY + 8,
+            boolean trashHover = Widget.inBounds(mouseX, mouseY, rightX - 16, rowY + (ITEM_ROW_H - 16) / 2, 16, 16);
+            ctx.drawString(tr, "x", rightX - 12, rowY + (ITEM_ROW_H - 16) / 2 + 3,
                     trashHover ? ThemeManager.color(ThemeToken.SEMANTIC_ERROR)
                                 : AuroraTheme.IOS_TERTIARY_LABEL, false);
 
@@ -216,10 +254,10 @@ public class ItemScaleSetting extends FeatureSetting {
             Component chevComp = Component.literal(chev).withStyle(SYMBOL_STYLE);
             int chevW = Math.max(1, tr.width(chevComp));
             MaterialIconRenderer.drawIcon(ctx, tr, chev,
-                    rightX - 34 + chevW / 2f, rowY + 8 + tr.lineHeight / 2f,
+                    rightX - 34 + chevW / 2f, rowY + ITEM_ROW_H / 2f,
                     MaterialIconRenderer.NATURAL_EM_GUI, AuroraTheme.IOS_SECONDARY_LABEL);
 
-            currentY += 30;
+            currentY += ITEM_ROW_STRIDE;
 
             if (expanded) {
                 // Get or create sliders for this item
@@ -381,7 +419,7 @@ public class ItemScaleSetting extends FeatureSetting {
             boolean expanded = expandedStates.getOrDefault(idStr, false);
             int rowHeaderY = currentY;
 
-            if (mouseY >= rowHeaderY && mouseY < rowHeaderY + 26) {
+            if (mouseY >= rowHeaderY && mouseY < rowHeaderY + ITEM_ROW_H) {
                 int rightX = rowX + rowWidth - 24;
                 // Delete Click
                 if (mouseX >= rightX - 16 && mouseX < rightX) {
@@ -400,7 +438,7 @@ public class ItemScaleSetting extends FeatureSetting {
                 }
             }
 
-            currentY += 30;
+            currentY += ITEM_ROW_STRIDE;
 
             if (expanded) {
                 List<SliderSetting> sliders = getOrCreateSliders(idStr);
@@ -432,7 +470,7 @@ public class ItemScaleSetting extends FeatureSetting {
 
         for (String idStr : sortedIds) {
             boolean expanded = expandedStates.getOrDefault(idStr, false);
-            currentY += 30;
+            currentY += ITEM_ROW_STRIDE;
 
             if (expanded) {
                 List<SliderSetting> sliders = getOrCreateSliders(idStr);
