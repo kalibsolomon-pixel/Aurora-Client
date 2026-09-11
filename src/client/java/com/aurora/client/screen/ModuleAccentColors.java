@@ -4,9 +4,9 @@ import java.util.Map;
 
 /**
  * Per-module accent color overrides. When a module id is present in
- * this map, {@link FeatureTile} uses the mapped color (ARGB) for both
- * the ON-state outline and the ON-state icon tint, replacing the
- * default {@code AuroraTheme.IOS_BLUE}.
+ * this map, the modules grid (AuroraScreen's tile renderer) uses the
+ * mapped color (ARGB) for both the ON-state outline and the ON-state
+ * icon tint, replacing the default {@code AuroraTheme.IOS_BLUE}.
  *
  * <p>This indirection exists so the per-module color palette can be
  * tweaked from one place during the design phase. Deleting an entry
