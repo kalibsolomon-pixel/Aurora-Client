@@ -964,6 +964,32 @@ Verified by DevPilot `s4` boots (stashed baseline + post-change captures +
 functional hit-test clicks proving the new 38/42 geometry in
 `.devpilot-pilot/s4-*`).
 
+Landed 2026-09-10 after that: **the §5 crosshair preset preview** — the
+last unsatisfied candidate from the spec's original §5 list. The crosshair
+detail screen gained a leading live-preview row (`CrosshairPreviewSetting`,
+first row, before the Style enum it demonstrates — the spec's default
+placement; Theme's trailing exception is a cumulative-result case that
+doesn't apply). The preview draws the selected preset through the REAL
+shape code: `CrosshairRenderer`'s shape switch was extracted into a public
+`drawShape(...)` that both the HUD path and the preview call (the
+`ItemSpriteRenderer` one-pipeline principle — no second implementation to
+drift). Fixed demo dimensions (7/2/2) at a stable row size — the preview's
+job is the SHAPE, the one thing no other control shows; Size/Thickness/Gap
+sliders and the Color swatch already surface their values (§4's exclusion
+clause applied to §5), and the color is the `ON_BACKGROUND` token so the
+shape stays legible on the inset panel in both modes. CUSTOM previews the
+user's real canvas. Drawn in the live overlay layer (cached shapes can't
+promise preset-switch immediacy). Verified by DevPilot `s5` boots: the
+preview shows CROSS/CIRCLE/SQUARE correctly and switches live with the
+enum; the in-game HUD is pixel-identical pre/post refactor (80×80 center
+crop A/B: 6400/6400 identical, 112 lit crosshair pixels both); and the
+preview's lit-pixel pattern is EXACTLY the in-game shape's pattern
+(112 px, centroid-relative offsets equal — same args through the same
+code). Captures in `.devpilot-pilot/s5-*`. The indicator-style enum
+(second selector further down) deliberately got no preview — this change
+was scoped to the preset selector; a second preview there is a possible
+follow-up.
+
 ---
 
 ## 9. Known outstanding work, dead code, and hazards

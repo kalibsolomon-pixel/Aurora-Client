@@ -76,18 +76,37 @@ public final class CrosshairRenderer {
         ctx.pose().pushMatrix();
         ctx.pose().translate(-0.5f, -0.5f);
 
-        switch (style) {
+        drawShape(ctx, style, cx, cy, size, thick, gap, color,
+                useIndicator ? cfg.crosshairIndicatorCustomPixels : cfg.crosshairCustomPixels,
+                useIndicator ? cfg.crosshairIndicatorCustomWidth : cfg.crosshairCustomWidth,
+                useIndicator ? cfg.crosshairIndicatorCustomHeight : cfg.crosshairCustomHeight);
+
+        ctx.pose().popMatrix();
+    }
+
+    /**
+     * Draws one crosshair shape centered on {@code (cx, cy)} — the single
+     * implementation behind both the in-game HUD crosshair and the settings
+     * screen's preset preview row ({@code CrosshairPreviewSetting}), so the
+     * two can never drift apart (the {@code ItemSpriteRenderer} principle:
+     * one pipeline, two call sites). The caller owns the half-pixel
+     * translate — apply {@code translate(-0.5, -0.5)} before calling to get
+     * the seam-straddling centering the HUD path uses.
+     *
+     * <p>For {@code CUSTOM}, the canvas pixels/dims are passed in by the
+     * caller (the HUD path selects main vs indicator canvas; the preview
+     * always shows the main one).
+     */
+    public static void drawShape(GuiGraphics ctx, AuroraConfig.CrosshairStyle style,
+                                 int cx, int cy, int size, int thick, int gap, int color,
+                                 boolean[] customPixels, int customW, int customH) {
+        switch (safe(style)) {
             case DOT    -> drawDot(ctx, cx, cy, size, color);
             case CIRCLE -> drawCircle(ctx, cx, cy, size, gap, color);
             case SQUARE -> drawSquare(ctx, cx, cy, size, thick, gap, color);
             case CROSS  -> drawCross(ctx, cx, cy, size, thick, gap, color);
-            case CUSTOM -> drawCustom(ctx, cx, cy, size, color,
-                    useIndicator ? cfg.crosshairIndicatorCustomPixels : cfg.crosshairCustomPixels,
-                    useIndicator ? cfg.crosshairIndicatorCustomWidth : cfg.crosshairCustomWidth,
-                    useIndicator ? cfg.crosshairIndicatorCustomHeight : cfg.crosshairCustomHeight);
+            case CUSTOM -> drawCustom(ctx, cx, cy, size, color, customPixels, customW, customH);
         }
-
-        ctx.pose().popMatrix();
     }
 
     private static AuroraConfig.CrosshairStyle safe(AuroraConfig.CrosshairStyle s) {
