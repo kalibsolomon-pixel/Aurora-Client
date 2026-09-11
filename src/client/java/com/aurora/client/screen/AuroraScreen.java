@@ -5,6 +5,8 @@ import com.aurora.client.module.ModuleManager;
 import com.aurora.client.screen.setting.FeatureSetting;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
+import com.aurora.client.ui.component.GlassEditBox;
+import com.aurora.client.ui.component.GlassSurface;
 import com.aurora.client.ui.component.ThemedScreen;
 import com.aurora.client.ui.component.ToggleSwitch;
 import com.aurora.client.ui.render.blur.BlurPanelRenderer;
@@ -35,6 +37,14 @@ import java.util.Map;
  * The static chrome (window, sidebar, settled cards/toggles) is rasterized
  * once into an off-screen cache and blitted each frame, so only live
  * overlays (hover, animated toggles, text, search glow) re-render per frame.
+ *
+ * <p>§6 convention 6, structural (2026-09-10 — the last of the big screens):
+ * {@code GlassSurface.beginGlassPass} → every surface (window, sidebar
+ * chips, layout buttons, search field, tiles / inline Settings rows under
+ * the tracked scissor) → {@code GlassSurface.overlayDim} → cached chrome
+ * blit + content. The static cache never holds glass: panels are texture
+ * blits that bypass the fill-capture sink, and the capture block runs
+ * before the pass's tint fills.
  */
 public class AuroraScreen extends Screen implements ThemedScreen {
 
@@ -176,31 +186,20 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     public void render(GuiGraphics g, int mouseX, int mouseY, float delta) {
         tickSmoothScroll();
 
-        // ---- Glass pilot: live GPU glass UNDER the dim ----
-        // Same layering contract as the Theme screen's window: the window
-        // is the DEPRESSED surface (main containers read as recessed) and
-        // its tint is the ordinary WINDOW_FILL fill, whose alpha already
-        // carries the theme's Background Opacity — still exactly one
-        // application point. Drawn before the overlay dim so the dim veils
-        // the panel and its surroundings equally. When the renderer declines
-        // (menu context with no world, screenshot suppression, failure)
-        // glassWindow is false and the cached chrome below carries the old
-        // opaque fill + outline instead (see the glass bit in the version
-        // hash, which forces the re-raster on the switch).
-        boolean glassWindow = false;
-        if (liveWorldBackdrop()) {
-            float radius = ThemeManager.current().roundness().radius();
-            glassWindow = BlurPanelRenderer.renderPanel(g, boxX(), boxY(), BOX_W, BOX_H,
-                    radius, BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX,
-                    BlurPanelRenderer.Lighting.depressed(), BlurPanelRenderer.Priority.WINDOW);
-            if (glassWindow) {
-                RenderUtil.drawRoundedRectAA(g, boxX(), boxY(), BOX_W, BOX_H, radius,
-                        ThemeManager.color(ThemeToken.WINDOW_FILL));
-                BlurPanelRenderer.drawRimFinish(g, boxX(), boxY(), BOX_W, BOX_H, radius);
-            }
-        }
-
-        g.fill(0, 0, this.width, this.height, ThemeManager.color(ThemeToken.OVERLAY_DIM));
+        // ---- 1. Glass pass — every glass surface paints BEFORE the dim ----
+        // (§6 convention 6, structural: the ManagerListScreen skeleton, and
+        // the last of the big screens to adopt it — 2026-09-10.) The window
+        // is the DEPRESSED surface (main containers read as recessed); its
+        // tint is the ordinary WINDOW_FILL fill, whose alpha already carries
+        // the theme's Background Opacity — still exactly one application
+        // point. The dim veils the panel and its surroundings equally. When
+        // the renderer declines (menu context with no world, screenshot
+        // suppression, failure) glassWindow is false and the cached chrome
+        // below carries the old opaque fill + outline instead (see the glass
+        // bit in the version hash, which forces the re-raster on the switch).
+        GlassSurface.beginGlassPass();
+        float radius = ThemeManager.current().roundness().radius();
+        boolean glassWindow = GlassSurface.container(g, boxX(), boxY(), BOX_W, BOX_H, radius);
 
         com.mojang.blaze3d.pipeline.RenderTarget main = this.minecraft != null ? this.minecraft.getMainRenderTarget() : null;
         int fbW = (main != null && main.width > 0) ? main.width : this.width;
@@ -225,9 +224,23 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             layerCache.commit(version);
         }
 
+        // Chrome + tab surfaces — after the capture block above (a tint fill
+        // painted during capture would rasterize into the cache). Tiles and
+        // the Settings tab's inline rows paint under the tracked scissor so
+        // their deferred rims keep the list clip.
+        List<Module> mods = filteredModules(); // one fetch drives pass + content (§10)
+        paintGlassPass(g, mods);
+
+        // ---- 2. Dim — closes the glass pass, veils every surface like it ----
+        // veils the world, flushes the deferred rim finishes, and from here
+        // on any glass body paint is reported as an ordering violation.
+        GlassSurface.overlayDim(g, this.width, this.height);
+
+        // Cached chrome — one textured blit (a content layer above the dim,
+        // exactly where it always sat).
         layerCache.blit(g, this.width, this.height);
 
-        renderLive(g, mouseX, mouseY, delta);
+        renderLive(g, mods, mouseX, mouseY, delta);
 
         super.render(g, mouseX, mouseY, delta);
         FeatureSetting.drawPendingTooltip(g, this.width, this.height);
@@ -272,7 +285,89 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         return new float[]{cx, cy, cw, ch};
     }
 
-    private void renderLive(GuiGraphics g, int mouseX, int mouseY, float delta) {
+    // Per-frame glass results from paintGlassPass, read by the content pass
+    // (flat fallbacks + text-color roles when false). Same scheme as the
+    // FeatureDetailScreen pilot's glassWindow bit.
+    private final boolean[] chipGlass = new boolean[2];
+    private boolean profGlass = false;
+    private final boolean[] layoutGlass = new boolean[2];
+    private boolean[] tileGlass = new boolean[0];
+
+    /** This frame's glass result for tile {@code i} (false when it declined or wasn't painted). */
+    private boolean tileGlass(int i) {
+        return i < tileGlass.length && tileGlass[i];
+    }
+
+    /**
+     * The glass pass (§6 convention 6): every surface on the screen, painted
+     * between {@code beginGlassPass} and {@code overlayDim} so the dim veils
+     * them like it veils the world. Sidebar chips + Profiles + layout buttons
+     * + the search field are this screen's own surfaces (raised; the selected
+     * chip/layout is stained); tiles paint under the content scissor — the
+     * tracked {@link GlassSurface#enableScissor} wrapper, so their deferred
+     * rims re-apply the clip after the dim; the Settings tab's inline rows
+     * drive the settings' own {@code renderGlassPass} under the same scissor
+     * (the same walk {@code renderSettingsLive} performs). Hover never
+     * changes a tint — the washes are content, painted after the dim.
+     */
+    private void paintGlassPass(GuiGraphics g, List<Module> mods) {
+        float bx = boxX(), by = boxY();
+        for (int i = 0; i < 2; i++) {
+            float catY = by + TAB_FIRST_Y + i * TAB_PITCH;
+            chipGlass[i] = GlassSurface.control(g, bx + 8, catY, 64, TAB_H, 5, selectedCategory == i);
+        }
+        float profY = by + TAB_FIRST_Y + 2 * TAB_PITCH;
+        profGlass = GlassSurface.control(g, bx + 8, profY, 64, TAB_H, 5);
+
+        if (selectedCategory == 0) {
+            float mx = mainX(), my = mainY();
+            layoutGlass[0] = GlassSurface.control(g, mx, my, 20, 20, 4, !gridLayout);
+            layoutGlass[1] = GlassSurface.control(g, mx + 24, my, 20, 20, 4, gridLayout);
+            // Search field — positioned here (the pass runs before
+            // renderModulesLive positions it again) and driven through its
+            // own split (EditBoxMixin carries the frame-stamp scheme).
+            searchField.visible = true;
+            searchField.setX(Math.round(mx + 48));
+            searchField.setY(Math.round(my));
+            searchField.setWidth(202);
+            ((GlassEditBox) searchField).aurora$renderGlassPass(g);
+
+            GlassSurface.enableScissor(g, (int) mx, (int) (boxY() + 36), (int) (mx + 254), (int) (boxY() + BOX_H - 10));
+            if (tileGlass.length < mods.size()) tileGlass = new boolean[mods.size()];
+            for (int i = 0; i < mods.size(); i++) {
+                float[] b = cardBounds(i, mods);
+                if (b == null) {
+                    tileGlass[i] = false;
+                    continue;
+                }
+                tileGlass[i] = GlassSurface.control(g, b[0], b[1], b[2], b[3], 6,
+                        mods.get(i).isEnabled(), BlurPanelRenderer.Priority.ROW);
+            }
+            GlassSurface.disableScissor(g);
+        } else {
+            float mx = mainX(), my = mainY();
+            GlassSurface.enableScissor(g, (int) mx, (int) (boxY() + 36), (int) (mx + 254), (int) (boxY() + BOX_H - 10));
+            float y = my + 38 - (float) scrolls[1].current();
+            for (FeatureMetadata m : FeatureRegistry.settings()) {
+                y += 22; // header row — plain text + an opaque toggle, no glass
+                if (m.settingsDetailOnly) {
+                    y += SETTINGS_HINT_H;
+                } else {
+                    for (FeatureSetting s : m.settings) {
+                        int rh = s.height();
+                        if (y + rh > my + 36 && y < my + 216) {
+                            s.renderGlassPass(g, (int) (mx + 4), (int) y, 246);
+                        }
+                        y += rh + 4;
+                    }
+                }
+                y += SETTINGS_ENTRY_GAP;
+            }
+            GlassSurface.disableScissor(g);
+        }
+    }
+
+    private void renderLive(GuiGraphics g, List<Module> mods, int mouseX, int mouseY, float delta) {
         float bx = boxX(), by = boxY();
         Font tr = this.font;
 
@@ -283,26 +378,19 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             float catY = by + TAB_FIRST_Y + i * TAB_PITCH;
             boolean hover = mouseX >= bx + 8 && mouseX <= bx + 72 && mouseY >= catY && mouseY <= catY + TAB_H;
             boolean sel = selectedCategory == i;
-            // Glass pilot: the category pair is a segmented control — every
-            // chip is RAISED glass, neutral when unselected and
-            // accent-STAINED when selected (selection reads through the
-            // tint alone, exactly like the Theme screen's segments). On
-            // decline the flat wash/hover fills return unchanged.
-            boolean chipGlass = liveWorldBackdrop() && BlurPanelRenderer.renderPanel(
-                    g, bx + 8, catY, 64, TAB_H, 5,
-                    BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX,
-                    BlurPanelRenderer.Lighting.raised());
-            if (chipGlass) {
-                RenderUtil.drawRoundedRectAA(g, bx + 8, catY, 64, TAB_H, 5,
-                        sel ? ThemeManager.stainedTint()
-                             : ThemeManager.color(ThemeToken.WINDOW_FILL));
-                BlurPanelRenderer.drawRimFinish(g, bx + 8, catY, 64, TAB_H, 5);
-            } else if (sel) {
-                RenderUtil.drawRoundedRectAA(g, bx + 8, catY, 64, 22, 5, alpha(ThemeToken.ACCENT, 0x26 / 255f));
-            } else if (hover) {
-                RenderUtil.drawRoundedRectAA(g, bx + 8, catY, 64, 22, 5, ThemeManager.surfaceColor(ThemeToken.SURFACE_VARIANT));
+            // Surface: raised glass painted pre-dim by paintGlassPass
+            // (chipGlass[i]) — neutral unselected, accent-STAINED selected
+            // (selection reads through the tint alone). Content here: the
+            // flat wash/hover fills only when the glass declined, then the
+            // label.
+            if (!chipGlass[i]) {
+                if (sel) {
+                    RenderUtil.drawRoundedRectAA(g, bx + 8, catY, 64, 22, 5, alpha(ThemeToken.ACCENT, 0x26 / 255f));
+                } else if (hover) {
+                    RenderUtil.drawRoundedRectAA(g, bx + 8, catY, 64, 22, 5, ThemeManager.surfaceColor(ThemeToken.SURFACE_VARIANT));
+                }
             }
-            int txt = chipGlass && sel ? ThemeManager.color(ThemeToken.ON_ACCENT)
+            int txt = chipGlass[i] && sel ? ThemeManager.color(ThemeToken.ON_ACCENT)
                     : sel ? ThemeManager.color(ThemeToken.ON_BACKGROUND)
                     : hover ? ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY)
                     : ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED);
@@ -311,35 +399,27 @@ public class AuroraScreen extends Screen implements ThemedScreen {
 
         float profY = by + TAB_FIRST_Y + 2 * TAB_PITCH;
         boolean pHover = mouseX >= bx + 8 && mouseX <= bx + 72 && mouseY >= profY && mouseY <= profY + TAB_H;
-        // Glass pilot: Profiles is a plain action button — neutral raised
-        // glass (never stained: it is not a selected/primary state).
-        boolean profGlass = liveWorldBackdrop() && BlurPanelRenderer.renderPanel(
-                g, bx + 8, profY, 64, TAB_H, 5,
-                BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX,
-                BlurPanelRenderer.Lighting.raised());
-        if (profGlass) {
-            RenderUtil.drawRoundedRectAA(g, bx + 8, profY, 64, TAB_H, 5,
-                    ThemeManager.color(ThemeToken.WINDOW_FILL));
-            BlurPanelRenderer.drawRimFinish(g, bx + 8, profY, 64, TAB_H, 5);
-        } else if (pHover) {
+        // Profiles is a plain action button — neutral raised glass painted
+        // pre-dim by paintGlassPass; the hover fill only on decline.
+        if (!profGlass && pHover) {
             RenderUtil.drawRoundedRectAA(g, bx + 8, profY, 64, 22, 5, ThemeManager.surfaceColor(ThemeToken.SURFACE_VARIANT));
         }
         g.drawString(tr, "Profiles", (int) (bx + 16), (int) (profY + 7),
                 pHover ? ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY) : ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED), false);
 
-        if (selectedCategory == 0) renderModulesLive(g, mouseX, mouseY, delta);
+        if (selectedCategory == 0) renderModulesLive(g, mods, mouseX, mouseY, delta);
         else renderSettingsLive(g, mouseX, mouseY, delta);
 
         drawScrollbar(g);
     }
 
-    private void renderModulesLive(GuiGraphics g, int mouseX, int mouseY, float delta) {
+    private void renderModulesLive(GuiGraphics g, List<Module> mods, int mouseX, int mouseY, float delta) {
         float mx = mainX(), my = mainY();
         Font tr = this.font;
 
         float btnY = my, btnSize = 20;
-        drawLayoutButton(g, mx, btnY, btnSize, !gridLayout, mouseX, mouseY, true);
-        drawLayoutButton(g, mx + 24, btnY, btnSize, gridLayout, mouseX, mouseY, false);
+        drawLayoutButton(g, mx, btnY, btnSize, !gridLayout, mouseX, mouseY, true, layoutGlass[0]);
+        drawLayoutButton(g, mx + 24, btnY, btnSize, gridLayout, mouseX, mouseY, false, layoutGlass[1]);
 
         // The search bar occupies exactly the original placeholder's bounds —
         // top edge aligned with the list/grid buttons, 202x20. EditBoxMixin
@@ -352,10 +432,11 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         searchField.setWidth(202);
 
         // Render the EditBox manually (addWidget registers it for input only,
-        // not for rendering) so typed text + caret actually draw.
+        // not for rendering) so typed text + caret actually draw. Its glass
+        // surface was already painted pre-dim (paintGlassPass drives the
+        // EditBoxMixin split); renderWidget draws content only.
         searchField.render(g, mouseX, mouseY, delta);
 
-        List<Module> mods = filteredModules();
         g.enableScissor((int) mx, (int) (boxY() + 36), (int) (mx + 254), (int) (boxY() + BOX_H - 10));
         for (int i = 0; i < mods.size(); i++) {
             Module m = mods.get(i);
@@ -365,22 +446,15 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             boolean hover = mouseX >= cx && mouseX <= cx + cw && mouseY >= cy && mouseY <= cy + ch;
             boolean on = m.isEnabled();
 
-            // Glass pilot: each tile is its own RAISED glass panel — its own
-            // correctly-cropped, correctly-scaled backdrop slice (per-element
-            // capture, never the whole scene stretched). Neutral tint when
-            // off, accent-STAINED when on (the enabled state reads through
-            // the tint, like a selected segment); hover adds a faint
-            // mode-aware wash on top. On decline the flat surface fill +
-            // accent wash/border return unchanged.
-            boolean tileGlass = liveWorldBackdrop() && BlurPanelRenderer.renderPanel(
-                    g, cx, cy, cw, ch, 6,
-                    BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX,
-                    BlurPanelRenderer.Lighting.raised(), BlurPanelRenderer.Priority.ROW);
+            // Surface: each tile is its own RAISED glass panel (painted
+            // pre-dim under the tracked scissor by paintGlassPass) — its own
+            // correctly-cropped, correctly-scaled backdrop slice. Neutral
+            // tint when off, accent-STAINED when on (the enabled state reads
+            // through the tint, like a selected segment). Content here: the
+            // faint mode-aware hover wash on top of the glass, or the flat
+            // surface fill + accent wash/border on decline.
+            boolean tileGlass = tileGlass(i);
             if (tileGlass) {
-                RenderUtil.drawRoundedRectAA(g, cx, cy, cw, ch, 6,
-                        on ? ThemeManager.stainedTint()
-                           : ThemeManager.color(ThemeToken.WINDOW_FILL));
-                BlurPanelRenderer.drawRimFinish(g, cx, cy, cw, ch, 6);
                 if (hover) {
                     RenderUtil.drawRoundedRectAA(g, cx, cy, cw, ch, 6,
                             alpha(ThemeToken.ON_BACKGROUND, 0x1A / 255f));
@@ -471,24 +545,15 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         g.disableScissor();
     }
 
-    private void drawLayoutButton(GuiGraphics g, float x, float y, float size, boolean selected, int mouseX, int mouseY, boolean list) {
+    private void drawLayoutButton(GuiGraphics g, float x, float y, float size, boolean selected,
+                                  int mouseX, int mouseY, boolean list, boolean btnGlass) {
         boolean hover = mouseX >= x && mouseX <= x + size && mouseY >= y && mouseY <= y + size;
-        // Glass pilot: the list/grid pair is a segmented control — RAISED
-        // glass on both, accent-STAINED on the active one (the genuinely
-        // selected control), neutral on the inactive one. On decline the
-        // flat fills + borders return unchanged.
-        boolean btnGlass = liveWorldBackdrop() && BlurPanelRenderer.renderPanel(
-                g, x, y, size, size, 4,
-                BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX,
-                BlurPanelRenderer.Lighting.raised());
+        // Surface: the list/grid pair is a segmented control — RAISED glass
+        // (painted pre-dim by paintGlassPass), accent-STAINED on the active
+        // one. Content here: the faint hover wash on unselected glass, the
+        // flat fills + borders on decline, then the icon.
         if (btnGlass) {
-            RenderUtil.drawRoundedRectAA(g, x, y, size, size, 4,
-                    selected ? ThemeManager.stainedTint()
-                             : ThemeManager.color(ThemeToken.WINDOW_FILL));
-            BlurPanelRenderer.drawRimFinish(g, x, y, size, size, 4);
             if (hover && !selected) {
-                // Hover cue preserved on glass (the tint stays constant, like
-                // every glass control): a faint mode-aware wash.
                 RenderUtil.drawRoundedRectAA(g, x, y, size, size, 4,
                         alpha(ThemeToken.ON_BACKGROUND, 0x1A / 255f));
             }
