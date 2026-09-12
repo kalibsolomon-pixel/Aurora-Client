@@ -19,6 +19,7 @@ import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.ui.util.UiLayerCache;
 import com.aurora.client.util.AuroraAnim;
 import com.aurora.client.util.AuroraTheme;
+import com.aurora.client.util.ScrollFade;
 import com.aurora.client.util.SmoothScroll;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -534,6 +535,19 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
 
         g.disableScissor();
 
+        // Design language §8 — top-edge scroll fade for the card grid. The
+        // cards are deliberately FLAT (R9) and float over the screen's
+        // dimmed-world backdrop with no container of their own, so the
+        // surface they dissolve into is this screen's dim veil at its own
+        // 0x55 strength — the same withAlpha the overlayDim call above
+        // applies, keeping the fade's top color exactly what the backdrop
+        // already is at that position.
+        ScrollFade.drawTop(g, gridLeft - 4,
+                cols * (CARD_W + CARD_GAP) - CARD_GAP + 8,
+                LIST_TOP - 2, ScrollFade.FADE_PX,
+                gridScroll.current(),
+                ThemeManager.withAlpha(ThemeManager.color(ThemeToken.OVERLAY_DIM), 0x55));
+
         // Scrollbar thumb — only when content overflows.
         renderScrollbar(g, mouseX, mouseY, gridLeft, cols, listBottom);
 
@@ -781,6 +795,14 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         }
 
         g.disableScissor();
+
+        // Design language §8 — top-edge scroll fade for the sidebar tabs.
+        // The sidebar IS a container (depressed glass / flat SURFACE-token
+        // panel — same token either way), so the tabs dissolve into
+        // surfaceColor(SURFACE): the exact color the panel body already has
+        // at the clip boundary in both the glass and fallback looks.
+        ScrollFade.drawTop(g, panelX, panelW, clipTop, ScrollFade.FADE_PX,
+                sidebarScroll.current(), ThemeManager.surfaceColor(ThemeToken.SURFACE));
 
         // Sidebar scroll indicator (only if content overflows) — painted
         // exactly as before R2; SmoothScroll supplies geometry/drag state.
