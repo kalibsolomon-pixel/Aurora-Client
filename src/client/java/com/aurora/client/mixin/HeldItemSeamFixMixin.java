@@ -20,7 +20,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  *
  * <p>Targets renderArmWithItem at HEAD: pushes a scale onto the matrix
  * stack so all subsequent positioning math operates on the scaled space.
- * The matching pop happens at TAIL.
+ * The matching pop is at RETURN (every return, not just the last one) —
+ * the method early-returns when the player is scoping, and a TAIL-only
+ * pop would leak the pushed pose on every scoping frame.
  */
 @Mixin(ItemInHandRenderer.class)
 public abstract class HeldItemSeamFixMixin {
@@ -43,7 +45,7 @@ public abstract class HeldItemSeamFixMixin {
         matrices.scale(s, s, s);
     }
 
-    @Inject(method = "renderArmWithItem", at = @At("TAIL"), require = 1)
+    @Inject(method = "renderArmWithItem", at = @At("RETURN"), require = 1)
     private void aurora$popSeamScale(
             net.minecraft.client.player.AbstractClientPlayer player,
             float tickProgress, float pitch, net.minecraft.world.InteractionHand hand,

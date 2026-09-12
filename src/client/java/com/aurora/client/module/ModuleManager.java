@@ -39,6 +39,7 @@ public class ModuleManager {
         modules.add(new Module("item_physics", "Item Physics", "Gives dropped items more natural physics — they lie flat where they land instead of hovering and spinning."));
         modules.add(new Module("particles", "Particles", "Per-particle control over every vanilla particle type — hide ones you find distracting and resize the rest."));
         modules.add(new Module("item_scale", "Item Scale", "Customize the scale, rotation, and screen translation of individual item models."));
+        modules.add(new Module("held_item_seams", "Held Item Seam Fix", "Hides the hairline seams that can appear between the faces of your first-person held items at certain camera angles."));
         modules.add(new Module("animations", "Animations", "Swing & view-bob curves, classic 1.8-style damage camera tilt, retro backwards-walking & sneak poses, idle held-item sway, and smooth entity rotation."));
         modules.add(new Module("hotbar_bounce", "Hotbar Bounce", "Pops a small bounce/pulse on a hotbar slot the moment an item lands in it or a stack grows."));
         modules.add(new Module("keystrokes", "Keystrokes", "Displays your WASD, mouse, jump, and sneak keys as a HUD overlay that lights up in real time as you press them."));

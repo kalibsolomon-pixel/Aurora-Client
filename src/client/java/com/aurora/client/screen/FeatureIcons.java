@@ -44,6 +44,7 @@ public final class FeatureIcons {
         ICONS.put("item_physics",          "\uE574"); // category (shapes physics)
         ICONS.put("particles",             "\uE819"); // sunny_snowing (particles)
         ICONS.put("item_scale",            "\uE85B"); // aspect_ratio
+        ICONS.put("held_item_seams",       "\uE421"); // texture — the texture-bleed artifact this fixes; subsetting requires the real full_material.ttf (see subset_script.py)
         ICONS.put("animations",            "\uE038"); // animation
         ICONS.put("keystrokes",            "\uE312"); // keyboard
         ICONS.put("minimap",               "\uE2C5"); // file_map

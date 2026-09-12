@@ -76,7 +76,7 @@ AuroraClient.java          Mod entrypoint: registers keybinds, HUD callbacks, fe
 │                           ThrottleDetector, EntityMovementSmoother, …).
 ├── module/                PRESENTATION-ONLY view-models for the settings grid
 │                           (Module, ModuleManager). NOT runtime logic. Hardcoded
-│                           list of 35 ids — can drift from FeatureRegistry (§3).
+│                           list of 36 ids — can drift from FeatureRegistry (§3).
 ├── hud/                   HUD layer: HudRenderer (top-level callback), HudAnchor,
 │                           CrosshairRenderer, HitboxRenderer, BlockOverlayRenderer,
 │                           WorldLineRenderer (shared thick lines), WaypointRenderer,
@@ -165,10 +165,10 @@ There is **no single registry**. Three structures must stay conceptually in sync
 1. **`feature/FeatureManager`** — ~29 long-lived `Feature` singletons with
    `onRegister()`/`onTick(Minecraft)` (interface `feature/Feature.java`).
    (The never-read `Feature.enabledByDefault()` was removed 2026-09-11, audit D9.)
-2. **`screen/FeatureRegistry`** — static UI metadata: **35 MODULES-tab + 4 SETTINGS-tab
+2. **`screen/FeatureRegistry`** — static UI metadata: **36 MODULES-tab + 4 SETTINGS-tab
    tiles** (`FeatureMetadata`: id, display name, marketing description, enable
    getter/setter, list of `FeatureSetting` widgets, `reset()`).
-3. **`module/ModuleManager`** — 35 hardcoded grid cards consumed by `AuroraScreen`.
+3. **`module/ModuleManager`** — 36 hardcoded grid cards consumed by `AuroraScreen`.
    A typo'd id here silently returns null metadata. (The missing `reflex` card landed
    2026-09-05, audit B5 — counts now match, but the list is still maintained by hand.)
 
@@ -220,7 +220,7 @@ shift+right-click = lock, X = disable.
 
 ## 4. Feature catalog
 
-### MODULES tab (35 tiles) — behavior + where the code lives
+### MODULES tab (36 tiles) — behavior + where the code lives
 
 | Feature (id) | What it does | Implementation |
 |---|---|---|
@@ -254,6 +254,7 @@ shift+right-click = lock, X = disable.
 | Item Physics (`item_physics`) | Dropped items lie flat, tumble by motion | `ItemEntityRendererExtractMixin` + `ItemEntityRendererSubmitMixin` + `util/AuroraItemPhysicsSnapshots` |
 | Particles (`particles`) | Per-particle-type visibility/scale/ARGB tint with search. Visibility gated at HEAD of `createParticle` (RETURN is too late) | `ParticleControlFeature`, `ParticleEngineMixin`, `ParticleAccessor` |
 | Item Scale (`item_scale`) | Per-item held scale/rotation/translation; per-hand defaults | `HeldItemRendererTweaksMixin`, `setting/ItemScaleSetting`, `ui/util/ItemSpriteRenderer` + `mixin/ItemStackRenderStateAccessor` |
+| Held Item Seam Fix (`held_item_seams`) | Hides the hairline texture-bleed seams between first-person held-item faces (visible at some camera angles, worse with hi-res packs) via a uniform sub-pixel scale-up — default 1.001 (0.1%), "Fix Strength" slider 0–50 per-mille, mixin clamps 1.0–1.05 | `HeldItemSeamFixMixin` only (no Feature object); written in the initial commit but inert until 2026-09-11 — see §8 |
 | Resourcepack Browser (`resourcepack_browser`) | Modrinth search/install for resource packs into `resourcepacks/` (never auto-enables) | `ResourcePackBrowserScreen`, `modrinth/ModrinthApi`, `modrinth/PackIconCache` |
 | Minecraft Reflex (`reflex`) | Reflex-style latency reduction: GL timer-query GPU time + EWMA CPU frame time → hold CPU before input sampling | `ReflexMinecraftMixin`, `util/reflex/*` |
 | Animations (`animations`) | Swing curve + 1.8 swing arc, view-bob curve/amplitude, 1.7/1.8 damage tilt, idle held-item sway, frame-rate-independent entity movement smoothing (tau scales with server packet bundling) | `HeldItemRendererMixin`, `GameRendererBobMixin`, `DamageTiltMixin`, `LivingEntityRendererExtractMixin` + `EntityMovementSmoother`, `util/AnimationCurves`, cross-cutting `ThrottleDetector` |
@@ -1252,7 +1253,40 @@ Adaptive Render Sleeping (now states its prerequisites). The Low Latency
 section is now: Enabled, Disable VSync, Adaptive Render Sleeping — nothing
 advertised that isn't real. (Config-block neighbor noted during the audit:
 `fixHeldItemSeams`/`heldItemInflation` have an implementation —
-`HeldItemSeamFixMixin` — but no UI row anywhere.)
+`HeldItemSeamFixMixin` — but no UI row anywhere. Resolved by the next entry.)
+
+Landed 2026-09-11 after that: **Held Item Seam Fix finished and surfaced** —
+the orphan the Low Latency audit flagged, resolved by investigation rather
+than by reflex. The investigation found the `reflex`-B5 shape one level
+deeper: the fields AND a complete mixin (`HeldItemSeamFixMixin`: uniform
+first-person held-item scale, default 1.001, clamped 1.0–1.05 — overlaps
+adjacent cube faces by a sub-pixel to hide mipmap texture-bleed seams)
+arrived in the initial commit (a big-bang import), but the mixin was absent
+from `aurora.mixins.json` — the ONLY unregistered mixin in the codebase —
+and the fields appear in no FeatureRegistry/ModuleManager revision in any
+commit: not "unreachable", outright inert since day one. No retirement
+commits, no intent comments — accidental omission, so the feature was
+finished, not left headless or deleted. Changes: the mixin is registered,
+and its pop inject was fixed `@At("TAIL")` → `@At("RETURN")` before
+activation — vanilla 1.21.11's `renderArmWithItem` early-returns at offset 7
+on `player.isScoping()` (verified in the mapped jar), so a TAIL-only pop
+would leak the HEAD's `pushPose` on every scoping frame (the sibling
+`HeldItemRendererTweaksMixin` already used RETURN for exactly this shape);
+new `held_item_seams` MODULES entry — master toggle plus a per-mille "Fix
+Strength" int slider 0–50 mapping 1.000–1.050 (the shared double slider's
+0.01 step and two-decimal readout cannot express thousandths) — with
+explicit reset prefixes (the two field names share no common camelCase
+prefix); a ModuleManager card after Item Scale (35 → 36 cards); the
+`texture` glyph (U+E421) added to `FeatureIcons` with the icon-font subset
+regenerated from the real `full_material.ttf` (40 glyphs, exactly the
+codepoint set). Verified by DevPilot `seamfix` boots (captures in
+`.devpilot-pilot/seamfix-post/`): the registry row is found with the
+slider; a slider drag-to-max driven through the REAL press/drag/release
+interaction path writes `heldItemInflation=1.05`; master-toggle and reset
+roundtrips exact with fields restored afterwards; and a first-person A/B at
+inflation 1.05 with the toggle on/off (frozen scene, sway disabled) diffs
+exactly on the held diamond sword's silhouette — the previously-inert
+config fields now demonstrably drive rendering.
 
 ---
 

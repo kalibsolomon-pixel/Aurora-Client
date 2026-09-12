@@ -1065,6 +1065,18 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                 // prefixes (the FeatureMetadata javadoc's reason resetPrefixes exist).
                 List.of("itemScale", "mainHandDefaultScale", "offHandDefaultScale"));
 
+        addWithSettings(MODULES, "held_item_seams", "Held Item Seam Fix",
+                "Removes the hairline seams that can appear between the faces of your first-person held items — thin texture-bleed lines that show up at certain camera angles, especially with higher-resolution resource packs. A tiny uniform scale-up (a fraction of a pixel by default) overlaps the adjacent cube faces just enough to hide them without visibly changing the item's size.",
+                () -> cfg.fixHeldItemSeams, v -> cfg.fixHeldItemSeams = v,
+                List.of(
+                        SliderSetting.ofInt("Fix Strength",
+                                () -> (int) Math.round((cfg.heldItemInflation - 1.0) * 1000.0),
+                                v -> cfg.heldItemInflation = 1.0 + v / 1000.0, 0, 50)
+                                .description("How far the held-item model is scaled up, in thousandths of its size (1 = 0.1%). 0 applies no scaling at all; 1 (the default) is a sub-pixel nudge that hides the seams while staying invisible; 5 and up hide them aggressively but items start to read as very slightly larger; 50 is the maximum the renderer will apply.")
+                ),
+                // Field names share no common camelCase prefix, so reset them explicitly.
+                List.of("fixHeldItemSeams", "heldItemInflation"));
+
         add(SETTINGS, "custom_title", "Custom Title",
                 "Replaces Minecraft's default main menu with Aurora's themed title screen — the diamond emblem, starfield backdrop, and restyled buttons. Purely cosmetic; turn it off to restore the vanilla menu. Takes effect the next time you return to the main menu.",
                 () -> cfg.customTitleScreen, v -> cfg.customTitleScreen = v);

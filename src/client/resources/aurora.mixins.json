@@ -39,6 +39,7 @@
     "ClientPlayNetworkHandlerWorldJoinMixin",
     "TotemParticleMixin",
     "HeldItemRendererTweaksMixin",
+    "HeldItemSeamFixMixin",
     "PlayerHealthLabelMixin",
     "ParticleAccessor",
     "ClientPacketListenerEntityEventMixin",
