@@ -9,6 +9,7 @@ import com.aurora.client.ui.component.Toast;
 import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.ui.util.UiLayerCache;
+import com.aurora.client.util.ScrollFade;
 import com.aurora.client.util.SmoothScroll;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -312,6 +313,17 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         }
 
         ctx.disableScissor();
+
+        // Design language §8 — top-edge scroll fade: rows fade into the
+        // screen's dim veil (OVERLAY_DIM, verbatim — these rows float over
+        // the veiled world, no container window, so the dim IS the surface
+        // they sit on) as they approach the clip band's top, instead of
+        // hard-cutting at the scissor. Gradient-only: the scissor already
+        // hides anything above the boundary. Painted outside the content
+        // scissor, before the thumb — an opaque-token sibling of the thumb's
+        // own over-the-dim layer, never glass.
+        ScrollFade.drawTop(ctx, listX - 4, listWidth() + 8, listClipTop(), ScrollFade.FADE_PX,
+                scroll.current(), ThemeManager.color(ThemeToken.OVERLAY_DIM));
 
         // The list's scrollbar thumb — after the content scissor (it is
         // content, painted opaque over the dim like every other thumb).
