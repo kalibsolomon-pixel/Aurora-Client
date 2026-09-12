@@ -189,7 +189,13 @@ search band — which is exactly where an abrupt edge reads worst).
   at that position:** `WINDOW_FILL` for scissored viewports inside a window
   (glass or flat — same token either way); `OVERLAY_DIM` for screens whose
   rows float over the veiled world with no container (the manager
-  screens), where the dim veil IS the surface.
+  screens), where the dim veil IS the surface; `SURFACE` for a container
+  panel that is not the main window (the pack browser's sidebar — the
+  same token its glass/flat panel tint uses), and when a screen dims at a
+  non-default strength the floating case takes the dim **at that screen's
+  own strength** (the pack browser's grid fades toward its 0x55 dim, not
+  the token's full alpha) — always the color the backdrop already has at
+  the boundary, never a stronger one invented for the fade.
 - **Engagement scales with scroll:** the gradient's top alpha is
   `min(1, scrollPos / 16)` of the surface color's own alpha — a list at
   rest (nothing above the boundary) is pixel-untouched, and the fade is
@@ -206,10 +212,16 @@ search band — which is exactly where an abrupt edge reads worst).
   an accepted nuance — no special handling (verified on the pilot: the
   waypoint rows' rims dim smoothly with their bodies).
 
-Piloted on `FeatureDetailScreen` (all detail screens incl. Miscellaneous),
-`ManagerListScreen` (both manager screens), and `AuroraScreen` (Mods grid
-+ Settings tab); extend screen by screen to the remaining scrollable
-surfaces from here.
+Rolled out in two waves: piloted on `FeatureDetailScreen` (all detail
+screens incl. Miscellaneous), `ManagerListScreen` (both manager screens),
+and `AuroraScreen` (Mods grid + Settings tab); then extended to
+`ResourcePackBrowserScreen` (sidebar tabs + card grid). The card case —
+flat, rim-less cards fading over the dimmed world — was checked visually
+on its own and needed **no adjustment**: the general rule transfers; the
+veiled card text reads as smoothly dimmed, not half-disappeared. No
+other scrollable surface remains: `EnumSetting`'s popup scrolls by whole
+rows (nothing ever partially crosses an edge — no fade applicable), and
+`WorldMapScreen`'s wheel is zoom, not a scrollable panel.
 
 ## What this does NOT change
 - No new visual style, colors, or glass behavior — this is layout
