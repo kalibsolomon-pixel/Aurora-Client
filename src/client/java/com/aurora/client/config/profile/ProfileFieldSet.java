@@ -36,6 +36,11 @@ public final class ProfileFieldSet {
      *   <li>{@code migratedHitregProperties} — the one-shot guard for the
      *       hitreg.properties migration. Resetting it through a profile
      *       apply would re-run the migration over the user's edits.</li>
+     *   <li>{@code migratedEffectExpiryExclusions} — same discipline, for
+     *       the exclusion-set → inclusion-list migration: a profile apply
+     *       resetting the guard to false would point the migrator at a
+     *       possibly-empty legacy set and flatten the profile's own curated
+     *       inclusion list on every switch.</li>
      * </ul>
      */
     public static final Set<String> EXCLUDED = Set.of(
@@ -44,7 +49,8 @@ public final class ProfileFieldSet {
             "playtimePerWorld",
             "fightStatsTotalFights",
             "fightStatsPlaytimeSeconds",
-            "migratedHitregProperties"
+            "migratedHitregProperties",
+            "migratedEffectExpiryExclusions"
     );
 
     private ProfileFieldSet() {}

@@ -35,6 +35,21 @@ public class AuroraConfig {
     private static AuroraConfig INSTANCE = new AuroraConfig();
 
     /**
+     * True when the last {@link #load()} found an existing aurora.json on
+     * disk (as opposed to a fresh install, which takes the {@code else}
+     * branch and creates one). Read by {@code EffectExpiryMigrator} to
+     * tell "config with prior data" (migrate the inclusion list so alert
+     * behavior carries over) from "genuinely fresh config" (leave the
+     * inclusion list empty — the new paradigm's default). The check lives
+     * here because {@code load()} creates the file on fresh installs, so
+     * a later existence probe would always say "existing".
+     */
+    private static boolean loadedFromExistingFile = false;
+
+    /** Whether the last {@link #load()} read a pre-existing config file. */
+    static boolean loadedFromDisk() { return loadedFromExistingFile; }
+
+    /**
      * Dedicated single-thread executor for config persistence. Disk writes are
      * slow and unpredictable (antivirus scanning, slow HDDs, network drives),
      * so {@link #save()} never touches the filesystem on the calling thread.
@@ -399,14 +414,33 @@ public class AuroraConfig {
     /** Seconds remaining at which the effect-expiry alert fires. */
     public int effectExpiryThresholdSeconds = 10;
     /**
-     * Registry ids (e.g. {@code "minecraft:strength"}) of effects EXCLUDED
-     * from the effect-expiry alert — the per-effect granularity. Absent id
-     * ⇒ the effect alerts, which is the pre-per-effect behavior, so the
-     * factory default (empty set) means every effect alerts and existing
-     * configs (which have no such field on disk) keep alerting on
-     * everything until the user opts effects out.
+     * Registry ids (e.g. {@code "minecraft:strength"}) of effects that DO
+     * raise the effect-expiry alert — the curated inclusion list behind the
+     * Alerts → Per-Effect Alerts section (the {@code ItemScaleSetting}
+     * search-then-add pattern: search, add, remove; only added effects
+     * alert AND render rows). Empty = no effect alerts, which is the
+     * new-install default; configs that predate the inclusion model are
+     * populated once by {@code EffectExpiryMigrator} so their alert
+     * behavior carries over.
+     */
+    public List<String> effectExpiryIncludedEffects = new ArrayList<>();
+    /**
+     * LEGACY, one version old: the exclusion-set model the per-effect
+     * feature first shipped with (absent = alert). Read exactly once by
+     * {@code EffectExpiryMigrator} (which flips it into
+     * {@link #effectExpiryIncludedEffects}) and by nothing else. Kept
+     * declared so old configs and profiles load it silently instead of
+     * tripping ProfileManager's "field no longer exists" skip.
      */
     public Set<String> effectExpiryExcludedEffects = new HashSet<>();
+    /**
+     * One-shot guard for {@code EffectExpiryMigrator} — same discipline as
+     * {@link #migratedHitregProperties}: arms even on fresh installs, and
+     * excluded from profile snapshots so a profile apply can neither wipe
+     * it (re-running the migration over the user's later curation) nor be
+     * undone by one.
+     */
+    public boolean migratedEffectExpiryExclusions = false;
     /** When true, also alert on held-tool low durability (not just armor). */
     public boolean toolDurabilityAlertEnabled = true;
 
@@ -1171,6 +1205,7 @@ public class AuroraConfig {
                 json = ThemeMigrator.migrateConfigJson(json, AuroraClient.LOGGER);
                 AuroraConfig loaded = GSON.fromJson(json, AuroraConfig.class);
                 if (loaded != null) {
+                    loadedFromExistingFile = true;
                     if (loaded.moduleLayouts == null) loaded.moduleLayouts = new HashMap<>();
                     if (loaded.particleVisibility == null) loaded.particleVisibility = new HashMap<>();
                     if (loaded.particleScale == null) loaded.particleScale = new HashMap<>();
@@ -1179,11 +1214,16 @@ public class AuroraConfig {
                     if (loaded.complianceSafeServers == null) loaded.complianceSafeServers = new java.util.ArrayList<>();
                     if (loaded.complianceStrictServers == null) loaded.complianceStrictServers = new java.util.ArrayList<>();
                     if (loaded.keystrokesExtraKeys == null) loaded.keystrokesExtraKeys = new java.util.ArrayList<>();
+                    if (loaded.effectExpiryIncludedEffects == null) loaded.effectExpiryIncludedEffects = new ArrayList<>();
                     if (loaded.effectExpiryExcludedEffects == null) loaded.effectExpiryExcludedEffects = new HashSet<>();
                     if (loaded.theme == null) loaded.theme = ThemeDefinition.defaults();
                     INSTANCE = loaded;
                 }
             } else {
+                // Fresh install — record that there was NO prior data, so
+                // EffectExpiryMigrator can leave the inclusion list empty
+                // (the new paradigm's default) instead of pre-populating it.
+                loadedFromExistingFile = false;
                 save();
             }
         } catch (Exception e) {

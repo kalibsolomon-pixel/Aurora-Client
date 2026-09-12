@@ -1,99 +1,95 @@
 package com.aurora.client.screen.setting;
 
-import com.aurora.client.config.AuroraConfig;
-import com.aurora.client.ui.component.ToggleSwitch;
+import com.aurora.client.theme.ThemeManager;
+import com.aurora.client.theme.ThemeToken;
+import com.aurora.client.ui.component.Widget;
+import com.aurora.client.util.AuroraShapes;
 import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.resources.Identifier;
 import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.resources.Identifier;
 
 /**
- * One row in the per-effect expiry-alert list (Alerts → Per-Effect
- * Alerts): the effect's vanilla status-effect sprite, its localized
- * display name, and a shared {@link ToggleSwitch} that opts the effect
- * in or out of the effect-expiry alert.
+ * One added-effect row in the Alerts → Per-Effect Alerts curated list —
+ * the {@link ItemScaleSetting} per-item row adapted to effects: 38px
+ * panel (ON_BACKGROUND wash, hover outline), the effect's vanilla 16×16
+ * {@code mob_effect/} sprite, its display name, and the trailing "x"
+ * remove control (red on hover) — presence in the list already means
+ * "alerts", so unlike the item rows there is nothing to expand and no
+ * chevron.
  *
- * <p>The toggle reads the config's exclusion set — on (default) means the
- * effect alerts, off means it is excluded — so the factory state (empty
- * set) matches the pre-per-effect behavior where every effect alerted.
- *
- * <p>Design language: no §4 subtitle (the toggle position IS the state,
- * per the exclusion clause) and no description tooltip (the row is
- * self-explanatory). Row chrome follows the {@link BooleanSetting}
- * geometry — same 28px minimum height, same trailing-switch placement —
- * with the label indented past the 18×18 icon the way ItemScale rows
- * indent past their real item icons.
+ * <p>The container ({@link EffectExpiryListSetting}) owns the backing
+ * list and performs removals through {@link #trashHit}; the row is the
+ * render + hit-test shape only.
  */
 public class EffectRowSetting extends FeatureSetting {
 
-    private static final int MIN_ROW_H = 28;
-    private static final int ICON = 18;
-    /** Icon slot + gap before the label, from the list's left margin. */
-    private static final int LABEL_PAD = 12 + ICON + 8;
+    /** ItemScaleSetting's row header height / stride, matched exactly. */
+    public static final int ROW_H = 38;
+    public static final int STRIDE = 42;
+    private static final int ICON_SIZE = 16;
 
     private final String effectId;
     private final Identifier spriteLoc;
-    /** Package-private so the container can match raw registry ids in search. */
+    /** Package-private so the container can sort rows by display label. */
     String effectId() { return effectId; }
-
-    /** Shared themed switch — owns the pill/thumb drawing + slide animation. */
-    private final ToggleSwitch toggle;
 
     public EffectRowSetting(String effectId, Identifier effectLoc, String displayName) {
         super(displayName);
         this.effectId = effectId;
         this.spriteLoc = Identifier.fromNamespaceAndPath(
                 effectLoc.getNamespace(), "mob_effect/" + effectLoc.getPath());
-        this.toggle = new ToggleSwitch(
-                () -> !AuroraConfig.get().effectExpiryExcludedEffects.contains(effectId),
-                v -> {
-                    var set = AuroraConfig.get().effectExpiryExcludedEffects;
-                    if (v) set.remove(effectId);
-                    else set.add(effectId);
-                });
     }
 
-    @Override public int baseHeight() { return MIN_ROW_H; }
-    @Override public int height() { return MIN_ROW_H; }
-
-    @Override
-    public int shapeFingerprint() {
-        return toggle.shapeFingerprint();
-    }
+    @Override public int baseHeight() { return ROW_H; }
+    @Override public int height() { return ROW_H; }
 
     @Override
     public void render(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
         Font tr = Minecraft.getInstance().font;
         if (tr == null) return;
 
-        // Effect sprite — the same 18×18 status-effect icon the vanilla
+        // Header panel — the ItemScale row band; the hover outline matches
+        // its footprint so there is no hover-without-click strip.
+        boolean rowHover = Widget.inBounds(mouseX, mouseY, x + 10, y, width - 20, ROW_H);
+        AuroraShapes.panel(ctx, x + 10, y, width - 20, ROW_H,
+                ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_BACKGROUND), 0x1A),
+                AuroraTheme.RADIUS_SMALL);
+        if (rowHover) {
+            AuroraShapes.outline(ctx, x + 10, y, width - 20, ROW_H,
+                    AuroraTheme.BORDER_OFF, AuroraTheme.RADIUS_SMALL);
+        }
+
+        // Effect sprite — the same status-effect icon the vanilla
         // inventory effect list draws (PotionModule's icon path).
-        ctx.blitSprite(RenderPipelines.GUI_TEXTURED, spriteLoc, x + 12, y + (MIN_ROW_H - ICON) / 2, ICON, ICON);
+        ctx.blitSprite(RenderPipelines.GUI_TEXTURED, spriteLoc,
+                x + 14, y + (ROW_H - ICON_SIZE) / 2, ICON_SIZE, ICON_SIZE);
 
-        // Display name, indented past the icon (ItemScale row geometry).
-        int textY = y + (MIN_ROW_H - tr.lineHeight) / 2;
-        ctx.drawString(tr, label, x + LABEL_PAD, textY, AuroraTheme.IOS_LABEL, false);
+        // Display name, indented past the icon (ItemScale row geometry),
+        // vertically centered — no §4 subtitle: the row's presence in the
+        // list IS its state (exclusion clause).
+        int textY = y + (ROW_H - tr.lineHeight) / 2;
+        ctx.drawString(tr, label, x + 20 + ICON_SIZE + 4, textY, AuroraTheme.IOS_LABEL, false);
 
-        // Trailing toggle — identical placement to BooleanSetting.
-        float switchX = x + width - 28 - 14;
-        float switchY = y + (MIN_ROW_H - 15) / 2.0f;
-        toggle.layout(switchX, switchY, 28, 15);
-        toggle.renderShapes(ctx, switchX, switchY, 28, 15);
-        toggle.renderOverlay(ctx, switchX, switchY, 28, 15, mouseX, mouseY);
+        // Remove control — ItemScale's trash "x" verbatim (red on hover).
+        int rightX = x + width - 24;
+        boolean trashHover = Widget.inBounds(mouseX, mouseY, rightX - 16, y + (ROW_H - 16) / 2, 16, 16);
+        ctx.drawString(tr, "x", rightX - 12, y + (ROW_H - 16) / 2 + 3,
+                trashHover ? ThemeManager.color(ThemeToken.SEMANTIC_ERROR)
+                        : AuroraTheme.IOS_TERTIARY_LABEL, false);
+    }
+
+    /** True when (mouseX, mouseY) is on this row's remove control. */
+    public boolean trashHit(double mouseX, double mouseY, int x, int y, int width) {
+        int rightX = x + width - 24;
+        return Widget.inBounds(mouseX, mouseY, rightX - 16, y + (ROW_H - 16) / 2, 16, 16);
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button,
                                 int rowX, int rowY, int rowWidth) {
-        if (button != 0) return false;
-        if (mouseY < rowY || mouseY > rowY + MIN_ROW_H) return false;
-        if (mouseX < rowX || mouseX > rowX + rowWidth) return false;
-        // Click anywhere on the row toggles — the same full-row target
-        // BooleanSetting gives its label + switch.
-        toggle.toggle();
-        AuroraConfig.save();
-        return true;
+        return false; // the container performs removals (ItemScale's division of labor)
     }
 }

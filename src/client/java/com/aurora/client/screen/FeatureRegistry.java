@@ -9,9 +9,7 @@ import com.aurora.client.theme.ThemeMode;
 import com.aurora.client.theme.ThemeRoundness;
 import net.minecraft.core.particles.ParticleType;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.effect.MobEffect;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -338,7 +336,7 @@ public final class FeatureRegistry {
                                 .description("How many seconds before an effect expires the alert should fire. 10 seconds gives you time to re-buff; lower values alert closer to the wire."),
 
                         new SectionHeaderSetting("Per-Effect Alerts"),
-                        new EffectExpiryListSetting(buildEffectRows()),
+                        new EffectExpiryListSetting(),
 
                         new SectionHeaderSetting("Sound"),
                         new BooleanSetting("Play Sound",
@@ -1534,40 +1532,6 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
     private static void add(List<FeatureMetadata> bucket, String id, String displayName,
                             String description, BooleanSupplier getter, Consumer<Boolean> setter) {
         bucket.add(new FeatureMetadata(id, displayName, description, getter, setter));
-    }
-
-    /**
-     * Effect-expiry per-effect rows — every registered potion effect as a
-     * sprite+toggle row behind the shared search container, sorted
-     * alphabetically by localized display name (the Particles list's
-     * ordering discipline). Built once at registry init; effects are a
-     * fixed vanilla registry. Display names resolve through the translation
-     * manager, which is live by the time any screen opens this registry;
-     * untranslated ids fall back to the humanized registry path.
-     */
-    private static List<EffectRowSetting> buildEffectRows() {
-        List<EffectRowSetting> effectRows = new ArrayList<>();
-        List<Identifier> effectIds = new ArrayList<>();
-        java.util.Map<Identifier, String> effectNames = new java.util.HashMap<>();
-        for (MobEffect eff : BuiltInRegistries.MOB_EFFECT) {
-            Identifier key = BuiltInRegistries.MOB_EFFECT.getKey(eff);
-            if (key == null) continue;
-            effectIds.add(key);
-            String name = null;
-            try {
-                name = Component.translatable(eff.getDescriptionId()).getString();
-            } catch (Throwable ignored) {
-            }
-            if (name == null || name.isEmpty() || name.startsWith("effect.")) {
-                name = humanizeParticleId(key.getPath());
-            }
-            effectNames.put(key, name);
-        }
-        effectIds.sort(Comparator.comparing(id -> effectNames.get(id).toLowerCase()));
-        for (Identifier id : effectIds) {
-            effectRows.add(new EffectRowSetting(id.toString(), id, effectNames.get(id)));
-        }
-        return effectRows;
     }
 
     /** Converts a particle registry path like {@code "dripping_water"}

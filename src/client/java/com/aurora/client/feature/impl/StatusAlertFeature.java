@@ -21,9 +21,12 @@ import java.util.Map;
  *   <li><b>Effect expiry</b> — when an active potion effect's remaining
  *       duration drops below the configured threshold (seconds). Uses
  *       per-effect tracking so each effect alerts once per application.
- *       Effects listed in {@code effectExpiryExcludedEffects} (the
- *       Per-Effect Alerts settings list) never alert; the default empty
- *       set means every effect alerts.</li>
+ *       Only effects on the curated inclusion list
+ *       ({@code effectExpiryIncludedEffects}, the Per-Effect Alerts
+ *       search-then-add list) alert; an empty list means nothing does.
+ *       Configs from the one-version exclusion-set model are migrated
+ *       once by {@code EffectExpiryMigrator} so alert behavior carries
+ *       over.</li>
  * </ul>
  *
  * <p>Works in the same tick-driven "threshold crossed → fire once" pattern
@@ -105,11 +108,11 @@ public class StatusAlertFeature implements Feature {
             Holder<MobEffect> effect = entry.getKey();
             MobEffectInstance inst = entry.getValue();
 
-            // Per-effect granularity: effects the user opted out of in the
-            // Alerts → Per-Effect Alerts list never alert. Absent from the
-            // exclusion set = alert (the default for every effect).
+            // Per-effect granularity: only effects on the curated inclusion
+            // list (Alerts → Per-Effect Alerts, the search-then-add list)
+            // alert. Empty list = nothing alerts — the new-install default.
             String effectId = effect.unwrapKey().map(k -> k.identifier().toString()).orElse(null);
-            if (effectId != null && cfg.effectExpiryExcludedEffects.contains(effectId)) {
+            if (effectId == null || !cfg.effectExpiryIncludedEffects.contains(effectId)) {
                 continue;
             }
 

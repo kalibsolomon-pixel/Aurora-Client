@@ -43,6 +43,13 @@ public class AuroraClient implements ClientModInitializer {
         // by cfg.migratedHitregProperties so it fires exactly once.
         com.aurora.client.hitreg.settings.HitregMigrator.runOnce();
 
+        // One-time migration of the per-effect Effect-Expiry alert model:
+        // the just-shipped exclusion set becomes an inclusion list
+        // (registry minus exclusions), preserving exactly what alerted
+        // before. Runs here for the same reason as HitregMigrator above —
+        // after the profile apply, which would otherwise wipe the result.
+        com.aurora.client.config.EffectExpiryMigrator.runOnce();
+
         registerAuroraKeybinds();
 
         // Better Hitreg (Jass's BetterHitreg, integrated): sets Hitreg.client

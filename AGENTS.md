@@ -235,7 +235,7 @@ shift+right-click = lock, X = disable.
 | Saturation Bar (`saturation_bar`) | Hidden saturation pips over hunger bar; AppleSkin port (Unlicense, credited) | `hud/SaturationOverlay`, `InGameHudFoodMixin` |
 | Block Overlay (`block_overlay`) | Custom block-selection outline (color, 1–6px width, see-through, face fill; SOLID or RAINBOW) | `hud/BlockOverlayRenderer` (Fabric `BEFORE_BLOCK_OUTLINE`), `BlockOverlayFeature`, `VertexRenderingMixin` (vanilla outline) |
 | Toggle Sprint/Sneak (`toggle_sprint_sneak`) | Press-once sprint/sneak; holds vanilla keys down each tick; 3 HUD display modes | `ToggleSprintFeature`, `hud/module/ToggleSprintSneakModule` + `ToggleIndividualModule`×2 |
-| Alerts (`alerts`) | Popup warnings: low durability (per-slot edge), low hunger, effect expiry; optional sound + test. Effect expiry has **per-effect granularity** (2026-09-12): a "Per-Effect Alerts" section lists every registered potion effect (localized name + vanilla `mob_effect/` sprite + toggle, alphabetical, behind the shared `SearchListSetting` search container extracted from the Particles list) writing an exclusion set — `AuroraConfig.effectExpiryExcludedEffects`, registry-id keys, absent = alert, empty factory default = the pre-per-effect alert-on-everything behavior (old configs migrate to exactly that). The section's master toggle gates everything, Low-Latency style (behavioral, not visual dimming). Reset prefix `effectExpiry` covers the set; the two reflection reset paths (`resetByPrefix`, `ProfileManager.applyProfile`) defensively copy mutable collection defaults since this Set arrived | `ArmorAlertFeature` + `StatusAlertFeature` → `hud/AlertManager`/`AlertRenderer`, `screen/setting/EffectRowSetting` + `EffectExpiryListSetting` + `SearchListSetting` |
+| Alerts (`alerts`) | Popup warnings: low durability (per-slot edge), low hunger, effect expiry; optional sound + test. Effect expiry has **per-effect granularity** (2026-09-12, rebuilt same day): a "Per-Effect Alerts" section following the `ItemScaleSetting` search-then-add pattern — search field + "+" add button suggesting one matching effect (sprite + "Add: <name>", ItemScale's three match tiers over the effect registry), adding to the curated inclusion list `AuroraConfig.effectExpiryIncludedEffects` (registry-id keys, present = alerts, empty = nothing alerts — the fresh-install default); added rows render alphabetically as `EffectRowSetting` (38px ItemScale row geometry, `mob_effect/` sprite, trash "x" remove), so only curated effects render rather than all ~40 every frame. Migration: `config/EffectExpiryMigrator.runOnce()` (HitregMigrator shape — one-shot, guarded by `migratedEffectExpiryExclusions`, profile-EXCLUDED, called from `AuroraClient` after the profile apply) flips the one-version legacy exclusion set into registry-minus-exclusions; `AuroraConfig.loadedFromDisk()` (set in `load()` — the file-existence probe can't be deferred because load() creates the file on fresh installs) keeps genuinely fresh configs at an empty list. The section's master toggle gates everything, Low-Latency style (behavioral, not visual dimming). Reset prefix `effectExpiry` covers the list; the two reflection reset paths (`resetByPrefix`, `ProfileManager.applyProfile`) defensively copy mutable collection defaults since this list arrived | `ArmorAlertFeature` + `StatusAlertFeature` → `hud/AlertManager`/`AlertRenderer`, `screen/setting/EffectRowSetting` + `EffectExpiryListSetting` (the Particles list remains on the shared `SearchListSetting`) |
 | Crosshair (`crosshair`) | Preset or CUSTOM painted crosshair with a **free-form canvas** (any W×H up to 128; dims live in `crosshairCustom{Width,Height}` + flat `boolean[]` pixels, resolved via `util/GridDims`); indicator crosshair when entity attackable; deliberate half-pixel centering fix. Canvas editor renders through a cached `DynamicTexture` (`ui/util/CanvasTexture` — one blit/frame, re-raster only on edit; replaced a per-cell fill loop that cost ~12.8 ms/frame at 33×33), HUD path merges lit cells into run-length fills, and growing the grid first runs a **measured** cost benchmark on the player's machine (`[canvas-cost]` log) with an apply-anyway warning — never hardware-name heuristics | `hud/CrosshairRenderer`, `PixelCanvasSetting`, `CanvasTexture`, `InGameHudMixin` (vanilla suppression) |
 | Hitbox (`hitbox`) | Custom entity hitboxes (self/target colors, eye-line, look line, width, see-through). Renders at plain vanilla interpolation — the smoother was **deliberately reverted** (desynced from model) | `hud/HitboxRenderer` (AFTER_ENTITIES) + `WorldLineRenderer`, `HitboxFeature`, `EntityRenderDispatcherMixin` |
 | Hit Color (`hit_color`) | Recolors hurt flash (port of harimasa/HitColor, MIT, credited) | `MixinOverlayTexture`, `EquipmentLayerRendererMixin`, `util/OverlayReloadListener` |
@@ -1424,6 +1424,43 @@ setter → save` wiring; excluded Strength never fires while Speed does
 (`Speed · 10s` popup captured in-world); re-enabling Strength makes both
 fire; master off fires nothing; zero ERRORs; captures in
 `.devpilot-pilot/fxe-*` (untracked).
+
+Rebuilt the same day (also 2026-09-12, one commit): **the per-effect
+list flipped from render-every-effect-with-a-toggle to the
+`ItemScaleSetting` search-then-add pattern** — perf motivation first
+(only curated effects render; the toggle version drew all ~40 rows every
+frame), interaction shape matched exactly: standalone `FeatureSetting`
+container (NOT the `SearchListSetting` filter-list base — Particles keeps
+that), search field + responder → one suggested effect, "+" glass add
+button, "Add: <name>" sprite line, added rows as `EffectRowSetting` with
+ItemScale's exact 38px row geometry (panel wash, hover outline, sprite,
+label, trash "x"; no chevron — presence in the list IS the state, there
+is nothing to expand). Data model flipped exclusion → inclusion:
+`effectExpiryIncludedEffects` (registry ids, present = alerts, empty =
+nothing alerts — the fresh-install default). The migration is the
+behavior-critical part: `EffectExpiryMigrator.runOnce()` (HitregMigrator
+discipline — one-shot flag `migratedEffectExpiryExclusions`, armed even
+on fresh installs, profile-EXCLUDED so an apply can neither re-run it
+over the user's curation nor be flattened by one; called after the
+profile apply; result saved to config AND profile) populates
+registry-minus-legacy-exclusions when the boot loaded a pre-existing
+aurora.json, so "exclusion empty" (the whole existing user base) lands
+on "everything alerts" — what they had — while a genuinely fresh config
+stays empty. The file-existed signal (`AuroraConfig.loadedFromDisk()`)
+must be captured in `load()` itself: load() creates the file on fresh
+installs, so a later existence probe would always say "existing".
+`StatusAlertFeature` skips effects absent from the list (an excluded
+effect never enters the fired map). Verified by the `fxe2` harness on a
+seeded just-shipped-version config (exclusion set
+[strength, blindness], master on, no inclusion key, no flag):
+post-boot inclusion = registry minus those two; in-world, strength never
+fired while speed did (pre-rebuild behavior preserved); then inclusion
+forced empty, and the full UI flow drove real
+`EffectExpiryListSetting.mouseClicked` wiring — search "str" →
+suggestion, "+" added minecraft:strength, trash removed it (second trash
+click correctly missed), re-add; then with ONLY strength on the list,
+speed was silent and strength fired — the exact inverse. Zero ERRORs;
+captures in `.devpilot-pilot/fxe2/` (untracked).
 
 ---
 
