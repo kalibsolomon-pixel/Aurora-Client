@@ -268,8 +268,10 @@ a launch crash, not a silent skip):
 - `EditBoxMixin` — replaces vanilla EditBox rendering with THE canonical themed/glass search
   bar on `ThemedScreen` implementors + multiplayer/world-select (gated by `customTitleScreen`).
   Caret always renders at text end (cursorPos not shadowed — audit B17).
-- `AbstractButtonMixin` — themes vanilla `Button`s (exactly `Button.class`) on the two vanilla
-  selection screens; press-squash animation; label width cached forever (audit B18).
+- `AbstractButtonMixin` — themes vanilla `Button`s (exactly `Button.Plain` — the class
+  `Button.builder().build()` constructs on 1.21.11; the former `Button.class` check never
+  matched anything, fixed 2026-09-12) on the two vanilla selection screens; press-squash
+  animation; label width cached forever (audit B18).
 - `TitleScreenMixin` — replaces vanilla title with `AuroraTitleScreen` when enabled; else adds
   an "Aurora Settings" corner button.
 - `MixinFont` (priority 1500) — swaps bundled TTFs into ALL text paths incl. measurement

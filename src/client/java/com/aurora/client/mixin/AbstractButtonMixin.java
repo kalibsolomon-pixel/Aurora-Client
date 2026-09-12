@@ -40,9 +40,21 @@ public abstract class AbstractButtonMixin {
         Minecraft mc = Minecraft.getInstance();
         if (mc == null || mc.screen == null) return false;
         if (!(mc.screen instanceof JoinMultiplayerScreen || mc.screen instanceof SelectWorldScreen)) return false;
-        
-        // Only apply to standard Buttons, not ImageButtons or other subclasses
-        return ((Object) this).getClass() == Button.class;
+
+        // Only the standard vanilla button — exactly what Button.builder()
+        // constructs. On 1.21.11 that is the inner subclass Button.Plain
+        // (Builder.build() news Button.Plain; Button itself is abstract), so
+        // the former getClass() == Button.class gate never matched anything
+        // and this theming — and the press-squash, gated by the same check —
+        // was inert for its entire life (found + fixed 2026-09-12). Matching
+        // Button.Plain exactly keeps ImageButton, LockIconButton and any
+        // other Button subclass (present or future) out: they draw their own
+        // sprites/geometry and must not take this painter, and a future
+        // vanilla button fails closed (stays vanilla) rather than being
+        // silently restyled. A getSuperclass() == Button.class check was
+        // rejected for exactly that reason — ImageButton extends Button
+        // directly and would match it.
+        return ((Object) this).getClass() == Button.Plain.class;
     }
 
     @Inject(method = "renderWidget", at = @At("HEAD"), cancellable = true)

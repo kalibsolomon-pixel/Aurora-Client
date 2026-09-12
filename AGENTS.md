@@ -1485,9 +1485,8 @@ fixed this session: 1.21.11's `Button$Builder.build()` constructs
 `getClass() == Button.class` gate excludes every vanilla button — the
 vanilla-button theming has been inert (all vanilla "Buttons" render stock;
 only the search-field theming, whose `EditBox` target has no such indirection,
-applies). Fix when wanted: match the runtime class name
-(`net.minecraft.client.gui.components.Button$Plain` / a
-`Button`-prefix check) or `getSuperclass() == Button.class`. (2) **The
+applies). Fixed later the same day — see the follow-up entry at the end of
+this section. (2) **The
 title screen's panorama-capture mechanism generalized to any no-world
 screen**: new shared `GlassSurface.renderMenuPanorama(Screen, GuiGraphics,
 float)` — draw `renderPanorama` (via the new `ScreenPanoramaAccessor`
@@ -1525,6 +1524,31 @@ Harness notes for future boots: the `oow`/`oow3` modes live in the
 untracked `DevPilot.java`; `FeatureRegistry.all()` does NOT lazy-init the
 buckets (only `modules()`/`settings()` do — calling `all()` first returns
 empty lists; harness code must touch `settings()` first).
+
+Fixed the same day, one follow-up commit: **the `AbstractButtonMixin`
+vanilla-button gate** — now an exact `getClass() == Button.Plain.class`
+match (the class `Button.builder().build()` constructs on 1.21.11; the
+mapped name is compile-checked, no stringly matching).
+`getSuperclass() == Button.class` was rejected: ImageButton/LockIconButton
+extend Button DIRECTLY and would take this painter; the exact match fails
+closed for any future vanilla subclass (stays vanilla) instead of silently
+restyle-ing it, and if Mojang ever changes what the builder constructs the
+failure resurfaces as the honest un-themed look. Verified by before/after
+boots (captures `.devpilot-pilot/btnfix-before|after/`, untracked): both
+selection screens' buttons render the themed dark fills (was vanilla gray
+bevels — button-band histograms before vs after), the already-themed
+search-field band is pixel-identical pre/post (in-frame control — only the
+button path changed; Aurora's own Button/ButtonWidget are screen-gated out
+and untouched), and the press-squash — gated by the same dead check, so
+equally dead before — fires: a real `mouseClicked` reaches `onClick` on
+`Button$Plain`, and the armed state renders the scale ease 1.0 → 0.96
+(probe values 0.995→0.960 across the 90 ms press-down; the pressed frame
+shows the button inset toward its center). Harness note: EVERY button on
+these two screens navigates or rebuilds the screen in its onPress (even
+Refresh does `setScreen(new JoinMultiplayerScreen(...))`), discarding the
+armed instance before the next frame renders — the press-capture arms the
+merged `aurora$pressDownStartMs` field reflectively on a still-rendering
+button instead.
 
 ---
 
