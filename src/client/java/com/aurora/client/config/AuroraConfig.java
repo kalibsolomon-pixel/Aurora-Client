@@ -12,8 +12,12 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -76,9 +80,14 @@ public class AuroraConfig {
             if (!field.getName().startsWith(camelCasePrefix)) continue;
             try {
                 Object def = field.get(DEFAULTS);
-                // Object-valued fields (the theme definition) must not alias
-                // the DEFAULTS snapshot - hand the live config its own copy.
+                // Object-valued fields must not alias the DEFAULTS snapshot
+                // - hand the live config its own copy (ThemeDefinition, and
+                // the mutable collections for the same reason: a shared
+                // Set/Map would let later edits mutate the factory default).
                 if (def instanceof ThemeDefinition td) def = ThemeDefinition.copyOf(td);
+                else if (def instanceof Map<?,?> m) def = new HashMap<>(m);
+                else if (def instanceof Set<?> s) def = new HashSet<>(s);
+                else if (def instanceof List<?> l) def = new ArrayList<>(l);
                 field.set(INSTANCE, def);
             } catch (IllegalAccessException ignored) {}
         }
@@ -389,6 +398,15 @@ public class AuroraConfig {
     public boolean effectExpiryAlertEnabled = true;
     /** Seconds remaining at which the effect-expiry alert fires. */
     public int effectExpiryThresholdSeconds = 10;
+    /**
+     * Registry ids (e.g. {@code "minecraft:strength"}) of effects EXCLUDED
+     * from the effect-expiry alert — the per-effect granularity. Absent id
+     * ⇒ the effect alerts, which is the pre-per-effect behavior, so the
+     * factory default (empty set) means every effect alerts and existing
+     * configs (which have no such field on disk) keep alerting on
+     * everything until the user opts effects out.
+     */
+    public Set<String> effectExpiryExcludedEffects = new HashSet<>();
     /** When true, also alert on held-tool low durability (not just armor). */
     public boolean toolDurabilityAlertEnabled = true;
 
@@ -1161,6 +1179,7 @@ public class AuroraConfig {
                     if (loaded.complianceSafeServers == null) loaded.complianceSafeServers = new java.util.ArrayList<>();
                     if (loaded.complianceStrictServers == null) loaded.complianceStrictServers = new java.util.ArrayList<>();
                     if (loaded.keystrokesExtraKeys == null) loaded.keystrokesExtraKeys = new java.util.ArrayList<>();
+                    if (loaded.effectExpiryExcludedEffects == null) loaded.effectExpiryExcludedEffects = new HashSet<>();
                     if (loaded.theme == null) loaded.theme = ThemeDefinition.defaults();
                     INSTANCE = loaded;
                 }

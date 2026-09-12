@@ -98,7 +98,7 @@ AuroraClient.java          Mod entrypoint: registers keybinds, HUD callbacks, fe
 │   │                      (UI metadata + settings widgets), FeatureIcons,
 │   │                      FeatureMetadata, ModuleAccentColors,
 │   │                      AuroraModMenuApi.
-│   └── setting/           ~21 FeatureSetting widget types (the design-language §4
+│   └── setting/           ~24 FeatureSetting widget types (the design-language §4
 │                           `valueLine` live-state subtitle lives on the FeatureSetting
 │                           base, opt-in — BooleanSetting is its only user so far;
 │                           EnumSetting, KeybindSetting, KeyListSetting, sliders, color
@@ -235,7 +235,7 @@ shift+right-click = lock, X = disable.
 | Saturation Bar (`saturation_bar`) | Hidden saturation pips over hunger bar; AppleSkin port (Unlicense, credited) | `hud/SaturationOverlay`, `InGameHudFoodMixin` |
 | Block Overlay (`block_overlay`) | Custom block-selection outline (color, 1–6px width, see-through, face fill; SOLID or RAINBOW) | `hud/BlockOverlayRenderer` (Fabric `BEFORE_BLOCK_OUTLINE`), `BlockOverlayFeature`, `VertexRenderingMixin` (vanilla outline) |
 | Toggle Sprint/Sneak (`toggle_sprint_sneak`) | Press-once sprint/sneak; holds vanilla keys down each tick; 3 HUD display modes | `ToggleSprintFeature`, `hud/module/ToggleSprintSneakModule` + `ToggleIndividualModule`×2 |
-| Alerts (`alerts`) | Popup warnings: low durability (per-slot edge), low hunger, effect expiry; optional sound + test | `ArmorAlertFeature` + `StatusAlertFeature` → `hud/AlertManager`/`AlertRenderer` |
+| Alerts (`alerts`) | Popup warnings: low durability (per-slot edge), low hunger, effect expiry; optional sound + test. Effect expiry has **per-effect granularity** (2026-09-12): a "Per-Effect Alerts" section lists every registered potion effect (localized name + vanilla `mob_effect/` sprite + toggle, alphabetical, behind the shared `SearchListSetting` search container extracted from the Particles list) writing an exclusion set — `AuroraConfig.effectExpiryExcludedEffects`, registry-id keys, absent = alert, empty factory default = the pre-per-effect alert-on-everything behavior (old configs migrate to exactly that). The section's master toggle gates everything, Low-Latency style (behavioral, not visual dimming). Reset prefix `effectExpiry` covers the set; the two reflection reset paths (`resetByPrefix`, `ProfileManager.applyProfile`) defensively copy mutable collection defaults since this Set arrived | `ArmorAlertFeature` + `StatusAlertFeature` → `hud/AlertManager`/`AlertRenderer`, `screen/setting/EffectRowSetting` + `EffectExpiryListSetting` + `SearchListSetting` |
 | Crosshair (`crosshair`) | Preset or CUSTOM painted crosshair with a **free-form canvas** (any W×H up to 128; dims live in `crosshairCustom{Width,Height}` + flat `boolean[]` pixels, resolved via `util/GridDims`); indicator crosshair when entity attackable; deliberate half-pixel centering fix. Canvas editor renders through a cached `DynamicTexture` (`ui/util/CanvasTexture` — one blit/frame, re-raster only on edit; replaced a per-cell fill loop that cost ~12.8 ms/frame at 33×33), HUD path merges lit cells into run-length fills, and growing the grid first runs a **measured** cost benchmark on the player's machine (`[canvas-cost]` log) with an apply-anyway warning — never hardware-name heuristics | `hud/CrosshairRenderer`, `PixelCanvasSetting`, `CanvasTexture`, `InGameHudMixin` (vanilla suppression) |
 | Hitbox (`hitbox`) | Custom entity hitboxes (self/target colors, eye-line, look line, width, see-through). Renders at plain vanilla interpolation — the smoother was **deliberately reverted** (desynced from model) | `hud/HitboxRenderer` (AFTER_ENTITIES) + `WorldLineRenderer`, `HitboxFeature`, `EntityRenderDispatcherMixin` |
 | Hit Color (`hit_color`) | Recolors hurt flash (port of harimasa/HitColor, MIT, credited) | `MixinOverlayTexture`, `EquipmentLayerRendererMixin`, `util/OverlayReloadListener` |
@@ -1374,6 +1374,56 @@ exact screens captured. Opacity/glass/mode are one-line theme mutations —
 harness verification of anything whose correctness depends on a theme
 token's VALUE must sweep at least {user's live value, factory default},
 and a verification claim should name the values it ran at.**
+
+Landed 2026-09-12 after that: **per-effect Effect-Expiry alert granularity**
+(two revertible commits). The Alerts feature's Effect Expiry section grew
+a "Per-Effect Alerts" group (§2 `SectionHeaderSetting`) listing every
+registered potion effect — localized display name + the vanilla
+`mob_effect/` sprite (PotionModule's icon path, ItemScale's row geometry:
+label indented past an 18×18 icon) + a shared `ToggleSwitch`, alphabetical
+by display name, behind a search field that filters by label OR raw
+registry id. The container is the Particles list's mechanism extracted,
+not duplicated: `SearchListSetting<T extends FeatureSetting>` (search
+EditBox + memoized filtered recompute + search-band hit-test + event
+forwarding + the EditBox glass pass; subclass supplies only `matches()`)
+— `ParticleConfigSetting` is now a thin subclass, pixel-identical
+(verified by a same-code control boot: cross-boot pixel diff over a live
+world is ~27% >±8 from world-through-glass drift alone, and the
+pre/post refactor diff measured BELOW that noise floor, with text-row
+band positions byte-identical). The extraction also hoisted a
+`baseHeight()` call out of the render loop's row-cull condition (it
+re-summed every row height per row — the O(rows²) §10 shape, inherited
+from the original). Data model: an exclusion SET,
+`AuroraConfig.effectExpiryExcludedEffects` (registry-id keys, absent =
+alert), chosen so the factory default (empty) preserves the
+single-toggle behavior — an old config loads with every effect alerting
+(or none, if the master was off; logged both in the harness). The master
+toggle gates everything behaviorally, Low-Latency style (no visual
+dimming of the rows). `StatusAlertFeature.checkEffects` skips excluded
+ids before threshold tracking (an excluded effect never even enters the
+fired map). Rows carry no §4 subtitles (toggle shows state) and no §5
+preview (name+icon self-explanatory); the list inherits the detail
+screen's §8 scissor fade for free (it's ordinary rows in the settings
+list). Hardening that came with it: both reflection reset paths
+(`AuroraConfig.resetByPrefix`, `ProfileManager.applyProfile`'s reset
+step) now defensively COPY mutable collection defaults — the new Set is
+the first collection field whose reset prefix actually matches
+(`effectExpiry`), and aliasing the DEFAULTS snapshot's collection would
+let later edits mutate the factory default (the same hazard
+`ThemeDefinition.copyOf` already guards against; profiles saved before
+the field existed would have handed the live config the aliased Set via
+the reset step). Harness notes: AlertManager's spam guard drops queued
+alerts sharing the active alert's TITLE, so every expiry alert in one
+burst collapses to one popup — the `fxe` harness staggers its two test
+effects 4s apart and also reads `StatusAlertFeature.alertedEffects`
+(the exact boundary the exclusion sits at) via reflection. Verified by
+three `fxe` boots (baseline, full, control): exclusion set loads `[]`
+from the old config; a real row click writes
+`[minecraft:strength]` through the real `mouseClicked → ToggleSwitch →
+setter → save` wiring; excluded Strength never fires while Speed does
+(`Speed · 10s` popup captured in-world); re-enabling Strength makes both
+fire; master off fires nothing; zero ERRORs; captures in
+`.devpilot-pilot/fxe-*` (untracked).
 
 ---
 

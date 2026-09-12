@@ -362,10 +362,17 @@ public class ProfileManager {
         }
         // 1. Reset all profile-scoped fields to factory defaults so any
         //    setting absent from the profile (e.g. a newly-added setting)
-        //    lands on its default value.
+        //    lands on its default value. Mutable collections are COPIED,
+        //    not aliased — a profile saved before the field existed would
+        //    otherwise hand the live config the DEFAULTS snapshot's Set/Map
+        //    object and every later edit would mutate the factory default.
         for (Field f : profileFields()) {
             try {
-                f.set(live, f.get(DEFAULTS));
+                Object def = f.get(DEFAULTS);
+                if (def instanceof java.util.Map<?,?> m) def = new java.util.HashMap<>(m);
+                else if (def instanceof java.util.Set<?> s) def = new java.util.HashSet<>(s);
+                else if (def instanceof java.util.List<?> l) def = new java.util.ArrayList<>(l);
+                f.set(live, def);
             } catch (Throwable t) {
                 AuroraClient.LOGGER.warn(
                         "ProfileManager: could not reset field '{}' to default", f.getName(), t);

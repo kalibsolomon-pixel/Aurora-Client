@@ -20,7 +20,10 @@ import java.util.Map;
  *       configured threshold (falling-edge so it doesn't repeat).</li>
  *   <li><b>Effect expiry</b> — when an active potion effect's remaining
  *       duration drops below the configured threshold (seconds). Uses
- *       per-effect tracking so each effect alerts once per application.</li>
+ *       per-effect tracking so each effect alerts once per application.
+ *       Effects listed in {@code effectExpiryExcludedEffects} (the
+ *       Per-Effect Alerts settings list) never alert; the default empty
+ *       set means every effect alerts.</li>
  * </ul>
  *
  * <p>Works in the same tick-driven "threshold crossed → fire once" pattern
@@ -101,6 +104,14 @@ public class StatusAlertFeature implements Feature {
         for (Map.Entry<Holder<MobEffect>, MobEffectInstance> entry : active.entrySet()) {
             Holder<MobEffect> effect = entry.getKey();
             MobEffectInstance inst = entry.getValue();
+
+            // Per-effect granularity: effects the user opted out of in the
+            // Alerts → Per-Effect Alerts list never alert. Absent from the
+            // exclusion set = alert (the default for every effect).
+            String effectId = effect.unwrapKey().map(k -> k.identifier().toString()).orElse(null);
+            if (effectId != null && cfg.effectExpiryExcludedEffects.contains(effectId)) {
+                continue;
+            }
 
             int remainingSecs = inst.getDuration() / 20; // ticks → seconds
             boolean alreadyAlerted = alertedEffects.getOrDefault(effect, false);
