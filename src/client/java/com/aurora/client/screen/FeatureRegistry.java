@@ -1423,9 +1423,6 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                         new BooleanSetting("Disable VSync (causes tearing without VRR)",
                                 () -> cfg.disableVSync, v -> cfg.disableVSync = v)
                                 .description("Turns off vertical sync, removing the frame-buffering delay it adds for the lowest possible input lag. The trade-off is screen tearing (a horizontal seam during fast motion) unless your monitor has a variable refresh rate like G-Sync or FreeSync. Leave on if you see tearing."),
-                        new BooleanSetting("High-Frequency Input Polling",
-                                () -> cfg.highFrequencyInput, v -> cfg.highFrequencyInput = v)
-                                .description("Flushes the GLFW event queue right before camera setup to fetch the latest cursor coordinates with sub-millisecond precision."),
                         new BooleanSetting("Adaptive Render Sleeping (Reflex-style)",
                                 () -> cfg.adaptiveRenderSleeping, v -> cfg.adaptiveRenderSleeping = v)
                                 .description("Dynamically aligns the CPU thread sleep with the render pipeline, sleeping immediately before input polling to minimize the rendering queue."),
@@ -1497,8 +1494,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                 List.of(
                         "smoothCamera",
                         "smoothFramePacer", "framePacer", "framePacing",
-                        "lowLatencyRender", "disableVSync",
-                        "highFrequencyInput", "adaptiveRenderSleeping",
+                        "lowLatencyRender", "disableVSync", "adaptiveRenderSleeping",
                         "tickSync", "inputSamplingDecoupled", "serverListDragReorder",
                         "compliance", "colorblind"));
 

@@ -291,7 +291,6 @@ public class AuroraConfig {
     public boolean tickSyncUseNettyCriteria = false;
 
     // ---- Late-Stage Responsive Features ----
-    public boolean highFrequencyInput = false;
     public boolean adaptiveRenderSleeping = false;
     public boolean fixHeldItemSeams = true;
     public double heldItemInflation = 1.001; // 1.0 = no fix, 1.005 = strong fix
