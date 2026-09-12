@@ -259,7 +259,7 @@ shift+right-click = lock, X = disable.
 | Animations (`animations`) | Swing curve + 1.8 swing arc, view-bob curve/amplitude, 1.7/1.8 damage tilt, idle held-item sway, frame-rate-independent entity movement smoothing (tau scales with server packet bundling) | `HeldItemRendererMixin`, `GameRendererBobMixin`, `DamageTiltMixin`, `LivingEntityRendererExtractMixin` + `EntityMovementSmoother`, `util/AnimationCurves`, cross-cutting `ThrottleDetector` |
 | Hotbar Bounce (`hotbar_bounce`) | White pulse outline on hotbar slot when stack count grows | `HotbarItemBounceMixin` → `HotbarBounceTracker` |
 | Keystrokes (`keystrokes`) | Key-panel overlay: WASD/mouse/CPS/space/sneak/sprint + up to 12 custom keys; pressed-key accent follows the theme accent by default (`keystrokesAccentColor == 0`, R6 P2; explicit color overrides); key labels follow the shared `hudColor` sentinel (R6 ext) | `hud/module/KeystrokesModule` |
-| Miscellaneous (`miscellaneous`) — **moved to the MODULES grid 2026-09-10** | The 2026-09-09 consolidation of the eight tiles that used to sit below Interface (Smooth Camera, Frame Pacer, Low Latency, Tick Sync, Decoupled Input, Drag-to-Reorder Servers, Compliance Mode, Accessibility) behind one tile + detail screen; grid right-click opens the same detail screen as every other tile — an explicit "for now" grouping, not a taxonomy decision | `FeatureRegistry` MODULES entry (byte-verbatim settings + unified reset), `ModuleManager` grid card, "?" (`question_mark` U+EB8B) icon |
+| Miscellaneous (`miscellaneous`) — **moved to the MODULES grid 2026-09-10** | The 2026-09-09 consolidation of the eight tiles that used to sit below Interface (Smooth Camera, Frame Pacer, Low Latency, Tick Sync, Decoupled Input, Drag-to-Reorder Servers, Compliance Mode, Accessibility) behind one tile + detail screen; grid right-click opens the same detail screen as every other tile — an explicit "for now" grouping, not a taxonomy decision. The Low Latency section was audited 2026-09-11 (§8): the dead Zero-Latency Camera and High-Frequency Input rows are gone, Adaptive Render Sleeping is genuinely gated on the section's Enabled toggle, and descriptions match verified behavior | `FeatureRegistry` MODULES entry (byte-verbatim settings + unified reset), `ModuleManager` grid card, "?" (`question_mark` U+EB8B) icon |
 
 ### SETTINGS tab (4 tiles)
 
@@ -1208,6 +1208,43 @@ description hooks, `settingsDetailOnly`, `HitboxPositionSmoother`).
 Verified per deletion by `compileClientJava`, at the end by a full `build`
 + jar-content audit (no removed assets ship), and by a DevPilot boot smoke.
 
+Landed 2026-09-11 after that: **the Low Latency cluster audit** (five revertible
+commits, following a dedicated investigation of the "High-Frequency Input"
+setting). The investigation disassembled vanilla 1.21.11's input/frame path from
+the mapped jar and established: GLFW events are pumped ONLY in
+`RenderSystem.flipFrame` (twice, around the buffer swap) and
+`limitDisplayFPS` (`glfwWaitEventsTimeout` during the cap wait) — both at frame
+END; `MouseHandler.handleAccumulatedMovement` applies the accumulated cursor
+delta EVERY frame (runTick render section, before `GameRenderer.render`) and
+zeroes it; vanilla applies `glfwSwapInterval` only at startup and on a vsync
+option change (`Window.updateVsync`). Consequences acted on: **Zero-Latency
+Camera removed** — its `Camera.setup` accumulator read was structurally always
+zero (nothing pumps between the zeroing and camera setup), a placebo since the
+initial commit; **High-Frequency Input removed** — never implemented in any
+commit/branch/stash (the late-latch pump it describes is the §9 candidate);
+**LowLatencyFeature fixed** — it used to force `glfwSwapInterval(1)` on first
+tick and again on every un-forcing transition (overriding a vanilla vsync-off
+preference in both directions), and turning the Low Latency master off while
+Disable VSync was on left swap interval 0 in place forever (the master's early
+return skipped the restore); now it only asserts 0 while active and hands back
+the vanilla option's own value on the way out; **Adaptive Render Sleeping is now genuinely gated on the
+Low Latency master** (both mixin sites AND in `lowLatencyRender`, read fresh
+each tick; the `RenderSystemMixin` cancel branch falls through to the precise
+pacer when off, since canceling without the runTick sleep would leave no
+limiter) and its runTick-HEAD sleep gained the Aurora-GUI exemption the cancel
+site always had — previously a HEAD sleep paced at the vanilla cap (120) kept
+re-anchoring the GUI limiter and Aurora screens ran at ~120 fps, silently
+defeating the Interface FPS cap (`guiFpsLimit`, 60); **three descriptions
+corrected** — Decoupled Input's vanilla-samples-at-20Hz claim (false on
+1.21.11; it actually applies the batch at the top of runTick, before the tick
+block, raw — bypassing cinematic-camera smoothing), the Low Latency "Enabled"
+row (a section master, not a queue-shrinking mechanism of its own), and
+Adaptive Render Sleeping (now states its prerequisites). The Low Latency
+section is now: Enabled, Disable VSync, Adaptive Render Sleeping — nothing
+advertised that isn't real. (Config-block neighbor noted during the audit:
+`fixHeldItemSeams`/`heldItemInflation` have an implementation —
+`HeldItemSeamFixMixin` — but no UI row anywhere.)
+
 ---
 
 ## 9. Known outstanding work, dead code, and hazards
@@ -1233,7 +1270,14 @@ Verified per deletion by `compileClientJava`, at the end by a full `build`
   Install/Installed states render accent-stained/neutral instead of success-green
   (§6 table). A `Button.success`-style variant would restore the old semantics.
 - FeatureRegistry's redundant `.glassButton(true)`/`.glassSegments(true)` pilot calls.
-- `highFrequencyInput` (Low Latency) is advertised in the UI with no implementation.
+- ~~`highFrequencyInput` (Low Latency) is advertised in the UI with no
+  implementation.~~ **Resolved (2026-09-11)**: removed along with the inert
+  Zero-Latency Camera (see §8). Remaining follow-up: the **late-latch input
+  pump** they were both meant to be — poll GLFW right before `Camera.setup`
+  (masked/replayed callbacks so key/button/resize events don't dispatch
+  mid-render) and re-add a consumer there. Medium scope (pump mixin +
+  mask/replay utility + verification harness); deliberately NOT built in the
+  audit session.
 - Accessibility colorblind correction: matrices are computed but the screen-reader item is
   deferred and the scroll-remap tick is a documented no-op.
 - ModMenu integration is minimal (reflective shim; "Mods" button retired as duplicating
