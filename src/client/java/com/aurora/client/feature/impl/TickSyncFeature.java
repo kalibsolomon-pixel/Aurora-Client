@@ -78,6 +78,16 @@ public class TickSyncFeature implements Feature {
 
     @Override
     public void onTick(Minecraft client) {
+        // Restore a vanilla tick rate the moment the toggle goes off mid-game —
+        // otherwise the last Aurora-adjusted rate stays applied to the level
+        // until reconnect (the disconnect handler is the only other restore point).
+        if (!AuroraConfig.get().tickSyncEnabled) {
+            isTickRateChangedLastTick = false;
+            if (clientTPS != 20f) {
+                setTickRate(20);
+            }
+            return;
+        }
         if (isTickRateChangedLastTick) {
             isTickRateChangedLastTick = false;
             setTickRate(Math.min(20, serverTPS));
