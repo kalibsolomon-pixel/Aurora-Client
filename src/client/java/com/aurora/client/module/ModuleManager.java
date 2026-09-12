@@ -47,7 +47,7 @@ public class ModuleManager {
         modules.add(new Module("world_map", "World Map", "A full-screen, pannable world map of your explored terrain."));
         modules.add(new Module("resourcepack_browser", "Resourcepack Browser", "Browse and install community resource packs directly from Modrinth. Search, preview, and one-click install straight into your resourcepacks folder."));
         modules.add(new Module("reflex", "Minecraft Reflex", "Uses the Nvidia Reflex principle to reduce rendering latency — locks frame pacing by estimating CPU and GPU time so input is sampled as late as possible."));
-        modules.add(new Module("miscellaneous", "Miscellaneous", "A temporary home for smaller settings without a dedicated screen of their own yet — smooth camera, frame pacing, latency, tick sync, input handling, server-list dragging, and compliance."));
+        modules.add(new Module("miscellaneous", "Miscellaneous", "A temporary home for smaller settings without a dedicated screen of their own yet — smooth camera, frame pacing, latency, tick sync, input handling, server-list dragging."));
     }
 
     public List<Module> getModules() {

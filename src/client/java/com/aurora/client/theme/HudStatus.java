@@ -75,10 +75,8 @@ public final class HudStatus {
 
     /** Urgent alert (low durability) — red. */
     public static final int ALERT_URGENT  = 0xFFFF5555;
-    /** Caution alert / toast (low hunger, compliance active) — amber. */
+    /** Caution alert / toast (low hunger) — amber. */
     public static final int ALERT_CAUTION = 0xFFFFAA00;
-    /** "All features restored" compliance toast — green (same value as {@link #DOT_PASSIVE}). */
-    public static final int RESTORED = 0xFF30D158;
 
     // ---- Minimap entity category dots ----
 

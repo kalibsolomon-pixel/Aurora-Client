@@ -22,8 +22,8 @@ import java.util.function.Consumer;
  * <ul>
  *   <li><b>Modules</b> â€” Aurora's gameplay/visual features (the grid),
  *       plus the combined "Miscellaneous" entry that groups the smaller
- *       settings (camera, frame pacer, latency, tick sync, input, servers,
- *       compliance) behind one detail screen - an explicit
+ *       settings (camera, frame pacer, latency, tick sync, input, servers)
+ *       behind one detail screen - an explicit
  *       "for now" grouping (moved here from Settings 2026-09-10)</li>
  *   <li><b>Settings</b> - global client settings: title screen, fonts,
  *       theme (moved here from Modules 2026-09-09), and the UI fps limit</li>
@@ -1354,10 +1354,11 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                 ));
 
         // ---- Miscellaneous ----
-        // Consolidates the eight former standalone Settings-tab tiles that
-        // sat below "Interface" (Smooth Camera, Frame Pacer, Low Latency,
-        // Tick Sync, Decoupled Input, Drag-to-Reorder Servers, Compliance
-        // Mode, Accessibility) into one entry - an explicit "for now"
+        // Consolidates the former standalone Settings-tab tiles that sat
+        // below "Interface" (Smooth Camera, Frame Pacer, Low Latency,
+        // Tick Sync, Decoupled Input, Drag-to-Reorder Servers — plus
+        // Compliance Mode and Accessibility until both were removed
+        // entirely 2026-09-12) into one entry - an explicit "for now"
         // grouping, not a permanent taxonomy decision. Every original
         // setting row is preserved verbatim under its own SectionHeader,
         // and each section's "Enabled" row carries the exact getter/setter
@@ -1374,10 +1375,10 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
         // (Settings-tab entries had no detail screen), so this is new
         // capability, consistent with the other combined features.
         addWithSettings(MODULES, "miscellaneous", "Miscellaneous",
-                "A temporary home for smaller settings that have not been given a dedicated feature screen of their own yet: smooth camera, frame pacing, latency, tick sync, input handling, server-list dragging, and compliance. Each keeps its own enable toggle and settings under its section; open the feature to configure them.",
-                () -> cfg.smoothCamera || cfg.smoothFramePacer || cfg.lowLatencyRender
+                "A temporary home for smaller settings that have not been given a dedicated feature screen of their own yet: smooth camera, frame pacing, latency, tick sync, input handling, and server-list dragging. Each keeps its own enable toggle and settings under its section; open the feature to configure them.",
+                        () -> cfg.smoothCamera || cfg.smoothFramePacer || cfg.lowLatencyRender
                         || cfg.tickSyncEnabled || cfg.inputSamplingDecoupled
-                        || cfg.serverListDragReorder || cfg.complianceModeEnabled,
+                        || cfg.serverListDragReorder,
                 v -> {
                     cfg.smoothCamera = v;
                     cfg.smoothFramePacer = v;
@@ -1385,7 +1386,6 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                     cfg.tickSyncEnabled = v;
                     cfg.inputSamplingDecoupled = v;
                     cfg.serverListDragReorder = v;
-                    cfg.complianceModeEnabled = v;
                 },
                 List.of(
                         new SectionHeaderSetting("Smooth Camera"),
@@ -1463,34 +1463,15 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                         new BooleanSetting("Enabled",
                                 () -> cfg.serverListDragReorder,
                                 v -> cfg.serverListDragReorder = v)
-                                .description("Lets you reorder servers in the Multiplayer server list by click-and-drag instead of vanilla's up/down arrow buttons. Click and hold a server, drag it to a new position, and release — the new order is saved instantly. Normal clicks still select and join servers as usual."),
-
-                        new SectionHeaderSetting("Compliance Mode"),
-                        new BooleanSetting("Enabled",
-                                () -> cfg.complianceModeEnabled,
-                                v -> cfg.complianceModeEnabled = v)
-                                .description("Automatically disables Aurora features that strict server anti-cheats may flag when you join known-strict servers (Hypixel, CubeCraft, etc.). Protects you from false-positive bans without manually toggling features every time you switch servers. Aurora restores your features when you leave."),
-                        new BooleanSetting("Show Activation Toast",
-                                () -> cfg.complianceModeToast,
-                                v -> cfg.complianceModeToast = v)
-                                .description("Pops a brief on-screen notification when compliance mode turns on or off."),
-                        new StringListSetting("Safe Servers (override)",
-                                () -> cfg.complianceSafeServers,
-                                v -> cfg.complianceSafeServers = v)
-                                .description("Server address patterns treated as always-safe. Entries here override built-in strict detection — useful for private servers with custom anti-cheat that you trust. One address per line; substring match (e.g. 'myserver.com' matches any subdomain)."),
-                        new StringListSetting("Strict Servers (custom)",
-                                () -> cfg.complianceStrictServers,
-                                v -> cfg.complianceStrictServers = v)
-                                .description("Additional server address patterns to treat as strict (compliance on). One address per line; substring match.")
+                                .description("Lets you reorder servers in the Multiplayer server list by click-and-drag instead of vanilla's up/down arrow buttons. Click and hold a server, drag it to a new position, and release — the new order is saved instantly. Normal clicks still select and join servers as usual.")
                 ),
-                // Union of the eight tiles' config fields (see the
+                // Union of the original tiles' config fields (see the
                 // resetByPrefix comment on pack_tweaks for prefix rules).
                 List.of(
                         "smoothCamera",
                         "smoothFramePacer", "framePacer", "framePacing",
                         "lowLatencyRender", "disableVSync", "adaptiveRenderSleeping",
-                        "tickSync", "inputSamplingDecoupled", "serverListDragReorder",
-                        "compliance"));
+                        "tickSync", "inputSamplingDecoupled", "serverListDragReorder"));
 
     }
 

@@ -1147,29 +1147,6 @@ public class AuroraConfig {
      */
     public boolean resourcepackBrowserEnabled = true;
 
-    // ---- Compliance Mode ----
-    /**
-     * When enabled, automatically disables features that strict server
-     * anti-cheats may flag (e.g. reach display, toggle sprint) based on
-     * the connected server's known rules. See
-     * {@link com.aurora.client.feature.impl.ComplianceModeFeature}.
-     */
-    public boolean complianceModeEnabled = false;
-    /** Show a brief toast notification when compliance mode activates/deactivates on a server. */
-    public boolean complianceModeToast = true;
-    /**
-     * User-maintained list of server address patterns (substring match)
-     * that are known-safe for all Aurora features. Entries here override
-     * the built-in detection — useful for private servers with custom AC.
-     */
-    public java.util.List<String> complianceSafeServers = new java.util.ArrayList<>();
-    /**
-     * User-maintained list of server address patterns (substring match)
-     * that should be treated as strict (compliance on) regardless of
-     * built-in detection.
-     */
-    public java.util.List<String> complianceStrictServers = new java.util.ArrayList<>();
-
 
     public static AuroraConfig get() { return INSTANCE; }
 
@@ -1189,8 +1166,6 @@ public class AuroraConfig {
                     if (loaded.particleScale == null) loaded.particleScale = new HashMap<>();
                     if (loaded.particleColor == null) loaded.particleColor = new HashMap<>();
                     if (loaded.itemScales == null) loaded.itemScales = new HashMap<>();
-                    if (loaded.complianceSafeServers == null) loaded.complianceSafeServers = new java.util.ArrayList<>();
-                    if (loaded.complianceStrictServers == null) loaded.complianceStrictServers = new java.util.ArrayList<>();
                     if (loaded.keystrokesExtraKeys == null) loaded.keystrokesExtraKeys = new java.util.ArrayList<>();
                     if (loaded.effectExpiryIncludedEffects == null) loaded.effectExpiryIncludedEffects = new ArrayList<>();
                     if (loaded.effectExpiryExcludedEffects == null) loaded.effectExpiryExcludedEffects = new HashSet<>();

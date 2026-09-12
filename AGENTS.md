@@ -289,9 +289,6 @@ the constant; `385e704`).
 - **`ThrottleDetector`**: measures server movement-packet bundling (median inter-move tick
   gap, 32 samples) → factor 1–6. Feeds `EntityMovementSmoother` only. Was also feeding
   hitbox smoothing, which was reverted (§9).
-- **`ComplianceModeFeature`**: auto-disables reach/toggle-sprint/hitbox/keystrokes/particles
-  on a built-in list of strict servers (hypixel etc.); restores on leave; user safe-list
-  overrides.
 - **`TickSyncFeature`**: adapts *client* tick rate toward server packet timing; resets on
   join/disconnect.
 - **WorldScope** (`util/WorldScope`): stable per-world id (`mp:<ip>` / `sp:<level>`) keys
@@ -1562,6 +1559,21 @@ Miscellaneous tile itself stays, now seven former tiles). Old configs carrying t
 removed fields load clean — GSON's lenient parsing ignores unknown fields, for both
 direct load and ProfileManager snapshots.
 
+Landed 2026-09-12 after that: **Compliance Mode removed entirely** (second revertible
+commit of the day, per the user's decision to remove rather than patch its
+config-persistence bug). The feature auto-disabled reach display, toggle sprint/sneak,
+hitbox (both sub-toggles), keystrokes, and particles on a built-in strict-server list
+with user safe/strict list overrides — a complete reference search confirmed those six
+config booleans were written by `ComplianceModeFeature.onTick` alone (it flipped the
+plain `AuroraConfig` fields; no other feature or mixin read compliance state), so with
+the feature gone each of the five features is back to purely user-controlled behavior.
+Removed: `ComplianceModeFeature`, its registration, the `complianceModeEnabled`/
+`complianceModeToast`/`complianceSafeServers`/`complianceStrictServers` config fields,
+the Miscellaneous screen's Compliance Mode section, `HudStatus.RESTORED` (compliance
+toast color, now unused), and `screen/setting/StringListSetting` (its only consumer was
+the two compliance server lists). Old configs carrying the removed fields load clean,
+direct and profile-snapshot both.
+
 ---
 
 ## 9. Known outstanding work, dead code, and hazards
@@ -1656,8 +1668,9 @@ direct load and ProfileManager snapshots.
   the `theme` card removed 2026-09-09 when Theme moved to the Settings tab) —
   ids here still silently fail on typos. Consider deriving one from the other someday.
 - ~~ComplianceMode's `hitboxFeatureEnabled` config field is an orphan~~ **Removed
-  (2026-09-11, audit D9)**; ComplianceMode and the hitbox keybind flip the real
-  `hitboxEnabled`/`hitboxTargetEnabled` sub-toggles.
+  (2026-09-11, audit D9)**; ~~ComplianceMode and the hitbox keybind flip the real
+  `hitboxEnabled`/`hitboxTargetEnabled` sub-toggles~~ — and ComplianceMode itself was
+  **removed entirely 2026-09-12** (§8); the hitbox keybind flips the real sub-toggles.
 - Four different animation helpers (`util/AnimationCurves`, `util/AuroraAnim`,
   `util/HoverAnim`, `ui/util/Animation`) — pick the right one per context.
 - `AuroraTheme`'s `IOS_*`/`ACCENT_*` names hold OnePlus Red (§5).

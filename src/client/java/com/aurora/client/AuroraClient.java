@@ -157,7 +157,7 @@ public class AuroraClient implements ClientModInitializer {
         HudRenderCallback.EVENT.register(hudRenderer::render);
 
         // Unified alert popup renderer — serves all alert sources
-        // (durability, hunger, effect expiry, compliance mode toasts).
+        // (durability, hunger, effect expiry).
         com.aurora.client.hud.AlertRenderer alertRenderer = new com.aurora.client.hud.AlertRenderer();
         HudRenderCallback.EVENT.register((ctx, tickCounter) -> {
             com.aurora.client.ui.util.AuroraFontRenderer.setRenderingAuroraUI(true);
