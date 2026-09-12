@@ -44,7 +44,7 @@ import net.minecraft.network.chat.Component;
  * {@link ButtonWidget}s on the standard glass treatment — chrome-only
  * depth, like {@code ColorPickerScreen}/{@code HudEditorScreen}: no
  * window, no dim, just glass controls over the live panorama, with the
- * complete flat look whenever glass declines (Transparent style, F2
+ * complete flat look whenever glass declines (Wireframe style, F2
  * suppression, a frame the panorama did not draw).
  *
  * <p>The 5-button stack uses the shared themed {@link ButtonWidget}

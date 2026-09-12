@@ -1471,6 +1471,61 @@ click correctly missed), re-add; then with ONLY strength on the list,
 speed was silent and strength fired — the exact inverse. Zero ERRORs;
 captures in `.devpilot-pilot/fxe2/` (untracked).
 
+Landed 2026-09-12 after that: **the out-of-world UI simplification** (three
+revertible commits). (1) **The selection-screen starfield is gone** —
+`SelectionScreenBackgroundMixin` and its `title_background.png` deleted;
+Singleplayer/Multiplayer show whatever vanilla renders (on 1.21.11 that is
+panorama + accessibility blur + menu texture via `Screen.renderBackground`
+itself). `AbstractButtonMixin`/`EditBoxMixin` theming on those screens is
+untouched — verified PIXEL-identical pre/post (same per-color histogram in
+the button band, zero-diff rows through the search field) by a stashed-baseline
+A/B boot. That A/B also surfaced a PRE-EXISTING breakage, deliberately not
+fixed this session: 1.21.11's `Button$Builder.build()` constructs
+`Button$Plain`, an inner SUBCLASS, so `AbstractButtonMixin`'s
+`getClass() == Button.class` gate excludes every vanilla button — the
+vanilla-button theming has been inert (all vanilla "Buttons" render stock;
+only the search-field theming, whose `EditBox` target has no such indirection,
+applies). Fix when wanted: match the runtime class name
+(`net.minecraft.client.gui.components.Button$Plain` / a
+`Button`-prefix check) or `getSuperclass() == Button.class`. (2) **The
+title screen's panorama-capture mechanism generalized to any no-world
+screen**: new shared `GlassSurface.renderMenuPanorama(Screen, GuiGraphics,
+float)` — draw `renderPanorama` (via the new `ScreenPanoramaAccessor`
+`@Invoker` mixin; the method is protected and only Screen subclasses could
+call it before) + `noteMenuBackdropDrawn()`, one call from a screen's
+`renderBackground` when `mc.level == null`, returning false with a live
+world. `AuroraTitleScreen` now goes through it, and `AuroraScreen`'s
+no-world path calls it from `renderBackground` — opening Aurora from the
+title screen now shows real panorama-blurred glass under Frosted (was: the
+flat fallback, because vanilla's own `renderBackground` drew the panorama
+but nobody declared it) and the flat look under Wireframe; the in-world
+path is unchanged. Verified by DevPilot `oow` boots (one boot, both styles,
+then an in-world control pass; captures in `.devpilot-pilot/oow/`,
+untracked): `lastOutcome='rendered'` + GlassStats 16 panels/frame
+(W1/C6/R9) `declines=0` on AuroraScreen-from-title under Frosted,
+`'transparent style (glass off)'` under Wireframe, in-world both styles
+captured; guard negative-tests ALL decline `'no level (menu context)'`
+sampled between frames on the title screen, on the now-declaring
+AuroraScreen (the stamp must not outlive its frame even for the declarer),
+and on a NON-declaring screen (`ProfileManagerScreen` — the leakage test;
+zero glass claims in its GlassStats window); the F2 interlock still
+suppresses (`'suppressed (screenshot in flight)'` through the real
+`takeScreenshot` path). Deliberately NOT extended this session (staged
+discipline): recommended next is `FeatureDetailScreen` (the direct next
+click from `AuroraScreen` in the same no-world context), then
+`ColorPickerScreen` and the pack browser (reachable no-world from detail
+rows / the Resourcepack tile), then the Profiles screen (sidebar button);
+`HudEditorScreen` opens in-world only and needs nothing. (3) **Display-label
+rename Transparent → Wireframe**: `GlassStyle.TRANSPARENT.displayName` +
+the FeatureRegistry description + human-facing comments/docs; the enum
+constant and persisted value stay `TRANSPARENT`, so existing configs parse
+unchanged — a label change, no save-migration. Label verified on-screen
+("Frosted | Wireframe", Frosted selected) by the `oow3` harness capture.
+Harness notes for future boots: the `oow`/`oow3` modes live in the
+untracked `DevPilot.java`; `FeatureRegistry.all()` does NOT lazy-init the
+buckets (only `modules()`/`settings()` do — calling `all()` first returns
+empty lists; harness code must touch `settings()` first).
+
 ---
 
 ## 9. Known outstanding work, dead code, and hazards

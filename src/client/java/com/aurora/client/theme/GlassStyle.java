@@ -18,7 +18,7 @@ package com.aurora.client.theme;
  *       setting exists.</li>
  * </ul>
  *
- * <p>Because Transparent decides before any GL work, it also skips the
+ * <p>Because Wireframe decides before any GL work, it also skips the
  * capture/blur/readback cost entirely (~1-2 ms per panel per frame) — a
  * real win on lower-end hardware, though the setting exists as a look
  * preference first.
@@ -29,13 +29,16 @@ package com.aurora.client.theme;
  * existing users see no change until they opt in.
  *
  * <p>Unknown or missing persisted values must never crash:
- * {@link #fromName} coerces them to {@link #FROSTED}.
+ * {@link #fromName} coerces them to {@link #FROSTED}. The display label is
+ * "Wireframe" (renamed from "Transparent" 2026-09-12); the enum constant
+ * and the persisted value stay {@code TRANSPARENT} so existing configs
+ * keep parsing — a label change, not a data-model change.
  */
 public enum GlassStyle {
     /** Blurred glass material — Aurora's established look. */
     FROSTED("Frosted"),
     /** Flat translucent fills; the blur pipeline never runs. */
-    TRANSPARENT("Transparent");
+    TRANSPARENT("Wireframe");
 
     private final String displayName;
 

@@ -11,7 +11,7 @@ root — findings and prioritized plan from the 2026-09-04 full GUI audit).
 
 **`master` is the canonical, current branch.** Everything the GUI work depends on is committed
 there: the mod-wide "glass everywhere" rollout, the ResourcePack browser glass wave, the
-**"Reset kills glass" session-latch fix**, the **Frosted/Transparent GlassStyle**, the
+**"Reset kills glass" session-latch fix**, the **Frosted/Wireframe GlassStyle**, the
 2026-09-04 GUI-audit deliverables and their B5–B19 fix wave, the `GlassSurface` helper with
 structural pre-dim layering — COMPLETE on every glass screen as of 2026-09-11
 (Profiles/Waypoints → FeatureDetailScreen → AuroraScreen + pack browser), frost-radius-follows-opacity, the
@@ -102,14 +102,16 @@ Key invariants (protected — see AGENTS.md §5/§6 for the full rules):
 - Semantic tokens (`SEMANTIC_ERROR/SUCCESS/WARNING`) are fixed-hue, NOT accent-derived — but
   adoption is sparse (12 references mod-wide; the HUD layer doesn't use them at all).
 
-### GlassStyle (Frosted / Transparent) — the second non-color token
+### GlassStyle (Frosted / Wireframe) — the second non-color token
 
 FROSTED (default) = the glass pipeline runs. TRANSPARENT = `BlurPanelRenderer.renderPanel`
 declines in a single early-return guard **before any GL work**, so every glass consumer takes
 the flat translucent fill it is already required to draw (the fallback contract). No call site
 knows the setting exists; Corner Style and Background Opacity keep their meanings in both
 styles. TRANSPARENT therefore also skips the entire capture/blur/readback cost — a real perf
-escape hatch, currently in active use in the dev config.
+escape hatch, currently in active use in the dev config. Display label is "Wireframe"
+(renamed from "Transparent" 2026-09-12); the enum constant and persisted value stay
+`TRANSPARENT`, so existing configs parse unchanged — label change only, no migration.
 
 ## 3. Glass material pipeline (`BlurPanelRenderer`, 1755 lines)
 
@@ -326,7 +328,7 @@ already diverged (audit D-note).
 - `AuroraTheme` statics are the legacy projection facade, not a dead system: reading them is
   correct; writing them anywhere but `ResolvedTheme.project()` is not. `IOS_BLUE` etc. hold
   OnePlus Red.
-- Two unrelated `GlassStyle` enums: `theme.GlassStyle` (Frosted/Transparent) vs
+- Two unrelated `GlassStyle` enums: `theme.GlassStyle` (Frosted/Wireframe) vs
   `Button.GlassStyle` (OFF/NEUTRAL/STAINED). Same name, different meanings.
 - `Button.GlassStyle` glass path disables during press-scale animation (renderPanel can't
   follow the pose) — deliberate, not a bug.

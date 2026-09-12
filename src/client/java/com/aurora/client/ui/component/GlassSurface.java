@@ -61,7 +61,8 @@ import java.util.Set;
  * and the caller draws its complete flat look (token fill + outline, or
  * whatever that screen's flat chrome is — fallback chrome legitimately
  * differs per screen, so it is deliberately not part of this helper).
- * Decline reasons are the renderer's: no world, Transparent glass style,
+ * Decline reasons are the renderer's: no world and no declared menu
+ * backdrop, Wireframe glass style,
  * screenshot interlock, tiny rect, session latch, pool exhaustion.
  *
  * <p><b>Overlays on glass.</b> Hover/focus never change the tint; callers
