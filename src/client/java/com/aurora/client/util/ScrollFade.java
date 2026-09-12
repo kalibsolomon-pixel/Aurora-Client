@@ -25,10 +25,17 @@ import net.minecraft.client.gui.GuiGraphics;
  * fully engaged exactly when one fade-height of content has passed the
  * boundary, regardless of how long the list is.
  *
- * <p>Two shapes: {@link #drawTop} for scissored viewports (content cannot
- * paint above the boundary, so a plain gradient suffices) and
- * {@link #drawTopCapped} for unscissored lists, where a solid cap of the
- * same color covers content that still paints above the boundary.
+ * <p>One shape: the gradient-only top fade, for scissored viewports —
+ * content must not be able to paint above the boundary, and a GL scissor
+ * (not a painted cover) is what enforces that. The pilot originally
+ * shipped a capped variant for the then-unscissored detail screens — a
+ * solid fill of the surface color above the boundary — and it failed in
+ * the field (2026-09-12): its hiding power was WINDOW_FILL's alpha, i.e.
+ * the user-tunable Background Opacity, so at low opacity rows slid right
+ * through the "cover" over the title band (reproduced on Minimap and
+ * Better Hitreg at opacity 0.1). The screen gained a real scissor and
+ * the capped variant was deleted; any future scrollable surface gets the
+ * scissor, never a painted cap.
  *
  * <p>Bottom edge deliberately has no counterpart — lists end in the screen's
  * own padding/footer, which never produced the collision the top edge does.
@@ -50,38 +57,21 @@ public final class ScrollFade {
     }
 
     /**
-     * Gradient-only top fade for scissored viewports: content cannot paint
-     * above {@code boundaryY}, so nothing needs capping above it.
+     * The §8 gradient: painted AFTER the scissored content, from the
+     * surface color VERBATIM at {@code boundaryY} down to fully
+     * transparent over {@code fadeH}. Softens the scissor boundary; it is
+     * not what hides content (see the class javadoc for why a painted
+     * cover cannot do that).
      */
     public static void drawTop(GuiGraphics g, int x, int w, int boundaryY, int fadeH,
                                double scrollPos, int surfaceArgb) {
-        draw(g, x, w, boundaryY, Integer.MIN_VALUE, fadeH, scrollPos, surfaceArgb);
-    }
-
-    /**
-     * Capped top fade for unscissored lists: a solid fill of the surface
-     * color from {@code capTopY} down to {@code boundaryY} hides content
-     * that still paints above the boundary, and the gradient continues below
-     * it. The cap uses the same engagement-scaled top alpha.
-     */
-    public static void drawTopCapped(GuiGraphics g, int x, int w, int capTopY, int boundaryY,
-                                     int fadeH, double scrollPos, int surfaceArgb) {
-        draw(g, x, w, boundaryY, capTopY, fadeH, scrollPos, surfaceArgb);
-    }
-
-    private static void draw(GuiGraphics g, int x, int w, int boundaryY, int capTopY,
-                             int fadeH, double scrollPos, int surfaceArgb) {
         double k = engagement(scrollPos, fadeH);
         if (k <= 0.0 || fadeH <= 0 || w <= 0) return;
         int rgb = surfaceArgb & 0x00FFFFFF;
         int surfaceA = (surfaceArgb >>> 24) & 0xFF;
         int topA = (int) (surfaceA * k);
         if (topA <= 0) return;
-        int top = (topA << 24) | rgb;
-        int bot = rgb; // fully transparent, same hue
-        if (capTopY != Integer.MIN_VALUE && boundaryY > capTopY) {
-            g.fill(x, capTopY, x + w, boundaryY, top);
-        }
-        g.fillGradient(x, boundaryY, x + w, boundaryY + fadeH, top, bot);
+        g.fillGradient(x, boundaryY, x + w, boundaryY + fadeH,
+                (topA << 24) | rgb, rgb);
     }
 }

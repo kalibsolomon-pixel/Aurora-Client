@@ -68,8 +68,16 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
     private final SmoothScroll scroll = new SmoothScroll(60.0);
     private FeatureSetting activeDragSetting = null;
 
-    /** Static-layer cache: window chrome + rows' cacheable shapes, blitted once per clean frame. */
-    private final UiLayerCache layerCache = new UiLayerCache();
+    /**
+     * Static-layer caches (§8 fix, 2026-09-12): the window chrome and the
+     * rows' cacheable shapes rasterize into SEPARATE layers — the chrome
+     * blits unscissored (the window panel may slide under the title band),
+     * the row layer blits under the TOP_FADE_Y scissor so row content can
+     * never paint over the title/subtitle/Done-Reset band at any Background
+     * Opacity. Same raster triggers as the former single cache.
+     */
+    private final UiLayerCache chromeCache = new UiLayerCache();
+    private final UiLayerCache rowCache = new UiLayerCache();
 
     /** Shared themed window panel (glow + fill + outline), drawn into the static cache. */
     private final RoundedPanel windowPanel = new RoundedPanel(true);
@@ -203,11 +211,16 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
             glassWindow = GlassSurface.container(ctx, listX, windowY, LIST_W, windowH, radius);
         }
 
-        // ---- Static-layer cache: window chrome + rows' cacheable shapes ----
+        // ---- Static-layer caches: window chrome + rows' cacheable shapes ----
+        // TWO caches, not one: the rows' shape layer is blitted under the
+        // TOP_FADE_Y scissor (see below) while the window chrome blits
+        // unscissored (the window panel itself is allowed to slide up under
+        // the title band — only ROW content must stop at the boundary).
         // Version covers every input that can change cached pixels: theme
         // (generation stamp bumps on every reload — accent/mode/roundness/
         // opacity/blur/enabled, drag throttles, profile switches), scroll,
         // content height (expanded editors), framebuffer size, and GUI scale.
+        // The row layer adds the settings' shape fingerprints.
         com.mojang.blaze3d.pipeline.RenderTarget main =
                 this.minecraft != null ? this.minecraft.getMainRenderTarget() : null;
         int fbW = (main != null && main.width > 0) ? main.width : this.width;
@@ -215,21 +228,31 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         int guiScale = Math.max(1, (int) this.minecraft.getWindow().getGuiScale());
         int fingerprint = 0;
         for (FeatureSetting s : meta.settings) fingerprint = fingerprint * 31 + s.shapeFingerprint();
-        long version = ThemeManager.generation() * 1_000_003L
+        long chromeVersion = ThemeManager.generation() * 1_000_003L
                 ^ ((long) (int) scroll.current() * 104729L)
                 ^ ((long) totalRowsH * 31L)
                 ^ ((long) fbW * 7919L)
                 ^ ((long) fbH * 17L)
                 ^ ((long) guiScale * 65537L)
-                ^ ((long) fingerprint * 100_000_009L)
                 ^ (glassWindow ? 0x5BD1B2C1L : 0L); // glass state changes cached fill presence
+        long rowVersion = chromeVersion ^ ((long) fingerprint * 100_000_009L);
 
-        if (!layerCache.isCurrent(version)) {
-            layerCache.ensureSize(fbW, fbH);
-            layerCache.clear();
-            RenderUtil.RectSink prev = RenderUtil.beginCapture(layerCache.sink());
+        if (!chromeCache.isCurrent(chromeVersion)) {
+            chromeCache.ensureSize(fbW, fbH);
+            chromeCache.clear();
+            RenderUtil.RectSink prev = RenderUtil.beginCapture(chromeCache.sink());
             try {
                 drawWindowChromeShapes(ctx, listX, windowY, windowH, glassWindow);
+            } finally {
+                RenderUtil.endCapture(prev);
+            }
+            chromeCache.commit(chromeVersion);
+        }
+        if (!rowCache.isCurrent(rowVersion)) {
+            rowCache.ensureSize(fbW, fbH);
+            rowCache.clear();
+            RenderUtil.RectSink prev = RenderUtil.beginCapture(rowCache.sink());
+            try {
                 int yy = TOP_PAD - (int) scroll.current();
                 for (FeatureSetting s : meta.settings) {
                     int h = s.height();
@@ -241,7 +264,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
             } finally {
                 RenderUtil.endCapture(prev);
             }
-            layerCache.commit(version);
+            rowCache.commit(rowVersion);
         }
 
         // Per-setting glass pass — after the capture pass above (a tint fill
@@ -281,8 +304,31 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         GlassSurface.overlayDim(ctx, this.width, this.height);
 
         // Cached chrome — one textured blit (a content layer above the dim,
-        // exactly where it always sat).
-        layerCache.blit(ctx, this.width, this.height);
+        // exactly where it always sat). UNSCISSED: the window panel is a
+        // container, and containers may slide up under the title band; only
+        // ROW content stops at the fade boundary.
+        chromeCache.blit(ctx, this.width, this.height);
+
+        // Design language §8 — top-edge scroll fade, the scissored shape.
+        // Rows (cached shapes AND live overlay) are clipped to a boundary
+        // that starts just below the title/subtitle/Done-Reset band and
+        // descends from TOP_FADE_Y+FADE_PX to TOP_FADE_Y as the fade
+        // engages (a resting list clips nothing — byte-identical at
+        // rest). The scissor, not a painted cap, is what stops rows from
+        // sliding over the title: the pilot's capped-fade variant veiled
+        // by WINDOW_FILL's alpha — the user-tunable Background Opacity —
+        // so at low opacity its "opaque" cover hid nothing and the
+        // title/content overlap returned (reproduced on Minimap + Better
+        // Hitreg at opacity 0.1). A GL scissor is opacity-independent and
+        // is the same mechanism every other scrollable screen already
+        // uses; the gradient below then only SOFTENS the boundary, fading
+        // rows into the window's own tint (WINDOW_FILL verbatim).
+        double fadeK = ScrollFade.engagement(scroll.current(), ScrollFade.FADE_PX);
+        int fadeTop = TOP_FADE_Y + (int) Math.round((1.0 - fadeK) * ScrollFade.FADE_PX);
+        ctx.enableScissor(0, fadeTop, this.width, this.height);
+
+        // Rows' cached shape layer — the second blit, under the boundary.
+        rowCache.blit(ctx, this.width, this.height);
 
         // Live overlay: text, hover feedback, animated values.
         int y = TOP_PAD - (int) scroll.current();
@@ -294,17 +340,12 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
             y += h + ROW_GAP;
         }
 
-        // Design language §8 — top-edge scroll fade. This list is NOT
-        // scissored (the whole window scrolls, rows culled only against the
-        // screen edges), so without this rows slide up over the title /
-        // Done-Reset band as they leave. The capped variant hides everything
-        // above TOP_FADE_Y and fades rows into the window's own tint
-        // (WINDOW_FILL, verbatim — its alpha IS the Background Opacity, so
-        // the fade never adds a second opacity application point) over
-        // FADE_PX below it. Engagement scales with the scroll position, so
-        // a resting list is pixel-untouched. Painted before the chrome
-        // buttons and the title so those stay crisp on top of the fade.
-        ScrollFade.drawTopCapped(ctx, listX, LIST_W, 0, TOP_FADE_Y, ScrollFade.FADE_PX,
+        ctx.disableScissor();
+
+        // The §8 gradient — softens the scissor boundary into the window's
+        // own tint. Painted after the scissor closes and before the chrome
+        // buttons/title so those stay crisp on top of it.
+        ScrollFade.drawTop(ctx, listX, LIST_W, TOP_FADE_Y, ScrollFade.FADE_PX,
                 scroll.current(), ThemeManager.color(ThemeToken.WINDOW_FILL));
 
         // Children: Done button.
@@ -453,7 +494,8 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         for (FeatureSetting s : meta.settings) {
             s.onDetailScreenClose();
         }
-        layerCache.dispose();
+        chromeCache.dispose();
+        rowCache.dispose();
         if (this.minecraft != null) this.minecraft.setScreen(parent);
     }
 

@@ -201,11 +201,22 @@ search band — which is exactly where an abrupt edge reads worst).
   rest (nothing above the boundary) is pixel-untouched, and the fade is
   fully engaged once one fade-height of content has passed the boundary.
   Engagement takes the raw scroll position, not a scroll/overflow ratio.
-- **Two shapes:** gradient-only (`drawTop`) for scissored viewports, where
-  the scissor already hides anything above the boundary; capped
-  (`drawTopCapped`) for unscissored lists (the detail screens), where a
-  solid cap of the same color must also cover content that still paints
-  above the boundary. Hit-testing follows the render truth either way:
+- **One shape, and it requires a scissor.** The gradient softens a
+  boundary that a GL SCISSOR enforces — content must be structurally
+  unable to paint above the boundary (every scrollable viewport
+  scissors its rows). The pilot's original capped variant — a painted
+  cover of the surface color above the boundary, for the then-unscissored
+  detail screens — failed in the field and is **retired**: its hiding
+  power was the surface color's alpha, i.e. the user-tunable Background
+  Opacity, so at low opacity rows slid through the "cover" and overlapped
+  the title band (reproduced on Minimap and Better Hitreg at opacity
+  0.1, fixed 2026-09-12 by giving the detail screens a real scissor). A
+  painted cover is opacity-bound and can never be trusted to hide
+  content; the scissor is opacity-independent. Where a screen's rows
+  live in a cache (as the detail screens' shape layer), that means two
+  cache layers — one for container chrome (unscissored; a container may
+  slide under the title band), one for rows (blitted under the boundary
+  scissor). Hit-testing follows the render truth either way:
   content hidden by the fade band is not clickable (the same rule
   `ManagerListScreen` applies to its scissored clip band).
 - **Rim highlights** of raised glass rows fading through the gradient are

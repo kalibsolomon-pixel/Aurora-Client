@@ -1333,6 +1333,48 @@ screenshot reads were wrong in both directions (claimed PRE history was
 colored, POST input white) — chromatic-pixel counting + color-isolation
 overlays were the reliable instrument; noted for future harness work.
 
+Landed 2026-09-12 after that: **the §8 top-edge scroll fade** (pilot +
+extension, then a field-regression fix the same day — read all three
+together; the regression is the important part). The pilot gave every
+scrollable screen a top-edge fade (`util/ScrollFade`: a 16px gradient in
+the surface color verbatim, engagement `min(1, scroll/16)`) — detail
+screens, both manager lists, `AuroraScreen` both tabs, then the pack
+browser's sidebar (`SURFACE`-token panel) and card grid (the screen's own
+0x55 dim). Rule + cases in DESIGN_LANGUAGE.md §8. The pilot's
+detail-screen implementation used a CAPPED variant for the then-unscissored
+list: a painted cover of `WINDOW_FILL` above the boundary, "hiding" rows
+that slid toward the title band. **That cover's hiding power was
+`WINDOW_FILL`'s alpha — the user-tunable Background Opacity — and the dev
+config this machine actually plays at runs 0.1**, so at full engagement
+the "opaque" cover was 90% transparent and rows slid right over the
+title/subtitle band on Minimap and Better Hitreg (the user's two
+screenshots; reproduced pre-fix with the `ovfix` harness: 1,126 stray
+text pixels in Minimap's under-title band, title+subtitle+row text
+bunched on Hitreg, both clean at opacity 1.0 — which is all the pilot's
+verification had effectively exercised). Fix: `FeatureDetailScreen` gained
+a real GL scissor — its single `UiLayerCache` split into `chromeCache`
+(window panel, blits unscissored: a container MAY slide under the title
+band) and `rowCache` (rows' shapes, blitted under a boundary scissor that
+descends TOP_FADE_Y+16 → TOP_FADE_Y as the fade engages, so a resting
+list clips nothing), the live overlay loop under the same scissor, the
+gradient kept as the softener only, and `ScrollFade.drawTopCapped`
+DELETED (a painted cover is opacity-bound and can never be trusted to
+hide content — the §8 rule now says every scrollable viewport must
+scissor, and a screen whose rows live in a cache needs two cache layers
+to scissor rows but not chrome). **The verification lesson, now standing
+method (same family as the `gfix` "read the report's stack" lesson): a
+visual-fix verification that runs at ONE theme configuration has verified
+nothing about the settings axis — the fade pilot's boots ran on this very
+machine at the user's 0.1 opacity, the pixel-diff showed the expected
+band and only small deltas (a 90%-transparent veil still dims bright
+text past a fixed threshold), the vision model even described the
+remaining ghost and was dismissed as unreliable, and the "verified, all
+45 screens" claim shipped while the exact reported bug was live on the
+exact screens captured. Opacity/glass/mode are one-line theme mutations —
+harness verification of anything whose correctness depends on a theme
+token's VALUE must sweep at least {user's live value, factory default},
+and a verification claim should name the values it ran at.**
+
 ---
 
 ## 9. Known outstanding work, dead code, and hazards
