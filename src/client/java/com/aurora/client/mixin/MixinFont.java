@@ -49,7 +49,7 @@ public abstract class MixinFont {
             // Symbols icon glyphs) — overriding them with the user's text font
             // would render the icon codepoints as broken / missing glyphs.
             net.minecraft.network.chat.FontDescription componentFont = component.getStyle().getFont();
-            if (componentFont != Style.EMPTY.getFont()) {
+            if (componentFont != AuroraFontRenderer.DEFAULT_FONT) {
                 return component;
             }
             return component.copy().withStyle(style);
@@ -57,28 +57,29 @@ public abstract class MixinFont {
         return component;
     }
 
-    @Inject(
+    @ModifyVariable(
             method = "drawInBatch(Lnet/minecraft/util/FormattedCharSequence;FFIZLorg/joml/Matrix4f;Lnet/minecraft/client/renderer/MultiBufferSource;Lnet/minecraft/client/gui/Font$DisplayMode;II)V",
             at = @At("HEAD"),
-            cancellable = true
+            argsOnly = true,
+            ordinal = 0
     )
-    private void drawInBatchCharSequenceIntercept(FormattedCharSequence text, float x, float y, int color, boolean dropShadow, org.joml.Matrix4f matrix, net.minecraft.client.renderer.MultiBufferSource bufferSource, net.minecraft.client.gui.Font.DisplayMode displayMode, int backgroundColor, int light, CallbackInfo ci) {
+    private FormattedCharSequence modifyDrawInBatchSequence(FormattedCharSequence text) {
         Style style = AuroraFontRenderer.getActiveStyle();
         if (style != null && text != null) {
             // Skip sequences that already carry a font (e.g. Material Symbols
-            // icon glyphs).  Stripping them and re-wrapping with the custom
-            // font would break the icons.
+            // icon glyphs). Overriding them would render the icons as broken
+            // glyphs.
             if (sequenceHasCustomFont(text)) {
-                return;
+                return text;
             }
-            String plain = AuroraFontRenderer.getSequenceString(text);
-            if (!plain.isEmpty()) {
-                Component comp = Component.literal(plain).withStyle(style);
-                Font self = (Font) (Object) this;
-                self.drawInBatch(comp, x, y, color, dropShadow, matrix, bufferSource, displayMode, backgroundColor, light);
-                ci.cancel();
-            }
+            // Swap ONLY the font, preserving every other per-character style
+            // attribute. Flattening the sequence to a plain string here (the
+            // old approach) destroyed the per-segment colors vanilla's
+            // CommandSuggestions attaches to the chat input — and every
+            // other styled sequence (colored chat, tooltips, …).
+            return AuroraFontRenderer.withCustomFont(text, style);
         }
+        return text;
     }
 
     // ========================================================================
@@ -121,11 +122,11 @@ public abstract class MixinFont {
             if (sequenceHasCustomFont(sequence)) {
                 return sequence;
             }
-            String plain = AuroraFontRenderer.getSequenceString(sequence);
-            if (!plain.isEmpty()) {
-                Component comp = Component.literal(plain).withStyle(style);
-                return comp.getVisualOrderText();
-            }
+            // Font swap only — the sequence's per-character colors and other
+            // style attributes survive (this is the 1.21.11 path the chat
+            // input's CommandSuggestions coloring renders through, via
+            // GuiTextRenderState at flush time).
+            return AuroraFontRenderer.withCustomFont(sequence, style);
         }
         return sequence;
     }
@@ -206,7 +207,7 @@ public abstract class MixinFont {
         // carry a font (ours or an icon font) are measured correctly by
         // vanilla, so we let them fall through.
         if (text instanceof Component c) {
-            if (c.getStyle().getFont() != DEFAULT_FONT) return;
+            if (c.getStyle().getFont() != AuroraFontRenderer.DEFAULT_FONT) return;
             if (c.getString().isEmpty()) return;
             Font self = (Font) (Object) this;
             MEASURING.get()[0]++;
@@ -288,14 +289,12 @@ public abstract class MixinFont {
      * font set (e.g. Material Symbols icon glyphs), meaning we must NOT
      * override the font for that text.
      */
-    private static final net.minecraft.network.chat.FontDescription DEFAULT_FONT = Style.EMPTY.getFont();
-
     private static boolean sequenceHasCustomFont(FormattedCharSequence sequence) {
         boolean[] found = { false };
         sequence.accept((index, style, codePoint) -> {
             // "Custom font" = any font that differs from the default empty
             // style's font (e.g. Material Symbols icon glyphs).
-            if (style.getFont() != DEFAULT_FONT) {
+            if (style.getFont() != AuroraFontRenderer.DEFAULT_FONT) {
                 found[0] = true;
                 return false; // stop iterating
             }

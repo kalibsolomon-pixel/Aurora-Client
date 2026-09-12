@@ -1288,6 +1288,51 @@ inflation 1.05 with the toggle on/off (frozen scene, sway disabled) diffs
 exactly on the held diamond sword's silhouette — the previously-inert
 config fields now demonstrably drive rendering.
 
+Landed 2026-09-12 after that: **styled-text colors restored under the
+custom font** — the command-syntax coloring in the chat input (and, it
+turned out, every styled `FormattedCharSequence`) was flattened to
+uniform white whenever Text & Fonts applied a bundled TTF (ALL_TEXT;
+AURORA_ONLY never touches chat). Vanilla ground truth, read from the
+mapped 1.21.11 jar: `CommandSuggestions`'s constructor installs
+`formatChat` via `EditBox.addFormatter`; `formatText` builds a COMPOSITE
+`FormattedCharSequence` from per-segment `FormattedCharSequence.forward`
+runs carrying `Style`s — literals GRAY (`ChatFormatting.GRAY`), parsed
+arguments cycling a 5-entry AQUA/YELLOW/GREEN/LIGHT_PURPLE/GOLD list,
+and the unparsed tail after a syntax error RED — and `EditBox.renderWidget`
+submits it through `GuiGraphics.drawString` → `GuiTextRenderState` →
+`Font.prepareText(FormattedCharSequence)` at flush time. (The suggestion
+popup is a separate mechanism: plain-string `drawString` with explicit
+int colors — selected `0xFFFFFF00` yellow, others `0xFFAAAAAA` gray —
+never affected.) Root cause: MixinFont's two sequence interceptors
+(`drawInBatch(FormattedCharSequence)` and `prepareText(FormattedCharSequence)`)
+extracted the plain string via `getSequenceString` and re-wrapped it as
+`Component.literal(plain).withStyle(fontOnlyStyle)` — destroying every
+per-character style, not just colors. Pixel-verified pre-fix: the input
+line AND colored chat history lost ALL chromatic pixels under the font;
+the popup was unaffected. Fix (general, not command-specific):
+`AuroraFontRenderer.withCustomFont` returns a decorating sequence whose
+sink swaps ONLY the font (`Style.withFont`, which preserves color, bold,
+italic, obfuscated, shadow) with a single-slot identity cache so the swap
+costs one Style per styled segment, not per character; both interceptors
+now return the decorated sequence instead of flattening (the drawInBatch
+one converted from cancel-and-redispatch to a plain `@ModifyVariable`),
+`AuroraFontRenderer`'s own sequence `drawString` overload uses the same
+helper, and the icon-glyph guard (`sequenceHasCustomFont`) is unchanged.
+Measured widths stay consistent: the width interceptors measure
+all-custom-font just like the decorator renders. Verified by DevPilot
+`chatfont` boots (captures in `.devpilot-pilot/chatfont-{pre,post}/`,
+framebuffer-exact, same command `/give @s minecraft:not_a_real_item`,
+config snapshot/restore): font OFF shows the vanilla gray/aqua/red
+segments; font ON pre-fix showed uniform white input + flattened history;
+font ON post-fix shows the segments back (input line: red `~#FC5454`
+tail, aqua selector, gray literal; history: red/green/aqua/yellow/gold
+all present) while the glyphs are genuinely Inter (39.6% structural
+pixel diff vs the font-OFF line — the font still applies), and the
+`/gamemode` popup keeps its yellow selected entry. The vision-model
+screenshot reads were wrong in both directions (claimed PRE history was
+colored, POST input white) — chromatic-pixel counting + color-isolation
+overlays were the reliable instrument; noted for future harness work.
+
 ---
 
 ## 9. Known outstanding work, dead code, and hazards

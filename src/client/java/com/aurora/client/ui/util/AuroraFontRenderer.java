@@ -144,12 +144,11 @@ public class AuroraFontRenderer {
      */
     public static float drawString(GuiGraphics graphics, Font font, FormattedCharSequence text, float x, float y, int color, boolean dropShadow) {
         net.minecraft.network.chat.Style style = getActiveStyle();
-        
+
         if (style != null) {
-            String plain = getSequenceString(text);
-            Component comp = Component.literal(plain).withStyle(style);
-            graphics.drawString(font, comp.getVisualOrderText(), Math.round(x), Math.round(y), color, dropShadow);
-            return x + font.width(comp);
+            FormattedCharSequence styled = withCustomFont(text, style);
+            graphics.drawString(font, styled, Math.round(x), Math.round(y), color, dropShadow);
+            return x + font.width(styled);
         } else {
             graphics.drawString(font, text, Math.round(x), Math.round(y), color, dropShadow);
             return x + font.width(text);
@@ -166,6 +165,56 @@ public class AuroraFontRenderer {
             return true;
         });
         return sb.toString();
+    }
+
+    /**
+     * The font of the empty style — what "this character never specified a
+     * font" looks like. Shared by the font-swap logic here and in
+     * {@code MixinFont}.
+     */
+    public static final net.minecraft.network.chat.FontDescription DEFAULT_FONT =
+            net.minecraft.network.chat.Style.EMPTY.getFont();
+
+    /**
+     * Returns a view of {@code sequence} whose characters carry the custom
+     * font from {@code style}, preserving every other style attribute
+     * (color, bold, italic, obfuscated, …) exactly as the source text
+     * defined it.
+     *
+     * <p>This is the style-preserving alternative to flattening the sequence
+     * through {@link #getSequenceString} and re-wrapping it in a
+     * font-only component — that flattening destroyed all per-character
+     * styling, which is how command syntax highlighting (vanilla
+     * {@code CommandSuggestions} colors the chat input via per-segment
+     * {@code Style}s), colored chat messages and any other styled text lost
+     * their colors under the custom font.
+     *
+     * <p>Characters that already specify their own font (e.g. Material
+     * Symbols icon glyphs) keep it — overriding those would render the icon
+     * codepoints as broken glyphs. Callers that have already skipped
+     * sequences carrying any custom font ({@code MixinFont}'s icon guard)
+     * never hit that branch; it is defense-in-depth for direct callers.
+     */
+    public static FormattedCharSequence withCustomFont(FormattedCharSequence sequence, net.minecraft.network.chat.Style style) {
+        net.minecraft.network.chat.FontDescription font = style.getFont();
+        return visitor -> sequence.accept(new net.minecraft.util.FormattedCharSink() {
+            // Consecutive characters of one segment share the same Style
+            // instance, so a single-slot identity cache keeps the swap at one
+            // Style allocation per styled segment instead of per character.
+            private net.minecraft.network.chat.Style lastSource = null;
+            private net.minecraft.network.chat.Style lastSwapped = null;
+
+            @Override
+            public boolean accept(int index, net.minecraft.network.chat.Style charStyle, int codePoint) {
+                if (charStyle != lastSource) {
+                    lastSource = charStyle;
+                    lastSwapped = charStyle.getFont() == DEFAULT_FONT
+                            ? charStyle.withFont(font)
+                            : charStyle;
+                }
+                return visitor.accept(index, lastSwapped, codePoint);
+            }
+        });
     }
 
     // ============================================================
