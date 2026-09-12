@@ -10,6 +10,7 @@ import com.aurora.client.ui.component.GlassSurface;
 import com.aurora.client.ui.component.RoundedPanel;
 import com.aurora.client.ui.component.ThemedScreen;
 import com.aurora.client.ui.util.RenderUtil;
+import com.aurora.client.util.ScrollFade;
 import com.aurora.client.util.SmoothScroll;
 import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.ui.util.UiLayerCache;
@@ -41,6 +42,13 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
     private static final int LIST_W = 320;
     private static final int TOP_PAD = 60;
     private static final int ROW_GAP = 6;
+
+    /**
+     * Top of the scroll-fade band (DESIGN_LANGUAGE §8): just below the
+     * title / Done-Reset chrome band. Rows fade out as they approach it
+     * instead of sliding over the title; above it they are fully hidden.
+     */
+    private static final int TOP_FADE_Y = 40;
 
     private static final int DONE_W = 64;
     private static final int DONE_H = 22;
@@ -286,6 +294,19 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
             y += h + ROW_GAP;
         }
 
+        // Design language §8 — top-edge scroll fade. This list is NOT
+        // scissored (the whole window scrolls, rows culled only against the
+        // screen edges), so without this rows slide up over the title /
+        // Done-Reset band as they leave. The capped variant hides everything
+        // above TOP_FADE_Y and fades rows into the window's own tint
+        // (WINDOW_FILL, verbatim — its alpha IS the Background Opacity, so
+        // the fade never adds a second opacity application point) over
+        // FADE_PX below it. Engagement scales with the scroll position, so
+        // a resting list is pixel-untouched. Painted before the chrome
+        // buttons and the title so those stay crisp on top of the fade.
+        ScrollFade.drawTopCapped(ctx, listX, LIST_W, 0, TOP_FADE_Y, ScrollFade.FADE_PX,
+                scroll.current(), ThemeManager.color(ThemeToken.WINDOW_FILL));
+
         // Children: Done button.
         super.render(ctx, mouseX, mouseY, delta);
 
@@ -360,7 +381,12 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         int y = TOP_PAD - (int) scroll.current();
         for (FeatureSetting s : meta.settings) {
             int h = s.height();
-            if (s.mouseClicked(mouseX, mouseY, button, listX, y, LIST_W)) {
+            // Hit-testing agrees with the scroll fade (§8): the part of a
+            // row hidden by the fade band (above TOP_FADE_Y) is not
+            // clickable — the same render-truth rule ManagerListScreen
+            // applies to its scissored clip band.
+            if (mouseY >= TOP_FADE_Y && y + h > TOP_FADE_Y && y < this.height
+                    && s.mouseClicked(mouseX, mouseY, button, listX, y, LIST_W)) {
                 activeDragSetting = s;
                 return true;
             }
