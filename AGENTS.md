@@ -266,8 +266,10 @@ shift+right-click = lock, X = disable.
 
 Custom Title (`custom_title` — themed title screen: vanilla panorama + 5 glass buttons
 (§6 rollout table; the custom logo/starfield blits were removed 2026-09-08) via
-`TitleScreenMixin`/`AuroraTitleScreen`; starfield + themed vanilla buttons on
-multiplayer/world-select via `SelectionScreenBackgroundMixin`, `AbstractButtonMixin`),
+`TitleScreenMixin`/`AuroraTitleScreen`; themed vanilla buttons + search field on
+multiplayer/world-select via `AbstractButtonMixin`/`EditBoxMixin` — the starfield
+background those screens carried until 2026-09-12 (`SelectionScreenBackgroundMixin`)
+is gone; they show the vanilla backdrop),
 Text & Fonts (`text_fonts` —
 bundled Google fonts scoped OFF/Aurora-only/ALL via `MixinFont` + `AuroraFontRenderer`),
 Theme (`theme` — moved here from the Modules tab 2026-09-09; the single-accent theming
@@ -452,8 +454,9 @@ exemption: `mc.level == null && !menuBackdropValid()`. Frame-scoped by construct
 only the code that just drew a full-viewport backdrop can say so), single-observer
 (one screen renders per frame) — see §6 convention 5 for the full reasoning. The
 adoption (`AuroraTitleScreen`): the custom logo/backdrop/starfield blits and their
-PNGs are gone (`logo.png`, `logo_backdrop.png` deleted; `title_background.png`
-retained for `SelectionScreenBackgroundMixin`), the screen calls `renderPanorama`
+PNGs are gone (`logo.png`, `logo_backdrop.png` deleted; `title_background.png` was
+retained for `SelectionScreenBackgroundMixin` until that starfield mixin itself was
+removed 2026-09-12, taking the PNG with it), the screen calls `renderPanorama`
 + `noteMenuBackdropDrawn()` and renders its 5 buttons as the standard glass
 `ButtonWidget`s (4 neutral, Aurora Settings stained), chrome-only depth, stack
 re-centered now that the logo block is gone. Verified by five DevPilot `title`-mode
@@ -710,7 +713,7 @@ flags now default ON mod-wide. Status below is committed `master`.
 | `WaypointManagerScreen` | **Full** | Raised glass rows + header/add buttons |
 | `ResourcePackBrowserScreen` | **Full** (2026-09-04; cards flat 2026-09-08; structural pass 2026-09-11 — closing the rollout) | Depressed glass sidebar (SURFACE-token tint via `GlassSurface.container`) + detail modal; **cards FLAT by decision (audit R9/B2)** — their opaque hover-lerp tint fully occluded the blur, so per-card glass was pure cost and the main output-pool driver (B1 halved; each card's install button is still a glass `Button`, DETAIL priority, driven in the pass under the tracked grid clip via the shared `forEachVisibleCard` culling walk with `drivenPhase` stamping); active category tab = raised glass whose accent-lerp wash IS its tint (the explicit-tint `GlassSurface.control` overload, evaluated in the pass); the dim runs at this screen's original `0x55` strength through `overlayDim`'s argb overload; the detail modal is the screen's one ABOVE-the-dim layer — panel via `GlassSurface.aboveDimContainer`, its buttons driven inside a `beginAboveDim`/`endAboveDim` zone; inactive tabs stay flat by design — small transient rows inside an already-glass container; install/Retry/Close buttons are the shared `Button` painter (Install = stained primary, Retry = destructive, progress/Done = neutral; **success-green is not expressible through `Button` — mapped to stained/neutral, flagged**); `renderBackground` world-gating; tokenized radii. Thumbnails, toast, scrollbars stay opaque/unchanged per convention |
 | `WorldMapScreen` | **Chrome-only** (2026-09-08) | The 3 toolbar buttons + the prompt's Cancel in NEUTRAL raised glass (`ButtonWidget.glassBackground`), prompt Create in STAINED (primary-action convention), and the create-waypoint prompt itself on DEPRESSED `GlassSurface.container` glass (WINDOW priority, `WINDOW_FILL` tint — the pack-browser detail-modal treatment; flat `RoundedPanel` fallback on decline); the name field was already raised glass via `EditBoxMixin`. `renderBackground` world-gate added (skip vanilla backdrop sandwich in-world — also saves its blur post-chain under a viewport the map fills anyway). Map content — void, tiles, waypoint markers, player arrow, bottom readouts — deliberately untouched; the readouts keep hardcoded white/gray because they float over map data where a mode-locked `ON_*` text token could go dark-on-dark in light mode. Glass samples the live backdrop behind the screen, NOT the map tiles: 1.21.11's deferred `GuiRenderState` means tile blits never reach the main target before the blur pass reads it — the same physics every glass surface has (only eager passes, like the title screen's panorama, are capturable) |
-| `AuroraTitleScreen` | **Chrome-only** (2026-09-08) | 5 floating glass buttons over the live vanilla panorama (4 neutral raised, Aurora Settings accent-stained — the ColorPicker-Apply convention); custom logo/backdrop/starfield blits and their PNGs removed (`title_background.png` stays — `SelectionScreenBackgroundMixin` still uses it). The screen calls `renderPanorama` then `BlurPanelRenderer.noteMenuBackdropDrawn()` — the frame-scoped declaration that is the one menu-context-guard exemption (§6 convention 5) — so the buttons blur the panorama through the ordinary world-reader capture; flat fallback whenever glass declines |
+| `AuroraTitleScreen` | **Chrome-only** (2026-09-08) | 5 floating glass buttons over the live vanilla panorama (4 neutral raised, Aurora Settings accent-stained — the ColorPicker-Apply convention); custom logo/backdrop/starfield blits and their PNGs removed (`title_background.png` went too when the selection-screen starfield was removed 2026-09-12). The screen calls `renderPanorama` then `BlurPanelRenderer.noteMenuBackdropDrawn()` — the frame-scoped declaration that is the one menu-context-guard exemption (§6 convention 5) — so the buttons blur the panorama through the ordinary world-reader capture; flat fallback whenever glass declines |
 | Toggles, sliders, HUD modules, tooltips/dropdowns-as-tooltips | **Never glass, by convention** | Opaque token surfaces |
 
 `BlurTestScreen` is the development harness (A/B radius toggles, synthetic capture FBO,

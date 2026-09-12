@@ -17,9 +17,11 @@ import net.minecraft.network.chat.Component;
  *
  * <p>The screen draws NO custom branding — the former emblem, diamond
  * backdrop and starfield blits were removed outright (their PNGs deleted;
- * only {@code title_background.png} survives, still shared by
- * {@code SelectionScreenBackgroundMixin} on the two selection screens). The
- * backdrop is vanilla's rotating title panorama, drawn by
+ * the starfield's own survival on the two selection screens ended
+ * 2026-09-12, when {@code SelectionScreenBackgroundMixin} was removed and
+ * those screens went back to the vanilla backdrop — their themed buttons
+ * and search fields stay, via {@code AbstractButtonMixin}/{@code EditBoxMixin}).
+ * The backdrop is vanilla's rotating title panorama, drawn by
  * {@code Screen.renderPanorama} exactly as vanilla's own title screen draws
  * it (vanilla {@code TitleScreen.renderBackground} is empty and
  * {@code render} calls {@code renderPanorama} directly — mirrored here

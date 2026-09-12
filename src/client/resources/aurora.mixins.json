@@ -52,7 +52,6 @@
     "ShieldSpecialRendererMixin",
     "MixinFont",
     "ScreenshotMixin",
-    "SelectionScreenBackgroundMixin",
     "AbstractButtonMixin",
     "EditBoxMixin",
     "ServerListDragReorderMixin",

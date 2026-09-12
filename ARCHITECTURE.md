@@ -264,7 +264,6 @@ a launch crash, not a silent skip):
   selection screens; press-squash animation; label width cached forever (audit B18).
 - `TitleScreenMixin` — replaces vanilla title with `AuroraTitleScreen` when enabled; else adds
   an "Aurora Settings" corner button.
-- `SelectionScreenBackgroundMixin` — starfield background on the two selection screens.
 - `MixinFont` (priority 1500) — swaps bundled TTFs into ALL text paths incl. measurement
   (`width`, `plainSubstrByWidth`); scoped OFF / Aurora-only (class-prefix + volatile flag) /
   ALL via `AuroraFontRenderer`. Perf-sensitive: per-measure allocations in the swapped paths.
