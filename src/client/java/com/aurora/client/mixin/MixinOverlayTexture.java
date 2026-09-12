@@ -33,8 +33,12 @@ public abstract class MixinOverlayTexture implements OverlayReloadListener {
     @Unique private int aurora$lastAppliedColor   = Integer.MIN_VALUE;
     @Unique private int aurora$lastAppliedEnabled = -1; // -1 = unknown, 0 = false, 1 = true
 
-    /** Vanilla "no overlay" pixel Ã¢â‚¬â€ preserves original behavior when hit color is off. */
-    @Unique private static final int AURORA_DISABLED_PIXEL = -1308622593;
+    /**
+     * The exact pixel vanilla writes into the top 8 rows of the overlay atlas
+     * (0xB2FF0000 ARGB — red at alpha 178, OverlayTexture's constructor).
+     * Restores the vanilla red flash bit-for-bit when hit color is off.
+     */
+    @Unique private static final int AURORA_DISABLED_PIXEL = -1291911168;
 
     @Inject(method = "<init>", at = @At("TAIL"))
     public void modifyHitColor(CallbackInfo ci) {
