@@ -8,6 +8,7 @@ import com.aurora.client.ui.util.RenderUtil;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -27,8 +28,9 @@ import java.util.Set;
  *       main render target: a live world ({@link #liveWorldBackdrop()}), or
  *       — the one declared exception — a menu backdrop a caller has stamped
  *       for this frame via {@code BlurPanelRenderer.noteMenuBackdropDrawn()}
- *       (the title screen, right after {@code renderPanorama} draws the
- *       panorama into the main target). With neither, every entry point
+ *       (what {@link #renderMenuPanorama} does for the no-world screens:
+ *       the title screen since 2026-09-08, {@code AuroraScreen} since
+ *       2026-09-12). With neither, every entry point
  *       declines up front (the same test the renderer's menu-context guard
  *       makes). Note {@link #liveWorldBackdrop()} itself answers only the
  *       world question — screens' {@code renderBackground} overrides use it
@@ -487,6 +489,39 @@ public final class GlassSurface {
     public static boolean liveWorldBackdrop() {
         Minecraft mc = Minecraft.getInstance();
         return mc != null && mc.level != null;
+    }
+
+    /**
+     * The shared menu-panorama backdrop — the extraction of what the title
+     * screen has done since 2026-09-08. Draws vanilla's rotating panorama
+     * ({@code Screen.renderPanorama}, an eager CubeMap pass that lands in
+     * the main render target's color texture the moment it returns) and
+     * declares it as this frame's capturable menu backdrop
+     * ({@link BlurPanelRenderer#noteMenuBackdropDrawn()}). A screen whose
+     * glass should work in a no-world context calls this from its
+     * {@code renderBackground} instead of falling through to vanilla's
+     * default menu background — which, on 1.21.11, draws the panorama
+     * itself and then stacks {@code renderBlurredBackground} +
+     * {@code renderMenuBackground} over it; calling this skips that
+     * sandwich, so the glass samples the clean panorama exactly the way
+     * the title screen's buttons do.
+     *
+     * <p>The declaration's guarantees are unchanged by which screen
+     * declares: the stamp is frame-scoped (it expires at the next
+     * {@code BlurPanelRenderer.beginFrame()}), and one screen renders per
+     * frame, so only the declaring screen's own surfaces — later in that
+     * same frame — can observe it.
+     *
+     * @return whether the panorama was drawn and declared (no level
+     *         loaded — skip vanilla's backdrop entirely); with a live
+     *         world behind the screen this returns {@code false} and the
+     *         caller keeps its world-gated path
+     */
+    public static boolean renderMenuPanorama(Screen screen, GuiGraphics g, float delta) {
+        if (liveWorldBackdrop()) return false;
+        ((com.aurora.client.mixin.ScreenPanoramaAccessor) screen).aurora$invokeRenderPanorama(g, delta);
+        BlurPanelRenderer.noteMenuBackdropDrawn();
+        return true;
     }
 
     /**

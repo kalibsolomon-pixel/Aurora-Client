@@ -612,14 +612,20 @@ claims/declines.
    `FeatureDetailScreen`, `ColorPickerScreen`, `HudEditorScreen` and
    `ResourcePackBrowserScreen` still carry private copies. Every glass integration follows
    the same **fallback contract**: decline (menu, screenshot suppression, failure) ⇒
-   complete flat look returns. The ONE exemption (2026-09-08): the menu-context guard (and
+   complete flat look returns. The ONE exemption (2026-09-08; generalized 2026-09-12): the
+   menu-context guard (and
    `GlassSurface.paint`'s capture-validity gate, which co-declines with it) admits a
    caller that has DECLARED a valid menu backdrop for the current frame —
-   `BlurPanelRenderer.noteMenuBackdropDrawn()`, stamped by `AuroraTitleScreen` right
-   after `renderPanorama` (on 1.21.11 `CubeMap.render` is an eager Blaze3D pass straight
-   into the main target's color texture, so the panorama is genuinely capturable by the
-   existing world-reader path). The stamp is frame-scoped (`poolEpoch` — expires at the
-   next `beginFrame()`), so it cannot leak to any other screen or frame; `liveWorldBackdrop()`
+   `BlurPanelRenderer.noteMenuBackdropDrawn()`, reached through the shared
+   `GlassSurface.renderMenuPanorama(Screen, GuiGraphics, float)` (draws the panorama,
+   then declares; returns false with a live world). Declaring screens: `AuroraTitleScreen`
+   since 2026-09-08 (from its `render`) and `AuroraScreen`'s no-world path since 2026-09-12
+   (from its `renderBackground` — before that, opening it from the title screen fell back
+   flat with no frosted glass at all). On 1.21.11 `CubeMap.render` is an eager Blaze3D pass
+   straight into the main target's color texture, so the panorama is genuinely capturable by
+   the existing world-reader path. The stamp is frame-scoped (`poolEpoch` — expires at the
+   next `beginFrame()`), so it cannot leak to any other screen or frame — whichever screen
+   declared; `liveWorldBackdrop()`
    itself is unchanged (its `renderBackground`-skip meaning is a separate question).
 6. **Layering contract — universal, structural.** EVERY glass surface — containers AND
    controls (rows, buttons, chips, pills, search/rename fields) — is painted in the screen's
@@ -702,7 +708,7 @@ flags now default ON mod-wide. Status below is committed `master`.
 
 | Screen | Status | Detail |
 |---|---|---|
-| `AuroraScreen` (main settings) | **Full** | Depressed glass window + raised glass tiles, search chip, profile button, layout buttons; world-gated. **Structural pre-dim pass (2026-09-11)**: `beginGlassPass` → window + chips/Profiles/layout/search field + tiles (tracked scissor, ROW priority) or the Settings tab's inline `renderGlassPass` walk (same scissor) → `overlayDim` → cached blit + content. `UiLayerCache` never holds glass (panels are texture blits bypassing the fill-capture sink); the Theme preview card gained its glass surface here for the first time |
+| `AuroraScreen` (main settings) | **Full** | Depressed glass window + raised glass tiles, search chip, profile button, layout buttons; world-gated — and since 2026-09-12 the no-world path draws the shared menu-panorama backdrop + declaration (`GlassSurface.renderMenuPanorama` from `renderBackground`), so opening the screen from the title screen shows real panorama-blurred glass under Frosted instead of the flat fallback (flat look under Wireframe/decline unchanged). **Structural pre-dim pass (2026-09-11)**: `beginGlassPass` → window + chips/Profiles/layout/search field + tiles (tracked scissor, ROW priority) or the Settings tab's inline `renderGlassPass` walk (same scissor) → `overlayDim` → cached blit + content. `UiLayerCache` never holds glass (panels are texture blits bypassing the fill-capture sink); the Theme preview card gained its glass surface here for the first time |
 | `FeatureDetailScreen` (all 45 detail views) | **Full** | Retires `GLASS_PILOT_IDS`; depressed glass window + glass Done/Reset for every feature. **Structural pre-dim pass (2026-09-10, the Part B pilot)**: `beginGlassPass` → every surface (window via `GlassSurface.container`, the four pill widgets, segments, `ButtonSetting`, the search/numeric fields, preview card, Done/Reset) → `GlassSurface.overlayDim` → cached blit + content. UiLayerCache unaffected: panels are texture blits that bypass the fill-capture sink, and the cached chrome stays a content layer above the dim. `EnumSetting`'s expanded popup stays above the dim via `GlassSurface.aboveDimControl` |
 | `ProfileManagerScreen` | **Full** | Rows are this screen's containers: DEPRESSED neutral glass (`WINDOW_FILL` only; the active-row `stainedTint` read as an accent-tinted container — user-flagged twice). Selection shown solely by the accent Active badge; New Profile/Done/Duplicate/Create all neutral raised |
 | Theme screen widgets (`ThemePreviewSetting`, `SegmentedControl`) | **Full** (the original pilot) | Preview card/chips/buttons glass; segments neutral-unselected/stained-selected |

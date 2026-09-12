@@ -60,6 +60,7 @@
     "ClientLevelWorldMapMixin",
     "ReflexMinecraftMixin",
     "ItemStackRenderStateAccessor",
+    "ScreenPanoramaAccessor",
     "hitreg.ArmorMixin",
     "hitreg.AttackMixin",
     "hitreg.ChunkMixin",

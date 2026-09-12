@@ -581,6 +581,9 @@ public final class BlurPanelRenderer {
      * into {@code getMainRenderTarget()}'s color texture (the exact texture
      * this pipeline's world reader wraps), so the pixels are already there
      * when the declaring screen's widgets capture later in the same frame.
+     * Screens reach this through {@code GlassSurface.renderMenuPanorama}
+     * (the shared draw-and-declare helper): the title screen since
+     * 2026-09-08, {@code AuroraScreen}'s no-world path since 2026-09-12.
      *
      * <p>This is the ONE sanctioned exception to the menu-context guard,
      * and it is built so it cannot leak:
@@ -601,7 +604,8 @@ public final class BlurPanelRenderer {
      *       exists for.</li>
      *   <li><b>Single-observer scope.</b> One screen renders per frame, so
      *       the only {@code renderPanel} calls that can observe a stamp are
-     *       the declaring screen's own surfaces, after the declaration.</li>
+     *       the declaring screen's own surfaces, after the declaration —
+     *       whichever screen declared.</li>
      * </ul>
      */
     public static void noteMenuBackdropDrawn() {
@@ -953,12 +957,13 @@ public final class BlurPanelRenderer {
         //
         // The ONE other exemption is by explicit per-frame DECLARATION (see
         // noteMenuBackdropDrawn): a caller that has just synchronously drawn
-        // a full-viewport backdrop into the main target — the title screen
-        // right after renderPanorama, whose CubeMap pass lands in the main
-        // target's color texture — asserts "no level, but valid capturable
-        // content" for this frame only. The stamp cannot survive the frame
-        // boundary, and every menu context that does not declare takes the
-        // exact historical decline below, term for term.
+        // a full-viewport backdrop into the main target — a declaring screen
+        // right after renderPanorama (GlassSurface.renderMenuPanorama: the
+        // title screen, AuroraScreen's no-world path), whose CubeMap pass
+        // lands in the main target's color texture — asserts "no level, but
+        // valid capturable content" for this frame only. The stamp cannot
+        // survive the frame boundary, and every menu context that does not
+        // declare takes the exact historical decline below, term for term.
         if (captureSource == null && mc.level == null && !menuBackdropValid()) {
             lastOutcome = "no level (menu context)";
             return false;

@@ -148,26 +148,32 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     }
 
     /**
-     * Glass pilot: when a live world is behind the screen, skip vanilla's
-     * background sandwich (full-screen blur + dark gradient) — the glass
-     * panels must sample the LIVE world, not an already-darkened,
-     * already-blurred backdrop (same reasoning as FeatureDetailScreen's
-     * no-op override on the Theme pilot). With no level loaded the glass
-     * renderer declines anyway (its menu-context guard) and the opaque
-     * fallback wants the vanilla backdrop as before, so the override is
-     * conditional on the same validity check the renderer uses.
+     * Backdrop by context. Live world: skip vanilla's background sandwich
+     * (full-screen blur + dark gradient) — the glass panels must sample the
+     * LIVE world, not an already-darkened, already-blurred backdrop (same
+     * reasoning as FeatureDetailScreen's no-op override on the Theme pilot).
+     * No world (opened from the title screen, or from the pause-less menu
+     * flow): the shared menu-panorama backdrop — panorama drawn and declared
+     * capturable, so the screen's glass surfaces sample it exactly like the
+     * title screen's buttons (2026-09-12; before this, vanilla's menu
+     * background drew, the guard correctly declined, and the screen fell
+     * back flat with no frosted glass at all under Frosted). The helper's
+     * {@code false} (a live world after all) falls through to vanilla's
+     * background for the flat look, as before glass.
      */
     @Override
     public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float delta) {
         if (liveWorldBackdrop()) return;
+        if (GlassSurface.renderMenuPanorama(this, g, delta)) return;
         super.renderBackground(g, mouseX, mouseY, delta);
     }
 
     /**
      * True when the main render target holds a live world — i.e. the glass
-     * capture source is valid. Mirrors {@code BlurPanelRenderer}'s own
-     * menu-context guard so this screen never asks for glass (and never
-     * drops the vanilla backdrop) in a context where glass cannot engage.
+     * capture source is valid without a menu-backdrop declaration. Mirrors
+     * {@code BlurPanelRenderer}'s own menu-context guard so this screen
+     * never asks for glass (and never drops the vanilla backdrop) in a
+     * context where glass cannot engage.
      */
     private boolean liveWorldBackdrop() {
         return this.minecraft != null && this.minecraft.level != null;

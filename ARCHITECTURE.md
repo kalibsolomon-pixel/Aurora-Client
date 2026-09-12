@@ -191,8 +191,14 @@ Conventions (violating these has caused real bugs — full list in AGENTS.md §6
    compact accent element, never a whole-row stain.
 4. Toggles, sliders, text entry (except search fields), and the color picker's editing
    surfaces are ALWAYS opaque.
-5. Glass needs a live world; `renderBackground` overrides skip vanilla's backdrop sandwich
-   when `GlassSurface.liveWorldBackdrop()`; decline ⇒ complete flat look (fallback contract).
+5. Glass needs a valid capture source: a live world, OR — the one declared
+   exception — a menu backdrop stamped for the frame via
+   `GlassSurface.renderMenuPanorama` (draws the panorama +
+   `BlurPanelRenderer.noteMenuBackdropDrawn()`; the title screen since
+   2026-09-08, `AuroraScreen`'s no-world path since 2026-09-12).
+   `renderBackground` overrides skip vanilla's backdrop sandwich when
+   `GlassSurface.liveWorldBackdrop()` and call the panorama helper when no
+   level is loaded; decline ⇒ complete flat look (fallback contract).
 6. EVERY glass surface — containers and controls — draws its BODY in the glass pass BEFORE
    the screen's `OVERLAY_DIM` fill; content after. Structural everywhere (rollout complete
    2026-09-11): the screen brackets the pass with `GlassSurface.beginGlassPass()`, the dim

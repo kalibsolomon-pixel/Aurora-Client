@@ -2,8 +2,8 @@ package com.aurora.client.screen;
 
 import com.aurora.client.ui.component.Button;
 import com.aurora.client.ui.component.ButtonWidget;
+import com.aurora.client.ui.component.GlassSurface;
 import com.aurora.client.ui.component.ThemedScreen;
-import com.aurora.client.ui.render.blur.BlurPanelRenderer;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
@@ -32,11 +32,15 @@ import net.minecraft.network.chat.Component;
  * issues an eager Blaze3D render pass straight into the main render
  * target's color texture — the same texture the glass pipeline's world
  * reader wraps — so right after {@code renderPanorama} returns, the
- * panorama pixels are genuinely capturable. The screen says so the one
- * sanctioned way: {@link BlurPanelRenderer#noteMenuBackdropDrawn()}, a
+ * panorama pixels are genuinely capturable. Since 2026-09-12 the screen
+ * says so through the shared helper —
+ * {@link GlassSurface#renderMenuPanorama}, which draws the panorama and
+ * stamps {@code BlurPanelRenderer.noteMenuBackdropDrawn()}, a
  * frame-scoped declaration that is the only exemption from the renderer's
  * menu-context guard (see that method for why the exemption cannot leak to
- * any other caller). The buttons are then ordinary shared
+ * any other caller; {@code AuroraScreen} declares the same way from its
+ * own {@code renderBackground} when no world is loaded). The buttons are
+ * then ordinary shared
  * {@link ButtonWidget}s on the standard glass treatment — chrome-only
  * depth, like {@code ColorPickerScreen}/{@code HudEditorScreen}: no
  * window, no dim, just glass controls over the live panorama, with the
@@ -107,13 +111,12 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
 
     @Override
     public void render(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
-        // Vanilla's rotating panorama, the same way the vanilla title screen
-        // draws it. CubeMap.render lands it in the main render target
-        // synchronously (an eager render pass against the main target's
-        // color texture), so once this returns the panorama is capturable —
-        // declared here, the one frame-scoped menu-backdrop opt-in.
-        renderPanorama(ctx, delta);
-        BlurPanelRenderer.noteMenuBackdropDrawn();
+        // Vanilla's rotating panorama via the shared menu-backdrop helper —
+        // the same draw + frame-scoped declaration any Aurora screen makes
+        // from its renderBackground (CubeMap.render is an eager pass against
+        // the main target's color texture, so the panorama is capturable the
+        // moment this returns).
+        GlassSurface.renderMenuPanorama(this, ctx, delta);
 
         // Buttons (and other drawable children)
         super.render(ctx, mouseX, mouseY, delta);
