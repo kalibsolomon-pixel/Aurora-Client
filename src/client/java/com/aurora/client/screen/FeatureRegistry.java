@@ -23,7 +23,7 @@ import java.util.function.Consumer;
  *   <li><b>Modules</b> â€” Aurora's gameplay/visual features (the grid),
  *       plus the combined "Miscellaneous" entry that groups the smaller
  *       settings (camera, frame pacer, latency, tick sync, input, servers,
- *       compliance, accessibility) behind one detail screen - an explicit
+ *       compliance) behind one detail screen - an explicit
  *       "for now" grouping (moved here from Settings 2026-09-10)</li>
  *   <li><b>Settings</b> - global client settings: title screen, fonts,
  *       theme (moved here from Modules 2026-09-09), and the UI fps limit</li>
@@ -1374,11 +1374,10 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
         // (Settings-tab entries had no detail screen), so this is new
         // capability, consistent with the other combined features.
         addWithSettings(MODULES, "miscellaneous", "Miscellaneous",
-                "A temporary home for smaller settings that have not been given a dedicated feature screen of their own yet: smooth camera, frame pacing, latency, tick sync, input handling, server-list dragging, compliance and accessibility. Each keeps its own enable toggle and settings under its section; open the feature to configure them.",
+                "A temporary home for smaller settings that have not been given a dedicated feature screen of their own yet: smooth camera, frame pacing, latency, tick sync, input handling, server-list dragging, and compliance. Each keeps its own enable toggle and settings under its section; open the feature to configure them.",
                 () -> cfg.smoothCamera || cfg.smoothFramePacer || cfg.lowLatencyRender
                         || cfg.tickSyncEnabled || cfg.inputSamplingDecoupled
-                        || cfg.serverListDragReorder || cfg.complianceModeEnabled
-                        || cfg.colorblindMode != AuroraConfig.ColorblindMode.OFF,
+                        || cfg.serverListDragReorder || cfg.complianceModeEnabled,
                 v -> {
                     cfg.smoothCamera = v;
                     cfg.smoothFramePacer = v;
@@ -1387,9 +1386,6 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                     cfg.inputSamplingDecoupled = v;
                     cfg.serverListDragReorder = v;
                     cfg.complianceModeEnabled = v;
-                    if (!v) cfg.colorblindMode = AuroraConfig.ColorblindMode.OFF;
-                    else if (cfg.colorblindMode == AuroraConfig.ColorblindMode.OFF)
-                        cfg.colorblindMode = AuroraConfig.ColorblindMode.DEUTERANOMALY;
                 },
                 List.of(
                         new SectionHeaderSetting("Smooth Camera"),
@@ -1485,24 +1481,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                         new StringListSetting("Strict Servers (custom)",
                                 () -> cfg.complianceStrictServers,
                                 v -> cfg.complianceStrictServers = v)
-                                .description("Additional server address patterns to treat as strict (compliance on). One address per line; substring match."),
-
-                        new SectionHeaderSetting("Accessibility"),
-                        new BooleanSetting("Enabled",
-                                () -> cfg.colorblindMode != AuroraConfig.ColorblindMode.OFF,
-                                v -> { if (!v) cfg.colorblindMode = AuroraConfig.ColorblindMode.OFF;
-                                                       else if (cfg.colorblindMode == AuroraConfig.ColorblindMode.OFF)
-                                                           cfg.colorblindMode = AuroraConfig.ColorblindMode.DEUTERANOMALY; })
-                                .description("Colorblind correction filters and scroll-wheel remapping for players who need them. Colorblind modes apply a daltonization color matrix to the whole screen so reds, greens, and blues are distinguishable for each type of deficiency."),
-                        new EnumSetting<>("Colorblind Mode",
-                                AuroraConfig.ColorblindMode.class,
-                                () -> cfg.colorblindMode,
-                                v -> cfg.colorblindMode = v)
-                                .description("Select the type of color vision deficiency to correct. The filter shifts colors into ranges you can distinguish. OFF disables the filter."),
-                        SliderSetting.ofInt("Correction Strength",
-                                () -> cfg.colorblindStrength,
-                                v -> cfg.colorblindStrength = v, 0, 100)
-                                .description("How strongly the correction is applied. 100% is full correction; lower values blend toward the original colors for a subtler effect.")
+                                .description("Additional server address patterns to treat as strict (compliance on). One address per line; substring match.")
                 ),
                 // Union of the eight tiles' config fields (see the
                 // resetByPrefix comment on pack_tweaks for prefix rules).
@@ -1511,10 +1490,8 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                         "smoothFramePacer", "framePacer", "framePacing",
                         "lowLatencyRender", "disableVSync", "adaptiveRenderSleeping",
                         "tickSync", "inputSamplingDecoupled", "serverListDragReorder",
-                        "compliance", "colorblind"));
+                        "compliance"));
 
-        // ---- Compliance Mode ----
-        // ---- Accessibility ----
     }
 
 

@@ -1170,28 +1170,6 @@ public class AuroraConfig {
      */
     public java.util.List<String> complianceStrictServers = new java.util.ArrayList<>();
 
-    // ---- Accessibility ----
-    /** Colorblind correction filter type. OFF = no filter. */
-    public ColorblindMode colorblindMode = ColorblindMode.OFF;
-    /** Strength of the colorblind correction filter (0..100%). */
-    public int colorblindStrength = 100;
-    /** Remap scroll-wheel up to a custom action (0 = vanilla, -1 = unbound). */
-    public int scrollUpRemap = 0;
-    /** Remap scroll-wheel down to a custom action (0 = vanilla, -1 = unbound). */
-    public int scrollDownRemap = 0;
-
-    public enum ColorblindMode {
-        OFF("Off"),
-        PROTANOPIA("Protanopia (red-blind)"),
-        DEUTERANOPIA("Deuteranopia (green-blind)"),
-        TRITANOPIA("Tritanopia (blue-blind)"),
-        PROTANOMALY("Protanomaly (red-weak)"),
-        DEUTERANOMALY("Deuteranomaly (green-weak)");
-
-        private final String label;
-        ColorblindMode(String label) { this.label = label; }
-        public String getLabel() { return label; }
-    }
 
     public static AuroraConfig get() { return INSTANCE; }
 

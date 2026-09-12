@@ -260,7 +260,7 @@ shift+right-click = lock, X = disable.
 | Animations (`animations`) | Swing curve + 1.8 swing arc, view-bob curve/amplitude, 1.7/1.8 damage tilt, idle held-item sway, frame-rate-independent entity movement smoothing (tau scales with server packet bundling) | `HeldItemRendererMixin`, `GameRendererBobMixin`, `DamageTiltMixin`, `LivingEntityRendererExtractMixin` + `EntityMovementSmoother`, `util/AnimationCurves`, cross-cutting `ThrottleDetector` |
 | Hotbar Bounce (`hotbar_bounce`) | White pulse outline on hotbar slot when stack count grows | `HotbarItemBounceMixin` → `HotbarBounceTracker` |
 | Keystrokes (`keystrokes`) | Key-panel overlay: WASD/mouse/CPS/space/sneak/sprint + up to 12 custom keys; pressed-key accent follows the theme accent by default (`keystrokesAccentColor == 0`, R6 P2; explicit color overrides); key labels follow the shared `hudColor` sentinel (R6 ext) | `hud/module/KeystrokesModule` |
-| Miscellaneous (`miscellaneous`) — **moved to the MODULES grid 2026-09-10** | The 2026-09-09 consolidation of the eight tiles that used to sit below Interface (Smooth Camera, Frame Pacer, Low Latency, Tick Sync, Decoupled Input, Drag-to-Reorder Servers, Compliance Mode, Accessibility) behind one tile + detail screen; grid right-click opens the same detail screen as every other tile — an explicit "for now" grouping, not a taxonomy decision. The Low Latency section was audited 2026-09-11 (§8): the dead Zero-Latency Camera and High-Frequency Input rows are gone, Adaptive Render Sleeping is genuinely gated on the section's Enabled toggle, and descriptions match verified behavior | `FeatureRegistry` MODULES entry (byte-verbatim settings + unified reset), `ModuleManager` grid card, "?" (`question_mark` U+EB8B) icon |
+| Miscellaneous (`miscellaneous`) — **moved to the MODULES grid 2026-09-10** | The 2026-09-09 consolidation of the tiles that used to sit below Interface (Smooth Camera, Frame Pacer, Low Latency, Tick Sync, Decoupled Input, Drag-to-Reorder Servers, Compliance Mode, Accessibility — the last two since removed entirely, 2026-09-12) behind one tile + detail screen; grid right-click opens the same detail screen as every other tile — an explicit "for now" grouping, not a taxonomy decision. The Low Latency section was audited 2026-09-11 (§8): the dead Zero-Latency Camera and High-Frequency Input rows are gone, Adaptive Render Sleeping is genuinely gated on the section's Enabled toggle, and descriptions match verified behavior | `FeatureRegistry` MODULES entry (byte-verbatim settings + unified reset), `ModuleManager` grid card, "?" (`question_mark` U+EB8B) icon |
 
 ### SETTINGS tab (4 tiles)
 
@@ -1550,6 +1550,18 @@ armed instance before the next frame renders — the press-capture arms the
 merged `aurora$pressDownStartMs` field reflectively on a still-rendering
 button instead.
 
+Landed 2026-09-12: **the Accessibility (colorblind) feature was removed entirely**
+(one revertible commit, D9 discipline — reference-search before delete). The feature
+never functioned: `AccessibilityFeature.getColorMatrix()`'s daltonization matrices had
+no render-path consumer at all, the screen-reader item was deferred, and the
+scroll-remap tick (`scrollUpRemap`/`scrollDownRemap`) was a documented no-op. Removed:
+`AccessibilityFeature`, its registration, the `colorblindMode`/`colorblindStrength`/
+scroll-remap config fields + `ColorblindMode` enum, and the Miscellaneous screen's
+Accessibility section (master toggle/getter/setter/reset-prefix entries updated; the
+Miscellaneous tile itself stays, now seven former tiles). Old configs carrying the
+removed fields load clean — GSON's lenient parsing ignores unknown fields, for both
+direct load and ProfileManager snapshots.
+
 ---
 
 ## 9. Known outstanding work, dead code, and hazards
@@ -1583,8 +1595,11 @@ button instead.
   mid-render) and re-add a consumer there. Medium scope (pump mixin +
   mask/replay utility + verification harness); deliberately NOT built in the
   audit session.
-- Accessibility colorblind correction: matrices are computed but the screen-reader item is
-  deferred and the scroll-remap tick is a documented no-op.
+- ~~Accessibility colorblind correction: matrices are computed but the screen-reader item is
+  deferred and the scroll-remap tick is a documented no-op~~ **Removed entirely
+  (2026-09-12)** — the feature never functioned (the color matrices had no render-path
+  consumer at all); `AccessibilityFeature`, the colorblind config fields/enum, and the
+  Miscellaneous screen's Accessibility section are gone. See §8.
 - ModMenu integration is minimal (reflective shim; "Mods" button retired as duplicating
   Aurora Settings).
 

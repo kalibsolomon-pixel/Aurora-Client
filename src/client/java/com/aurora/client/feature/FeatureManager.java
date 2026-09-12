@@ -42,7 +42,6 @@ public class FeatureManager {
         register(new ThemeFeature());
         register(new StatusAlertFeature());
         register(new ComplianceModeFeature());
-        register(new AccessibilityFeature());
         register(new TickSyncFeature());
         for (Feature f : features.values()) {
             try {
