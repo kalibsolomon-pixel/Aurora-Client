@@ -8,9 +8,13 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * Reads the MouseHandler's accumulated cursor delta at the start of each frame
- * render and applies it to the local player's look direction. Vanilla
- * normally only does this 20 times/sec inside MouseHandler#tick ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ updateMouse.
+ * Applies the MouseHandler's accumulated cursor delta at the very top of
+ * each frame render — before the game-tick block — instead of vanilla's
+ * own per-frame application point in MouseHandler.handleAccumulatedMovement
+ * (runTick's render section, just before GameRenderer.render). On frames
+ * that run a game tick, tick logic sees this frame's aim rather than the
+ * previous one's. The batch is applied raw, bypassing vanilla's
+ * cinematic-camera smoothing curve.
  *
  * <p>Network rate is unchanged: LocalPlayer.sendMovementPackets
  * runs at tick rate and only sends the latest yaw/pitch.

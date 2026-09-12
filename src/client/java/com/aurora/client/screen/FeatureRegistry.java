@@ -1419,13 +1419,13 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                         new BooleanSetting("Enabled",
                                 () -> cfg.lowLatencyRender,
                                 v -> cfg.lowLatencyRender = v)
-                                .description("Shrinks the GPU's render-ahead queue so the frame you see reflects your most recent input. Reduces the delay between moving your mouse and the screen updating — the world feels more 'connected' to your hand. For the biggest effect, also disable VSync below."),
+                                .description("Master switch for the latency settings in this section: the VSync-off enforcement and the Reflex-style render sleep below. With this off, neither has any effect, even with their own toggles on."),
                         new BooleanSetting("Disable VSync (causes tearing without VRR)",
                                 () -> cfg.disableVSync, v -> cfg.disableVSync = v)
                                 .description("Turns off vertical sync, removing the frame-buffering delay it adds for the lowest possible input lag. The trade-off is screen tearing (a horizontal seam during fast motion) unless your monitor has a variable refresh rate like G-Sync or FreeSync. Leave on if you see tearing."),
                         new BooleanSetting("Adaptive Render Sleeping (Reflex-style)",
                                 () -> cfg.adaptiveRenderSleeping, v -> cfg.adaptiveRenderSleeping = v)
-                                .description("Dynamically aligns the CPU thread sleep with the render pipeline, sleeping immediately before input polling to minimize the rendering queue."),
+                                .description("Moves the frame-rate limiter's wait from the end of the frame to the very start of the next one, so the CPU sleeps just before your input is applied and the frame is built — keeping the GPU render queue short. Requires this section's Enabled toggle plus the Frame Pacer above being on with a non-Vanilla strategy."),
 
                         new SectionHeaderSetting("Tick Sync"),
                         new BooleanSetting("Enabled",
@@ -1446,7 +1446,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                         new BooleanSetting("Enabled",
                                 () -> cfg.inputSamplingDecoupled,
                                 v -> cfg.inputSamplingDecoupled = v)
-                                .description("Samples your mouse every rendered frame instead of on Minecraft's fixed 20-per-second schedule. Vanilla's coarse sampling makes aim feel like it snaps in tiny steps at high FPS; decoupling it makes mouse movement perfectly fluid and 1:1 with your hand. Recommended for anyone playing above 60 FPS."),
+                                .description("Feeds your mouse movement into the game at the very top of each rendered frame — ahead of the game-tick logic, instead of at vanilla's own per-frame application point just before the world renders. On frames that run a game tick, your aim is already in place before tick decisions are made instead of landing just after. Applies the raw batch, so vanilla's cinematic-camera smoothing is bypassed while this is on."),
 
                         new SectionHeaderSetting("Drag-to-Reorder Servers"),
                         new BooleanSetting("Enabled",
