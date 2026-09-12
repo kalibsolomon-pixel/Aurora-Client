@@ -986,7 +986,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                         new SectionHeaderSetting("Appearance"),
                         new ColorSetting("Border Color",
                                 () -> cfg.minimapBorderColor, v -> cfg.minimapBorderColor = v)
-                                .description("Color of the 1px frame around the minimap, and the fill used to mask corners when Circular is on."),
+                                .description("Color of the frame ring around the minimap and the compass letters. Default (0) follows the theme accent; pick a color to override."),
                         new ColorSetting("Coordinate Text Color",
                                 () -> cfg.minimapCoordColor, v -> cfg.minimapCoordColor = v)
                                 .description("Color of the X/Y/Z readout shown below the minimap when Show Coordinates is on.")

@@ -1051,8 +1051,13 @@ public class AuroraConfig {
     public boolean minimapShowCompass = true;
     /** Minimap background mode. */
     public HudBackground minimapBgMode = HudBackground.AURORA;
-    /** Minimap border/frame color (ARGB). */
-    public int minimapBorderColor = 0xFF000000;
+    /**
+     * Minimap border/frame color (ARGB). {@code 0} (factory default) is the
+     * follow-accent sentinel resolved via {@code HudText.color()} — ring and
+     * compass take the theme accent; any non-zero value wins verbatim
+     * (legacy configs that persisted the old black default are unchanged).
+     */
+    public int minimapBorderColor = 0;
     /** Minimap coordinate text color (ARGB). */
     public int minimapCoordColor = 0xFFFFFFFF;
 

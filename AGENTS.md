@@ -249,7 +249,7 @@ shift+right-click = lock, X = disable.
 | Totem Pop Counter (`totem_pop`) | Your (and optionally others') totem activations; reset keybind; nametag counts | `TotemPopFeature`, `ClientPacketListenerEntityEventMixin`, `TotemPopModule` |
 | Stats Overlay (`stats`) | Session kills/deaths/K/D/time (kills heuristic: strike → 4s death window) **plus Better Hitreg's fight stats**: Fights (session + lifetime total), Fight Time (session + lifetime), Last Fight (duration + both accuracies). Lifetime totals persist in `fightStatsTotalFights`/`fightStatsPlaytimeSeconds` (profile-excluded); session values reset with "Reset Stats"; lifetime totals only via the separate "Reset Lifetime Fight Totals" button | `StatsTrackerFeature` (`recordFight`), `StatsModule`, fed by `hitreg/settings/Settings.addFight` |
 | Waypoints (`waypoints`) | Per-world persistent markers: beacon beam and/or highlight slab + billboard labels; auto death waypoints (replace-previous or capped) | `WaypointFeature`, `hud/WaypointRenderer` (two passes), `WaypointManagerScreen` |
-| Minimap (`minimap`) | HUD minimap; rotation baked into the sampling pass (cheap); biome tint, hillshade, depth water; waypoint/entity dots, compass; can read World Map's region cache instead of live chunks | `hud/module/MinimapModule` (805 lines), `MinimapFeature`, `worldmap/WorldMapClient.sampleSurfaceAbgr` |
+| Minimap (`minimap`) | HUD minimap; rotation baked into the sampling pass (cheap); biome tint, hillshade, depth water; waypoint/entity dots, compass; can read World Map's region cache instead of live chunks. Frame ring + compass letters = chrome, follow the theme accent via `minimapBorderColor`'s `0` sentinel (`HudText.color()`); terrain/biome tints = data, never themed | `hud/module/MinimapModule` (805 lines), `MinimapFeature`, `worldmap/WorldMapClient.sampleSurfaceAbgr` |
 | Container Preview (`container_preview`) | Tooltip grid for shulker contents + ender chest (snapshot while chest screen open — 1.21.x limitation) | `ItemTooltipImageMixin`, `ItemContainerContentsTooltipMixin`, `hud/preview/*` |
 | Item Physics (`item_physics`) | Dropped items lie flat, tumble by motion | `ItemEntityRendererExtractMixin` + `ItemEntityRendererSubmitMixin` + `util/AuroraItemPhysicsSnapshots` |
 | Particles (`particles`) | Per-particle-type visibility/scale/ARGB tint with search. Visibility gated at HEAD of `createParticle` (RETURN is too late) | `ParticleControlFeature`, `ParticleEngineMixin`, `ParticleAccessor` |
@@ -419,12 +419,21 @@ every one of them while keystrokes fills + the Info panel's AURORA backdrop stil
 track the theme, a key-absent config resolves to the accent, and the fixed-hue
 elements (HudStatus alert card, armor durability bars, minimap entity dots) are
 byte-identical across accents. The remaining hard calls stay deferred: Minimap
-(terrain/biome tint, frame ring), Crosshair/Hitbox/BlockOverlay, SaturationOverlay,
+(terrain/biome tint), Crosshair/Hitbox/BlockOverlay, SaturationOverlay,
 Armor's durability bar, `AuroraTitleScreen` — each has
 data-vs-chrome or fixed-hue questions the pilot sessions deferred on purpose.
 (`WorldMapScreen` left this list 2026-09-08: its chrome got the chrome-only glass
 treatment — §6 table — and its map content/readouts were ruled content, hardcoded
-neutrals over map data.)
+neutrals over map data.) (Minimap's frame ring also left the list 2026-09-11, user
+ruling: the ring/frame and compass letters are CHROME and now follow the theme
+accent via `minimapBorderColor`'s `0` follow-accent sentinel — the same
+`HudText.color()` resolution as `hudColor`, default flipped black→0 so fresh
+configs get the accent while legacy persisted colors win verbatim; the compass
+letters (previously hardcoded white) take the same resolved color so ring +
+compass move as one chrome unit. Terrain/biome tints stay DATA — real world
+colors, untouched — and entity dots/waypoint colors stay pinned by the original
+R6 pass. Verified by p3red/p3blue boots: ring + compass track the accent, map
+interior byte-identical across accents.)
 
 Landed 2026-09-08 after that: **glass on the title screen, over the vanilla panorama**
 (two commits — mechanism, then adoption). Investigation first established what the

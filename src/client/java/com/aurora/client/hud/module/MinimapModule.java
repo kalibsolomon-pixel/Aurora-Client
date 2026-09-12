@@ -5,6 +5,7 @@ import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.config.AuroraConfig.Waypoint;
 import com.aurora.client.feature.impl.WaypointFeature;
 import com.aurora.client.hud.HudAnchor;
+import com.aurora.client.theme.HudText;
 import com.aurora.client.worldmap.WorldMapClient;
 import com.mojang.blaze3d.platform.NativeImage;
 import net.minecraft.client.Minecraft;
@@ -166,7 +167,11 @@ import java.util.List;
 
         boolean circular = cfg.minimapCircular;
         boolean rotate = cfg.minimapRotateWithPlayer;
-        int border = cfg.minimapBorderColor;
+        // Chrome color (ring/frame + compass letters): the HudText sentinel —
+        // 0 (factory default) follows the theme accent, explicit ARGB wins.
+        // Terrain/biome sampling never reads this; entity dots and waypoint
+        // colors are pinned elsewhere by R6 and untouched here.
+        int border = HudText.color(cfg.minimapBorderColor);
         int cx = mapX + size / 2;
         int cy = mapY + size / 2;
 
@@ -248,7 +253,7 @@ import java.util.List;
 
         // --- Compass letters ---
         if (cfg.minimapShowCompass) {
-            drawCompass(g, mapX, mapY, size, mc.player.getYRot(), rotate, mc);
+            drawCompass(g, mapX, mapY, size, mc.player.getYRot(), rotate, mc, border);
         }
 
         // --- Coordinate readout ---
@@ -774,7 +779,7 @@ import java.util.List;
     }
 
     private void drawCompass(GuiGraphics g, int x, int y, int size,
-                             float yawDeg, boolean rotateWithPlayer, Minecraft mc) {
+                             float yawDeg, boolean rotateWithPlayer, Minecraft mc, int color) {
         float cx = x + size * 0.5f;
         float cy = y + size * 0.5f;
         float radius = size * 0.5f - 6;
@@ -790,7 +795,7 @@ import java.util.List;
             int sx = (int) (cx + lx);
             int sy = (int) (cy + ly);
             int tw = mc.font.width(letters[i]);
-            g.drawString(mc.font, letters[i], sx - tw / 2, sy - 4, 0xFFFFFFFF, false);
+            g.drawString(mc.font, letters[i], sx - tw / 2, sy - 4, color, false);
         }
     }
 
