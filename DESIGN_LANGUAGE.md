@@ -166,6 +166,51 @@ which follows whatever logical grouping the feature naturally has):
    groups — never interleaved with adjustable settings, matching iOS's
    convention of isolating destructive actions from everything else.
 
+## 8. Scroll-boundary fade (top edge only)
+
+Scrollable content **fades into the surface it sits on** as it approaches
+the TOP clip boundary — never a hard cut at a scissor edge, and never a
+slide over the title band on unscissored lists. The bottom edge
+deliberately has no counterpart: lists end in the screen's own
+padding/footer, which never produced the collision the top edge does
+(content leaving at the top passes under fixed chrome — title, toolbar,
+search band — which is exactly where an abrupt edge reads worst).
+
+- **Mechanism:** `util/ScrollFade` — a vertical gradient painted AFTER the
+  scrollable content (never inside a `UiLayerCache` capture pass), starting
+  at the boundary in the surface color **verbatim — alpha channel
+  included** — and ramping to fully transparent over **16 GUI pixels**
+  (`ScrollFade.FADE_PX`). Because the top of the gradient is the color the
+  surface already has at that position, the fade reads as content
+  dissolving into the surface over glass and flat/fallback containers
+  alike, and never introduces a second Background Opacity application
+  point.
+- **The surface color is whatever the screen's container tint actually is
+  at that position:** `WINDOW_FILL` for scissored viewports inside a window
+  (glass or flat — same token either way); `OVERLAY_DIM` for screens whose
+  rows float over the veiled world with no container (the manager
+  screens), where the dim veil IS the surface.
+- **Engagement scales with scroll:** the gradient's top alpha is
+  `min(1, scrollPos / 16)` of the surface color's own alpha — a list at
+  rest (nothing above the boundary) is pixel-untouched, and the fade is
+  fully engaged once one fade-height of content has passed the boundary.
+  Engagement takes the raw scroll position, not a scroll/overflow ratio.
+- **Two shapes:** gradient-only (`drawTop`) for scissored viewports, where
+  the scissor already hides anything above the boundary; capped
+  (`drawTopCapped`) for unscissored lists (the detail screens), where a
+  solid cap of the same color must also cover content that still paints
+  above the boundary. Hit-testing follows the render truth either way:
+  content hidden by the fade band is not clickable (the same rule
+  `ManagerListScreen` applies to its scissored clip band).
+- **Rim highlights** of raised glass rows fading through the gradient are
+  an accepted nuance — no special handling (verified on the pilot: the
+  waypoint rows' rims dim smoothly with their bodies).
+
+Piloted on `FeatureDetailScreen` (all detail screens incl. Miscellaneous),
+`ManagerListScreen` (both manager screens), and `AuroraScreen` (Mods grid
++ Settings tab); extend screen by screen to the remaining scrollable
+surfaces from here.
+
 ## What this does NOT change
 - No new visual style, colors, or glass behavior — this is layout
   discipline applied through existing tokens and existing widgets.
