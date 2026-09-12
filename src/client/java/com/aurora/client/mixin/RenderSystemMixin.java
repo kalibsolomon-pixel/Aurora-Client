@@ -50,7 +50,7 @@ public abstract class RenderSystemMixin {
         if (!isAuroraGui) {
             if (!cfg.smoothFramePacer) return;
             if (cfg.framePacingStrategy == AuroraConfig.PacingStrategy.VANILLA) return;
-            if (cfg.adaptiveRenderSleeping) {
+            if (cfg.lowLatencyRender && cfg.adaptiveRenderSleeping) {
                 ci.cancel(); // Let the start of runTick handle adaptive JIT sleeping instead
                 return;
             }

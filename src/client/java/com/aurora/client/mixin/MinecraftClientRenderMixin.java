@@ -35,7 +35,15 @@ public abstract class MinecraftClientRenderMixin {
         // content): resets "dim painted" so every frame starts in the pass.
         com.aurora.client.ui.component.GlassSurface.beginFrame();
 
-        if (cfg.smoothFramePacer && cfg.adaptiveRenderSleeping && cfg.framePacingStrategy != AuroraConfig.PacingStrategy.VANILLA) {
+        // Adaptive (Reflex-style) render sleep. Gated on the Low Latency
+        // master, and skipped inside Aurora's own screens: there the GUI
+        // limiter (RenderSystemMixin, guiFpsLimit) owns pacing, and a HEAD
+        // sleep paced at the vanilla cap would outrun its anchor and
+        // silently defeat the Interface FPS cap.
+        boolean auroraGui = self.screen != null
+                && self.screen.getClass().getName().startsWith("com.aurora.client.screen");
+        if (!auroraGui && cfg.lowLatencyRender && cfg.smoothFramePacer
+                && cfg.adaptiveRenderSleeping && cfg.framePacingStrategy != AuroraConfig.PacingStrategy.VANILLA) {
             int fps = self.options.framerateLimit().get();
             if (fps > 0) {
                 double now = org.lwjgl.glfw.GLFW.glfwGetTime();
