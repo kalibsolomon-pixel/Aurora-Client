@@ -14,6 +14,7 @@ import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.ui.util.MaterialIconRenderer;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.ui.util.UiLayerCache;
+import com.aurora.client.util.ScrollFade;
 import com.aurora.client.util.SmoothScroll;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -409,6 +410,17 @@ public class AuroraScreen extends Screen implements ThemedScreen {
 
         if (selectedCategory == 0) renderModulesLive(g, mods, mouseX, mouseY, delta);
         else renderSettingsLive(g, mouseX, mouseY, delta);
+
+        // Design language §8 — top-edge scroll fade. Both tabs scissor
+        // their content to the same viewport (boxY()+36 .. boxY()+BOX_H-10),
+        // so one gradient serves either: tiles / inline rows fade into the
+        // window's own tint (WINDOW_FILL, verbatim — its alpha IS the
+        // Background Opacity, the single application point) as they approach
+        // the viewport top, instead of hard-cutting at the scissor. Painted
+        // outside the content scissor, before the thumb. Gradient-only: the
+        // scissor already hides anything above the boundary.
+        ScrollFade.drawTop(g, (int) mainX(), 254, (int) (boxY() + 36), ScrollFade.FADE_PX,
+                scrolls[selectedCategory].current(), ThemeManager.color(ThemeToken.WINDOW_FILL));
 
         drawScrollbar(g);
     }
