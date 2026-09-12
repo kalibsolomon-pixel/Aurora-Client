@@ -291,7 +291,6 @@ public class AuroraConfig {
     public boolean tickSyncUseNettyCriteria = false;
 
     // ---- Late-Stage Responsive Features ----
-    public boolean zeroLatencyCamera = false;
     public boolean highFrequencyInput = false;
     public boolean adaptiveRenderSleeping = false;
     public boolean fixHeldItemSeams = true;

@@ -30,8 +30,6 @@ public abstract class CameraUpdateMixin {
     @Shadow
     protected abstract void setRotation(float yaw, float pitch);
 
-    @org.spongepowered.asm.mixin.Unique private static boolean aurora$loggedZeroLatency = false;
-
     @Inject(
             method = "setup",
             at = @At(
@@ -47,28 +45,6 @@ public abstract class CameraUpdateMixin {
             boolean inverseView, float tickDelta, CallbackInfo ci) {
 
         if (!(focusedEntity instanceof LocalPlayer)) return;
-
-        if (AuroraConfig.get().zeroLatencyCamera) {
-            Minecraft self = Minecraft.getInstance();
-            if (self.mouseHandler != null && self.player != null && self.mouseHandler.isMouseGrabbed()) {
-                com.aurora.client.mixin.MouseAccessor mouseAccess = (com.aurora.client.mixin.MouseAccessor) self.mouseHandler;
-                double dx = mouseAccess.aurora$getCursorDeltaX();
-                double dy = mouseAccess.aurora$getCursorDeltaY();
-                if (dx != 0.0 || dy != 0.0) {
-                    if (!aurora$loggedZeroLatency) {
-                        com.aurora.client.AuroraClient.LOGGER.info("[Aurora-LateInput] Zero-Latency late-stage camera injection active.");
-                        aurora$loggedZeroLatency = true;
-                    }
-                    double sens = self.options.sensitivity().get() * 0.6 + 0.2;
-                    double scale = sens * sens * sens * 8.0;
-                    boolean invert = self.options.invertMouseY().get();
-                    self.player.turn((float) (dx * scale), (float) (dy * scale * (invert ? -1 : 1)));
-                    this.setRotation(self.player.getYRot(), self.player.getXRot());
-                    mouseAccess.aurora$setCursorDeltaX(0.0);
-                    mouseAccess.aurora$setCursorDeltaY(0.0);
-                }
-            }
-        }
 
         // Priority: FreeLook wins over smooth camera.
         if (AuroraConfig.get().freeLookEnabled && FreeLookFeature.isActive()) {
