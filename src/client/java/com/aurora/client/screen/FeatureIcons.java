@@ -30,6 +30,7 @@ public final class FeatureIcons {
         ICONS.put("crosshair",             "\uE55C"); // gps_fixed (target)
         ICONS.put("hitbox",                "\uE3C2"); // crop_free (box outline)
         ICONS.put("hit_color",             "\uE3B8"); // colorize (dropper)
+        ICONS.put("glint_color",           "\uE65F"); // auto_awesome (sparkles — the enchant shimmer)
         ICONS.put("better_hitreg",         "\uF889"); // swords — crossed blades, melee PvP; subsetting requires the real full_material.ttf (see subset_script.py)
         ICONS.put("info_module",           "\uE88E"); // info
         ICONS.put("cps",                   "\uE323"); // mouse

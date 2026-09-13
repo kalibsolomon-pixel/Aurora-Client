@@ -1702,6 +1702,15 @@ captures (not flattened); and the mid-session toggle-off restores vanilla purple
 (blade purple 25996, B-dominant differential, zero residual target hues) — the
 `d84298c` failure mode stays affirmatively ruled out.
 
+Landed 2026-09-13 after that: **the Glint Color tile icon** — `auto_awesome`
+(the Material sparkles glyph, U+E65F) on the Modules-grid card, next to Hit
+Color's dropper. Codepoint verified against the real `full_material.ttf` cmap
+(not hand-typed), the material-symbols subset regenerated from it (41 glyphs —
+exactly the `FeatureIcons` codepoint set again), and the subset's kept glyph
+outline-verified byte-identical to the source font's `auto_awesome`. Verified
+in-game by a `glinticon` DevPilot boot: the enabled tile renders the sparkles
+glyph in ON_ACCENT on the stained glass.
+
 ---
 
 ## 9. Known outstanding work, dead code, and hazards
