@@ -109,6 +109,12 @@ public class AuroraClient implements ClientModInitializer {
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_WORLD_TICK.register(
                 client -> com.aurora.client.util.OverlayReloadListener.callEvent());
 
+        // Enchant Glint Recolor: END_CLIENT_TICK (not WORLD) so glint config
+        // edits apply even from no-world screens; ticks run between frames,
+        // which is what makes the texture reload safe (GlintColor.tick).
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(
+                client -> com.aurora.client.util.GlintColor.tick());
+
         // Two-way sync between Aurora config and the vanilla KeyMapping
         // entries we registered above. END_CLIENT_TICK runs every tick
         // regardless of world state, so rebinds made from the vanilla

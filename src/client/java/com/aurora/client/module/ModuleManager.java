@@ -26,6 +26,7 @@ public class ModuleManager {
         modules.add(new Module("hitbox", "Hitbox", "Draws entity hitboxes with your own color, line width, and optional eye-level and look-direction lines."));
         modules.add(new Module("better_hitreg", "Better Hitreg", "Client-side hit registration feedback for PvP — plays your hit sound and hurt animation the instant you swing instead of waiting for the server, tracks ghosted and misplaced hits, and adds reach rings, target hitboxes and a practice arena. Original project by Jass."));
         modules.add(new Module("hit_color", "Hit Color", "Recolors the red flash that overlays an entity when it takes damage."));
+        modules.add(new Module("glint_color", "Glint Color", "Recolors the animated shimmer that enchanted items and armor give off."));
         modules.add(new Module("info_module", "Info HUD", "A configurable corner readout of useful at-a-glance info — FPS, coordinates, time of day, facing, biome, dimension, light level, playtime and more."));
         modules.add(new Module("cps", "CPS", "Shows your current clicks-per-second as a HUD counter."));
         modules.add(new Module("armor_hud", "Armor HUD", "Displays your four equipped armor pieces and their remaining durability on the HUD."));

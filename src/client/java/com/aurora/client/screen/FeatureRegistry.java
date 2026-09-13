@@ -468,6 +468,18 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                 .description("Also tints worn armor with the flash color when an entity is hurt.")
                 ));
 
+        addWithSettings(MODULES, "glint_color", "Glint Color",
+                "Recolors the enchantment glint — the animated shimmer on enchanted items, tools, and worn armor. Vanilla's purple sheen is subtle and every enchantment looks the same; a bright custom color makes enchanted gear instantly recognizable in your hotbar, hand, and inventory.",
+                () -> cfg.glintColorEnabled, v -> cfg.glintColorEnabled = v,
+                List.of(
+                        new ColorSetting("Glint Color", () -> cfg.glintColor, v -> cfg.glintColor = v)
+                                .description("The tint multiplied onto the glint's shimmer pattern. The color's opacity scales the glint's strength — lower alpha gives a subtler shimmer. Vanilla's glint is a dim purple."),
+                        new BooleanSetting("Tint Armor",
+                                () -> cfg.glintColorTintArmor,
+                                v -> cfg.glintColorTintArmor = v)
+                                .description("Also recolor the glint on worn armor pieces. When off, only held and inventory items are recolored and armor keeps the vanilla purple shimmer.")
+                ));
+
         // HUD MODULES â€” each has Background mode + Background Color
 
         addWithSettings(MODULES, "info_module", "Info HUD",

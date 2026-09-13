@@ -25,6 +25,7 @@
     "MinecraftClientRenderMixin",
     "MixinOverlayTexture",
     "EquipmentLayerRendererMixin",
+    "ReloadableTextureMixin",
     "InGameHudPotionOverlayMixin",
     "NoFogMixin",
     "UnderwaterClarityMixin",

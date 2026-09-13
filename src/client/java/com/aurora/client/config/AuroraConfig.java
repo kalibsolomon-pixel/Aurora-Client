@@ -337,6 +337,11 @@ public class AuroraConfig {
     public boolean hitColorEnabled = false;
     public int hitColor = 0x66FF0000; // ARGB: ~40% red, similar to vanilla flash
     public boolean hitColorTintArmor = true; // also tint armor when an entity is hurt
+    // ---- Enchant Glint Recolor (mirrors the Hit Color field set) ----
+    public boolean glintColorEnabled = false;
+    /** ARGB tint multiplied onto the glint pattern; alpha scales strength. */
+    public int glintColor = 0xFFFF0000;
+    public boolean glintColorTintArmor = true; // also recolor worn-armor glint
     // ---- Info module (FPS / coords / time toggles) ----
     public boolean showFps    = true;
     public boolean showCoords = true;

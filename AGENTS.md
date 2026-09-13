@@ -76,7 +76,7 @@ AuroraClient.java          Mod entrypoint: registers keybinds, HUD callbacks, fe
 │                           ThrottleDetector, EntityMovementSmoother, …).
 ├── module/                PRESENTATION-ONLY view-models for the settings grid
 │                           (Module, ModuleManager). NOT runtime logic. Hardcoded
-│                           list of 36 ids — can drift from FeatureRegistry (§3).
+│                           list of 37 ids — can drift from FeatureRegistry (§3).
 ├── hud/                   HUD layer: HudRenderer (top-level callback), HudAnchor,
 │                           CrosshairRenderer, HitboxRenderer, BlockOverlayRenderer,
 │                           WorldLineRenderer (shared thick lines), WaypointRenderer,
@@ -165,10 +165,10 @@ There is **no single registry**. Three structures must stay conceptually in sync
 1. **`feature/FeatureManager`** — ~29 long-lived `Feature` singletons with
    `onRegister()`/`onTick(Minecraft)` (interface `feature/Feature.java`).
    (The never-read `Feature.enabledByDefault()` was removed 2026-09-11, audit D9.)
-2. **`screen/FeatureRegistry`** — static UI metadata: **36 MODULES-tab + 4 SETTINGS-tab
+2. **`screen/FeatureRegistry`** — static UI metadata: **37 MODULES-tab + 4 SETTINGS-tab
    tiles** (`FeatureMetadata`: id, display name, marketing description, enable
    getter/setter, list of `FeatureSetting` widgets, `reset()`).
-3. **`module/ModuleManager`** — 36 hardcoded grid cards consumed by `AuroraScreen`.
+3. **`module/ModuleManager`** — 37 hardcoded grid cards consumed by `AuroraScreen`.
    A typo'd id here silently returns null metadata. (The missing `reflex` card landed
    2026-09-05, audit B5 — counts now match, but the list is still maintained by hand.)
 
@@ -179,8 +179,8 @@ object. `FeatureMetadata` wraps `() -> cfg.xEnabled` / `v -> cfg.xEnabled = v`. 
 `DEFAULTS` snapshot taken at class init).
 
 Several shipped features have **no Feature object at all** (pure mixin + config field):
-No Fog, Hit Color, Item Scale, Resourcepack Browser, Reflex, Hotbar Bounce, Keystrokes,
-Better Hitreg (its own tick/render/HUD hooks are registered by `hitreg/BetterHitreg`).
+No Fog, Hit Color, Glint Color, Item Scale, Resourcepack Browser, Reflex, Hotbar Bounce,
+Keystrokes, Better Hitreg (its own tick/render/HUD hooks are registered by `hitreg/BetterHitreg`).
 
 **Persistence:** `AuroraConfig` — one pretty-printed GSON file at `<config>/aurora.json`.
 All state is public non-static fields; the class *is* the schema. Saves are **async** on a
@@ -220,7 +220,7 @@ shift+right-click = lock, X = disable.
 
 ## 4. Feature catalog
 
-### MODULES tab (36 tiles) — behavior + where the code lives
+### MODULES tab (37 tiles) — behavior + where the code lives
 
 | Feature (id) | What it does | Implementation |
 |---|---|---|
@@ -239,6 +239,7 @@ shift+right-click = lock, X = disable.
 | Crosshair (`crosshair`) | Preset or CUSTOM painted crosshair with a **free-form canvas** (any W×H up to 128; dims live in `crosshairCustom{Width,Height}` + flat `boolean[]` pixels, resolved via `util/GridDims`); indicator crosshair when entity attackable; deliberate half-pixel centering fix. Canvas editor renders through a cached `DynamicTexture` (`ui/util/CanvasTexture` — one blit/frame, re-raster only on edit; replaced a per-cell fill loop that cost ~12.8 ms/frame at 33×33), HUD path merges lit cells into run-length fills, and growing the grid first runs a **measured** cost benchmark on the player's machine (`[canvas-cost]` log) with an apply-anyway warning — never hardware-name heuristics | `hud/CrosshairRenderer`, `PixelCanvasSetting`, `CanvasTexture`, `InGameHudMixin` (vanilla suppression) |
 | Hitbox (`hitbox`) | Custom entity hitboxes (self/target colors, eye-line, look line, width, see-through). Renders at plain vanilla interpolation — the smoother was **deliberately reverted** (desynced from model) | `hud/HitboxRenderer` (AFTER_ENTITIES) + `WorldLineRenderer`, `HitboxFeature`, `EntityRenderDispatcherMixin` |
 | Hit Color (`hit_color`) | Recolors hurt flash (port of harimasa/HitColor, MIT, credited) | `MixinOverlayTexture`, `EquipmentLayerRendererMixin`, `util/OverlayReloadListener` |
+| Glint Color (`glint_color`) — **added 2026-09-13, mirrors Hit Color's structure** | Recolors the enchantment glint (held/GUI/dropped items + worn armor) by tinting the two glint textures vanilla's four glint render types sample (`enchanted_glint_item.png`/`enchanted_glint_armor.png`, ids read from `ItemRenderer.<clinit>` bytecode). 1.21.11's glint is NOT a HitColor-style flat overlay: it's a scrolling texture pattern blended additively (`BlendFunction.GLINT` = `SRC_COLOR,ONE`) on the `pipeline/glint` shader, so the color lives in the texture pixels — recolor = per-channel multiply by the picker color (alpha scales strength, pattern intensity carries the shimmer through), applied at HEAD of `ReloadableTexture.apply` (the last CPU-side moment before upload+close; `SimpleTexture.loadContents` couldn't host the hook because Mixin can't shadow its inherited `resourceId()`). **No disabled-state constant exists at all** — the d84298c byte-swap bug class is structurally eliminated: off = vanilla's own untouched file load. Mid-session toggle/color changes force a synchronous reload of exactly the two textures via `TextureManager.release`+`getTexture` from END_CLIENT_TICK (`util/GlintColor.tick`, HitColor's change-detection pattern; between frames per §6 convention 10, skipped while a resource reload is in flight). Settings mirror Hit Color exactly: master toggle + `ColorSetting` + "Tint Armor" sub-toggle (`glintColorEnabled`/`glintColor`/`glintColorTintArmor`; reset prefix `glintColor`) | `mixin/ReloadableTextureMixin`, `util/GlintColor`, END_CLIENT_TICK hook in `AuroraClient` |
 | Better Hitreg (`better_hitreg`) | BetterHitreg by Jass, integrated with permission (credited in-file + screen subtitle). Client-side hit feedback: on your swing the target's hurt animation, the correct attack sound and crit/sharpness particles play locally after `hitregDelayMs` (0 = next frame) while the server's late copy is cancelled (`ServerMixin`/`NetworkMixin`→`DontAnimate` marker→`DamageMixin`); "Safe Regs Only"/shield rules; ghost + misplace detection over a rolling 100-hit window (surfaced as live value lines under the Alert Delays/Ghosts/Misplaces toggles via `BooleanSetting.valueLine`, plus tooltips; "Reset Tracked Stats" isolated in a trailing Maintenance section per DESIGN_LANGUAGE §7.3); audio (mute other fights/self/them/non-hits, 1.8 sounds, OpenAL EFX muffle/sharpen via `SourceMixin`, metronome); render (hide other fights/animations/armor/particles, target + server hitbox, target cross, reach + jump rings, perfect-hit / jump-reset flash); practice arena (Unrender World via `ChunkMixin`, solid floor, floor grid); 19 ARGB overlay colors; six keybinds incl. the practice scoreboard. Fight tracking feeds the Stats Overlay (`Settings.addFight`). No chat/alert output at all (removed at integration). Card toggle = `hitregEnabled` master (ANDed into every `Toggle.toggled()` read); "Custom Hitreg" inside is upstream's own switch | `hitreg/*` (§2), `mixin/hitreg/*` (13), `AuroraConfig.hitreg*` (Reset prefix `hitreg`) |
 | Info HUD (`info_module`) | Corner readout, 13 individually toggleable rows (FPS/XYZ/time/facing/biome/light/memory/ping/CPS/playtime…); default background is the theme-derived `AURORA` gradient (`HUD_BACKDROP_*`, R6 P2 — was `NONE`); text follows the theme accent by default (shared `hudColor` sentinel, R6 ext — `theme/HudText`) | `hud/module/InfoModule`, `PlaytimeFeature` (per-world buckets) |
 | CPS (`cps`) | L/R clicks-per-second; counts from raw GLFW callback (polling caps at 20) | `CpsModule`, `CpsTracker`, `ClickTrackerFeature`, `MouseClickTrackerMixin` |
@@ -1614,6 +1615,56 @@ clearFocus-on-click) plus `valueFormatter` (the cap's "Off" at 0) and `Slider.se
 — deliberately a general enhancement, not a one-off widget, since the addition to the
 shared slider row is small and other wide-range settings (0–2000 sliders drag poorly)
 will want it.
+
+Landed 2026-09-13 after that: **Glint Color (`glint_color`)** — the enchant-glint
+recolor, built mirroring Hit Color's real structure (master toggle + color picker +
+"Tint Armor" sub-toggle — Hit Color exposes a picker, not just an on/off) after
+re-reading the `d84298c` fix (the disabled-state pixel was the byte-swapped blue twin
+of vanilla's red overlay pixel, so toggle-off painted the wrong color). Investigation
+by disassembly established that 1.21.11's glint is a *completely different mechanism*
+from Hit Color's overlay atlas: every glint draw (held, GUI/hotbar, dropped items via
+`ItemRenderer.getFoilBuffer`'s four render types; worn armor via
+`EquipmentLayerRenderer` → `armorEntityGlint`) is a second pass of the item's quads on
+the `pipeline/glint` shader with vertex format POSITION_TEX (no per-vertex color),
+blend `BlendFunction.GLINT` = `glBlendFuncSeparate(SRC_COLOR, ONE, ZERO, ONE)` — the
+fragment RGB is *added* to the framebuffer, so both the purple hue and the shimmer
+pattern live in exactly two 128×128 textures (`textures/misc/enchanted_glint_item.png`
+/ `_armor.png`, ids read from `ItemRenderer.<clinit>`'s `ldc`s, `blur: true`), whose
+pixels the shader multiplies by ColorModulator (white in practice) and a fog fade.
+Recoloring therefore means rewriting those pixels, not swapping a blend color: the hook
+(`mixin/ReloadableTextureMixin` → `util/GlintColor`) tints them at HEAD of
+`ReloadableTexture.apply` — the one concrete funnel every reloadable texture passes
+through, and the last CPU-side moment before vanilla uploads and *closes* the
+NativeImage (a first attempt targeted `SimpleTexture.loadContents` but Mixin cannot
+@Shadow the inherited `resourceId()` — caught by the boot, retargeted). The tint is a
+per-channel multiply by the picker color (pattern intensity carries the shimmer;
+picker alpha scales strength; alpha channel preserved — the glint shader only uses it
+for a <0.1 discard), recomposed exclusively via `net.minecraft.util.ARGB` helpers.
+The `d84298c` lesson is answered *structurally*: **there is no disabled-state constant
+anywhere** — off returns vanilla's untouched file load bit-for-bit, and every texture
+id compared against came from bytecode, not hand-typing. Mid-session toggle/color
+changes can't rewrite closed pixels, so `GlintColor.tick()` (END_CLIENT_TICK from
+`AuroraClient`, HitColor's change-detection pattern: short-circuit unless
+enabled/color/tintArmor changed) forces a synchronous reload of exactly the two
+textures via `TextureManager.release`+`getTexture` — vanilla's own
+`registerAndLoad → loadContents → apply` path re-entering the hook; runs between
+frames (§6 convention 10) and is skipped while `mc.getOverlay() != null` (a resource
+reload's async PendingReloads would otherwise apply() onto a closed texture), leaving
+the change pending for the next tick. F3+T reloads re-tint automatically by
+construction. Verified by three DevPilot boots under gamescope (log evidence + the
+`[glintColor] tinted …` load-hook lines with exact before/after pixels):
+framebuffer-exact captures of a Sharpness-V diamond sword + Protection-IV diamond
+armor show vanilla purple off (5189 purple blade-stripe pixels), red when on (red 7354
+/ purple 8 in the held-item region; armor differential red 111 vs purple 19), and —
+the d84298c failure mode affirmatively ruled out — vanilla purple again after a
+mid-session toggle-off (10628 purple blade stripes, 0 red; armor differential purple
+1052 vs red 45); a `glintui` boot confirmed the Modules-grid tile and the detail
+screen (title "Glint Color", color picker + Tint Armor rows, `settings=2`). Settings
+`glintColorEnabled`/`glintColor`/`glintColorTintArmor`, reset prefix `glintColor`
+(camelCase-derived). Harness gotchas fixed along the way: the generic tick-40
+(spectator) / tick-180 (tp into terrain) preamble blocks now exempt `glintcolor`, and
+equipment set via the client *inventory* (`setItem(0/36..39)` + `setSelectedSlot`)
+survives chunk equipment resyncs that wipe client-side `setItemSlot` writes.
 
 ---
 
