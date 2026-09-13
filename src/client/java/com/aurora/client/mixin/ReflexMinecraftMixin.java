@@ -1,24 +1,25 @@
 package com.aurora.client.mixin;
 
-import com.aurora.client.util.reflex.CpuTimeCollector;
 import com.aurora.client.util.reflex.ReflexScheduler;
 import net.minecraft.client.Minecraft;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+/**
+ * Reflex's three per-frame hooks. Deliberately thin: every body lives in
+ * {@link ReflexScheduler} (beginFrame/beforeFlush/endFrame), wrapped by its
+ * exception-safety guard — an unexpected failure inside Reflex disables its
+ * pacing for the session with one ERROR log and must NEVER propagate into
+ * vanilla's frame loop (see ReflexScheduler's 2026-09-13 note: the
+ * disconnect-during-render crash).
+ */
 @Mixin(Minecraft.class)
 public abstract class ReflexMinecraftMixin {
-    @Unique
-    private final CpuTimeCollector cpuTimeCollect = new CpuTimeCollector();
-
     @Inject(method = "runTick", at = @At(value = "HEAD", shift = At.Shift.AFTER))
     private void aurora$reflexAfterRender(boolean bl, CallbackInfo ci) {
-        ReflexScheduler.getInstance().waitBeforeRender();
-        cpuTimeCollect.startCollect();
-        ReflexScheduler.getInstance().renderQueueAdd();
+        ReflexScheduler.getInstance().beginFrame();
     }
 
     @Inject(
@@ -26,7 +27,7 @@ public abstract class ReflexMinecraftMixin {
             at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/platform/Window;updateDisplay(Lcom/mojang/blaze3d/TracyFrameCapture;)V")
     )
     private void aurora$reflexBeforeFlush(CallbackInfo ci) {
-        ReflexScheduler.getInstance().renderQueueEndInsert();
+        ReflexScheduler.getInstance().beforeFlush();
     }
 
     @Inject(
@@ -38,21 +39,6 @@ public abstract class ReflexMinecraftMixin {
             )
     )
     private void aurora$reflexAfterFlush(CallbackInfo ci) {
-        Long cpuTime = null;
-        if (!ReflexScheduler.getInstance().gpuTimeCollectorDeque.isEmpty()) {
-            ReflexScheduler.getInstance().gpuTimeCollectorDeque.getFirst().startQueryCheck();
-        }
-        if(!ReflexScheduler.getInstance().gpuTimeCollectorDeque.isEmpty() && ReflexScheduler.getInstance().gpuTimeCollectorDeque.getFirst().startTimeSystem != null){
-            if (cpuTimeCollect.startTime != null) {
-                cpuTime = ReflexScheduler.getInstance().gpuTimeCollectorDeque.getFirst().startTimeSystem - cpuTimeCollect.startTime;
-            }
-        } else {
-            cpuTimeCollect.endCollect();
-            cpuTime = cpuTimeCollect.getCpuTime();
-        }
-        cpuTimeCollect.reset();
-        if (cpuTime != null) {
-            ReflexScheduler.getInstance().updateCpuTime(cpuTime);
-        }
+        ReflexScheduler.getInstance().endFrame();
     }
 }

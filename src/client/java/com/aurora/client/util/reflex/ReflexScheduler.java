@@ -1,11 +1,12 @@
 package com.aurora.client.util.reflex;
 
-import com.aurora.client.AuroraClient;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Iterator;
+
+import static com.aurora.client.AuroraClient.LOGGER;
 
 public class ReflexScheduler {
     private static ReflexScheduler instance;
@@ -166,5 +167,104 @@ public class ReflexScheduler {
     enum RenderQueueAction {
         ADD,
         END_INSERT
+    }
+
+    // --- Exception safety (2026-09-13, from a real gameplay crash) ----------
+    //
+    // Reflex hooks directly into Minecraft's frame loop (three injections in
+    // ReflexMinecraftMixin, delegating here), so any exception escaping those
+    // hooks propagates into vanilla's own critical paths — that is exactly
+    // how the 2026-09-13 crash died: a server-transfer disconnect ran queued
+    // tasks mid-frame, left a GPU query pair half-processed, and the next
+    // hook's IllegalStateException("startTimeGpu is null") interrupted
+    // Minecraft.disconnect mid-teardown; the half-torn state NPE'd
+    // GameRenderer.renderHand the following frame. Reflex is a non-essential
+    // latency optimization, so it takes the same defense-in-depth posture as
+    // BlurPanelRenderer's permanentlyDisabled latch: on ANY unexpected
+    // failure inside a render hook, log once with the stack and disable
+    // pacing for the rest of the session instead of ever throwing into
+    // vanilla. The reflexEnabled setting is untouched — the next launch
+    // retries.
+
+    private boolean sessionDisabled = false;
+    private final CpuTimeCollector cpuTimeCollect = new CpuTimeCollector();
+
+    public boolean isSessionDisabled() {
+        return sessionDisabled;
+    }
+
+    /**
+     * Runs one render-hook body. Latched off after the first failure, so a
+     * broken Reflex costs its pacing (and nothing else) for the session.
+     * Public because it is the exact guard the frame hooks run under — the
+     * dev harness drives it directly to verify the catch-and-latch behavior.
+     */
+    public void runGuarded(Runnable body) {
+        if (sessionDisabled) {
+            return;
+        }
+        try {
+            body.run();
+        } catch (Throwable t) {
+            disableForSession(t);
+        }
+    }
+
+    private void disableForSession(Throwable cause) {
+        sessionDisabled = true;
+        LOGGER.error("[Reflex] unexpected exception inside the Reflex render hook — Reflex latency "
+                + "pacing is now disabled for the rest of this session so it cannot interfere with "
+                + "the game (the reflexEnabled setting is untouched; pacing returns on next launch). "
+                + "Skipping pacing changes nothing else about gameplay. Cause:", cause);
+        try {
+            // Drain half-processed collectors; reset() releases their outstanding
+            // GL query objects. Cleanup must never re-throw — this runs inside
+            // the failure handler on the render thread.
+            for (GpuTimeCollector c : gpuTimeCollectorDeque) {
+                collectorPool.returnObject(c);
+            }
+            gpuTimeCollectorDeque.clear();
+        } catch (Throwable cleanup) {
+            LOGGER.warn("[Reflex] collector cleanup after session-disable failed (ignored)", cleanup);
+        }
+        currentOperateGpuTimeCollector = null;
+        lastRenderQueueAction = null;
+        cpuTimeCollect.reset();
+    }
+
+    /** Frame head (runTick HEAD): pace, then open a new GPU timing window. */
+    public void beginFrame() {
+        runGuarded(() -> {
+            waitBeforeRender();
+            cpuTimeCollect.startCollect();
+            renderQueueAdd();
+        });
+    }
+
+    /** Just before the swapchain present (Window.updateDisplay). */
+    public void beforeFlush() {
+        runGuarded(this::renderQueueEndInsert);
+    }
+
+    /** Just after GameRenderer.render: harvest this frame's CPU timing. */
+    public void endFrame() {
+        runGuarded(() -> {
+            Long cpuTime = null;
+            if (!gpuTimeCollectorDeque.isEmpty()) {
+                gpuTimeCollectorDeque.getFirst().startQueryCheck();
+            }
+            if (!gpuTimeCollectorDeque.isEmpty() && gpuTimeCollectorDeque.getFirst().startTimeSystem != null) {
+                if (cpuTimeCollect.startTime != null) {
+                    cpuTime = gpuTimeCollectorDeque.getFirst().startTimeSystem - cpuTimeCollect.startTime;
+                }
+            } else {
+                cpuTimeCollect.endCollect();
+                cpuTime = cpuTimeCollect.getCpuTime();
+            }
+            cpuTimeCollect.reset();
+            if (cpuTime != null) {
+                updateCpuTime(cpuTime);
+            }
+        });
     }
 }

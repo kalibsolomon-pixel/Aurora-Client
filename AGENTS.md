@@ -257,7 +257,7 @@ shift+right-click = lock, X = disable.
 | Item Scale (`item_scale`) | Per-item held scale/rotation/translation; per-hand defaults | `HeldItemRendererTweaksMixin`, `setting/ItemScaleSetting`, `ui/util/ItemSpriteRenderer` + `mixin/ItemStackRenderStateAccessor` |
 | Held Item Seam Fix (`held_item_seams`) | Hides the hairline texture-bleed seams between first-person held-item faces (visible at some camera angles, worse with hi-res packs) via a uniform sub-pixel scale-up — default 1.001 (0.1%), "Fix Strength" slider 0–50 per-mille, mixin clamps 1.0–1.05 | `HeldItemSeamFixMixin` only (no Feature object); written in the initial commit but inert until 2026-09-11 — see §8 |
 | Resourcepack Browser (`resourcepack_browser`) | Modrinth search/install for resource packs into `resourcepacks/` (never auto-enables) | `ResourcePackBrowserScreen`, `modrinth/ModrinthApi`, `modrinth/PackIconCache` |
-| Minecraft Reflex (`reflex`) | Reflex-style latency reduction: GL timer-query GPU time + EWMA CPU frame time → hold CPU before input sampling | `ReflexMinecraftMixin`, `util/reflex/*` |
+| Minecraft Reflex (`reflex`) | Reflex-style latency reduction: GL timer-query GPU time + EWMA CPU frame time → hold CPU before input sampling; render hooks exception-safe (2026-09-13, §8): an interrupted query pair drops that frame's GPU sample instead of throwing, and any unexpected hook exception disables Reflex for the session with one ERROR log rather than propagating into vanilla's render/disconnect paths (the real disconnect crash) | `ReflexMinecraftMixin` → `ReflexScheduler.beginFrame/beforeFlush/endFrame` (all guarded), `util/reflex/*` |
 | Animations (`animations`) | Swing curve + 1.8 swing arc, view-bob curve/amplitude, 1.7/1.8 damage tilt, idle held-item sway, frame-rate-independent entity movement smoothing (tau scales with server packet bundling) | `HeldItemRendererMixin`, `GameRendererBobMixin`, `DamageTiltMixin`, `LivingEntityRendererExtractMixin` + `EntityMovementSmoother`, `util/AnimationCurves`, cross-cutting `ThrottleDetector` |
 | Hotbar Bounce (`hotbar_bounce`) | White pulse outline on hotbar slot when stack count grows | `HotbarItemBounceMixin` → `HotbarBounceTracker` |
 | Keystrokes (`keystrokes`) | Key-panel overlay: WASD/mouse/CPS/space/sneak/sprint + up to 12 custom keys; pressed-key accent follows the theme accent by default (`keystrokesAccentColor == 0`, R6 P2; explicit color overrides); key labels follow the shared `hudColor` sentinel (R6 ext) | `hud/module/KeystrokesModule` |
@@ -1743,6 +1743,28 @@ forever, which is exactly what `startTimeGpu == null` encodes after
 null` ISE (stack through `Minecraft.runTick` → `Minecraft.run`); the POST-fix
 boot returned `done=true` with no throw plus the WARN, and the normal
 pipeline was unchanged (deque drains, GPU estimate fills, 60 fps).
+
+Landed 2026-09-13 after that: **Reflex's render hooks are exception-safe,
+mod-wide** (the general fix — same defense-in-depth posture as
+`BlurPanelRenderer.permanentlyDisabled`). A render-loop hook that can throw
+an uncaught exception into Minecraft's own critical paths — disconnect, frame
+rendering — is a structural risk independent of the specific bug above, so
+the three `ReflexMinecraftMixin` injections are now thin one-line delegations
+to `ReflexScheduler.beginFrame()/beforeFlush()/endFrame()` (the hook bodies
+moved into the scheduler, including the CPU-time collection that lived as an
+@Unique mixin field), and every body runs under `runGuarded`: on ANY
+Throwable, Reflex logs exactly one ERROR with the full stack, drains its
+half-processed collectors (`reset()` releases their GL query objects), and
+latches itself off for the rest of the session — pacing skipped, everything
+else untouched, `reflexEnabled` untouched (next launch retries). This closes
+the whole CLASS: any future edge case in the timing logic degrades Reflex
+instead of crashing the game, while staying loud in the log (nothing is
+silently swallowed). Verified by the full `reflex` DevPilot boot: the harness
+drives a failure through the same `runGuarded` the hooks use — one ERROR +
+stack logged, `isSessionDisabled()` latched, a second guarded call no-ops,
+and the game kept rendering at 60 fps for 10 s with the latch on before a
+clean exit; the same boot re-verified normal pacing (Phase A) and the
+graceful drop (Phase B). Clean no-DevPilot smoke boot after.
 
 ---
 
