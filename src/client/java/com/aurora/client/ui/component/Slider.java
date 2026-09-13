@@ -50,6 +50,16 @@ public class Slider extends Widget {
         return getter.getAsDouble();
     }
 
+    /**
+     * Applies an exact value programmatically (snapped and clamped to the
+     * range, like a drag) — the precise-entry path of
+     * {@code SliderSetting.editableValue()}, where typing "1737" must land
+     * on 1737, not on wherever a mouse ratio would put it.
+     */
+    public void setValue(double raw) {
+        setter.accept(snap(raw));
+    }
+
     /** Track Y within the widget box (bottom-anchored, matching the row layout). */
     private float trackY() {
         return y + h - 12f;

@@ -6,9 +6,12 @@ import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.network.chat.Component;
 
 import java.util.function.DoubleConsumer;
 import java.util.function.DoubleSupplier;
+import java.util.function.Function;
 import java.util.function.IntConsumer;
 import java.util.function.IntSupplier;
 import java.util.function.Supplier;
@@ -27,6 +30,15 @@ import java.util.function.Supplier;
  * readout is right-aligned 14 px from the row's right edge, and the track
  * spans the row inset 12 px per side ({@link #trackInset()} total; the
  * theme-opacity slider keeps its own historical 26 px inset).
+ *
+ * <p><b>Editable value</b> ({@link #editableValue()}, opt-in): the value
+ * readout becomes a small text field on click, for precise entry on ranges
+ * too wide to drag accurately (the global frame cap's 0–2000). Enter or
+ * clicking away commits; Escape reverts. A numeric value outside the range
+ * clamps (drag parity — the slider could never leave the range either);
+ * empty or non-numeric input reverts. The committed value flows through
+ * the slider's own snap+clamp+setter path, and persists via the same
+ * async {@link AuroraConfig#save()} as every other commit point.
  *
  * <p>{@link ThemeOpacitySetting} extends this row with drag-aware
  * throttled live-apply: it reuses the drawing pieces and the value cache
@@ -47,6 +59,14 @@ public class SliderSetting extends FeatureSetting {
 
     private final boolean intMode;
     private boolean percent = false;
+
+    // ----- editable value (opt-in; see class doc) -----
+    private boolean editable = false;
+    private boolean editingValue = false;
+    private EditBox valueField;
+    /** Readout text transform (e.g. the frame cap's "Off" at 0); null = raw value text. */
+    private Function<Double, String> valueFormat = null;
+    private int lastReadoutRight, lastReadoutW;
 
     private long cachedKey = Long.MIN_VALUE;
     private String cachedStr = "";
@@ -94,10 +114,28 @@ public class SliderSetting extends FeatureSetting {
     @Override public SliderSetting description(Supplier<String> desc) { super.description(desc); return this; }
 
     /**
-     * Render the value readout as a percentage (value * 100, rounded, with "%")
+     * Render the value as a percentage (value * 100, rounded, with "%")
      * instead of the raw two-decimal form. Double ranges only; ignored for ints.
      */
     public SliderSetting percent() { this.percent = true; this.cachedKey = Long.MIN_VALUE; return this; }
+
+    /**
+     * Opt this row into the editable value readout: clicking the readout
+     * swaps it for a small text field (Enter/click-away commits, Escape
+     * reverts — see the class doc for the exact commit semantics). For
+     * wide ranges where dragging can't hit an exact value quickly.
+     */
+    public SliderSetting editableValue() { this.editable = true; return this; }
+
+    /**
+     * Custom readout text (e.g. "Off" for a 0 sentinel). The editor still
+     * prefills and commits raw numbers — the formatter is display-only.
+     */
+    public SliderSetting valueFormatter(Function<Double, String> format) {
+        this.valueFormat = format;
+        this.cachedKey = Long.MIN_VALUE;
+        return this;
+    }
 
     @Override public int baseHeight() { return CONTROL_H; }
     @Override public int height() { return CONTROL_H + descriptionHeight(lastWidth); }
@@ -119,7 +157,7 @@ public class SliderSetting extends FeatureSetting {
         slider.layout(trackX, y, trackW, CONTROL_H);
     }
 
-    /** Label + cached value readout. Reads the value through the slider's getter. */
+    /** Label + cached value readout (or the edit field while editing). Reads the value through the slider's getter. */
     protected void drawLabelRow(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
         lastWidth = width;
         Font tr = Minecraft.getInstance().font;
@@ -128,12 +166,30 @@ public class SliderSetting extends FeatureSetting {
 
         renderLabelWithTooltip(ctx, label, x + 12, y + 6, AuroraTheme.IOS_LABEL, mouseX, mouseY, disabled);
 
+        // A click elsewhere on the screen clears row focus before the clicked
+        // row re-claims it — focus loss without a click on THIS row is the
+        // click-away commit signal (Done button, another row, the search
+        // field…). Checked here rather than in mouseClicked because most
+        // clicks never reach this row's handler at all.
+        if (editingValue && FeatureSetting.getFocused() != this) {
+            commitValueEdit();
+        }
+
+        if (editingValue && valueField != null) {
+            layoutValueField(x, y, width);
+            valueField.setEditable(!disabled);
+            valueField.render(ctx, mouseX, mouseY, 0f);
+            return;
+        }
+
         long key = valueKey(value);
         if (key != cachedKey) {
             cachedStr = valueText(value);
             cachedStrW = tr.width(cachedStr);
             cachedKey = key;
         }
+        lastReadoutRight = x + width - 14;
+        lastReadoutW = cachedStrW;
 
         // Highlight the value in accent when this slider holds focus, so the
         // user can see at a glance which slider scroll/keys go to.
@@ -161,8 +217,102 @@ public class SliderSetting extends FeatureSetting {
     }
 
     private String valueText(double v) {
+        if (valueFormat != null) return valueFormat.apply(v);
         if (intMode) return Integer.toString((int) v);
         return percent ? Math.round(v * 100.0) + "%" : String.format("%.2f", v);
+    }
+
+    // ------------------------------------------------------------------
+    //  Editable value (opt-in; see class doc)
+    // ------------------------------------------------------------------
+
+    private static final int VALUE_FIELD_W = 46;
+    private static final int VALUE_FIELD_H = 16;
+
+    /** Lazily creates the value EditBox (theme rendering comes from EditBoxMixin like every other field). */
+    private void ensureValueField() {
+        if (valueField != null) return;
+        Font font = Minecraft.getInstance().font;
+        valueField = new EditBox(font, 0, 0, VALUE_FIELD_W, VALUE_FIELD_H, Component.literal(label));
+        valueField.setMaxLength(6);
+        valueField.setBordered(false);
+        valueField.setTextColor(AuroraTheme.IOS_LABEL);
+        // Digits only (plus '.'/'-' for double rows), live-stripped — the
+        // same responder idiom as PixelCanvasSetting's W/H fields.
+        valueField.setResponder(s -> {
+            String allowed = intMode ? "0123456789" : "0123456789.-";
+            StringBuilder sb = new StringBuilder(s.length());
+            boolean dotSeen = false;
+            for (char c : s.toCharArray()) {
+                if (Character.isDigit(c) || (c == '-' && sb.length() == 0) || (c == '.' && !intMode && !dotSeen)) {
+                    if (c == '.') dotSeen = true;
+                    sb.append(c);
+                }
+            }
+            String clean = sb.toString();
+            if (!clean.equals(s)) valueField.setValue(clean);
+        });
+    }
+
+    private void layoutValueField(int x, int y, int width) {
+        // Vertically centered on where the readout text sits (y+6, ~9px line)
+        // so opening the editor doesn't visibly jump the value's position.
+        valueField.setX(x + width - 14 - VALUE_FIELD_W);
+        valueField.setY(y + 2);
+        valueField.setWidth(VALUE_FIELD_W);
+    }
+
+    /** Opens the in-place value editor (the readout's click handler). */
+    private void openValueEdit() {
+        ensureValueField();
+        double v = slider.value();
+        valueField.setValue(intMode ? Integer.toString((int) v) : String.valueOf(v));
+        valueField.setFocused(true);
+        valueField.moveCursorToEnd(false);
+        editingValue = true;
+        requestFocus();
+    }
+
+    /** Commits the field's contents: numeric → clamp through the slider; empty/invalid → revert. Never re-claims row focus — the Enter path does that itself, and on click-away the clicked element owns focus now. */
+    private void commitValueEdit() {
+        if (!editingValue) return;
+        editingValue = false;
+        if (valueField != null) valueField.setFocused(false);
+        String text = valueField == null ? "" : valueField.getValue().trim();
+        if (!text.isEmpty() && !"-".equals(text) && !".".equals(text)) {
+            try {
+                double parsed = intMode ? Integer.parseInt(text) : Double.parseDouble(text);
+                slider.setValue(parsed); // snap + clamp + setter — the exact drag path
+                AuroraConfig.save();
+            } catch (NumberFormatException ignored) {
+                // reverted — stripped characters can't produce this for ints,
+                // but a lone "."/"-" guard costs nothing for doubles
+            }
+        }
+    }
+
+    /** Reverts the edit without applying (Escape / screen close). */
+    private void cancelValueEdit() {
+        editingValue = false;
+        if (valueField != null) valueField.setFocused(false);
+    }
+
+    /**
+     * Pre-dim surface (§6 convention 6): drives the value field's own glass
+     * pass (EditBoxMixin carries the frame-stamp scheme), positioned from
+     * the row geometry the screen passes — the same rect render computes.
+     */
+    @Override
+    public void renderGlassPass(GuiGraphics ctx, int x, int y, int width) {
+        if (!com.aurora.client.ui.component.GlassSurface.passOpen()) return; // legacy frame order
+        if (!editingValue || valueField == null || isDisabled()) return;
+        layoutValueField(x, y, width);
+        ((com.aurora.client.ui.component.GlassEditBox) valueField).aurora$renderGlassPass(ctx);
+    }
+
+    @Override
+    public void onDetailScreenClose() {
+        cancelValueEdit();
     }
 
     @Override
@@ -180,9 +330,61 @@ public class SliderSetting extends FeatureSetting {
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button, int rowX, int rowY, int rowWidth) {
         if (isDisabled()) return false;
+        if (editingValue && valueField != null) {
+            // Inside the field: keep editing. Elsewhere in the row: commit and
+            // let the click do its normal job (e.g. start a slider drag).
+            boolean inField = mouseX >= valueField.getX() && mouseX < valueField.getX() + VALUE_FIELD_W
+                    && mouseY >= valueField.getY() && mouseY < valueField.getY() + VALUE_FIELD_H;
+            if (inField) {
+                valueField.setFocused(true);
+                requestFocus();
+                return true;
+            }
+            commitValueEdit(); // falls through — the click proceeds
+        } else if (editable && button == 0) {
+            // Readout rect (padded to a comfortable click target) opens the editor.
+            int hitW = Math.max(lastReadoutW, 30) + 6;
+            if (lastReadoutRight > 0
+                    && mouseX >= lastReadoutRight - hitW && mouseX < lastReadoutRight + 2
+                    && mouseY >= rowY + 2 && mouseY < rowY + 16) {
+                openValueEdit();
+                return true;
+            }
+        }
         boolean handled = slider.mouseClicked(mouseX, mouseY, button);
         if (handled) requestFocus();
         return handled;
+    }
+
+    @Override
+    public boolean onKeyPress(net.minecraft.client.input.KeyEvent _kev) {
+        if (isDisabled()) return false;
+        if (editingValue && valueField != null) {
+            if (_kev.key() == org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER
+                    || _kev.key() == org.lwjgl.glfw.GLFW.GLFW_KEY_KP_ENTER) {
+                commitValueEdit();
+                // Keep the row focused so arrow keys adjust the slider right after.
+                requestFocus();
+                return true;
+            }
+            if (_kev.key() == org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE) {
+                cancelValueEdit();
+                return true;
+            }
+            return valueField.keyPressed(_kev);
+        }
+        // Non-editing presses keep the existing routing (the int variant,
+        // which subclasses like ThemeOpacitySetting may override).
+        return super.onKeyPress(_kev);
+    }
+
+    @Override
+    public boolean onCharTyped(net.minecraft.client.input.CharacterEvent _ev) {
+        if (isDisabled()) return false;
+        if (editingValue && valueField != null) {
+            return valueField.charTyped(_ev);
+        }
+        return false;
     }
 
     @Override
