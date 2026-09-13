@@ -243,11 +243,17 @@ public class AuroraConfig {
      */
     public int frameCapFps = 0;
 
+    /**
+     * Frame-pacer wait strategies (see {@link com.aurora.client.util.FramePacer}).
+     * YIELD was removed 2026-09-13: its genuine {@code Thread.yield()} form
+     * measured identical to SPIN (a yield returns immediately when nothing
+     * else is runnable, so the wait still burns a full core) — configs that
+     * persisted it load as null and fall back to the default strategy.
+     */
     public enum PacingStrategy {
         VANILLA,    // disabled
-        YIELD,      // pure Thread.onSpinWait, max precision, ~1 core
         PARK,       // LockSupport.parkNanos + spin tail (low CPU)
-        HYBRID,     // park -> yield -> spin (recommended)
+        HYBRID,     // park -> spin (longer spin window than PARK)
         SPIN        // pure busy loop (max precision, wastes a core)
     }
     public boolean smoothCamera = false;
@@ -1185,6 +1191,10 @@ public class AuroraConfig {
                     if (loaded.effectExpiryIncludedEffects == null) loaded.effectExpiryIncludedEffects = new ArrayList<>();
                     if (loaded.effectExpiryExcludedEffects == null) loaded.effectExpiryExcludedEffects = new HashSet<>();
                     if (loaded.theme == null) loaded.theme = ThemeDefinition.defaults();
+                    // Covers a removed-enum value (e.g. the YIELD strategy
+                    // deleted 2026-09-13) and a corrupt entry: Gson parses an
+                    // unknown enum name to null.
+                    if (loaded.framePacingStrategy == null) loaded.framePacingStrategy = PacingStrategy.HYBRID;
                     INSTANCE = loaded;
                 }
             } else {
