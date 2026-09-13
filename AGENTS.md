@@ -1711,6 +1711,39 @@ outline-verified byte-identical to the source font's `auto_awesome`. Verified
 in-game by a `glinticon` DevPilot boot: the enabled tile renders the sparkles
 glyph in ON_ACCENT on the stained glass.
 
+Landed 2026-09-13 after that: **the Reflex disconnect-during-render crash —
+root cause** (found in real live gameplay, not the dev harness). A server sent
+a `ServerTransferS2CPacket`; during `Minecraft.disconnect()`'s handling of the
+transfer, Aurora's Reflex render hook threw `IllegalStateException("startTimeGpu
+is null")` from `GpuTimeCollector.endQueryCheck` — the uncaught exception
+interrupted the disconnect partway (interaction manager nulled, teardown
+unfinished) and the next frame's `GameRenderer.renderHand` NPE'd on the
+half-torn state. Mechanism: Reflex frames a GPU timer-query PAIR per frame
+(`glQueryCounter` start at runTick head, end at `updateDisplay`; results
+polled later by availability), and queued main-thread tasks — exactly how the
+transfer packet's disconnect runs, inside `runTick`'s task drain and again
+inside `disconnect`'s own `runAllTasks` mid-teardown (verified in the 1.21.11
+bytecode) — can interrupt the frame between a pair's begin and end checks,
+leaving an end query whose start query never reported a result. Out-of-order
+`glQueryCounter` completion is also spec-legal on its own. The old code
+treated "start result missing at end-check time" as an API violation and
+threw; it is a normal interrupted-frame state, so `endQueryCheck` now DROPS
+that frame's GPU sample: deletes the orphaned start query, logs one WARN per
+session (DEBUG afterwards), returns "done" so the caller retires the
+collector, and never runs the end callback (`endTimeSystem` needs the missing
+`startTimeSystem`). `startQueryCheck` is likewise null-safe for an
+already-consumed start query, and `reset()` now deletes still-outstanding
+query objects so abandoned collectors (stale-frame removal, an interrupted
+frame) don't leak them in the driver. Verified by a `reflex0` DevPilot boot
+pair under gamescope — the harness reproduces the crash state
+deterministically on any driver (query-end called with the start query
+swapped for a never-issued id; such a query object reports "not available"
+forever, which is exactly what `startTimeGpu == null` encodes after
+`startQueryCheck`): the PRE-fix boot reproduced the exact `startTimeGpu is
+null` ISE (stack through `Minecraft.runTick` → `Minecraft.run`); the POST-fix
+boot returned `done=true` with no throw plus the WARN, and the normal
+pipeline was unchanged (deque drains, GPU estimate fills, 60 fps).
+
 ---
 
 ## 9. Known outstanding work, dead code, and hazards

@@ -17,6 +17,9 @@ public class GpuTimeCollector {
     private Runnable startCallback = null;
     private Runnable endCallback = null;
 
+    /** Logs the dropped-sample warning once per session; DEBUG afterwards. */
+    private static boolean loggedNullStartDrop = false;
+
     long gpuToSystem(long gpu) {
         long[] t = new long[1];
         GL33C.glGetInteger64v(GL33C.GL_TIMESTAMP, t);
@@ -49,7 +52,10 @@ public class GpuTimeCollector {
             throw new IllegalStateException("startQueryInsert() must be called before startQueryCheck()");
         }
 
-        if (startTimeGpu == null) {
+        // startTimeQuery == null means the start query was already consumed
+        // (completed normally, or dropped by endQueryCheck's interrupted-frame
+        // path): nothing to poll, startTimeGpu legitimately stays null.
+        if (startTimeGpu == null && startTimeQuery != null) {
             if (GL33C.glGetQueryObjecti64(startTimeQuery, GL33C.GL_QUERY_RESULT_AVAILABLE) == GL11C.GL_TRUE) {
                 startTimeGpu = GL33C.glGetQueryObjecti64(startTimeQuery, GL33C.GL_QUERY_RESULT);
                 GL32C.glDeleteQueries(startTimeQuery);
@@ -86,6 +92,12 @@ public class GpuTimeCollector {
             throw new IllegalStateException("endQueryInsert() must be called before endQueryCheck()");
         }
 
+        // End query already consumed (completed normally, or dropped below):
+        // nothing outstanding, report "done" so the caller retires us.
+        if (endTimeQuery == null) {
+            return true;
+        }
+
         if (GL33C.glGetQueryObjecti64(endTimeQuery, GL33C.GL_QUERY_RESULT_AVAILABLE) == GL11C.GL_TRUE) {
             endTimeGpu = GL33C.glGetQueryObjecti64(endTimeQuery, GL33C.GL_QUERY_RESULT);
             GL32C.glDeleteQueries(endTimeQuery);
@@ -93,8 +105,32 @@ public class GpuTimeCollector {
 
             startQueryCheck();
             if (startTimeGpu == null) {
-                LOGGER.error("startTimeGpu is null", new IllegalStateException("startTimeGpu is null"));
-                throw new IllegalStateException("startTimeGpu is null");
+                // The end timestamp retired but the start query has no result
+                // available — a legal GL state (glQueryCounter results may
+                // complete out of order) and the reliable outcome of a frame
+                // whose begin→end query cycle was interrupted mid-pair (a
+                // server transfer / disconnect runs queued tasks mid-frame,
+                // inside runTick and again inside disconnect's own task
+                // drain). Threw here until 2026-09-13: the IllegalStateException
+                // propagated through the runTick injection into vanilla's
+                // disconnect/render flow and crashed a real game. One frame's
+                // GPU sample is not crash-worthy — drop it, release the
+                // orphaned query, report "done". The end callback must NOT
+                // run: endTimeSystem needs startTimeSystem, which is missing.
+                if (startTimeQuery != null) {
+                    GL32C.glDeleteQueries(startTimeQuery);
+                    startTimeQuery = null;
+                }
+                if (!loggedNullStartDrop) {
+                    loggedNullStartDrop = true;
+                    LOGGER.warn("[Reflex] GPU start-timestamp query had no result when the end query "
+                            + "completed (interrupted frame — e.g. a disconnect/server transfer — or "
+                            + "out-of-order query completion); dropping this frame's GPU timing sample. "
+                            + "Further occurrences are logged at DEBUG.");
+                } else {
+                    LOGGER.debug("[Reflex] dropping GPU timing sample: start query result unavailable");
+                }
+                return true;
             }
 
             endTimeSystem = gpuToSystem(endTimeGpu);
@@ -108,12 +144,22 @@ public class GpuTimeCollector {
     }
 
     public void reset() {
+        // Release any query objects this collector still owns — abandoned
+        // collectors (stale-frame removal, an interrupted frame, the
+        // session-disable drain in ReflexScheduler) would otherwise leak them
+        // in the driver. Always called on the render thread.
+        if (startTimeQuery != null) {
+            GL32C.glDeleteQueries(startTimeQuery);
+            startTimeQuery = null;
+        }
+        if (endTimeQuery != null) {
+            GL32C.glDeleteQueries(endTimeQuery);
+            endTimeQuery = null;
+        }
         startTimeSystem = null;
         endTimeSystem = null;
         startTimeGpu = null;
         endTimeGpu = null;
-        startTimeQuery = null;
-        endTimeQuery = null;
         startQueryInserted = false;
         endQueryInserted = false;
     }
