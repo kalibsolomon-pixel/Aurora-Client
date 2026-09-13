@@ -22,7 +22,7 @@ import java.util.function.Consumer;
  * <ul>
  *   <li><b>Modules</b> â€” Aurora's gameplay/visual features (the grid),
  *       plus the combined "Miscellaneous" entry that groups the smaller
- *       settings (camera, frame pacer, latency, tick sync, input, servers)
+ *       settings (camera, frame pacer, latency, input, servers)
  *       behind one detail screen - an explicit
  *       "for now" grouping (moved here from Settings 2026-09-10)</li>
  *   <li><b>Settings</b> - global client settings: title screen, fonts,
@@ -1368,9 +1368,9 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
         // ---- Miscellaneous ----
         // Consolidates the former standalone Settings-tab tiles that sat
         // below "Interface" (Smooth Camera, Frame Pacer, Low Latency,
-        // Tick Sync, Decoupled Input, Drag-to-Reorder Servers — plus
-        // Compliance Mode and Accessibility until both were removed
-        // entirely 2026-09-12) into one entry - an explicit "for now"
+        // Tick Sync, Decoupled Input, Drag-to-Reorder Servers — Tick Sync
+        // removed entirely 2026-09-13, Compliance Mode and Accessibility
+        // likewise 2026-09-12) into one entry - an explicit "for now"
         // grouping, not a permanent taxonomy decision. Every original
         // setting row is preserved verbatim under its own SectionHeader,
         // and each section's "Enabled" row carries the exact getter/setter
@@ -1387,15 +1387,14 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
         // (Settings-tab entries had no detail screen), so this is new
         // capability, consistent with the other combined features.
         addWithSettings(MODULES, "miscellaneous", "Miscellaneous",
-                "A temporary home for smaller settings that have not been given a dedicated feature screen of their own yet: smooth camera, frame pacing, a global frame cap, latency, tick sync, input handling, and server-list dragging. Each keeps its own enable toggle and settings under its section; open the feature to configure them.",
+                "A temporary home for smaller settings that have not been given a dedicated feature screen of their own yet: smooth camera, frame pacing, a global frame cap, latency, input handling, and server-list dragging. Each keeps its own enable toggle and settings under its section; open the feature to configure them.",
                         () -> cfg.smoothCamera || cfg.smoothFramePacer || cfg.lowLatencyRender
-                        || cfg.tickSyncEnabled || cfg.inputSamplingDecoupled
+                        || cfg.inputSamplingDecoupled
                         || cfg.serverListDragReorder || cfg.frameCapFps > 0,
                 v -> {
                     cfg.smoothCamera = v;
                     cfg.smoothFramePacer = v;
                     cfg.lowLatencyRender = v;
-                    cfg.tickSyncEnabled = v;
                     cfg.inputSamplingDecoupled = v;
                     cfg.serverListDragReorder = v;
                     // The cap is a value setting, not a toggle: master-off
@@ -1461,21 +1460,6 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                 () -> cfg.adaptiveRenderSleeping, v -> cfg.adaptiveRenderSleeping = v)
                                 .description("Moves the frame-rate limiter's wait from the end of the frame to the very start of the next one, so the CPU sleeps just before your input is applied and the frame is built — keeping the GPU render queue short. Requires this section's Enabled toggle plus the Frame Pacer above being on with a non-Vanilla strategy."),
 
-                        new SectionHeaderSetting("Tick Sync"),
-                        new BooleanSetting("Enabled",
-                                () -> cfg.tickSyncEnabled,
-                                v -> cfg.tickSyncEnabled = v)
-                                .description("Reduces the delay between server packets and client ticks by dynamically adjusting the client tick rate to match the server's packet delivery. Helps minimize delay when working with command blocks or fast entity updates. Only shifts ticks when a desync is detected."),
-                        new BooleanSetting("Auto Margin",
-                                () -> cfg.tickSyncUseAutoMargin, v -> cfg.tickSyncUseAutoMargin = v)
-                                .description("Automatically adjust the sync margin based on connection stability."),
-                        new BooleanSetting("Fast Sync",
-                                () -> cfg.tickSyncUseFastSync, v -> cfg.tickSyncUseFastSync = v)
-                                .description("Allow accelerating client ticks (pull) to catch up, rather than only delaying (push)."),
-                        new BooleanSetting("Use Netty Thread (Experimental)",
-                                () -> cfg.tickSyncUseNettyCriteria, v -> cfg.tickSyncUseNettyCriteria = v)
-                                .description("Use the time packets arrive on the Netty network thread instead of the Render thread."),
-
                         new SectionHeaderSetting("Decoupled Input"),
                         new BooleanSetting("Enabled",
                                 () -> cfg.inputSamplingDecoupled,
@@ -1494,7 +1478,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                         "smoothCamera",
                         "smoothFramePacer", "framePacer", "framePacing", "frameCap",
                         "lowLatencyRender", "disableVSync", "adaptiveRenderSleeping",
-                        "tickSync", "inputSamplingDecoupled", "serverListDragReorder"));
+                        "inputSamplingDecoupled", "serverListDragReorder"));
 
     }
 

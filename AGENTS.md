@@ -72,8 +72,8 @@ AuroraClient.java          Mod entrypoint: registers keybinds, HUD callbacks, fe
 │   └── settings/          Settings (facade over AuroraConfig), Toggle/Color enums
 │                          (config-backed), HitregMigrator (one-shot Properties import).
 ├── feature/               Feature SYSTEM (see §3). Feature.java = interface;
-│   └── impl/              29 runtime Feature singletons + helper classes (TickSync,
-│                           ThrottleDetector, EntityMovementSmoother, …).
+│   └── impl/              26 runtime Feature singletons + helper classes
+│                           (ThrottleDetector, EntityMovementSmoother, …).
 ├── module/                PRESENTATION-ONLY view-models for the settings grid
 │                           (Module, ModuleManager). NOT runtime logic. Hardcoded
 │                           list of 37 ids — can drift from FeatureRegistry (§3).
@@ -162,7 +162,7 @@ subset. (The former `module_icons/` PNG set + stray design-source SVGs + the sta
 
 There is **no single registry**. Three structures must stay conceptually in sync:
 
-1. **`feature/FeatureManager`** — ~29 long-lived `Feature` singletons with
+1. **`feature/FeatureManager`** — 26 long-lived `Feature` singletons with
    `onRegister()`/`onTick(Minecraft)` (interface `feature/Feature.java`).
    (The never-read `Feature.enabledByDefault()` was removed 2026-09-11, audit D9.)
 2. **`screen/FeatureRegistry`** — static UI metadata: **37 MODULES-tab + 4 SETTINGS-tab
@@ -261,7 +261,7 @@ shift+right-click = lock, X = disable.
 | Animations (`animations`) | Swing curve + 1.8 swing arc, view-bob curve/amplitude, 1.7/1.8 damage tilt, idle held-item sway, frame-rate-independent entity movement smoothing (tau scales with server packet bundling) | `HeldItemRendererMixin`, `GameRendererBobMixin`, `DamageTiltMixin`, `LivingEntityRendererExtractMixin` + `EntityMovementSmoother`, `util/AnimationCurves`, cross-cutting `ThrottleDetector` |
 | Hotbar Bounce (`hotbar_bounce`) | White pulse outline on hotbar slot when stack count grows | `HotbarItemBounceMixin` → `HotbarBounceTracker` |
 | Keystrokes (`keystrokes`) | Key-panel overlay: WASD/mouse/CPS/space/sneak/sprint + up to 12 custom keys; pressed-key accent follows the theme accent by default (`keystrokesAccentColor == 0`, R6 P2; explicit color overrides); key labels follow the shared `hudColor` sentinel (R6 ext) | `hud/module/KeystrokesModule` |
-| Miscellaneous (`miscellaneous`) — **moved to the MODULES grid 2026-09-10** | The 2026-09-09 consolidation of the tiles that used to sit below Interface (Smooth Camera, Frame Pacer, Low Latency, Tick Sync, Decoupled Input, Drag-to-Reorder Servers, Compliance Mode, Accessibility — the last two since removed entirely, 2026-09-12) behind one tile + detail screen; grid right-click opens the same detail screen as every other tile — an explicit "for now" grouping, not a taxonomy decision. The Low Latency section was audited 2026-09-11 (§8): the dead Zero-Latency Camera and High-Frequency Input rows are gone, Adaptive Render Sleeping is genuinely gated on the section's Enabled toggle, and descriptions match verified behavior. A **Frame Cap section was added 2026-09-13** (between Frame Pacer and Low Latency): the global `frameCapFps` (0 = Off, 10–2000) enforced at the top of each frame in `MinecraftClientRenderMixin` — see §8's 2026-09-13 entry for why it lives there and how it composes with every other limiter | `FeatureRegistry` MODULES entry (byte-verbatim settings + unified reset), `ModuleManager` grid card, "?" (`question_mark` U+EB8B) icon |
+| Miscellaneous (`miscellaneous`) — **moved to the MODULES grid 2026-09-10** | The 2026-09-09 consolidation of the tiles that used to sit below Interface (Smooth Camera, Frame Pacer, Low Latency, Tick Sync, Decoupled Input, Drag-to-Reorder Servers, Compliance Mode, Accessibility — Compliance/Accessibility removed entirely 2026-09-12, **Tick Sync removed entirely 2026-09-13**, see §8) behind one tile + detail screen; grid right-click opens the same detail screen as every other tile — an explicit "for now" grouping, not a taxonomy decision. The Low Latency section was audited 2026-09-11 (§8): the dead Zero-Latency Camera and High-Frequency Input rows are gone, Adaptive Render Sleeping is genuinely gated on the section's Enabled toggle, and descriptions match verified behavior. A **Frame Cap section was added 2026-09-13** (between Frame Pacer and Low Latency): the global `frameCapFps` (0 = Off, 10–2000) enforced at the top of each frame in `MinecraftClientRenderMixin` — see §8's 2026-09-13 entry for why it lives there and how it composes with every other limiter | `FeatureRegistry` MODULES entry (byte-verbatim settings + unified reset), `ModuleManager` grid card, "?" (`question_mark` U+EB8B) icon |
 
 ### SETTINGS tab (4 tiles)
 
@@ -290,8 +290,6 @@ the constant; `385e704`).
 - **`ThrottleDetector`**: measures server movement-packet bundling (median inter-move tick
   gap, 32 samples) → factor 1–6. Feeds `EntityMovementSmoother` only. Was also feeding
   hitbox smoothing, which was reverted (§9).
-- **`TickSyncFeature`**: adapts *client* tick rate toward server packet timing; resets on
-  join/disconnect.
 - **WorldScope** (`util/WorldScope`): stable per-world id (`mp:<ip>` / `sp:<level>`) keys
   waypoints, playtime, and worldmap storage folders.
 
@@ -1765,6 +1763,47 @@ stack logged, `isSessionDisabled()` latched, a second guarded call no-ops,
 and the game kept rendering at 60 fps for 10 s with the latch on before a
 clean exit; the same boot re-verified normal pacing (Phase A) and the
 graceful drop (Phase B). Clean no-DevPilot smoke boot after.
+
+Landed 2026-09-13 after that: **Tick Sync removed entirely** (one revertible
+commit, same discipline as the Compliance/Accessibility removals). Two
+independent reasons, both established by a same-day audit:
+(1) **Licensing** — the feature was a near-verbatim, uncredited port of
+LogGamja's "Tick Sync" (modrinth `tick-sync`, ARR license; the algorithm,
+field names, and constants matched upstream line for line), breaking this
+repo's own credit convention (Freelook++/AppleSkin/HitColor/Better Hitreg
+are all credited/permissioned); removal was chosen over pursuing
+permission. (2) **Anticheat exposure** — the audit (verified against
+1.21.11 bytecode, not assumption) traced the feature's real effect: it
+wrote sub-20 tick rates into `ClientLevel.tickRateManager()`, which
+vanilla's `DeltaTracker$Timer` consults via
+`getTickTargetMillis = max(50, millisecondsPerTick())`, occasionally
+stretching a single client tick to ~60–105 ms (≤1/s while desynced) —
+which shifts the cadence of every serverbound gameplay packet
+(`LocalPlayer.tick` → `sendPosition`, plus tick-consumed attack/use
+clicks), i.e. exactly the deviation category competitive Timer checks
+(Vulcan/Grim/Matrix) measure; note the port had silently DROPPED
+upstream's `getTickTargetMillis` un-cap mixin, so Fast Sync's pull
+direction was already inert — push-only, in the slow direction, but a
+deliberate cadence deviation nonetheless. Removed: `TickSyncFeature` +
+registration, `TickSyncNetworkMixin` + `aurora.mixins.json` entry, the
+Miscellaneous Tick Sync section (master getter/setter + Auto Margin/Fast
+Sync/Netty Thread rows + `tickSync` reset prefix), the four `AuroraConfig`
+fields, description strings, and the DevPilot `ticksync` harness mode
+(untracked). With the feature gone, no non-vanilla writer of the client
+tick-rate manager exists — 20 TPS / standard movement-packet cadence by
+construction. Old configs load clean (default Gson ignores the unknown
+fields; ProfileManager WARNs "field … no longer exists; skipped" and both
+`aurora.json` and profiles rewrite without them on next save — verified on
+a real boot carrying all four old fields, master ON). Verified by a
+DevPilot `tabs` boot under gamescope: Miscellaneous detail screen
+`rows=19` with every label enumerated (was 24; no Tick Sync section
+anywhere), master-toggle roundtrip flips exactly the five remaining
+sub-flags, unified reset restores pacer/camera fields, world joined, 60
+fps, clean exit, zero tick-rate mutations in the log. Feature count
+29 → 26 (§2/§3 updated); MODULES tile count unchanged at 37
+(Miscellaneous keeps its tile). `HITREG_INTEGRATION_CATALOG.md`'s
+mixin-collision note updated (the `handleMoveEntity`/`handleTickingState`
+injections went with the mixin).
 
 ---
 

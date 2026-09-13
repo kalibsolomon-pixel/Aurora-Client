@@ -41,7 +41,6 @@ public class FeatureManager {
         register(new StatsTrackerFeature());
         register(new ThemeFeature());
         register(new StatusAlertFeature());
-        register(new TickSyncFeature());
         for (Feature f : features.values()) {
             try {
                 f.onRegister();

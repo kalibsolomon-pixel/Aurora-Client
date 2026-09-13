@@ -323,12 +323,6 @@ public class AuroraConfig {
     public boolean inputSamplingDecoupled = false;
     public boolean lowLatencyRender = true;
     public boolean disableVSync = false;
-    
-    // ---- Tick Sync ----
-    public boolean tickSyncEnabled = false;
-    public boolean tickSyncUseAutoMargin = true;
-    public boolean tickSyncUseFastSync = false;
-    public boolean tickSyncUseNettyCriteria = false;
 
     // ---- Late-Stage Responsive Features ----
     public boolean adaptiveRenderSleeping = false;
