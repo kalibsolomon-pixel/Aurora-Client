@@ -261,7 +261,7 @@ shift+right-click = lock, X = disable.
 | Animations (`animations`) | Swing curve + 1.8 swing arc, view-bob curve/amplitude, 1.7/1.8 damage tilt, idle held-item sway, frame-rate-independent entity movement smoothing (tau scales with server packet bundling) | `HeldItemRendererMixin`, `GameRendererBobMixin`, `DamageTiltMixin`, `LivingEntityRendererExtractMixin` + `EntityMovementSmoother`, `util/AnimationCurves`, cross-cutting `ThrottleDetector` |
 | Hotbar Bounce (`hotbar_bounce`) | White pulse outline on hotbar slot when stack count grows | `HotbarItemBounceMixin` → `HotbarBounceTracker` |
 | Keystrokes (`keystrokes`) | Key-panel overlay: WASD/mouse/CPS/space/sneak/sprint + up to 12 custom keys; pressed-key accent follows the theme accent by default (`keystrokesAccentColor == 0`, R6 P2; explicit color overrides); key labels follow the shared `hudColor` sentinel (R6 ext) | `hud/module/KeystrokesModule` |
-| Miscellaneous (`miscellaneous`) — **moved to the MODULES grid 2026-09-10** | The 2026-09-09 consolidation of the tiles that used to sit below Interface (Smooth Camera, Frame Pacer, Low Latency, Tick Sync, Decoupled Input, Drag-to-Reorder Servers, Compliance Mode, Accessibility — Compliance/Accessibility removed entirely 2026-09-12, **Tick Sync removed entirely 2026-09-13**, see §8) behind one tile + detail screen; grid right-click opens the same detail screen as every other tile — an explicit "for now" grouping, not a taxonomy decision. The Low Latency section was audited 2026-09-11 (§8): the dead Zero-Latency Camera and High-Frequency Input rows are gone, Adaptive Render Sleeping is genuinely gated on the section's Enabled toggle, and descriptions match verified behavior. **Disable VSync's fullscreen-transition hole (F11 silently re-enabling vsync behind the toggle, wedged until cycled off/on) was fixed 2026-09-13 — §8.** A **Frame Cap section was added 2026-09-13** (between Frame Pacer and Low Latency): the global `frameCapFps` (0 = Off, 10–2000) enforced at the top of each frame in `MinecraftClientRenderMixin` — see §8's 2026-09-13 entry for why it lives there and how it composes with every other limiter | `FeatureRegistry` MODULES entry (byte-verbatim settings + unified reset), `ModuleManager` grid card, "?" (`question_mark` U+EB8B) icon |
+| Miscellaneous (`miscellaneous`) — **moved to the MODULES grid 2026-09-10** | The 2026-09-09 consolidation of the tiles that used to sit below Interface (Smooth Camera, Frame Pacer, Low Latency, Tick Sync, Decoupled Input, Drag-to-Reorder Servers, Compliance Mode, Accessibility — Compliance/Accessibility removed entirely 2026-09-12, **Tick Sync removed entirely 2026-09-13**, see §8) behind one tile + detail screen; grid right-click opens the same detail screen as every other tile — an explicit "for now" grouping, not a taxonomy decision. The Low Latency section was audited 2026-09-11 (§8): the dead Zero-Latency Camera and High-Frequency Input rows are gone, Adaptive Render Sleeping is genuinely gated on the section's Enabled toggle, and descriptions match verified behavior. **Disable VSync's fullscreen-transition hole (F11 silently re-enabling vsync behind the toggle, wedged until cycled off/on) was fixed 2026-09-13 — §8.** The **Frame Pacer's YIELD strategy was removed 2026-09-13** (a genuine `Thread.yield()` implementation was measured with the audit's `perf` harness and proved identical to SPIN — full core, precision within noise; §8) and **new configs default to PARK** (was HYBRID; persisted strategies load verbatim — §8). A **Frame Cap section was added 2026-09-13** (between Frame Pacer and Low Latency): the global `frameCapFps` (0 = Off, 10–2000) enforced at the top of each frame in `MinecraftClientRenderMixin` — see §8's 2026-09-13 entry for why it lives there and how it composes with every other limiter | `FeatureRegistry` MODULES entry (byte-verbatim settings + unified reset), `ModuleManager` grid card, "?" (`question_mark` U+EB8B) icon |
 
 ### SETTINGS tab (4 tiles)
 
@@ -1849,6 +1849,58 @@ stash-A/B boot pinned the one suspicious number (cap30-fix miss15% 50.3%
 vs the audit's 0.0%) on phase position / just-loaded-world jitter, not
 the fix (no-fix at the same early position: 47.8%, statistically
 identical).
+
+Landed 2026-09-13 after that: **the Frame Pacer strategy-menu cleanup**
+(two revertible commits — both items flagged for follow-up by that
+morning's efficiency audit, re-measured with the audit's own DevPilot
+`perf` harness under gamescope: two full `AURORA_DEV_PERF_ONLY=p60,p120`
+boots plus the per-frame CSVs, and a new `p120-yield` phase the audit
+never needed because its YIELD was byte-identical to SPIN). **(a) YIELD
+removed.** The audit's finding was that `waitUntilYield` ≡ `waitUntilSpin`
+(two `Thread.onSpinWait` loops; the "cooperative yield, ~10µs precision"
+javadoc described behavior that didn't exist). A genuine cooperative form
+— `Thread.yield()` per poll — was implemented and measured before
+deciding: it burned a full core exactly like SPIN (render-thread CPU
+95.3% vs SPIN's 95.6% at 60 fps, 92.2% vs 92.6% at 120; per-frame CSV at
+120: 7.73 ms CPU per 8.33 ms frame vs SPIN's 7.67, with not one genuinely
+descheduled frame in 360 — `Thread.yield()` returns immediately when no
+other thread is runnable), and its precision was never better than
+SPIN's on any metric in either boot. The alternative implementation the
+follow-up named, short `parkNanos` calls, is PARK's own mechanism and
+would have duplicated PARK instead. No distinct tradeoff point exists
+either way, so the option was collapsed rather than kept: enum value,
+`waitUntilYield`, the FeatureRegistry case + harness phases removed, and
+`waitUntilHybrid`'s stage-2/stage-3 seam (the never-was-a-yield loop pair
+over adjacent intervals) collapsed into one spin loop — behavior-
+identical, deleting only the copy-paste artifact. Old configs persisting
+"YIELD" degrade cleanly: Gson parses the unknown name to null,
+`AuroraConfig.load()` self-heals a null strategy to the factory default,
+`FramePacer.waitUntil` keeps a null→PARK fallback covering the
+profile-apply path (a "YIELD" value in a profile snapshot also overlays
+as null), and since Gson omits null fields the next save drops the field
+entirely — verified by a real boot with "YIELD" in both `aurora.json`
+and the active profile: clean session at PARK, both files rewrite
+without the field, next load takes the PARK initializer (the Tick Sync
+removal's migration shape). **(b) New configs default to PARK** (was
+HYBRID): the audit measured PARK ≥ HYBRID on accuracy at 60 fps
+(miss15% 9.7 vs 10.8, and PARK's p50/p99 within 0.1 ms of HYBRID's) for
+less CPU (29.6% vs 36.9%), and at 120 fps the two sit inside each
+other's cross-boot precision band (p50 identical; miss15% 37–69% vs
+34–49% across the audit's and today's boots — frame-work variance
+dominates 8.3 ms targets) while PARK costs meaningfully less CPU (41%
+vs 54%). Only the field initializer (and the two null-fallbacks, and
+the FeatureRegistry descriptions' "Default." marker) changed — persisted
+strategies load verbatim, verified by a boot whose `aurora.json` +
+active profile both carry explicit "HYBRID" (non-default after the
+change): the live strategy was HYBRID throughout and both files still
+say HYBRID after the shutdown save; a fresh-install boot (config +
+profiles moved aside) writes `"framePacingStrategy": "PARK"`.
+Measurement caveat, recorded for future comparisons: today's re-measure
+boots ran noisier than the audit's (strategy-independent — vanilla's
+p60 stdMs 3.9–4.1 vs the audit's 2.6, every pacer shifted equally, both
+today's boots and the audit's own run-1-vs-run-2 spread show this), so
+the audit's absolute numbers remain the reference; the yield≡spin
+relative result is boot-invariant and confirmed at the per-frame level.
 
 ---
 

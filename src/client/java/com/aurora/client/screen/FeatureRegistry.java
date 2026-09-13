@@ -1423,8 +1423,8 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                 v -> cfg.framePacingStrategy = v)
                                 .valueDescriptions(s -> switch (s) {
                                     case VANILLA -> "Disabled â€” uses Minecraft's default frame pacing. Notice the jitter at high FPS caps above ~64.";
-                                    case PARK -> "Sleeps for most of the wait â€” very low CPU. Slightly less stable timing (Â±1-2ms) but cool & quiet. Good for laptops.";
-                                    case HYBRID -> "Recommended. Sleeps when far from the frame deadline, spins for the last microseconds. Best balance of precision and CPU.";
+                                    case PARK -> "Default. Sleeps for most of the wait, spinning only the final half-millisecond. Measured the most stable frame times of any strategy at 60 fps while using the least CPU - cool and quiet with nothing given up.";
+                                    case HYBRID -> "Sleeps when far from the frame deadline, then spins for the last two milliseconds. Measured no more precise than Park for extra CPU; kept for configs that set it before.";
                                     case SPIN -> "Pure busy-loop. Maximum precision (sub-microsecond) but wastes a CPU core. Useful for benchmarking only.";
                                 }),
                         new BooleanSetting("Low CPU Mode (laptops)",

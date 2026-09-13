@@ -88,10 +88,10 @@ public final class FramePacer {
         }
     }
 
-    /** Dispatch to the configured strategy. */
+    /** Dispatch to the configured strategy (null falls back to PARK, the factory default). */
     public static void waitUntil(double target, AuroraConfig cfg) {
         AuroraConfig.PacingStrategy strat = cfg.framePacingStrategy;
-        if (strat == null) strat = AuroraConfig.PacingStrategy.HYBRID;
+        if (strat == null) strat = AuroraConfig.PacingStrategy.PARK;
 
         int spinTail = Math.max(50, cfg.framePacerSpinThresholdMicros);
         int parkTail = Math.max(spinTail + 100, cfg.framePacerParkThresholdMicros);

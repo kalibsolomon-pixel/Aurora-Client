@@ -222,7 +222,12 @@ public class AuroraConfig {
     public boolean fullBright = false;
     public int fullBrightGamma = 500; // percentage, 100..1500
     public boolean smoothFramePacer = true;
-    public PacingStrategy framePacingStrategy = PacingStrategy.HYBRID;
+    // PARK since 2026-09-13 (was HYBRID): the efficiency audit measured PARK
+    // as at least as accurate at 60 and 120 fps for meaningfully less CPU
+    // (HYBRID's longer spin window buys nothing). Only fresh configs see this
+    // — every existing config has the field explicitly persisted, which wins
+    // verbatim on load.
+    public PacingStrategy framePacingStrategy = PacingStrategy.PARK;
     public int framePacerSpinThresholdMicros = 500;   // switch to pure spin within this much of target
     public int framePacerParkThresholdMicros = 2000;  // switch from park to yield within this
     public boolean framePacerLowCpuMode = false;      // longer parks, gives up some precision
@@ -1194,7 +1199,7 @@ public class AuroraConfig {
                     // Covers a removed-enum value (e.g. the YIELD strategy
                     // deleted 2026-09-13) and a corrupt entry: Gson parses an
                     // unknown enum name to null.
-                    if (loaded.framePacingStrategy == null) loaded.framePacingStrategy = PacingStrategy.HYBRID;
+                    if (loaded.framePacingStrategy == null) loaded.framePacingStrategy = PacingStrategy.PARK;
                     INSTANCE = loaded;
                 }
             } else {
