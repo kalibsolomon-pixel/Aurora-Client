@@ -232,7 +232,7 @@ shift+right-click = lock, X = disable.
 | Pack Tweaks (`pack_tweaks`) | Bundle: totem particle size 25–100%; first-person shield styles (VANILLA/LOWERED/SIDE/COMPACT); shield-status tints; water & lava clarity fog; hide lava orange overlay | `TotemParticleMixin`, `HeldItemRendererTweaksMixin`, `UnderwaterClarityMixin`, `LavaClarityMixin`, `LavaOverlayMixin` |
 | Entity Health (`player_health`) | HP above nearby entities (number or heart row); "only attacked" mode | `PlayerHealthLabelMixin` + `LivingEntityRendererExtractMixin` + `ClientPlayerAttackMixin` + `util/AttackedPlayerTracker` + `util/AuroraHealthSnapshots` |
 | FreeLook (`free_look`) | Hold-V detached camera (3rd-person forced); adapted from Freelook++ (MIT, credited in-file) | `FreeLookFeature`, `EntityMixin`, `CameraUpdateMixin` |
-| Saturation Bar (`saturation_bar`) | Hidden saturation pips over hunger bar; AppleSkin port (Unlicense, credited) | `hud/SaturationOverlay`, `InGameHudFoodMixin` |
+| Saturation Bar (`saturation_bar`) | Hidden saturation pips over hunger bar; AppleSkin port (Unlicense, credited). Its sprite atlas `assets/aurora/textures/icons.png` was accidentally deleted by the 2026-09-11 D9 dead-texture sweep (regression found + fixed 2026-09-13 — see §8): a missing GUI texture renders as opaque black, so the overlay drew a solid black bar; the file is restored and `SaturationOverlay`'s javadoc now documents the asset dependency explicitly | `hud/SaturationOverlay`, `InGameHudFoodMixin` |
 | Block Overlay (`block_overlay`) | Custom block-selection outline (color, 1–6px width, see-through, face fill; SOLID or RAINBOW) | `hud/BlockOverlayRenderer` (Fabric `BEFORE_BLOCK_OUTLINE`), `BlockOverlayFeature`, `VertexRenderingMixin` (vanilla outline) |
 | Toggle Sprint/Sneak (`toggle_sprint_sneak`) | Press-once sprint/sneak; holds vanilla keys down each tick; 3 HUD display modes | `ToggleSprintFeature`, `hud/module/ToggleSprintSneakModule` + `ToggleIndividualModule`×2 |
 | Alerts (`alerts`) | Popup warnings: low durability (per-slot edge), low hunger, effect expiry; optional sound + test. Effect expiry has **per-effect granularity** (2026-09-12, rebuilt same day): a "Per-Effect Alerts" section following the `ItemScaleSetting` search-then-add pattern — search field + "+" add button suggesting one matching effect (sprite + "Add: <name>", ItemScale's three match tiers over the effect registry), adding to the curated inclusion list `AuroraConfig.effectExpiryIncludedEffects` (registry-id keys, present = alerts, empty = nothing alerts — the fresh-install default); added rows render alphabetically as `EffectRowSetting` (38px ItemScale row geometry, `mob_effect/` sprite, trash "x" remove), so only curated effects render rather than all ~40 every frame. Migration: `config/EffectExpiryMigrator.runOnce()` (HitregMigrator shape — one-shot, guarded by `migratedEffectExpiryExclusions`, profile-EXCLUDED, called from `AuroraClient` after the profile apply) flips the one-version legacy exclusion set into registry-minus-exclusions; `AuroraConfig.loadedFromDisk()` (set in `load()` — the file-existence probe can't be deferred because load() creates the file on fresh installs) keeps genuinely fresh configs at an empty list. The section's master toggle gates everything, Low-Latency style (behavioral, not visual dimming). Reset prefix `effectExpiry` covers the list; the two reflection reset paths (`resetByPrefix`, `ProfileManager.applyProfile`) defensively copy mutable collection defaults since this list arrived | `ArmorAlertFeature` + `StatusAlertFeature` → `hud/AlertManager`/`AlertRenderer`, `screen/setting/EffectRowSetting` + `EffectExpiryListSetting` (the Particles list remains on the shared `SearchListSetting`) |
@@ -1901,6 +1901,47 @@ p60 stdMs 3.9–4.1 vs the audit's 2.6, every pacer shifted equally, both
 today's boots and the audit's own run-1-vs-run-2 spread show this), so
 the audit's absolute numbers remain the reference; the yield≡spin
 relative result is boot-invariant and confirmed at the per-frame level.
+
+Landed 2026-09-13 after that: **the Saturation Bar black-bar regression**
+(found by manual testing, root-caused by history search — a textbook
+knock-on: the overlay code never changed at all). Symptom: the AppleSkin
+saturation overlay (`hud/SaturationOverlay`, untouched since the initial
+commit) rendered a solid opaque black bar over the rightmost food slots
+instead of golden pips. The regressing commit was **`997c84b`, the
+2026-09-11 D9 "Remove unreferenced texture PNGs" sweep**: it deleted
+`assets/aurora/textures/icons.png` believing no code referenced it — but
+`SaturationOverlay.ICONS` has held a live reference
+(`aurora:textures/icons.png`) since the initial commit; the sweep's
+reference check simply missed it (grep hazard: the identifier string
+`"textures/icons.png"` sits inside the overlay's constructor call, easy
+to skim past; the sweep's commit message even says "none is referenced by
+any code" — it was wrong for exactly this one file, right for the other
+three). Why BLACK and not an error or the magenta missingno checkerboard:
+on 1.21.11 a failed GUI texture load falls back to
+`TextureContents.createMissing()` — the 16×16 opaque black/magenta
+quadrant checkerboard (`MissingTextureAtlasSprite.generateMissingImage`)
+— and the overlay blits `u=0..36, v=0` of a **256-wide** atlas, so the
+normalized UVs land entirely inside the checkerboard's top-left
+**solid-black** quadrant: every pip draws as an opaque pure-black 9×9
+square, `ceil(sat/2)` of them forming the contiguous bar. The game logs
+`Missing resource aurora:textures/icons.png` (WARN, every frame) — which
+is exactly the line the broken-boot reproduction showed. Fix: restore
+the PNG from `997c84b^` byte-identical (the ONLY thing wrong; D9's other
+three removals — `gui/knob.png`, `gui/panel.png`, `gui/panel_outline.png`
+— genuinely had no readers and stay deleted, re-confirmed by zero
+missing-resource lines in the fixed boot's log), plus an explicit ASSET
+DEPENDENCY note in `SaturationOverlay`'s javadoc so the next dead-asset
+sweep sees the dependency where the identifier lives. Verified by a
+purpose-built DevPilot `satbar` harness mode (survival player, food 20 /
+saturation forced server-side, framebuffer-exact `mcCapture`): broken
+boot = contiguous pure-(0,0,0) black block over exactly the rightmost
+`ceil(sat/2)` slots; fixed boot = the golden pip outlines in the correct
+slots (7 pips at sat 14), pixel-mapped both times. Lesson recorded for
+future sweeps: **an asset is "unreferenced" only if the namespace:path
+string is absent from ALL source sets — including identifiers assembled
+from constants (`MOD_ID` + a path literal) — and texture deletions are
+VISUAL regressions that no compile check can catch; boot the game and
+look at the features that consume bundled assets.**
 
 ---
 

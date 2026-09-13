@@ -23,8 +23,17 @@ import net.minecraft.resources.Identifier;
  *   col 3 (u=27): full
  * </pre>
  *
+ * <p>ASSET DEPENDENCY: this class is the sole reader of the bundled file
+ * {@code src/client/resources/assets/aurora/textures/icons.png} (the reference
+ * is the {@link #ICONS} identifier, not a filename literal — reference-audit
+ * greps have missed it before, and the 2026-09-11 D9 dead-texture sweep
+ * deleted the file, turning every pip into an opaque black square: MC's
+ * missing-texture fallback is a 16x16 checkerboard whose top-left quadrant is
+ * solid black, and u=0..36 of a 256-wide atlas lands entirely inside it).
+ * Don't remove the PNG without removing this overlay.
+ *
  * <p>Called from InGameHudMixin with the exact (top, right) that vanilla
- * passed to its own renderFood ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â so alignment is perfect by construction.
+ * passed to its own renderFood — so alignment is perfect by construction.
  */
 public final class SaturationOverlay {
 
