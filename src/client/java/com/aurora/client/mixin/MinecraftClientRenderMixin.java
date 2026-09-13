@@ -39,17 +39,47 @@ public abstract class MinecraftClientRenderMixin {
         // content): resets "dim painted" so every frame starts in the pass.
         com.aurora.client.ui.component.GlassSurface.beginFrame();
 
-        // Adaptive (Reflex-style) render sleep. Gated on the Low Latency
-        // master, and skipped inside Aurora's own screens: there the GUI
-        // limiter (RenderSystemMixin, guiFpsLimit) owns pacing, and a HEAD
-        // sleep paced at the vanilla cap would outrun its anchor and
-        // silently defeat the Interface FPS cap.
+        // Frame pacing at the top of the frame (before input application and
+        // the render queue — the Reflex-style position: the CPU sleeps, then
+        // samples input, then builds the frame). Two pacing sources own this
+        // block and share one anchor chain (they are mutually exclusive per
+        // frame, and the anchor re-anchors whenever the effective fps
+        // changes, so handovers between them are clean):
+        //
+        //  1. Adaptive (Reflex-style) render sleep — paced at the vanilla
+        //     framerate option, gated on the Low Latency master + Frame
+        //     Pacer prerequisites, and skipped inside Aurora's own screens
+        //     where the GUI limiter (RenderSystemMixin, guiFpsLimit) has
+        //     historically owned pacing.
+        //  2. The global frame cap (frameCapFps > 0) — paced at the cap on
+        //     every frame, Aurora screens included. It must live here rather
+        //     than in limitDisplayFPS because the 1.21.11 game loop only
+        //     calls RenderSystem.limitDisplayFPS while the vanilla option is
+        //     below its Unlimited sentinel (260): with vanilla "Unlimited"
+        //     nothing else in the chain ever runs, so this is the only point
+        //     that can enforce a cap in that (very common) configuration.
+        //
+        // Composition guarantee (the "no two limiters fighting" invariant):
+        // every pacer in the frame — vanilla's own, the Frame Pacer, the GUI
+        // limiter, this cap — is an independent anchored "wait until my
+        // target". A pacer whose cadence is looser than the actual frame
+        // cadence hits its re-anchor branch (late by > half a frame) and
+        // waits nothing; the tightest active constraint therefore always
+        // determines the rate: min(vanilla option, vanilla's iconified/AFK/
+        // menu throttles, guiFpsLimit on Aurora screens, this cap).
         boolean auroraGui = self.screen != null
                 && self.screen.getClass().getName().startsWith("com.aurora.client.screen");
-        if (!auroraGui && cfg.lowLatencyRender && cfg.smoothFramePacer
-                && cfg.adaptiveRenderSleeping && cfg.framePacingStrategy != AuroraConfig.PacingStrategy.VANILLA) {
-            int fps = self.options.framerateLimit().get();
-            if (fps > 0) {
+        boolean adaptivePacing = !auroraGui && cfg.lowLatencyRender && cfg.smoothFramePacer
+                && cfg.adaptiveRenderSleeping && cfg.framePacingStrategy != AuroraConfig.PacingStrategy.VANILLA;
+        int capFps = Math.max(0, cfg.frameCapFps);
+        if (adaptivePacing || capFps > 0) {
+            // The adaptive sleep is paced by the vanilla option (260 is its
+            // Unlimited sentinel — pacing at it is the historical no-op the
+            // adaptive path has always performed); the cap tightens whichever
+            // rate is active.
+            int fps = adaptivePacing ? self.options.framerateLimit().get() : Integer.MAX_VALUE;
+            if (capFps > 0) fps = Math.min(fps, capFps);
+            if (fps > 0 && fps < Integer.MAX_VALUE) {
                 double now = org.lwjgl.glfw.GLFW.glfwGetTime();
                 double frameTime = 1.0 / fps;
                 if (aurora$nextAdaptiveFrameTarget == 0.0
@@ -58,11 +88,22 @@ public abstract class MinecraftClientRenderMixin {
                     aurora$nextAdaptiveFrameTarget = now + frameTime;
                     aurora$lastAdaptiveFps = fps;
                 } else {
-                    if (!aurora$loggedAdaptiveSleep) {
+                    if (adaptivePacing && !aurora$loggedAdaptiveSleep) {
                         com.aurora.client.AuroraClient.LOGGER.info("[Aurora-Reflex] Adaptive JIT Render-Queue sleeping initialized and active.");
                         aurora$loggedAdaptiveSleep = true;
                     }
-                    com.aurora.client.util.FramePacer.waitUntil(aurora$nextAdaptiveFrameTarget, cfg);
+                    if (adaptivePacing) {
+                        com.aurora.client.util.FramePacer.waitUntil(aurora$nextAdaptiveFrameTarget, cfg);
+                    } else if (cfg.smoothFramePacer && cfg.framePacingStrategy != AuroraConfig.PacingStrategy.VANILLA) {
+                        com.aurora.client.util.FramePacer.waitUntil(aurora$nextAdaptiveFrameTarget, cfg);
+                    } else {
+                        // Cap-only with the Frame Pacer off or on the VANILLA
+                        // strategy: the configured strategies have no vanilla
+                        // equivalent for a custom cap, so pace with the fixed
+                        // hybrid profile — the same fallback the Aurora-GUI
+                        // limiter uses in RenderSystemMixin.
+                        com.aurora.client.util.FramePacer.waitUntilHybrid(aurora$nextAdaptiveFrameTarget, 2000, 500);
+                    }
                     aurora$nextAdaptiveFrameTarget += frameTime;
                 }
             }

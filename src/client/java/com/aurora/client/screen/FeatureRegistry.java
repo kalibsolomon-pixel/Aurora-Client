@@ -1375,10 +1375,10 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
         // (Settings-tab entries had no detail screen), so this is new
         // capability, consistent with the other combined features.
         addWithSettings(MODULES, "miscellaneous", "Miscellaneous",
-                "A temporary home for smaller settings that have not been given a dedicated feature screen of their own yet: smooth camera, frame pacing, latency, tick sync, input handling, and server-list dragging. Each keeps its own enable toggle and settings under its section; open the feature to configure them.",
+                "A temporary home for smaller settings that have not been given a dedicated feature screen of their own yet: smooth camera, frame pacing, a global frame cap, latency, tick sync, input handling, and server-list dragging. Each keeps its own enable toggle and settings under its section; open the feature to configure them.",
                         () -> cfg.smoothCamera || cfg.smoothFramePacer || cfg.lowLatencyRender
                         || cfg.tickSyncEnabled || cfg.inputSamplingDecoupled
-                        || cfg.serverListDragReorder,
+                        || cfg.serverListDragReorder || cfg.frameCapFps > 0,
                 v -> {
                     cfg.smoothCamera = v;
                     cfg.smoothFramePacer = v;
@@ -1386,6 +1386,10 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                     cfg.tickSyncEnabled = v;
                     cfg.inputSamplingDecoupled = v;
                     cfg.serverListDragReorder = v;
+                    // The cap is a value setting, not a toggle: master-off
+                    // removes it (0 = Off), master-on leaves whatever cap the
+                    // user chose (a forced "on" value would be arbitrary).
+                    if (!v) cfg.frameCapFps = 0;
                 },
                 List.of(
                         new SectionHeaderSetting("Smooth Camera"),
@@ -1425,6 +1429,13 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                 () -> cfg.framePacerParkThresholdMicros,
                                 v -> cfg.framePacerParkThresholdMicros = v, 1000, 8000)
                                 .description("When to switch from coarse OS-level sleep to fine yield-spin. Higher = lower CPU, lower = more stable timing."),
+
+                        new SectionHeaderSetting("Frame Cap"),
+                        SliderSetting.ofInt("Global Frame Cap",
+                                () -> cfg.frameCapFps, v -> cfg.frameCapFps = v, 0, 2000)
+                                .editableValue()
+                                .valueFormatter(v -> v.intValue() <= 0 ? "Off" : Integer.toString(v.intValue()))
+                                .description("Caps the game's framerate everywhere — world, menus, and Aurora's screens alike — at up to 2000 FPS. 0 (Off) removes the cap. Unlike Minecraft's own FPS limit, this works even when that option is set to Unlimited, and it stacks cleanly with it: whichever is lower wins. The wait happens at the very start of each frame, so latency stays low. Click the value to type an exact number; drag or use the arrows for rough adjustment."),
 
                         new SectionHeaderSetting("Low Latency"),
                         new BooleanSetting("Enabled",
@@ -1469,7 +1480,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                 // resetByPrefix comment on pack_tweaks for prefix rules).
                 List.of(
                         "smoothCamera",
-                        "smoothFramePacer", "framePacer", "framePacing",
+                        "smoothFramePacer", "framePacer", "framePacing", "frameCap",
                         "lowLatencyRender", "disableVSync", "adaptiveRenderSleeping",
                         "tickSync", "inputSamplingDecoupled", "serverListDragReorder"));
 

@@ -260,7 +260,7 @@ shift+right-click = lock, X = disable.
 | Animations (`animations`) | Swing curve + 1.8 swing arc, view-bob curve/amplitude, 1.7/1.8 damage tilt, idle held-item sway, frame-rate-independent entity movement smoothing (tau scales with server packet bundling) | `HeldItemRendererMixin`, `GameRendererBobMixin`, `DamageTiltMixin`, `LivingEntityRendererExtractMixin` + `EntityMovementSmoother`, `util/AnimationCurves`, cross-cutting `ThrottleDetector` |
 | Hotbar Bounce (`hotbar_bounce`) | White pulse outline on hotbar slot when stack count grows | `HotbarItemBounceMixin` → `HotbarBounceTracker` |
 | Keystrokes (`keystrokes`) | Key-panel overlay: WASD/mouse/CPS/space/sneak/sprint + up to 12 custom keys; pressed-key accent follows the theme accent by default (`keystrokesAccentColor == 0`, R6 P2; explicit color overrides); key labels follow the shared `hudColor` sentinel (R6 ext) | `hud/module/KeystrokesModule` |
-| Miscellaneous (`miscellaneous`) — **moved to the MODULES grid 2026-09-10** | The 2026-09-09 consolidation of the tiles that used to sit below Interface (Smooth Camera, Frame Pacer, Low Latency, Tick Sync, Decoupled Input, Drag-to-Reorder Servers, Compliance Mode, Accessibility — the last two since removed entirely, 2026-09-12) behind one tile + detail screen; grid right-click opens the same detail screen as every other tile — an explicit "for now" grouping, not a taxonomy decision. The Low Latency section was audited 2026-09-11 (§8): the dead Zero-Latency Camera and High-Frequency Input rows are gone, Adaptive Render Sleeping is genuinely gated on the section's Enabled toggle, and descriptions match verified behavior | `FeatureRegistry` MODULES entry (byte-verbatim settings + unified reset), `ModuleManager` grid card, "?" (`question_mark` U+EB8B) icon |
+| Miscellaneous (`miscellaneous`) — **moved to the MODULES grid 2026-09-10** | The 2026-09-09 consolidation of the tiles that used to sit below Interface (Smooth Camera, Frame Pacer, Low Latency, Tick Sync, Decoupled Input, Drag-to-Reorder Servers, Compliance Mode, Accessibility — the last two since removed entirely, 2026-09-12) behind one tile + detail screen; grid right-click opens the same detail screen as every other tile — an explicit "for now" grouping, not a taxonomy decision. The Low Latency section was audited 2026-09-11 (§8): the dead Zero-Latency Camera and High-Frequency Input rows are gone, Adaptive Render Sleeping is genuinely gated on the section's Enabled toggle, and descriptions match verified behavior. A **Frame Cap section was added 2026-09-13** (between Frame Pacer and Low Latency): the global `frameCapFps` (0 = Off, 10–2000) enforced at the top of each frame in `MinecraftClientRenderMixin` — see §8's 2026-09-13 entry for why it lives there and how it composes with every other limiter | `FeatureRegistry` MODULES entry (byte-verbatim settings + unified reset), `ModuleManager` grid card, "?" (`question_mark` U+EB8B) icon |
 
 ### SETTINGS tab (4 tiles)
 
@@ -1573,6 +1573,47 @@ the Miscellaneous screen's Compliance Mode section, `HudStatus.RESTORED` (compli
 toast color, now unused), and `screen/setting/StringListSetting` (its only consumer was
 the two compliance server lists). Old configs carrying the removed fields load clean,
 direct and profile-snapshot both.
+
+Landed 2026-09-13: **the global Frame Cap** (Miscellaneous, own "Frame Cap" section
+between Frame Pacer and Low Latency) — `AuroraConfig.frameCapFps`, 0 = Off (default,
+fresh installs see no behavior change), 10–2000 active, presented as a slider whose
+value readout is click-to-edit. Investigation first mapped every limiter in the frame:
+vanilla 1.21.11's game loop paces through `RenderSystem.limitDisplayFPS(fps)` after the
+swap **only while `FramerateLimitTracker.getFramerateLimit() < 260`** (260 = the
+Unlimited sentinel; the tracker layers iconified-10 / AFK-10-or-30 / menu-60 throttles
+over the option), Aurora's `RenderSystemMixin` replaces that call (Aurora screens →
+`guiFpsLimit`, else the Frame Pacer strategies, or cancels it when Adaptive Render
+Sleeping owns pacing), and the adaptive sleep itself paces at runTick HEAD from
+`options.framerateLimit()`. The load-bearing discovery: **with the vanilla option at
+Unlimited the game loop never calls `limitDisplayFPS` at all** — any cap implemented
+there is silently dead (this also explains, and pre-dates this change, why
+`guiFpsLimit` is dead in-world with the option Unlimited — a known quirk, deliberately
+NOT fixed here), so the new cap lives at runTick HEAD in `MinecraftClientRenderMixin`,
+the one pacing point that runs every frame regardless of the option. It shares the
+adaptive sleep's anchor chain (mutually exclusive owners; the re-anchor-on-fps-change
+covers handovers), folds into the adaptive pacer's fps when that is active
+(`min(option, cap)`, one wait), and when the Frame Pacer is off / VANILLA-strategy it
+paces with the fixed hybrid profile — the same fallback the GUI limiter uses. The
+composition rule (why nothing fights): every pacer is an independent anchored
+"wait until my target", and one looser than the actual cadence degenerates to a no-op
+re-anchor, so effective fps = min(vanilla option, vanilla throttles, guiFpsLimit on
+Aurora screens, this cap) — tightest wins, nothing defeats anything. Verified in-game
+(DevPilot `framecap` boots, vsync forced off, frozen dev world): cap 30 and 144 with
+the option Unlimited hold exactly 30/144; cap 2000 rides at the natural ~224; option
+120 + cap 144 → 120 (vanilla tighter wins — the audit's defeat bug class, re-checked);
+option 120 + cap 30 → 30; adaptive@60 + cap 144 → 60; adaptive@60 + cap 30 → 30; and
+the Miscellaneous screen itself holds the cap (30) with the option Unlimited, where
+the post-swap limiter is dead. The card master toggle ORs `frameCapFps > 0` and
+master-off zeroes it (master-on does NOT force a cap value — it's a value setting,
+not a toggle); reset prefix `frameCap`. The same change added the general
+`SliderSetting.editableValue()` capability (click the value readout → in-place
+`EditBox`; Enter or click-away commits through the slider's snap+clamp+setter, Escape
+reverts, out-of-range clamps, empty/non-numeric reverts — matching PixelCanvas's W/H
+fields' strip-responder idiom; focus-loss commit keyed off the detail screen's
+clearFocus-on-click) plus `valueFormatter` (the cap's "Off" at 0) and `Slider.setValue`
+— deliberately a general enhancement, not a one-off widget, since the addition to the
+shared slider row is small and other wide-range settings (0–2000 sliders drag poorly)
+will want it.
 
 ---
 
