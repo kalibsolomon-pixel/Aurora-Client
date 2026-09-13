@@ -261,7 +261,7 @@ shift+right-click = lock, X = disable.
 | Animations (`animations`) | Swing curve + 1.8 swing arc, view-bob curve/amplitude, 1.7/1.8 damage tilt, idle held-item sway, frame-rate-independent entity movement smoothing (tau scales with server packet bundling) | `HeldItemRendererMixin`, `GameRendererBobMixin`, `DamageTiltMixin`, `LivingEntityRendererExtractMixin` + `EntityMovementSmoother`, `util/AnimationCurves`, cross-cutting `ThrottleDetector` |
 | Hotbar Bounce (`hotbar_bounce`) | White pulse outline on hotbar slot when stack count grows | `HotbarItemBounceMixin` → `HotbarBounceTracker` |
 | Keystrokes (`keystrokes`) | Key-panel overlay: WASD/mouse/CPS/space/sneak/sprint + up to 12 custom keys; pressed-key accent follows the theme accent by default (`keystrokesAccentColor == 0`, R6 P2; explicit color overrides); key labels follow the shared `hudColor` sentinel (R6 ext) | `hud/module/KeystrokesModule` |
-| Miscellaneous (`miscellaneous`) — **moved to the MODULES grid 2026-09-10** | The 2026-09-09 consolidation of the tiles that used to sit below Interface (Smooth Camera, Frame Pacer, Low Latency, Tick Sync, Decoupled Input, Drag-to-Reorder Servers, Compliance Mode, Accessibility — Compliance/Accessibility removed entirely 2026-09-12, **Tick Sync removed entirely 2026-09-13**, see §8) behind one tile + detail screen; grid right-click opens the same detail screen as every other tile — an explicit "for now" grouping, not a taxonomy decision. The Low Latency section was audited 2026-09-11 (§8): the dead Zero-Latency Camera and High-Frequency Input rows are gone, Adaptive Render Sleeping is genuinely gated on the section's Enabled toggle, and descriptions match verified behavior. A **Frame Cap section was added 2026-09-13** (between Frame Pacer and Low Latency): the global `frameCapFps` (0 = Off, 10–2000) enforced at the top of each frame in `MinecraftClientRenderMixin` — see §8's 2026-09-13 entry for why it lives there and how it composes with every other limiter | `FeatureRegistry` MODULES entry (byte-verbatim settings + unified reset), `ModuleManager` grid card, "?" (`question_mark` U+EB8B) icon |
+| Miscellaneous (`miscellaneous`) — **moved to the MODULES grid 2026-09-10** | The 2026-09-09 consolidation of the tiles that used to sit below Interface (Smooth Camera, Frame Pacer, Low Latency, Tick Sync, Decoupled Input, Drag-to-Reorder Servers, Compliance Mode, Accessibility — Compliance/Accessibility removed entirely 2026-09-12, **Tick Sync removed entirely 2026-09-13**, see §8) behind one tile + detail screen; grid right-click opens the same detail screen as every other tile — an explicit "for now" grouping, not a taxonomy decision. The Low Latency section was audited 2026-09-11 (§8): the dead Zero-Latency Camera and High-Frequency Input rows are gone, Adaptive Render Sleeping is genuinely gated on the section's Enabled toggle, and descriptions match verified behavior. **Disable VSync's fullscreen-transition hole (F11 silently re-enabling vsync behind the toggle, wedged until cycled off/on) was fixed 2026-09-13 — §8.** A **Frame Cap section was added 2026-09-13** (between Frame Pacer and Low Latency): the global `frameCapFps` (0 = Off, 10–2000) enforced at the top of each frame in `MinecraftClientRenderMixin` — see §8's 2026-09-13 entry for why it lives there and how it composes with every other limiter | `FeatureRegistry` MODULES entry (byte-verbatim settings + unified reset), `ModuleManager` grid card, "?" (`question_mark` U+EB8B) icon |
 
 ### SETTINGS tab (4 tiles)
 
@@ -1804,6 +1804,51 @@ fps, clean exit, zero tick-rate mutations in the log. Feature count
 (Miscellaneous keeps its tile). `HITREG_INTEGRATION_CATALOG.md`'s
 mixin-collision note updated (the `handleMoveEntity`/`handleTickingState`
 injections went with the mixin).
+
+Landed 2026-09-13 after that: **Disable VSync survives fullscreen
+transitions** (fixes the F11 hole found by the same day's
+efficiency/effectiveness audit of Frame Pacer / Frame Cap / Disable VSync).
+The audit measured the bug live: Disable VSync active and the client
+uncapped (234.9 fps, un-quantized) → F11 → 60.0 fps vblank-quantized →
+F11 back → STILL 60.0 — only an explicit off/on of the setting recovered
+it. Root cause, verified against 1.21.11 bytecode: vanilla asserts the
+swap interval from THREE places, not the two the feature's javadoc
+claimed — the `Minecraft` constructor, the vsync option's observer, and
+`Window.updateDisplay`, which on every pending fullscreen transition calls
+`updateFullscreen(this.vsync, …)` → `updateVsync(this.vsync)`, re-asserting
+the FIELD's value. Aurora's old code called `glfwSwapInterval(0)` directly,
+so `Window.vsync` still held the vanilla option's value (true) — the
+transition faithfully re-enabled vsync, and `LowLatencyFeature`'s
+`wantNoVSync == forcedNoVSync` edge detection never fired because its own
+state genuinely hadn't changed. Fix (the "route through vanilla" candidate
+from the audit's three options, plus the cheap watchdog): every Aurora
+write now goes through the public `Window.updateVsync` — the field always
+tracks the state Aurora actually forced, so the fullscreen re-assert lands
+on interval 0 by construction — and while forcing is active the feature
+re-asserts `updateVsync(false)` every tick (20 trivial calls/s), which
+additionally self-heals the one writer routing alone can't cover: the
+vanilla option's observer, which can apply `updateVsync(true)` mid-forcing.
+The restore path is unchanged in semantics (falling edge → one routed
+`updateVsync(vanillaOptionValue)`, never forcing vsync on), and the class
+javadoc now documents all three call sites. Verified by DevPilot `perf`
+boots under gamescope — with a harness lesson worth recording: the
+per-phase vsync transition driver added during the audit (to de-contaminate
+its tail phases) MASKS this bug, because cycling `disableVSync` off/on
+across a phase boundary is exactly the recovery toggle; an A/B boot
+without the fix exposed the masking, and the `f11-*`/`optobs` phases now
+suppress the cycle and enter with continuous forcing. Results: the exact
+repro sequence holds uncapped throughout — 576.7 fps (windowed) → 567.7
+fps (fullscreen, p50 1.52 ms, un-quantized) → 555.8 fps (back windowed),
+versus 60.0/60.0 pre-fix; the new `optobs` phase (fires the vanilla
+observer's `updateVsync(true)` mid-forcing — the config round-trip case,
+no off/on) holds 493.7 fps un-quantized; the restore path re-quantizes to
+60.1 fps / p50 16.63 ms as designed; render-thread CPU in the forced
+phases (83–85% of one core) matches the audit's uncapped baselines
+(84.7/85.1%) — the per-tick re-assert costs nothing measurable; and a
+stash-A/B boot pinned the one suspicious number (cap30-fix miss15% 50.3%
+vs the audit's 0.0%) on phase position / just-loaded-world jitter, not
+the fix (no-fix at the same early position: 47.8%, statistically
+identical).
 
 ---
 
