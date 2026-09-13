@@ -239,7 +239,7 @@ shift+right-click = lock, X = disable.
 | Crosshair (`crosshair`) | Preset or CUSTOM painted crosshair with a **free-form canvas** (any W×H up to 128; dims live in `crosshairCustom{Width,Height}` + flat `boolean[]` pixels, resolved via `util/GridDims`); indicator crosshair when entity attackable; deliberate half-pixel centering fix. Canvas editor renders through a cached `DynamicTexture` (`ui/util/CanvasTexture` — one blit/frame, re-raster only on edit; replaced a per-cell fill loop that cost ~12.8 ms/frame at 33×33), HUD path merges lit cells into run-length fills, and growing the grid first runs a **measured** cost benchmark on the player's machine (`[canvas-cost]` log) with an apply-anyway warning — never hardware-name heuristics | `hud/CrosshairRenderer`, `PixelCanvasSetting`, `CanvasTexture`, `InGameHudMixin` (vanilla suppression) |
 | Hitbox (`hitbox`) | Custom entity hitboxes (self/target colors, eye-line, look line, width, see-through). Renders at plain vanilla interpolation — the smoother was **deliberately reverted** (desynced from model) | `hud/HitboxRenderer` (AFTER_ENTITIES) + `WorldLineRenderer`, `HitboxFeature`, `EntityRenderDispatcherMixin` |
 | Hit Color (`hit_color`) | Recolors hurt flash (port of harimasa/HitColor, MIT, credited) | `MixinOverlayTexture`, `EquipmentLayerRendererMixin`, `util/OverlayReloadListener` |
-| Glint Color (`glint_color`) — **added 2026-09-13, mirrors Hit Color's structure** | Recolors the enchantment glint (held/GUI/dropped items + worn armor) by tinting the two glint textures vanilla's four glint render types sample (`enchanted_glint_item.png`/`enchanted_glint_armor.png`, ids read from `ItemRenderer.<clinit>` bytecode). 1.21.11's glint is NOT a HitColor-style flat overlay: it's a scrolling texture pattern blended additively (`BlendFunction.GLINT` = `SRC_COLOR,ONE`) on the `pipeline/glint` shader, so the color lives in the texture pixels — recolor = per-channel multiply by the picker color (alpha scales strength, pattern intensity carries the shimmer through), applied at HEAD of `ReloadableTexture.apply` (the last CPU-side moment before upload+close; `SimpleTexture.loadContents` couldn't host the hook because Mixin can't shadow its inherited `resourceId()`). **No disabled-state constant exists at all** — the d84298c byte-swap bug class is structurally eliminated: off = vanilla's own untouched file load. Mid-session toggle/color changes force a synchronous reload of exactly the two textures via `TextureManager.release`+`getTexture` from END_CLIENT_TICK (`util/GlintColor.tick`, HitColor's change-detection pattern; between frames per §6 convention 10, skipped while a resource reload is in flight). Settings mirror Hit Color exactly: master toggle + `ColorSetting` + "Tint Armor" sub-toggle (`glintColorEnabled`/`glintColor`/`glintColorTintArmor`; reset prefix `glintColor`) | `mixin/ReloadableTextureMixin`, `util/GlintColor`, END_CLIENT_TICK hook in `AuroraClient` |
+| Glint Color (`glint_color`) — **added 2026-09-13, mirrors Hit Color's structure** | Recolors the enchantment glint (held/GUI/dropped items + worn armor) by tinting the two glint textures vanilla's four glint render types sample (`enchanted_glint_item.png`/`enchanted_glint_armor.png`, ids read from `ItemRenderer.<clinit>` bytecode). 1.21.11's glint is NOT a HitColor-style flat overlay: it's a scrolling texture pattern blended additively (`BlendFunction.GLINT` = `SRC_COLOR,ONE`) on the `pipeline/glint` shader, so the color lives in the texture pixels — recolor = **colorize** (2026-09-13 same-day fix: the original per-channel multiply could only dim channels, so any target far from the source's dim purple `0x4b237b` read weak — green capped at 35/255, white was literal identity): each pixel's intensity (`max(R,G,B)`, HSV value — weighted luma's green-dominant weights would re-dim the R/B-heavy purple) drives the picker color at full strength, preserving the shimmer's value ramp and near-black background (alpha untouched; picker alpha scales strength), applied at HEAD of `ReloadableTexture.apply` (the last CPU-side moment before upload+close; `SimpleTexture.loadContents` couldn't host the hook because Mixin can't shadow its inherited `resourceId()`). **No disabled-state constant exists at all** — the d84298c byte-swap bug class is structurally eliminated: off = vanilla's own untouched file load. Mid-session toggle/color changes force a synchronous reload of exactly the two textures via `TextureManager.release`+`getTexture` from END_CLIENT_TICK (`util/GlintColor.tick`, HitColor's change-detection pattern; between frames per §6 convention 10, skipped while a resource reload is in flight). Settings mirror Hit Color exactly: master toggle + `ColorSetting` + "Tint Armor" sub-toggle (`glintColorEnabled`/`glintColor`/`glintColorTintArmor`; reset prefix `glintColor`) | `mixin/ReloadableTextureMixin`, `util/GlintColor`, END_CLIENT_TICK hook in `AuroraClient` |
 | Better Hitreg (`better_hitreg`) | BetterHitreg by Jass, integrated with permission (credited in-file + screen subtitle). Client-side hit feedback: on your swing the target's hurt animation, the correct attack sound and crit/sharpness particles play locally after `hitregDelayMs` (0 = next frame) while the server's late copy is cancelled (`ServerMixin`/`NetworkMixin`→`DontAnimate` marker→`DamageMixin`); "Safe Regs Only"/shield rules; ghost + misplace detection over a rolling 100-hit window (surfaced as live value lines under the Alert Delays/Ghosts/Misplaces toggles via `BooleanSetting.valueLine`, plus tooltips; "Reset Tracked Stats" isolated in a trailing Maintenance section per DESIGN_LANGUAGE §7.3); audio (mute other fights/self/them/non-hits, 1.8 sounds, OpenAL EFX muffle/sharpen via `SourceMixin`, metronome); render (hide other fights/animations/armor/particles, target + server hitbox, target cross, reach + jump rings, perfect-hit / jump-reset flash); practice arena (Unrender World via `ChunkMixin`, solid floor, floor grid); 19 ARGB overlay colors; six keybinds incl. the practice scoreboard. Fight tracking feeds the Stats Overlay (`Settings.addFight`). No chat/alert output at all (removed at integration). Card toggle = `hitregEnabled` master (ANDed into every `Toggle.toggled()` read); "Custom Hitreg" inside is upstream's own switch | `hitreg/*` (§2), `mixin/hitreg/*` (13), `AuroraConfig.hitreg*` (Reset prefix `hitreg`) |
 | Info HUD (`info_module`) | Corner readout, 13 individually toggleable rows (FPS/XYZ/time/facing/biome/light/memory/ping/CPS/playtime…); default background is the theme-derived `AURORA` gradient (`HUD_BACKDROP_*`, R6 P2 — was `NONE`); text follows the theme accent by default (shared `hudColor` sentinel, R6 ext — `theme/HudText`) | `hud/module/InfoModule`, `PlaytimeFeature` (per-world buckets) |
 | CPS (`cps`) | L/R clicks-per-second; counts from raw GLFW callback (polling caps at 20) | `CpsModule`, `CpsTracker`, `ClickTrackerFeature`, `MouseClickTrackerMixin` |
@@ -1640,6 +1640,8 @@ NativeImage (a first attempt targeted `SimpleTexture.loadContents` but Mixin can
 per-channel multiply by the picker color (pattern intensity carries the shimmer;
 picker alpha scales strength; alpha channel preserved — the glint shader only uses it
 for a <0.1 discard), recomposed exclusively via `net.minecraft.util.ARGB` helpers.
+(The multiply semantics were superseded within hours by the colorize fix — see the
+next entry.)
 The `d84298c` lesson is answered *structurally*: **there is no disabled-state constant
 anywhere** — off returns vanilla's untouched file load bit-for-bit, and every texture
 id compared against came from bytecode, not hand-typing. Mid-session toggle/color
@@ -1665,6 +1667,40 @@ screen (title "Glint Color", color picker + Tint Armor rows, `settings=2`). Sett
 (spectator) / tick-180 (tp into terrain) preamble blocks now exempt `glintcolor`, and
 equipment set via the client *inventory* (`setItem(0/36..39)` + `setSelectedSlot`)
 survives chunk equipment resyncs that wipe client-side `setItemSlot` writes.
+
+Landed 2026-09-13 after that: **the Glint Color colorize fix** — the recolor read
+strong only near the source's purple hue and weak everywhere else. Diagnosis
+confirmed against the code before changing anything: the tint multiplied each
+source channel by the picker's channel (`new = orig × target/255`), and a multiply
+can only dim or zero channels, never brighten — the source glint is a dim purple
+(`0x4b237b` ≈ 29% R / 14% G / 48% B), so a green target could never exceed 35/255
+and a white target was literal identity (vanilla purple, unchanged). The fix is a
+colorize: each pixel reduces to an intensity = `max(R,G,B)` (HSV value) and the
+output is `intensity × target` — the target at FULL strength wherever the pattern
+was bright, near-black wherever it was dark, so the shimmer survives as a value
+ramp of the target hue instead of a flat block; the texture's alpha stays
+untouched and the picker's alpha still scales strength. `max` was chosen over
+weighted luminance (`0.299R+0.587G+0.114B`) deliberately: the pattern's energy
+lives in R and B (purple), which green-dominant luma weights systematically
+undervalue — a second-order version of the very dimming being fixed. One
+implementation bug was caught by reading the boot log's `[glintColor]` probe
+lines before trusting any capture: the first draft kept the target channel on
+the 0..1 float scale inside `Math.round(...)`, which collapses to 0 or 1 and
+turned the whole texture black (`ff4b237b -> ff000000` for every target); the
+target channel must stay on the 0..255 scale. Verified by a `glintcolor2` DevPilot
+boot under gamescope (four targets + mid-session off, 1p held sword + 3p armor;
+log probe pixels: purple→`ff4c247b` (≈ vanilla's own `ff4b237b`), green→
+`ff006219`, white→`ff7b7b7b` — arithmetically impossible under multiply —
+red→`ff7b0000`): a near-vanilla purple target reproduces vanilla with a net-zero
+signed blade differential (no regression); green reads vivid at the far hue
+(blade hue counts green 27955 / purple 4; signed diff +88 G against off); white
+is the armor's silver shimmer (3p: zero purple-dominant pixels while on); red
+present with +29 R / −64 B against off (red light in, the purple's blue out);
+the shimmer still animates (an animation-pair capture differs on 14921/61740
+blade pixels — a moving pattern, not a static tint) with value-STD 14–38 across
+captures (not flattened); and the mid-session toggle-off restores vanilla purple
+(blade purple 25996, B-dominant differential, zero residual target hues) — the
+`d84298c` failure mode stays affirmatively ruled out.
 
 ---
 

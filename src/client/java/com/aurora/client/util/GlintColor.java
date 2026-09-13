@@ -12,7 +12,7 @@ import net.minecraft.util.ARGB;
 /**
  * Enchant Glint Recolor — the load-side half of the feature (the settings
  * card is {@code glint_color}; the injection point is
- * {@code mixin/SimpleTextureMixin}).
+ * {@code mixin/ReloadableTextureMixin}).
  *
  * <p>How the glint actually renders on 1.21.11 (verified by disassembly,
  * see {@code SimpleTextureMixin}): every enchant glint draw — held items,
@@ -29,11 +29,11 @@ import net.minecraft.util.ARGB;
  * {@code ENCHANTED_GLINT_ITEM} / {@code ENCHANTED_GLINT_ARMOR}.
  *
  * <p>Recoloring therefore means recoloring those pixels: the load hook
- * multiplies every pixel's channels by the picker color (tint semantics —
- * the pattern's per-pixel intensity carries the shimmer structure through
- * untouched). This runs inside {@code SimpleTexture.loadContents}, before
- * vanilla uploads the texture; vanilla closes the NativeImage right after
- * upload, so this is the only CPU-side moment the pixels exist.
+ * colorizes them — each pixel's intensity ({@code max(R,G,B)}) drives the
+ * picker color at full strength, preserving the shimmer's value ramp while
+ * replacing its hue (see {@link #tint}). This runs inside the texture
+ * load/apply funnel, before vanilla uploads; vanilla closes the NativeImage
+ * right after upload, so this is the only CPU-side moment the pixels exist.
  *
  * <p>The HitColor d84298c lesson (byte-swapped "disabled" constant painted
  * the wrong color) is answered structurally here: there is NO disabled-state
@@ -78,7 +78,7 @@ public final class GlintColor {
     }
 
     /**
-     * The load hook (called at RETURN of SimpleTexture.loadContents by the
+     * The load hook (called at HEAD of ReloadableTexture.apply by the
      * mixin). Recolors the pixels in place when the feature is enabled;
      * returns the contents untouched otherwise — including the armor texture
      * when only item glint is enabled (the "Tint Armor" sub-toggle, mirroring
@@ -97,21 +97,35 @@ public final class GlintColor {
     }
 
     /**
-     * Tint semantics: because the glint blend is additive with the source
-     * RGB as the weight, each pixel's channels ARE its additive energy.
-     * Multiplying per-channel by the picker color re-hues the pattern while
-     * preserving its intensity structure exactly. The picker's alpha scales
-     * overall strength (the texture's own alpha is left alone — the glint
-     * shader only uses it for a {@code < 0.1} discard, and the vanilla
-     * textures are fully opaque).
+     * Colorize semantics (the fix for the weak-recolor bug): because the
+     * glint blend is additive with the source RGB as the weight, each output
+     * pixel's channels ARE its additive energy. The old math multiplied the
+     * original channels by the target color — a tint that can only dim, so
+     * any target far from the source's dim purple (R≈29%, G≈14%, B≈48%)
+     * came out weak no matter how saturated it was. Instead each pixel is
+     * reduced to an INTENSITY — {@code max(R,G,B)} — and the output is
+     * {@code intensity × target}: the target color at full strength wherever
+     * the original texture was bright, scaling to near-black wherever the
+     * original was dark, so the shimmer pattern (a fixed-hue value ramp)
+     * survives as a value ramp of the target hue rather than flattening
+     * into a solid block.
+     *
+     * <p>Why {@code max(R,G,B)} (HSV value) and not a weighted luminance
+     * (0.299R+0.587G+0.114B): the source pattern's energy sits in the red
+     * and blue channels (purple), which weighted luma systematically
+     * undervalues — its green-dominant weights would re-dim the recolored
+     * glint to a fraction of the target, a second-order version of the same
+     * weakness being fixed. {@code max} reads the pattern's own crest as
+     * "full strength" and reproduces the ramp exactly.
+     *
+     * <p>The picker's alpha still scales overall strength, and the
+     * texture's own alpha is left alone (the glint shader only uses it for
+     * a {@code < 0.1} discard, and the vanilla textures are fully opaque).
      */
     private static void tint(Identifier id, TextureContents contents, int argb) {
         NativeImage image = contents.image();
         if (image == null) return;
 
-        float red   = ARGB.red(argb)   / 255.0f;
-        float green = ARGB.green(argb) / 255.0f;
-        float blue  = ARGB.blue(argb)  / 255.0f;
         float strength = ARGB.alpha(argb) / 255.0f;
 
         int before = image.getPixel(0, 0);
@@ -120,13 +134,15 @@ public final class GlintColor {
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
                 int px = image.getPixel(x, y);
+                float intensity = Math.max(ARGB.red(px),
+                        Math.max(ARGB.green(px), ARGB.blue(px))) / 255.0f;
                 image.setPixel(x, y, ARGB.color(ARGB.alpha(px),
-                        Math.round(ARGB.red(px)   * red   * strength),
-                        Math.round(ARGB.green(px) * green * strength),
-                        Math.round(ARGB.blue(px)  * blue  * strength)));
+                        Math.round(ARGB.red(argb)   * intensity * strength),
+                        Math.round(ARGB.green(argb) * intensity * strength),
+                        Math.round(ARGB.blue(argb)  * intensity * strength)));
             }
         }
-        AuroraClient.LOGGER.info("[glintColor] tinted {} ({}x{}): (0,0) {} -> {}",
+        AuroraClient.LOGGER.info("[glintColor] colorized {} ({}x{}): (0,0) {} -> {}",
                 id, width, height, Integer.toHexString(before), Integer.toHexString(image.getPixel(0, 0)));
     }
 
