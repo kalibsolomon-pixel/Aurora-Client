@@ -124,18 +124,19 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
         this.addRenderableWidget(hexField);
 
         int btnY = ch - 32;
-        this.addRenderableWidget(new ButtonWidget(
+        this.addRenderableWidget(ButtonWidget.semantic(
                 cw / 2 - 110, btnY, 100, 20,
                 Component.literal("Apply"),
+                "Applies the selected color and returns.",
                 () -> {
                     onApply.accept(currentArgb());
                     this.minecraft.setScreen(parent);
-                },
-                true).glassStyle(Button.GlassStyle.STAINED));
+                }).glassStyle(Button.GlassStyle.STAINED).primary(true));
 
-        this.addRenderableWidget(new ButtonWidget(
+        this.addRenderableWidget(ButtonWidget.semantic(
                 cw / 2 + 10, btnY, 100, 20,
                 Component.literal("Cancel"),
+                "Discards any edits and returns.",
                 () -> this.minecraft.setScreen(parent)).glassBackground(true));
     }
 

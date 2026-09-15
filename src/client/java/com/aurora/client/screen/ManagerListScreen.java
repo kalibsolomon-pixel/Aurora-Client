@@ -266,9 +266,10 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         // the shared row both manager screens ship.
         toolbarActionBtn = createToolbarActionBtn();
         if (toolbarActionBtn != null) this.addRenderableWidget(toolbarActionBtn);
-        doneBtn = this.addRenderableWidget(new ButtonWidget(
+        doneBtn = this.addRenderableWidget(ButtonWidget.semantic(
                 this.width - 80 - 16, 16, 80, 22,
                 Component.literal("Done"),
+                "Close this screen and return.",
                 this::onClose).glassBackground(true));
 
         // Custom-painted semantic controls join vanilla's child/narratable

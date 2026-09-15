@@ -65,6 +65,17 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
     // so a rename simply produces a fresh entry instead of a stale capture.
     private final Map<String, Button> dupBtns = new HashMap<>();
     private final Map<String, Button> delBtns = new HashMap<>();
+    /**
+     * The semantic controls behind the Duplicate/Delete row buttons (Phase A
+     * full rollout), keyed in lockstep with their buttons — created together
+     * on the row's first paint, dropped together in {@link #reconcileRowCaches}
+     * (removal unregisters the control, clearing focus if it held it). The
+     * shared Button remains the sole pixel and press-animation owner; the
+     * control owns the activation convergence, narration, and the semantic
+     * click. Delete's accessible name carries the target profile name.
+     */
+    private final Map<String, SemanticActionControl> dupControls = new HashMap<>();
+    private final Map<String, SemanticActionControl> delControls = new HashMap<>();
     /** The create-row's confirm button (recreated per create session). */
     private Button createBtn;
 
@@ -141,8 +152,9 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
 
     @Override protected ButtonWidget createToolbarActionBtn() {
         // "New Profile" — a plain action, so neutral raised glass.
-        return new ButtonWidget(16, 16, 120, 22,
+        return ButtonWidget.semantic(16, 16, 120, 22,
                 Component.literal("New Profile"),
+                "Opens the new-profile editor.",
                 this::beginCreate).glassBackground(true);
     }
 
@@ -154,8 +166,28 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         // large profile list that alone dominated the frame (~5 ms at 2000
         // rows). (fixed in 0a0caaa; the rule is now standing — AGENTS.md §10)
         Set<String> live = new HashSet<>(profiles);
-        dupBtns.keySet().retainAll(live);
-        delBtns.keySet().retainAll(live);
+        boolean membershipChanged = dupBtns.keySet().retainAll(live);
+        membershipChanged |= delBtns.keySet().retainAll(live);
+        // The row buttons' semantic controls drop with their buttons —
+        // removeWidget takes the control out of the vanilla child/narratable
+        // lists and clears screen focus if the removed control held it, so a
+        // deleted profile can never leave a stale focusable region behind
+        // (the Waypoint-Copy lifecycle rule, applied to both row actions).
+        reconcileSemanticControls(dupControls, live);
+        reconcileSemanticControls(delControls, live);
+        if (membershipChanged) nameFitCache.clear();
+    }
+
+    /** Unregisters and drops the row controls whose profile is no longer live. */
+    private void reconcileSemanticControls(Map<String, SemanticActionControl> controls,
+                                           Set<String> live) {
+        for (var it = controls.entrySet().iterator(); it.hasNext(); ) {
+            var entry = it.next();
+            if (!live.contains(entry.getKey())) {
+                unregisterSemanticControl(entry.getValue());
+                it.remove();
+            }
+        }
     }
 
     @Override
@@ -206,9 +238,17 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
                 () -> {
                     Button db = dupBtn(name);
                     db.layout(x + DUP_DX, y + 4, BTN_DUP_W, ROW_H - 8);
+                    syncDupControl(name, x + DUP_DX, y + 4, y);
                     db.renderGlassPass(ctx, x + DUP_DX, y + 4, BTN_DUP_W, ROW_H - 8);
                 },
                 () -> rowGlassDrawn.getOrDefault(name, false));
+    }
+
+    /** Per-frame Duplicate-control sync: bounds follow the row's live geometry, availability the clip band. Lazily creates the pair (the glass pass runs before the content pass on a row's first frame). */
+    private void syncDupControl(String name, int btnX, int btnY, int rowY) {
+        SemanticActionControl control = dupControl(name);
+        control.setBounds(btnX, btnY, BTN_DUP_W, ROW_H - 8);
+        control.setAvailable(rowY + ROW_H > listClipTop() && rowY < listClipBottom());
     }
 
     @Override
@@ -255,34 +295,95 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         cx += NAME_W + CONTROL_GAP;
 
         // Duplicate — surface already painted in the glass pass; this draws
-        // the label (or the flat fallback where glass declined).
+        // the label (or the flat fallback where glass declined). The semantic
+        // control re-syncs here (same rect the glass pass computed): pointer
+        // hover for narration and the provisional focus ring on the Button.
         Button dupBtn = dupBtn(name);
         dupBtn.layout(x + DUP_DX, y + 4, BTN_DUP_W, ROW_H - 8);
+        syncDupControl(name, x + DUP_DX, y + 4, y);
+        SemanticActionControl dupControl = dupControls.get(name);
+        if (dupControl != null) {
+            dupControl.updatePointer(mouseX, mouseY);
+            dupBtn.focused(dupControl.isFocused());
+        }
         dupBtn.render(ctx, x + DUP_DX, y + 4, BTN_DUP_W, ROW_H - 8, mouseX, mouseY);
 
         // Delete — shared Button, destructive variant (never glass); hidden
-        // for the default + active profiles (non-deletable).
+        // for the default + active profiles (non-deletable). Semantic control
+        // keyed in lockstep; the accessible name carries the target profile.
         if (!isDefault && !isActive) {
-            Button dBtn = delBtns.computeIfAbsent(name, k -> new Button("Delete", () -> {
-                commitEditors();
-                if (ProfileManager.getInstance().delete(k)) {
-                    flash("Deleted " + k);
-                }
-            }).destructive(true));
+            Button dBtn = delBtn(name);
             dBtn.layout(x + DEL_DX, y + 4, BTN_DEL_W, ROW_H - 8);
+            SemanticActionControl delControl = delControls.get(name);
+            if (delControl != null) {
+                delControl.setBounds(x + DEL_DX, y + 4, BTN_DEL_W, ROW_H - 8);
+                delControl.setAvailable(y + ROW_H > listClipTop() && y < listClipBottom());
+                delControl.updatePointer(mouseX, mouseY);
+                dBtn.focused(delControl.isFocused());
+            }
             dBtn.render(ctx, x + DEL_DX, y + 4, BTN_DEL_W, ROW_H - 8, mouseX, mouseY);
         }
     }
 
-    /** Duplicate — the shared themed Button in neutral raised glass (a plain action, never a selected state). */
+    /** Duplicate — the shared themed Button in neutral raised glass, with its Phase A semantic control. */
     private Button dupBtn(String name) {
-        return dupBtns.computeIfAbsent(name, k -> new Button("Duplicate", () -> {
-            commitEditors();
-            String dupName = uniqueName(k + " Copy");
-            if (ProfileManager.getInstance().duplicate(k, dupName)) {
-                flash("Duplicated → " + dupName);
-            }
-        }).glassBackground(true).priority(BlurPanelRenderer.Priority.DETAIL));
+        return dupBtns.computeIfAbsent(name, k -> {
+            Button b = new Button("Duplicate", () -> {}).glassBackground(true)
+                    .priority(BlurPanelRenderer.Priority.DETAIL);
+            // The action owns the real behavior exactly once; the Button keeps
+            // the pixels, hover, press animation (via triggerPressAnimation),
+            // and per-frame bounds. Always enabled — deletion of a duplicate
+            // is always possible; visibility gating comes from the control's
+            // per-frame availability instead.
+            SemanticActionControl control = new SemanticActionControl(SemanticAction.button(
+                    Component.literal("Duplicate " + k),
+                    () -> Component.literal("Creates a copy of this profile, including all of its settings."),
+                    () -> Component.empty(),
+                    () -> true,
+                    () -> {
+                        commitEditors();
+                        String dupName = uniqueName(k + " Copy");
+                        if (ProfileManager.getInstance().duplicate(k, dupName)) {
+                            flash("Duplicated → " + dupName);
+                        }
+                    }),
+                    MinecraftSemanticFeedback.INSTANCE,
+                    b::triggerPressAnimation,
+                    SemanticActionControl.PointerRouting.MANUAL);
+            dupControls.put(k, control);
+            registerSemanticControl(control);
+            return b;
+        });
+    }
+
+    /** The semantic control behind a Duplicate button (creating the button pair on demand). */
+    private SemanticActionControl dupControl(String name) {
+        dupBtn(name);
+        return dupControls.get(name);
+    }
+
+    /** Delete — shared Button, destructive variant, with its Phase A semantic control. */
+    private Button delBtn(String name) {
+        return delBtns.computeIfAbsent(name, k -> {
+            Button b = new Button("Delete", () -> {}).destructive(true);
+            SemanticActionControl control = new SemanticActionControl(SemanticAction.button(
+                    Component.literal("Delete " + k),
+                    () -> Component.literal("Deletes this profile. Its file is removed; the active profile cannot be deleted."),
+                    () -> Component.empty(),
+                    () -> true,
+                    () -> {
+                        commitEditors();
+                        if (ProfileManager.getInstance().delete(k)) {
+                            flash("Deleted " + k);
+                        }
+                    }),
+                    MinecraftSemanticFeedback.INSTANCE,
+                    b::triggerPressAnimation,
+                    SemanticActionControl.PointerRouting.MANUAL);
+            delControls.put(k, control);
+            registerSemanticControl(control);
+            return b;
+        });
     }
 
     /** The create-row's confirm button — neutral raised glass like every other action button here. */
@@ -401,10 +502,23 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
 
     @Override
     protected boolean rowClicked(double mouseX, double mouseY, int listX, String name, int index) {
-        // Shared row buttons see the click first.
-        Button rowBtn;
-        if ((rowBtn = dupBtns.get(name)) != null && rowBtn.mouseClicked(mouseX, mouseY, 0)) return true;
-        if ((rowBtn = delBtns.get(name)) != null && rowBtn.mouseClicked(mouseX, mouseY, 0)) return true;
+        // Shared row buttons see the click first — Duplicate routes through
+        // its semantic control (enabled gate + exactly-once activation +
+        // sound + focus participation), Delete likewise. A rejected click
+        // (missed bounds) falls through to the next handler, as before.
+        SemanticActionControl dupControl = dupControls.get(name);
+        if (dupControl != null && dupControl.activateFromPointer(mouseX, mouseY, 0)) {
+            this.setFocused(dupControl);
+            return true;
+        }
+        SemanticActionControl delControl = delControls.get(name);
+        if (delControl != null && delControl.activateFromPointer(mouseX, mouseY, 0)) {
+            // NO re-focus: the action just deleted this profile's row and the
+            // control is unregistered by the next reconcile — refocusing
+            // would point keyboard focus at a control about to leave the
+            // screen (the stale-focus-after-removal rule).
+            return true;
+        }
 
         int nameLeft = editorFieldX(listX);
         if (mouseX >= nameLeft && mouseX < nameLeft + NAME_W) {

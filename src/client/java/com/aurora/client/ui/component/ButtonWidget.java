@@ -70,9 +70,13 @@ public class ButtonWidget extends AbstractButton {
      * every service (pointer, keyboard, focus, click sound, narration base)
      * remaining vanilla's. The action deliberately carries
      * {@link SemanticSound#NONE} — vanilla already plays the UI click before
-     * {@code onPress} on both activation paths — and an always-true enabled
-     * gate mirroring vanilla's {@code active} flag, the authoritative gate.
-     * The description supplements the vanilla button narration.
+     * {@code onPress} on both activation paths — and its enabled gate IS
+     * vanilla's {@code isActive()} ({@code visible && active}), the one
+     * authoritative gate an inactive widget is rejected by before onPress
+     * ever runs; mirroring it keeps the semantic metadata truthful on
+     * buttons whose availability vanilla owns (e.g. the title screen's
+     * Multiplayer button). The description supplements the vanilla button
+     * narration.
      */
     public static ButtonWidget semantic(int x, int y, int w, int h, Component label,
                                         String description, Runnable onPress) {
@@ -81,7 +85,7 @@ public class ButtonWidget extends AbstractButton {
                 label,
                 description != null ? () -> Component.literal(description) : null,
                 null,
-                () -> true,
+                widget::isActive,
                 onPress,
                 SemanticSound.NONE,
                 true, true);
@@ -90,6 +94,16 @@ public class ButtonWidget extends AbstractButton {
 
     public ButtonWidget destructive(boolean d) {
         painter.destructive(d);
+        return this;
+    }
+
+    /**
+     * Forwarded to the painter: the flat fallback's primary/secondary variant
+     * (glass draws the stained treatment for primaries; this only decides
+     * what a decline looks like).
+     */
+    public ButtonWidget primary(boolean p) {
+        painter.primary(p);
         return this;
     }
 
@@ -160,6 +174,13 @@ public class ButtonWidget extends AbstractButton {
             Component state = semanticAction.state();
             if (state != null && !state.getString().isBlank()) {
                 builder.add(NarratedElementType.HINT, state);
+            }
+            // The semantic action's enabled gate IS vanilla's active flag —
+            // when vanilla rejects activation, narration says so too (the
+            // same established mechanism the custom-painted controls use).
+            if (!semanticAction.enabled()) {
+                builder.add(NarratedElementType.HINT,
+                        Component.translatable("narration.aurora.control.disabled"));
             }
         }
     }

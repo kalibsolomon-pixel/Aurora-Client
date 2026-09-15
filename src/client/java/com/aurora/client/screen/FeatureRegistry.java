@@ -639,7 +639,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                         // intent (nothing harmless sits below it to mis-click).
                         // The reset used to sit between Reset Counter Key and
                         // Show Other Players.
-                        new ButtonSetting("Reset Now",
+                        ButtonSetting.semantic("Reset Now",
                                 () -> {
                                     com.aurora.client.feature.impl.TotemPopFeature f =
                                             com.aurora.client.feature.impl.TotemPopFeature.get();
@@ -811,7 +811,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
             // reset used to sit between Alert Misplaces and Track Fight
             // Statistics inside Tracking.
             hitregRows.add(new SectionHeaderSetting("Maintenance"));
-            hitregRows.add(new ButtonSetting("Reset Tracked Stats", "Reset",
+            hitregRows.add(ButtonSetting.semantic("Reset Tracked Stats", "Reset",
                     () -> com.aurora.client.hitreg.Hitreg.last100Regs = new com.aurora.client.hitreg.util.RegQueue(100))
                     .description("Clears the rolling last-100-hits sample behind the delay/ghost/misplace figures in Tracking. Does not touch fight statistics — those live in the Stats Overlay."));
 
@@ -866,14 +866,14 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                         // least-to-most destructive: session counters, then the
                         // persisted lifetime totals.
                         new SectionHeaderSetting("Maintenance"),
-                        new ButtonSetting("Reset Stats", "Reset",
+                        ButtonSetting.semantic("Reset Stats", "Reset",
                                 () -> {
                                     com.aurora.client.feature.impl.StatsTrackerFeature feat =
                                             com.aurora.client.feature.impl.StatsTrackerFeature.get();
                                     if (feat != null) feat.resetAll();
                                 })
                                 .description("Clears the session counters back to zero: kills, deaths, the session timer, session fights and the last-fight readout. Lifetime fight totals are kept."),
-                        new ButtonSetting("Reset Lifetime Fight Totals", "Reset",
+                        ButtonSetting.semantic("Reset Lifetime Fight Totals", "Reset",
                                 () -> {
                                     com.aurora.client.feature.impl.StatsTrackerFeature feat =
                                             com.aurora.client.feature.impl.StatsTrackerFeature.get();
@@ -1101,7 +1101,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                 "Browse and install community resource packs directly from Modrinth — no browser, no manual file dropping. Search by name, preview the top results with thumbnails and download counts, then one-click install straight into your resourcepacks folder. Installed packs still need to be enabled in Options → Resource Packs, just like any manually-added pack.",
                 () -> cfg.resourcepackBrowserEnabled, v -> cfg.resourcepackBrowserEnabled = v,
                 List.of(
-                        new ButtonSetting("Open Browser…",
+                        ButtonSetting.semantic("Open Browser…",
                                 () -> {
                                     net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
                                     if (mc != null) {

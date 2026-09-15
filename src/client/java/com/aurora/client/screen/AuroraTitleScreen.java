@@ -76,15 +76,18 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
         int step = BUTTON_H + BUTTON_GAP;
 
         addBtn(centerX, startY + step * 0, Component.translatable("aurora.button.singleplayer"),
+                "Browse and play singleplayer worlds.",
                 () -> this.minecraft.setScreen(new SelectWorldScreen(this)),
                 false);
         ButtonWidget multiplayerBtn = addBtn(centerX, startY + step * 1, Component.translatable("aurora.button.multiplayer"),
+                "Browse multiplayer servers.",
                 () -> this.minecraft.setScreen(new JoinMultiplayerScreen(this)),
                 false);
         if (this.minecraft != null) {
             multiplayerBtn.active = this.minecraft.allowsMultiplayer();
         }
         addBtn(centerX, startY + step * 2, Component.literal("Aurora Settings"),
+                "Open Aurora's settings.",
                 () -> this.minecraft.setScreen(AuroraScreen.create()),
                 true);
         // "Mods" button retired — duplicated Aurora Settings while no
@@ -92,19 +95,26 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
         // reflective shim AuroraModMenuApi stays in place for a future
         // re-enable once Mod Menu ships a stable 1.21.11 release.
         addBtn(centerX, startY + step * 3, Component.translatable("aurora.button.options"),
+                "Open Minecraft's options.",
                 () -> this.minecraft.setScreen(new OptionsScreen(this, this.minecraft.options)),
                 false);
         addBtn(centerX, startY + step * 4, Component.translatable("aurora.button.quit"),
+                "Quit Minecraft.",
                 () -> this.minecraft.stop(),
                 false);
     }
 
-    private ButtonWidget addBtn(int x, int y, Component label, Runnable onPress, boolean primary) {
-        ButtonWidget btn = new ButtonWidget(x, y, BUTTON_W, BUTTON_H, label, onPress, primary);
+    private ButtonWidget addBtn(int x, int y, Component label, String description,
+                                Runnable onPress, boolean primary) {
+        // Vanilla-backed semantic button: vanilla keeps the pointer/keyboard/
+        // focus routing and the click sound; the semantic action owns only the
+        // behavior callback plus narration metadata.
+        ButtonWidget btn = ButtonWidget.semantic(x, y, BUTTON_W, BUTTON_H, label, description, onPress);
         // Standard glass treatment: neutral raised for actions, accent-
         // stained for the primary (selected/primary is the only stained
-        // scope — §6 convention 3).
-        btn.glassStyle(primary ? Button.GlassStyle.STAINED : Button.GlassStyle.NEUTRAL);
+        // scope — §6 convention 3); primary(true) keeps the flat-fallback
+        // variant consistent with the stained treatment.
+        btn.glassStyle(primary ? Button.GlassStyle.STAINED : Button.GlassStyle.NEUTRAL).primary(primary);
         this.addRenderableWidget(btn);
         return btn;
     }

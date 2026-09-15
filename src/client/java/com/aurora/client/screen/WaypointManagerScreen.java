@@ -82,15 +82,18 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
     private final Map<Waypoint, ColorSwatch> rowSwatches = new HashMap<>();
 
     /**
-     * The semantic controls behind the Copy buttons (Phase A rollout): keyed
-     * in lockstep with {@link #rowCopyBtns} — created together, and dropped
+     * The semantic controls behind the row buttons (Phase A full rollout),
+     * keyed in lockstep with their buttons — created together, and dropped
      * together in {@link #reconcileRowCaches} (removal also unregisters the
      * control from the screen, which clears focus if it held it). The shared
      * Button remains the sole pixel and press-animation owner; the control
      * owns the enabled gate, the activation convergence, narration, and the
-     * semantic click. Color/Delete keep their legacy wiring this session.
+     * semantic click. Color/Delete joined Copy in the full rollout; Delete's
+     * accessible name carries the target waypoint.
      */
     private final Map<Waypoint, SemanticActionControl> rowCopyControls = new HashMap<>();
+    private final Map<Waypoint, SemanticActionControl> rowColorControls = new HashMap<>();
+    private final Map<Waypoint, SemanticActionControl> rowDeleteControls = new HashMap<>();
 
     // Row-control offsets from the row's left edge, shared by the glass pass
     // and the content pass so the two can never disagree on where a button is.
@@ -126,16 +129,16 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
     @Override protected ButtonWidget createToolbarActionBtn() {
         // Drop is the screen's single primary action → accent-STAINED glass
         // (Done, from the base, is a plain action → neutral).
-        return new ButtonWidget(
+        return ButtonWidget.semantic(
                 16, 16, 160, 22,
                 Component.literal("Drop at Player Position"),
+                "Drops a new waypoint at your current position.",
                 () -> {
                     WaypointFeature feat = WaypointFeature.get();
                     if (feat == null) return;
                     feat.dropAtPlayer("Waypoint", 0xFFFFAA00, false);
                     rebuildNameField();
-                },
-                true).glassStyle(Button.GlassStyle.STAINED);
+                }).glassStyle(Button.GlassStyle.STAINED).primary(true);
     }
 
     @Override
@@ -157,18 +160,26 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
         membershipChanged |= rowColorBtns.keySet().retainAll(live);
         membershipChanged |= rowDeleteBtns.keySet().retainAll(live);
         membershipChanged |= rowSwatches.keySet().retainAll(live);
-        // Copy's semantic controls drop with their buttons — removeWidget
-        // takes the control out of the vanilla child/narratable lists and
-        // clears screen focus if the removed control held it, so a deleted
-        // waypoint can never leave a stale focusable region behind.
-        for (var it = rowCopyControls.entrySet().iterator(); it.hasNext(); ) {
+        // The row buttons' semantic controls drop with their buttons —
+        // removeWidget takes the control out of the vanilla child/narratable
+        // lists and clears screen focus if the removed control held it, so a
+        // deleted waypoint can never leave a stale focusable region behind.
+        reconcileSemanticControls(rowCopyControls, live);
+        reconcileSemanticControls(rowColorControls, live);
+        reconcileSemanticControls(rowDeleteControls, live);
+        if (membershipChanged) nameFitCache.clear();
+    }
+
+    /** Unregisters and drops the row controls whose waypoint is no longer live. */
+    private void reconcileSemanticControls(Map<Waypoint, SemanticActionControl> controls,
+                                           Set<Waypoint> live) {
+        for (var it = controls.entrySet().iterator(); it.hasNext(); ) {
             var entry = it.next();
             if (!live.contains(entry.getKey())) {
                 unregisterSemanticControl(entry.getValue());
                 it.remove();
             }
         }
-        if (membershipChanged) nameFitCache.clear();
     }
 
     // ------------------------------------------------------------------
@@ -210,9 +221,15 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
                     b.renderGlassPass(ctx, x + COPY_DX, by, BTN_COPY_W, bh);
                     b = colorBtn(wp);
                     b.layout(x + COLOR_DX, by, BTN_COLOR_W, bh);
+                    SemanticActionControl colorControl = colorControl(wp);
+                    colorControl.setBounds(x + COLOR_DX, by, BTN_COLOR_W, bh);
+                    colorControl.setAvailable(y + ROW_H > listClipTop() && y < listClipBottom());
                     b.renderGlassPass(ctx, x + COLOR_DX, by, BTN_COLOR_W, bh);
                     b = deleteBtn(wp);
                     b.layout(x + DEL_DX, by, BTN_DEL_W, bh);
+                    SemanticActionControl deleteControl = deleteControl(wp);
+                    deleteControl.setBounds(x + DEL_DX, by, BTN_DEL_W, bh);
+                    deleteControl.setAvailable(y + ROW_H > listClipTop() && y < listClipBottom());
                     b.renderGlassPass(ctx, x + DEL_DX, by, BTN_DEL_W, bh);
                 },
                 () -> rowGlassDrawn.getOrDefault(wp, false));
@@ -262,26 +279,38 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
 
         // Row buttons — surfaces already painted in the glass pass; these
         // renders draw labels (or the flat fallback where glass declined).
-        // Copy's semantic control re-syncs here (same rect the glass pass
-        // computed): pointer-hover state for narration, availability from
-        // the same clip band the base hit test clamps to, and the
+        // Each button's semantic control re-syncs here (same rect the glass
+        // pass computed): pointer-hover state for narration, availability
+        // from the same clip band the base hit test clamps to, and the
         // provisional focus ring on the shared Button.
         Button copyBtn = copyBtn(wp);
         copyBtn.layout(x + COPY_DX, y + 4, BTN_COPY_W, ROW_H - 8);
         SemanticActionControl copyControl = copyControl(wp);
-        copyControl.setBounds(x + COPY_DX, y + 4, BTN_COPY_W, ROW_H - 8);
-        copyControl.setAvailable(y + ROW_H > listClipTop() && y < listClipBottom());
-        copyControl.updatePointer(mouseX, mouseY);
+        syncRowControl(copyControl, x + COPY_DX, BTN_COPY_W, y, mouseX, mouseY);
         copyBtn.focused(copyControl.isFocused());
         copyBtn.render(ctx, x + COPY_DX, y + 4, BTN_COPY_W, ROW_H - 8, mouseX, mouseY);
 
         Button colorBtn = colorBtn(wp);
         colorBtn.layout(x + COLOR_DX, y + 4, BTN_COLOR_W, ROW_H - 8);
+        SemanticActionControl colorControl = colorControl(wp);
+        syncRowControl(colorControl, x + COLOR_DX, BTN_COLOR_W, y, mouseX, mouseY);
+        colorBtn.focused(colorControl.isFocused());
         colorBtn.render(ctx, x + COLOR_DX, y + 4, BTN_COLOR_W, ROW_H - 8, mouseX, mouseY);
 
         Button delBtn = deleteBtn(wp);
         delBtn.layout(x + DEL_DX, y + 4, BTN_DEL_W, ROW_H - 8);
+        SemanticActionControl delControl = deleteControl(wp);
+        syncRowControl(delControl, x + DEL_DX, BTN_DEL_W, y, mouseX, mouseY);
+        delBtn.focused(delControl.isFocused());
         delBtn.render(ctx, x + DEL_DX, y + 4, BTN_DEL_W, ROW_H - 8, mouseX, mouseY);
+    }
+
+    /** Shared per-frame row-control sync: bounds + clip-band availability + pointer hover for narration. */
+    private void syncRowControl(SemanticActionControl control, int btnX, int btnW, int rowY,
+                                int mouseX, int mouseY) {
+        control.setBounds(btnX, rowY + 4, btnW, ROW_H - 8);
+        control.setAvailable(rowY + ROW_H > listClipTop() && rowY < listClipBottom());
+        control.updatePointer(mouseX, mouseY);
     }
 
     /** Copy — the shared themed Button in neutral raised glass, with its Phase A semantic control. */
@@ -294,11 +323,8 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
             // and per-frame bounds. Always enabled — the manager enforces no
             // availability rule for copy; visibility gating comes from the
             // control's per-frame availability instead.
-            String where = (k.name == null || k.name.isBlank())
-                    ? "waypoint " + k.x + " " + k.y + " " + k.z
-                    : k.name;
             SemanticActionControl control = new SemanticActionControl(SemanticAction.button(
-                    Component.literal("Copy " + where),
+                    Component.literal("Copy " + where(k)),
                     () -> Component.literal("Copies this waypoint's coordinates to the clipboard."),
                     () -> Component.literal("Coordinates: " + k.x + " " + k.y + " " + k.z),
                     () -> true,
@@ -322,40 +348,91 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
         return rowCopyControls.get(wp);
     }
 
-    /** Color — shared themed Button in neutral raised glass; opens the shared color picker. */
+    /** Color — shared themed Button in neutral raised glass, with its Phase A semantic control; opens the shared color picker. */
     private Button colorBtn(Waypoint wp) {
-        return rowColorBtns.computeIfAbsent(wp, k -> new Button("Color", () -> {
-            commitEditors();
-            if (this.minecraft != null) {
-                this.minecraft.setScreen(new ColorPickerScreen(WaypointManagerScreen.this,
-                        "Waypoint Color", k.color, argb -> {
-                            // k IS the waypoint instance (identity-keyed), so
-                            // resolve it in the live list by identity — never
-                            // by position, which could target a different
-                            // waypoint after any add/remove.
-                            List<Waypoint> live = currentRows();
-                            if (live.contains(k)) {
-                                k.color = argb;
-                                WaypointFeature feat = WaypointFeature.get();
-                                if (feat != null) feat.touch();
-                            }
-                        }));
-            }
-        }).glassBackground(true).priority(BlurPanelRenderer.Priority.DETAIL));
+        return rowColorBtns.computeIfAbsent(wp, k -> {
+            Button b = new Button("Color", () -> {}).glassBackground(true)
+                    .priority(BlurPanelRenderer.Priority.DETAIL);
+            String where = where(k);
+            SemanticActionControl control = new SemanticActionControl(SemanticAction.button(
+                    Component.literal("Color " + where),
+                    () -> Component.literal("Opens the color picker for this waypoint."),
+                    () -> Component.empty(),
+                    () -> true,
+                    () -> {
+                        commitEditors();
+                        if (this.minecraft != null) {
+                            this.minecraft.setScreen(new ColorPickerScreen(WaypointManagerScreen.this,
+                                    "Waypoint Color", k.color, argb -> {
+                                        // k IS the waypoint instance (identity-keyed), so
+                                        // resolve it in the live list by identity — never
+                                        // by position, which could target a different
+                                        // waypoint after any add/remove.
+                                        List<Waypoint> live = currentRows();
+                                        if (live.contains(k)) {
+                                            k.color = argb;
+                                            WaypointFeature feat = WaypointFeature.get();
+                                            if (feat != null) feat.touch();
+                                        }
+                                    }));
+                        }
+                    }),
+                    MinecraftSemanticFeedback.INSTANCE,
+                    b::triggerPressAnimation,
+                    SemanticActionControl.PointerRouting.MANUAL);
+            rowColorControls.put(k, control);
+            registerSemanticControl(control);
+            return b;
+        });
+    }
+
+    /** The semantic control behind a Color button (creating the button pair on demand). */
+    private SemanticActionControl colorControl(Waypoint wp) {
+        colorBtn(wp);
+        return rowColorControls.get(wp);
     }
 
     /**
-     * Delete — shared Button in its destructive (semantic-error) variant.
+     * Delete — shared Button in its destructive (semantic-error) variant,
+     * with its Phase A semantic control. The accessible name carries the
+     * target waypoint so a narrator announces what would be removed.
      * Destructive keeps the flat look by design (the shared Button skips
      * glass for destructive) — error semantics must not read as glass chrome.
      */
     private Button deleteBtn(Waypoint wp) {
-        return rowDeleteBtns.computeIfAbsent(wp, k -> new Button("Delete", () -> {
-            commitEditors();
-            WaypointFeature feat = WaypointFeature.get();
-            if (feat != null) feat.remove(k);
-            rebuildNameField();
-        }).destructive(true));
+        return rowDeleteBtns.computeIfAbsent(wp, k -> {
+            Button b = new Button("Delete", () -> {}).destructive(true);
+            SemanticActionControl control = new SemanticActionControl(SemanticAction.button(
+                    Component.literal("Delete " + where(k)),
+                    () -> Component.literal("Removes this waypoint from the current world."),
+                    () -> Component.empty(),
+                    () -> true,
+                    () -> {
+                        commitEditors();
+                        WaypointFeature feat = WaypointFeature.get();
+                        if (feat != null) feat.remove(k);
+                        rebuildNameField();
+                    }),
+                    MinecraftSemanticFeedback.INSTANCE,
+                    b::triggerPressAnimation,
+                    SemanticActionControl.PointerRouting.MANUAL);
+            rowDeleteControls.put(k, control);
+            registerSemanticControl(control);
+            return b;
+        });
+    }
+
+    /** The semantic control behind a Delete button (creating the button pair on demand). */
+    private SemanticActionControl deleteControl(Waypoint wp) {
+        deleteBtn(wp);
+        return rowDeleteControls.get(wp);
+    }
+
+    /** The accessible-name form of a waypoint: its name, or its coordinates when unnamed. */
+    private static String where(Waypoint wp) {
+        return (wp.name == null || wp.name.isBlank())
+                ? "waypoint " + wp.x + " " + wp.y + " " + wp.z
+                : wp.name;
     }
 
     // ------------------------------------------------------------------
@@ -369,19 +446,29 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
 
     @Override
     protected boolean rowClicked(double mouseX, double mouseY, int listX, Waypoint wp, int index) {
-        // Shared row buttons see the click first — each hit-tests its own
-        // (per-frame-laid-out) bounds and runs its own action. Copy routes
-        // through its semantic control (enabled gate + exactly-once
-        // activation + sound + focus participation); Color/Delete keep the
-        // legacy direct-Button wiring this session.
+        // Shared row buttons see the click first — each routes through its
+        // semantic control (enabled gate + exactly-once activation + sound +
+        // focus participation). A rejected click (missed bounds) falls
+        // through to the next handler, as before.
         SemanticActionControl copyControl = rowCopyControls.get(wp);
         if (copyControl != null && copyControl.activateFromPointer(mouseX, mouseY, 0)) {
             this.setFocused(copyControl);
             return true;
         }
-        Button rowBtn;
-        if ((rowBtn = rowColorBtns.get(wp)) != null && rowBtn.mouseClicked(mouseX, mouseY, 0)) return true;
-        if ((rowBtn = rowDeleteBtns.get(wp)) != null && rowBtn.mouseClicked(mouseX, mouseY, 0)) return true;
+        SemanticActionControl colorControl = rowColorControls.get(wp);
+        if (colorControl != null && colorControl.activateFromPointer(mouseX, mouseY, 0)) {
+            this.setFocused(colorControl);
+            return true;
+        }
+        SemanticActionControl delControl = rowDeleteControls.get(wp);
+        if (delControl != null && delControl.activateFromPointer(mouseX, mouseY, 0)) {
+            // NO re-focus: the action just removed this row, and the control
+            // is unregistered by the next reconcile — refocusing would point
+            // keyboard focus at a control about to leave the screen (the
+            // stale-focus-after-removal rule). The click rule above already
+            // dropped focus.
+            return true;
+        }
 
         // Name area → enter inline edit mode for this row.
         int nameLeft = editorFieldX(listX);

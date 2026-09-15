@@ -16,6 +16,14 @@ import java.util.function.Supplier;
  * Single-action button row. Used for things like a "Preview" sound button
  * sitting next to a sound selector — the button does its work and returns
  * (no state change tracked here).
+ *
+ * <p>Every ButtonSetting is semantic (Phase A complete): the row's shared
+ * Button keeps the pixels, hover, and press animation, while a
+ * {@link SemanticActionControl} owns the activation convergence (enabled
+ * gate, exactly-once behavior, the semantic click), focus participation,
+ * and narration. The former non-semantic constructors were removed once the
+ * last registry consumer migrated — the {@code semantic()} factories are the
+ * only construction path.
  */
 public class ButtonSetting extends FeatureSetting {
     private static final int CONTROL_H = 28;
@@ -26,17 +34,6 @@ public class ButtonSetting extends FeatureSetting {
     private final SemanticActionControl interactionControl;
 
     private int lastWidth = 240;
-
-    public ButtonSetting(String label, Runnable onPress) {
-        this(label, "Preview", onPress);
-    }
-
-    /** Variant with an explicit button caption (the default reads "Preview"). */
-    public ButtonSetting(String label, String buttonText, Runnable onPress) {
-        super(label);
-        this.button = new Button(buttonText, onPress).glassBackground(true);
-        this.interactionControl = null;
-    }
 
     private ButtonSetting(String label, String buttonText,
                           Supplier<String> accessibleState,
@@ -66,7 +63,7 @@ public class ButtonSetting extends FeatureSetting {
                 pointerRouting);
     }
 
-    /** Opt-in Phase A semantic path; legacy ButtonSetting constructors stay unchanged. */
+    /** The semantic construction path — every ButtonSetting is semantic. */
     public static ButtonSetting semantic(String label, Runnable onPress) {
         return semantic(label, "Preview", onPress);
     }
@@ -103,11 +100,9 @@ public class ButtonSetting extends FeatureSetting {
         int btnX = x + width - BTN_W - 14;
         int btnY = y + (CONTROL_H - BTN_H) / 2;
         button.layout(btnX, btnY, BTN_W, BTN_H);
-        if (interactionControl != null) {
-            interactionControl.setBounds(btnX, btnY, BTN_W, BTN_H);
-            boolean disabled = isDisabled();
-            button.disabled(disabled).focused(interactionControl.isFocused() && !disabled);
-        }
+        interactionControl.setBounds(btnX, btnY, BTN_W, BTN_H);
+        boolean disabled = isDisabled();
+        button.disabled(disabled).focused(interactionControl.isFocused() && !disabled);
         button.renderGlassPass(ctx, btnX, btnY, BTN_W, BTN_H);
     }
 
@@ -134,10 +129,7 @@ public class ButtonSetting extends FeatureSetting {
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button, int rowX, int rowY, int rowWidth) {
         if (button != 0) return false;
-        if (interactionControl != null) {
-            return interactionControl.activateFromPointer(mouseX, mouseY, button);
-        }
-        return this.button.mouseClicked(mouseX, mouseY, button);
+        return interactionControl.activateFromPointer(mouseX, mouseY, button);
     }
 
     @Override
@@ -146,7 +138,6 @@ public class ButtonSetting extends FeatureSetting {
     }
 
     private void syncInteraction(int x, int y, int mouseX, int mouseY) {
-        if (interactionControl == null) return;
         interactionControl.setBounds(x, y, BTN_W, BTN_H);
         interactionControl.updatePointer(mouseX, mouseY);
         boolean disabled = isDisabled();

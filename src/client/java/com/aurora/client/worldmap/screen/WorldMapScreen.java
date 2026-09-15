@@ -137,19 +137,24 @@ public class WorldMapScreen extends Screen implements ThemedScreen {
             centerZ = mc.player.getZ();
         }
 
-        dimButton = new ButtonWidget(12, 12, 176, 22,
+        dimButton = ButtonWidget.semantic(12, 12, 176, 22,
                 Component.literal("Dimension: " + shortDim(currentDim())),
+                "Cycles the map through the dimensions you have visited.",
                 this::cycleDimension).glassBackground(true);
         addRenderableWidget(dimButton);
 
-        addRenderableWidget(new ButtonWidget(12 + 176 + 8, 12, 140, 22,
-                Component.literal("Center on Player"), () -> followPlayer = true)
+        addRenderableWidget(ButtonWidget.semantic(12 + 176 + 8, 12, 140, 22,
+                Component.literal("Center on Player"),
+                "Follows the player so the map stays centered on them.",
+                () -> followPlayer = true)
                 .glassBackground(true));
 
         // Opens the existing Waypoint feature's own manager screen — the
         // single list stays owned and persisted there, never copied here.
-        addRenderableWidget(new ButtonWidget(12 + 176 + 8 + 140 + 8, 12, 140, 22,
-                Component.literal("Waypoints\u2026"), () -> {
+        addRenderableWidget(ButtonWidget.semantic(12 + 176 + 8 + 140 + 8, 12, 140, 22,
+                Component.literal("Waypoints\u2026"),
+                "Opens the waypoint manager for this world.",
+                () -> {
                     if (this.minecraft != null) {
                         this.minecraft.setScreen(new WaypointManagerScreen(this));
                     }
@@ -173,11 +178,14 @@ public class WorldMapScreen extends Screen implements ThemedScreen {
             addRenderableWidget(promptName);
             // Create = the primary action → STAINED glass (ColorPicker Apply
             // convention); Cancel neutral, like every secondary control.
-            addRenderableWidget(new ButtonWidget(promptPanelX + 10, promptPanelY + 48,
-                    96, 20, Component.literal("Create"), this::createFromPrompt, true)
-                    .glassStyle(Button.GlassStyle.STAINED));
-            addRenderableWidget(new ButtonWidget(promptPanelX + PROMPT_W - 106, promptPanelY + 48,
-                    96, 20, Component.literal("Cancel"), this::closePrompt)
+            addRenderableWidget(ButtonWidget.semantic(promptPanelX + 10, promptPanelY + 48,
+                    96, 20, Component.literal("Create"),
+                    "Creates the waypoint with the entered name.",
+                    this::createFromPrompt).glassStyle(Button.GlassStyle.STAINED).primary(true));
+            addRenderableWidget(ButtonWidget.semantic(promptPanelX + PROMPT_W - 106, promptPanelY + 48,
+                    96, 20, Component.literal("Cancel"),
+                    "Closes this prompt without creating a waypoint.",
+                    this::closePrompt)
                     .glassBackground(true));
         }
     }

@@ -196,6 +196,108 @@ class SemanticRolloutTest {
     }
 
     // ------------------------------------------------------------------
+    // Multiple vanilla-backed (SemanticSound.NONE) actions coexisting:
+    // each activates exactly once and none dispatches semantic feedback,
+    // even when an adapter is wired — vanilla owns the click sound.
+    // ------------------------------------------------------------------
+
+    @Test
+    void multipleVanillaBackedActionsActivateOnceEachWithoutSemanticFeedback() {
+        AtomicInteger behaviorA = new AtomicInteger();
+        AtomicInteger behaviorB = new AtomicInteger();
+        AtomicInteger sounds = new AtomicInteger();
+        SemanticFeedback countingFeedback = sound -> {
+            if (sound == SemanticSound.ACTIVATION) sounds.incrementAndGet();
+        };
+        SemanticAction a = new SemanticAction(Component.literal("Apply"),
+                () -> Component.literal("Applies the selected color and returns."), null,
+                () -> true, behaviorA::incrementAndGet, SemanticSound.NONE, true, true);
+        SemanticAction b = new SemanticAction(Component.literal("Cancel"),
+                () -> Component.literal("Discards any edits and returns."), null,
+                () -> true, behaviorB::incrementAndGet, SemanticSound.NONE, true, true);
+
+        // The vanilla-backed route calls activate(null, null) — vanilla owns
+        // sound and visuals; passing an adapter must still stay silent.
+        assertTrue(a.activate(null, null));
+        assertTrue(b.activate(countingFeedback, null));
+        assertEquals(1, behaviorA.get());
+        assertEquals(1, behaviorB.get());
+        assertEquals(0, sounds.get(), "SemanticSound.NONE must never dispatch feedback");
+    }
+
+    // ------------------------------------------------------------------
+    // Traversal direction symmetry: backward (Shift+Tab) obeys the same
+    // availability rules as forward Tab.
+    // ------------------------------------------------------------------
+
+    @Test
+    void backwardTraversalFollowsTheSameAvailabilityRules() {
+        AtomicInteger behavior = new AtomicInteger();
+        SemanticActionControl c = control(buttonAction(() -> true, behavior));
+        c.setAvailable(true);
+        c.setBounds(10, 20, 90, 18);
+
+        assertNotNull(c.nextFocusPath(new FocusNavigationEvent.TabNavigation(false)));
+        c.setAvailable(false);
+        assertNull(c.nextFocusPath(new FocusNavigationEvent.TabNavigation(false)));
+        c.setAvailable(true);
+        assertNotNull(c.nextFocusPath(new FocusNavigationEvent.TabNavigation(false)));
+        assertEquals(0, behavior.get());
+    }
+
+    // ------------------------------------------------------------------
+    // The install-phase shape (Phase A pack-browser rollout): one
+    // long-lived control whose gate reads external phase state — accepted
+    // while the phase is actionable, rejected-without-feedback while not,
+    // traversal-eligible again when the phase returns, all without
+    // reconstruction.
+    // ------------------------------------------------------------------
+
+    @Test
+    void phaseGatedInstallRejectsWhileInactiveAndRecoversWithoutReconstruction() {
+        AtomicInteger phase = new AtomicInteger(0); // 0 = IDLE, 1 = RESOLVING
+        AtomicInteger behavior = new AtomicInteger();
+        AtomicInteger sounds = new AtomicInteger();
+        AtomicInteger visuals = new AtomicInteger();
+        SemanticAction action = new SemanticAction(
+                Component.literal("Install Test Pack"),
+                () -> Component.literal("Downloads the pack into your resourcepacks folder."),
+                () -> phase.get() == 0 ? Component.empty() : Component.literal("Resolving a compatible version…"),
+                () -> phase.get() == 0,
+                behavior::incrementAndGet,
+                SemanticSound.ACTIVATION,
+                true, true);
+        SemanticActionControl c = control(action, sounds, visuals);
+        c.setAvailable(true);
+        c.setBounds(10, 20, 80, 18);
+
+        // IDLE: accepted exactly once (action + sound + visual).
+        assertTrue(c.activateFromPointer(11, 21, 0));
+        assertEquals(1, behavior.get());
+        assertEquals(1, sounds.get());
+        assertEquals(1, visuals.get());
+
+        // RESOLVING: same instance, rejected — no behavior, no success
+        // feedback of any kind; still narratable; traversal skips it.
+        phase.set(1);
+        assertFalse(c.activateFromPointer(11, 21, 0));
+        c.setFocused(true);
+        assertTrue(c.keyPressed(new KeyEvent(257, 0, 0)), "selection key consumed so it cannot fall through");
+        assertEquals(1, behavior.get());
+        assertEquals(1, sounds.get());
+        assertEquals(1, visuals.get());
+        assertTrue(c.isActive(), "phase-gated controls remain narration candidates");
+        assertNull(c.nextFocusPath(new FocusNavigationEvent.TabNavigation(true)));
+
+        // Back to IDLE (a failed install's Retry): the same control serves.
+        phase.set(0);
+        assertTrue(c.activateFromPointer(11, 21, 0));
+        assertEquals(2, behavior.get());
+        assertEquals(2, sounds.get());
+        assertEquals(2, visuals.get());
+    }
+
+    // ------------------------------------------------------------------
     // Helpers
     // ------------------------------------------------------------------
 

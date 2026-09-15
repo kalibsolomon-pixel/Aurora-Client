@@ -127,13 +127,16 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         this.addRenderableWidget(this.doneBtn);
 
         // Reset-to-defaults button immediately to the left of Done. Persists
-        // immediately so the change is visible to other open screens.
+        // immediately so the change is visible to other open screens. Phase A:
+        // vanilla-backed semantic like Done (destructive — the semantic layer
+        // only names it; colors/labels/behavior are untouched).
         int resetW = 70;
         int resetX = this.width - DONE_W - DONE_RIGHT_MARGIN - resetW - 6;
-        this.resetBtn = new ButtonWidget(
+        this.resetBtn = ButtonWidget.semantic(
                 resetX, DONE_TOP_MARGIN,
                 resetW, DONE_H,
                 Component.literal("Reset"),
+                "Resets this feature's settings to their defaults and saves.",
                 () -> {
                     meta.reset();
                     AuroraConfig.save();

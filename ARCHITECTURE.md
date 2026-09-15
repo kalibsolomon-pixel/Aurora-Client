@@ -55,7 +55,9 @@ Shared components (ui/component/)
   ButtonWidget (AbstractButton adapter — zero paint of its own)
   ToggleSwitch, Slider, SegmentedControl (glass-capable), RoundedPanel, ColorSwatch, ThemedScreen marker
 
-Semantic interaction (ui/interaction/) — Phase A pilot + limited rollout
+Semantic interaction (ui/interaction/) — Phase A, complete: every ordinary
+  button-like control participates (custom-painted via SemanticActionControl,
+  vanilla-backed via ButtonWidget.semantic); see §4 for topologies + deferrals
   SemanticAction         name/description/state/enabled metadata + the single activation gate
   SemanticActionControl  invisible Screen child: focus traversal, Enter/Space, narration, pointer adapter
   SemanticFeedback       semantic sound vocabulary; MinecraftSemanticFeedback maps ACTIVATION to UI click
@@ -250,45 +252,95 @@ Segmented, StringList, ThemeOpacity, ThemePreview. `FeatureSetting` provides the
 shapes/overlay/glassPass render split, static focus registry, label-tooltip dwell system, and
 detail-screen lifecycle hooks.
 
-`ButtonSetting.semantic(...)` is the deliberately narrow Phase A adoption seam. A 2026-09-14
-limited rollout proved the same services across four further routing topologies without any
-foundation change:
+**Phase A (interaction foundation) is COMPLETE for the current architecture** —
+every ordinary button-like control participates in the semantic contract
+(`SemanticAction`/`SemanticActionControl` for custom-painted controls,
+`ButtonWidget.semantic` for vanilla-backed ones). `ButtonSetting.semantic(...))`
+is the only construction path; the legacy non-semantic constructors were removed
+after a reference search confirmed zero remaining consumers (the migration made
+them obsolete). Migrated topology families:
 
-- **Feature-detail rows** (the pilot's topology): Waypoints → Manage Waypoints… / Drop at
-  Player Position migrated, proving two semantic controls coexist with vanilla-tab focus on
-  one screen (traversal order is vanilla's spatial top-sort; semantic rows interleave with
+- **Feature-detail rows** (the pilot): Waypoints → Manage Waypoints… / Drop at
+  Player Position, Alerts' Test Sound, and the full-rollout rows — Totem Pop's
+  Reset Now, Better Hitreg's Reset Tracked Stats, Stats Overlay's Reset Stats /
+  Reset Lifetime Fight Totals, Resourcepack Browser's Open Browser… — two or
+  more semantic controls coexist with vanilla-tab focus on one screen
+  (traversal order is vanilla's spatial top-sort; semantic rows interleave with
   the Done/Reset `ButtonWidget`s).
-- **Manager row buttons** (`ManagerListScreen` + `WaypointManagerScreen` Copy): per-row
-  semantic controls keyed in lockstep with their Buttons, created lazily when the row first
-  paints and unregistered via `removeWidget` in `reconcileRowCaches` (removal clears focus).
-  The base gained the registration lifecycle: `registerSemanticControl` (record pre-init /
-  attach post-init / re-add after a resize's `rebuildWidgets`), a per-frame availability
-  sweep in `render` (every control starts unavailable; the row passes re-mark what the clip
-  band shows, so render truth and input truth agree), and the click-drops-semantic-focus
-  rule from `FeatureDetailScreen`.
-- **Screen-level manual action with dynamic enabled state** (`ProfileManagerScreen`
-  Create): enabled exactly while the create field holds a non-empty name; the Button mirrors
-  the gate with its existing disabled treatment. Deliberately `focusable=false,
-  keyboardEligible=false` — the field's Enter owns this form's keyboard commit (a selection
-  key landing on the button while its own field is being typed into would commit the form on
-  a Space). Clicks within the button's bounds are consumed even when disabled: the create
-  row sits directly above profile row 0 in the same geometry column and an unconsumed
-  rejected click would fall through onto that row's Duplicate button.
-- **Vanilla-backed Aurora-painted button** (`ButtonWidget.semantic`, used by
-  `FeatureDetailScreen`'s Done): the `SemanticAction` owns only the behavior callback;
-  pointer routing, keyboard activation, focus, the UI click sound, and base narration stay
-  vanilla's. The action carries `SemanticSound.NONE` because vanilla plays
-  `playDownSound` before `onPress` on both the mouse and selection-key paths (verified in
-  1.21.11 bytecode) — a semantic click would double it — and an always-true enabled gate
-  mirroring vanilla's `active` flag, the authoritative gate. The action's description/state
-  supplement the vanilla button narration, and vanilla focus now paints the provisional
-  1 px accent hairline through the shared painter on every `ButtonWidget`.
+- **Manager row buttons** (`ManagerListScreen` + both subclasses — ALL row
+  actions now): Waypoint Copy/Color/Delete and Profile Duplicate/Delete,
+  per-row semantic controls keyed in lockstep with their Buttons, created
+  lazily when the row first paints and unregistered via `removeWidget` in
+  `reconcileRowCaches` (removal clears focus). Destructive actions take NO
+  re-focus after a pointer activation — the action just removed their own row,
+  so the refocus would target a control about to leave the screen. The base
+  gained the registration lifecycle: `registerSemanticControl` (record pre-init
+  / attach post-init / re-add after a resize's `rebuildWidgets`), a per-frame
+  availability sweep in `render` (every control starts unavailable; the row
+  passes re-mark what the clip band shows, so render truth and input truth
+  agree), and the click-drops-semantic-focus rule from
+  `FeatureDetailScreen`.
+- **Screen-level manual action with dynamic enabled state**
+  (`ProfileManagerScreen` Create): enabled exactly while the create field holds
+  a non-empty name; the Button mirrors the gate with its existing disabled
+  treatment. Deliberately `focusable=false, keyboardEligible=false` — the
+  field's Enter owns this form's keyboard commit. Clicks within the button's
+  bounds are consumed even when disabled (see consumption rules below).
+- **Vanilla-backed Aurora-painted buttons** (`ButtonWidget.semantic`, now every
+  consumer): the `SemanticAction` owns only the behavior callback plus
+  narration metadata; pointer routing, keyboard activation, focus, the UI
+  click sound, and base narration stay vanilla's. The action carries
+  `SemanticSound.NONE` (vanilla plays `playDownSound` before `onPress` on both
+  the mouse and selection-key paths) and an enabled gate that IS vanilla's
+  `isActive()` — the authoritative gate — so inactive buttons (e.g. the title
+  screen's Multiplayer when disabled) narrate their disabled state. Consumers:
+  FeatureDetail Done/Reset, both managers' toolbar action + Done (Drop / New
+  Profile), HudEditor's two buttons, ColorPicker Apply/Cancel, all five
+  AuroraTitleScreen buttons, WorldMap's three toolbar buttons + the waypoint
+  prompt's Create/Cancel, and the pack browser's Done. (`Button.primary(boolean)`
+  / `ButtonWidget.primary(boolean)` were added so semantic construction can
+  still select the flat-fallback variant.)
+- **Pack browser card + modal actions**: per-(card, phase) install controls —
+  IDLE/DONE accept and reject via the install handler's own phase rule
+  (RESOLVING/DOWNLOADING reject) — plus the modal's Close. Phase-gated
+  rejection is narrated (state line: "Downloading…" etc.) without mirroring a
+  disabled look onto the painter (the disabled-treatment pilot is Phase B).
+  Pruned cards unregister their controls (the manager-row rule). Modal focus
+  containment: while the modal is interactive the covered chrome (search
+  field, Done) is made `active=false`, which drops it out of traversal via
+  vanilla's own `AbstractWidget.nextFocusPath` gate — the child-level
+  mechanism that actually carries containment, because 1.21.11's
+  `Screen.keyPressed` invokes the container's `nextFocusPath` NON-virtually
+  (`invokespecial`) and a screen-level traversal override is never called (a
+  harness-discovered vanilla fact). `openDetail` also clears focus off the
+  obscured field (a focused covered EditBox silently swallows typing).
 
-Every legacy `ButtonSetting` constructor, the remaining row families (Color/Delete row
-buttons, per-card Install buttons, AuroraScreen's manual chrome, `PixelCanvasSetting`'s
-widget-internal editing buttons), and all toggles/sliders/enums/keybinds retain their
-existing behavior. WIDGET-mode pointer routing on `SemanticActionControl` remains unexercised
-by real consumers (every custom control here is manually routed by its clipped screen).
+**Pointer-event consumption rules (the rollout's discovered hazards):** a
+rejected activation inside a control's rect is CONSUMED-BUT-INERT wherever the
+same geometry column could otherwise deliver the click to a DIFFERENT control
+underneath — the Profile create row (a rejected Create click would fall onto
+row 0's Duplicate) and the pack install buttons (a rejected "Resolving…" click
+would fall onto the card body and open the modal) both consume. A rejected
+click that merely misses (bounds miss) falls through as before. Selection keys
+targeting a focused-but-disabled control are consumed for the same reason
+(`SemanticActionControl.keyPressed` returns true after the rejected attempt).
+
+**Intentional deferrals (classified, not omitted):** `AuroraScreen`'s manual
+chrome (tiles/tabs/sidebar/layout buttons) waits for Phase C's
+viewport/input-bounds coupling — availability-as-input-truth must not be built
+on the screen's known render-clip/input disagreement; compact `+`/`x`/Clear/
+Default composite-widget actions (`PixelCanvasSetting`, `ItemScaleSetting`,
+the Effect list, `KeyList`/`StringList`-style removes) wait for the Phase C
+icon-action primitive; pack-browser card bodies and sidebar tabs (selection/
+navigation families, Phase B/C scope); `ThemePreviewSetting`'s two mock buttons
+(a non-interactive preview — `C: not button-like`); `AbstractButtonMixin`'s
+themed vanilla selection-screen buttons and `TitleScreenMixin`'s vanilla
+`Button.builder` corner button (vanilla-owned routing already — `D: vanilla-
+owned exception`; adapting them means migrating the mixin painter to
+`ButtonWidget`, not adding semantic actions); `BlurTestScreen`'s stress
+controls (dev harness). WIDGET-mode pointer routing on `SemanticActionControl`
+remains unexercised by real consumers (every custom control here is manually
+routed by its clipped screen) and kept.
 
 ### The three render layers (cache discipline)
 

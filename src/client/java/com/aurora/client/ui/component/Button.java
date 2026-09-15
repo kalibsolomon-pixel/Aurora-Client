@@ -36,7 +36,7 @@ public class Button extends Widget {
 
     private final Component label;
     private final Runnable onPress;
-    private final boolean primary;
+    private boolean primary;
 
     private boolean disabled = false;
     /** Opt-in semantic focus ring; false preserves every legacy button pixel. */
@@ -121,6 +121,12 @@ public class Button extends Widget {
      */
     public Button destructive(boolean d) {
         this.destructive = d;
+        return this;
+    }
+
+    /** Variant selector for the flat fallback fill (see {@link #primary}). */
+    public Button primary(boolean p) {
+        this.primary = p;
         return this;
     }
 

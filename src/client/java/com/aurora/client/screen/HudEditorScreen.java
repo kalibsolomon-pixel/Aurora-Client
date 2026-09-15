@@ -96,9 +96,10 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
         int w = 120;
         int h = 20;
 
-        this.addRenderableWidget(new ButtonWidget(
+        this.addRenderableWidget(ButtonWidget.semantic(
                 (this.width - w) / 2, (this.height - h) / 2, w, h,
                 Component.literal("Aurora Settings"),
+                "Captures the current layout and opens Aurora's settings.",
                 () -> {
                     AuroraClient.captureLayouts(AuroraClient.modules());
                     AuroraConfig.save();
@@ -107,9 +108,10 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
                     }
                 }).glassBackground(true));
 
-        this.addRenderableWidget(new ButtonWidget(
+        this.addRenderableWidget(ButtonWidget.semantic(
                 this.width - w - 8, 8, w, h,
                 Component.literal("Reset Positions"),
+                "Moves every HUD module back to its default anchor, offset and scale.",
                 this::resetLayouts).glassBackground(true));
     }
 

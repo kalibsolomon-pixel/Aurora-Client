@@ -14,6 +14,10 @@ import com.aurora.client.ui.component.GlassSurface;
 import com.aurora.client.ui.component.ThemedScreen;
 import com.aurora.client.ui.component.Toast;
 import com.aurora.client.ui.component.Widget;
+import com.aurora.client.ui.interaction.MinecraftSemanticFeedback;
+import com.aurora.client.ui.interaction.SemanticAction;
+import com.aurora.client.ui.interaction.SemanticActionControl;
+import com.aurora.client.ui.interaction.SemanticSound;
 import com.aurora.client.ui.render.blur.BlurPanelRenderer;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.ui.util.UiLayerCache;
@@ -28,11 +32,13 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -218,6 +224,21 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
          */
         final Button[] cardPhaseButtons = new Button[5];
         final Button[] modalPhaseButtons = new Button[5];
+
+        /**
+         * The phase buttons' semantic controls (Phase A full rollout), keyed
+         * in lockstep with the button arrays above — created together by the
+         * walks that drive the buttons, pruned together with the CardState
+         * (the screen's prune site unregisters them, clearing focus if one
+         * held it). Card-sized and modal-sized variants are separate controls
+         * because their bounds (and glass passes) differ. RESOLVING/
+         * DOWNLOADING/DONE-phase actions carry a disabled gate — matching
+         * {@code handleInstallClick}'s own phase guard — without mirroring
+         * the disabled LOOK onto the painter (those phases keep today's
+         * enabled-style pixels; the disabled treatment pilot is Phase B).
+         */
+        final SemanticActionControl[] cardPhaseControls = new SemanticActionControl[5];
+        final SemanticActionControl[] modalPhaseControls = new SemanticActionControl[5];
     }
 
     // ---- Smooth scroll (target-based lerp, shared SmoothScroll) ----
@@ -256,6 +277,52 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
     private boolean detailOpenTarget = false;
     /** Modal Close button — shared glass Button painter, laid out per frame. */
     private Button detailCloseButton;
+
+    /**
+     * The Close button's semantic control (Phase A) — created in lockstep
+     * with the painter, one per screen.
+     */
+    private SemanticActionControl detailCloseControl;
+
+    // ---- Phase A semantic-control lifecycle (the ManagerListScreen shape,
+    // ported for this screen's manual chrome) ----
+    //
+    // The card + modal install buttons and the modal Close button are
+    // custom-painted Buttons hit-tested manually by this screen; their
+    // SemanticActionControls join vanilla's child/narratable lists so they
+    // participate in focus traversal, Enter/Space activation, and narration.
+    // registerSemanticControl records pre-init and attaches post-init;
+    // init() re-adds every registered control after a resize's
+    // rebuildWidgets; render() starts every control unavailable and the
+    // card/modal walks re-mark what they actually show (render truth and
+    // input truth agree); the result-set prune unregisters pruned cards'
+    // controls; a click drops semantic focus first (the manager screens'
+    // rule). While the detail modal is interactive, traversal is contained
+    // to the modal's own controls (see nextFocusPath) — covered background
+    // chrome can neither take focus nor activation.
+    private final List<SemanticActionControl> semanticControls = new ArrayList<>();
+    private boolean semanticWidgetsLive = false;
+
+    /** True while the modal is past its interaction gate — the same condition the click path uses. */
+    private boolean modalInteractive() {
+        return detailOpenT > 0.5f && detailProject != null;
+    }
+
+    private void registerSemanticControl(SemanticActionControl control) {
+        if (control == null || semanticControls.contains(control)) return;
+        semanticControls.add(control);
+        if (semanticWidgetsLive) {
+            control.setFocused(false);
+            control.setAvailable(false);
+            this.addWidget(control);
+        }
+    }
+
+    private void unregisterSemanticControl(SemanticActionControl control) {
+        if (control == null) return;
+        semanticControls.remove(control);
+        if (semanticWidgetsLive) this.removeWidget(control);
+    }
 
     /**
      * The Done chrome button — kept as a field so the glass pass drives its
@@ -342,10 +409,23 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         searchField.setResponder(s -> { lastTypedMs = System.currentTimeMillis(); });
         this.addRenderableWidget(searchField);
 
-        doneBtn = new ButtonWidget(
+        doneBtn = ButtonWidget.semantic(
                 this.width - 80 - 16, 12, 80, 22,
-                Component.literal("Done"), this::onClose).glassBackground(true);
+                Component.literal("Done"),
+                "Close this screen and return.",
+                this::onClose).glassBackground(true);
         this.addRenderableWidget(doneBtn);
+
+        // Custom-painted semantic controls (card/modal install buttons, the
+        // modal Close) join the vanilla child/narratable lifecycle without
+        // joining its render list. A rebuildWidgets (resize) cleared the
+        // lists; every registered control re-adds here.
+        for (SemanticActionControl control : semanticControls) {
+            control.setFocused(false);
+            control.setAvailable(false);
+            this.addWidget(control);
+        }
+        semanticWidgetsLive = true;
 
         // Focus the search field immediately so typing works without a click.
         this.setInitialFocus(searchField);
@@ -372,10 +452,27 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
             results = pr;
             loading = false;
             // Prune install state for cards no longer in the result set so
-            // the map doesn't grow unboundedly across many searches.
-            cardStates.keySet().retainAll(pr.stream()
+            // the map doesn't grow unboundedly across many searches. The
+            // pruned states' semantic controls (card + modal install buttons)
+            // are unregistered too — removeWidget takes them out of the
+            // vanilla child/narratable lists and clears screen focus if one
+            // held it, so a vanished card can never leave a stale focusable
+            // region behind (the manager-row lifecycle rule).
+            Set<String> liveIds = pr.stream()
                     .map(p -> p.projectId)
-                    .collect(java.util.stream.Collectors.toList()));
+                    .collect(java.util.stream.Collectors.toSet());
+            for (Map.Entry<String, CardState> entry : cardStates.entrySet()) {
+                if (!liveIds.contains(entry.getKey())) {
+                    CardState removed = entry.getValue();
+                    for (SemanticActionControl control : removed.cardPhaseControls) {
+                        unregisterSemanticControl(control);
+                    }
+                    for (SemanticActionControl control : removed.modalPhaseControls) {
+                        unregisterSemanticControl(control);
+                    }
+                }
+            }
+            cardStates.keySet().retainAll(liveIds);
         }
         String err = pendingError.getAndSet(null);
         if (err != null) {
@@ -456,6 +553,31 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         // current maxScroll every frame (window resizes shrinking the grid).
         gridScroll.advance(maxScroll());
         sidebarScroll.advance(sidebarMaxScroll());
+
+        // Semantic availability is re-derived every frame (the manager-screen
+        // rule): everything starts unavailable and the card/modal walks below
+        // re-mark what they actually show, so a scrolled-out card's install
+        // button (or a modal control while the modal is closed) can neither be
+        // keyed nor pointer-activated while invisible.
+        //
+        // Modal focus containment (design language §13.3, keyboard side):
+        // while the detail modal is interactive, the covered chrome (Done
+        // button, search field) is made INACTIVE — vanilla's own traversal
+        // gate (`AbstractWidget.nextFocusPath` returns null when inactive)
+        // then skips them, so Tab/arrow traversal can only reach the modal's
+        // two semantic controls, and vanilla's active guard blocks their
+        // pointer activation beneath the modal. (1.21.11's Screen.keyPressed
+        // invokes the CONTAINER's nextFocusPath non-virtually, so a
+        // screen-level traversal override cannot intercept this — the
+        // child-level gate is the mechanism that actually carries it.) The
+        // Done button painting its existing disabled treatment while covered
+        // is the sanctioned disabled-look sync (§16 unavailable).
+        boolean modalInteractive = modalInteractive();
+        for (SemanticActionControl control : semanticControls) {
+            control.setAvailable(false);
+        }
+        if (doneBtn != null) doneBtn.active = !modalInteractive;
+        if (searchField != null) searchField.active = !modalInteractive;
 
         // ---- 1. Glass pass — every surface BEFORE the dim (§6 convention 6 ----
         // structural; this screen completed the mod-wide rollout 2026-09-10).
@@ -672,6 +794,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         int cols = columns();
         int listBottom = this.height - LIST_BOTTOM_PAD;
         List<ModrinthProject> list = results;
+        boolean modalInteractive = modalInteractive();
         GlassSurface.enableScissor(g, gridLeft - 4, LIST_TOP - 2,
                 gridLeft + cols * (CARD_W + CARD_GAP) - CARD_GAP + 4, listBottom);
         forEachVisibleCard(list, cols, gridLeft, listBottom, (p, x, y) -> {
@@ -685,6 +808,13 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
                 st.cardPhaseButtons[st.phase] = installBtn;
             }
             installBtn.layout(btnX, btnY, btnW, btnH);
+            // The card's semantic control is marked here too (same clip-band
+            // rule the content pass and the click walk use), so a visible
+            // card's install button is keyed and clickable exactly while it
+            // renders — and never while the modal covers the grid.
+            SemanticActionControl control = phaseControl(p, st, st.phase, installBtn, false);
+            control.setBounds(btnX, btnY, btnW, btnH);
+            control.setAvailable(!modalInteractive);
             installBtn.renderGlassPass(g, btnX, btnY, btnW, btnH);
             st.drivenPhase = st.phase;
         });
@@ -913,6 +1043,14 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
             st.cardPhaseButtons[renderPhase] = installBtn;
         }
         installBtn.layout(btnX, btnY, btnW, btnH);
+        // The control syncs again at content time (same rect): pointer hover
+        // for narration and the provisional focus ring. Availability was
+        // re-marked by the glass pass walk above (same clip, same gate).
+        SemanticActionControl control = phaseControl(p, st, renderPhase, installBtn, false);
+        control.setBounds(btnX, btnY, btnW, btnH);
+        control.setAvailable(!modalInteractive());
+        control.updatePointer(mouseX, mouseY);
+        installBtn.focused(control.isFocused());
         installBtn.render(g, btnX, btnY, btnW, btnH, mouseX, mouseY);
     }
 
@@ -945,6 +1083,46 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
                     .destructive(true);
             default -> throw new IllegalArgumentException("phase " + phase);
         };
+    }
+
+    /**
+     * The semantic control for one (CardState, phase) install button, created
+     * in lockstep with its painter by whichever walk drives it first. The
+     * action's enabled gate is the install handler's own phase rule (IDLE and
+     * FAILED accept; RESOLVING/DOWNLOADING/DONE reject) — a rejected activation
+     * is consumed-but-inert at the call sites, exactly like today's clicks on
+     * a "Resolving…" button. The disabled LOOK is deliberately NOT mirrored
+     * onto the painter (those phases keep today's enabled-style pixels; the
+     * disabled treatment pilot is Phase B) — narration reports the state
+     * instead. The accessible name carries the pack title.
+     */
+    private SemanticActionControl phaseControl(ModrinthProject p, CardState st, int phase,
+                                               Button painter, boolean modal) {
+        SemanticActionControl[] controls = modal ? st.modalPhaseControls : st.cardPhaseControls;
+        SemanticActionControl control = controls[phase];
+        if (control != null) return control;
+        String title = p.title == null || p.title.isBlank() ? p.projectId : p.title;
+        boolean actionable = phase == CardState.IDLE || phase == CardState.FAILED;
+        String verb = phase == CardState.FAILED ? "Retry" : "Install";
+        control = new SemanticActionControl(SemanticAction.button(
+                Component.literal(verb + " " + title),
+                () -> actionable
+                        ? Component.literal("Downloads the pack into your resourcepacks folder. Enable it in Options → Resource Packs.")
+                        : Component.empty(),
+                () -> switch (phase) {
+                    case CardState.RESOLVING -> Component.literal("Resolving a compatible version…");
+                    case CardState.DOWNLOADING -> Component.literal("Downloading…");
+                    case CardState.DONE -> Component.literal("Installed");
+                    default -> Component.empty();
+                },
+                () -> st.phase == phase && actionable,
+                () -> handleInstallClick(p)),
+                MinecraftSemanticFeedback.INSTANCE,
+                painter::triggerPressAnimation,
+                SemanticActionControl.PointerRouting.MANUAL);
+        controls[phase] = control;
+        registerSemanticControl(control);
+        return control;
     }
 
     private void renderDetailModal(GuiGraphics g, int mouseX, int mouseY) {
@@ -1002,7 +1180,8 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
      * Drives the modal's install + Close button surfaces in place (above the
      * dim, inside the caller's above-dim zone). The geometry is the exact
      * math {@link #renderDetailContent} uses for its renders — keep the two
-     * in lockstep.
+     * in lockstep. Their semantic controls' bounds and availability are
+     * stamped here too (the modal is the only place they are interactive).
      */
     private void driveModalButtonsGlassPass(GuiGraphics g, ModrinthProject p,
                                             int mx, int my, int mw, int mh) {
@@ -1017,6 +1196,9 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
             st.modalPhaseButtons[st.phase] = detailInstallBtn;
         }
         detailInstallBtn.layout(btnX, btnY, btnW, btnH);
+        SemanticActionControl installControl = phaseControl(p, st, st.phase, detailInstallBtn, true);
+        installControl.setBounds(btnX, btnY, btnW, btnH);
+        installControl.setAvailable(true);
         detailInstallBtn.renderGlassPass(g, btnX, btnY, btnW, btnH);
 
         int cbW = 60, cbH = 22;
@@ -1026,7 +1208,29 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
             detailCloseButton = new Button(Component.literal("Close"), () -> {}).glassBackground(true);
         }
         detailCloseButton.layout(cbX, cbY, cbW, cbH);
+        SemanticActionControl closeControl = closeControl();
+        closeControl.setBounds(cbX, cbY, cbW, cbH);
+        closeControl.setAvailable(true);
         detailCloseButton.renderGlassPass(g, cbX, cbY, cbW, cbH);
+    }
+
+    /** The modal Close button's semantic control — created in lockstep with its painter. */
+    private SemanticActionControl closeControl() {
+        if (detailCloseControl == null) {
+            detailCloseControl = new SemanticActionControl(SemanticAction.button(
+                    Component.literal("Close"),
+                    () -> Component.literal("Closes the pack details."),
+                    () -> Component.empty(),
+                    () -> true,
+                    this::closeDetail),
+                    MinecraftSemanticFeedback.INSTANCE,
+                    () -> {
+                        if (detailCloseButton != null) detailCloseButton.triggerPressAnimation();
+                    },
+                    SemanticActionControl.PointerRouting.MANUAL);
+            registerSemanticControl(detailCloseControl);
+        }
+        return detailCloseControl;
     }
 
     private void renderDetailContent(GuiGraphics g, ModrinthProject p, int mx, int my, int mw, int mh, int mouseX, int mouseY) {
@@ -1075,9 +1279,10 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
 
         // Install button row — the shared glass Button painter at this
         // modal's larger size (a separate instance from the card's, so both
-        // surfaces can show the same pack simultaneously). Clicks route
-        // through handleDetailClick's rect test; the painter's action is a
-        // no-op (the ButtonWidget discipline).
+        // surfaces can show the same pack simultaneously). Its semantic
+        // control re-syncs here (same rect the glass pass computed): pointer
+        // hover for narration and the provisional focus ring. Clicks route
+        // through handleDetailClick's control routing.
         CardState st = cardStates.computeIfAbsent(p.projectId, k -> new CardState());
         int btnW = 130, btnH = 24;
         int btnX = mx + pad;
@@ -1088,11 +1293,16 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
             st.modalPhaseButtons[st.phase] = detailInstallBtn;
         }
         detailInstallBtn.layout(btnX, btnY, btnW, btnH);
+        SemanticActionControl installControl = phaseControl(p, st, st.phase, detailInstallBtn, true);
+        installControl.setBounds(btnX, btnY, btnW, btnH);
+        installControl.setAvailable(true);
+        installControl.updatePointer(mouseX, mouseY);
+        detailInstallBtn.focused(installControl.isFocused());
         detailInstallBtn.render(g, btnX, btnY, btnW, btnH, mouseX, mouseY);
 
         // Close button (top-right of modal) — shared glass Button painter,
         // neutral raised like every other chrome action on this screen.
-        // Clicks route through handleDetailClick's rect test (no-op action).
+        // Clicks route through handleDetailClick's control routing.
         int cbW = 60, cbH = 22;
         int cbX = mx + mw - cbW - pad;
         int cbY = my + pad;
@@ -1100,6 +1310,11 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
             detailCloseButton = new Button(Component.literal("Close"), () -> {}).glassBackground(true);
         }
         detailCloseButton.layout(cbX, cbY, cbW, cbH);
+        SemanticActionControl closeControl = closeControl();
+        closeControl.setBounds(cbX, cbY, cbW, cbH);
+        closeControl.setAvailable(true);
+        closeControl.updatePointer(mouseX, mouseY);
+        detailCloseButton.focused(closeControl.isFocused());
         detailCloseButton.render(g, cbX, cbY, cbW, cbH, mouseX, mouseY);
     }
 
@@ -1152,6 +1367,11 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         double mouseX = ev.x();
         double mouseY = ev.y();
         if (ev.button() != 0) return super.mouseClicked(ev, dbl);
+
+        // The manager screens' rule: a click drops a semantic control's
+        // vanilla focus first; the routing below re-focuses the control it
+        // lands on (accepted only).
+        if (this.getFocused() instanceof SemanticActionControl) this.setFocused(null);
 
         // Detail modal gets first crack at clicks when open.
         if (detailOpenT > 0.5f && detailProject != null) {
@@ -1218,6 +1438,12 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         if (searchField != null && searchField.mouseClicked(ev, dbl)) return true;
 
         // Card clicks: install button first, then card body (opens detail).
+        // The install button routes through its semantic control (enabled
+        // gate + exactly-once activation + sound + focus participation).
+        // Clicks WITHIN the button rect are consumed even when the gate
+        // rejects them (a "Resolving…" phase): an unconsumed rejected click
+        // would fall through onto the card-body branch and open the detail
+        // modal — the Profile-Create consume-but-inert rule.
         List<ModrinthProject> list = results;
         int cols = columns();
         int gridLeft = gridLeft();
@@ -1231,7 +1457,14 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
             int btnX = x + CARD_W - btnW - THUMB_PAD;
             int btnY = y + CARD_H - btnH - 8;
             if (Widget.inBounds(mouseX, mouseY, btnX, btnY, btnW, btnH)) {
-                handleInstallClick(list.get(i));
+                ModrinthProject clicked = list.get(i);
+                CardState st = cardStates.get(clicked.projectId);
+                if (st != null) {
+                    SemanticActionControl control = st.cardPhaseControls[st.phase];
+                    if (control != null && control.activateFromPointer(mouseX, mouseY, 0)) {
+                        this.setFocused(control);
+                    }
+                }
                 return true;
             }
             if (Widget.inBounds(mouseX, mouseY, x, y, CARD_W, CARD_H)) {
@@ -1242,7 +1475,13 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         return super.mouseClicked(ev, dbl);
     }
 
-    /** Handles clicks inside the open pack-detail modal. */
+    /**
+     * Handles clicks inside the open pack-detail modal. The modal's buttons
+     * route through their semantic controls (exactly-once activation + sound
+     * + focus participation); the modal consumes every click it receives —
+     * an accepted control click acts, everything else is inert — so no
+     * obscured control behind the modal can ever receive it.
+     */
     private boolean handleDetailClick(double mouseX, double mouseY) {
         int modalW = Math.min(460, this.width - 40);
         int modalH = Math.min(360, this.height - 60);
@@ -1257,13 +1496,23 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         }
 
         int pad = 18;
-        // Close button.
+        // Close button — the semantic action IS closeDetail; a null control
+        // (modal never rendered — cannot normally happen past the 0.5 gate)
+        // keeps the legacy direct call.
         int cbW = 60, cbH = 22;
         int cbX = modalX + modalW - cbW - pad;
         int cbY = modalY + pad;
         if (Widget.inBounds(mouseX, mouseY, cbX, cbY, cbW, cbH)) {
-            closeDetail();
-            return true;
+            SemanticActionControl control = detailCloseControl;
+            if (control == null) {
+                closeDetail();
+            } else {
+                // The action is closeDetail itself, which clears focus —
+                // no re-focus here (a control whose action tears its own
+                // surface down must not end up focused).
+                control.activateFromPointer(mouseX, mouseY, 0);
+            }
+            return true; // consumed either way
         }
 
         // Install button.
@@ -1271,8 +1520,14 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         int btnX = modalX + pad;
         int btnY = modalY + modalH - pad - btnH;
         if (Widget.inBounds(mouseX, mouseY, btnX, btnY, btnW, btnH)) {
-            if (detailProject != null) handleInstallClick(detailProject);
-            return true;
+            if (detailProject != null) {
+                CardState st = cardStates.get(detailProject.projectId);
+                SemanticActionControl control = st == null ? null : st.modalPhaseControls[st.phase];
+                if (control != null && control.activateFromPointer(mouseX, mouseY, 0)) {
+                    this.setFocused(control);
+                }
+            }
+            return true; // consumed either way (rejected/inert keeps parity)
         }
         return true; // consume clicks inside the modal
     }
@@ -1280,10 +1535,24 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
     private void openDetail(ModrinthProject p) {
         detailProject = p;
         detailOpenTarget = true;
+        // Focus containment (design language §13.3, keyboard side): the modal
+        // is about to cover the screen, so nothing obscured may keep keyboard
+        // focus (a focused search field would silently swallow typing). Focus
+        // moves INTO the modal when its install control already exists; until
+        // the first modal drive creates it (next frame), focus is null.
+        this.clearFocus();
+        CardState st = cardStates.get(p.projectId);
+        if (st != null) {
+            SemanticActionControl control = st.modalPhaseControls[st.phase];
+            if (control != null) this.setFocused(control);
+        }
     }
 
     private void closeDetail() {
         detailOpenTarget = false;
+        // A closing modal's controls become unavailable; a covered or hidden
+        // control must not remain meaningfully focused (§16).
+        if (this.getFocused() instanceof SemanticActionControl) this.setFocused(null);
     }
 
     private double maxScroll() {
