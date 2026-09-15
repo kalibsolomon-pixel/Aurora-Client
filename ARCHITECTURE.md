@@ -55,6 +55,11 @@ Shared components (ui/component/)
   ButtonWidget (AbstractButton adapter — zero paint of its own)
   ToggleSwitch, Slider, SegmentedControl (glass-capable), RoundedPanel, ColorSwatch, ThemedScreen marker
 
+Semantic interaction (ui/interaction/) — Phase A pilot
+  SemanticAction         name/description/state/enabled metadata + the single activation gate
+  SemanticActionControl  invisible Screen child: focus traversal, Enter/Space, narration, pointer adapter
+  SemanticFeedback       semantic sound vocabulary; MinecraftSemanticFeedback maps ACTIVATION to UI click
+
 Render utilities (ui/util/)
   RenderUtil        AA fills/outlines/circles at device-pixel precision + beginCapture/RectSink + fills counter
   UiLayerCache      static-chrome raster cache (NativeImage→DynamicTexture, version-keyed)
@@ -245,6 +250,16 @@ Segmented, StringList, ThemeOpacity, ThemePreview. `FeatureSetting` provides the
 shapes/overlay/glassPass render split, static focus registry, label-tooltip dwell system, and
 detail-screen lifecycle hooks.
 
+`ButtonSetting.semantic(...)` is the deliberately narrow Phase A adoption seam. As of
+2026-09-14 only Alerts → **Test Sound** uses it; every legacy `ButtonSetting` constructor and
+all other control families retain their existing behavior. The setting's existing `Button`
+still owns all pixels, hover, hit geometry, and press animation. Its invisible
+`SemanticActionControl` is added with `Screen.addWidget` (not the render list), so vanilla
+owns focus traversal and narration while `FeatureDetailScreen` retains its clipped manual
+pointer routing. This split avoids double dispatch: pointer, Enter, and Space all converge on
+`SemanticAction.activate`, whose enabled check gates the press animation, one semantic UI
+click, and the behavior callback together.
+
 ### The three render layers (cache discipline)
 
 Screens split drawing into: **shapes** (cacheable static geometry → rasterized once into
@@ -295,6 +310,14 @@ a launch crash, not a silent skip):
 
 - **Focus**: `FeatureSetting.activeFocused` static registry (request/release/clear) routes
   key/char/scroll to one setting; screens delegate in `keyPressed`/`charTyped`/`mouseScrolled`.
+  In parallel, Phase A semantic actions use vanilla `Screen` child focus through
+  `SemanticActionControl`. Disabled actions remain narratable (including explicit Disabled
+  metadata) but are skipped by focus traversal and reject pointer/keyboard activation.
+- **Activation feedback**: semantic actions select `SemanticSound.ACTIVATION`; the Minecraft
+  adapter maps it once to vanilla's UI button click. Feature-specific output remains separate
+  (for the pilot, the selected alert-preview sound is the action behavior, not UI feedback).
+  The pilot focus affordance is an opt-in 1 px accent hairline on the existing button painter;
+  unfocused legacy and pilot rest pixels are unchanged.
 - **Drag routing**: screens keep an `activeDragSetting` through mouseDragged/Released.
 - **Smooth scroll**: target-based exponential lerp advanced in `render()` with wall-clock dt —
   but implemented independently per screen with different τ (45–80 ms) and different scrollbar

@@ -9,6 +9,7 @@ import com.aurora.client.ui.component.ButtonWidget;
 import com.aurora.client.ui.component.GlassSurface;
 import com.aurora.client.ui.component.RoundedPanel;
 import com.aurora.client.ui.component.ThemedScreen;
+import com.aurora.client.ui.interaction.SemanticActionControl;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.util.ScrollFade;
 import com.aurora.client.util.SmoothScroll;
@@ -131,6 +132,18 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
                     AuroraConfig.save();
                 }).glassBackground(true);
         this.addRenderableWidget(this.resetBtn);
+
+        // Custom-painted semantic controls join vanilla's child/narratable
+        // lifecycle without joining its render list. Their setting remains
+        // the sole pixel and clipped-pointer owner.
+        for (FeatureSetting setting : meta.settings) {
+            SemanticActionControl control = setting.interactionControl();
+            if (control != null) {
+                control.setFocused(false);
+                control.setAvailable(false);
+                this.addWidget(control);
+            }
+        }
 
         // Notify every setting the first time this screen instance is
         // initialized (i.e. on open) so stateful settings (e.g. a search
@@ -287,6 +300,10 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         int gy = TOP_PAD - (int) scroll.current();
         for (FeatureSetting s : meta.settings) {
             int gh = s.height();
+            SemanticActionControl control = s.interactionControl();
+            if (control != null) {
+                control.setAvailable(gy + gh > TOP_FADE_Y && gy < this.height);
+            }
             if (gy + gh > 0 && gy < this.height) {
                 s.renderGlassPass(ctx, listX, gy, LIST_W);
             }
@@ -416,6 +433,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
     public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent _ev, boolean _doubleClicked) {
         double mouseX = _ev.x(); double mouseY = _ev.y(); int button = _ev.button();
         FeatureSetting.clearFocus();
+        if (this.getFocused() instanceof SemanticActionControl) this.setFocused(null);
         if (super.mouseClicked(_ev, _doubleClicked)) return true;
         
         int listX = (this.width - LIST_W) / 2;
@@ -429,6 +447,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
             if (mouseY >= TOP_FADE_Y && y + h > TOP_FADE_Y && y < this.height
                     && s.mouseClicked(mouseX, mouseY, button, listX, y, LIST_W)) {
                 activeDragSetting = s;
+                if (s.interactionControl() != null) this.setFocused(s.interactionControl());
                 return true;
             }
             y += h + ROW_GAP;

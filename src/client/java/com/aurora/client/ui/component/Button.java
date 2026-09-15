@@ -39,6 +39,8 @@ public class Button extends Widget {
     private final boolean primary;
 
     private boolean disabled = false;
+    /** Opt-in semantic focus ring; false preserves every legacy button pixel. */
+    private boolean focused = false;
     /** Destructive variant — semantic-error fill/border for delete-style actions. */
     private boolean destructive = false;
 
@@ -103,6 +105,11 @@ public class Button extends Widget {
 
     public Button disabled(boolean d) {
         this.disabled = d;
+        return this;
+    }
+
+    public Button focused(boolean focused) {
+        this.focused = focused;
         return this;
     }
 
@@ -345,6 +352,11 @@ public class Button extends Widget {
             }
         }
 
+        if (focused) {
+            RenderUtil.drawRoundedOutlineAA(g, x, y, w, h, radius, 1.0f,
+                    ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
+        }
+
         int textX = Math.round(x + w / 2f);
         int textY = Math.round(y + (h - tr.lineHeight) / 2f) + 1;
         AuroraFontRenderer.drawCentered(g, tr, label, textX, textY, text);
@@ -355,9 +367,14 @@ public class Button extends Widget {
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
         if (disabled || button != 0 || !inBounds(mx, my, x, y, w, h)) return false;
-        pressDownStartMs = System.currentTimeMillis();
+        triggerPressAnimation();
         if (onPress != null) onPress.run();
         return true;
+    }
+
+    /** Starts the existing mouse-down press animation for a semantic activation. */
+    public void triggerPressAnimation() {
+        pressDownStartMs = System.currentTimeMillis();
     }
 
     private float currentScale() {

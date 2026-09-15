@@ -126,6 +126,11 @@ public abstract class FeatureSetting {
     public void renderGlassPass(GuiGraphics ctx, int x, int y, int width) {
     }
 
+    /** Optional screen-lifecycle adapter for custom-painted semantic controls. */
+    public com.aurora.client.ui.interaction.SemanticActionControl interactionControl() {
+        return null;
+    }
+
     /**
      * Stable fingerprint of this setting's cacheable shape layer. The owning
      * screen's static-layer cache folds it into its version, so a change

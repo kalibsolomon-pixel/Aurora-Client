@@ -1,10 +1,16 @@
 package com.aurora.client.screen.setting;
 
 import com.aurora.client.ui.component.Button;
+import com.aurora.client.ui.interaction.MinecraftSemanticFeedback;
+import com.aurora.client.ui.interaction.SemanticAction;
+import com.aurora.client.ui.interaction.SemanticActionControl;
 import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.network.chat.Component;
+
+import java.util.function.Supplier;
 
 /**
  * Single-action button row. Used for things like a "Preview" sound button
@@ -17,6 +23,7 @@ public class ButtonSetting extends FeatureSetting {
     private static final int BTN_H = 18;
 
     private final Button button;
+    private final SemanticActionControl interactionControl;
 
     private int lastWidth = 240;
 
@@ -28,6 +35,52 @@ public class ButtonSetting extends FeatureSetting {
     public ButtonSetting(String label, String buttonText, Runnable onPress) {
         super(label);
         this.button = new Button(buttonText, onPress).glassBackground(true);
+        this.interactionControl = null;
+    }
+
+    private ButtonSetting(String label, String buttonText,
+                          Supplier<String> accessibleState,
+                          Runnable onPress,
+                          SemanticActionControl.PointerRouting pointerRouting) {
+        super(label);
+        this.button = new Button(buttonText, () -> {}).glassBackground(true);
+        SemanticAction action = SemanticAction.button(
+                Component.literal(label),
+                () -> {
+                    String description = currentDescription();
+                    return description != null
+                            ? Component.literal(description)
+                            : Component.empty();
+                },
+                () -> {
+                    String state = accessibleState != null ? accessibleState.get() : null;
+                    return state != null
+                            ? Component.literal(state)
+                            : Component.empty();
+                },
+                () -> !isDisabled(),
+                onPress);
+        this.interactionControl = new SemanticActionControl(action,
+                MinecraftSemanticFeedback.INSTANCE,
+                this.button::triggerPressAnimation,
+                pointerRouting);
+    }
+
+    /** Opt-in Phase A semantic path; legacy ButtonSetting constructors stay unchanged. */
+    public static ButtonSetting semantic(String label, Runnable onPress) {
+        return semantic(label, "Preview", onPress);
+    }
+
+    public static ButtonSetting semantic(String label, String buttonText, Runnable onPress) {
+        return new ButtonSetting(label, buttonText, null, onPress,
+                SemanticActionControl.PointerRouting.MANUAL);
+    }
+
+    public static ButtonSetting semantic(String label, String buttonText,
+                                         Supplier<String> accessibleState,
+                                         Runnable onPress) {
+        return new ButtonSetting(label, buttonText, accessibleState, onPress,
+                SemanticActionControl.PointerRouting.MANUAL);
     }
 
     @Override public ButtonSetting description(String desc) { super.description(desc); return this; }
@@ -50,6 +103,11 @@ public class ButtonSetting extends FeatureSetting {
         int btnX = x + width - BTN_W - 14;
         int btnY = y + (CONTROL_H - BTN_H) / 2;
         button.layout(btnX, btnY, BTN_W, BTN_H);
+        if (interactionControl != null) {
+            interactionControl.setBounds(btnX, btnY, BTN_W, BTN_H);
+            boolean disabled = isDisabled();
+            button.disabled(disabled).focused(interactionControl.isFocused() && !disabled);
+        }
         button.renderGlassPass(ctx, btnX, btnY, BTN_W, BTN_H);
     }
 
@@ -67,6 +125,7 @@ public class ButtonSetting extends FeatureSetting {
         int btnY = y + (CONTROL_H - BTN_H) / 2;
 
         button.layout(btnX, btnY, BTN_W, BTN_H);
+        syncInteraction(btnX, btnY, mouseX, mouseY);
         button.render(ctx, btnX, btnY, BTN_W, BTN_H, mouseX, mouseY);
 
         renderDescription(ctx, x, y + CONTROL_H, width);
@@ -75,6 +134,22 @@ public class ButtonSetting extends FeatureSetting {
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button, int rowX, int rowY, int rowWidth) {
         if (button != 0) return false;
+        if (interactionControl != null) {
+            return interactionControl.activateFromPointer(mouseX, mouseY, button);
+        }
         return this.button.mouseClicked(mouseX, mouseY, button);
+    }
+
+    @Override
+    public SemanticActionControl interactionControl() {
+        return interactionControl;
+    }
+
+    private void syncInteraction(int x, int y, int mouseX, int mouseY) {
+        if (interactionControl == null) return;
+        interactionControl.setBounds(x, y, BTN_W, BTN_H);
+        interactionControl.updatePointer(mouseX, mouseY);
+        boolean disabled = isDisabled();
+        button.disabled(disabled).focused(interactionControl.isFocused() && !disabled);
     }
 }

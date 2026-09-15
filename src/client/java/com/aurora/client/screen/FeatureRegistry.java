@@ -347,7 +347,8 @@ public final class FeatureRegistry {
                                 () -> cfg.armorAlertSoundChoice,
                                 v -> cfg.armorAlertSoundChoice = v)
                                 .description("Which sound effect plays for the alert. Pick one distinct enough to recognize instantly mid-game. Use Test Sound below to preview."),
-                        new ButtonSetting("Test Sound",
+                        ButtonSetting.semantic("Test Sound", "Preview",
+                                () -> "Current sound: " + cfg.armorAlertSoundChoice,
                                 com.aurora.client.feature.impl.ArmorAlertFeature::playPreview)
                                 .description("Plays the currently selected alert sound once so you can preview it.")
                 ),
@@ -1571,4 +1572,3 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
         }
     }
 }
-
