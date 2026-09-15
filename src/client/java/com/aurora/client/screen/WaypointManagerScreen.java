@@ -10,6 +10,9 @@ import com.aurora.client.ui.component.ButtonWidget;
 import com.aurora.client.ui.component.ColorSwatch;
 import com.aurora.client.ui.component.GlassEditBox;
 import com.aurora.client.ui.component.GlassSurface;
+import com.aurora.client.ui.interaction.MinecraftSemanticFeedback;
+import com.aurora.client.ui.interaction.SemanticAction;
+import com.aurora.client.ui.interaction.SemanticActionControl;
 import com.aurora.client.ui.render.blur.BlurPanelRenderer;
 import com.aurora.client.util.WorldScope;
 import net.minecraft.client.Minecraft;
@@ -78,6 +81,17 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
     private final Map<Waypoint, Button> rowDeleteBtns = new HashMap<>();
     private final Map<Waypoint, ColorSwatch> rowSwatches = new HashMap<>();
 
+    /**
+     * The semantic controls behind the Copy buttons (Phase A rollout): keyed
+     * in lockstep with {@link #rowCopyBtns} — created together, and dropped
+     * together in {@link #reconcileRowCaches} (removal also unregisters the
+     * control from the screen, which clears focus if it held it). The shared
+     * Button remains the sole pixel and press-animation owner; the control
+     * owns the enabled gate, the activation convergence, narration, and the
+     * semantic click. Color/Delete keep their legacy wiring this session.
+     */
+    private final Map<Waypoint, SemanticActionControl> rowCopyControls = new HashMap<>();
+
     // Row-control offsets from the row's left edge, shared by the glass pass
     // and the content pass so the two can never disagree on where a button is.
     private static final int COPY_DX  = ROW_INSET + SWATCH_W + CONTROL_GAP + NAME_W + CONTROL_GAP + COORDS_W + CONTROL_GAP;
@@ -143,6 +157,17 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
         membershipChanged |= rowColorBtns.keySet().retainAll(live);
         membershipChanged |= rowDeleteBtns.keySet().retainAll(live);
         membershipChanged |= rowSwatches.keySet().retainAll(live);
+        // Copy's semantic controls drop with their buttons — removeWidget
+        // takes the control out of the vanilla child/narratable lists and
+        // clears screen focus if the removed control held it, so a deleted
+        // waypoint can never leave a stale focusable region behind.
+        for (var it = rowCopyControls.entrySet().iterator(); it.hasNext(); ) {
+            var entry = it.next();
+            if (!live.contains(entry.getKey())) {
+                unregisterSemanticControl(entry.getValue());
+                it.remove();
+            }
+        }
         if (membershipChanged) nameFitCache.clear();
     }
 
@@ -176,6 +201,12 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
                     int bh = ROW_H - 8;
                     Button b = copyBtn(wp);
                     b.layout(x + COPY_DX, by, BTN_COPY_W, bh);
+                    // Same clip-band rule the content pass and the base hit
+                    // test use (row rect vs listClipTop/Bottom), applied at
+                    // the earliest point the geometry is known.
+                    SemanticActionControl copyControl = copyControl(wp);
+                    copyControl.setBounds(x + COPY_DX, by, BTN_COPY_W, bh);
+                    copyControl.setAvailable(y + ROW_H > listClipTop() && y < listClipBottom());
                     b.renderGlassPass(ctx, x + COPY_DX, by, BTN_COPY_W, bh);
                     b = colorBtn(wp);
                     b.layout(x + COLOR_DX, by, BTN_COLOR_W, bh);
@@ -231,8 +262,17 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
 
         // Row buttons — surfaces already painted in the glass pass; these
         // renders draw labels (or the flat fallback where glass declined).
+        // Copy's semantic control re-syncs here (same rect the glass pass
+        // computed): pointer-hover state for narration, availability from
+        // the same clip band the base hit test clamps to, and the
+        // provisional focus ring on the shared Button.
         Button copyBtn = copyBtn(wp);
         copyBtn.layout(x + COPY_DX, y + 4, BTN_COPY_W, ROW_H - 8);
+        SemanticActionControl copyControl = copyControl(wp);
+        copyControl.setBounds(x + COPY_DX, y + 4, BTN_COPY_W, ROW_H - 8);
+        copyControl.setAvailable(y + ROW_H > listClipTop() && y < listClipBottom());
+        copyControl.updatePointer(mouseX, mouseY);
+        copyBtn.focused(copyControl.isFocused());
         copyBtn.render(ctx, x + COPY_DX, y + 4, BTN_COPY_W, ROW_H - 8, mouseX, mouseY);
 
         Button colorBtn = colorBtn(wp);
@@ -244,13 +284,42 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
         delBtn.render(ctx, x + DEL_DX, y + 4, BTN_DEL_W, ROW_H - 8, mouseX, mouseY);
     }
 
-    /** Copy — the shared themed Button in neutral raised glass. */
+    /** Copy — the shared themed Button in neutral raised glass, with its Phase A semantic control. */
     private Button copyBtn(Waypoint wp) {
-        return rowCopyBtns.computeIfAbsent(wp, k -> new Button("Copy", () -> {
-            commitEditors();
-            copyToClipboard(k.x + " " + k.y + " " + k.z);
-            flash("Copied: " + k.x + " " + k.y + " " + k.z);
-        }).glassBackground(true).priority(BlurPanelRenderer.Priority.DETAIL));
+        return rowCopyBtns.computeIfAbsent(wp, k -> {
+            Button b = new Button("Copy", () -> {}).glassBackground(true)
+                    .priority(BlurPanelRenderer.Priority.DETAIL);
+            // The action owns the real behavior exactly once; the Button keeps
+            // the pixels, hover, press animation (via triggerPressAnimation),
+            // and per-frame bounds. Always enabled — the manager enforces no
+            // availability rule for copy; visibility gating comes from the
+            // control's per-frame availability instead.
+            String where = (k.name == null || k.name.isBlank())
+                    ? "waypoint " + k.x + " " + k.y + " " + k.z
+                    : k.name;
+            SemanticActionControl control = new SemanticActionControl(SemanticAction.button(
+                    Component.literal("Copy " + where),
+                    () -> Component.literal("Copies this waypoint's coordinates to the clipboard."),
+                    () -> Component.literal("Coordinates: " + k.x + " " + k.y + " " + k.z),
+                    () -> true,
+                    () -> {
+                        commitEditors();
+                        copyToClipboard(k.x + " " + k.y + " " + k.z);
+                        flash("Copied: " + k.x + " " + k.y + " " + k.z);
+                    }),
+                    MinecraftSemanticFeedback.INSTANCE,
+                    b::triggerPressAnimation,
+                    SemanticActionControl.PointerRouting.MANUAL);
+            rowCopyControls.put(k, control);
+            registerSemanticControl(control);
+            return b;
+        });
+    }
+
+    /** The semantic control behind a Copy button (creating the button pair on demand). */
+    private SemanticActionControl copyControl(Waypoint wp) {
+        copyBtn(wp);
+        return rowCopyControls.get(wp);
     }
 
     /** Color — shared themed Button in neutral raised glass; opens the shared color picker. */
@@ -301,9 +370,16 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
     @Override
     protected boolean rowClicked(double mouseX, double mouseY, int listX, Waypoint wp, int index) {
         // Shared row buttons see the click first — each hit-tests its own
-        // (per-frame-laid-out) bounds and runs its own action.
+        // (per-frame-laid-out) bounds and runs its own action. Copy routes
+        // through its semantic control (enabled gate + exactly-once
+        // activation + sound + focus participation); Color/Delete keep the
+        // legacy direct-Button wiring this session.
+        SemanticActionControl copyControl = rowCopyControls.get(wp);
+        if (copyControl != null && copyControl.activateFromPointer(mouseX, mouseY, 0)) {
+            this.setFocused(copyControl);
+            return true;
+        }
         Button rowBtn;
-        if ((rowBtn = rowCopyBtns.get(wp)) != null && rowBtn.mouseClicked(mouseX, mouseY, 0)) return true;
         if ((rowBtn = rowColorBtns.get(wp)) != null && rowBtn.mouseClicked(mouseX, mouseY, 0)) return true;
         if ((rowBtn = rowDeleteBtns.get(wp)) != null && rowBtn.mouseClicked(mouseX, mouseY, 0)) return true;
 

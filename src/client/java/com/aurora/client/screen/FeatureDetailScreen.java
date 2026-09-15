@@ -112,10 +112,17 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
 
     @Override
     protected void init() {
-        this.doneBtn = new ButtonWidget(
+        // Done — the rollout's vanilla-backed representative (Phase A): the
+        // SemanticAction owns the behavior callback while vanilla keeps the
+        // pointer/keyboard/focus routing AND the click sound (the action is
+        // SemanticSound.NONE, so nothing doubles), and its description
+        // supplements the button narration. Reset stays legacy (destructive,
+        // excluded from this rollout).
+        this.doneBtn = ButtonWidget.semantic(
                 this.width - DONE_W - DONE_RIGHT_MARGIN, DONE_TOP_MARGIN,
                 DONE_W, DONE_H,
                 Component.literal("Done"),
+                "Close this screen and return.",
                 this::onClose).glassBackground(true);
         this.addRenderableWidget(this.doneBtn);
 

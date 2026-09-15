@@ -886,14 +886,14 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                 "Place persistent world markers rendered as beacon beams and/or block highlights with a name and distance label. Find your way back to bases, mines, or points of interest — and have a waypoint dropped automatically wherever you die so you can recover your stuff.",
                 () -> cfg.waypointsEnabled, v -> cfg.waypointsEnabled = v,
                 List.of(
-                        new ButtonSetting("Manage Waypoints…",
+                        ButtonSetting.semantic("Manage Waypoints…",
                                 () -> {
                                     net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
                                     if (mc != null) {
                                         mc.setScreen(new WaypointManagerScreen(mc.screen));
                                     }
                                 }),
-                        new ButtonSetting("Drop at Player Position",
+                        ButtonSetting.semantic("Drop at Player Position",
                                 () -> {
                                     com.aurora.client.feature.impl.WaypointFeature feat =
                                             com.aurora.client.feature.impl.WaypointFeature.get();

@@ -6,6 +6,7 @@ import com.aurora.client.ui.component.ButtonWidget;
 import com.aurora.client.ui.component.GlassSurface;
 import com.aurora.client.ui.component.ThemedScreen;
 import com.aurora.client.ui.component.Toast;
+import com.aurora.client.ui.interaction.SemanticActionControl;
 import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.ui.util.UiLayerCache;
@@ -21,6 +22,7 @@ import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -132,6 +134,59 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
     private ButtonWidget toolbarActionBtn;
     private ButtonWidget doneBtn;
 
+    // ---- Phase A semantic controls (custom-painted, vanilla-lifecycle) ----
+    //
+    // Row/screen buttons painted by the shared {@code Button} and hit-tested
+    // manually by the subclass can join vanilla's focus/keyboard/narration
+    // lifecycle through an invisible {@link SemanticActionControl}, the same
+    // adapter FeatureDetailScreen adds for its settings' controls. The
+    // screens own the pixel and pointer routing exactly as before; the
+    // control supplies focus participation, Enter/Space activation,
+    // narration metadata, and the semantic activation sound.
+    //
+    // Lifecycle (mirrors FeatureDetailScreen.init's walk):
+    //  - registerSemanticControl records the control and, once the screen is
+    //    initialized, adds it to the vanilla child/narratable lists right
+    //    away; init() re-adds every registered control after a
+    //    rebuildWidgets (window resize clears the lists).
+    //  - render() marks every registered control unavailable at frame start;
+    //    the subclass row passes re-mark the ones their (clipped) geometry
+    //    actually shows, so a row scrolled out of the clip band can neither
+    //    be keyed nor pointer-activated while invisible — render truth and
+    //    input truth agree (design language §13.3).
+    //  - Stale focus: a click anywhere drops a SemanticActionControl's
+    //    vanilla focus first (FeatureDetailScreen's rule), and removeWidget
+    //    clears focus when a reconciled-away row control is discarded.
+    private final List<SemanticActionControl> semanticControls = new ArrayList<>();
+    /** Set at the end of {@link #init()}; before that, registrations only record. */
+    private boolean semanticWidgetsLive = false;
+
+    /**
+     * Registers a custom-painted semantic control with this screen's widget
+     * and narratable lifecycle. Safe from the subclass constructor (before
+     * {@code init()} — the control joins on init) and from lazy per-row
+     * construction during render (after init — it joins immediately).
+     * Registration is idempotent by identity.
+     */
+    protected final void registerSemanticControl(SemanticActionControl control) {
+        if (control == null || semanticControls.contains(control)) return;
+        semanticControls.add(control);
+        if (semanticWidgetsLive) addSemanticControl(control);
+    }
+
+    private void addSemanticControl(SemanticActionControl control) {
+        control.setFocused(false);
+        control.setAvailable(false);
+        this.addWidget(control);
+    }
+
+    /** Removes a control whose row ceased to exist (vanilla clears focus if it held it). */
+    protected final void unregisterSemanticControl(SemanticActionControl control) {
+        if (control == null) return;
+        semanticControls.remove(control);
+        if (semanticWidgetsLive) this.removeWidget(control);
+    }
+
     // ---- Static row-surface template (P2: kill the per-row fill volume) ----
     //
     // Both manager screens paint, per visible row and per frame, a large
@@ -215,6 +270,15 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
                 this.width - 80 - 16, 16, 80, 22,
                 Component.literal("Done"),
                 this::onClose).glassBackground(true));
+
+        // Custom-painted semantic controls join vanilla's child/narratable
+        // lifecycle without joining its render list (the settings' controls
+        // on FeatureDetailScreen do the same). A rebuildWidgets (resize)
+        // cleared the lists; every registered control re-adds here.
+        for (SemanticActionControl control : semanticControls) {
+            addSemanticControl(control);
+        }
+        semanticWidgetsLive = true;
     }
 
     /** The toolbar's left action button, constructed but not registered (the base registers it). */
@@ -266,6 +330,13 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         // Row-widget cache hygiene runs before either pass so both see the
         // same button instances.
         reconcileRowCaches(rows);
+        // Semantic availability is re-derived every frame from the row
+        // geometry: everything starts unavailable and the row passes below
+        // re-mark what the clip band actually shows, so a control whose row
+        // is scrolled out can neither be keyed nor activated while invisible.
+        for (SemanticActionControl control : semanticControls) {
+            control.setAvailable(false);
+        }
 
         // ---- 1. Glass pass (before the dim) ----
         // Opened explicitly so each surface's rim finish is deferred past the
@@ -598,6 +669,11 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         double mouseY = _ev.y();
         int button = _ev.button();
         if (button != 0) return super.mouseClicked(_ev, _doubleClicked);
+
+        // FeatureDetailScreen's rule: a click drops a semantic control's
+        // vanilla focus first, so focus never lingers somewhere the pointer
+        // just left. The row walk below re-focuses the control it lands on.
+        if (this.getFocused() instanceof SemanticActionControl) this.setFocused(null);
 
         // Editors first.
         if (editorClickFirst(_ev, _doubleClicked)) return true;

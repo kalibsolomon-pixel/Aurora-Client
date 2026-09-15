@@ -55,7 +55,7 @@ Shared components (ui/component/)
   ButtonWidget (AbstractButton adapter — zero paint of its own)
   ToggleSwitch, Slider, SegmentedControl (glass-capable), RoundedPanel, ColorSwatch, ThemedScreen marker
 
-Semantic interaction (ui/interaction/) — Phase A pilot
+Semantic interaction (ui/interaction/) — Phase A pilot + limited rollout
   SemanticAction         name/description/state/enabled metadata + the single activation gate
   SemanticActionControl  invisible Screen child: focus traversal, Enter/Space, narration, pointer adapter
   SemanticFeedback       semantic sound vocabulary; MinecraftSemanticFeedback maps ACTIVATION to UI click
@@ -250,15 +250,45 @@ Segmented, StringList, ThemeOpacity, ThemePreview. `FeatureSetting` provides the
 shapes/overlay/glassPass render split, static focus registry, label-tooltip dwell system, and
 detail-screen lifecycle hooks.
 
-`ButtonSetting.semantic(...)` is the deliberately narrow Phase A adoption seam. As of
-2026-09-14 only Alerts → **Test Sound** uses it; every legacy `ButtonSetting` constructor and
-all other control families retain their existing behavior. The setting's existing `Button`
-still owns all pixels, hover, hit geometry, and press animation. Its invisible
-`SemanticActionControl` is added with `Screen.addWidget` (not the render list), so vanilla
-owns focus traversal and narration while `FeatureDetailScreen` retains its clipped manual
-pointer routing. This split avoids double dispatch: pointer, Enter, and Space all converge on
-`SemanticAction.activate`, whose enabled check gates the press animation, one semantic UI
-click, and the behavior callback together.
+`ButtonSetting.semantic(...)` is the deliberately narrow Phase A adoption seam. A 2026-09-14
+limited rollout proved the same services across four further routing topologies without any
+foundation change:
+
+- **Feature-detail rows** (the pilot's topology): Waypoints → Manage Waypoints… / Drop at
+  Player Position migrated, proving two semantic controls coexist with vanilla-tab focus on
+  one screen (traversal order is vanilla's spatial top-sort; semantic rows interleave with
+  the Done/Reset `ButtonWidget`s).
+- **Manager row buttons** (`ManagerListScreen` + `WaypointManagerScreen` Copy): per-row
+  semantic controls keyed in lockstep with their Buttons, created lazily when the row first
+  paints and unregistered via `removeWidget` in `reconcileRowCaches` (removal clears focus).
+  The base gained the registration lifecycle: `registerSemanticControl` (record pre-init /
+  attach post-init / re-add after a resize's `rebuildWidgets`), a per-frame availability
+  sweep in `render` (every control starts unavailable; the row passes re-mark what the clip
+  band shows, so render truth and input truth agree), and the click-drops-semantic-focus
+  rule from `FeatureDetailScreen`.
+- **Screen-level manual action with dynamic enabled state** (`ProfileManagerScreen`
+  Create): enabled exactly while the create field holds a non-empty name; the Button mirrors
+  the gate with its existing disabled treatment. Deliberately `focusable=false,
+  keyboardEligible=false` — the field's Enter owns this form's keyboard commit (a selection
+  key landing on the button while its own field is being typed into would commit the form on
+  a Space). Clicks within the button's bounds are consumed even when disabled: the create
+  row sits directly above profile row 0 in the same geometry column and an unconsumed
+  rejected click would fall through onto that row's Duplicate button.
+- **Vanilla-backed Aurora-painted button** (`ButtonWidget.semantic`, used by
+  `FeatureDetailScreen`'s Done): the `SemanticAction` owns only the behavior callback;
+  pointer routing, keyboard activation, focus, the UI click sound, and base narration stay
+  vanilla's. The action carries `SemanticSound.NONE` because vanilla plays
+  `playDownSound` before `onPress` on both the mouse and selection-key paths (verified in
+  1.21.11 bytecode) — a semantic click would double it — and an always-true enabled gate
+  mirroring vanilla's `active` flag, the authoritative gate. The action's description/state
+  supplement the vanilla button narration, and vanilla focus now paints the provisional
+  1 px accent hairline through the shared painter on every `ButtonWidget`.
+
+Every legacy `ButtonSetting` constructor, the remaining row families (Color/Delete row
+buttons, per-card Install buttons, AuroraScreen's manual chrome, `PixelCanvasSetting`'s
+widget-internal editing buttons), and all toggles/sliders/enums/keybinds retain their
+existing behavior. WIDGET-mode pointer routing on `SemanticActionControl` remains unexercised
+by real consumers (every custom control here is manually routed by its clipped screen).
 
 ### The three render layers (cache discipline)
 
@@ -313,11 +343,16 @@ a launch crash, not a silent skip):
   In parallel, Phase A semantic actions use vanilla `Screen` child focus through
   `SemanticActionControl`. Disabled actions remain narratable (including explicit Disabled
   metadata) but are skipped by focus traversal and reject pointer/keyboard activation.
+  Availability is per-frame state on the control: `FeatureDetailScreen` derives it from the
+  fade band, `ManagerListScreen` sweeps it false at frame start and lets the row passes
+  re-mark what the clip band shows — a scrolled-out control can neither be keyed nor
+  pointer-activated while invisible.
 - **Activation feedback**: semantic actions select `SemanticSound.ACTIVATION`; the Minecraft
-  adapter maps it once to vanilla's UI button click. Feature-specific output remains separate
-  (for the pilot, the selected alert-preview sound is the action behavior, not UI feedback).
-  The pilot focus affordance is an opt-in 1 px accent hairline on the existing button painter;
-  unfocused legacy and pilot rest pixels are unchanged.
+  adapter maps it once to vanilla's UI click. Feature-specific output remains separate (the
+  alert-preview sound is the action behavior, not UI feedback). Vanilla-backed controls keep
+  vanilla's own click and take `SemanticSound.NONE` — ownership adapts, never duplicates.
+  The pilot focus affordance is an opt-in 1 px accent hairline on the existing button
+  painter; unfocused legacy and pilot rest pixels are unchanged.
 - **Drag routing**: screens keep an `activeDragSetting` through mouseDragged/Released.
 - **Smooth scroll**: target-based exponential lerp advanced in `render()` with wall-clock dt —
   but implemented independently per screen with different τ (45–80 ms) and different scrollbar

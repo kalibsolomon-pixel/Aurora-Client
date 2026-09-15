@@ -6,6 +6,10 @@ import com.aurora.client.ui.component.Button;
 import com.aurora.client.ui.component.ButtonWidget;
 import com.aurora.client.ui.component.GlassEditBox;
 import com.aurora.client.ui.component.GlassSurface;
+import com.aurora.client.ui.interaction.MinecraftSemanticFeedback;
+import com.aurora.client.ui.interaction.SemanticAction;
+import com.aurora.client.ui.interaction.SemanticActionControl;
+import com.aurora.client.ui.interaction.SemanticSound;
 import com.aurora.client.ui.render.blur.BlurPanelRenderer;
 import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.ui.util.RenderUtil;
@@ -64,6 +68,20 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
     /** The create-row's confirm button (recreated per create session). */
     private Button createBtn;
 
+    /**
+     * The Create confirm's Phase A semantic control (rollout): long-lived
+     * (one per screen), with a DYNAMIC enabled gate — enabled exactly while
+     * the create field holds a non-empty name. Keyboard routing stays
+     * deliberately with the field's Enter (focusable/keyboard-eligible off
+     * on the control): making the button a selection target while its own
+     * field is being typed into would let a Space keypress commit the form
+     * mid-typing — the field already commits on Enter, which is the form's
+     * established keyboard path. Pointer activation routes through the
+     * control's gate (clicks on the disabled button no longer consume,
+     * animate, or fall through into a create attempt).
+     */
+    private final SemanticActionControl createControl;
+
     private boolean createRowGlassDrawn = false;
 
     // Row-control offsets from the row's left edge, shared by the glass pass
@@ -73,6 +91,29 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
 
     public ProfileManagerScreen(Screen parent) {
         super(Component.literal("Profiles"), parent);
+        // Constructed directly (not via SemanticAction.button): this form's
+        // keyboard commit belongs to the field's Enter, so the button is
+        // focusable=false / keyboard-eligible=false — pointer-activated,
+        // narratable, traversal-invisible (see the field javadoc).
+        this.createControl = new SemanticActionControl(new SemanticAction(
+                Component.literal("Create"),
+                () -> Component.literal("Creates a new profile with the entered name."),
+                null,
+                this::createEnabled,
+                this::commitCreate,
+                SemanticSound.ACTIVATION,
+                false, false),
+                MinecraftSemanticFeedback.INSTANCE,
+                () -> {
+                    if (createBtn != null) createBtn.triggerPressAnimation();
+                },
+                SemanticActionControl.PointerRouting.MANUAL);
+        registerSemanticControl(this.createControl);
+    }
+
+    /** The create gate: enabled exactly while a non-empty name is entered. */
+    private boolean createEnabled() {
+        return creatingNew && createField != null && !createField.getValue().trim().isEmpty();
     }
 
     // ------------------------------------------------------------------
@@ -130,11 +171,19 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
     protected void paintLeadingRowGlassPass(GuiGraphics ctx, int x, int y, int w, int leadIndex) {
         // Same template treatment as normal rows (the create row shares the
         // row geometry; its Create button sits at Duplicate's offset).
+        // Availability follows the same clip-band rule as the row loop so a
+        // create row scrolled out of the clip can neither be keyed nor
+        // clicked while invisible.
+        createControl.setAvailable(creatingNew && y + ROW_H > listClipTop() && y < listClipBottom());
         paintTemplatedRowSurface(ctx, x, y,
                 () -> createRowGlassDrawn = renderRowSurface(ctx, x, y, w),
                 () -> {
                     Button cb = createBtn();
                     cb.layout(x + DUP_DX, y + 4, BTN_DUP_W, ROW_H - 8);
+                    createControl.setBounds(x + DUP_DX, y + 4, BTN_DUP_W, ROW_H - 8);
+                    boolean enabled = createEnabled();
+                    cb.disabled(!enabled);
+                    cb.focused(createControl.isFocused() && enabled);
                     cb.renderGlassPass(ctx, x + DUP_DX, y + 4, BTN_DUP_W, ROW_H - 8);
                 },
                 () -> createRowGlassDrawn);
@@ -239,10 +288,31 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
     /** The create-row's confirm button — neutral raised glass like every other action button here. */
     private Button createBtn() {
         if (createBtn == null) {
-            createBtn = new Button("Create", this::commitCreate).glassBackground(true)
+            // No-op onPress: the behavior fires exactly once through the
+            // createControl's semantic gate (this button only paints).
+            createBtn = new Button("Create", () -> {}).glassBackground(true)
                     .priority(BlurPanelRenderer.Priority.DETAIL);
         }
         return createBtn;
+    }
+
+    /**
+     * Per-frame sync of the create pair: the control's bounds follow the
+     * row's live geometry and its availability tracks the clip band; the
+     * Button mirrors the dynamic enabled gate (existing disabled treatment —
+     * the rollout's one new visual state) and the control's focus.
+     */
+    private void syncCreateControl(int x, int y, int mouseX, int mouseY) {
+        Button cb = createBtn();
+        int btnX = x + DUP_DX;
+        int btnY = y + 4;
+        cb.layout(btnX, btnY, BTN_DUP_W, ROW_H - 8);
+        createControl.setBounds(btnX, btnY, BTN_DUP_W, ROW_H - 8);
+        createControl.setAvailable(y + ROW_H > listClipTop() && y < listClipBottom());
+        createControl.updatePointer(mouseX, mouseY);
+        boolean enabled = createEnabled();
+        cb.disabled(!enabled);
+        cb.focused(createControl.isFocused() && enabled);
     }
 
     /**
@@ -279,8 +349,8 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
 
         // "Create" confirm button where Duplicate usually sits — surface
         // painted in the glass pass; this draws the label.
+        syncCreateControl(x, y, mouseX, mouseY);
         Button cb = createBtn();
-        cb.layout(x + DUP_DX, y + 4, BTN_DUP_W, ROW_H - 8);
         cb.render(ctx, x + DUP_DX, y + 4, BTN_DUP_W, ROW_H - 8, mouseX, mouseY);
     }
 
@@ -313,9 +383,20 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
 
     @Override
     protected boolean rowAreaClickFirst(double mouseX, double mouseY) {
-        // "Create" confirm button in the create row (shared Button hit-tests
-        // its own per-frame-laid-out bounds).
-        return creatingNew && createBtn != null && createBtn.mouseClicked(mouseX, mouseY, 0);
+        // "Create" confirm button in the create row — routed through its
+        // semantic control. Clicks within the button's bounds are CONSUMED
+        // even when the gate rejects them (empty name): the create row sits
+        // directly above profile row 0 in the same geometry column, and an
+        // unconsumed click would fall through onto that row's Duplicate
+        // button. A rejected click is inert — no animation, no sound, no
+        // create, no fall-through.
+        if (!creatingNew) return false;
+        SemanticActionControl control = this.createControl;
+        boolean inButton = mouseX >= control.getX() && mouseX < control.getX() + control.getWidth()
+                && mouseY >= control.getY() && mouseY < control.getY() + control.getHeight();
+        if (!inButton) return false;
+        control.activateFromPointer(mouseX, mouseY, 0);
+        return true;
     }
 
     @Override
