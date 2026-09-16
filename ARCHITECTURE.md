@@ -440,6 +440,33 @@ a launch crash, not a silent skip):
   intermediate states paint live over them and the toggle pilot's
   stale-hole class cannot occur (there is no settled state other than rest
   for a key to flip on).
+  **Phase B pilot 3 (2026-09-16): `Slider` — the first
+  continuous-manipulation control, opt-in via
+  `Slider.canonicalStates()`/`SliderSetting.canonicalStates()`.** 62 slider
+  rows share the component, so the pilot migrates exactly one production
+  row (Waypoints → Beam Width, 0.1–1.0 step 0.01); every other row keeps
+  the legacy snap-in hover byte-for-byte (runtime-proven by an isolation
+  oracle on a neighboring row). Canonical channels, overlapping: hover =
+  `HoverAnim.symmetric(140)` with the settled halo endpoint preserved;
+  active dragging = a +1 px knob-radius "grip" applied instantly on the
+  accepted mouse-down and released instantly (direct response outranks
+  staged animation on a continuous control; the pre-existing
+  `dragging ||` clause already keeps the hover channel alive when the
+  pointer leaves the bounds mid-drag); focused = the geometry-following
+  accent hairline family (capsule outside the track — the third geometry,
+  strengthening the family case), mirrored from the row's existing
+  FeatureSetting focus; disabled treatment preserved as-is (already
+  v3-shaped: inset track/border fill/muted knob + full input gating).
+  **Cache finding:** the track renders in the cached shape layer with a
+  disabled-dependent color and no fingerprint bit — a latent staleness
+  (no production slider flips disabled today); fixed narrowly by
+  `Slider.shapeFingerprint()` carrying a disabled bit and
+  `SliderSetting` delegating to it. Hover/drag/focus visuals all render
+  in the live layer (Button-safe category). Value semantics untouched
+  (unit-proven: jump/snap/clamp/keyboard/modifiers; runtime-proven
+  through the real screen input path incl. outside-bounds drags and
+  rapid reversal; knob center/value correspondence measured to 0.1 GUI
+  px with the grip growing the radius around the unmoved center).
 - **ToggleSwitch — the Phase B state-complete pilot (2026-09-15)**: overlapping state
   channels (on/off × hover × pressed × focused × disabled), not an exclusive enum.
   Hover = the symmetric animator above, one restrained channel (track lerps 10% toward

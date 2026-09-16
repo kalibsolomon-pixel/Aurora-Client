@@ -137,8 +137,29 @@ public class SliderSetting extends FeatureSetting {
         return this;
     }
 
+    /**
+     * Opt this row into the Phase B canonical slider state channels
+     * (symmetric 140 ms hover, drag-grip knob, focus hairline) — see
+     * {@link Slider#canonicalStates()}. Pilot-scoped: slider rows stay
+     * legacy until deliberately migrated.
+     */
+    public SliderSetting canonicalStates() {
+        slider.canonicalStates();
+        return this;
+    }
+
     @Override public int baseHeight() { return CONTROL_H; }
     @Override public int height() { return CONTROL_H + descriptionHeight(lastWidth); }
+
+    /**
+     * The cached layer (track) depends on the slider's disabled color —
+     * delegate to the slider's fingerprint so a flip invalidates the row
+     * cache (the latent staleness the Phase B audit found).
+     */
+    @Override
+    public int shapeFingerprint() {
+        return slider.shapeFingerprint();
+    }
 
     // ------------------------------------------------------------------
     //  Row pieces — shared by render() and the shapes/overlay split a
@@ -209,6 +230,9 @@ public class SliderSetting extends FeatureSetting {
     protected void drawTrackOverlay(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
         layoutTrack(x, y, width);
         slider.disabled(isDisabled());
+        // Canonical focus paint: the row owns keyboard focus (its readout
+        // already highlights); mirror it onto the track hairline.
+        slider.focusedVisual(!isDisabled() && FeatureSetting.getFocused() == this);
         slider.renderOverlay(ctx, lastTrackX, y, lastTrackW, CONTROL_H, mouseX, mouseY);
     }
 
