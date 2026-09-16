@@ -4,6 +4,9 @@ import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.component.GlassSurface;
 import com.aurora.client.ui.component.Widget;
+import com.aurora.client.ui.interaction.MinecraftSemanticFeedback;
+import com.aurora.client.ui.interaction.SemanticAction;
+import com.aurora.client.ui.interaction.SemanticActionControl;
 import com.aurora.client.ui.render.blur.BlurPanelRenderer;
 import com.aurora.client.ui.util.MaterialIconRenderer;
 import com.aurora.client.ui.util.RenderUtil;
@@ -14,11 +17,67 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
+import org.lwjgl.glfw.GLFW;
 
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+/**
+ * Phase B pilot (2026-09-16) — opt-in canonical state mode
+ * ({@link #canonicalStates()}; 26 enum rows share this component, so the
+ * pilot must not migrate them silently — the Slider pilot's isolation
+ * pattern). The default construction keeps the legacy behavior
+ * byte-for-byte. Canonical mode models the trigger with OVERLAPPING state
+ * channels, not one exclusive enum:
+ * <ul>
+ *   <li><b>selected value</b> — persistent data (the config-backed getter);
+ *       never conflated with hover or expanded.</li>
+ *   <li><b>hover</b> — {@link HoverAnim#symmetric}(140), the pointer's
+ *       relationship with the trigger pill ONLY. The legacy mode pins the
+ *       hover target at 1 while expanded ({@code hover || expanded}) — the
+ *       exact conflation this pilot removes: with the popup open and the
+ *       pointer down in the option list, the pill eases back to its REST
+ *       surface while still visibly owning the popup (below). Settled-hover
+ *       endpoints are unchanged; only the pin and the path animate.</li>
+ *   <li><b>expanded</b> — popup ownership, persistent until dismissal or
+ *       selection. Distinct treatment: the EXISTING chevron indicator (it
+ *       already flips down-arrow/up-arrow) takes the accent color for the
+ *       whole time the popup is open — the design language §11.7 expanded
+ *       state, expressed through the indicator the component already has
+ *       (no new icon), readable over glass and flat alike (content glyph,
+ *       never a tint change). Independent of hover: expanded + not hovered
+ *       reads as rest surface + accent chevron + the open popup.</li>
+ *   <li><b>focused</b> — vanilla child focus on this row's
+ *       {@link SemanticActionControl} (canonical rows only), mirrored into
+ *       the paint as the Button-family focus hairline (1 px accent outline
+ *       on the pill rect) — visible without hover, distinct from the
+ *       expanded treatment (hairline around the pill vs. accent chevron
+ *       inside it), the same provisional treatment as the
+ *       button/toggle/slider pilots.</li>
+ *   <li><b>disabled</b> — unchanged: inset fill, dim text, no open, no
+ *       selection, keyboard rejected, disabled narration exposed.</li>
+ * </ul>
+ *
+ * <p>Canonical input semantics (the narrow Phase A adapter, canonical rows
+ * only): trigger activation — pointer or Enter/Space — routes through the
+ * semantic action (exactly-once vanilla UI click on open/close, §11.7;
+ * the pointer/open/close path was silent before — reported as an intended
+ * pilot change). Escape while expanded collapses the popup WITHOUT closing
+ * the screen (the legacy path let Escape fall through to vanilla, closing
+ * the whole screen — a correctness defect once keyboard activation exists);
+ * Up/Down while expanded scroll the option list (the popup's existing wheel
+ * behavior, mapped 1:1 — full keyboard VALUE selection stays a dedicated
+ * semantic-control pass). Option selection and outside-click dismissal keep
+ * their exact legacy semantics (silent, consumed).
+ *
+ * <p>Popup rows are deliberately NOT migrated: they are a selection-list
+ * family (persistent accent text = committed value, immediate wash =
+ * transient hover), classified for later Phase B review. Cache note: the
+ * enum renders FULLY LIVE (no shape layer, constant fingerprint); expanded
+ * state changes the row height, which is already an owning-screen cache
+ * version input, so no fingerprint changes are needed.
+ */
 public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
     private static final int CONTROL_H = 28;
     private static final int BTN_W = 100; // slightly wider to accommodate arrow indicators
@@ -75,7 +134,14 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
     private boolean expanded = false;
     private int scrollOffset = 0; // scroll offset for listing max 5 elements
 
-    private final HoverAnim hoverAnim = new HoverAnim(140L);
+    /** Legacy hover: snap-in from rest, target pinned while expanded. */
+    private HoverAnim hoverAnim = new HoverAnim(140L);
+    /** Phase B opt-in — see the class javadoc. */
+    private boolean canonical = false;
+    /** Mirrored from the semantic control's vanilla focus each frame. */
+    private boolean focusedVisual = false;
+    /** Canonical rows only (lazy — see {@link #interactionControl()}). */
+    private SemanticActionControl interactionControl;
 
     public EnumSetting(String label, Class<E> enumClass, Supplier<E> getter, Consumer<E> setter) {
         super(label);
@@ -106,6 +172,44 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
     public EnumSetting<E> glassButton(boolean g) {
         this.glassButton = g;
         return this;
+    }
+
+    /**
+     * Opts this row into the Phase B canonical state channels (symmetric
+     * 140 ms hover driven by the pointer only, the accent-chevron expanded
+     * treatment, the focus hairline + semantic keyboard/narration adapter).
+     * Must be called before first render — it swaps the hover animator. The
+     * other 25 enum rows keep the legacy behavior byte-for-byte.
+     */
+    public EnumSetting<E> canonicalStates() {
+        this.canonical = true;
+        this.hoverAnim = HoverAnim.symmetric(140L);
+        return this;
+    }
+
+    /** True when this row runs the Phase B canonical state channels. */
+    public boolean canonical() {
+        return canonical;
+    }
+
+    /**
+     * The trigger's hover-anim target. Legacy pins the target while expanded
+     * (the pre-pilot conflation); canonical drives it from the pointer only —
+     * the §7 "expanded is not hover" rule, testable headless.
+     */
+    boolean hoverTarget(boolean pointerOverTrigger, boolean disabled) {
+        return canonical ? pointerOverTrigger && !disabled
+                         : (pointerOverTrigger || expanded) && !disabled;
+    }
+
+    /** Trigger activation: toggle the popup + keep the focus bookkeeping. */
+    private void toggleExpanded() {
+        expanded = !expanded;
+        if (expanded) {
+            requestFocus();
+        } else {
+            releaseFocus();
+        }
     }
 
     private String displayName(E v) {
@@ -181,7 +285,19 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
         lastBtnY = btnY;
 
         boolean hover = !disabled && Widget.inBounds(mouseX, mouseY, btnX, btnY, BTN_W, BTN_H);
-        float hT = hoverAnim.update((hover || expanded) && !disabled);
+        // Canonical mode drives the animator from the POINTER only; legacy
+        // keeps the shipped pin-at-1-while-expanded target.
+        float hT = hoverAnim.update(hoverTarget(hover, disabled));
+
+        // Canonical rows: mirror the semantic control's geometry, pointer,
+        // and vanilla focus into this row every frame (the BooleanSetting
+        // sync discipline) — a focused or hovered-for-narration pill always
+        // corresponds to real widget state.
+        if (canonical && interactionControl != null) {
+            interactionControl.setBounds(btnX, btnY, BTN_W, BTN_H);
+            interactionControl.updatePointer(mouseX, mouseY);
+            focusedVisual = interactionControl.isFocused();
+        }
 
         int fillTint   = disabled ? ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_BACKGROUND), 0x22)
                                   : AuroraAnim.lerpArgb(AuroraTheme.PANEL_OFF, AuroraTheme.PANEL_OFF_HOVER, hT);
@@ -214,6 +330,16 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
             RenderUtil.drawSquircleOutline(ctx, btnX, btnY, BTN_W, BTN_H, AuroraTheme.RADIUS_SMALL, 1.0f, borderTint);
         }
 
+        // Canonical focus treatment: the Button-family hairline (1 px accent
+        // outline on the pill rect) — the geometry-following provisional
+        // focus family. Drawn in the content pass over glass and flat alike;
+        // hue/geometry-distinct from the expanded chevron treatment below.
+        if (canonical && focusedVisual) {
+            RenderUtil.drawRoundedOutlineAA(ctx, btnX, btnY, BTN_W, BTN_H,
+                    AuroraTheme.RADIUS_SMALL, 1.0f,
+                    ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
+        }
+
         // Draw the option name centered within the space left of the arrow.
         int textX = btnX + (BTN_W - arrowReserve - cachedNameW) / 2;
         int textY = btnY + (BTN_H - tr.lineHeight) / 2 + 1;
@@ -228,9 +354,15 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
         int arrowW = expanded ? cachedUpArrowWidth : cachedDownArrowWidth;
         int arrowX = btnX + BTN_W - arrowW - 4; // 4px margin from right edge
         int arrowY = btnY + (BTN_H - tr.lineHeight) / 2 + 1; // centered vertically exactly with text
+        // Canonical expanded treatment: the existing chevron indicator (it
+        // already flips direction) takes the accent color for the whole time
+        // the popup is open — persistent, independent of hover, readable on
+        // glass and flat alike, the same accent role the popup's selected
+        // row reads. Legacy rows keep the text-color chevron.
+        int arrowColor = canonical && expanded ? AuroraTheme.TEXT_ACCENT : textColor;
         MaterialIconRenderer.drawIcon(ctx, tr, expanded ? "\uE5C6" : "\uE5CF",
                 arrowX + arrowW / 2f, arrowY + tr.lineHeight / 2f,
-                MaterialIconRenderer.NATURAL_EM_GUI, textColor);
+                MaterialIconRenderer.NATURAL_EM_GUI, arrowColor);
 
         if (expanded) {
             int dropdownY = btnY + BTN_H + 2;
@@ -311,12 +443,15 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
         boolean clickedButton = Widget.inBounds(mouseX, mouseY, btnX, btnY, BTN_W, BTN_H);
 
         if (clickedButton) {
-            expanded = !expanded;
-            if (expanded) {
-                requestFocus();
-            } else {
-                releaseFocus();
+            // Canonical host (the detail screen marks the control available
+            // and runs the lifecycle): the semantic action owns activation —
+            // exactly-once behavior + the §11.7 activation click on open and
+            // close, pointer and keyboard alike. Legacy rows keep the direct
+            // path, byte-for-byte today's behavior.
+            if (canonical && interactionControl != null && interactionControl.isAvailable()) {
+                return interactionControl.activateFromPointer(mouseX, mouseY, button);
             }
+            toggleExpanded();
             return true;
         }
 
@@ -364,6 +499,73 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
         releaseFocus();
     }
 
+    /**
+     * The canonical row's semantic control (focus traversal, Enter/Space
+     * activation, the activation click, narration with the current value and
+     * expanded/collapsed state). Legacy rows return null — the pilot
+     * isolation: only a {@link #canonicalStates()} row joins the semantic
+     * lifecycle.
+     */
+    @Override
+    public SemanticActionControl interactionControl() {
+        if (!canonical) return null;
+        if (interactionControl == null) {
+            interactionControl = new SemanticActionControl(SemanticAction.button(
+                    Component.literal(label),
+                    () -> {
+                        String description = currentDescription();
+                        return description != null
+                                ? Component.literal(description)
+                                : Component.empty();
+                    },
+                    () -> {
+                        E v = getter.get();
+                        return Component.literal((v == null ? "—" : displayName(v))
+                                + (expanded ? ", expanded" : ", collapsed"));
+                    },
+                    () -> !isDisabled(),
+                    this::toggleExpanded),
+                    MinecraftSemanticFeedback.INSTANCE,
+                    null,
+                    SemanticActionControl.PointerRouting.MANUAL);
+        }
+        return interactionControl;
+    }
+
+    /**
+     * Canonical keyboard adapter — the NARROW set the pilot's keyboard path
+     * requires, nothing more (full keyboard value selection is a dedicated
+     * semantic-control pass):
+     * <ul>
+     *   <li><b>Escape while expanded</b> collapses the popup and consumes —
+     *       without this, Escape falls through to vanilla and closes the
+     *       whole screen, a correctness defect once keyboard activation can
+     *       open the popup. Collapsed Escape is not consumed (screen close
+     *       stays vanilla).</li>
+     *   <li><b>Up/Down while expanded</b> scroll the option list ±1 row —
+     *       the popup's existing wheel behavior mapped 1:1; consumed only
+     *       when the list actually scrolls (&gt;5 options).</li>
+     * </ul>
+     * Enter/Space stay on the vanilla-child path (the semantic control's
+     * selection-key handling) so activation fires exactly once.
+     */
+    @Override
+    public boolean onKeyPress(int keyCode, int modifiers) {
+        if (!canonical || !expanded) return false;
+        if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
+            expanded = false;
+            releaseFocus();
+            return true;
+        }
+        if (keyCode == GLFW.GLFW_KEY_DOWN) {
+            return onScroll(-1);
+        }
+        if (keyCode == GLFW.GLFW_KEY_UP) {
+            return onScroll(1);
+        }
+        return false;
+    }
+
     @Override
     public boolean onScroll(double vertical) {
         if (!expanded) return false;
@@ -376,4 +578,9 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
         if (scrollOffset > maxScroll) scrollOffset = maxScroll;
         return true;
     }
+
+    // Package-private test visibility (Phase B pilot).
+    HoverAnim hoverAnimator() { return hoverAnim; }
+    boolean expandedState() { return expanded; }
+    boolean focusedVisualState() { return focusedVisual; }
 }

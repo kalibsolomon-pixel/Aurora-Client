@@ -1208,10 +1208,15 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                 () -> cfg.smoothAnimationsEnabled, v -> cfg.smoothAnimationsEnabled = v,
                 List.of(
                         new SectionHeaderSetting("Swing"),
+                        // Phase B Enum pilot row: the one canonicalStates()
+                        // enum (symmetric pointer-only hover, accent-chevron
+                        // expanded treatment, focus hairline + semantic
+                        // adapter). Every other enum row stays legacy.
                         new EnumSetting<>("Swing Curve",
                                 AuroraConfig.AnimationCurve.class,
                                 () -> cfg.swingAnimationCurve,
                                 v -> cfg.swingAnimationCurve = v)
+                                .canonicalStates()
                                 .valueDescriptions(c -> switch (c) {
                                     case LINEAR -> "Vanilla — no easing. Constant arm velocity. Feels limp.";
                                     case SINE -> "Gentlest easing. Even acceleration in and out. Smooth but not punchy.";

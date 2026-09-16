@@ -245,7 +245,8 @@ Conventions (violating these has caused real bugs — full list in AGENTS.md §6
 | Toggles, sliders, HUD modules, tooltips | Never glass, by convention | Opaque token surfaces |
 
 Settings-widget vocabulary (`screen/setting/`, base class `FeatureSetting`): Boolean, Button,
-Color (embedded HSL picker), DoubleSlider, Enum (dropdown popup), IntSlider, ItemScale
+Color (embedded HSL picker), DoubleSlider, Enum (dropdown popup; one canonical-Phase-B pilot
+row — Animations "Swing Curve" — via `canonicalStates()`, the rest legacy), IntSlider, ItemScale
 (search + per-item slider stack), Keybind, KeyList, ParticleConfig (+ParticleRow), PixelCanvas
 (crosshair editor, `CanvasTexture` cached raster + measured cost benchmark), SectionHeader,
 Segmented, StringList, ThemeOpacity, ThemePreview. `FeatureSetting` provides the
@@ -448,33 +449,63 @@ a launch crash, not a silent skip):
   disabled-color cache staleness (`Slider.shapeFingerprint()` disabled bit
   + `SliderSetting` delegation); hover/drag/focus visuals render in the
   live layer (Button-safe cache category).
-  **Phase B ROLLOUT (2026-09-16): ToggleSwitch and Slider states are
-  production-wide.** Sliders: `SliderSetting`'s constructors call
-  `canonicalStates()` — every setting row (both `of`/`ofInt` factories and
-  the `ThemeOpacitySetting.createSlider` path) runs the canonical channels;
-  the ThemePreview mock constructs `Slider` directly and stays legacy by
-  construction. Toggles: production `BooleanSetting` rows have been
-  component-canonical since the pilot; the rollout adds
-  `ToggleSwitch.previewMode()` and marks the ThemePreview mock with it so
-  a decorative toggle never responds to the pointer (the mock's inertness
-  is now explicit rather than incidental). **Intentional legacy
-  exceptions:** ThemePreview's mock slider + mock toggle (non-interactive
-  previews); AuroraScreen's inline/header toggles (Phase C: manual chrome
-  with unresolved viewport/input-truth — they receive the component-level
-  hover wash but never the focus hairline or a semantic control, and that
-  split stays until Phase C). Button is globally canonical since pilot 2.
-  Mixed-control consistency verified at runtime: Button, ToggleSwitch, and
-  Slider on one screen all animate from rest (first samples mid-flight,
-  none snapped) on the same 140 ms symmetric vocabulary; the
-  geometry-following focus hairline now holds across three component
-  geometries plus Button's rectangle (rollout evidence supports calling it
-  the Phase B canonical focus family for mechanical controls — promotion
-  is a separate decision). Cache rules unchanged and re-audited for the
-  broadened set: toggles render fully live; sliders keep the disabled-bit
-  fingerprint (delegation covers ThemeOpacitySetting, unit-pinned);
-  hover/drag/focus visuals stay live-layer everywhere. Remaining Phase B
-  families: ColorSwatch, Enum, Keybind, KeyList, tooltips, pack card/tab
-  hover — all still legacy pending per-family review.
+**Phase B ROLLOUT (2026-09-16): ToggleSwitch and Slider states are
+production-wide.** Sliders: `SliderSetting`'s constructors call
+`canonicalStates()` — every setting row (both `of`/`ofInt` factories and
+the `ThemeOpacitySetting.createSlider` path) runs the canonical channels;
+the ThemePreview mock constructs `Slider` directly and stays legacy by
+construction. Toggles: production `BooleanSetting` rows have been
+component-canonical since the pilot; the rollout adds
+`ToggleSwitch.previewMode()` and marks the ThemePreview mock with it so
+a decorative toggle never responds to the pointer (the mock's inertness
+is now explicit rather than incidental). **Intentional legacy
+exceptions:** ThemePreview's mock slider + mock toggle (non-interactive
+previews); AuroraScreen's inline/header toggles (Phase C: manual chrome
+with unresolved viewport/input-truth — they receive the component-level
+hover wash but never the focus hairline or a semantic control, and that
+split stays until Phase C). Button is globally canonical since pilot 2.
+Mixed-control consistency verified at runtime: Button, ToggleSwitch, and
+Slider on one screen all animate from rest (first samples mid-flight,
+none snapped) on the same 140 ms symmetric vocabulary; the
+geometry-following focus hairline now holds across three component
+geometries plus Button's rectangle (rollout evidence supports calling it
+the Phase B canonical focus family for mechanical controls — promotion
+is a separate decision). Cache rules unchanged and re-audited for the
+broadened set: toggles render fully live; sliders keep the disabled-bit
+fingerprint (delegation covers ThemeOpacitySetting, unit-pinned);
+hover/drag/focus visuals stay live-layer everywhere.
+**Phase B pilot 4 (2026-09-16): `EnumSetting` canonical trigger states,
+proven on one row** (Animations → "Swing Curve" via
+`EnumSetting.canonicalStates()`; the other 25 enum rows keep the legacy
+behavior byte-for-byte). The pilot's central rule — expanded is NOT
+hover: the legacy row drove its hover animator with
+`hover || expanded`, pinning the pill at its hover endpoint for the
+whole time the popup was open; canonical mode drives it from the POINTER
+only, so `expanded + not hovered` (pointer down in the option list)
+visibly reads as rest surface + popup, with the EXPANDED state carried
+by the existing chevron indicator taking the accent color (direction
+flip + accent, no new icon; the same accent role the popup's selected
+row reads — pixel-verified: the focused-vs-expanded distinction is
+exactly the chevron ROI, 180/1584 px changed inside it, 0 outside).
+Focus = the Button-family hairline via a canonical-only
+`SemanticActionControl` (`interactionControl()` returns null for legacy
+rows — the pilot isolation): Tab traversal, Enter/Space open-close with
+exactly one §11.7 activation click (the pointer path was silent before —
+an intended pilot change), narration carrying value + expanded/collapsed
++ disabled. The narrow keyboard adapter: Escape while expanded collapses
+the popup WITHOUT closing the screen (legacy let Escape fall through to
+vanilla and killed the whole screen — the correctness defect the
+keyboard path required fixing), Up/Down scroll the option list (the
+popup's wheel behavior mapped 1:1); full keyboard VALUE selection stays
+a dedicated semantic-control pass. Popup rows are deliberately
+UNMIGRATED — a selection-list family (accent text = committed value,
+immediate wash = transient hover) classified for later Phase B review;
+the dark-mode wash's subtlety (240 px vs light's 96%) is an observation
+for that review. Cache note: enums render fully live; expanded state
+changes row height, already an owning-screen cache version input — no
+fingerprint changes. Remaining Phase B families: ColorSwatch, Keybind,
+KeyList, tooltips, pack card/tab hover — all still legacy pending
+per-family review.
 - **ToggleSwitch — the Phase B state-complete pilot (2026-09-15)**: overlapping state
   channels (on/off × hover × pressed × focused × disabled), not an exclusive enum.
   Hover = the symmetric animator above, one restrained channel (track lerps 10% toward
