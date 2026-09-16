@@ -7,13 +7,14 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Phase B Enum pilot: the canonical opt-in, the hover/expanded channel
- * split, the popup open/close/outside-dismiss state machine, and the narrow
- * keyboard adapter. Pure state paths only — the trigger's semantic
- * activation (real UI click sound), focus paint, and option selection save
- * are runtime-verified by the DevPilot harness (the semantic feedback
- * adapter touches the live Minecraft instance; selection writes config).
- * HoverAnim symmetric math itself is proven by TogglePilotTest.
+ * Phase B Enum state coverage (pilot semantics, now the rollout default):
+ * the pointer-only hover target, the popup open/close/outside-dismiss
+ * state machine, and the narrow keyboard adapter. Pure state paths only —
+ * the trigger's semantic activation (real UI click sound), focus paint,
+ * and option selection save are runtime-verified by the DevPilot harness
+ * (the semantic feedback adapter touches the live Minecraft instance;
+ * selection writes config). HoverAnim symmetric math itself is proven by
+ * TogglePilotTest.
  */
 class EnumPilotTest {
 
@@ -32,43 +33,48 @@ class EnumPilotTest {
     private static final int BTN_Y = ROW_Y + 5;
 
     @Test
-    void canonicalOptInSwapsTheHoverAnimatorLegacyDefaultStaysLegacy() {
+    void constructionIsSymmetricCanonicalByDefault() {
         AtomicReference<EightValues> v = new AtomicReference<>();
-        EnumSetting<EightValues> legacy = eight(v);
-        assertEquals(1f, legacy.hoverAnimator().update(true), 0f,
-                "default construction keeps the legacy snap-in (25 rows depend on it)");
+        EnumSetting<EightValues> row = eight(v);
+        float first = row.hoverAnimator().update(true);
+        assertTrue(first < 0.5f, "rollout default must animate from rest, got " + first);
+        // Structural pin: the animator is the symmetric construction — the
+        // snap-in legacy animator must not silently return.
+        assertFalse(animatorBackDatesFromRest(row),
+                "the default animator must be HoverAnim.symmetric (no snap-in path)");
+    }
 
-        EnumSetting<EightValues> canonical = eight(v).canonicalStates();
-        float first = canonical.hoverAnimator().update(true);
-        assertTrue(first < 0.5f, "canonical opt-in must animate from rest, got " + first);
-        assertTrue(canonical.canonical());
+    private static boolean animatorBackDatesFromRest(EnumSetting<?> row) {
+        try {
+            var anim = row.hoverAnimator();
+            var f = anim.getClass().getDeclaredField("backDateFromRest");
+            f.setAccessible(true);
+            return f.getBoolean(anim);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError(e);
+        }
     }
 
     @Test
-    void expandedDoesNotDriveTheCanonicalHoverTargetLegacyKeepsThePin() {
+    void expandedNeverDrivesTheTriggerHoverTarget() {
         AtomicReference<EightValues> v = new AtomicReference<>();
-        EnumSetting<EightValues> canonical = eight(v).canonicalStates();
+        EnumSetting<EightValues> row = eight(v);
         // Open the popup (direct path — the semantic control is not created
         // until a semantic host asks for it).
-        assertTrue(canonical.mouseClicked(BTN_X + 10, BTN_Y + 9, 0, ROW_X, ROW_Y, ROW_W));
-        assertTrue(canonical.expandedState());
-        assertFalse(canonical.hoverTarget(false, false),
-                "canonical: expanded must NOT pin the hover target (§7 — expanded is not hover)");
-        assertTrue(canonical.hoverTarget(true, false),
-                "canonical: the pointer over the trigger still drives hover");
-        assertFalse(canonical.hoverTarget(true, true),
-                "disabled suppresses the hover target on every mode");
-
-        EnumSetting<EightValues> legacy = eight(v);
-        assertTrue(legacy.mouseClicked(BTN_X + 10, BTN_Y + 9, 0, ROW_X, ROW_Y, ROW_W));
-        assertTrue(legacy.hoverTarget(false, false),
-                "legacy: the shipped pin-at-1-while-expanded target is byte-preserved");
+        assertTrue(row.mouseClicked(BTN_X + 10, BTN_Y + 9, 0, ROW_X, ROW_Y, ROW_W));
+        assertTrue(row.expandedState());
+        assertFalse(row.hoverTarget(false, false),
+                "expanded must NOT drive the hover target (expanded is not hover)");
+        assertTrue(row.hoverTarget(true, false),
+                "the pointer over the trigger still drives hover");
+        assertFalse(row.hoverTarget(true, true),
+                "disabled suppresses the hover target");
     }
 
     @Test
     void triggerClickTogglesExpandedExactlyOncePerClick() {
         AtomicReference<EightValues> v = new AtomicReference<>();
-        EnumSetting<EightValues> row = eight(v).canonicalStates();
+        EnumSetting<EightValues> row = eight(v);
         // Outside the pill: not consumed while collapsed.
         assertFalse(row.mouseClicked(5, 5, 0, ROW_X, ROW_Y, ROW_W));
 
@@ -86,7 +92,7 @@ class EnumPilotTest {
     @Test
     void outsideClickCollapsesAndConsumesWhileExpanded() {
         AtomicReference<EightValues> v = new AtomicReference<>();
-        EnumSetting<EightValues> row = eight(v).canonicalStates();
+        EnumSetting<EightValues> row = eight(v);
         row.mouseClicked(BTN_X + 10, BTN_Y + 9, 0, ROW_X, ROW_Y, ROW_W);
 
         // A click far from trigger and popup: consumed (never falls through
@@ -99,7 +105,7 @@ class EnumPilotTest {
     @Test
     void popupFooterBandClickCollapsesWithoutSelecting() {
         AtomicReference<EightValues> v = new AtomicReference<>();
-        EnumSetting<EightValues> row = eight(v).canonicalStates();
+        EnumSetting<EightValues> row = eight(v);
         row.mouseClicked(BTN_X + 10, BTN_Y + 9, 0, ROW_X, ROW_Y, ROW_W);
 
         // Inside the dropdown rect but in the 2px footer band below the last
@@ -115,7 +121,7 @@ class EnumPilotTest {
     @Test
     void disabledRejectsOpenAndKeyboardAndKeepsTheValue() {
         AtomicReference<EightValues> v = new AtomicReference<>();
-        EnumSetting<EightValues> row = eight(v).canonicalStates();
+        EnumSetting<EightValues> row = eight(v);
         row.disabled(() -> true);
         assertFalse(row.mouseClicked(BTN_X + 10, BTN_Y + 9, 0, ROW_X, ROW_Y, ROW_W));
         assertFalse(row.expandedState(), "a disabled enum must not open");
@@ -131,7 +137,7 @@ class EnumPilotTest {
     @Test
     void escapeCollapsesAnExpandedPopupButFallsThroughWhenCollapsed() {
         AtomicReference<EightValues> v = new AtomicReference<>();
-        EnumSetting<EightValues> row = eight(v).canonicalStates();
+        EnumSetting<EightValues> row = eight(v);
         // Collapsed: Escape is not the enum's to consume (screen close).
         assertFalse(row.onKeyPress(org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE, 0));
 
@@ -140,18 +146,12 @@ class EnumPilotTest {
                 "Escape while expanded belongs to the popup, not the screen");
         assertFalse(row.expandedState());
         assertEquals(EightValues.A, v.get());
-
-        // The legacy row keeps no such adapter.
-        EnumSetting<EightValues> legacy = eight(v);
-        legacy.mouseClicked(BTN_X + 10, BTN_Y + 9, 0, ROW_X, ROW_Y, ROW_W);
-        assertFalse(legacy.onKeyPress(org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE, 0),
-                "legacy rows never had a key path — byte-preserved");
     }
 
     @Test
     void arrowKeysScrollOnlyScrollableExpandedLists() {
         AtomicReference<EightValues> v = new AtomicReference<>();
-        EnumSetting<EightValues> row = eight(v).canonicalStates();
+        EnumSetting<EightValues> row = eight(v);
         // Collapsed: arrows are not consumed.
         assertFalse(row.onKeyPress(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN, 0));
 
@@ -165,25 +165,21 @@ class EnumPilotTest {
         assertEquals(0, scrollOffset(row));
 
         AtomicReference<TwoValues> v2 = new AtomicReference<>(TwoValues.X);
-        EnumSetting<TwoValues> two = new EnumSetting<>("Two", TwoValues.class, v2::get, v2::set)
-                .canonicalStates();
+        EnumSetting<TwoValues> two = new EnumSetting<>("Two", TwoValues.class, v2::get, v2::set);
         two.mouseClicked(BTN_X + 10, BTN_Y + 9, 0, ROW_X, ROW_Y, ROW_W);
         assertFalse(two.onKeyPress(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN, 0),
                 "≤5 options never scroll — the key falls through");
     }
 
     @Test
-    void semanticControlExistsOnlyForCanonicalRowsAndMirrorsTheEnabledGate() {
+    void semanticControlExistsByDefaultAndMirrorsTheEnabledGate() {
         AtomicReference<EightValues> v = new AtomicReference<>();
-        EnumSetting<EightValues> legacy = eight(v);
-        assertNull(legacy.interactionControl(),
-                "legacy rows must not join the semantic lifecycle (pilot isolation)");
-
-        EnumSetting<EightValues> canonical = eight(v).canonicalStates();
-        var control = canonical.interactionControl();
-        assertNotNull(control);
+        EnumSetting<EightValues> row = eight(v);
+        var control = row.interactionControl();
+        assertNotNull(control,
+                "the semantic adapter is the default — every host that asks gets it");
         assertTrue(control.action().enabled(), "enabled gate mirrors the row's supplier");
-        canonical.disabled(() -> true);
+        row.disabled(() -> true);
         assertFalse(control.action().enabled(),
                 "the disabled gate must be the authoritative activation gate");
     }
@@ -191,7 +187,7 @@ class EnumPilotTest {
     @Test
     void detailScreenCloseResetsPopupState() {
         AtomicReference<EightValues> v = new AtomicReference<>();
-        EnumSetting<EightValues> row = eight(v).canonicalStates();
+        EnumSetting<EightValues> row = eight(v);
         row.mouseClicked(BTN_X + 10, BTN_Y + 9, 0, ROW_X, ROW_Y, ROW_W);
         row.onKeyPress(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN, 0);
         row.onDetailScreenClose();

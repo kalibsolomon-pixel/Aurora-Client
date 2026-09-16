@@ -245,13 +245,13 @@ Conventions (violating these has caused real bugs — full list in AGENTS.md §6
 | Toggles, sliders, HUD modules, tooltips | Never glass, by convention | Opaque token surfaces |
 
 Settings-widget vocabulary (`screen/setting/`, base class `FeatureSetting`): Boolean, Button,
-Color (embedded HSL picker), DoubleSlider, Enum (dropdown popup; one canonical-Phase-B pilot
-row — Animations "Swing Curve" — via `canonicalStates()`, the rest legacy), IntSlider, ItemScale
-(search + per-item slider stack), Keybind, KeyList, ParticleConfig (+ParticleRow), PixelCanvas
-(crosshair editor, `CanvasTexture` cached raster + measured cost benchmark), SectionHeader,
-Segmented, StringList, ThemeOpacity, ThemePreview. `FeatureSetting` provides the
-shapes/overlay/glassPass render split, static focus registry, label-tooltip dwell system, and
-detail-screen lifecycle hooks.
+Color (embedded HSL picker), DoubleSlider, Enum (dropdown popup; canonical Phase B states are
+production-wide — all 26 rows, the AuroraScreen-hosted three at component level only, see §6),
+IntSlider, ItemScale (search + per-item slider stack), Keybind, KeyList, ParticleConfig
+(+ParticleRow), PixelCanvas (crosshair editor, `CanvasTexture` cached raster + measured cost
+benchmark), SectionHeader, Segmented, StringList, ThemeOpacity, ThemePreview. `FeatureSetting`
+provides the shapes/overlay/glassPass render split, static focus registry, label-tooltip dwell
+system, and detail-screen lifecycle hooks.
 
 **Phase A (interaction foundation) is COMPLETE for the current architecture** —
 every ordinary button-like control participates in the semantic contract
@@ -503,9 +503,41 @@ immediate wash = transient hover) classified for later Phase B review;
 the dark-mode wash's subtlety (240 px vs light's 96%) is an observation
 for that review. Cache note: enums render fully live; expanded state
 changes row height, already an owning-screen cache version input — no
-fingerprint changes. Remaining Phase B families: ColorSwatch, Keybind,
-KeyList, tooltips, pack card/tab hover — all still legacy pending
-per-family review.
+fingerprint changes.
+**Phase B ROLLOUT (2026-09-16, later that day): canonical Enum states are
+production-wide — 26/26 rows.** The seam decision: the pilot's
+`canonicalStates()` opt-in is REMOVED with the flag — canonical is
+`EnumSetting`'s only behavior (the Button/ToggleSwitch end state; Slider
+keeps its flag only because the ThemePreview mock constructs it directly,
+and Enum has no mock consumer — every production row constructs through
+the registry, no `glassButton(false)` exceptions exist). `hoverTarget`'s
+pointer-only rule is now unconditional and unit-pinned; a rollout
+inventory test pins the 26-row count against FeatureRegistry (the source
+file — the registry class itself is not headless-loadable). The three
+AuroraScreen SETTINGS-tab enums (Text Renderer, Client Font, UI FPS
+Limit) are canonical AT THE COMPONENT LEVEL with the host-dependent
+capabilities explicitly absent — the documented Phase C host deferral,
+the same split the inline toggles carry: the semantic control
+materializes only when a host asks (`interactionControl()` —
+FeatureDetailScreen does at open; AuroraScreen never does), so those rows
+get canonical hover timing, the accent-chevron expanded treatment, popup
+semantics, AND Escape/arrow keys (AuroraScreen routes `keyPressed`
+through the FeatureSetting focus registry, which an expanded enum holds)
+but no Tab focus, no Enter/Space activation, no narration, no activation
+click — runtime-verified per channel, not assumed all-or-nothing.
+Runtime verification: DevPilot `enumr` boots dark+light, 20/20 oracles
+each — all four Animations enums animate from rest (no snap left on a
+multi-enum screen), inter-enum ownership (open-one-consumes-the-other,
+independent values, close-one-open-another), keyboard on a non-pilot row
+(Tab/Enter/Up/Down/Escape), >5 vs ≤5 wheel semantics, and the
+AuroraScreen boundary set. Rollout-vs-pilot A/B on the pilot row:
+rest and expanded-not-hovered byte-identical (0/7200 px — the treatment
+was frozen, the rollout changed only the other 25 rows' path, not their
+endpoints). The stash-baseline (pilot tree) boot fails exactly the three
+legacy-row enter oracles — the suite discriminates rollout from pilot
+state. Remaining Phase B families: ColorSwatch, Keybind, KeyList,
+tooltips, pack card/tab hover — all still legacy pending per-family
+review.
 - **ToggleSwitch — the Phase B state-complete pilot (2026-09-15)**: overlapping state
   channels (on/off × hover × pressed × focused × disabled), not an exclusive enum.
   Hover = the symmetric animator above, one restrained channel (track lerps 10% toward

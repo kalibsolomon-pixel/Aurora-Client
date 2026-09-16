@@ -72,4 +72,43 @@ class RolloutStatesTest {
         ToggleSwitch mock = new com.aurora.client.ui.component.ToggleSwitch(() -> true, b -> {}).previewMode();
         assertTrue(mock.isPreviewMode());
     }
+
+    // ------------------------------------------------------------------
+    // Enum rollout invariants (2026-09-16): canonical states are the
+    // component's only behavior — no opt-in, no legacy escape.
+    // ------------------------------------------------------------------
+
+    private enum RolloutEnum { A, B }
+
+    @Test
+    void enumConstructionIsCanonicalWithNoOptInEscape() {
+        AtomicReference<RolloutEnum> v = new AtomicReference<>(RolloutEnum.A);
+        EnumSetting<RolloutEnum> row = new EnumSetting<>("R", RolloutEnum.class, v::get, v::set);
+        float first = row.hoverAnimator().update(true);
+        assertTrue(first < 0.5f, "every construction animates from rest — canonical by default");
+        // The pilot's opt-in mechanism is retired with the flag (the
+        // Button/ToggleSwitch end state). Reintroducing an opt-in seam is a
+        // deliberate decision that must update this pin.
+        assertThrows(NoSuchMethodException.class,
+                () -> EnumSetting.class.getMethod("canonicalStates"),
+                "canonicalStates() was the pilot's isolation mechanism — the rollout removed it");
+    }
+
+    @Test
+    void productionEnumInventoryHoldsAtTwentySixRows() {
+        // Source-level inventory pin: the docs record "all 26 production
+        // EnumSetting rows construct in FeatureRegistry" (FeatureRegistry
+        // itself is not headless-loadable — its lambdas capture the live
+        // config). Any added/removed enum row must consciously update this
+        // count together with ARCHITECTURE.md.
+        try {
+            String src = new String(java.nio.file.Files.readAllBytes(java.nio.file.Path.of(
+                    "src/client/java/com/aurora/client/screen/FeatureRegistry.java")));
+            int count = src.split("new EnumSetting<>", -1).length - 1;
+            assertEquals(26, count,
+                    "production EnumSetting construction sites (inventory drift guard)");
+        } catch (java.io.IOException e) {
+            fail("FeatureRegistry.java not readable from the test working dir: " + e.getMessage());
+        }
+    }
 }
