@@ -538,6 +538,51 @@ legacy-row enter oracles — the suite discriminates rollout from pilot
 state. Remaining Phase B families: ColorSwatch, Keybind, KeyList,
 tooltips, pack card/tab hover — all still legacy pending per-family
 review.
+**Phase B pilot 5 (2026-09-16, later): ColorSwatch canonical states,
+proven on one row** (Crosshair → "Color" via `ColorSetting.canonicalStates()`
+→ `ColorSwatch.canonicalStates()`; the other 28 color rows and the
+Waypoint manager's non-clickable display chips keep the legacy behavior
+byte-for-byte). The governing invariant: **the represented color sample
+is DATA** — no state modifies its pixels; all interaction treatment
+lives on the surrounding chrome (pixel-proven: the interior ROI is
+byte-exact to the stored RGB in rest/hover/focus/expanded/disabled for
+black, white, red, cyan, and gray, in both themes). The pilot corrected
+one real violation: the legacy disabled branch halved the sample's alpha
+(`color & 0x55FFFFFF`), changing its rendered color — canonical keeps the
+sample literal and communicates disabled through the base ring in the
+established disabled-chrome idiom (`ON_BACKGROUND @ 0x33`, EnumSetting's
+disabled treatment); the stash-baseline pixel proof shows every stress
+color shifting when disabled pre-pilot (white 255→198) and staying
+byte-exact after. Canonical channels: hover = symmetric 140 ms with the
+unchanged halo endpoint; selected = the existing 1.5 px accent ring 2 px
+out, now COMPOSING with hover instead of suppressing it (the legacy
+branch dropped hover feedback on a selected swatch — production hosts
+never select today; the channel is the component's contract for the
+future peer-group migration); focused = the Button-family 1 px hairline
+ON the rect — a deliberately different radius/weight from the selection
+ring's 2 px-out position, so focus can never read as selection (the
+geometry-following family generalized to the small swatch without an
+exception); disabled = literal sample + muted ring, no halo, traversal
+gated. The host row gains the Enum-trigger interaction contract
+(`SemanticActionControl`: Tab focus, Enter/Space open/close with exactly
+one activation click, narration carrying the value as hex — the picker's
+own vocabulary — plus expanded/collapsed; Escape collapses the inline
+picker without closing the screen). NO press treatment by decision: the
+editor expanding under the swatch IS the feedback (the row's height
+doubles; a scale/deform would only suggest the value changed). Topology
+note: ColorSwatch's production reality is single-swatch-opens-editor
+(the 29 `ColorSetting` rows); the PEER-GROUP topology with persistent
+selection exists only in `AccentSetting`'s hand-rolled preset grid, which
+is NOT a ColorSwatch consumer (and renders on AuroraScreen's inline
+Settings tab — the Phase C host deferral applies); migrating it is a
+separate future task. The Waypoint manager's row chips are data-only
+displays that still show a spurious hover halo today — observed, left
+legacy, a candidate for a `previewMode()`-class opt-OUT in a later pass.
+Cache note: the per-color resting template blits only at exact rest
+(`!disabled && !selected && hT <= 0`) and never keys on state — the
+Button-safe category; all state chrome paints live. Remaining Phase B
+families: Keybind, KeyList, tooltips, pack card/tab hover,
+AccentSetting's peer grid — all still legacy pending per-family review.
 - **ToggleSwitch — the Phase B state-complete pilot (2026-09-15)**: overlapping state
   channels (on/off × hover × pressed × focused × disabled), not an exclusive enum.
   Hover = the symmetric animator above, one restrained channel (track lerps 10% toward

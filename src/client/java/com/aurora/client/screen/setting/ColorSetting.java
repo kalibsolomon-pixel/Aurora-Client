@@ -2,20 +2,37 @@ package com.aurora.client.screen.setting;
 
 import com.aurora.client.ui.component.ColorSwatch;
 import com.aurora.client.ui.component.Widget;
+import com.aurora.client.ui.interaction.MinecraftSemanticFeedback;
+import com.aurora.client.ui.interaction.SemanticAction;
+import com.aurora.client.ui.interaction.SemanticActionControl;
 import com.aurora.client.util.AuroraShapes;
 import com.aurora.client.util.AuroraTheme;
 import com.aurora.client.util.ColorEntryHelper;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.network.chat.Component;
+import org.lwjgl.glfw.GLFW;
 
 import java.util.function.Consumer;
 import java.util.function.IntSupplier;
 
 /**
- * Color setting Ã¢â‚¬â€  collapsed swatch + expanded HSL picker. Wave D rebuild
+ * Color setting — collapsed swatch + expanded HSL picker. Wave D rebuild
  * swaps {@link com.aurora.client.util.RoundedRect} chrome for AuroraShapes
  * + theme colors and adds a hover halo to the swatch ring. HSL math, pad
- * cache, drag state machine Ã¢â‚¬â€  all unchanged from prior waves.
+ * cache, drag state machine — all unchanged from prior waves.
+ *
+ * <p><b>Phase B pilot (2026-09-16):</b> {@link #canonicalStates()} opts the
+ * row's swatch into the canonical state channels (see {@link ColorSwatch}'s
+ * class javadoc — represented color is literal data, all interaction
+ * treatment on chrome) and gives the swatch the Enum-trigger interaction
+ * contract: a {@link SemanticActionControl} (focus traversal, Enter/Space
+ * open/close with exactly one activation click, narration carrying the
+ * current value as hex plus expanded/collapsed), and the narrow keyboard
+ * adapter (Escape while expanded collapses the picker without closing the
+ * screen). The expanded editor's own surfaces (pad/strips/preview) are
+ * DATA by convention — untouched. Hosts never marking the control
+ * available keep the legacy pointer-only path.
  */
 public class ColorSetting extends FeatureSetting {
     private static final int ROW_H_COLLAPSED = 28;
@@ -51,12 +68,32 @@ public class ColorSetting extends FeatureSetting {
 
     /** Shared themed swatch — owns the checkerboard + fill + ring/halo rendering. */
     private final ColorSwatch swatch;
+    /** Phase B: focus/keyboard/narration adapter (lazy — see {@link #interactionControl()}). */
+    private SemanticActionControl interactionControl;
+    /** Phase B opt-in — see the class javadoc. */
+    private boolean canonical;
 
     public ColorSetting(String label, IntSupplier getter, Consumer<Integer> setter) {
         super(label);
         this.getter = getter;
         this.setter = setter;
         this.swatch = new ColorSwatch(getter, null);
+    }
+
+    /**
+     * Opts this row's swatch into the Phase B canonical state channels plus
+     * the semantic open/close adapter. Must be called before first render.
+     * Every other color row keeps the legacy behavior byte-for-byte.
+     */
+    public ColorSetting canonicalStates() {
+        this.canonical = true;
+        swatch.canonicalStates();
+        return this;
+    }
+
+    /** True when this row runs the Phase B canonical state channels. */
+    public boolean canonical() {
+        return canonical;
     }
 
     @Override public int baseHeight() { return expanded ? ROW_H_EXPANDED : ROW_H_COLLAPSED; }
@@ -73,6 +110,14 @@ public class ColorSetting extends FeatureSetting {
         swatchY = y + (ROW_H_COLLAPSED - swatchH) / 2;
         swatch.disabled(disabled);
         swatch.layout(swatchX, swatchY, swatchW, swatchH);
+        // Canonical rows: mirror the semantic control's geometry, pointer,
+        // and vanilla focus into the swatch every frame (the BooleanSetting
+        // sync discipline).
+        if (canonical && interactionControl != null) {
+            interactionControl.setBounds(swatchX, swatchY, swatchW, swatchH);
+            interactionControl.updatePointer(mouseX, mouseY);
+            swatch.focusedVisual(interactionControl.isFocused());
+        }
         swatch.renderOverlay(ctx, swatchX, swatchY, swatchW, swatchH, mouseX, mouseY);
         
 
@@ -124,8 +169,13 @@ public class ColorSetting extends FeatureSetting {
 
         if (mouseX >= swatchX && mouseX < swatchX + swatchW
                 && mouseY >= swatchY && mouseY < swatchY + swatchH) {
-            if (!expanded) { seedFromCurrent(); expanded = true; }
-            else expanded = false;
+            // Semantic host: the control owns activation — exactly-once
+            // behavior + one activation click on open/close. Legacy hosts
+            // keep the direct path, byte-for-byte today's behavior.
+            if (canonical && interactionControl != null && interactionControl.isAvailable()) {
+                return interactionControl.activateFromPointer(mouseX, mouseY, button);
+            }
+            toggleExpanded();
             return true;
         }
         if (!expanded) return false;
@@ -174,6 +224,87 @@ public class ColorSetting extends FeatureSetting {
         int argb = getter.getAsInt();
         float[] hsla = ColorEntryHelper.argbToHsla(argb);
         h = hsla[0]; s = hsla[1]; l = hsla[2]; a = hsla[3];
+    }
+
+    /**
+     * Swatch activation: toggle the inline editor + (canonical) hold the
+     * focus registry while expanded so the keyboard adapter can receive
+     * Escape. The editor expanding under the swatch IS the press feedback —
+     * no separate press treatment is added (the row's height doubles; a
+     * scale/deform on top of that would only suggest the value changed).
+     */
+    private void toggleExpanded() {
+        if (!expanded) {
+            seedFromCurrent();
+            expanded = true;
+            requestFocus();
+        } else {
+            expanded = false;
+            releaseFocus();
+        }
+    }
+
+    /**
+     * The canonical row's semantic control (focus traversal, Enter/Space
+     * activation, the activation click, narration with the current value as
+     * hex — the established color-value vocabulary the picker's hex field
+     * uses — plus expanded/collapsed). Legacy rows return null — the pilot
+     * isolation.
+     */
+    @Override
+    public SemanticActionControl interactionControl() {
+        if (!canonical) return null;
+        if (interactionControl == null) {
+            interactionControl = new SemanticActionControl(SemanticAction.button(
+                    Component.literal(label),
+                    () -> {
+                        String description = currentDescription();
+                        return description != null
+                                ? Component.literal(description)
+                                : Component.empty();
+                    },
+                    () -> Component.literal(String.format("#%06X", getter.getAsInt() & 0x00FFFFFF)
+                            + (expanded ? ", expanded" : ", collapsed")),
+                    () -> !isDisabled(),
+                    this::toggleExpanded),
+                    MinecraftSemanticFeedback.INSTANCE,
+                    null,
+                    SemanticActionControl.PointerRouting.MANUAL);
+        }
+        return interactionControl;
+    }
+
+    /**
+     * Canonical keyboard adapter, the Enum-trigger narrow set: Escape while
+     * expanded collapses the picker without closing the screen. Collapsed
+     * Escape is not consumed (screen close stays vanilla). Picker VALUE
+     * editing stays pointer-driven; keyboard color entry is future
+     * accessibility work, deliberately not built here.
+     */
+    @Override
+    public boolean onKeyPress(int keyCode, int modifiers) {
+        if (!canonical || !expanded) return false;
+        if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
+            expanded = false;
+            releaseFocus();
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Canonical rows reset transient popup state on screen close (the
+     * EnumSetting lifecycle contract — without this, an expanded picker and
+     * its registry focus leak across screen opens because settings are
+     * long-lived singletons). Legacy rows keep the shipped
+     * persists-across-close behavior.
+     */
+    @Override
+    public void onDetailScreenClose() {
+        if (!canonical) return;
+        expanded = false;
+        dragging = DragTarget.NONE;
+        releaseFocus();
     }
 
     private void commit() { setter.accept(ColorEntryHelper.hslaToArgb(h, s, l, a)); }

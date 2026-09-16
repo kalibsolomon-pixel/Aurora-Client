@@ -22,6 +22,35 @@ import java.util.function.IntSupplier;
  * through the high-res AA engine; the base ring uses the {@code BORDER}
  * token, the hover halo uses {@code ON_BACKGROUND} (mode-aware), and the
  * selection ring uses {@code ACCENT}.
+ *
+ * <p><b>Phase B pilot (2026-09-16) — opt-in canonical state mode</b>
+ * ({@link #canonicalStates()}; the production hosts are the 29
+ * single-swatch {@code ColorSetting} rows and the Waypoint manager's
+ * non-clickable display chips, so the pilot must not migrate them
+ * silently — the Slider/Enum isolation pattern). The represented color
+ * sample is DATA: no state ever modifies its pixels. Canonical mode adds
+ * overlapping state channels, all on the surrounding chrome:
+ * <ul>
+ *   <li><b>hover</b> — {@link HoverAnim#symmetric}(140) (the legacy
+ *       constructor snaps in from rest); endpoint unchanged — the 1 px
+ *       {@code ON_BACKGROUND} halo outside the sample. The halo now also
+ *       draws while selected (the legacy branch suppressed hover feedback
+ *       on a selected swatch — a selected/hovered collapse).</li>
+ *   <li><b>selected</b> — unchanged persistent indicator: the 1.5 px
+ *       {@code ACCENT} ring 2 px outside the sample (production hosts
+ *       never select today; the channel is the component's contract for a
+ *       future peer-group migration).</li>
+ *   <li><b>focused</b> — opt-in {@link #focusedVisual(boolean)}: the
+ *       Button-family 1 px accent hairline ON the swatch rect — a
+ *       deliberately different radius and weight from the selection ring
+ *       (on-rect vs. 2 px out) so focus can never read as selection.</li>
+ *   <li><b>disabled</b> — the represented color stays LITERAL (the
+ *       legacy branch halved the sample's alpha, changing its rendered
+ *       color — the data invariant this pilot corrects); disabled reads
+ *       through the base ring in the established disabled-chrome idiom
+ *       ({@code ON_BACKGROUND} at the EnumSetting disabled fill's 0x33
+ *       strength). No halo on any disabled channel.</li>
+ * </ul>
  */
 public class ColorSwatch extends Widget {
 
@@ -31,7 +60,11 @@ public class ColorSwatch extends Widget {
     private boolean checkerboard = true;
     private boolean selected = false;
     private boolean disabled = false;
-    private final HoverAnim hoverAnim = new HoverAnim(140L);
+    /** Phase B opt-in — see the class javadoc. */
+    private boolean canonical = false;
+    /** Opt-in focus paint (the host row owns the focus lifecycle). */
+    private boolean focusedVisual = false;
+    private HoverAnim hoverAnim = new HoverAnim(140L);
 
     public ColorSwatch(IntSupplier getter, Runnable onClick) {
         this.getter = getter;
@@ -51,6 +84,40 @@ public class ColorSwatch extends Widget {
     public ColorSwatch disabled(boolean d) {
         this.disabled = d;
         return this;
+    }
+
+    /**
+     * Opts this swatch into the Phase B canonical state channels (symmetric
+     * 140 ms hover, literal disabled sample, composited selected+hover,
+     * focus hairline). Must be called before first render — it swaps the
+     * hover animator.
+     */
+    public ColorSwatch canonicalStates() {
+        this.canonical = true;
+        this.hoverAnim = HoverAnim.symmetric(140L);
+        return this;
+    }
+
+    /** True when this swatch runs the Phase B canonical state channels. */
+    public boolean canonical() {
+        return canonical;
+    }
+
+    /** Focus paint opt-in — the host row mirrors its keyboard focus here. */
+    public ColorSwatch focusedVisual(boolean focused) {
+        this.focusedVisual = focused;
+        return this;
+    }
+
+    /**
+     * The sample fill's ARGB. Legacy halves the alpha when disabled (the
+     * shipped treatment — the sample's rendered color changes); canonical
+     * keeps the sample literal in every state — disabled communicates
+     * through the ring chrome instead. Package-private for the pilot's
+     * RGB-invariant unit test.
+     */
+    int sampleArgb(int color, boolean isDisabled) {
+        return canonical || !isDisabled ? color | 0xFF000000 : color & 0x55FFFFFF;
     }
 
     @Override
@@ -74,10 +141,40 @@ public class ColorSwatch extends Widget {
             if (checkerboard) {
                 drawCheckerboard(g, x, y, w, h, radius);
             }
-            int drawColor = disabled ? (color & 0x55FFFFFF) : (color | 0xFF000000);
-            RenderUtil.drawRoundedRectAA(g, x, y, w, h, radius, drawColor);
+            RenderUtil.drawRoundedRectAA(g, x, y, w, h, radius, sampleArgb(color, disabled));
         }
 
+        if (canonical) {
+            // Overlapping channels, all on chrome — the sample itself never
+            // changes with state. Base ring first: BORDER at rest/hover,
+            // the established disabled-chrome idiom when disabled.
+            if (!rest) {
+                RenderUtil.drawRoundedOutlineAA(g, x, y, w, h, radius, 1.0f,
+                        disabled
+                                ? ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_BACKGROUND), 0x33)
+                                : ThemeManager.color(ThemeToken.BORDER));
+            }
+            if (selected) {
+                RenderUtil.drawRoundedOutlineAA(g, x - 2, y - 2, w + 4, h + 4, radius + 2, 1.5f,
+                        ThemeManager.color(ThemeToken.ACCENT));
+            }
+            if (hT > 0f) {
+                int haloA = Math.round(90 * hT);
+                int onBg = ThemeManager.color(ThemeToken.ON_BACKGROUND) & 0x00FFFFFF;
+                RenderUtil.drawRoundedOutlineAA(g, x - 1, y - 1, w + 2, h + 2, radius + 1, 1.0f,
+                        (haloA << 24) | onBg);
+            }
+            // Focus: the Button-family hairline ON the rect — radius and
+            // weight deliberately distinct from the selection ring's
+            // 2 px-out position, so focus never reads as selection.
+            if (focusedVisual) {
+                RenderUtil.drawRoundedOutlineAA(g, x, y, w, h, radius, 1.0f,
+                        ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
+            }
+            return;
+        }
+
+        // Legacy composition, byte-identical to the pre-pilot render.
         if (selected) {
             RenderUtil.drawRoundedOutlineAA(g, x - 2, y - 2, w + 4, h + 4, radius + 2, 1.5f,
                     ThemeManager.color(ThemeToken.ACCENT));
@@ -156,6 +253,11 @@ public class ColorSwatch extends Widget {
         if (disabled || button != 0 || !inBounds(mx, my, x, y, w, h)) return false;
         if (onClick != null) onClick.run();
         return true;
+    }
+
+    /** The hover animator — package-private test visibility for the Phase B pilot. */
+    HoverAnim hoverAnimator() {
+        return hoverAnim;
     }
 
     /**
