@@ -170,4 +170,99 @@ class RolloutStatesTest {
             fail(e.toString());
         }
     }
+
+    // ------------------------------------------------------------------
+    // Keybind rollout invariants (2026-09-16): canonical capture states
+    // are the row's only behavior — no opt-in, no legacy disabled bypass.
+    // ------------------------------------------------------------------
+
+    @Test
+    void keybindConstructionIsCanonicalWithNoOptInEscape() {
+        AtomicReference<Integer> v = new AtomicReference<>(org.lwjgl.glfw.GLFW.GLFW_KEY_J);
+        KeybindSetting row = new KeybindSetting("R", v::get, v::set);
+        assertNotNull(row.interactionControl(),
+                "every construction produces the semantic adapter — canonical by default");
+        float first = row.hoverAnimator().update(true);
+        assertTrue(first < 0.5f, "every construction animates from rest — canonical by default");
+        // The pilot's opt-in mechanism is retired with the flag (the
+        // EnumSetting end state). Reintroducing an opt-in seam is a
+        // deliberate decision that must update this pin together with
+        // ARCHITECTURE.md. This also pins the removal of the legacy
+        // branch — the historical disabled bypass (a disabled row could
+        // enter listening, mutate config, and save) is unreachable.
+        assertThrows(NoSuchMethodException.class,
+                () -> KeybindSetting.class.getMethod("canonicalStates"),
+                "canonicalStates() was the pilot's isolation mechanism — the rollout removed it");
+    }
+
+    @Test
+    void productionKeybindInventoryHoldsAtSeventeenRows() {
+        // Source-level inventory pin: the docs record "all 17 production
+        // KeybindSetting rows construct in FeatureRegistry" (16 mirror an
+        // Aurora KeyMapping, Stats Reset is Aurora-UI-only; the vanilla
+        // Controls screen additionally exposes HUD Editor + Blur Test — 18
+        // registered mappings, a separate configuration surface outside
+        // this rollout). Any added/removed keybind row must consciously
+        // update this count together with ARCHITECTURE.md.
+        try {
+            String src = new String(java.nio.file.Files.readAllBytes(java.nio.file.Path.of(
+                    "src/client/java/com/aurora/client/screen/FeatureRegistry.java")));
+            int count = src.split("new KeybindSetting", -1).length - 1;
+            assertEquals(17, count,
+                    "production KeybindSetting construction sites (inventory drift guard)");
+        } catch (java.io.IOException e) {
+            fail("FeatureRegistry.java not readable from the test working dir: " + e.getMessage());
+        }
+    }
+
+    @Test
+    void multipleKeybindRowsHoldExactlyOneCaptureOwner() {
+        java.util.concurrent.atomic.AtomicInteger a = new java.util.concurrent.atomic.AtomicInteger(
+                org.lwjgl.glfw.GLFW.GLFW_KEY_J);
+        java.util.concurrent.atomic.AtomicInteger b = new java.util.concurrent.atomic.AtomicInteger(
+                org.lwjgl.glfw.GLFW.GLFW_KEY_K);
+        java.util.concurrent.atomic.AtomicInteger writes = new java.util.concurrent.atomic.AtomicInteger();
+        java.util.concurrent.atomic.AtomicInteger saves = new java.util.concurrent.atomic.AtomicInteger();
+        KeybindSetting rowA = new KeybindSetting("A", a::get, v -> { writes.incrementAndGet(); a.set(v); }, saves::incrementAndGet);
+        KeybindSetting rowB = new KeybindSetting("B", b::get, v -> { writes.incrementAndGet(); b.set(v); }, saves::incrementAndGet);
+
+        assertTrue(rowA.mouseClicked(1, 1, 0, 0, 0, 320));
+        assertTrue(rowA.listeningState());
+        // Activating B while A listens cancels A's ownership structurally
+        // (beginListening) — never two simultaneous listening owners.
+        rowB.interactionControl().action().activate(
+                com.aurora.client.ui.interaction.SemanticFeedback.NONE, null);
+        assertTrue(rowB.listeningState());
+        assertFalse(rowA.listeningState(), "A must be torn down when B takes ownership");
+
+        // The stale owner's key event is inert; B's is the one capture.
+        assertFalse(rowA.onKeyPress(org.lwjgl.glfw.GLFW.GLFW_KEY_F7, 0));
+        assertTrue(rowB.onKeyPress(org.lwjgl.glfw.GLFW.GLFW_KEY_F7, 0));
+        assertEquals((int) org.lwjgl.glfw.GLFW.GLFW_KEY_F7, b.get());
+        assertEquals((int) org.lwjgl.glfw.GLFW.GLFW_KEY_J, a.get(), "no double capture through the stale owner");
+        assertEquals(1, writes.get(), "exactly one write");
+        assertEquals(1, saves.get(), "exactly one save");
+        assertFalse(rowB.listeningState());
+    }
+
+    @Test
+    void keyListRemainsTheSeparateLegacyMultiValueFamily() {
+        // Boundary pin: Keystrokes' Extra Keys is the one KeyListSetting
+        // (the next Phase B pilot — multi-value capture ownership must not
+        // reuse the single-binding model). Its add-pill still ships the
+        // legacy snap-in HoverAnim, untouched by this rollout.
+        java.util.List<Integer> list = new java.util.ArrayList<>();
+        KeyListSetting row = new KeyListSetting("Extra Keys", () -> list, v -> {});
+        try {
+            var f = KeyListSetting.class.getDeclaredField("hoverAnim");
+            f.setAccessible(true);
+            var anim = (com.aurora.client.util.HoverAnim) f.get(row);
+            float first = anim.update(true);
+            assertTrue(first > 0.99f,
+                    "KeyListSetting keeps the legacy snap-in animator (first sample settled="
+                            + first + ") — the multi-value family is deliberately unmigrated");
+        } catch (ReflectiveOperationException e) {
+            fail(e.toString());
+        }
+    }
 }

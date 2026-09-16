@@ -657,8 +657,7 @@ config, and save; enabled→listening→disabled also retained capture. On the
 pilot, disabled rejects pointer/keyboard activation, removes hover/focus/
 stain, keeps a dim but legible bound value, and immediately cancels an active
 capture without mutation or save. A final event racing the gate is
-consume-but-inert. The test suite pins both the legacy reproduction and the
-pilot fix so a future rollout cannot be confused with accidental global
+consume-but-inert. The test suite pins the pilot fix so a future rollout cannot be confused with accidental global
 change.
 
 Cache/perf: the key name is cached by bound int; the semantic child and hover
@@ -666,10 +665,56 @@ animator are long-lived. Bound/listening/disabled/hover/focus paint in the
 live layer; no state enters `UiLayerCache` and no cache fingerprint changes.
 The raised glass split is retained (neutral rest, accent-stained listening,
 complete flat fallback); disabled bypasses the glass surface and uses the
-established Enum-style muted fill/border. This pilot does not change
-AuroraScreen host routing, `KeyListSetting`, vanilla Controls synchronization,
-or any other keybind row. Promotion of all 17 rows is a separate rollout
-decision after the dark/light runtime matrix.
+established Enum-style muted fill/border.
+
+**Phase B ROLLOUT (2026-09-16, later): canonical keybind capture states are
+production-wide — all 17 `KeybindSetting` rows.** The seam decision: the
+pilot's `canonicalStates()` opt-in is REMOVED with the flag — canonical is
+`KeybindSetting`'s only behavior (the EnumSetting end state; every
+production row constructs through FeatureRegistry and no mock/preview/
+AuroraScreen-hosted consumer exists, so no legacy escape remains — the
+historical disabled bypass, reproduced and pinned by the pilot's legacy
+fixture, is unreachable from any construction path). The disabled-gate
+correction is therefore production-wide: every row rejects
+pointer/keyboard activation while disabled, cancels an active capture the
+moment it enters disabled, keeps a stale racing event consume-but-inert,
+and never mutates or saves through the gate. Capture lifecycle, the
+focus≠listening split, Enter/Space arming (structural, no timing delays),
+exactly-once setter+save, Escape/Backspace→UNBOUND clear semantics,
+pointer-press-cancel-consume (mouse is not bindable), scroll-away and
+screen-replacement teardown (`onClose()`/`removed()` idempotent), and the
+single-capture-owner rule (a second pointer press is required to arm a
+different row — the frozen two-step interaction) all hold on every row.
+Inventory pinned by source test: 17 FeatureRegistry rows (16 mirror an
+Aurora `KeyMapping`; Stats Reset is Aurora-UI-only), 18 registered
+vanilla mappings (the Controls screen is a separate configuration
+surface, untouched — its two-way sync verified live: an Aurora-UI capture
+flows into the `KeyMapping` through `AuroraKeybinds.tick()`), and
+Keystrokes' one `KeyListSetting` stays the separate legacy multi-value
+family (snap-in animator unit-pinned; the next Phase B pilot). Runtime:
+DevPilot `keybindb` extended for the rollout — 27/27 oracles on both the
+dark and light/bright-accent boots, covering the frozen pilot row
+(Toggle Sprint), the adjacent now-canonical row, Better Hitreg as the
+dense six-keybind stress case (canonical adapters on three rows,
+two-step ownership transfer, exactly-one capture/write/save, forced
+disabled fixture, enabled→listening→disabled, 300-step scroll-away
+cancel, screen-close teardown), Waypoints as the second topology (both
+rows canonical, capture restores, sibling untouched), the vanilla
+mapping sync, and full binding/theme restoration verified against the
+pre-run snapshot (success, oracle-failure, timeout, and panic paths).
+Pixel evidence in `.devpilot-keybindb/rollout-dark` + `rollout-light-bright`
+(13 captures each): hover animates rest→early→mid→settled (7277/6476/132
+px frame deltas >8/255 — progress, then convergence), disabled is
+distinct from rest (43636 px) in both themes, listening survives pointer
+departure (focused vs listening-away 10087 px, listening stain stable
+while only hover changes: hovered-vs-away 1480 px), and the dense
+hitreg/waypoints screens show the same treatments. Baseline
+discrimination: the same harness on the pilot commit `1836c9a` fails
+exactly 5 oracles — the neighbor/hitreg/waypoint rows read legacy, the
+disabled bypass is reachable on them (`rejected=false`), and scroll-away
+does not cancel legacy rows — the suite distinguishes rollout from pilot.
+Remaining Phase B families: KeyList, tooltips, pack card/tab hover,
+AccentSetting's peer grid — all still legacy pending per-family review.
 - **ToggleSwitch — the Phase B state-complete pilot (2026-09-15)**: overlapping state
   channels (on/off × hover × pressed × focused × disabled), not an exclusive enum.
   Hover = the symmetric animator above, one restrained channel (track lerps 10% toward

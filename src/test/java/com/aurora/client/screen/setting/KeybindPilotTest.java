@@ -12,9 +12,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Phase B Keybind pilot: persistent capture is independent of hover/focus,
- * activation arms only a later event, disabled is authoritative, and every
- * capture/cancel path has exactly-once write/save ownership. Rendering and
+ * Phase B Keybind pilot + rollout: persistent capture is independent of
+ * hover/focus, activation arms only a later event, disabled is
+ * authoritative, and every capture/cancel path has exactly-once
+ * write/save ownership. Since the 2026-09-16 rollout every construction
+ * is canonical (the pilot's legacy fixture reproduced a real disabled
+ * bypass — a disabled row could enter listening, mutate config, and save;
+ * that path is gone with the legacy branch, pinned below by the
+ * canonicalStates-removal assertion in RolloutStatesTest). Rendering and
  * real Minecraft child dispatch are covered by the DevPilot runtime mode.
  */
 class KeybindPilotTest {
@@ -28,42 +33,22 @@ class KeybindPilotTest {
     }
 
     @Test
-    void baselineLegacyNeighborReproducesTheDisabledBypass() {
-        Fixture f = fixture(false);
-        f.disabled.set(true);
+    void constructionIsCanonicalWithPointerOnlySymmetricHover() {
+        Fixture f = fixture();
+        assertNotNull(f.row.interactionControl());
+        assertNull(FeatureSetting.getFocused());
 
-        assertTrue(f.row.mouseClicked(1, 1, 0, 0, 0, 320),
-                "baseline defect: legacy disabled row still enters listening");
-        assertTrue(f.row.listeningState());
-        assertTrue(f.row.hoverTarget(false, true),
-                "baseline defect: legacy listening pins accepted-hover treatment");
-        assertTrue(f.row.onKeyPress(CAPTURED, 0));
-        assertEquals(CAPTURED, f.binding.get(),
-                "baseline defect: disabled capture mutates the binding");
-        assertEquals(1, f.saves.get(),
-                "baseline defect: disabled capture persists the mutation");
-    }
-
-    @Test
-    void canonicalOptInIsIsolatedAndUsesSymmetricPointerOnlyHover() {
-        Fixture legacy = fixture(false);
-        Fixture pilot = fixture(true);
-
-        assertFalse(legacy.row.canonical());
-        assertNull(legacy.row.interactionControl());
-        assertTrue(pilot.row.canonical());
-        assertNotNull(pilot.row.interactionControl());
-
-        float first = pilot.row.hoverAnimator().update(true);
+        float first = f.row.hoverAnimator().update(true);
         assertTrue(first < 0.5f, "canonical hover must animate from rest, got " + first);
-        assertTrue(pilot.row.hoverTarget(true, false));
-        assertFalse(pilot.row.hoverTarget(false, false));
-        assertFalse(pilot.row.hoverTarget(true, true));
+        assertTrue(f.row.hoverTarget(true, false));
+        assertFalse(f.row.hoverTarget(false, false));
+        assertFalse(f.row.hoverTarget(true, true),
+                "disabled must not produce accepted hover treatment");
     }
 
     @Test
     void canonicalHoverReversesContinuouslyMidFlight() throws Exception {
-        Fixture f = fixture(true);
+        Fixture f = fixture();
         var hover = f.row.hoverAnimator();
         hover.update(true);
         Thread.sleep(60);
@@ -77,7 +62,7 @@ class KeybindPilotTest {
 
     @Test
     void focusAndListeningAreIndependentChannels() {
-        Fixture f = fixture(true);
+        Fixture f = fixture();
         var control = f.row.interactionControl();
         control.setAvailable(true);
         control.setFocused(true);
@@ -98,7 +83,7 @@ class KeybindPilotTest {
 
     @Test
     void activationEventOnlyArmsAndASeparateEventCaptures() {
-        Fixture f = fixture(true);
+        Fixture f = fixture();
         var control = f.row.interactionControl();
         control.setAvailable(true);
         control.setFocused(true);
@@ -117,7 +102,7 @@ class KeybindPilotTest {
 
     @Test
     void successfulCaptureWritesAndSavesExactlyOnce() {
-        Fixture f = fixture(true);
+        Fixture f = fixture();
         begin(f);
 
         assertTrue(f.row.onKeyPress(CAPTURED, 0));
@@ -134,7 +119,7 @@ class KeybindPilotTest {
 
     @Test
     void disabledCannotEnterListeningThroughPointerOrSemanticActivation() {
-        Fixture f = fixture(true);
+        Fixture f = fixture();
         f.disabled.set(true);
 
         assertFalse(f.row.mouseClicked(1, 1, 0, 0, 0, 320));
@@ -149,7 +134,7 @@ class KeybindPilotTest {
 
     @Test
     void enabledListeningThenDisabledCancelsWithoutMutationOrSave() {
-        Fixture f = fixture(true);
+        Fixture f = fixture();
         begin(f);
         assertTrue(f.row.listeningState());
 
@@ -166,7 +151,7 @@ class KeybindPilotTest {
 
     @Test
     void disabledRaceInputIsConsumedButCannotMutateOrSave() {
-        Fixture f = fixture(true);
+        Fixture f = fixture();
         begin(f);
         f.disabled.set(true);
 
@@ -180,7 +165,7 @@ class KeybindPilotTest {
 
     @Test
     void pointerCancellationIsConsumedAndNeverBecomesAMouseBinding() {
-        Fixture f = fixture(true);
+        Fixture f = fixture();
         begin(f);
 
         assertTrue(KeybindSetting.cancelActiveCapture());
@@ -193,21 +178,21 @@ class KeybindPilotTest {
 
     @Test
     void escapeAndBackspacePreserveTheExistingClearSemantics() {
-        Fixture escape = fixture(true);
+        Fixture escape = fixture();
         begin(escape);
         assertTrue(escape.row.onKeyPress(GLFW.GLFW_KEY_ESCAPE, 0));
         assertEquals(AuroraKey.UNBOUND, escape.binding.get());
         assertEquals(1, escape.writes.get());
         assertEquals(1, escape.saves.get());
 
-        Fixture backspace = fixture(true);
+        Fixture backspace = fixture();
         begin(backspace);
         assertTrue(backspace.row.onKeyPress(GLFW.GLFW_KEY_BACKSPACE, 0));
         assertEquals(AuroraKey.UNBOUND, backspace.binding.get());
         assertEquals(1, backspace.writes.get());
         assertEquals(1, backspace.saves.get());
 
-        Fixture delete = fixture(true);
+        Fixture delete = fixture();
         begin(delete);
         assertTrue(delete.row.onKeyPress(GLFW.GLFW_KEY_DELETE, 0));
         assertEquals(GLFW.GLFW_KEY_DELETE, delete.binding.get(),
@@ -216,13 +201,13 @@ class KeybindPilotTest {
 
     @Test
     void viewportLossAndScreenLifecycleBothCancelCapture() {
-        Fixture viewport = fixture(true);
+        Fixture viewport = fixture();
         begin(viewport);
         viewport.row.onInteractionAvailabilityChanged(false);
         assertFalse(viewport.row.listeningState());
         assertEquals(0, viewport.saves.get());
 
-        Fixture close = fixture(true);
+        Fixture close = fixture();
         begin(close);
         close.row.onDetailScreenClose();
         assertFalse(close.row.listeningState());
@@ -235,7 +220,7 @@ class KeybindPilotTest {
         assertTrue(f.row.listeningState());
     }
 
-    private static Fixture fixture(boolean canonical) {
+    private static Fixture fixture() {
         AtomicInteger binding = new AtomicInteger(ORIGINAL);
         AtomicInteger writes = new AtomicInteger();
         AtomicInteger saves = new AtomicInteger();
@@ -244,7 +229,6 @@ class KeybindPilotTest {
             writes.incrementAndGet();
             binding.set(value);
         }, saves::incrementAndGet);
-        if (canonical) row.canonicalStates();
         row.disabled(disabled::get);
         return new Fixture(row, binding, writes, saves, disabled);
     }

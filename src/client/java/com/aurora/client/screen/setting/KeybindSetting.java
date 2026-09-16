@@ -35,10 +35,12 @@ import java.util.function.Supplier;
  *   <li>{@code BACKSPACE} — same as ESC, mirrors vanilla controls UX.</li>
  * </ul>
  *
- * <p><b>Phase B pilot (2026-09-16):</b> {@link #canonicalStates()} opts one
- * production row into the state-complete capture model. The other keybind
- * rows deliberately keep their legacy behavior for pilot isolation.
- * Canonical channels overlap rather than alias one another:
+ * <p><b>Phase B ROLLOUT (2026-09-16):</b> the canonical state/capture
+ * model is this class's only behavior — the pilot's
+ * {@code canonicalStates()} opt-in was removed with the flag (the
+ * EnumSetting end state; every production row constructs through
+ * FeatureRegistry and no mock/direct consumer exists). Canonical
+ * channels overlap rather than alias one another:
  * <ul>
  *   <li>the bound value is persistent config data;</li>
  *   <li>hover is pointer-only {@link HoverAnim#symmetric(long) symmetric
@@ -81,7 +83,7 @@ public class KeybindSetting extends FeatureSetting {
     private final IntConsumer setter;
     private final Runnable saveAction;
 
-    /** Canonical capture owner. Legacy rows keep their shipped local-only state. */
+    /** Canonical capture owner — at most one listening row exists at a time. */
     private static KeybindSetting activeCapture;
 
     /**
@@ -97,9 +99,7 @@ public class KeybindSetting extends FeatureSetting {
     private int lastBtnX, lastBtnY;
     private int lastWidth = 240;
     private boolean listening = false;
-    /** Legacy by default; swapped only by canonicalStates() for pilot isolation. */
-    private HoverAnim hoverAnim = new HoverAnim(140L);
-    private boolean canonical = false;
+    private final HoverAnim hoverAnim = HoverAnim.symmetric(140L);
     private boolean focusedVisual = false;
     private SemanticActionControl interactionControl;
 
@@ -122,17 +122,6 @@ public class KeybindSetting extends FeatureSetting {
     @Override public KeybindSetting description(String desc) { super.description(desc); return this; }
     @Override public KeybindSetting description(Supplier<String> desc) { super.description(desc); return this; }
 
-    /** Opts this row into the Phase B state/capture pilot. */
-    public KeybindSetting canonicalStates() {
-        this.canonical = true;
-        this.hoverAnim = HoverAnim.symmetric(140L);
-        return this;
-    }
-
-    public boolean canonical() {
-        return canonical;
-    }
-
     @Override public int baseHeight() { return CONTROL_H; }
     @Override public int height()     { return CONTROL_H + descriptionHeight(lastWidth); }
 
@@ -149,7 +138,7 @@ public class KeybindSetting extends FeatureSetting {
         int btnX = x + width - BTN_W - 14;
         int btnY = y + (CONTROL_H - BTN_H) / 2;
         float glassR = Math.min(BTN_H / 2f, ThemeManager.current().roundness().radiusSmall());
-        passDrewPill = (!canonical || !disabled)
+        passDrewPill = !disabled
                 && GlassSurface.control(ctx, btnX, btnY, BTN_W, BTN_H, glassR, listening);
     }
 
@@ -162,7 +151,7 @@ public class KeybindSetting extends FeatureSetting {
 
         // Keybind rows intentionally skip the label-hover description tooltip.
         ctx.drawString(tr, label, x + 12, y + (CONTROL_H - tr.lineHeight) / 2,
-                canonical && disabled ? AuroraTheme.TEXT_DIM : AuroraTheme.TEXT_PRIMARY, false);
+                disabled ? AuroraTheme.TEXT_DIM : AuroraTheme.TEXT_PRIMARY, false);
 
         int btnX = x + width - BTN_W - 14;
         int btnY = y + (CONTROL_H - BTN_H) / 2;
@@ -172,19 +161,19 @@ public class KeybindSetting extends FeatureSetting {
         boolean hover = Widget.inBounds(mouseX, mouseY, btnX, btnY, BTN_W, BTN_H);
         float hT = hoverAnim.update(hoverTarget(hover, disabled));
 
-        if (canonical && interactionControl != null) {
+        if (interactionControl != null) {
             interactionControl.setBounds(btnX, btnY, BTN_W, BTN_H);
             interactionControl.updatePointer(mouseX, mouseY);
             focusedVisual = interactionControl.isFocused() && !disabled;
         }
 
-        int fillTint   = canonical && disabled
+        int fillTint   = disabled
                 ? ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_BACKGROUND), 0x22)
                 : AuroraAnim.lerpArgb(AuroraTheme.PANEL_OFF, AuroraTheme.PANEL_OFF_HOVER, hT);
-        int borderTint = canonical && disabled
+        int borderTint = disabled
                 ? ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_BACKGROUND), 0x33)
                 : AuroraAnim.lerpArgb(AuroraTheme.BORDER_OFF, AuroraTheme.BORDER_OFF_HOVER, hT);
-        int textColor  = canonical && disabled ? AuroraTheme.TEXT_DIM
+        int textColor  = disabled ? AuroraTheme.TEXT_DIM
                 : AuroraAnim.lerpArgb(AuroraTheme.TEXT_SECONDARY, AuroraTheme.TEXT_PRIMARY, hT);
 
         // Glass: raised glass replaces the flat fill + outline (the glass
@@ -202,7 +191,7 @@ public class KeybindSetting extends FeatureSetting {
         boolean glassOk;
         if (glassPassFrame == GlassSurface.frame()) {
             glassOk = passDrewPill;
-        } else if (!canonical || !disabled) {
+        } else if (!disabled) {
             glassOk = GlassSurface.control(ctx, btnX, btnY, BTN_W, BTN_H, glassR, listening);
         } else {
             glassOk = false;
@@ -214,7 +203,7 @@ public class KeybindSetting extends FeatureSetting {
                     listening ? AuroraTheme.IOS_BLUE : borderTint);
         }
 
-        if (canonical && focusedVisual) {
+        if (focusedVisual) {
             RenderUtil.drawRoundedOutlineAA(ctx, btnX, btnY, BTN_W, BTN_H,
                     AuroraTheme.RADIUS_SMALL, 1.0f,
                     ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
@@ -235,7 +224,7 @@ public class KeybindSetting extends FeatureSetting {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button, int rowX, int rowY, int rowWidth) {
-        if (canonical && reconcileDisabledState()) return false;
+        if (reconcileDisabledState()) return false;
         if (button != 0) return false;
         boolean onBtn = Widget.inBounds(mouseX, mouseY, lastBtnX, lastBtnY, BTN_W, BTN_H);
         if (!onBtn) {
@@ -246,18 +235,12 @@ public class KeybindSetting extends FeatureSetting {
             }
             return false;
         }
-        if (canonical) {
-            // A semantic host owns entry (one activation sound). The direct
-            // path exists for headless/manual hosts and stays silent.
-            if (interactionControl != null && interactionControl.isAvailable()) {
-                return interactionControl.activateFromPointer(mouseX, mouseY, button);
-            }
-            if (listening) cancelListening(); else beginListening();
-            return true;
+        // A semantic host owns entry (one activation sound). The direct
+        // path exists for headless/manual hosts and stays silent.
+        if (interactionControl != null && interactionControl.isAvailable()) {
+            return interactionControl.activateFromPointer(mouseX, mouseY, button);
         }
-        // Legacy toggle path — intentionally untouched for the neighboring row.
-        listening = !listening;
-        if (listening) requestFocus(); else releaseFocus();
+        if (listening) cancelListening(); else beginListening();
         return true;
     }
 
@@ -273,19 +256,19 @@ public class KeybindSetting extends FeatureSetting {
 
     @Override
     public void onDetailScreenOpen() {
-        if (canonical) cancelListening();
+        cancelListening();
     }
 
     @Override
     public void onInteractionAvailabilityChanged(boolean available) {
-        if (canonical && !available) cancelListening();
+        if (!available) cancelListening();
     }
 
     @Override
     public boolean onKeyPress(int keyCode, int modifiers) {
         if (!listening) return false;
 
-        if (canonical && reconcileDisabledState()) {
+        if (reconcileDisabledState()) {
             // The event reached a capture owner whose gate changed since the
             // last frame. Consume-but-inert: no write/save and no fallthrough
             // into another control.
@@ -306,7 +289,6 @@ public class KeybindSetting extends FeatureSetting {
     /** Canonical semantic adapter: focus/Enter/Space/narration + enabled gate. */
     @Override
     public SemanticActionControl interactionControl() {
-        if (!canonical) return null;
         if (interactionControl == null) {
             interactionControl = new SemanticActionControl(SemanticAction.button(
                     Component.literal(label),
@@ -327,11 +309,6 @@ public class KeybindSetting extends FeatureSetting {
     }
 
     private void beginListening() {
-        if (!canonical) {
-            listening = true;
-            requestFocus();
-            return;
-        }
         if (isDisabled() || listening) return;
         if (activeCapture != null && activeCapture != this) activeCapture.cancelListening();
         activeCapture = this;
@@ -363,13 +340,12 @@ public class KeybindSetting extends FeatureSetting {
     /** Disabled can change asynchronously with respect to capture events. */
     private boolean reconcileDisabledState() {
         boolean disabled = isDisabled();
-        if (canonical && disabled && listening) cancelListening();
+        if (disabled && listening) cancelListening();
         return disabled;
     }
 
     boolean hoverTarget(boolean pointerOver, boolean disabled) {
-        if (canonical) return pointerOver && !disabled;
-        return pointerOver || listening;
+        return pointerOver && !disabled;
     }
 
     private String currentKeyName() {

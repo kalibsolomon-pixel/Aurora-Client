@@ -264,7 +264,6 @@ public final class FeatureRegistry {
                 List.of(
                         new KeybindSetting("Toggle Sprint Key",
                                 () -> cfg.toggleSprintKey, v -> cfg.toggleSprintKey = v)
-                                .canonicalStates()
                                 .description("Press once to start sprinting, again to stop."),
                         new KeybindSetting("Toggle Sneak Key",
                                 () -> cfg.toggleSneakKey, v -> cfg.toggleSneakKey = v)
