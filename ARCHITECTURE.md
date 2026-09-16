@@ -611,6 +611,65 @@ rows still legacy) — the suite discriminates rollout from pilot.
 Remaining Phase B families: Keybind, KeyList, tooltips, pack card/tab
 hover, AccentSetting's peer grid — all still legacy pending per-family
 review.
+**Phase B pilot 6 (2026-09-16): `KeybindSetting` canonical capture states,
+proven on one row** (Toggle Sprint/Sneak → "Toggle Sprint Key" via
+`KeybindSetting.canonicalStates()`; the adjacent Toggle Sneak row and the
+other 15 production keybind rows remain legacy byte-for-byte). Inventory:
+FeatureRegistry owns 17 detail-screen `KeybindSetting` rows; 16 mirror an
+Aurora `KeyMapping`, Stats Reset is Aurora-UI-only, and the vanilla Controls
+screen additionally exposes HUD Editor + Blur Test. Keystrokes' one
+`KeyListSetting` is a separate multi-value family and is explicitly outside
+this pilot. Aurora's binding vocabulary remains raw GLFW KEYSYM ints:
+keyboard keys only; mouse buttons and scancodes are not silently coerced.
+
+The pilot separates five channels that legacy conflated: the stored binding
+is persistent DATA; hover is pointer-only symmetric 140 ms; semantic focus
+is the Tab target and Button-family accent hairline; listening is persistent
+ownership of the next keyboard event, communicated by the existing stained
+pill + `> press key <`; disabled is the authoritative gate. Focus may exist
+without listening, and listening survives pointer departure without pinning
+hover. There is no additional press animation by decision: entering the
+visibly stained capture state is the activation response. The semantic child
+owns pointer and Enter/Space activation, narration reports either `Bound to
+<key>` or `Waiting for key input. Current binding: <key>`, and exactly one
+vanilla click plays when capture is armed. The activation event returns
+through child dispatch before `FeatureSetting.activeFocused` becomes the
+capture route, so Enter/Space can never bind itself; a later key event is the
+one captured. Successful capture performs exactly one setter call and one
+save, releases capture routing, but leaves the semantic child focused.
+
+Cancellation semantics are explicit. Escape and Backspace preserve Aurora's
+shipped/advertised behavior and CLEAR to `UNBOUND`; Delete and all other
+keyboard keycodes are ordinary bindings. A pointer press while listening is
+not bindable: `FeatureDetailScreen` cancels the single canonical capture owner
+and consumes that press before any underlying child/row can activate. A
+second press is required for the new target. Scrolling the row outside the
+interactive viewport, replacing/removing/closing the screen, or opening the
+detail screen cancels without mutation/save. `removed()` shares an idempotent
+teardown with `onClose()` because screen replacement does not promise the
+latter. This also prevents the static focused-setting registry from leaking
+into another screen.
+
+The reproduced correctness defect is intentionally left on every non-pilot
+row for isolation: legacy `KeybindSetting` never consulted `isDisabled()`, so
+a disabled row could enter the stained listening state, accept a key, mutate
+config, and save; enabled→listening→disabled also retained capture. On the
+pilot, disabled rejects pointer/keyboard activation, removes hover/focus/
+stain, keeps a dim but legible bound value, and immediately cancels an active
+capture without mutation or save. A final event racing the gate is
+consume-but-inert. The test suite pins both the legacy reproduction and the
+pilot fix so a future rollout cannot be confused with accidental global
+change.
+
+Cache/perf: the key name is cached by bound int; the semantic child and hover
+animator are long-lived. Bound/listening/disabled/hover/focus paint in the
+live layer; no state enters `UiLayerCache` and no cache fingerprint changes.
+The raised glass split is retained (neutral rest, accent-stained listening,
+complete flat fallback); disabled bypasses the glass surface and uses the
+established Enum-style muted fill/border. This pilot does not change
+AuroraScreen host routing, `KeyListSetting`, vanilla Controls synchronization,
+or any other keybind row. Promotion of all 17 rows is a separate rollout
+decision after the dark/light runtime matrix.
 - **ToggleSwitch — the Phase B state-complete pilot (2026-09-15)**: overlapping state
   channels (on/off × hover × pressed × focused × disabled), not an exclusive enum.
   Hover = the symmetric animator above, one restrained channel (track lerps 10% toward

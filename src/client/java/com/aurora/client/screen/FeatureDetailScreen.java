@@ -103,6 +103,9 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
      * open, so this correctly resets per visit.
      */
     private boolean firstInit = true;
+    /** Guards lifecycle teardown because onClose() replaces the screen and
+     *  Minecraft then calls removed() on the same instance. */
+    private boolean transientStateClosed = false;
 
     public FeatureDetailScreen(Screen parent, FeatureMetadata meta) {
         super(Component.literal(meta.displayName));
@@ -312,7 +315,9 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
             int gh = s.height();
             SemanticActionControl control = s.interactionControl();
             if (control != null) {
-                control.setAvailable(gy + gh > TOP_FADE_Y && gy < this.height);
+                boolean available = gy + gh > TOP_FADE_Y && gy < this.height;
+                control.setAvailable(available);
+                s.onInteractionAvailabilityChanged(available);
             }
             if (gy + gh > 0 && gy < this.height) {
                 s.renderGlassPass(ctx, listX, gy, LIST_W);
@@ -442,6 +447,11 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
     @Override
     public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent _ev, boolean _doubleClicked) {
         double mouseX = _ev.x(); double mouseY = _ev.y(); int button = _ev.button();
+        // A canonical keybind capture owns the next pointer event as a
+        // cancellation gesture. Consume it before vanilla children or a
+        // different row can act, so one click can never both cancel capture
+        // and activate an unrelated control underneath.
+        if (com.aurora.client.screen.setting.KeybindSetting.cancelActiveCapture()) return true;
         FeatureSetting.clearFocus();
         if (this.getFocused() instanceof SemanticActionControl) this.setFocused(null);
         if (super.mouseClicked(_ev, _doubleClicked)) return true;
@@ -517,6 +527,24 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
     @Override
     public void onClose() {
         AuroraConfig.save();
+        closeTransientState();
+        if (this.minecraft != null) this.minecraft.setScreen(parent);
+    }
+
+    /**
+     * Minecraft may replace a screen without invoking its onClose() method.
+     * The removed() hook is therefore the final capture-lifecycle boundary;
+     * the guard keeps the ordinary Done/Escape path exactly-once.
+     */
+    @Override
+    public void removed() {
+        closeTransientState();
+        super.removed();
+    }
+
+    private void closeTransientState() {
+        if (transientStateClosed) return;
+        transientStateClosed = true;
         // Give settings a chance to clear transient state (e.g. a search
         // query) before the screen tears down. Without this, state leaks
         // into the next open because settings instances are reused.
@@ -525,7 +553,6 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         }
         chromeCache.dispose();
         rowCache.dispose();
-        if (this.minecraft != null) this.minecraft.setScreen(parent);
     }
 
     @Override

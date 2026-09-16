@@ -132,6 +132,16 @@ public abstract class FeatureSetting {
     }
 
     /**
+     * Notifies a setting whether its semantic control is currently inside
+     * the owning screen's effective interaction viewport. Most settings do
+     * not hold modal input state and need no callback. Capture-style
+     * controls override this so a scrolled-out control cannot keep hidden
+     * ownership of subsequent input.
+     */
+    public void onInteractionAvailabilityChanged(boolean available) {
+    }
+
+    /**
      * Stable fingerprint of this setting's cacheable shape layer. The owning
      * screen's static-layer cache folds it into its version, so a change
      * re-renders only this row's cached shapes. Default {@code 0} — override
