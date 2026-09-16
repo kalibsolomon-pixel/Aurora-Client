@@ -213,6 +213,11 @@ public class BooleanSetting extends FeatureSetting {
         toggle.focusedVisual(interactionControl != null && interactionControl.isFocused());
     }
 
+    /** Whether the row's toggle is a non-interactive preview (rollout test visibility). */
+    boolean togglePreviewMode() {
+        return toggle.isPreviewMode();
+    }
+
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button, int rowX, int rowY, int rowWidth) {
         if (isDisabled()) return false;

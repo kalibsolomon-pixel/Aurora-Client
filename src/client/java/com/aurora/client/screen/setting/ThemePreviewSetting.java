@@ -62,7 +62,10 @@ public class ThemePreviewSetting extends FeatureSetting {
     // real toggle/slider family was reverted (too small to carry the
     // treatment); the preview shows that final state.
     private final RoundedPanel card = new RoundedPanel(false, ThemeToken.SURFACE);
-    private final ToggleSwitch toggle = new ToggleSwitch(() -> true, v -> {});
+    // Mocks: the toggle opts into previewMode (no hover response — a
+    // decorative toggle must not read as interactive), and the slider stays
+    // on the legacy direct construction (no canonicalStates), same rule.
+    private final ToggleSwitch toggle = new ToggleSwitch(() -> true, v -> {}).previewMode();
     private final Slider slider = new Slider(() -> 0.6, v -> {}, 0, 1, 0.01);
     private final Button primaryBtn = new Button("Button", () -> {}, true)
             .glassStyle(Button.GlassStyle.STAINED);

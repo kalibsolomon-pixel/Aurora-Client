@@ -92,12 +92,19 @@ public class SliderSetting extends FeatureSetting {
         super(label);
         this.intMode = intMode;
         this.slider = slider;
+        // Phase B rollout: every SETTING row runs the canonical state
+        // channels (symmetric 140 ms hover, drag grip, focus hairline).
+        // The mock sliders in ThemePreviewSetting construct Slider directly
+        // and stay legacy by construction.
+        slider.canonicalStates();
     }
 
     SliderSetting(String label, DoubleSupplier getter, DoubleConsumer setter, double min, double max, boolean intMode) {
         super(label);
         this.intMode = intMode;
         this.slider = createSlider(getter, setter, min, max);
+        // See the private constructor's note — factory-wide canonical.
+        this.slider.canonicalStates();
     }
 
     /**
@@ -138,10 +145,9 @@ public class SliderSetting extends FeatureSetting {
     }
 
     /**
-     * Opt this row into the Phase B canonical slider state channels
-     * (symmetric 140 ms hover, drag-grip knob, focus hairline) — see
-     * {@link Slider#canonicalStates()}. Pilot-scoped: slider rows stay
-     * legacy until deliberately migrated.
+     * Explicit canonical-state opt-in — since the Phase B rollout this is
+     * the factory default for every slider row; the method remains as
+     * documentation-grade idempotence for call sites that want to state it.
      */
     public SliderSetting canonicalStates() {
         slider.canonicalStates();

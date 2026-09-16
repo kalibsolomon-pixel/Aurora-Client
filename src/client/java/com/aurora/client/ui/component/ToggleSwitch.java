@@ -79,6 +79,13 @@ public class ToggleSwitch extends Widget {
     private final BooleanSupplier getter;
     private final Consumer<Boolean> setter;
     private boolean disabled = false;
+    /**
+     * Non-interactive visual representation (the theme-preview mock): the
+     * hover channel is gated off so a pointer crossing a decorative toggle
+     * never reads as interactivity. Default false — every production
+     * Boolean-setting toggle is interactive.
+     */
+    private boolean previewMode = false;
 
     private Animation slideAnim;
 
@@ -110,6 +117,22 @@ public class ToggleSwitch extends Widget {
         return this;
     }
 
+    /**
+     * Marks this instance as a non-interactive visual representation (the
+     * theme-preview mock): no hover response. The ON/OFF look, disabled
+     * treatment, and slide animation still render — a preview shows the
+     * control, it just never claims the pointer.
+     */
+    public ToggleSwitch previewMode() {
+        this.previewMode = true;
+        return this;
+    }
+
+    /** Whether this instance is a non-interactive preview (see {@link #previewMode()}). */
+    public boolean isPreviewMode() {
+        return previewMode;
+    }
+
     @Override
     public int shapeFingerprint() {
         // Fully live — no cacheable shape layer (see the class javadoc's
@@ -126,7 +149,7 @@ public class ToggleSwitch extends Widget {
     public void renderOverlay(GuiGraphics g, float x, float y, float w, float h, int mouseX, int mouseY) {
         boolean on = getter.getAsBoolean();
         float t = advance(on); // advances once per frame; wall-clock real-dt
-        boolean hovered = !disabled && inBounds(mouseX, mouseY, x, y, w, h);
+        boolean hovered = !previewMode && !disabled && inBounds(mouseX, mouseY, x, y, w, h);
         float hoverT = hoverAnim.update(hovered);
 
         // Track (fill carries the ON/OFF state, the hover wash, and the

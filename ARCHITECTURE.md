@@ -440,33 +440,41 @@ a launch crash, not a silent skip):
   intermediate states paint live over them and the toggle pilot's
   stale-hole class cannot occur (there is no settled state other than rest
   for a key to flip on).
-  **Phase B pilot 3 (2026-09-16): `Slider` — the first
-  continuous-manipulation control, opt-in via
-  `Slider.canonicalStates()`/`SliderSetting.canonicalStates()`.** 62 slider
-  rows share the component, so the pilot migrates exactly one production
-  row (Waypoints → Beam Width, 0.1–1.0 step 0.01); every other row keeps
-  the legacy snap-in hover byte-for-byte (runtime-proven by an isolation
-  oracle on a neighboring row). Canonical channels, overlapping: hover =
-  `HoverAnim.symmetric(140)` with the settled halo endpoint preserved;
-  active dragging = a +1 px knob-radius "grip" applied instantly on the
-  accepted mouse-down and released instantly (direct response outranks
-  staged animation on a continuous control; the pre-existing
-  `dragging ||` clause already keeps the hover channel alive when the
-  pointer leaves the bounds mid-drag); focused = the geometry-following
-  accent hairline family (capsule outside the track — the third geometry,
-  strengthening the family case), mirrored from the row's existing
-  FeatureSetting focus; disabled treatment preserved as-is (already
-  v3-shaped: inset track/border fill/muted knob + full input gating).
-  **Cache finding:** the track renders in the cached shape layer with a
-  disabled-dependent color and no fingerprint bit — a latent staleness
-  (no production slider flips disabled today); fixed narrowly by
-  `Slider.shapeFingerprint()` carrying a disabled bit and
-  `SliderSetting` delegating to it. Hover/drag/focus visuals all render
-  in the live layer (Button-safe category). Value semantics untouched
-  (unit-proven: jump/snap/clamp/keyboard/modifiers; runtime-proven
-  through the real screen input path incl. outside-bounds drags and
-  rapid reversal; knob center/value correspondence measured to 0.1 GUI
-  px with the grip growing the radius around the unmoved center).
+  **Phase B pilot 3 (2026-09-16): `Slider` canonical states, proven on one
+  row** (Waypoints → Beam Width) — symmetric hover, the instant +1 px
+  drag-grip knob (center never moves; measured 0.1 px value
+  correspondence), the focus hairline, preserved disabled treatment, and
+  untouched value semantics. Its audit found and fixed the latent
+  disabled-color cache staleness (`Slider.shapeFingerprint()` disabled bit
+  + `SliderSetting` delegation); hover/drag/focus visuals render in the
+  live layer (Button-safe cache category).
+  **Phase B ROLLOUT (2026-09-16): ToggleSwitch and Slider states are
+  production-wide.** Sliders: `SliderSetting`'s constructors call
+  `canonicalStates()` — every setting row (both `of`/`ofInt` factories and
+  the `ThemeOpacitySetting.createSlider` path) runs the canonical channels;
+  the ThemePreview mock constructs `Slider` directly and stays legacy by
+  construction. Toggles: production `BooleanSetting` rows have been
+  component-canonical since the pilot; the rollout adds
+  `ToggleSwitch.previewMode()` and marks the ThemePreview mock with it so
+  a decorative toggle never responds to the pointer (the mock's inertness
+  is now explicit rather than incidental). **Intentional legacy
+  exceptions:** ThemePreview's mock slider + mock toggle (non-interactive
+  previews); AuroraScreen's inline/header toggles (Phase C: manual chrome
+  with unresolved viewport/input-truth — they receive the component-level
+  hover wash but never the focus hairline or a semantic control, and that
+  split stays until Phase C). Button is globally canonical since pilot 2.
+  Mixed-control consistency verified at runtime: Button, ToggleSwitch, and
+  Slider on one screen all animate from rest (first samples mid-flight,
+  none snapped) on the same 140 ms symmetric vocabulary; the
+  geometry-following focus hairline now holds across three component
+  geometries plus Button's rectangle (rollout evidence supports calling it
+  the Phase B canonical focus family for mechanical controls — promotion
+  is a separate decision). Cache rules unchanged and re-audited for the
+  broadened set: toggles render fully live; sliders keep the disabled-bit
+  fingerprint (delegation covers ThemeOpacitySetting, unit-pinned);
+  hover/drag/focus visuals stay live-layer everywhere. Remaining Phase B
+  families: ColorSwatch, Enum, Keybind, KeyList, tooltips, pack card/tab
+  hover — all still legacy pending per-family review.
 - **ToggleSwitch — the Phase B state-complete pilot (2026-09-15)**: overlapping state
   channels (on/off × hover × pressed × focused × disabled), not an exclusive enum.
   Hover = the symmetric animator above, one restrained channel (track lerps 10% toward

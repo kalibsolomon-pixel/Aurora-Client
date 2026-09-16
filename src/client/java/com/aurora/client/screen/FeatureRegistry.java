@@ -911,12 +911,8 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                         new EnumSetting<>("Display Style", AuroraConfig.WaypointDisplay.class,
                                 () -> cfg.waypointDisplay, v -> cfg.waypointDisplay = v)
                                 .description("BEAM = beacon column. BLOCK = highlight the exact block(s). BOTH = both."),
-                        // Phase B slider pilot target (canonicalStates) — one
-                        // production row, safe double range, no per-change
-                        // side effect; every other slider row stays legacy.
                         SliderSetting.of("Beam Width",
-                                () -> cfg.waypointBeamWidth, v -> cfg.waypointBeamWidth = v, 0.1, 1.0)
-                                .canonicalStates(),
+                                () -> cfg.waypointBeamWidth, v -> cfg.waypointBeamWidth = v, 0.1, 1.0),
                         SliderSetting.ofInt("Block Highlight Radius",
                                 () -> cfg.waypointBlockRadius, v -> cfg.waypointBlockRadius = v, 0, 4)
                                 .description("Widens the floor slab on the horizontal plane only — the highlight is always one block tall. 0 = single block, 1 = 3×3 slab, etc. Only used when display style includes BLOCK."),
