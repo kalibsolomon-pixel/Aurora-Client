@@ -246,11 +246,11 @@ class RolloutStatesTest {
     }
 
     @Test
-    void keyListRemainsTheSeparateLegacyMultiValueFamily() {
-        // Boundary pin: Keystrokes' Extra Keys is the one KeyListSetting
-        // (the next Phase B pilot — multi-value capture ownership must not
-        // reuse the single-binding model). Its add-pill still ships the
-        // legacy snap-in HoverAnim, untouched by this rollout.
+    void keyListAddPillIsCanonicalAndStaysASeparateFamily() {
+        // Phase B KeyList pilot (2026-09-16): the add pill runs the
+        // canonical symmetric animator; the family boundary is semantic,
+        // not animator state — KeyList keeps its own ESC/BACKSPACE-cancel
+        // rule and multi-value capture semantics (see KeyListPilotTest).
         java.util.List<Integer> list = new java.util.ArrayList<>();
         KeyListSetting row = new KeyListSetting("Extra Keys", () -> list, v -> {});
         try {
@@ -258,9 +258,9 @@ class RolloutStatesTest {
             f.setAccessible(true);
             var anim = (com.aurora.client.util.HoverAnim) f.get(row);
             float first = anim.update(true);
-            assertTrue(first > 0.99f,
-                    "KeyListSetting keeps the legacy snap-in animator (first sample settled="
-                            + first + ") — the multi-value family is deliberately unmigrated");
+            assertTrue(first < 0.5f,
+                    "the add pill animates from rest (first sample " + first
+                            + ") — canonical since the Phase B pilot");
         } catch (ReflectiveOperationException e) {
             fail(e.toString());
         }

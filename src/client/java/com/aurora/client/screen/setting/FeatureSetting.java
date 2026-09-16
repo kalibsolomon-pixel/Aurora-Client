@@ -43,6 +43,61 @@ public abstract class FeatureSetting {
     /** The setting currently claiming scroll/key focus, or null. */
     private static volatile FeatureSetting activeFocused = null;
 
+    // ===== Exclusive capture ownership =====
+    //
+    // Capture-style settings (Keybind, KeyList) own the NEXT keyboard event
+    // while listening. Exactly one such owner may exist process-wide — the
+    // slot below is that invariant, structural rather than per-family, so a
+    // KeyList and a Keybind can never both claim the next input even if a
+    // future screen hosts both. Claiming cancels the previous owner through
+    // its {@link #onCancelCapture} hook; release paths are idempotent.
+
+    /** The setting currently owning key capture, or null. */
+    private static FeatureSetting captureOwner;
+
+    /**
+     * Claims exclusive capture ownership, cancelling any previous owner.
+     * Returns false (and claims nothing) when this setting is disabled —
+     * the authoritative gate lives here so no call site can forget it.
+     */
+    protected boolean claimCaptureOwnership() {
+        if (isDisabled()) return false;
+        if (captureOwner != null && captureOwner != this) {
+            FeatureSetting previous = captureOwner;
+            captureOwner = null;
+            previous.onCancelCapture();
+        }
+        captureOwner = this;
+        return true;
+    }
+
+    /** Releases capture ownership if held; always invokes the cancel hook. */
+    protected void releaseCaptureOwnership() {
+        boolean held = captureOwner == this;
+        if (held) captureOwner = null;
+        onCancelCapture();
+    }
+
+    /** Whether this setting currently owns key capture. */
+    protected boolean ownsCapture() {
+        return captureOwner == this;
+    }
+
+    /** Family hook: clear listening visuals/state. Default no-op. */
+    protected void onCancelCapture() {
+    }
+
+    /**
+     * Cancels the one capture owner (whatever family) and reports whether
+     * a pointer event was consumed. Called before screen child routing.
+     */
+    public static boolean cancelActiveCapture() {
+        FeatureSetting owner = captureOwner;
+        if (owner == null) return false;
+        owner.releaseCaptureOwnership();
+        return true;
+    }
+
     protected FeatureSetting(String label) {
         this.label = label;
     }

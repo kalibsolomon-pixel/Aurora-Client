@@ -447,11 +447,11 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
     @Override
     public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent _ev, boolean _doubleClicked) {
         double mouseX = _ev.x(); double mouseY = _ev.y(); int button = _ev.button();
-        // A canonical keybind capture owns the next pointer event as a
-        // cancellation gesture. Consume it before vanilla children or a
-        // different row can act, so one click can never both cancel capture
-        // and activate an unrelated control underneath.
-        if (com.aurora.client.screen.setting.KeybindSetting.cancelActiveCapture()) return true;
+        // A canonical capture owner (Keybind or KeyList) owns the next
+        // pointer event as a cancellation gesture. Consume it before
+        // vanilla children or a different row can act, so one click can
+        // never both cancel capture and activate an unrelated control.
+        if (com.aurora.client.screen.setting.FeatureSetting.cancelActiveCapture()) return true;
         FeatureSetting.clearFocus();
         if (this.getFocused() instanceof SemanticActionControl) this.setFocused(null);
         if (super.mouseClicked(_ev, _doubleClicked)) return true;

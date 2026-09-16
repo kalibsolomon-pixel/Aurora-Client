@@ -83,9 +83,6 @@ public class KeybindSetting extends FeatureSetting {
     private final IntConsumer setter;
     private final Runnable saveAction;
 
-    /** Canonical capture owner — at most one listening row exists at a time. */
-    private static KeybindSetting activeCapture;
-
     /**
      * Glass-pass bookkeeping (the {@code Button} scheme, §6 convention 6):
      * the frame in which {@link #renderGlassPass} painted the pill pre-dim
@@ -310,16 +307,16 @@ public class KeybindSetting extends FeatureSetting {
 
     private void beginListening() {
         if (isDisabled() || listening) return;
-        if (activeCapture != null && activeCapture != this) activeCapture.cancelListening();
-        activeCapture = this;
+        // Claims the shared exclusive slot (FeatureSetting) — any Keybind
+        // OR KeyList owner is cancelled first; there is never two.
+        if (!claimCaptureOwnership()) return;
         listening = true;
         requestFocus();
     }
 
+    /** Release clears listening + focus via {@link #onCancelCapture}. */
     private void finishListening() {
-        listening = false;
-        if (activeCapture == this) activeCapture = null;
-        releaseFocus();
+        releaseCaptureOwnership();
     }
 
     private void cancelListening() {
@@ -327,14 +324,19 @@ public class KeybindSetting extends FeatureSetting {
     }
 
     /**
-     * Cancels the one canonical capture owner and reports whether the
-     * pointer event was consumed. Called before detail-screen child routing.
+     * Cancels the one capture owner (any family — usually this one's
+     * screen's keybind rows) and reports whether the pointer event was
+     * consumed. Delegates to the shared {@link FeatureSetting} slot; kept
+     * as a family-named alias for the tests and the runtime harness.
      */
     public static boolean cancelActiveCapture() {
-        KeybindSetting owner = activeCapture;
-        if (owner == null || !owner.listening) return false;
-        owner.cancelListening();
-        return true;
+        return FeatureSetting.cancelActiveCapture();
+    }
+
+    @Override
+    protected void onCancelCapture() {
+        listening = false;
+        releaseFocus();
     }
 
     /** Disabled can change asynchronously with respect to capture events. */

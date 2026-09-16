@@ -715,6 +715,72 @@ disabled bypass is reachable on them (`rejected=false`), and scroll-away
 does not cancel legacy rows — the suite distinguishes rollout from pilot.
 Remaining Phase B families: KeyList, tooltips, pack card/tab hover,
 AccentSetting's peer grid — all still legacy pending per-family review.
+**Phase B pilot 7 (2026-09-16, later): `KeyListSetting` canonical
+multi-value capture states** (Keystrokes → "Extra Keys" — the one
+production KeyList, so the pilot's isolation is behavioral-family-level
+and the canonical behavior is unconditional; the commit is the isolation
+boundary). Baseline topology was ONE manually routed compound control:
+per-entry rows with immediate-hover "−" remove chips, a "+ Add Key" pill
+(legacy snap-in hover pinned by `hover || listening`), and capture
+routed through the static `FeatureSetting` focus registry. Baseline
+defects found and fixed: disabled was never consulted anywhere (a
+disabled row could add, remove, and save), a duplicate/full capture
+SAVED despite no mutation, and a pointer press on a screen child (Done)
+while listening could click through (the screen's pre-children guard
+only knew Keybind rows).
+
+The pilot's architecture answer — **capture ownership lives at the ADD
+level** (capture purpose is always ADD; no rebinding exists, so no
+REPLACE(index) semantics were invented) **on a NEW shared exclusive
+slot on `FeatureSetting`**: `claimCaptureOwnership()` /
+`releaseCaptureOwnership()` / the family `onCancelCapture()` hook, with
+the disabled gate inside the claim itself. `KeybindSetting` was migrated
+onto the same slot with identical observable behavior (its public
+`cancelActiveCapture` remains as a family-named alias), and
+`FeatureDetailScreen`'s pre-children pointer guard now cancels
+WHATEVER family owns — a KeyList and a Keybind can structurally never
+both claim the next input, on one screen or across screens. State model:
+list values are DATA (rendered literally, also while disabled); the add
+pill's hover is pointer-only symmetric 140 ms, never pinned by
+listening; entry rows are removable chips whose immediate hover is kept
+deliberately (a scanning family, documented); focus is the add action's
+semantic target (Tab/Enter/Space/narration, one activation click arming
+capture — Enter cannot self-add); listening is the stained pill +
+"> press key <", visible after pointer departure; disabled is
+authoritative everywhere (rejects add AND remove at action time, not
+render time; entering disabled while listening cancels without
+mutation; a stale racing key is consumed-but-inert). Multi-value clear
+rule preserved and made explicit: ESC and BACKSPACE CANCEL without
+mutation (not Keybind's clear-to-UNBOUND — there is no one value to
+clear); Delete and every other keycode are ordinary bindable entries;
+duplicates and the 12-entry cap close the capture as an accepted no-op
+with NO save. Removal removes exactly one entry with one save; the add
+action's semantic control is row-scoped (not entry-scoped), so focus
+survives structural mutation with nothing dangling. Scroll-away,
+screen close/replacement/open, and viewport loss all cancel through the
+existing teardown (`onInteractionAvailabilityChanged`,
+`onDetailScreenClose/Open` — no competing global capture manager).
+Cache/perf: entries render live; row height is already an owning-screen
+cache input; key display names are memoized per GLFW value (the
+ellipsized per-frame path no longer formats through InputConstants); no
+per-frame child reconstruction, no polling. Unit: 14 focused tests
+(`KeyListPilotTest`) incl. the cross-family single-owner invariant and
+the empty-list roundtrip; the Keybind suites pass unchanged. Runtime:
+DevPilot `keylistb` — 22/22 oracles on BOTH the dark and light/bright
+boots (hover settle/exit 1.0/0.0, Tab-focus-not-listening, Enter-arms-
+without-self-add, listening-pointer-away hover 0.0, F13 add, duplicate
+no-op, exact removal, Escape-cancels-without-clearing-and-without-
+closing-the-screen, outside-click + right-click cancel/consume,
+scroll-away, disabled rejection of add+remove, enabled→listening→
+disabled, empty→add→remove→empty, screen-close teardown, and a
+cross-family sanity pass proving the canonical Keybind still arms and
+captures on its own screen) with full state restoration (the user's
+actual list/enabled/sprint key/theme) verified after every boot.
+Captures in `.devpilot-keylistb/rollout-dark` + `rollout-light-bright`
+(10 each; whole-frame deltas carry menu-panorama drift, so the state
+oracles and logged hover values are the quantitative backbone). The
+KeyList stays clearly separate from single `KeybindSetting`: different
+clear rule, multi-value mutation, chip-family entry hover.
 - **ToggleSwitch — the Phase B state-complete pilot (2026-09-15)**: overlapping state
   channels (on/off × hover × pressed × focused × disabled), not an exclusive enum.
   Hover = the symmetric animator above, one restrained channel (track lerps 10% toward
