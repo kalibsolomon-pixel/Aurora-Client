@@ -56,6 +56,11 @@ public final class SemanticActionControl extends AbstractWidget {
         if (!available) pointerHovered = false;
     }
 
+    /** Whether the hosting screen's current-frame sweep marked this control interactable. */
+    public boolean isAvailable() {
+        return available;
+    }
+
     public void updatePointer(double mouseX, double mouseY) {
         pointerHovered = available && contains(mouseX, mouseY);
     }

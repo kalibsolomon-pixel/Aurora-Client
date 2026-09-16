@@ -1,6 +1,9 @@
 package com.aurora.client.screen.setting;
 
 import com.aurora.client.ui.component.ToggleSwitch;
+import com.aurora.client.ui.interaction.MinecraftSemanticFeedback;
+import com.aurora.client.ui.interaction.SemanticAction;
+import com.aurora.client.ui.interaction.SemanticActionControl;
 import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -19,16 +22,23 @@ import java.util.function.Supplier;
  *
  * <p><b>Visual spec</b> (matching Apple's UISwitch dark mode):
  * <ul>
- *   <li>Track: 36×20 px capsule. Off: {@code systemFill} translucent
- *       gray. On: {@code systemBlue}. Color crossfades on the same curve
- *       as the thumb position.</li>
- *   <li>Thumb: circle inset 2 px from each side of the track. Pure white.
- *       Subtle 2-pass shadow underneath fakes a real drop shadow.</li>
- *   <li>Slide: spring-overshoot easing, 280 ms — the thumb peaks slightly
- *       past its target and settles back, matching the iOS feel.</li>
- *   <li>Hover: a faint white halo behind the thumb, fading in over
- *       140 ms ease-out.</li>
+ *   <li>Track: 28×15 px capsule (see {@link ToggleSwitch}). Off:
+ *       {@code SURFACE_VARIANT}. On: {@code ACCENT}. Color crossfades on
+ *       the same curve as the thumb position.</li>
+ *   <li>Thumb: circle inset 2.5 px from each side of the track. Pure white.</li>
+ *   <li>Slide: exponential approach on real delta time.</li>
  * </ul>
+ *
+ * <p><b>Phase B state pilot:</b> the row mirrors its disabled gate into the
+ * widget every frame (the toggle carries the disabled treatment) and — when
+ * the host screen runs the semantic lifecycle — exposes a
+ * {@link SemanticActionControl}: the whole-row hit target stays the pointer
+ * path, and the control adds focus traversal, Enter/Space activation (the
+ * same toggle + save exactly once), the one semantic activation click, and
+ * on/off narration (design language §11.4). Hosts that never mark the
+ * control available (AuroraScreen's inline Settings tab — its semantic
+ * rollout is the documented Phase C deferral) keep the exact legacy
+ * pointer-only behavior through the availability gate.
  */
 public class BooleanSetting extends FeatureSetting {
     private static final int MIN_ROW_H = 28;
@@ -48,6 +58,8 @@ public class BooleanSetting extends FeatureSetting {
 
     /** Shared themed switch — owns the pill/thumb drawing + slide animation. */
     private final ToggleSwitch toggle;
+    /** Phase B: focus/keyboard/narration adapter (lazy — see {@link #interactionControl()}). */
+    private SemanticActionControl interactionControl;
 
     public BooleanSetting(String label, BooleanSupplier getter, Consumer<Boolean> setter) {
         super(label);
@@ -99,6 +111,36 @@ public class BooleanSetting extends FeatureSetting {
         return toggle.shapeFingerprint();
     }
 
+    /**
+     * The toggle's semantic control: focus traversal, Enter/Space
+     * activation (the same toggle+save the pointer path runs, exactly
+     * once), the semantic activation click, and on/off narration. The
+     * enabled gate mirrors the row's disabled supplier.
+     */
+    @Override
+    public SemanticActionControl interactionControl() {
+        if (interactionControl == null) {
+            interactionControl = new SemanticActionControl(SemanticAction.button(
+                    labelText,
+                    () -> {
+                        String description = currentDescription();
+                        return description != null
+                                ? Component.literal(description)
+                                : Component.empty();
+                    },
+                    () -> Component.literal(getter.getAsBoolean() ? "On" : "Off"),
+                    () -> !isDisabled(),
+                    () -> {
+                        toggle.toggle();
+                        com.aurora.client.config.AuroraConfig.save();
+                    }),
+                    MinecraftSemanticFeedback.INSTANCE,
+                    null,
+                    SemanticActionControl.PointerRouting.MANUAL);
+        }
+        return interactionControl;
+    }
+
     @Override
     public void render(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
         renderShapes(ctx, x, y, width, mouseX, mouseY);
@@ -115,6 +157,7 @@ public class BooleanSetting extends FeatureSetting {
         float switchX = x + width - 28 - 14;
         float switchY = y + (cachedBaseHeight - 15) / 2.0f;
         toggle.layout(switchX, switchY, 28, 15);
+        syncToggleState(x, y, width, -1, -1);
         toggle.renderShapes(ctx, switchX, switchY, 28, 15);
     }
 
@@ -147,9 +190,27 @@ public class BooleanSetting extends FeatureSetting {
         float switchX = x + width - 28 - 14;
         float switchY = y + (controlH - 15) / 2.0f;
         toggle.layout(switchX, switchY, 28, 15);
+        syncToggleState(x, y, width, mouseX, mouseY);
         toggle.renderOverlay(ctx, switchX, switchY, 28, 15, mouseX, mouseY);
 
         renderDescription(ctx, x, y + controlH, width);
+    }
+
+    /**
+     * Per-frame sync of the row's gate into the widget (the disabled
+     * treatment), of the semantic control's bounds (the whole-row hit band —
+     * the same rect the row click delegates, so the control's pointer gate
+     * and focus ring geometry agree with the row), and of the control's
+     * focus into the paint (the provisional hairline) — a focused toggle
+     * always corresponds to real keyboard focus.
+     */
+    private void syncToggleState(int x, int y, int width, int mouseX, int mouseY) {
+        toggle.disabled(isDisabled());
+        if (interactionControl != null) {
+            interactionControl.setBounds(x, y, width, cachedBaseHeight);
+            interactionControl.updatePointer(mouseX, mouseY);
+        }
+        toggle.focusedVisual(interactionControl != null && interactionControl.isFocused());
     }
 
     @Override
@@ -159,6 +220,14 @@ public class BooleanSetting extends FeatureSetting {
         int controlH = baseHeight();
         if (mouseY < rowY || mouseY > rowY + controlH) return false;
         if (mouseX < rowX || mouseX > rowX + rowWidth) return false;
+        // Semantic host (the detail screen marks the control available and
+        // runs the lifecycle): the control owns activation — exactly-once
+        // behavior + the semantic click + focus participation. Legacy hosts
+        // (AuroraScreen's inline tab — its availability sweep is the Phase C
+        // deferral) keep the direct path, byte-for-byte today's behavior.
+        if (interactionControl != null && interactionControl.isAvailable()) {
+            return interactionControl.activateFromPointer(mouseX, mouseY, button);
+        }
         toggle.toggle();
         com.aurora.client.config.AuroraConfig.save();
         return true;

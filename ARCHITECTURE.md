@@ -413,6 +413,34 @@ a launch crash, not a silent skip):
   `Button`'s hand-rolled easeOutCubic copy, and the pack browser's Map-keyed `updateHover`.
   Four animation helper classes total (`AnimationCurves`, `AuroraAnim`, `HoverAnim`,
   `ui/util/Animation`); `AuroraAnim` is the shared math library.
+  **Phase B pilot (2026-09-15): `HoverAnim.symmetric(ms)`** is the §8.3 canonical hover —
+  symmetric enter/exit, no snap from rest (a fresh leg starts at zero progress), and
+  mid-flight reversal mirrors the RAW progress fraction (`newRaw₀ = 1 − lastRaw`), which
+  continues the eased value exactly for any easing without inverting it. The legacy
+  constructors keep the shipped snap-in-from-rest behavior byte-for-byte (pinned by a
+  unit test); Phase B re-trains consumers one family at a time.
+- **ToggleSwitch — the Phase B state-complete pilot (2026-09-15)**: overlapping state
+  channels (on/off × hover × pressed × focused × disabled), not an exclusive enum.
+  Hover = the symmetric animator above, one restrained channel (track lerps 10% toward
+  `ON_BACKGROUND` — lifts in dark mode, deepens in light). Pressed = a one-shot
+  mechanical thumb-compression pulse (8% over 90 ms, recovers over 180 ms) fired from
+  `toggle()` — geometry responding, never a second toggle, and a disabled toggle never
+  pulses. Focused = opt-in `focusedVisual(boolean)`: a 1 px accent hairline capsule
+  1.5 px OUTSIDE the track (visible without hover, distinct from the ON fill, both
+  modes — the same provisional-treatment family as the button hairline; the final
+  Aurora focus visual is still open). Disabled = `SURFACE_INSET` off-track, 35% accent
+  residue on-track, `ON_BACKGROUND_MUTED` thumb — inert but still communicating the
+  stored value. `BooleanSetting` mirrors its disabled gate into the widget every frame
+  and (on hosts running the semantic lifecycle) exposes the row's
+  `SemanticActionControl` — whole-row pointer target preserved, plus Tab/Enter/Space
+  activation and on/off narration; hosts that never mark the control available
+  (AuroraScreen's inline Settings tab, the Phase C deferral) keep the legacy
+  pointer-only path through the availability gate. **Cache note:** the toggle now
+  renders FULLY LIVE and returns a constant `shapeFingerprint()` — the cached-settled
+  design had a hole (a hover-exit's first frame re-rastered the cache with the toggle
+  absent and the settle never refilled it), and going live also deletes the per-flip
+  full-frame row-cache re-raster the old on/off fingerprint bit caused (~35 AA fills
+  per toggle per frame; 1–6 toggles per screen ≈ 200 fills, far under the §10 line).
 - **Tooltips**: `FeatureSetting` label-dwell tooltip system (1500 ms dwell, 200 ms fade).
 - **HUD editor**: drag-move / corner-resize / shift+click settings / right-click hide /
   shift+right-click lock / X disable (R-Shift in world).
