@@ -61,8 +61,16 @@ public class Button extends Widget {
 
     private GlassStyle glassStyle = GlassStyle.OFF;
 
-    /** Hover crossfade, on the same easeOutCubic curve the hand-rolled version used. */
-    private final HoverAnim hoverAnim = new HoverAnim(HOVER_MS, HoverAnim.EASE_OUT_CUBIC);
+    /**
+     * Hover crossfade — the §8.3 canonical symmetric mode (Phase B pilot,
+     * 2026-09-15): 140 ms enter AND 140 ms exit, no snap from locked rest,
+     * mid-flight reversal mirrors the raw progress fraction (the same
+     * semantics the ToggleSwitch pilot proved). Curve is the canonical
+     * smoothstep (the former easeOutCubic copy moves to the shared
+     * vocabulary); rest and settled-hover pixels are unchanged — only the
+     * path between them.
+     */
+    private final HoverAnim hoverAnim = HoverAnim.symmetric(HOVER_MS);
 
     private long pressDownStartMs = -1L;
 
@@ -381,6 +389,11 @@ public class Button extends Widget {
     /** Starts the existing mouse-down press animation for a semantic activation. */
     public void triggerPressAnimation() {
         pressDownStartMs = System.currentTimeMillis();
+    }
+
+    /** The hover animator — package-private test visibility for the Phase B motion pilot. */
+    HoverAnim hoverAnimator() {
+        return hoverAnim;
     }
 
     private float currentScale() {

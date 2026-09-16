@@ -413,12 +413,33 @@ a launch crash, not a silent skip):
   `Button`'s hand-rolled easeOutCubic copy, and the pack browser's Map-keyed `updateHover`.
   Four animation helper classes total (`AnimationCurves`, `AuroraAnim`, `HoverAnim`,
   `ui/util/Animation`); `AuroraAnim` is the shared math library.
-  **Phase B pilot (2026-09-15): `HoverAnim.symmetric(ms)`** is the §8.3 canonical hover —
+  **Phase B pilot 1 (2026-09-15): `HoverAnim.symmetric(ms)`** is the §8.3 canonical hover —
   symmetric enter/exit, no snap from rest (a fresh leg starts at zero progress), and
   mid-flight reversal mirrors the RAW progress fraction (`newRaw₀ = 1 − lastRaw`), which
   continues the eased value exactly for any easing without inverting it. The legacy
   constructors keep the shipped snap-in-from-rest behavior byte-for-byte (pinned by a
   unit test); Phase B re-trains consumers one family at a time.
+  **Phase B pilot 2 (2026-09-15): the shared `Button` migrated to
+  `HoverAnim.symmetric(140)`** — the second consumer of the canonical
+  vocabulary, and the last legacy `EASE_OUT_CUBIC` user. Button was the
+  sole remaining legacy hover of its kind; everything that paints through
+  the shared Button painter migrates with it (ButtonWidget + every
+  vanilla-backed button, ButtonSetting rows, manager row buttons, pack
+  install/modal buttons, the theme-preview mocks, WorldMap chrome) — that
+  is the shared-primitive scope, NOT a family rollout: Slider, ColorSwatch,
+  Enum, Keybind, KeyList, PixelCanvas internals, and the tooltip fade keep
+  their own legacy `HoverAnim` instances (snap-in) until deliberately
+  re-trained; pack card/tab hover is the browser's own animator, untouched.
+  Mid-flight curve changed easeOutCubic → the canonical smoothstep; rest
+  and settled-hover pixels are byte-identical (stash A/B: 0 px on
+  rest/settled/focus/disabled captures, and 0 px in the pack-modal Close
+  ROI; whole-frame modal deltas were panorama drift, matched by a backdrop
+  control strip). Cache note: Button's resting-surface templates are keyed
+  on (size, variant, scale, theme-generation) — never on hover state — and
+  are blitted only at EXACT rest (`hoverT == 0`), so the 140 ms of
+  intermediate states paint live over them and the toggle pilot's
+  stale-hole class cannot occur (there is no settled state other than rest
+  for a key to flip on).
 - **ToggleSwitch — the Phase B state-complete pilot (2026-09-15)**: overlapping state
   channels (on/off × hover × pressed × focused × disabled), not an exclusive enum.
   Hover = the symmetric animator above, one restrained channel (track lerps 10% toward
