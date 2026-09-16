@@ -22,17 +22,17 @@ import java.util.function.IntSupplier;
  * + theme colors and adds a hover halo to the swatch ring. HSL math, pad
  * cache, drag state machine — all unchanged from prior waves.
  *
- * <p><b>Phase B pilot (2026-09-16):</b> {@link #canonicalStates()} opts the
- * row's swatch into the canonical state channels (see {@link ColorSwatch}'s
- * class javadoc — represented color is literal data, all interaction
- * treatment on chrome) and gives the swatch the Enum-trigger interaction
- * contract: a {@link SemanticActionControl} (focus traversal, Enter/Space
- * open/close with exactly one activation click, narration carrying the
- * current value as hex plus expanded/collapsed), and the narrow keyboard
- * adapter (Escape while expanded collapses the picker without closing the
- * screen). The expanded editor's own surfaces (pad/strips/preview) are
- * DATA by convention — untouched. Hosts never marking the control
- * available keep the legacy pointer-only path.
+ * <p><b>Phase B ROLLOUT (2026-09-16):</b> canonical swatch states are this
+ * row class's only behavior (see {@link ColorSwatch}'s class javadoc —
+ * represented color is literal data, all interaction treatment on chrome)
+ * plus the Enum-trigger interaction contract: a
+ * {@link SemanticActionControl} (focus traversal, Enter/Space open/close
+ * with exactly one activation click, narration carrying the current value
+ * as hex plus expanded/collapsed), and the narrow keyboard adapter (Escape
+ * while expanded collapses the picker without closing the screen). The
+ * expanded editor's own surfaces (pad/strips/preview) are DATA by
+ * convention — untouched. The Waypoint manager's display chips construct
+ * {@link ColorSwatch} directly and stay legacy by construction.
  */
 public class ColorSetting extends FeatureSetting {
     private static final int ROW_H_COLLAPSED = 28;
@@ -70,30 +70,17 @@ public class ColorSetting extends FeatureSetting {
     private final ColorSwatch swatch;
     /** Phase B: focus/keyboard/narration adapter (lazy — see {@link #interactionControl()}). */
     private SemanticActionControl interactionControl;
-    /** Phase B opt-in — see the class javadoc. */
-    private boolean canonical;
 
     public ColorSetting(String label, IntSupplier getter, Consumer<Integer> setter) {
         super(label);
         this.getter = getter;
         this.setter = setter;
-        this.swatch = new ColorSwatch(getter, null);
-    }
-
-    /**
-     * Opts this row's swatch into the Phase B canonical state channels plus
-     * the semantic open/close adapter. Must be called before first render.
-     * Every other color row keeps the legacy behavior byte-for-byte.
-     */
-    public ColorSetting canonicalStates() {
-        this.canonical = true;
-        swatch.canonicalStates();
-        return this;
-    }
-
-    /** True when this row runs the Phase B canonical state channels. */
-    public boolean canonical() {
-        return canonical;
+        // Phase B ROLLOUT: canonical swatch states are this row class's only
+        // behavior — every production color row constructs here (the Enum
+        // seam). The Waypoint manager's data-only chips construct ColorSwatch
+        // directly and stay legacy BY CONSTRUCTION (the component-level opt-in
+        // exists exactly for them).
+        this.swatch = new ColorSwatch(getter, null).canonicalStates();
     }
 
     @Override public int baseHeight() { return expanded ? ROW_H_EXPANDED : ROW_H_COLLAPSED; }
@@ -110,10 +97,9 @@ public class ColorSetting extends FeatureSetting {
         swatchY = y + (ROW_H_COLLAPSED - swatchH) / 2;
         swatch.disabled(disabled);
         swatch.layout(swatchX, swatchY, swatchW, swatchH);
-        // Canonical rows: mirror the semantic control's geometry, pointer,
-        // and vanilla focus into the swatch every frame (the BooleanSetting
-        // sync discipline).
-        if (canonical && interactionControl != null) {
+        // Mirror the semantic control's geometry, pointer, and vanilla focus
+        // into the swatch every frame (the BooleanSetting sync discipline).
+        if (interactionControl != null) {
             interactionControl.setBounds(swatchX, swatchY, swatchW, swatchH);
             interactionControl.updatePointer(mouseX, mouseY);
             swatch.focusedVisual(interactionControl.isFocused());
@@ -170,9 +156,9 @@ public class ColorSetting extends FeatureSetting {
         if (mouseX >= swatchX && mouseX < swatchX + swatchW
                 && mouseY >= swatchY && mouseY < swatchY + swatchH) {
             // Semantic host: the control owns activation — exactly-once
-            // behavior + one activation click on open/close. Legacy hosts
-            // keep the direct path, byte-for-byte today's behavior.
-            if (canonical && interactionControl != null && interactionControl.isAvailable()) {
+            // behavior + one activation click on open/close. Hosts that
+            // never ask for the control keep the direct path.
+            if (interactionControl != null && interactionControl.isAvailable()) {
                 return interactionControl.activateFromPointer(mouseX, mouseY, button);
             }
             toggleExpanded();
@@ -245,15 +231,14 @@ public class ColorSetting extends FeatureSetting {
     }
 
     /**
-     * The canonical row's semantic control (focus traversal, Enter/Space
-     * activation, the activation click, narration with the current value as
-     * hex — the established color-value vocabulary the picker's hex field
-     * uses — plus expanded/collapsed). Legacy rows return null — the pilot
-     * isolation.
+     * The row's semantic control (focus traversal, Enter/Space activation,
+     * the activation click, narration with the current value as hex — the
+     * established color-value vocabulary the picker's hex field uses — plus
+     * expanded/collapsed). Lazy by design: it materializes only when a host
+     * asks for it.
      */
     @Override
     public SemanticActionControl interactionControl() {
-        if (!canonical) return null;
         if (interactionControl == null) {
             interactionControl = new SemanticActionControl(SemanticAction.button(
                     Component.literal(label),
@@ -275,15 +260,15 @@ public class ColorSetting extends FeatureSetting {
     }
 
     /**
-     * Canonical keyboard adapter, the Enum-trigger narrow set: Escape while
-     * expanded collapses the picker without closing the screen. Collapsed
-     * Escape is not consumed (screen close stays vanilla). Picker VALUE
-     * editing stays pointer-driven; keyboard color entry is future
-     * accessibility work, deliberately not built here.
+     * Keyboard adapter, the Enum-trigger narrow set: Escape while expanded
+     * collapses the picker without closing the screen. Collapsed Escape is
+     * not consumed (screen close stays vanilla). Picker VALUE editing stays
+     * pointer-driven; keyboard color entry is future accessibility work,
+     * deliberately not built here.
      */
     @Override
     public boolean onKeyPress(int keyCode, int modifiers) {
-        if (!canonical || !expanded) return false;
+        if (!expanded) return false;
         if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
             expanded = false;
             releaseFocus();
@@ -293,15 +278,12 @@ public class ColorSetting extends FeatureSetting {
     }
 
     /**
-     * Canonical rows reset transient popup state on screen close (the
-     * EnumSetting lifecycle contract — without this, an expanded picker and
-     * its registry focus leak across screen opens because settings are
-     * long-lived singletons). Legacy rows keep the shipped
-     * persists-across-close behavior.
+     * Reset transient popup state on screen close (the EnumSetting lifecycle
+     * contract — without this, an expanded picker and its registry focus
+     * leak across screen opens because settings are long-lived singletons).
      */
     @Override
     public void onDetailScreenClose() {
-        if (!canonical) return;
         expanded = false;
         dragging = DragTarget.NONE;
         releaseFocus();

@@ -580,9 +580,37 @@ displays that still show a spurious hover halo today — observed, left
 legacy, a candidate for a `previewMode()`-class opt-OUT in a later pass.
 Cache note: the per-color resting template blits only at exact rest
 (`!disabled && !selected && hT <= 0`) and never keys on state — the
-Button-safe category; all state chrome paints live. Remaining Phase B
-families: Keybind, KeyList, tooltips, pack card/tab hover,
-AccentSetting's peer grid — all still legacy pending per-family review.
+Button-safe category; all state chrome paints live.
+**Phase B ROLLOUT (2026-09-16, later): canonical color-swatch states are
+production-wide — all 29 interactive `ColorSetting` rows** (26 in
+FeatureRegistry + AccentSetting's embedded Custom picker +
+ParticleRowSetting's overlay row). The seam: `ColorSetting` constructs
+its swatch canonical unconditionally (the Enum flagless-row pattern);
+the pilot's `ColorSetting.canonicalStates()` opt-in is removed with the
+flag, while `ColorSwatch.canonicalStates()` REMAINS — the component-level
+opt-in is structurally necessary because the Waypoint manager's
+data-only display chips construct `ColorSwatch` directly and stay legacy
+by construction (the D-class isolation falls out of the seam; unit-pinned
+— and the chips' spurious hover halo is the documented future
+`previewMode()`-class cleanup, deliberately not fixed here).
+AccentSetting's preset grid remains hand-rolled (NOT ColorSetting — the
+peer-selection family, future task; its embedded Custom picker IS a
+ColorSetting and is canonical, unit-pinned). The literal
+represented-color invariant is now a production invariant — interior
+byte-exact to stored RGB across rest/hover/focus/expanded/disabled for
+the stress set in both themes (runtime-oracled on the rollout boots);
+the legacy disabled alpha-halving stays unreachable from any
+production color row (reachable only through direct legacy ColorSwatch
+construction — the chips, which are never disabled). Runtime:
+DevPilot swatchb rollout boots dark+light 22/22 (the crosshair split is
+gone — neighbor canonical; block_overlay's two color rows verified as
+the second multi-color screen with independent editor ownership; the
+harness now restores on normal/oracle-failure/timeout paths). The
+pilot-tree stash baseline fails exactly the second-screen oracle (its
+rows still legacy) — the suite discriminates rollout from pilot.
+Remaining Phase B families: Keybind, KeyList, tooltips, pack card/tab
+hover, AccentSetting's peer grid — all still legacy pending per-family
+review.
 - **ToggleSwitch — the Phase B state-complete pilot (2026-09-15)**: overlapping state
   channels (on/off × hover × pressed × focused × disabled), not an exclusive enum.
   Hover = the symmetric animator above, one restrained channel (track lerps 10% toward

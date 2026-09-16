@@ -111,4 +111,63 @@ class RolloutStatesTest {
             fail("FeatureRegistry.java not readable from the test working dir: " + e.getMessage());
         }
     }
+
+    @Test
+    void colorSettingConstructionIsCanonicalWithDirectSwatchesLegacy() {
+        AtomicReference<Integer> v = new AtomicReference<>(0xFF808080);
+        ColorSetting row = new ColorSetting("R", v::get, v::set);
+        try {
+            var swField = ColorSetting.class.getDeclaredField("swatch");
+            swField.setAccessible(true);
+            var sw = swField.get(row);
+            assertTrue((boolean) sw.getClass().getMethod("canonical").invoke(sw),
+                    "every ColorSetting row constructs its swatch canonical (rollout seam)");
+        } catch (ReflectiveOperationException e) {
+            fail(e.toString());
+        }
+        // The D-class isolation falls out of the seam: a directly-constructed
+        // ColorSwatch (the Waypoint display chips) stays legacy.
+        var chip = new com.aurora.client.ui.component.ColorSwatch(v::get, null);
+        assertFalse(chip.canonical(),
+                "direct ColorSwatch construction stays legacy by design (data-only chips)");
+    }
+
+    @Test
+    void productionColorRowInventoryHoldsAtTwentySixRows() {
+        // Same source-level inventory pin as the enums: 26 ColorSetting rows
+        // construct in FeatureRegistry (28 overall — the other two are
+        // AccentSetting's embedded picker and ParticleRowSetting's overlay
+        // row, both ColorSetting-class and both canonical by construction).
+        try {
+            String src = new String(java.nio.file.Files.readAllBytes(java.nio.file.Path.of(
+                    "src/client/java/com/aurora/client/screen/FeatureRegistry.java")));
+            int count = src.split("new ColorSetting", -1).length - 1;
+            assertEquals(26, count,
+                    "production ColorSetting construction sites (inventory drift guard)");
+        } catch (java.io.IOException e) {
+            fail("FeatureRegistry.java not readable from the test working dir: " + e.getMessage());
+        }
+    }
+
+    @Test
+    void accentSettingCustomPickerIsCanonicalItsPresetGridIsNotColorSetting() {
+        // §8 classification pin: AccentSetting's Custom slot embeds a plain
+        // ColorSetting (canonical by construction like every other row);
+        // its preset grid is hand-rolled rendering, NOT a ColorSetting —
+        // the peer-selection family stays outside this rollout.
+        AtomicReference<Integer> accent = new AtomicReference<>(0xFFEB0029); // a preset value
+        AccentSetting row = new AccentSetting("Accent", accent::get, accent::set);
+        try {
+            var f = AccentSetting.class.getDeclaredField("customPicker");
+            f.setAccessible(true);
+            var picker = f.get(row);
+            var swF = ColorSetting.class.getDeclaredField("swatch");
+            swF.setAccessible(true);
+            var sw = swF.get(picker);
+            assertTrue((boolean) sw.getClass().getMethod("canonical").invoke(sw),
+                    "the embedded Custom picker is a ColorSetting — canonical by construction");
+        } catch (ReflectiveOperationException e) {
+            fail(e.toString());
+        }
+    }
 }

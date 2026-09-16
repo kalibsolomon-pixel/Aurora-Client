@@ -373,13 +373,7 @@ public final class FeatureRegistry {
                         SliderSetting.ofInt("Gap", () -> cfg.crosshairGap, v -> cfg.crosshairGap = v, 0, 10)
                                 .description("Creates broken shapes. Only enabled for CIRCLE or SQUARE.")
                                 .disabled(() -> cfg.crosshairStyle != AuroraConfig.CrosshairStyle.CIRCLE && cfg.crosshairStyle != AuroraConfig.CrosshairStyle.SQUARE),
-                        // Phase B ColorSwatch pilot row: the one
-                        // canonicalStates() color row (literal sample,
-                        // chrome-only states, focus hairline + semantic
-                        // open/close adapter). Every other color row stays
-                        // legacy.
-                        new ColorSetting("Color", () -> cfg.crosshairColor, v -> cfg.crosshairColor = v)
-                                .canonicalStates(),
+                        new ColorSetting("Color", () -> cfg.crosshairColor, v -> cfg.crosshairColor = v),
                         new PixelCanvasSetting("Custom Canvas (used when style = CUSTOM)",
                                 () -> cfg.crosshairCustomPixels, v -> cfg.crosshairCustomPixels = v,
                                 () -> cfg.crosshairCustomWidth, v -> cfg.crosshairCustomWidth = v,

@@ -8,10 +8,10 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Phase B ColorSetting pilot: the row-level canonical contract — opt-in
- * forwarding, the swatch-trigger open/close state machine (which never
- * writes the value), disabled rejection, the Escape adapter, control
- * isolation, and the close lifecycle. The semantic feedback adapter and
+ * Phase B ColorSetting rollout: the row-level canonical contract —
+ * canonical-by-construction, the swatch-trigger open/close state machine
+ * (which never writes the value), disabled rejection, the Escape adapter,
+ * control existence, and the close lifecycle. The semantic feedback adapter and
  * picker drags touch the live Minecraft instance / config save — those are
  * runtime-verified by the DevPilot harness.
  */
@@ -33,24 +33,25 @@ class ColorSettingPilotTest {
     }
 
     @Test
-    void canonicalForwardsToTheSwatch() {
+    void constructionIsCanonicalByDefaultWithNoOptInEscape() {
         AtomicReference<Integer> v = new AtomicReference<>();
         AtomicInteger writes = new AtomicInteger();
-        ColorSetting legacy = row(v, writes);
-        assertFalse(legacy.canonical());
-
-        ColorSetting canonical = row(v, writes).canonicalStates();
-        assertTrue(canonical.canonical());
-        var sw = (com.aurora.client.ui.component.ColorSwatch)
-                field(canonical, "swatch");
-        assertTrue(sw.canonical(), "canonicalStates() must reach the swatch");
+        ColorSetting row = row(v, writes);
+        var sw = (com.aurora.client.ui.component.ColorSwatch) field(row, "swatch");
+        assertTrue(sw.canonical(), "every ColorSetting row is canonical by construction");
+        // The pilot's opt-in mechanism is retired with the flag (the Enum
+        // seam). Reintroducing an opt-in seam is a deliberate decision that
+        // must update this pin.
+        assertThrows(NoSuchMethodException.class,
+                () -> ColorSetting.class.getMethod("canonicalStates"),
+                "canonicalStates() was the pilot's isolation mechanism — the rollout removed it");
     }
 
     @Test
     void swatchClickTogglesTheEditorExactlyOnceAndNeverWritesTheValue() {
         AtomicReference<Integer> v = new AtomicReference<>();
         AtomicInteger writes = new AtomicInteger();
-        ColorSetting row = row(v, writes).canonicalStates();
+        ColorSetting row = row(v, writes);
 
         assertFalse(row.mouseClicked(OUT_X, OUT_Y, 0, ROW_X, ROW_Y, ROW_W)); // outside the swatch
         assertTrue(row.mouseClicked(IN_X, IN_Y, 0, ROW_X, ROW_Y, ROW_W));
@@ -69,7 +70,7 @@ class ColorSettingPilotTest {
     void disabledRejectsOpenAndKeyboardAndKeepsTheValue() {
         AtomicReference<Integer> v = new AtomicReference<>();
         AtomicInteger writes = new AtomicInteger();
-        ColorSetting row = row(v, writes).canonicalStates();
+        ColorSetting row = row(v, writes);
         row.disabled(() -> true);
         assertFalse(row.mouseClicked(IN_X, IN_Y, 0, ROW_X, ROW_Y, ROW_W));
         assertFalse((boolean) field(row, "expanded"), "a disabled color row must not open");
@@ -85,7 +86,7 @@ class ColorSettingPilotTest {
     void escapeCollapsesAnExpandedPickerButFallsThroughWhenCollapsed() {
         AtomicReference<Integer> v = new AtomicReference<>();
         AtomicInteger writes = new AtomicInteger();
-        ColorSetting row = row(v, writes).canonicalStates();
+        ColorSetting row = row(v, writes);
         assertFalse(row.onKeyPress(org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE, 0),
                 "collapsed Escape is the screen's, not the picker's");
 
@@ -94,27 +95,18 @@ class ColorSettingPilotTest {
                 "Escape while expanded belongs to the picker");
         assertFalse((boolean) field(row, "expanded"));
         assertEquals(0, writes.get(), "dismissal never writes the value");
-
-        // The legacy row keeps no key path.
-        ColorSetting legacy = row(v, writes);
-        legacy.mouseClicked(IN_X, IN_Y, 0, ROW_X, ROW_Y, ROW_W);
-        assertTrue((boolean) field(legacy, "expanded"));
-        assertFalse(legacy.onKeyPress(org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE, 0),
-                "legacy rows never had a key path — byte-preserved");
     }
 
     @Test
-    void semanticControlExistsOnlyForCanonicalRowsAndMirrorsTheEnabledGate() {
+    void semanticControlExistsByDefaultAndMirrorsTheEnabledGate() {
         AtomicReference<Integer> v = new AtomicReference<>();
         AtomicInteger writes = new AtomicInteger();
-        assertNull(row(v, writes).interactionControl(),
-                "legacy rows must not join the semantic lifecycle (pilot isolation)");
-
-        ColorSetting canonical = row(v, writes).canonicalStates();
-        var control = canonical.interactionControl();
-        assertNotNull(control);
+        ColorSetting row = row(v, writes);
+        var control = row.interactionControl();
+        assertNotNull(control,
+                "the semantic adapter is the default — every host that asks gets it");
         assertTrue(control.action().enabled());
-        canonical.disabled(() -> true);
+        row.disabled(() -> true);
         assertFalse(control.action().enabled(),
                 "the disabled gate must be the authoritative activation gate");
     }
@@ -123,18 +115,11 @@ class ColorSettingPilotTest {
     void detailScreenCloseResetsCanonicalTransientState() {
         AtomicReference<Integer> v = new AtomicReference<>();
         AtomicInteger writes = new AtomicInteger();
-        ColorSetting row = row(v, writes).canonicalStates();
+        ColorSetting row = row(v, writes);
         row.mouseClicked(IN_X, IN_Y, 0, ROW_X, ROW_Y, ROW_W);
         row.onDetailScreenClose();
         assertFalse((boolean) field(row, "expanded"),
                 "no stale expanded state or registry focus across screen opens");
-
-        // Legacy rows keep the shipped persists-across-close behavior.
-        ColorSetting legacy = row(v, writes);
-        legacy.mouseClicked(IN_X, IN_Y, 0, ROW_X, ROW_Y, ROW_W);
-        legacy.onDetailScreenClose();
-        assertTrue((boolean) field(legacy, "expanded"),
-                "legacy behavior is byte-preserved (documented, not fixed here)");
     }
 
     private static Object field(Object target, String name) {
