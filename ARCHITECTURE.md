@@ -713,8 +713,11 @@ discrimination: the same harness on the pilot commit `1836c9a` fails
 exactly 5 oracles — the neighbor/hitreg/waypoint rows read legacy, the
 disabled bypass is reachable on them (`rejected=false`), and scroll-away
 does not cancel legacy rows — the suite distinguishes rollout from pilot.
-Remaining Phase B families: KeyList, tooltips, pack card/tab hover,
-AccentSetting's peer grid — all still legacy pending per-family review.
+(At the time of writing: KeyList, tooltips, pack card/tab hover,
+AccentSetting's peer grid remained legacy. KeyList landed as pilot 7
+below; the tooltip fade migrated to `HoverAnim.symmetric(200)` — see the
+Tooltips entry in this section; pack card/tab hover and AccentSetting's
+peer grid remain the open Phase B pilots.)
 **Phase B pilot 7 (2026-09-16, later): `KeyListSetting` canonical
 multi-value capture states** (Keystrokes → "Extra Keys" — the one
 production KeyList, so the pilot's isolation is behavioral-family-level
@@ -803,7 +806,24 @@ clear rule, multi-value mutation, chip-family entry hover.
   absent and the settle never refilled it), and going live also deletes the per-flip
   full-frame row-cache re-raster the old on/off fingerprint bit caused (~35 AA fills
   per toggle per frame; 1–6 toggles per screen ≈ 200 fills, far under the §10 line).
-- **Tooltips**: `FeatureSetting` label-dwell tooltip system (1500 ms dwell, 200 ms fade).
+- **Tooltips — Phase B canonical fade (2026-09-16)**: the
+  `FeatureSetting` label-dwell system is Aurora's ONE production tooltip
+  implementation (no other tooltip renderer exists under `screen/ ui/
+  worldmap/`; the pack browser has none — its detail modal replaces them).
+  The 1500 ms dwell, per-label identity/dwell reset, claim-time frozen
+  anchor, 220 px wrap, and screen-edge clamping are unchanged; the fade
+  migrated from the legacy snap-in `HoverAnim(200)` to
+  `HoverAnim.symmetric(200)` — dwell completion now starts a 200 ms
+  fade-in from rest (previously an instant appearance), eligibility ends
+  with the symmetric 200 ms fade-out, and mid-flight reversal mirrors raw
+  progress continuously. The tooltip's 200 ms is its own
+  supplemental-information motion family, deliberately NOT the 140 ms
+  control-hover duration. The tooltip legacy snap-in dialect is retired;
+  remaining legacy `HoverAnim` constructors: PixelCanvas's three text
+  buttons, `ColorSwatch`'s default ctor (Waypoint data chips only — the
+  documented E-class cleanup), and `Slider`'s default ctor (the
+  ThemePreview mock only). Pinned by `TooltipFadeMigrationTest` (dwell
+  gate, fade-from-rest, symmetry, reversal, identity, disabled).
 - **HUD editor**: drag-move / corner-resize / shift+click settings / right-click hide /
   shift+right-click lock / X disable (R-Shift in world).
 

@@ -375,8 +375,11 @@ public abstract class FeatureSetting {
     private static final Map<String, Long> HOVER_DWELL = new HashMap<>();
 
     /** Shared 0→1 fade for the tooltip; advanced exactly once per frame
-     *  in {@link #drawPendingTooltip}. */
-    private static final HoverAnim TOOLTIP_FADE = new HoverAnim(TOOLTIP_FADE_MS);
+     *  in {@link #drawPendingTooltip}. Symmetric (§8.3 vocabulary at the
+     *  tooltip's own 200 ms — supplemental-info motion, not the 140 ms
+     *  control-hover duration): the fade-in animates from rest once the
+     *  dwell completes; it does not snap in. */
+    private static final HoverAnim TOOLTIP_FADE = HoverAnim.symmetric(TOOLTIP_FADE_MS);
 
     /**
      * Tooltip state for the current frame. Label renderers set
