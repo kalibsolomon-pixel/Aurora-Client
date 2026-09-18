@@ -410,8 +410,10 @@ a launch crash, not a silent skip):
 - **Smooth scroll**: target-based exponential lerp advanced in `render()` with wall-clock dt —
   but implemented independently per screen with different τ (45–80 ms) and different scrollbar
   code (6 variants mod-wide; only AuroraScreen and the pack browser draw draggable thumbs).
-- **Hover easing**: three idioms coexist — `util/HoverAnim` (smoothstep, used by widgets),
-  `Button`'s hand-rolled easeOutCubic copy, and the pack browser's Map-keyed `updateHover`.
+- **Hover easing**: the canonical vocabulary is `util/HoverAnim` (Phase B); the
+  former three-idiom split (`HoverAnim` snap-in, `Button`'s hand-rolled easeOutCubic
+  copy, and the pack browser's Map-keyed local animator) is fully retired — Button
+  since pilot 2, the pack browser's tabs/cards since pilot 8 (2026-09-18).
   Four animation helper classes total (`AnimationCurves`, `AuroraAnim`, `HoverAnim`,
   `ui/util/Animation`); `AuroraAnim` is the shared math library.
   **Phase B pilot 1 (2026-09-15): `HoverAnim.symmetric(ms)`** is the §8.3 canonical hover —
@@ -845,6 +847,78 @@ clear rule, multi-value mutation, chip-family entry hover.
   and DevPilot `pixelcanvasb` (11/11 oracles, v3 tree, plus a
   legacy-expectation baseline boot whose first hover sample is exactly
   1.0 — the snap — vs the migrated tree's 0.04–0.28 from rest).
+- **Pack-browser navigation tabs — Phase B pilot 8 (2026-09-18)**: the
+  resource-pack browser's category sidebar (23 rows: 21 selectable tabs
+  + 2 section headers — the audit inventory's "9 tabs" was stale) is the
+  production navigation/tab family, and it models OVERLAPPING state
+  channels rather than an exclusive enum. **selected** = the persistent
+  `activeCategory` (null = "All"), painted as the accent wash that is
+  fully visible at hover 0 (0.30-alpha rest, 0.40 settled-hover) plus
+  the 0.55 accent outline on the flat fallback — never through hover
+  progress. The pre-pilot code drove the active tab's animator with
+  hover-OR-selected, pinning it at its endpoint, so selection was
+  expressed ONLY through stuck hover progress; that conflation is gone
+  (source-pinned: the boolean expression is banned from the file).
+  **hover** = pointer-only `HoverAnim.symmetric(140)` — the screen's
+  whole local 150 ms hover family (tabs AND card bodies) is retired in
+  the same stroke, so a mid-flight reversal now continues from current
+  progress instead of snapping to the far endpoint, and card bodies
+  ride the same canonical animator with their rest endpoint (the
+  `t == 0` template blit) and compound click ownership byte-preserved.
+  **focused** = vanilla child focus on one `SemanticActionControl` per
+  selectable tab (the plain existing action infrastructure — no
+  navigation-specific adapter was needed; the button-like contract
+  models tabs exactly), painted as the Button-family 1 px accent
+  hairline, composing with the selected outline without either channel
+  losing legibility (selection reads through the fill, focus through
+  the stroke). **disabled** = N/A in the current topology (every
+  category is always available; the only gating is the per-frame
+  AVAILABILITY sweep — a tab outside the sidebar clip band or covered
+  by the detail modal can neither take focus nor activate, the
+  card-button discipline). Keyboard: Tab traversal through the vanilla
+  child list (spatial order, the host's established rule), Enter/Space
+  activate the focused inactive tab with exactly one category change;
+  activating the already-selected tab is a SILENT consumed no-op (the
+  baseline re-ran `submitSearch`, clearing the text-fit cache and
+  resetting grid scroll to top on every redundant click). Sound
+  ownership: the tab actions carry `SemanticSound.NONE` and play
+  exactly one ACTIVATION through `MinecraftSemanticFeedback` inside
+  the behavior, only when the category actually changes. NO press
+  animation by decision (the immediate selection transition IS the
+  press acknowledgment; copying Button's scale would suggest a
+  momentary action). Arrow-key navigation DEFERRED (decision B):
+  Left/Right roving-tabindex semantics need a reusable tab-group
+  primitive owning focus-within-group and selection-follows-focus —
+  Phase C component architecture, not a screen-local key handler.
+  Narration carries the category name + `Selected`/`Not selected`
+  state (metadata-verified; `libflite` remains unavailable). The DONE
+  install phase gains the canonical Button disabled treatment
+  (`SURFACE_INSET` fill + muted label — DONE is terminal and its
+  action has been gate-rejected since Phase A; the painter now agrees,
+  and the glass flag went with it since a disabled button never paints
+  glass). Cache/perf: animators keyed by stable identity
+  (`"tab:"+index`, `"card:"+projectId`), card keys pruned with their
+  CardState on result-set change; controls created lazily once per
+  screen instance and re-added by `init()` on resize; no per-frame
+  construction; the sidebar walk stays O(rows). Pinned by
+  `PackTabsPilotTest` (11 tests: exactly-one-click sound model with
+  silent reselection, narration metadata, selected-tab focusability,
+  symmetric-140 without pinning, and source pins for the pointer-only
+  target / one-animator-family / no-op guard / DONE disabled /
+  hairline / semantic click routing / arrow deferral). Verified by
+  DevPilot `packtabsb` boots — 28/28 oracles on BOTH the dark and
+  light/bright themes (captures in the untracked `.devpilot-packtabsb/`;
+  pixel evidence: the selected tab at hover 0 differs from inactive rest
+  by 9304/9328 ROI px with a 0-px drift floor between identical states,
+  the hover delta adds 9176 px, and the focus hairline reads as accent
+  edge rows (60,72,133) over base (13,19,44) on an otherwise unfilled
+  tab) — and a stashed-baseline boot on `f1ccf95` failing exactly the
+  canonical oracles (selected tab pinned at hover 1.0 at rest AND after
+  pointer exit AND on a freshly reopened screen; reversal snapped to
+  the endpoint; the control/narration/keyboard phases skip — no
+  controls exist), with the flipped legacy-expectation oracles passing:
+  the suite discriminates the migration from the baseline.
+  Remaining Phase B family: AccentSetting peer selection.
 - **Tooltips — Phase B canonical fade (2026-09-16)**: the
   `FeatureSetting` label-dwell system is Aurora's ONE production tooltip
   implementation (no other tooltip renderer exists under `screen/ ui/

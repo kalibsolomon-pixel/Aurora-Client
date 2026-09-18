@@ -23,6 +23,7 @@ import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.ui.util.UiLayerCache;
 import com.aurora.client.util.AuroraAnim;
 import com.aurora.client.util.AuroraTheme;
+import com.aurora.client.util.HoverAnim;
 import com.aurora.client.util.ScrollFade;
 import com.aurora.client.util.SmoothScroll;
 import net.minecraft.client.Minecraft;
@@ -58,8 +59,20 @@ import java.util.concurrent.atomic.AtomicReference;
  *       so the browser respects the user's configured accent + background
  *       palette instead of hardcoding white-on-near-black.</li>
  *   <li>Eased hover feedback — cards, tabs and install buttons animate
- *       their fill/outline over ~150 ms via {@link AuroraAnim#easeOutCubic},
- *       matching the rest of Aurora's iOS-style control language.</li>
+ *       their fill/outline over 140 ms via the canonical §8.3
+ *       {@link HoverAnim#symmetric} vocabulary (Phase B pack-tabs pilot,
+ *       2026-09-18; the screen's former local 150 ms animator is retired).
+ *       Tabs model OVERLAPPING state channels: <b>selected</b> — the
+ *       persistent {@code activeCategory}, painted as the accent wash that
+ *       is visible at hover 0 (never through hover progress); <b>hover</b> —
+ *       pointer-only, symmetric 140 ms, never pinned by selection or focus;
+ *       <b>focused</b> — the Button-family 1 px accent hairline on the tab's
+ *       own {@link SemanticActionControl} (Tab traversal + Enter/Space
+ *       activation + Selected/Not-selected narration + exactly one
+ *       selection click; reselecting the current category is a silent
+ *       no-op); <b>disabled</b> — N/A (every category is always available;
+ *       the only gating is per-frame availability under the sidebar clip
+ *       band and the detail modal).</li>
  *   <li>Smooth (target-based) scrolling for both the card grid and the
  *       category sidebar — wheel input sets a target offset and the render
  *       loop lerps toward it, so scrolling glides instead of snapping.</li>
@@ -112,7 +125,8 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
     private static final int TAB_H          = 22;
     private static final int TAB_GAP        = 4;
     private static final int HEADER_H       = 16;       // sidebar section header row height
-    private static final int HOVER_MS       = 150;      // eased-hover duration
+    /** §8.3 canonical hover duration — tabs and card bodies alike (Phase B). */
+    private static final long HOVER_MS      = 140L;
     // (removed SCROLL_EASE — scroll easing is delta-time based in render(),
     //  via the shared SmoothScroll advanced at the top of render().)
 
@@ -233,9 +247,10 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
          * held it). Card-sized and modal-sized variants are separate controls
          * because their bounds (and glass passes) differ. RESOLVING/
          * DOWNLOADING/DONE-phase actions carry a disabled gate — matching
-         * {@code handleInstallClick}'s own phase guard — without mirroring
-         * the disabled LOOK onto the painter (those phases keep today's
-         * enabled-style pixels; the disabled treatment pilot is Phase B).
+         * {@code handleInstallClick}'s own phase rule. Since the Phase B
+         * pack-tabs pilot the DONE painter carries the matching disabled
+         * treatment (visuals agree with the gate); RESOLVING/DOWNLOADING
+         * keep enabled-style busy pixels — in-progress, not unavailable.
          */
         final SemanticActionControl[] cardPhaseControls = new SemanticActionControl[5];
         final SemanticActionControl[] modalPhaseControls = new SemanticActionControl[5];
@@ -253,19 +268,25 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
     /** Sidebar scroll — same glide; wheel step 28, thumb min 24. */
     private final SmoothScroll sidebarScroll = new SmoothScroll(80.0);
 
-    // ---- Eased hover state (keyed by stable index: tab slug / project id / "card"+i) ----
-    // One state object per key instead of three parallel maps. Deliberately
-    // NOT util/HoverAnim: these hovers EASE IN from zero on first hover,
-    // while HoverAnim (locked at 0 at rest) settles instantly on its first
-    // target=true frame — adopting it would visibly change every card's
-    // first hover-in. Same easing curve (easeOutCubic) as HoverAnim's
-    // EASE_OUT_CUBIC.
-    private final Map<String, HoverEase> hovers = new HashMap<>();
+    // ---- Canonical hover state (keyed by stable identity: "tab:"+index,
+    // "card:"+projectId) ----
+    // Phase B pack-tabs pilot (2026-09-18): the screen's former local
+    // 150 ms hover animator is RETIRED — tabs and card bodies animate on the
+    // §8.3 canonical
+    // HoverAnim.symmetric(140) (smoothstep, pointer-only targets, continuous
+    // mid-flight reversal — the old local animator restarted a reversal from
+    // the far endpoint, so an interrupted enter visibly jumped). The animators
+    // are keyed by stable identity (CATEGORIES array index / Modrinth project
+    // id), never by list position, and card keys are pruned together with
+    // their CardState when a result set changes. The former hover-OR-selected
+    // target on the active tab is the conflation this
+    // pilot removed: selection now reads through the persistent accent wash
+    // (see renderSidebar), so hover progress returns to 0 the moment the
+    // pointer leaves the tab while the tab stays visibly selected.
+    private final Map<String, HoverAnim> hovers = new HashMap<>();
 
-    private static final class HoverEase {
-        float t;
-        Long start;
-        boolean active;
+    private HoverAnim hoverAnim(String key) {
+        return hovers.computeIfAbsent(key, k -> HoverAnim.symmetric(HOVER_MS));
     }
 
     // ---- Toast feedback ----
@@ -303,6 +324,31 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
     private final List<SemanticActionControl> semanticControls = new ArrayList<>();
     private boolean semanticWidgetsLive = false;
 
+    /**
+     * Per-category-tab semantic controls (Phase B pack-tabs pilot,
+     * 2026-09-18) — one per SELECTABLE tab, lazily created by the sidebar
+     * walk that first paints it, in lockstep with the CATEGORIES array
+     * (header rows stay null). Tabs are navigation, and the
+     * {@link SemanticActionControl} vocabulary models them exactly — focus
+     * traversal, Enter/Space activation, narration with selection metadata,
+     * the selection click — so no navigation-specific adapter was built:
+     * this IS the existing semantic action infrastructure, one action per
+     * tab, enabled-gate {@code () -> true} (disabled/unavailable is N/A in
+     * the current topology — every category is always selectable; the only
+     * gating is the per-frame AVAILABILITY sweep: a tab scrolled out of the
+     * sidebar clip band or covered by the detail modal can neither take
+     * focus nor activate, keeping render truth and input truth agreed).
+     * Sound ownership: the action carries {@link SemanticSound#NONE} and
+     * plays exactly one {@link SemanticSound#ACTIVATION} through
+     * {@link MinecraftSemanticFeedback} inside its behavior, ONLY when the
+     * category actually changes — activating the already-selected tab is a
+     * silent consumed no-op (no re-fetch, no scroll reset, no repeated
+     * click). No press animation by decision: the immediate selection
+     * transition IS the feedback (§8.4 tabs acknowledge press via
+     * selection; copying Button's scale would suggest a momentary action).
+     */
+    private final SemanticActionControl[] tabControls = new SemanticActionControl[CATEGORIES.length];
+
     /** True while the modal is past its interaction gate — the same condition the click path uses. */
     private boolean modalInteractive() {
         return detailOpenT > 0.5f && detailProject != null;
@@ -322,6 +368,61 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         if (control == null) return;
         semanticControls.remove(control);
         if (semanticWidgetsLive) this.removeWidget(control);
+    }
+
+    /** True when {@code tab} is the persistent selected category (null slug = "All"). */
+    private boolean isActiveCategory(CategoryTab tab) {
+        return (tab.slug == null && activeCategory == null)
+                || (tab.slug != null && tab.slug.equals(activeCategory));
+    }
+
+    /**
+     * The one category-selection path — pointer clicks and keyboard
+     * activation both land here. Activating the already-selected category is
+     * a NO-OP by decision (Phase B): the baseline re-ran submitSearch, which
+     * cleared the text-fit cache and reset the grid scroll to top on every
+     * redundant click — redundant downstream work with a visible side
+     * effect. Selection itself remains immediate (same tick), and hover
+     * stays pointer-derived per tab (the animators are independent of this
+     * state).
+     */
+    private void selectCategory(CategoryTab tab) {
+        if (isActiveCategory(tab)) return;
+        activeCategory = tab.slug;
+        pendingQuery = searchField != null ? searchField.getValue() : "";
+        submitSearch(pendingQuery, activeCategory);
+    }
+
+    /**
+     * The tab's semantic control — focus traversal, Enter/Space activation,
+     * exactly-one selection click, narration carrying
+     * {@code Selected / Not selected}. Enabled is unconditionally true so
+     * the SELECTED tab stays focusable and narrates normally (a disabled
+     * gate would drop it out of Tab traversal — you could never key onto
+     * the current category); the already-selected no-op lives in the
+     * behavior with the sound (see the field javadoc above).
+     */
+    private SemanticActionControl tabControl(int i) {
+        SemanticActionControl control = tabControls[i];
+        if (control != null) return control;
+        CategoryTab tab = CATEGORIES[i];
+        control = new SemanticActionControl(new SemanticAction(
+                Component.literal(tab.displayName),
+                () -> Component.literal("Filters the pack list to this category."),
+                () -> Component.literal(isActiveCategory(tab) ? "Selected" : "Not selected"),
+                () -> true,
+                () -> {
+                    if (isActiveCategory(tab)) return; // silent no-op
+                    MinecraftSemanticFeedback.INSTANCE.play(SemanticSound.ACTIVATION);
+                    selectCategory(tab);
+                },
+                SemanticSound.NONE, true, true),
+                MinecraftSemanticFeedback.INSTANCE,
+                null, // no press animation — selection transition is the feedback
+                SemanticActionControl.PointerRouting.MANUAL);
+        tabControls[i] = control;
+        registerSemanticControl(control);
+        return control;
     }
 
     /**
@@ -473,6 +574,13 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
                 }
             }
             cardStates.keySet().retainAll(liveIds);
+            // Card hover animators are keyed by the same stable ids — prune
+            // them with their CardState so vanished cards never leave stale
+            // animator entries behind (tab animators are index-keyed and
+            // live for the screen's lifetime).
+            Set<String> liveHoverKeys = new java.util.HashSet<>(liveIds.size());
+            for (String id : liveIds) liveHoverKeys.add("card:" + id);
+            hovers.keySet().removeIf(k -> k.startsWith("card:") && !liveHoverKeys.contains(k));
         }
         String err = pendingError.getAndSet(null);
         if (err != null) {
@@ -736,14 +844,22 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
     }
 
     /**
-     * The ACTIVE category tab's surface. Its historical look is a raised
-     * glass panel tinted by an accent wash whose strength lerps with hover
-     * (0.30→0.40) — the wash IS the tint, so it paints here, in the pass,
-     * through the explicit-tint GlassSurface.control; the hover ease for the
-     * active tab's key advances here (once per frame — renderSidebar skips
-     * it for the active tab and reads activeTabT). Under the tracked sidebar
-     * clip so the deferred rim keeps it. Inactive tabs stay flat by design
-     * (small transient rows inside an already-glass container).
+     * The ACTIVE category tab's surface. Its look is a raised glass panel
+     * tinted by an accent wash whose strength lerps with hover (0.30→0.40) —
+     * the wash IS the tint, so it paints here, in the pass, through the
+     * explicit-tint GlassSurface.control; the hover ease for the active
+     * tab's key advances here (once per frame — renderSidebar skips it for
+     * the active tab and reads activeTabT). The target is the POINTER ONLY
+     * (Phase B): the pre-pilot code drove this animator with hover OR
+     * selected, so the persistent selected state was
+     * expressed solely through a hover animator stuck at its endpoint —
+     * selection is now the persistent 0.30 wash itself (visible at
+     * hoverT == 0), and hover is the transient 0.30→0.40 strengthening on
+     * top. The tab's semantic control is stamped here too (bounds +
+     * availability under the same clip/modal gates the content walk uses).
+     * Under the tracked sidebar clip so the deferred rim keeps it. Inactive
+     * tabs stay flat by design (small transient rows inside an already-glass
+     * container).
      */
     private void paintActiveTabPass(GuiGraphics g, int mouseX, int mouseY,
                                     int panelX, int panelY, int panelW, int panelH) {
@@ -759,13 +875,15 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
                 tabY += HEADER_H;
                 continue;
             }
-            boolean isActive = (tab.slug == null && activeCategory == null)
-                    || (tab.slug != null && tab.slug.equals(activeCategory));
-            if (isActive) {
-                boolean hover = Widget.inBounds(mouseX, mouseY, tabX, tabY, tabW, TAB_H)
+            if (isActiveCategory(tab)) {
+                boolean visible = tabY + TAB_H > clipTop && tabY < clipBot;
+                boolean hover = visible && Widget.inBounds(mouseX, mouseY, tabX, tabY, tabW, TAB_H)
                         && mouseY >= clipTop && mouseY < clipBot;
-                activeTabT = updateHover("tab:" + i, hover || isActive);
-                if (tabY + TAB_H > clipTop && tabY < clipBot) {
+                activeTabT = hoverAnim("tab:" + i).update(hover);
+                SemanticActionControl control = tabControl(i);
+                control.setBounds(tabX, tabY, tabW, TAB_H);
+                control.setAvailable(visible && !modalInteractive());
+                if (visible) {
                     float tabR = Math.min(TAB_H / 2f, AuroraTheme.RADIUS_SMALL);
                     int fill = AuroraAnim.lerpArgb(
                             AuroraAnim.scaleAlpha(AuroraTheme.IOS_BLUE, 0.30f),
@@ -867,22 +985,39 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
                 continue;
             }
 
-            boolean isActive = (tab.slug == null && activeCategory == null)
-                    || (tab.slug != null && tab.slug.equals(activeCategory));
-            boolean hover = Widget.inBounds(mouseX, mouseY, tabX, tabY, tabW, TAB_H)
+            boolean isActive = isActiveCategory(tab);
+            boolean inBand = tabY + TAB_H > clipTop && tabY < clipBot;
+            boolean hover = inBand && Widget.inBounds(mouseX, mouseY, tabX, tabY, tabW, TAB_H)
                     && mouseY >= clipTop && mouseY < clipBot;
 
-            // Eased hover / active transition. The ACTIVE tab's ease is
-            // advanced by the glass pass (its tint is the accent wash, so
-            // the lerp is evaluated there); inactive tabs advance here.
-            String key = "tab:" + i;
-            float t = isActive ? activeTabT : updateHover(key, hover || isActive);
+            // Semantic control sync (the EnumSetting/BooleanSetting
+            // discipline): bounds, availability (clip band + modal cover),
+            // and pointer-hover-for-narration mirror the painted geometry
+            // every frame, so render truth and input truth agree — a tab
+            // scrolled out of the band or covered by the detail modal can
+            // neither be keyed nor clicked.
+            SemanticActionControl control = tabControl(i);
+            control.setBounds(tabX, tabY, tabW, TAB_H);
+            control.setAvailable(inBand && !modalInteractive());
+            control.updatePointer(mouseX, mouseY);
+
+            // Canonical hover: the POINTER only, symmetric 140 ms. The
+            // ACTIVE tab's ease is advanced by the glass pass (its tint is
+            // the accent wash, so the lerp is evaluated there — renderSidebar
+            // reads activeTabT); inactive tabs advance here. Selection is a
+            // SEPARATE persistent channel: the active rest fill is the 0.30
+            // accent wash itself (visible at hoverT == 0), hover composes on
+            // top as the transient 0.30→0.40 strengthening — the four states
+            // (inactive/active × rest/hover) never collapse.
+            float t = isActive ? activeTabT : hoverAnim("tab:" + i).update(hover);
 
             int fill;
             int textCol;
             int outlineCol = 0;
             if (isActive) {
-                // Accent-tinted active fill, lerping in on hover.
+                // Persistent selected treatment: accent wash fill (0.30 at
+                // rest, 0.40 settled-hover) + accent outline — independent
+                // of the hover animator's endpoint.
                 int accentFill = AuroraAnim.lerpArgb(
                         AuroraAnim.scaleAlpha(AuroraTheme.IOS_BLUE, 0.30f),
                         AuroraAnim.scaleAlpha(AuroraTheme.IOS_BLUE_HOVER, 0.40f), t);
@@ -911,6 +1046,17 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
                 }
             } else if ((fill >>> 24) != 0) {
                 RenderUtil.drawRoundedRectAA(g, tabX, tabY, tabW, TAB_H, tabR, fill);
+            }
+
+            // Keyboard focus: the Button-family 1 px accent hairline
+            // (geometry-following, 0x99) — an independent channel from both
+            // the wash (selection's carrier) and hover. It composes with the
+            // selected outline (0x55 accent underneath) without either state
+            // losing legibility: selection reads through the fill, focus
+            // through the stroke.
+            if (control.isFocused()) {
+                RenderUtil.drawRoundedOutlineAA(g, tabX, tabY, tabW, TAB_H, tabR, 1.0f,
+                        ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
             }
 
             String label = tab.displayName;
@@ -953,7 +1099,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
 
     private void renderCard(GuiGraphics g, ModrinthProject p, int x, int y, int mouseX, int mouseY) {
         boolean cardHover = Widget.inBounds(mouseX, mouseY, x, y, CARD_W, CARD_H);
-        float t = updateHover("card:" + p.projectId, cardHover);
+        float t = hoverAnim("card:" + p.projectId).update(cardHover);
 
         // Card body — deliberately FLAT (audit R9/B1/B2, 2026-09-08): the
         // hover-lerp tint below is fully opaque, so when this was a per-card
@@ -1060,7 +1206,13 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
      * is the primary action → accent-STAINED glass (the glass conventions
      * reserve stained for primary/selected elements; the detail modal's old
      * hand-rolled Install was already an accent gradient); Resolving…/
-     * Downloading…/Installed ✓ are neutral glass; Retry is the component's
+     * Downloading… are neutral glass (busy states — their phase gate already
+     * rejects activation and narrates the progress line, and their pixels
+     * legitimately read as an in-progress control, not an unavailable one);
+     * Installed ✓ carries the canonical Button DISABLED treatment
+     * (inset fill, muted label — DONE is terminal and its action is
+     * genuinely unavailable, so the painter finally agrees with the gate the
+     * semantic action has enforced since Phase A); Retry is the component's
      * destructive treatment (semantic-error fill + outline + white label —
      * Button deliberately pins destructive to the flat look). The previous
      * success-green fills are not expressible through the shared painter
@@ -1078,7 +1230,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
             case CardState.DOWNLOADING -> new Button(Component.literal("Downloading…"), () -> {})
                     .glassBackground(true).priority(BlurPanelRenderer.Priority.DETAIL);
             case CardState.DONE -> new Button(Component.literal("Installed ✓"), () -> {})
-                    .glassBackground(true).priority(BlurPanelRenderer.Priority.DETAIL);
+                    .disabled(true);
             case CardState.FAILED -> new Button(Component.literal("Retry"), () -> {})
                     .destructive(true);
             default -> throw new IllegalArgumentException("phase " + phase);
@@ -1091,10 +1243,10 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
      * action's enabled gate is the install handler's own phase rule (IDLE and
      * FAILED accept; RESOLVING/DOWNLOADING/DONE reject) — a rejected activation
      * is consumed-but-inert at the call sites, exactly like today's clicks on
-     * a "Resolving…" button. The disabled LOOK is deliberately NOT mirrored
-     * onto the painter (those phases keep today's enabled-style pixels; the
-     * disabled treatment pilot is Phase B) — narration reports the state
-     * instead. The accessible name carries the pack title.
+     * a "Resolving…" button, and narration reports the phase state. DONE's
+     * painter mirrors the gate with the canonical disabled treatment; the
+     * busy phases keep enabled-style pixels (see newPhaseButton). The
+     * accessible name carries the pack title.
      */
     private SemanticActionControl phaseControl(ModrinthProject p, CardState st, int phase,
                                                Button painter, boolean modal) {
@@ -1379,6 +1531,11 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         }
 
         // Sidebar tab clicks (respecting the clip region + scroll offset).
+        // Every hit routes through the tab's semantic control — the enabled
+        // gate, exactly-one selection click, and sound ownership all live in
+        // the action; the click is consumed either way (an already-selected
+        // hit is the silent no-op; a release through would reach nothing
+        // else in the sidebar). Header rows are not controls and never hit.
         int panelY = TOP_BAR_H;
         int panelH = this.height - TOP_BAR_H - 16;
         int clipTop = panelY + 26;
@@ -1392,9 +1549,12 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
             if (tab.section != Section.HEADER
                     && Widget.inBounds(mouseX, mouseY, tabX, tabY, tabW, rowH)
                     && mouseY >= clipTop && mouseY < clipBot) {
-                activeCategory = tab.slug;
-                pendingQuery = searchField != null ? searchField.getValue() : "";
-                submitSearch(pendingQuery, activeCategory);
+                SemanticActionControl control = tabControls[i];
+                if (control != null && control.activateFromPointer(mouseX, mouseY, 0)) {
+                    this.setFocused(control);
+                } else if (control == null) {
+                    selectCategory(tab); // pre-first-render click — cannot normally happen
+                }
                 return true;
             }
             tabY += tab.section == Section.HEADER ? HEADER_H : TAB_H + TAB_GAP;
@@ -1716,31 +1876,6 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
                 });
             });
         });
-    }
-
-    // ------------------------------------------------------------------
-    //  Hover easing helper
-    // ------------------------------------------------------------------
-
-    /**
-     * Advances an eased hover animation for {@code key} and returns the
-     * current normalized value {@code [0,1]}. Tracks active/inactive
-     * transitions so a hover-out plays the reverse curve smoothly.
-     */
-    private float updateHover(String key, boolean active) {
-        HoverEase h = hovers.computeIfAbsent(key, k -> new HoverEase());
-        if (active != h.active) {
-            h.start = System.currentTimeMillis();
-            h.active = active;
-        }
-        if (active && h.t >= 1f) return 1f;
-        if (!active && h.t <= 0f) return 0f;
-
-        if (h.start == null) return active ? 1f : 0f;
-        float raw = AuroraAnim.clamp01((System.currentTimeMillis() - h.start) / (float) HOVER_MS);
-        float t = active ? raw : (1f - raw);
-        h.t = AuroraAnim.easeOutCubic(t);
-        return h.t;
     }
 
     // ------------------------------------------------------------------
