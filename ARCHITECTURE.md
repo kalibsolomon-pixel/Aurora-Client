@@ -806,6 +806,45 @@ clear rule, multi-value mutation, chip-family entry hover.
   absent and the settle never refilled it), and going live also deletes the per-flip
   full-frame row-cache re-raster the old on/off fingerprint bit caused (~35 AA fills
   per toggle per frame; 1–6 toggles per screen ≈ 200 fills, far under the §10 line).
+- **PixelCanvas actions — Phase B full semantic adoption (2026-09-18)**:
+  the three text actions of `PixelCanvasSetting`'s TWO production rows
+  (the crosshair main canvas + indicator canvas; 56×16 Clear/Default and
+  46×16 Apply) adopted the complete canonical action vocabulary —
+  symmetric 140 ms hover (the last legacy snap-in action animators are
+  retired), and a `SemanticActionControl` per action (the KeyList add-pill
+  pattern, extended: `FeatureSetting.interactionControls()` now returns a
+  LIST — the single-control default flows through unchanged — and
+  `FeatureDetailScreen` registers/sweeps/refocuses the whole list). Tab
+  order is visual/read (Clear, Apply, Default); focus is the Button-family
+  1 px accent hairline on each button rect, never while disabled;
+  Enter/Space activate with exactly one activation click through
+  `MinecraftSemanticFeedback` (pointer paths route through
+  `activateFromPointer`, direct-path fallback for headless hosts);
+  narration carries per-action names ("Clear Canvas" / "Restore Default
+  Shape" / "Apply Resolution") plus concise descriptions. NO press
+  animation by decision (the immediate action result + status line is the
+  feedback — the Keybind/KeyList precedent). Disabled is the authoritative
+  gate everywhere: the row's existing style-based supplier drives render,
+  hover suppression, pointer AND keyboard rejection with no mutation or
+  save (runtime-oracled: style=CROSS rejects all three). Data semantics
+  byte-preserved: Clear zeroes in place with one save; Default commits the
+  vanilla 15×15 pattern + dims with one save + focus release; Apply
+  validates → measured-benchmark/warn → center-copy resize with one save;
+  the W/H fields' own Enter route is untouched (an expanded enum-style
+  double-activation is impossible — the fields and the semantic control
+  never hold focus simultaneously). The warning panel's Apply Anyway /
+  Cancel stay MANUAL (modal-confirmation family, immediate hover, disabled
+  while measuring — classified, not migrated), and the canvas body is a
+  direct-manipulation data surface untouched by this migration. The
+  compact `+`/`×`/`−` glyph family elsewhere stays deferred to the Phase C
+  icon-action primitive (unit-pinned). Post-migration legacy `HoverAnim`
+  inventory: `Slider`'s default ctor (ThemePreview mock only),
+  `ColorSwatch`'s default ctor (Waypoint data chips only — the documented
+  E-class cleanup), and `HoverAnim.symmetric`'s own internal private ctor
+  — nothing else. Verified by `PixelCanvasActionMigrationTest` (5 tests)
+  and DevPilot `pixelcanvasb` (11/11 oracles, v3 tree, plus a
+  legacy-expectation baseline boot whose first hover sample is exactly
+  1.0 — the snap — vs the migrated tree's 0.04–0.28 from rest).
 - **Tooltips — Phase B canonical fade (2026-09-16)**: the
   `FeatureSetting` label-dwell system is Aurora's ONE production tooltip
   implementation (no other tooltip renderer exists under `screen/ ui/
@@ -819,10 +858,11 @@ clear rule, multi-value mutation, chip-family entry hover.
   progress continuously. The tooltip's 200 ms is its own
   supplemental-information motion family, deliberately NOT the 140 ms
   control-hover duration. The tooltip legacy snap-in dialect is retired;
-  remaining legacy `HoverAnim` constructors: PixelCanvas's three text
-  buttons, `ColorSwatch`'s default ctor (Waypoint data chips only — the
-  documented E-class cleanup), and `Slider`'s default ctor (the
-  ThemePreview mock only). Pinned by `TooltipFadeMigrationTest` (dwell
+  remaining legacy `HoverAnim` constructors after the tooltip migration
+  were PixelCanvas's three text buttons (migrated 2026-09-18 — see the
+  PixelCanvas entry above), `ColorSwatch`'s default ctor (Waypoint data
+  chips only — the documented E-class cleanup), and `Slider`'s default
+  ctor (the ThemePreview mock only). Pinned by `TooltipFadeMigrationTest` (dwell
   gate, fade-from-rest, symmetry, reversal, identity, disabled).
 - **HUD editor**: drag-move / corner-resize / shift+click settings / right-click hide /
   shift+right-click lock / X disable (R-Shift in world).

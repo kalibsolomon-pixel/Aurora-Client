@@ -134,9 +134,21 @@ public class PixelCanvasSetting extends FeatureSetting {
     private int sizeRowY;
     private int defaultBtnX, defaultBtnY;
 
-    private final HoverAnim clearHoverAnim = new HoverAnim(140L);
-    private final HoverAnim defaultHoverAnim = new HoverAnim(140L);
-    private final HoverAnim applyHoverAnim = new HoverAnim(140L);
+    // §8.3 canonical symmetric hover (Phase B): enter animates from rest,
+    // exit mirrors raw progress — the legacy snap-in constructors are gone.
+    private final HoverAnim clearHoverAnim = HoverAnim.symmetric(140L);
+    private final HoverAnim defaultHoverAnim = HoverAnim.symmetric(140L);
+    private final HoverAnim applyHoverAnim = HoverAnim.symmetric(140L);
+
+    // Semantic action adapters (Phase B full adoption — ordinary discrete
+    // text actions, not the deferred compact glyph family): each button
+    // gains Tab focus (Button-family hairline), Enter/Space activation,
+    // narration metadata, and exactly-one activation click through
+    // MinecraftSemanticFeedback. Long-lived; bounds follow the row each
+    // render (the KeyList add-pill pattern).
+    private com.aurora.client.ui.interaction.SemanticActionControl clearControl;
+    private com.aurora.client.ui.interaction.SemanticActionControl defaultControl;
+    private com.aurora.client.ui.interaction.SemanticActionControl applyControl;
 
     // Free-form resolution input
     private final EditBox widthField;
@@ -286,6 +298,11 @@ public class PixelCanvasSetting extends FeatureSetting {
                 clearBtnX + (CLEAR_BTN_W - clearLabelW) / 2,
                 clearBtnY + (CLEAR_BTN_H - tr.lineHeight) / 2 + 1,
                 clearText, false);
+        if (clearControl == null) clearControl = createControl("Clear Canvas",
+                "Erase every painted pixel from the custom crosshair canvas.", this::clearCanvas);
+        clearControl.setBounds(clearBtnX, clearBtnY, CLEAR_BTN_W, CLEAR_BTN_H);
+        clearControl.updatePointer(mouseX, mouseY);
+        drawFocusHairline(ctx, clearControl, clearBtnX, clearBtnY, CLEAR_BTN_W, CLEAR_BTN_H, disabled);
 
         // ---- Free-form resolution row: [W] × [H] [Apply] ----
         sizeRowY = y + LABEL_H;
@@ -392,6 +409,11 @@ public class PixelCanvasSetting extends FeatureSetting {
         String lbl = "Apply";
         ctx.drawString(tr, lbl, applyBtnX + (APPLY_W - tr.width(lbl)) / 2,
                 applyBtnY + (CLEAR_BTN_H - tr.lineHeight) / 2 + 1, text, false);
+        if (applyControl == null) applyControl = createControl("Apply Resolution",
+                "Apply the entered canvas width and height.", this::onApplyClicked);
+        applyControl.setBounds(applyBtnX, applyBtnY, APPLY_W, CLEAR_BTN_H);
+        applyControl.updatePointer(mouseX, mouseY);
+        drawFocusHairline(ctx, applyControl, applyBtnX, applyBtnY, APPLY_W, CLEAR_BTN_H, disabled);
     }
 
     private void drawDefaultButton(GuiGraphics ctx, Font tr, int mouseX, int mouseY, boolean disabled) {
@@ -405,6 +427,52 @@ public class PixelCanvasSetting extends FeatureSetting {
         String lbl = "Default";
         ctx.drawString(tr, lbl, defaultBtnX + (DEFAULT_W - tr.width(lbl)) / 2,
                 defaultBtnY + (CLEAR_BTN_H - tr.lineHeight) / 2 + 1, text, false);
+        if (defaultControl == null) defaultControl = createControl("Restore Default Shape",
+                "Restore the vanilla 15×15 crosshair shape.", this::applyVanillaDefault);
+        defaultControl.setBounds(defaultBtnX, defaultBtnY, DEFAULT_W, CLEAR_BTN_H);
+        defaultControl.updatePointer(mouseX, mouseY);
+        drawFocusHairline(ctx, defaultControl, defaultBtnX, defaultBtnY, DEFAULT_W, CLEAR_BTN_H, disabled);
+    }
+
+    /** The Button-family geometry-following focus hairline (EnumSetting's
+     *  idiom): visible without hover, never while disabled. */
+    private void drawFocusHairline(GuiGraphics ctx,
+                                   com.aurora.client.ui.interaction.SemanticActionControl control,
+                                   int bx, int by, int bw, int bh, boolean disabled) {
+        if (disabled || control == null || !control.isFocused()) return;
+        RenderUtil.drawRoundedOutlineAA(ctx, bx, by, bw, bh, AuroraTheme.RADIUS_SMALL, 1.0f,
+                com.aurora.client.theme.ThemeManager.withAlpha(
+                        com.aurora.client.theme.ThemeManager.color(com.aurora.client.theme.ThemeToken.ACCENT), 0x99));
+    }
+
+    /** Lazy semantic-control factory (the KeyList add-pill pattern). */
+    private com.aurora.client.ui.interaction.SemanticActionControl createControl(
+            String name, String description, Runnable onActivate) {
+        return new com.aurora.client.ui.interaction.SemanticActionControl(
+                com.aurora.client.ui.interaction.SemanticAction.button(
+                        Component.literal(name),
+                        () -> Component.literal(description),
+                        () -> Component.empty(),
+                        () -> !isDisabled(),
+                        onActivate),
+                com.aurora.client.ui.interaction.MinecraftSemanticFeedback.INSTANCE,
+                null,
+                com.aurora.client.ui.interaction.SemanticActionControl.PointerRouting.MANUAL);
+    }
+
+    /** The row's three semantic actions, in visual/read order
+     *  (Clear sits in the label row above the size row's Apply/Default). */
+    @Override
+    public java.util.List<com.aurora.client.ui.interaction.SemanticActionControl> interactionControls() {
+        // Lazily materialize so the list exists before the first render
+        // (the host registers at screen open, which precedes render).
+        if (clearControl == null) clearControl = createControl("Clear Canvas",
+                "Erase every painted pixel from the custom crosshair canvas.", this::clearCanvas);
+        if (defaultControl == null) defaultControl = createControl("Restore Default Shape",
+                "Restore the vanilla 15×15 crosshair shape.", this::applyVanillaDefault);
+        if (applyControl == null) applyControl = createControl("Apply Resolution",
+                "Apply the entered canvas width and height.", this::onApplyClicked);
+        return java.util.List.of(clearControl, applyControl, defaultControl);
     }
 
     private void drawWarnButton(GuiGraphics ctx, Font tr, int bx, int by, int bw, int bh,
@@ -573,6 +641,17 @@ public class PixelCanvasSetting extends FeatureSetting {
                 String.format(java.util.Locale.ROOT, "%.4f", measuredPerFillMs));
     }
 
+    /** Clear action (unchanged semantics): zero the pixel array in place,
+     *  one edit-version bump, one save. */
+    private void clearCanvas() {
+        boolean[] pixels = pixels();
+        if (pixels != null) {
+            for (int i = 0; i < pixels.length; i++) pixels[i] = false;
+            editVersion++;
+            AuroraConfig.save();
+        }
+    }
+
     /** Commits the vanilla 15×15 crosshair shape (Default button). A
      *  fixed, curated pattern — skips the measured-cost flow, and cancels
      *  any in-flight benchmark/warning for a manual entry. */
@@ -681,6 +760,11 @@ public class PixelCanvasSetting extends FeatureSetting {
             heightField.setFocused(false);
 
             if (Widget.inBounds(mouseX, mouseY, applyBtnX, applyBtnY, APPLY_W, CLEAR_BTN_H)) {
+                // Semantic host owns activation (one activation click, enabled
+                // gate, narration); consume-but-inert on rejection.
+                if (applyControl != null && applyControl.isAvailable()) {
+                    return applyControl.activateFromPointer(mouseX, mouseY, button);
+                }
                 onApplyClicked();
                 return true;
             }
@@ -689,6 +773,9 @@ public class PixelCanvasSetting extends FeatureSetting {
         // Default button: restore the vanilla 15×15 pattern.
         if (button == 0
                 && Widget.inBounds(mouseX, mouseY, defaultBtnX, defaultBtnY, DEFAULT_W, CLEAR_BTN_H)) {
+            if (defaultControl != null && defaultControl.isAvailable()) {
+                return defaultControl.activateFromPointer(mouseX, mouseY, button);
+            }
             applyVanillaDefault();
             return true;
         }
@@ -696,12 +783,10 @@ public class PixelCanvasSetting extends FeatureSetting {
         // Clear button.
         if (button == 0
                 && Widget.inBounds(mouseX, mouseY, clearBtnX, clearBtnY, CLEAR_BTN_W, CLEAR_BTN_H)) {
-            boolean[] pixels = pixels();
-            if (pixels != null) {
-                for (int i = 0; i < pixels.length; i++) pixels[i] = false;
-                editVersion++;
-                AuroraConfig.save();
+            if (clearControl != null && clearControl.isAvailable()) {
+                return clearControl.activateFromPointer(mouseX, mouseY, button);
             }
+            clearCanvas();
             return true;
         }
 

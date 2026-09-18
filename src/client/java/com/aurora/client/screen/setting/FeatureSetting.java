@@ -187,6 +187,19 @@ public abstract class FeatureSetting {
     }
 
     /**
+     * All custom-painted semantic controls of this setting. Default: the
+     * single {@link #interactionControl()} when non-null, else empty.
+     * Settings exposing several distinct actions (PixelCanvas's
+     * Clear/Default/Apply) override this; the owning screen registers,
+     * availability-sweeps, and refocuses the whole list. Lazy single
+     * controls keep flowing through the default without change.
+     */
+    public java.util.List<com.aurora.client.ui.interaction.SemanticActionControl> interactionControls() {
+        com.aurora.client.ui.interaction.SemanticActionControl c = interactionControl();
+        return c == null ? java.util.List.of() : java.util.List.of(c);
+    }
+
+    /**
      * Notifies a setting whether its semantic control is currently inside
      * the owning screen's effective interaction viewport. Most settings do
      * not hold modal input state and need no callback. Capture-style

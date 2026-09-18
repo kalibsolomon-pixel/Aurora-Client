@@ -150,8 +150,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         // lifecycle without joining its render list. Their setting remains
         // the sole pixel and clipped-pointer owner.
         for (FeatureSetting setting : meta.settings) {
-            SemanticActionControl control = setting.interactionControl();
-            if (control != null) {
+            for (SemanticActionControl control : setting.interactionControls()) {
                 control.setFocused(false);
                 control.setAvailable(false);
                 this.addWidget(control);
@@ -313,10 +312,11 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         int gy = TOP_PAD - (int) scroll.current();
         for (FeatureSetting s : meta.settings) {
             int gh = s.height();
-            SemanticActionControl control = s.interactionControl();
-            if (control != null) {
+            if (!s.interactionControls().isEmpty()) {
                 boolean available = gy + gh > TOP_FADE_Y && gy < this.height;
-                control.setAvailable(available);
+                for (SemanticActionControl control : s.interactionControls()) {
+                    control.setAvailable(available);
+                }
                 s.onInteractionAvailabilityChanged(available);
             }
             if (gy + gh > 0 && gy < this.height) {
@@ -467,7 +467,8 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
             if (mouseY >= TOP_FADE_Y && y + h > TOP_FADE_Y && y < this.height
                     && s.mouseClicked(mouseX, mouseY, button, listX, y, LIST_W)) {
                 activeDragSetting = s;
-                if (s.interactionControl() != null) this.setFocused(s.interactionControl());
+                var controls = s.interactionControls();
+                if (!controls.isEmpty()) this.setFocused(controls.get(0));
                 return true;
             }
             y += h + ROW_GAP;
