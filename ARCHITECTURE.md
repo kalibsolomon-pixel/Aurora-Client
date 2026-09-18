@@ -1136,6 +1136,179 @@ documentation and tests only.
 - **HUD editor**: drag-move / corner-resize / shift+click settings / right-click hide /
   shift+right-click lock / X disable (R-Shift in world).
 
+**PHASE C IMPLEMENTATION PLAN (2026-09-18 — source-derived audit of `27bf258`;
+planning only, no production change has been made).** Phase C is *Geometry and
+Conformance* (DESIGN_LANGUAGE §18): rectangular chrome to resolved roundness,
+the icon-action primitive, render-clip/input-bounds coupling, and the deferred
+host/component work Phase B froze out. Everything below was verified from
+source at the Phase B closure baseline; file:line refs are current.
+
+**C-1. Viewport/input bounds coupling (the correctness core).** The known
+`AuroraScreen` render/input disagreement is real and has three parts:
+(a) the **Settings-tab click walk is un-gated** — render culls rows to the
+`viewTop()/viewBot()` band and scissors to `[boxY()+36, boxY()+230]`
+(`AuroraScreen.java:517/:555`), but `mouseClicked` walks EVERY inline row,
+header-click zone, and toggle zone at raw screen coords with no viewport test
+(`:761-791`), so a setting scrolled off-screen (even above the window or below
+it, over the dim) is still clickable and its inline `EditBox` focusable;
+(b) **Modules-tab tiles use unclamped partial rects** — `cardBounds` culls
+fully-invisible tiles but the click/hover tests use the FULL card rect
+(`:745-758`, hover `:464`), leaving up to ~78 px of invisible clickable area
+below the window border (a tile straddling the bottom edge is toggleable by
+clicking the dim outside the window) and hover feedback while the pointer is
+over invisible pixels; (c) **three bands disagree** — scissor
+`[boxY()+36, boxY()+230]` (inlined 4×: `:342/:356/:458/:517`), the
+`viewTop()/viewBot()` cull `[boxY()+48, boxY()+228]`, and `computeMaxScroll`'s
+180 px extent (`:659-670`). The same defect class exists in two more hosts:
+the **pack browser's card-grid click walk is unclamped** (render culls via
+`forEachVisibleCard` under the grid scissor, but `mouseClicked` iterates all
+results at raw rects — an invisible card scrolled above `LIST_TOP` opens the
+detail modal; `ResourcePackBrowserScreen.java:1607-1634`; the install buttons
+are protected only by their availability sweep) and the **manager screens'
+inline rename/create editors** keep a stale hit rect and paint outside the
+clip band (`ManagerListScreen.java:362/:406/:849`,
+`ProfileManagerScreen.java:427-432`). Smaller members: `SemanticActionControl`
+keyboard availability is band-level, not rect-level (a half-clipped row button
+remains Enter-activatable); `AuroraScreen`'s `FeatureSetting.activeFocused`
+routing is not viewport-gated (`:843-847`); PixelCanvas's measuring-state
+buttons paint disabled but neither act nor consume (`PixelCanvasSetting.java`
+warn buttons: painted `enabled` at draw vs `warnPending != null` click gate);
+the pack modal's open-animation render offset is not reflected in its hit rect.
+
+*Fix architecture:* ONE per-frame bounds truth per scrolling host (a tiny
+ClipBand value: x-extent + top/bottom + `contains/clamp/intersects`), consumed
+by the scissor, the render cull, the click walk, the hover test, the thumb
+geometry, and the semantic-availability sweep — the FeatureDetailScreen model
+(`TOP_FADE_Y` shared by render scissor and click gate, `:360/:467`) and
+ManagerListScreen's clamp (`:699-700`) generalized, not a layout engine.
+
+**C-2. AuroraScreen semantic hosting + navigation (the Phase B freeze-out).**
+The Settings tab hosts inline settings whose controls never materialize:
+3 `EnumSetting`s (Text Renderer, Client Font, UI FPS Limit), `AccentSetting`'s
+10 peers (both already implement `interactionControl(s)` — they materialize
+only when a host asks, and AuroraScreen never asks), 3 `SegmentedSetting`s,
+`ThemeOpacitySetting`, `ThemePreviewSetting`, and 4 header `ToggleSwitch`es —
+all pointer-only, no Tab/Enter/narration. The manual chrome (sidebar
+Mods/Settings tabs, Profiles chip, list/grid layout pair, module tiles,
+Settings headers) is immediate-hover, silent, keyboard-inaccessible, and
+un-narrated. Classification against the frozen pack-navigation contract:
+sidebar tabs ARE the navigation family; the layout pair is a segmented
+peer-value control (not a tab); tiles are button-like toggles with a secondary
+navigation action (§11.10 card contract, not "tab"); Profiles is a plain
+action. Hosting duties already exist verbatim in FeatureDetailScreen
+(register in `init`, per-frame availability sweep, click-drops-focus, capture
+cancel first) and ManagerListScreen (`registerSemanticControl` lifecycle +
+frame-start unavailable sweep) — AuroraScreen adopts the same rules; the
+registration/sweep machinery is shareable as a small host helper rather than
+copied.
+
+**C-3. Peer/navigation group primitive (arrow keys).** Phase B deferred
+Left/Right roving for pack tabs and Accent peers. Verified from 1.21.11
+bytecode: `Screen.keyPressed` invokes `AbstractContainerEventHandler.
+keyPressed`/`nextFocusPath` via **invokespecial** — subclass overrides never
+run, so a group CANNOT be implemented as a traversal override; it must be a
+`keyPressed` interceptor before `super` (vanilla's own container walk already
+moves focus spatially among available children, but is unscoped, unwrapping,
+and moves focus only). The primitive: a group registry (ordered members,
+wrap, optional selection-follows-focus policy — manual activation recommended:
+arrows move focus silently, Enter/Space/click select, since selection has
+side effects like grid reset). Consumers: pack tabs (21), Accent peers (10,
+5×2 grid), SegmentedControl segments, AuroraScreen sidebar tabs.
+
+**C-4. Icon-action primitive.** No shared icon button exists (`Button` is
+text-only). Manual compact glyph actions in production (all immediate-hover or
+none, zero focus/keyboard/narration/sound): ItemScale "+" add and per-row "x"
+remove + expand chevrons; EffectExpiry "+" add + EffectRow "x" remove;
+KeyList "−" remove chips (the ONE with a documented deliberate
+immediate-hover scanning rationale — preserve or consciously change);
+ParticleRow's ASCII "v"/">" disclosure stand-ins; HudEditor's hand-rasterized
+9×9 X disable badge (whose on-screen hint claims an X KEY that does not
+exist — no `keyPressed` in the file); AuroraScreen's vector-drawn layout
+icons; PixelCanvas's warning-panel Apply Anyway/Cancel (manual, classified
+modal-family). `FeatureIcons` has NO add/close/delete codepoints — the subset
+must be regenerated (add `add`/`close`/`remove`/`check`-class glyphs) before
+any text→icon migration. Primitive = `SemanticAction` + a compact painter
+(glyph via `MaterialIconRenderer`, hit target ≥ the §5.2 vocabulary, radius
+through the resolver, canonical hover/focus/disabled; per-instance geometry,
+NOT one size for all).
+
+**C-5. SegmentedControl conformance.** Semantically a peer-selection VALUE
+group (not navigation, not a new family) — the Accent peer contract applies:
+pointer-only `HoverAnim.symmetric(140)` (today: immediate + hover suppressed
+on the selected segment — the exact conflation pattern Phase B banned
+elsewhere), `SemanticActionControl` per segment (Tab/Enter/sound-on-change,
+silent no-op on reselect — the `i != selectedIndex` guard already exists),
+narration with group/option/selection, arrows via C-3. Radius already
+resolves (`min(trackH/2, radiusSmall())` — Square-safe).
+
+**C-6. AbstractButtonMixin.** Targets exactly `Button.Plain` on
+JoinMultiplayer/SelectWorld, gated by `customTitleScreen`. Carries a
+hand-rolled 140 ms snap-in/ease-out hover with `isHovered() || isFocused()`
+aliasing and a press-squash duplicate of Button's math; radius already
+tokenized. Path: **painter migration** — delegate the inject body to the
+shared Button painter, adopt `HoverAnim.symmetric(140)` with hover/focus
+decoupled (focus = the Button-family hairline), keep vanilla routing
+(focus/keyboard/narration/click) untouched. Its own pilot; risk is contained
+to two vanilla screens.
+
+**C-7. Square-mode / radius conformance.** ~93 production radius sites
+resolve through the theme (live `roundness().radius*()` or the projected
+`AuroraTheme.RADIUS*` facade — both correct; facade reads are idiom, not
+bugs). Genuine SQUARE-mode nonconformances (finite list): AuroraScreen chips
+5 / layout buttons 4 / tiles 6 (both glass and flat paths — the only screens
+passing literal radii to `GlassSurface`), ManagerListScreen toast 4 (inherited
+by both managers), ColorPickerScreen preview 4 + pad/strip frames 6 (policy:
+data-adjacent content frames — rule them exempt or tokenize), Keystrokes key
+cells 3, HudBackgrounds 2 (documented "boxier" deviation — sanction or
+tokenize), four scrollbar-thumb capsules at 2 (policy: mechanical exemption
+like toggle/slider tracks, or square them). HudEditor's editor chrome is
+plain fill rects (no radius in ANY mode — status-overlay family; ruling).
+ToggleSwitch/Slider tracks and all knobs stay circular by the mechanical
+exemption. A shared `radiusSmall`-style resolver helper is warranted only if
+the facade-idiom unification is wanted; the conformance fixes themselves are
+token substitutions.
+
+**C-8. Correctness hardening batch (independent smalls).** Manager editor
+clip (C-1e), pack grid clamp + modal-animation rect, PixelCanvas measuring
+click-leak, Escape asymmetry (PixelCanvas W/H + the three search fields:
+Escape while typing closes the whole screen — route to unfocus like the pack
+browser), HudEditor X key (implement or reword the hint), create-row consume
+hardening (bounds-based → availability-aware), search-band hit rects 2 px
+taller than the painted fields, ColorPicker short-window hex/button overlap,
+Enum popup no-flip-up near screen bottom (rows lost off-screen).
+
+**Dependency graph (derived):** C-1 bounds truth → C-2 hosting → C-2b
+navigation adoption; C-3 group primitive → C-5 SegmentedControl → arrows on
+pack tabs/Accent; C-4 icon primitive → compact-action rollout; C-6 and C-7
+independent; C-8 rides anywhere after C-1. **Sequence:** 1) C-1 pilot on
+AuroraScreen (+ClipBand) [flagship]; 2) C-7 wave 1 after rulings [flash];
+3) C-2 hosting [flagship]; 4) C-2b navigation + sound policy [flagship];
+5) C-3 primitive → C-5 segmented → arrows [flagship → flash]; 6) C-4 pilot
+(ItemScale/Effect/HudEditor-X) → rollout [flagship → flash]; 7) C-6 vanilla
+painter pilot [flagship]; 8) C-8 batch [flash]; 9) §15.2 conformance harness
++ closure audit [flagship]. Each step independently revertible; screenshots:
+ROUND pixel-parity A/B everywhere (no intended rest-state change except the
+ruling items), SQUARE captures for C-7, hover-timing captures for the
+immediate→140 ms migrations, numeric hit-bound oracles as the primary
+evidence for C-1 (screenshots alone cannot prove input agreement).
+
+**Phase C closure criteria:** render/click/hover bounds coupled through one
+band truth on every scrolling host (AuroraScreen both tabs, pack grid,
+manager editors); Square mode squares every non-exempt rectangular chrome
+(exception list finite and documented); compact actions canonical (semantic,
+canonical hover, narrated, disabled-gated) or explicitly classified
+(KeyList chips, popup rows); AuroraScreen hosts the deferred component
+contracts (enums, accent peers, segmented, toggles, tabs/layout/tiles with
+the pack contract); arrow navigation exists on pack tabs + Accent + segmented
+via one group primitive; SegmentedControl conforms; AbstractButtonMixin
+painter migrated; C-8 items closed or re-classified; the conformance harness
+runs the §15.2 matrix; contrast/disabled-material work handed to Phase D+.
+Phase B compatibility guardrails: the Enum popup's immediate-hover rows and
+the Profile-create consume-but-inert rule are ACCEPTED Phase B semantics —
+not reopened; the KeyList chip hover rationale is preserved unless explicitly
+changed; new sounds use only the existing vanilla-click ACTIVATION mapping
+(identity is Phase F).
+
 ## 7. Registries (the drift trap)
 
 Three parallel structures with no single source of truth:
