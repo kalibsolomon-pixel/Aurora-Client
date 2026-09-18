@@ -919,6 +919,82 @@ clear rule, multi-value mutation, chip-family entry hover.
   controls exist), with the flipped legacy-expectation oracles passing:
   the suite discriminates the migration from the baseline.
   Remaining Phase B family: AccentSetting peer selection.
+- **AccentSetting preset grid — Phase B pilot 9 (2026-09-18): the
+  peer-selection family, the last novel Phase B semantic family.**
+  The Theme screen's accent grid (10 peers: 9 `ThemePresets` + Custom,
+  5 per row, 24 px cells) models a PEER-SELECTION GROUP whose members
+  represent VALUES. **Selection is never stored**: the literal accent is
+  the source of truth — `ThemePresets.matching(accent)` for presets,
+  "no preset matches" for Custom; no selected-index field exists that
+  could disagree (unit-pinned), and a picker edit landing exactly on a
+  preset value selects that preset by construction. **Hover** =
+  pointer-only `HoverAnim.symmetric(140)` per peer (the baseline rings
+  were immediate), animating the existing 1 px WINDOW_OUTLINE ring's
+  alpha. **Composition replaces the baseline `else if`**: the persistent
+  1.5 px selection ring (2 px out, label color) draws unconditionally
+  for the matching peer — the baseline drew hover only when NOT
+  selected, erasing hover feedback on the selected preset AND on active
+  Custom; both compose now. **Focused** = one `SemanticActionControl`
+  per peer, materialized as a complete set on the first
+  `interactionControls()` ask — the Theme DETAIL screen hosts them
+  fully (registration/sweep/refocus, Tab + Enter/Space selection with
+  exactly one accent change, narration with `Selected`/`Not selected`,
+  the conditional click); AuroraScreen's inline Settings tab never
+  asks — the documented Phase C host deferral, the exact split the
+  three AuroraScreen-hosted enums carry (canonical states + silent
+  pointer path; host-level Tab/narration awaits the host primitive).
+  **Disabled** is the authoritative gate (the baseline PAINTED the
+  hover ring on disabled cells while rejecting clicks — fixed): no
+  hover target (an in-flight hover eases back to rest on the
+  enable→disable transition), no pointer/keyboard activation, no save,
+  no sound, the action's enabled gate drops peers from traversal and
+  narrates unavailable — while the selected ring stays readable and
+  every color interior stays literal. The baseline's disabled treatment
+  alpha-halved the active Custom preview's fill — modifying represented
+  DATA to say "disabled" — removed per the ColorSwatch principle (the
+  inactive chrome fill + dimmed label carry it). Sound ownership: peer
+  actions carry `SemanticSound.NONE` and play exactly one ACTIVATION
+  through `MinecraftSemanticFeedback` inside the behavior, only when
+  the activation had an effect — a preset that changes the accent (or
+  closes the open editor) clicks, Custom's open/reset always clicks
+  (it always acts), and the already-selected no-op (editor closed) is
+  silent. Activation/persistence: one setter call per genuine change
+  (the production setter's `persistThemeChange` is THE persistence
+  action — the pilot removes the redundant second config save the grid
+  path used to issue); already-selected clicks are consumed no-ops with
+  zero reloads (ThemeManager generation proven static). NO press
+  animation by decision (the immediate selection-ring transfer is the
+  feedback). Arrow-key roving within the group DEFERRED to Phase C
+  (the tab-group/peer-group host primitive; the same decision as the
+  pack tabs). The embedded Custom `ColorSetting` picker is reused
+  literally and unmodified — its own semantic control is never
+  materialized, so no duplicate sound can arise between peer activation
+  and picker actions; `custom-active` is derived, not stored.
+  Cache/perf: preset fills remain the cacheable shapes layer; every
+  ring/hover/label is live overlay (unchanged split); animators and
+  controls are long-lived arrays indexed by grid position;
+  `interactionControls()` builds its list once; no per-frame
+  construction and matching stays O(9). Pinned by
+  `AccentSettingPilotTest` (19 tests: topology, literal-derived
+  selection with no stored index, exact preset persistence + transfer,
+  no-op policy, editor-close semantics, Custom open-not-change,
+  one-save grid path, pointer-only + disabled-rejected hover target,
+  independent symmetric animators, else-if ban, disabled rejection,
+  literal interiors, conditional sound model, host deferral,
+  narration metadata, picker isolation). Verified by DevPilot
+  `accentb` boots — 21/21 oracles on BOTH dark and light themes plus
+  four offline pixel verdicts per theme (selected-peer hover paints
+  624 ROI px over the persistent ring, ACTIVE-Custom hover paints 624,
+  the disabled transition withdraws the ring with the pointer still
+  parked 628/622, and the Red interior is byte-exact (235,0,41) across
+  rest/hover/disabled) — and a stashed-baseline boot on `6134aae`
+  passing its applicable oracles (6/6, control/animator phases
+  skipped) whose pixel pairs read 0/0/0 on exactly those three
+  compositions: the baseline suppressed hover on the selected peer,
+  gave active Custom no hover, and kept painting the hover affordance
+  while disabled. The suite discriminates. Phase B's novel-family work
+  is COMPLETE with this pilot; the documented E-class cleanup
+  (Waypoint data chips' spurious hover halo) remains.
 - **Tooltips — Phase B canonical fade (2026-09-16)**: the
   `FeatureSetting` label-dwell system is Aurora's ONE production tooltip
   implementation (no other tooltip renderer exists under `screen/ ui/
