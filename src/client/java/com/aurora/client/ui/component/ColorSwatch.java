@@ -25,9 +25,11 @@ import java.util.function.IntSupplier;
  *
  * <p><b>Phase B pilot (2026-09-16) — opt-in canonical state mode</b>
  * ({@link #canonicalStates()}; the production hosts are the 29
- * single-swatch {@code ColorSetting} rows and the Waypoint manager's
- * non-clickable display chips, so the pilot must not migrate them
- * silently — the Slider/Enum isolation pattern). The represented color
+ * single-swatch {@code ColorSetting} rows — the Waypoint manager's
+ * display chips left the interactive vocabulary entirely via
+ * {@link #dataOnly()} in the 2026-09-18 E-class cleanup, so nothing
+ * production-side constructs the legacy interactive default anymore).
+ * The represented color
  * sample is DATA: no state ever modifies its pixels. Canonical mode adds
  * overlapping state channels, all on the surrounding chrome:
  * <ul>
@@ -62,6 +64,8 @@ public class ColorSwatch extends Widget {
     private boolean disabled = false;
     /** Phase B opt-in — see the class javadoc. */
     private boolean canonical = false;
+    /** Phase B E-class cleanup opt-out — see {@link #dataOnly()}. */
+    private boolean dataOnly = false;
     /** Opt-in focus paint (the host row owns the focus lifecycle). */
     private boolean focusedVisual = false;
     private HoverAnim hoverAnim = new HoverAnim(140L);
@@ -74,6 +78,29 @@ public class ColorSwatch extends Widget {
     public ColorSwatch checkerboard(boolean c) {
         this.checkerboard = c;
         return this;
+    }
+
+    /**
+     * Marks this swatch a DISPLAY-ONLY data sample (the Waypoint manager's
+     * color chips — the ToggleSwitch {@code previewMode()} pattern, named
+     * for data semantics): the represented color keeps rendering at rest
+     * (the shared per-color template — checkerboard included, BORDER ring,
+     * byte-identical to an interactive swatch's rest), but the instance
+     * never claims the pointer — no hover target, no halo, no selection or
+     * focus paint, no press, no click consumption, no callback. Interaction
+     * states are meaningless here and ignored if set. The component itself
+     * knows it is data, so no host-side hit-test or rendering workaround is
+     * involved. Default false — every other construction stays interactive
+     * (canonical through {@code ColorSetting}, legacy by default).
+     */
+    public ColorSwatch dataOnly() {
+        this.dataOnly = true;
+        return this;
+    }
+
+    /** Whether this instance is a display-only data sample (see {@link #dataOnly()}). */
+    public boolean isDataOnly() {
+        return dataOnly;
     }
 
     public ColorSwatch selected(boolean s) {
@@ -124,6 +151,17 @@ public class ColorSwatch extends Widget {
     public void renderOverlay(GuiGraphics g, float x, float y, float w, float h, int mouseX, int mouseY) {
         int color = getter.getAsInt();
         float radius = Math.min(h / 2f, ThemeManager.current().roundness().radiusSmall());
+
+        if (dataOnly) {
+            // Display-only data sample: the neutral at-rest look, nothing
+            // else — the pointer is irrelevant (mouseX/mouseY unused), no
+            // interaction state is consulted or computed, and the shared
+            // per-color template keeps it one blit. Byte-identical to an
+            // interactive swatch at rest, so a data chip and a canonical
+            // swatch sit on one row without a seam.
+            blitSwatchTemplate(g, x, y, w, h, color, radius, checkerboard);
+            return;
+        }
 
         boolean hover = !disabled && inBounds(mouseX, mouseY, x, y, w, h);
         float hT = hoverAnim.update(hover);
@@ -250,7 +288,7 @@ public class ColorSwatch extends Widget {
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
-        if (disabled || button != 0 || !inBounds(mx, my, x, y, w, h)) return false;
+        if (dataOnly || disabled || button != 0 || !inBounds(mx, my, x, y, w, h)) return false;
         if (onClick != null) onClick.run();
         return true;
     }

@@ -249,12 +249,15 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
         int cx = x + ROW_INSET;
         int cy = y + (ROW_H - SWATCH_W) / 2;
 
-        // Color swatch — the shared ColorSwatch component (checkerboard so
-        // alpha-carrying waypoint colors read correctly). Not clickable; the
-        // Color button beside it owns the edit action. Stays opaque: it
-        // displays user color content at full fidelity.
+        // Color swatch — the shared ColorSwatch component as a DISPLAY-ONLY
+        // data sample (checkerboard so alpha-carrying waypoint colors read
+        // correctly, dataOnly so it never claims the pointer — the former
+        // spurious legacy hover halo is gone, Phase B's E-class cleanup).
+        // Not clickable; the Color button beside it owns the edit action.
+        // Stays opaque: it displays user color content at full fidelity,
+        // byte-identical in every pointer state.
         ColorSwatch swatch = rowSwatches.computeIfAbsent(wp,
-                k -> new ColorSwatch(() -> wp.color, null).checkerboard(true));
+                k -> new ColorSwatch(() -> wp.color, null).checkerboard(true).dataOnly());
         swatch.layout(cx, cy, SWATCH_W, SWATCH_W);
         swatch.render(ctx, cx, cy, SWATCH_W, SWATCH_W, mouseX, mouseY);
         cx += SWATCH_W + CONTROL_GAP;

@@ -995,6 +995,55 @@ clear rule, multi-value mutation, chip-family entry hover.
   while disabled. The suite discriminates. Phase B's novel-family work
   is COMPLETE with this pilot; the documented E-class cleanup
   (Waypoint data chips' spurious hover halo) remains.
+- **Waypoint data chips — Phase B E-class cleanup (2026-09-18)**: the
+  Waypoint manager's row color chips are DISPLAY-ONLY data samples and
+  now say so through the component itself — `ColorSwatch.dataOnly()`
+  (the `ToggleSwitch.previewMode()` pattern, named for data semantics).
+  Before this, the chips were the last production consumer of
+  ColorSwatch's legacy interactive default: a null callback, no click
+  routing (the manager's row walk owns input; the Color button owns
+  the edit action), no focus, no semantic control — yet the renderer
+  still computed pointer hover and painted the legacy snap-in halo,
+  advertising an interaction that did not exist. Data-only mode renders
+  the shared per-color rest template (checkerboard + opaque literal
+  fill + BORDER ring — byte-identical to an interactive swatch at
+  rest, one blit) and returns before any interaction state is
+  computed: no hover target ever, no halo, no selection/focus paint,
+  no press, no click consumption (mouseClicked returns false and never
+  runs a callback), no narration surface — mouseX/mouseY unused. The
+  mode is an instance flag (no shared/static state to leak); the
+  represented color stays literal in every pointer state (the chip is
+  neutral data, NOT styled disabled). Interactive swatches are
+  untouched: `ColorSetting` still constructs canonical (unit-pinned —
+  data-only cannot leak in), and the legacy interactive DEFAULT path
+  is deliberately retained as the component's public behavior (its
+  disabled alpha-halving stays unreachable from production — pinned by
+  `ColorSwatchPilotTest`), so the post-cleanup legacy `new HoverAnim(`
+  inventory is exactly the documented three: ColorSwatch's default
+  field (now production-unreachable), Slider's ThemePreview mock
+  field, and `HoverAnim.symmetric`'s internal factory construction —
+  verified by a source-sweep test. Pinned by `ColorSwatchDataOnlyTest`
+  (7 tests: pointer/callback rejection, the no-interaction-state
+  render branch, instance isolation, the literal-sample invariant, the
+  Waypoint adoption + pure-data call surface, ColorSetting's
+  canonical isolation, and the inventory sweep). Verified by DevPilot
+  `waypointchipb` boots (a temp waypoint swapped into the joined dev
+  world's scope key, theme forced to full opacity, GUI scale forced to
+  1 so the 460-wide list fits the fixed 854×480 dev window): 10/10
+  oracles on dark AND light — the chip's animator reads a flat 0 with
+  the pointer parked directly on it, a chip click mutates nothing
+  (color/name/count intact, no picker, no editor, not consumed — the
+  row's fall-through owns it), Tab traversal is data-safe, a live
+  color change reaches the sample with no staleness, scrolling and
+  close/reopen leave no stale state. Pixel verdicts: the chip's chrome
+  columns are magnitude-identical to same-row control columns under
+  hover (41.0 vs 41.0 dark, 405.0 vs 405.0 light — the only delta is
+  the row's own legitimate hover wash) and the interior is
+  byte-identical (59,130,246) across rest/hover/exit; the stashed
+  `7a52582` baseline FAILS the same discrimination — its chip
+  animator reads 1.0 under the parked pointer (oracle flipped and
+  passing) and its halo column shows 199.4 mean-delta against the same
+  41.0 wash. The suite discriminates.
 - **Tooltips — Phase B canonical fade (2026-09-16)**: the
   `FeatureSetting` label-dwell system is Aurora's ONE production tooltip
   implementation (no other tooltip renderer exists under `screen/ ui/
