@@ -513,3 +513,33 @@ Decision required: whether small glyph actions need standardized icon, hit targe
 - Screenshot suppression and material fallback were observed, but output-pool exhaustion and forced shader failure were not induced.
 - Runtime evidence remains in ignored `run/` storage and is not part of the committed audit.
 - Historical intent was inferred only where comments, architecture documentation, or clearly separate integration paths support it. Unclear cases remain categorized as unexplained rather than assigned intent.
+
+---
+
+## Closure addendum — Phase B disposition (2026-09-18)
+
+This addendum is appended, not merged: everything above remains the untouched
+2026-09-14 baseline snapshot. It records how this audit's Phase-B-relevant
+observations were dispositioned by the Phase A/B work that landed through
+`18f885e` ("Phase B — Motion and State Primitives — COMPLETE"; see
+`ARCHITECTURE.md`'s Phase B history and closure record for the per-family
+pilots and their evidence). A future reader should treat statements above
+like "HoverAnim snaps hover-in from rest" or "Pack card/tab hover is the
+browser's own animator" as historical, not current.
+
+| Original audit observation (2026-09-14) | Disposition |
+|---|---|
+| `HoverAnim` snaps in from rest while comments claim symmetric fade | RESOLVED — `HoverAnim.symmetric(140)` is the canonical vocabulary; every custom interactive family uses it; the legacy constructor survives only as Slider's ThemePreview mock, ColorSwatch's zero-consumer public default, and the internal factory construction |
+| Pack browser's local ~150 ms symmetric animator (a special dialect) | RESOLVED — retired; tabs and card bodies run the shared canonical animator (2026-09-18) |
+| Selected/expanded pins hover (`hover || expanded`, pack `hover || active`) | RESOLVED — Enum (2026-09-16), pack tabs (2026-09-18), Accent peers (2026-09-18) all decoupled the channels; the aliasing pattern is source-banned in those files |
+| Toggles/sliders/swatches/enums omit hover/press/focus/disabled subsets | RESOLVED — state-complete treatments per family (Phase B pilots 1–9), each pixel- and runtime-verified in both themes |
+| Manual cards/tabs lack vanilla-equivalent keyboard/narration/sound | SPLIT — pack tabs, accent peers, and all settings-row families RESOLVED (semantic controls, focus, narration, exactly-one sound); AuroraScreen manual chrome and SegmentedControl DEFERRED TO C (host/geometry pass); `AbstractButtonMixin`'s themed vanilla buttons (hand-rolled 140 ms snap-in hover, hover/focus aliasing) DEFERRED TO C (painter migration to `ButtonWidget` is the documented path) |
+| Routing-dependent sound split (custom controls silent) | RESOLVED at the ownership level — accepted actions play exactly one semantic click through the shared adapter on every family whose host permits; sound *identity* remains Phase F |
+| Disabled treatments inconsistent (toggle indistinguishable, keybind ignores disabled, DONE install paints enabled pixels) | RESOLVED — disabled is authoritative per family; the DONE-phase button paints the canonical disabled look (`6134aae`) |
+| Waypoint chips' spurious hover halo | RESOLVED — `ColorSwatch.dataOnly()` (`18f885e`); zero interaction response, literal interiors |
+| Immediate-hover module cards/segments/main-screen chrome | DEFERRED TO C (AuroraScreen manual chrome + SegmentedControl migrate with their host/component pass) |
+| Fixed local radii ignoring Square mode | DEFERRED TO C (geometry conformance) |
+| Composited contrast / `ON_ACCENT` below 4.5:1 / low-opacity text robustness | DEFERRED TO D |
+| No distortion/refraction in glass | INTENTIONAL — v3 §7.2 keeps the canonical material blur+tint+lighting+rim; refraction remains Phase G R&D only |
+| Narration unverified at runtime (`libflite` missing) | UNCHANGED ENVIRONMENT LIMITATION — metadata-verified only |
+| Stale factual counts (e.g. "9 category tabs") | SUPERSEDED — current topology: 23 sidebar rows = 21 selectable tabs + 2 headers; 26 enum rows; 29 color rows; 17 keybind rows; the counts in `ARCHITECTURE.md` and the pinned source tests are current |

@@ -1027,10 +1027,26 @@ Create shared semantic interaction routing/services for focus, keyboard activati
 narration metadata, disabled behavior, and sound hooks. Adapt both custom and vanilla-backed
 controls without changing all component visuals at once.
 
-### Phase B — Motion and state primitives
+### Phase B — Motion and state primitives — **COMPLETE (2026-09-18)**
 
 Correct shared hover to symmetric 140 ms behavior and establish state-complete primitives.
 Pilot press/focus/disabled treatments before applying them mod-wide.
+
+**Closure record (2026-09-18, `18f885e`):** every custom interactive
+family runs the canonical state vocabulary — Button (all ordinary
+actions), ToggleSwitch, Slider, EnumSetting (26 rows), ColorSetting /
+interactive ColorSwatch (29 rows), KeybindSetting (17 rows), KeyList,
+the tooltip fade (the one deliberate 200 ms supplemental exception),
+PixelCanvas text actions, pack-browser navigation tabs + card hover,
+AccentSetting peer selection, and the Waypoint data chips as explicit
+data-only surfaces. Persistent value/selection state is independent of
+hover wherever the semantics require it; disabled is authoritative on
+every Phase B-complete component; semantic sound ownership is
+exactly-once with silent no-ops and rejections; capture families hold
+exclusive ownership with safe teardown. The finite immediate-hover
+exception list and the Phase C+ deferral inventory live in
+`ARCHITECTURE.md`'s Phase B closure record. Phase C begins from the
+frozen component contracts recorded there.
 
 ### Phase C — Geometry and conformance
 

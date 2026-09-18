@@ -1044,6 +1044,76 @@ clear rule, multi-value mutation, chip-family entry hover.
   animator reads 1.0 under the parked pointer (oracle flipped and
   passing) and its halo column shows 199.4 mean-delta against the same
   41.0 wash. The suite discriminates.
+
+**PHASE B CLOSURE RECORD (2026-09-18, baseline `18f885e`, 140 tests /
+0 failures).** Phase B — Motion and State Primitives — is COMPLETE.
+The canonical vocabulary, verified from source at closure: ordinary
+control hover is `HoverAnim.symmetric(140)` on every custom
+interactive family; the tooltip fade is the one deliberate
+supplemental exception at symmetric 200 ms behind its preserved
+1500 ms dwell; press is 90 ms compression / ~180 ms recovery (Button
+and Toggle); capture/press acknowledgment semantics per family as
+recorded in each pilot entry above. The global `new HoverAnim(`
+inventory at closure is exactly three: Slider's default field
+(ThemePreview mock only), ColorSwatch's default field (public
+compatibility behavior with ZERO production consumers since
+`18f885e`), and `HoverAnim.symmetric`'s internal factory construction
+— **no unexplained legacy snap-in consumer remains on any
+production-interactive custom surface**. The retired pack-browser
+local 150 ms animator family is gone. **Immediate-hover exceptions
+(the finite list):** Enum popup option rows and the other
+selection-list rows (a scanning family — the committed value already
+shows; hover marks the candidate under the pointer, and §11.7 keeps
+it classified for the Phase C review); ColorPicker direct-manipulation
+surfaces (dragging data — interpolation is meaningless); manager and
+grid scrollbars + scrollbar thumbs (direct manipulation chrome);
+SegmentedControl segments and AuroraScreen's manual chrome
+(tiles/tabs/layout buttons) — the latter two are C-DEFERRED, not
+intentional end-states: SegmentedControl still draws immediate hover
+with the selected-segment suppression Phase B eliminated elsewhere,
+and `AbstractButtonMixin` (the themed vanilla selection-screen
+buttons — a vanilla-owned integration adapter) carries a hand-rolled
+140 ms snap-in hover with hover/focus aliasing; both migrate when the
+Phase C component/host pass reaches them (the mixin's path is the
+documented painter migration to `ButtonWidget`). **Data-only/preview
+exceptions:** Waypoint color chips (`ColorSwatch.dataOnly()`),
+ThemePreview's mock slider (legacy constructor by design) and mock
+toggle (`previewMode()`), the preview's mock buttons (non-interactive
+painter calls), BlurTestScreen and DevPilot (dev-only). **Phase C
+deferral inventory (reconfirmed from source):** AuroraScreen
+render/input clipping agreement (the known mismatch is real and
+untouched); AuroraScreen manual-chrome semantic hosting (sidebar
+tabs, layout buttons, tiles); inline Enum/Accent peer control hosting
+on AuroraScreen's Settings tab; the compact `+`/`×`/`−` icon-action
+primitive (ItemScale rows, Effect list, KeyList remove chips,
+PixelCanvas warning-panel buttons as the classified modal family);
+HudEditor's X key + controls; SegmentedControl keyboard/narration;
+the reusable tab/peer-group arrow-navigation primitive (pack tabs +
+Accent peers both deferred to it); Square-mode/fixed-radius geometry
+conformance (AuroraScreen's literal radii, SegmentedControl); the
+§15.2 conformance harness; AbstractButtonMixin + SegmentedControl
+hover dialects (above). The Phase A ProfileManager create-row
+consume-but-inert behavior is the accepted rule, not a defect.
+**Phase D deferrals:** composited text contrast at low opacity,
+`ON_ACCENT` robustness for difficult accents, light-theme disabled
+readability, a unified disabled-material treatment — with literal
+represented colors exempt (the ColorSwatch/AccentSetting data
+invariants now pin that exemption). **Phase E/F/G** boundaries are
+unchanged: glass refinement, sound identity, optional
+refraction/distortion R&D; canonical glass remains blur + tint +
+face lighting + rim with no distortion. Runtime closure evidence:
+DevPilot `phasebclose` boots (dark + light) walk representative
+instances of every detail-screen family — Button (chrome painter +
+PixelCanvas actions), Toggle, Slider, Enum, Color, Keybind — reading
+their REAL animators: each animates from rest (no snap), settles at
+1.0, and exits to exactly 0.0, the shared timing vocabulary in one
+boot; plus the 200 ms tooltip fade sampled mid-flight, value-channel
+independence under parked hover, disabled-authority rejection, and
+the Accent peer topology. The pack tabs, accent peers, and Waypoint
+chips are covered by their own modes' fresh boots on this tree
+(28/28 dark + light, 21/21 dark + light, 10/10 dark + light
+respectively). No production code changed in the closure sweep —
+documentation and tests only.
 - **Tooltips — Phase B canonical fade (2026-09-16)**: the
   `FeatureSetting` label-dwell system is Aurora's ONE production tooltip
   implementation (no other tooltip renderer exists under `screen/ ui/
