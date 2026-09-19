@@ -1309,6 +1309,96 @@ not reopened; the KeyList chip hover rationale is preserved unless explicitly
 changed; new sounds use only the existing vanilla-click ACTIVATION mapping
 (identity is Phase F).
 
+**C-1 PILOT RECORD (2026-09-19, "couple aurora screen viewport input").**
+Implemented and verified on AuroraScreen; `ClipBand` exists but ONLY
+AuroraScreen adopts it in this pilot (unit-pinned — no opportunistic
+rollout).
+
+- **Primitive:** `ui/util/ClipBand` — an immutable 4-int rectangle
+  (x, y, width, height; half-open `[x,x+w) × [y,y+h)`, the
+  `Widget.inBounds`/`SemanticActionControl.contains` convention; edge
+  contact is NOT intersection; degenerate bands are inert). API:
+  `contains(px,py)`, `intersects(rx,ry,rw,rh)`, `clampY`, `isEmpty`.
+  No Minecraft imports (headless-testable), no layout framework, one
+  small allocation per call-site loop (hosts hoist one per frame/event).
+- **AuroraScreen viewport ownership:** `contentViewport()` returns the
+  ONE truth — the content scissor's own rectangle
+  `[mainX(), boxY()+36] .. [mainX()+254, boxY()+230]` (now named via
+  `CONTENT_TOP_INSET/CONTENT_BOT_INSET/CONTENT_W`). It drives the
+  scissor (all four call sites + the ScrollFade anchor), the tile/row
+  render cull, the click walk, the tile hover test, and the
+  focused-setting keyboard availability. Two regions deliberately stay
+  SEPARATE and documented: the scrollbar TRACK band (`viewTop/viewBot`,
+  12px inset at top / 2px at bottom — thumb pixels preserved exactly)
+  and `computeMaxScroll`'s 180px visible-height tuning (scroll physics
+  unchanged; the former 180-vs-194 extent discrepancy is REPORTED, not
+  "fixed" — not unambiguously the same truth).
+- **Settings coupling:** the click walk is now inside
+  `else if (vp.contains(mouseX, mouseY))` — point ∈ viewport ∩ raw rect
+  is the actionable region (a pointer outside the band cannot reach any
+  row, header zone, or inline EditBox; partially visible targets answer
+  only on their visible pixels). The render walks gate on
+  `vp.intersects`, replacing the old 12px-tighter cull band.
+- **Modules coupling:** `cardBounds(i, mods, vp)` culls by viewport
+  intersection; tile hover and click require `vp.contains(pointer)` —
+  the hidden part of a partially clipped tile is inert (hover and
+  activation).
+- **Keyboard/focus:** the render walk publishes per-row availability
+  (`onInteractionAvailabilityChanged`) and tracks whether the
+  registry-focused setting intersects the viewport
+  (`focusedSettingVisible`, reset at frame start — the Modules tab
+  reads unavailable). `keyPressed`/`charTyped`/`mouseScrolled` gate
+  routing on it: a scrolled-away focused row no longer takes action
+  keys or eats the wheel. Focus is not forcibly cleared (gating =
+  "made unavailable", the ManagerListScreen convention; scrolling back
+  restores routing — no re-click needed). Capture-family safety: the
+  Settings tab hosts no Keybind/KeyList rows (N/A), but the
+  availability hook is the same one their teardown uses.
+- **Forgiving hit-target ruling:** the header toggle's 40px click zone
+  (vs the 28px painted switch) is INTENTIONAL (it tiles the header
+  row's right edge against the navigation zone) — retained, now
+  viewport-intersected like every other target.
+- **SemanticActionControl availability:** unchanged in C-1 (band-level
+  availability stays on the Phase B hosts; AuroraScreen materializes
+  no controls). Rect-level availability is C-2's host-sweep work.
+- **Verification:** 156 tests / 0 failures (140 Phase B + 16 new:
+  `ClipBandTest` pins the intersection semantics;
+  `AuroraScreenViewportCouplingTest` pins the source contract —
+  scissor-from-band, the ungated literals' absence, click/hover gates,
+  keyboard gating, and AuroraScreen-only adoption). DevPilot `c1bounds`
+  (untracked, wiring removed after): title context, GUI scale 1,
+  forced DARK/RED/ROUND/Wireframe@1.0; **v3 18/18 oracles** (the C-1
+  matrix, cases 1-15); the stashed `4d480b9` baseline runs the same
+  harness at **17/1 with flipped expectations** — the discriminators
+  reproduce the defects: a hidden-part zone click flips a setting,
+  fully-above-viewport clicks flip settings and open detail screens,
+  the clipped tile's hidden pixels toggle a module, and an
+  off-viewport focused row still takes arrow keys. The baseline's one
+  FAIL is `settings-5` (below-viewport row): its walk is ungated but
+  the slider WIDGET's bounds are render-coupled — a never-rendered row
+  has no layout, so the baseline is protected by accident, not design
+  (v3 rejects structurally). Pixel evidence (`.devpilot-c1/`): rest
+  parity v3-vs-baseline 103/86400 (settings) and 41/86400 (modules)
+  window px beyond ±8/255, mean 0.41-0.49 (panorama-phase sampling
+  noise — the fixture's window interior composites the rotating menu
+  panorama, measured at mean 12.7 between 2-tick-apart same-state
+  captures, and matched-phase-offset cross-boot pairs align it);
+  mid-scroll parity 45 + 11 px (the cull unification's visible effect
+  is confined to transient 12px slivers while a row crosses the old
+  band edge); the hover discriminator with a control-strip reference:
+  baseline lights the tile's visible slice from a pointer on its
+  HIDDEN pixels (+1.17 excess over its own sidebar control strip ≈ its
+  visible-park control +1.07), v3 does not (−0.06; its visible-park
+  control +1.19 lights). SQUARE captured as a regression observation
+  only.
+- **Remaining ClipBand consumers (C-8/rollout decision):** the pack
+  browser's card-grid click walk (unclamped — invisible cards open the
+  detail modal), the manager inline rename/create editors (stale hit
+  rects + unclipped paint), and the pack modal's open-animation rect.
+  Harness note: `c1bounds` also demonstrated the fixture-bookkeeping
+  class (grid tile 0 is `zoom`, not `world_map` — key on the live grid
+  order).
+
 ## 7. Registries (the drift trap)
 
 Three parallel structures with no single source of truth:

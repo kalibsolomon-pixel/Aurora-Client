@@ -11,6 +11,7 @@ import com.aurora.client.ui.component.ThemedScreen;
 import com.aurora.client.ui.component.ToggleSwitch;
 import com.aurora.client.ui.render.blur.BlurPanelRenderer;
 import com.aurora.client.ui.util.AuroraFontRenderer;
+import com.aurora.client.ui.util.ClipBand;
 import com.aurora.client.ui.util.MaterialIconRenderer;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.ui.util.UiLayerCache;
@@ -46,6 +47,15 @@ import java.util.Map;
  * blit + content. The static cache never holds glass: panels are texture
  * blits that bypass the fill-capture sink, and the capture block runs
  * before the pass's tint fills.
+ *
+ * <p>Phase C-1 (2026-09-19): one authoritative content viewport
+ * ({@link #contentViewport()}) couples the content scissor, the tile/row
+ * render cull, pointer hit-testing, tile hover, and focused-setting
+ * keyboard availability — a pixel is interactive exactly when it is
+ * visible. Previously the Settings-tab click walk was ungated and tile
+ * hit-testing used unclamped partial rects, so controls scrolled outside
+ * the viewport remained addressable (even above the window or below it,
+ * over the dim).
  */
 public class AuroraScreen extends Screen implements ThemedScreen {
 
@@ -95,6 +105,18 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     };
     private FeatureSetting activeDragSetting = null;
 
+    /**
+     * C-1 keyboard-availability truth: whether the setting currently
+     * holding the {@code FeatureSetting} registry focus shares a pixel
+     * with the content viewport. Refreshed by the Settings-tab render walk
+     * every frame (reset to false at frame start — the Modules tab and any
+     * row scrolled out of the band read unavailable). The key/char/scroll
+     * routing below gates on it: an off-viewport focused row is neither
+     * visible nor pointer-actionable, so it must not keep receiving action
+     * keys or the wheel either (DESIGN_LANGUAGE §13.3).
+     */
+    private boolean focusedSettingVisible = false;
+
     private final Map<String, ToggleSwitch> sectionToggles = new HashMap<>();
 
     private final UiLayerCache layerCache = new UiLayerCache();
@@ -127,12 +149,43 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     private float mainY() { return boxY() + 12; }
 
     /**
-     * The scroll viewport every scroll-related number must agree on: the
-     * scissor content window's resting bounds, the card cull, maxScroll's
-     * 180px visible height, and the scrollbar track. Anchored to mainY()'s
-     * own +36/+216 content offsets — never re-derived from BOX_H here, or
-     * the +12 main-area offset gets counted twice and the track (thumb
-     * included) slides below the window border.
+     * The single authoritative CONTENT VIEWPORT (Phase C-1): the exact
+     * rectangle the content scissor paints — {@code [mainX(), boxY()+36]}
+     * to {@code [mainX()+254, boxY()+230]}. One truth drives the scissor,
+     * the tile/row render cull, the pointer hit-test, the tile hover test,
+     * and the focused-setting keyboard availability: a pixel is
+     * interactive exactly when it is visible
+     * ({@code rawBounds ∩ viewport} is the actionable region;
+     * DESIGN_LANGUAGE §13.3). Before C-1 these were three disagreeing
+     * bands — the scissor, a 12px-tighter cull band, and a 180px scroll
+     * extent — which is how scrolled-off rows stayed clickable.
+     *
+     * <p>Two regions deliberately remain SEPARATE from this truth (see
+     * {@link #viewTop()}: the scrollbar track band, and
+     * {@link #computeMaxScroll()}'s 180px visible-height tuning — changing
+     * either would change thumb placement or scroll physics, both outside
+     * C-1's no-visual-change contract.
+     */
+    private ClipBand contentViewport() {
+        return new ClipBand((int) mainX(), (int) (boxY() + CONTENT_TOP_INSET),
+                CONTENT_W, (int) (BOX_H - CONTENT_TOP_INSET - CONTENT_BOT_INSET));
+    }
+
+    /** Content scissor's inset from the window's top edge (below the search/layout band). */
+    private static final int CONTENT_TOP_INSET = 36;
+    /** Content scissor's inset from the window's bottom edge. */
+    private static final int CONTENT_BOT_INSET = 10;
+    /** Content column width (drives the scissor, the row width, and the viewport's x extent). */
+    private static final int CONTENT_W = 254;
+
+    /**
+     * The SCROLLBAR TRACK band — chrome geometry only (thumb placement,
+     * the grab zone, and the drag mapping), NOT the content viewport. It
+     * is deliberately inset from the content scissor (12px at the top so
+     * the thumb clears the scroll-fade band, 2px at the bottom) and its
+     * 180px height is the historical {@link #computeMaxScroll()} visible
+     * height; preserving it keeps the thumb's pixels and the scroll extent
+     * byte-identical (C-1 changes no scroll physics or thumb appearance).
      */
     private float viewTop() { return mainY() + 36; }
     private float viewBot() { return mainY() + 216; }
@@ -192,6 +245,11 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float delta) {
         tickSmoothScroll();
+        // Frame-start reset: focused-setting keyboard availability is
+        // re-derived by the Settings walk below (renderSettingsLive); on
+        // the Modules tab no inline row is visible, so the registry focus
+        // (if any survives a tab switch) reads unavailable.
+        focusedSettingVisible = false;
 
         // ---- 1. Glass pass — every glass surface paints BEFORE the dim ----
         // (§6 convention 6, structural: the ManagerListScreen skeleton, and
@@ -275,8 +333,13 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         RenderUtil.drawRoundedRectAA(g, bx + 80, by + 12, 1, BOX_H - 24, 0.5f, alpha(ThemeToken.ON_BACKGROUND, 0x08f));
     }
 
-    /** Card/toggle geometry for module index {@code i}; null when off-screen. [cx,cy,cw,ch,tx,ty,tw,th] */
-    private float[] cardBounds(int i, List<Module> mods) {
+    /**
+     * Card/toggle geometry for module index {@code i}; null when the tile
+     * shares no pixel with {@code vp} (the render cull and the click walk
+     * share this one answer — a culled tile is neither painted nor
+     * clickable). Returns {@code [cx,cy,cw,ch]}.
+     */
+    private float[] cardBounds(int i, List<Module> mods, ClipBand vp) {
         float mx = mainX(), my = mainY();
         float cx, cy, cw, ch;
         if (gridLayout) {
@@ -288,7 +351,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             cx = mx;
             cy = (float) (my + 38 + i * (ch + 6) - scrolls[0].current());
         }
-        if (cy + ch < viewTop() || cy > viewBot()) return null;
+        if (!vp.intersects(cx, cy, cw, ch)) return null;
         return new float[]{cx, cy, cw, ch};
     }
 
@@ -319,6 +382,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
      */
     private void paintGlassPass(GuiGraphics g, List<Module> mods) {
         float bx = boxX(), by = boxY();
+        ClipBand vp = contentViewport();
         for (int i = 0; i < 2; i++) {
             float catY = by + TAB_FIRST_Y + i * TAB_PITCH;
             chipGlass[i] = GlassSurface.control(g, bx + 8, catY, 64, TAB_H, 5, selectedCategory == i);
@@ -339,10 +403,10 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             searchField.setWidth(202);
             ((GlassEditBox) searchField).aurora$renderGlassPass(g);
 
-            GlassSurface.enableScissor(g, (int) mx, (int) (boxY() + 36), (int) (mx + 254), (int) (boxY() + BOX_H - 10));
+            GlassSurface.enableScissor(g, vp.x, vp.y, vp.xEnd(), vp.yEnd());
             if (tileGlass.length < mods.size()) tileGlass = new boolean[mods.size()];
             for (int i = 0; i < mods.size(); i++) {
-                float[] b = cardBounds(i, mods);
+                float[] b = cardBounds(i, mods, vp);
                 if (b == null) {
                     tileGlass[i] = false;
                     continue;
@@ -353,7 +417,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             GlassSurface.disableScissor(g);
         } else {
             float mx = mainX(), my = mainY();
-            GlassSurface.enableScissor(g, (int) mx, (int) (boxY() + 36), (int) (mx + 254), (int) (boxY() + BOX_H - 10));
+            GlassSurface.enableScissor(g, vp.x, vp.y, vp.xEnd(), vp.yEnd());
             float y = my + 38 - (float) scrolls[1].current();
             for (FeatureMetadata m : FeatureRegistry.settings()) {
                 y += 22; // header row — plain text + an opaque toggle, no glass
@@ -362,7 +426,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 } else {
                     for (FeatureSetting s : m.settings) {
                         int rh = s.height();
-                        if (y + rh > my + 36 && y < my + 216) {
+                        if (vp.intersects(mx + 4, y, 246, rh)) {
                             s.renderGlassPass(g, (int) (mx + 4), (int) y, 246);
                         }
                         y += rh + 4;
@@ -418,14 +482,16 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         else renderSettingsLive(g, mouseX, mouseY, delta);
 
         // Design language §8 — top-edge scroll fade. Both tabs scissor
-        // their content to the same viewport (boxY()+36 .. boxY()+BOX_H-10),
-        // so one gradient serves either: tiles / inline rows fade into the
-        // window's own tint (WINDOW_FILL, verbatim — its alpha IS the
-        // Background Opacity, the single application point) as they approach
-        // the viewport top, instead of hard-cutting at the scissor. Painted
-        // outside the content scissor, before the thumb. Gradient-only: the
-        // scissor already hides anything above the boundary.
-        ScrollFade.drawTop(g, (int) mainX(), 254, (int) (boxY() + 36), ScrollFade.FADE_PX,
+        // their content to the same viewport, so one gradient serves
+        // either: tiles / inline rows fade into the window's own tint
+        // (WINDOW_FILL, verbatim — its alpha IS the Background Opacity,
+        // the single application point) as they approach the viewport top,
+        // instead of hard-cutting at the scissor. Painted outside the
+        // content scissor, before the thumb, anchored at the band's own
+        // top edge. Gradient-only: the scissor already hides anything
+        // above the boundary.
+        ClipBand vp = contentViewport();
+        ScrollFade.drawTop(g, vp.x, vp.width, vp.y, ScrollFade.FADE_PX,
                 scrolls[selectedCategory].current(), ThemeManager.color(ThemeToken.WINDOW_FILL));
 
         drawScrollbar(g);
@@ -434,6 +500,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     private void renderModulesLive(GuiGraphics g, List<Module> mods, int mouseX, int mouseY, float delta) {
         float mx = mainX(), my = mainY();
         Font tr = this.font;
+        ClipBand vp = contentViewport();
 
         float btnY = my, btnSize = 20;
         drawLayoutButton(g, mx, btnY, btnSize, !gridLayout, mouseX, mouseY, true, layoutGlass[0]);
@@ -455,13 +522,18 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         // EditBoxMixin split); renderWidget draws content only.
         searchField.render(g, mouseX, mouseY, delta);
 
-        g.enableScissor((int) mx, (int) (boxY() + 36), (int) (mx + 254), (int) (boxY() + BOX_H - 10));
+        g.enableScissor(vp.x, vp.y, vp.xEnd(), vp.yEnd());
         for (int i = 0; i < mods.size(); i++) {
             Module m = mods.get(i);
-            float[] b = cardBounds(i, mods);
+            float[] b = cardBounds(i, mods, vp);
             if (b == null) continue;
             float cx = b[0], cy = b[1], cw = b[2], ch = b[3];
-            boolean hover = mouseX >= cx && mouseX <= cx + cw && mouseY >= cy && mouseY <= cy + ch;
+            // Hover reads the VISIBLE intersection: the pointer must be on
+            // a pixel the scissor actually paints. A tile scrolled past the
+            // band's edge no longer lights up from a pointer resting on its
+            // hidden half (render truth == hover truth, C-1).
+            boolean hover = vp.contains(mouseX, mouseY)
+                    && mouseX >= cx && mouseX <= cx + cw && mouseY >= cy && mouseY <= cy + ch;
             boolean on = m.isEnabled();
 
             // Surface: each tile is its own RAISED glass panel (painted
@@ -513,12 +585,13 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         float mx = mainX(), my = mainY();
         Font tr = this.font;
         searchField.visible = false;
+        ClipBand vp = contentViewport();
 
-        g.enableScissor((int) mx, (int) (boxY() + 36), (int) (mx + 254), (int) (boxY() + BOX_H - 10));
+        g.enableScissor(vp.x, vp.y, vp.xEnd(), vp.yEnd());
         float y = my + 38 - (float) scrolls[1].current();
         for (FeatureMetadata m : FeatureRegistry.settings()) {
             int headerH = 22;
-            if (y + headerH > my + 36 && y < my + 216) {
+            if (vp.intersects(mx + 4, y, CONTENT_W - 4, headerH)) {
                 g.drawString(tr, m.displayName, (int) (mx + 4), (int) (y + 6), ThemeManager.color(ThemeToken.ON_BACKGROUND), false);
                 // Detail-screen affordance: a header click opens the entry's
                 // detail screen (the Settings tab's counterpart of the
@@ -544,7 +617,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 // inline rows — the merged list lives behind the header
                 // click. The hint height must match the walks in
                 // computeMaxScroll and mouseClicked.
-                if (y + SETTINGS_HINT_H > my + 36 && y < my + 216) {
+                if (vp.intersects(mx + 4, y, CONTENT_W - 4, SETTINGS_HINT_H)) {
                     g.drawString(tr, "Click to configure", (int) (mx + 4), (int) (y + 1),
                             ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED), false);
                 }
@@ -552,8 +625,20 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             } else {
                 for (FeatureSetting s : m.settings) {
                     int rh = s.height();
-                    if (y + rh > my + 36 && y < my + 216) {
+                    boolean visible = vp.intersects(mx + 4, y, 246, rh);
+                    if (visible) {
                         s.render(g, (int) (mx + 4), (int) y, 246, mouseX, mouseY);
+                    }
+                    // C-1 render/input availability coupling: the row (and,
+                    // when it holds the focused setting, keyboard routing)
+                    // is available exactly while it shares a pixel with the
+                    // viewport. onInteractionAvailabilityChanged is the
+                    // FeatureDetailScreen hook — capture families cancel on
+                    // false; this tab hosts none today, so it is uniform
+                    // plumbing, not a behavior change.
+                    s.onInteractionAvailabilityChanged(visible);
+                    if (s == FeatureSetting.getFocused()) {
+                        focusedSettingVisible = visible;
                     }
                     y += rh + 4;
                 }
@@ -738,15 +823,24 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             return true;
         }
 
+        // C-1: the content viewport is the input truth for both tabs' walk-up
+        // targets. A pointer outside the band is never on a pixel the
+        // content scissor paints, so no scrolled row, header, or tile may
+        // answer it; a partially clipped target answers only inside its
+        // visible intersection (point ∈ viewport ∩ raw rect). Chrome tested
+        // above (sidebar chips, layout buttons, search field via children)
+        // and the scrollbar below live outside this gate by construction.
+        ClipBand vp = contentViewport();
         if (selectedCategory == 0) {
             if (button == 0 && mouseX >= mx && mouseX <= mx + 20 && mouseY >= my && mouseY <= my + 20) { gridLayout = false; return true; }
             if (button == 0 && mouseX >= mx + 24 && mouseX <= mx + 44 && mouseY >= my && mouseY <= my + 20) { gridLayout = true; return true; }
             List<Module> mods = filteredModules();
             for (int i = 0; i < mods.size(); i++) {
                 Module m = mods.get(i);
-                float[] b = cardBounds(i, mods);
+                float[] b = cardBounds(i, mods, vp);
                 if (b == null) continue;
-                if (mouseX >= b[0] && mouseX <= b[0] + b[2] && mouseY >= b[1] && mouseY <= b[1] + b[3]) {
+                if (vp.contains(mouseX, mouseY)
+                        && mouseX >= b[0] && mouseX <= b[0] + b[2] && mouseY >= b[1] && mouseY <= b[1] + b[3]) {
                     if (button == 1) {
                         FeatureMetadata fm = findMeta(m.id);
                         if (fm != null && fm.hasDetail() && this.minecraft != null) {
@@ -757,9 +851,15 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                     if (button == 0) { m.toggle(); return true; }
                 }
             }
-        } else {
+        } else if (vp.contains(mouseX, mouseY)) {
             float y = my + 38 - (float) scrolls[1].current();
             for (FeatureMetadata m : FeatureRegistry.settings()) {
+                // The toggle zone is deliberately ~10px wider than the
+                // painted 28px switch (a forgiving hit target that tiles
+                // the header row's right edge against the navigation zone
+                // to its left) — intentional, retained (C-1 ruling); the
+                // viewport gate above now intersects it with the visible
+                // band like every other target.
                 if (button == 0 && mouseX >= mx + 254 - 40 && mouseX <= mx + 254 && mouseY >= y + 4 && mouseY <= y + 19) {
                     m.setEnabled(!m.isEnabled());
                     com.aurora.client.config.AuroraConfig.save();
@@ -780,7 +880,12 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 } else {
                     for (FeatureSetting s : m.settings) {
                         int rh = s.height();
-                        if (s.mouseClicked(mouseX, mouseY, button, (int) (mx + 4), (int) y, 246)) {
+                        // Same visibility as the render walk: a row that
+                        // shares no pixel with the viewport is not
+                        // pointer-addressable (its EditBoxes and controls
+                        // cannot gain focus from off-screen clicks either).
+                        if (vp.intersects(mx + 4, y, 246, rh)
+                                && s.mouseClicked(mouseX, mouseY, button, (int) (mx + 4), (int) y, 246)) {
                             activeDragSetting = s;
                             return true;
                         }
@@ -834,7 +939,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontal, double vertical) {
         FeatureSetting focused = FeatureSetting.getFocused();
-        if (focused != null && focused.onScroll(vertical)) return true;
+        if (focused != null && focusedSettingVisible && focused.onScroll(vertical)) return true;
         scrolls[selectedCategory].wheel(vertical, 30, computeMaxScroll());
         return true;
     }
@@ -842,14 +947,14 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     @Override
     public boolean keyPressed(net.minecraft.client.input.KeyEvent _kev) {
         FeatureSetting focused = FeatureSetting.getFocused();
-        if (focused != null && focused.onKeyPress(_kev)) return true;
+        if (focused != null && focusedSettingVisible && focused.onKeyPress(_kev)) return true;
         return super.keyPressed(_kev);
     }
 
     @Override
     public boolean charTyped(net.minecraft.client.input.CharacterEvent _ev) {
         FeatureSetting focused = FeatureSetting.getFocused();
-        if (focused != null && focused.onCharTyped(_ev)) return true;
+        if (focused != null && focusedSettingVisible && focused.onCharTyped(_ev)) return true;
         return super.charTyped(_ev);
     }
 }
