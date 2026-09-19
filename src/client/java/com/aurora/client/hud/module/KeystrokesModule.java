@@ -51,6 +51,13 @@ public class KeystrokesModule extends HudModule {
     private static final int GAP = 2;
     /** Cluster width: three key columns. */
     private static final int WIDTH = CELL * 3 + GAP * 2;
+    /**
+     * Keycap corner radius — REPRESENTATIONAL HUD geometry, Square-mode-exempt
+     * by ruling (C-7): the cells draw physical keyboard keycaps (a drawn
+     * keycap reads as a key BECAUSE of its slightly rounded corners), in the
+     * HUD floating-content exception domain (DESIGN_LANGUAGE §16). Normal
+     * rectangular chrome must not copy this pattern — tokenize instead.
+     */
     private static final int KEY_RADIUS = 3;
     private static final int SPACE_H = 10;
     private static final int CPS_H = 11;

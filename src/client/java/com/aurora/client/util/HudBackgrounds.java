@@ -26,7 +26,14 @@ public final class HudBackgrounds {
 
     private HudBackgrounds() {}
 
-    /** Boxier corners than the rest of the UI ({@link AuroraTheme#RADIUS}). */
+    /**
+     * Boxier corners than the rest of the UI ({@link AuroraTheme#RADIUS}) —
+     * a SANCTIONED deviation, Square-mode-exempt by ruling (C-7): HUD module
+     * panels are floating HUD content (DESIGN_LANGUAGE §16's exception
+     * domain) whose compact boxy look is deliberate feature identity, not
+     * rectangular chrome that forgot the token. Do not "fix" this to follow
+     * Square mode.
+     */
     private static final int RADIUS = 2;
     private static final int PAD = 3;
 

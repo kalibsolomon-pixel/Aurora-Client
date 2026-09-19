@@ -224,8 +224,17 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
                 scale * 31L ^ previewW * 7919L ^ previewH * 17L, previewX, previewY, previewW, previewH,
                 () -> drawCheckerboard(ctx, 0, 0, previewW, previewH));
         ctx.fill(previewX, previewY, previewX + previewW, previewY + previewH, currentArgb());
-        // Content-frame white on the preview — structural neutral (see class javadoc).
-        RenderUtil.drawRoundedOutlineAA(ctx, previewX, previewY, previewW, previewH, 4, 1.0f, 0xFFFFFFFF);
+        // Content-frame white on the preview — structural neutral (see class
+        // javadoc). The PREVIEW is a represented-color sample like every
+        // ColorSetting swatch: its clipping follows theme roundness when
+        // rectangular (C-7 — was a literal 4 that ignored Square mode; the
+        // ColorSwatch min(h/2, radiusSmall) pattern). The pad/hue/alpha
+        // strips stay data-driven — their rounded corners belong to the
+        // gradient surfaces being edited (DESIGN_LANGUAGE §16's
+        // color-picking data-surface exception) and are Square-mode-exempt
+        // by ruling.
+        RenderUtil.drawRoundedOutlineAA(ctx, previewX, previewY, previewW, previewH,
+                Math.min(previewH / 2f, ThemeManager.current().roundness().radiusSmall()), 1.0f, 0xFFFFFFFF);
 
         ctx.drawString(tr, Component.literal("Hue"),   hueX - 4, hueY - 12, labelCol, false);
         ctx.drawString(tr, Component.literal("Alpha"), alphaX - 8, alphaY - 12, labelCol, false);
@@ -278,7 +287,12 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
                 RenderUtil.fillLogical(ctx, x0, y0, x1, y1, argb);
             }
         }
-        // Content-frame white around the pad — structural neutral (see class javadoc).
+        // Content-frame white around the pad — structural neutral (see class
+        // javadoc). DATA-DRIVEN exemption (C-7 ruling): the pad/hue/alpha
+        // gradient surfaces are color-picking data (DESIGN_LANGUAGE §16);
+        // their corner geometry belongs to the data surface, not to
+        // rectangular chrome, so Square mode deliberately does not square
+        // these frames (unlike the preview sample above).
         RenderUtil.drawRoundedOutlineAA(ctx, ox, oy, padSize, padSize, 6, 1.0f, 0xFFFFFFFF);
     }
 
@@ -289,7 +303,8 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
             int argb = ColorEntryHelper.hslaToArgb(h, 1f, 0.5f, 1f);
             RenderUtil.fillLogical(ctx, ox, oy + py, ox + hueW, oy + py + 1, argb);
         }
-        // Content-frame white around the hue strip — structural neutral.
+        // Content-frame white around the hue strip — structural neutral;
+        // data-driven exemption as above (C-7).
         RenderUtil.drawRoundedOutlineAA(ctx, ox, oy, hueW, hueH, 6, 1.0f, 0xFFFFFFFF);
     }
 
@@ -301,7 +316,8 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
             int argb = ColorEntryHelper.hslaToArgb(hue, sat, lit, a);
             RenderUtil.fillLogical(ctx, ox, oy + py, ox + alphaW, oy + py + 1, argb);
         }
-        // Content-frame white around the alpha strip — structural neutral.
+        // Content-frame white around the alpha strip — structural neutral;
+        // data-driven exemption as above (C-7).
         RenderUtil.drawRoundedOutlineAA(ctx, ox, oy, alphaW, alphaH, 6, 1.0f, 0xFFFFFFFF);
     }
 

@@ -1399,6 +1399,68 @@ rollout).
   class (grid tile 0 is `zoom`, not `world_map` — key on the live grid
   order).
 
+**C-7 PILOT RECORD (2026-09-19, "conform square mode geometry" — Wave 1).**
+The finite literal-radius inventory was rebuilt from source at `3b47974`
+(matching the planning audit) and every site classified. Migrated
+(RECTANGULAR_CHROME → the existing `radiusSmall()` token, glass and flat
+paths together): AuroraScreen sidebar chips (5→6), layout buttons (4→6),
+module tiles (6→6 — ROUND-pixel-identical), the manager toast (4→6, the
+pack browser's toast already passed the token), and the ColorPicker
+preview frame (4→6 via the ColorSwatch `min(h/2, radiusSmall)` pattern —
+the preview is a represented-color sample like every ColorSetting swatch).
+No new radius abstraction was needed (the planning-audit conclusion held).
+
+*Policy rulings (explicit, pinned at the source sites + by tests):* the
+picker's pad/hue/alpha frames are DATA-DRIVEN — color-picking gradient
+surfaces (§16's exception domain), Square-exempt; Keystrokes' keycap
+radius 3 is REPRESENTATIONAL HUD geometry (drawn keycaps), Square-exempt;
+HudBackgrounds' radius 2 is the already-documented "boxier" HUD deviation,
+SANCTIONED (not silently changed); scrollbar-thumb capsules (4 sites,
+radius 2) are MECHANICAL direct-manipulation chrome (the toggle/slider
+track family), Square-exempt; HudEditor's plain-fill chrome is already
+square in both modes — conformance satisfied, ROUND rounding deliberately
+NOT added (no design-language requirement; would expand Wave 1).
+ToggleSwitch/Slider tracks+knobs verified untouched (pinned).
+
+*Verification:* 167 tests / 0 failures (156 + 11 in
+`SquareModeConformanceTest`: the token table, the glass/flat source
+contracts for every migrated family, the literal-ban pins, and the
+explicit-exemption pins). Runtime `c7square` (untracked, wiring removed):
+12 captures per tree (ROUND/SQUARE × Wireframe-flat/Frosted-glass on
+AuroraScreen, toast, picker) on the migrated tree and the stashed
+`3b47974` baseline. SQUARE corner oracle: the picker preview's corner
+cell fills 64/64 red in SQUARE vs 58/64 in ROUND (the 6px arc removed) —
+decisive; the tile corner cell flips 7/64 px at max=179 with a 0.00
+drift floor; the layout-button corner flips 7/64 at max=96. ROUND parity
+(after vs before, matched fixtures): module tiles byte-identical; the
+total window diffs are 16 px (settings tab — exactly the selected chip's
+four corner arcs, 5→6) and 120 px (modules tab — the selected chip +
+layout-button corner arcs, 4→6; bands localize to those corner cells and
+nowhere else), toast 18 px and preview 52 px full-frame — the deliberate,
+quantified cost of replacing accidental literals with the semantic token.
+The toast's own corner is palette-invisible (fill ≈ backdrop at the dev
+fixture) — its conformance rides the same proven token mechanism plus the
+source pin. Cache audit: every affected cache is keyed on
+`ThemeManager.generation()` (AuroraScreen's layer cache, Button templates,
+manager row templates), which bumps on the roundness reload — no
+fingerprint fix needed. C-1 regression: the full `c1bounds` suite re-ran
+on the C-7 tree at 18/18. The first capture round was invalid (the
+harness forgot to open AuroraScreen — all eight "AuroraScreen" captures
+were the title screen); fixed and re-run on both trees.
+
+*Mimosa (per-task requirement):* the plugin's deep project scan ran to
+COMPLETION during this task (19 s, seal
+`sha256:3489eb…`, 0 findings, dependency scan completed, 0 advisories;
+evidence boundary static-only) — the `scanner_enobufs` pre-commit
+condition did NOT recur. The scan's coverage is thin (1 package, 19 s
+for a 48k-line tree), so this is completion evidence, not a broad
+security claim.
+
+*Remaining Square-mode work:* none identified in the Wave-1 inventory —
+every production literal radius is now either migrated or an explicitly
+ruled exemption. New chrome must resolve through the tokens (the
+source-contract tests document the pattern).
+
 ## 7. Registries (the drift trap)
 
 Three parallel structures with no single source of truth:

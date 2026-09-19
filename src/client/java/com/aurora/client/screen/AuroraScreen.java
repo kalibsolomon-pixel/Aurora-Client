@@ -383,17 +383,24 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     private void paintGlassPass(GuiGraphics g, List<Module> mods) {
         float bx = boxX(), by = boxY();
         ClipBand vp = contentViewport();
+        // C-7: every control-scaled chrome radius on this screen (chips,
+        // layout buttons, tiles) resolves through the SAME theme token in
+        // BOTH the glass and flat paths — Square mode squares them all.
+        // The former literals (5/4/6) were pre-token survivals; the tile
+        // literal 6 equals radiusSmall's ROUND value, so only the chips
+        // (5→6) and layout buttons (4→6) shift one/two ROUND corner pixels.
+        float ctrlRadius = ThemeManager.current().roundness().radiusSmall();
         for (int i = 0; i < 2; i++) {
             float catY = by + TAB_FIRST_Y + i * TAB_PITCH;
-            chipGlass[i] = GlassSurface.control(g, bx + 8, catY, 64, TAB_H, 5, selectedCategory == i);
+            chipGlass[i] = GlassSurface.control(g, bx + 8, catY, 64, TAB_H, ctrlRadius, selectedCategory == i);
         }
         float profY = by + TAB_FIRST_Y + 2 * TAB_PITCH;
-        profGlass = GlassSurface.control(g, bx + 8, profY, 64, TAB_H, 5);
+        profGlass = GlassSurface.control(g, bx + 8, profY, 64, TAB_H, ctrlRadius);
 
         if (selectedCategory == 0) {
             float mx = mainX(), my = mainY();
-            layoutGlass[0] = GlassSurface.control(g, mx, my, 20, 20, 4, !gridLayout);
-            layoutGlass[1] = GlassSurface.control(g, mx + 24, my, 20, 20, 4, gridLayout);
+            layoutGlass[0] = GlassSurface.control(g, mx, my, 20, 20, ctrlRadius, !gridLayout);
+            layoutGlass[1] = GlassSurface.control(g, mx + 24, my, 20, 20, ctrlRadius, gridLayout);
             // Search field — positioned here (the pass runs before
             // renderModulesLive positions it again) and driven through its
             // own split (EditBoxMixin carries the frame-stamp scheme).
@@ -411,7 +418,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                     tileGlass[i] = false;
                     continue;
                 }
-                tileGlass[i] = GlassSurface.control(g, b[0], b[1], b[2], b[3], 6,
+                tileGlass[i] = GlassSurface.control(g, b[0], b[1], b[2], b[3], ctrlRadius,
                         mods.get(i).isEnabled(), BlurPanelRenderer.Priority.ROW);
             }
             GlassSurface.disableScissor(g);
@@ -441,6 +448,9 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     private void renderLive(GuiGraphics g, List<Module> mods, int mouseX, int mouseY, float delta) {
         float bx = boxX(), by = boxY();
         Font tr = this.font;
+        // Same token as paintGlassPass's glass surfaces — the flat fallback
+        // corners and the glass corners derive from one radius (C-7).
+        float ctrlRadius = ThemeManager.current().roundness().radiusSmall();
 
         g.drawString(tr, "AURORA", (int) (bx + 16), (int) (by + 16), ThemeManager.color(ThemeToken.ACCENT), false);
 
@@ -456,9 +466,9 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             // label.
             if (!chipGlass[i]) {
                 if (sel) {
-                    RenderUtil.drawRoundedRectAA(g, bx + 8, catY, 64, 22, 5, alpha(ThemeToken.ACCENT, 0x26 / 255f));
+                    RenderUtil.drawRoundedRectAA(g, bx + 8, catY, 64, 22, ctrlRadius, alpha(ThemeToken.ACCENT, 0x26 / 255f));
                 } else if (hover) {
-                    RenderUtil.drawRoundedRectAA(g, bx + 8, catY, 64, 22, 5, ThemeManager.surfaceColor(ThemeToken.SURFACE_VARIANT));
+                    RenderUtil.drawRoundedRectAA(g, bx + 8, catY, 64, 22, ctrlRadius, ThemeManager.surfaceColor(ThemeToken.SURFACE_VARIANT));
                 }
             }
             int txt = chipGlass[i] && sel ? ThemeManager.color(ThemeToken.ON_ACCENT)
@@ -473,7 +483,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         // Profiles is a plain action button — neutral raised glass painted
         // pre-dim by paintGlassPass; the hover fill only on decline.
         if (!profGlass && pHover) {
-            RenderUtil.drawRoundedRectAA(g, bx + 8, profY, 64, 22, 5, ThemeManager.surfaceColor(ThemeToken.SURFACE_VARIANT));
+            RenderUtil.drawRoundedRectAA(g, bx + 8, profY, 64, 22, ctrlRadius, ThemeManager.surfaceColor(ThemeToken.SURFACE_VARIANT));
         }
         g.drawString(tr, "Profiles", (int) (bx + 16), (int) (profY + 7),
                 pHover ? ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY) : ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED), false);
@@ -523,6 +533,10 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         searchField.render(g, mouseX, mouseY, delta);
 
         g.enableScissor(vp.x, vp.y, vp.xEnd(), vp.yEnd());
+        // Same theme-resolved control radius the glass pass paints the tiles
+        // with (C-7 — the former literal 6 equals radiusSmall's ROUND value,
+        // so ROUND pixels are unchanged and SQUARE squares the tiles).
+        float tileRadius = ThemeManager.current().roundness().radiusSmall();
         for (int i = 0; i < mods.size(); i++) {
             Module m = mods.get(i);
             float[] b = cardBounds(i, mods, vp);
@@ -546,18 +560,18 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             boolean tileGlass = tileGlass(i);
             if (tileGlass) {
                 if (hover) {
-                    RenderUtil.drawRoundedRectAA(g, cx, cy, cw, ch, 6,
+                    RenderUtil.drawRoundedRectAA(g, cx, cy, cw, ch, tileRadius,
                             alpha(ThemeToken.ON_BACKGROUND, 0x1A / 255f));
                 }
             } else {
                 // Tile surface — same dark/translucent character as the panel
                 // (surface RGB + the panel's opacity-driven alpha), hover lifts it.
-                RenderUtil.drawRoundedRectAA(g, cx, cy, cw, ch, 6,
+                RenderUtil.drawRoundedRectAA(g, cx, cy, cw, ch, tileRadius,
                         hover ? ThemeManager.surfaceColor(ThemeToken.SURFACE_VARIANT) : ThemeManager.surfaceColor(ThemeToken.SURFACE));
                 if (on) {
                     // Accent wash + border = the enabled indicator (no switch widget).
-                    RenderUtil.drawRoundedRectAA(g, cx, cy, cw, ch, 6, alpha(ThemeToken.ACCENT, 0x14 / 255f));
-                    RenderUtil.drawRoundedOutlineAA(g, cx, cy, cw, ch, 6, 1.0f, ThemeManager.color(ThemeToken.ACCENT));
+                    RenderUtil.drawRoundedRectAA(g, cx, cy, cw, ch, tileRadius, alpha(ThemeToken.ACCENT, 0x14 / 255f));
+                    RenderUtil.drawRoundedOutlineAA(g, cx, cy, cw, ch, tileRadius, 1.0f, ThemeManager.color(ThemeToken.ACCENT));
                 }
             }
 
@@ -651,20 +665,23 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     private void drawLayoutButton(GuiGraphics g, float x, float y, float size, boolean selected,
                                   int mouseX, int mouseY, boolean list, boolean btnGlass) {
         boolean hover = mouseX >= x && mouseX <= x + size && mouseY >= y && mouseY <= y + size;
+        // Same theme-resolved control radius as the glass pass's surfaces of
+        // this pair (C-7 — was a literal 4 that ignored Square mode).
+        float ctrlRadius = ThemeManager.current().roundness().radiusSmall();
         // Surface: the list/grid pair is a segmented control — RAISED glass
         // (painted pre-dim by paintGlassPass), accent-STAINED on the active
         // one. Content here: the faint hover wash on unselected glass, the
         // flat fills + borders on decline, then the icon.
         if (btnGlass) {
             if (hover && !selected) {
-                RenderUtil.drawRoundedRectAA(g, x, y, size, size, 4,
+                RenderUtil.drawRoundedRectAA(g, x, y, size, size, ctrlRadius,
                         alpha(ThemeToken.ON_BACKGROUND, 0x1A / 255f));
             }
         } else {
             int bg = selected ? alpha(ThemeToken.ACCENT, 0x26 / 255f) : (hover ? ThemeManager.surfaceColor(ThemeToken.SURFACE_VARIANT) : ThemeManager.surfaceColor(ThemeToken.SURFACE));
             int border = selected ? ThemeManager.color(ThemeToken.ACCENT) : alpha(ThemeToken.ON_BACKGROUND, 0x08f);
-            RenderUtil.drawRoundedRectAA(g, x, y, size, size, 4, bg);
-            RenderUtil.drawRoundedOutlineAA(g, x, y, size, size, 4, 1.0f, border);
+            RenderUtil.drawRoundedRectAA(g, x, y, size, size, ctrlRadius, bg);
+            RenderUtil.drawRoundedOutlineAA(g, x, y, size, size, ctrlRadius, 1.0f, border);
         }
         // Same contract as the tiles: on stained glass the icon takes the
         // contrast-derived ON_ACCENT; the flat fallback's ~15% accent wash is
@@ -800,6 +817,10 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         // hover highlight.
         int col = ThemeManager.color(ThemeToken.ON_BACKGROUND) & 0x00FFFFFF;
         int a = scrolls[selectedCategory].isDragging() ? 0x55 : 0x30;
+        // The thumb's capsule radius is MECHANICAL — direct-manipulation
+        // chrome in the toggle-track/slider-track family, Square-mode-exempt
+        // by ruling (C-7; same at ManagerListScreen and the pack browser's
+        // two tracks). Width/drag physics untouched.
         RenderUtil.drawRoundedRectAA(g, mainX() + 258, thumbY, 3, thumbH, 2, (a << 24) | col);
     }
 

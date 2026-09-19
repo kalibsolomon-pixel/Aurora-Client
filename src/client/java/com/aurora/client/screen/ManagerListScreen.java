@@ -863,7 +863,11 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
 
     /** Renders the toast; call from the screen's tail (screen-owned order). */
     protected void renderToast(GuiGraphics ctx) {
-        toast.render(ctx, this.font, this.width, this.height, 4);
+        // C-7: the toast is ordinary rectangular feedback chrome — its radius
+        // resolves through the theme (was a literal 4 that ignored Square
+        // mode). The pack browser's toast already passes the same token.
+        toast.render(ctx, this.font, this.width, this.height,
+                ThemeManager.current().roundness().radiusSmall());
     }
 
     /** Persist screen state on close if the screen owns any (the Waypoint screen saves the config). */
