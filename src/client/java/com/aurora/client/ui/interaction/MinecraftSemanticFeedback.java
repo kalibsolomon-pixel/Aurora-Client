@@ -13,6 +13,8 @@ public final class MinecraftSemanticFeedback implements SemanticFeedback {
     @Override
     public void play(SemanticSound sound) {
         if (sound != SemanticSound.ACTIVATION) return;
-        AbstractWidget.playButtonClickSound(Minecraft.getInstance().getSoundManager());
+        Minecraft client = Minecraft.getInstance();
+        if (client == null) return; // headless (unit tests) — no sound manager exists
+        AbstractWidget.playButtonClickSound(client.getSoundManager());
     }
 }

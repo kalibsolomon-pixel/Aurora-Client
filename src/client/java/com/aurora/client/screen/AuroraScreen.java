@@ -85,11 +85,8 @@ import java.util.Map;
  * detail screen (custom_title has none — its header is grouping chrome
  * with a toggle only); the four header toggles are the Phase-B Boolean
  * adapter (the existing {@link ToggleSwitch} stays painter/state, the
- * semantic control owns the single activation). The layout pair is
- * deliberately NOT adopted: it is the same peer-value family
- * {@code SegmentedControl} belongs to, and C-5 establishes that contract
- * (arrow/peer semantics are C-3) — it keeps its immediate hover and
- * silent manual clicks, documented as the remaining gap.
+ * semantic control owns the single activation). The layout pair's C-2b
+ * deferral is CLOSED by C-5 — see the C-5 paragraph below.
  *
  * <p>Phase C-3 (2026-09-20): arrow-key roving through the shared
  * {@link SemanticControlGroup} primitive. The sidebar Mods/Settings tabs
@@ -100,6 +97,15 @@ import java.util.Map;
  * screen gets the identical ring). Arrows never select — Enter/Space/click
  * remain the only selection paths (selection has side effects like the
  * per-tab scroll reset), and cross-axis keys fall through to vanilla.
+ *
+ * <p>Phase C-5 (2026-09-20): SegmentedControl conformance closed the last
+ * deferred peer-selection surface on this screen. The Theme entry's three
+ * segmented rows (Mode, Corner Style, Glass Style — 7 peers) materialize
+ * their component-owned controls through the same generic C-2 hosting loop
+ * (zero screen-side segment logic) and rove via the C-3 seam; the layout
+ * pair adopted the peer semantic primitive on its existing 20×20 painter
+ * (canonical 140 ms hover, focus hairline, one-click selection with a
+ * silent no-op on the active layout, Left/Right ring).
  */
 public class AuroraScreen extends Screen implements ThemedScreen {
 
@@ -189,6 +195,24 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     private final SemanticControlGroup sidebarTabGroup = SemanticControlGroup.horizontal();
     /** The Profiles chip — a plain action (opens the profile manager). */
     private SemanticActionControl profilesControl;
+    /**
+     * The list/grid layout pair (C-5) — the same peer-selection family as
+     * {@code SegmentedControl}, adopted through the peer semantic primitive
+     * rather than the text-segment component (the 20×20 vector-icon geometry
+     * is not a text track; reusing the painter would be a visual redesign).
+     * The manual painter stays; hover becomes the canonical pointer-only
+     * symmetric 140 ms, focus gains the Button-family hairline, and clicks
+     * route through the actions — one ACTIVATION on a genuine change, silent
+     * consumed no-op on the already-selected layout.
+     */
+    private final SemanticActionControl[] layoutControls = new SemanticActionControl[2];
+    /** C-5: the pair roves Left/Right as one horizontal ring. */
+    private final SemanticControlGroup layoutGroup = SemanticControlGroup.horizontal();
+    /** Canonical hover animators for the pair — pointer-only (C-5). */
+    private final HoverAnim[] layoutHovers = {
+            HoverAnim.symmetric(HOVER_MS),
+            HoverAnim.symmetric(HOVER_MS),
+    };
     /** One control per module card, keyed by stable module id (finite: the ModuleManager set). */
     private final Map<String, SemanticActionControl> tileControls = new HashMap<>();
     /** Settings-header navigation, keyed by entry id — only entries with a detail screen. */
@@ -255,18 +279,20 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         this.addWidget(searchField);
 
         // C-2b screen-owned chrome: the two navigation tabs, the Profiles
-        // action, all 37 module cards, and the Settings headers + header
-        // toggles are created once and registered in visual order (sidebar
-        // first; module cards in ModuleManager order, the grid's visual
-        // order; the Settings walk interleaves each entry's header chrome
-        // with its rows further down). The factories are identity-stable,
-        // so a resize's beginRebuild/finishRebuild re-registers these same
-        // objects without accumulating children. The layout pair is
-        // deliberately absent — peer selection is C-5's SegmentedControl
-        // contract (see the class javadoc).
+        // action, the layout pair (C-5 — the last deferred peer-selection
+        // surface on this screen), all 37 module cards, and the Settings
+        // headers + header toggles are created once and registered in visual
+        // order (sidebar first; the layout pair tops the content column
+        // before the module cards in ModuleManager order; the Settings walk
+        // interleaves each entry's header chrome with its rows further
+        // down). The factories are identity-stable, so a resize's
+        // beginRebuild/finishRebuild re-registers these same objects without
+        // accumulating children.
         tabControls[0] = tabControl(0);
         tabControls[1] = tabControl(1);
         profilesControl = profilesActionControl();
+        layoutControls[0] = layoutControl(0);
+        layoutControls[1] = layoutControl(1);
         for (Module m : ModuleManager.getInstance().getModules()) {
             tileControls.put(m.id, tileControl(m));
         }
@@ -355,6 +381,41 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 SemanticActionControl.PointerRouting.MANUAL);
         semanticHost.register(profilesControl);
         return profilesControl;
+    }
+
+    /**
+     * One layout peer (0 = List, 1 = Grid) — the peer-selection value
+     * contract on the existing manual painter (see {@link #layoutControls}).
+     * The represented value is the {@code gridLayout} field, read live for
+     * the Selected state (no stored index that could disagree); selecting
+     * the already-active layout is a silent consumed no-op (no scroll reset,
+     * no rebuild — exactly the baseline's behavior, now with the sound
+     * discipline made explicit).
+     */
+    private SemanticActionControl layoutControl(int i) {
+        SemanticActionControl control = layoutControls[i];
+        if (control != null) return control;
+        String name = i == 0 ? "List Layout" : "Grid Layout";
+        final boolean grid = i == 1;
+        control = new SemanticActionControl(new SemanticAction(
+                Component.literal(name),
+                () -> Component.literal("Switches the Modules tab between list and grid layouts."),
+                () -> Component.literal(gridLayout == grid ? "Selected" : "Not selected"),
+                () -> true,
+                () -> {
+                    if (gridLayout == grid) return; // reactivating the active layout: silent consumed no-op
+                    MinecraftSemanticFeedback.INSTANCE
+                            .play(SemanticSound.ACTIVATION);
+                    gridLayout = grid;
+                },
+                SemanticSound.NONE, true, true),
+                MinecraftSemanticFeedback.INSTANCE,
+                null, // no press animation — the selection transfer is the feedback
+                SemanticActionControl.PointerRouting.MANUAL);
+        layoutControls[i] = control;
+        layoutGroup.attach(control); // C-5 ring; idempotent across re-inits
+        semanticHost.register(control);
+        return control;
     }
 
     /**
@@ -873,8 +934,24 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         ClipBand vp = contentViewport();
 
         float btnY = my, btnSize = 20;
-        drawLayoutButton(g, mx, btnY, btnSize, !gridLayout, mouseX, mouseY, true, layoutGlass[0]);
-        drawLayoutButton(g, mx + 24, btnY, btnSize, gridLayout, mouseX, mouseY, false, layoutGlass[1]);
+        // The layout pair (C-5): canonical pointer-only hover per peer — never
+        // gated on selection — plus bounds/pointer sync for the semantic
+        // controls (Modules-tab chrome: always interactive while painted; the
+        // Settings tab never re-marks them, so the frame-start sweep makes
+        // them unavailable there).
+        for (int i = 0; i < 2; i++) {
+            float lx = i == 0 ? mx : mx + 24;
+            boolean hover = Widget.inBounds(mouseX, mouseY, lx, btnY, btnSize, btnSize);
+            float hoverT = layoutHovers[i].update(hover);
+            SemanticActionControl control = layoutControls[i];
+            if (control != null) {
+                control.setBounds((int) lx, (int) btnY, (int) btnSize, (int) btnSize);
+                control.setAvailable(true);
+                control.updatePointer(mouseX, mouseY);
+            }
+            drawLayoutButton(g, lx, btnY, btnSize, (i == 1) == gridLayout, hoverT,
+                    control != null && control.isFocused(), i == 0, layoutGlass[i]);
+        }
 
         // The search bar occupies exactly the original placeholder's bounds —
         // top edge aligned with the list/grid buttons, 202x20. EditBoxMixin
@@ -1092,26 +1169,49 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         g.disableScissor();
     }
 
+    /**
+     * One layout button's painter (C-5 conformance, visuals preserved): the
+     * selected channel, hover channel, and focus channel are independent.
+     * Hover is the caller-driven canonical {@code hoverT} (pointer-only,
+     * symmetric 140 ms — was immediate AND suppressed on the selected peer);
+     * the translucent ON_BACKGROUND wash composes over stained/neutral glass
+     * and the flat fills alike, so selected+hover is representable. Focus is
+     * the Button-family 1 px accent hairline. Rest states and the vector
+     * icons are unchanged; the flat unselected base now lerps to its hover
+     * endpoint instead of snapping.
+     */
     private void drawLayoutButton(GuiGraphics g, float x, float y, float size, boolean selected,
-                                  int mouseX, int mouseY, boolean list, boolean btnGlass) {
-        boolean hover = mouseX >= x && mouseX <= x + size && mouseY >= y && mouseY <= y + size;
+                                  float hoverT, boolean focused, boolean list, boolean btnGlass) {
         // Same theme-resolved control radius as the glass pass's surfaces of
         // this pair (C-7 — was a literal 4 that ignored Square mode).
         float ctrlRadius = ThemeManager.current().roundness().radiusSmall();
         // Surface: the list/grid pair is a segmented control — RAISED glass
         // (painted pre-dim by paintGlassPass), accent-STAINED on the active
-        // one. Content here: the faint hover wash on unselected glass, the
-        // flat fills + borders on decline, then the icon.
+        // one. Content here: the canonical hover wash on glass (both peers),
+        // the flat fills + borders on decline, then the icon.
         if (btnGlass) {
-            if (hover && !selected) {
+            if (hoverT > 0f) {
                 RenderUtil.drawRoundedRectAA(g, x, y, size, size, ctrlRadius,
-                        alpha(ThemeToken.ON_BACKGROUND, 0x1A / 255f));
+                        alpha(ThemeToken.ON_BACKGROUND, (0x1A / 255f) * hoverT));
             }
         } else {
-            int bg = selected ? alpha(ThemeToken.ACCENT, 0x26 / 255f) : (hover ? ThemeManager.surfaceColor(ThemeToken.SURFACE_VARIANT) : ThemeManager.surfaceColor(ThemeToken.SURFACE));
+            int bg = selected ? alpha(ThemeToken.ACCENT, 0x26 / 255f)
+                    : AuroraAnim.lerpArgb(
+                            ThemeManager.surfaceColor(ThemeToken.SURFACE),
+                            ThemeManager.surfaceColor(ThemeToken.SURFACE_VARIANT), hoverT);
             int border = selected ? ThemeManager.color(ThemeToken.ACCENT) : alpha(ThemeToken.ON_BACKGROUND, 0x08f);
             RenderUtil.drawRoundedRectAA(g, x, y, size, size, ctrlRadius, bg);
             RenderUtil.drawRoundedOutlineAA(g, x, y, size, size, ctrlRadius, 1.0f, border);
+            if (!selected && hoverT > 0f) {
+                RenderUtil.drawRoundedRectAA(g, x, y, size, size, ctrlRadius,
+                        alpha(ThemeToken.ON_BACKGROUND, (0x1A / 255f) * hoverT));
+            }
+        }
+        // Keyboard focus: the Button-family hairline — independent of both
+        // the enabled stain and the hover wash.
+        if (focused) {
+            RenderUtil.drawRoundedOutlineAA(g, x, y, size, size, ctrlRadius, 1.0f,
+                    ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
         }
         // Same contract as the tiles: on stained glass the icon takes the
         // contrast-derived ON_ACCENT; the flat fallback's ~15% accent wash is
@@ -1298,8 +1398,22 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         // and the scrollbar below live outside this gate by construction.
         ClipBand vp = contentViewport();
         if (selectedCategory == 0) {
-            if (button == 0 && mouseX >= mx && mouseX <= mx + 20 && mouseY >= my && mouseY <= my + 20) { gridLayout = false; return true; }
-            if (button == 0 && mouseX >= mx + 24 && mouseX <= mx + 44 && mouseY >= my && mouseY <= my + 20) { gridLayout = true; return true; }
+            // Layout pair (C-5): both zones route through the peer controls —
+            // the enabled gate, exactly-one activation click, and the silent
+            // selected no-op all live in the action. Consumed either way (the
+            // 4px gap between the zones stays inert, as before).
+            if (button == 0 && mouseX >= mx && mouseX <= mx + 20 && mouseY >= my && mouseY <= my + 20) {
+                if (layoutControls[0] != null && layoutControls[0].activateFromPointer(mouseX, mouseY, button)) {
+                    this.setFocused(layoutControls[0]);
+                }
+                return true;
+            }
+            if (button == 0 && mouseX >= mx + 24 && mouseX <= mx + 44 && mouseY >= my && mouseY <= my + 20) {
+                if (layoutControls[1] != null && layoutControls[1].activateFromPointer(mouseX, mouseY, button)) {
+                    this.setFocused(layoutControls[1]);
+                }
+                return true;
+            }
             List<Module> mods = filteredModules();
             for (int i = 0; i < mods.size(); i++) {
                 Module m = mods.get(i);

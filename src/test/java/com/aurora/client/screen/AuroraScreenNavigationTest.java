@@ -58,6 +58,9 @@ class AuroraScreenNavigationTest {
         assertTrue(src.contains("tabControls[0] = tabControl(0);"));
         assertTrue(src.contains("tabControls[1] = tabControl(1);"));
         assertTrue(src.contains("profilesControl = profilesActionControl();"));
+        // C-5: the layout pair joined the hosted chrome.
+        assertTrue(src.contains("layoutControls[0] = layoutControl(0);"));
+        assertTrue(src.contains("layoutControls[1] = layoutControl(1);"));
         // Module cards: one control per ModuleManager module (37 tiles).
         assertTrue(src.contains("for (Module m : ModuleManager.getInstance().getModules()) {\n            tileControls.put(m.id, tileControl(m));\n        }"));
         assertEquals(37, count(modules, "new Module("), "the grid's tile inventory (ModuleManager)");
@@ -73,17 +76,36 @@ class AuroraScreenNavigationTest {
     }
 
     @Test
-    void layoutPairIsDeliberatelyDeferredToC5() {
+    void layoutPairAdoptsThePeerSelectionContract() {
         String src = read(SCREEN);
-        // The pair keeps its manual immediate path (documented remaining
-        // gap: canonical hover + peer semantic controls + C-3 arrows all
-        // land with C-5's SegmentedControl conformance).
-        assertTrue(src.contains("gridLayout = false; return true;"));
-        assertTrue(src.contains("gridLayout = true; return true;"));
-        assertFalse(src.contains("layoutControl"),
-                "C-2b must not manufacture a one-off peer primitive for the layout pair");
-        assertTrue(src.contains("peer selection is C-5's SegmentedControl"),
-                "the deferral stays documented at the init site");
+        // C-5: the pair joined the peer-selection family through the shared
+        // primitive — NOT the text-segment component (the 20×20 vector-icon
+        // geometry is not a text track; the narrowest solution reuses the
+        // peer semantics on the existing painter).
+        assertTrue(src.contains("private final SemanticControlGroup layoutGroup = SemanticControlGroup.horizontal();"),
+                "the pair is one horizontal roving ring");
+        assertEquals(1, count(src, "layoutGroup.attach(control);"),
+                "both peers join the ring at the shared factory");
+        assertTrue(src.contains("private final SemanticActionControl[] layoutControls = new SemanticActionControl[2];"));
+        // Canonical hover: pointer-only symmetric 140 ms, never gated on the
+        // selected layout (the C-2b immediate+suppressed behavior is gone).
+        assertTrue(src.contains("HoverAnim[] layoutHovers = {\n            HoverAnim.symmetric(HOVER_MS),\n            HoverAnim.symmetric(HOVER_MS),\n    };"));
+        assertTrue(src.contains("layoutHovers[i].update(hover);"));
+        // Clicks route through the actions — the raw assignments are gone,
+        // and the already-selected layout is a silent consumed no-op.
+        assertFalse(src.contains("gridLayout = false; return true;"));
+        assertFalse(src.contains("gridLayout = true; return true;"));
+        String factory = bodyOf(src, "private SemanticActionControl layoutControl(int i) {");
+        assertTrue(factory.contains("if (gridLayout == grid) return;"));
+        assertTrue(factory.contains("play(SemanticSound.ACTIVATION);"));
+        assertTrue(factory.contains("SemanticSound.NONE, true, true)"));
+        // The painter keeps its 20×20 vector icons (visual preservation) and
+        // gains the independent focus channel.
+        String painter = bodyOf(src, "private void drawLayoutButton(");
+        assertTrue(painter.contains("if (focused) {"));
+        assertTrue(painter.contains("0x99"));
+        assertFalse(painter.contains("mouseX"),
+                "hover no longer reads the pointer directly — it consumes the canonical hoverT");
     }
 
     // ------------------------------------------------------------------
@@ -135,15 +157,18 @@ class AuroraScreenNavigationTest {
         int search = initBody.indexOf("this.addWidget(searchField)");
         int tabs = initBody.indexOf("tabControls[0] = tabControl(0);");
         int profiles = initBody.indexOf("profilesControl = profilesActionControl();");
+        int layout = initBody.indexOf("layoutControls[0] = layoutControl(0);");
         int tiles = initBody.indexOf("tileControls.put(m.id, tileControl(m));");
         int settings = initBody.indexOf("headerToggleControls.put(metadata.id, headerToggleControl(metadata));");
-        assertTrue(search >= 0 && tabs > search && profiles > tabs && tiles > profiles && settings > tiles,
+        assertTrue(search >= 0 && tabs > search && profiles > tabs && layout > profiles
+                        && tiles > layout && settings > tiles,
                 "registration follows the visual traversal order");
         // Factories are identity-stable: a resize's rebuild re-registers the
         // SAME objects (each factory returns its stored instance first).
         for (String guard : new String[]{
                 "SemanticActionControl control = tabControls[i];\n        if (control != null) return control;",
                 "if (profilesControl != null) return profilesControl;",
+                "SemanticActionControl control = layoutControls[i];\n        if (control != null) return control;",
                 "SemanticActionControl control = tileControls.get(m.id);\n        if (control != null) return control;",
                 "SemanticActionControl control = headerNavControls.get(m.id);\n        if (control != null) return control;",
                 "SemanticActionControl control = headerToggleControls.get(m.id);\n        if (control != null) return control;"}) {
@@ -226,6 +251,7 @@ class AuroraScreenNavigationTest {
         // …and the animators are driven from pointer-only targets.
         assertTrue(src.contains("tabHovers[i].update(hover);"));
         assertTrue(src.contains("profilesHover.update(pHover);"));
+        assertTrue(src.contains("layoutHovers[i].update(hover);"));
         assertTrue(src.contains("tileHover(m.id).update(hover)"));
         assertTrue(src.contains("headerHover(m.id).update(navHover)"));
     }
@@ -337,6 +363,9 @@ class AuroraScreenNavigationTest {
         String src = read(SCREEN);
         // Sidebar: name + Selected/Not selected.
         assertTrue(src.contains("Component.literal(selectedCategory == i ? \"Selected\" : \"Not selected\")"));
+        // Layout pair (C-5): name + Selected/Not selected, derived live from
+        // the represented gridLayout value.
+        assertTrue(src.contains("Component.literal(gridLayout == grid ? \"Selected\" : \"Not selected\")"));
         // Module card: name + description + Enabled/Disabled state.
         assertTrue(src.contains("Component.literal(m.isEnabled() ? \"Enabled\" : \"Disabled\")"));
         assertTrue(src.contains("() -> Component.literal(m.description)"));
@@ -350,10 +379,11 @@ class AuroraScreenNavigationTest {
     @Test
     void focusIsTheButtonFamilyHairlineAndNeverHover() {
         String src = read(SCREEN);
-        // Chips, Profiles, cards, and header nav draw the shared 1px accent
-        // hairline (0x99) from the control's vanilla focus only.
-        assertEquals(4, count(src, "ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99)"),
-                "chips/profiles/tiles/header-nav hairline sites");
+        // Chips, Profiles, cards, header nav, and the layout pair draw the
+        // shared 1px accent hairline (0x99) from the control's vanilla focus
+        // only.
+        assertEquals(5, count(src, "ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99)"),
+                "chips/profiles/tiles/header-nav/layout-pair hairline sites");
         for (String site : new String[]{
                 "if (control != null && control.isFocused())",
                 "if (profilesControl != null && profilesControl.isFocused())",
@@ -372,7 +402,10 @@ class AuroraScreenNavigationTest {
         // or hoverable.
         String modules = bodyOf(src, "private void renderModulesLive(");
         int cull = modules.indexOf("if (b == null) continue;");
-        int mark = modules.indexOf("control.setAvailable(true);");
+        // C-5 added the layout pair's availability mark ABOVE the tile walk
+        // (Modules-tab chrome) — the tile re-mark is the one that must follow
+        // the viewport cull.
+        int mark = modules.indexOf("control.setAvailable(true);", cull);
         assertTrue(cull >= 0 && mark > cull, "card availability follows the viewport cull");
         // Headers + toggles: marked inside the vp.intersects header branch.
         String settings = bodyOf(src, "private void renderSettingsLive(");
@@ -392,8 +425,8 @@ class AuroraScreenNavigationTest {
         // Navigation/selection uses the transition as feedback; the card's
         // state change is the feedback; only the toggle keeps a mechanical
         // press (the component's own thumb pulse, fired by t.toggle()).
-        assertEquals(4, count(src, "// no press animation"),
-                "tabs, profiles, cards, header nav: no press animation by decision");
+        assertEquals(5, count(src, "// no press animation"),
+                "tabs, profiles, layout pair, cards, header nav: no press animation by decision");
         assertFalse(src.contains("0.96"), "no Button-family press scale was copied onto chrome");
     }
 
@@ -410,7 +443,7 @@ class AuroraScreenNavigationTest {
         int chrome = click.indexOf("activateFromPointer(mouseX, mouseY, button)");
         assertTrue(cancel >= 0 && drop > cancel && sup > drop && chrome > sup,
                 "capture-cancel-first ordering preserved");
-        assertEquals(5, count(click, "this.setFocused("),
-                "tabs x2 are a loop, profiles, tile, toggle, nav — five focus sites (loop counted once)");
+        assertEquals(7, count(click, "this.setFocused("),
+                "tabs x2 are a loop, profiles, layout pair x2, tile, toggle, nav — seven focus sites (loops counted once)");
     }
 }

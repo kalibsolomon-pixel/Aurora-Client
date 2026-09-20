@@ -1,6 +1,5 @@
 package com.aurora.client.screen.setting;
 
-import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.ui.component.SegmentedControl;
 import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.Minecraft;
@@ -60,7 +59,12 @@ public class SegmentedSetting<E extends Enum<E>> extends FeatureSetting {
         for (int i = 0; i < values.length; i++) labels[i] = this.labelFn.apply(values[i]);
         this.control = new SegmentedControl(labels,
                 () -> indexOf(getter.get()),
-                i -> { setter.accept(values[i]); AuroraConfig.save(); });
+                // The setter is the ONE persistence path: every production
+                // construction's setter persists (the Theme setters run
+                // persistThemeChange — config save + profile sync). The
+                // baseline wrapper added a second config save on top, the
+                // exact redundancy the Accent pilot removed (C-5).
+                i -> setter.accept(values[i]));
     }
 
     private int indexOf(E v) {
@@ -90,6 +94,18 @@ public class SegmentedSetting<E extends Enum<E>> extends FeatureSetting {
 
     /** Whether segments render as glass; glass is the mod-wide default look. */
     private boolean glass = true;
+
+    /**
+     * The complete peer set, materialized on first ask and forwarded from
+     * the shared control (C-5) — one {@code SemanticActionControl} per
+     * segment plus the component-owned horizontal roving ring, so hosts get
+     * the full peer-selection contract (Tab/Enter/sound-on-change, silent
+     * reselect, C-3 arrows) without knowing segment semantics.
+     */
+    @Override
+    public java.util.List<com.aurora.client.ui.interaction.SemanticActionControl> interactionControls() {
+        return control.interactionControls(label);
+    }
 
     @Override public int baseHeight() { return CONTROL_H; }
     @Override public int height() { return CONTROL_H + descriptionHeight(lastWidth); }

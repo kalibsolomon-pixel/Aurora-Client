@@ -1723,6 +1723,109 @@ the Accent peers (both hosts), and the AuroraScreen sidebar through ONE
 primitive; C-5 (SegmentedControl conformance + the layout pair) is now
 unblocked and is the next phase per the dependency graph.
 
+**C-5 PILOT RECORD (2026-09-20, "conform segmented peer selection").**
+SegmentedControl joined the Accent peer-selection family, and the C-2b
+layout-pair deferral closed — AuroraScreen's last deferred peer-selection
+surface.
+
+- **Inventory (rebuilt, not trusted):** exactly three production
+  `SegmentedSetting`s, all on the Theme entry — Mode (2 peers), Corner
+  Style (3), Glass Style (2) = 7 peers, hosted by BOTH the Theme detail
+  screen and AuroraScreen's Settings tab. No other `SegmentedControl`
+  construction exists. The baseline defect was confirmed verbatim: hover
+  was immediate (a boolean) AND gated off on the selected segment
+  (`!isSelected && inBounds`), the exact Phase-B conflation.
+- **Component contract:** selection stays the live-derived enum (no stored
+  index); hover is pointer-only `HoverAnim.symmetric(140)` per segment,
+  long-lived, NEVER gated on selection — the transient channel is a
+  translucent ON_BACKGROUND wash (0x1A·hoverT) that composes over
+  stained/neutral glass and flat fills alike (the module-card idiom), so
+  selected+hover is representable everywhere; the unselected label lerps
+  SECONDARY→ON_BACKGROUND by the same animator. Focus is the Button-family
+  1 px accent hairline (0x99), one site, independent of both channels.
+  `interactionControls(settingLabel)` materializes one
+  `SemanticActionControl` per segment on first ask, attached to a
+  component-owned `SemanticControlGroup.horizontal()` — the C-3 ring
+  travels with the controls to every host; `SegmentedSetting` just
+  forwards them, and BOTH hosts registered them through the existing
+  generic C-2 loop with ZERO screen-side segment logic (the hosting test's
+  `instanceof SegmentedSetting` ban still holds). Pointer converges on the
+  semantic action when materialized (the EnumSetting routing precedent —
+  hosts that never asked keep the silent direct path). Sound: the action
+  carries NONE and plays exactly one ACTIVATION inside the behavior, only
+  on a genuine change; the already-selected peer is a silent consumed
+  no-op. Narration: option name + "Sets <row> to <option>." +
+  Selected/Not selected, disabled included. Disabled stays the
+  authoritative gate (row guard + the action's `!disabled`, synced per
+  frame by renderOverlay). **The baseline's double-save is gone:** the
+  constructor wrapper added `AuroraConfig.save()` on top of every Theme
+  setter's `persistThemeChange()` — the setter is now the one persistence
+  path (the exact redundancy the Accent pilot removed). One adjacent
+  adapter fix: `MinecraftSemanticFeedback.play` is null-instance-safe
+  (headless unit tests have no sound manager; a no-op there is the honest
+  adaptation).
+- **Layout pair (AuroraScreen):** the narrowest solution per the audit —
+  NOT the text-segment component (the 20×20 vector-icon geometry is not a
+  text track; forcing it would be a visual redesign) but the peer SEMANTIC
+  primitive on the existing painter: two `SemanticActionControl`s + a
+  horizontal ring + canonical hover animators + the hairline, registered
+  through the same `SemanticControlHost` between Profiles and the module
+  cards (Modules-tab traversal: search → Mods/Settings/Profiles → the pair
+  → tiles). Visual preservation: 20×20 geometry, vector icons, spacing,
+  selected treatment (stained glass / accent wash + border), C-7 radii,
+  placement — all unchanged; hover intentionally becomes canonical 140 ms
+  (was immediate AND suppressed on the selected peer) and the hairline is
+  intentionally new. Clicks route through the actions (the raw
+  `gridLayout = …` assignments are gone); the already-selected layout is
+  a silent consumed no-op; the represented value is the live `gridLayout`
+  field. Availability: marked only in the Modules walk — the Settings tab
+  leaves the pair swept unavailable.
+- **Traversal (Settings tab, with the three groups inserted):** text_fonts
+  nav+toggle, 2 enums, theme nav+toggle, Mode×2, Corner×3, Glass×2,
+  Accent×10, interface nav+toggle, UI-FPS enum — the hosted component
+  inventory grew 13 → 20 and the screen total 60 → 69 (the c2bnav
+  harness's inventory oracles updated accordingly). Within each group:
+  Tab walks peer 0→N (vanilla child order = registration order); Left/
+  Right is group-local through the C-3 seam the screens already carry.
+- **Verification:** unit suite **225/0** (was 213; +12
+  `SegmentedSettingPilotTest` — topology, live-derived selection, pointer
+  convergence on both paths with exactly-once commit and selected no-op,
+  disabled rejection, keyboard exactly-once, horizontal ring + cross-axis
+  null, and the source pins: canonical hover with no `!isSelected` gate,
+  one hairline site, one play site, no `AuroraConfig.save()` in the row,
+  no local arrow math, hosts stay generic). C-2b site-count pins updated
+  exactly as grown (7 focus sites, 5 no-press sites, 5 hairline sites,
+  layout registration order) and the deferral pin flipped to an adoption
+  pin. Runtime: DevPilot `c5segments` boots, **26/26 dark AND light** —
+  segmented (silent focus-only arrows with value byte-stable and hover 0
+  during keyboard focus, Enter flips Mode exactly once with the reload
+  generation bump, selected reactivation consumed with generation STATIC,
+  wrap, Corner cross-axis value-untouched, Corner/Glass genuine flips +
+  restore), scroll-out (all 7 peers unavailable) and scroll-back, layout
+  pair (REAL Tab reach in 4 hops from the search field, Enter-selects
+  list, focus-only Right with the value held false, one selection, silent
+  no-op, wrap, selected-persists-hover0 with focus independent, canonical
+  hover live at 0.63 mid-flight), search-EditBox caret keys kept, enum
+  trigger not roved, tab-switch invalidation, resize/re-init with no
+  duplicates (69 children, group stable). Pixel evidence: the selected
+  Grid button's border reads exactly (235,0,41) full-alpha OnePlus Red
+  while the focused List button's edge is the blended hairline channel —
+  and the first capture pass exposed a harness lesson now recorded:
+  mcCapture grabs the LAST rendered frame, so a capture in the same tick
+  as a focus move shows the previous frame's focus (captures moved one
+  tick later; the state-reading oracles were never affected).
+  Regressions: `c3rove` 19/19 (Accent/pack/sidebar rings unchanged),
+  SquareModeConformanceTest green (radii untouched —
+  `min(trackH/2, radiusSmall())` and the layout pair's radiusSmall()
+  survive verbatim), full suite + build green.
+- **Scope kept:** AccentSetting and pack navigation untouched (regression
+  only); ThemePreview/mock controls still expose nothing; no Phase D+
+  contrast work (the light theme's disabled-label contrast stays Phase D).
+Verdict: **C-5 SEGMENTED CONTROL CONFORMANCE COMPLETE** — every production
+segmented peer uses the canonical peer-selection contract, AuroraScreen
+hosts them generically, the layout pair is adopted through the same
+primitive, and C-3 navigation is reused with zero new arrow math.
+
 ## 7. Registries (the drift trap)
 
 Three parallel structures with no single source of truth:

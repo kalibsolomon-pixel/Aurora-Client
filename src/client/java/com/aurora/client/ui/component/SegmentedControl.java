@@ -2,12 +2,21 @@ package com.aurora.client.ui.component;
 
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
+import com.aurora.client.ui.interaction.MinecraftSemanticFeedback;
+import com.aurora.client.ui.interaction.SemanticAction;
+import com.aurora.client.ui.interaction.SemanticActionControl;
+import com.aurora.client.ui.interaction.SemanticControlGroup;
+import com.aurora.client.ui.interaction.SemanticSound;
 import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.ui.util.RenderUtil;
+import com.aurora.client.util.AuroraAnim;
+import com.aurora.client.util.HoverAnim;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.network.chat.Component;
 
+import java.util.Arrays;
 import java.util.function.IntConsumer;
 import java.util.function.IntSupplier;
 
@@ -21,10 +30,27 @@ import java.util.function.IntSupplier;
  * text uses {@code ON_ACCENT} (selected) and {@code ON_BACKGROUND_SECONDARY}
  * / {@code ON_BACKGROUND} (hover). Track corner radius follows the roundness
  * token. Labels are centered and non-shadowed.
+ *
+ * <p>Phase C-5 (2026-09-20): the canonical peer-selection contract — the
+ * AccentSetting family. Hover is pointer-only {@code HoverAnim.symmetric(140)}
+ * per segment and is NEVER gated on selection (the baseline suppressed hover
+ * on the selected segment — the exact conflation Phase B banned); the
+ * transient channel is a translucent ON_BACKGROUND wash that composes over
+ * stained/neutral glass AND flat fills alike (the module-card idiom), so
+ * {@code selected+hover} is representable everywhere. Focus is the
+ * Button-family 1 px accent hairline, independent of both. One
+ * {@link SemanticActionControl} per segment materializes on the first host
+ * ask ({@link #interactionControls(String)}), attached to a component-owned
+ * horizontal {@link SemanticControlGroup} — the C-3 roving ring travels with
+ * the controls to every host. Arrows move focus silently; Enter/Space/click
+ * select through the action, which plays exactly one ACTIVATION on a genuine
+ * change and treats the already-selected peer as a silent consumed no-op.
  */
 public class SegmentedControl extends Widget {
 
     private static final float SEG_GAP = 2f;
+    /** §8.3 canonical hover duration — every segment (C-5). */
+    private static final long HOVER_MS = 140L;
 
     private final String[] options;
     private final IntSupplier selectedIndex;
@@ -32,6 +58,20 @@ public class SegmentedControl extends Widget {
 
     private boolean disabled = false;
     private float trackH = 20f;
+
+    /** Canonical hover animators — pointer-only, one per segment, long-lived (C-5). */
+    private final HoverAnim[] segmentHovers;
+
+    /** C-5: one semantic control per segment — materialized only when a host asks. */
+    private SemanticActionControl[] segmentControls;
+    /** Cached list view of {@link #segmentControls} (the host sweeps it per frame). */
+    private java.util.List<SemanticActionControl> segmentControlList;
+    /**
+     * C-5 roving ring: horizontal, attach order = visual order. Declared here
+     * so it travels with {@link #interactionControls(String)} to whichever
+     * host materializes them — hosts need only the existing C-3 rove seam.
+     */
+    private final SemanticControlGroup segmentGroup = SemanticControlGroup.horizontal();
 
     /**
      * Glass pilot (Theme screen only): each segment becomes its own RAISED
@@ -49,6 +89,10 @@ public class SegmentedControl extends Widget {
         this.options = options;
         this.selectedIndex = selectedIndex;
         this.onSelect = onSelect;
+        this.segmentHovers = new HoverAnim[options.length];
+        for (int i = 0; i < options.length; i++) {
+            this.segmentHovers[i] = HoverAnim.symmetric(HOVER_MS);
+        }
     }
 
     public SegmentedControl trackHeight(float h) {
@@ -154,22 +198,48 @@ public class SegmentedControl extends Widget {
             int sx = segStart(i, x, w);
             int sw = segWidth(i, x, w);
             boolean isSelected = i == selected;
-            boolean hover = !disabled && !isSelected && inBounds(mouseX, mouseY, sx, y, sw, trackH);
 
-            if (!glassOk) {
-                if (isSelected) {
-                    RenderUtil.drawRoundedRectAA(g, sx, y, sw, trackH, radius,
-                            ThemeManager.color(ThemeToken.ACCENT));
-                } else if (hover) {
-                    RenderUtil.drawRoundedRectAA(g, sx, y, sw, trackH, radius,
-                            ThemeManager.color(ThemeToken.SURFACE_VARIANT));
-                }
+            // Canonical hover (C-5): POINTER-only, symmetric 140 ms, never
+            // gated on selection — the selected segment stays hoverable (the
+            // baseline suppressed it, the Phase-C conflation). The transient
+            // channel is a translucent ON_BACKGROUND wash that composes over
+            // stained/neutral glass and flat fills alike — never a second
+            // selection read.
+            float hoverT = segmentHovers[i].update(
+                    !disabled && inBounds(mouseX, mouseY, sx, y, sw, trackH));
+
+            // Semantic sync (the EnumSetting discipline): bounds + pointer
+            // mirror the painted segment each frame; the hairline reads the
+            // control's vanilla focus. Only when a host materialized the
+            // controls — null otherwise keeps the silent legacy path.
+            SemanticActionControl control = segmentControls == null ? null : segmentControls[i];
+            if (control != null) {
+                control.setBounds(sx, (int) y, sw, (int) trackH);
+                control.updatePointer(mouseX, mouseY);
+            }
+
+            if (!glassOk && isSelected) {
+                RenderUtil.drawRoundedRectAA(g, sx, y, sw, trackH, radius,
+                        ThemeManager.color(ThemeToken.ACCENT));
+            }
+
+            if (!disabled && hoverT > 0f) {
+                RenderUtil.drawRoundedRectAA(g, sx, y, sw, trackH, radius,
+                        alpha(ThemeToken.ON_BACKGROUND, (0x1A / 255f) * hoverT));
+            }
+
+            // Keyboard focus: the Button-family 1 px accent hairline — an
+            // independent channel from both the selection fill and hover wash.
+            if (control != null && control.isFocused()) {
+                RenderUtil.drawRoundedOutlineAA(g, sx, y, sw, trackH, radius, 1.0f,
+                        ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
             }
 
             int color = disabled ? ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED)
                     : isSelected ? ThemeManager.color(ThemeToken.ON_ACCENT)
-                    : hover ? ThemeManager.color(ThemeToken.ON_BACKGROUND)
-                    : ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY);
+                    : AuroraAnim.lerpArgb(
+                            ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY),
+                            ThemeManager.color(ThemeToken.ON_BACKGROUND), hoverT);
 
             AuroraFontRenderer.drawCentered(g, tr, options[i], Math.round(sx + sw / 2f),
                     Math.round(y + (trackH - tr.lineHeight) / 2f), color);
@@ -183,13 +253,73 @@ public class SegmentedControl extends Widget {
             int sx = segStart(i, x, w);
             int sw = segWidth(i, x, w);
             if (mx >= sx && mx < sx + sw) {
-                if (i != selectedIndex.getAsInt()) {
+                // Pointer converges on the same semantic value-change path as
+                // the keyboard when a host materialized the controls
+                // (exactly-one activation click; the no-op lives in the
+                // action with the sound). Hosts that never asked keep the
+                // direct silent path — the EnumSetting precedent.
+                if (segmentControls != null && segmentControls[i].isAvailable()) {
+                    segmentControls[i].activateFromPointer(mx, my, button);
+                } else if (i != selectedIndex.getAsInt()) {
                     onSelect.accept(i);
                 }
                 return true;
             }
         }
         return false;
+    }
+
+    /**
+     * The complete peer set, materialized on first ask (the AccentSetting
+     * discipline): one {@link SemanticActionControl} per segment in visual
+     * order, all attached to the component's horizontal roving ring. Hosts
+     * that ask (FeatureDetailScreen, AuroraScreen's Settings tab) get the
+     * full peer-selection contract; hosts that never ask keep the silent
+     * direct pointer path. {@code settingLabel} names the owning row for
+     * narration/description and is captured once at materialization.
+     */
+    public java.util.List<SemanticActionControl> interactionControls(String settingLabel) {
+        if (segmentControlList == null) {
+            for (int i = 0; i < options.length; i++) segmentControl(i, settingLabel);
+            segmentControlList = Arrays.asList(segmentControls);
+        }
+        return segmentControlList;
+    }
+
+    private SemanticActionControl segmentControl(int i, String settingLabel) {
+        if (segmentControls == null) segmentControls = new SemanticActionControl[options.length];
+        SemanticActionControl control = segmentControls[i];
+        if (control != null) return control;
+        final int index = i;
+        control = new SemanticActionControl(new SemanticAction(
+                Component.literal(options[i]),
+                () -> Component.literal("Sets " + settingLabel + " to " + options[index] + "."),
+                () -> Component.literal(isSelected(index) ? "Selected" : "Not selected"),
+                () -> !disabled,
+                () -> {
+                    if (index == clampedSelected()) return; // silent consumed no-op
+                    MinecraftSemanticFeedback.INSTANCE.play(SemanticSound.ACTIVATION);
+                    onSelect.accept(index);
+                },
+                SemanticSound.NONE, true, true),
+                MinecraftSemanticFeedback.INSTANCE,
+                null, // no press animation — the selection transfer is the feedback
+                SemanticActionControl.PointerRouting.MANUAL);
+        segmentControls[i] = control;
+        segmentGroup.attach(control); // C-5 ring; idempotent across re-materialization
+        return control;
+    }
+
+    private int clampedSelected() {
+        return Math.max(0, Math.min(options.length - 1, selectedIndex.getAsInt()));
+    }
+
+    private boolean isSelected(int i) {
+        return i == clampedSelected();
+    }
+
+    private static int alpha(ThemeToken t, float a) {
+        return (Math.round(a * 255f) << 24) | (ThemeManager.color(t) & 0x00FFFFFF);
     }
 
     private int segStart(int i, float x, float w) {
