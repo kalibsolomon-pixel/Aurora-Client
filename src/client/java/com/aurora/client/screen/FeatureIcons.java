@@ -68,6 +68,13 @@ public final class FeatureIcons {
         // subset_script.py includes them in the material-symbols font subset.
         ICONS.put("_dropdown_expand_more", "\uE5CF"); // expand_more (chevron down)
         ICONS.put("_dropdown_expand_less", "\uE5C6"); // expand_less (chevron up)
+
+        // Compact icon actions (Phase C-4) — the IconAction primitive's
+        // glyph vocabulary, referenced by codepoint here so the subsetter
+        // carries them. The GLYPH IS PRESENTATION ONLY; accessible meaning
+        // lives on each SemanticAction's textual label.
+        ICONS.put("_action_add",   "\uE147"); // add (plus)
+        ICONS.put("_action_close", "\uE5CD"); // close (x)
     }
 
     private FeatureIcons() {}
