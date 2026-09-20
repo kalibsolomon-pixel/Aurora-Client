@@ -71,6 +71,23 @@ import java.util.function.Supplier;
  * rule). Scrolling the row out of the interactive viewport, replacing
  * or closing the screen cancels without mutation or save.
  *
+ * <p><b>Phase C-4 rollout ruling (2026-09-20): the sanctioned scanning
+ * exception, with the semantic adapter.</b> The "−" chips stay OUT of the
+ * icon-action painter migration — their immediate hover tint is the
+ * documented Phase-B scanning behavior (hover marks the candidate under
+ * the pointer while scanning a list; interpolating it would lag the scan),
+ * and making {@code IconAction} configurable enough to reproduce it would
+ * weaken the canonical primitive for one specialized surface. That
+ * exemption covers the PAINTER only — not accessibility: each chip now
+ * carries the semantic channels through the primitive's custom-painter
+ * mode (the HudEditor X-badge precedent — the chip keeps its own pixels
+ * while {@code IconAction} supplies the control): Tab focus + the
+ * Button-family hairline, Enter/Space removal, "Remove key &lt;name&gt;"
+ * narration, exactly-once routing, and — new, replacing silence — one
+ * activation click per removal. Pointer and keyboard converge on the ONE
+ * {@link #removeEntry} path; chips are identity-keyed by their GLFW value
+ * (unique in the list — capture rejects duplicates), never by row index.
+ *
  * <p>Glass: the "Add Key" pill matches {@link KeybindSetting}'s pill —
  * RAISED glass with the neutral {@code WINDOW_FILL} tint at rest and
  * the accent-STAINED tint while listening; disabled bypasses glass for
@@ -98,6 +115,61 @@ public class KeyListSetting extends FeatureSetting {
     private int lastX, lastY, lastW = 240;
     private final HoverAnim hoverAnim = HoverAnim.symmetric(140L);
     private SemanticActionControl interactionControl;
+
+    // ---- C-4 rollout: the chips' semantic adapter (painter stays exempt) ----
+
+    /** One remove action per listed key, keyed by the GLFW VALUE (unique —
+     *  capture rejects duplicates; row indexes shift on removal, values
+     *  don't). Long-lived; pruned with its entry. */
+    private final Map<Integer, com.aurora.client.ui.component.IconAction> chipRemoveActions = new HashMap<>();
+    /** Bumped at every list mutation so the host-visible control list can
+     *  be rebuilt exactly once per change (never per frame). */
+    private int chipsVersion = 0;
+    private int cachedChipVersion = -1;
+    /**
+     * The host-visible control list — chips in visual order, then the add
+     * action — rebuilt on mutation only, swapped as a FRESH instance so the
+     * detail screen's identity-based dynamic-set diff sees the change.
+     */
+    private List<SemanticActionControl> chipControlList = new ArrayList<>();
+
+    /** The chip's remove action — long-lived, keyed by the stable key value. */
+    private com.aurora.client.ui.component.IconAction chipRemoveAction(int value) {
+        return chipRemoveActions.computeIfAbsent(value, v -> new com.aurora.client.ui.component.IconAction(
+                com.aurora.client.screen.FeatureIcons.get("_action_close"),
+                SemanticAction.button(
+                        Component.literal("Remove key " + KeybindSetting.keyName(v)),
+                        () -> Component.literal("Removes " + KeybindSetting.keyName(v)
+                                + " from " + label + "."),
+                        null,
+                        () -> !isDisabled(),
+                        () -> removeEntry(v)),
+                () -> 0xFFFFFFFF,
+                () -> 0xFFFFFFFF));
+    }
+
+    /** The ONE removal path — the action's behavior and the legacy fallback both land here. */
+    private void removeEntry(int value) {
+        List<Integer> copy = new ArrayList<>(safeList());
+        // By VALUE (boxed — List.remove(int) would treat it as an index);
+        // values are unique in the list, so this removes exactly the row.
+        if (!copy.contains(value)) return;
+        copy.remove(Integer.valueOf(value));
+        setter.accept(copy);
+        saveAction.run(); // exactly one save, only on real mutation
+        chipsVersion++;
+        chipRemoveActions.remove(value);
+    }
+
+    /** The ONE add path (capture); bumps the same mutation version. */
+    private void addEntry(int keyCode) {
+        List<Integer> copy = new ArrayList<>(safeList());
+        if (copy.contains(keyCode) || copy.size() >= KeystrokesModule.MAX_EXTRA_KEYS) return;
+        copy.add(keyCode);
+        setter.accept(copy);
+        saveAction.run();
+        chipsVersion++;
+    }
 
     /** User-facing key names, memoized by GLFW value (no per-frame formatting). */
     private final Map<Integer, String> nameCache = new HashMap<>();
@@ -165,15 +237,22 @@ public class KeyListSetting extends FeatureSetting {
             int btnX = x + width - BTN_SIZE - 14;
             int btnY = iy + (ROW_H - BTN_SIZE) / 2;
             // Removable-chip family: immediate hover tint (no animator) by
-            // design — list scanning, not a state change. Disabled removes
-            // the affordance's hover emphasis entirely.
+            // design — list scanning, not a state change. The C-4 ruling
+            // keeps this painter verbatim; the chip's icon action supplies
+            // only the semantic channels (control sync + focus hairline).
+            // Disabled removes the affordance's hover emphasis entirely.
             boolean btnHover = !disabled && Widget.inBounds(mouseX, mouseY, btnX, btnY, BTN_SIZE, BTN_SIZE);
             ctx.fill(btnX, btnY, btnX + BTN_SIZE, btnY + BTN_SIZE,
                     ThemeManager.withAlpha(err, btnHover ? 0x66 : 0x33));
             AuroraFontRenderer.drawCentered(ctx, tr, "\u2212", btnX + BTN_SIZE / 2,
                     btnY + (BTN_SIZE - tr.lineHeight) / 2, 0xFFFFFFFF);
-
             Integer boxed = items.get(i);
+            if (boxed != null && !disabled) {
+                com.aurora.client.ui.component.IconAction chip = chipRemoveAction(boxed);
+                chip.syncChannels(btnX, btnY, BTN_SIZE, BTN_SIZE, mouseX, mouseY);
+                chip.paintHairline(ctx, btnX, btnY, BTN_SIZE, BTN_SIZE);
+            }
+
             String display = boxed == null ? "?" : cachedName(boxed);
             int maxW = width - BTN_SIZE - 44;
             display = AuroraFontRenderer.ellipsize(tr, display, maxW, 3);
@@ -246,11 +325,17 @@ public class KeyListSetting extends FeatureSetting {
             int btnX = lastX + lastW - BTN_SIZE - 14;
             int btnY = iy + (ROW_H - BTN_SIZE) / 2;
             if (Widget.inBounds(mouseX, mouseY, btnX, btnY, BTN_SIZE, BTN_SIZE)) {
-                List<Integer> copy = new ArrayList<>(items);
-                if (i < copy.size()) {
-                    copy.remove(i);
-                    setter.accept(copy);
-                    saveAction.run();
+                Integer boxed = items.get(i);
+                if (boxed != null) {
+                    // C-4 rollout: pointer routes through the chip's semantic
+                    // action (exactly-once + the one click); the legacy
+                    // fallback beside it covers the pre-first-ask window.
+                    // Both land in removeEntry — the ONE removal path.
+                    com.aurora.client.ui.component.IconAction chip = chipRemoveActions.get(boxed);
+                    if (chip != null && chip.clicked(mouseX, mouseY, button)) {
+                        return true;
+                    }
+                    removeEntry(boxed);
                 }
                 return true;
             }
@@ -293,12 +378,7 @@ public class KeyListSetting extends FeatureSetting {
         // analogue of the single-Keybind clear rule (there is no one value
         // to clear). Delete and every other keycode are ordinary entries.
         if (keyCode != GLFW.GLFW_KEY_ESCAPE && keyCode != GLFW.GLFW_KEY_BACKSPACE) {
-            List<Integer> copy = new ArrayList<>(safeList());
-            if (!copy.contains(keyCode) && copy.size() < KeystrokesModule.MAX_EXTRA_KEYS) {
-                copy.add(keyCode);
-                setter.accept(copy);
-                saveAction.run(); // exactly one save, only on real mutation
-            }
+            addEntry(keyCode);
             // Duplicate / full-list capture: accepted no-op close. No
             // mutation, therefore no save.
         }
@@ -341,6 +421,31 @@ public class KeyListSetting extends FeatureSetting {
                     SemanticActionControl.PointerRouting.MANUAL);
         }
         return interactionControl;
+    }
+
+    /**
+     * C-4 rollout: the chips' remove controls (visual order) followed by the
+     * add action — Tab order matches the painted layout. Rebuilt only when
+     * the list mutated (version) or drifted externally (count check), swapped
+     * as a FRESH instance so the host diff registers/unregisters the delta;
+     * a removed chip's action is pruned with its entry, so no stale control
+     * can keep focus or replay a removal.
+     */
+    @Override
+    public java.util.List<SemanticActionControl> interactionControls() {
+        List<Integer> items = safeList();
+        if (cachedChipVersion != chipsVersion || chipControlList.size() != items.size() + 1) {
+            List<SemanticActionControl> fresh = new ArrayList<>();
+            for (Integer value : items) {
+                if (value != null) fresh.add(chipRemoveAction(value).interactionControl());
+            }
+            fresh.add(interactionControl());
+            chipControlList = fresh;
+            cachedChipVersion = chipsVersion;
+            // A list that shrank externally must not keep dead chip actions.
+            chipRemoveActions.keySet().retainAll(new java.util.HashSet<>(items));
+        }
+        return chipControlList;
     }
 
     private void beginListening() {

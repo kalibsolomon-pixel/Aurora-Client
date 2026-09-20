@@ -15,14 +15,15 @@ import net.minecraft.resources.Identifier;
  * One added-effect row in the Alerts → Per-Effect Alerts curated list —
  * the {@link ItemScaleSetting} per-item row adapted to effects: 38px
  * panel (ON_BACKGROUND wash, hover outline), the effect's vanilla 16×16
- * {@code mob_effect/} sprite, its display name, and the trailing "x"
- * remove control (red on hover) — presence in the list already means
- * "alerts", so unlike the item rows there is nothing to expand and no
- * chevron.
+ * {@code mob_effect/} sprite, and its display name — presence in the list
+ * already means "alerts", so unlike the item rows there is nothing to
+ * expand and no chevron.
  *
- * <p>The container ({@link EffectExpiryListSetting}) owns the backing
- * list and performs removals through {@link #trashHit}; the row is the
- * render + hit-test shape only.
+ * <p>The container ({@link EffectExpiryListSetting}) owns the backing list,
+ * performs removals, and — since the Phase C-4 rollout — owns the row's
+ * trailing remove icon action (the canonical close glyph through the C-4
+ * primitive, painted by the container in this row's trailing 16×16 zone;
+ * the text "x" this row used to draw itself is gone).
  */
 public class EffectRowSetting extends FeatureSetting {
 
@@ -72,13 +73,9 @@ public class EffectRowSetting extends FeatureSetting {
         // list IS its state (exclusion clause).
         int textY = y + (ROW_H - tr.lineHeight) / 2;
         ctx.drawString(tr, label, x + 20 + ICON_SIZE + 4, textY, AuroraTheme.IOS_LABEL, false);
-
-        // Remove control — ItemScale's trash "x" verbatim (red on hover).
-        int rightX = x + width - 24;
-        boolean trashHover = Widget.inBounds(mouseX, mouseY, rightX - 16, y + (ROW_H - 16) / 2, 16, 16);
-        ctx.drawString(tr, "x", rightX - 12, y + (ROW_H - 16) / 2 + 3,
-                trashHover ? ThemeManager.color(ThemeToken.SEMANTIC_ERROR)
-                        : AuroraTheme.IOS_TERTIARY_LABEL, false);
+        // The trailing remove control is the container's icon action (C-4):
+        // it paints itself into this row's 16×16 zone from the container's
+        // render loop, right after the row body.
     }
 
     /** True when (mouseX, mouseY) is on this row's remove control. */

@@ -32,7 +32,7 @@ import java.util.Map;
  * list: a search field with a "+" add button suggests one matching
  * effect (sprite + "Add: <name>"), adding it to the config's curated
  * inclusion list ({@code effectExpiryIncludedEffects}); only effects on
- * that list alert AND render rows, each with ItemScale's trash control.
+ * that list alert AND render rows, each with the C-4 remove icon action.
  *
  * <p>Match tiers are ItemScale's: exact registry id or path, then path
  * contains, then localized display name contains. Added rows display in
@@ -62,6 +62,25 @@ public class EffectExpiryListSetting extends FeatureSetting {
 
     /** Row objects cached per effect id (ItemScale's per-item slider caches). */
     private final Map<String, EffectRowSetting> rowCache = new HashMap<>();
+
+    /**
+     * C-4 rollout: one long-lived remove icon action per added effect,
+     * identity-keyed by the stable effect id — the C-4A pilot A shape
+     * (ItemScale's per-row removes) applied to this list's rows. The
+     * canonical contract (close glyph, pointer-only symmetric-140 hover
+     * tertiary→error, focus hairline, Tab/Enter/Space, exactly one
+     * activation click) replaces the text "x" the row drew; the container
+     * stays the sole owner of removal (row + action prune + save all land
+     * in {@link #removeEffect}).
+     */
+    private final Map<String, com.aurora.client.ui.component.IconAction> rowRemoveActions = new HashMap<>();
+    /**
+     * The host-visible control list (add first, then each row's remove in
+     * the sorted visual order), rebuilt on mutation only — swapped as a
+     * FRESH instance so the detail screen's identity-based dynamic-set diff
+     * sees the change (the C-4A trap: an in-place clear hides the mutation).
+     */
+    private List<com.aurora.client.ui.interaction.SemanticActionControl> rowControlList = new ArrayList<>();
 
     /**
      * Phase C-4 pilot B: the "+" add as the canonical icon action — the
@@ -102,6 +121,65 @@ public class EffectExpiryListSetting extends FeatureSetting {
     @Override
     public com.aurora.client.ui.interaction.SemanticActionControl interactionControl() {
         return addAction.interactionControl();
+    }
+
+    private com.aurora.client.ui.component.IconAction rowRemoveAction(String effectId) {
+        return rowRemoveActions.computeIfAbsent(effectId, id -> {
+            String name = rowFor(id).label;
+            return new com.aurora.client.ui.component.IconAction(
+                    com.aurora.client.screen.FeatureIcons.get("_action_close"),
+                    com.aurora.client.ui.interaction.SemanticAction.button(
+                            Component.literal("Remove effect " + name),
+                            () -> Component.literal("Removes " + name
+                                    + " from the per-effect alert list."),
+                            null,
+                            () -> true,
+                            () -> removeEffect(id)),
+                    () -> AuroraTheme.IOS_TERTIARY_LABEL,
+                    () -> ThemeManager.color(ThemeToken.SEMANTIC_ERROR));
+        });
+    }
+
+    /** The ONE removal path — the action's behavior and the legacy fallback both land here. */
+    private void removeEffect(String effectId) {
+        AuroraConfig.get().effectExpiryIncludedEffects.remove(effectId);
+        // The row (and with it its remove action) is stale the moment its
+        // row dies — prune both so no semantic child outlives its row.
+        rowCache.remove(effectId);
+        rowRemoveActions.remove(effectId);
+        rebuildRowControlList();
+        AuroraConfig.save();
+    }
+
+    /** Re-syncs the host-visible control list to the sorted visual order (mutation-time only). */
+    private void rebuildRowControlList() {
+        List<com.aurora.client.ui.interaction.SemanticActionControl> fresh = new ArrayList<>();
+        List<String> included = sortedIncluded();
+        fresh.add(addAction.interactionControl());
+        for (String id : included) {
+            fresh.add(rowRemoveAction(id).interactionControl());
+        }
+        rowControlList = fresh; // fresh instance — the host diff sees the swap
+    }
+
+    /** The included ids, alphabetically by display label (the visual row order). */
+    private List<String> sortedIncluded() {
+        List<String> included = new ArrayList<>(AuroraConfig.get().effectExpiryIncludedEffects);
+        included.sort(Comparator.comparing(id -> rowFor(id).label.toLowerCase()));
+        return included;
+    }
+
+    /** C-4: the add action plus each row's remove, in visual order (Tab order). */
+    @Override
+    public java.util.List<com.aurora.client.ui.interaction.SemanticActionControl> interactionControls() {
+        // Mutation paths rebuild the list themselves; the count check is the
+        // safety net for externally-changed configs (a stale control must
+        // never outlive its row).
+        if (rowControlList.size()
+                != AuroraConfig.get().effectExpiryIncludedEffects.size() + 1) {
+            rebuildRowControlList();
+        }
+        return rowControlList;
     }
 
     public EffectExpiryListSetting() {
@@ -219,7 +297,6 @@ public class EffectExpiryListSetting extends FeatureSetting {
     @Override
     public void render(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
         Font tr = Minecraft.getInstance().font;
-        AuroraConfig cfg = AuroraConfig.get();
 
         // 1. Search bar — themed background/outline drawn by EditBoxMixin.
         int searchW = width - 56;
@@ -268,12 +345,15 @@ public class EffectExpiryListSetting extends FeatureSetting {
 
         // 2. Added-effects list — alphabetical (ItemScale sorts its ids the
         //    same way). Only added effects render: the perf point of the
-        //    search-then-add model.
-        List<String> included = new ArrayList<>(cfg.effectExpiryIncludedEffects);
-        included.sort(Comparator.comparing(id -> rowFor(id).label.toLowerCase()));
-
-        for (String effectId : included) {
-            rowFor(effectId).render(ctx, x, currentY, width, mouseX, mouseY);
+        //    search-then-add model. Each row's trailing remove control is
+        //    the row's icon action (C-4), painted by the container in the
+        //    row's trailing 16×16 zone.
+        for (String effectId : sortedIncluded()) {
+            EffectRowSetting row = rowFor(effectId);
+            row.render(ctx, x, currentY, width, mouseX, mouseY);
+            int rightX = x + width - 24;
+            rowRemoveAction(effectId).paint(ctx, tr, rightX - 16,
+                    currentY + (EffectRowSetting.ROW_H - 16) / 2, 16, 16, mouseX, mouseY);
             currentY += EffectRowSetting.STRIDE;
         }
     }
@@ -314,16 +394,18 @@ public class EffectExpiryListSetting extends FeatureSetting {
             currentY += 12;
         }
 
-        AuroraConfig cfg = AuroraConfig.get();
-        List<String> included = new ArrayList<>(cfg.effectExpiryIncludedEffects);
-        included.sort(Comparator.comparing(id -> rowFor(id).label.toLowerCase()));
-
-        for (String effectId : included) {
+        for (String effectId : sortedIncluded()) {
             if (mouseY >= currentY && mouseY < currentY + EffectRowSetting.ROW_H) {
                 if (rowFor(effectId).trashHit(mouseX, mouseY, rowX, currentY, rowWidth)) {
-                    cfg.effectExpiryIncludedEffects.remove(effectId);
-                    rowCache.remove(effectId);
-                    AuroraConfig.save();
+                    // C-4 rollout: routes through the semantic action
+                    // (exactly-once + the one click); the legacy direct path
+                    // beside it covers the pre-first-ask window. Both land
+                    // in removeEffect — the ONE removal path.
+                    com.aurora.client.ui.component.IconAction remove = rowRemoveActions.get(effectId);
+                    if (remove != null && remove.clicked(mouseX, mouseY, button)) {
+                        return true;
+                    }
+                    removeEffect(effectId);
                     return true;
                 }
             }

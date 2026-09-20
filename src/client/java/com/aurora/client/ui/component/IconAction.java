@@ -46,7 +46,11 @@ import net.minecraft.client.gui.GuiGraphics;
  * lazily on the first {@link #interactionControl()} ask and is never
  * rebuilt; hosts that never ask keep their silent direct pointer path (the
  * EnumSetting discipline — callers keep a legacy fallback beside
- * {@link #clicked}).
+ * {@link #clicked}). A DISCLOSURE action (expand/collapse) is the one
+ * stateful form: the glyph supplier flips with the Expanded/Collapsed
+ * state (§6 semantic disclosure contract — the state lives in the action's
+ * narration metadata), while the instance — and with it the control and
+ * keyboard focus — survives the toggle.
  */
 public final class IconAction {
 
@@ -54,8 +58,15 @@ public final class IconAction {
     public static final long HOVER_MS = 140L;
 
     private final SemanticAction action;
-    /** Material Symbols codepoint — presentation only, never semantics. */
-    private final String glyph;
+    /**
+     * Material Symbols codepoint — presentation only, never semantics. A
+     * supplier (not a fixed value) so a DISCLOSURE action can flip its glyph
+     * with its Expanded/Collapsed state while staying ONE long-lived
+     * instance: the control (and with it keyboard focus) must survive the
+     * toggle, so the state cannot be modeled as two actions. The fixed-glyph
+     * constructor wraps its constant — no per-frame allocation either way.
+     */
+    private final java.util.function.Supplier<String> glyph;
     private final java.util.function.IntSupplier restColor;
     private final java.util.function.IntSupplier hoverColor;
     private final HoverAnim hover = HoverAnim.symmetric(HOVER_MS);
@@ -65,10 +76,22 @@ public final class IconAction {
     public IconAction(String glyph, SemanticAction action,
                       java.util.function.IntSupplier restColor,
                       java.util.function.IntSupplier hoverColor) {
+        this(() -> glyph, action, restColor, hoverColor);
+    }
+
+    /** Stateful-glyph form — the disclosure contract (Expanded/Collapsed). */
+    public IconAction(java.util.function.Supplier<String> glyph, SemanticAction action,
+                      java.util.function.IntSupplier restColor,
+                      java.util.function.IntSupplier hoverColor) {
         this.glyph = glyph;
         this.action = action;
         this.restColor = restColor;
         this.hoverColor = hoverColor;
+    }
+
+    /** The glyph for the action's CURRENT state — presentation only. */
+    public String currentGlyph() {
+        return glyph.get();
     }
 
     /** The lazy semantic control — hosts register it once (the EnumSetting discipline). */
@@ -116,7 +139,7 @@ public final class IconAction {
         int color = !action.enabled()
                 ? ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED)
                 : AuroraAnim.lerpArgb(restColor.getAsInt(), hoverColor.getAsInt(), hover.current());
-        MaterialIconRenderer.drawIcon(g, font, glyph, x + w / 2f, y + h / 2f,
+        MaterialIconRenderer.drawIcon(g, font, glyph.get(), x + w / 2f, y + h / 2f,
                 emFor(w, h), color);
         paintHairline(g, x, y, w, h);
     }

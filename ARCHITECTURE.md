@@ -1930,6 +1930,148 @@ adequate (deterministic regeneration, two glyphs added), the dynamic
 lifecycle is correct, and the remaining inventory is mechanical
 adoption.
 
+**C-4B ROLLOUT RECORD (2026-09-20, "complete icon action rollout").** The
+remaining compact-action inventory joined the frozen primitive. Final
+classifications (reconfirmed from source, exact counts):
+
+- **MIGRATED (5):** ItemScale `+` add (24×20 pill, the C-4A pilot-B
+  shape — one animator now drives the flat pill AND the add glyph; the
+  enabled gate became the can-add state, so a duplicate suggestion now
+  reads honestly as disabled instead of consuming its click silently);
+  ItemScale expand/collapse chevrons (STATEFUL disclosure actions — see
+  below); EffectRow `x` remove (container-owned, the C-4A pilot-A shape,
+  `Remove effect <name>` narration); ParticleRow ASCII `v`/`>`
+  disclosures (the Material expand pair, ASCII gone); KeyList `−` chips
+  (ruling B + adapter — below).
+- **ALREADY CANONICAL (2):** AuroraScreen layout pair (C-5), EnumSetting
+  chevrons.
+- **CLASSIFIED OUTSIDE (2):** PixelCanvas Apply/Cancel (TEXT_ACTION,
+  modal-confirmation family, Phase-B classified), HudEditor X (C-4A
+  pilot C).
+- **DECORATIVE:** none newly classified.
+- No additional uncategorized compact actions exist (source sweep:
+  every remaining `+`/`x`/`v`/`>`/`−` text glyph in the settings
+  packages is one of the above).
+
+**The one primitive extension — the stateful disclosure.** §6 of the
+rollout task ("stateful disclosure icon actions") exposed a genuine
+incompatibility, not a per-screen fork: an expand/collapse action must
+flip its glyph with its Expanded/Collapsed state while its semantic
+control — and with it keyboard focus — survives the toggle; two actions
+would kill focus at every expand. The fix is one narrow addition:
+`IconAction`'s glyph became a `Supplier<String>` (the fixed-glyph
+constructor wraps its constant; `currentGlyph()` exposes state for
+tests). Canonical hover, hairline, routing, sound, and radius are
+untouched — the C-4A pins still pass verbatim.
+
+**Disclosure contract (both hosts — ItemScale chevrons, ParticleRow
+headers):** the pointer target is the whole row header (exactly the zone
+that always toggled — one toggle path, the chevron is not a separate
+button); pointer/Enter/Space converge on ONE `toggleExpanded` domain
+path (source-pinned: exactly one mutation line per family); narration =
+"Toggle <row label>" + Expanded/Collapsed STATE, never glyph names; the
+glyph supplier and the state string derive from the same boolean, so
+glyph/agreement is structural (unit + runtime pinned); focus is retained
+across the toggle (§18: row survives, child content changes — runtime
+oracles 11 and 23); one ACTIVATION per toggle.
+
+**KeyList ruling — B, the explicit exception, plus the narrow adapter.**
+The chips' immediate-hover scanning painter stays verbatim (the Phase-B
+sanctioned scanning rationale; making `IconAction` configurable enough
+to reproduce it would weaken the canonical primitive for one surface —
+the task's own preference for B). The exemption is from the canonical
+hover/painter ONLY, not from accessibility: each chip carries a semantic
+`IconAction` in custom-painter mode (the HudEditor X-badge precedent —
+chip keeps its own pixels; the primitive supplies the control): Tab
+focus + the Button-family hairline (painted on the 14×14 chip), Enter/
+Space removal, "Remove key <name>" narration, exactly-one ACTIVATION
+(replacing the removal's historical silence), and the row's disabled
+gate. Identity is the GLFW key VALUE (unique — capture rejects
+duplicates), never the shifting row index; removal is by value. Pointer
+and keyboard converge on ONE `removeEntry` path (one mutation, one
+save). Chip controls host in visual order before the add action, rebuilt
+only on mutation (`chipsVersion`), pruned with their entries, and
+`retainAll` cleans externally-shrunk lists.
+
+**Dynamic identity/lifecycle (all families):** ItemScale rows keyed by
+item id (two actions per row — disclosure then remove, plus the add
+control first: the search-then-add pill hosts above the row list;
+`2N+1` count check); EffectExpiry by effect id (add + one remove per
+row, `N+1`); KeyList by key value; ParticleRows are a FIXED registry set
+exposed through `SearchListSetting`'s new aggregation (the filtered
+rows' controls, rebuilt only on a real refilter — never per frame, fresh
+instance per rebuild so the host's identity diff sees membership
+changes). All land in the C-4A host machinery: the detail screen's
+per-frame identity diff registers/unregisters the delta and drops focus
+with a removed control.
+
+**Exactly-once persistence audit (per consumer):** ItemScale add — 1
+mutation, 1 save, 1 sound (the gate rejects duplicates/no-match with no
+save); ItemScale disclosure — 1 mutation, 0 saves (pure view state), 1
+sound; ItemScale remove — 1 mutation, 1 save, 1 sound; EffectExpiry
+add/remove — 1 mutation, 1 save, 1 sound each (no stacked saves found —
+the C-5 double-save class was checked for and absent); Particle
+disclosure — 1 mutation, 0 saves, 1 sound; KeyList remove — 1 mutation,
+1 save, 1 sound (the package-private save seam made this unit-pinnable
+in C-4A's KeyList suite).
+
+**Disabled behavior:** ItemScale add — the can-add state (no hover
+target: runtime-oracled as disabled + traversal-invisible, then enabled
++ Tab-reachable after a live match); all disclosures — always enabled
+(no invented disabled state; nothing disables these rows today);
+EffectRow remove — always enabled (presence in the curated list is the
+row); KeyList chips/add — the row's `isDisabled()` gate (rejects
+pointer AND keyboard with no save; unit-pinned).
+
+**Font/subset: one corrected codepoint — a pre-existing defect found BY the
+rollout's visual evidence.** The first capture pass painted the "expanded"
+disclosure as a closed circle-with-bar, not a chevron. Root cause (verified
+against `full_material.ttf`'s cmap, the recorded `flash_on` U+E4E3 bug
+class): `_dropdown_expand_less`/`CHEV_UP` carried **U+E5C6 =
+`arrow_drop_down_circle`** — `expand_less` actually lives at **U+E5CE**.
+The wrong codepoint predated C-4B (EnumSetting's own dropdown chevron and
+ItemScale's static draw painted it); C-4B corrected all four sites
+(FeatureIcons, EnumSetting ×2, both new CHEV_UP constants) and regenerated
+the subset from the licensed full font (43 unique glyphs, E5CE in / E5C6
+out, kept-glyph outlines byte-identical to source). Direction is
+correct-preserved: collapsed = expand_more (converges down), expanded =
+expand_less (converges up) — pixel-verified both directions on the rollout
+captures. No remove/check-class glyphs were added (unit-pinned).
+
+**Verification:** unit **247/0** (the 235 baseline + 12
+`IconActionRolloutTest`: the disclosure behavioral contract — glyph
+tracks state, narration agrees, control identity survives; KeyList chip
+hosting/order/stability, keyboard exactly-once with stale-control
+non-replay, lifecycle no-duplicates, the disabled gate; plus source pins
+for every family's one-domain-path rule, the KeyList exemption shape,
+and the no-font-expansion rule). Runtime DevPilot `c4rollout`
+(untracked): **31/31 dark ROUND, 31/31 light ROUND, 31/31 dark SQUARE**
+— the full matrix of add (disabled-traversal-invisible → Tab reach →
+focus at hover 0 → Enter/Space/pointer each exactly once), both
+disclosure families (expand/collapse exactly-once, state/glyph
+agreement, focus retained, sound ownership), EffectRow remove (Tab
+reach, exactly-once, stale control+focus cleanup, subsequent traversal
+valid, hovered+focused captures), KeyList adapter (chips hosted in
+order, textual narration, Enter removes exactly once, stale cleanup,
+scanning painter preserved), lifecycle (add→remove→re-add + resize, no
+duplicates), and offscreen unavailability (scroll-out sweeps every chip
+unavailable). Harness notes: `gamescope --backend headless` is the
+reliable boot mode for attended desktops (a windowed gamescope boot
+parked on a minimized window for 40 minutes mid-matrix and was then
+contaminated by human input — the run was discarded, the harness gained
+a 200-tick probe budget and a foreign-screen contamination abort); the
+add's disabled gate reads live, so Tab-reach oracles must type the query
+first (the first draft's "focus before query" failed against the
+CORRECT gate); vanilla child order is APPEND order (new rows' controls
+land at the end — pick rows by description, never position).
+
+Verdict: **C-4 ICON-ACTION ROLLOUT COMPLETE** — every production compact
+action is migrated, already canonical, classified outside the family,
+or the one finite documented exception (KeyList's scanning painter)
+with equivalent semantic accessibility. Recommended next: **C-6
+AbstractButtonMixin migration**.
+
+
 ## 7. Registries (the drift trap)
 
 Three parallel structures with no single source of truth:

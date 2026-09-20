@@ -246,7 +246,7 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
 
         // Cache arrow glyphs first (their width reserves space for the label).
         if (cachedUpArrow == null) {
-            Component upComp = Component.literal("\uE5C6").withStyle(SYMBOL_STYLE);
+            Component upComp = Component.literal("\uE5CE").withStyle(SYMBOL_STYLE);
             cachedUpArrow = upComp.getVisualOrderText();
             cachedUpArrowWidth = tr.width(upComp);
             Component downComp = Component.literal("\uE5CF").withStyle(SYMBOL_STYLE);
@@ -348,7 +348,7 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
         // glass and flat alike, the same accent role the popup's selected
         // row reads.
         int arrowColor = expanded ? AuroraTheme.TEXT_ACCENT : textColor;
-        MaterialIconRenderer.drawIcon(ctx, tr, expanded ? "\uE5C6" : "\uE5CF",
+        MaterialIconRenderer.drawIcon(ctx, tr, expanded ? "\uE5CE" : "\uE5CF",
                 arrowX + arrowW / 2f, arrowY + tr.lineHeight / 2f,
                 MaterialIconRenderer.NATURAL_EM_GUI, arrowColor);
 

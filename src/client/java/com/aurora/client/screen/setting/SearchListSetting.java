@@ -42,6 +42,16 @@ public abstract class SearchListSetting<T extends FeatureSetting> extends Featur
     protected String lastQuery = null;
     protected List<T> filtered = new ArrayList<>();
 
+    /**
+     * C-4 rollout: the visible rows' semantic controls, cached and rebuilt
+     * ONLY when the filtered set actually changes (a query keystroke) —
+     * never per frame. Swapped as a FRESH instance so the owning screen's
+     * identity-based dynamic-set diff sees the change; the controls
+     * themselves are the rows' own long-lived instances.
+     */
+    private List<com.aurora.client.ui.interaction.SemanticActionControl> rowControls = java.util.List.of();
+    private boolean rowControlsDirty = true;
+
     protected SearchListSetting(String label, List<T> rows, String searchHint) {
         super(label);
         this.allRows = rows;
@@ -94,6 +104,7 @@ public abstract class SearchListSetting<T extends FeatureSetting> extends Featur
         releaseFocus();
         lastQuery = null;
         filtered.clear();
+        rowControlsDirty = true;
     }
 
     /** True if this row matches the cleaned (lowercased, trimmed) query. */
@@ -108,6 +119,27 @@ public abstract class SearchListSetting<T extends FeatureSetting> extends Featur
         for (T row : allRows) {
             if (matches(row, clean)) filtered.add(row);
         }
+        rowControlsDirty = true;
+    }
+
+    /**
+     * C-4: the filtered rows' controls in visual order (Tab order == row
+     * order), rebuilt only on a real refilter. The rows are long-lived
+     * fixed-set instances, so the controls are stable across refilters;
+     * only membership changes.
+     */
+    @Override
+    public java.util.List<com.aurora.client.ui.interaction.SemanticActionControl> interactionControls() {
+        if (rowControlsDirty) {
+            java.util.List<com.aurora.client.ui.interaction.SemanticActionControl> fresh =
+                    new ArrayList<>();
+            for (T row : filtered) {
+                fresh.addAll(row.interactionControls());
+            }
+            rowControls = fresh; // fresh instance — the host diff sees the swap
+            rowControlsDirty = false;
+        }
+        return rowControls;
     }
 
     @Override

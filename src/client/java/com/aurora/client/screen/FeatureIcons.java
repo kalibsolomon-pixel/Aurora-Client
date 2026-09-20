@@ -67,7 +67,7 @@ public final class FeatureIcons {
         // Dropdown chevrons (EnumSetting) — referenced by codepoint here so
         // subset_script.py includes them in the material-symbols font subset.
         ICONS.put("_dropdown_expand_more", "\uE5CF"); // expand_more (chevron down)
-        ICONS.put("_dropdown_expand_less", "\uE5C6"); // expand_less (chevron up)
+        ICONS.put("_dropdown_expand_less", "\uE5CE"); // expand_less (chevron up)
 
         // Compact icon actions (Phase C-4) — the IconAction primitive's
         // glyph vocabulary, referenced by codepoint here so the subsetter
