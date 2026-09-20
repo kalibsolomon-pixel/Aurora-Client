@@ -36,9 +36,8 @@ import java.util.function.Supplier;
  * path, and the control adds focus traversal, Enter/Space activation (the
  * same toggle + save exactly once), the one semantic activation click, and
  * on/off narration (design language §11.4). Hosts that never mark the
- * control available (AuroraScreen's inline Settings tab — its semantic
- * rollout is the documented Phase C deferral) keep the exact legacy
- * pointer-only behavior through the availability gate.
+ * control available keep the exact legacy pointer-only behavior through
+ * the availability gate.
  */
 public class BooleanSetting extends FeatureSetting {
     private static final int MIN_ROW_H = 28;

@@ -246,7 +246,7 @@ Conventions (violating these has caused real bugs — full list in AGENTS.md §6
 
 Settings-widget vocabulary (`screen/setting/`, base class `FeatureSetting`): Boolean, Button,
 Color (embedded HSL picker), DoubleSlider, Enum (dropdown popup; canonical Phase B states are
-production-wide — all 26 rows, the AuroraScreen-hosted three at component level only, see §6),
+production-wide — all 26 rows; Phase C-2 hosts the AuroraScreen three semantically, see §6),
 IntSlider, ItemScale (search + per-item slider stack), Keybind, KeyList, ParticleConfig
 (+ParticleRow), PixelCanvas (crosshair editor, `CanvasTexture` cached raster + measured cost
 benchmark), SectionHeader, Segmented, StringList, ThemeOpacity, ThemePreview. `FeatureSetting`
@@ -275,8 +275,9 @@ them obsolete). Migrated topology families:
   `reconcileRowCaches` (removal clears focus). Destructive actions take NO
   re-focus after a pointer activation — the action just removed their own row,
   so the refocus would target a control about to leave the screen. The base
-  gained the registration lifecycle: `registerSemanticControl` (record pre-init
-  / attach post-init / re-add after a resize's `rebuildWidgets`), a per-frame
+  gained the registration lifecycle, now implemented by the narrow shared
+  `SemanticControlHost`: `registerSemanticControl` (record pre-init / attach
+  post-init / re-add after a resize's `rebuildWidgets`), a per-frame
   availability sweep in `render` (every control starts unavailable; the row
   passes re-mark what the clip band shows, so render truth and input truth
   agree), and the click-drops-semantic-focus rule from
@@ -515,18 +516,13 @@ and Enum has no mock consumer — every production row constructs through
 the registry, no `glassButton(false)` exceptions exist). `hoverTarget`'s
 pointer-only rule is now unconditional and unit-pinned; a rollout
 inventory test pins the 26-row count against FeatureRegistry (the source
-file — the registry class itself is not headless-loadable). The three
-AuroraScreen SETTINGS-tab enums (Text Renderer, Client Font, UI FPS
-Limit) are canonical AT THE COMPONENT LEVEL with the host-dependent
-capabilities explicitly absent — the documented Phase C host deferral,
-the same split the inline toggles carry: the semantic control
-materializes only when a host asks (`interactionControl()` —
-FeatureDetailScreen does at open; AuroraScreen never does), so those rows
-get canonical hover timing, the accent-chevron expanded treatment, popup
-semantics, AND Escape/arrow keys (AuroraScreen routes `keyPressed`
-through the FeatureSetting focus registry, which an expanded enum holds)
-but no Tab focus, no Enter/Space activation, no narration, no activation
-click — runtime-verified per channel, not assumed all-or-nothing.
+file — the registry class itself is not headless-loadable). At the time of
+the Phase B rollout, the three AuroraScreen SETTINGS-tab enums (Text
+Renderer, Client Font, UI FPS Limit) were canonical AT THE COMPONENT LEVEL
+but intentionally host-deferred. Phase C-2 has since closed that seam:
+AuroraScreen now asks for and hosts their controls, so they retain the same
+hover/chevron/popup behavior and additionally receive Tab focus,
+Enter/Space, narration, and the component-owned activation click.
 Runtime verification: DevPilot `enumr` boots dark+light, 20/20 oracles
 each — all four Animations enums animate from rest (no snap left on a
 multi-enum screen), inter-enum ownership (open-one-consumes-the-other,
@@ -939,10 +935,9 @@ clear rule, multi-value mutation, chip-family entry hover.
   `interactionControls()` ask — the Theme DETAIL screen hosts them
   fully (registration/sweep/refocus, Tab + Enter/Space selection with
   exactly one accent change, narration with `Selected`/`Not selected`,
-  the conditional click); AuroraScreen's inline Settings tab never
-  asks — the documented Phase C host deferral, the exact split the
-  three AuroraScreen-hosted enums carry (canonical states + silent
-  pointer path; host-level Tab/narration awaits the host primitive).
+  the conditional click). At pilot time AuroraScreen's inline Settings tab
+  intentionally did not ask; Phase C-2 now materializes and hosts the same
+  ten controls there without changing the component contract.
   **Disabled** is the authoritative gate (the baseline PAINTED the
   hover ring on disabled cells while rejecting clicks — fixed): no
   hover target (an in-flight hover eases back to rest on the
@@ -1182,7 +1177,10 @@ geometry, and the semantic-availability sweep — the FeatureDetailScreen model
 (`TOP_FADE_Y` shared by render scissor and click gate, `:360/:467`) and
 ManagerListScreen's clamp (`:699-700`) generalized, not a layout engine.
 
-**C-2. AuroraScreen semantic hosting + navigation (the Phase B freeze-out).**
+**C-2 planning snapshot. AuroraScreen semantic hosting + navigation (the Phase B freeze-out).**
+Implementation split this item at its dependency boundary: C-2 is the
+completed existing-control hosting pass recorded below; manual navigation
+adoption remains C-2b.
 The Settings tab hosts inline settings whose controls never materialize:
 3 `EnumSetting`s (Text Renderer, Client Font, UI FPS Limit), `AccentSetting`'s
 10 peers (both already implement `interactionControl(s)` — they materialize
@@ -1460,6 +1458,71 @@ security claim.
 every production literal radius is now either migrated or an explicitly
 ruled exemption. New chrome must resolve through the tokens (the
 source-contract tests document the pattern).
+
+**C-2 IMPLEMENTATION RECORD (2026-09-20, AuroraScreen semantic hosting).**
+`ui/interaction/SemanticControlHost` now owns the narrow lifecycle shared by
+semantic hosts: identity-idempotent registration in visual order, widget-list
+rebuilds, frame availability resets, stale vanilla-focus cleanup, pointer-to-
+semantic focus, and immediate off-host invalidation. It has no layout or
+concrete-setting knowledge. `ManagerListScreen` uses the helper for its
+existing dynamic row controls without changing its ordering or availability
+policy; `FeatureDetailScreen` remains on its established host path because
+folding its capture-aware setting lifecycle into this extraction would have
+expanded C-2 and risked Phase-B behavior.
+
+`AuroraScreen.init()` now asks every Settings-row component for the semantic
+controls it already owns and adds them as vanilla children exactly once per
+screen rebuild. The exact hosted inventory is 13 controls: the two Text &
+Fonts `EnumSetting` triggers, `AccentSetting`'s ten visual-order peers (Blue,
+Indigo, Purple, Pink, Red, Orange, Yellow, Green, Teal, Custom), and the
+Interface `EnumSetting` trigger. The existing vanilla search `EditBox` is
+added first and remains singular; it is visible/focusable only on Modules.
+No controls are constructed or registered in the frame path.
+
+Availability is re-derived every frame from C-1's single authoritative
+`ClipBand`: a hosted action is available only on Settings, while its row is
+visible, and while its own actionable rectangle has a non-empty half-open
+intersection with the band. Thus partial visibility remains interactive,
+matching C-1 pointer policy without focus jumps at an edge; edge contact or a
+fully clipped rectangle is unavailable. Component enabled state remains the
+separate authoritative `SemanticAction.enabled()` gate, so a geometrically
+available disabled action can still narrate its disabled state while traversal
+and activation reject it. The sweep clears stale vanilla focus.
+Tab changes and screen removal invalidate the whole host immediately, and
+resize/re-init clears old focus then re-adds the stable component-owned
+controls without accumulating children. Manual pointer activation remains in
+the component; after the one accepted click, the host focuses the exact peer
+or trigger under the pointer and never replays the action or sound.
+
+The three enums now receive vanilla Tab focus, Enter/Space activation,
+component-owned narration/focus chrome/sound, and viewport authority on this
+host. Losing availability also collapses an expanded enum, resets its popup
+scroll, and releases setting focus, so an offscreen popup cannot keep keyboard
+or wheel ownership. Accent's ten existing peers receive the same host
+lifecycle; preset selection, literal selected-state derivation, no-op silence,
+and Custom's editor-without-value-change semantics remain component-owned.
+
+Explicit deferrals remain explicit: three `SegmentedSetting` rows expose no
+semantic controls (C-5); Theme Opacity is still a manual continuous setting;
+the four Settings header toggles and AuroraScreen's tabs/sidebar/layout/module
+tiles are navigation/chrome work for C-2b; Accent roving/arrow navigation is
+C-3. `ThemePreview` stays preview/data only and contributes no child or Tab
+stop. C-2 therefore closes hosting for every Phase-B-complete inline contract,
+but does not make AuroraScreen generally Phase-C complete.
+
+Verification: 180 tests / 0 failures (the 167-test baseline plus 13 focused
+host/AuroraScreen cases), including deterministic identity registration,
+rebuild/clear, live registration, availability and stale-focus cleanup,
+disabled/unavailable rejection, ordering, exact inventory and deferrals,
+C-1 coupling, tab invalidation, pointer ownership, search ordering,
+ThemePreview isolation, and Enum/Accent regressions. The untracked `c2host`
+harness defines 22 runtime oracles and representative dark/light captures,
+but the dev client did not reach its first rendered screen in this environment
+after initialization, so 0/22 runtime oracles executed and no new visual
+evidence was produced. The pre-task dev-pilot properties and local config were
+restored byte-for-byte. No radius code changed; C-7 source/unit contracts pass.
+Verdict: **C-2 AURORA SCREEN SEMANTIC HOSTING COMPLETE** at the code boundary;
+runtime/visual evidence remains an explicitly recorded environment gap.
 
 ## 7. Registries (the drift trap)
 

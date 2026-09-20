@@ -56,14 +56,10 @@ import java.util.function.Supplier;
  *       treatment (hairline around the pill vs. accent chevron inside
  *       it). <b>Host-dependent:</b> the control materializes only when
  *       the host asks for it ({@link #interactionControl()} —
- *       {@code FeatureDetailScreen} does; {@code AuroraScreen}'s inline
- *       Settings tab does not, so the three enums hosted there get the
- *       canonical hover/chevron/popup channels but no semantic
- *       focus/keyboard-activation/narration/click — the same documented
- *       Phase C host deferral the inline toggles carry. Their keyboard
- *       dismissal still works: the screen routes {@code keyPressed} to
- *       the focused setting, and the enum holds the registry focus while
- *       expanded).</li>
+ *       {@code FeatureDetailScreen} and, since Phase C-2,
+ *       {@code AuroraScreen}'s inline Settings tab both do). Keyboard
+ *       dismissal also routes through the setting focus registry while the
+ *       popup is expanded.</li>
  *   <li><b>disabled</b> — unchanged: inset fill, dim text, no open, no
  *       selection, keyboard rejected, disabled narration exposed.</li>
  * </ul>
@@ -283,9 +279,8 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
         // Mirror the semantic control's geometry, pointer, and vanilla focus
         // into this row every frame (the BooleanSetting sync discipline) — a
         // focused or hovered-for-narration pill always corresponds to real
-        // widget state. Hosts that never ask for the control (AuroraScreen's
-        // inline Settings tab, the Phase C deferral) keep it null: canonical
-        // visuals without the semantic capabilities that host can't own.
+        // widget state. A host that never asks keeps it null: canonical
+        // visuals without semantic capabilities it has not adopted.
         if (interactionControl != null) {
             interactionControl.setBounds(btnX, btnY, BTN_W, BTN_H);
             interactionControl.updatePointer(mouseX, mouseY);
@@ -439,9 +434,8 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
             // Semantic host (the detail screen marks the control available
             // and runs the lifecycle): the semantic action owns activation —
             // exactly-once behavior + the §11.7 activation click on open and
-            // close, pointer and keyboard alike. Hosts that never ask for
-            // the control (AuroraScreen's inline tab — the Phase C deferral)
-            // keep the direct silent path.
+            // close, pointer and keyboard alike. Hosts that never ask keep
+            // the direct silent path; AuroraScreen has asked since C-2.
             if (interactionControl != null && interactionControl.isAvailable()) {
                 return interactionControl.activateFromPointer(mouseX, mouseY, button);
             }
@@ -497,10 +491,8 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
      * The row's semantic control (focus traversal, Enter/Space activation,
      * the activation click, narration with the current value and
      * expanded/collapsed state). Lazy by design: it materializes only when
-     * a host asks for it — {@code FeatureDetailScreen} does at screen open;
-     * {@code AuroraScreen}'s inline Settings tab does not (the documented
-     * Phase C host deferral), so enums there keep pointer-only activation
-     * with no focus/narration/sound, like the inline toggles.
+     * a host asks for it — {@code FeatureDetailScreen} and, since Phase C-2,
+     * {@code AuroraScreen}'s inline Settings tab both do at initialization.
      */
     @Override
     public SemanticActionControl interactionControl() {
@@ -525,6 +517,21 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
                     SemanticActionControl.PointerRouting.MANUAL);
         }
         return interactionControl;
+    }
+
+    /**
+     * A popup is an interaction surface owned by its trigger. If the host
+     * removes that trigger from the active viewport/tab, collapse the popup
+     * and release the setting-level keyboard owner immediately; an invisible
+     * popup must not retain Escape/arrow/wheel ownership.
+     */
+    @Override
+    public void onInteractionAvailabilityChanged(boolean available) {
+        if (!available && expanded) {
+            expanded = false;
+            scrollOffset = 0;
+            releaseFocus();
+        }
     }
 
     /**

@@ -195,6 +195,21 @@ class EnumPilotTest {
         assertEquals(0, scrollOffset(row), "scroll resets for the next visit");
     }
 
+    @Test
+    void losingHostAvailabilityCollapsesPopupAndReleasesKeyboardOwnership() {
+        AtomicReference<EightValues> v = new AtomicReference<>();
+        EnumSetting<EightValues> row = eight(v);
+        row.mouseClicked(BTN_X + 10, BTN_Y + 9, 0, ROW_X, ROW_Y, ROW_W);
+        row.onKeyPress(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN, 0);
+        assertTrue(row.expandedState());
+        assertSame(row, FeatureSetting.getFocused());
+
+        row.onInteractionAvailabilityChanged(false);
+        assertFalse(row.expandedState(), "an off-viewport popup owner must collapse");
+        assertEquals(0, scrollOffset(row));
+        assertNull(FeatureSetting.getFocused(), "hidden popup must release routed keys/wheel");
+    }
+
     private static int scrollOffset(EnumSetting<?> row) {
         try {
             var f = EnumSetting.class.getDeclaredField("scrollOffset");

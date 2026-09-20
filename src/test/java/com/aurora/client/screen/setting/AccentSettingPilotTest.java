@@ -316,12 +316,12 @@ class AccentSettingPilotTest {
     // ---- Focus host boundary ----
 
     @Test
-    void auroraScreenHostDeferralRemainsIntact() throws Exception {
+    void auroraScreenMaterializesTheExistingPeerControlsInPhaseC2() throws Exception {
         String aurora = java.nio.file.Files.readString(java.nio.file.Path.of(
                 "src/client/java/com/aurora/client/screen/AuroraScreen.java"));
-        assertFalse(aurora.contains("interactionControls("),
-                "AuroraScreen must not consume peer controls (the Phase C host deferral)");
-        // The component exposes the full set the future host will consume.
+        assertTrue(aurora.contains("List.copyOf(setting.interactionControls())"),
+                "AuroraScreen must materialize component-owned controls during init");
+        // The component exposes the complete visual-order set the host consumes.
         List<SemanticActionControl> peers = row.interactionControls();
         assertEquals("Blue", peers.get(0).action().accessibleName().getString());
         assertEquals("Custom", peers.get(9).action().accessibleName().getString());

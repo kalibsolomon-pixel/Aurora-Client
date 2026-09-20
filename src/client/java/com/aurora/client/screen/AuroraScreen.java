@@ -10,6 +10,8 @@ import com.aurora.client.ui.component.GlassSurface;
 import com.aurora.client.ui.component.ThemedScreen;
 import com.aurora.client.ui.component.ToggleSwitch;
 import com.aurora.client.ui.render.blur.BlurPanelRenderer;
+import com.aurora.client.ui.interaction.SemanticActionControl;
+import com.aurora.client.ui.interaction.SemanticControlHost;
 import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.ui.util.ClipBand;
 import com.aurora.client.ui.util.MaterialIconRenderer;
@@ -25,6 +27,7 @@ import net.minecraft.network.chat.Component;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -119,6 +122,20 @@ public class AuroraScreen extends Screen implements ThemedScreen {
 
     private final Map<String, ToggleSwitch> sectionToggles = new HashMap<>();
 
+    /**
+     * Phase C-2 host for the semantic contracts the inline Settings
+     * components already expose. Registration follows registry row order;
+     * component semantics/layout remain outside this helper.
+     */
+    private final SemanticControlHost semanticHost = new SemanticControlHost(
+            control -> this.addWidget(control),
+            control -> this.removeWidget(control),
+            this::getFocused,
+            this::setFocused);
+    /** Stable per-setting views captured during init; never allocated in the frame path. */
+    private final Map<FeatureSetting, List<SemanticActionControl>> hostedSettingControls =
+            new IdentityHashMap<>();
+
     private final UiLayerCache layerCache = new UiLayerCache();
 
     public AuroraScreen() {
@@ -128,6 +145,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     @Override
     protected void init() {
         super.init();
+        semanticHost.beginRebuild();
         for (SmoothScroll s : scrolls) s.resetClock();
         sectionToggles.clear();
 
@@ -140,7 +158,27 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         searchField.setBordered(false);
         searchField.setTextColor(0xFFFFFFFF);
         searchField.setResponder(s -> this.searchQuery = s);
+        // Explicit traversal position: the vanilla search field is first.
+        // It is visible/focusable on Modules and hidden on Settings.
         this.addWidget(searchField);
+
+        // HOSTABLE_NOW only: ask every inline component for the semantic
+        // controls it already owns. Today this deterministically yields the
+        // two Text & Fonts enums, Accent's ten visual-order peers, then the
+        // Interface enum (13 controls total). Segmented/opacity/preview and
+        // header toggles expose none, so C-2 does not invent them here.
+        hostedSettingControls.clear();
+        for (FeatureMetadata metadata : FeatureRegistry.settings()) {
+            for (FeatureSetting setting : metadata.settings) {
+                List<SemanticActionControl> controls = List.copyOf(setting.interactionControls());
+                hostedSettingControls.put(setting, controls);
+                for (SemanticActionControl control : controls) {
+                    semanticHost.register(control);
+                }
+                setting.onInteractionAvailabilityChanged(false);
+            }
+        }
+        semanticHost.finishRebuild();
     }
 
     private float boxX() { return (this.width - BOX_W) / 2.0f; }
@@ -245,6 +283,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float delta) {
         tickSmoothScroll();
+        semanticHost.beginAvailabilitySweep();
         // Frame-start reset: focused-setting keyboard availability is
         // re-derived by the Settings walk below (renderSettingsLive); on
         // the Modules tab no inline row is visible, so the registry focus
@@ -306,6 +345,11 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         layerCache.blit(g, this.width, this.height);
 
         renderLive(g, mods, mouseX, mouseY, delta);
+
+        // Availability has now been derived from this frame's component
+        // bounds. An off-tab/off-viewport control cannot retain vanilla
+        // focus even though its action already rejects activation.
+        semanticHost.finishAvailabilitySweep();
 
         super.render(g, mouseX, mouseY, delta);
         FeatureSetting.drawPendingTooltip(g, this.width, this.height);
@@ -643,6 +687,19 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                     if (visible) {
                         s.render(g, (int) (mx + 4), (int) y, 246, mouseX, mouseY);
                     }
+                    boolean anyControlAvailable = false;
+                    List<SemanticActionControl> controls = hostedSettingControls.getOrDefault(s, List.of());
+                    for (SemanticActionControl control : controls) {
+                        // Partial-visibility policy: any non-empty
+                        // intersection of the ACTIONABLE control rect with
+                        // C-1's authoritative viewport is available. Edge
+                        // contact alone is not (ClipBand is half-open).
+                        boolean available = visible && vp.intersects(
+                                control.getX(), control.getY(),
+                                control.getWidth(), control.getHeight());
+                        semanticHost.setAvailable(control, available);
+                        anyControlAvailable |= available;
+                    }
                     // C-1 render/input availability coupling: the row (and,
                     // when it holds the focused setting, keyboard routing)
                     // is available exactly while it shares a pixel with the
@@ -650,7 +707,8 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                     // FeatureDetailScreen hook — capture families cancel on
                     // false; this tab hosts none today, so it is uniform
                     // plumbing, not a behavior change.
-                    s.onInteractionAvailabilityChanged(visible);
+                    s.onInteractionAvailabilityChanged(
+                            controls.isEmpty() ? visible : anyControlAvailable);
                     if (s == FeatureSetting.getFocused()) {
                         focusedSettingVisible = visible;
                     }
@@ -829,11 +887,18 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         double mouseX = _ev.x(); double mouseY = _ev.y(); int button = _ev.button();
         float bx = boxX(), by = boxY(), mx = mainX(), my = mainY();
 
+        // Match the accepted FeatureDetailScreen pointer contract: capture
+        // cancellation owns the click, otherwise pointer interaction drops
+        // stale setting/semantic focus before the clicked target reclaims it.
+        if (FeatureSetting.cancelActiveCapture()) return true;
+        FeatureSetting.clearFocus();
+        semanticHost.dropFocus();
         if (super.mouseClicked(_ev, _dbl)) return true;
 
         for (int i = 0; i < 2; i++) {
             float catY = by + TAB_FIRST_Y + i * TAB_PITCH;
             if (mouseX >= bx + 8 && mouseX <= bx + 72 && mouseY >= catY && mouseY <= catY + TAB_H) {
+                if (selectedCategory != i && i == 0) invalidateSettingsSemantics();
                 selectedCategory = i;
                 return true;
             }
@@ -908,6 +973,10 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                         if (vp.intersects(mx + 4, y, 246, rh)
                                 && s.mouseClicked(mouseX, mouseY, button, (int) (mx + 4), (int) y, 246)) {
                             activeDragSetting = s;
+                            // Manual pointer ownership stays with the
+                            // component. The host only mirrors focus onto
+                            // the exact peer/trigger under the accepted click.
+                            semanticHost.focusAt(mouseX, mouseY);
                             return true;
                         }
                         y += rh + 4;
@@ -978,9 +1047,24 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         if (focused != null && focusedSettingVisible && focused.onCharTyped(_ev)) return true;
         return super.charTyped(_ev);
     }
+
+    /** Immediate off-tab/removal boundary; render will rebuild availability on return. */
+    private void invalidateSettingsSemantics() {
+        semanticHost.deactivateAll();
+        focusedSettingVisible = false;
+        for (FeatureMetadata metadata : FeatureRegistry.settings()) {
+            for (FeatureSetting setting : metadata.settings) {
+                setting.onInteractionAvailabilityChanged(false);
+            }
+        }
+    }
+
+    @Override
+    public void removed() {
+        invalidateSettingsSemantics();
+        super.removed();
+    }
 }
-
-
 
 
 

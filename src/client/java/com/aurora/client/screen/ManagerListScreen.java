@@ -7,6 +7,7 @@ import com.aurora.client.ui.component.GlassSurface;
 import com.aurora.client.ui.component.ThemedScreen;
 import com.aurora.client.ui.component.Toast;
 import com.aurora.client.ui.interaction.SemanticActionControl;
+import com.aurora.client.ui.interaction.SemanticControlHost;
 import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.ui.util.UiLayerCache;
@@ -157,9 +158,11 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
     //  - Stale focus: a click anywhere drops a SemanticActionControl's
     //    vanilla focus first (FeatureDetailScreen's rule), and removeWidget
     //    clears focus when a reconciled-away row control is discarded.
-    private final List<SemanticActionControl> semanticControls = new ArrayList<>();
-    /** Set at the end of {@link #init()}; before that, registrations only record. */
-    private boolean semanticWidgetsLive = false;
+    private final SemanticControlHost semanticHost = new SemanticControlHost(
+            control -> this.addWidget(control),
+            control -> this.removeWidget(control),
+            this::getFocused,
+            this::setFocused);
 
     /**
      * Registers a custom-painted semantic control with this screen's widget
@@ -169,22 +172,12 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
      * Registration is idempotent by identity.
      */
     protected final void registerSemanticControl(SemanticActionControl control) {
-        if (control == null || semanticControls.contains(control)) return;
-        semanticControls.add(control);
-        if (semanticWidgetsLive) addSemanticControl(control);
-    }
-
-    private void addSemanticControl(SemanticActionControl control) {
-        control.setFocused(false);
-        control.setAvailable(false);
-        this.addWidget(control);
+        semanticHost.register(control);
     }
 
     /** Removes a control whose row ceased to exist (vanilla clears focus if it held it). */
     protected final void unregisterSemanticControl(SemanticActionControl control) {
-        if (control == null) return;
-        semanticControls.remove(control);
-        if (semanticWidgetsLive) this.removeWidget(control);
+        semanticHost.unregister(control);
     }
 
     // ---- Static row-surface template (P2: kill the per-row fill volume) ----
@@ -262,6 +255,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
 
     @Override
     protected void init() {
+        semanticHost.beginRebuild();
         // Top toolbar: the screen's action button (left) + Done (right) —
         // the shared row both manager screens ship.
         toolbarActionBtn = createToolbarActionBtn();
@@ -276,10 +270,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         // lifecycle without joining its render list (the settings' controls
         // on FeatureDetailScreen do the same). A rebuildWidgets (resize)
         // cleared the lists; every registered control re-adds here.
-        for (SemanticActionControl control : semanticControls) {
-            addSemanticControl(control);
-        }
-        semanticWidgetsLive = true;
+        semanticHost.finishRebuild();
     }
 
     /** The toolbar's left action button, constructed but not registered (the base registers it). */
@@ -335,9 +326,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         // geometry: everything starts unavailable and the row passes below
         // re-mark what the clip band actually shows, so a control whose row
         // is scrolled out can neither be keyed nor activated while invisible.
-        for (SemanticActionControl control : semanticControls) {
-            control.setAvailable(false);
-        }
+        semanticHost.beginAvailabilitySweep();
 
         // ---- 1. Glass pass (before the dim) ----
         // Opened explicitly so each surface's rim finish is deferred past the
@@ -674,7 +663,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         // FeatureDetailScreen's rule: a click drops a semantic control's
         // vanilla focus first, so focus never lingers somewhere the pointer
         // just left. The row walk below re-focuses the control it lands on.
-        if (this.getFocused() instanceof SemanticActionControl) this.setFocused(null);
+        semanticHost.dropFocus();
 
         // Editors first.
         if (editorClickFirst(_ev, _doubleClicked)) return true;

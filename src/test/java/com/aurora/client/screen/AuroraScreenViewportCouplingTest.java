@@ -105,9 +105,10 @@ class AuroraScreenViewportCouplingTest {
     @Test
     void settingsWalkFiresAvailabilityChanges() {
         String src = screenSource();
-        assertTrue(src.contains("s.onInteractionAvailabilityChanged(visible);"),
-                "the render walk must publish row availability (the "
-                        + "FeatureDetailScreen hook — capture families cancel on false)");
+        assertTrue(src.contains("s.onInteractionAvailabilityChanged(\n"
+                        + "                            controls.isEmpty() ? visible : anyControlAvailable);"),
+                "the render walk must publish control-rect availability when hosted, "
+                        + "and row availability for deferred/non-semantic rows");
     }
 
     @Test

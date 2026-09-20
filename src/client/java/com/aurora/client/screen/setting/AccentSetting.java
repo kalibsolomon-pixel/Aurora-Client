@@ -44,9 +44,8 @@ import java.util.function.Supplier;
  *       immediate; endpoints unchanged, only the path animates.</li>
  *   <li><b>focused</b> — one {@link SemanticActionControl} per peer,
  *       materialized only when a host asks ({@link #interactionControls()}
- *       — FeatureDetailScreen does; AuroraScreen's inline Settings tab does
- *       not, the documented Phase C host deferral, the exact split the
- *       three AuroraScreen-hosted enums carry). Focus paints the
+ *       — FeatureDetailScreen and, since Phase C-2, AuroraScreen's inline
+ *       Settings tab both do). Focus paints the
  *       Button-family 1 px accent hairline ON the cell — weight/position
  *       distinct from the selection ring's 2 px-out stroke.</li>
  *   <li><b>disabled</b> — the authoritative gate: no hover target, no
@@ -336,10 +335,8 @@ public class AccentSetting extends FeatureSetting {
      * The complete peer set, materialized on first ask. Hosts that ask
      * (FeatureDetailScreen: registration, per-frame availability sweep,
      * post-activation refocus) get the full peer-selection contract; hosts
-     * that never ask (AuroraScreen's inline Settings tab) keep the
-     * component-level states with the silent direct pointer path — the
-     * documented Phase C host deferral, the exact split the three
-     * AuroraScreen-hosted enums carry.
+     * that never ask keep the component-level states with the silent direct
+     * pointer path. AuroraScreen asks during init as of Phase C-2.
      */
     @Override
     public java.util.List<SemanticActionControl> interactionControls() {
