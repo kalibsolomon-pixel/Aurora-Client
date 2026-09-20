@@ -6,6 +6,7 @@ import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.component.GlassEditBox;
 import com.aurora.client.ui.component.GlassSurface;
 import com.aurora.client.ui.component.Widget;
+import com.aurora.client.util.AuroraAnim;
 import com.aurora.client.util.AuroraShapes;
 import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.Minecraft;
@@ -61,6 +62,47 @@ public class EffectExpiryListSetting extends FeatureSetting {
 
     /** Row objects cached per effect id (ItemScale's per-item slider caches). */
     private final Map<String, EffectRowSetting> rowCache = new HashMap<>();
+
+    /**
+     * Phase C-4 pilot B: the "+" add as the canonical icon action — the
+     * Material add glyph, pointer-only symmetric-140 hover driving BOTH the
+     * glyph and the pill surface, focus hairline, Tab/Enter/Space, exactly
+     * one activation click on a genuine add. The enabled gate IS the
+     * no-matching-effect state (the authoritative disabled contract: no
+     * hover target, no activation, glyph painted muted).
+     */
+    private final com.aurora.client.ui.component.IconAction addAction =
+            new com.aurora.client.ui.component.IconAction(
+                    com.aurora.client.screen.FeatureIcons.get("_action_add"),
+                    com.aurora.client.ui.interaction.SemanticAction.button(
+                            Component.literal("Add effect"),
+                            () -> Component.literal(foundEffect == null
+                                    ? "Search for an effect to add."
+                                    : "Adds the matched effect to the per-effect alert list."),
+                            null,
+                            () -> foundEffect != null,
+                            this::addFoundEffect),
+                    () -> AuroraTheme.TEXT_SECONDARY,
+                    () -> 0xFFFFFFFF);
+
+    /** The ONE add path — the action's behavior and the legacy fallback both land here. */
+    private void addFoundEffect() {
+        if (foundEffect == null) return;
+        String idStr = foundEffect.toString();
+        AuroraConfig cfg = AuroraConfig.get();
+        if (!cfg.effectExpiryIncludedEffects.contains(idStr)) {
+            cfg.effectExpiryIncludedEffects.add(idStr);
+            searchField.setValue("");
+            // Persist immediately — matches ItemScale's add.
+            AuroraConfig.save();
+        }
+    }
+
+    /** C-4: the add action's control (single — the default wrapper picks it up). */
+    @Override
+    public com.aurora.client.ui.interaction.SemanticActionControl interactionControl() {
+        return addAction.interactionControl();
+    }
 
     public EffectExpiryListSetting() {
         super("Per-Effect Alert List");
@@ -187,13 +229,16 @@ public class EffectExpiryListSetting extends FeatureSetting {
         searchField.render(ctx, mouseX, mouseY, 0f);
 
         // "+" add button — raised glass (flat pill on decline); ItemScale's
-        // in-place/stamped split verbatim.
+        // in-place/stamped split verbatim. C-4 pilot B: the canonical hover
+        // (one animator) drives the pill surface AND the glyph — the whole
+        // action eases, surface no longer snaps ahead of the glyph.
         int plusX = x + width - 36;
         int plusY = y + 5;
-        boolean plusHover = Widget.inBounds(mouseX, mouseY, plusX, plusY, 24, 20);
+        addAction.syncChannels(plusX, plusY, 24, 20, mouseX, mouseY);
+        float plusT = addAction.hoverT();
         int plusBg = ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_BACKGROUND),
-                plusHover ? 0x66 : 0x2E);
-        int plusBorder = plusHover ? AuroraTheme.BORDER_ON_HOVER : AuroraTheme.BORDER_OFF;
+                (int) (0x2E + (0x66 - 0x2E) * plusT));
+        int plusBorder = AuroraAnim.lerpArgb(AuroraTheme.BORDER_OFF, AuroraTheme.BORDER_ON_HOVER, plusT);
         float plusR = Math.min(20 / 2f, ThemeManager.current().roundness().radiusSmall());
         boolean plusGlass;
         if (glassPassFrame == GlassSurface.frame()) {
@@ -205,8 +250,7 @@ public class EffectExpiryListSetting extends FeatureSetting {
             AuroraShapes.panel(ctx, plusX, plusY, 24, 20, plusBg, AuroraTheme.RADIUS_SMALL);
             AuroraShapes.outline(ctx, plusX, plusY, 24, 20, plusBorder, AuroraTheme.RADIUS_SMALL);
         }
-        com.aurora.client.ui.util.AuroraFontRenderer.drawCentered(ctx, tr, "+", plusX + 12, plusY + 6,
-                plusHover ? 0xFFFFFFFF : AuroraTheme.TEXT_SECONDARY);
+        addAction.paintGlyph(ctx, tr, plusX, plusY, 24, 20);
 
         // "Suggested effect" preview — its real status-effect sprite
         // beside the text (ItemScale's "Add: <name>" line).
@@ -247,19 +291,18 @@ public class EffectExpiryListSetting extends FeatureSetting {
                 searchField.setFocused(false);
             }
 
-            // Click on "+" button
+            // Click on "+" button (C-4 pilot B): routes through the semantic
+            // action (exactly-once + the one click); the disabled gate IS
+            // the no-match state, so an unmatched click falls through to the
+            // legacy path and stays unconsumed exactly as before.
             int plusX = rowX + rowWidth - 36;
             if (mouseX >= plusX && mouseX < plusX + 24) {
+                if (addAction.clicked(mouseX, mouseY, button)) {
+                    return true;
+                }
                 // Nothing to add (no matching effect) — don't consume.
                 if (foundEffect == null) return false;
-                String idStr = foundEffect.toString();
-                AuroraConfig cfg = AuroraConfig.get();
-                if (!cfg.effectExpiryIncludedEffects.contains(idStr)) {
-                    cfg.effectExpiryIncludedEffects.add(idStr);
-                    searchField.setValue("");
-                    // Persist immediately — matches ItemScale's add.
-                    AuroraConfig.save();
-                }
+                addFoundEffect();
                 return true;
             }
         }

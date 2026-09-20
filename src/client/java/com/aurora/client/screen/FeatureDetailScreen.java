@@ -104,6 +104,18 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
      * open, so this correctly resets per visit.
      */
     private boolean firstInit = true;
+
+    /**
+     * C-4: the controls this screen last registered per setting — the diff
+     * baseline for DYNAMIC control sets (ItemScale's per-row removes). The
+     * per-frame sweep below compares each setting's fresh
+     * {@code interactionControls()} against it and registers/unregisters the
+     * delta through the widget lifecycle, so a row added or removed
+     * mid-session gets exactly one control and no semantic child outlives
+     * its row (a removed control that held focus drops it here).
+     */
+    private final java.util.Map<FeatureSetting, java.util.List<SemanticActionControl>>
+            registeredSettingControls = new java.util.IdentityHashMap<>();
     /** Guards lifecycle teardown because onClose() replaces the screen and
      *  Minecraft then calls removed() on the same instance. */
     private boolean transientStateClosed = false;
@@ -150,8 +162,11 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         // Custom-painted semantic controls join vanilla's child/narratable
         // lifecycle without joining its render list. Their setting remains
         // the sole pixel and clipped-pointer owner.
+        registeredSettingControls.clear();
         for (FeatureSetting setting : meta.settings) {
-            for (SemanticActionControl control : setting.interactionControls()) {
+            var controls = setting.interactionControls();
+            registeredSettingControls.put(setting, controls);
+            for (SemanticActionControl control : controls) {
                 control.setFocused(false);
                 control.setAvailable(false);
                 this.addWidget(control);
@@ -313,9 +328,30 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         int gy = TOP_PAD - (int) scroll.current();
         for (FeatureSetting s : meta.settings) {
             int gh = s.height();
-            if (!s.interactionControls().isEmpty()) {
+            var controls = s.interactionControls();
+            if (!controls.isEmpty()) {
+                // C-4 dynamic-set diff: mutation-time list changes (rows
+                // added/removed) register/unregister here — zero allocation
+                // on the unchanged path (identity compare against the
+                // setting's own cached list).
+                var prev = registeredSettingControls.put(s, controls);
+                if (prev != null && prev != controls && !sameControlList(prev, controls)) {
+                    for (SemanticActionControl c : controls) {
+                        if (!containsControl(prev, c)) {
+                            c.setFocused(false);
+                            c.setAvailable(false);
+                            this.addWidget(c);
+                        }
+                    }
+                    for (SemanticActionControl c : prev) {
+                        if (!containsControl(controls, c)) {
+                            if (this.getFocused() == c) this.setFocused(null);
+                            this.removeWidget(c);
+                        }
+                    }
+                }
                 boolean available = gy + gh > TOP_FADE_Y && gy < this.height;
-                for (SemanticActionControl control : s.interactionControls()) {
+                for (SemanticActionControl control : controls) {
                     control.setAvailable(available);
                 }
                 s.onInteractionAvailabilityChanged(available);
@@ -468,8 +504,22 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
             if (mouseY >= TOP_FADE_Y && y + h > TOP_FADE_Y && y < this.height
                     && s.mouseClicked(mouseX, mouseY, button, listX, y, LIST_W)) {
                 activeDragSetting = s;
+                // Mirror focus onto the exact control under the accepted
+                // click when the setting exposes several (ItemScale's rows,
+                // Accent's peers — AuroraScreen's rule); single-control
+                // settings keep the first-control focus the C-2 pilot set.
                 var controls = s.interactionControls();
-                if (!controls.isEmpty()) this.setFocused(controls.get(0));
+                if (!controls.isEmpty()) {
+                    SemanticActionControl hit = null;
+                    for (SemanticActionControl c : controls) {
+                        if (c.isAvailable() && mouseX >= c.getX() && mouseX < c.getRight()
+                                && mouseY >= c.getY() && mouseY < c.getBottom()) {
+                            hit = c;
+                            break;
+                        }
+                    }
+                    this.setFocused(hit != null ? hit : controls.get(0));
+                }
                 return true;
             }
             y += h + ROW_GAP;
@@ -510,6 +560,23 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
 
         scroll.wheel(vertical, 30, maxScroll);
         return true;
+    }
+
+    private boolean sameControlList(java.util.List<SemanticActionControl> a,
+                                    java.util.List<SemanticActionControl> b) {
+        if (a.size() != b.size()) return false;
+        for (int i = 0; i < a.size(); i++) {
+            if (a.get(i) != b.get(i)) return false;
+        }
+        return true;
+    }
+
+    private boolean containsControl(java.util.List<SemanticActionControl> list,
+                                    SemanticActionControl wanted) {
+        for (SemanticActionControl c : list) {
+            if (c == wanted) return true;
+        }
+        return false;
     }
 
     @Override

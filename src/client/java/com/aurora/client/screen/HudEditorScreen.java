@@ -10,6 +10,9 @@ import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.component.ButtonWidget;
 import com.aurora.client.ui.component.ThemedScreen;
 import com.aurora.client.ui.component.Widget;
+
+import java.util.HashMap;
+import java.util.Map;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -113,6 +116,41 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
                 Component.literal("Reset Positions"),
                 "Moves every HUD module back to its default anchor, offset and scale.",
                 this::resetLayouts).glassBackground(true));
+
+        // Phase C-4 pilot C: one icon action per HUD module's X badge —
+        // the canonical contract (Tab/Enter/Space, focus hairline, canonical
+        // hover, exactly one activation click) layered onto the existing
+        // raster badge, which keeps its hand-drawn status-overlay look
+        // (this screen's C-7 family ruling: plain fills, no radius in any
+        // mode — the hairline is square here for the same reason). Long-
+        // lived, keyed by the stable module id; registered after the two
+        // floating buttons so Tab reaches them in visual reading order.
+        HudModuleManager modules = AuroraClient.modules();
+        if (modules != null) {
+            for (HudModule m : modules.all()) {
+                this.addWidget(xAction(m).interactionControl());
+            }
+        }
+    }
+
+    // ---- Phase C-4 pilot C: the X badge's semantic layer ----
+
+    private final Map<String, com.aurora.client.ui.component.IconAction> xActions = new HashMap<>();
+
+    /** The module's disable action — long-lived, keyed by the stable module id. */
+    private com.aurora.client.ui.component.IconAction xAction(HudModule m) {
+        return xActions.computeIfAbsent(m.id(), id ->
+                new com.aurora.client.ui.component.IconAction(
+                        com.aurora.client.screen.FeatureIcons.get("_action_close"),
+                        com.aurora.client.ui.interaction.SemanticAction.button(
+                                Component.literal("Disable " + m.displayName()),
+                                () -> Component.literal("Turns off the " + m.displayName()
+                                        + " HUD module (same as toggling it off in Aurora's settings)."),
+                                null,
+                                () -> true,
+                                () -> disableViaRegistry(m)),
+                        () -> 0xFFFFFFFF,
+                        () -> 0xFFFFFFFF));
     }
 
     private void resetLayouts() {
@@ -212,6 +250,14 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
         HudModuleManager mgr = AuroraClient.modules();
         if (mgr == null) return;
 
+        // C-4 availability sweep (the manager-screen rule): every X action
+        // starts the frame unavailable; the walk below re-marks the ones
+        // whose badge actually paints (module enabled). A module disabled
+        // mid-session cannot keep invisible focus or activation.
+        for (com.aurora.client.ui.component.IconAction action : xActions.values()) {
+            action.interactionControl().setAvailable(false);
+        }
+
         for (HudModule m : mgr.all()) {
             if (!m.isConfigEnabled()) continue;
 
@@ -243,11 +289,25 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
             }
 
             // X icon (top-right INSIDE the AABB). Only on enabled modules — clicking
-            // an X on a disabled module would be a no-op.
+            // an X on a disabled module would be a no-op. C-4 pilot C: the badge
+            // gains the canonical channels — availability tied to its paint,
+            // pointer-only symmetric-140 hover (the badge bg eases toward
+            // full opacity), and the square focus hairline (this screen's
+            // status-overlay family keeps plain-fill geometry).
             if (m.enabled) {
                 int xIconX = x + w - X_ICON_SIZE - 2;
                 int xIconY = y + 2;
-                drawXIcon(ctx, xIconX, xIconY);
+                com.aurora.client.ui.component.IconAction action = xAction(m);
+                action.interactionControl().setAvailable(true);
+                action.syncChannels(xIconX, xIconY, X_ICON_SIZE, X_ICON_SIZE, mouseX, mouseY);
+                drawXIcon(ctx, xIconX, xIconY, action.hoverT());
+                if (action.isFocused()) {
+                    int hair = ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99);
+                    ctx.fill(xIconX - 1, xIconY - 1, xIconX, xIconY + X_ICON_SIZE, hair);
+                    ctx.fill(xIconX + X_ICON_SIZE, xIconY - 1, xIconX + X_ICON_SIZE + 1, xIconY + X_ICON_SIZE, hair);
+                    ctx.fill(xIconX, xIconY - 1, xIconX + X_ICON_SIZE, xIconY, hair);
+                    ctx.fill(xIconX, xIconY + X_ICON_SIZE, xIconX + X_ICON_SIZE, xIconY + X_ICON_SIZE + 1, hair);
+                }
             }
 
             // Lock icon (top-left INSIDE the AABB) when locked.
@@ -275,9 +335,13 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
         ctx.fill(cx, cy, cx + 4, cy + 4, CORNER_HANDLE);
     }
 
-    private void drawXIcon(GuiGraphics ctx, int x, int y) {
-        // Filled background square + diagonal cross "X" on top.
-        ctx.fill(x, y, x + X_ICON_SIZE, y + X_ICON_SIZE, xIconBg());
+    private void drawXIcon(GuiGraphics ctx, int x, int y, float hoverT) {
+        // Filled background square + diagonal cross "X" on top. C-4: the
+        // canonical hover eases the background's alpha (0xC0 → 0xF0) —
+        // pointer-only, symmetric 140 ms via the icon action.
+        ctx.fill(x, y, x + X_ICON_SIZE, y + X_ICON_SIZE,
+                ((int) (0xC0 + (0xF0 - 0xC0) * hoverT) << 24)
+                        | (xIconBg() & 0x00FFFFFF));
         // Manual diagonal lines via 1-px fills.
         for (int i = 1; i < X_ICON_SIZE - 1; i++) {
             ctx.fill(x + i, y + i, x + i + 1, y + i + 1, X_ICON_FG);
@@ -343,12 +407,16 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
                 return true;
             }
 
-            // X icon (only present on enabled modules).
+            // X icon (only present on enabled modules). C-4 pilot C: routes
+            // through the semantic action (exactly-once + the one click);
+            // the direct call stays as the pre-materialization fallback.
             if (hit.enabled) {
                 int xIconX = x + sw - X_ICON_SIZE - 2;
                 int xIconY = y + 2;
                 if (Widget.inBounds(mx, my, xIconX, xIconY, X_ICON_SIZE, X_ICON_SIZE)) {
-                    disableViaRegistry(hit);
+                    if (!xAction(hit).clicked(mx, my, button)) {
+                        disableViaRegistry(hit);
+                    }
                     return true;
                 }
             }

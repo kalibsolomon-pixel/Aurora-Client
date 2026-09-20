@@ -1826,6 +1826,110 @@ segmented peer uses the canonical peer-selection contract, AuroraScreen
 hosts them generically, the layout pair is adopted through the same
 primitive, and C-3 navigation is reused with zero new arrow math.
 
+**C-4A PILOT RECORD (2026-09-20, "pilot canonical icon actions" + "extend
+material icon subset").** The icon-action primitive and its heterogeneous
+pilot — the rollout itself remains pending (this was the pilot phase).
+
+- **Rebuilt inventory (from source, not the audit's list):** ItemScale
+  per-row "x" remove (16×16 zone, text glyph red-on-hover immediate);
+  ItemScale "+" add (24×20 pill, text glyph); ItemScale expand chevrons
+  (already Material glyphs, disclosure); EffectExpiry "+" add (24×20,
+  ItemScale verbatim); EffectRow "x" remove (16×16, container-owned);
+  KeyList "−" chips (immediate hover — the sanctioned scanning
+  exception); ParticleRow "v"/">" ASCII disclosures; HudEditor 9×9
+  raster X badge (top-right per enabled module, click → registry
+  disable, hint text claims a nonexistent X key); PixelCanvas warning
+  Apply/Cancel (text buttons, modal family); AuroraScreen layout icons
+  (resolved by C-5); EnumSetting chevrons (canonical).
+- **Classification:** ICON_ACTION — the three pilots + the rollout set
+  (ItemScale add/chevrons, EffectRow x, ParticleRow disclosures);
+  DISCLOSURE — chevrons/ParticleRow migrate with Expanded/Collapsed
+  state narration; TEXT_ACTION — PixelCanvas Apply/Cancel (modal
+  family, no icon forcing); DEFERRED_WITH_REASON — KeyList "−"
+  (Phase-B sanctioned immediate-hover scanning exception; rollout will
+  need either a no-animator adapter or a conscious exception ruling);
+  ALREADY_CANONICAL — layout pair (C-5), EnumSetting chevrons.
+- **Icon-font prerequisite:** the subset derives from `FeatureIcons`
+  codepoints via `subset_script.py` (now path-portable). Added exactly
+  the two glyphs the pilots justify — `_action_add` U+E147, `_action_close`
+  U+E5CD (41 → 43 glyphs; remove/check deferred until a consumer
+  exists) — regenerated from the licensed `full_material.ttf`
+  (Material Symbols, Apache-2.0 attribution unchanged) and verified
+  byte-deterministic across regenerations.
+- **Primitive:** `ui/component/IconAction` — one long-lived instance per
+  action site owning (a) a `SemanticActionControl` (lazy, the EnumSetting
+  discipline — hosts that never ask keep their silent direct path), (b)
+  pointer-only `HoverAnim.symmetric(140)`, (c) the Button-family hairline,
+  (d) `MaterialIconRenderer` glyph painting with an explicit finite em
+  (`min(NATURAL_EM_GUI, min(w,h)−2)` — per-instance geometry, never one
+  size), and (e) theme-live color suppliers. The GLYPH IS PRESENTATION
+  ONLY — accessible meaning lives on the action's textual label.
+  Surfaces stay the host's: `paint` renders glyph+hairline channels,
+  `syncChannels`+`hoverT()` serve hosts painting their own pixels
+  (HudEditor's badge), and `paintGlyph` bridges callers interleaving a
+  surface between sync and glyph (EffectExpiry's pill — one animator now
+  drives pill AND glyph). Radius: `min(min(w,h)/2, radiusSmall())` —
+  SQUARE squares rectangular chrome; HudEditor's hairline is square by
+  its status-overlay family ruling. Disabled = the action's enabled
+  gate (no hover target, no activation, muted glyph).
+- **Pilots:** (A) ItemScale remove — the close glyph replaces the text
+  "x" in the same 16×16 zone, canonical tertiary→error-red hover,
+  keyboard/narration gained, removal behavior verbatim through
+  `removeItem` (one path for action and legacy fallback), rows
+  identity-keyed `computeIfAbsent` with mutation-time list rebuilds.
+  (B) EffectExpiry add — the add glyph on the existing pill, the
+  no-match state IS the enabled gate (authoritative disabled), one add
+  path (`addFoundEffect`). (C) HudEditor X — the raster badge keeps its
+  status-overlay look, gaining the channels (hover eases the badge bg
+  0xC0→0xF0, square hairline, Tab/Enter/Space, exactly-one click,
+  narration "Disable <module>"); the badge's availability sweeps with
+  its paint (module enabled); the phantom "X: disable" KEY hint is
+  left untouched and classified C-8 (no keyPressed was invented).
+- **Host machinery (a real find):** FeatureDetailScreen now diffs each
+  setting's `interactionControls()` per frame (zero-allocation identity
+  compare against the last-seen list; addWidget/removeWidget only on
+  the delta, focus dropped with a removed control) — dynamic sets
+  (ItemScale rows) get exactly one control and no semantic child
+  outlives its row. The pilot boots caught the first draft's trap:
+  rebuilding the SAME list instance in place made the identity diff
+  see no change and the stale control stayed registered — rebuilds now
+  swap in a fresh list. The click walk also mirrors focus onto the
+  control under the accepted pointer for multi-control settings
+  (AuroraScreen's rule; single-control settings keep first-control
+  focus).
+- **Verification:** unit **235/0** (+10 `IconActionPilotTest`: routing,
+  exactly-once, keyboard, disabled rejection, focus-at-hover-0, lazy
+  lifecycle, narration, and source pins — primitive vocabulary, all
+  three pilots use it, no local click sound, no text glyphs left, no
+  per-frame construction, the host diff, the font subset). Runtime
+  `c4iconpilot`: **26/26 dark ROUND, 26/26 light ROUND, 26/26 dark
+  SQUARE** — hover enter/exit/rest, focus at hover 0, Enter-removes
+  exactly once with stale control + focus cleaned and the neighbor row
+  intact, pointer/Enter/Space adds exactly once each with the no-match
+  gate inert, focus coherent after mutation, Tab reaches the X in 2
+  hops, Enter/Space disable exactly once with the swept X unavailable,
+  corner-halo non-interference both ways, resize without duplicates,
+  the phantom hint classified. Captures per theme
+  (`.devpilot-c4/{dark,light,square}/`: item-x hover/focused,
+  effect-add, hud-x-focused). Harness lessons: mcCapture's one-frame
+  lag applies to focus changes; a d-clock snap must act in the SAME
+  tick (d is computed before the snap); startup wait-gates need
+  seen-flags or they re-fire; the live dev config has nearly every HUD
+  feature off, so HudEditor pilots must force modules on (saved +
+  restored); hover-exit samples belong 1 tick after the park (3 ticks
+  already exceeds 140 ms).
+- **C-8 findings recorded:** the HudEditor phantom X-key hint (hint
+  text claims a key that does not exist — pilot left it untouched);
+  the ±6px resize-halo investigation stays C-8 (the pilot verified the
+  X's own bounds do not participate); `disableViaRegistry` does not
+  persist the disable (existing behavior preserved verbatim by the
+  action).
+Verdict: **C-4 ICON-ACTION PILOT READY FOR ROLLOUT** — the primitive is
+sound across three heterogeneous consumers, the icon infrastructure is
+adequate (deterministic regeneration, two glyphs added), the dynamic
+lifecycle is correct, and the remaining inventory is mechanical
+adoption.
+
 ## 7. Registries (the drift trap)
 
 Three parallel structures with no single source of truth:

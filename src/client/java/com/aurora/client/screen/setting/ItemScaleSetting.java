@@ -89,6 +89,78 @@ public class ItemScaleSetting extends FeatureSetting {
     // Keep active SliderSetting instances per item and per field to handle drag events cleanly
     private final Map<String, List<SliderSetting>> itemSliders = new HashMap<>();
 
+    // ---- Phase C-4 pilot A: the per-row remove action ----
+    //
+    // One long-lived IconAction per customized item (identity-keyed by item
+    // id, created lazily by the render walk, pruned by the removal itself) —
+    // the C-4 icon-action primitive supplies the canonical contract
+    // (Material close glyph, pointer-only symmetric-140 hover, focus
+    // hairline, Tab/Enter/Space, exactly one activation click). The domain
+    // behavior is unchanged verbatim; the accessible label is textual
+    // ("Remove item" + the row's name in the description), never the glyph.
+    private final Map<String, com.aurora.client.ui.component.IconAction> rowRemoveActions = new LinkedHashMap<>();
+    /**
+     * The host-visible control list, rebuilt on mutation only (never per
+     * frame). The rebuild swaps in a FRESH instance — the detail screen's
+     * dynamic-set diff is identity-based, so clearing the same list in
+     * place would hide the mutation and leave a removed row's control
+     * registered (found live by the C-4 pilot boots).
+     */
+    private List<com.aurora.client.ui.interaction.SemanticActionControl> rowControlList = new ArrayList<>();
+
+    private com.aurora.client.ui.component.IconAction rowRemoveAction(String idStr) {
+        return rowRemoveActions.computeIfAbsent(idStr, id -> {
+            String label = humanizeItemId(id);
+            return new com.aurora.client.ui.component.IconAction(
+                    com.aurora.client.screen.FeatureIcons.get("_action_close"),
+                    com.aurora.client.ui.interaction.SemanticAction.button(
+                            Component.literal("Remove item"),
+                            () -> Component.literal("Removes " + label + " from the customized item list."),
+                            null,
+                            () -> true,
+                            () -> removeItem(id)),
+                    () -> AuroraTheme.IOS_TERTIARY_LABEL,
+                    () -> ThemeManager.color(ThemeToken.SEMANTIC_ERROR));
+        });
+    }
+
+    /** The ONE removal path — the action's behavior and the legacy fallback both land here. */
+    private void removeItem(String idStr) {
+        AuroraConfig cfg = AuroraConfig.get();
+        cfg.itemScales.remove(idStr);
+        itemSliders.remove(idStr);
+        expandedStates.remove(idStr);
+        // The row's control is stale the moment its row dies: prune it here
+        // so the host's diff unregisters it next frame (no semantic child
+        // outlives its row).
+        rowRemoveActions.remove(idStr);
+        rebuildRowControlList();
+        AuroraConfig.save();
+    }
+
+    /** Re-syncs the host-visible control list to the sorted visual row order (mutation-time only). */
+    private void rebuildRowControlList() {
+        List<com.aurora.client.ui.interaction.SemanticActionControl> fresh = new ArrayList<>();
+        List<String> sortedIds = new ArrayList<>(AuroraConfig.get().itemScales.keySet());
+        Collections.sort(sortedIds);
+        for (String id : sortedIds) {
+            fresh.add(rowRemoveAction(id).interactionControl());
+        }
+        rowControlList = fresh; // fresh instance — the host diff sees the swap
+    }
+
+    /** C-4: the per-row remove controls, in visual order (Tab order == row order). */
+    @Override
+    public List<com.aurora.client.ui.interaction.SemanticActionControl> interactionControls() {
+        // Mutation paths rebuild the list themselves; this count check is the
+        // safety net for externally-changed configs (a stale control must
+        // never outlive its row).
+        if (rowControlList.size() != AuroraConfig.get().itemScales.size()) {
+            rebuildRowControlList();
+        }
+        return rowControlList;
+    }
+
     public ItemScaleSetting() {
         super("Item Scale Configurator");
         Font font = Minecraft.getInstance().font;
@@ -280,11 +352,12 @@ public class ItemScaleSetting extends FeatureSetting {
 
             // chevron and trash icon
             int rightX = x + width - 24;
-            // Draw Delete Button (Red cross/Trash)
-            boolean trashHover = Widget.inBounds(mouseX, mouseY, rightX - 16, rowY + (ITEM_ROW_H - 16) / 2, 16, 16);
-            ctx.drawString(tr, "x", rightX - 12, rowY + (ITEM_ROW_H - 16) / 2 + 3,
-                    trashHover ? ThemeManager.color(ThemeToken.SEMANTIC_ERROR)
-                                : AuroraTheme.IOS_TERTIARY_LABEL, false);
+            // Remove action (C-4 pilot A): the Material close glyph through
+            // the icon-action primitive — canonical 140 ms hover (tertiary →
+            // error red, animated — was immediate), focus hairline, and the
+            // control sync, in the same 16×16 zone the click walk tests.
+            rowRemoveAction(idStr).paint(ctx, tr, rightX - 16, rowY + (ITEM_ROW_H - 16) / 2, 16, 16,
+                    mouseX, mouseY);
 
             // Draw Chevron — Material Symbols glyph (the EnumSetting
             // convention; already in the font subset). Rasterized at the
@@ -438,11 +511,12 @@ public class ItemScaleSetting extends FeatureSetting {
                         // Persist immediately — matches how sibling widgets
                         // save at commit; relying on a later save loses
                         // the change on a crash.
-                        AuroraConfig.save();
-                    }
+                    AuroraConfig.save();
+                    rebuildRowControlList();
                 }
-                return true;
             }
+            return true;
+        }
         }
 
         // Click on customized items list
@@ -461,12 +535,16 @@ public class ItemScaleSetting extends FeatureSetting {
 
             if (mouseY >= rowHeaderY && mouseY < rowHeaderY + ITEM_ROW_H) {
                 int rightX = rowX + rowWidth - 24;
-                // Delete Click
+                // Remove click (C-4 pilot A): routes through the semantic
+                // action — exactly-once activation + the one click — with the
+                // legacy direct path beside it for the pre-first-ask window
+                // (the EnumSetting discipline). Both land in removeItem.
                 if (mouseX >= rightX - 16 && mouseX < rightX) {
-                    cfg.itemScales.remove(idStr);
-                    itemSliders.remove(idStr);
-                    expandedStates.remove(idStr);
-                    AuroraConfig.save();
+                    com.aurora.client.ui.component.IconAction remove = rowRemoveActions.get(idStr);
+                    if (remove != null && remove.clicked(mouseX, mouseY, button)) {
+                        return true;
+                    }
+                    removeItem(idStr);
                     return true;
                 }
 
