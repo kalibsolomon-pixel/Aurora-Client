@@ -1524,6 +1524,117 @@ restored byte-for-byte. No radius code changed; C-7 source/unit contracts pass.
 Verdict: **C-2 AURORA SCREEN SEMANTIC HOSTING COMPLETE** at the code boundary;
 runtime/visual evidence remains an explicitly recorded environment gap.
 
+**C-2b IMPLEMENTATION RECORD (2026-09-20, "adopt aurora screen navigation
+semantics").** AuroraScreen's manual navigation and chrome joined the frozen
+semantic contracts through the same C-2 host — 47 new screen-owned
+`SemanticActionControl`s alongside the 13 component-owned ones (60 total,
+one canonical registration in `init`, identity-stable factories so a
+resize's rebuild re-registers the same objects). The rebuilt inventory and
+its classification (verified from source; the C-2 report's list confirmed
+with two precision notes):
+
+- **Sidebar Mods/Settings tabs — NAVIGATION** (the frozen pack-navigation
+  contract, semantics not implementation): persistent selection through the
+  stained tint / flat accent wash — never the hover animator (the four
+  states selected/unselected × rest/hover never collapse); pointer-only
+  `HoverAnim.symmetric(140)` per tab (the former immediate text/fill
+  flip); Tab focus + the Button-family 1 px accent hairline; Enter/Space
+  and pointer clicks converge on ONE `selectCategory` path that plays
+  exactly one ACTIVATION on a real destination change and consumes the
+  already-selected click as a silent no-op (no rebuild, no scroll reset —
+  per-tab scroll positions survive by construction). A real switch runs
+  `semanticHost.deactivateAll()` immediately, so no off-tab control keeps
+  focus or can activate.
+- **Profiles chip — ACTION** (opens the profile manager; no persistent
+  selection, so navigation would misclassify it): canonical hover, focus
+  hairline, Enter/Space, narration, one activation click.
+- **Layout pair (list/grid) — PEER_SELECTION, DEFERRED TO C-5** (the task's
+  default preference): it is the same peer-value family `SegmentedControl`
+  belongs to, and C-5 establishes that contract (C-3 the arrow group).
+  Remaining gap: immediate hover, no semantic controls, no peer-group
+  semantics — all land with C-5. No one-off peer primitive was built.
+- **37 module tiles — COMPOUND CARDS**: one control per module, keyed by
+  stable module id (finite: the ModuleManager set; search filtering changes
+  only availability, never the control set). Primary action (left click /
+  Enter / Space) toggles the module through the action — exactly one
+  activation, one click, the `Module.setEnabled` save; the enabled state is
+  the persistent stained channel, independent of hover (which animates the
+  transient wash at 140 ms from the pointer only). The right-click detail
+  navigation stays pointer-specific (no keyboard chord invented; C-3/C-5
+  don't cover it) and plays one click at the site — parity with the
+  Settings header that opens the same destination, so sound policy does
+  not depend on the route. Availability is the C-2 partial-visibility rule
+  over C-1's ClipBand (the render walk re-marks exactly the
+  viewport-intersecting tiles): a hidden tile is not focusable,
+  keyboard-actionable, narrated, or hoverable, and clipped pixels are inert
+  (the click walk's `vp.contains` gate predates C-2b and is unchanged).
+- **Settings headers — 3 NAVIGATION + 1 grouping chrome**: text_fonts,
+  theme, and interface navigate to their detail screens (Enter/Space and
+  the header click route through a per-entry control; hover is the chevron
+  affordance brightening at 140 ms — a text row, so no fill wash is
+  invented); custom_title has no detail screen and gets no control (its
+  header is a label + toggle only).
+- **4 header toggles — TOGGLE (the Phase-B Boolean adapter)**: the existing
+  `ToggleSwitch` stays painter/state mechanism (its own canonical hover wash
+  and thumb press pulse), and a per-entry control owns the ONE activation
+  source — pointer, Enter, Space all run `toggle + save` exactly once
+  (`BooleanSetting`'s wiring); the switch itself is never clicked, so no
+  double-toggle. The forgiving 40 px zone IS the control bounds (C-1
+  ruling retained); the focus hairline paints through
+  `ToggleSwitch.focusedVisual`, synced per frame.
+
+Traversal order (child-list = Tab order, unavailable controls skipped):
+search field (Modules only — hidden on Settings) → Mods → Settings →
+Profiles → [Modules: 37 tiles in ModuleManager grid order | Settings:
+custom_title toggle, text_fonts nav+toggle, its 2 enums, theme nav+toggle,
+Accent's 10 peers (+ non-hosting rows), interface nav+toggle, its enum].
+Sound ownership: every accepted activation lives in the action (tabs carry
+`SemanticSound.NONE` and play inside the behavior only on real change;
+Profiles/tiles/nav/toggles construct via `SemanticAction.button`); the
+host never plays sounds; hover/focus/rejection silent. Press treatment per
+family: none for navigation/cards/headers (the state/destination change is
+the feedback); the toggle keeps its existing thumb pulse. Narration:
+tabs Selected/Not selected, tiles Enabled/Disabled + description, toggles
+On/Off, Profiles/header-nav action descriptions. No radius code changed
+(C-7 contracts pass); the header hairline reuses the radius passed in from
+`renderLive`, keeping the C-7 test's four-derivation pin exact.
+
+Verification: **198 tests / 0 failures** (the 180 baseline + 18: 17 new
+`AuroraScreenNavigationTest` source-contract pins — inventory, deferral,
+registration order/lifecycle, inactive-tab reachability, state/hover
+independence, no-op + exactly-once, narration, ClipBand availability,
+press treatment, pointer-ownership ordering — and the updated C-2 hosting
+pin for the selectCategory convergence). Runtime (gamescope bypass — see
+below): DevPilot `c2bnav` **33/33 on BOTH dark and light boots** (hover
+enter/exit/reversal sampled from the real animators, silent no-op, Enter
+and Space single-flip, Tab-reach for card/Profiles, persistence under
+parked hover, clipped-pixel inertness, hidden-card exclusion, header
+nav/toggle keyboard activation, off-viewport unavailability, narration
+metadata, tab invalidation both directions, resize singularity); the
+deferred **C-2 `c2host` matrix now runs 22/22 on BOTH themes** (updated to
+the 60-control inventory with name-based lookups — the component-owned 13
+remain an in-order subsequence behind the sidebar trio), closing C-2's
+runtime debt; `c1bounds` **18/18**; `c7square` re-captured (ROUND/SQUARE ×
+flat/glass — SQUARE AuroraScreen captures included). Pixel/ROI evidence
+(dark, `.devpilot-c2bnav/`): the selected Mods chip is byte-stable while
+another chip is hovered (0/1408 px — selection persists at hover 0), the
+focus hairline reads as a 168-px ring ROI on the chip and an accent
+(154,9,34) pixel row on the focused card, and the hover treatments are
+live (1404/1408 px per hovered chip). Harness notes: the dev-window
+captures are 854×480 (gamescope composites larger), and the C-1
+fixture-bookkeeping lesson recurred — ModuleManager grid 0 is `zoom`, not
+`world_map` (world_map sits at grid 33, below the fold). Two harness-side
+oracle bugs were found by the first boot (a mid-flight exit legitimately
+reaches 0 inside 2 ticks — the no-snap proof needs a 50 ms sample; the
+tab-invalidation oracle originally asserted the wrong direction for the
+new tab's own controls); both were harness fixes, zero production changes.
+The C-2 stall did not reproduce under gamescope this session: every boot
+reached first render, ran its matrix, and exited cleanly.
+Verdict: **C-2B AURORA SCREEN NAVIGATION COMPLETE** — remaining
+AuroraScreen Phase C gaps belong to C-3 (arrow groups on the tabs/peers)
+and C-5 (SegmentedControl conformance + the layout pair), both documented
+above.
+
 ## 7. Registries (the drift trap)
 
 Three parallel structures with no single source of truth:

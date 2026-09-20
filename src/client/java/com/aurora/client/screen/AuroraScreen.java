@@ -9,14 +9,20 @@ import com.aurora.client.ui.component.GlassEditBox;
 import com.aurora.client.ui.component.GlassSurface;
 import com.aurora.client.ui.component.ThemedScreen;
 import com.aurora.client.ui.component.ToggleSwitch;
+import com.aurora.client.ui.component.Widget;
 import com.aurora.client.ui.render.blur.BlurPanelRenderer;
+import com.aurora.client.ui.interaction.MinecraftSemanticFeedback;
+import com.aurora.client.ui.interaction.SemanticAction;
 import com.aurora.client.ui.interaction.SemanticActionControl;
 import com.aurora.client.ui.interaction.SemanticControlHost;
+import com.aurora.client.ui.interaction.SemanticSound;
 import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.ui.util.ClipBand;
 import com.aurora.client.ui.util.MaterialIconRenderer;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.ui.util.UiLayerCache;
+import com.aurora.client.util.AuroraAnim;
+import com.aurora.client.util.HoverAnim;
 import com.aurora.client.util.ScrollFade;
 import com.aurora.client.util.SmoothScroll;
 import net.minecraft.client.gui.Font;
@@ -59,8 +65,35 @@ import java.util.Map;
  * hit-testing used unclamped partial rects, so controls scrolled outside
  * the viewport remained addressable (even above the window or below it,
  * over the dim).
+ *
+ * <p>Phase C-2b (2026-09-20): the screen's manual chrome joined the frozen
+ * semantic contracts through the C-2 host. The sidebar Mods/Settings tabs
+ * are NAVIGATION (the pack-tabs contract: persistent selection through the
+ * stained tint — never the hover animator —, pointer-only
+ * {@code HoverAnim.symmetric(140)}, Tab focus + the Button-family hairline,
+ * Enter/Space through one {@link #selectCategory} path, one activation
+ * click on a real destination change, silent consumed no-op on the selected
+ * tab). Profiles is a plain ACTION (opens the profile manager; no
+ * persistent selection). The 37 module cards are COMPOUND CARDS —
+ * left-click/Enter toggles the module (exactly one click; the enabled
+ * state is the persistent stained channel, independent of hover), the
+ * right-click detail navigation stays pointer-specific (one click, parity
+ * with the Settings header that opens the same destination), and
+ * availability is the C-2 partial-visibility rule over the C-1 ClipBand.
+ * The Settings tab's headers are navigation for the three entries with a
+ * detail screen (custom_title has none — its header is grouping chrome
+ * with a toggle only); the four header toggles are the Phase-B Boolean
+ * adapter (the existing {@link ToggleSwitch} stays painter/state, the
+ * semantic control owns the single activation). The layout pair is
+ * deliberately NOT adopted: it is the same peer-value family
+ * {@code SegmentedControl} belongs to, and C-5 establishes that contract
+ * (arrow/peer semantics are C-3) — it keeps its immediate hover and
+ * silent manual clicks, documented as the remaining gap.
  */
 public class AuroraScreen extends Screen implements ThemedScreen {
+
+    /** §8.3 canonical hover duration — sidebar chrome, cards, headers alike (C-2b). */
+    private static final long HOVER_MS = 140L;
 
     private static final float BOX_W = 360;
     private static final float BOX_H = 240;
@@ -122,6 +155,47 @@ public class AuroraScreen extends Screen implements ThemedScreen {
 
     private final Map<String, ToggleSwitch> sectionToggles = new HashMap<>();
 
+    // ---- Phase C-2b: screen-owned semantic chrome ----
+    //
+    // The manual controls this screen painted before C-2b (sidebar nav
+    // tabs, Profiles action, module cards, Settings headers + header
+    // toggles) each gained a SemanticActionControl. All of them are created
+    // ONCE per screen instance in init (factories below are
+    // identity-stable, so a resize's rebuild re-registers the same objects
+    // — never duplicates) and stay long-lived for the screen's lifetime;
+    // the render walks stamp bounds + ClipBand availability + pointer
+    // state per frame, exactly the pack-browser tab discipline. Sound
+    // ownership lives in the actions (see each factory); the host never
+    // plays sounds.
+    /** Sidebar navigation tabs (Mods=0, Settings=1) — the pack-nav contract. */
+    private final SemanticActionControl[] tabControls = new SemanticActionControl[2];
+    /** The Profiles chip — a plain action (opens the profile manager). */
+    private SemanticActionControl profilesControl;
+    /** One control per module card, keyed by stable module id (finite: the ModuleManager set). */
+    private final Map<String, SemanticActionControl> tileControls = new HashMap<>();
+    /** Settings-header navigation, keyed by entry id — only entries with a detail screen. */
+    private final Map<String, SemanticActionControl> headerNavControls = new HashMap<>();
+    /** The four header toggles, keyed by entry id. */
+    private final Map<String, SemanticActionControl> headerToggleControls = new HashMap<>();
+    /** Canonical hover animators — pointer-only targets, keyed by stable identity (never list position). */
+    private final HoverAnim[] tabHovers = {
+            HoverAnim.symmetric(HOVER_MS),
+            HoverAnim.symmetric(HOVER_MS),
+    };
+    private final HoverAnim profilesHover = HoverAnim.symmetric(HOVER_MS);
+    private final Map<String, HoverAnim> tileHovers = new HashMap<>();
+    private final Map<String, HoverAnim> headerHovers = new HashMap<>();
+
+    /** The module card's hover animator (lazily created once per module, long-lived). */
+    private HoverAnim tileHover(String moduleId) {
+        return tileHovers.computeIfAbsent(moduleId, k -> HoverAnim.symmetric(HOVER_MS));
+    }
+
+    /** The settings header's hover animator (lazily created once per entry, long-lived). */
+    private HoverAnim headerHover(String entryId) {
+        return headerHovers.computeIfAbsent(entryId, k -> HoverAnim.symmetric(HOVER_MS));
+    }
+
     /**
      * Phase C-2 host for the semantic contracts the inline Settings
      * components already expose. Registration follows registry row order;
@@ -162,6 +236,23 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         // It is visible/focusable on Modules and hidden on Settings.
         this.addWidget(searchField);
 
+        // C-2b screen-owned chrome: the two navigation tabs, the Profiles
+        // action, all 37 module cards, and the Settings headers + header
+        // toggles are created once and registered in visual order (sidebar
+        // first; module cards in ModuleManager order, the grid's visual
+        // order; the Settings walk interleaves each entry's header chrome
+        // with its rows further down). The factories are identity-stable,
+        // so a resize's beginRebuild/finishRebuild re-registers these same
+        // objects without accumulating children. The layout pair is
+        // deliberately absent — peer selection is C-5's SegmentedControl
+        // contract (see the class javadoc).
+        tabControls[0] = tabControl(0);
+        tabControls[1] = tabControl(1);
+        profilesControl = profilesActionControl();
+        for (Module m : ModuleManager.getInstance().getModules()) {
+            tileControls.put(m.id, tileControl(m));
+        }
+
         // HOSTABLE_NOW only: ask every inline component for the semantic
         // controls it already owns. Today this deterministically yields the
         // two Text & Fonts enums, Accent's ten visual-order peers, then the
@@ -169,6 +260,13 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         // header toggles expose none, so C-2 does not invent them here.
         hostedSettingControls.clear();
         for (FeatureMetadata metadata : FeatureRegistry.settings()) {
+            // Header chrome precedes the entry's rows in traversal order
+            // (visual top-to-bottom): the navigation control for entries
+            // with a detail screen, then the header toggle.
+            if (metadata.hasDetail()) {
+                headerNavControls.put(metadata.id, headerNavControl(metadata));
+            }
+            headerToggleControls.put(metadata.id, headerToggleControl(metadata));
             for (FeatureSetting setting : metadata.settings) {
                 List<SemanticActionControl> controls = List.copyOf(setting.interactionControls());
                 hostedSettingControls.put(setting, controls);
@@ -179,6 +277,171 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             }
         }
         semanticHost.finishRebuild();
+    }
+
+    // ------------------------------------------------------------------
+    //  C-2b control factories — identity-stable (a second init re-uses the
+    //  same instances), registered at creation. All live above render() so
+    //  no registration can ever sit in the frame path.
+    // ------------------------------------------------------------------
+
+    /**
+     * The sidebar navigation tab — the frozen pack-navigation contract.
+     * Selected stays focusable (a disabled-style gate would strand Tab
+     * traversal on the current tab) and narrates {@code Selected}; the
+     * already-selected no-op lives in the behavior with the sound.
+     */
+    private SemanticActionControl tabControl(int i) {
+        SemanticActionControl control = tabControls[i];
+        if (control != null) return control;
+        String name = i == 0 ? "Mods" : "Settings";
+        control = new SemanticActionControl(new SemanticAction(
+                Component.literal(name),
+                () -> Component.literal("Switches the main screen to the " + name + " tab."),
+                () -> Component.literal(selectedCategory == i ? "Selected" : "Not selected"),
+                () -> true,
+                () -> {
+                    if (selectedCategory == i) return; // reactivating the selected tab: silent consumed no-op
+                    MinecraftSemanticFeedback.INSTANCE
+                            .play(SemanticSound.ACTIVATION);
+                    selectCategory(i);
+                },
+                SemanticSound.NONE, true, true),
+                MinecraftSemanticFeedback.INSTANCE,
+                null, // no press animation — the selection transition is the feedback
+                SemanticActionControl.PointerRouting.MANUAL);
+        tabControls[i] = control;
+        semanticHost.register(control);
+        return control;
+    }
+
+    /**
+     * The Profiles chip — an ordinary ACTION (opens the profile manager; it
+     * holds no persistent selection, so the navigation family would
+     * misclassify it). Manual painter + the button-like action contract:
+     * canonical hover, focus, Enter/Space, narration, one activation click.
+     */
+    private SemanticActionControl profilesActionControl() {
+        if (profilesControl != null) return profilesControl;
+        profilesControl = new SemanticActionControl(SemanticAction.button(
+                Component.literal("Profiles"),
+                () -> Component.literal("Opens the profile manager."),
+                null,
+                () -> true,
+                () -> {
+                    if (this.minecraft != null) this.minecraft.setScreen(new ProfileManagerScreen(this));
+                }),
+                MinecraftSemanticFeedback.INSTANCE,
+                null, // no press animation — the screen transition is the feedback
+                SemanticActionControl.PointerRouting.MANUAL);
+        semanticHost.register(profilesControl);
+        return profilesControl;
+    }
+
+    /**
+     * One module card — a COMPOUND CARD, not a plain button. The primary
+     * action (left click / Enter / Space) toggles the module with exactly
+     * one activation click; the module's enabled state is the persistent
+     * represented channel (the stained tint / accent wash), never hover.
+     * The right-click detail navigation stays pointer-specific (no keyboard
+     * chord invented in C-2b) and plays its own single click at the site.
+     */
+    private SemanticActionControl tileControl(Module m) {
+        SemanticActionControl control = tileControls.get(m.id);
+        if (control != null) return control;
+        control = new SemanticActionControl(SemanticAction.button(
+                Component.literal(m.name),
+                () -> Component.literal(m.description),
+                () -> Component.literal(m.isEnabled() ? "Enabled" : "Disabled"),
+                () -> true,
+                m::toggle),
+                MinecraftSemanticFeedback.INSTANCE,
+                null, // no press animation — the state transition is the feedback
+                SemanticActionControl.PointerRouting.MANUAL);
+        tileControls.put(m.id, control);
+        semanticHost.register(control);
+        return control;
+    }
+
+    /**
+     * A Settings-header navigation control — opens the entry's detail
+     * screen (a subordinate destination, the same one the module cards'
+     * right-click reaches). custom_title has no detail screen and gets no
+     * control: its header is grouping chrome.
+     */
+    private SemanticActionControl headerNavControl(FeatureMetadata m) {
+        SemanticActionControl control = headerNavControls.get(m.id);
+        if (control != null) return control;
+        control = new SemanticActionControl(SemanticAction.button(
+                Component.literal(m.displayName),
+                () -> Component.literal("Opens the " + m.displayName + " settings."),
+                null,
+                () -> true,
+                () -> {
+                    if (this.minecraft != null) {
+                        this.minecraft.setScreen(new FeatureDetailScreen(this, m));
+                    }
+                }),
+                MinecraftSemanticFeedback.INSTANCE,
+                null, // no press animation — the navigation transition is the feedback
+                SemanticActionControl.PointerRouting.MANUAL);
+        headerNavControls.put(m.id, control);
+        semanticHost.register(control);
+        return control;
+    }
+
+    /**
+     * A header toggle — the Phase-B Boolean adapter: the existing
+     * {@link ToggleSwitch} stays the painter/state mechanism (its own
+     * canonical hover wash + thumb press pulse), and this control owns the
+     * ONE activation source (pointer, Enter, Space all converge on
+     * toggle + save, exactly the {@code BooleanSetting} wiring). The
+     * switch itself is never clicked directly, so it cannot double-toggle.
+     */
+    private SemanticActionControl headerToggleControl(FeatureMetadata m) {
+        SemanticActionControl control = headerToggleControls.get(m.id);
+        if (control != null) return control;
+        control = new SemanticActionControl(SemanticAction.button(
+                Component.literal(m.displayName),
+                () -> Component.literal("Turns " + m.displayName + " on or off."),
+                () -> Component.literal(m.isEnabled() ? "On" : "Off"),
+                () -> true,
+                () -> {
+                    ToggleSwitch t = sectionToggles.get(m.id);
+                    if (t != null) t.toggle();
+                    com.aurora.client.config.AuroraConfig.save();
+                }),
+                MinecraftSemanticFeedback.INSTANCE,
+                null,
+                SemanticActionControl.PointerRouting.MANUAL);
+        headerToggleControls.put(m.id, control);
+        semanticHost.register(control);
+        return control;
+    }
+
+    /**
+     * The ONE tab-selection path (pointer, Enter, Space converge here).
+     * Reactivating the already-selected tab never reaches this method's
+     * body — the action's no-op guard consumes it silently first. A real
+     * change switches immediately (no rebuild/reset: the per-tab scroll
+     * positions are preserved by construction) and invalidates every
+     * hosted control until the new tab's render walk re-marks it, so no
+     * hidden control can retain focus or activate.
+     */
+    private void selectCategory(int i) {
+        if (selectedCategory == i) return;
+        if (i == 0) {
+            // Leaving the Settings tab — notify its rows now (capture
+            // families' teardown hook; uniform plumbing, none hosted here).
+            for (FeatureMetadata metadata : FeatureRegistry.settings()) {
+                for (FeatureSetting setting : metadata.settings) {
+                    setting.onInteractionAvailabilityChanged(false);
+                }
+            }
+        }
+        selectedCategory = i;
+        semanticHost.deactivateAll();
+        focusedSettingVisible = false;
     }
 
     private float boxX() { return (this.width - BOX_W) / 2.0f; }
@@ -501,39 +764,73 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         String[] cats = {"Mods", "Settings"};
         for (int i = 0; i < 2; i++) {
             float catY = by + TAB_FIRST_Y + i * TAB_PITCH;
-            boolean hover = mouseX >= bx + 8 && mouseX <= bx + 72 && mouseY >= catY && mouseY <= catY + TAB_H;
             boolean sel = selectedCategory == i;
+            // Canonical hover (§8.3, C-2b): POINTER only, symmetric 140 ms —
+            // never driven by selection. Selection is the persistent
+            // channel: the stained glass tint (or the flat accent wash
+            // below), visible at hover 0; the selected tab's label
+            // treatment is fixed, so the channels can never alias.
+            boolean hover = Widget.inBounds(mouseX, mouseY, bx + 8, catY, 64, TAB_H);
+            float hoverT = tabHovers[i].update(hover);
+            SemanticActionControl control = tabControls[i];
+            if (control != null) {
+                control.setBounds((int) (bx + 8), (int) catY, 64, (int) TAB_H);
+                control.setAvailable(true); // static sidebar chrome — always interactive
+                control.updatePointer(mouseX, mouseY);
+            }
             // Surface: raised glass painted pre-dim by paintGlassPass
             // (chipGlass[i]) — neutral unselected, accent-STAINED selected
             // (selection reads through the tint alone). Content here: the
-            // flat wash/hover fills only when the glass declined, then the
-            // label.
+            // flat hover wash only when the glass declined, then the label.
             if (!chipGlass[i]) {
                 if (sel) {
                     RenderUtil.drawRoundedRectAA(g, bx + 8, catY, 64, 22, ctrlRadius, alpha(ThemeToken.ACCENT, 0x26 / 255f));
-                } else if (hover) {
-                    RenderUtil.drawRoundedRectAA(g, bx + 8, catY, 64, 22, ctrlRadius, ThemeManager.surfaceColor(ThemeToken.SURFACE_VARIANT));
+                } else if (hoverT > 0f) {
+                    RenderUtil.drawRoundedRectAA(g, bx + 8, catY, 64, 22, ctrlRadius,
+                            AuroraAnim.lerpArgb(0x00000000,
+                                    ThemeManager.surfaceColor(ThemeToken.SURFACE_VARIANT), hoverT));
                 }
             }
             int txt = chipGlass[i] && sel ? ThemeManager.color(ThemeToken.ON_ACCENT)
                     : sel ? ThemeManager.color(ThemeToken.ON_BACKGROUND)
-                    : hover ? ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY)
-                    : ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED);
+                    : AuroraAnim.lerpArgb(
+                            ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED),
+                            ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY), hoverT);
             g.drawString(tr, cats[i], (int) (bx + 16), (int) (catY + 7), txt, false);
+            // Keyboard focus: the Button-family 1 px accent hairline — an
+            // independent channel from both the selection tint and hover.
+            if (control != null && control.isFocused()) {
+                RenderUtil.drawRoundedOutlineAA(g, bx + 8, catY, 64, 22, ctrlRadius, 1.0f,
+                        ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
+            }
         }
 
         float profY = by + TAB_FIRST_Y + 2 * TAB_PITCH;
-        boolean pHover = mouseX >= bx + 8 && mouseX <= bx + 72 && mouseY >= profY && mouseY <= profY + TAB_H;
+        boolean pHover = Widget.inBounds(mouseX, mouseY, bx + 8, profY, 64, TAB_H);
+        float profT = profilesHover.update(pHover);
+        if (profilesControl != null) {
+            profilesControl.setBounds((int) (bx + 8), (int) profY, 64, (int) TAB_H);
+            profilesControl.setAvailable(true);
+            profilesControl.updatePointer(mouseX, mouseY);
+        }
         // Profiles is a plain action button — neutral raised glass painted
-        // pre-dim by paintGlassPass; the hover fill only on decline.
-        if (!profGlass && pHover) {
-            RenderUtil.drawRoundedRectAA(g, bx + 8, profY, 64, 22, ctrlRadius, ThemeManager.surfaceColor(ThemeToken.SURFACE_VARIANT));
+        // pre-dim by paintGlassPass; the hover wash only on decline.
+        if (!profGlass && profT > 0f) {
+            RenderUtil.drawRoundedRectAA(g, bx + 8, profY, 64, 22, ctrlRadius,
+                    AuroraAnim.lerpArgb(0x00000000,
+                            ThemeManager.surfaceColor(ThemeToken.SURFACE_VARIANT), profT));
         }
         g.drawString(tr, "Profiles", (int) (bx + 16), (int) (profY + 7),
-                pHover ? ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY) : ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED), false);
+                AuroraAnim.lerpArgb(
+                        ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED),
+                        ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY), profT), false);
+        if (profilesControl != null && profilesControl.isFocused()) {
+            RenderUtil.drawRoundedOutlineAA(g, bx + 8, profY, 64, 22, ctrlRadius, 1.0f,
+                    ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
+        }
 
         if (selectedCategory == 0) renderModulesLive(g, mods, mouseX, mouseY, delta);
-        else renderSettingsLive(g, mouseX, mouseY, delta);
+        else renderSettingsLive(g, mouseX, mouseY, delta, ctrlRadius);
 
         // Design language §8 — top-edge scroll fade. Both tabs scissor
         // their content to the same viewport, so one gradient serves
@@ -589,9 +886,21 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             // Hover reads the VISIBLE intersection: the pointer must be on
             // a pixel the scissor actually paints. A tile scrolled past the
             // band's edge no longer lights up from a pointer resting on its
-            // hidden half (render truth == hover truth, C-1).
+            // hidden half (render truth == hover truth, C-1). The target is
+            // the POINTER only (C-2b): the enabled state below is the
+            // persistent channel and never pins the animator.
             boolean hover = vp.contains(mouseX, mouseY)
                     && mouseX >= cx && mouseX <= cx + cw && mouseY >= cy && mouseY <= cy + ch;
+            float hoverT = tileHover(m.id).update(hover);
+            SemanticActionControl control = tileControls.get(m.id);
+            if (control != null) {
+                // The walk only reaches tiles that intersect the viewport,
+                // so this re-mark IS the ClipBand truth (C-2 partial
+                // visibility: any non-empty intersection is available).
+                control.setBounds((int) cx, (int) cy, (int) cw, (int) ch);
+                control.setAvailable(true);
+                control.updatePointer(mouseX, mouseY);
+            }
             boolean on = m.isEnabled();
 
             // Surface: each tile is its own RAISED glass panel (painted
@@ -603,20 +912,28 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             // surface fill + accent wash/border on decline.
             boolean tileGlass = tileGlass(i);
             if (tileGlass) {
-                if (hover) {
+                if (hoverT > 0f) {
                     RenderUtil.drawRoundedRectAA(g, cx, cy, cw, ch, tileRadius,
-                            alpha(ThemeToken.ON_BACKGROUND, 0x1A / 255f));
+                            alpha(ThemeToken.ON_BACKGROUND, (0x1A / 255f) * hoverT));
                 }
             } else {
                 // Tile surface — same dark/translucent character as the panel
                 // (surface RGB + the panel's opacity-driven alpha), hover lifts it.
                 RenderUtil.drawRoundedRectAA(g, cx, cy, cw, ch, tileRadius,
-                        hover ? ThemeManager.surfaceColor(ThemeToken.SURFACE_VARIANT) : ThemeManager.surfaceColor(ThemeToken.SURFACE));
+                        AuroraAnim.lerpArgb(
+                                ThemeManager.surfaceColor(ThemeToken.SURFACE),
+                                ThemeManager.surfaceColor(ThemeToken.SURFACE_VARIANT), hoverT));
                 if (on) {
                     // Accent wash + border = the enabled indicator (no switch widget).
                     RenderUtil.drawRoundedRectAA(g, cx, cy, cw, ch, tileRadius, alpha(ThemeToken.ACCENT, 0x14 / 255f));
                     RenderUtil.drawRoundedOutlineAA(g, cx, cy, cw, ch, tileRadius, 1.0f, ThemeManager.color(ThemeToken.ACCENT));
                 }
+            }
+            // Keyboard focus: the Button-family hairline — independent of
+            // both the enabled stain and the hover wash.
+            if (control != null && control.isFocused()) {
+                RenderUtil.drawRoundedOutlineAA(g, cx, cy, cw, ch, tileRadius, 1.0f,
+                        ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
             }
 
             if (gridLayout) {
@@ -639,7 +956,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         g.disableScissor();
     }
 
-    private void renderSettingsLive(GuiGraphics g, int mouseX, int mouseY, float delta) {
+    private void renderSettingsLive(GuiGraphics g, int mouseX, int mouseY, float delta, float ctrlRadius) {
         float mx = mainX(), my = mainY();
         Font tr = this.font;
         searchField.visible = false;
@@ -650,6 +967,16 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         for (FeatureMetadata m : FeatureRegistry.settings()) {
             int headerH = 22;
             if (vp.intersects(mx + 4, y, CONTENT_W - 4, headerH)) {
+                // Header navigation (C-2b): the entries WITH a detail
+                // screen navigate (same family as the sidebar tabs' action
+                // contract); custom_title has none — its header is grouping
+                // chrome and renders neither affordance nor control. Hover
+                // is the chevron affordance brightening, pointer-only
+                // canonical 140 ms — the row is text chrome, so no fill
+                // wash is invented for it.
+                boolean navHover = m.hasDetail()
+                        && Widget.inBounds(mouseX, mouseY, mx + 4, y, CONTENT_W - 4 - 42, headerH);
+                float navT = m.hasDetail() ? headerHover(m.id).update(navHover) : 0f;
                 g.drawString(tr, m.displayName, (int) (mx + 4), (int) (y + 6), ThemeManager.color(ThemeToken.ON_BACKGROUND), false);
                 // Detail-screen affordance: a header click opens the entry's
                 // detail screen (the Settings tab's counterpart of the
@@ -658,7 +985,22 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 if (m.hasDetail()) {
                     MaterialIconRenderer.drawIcon(g, tr, FeatureIcons.get("_dropdown_expand_more"),
                             mx + 254 - 40 - 12, y + 11, 9,
-                            ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED));
+                            AuroraAnim.lerpArgb(
+                                    ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED),
+                                    ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY), navT));
+                    SemanticActionControl nav = headerNavControls.get(m.id);
+                    if (nav != null) {
+                        // The navigation zone mirrors the click walk's rect
+                        // (left of the toggle zone); the header shares a
+                        // pixel with the viewport, so it is available.
+                        nav.setBounds((int) (mx + 4), (int) y, CONTENT_W - 4 - 42, headerH);
+                        nav.setAvailable(true);
+                        nav.updatePointer(mouseX, mouseY);
+                        if (nav.isFocused()) {
+                            RenderUtil.drawRoundedOutlineAA(g, mx + 4, y, CONTENT_W - 4 - 42, headerH, ctrlRadius, 1.0f,
+                                    ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
+                        }
+                    }
                 }
                 ToggleSwitch t = sectionToggles.get(m.id);
                 if (t != null) {
@@ -667,6 +1009,17 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                     t.layout(tx, y + 4, tw, th);
                     t.renderShapes(g, tx, y + 4, tw, th);
                     t.renderOverlay(g, tx, y + 4, tw, th, mouseX, mouseY);
+                    SemanticActionControl tc = headerToggleControls.get(m.id);
+                    if (tc != null) {
+                        // The forgiving 40px zone IS the control (the C-1
+                        // ruling) — pointer, keyboard, and narration share
+                        // one target; the switch paints the focus hairline
+                        // itself via focusedVisual (BooleanSetting's sync).
+                        tc.setBounds((int) (mx + 254 - 40), (int) (y + 4), 40, 15);
+                        tc.setAvailable(true);
+                        tc.updatePointer(mouseX, mouseY);
+                        t.focusedVisual(tc.isFocused());
+                    }
                 }
             }
             y += headerH;
@@ -895,17 +1248,25 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         semanticHost.dropFocus();
         if (super.mouseClicked(_ev, _dbl)) return true;
 
+        // Sidebar chrome (C-2b): tab and Profiles clicks route through their
+        // semantic controls — the enabled gate, exactly-one activation click,
+        // and sound ownership all live in the action. The click is consumed
+        // either way (an already-selected tab is the silent no-op; a release
+        // through would reach nothing else in the sidebar).
         for (int i = 0; i < 2; i++) {
             float catY = by + TAB_FIRST_Y + i * TAB_PITCH;
-            if (mouseX >= bx + 8 && mouseX <= bx + 72 && mouseY >= catY && mouseY <= catY + TAB_H) {
-                if (selectedCategory != i && i == 0) invalidateSettingsSemantics();
-                selectedCategory = i;
+            if (Widget.inBounds(mouseX, mouseY, bx + 8, catY, 64, TAB_H)) {
+                if (tabControls[i] != null && tabControls[i].activateFromPointer(mouseX, mouseY, button)) {
+                    this.setFocused(tabControls[i]);
+                }
                 return true;
             }
         }
         float profY = by + TAB_FIRST_Y + 2 * TAB_PITCH;
-        if (mouseX >= bx + 8 && mouseX <= bx + 72 && mouseY >= profY && mouseY <= profY + TAB_H) {
-            if (this.minecraft != null) this.minecraft.setScreen(new ProfileManagerScreen(this));
+        if (Widget.inBounds(mouseX, mouseY, bx + 8, profY, 64, TAB_H)) {
+            if (profilesControl != null && profilesControl.activateFromPointer(mouseX, mouseY, button)) {
+                this.setFocused(profilesControl);
+            }
             return true;
         }
 
@@ -928,13 +1289,28 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 if (vp.contains(mouseX, mouseY)
                         && mouseX >= b[0] && mouseX <= b[0] + b[2] && mouseY >= b[1] && mouseY <= b[1] + b[3]) {
                     if (button == 1) {
+                        // Secondary (pointer-specific) card action: open the
+                        // detail screen. One activation click at the site —
+                        // parity with the Settings header that opens the same
+                        // destination, so sound policy does not depend on the
+                        // route (design language §1.1).
                         FeatureMetadata fm = findMeta(m.id);
                         if (fm != null && fm.hasDetail() && this.minecraft != null) {
+                            MinecraftSemanticFeedback.INSTANCE
+                                    .play(SemanticSound.ACTIVATION);
                             this.minecraft.setScreen(new FeatureDetailScreen(this, fm));
                         }
                         return true;
                     }
-                    if (button == 0) { m.toggle(); return true; }
+                    if (button == 0) {
+                        // Primary card action: toggle through the semantic
+                        // control (exactly-once activation + the one click).
+                        SemanticActionControl control = tileControls.get(m.id);
+                        if (control != null && control.activateFromPointer(mouseX, mouseY, button)) {
+                            this.setFocused(control);
+                        }
+                        return true;
+                    }
                 }
             }
         } else if (vp.contains(mouseX, mouseY)) {
@@ -945,19 +1321,26 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 // the header row's right edge against the navigation zone
                 // to its left) — intentional, retained (C-1 ruling); the
                 // viewport gate above now intersects it with the visible
-                // band like every other target.
+                // band like every other target. The control owns the one
+                // activation (toggle + save + the switch's thumb pulse).
                 if (button == 0 && mouseX >= mx + 254 - 40 && mouseX <= mx + 254 && mouseY >= y + 4 && mouseY <= y + 19) {
-                    m.setEnabled(!m.isEnabled());
-                    com.aurora.client.config.AuroraConfig.save();
+                    SemanticActionControl tc = headerToggleControls.get(m.id);
+                    if (tc != null && tc.activateFromPointer(mouseX, mouseY, button)) {
+                        this.setFocused(tc);
+                    }
                     return true;
                 }
                 // Header (and, for detail-only entries, the hint line under
-                // it) opens the detail screen — the toggle zone above keeps
-                // priority. Walk must mirror renderSettingsLive.
+                // it) opens the detail screen through its navigation
+                // control — the toggle zone above keeps priority. Walk must
+                // mirror renderSettingsLive.
                 if (button == 0 && m.hasDetail() && this.minecraft != null
                         && mouseX >= mx + 4 && mouseX <= mx + 254 - 42
                         && mouseY >= y && mouseY <= y + 22 + (m.settingsDetailOnly ? SETTINGS_HINT_H : 0)) {
-                    this.minecraft.setScreen(new FeatureDetailScreen(this, m));
+                    SemanticActionControl nav = headerNavControls.get(m.id);
+                    if (nav != null && nav.activateFromPointer(mouseX, mouseY, button)) {
+                        this.setFocused(nav);
+                    }
                     return true;
                 }
                 y += 22;

@@ -83,9 +83,14 @@ class AuroraScreenSemanticHostingTest {
     @Test
     void tabSwitchInvalidatesAndPointerFocusDoesNotActivateTwice() {
         String src = read(SCREEN);
-        assertTrue(src.contains("if (selectedCategory != i && i == 0) invalidateSettingsSemantics();"));
-        assertTrue(src.contains("semanticHost.deactivateAll()"));
+        // C-2b: the manual `selectedCategory = i` assignment is gone — tab
+        // clicks route through the tab controls into one selectCategory
+        // path, which invalidates the host on every real change.
+        assertTrue(src.contains("private void selectCategory(int i)"));
+        assertTrue(src.contains("semanticHost.deactivateAll();"));
         assertTrue(src.contains("semanticHost.focusAt(mouseX, mouseY);"));
+        assertFalse(src.contains("selectedCategory = i;\n                return true;"),
+                "tab clicks must not bypass the semantic action");
         assertEquals(1, count(src, "s.mouseClicked(mouseX, mouseY, button"),
                 "the component remains the sole manual pointer activation route");
     }
