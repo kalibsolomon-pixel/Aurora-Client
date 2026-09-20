@@ -13,7 +13,8 @@ import static org.junit.jupiter.api.Assertions.*;
  * contract is pinned against source, the established C-1/C-2 pattern).
  * Covered families: sidebar navigation tabs, the Profiles action, module
  * cards, Settings-header navigation, and the header toggles. The layout
- * pair's C-5 deferral is pinned as deliberately NOT adopted.
+ * pair's C-5 deferral is pinned as deliberately NOT adopted. C-3 adds the
+ * roving-ring pins (sidebar tabs + the interceptor seam).
  */
 class AuroraScreenNavigationTest {
 
@@ -83,6 +84,40 @@ class AuroraScreenNavigationTest {
                 "C-2b must not manufacture a one-off peer primitive for the layout pair");
         assertTrue(src.contains("peer selection is C-5's SegmentedControl"),
                 "the deferral stays documented at the init site");
+    }
+
+    // ------------------------------------------------------------------
+    //  C-3: arrow-key roving
+    // ------------------------------------------------------------------
+
+    @Test
+    void sidebarTabsFormOneHorizontalRovingRingWithoutProfiles() {
+        String src = read(SCREEN);
+        assertTrue(src.contains(
+                        "private final SemanticControlGroup sidebarTabGroup = SemanticControlGroup.horizontal();"),
+                "the two nav tabs are one horizontal ring");
+        assertEquals(1, count(src, "sidebarTabGroup.attach(control);"),
+                "exactly the shared tabControl factory attaches its members");
+        String profiles = bodyOf(src, "private SemanticActionControl profilesActionControl()");
+        assertFalse(profiles.contains("sidebarTabGroup"),
+                "Profiles is a plain action, not a navigation peer — it never joins the ring");
+        // No screen-local arrow math: geometry, wrap, and eligibility rules
+        // live in the shared primitive.
+        for (String banned : new String[]{"GLFW_KEY_LEFT", "GLFW_KEY_RIGHT", "GLFW_KEY_UP", "GLFW_KEY_DOWN"}) {
+            assertFalse(src.contains(banned), banned + " must not appear in the screen source");
+        }
+    }
+
+    @Test
+    void rovingInterceptsBeforeSuperInTheKeyPath() {
+        String src = read(SCREEN);
+        String body = bodyOf(src, "public boolean keyPressed(");
+        int rove = body.indexOf("SemanticControlGroup.rove");
+        int supp = body.indexOf("super.keyPressed");
+        assertTrue(rove >= 0 && supp > rove,
+                "the interceptor must run BEFORE super — Screen.keyPressed reaches the container walk via invokespecial");
+        assertTrue(body.indexOf("focused.onKeyPress(_kev)") >= 0 && body.indexOf("focused.onKeyPress(_kev)") < rove,
+                "an inline setting's own key handling (EditBoxes, captures) keeps priority over roving");
     }
 
     // ------------------------------------------------------------------

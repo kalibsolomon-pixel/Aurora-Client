@@ -10,6 +10,7 @@ import com.aurora.client.ui.component.GlassSurface;
 import com.aurora.client.ui.component.RoundedPanel;
 import com.aurora.client.ui.component.ThemedScreen;
 import com.aurora.client.ui.interaction.SemanticActionControl;
+import com.aurora.client.ui.interaction.SemanticControlGroup;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.util.ScrollFade;
 import com.aurora.client.util.SmoothScroll;
@@ -515,6 +516,10 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
     public boolean keyPressed(net.minecraft.client.input.KeyEvent _kev) {
         FeatureSetting focused = FeatureSetting.getFocused();
         if (focused != null && focused.onKeyPress(_kev)) return true;
+        // C-3 roving interceptor — before super (the invokespecial seam): a
+        // grouped hosted control (today: AccentSetting's peer grid on the
+        // Theme screen) owns its group's arrows, moving focus silently.
+        if (SemanticControlGroup.rove(this.getFocused(), _kev, this::setFocused)) return true;
         return super.keyPressed(_kev);
     }
 

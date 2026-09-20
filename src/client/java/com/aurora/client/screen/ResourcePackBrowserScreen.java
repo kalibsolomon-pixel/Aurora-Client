@@ -17,6 +17,7 @@ import com.aurora.client.ui.component.Widget;
 import com.aurora.client.ui.interaction.MinecraftSemanticFeedback;
 import com.aurora.client.ui.interaction.SemanticAction;
 import com.aurora.client.ui.interaction.SemanticActionControl;
+import com.aurora.client.ui.interaction.SemanticControlGroup;
 import com.aurora.client.ui.interaction.SemanticSound;
 import com.aurora.client.ui.render.blur.BlurPanelRenderer;
 import com.aurora.client.ui.util.RenderUtil;
@@ -349,6 +350,18 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
      */
     private final SemanticActionControl[] tabControls = new SemanticActionControl[CATEGORIES.length];
 
+    /**
+     * C-3: the category tabs rove Up/Down as one VERTICAL ring — the sidebar
+     * is a top-to-bottom stack, so the tab-list arrows are Up/Down (the
+     * geometry the audit's "Left/Right" shorthand actually described for a
+     * vertical list). Attach order is category order: the sidebar walk
+     * materializes controls in lockstep with {@code CATEGORIES}, and header
+     * rows simply contribute no member. Arrows move focus silently with
+     * wrap; the availability sweep still governs eligibility (a tab scrolled
+     * out of the clip band or covered by the modal is skipped).
+     */
+    private final SemanticControlGroup categoryTabGroup = SemanticControlGroup.vertical();
+
     /** True while the modal is past its interaction gate — the same condition the click path uses. */
     private boolean modalInteractive() {
         return detailOpenT > 0.5f && detailProject != null;
@@ -421,6 +434,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
                 null, // no press animation — selection transition is the feedback
                 SemanticActionControl.PointerRouting.MANUAL);
         tabControls[i] = control;
+        categoryTabGroup.attach(control); // C-3 ring; idempotent across re-materialization
         registerSemanticControl(control);
         return control;
     }
@@ -1827,6 +1841,10 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
             }
             if (searchField.keyPressed(_kev)) return true;
         }
+        // C-3 roving interceptor — before super (the invokespecial seam): a
+        // focused category tab owns Up/Down, moving focus silently through
+        // the visible ring instead of vanilla's unscoped spatial walk.
+        if (SemanticControlGroup.rove(this.getFocused(), _kev, this::setFocused)) return true;
         return super.keyPressed(_kev);
     }
 

@@ -14,6 +14,7 @@ import com.aurora.client.ui.render.blur.BlurPanelRenderer;
 import com.aurora.client.ui.interaction.MinecraftSemanticFeedback;
 import com.aurora.client.ui.interaction.SemanticAction;
 import com.aurora.client.ui.interaction.SemanticActionControl;
+import com.aurora.client.ui.interaction.SemanticControlGroup;
 import com.aurora.client.ui.interaction.SemanticControlHost;
 import com.aurora.client.ui.interaction.SemanticSound;
 import com.aurora.client.ui.util.AuroraFontRenderer;
@@ -89,6 +90,16 @@ import java.util.Map;
  * {@code SegmentedControl} belongs to, and C-5 establishes that contract
  * (arrow/peer semantics are C-3) — it keeps its immediate hover and
  * silent manual clicks, documented as the remaining gap.
+ *
+ * <p>Phase C-3 (2026-09-20): arrow-key roving through the shared
+ * {@link SemanticControlGroup} primitive. The sidebar Mods/Settings tabs
+ * form one horizontal ring (Left/Right move focus silently with wrap;
+ * Profiles stays outside it — an action, not a peer); the Settings tab's
+ * hosted Accent peers rove as their component-declared 5×2 grid (the
+ * group travels with {@code interactionControls()}, so the Theme detail
+ * screen gets the identical ring). Arrows never select — Enter/Space/click
+ * remain the only selection paths (selection has side effects like the
+ * per-tab scroll reset), and cross-axis keys fall through to vanilla.
  */
 public class AuroraScreen extends Screen implements ThemedScreen {
 
@@ -169,6 +180,13 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     // plays sounds.
     /** Sidebar navigation tabs (Mods=0, Settings=1) — the pack-nav contract. */
     private final SemanticActionControl[] tabControls = new SemanticActionControl[2];
+    /**
+     * C-3: the sidebar tabs rove Left/Right as one horizontal ring. Profiles
+     * is deliberately NOT a member — it is a plain action (C-2b ruling), not
+     * a navigation peer, and grouping it would make arrows "select-ish" over
+     * a control that opens another screen.
+     */
+    private final SemanticControlGroup sidebarTabGroup = SemanticControlGroup.horizontal();
     /** The Profiles chip — a plain action (opens the profile manager). */
     private SemanticActionControl profilesControl;
     /** One control per module card, keyed by stable module id (finite: the ModuleManager set). */
@@ -311,6 +329,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 null, // no press animation — the selection transition is the feedback
                 SemanticActionControl.PointerRouting.MANUAL);
         tabControls[i] = control;
+        sidebarTabGroup.attach(control); // C-3 ring; idempotent across re-inits
         semanticHost.register(control);
         return control;
     }
@@ -1421,6 +1440,12 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     public boolean keyPressed(net.minecraft.client.input.KeyEvent _kev) {
         FeatureSetting focused = FeatureSetting.getFocused();
         if (focused != null && focusedSettingVisible && focused.onKeyPress(_kev)) return true;
+        // C-3 roving interceptor — BEFORE super (Screen.keyPressed reaches the
+        // container walk via invokespecial, so this is the only seam): while a
+        // grouped control holds focus (sidebar tabs, the hosted Accent peers),
+        // the group's arrows move focus silently and are consumed. Selection
+        // never follows — Enter/Space/click stay the only selection paths.
+        if (SemanticControlGroup.rove(this.getFocused(), _kev, this::setFocused)) return true;
         return super.keyPressed(_kev);
     }
 

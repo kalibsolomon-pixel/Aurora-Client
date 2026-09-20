@@ -2,7 +2,9 @@ package com.aurora.client.screen.setting;
 
 import com.aurora.client.theme.ThemePresets;
 import com.aurora.client.ui.interaction.SemanticActionControl;
+import com.aurora.client.ui.interaction.SemanticControlGroup;
 import com.aurora.client.util.HoverAnim;
+import net.minecraft.client.input.KeyEvent;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,6 +32,11 @@ import static org.junit.jupiter.api.Assertions.*;
  * against the REAL component with a counting setter — the pilot removed
  * the grid path's redundant direct config save, so clicks persist exactly
  * through the wired setter and nothing touches disk in these tests.
+ *
+ * <p>Phase C-3 adds the roving-ring pins: the peers form one component-
+ * declared grid ring that travels with {@code interactionControls()}, and
+ * both hosts (AuroraScreen's Settings tab, the Theme detail screen) route
+ * arrows through the same single seam.
  */
 class AccentSettingPilotTest {
 
@@ -336,6 +343,55 @@ class AccentSettingPilotTest {
         accent.set(0xFF123456);
         assertEquals("Selected", peers.get(9).action().state().getString(), "derived live");
         assertEquals("Not selected", peers.get(indexOf("Red")).action().state().getString());
+    }
+
+    // ---- C-3 roving group ----
+
+    @Test
+    void peersFormOneGridRovingRingDeclaredByTheComponent() throws Exception {
+        String source = src();
+        assertTrue(source.contains("SemanticControlGroup.grid(PER_ROW)"),
+                "the ring is a PER_ROW-wide grid declared with the component's own geometry");
+        assertTrue(source.contains("peerGroup.attach(control);"),
+                "peers join the ring at their creation site (row-major visual order)");
+        assertFalse(source.contains("SemanticControlGroup.horizontal"));
+        assertFalse(source.contains("SemanticControlGroup.vertical"));
+        // The group travels with interactionControls(): both hosts route
+        // arrows through the same one seam, before super.keyPressed.
+        String seam = "if (SemanticControlGroup.rove(this.getFocused(), _kev, this::setFocused)) return true;";
+        String aurora = java.nio.file.Files.readString(java.nio.file.Path.of(
+                "src/client/java/com/aurora/client/screen/AuroraScreen.java"));
+        String detail = java.nio.file.Files.readString(java.nio.file.Path.of(
+                "src/client/java/com/aurora/client/screen/FeatureDetailScreen.java"));
+        assertTrue(aurora.contains(seam), "AuroraScreen (inline Settings tab) intercepts roving");
+        assertTrue(detail.contains(seam), "FeatureDetailScreen (Theme detail) intercepts roving");
+    }
+
+    @Test
+    void realPeerGridRovesByOneAndByRowOnTheMaterializedControls() throws Exception {
+        List<SemanticActionControl> peers = row.interactionControls();
+        for (SemanticActionControl peer : peers) peer.setAvailable(true);
+        SemanticControlGroup group = peers.get(0).interactionGroup();
+        assertNotNull(group, "materialized peers carry their ring");
+        assertSame(group, peers.get(9).interactionGroup(), "one shared ring across all ten");
+
+        KeyEvent right = new KeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT, 0, 0);
+        KeyEvent left = new KeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT, 0, 0);
+        KeyEvent down = new KeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN, 0, 0);
+        KeyEvent up = new KeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_UP, 0, 0);
+        int perRow = staticInt("PER_ROW");
+        assertSame(peers.get(1), group.rovingTarget(right, peers.get(0)));
+        assertSame(peers.get(perRow), group.rovingTarget(down, peers.get(0)), "Down steps one row");
+        assertSame(peers.get(0), group.rovingTarget(up, peers.get(perRow)));
+        assertSame(peers.get(9), group.rovingTarget(left, peers.get(0)), "Left wraps the ring");
+
+        // The disabled gate is authoritative: with the row disabled no peer
+        // is eligible, so the arrow falls through (and can never select).
+        row.disabled(() -> true);
+        assertNull(group.rovingTarget(right, peers.get(0)));
+        assertNull(group.rovingTarget(down, peers.get(5)));
+        row.disabled(() -> false);
+        assertSame(peers.get(1), group.rovingTarget(right, peers.get(0)), "eligible again, same instances");
     }
 
     // ---- Embedded picker isolation ----

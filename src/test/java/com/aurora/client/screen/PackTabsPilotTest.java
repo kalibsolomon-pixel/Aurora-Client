@@ -272,12 +272,23 @@ class PackTabsPilotTest {
     }
 
     @Test
-    void arrowKeyNavigationStaysDeferredToThePhaseCTabGroupPrimitive() throws Exception {
-        // Decision B: Left/Right roving-tabindex semantics require a reusable
-        // tab-group primitive that owns focus-within-group and
-        // selection-follows-focus — Phase C component architecture, not a
-        // screen-local key handler. Pin that no ad-hoc arrows were added.
+    void arrowsRoveThroughTheSharedGroupPrimitiveNotScreenLocalMath() throws Exception {
+        // C-3 adopted (the Phase-B Decision-B deferral is lifted): the
+        // sidebar's category tabs are one VERTICAL roving ring — the list is
+        // a top-to-bottom stack, so the tab-list arrows are Up/Down. Arrows
+        // move focus silently (manual activation: selection still needs
+        // Enter/Space/click), and every geometry/wrap/eligibility rule lives
+        // in the shared SemanticControlGroup primitive.
         String src = screenSource();
+        assertTrue(src.contains(
+                        "private final SemanticControlGroup categoryTabGroup = SemanticControlGroup.vertical();"),
+                "the tabs form one vertical ring");
+        assertTrue(src.contains("categoryTabGroup.attach(control);"),
+                "each tab joins the ring at its creation site (category order)");
+        assertTrue(src.contains(
+                        "if (SemanticControlGroup.rove(this.getFocused(), _kev, this::setFocused)) return true;"),
+                "the one interceptor seam, before super.keyPressed");
+        // And still no screen-local arrow math of any kind.
         assertFalse(src.contains("GLFW_KEY_LEFT"));
         assertFalse(src.contains("GLFW_KEY_RIGHT"));
         assertFalse(src.contains("GLFW_KEY_UP"));

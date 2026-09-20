@@ -26,6 +26,8 @@ public final class SemanticActionControl extends AbstractWidget {
     private final Runnable acceptedVisualFeedback;
     private final PointerRouting pointerRouting;
 
+    /** The peer group this control roves arrows within (C-3), or null. */
+    private SemanticControlGroup group;
     private boolean available;
     private boolean pointerHovered;
 
@@ -42,6 +44,16 @@ public final class SemanticActionControl extends AbstractWidget {
 
     public SemanticAction action() {
         return action;
+    }
+
+    /** The peer group that owns this control's arrow keys (C-3), or null. */
+    public SemanticControlGroup interactionGroup() {
+        return group;
+    }
+
+    /** Membership is declared by the group's attach, at the creation site. */
+    void attachGroup(SemanticControlGroup group) {
+        this.group = group;
     }
 
     public void setBounds(int x, int y, int width, int height) {

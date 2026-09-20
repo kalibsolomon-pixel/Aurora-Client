@@ -137,6 +137,16 @@ public class AccentSetting extends FeatureSetting {
     private final SemanticActionControl[] peerControls = new SemanticActionControl[ThemePresets.ALL.size() + 1];
     /** Cached list view of {@link #peerControls} (the sweep walks it per frame). */
     private java.util.List<SemanticActionControl> peerControlList;
+    /**
+     * C-3 roving ring over the peers, declared HERE so it travels with
+     * {@link #interactionControls()} to whichever host materializes them —
+     * the Theme detail screen and AuroraScreen's Settings tab get the
+     * identical grid semantics with zero host-side wiring. Grid of
+     * {@code PER_ROW}: Left/Right step one peer, Up/Down one row; arrows
+     * move focus silently, never select.
+     */
+    private final com.aurora.client.ui.interaction.SemanticControlGroup peerGroup =
+            com.aurora.client.ui.interaction.SemanticControlGroup.grid(PER_ROW);
 
     private int lastX, lastY, lastW;
 
@@ -328,6 +338,7 @@ public class AccentSetting extends FeatureSetting {
                 null, // no press animation — the ring transfer is the feedback
                 SemanticActionControl.PointerRouting.MANUAL);
         peerControls[i] = control;
+        peerGroup.attach(control); // C-3: attach order = row-major visual order
         return control;
     }
 

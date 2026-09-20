@@ -1635,6 +1635,94 @@ AuroraScreen Phase C gaps belong to C-3 (arrow groups on the tabs/peers)
 and C-5 (SegmentedControl conformance + the layout pair), both documented
 above.
 
+**C-3 PILOT RECORD (2026-09-20, "adopt semantic group arrow roving").**
+The peer/navigation group primitive landed, with arrows on all three named
+consumers.
+
+- **Primitive:** `ui/interaction/SemanticControlGroup` — an ordered member
+  ring with a geometry (`horizontal()` Left/Right ±1, `vertical()` Up/Down
+  ±1 — the pack sidebar is a top-to-bottom stack, so its tab-list arrows
+  are Up/Down, the shape the audit's "Left/Right" shorthand actually
+  described; `grid(columns)` ±1 / ±columns). Membership is declared at the
+  control's creation site by `attach` (identity-idempotent, first-attach
+  order = visual order, for the control's lifetime) and carried as a
+  back-reference on the control (`interactionGroup()`), so a host's ONE
+  interceptor line serves every group it hosts with no host-side registry
+  and zero changes to `SemanticControlHost` — the host still knows nothing
+  about tabs/cards/toggles/groups. The screen seam is the static
+  `SemanticControlGroup.rove(focused, event, setFocused)`, called in
+  `keyPressed` BEFORE `super` (the audit's bytecode fact: 1.21.11's
+  `Screen.keyPressed` reaches the container walk via invokespecial, so a
+  traversal override cannot implement a group — consuming the arrow before
+  super both scopes the move and stops vanilla's unscoped spatial walk from
+  escaping the ring). **Manual activation policy** (the audit's recommended
+  option, now the only one): arrows move focus SILENTLY — no behavior, no
+  sound, no selection; Enter/Space/click stay the only selection paths
+  (selection has side effects: category switches reset the pack grid,
+  accent changes reload the theme). Cross-axis keys are not owned (a
+  horizontal ring lets Up/Down fall through to vanilla). Eligibility
+  mirrors `nextFocusPath`'s gate (available && action-enabled && focusable)
+  so arrows can never land where Tab cannot; the pack browser's modal
+  containment and every ClipBand sweep govern roving targets for free.
+- **Movement math, and the bug the boots caught:** candidate order is the
+  exact stride target first (grid Up/Down land one row away), then onward
+  member-by-member in the step's direction through the whole ring, with
+  `current` skipped rather than terminated on. The first draft iterated
+  stride multiples (`from + k*step mod n`) — and a stride that divides the
+  member count (`gcd(5,10)=5` for the accent grid) visits only a sub-orbit
+  {i, i+5}, so with the direct target clipped the scan declared "nowhere
+  to rove" while eligible members sat one position off the orbit. The
+  first dark boot failed exactly there (DOWN inside a half-clipped accent
+  grid dead-ended; UP fell through to vanilla, which spatially escaped to
+  the Theme header control), the unit suite had missed it because every
+  asserted pair happened to sit inside one orbit, and the fixed walk is
+  pinned by `gridRovingWalksTheFullRingWhenTheStrideTargetIsClipped`
+  (clipped direct target → next member in direction; whole lower row
+  clipped → wraps to the first eligible member; the arc between current
+  and the stride target stays reachable).
+- **Consumers:** (1) AuroraScreen's sidebar Mods/Settings tabs — one
+  horizontal ring; Profiles deliberately NOT a member (a plain action,
+  C-2b's ruling — grouping it would make arrows "select-ish" over a
+  control that opens another screen). (2) AccentSetting's ten peers — the
+  ring is declared ON THE COMPONENT (`grid(PER_ROW)` attached in
+  `peerControl(i)`) and travels with `interactionControls()`, so
+  AuroraScreen's Settings tab and the Theme `FeatureDetailScreen` get the
+  identical ring with zero extra wiring; both hosts added the one `rove`
+  line. (3) The pack browser's 21 category tabs — a vertical ring in
+  category order (header rows contribute no member), attached in
+  `tabControl(i)`, `rove` before `super` after the search-field branch.
+  SegmentedControl segments + the AuroraScreen layout pair remain C-5
+  (they consume this primitive; the C-2b deferral pins stay accurate).
+- **Sound/narration:** unchanged by construction — arrows activate
+  nothing, so the existing exactly-one-click ACTIVATION model on real
+  selection is untouched, and focus moves narrate through vanilla's own
+  focus-change narration.
+- **Verification:** unit suite 213/0 (was 198; +10
+  `SemanticControlGroupTest` behavioral, +2 AuroraScreenNavigationTest
+  roving pins — ring membership, Profiles exclusion, the
+  rove-before-super seam, no screen-local arrow math; +2
+  AccentSettingPilotTest — component-declared grid + both hosts' seam +
+  real-peer roving incl. the disabled gate; PackTabsPilotTest's
+  Phase-B deferral pin flipped to an adoption pin). Runtime: DevPilot
+  `c3rove` boots under gamescope, dark AND light, **19/19 oracles each**:
+  sidebar (silent Right/Left with wrap both ways, selection byte-stable
+  during roving, cross-axis falls through, Enter selects the roved-to
+  tab), accent grid on BOTH hosts (±1/±row steps, ring wrap, accent
+  literal unchanged through every arrow, Enter selects Pink
+  `0xFFE91E63` / Orange `0xFFFB8C00` through the real action), pack ring
+  (21 tabs, Down one, Up wraps to the last band-visible tab, Enter
+  selects category `blocks`). Captures in `.devpilot-c3rove/{dark,light}/`
+  (sidebar focus ring on an unselected tab mid-rove, focused accent peer,
+  focused pack tab). Harness lessons recorded: probe scroll on the
+  grid's SECOND row (a row-1-visible probe leaves the oracles testing a
+  half-clipped grid — which is how the stride bug was found), and
+  `AURORA_DEV_CAPTURE_DIR` must be absolute (the game CWD is `run/`;
+  relative capture paths silently no-op).
+Verdict: **C-3 GROUP PRIMITIVE COMPLETE** — arrows exist on the pack tabs,
+the Accent peers (both hosts), and the AuroraScreen sidebar through ONE
+primitive; C-5 (SegmentedControl conformance + the layout pair) is now
+unblocked and is the next phase per the dependency graph.
+
 ## 7. Registries (the drift trap)
 
 Three parallel structures with no single source of truth:
