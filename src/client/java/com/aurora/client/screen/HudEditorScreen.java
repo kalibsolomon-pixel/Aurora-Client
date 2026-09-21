@@ -73,6 +73,18 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
     private int labelBg()         { return (0xA0 << 24) | (ThemeManager.color(ThemeToken.OVERLAY_DIM) & 0x00FFFFFF); }
 
     private static final int CORNER_HIT_RADIUS = 6;
+    // C-8 halo ruling (recorded, deliberate): the ±6 corner squares and the
+    // findAt AABB halo are an intentional grab AFFORDANCE — corner handles
+    // paint 4×4 at the corner, deliberately slightly outside the AABB, and
+    // a forgiving zone is what makes them grabbable. It cannot hijack a
+    // neighbor's painted controls: findAt keeps the LAST hit in manager
+    // order, which is the render order — the visually TOPMOST module wins,
+    // so pointer routing matches paint truth. Within one module the X
+    // badge's rect is tested BEFORE the corner zones: the two painted
+    // affordances occupy disjoint pixels (X spans [w-11, w-2)×[2, 11), the
+    // TR handle paints [w-2, w+2)×[-2, 2)), and every pixel of each zone's
+    // overlap with the other's RECT belongs to exactly the affordance
+    // painted there — X pixels disable, handle-adjacent pixels resize.
     private static final int X_ICON_SIZE       = 9;
     private static final int LOCK_ICON_SIZE    = 9;
 
@@ -192,8 +204,13 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
         ctx.pose().pushMatrix();
         ctx.pose().translate(8.0f, 8.0f);
         ctx.pose().scale(0.75f, 0.75f);
+        // C-8 truthfulness fix: the old hint read "X: disable", claiming an
+        // X KEY shortcut that does not exist (this screen never bound a key
+        // handler). The disable affordance is the X BADGE click — the hint
+        // now says exactly that (no key was invented to satisfy the old
+        // text).
         ctx.drawString(this.font,
-                "Drag body: move  |  Drag corner: resize  |  RClick: hide  |  Shift+RClick: lock  |  Shift+LClick: settings  |  X: disable",
+                "Drag body: move  |  Drag corner: resize  |  RClick: hide  |  Shift+RClick: lock  |  Shift+LClick: settings  |  X badge: disable",
                 0, 0, ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_OVERLAY), 0xDD), false);
         ctx.pose().popMatrix();
     }
@@ -234,6 +251,15 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
                 // Convert it back to a top-left position.
                 int newTopLeftX = pivotIsRight() ? resizePivotX - sw : resizePivotX;
                 int newTopLeftY = pivotIsBottom() ? resizePivotY - sh : resizePivotY;
+                // C-8: a resize grows away from its fixed pivot and could
+                // previously push the moving edge off-screen — the editor's
+                // standing policy (MOVE clamps to the screen) now applies
+                // to RESIZE too: the resulting AABB stays on-screen. When
+                // the clamp bites, the pivot gives up its fixed position to
+                // the screen edge (the honest resolution — the alternative,
+                // shrinking the scale, would fight the user's gesture).
+                newTopLeftX = Math.max(0, Math.min(this.width - sw, newTopLeftX));
+                newTopLeftY = Math.max(0, Math.min(this.height - sh, newTopLeftY));
                 active.offsetX = newTopLeftX - active.anchor.applyX(this.width,  sw);
                 active.offsetY = newTopLeftY - active.anchor.applyY(this.height, sh);
             }
@@ -536,12 +562,22 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
      * Find the FeatureMetadata matching this module's {@link HudModule#featureRegistryId}
      * and toggle its enable setter to false. Mirrors what the modules-grid X-tile
      * would do.
+     *
+     * <p>C-8 persistence ruling: the grid path ({@code Module.setEnabled})
+     * saves the config IMMEDIATELY on every toggle, and a HUD-editor
+     * disable is expected to persist like every other enable/disable path —
+     * so the registry write saves too. (The editor previously relied on a
+     * later full save — close, Aurora Settings, or the shutdown hook —
+     * which lost the disable on a crash before any of those ran.) The
+     * fallback editor-local flag flip stays session-only by design (no
+     * config field to persist when the registry lookup misses).
      */
     private void disableViaRegistry(HudModule m) {
         String regId = m.featureRegistryId();
         for (FeatureMetadata fm : FeatureRegistry.modules()) {
             if (regId.equals(fm.id)) {
                 fm.setEnabled(false);
+                AuroraConfig.save();
                 return;
             }
         }

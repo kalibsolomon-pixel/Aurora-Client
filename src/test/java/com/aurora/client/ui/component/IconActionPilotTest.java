@@ -185,10 +185,11 @@ class IconActionPilotTest {
         assertTrue(s.contains("xAction(hit).clicked(mx, my, button)"));
         assertTrue(s.contains("Component.literal(\"Disable \" + m.displayName())"),
                 "the accessible label names the domain action, not the glyph");
-        // The phantom X-KEY hint stays C-8's item: no keyPressed was invented.
+        // The phantom X-KEY hint was C-8's item: resolved by REWORDING to
+        // the real affordance (the badge click) — still no keyPressed.
         assertEquals(0, count(s, "keyPressed"));
-        assertTrue(s.contains("\"Drag body: move  |  Drag corner: resize  |  RClick: hide  |  Shift+RClick: lock  |  Shift+LClick: settings  |  X: disable\""),
-                "the stale hint text is untouched — classified C-8, not silently changed");
+        assertTrue(s.contains("X badge: disable"),
+                "C-8 resolution: the hint now describes the badge click truthfully");
         // The badge keeps its status-overlay geometry: the hairline is square.
         assertFalse(s.contains("drawRoundedOutlineAA"), "no rounded chrome on this screen's overlays");
     }
