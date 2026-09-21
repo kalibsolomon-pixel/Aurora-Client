@@ -2071,6 +2071,112 @@ or the one finite documented exception (KeyList's scanning painter)
 with equivalent semantic accessibility. Recommended next: **C-6
 AbstractButtonMixin migration**.
 
+**C-6 IMPLEMENTATION RECORD (2026-09-21, "conform vanilla button
+painter").** The Aurora-gated vanilla button family joined the shared
+Button's visual/motion contract with vanilla keeping every interaction
+semantic.
+
+- **Affected inventory (rebuilt from source + runtime):** the mixin's
+  gate is `customTitleScreen` ∧ screen ∈ {JoinMultiplayerScreen,
+  SelectWorldScreen} ∧ `getClass() == Button.Plain.class`. Runtime
+  inventory: JoinMultiplayer = 7 `Button.Plain` (Join Server·inactive,
+  Direct Connection, Add Server, Edit·inactive, Delete·inactive,
+  Refresh, Back) + 0 other buttons + 2 non-buttons (StringWidget,
+  ServerSelectionList); SelectWorld = 6 `Button.Plain` (Play Selected
+  World·inactive, Create New World, Edit/Delete/Re-Create·inactive,
+  Back) + EditBox + WorldSelectionList. No non-Plain AbstractButton on
+  either screen (the gate's exclusion arm is source-pinned and
+  fail-closed for future subclasses).
+- **Baseline reconfirmed verbatim:** custom painter
+  (SURFACE→SURFACE_VARIANT/BORDER→BORDER_HOVER, radiusSmall), hand-
+  rolled hover with backdated start (= snap-in from rest on enter),
+  `isHovered() || isFocused()` aliasing, a local copy of the 90/180 ms
+  press math, no sound, press armed by an onClick observation only
+  (keyboard activation never animated), and disabled buttons still
+  animating hover (vanilla sets `isHovered` without consulting
+  `active` — bytecode-verified).
+- **Ownership boundary (the C-6 rule):** the mixin cancels ONLY
+  `renderWidget` (pixels). The two HEAD hooks (`onClick`, `keyPressed`
+  with vanilla's own `isSelection ∧ isActive` gate mirrored) are pure
+  OBSERVATIONS arming the press animation — never cancel, consume,
+  call `onPress`, play a sound, or touch active/focus. Vanilla's
+  activation funnel (bytecode: `mouseClicked → playDownSound +
+  onClick`; `keyPressed-selection → playDownSound + onPress`) is
+  disjoint by input path, so exactly one observation fires per
+  accepted activation — keyboard presses now animate for the first
+  time. No `SemanticActionControl` wraps any vanilla button; narration
+  and the click sound stay 100% vanilla; there is no second enabled
+  supplier (`self.active` is authoritative, gating the hover target
+  exactly like the shared Button's disabled contract).
+- **Shared painter (no second implementation):** `Button` gained
+  `paintFlatSecondary(g, font, label, x, y, w, h, hoverT, scale,
+  focused, active)` — a PURE visual painter (pose wrap, token radius,
+  disabled/rest/hover ramps, 1 px outline, the Button-family focus
+  hairline, centered label) — plus `secondaryFlatFill/Border` and the
+  shared `pressScaleAt(long)` timeline; `Button.renderOverlay`'s
+  secondary branch and the resting-surface template now consume the
+  same helpers, so the flat-secondary look has ONE source. The mixin
+  body is a gate + one `HoverAnim.symmetric(140)` update + one painter
+  call; the old label-width cache and local math are gone (label
+  centering now measures per frame through `AuroraFontRenderer.
+  drawCentered` — the same cost class as every Aurora Button, ~13
+  buttons/screen).
+- **Hover/focus/press contract:** pointer-only symmetric 140 ms
+  (enter/exit/reversal runtime-oracled continuous); focus = the hairline
+  alone (focused ∧ hoverT=0 proven behaviorally AND pixel-wise in all
+  three themes — light needed a hue classifier for the pink-on-light
+  blend); press = the shared timeline driven by the observational arm
+  (visual verified via the reflective-arm technique: real activations
+  navigate/rebuild the screen and discard the armed instance before the
+  next frame — the btnfix finding, unchanged by C-6).
+- **Gate behavior:** `customTitleScreen=false` renders pure vanilla —
+  verified at runtime (gate reflect false + capture: no Aurora border
+  ring, no SURFACE fill; the translucent vanilla sprite over the
+  panorama). ROUND corner = arc gap, SQUARE corner = filled (pixel-
+  verified both).
+- **Rest parity (baseline vs migrated, per theme):** enabled buttons
+  pixel-identical in fill/border colors AND label pixel counts; the
+  ~10% ROI diff is ±1 px label centering (the shared painter's
+  visual-order width vs the old component-width centering) and the
+  panorama's cross-boot rotation; disabled buttons moved
+  SURFACE→SURFACE_INSET — the canonical disabled treatment, the
+  intended §12 change. Whole-frame diffs are panorama-dominated
+  (rotating cube map, not syncable across boots).
+- **Lifecycle/perf:** all animation state is per-widget @Unique
+  instance fields (one final animator, two longs/ints) — no statics,
+  no maps, dies with the widget on close/reinit (resize oracle:
+  distinct animators, both at rest); zero per-frame allocation in the
+  mixin.
+- **Verification:** unit **259/0** (+12
+  `AbstractButtonMixinConformanceTest`: gate fail-closed, single
+  cancellable, no sound/wrapper/narration-touch identifiers, canonical
+  hover vocabulary, no alias, shared-painter + single-source pins,
+  static-free state, no per-frame construction, press-timeline
+  behavior, animator no-snap). Runtime `c6buttonmixin` (untracked):
+  **23/23 dark ROUND, 23/23 light ROUND, 23/23 dark SQUARE** — path
+  active, rest, hover enter/exit/reversal, keyboard focus at hoverT=0,
+  pointer + keyboard activation exactly once each (the press-count
+  observation IS vanilla's sound funnel — the mixin contributes zero
+  sounds, source-pinned), disabled rejection (no hover target, no
+  activation, no count), SelectWorld representative set, geometry
+  logged and equal to baseline, gate-off vanilla, resize lifecycle,
+  no stale press. Regressions: full `test build` 259/0;
+  `c4iconpilot` 26/26; `c4rollout` 31/31; Phase-B `hoverb` all-oracle
+  PASS on the real shared Button. Harness notes: reflective mixin
+  member lookup goes through the transformed `AbstractButton.class`
+  (Button.Plain does not declare them); hover-exit samples need a
+  ~2-tick window (the pointer flip reaches the animator a tick late
+  in this environment); mcCapture's one-frame lag defers state-change
+  captures one tick; and a negative-`d` guard belongs at the top of
+  every phase FSM.
+
+Verdict: **C-6 ABSTRACT BUTTON MIXIN COMPLETE** — the Aurora-gated
+vanilla Button family paints through the canonical shared
+painter/timeline while vanilla retains interaction, narration,
+disabled, focus traversal, and sound ownership. Recommended next:
+**C-8 correctness batch + the remaining ClipBand consumers** (the
+pack grid clamp, manager editors, pack modal rect).
+
 
 ## 7. Registries (the drift trap)
 

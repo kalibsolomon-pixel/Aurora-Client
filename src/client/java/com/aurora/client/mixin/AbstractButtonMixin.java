@@ -1,38 +1,72 @@
 package com.aurora.client.mixin;
 
 import com.aurora.client.config.AuroraConfig;
-import com.aurora.client.theme.ThemeManager;
-import com.aurora.client.theme.ThemeToken;
-import com.aurora.client.util.AuroraAnim;
-import com.aurora.client.ui.util.RenderUtil;
+import com.aurora.client.ui.component.Button;
+import com.aurora.client.util.HoverAnim;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractButton;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
 import net.minecraft.client.gui.screens.worldselection.SelectWorldScreen;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+/**
+ * Phase C-6: Aurora painting/motion ONLY on the vanilla button family of the
+ * customized selection screens — vanilla {@code AbstractButton}/{@code Button}
+ * keeps every interaction semantic (pointer/Enter/Space activation, disabled
+ * authority, focus traversal, narration, and the activation click sound).
+ *
+ * <p><b>Ownership boundary (the C-6 rule):</b> this mixin cancels only
+ * {@code renderWidget} (pixels) and never intercepts an input event. The two
+ * @Inject HEAD hooks on {@code onClick}/{@code keyPressed} are pure
+ * OBSERVATIONS — they arm the press animation and never cancel, consume,
+ * call {@code onPress}, play a sound, or alter active/focused state. The
+ * vanilla activation funnel (verified in the 1.21.11 bytecode:
+ * {@code mouseClicked → playDownSound + onClick} and
+ * {@code keyPressed → playDownSound + onPress}) fires exactly once per
+ * accepted activation on each input path, so arming at both observation
+ * sites — which are disjoint by input path — yields exactly one arm per
+ * activation, keyboard included (the old onClick-only observation never
+ * animated a keyboard press).
+ *
+ * <p><b>Shared visuals (no second implementation):</b> the surface, colors,
+ * radius, focus hairline, label centering, and the press-scale timeline all
+ * come from the canonical shared Button — {@link Button#paintFlatSecondary}
+ * (a pure visual painter) and {@link Button#pressScaleAt} (the shared
+ * 90 ms/180 ms timeline). Hover is the §8.3 canonical
+ * {@link HoverAnim#symmetric(long) symmetric 140 ms} — pointer-only
+ * ({@code active && isHovered()}, never {@code isHovered() || isFocused()};
+ * disabled has no hover target, exactly like the shared Button), so keyboard
+ * focus is carried by the Button-family hairline alone. Vanilla
+ * {@code AbstractWidget.render} sets {@code isHovered} without consulting
+ * {@code active} (bytecode), so the explicit {@code active} gate is
+ * required for the canonical disabled behavior.
+ *
+ * <p><b>Lifecycle:</b> all animation state is per-widget @Unique instance
+ * fields — a button's hover/press state dies with the widget on screen
+ * close/reinit; there is no static map and nothing leaks across screens.
+ */
 @Mixin(AbstractButton.class)
 public abstract class AbstractButtonMixin {
 
-    @Unique private long aurora$hoverStartMs = 0;
-    @Unique private boolean aurora$wasActive = false;
-    @Unique private float aurora$hoverT = 0f;
-    @Unique private static final long HOVER_MS = 140L;
+    /** §8.3 canonical hover — one long-lived animator per widget (C-6). */
+    @Unique private final HoverAnim aurora$hover = HoverAnim.symmetric(140L);
 
-    @Unique private long aurora$pressDownStartMs = -1L;
-    @Unique private static final long PRESS_DOWN_MS = 90L;
-    @Unique private static final long PRESS_UP_MS = 180L;
-
-    @Unique private int aurora$cachedLabelW = -1;
-    /** Message the width was measured for; the cache invalidates when the label changes. */
-    @Unique private String aurora$cachedLabelMsg = null;
+    /**
+     * Press-observation state: the start stamp feeds the shared timeline
+     * (rendering only), and the counter is the deterministic oracle that
+     * exactly one observation fires per accepted activation (the vanilla
+     * sound's own funnel — the mixin itself plays zero sounds).
+     */
+    @Unique private long aurora$pressStartMs = -1L;
+    @Unique private int aurora$pressCount = 0;
 
     @Unique
     private boolean aurora$shouldApplyStyle() {
@@ -54,108 +88,59 @@ public abstract class AbstractButtonMixin {
         // silently restyled. A getSuperclass() == Button.class check was
         // rejected for exactly that reason — ImageButton extends Button
         // directly and would match it.
-        return ((Object) this).getClass() == Button.Plain.class;
+        // Button here is Aurora's shared component; the vanilla class is
+        // qualified at the gate so both can coexist in this file.
+        return ((Object) this).getClass() == net.minecraft.client.gui.components.Button.Plain.class;
     }
 
     @Inject(method = "renderWidget", at = @At("HEAD"), cancellable = true)
     private void aurora$renderCustomWidget(GuiGraphics ctx, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         if (aurora$shouldApplyStyle()) {
             AbstractButton self = (AbstractButton) (Object) this;
-            
-            boolean active = self.isHovered() || self.isFocused();
-            if (active != aurora$wasActive) {
-                aurora$hoverStartMs = System.currentTimeMillis() - (long) ((1f - aurora$hoverT) * HOVER_MS);
-                aurora$wasActive = active;
-            }
-            float targetT = active ? 1f : 0f;
-            if (aurora$hoverT != targetT) {
-                long elapsed = System.currentTimeMillis() - aurora$hoverStartMs;
-                float raw = Math.min(1f, Math.max(0f, elapsed / (float) HOVER_MS));
-                float t = active ? raw : (1f - raw);
-                aurora$hoverT = AuroraAnim.easeOutCubic(t);
-                if (raw >= 1f) aurora$hoverT = targetT;
-            }
-
-            int x = self.getX();
-            int y = self.getY();
-            int w = self.getWidth();
-            int h = self.getHeight();
-            int cx = x + w / 2;
-            int cy = y + h / 2;
-
-            float scale = aurora$currentScale();
-
-            ctx.pose().pushMatrix();
-            if (scale != 1.0f) {
-                ctx.pose().translate(cx, cy);
-                ctx.pose().scale(scale, scale);
-                ctx.pose().translate(-cx, -cy);
-            }
-
-            // Same token set + AA engine + radiusSmall as the canonical
-            // ui.component.Button, so vanilla-screen buttons are pixel
-            // siblings of Aurora's own buttons in both Dark and Light mode
-            // (the old hardcoded translucent-white fill vanished on light
-            // surfaces).
-            int bgCol = AuroraAnim.lerpArgb(
-                    ThemeManager.color(ThemeToken.SURFACE),
-                    ThemeManager.color(ThemeToken.SURFACE_VARIANT), aurora$hoverT);
-            int borderCol = AuroraAnim.lerpArgb(
-                    ThemeManager.color(ThemeToken.BORDER),
-                    ThemeManager.color(ThemeToken.BORDER_HOVER), aurora$hoverT);
-            float radius = ThemeManager.current().roundness().radiusSmall();
-            RenderUtil.drawRoundedRectAA(ctx, x, y, w, h, radius, bgCol);
-            RenderUtil.drawRoundedOutlineAA(ctx, x, y, w, h, radius, 1.0f, borderCol);
-
             Font tr = Minecraft.getInstance().font;
-            var label = self.getMessage();
-            String labelStr = label.getString();
-            if (aurora$cachedLabelMsg == null || !aurora$cachedLabelMsg.equals(labelStr)) {
-                aurora$cachedLabelMsg = labelStr;
-                aurora$cachedLabelW = tr.width(label);
-            }
-            int textX = x + (w - aurora$cachedLabelW) / 2;
-            int textY = y + (h - tr.lineHeight) / 2 + 1;
-
-            int textCol = self.active ? ThemeManager.color(ThemeToken.ON_BACKGROUND)
-                    : ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED);
-            ctx.drawString(tr, self.getMessage(), textX, textY, textCol, false);
-
-            ctx.pose().popMatrix();
-            
+            // Pointer-only hover target, gated by vanilla's authoritative
+            // active flag — disabled buttons have no hover target (the
+            // shared Button's contract; an in-flight hover eases back to
+            // rest on the enable→disable transition).
+            float hoverT = aurora$hover.update(self.active && self.isHovered());
+            // The whole visual — press-scale pose, token radius, colors,
+            // focus hairline, centered label — is the shared painter's.
+            Button.paintFlatSecondary(ctx, tr, self.getMessage(),
+                    self.getX(), self.getY(), self.getWidth(), self.getHeight(),
+                    hoverT, Button.pressScaleAt(aurora$pressStartMs),
+                    self.isFocused(), self.active);
             ci.cancel();
         }
     }
 
+    /**
+     * Press observation, pointer path (mouseClicked → playDownSound +
+     * onClick in the vanilla bytecode). HEAD, never cancellable: vanilla's
+     * own click sound and onPress proceed untouched.
+     */
     @Inject(method = "onClick", at = @At("HEAD"))
-    private void aurora$onClick(net.minecraft.client.input.MouseButtonEvent ev, boolean dbl, CallbackInfo ci) {
+    private void aurora$observePointerPress(MouseButtonEvent ev, boolean dbl, CallbackInfo ci) {
         if (aurora$shouldApplyStyle()) {
-            aurora$pressDownStartMs = System.currentTimeMillis();
+            aurora$pressStartMs = System.currentTimeMillis();
+            aurora$pressCount++;
         }
     }
 
-    @Unique
-    private float aurora$currentScale() {
-        if (aurora$pressDownStartMs > 0L) {
-            long now = System.currentTimeMillis();
-            long elapsed = now - aurora$pressDownStartMs;
-            if (elapsed < PRESS_DOWN_MS) {
-                float raw = Math.min(1f, Math.max(0f, elapsed / (float) PRESS_DOWN_MS));
-                float eased = AuroraAnim.easeOutCubic(raw);
-                return aurora$lerpFloat(1.0f, 0.96f, eased);
-            } else if (elapsed < PRESS_DOWN_MS + PRESS_UP_MS) {
-                float raw = Math.min(1f, Math.max(0f, (elapsed - PRESS_DOWN_MS) / (float) PRESS_UP_MS));
-                float spring = AuroraAnim.springOvershoot(raw);
-                return aurora$lerpFloat(0.96f, 1.00f, spring);
-            } else {
-                aurora$pressDownStartMs = -1L;
-            }
+    /**
+     * Press observation, keyboard path (keyPressed's selection branch →
+     * playDownSound + onPress; onClick is NOT called on that path). The
+     * gate mirrors vanilla's own selection check so a non-selection key or
+     * an inactive button never arms the animation. keyPressed returns
+     * boolean, so the observation hook carries a CallbackInfoReturnable —
+     * still never set to a value (vanilla's routing decides).
+     */
+    @Inject(method = "keyPressed", at = @At("HEAD"))
+    private void aurora$observeKeyboardPress(KeyEvent ev,
+                                             org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable<Boolean> ci) {
+        if (aurora$shouldApplyStyle() && ev.isSelection()
+                && ((AbstractButton) (Object) this).isActive()) {
+            aurora$pressStartMs = System.currentTimeMillis();
+            aurora$pressCount++;
         }
-        return 1.0f;
-    }
-    
-    @Unique
-    private float aurora$lerpFloat(float a, float b, float t) {
-        return a + (b - a) * t;
     }
 }

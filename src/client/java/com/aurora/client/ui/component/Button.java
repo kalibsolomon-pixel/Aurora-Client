@@ -228,10 +228,9 @@ public class Button extends Widget {
             try {
                 switch (kind) {
                     case KIND_FLAT_SECONDARY -> {
-                        RenderUtil.drawRoundedRectAA(g, 1, 1, w, h, radius,
-                                ThemeManager.color(ThemeToken.SURFACE));
+                        RenderUtil.drawRoundedRectAA(g, 1, 1, w, h, radius, secondaryFlatFill(0f));
                         RenderUtil.drawRoundedOutlineAA(g, 1, 1, w, h, radius, 1.0f,
-                                ThemeManager.color(ThemeToken.BORDER));
+                                secondaryFlatBorder(0f));
                     }
                     case KIND_FLAT_PRIMARY -> {
                         RenderUtil.drawRoundedRectAA(g, 1, 1, w, h, radius,
@@ -321,12 +320,10 @@ public class Button extends Widget {
             border = AuroraAnim.lerpArgb(0x22FFFFFF, 0x44FFFFFF, hoverT);
             text = ThemeManager.color(ThemeToken.ON_ACCENT);
         } else {
-            bg = AuroraAnim.lerpArgb(
-                    ThemeManager.color(ThemeToken.SURFACE),
-                    ThemeManager.color(ThemeToken.SURFACE_VARIANT), hoverT);
-            border = AuroraAnim.lerpArgb(
-                    ThemeManager.color(ThemeToken.BORDER),
-                    ThemeManager.color(ThemeToken.BORDER_HOVER), hoverT);
+            // C-6: the flat-secondary ramps are shared with the vanilla-gated
+            // mixin painter — the single source (secondaryFlatFill/Border).
+            bg = secondaryFlatFill(hoverT);
+            border = secondaryFlatBorder(hoverT);
             text = ThemeManager.color(ThemeToken.ON_BACKGROUND);
         }
 
@@ -396,7 +393,40 @@ public class Button extends Widget {
         return hoverAnim;
     }
 
-    private float currentScale() {
+    // ---- Shared flat-secondary painter + press timeline (Phase C-6) ----
+    //
+    // The vanilla-gated AbstractButtonMixin paints Aurora-styled vanilla
+    // buttons on the selection screens. To avoid a second independently
+    // maintained copy of the ordinary secondary look, the color derivations
+    // and the press-scale timeline live HERE as the single source:
+    // renderOverlay's flat-secondary branch consumes the color helpers, and
+    // the mixin consumes paintFlatSecondary/pressScaleAt. The painter is
+    // PURE VISUALS — bounds, label, hoverT, press scale, focus, active —
+    // and owns no activation, sound, narration, or traversal semantics
+    // (vanilla keeps those on the mixin path; this class keeps its own on
+    // the Aurora path).
+
+    /** The flat-secondary fill ramp (rest → settled hover). */
+    static int secondaryFlatFill(float hoverT) {
+        return AuroraAnim.lerpArgb(
+                ThemeManager.color(ThemeToken.SURFACE),
+                ThemeManager.color(ThemeToken.SURFACE_VARIANT), hoverT);
+    }
+
+    /** The flat-secondary outline ramp (rest → settled hover). */
+    static int secondaryFlatBorder(float hoverT) {
+        return AuroraAnim.lerpArgb(
+                ThemeManager.color(ThemeToken.BORDER),
+                ThemeManager.color(ThemeToken.BORDER_HOVER), hoverT);
+    }
+
+    /**
+     * The shared press-scale timeline — 90 ms toward 0.96 (ease-out), then
+     * ~180 ms spring recovery — as a pure function of the press start
+     * stamp. One implementation for Aurora's own buttons and the
+     * vanilla-gated mixin buttons.
+     */
+    public static float pressScaleAt(long pressDownStartMs) {
         if (pressDownStartMs > 0L) {
             long elapsed = System.currentTimeMillis() - pressDownStartMs;
             if (elapsed < PRESS_DOWN_MS) {
@@ -405,10 +435,54 @@ public class Button extends Widget {
             } else if (elapsed < PRESS_DOWN_MS + PRESS_UP_MS) {
                 float raw = Math.min(1f, Math.max(0f, (elapsed - PRESS_DOWN_MS) / (float) PRESS_UP_MS));
                 return AuroraAnim.lerp(0.96f, 1.0f, AuroraAnim.springOvershoot(raw));
-            } else {
-                pressDownStartMs = -1L;
             }
         }
         return 1.0f;
+    }
+
+    /**
+     * Pure visual painter for one flat-secondary button: press-scale pose
+     * wrap, token radius, disabled/rest/hover colors, 1 px outline, the
+     * Button-family focus hairline (an independent channel — never a hover
+     * substitute), and the centered non-shadowed label. Consumers own all
+     * interaction state; this method activates nothing.
+     */
+    public static void paintFlatSecondary(GuiGraphics g, Font tr, Component label,
+                                           int x, int y, int w, int h,
+                                           float hoverT, float scale,
+                                           boolean focused, boolean active) {
+        float cx = x + w / 2f;
+        float cy = y + h / 2f;
+        g.pose().pushMatrix();
+        if (scale != 1.0f) {
+            g.pose().translate(cx, cy);
+            g.pose().scale(scale, scale);
+            g.pose().translate(-cx, -cy);
+        }
+
+        float radius = ThemeManager.current().roundness().radiusSmall();
+        int bg = active ? secondaryFlatFill(hoverT)
+                : ThemeManager.color(ThemeToken.SURFACE_INSET);
+        int border = active ? secondaryFlatBorder(hoverT)
+                : ThemeManager.color(ThemeToken.BORDER);
+        int text = active ? ThemeManager.color(ThemeToken.ON_BACKGROUND)
+                : ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED);
+
+        RenderUtil.drawRoundedRectAA(g, x, y, w, h, radius, bg);
+        RenderUtil.drawRoundedOutlineAA(g, x, y, w, h, radius, 1.0f, border);
+
+        if (focused) {
+            RenderUtil.drawRoundedOutlineAA(g, x, y, w, h, radius, 1.0f,
+                    ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
+        }
+
+        AuroraFontRenderer.drawCentered(g, tr, label, Math.round(x + w / 2f),
+                Math.round(y + (h - tr.lineHeight) / 2f) + 1, text);
+
+        g.pose().popMatrix();
+    }
+
+    private float currentScale() {
+        return pressScaleAt(pressDownStartMs);
     }
 }
