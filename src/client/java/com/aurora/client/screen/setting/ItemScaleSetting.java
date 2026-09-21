@@ -573,8 +573,10 @@ public class ItemScaleSetting extends FeatureSetting {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button, int rowX, int rowY, int rowWidth) {
-        // Forward click to search bar
-        if (mouseY >= rowY + 5 && mouseY < rowY + 25) {
+        // Forward click to search bar — the field's EXACT painted rect
+        // ([rowY+6, rowY+24); the old [rowY+5, rowY+25) band was 2px taller
+        // than the painted field — C-8, half-open at both edges).
+        if (mouseY >= rowY + 6 && mouseY < rowY + 24) {
             int searchW = rowWidth - 56;
             if (mouseX >= rowX + 12 && mouseX < rowX + 12 + searchW) {
                 searchField.setFocused(true);
@@ -708,6 +710,14 @@ public class ItemScaleSetting extends FeatureSetting {
     @Override
     public boolean onKeyPress(net.minecraft.client.input.KeyEvent _kev) {
         if (searchField != null && searchField.isFocused()) {
+            // C-8 Escape rule: unfocus + consume while typing (the
+            // fall-through used to close the whole screen); the second
+            // press reaches the screen.
+            if (_kev.key() == org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE) {
+                searchField.setFocused(false);
+                releaseFocus();
+                return true;
+            }
             if (searchField.keyPressed(_kev)) {
                 return true;
             }

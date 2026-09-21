@@ -214,6 +214,15 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
 
     @Override
     public void render(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
+        // C-8: publish this screen's effective row clip (the fade-boundary
+        // scissor the overlay walk uses — same formula, computed here once)
+        // so floating row geometry (EnumSetting's popup) resolves placement
+        // against the pixels this screen actually shows.
+        double fadeK0 = ScrollFade.engagement(scroll.current(), ScrollFade.FADE_PX);
+        int fadeTop0 = TOP_FADE_Y + (int) Math.round((1.0 - fadeK0) * ScrollFade.FADE_PX);
+        FeatureSetting.setHostBand(new com.aurora.client.ui.util.ClipBand(
+                0, fadeTop0, this.width, this.height - fadeTop0));
+
         int totalRowsH = 0;
         for (FeatureSetting s : meta.settings) totalRowsH += s.height() + ROW_GAP;
         if (totalRowsH > 0) totalRowsH -= ROW_GAP; // trailing gap not drawn
@@ -618,6 +627,10 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
     private void closeTransientState() {
         if (transientStateClosed) return;
         transientStateClosed = true;
+        // Drop the published host band with the rest of the transient state
+        // (C-8) — nothing of this screen may keep influencing another host's
+        // popup placement.
+        FeatureSetting.clearHostBand();
         // Give settings a chance to clear transient state (e.g. a search
         // query) before the screen tears down. Without this, state leaks
         // into the next open because settings instances are reused.

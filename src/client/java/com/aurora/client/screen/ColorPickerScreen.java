@@ -53,6 +53,21 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
     private EditBox hexField;
     private boolean syncingHex;
 
+    /**
+     * C-8 short-window geometry: the picker is SUPPORTABLE down to a
+     * {@link #MIN_PAD}px pad — below that the responsive stack (pad +
+     * preview + hex field above the pinned Apply/Cancel row) cannot fit
+     * without overlapping, so the editing surfaces are skipped entirely and
+     * a message renders in their place (the old code clamped the pad to a
+     * 60px floor regardless of window height, which pushed the hex field
+     * under the buttons on any window shorter than ~210 GUI px). The
+     * buttons stay pinned and reachable in every configuration — Apply
+     * commits the current (initial) color, Cancel discards.
+     */
+    private static final int MIN_PAD = 40;
+    /** Whether this window can show the editing surfaces at all (set by init). */
+    private boolean pickerSupportable = true;
+
     // ---- R8 (audit): cached editing surfaces ----
     // The pad, hue strip, alpha strip and preview checkerboard are ~2800
     // plain fill submissions EVERY frame at rest — pure static cost through
@@ -91,10 +106,15 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
         int cw = this.width;
         int ch = this.height;
 
-        // Clamped to a sane minimum: on a very short window cw/ch can shrink
-        // the computed size to zero or below, which inverts the pad's fill
-        // loops. Below the clamp the picker gets cramped, never broken.
-        padSize = Math.max(60, Math.min(240, Math.min(cw - 200, ch - 160)));
+        // Responsive with an explicit supportable minimum (C-8): the pad
+        // shrinks with BOTH axes (the height term reserves the vertical
+        // stack below it — preview + hex + gap — plus the pinned button
+        // row, so an unclamped pad never overlaps them); below MIN_PAD the
+        // editing surfaces are skipped (see pickerSupportable) instead of
+        // generating overlapping or off-bounds controls.
+        int maxPad = Math.min(240, Math.min(cw - 200, ch - 160));
+        pickerSupportable = maxPad >= MIN_PAD;
+        padSize = pickerSupportable ? maxPad : MIN_PAD; // unused when unsupported
         padX = (cw - padSize - 80) / 2;
         padY = 48;
 
@@ -113,15 +133,19 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
         previewW = padSize;
         previewH = 28;
 
-        hexField = new EditBox(
-                this.font,
-                previewX, previewY + previewH + 10, previewW, 18,
-                Component.literal("Hex")
-        );
-        hexField.setMaxLength(9);
-        hexField.setValue(formatHex(currentArgb()));
-        hexField.setResponder(this::onHexChanged);
-        this.addRenderableWidget(hexField);
+        if (pickerSupportable) {
+            hexField = new EditBox(
+                    this.font,
+                    previewX, previewY + previewH + 10, previewW, 18,
+                    Component.literal("Hex")
+            );
+            hexField.setMaxLength(9);
+            hexField.setValue(formatHex(currentArgb()));
+            hexField.setResponder(this::onHexChanged);
+            this.addRenderableWidget(hexField);
+        } else {
+            hexField = null;
+        }
 
         int btnY = ch - 32;
         this.addRenderableWidget(ButtonWidget.semantic(
@@ -195,6 +219,20 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
         int labelCol = ThemeManager.withAlpha(onOverlay, 0x99);
 
         AuroraFontRenderer.drawCentered(ctx, tr, this.title, this.width / 2, 20, onOverlay);
+
+        // C-8 short-window graceful fail: below the supportable minimum the
+        // editing surfaces are skipped (they could not fit without
+        // overlapping the pinned actions or leaving the usable bounds);
+        // Apply commits the current color, Cancel discards.
+        if (!pickerSupportable) {
+            AuroraFontRenderer.drawCentered(ctx, tr,
+                    Component.literal("Window too small for the color picker"),
+                    this.width / 2, this.height / 2 - 20, onOverlay);
+            AuroraFontRenderer.drawCentered(ctx, tr,
+                    Component.literal("Resize the window, or use Apply / Cancel below"),
+                    this.width / 2, this.height / 2 - 8, labelCol);
+            return;
+        }
 
         int scale = Math.max(1, (int) Minecraft.getInstance().getWindow().getGuiScale());
         drawCachedSurface(ctx, padCache,
@@ -348,7 +386,10 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
     @Override
     public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent _ev, boolean _doubleClicked) {
         double mouseX = _ev.x(); double mouseY = _ev.y(); int button = _ev.button();
-        if (button == 0) {
+        // Editing surfaces exist only in the supportable configuration
+        // (C-8) — below the minimum there is nothing to drag; the buttons
+        // are vanilla children and keep working.
+        if (button == 0 && pickerSupportable) {
             if (inBounds(mouseX, mouseY, padX, padY, padSize, padSize)) {
                 dragging = DragTarget.PAD;
                 updateFromPad(mouseX, mouseY);
@@ -371,7 +412,7 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
     @Override
     public boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent _ev, double dx, double dy) {
         double mouseX = _ev.x(); double mouseY = _ev.y(); int button = _ev.button();
-        if (button == 0 && dragging != DragTarget.NONE) {
+        if (button == 0 && pickerSupportable && dragging != DragTarget.NONE) {
             switch (dragging) {
                 case PAD -> updateFromPad(mouseX, mouseY);
                 case HUE -> updateFromHue(mouseY);

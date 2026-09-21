@@ -353,9 +353,13 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
                 MaterialIconRenderer.NATURAL_EM_GUI, arrowColor);
 
         if (expanded) {
-            int dropdownY = btnY + BTN_H + 2;
             int visibleCount = Math.min(5, values.length);
             int dropdownH = visibleCount * OPT_H + 4;
+            // C-8: placement resolves against the host band — the popup
+            // flips UP when opening down would clip its option rows at the
+            // band's bottom edge. One truth for paint and input
+            // (dropdownY); every consumer below derives from it.
+            int dropdownY = dropdownY(btnY, dropdownH);
 
             // Glass: the expanded option list is a floating panel above other
             // content — RAISED glass with the neutral WINDOW_FILL tint (never
@@ -444,9 +448,13 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
         }
 
         if (expanded) {
-            int dropdownY = btnY + BTN_H + 2;
             int visibleCount = Math.min(5, values.length);
             int dropdownH = visibleCount * OPT_H + 4;
+            // C-8: placement resolves against the host band — the popup
+            // flips UP when opening down would clip its option rows at the
+            // band's bottom edge. One truth for paint and input
+            // (dropdownY); every consumer below derives from it.
+            int dropdownY = dropdownY(btnY, dropdownH);
 
             boolean clickedDropdown = Widget.inBounds(mouseX, mouseY, btnX, dropdownY, BTN_W, dropdownH);
 
@@ -485,6 +493,42 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
         expanded = false;
         scrollOffset = 0;
         releaseFocus();
+    }
+
+    /**
+     * The resolved popup top for the current frame (C-8) — the ONE
+     * placement truth the render, the option hover, the click walk and the
+     * wheel all derive from. Deterministic, geometry-only:
+     * <ol>
+     *   <li>preferred: below the trigger ({@code btnY + BTN_H + 2}) when
+     *       the whole popup fits before the host band's bottom edge;</li>
+     *   <li>otherwise above ({@code btnY - 2 - dropdownH}) when the whole
+     *       popup fits below the band's top edge;</li>
+     *   <li>otherwise the side with more usable space, clamped into the
+     *       band (the popup's own scroll handles oversized lists; the
+     *       scissor clips whatever a tiny band cannot show).</li>
+     * </ol>
+     * The band is the OWNING host's row clip ({@link FeatureSetting#hostBand()}
+     * — FeatureDetailScreen's fade boundary / AuroraScreen's content
+     * viewport), not the raw screen: a popup that "fits the screen" but
+     * crosses the host's scissor is clipped pixels, exactly the lost-option
+     * rows this resolves. Placement only — popup semantics, scrolling,
+     * selection, keyboard and sound behavior are unchanged.
+     */
+    int dropdownY(int btnY, int dropdownH) {
+        com.aurora.client.ui.util.ClipBand band = FeatureSetting.hostBand();
+        int below = btnY + BTN_H + 2;
+        if (below + dropdownH <= band.yEnd()) return below;
+        int above = btnY - 2 - dropdownH;
+        if (above >= band.y) return above;
+        int spaceBelow = band.yEnd() - below;
+        int spaceAbove = btnY - 2 - band.y;
+        // Neither side fits: the side with more usable space, clamped into
+        // the band (both directions — a degenerate tiny band still yields a
+        // deterministic, in-band top).
+        int belowClamped = Math.max(band.y, Math.min(band.yEnd() - dropdownH, below));
+        int aboveClamped = Math.max(band.y, above);
+        return spaceBelow >= spaceAbove ? belowClamped : aboveClamped;
     }
 
     /**

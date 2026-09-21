@@ -730,19 +730,31 @@ public class PixelCanvasSetting extends FeatureSetting {
     public boolean mouseClicked(double mouseX, double mouseY, int button, int rowX, int rowY, int rowWidth) {
         if (isDisabled()) return false;
 
-        // Warning panel buttons.
+        // Warning panel (C-8 modality): the panel owns its region — clicks
+        // inside it never leak through to the canvas or other controls.
+        // The buttons act only in the decision state (warnPending); during
+        // measuring they are painted disabled and their clicks are
+        // consumed-but-inert, the disabled-button discipline everywhere
+        // else (the pre-C-8 fall-through let a measuring-state click on
+        // the disabled buttons escape the panel).
         if ((warnPending != null || benchPending != null) && button == 0) {
-            if (warnPending != null && mouseY >= warnBtnY && mouseY < warnBtnY + 16) {
-                if (mouseX >= warnBtnApplyX && mouseX < warnBtnApplyX + 86) {
-                    applyResize(warnPending[0], warnPending[1]);
-                    return true;
+            int wpy = canvasY + getCanvasH() + 6;
+            int wpx = rowX + 14;
+            int wpw = rowWidth - 28;
+            if (mouseX >= wpx && mouseX < wpx + wpw && mouseY >= wpy && mouseY < wpy + WARN_PANEL_H) {
+                if (warnPending != null && mouseY >= warnBtnY && mouseY < warnBtnY + 16) {
+                    if (mouseX >= warnBtnApplyX && mouseX < warnBtnApplyX + 86) {
+                        applyResize(warnPending[0], warnPending[1]);
+                        return true;
+                    }
+                    if (mouseX >= warnBtnCancelX && mouseX < warnBtnCancelX + 64) {
+                        warnPending = null;
+                        status = "Kept current resolution.";
+                        statusIsError = false;
+                        return true;
+                    }
                 }
-                if (mouseX >= warnBtnCancelX && mouseX < warnBtnCancelX + 64) {
-                    warnPending = null;
-                    status = "Kept current resolution.";
-                    statusIsError = false;
-                    return true;
-                }
+                return true; // panel body / measuring-state buttons: inert, consumed
             }
         }
 
@@ -843,6 +855,16 @@ public class PixelCanvasSetting extends FeatureSetting {
             if (f.isFocused()) {
                 if (_kev.key() == com.mojang.blaze3d.platform.InputConstants.KEY_RETURN) {
                     onApplyClicked();
+                    return true;
+                }
+                // C-8 Escape rule: unfocus + consume while a W/H field is
+                // active (vanilla EditBox ignores Escape, so the press used
+                // to fall through and close the whole screen); the second
+                // press reaches the screen.
+                if (_kev.key() == org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE) {
+                    widthField.setFocused(false);
+                    heightField.setFocused(false);
+                    releaseFocus();
                     return true;
                 }
                 return f.keyPressed(_kev);

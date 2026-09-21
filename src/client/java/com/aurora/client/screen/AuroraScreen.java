@@ -632,6 +632,10 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         // the Modules tab no inline row is visible, so the registry focus
         // (if any survives a tab switch) reads unavailable.
         focusedSettingVisible = false;
+        // C-8: publish the content viewport as this frame's host band so
+        // floating row geometry (EnumSetting's popup) resolves placement
+        // against the same clip the scissor, cull, and hit-tests use.
+        FeatureSetting.setHostBand(contentViewport());
 
         // ---- 1. Glass pass — every glass surface paints BEFORE the dim ----
         // (§6 convention 6, structural: the ManagerListScreen skeleton, and
@@ -1552,6 +1556,16 @@ public class AuroraScreen extends Screen implements ThemedScreen {
 
     @Override
     public boolean keyPressed(net.minecraft.client.input.KeyEvent _kev) {
+        // C-8 Escape rule for the Modules search field (the pack browser's
+        // canonical text-field contract): Escape while typing UNFOCUSES the
+        // field and is consumed — vanilla EditBox ignores Escape, so the
+        // fall-through used to close the whole screen on the first press.
+        // The second press (no active field) reaches the screen.
+        if (searchField != null && searchField.isFocused()
+                && _kev.key() == org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE) {
+            searchField.setFocused(false);
+            return true;
+        }
         FeatureSetting focused = FeatureSetting.getFocused();
         if (focused != null && focusedSettingVisible && focused.onKeyPress(_kev)) return true;
         // C-3 roving interceptor — BEFORE super (Screen.keyPressed reaches the
@@ -1584,6 +1598,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     @Override
     public void removed() {
         invalidateSettingsSemantics();
+        FeatureSetting.clearHostBand(); // C-8 — drop the published host band
         super.removed();
     }
 }

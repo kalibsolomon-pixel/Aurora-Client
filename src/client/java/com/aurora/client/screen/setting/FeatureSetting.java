@@ -43,6 +43,41 @@ public abstract class FeatureSetting {
     /** The setting currently claiming scroll/key focus, or null. */
     private static volatile FeatureSetting activeFocused = null;
 
+    // ===== Host clip band (C-8) =====
+    //
+    // Settings that float interactive geometry past their own row
+    // (EnumSetting's option popup) resolve its placement against the
+    // OWNING HOST's effective row clip — the same band truth the host's
+    // scissor and hit-tests use (C-1/C-8). Hosts publish it once per frame
+    // before their row walks (FeatureDetailScreen: its fade-boundary
+    // scissor; AuroraScreen: its contentViewport) and clear it on removal;
+    // the default is the full screen, so a host that never publishes (or a
+    // headless test) gets plain screen-bounds placement.
+    private static volatile com.aurora.client.ui.util.ClipBand hostBand = null;
+
+    /** Publishes this frame's host row-clip band (hosts call before row walks). */
+    public static void setHostBand(com.aurora.client.ui.util.ClipBand band) {
+        hostBand = band;
+    }
+
+    /** Clears the published band (hosts call from {@code removed()}). */
+    public static void clearHostBand() {
+        hostBand = null;
+    }
+
+    /**
+     * The owning host's effective row clip for this frame, or the full
+     * screen when no host published one. Never null.
+     */
+    public static com.aurora.client.ui.util.ClipBand hostBand() {
+        com.aurora.client.ui.util.ClipBand band = hostBand;
+        if (band != null) return band;
+        var win = Minecraft.getInstance() != null ? Minecraft.getInstance().getWindow() : null;
+        int w = win != null ? win.getGuiScaledWidth() : 240;
+        int h = win != null ? win.getGuiScaledHeight() : 240;
+        return new com.aurora.client.ui.util.ClipBand(0, 0, w, h);
+    }
+
     // ===== Exclusive capture ownership =====
     //
     // Capture-style settings (Keybind, KeyList) own the NEXT keyboard event

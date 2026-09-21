@@ -205,8 +205,11 @@ public abstract class SearchListSetting<T extends FeatureSetting> extends Featur
     public boolean mouseClicked(double mouseX, double mouseY, int button, int rowX, int rowY, int rowWidth) {
         recomputeFiltered();
 
-        // Search bar hit-test
-        if (mouseY >= rowY + 5 && mouseY < rowY + 25) {
+        // Search bar hit-test — the field's EXACT painted rect (C-8: the
+        // field renders at rowY+6 with height 18, i.e. [rowY+6, rowY+24);
+        // the old [rowY+5, rowY+25) band was 2px taller than the painted
+        // field). Half-open: the bottom edge row is not part of the field.
+        if (mouseY >= rowY + 6 && mouseY < rowY + 24) {
             int searchW = rowWidth - 24;
             if (mouseX >= rowX + 12 && mouseX < rowX + 12 + searchW) {
                 searchField.setFocused(true);
@@ -258,6 +261,16 @@ public abstract class SearchListSetting<T extends FeatureSetting> extends Featur
     @Override
     public boolean onKeyPress(net.minecraft.client.input.KeyEvent _kev) {
         if (searchField != null && searchField.isFocused()) {
+            // C-8 Escape rule (the pack browser's canonical text-field
+            // contract): Escape while typing UNFOCUSES the field and is
+            // consumed — vanilla EditBox does not consume Escape, so the
+            // pre-C-8 fall-through closed the whole screen on the first
+            // press. The second press (no active field) reaches the screen.
+            if (_kev.key() == org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE) {
+                searchField.setFocused(false);
+                releaseFocus();
+                return true;
+            }
             if (searchField.keyPressed(_kev)) {
                 return true;
             }
