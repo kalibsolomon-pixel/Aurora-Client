@@ -2177,6 +2177,172 @@ disabled, focus traversal, and sound ownership. Recommended next:
 **C-8 correctness batch + the remaining ClipBand consumers** (the
 pack grid clamp, manager editors, pack modal rect).
 
+**C-8 IMPLEMENTATION RECORD (2026-09-21, four revertible commits —
+`d15071b` "couple remaining clipped input geometry", `3de9a47` "fix
+popup and editor edge geometry", `fd97f95` "close phase c correctness
+defects", `32dcd81` "keep manager editor bounds tracking while
+hidden").** The correctness batch: the C-1 ClipBand rollout to its
+named remaining consumers, the escape/band/placement edge geometry,
+and the HudEditor/PixelCanvas items. Inventory rebuilt from source
+against every historical note (C-1's remaining-consumer list, the C-8
+planning list, C-4A's recorded findings); every production change maps
+to a row.**
+
+- **Manager list viewport (C-1e):** `ManagerListScreen` derives ONE
+  `listBand(listX)` truth (the content band, half-open) consumed by
+  the render cull (the old over-wide literal cull is gone), the row
+  click walk, the editor gates, and the per-row availability the
+  subclasses re-mark. **Editor lifecycle ruling (suspend, not clear):**
+  a focused editor whose field has scrolled out of the band is
+  SUSPENDED — key/char routing gated off, scroll-back resumes typing
+  with focus and value intact, no re-click (the accepted C-1 AuroraScreen
+  precedent; nothing about EditBox semantics demands stronger cleanup —
+  a hidden field renders nothing). **Bounds rule (found live by the
+  boots):** the editor field is positioned EVERY frame while open
+  (paint still gated + scissored to the band via `renderEditorClipped`);
+  the first cut gated the layout on visibility, leaving a stale rect
+  inside the band that an in-band click could refocus (`32dcd81`).
+  Partial visibility: the visible slab is clickable, a click on the
+  clipped-away side is an outside-list click (commits the editor).
+- **Profile create row:** `rowAreaClickFirst` hit-tests the LIVE
+  leading-row geometry (never the control's possibly-stale bounds) and
+  activates through the control only while its clip-band availability
+  holds; rejected in-rect clicks stay consumed exactly once (no
+  fall-through onto row 0's Duplicate), unavailable clicks are
+  consumed-but-inert at the row's true off-band rect.
+- **Pack grid clamp:** the card click walk is the SAME
+  `forEachVisibleCard` culling walk the render runs, and every hit
+  requires the pointer inside the grid band — a card's clipped-away
+  slab and fully hidden cards are inert (a pre-C-8 click on an
+  invisible card's raw rect opened the detail modal). Card bodies have
+  no keyboard path (pointer-only openDetail); the install controls'
+  availability sweep already excludes hidden cards — verified, not
+  rebuilt.
+- **Pack modal animation geometry:** one `detailModalX/Y/W/H` truth
+  (the eased sheet translate lives only in `detailModalY`); render,
+  button drives, content, AND `handleDetailClick` all derive from it —
+  through every animation frame the hit rects sit on the painted
+  buttons (pre-C-8 the hit test used the final position: up to ~8px of
+  painted≠clickable while the sheet slid). Containment re-verified at
+  runtime (covered chrome inactive ⇒ Tab stays in the modal, sidebar
+  clicks blocked, wheel consumed).
+- **Escape/unfocus rule (the pack browser's canonical contract)** on
+  every production text field that lacked it: Particles/EffectExpiry/
+  ItemScale search fields, PixelCanvas W/H fields, and AuroraScreen's
+  Modules search now UNFOCUS and consume on the first Escape; the
+  second press reaches the screen. Keybind/KeyList capture semantics
+  untouched (their Escape clears/cancels by design). ColorPicker's hex
+  field RULED INTENTIONAL: that screen's Escape IS its discard/Cancel
+  path (screen-level semantic, not a field asymmetry).
+- **Search-band exact bounds:** all three detail-screen search hit
+  bands are the painted field rect `[rowY+6, rowY+24)` (was 2px
+  taller, closed at both edges now).
+- **Enum popup placement:** one deterministic resolver
+  (`dropdownY(btnY, dropdownH)`) — preferred below; flip UP when the
+  host band would clip the option rows; otherwise the roomier side
+  clamped in-band — shared by render, option hover, the click walk,
+  and placement. Hosts publish their effective row clip via
+  `FeatureSetting.setHostBand` (FeatureDetailScreen's fade boundary,
+  AuroraScreen's contentViewport; cleared on removal; default full
+  screen). Popup semantics/scroll/selection/keyboard/sound unchanged —
+  placement only; the expanded row's height reservation still grows
+  below the trigger (a flipped popup reserves a blank gap below — the
+  honest cost of not redesigning Enum's row model).
+- **ColorPicker short-window geometry:** the overlap-causing 60px pad
+  floor is gone; the pad shrinks responsively with both axes to a
+  40px supportable minimum, and below that the editing surfaces are
+  SKIPPED (a message renders in their place; surface input gated off)
+  while Apply/Cancel stay pinned — graceful fail instead of
+  overlapping/off-bounds controls. Normal windows: identical layout
+  (the responsive term is unchanged; only the floor differed).
+- **PixelCanvas warning panel:** the panel owns its region — clicks
+  inside it are always consumed; Apply/Cancel act only in the decision
+  state (`warnPending`); during measuring the painted-disabled buttons
+  are consume-but-inert instead of leaking to the canvas (the C-1
+  planning note's click-leak). Apply/Cancel stay TEXT_ACTION (no icon
+  conversion); Tab containment unchanged (inline panel, no controls).
+- **HudEditor:** the phantom "X: disable" KEY hint reworded to
+  "X badge: disable" (no key invented; the screen still routes no key
+  events). `disableViaRegistry` saves the config immediately after the
+  registry write — `Module.setEnabled` parity (the grid path's
+  convention); the editor-local fallback flag stays session-only (no
+  config field when the lookup misses). RESIZE keeps the module
+  on-screen: the resized AABB clamps into `[0,w]×[0,h]` like MOVE
+  always did (scale stays clamped 0.5–3.0; when the clamp bites, the
+  fixed pivot yields to the screen edge). **Halo ruling (recorded):**
+  the ±6 corner squares and the findAt AABB halo are an intentional
+  grab affordance — topmost-wins hit routing matches render order, and
+  the X badge's rect is tested BEFORE the corner zones; the two painted
+  affordances are pixel-disjoint (X spans [w-11,w-2)×[2,11), the TR
+  handle paints [w-2,w+2)×[-2,2)), so precedence is exact rather than
+  event-order luck.
+- **Manager scrollbar ~1px note (RECLASSIFIED to Phase E):** the
+  thumb-height/Y int truncation vs SmoothScroll's double forms is a
+  sub-pixel cosmetic disagreement, fully absorbed by the intentional
+  ±4 grab band; no input/render correctness mismatch exists to fix.
+
+*Verification:* unit suite **282/0** (259 baseline + 23 C-8 tests:
+`PhaseC8ClipCouplingTest`, `PhaseC8EdgeGeometryTest`,
+`PhaseC8HudEditorTest` — source contracts + pure geometry/placement
+math; two historical pins updated to the C-8 resolutions — the C-1
+ClipBand adoption set and the C-4A stale-hint pin). Runtime: DevPilot
+`c8correctness` under gamescope headless, **39/39 oracles** (final
+boot; earlier boots' harness fixture bugs — tick-vs-frame races,
+row-gap clicks, a lost sub-phase arm — were fixed along the way and
+found one real defect, the stale hidden-editor bounds above):
+manager editor lifecycle 9 (visible focus/type, bounds track across
+scroll both visible AND hidden, keyboard suspended while hidden,
+scroll-back resume, old-position inert, partial-slab actionable,
+clipped-pixel commits), Profile create 3 (empty consumed-once inert,
+typed creates exactly once through the real click path, unavailable
+inert at the live off-band rect), pack grid 5 (visible opens, clipped
+slab inert, visible slab actionable, fully hidden inert, availability
+follows scroll), pack modal 5 (mid-animation painted position is the
+hit position at openT=0.51 with the 1px animated-only strip, ghost
+final strip is backdrop, background pointer + Tab blocked, final
+Close correct), Escape 5 (search focused on open, first Escape
+unfocuses only, second closes; PixelCanvas W/H same; band overhang
+pixel inert vs first painted pixel focusable), ColorPicker 3 (normal
+window no overlap + pad live, short-window graceful), Enum 4 (popup
+opens near band bottom, flips up btnY=400→popupY=314 on the [40,480)
+band, room-below opens down on two placements), HudEditor 3 (badge
+disables with the config field flipped — registry path, persisted
+write, no resize side effect; drag-to-oversize clamps on-screen with
+no X trigger) + hud hint capture. Captures in `.devpilot-c8/` (10:
+mgr hidden/partial editors, pack grid, modal mid-animation, enum
+flipped, picker normal/short, hud x-region/resize/hint). Baseline
+discrimination: the boots reproduced the pre-fix behaviors before the
+fixes (boot 1: stale bounds refocus path, modal ghost-position close,
+2px band focus, popup-down clip at the band bottom, X-hint text) —
+the suite discriminates. **Performance:** all new per-frame geometry
+is integer intersects over an immutable 4-int band (one allocation
+per host per frame); the pack click walk now visits ONLY visible
+cards (strictly less work than the old full-list walk). *Mimosa:*
+deep scan COMPLETED (seal
+`sha256:38d9dac88f51c017d0137482cf7a58bf01f75f2424475a4bb0cdf8dede50c68b`,
+0 findings; dependency scan completed, 0 advisories; evidence
+boundary static-only — completion evidence, not a broad security
+claim; the commit-time `scanner_enobufs` condition did not recur).
+
+*Rulings recorded:* manager editor keyboard = suspended-not-cleared
+(C-1 precedent); ColorPicker hex Escape = intentional screen-level
+Cancel; manager row-level (band, not rect) keyboard availability =
+the accepted C-2 partial-visibility policy, unchanged; resize halo =
+intentional affordance with exact precedence; PixelCanvas warning =
+inline panel (no modal Tab containment needed — no controls on the
+warn buttons); manager scrollbar 1px = Phase E cosmetic.
+
+*Not reopened (Phase B guardrails):* the Enum popup's immediate-hover
+option rows and the Profile-create consume-but-inert rule are accepted
+Phase B semantics; no sounds beyond the existing ACTIVATION mapping.
+
+Verdict: **C-8 CORRECTNESS BATCH COMPLETE at the code+runtime
+boundary** — every rebuilt inventory item is fixed, already resolved,
+or explicitly reclassified with evidence. Remaining Phase C work: the
+§15.2 conformance harness + the final closure audit (next per the
+dependency graph); nothing else in the Phase C correctness backlog is
+known-open.
+
 
 ## 7. Registries (the drift trap)
 
