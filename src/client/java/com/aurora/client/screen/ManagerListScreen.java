@@ -3,6 +3,7 @@ package com.aurora.client.screen;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.component.ButtonWidget;
+import com.aurora.client.ui.util.ClipBand;
 import com.aurora.client.ui.component.GlassSurface;
 import com.aurora.client.ui.component.ThemedScreen;
 import com.aurora.client.ui.component.Toast;
@@ -335,20 +336,27 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         GlassSurface.beginGlassPass();
         rowGlassDrawn.clear();
         onBeginRowGlassPass();
+        ClipBand band = listBand(listX);
         GlassSurface.enableScissor(ctx, listX - 4, listClipTop(), listX + listWidth() + 4, listClipBottom());
         int gy = listTop() - (int) scroll.current();
         for (int l = 0; l < leadingRowCount(); l++) {
-            if (rowPaintVisible(gy)) paintLeadingRowGlassPass(ctx, listX, gy, listWidth(), l);
+            if (rowPaintVisible(band, gy)) paintLeadingRowGlassPass(ctx, listX, gy, listWidth(), l);
             gy += rowStep();
         }
         for (T row : rows) {
-            if (rowPaintVisible(gy)) paintRowGlassPass(ctx, listX, gy, listWidth(), row);
+            if (rowPaintVisible(band, gy)) paintRowGlassPass(ctx, listX, gy, listWidth(), row);
             gy += rowStep();
         }
         GlassSurface.disableScissor(ctx);
         if (toolbarActionBtn != null) toolbarActionBtn.renderGlassPass(ctx);
         if (doneBtn != null) doneBtn.renderGlassPass(ctx);
+        // The inline editor paints UNDER THE SAME CLIP as its row (C-8): an
+        // editor whose row is half-scrolled out of the band must not paint
+        // outside it, and a fully-scrolled-out editor paints nothing (the
+        // subclass hooks gate on the field's band visibility themselves).
+        GlassSurface.enableScissor(ctx, listX - 4, listClipTop(), listX + listWidth() + 4, listClipBottom());
         paintEditorGlassPass(ctx, rows, listX);
+        GlassSurface.disableScissor(ctx);
 
         // ---- 2. Dim — end of the glass pass (token-driven; dark in both modes by design) ----
         GlassSurface.overlayDim(ctx, this.width, this.height);
@@ -364,12 +372,12 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
 
         int y = listTop() - (int) scroll.current();
         for (int l = 0; l < leadingRowCount(); l++) {
-            if (rowPaintVisible(y)) paintLeadingRow(ctx, listX, y, listWidth(), l, mouseX, mouseY);
+            if (rowPaintVisible(band, y)) paintLeadingRow(ctx, listX, y, listWidth(), l, mouseX, mouseY);
             y += rowStep();
         }
         for (int i = 0; i < rows.size(); i++) {
             T row = rows.get(i);
-            if (rowPaintVisible(y)) paintRow(ctx, listX, y, listWidth(), row, i, mouseX, mouseY);
+            if (rowPaintVisible(band, y)) paintRow(ctx, listX, y, listWidth(), row, i, mouseX, mouseY);
             y += rowStep();
         }
 
@@ -428,9 +436,26 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
     protected int listClipTop() { return listTop() - 2; }
     protected int listClipBottom() { return listTop() + (this.height - listTop() - listBottomPad()); }
 
-    /** The row loops' visibility test (a row paints if any part can show in the clip band). */
-    private boolean rowPaintVisible(int rowY) {
-        return rowY + rowHeight() > listTop() - rowHeight() && rowY < listClipBottom();
+    /**
+     * C-8 (the C-1 ClipBand rollout to this host): the list viewport's ONE
+     * bounds truth — the content region the row scissor paints, minus the
+     * decorative ±4px shadow bleed (rows are interactive exactly on their
+     * own horizontal extent, which is what the click walk always tested).
+     * Everything that decides whether list content is visible or
+     * interactive derives from it: the render cull, the row click walk,
+     * the inline editors' visibility/paint scissor/keyboard routing, and
+     * the clip-band availability the row passes re-mark every frame. The
+     * band is half-open {@code [y, yEnd)} — edge contact is not
+     * intersection (the frozen C-1 semantics).
+     */
+    protected ClipBand listBand(int listX) {
+        return new ClipBand(listX, listClipTop(), listWidth(), listClipBottom() - listClipTop());
+    }
+
+    /** The row loops' visibility test: a row paints iff it shares at least
+     *  one pixel with the clip band (the band's half-open intersect). */
+    private boolean rowPaintVisible(ClipBand band, int rowY) {
+        return band.intersects(band.x, rowY, band.width, rowHeight());
     }
 
     /**
@@ -665,17 +690,21 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         // just left. The row walk below re-focuses the control it lands on.
         semanticHost.dropFocus();
 
-        // Editors first.
-        if (editorClickFirst(_ev, _doubleClicked)) return true;
+        // Editors first — but only for clicks inside the list's clip band
+        // (C-8): an inline editor whose row is scrolled partly/fully out of
+        // the band keeps fresh bounds (see layoutRenameField) yet its
+        // clipped-away pixels are not actionable; a click outside the band
+        // must reach the rows/toolbar, never a hidden editor.
+        if (mouseY >= listClipTop() && mouseY < listClipBottom()
+                && editorClickFirst(_ev, _doubleClicked)) return true;
 
         // Screen-specific pre-row controls (the Profile create button).
         if (rowAreaClickFirst(mouseX, mouseY)) return true;
 
         int listX = (this.width - listWidth()) / 2;
+        ClipBand band = listBand(listX);
         List<T> rows = currentRows();
         int y = listTop() - (int) scroll.current() + leadingRowCount() * rowStep();
-        int clipTop = listClipTop();
-        int clipBot = listClipBottom();
         for (int i = 0; i < rows.size(); i++) {
             T row = rows.get(i);
             int rowTop = y;
@@ -684,9 +713,9 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
             // Hit-testing agrees with the render scissor: only the VISIBLE
             // part of the row is clickable (rows scrolled above the clip —
             // or below it — are not), and only within the row's horizontal
-            // extent.
-            if (mouseY >= Math.max(rowTop, clipTop) && mouseY < Math.min(rowBot, clipBot)
-                    && mouseX >= listX && mouseX < listX + listWidth()) {
+            // extent. The same band truth the render cull uses (C-8).
+            if (band.contains(mouseX, mouseY)
+                    && mouseY >= Math.max(rowTop, band.y) && mouseY < Math.min(rowBot, band.yEnd())) {
                 if (rowClicked(mouseX, mouseY, listX, row, i)) return true;
             }
             y += rowStep();
@@ -761,7 +790,15 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
 
     @Override
     public boolean keyPressed(KeyEvent _kev) {
-        if (nameField != null && nameField.isFocused()) {
+        // C-8: a focused editor whose field has scrolled out of the clip
+        // band is SUSPENDED, not cancelled — its row still exists, and
+        // scrolling back restores routing with the focus and the typed
+        // value intact (the accepted C-1 AuroraScreen ruling for focused
+        // settings; nothing about EditBox semantics demands stronger
+        // cleanup, since a hidden field renders nothing). While hidden it
+        // takes no action keys, no characters — an offscreen editor must
+        // not silently own the keyboard.
+        if (nameField != null && nameField.isFocused() && renameEditorVisible()) {
             int key = _kev.key();
             if (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER) {
                 commitEdit();
@@ -778,7 +815,8 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
 
     @Override
     public boolean charTyped(CharacterEvent _ev) {
-        if (nameField != null && nameField.isFocused() && nameField.charTyped(_ev)) return true;
+        if (nameField != null && nameField.isFocused() && renameEditorVisible()
+                && nameField.charTyped(_ev)) return true;
         return super.charTyped(_ev);
     }
 
@@ -826,19 +864,61 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
 
     /**
      * Positions the rename editor over its row for this frame and returns
-     * it, or {@code null} when none is visible. Shared by the glass pass
-     * (which paints the field's surface at that position) and the content
-     * pass (which renders it), so the two can never disagree.
+     * it, or {@code null} when none is open or its row no longer exists.
+     * Shared by the glass pass (which paints the field's surface at that
+     * position) and the content pass (which renders it), so the two can
+     * never disagree.
+     *
+     * <p>C-8: the position is written EVERY frame while the editor is open,
+     * even when the row is scrolled out of the clip band — a hidden editor
+     * must never keep stale hit bounds from its last visible frame (the
+     * band gate in {@code mouseClicked}/{@code keyPressed} makes the
+     * out-of-band position inert; scrolling back re-activates the field at
+     * its true position with no re-click). Painters gate on
+     * {@link #renameEditorVisible()} and the base scissors the editor's
+     * passes to the band, so the field only ever paints visible pixels.
      */
     protected EditBox layoutRenameField(List<T> rows, int listX) {
         if (nameField == null || editingIndex < 0 || editingIndex >= rows.size()) return null;
         int rowY = listTop() - (int) scroll.current()
                 + leadingRowCount() * rowStep()
                 + editingIndex * rowStep();
-        if (rowY < listTop() - rowHeight() || rowY >= listClipBottom()) return null;
         nameField.setX(editorFieldX(listX));
         nameField.setY(rowY + (rowHeight() - 16) / 2);
         return nameField;
+    }
+
+    /**
+     * Whether the rename editor's FIELD rectangle shares at least one pixel
+     * with the clip band this frame (C-8's render-truth rule applied to the
+     * editor itself — the field is the interactive thing, so its own rect,
+     * not the row's, decides). Side-effect free, so the keyboard router can
+     * consult it between frames.
+     */
+    protected boolean renameEditorVisible() {
+        if (nameField == null || editingIndex < 0) return false;
+        List<T> rows = currentRows();
+        if (editingIndex >= rows.size()) return false;
+        int rowY = listTop() - (int) scroll.current()
+                + leadingRowCount() * rowStep()
+                + editingIndex * rowStep();
+        int fieldY = rowY + (rowHeight() - 16) / 2;
+        return fieldY + 16 > listClipTop() && fieldY < listClipBottom();
+    }
+
+    /**
+     * Renders the inline editor UNDER THE LIST CLIP (C-8): an editor whose
+     * row is partially visible paints only its visible pixels; a fully
+     * hidden editor ({@code field == null} from the layout gate) paints
+     * nothing. Call from the screen tail in place of a raw
+     * {@code EditBox.render}.
+     */
+    protected void renderEditorClipped(GuiGraphics ctx, EditBox field, int listX,
+                                       int mouseX, int mouseY, float delta) {
+        if (field == null) return;
+        ctx.enableScissor(listX - 4, listClipTop(), listX + listWidth() + 4, listClipBottom());
+        field.render(ctx, mouseX, mouseY, delta);
+        ctx.disableScissor();
     }
 
     // ------------------------------------------------------------------

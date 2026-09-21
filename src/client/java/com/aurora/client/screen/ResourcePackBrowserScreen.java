@@ -20,6 +20,7 @@ import com.aurora.client.ui.interaction.SemanticActionControl;
 import com.aurora.client.ui.interaction.SemanticControlGroup;
 import com.aurora.client.ui.interaction.SemanticSound;
 import com.aurora.client.ui.render.blur.BlurPanelRenderer;
+import com.aurora.client.ui.util.ClipBand;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.ui.util.UiLayerCache;
 import com.aurora.client.util.AuroraAnim;
@@ -365,6 +366,24 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
     /** True while the modal is past its interaction gate — the same condition the click path uses. */
     private boolean modalInteractive() {
         return detailOpenT > 0.5f && detailProject != null;
+    }
+
+    // ---- C-8: the modal's ONE animation/bounds truth ----
+    //
+    // The open animation translates the sheet 16px upward from its resting
+    // position (eased). Before C-8 the render/button-drive/content walks used
+    // the animated position while handleDetailClick hit-tested the FINAL
+    // position — up to 8px of painted-control ≠ clickable-control mismatch
+    // through every sampled animation frame. Every consumer now derives from
+    // these three helpers, so the interactive rect IS the painted rect at
+    // each animation sample (and settles to the final rect on completion).
+    private int detailModalW() { return Math.min(460, this.width - 40); }
+    private int detailModalH() { return Math.min(360, this.height - 60); }
+    private int detailModalX() { return (this.width - detailModalW()) / 2; }
+    /** The eased sheet translate — the only place the animation enters geometry. */
+    private int detailModalY() {
+        float openT = AuroraAnim.easeOutCubic(detailOpenT);
+        return (this.height - detailModalH()) / 2 + (int) ((1f - openT) * 16);
     }
 
     private void registerSemanticControl(SemanticActionControl control) {
@@ -1298,11 +1317,14 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         int dimAlpha = (int) (180 * openT);
         g.fill(0, 0, this.width, this.height, (dimAlpha << 24));
 
-        int modalW = Math.min(460, this.width - 40);
-        int modalH = Math.min(360, this.height - 60);
-        int modalX = (this.width - modalW) / 2;
+        // C-8: the modal's geometry comes from the ONE truth (the same
+        // helpers handleDetailClick hit-tests against), so the painted sheet
+        // and its interactive rect agree at every animation sample.
+        int modalW = detailModalW();
+        int modalH = detailModalH();
+        int modalX = detailModalX();
         // Slight upward translate during open for a sheet-like feel.
-        int modalY = (this.height - modalH) / 2 + (int) ((1f - openT) * 16);
+        int modalY = detailModalY();
 
         g.enableScissor(0, 0, this.width, this.height);
         // Modal body — ABOVE the dim by design (§9's other named case: the
@@ -1618,34 +1640,44 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         // rejects them (a "Resolving…" phase): an unconsumed rejected click
         // would fall through onto the card-body branch and open the detail
         // modal — the Profile-Create consume-but-inert rule.
+        //
+        // C-8 (the C-1 ClipBand rollout to this host): the walk is the SAME
+        // culling walk the render runs (forEachVisibleCard — fully hidden
+        // cards never enter it) and every hit additionally requires the
+        // pointer inside the grid's clip band, so a partially visible card
+        // is actionable only on the pixels the scissor actually paints —
+        // never on its clipped-away slab above LIST_TOP or below the fold.
         List<ModrinthProject> list = results;
         int cols = columns();
         int gridLeft = gridLeft();
-        for (int i = 0; i < list.size(); i++) {
-            int col = i % cols;
-            int row = i / cols;
-            int x = gridLeft + col * (CARD_W + CARD_GAP);
-            int yBase = LIST_TOP + row * (CARD_H + CARD_GAP);
-            int y = yBase - (int) gridScroll.current();
+        int gridBottom = this.height - LIST_BOTTOM_PAD;
+        ClipBand gridBand = new ClipBand(gridLeft - 4, LIST_TOP - 2,
+                cols * (CARD_W + CARD_GAP) - CARD_GAP + 8, gridBottom - (LIST_TOP - 2));
+        final boolean[] cardHit = {false};
+        forEachVisibleCard(list, cols, gridLeft, gridBottom, (p, x, y) -> {
+            if (cardHit[0]) return;
             int btnW = 80, btnH = 18;
             int btnX = x + CARD_W - btnW - THUMB_PAD;
             int btnY = y + CARD_H - btnH - 8;
-            if (Widget.inBounds(mouseX, mouseY, btnX, btnY, btnW, btnH)) {
-                ModrinthProject clicked = list.get(i);
-                CardState st = cardStates.get(clicked.projectId);
+            if (Widget.inBounds(mouseX, mouseY, btnX, btnY, btnW, btnH)
+                    && gridBand.contains(mouseX, mouseY)) {
+                CardState st = cardStates.get(p.projectId);
                 if (st != null) {
                     SemanticActionControl control = st.cardPhaseControls[st.phase];
                     if (control != null && control.activateFromPointer(mouseX, mouseY, 0)) {
                         this.setFocused(control);
                     }
                 }
-                return true;
+                cardHit[0] = true;
+                return;
             }
-            if (Widget.inBounds(mouseX, mouseY, x, y, CARD_W, CARD_H)) {
-                openDetail(list.get(i));
-                return true;
+            if (Widget.inBounds(mouseX, mouseY, x, y, CARD_W, CARD_H)
+                    && gridBand.contains(mouseX, mouseY)) {
+                openDetail(p);
+                cardHit[0] = true;
             }
-        }
+        });
+        if (cardHit[0]) return true;
         return super.mouseClicked(ev, dbl);
     }
 
@@ -1654,13 +1686,16 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
      * route through their semantic controls (exactly-once activation + sound
      * + focus participation); the modal consumes every click it receives —
      * an accepted control click acts, everything else is inert — so no
-     * obscured control behind the modal can ever receive it.
+     * obscured control behind the modal can ever receive it. C-8: geometry
+     * derives from the SAME animated-position helpers the render paints
+     * (detailModalX/Y/W/H), so during the open animation the hit rects sit
+     * exactly on the painted buttons — never on their final-position ghosts.
      */
     private boolean handleDetailClick(double mouseX, double mouseY) {
-        int modalW = Math.min(460, this.width - 40);
-        int modalH = Math.min(360, this.height - 60);
-        int modalX = (this.width - modalW) / 2;
-        int modalY = (this.height - modalH) / 2;
+        int modalW = detailModalW();
+        int modalH = detailModalH();
+        int modalX = detailModalX();
+        int modalY = detailModalY();
 
         // Clicks outside the modal close it.
         if (mouseX < modalX || mouseX >= modalX + modalW

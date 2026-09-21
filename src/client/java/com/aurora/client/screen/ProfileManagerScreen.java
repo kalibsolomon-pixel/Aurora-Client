@@ -419,9 +419,15 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
     /**
      * Positions the inline editor (the create field, else the rename
      * field) over its row for this frame and returns it, or {@code null}
-     * when none is visible. Shared by the glass pass (which paints the
+     * when none is open. Shared by the glass pass (which paints the
      * field's surface at that position) and the content pass (which
      * renders it), so the two can never disagree.
+     *
+     * <p>C-8: like the base's rename contract, the create field's position
+     * is written EVERY frame while the create editor is open — even when
+     * its leading row has scrolled out of the clip band — so it can never
+     * keep stale hit bounds from its last visible frame. Paint and input
+     * gate on {@link #editFieldVisible} plus the base's band gates.
      */
     private EditBox layoutEditField(List<String> profiles, int listX) {
         if (creatingNew && createField != null) {
@@ -431,6 +437,19 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
             return createField;
         }
         return layoutRenameField(profiles, listX);
+    }
+
+    /**
+     * Whether this screen's active inline editor (create or rename) shows
+     * at least one pixel in the clip band this frame — the C-8 render-truth
+     * gate the paint passes and keyboard routing consult.
+     */
+    private boolean editFieldVisible(List<String> profiles) {
+        if (creatingNew && createField != null) {
+            int fieldY = listTop() - (int) scroll.current() + (ROW_H - 16) / 2;
+            return fieldY + 16 > listClipTop() && fieldY < listClipBottom();
+        }
+        return renameEditorVisible();
     }
 
     private void renderCreateRow(GuiGraphics ctx, int x, int y, int w,
@@ -485,18 +504,29 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
     @Override
     protected boolean rowAreaClickFirst(double mouseX, double mouseY) {
         // "Create" confirm button in the create row — routed through its
-        // semantic control. Clicks within the button's bounds are CONSUMED
-        // even when the gate rejects them (empty name): the create row sits
-        // directly above profile row 0 in the same geometry column, and an
-        // unconsumed click would fall through onto that row's Duplicate
-        // button. A rejected click is inert — no animation, no sound, no
-        // create, no fall-through.
+        // semantic control. C-8: the hit test uses the create row's LIVE
+        // geometry (leading row 0 at the current scroll), never the
+        // control's possibly-stale bounds — the render walk only re-syncs
+        // them while the row is visible — and availability is the control's
+        // own clip-band gate, so a create row scrolled out of the band can
+        // neither create nor fall through onto anything. Clicks within the
+        // button's rect are CONSUMED even when the gate rejects them (empty
+        // name, scrolled-away row): the create row sits directly above
+        // profile row 0 in the same geometry column, and an unconsumed
+        // click would fall through onto that row's Duplicate button. A
+        // rejected click is inert — no animation, no sound, no create, no
+        // fall-through.
         if (!creatingNew) return false;
-        SemanticActionControl control = this.createControl;
-        boolean inButton = mouseX >= control.getX() && mouseX < control.getX() + control.getWidth()
-                && mouseY >= control.getY() && mouseY < control.getY() + control.getHeight();
+        int listX = (this.width - listWidth()) / 2;
+        int rowY = listTop() - (int) scroll.current();
+        int btnX = listX + DUP_DX;
+        int btnY = rowY + 4;
+        boolean inButton = mouseX >= btnX && mouseX < btnX + BTN_DUP_W
+                && mouseY >= btnY && mouseY < btnY + (ROW_H - 8);
         if (!inButton) return false;
-        control.activateFromPointer(mouseX, mouseY, 0);
+        if (createControl.isAvailable()) {
+            createControl.activateFromPointer(mouseX, mouseY, 0);
+        }
         return true;
     }
 
@@ -542,7 +572,10 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
     @Override
     public boolean keyPressed(net.minecraft.client.input.KeyEvent _kev) {
         int key = _kev.key();
-        if (createField != null && createField.isFocused()) {
+        // C-8: the create editor follows the base rename contract — a field
+        // scrolled out of the clip band is SUSPENDED (no keys routed), not
+        // cancelled; scrolling back restores typing with focus and value.
+        if (createField != null && createField.isFocused() && editFieldVisible(currentRows())) {
             if (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER) {
                 commitCreate();
                 return true;
@@ -559,7 +592,8 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
 
     @Override
     public boolean charTyped(net.minecraft.client.input.CharacterEvent _ev) {
-        if (createField != null && createField.isFocused() && createField.charTyped(_ev)) return true;
+        if (createField != null && createField.isFocused() && editFieldVisible(currentRows())
+                && createField.charTyped(_ev)) return true;
         return super.charTyped(_ev);
     }
 
@@ -617,6 +651,9 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
 
     @Override
     protected void paintEditorGlassPass(GuiGraphics ctx, List<String> rows, int listX) {
+        // The base scissors this call to the list clip (C-8); a fully
+        // hidden editor paints no surface at all.
+        if (!editFieldVisible(rows)) return;
         EditBox field = layoutEditField(rows, listX);
         if (field != null) ((GlassEditBox) field).aurora$renderGlassPass(ctx);
     }
@@ -624,10 +661,13 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
     @Override
     protected void paintTail(GuiGraphics ctx, int mouseX, int mouseY, float delta,
                              List<String> rows, int listX) {
-        // Inline editors render on top so the caret draws above row fills.
-        // Their surface was painted in the glass pass; this is content only.
-        EditBox editor = layoutEditField(rows, listX);
-        if (editor != null) editor.render(ctx, mouseX, mouseY, delta);
+        // Inline editors render on top so the caret draws above row fills,
+        // and UNDER THE LIST CLIP (C-8 — renderEditorClipped): a partially
+        // visible editor paints only its visible pixels. Their surface was
+        // painted in the glass pass; this is content only.
+        if (editFieldVisible(rows)) {
+            renderEditorClipped(ctx, layoutEditField(rows, listX), listX, mouseX, mouseY, delta);
+        }
 
         // Toast (above the editor here — this screen's historical order;
         // the Waypoint screen draws it the other way around).

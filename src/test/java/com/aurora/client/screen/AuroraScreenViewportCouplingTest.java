@@ -112,15 +112,20 @@ class AuroraScreenViewportCouplingTest {
     }
 
     @Test
-    void clipBandAdoptionIsAuroraScreenOnlyInC1() {
-        // The pilot's blast radius: no other production host adopts the
-        // primitive yet (the pack grid, manager editors, and pack modal are
-        // deliberate later consumers — ARCHITECTURE.md's C-1 record).
+    void clipBandAdoptionIsExactlyTheC8ConsumerSet() {
+        // C-1's blast radius was AuroraScreen only; C-8 (the sanctioned
+        // rollout the C-1 record deferred to) added exactly the two named
+        // later consumers — the manager list viewport and the pack grid.
+        // The pin keeps walking the tree so any FURTHER adopter still shows
+        // up here and must be justified in this test.
+        List<String> expected = List.of(
+                "src/client/java/com/aurora/client/screen/AuroraScreen.java",
+                "src/client/java/com/aurora/client/screen/ManagerListScreen.java",
+                "src/client/java/com/aurora/client/screen/ResourcePackBrowserScreen.java");
         try (Stream<Path> files = Files.walk(Path.of("src/client/java"))) {
             List<String> adopters = new ArrayList<>();
             files.filter(p -> p.toString().endsWith(".java"))
                     .filter(p -> !p.toString().endsWith("ui/util/ClipBand.java"))
-                    .filter(p -> !p.toString().endsWith("screen/AuroraScreen.java"))
                     .filter(p -> !p.toString().endsWith("DevPilot.java"))
                     .forEach(p -> {
                         try {
@@ -131,8 +136,8 @@ class AuroraScreenViewportCouplingTest {
                         } catch (java.io.IOException ignored) {
                         }
                     });
-            assertTrue(adopters.isEmpty(),
-                    "C-1 adopts ClipBand on AuroraScreen only — unexpected adopters: " + adopters);
+            assertTrue(expected.containsAll(adopters) && adopters.containsAll(expected),
+                    "ClipBand adopters must be exactly the C-1/C-8 consumer set — found: " + adopters);
         } catch (java.io.IOException e) {
             fail("source walk failed: " + e);
         }

@@ -510,6 +510,9 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
 
     @Override
     protected void paintEditorGlassPass(GuiGraphics ctx, List<Waypoint> rows, int listX) {
+        // The base scissors this call to the list clip (C-8); a fully
+        // hidden editor paints no surface at all.
+        if (!renameEditorVisible()) return;
         if (layoutRenameField(rows, listX) != null) {
             ((GlassEditBox) nameField).aurora$renderGlassPass(ctx);
         }
@@ -525,10 +528,12 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
         // Inline name editor sits on top of its row — rendered after the
         // toast so its caret and selection draw above everything (this
         // screen's historical order; the Profile screen draws its editor
-        // first). Its surface was painted in the glass pass; this draws
-        // content only.
-        if (layoutRenameField(rows, listX) != null) {
-            nameField.render(ctx, mouseX, mouseY, delta);
+        // first), and UNDER THE LIST CLIP via renderEditorClipped (C-8): a
+        // partially visible editor paints only its visible pixels, a fully
+        // hidden one nothing. Its surface was painted in the glass pass;
+        // this draws content only.
+        if (renameEditorVisible()) {
+            renderEditorClipped(ctx, layoutRenameField(rows, listX), listX, mouseX, mouseY, delta);
         }
     }
 
