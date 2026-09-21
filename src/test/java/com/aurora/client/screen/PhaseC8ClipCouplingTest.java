@@ -109,6 +109,17 @@ class PhaseC8ClipCouplingTest {
                     p.getFileName() + " must render its editor through the clipped painter");
             assertTrue(s.contains("EditorVisible"),
                     p.getFileName() + " must gate editor paint/keys on band visibility");
+            // The layout (position refresh) must run BEFORE the visibility
+            // gate in the glass pass — a hidden editor's bounds must still
+            // track its row every frame, so no stale rect can ever remain
+            // inside the band (found live by the c8correctness boots).
+            String glassHook = methodBody(s, "protected void paintEditorGlassPass");
+            String hookLower = glassHook.toLowerCase();
+            int layoutIdx = Math.max(hookLower.indexOf("layouteditfield"), hookLower.indexOf("layoutrenamefield"));
+            // editFieldVisible (Profile) / renameEditorVisible (Waypoint)
+            int visibleIdx = Math.max(hookLower.indexOf("editfieldvisible"), hookLower.indexOf("editorvisible"));
+            assertTrue(layoutIdx >= 0 && visibleIdx > layoutIdx,
+                    p.getFileName() + " must position the field BEFORE the visibility gate");
         }
     }
 

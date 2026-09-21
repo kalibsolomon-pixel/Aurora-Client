@@ -17,6 +17,7 @@ import com.aurora.client.ui.render.blur.BlurPanelRenderer;
 import com.aurora.client.util.WorldScope;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
@@ -510,12 +511,11 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
 
     @Override
     protected void paintEditorGlassPass(GuiGraphics ctx, List<Waypoint> rows, int listX) {
-        // The base scissors this call to the list clip (C-8); a fully
-        // hidden editor paints no surface at all.
-        if (!renameEditorVisible()) return;
-        if (layoutRenameField(rows, listX) != null) {
-            ((GlassEditBox) nameField).aurora$renderGlassPass(ctx);
-        }
+        // Position ALWAYS (fresh bounds every frame — a hidden editor must
+        // never keep a stale rect in the band), then paint only when a
+        // pixel is visible. The base scissors this call to the list clip.
+        if (layoutRenameField(rows, listX) == null || !renameEditorVisible()) return;
+        ((GlassEditBox) nameField).aurora$renderGlassPass(ctx);
     }
 
     @Override
@@ -530,10 +530,12 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
         // screen's historical order; the Profile screen draws its editor
         // first), and UNDER THE LIST CLIP via renderEditorClipped (C-8): a
         // partially visible editor paints only its visible pixels, a fully
-        // hidden one nothing. Its surface was painted in the glass pass;
-        // this draws content only.
-        if (renameEditorVisible()) {
-            renderEditorClipped(ctx, layoutRenameField(rows, listX), listX, mouseX, mouseY, delta);
+        // hidden one nothing (bounds still refreshed every frame by the
+        // layout call in the glass pass above). Its surface was painted in
+        // the glass pass; this draws content only.
+        EditBox editor = layoutRenameField(rows, listX);
+        if (editor != null && renameEditorVisible()) {
+            renderEditorClipped(ctx, editor, listX, mouseX, mouseY, delta);
         }
     }
 

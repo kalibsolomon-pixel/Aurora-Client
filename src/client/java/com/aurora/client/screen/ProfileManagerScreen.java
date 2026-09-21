@@ -651,11 +651,13 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
 
     @Override
     protected void paintEditorGlassPass(GuiGraphics ctx, List<String> rows, int listX) {
-        // The base scissors this call to the list clip (C-8); a fully
-        // hidden editor paints no surface at all.
-        if (!editFieldVisible(rows)) return;
+        // Position ALWAYS (fresh bounds every frame — a hidden editor must
+        // never keep a stale rect its last visible frame could leave in the
+        // band), then paint only when a pixel is visible. The base scissors
+        // this call to the list clip (C-8).
         EditBox field = layoutEditField(rows, listX);
-        if (field != null) ((GlassEditBox) field).aurora$renderGlassPass(ctx);
+        if (field == null || !editFieldVisible(rows)) return;
+        ((GlassEditBox) field).aurora$renderGlassPass(ctx);
     }
 
     @Override
@@ -663,10 +665,12 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
                              List<String> rows, int listX) {
         // Inline editors render on top so the caret draws above row fills,
         // and UNDER THE LIST CLIP (C-8 — renderEditorClipped): a partially
-        // visible editor paints only its visible pixels. Their surface was
-        // painted in the glass pass; this is content only.
-        if (editFieldVisible(rows)) {
-            renderEditorClipped(ctx, layoutEditField(rows, listX), listX, mouseX, mouseY, delta);
+        // visible editor paints only its visible pixels, a fully hidden one
+        // nothing (bounds still refreshed above via the glass-pass layout).
+        // Their surface was painted in the glass pass; this is content only.
+        EditBox editor = layoutEditField(rows, listX);
+        if (editor != null && editFieldVisible(rows)) {
+            renderEditorClipped(ctx, editor, listX, mouseX, mouseY, delta);
         }
 
         // Toast (above the editor here — this screen's historical order;
