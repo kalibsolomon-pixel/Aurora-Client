@@ -543,3 +543,27 @@ browser's own animator" as historical, not current.
 | No distortion/refraction in glass | INTENTIONAL — v3 §7.2 keeps the canonical material blur+tint+lighting+rim; refraction remains Phase G R&D only |
 | Narration unverified at runtime (`libflite` missing) | UNCHANGED ENVIRONMENT LIMITATION — metadata-verified only |
 | Stale factual counts (e.g. "9 category tabs") | SUPERSEDED — current topology: 23 sidebar rows = 21 selectable tabs + 2 headers; 26 enum rows; 29 color rows; 17 keybind rows; the counts in `ARCHITECTURE.md` and the pinned source tests are current |
+
+---
+
+## Closure addendum II — Phase C disposition (2026-09-21)
+
+Appended the same way as the Phase B addendum: everything above remains the
+untouched baseline. This records how the audit's Phase-C-relevant deferred
+observations were dispositioned by the Phase C work through the closure
+baseline (see `ARCHITECTURE.md`'s Phase C closure record for the full
+harness/matrix evidence).
+
+| Observation deferred at the Phase B addendum | Phase C disposition |
+|---|---|
+| AuroraScreen manual chrome (cards/tabs/layout) lacks keyboard/narration/sound | RESOLVED — C-2b/C-5: semantic controls, canonical hover, narration, exactly-one-click model on every chrome family |
+| SegmentedControl immediate hover + selected-suppression | RESOLVED — C-5: pointer-only symmetric 140 ms composing with selection, semantic peers, one persistence path |
+| `AbstractButtonMixin` hand-rolled hover, hover/focus aliasing | RESOLVED — C-6: shared painter/timeline, canonical hover, independent focus hairline, vanilla keeps interaction/sound |
+| Fixed local radii ignoring Square mode | RESOLVED — C-7 Wave 1 + the closure harness's argument-aware literal inventory (fourteen classified sites, zero unclassified rectangular chrome) |
+| `AuroraScreen` render-clip/input-bounds drift | RESOLVED — C-1/C-8 ClipBand coupling across every scrolling host |
+| The §15.2 conformance harness ("future verification tool") | RESOLVED — built at closure: the tracked `conformance` test package (family manifest + manifest audits + behavioral matrix) and the untracked DevPilot `phasecclose` runtime matrix (31/31 on dark/light × ROUND/SQUARE) |
+| Composited contrast / `ON_ACCENT` / low-opacity robustness | REMAINS PHASE D (unchanged boundary) |
+| Glass seams/continuity, scrollbar sub-pixel polish | REMAINS PHASE E |
+| Sound identity | REMAINS PHASE F |
+| Refraction/distortion | REMAINS PHASE G (R&D-only per v3 §7.2) |
+| Narration runtime verification | UNCHANGED ENVIRONMENT LIMITATION |

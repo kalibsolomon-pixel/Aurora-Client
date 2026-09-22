@@ -2343,6 +2343,203 @@ or explicitly reclassified with evidence. Remaining Phase C work: the
 dependency graph); nothing else in the Phase C correctness backlog is
 known-open.
 
+**PHASE C CLOSURE RECORD (2026-09-21, "the §15.2 conformance harness +
+the final closure audit").** Phase C — Geometry and Conformance — is
+**COMPLETE**. The closure criteria (the list above the C-1 record) were
+re-derived from the current documents and source, each audited, and each
+holds with durable and runtime evidence:
+
+1. **Bounds coupling** — one band truth per scrolling host, closed at C-1
+   (AuroraScreen) and C-8 (manager viewport, pack grid/modal, popup
+   placement); the harness's corrected consumer sweep (below) confirmed
+   the complete set with no unlisted consumer and no raw hit-testing
+   bypass.
+2. **Square mode** — C-7's inventory re-run as an argument-aware sweep
+   over every AA/squircle/glass-panel call: fourteen literal-radius
+   sites, all classified (4 mechanical thumb capsules, 3 data-driven
+   picker frames, 6 representational layout-icon/hairline strokes, 1
+   documented in-source); zero unclassified rectangular chrome; no new
+   sites since C-7.
+3. **Compact actions** — C-4A/B's inventory closed (migrated / already
+   canonical / classified outside / the one finite KeyList scanning-
+   painter exception with semantic accessibility); the manifest
+   completeness sweep keeps it closed.
+4. **AuroraScreen deferred semantics** — C-2/C-2b/C-5 hosted; the
+   inventory re-derived from live source at closure: **69 controls**
+   (49 screen-owned + 20 component-owned), matching the C-5 count.
+5/6. **Navigation/peer/segmented coherence** — C-3's one group primitive
+   with the stride-orbit regression retained
+   (`gridRovingWalksTheFullRingWhenTheStrideTargetIsClipped`); C-5's
+   peer contract on every segmented surface incl. the layout pair.
+7. **AbstractButtonMixin** — C-6's ownership boundary (vanilla owns
+   interaction/narration/enabled/sound; Aurora owns pixels through the
+   shared painter/timeline), gate fail-closed.
+8. **C-8 inventory** — closed/reclassified (39/39 runtime oracles).
+9. **The §15.2 harness** — built; see below.
+10. **No unexplained deferral** — the deferral audit resolved every
+    Phase A/B/C-record deferral (table below).
+11/12. Suites green (332/0; matrix 31/31 × four theme axes).
+13. Hygiene/restoration — verified at closure.
+
+**The §15.2 harness architecture** (DESIGN_LANGUAGE §15.2's "future
+conformance harness", now real): the smallest three-layer shape the
+closure task sanctioned —
+
+- **Tracked pure+source contract tests** (`src/test/.../conformance/`):
+  `SemanticFamilyManifest` (the finite family catalog with per-family
+  contract dimensions — hover/press/sound/keyboard/focus/narration/
+  disabled/clip-coupling — plus the non-family exemption catalog) and
+  two test classes over it. `ConformanceManifestTest` holds the
+  inherently architectural audits: manifest completeness (every
+  production `new SemanticActionControl(` site must belong to a
+  manifest family — an unclassified family fails closure), the
+  canonical-hover vocabulary pins (`HoverAnim.symmetric` declared where
+  every animated family lives, `HOVER_MS = 140` where it resolves
+  through a constant), sound ownership (the behavior-side play set is
+  exactly the four play-on-change files; ButtonWidget carries NONE; no
+  Aurora UI chrome calls vanilla sound directly — hitreg's practice
+  click is the one domain site), the argument-aware radius-literal
+  inventory (the fourteen classified sites; a NEW literal fails until
+  tokenized or ruled), the COMPLETE ClipBand consumer set (7 files —
+  the C-8 pin's `new ClipBand(` pattern had missed FeatureDetailScreen's
+  fully-qualified construction and the two host-band API readers; all
+  three are legitimate adoptions, the pin was the blind spot), the
+  AuroraScreen inventory re-derived from live source (tiles from
+  ModuleManager's source, segmented peers from the live enum sizes,
+  never the historical count), and the frozen tooltip constants
+  (1500/200). `ButtonLikeConformanceTest` runs the shared button-like
+  contract **behaviorally over real production controls** — eight
+  fixtures (plain SemanticAction.button adapter, Enum trigger, Color
+  trigger, Keybind arm, KeyList add, Segmented peer, Accent peer,
+  IconAction) × five matrix checks (pointer exactly-once with rejected
+  presses inert; Enter and Space each exactly-once from a reset state —
+  a double-firing toggle returns to rest and is CAUGHT, not masked;
+  disabled authoritative+silent+consuming; unavailability removes
+  activation AND traversal AND narration; accessible name textual and
+  glyph-independent). This is the drift net the per-family pilot suites
+  cannot be: a future family must join the manifest (the completeness
+  sweep forces it) and inherits the shared matrix.
+- **Runtime DevPilot `phasecclose` mode** (untracked, per the §15.2/§6
+  convention): a representative 31-oracle cross-family acceptance
+  matrix — one strong oracle per contract per family — through real
+  screens/controls/animators: AuroraScreen inventory + tab navigation
+  (select, silent selected-no-op, focus-only arrows, enter-on-roved-to),
+  tile hover from rest → settle → exit, focus at hover 0, tile Enter
+  toggle exactly-once + restore, segmented flip exactly-once with one
+  generation bump + selected-no-op static generation, accent literal
+  selection, enum open + Escape-collapses-not-closes (the C-8 rule),
+  scroll-out/scroll-back availability, slider keyboard step, keybind
+  arm + F13 capture exactly-once, keylist add/remove/chip-Enter with
+  stale-focus cleanup after a frame, particle disclosure state
+  agreement (Collapsed→Expanded) with focus surviving the toggle,
+  PixelCanvas Clear exactly-once through the real domain effect,
+  vanilla Button.Plain focus + Enter navigation through vanilla's own
+  funnel, and (SQUARE boots) live `radiusSmall() == 0` + the corner
+  pixel probe. Durable assertions live in the tracked layer;
+  orchestration/capture stays untracked.
+- **Boundary documented**: production depends on neither half; the
+  harness adds ZERO production runtime cost (no inspection seams were
+  needed — reflection over package-private accessors, the established
+  DevPilot pattern).
+
+**Runtime closure matrix evidence** — `phasecclose` **31/31 on all four
+theme axes**: dark ROUND, light ROUND, dark SQUARE, light SQUARE
+(captures in the untracked `.devpilot-phasecclose/{dark,light}-{round,
+square}/`: Aurora Settings mid-matrix, focused Particles disclosure,
+vanilla JoinMultiplayer per axis). Behavioral contracts were
+theme-independent by construction — the only axis-sensitive oracle
+(the segmented flip) was made axis-aware rather than relaxed.
+
+**Historical mode reruns on the closure tree** (the deep per-family
+matrices the closure matrix deliberately does not duplicate):
+`c1bounds` **18/18** (expect=v3), `c3rove` **19/19** (dark),
+`c4rollout` **31/31** (dark), `c6buttonmixin` **23/23** (dark),
+`c8correctness` **39/39** (incl. the world join), and `c7square`'s
+12-capture set regenerated cleanly (its offline SQUARE-vs-ROUND
+whole-frame diff is panorama-dominated across boots — the known c7
+caveat — so the SQUARE pixel proof rests on the historical
+matched-fixture analysis plus today's live `radiusSmall()==0` + corner
+probe + the token pins; no radius code changed since C-7, pinned by the
+manifest's inventory test). Omitted: `c2host`/`c2bnav`/`c5segments`
+(subsumed — their inventory and behavior oracles are carried by the
+manifest tests, `phasecclose`, and `c3rove`'s ring coverage), the Phase
+B modes (re-verified at the Phase B closure; untouched by C), and
+`phasebclose` (same).
+
+**Harness quality audit (the false-confidence check):** every tracked
+assertion is behavioral (real production controls, real activation
+paths, real animators) or a precise architectural inventory (completeness
+sweeps with exact expected sets, an argument-parsing radius scanner —
+not a text grep); no test asserts a mere method name; runtime oracles
+read live state (config fields, control availability, focus identity,
+generation counters, animator progress) — screenshots are supplementary
+captures, never the assertion; each fixture family is asserted through
+its OWN production artifact, so the parameterized matrix is not five
+copies of one fixture. Known limits, stated honestly: the sound
+exactly-once is behaviorally proven only where a counting feedback can
+be injected (the adapter layer); family-level sound ownership is pinned
+at the source level. Runtime narrator output remains unverifiable on
+this host (no libflite) — narration is metadata-verified, unchanged
+since the audit.
+
+**Historical deferral resolution** (every Phase A/B/C-record deferral →
+one of the sanctioned buckets):
+
+| Deferral (record) | Resolution |
+|---|---|
+| AuroraScreen render/input clip drift (B closure list) | CLOSED — C-1/C-8 |
+| AuroraScreen manual-chrome semantic hosting (B) | CLOSED — C-2b |
+| Inline Enum/Accent hosting on AuroraScreen (B) | CLOSED — C-2 |
+| Compact `+`/`×`/`−` icon-action primitive (B) | CLOSED — C-4A/B |
+| HudEditor X badge phantom key hint (C-4A finding) | CLOSED — C-8 (reworded; no key invented) |
+| HudEditor ±6px resize halo (C-4A finding) | SANCTIONED EXCEPTION — intentional grab affordance, exact precedence (C-8 ruling) |
+| HudEditor `disableViaRegistry` persistence (C-4A finding) | CLOSED — C-8 (saves like the grid path) |
+| SegmentedControl keyboard/narration + hover dialect (B) | CLOSED — C-5 |
+| AbstractButtonMixin hover dialect / painter migration (B) | CLOSED — C-6 |
+| Tab/peer-group arrow primitive (B) | CLOSED — C-3 |
+| Square-mode/fixed-radius conformance (B) | CLOSED — C-7 + the manifest inventory |
+| The §15.2 conformance harness (B/C) | CLOSED — this record |
+| Pack modal animated hit rect, manager editors, pack grid clamp, Escape rule, search bands, popup flip, picker short-window, PixelCanvas click-leak (C-8 plan) | CLOSED — C-8 |
+| Manager scrollbar ~1px thumb truncation (C-8) | PHASE E — sub-pixel cosmetic, absorbed by the ±4 grab band |
+| Profile-create consume-but-inert (A/B) | SANCTIONED EXCEPTION — the accepted Phase A/B rule, not reopened |
+| Enum popup immediate-hover rows (B) | SANCTIONED EXCEPTION — the scanning-family ruling (§11.7 review done at C-5) |
+| KeyList chip immediate hover (B) | SANCTIONED EXCEPTION — scanning painter + semantic adapter (C-4B) |
+| ThemePreview mocks / Waypoint data chips / ColorPicker data surfaces / scrollbars / HudEditor canvas / map content | DEV/PREVIEW/DATA-ONLY — the manifest's non-family catalog |
+| Vanilla selection-screen buttons / title corner button (A) | VANILLA-OWNED — C-6 migrated the painter; vanilla keeps routing |
+| BlurTestScreen / DevPilot (A) | DEV/PREVIEW/DATA-ONLY |
+| WIDGET-mode pointer routing on SemanticActionControl (A, unexercised) | CLOSED — the Phase A decision stands (kept deliberately as adapter surface; no open question, zero consumers) |
+| `FeatureMetadata.settingsDetailOnly` inert machinery (AGENTS §9) | PHASE D — housekeeping item outside Phase C's contracts (no registered user) |
+| Composited contrast / ON_ACCENT / low-opacity / disabled material (B) | PHASE D |
+| Glass continuity/seams/scrollbar material polish (B/C-8) | PHASE E |
+| Sound identity beyond the ACTIVATION mapping (B) | PHASE F |
+| Refraction/distortion (v3 §7.2) | PHASE G — R&D only |
+
+**Phase D+ handoff** (rebuilt from the current documents; not started):
+**D** — composited contrast at low opacity, `ON_ACCENT` robustness for
+difficult accents, light-theme disabled readability, a unified disabled
+material, disabled/covered FIELD material (the C-8 note kept field
+material work out of C; represented-data literals stay exempt, pinned).
+**E** — glass continuity/seams/rim/lighting coherence per §7.3, and the
+reclassified scrollbar sub-pixel polish. **F** — semantic sound identity
+(the routing layer is done; assets/pitch/user-control remain). **G** —
+optional refraction/distortion R&D through §7.2's dedicated process
+only. Carried hygiene notes, not Phase C defects: the Button success
+variant (§9), FeatureRegistry's redundant pilot calls (§9), the
+AuroraScreen "13 controls" comment drift — fixed in this closure's docs
+commit.
+
+**Verification at closure:** `./gradlew --no-daemon test build` —
+**332 tests / 0 failures** (282 floor + 50 harness tests: 10 manifest
+audits + 40 behavioral matrix executions); no test removed. Production
+changes in the closure: none behavioral (one stale comment refreshed;
+the tracked diff is test + docs only). Mimosa deep scan: COMPLETED on
+the closure tree (seal
+`sha256:a9b0baf010a3aaac7520bc64b577b207cd57ec53d14529ff409ae190ff76d501`,
+0 findings; dependency scan completed, 0 advisories; evidence boundary
+static-only — completion evidence, not a broad security claim; the
+commit-time `scanner_enobufs` condition recurred and the scan was
+polled to its sealed completion immediately after).
+
 
 ## 7. Registries (the drift trap)
 
