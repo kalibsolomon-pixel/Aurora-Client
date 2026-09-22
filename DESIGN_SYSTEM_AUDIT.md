@@ -567,3 +567,27 @@ harness/matrix evidence).
 | Sound identity | REMAINS PHASE F |
 | Refraction/distortion | REMAINS PHASE G (R&D-only per v3 §7.2) |
 | Narration runtime verification | UNCHANGED ENVIRONMENT LIMITATION |
+
+---
+
+## Closure addendum III — Phase D-0 planning disposition (2026-09-22)
+
+Appended the same way as the prior addenda: the baseline above is untouched.
+The Phase D-0 planning audit (see `ARCHITECTURE.md`'s Phase D-0 record for
+the full methodology, failure table, and implementation plan) re-derived
+this audit's contrast-relevant observations with the real `PaletteEngine`
+under an alpha-composited model and confirmed them:
+
+| Observation deferred at the Phase C addendum | D-0 disposition |
+|---|---|
+| Composited contrast at low opacity | CONFIRMED + QUANTIFIED — primary text over a 0.10 window is 1.21:1 over a near-white world; 4.5:1 needs window opacity ≥ 0.58 (worst fixture); D-4 owns the minimum-effective-backing pilot |
+| `ON_ACCENT` below 4.5:1 for default red (4.30) | CONFIRMED + EXTENDED — sat-blue 4.33 also fails; hover/gradient variants fall to 3.46; the binary picker's floor is ≈4.17; stained-translucent backings collapse the pick's reference to 1.95 (sat-red) — D-2/D-3 own the readable-stained-backing adaptation |
+| Light-theme disabled readability | CONFIRMED — disabled labels 1.95-1.97 (light), disabled fill barely distinct from enabled (1.04); D-5 owns it |
+| A unified disabled material | PLANNED (D-5) — the Enum inset+muted idiom is the designated base |
+| Disabled/covered field material | PLANNED (D-5) — no disabled EditBox visual exists today; covered = pack-modal containment, ruled interaction-only (the veil is the signal) |
+| Muted/faint below any readability floor | CLASSIFIED — muted 2.59 dark / 1.96 light vs a proposed 2.2 project floor; faint exempt (decorative per §3.3) |
+| (New, not in this audit) tooltip text role | D-0 finding — light-mode tooltip text is near-white on a near-white box at every opacity (math ~1.09; runtime-measured 1.00, pixel-identical); fix scoped to D-1/D-6 |
+
+All other Phase D-0 findings (selection separation 1.00, focus hairline
+1.00 vs stained, white thumb/knob 1.00 on light accents, the bypass set)
+live in the ARCHITECTURE.md failure table with their root-cause groups.

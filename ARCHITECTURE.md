@@ -2541,6 +2541,376 @@ commit-time `scanner_enobufs` condition recurred and the scan was
 polled to its sealed completion immediately after).
 
 
+**PHASE D-0 PLANNING AUDIT (2026-09-22, baseline `f47fdbc`; planning only,
+no production color/material change has been made).** Phase D is *Color and
+Contrast Robustness* (DESIGN_LANGUAGE §18: "Pilot deterministic on-accent
+rendered treatment and low-opacity backing for essential text. Preserve
+stored accent and avoid frame-dependent world-pixel adaptation"). This
+record establishes the complete D plan: the color architecture as verified
+from source, the deterministic + runtime measurement methodology, the
+semantic pairing and bypass inventories, the failure table with root-cause
+groups, the recommended contrast standard and adaptation architecture, the
+implementation sequence with pilots, and the closure criteria. Everything
+numeric below is reproducible: the deterministic layer compiles the REAL
+production `PaletteEngine`/`ThemeToken` (pure Java, no MC imports) outside
+the tree and composites straight-alpha over fixture backdrops; the runtime
+layer is the untracked DevPilot `d0contrast` mode.
+
+**Current color architecture (source-verified).** The pipeline is:
+`ThemeDefinition` (accent/mode/roundness/glassStyle/opacity, persisted in
+`AuroraConfig.theme`) → `ThemeManager.sync/reload` → `ThemeResolver.resolve`
+→ `PaletteEngine.derive` (pure HSL function; ~40 `ThemeToken` values) or the
+fixed factory table (theme off) → `ResolvedTheme` (immutable ordinal-indexed
+array; `project()` is the only writer of the `AuroraTheme` legacy statics).
+Key derivation facts Phase D builds on: `ON_ACCENT`/`ON_BACKGROUND`/
+`ON_SURFACE` come from `PaletteEngine.pickOnColor(bg, hue)` — a BINARY
+choice between two tinted candidates (near-white `hsl(hue,0.05,0.97)` /
+near-black `hsl(hue,0.10,0.08)`) by the higher `contrastRatio`, evaluated
+against the OPAQUE token pair; secondary/muted/faint are that same RGB at
+alphas `0x99`/`0x4D`/`0x2E`; Background Opacity is applied at exactly one
+point (`WINDOW_FILL` alpha), with translucent consumers composing via
+`ThemeManager.surfaceColor(token)` (token RGB at `WINDOW_FILL`'s alpha) or
+`stainedTint()` (accent RGB at `max(windowAlpha, 140)` — the stained
+visibility floor); `relativeLuminance`/`contrastRatio` already exist as
+PUBLIC production methods on `PaletteEngine` — the contrast-math foundation
+is shipped and unit-testable. Nested glass panels capture the MAIN render
+target (world/panorama), not previously drawn glass (deferred
+`GuiRenderState` physics) — a stained pill's rendered backing is
+`stainedTint` over the WORLD, not over the window; the measurement model
+mirrors this exactly.
+
+**Stored vs rendered accent.** Stored identity lives in
+`AuroraConfig.theme.accent` (`normalizeAccent` only guards alpha — any RGB
+is legal) and is read directly by the AccentSetting preset grid + Custom
+picker (the swatch shows the literal accent — intentional, data),
+`stainedTint()`, and the data consumers. Adaptation can therefore be
+centralized at RESOLVE time (a rendered-backing/foreground derivation
+inside `PaletteEngine`/`ResolvedTheme`, keyed on the same inputs,
+invalidated by the existing `generation()` bump): it can never write
+`cfg.theme.accent`, so the user's stored preference is immutable by
+construction, and every preview that intentionally shows the raw stored
+color reads the accent, not the adapted token. §1.6/§3.2 are satisfied
+structurally rather than by discipline.
+
+**Contrast standard (recommendation — NOT adopted by this audit).** No repo
+document adopts a numeric accessibility standard; DESIGN_LANGUAGE §3.2
+explicitly treats ratios as diagnostic evidence and requires tests to state
+the compositing context. Phase D must adopt one normative rule before
+implementation. Recommended: metric = WCAG 2.x relative-luminance ratio
+(the production `contrastRatio`); **4.5:1** for essential primary text on
+deterministic backings (one practical text size ⇒ the 3:1 "large text"
+relaxation never applies); **3:1** for essential non-text state indicators
+(focus ring, selection-backing separation, thumbs/knobs vs tracks, status
+indicators, disclosure glyphs); **2.2:1 project-specific soft floor** for
+muted text on its opaque paired surface, with §3.3's hard rule unchanged
+(muted never the sole carrier of essential information) and faint exempt;
+and a **composited-context rule** — thresholds apply to the COMPOSITED
+pair, with content-dependent backings governed by the §3.4
+practical-usability bar (a deterministic minimum-effective-backing rule,
+never a per-frame ratio promise).
+
+**Measurement methodology.** (1) *Deterministic math* (normative): compile
+the real theme classes standalone; composite straight-alpha in 8-bit sRGB
+(what MC's GUI blend does); backdrops = the §9 fixture set {near-black,
+dark midtone, light midtone, near-white, deep green, sunset orange} ×
+opacity {0.10, 0.35, 0.65, 1.0} × the §13 accent stress matrix (14
+accents: default red, black, near-black, white, near-white, mid-gray,
+light-mid-gray, saturated red/green/blue/yellow, cyan, magenta, low-sat
+midtone) × both modes — ~4.6k rows, validated by reproducing the
+2026-09-14 audit's independent probes exactly where the accent sets
+overlap (ON_ACCENT red 4.30/black 19.64/white 18.59; muted light 1.96 vs
+their 1.95-1.98; faint light 1.46 vs ~1.47). (2) *Runtime framebuffer
+verification* (`d0contrast`, below). (3) Screenshots are supplementary
+records only. No vision model anywhere in the chain.
+
+**Semantic foreground/background inventory (production).** 14 pairing
+families: (1) primary text on window; (2) secondary; (3) muted; (4) faint;
+(5) ON_ACCENT on accent (ACCENT/HOVER/PRESSED/GRAD_*/stainedTint@floor) —
+primary Button flat+stained, selected chip/tile, selected segment,
+Keybind/KeyList listening pills; (6) accent-family as glyph on neutral —
+flat-selected tile icons, EnumSetting chevron/selected option, layout
+icons; (7) semantic status (incl. hardcoded white-on-error) on
+surface/wash; (8) text-field text/placeholder/caret on field glass or
+`surfaceColor(SURFACE)` flat; (9) focus hairline (ACCENT@0x99) at the
+control edge; (10) selection separation (stain/wash vs window/sidebar/
+world); (11) white mechanical thumb/knob vs tracks; (12) disabled
+treatments (MUTED + SURFACE_INSET, Enum's 0x22/0x33 ring); (13) tooltip
+(ON_OVERLAY over `surfaceColor(SURFACE)` box); (14) overlay dim.
+Direct-color bypass sweep: the production core is token-driven; Phase-D-
+relevant bypasses are the hardcoded white-on-error glyphs (KeyList remove
+chip, Button destructive label — no ON_ERROR token exists), IconAction
+literal/half-literal colors (KeyList chips, HudEditor X, ItemScale/
+EffectExpiry add icons), `PixelCanvasSetting`'s parallel status palette
+(`STATUS_ERR 0xFFFF6B6B`, `STATUS_INFO 0xFF9AA5B8`, warning-panel
+literals — the `SEMANTIC_*` tokens exist but are not read), and one code
+quirk: `AuroraScreen.alpha(ON_BACKGROUND, 0x53f)` — a `0.53f` float typo
+(`1311*255` truncates to alpha `0xF1`, so the layout icons render ~95%
+instead of the intended ~53%). HUD-module plates/labels are the HUD's
+separate HudStatus/HudText policy domain (§16 exception) — boundary
+recorded, not Phase D scope. Shadow/mask/AA construction literals are
+implementation color.
+
+**ON_ACCENT inventory (§12).** Exact production consumers (7 sites; no
+`AuroraTheme.ON_ACCENT` readers remain): AuroraScreen selected-chip label
++ selected-tile glyph (glass paths), ProfileManagerScreen's Active badge,
+Keybind/KeyList listening-pill labels, SegmentedControl's selected-segment
+label, Button's primary label. Backing variants in play: opaque ACCENT,
+ACCENT_GRAD_BOT→TOP (flat primary), ACCENT_HOVER, and stainedTint at
+`max(op,140)` alpha (every glass stained surface — up to 45% transparent
+over the world). Accent fully user-configurable.
+
+**Accent stress results (deterministic; exact).** ON_ACCENT vs opaque
+ACCENT (mode-independent): default-red **4.30**, sat-blue **4.33**,
+mid-gray 4.71, sat-red 4.65 (picks near-black), magenta 5.25, light-mid-
+gray 7.82, low-sat-midtone 7.55, sat-green 8.45, cyan 9.96, sat-yellow
+13.76, near-black 13.24, near-white 17.06, white 18.59, black 19.64. The
+factory-default accent FAILS 4.5 on its own primary buttons, as does
+saturated blue; hover/gradient variants are worse (vs ACCENT_HOVER worst
+3.46 sat-blue; vs ACCENT_GRAD_TOP 3.46; vs ACCENT_PRESSED 2.67 sat-red);
+the binary picker's theoretical floor is ≈4.17. The structural failure
+the matrix exposes: the pick references the OPAQUE accent, but stained
+glass renders at `max(op,140)` alpha over the world — for accents whose
+pick is near-black (sat-red etc.) the composited stained backing is far
+darker than the reference: ON_ACCENT-on-stained worst **1.95**
+(DARK/sat-red/near-black world), and ≈1.01 for near-white accents on
+bright worlds.
+
+**Low-opacity / glass findings.** At the live dev setting (0.10) over a
+near-white world, DARK-mode primary text on the window is **1.21** (black
+accent worst 1.13 in LIGHT over near-black); 4.5 arrives only at window
+opacity **≥ 0.58** over a near-white world (≥ 0.47 over a light midtone;
+dark worlds always pass — 1.22@0.10 → 2.23@0.35 → 5.78@0.65 → 17.8@1.0
+over the worst fixture). Secondary 1.09 / muted 1.05 / faint 1.03 at 0.10
+— the whole hierarchy is world-dependent below ~0.5. Tooltip: **light
+mode fails at EVERY opacity (1.01-1.09)** — the box is
+`surfaceColor(SURFACE)` (mode-flipped light) while the text is ON_OVERLAY
+(locked near-white in both modes): an inherent token-role bug. Selection
+separation: stainedChip-vs-window 1.00 (near-white accent, light),
+activeTabWash-vs-sidebar 1.00 (even at op 1.0), selectedChipWash flat
+1.00, toggleOnTrack-vs-surface 1.05. Focus hairline vs window 1.00
+(near-white accent) and ≈1.0 vs stained backings for EVERY accent (the
+ring is 60% alpha of the same accent the stain is made of). White thumb
+vs ON track **1.00 for a white accent** (the thumb vanishes); white knob
+vs OFF track 1.21 (light/sat-yellow). Disabled: Button/Slider label
+(MUTED on SURFACE_INSET) 1.95-1.97 (light) — below even the 2.2 soft
+floor; Enum disabled 2.50 (dark, op 1.0), 1.04 at 0.10; the disabled
+FILL is barely distinct from enabled (SURFACE_INSET vs SURFACE = 1.04 —
+distinction rides on border+text alone). Destructive: white on the flat
+error fill 3.44 (fails 4.5 as text); translucent error washes 1.74-2.37
+at low opacity. SEMANTIC_WARNING on light surface 2.02 (fails the 3:1
+indicator bar); SUCCESS 3.59 light; SECONDARY_ACCENT chrome glyphs 3.48
+light; plain muted on opaque surface 2.59 dark / 1.96 light; secondary
+4.57 worst (light/sat-yellow — marginal PASS).
+
+**Text-field findings.** One implementation (`EditBoxMixin`) serves every
+themed field. Normal: glass control tint (WINDOW_FILL@op) or flat
+`surfaceColor(SURFACE)` — both translucent at low opacity; text
+ON_BACKGROUND; focus = caret + ACCENT@0x99 hairline. Placeholder =
+ON_BACKGROUND_MUTED — 1.05 at 0.10 over dark worlds, ~2 at op 1.0. No
+distinct hover material (by design). Focused: SURFACE_VARIANT flat +
+hairline. **Disabled: NO visual state exists** — the mixin never consults
+`isEditable()`; the one production disabled field (SliderSetting's
+numeric editor, `setEditable(!disabled)`) renders pixel-identical to an
+enabled field. **Covered** (the handoff's term) is the pack browser's
+modal containment: covered fields are made `active=false` (interaction
+removed) while pixels stay identical, veiled by the modal backdrop +
+panel + dim — occlusion is communicated by the veil and render/interaction
+truth agree; the D-5 ruling keeps it interaction-only. Selected-text
+highlight is not rendered by the mixin (plain visible text under scissor
+— a minor fidelity note, not a contrast failure). No invalid/error state
+exists anywhere.
+
+**Failure inventory (finite, root-caused).**
+
+| ID | Family/state | Worst case | Thr | Root cause |
+|---|---|---|---|---|
+| D0-01 | ON_ACCENT text on accent (flat primary, op 1.0) | 4.30 default-red (sat-blue 4.33) | 4.5 | binary picker floor ≈4.17 |
+| D0-02 | ON_ACCENT on hover/gradient variants | 3.46 (ACCENT_PRESSED 2.67 if text-bearing) | 4.5 | variants drift lighter than the pick reference |
+| D0-03 | ON_ACCENT on stained glass (nested, low op) | 1.95 sat-red; ≈1.01 light accents on bright worlds | 4.5 | pick references OPAQUE accent; backing is @max(op,140) |
+| D0-04 | Selection separation (stain/wash vs window/sidebar) | 1.00 | 3.0 | same tint-vs-tint; no separation rule exists |
+| D0-05 | Focus hairline vs adjacent surfaces | 1.00 (light accents vs window; all accents vs stained) | 3.0 | hairline = same accent as the stain, 60% alpha |
+| D0-06 | White thumb/knob vs track | 1.00 white accent (ON); 1.21 light/yellow (OFF) | 3.0 | fixed structural neutral, no accent-stress rule |
+| D0-07 | Tooltip text vs box (LIGHT) | 1.01-1.09 at ALL opacities | 4.5 | ON_OVERLAY locked light on a mode-flipped light box |
+| D0-08 | Text hierarchy over low-opacity window | 1.21/1.09/1.05/1.03 @0.10 | 4.5/§3.4 | content-dependent backing; no minimum-effective-backing |
+| D0-09 | Placeholder (muted) over field | 1.05 @0.10; ~2 op1.0 | 2.2 | muted tier + translucent field |
+| D0-10 | Disabled labels (Button/Slider MUTED on inset) | 1.95-1.97 light | 2.2 | muted tier reused for state |
+| D0-11 | Disabled fill vs enabled fill | 1.04 | distinct | inset/surface lightness bands nearly equal |
+| D0-12 | Accent-as-glyph on neutral (flat fallbacks) | 1.05 near-white light | 3.0 | raw accent as indicator without contrast check |
+| D0-13 | Destructive white-on-error | 3.44 flat; 1.74-2.37 washes | 4.5 | no ON_ERROR token; hardcoded white |
+| D0-14 | SEMANTIC_WARNING (light) as indicator | 2.02 | 3.0 | mode-locked lightness too light |
+| D0-15 | SECONDARY_ACCENT chrome glyphs (light) | 3.48 | 3.0 | chrome lightness band |
+| D0-16 | Disabled EditBox | no state at all | — | mixin ignores isEditable |
+| D0-17 | Component bypasses | PixelCanvas parallel palette; IconAction literal whites; KeyList white-on-error chip | varies | palette semantics bypassed |
+| D0-18 | alpha(ON_BACKGROUND, 0x53f) typo | effective 0xF1 vs intended 0.53 | — | code defect (trivial) |
+
+Root-cause groups: **G1** binary-picker + translucent/hover backing
+references (D0-01..04); **G2** fixed-foreground/neutral indicators vs
+variable backings without a separation rule (D0-05, D0-06, D0-12, D0-14,
+D0-15); **G3** locked-light text roles on mode-flipped backings (D0-07);
+**G4** low-opacity content-dependent backing with no minimum-effective-
+backing (D0-08, D0-09); **G5** disabled states reusing the muted tier on
+low-energy surfaces (D0-10, D0-11, D0-16); **G6** component-local color
+decisions bypassing tokens (D0-13, D0-17, D0-18).
+
+**Proposed Phase D architecture (smallest coherent shape).** (1) Contrast
+calculation lives in `PaletteEngine` (already owns the math); nothing
+per-frame. (2) Foreground adaptation: keep `pickOnColor`'s binary choice
+as the ONLY foreground mechanism (stable, accent-keyed; continuous
+foreground derivation would break identity/stability for ≤0.2 gain).
+(3) Backing adaptation — the recommended ON_ACCENT strategy: a
+resolve-time `readableStainedBacking(accent, onAccent, mode)` for
+TEXT-BEARING stained surfaces: raise the rendered backing's effective
+alpha toward opaque until `contrastRatio(onAccent, compositedWorstCase)
+≥ 4.5`; if opaque accent still fails (the ≈4.17 floor), shift the
+backing's LIGHTNESS minimally toward the pick's contrast side (not
+hue/saturation), bounded ΔL ≤ 0.08; the worst case is mode-deterministic
+(stain over the mode-locked extreme base), so the world-dependent case
+passes too. Exactly §3.2's permitted directions. (4) Selection
+separation: the same derivation answers "stain vs container ≥ 3:1";
+where an accent cannot separate without losing identity, the fallback is
+the existing compact-indicator channel (outline/badge). (5) Components
+request unchanged (`ThemeManager.color(...)`/`stainedTint()`); new values
+flow through new resolve-time outputs on `ResolvedTheme` (e.g.
+`STAINED_TEXT_BACKING` consumed by `GlassSurface.stainedControl`'s
+text-bearing path; a derived `FOCUS_RING` color) — no component invents
+local contrast math. (6) Stored accent immutable: derivations are pure
+functions of the definition; never written back (§1.6 structurally).
+(7) Animation stability: floors are computed from the family's LIGHTEST
+endpoint (hover/gradient-top) at resolve time so every interpolated
+state passes; values change only on theme reload — no per-frame
+evaluation, no hysteresis needed; accent live-drag (100 ms throttled
+commits) re-resolves atomically. (8) Glass/content-dependent backings:
+the D-4 minimum readability backing is a deterministic derived plate
+behind ESSENTIAL text rows on windowed screens — alpha ramping from 0
+above an opacity threshold to a bounded max below — never a global
+opacity floor (the single-application-point rule is untouched; the plate
+is a separate, explicit, deterministic treatment per §3.4). (9)
+Exceptions: named constants with javadoc rulings in `PaletteEngine` plus
+the manifest pattern's classified-exemption list. (10) Testing without
+screenshots: the whole standard is headless-testable (`PaletteEngine` is
+MC-free); runtime evidence is needed only for compositing-model
+verification and pilot A/B captures.
+
+**API sketch (conceptual, derived from existing shapes):** `PaletteEngine.
+derive` gains resolve-time outputs analogous to `readableStainedBacking(
+accent, onAccent, worstBase)` / `focusRingColor(accent, adjacent)`;
+`ResolvedTheme` exposes them beside `stainedTint()`/`rimPastel()`;
+`GlassSurface.stainedControl` takes the text-bearing flag. No new
+framework — the engine already owns this shape.
+
+**Compatibility.** No schema/config change: adaptation is render-time
+only; stored accent/mode/opacity untouched; no migration; old
+configs/profiles load identically. The one intended visible change class
+is exactly Phase D's mandate. **Performance:** resolve-time pure math
+(once per reload, throttled by the 6-field dirty check); zero per-frame
+cost; no framebuffer reads; pixel caches already key on `generation()`;
+the D-4 plate is one extra fill per essential row.
+
+**Test architecture (designed now; D-7 lands it).** L1 pure math
+(sRGB/luminance/composite/ratio over `PaletteEngine` itself); L2 accent
+stress (every §13 accent × mode × normative pairings ≥ thresholds); L3
+semantic token tests (the 14 families at deterministic backings); L4
+component contract pins (no raw-accent text/indicator reads outside
+sanctioned sites; text-bearing stained surfaces read the adapted backing;
+EditBox consults editability); L5 runtime controlled-background
+verification (d0contrast oracles + pilot A/B); L6 pixel/ROI integration
+proofs per pilot.
+
+**Implementation sequence (rebuilt from the dependency graph; each step
+independently revertible).** **D-1** contrast foundation: adopt the
+standard as a DESIGN_LANGUAGE amendment; unit-test L1-L2; implement the
+`readableStainedBacking` + `focusRing` derivations (unused yet). Zero
+visual change. **D-2** ON_ACCENT pilot on three heterogeneous surfaces:
+the flat primary Button (title "Aurora Settings" — opaque stack, gradient
++ hover variants), the SegmentedControl selected peer (selection
+separation + ON_ACCENT together), the Keybind listening pill (stained
+glass over the world, transient). Verification: stress-accent boots (red,
+sat-blue, near-white, mid-gray) with pixel ratio oracles. **D-3**
+selected-state rollout: chips/tiles/tabs/active-tab wash + separation
+floor; the pack active tab's explicit tint migrates too. **D-4**
+low-opacity readability backing pilot on FeatureDetailScreen essential
+rows at 0.10/0.35 against §3.4's usability targets; placeholder policy.
+**D-5** text-field disabled/covered states: the `isEditable` branch
+(Enum's inset+muted idiom, caret suppressed); covered stays
+interaction-only (the veil is the signal — recorded ruling);
+disabled-distinctness fixes from D0-10/11. **D-6** non-text indicators +
+bypass sweep: focus-ring derivation rollout; thumb/knob accent-stress
+treatment; SEMANTIC_WARNING lightness; SECONDARY_ACCENT floor; ON_ERROR
+token + destructive/KeyList migration; PixelCanvas palette → SEMANTIC_*;
+IconAction token colors; the 0x53f typo; the tooltip role fix (may ride
+D-1 if trivial). **D-7** conformance/closure: the layered suite green,
+the d0contrast matrix re-run across stress accents × modes × opacities,
+the failure table re-derived to zero unadapted entries, closure audit.
+
+**Pilot recommendations** (heterogeneous by construction): text-on-accent
+flat Button; stained-glass listening pill (nested-over-world, transient);
+Segmented selected peer (separation); glass-backed essential text at 0.10
+(content-dependent); disabled EditBox (state material); IconAction
+white-on-error (KeyList chip) joins D-6.
+
+**Closure criteria (measurable).** (1) All 14 pairing families meet their
+thresholds at deterministic backings, both modes, all stress accents
+(unit-verified). (2) Text-bearing stained surfaces pass 4.5 at the
+mode-locked worst case for every stress accent via the documented
+adaptation; non-text stained separation ≥ 3:1 or a classified
+compact-indicator fallback. (3) Stored accent byte-identical
+before/after every pilot (config-diff oracle). (4) No unclassified
+raw-accent foreground consumer remains (manifest sweep). (5) Disabled
+fields readable (≥2.2) and distinct (fill or border channel); the
+covered-field ruling recorded. (6) Focus ring ≥ 3:1 against both adjacent
+surfaces across the stress matrix. (7) Low-opacity: essential-text
+surfaces carry the minimum-effective-backing plate; §3.4 targets met on
+the fixture set. (8) Dark + light pass; Phase C behavior unchanged
+(geometry/hitboxes/keyboard/narration/sound/timing/Square frozen —
+pixel-diff guards on ROUND rest states where no change is intended).
+(9) The D-7 harness operational. (10) DESIGN_LANGUAGE's contrast standard
+amended normatively.
+
+**Phase E/F/G boundary.** Phase D does NOT touch glass seam aesthetics,
+rim/lighting continuity, blur character, scrollbar sub-pixel polish, or
+decorative material nuance (all E); sound identity (F); refraction R&D
+(G). The D-4 plate is readability backing, not glass redesign — aesthetic
+integration notes may hand to E, but the plate lands in D.
+
+**Runtime audit evidence (DevPilot `d0contrast`, untracked; wiring removed
+and the tracked tree verified clean after).** Two boots under `gamescope
+--backend headless` (guiScale 1, RED/ROUND/TRANSPARENT@1.0 forced, title
+context): DARK (final run 4 PASS / 3 harness fails) and LIGHT (4 PASS / 1
+harness fail). The meaningful measurements — strip samples through real
+glyph rows (fg = extreme-luminance pixel, bg = strip median; a
+mixed-pixel strip is a CONSERVATIVE lower bound on the pairing):
+
+| Runtime measurement | Deterministic math | Measured (framebuffer) | Verdict |
+|---|---|---|---|
+| Primary-button label, ON_ACCENT over accent (DARK/RED) | 4.30 | **4.04** (re-run 3.93) | < 4.5 confirmed from real pixels |
+| Primary-button label (LIGHT/RED) | 4.30 (mode-independent) | **3.61** | same |
+| Search-field placeholder over field @ opacity 0.10 (DARK/RED) | 1.05-2.5 (content-dependent) | **1.26 / 1.29** | low-opacity dependence reproduced |
+| Light-mode dwell-tooltip text vs box | ~1.09 | **1.00 — fg == bg** (`#FFF6F1F2` both: no pixel distinguishable from the box) | catastrophic failure reproduced |
+| Tooltip box detection (pointer-anchored probe 0) | — | 61 px uniform run found | fixture OK |
+| Title buttons / search field found | — | both | fixture OK |
+
+The three dropped oracles and why (harness lessons, recorded): the
+secondary-label and window-interior strips are WIDGET-GEOMETRY anchored,
+but the screenshot consumer completes asynchronously and the frames lag
+the widget-coordinate frames around the guiScale resize — their strips
+crossed panorama rows (the vanilla panorama is sunset-red, ~#C72C36,
+which is what made the mismatch visible); the focus-hairline probe
+sampled columns x−1/x+2 while the AA stroke centers between them. All
+three pairings remain covered by the deterministic layer. State
+(theme/accent/opacity/glassStyle/guiScale/customTitleScreen/screen) was
+snapshotted before the first mutation and restored on every exit path
+(both boots log "restored theme/config/gui-scale exactly"; `run/config/
+aurora.json`'s theme block verified back at the user's values —
+DARK/SQUARE/TRANSPARENT@0.09, the user's own accent; `devpilot.properties`
+restored byte-for-byte; `AuroraClient.java` reverted — `git diff` empty).
+Captures in `.devpilot-d0/{dark,light}/`.
+
+**Verification at D-0:** `./gradlew --no-daemon test build` — **332 tests
+/ 0 failures** (unchanged; docs + untracked harness only). Recommended
+D-1 model: the contrast-foundation phase above, piloting nothing visual
+until its derivations are unit-pinned.
+
+
 ## 7. Registries (the drift trap)
 
 Three parallel structures with no single source of truth:
