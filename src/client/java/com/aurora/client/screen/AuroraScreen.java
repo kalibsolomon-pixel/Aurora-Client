@@ -298,10 +298,11 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         }
 
         // HOSTABLE_NOW only: ask every inline component for the semantic
-        // controls it already owns. Today this deterministically yields the
-        // two Text & Fonts enums, Accent's ten visual-order peers, then the
-        // Interface enum (13 controls total). Segmented/opacity/preview and
-        // header toggles expose none, so C-2 does not invent them here.
+        // controls it already owns. This deterministically yields the two
+        // Text & Fonts enums, Accent's ten visual-order peers, the three
+        // segmented rows' seven peers, then the Interface enum (20 controls
+        // total — C-5 added the segmented groups to C-2's thirteen).
+        // Segmented peers materialize per SEGMENT, one control each.
         hostedSettingControls.clear();
         for (FeatureMetadata metadata : FeatureRegistry.settings()) {
             // Header chrome precedes the entry's rows in traversal order
