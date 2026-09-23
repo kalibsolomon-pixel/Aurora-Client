@@ -171,9 +171,12 @@ It does require practical usability:
 - Per-frame text-color mutation against arbitrary backdrop pixels should not be used as a
   routine fix.
 
-The exact minimum effective backing algorithm is unresolved and requires a controlled
-pilot. The configured window opacity remains authoritative; any compensating treatment must
-be explicit, deterministic, and limited to the surfaces that need it.
+The minimum effective backing is a resolve-time semantic plate: starting from zero alpha,
+Aurora selects the first 1/255 alpha step of the mode's surface color that lets essential
+foreground pass against the controlled black/white backdrop extremes. It is applied only to
+essential text-bearing rows, title groups, controls, and fields that need it. The configured
+window opacity remains authoritative and is never rewritten; the plate is a separate local
+layer, not a global opacity floor or a material redesign.
 
 ### 3.5 Current architecture note
 

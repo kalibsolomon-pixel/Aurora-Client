@@ -65,7 +65,7 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
     /** X badge fill — semantic-error RGB at the original 0xC0 strength. */
     private int xIconBg()         { return (0xC0 << 24) | (ThemeManager.color(ThemeToken.SEMANTIC_ERROR) & 0x00FFFFFF); }
     private int xIconFg()         { return ThemeManager.semanticContrast().errorForeground(); }
-    private static final int CORNER_HANDLE = 0xFFFFFFFF;
+    private int cornerHandle()      { return ThemeManager.semanticContrast().mechanicalOff(); }
     /** Lock badge fill — inset-surface RGB at the original 0xC0 strength. */
     private int lockIconBg()      { return (0xC0 << 24) | (ThemeManager.color(ThemeToken.SURFACE_INSET) & 0x00FFFFFF); }
     private int lockIconFg()      { return ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY); }
@@ -353,12 +353,13 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
                 labelY = y - this.font.lineHeight - 4;
             }
             ctx.fill(labelX, labelY, labelX + labelW, labelY + this.font.lineHeight + 2, labelBg());
-            ctx.drawString(this.font, label, labelX + 2, labelY + 2, 0xFFFFFFFF, false);
+            ctx.drawString(this.font, label, labelX + 2, labelY + 2,
+                    ThemeManager.color(ThemeToken.ON_OVERLAY), false);
         }
     }
 
-    private static void drawCornerHandle(GuiGraphics ctx, int cx, int cy) {
-        ctx.fill(cx, cy, cx + 4, cy + 4, CORNER_HANDLE);
+    private void drawCornerHandle(GuiGraphics ctx, int cx, int cy) {
+        ctx.fill(cx, cy, cx + 4, cy + 4, cornerHandle());
     }
 
     private void drawXIcon(GuiGraphics ctx, int x, int y, float hoverT) {

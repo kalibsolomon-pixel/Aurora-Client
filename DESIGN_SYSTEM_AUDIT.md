@@ -628,3 +628,24 @@ not reach the harness before being terminated and restored. Screenshot/ROI integ
 evidence is therefore still open. Disposition: **D-2 ON_ACCENT PILOT PARTIAL**; implementation
 and mathematical architecture are sound, but D-3 must not begin until real-frame pixel
 evidence closes the remaining acceptance item.
+
+## Closure addendum VI — Phase D completion (2026-09-23)
+
+The user's accepted starting point superseded D-2's former screenshot-only partial status:
+manual inspection accepted the pilot, and screenshots are not a D-3…D-7 closure requirement.
+D-3 promoted the pilot to `AdaptiveOnAccentTreatment` and migrated all seven original
+families, including selected chips/tiles/layout glyphs, Profile Active, and KeyList. Selected
+peers now carry a compact semantic boundary when tint separation alone is insufficient.
+
+D-4 added resolve-time minimum effective backing for essential rows/title groups and neutral
+controls without changing stored opacity. D-5 made `EditBox` editability visually semantic,
+kept `active=false` modal coverage interaction-only, restored vanilla selection-range paint,
+suppressed the disabled caret, and derived subordinate readable placeholder treatment. D-6
+migrated focus hairlines, mechanical indicators, warning/secondary/error roles, destructive
+foregrounds, tooltip composition, IconAction call sites, and PixelCanvas's UI-status palette
+to `SemanticContrastTreatment`; represented data colors remain sanctioned exceptions.
+
+All production decisions remain resolve-time and immutable. No framebuffer read, per-frame
+WCAG calculation/HSL search, preference mutation, or new cache was introduced. The final
+objective suite includes controlled black/dark/light/white backdrops, all stress accents and
+both modes; final build and exact test count are recorded in `ARCHITECTURE.md`.

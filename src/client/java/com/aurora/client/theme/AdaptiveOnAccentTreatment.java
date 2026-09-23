@@ -19,6 +19,7 @@ public final class AdaptiveOnAccentTreatment {
     private static final int HOVER_WASH_MAX_ALPHA = 0x1A;
 
     private final int foreground;
+    private final int supplementalForeground;
     private final int buttonRest;
     private final int buttonHover;
     private final int selectedSegment;
@@ -32,12 +33,14 @@ public final class AdaptiveOnAccentTreatment {
     private final boolean boundedBackingSufficient;
     private final String policy;
 
-    private AdaptiveOnAccentTreatment(int foreground, int buttonRest, int buttonHover,
+    private AdaptiveOnAccentTreatment(int foreground, int supplementalForeground,
+                                   int buttonRest, int buttonHover,
                                    int selectedSegment, int listeningPill, int stainedTint,
                                    int selectionIndicator, int scrimArgb, float lightnessShift, double stainedAlpha,
                                    double worstRatio, boolean boundedBackingSufficient,
                                    String policy) {
         this.foreground = foreground;
+        this.supplementalForeground = supplementalForeground;
         this.buttonRest = buttonRest;
         this.buttonHover = buttonHover;
         this.selectedSegment = selectedSegment;
@@ -116,8 +119,9 @@ public final class AdaptiveOnAccentTreatment {
             policy = "foreground-only";
         }
 
+        int supplemental = supplementalForeground(foreground, finalSelected, finalStain);
         AdaptiveOnAccentTreatment treatment = new AdaptiveOnAccentTreatment(
-                foreground, finalRest, finalHover, finalSelected, finalListening,
+                foreground, supplemental, finalRest, finalHover, finalSelected, finalListening,
                 finalStain, colors[ThemeToken.ON_BACKGROUND.ordinal()], scrim,
                 shift, stainAlpha / 255d, worst,
                 bounded.sufficient(), policy);
@@ -177,6 +181,28 @@ public final class AdaptiveOnAccentTreatment {
                 >= ContrastDerivations.ESSENTIAL_TEXT_RATIO;
     }
 
+    private static int supplementalForeground(int foreground, int selected, int stain) {
+        int rgb = foreground & 0x00FFFFFF;
+        for (int a = 0x4D; a <= 255; a++) {
+            int candidate = (a << 24) | rgb;
+            int visible = PaletteEngine.composite(candidate, selected);
+            if (PaletteEngine.contrastRatio(visible, selected)
+                    < ContrastDerivations.SUPPLEMENTAL_MUTED_RATIO) continue;
+            boolean pass = true;
+            for (int base : ContrastDerivations.WORST_BASES) {
+                int backing = PaletteEngine.composite(stain, base);
+                visible = PaletteEngine.composite(candidate, backing);
+                if (PaletteEngine.contrastRatio(visible, backing)
+                        < ContrastDerivations.SUPPLEMENTAL_MUTED_RATIO) {
+                    pass = false;
+                    break;
+                }
+            }
+            if (pass) return candidate;
+        }
+        return foreground;
+    }
+
     private static int shiftLightness(int color, float shift) {
         if (shift == 0f) return color;
         float[] hsl = PaletteEngine.rgbToHsl(color & 0x00FFFFFF);
@@ -200,6 +226,7 @@ public final class AdaptiveOnAccentTreatment {
     private record Candidate(AdaptiveOnAccentTreatment treatment, int scrimAlpha) {}
 
     public int foreground() { return foreground; }
+    public int supplementalForeground() { return supplementalForeground; }
     public int buttonRest() { return buttonRest; }
     public int buttonHover() { return buttonHover; }
     public int selectedSegment() { return selectedSegment; }

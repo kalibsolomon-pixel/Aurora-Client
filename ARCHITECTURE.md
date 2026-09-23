@@ -3039,6 +3039,99 @@ and Square mode are untouched. D-3 should reuse the single treatment only after 
 in-frame screenshot/ROI closure, then migrate the four frozen families explicitly rather
 than changing the global `ON_ACCENT` token.
 
+### Phase D-3…D-7 closure record (2026-09-23) — color and contrast robustness complete
+
+**Accepted boundary.** The user accepted D-2's rendered pilot and explicitly removed automated
+screenshot/ROI evidence from the remaining closure requirements. The D-2 implementation was
+therefore treated as complete without reopening its old capture-only partial disposition.
+
+**D-3 — canonical adaptive ON_ACCENT.** `OnAccentPilotTreatment` became
+`AdaptiveOnAccentTreatment`; production has no direct `ThemeToken.ON_ACCENT` painter. The seven
+original families are: Button primary label; SegmentedControl selected peer; Keybind listening
+pill; KeyList listening/add pill; AuroraScreen selected sidebar chip; AuroraScreen selected
+layout/tile glyph family (including essential tile title); and ProfileManager Active badge.
+Every family consumes one stable foreground plus the same bounded accent backing/scrim policy.
+Selected chips, segments, layouts, and tiles additionally paint the treatment's compact
+selection boundary so tint collapse is not the sole state signal. Interaction, persistence,
+roving focus, narration, sound, geometry, and Square behavior are unchanged. The untracked
+historical DevPilot still compiles through a deprecated read-only alias; no production painter
+uses that alias.
+
+**D-4 — low-opacity readability.** `SemanticContrastTreatment` derives a minimum local plate
+in 1/255 alpha steps over the resolved window and black/white controlled extremes. Feature
+detail rows and their title group paint this plate only when non-zero; neutral controls use
+the equivalent readable control tint. This preserves the configured Background Opacity and
+does not make the whole window opaque. It is a readability layer, not Phase-E material polish.
+
+**D-5 — fields.** The single `EditBoxMixin` now reads the target's private `isEditable` state.
+Editable normal/focus fields use the placeholder-readable semantic field tint; disabled fields
+use an opaque derived fill/foreground and suppress caret/focus glass. `active=false` is not read,
+so the resource-pack modal's covered-field ruling remains interaction containment plus veil,
+not semantic disability. The subordinate placeholder retains the muted RGB but raises alpha
+only as far as the 2.2 controlled-backdrop floor requires. The existing `highlightPos` range is
+now painted before text, restoring the selection indication the custom painter had suppressed.
+No generic invalid state exists, so none was invented.
+
+**D-6 — focus, indicators, status, bypasses.** Every production 0x99 raw-accent focus hairline
+now reads a resolve-time contextual semantic color (neutral vs selected-accent). Toggle and
+slider mechanical indicators use separately derived on/off foregrounds, avoiding the impossible
+single-white solution across black and white accents. Error-background foreground, error/
+warning/secondary indicators, tooltip foreground+opaque backing, disabled control fill/text,
+KeyList destructive glyphs, HudEditor actions, and ItemScale/EffectExpiry IconActions are
+centralized. PixelCanvas's status/error/warning UI chrome migrated; its canvas pixels remain
+represented data. The `0x53f` float typo is corrected to `0.53f`.
+
+**Direct-color disposition.** White-on-error: migrated to semantic error foreground. IconAction
+half-literals: migrated at the Phase-D-relevant action sites. PixelCanvas status palette:
+migrated; canvas raster white remains represented data. Color-picker/ColorSetting white cursors
+and outlines: sanctioned represented-data boundaries. Resource-pack generated-letter placeholder
+white: sanctioned represented thumbnail data. Server-list drag ghost and BlurTest diagnostics:
+outside Phase D's themed-screen inventory. Renderer masks/shadows/AA constants: implementation
+colors. HUD status/data policy remains the documented HUD-domain exception.
+
+**D0-01…D0-18 final disposition.**
+
+| ID | Final disposition | Evidence |
+|---|---|---|
+| D0-01 | RESOLVED D-2 | adaptive foreground/backing, opaque Button matrix ≥4.5 |
+| D0-02 | RESOLVED D-2 | complete Button/hover/segment paths covered by stable treatment |
+| D0-03 | RESOLVED D-2 | bounded stain plus explicit neutral scrim fallback |
+| D0-04 | RESOLVED D-3 | compact selection boundary on selected peer families |
+| D0-05 | RESOLVED D-6 | contextual resolve-time focus colors |
+| D0-06 | RESOLVED D-6 | separate on/off mechanical indicator colors |
+| D0-07 | RESOLVED D-6 | tooltip foreground paired with opaque semantic backing |
+| D0-08 | RESOLVED D-4 | minimum local plates and readable control tint |
+| D0-09 | RESOLVED D-5 | field tint + minimally strengthened muted placeholder alpha |
+| D0-10 | RESOLVED D-6 | shared disabled fill/foreground in Button/field/control paths |
+| D0-11 | RESOLVED D-6 | opaque disabled material plus border/text distinction |
+| D0-12 | RESOLVED D-3/D-6 | adaptive selected glyphs; semantic indicator derivation |
+| D0-13 | RESOLVED D-6 | derived error foreground replaces white-on-error |
+| D0-14 | RESOLVED D-6 | warning hue shifted minimally to 3:1 on semantic surface |
+| D0-15 | RESOLVED D-6 | secondary indicator receives the same finite derivation |
+| D0-16 | RESOLVED D-5 | EditBox `isEditable` material branch |
+| D0-17 | RESOLVED D-6 / SANCTIONED EXCEPTION | UI-status/action bypasses migrated; represented-data literals classified |
+| D0-18 | RESOLVED D-3 | `0x53f` corrected to `0.53f` |
+
+**Performance and preferences.** Both treatments are constructed once inside `ResolvedTheme` on
+either resolver path. Searches are bounded (8-bit alpha/lightness domains); render paths are
+cached field reads and ordinary fills. There are no framebuffer reads, per-frame ratios/HSL
+searches, or unbounded caches. Accent, mode, roundness, glass style, opacity, serialized theme,
+and profiles are inputs only and are never rewritten.
+
+**Verification and limitations.** `PhaseDCompletionContrastTest` covers all shared stress accents,
+both modes, controlled near-black/dark/light/near-white backdrops, opacity 0.10, essential plates,
+neutral controls, fields/placeholders, disabled fields, tooltip, contextual focus, mechanical and
+status indicators, source bypass bans, selection restoration, and the covered-field ruling. The
+existing D-1/D-2 stress suites and Phase-C behavioral/source contracts remain enabled. Final
+`./gradlew --no-daemon test build`: **401 tests / 0 failures / 0 errors / 0 skipped**, build
+successful. Runtime visual capture was intentionally not repeated; the user's manual visual review
+is the final visual acceptance.
+Mimosa was not exposed in this environment, so no seal is claimed.
+
+**Phase E/F/G handoff.** Phase E still owns glass continuity, seams, rim/edge aesthetics, blur
+refinement, and scrollbar subpixel polish. Phase F owns sound identity. Phase G remains optional
+refraction/distortion R&D. None was implemented here.
+
 
 ## 7. Registries (the drift trap)
 

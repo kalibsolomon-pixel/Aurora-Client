@@ -272,7 +272,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         searchField = new EditBox(this.font, 0, 0, 202, 20, Component.literal("Search..."));
         searchField.setHint(Component.literal("Search modules..."));
         searchField.setBordered(false);
-        searchField.setTextColor(0xFFFFFFFF);
+        searchField.setTextColor(ThemeManager.color(ThemeToken.ON_BACKGROUND));
         searchField.setResponder(s -> this.searchQuery = s);
         // Explicit traversal position: the vanilla search field is first.
         // It is visible/focusable on Modules and hidden on Settings.
@@ -1069,7 +1069,8 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                         on ? ThemeManager.adaptiveOnAccent().foreground()
                                 : ThemeManager.color(ThemeToken.ON_BACKGROUND), false);
                 RenderUtil.drawWordWrapMaxLines(tr, g, m.description, cx + 40, cy + 20, 185, 1,
-                        ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED));
+                        on ? ThemeManager.adaptiveOnAccent().supplementalForeground()
+                                : ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED));
             }
         }
         if (mods.isEmpty()) {

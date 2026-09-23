@@ -52,6 +52,10 @@ class AdaptiveOnAccentTreatmentTest {
                     for (int backdrop : BACKDROPS) {
                         int glass = PaletteEngine.composite(p.stainedTint(), backdrop);
                         assertPass(p.foreground(), glass, "glass " + where);
+                        int supplemental = PaletteEngine.composite(p.supplementalForeground(), glass);
+                        assertTrue(PaletteEngine.contrastRatio(supplemental, glass)
+                                >= ContrastDerivations.SUPPLEMENTAL_MUTED_RATIO,
+                                "supplemental glass " + where);
                         int wash = (0x1A << 24) | washRgb;
                         assertPass(p.foreground(), PaletteEngine.composite(wash, glass),
                                 "selected glass hover " + where);
