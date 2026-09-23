@@ -278,10 +278,10 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         if (isActive) {
             float radius = ThemeManager.current().roundness().radiusSmall();
             RenderUtil.drawRoundedRectAA(ctx, cx, y + (ROW_H - 16) / 2, ACTIVE_BADGE_W, 16, radius,
-                    ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x55));
+                    ThemeManager.adaptiveOnAccent().selectedSegment());
             AuroraFontRenderer.drawCentered(ctx, this.font, Component.literal("Active"),
                     cx + ACTIVE_BADGE_W / 2, y + (ROW_H - this.font.lineHeight) / 2,
-                    ThemeManager.color(ThemeToken.ON_ACCENT));
+                    ThemeManager.adaptiveOnAccent().foreground());
         }
         cx += ACTIVE_BADGE_W + CONTROL_GAP;
 

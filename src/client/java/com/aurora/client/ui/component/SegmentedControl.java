@@ -147,7 +147,7 @@ public class SegmentedControl extends Widget {
             int sx = segStart(i, x, w);
             int sw = segWidth(i, x, w);
             boolean drew = i == selected
-                    ? GlassSurface.onAccentPilotControl(g, sx, y, sw, trackH, radius)
+                    ? GlassSurface.adaptiveOnAccentControl(g, sx, y, sw, trackH, radius)
                     : GlassSurface.control(g, sx, y, sw, trackH, radius);
             if (!drew) {
                 passDrewSegments = false;
@@ -184,7 +184,7 @@ public class SegmentedControl extends Widget {
                     int sw = segWidth(i, x, w);
                     boolean isSelected = i == selected;
                     boolean drew = isSelected
-                            ? GlassSurface.onAccentPilotControl(g, sx, y, sw, trackH, radius)
+                            ? GlassSurface.adaptiveOnAccentControl(g, sx, y, sw, trackH, radius)
                             : GlassSurface.control(g, sx, y, sw, trackH, radius);
                     if (!drew) {
                         glassOk = false;
@@ -226,7 +226,7 @@ public class SegmentedControl extends Widget {
 
             if (!glassOk && isSelected) {
                 RenderUtil.drawRoundedRectAA(g, sx, y, sw, trackH, radius,
-                        ThemeManager.onAccentPilot().selectedSegment());
+                        ThemeManager.adaptiveOnAccent().selectedSegment());
             }
 
             if (!disabled && hoverT > 0f) {
@@ -242,7 +242,7 @@ public class SegmentedControl extends Widget {
             }
 
             int color = disabled ? ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED)
-                    : isSelected ? ThemeManager.onAccentPilot().foreground()
+                    : isSelected ? ThemeManager.adaptiveOnAccent().foreground()
                     : AuroraAnim.lerpArgb(
                             ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY),
                             ThemeManager.color(ThemeToken.ON_BACKGROUND), hoverT);

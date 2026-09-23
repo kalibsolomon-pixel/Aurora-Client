@@ -370,17 +370,17 @@ public final class GlassSurface {
      * separate from {@link #stainedControl}: D-3 owns migration of the
      * remaining stained consumers.
      */
-    public static boolean onAccentPilotControl(GuiGraphics g, float x, float y, float w, float h,
-                                               float radius) {
-        return onAccentPilotControl(g, x, y, w, h, radius,
+    public static boolean adaptiveOnAccentControl(GuiGraphics g, float x, float y, float w, float h,
+                                                  float radius) {
+        return adaptiveOnAccentControl(g, x, y, w, h, radius,
                 BlurPanelRenderer.Priority.CONTROL);
     }
 
     /** Phase D-2 pilot surface with explicit degradation priority. */
-    public static boolean onAccentPilotControl(GuiGraphics g, float x, float y, float w, float h,
-                                               float radius, BlurPanelRenderer.Priority priority) {
+    public static boolean adaptiveOnAccentControl(GuiGraphics g, float x, float y, float w, float h,
+                                                  float radius, BlurPanelRenderer.Priority priority) {
         return paint(g, x, y, w, h, radius, BlurPanelRenderer.Lighting.raised(),
-                ThemeManager.onAccentPilot().stainedTint(), priority);
+                ThemeManager.adaptiveOnAccent().stainedTint(), priority);
     }
 
     /**

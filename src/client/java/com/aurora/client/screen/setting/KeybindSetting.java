@@ -136,7 +136,7 @@ public class KeybindSetting extends FeatureSetting {
         int btnY = y + (CONTROL_H - BTN_H) / 2;
         float glassR = Math.min(BTN_H / 2f, ThemeManager.current().roundness().radiusSmall());
         passDrewPill = !disabled && (listening
-                ? GlassSurface.onAccentPilotControl(ctx, btnX, btnY, BTN_W, BTN_H, glassR)
+                ? GlassSurface.adaptiveOnAccentControl(ctx, btnX, btnY, BTN_W, BTN_H, glassR)
                 : GlassSurface.control(ctx, btnX, btnY, BTN_W, BTN_H, glassR));
     }
 
@@ -191,14 +191,14 @@ public class KeybindSetting extends FeatureSetting {
             glassOk = passDrewPill;
         } else if (!disabled) {
             glassOk = listening
-                    ? GlassSurface.onAccentPilotControl(ctx, btnX, btnY, BTN_W, BTN_H, glassR)
+                    ? GlassSurface.adaptiveOnAccentControl(ctx, btnX, btnY, BTN_W, BTN_H, glassR)
                     : GlassSurface.control(ctx, btnX, btnY, BTN_W, BTN_H, glassR);
         } else {
             glassOk = false;
         }
         if (!glassOk) {
             RenderUtil.drawSquircle(ctx, btnX, btnY, BTN_W, BTN_H, AuroraTheme.RADIUS_SMALL,
-                    listening ? ThemeManager.onAccentPilot().listeningPill() : fillTint);
+                    listening ? ThemeManager.adaptiveOnAccent().listeningPill() : fillTint);
             RenderUtil.drawSquircleOutline(ctx, btnX, btnY, BTN_W, BTN_H, AuroraTheme.RADIUS_SMALL, 1.0f,
                     listening ? AuroraTheme.IOS_BLUE : borderTint);
         }
@@ -213,7 +213,7 @@ public class KeybindSetting extends FeatureSetting {
         // Trim long names so they fit in the pill (keep at least 3 chars + ellipsis).
         labelText = AuroraFontRenderer.ellipsize(tr, labelText, BTN_W - 8, 3);
         int labelW = tr.width(labelText);
-        int textCol = listening ? ThemeManager.onAccentPilot().foreground() : textColor;
+        int textCol = listening ? ThemeManager.adaptiveOnAccent().foreground() : textColor;
         ctx.drawString(tr, labelText,
                 btnX + (BTN_W - labelW) / 2,
                 btnY + (BTN_H - tr.lineHeight) / 2 + 1,

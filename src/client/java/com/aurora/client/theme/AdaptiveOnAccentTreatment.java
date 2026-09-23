@@ -1,7 +1,7 @@
 package com.aurora.client.theme;
 
 /**
- * Phase D-2's resolve-time treatment for the three ON_ACCENT pilot families:
+ * Phase D's canonical resolve-time treatment for every text-bearing ON_ACCENT family:
  * flat primary buttons, selected segmented-control peers, and the Keybind
  * listening pill. Components consume these already-resolved colors; no
  * luminance or contrast work occurs while rendering.
@@ -13,7 +13,7 @@ package com.aurora.client.theme;
  * separate semantic layer, not a mutation of the stored accent and not an
  * excuse to exceed the {@code |delta L| <= 0.08} identity bound.
  */
-public final class OnAccentPilotTreatment {
+public final class AdaptiveOnAccentTreatment {
 
     private static final int PATH_STEPS = 255;
     private static final int HOVER_WASH_MAX_ALPHA = 0x1A;
@@ -24,6 +24,7 @@ public final class OnAccentPilotTreatment {
     private final int selectedSegment;
     private final int listeningPill;
     private final int stainedTint;
+    private final int selectionIndicator;
     private final int scrimArgb;
     private final float lightnessShift;
     private final double stainedAlpha;
@@ -31,9 +32,9 @@ public final class OnAccentPilotTreatment {
     private final boolean boundedBackingSufficient;
     private final String policy;
 
-    private OnAccentPilotTreatment(int foreground, int buttonRest, int buttonHover,
+    private AdaptiveOnAccentTreatment(int foreground, int buttonRest, int buttonHover,
                                    int selectedSegment, int listeningPill, int stainedTint,
-                                   int scrimArgb, float lightnessShift, double stainedAlpha,
+                                   int selectionIndicator, int scrimArgb, float lightnessShift, double stainedAlpha,
                                    double worstRatio, boolean boundedBackingSufficient,
                                    String policy) {
         this.foreground = foreground;
@@ -42,6 +43,7 @@ public final class OnAccentPilotTreatment {
         this.selectedSegment = selectedSegment;
         this.listeningPill = listeningPill;
         this.stainedTint = stainedTint;
+        this.selectionIndicator = selectionIndicator;
         this.scrimArgb = scrimArgb;
         this.lightnessShift = lightnessShift;
         this.stainedAlpha = stainedAlpha;
@@ -50,7 +52,7 @@ public final class OnAccentPilotTreatment {
         this.policy = policy;
     }
 
-    static OnAccentPilotTreatment fromColors(int[] colors) {
+    static AdaptiveOnAccentTreatment fromColors(int[] colors) {
         // D-1 already made the semantic light/dark foreground choice. D-2
         // consumes that result rather than silently replacing it when the
         // carried bounded-backing result reports insufficient; insufficiency
@@ -94,7 +96,7 @@ public final class OnAccentPilotTreatment {
             }
         }
         if (scrimAlpha > 255) {
-            throw new IllegalStateException("ON_ACCENT pilot fallback failed");
+            throw new IllegalStateException("ON_ACCENT adaptive ON_ACCENT fallback failed");
         }
 
         int scrim = (scrimAlpha << 24) | scrimRgb;
@@ -114,9 +116,10 @@ public final class OnAccentPilotTreatment {
             policy = "foreground-only";
         }
 
-        OnAccentPilotTreatment treatment = new OnAccentPilotTreatment(
+        AdaptiveOnAccentTreatment treatment = new AdaptiveOnAccentTreatment(
                 foreground, finalRest, finalHover, finalSelected, finalListening,
-                finalStain, scrim, shift, stainAlpha / 255d, worst,
+                finalStain, colors[ThemeToken.ON_BACKGROUND.ordinal()], scrim,
+                shift, stainAlpha / 255d, worst,
                 bounded.sufficient(), policy);
         return new Candidate(treatment, scrimAlpha);
     }
@@ -194,7 +197,7 @@ public final class OnAccentPilotTreatment {
                 | Math.round(ab + (bb - ab) * t);
     }
 
-    private record Candidate(OnAccentPilotTreatment treatment, int scrimAlpha) {}
+    private record Candidate(AdaptiveOnAccentTreatment treatment, int scrimAlpha) {}
 
     public int foreground() { return foreground; }
     public int buttonRest() { return buttonRest; }
@@ -202,6 +205,8 @@ public final class OnAccentPilotTreatment {
     public int selectedSegment() { return selectedSegment; }
     public int listeningPill() { return listeningPill; }
     public int stainedTint() { return stainedTint; }
+    /** Opaque compact boundary used when tint alone cannot guarantee 3:1 selected/container separation. */
+    public int selectionIndicator() { return selectionIndicator; }
     public int scrimArgb() { return scrimArgb; }
     public float lightnessShift() { return lightnessShift; }
     public double stainedAlpha() { return stainedAlpha; }

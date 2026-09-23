@@ -27,7 +27,7 @@ public final class ResolvedTheme {
     private final int[] colors;
     private final int rimPastel;
     private final ContrastDerivations contrast;
-    private final OnAccentPilotTreatment onAccentPilot;
+    private final AdaptiveOnAccentTreatment adaptiveOnAccent;
 
     /** How far the rim's high-opacity pastel tone is lightened toward white (0..1). */
     public static final float RIM_PASTEL_TOWARD_WHITE = 0.65f;
@@ -49,7 +49,7 @@ public final class ResolvedTheme {
         // of the token array: identical inputs (both resolution paths go
         // through this constructor) yield identical results.
         this.contrast = ContrastDerivations.fromColors(colors);
-        this.onAccentPilot = OnAccentPilotTreatment.fromColors(colors);
+        this.adaptiveOnAccent = AdaptiveOnAccentTreatment.fromColors(colors);
     }
 
     /** Mix an ARGB color toward white by {@link #RIM_PASTEL_TOWARD_WHITE}. */
@@ -109,7 +109,7 @@ public final class ResolvedTheme {
     public ContrastDerivations contrastDerivations() { return contrast; }
 
     /** Phase D-2's immutable treatment for the three explicitly piloted ON_ACCENT families. */
-    public OnAccentPilotTreatment onAccentPilot() { return onAccentPilot; }
+    public AdaptiveOnAccentTreatment adaptiveOnAccent() { return adaptiveOnAccent; }
 
     /**
      * Publish the resolved values onto the legacy {@link AuroraTheme}

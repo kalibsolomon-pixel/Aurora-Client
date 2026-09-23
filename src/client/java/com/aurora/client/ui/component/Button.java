@@ -235,7 +235,7 @@ public class Button extends Widget {
                     }
                     case KIND_FLAT_PRIMARY -> {
                         RenderUtil.drawRoundedRectAA(g, 1, 1, w, h, radius,
-                                ThemeManager.onAccentPilot().buttonRest());
+                                ThemeManager.adaptiveOnAccent().buttonRest());
                         RenderUtil.drawRoundedOutlineAA(g, 1, 1, w, h, radius, 1.0f, 0x22FFFFFF);
                     }
                     case KIND_FLAT_DESTRUCTIVE -> {
@@ -246,7 +246,7 @@ public class Button extends Widget {
                     }
                     default -> RenderUtil.drawRoundedRectAA(g, 1, 1, w, h, radius,
                             kind == KIND_GLASS_STAINED_PILOT
-                                    ? ThemeManager.onAccentPilot().stainedTint()
+                                    ? ThemeManager.adaptiveOnAccent().stainedTint()
                                     : kind == KIND_GLASS_STAINED
                                             ? ThemeManager.stainedTint()
                                             : ThemeManager.color(ThemeToken.WINDOW_FILL));
@@ -271,7 +271,7 @@ public class Button extends Widget {
             RenderUtil.RectSink prev = RenderUtil.beginCapture(RenderUtil.DISCARD_SINK);
             try {
                 glassPassDrew = glassStyle == GlassStyle.STAINED && primary
-                        ? GlassSurface.onAccentPilotControl(g, x, y, w, h, radius, priority)
+                        ? GlassSurface.adaptiveOnAccentControl(g, x, y, w, h, radius, priority)
                         : GlassSurface.control(g, x, y, w, h, radius,
                                 glassStyle == GlassStyle.STAINED, priority);
             } finally {
@@ -322,10 +322,10 @@ public class Button extends Widget {
             text = 0xFFFFFFFF;
         } else if (primary) {
             bg = AuroraAnim.lerpArgb(
-                    ThemeManager.onAccentPilot().buttonRest(),
-                    ThemeManager.onAccentPilot().buttonHover(), hoverT);
+                    ThemeManager.adaptiveOnAccent().buttonRest(),
+                    ThemeManager.adaptiveOnAccent().buttonHover(), hoverT);
             border = AuroraAnim.lerpArgb(0x22FFFFFF, 0x44FFFFFF, hoverT);
-            text = ThemeManager.onAccentPilot().foreground();
+            text = ThemeManager.adaptiveOnAccent().foreground();
         } else {
             // C-6: the flat-secondary ramps are shared with the vanilla-gated
             // mixin painter — the single source (secondaryFlatFill/Border).
@@ -349,7 +349,7 @@ public class Button extends Widget {
             RenderUtil.RectSink prev = RenderUtil.beginCapture(RenderUtil.DISCARD_SINK);
             try {
                 glassDrew = glassStyle == GlassStyle.STAINED && primary
-                        ? GlassSurface.onAccentPilotControl(g, x, y, w, h, radius, priority)
+                        ? GlassSurface.adaptiveOnAccentControl(g, x, y, w, h, radius, priority)
                         : GlassSurface.control(g, x, y, w, h, radius,
                                 glassStyle == GlassStyle.STAINED, priority);
             } finally {

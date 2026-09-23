@@ -97,8 +97,17 @@ public final class ThemeManager {
     }
 
     /** Resolve-time Phase D-2 treatment; a cached object read, never per-frame contrast work. */
-    public static OnAccentPilotTreatment onAccentPilot() {
-        return current.onAccentPilot();
+    public static AdaptiveOnAccentTreatment adaptiveOnAccent() {
+        return current.adaptiveOnAccent();
+    }
+
+    /**
+     * Compatibility bridge for the pre-existing untracked DevPilot harness.
+     * Production painters use {@link #adaptiveOnAccent()} exclusively.
+     */
+    @Deprecated
+    public static AdaptiveOnAccentTreatment onAccentPilot() {
+        return adaptiveOnAccent();
     }
 
     /**

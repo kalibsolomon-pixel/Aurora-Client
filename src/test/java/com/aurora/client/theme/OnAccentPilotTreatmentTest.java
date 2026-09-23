@@ -10,8 +10,8 @@ import static com.aurora.client.theme.ContrastFixtures.ACCENTS;
 import static com.aurora.client.theme.ContrastFixtures.BACKDROPS;
 import static org.junit.jupiter.api.Assertions.*;
 
-/** Phase D-2 mathematical oracle and migration-boundary pins. */
-class OnAccentPilotTreatmentTest {
+/** Phase D-2/D-3 mathematical oracle and complete production-inventory pins. */
+class AdaptiveOnAccentTreatmentTest {
 
     private static ResolvedTheme resolve(int accent, ThemeMode mode, double opacity) {
         ThemeDefinition def = new ThemeDefinition();
@@ -26,7 +26,7 @@ class OnAccentPilotTreatmentTest {
         for (var named : ACCENTS.entrySet()) {
             for (ThemeMode mode : ThemeMode.values()) {
                 for (double opacity : ContrastFixtures.OPACITIES) {
-                    OnAccentPilotTreatment p = resolve(named.getValue(), mode, opacity).onAccentPilot();
+                    AdaptiveOnAccentTreatment p = resolve(named.getValue(), mode, opacity).adaptiveOnAccent();
                     String where = named.getKey() + "/" + mode + "/" + opacity;
 
                     // Button rest -> hover is the complete color animation;
@@ -65,7 +65,7 @@ class OnAccentPilotTreatmentTest {
     @Test
     void foregroundIsStableAcrossEveryAnimationState() {
         for (int accent : ACCENTS.values()) {
-            OnAccentPilotTreatment p = resolve(accent, ThemeMode.DARK, 0.10).onAccentPilot();
+            AdaptiveOnAccentTreatment p = resolve(accent, ThemeMode.DARK, 0.10).adaptiveOnAccent();
             int foreground = p.foreground();
             for (int i = 0; i <= 255; i++) {
                 assertEquals(foreground, p.foreground(), "no light/dark flip at step " + i);
@@ -85,9 +85,9 @@ class OnAccentPilotTreatmentTest {
             ResolvedTheme second = ThemeResolver.resolve(def, true);
             assertEquals(before, def.accent, named.getKey());
             assertEquals(before, first.accent(), named.getKey());
-            assertEquals(first.onAccentPilot().foreground(), second.onAccentPilot().foreground());
-            assertEquals(first.onAccentPilot().stainedTint(), second.onAccentPilot().stainedTint());
-            assertEquals(first.onAccentPilot().policy(), second.onAccentPilot().policy());
+            assertEquals(first.adaptiveOnAccent().foreground(), second.adaptiveOnAccent().foreground());
+            assertEquals(first.adaptiveOnAccent().stainedTint(), second.adaptiveOnAccent().stainedTint());
+            assertEquals(first.adaptiveOnAccent().policy(), second.adaptiveOnAccent().policy());
         }
     }
 
@@ -95,7 +95,7 @@ class OnAccentPilotTreatmentTest {
     void boundedAccentAdaptationNeverExceedsIdentityLimit() {
         for (int accent : ACCENTS.values()) {
             for (ThemeMode mode : ThemeMode.values()) {
-                OnAccentPilotTreatment p = resolve(accent, mode, 0.10).onAccentPilot();
+                AdaptiveOnAccentTreatment p = resolve(accent, mode, 0.10).adaptiveOnAccent();
                 assertTrue(Math.abs(p.lightnessShift())
                         <= ContrastDerivations.MAX_BACKING_LIGHTNESS_SHIFT);
             }
@@ -107,36 +107,31 @@ class OnAccentPilotTreatmentTest {
         ResolvedTheme t = resolve(ContrastFixtures.DEFAULT_RED, ThemeMode.DARK, 0.10);
         assertFalse(t.contrastDerivations().stainedTextBacking().sufficient(),
                 "D-1's documented full-family counterexample remains real");
-        OnAccentPilotTreatment p = t.onAccentPilot();
+        AdaptiveOnAccentTreatment p = t.adaptiveOnAccent();
         assertEquals("separate-readability-scrim", p.policy());
         assertTrue((p.scrimArgb() >>> 24) > 0, "fallback is present, not silently bypassed");
         assertTrue(p.worstRatio() >= ESSENTIAL_TEXT_RATIO);
     }
 
     @Test
-    void exactlyTheThreePilotFamiliesConsumeTheNewSemanticOutput() throws Exception {
+    void allSevenOriginalFamiliesConsumeTheAdaptiveSemanticOutput() throws Exception {
         String button = source("ui/component/Button.java");
         String segment = source("ui/component/SegmentedControl.java");
         String keybind = source("screen/setting/KeybindSetting.java");
-        assertTrue(button.contains("ThemeManager.onAccentPilot().foreground()"));
-        assertTrue(segment.contains("ThemeManager.onAccentPilot().foreground()"));
-        assertTrue(keybind.contains("ThemeManager.onAccentPilot().foreground()"));
+        assertTrue(button.contains("ThemeManager.adaptiveOnAccent().foreground()"));
+        assertTrue(segment.contains("ThemeManager.adaptiveOnAccent().foreground()"));
+        assertTrue(keybind.contains("ThemeManager.adaptiveOnAccent().foreground()"));
 
-        // KeyList is the other listening implementation and is deliberately
-        // frozen for D-3, making the singular D-2 Keybind pilot explicit.
         String keyList = source("screen/setting/KeyListSetting.java");
-        assertTrue(keyList.contains("ThemeManager.color(ThemeToken.ON_ACCENT)"));
-        assertFalse(keyList.contains("ThemeManager.onAccentPilot()"));
-    }
-
-    @Test
-    void nonPilotOnAccentConsumersRemainOnTheHistoricalToken() throws Exception {
+        assertTrue(keyList.contains("ThemeManager.adaptiveOnAccent().foreground()"));
         String aurora = source("screen/AuroraScreen.java");
         String profiles = source("screen/ProfileManagerScreen.java");
-        String keyList = source("screen/setting/KeyListSetting.java");
-        assertEquals(3, occurrences(aurora, "ThemeManager.color(ThemeToken.ON_ACCENT)"));
-        assertEquals(1, occurrences(profiles, "ThemeManager.color(ThemeToken.ON_ACCENT)"));
-        assertEquals(1, occurrences(keyList, "ThemeManager.color(ThemeToken.ON_ACCENT)"));
+        assertTrue(aurora.contains("ThemeManager.adaptiveOnAccent().foreground()"));
+        assertTrue(aurora.contains("ThemeManager.adaptiveOnAccent().selectionIndicator()"));
+        assertTrue(profiles.contains("ThemeManager.adaptiveOnAccent().foreground()"));
+        assertEquals(0, occurrences(aurora, "ThemeManager.color(ThemeToken.ON_ACCENT)"));
+        assertEquals(0, occurrences(profiles, "ThemeManager.color(ThemeToken.ON_ACCENT)"));
+        assertEquals(0, occurrences(keyList, "ThemeManager.color(ThemeToken.ON_ACCENT)"));
     }
 
     private static String source(String relative) throws Exception {

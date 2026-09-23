@@ -208,8 +208,9 @@ public class KeyListSetting extends FeatureSetting {
         int addW = width - 28;
         int addY = y + ROW_H + 2 + safeList().size() * (ROW_H + 2) + 4;
         float glassR = Math.min(ADD_H / 2f, ThemeManager.current().roundness().radiusSmall());
-        passDrewPill = !isDisabled()
-                && GlassSurface.control(ctx, addX, addY, addW, ADD_H, glassR, listening);
+        passDrewPill = !isDisabled() && (listening
+                ? GlassSurface.adaptiveOnAccentControl(ctx, addX, addY, addW, ADD_H, glassR)
+                : GlassSurface.control(ctx, addX, addY, addW, ADD_H, glassR));
     }
 
     @Override
@@ -294,13 +295,15 @@ public class KeyListSetting extends FeatureSetting {
         if (glassPassFrame == GlassSurface.frame()) {
             glassOk = passDrewPill;
         } else if (!disabled) {
-            glassOk = GlassSurface.control(ctx, addX, addY, addW, ADD_H, glassR, listening);
+            glassOk = listening
+                    ? GlassSurface.adaptiveOnAccentControl(ctx, addX, addY, addW, ADD_H, glassR)
+                    : GlassSurface.control(ctx, addX, addY, addW, ADD_H, glassR);
         } else {
             glassOk = false;
         }
         if (!glassOk) {
             RenderUtil.drawSquircle(ctx, addX, addY, addW, ADD_H, AuroraTheme.RADIUS_SMALL,
-                    listening ? AuroraTheme.IOS_BLUE_PRESSED : fillTint);
+                    listening ? ThemeManager.adaptiveOnAccent().listeningPill() : fillTint);
             RenderUtil.drawSquircleOutline(ctx, addX, addY, addW, ADD_H, AuroraTheme.RADIUS_SMALL, 1.0f,
                     listening ? AuroraTheme.IOS_BLUE : borderTint);
         }
@@ -309,7 +312,7 @@ public class KeyListSetting extends FeatureSetting {
                 : items.size() >= KeystrokesModule.MAX_EXTRA_KEYS ? "List full (12 max)"
                 : "+ Add Key";
         int addTextW = tr.width(addText);
-        int textCol = listening ? ThemeManager.color(ThemeToken.ON_ACCENT) : textColor;
+        int textCol = listening ? ThemeManager.adaptiveOnAccent().foreground() : textColor;
         ctx.drawString(tr, addText, addX + (addW - addTextW) / 2,
                 addY + (ADD_H - tr.lineHeight) / 2 + 1, textCol, false);
     }
