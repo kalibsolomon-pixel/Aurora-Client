@@ -32,10 +32,10 @@ import java.util.List;
  * than pretending a guarantee). Mode genuinely enters only where mode-locked
  * tokens do (e.g. the focus ring's adjacent surface).
  *
- * <p>D-1 status: foundation only. No production consumer reads these values
- * yet — the D-2 (ON_ACCENT pilot), D-3 (selected-state rollout), D-4
- * (readability plates) and D-6 (focus-ring rollout) phases migrate consumers
- * one family at a time.
+ * <p>D-1 established the foundation. Phase D-2 now consumes the stained
+ * result through {@link OnAccentPilotTreatment} for exactly three pilot
+ * families; D-3 (selected-state rollout), D-4 (readability plates), and D-6
+ * (focus-ring rollout) retain their separate migration boundaries.
  */
 public final class ContrastDerivations {
 

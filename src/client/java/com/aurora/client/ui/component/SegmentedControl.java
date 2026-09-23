@@ -146,7 +146,10 @@ public class SegmentedControl extends Widget {
         for (int i = 0; i < options.length; i++) {
             int sx = segStart(i, x, w);
             int sw = segWidth(i, x, w);
-            if (!GlassSurface.control(g, sx, y, sw, trackH, radius, i == selected)) {
+            boolean drew = i == selected
+                    ? GlassSurface.onAccentPilotControl(g, sx, y, sw, trackH, radius)
+                    : GlassSurface.control(g, sx, y, sw, trackH, radius);
+            if (!drew) {
                 passDrewSegments = false;
                 break;
             }
@@ -180,7 +183,10 @@ public class SegmentedControl extends Widget {
                     int sx = segStart(i, x, w);
                     int sw = segWidth(i, x, w);
                     boolean isSelected = i == selected;
-                    if (!GlassSurface.control(g, sx, y, sw, trackH, radius, isSelected)) {
+                    boolean drew = isSelected
+                            ? GlassSurface.onAccentPilotControl(g, sx, y, sw, trackH, radius)
+                            : GlassSurface.control(g, sx, y, sw, trackH, radius);
+                    if (!drew) {
                         glassOk = false;
                         break;
                     }
@@ -220,7 +226,7 @@ public class SegmentedControl extends Widget {
 
             if (!glassOk && isSelected) {
                 RenderUtil.drawRoundedRectAA(g, sx, y, sw, trackH, radius,
-                        ThemeManager.color(ThemeToken.ACCENT));
+                        ThemeManager.onAccentPilot().selectedSegment());
             }
 
             if (!disabled && hoverT > 0f) {
@@ -236,7 +242,7 @@ public class SegmentedControl extends Widget {
             }
 
             int color = disabled ? ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED)
-                    : isSelected ? ThemeManager.color(ThemeToken.ON_ACCENT)
+                    : isSelected ? ThemeManager.onAccentPilot().foreground()
                     : AuroraAnim.lerpArgb(
                             ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY),
                             ThemeManager.color(ThemeToken.ON_BACKGROUND), hoverT);

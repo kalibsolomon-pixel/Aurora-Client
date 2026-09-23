@@ -135,8 +135,9 @@ public class KeybindSetting extends FeatureSetting {
         int btnX = x + width - BTN_W - 14;
         int btnY = y + (CONTROL_H - BTN_H) / 2;
         float glassR = Math.min(BTN_H / 2f, ThemeManager.current().roundness().radiusSmall());
-        passDrewPill = !disabled
-                && GlassSurface.control(ctx, btnX, btnY, BTN_W, BTN_H, glassR, listening);
+        passDrewPill = !disabled && (listening
+                ? GlassSurface.onAccentPilotControl(ctx, btnX, btnY, BTN_W, BTN_H, glassR)
+                : GlassSurface.control(ctx, btnX, btnY, BTN_W, BTN_H, glassR));
     }
 
     @Override
@@ -189,13 +190,15 @@ public class KeybindSetting extends FeatureSetting {
         if (glassPassFrame == GlassSurface.frame()) {
             glassOk = passDrewPill;
         } else if (!disabled) {
-            glassOk = GlassSurface.control(ctx, btnX, btnY, BTN_W, BTN_H, glassR, listening);
+            glassOk = listening
+                    ? GlassSurface.onAccentPilotControl(ctx, btnX, btnY, BTN_W, BTN_H, glassR)
+                    : GlassSurface.control(ctx, btnX, btnY, BTN_W, BTN_H, glassR);
         } else {
             glassOk = false;
         }
         if (!glassOk) {
             RenderUtil.drawSquircle(ctx, btnX, btnY, BTN_W, BTN_H, AuroraTheme.RADIUS_SMALL,
-                    listening ? AuroraTheme.IOS_BLUE_PRESSED : fillTint);
+                    listening ? ThemeManager.onAccentPilot().listeningPill() : fillTint);
             RenderUtil.drawSquircleOutline(ctx, btnX, btnY, BTN_W, BTN_H, AuroraTheme.RADIUS_SMALL, 1.0f,
                     listening ? AuroraTheme.IOS_BLUE : borderTint);
         }
@@ -210,7 +213,7 @@ public class KeybindSetting extends FeatureSetting {
         // Trim long names so they fit in the pill (keep at least 3 chars + ellipsis).
         labelText = AuroraFontRenderer.ellipsize(tr, labelText, BTN_W - 8, 3);
         int labelW = tr.width(labelText);
-        int textCol = listening ? ThemeManager.color(ThemeToken.ON_ACCENT) : textColor;
+        int textCol = listening ? ThemeManager.onAccentPilot().foreground() : textColor;
         ctx.drawString(tr, labelText,
                 btnX + (BTN_W - labelW) / 2,
                 btnY + (BTN_H - tr.lineHeight) / 2 + 1,

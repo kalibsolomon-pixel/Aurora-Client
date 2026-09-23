@@ -96,6 +96,11 @@ public final class ThemeManager {
         return (alpha << 24) | (current.color(ThemeToken.ACCENT) & 0x00FFFFFF);
     }
 
+    /** Resolve-time Phase D-2 treatment; a cached object read, never per-frame contrast work. */
+    public static OnAccentPilotTreatment onAccentPilot() {
+        return current.onAccentPilot();
+    }
+
     /**
      * Fixed visibility floor for stained tints — see {@link #stainedTint()}.
      * Aliased from {@link ContrastDerivations#STAINED_VISIBILITY_FLOOR_ALPHA}

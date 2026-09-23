@@ -366,6 +366,24 @@ public final class GlassSurface {
     }
 
     /**
+     * Phase D-2's text-bearing stained pilot surface. This deliberately is
+     * separate from {@link #stainedControl}: D-3 owns migration of the
+     * remaining stained consumers.
+     */
+    public static boolean onAccentPilotControl(GuiGraphics g, float x, float y, float w, float h,
+                                               float radius) {
+        return onAccentPilotControl(g, x, y, w, h, radius,
+                BlurPanelRenderer.Priority.CONTROL);
+    }
+
+    /** Phase D-2 pilot surface with explicit degradation priority. */
+    public static boolean onAccentPilotControl(GuiGraphics g, float x, float y, float w, float h,
+                                               float radius, BlurPanelRenderer.Priority priority) {
+        return paint(g, x, y, w, h, radius, BlurPanelRenderer.Lighting.raised(),
+                ThemeManager.onAccentPilot().stainedTint(), priority);
+    }
+
+    /**
      * Convenience for the "selection reads through the tint" pattern:
      * {@link #stainedControl} when {@code stained}, else {@link #control}.
      * Both are RAISED — selection never changes the lighting orientation.

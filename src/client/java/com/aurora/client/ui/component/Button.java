@@ -193,6 +193,7 @@ public class Button extends Widget {
     private static final int KIND_FLAT_DESTRUCTIVE = 2;
     private static final int KIND_GLASS_TINT = 3;
     private static final int KIND_GLASS_STAINED = 4;
+    private static final int KIND_GLASS_STAINED_PILOT = 5;
     private static final Map<Long, UiLayerCache> SURFACE_TEMPLATES = new HashMap<>();
 
     private static long templateKey(float w, float h, int kind) {
@@ -234,7 +235,7 @@ public class Button extends Widget {
                     }
                     case KIND_FLAT_PRIMARY -> {
                         RenderUtil.drawRoundedRectAA(g, 1, 1, w, h, radius,
-                                ThemeManager.color(ThemeToken.ACCENT_GRAD_BOT));
+                                ThemeManager.onAccentPilot().buttonRest());
                         RenderUtil.drawRoundedOutlineAA(g, 1, 1, w, h, radius, 1.0f, 0x22FFFFFF);
                     }
                     case KIND_FLAT_DESTRUCTIVE -> {
@@ -244,9 +245,11 @@ public class Button extends Widget {
                         RenderUtil.drawRoundedOutlineAA(g, 1, 1, w, h, radius, 1.0f, err);
                     }
                     default -> RenderUtil.drawRoundedRectAA(g, 1, 1, w, h, radius,
-                            kind == KIND_GLASS_STAINED
-                                    ? ThemeManager.stainedTint()
-                                    : ThemeManager.color(ThemeToken.WINDOW_FILL));
+                            kind == KIND_GLASS_STAINED_PILOT
+                                    ? ThemeManager.onAccentPilot().stainedTint()
+                                    : kind == KIND_GLASS_STAINED
+                                            ? ThemeManager.stainedTint()
+                                            : ThemeManager.color(ThemeToken.WINDOW_FILL));
                 }
             } finally {
                 RenderUtil.endCapture(prev);
@@ -267,14 +270,18 @@ public class Button extends Widget {
             // wrap suppresses only GlassSurface's live tint submission.
             RenderUtil.RectSink prev = RenderUtil.beginCapture(RenderUtil.DISCARD_SINK);
             try {
-                glassPassDrew = GlassSurface.control(g, x, y, w, h, radius,
-                        glassStyle == GlassStyle.STAINED, priority);
+                glassPassDrew = glassStyle == GlassStyle.STAINED && primary
+                        ? GlassSurface.onAccentPilotControl(g, x, y, w, h, radius, priority)
+                        : GlassSurface.control(g, x, y, w, h, radius,
+                                glassStyle == GlassStyle.STAINED, priority);
             } finally {
                 RenderUtil.endCapture(prev);
             }
             if (glassPassDrew) {
                 blitSurfaceTemplate(g, x, y, w, h, radius,
-                        glassStyle == GlassStyle.STAINED ? KIND_GLASS_STAINED : KIND_GLASS_TINT);
+                        glassStyle == GlassStyle.STAINED
+                                ? primary ? KIND_GLASS_STAINED_PILOT : KIND_GLASS_STAINED
+                                : KIND_GLASS_TINT);
             }
         } else {
             glassPassDrew = false;
@@ -315,10 +322,10 @@ public class Button extends Widget {
             text = 0xFFFFFFFF;
         } else if (primary) {
             bg = AuroraAnim.lerpArgb(
-                    ThemeManager.color(ThemeToken.ACCENT_GRAD_BOT),
-                    ThemeManager.color(ThemeToken.ACCENT_GRAD_TOP), hoverT);
+                    ThemeManager.onAccentPilot().buttonRest(),
+                    ThemeManager.onAccentPilot().buttonHover(), hoverT);
             border = AuroraAnim.lerpArgb(0x22FFFFFF, 0x44FFFFFF, hoverT);
-            text = ThemeManager.color(ThemeToken.ON_ACCENT);
+            text = ThemeManager.onAccentPilot().foreground();
         } else {
             // C-6: the flat-secondary ramps are shared with the vanilla-gated
             // mixin painter — the single source (secondaryFlatFill/Border).
@@ -341,14 +348,18 @@ public class Button extends Widget {
         } else if (glassEligible(scale)) {
             RenderUtil.RectSink prev = RenderUtil.beginCapture(RenderUtil.DISCARD_SINK);
             try {
-                glassDrew = GlassSurface.control(g, x, y, w, h, radius,
-                        glassStyle == GlassStyle.STAINED, priority);
+                glassDrew = glassStyle == GlassStyle.STAINED && primary
+                        ? GlassSurface.onAccentPilotControl(g, x, y, w, h, radius, priority)
+                        : GlassSurface.control(g, x, y, w, h, radius,
+                                glassStyle == GlassStyle.STAINED, priority);
             } finally {
                 RenderUtil.endCapture(prev);
             }
             if (glassDrew) {
                 blitSurfaceTemplate(g, x, y, w, h, radius,
-                        glassStyle == GlassStyle.STAINED ? KIND_GLASS_STAINED : KIND_GLASS_TINT);
+                        glassStyle == GlassStyle.STAINED
+                                ? primary ? KIND_GLASS_STAINED_PILOT : KIND_GLASS_STAINED
+                                : KIND_GLASS_TINT);
             }
         } else {
             glassDrew = false;
