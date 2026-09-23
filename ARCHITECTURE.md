@@ -36,8 +36,9 @@ Theme system (source of truth)
   theme/ThemeDefinition      persisted: accent, ThemeMode, ThemeRoundness, GlassStyle, backgroundOpacity
   theme/ThemeManager         lifecycle: reload() / sync() (per-tick 6-field dirty check) / generation stamp
   theme/ThemeResolver        two paths: PaletteEngine.derive (theme on) | fixed factory palette (theme off)
-  theme/PaletteEngine        pure function: accent + mode → ~40 tokens; HSL, contrast-checked text
-  theme/ResolvedTheme        immutable ordinal-indexed int[]; color(token) is one array read; project()→AuroraTheme
+  theme/PaletteEngine        pure function: accent + mode → ~40 tokens; canonical sRGB/contrast/composition math
+  theme/ContrastDerivations  pure resolve-time D-1 outputs; no production consumer until D-2+
+  theme/ResolvedTheme        immutable tokens + contrast snapshot; color(token) is one array read; project()→AuroraTheme
   theme/ThemeToken           ~40 role-named tokens (ACCENT*, SURFACE*, ON_*, BORDER*, SEMANTIC_*, …)
   theme/ThemeRoundness       ROUND/SLIGHTLY_ROUND/SQUARE → RADIUS 10/6/0, RADIUS_LARGE 14/8/0, RADIUS_SMALL 6/3/0
   theme/GlassStyle           FROSTED/TRANSPARENT — rendering-technique switch (see §3)
@@ -92,6 +93,7 @@ ResolvedTheme (immutable, volatile in ThemeManager; generation() stamp for pixel
    ├─ surfaceColor(token)   token RGB + WINDOW_FILL's alpha (how cards/rows inherit panel translucency)
    ├─ stainedTint()         accent RGB at max(WINDOW_FILL alpha, 140) — fixed visibility floor
    ├─ rimPastel()           accent lightened 65% toward white (derived once per resolve)
+   ├─ contrastDerivations() D-1 immutable resolve-time snapshot; currently no painter reads it
    └─ project()             → AuroraTheme statics (the ONLY writer; ~30 reader files)
 ```
 
@@ -2909,6 +2911,78 @@ Captures in `.devpilot-d0/{dark,light}/`.
 / 0 failures** (unchanged; docs + untracked harness only). Recommended
 D-1 model: the contrast-foundation phase above, piloting nothing visual
 until its derivations are unit-pinned.
+
+### Phase D-1 implementation record (2026-09-23) — contrast foundation complete
+
+**Normative contract.** DESIGN_LANGUAGE v3 §3.6 now fixes essential normal text at
+4.5:1 on deterministic backings, essential non-text state indicators at 3.0:1, and
+supplemental muted text at 2.2:1 only when it is not the sole carrier of essential
+information. Faint/decorative content is exempt under that same information rule.
+Content-dependent glass is explicitly not certified by comparing two raw tokens; D-4 owns
+the controlled-background/readability policy.
+
+**Canonical math and representation.** Aurora colors remain straight-alpha ARGB. `PaletteEngine`
+is the sole implementation of the WCAG sRGB transfer, relative luminance, symmetric contrast
+ratio, and straight-alpha foreground-over-background composition. Composition normalizes RGB
+by the exact composed alpha before nearest-integer channel/output-alpha quantization; the
+translucent-over-translucent regression is pinned. `pickOnColor` delegates to the generalized
+finite light/dark candidate decision without changing historical output or light-on-tie behavior.
+
+**Resolve-time API.** New pure `ContrastDerivations` owns the 4.5/3.0/2.2 thresholds and
+provides: threshold-reporting readable foreground selection; text-bearing stained-backing
+adaptation; stable multi-backing focus-ring derivation; selected/container separation after
+composition; and the minimum readable backing alpha for D-4. Stained adaptation raises alpha
+first, then may move HSL lightness only, with `|ΔL| <= 0.08`; hue/saturation and the stored
+accent remain invariant. It evaluates the finite stain family over black/white world extremes,
+checks that foreground luminance lies outside the resulting backing band, and reports
+insufficiency instead of exceeding the bound. Same-accent stained focus remains explicitly
+deferred to D-3/D-6.
+
+`ResolvedTheme` computes one immutable derivation snapshot in its constructor on both factory
+and derived resolver paths. `ThemeManager` only aliases the existing stained-alpha floor to
+the derivation owner's constant. There is no cache, framebuffer read, global mutable state, or
+per-frame derivation: `ThemeManager.sync()`'s existing six-field dirty check triggers resolve,
+and painters still read the same tokens as before. No Button, SegmentedControl, listening pill,
+focus painter, EditBox, navigation-selection, or IconAction consumer was migrated.
+
+**Fixtures and characterization.** The tracked catalog has the fourteen named D-0 accents,
+two earlier-audit pure-hue extensions, six named backdrops, both modes, and opacities
+0.10/0.35/0.65/1.0. Exact reproduced failure values are: default-red ON_ACCENT 4.3025263294;
+saturated-red pressed 2.6682588950; saturated-red stain over near-black 1.9523937948; primary
+text at opacity 0.10 over near-white 1.2090608853; light muted 1.9630622104; light warning
+2.0225918271; and pathological near-white same-accent focus 1.0087784699. D-0 did not retain
+the saturated-blue RGB. The representative `#5E5EFF` reproduces opaque 4.3385358589 but its
+hover is 3.3785166810, not the historical rounded 3.46; the history is retained rather than
+inventing a fixture that makes incompatible observations co-occur.
+
+**Zero-visual-change evidence.** `src/test/resources/theme/d1-token-baseline.txt` is the
+preserved pre-D-1 oracle: 64 rows covering all 40 tokens for 16 accents × both modes,
+factory/derived resolution at four opacities, and historical `pickOnColor`. Its pre-change,
+tracked, and post-change SHA-256 is
+`1d39d6b10e445597b91f83eaadbd5dadfa021eae32cfe1bb5252e64ecd20e9fc`; every row is byte-identical.
+Source inspection confirms the representative Phase-C painters are unchanged and no new
+derivation accessor has a production consumer.
+
+**Verification.** The D-1 package contributes 58 tests spanning canonical math, alpha edges,
+nested/translucent composition, stress properties, D-0 characterization, bounded identity,
+focus/separation/plate helpers, resolver determinism, serialization immutability, and baseline
+equivalence. The full `./gradlew --no-daemon test build` result is **390 tests / 0 failures /
+0 errors / 0 skipped**, build successful (the pre-D-1 floor was 332). Negative checks proved
+sensitivity by temporarily breaking exact-alpha normalization, choosing the lower-contrast
+foreground, and changing the 0.08 bound; the corresponding tests failed, and every mutation
+was restored.
+
+The untracked DevPilot `d1foundation` runtime mode passed **7/7** oracles: deterministic DARK,
+deterministic LIGHT, derivations present, real config/stored accent unchanged, all 40 existing
+token outputs stable, reload derivations stable, and reload generation advancing exactly once
+with preferences unchanged. The optional narrator again lacked `libflite.so`; it is unrelated
+to these color oracles. Wiring, `run/devpilot.properties`, and the user's
+DARK/SQUARE/TRANSPARENT@0.09 theme and `#FF1C54AF` accent were restored exactly.
+
+**D-2 handoff.** D-2 may pilot `ON_ACCENT` on the three already-designated heterogeneous
+surfaces using the carried outputs, but must treat a `StainedBacking.sufficient() == false` as
+a real request for its documented fallback rather than weakening the threshold or identity
+bound. D-1 itself deliberately stops before any consumer migration.
 
 
 ## 7. Registries (the drift trap)

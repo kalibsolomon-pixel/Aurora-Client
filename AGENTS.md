@@ -106,7 +106,8 @@ AuroraClient.java          Mod entrypoint: registers keybinds, HUD callbacks, fe
 │                           ParticleConfigSetting, ThemePreview, SectionFooterSetting —
 │                           the design language's §3 group footer…).
 ├── theme/                 THEME ENGINE (see §5): ThemeManager, ThemeResolver,
-│                          PaletteEngine, ResolvedTheme, ThemeToken (enum), ThemeDefinition,
+│                          PaletteEngine, ContrastDerivations (Phase D-1 resolve-time
+│                          contrast foundation), ResolvedTheme, ThemeToken (enum), ThemeDefinition,
 │                          ThemeMode, ThemeRoundness, ThemePresets, ThemeMigrator,
 │                          HudStatus + HudText (HUD color policy: fixed-hue status
 │                          palette; follow-accent text-color sentinel).
@@ -315,6 +316,7 @@ ResolvedTheme  (immutable ordinal-indexed int[]; volatile static in ThemeManager
    ├─ color(ThemeToken)      — one array access, zero alloc, safe from any thread
    ├─ surfaceColor(token)    — token RGB with WINDOW_FILL's opacity-driven alpha
    ├─ stainedTint()          — accent RGB at max(WINDOW_FILL alpha, floor 140)
+   ├─ contrastDerivations()  — D-1 immutable resolve-time foundation; unused by consumers
    ├─ generation()           — AtomicLong stamp; key any theme-derived pixel cache off this
    └─ project()  ──────────► AuroraTheme statics (util/AuroraTheme.java)
 ```
@@ -328,7 +330,12 @@ ResolvedTheme  (immutable ordinal-indexed int[]; volatile static in ThemeManager
   dirty-check (accent/mode/roundness/opacity/enabled) that also catches profile switches.
 - **`PaletteEngine`** rules: backgrounds take accent *hue only* with mode-locked lightness
   (dark ~6–15%, light ~90–97% — a near-white accent can't wash out the UI); text is
-  contrast-checked via relative luminance; simple HSL, never throws on any input.
+  contrast-checked via relative luminance; simple HSL, never throws on any input. It owns
+  the canonical straight-ARGB composition, sRGB transfer, luminance, and ratio math.
+- **`ContrastDerivations`** (Phase D-1): pure, bounded, threshold-aware foreground,
+  stained-backing, focus-ring, selection-separation, and minimum-backing math. One immutable
+  snapshot is created by `ResolvedTheme` on either resolver path. No production painter reads
+  it until D-2+; stored accent/config remain inputs and are never adapted in place.
 - **`ThemeResolver`** has two paths: derived palette (`themeEnabled`) and a verbatim fixed
   *factory palette* (theme off — intentionally not the derived form of the defaults).
   **`applyBackgroundOpacity` stamps the opacity onto the `WINDOW_FILL` token's ALPHA ONLY —

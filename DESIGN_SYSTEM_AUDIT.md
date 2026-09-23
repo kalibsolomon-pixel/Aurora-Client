@@ -591,3 +591,22 @@ under an alpha-composited model and confirmed them:
 All other Phase D-0 findings (selection separation 1.00, focus hairline
 1.00 vs stained, white thumb/knob 1.00 on light accents, the bypass set)
 live in the ARCHITECTURE.md failure table with their root-cause groups.
+
+---
+
+## Closure addendum IV — Phase D-1 foundation disposition (2026-09-23)
+
+Appended without rewriting the baseline or D-0 findings. Phase D-1 implemented the
+zero-visual-change prerequisite for later contrast pilots: DESIGN_LANGUAGE v3 §3.6 contains
+the normative 4.5/3.0/2.2 contract; `PaletteEngine` owns the canonical sRGB, luminance,
+contrast, and straight-alpha composition math; and immutable `ContrastDerivations` are computed
+once by `ResolvedTheme` on both resolver paths. The new foundation covers readable foreground,
+bounded stained backing (`|ΔL| <= 0.08`, insufficiency exposed), focus ring, selection
+separation, and minimum readability backing. It does not migrate a painter or alter a token.
+
+The preserved 64-row pre-D-1 token oracle is byte-identical after the implementation, all
+representative Phase-C consumer sources are unchanged, the untracked runtime harness passed
+7/7, and the full suite passed 390/390. Therefore this audit's contrast observations remain
+historical/current failure evidence for D-2 through D-6, while the shared math and resolution
+ownership they required are now RESOLVED at the foundation level. Consumer conformance remains
+deliberately open; D-2 begins with the `ON_ACCENT` pilot.
