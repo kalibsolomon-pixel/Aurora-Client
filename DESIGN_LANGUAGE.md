@@ -136,8 +136,10 @@ directions include changing the effective stained backing/lightness or increasin
 material backing through a deterministic rule. Dynamic frame-by-frame foreground changes
 based on arbitrary world pixels are not the default solution.
 
-Contrast ratios are diagnostic evidence, not a claim that WCAG mechanically governs every
-translucent Minecraft surface. Tests must state the actual compositing context.
+Contrast ratios against deterministic backings are **normative acceptance rules** —
+see §3.6. Ratios over content-dependent (glass/world) backings remain diagnostic
+evidence, not a claim that WCAG mechanically governs every translucent Minecraft
+surface. Tests must state the actual compositing context either way.
 
 ### 3.3 Text hierarchy
 
@@ -179,6 +181,53 @@ be explicit, deterministic, and limited to the surfaces that need it.
 colors, and HUD tokens from one accent plus mode. `ResolvedTheme` is the immutable read path;
 `AuroraTheme` remains a projection facade, not an independent palette. New code should use
 semantic tokens and must not write legacy statics outside `ResolvedTheme.project()`.
+
+### 3.6 Contrast thresholds (normative — adopted 2026-09-23, Phase D-1)
+
+Phase D measures contrast with the WCAG 2.x relative-luminance ratio (the metric
+`PaletteEngine` already implements: sRGB linearization, relative luminance,
+`contrastRatio`). The following thresholds are **normative acceptance rules**, not
+diagnostics. They bind Phase D implementation work (D-2 onward); adopting them here
+changes no rendered output by itself.
+
+| Category | Minimum ratio | Scope notes |
+|---|---|---|
+| Essential normal text on deterministic backings | **4.5:1** | Aurora ships one practical text size, so the WCAG "large text" relaxation never applies. |
+| Essential non-text state indicators | **3.0:1** | Focus indicators, control glyphs, selected-state boundaries where the boundary is required to communicate state, and mechanical state indicators where appropriate. |
+| Supplemental muted text | **2.2:1** | Project-specific floor (D-0). Applies only where the text is genuinely supplemental and is **not** the sole carrier of essential information (§3.3). |
+| Faint/decorative text | exempt | Only under §3.3's existing rule: it may never be the sole carrier of essential information. |
+
+Thresholds apply to the **composited pair**: the foreground over the backing that
+actually renders beneath it, straight-alpha composited where either layer is
+translucent. A ratio measured between two un-composited tokens whose real rendering
+is translucent is not evidence of conformance.
+
+**Content-dependent glass.** Mathematical token-pair contrast alone is insufficient
+for text over Frosted glass at low Background Opacity, because the visible backing
+includes arbitrary world/panorama pixels. Those cases are governed by the §3.4
+practical-usability bar and the controlled-background readability policy defined by
+the later Phase D-4 work. No guarantee for arbitrary-world contrast may be claimed
+by comparing two theme tokens alone.
+
+**Contrast ownership.** Theme resolution owns semantic contrast derivation.
+Components consume semantic outputs; they do not independently solve contrast. The
+pipeline is conceptually:
+
+```text
+stored theme/accent → PaletteEngine → semantic derivations → ResolvedTheme → component
+```
+
+**Stored-preference invariant (hard contract).** Contrast adaptation MUST NOT mutate
+or rewrite the stored accent/theme preference — not the config field, not the
+persisted profile snapshot, not the in-memory definition after resolution. The
+user's stored accent is an **input** to derivation, never an adaptation target
+(§1.6, §3.2). Adaptation exists only in derived, resolve-time outputs that are
+recomputed from the definition on every reload.
+
+**Determinism.** Derivations are pure functions of the theme definition, evaluated
+at resolve time. They never sample the framebuffer, never observe world pixels, and
+never vary per animation frame; the assumed worst-case backing is a documented,
+mode-deterministic constant (see the Phase D records in `ARCHITECTURE.md`).
 
 ## 4. Typography
 
@@ -1056,7 +1105,9 @@ couple render clipping with input bounds.
 ### Phase D — Color and contrast robustness
 
 Pilot deterministic on-accent rendered treatment and low-opacity backing for essential text.
-Preserve stored accent and avoid frame-dependent world-pixel adaptation.
+Preserve stored accent and avoid frame-dependent world-pixel adaptation. The normative
+contrast thresholds, ownership rules, and stored-preference invariant governing this phase
+are §3.6 (adopted at D-1).
 
 ### Phase E — Material refinement
 
