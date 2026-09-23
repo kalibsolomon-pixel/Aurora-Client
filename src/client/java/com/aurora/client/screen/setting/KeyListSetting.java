@@ -144,8 +144,8 @@ public class KeyListSetting extends FeatureSetting {
                         null,
                         () -> !isDisabled(),
                         () -> removeEntry(v)),
-                () -> 0xFFFFFFFF,
-                () -> 0xFFFFFFFF));
+                () -> ThemeManager.semanticContrast().errorForeground(),
+                () -> ThemeManager.semanticContrast().errorForeground()));
     }
 
     /** The ONE removal path — the action's behavior and the legacy fallback both land here. */
@@ -246,7 +246,8 @@ public class KeyListSetting extends FeatureSetting {
             ctx.fill(btnX, btnY, btnX + BTN_SIZE, btnY + BTN_SIZE,
                     ThemeManager.withAlpha(err, btnHover ? 0x66 : 0x33));
             AuroraFontRenderer.drawCentered(ctx, tr, "\u2212", btnX + BTN_SIZE / 2,
-                    btnY + (BTN_SIZE - tr.lineHeight) / 2, 0xFFFFFFFF);
+                    btnY + (BTN_SIZE - tr.lineHeight) / 2,
+                    ThemeManager.semanticContrast().errorForeground());
             Integer boxed = items.get(i);
             if (boxed != null && !disabled) {
                 com.aurora.client.ui.component.IconAction chip = chipRemoveAction(boxed);

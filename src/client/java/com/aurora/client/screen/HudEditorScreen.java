@@ -60,11 +60,11 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
     // ------------------------------------------------------------------
     private int outlineEnabled()  { return ThemeManager.color(ThemeToken.SEMANTIC_SUCCESS); }
     private int outlineDisabled() { return ThemeManager.color(ThemeToken.SEMANTIC_ERROR); }
-    private int outlineDrag()     { return ThemeManager.color(ThemeToken.SEMANTIC_WARNING); }
-    private int outlineLocked()   { return ThemeManager.color(ThemeToken.SECONDARY_ACCENT); }
+    private int outlineDrag()     { return ThemeManager.semanticContrast().warningIndicator(); }
+    private int outlineLocked()   { return ThemeManager.semanticContrast().secondaryIndicator(); }
     /** X badge fill — semantic-error RGB at the original 0xC0 strength. */
     private int xIconBg()         { return (0xC0 << 24) | (ThemeManager.color(ThemeToken.SEMANTIC_ERROR) & 0x00FFFFFF); }
-    private static final int X_ICON_FG = 0xFFFFFFFF;
+    private int xIconFg()         { return ThemeManager.semanticContrast().errorForeground(); }
     private static final int CORNER_HANDLE = 0xFFFFFFFF;
     /** Lock badge fill — inset-surface RGB at the original 0xC0 strength. */
     private int lockIconBg()      { return (0xC0 << 24) | (ThemeManager.color(ThemeToken.SURFACE_INSET) & 0x00FFFFFF); }
@@ -161,8 +161,8 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
                                 null,
                                 () -> true,
                                 () -> disableViaRegistry(m)),
-                        () -> 0xFFFFFFFF,
-                        () -> 0xFFFFFFFF));
+                        this::xIconFg,
+                        this::xIconFg));
     }
 
     private void resetLayouts() {
@@ -328,7 +328,7 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
                 action.syncChannels(xIconX, xIconY, X_ICON_SIZE, X_ICON_SIZE, mouseX, mouseY);
                 drawXIcon(ctx, xIconX, xIconY, action.hoverT());
                 if (action.isFocused()) {
-                    int hair = ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99);
+                    int hair = ThemeManager.semanticContrast().focusNeutral();
                     ctx.fill(xIconX - 1, xIconY - 1, xIconX, xIconY + X_ICON_SIZE, hair);
                     ctx.fill(xIconX + X_ICON_SIZE, xIconY - 1, xIconX + X_ICON_SIZE + 1, xIconY + X_ICON_SIZE, hair);
                     ctx.fill(xIconX, xIconY - 1, xIconX + X_ICON_SIZE, xIconY, hair);
@@ -370,8 +370,8 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
                         | (xIconBg() & 0x00FFFFFF));
         // Manual diagonal lines via 1-px fills.
         for (int i = 1; i < X_ICON_SIZE - 1; i++) {
-            ctx.fill(x + i, y + i, x + i + 1, y + i + 1, X_ICON_FG);
-            ctx.fill(x + (X_ICON_SIZE - 1 - i), y + i, x + (X_ICON_SIZE - i), y + i + 1, X_ICON_FG);
+            ctx.fill(x + i, y + i, x + i + 1, y + i + 1, xIconFg());
+            ctx.fill(x + (X_ICON_SIZE - 1 - i), y + i, x + (X_ICON_SIZE - i), y + i + 1, xIconFg());
         }
     }
 

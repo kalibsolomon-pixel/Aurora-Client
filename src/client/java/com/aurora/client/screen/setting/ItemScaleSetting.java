@@ -107,7 +107,7 @@ public class ItemScaleSetting extends FeatureSetting {
                             this::canAddFoundItem,
                             this::addFoundItem),
                     () -> AuroraTheme.TEXT_SECONDARY,
-                    () -> 0xFFFFFFFF);
+                    () -> ThemeManager.color(ThemeToken.ON_BACKGROUND));
 
     private boolean canAddFoundItem() {
         if (foundItem == null) return false;

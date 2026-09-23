@@ -103,7 +103,7 @@ class AuroraScreenNavigationTest {
         // gains the independent focus channel.
         String painter = bodyOf(src, "private void drawLayoutButton(");
         assertTrue(painter.contains("if (focused) {"));
-        assertTrue(painter.contains("0x99"));
+        assertTrue(painter.contains("ThemeManager.semanticContrast().focusOnAccent()"));
         assertFalse(painter.contains("mouseX"),
                 "hover no longer reads the pointer directly — it consumes the canonical hoverT");
     }
@@ -382,8 +382,8 @@ class AuroraScreenNavigationTest {
         // Chips, Profiles, cards, header nav, and the layout pair draw the
         // shared 1px accent hairline (0x99) from the control's vanilla focus
         // only.
-        assertEquals(5, count(src, "ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99)"),
-                "chips/profiles/tiles/header-nav/layout-pair hairline sites");
+        assertEquals(8, count(src, "ThemeManager.semanticContrast().focus"),
+                "contextual focus colors cover chips/profiles/tiles/header-nav/layout-pair branches");
         for (String site : new String[]{
                 "if (control != null && control.isFocused())",
                 "if (profilesControl != null && profilesControl.isFocused())",

@@ -343,6 +343,12 @@ public final class GlassSurface {
         return control(g, x, y, w, h, radius, false, BlurPanelRenderer.Priority.CONTROL);
     }
 
+    /** Raised text-field surface with the placeholder-readable D-5 backing. */
+    public static boolean field(GuiGraphics g, float x, float y, float w, float h, float radius) {
+        return paint(g, x, y, w, h, radius, BlurPanelRenderer.Lighting.raised(),
+                ThemeManager.semanticContrast().fieldTint(), BlurPanelRenderer.Priority.CONTROL);
+    }
+
     /**
      * {@link #control(GuiGraphics, float, float, float, float, float)} with
      * an explicit degradation priority — for control-styled ROWS (the
@@ -404,7 +410,7 @@ public final class GlassSurface {
     public static boolean control(GuiGraphics g, float x, float y, float w, float h, float radius,
                                   boolean stained, BlurPanelRenderer.Priority priority) {
         return paint(g, x, y, w, h, radius, BlurPanelRenderer.Lighting.raised(),
-                stained ? ThemeManager.stainedTint() : ThemeManager.color(ThemeToken.WINDOW_FILL),
+                stained ? ThemeManager.stainedTint() : ThemeManager.semanticContrast().controlTint(),
                 priority);
     }
 

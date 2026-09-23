@@ -307,6 +307,11 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
                 for (FeatureSetting s : meta.settings) {
                     int h = s.height();
                     if (yy + h > 0 && yy < this.height) {
+                        int plate = ThemeManager.semanticContrast().essentialPlate();
+                        if ((plate >>> 24) != 0) {
+                            RenderUtil.drawRoundedRectAA(ctx, listX + 6, yy, LIST_W - 12, h,
+                                    ThemeManager.current().roundness().radiusSmall(), plate);
+                        }
                         s.renderShapes(ctx, listX, yy, LIST_W, 0, 0);
                     }
                     yy += h + ROW_GAP;
@@ -445,6 +450,15 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         // scaled glyphs) would violate the no-new-visual-style constraint.
         if (this.font != null) {
             int titleX = listX + 12;
+            int plate = ThemeManager.semanticContrast().essentialPlate();
+            if ((plate >>> 24) != 0) {
+                int lines = meta.subtitle != null && !meta.subtitle.isEmpty() ? 2 : 1;
+                RenderUtil.drawRoundedRectAA(ctx, titleX - 5, TITLE_Y - 3,
+                        Math.min(LIST_W - 12, Math.max(this.font.width(meta.displayName),
+                                meta.subtitle == null ? 0 : this.font.width(meta.subtitle)) + 10),
+                        lines * (this.font.lineHeight + 1) + 5,
+                        ThemeManager.current().roundness().radiusSmall(), plate);
+            }
             ctx.drawString(this.font, meta.displayName, titleX, TITLE_Y,
                     ThemeManager.color(ThemeToken.ON_BACKGROUND), false);
             if (meta.subtitle != null && !meta.subtitle.isEmpty()) {

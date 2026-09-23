@@ -1,6 +1,8 @@
 package com.aurora.client.screen.setting;
 
 import com.aurora.client.config.AuroraConfig;
+import com.aurora.client.theme.ThemeManager;
+import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.component.Widget;
 import com.aurora.client.ui.util.CanvasTexture;
 import com.aurora.client.ui.util.RenderUtil;
@@ -94,8 +96,6 @@ public class PixelCanvasSetting extends FeatureSetting {
     private static final int APPLY_W = 46;
     private static final int DEFAULT_W = 56;
 
-    private static final int STATUS_ERR  = 0xFFFF6B6B;
-    private static final int STATUS_INFO = 0xFF9AA5B8;
 
     /**
      * The vanilla crosshair shape: 15×15, a 1-px-thick plus with 9-px
@@ -341,7 +341,8 @@ public class PixelCanvasSetting extends FeatureSetting {
         // or buttons; transient until the next action).
         if (status != null) {
             ctx.drawString(tr, status, x + 14, canvasY + getCanvasH() + 5,
-                    statusIsError ? STATUS_ERR : STATUS_INFO, false);
+                    statusIsError ? ThemeManager.semanticContrast().errorIndicator()
+                            : ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
         }
 
         // ---- Canvas ----
@@ -372,8 +373,10 @@ public class PixelCanvasSetting extends FeatureSetting {
         if (benchPending != null || warnPending != null) {
             int wpy = canvasY + getCanvasH() + 6;
             int wpw = width - 28;
-            RenderUtil.drawSquircle(ctx, x + 14, wpy, wpw, WARN_PANEL_H, AuroraTheme.RADIUS_SMALL, 0x66301808);
-            RenderUtil.drawSquircleOutline(ctx, x + 14, wpy, wpw, WARN_PANEL_H, AuroraTheme.RADIUS_SMALL, 1.0f, 0xFFB98900);
+            int warning = ThemeManager.semanticContrast().warningIndicator();
+            RenderUtil.drawSquircle(ctx, x + 14, wpy, wpw, WARN_PANEL_H, AuroraTheme.RADIUS_SMALL,
+                    ThemeManager.withAlpha(warning, 0x44));
+            RenderUtil.drawSquircleOutline(ctx, x + 14, wpy, wpw, WARN_PANEL_H, AuroraTheme.RADIUS_SMALL, 1.0f, warning);
             String l1;
             if (benchPending != null) {
                 l1 = "Measuring render cost at " + benchPending[0] + "×" + benchPending[1] + "…";
@@ -384,7 +387,8 @@ public class PixelCanvasSetting extends FeatureSetting {
             }
             ctx.drawString(tr, l1, x + 22, wpy + 6, AuroraTheme.TEXT_PRIMARY, false);
             String l2 = hardwareContext();
-            ctx.drawString(tr, l2, x + 22, wpy + 6 + tr.lineHeight + 2, STATUS_INFO, false);
+            ctx.drawString(tr, l2, x + 22, wpy + 6 + tr.lineHeight + 2,
+                    ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
 
             warnBtnY = wpy + 6 + (tr.lineHeight + 2) * 2 + 2;
             warnBtnApplyX = x + 22;
@@ -979,4 +983,3 @@ public class PixelCanvasSetting extends FeatureSetting {
         }
     }
 }
-

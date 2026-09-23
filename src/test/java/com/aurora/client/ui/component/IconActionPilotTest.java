@@ -132,8 +132,8 @@ class IconActionPilotTest {
         assertTrue(s.contains("public static final long HOVER_MS = 140L;"));
         assertTrue(s.contains("MaterialIconRenderer.drawIcon"), "approved icon infrastructure");
         assertTrue(s.contains("SemanticActionControl"), "semantic control backbone");
-        assertTrue(s.contains("withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99)"),
-                "Button-family focus hairline");
+        assertTrue(s.contains("ThemeManager.semanticContrast().focusNeutral()"),
+                "resolve-time Button-family focus hairline");
         assertTrue(s.contains("roundness().radiusSmall()"), "C-7 radius token");
         assertTrue(s.contains("NATURAL_EM_GUI, Math.min(w, h) - 2"), "explicit finite per-instance em");
         assertFalse(s.contains("MinecraftSemanticFeedback.INSTANCE.play"),

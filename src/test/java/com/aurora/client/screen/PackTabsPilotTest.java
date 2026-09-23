@@ -256,8 +256,8 @@ class PackTabsPilotTest {
         int i = src.indexOf("if (control.isFocused())");
         assertTrue(i >= 0, "focus hairline gate not found");
         String draw = src.substring(i, src.indexOf(';', i));
-        assertTrue(draw.contains("ThemeToken.ACCENT") && draw.contains("0x99"),
-                "focus = the geometry-following 1 px accent hairline family");
+        assertTrue(draw.contains("ThemeManager.semanticContrast().focusNeutral()"),
+                "focus = the resolve-time semantic 1 px hairline family");
         assertTrue(src.contains("control.setAvailable(inBand && !modalInteractive());"),
                 "tab availability follows the clip band and the modal cover");
     }

@@ -206,7 +206,8 @@ public class KeybindSetting extends FeatureSetting {
         if (focusedVisual) {
             RenderUtil.drawRoundedOutlineAA(ctx, btnX, btnY, BTN_W, BTN_H,
                     AuroraTheme.RADIUS_SMALL, 1.0f,
-                    ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
+                    listening ? ThemeManager.semanticContrast().focusOnAccent()
+                            : ThemeManager.semanticContrast().focusNeutral());
         }
 
         String labelText = listening ? "> press key <" : currentKeyName();

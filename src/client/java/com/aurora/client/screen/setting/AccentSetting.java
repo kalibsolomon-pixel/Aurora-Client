@@ -441,7 +441,7 @@ public class AccentSetting extends FeatureSetting {
             }
             if (control != null && control.isFocused()) {
                 RenderUtil.drawRoundedOutlineAA(ctx, sx, sy, sw, SWATCH_H, swR, 1.0f,
-                        ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
+                        ThemeManager.semanticContrast().focusNeutral());
             }
         }
 

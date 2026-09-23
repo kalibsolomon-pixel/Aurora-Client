@@ -101,6 +101,11 @@ public final class ThemeManager {
         return current.adaptiveOnAccent();
     }
 
+    /** Resolve-time semantic colors for readability, fields, focus, status, and indicators. */
+    public static SemanticContrastTreatment semanticContrast() {
+        return current.semanticContrast();
+    }
+
     /**
      * Compatibility bridge for the pre-existing untracked DevPilot harness.
      * Production painters use {@link #adaptiveOnAccent()} exclusively.

@@ -165,8 +165,9 @@ public class ToggleSwitch extends Widget {
         float knobX = minX + (maxX - minX) * t;
         float knobY = y + (h - thumbD) / 2f;
         int thumbCol = disabled
-                ? ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED)
-                : 0xFFFFFFFF;
+                ? ThemeManager.semanticContrast().disabledText()
+                : on ? ThemeManager.semanticContrast().mechanicalOn()
+                        : ThemeManager.semanticContrast().mechanicalOff();
         RenderUtil.drawCircleAA(g, knobX, knobY, thumbD, thumbD, thumbCol);
 
         // Provisional focus treatment: geometry-following accent hairline
@@ -176,7 +177,7 @@ public class ToggleSwitch extends Widget {
             float radius = h / 2f;
             RenderUtil.drawRoundedOutlineAA(g, x - 1.5f, y - 1.5f, w + 3f, h + 3f,
                     radius + 1.5f, 1.0f,
-                    ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
+                    ThemeManager.semanticContrast().focusNeutral());
         }
     }
 

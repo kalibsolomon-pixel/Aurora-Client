@@ -310,16 +310,16 @@ public class Button extends Widget {
 
         int bg, border, text;
         if (disabled) {
-            bg = ThemeManager.color(ThemeToken.SURFACE_INSET);
+            bg = ThemeManager.semanticContrast().disabledFill();
             border = ThemeManager.color(ThemeToken.BORDER);
-            text = ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED);
+            text = ThemeManager.semanticContrast().disabledText();
         } else if (destructive) {
             int err = ThemeManager.color(ThemeToken.SEMANTIC_ERROR);
             bg = AuroraAnim.lerpArgb(
                     ThemeManager.withAlpha(err, 0x44),
                     ThemeManager.withAlpha(err, 0x88), hoverT);
             border = err;
-            text = 0xFFFFFFFF;
+            text = ThemeManager.semanticContrast().errorForeground();
         } else if (primary) {
             bg = AuroraAnim.lerpArgb(
                     ThemeManager.adaptiveOnAccent().buttonRest(),
@@ -376,7 +376,8 @@ public class Button extends Widget {
 
         if (focused) {
             RenderUtil.drawRoundedOutlineAA(g, x, y, w, h, radius, 1.0f,
-                    ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
+                    primary ? ThemeManager.semanticContrast().focusOnAccent()
+                            : ThemeManager.semanticContrast().focusNeutral());
         }
 
         int textX = Math.round(x + w / 2f);
@@ -473,18 +474,18 @@ public class Button extends Widget {
 
         float radius = ThemeManager.current().roundness().radiusSmall();
         int bg = active ? secondaryFlatFill(hoverT)
-                : ThemeManager.color(ThemeToken.SURFACE_INSET);
+                : ThemeManager.semanticContrast().disabledFill();
         int border = active ? secondaryFlatBorder(hoverT)
                 : ThemeManager.color(ThemeToken.BORDER);
         int text = active ? ThemeManager.color(ThemeToken.ON_BACKGROUND)
-                : ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED);
+                : ThemeManager.semanticContrast().disabledText();
 
         RenderUtil.drawRoundedRectAA(g, x, y, w, h, radius, bg);
         RenderUtil.drawRoundedOutlineAA(g, x, y, w, h, radius, 1.0f, border);
 
         if (focused) {
             RenderUtil.drawRoundedOutlineAA(g, x, y, w, h, radius, 1.0f,
-                    ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
+                    ThemeManager.semanticContrast().focusNeutral());
         }
 
         AuroraFontRenderer.drawCentered(g, tr, label, Math.round(x + w / 2f),

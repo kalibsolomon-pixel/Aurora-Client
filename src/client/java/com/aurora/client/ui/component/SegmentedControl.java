@@ -228,6 +228,10 @@ public class SegmentedControl extends Widget {
                 RenderUtil.drawRoundedRectAA(g, sx, y, sw, trackH, radius,
                         ThemeManager.adaptiveOnAccent().selectedSegment());
             }
+            if (isSelected) {
+                RenderUtil.drawRoundedOutlineAA(g, sx, y, sw, trackH, radius, 1.0f,
+                        ThemeManager.adaptiveOnAccent().selectionIndicator());
+            }
 
             if (!disabled && hoverT > 0f) {
                 RenderUtil.drawRoundedRectAA(g, sx, y, sw, trackH, radius,
@@ -238,7 +242,8 @@ public class SegmentedControl extends Widget {
             // independent channel from both the selection fill and hover wash.
             if (control != null && control.isFocused()) {
                 RenderUtil.drawRoundedOutlineAA(g, sx, y, sw, trackH, radius, 1.0f,
-                        ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
+                        isSelected ? ThemeManager.semanticContrast().focusOnAccent()
+                                : ThemeManager.semanticContrast().focusNeutral());
             }
 
             int color = disabled ? ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED)

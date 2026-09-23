@@ -325,7 +325,7 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
         if (focusedVisual) {
             RenderUtil.drawRoundedOutlineAA(ctx, btnX, btnY, BTN_W, BTN_H,
                     AuroraTheme.RADIUS_SMALL, 1.0f,
-                    ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
+                    ThemeManager.semanticContrast().focusNeutral());
         }
 
         // Draw the option name centered within the space left of the arrow.

@@ -256,9 +256,9 @@ class SegmentedSettingPilotTest {
     @Test
     void focusIsTheButtonFamilyHairlineAndSelectedKeepsItsFill() {
         String source = src(SRC);
-        assertEquals(1, source.split(java.util.regex.Pattern.quote(
-                "ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99)"), -1).length - 1,
-                "exactly one focus hairline site — independent of the selection fill");
+        assertEquals(2, source.split(java.util.regex.Pattern.quote(
+                "ThemeManager.semanticContrast().focus"), -1).length - 1,
+                "one contextual focus site with neutral and selected outputs");
         assertTrue(source.contains("if (control != null && control.isFocused())"));
     }
 

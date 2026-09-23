@@ -1089,7 +1089,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
             // through the stroke.
             if (control.isFocused()) {
                 RenderUtil.drawRoundedOutlineAA(g, tabX, tabY, tabW, TAB_H, tabR, 1.0f,
-                        ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
+                        ThemeManager.semanticContrast().focusNeutral());
             }
 
             String label = tab.displayName;

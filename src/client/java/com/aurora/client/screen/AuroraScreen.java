@@ -899,7 +899,8 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             // independent channel from both the selection tint and hover.
             if (control != null && control.isFocused()) {
                 RenderUtil.drawRoundedOutlineAA(g, bx + 8, catY, 64, 22, ctrlRadius, 1.0f,
-                        ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
+                        sel ? ThemeManager.semanticContrast().focusOnAccent()
+                                : ThemeManager.semanticContrast().focusNeutral());
             }
         }
 
@@ -924,7 +925,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                         ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY), profT), false);
         if (profilesControl != null && profilesControl.isFocused()) {
             RenderUtil.drawRoundedOutlineAA(g, bx + 8, profY, 64, 22, ctrlRadius, 1.0f,
-                    ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
+                    ThemeManager.semanticContrast().focusNeutral());
         }
 
         if (selectedCategory == 0) renderModulesLive(g, mods, mouseX, mouseY, delta);
@@ -1051,7 +1052,8 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             // both the enabled stain and the hover wash.
             if (control != null && control.isFocused()) {
                 RenderUtil.drawRoundedOutlineAA(g, cx, cy, cw, ch, tileRadius, 1.0f,
-                        ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
+                        on ? ThemeManager.semanticContrast().focusOnAccent()
+                                : ThemeManager.semanticContrast().focusNeutral());
             }
 
             if (gridLayout) {
@@ -1118,7 +1120,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                         nav.updatePointer(mouseX, mouseY);
                         if (nav.isFocused()) {
                             RenderUtil.drawRoundedOutlineAA(g, mx + 4, y, CONTENT_W - 4 - 42, headerH, ctrlRadius, 1.0f,
-                                    ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
+                                    ThemeManager.semanticContrast().focusNeutral());
                         }
                     }
                 }
@@ -1239,7 +1241,8 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         // the enabled stain and the hover wash.
         if (focused) {
             RenderUtil.drawRoundedOutlineAA(g, x, y, size, size, ctrlRadius, 1.0f,
-                    ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
+                    selected ? ThemeManager.semanticContrast().focusOnAccent()
+                            : ThemeManager.semanticContrast().focusNeutral());
         }
         // Same contract as the tiles: on stained glass the icon takes the
         // contrast-derived ON_ACCENT; the flat fallback's ~15% accent wash is
