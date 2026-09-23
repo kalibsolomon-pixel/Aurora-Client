@@ -2984,6 +2984,61 @@ surfaces using the carried outputs, but must treat a `StainedBacking.sufficient(
 a real request for its documented fallback rather than weakening the threshold or identity
 bound. D-1 itself deliberately stops before any consumer migration.
 
+### Phase D-2 implementation record (2026-09-23) — ON_ACCENT pilot
+
+**Inventory and boundary.** The source-reconstructed seven-family inventory is: (1)
+`AuroraScreen` selected-chip label; (2) `AuroraScreen` selected tile/layout glyph family
+(`drawLayoutButton` and `drawTileIcon`); (3) `ProfileManagerScreen` Active badge; (4)
+`KeybindSetting` listening pill; (5) `KeyListSetting` listening/add pill; (6)
+`SegmentedControl` selected peer; and (7) `Button` primary label. D-2 migrates exactly
+families 4, 6, and 7. Families 1–3 and 5 remain byte/token-equivalent on the historical
+`ON_ACCENT`/`stainedTint` path and are pinned by source-regression tests for D-3.
+
+**Resolve-time architecture.** `ResolvedTheme` now carries one immutable
+`OnAccentPilotTreatment`. It consumes the existing semantic `ON_ACCENT` foreground, keeps
+that one foreground stable through every animation state, and derives the actual Button
+rest/hover endpoints, selected-segment backing, Keybind listening backing, and shared
+text-bearing stained tint. Components only read these cached outputs. There are no
+framebuffer reads, per-frame WCAG calculations, per-frame HSL searches, global mutable
+caches, or unbounded caches; the existing theme-generation key invalidates Button surface
+templates.
+
+**Adaptation and fallback.** The treatment first uses D-1's stained alpha/lightness
+adaptation over the real production family (accent, hover, pressed, and gradient endpoints),
+with `|delta L| <= 0.08`. When that result reports `sufficient() == false`, the treatment
+does not return it as conformant: it composites the minimum neutral black/white readability
+scrim over the bounded result. This is a separate semantic layer, not additional accent
+mutation; it is collapsed into the final ARGB tint because straight-alpha composition is
+associative for this fixed stack. Policy labels are `foreground-only`,
+`bounded-accent-backing`, and `separate-readability-scrim`. Across the complete matrix,
+40/128 resolved accent/mode/opacity cases use the scrim fallback, 72 use bounded accent
+backing, and 16 require foreground only; maximum scrim alpha is 59/255 (saturated red,
+DARK, opacity 0.10). Stored/config/serialized accent values are never written.
+
+**Mathematical results.** The tracked oracle runs all 16 D-1 accents, DARK/LIGHT, all four
+D-1 opacities, six controlled backdrops, and 256 deterministic steps for both the Button
+color path and selected-segment hover wash: 67,200 contrast assertions. Worst flat Button
+ratio is 4.8132728423 (default red, DARK, opacity 0.10); selected segment is 5.1262354566
+(pure magenta, LIGHT, opacity 0.10); flat listening pill is 4.5018256725 (magenta, DARK,
+opacity 0.10). The shared overall/glass-path minimum is 4.5018256725. Button press changes
+geometry only and retains the current verified color endpoint. Foreground never flips.
+
+**Runtime evidence.** The untracked DevPilot `d2onaccent` mode renders the real Button,
+SegmentedControl, and KeybindSetting implementations together for six DARK/LIGHT difficult
+accent phases. Its first completed run passed 12/12 resolve-time/stored-accent oracles and
+restored the config, options, GUI scale, and DevPilot properties byte-for-byte. Desktop-level
+captures from that run were rejected because the compositor captured the lock screen/Codex
+desktop instead of Minecraft. A follow-up in-frame capture run was terminated during a
+resource-initialization stall; therefore no screenshot or framebuffer ROI is accepted as
+pixel evidence in this record. Mathematical compositing is normative, but this missing
+integration evidence keeps the D-2 disposition partial rather than complete.
+
+**Regression and handoff.** D-1's token baseline and all contrast foundations remain intact;
+Phase-C geometry, activation, sound, focus, navigation, narration, hover timing, press timing,
+and Square mode are untouched. D-3 should reuse the single treatment only after successful
+in-frame screenshot/ROI closure, then migrate the four frozen families explicitly rather
+than changing the global `ON_ACCENT` token.
+
 
 ## 7. Registries (the drift trap)
 

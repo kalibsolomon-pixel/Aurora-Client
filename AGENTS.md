@@ -316,7 +316,8 @@ ResolvedTheme  (immutable ordinal-indexed int[]; volatile static in ThemeManager
    ├─ color(ThemeToken)      — one array access, zero alloc, safe from any thread
    ├─ surfaceColor(token)    — token RGB with WINDOW_FILL's opacity-driven alpha
    ├─ stainedTint()          — accent RGB at max(WINDOW_FILL alpha, floor 140)
-   ├─ contrastDerivations()  — D-1 immutable resolve-time foundation; unused by consumers
+   ├─ contrastDerivations()  — D-1 immutable resolve-time foundation; D-2 consumes its stained result
+   ├─ onAccentPilot()        — D-2 immutable Button/Segment/Keybind foreground+backing treatment
    ├─ generation()           — AtomicLong stamp; key any theme-derived pixel cache off this
    └─ project()  ──────────► AuroraTheme statics (util/AuroraTheme.java)
 ```
@@ -334,8 +335,14 @@ ResolvedTheme  (immutable ordinal-indexed int[]; volatile static in ThemeManager
   the canonical straight-ARGB composition, sRGB transfer, luminance, and ratio math.
 - **`ContrastDerivations`** (Phase D-1): pure, bounded, threshold-aware foreground,
   stained-backing, focus-ring, selection-separation, and minimum-backing math. One immutable
-  snapshot is created by `ResolvedTheme` on either resolver path. No production painter reads
-  it until D-2+; stored accent/config remain inputs and are never adapted in place.
+  snapshot is created by `ResolvedTheme` on either resolver path. D-2's three-pilot
+  `OnAccentPilotTreatment` consumes the stained result at resolve time; stored accent/config
+  remain inputs and are never adapted in place.
+- **`OnAccentPilotTreatment`** (Phase D-2): one immutable semantic output for flat primary
+  Buttons, selected SegmentedControl peers, and the Keybind listening pill. It keeps one stable
+  `ON_ACCENT` foreground, applies D-1's alpha/lightness-bounded stain, and uses the minimum
+  neutral readability scrim when D-1 reports the full state family insufficient. The four
+  non-pilot families remain on the historical token/tint path for D-3.
 - **`ThemeResolver`** has two paths: derived palette (`themeEnabled`) and a verbatim fixed
   *factory palette* (theme off — intentionally not the derived form of the defaults).
   **`applyBackgroundOpacity` stamps the opacity onto the `WINDOW_FILL` token's ALPHA ONLY —

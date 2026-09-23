@@ -610,3 +610,21 @@ representative Phase-C consumer sources are unchanged, the untracked runtime har
 historical/current failure evidence for D-2 through D-6, while the shared math and resolution
 ownership they required are now RESOLVED at the foundation level. Consumer conformance remains
 deliberately open; D-2 begins with the `ON_ACCENT` pilot.
+
+## Closure addendum V — Phase D-2 ON_ACCENT pilot disposition (2026-09-23)
+
+Appended without rewriting the baseline, D-0 findings, or D-1 foundation record. D-2 now
+migrates exactly three families—flat primary Button, selected SegmentedControl peer, and the
+Keybind listening pill—through one immutable resolve-time `OnAccentPilotTreatment`. The four
+other inventory families remain frozen for D-3. The treatment preserves one stable semantic
+foreground, uses D-1's bounded stain first, and handles `sufficient() == false` with the
+minimum separate neutral readability scrim; stored accent identity is unchanged.
+
+The 67,200-assertion headless state/accent/mode/opacity/backdrop matrix passes with an overall
+minimum 4.5018256725:1, and the runtime harness passed 12/12 semantic/stored-accent oracles.
+Four deliberate negative mutations were detected by the intended tests. However, the
+desktop compositor captured non-game surfaces, and the corrected in-frame capture run did
+not reach the harness before being terminated and restored. Screenshot/ROI integration
+evidence is therefore still open. Disposition: **D-2 ON_ACCENT PILOT PARTIAL**; implementation
+and mathematical architecture are sound, but D-3 must not begin until real-frame pixel
+evidence closes the remaining acceptance item.
