@@ -26,6 +26,7 @@ public final class ResolvedTheme {
     private final boolean accentsEnabled;
     private final int[] colors;
     private final int rimPastel;
+    private final ContrastDerivations contrast;
 
     /** How far the rim's high-opacity pastel tone is lightened toward white (0..1). */
     public static final float RIM_PASTEL_TOWARD_WHITE = 0.65f;
@@ -40,6 +41,13 @@ public final class ResolvedTheme {
         // stroke's target color at high Background Opacity (see
         // BlurPanelRenderer's composite shader).
         this.rimPastel = rimPastel(colors[ThemeToken.ACCENT.ordinal()]);
+        // Phase D-1 (2026-09-23): the resolve-time contrast derivations
+        // (focus ring, readable stained backing, selection separation) —
+        // computed once per resolve, carried for the D-2+ consumer
+        // migrations, read by NO production consumer yet. Pure derivation
+        // of the token array: identical inputs (both resolution paths go
+        // through this constructor) yield identical results.
+        this.contrast = ContrastDerivations.fromColors(colors);
     }
 
     /** Mix an ARGB color toward white by {@link #RIM_PASTEL_TOWARD_WHITE}. */
@@ -88,6 +96,16 @@ public final class ResolvedTheme {
      * pure white, and deliberately NOT the panel's interior fill color.
      */
     public int rimPastel() { return rimPastel; }
+
+    /**
+     * The Phase D-1 contrast-derivation snapshot for this resolve — the
+     * focus-ring derivation, the readable-stained-backing policy for the
+     * current accent family and window opacity, and the worst-case
+     * selection separation. Foundation only: no production consumer reads
+     * these yet (the D-2+ phases migrate consumers family by family), so
+     * their presence changes no rendered output.
+     */
+    public ContrastDerivations contrastDerivations() { return contrast; }
 
     /**
      * Publish the resolved values onto the legacy {@link AuroraTheme}

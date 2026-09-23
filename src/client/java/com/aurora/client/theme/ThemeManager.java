@@ -96,8 +96,12 @@ public final class ThemeManager {
         return (alpha << 24) | (current.color(ThemeToken.ACCENT) & 0x00FFFFFF);
     }
 
-    /** Fixed visibility floor for stained tints — see {@link #stainedTint()}. */
-    private static final int STAINED_MIN_ALPHA = 140;
+    /**
+     * Fixed visibility floor for stained tints — see {@link #stainedTint()}.
+     * Aliased from {@link ContrastDerivations#STAINED_VISIBILITY_FLOOR_ALPHA}
+     * (Phase D-1) so the floor has exactly one definition.
+     */
+    private static final int STAINED_MIN_ALPHA = ContrastDerivations.STAINED_VISIBILITY_FLOOR_ALPHA;
 
     /**
      * Re-stamp an ARGB color's alpha channel (clamped 0..255). Used to derive
