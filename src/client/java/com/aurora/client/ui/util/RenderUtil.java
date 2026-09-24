@@ -10,6 +10,15 @@ import java.util.List;
 public class RenderUtil {
 
     /**
+     * One physical device pixel expressed in logical GUI units. Use this for
+     * understated semantic edges that must not grow with the GUI scale.
+     */
+    public static float devicePixelStroke() {
+        return 1.0f / Math.max(1.0f,
+                (float) Minecraft.getInstance().getWindow().getGuiScale());
+    }
+
+    /**
      * A destination for rasterized integer-pixel rectangles. The mod's
      * high-res AA engine rasterizes per <b>physical device pixel</b>; this
      * interface lets the exact same row/coverage math write either into a

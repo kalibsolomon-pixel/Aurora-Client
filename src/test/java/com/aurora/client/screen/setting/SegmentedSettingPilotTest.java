@@ -259,7 +259,10 @@ class SegmentedSettingPilotTest {
         assertEquals(2, source.split(java.util.regex.Pattern.quote(
                 "ThemeManager.semanticContrast().focus"), -1).length - 1,
                 "one contextual focus site with neutral and selected outputs");
-        assertTrue(source.contains("if (control != null && control.isFocused())"));
+        assertTrue(source.contains("boolean focused = control != null && control.isFocused();"));
+        assertTrue(source.contains("if (focused) {"));
+        assertTrue(source.contains("if (isSelected && !focused)"),
+                "focus replaces the thin edge instead of stacking a second outline");
     }
 
     @Test

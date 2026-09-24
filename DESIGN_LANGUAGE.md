@@ -478,6 +478,12 @@ State precedence must be predictable. Disabled suppresses accepted hover/press/a
 feedback. Active manipulation remains visible while the pointer moves. Focus remains visible
 without hover. Selected/on persists after transient hover and press end.
 
+Selection boundaries belong only to genuine chosen-item states, never to Enabled, Active,
+listening, warning, error, or other status presentation. The selected backing is the primary
+cue; when non-text separation requires reinforcement, use one subtle device-pixel edge. If a
+selected item is also keyboard-focused, paint the focus ring instead of stacking both edges;
+the selected backing continues to carry selection independently.
+
 ### 8.2 Button-like interaction service
 
 Anything semantically button-like participates in one common service contract even when its

@@ -76,8 +76,8 @@ public class SegmentedControl extends Widget {
     /**
      * Glass pilot (Theme screen only): each segment becomes its own RAISED
      * glass panel — neutral tint (WINDOW_FILL) for unselected, accent-stained
-     * tint ({@link ThemeManager#stainedTint()}) for selected. Selection reads
-     * through tint alone; both states share the raised orientation (the
+     * tint ({@link ThemeManager#stainedTint()}) for selected. The tint is the
+     * primary selection cue and a thin semantic edge reinforces it; both states share the raised orientation (the
      * hierarchy rule: controls float above the recessed window). The flat
      * track base is suppressed from the cached shape layer while this is on;
      * whenever the glass renderer declines (screenshot suppression, failure)
@@ -228,8 +228,10 @@ public class SegmentedControl extends Widget {
                 RenderUtil.drawRoundedRectAA(g, sx, y, sw, trackH, radius,
                         ThemeManager.adaptiveOnAccent().selectedSegment());
             }
-            if (isSelected) {
-                RenderUtil.drawRoundedOutlineAA(g, sx, y, sw, trackH, radius, 1.0f,
+            boolean focused = control != null && control.isFocused();
+            if (isSelected && !focused) {
+                RenderUtil.drawRoundedOutlineAA(g, sx, y, sw, trackH, radius,
+                        RenderUtil.devicePixelStroke(),
                         ThemeManager.adaptiveOnAccent().selectionIndicator());
             }
 
@@ -240,7 +242,7 @@ public class SegmentedControl extends Widget {
 
             // Keyboard focus: the Button-family 1 px accent hairline — an
             // independent channel from both the selection fill and hover wash.
-            if (control != null && control.isFocused()) {
+            if (focused) {
                 RenderUtil.drawRoundedOutlineAA(g, sx, y, sw, trackH, radius, 1.0f,
                         isSelected ? ThemeManager.semanticContrast().focusOnAccent()
                                 : ThemeManager.semanticContrast().focusNeutral());

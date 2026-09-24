@@ -3051,9 +3051,12 @@ original families are: Button primary label; SegmentedControl selected peer; Key
 pill; KeyList listening/add pill; AuroraScreen selected sidebar chip; AuroraScreen selected
 layout/tile glyph family (including essential tile title); and ProfileManager Active badge.
 Every family consumes one stable foreground plus the same bounded accent backing/scrim policy.
-Selected chips, segments, layouts, and tiles additionally paint the treatment's compact
-selection boundary so tint collapse is not the sole state signal. Interaction, persistence,
-roving focus, narration, sound, geometry, and Square behavior are unchanged. The untracked
+Selected chips, segments, and layouts additionally paint the treatment's compact selection
+boundary so tint collapse is not the sole state signal. Enabled module tiles are status, not
+selection: they retain their semantic backing and readable foreground without an outline.
+The selection edge is minimum-alpha at 3:1 and one physical device pixel; focused selected
+peers paint the focus ring alone while their backing continues to carry selection. Interaction,
+persistence, roving focus, narration, sound, geometry, and Square behavior are unchanged. The untracked
 historical DevPilot still compiles through a deprecated read-only alias; no production painter
 uses that alias.
 

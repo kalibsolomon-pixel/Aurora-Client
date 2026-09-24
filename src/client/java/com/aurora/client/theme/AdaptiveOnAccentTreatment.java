@@ -120,12 +120,67 @@ public final class AdaptiveOnAccentTreatment {
         }
 
         int supplemental = supplementalForeground(foreground, finalSelected, finalStain);
+        int selectionIndicator = selectionIndicator(foreground, finalSelected, finalStain,
+                hoverWashRgb);
         AdaptiveOnAccentTreatment treatment = new AdaptiveOnAccentTreatment(
                 foreground, supplemental, finalRest, finalHover, finalSelected, finalListening,
-                finalStain, colors[ThemeToken.ON_BACKGROUND.ordinal()], scrim,
+                finalStain, selectionIndicator, scrim,
                 shift, stainAlpha / 255d, worst,
                 bounded.sufficient(), policy);
         return new Candidate(treatment, scrimAlpha);
+    }
+
+    /**
+     * The selection edge is secondary to the selected backing, so retain the
+     * semantic foreground hue while using only the minimum alpha that keeps
+     * the edge at the essential 3:1 non-text threshold. Both painter orders
+     * are covered: SegmentedControl washes over the edge, while AuroraScreen
+     * paints the edge over its hover wash.
+     */
+    private static int selectionIndicator(int foreground, int selected, int stain,
+                                          int hoverWashRgb) {
+        int rgb = foreground & 0x00FFFFFF;
+        for (int alpha = 1; alpha <= 255; alpha++) {
+            int candidate = (alpha << 24) | rgb;
+            if (selectionIndicatorPasses(candidate, selected, stain, hoverWashRgb)) {
+                return candidate;
+            }
+        }
+        return foreground;
+    }
+
+    private static boolean selectionIndicatorPasses(int indicator, int selected, int stain,
+                                                     int hoverWashRgb) {
+        if (!selectionEdgePasses(indicator, selected)) return false;
+        for (int base : ContrastDerivations.WORST_BASES) {
+            if (!selectionEdgePasses(indicator, PaletteEngine.composite(stain, base))) return false;
+        }
+        for (int i = 0; i <= PATH_STEPS; i++) {
+            int wash = (Math.round(HOVER_WASH_MAX_ALPHA * (i / (float) PATH_STEPS)) << 24)
+                    | hoverWashRgb;
+            if (!selectionEdgePassesAfterWash(indicator, selected, wash)) return false;
+            if (!selectionEdgePasses(indicator, PaletteEngine.composite(wash, selected))) return false;
+            for (int base : ContrastDerivations.WORST_BASES) {
+                int glass = PaletteEngine.composite(stain, base);
+                if (!selectionEdgePassesAfterWash(indicator, glass, wash)) return false;
+                if (!selectionEdgePasses(indicator, PaletteEngine.composite(wash, glass))) return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean selectionEdgePasses(int indicator, int backing) {
+        int visible = PaletteEngine.composite(indicator, backing);
+        return PaletteEngine.contrastRatio(visible, backing)
+                >= ContrastDerivations.NON_TEXT_INDICATOR_RATIO;
+    }
+
+    private static boolean selectionEdgePassesAfterWash(int indicator, int backing, int wash) {
+        int visibleBacking = PaletteEngine.composite(wash, backing);
+        int visibleIndicator = PaletteEngine.composite(wash,
+                PaletteEngine.composite(indicator, backing));
+        return PaletteEngine.contrastRatio(visibleIndicator, visibleBacking)
+                >= ContrastDerivations.NON_TEXT_INDICATOR_RATIO;
     }
 
     private static boolean passesAllStates(int fg, int rest, int hover, int selected,
@@ -232,7 +287,7 @@ public final class AdaptiveOnAccentTreatment {
     public int selectedSegment() { return selectedSegment; }
     public int listeningPill() { return listeningPill; }
     public int stainedTint() { return stainedTint; }
-    /** Opaque compact boundary used when tint alone cannot guarantee 3:1 selected/container separation. */
+    /** Minimum-alpha compact boundary that preserves 3:1 selected/container separation. */
     public int selectionIndicator() { return selectionIndicator; }
     public int scrimArgb() { return scrimArgb; }
     public float lightnessShift() { return lightnessShift; }

@@ -87,6 +87,48 @@ class PhaseDCompletionContrastTest {
     }
 
     @Test
+    void selectionBoundaryIsMinimumAlphaAndKeepsThreeToOneSeparation() {
+        for (int accent : ContrastFixtures.ACCENTS.values()) {
+            for (ThemeMode mode : ThemeMode.values()) {
+                for (double opacity : ContrastFixtures.OPACITIES) {
+                    ResolvedTheme theme = resolve(accent, mode, opacity);
+                    AdaptiveOnAccentTreatment adaptive = theme.adaptiveOnAccent();
+                    int indicator = adaptive.selectionIndicator();
+                    assertTrue((indicator >>> 24) < 255, "selection edge remains understated");
+                    int washRgb = theme.color(ThemeToken.ON_BACKGROUND) & 0x00FFFFFF;
+                    assertSelectionPaths(indicator, adaptive.selectedSegment(), washRgb,
+                            "flat selection");
+                    for (int world : ContrastDerivations.WORST_BASES) {
+                        int glass = PaletteEngine.composite(adaptive.stainedTint(), world);
+                        assertSelectionPaths(indicator, glass, washRgb, "glass selection");
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    void statusDoesNotConsumeSelectionBoundaryAndFocusDoesNotStackIt() throws Exception {
+        String aurora = Files.readString(Path.of(
+                "src/client/java/com/aurora/client/screen/AuroraScreen.java"));
+        String modulePainter = aurora.substring(aurora.indexOf("private void renderModulesLive"),
+                aurora.indexOf("private void renderSettingsLive"));
+        assertFalse(modulePainter.contains("selectionIndicator()"),
+                "Enabled module status must not render a selection boundary");
+        assertFalse(modulePainter.contains("ThemeManager.color(ThemeToken.ACCENT));"),
+                "Enabled module status must not retain its older accent border");
+
+        String segment = Files.readString(Path.of(
+                "src/client/java/com/aurora/client/ui/component/SegmentedControl.java"));
+        assertTrue(aurora.contains("if (sel && !focused)"));
+        assertTrue(aurora.contains("if (selected && !focused)"));
+        assertTrue(segment.contains("if (isSelected && !focused)"));
+        assertEquals(3, occurrences(aurora + segment,
+                "ThemeManager.adaptiveOnAccent().selectionIndicator()"));
+        assertEquals(3, occurrences(aurora + segment, "RenderUtil.devicePixelStroke()"));
+    }
+
+    @Test
     void fieldPainterDistinguishesDisabledFromCoveredAndRestoresSelection() throws Exception {
         String source = Files.readString(Path.of(
                 "src/client/java/com/aurora/client/mixin/EditBoxMixin.java"));
@@ -114,5 +156,34 @@ class PhaseDCompletionContrastTest {
     private static void assertRatio(int foreground, int backing, double minimum, String message) {
         assertTrue(PaletteEngine.contrastRatio(foreground, backing) >= minimum,
                 message + " ratio=" + PaletteEngine.contrastRatio(foreground, backing));
+    }
+
+    private static void assertSelectionRatio(int indicator, int backing, String message) {
+        int visible = PaletteEngine.composite(indicator, backing);
+        assertRatio(visible, backing, ContrastDerivations.NON_TEXT_INDICATOR_RATIO, message);
+    }
+
+    private static void assertSelectionPaths(int indicator, int backing, int washRgb,
+                                             String message) {
+        assertSelectionRatio(indicator, backing, message);
+        for (int i = 0; i <= 255; i++) {
+            int wash = (Math.round(0x1A * (i / 255f)) << 24) | washRgb;
+            int washedBacking = PaletteEngine.composite(wash, backing);
+            assertSelectionRatio(indicator, washedBacking, message + " edge-over-wash");
+            int washedIndicator = PaletteEngine.composite(wash,
+                    PaletteEngine.composite(indicator, backing));
+            assertRatio(washedIndicator, washedBacking,
+                    ContrastDerivations.NON_TEXT_INDICATOR_RATIO,
+                    message + " wash-over-edge");
+        }
+    }
+
+    private static int occurrences(String source, String needle) {
+        int count = 0, at = 0;
+        while ((at = source.indexOf(needle, at)) >= 0) {
+            count++;
+            at += needle.length();
+        }
+        return count;
     }
 }

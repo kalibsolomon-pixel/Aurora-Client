@@ -891,13 +891,15 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                             ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED),
                             ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY), hoverT);
             g.drawString(tr, cats[i], (int) (bx + 16), (int) (catY + 7), txt, false);
-            if (sel) {
-                RenderUtil.drawRoundedOutlineAA(g, bx + 8, catY, 64, 22, ctrlRadius, 1.0f,
+            boolean focused = control != null && control.isFocused();
+            if (sel && !focused) {
+                RenderUtil.drawRoundedOutlineAA(g, bx + 8, catY, 64, 22, ctrlRadius,
+                        RenderUtil.devicePixelStroke(),
                         ThemeManager.adaptiveOnAccent().selectionIndicator());
             }
             // Keyboard focus: the Button-family 1 px accent hairline — an
             // independent channel from both the selection tint and hover.
-            if (control != null && control.isFocused()) {
+            if (focused) {
                 RenderUtil.drawRoundedOutlineAA(g, bx + 8, catY, 64, 22, ctrlRadius, 1.0f,
                         sel ? ThemeManager.semanticContrast().focusOnAccent()
                                 : ThemeManager.semanticContrast().focusNeutral());
@@ -1021,10 +1023,10 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             // Surface: each tile is its own RAISED glass panel (painted
             // pre-dim under the tracked scissor by paintGlassPass) — its own
             // correctly-cropped, correctly-scaled backdrop slice. Neutral
-            // tint when off, accent-STAINED when on (the enabled state reads
-            // through the tint, like a selected segment). Content here: the
+            // tint when off, accent-STAINED when on (the enabled status reads
+            // through its semantic backing). Content here: the
             // faint mode-aware hover wash on top of the glass, or the flat
-            // surface fill + accent wash/border on decline.
+            // surface fill + accent wash on decline.
             boolean tileGlass = tileGlass(i);
             if (tileGlass) {
                 if (hoverT > 0f) {
@@ -1039,14 +1041,10 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                                 ThemeManager.surfaceColor(ThemeToken.SURFACE),
                                 ThemeManager.surfaceColor(ThemeToken.SURFACE_VARIANT), hoverT));
                 if (on) {
-                    // Accent wash + border = the enabled indicator (no switch widget).
+                    // The accent wash is the enabled status treatment; status
+                    // does not borrow the selection-boundary vocabulary.
                     RenderUtil.drawRoundedRectAA(g, cx, cy, cw, ch, tileRadius, alpha(ThemeToken.ACCENT, 0x14 / 255f));
-                    RenderUtil.drawRoundedOutlineAA(g, cx, cy, cw, ch, tileRadius, 1.0f, ThemeManager.color(ThemeToken.ACCENT));
                 }
-            }
-            if (on) {
-                RenderUtil.drawRoundedOutlineAA(g, cx, cy, cw, ch, tileRadius, 1.0f,
-                        ThemeManager.adaptiveOnAccent().selectionIndicator());
             }
             // Keyboard focus: the Button-family hairline — independent of
             // both the enabled stain and the hover wash.
@@ -1226,16 +1224,19 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                     : AuroraAnim.lerpArgb(
                             ThemeManager.surfaceColor(ThemeToken.SURFACE),
                             ThemeManager.surfaceColor(ThemeToken.SURFACE_VARIANT), hoverT);
-            int border = selected ? ThemeManager.adaptiveOnAccent().selectionIndicator() : alpha(ThemeToken.ON_BACKGROUND, 0x08f);
             RenderUtil.drawRoundedRectAA(g, x, y, size, size, ctrlRadius, bg);
-            RenderUtil.drawRoundedOutlineAA(g, x, y, size, size, ctrlRadius, 1.0f, border);
+            if (!selected) {
+                RenderUtil.drawRoundedOutlineAA(g, x, y, size, size, ctrlRadius, 1.0f,
+                        alpha(ThemeToken.ON_BACKGROUND, 0x08f));
+            }
             if (!selected && hoverT > 0f) {
                 RenderUtil.drawRoundedRectAA(g, x, y, size, size, ctrlRadius,
                         alpha(ThemeToken.ON_BACKGROUND, (0x1A / 255f) * hoverT));
             }
         }
-        if (selected) {
-            RenderUtil.drawRoundedOutlineAA(g, x, y, size, size, ctrlRadius, 1.0f,
+        if (selected && !focused) {
+            RenderUtil.drawRoundedOutlineAA(g, x, y, size, size, ctrlRadius,
+                    RenderUtil.devicePixelStroke(),
                     ThemeManager.adaptiveOnAccent().selectionIndicator());
         }
         // Keyboard focus: the Button-family hairline — independent of both
