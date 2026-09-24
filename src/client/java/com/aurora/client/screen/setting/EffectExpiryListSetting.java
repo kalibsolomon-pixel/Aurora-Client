@@ -102,7 +102,7 @@ public class EffectExpiryListSetting extends FeatureSetting {
                             () -> foundEffect != null,
                             this::addFoundEffect),
                     () -> AuroraTheme.TEXT_SECONDARY,
-                    () -> ThemeManager.color(ThemeToken.ON_BACKGROUND));
+                    () -> 0xFFFFFFFF);
 
     /** The ONE add path — the action's behavior and the legacy fallback both land here. */
     private void addFoundEffect() {

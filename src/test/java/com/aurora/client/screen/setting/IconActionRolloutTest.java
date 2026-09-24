@@ -214,7 +214,7 @@ class IconActionRolloutTest {
                 "state is readable for deterministic disclosure tests");
         // The canonical vocabulary is untouched (C-4A pins keep asserting it).
         assertTrue(s.contains("HoverAnim.symmetric(HOVER_MS)"));
-        assertTrue(s.contains("ThemeManager.semanticContrast().focusNeutral()"));
+        assertTrue(s.contains("withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99)"));
     }
 
     // ---- Source pins: ItemScale add + disclosures ----

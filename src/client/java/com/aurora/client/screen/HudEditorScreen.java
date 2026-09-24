@@ -60,12 +60,12 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
     // ------------------------------------------------------------------
     private int outlineEnabled()  { return ThemeManager.color(ThemeToken.SEMANTIC_SUCCESS); }
     private int outlineDisabled() { return ThemeManager.color(ThemeToken.SEMANTIC_ERROR); }
-    private int outlineDrag()     { return ThemeManager.semanticContrast().warningIndicator(); }
-    private int outlineLocked()   { return ThemeManager.semanticContrast().secondaryIndicator(); }
+    private int outlineDrag()     { return ThemeManager.color(ThemeToken.SEMANTIC_WARNING); }
+    private int outlineLocked()   { return ThemeManager.color(ThemeToken.SECONDARY_ACCENT); }
     /** X badge fill — semantic-error RGB at the original 0xC0 strength. */
     private int xIconBg()         { return (0xC0 << 24) | (ThemeManager.color(ThemeToken.SEMANTIC_ERROR) & 0x00FFFFFF); }
-    private int xIconFg()         { return ThemeManager.semanticContrast().errorForeground(); }
-    private int cornerHandle()      { return ThemeManager.semanticContrast().mechanicalOff(); }
+    private static final int X_ICON_FG = 0xFFFFFFFF;
+    private static final int CORNER_HANDLE = 0xFFFFFFFF;
     /** Lock badge fill — inset-surface RGB at the original 0xC0 strength. */
     private int lockIconBg()      { return (0xC0 << 24) | (ThemeManager.color(ThemeToken.SURFACE_INSET) & 0x00FFFFFF); }
     private int lockIconFg()      { return ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY); }
@@ -161,8 +161,8 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
                                 null,
                                 () -> true,
                                 () -> disableViaRegistry(m)),
-                        this::xIconFg,
-                        this::xIconFg));
+                        () -> 0xFFFFFFFF,
+                        () -> 0xFFFFFFFF));
     }
 
     private void resetLayouts() {
@@ -328,7 +328,7 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
                 action.syncChannels(xIconX, xIconY, X_ICON_SIZE, X_ICON_SIZE, mouseX, mouseY);
                 drawXIcon(ctx, xIconX, xIconY, action.hoverT());
                 if (action.isFocused()) {
-                    int hair = ThemeManager.semanticContrast().focusNeutral();
+                    int hair = ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99);
                     ctx.fill(xIconX - 1, xIconY - 1, xIconX, xIconY + X_ICON_SIZE, hair);
                     ctx.fill(xIconX + X_ICON_SIZE, xIconY - 1, xIconX + X_ICON_SIZE + 1, xIconY + X_ICON_SIZE, hair);
                     ctx.fill(xIconX, xIconY - 1, xIconX + X_ICON_SIZE, xIconY, hair);
@@ -353,13 +353,12 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
                 labelY = y - this.font.lineHeight - 4;
             }
             ctx.fill(labelX, labelY, labelX + labelW, labelY + this.font.lineHeight + 2, labelBg());
-            ctx.drawString(this.font, label, labelX + 2, labelY + 2,
-                    ThemeManager.color(ThemeToken.ON_OVERLAY), false);
+            ctx.drawString(this.font, label, labelX + 2, labelY + 2, 0xFFFFFFFF, false);
         }
     }
 
-    private void drawCornerHandle(GuiGraphics ctx, int cx, int cy) {
-        ctx.fill(cx, cy, cx + 4, cy + 4, cornerHandle());
+    private static void drawCornerHandle(GuiGraphics ctx, int cx, int cy) {
+        ctx.fill(cx, cy, cx + 4, cy + 4, CORNER_HANDLE);
     }
 
     private void drawXIcon(GuiGraphics ctx, int x, int y, float hoverT) {
@@ -371,8 +370,8 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
                         | (xIconBg() & 0x00FFFFFF));
         // Manual diagonal lines via 1-px fills.
         for (int i = 1; i < X_ICON_SIZE - 1; i++) {
-            ctx.fill(x + i, y + i, x + i + 1, y + i + 1, xIconFg());
-            ctx.fill(x + (X_ICON_SIZE - 1 - i), y + i, x + (X_ICON_SIZE - i), y + i + 1, xIconFg());
+            ctx.fill(x + i, y + i, x + i + 1, y + i + 1, X_ICON_FG);
+            ctx.fill(x + (X_ICON_SIZE - 1 - i), y + i, x + (X_ICON_SIZE - i), y + i + 1, X_ICON_FG);
         }
     }
 

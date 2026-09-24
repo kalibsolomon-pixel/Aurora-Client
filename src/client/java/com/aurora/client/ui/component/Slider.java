@@ -162,7 +162,7 @@ public class Slider extends Widget {
         float knobR = canonical && dragging ? KNOB_R_DRAG : KNOB_R;
         float knobX = x + filledW;
         float knobY = ty + TRACK_H / 2f;
-        RenderUtil.drawRoundedRectAA(g, knobX - knobR, knobY - knobR, knobR * 2f, knobR * 2f, knobR, knob(t));
+        RenderUtil.drawRoundedRectAA(g, knobX - knobR, knobY - knobR, knobR * 2f, knobR * 2f, knobR, knob());
 
         if (hT > 0f) {
             int onBg = ThemeManager.color(ThemeToken.ON_BACKGROUND) & 0x00FFFFFF;
@@ -178,7 +178,7 @@ public class Slider extends Widget {
         if (canonical && focusedVisual) {
             RenderUtil.drawRoundedOutlineAA(g, x - 3f, ty - 3f, w + 6f, TRACK_H + 6f,
                     TRACK_H / 2f + 3f, 1.0f,
-                    ThemeManager.semanticContrast().focusNeutral());
+                    ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
         }
     }
 
@@ -192,10 +192,8 @@ public class Slider extends Widget {
                 : ThemeManager.color(ThemeToken.ACCENT);
     }
 
-    private int knob(float valueT) {
-        return disabled ? ThemeManager.semanticContrast().disabledText()
-                : valueT > 0f ? ThemeManager.semanticContrast().mechanicalOn()
-                        : ThemeManager.semanticContrast().mechanicalOff();
+    private int knob() {
+        return disabled ? ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED) : 0xFFFFFFFF;
     }
 
     @Override

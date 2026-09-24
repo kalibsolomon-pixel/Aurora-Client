@@ -26,9 +26,6 @@ public final class ResolvedTheme {
     private final boolean accentsEnabled;
     private final int[] colors;
     private final int rimPastel;
-    private final ContrastDerivations contrast;
-    private final AdaptiveOnAccentTreatment adaptiveOnAccent;
-    private final SemanticContrastTreatment semanticContrast;
 
     /** How far the rim's high-opacity pastel tone is lightened toward white (0..1). */
     public static final float RIM_PASTEL_TOWARD_WHITE = 0.65f;
@@ -43,15 +40,6 @@ public final class ResolvedTheme {
         // stroke's target color at high Background Opacity (see
         // BlurPanelRenderer's composite shader).
         this.rimPastel = rimPastel(colors[ThemeToken.ACCENT.ordinal()]);
-        // Phase D-1 (2026-09-23): the resolve-time contrast derivations
-        // (focus ring, readable stained backing, selection separation) —
-        // computed once per resolve and consumed by D-2's narrowly scoped
-        // OnAccentPilotTreatment (other D-3+ outputs remain unused). Pure derivation
-        // of the token array: identical inputs (both resolution paths go
-        // through this constructor) yield identical results.
-        this.contrast = ContrastDerivations.fromColors(colors);
-        this.adaptiveOnAccent = AdaptiveOnAccentTreatment.fromColors(colors);
-        this.semanticContrast = SemanticContrastTreatment.fromColors(colors, adaptiveOnAccent, contrast);
     }
 
     /** Mix an ARGB color toward white by {@link #RIM_PASTEL_TOWARD_WHITE}. */
@@ -100,21 +88,6 @@ public final class ResolvedTheme {
      * pure white, and deliberately NOT the panel's interior fill color.
      */
     public int rimPastel() { return rimPastel; }
-
-    /**
-     * The Phase D-1 contrast-derivation snapshot for this resolve — the
-     * focus-ring derivation, the readable-stained-backing policy for the
-     * current accent family and window opacity, and the worst-case
-     * selection separation. D-2 consumes only the stained-backing result;
-     * the later phases migrate the remaining outputs family by family.
-     */
-    public ContrastDerivations contrastDerivations() { return contrast; }
-
-    /** Phase D-2's immutable treatment for the three explicitly piloted ON_ACCENT families. */
-    public AdaptiveOnAccentTreatment adaptiveOnAccent() { return adaptiveOnAccent; }
-
-    /** Phase D's immutable non-accent semantic contrast treatment. */
-    public SemanticContrastTreatment semanticContrast() { return semanticContrast; }
 
     /**
      * Publish the resolved values onto the legacy {@link AuroraTheme}

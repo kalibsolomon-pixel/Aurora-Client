@@ -96,31 +96,8 @@ public final class ThemeManager {
         return (alpha << 24) | (current.color(ThemeToken.ACCENT) & 0x00FFFFFF);
     }
 
-    /** Resolve-time Phase D-2 treatment; a cached object read, never per-frame contrast work. */
-    public static AdaptiveOnAccentTreatment adaptiveOnAccent() {
-        return current.adaptiveOnAccent();
-    }
-
-    /** Resolve-time semantic colors for readability, fields, focus, status, and indicators. */
-    public static SemanticContrastTreatment semanticContrast() {
-        return current.semanticContrast();
-    }
-
-    /**
-     * Compatibility bridge for the pre-existing untracked DevPilot harness.
-     * Production painters use {@link #adaptiveOnAccent()} exclusively.
-     */
-    @Deprecated
-    public static AdaptiveOnAccentTreatment onAccentPilot() {
-        return adaptiveOnAccent();
-    }
-
-    /**
-     * Fixed visibility floor for stained tints — see {@link #stainedTint()}.
-     * Aliased from {@link ContrastDerivations#STAINED_VISIBILITY_FLOOR_ALPHA}
-     * (Phase D-1) so the floor has exactly one definition.
-     */
-    private static final int STAINED_MIN_ALPHA = ContrastDerivations.STAINED_VISIBILITY_FLOOR_ALPHA;
+    /** Fixed visibility floor for stained tints — see {@link #stainedTint()}. */
+    private static final int STAINED_MIN_ALPHA = 140;
 
     /**
      * Re-stamp an ARGB color's alpha channel (clamped 0..255). Used to derive

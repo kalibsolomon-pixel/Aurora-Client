@@ -106,8 +106,7 @@ AuroraClient.java          Mod entrypoint: registers keybinds, HUD callbacks, fe
 │                           ParticleConfigSetting, ThemePreview, SectionFooterSetting —
 │                           the design language's §3 group footer…).
 ├── theme/                 THEME ENGINE (see §5): ThemeManager, ThemeResolver,
-│                          PaletteEngine, ContrastDerivations (Phase D-1 resolve-time
-│                          contrast foundation), ResolvedTheme, ThemeToken (enum), ThemeDefinition,
+│                          PaletteEngine, ResolvedTheme, ThemeToken (enum), ThemeDefinition,
 │                          ThemeMode, ThemeRoundness, ThemePresets, ThemeMigrator,
 │                          HudStatus + HudText (HUD color policy: fixed-hue status
 │                          palette; follow-accent text-color sentinel).
@@ -316,9 +315,6 @@ ResolvedTheme  (immutable ordinal-indexed int[]; volatile static in ThemeManager
    ├─ color(ThemeToken)      — one array access, zero alloc, safe from any thread
    ├─ surfaceColor(token)    — token RGB with WINDOW_FILL's opacity-driven alpha
    ├─ stainedTint()          — accent RGB at max(WINDOW_FILL alpha, floor 140)
-   ├─ contrastDerivations()  — D-1 immutable resolve-time math foundation
-   ├─ adaptiveOnAccent()     — D-2/D-3 canonical text-bearing accent treatment
-   ├─ semanticContrast()     — D-4…D-6 plates/fields/focus/status/indicator treatment
    ├─ generation()           — AtomicLong stamp; key any theme-derived pixel cache off this
    └─ project()  ──────────► AuroraTheme statics (util/AuroraTheme.java)
 ```
@@ -332,21 +328,7 @@ ResolvedTheme  (immutable ordinal-indexed int[]; volatile static in ThemeManager
   dirty-check (accent/mode/roundness/opacity/enabled) that also catches profile switches.
 - **`PaletteEngine`** rules: backgrounds take accent *hue only* with mode-locked lightness
   (dark ~6–15%, light ~90–97% — a near-white accent can't wash out the UI); text is
-  contrast-checked via relative luminance; simple HSL, never throws on any input. It owns
-  the canonical straight-ARGB composition, sRGB transfer, luminance, and ratio math.
-- **`ContrastDerivations`** (Phase D-1): pure, bounded, threshold-aware foreground,
-  stained-backing, focus-ring, selection-separation, and minimum-backing math. One immutable
-  snapshot is created by `ResolvedTheme` on either resolver path. D-2's three-pilot
-  `OnAccentPilotTreatment` consumes the stained result at resolve time; stored accent/config
-  remain inputs and are never adapted in place.
-- **`AdaptiveOnAccentTreatment`** (Phase D-2/D-3): the canonical immutable output for all seven
-  original text-bearing accent families. It keeps one stable foreground, applies D-1's bounded
-  stain, and uses the minimum neutral readability scrim when needed; selected peers also expose
-  a compact boundary color.
-- **`SemanticContrastTreatment`** (Phase D-4…D-6): immutable resolve-time outputs for minimum
-  essential-content plates and neutral-control/field backing, placeholder/disabled fields,
-  contextual focus, mechanical indicators, semantic status foregrounds/indicators, and tooltips.
-  Components only read these values; no production painter performs contrast math.
+  contrast-checked via relative luminance; simple HSL, never throws on any input.
 - **`ThemeResolver`** has two paths: derived palette (`themeEnabled`) and a verbatim fixed
   *factory palette* (theme off — intentionally not the derived form of the defaults).
   **`applyBackgroundOpacity` stamps the opacity onto the `WINDOW_FILL` token's ALPHA ONLY —

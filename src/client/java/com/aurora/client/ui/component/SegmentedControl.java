@@ -76,8 +76,8 @@ public class SegmentedControl extends Widget {
     /**
      * Glass pilot (Theme screen only): each segment becomes its own RAISED
      * glass panel — neutral tint (WINDOW_FILL) for unselected, accent-stained
-     * tint ({@link ThemeManager#stainedTint()}) for selected. The tint is the
-     * primary selection cue and a thin semantic edge reinforces it; both states share the raised orientation (the
+     * tint ({@link ThemeManager#stainedTint()}) for selected. Selection reads
+     * through tint alone; both states share the raised orientation (the
      * hierarchy rule: controls float above the recessed window). The flat
      * track base is suppressed from the cached shape layer while this is on;
      * whenever the glass renderer declines (screenshot suppression, failure)
@@ -146,10 +146,7 @@ public class SegmentedControl extends Widget {
         for (int i = 0; i < options.length; i++) {
             int sx = segStart(i, x, w);
             int sw = segWidth(i, x, w);
-            boolean drew = i == selected
-                    ? GlassSurface.adaptiveOnAccentControl(g, sx, y, sw, trackH, radius)
-                    : GlassSurface.control(g, sx, y, sw, trackH, radius);
-            if (!drew) {
+            if (!GlassSurface.control(g, sx, y, sw, trackH, radius, i == selected)) {
                 passDrewSegments = false;
                 break;
             }
@@ -183,10 +180,7 @@ public class SegmentedControl extends Widget {
                     int sx = segStart(i, x, w);
                     int sw = segWidth(i, x, w);
                     boolean isSelected = i == selected;
-                    boolean drew = isSelected
-                            ? GlassSurface.adaptiveOnAccentControl(g, sx, y, sw, trackH, radius)
-                            : GlassSurface.control(g, sx, y, sw, trackH, radius);
-                    if (!drew) {
+                    if (!GlassSurface.control(g, sx, y, sw, trackH, radius, isSelected)) {
                         glassOk = false;
                         break;
                     }
@@ -226,13 +220,7 @@ public class SegmentedControl extends Widget {
 
             if (!glassOk && isSelected) {
                 RenderUtil.drawRoundedRectAA(g, sx, y, sw, trackH, radius,
-                        ThemeManager.adaptiveOnAccent().selectedSegment());
-            }
-            boolean focused = control != null && control.isFocused();
-            if (isSelected && !focused) {
-                RenderUtil.drawRoundedOutlineAA(g, sx, y, sw, trackH, radius,
-                        RenderUtil.devicePixelStroke(),
-                        ThemeManager.adaptiveOnAccent().selectionIndicator());
+                        ThemeManager.color(ThemeToken.ACCENT));
             }
 
             if (!disabled && hoverT > 0f) {
@@ -242,14 +230,13 @@ public class SegmentedControl extends Widget {
 
             // Keyboard focus: the Button-family 1 px accent hairline — an
             // independent channel from both the selection fill and hover wash.
-            if (focused) {
+            if (control != null && control.isFocused()) {
                 RenderUtil.drawRoundedOutlineAA(g, sx, y, sw, trackH, radius, 1.0f,
-                        isSelected ? ThemeManager.semanticContrast().focusOnAccent()
-                                : ThemeManager.semanticContrast().focusNeutral());
+                        ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
             }
 
             int color = disabled ? ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED)
-                    : isSelected ? ThemeManager.adaptiveOnAccent().foreground()
+                    : isSelected ? ThemeManager.color(ThemeToken.ON_ACCENT)
                     : AuroraAnim.lerpArgb(
                             ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY),
                             ThemeManager.color(ThemeToken.ON_BACKGROUND), hoverT);

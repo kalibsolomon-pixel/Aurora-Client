@@ -207,7 +207,7 @@ public class ColorSwatch extends Widget {
             // 2 px-out position, so focus never reads as selection.
             if (focusedVisual) {
                 RenderUtil.drawRoundedOutlineAA(g, x, y, w, h, radius, 1.0f,
-                        ThemeManager.semanticContrast().focusNeutral());
+                        ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
             }
             return;
         }

@@ -144,8 +144,8 @@ public class KeyListSetting extends FeatureSetting {
                         null,
                         () -> !isDisabled(),
                         () -> removeEntry(v)),
-                () -> ThemeManager.semanticContrast().errorForeground(),
-                () -> ThemeManager.semanticContrast().errorForeground()));
+                () -> 0xFFFFFFFF,
+                () -> 0xFFFFFFFF));
     }
 
     /** The ONE removal path — the action's behavior and the legacy fallback both land here. */
@@ -208,9 +208,8 @@ public class KeyListSetting extends FeatureSetting {
         int addW = width - 28;
         int addY = y + ROW_H + 2 + safeList().size() * (ROW_H + 2) + 4;
         float glassR = Math.min(ADD_H / 2f, ThemeManager.current().roundness().radiusSmall());
-        passDrewPill = !isDisabled() && (listening
-                ? GlassSurface.adaptiveOnAccentControl(ctx, addX, addY, addW, ADD_H, glassR)
-                : GlassSurface.control(ctx, addX, addY, addW, ADD_H, glassR));
+        passDrewPill = !isDisabled()
+                && GlassSurface.control(ctx, addX, addY, addW, ADD_H, glassR, listening);
     }
 
     @Override
@@ -246,8 +245,7 @@ public class KeyListSetting extends FeatureSetting {
             ctx.fill(btnX, btnY, btnX + BTN_SIZE, btnY + BTN_SIZE,
                     ThemeManager.withAlpha(err, btnHover ? 0x66 : 0x33));
             AuroraFontRenderer.drawCentered(ctx, tr, "\u2212", btnX + BTN_SIZE / 2,
-                    btnY + (BTN_SIZE - tr.lineHeight) / 2,
-                    ThemeManager.semanticContrast().errorForeground());
+                    btnY + (BTN_SIZE - tr.lineHeight) / 2, 0xFFFFFFFF);
             Integer boxed = items.get(i);
             if (boxed != null && !disabled) {
                 com.aurora.client.ui.component.IconAction chip = chipRemoveAction(boxed);
@@ -296,15 +294,13 @@ public class KeyListSetting extends FeatureSetting {
         if (glassPassFrame == GlassSurface.frame()) {
             glassOk = passDrewPill;
         } else if (!disabled) {
-            glassOk = listening
-                    ? GlassSurface.adaptiveOnAccentControl(ctx, addX, addY, addW, ADD_H, glassR)
-                    : GlassSurface.control(ctx, addX, addY, addW, ADD_H, glassR);
+            glassOk = GlassSurface.control(ctx, addX, addY, addW, ADD_H, glassR, listening);
         } else {
             glassOk = false;
         }
         if (!glassOk) {
             RenderUtil.drawSquircle(ctx, addX, addY, addW, ADD_H, AuroraTheme.RADIUS_SMALL,
-                    listening ? ThemeManager.adaptiveOnAccent().listeningPill() : fillTint);
+                    listening ? AuroraTheme.IOS_BLUE_PRESSED : fillTint);
             RenderUtil.drawSquircleOutline(ctx, addX, addY, addW, ADD_H, AuroraTheme.RADIUS_SMALL, 1.0f,
                     listening ? AuroraTheme.IOS_BLUE : borderTint);
         }
@@ -313,7 +309,7 @@ public class KeyListSetting extends FeatureSetting {
                 : items.size() >= KeystrokesModule.MAX_EXTRA_KEYS ? "List full (12 max)"
                 : "+ Add Key";
         int addTextW = tr.width(addText);
-        int textCol = listening ? ThemeManager.adaptiveOnAccent().foreground() : textColor;
+        int textCol = listening ? ThemeManager.color(ThemeToken.ON_ACCENT) : textColor;
         ctx.drawString(tr, addText, addX + (addW - addTextW) / 2,
                 addY + (ADD_H - tr.lineHeight) / 2 + 1, textCol, false);
     }

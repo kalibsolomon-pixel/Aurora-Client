@@ -61,10 +61,6 @@ public abstract class EditBoxMixin implements GlassEditBox {
     @Shadow private int displayPos;
     /** Caret index within the value string. */
     @Shadow private int cursorPos;
-    /** Other end of the vanilla text selection; equals cursorPos when no range is selected. */
-    @Shadow private int highlightPos;
-    /** Semantic editability; unlike active=false modal containment, this is the disabled-field state. */
-    @Shadow private boolean isEditable;
     /** Placeholder hint text shown when the field is empty. */
     @Shadow private Component hint;
 
@@ -102,9 +98,8 @@ public abstract class EditBoxMixin implements GlassEditBox {
     public void aurora$renderGlassPass(GuiGraphics ctx) {
         EditBox self = (EditBox) (Object) this;
         aurora$glassPassFrame = GlassSurface.frame();
-        aurora$glassPassDrew = self.visible && isEditable
-                && aurora$themedScreen(Minecraft.getInstance())
-                && GlassSurface.field(ctx, self.getX(), self.getY(), self.getWidth(), self.getHeight(),
+        aurora$glassPassDrew = self.visible && aurora$themedScreen(Minecraft.getInstance())
+                && GlassSurface.control(ctx, self.getX(), self.getY(), self.getWidth(), self.getHeight(),
                         ThemeManager.current().roundness().radiusSmall());
     }
 
@@ -120,7 +115,6 @@ public abstract class EditBoxMixin implements GlassEditBox {
         float w = self.getWidth();
         float h = self.getHeight();
         boolean focused = self.isFocused();
-        boolean editable = isEditable;
         String value = self.getValue();
 
         // --- 1. Background (fully replaces vanilla box) ---
@@ -133,31 +127,26 @@ public abstract class EditBoxMixin implements GlassEditBox {
         // result matters here; otherwise it is painted in place now. With no
         // live world the renderer declines and the flat themed fill +
         // outline below draws instead, exactly as before glass.
-        int fillCol = editable
-                ? ThemeManager.semanticContrast().fieldTint()
-                : ThemeManager.semanticContrast().disabledFill();
-        int borderCol = editable
-                ? (focused ? AuroraTheme.BORDER_ON_HOVER : AuroraTheme.BORDER_OFF)
-                : ThemeManager.semanticContrast().disabledText();
+        int fillCol = ThemeManager.surfaceColor(focused ? ThemeToken.SURFACE_VARIANT : ThemeToken.SURFACE);
+        int borderCol = focused ? AuroraTheme.BORDER_ON_HOVER : AuroraTheme.BORDER_OFF;
 
         float radius = ThemeManager.current().roundness().radiusSmall();
         boolean glassOk = aurora$glassPassFrame == GlassSurface.frame()
                 ? aurora$glassPassDrew
-                : editable && GlassSurface.field(ctx, x, y, w, h, radius);
+                : GlassSurface.control(ctx, x, y, w, h, radius);
         if (glassOk) {
             // Focus ring on glass — a translucent hairline that brightens
             // the rim without stacking a second surface.
-            if (focused && editable) {
+            if (focused) {
                 RenderUtil.drawRoundedOutlineAA(ctx, x, y, w, h, radius, 1.0f,
-                        ThemeManager.semanticContrast().focusNeutral());
+                        ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
             }
         } else {
             RenderUtil.drawRoundedRectAA(ctx, x, y, w, h, radius, fillCol);
         }
 
         // --- 2. Text / hint rendering, vertically centered ---
-        int textCol = editable ? ThemeManager.color(ThemeToken.ON_BACKGROUND)
-                : ThemeManager.semanticContrast().disabledText();
+        int textCol = ThemeManager.color(ThemeToken.ON_BACKGROUND);
         int innerX = (int) x + 8;           // 8px left padding
         int innerRight = (int) (x + w) - 4; // 4px right padding
         int textY = (int) (y + (h - font.lineHeight) / 2) + 1; // +1 nudges past baseline offset
@@ -167,25 +156,13 @@ public abstract class EditBoxMixin implements GlassEditBox {
             // Placeholder hint text
             if (hint != null) {
                 ctx.drawString(font, hint, innerX, textY,
-                        editable ? ThemeManager.semanticContrast().placeholderText()
-                                : ThemeManager.semanticContrast().disabledText(), false);
+                        ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED), false);
             }
         } else {
             // Render the value text, scrolled by displayPos so long
             // queries stay visible as the user types.
             int safeDisp = Math.min(displayPos, value.length());
             String visible = value.substring(safeDisp);
-            if (focused && editable && highlightPos != cursorPos) {
-                int start = Math.max(safeDisp, Math.min(highlightPos, cursorPos));
-                int end = Math.max(safeDisp, Math.max(highlightPos, cursorPos));
-                end = Math.min(end, value.length());
-                int sx1 = innerX + font.width(value.substring(safeDisp, Math.min(start, value.length())));
-                int sx2 = innerX + font.width(value.substring(safeDisp, end));
-                if (sx2 > sx1) {
-                    ctx.fill(sx1, textY - 1, Math.min(sx2, innerRight), textY + font.lineHeight,
-                            ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x66));
-                }
-            }
             ctx.drawString(font, visible, innerX - safeDisp, textY, textCol, false);
         }
         ctx.disableScissor();
@@ -193,7 +170,7 @@ public abstract class EditBoxMixin implements GlassEditBox {
         // --- 3. Blinking caret when focused ---
         // Use wall-clock time for the blink cycle (~530ms on, ~530ms off)
         // instead of shadowing the vanilla `frame` counter.
-        if (focused && editable && (System.currentTimeMillis() / 530L) % 2L == 0L) {
+        if (focused && (System.currentTimeMillis() / 530L) % 2L == 0L) {
             // Caret X from the ACTUAL cursor position (mid-string included),
             // measured over the visible window: width of the text between
             // the scroll offset and the cursor.

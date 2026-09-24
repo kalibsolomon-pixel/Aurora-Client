@@ -164,7 +164,7 @@ public final class IconAction {
         float radius = Math.min(Math.min(w, h) / 2f,
                 ThemeManager.current().roundness().radiusSmall());
         RenderUtil.drawRoundedOutlineAA(g, x, y, w, h, radius, 1.0f,
-                ThemeManager.semanticContrast().focusNeutral());
+                ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
     }
 
     /**

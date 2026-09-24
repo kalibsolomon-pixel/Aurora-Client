@@ -343,12 +343,6 @@ public final class GlassSurface {
         return control(g, x, y, w, h, radius, false, BlurPanelRenderer.Priority.CONTROL);
     }
 
-    /** Raised text-field surface with the placeholder-readable D-5 backing. */
-    public static boolean field(GuiGraphics g, float x, float y, float w, float h, float radius) {
-        return paint(g, x, y, w, h, radius, BlurPanelRenderer.Lighting.raised(),
-                ThemeManager.semanticContrast().fieldTint(), BlurPanelRenderer.Priority.CONTROL);
-    }
-
     /**
      * {@link #control(GuiGraphics, float, float, float, float, float)} with
      * an explicit degradation priority — for control-styled ROWS (the
@@ -372,24 +366,6 @@ public final class GlassSurface {
     }
 
     /**
-     * Phase D-2's text-bearing stained pilot surface. This deliberately is
-     * separate from {@link #stainedControl}: D-3 owns migration of the
-     * remaining stained consumers.
-     */
-    public static boolean adaptiveOnAccentControl(GuiGraphics g, float x, float y, float w, float h,
-                                                  float radius) {
-        return adaptiveOnAccentControl(g, x, y, w, h, radius,
-                BlurPanelRenderer.Priority.CONTROL);
-    }
-
-    /** Phase D-2 pilot surface with explicit degradation priority. */
-    public static boolean adaptiveOnAccentControl(GuiGraphics g, float x, float y, float w, float h,
-                                                  float radius, BlurPanelRenderer.Priority priority) {
-        return paint(g, x, y, w, h, radius, BlurPanelRenderer.Lighting.raised(),
-                ThemeManager.adaptiveOnAccent().stainedTint(), priority);
-    }
-
-    /**
      * Convenience for the "selection reads through the tint" pattern:
      * {@link #stainedControl} when {@code stained}, else {@link #control}.
      * Both are RAISED — selection never changes the lighting orientation.
@@ -410,7 +386,7 @@ public final class GlassSurface {
     public static boolean control(GuiGraphics g, float x, float y, float w, float h, float radius,
                                   boolean stained, BlurPanelRenderer.Priority priority) {
         return paint(g, x, y, w, h, radius, BlurPanelRenderer.Lighting.raised(),
-                stained ? ThemeManager.stainedTint() : ThemeManager.semanticContrast().controlTint(),
+                stained ? ThemeManager.stainedTint() : ThemeManager.color(ThemeToken.WINDOW_FILL),
                 priority);
     }
 

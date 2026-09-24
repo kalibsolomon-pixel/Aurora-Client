@@ -193,7 +193,6 @@ public class Button extends Widget {
     private static final int KIND_FLAT_DESTRUCTIVE = 2;
     private static final int KIND_GLASS_TINT = 3;
     private static final int KIND_GLASS_STAINED = 4;
-    private static final int KIND_GLASS_STAINED_PILOT = 5;
     private static final Map<Long, UiLayerCache> SURFACE_TEMPLATES = new HashMap<>();
 
     private static long templateKey(float w, float h, int kind) {
@@ -235,7 +234,7 @@ public class Button extends Widget {
                     }
                     case KIND_FLAT_PRIMARY -> {
                         RenderUtil.drawRoundedRectAA(g, 1, 1, w, h, radius,
-                                ThemeManager.adaptiveOnAccent().buttonRest());
+                                ThemeManager.color(ThemeToken.ACCENT_GRAD_BOT));
                         RenderUtil.drawRoundedOutlineAA(g, 1, 1, w, h, radius, 1.0f, 0x22FFFFFF);
                     }
                     case KIND_FLAT_DESTRUCTIVE -> {
@@ -245,11 +244,9 @@ public class Button extends Widget {
                         RenderUtil.drawRoundedOutlineAA(g, 1, 1, w, h, radius, 1.0f, err);
                     }
                     default -> RenderUtil.drawRoundedRectAA(g, 1, 1, w, h, radius,
-                            kind == KIND_GLASS_STAINED_PILOT
-                                    ? ThemeManager.adaptiveOnAccent().stainedTint()
-                                    : kind == KIND_GLASS_STAINED
-                                            ? ThemeManager.stainedTint()
-                                            : ThemeManager.color(ThemeToken.WINDOW_FILL));
+                            kind == KIND_GLASS_STAINED
+                                    ? ThemeManager.stainedTint()
+                                    : ThemeManager.color(ThemeToken.WINDOW_FILL));
                 }
             } finally {
                 RenderUtil.endCapture(prev);
@@ -270,18 +267,14 @@ public class Button extends Widget {
             // wrap suppresses only GlassSurface's live tint submission.
             RenderUtil.RectSink prev = RenderUtil.beginCapture(RenderUtil.DISCARD_SINK);
             try {
-                glassPassDrew = glassStyle == GlassStyle.STAINED && primary
-                        ? GlassSurface.adaptiveOnAccentControl(g, x, y, w, h, radius, priority)
-                        : GlassSurface.control(g, x, y, w, h, radius,
-                                glassStyle == GlassStyle.STAINED, priority);
+                glassPassDrew = GlassSurface.control(g, x, y, w, h, radius,
+                        glassStyle == GlassStyle.STAINED, priority);
             } finally {
                 RenderUtil.endCapture(prev);
             }
             if (glassPassDrew) {
                 blitSurfaceTemplate(g, x, y, w, h, radius,
-                        glassStyle == GlassStyle.STAINED
-                                ? primary ? KIND_GLASS_STAINED_PILOT : KIND_GLASS_STAINED
-                                : KIND_GLASS_TINT);
+                        glassStyle == GlassStyle.STAINED ? KIND_GLASS_STAINED : KIND_GLASS_TINT);
             }
         } else {
             glassPassDrew = false;
@@ -310,22 +303,22 @@ public class Button extends Widget {
 
         int bg, border, text;
         if (disabled) {
-            bg = ThemeManager.semanticContrast().disabledFill();
+            bg = ThemeManager.color(ThemeToken.SURFACE_INSET);
             border = ThemeManager.color(ThemeToken.BORDER);
-            text = ThemeManager.semanticContrast().disabledText();
+            text = ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED);
         } else if (destructive) {
             int err = ThemeManager.color(ThemeToken.SEMANTIC_ERROR);
             bg = AuroraAnim.lerpArgb(
                     ThemeManager.withAlpha(err, 0x44),
                     ThemeManager.withAlpha(err, 0x88), hoverT);
             border = err;
-            text = ThemeManager.semanticContrast().errorForeground();
+            text = 0xFFFFFFFF;
         } else if (primary) {
             bg = AuroraAnim.lerpArgb(
-                    ThemeManager.adaptiveOnAccent().buttonRest(),
-                    ThemeManager.adaptiveOnAccent().buttonHover(), hoverT);
+                    ThemeManager.color(ThemeToken.ACCENT_GRAD_BOT),
+                    ThemeManager.color(ThemeToken.ACCENT_GRAD_TOP), hoverT);
             border = AuroraAnim.lerpArgb(0x22FFFFFF, 0x44FFFFFF, hoverT);
-            text = ThemeManager.adaptiveOnAccent().foreground();
+            text = ThemeManager.color(ThemeToken.ON_ACCENT);
         } else {
             // C-6: the flat-secondary ramps are shared with the vanilla-gated
             // mixin painter — the single source (secondaryFlatFill/Border).
@@ -348,18 +341,14 @@ public class Button extends Widget {
         } else if (glassEligible(scale)) {
             RenderUtil.RectSink prev = RenderUtil.beginCapture(RenderUtil.DISCARD_SINK);
             try {
-                glassDrew = glassStyle == GlassStyle.STAINED && primary
-                        ? GlassSurface.adaptiveOnAccentControl(g, x, y, w, h, radius, priority)
-                        : GlassSurface.control(g, x, y, w, h, radius,
-                                glassStyle == GlassStyle.STAINED, priority);
+                glassDrew = GlassSurface.control(g, x, y, w, h, radius,
+                        glassStyle == GlassStyle.STAINED, priority);
             } finally {
                 RenderUtil.endCapture(prev);
             }
             if (glassDrew) {
                 blitSurfaceTemplate(g, x, y, w, h, radius,
-                        glassStyle == GlassStyle.STAINED
-                                ? primary ? KIND_GLASS_STAINED_PILOT : KIND_GLASS_STAINED
-                                : KIND_GLASS_TINT);
+                        glassStyle == GlassStyle.STAINED ? KIND_GLASS_STAINED : KIND_GLASS_TINT);
             }
         } else {
             glassDrew = false;
@@ -376,8 +365,7 @@ public class Button extends Widget {
 
         if (focused) {
             RenderUtil.drawRoundedOutlineAA(g, x, y, w, h, radius, 1.0f,
-                    primary ? ThemeManager.semanticContrast().focusOnAccent()
-                            : ThemeManager.semanticContrast().focusNeutral());
+                    ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
         }
 
         int textX = Math.round(x + w / 2f);
@@ -474,18 +462,18 @@ public class Button extends Widget {
 
         float radius = ThemeManager.current().roundness().radiusSmall();
         int bg = active ? secondaryFlatFill(hoverT)
-                : ThemeManager.semanticContrast().disabledFill();
+                : ThemeManager.color(ThemeToken.SURFACE_INSET);
         int border = active ? secondaryFlatBorder(hoverT)
                 : ThemeManager.color(ThemeToken.BORDER);
         int text = active ? ThemeManager.color(ThemeToken.ON_BACKGROUND)
-                : ThemeManager.semanticContrast().disabledText();
+                : ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED);
 
         RenderUtil.drawRoundedRectAA(g, x, y, w, h, radius, bg);
         RenderUtil.drawRoundedOutlineAA(g, x, y, w, h, radius, 1.0f, border);
 
         if (focused) {
             RenderUtil.drawRoundedOutlineAA(g, x, y, w, h, radius, 1.0f,
-                    ThemeManager.semanticContrast().focusNeutral());
+                    ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
         }
 
         AuroraFontRenderer.drawCentered(g, tr, label, Math.round(x + w / 2f),

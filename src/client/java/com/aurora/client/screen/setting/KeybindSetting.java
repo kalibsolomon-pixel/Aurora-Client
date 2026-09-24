@@ -135,9 +135,8 @@ public class KeybindSetting extends FeatureSetting {
         int btnX = x + width - BTN_W - 14;
         int btnY = y + (CONTROL_H - BTN_H) / 2;
         float glassR = Math.min(BTN_H / 2f, ThemeManager.current().roundness().radiusSmall());
-        passDrewPill = !disabled && (listening
-                ? GlassSurface.adaptiveOnAccentControl(ctx, btnX, btnY, BTN_W, BTN_H, glassR)
-                : GlassSurface.control(ctx, btnX, btnY, BTN_W, BTN_H, glassR));
+        passDrewPill = !disabled
+                && GlassSurface.control(ctx, btnX, btnY, BTN_W, BTN_H, glassR, listening);
     }
 
     @Override
@@ -190,15 +189,13 @@ public class KeybindSetting extends FeatureSetting {
         if (glassPassFrame == GlassSurface.frame()) {
             glassOk = passDrewPill;
         } else if (!disabled) {
-            glassOk = listening
-                    ? GlassSurface.adaptiveOnAccentControl(ctx, btnX, btnY, BTN_W, BTN_H, glassR)
-                    : GlassSurface.control(ctx, btnX, btnY, BTN_W, BTN_H, glassR);
+            glassOk = GlassSurface.control(ctx, btnX, btnY, BTN_W, BTN_H, glassR, listening);
         } else {
             glassOk = false;
         }
         if (!glassOk) {
             RenderUtil.drawSquircle(ctx, btnX, btnY, BTN_W, BTN_H, AuroraTheme.RADIUS_SMALL,
-                    listening ? ThemeManager.adaptiveOnAccent().listeningPill() : fillTint);
+                    listening ? AuroraTheme.IOS_BLUE_PRESSED : fillTint);
             RenderUtil.drawSquircleOutline(ctx, btnX, btnY, BTN_W, BTN_H, AuroraTheme.RADIUS_SMALL, 1.0f,
                     listening ? AuroraTheme.IOS_BLUE : borderTint);
         }
@@ -206,15 +203,14 @@ public class KeybindSetting extends FeatureSetting {
         if (focusedVisual) {
             RenderUtil.drawRoundedOutlineAA(ctx, btnX, btnY, BTN_W, BTN_H,
                     AuroraTheme.RADIUS_SMALL, 1.0f,
-                    listening ? ThemeManager.semanticContrast().focusOnAccent()
-                            : ThemeManager.semanticContrast().focusNeutral());
+                    ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
         }
 
         String labelText = listening ? "> press key <" : currentKeyName();
         // Trim long names so they fit in the pill (keep at least 3 chars + ellipsis).
         labelText = AuroraFontRenderer.ellipsize(tr, labelText, BTN_W - 8, 3);
         int labelW = tr.width(labelText);
-        int textCol = listening ? ThemeManager.adaptiveOnAccent().foreground() : textColor;
+        int textCol = listening ? ThemeManager.color(ThemeToken.ON_ACCENT) : textColor;
         ctx.drawString(tr, labelText,
                 btnX + (BTN_W - labelW) / 2,
                 btnY + (BTN_H - tr.lineHeight) / 2 + 1,

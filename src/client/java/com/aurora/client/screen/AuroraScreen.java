@@ -272,7 +272,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         searchField = new EditBox(this.font, 0, 0, 202, 20, Component.literal("Search..."));
         searchField.setHint(Component.literal("Search modules..."));
         searchField.setBordered(false);
-        searchField.setTextColor(ThemeManager.color(ThemeToken.ON_BACKGROUND));
+        searchField.setTextColor(0xFFFFFFFF);
         searchField.setResponder(s -> this.searchQuery = s);
         // Explicit traversal position: the vanilla search field is first.
         // It is visible/focusable on Modules and hidden on Settings.
@@ -784,21 +784,15 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         float ctrlRadius = ThemeManager.current().roundness().radiusSmall();
         for (int i = 0; i < 2; i++) {
             float catY = by + TAB_FIRST_Y + i * TAB_PITCH;
-            chipGlass[i] = selectedCategory == i
-                    ? GlassSurface.adaptiveOnAccentControl(g, bx + 8, catY, 64, TAB_H, ctrlRadius)
-                    : GlassSurface.control(g, bx + 8, catY, 64, TAB_H, ctrlRadius);
+            chipGlass[i] = GlassSurface.control(g, bx + 8, catY, 64, TAB_H, ctrlRadius, selectedCategory == i);
         }
         float profY = by + TAB_FIRST_Y + 2 * TAB_PITCH;
         profGlass = GlassSurface.control(g, bx + 8, profY, 64, TAB_H, ctrlRadius);
 
         if (selectedCategory == 0) {
             float mx = mainX(), my = mainY();
-            layoutGlass[0] = !gridLayout
-                    ? GlassSurface.adaptiveOnAccentControl(g, mx, my, 20, 20, ctrlRadius)
-                    : GlassSurface.control(g, mx, my, 20, 20, ctrlRadius);
-            layoutGlass[1] = gridLayout
-                    ? GlassSurface.adaptiveOnAccentControl(g, mx + 24, my, 20, 20, ctrlRadius)
-                    : GlassSurface.control(g, mx + 24, my, 20, 20, ctrlRadius);
+            layoutGlass[0] = GlassSurface.control(g, mx, my, 20, 20, ctrlRadius, !gridLayout);
+            layoutGlass[1] = GlassSurface.control(g, mx + 24, my, 20, 20, ctrlRadius, gridLayout);
             // Search field — positioned here (the pass runs before
             // renderModulesLive positions it again) and driven through its
             // own split (EditBoxMixin carries the frame-stamp scheme).
@@ -816,11 +810,8 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                     tileGlass[i] = false;
                     continue;
                 }
-                tileGlass[i] = mods.get(i).isEnabled()
-                        ? GlassSurface.adaptiveOnAccentControl(g, b[0], b[1], b[2], b[3], ctrlRadius,
-                                BlurPanelRenderer.Priority.ROW)
-                        : GlassSurface.control(g, b[0], b[1], b[2], b[3], ctrlRadius,
-                                BlurPanelRenderer.Priority.ROW);
+                tileGlass[i] = GlassSurface.control(g, b[0], b[1], b[2], b[3], ctrlRadius,
+                        mods.get(i).isEnabled(), BlurPanelRenderer.Priority.ROW);
             }
             GlassSurface.disableScissor(g);
         } else {
@@ -878,31 +869,24 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             // flat hover wash only when the glass declined, then the label.
             if (!chipGlass[i]) {
                 if (sel) {
-                    RenderUtil.drawRoundedRectAA(g, bx + 8, catY, 64, 22, ctrlRadius,
-                            ThemeManager.adaptiveOnAccent().selectedSegment());
+                    RenderUtil.drawRoundedRectAA(g, bx + 8, catY, 64, 22, ctrlRadius, alpha(ThemeToken.ACCENT, 0x26 / 255f));
                 } else if (hoverT > 0f) {
                     RenderUtil.drawRoundedRectAA(g, bx + 8, catY, 64, 22, ctrlRadius,
                             AuroraAnim.lerpArgb(0x00000000,
                                     ThemeManager.surfaceColor(ThemeToken.SURFACE_VARIANT), hoverT));
                 }
             }
-            int txt = sel ? ThemeManager.adaptiveOnAccent().foreground()
+            int txt = chipGlass[i] && sel ? ThemeManager.color(ThemeToken.ON_ACCENT)
+                    : sel ? ThemeManager.color(ThemeToken.ON_BACKGROUND)
                     : AuroraAnim.lerpArgb(
                             ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED),
                             ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY), hoverT);
             g.drawString(tr, cats[i], (int) (bx + 16), (int) (catY + 7), txt, false);
-            boolean focused = control != null && control.isFocused();
-            if (sel && !focused) {
-                RenderUtil.drawRoundedOutlineAA(g, bx + 8, catY, 64, 22, ctrlRadius,
-                        RenderUtil.devicePixelStroke(),
-                        ThemeManager.adaptiveOnAccent().selectionIndicator());
-            }
             // Keyboard focus: the Button-family 1 px accent hairline — an
             // independent channel from both the selection tint and hover.
-            if (focused) {
+            if (control != null && control.isFocused()) {
                 RenderUtil.drawRoundedOutlineAA(g, bx + 8, catY, 64, 22, ctrlRadius, 1.0f,
-                        sel ? ThemeManager.semanticContrast().focusOnAccent()
-                                : ThemeManager.semanticContrast().focusNeutral());
+                        ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
             }
         }
 
@@ -927,7 +911,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                         ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY), profT), false);
         if (profilesControl != null && profilesControl.isFocused()) {
             RenderUtil.drawRoundedOutlineAA(g, bx + 8, profY, 64, 22, ctrlRadius, 1.0f,
-                    ThemeManager.semanticContrast().focusNeutral());
+                    ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
         }
 
         if (selectedCategory == 0) renderModulesLive(g, mods, mouseX, mouseY, delta);
@@ -1023,10 +1007,10 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             // Surface: each tile is its own RAISED glass panel (painted
             // pre-dim under the tracked scissor by paintGlassPass) — its own
             // correctly-cropped, correctly-scaled backdrop slice. Neutral
-            // tint when off, accent-STAINED when on (the enabled status reads
-            // through its semantic backing). Content here: the
+            // tint when off, accent-STAINED when on (the enabled state reads
+            // through the tint, like a selected segment). Content here: the
             // faint mode-aware hover wash on top of the glass, or the flat
-            // surface fill + accent wash on decline.
+            // surface fill + accent wash/border on decline.
             boolean tileGlass = tileGlass(i);
             if (tileGlass) {
                 if (hoverT > 0f) {
@@ -1041,34 +1025,30 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                                 ThemeManager.surfaceColor(ThemeToken.SURFACE),
                                 ThemeManager.surfaceColor(ThemeToken.SURFACE_VARIANT), hoverT));
                 if (on) {
-                    // The accent wash is the enabled status treatment; status
-                    // does not borrow the selection-boundary vocabulary.
+                    // Accent wash + border = the enabled indicator (no switch widget).
                     RenderUtil.drawRoundedRectAA(g, cx, cy, cw, ch, tileRadius, alpha(ThemeToken.ACCENT, 0x14 / 255f));
+                    RenderUtil.drawRoundedOutlineAA(g, cx, cy, cw, ch, tileRadius, 1.0f, ThemeManager.color(ThemeToken.ACCENT));
                 }
             }
             // Keyboard focus: the Button-family hairline — independent of
             // both the enabled stain and the hover wash.
             if (control != null && control.isFocused()) {
                 RenderUtil.drawRoundedOutlineAA(g, cx, cy, cw, ch, tileRadius, 1.0f,
-                        on ? ThemeManager.semanticContrast().focusOnAccent()
-                                : ThemeManager.semanticContrast().focusNeutral());
+                        ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
             }
 
             if (gridLayout) {
                 drawTileIcon(g, tr, m, cx + cw / 2f, cy + 30, 28f, on, tileGlass);
                 String name = fit(tr, m.name, (int) cw - 8);
                 g.drawString(tr, name, (int) (cx + (cw - tr.width(name)) / 2f), (int) (cy + ch - 20),
-                        on ? ThemeManager.adaptiveOnAccent().foreground()
-                                : ThemeManager.color(ThemeToken.ON_BACKGROUND), false);
+                        ThemeManager.color(ThemeToken.ON_BACKGROUND), false);
             } else {
                 drawTileIcon(g, tr, m, cx + 20, cy + ch / 2f, 16f, on, tileGlass);
                 String name = fit(tr, m.name, 130);
                 g.drawString(tr, name, (int) (cx + 40), (int) (cy + 8),
-                        on ? ThemeManager.adaptiveOnAccent().foreground()
-                                : ThemeManager.color(ThemeToken.ON_BACKGROUND), false);
+                        ThemeManager.color(ThemeToken.ON_BACKGROUND), false);
                 RenderUtil.drawWordWrapMaxLines(tr, g, m.description, cx + 40, cy + 20, 185, 1,
-                        on ? ThemeManager.adaptiveOnAccent().supplementalForeground()
-                                : ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED));
+                        ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED));
             }
         }
         if (mods.isEmpty()) {
@@ -1119,7 +1099,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                         nav.updatePointer(mouseX, mouseY);
                         if (nav.isFocused()) {
                             RenderUtil.drawRoundedOutlineAA(g, mx + 4, y, CONTENT_W - 4 - 42, headerH, ctrlRadius, 1.0f,
-                                    ThemeManager.semanticContrast().focusNeutral());
+                                    ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
                         }
                     }
                 }
@@ -1220,37 +1200,30 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                         alpha(ThemeToken.ON_BACKGROUND, (0x1A / 255f) * hoverT));
             }
         } else {
-            int bg = selected ? ThemeManager.adaptiveOnAccent().selectedSegment()
+            int bg = selected ? alpha(ThemeToken.ACCENT, 0x26 / 255f)
                     : AuroraAnim.lerpArgb(
                             ThemeManager.surfaceColor(ThemeToken.SURFACE),
                             ThemeManager.surfaceColor(ThemeToken.SURFACE_VARIANT), hoverT);
+            int border = selected ? ThemeManager.color(ThemeToken.ACCENT) : alpha(ThemeToken.ON_BACKGROUND, 0x08f);
             RenderUtil.drawRoundedRectAA(g, x, y, size, size, ctrlRadius, bg);
-            if (!selected) {
-                RenderUtil.drawRoundedOutlineAA(g, x, y, size, size, ctrlRadius, 1.0f,
-                        alpha(ThemeToken.ON_BACKGROUND, 0x08f));
-            }
+            RenderUtil.drawRoundedOutlineAA(g, x, y, size, size, ctrlRadius, 1.0f, border);
             if (!selected && hoverT > 0f) {
                 RenderUtil.drawRoundedRectAA(g, x, y, size, size, ctrlRadius,
                         alpha(ThemeToken.ON_BACKGROUND, (0x1A / 255f) * hoverT));
             }
         }
-        if (selected && !focused) {
-            RenderUtil.drawRoundedOutlineAA(g, x, y, size, size, ctrlRadius,
-                    RenderUtil.devicePixelStroke(),
-                    ThemeManager.adaptiveOnAccent().selectionIndicator());
-        }
         // Keyboard focus: the Button-family hairline — independent of both
         // the enabled stain and the hover wash.
         if (focused) {
             RenderUtil.drawRoundedOutlineAA(g, x, y, size, size, ctrlRadius, 1.0f,
-                    selected ? ThemeManager.semanticContrast().focusOnAccent()
-                            : ThemeManager.semanticContrast().focusNeutral());
+                    ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
         }
         // Same contract as the tiles: on stained glass the icon takes the
         // contrast-derived ON_ACCENT; the flat fallback's ~15% accent wash is
         // dark enough that the accent glyph still reads there.
-        int iconCol = selected ? ThemeManager.adaptiveOnAccent().foreground()
-                : alpha(ThemeToken.ON_BACKGROUND, 0.53f);
+        int iconCol = selected && btnGlass ? ThemeManager.color(ThemeToken.ON_ACCENT)
+                : selected ? ThemeManager.color(ThemeToken.ACCENT)
+                : alpha(ThemeToken.ON_BACKGROUND, 0x53f);
         if (list) {
             for (int i = 0; i < 3; i++) {
                 float dy = y + 5 + i * 4.5f;
@@ -1295,7 +1268,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         // still read and are kept unchanged.
         int color;
         if (on && stainedGlass) {
-            color = ThemeManager.adaptiveOnAccent().foreground();
+            color = ThemeManager.color(ThemeToken.ON_ACCENT);
         } else if (on) {
             int accent = ModuleAccentColors.get(m.id);
             color = accent != 0 ? accent : ThemeManager.color(ThemeToken.ACCENT);
@@ -1630,3 +1603,6 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         super.removed();
     }
 }
+
+
+
