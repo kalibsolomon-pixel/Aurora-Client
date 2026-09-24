@@ -12,6 +12,7 @@ import com.aurora.client.ui.component.ScrollbarChrome;
 import com.aurora.client.ui.component.ThemedScreen;
 import com.aurora.client.ui.component.ToggleSwitch;
 import com.aurora.client.ui.component.Widget;
+import com.aurora.client.ui.render.blur.BlurPanelRenderer;
 import com.aurora.client.ui.interaction.MinecraftSemanticFeedback;
 import com.aurora.client.ui.interaction.SemanticAction;
 import com.aurora.client.ui.interaction.SemanticActionControl;
@@ -52,8 +53,8 @@ import java.util.Map;
  * overlays (hover, animated toggles, text, search glow) re-render per frame.
  *
  * <p>§6 convention 6, structural (2026-09-11 — the last of the big screens):
- * {@code GlassSurface.beginGlassPass} → window/search/inline glass plus
- * parent-owned embedded sidebar/layout/tile material under the tracked
+ * {@code GlassSurface.beginGlassPass} → window/sidebar/layout/search/inline
+ * glass plus parent-owned embedded neutral-tile material under the tracked
  * scissor → {@code GlassSurface.overlayDim} → cached chrome
  * blit + content. The static cache never holds glass: panels are texture
  * blits that bypass the fill-capture sink, and the capture block runs
@@ -748,13 +749,31 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         return new float[]{cx, cy, cw, ch};
     }
 
+    // Sidebar and view controls remain distinct raised objects: every peer
+    // owns neutral glass, while the selected peer owns stained glass.
+    private final boolean[] chipGlass = new boolean[2];
+    private boolean profGlass = false;
+    private final boolean[] layoutGlass = new boolean[2];
+
+    // Enabled module cards are the deliberate Phase E exception to the
+    // parent-owned embedded rule: their highlighted state is a distinct
+    // raised object, so it keeps the frosted gradient and glossy glass rim.
+    // The result is frame-local and selects the established flat fallback
+    // when live glass is unavailable.
+    private boolean[] highlightedTileGlass = new boolean[0];
+
+    private boolean highlightedTileGlass(int i) {
+        return i < highlightedTileGlass.length && highlightedTileGlass[i];
+    }
+
     /**
      * The material pass (§6 convention 6): every surface on the screen, painted
      * between {@code beginGlassPass} and {@code overlayDim} so the dim veils
-     * them like it veils the world. The window and search field own glass;
-     * sidebar chips, Profiles, layout buttons and tiles inherit that parent
-     * material through {@link MaterialSurface#embeddedControl}, so they add
-     * no child blur sample or rim. The Settings tab's inline rows
+     * them like it veils the world. The window, sidebar tabs, Profiles,
+     * layout buttons, and search field own glass. Neutral tiles alone inherit
+     * the window through {@link MaterialSurface#embeddedControl}, while enabled
+     * tiles remain distinct raised stained glass: their frost, gradient and
+     * glossy rim are the visual highlight. The Settings tab's inline rows
      * drive the settings' own {@code renderGlassPass} under the same scissor
      * (the same walk {@code renderSettingsLive} performs). Hover never
      * changes a tint — the washes are content, painted after the dim.
@@ -771,15 +790,16 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         float ctrlRadius = ThemeManager.current().roundness().radiusSmall();
         for (int i = 0; i < 2; i++) {
             float catY = by + TAB_FIRST_Y + i * TAB_PITCH;
-            MaterialSurface.embeddedControl(g, bx + 8, catY, 64, TAB_H, ctrlRadius, selectedCategory == i);
+            chipGlass[i] = GlassSurface.control(g, bx + 8, catY, 64, TAB_H,
+                    ctrlRadius, selectedCategory == i);
         }
         float profY = by + TAB_FIRST_Y + 2 * TAB_PITCH;
-        MaterialSurface.embeddedControl(g, bx + 8, profY, 64, TAB_H, ctrlRadius, false);
+        profGlass = GlassSurface.control(g, bx + 8, profY, 64, TAB_H, ctrlRadius);
 
         if (selectedCategory == 0) {
             float mx = mainX(), my = mainY();
-            MaterialSurface.embeddedControl(g, mx, my, 20, 20, ctrlRadius, !gridLayout);
-            MaterialSurface.embeddedControl(g, mx + 24, my, 20, 20, ctrlRadius, gridLayout);
+            layoutGlass[0] = GlassSurface.control(g, mx, my, 20, 20, ctrlRadius, !gridLayout);
+            layoutGlass[1] = GlassSurface.control(g, mx + 24, my, 20, 20, ctrlRadius, gridLayout);
             // Search field — positioned here (the pass runs before
             // renderModulesLive positions it again) and driven through its
             // own split (EditBoxMixin carries the frame-stamp scheme).
@@ -790,11 +810,23 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             ((GlassEditBox) searchField).aurora$renderGlassPass(g);
 
             GlassSurface.enableScissor(g, vp.x, vp.y, vp.xEnd(), vp.yEnd());
+            if (highlightedTileGlass.length < mods.size()) {
+                highlightedTileGlass = new boolean[mods.size()];
+            }
             for (int i = 0; i < mods.size(); i++) {
                 float[] b = cardBounds(i, mods, vp);
-                if (b == null) continue;
-                MaterialSurface.embeddedControl(g, b[0], b[1], b[2], b[3], ctrlRadius,
-                        mods.get(i).isEnabled());
+                if (b == null) {
+                    highlightedTileGlass[i] = false;
+                    continue;
+                }
+                if (mods.get(i).isEnabled()) {
+                    highlightedTileGlass[i] = GlassSurface.control(g,
+                            b[0], b[1], b[2], b[3], ctrlRadius, true,
+                            BlurPanelRenderer.Priority.ROW);
+                } else {
+                    highlightedTileGlass[i] = false;
+                    MaterialSurface.embeddedControl(g, b[0], b[1], b[2], b[3], ctrlRadius, false);
+                }
             }
             GlassSurface.disableScissor(g);
         } else {
@@ -846,10 +878,21 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 control.setAvailable(true); // static sidebar chrome — always interactive
                 control.updatePointer(mouseX, mouseY);
             }
-            // The window owns glass; this child contributes only its local
-            // neutral/stained material tint. Selection remains the existing
-            // stained channel and hover remains the existing text channel.
-            int txt = sel ? ThemeManager.color(ThemeToken.ON_ACCENT)
+            // Raised glass was painted pre-dim: neutral for the inactive tab,
+            // accent-stained for the selected tab. Preserve the established
+            // flat fallback if the glass renderer declines this frame.
+            if (!chipGlass[i]) {
+                if (sel) {
+                    RenderUtil.drawRoundedRectAA(g, bx + 8, catY, 64, 22, ctrlRadius,
+                            alpha(ThemeToken.ACCENT, 0x26 / 255f));
+                } else if (hoverT > 0f) {
+                    RenderUtil.drawRoundedRectAA(g, bx + 8, catY, 64, 22, ctrlRadius,
+                            AuroraAnim.lerpArgb(0x00000000,
+                                    ThemeManager.surfaceColor(ThemeToken.SURFACE_VARIANT), hoverT));
+                }
+            }
+            int txt = chipGlass[i] && sel ? ThemeManager.color(ThemeToken.ON_ACCENT)
+                    : sel ? ThemeManager.color(ThemeToken.ON_BACKGROUND)
                     : AuroraAnim.lerpArgb(
                             ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED),
                             ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY), hoverT);
@@ -870,7 +913,13 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             profilesControl.setAvailable(true);
             profilesControl.updatePointer(mouseX, mouseY);
         }
-        // Profiles is a neutral embedded action; hover remains in its text.
+        // Profiles is neutral raised glass; retain its hover fallback when
+        // live glass is unavailable.
+        if (!profGlass && profT > 0f) {
+            RenderUtil.drawRoundedRectAA(g, bx + 8, profY, 64, 22, ctrlRadius,
+                    AuroraAnim.lerpArgb(0x00000000,
+                            ThemeManager.surfaceColor(ThemeToken.SURFACE_VARIANT), profT));
+        }
         g.drawString(tr, "Profiles", (int) (bx + 16), (int) (profY + 7),
                 AuroraAnim.lerpArgb(
                         ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED),
@@ -921,7 +970,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 control.updatePointer(mouseX, mouseY);
             }
             drawLayoutButton(g, lx, btnY, btnSize, (i == 1) == gridLayout, hoverT,
-                    control != null && control.isFocused(), i == 0, true);
+                    control != null && control.isFocused(), i == 0, layoutGlass[i]);
         }
 
         // The search bar occupies exactly the original placeholder's bounds —
@@ -970,9 +1019,18 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             }
             boolean on = m.isEnabled();
 
-            // The enclosing window owns the one backdrop sample and rim.
-            // Tiles add only the central embedded neutral/stained treatment;
-            // hover is a control-local overlay, not another glass layer.
+            // Neutral tiles inherit the enclosing window. Enabled tiles are
+            // isolated stained glass; if glass declines, preserve the old
+            // accent-wash + bright-outline fallback instead of disappearing.
+            boolean highlightedGlass = on && highlightedTileGlass(i);
+            if (on && !highlightedGlass) {
+                RenderUtil.drawRoundedRectAA(g, cx, cy, cw, ch, tileRadius,
+                        ThemeManager.surfaceColor(ThemeToken.SURFACE));
+                RenderUtil.drawRoundedRectAA(g, cx, cy, cw, ch, tileRadius,
+                        alpha(ThemeToken.ACCENT, 0x14 / 255f));
+                RenderUtil.drawRoundedOutlineAA(g, cx, cy, cw, ch, tileRadius, 1.0f,
+                        ThemeManager.color(ThemeToken.ACCENT));
+            }
             if (hoverT > 0f) {
                 RenderUtil.drawRoundedRectAA(g, cx, cy, cw, ch, tileRadius,
                         alpha(ThemeToken.ON_BACKGROUND, (0x1A / 255f) * hoverT));
@@ -985,12 +1043,12 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             }
 
             if (gridLayout) {
-                drawTileIcon(g, tr, m, cx + cw / 2f, cy + 30, 28f, on, true);
+                drawTileIcon(g, tr, m, cx + cw / 2f, cy + 30, 28f, on, highlightedGlass);
                 String name = fit(tr, m.name, (int) cw - 8);
                 g.drawString(tr, name, (int) (cx + (cw - tr.width(name)) / 2f), (int) (cy + ch - 20),
                         ThemeManager.color(ThemeToken.ON_BACKGROUND), false);
             } else {
-                drawTileIcon(g, tr, m, cx + 20, cy + ch / 2f, 16f, on, true);
+                drawTileIcon(g, tr, m, cx + 20, cy + ch / 2f, 16f, on, highlightedGlass);
                 String name = fit(tr, m.name, 130);
                 g.drawString(tr, name, (int) (cx + 40), (int) (cy + 8),
                         ThemeManager.color(ThemeToken.ON_BACKGROUND), false);

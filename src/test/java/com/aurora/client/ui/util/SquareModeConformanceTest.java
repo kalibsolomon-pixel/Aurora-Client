@@ -53,21 +53,26 @@ class SquareModeConformanceTest {
     }
 
     // ------------------------------------------------------------------
-    // AuroraScreen: chips / layout buttons / tiles — embedded material path.
+    // AuroraScreen: raised-glass chrome + embedded/glass tile paths.
     // ------------------------------------------------------------------
 
     @Test
     void auroraScreenChromeResolvesThroughRadiusSmallInBothPaths() {
         String src = read("src/client/java/com/aurora/client/screen/AuroraScreen.java");
-        // Parent-owned path (paintGlassPass) — chips, Profiles, layout pair, tiles.
-        assertTrue(src.contains("MaterialSurface.embeddedControl(g, bx + 8, catY, 64, TAB_H, ctrlRadius"),
-                "chip material uses the resolved control radius");
-        assertTrue(src.contains("MaterialSurface.embeddedControl(g, bx + 8, profY, 64, TAB_H, ctrlRadius"),
-                "Profiles material uses the resolved control radius");
-        assertTrue(src.contains("MaterialSurface.embeddedControl(g, mx, my, 20, 20, ctrlRadius"),
-                "layout-button material uses the resolved control radius");
+        // Isolated raised-glass path (paintGlassPass) — sidebar tabs,
+        // Profiles, and the layout pair all share the resolved token.
+        assertTrue(src.contains("chipGlass[i] = GlassSurface.control(g, bx + 8, catY, 64, TAB_H,"),
+                "chip glass uses the resolved control radius");
+        assertTrue(src.contains("profGlass = GlassSurface.control(g, bx + 8, profY, 64, TAB_H, ctrlRadius)"),
+                "Profiles glass uses the resolved control radius");
+        assertTrue(src.contains("layoutGlass[0] = GlassSurface.control(g, mx, my, 20, 20, ctrlRadius"),
+                "layout-button glass uses the resolved control radius");
+        // Tiles intentionally split by state: neutral is embedded; enabled
+        // is isolated stained glass. Both consume the same resolved radius.
         assertTrue(src.contains("MaterialSurface.embeddedControl(g, b[0], b[1], b[2], b[3], ctrlRadius"),
-                "tile material uses the resolved control radius");
+                "neutral tile material uses the resolved control radius");
+        assertTrue(src.contains("b[0], b[1], b[2], b[3], ctrlRadius, true,"),
+                "highlighted tile glass uses the resolved control radius");
         // Content overlays — the same derivations, not independent literals.
         assertTrue(src.contains("size, size, ctrlRadius"), "flat layout fills use the same radius");
         assertTrue(src.contains("cw, ch, tileRadius"), "flat tile fills use the same radius");

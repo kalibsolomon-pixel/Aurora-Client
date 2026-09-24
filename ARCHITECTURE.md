@@ -2610,8 +2610,10 @@ Phase E adds two narrow shared owners without changing the glass renderer:
   capsule. Callers use the same resolved bounds for hit testing and grab offsets.
 
 The production pilot is intentionally heterogeneous but bounded: `AuroraScreen`'s window
-continues to own depressed glass, while its sidebar chips, Profiles action, layout pair, and
-visible module tiles use embedded material; its search field remains isolated control glass.
+continues to own depressed glass, while neutral module tiles use embedded material. After
+user review, its sidebar tabs, Profiles action, and layout pair retain isolated raised glass;
+selected peers and enabled module tiles use raised stained glass so the highlight keeps its
+frosted gradient and glossy rim. The search field remains isolated control glass.
 The shared manager scrollbar uses the new geometry, setting tooltips use floating material,
 and `EnumSetting` no longer draws a second tint/rim after `aboveDimControl` already completed
 the surface. No interaction geometry or Phase B timing changed.

@@ -382,7 +382,12 @@ same region uses an embedded control treatment: a centrally derived local tint p
 existing hover/focus/state overlays, with no second backdrop sample and no child rim. A child
 still requests isolated glass when it is a genuinely separate raised object, crosses a parent
 boundary, or floats independently. Stained state remains permitted on an embedded control;
-the stain communicates selection/primary emphasis, not another structural layer.
+the stain communicates selection/primary emphasis, not another structural layer. A selected
+card or selected peer may instead remain isolated raised stained glass when frost,
+directional lighting, and the glossy rim are the product's intended persistent highlight;
+Aurora's enabled module cards and selected navigation/view peers are canonical exceptions.
+Their unselected peers remain neutral raised glass when the whole control group is intended
+to read as a set of physical frosted controls.
 
 Floating tooltip material is stable token-backed chrome rather than live glass. It uses one
 low-emphasis edge and shadow, respects theme roundness, and does not inherit the window's

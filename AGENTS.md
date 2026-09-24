@@ -2124,13 +2124,16 @@ look at the features that consume bundled assets.**
 
 Phase E is at the manual-review gate, not complete. The new central nested-material rule is:
 an enclosing window/panel owns blur and its outer rim; a child that only subdivides that same
-region uses `ui/component/MaterialSurface.embeddedControl` (local neutral/stained tint, no
-second capture and no child rim). A semantically isolated control may still use
+region may use `ui/component/MaterialSurface.embeddedControl` (local neutral tint, no second
+capture and no child rim). A semantically isolated control may still use
 `GlassSurface.control`. Tooltips use `MaterialSurface.floating`, a stable opaque token-backed
 surface with one restrained edge and shadow; this is material hierarchy, not Phase D
 contrast adaptation.
 
-Pilot scope: `AuroraScreen` sidebar chips, Profiles, layout pair, and visible module tiles;
+Pilot scope: `AuroraScreen` neutral module tiles use embedded material. The sidebar tabs,
+Profiles action, and layout pair retain isolated raised glass after user review; selected
+peers and enabled module tiles use raised stained glass so their frost, gradient, and glossy
+rim remain the highlight;
 setting-description tooltips; the `EnumSetting` above-dim double-tint/rim correction; and
 device-pixel-snapped thumbs on `AuroraScreen` plus the shared Profile/Waypoint manager base.
 `ScrollbarChrome.Thumb` is the shared paint/hit/grab geometry. Do not broadly migrate other

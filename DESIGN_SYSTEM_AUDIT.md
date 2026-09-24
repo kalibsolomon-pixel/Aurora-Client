@@ -610,9 +610,11 @@ was introduced.
 
 Pilot changes are limited to:
 
-- the Aurora main screen's sidebar chips, Profiles action, layout pair, and visible module
-  tiles, which now inherit the enclosing window's glass and add only a local neutral/stained
-  treatment;
+- the Aurora main screen's neutral module tiles inherit the enclosing window's glass and add
+  only a local neutral treatment; after user review, the sidebar tabs, Profiles action, and
+  layout pair retain neutral raised glass, while selected peers and enabled module tiles use
+  raised stained glass so their frosted gradient and glossy outline carry the highlighted
+  state;
 - the setting-description tooltip, which now uses stable floating material;
 - the enum popup correctness fix (one above-dim tint and rim, not two);
 - Aurora main-screen and shared Profile/Waypoint-manager scrollbar thumbs, which use common
