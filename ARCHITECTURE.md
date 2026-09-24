@@ -2508,19 +2508,25 @@ one of the sanctioned buckets):
 | Vanilla selection-screen buttons / title corner button (A) | VANILLA-OWNED — C-6 migrated the painter; vanilla keeps routing |
 | BlurTestScreen / DevPilot (A) | DEV/PREVIEW/DATA-ONLY |
 | WIDGET-mode pointer routing on SemanticActionControl (A, unexercised) | CLOSED — the Phase A decision stands (kept deliberately as adapter surface; no open question, zero consumers) |
-| `FeatureMetadata.settingsDetailOnly` inert machinery (AGENTS §9) | PHASE D — housekeeping item outside Phase C's contracts (no registered user) |
-| Composited contrast / ON_ACCENT / low-opacity / disabled material (B) | PHASE D |
-| Glass continuity/seams/scrollbar material polish (B/C-8) | PHASE E |
-| Sound identity beyond the ACTIVATION mapping (B) | PHASE F |
-| Refraction/distortion (v3 §7.2) | PHASE G — R&D only |
+| `FeatureMetadata.settingsDetailOnly` inert machinery (AGENTS §9) | DEFERRED HOUSEKEEPING — outside Phase E; no registered user |
+| Composited contrast / ON_ACCENT / low-opacity / disabled material (B) | DEFERRED — Phase D treatment reverted; Phase C color behavior is authoritative |
+| Glass continuity/seams/scrollbar material polish (B/C-8) | PHASE E — NEXT |
+| Sound identity beyond the ACTIVATION mapping (B) | PHASE F — PLANNED |
+| Refraction/distortion (v3 §7.2) | PHASE G — OPTIONAL R&D only |
 
-**Phase D+ handoff** (rebuilt from the current documents; not started):
-**D** — composited contrast at low opacity, `ON_ACCENT` robustness for
-difficult accents, light-theme disabled readability, a unified disabled
-material, disabled/covered FIELD material (the C-8 note kept field
-material work out of C; represented-data literals stay exempt, pinned).
-**E** — glass continuity/seams/rim/lighting coherence per §7.3, and the
-reclassified scrollbar sub-pixel polish. **F** — semantic sound identity
+**Phase D disposition and Phase E handoff (2026-09-24).** Phase D's
+contrast architecture was implemented and manually evaluated, but its
+visual treatment changed Aurora's appearance more than desired relative
+to its benefit. It was intentionally forward-reverted; this is a product
+decision, not a technical-failure ruling. The Phase C rendering baseline
+is again authoritative for color/contrast behavior. Do not reintroduce
+the reverted contrast derivations during material work unless explicitly
+requested as a separate, conservative design effort.
+
+**E — NEXT:** glass continuity/seams/rim/lighting coherence per §7.3,
+blur/material aesthetics, opacity hierarchy, and the reclassified
+scrollbar sub-pixel polish. Local material adjustments must preserve the
+Phase C color semantics. **F — PLANNED:** semantic sound identity
 (the routing layer is done; assets/pitch/user-control remain). **G** —
 optional refraction/distortion R&D through §7.2's dedicated process
 only. Carried hygiene notes, not Phase C defects: the Button success

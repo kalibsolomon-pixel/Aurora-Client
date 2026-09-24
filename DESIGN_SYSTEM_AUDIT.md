@@ -562,8 +562,24 @@ harness/matrix evidence).
 | Fixed local radii ignoring Square mode | RESOLVED — C-7 Wave 1 + the closure harness's argument-aware literal inventory (fourteen classified sites, zero unclassified rectangular chrome) |
 | `AuroraScreen` render-clip/input-bounds drift | RESOLVED — C-1/C-8 ClipBand coupling across every scrolling host |
 | The §15.2 conformance harness ("future verification tool") | RESOLVED — built at closure: the tracked `conformance` test package (family manifest + manifest audits + behavioral matrix) and the untracked DevPilot `phasecclose` runtime matrix (31/31 on dark/light × ROUND/SQUARE) |
-| Composited contrast / `ON_ACCENT` / low-opacity robustness | REMAINS PHASE D (unchanged boundary) |
-| Glass seams/continuity, scrollbar sub-pixel polish | REMAINS PHASE E |
-| Sound identity | REMAINS PHASE F |
-| Refraction/distortion | REMAINS PHASE G (R&D-only per v3 §7.2) |
+| Composited contrast / `ON_ACCENT` / low-opacity robustness | DEFERRED — Phase D was implemented, manually reviewed, and intentionally reverted because its visual treatment was too intrusive relative to its benefit; Phase C behavior remains authoritative |
+| Glass seams/continuity, scrollbar sub-pixel polish | PHASE E — NEXT |
+| Sound identity | PHASE F — PLANNED |
+| Refraction/distortion | PHASE G — OPTIONAL (R&D-only per v3 §7.2) |
 | Narration runtime verification | UNCHANGED ENVIRONMENT LIMITATION |
+
+---
+
+## Closure addendum III — Phase D disposition and Phase E handoff (2026-09-24)
+
+Phase D color/contrast robustness was fully implemented and manually evaluated. The treatment
+was technically functional, but the visual change was broader and more intrusive than desired,
+so the user intentionally rejected the direction and the implementation was forward-reverted.
+The detailed findings above remain historical audit evidence; they do not describe active
+production contrast architecture or authorize piecemeal restoration.
+
+Current roadmap: Phase A COMPLETE; Phase B COMPLETE; Phase C COMPLETE; Phase D REVERTED /
+DEFERRED; Phase E NEXT (material refinement); Phase F PLANNED; Phase G OPTIONAL. Phase E keeps
+the Phase C color behavior and addresses glass continuity, seams, rim/edge treatment,
+blur/material aesthetics, opacity hierarchy, and scrollbar sub-pixel polish. A future contrast
+effort requires an explicit request and a more conservative visual brief.

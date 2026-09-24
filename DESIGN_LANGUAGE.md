@@ -1048,27 +1048,32 @@ exception list and the Phase C+ deferral inventory live in
 `ARCHITECTURE.md`'s Phase B closure record. Phase C begins from the
 frozen component contracts recorded there.
 
-### Phase C — Geometry and conformance
+### Phase C — Geometry and conformance — **COMPLETE (2026-09-21)**
 
 Move rectangular chrome to resolved roundness, establish the icon-action primitive, and
 couple render clipping with input bounds.
 
-### Phase D — Color and contrast robustness
+### Phase D — Color and contrast robustness — **REVERTED / DEFERRED (2026-09-24)**
 
-Pilot deterministic on-accent rendered treatment and low-opacity backing for essential text.
-Preserve stored accent and avoid frame-dependent world-pixel adaptation.
+Phase D's deterministic on-accent, low-opacity backing, and semantic contrast treatment was
+implemented and manually evaluated, then intentionally reverted. The implementation was not
+technically broken; manual review found that it changed Aurora's appearance more than its
+benefit justified. Phase C color/contrast behavior is authoritative. Contrast may be revisited
+later only as an explicitly requested, more conservative design effort.
 
-### Phase E — Material refinement
+### Phase E — Material refinement — **NEXT**
 
 Evaluate glass continuity, panel seams, rims, lighting, and opacity hierarchy after semantic
-roles are consistently applied. Do not begin with a shader rewrite.
+roles are consistently applied. Do not begin with a shader rewrite or quietly reintroduce the
+reverted Phase D contrast treatment; preserve Phase C color semantics unless a material effect
+requires a strictly local adjustment.
 
-### Phase F — Sound identity
+### Phase F — Sound identity — **PLANNED**
 
 Implement semantic sound routing and carefully designed Aurora UI assets only after the
 interaction contract can deliver them consistently and user control is clear.
 
-### Phase G — Optional R&D
+### Phase G — Optional R&D — **OPTIONAL**
 
 Explore refraction/distortion only through the dedicated process in §7.2, after the existing
 material system is coherent. It is not part of the v3 baseline.

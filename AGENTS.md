@@ -301,6 +301,12 @@ the constant; `385e704`).
 `PaletteEngine` derives every UI color from it; tokens are read through a cached
 `ResolvedTheme`; legacy statics are a write-only-from-one-place facade.
 
+**Current color baseline (2026-09-24):** Phase D's contrast architecture was implemented,
+manually reviewed, and intentionally reverted for visual preference. Phase C color behavior is
+authoritative while Phase E material refinement proceeds. Do not reintroduce the reverted
+Phase D contrast derivations, readability plates, or semantic status/focus color system unless
+the user explicitly requests a separate conservative contrast effort.
+
 ### Data flow (who writes what)
 
 ```
