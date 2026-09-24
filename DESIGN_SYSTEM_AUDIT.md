@@ -583,3 +583,48 @@ DEFERRED; Phase E NEXT (material refinement); Phase F PLANNED; Phase G OPTIONAL.
 the Phase C color behavior and addresses glass continuity, seams, rim/edge treatment,
 blur/material aesthetics, opacity hierarchy, and scrollbar sub-pixel polish. A future contrast
 effort requires an explicit request and a more conservative visual brief.
+
+---
+
+## Phase E foundation and pilot addendum (2026-09-24)
+
+Phase E stops at a manual-review gate with a deliberately bounded production pilot.
+
+The audit found these concrete ownership defects:
+
+- `AuroraScreen` sampled and rimmed its window, sidebar controls, layout controls, and every
+  visible module tile independently, so one enclosing region read as stacked panes and spent
+  one blur/readback per child.
+- `EnumSetting` called `aboveDimControl` and then repeated the tint and rim that helper had
+  already painted, producing a real double-composite.
+- scrollbar callers retained fractional scroll state but independently truncated thumb top
+  and height to logical integers, losing up to several device pixels at common GUI scales.
+- setting tooltips used the window-opacity-derived `surfaceColor(SURFACE)` despite being a
+  floating surface whose material should remain stable above ordinary content.
+
+The foundation is intentionally small: `MaterialSurface` owns embedded/inherited control and
+floating-surface recipes; `ScrollbarChrome` owns device-edge thumb quantization and the shared
+3 px mechanical thumb painter. `GlassSurface` remains the owner of isolated glass capture,
+blur, lighting, phase ordering, and rims. No new theme-token taxonomy or contrast derivation
+was introduced.
+
+Pilot changes are limited to:
+
+- the Aurora main screen's sidebar chips, Profiles action, layout pair, and visible module
+  tiles, which now inherit the enclosing window's glass and add only a local neutral/stained
+  treatment;
+- the setting-description tooltip, which now uses stable floating material;
+- the enum popup correctness fix (one above-dim tint and rim, not two);
+- Aurora main-screen and shared Profile/Waypoint-manager scrollbar thumbs, which use common
+  device-pixel-snapped geometry without changing wheel, drag, hit-band, or easing semantics.
+
+The pilot adds no render pass, framebuffer copy, blur request, or per-frame material object.
+It removes repeated main-screen child blur requests. Phase B hover/press/tooltip timing and
+Phase C color, state, geometry, clipping, and interaction semantics remain unchanged. Phase D
+classes, scrims, plates, adaptive contrast, and accent modification remain absent.
+
+Known review items remain intentionally open: compare the heterogeneous Aurora-screen pilot
+against detail/title/manager controls before rollout; decide whether connected segmented
+controls should share one group material; and consider a later renderer-level unification of
+blur/tint/rim device rectangles. Do not roll the embedded rule across production until the
+user accepts this visual direction.

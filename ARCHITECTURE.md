@@ -2595,3 +2595,28 @@ already diverged (audit D-note).
   duplicated tokens and destabilized the agent's entire output stream. Prefer
   config-file/log oracles and pixel-diff checks; treat any single vision read as suspect
   and never paste its raw output onward.
+
+## 9. Phase E material foundation and pilot (2026-09-24)
+
+Phase E adds two narrow shared owners without changing the glass renderer:
+
+- `ui/component/MaterialSurface` owns non-sampling material. `embeddedControl` is the
+  parent-owned rule for a control inside established window/panel glass: neutral children
+  add one central `SURFACE_VARIANT` overlay; selected/primary children use the existing
+  stained tint; neither requests blur nor owns a rim. `floating` is stable token-backed
+  `SURFACE` chrome with one low-emphasis `BORDER` edge and the existing shadow.
+- `ui/component/ScrollbarChrome` resolves exact logical thumb bounds, snaps the two edges
+  together to the current device-pixel grid, and paints the canonical 3 px mechanical
+  capsule. Callers use the same resolved bounds for hit testing and grab offsets.
+
+The production pilot is intentionally heterogeneous but bounded: `AuroraScreen`'s window
+continues to own depressed glass, while its sidebar chips, Profiles action, layout pair, and
+visible module tiles use embedded material; its search field remains isolated control glass.
+The shared manager scrollbar uses the new geometry, setting tooltips use floating material,
+and `EnumSetting` no longer draws a second tint/rim after `aboveDimControl` already completed
+the surface. No interaction geometry or Phase B timing changed.
+
+This is not a completed rollout. Detail screens, title controls, pack-browser scrollbars,
+segmented controls, and manager rows remain comparison surfaces for manual review. No new
+render pass or framebuffer work was added; the main-screen pilot removes repeated child
+capture/blur/readback work. Phase D contrast architecture remains absent.

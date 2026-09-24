@@ -53,23 +53,22 @@ class SquareModeConformanceTest {
     }
 
     // ------------------------------------------------------------------
-    // AuroraScreen: chips / layout buttons / tiles — glass AND flat paths.
+    // AuroraScreen: chips / layout buttons / tiles — embedded material path.
     // ------------------------------------------------------------------
 
     @Test
     void auroraScreenChromeResolvesThroughRadiusSmallInBothPaths() {
         String src = read("src/client/java/com/aurora/client/screen/AuroraScreen.java");
-        // Glass path (paintGlassPass) — chips, profiles chip, layout pair, tiles.
-        assertTrue(src.contains("GlassSurface.control(g, bx + 8, catY, 64, TAB_H, ctrlRadius"),
-                "chip glass surface uses the resolved control radius");
-        assertTrue(src.contains("GlassSurface.control(g, bx + 8, profY, 64, TAB_H, ctrlRadius"),
-                "profiles chip glass surface uses the resolved control radius");
-        assertTrue(src.contains("GlassSurface.control(g, mx, my, 20, 20, ctrlRadius"),
-                "layout-button glass surface uses the resolved control radius");
-        assertTrue(src.contains("GlassSurface.control(g, b[0], b[1], b[2], b[3], ctrlRadius"),
-                "tile glass surface uses the resolved control radius");
-        // Flat/content path — the same derivations, not independent literals.
-        assertTrue(src.contains("64, 22, ctrlRadius"), "flat chip fills use the same radius");
+        // Parent-owned path (paintGlassPass) — chips, Profiles, layout pair, tiles.
+        assertTrue(src.contains("MaterialSurface.embeddedControl(g, bx + 8, catY, 64, TAB_H, ctrlRadius"),
+                "chip material uses the resolved control radius");
+        assertTrue(src.contains("MaterialSurface.embeddedControl(g, bx + 8, profY, 64, TAB_H, ctrlRadius"),
+                "Profiles material uses the resolved control radius");
+        assertTrue(src.contains("MaterialSurface.embeddedControl(g, mx, my, 20, 20, ctrlRadius"),
+                "layout-button material uses the resolved control radius");
+        assertTrue(src.contains("MaterialSurface.embeddedControl(g, b[0], b[1], b[2], b[3], ctrlRadius"),
+                "tile material uses the resolved control radius");
+        // Content overlays — the same derivations, not independent literals.
         assertTrue(src.contains("size, size, ctrlRadius"), "flat layout fills use the same radius");
         assertTrue(src.contains("cw, ch, tileRadius"), "flat tile fills use the same radius");
         // One hoisted derivation per render pass (paintGlassPass,
@@ -98,13 +97,14 @@ class SquareModeConformanceTest {
 
     @Test
     void auroraScreenScrollbarThumbStaysAMechanicalCapsule() {
-        String src = read("src/client/java/com/aurora/client/screen/AuroraScreen.java");
+        String src = read("src/client/java/com/aurora/client/ui/component/ScrollbarChrome.java");
         // MECHANICAL exemption (C-7 ruling): the 3px thumb's capsule radius 2
         // is direct-manipulation chrome (the toggle/slider track family) —
         // pinned so it is not re-filed as a Square-mode bug.
-        assertTrue(src.contains("thumbY, 3, thumbH, 2,"),
+        assertTrue(src.contains("3, (float) thumb.height(), 2,"),
                 "the scrollbar thumb keeps its mechanical capsule radius");
-        assertTrue(src.contains("MECHANICAL"),
+        String host = read("src/client/java/com/aurora/client/screen/AuroraScreen.java");
+        assertTrue(host.contains("MECHANICAL"),
                 "the exemption stays documented at the site");
     }
 

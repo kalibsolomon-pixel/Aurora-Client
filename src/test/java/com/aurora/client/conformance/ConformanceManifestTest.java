@@ -202,8 +202,7 @@ class ConformanceManifestTest {
     void radiusLiteralsAreExactlyTheClassifiedInventory() throws IOException {
         List<Site> classified = new ArrayList<>(List.of(
                 // MECHANICAL scrollbar-thumb capsules (Square-exempt, C-7).
-                new Site(SRC + "screen/AuroraScreen.java", "2"),
-                new Site(SRC + "screen/ManagerListScreen.java", "2"),
+                new Site(SRC + "ui/component/ScrollbarChrome.java", "2"),
                 new Site(SRC + "screen/ResourcePackBrowserScreen.java", "2"),
                 new Site(SRC + "screen/ResourcePackBrowserScreen.java", "2"),
                 // DATA-DRIVEN picker frames (§16).
@@ -240,7 +239,7 @@ class ConformanceManifestTest {
         }
         assertEquals(new HashSet<>(classified), new HashSet<>(seen),
                 "unclassified or missing literal radius sites");
-        assertEquals(14, seen.size(), "inventory drift — sites: " + seen);
+        assertEquals(13, seen.size(), "inventory drift — sites: " + seen);
         assertEquals(classified.size(), seen.size(), "multiplicity drift");
     }
 

@@ -376,6 +376,19 @@ Do not over-layer glass. Nested material levels must explain structure, not show
 renderer. Small transient rows inside an already-material container may remain flat when a
 second glass layer adds no semantic depth or when its opaque content would hide the material.
 
+**Nested-material ownership rule (Phase E pilot):** an enclosing window or panel owns the
+backdrop sample, blur, and outer rim. A child that is only an interaction subdivision of that
+same region uses an embedded control treatment: a centrally derived local tint plus its
+existing hover/focus/state overlays, with no second backdrop sample and no child rim. A child
+still requests isolated glass when it is a genuinely separate raised object, crosses a parent
+boundary, or floats independently. Stained state remains permitted on an embedded control;
+the stain communicates selection/primary emphasis, not another structural layer.
+
+Floating tooltip material is stable token-backed chrome rather than live glass. It uses one
+low-emphasis edge and shadow, respects theme roundness, and does not inherit the window's
+opacity merely because it originated inside that window. This is a material-depth decision,
+not adaptive contrast behavior.
+
 ### 7.4 Integration invariants
 
 The following are both design and renderer-safety rules:
@@ -394,6 +407,9 @@ The following are both design and renderer-safety rules:
   deterministic.
 - Text, hover, caret, focus, and press feedback do not independently mutate the underlying
   glass tint.
+- Scrollbar thumb geometry retains fractional logical positions and snaps both physical
+  edges together to the device-pixel grid; painting, hit testing, and drag offsets share the
+  same resolved bounds.
 
 Toggle and slider mechanics remain opaque by convention. Tooltips should use a stable,
 readable token surface rather than becoming another live-backdrop showcase. Text fields are
