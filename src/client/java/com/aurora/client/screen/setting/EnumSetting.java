@@ -7,7 +7,6 @@ import com.aurora.client.ui.component.Widget;
 import com.aurora.client.ui.interaction.MinecraftSemanticFeedback;
 import com.aurora.client.ui.interaction.SemanticAction;
 import com.aurora.client.ui.interaction.SemanticActionControl;
-import com.aurora.client.ui.render.blur.BlurPanelRenderer;
 import com.aurora.client.ui.util.MaterialIconRenderer;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.util.AuroraAnim;
@@ -375,11 +374,7 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
             // integration uses.
             float popR = Math.min(dropdownH / 2f, ThemeManager.current().roundness().radiusSmall());
             boolean popGlass = glassButton && GlassSurface.aboveDimControl(ctx, btnX, dropdownY, BTN_W, dropdownH, popR);
-            if (popGlass) {
-                RenderUtil.drawRoundedRectAA(ctx, btnX, dropdownY, BTN_W, dropdownH, popR,
-                        ThemeManager.color(ThemeToken.WINDOW_FILL));
-                BlurPanelRenderer.drawRimFinish(ctx, btnX, dropdownY, BTN_W, dropdownH, popR);
-            } else {
+            if (!popGlass) {
                 RenderUtil.drawSquircle(ctx, btnX, dropdownY, BTN_W, dropdownH, AuroraTheme.RADIUS_SMALL, ThemeManager.surfaceColor(ThemeToken.SURFACE));
                 RenderUtil.drawSquircleOutline(ctx, btnX, dropdownY, BTN_W, dropdownH, AuroraTheme.RADIUS_SMALL, 1.0f, borderTint);
             }

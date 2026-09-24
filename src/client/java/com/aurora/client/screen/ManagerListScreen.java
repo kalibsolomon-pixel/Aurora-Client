@@ -5,6 +5,7 @@ import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.component.ButtonWidget;
 import com.aurora.client.ui.util.ClipBand;
 import com.aurora.client.ui.component.GlassSurface;
+import com.aurora.client.ui.component.ScrollbarChrome;
 import com.aurora.client.ui.component.ThemedScreen;
 import com.aurora.client.ui.component.Toast;
 import com.aurora.client.ui.interaction.SemanticActionControl;
@@ -640,13 +641,9 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         return Math.max(0, total - (this.height - listTop() - listBottomPad()));
     }
 
-    /** The thumb's current top/height in screen coordinates (int-truncated for painting). */
-    private int thumbHeightPx(double maxScroll, int trackH) {
-        return (int) scroll.thumbHeight(trackH, maxScroll, 24);
-    }
-
-    private int thumbYPx(double maxScroll, int trackH, int thumbH) {
-        return listClipTop() + (int) ((trackH - thumbH) * scroll.ratio(maxScroll));
+    private ScrollbarChrome.Thumb thumb(double maxScroll, int trackH) {
+        return ScrollbarChrome.thumb(scroll, listClipTop(), trackH, maxScroll, 24,
+                this.minecraft.getWindow().getGuiScale());
     }
 
     /**
@@ -664,14 +661,10 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         int trackTop = listClipTop();
         int trackH = listClipBottom() - trackTop;
         int trackX = listX + listWidth() + 6;
-        int thumbH = thumbHeightPx(maxScroll, trackH);
-        int thumbY = thumbYPx(maxScroll, trackH, thumbH);
+        ScrollbarChrome.Thumb thumb = thumb(maxScroll, trackH);
         boolean hover = mouseX >= trackX - 2 && mouseX <= trackX + 5
-                && mouseY >= thumbY && mouseY <= thumbY + thumbH;
-        int col = (hover || scroll.isDragging())
-                ? ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_OVERLAY), 0x55)
-                : ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_OVERLAY), 0x30);
-        RenderUtil.drawRoundedRectAA(ctx, trackX, thumbY, 3, thumbH, 2, col);
+                && mouseY >= thumb.y() && mouseY <= thumb.y() + thumb.height();
+        ScrollbarChrome.draw(ctx, trackX, thumb, hover || scroll.isDragging(), ThemeToken.ON_OVERLAY);
     }
 
     // ------------------------------------------------------------------
@@ -729,14 +722,13 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
             int trackTop = listClipTop();
             int trackH = listClipBottom() - trackTop;
             int trackX = listX + listWidth() + 6;
-            int thumbH = thumbHeightPx(maxScroll, trackH);
-            int thumbY = thumbYPx(maxScroll, trackH, thumbH);
+            ScrollbarChrome.Thumb thumb = thumb(maxScroll, trackH);
             if (mouseX >= trackX - 3 && mouseX <= trackX + 6
-                    && mouseY >= thumbY - 4 && mouseY <= thumbY + thumbH + 4) {
+                    && mouseY >= thumb.y() - 4 && mouseY <= thumb.y() + thumb.height() + 4) {
                 // Grab-where-clicked, with the grab offset clamped into the
                 // thumb so clicking the generous hit-padding grabs the
                 // nearest edge instead of jumping the thumb.
-                int grab = (int) Math.max(0, Math.min(thumbH, mouseY - thumbY));
+                double grab = Math.max(0, Math.min(thumb.height(), mouseY - thumb.y()));
                 scroll.beginThumbDrag(grab);
                 return true;
             }

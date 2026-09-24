@@ -2,8 +2,7 @@ package com.aurora.client.screen.setting;
 
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
-import com.aurora.client.util.AuroraShapes;
-import com.aurora.client.util.AuroraTheme;
+import com.aurora.client.ui.component.MaterialSurface;
 import com.aurora.client.util.HoverAnim;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -534,11 +533,7 @@ public abstract class FeatureSetting {
         if (by < 4) by = 4;
         // Corner chamfer conforms to the Theme module's roundness option.
         int radius = ThemeManager.current().roundness().radius();
-        AuroraShapes.dropShadow(ctx, bx, by, boxW, boxH, radius, fade);
-        AuroraShapes.panel(ctx, bx, by, boxW, boxH,
-                fadeColor(ThemeManager.surfaceColor(ThemeToken.SURFACE), fade), radius);
-        AuroraShapes.outline(ctx, bx, by, boxW, boxH,
-                fadeColor(AuroraTheme.WINDOW_OUTLINE, fade), radius);
+        MaterialSurface.floating(ctx, bx, by, boxW, boxH, radius, fade);
         // ON_OVERLAY is the tooltip-text role every other tooltip in the
         // codebase reads (Profile/Waypoint rows, the pack-browser toast).
         int textColor = fadeColor(ThemeManager.color(ThemeToken.ON_OVERLAY), fade);
