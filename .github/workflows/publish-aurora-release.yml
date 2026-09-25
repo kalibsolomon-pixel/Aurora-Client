@@ -1,0 +1,220 @@
+name: Publish Aurora Release
+
+# The ordinary push/PR build never publishes. A developer must dispatch this
+# workflow, name the source explicitly, and approve aurora-production.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Aurora version already declared by the source (without v)'
+        required: true
+        type: string
+      channel:
+        description: 'Release channel'
+        required: true
+        type: choice
+        options:
+          - stable
+          - beta
+          - nightly
+      source_ref:
+        description: 'Exact source commit SHA, branch, or tag to build'
+        required: true
+        type: string
+
+concurrency:
+  group: aurora-release-${{ inputs.version }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Test and verify candidate
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      source_sha: ${{ steps.source.outputs.sha }}
+    env:
+      RELEASE_VERSION: ${{ inputs.version }}
+      RELEASE_CHANNEL: ${{ inputs.channel }}
+    steps:
+      - name: Require the reviewed default-branch workflow
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" != 'refs/heads/master' ]]; then
+            echo 'Run this publication workflow from the default master branch.' >&2
+            exit 1
+          fi
+      - name: Check out the reviewed release tooling
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Test the release verifier
+        run: python3 -B -m unittest discover -s tools -p 'test_*.py'
+      - name: Check out the explicitly requested source
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.source_ref }}
+          path: source
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Pin the resolved source commit
+        id: source
+        shell: bash
+        run: |
+          sha="$(git -C source rev-parse HEAD)"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "Building exact source commit $sha"
+      - name: Reject an existing tag or release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >-
+          python3 tools/verify_release_artifact.py collision
+          --repo "$GITHUB_REPOSITORY"
+          --version "$RELEASE_VERSION"
+          --channel "$RELEASE_CHANNEL"
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v6
+      - name: Set up the project build JDK
+        uses: actions/setup-java@v5
+        with:
+          java-version: '25'
+          distribution: microsoft
+      - name: Run every test
+        working-directory: source
+        run: ./gradlew test
+      - name: Build the release candidate from the same source
+        working-directory: source
+        run: ./gradlew build --rerun-tasks
+      - name: Verify JAR identity, version, size, and SHA-256
+        env:
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+        shell: bash
+        run: |
+          mkdir -p release-bundle
+          python3 tools/verify_release_artifact.py inspect \
+            --source-root source --jar-dir source/build/libs \
+            --version "$RELEASE_VERSION" --channel "$RELEASE_CHANNEL" \
+            --source-sha "$SOURCE_SHA" \
+            --output release-bundle/release-metadata.json
+          cp "source/build/libs/aurora-${RELEASE_VERSION}.jar" release-bundle/
+          python3 tools/verify_release_artifact.py verify \
+            --metadata release-bundle/release-metadata.json \
+            --jar-dir release-bundle \
+            --version "$RELEASE_VERSION" --channel "$RELEASE_CHANNEL" \
+            --source-sha "$SOURCE_SHA"
+      - name: Hand off only the verified candidate
+        uses: actions/upload-artifact@v7
+        with:
+          name: aurora-release-candidate
+          path: release-bundle/
+          if-no-files-found: error
+
+  publish:
+    name: Approve and publish verified JAR
+    needs: validate
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-24.04
+    environment: aurora-production
+    permissions:
+      contents: write
+    env:
+      RELEASE_VERSION: ${{ inputs.version }}
+      RELEASE_CHANNEL: ${{ inputs.channel }}
+      SOURCE_SHA: ${{ needs.validate.outputs.source_sha }}
+    steps:
+      - name: Check out reviewed release tooling
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Download the exact validated candidate
+        uses: actions/download-artifact@v8
+        with:
+          name: aurora-release-candidate
+          path: release-bundle
+      - name: Reverify the handoff before any write
+        run: >-
+          python3 tools/verify_release_artifact.py verify
+          --metadata release-bundle/release-metadata.json
+          --jar-dir release-bundle
+          --version "$RELEASE_VERSION"
+          --channel "$RELEASE_CHANNEL"
+          --source-sha "$SOURCE_SHA"
+      - name: Recheck tag and release collisions
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >-
+          python3 tools/verify_release_artifact.py collision
+          --repo "$GITHUB_REPOSITORY"
+          --version "$RELEASE_VERSION"
+          --channel "$RELEASE_CHANNEL"
+      - name: Prepare release notes from verified metadata
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          m = json.loads(Path('release-bundle/release-metadata.json').read_text())
+          Path('release-notes.md').write_text(
+              f"Aurora Client {m['version']} for Minecraft {m['minecraftVersion']}.\n\n"
+              f"Source commit: `{m['sourceSha']}`\n\n"
+              f"Runtime JAR: `{m['fileName']}` ({m['sizeBytes']} bytes)\n\n"
+              f"SHA-256: `{m['sha256']}`\n",
+              encoding='utf-8')
+          PY
+      - name: Create draft, upload, and verify its sole asset
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          tag="v${RELEASE_VERSION}"
+          flags=()
+          if [[ "$RELEASE_CHANNEL" != stable ]]; then
+            flags+=(--prerelease --latest=false)
+          fi
+          gh release create "$tag" -R "$GITHUB_REPOSITORY" \
+            --draft --target "$SOURCE_SHA" \
+            --title "Aurora Client ${RELEASE_VERSION}" \
+            --notes-file release-notes.md "${flags[@]}"
+          gh release upload "$tag" "release-bundle/aurora-${RELEASE_VERSION}.jar" \
+            -R "$GITHUB_REPOSITORY"
+          python3 tools/verify_release_artifact.py draft \
+            --repo "$GITHUB_REPOSITORY" \
+            --metadata release-bundle/release-metadata.json
+          mkdir -p draft-download
+          gh release download "$tag" -R "$GITHUB_REPOSITORY" \
+            --pattern "aurora-${RELEASE_VERSION}.jar" --dir draft-download
+          python3 tools/verify_release_artifact.py verify \
+            --metadata release-bundle/release-metadata.json \
+            --jar-dir draft-download \
+            --version "$RELEASE_VERSION" --channel "$RELEASE_CHANNEL" \
+            --source-sha "$SOURCE_SHA"
+      - name: Publish only the complete draft
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          gh release edit "v${RELEASE_VERSION}" --draft=false \
+            -R "$GITHUB_REPOSITORY"
+      - name: Anonymously redownload and inspect the public JAR
+        run: >-
+          python3 tools/verify_release_artifact.py public
+          --repo "$GITHUB_REPOSITORY"
+          --metadata release-bundle/release-metadata.json
+          --download-dir "$RUNNER_TEMP/aurora-public-verification"
+      - name: Record the public artifact identity
+        shell: bash
+        run: |
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          from pathlib import Path
+          m = json.loads(Path('release-bundle/release-metadata.json').read_text())
+          print(f"## Aurora Client {m['version']} ({m['channel']})")
+          print(f"Source commit: `{m['sourceSha']}`")
+          print(f"Public JAR: `{m['fileName']}` ({m['sizeBytes']} bytes)")
+          print(f"SHA-256: `{m['sha256']}`")
+          print("Anonymous public redownload and JAR metadata inspection passed.")
+          print("Launcher manifest publication is a separate manual step.")
+          PY
