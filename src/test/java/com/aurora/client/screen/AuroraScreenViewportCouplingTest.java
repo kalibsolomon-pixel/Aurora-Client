@@ -124,14 +124,14 @@ class AuroraScreenViewportCouplingTest {
                 "src/client/java/com/aurora/client/screen/ResourcePackBrowserScreen.java");
         try (Stream<Path> files = Files.walk(Path.of("src/client/java"))) {
             List<String> adopters = new ArrayList<>();
-            files.filter(p -> p.toString().endsWith(".java"))
-                    .filter(p -> !p.toString().endsWith("ui/util/ClipBand.java"))
-                    .filter(p -> !p.toString().endsWith("DevPilot.java"))
+            files.filter(p -> sourcePath(p).endsWith(".java"))
+                    .filter(p -> !sourcePath(p).endsWith("ui/util/ClipBand.java"))
+                    .filter(p -> !sourcePath(p).endsWith("DevPilot.java"))
                     .forEach(p -> {
                         try {
                             String s = Files.readString(p);
                             if (s.contains("new ClipBand(") || s.contains("ClipBand vp")) {
-                                adopters.add(p.toString());
+                                adopters.add(sourcePath(p));
                             }
                         } catch (java.io.IOException ignored) {
                         }
@@ -141,5 +141,9 @@ class AuroraScreenViewportCouplingTest {
         } catch (java.io.IOException e) {
             fail("source walk failed: " + e);
         }
+    }
+
+    private static String sourcePath(Path path) {
+        return path.toString().replace('\\', '/');
     }
 }

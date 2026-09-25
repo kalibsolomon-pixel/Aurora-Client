@@ -65,6 +65,9 @@ class ConformanceManifestTest {
         }
         for (SemanticFamilyManifest.NonFamily nf : NON_FAMILIES) {
             String path = nf.file().contains("#") ? nf.file().substring(0, nf.file().indexOf('#')) : nf.file();
+            // DevPilot is deliberately untracked and may be absent from a
+            // release source tree; every production exemption must exist.
+            if (path.equals(SRC + "DevPilot.java")) continue;
             assertTrue(Files.exists(Path.of(path)), "non-family file missing: " + path);
         }
     }
@@ -339,7 +342,7 @@ class ConformanceManifestTest {
             List<String> out = new ArrayList<>();
             files.filter(p -> p.toString().endsWith(".java"))
                     .filter(p -> !p.toString().endsWith("DevPilot.java"))
-                    .forEach(p -> out.add(p.toString()));
+                    .forEach(p -> out.add(p.toString().replace('\\', '/')));
             return out;
         }
     }
