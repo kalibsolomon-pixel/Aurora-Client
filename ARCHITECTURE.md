@@ -2622,3 +2622,40 @@ This is not a completed rollout. Detail screens, title controls, pack-browser sc
 segmented controls, and manager rows remain comparison surfaces for manual review. No new
 render pass or framebuffer work was added; the main-screen pilot removes repeated child
 capture/blur/readback work. Phase D contrast architecture remains absent.
+
+## 10. Authenticated launcher activity bridge (2026-09-27)
+
+`launcher/` is an optional local activity producer, initialized from AuroraClient.
+Aurora Launcher remains the sole Discord owner; the mod has no Discord connection,
+SDK, application identity, formatting or preferences. The exact v1 wire schema,
+bootstrap, receiver obligations and next launcher task live in
+[LAUNCHER_ACTIVITY_PROTOCOL.md](LAUNCHER_ACTIVITY_PROTOCOL.md).
+
+Valid process-only bootstrap supplies literal IPv4 loopback endpoint, per-launch UUID,
+256-bit ephemeral capability and protocol 1. Launcher binds exclusive ephemeral TCP
+before spawn; mod connects once, authenticates, waits for bounded exact acceptance,
+then sends typed MAIN_MENU/SINGLEPLAYER/MULTIPLAYER transitions with independent optional
+world name, friendly server name and server address. Missing env means no worker/events/
+network; malformed bootstrap and all bridge failures are nonfatal and disable integration
+for the session. Nothing enters AuroraConfig or profile persistence.
+
+The loaded Minecraft level, not the open screen, determines gameplay. Integrated-server
+WorldData level name is the display source; ServerData.name/ip supply separate multiplayer
+identity categories. Fabric CLIENT_STARTED/world-change/JOIN/DISCONNECT/STOPPING provide
+events without new mixins. Null-world changes are excluded by Fabric 0.141.4, so DISCONNECT
+explicitly clears activity rather than reading the old level during teardown. Repeated
+join/dimension snapshots are suppressed. Pause screens leave gameplay state intact.
+
+One daemon worker owns all NIO/serialization/channel closure with two-second total I/O
+deadlines and a 32-entry FIFO; callbacks only capture bounded immutable snapshots. No
+client/render-thread network work, tick serialization, renderer coupling, polling,
+heartbeat or reconnect. Overflow closes integration rather than losing state ordering.
+One ordered connection plus monotonic sequence guards against stale updates. STOPPING
+signals asynchronous close; EOF or supervised child exit must clear launcher identities.
+
+World/server identities are private input to the launcher, never INFO logs or persisted
+telemetry. Only generic DEBUG diagnostics ship. Credentials, paths, account data, gameplay
+telemetry and arbitrary server metadata are excluded. Launcher must independently filter
+and sanitize before Discord, with world/name/address opt-ins default off. The separate
+Python development receiver is test tooling outside the runtime artifact; actual launcher
+receiver/privacy UI remains unimplemented in this repository.

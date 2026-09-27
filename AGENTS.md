@@ -62,6 +62,11 @@ AuroraClient.java          Mod entrypoint: registers keybinds, HUD callbacks, fe
                            managers, HUD modules, tooltip component, shutdown-save hook,
                            runs HitregMigrator after the profile apply, and calls
                            hitreg/BetterHitreg.initialize().
+├── launcher/              Optional authenticated activity producer for Aurora Launcher:
+│                          typed menu/singleplayer/multiplayer snapshots, Fabric lifecycle
+│                          adapter, per-launch env capability, loopback TCP worker.
+│                          No Discord code/settings, tick/render hook or config persistence.
+│                          See LAUNCHER_ACTIVITY_PROTOCOL.md for the v1 receiver contract.
 ├── hitreg/                BETTER HITREG (from BetterHitreg by Jass, integrated with
 │   │                      permission): BetterHitreg (init/keybind dispatch/score HUD),
 │   │                      Hitreg (fight state machine), Hit, HitType — timing core,
@@ -208,6 +213,14 @@ keys; unbound here on purpose). Gotcha (observed
 two-way sync sees vanilla's still-unbound KeyMapping at boot and writes -1 back into the
 config. The vanilla-side binding in `options.txt` (`key_key.aurora.<id>:key.keyboard.x`)
 must be set too (that is what the in-game UIs do).
+
+**Launcher activity integration (2026-09-27):** `launcher/LauncherActivityIntegration`
+is initialized from AuroraClient only when process-scoped `AURORA_ACTIVITY_*` bootstrap
+is valid. Fabric lifecycle/connection events project authoritative menu/world/server
+identity to one authenticated loopback TCP worker; no runtime Feature/card/config toggle,
+renderer hook or per-tick traffic. Aurora Launcher owns Discord/privacy. No bootstrap or
+identity persistence. Failures disable this optional bridge without affecting gameplay;
+standalone launchers do nothing. See `LAUNCHER_ACTIVITY_PROTOCOL.md` and ARCHITECTURE §10.
 
 **HUD modules** (`hud/module/`): 13 registered in `AuroraClient` — Info, CPS, Armor, Reach,
 ToggleSprintSneak, ToggleIndividual ×2 (sprint/sneak), Potion, Ping, TotemPop, Stats,

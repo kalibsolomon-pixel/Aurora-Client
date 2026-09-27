@@ -26,6 +26,8 @@ public class AuroraClient implements ClientModInitializer {
     public void onInitializeClient() {
         LOGGER.info("Initializing Aurora Client...");
 
+        com.aurora.client.launcher.LauncherActivityIntegration.initialize();
+
         AuroraConfig.load();
 
         // Load + apply the active profile (or create the default one on first

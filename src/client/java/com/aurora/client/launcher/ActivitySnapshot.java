@@ -33,15 +33,24 @@ record ActivitySnapshot(State state, String worldDisplayName, String serverDispl
         int count = 0;
         int end = Math.min(value.length(), 4096);
         for (int i = 0; i < end && count < maxCodePoints;) {
-            int cp = value.codePointAt(i);
+            int cp = i + 1 == end && Character.isHighSurrogate(value.charAt(i))
+                    ? value.charAt(i) : value.codePointAt(i);
             i += Character.charCount(cp);
             if (Character.isISOControl(cp) || Character.getType(cp) == Character.FORMAT
                     || Character.getType(cp) == Character.SURROGATE || cp == 0x2028 || cp == 0x2029) continue;
             result.appendCodePoint(cp);
             count++;
         }
-        String text = result.toString().strip();
+        int start = 0;
+        int finish = result.length();
+        while (start < finish && whitespace(result.codePointAt(start))) start += Character.charCount(result.codePointAt(start));
+        while (finish > start && whitespace(result.codePointBefore(finish))) finish -= Character.charCount(result.codePointBefore(finish));
+        String text = result.substring(start, finish);
         return text.isEmpty() ? null : text;
+    }
+
+    private static boolean whitespace(int cp) {
+        return Character.isWhitespace(cp) || Character.isSpaceChar(cp);
     }
 
     @Override public String toString() { return "ActivitySnapshot[" + state + "]"; }

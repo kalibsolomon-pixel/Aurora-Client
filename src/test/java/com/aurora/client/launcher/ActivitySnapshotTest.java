@@ -40,6 +40,7 @@ class ActivitySnapshotTest {
     @Test void controlsFormattingAndBrokenSurrogatesAreRemoved() {
         assertEquals("ABC", ActivitySnapshot.displayText(" A\r\n\t\0\u007f\u0085\u202eB\u2028\u2029\ud800C ", 128));
         assertNull(ActivitySnapshot.displayText(" \r\n\u202e ", 128));
+        assertEquals("World", ActivitySnapshot.displayText("\u00a0\u2007World\u202f", 128));
     }
 
     @Test void unicodeBoundsAreCodePointsAndDoNotSplitSupplementaryCharacters() {
@@ -50,6 +51,7 @@ class ActivitySnapshotTest {
 
     @Test void adversarialInputWorkIsBounded() {
         assertNull(ActivitySnapshot.displayText("\0".repeat(5000) + "hidden", 128));
+        assertNull(ActivitySnapshot.displayText("\0".repeat(4095) + "😀", 128));
         assertEquals(128, ActivitySnapshot.project(true, true, "a".repeat(10000), null, null).worldDisplayName().length());
     }
 
