@@ -272,3 +272,54 @@ unreviewed artifact hash receives no bridge at all.
    created here.
 3. Launcher pin update per the activation plan after publication, with its own
    regression run.
+
+## Publication outcome addendum — 2026-09-28 (incident record)
+
+The owner approved the exact candidate above, and publication was attempted on
+2026-09-28. What actually happened, in order:
+
+1. Branch `master` (`0d873f9`) was pushed normally; tag `v2.1.4` was created on
+   `bb99647e` (lightweight, matching `v2.1.3`) and pushed; both verified.
+2. The GitHub release was created with `gh release create` **without an explicit
+   `--target`**. Because the tag already existed, the release published correctly
+   on tag `v2.1.4` but recorded `target_commitish: "master"` instead of the
+   exact source SHA. The asset itself was byte-exact: an independent download
+   re-hashed to the approved digest, and GitHub's own asset digest matched.
+3. This repository's fail-closed verifier (`tools/verify_release_artifact.py
+   public`) correctly rejected the release ("release target differs from the
+   exact built source commit").
+4. GitHub refused to patch `target_commitish` on the published release
+   ("target_commitish cannot be changed when release is immutable").
+5. **The error in judgment:** the release was deleted and re-created to repair
+   that metadata. GitHub's Immutable Releases feature (GA) permanently reserves
+   a tag name once a published release has used it. Result:
+   - `tag_name was used by an immutable release` blocks any new release on
+     `v2.1.4` (direct create, draft-then-publish, and REST all fail);
+   - the tag ref itself was deleted during the attempt and **cannot be
+     re-created** (`GH013: Cannot create ref due to creations being restricted`,
+     specific to `v2.1.4` — an unrelated probe tag pushed and deleted fine, and
+     the repository has no owner-editable rulesets or tag protections involved);
+   - no `v2.1.4` release, tag, or public asset exists.
+
+**Current production truth:** Aurora Client production remains **2.1.3**
+(tag `v2.1.3`, unchanged, asset digest verified intact). The launcher production
+pin remains 2.1.3. The 2.1.4 candidate above passed its full technical review —
+including a real-Minecraft v2 smoke test and public download verification while
+the release briefly existed — but **2.1.4 was never a standing public release
+and must never be silently retried**: the tag name is considered permanently
+unavailable unless GitHub itself later changes the repository state.
+
+**Recovery proceeds as 2.1.5** (see `BRIDGE_V2_RELEASE_ACCEPTANCE_2.1.5.md`).
+The approved 2.1.4 candidate bytes remain the semantic baseline for it.
+
+### Release-process lesson (now codified in `RELEASE_PROCESS.md`)
+
+For immutable releases:
+
+1. create DRAFT;
+2. explicitly specify the exact target commit;
+3. attach the exact approved assets;
+4. verify draft metadata and assets;
+5. only then publish;
+6. after publication, NEVER delete/recreate automatically to repair metadata;
+7. if immutable publication verification fails, STOP for owner review.

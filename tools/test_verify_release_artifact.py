@@ -158,6 +158,55 @@ class ReleaseArtifactTests(unittest.TestCase):
         state["immutable"] = True
         self.assertEqual(release.validate_release_state(state, metadata, draft=False), url)
 
+    def test_draft_release_is_located_through_the_listing(self):
+        draft = {"id": 1, "tag_name": "v2.1.1", "draft": True}
+        listing = [{"id": 9, "tag_name": "v2.1.0", "draft": False}, draft]
+        with patch.object(release, "github_json_list", return_value=listing):
+            self.assertEqual(release.find_draft_by_tag(release.REPO_ID, "v2.1.1"), draft)
+        with patch.object(release, "github_json_list", return_value=listing[:1]):
+            with self.assertRaisesRegex(release.ReleaseError, "no draft release"):
+                release.find_draft_by_tag(release.REPO_ID, "v2.1.1")
+        published = [{"id": 9, "tag_name": "v2.1.1", "draft": False}]
+        with patch.object(release, "github_json_list", return_value=published):
+            with self.assertRaisesRegex(release.ReleaseError, "published release"):
+                release.find_draft_by_tag(release.REPO_ID, "v2.1.1")
+        duplicate = [draft, {"id": 2, "tag_name": "v2.1.1", "draft": True}]
+        with patch.object(release, "github_json_list", return_value=duplicate):
+            with self.assertRaisesRegex(release.ReleaseError, "multiple drafts"):
+                release.find_draft_by_tag(release.REPO_ID, "v2.1.1")
+
+    def test_draft_asset_url_may_still_be_unset(self):
+        metadata = self.inspect()
+        state = {
+            "tag_name": "v2.1.1", "draft": True, "target_commitish": SHA,
+            "prerelease": False,
+            "assets": [{
+                "name": metadata["fileName"], "size": metadata["sizeBytes"],
+                "state": "uploaded", "digest": "sha256:" + metadata["sha256"],
+                "browser_download_url": None,
+            }],
+        }
+        self.assertIsNone(release.validate_release_state(state, metadata, draft=True))
+        state["draft"] = False
+        state["immutable"] = True
+        with self.assertRaisesRegex(release.ReleaseError, "asset URL"):
+            release.validate_release_state(state, metadata, draft=False)
+
+    def test_draft_must_not_already_be_immutable(self):
+        metadata = self.inspect()
+        url = f"https://github.com/{release.REPO_ID}/releases/download/v2.1.1/aurora-2.1.1.jar"
+        state = {
+            "tag_name": "v2.1.1", "draft": True, "target_commitish": SHA,
+            "prerelease": False, "immutable": True,
+            "assets": [{
+                "name": metadata["fileName"], "size": metadata["sizeBytes"],
+                "state": "uploaded", "digest": "sha256:" + metadata["sha256"],
+                "browser_download_url": url,
+            }],
+        }
+        with self.assertRaisesRegex(release.ReleaseError, "already immutable"):
+            release.validate_release_state(state, metadata, draft=True)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -195,7 +195,7 @@ def verify_bundle(metadata: dict, jar: Path, version: str, channel: str, source_
         raise ReleaseError("handoff/public JAR metadata differs from the verified candidate")
 
 
-def github_json(repo: str, path: str, *, authenticated: bool, missing_ok: bool = False) -> dict | None:
+def github_value(repo: str, path: str, *, authenticated: bool, missing_ok: bool = False):
     if repo != REPO_ID:
         raise ReleaseError("release tooling is pinned to the canonical Aurora-Client repository")
     request = urllib.request.Request(
@@ -219,10 +219,21 @@ def github_json(repo: str, path: str, *, authenticated: bool, missing_ok: bool =
     if len(body) > 2 * 1024 * 1024:
         raise ReleaseError("GitHub API response is too large")
     try:
-        value = json.loads(body)
+        return json.loads(body)
     except json.JSONDecodeError as error:
         raise ReleaseError("GitHub API returned malformed JSON") from error
-    if not isinstance(value, dict):
+
+
+def github_json(repo: str, path: str, *, authenticated: bool, missing_ok: bool = False) -> dict | None:
+    value = github_value(repo, path, authenticated=authenticated, missing_ok=missing_ok)
+    if value is not None and not isinstance(value, dict):
+        raise ReleaseError("GitHub API returned an unexpected response")
+    return value
+
+
+def github_json_list(repo: str, path: str, *, authenticated: bool) -> list:
+    value = github_value(repo, path, authenticated=authenticated)
+    if not isinstance(value, list) or any(not isinstance(item, dict) for item in value):
         raise ReleaseError("GitHub API returned an unexpected response")
     return value
 
@@ -236,7 +247,36 @@ def check_collision(repo: str, version: str, channel: str) -> None:
         raise ReleaseError(f"release {tag} already exists; published releases are never repaired automatically")
 
 
-def validate_release_state(release: dict, metadata: dict, *, draft: bool) -> str:
+def find_draft_by_tag(repo: str, tag: str) -> dict:
+    """Locate the single draft release intended for ``tag``.
+
+    Drafts are NOT addressable through ``releases/tags/{tag}`` — that route
+    only resolves published releases (the v2.1.4 incident's draft check could
+    never have worked through it). The authenticated release listing is scanned
+    instead, failing closed on ambiguity or on any published release already
+    occupying the tag.
+    """
+    page = 1
+    while True:
+        releases = github_json_list(repo, f"releases?per_page=100&page={page}", authenticated=True)
+        published = [item for item in releases if item.get("draft") is not True and item.get("tag_name") == tag]
+        if published:
+            raise ReleaseError(
+                f"tag {tag} already has a published release; never repair or re-publish it automatically"
+            )
+        drafts = [item for item in releases if item.get("draft") is True and item.get("tag_name") == tag]
+        if drafts:
+            if len(drafts) > 1:
+                raise ReleaseError(f"multiple drafts target tag {tag}; resolve the ambiguity manually")
+            return drafts[0]
+        if len(releases) < 100:
+            raise ReleaseError(
+                f"no draft release targets tag {tag}; create the draft with the exact target commit first"
+            )
+        page += 1
+
+
+def validate_release_state(release: dict, metadata: dict, *, draft: bool) -> str | None:
     if release.get("tag_name") != metadata["tag"] or release.get("draft") is not draft:
         raise ReleaseError("release tag or draft state is wrong")
     if release.get("target_commitish") != metadata["sourceSha"]:
@@ -245,6 +285,8 @@ def validate_release_state(release: dict, metadata: dict, *, draft: bool) -> str
         raise ReleaseError("release prerelease flag differs from the selected channel")
     if not draft and release.get("immutable") is not True:
         raise ReleaseError("published release is not immutable")
+    if draft and release.get("immutable") is True:
+        raise ReleaseError("draft release is already immutable; refuse to validate a wrong-state fetch")
     assets = release.get("assets")
     if not isinstance(assets, list) or len(assets) != 1:
         raise ReleaseError("release must contain exactly one runtime JAR asset before finalization")
@@ -258,7 +300,9 @@ def validate_release_state(release: dict, metadata: dict, *, draft: bool) -> str
         raise ReleaseError("GitHub asset digest differs from the verified candidate")
     url = asset.get("browser_download_url")
     expected = f"https://github.com/{REPO_ID}/releases/download/{metadata['tag']}/{metadata['fileName']}"
-    if url != expected:
+    # Drafts legitimately expose a null download URL until publication; the
+    # exact immutable URL is enforced by the post-publication check instead.
+    if (url is None and not draft) or (url is not None and url != expected):
         raise ReleaseError("release asset URL is not the expected immutable tag asset URL")
     return url
 
@@ -330,21 +374,24 @@ def main() -> None:
     elif args.command == "collision":
         check_collision(args.repo, args.version, args.channel)
         print("requested tag and release are unused")
-    elif args.command in {"draft", "public"}:
+    elif args.command == "draft":
+        metadata = load_metadata(args.metadata)
+        release = find_draft_by_tag(args.repo, metadata["tag"])
+        validate_release_state(release, metadata, draft=True)
+        print("draft contains the complete expected runtime JAR and exact source target")
+    elif args.command == "public":
         metadata = load_metadata(args.metadata)
         release = github_json(
             args.repo, "releases/tags/" + urllib.parse.quote(metadata["tag"], safe=""),
-            authenticated=args.command == "draft",
+            authenticated=False,
         )
-        assert release is not None
-        url = validate_release_state(release, metadata, draft=args.command == "draft")
-        if args.command == "public":
-            jar = args.download_dir / metadata["fileName"]
-            download_public(url, jar, metadata["sizeBytes"])
-            verify_bundle(metadata, jar, metadata["version"], metadata["channel"], metadata["sourceSha"])
-            print(f"anonymous public JAR verified: {metadata['sizeBytes']} bytes, sha256:{metadata['sha256']}")
-        else:
-            print("draft contains the complete expected runtime JAR and exact source target")
+        if release is None:
+            raise ReleaseError("published release does not exist; publication is a separate owner step")
+        url = validate_release_state(release, metadata, draft=False)
+        jar = args.download_dir / metadata["fileName"]
+        download_public(url, jar, metadata["sizeBytes"])
+        verify_bundle(metadata, jar, metadata["version"], metadata["channel"], metadata["sourceSha"])
+        print(f"anonymous public JAR verified: {metadata['sizeBytes']} bytes, sha256:{metadata['sha256']}")
 
 
 if __name__ == "__main__":
