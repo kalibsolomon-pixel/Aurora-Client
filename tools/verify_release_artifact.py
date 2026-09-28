@@ -300,9 +300,17 @@ def validate_release_state(release: dict, metadata: dict, *, draft: bool) -> str
         raise ReleaseError("GitHub asset digest differs from the verified candidate")
     url = asset.get("browser_download_url")
     expected = f"https://github.com/{REPO_ID}/releases/download/{metadata['tag']}/{metadata['fileName']}"
-    # Drafts legitimately expose a null download URL until publication; the
-    # exact immutable URL is enforced by the post-publication check instead.
-    if (url is None and not draft) or (url is not None and url != expected):
+    # Draft assets legitimately expose no final URL until publication: GitHub
+    # serves them under an "untagged-<id>/" path (or null). Only the filename
+    # within this repository's download scope is meaningful at draft stage; the
+    # exact immutable tag URL is enforced post-publication instead.
+    if draft:
+        if url is not None and not (
+            url.startswith(f"https://github.com/{REPO_ID}/releases/download/")
+            and url.rsplit("/", 1)[-1] == metadata["fileName"]
+        ):
+            raise ReleaseError("draft asset URL is outside the repository release-download scope")
+    elif url != expected:
         raise ReleaseError("release asset URL is not the expected immutable tag asset URL")
     return url
 

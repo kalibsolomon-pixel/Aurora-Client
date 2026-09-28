@@ -187,10 +187,27 @@ class ReleaseArtifactTests(unittest.TestCase):
             }],
         }
         self.assertIsNone(release.validate_release_state(state, metadata, draft=True))
+        untagged = f"https://github.com/{release.REPO_ID}/releases/download/untagged-deadbeef/{metadata['fileName']}"
+        state["assets"][0]["browser_download_url"] = untagged
+        self.assertEqual(release.validate_release_state(state, metadata, draft=True), untagged)
         state["draft"] = False
         state["immutable"] = True
         with self.assertRaisesRegex(release.ReleaseError, "asset URL"):
             release.validate_release_state(state, metadata, draft=False)
+
+    def test_draft_asset_url_must_stay_within_the_repository_scope(self):
+        metadata = self.inspect()
+        state = {
+            "tag_name": "v2.1.1", "draft": True, "target_commitish": SHA,
+            "prerelease": False,
+            "assets": [{
+                "name": metadata["fileName"], "size": metadata["sizeBytes"],
+                "state": "uploaded", "digest": "sha256:" + metadata["sha256"],
+                "browser_download_url": f"https://example.com/{metadata['fileName']}",
+            }],
+        }
+        with self.assertRaisesRegex(release.ReleaseError, "scope"):
+            release.validate_release_state(state, metadata, draft=True)
 
     def test_draft_must_not_already_be_immutable(self):
         metadata = self.inspect()
