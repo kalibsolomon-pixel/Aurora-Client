@@ -38,7 +38,7 @@ public final class LauncherActivityIntegration {
             var integrated = client.getSingleplayerServer();
             ServerData server = client.getCurrentServer();
             String worldSaveId = integrated == null ? null
-                    : integrated.getWorldPath(LevelResource.ROOT).getFileName().toString();
+                    : integrated.getWorldPath(LevelResource.ROOT).normalize().getFileName().toString();
             bridge.publish(ActivitySnapshot.project(client.level != null, client.hasSingleplayerServer(),
                     integrated == null ? null : integrated.getWorldData().getLevelName(),
                     server == null ? null : server.name, server == null ? null : server.ip,
