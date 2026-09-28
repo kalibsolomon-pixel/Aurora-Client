@@ -6,6 +6,7 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientWorldEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ServerData;
+import net.minecraft.world.level.storage.LevelResource;
 
 /** Event adapter only. No mixins, tick hooks, config fields or renderer dependencies. */
 public final class LauncherActivityIntegration {
@@ -36,9 +37,12 @@ public final class LauncherActivityIntegration {
         try {
             var integrated = client.getSingleplayerServer();
             ServerData server = client.getCurrentServer();
+            String worldSaveId = integrated == null ? null
+                    : integrated.getWorldPath(LevelResource.ROOT).getFileName().toString();
             bridge.publish(ActivitySnapshot.project(client.level != null, client.hasSingleplayerServer(),
                     integrated == null ? null : integrated.getWorldData().getLevelName(),
-                    server == null ? null : server.name, server == null ? null : server.ip));
+                    server == null ? null : server.name, server == null ? null : server.ip,
+                    worldSaveId, server == null ? null : server.ip));
         } catch (Exception | LinkageError failure) {
             bridge.close();
             AuroraClient.LOGGER.debug("Aurora launcher activity bridge state unavailable for this session.");

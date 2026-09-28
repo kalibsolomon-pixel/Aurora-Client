@@ -16,8 +16,9 @@ final class BridgeBootstrap {
     final InetSocketAddress endpoint;
     final String sessionId;
     final String capability;
+    final int protocol;
 
-    private BridgeBootstrap(int port, String sessionId, String capability) {
+    private BridgeBootstrap(int port, String sessionId, String capability, int protocol) {
         try {
             // Literal bytes: no DNS, alternate host syntax or non-loopback fallback.
             endpoint = new InetSocketAddress(InetAddress.getByAddress(new byte[]{127, 0, 0, 1}), port);
@@ -26,6 +27,7 @@ final class BridgeBootstrap {
         }
         this.sessionId = sessionId;
         this.capability = capability;
+        this.protocol = protocol;
     }
 
     static BridgeBootstrap fromEnvironment(Map<String, String> env) {
@@ -36,7 +38,8 @@ final class BridgeBootstrap {
         if (endpoint == null && session == null && capability == null && version == null) return null;
         if (endpoint == null || endpoint.length() > 21 || !endpoint.matches("127\\.0\\.0\\.1:[1-9][0-9]{0,4}")
                 || session == null || session.length() != 36
-                || capability == null || !capability.matches("[0-9a-f]{64}") || !"1".equals(version)) {
+                || capability == null || !capability.matches("[0-9a-f]{64}")
+                || !("1".equals(version) || "2".equals(version))) {
             throw new IllegalArgumentException("Invalid activity bridge bootstrap");
         }
         if (!UUID.fromString(session).toString().equals(session)) {
@@ -44,7 +47,7 @@ final class BridgeBootstrap {
         }
         int port = Integer.parseInt(endpoint.substring(10));
         if (port > 65535) throw new IllegalArgumentException("Invalid activity bridge port");
-        return new BridgeBootstrap(port, session, capability);
+        return new BridgeBootstrap(port, session, capability, Integer.parseInt(version));
     }
 
     @Override public String toString() { return "BridgeBootstrap[redacted]"; }

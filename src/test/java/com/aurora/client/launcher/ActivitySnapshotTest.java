@@ -58,4 +58,20 @@ class ActivitySnapshotTest {
     @Test void snapshotsDoNotExposePrivateValuesThroughToString() {
         assertFalse(ActivitySnapshot.project(true, true, "Private World", null, null).toString().contains("Private"));
     }
+
+    @Test void saveIdentityIsDistinctFromDisplayAndRejectsTraversal() {
+        var first = ActivitySnapshot.project(true, true, "Old", null, null, "save-1", null);
+        var renamed = ActivitySnapshot.project(true, true, "New", null, null, "save-1", null);
+        assertEquals(first.worldSaveId(), renamed.worldSaveId());
+        for (String id : new String[]{"..", "../other", "C:drive", "a\\b", "bad.", "bad\0name"}) {
+            assertNull(ActivitySnapshot.project(true, true, "Display", null, null, id, null).worldSaveId());
+        }
+    }
+
+    @Test void aLongServerAddressCannotBeTruncatedIntoAnotherTarget() {
+        var snapshot = ActivitySnapshot.project(true, false, null, "Display", "example.invalid",
+                null, "a".repeat(256));
+        assertNull(snapshot.serverTarget());
+        assertEquals("example.invalid", snapshot.serverAddress());
+    }
 }

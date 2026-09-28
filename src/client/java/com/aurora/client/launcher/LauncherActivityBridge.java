@@ -60,7 +60,7 @@ final class LauncherActivityBridge implements AutoCloseable {
                 while (!channel.finishConnect()) await(key, SelectionKey.OP_CONNECT, deadline);
             }
             BridgeIo.write(channel, key, ActivityProtocol.hello(bootstrap), () -> stopped);
-            accept(channel, key);
+            accept(channel, key, bootstrap.protocol);
             safeDiagnostic("Aurora launcher activity bridge connected.");
             ByteBuffer unexpected = ByteBuffer.allocate(1);
             while (!stopped) {
@@ -68,7 +68,7 @@ final class LauncherActivityBridge implements AutoCloseable {
                 if (channel.read(unexpected) != 0) throw new IOException("Activity bridge closed or unexpected input");
                 Update next = updates.poll();
                 if (next != null) {
-                    BridgeIo.write(channel, key, ActivityProtocol.activity(bootstrap.sessionId, next.sequence(), next.snapshot()), () -> stopped);
+                    BridgeIo.write(channel, key, ActivityProtocol.activity(bootstrap.sessionId, next.sequence(), next.snapshot(), bootstrap.protocol), () -> stopped);
                 } else {
                     key.interestOps(SelectionKey.OP_READ);
                     // Recheck after setting interest; publish may have raced the previous poll.
@@ -89,7 +89,7 @@ final class LauncherActivityBridge implements AutoCloseable {
         }
     }
 
-    private void accept(SocketChannel channel, SelectionKey key) throws IOException {
+    private void accept(SocketChannel channel, SelectionKey key, int protocol) throws IOException {
         ByteBuffer line = ByteBuffer.allocate(ActivityProtocol.ACK_BYTES);
         long deadline = BridgeIo.deadline();
         while (true) {
@@ -98,7 +98,8 @@ final class LauncherActivityBridge implements AutoCloseable {
             int size = line.position();
             if (size > 0 && line.get(size - 1) == '\n') {
                 String ack = new String(line.array(), 0, size, StandardCharsets.UTF_8);
-                if (!ActivityProtocol.ACCEPTED.equals(ack)) throw new IOException("Activity bridge acceptance rejected");
+                String expected = protocol == 2 ? ActivityProtocol.ACCEPTED_V2 : ActivityProtocol.ACCEPTED;
+                if (!expected.equals(ack)) throw new IOException("Activity bridge acceptance rejected");
                 return;
             }
             if (!line.hasRemaining()) throw new IOException("Activity bridge acceptance exceeds limit");

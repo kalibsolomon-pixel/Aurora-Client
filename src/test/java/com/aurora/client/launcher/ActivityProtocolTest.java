@@ -51,7 +51,7 @@ class ActivityProtocolTest {
     }
 
     @Test void protocolVersionAndSessionAreStrict() {
-        for (String version : new String[]{"0", "2", "01", "1\n"}) {
+        for (String version : new String[]{"0", "3", "01", "1\n"}) {
             var env = new HashMap<>(environment(12345));
             env.put(BridgeBootstrap.VERSION, version);
             assertThrows(IllegalArgumentException.class, () -> BridgeBootstrap.fromEnvironment(env));
@@ -59,6 +59,21 @@ class ActivityProtocolTest {
         var env = new HashMap<>(environment(12345));
         env.put(BridgeBootstrap.SESSION, "x".repeat(36));
         assertThrows(IllegalArgumentException.class, () -> BridgeBootstrap.fromEnvironment(env));
+    }
+
+    @Test void v2CarriesIdentityWhileV1RemainsDisplayOnly() throws Exception {
+        var env = new HashMap<>(environment(12345));
+        env.put(BridgeBootstrap.VERSION, "2");
+        var bootstrap = BridgeBootstrap.fromEnvironment(env);
+        assertEquals(2, bootstrap.protocol);
+        var hello = JsonParser.parseString(new String(ActivityProtocol.hello(bootstrap), StandardCharsets.UTF_8)).getAsJsonObject();
+        assertEquals(2, hello.get("schemaVersion").getAsInt());
+        var snapshot = ActivitySnapshot.project(true, true, "Renamed World", null, null, "StableSave", null);
+        var v1 = JsonParser.parseString(new String(ActivityProtocol.activity(bootstrap.sessionId, 2, snapshot), StandardCharsets.UTF_8)).getAsJsonObject();
+        var v2 = JsonParser.parseString(new String(ActivityProtocol.activity(bootstrap.sessionId, 2, snapshot, 2), StandardCharsets.UTF_8)).getAsJsonObject();
+        assertFalse(v1.has("worldSaveId"));
+        assertEquals("StableSave", v2.get("worldSaveId").getAsString());
+        assertEquals("Renamed World", v2.get("worldDisplayName").getAsString());
     }
 
     @Test void handshakeIsBoundedAndCapabilityNeverAppearsInActivity() throws Exception {

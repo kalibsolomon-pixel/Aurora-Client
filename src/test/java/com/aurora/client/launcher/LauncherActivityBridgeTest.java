@@ -79,6 +79,32 @@ class LauncherActivityBridgeTest {
         }
     }
 
+    @Test void v2WorkerTransportsIdentitySeparatelyFromDisplay() throws Exception {
+        try (var server = listener()) {
+            var env = new java.util.HashMap<>(ActivityProtocolTest.environment(server.getLocalPort()));
+            env.put(BridgeBootstrap.VERSION, "2");
+            var bootstrap = BridgeBootstrap.fromEnvironment(env);
+            try (var bridge = new LauncherActivityBridge(bootstrap, ignored -> {}); var socket = server.accept()) {
+                assertEquals(2, read(socket).get("schemaVersion").getAsInt());
+                socket.getOutputStream().write(ActivityProtocol.ACCEPTED_V2.getBytes(StandardCharsets.UTF_8));
+                socket.getOutputStream().flush();
+                assertEquals("MAIN_MENU", read(socket).get("state").getAsString());
+                bridge.publish(ActivitySnapshot.project(true, true, "Renamed World", null, null, "stable-save", null));
+                var world = read(socket);
+                assertEquals(2, world.get("schemaVersion").getAsInt());
+                assertEquals("Renamed World", world.get("worldDisplayName").getAsString());
+                assertEquals("stable-save", world.get("worldSaveId").getAsString());
+                bridge.publish(ActivitySnapshot.mainMenu());
+                assertFalse(read(socket).has("worldSaveId"));
+                bridge.publish(ActivitySnapshot.project(true, false, null, "Friendly Server", "example.invalid", null, "EXAMPLE.invalid"));
+                var multiplayer = read(socket);
+                assertEquals("Friendly Server", multiplayer.get("serverDisplayName").getAsString());
+                assertEquals("EXAMPLE.invalid", multiplayer.get("serverTarget").getAsString());
+                bridge.close(); terminated(bridge);
+            }
+        }
+    }
+
     @Test void refusedConnectionDisablesWithoutRetry() throws Exception {
         int port;
         try (var unused = listener()) { port = unused.getLocalPort(); }

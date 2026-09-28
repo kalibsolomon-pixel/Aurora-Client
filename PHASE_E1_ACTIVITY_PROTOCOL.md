@@ -1,0 +1,7 @@
+# Phase E1 client activity identity
+
+The authenticated loopback bridge can speak schema v1 or v2, selected only by the launcher-owned `AURORA_ACTIVITY_PROTOCOL` bootstrap value. Schema v1 frames and acceptance bytes are unchanged. Schema v2 uses the same bounded JSON-line transport, authentication, monotonic whole snapshots, one connection, and nonfatal failure behavior, with `schemaVersion:2` in hello, acceptance, and activity frames.
+
+V2 activity may additionally carry `worldSaveId` in `SINGLEPLAYER` or `serverTarget` in `MULTIPLAYER`. Both are omitted in all other states. `worldSaveId` is the save directory component from the integrated server's `LevelResource.ROOT`, separate from the human-readable world title. `serverTarget` is the current Minecraft `ServerData.ip` connection field, separate from `ServerData.name`. The client bounds and sanitizes both before sending; the launcher independently validates them before persistence or future use. No absolute path, credentials, account identity, command, or Java argument is sent.
+
+An older launcher with the reviewed older artifact uses v1. A new launcher still uses v1 for that artifact and has a v2 receiver ready for a future reviewed client artifact. An older launcher presented with an unrecognized newly built artifact disables the optional bridge; normal game launch and process-only presence continue. The client does not reconnect or downgrade after failed v2 authentication. No E1 client code performs Quick Launch or changes Discord publishing.
