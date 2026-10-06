@@ -23,12 +23,15 @@ public final class UnifiedPalette {
             strong = rgb(hsl[0], hsl[1], light);
             foreground = 0xffffffff;
         }
+        if(strong==base) {
+            light += foreground == -1 ? -.02 : .02;
+            strong=readable(hsl[0],hsl[1],light,foreground);
+        }
         int hover = readable(hsl[0], hsl[1], light + (foreground == -1 ? -.03 : .05), foreground);
         int pressed = readable(hsl[0], hsl[1], light + (foreground == -1 ? -.07 : .02), foreground);
         // A base already in the action band may equal strong. Preserve the base,
         // but keep the primary role visibly distinct with a small HSL step.
-        if (strong == base) strong = readable(hsl[0], hsl[1], light + (foreground == -1 ? -.02 : .02), foreground);
-        int neutral = mode == ThemeMode.LIGHT ? 0xffeeeeee : 0xff16171d;
+        int neutral = mode == ThemeMode.LIGHT ? PaletteEngine.derive(base,mode)[ThemeToken.SURFACE_VARIANT.ordinal()] : 0xff1d1f27;
         double markerLight = hsl[2];
         int marker = base;
         for (int i = 0; contrast(marker, neutral) < 3 && i < 100; i++) {
@@ -44,7 +47,7 @@ public final class UnifiedPalette {
         put(c, ThemeToken.MATERIAL_CANVAS, dark ? 0xff101116 : c[ThemeToken.BACKGROUND.ordinal()]);
         put(c, ThemeToken.MATERIAL_PANEL, dark ? 0xff16171d : c[ThemeToken.SURFACE.ordinal()]);
         put(c, ThemeToken.MATERIAL_RAISED, dark ? 0xff1d1f27 : c[ThemeToken.SURFACE_VARIANT.ordinal()]);
-        put(c, ThemeToken.MATERIAL_HOVER, dark ? 0xff242631 : c[ThemeToken.SURFACE_VARIANT.ordinal()]);
+        put(c, ThemeToken.MATERIAL_HOVER, dark ? 0xff242631 : neutralHover(c[ThemeToken.SURFACE_VARIANT.ordinal()],c[ThemeToken.ON_BACKGROUND.ordinal()]));
         put(c, ThemeToken.MATERIAL_PRESSED, dark ? 0xff1a1c24 : c[ThemeToken.SURFACE_INSET.ordinal()]);
         put(c, ThemeToken.MATERIAL_SUNKEN, dark ? 0xff0d0e13 : c[ThemeToken.SURFACE_INSET.ordinal()]);
         put(c, ThemeToken.MATERIAL_BORDER, dark ? 0xff24262f : c[ThemeToken.BORDER.ordinal()]);
@@ -61,6 +64,14 @@ public final class UnifiedPalette {
         put(c, ThemeToken.STATUS_ERROR, 0xffff9a9a); put(c, ThemeToken.STATUS_WORKING, 0xff8fb7ff);
     }
 
+    private static int neutralHover(int surface,int text) {
+        int result=0xff000000;
+        for(int shift:new int[]{16,8,0}) {
+            int a=surface>>>shift&255,b=text>>>shift&255;
+            result |= Math.round(a+(b-a)*.08f)<<shift;
+        }
+        return result;
+    }
     private static void put(int[] c, ThemeToken t, int v) { c[t.ordinal()] = v; }
     private static int readable(double h, double s, double l, int foreground) {
         l = clamp(l, .05, .95);

@@ -132,6 +132,9 @@ public final class GlassSurface {
 
     private GlassSurface() {}
 
+    private static final BlurPanelRenderer.Lighting UNIFIED_LIGHTING =
+            new BlurPanelRenderer.Lighting(true,0,0);
+
     // ------------------------------------------------------------------
     //  Frame phase: glass pass → dim (+ deferred rims) → content
     // ------------------------------------------------------------------
@@ -313,7 +316,7 @@ public final class GlassSurface {
      */
     public static boolean container(GuiGraphics g, float x, float y, float w, float h, float radius,
                                     BlurPanelRenderer.Priority priority) {
-        return paint(g, x, y, w, h, radius, BlurPanelRenderer.Lighting.depressed(),
+        return paint(g, x, y, w, h, radius, MaterialSurface.unified() ? UNIFIED_LIGHTING : BlurPanelRenderer.Lighting.depressed(),
                 ThemeManager.color(ThemeToken.WINDOW_FILL), priority);
     }
 
@@ -328,7 +331,7 @@ public final class GlassSurface {
      */
     public static boolean container(GuiGraphics g, float x, float y, float w, float h, float radius,
                                     ThemeToken surface) {
-        return paint(g, x, y, w, h, radius, BlurPanelRenderer.Lighting.depressed(),
+        return paint(g, x, y, w, h, radius, MaterialSurface.unified() ? UNIFIED_LIGHTING : BlurPanelRenderer.Lighting.depressed(),
                 ThemeManager.surfaceColor(surface), BlurPanelRenderer.Priority.WINDOW);
     }
 
@@ -385,6 +388,7 @@ public final class GlassSurface {
      */
     public static boolean control(GuiGraphics g, float x, float y, float w, float h, float radius,
                                   boolean stained, BlurPanelRenderer.Priority priority) {
+        if (MaterialSurface.unified()) return false;
         return paint(g, x, y, w, h, radius, BlurPanelRenderer.Lighting.raised(),
                 stained ? ThemeManager.stainedTint() : ThemeManager.color(ThemeToken.WINDOW_FILL),
                 priority);
@@ -400,6 +404,7 @@ public final class GlassSurface {
      * multiplier stacked on another tint.
      */
     public static boolean control(GuiGraphics g, float x, float y, float w, float h, float radius, int tint) {
+        if (MaterialSurface.unified()) return false;
         return paint(g, x, y, w, h, radius, BlurPanelRenderer.Lighting.raised(), tint,
                 BlurPanelRenderer.Priority.CONTROL);
     }
@@ -543,9 +548,20 @@ public final class GlassSurface {
             report("glass surface body painted AFTER the overlay dim — every glass surface belongs "
                     + "in the glass pass, before GlassSurface.overlayDim");
         }
-        if (!BlurPanelRenderer.renderPanel(g, x, y, w, h, radius,
-                BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX, lighting, priority)) {
+        boolean unified = MaterialSurface.unified();
+        // WINDOW is the parent owner; embedded controls never sample this backdrop.
+        boolean drew = unified
+                ? BlurPanelRenderer.renderUnifiedPanel(g,x,y,w,h,radius,
+                    BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX,UNIFIED_LIGHTING,priority)
+                : BlurPanelRenderer.renderPanel(g,x,y,w,h,radius,
+                    BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX,lighting,priority);
+        if (!drew) {
             return false;
+        }
+        if(unified) {
+            if(passOpen() && trackedClip==null && !cornersInScissor(g,x,y,w,h))
+                report("unified parent painted under an untracked raw scissor");
+            return true; // caller's cached parent face owns tint + boundary after dim
         }
         RenderUtil.drawRoundedRectAA(g, x, y, w, h, radius, tint);
         if (passOpen()) {

@@ -5,6 +5,8 @@ import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.render.blur.BlurPanelRenderer;
 import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.ui.util.RenderUtil;
+import com.aurora.client.ui.util.CubicBezier;
+import com.aurora.client.ui.util.TimedTransition;
 import com.aurora.client.ui.util.UiLayerCache;
 import com.aurora.client.util.AuroraAnim;
 import com.aurora.client.util.HoverAnim;
@@ -73,6 +75,48 @@ public class Button extends Widget {
     private final HoverAnim hoverAnim = HoverAnim.symmetric(HOVER_MS);
 
     private long pressDownStartMs = -1L;
+    private final TimedTransition pilotHover = new TimedTransition(120,CubicBezier.EASE);
+    private final TimedTransition pilotPress = new TimedTransition(120,CubicBezier.EASE);
+    private boolean pilotMotionPrimed;
+    private boolean pointerHeld;
+
+    public void pointerHeld(boolean held) { pointerHeld = held && !disabled; }
+
+    @Override public boolean mouseReleased(double mx,double my,int button) {
+        pointerHeld = false;
+        return false;
+    }
+
+    private void renderUnified(GuiGraphics g,float x,float y,float w,float h,int mx,int my) {
+        long now=System.nanoTime();
+        if(!pilotMotionPrimed) { pilotHover.update(0,now); pilotPress.update(0,now); pilotMotionPrimed=true; }
+        float hover=(float)pilotHover.update(!disabled && inBounds(mx,my,x,y,w,h) ? 1 : 0,now);
+        boolean pulse=System.currentTimeMillis()-pressDownStartMs < 120 && pressDownStartMs>=0;
+        float press=(float)pilotPress.update(!disabled && (pointerHeld || pulse) ? 1 : 0,now);
+        float r=ThemeManager.current().roundness().radiusSmall();
+        int fill=ThemeManager.color(primary ? ThemeToken.ACTION_STRONG : ThemeToken.MATERIAL_RAISED);
+        int over=ThemeManager.color(primary ? ThemeToken.ACTION_HOVER : ThemeToken.MATERIAL_HOVER);
+        int down=ThemeManager.color(primary ? ThemeToken.ACTION_PRESSED : ThemeToken.MATERIAL_PRESSED);
+        int edge=MaterialSurface.color(ThemeToken.BORDER_HOVER);
+        int text=ThemeManager.color(primary ? ThemeToken.ON_ACTION : ThemeToken.MATERIAL_TEXT);
+        if(destructive) { fill=ThemeManager.color(ThemeToken.STATUS_ERROR); over=fill;down=fill;text=0xff101116; }
+        fill=AuroraAnim.lerpArgb(AuroraAnim.lerpArgb(fill,over,hover),down,press);
+        if(disabled) { fill=AuroraAnim.lerpArgb(fill,ThemeManager.color(ThemeToken.MATERIAL_PANEL),.65f);text=MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED); }
+        float py=y+press; // one logical pixel; bounds and semantic geometry stay unchanged
+        int kind=(destructive ? 30 : primary ? 20 : 10)+(disabled ? 4 : hover==1 ? 1 : 0);
+        MaterialSurface.cached(g,x,py,w,h,r,0,0,80,true);
+        if((hover==0 || hover==1) && press==0)
+            MaterialSurface.cached(g,x,py,w,h,r,fill,edge,kind,false);
+        else {
+            RenderUtil.drawRoundedRectAA(g,x,py,w,h,r,fill);
+            RenderUtil.drawRoundedOutlineAA(g,x,py,w,h,r,1,edge);
+        }
+        if(focused && !disabled) RenderUtil.drawRoundedOutlineAA(g,x-2,y-2,w+4,h+4,r+2,1,
+                MaterialSurface.color(ThemeToken.ACCENT));
+        Font font=Minecraft.getInstance().font;
+        if(font!=null) AuroraFontRenderer.drawCentered(g,font,label,Math.round(x+w/2),
+                Math.round(py+(h-font.lineHeight)/2)+1,text);
+    }
 
     /**
      * Glass-pass bookkeeping: the frame in which {@link #renderGlassPass}
@@ -259,6 +303,7 @@ public class Button extends Widget {
     @Override
     public void renderGlassPass(GuiGraphics g, float x, float y, float w, float h) {
         glassPassFrame = GlassSurface.frame();
+        if(MaterialSurface.unified()) { glassPassDrew=false; return; }
         float radius = ThemeManager.current().roundness().radiusSmall();
         boolean eligible = glassEligible(currentScale());
         if (eligible) {
@@ -283,6 +328,7 @@ public class Button extends Widget {
 
     @Override
     public void renderOverlay(GuiGraphics g, float x, float y, float w, float h, int mouseX, int mouseY) {
+        if(MaterialSurface.unified()) { renderUnified(g,x,y,w,h,mouseX,mouseY); return; }
         Font tr = Minecraft.getInstance().font;
         if (tr == null) return;
 
@@ -378,6 +424,7 @@ public class Button extends Widget {
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
         if (disabled || button != 0 || !inBounds(mx, my, x, y, w, h)) return false;
+        pointerHeld(true);
         triggerPressAnimation();
         if (onPress != null) onPress.run();
         return true;

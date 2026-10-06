@@ -918,6 +918,20 @@ public final class BlurPanelRenderer {
     public static boolean renderPanel(GuiGraphics g, float guiX, float guiY, float guiW, float guiH,
                                       float cornerRadiusGui, float blurRadiusPx, Lighting lighting,
                                       Priority priority, CaptureSource captureSource) {
+        return renderPanelInternal(g,guiX,guiY,guiW,guiH,cornerRadiusGui,blurRadiusPx,
+                lighting,priority,captureSource,false);
+    }
+
+    /** Unified pilot: bypasses only the retained legacy style preference.
+     * Every capture, screenshot, scissor, capacity and GL safety guard remains shared. */
+    public static boolean renderUnifiedPanel(GuiGraphics g,float x,float y,float w,float h,float r,
+                                             float blur,Lighting lighting,Priority priority) {
+        return renderPanelInternal(g,x,y,w,h,r,blur,lighting,priority,null,true);
+    }
+
+    private static boolean renderPanelInternal(GuiGraphics g,float guiX,float guiY,float guiW,float guiH,
+            float cornerRadiusGui,float blurRadiusPx,Lighting lighting,Priority priority,
+            CaptureSource captureSource,boolean unified) {
         if (priority == null) priority = Priority.CONTROL;
         lastOutcome = "rendered";
         if (permanentlyDisabled) { lastOutcome = "disabled (earlier failure)"; return false; }
@@ -933,7 +947,7 @@ public final class BlurPanelRenderer {
         // capture/blur/readback cost.
         // The synthetic harness (BlurTestScreen) is exempt, like the
         // menu-context guard below: it exists to exercise this pipeline.
-        if (captureSource == null && ThemeManager.current().glassStyle() == GlassStyle.TRANSPARENT) {
+        if (!unified && captureSource == null && ThemeManager.current().glassStyle() == GlassStyle.TRANSPARENT) {
             lastOutcome = "transparent style (glass off)";
             return false;
         }

@@ -1,5 +1,6 @@
 package com.aurora.client.screen.setting;
 import com.aurora.client.ui.component.Widget;
+import com.aurora.client.ui.component.MaterialSurface;
 import com.aurora.client.ui.util.AuroraFontRenderer;
 
 import com.aurora.client.config.AuroraConfig;
@@ -455,16 +456,17 @@ public class AccentSetting extends FeatureSetting {
         int cy = cellY(ci);
         int cw = swatchW(width);
         boolean customActive = preset == null;
-        int customFill = customActive ? accent : AuroraTheme.IOS_TERTIARY_BG;
+        int customFill = customActive ? accent : (MaterialSurface.unified()
+                ? MaterialSurface.color(ThemeToken.SURFACE_VARIANT) : AuroraTheme.IOS_TERTIARY_BG);
         RenderUtil.drawRoundedRectAA(ctx, cx, cy, cw, SWATCH_H, swR, customFill | 0xFF000000);
         if (!customActive) {
-            RenderUtil.drawRoundedOutlineAA(ctx, cx, cy, cw, SWATCH_H, swR, 1.0f, AuroraTheme.BORDER_OFF);
+            RenderUtil.drawRoundedOutlineAA(ctx, cx, cy, cw, SWATCH_H, swR, 1.0f, MaterialSurface.unified() ? MaterialSurface.color(ThemeToken.BORDER_HOVER) : AuroraTheme.BORDER_OFF);
         }
         int customText = customActive
                 ? PaletteEngine.pickOnColor(accent, 0f)
-                : AuroraTheme.IOS_SECONDARY_LABEL;
+                : MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY);
         AuroraFontRenderer.drawCentered(ctx, tr, "Custom", cx + cw / 2,
-                cy + (SWATCH_H - tr.lineHeight) / 2, disabled ? AuroraTheme.TEXT_DIM : customText);
+                cy + (SWATCH_H - tr.lineHeight) / 2, disabled ? MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED) : customText);
 
         if (!editorOpen) return;
         // The embedded, unmodified damage-tint-style picker — rendered as a

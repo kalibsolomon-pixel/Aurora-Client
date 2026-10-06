@@ -23,6 +23,8 @@ import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.ui.util.ClipBand;
 import com.aurora.client.ui.util.MaterialIconRenderer;
 import com.aurora.client.ui.util.RenderUtil;
+import com.aurora.client.ui.util.TimedTransition;
+import com.aurora.client.ui.util.CubicBezier;
 import com.aurora.client.ui.util.UiLayerCache;
 import com.aurora.client.util.AuroraAnim;
 import com.aurora.client.util.HoverAnim;
@@ -110,6 +112,8 @@ import java.util.Map;
  * silent no-op on the active layout, Left/Right ring).
  */
 public class AuroraScreen extends Screen implements ThemedScreen {
+    @Override public boolean unifiedThemePilot() { return true; }
+
 
     /** §8.3 canonical hover duration — sidebar chrome, cards, headers alike (C-2b). */
     private static final long HOVER_MS = 140L;
@@ -228,6 +232,16 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     };
     private final HoverAnim profilesHover = HoverAnim.symmetric(HOVER_MS);
     private final Map<String, HoverAnim> tileHovers = new HashMap<>();
+    private static final String[] PILOT_TABS={"tab0","tab1"}, PILOT_LAYOUTS={"layout0","layout1"};
+    private final Map<String,TimedTransition> pilotHovers=new HashMap<>();
+    private final Map<String,TimedTransition> pilotHeaderHovers=new HashMap<>();
+    private float pilotHover(String id,boolean hovered) {
+        return pilotHover(pilotHovers,id,hovered);
+    }
+    private float pilotHover(Map<String,TimedTransition> animators,String id,boolean hovered) {
+        return animators.computeIfAbsent(id,k->new TimedTransition(120,CubicBezier.EASE,0))
+                .update(hovered ? 1 : 0,System.nanoTime());
+    }
     private final Map<String, HoverAnim> headerHovers = new HashMap<>();
 
     /** The module card's hover animator (lazily created once per module, long-lived). */
@@ -623,7 +637,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
 
     /** Token color with an alpha override — restores the pre-migration translucency, mode-aware. */
     private static int alpha(ThemeToken t, float a) {
-        return (Math.round(a * 255f) << 24) | (ThemeManager.color(t) & 0x00FFFFFF);
+        return (Math.round(a * 255f) << 24) | (MaterialSurface.color(t) & 0x00FFFFFF);
     }
 
     @Override
@@ -715,13 +729,14 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             RenderUtil.drawRoundedOutlineAA(g, bx - i * 2, by - i * 2, BOX_W + i * 4, BOX_H + i * 4,
                     radius + i * 2, 2.0f, (a << 24) | 0x000000);
         }
-        if (!glassWindow) {
+        if (!glassWindow || MaterialSurface.unified()) {
             // Glass pilot: the live glass material supplies the fill + rim;
             // stacking the old fill/outline on top would read as a double
             // surface. The glow rings above stay — they read as a drop
             // shadow, not an outline.
-            RenderUtil.drawRoundedRectAA(g, bx, by, BOX_W, BOX_H, radius, ThemeManager.color(ThemeToken.WINDOW_FILL));
-            RenderUtil.drawRoundedOutlineAA(g, bx, by, BOX_W, BOX_H, radius, 1.0f, alpha(ThemeToken.ON_BACKGROUND, 0x13 / 255f));
+            RenderUtil.drawRoundedRectAA(g, bx, by, BOX_W, BOX_H, radius, MaterialSurface.color(ThemeToken.WINDOW_FILL));
+            RenderUtil.drawRoundedOutlineAA(g, bx, by, BOX_W, BOX_H, radius, 1.0f, MaterialSurface.unified() ? MaterialSurface.color(ThemeToken.BORDER)
+                    : alpha(ThemeToken.ON_BACKGROUND, 0x13 / 255f));
         }
 
         RenderUtil.drawRoundedRectAA(g, bx + 80, by + 12, 1, BOX_H - 24, 0.5f, alpha(ThemeToken.ON_BACKGROUND, 0x08f));
@@ -819,6 +834,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                     highlightedTileGlass[i] = false;
                     continue;
                 }
+                if (MaterialSurface.unified()) { highlightedTileGlass[i]=false;continue; }
                 if (mods.get(i).isEnabled()) {
                     highlightedTileGlass[i] = GlassSurface.control(g,
                             b[0], b[1], b[2], b[3], ctrlRadius, true,
@@ -859,7 +875,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         // corners and the glass corners derive from one radius (C-7).
         float ctrlRadius = ThemeManager.current().roundness().radiusSmall();
 
-        g.drawString(tr, "AURORA", (int) (bx + 16), (int) (by + 16), ThemeManager.color(ThemeToken.ACCENT), false);
+        g.drawString(tr, "AURORA", (int) (bx + 16), (int) (by + 16), MaterialSurface.color(ThemeToken.ACCENT), false);
 
         String[] cats = {"Mods", "Settings"};
         for (int i = 0; i < 2; i++) {
@@ -871,7 +887,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             // below), visible at hover 0; the selected tab's label
             // treatment is fixed, so the channels can never alias.
             boolean hover = Widget.inBounds(mouseX, mouseY, bx + 8, catY, 64, TAB_H);
-            float hoverT = tabHovers[i].update(hover);
+            float hoverT = MaterialSurface.unified() ? pilotHover(PILOT_TABS[i],hover) : tabHovers[i].update(hover);
             SemanticActionControl control = tabControls[i];
             if (control != null) {
                 control.setBounds((int) (bx + 8), (int) catY, 64, (int) TAB_H);
@@ -881,7 +897,8 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             // Raised glass was painted pre-dim: neutral for the inactive tab,
             // accent-stained for the selected tab. Preserve the established
             // flat fallback if the glass renderer declines this frame.
-            if (!chipGlass[i]) {
+            if(MaterialSurface.unified()) MaterialSurface.selection(g,bx+8,catY,64,22,ctrlRadius,sel,hoverT);
+            else if (!chipGlass[i]) {
                 if (sel) {
                     RenderUtil.drawRoundedRectAA(g, bx + 8, catY, 64, 22, ctrlRadius,
                             alpha(ThemeToken.ACCENT, 0x26 / 255f));
@@ -891,23 +908,23 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                                     ThemeManager.surfaceColor(ThemeToken.SURFACE_VARIANT), hoverT));
                 }
             }
-            int txt = chipGlass[i] && sel ? ThemeManager.color(ThemeToken.ON_ACCENT)
-                    : sel ? ThemeManager.color(ThemeToken.ON_BACKGROUND)
+            int txt = chipGlass[i] && sel ? MaterialSurface.color(ThemeToken.ON_ACCENT)
+                    : sel ? MaterialSurface.color(ThemeToken.ON_BACKGROUND)
                     : AuroraAnim.lerpArgb(
-                            ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED),
-                            ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY), hoverT);
+                            MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED),
+                            MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), hoverT);
             g.drawString(tr, cats[i], (int) (bx + 16), (int) (catY + 7), txt, false);
             // Keyboard focus: the Button-family 1 px accent hairline — an
             // independent channel from both the selection tint and hover.
             if (control != null && control.isFocused()) {
                 RenderUtil.drawRoundedOutlineAA(g, bx + 8, catY, 64, 22, ctrlRadius, 1.0f,
-                        ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
+                        ThemeManager.withAlpha(MaterialSurface.color(ThemeToken.ACCENT), 0x99));
             }
         }
 
         float profY = by + TAB_FIRST_Y + 2 * TAB_PITCH;
         boolean pHover = Widget.inBounds(mouseX, mouseY, bx + 8, profY, 64, TAB_H);
-        float profT = profilesHover.update(pHover);
+        float profT = MaterialSurface.unified() ? pilotHover("profiles",pHover) : profilesHover.update(pHover);
         if (profilesControl != null) {
             profilesControl.setBounds((int) (bx + 8), (int) profY, 64, (int) TAB_H);
             profilesControl.setAvailable(true);
@@ -915,18 +932,19 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         }
         // Profiles is neutral raised glass; retain its hover fallback when
         // live glass is unavailable.
-        if (!profGlass && profT > 0f) {
+        if(MaterialSurface.unified()) MaterialSurface.selection(g,bx+8,profY,64,22,ctrlRadius,false,profT);
+        else if (!profGlass && profT > 0f) {
             RenderUtil.drawRoundedRectAA(g, bx + 8, profY, 64, 22, ctrlRadius,
                     AuroraAnim.lerpArgb(0x00000000,
                             ThemeManager.surfaceColor(ThemeToken.SURFACE_VARIANT), profT));
         }
         g.drawString(tr, "Profiles", (int) (bx + 16), (int) (profY + 7),
                 AuroraAnim.lerpArgb(
-                        ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED),
-                        ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY), profT), false);
+                        MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED),
+                        MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), profT), false);
         if (profilesControl != null && profilesControl.isFocused()) {
             RenderUtil.drawRoundedOutlineAA(g, bx + 8, profY, 64, 22, ctrlRadius, 1.0f,
-                    ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
+                    ThemeManager.withAlpha(MaterialSurface.color(ThemeToken.ACCENT), 0x99));
         }
 
         if (selectedCategory == 0) renderModulesLive(g, mods, mouseX, mouseY, delta);
@@ -943,7 +961,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         // above the boundary.
         ClipBand vp = contentViewport();
         ScrollFade.drawTop(g, vp.x, vp.width, vp.y, ScrollFade.FADE_PX,
-                scrolls[selectedCategory].current(), ThemeManager.color(ThemeToken.WINDOW_FILL));
+                scrolls[selectedCategory].current(), MaterialSurface.color(ThemeToken.WINDOW_FILL));
 
         drawScrollbar(g);
     }
@@ -962,7 +980,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         for (int i = 0; i < 2; i++) {
             float lx = i == 0 ? mx : mx + 24;
             boolean hover = Widget.inBounds(mouseX, mouseY, lx, btnY, btnSize, btnSize);
-            float hoverT = layoutHovers[i].update(hover);
+            float hoverT = MaterialSurface.unified() ? pilotHover(PILOT_LAYOUTS[i],hover) : layoutHovers[i].update(hover);
             SemanticActionControl control = layoutControls[i];
             if (control != null) {
                 control.setBounds((int) lx, (int) btnY, (int) btnSize, (int) btnSize);
@@ -1007,7 +1025,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             // persistent channel and never pins the animator.
             boolean hover = vp.contains(mouseX, mouseY)
                     && mouseX >= cx && mouseX <= cx + cw && mouseY >= cy && mouseY <= cy + ch;
-            float hoverT = tileHover(m.id).update(hover);
+            float hoverT = MaterialSurface.unified() ? pilotHover(m.id,hover) : tileHover(m.id).update(hover);
             SemanticActionControl control = tileControls.get(m.id);
             if (control != null) {
                 // The walk only reaches tiles that intersect the viewport,
@@ -1023,15 +1041,16 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             // isolated stained glass; if glass declines, preserve the old
             // accent-wash + bright-outline fallback instead of disappearing.
             boolean highlightedGlass = on && highlightedTileGlass(i);
-            if (on && !highlightedGlass) {
+            if(MaterialSurface.unified()) MaterialSurface.selection(g,cx,cy,cw,ch,tileRadius,on,hoverT);
+            else if (on && !highlightedGlass) {
                 RenderUtil.drawRoundedRectAA(g, cx, cy, cw, ch, tileRadius,
                         ThemeManager.surfaceColor(ThemeToken.SURFACE));
                 RenderUtil.drawRoundedRectAA(g, cx, cy, cw, ch, tileRadius,
                         alpha(ThemeToken.ACCENT, 0x14 / 255f));
                 RenderUtil.drawRoundedOutlineAA(g, cx, cy, cw, ch, tileRadius, 1.0f,
-                        ThemeManager.color(ThemeToken.ACCENT));
+                        MaterialSurface.color(ThemeToken.ACCENT));
             }
-            if (hoverT > 0f) {
+            if (!MaterialSurface.unified() && hoverT > 0f) {
                 RenderUtil.drawRoundedRectAA(g, cx, cy, cw, ch, tileRadius,
                         alpha(ThemeToken.ON_BACKGROUND, (0x1A / 255f) * hoverT));
             }
@@ -1039,25 +1058,25 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             // both the enabled stain and the hover wash.
             if (control != null && control.isFocused()) {
                 RenderUtil.drawRoundedOutlineAA(g, cx, cy, cw, ch, tileRadius, 1.0f,
-                        ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
+                        ThemeManager.withAlpha(MaterialSurface.color(ThemeToken.ACCENT), 0x99));
             }
 
             if (gridLayout) {
                 drawTileIcon(g, tr, m, cx + cw / 2f, cy + 30, 28f, on, highlightedGlass);
                 String name = fit(tr, m.name, (int) cw - 8);
                 g.drawString(tr, name, (int) (cx + (cw - tr.width(name)) / 2f), (int) (cy + ch - 20),
-                        ThemeManager.color(ThemeToken.ON_BACKGROUND), false);
+                        MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
             } else {
                 drawTileIcon(g, tr, m, cx + 20, cy + ch / 2f, 16f, on, highlightedGlass);
                 String name = fit(tr, m.name, 130);
                 g.drawString(tr, name, (int) (cx + 40), (int) (cy + 8),
-                        ThemeManager.color(ThemeToken.ON_BACKGROUND), false);
+                        MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
                 RenderUtil.drawWordWrapMaxLines(tr, g, m.description, cx + 40, cy + 20, 185, 1,
-                        ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED));
+                        MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED));
             }
         }
         if (mods.isEmpty()) {
-            g.drawString(tr, "No modules found.", (int) (mx + 12), (int) (my + 45), ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED), false);
+            g.drawString(tr, "No modules found.", (int) (mx + 12), (int) (my + 45), MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED), false);
         }
         g.disableScissor();
     }
@@ -1082,8 +1101,8 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 // wash is invented for it.
                 boolean navHover = m.hasDetail()
                         && Widget.inBounds(mouseX, mouseY, mx + 4, y, CONTENT_W - 4 - 42, headerH);
-                float navT = m.hasDetail() ? headerHover(m.id).update(navHover) : 0f;
-                g.drawString(tr, m.displayName, (int) (mx + 4), (int) (y + 6), ThemeManager.color(ThemeToken.ON_BACKGROUND), false);
+                float navT = m.hasDetail() ? (MaterialSurface.unified() ? pilotHover(pilotHeaderHovers,m.id,navHover) : headerHover(m.id).update(navHover)) : 0f;
+                g.drawString(tr, m.displayName, (int) (mx + 4), (int) (y + 6), MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
                 // Detail-screen affordance: a header click opens the entry's
                 // detail screen (the Settings tab's counterpart of the
                 // Modules tab's right-click-to-detail) — the chevron marks
@@ -1092,8 +1111,8 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                     MaterialIconRenderer.drawIcon(g, tr, FeatureIcons.get("_dropdown_expand_more"),
                             mx + 254 - 40 - 12, y + 11, 9,
                             AuroraAnim.lerpArgb(
-                                    ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED),
-                                    ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY), navT));
+                                    MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED),
+                                    MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), navT));
                     SemanticActionControl nav = headerNavControls.get(m.id);
                     if (nav != null) {
                         // The navigation zone mirrors the click walk's rect
@@ -1104,7 +1123,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                         nav.updatePointer(mouseX, mouseY);
                         if (nav.isFocused()) {
                             RenderUtil.drawRoundedOutlineAA(g, mx + 4, y, CONTENT_W - 4 - 42, headerH, ctrlRadius, 1.0f,
-                                    ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
+                                    ThemeManager.withAlpha(MaterialSurface.color(ThemeToken.ACCENT), 0x99));
                         }
                     }
                 }
@@ -1136,7 +1155,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 // computeMaxScroll and mouseClicked.
                 if (vp.intersects(mx + 4, y, CONTENT_W - 4, SETTINGS_HINT_H)) {
                     g.drawString(tr, "Click to configure", (int) (mx + 4), (int) (y + 1),
-                            ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED), false);
+                            MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED), false);
                 }
                 y += SETTINGS_HINT_H;
             } else {
@@ -1199,7 +1218,8 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         // (painted pre-dim by paintGlassPass), accent-STAINED on the active
         // one. Content here: the canonical hover wash on glass (both peers),
         // the flat fills + borders on decline, then the icon.
-        if (btnGlass) {
+        if(MaterialSurface.unified()) MaterialSurface.selection(g,x,y,size,size,ctrlRadius,selected,hoverT);
+        else if (btnGlass) {
             if (hoverT > 0f) {
                 RenderUtil.drawRoundedRectAA(g, x, y, size, size, ctrlRadius,
                         alpha(ThemeToken.ON_BACKGROUND, (0x1A / 255f) * hoverT));
@@ -1209,7 +1229,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                     : AuroraAnim.lerpArgb(
                             ThemeManager.surfaceColor(ThemeToken.SURFACE),
                             ThemeManager.surfaceColor(ThemeToken.SURFACE_VARIANT), hoverT);
-            int border = selected ? ThemeManager.color(ThemeToken.ACCENT) : alpha(ThemeToken.ON_BACKGROUND, 0x08f);
+            int border = selected ? MaterialSurface.color(ThemeToken.ACCENT) : alpha(ThemeToken.ON_BACKGROUND, 0x08f);
             RenderUtil.drawRoundedRectAA(g, x, y, size, size, ctrlRadius, bg);
             RenderUtil.drawRoundedOutlineAA(g, x, y, size, size, ctrlRadius, 1.0f, border);
             if (!selected && hoverT > 0f) {
@@ -1221,13 +1241,13 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         // the enabled stain and the hover wash.
         if (focused) {
             RenderUtil.drawRoundedOutlineAA(g, x, y, size, size, ctrlRadius, 1.0f,
-                    ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
+                    ThemeManager.withAlpha(MaterialSurface.color(ThemeToken.ACCENT), 0x99));
         }
         // Same contract as the tiles: on stained glass the icon takes the
         // contrast-derived ON_ACCENT; the flat fallback's ~15% accent wash is
         // dark enough that the accent glyph still reads there.
-        int iconCol = selected && btnGlass ? ThemeManager.color(ThemeToken.ON_ACCENT)
-                : selected ? ThemeManager.color(ThemeToken.ACCENT)
+        int iconCol = selected && btnGlass ? MaterialSurface.color(ThemeToken.ON_ACCENT)
+                : selected ? MaterialSurface.color(ThemeToken.ACCENT)
                 : alpha(ThemeToken.ON_BACKGROUND, 0x53f);
         if (list) {
             for (int i = 0; i < 3; i++) {
@@ -1273,12 +1293,12 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         // still read and are kept unchanged.
         int color;
         if (on && stainedGlass) {
-            color = ThemeManager.color(ThemeToken.ON_ACCENT);
+            color = MaterialSurface.color(ThemeToken.ON_ACCENT);
         } else if (on) {
             int accent = ModuleAccentColors.get(m.id);
-            color = accent != 0 ? accent : ThemeManager.color(ThemeToken.ACCENT);
+            color = accent != 0 ? accent : MaterialSurface.color(ThemeToken.ACCENT);
         } else {
-            color = ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED);
+            color = MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED);
         }
         // Crisp native-resolution glyph (the shared font atlas is
         // point-sampled and degrades badly at these sizes); em size = the
@@ -1591,6 +1611,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
 
     @Override
     public void removed() {
+        if(unifiedThemePilot()) MaterialSurface.disposeTemplates();
         invalidateSettingsSemantics();
         FeatureSetting.clearHostBand(); // C-8 — drop the published host band
         super.removed();

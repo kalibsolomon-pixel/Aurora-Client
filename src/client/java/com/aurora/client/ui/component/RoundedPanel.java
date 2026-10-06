@@ -50,7 +50,7 @@ public class RoundedPanel extends Widget {
     public void renderShapes(GuiGraphics g, float x, float y, float w, float h, boolean glassActive) {
         float radius = ThemeManager.current().roundness().radius();
 
-        if (glow) {
+        if (glow && !MaterialSurface.unified()) {
             for (int i = 1; i <= 8; i++) {
                 int a = Math.max(0, 40 - i * 5);
                 RenderUtil.drawRoundedOutlineAA(g, x - i, y - i, w + i * 2f, h + i * 2f,
@@ -58,9 +58,9 @@ public class RoundedPanel extends Widget {
             }
         }
 
-        if (!glassActive) {
-            RenderUtil.drawRoundedRectAA(g, x, y, w, h, radius, ThemeManager.color(fillToken));
-            RenderUtil.drawRoundedOutlineAA(g, x, y, w, h, radius, 1.0f, ThemeManager.color(ThemeToken.WINDOW_OUTLINE));
+        if (!glassActive || MaterialSurface.unified()) {
+            RenderUtil.drawRoundedRectAA(g, x, y, w, h, radius, MaterialSurface.color(fillToken));
+            RenderUtil.drawRoundedOutlineAA(g, x, y, w, h, radius, 1.0f, MaterialSurface.color(ThemeToken.WINDOW_OUTLINE));
         }
     }
 }

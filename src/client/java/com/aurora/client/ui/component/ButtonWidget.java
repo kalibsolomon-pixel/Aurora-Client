@@ -121,6 +121,7 @@ public class ButtonWidget extends AbstractButton {
 
     @Override
     public void onPress(InputWithModifiers input) {
+        if(MaterialSurface.unified()) painter.triggerPressAnimation();
         if (semanticAction != null) {
             // Vanilla already gated on `active` and played its own click sound
             // on both the pointer and selection-key paths (AbstractWidget /
@@ -136,6 +137,11 @@ public class ButtonWidget extends AbstractButton {
         // Forward for hover/press animation state only (no-op action inside).
         painter.mouseClicked(ev.x(), ev.y(), ev.button());
         return super.mouseClicked(ev, dbl);
+    }
+
+    @Override public boolean mouseReleased(MouseButtonEvent event) {
+        painter.pointerHeld(false);
+        return super.mouseReleased(event);
     }
 
     /**

@@ -100,9 +100,14 @@ public final class UiLayerCache implements RenderUtil.RectSink {
      * scrolling never re-rasterizes.
      */
     public void blitAt(GuiGraphics g, int x, int y, int logicalW, int logicalH) {
+        blitAt(g,x,y,logicalW,logicalH,-1);
+    }
+
+    /** Alpha-modulated reuse of a stable template (floating material fades). */
+    public void blitAt(GuiGraphics g,int x,int y,int logicalW,int logicalH,int tint) {
         if (tex == null || w <= 0 || h <= 0) return;
         g.blit(RenderPipelines.GUI_TEXTURED, texId,
-                x, y, 0f, 0f, logicalW, logicalH, w, h, w, h, -1);
+                x, y, 0f, 0f, logicalW, logicalH, w, h, w, h, tint);
     }
 
     /**

@@ -14,6 +14,10 @@ public final class TimedTransition {
         this.durationNs = durationMs * 1_000_000;
         this.curve = curve;
     }
+    public TimedTransition(long durationMs,CubicBezier curve,double initial) {
+        this(durationMs,curve);
+        initialized=true; start=target=initial;
+    }
     public float update(double next, long now) {
         if (!initialized) { initialized = true; start = target = next; started = now; }
         double current = value(now);

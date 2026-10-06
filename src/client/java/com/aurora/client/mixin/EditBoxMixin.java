@@ -5,6 +5,7 @@ import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.component.GlassEditBox;
 import com.aurora.client.ui.component.GlassSurface;
+import com.aurora.client.ui.component.MaterialSurface;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.Minecraft;
@@ -130,6 +131,10 @@ public abstract class EditBoxMixin implements GlassEditBox {
         int fillCol = ThemeManager.surfaceColor(focused ? ThemeToken.SURFACE_VARIANT : ThemeToken.SURFACE);
         int borderCol = focused ? AuroraTheme.BORDER_ON_HOVER : AuroraTheme.BORDER_OFF;
 
+        if(MaterialSurface.unified()) {
+            fillCol=MaterialSurface.color(ThemeToken.SURFACE_INSET);
+            borderCol=MaterialSurface.color(ThemeToken.BORDER_HOVER);
+        }
         float radius = ThemeManager.current().roundness().radiusSmall();
         boolean glassOk = aurora$glassPassFrame == GlassSurface.frame()
                 ? aurora$glassPassDrew
@@ -139,14 +144,14 @@ public abstract class EditBoxMixin implements GlassEditBox {
             // the rim without stacking a second surface.
             if (focused) {
                 RenderUtil.drawRoundedOutlineAA(ctx, x, y, w, h, radius, 1.0f,
-                        ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
+                        ThemeManager.withAlpha(MaterialSurface.color(ThemeToken.ACCENT), 0x99));
             }
         } else {
             RenderUtil.drawRoundedRectAA(ctx, x, y, w, h, radius, fillCol);
         }
 
         // --- 2. Text / hint rendering, vertically centered ---
-        int textCol = ThemeManager.color(ThemeToken.ON_BACKGROUND);
+        int textCol = MaterialSurface.color(ThemeToken.ON_BACKGROUND);
         int innerX = (int) x + 8;           // 8px left padding
         int innerRight = (int) (x + w) - 4; // 4px right padding
         int textY = (int) (y + (h - font.lineHeight) / 2) + 1; // +1 nudges past baseline offset
@@ -156,7 +161,7 @@ public abstract class EditBoxMixin implements GlassEditBox {
             // Placeholder hint text
             if (hint != null) {
                 ctx.drawString(font, hint, innerX, textY,
-                        ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED), false);
+                        MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED), false);
             }
         } else {
             // Render the value text, scrolled by displayPos so long
@@ -189,6 +194,8 @@ public abstract class EditBoxMixin implements GlassEditBox {
             RenderUtil.drawRoundedOutlineAA(ctx, x, y, w, h, radius, 1.0f, borderCol);
         }
 
+        if(MaterialSurface.unified() && focused && self.active)
+            RenderUtil.drawRoundedOutlineAA(ctx,x-2,y-2,w+4,h+4,radius+2,1,MaterialSurface.color(ThemeToken.ACCENT));
         // Cancel the vanilla render so its background/border never appear.
         ci.cancel();
     }

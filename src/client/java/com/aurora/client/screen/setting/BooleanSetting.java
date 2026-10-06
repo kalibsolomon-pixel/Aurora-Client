@@ -5,6 +5,8 @@ import com.aurora.client.ui.interaction.MinecraftSemanticFeedback;
 import com.aurora.client.ui.interaction.SemanticAction;
 import com.aurora.client.ui.interaction.SemanticActionControl;
 import com.aurora.client.util.AuroraTheme;
+import com.aurora.client.ui.component.MaterialSurface;
+import com.aurora.client.theme.ThemeToken;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -174,7 +176,7 @@ public class BooleanSetting extends FeatureSetting {
         boolean disabled = isDisabled();
         for (int li = 0; li < cachedLines.size(); li++) {
             var line = cachedLines.get(li);
-            ctx.drawString(tr, line, x + LABEL_PAD, textY, AuroraTheme.IOS_LABEL, false);
+            ctx.drawString(tr, line, x + LABEL_PAD, textY, MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
             // Each wrapped line of the label text is a dwell region for
             // the description tooltip — hover the label itself, no badge.
             // The description supplier is only evaluated while hovered.

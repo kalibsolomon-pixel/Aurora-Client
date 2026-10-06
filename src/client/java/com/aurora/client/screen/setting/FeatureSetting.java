@@ -495,7 +495,10 @@ public abstract class FeatureSetting {
                                           int color, int mouseX, int mouseY, boolean disabled) {
         Font tr = Minecraft.getInstance().font;
         if (tr == null) return;
-        int finalColor = disabled ? com.aurora.client.util.AuroraTheme.TEXT_DIM : color;
+        if(MaterialSurface.unified() && color==com.aurora.client.util.AuroraTheme.IOS_LABEL)
+            color=MaterialSurface.color(ThemeToken.ON_BACKGROUND);
+        int finalColor = disabled ? (MaterialSurface.unified() ? MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED)
+                : com.aurora.client.util.AuroraTheme.TEXT_DIM) : color;
         ctx.drawString(tr, text, x, y, finalColor, false);
         trackLabelHover(tooltipKey(), this::currentDescription, x, y,
                 tr.width(text), tr.lineHeight, mouseX, mouseY, disabled);
@@ -536,7 +539,7 @@ public abstract class FeatureSetting {
         MaterialSurface.floating(ctx, bx, by, boxW, boxH, radius, fade);
         // ON_OVERLAY is the tooltip-text role every other tooltip in the
         // codebase reads (Profile/Waypoint rows, the pack-browser toast).
-        int textColor = fadeColor(ThemeManager.color(ThemeToken.ON_OVERLAY), fade);
+        int textColor = fadeColor(MaterialSurface.unified() ? MaterialSurface.color(ThemeToken.ON_BACKGROUND) : ThemeManager.color(ThemeToken.ON_OVERLAY), fade);
         int ty = by + 4;
         for (var l : lines) {
             ctx.drawString(tr, l, bx + 6, ty, textColor, false);

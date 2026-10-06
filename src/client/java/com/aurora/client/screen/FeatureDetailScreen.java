@@ -4,6 +4,7 @@ import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.screen.setting.FeatureSetting;
 import com.aurora.client.screen.setting.ThemePreviewSetting;
 import com.aurora.client.theme.ThemeManager;
+import com.aurora.client.ui.component.MaterialSurface;
 import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.component.ButtonWidget;
 import com.aurora.client.ui.component.GlassSurface;
@@ -40,6 +41,8 @@ import net.minecraft.network.chat.Component;
  * paints in the content pass through {@code GlassSurface.aboveDimControl}.
  */
 public class FeatureDetailScreen extends Screen implements ThemedScreen {
+    @Override public boolean unifiedThemePilot() { return "theme".equals(meta.id); }
+
 
     private static final int LIST_W = 320;
     private static final int TOP_PAD = 60;
@@ -140,6 +143,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
                 Component.literal("Done"),
                 "Close this screen and return.",
                 this::onClose).glassBackground(true);
+        this.doneBtn.primary(unifiedThemePilot());
         this.addRenderableWidget(this.doneBtn);
 
         // Reset-to-defaults button immediately to the left of Done. Persists
@@ -208,6 +212,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         // declines anyway (its menu-context guard) and the opaque fallback
         // wants the vanilla backdrop as before, so the override is
         // conditional on the same validity check the renderer uses.
+        if(MaterialSurface.unified() && GlassSurface.renderMenuPanorama(this,g,delta)) return;
         if (liveWorldBackdrop()) return;
         super.renderBackground(g, mouseX, mouseY, delta);
     }
@@ -424,7 +429,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         // own tint. Painted after the scissor closes and before the chrome
         // buttons/title so those stay crisp on top of it.
         ScrollFade.drawTop(ctx, listX, LIST_W, TOP_FADE_Y, ScrollFade.FADE_PX,
-                scroll.current(), ThemeManager.color(ThemeToken.WINDOW_FILL));
+                scroll.current(), MaterialSurface.color(ThemeToken.WINDOW_FILL));
 
         // Children: Done button.
         super.render(ctx, mouseX, mouseY, delta);
@@ -446,11 +451,11 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         if (this.font != null) {
             int titleX = listX + 12;
             ctx.drawString(this.font, meta.displayName, titleX, TITLE_Y,
-                    ThemeManager.color(ThemeToken.ON_BACKGROUND), false);
+                    MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
             if (meta.subtitle != null && !meta.subtitle.isEmpty()) {
                 ctx.drawString(this.font, meta.subtitle, titleX,
                         TITLE_Y + this.font.lineHeight + 1,
-                        ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
+                        MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
             }
         }
 
@@ -620,6 +625,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
      */
     @Override
     public void removed() {
+        if(unifiedThemePilot()) MaterialSurface.disposeTemplates();
         closeTransientState();
         super.removed();
     }

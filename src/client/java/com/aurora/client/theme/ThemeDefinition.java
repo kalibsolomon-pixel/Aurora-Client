@@ -13,6 +13,10 @@ package com.aurora.client.theme;
  * neutrals are now tinted from the accent hue, which is what keeps the
  * whole palette looking like one family.
  *
+ * <p>Unified pilot: this persisted identity and customization schema is
+ * unchanged. Its Dark neutral/action roles resolve separately from the legacy
+ * hue-tinted palette; see UnifiedPalette and UNIFIED_THEME_PILOT.md.
+ *
  * <p>Migration: {@code themePrimaryColor} became {@link #accent}
  * (see {@link ThemeMigrator}); the legacy {@code themeSecondaryColor} is
  * dropped because it has no independent role anymore. Serialized by the

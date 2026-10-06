@@ -1,6 +1,8 @@
 package com.aurora.client.screen.setting;
 
 import com.aurora.client.config.AuroraConfig;
+import com.aurora.client.ui.component.MaterialSurface;
+import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.component.Slider;
 import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.Minecraft;
@@ -191,7 +193,7 @@ public class SliderSetting extends FeatureSetting {
         boolean disabled = isDisabled();
         double value = slider.value();
 
-        renderLabelWithTooltip(ctx, label, x + 12, y + 6, AuroraTheme.IOS_LABEL, mouseX, mouseY, disabled);
+        renderLabelWithTooltip(ctx, label, x + 12, y + 6, MaterialSurface.color(ThemeToken.ON_BACKGROUND), mouseX, mouseY, disabled);
 
         // A click elsewhere on the screen clears row focus before the clicked
         // row re-claims it — focus loss without a click on THIS row is the
@@ -221,7 +223,7 @@ public class SliderSetting extends FeatureSetting {
         // Highlight the value in accent when this slider holds focus, so the
         // user can see at a glance which slider scroll/keys go to.
         boolean focused = (!disabled && FeatureSetting.getFocused() == this);
-        int valueColor = disabled ? AuroraTheme.TEXT_DIM : (focused ? AuroraTheme.IOS_BLUE : AuroraTheme.IOS_SECONDARY_LABEL);
+        int valueColor = disabled ? MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED) : (focused ? MaterialSurface.color(ThemeToken.ACCENT) : MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY));
         ctx.drawString(tr, cachedStr, x + width - cachedStrW - 14, y + 6, valueColor, false);
     }
 
@@ -266,7 +268,7 @@ public class SliderSetting extends FeatureSetting {
         valueField = new EditBox(font, 0, 0, VALUE_FIELD_W, VALUE_FIELD_H, Component.literal(label));
         valueField.setMaxLength(6);
         valueField.setBordered(false);
-        valueField.setTextColor(AuroraTheme.IOS_LABEL);
+        valueField.setTextColor(MaterialSurface.color(ThemeToken.ON_BACKGROUND));
         // Digits only (plus '.'/'-' for double rows), live-stripped — the
         // same responder idiom as PixelCanvasSetting's W/H fields.
         valueField.setResponder(s -> {

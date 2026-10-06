@@ -7,6 +7,10 @@ package com.aurora.client.theme;
  * a pure function (accent + mode in, full token set out) that derives the
  * entire palette from a single accent color.
  *
+ * <p>The additive Launcher-derived unified roles resolve alongside this
+ * compatibility palette. Only the two unified pilot hosts read those roles;
+ * legacy tokens and facade projection remain unchanged (UNIFIED_THEME_PILOT.md).
+ *
  * <p>Two resolution paths exist:
  * <ul>
  *   <li><b>Accents enabled</b> (user theme on): every token is derived by

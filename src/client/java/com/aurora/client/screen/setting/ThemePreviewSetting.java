@@ -3,6 +3,7 @@ package com.aurora.client.screen.setting;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.component.Button;
+import com.aurora.client.ui.component.MaterialSurface;
 import com.aurora.client.ui.component.RoundedPanel;
 import com.aurora.client.ui.component.Slider;
 import com.aurora.client.ui.component.ToggleSwitch;
@@ -87,6 +88,7 @@ public class ThemePreviewSetting extends FeatureSetting {
 
     @Override
     public void renderShapes(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
+        if(MaterialSurface.unified()) return;
         // The preview card + mock controls are the shared themed components
         // themselves — a theme reload is literally the preview update.
         int px = x + PAD_X;
@@ -149,6 +151,7 @@ public class ThemePreviewSetting extends FeatureSetting {
      */
     @Override
     public void renderGlassPass(GuiGraphics ctx, int x, int y, int width) {
+        if(MaterialSurface.unified()) return;
         int cardX = x + PAD_X;
         int cardY = y + PAD_Y;
         int cardW = width - PAD_X * 2;
@@ -196,6 +199,15 @@ public class ThemePreviewSetting extends FeatureSetting {
         int py = y + PAD_Y;
         int pw = width - PAD_X * 2;
 
+        if(MaterialSurface.unified()) {
+            MaterialSurface.cached(ctx,px,py,pw,PREVIEW_H-PAD_Y,
+                    ThemeManager.current().roundness().radius(),MaterialSurface.color(ThemeToken.SURFACE_VARIANT),
+                    MaterialSurface.color(ThemeToken.BORDER),40,false);
+            toggle.renderOverlay(ctx,px+12,py+52,TOGGLE_W,TOGGLE_H,-1,-1);
+            slider.layout(px+12+TOGGLE_W+14,py+52+TOGGLE_H/2-6,64,16);
+            slider.renderShapes(ctx,px+12+TOGGLE_W+14,py+52+TOGGLE_H/2-6,64,16);
+            slider.renderOverlay(ctx,px+12+TOGGLE_W+14,py+52+TOGGLE_H/2-6,64,16,-1,-1);
+        }
         // Mock buttons — content only: the pass stamped their frames, so
         // these renderOverlay calls draw each Button's label (and its flat
         // fallback when the glass declined). On a screen that never drove
@@ -207,9 +219,9 @@ public class ThemePreviewSetting extends FeatureSetting {
 
         int tx = px + 12;
         int ty = py + 10;
-        ctx.drawString(tr, "Primary text", tx, ty, AuroraTheme.IOS_LABEL, false);
-        ctx.drawString(tr, "Secondary text", tx, ty + 12, AuroraTheme.IOS_SECONDARY_LABEL, false);
-        ctx.drawString(tr, "Muted text", tx, ty + 24, AuroraTheme.IOS_TERTIARY_LABEL, false);
+        ctx.drawString(tr, "Primary text", tx, ty, MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
+        ctx.drawString(tr, "Secondary text", tx, ty + 12, MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
+        ctx.drawString(tr, "Muted text", tx, ty + 24, MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED), false);
     }
 
     @Override

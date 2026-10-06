@@ -36,4 +36,22 @@ class UnifiedPaletteTest {
         assertEquals(light.color(ThemeToken.ON_BACKGROUND),light.color(ThemeToken.MATERIAL_TEXT));
         assertEquals(def.accent,ThemeResolver.resolve(def,false).accent());
     }
+    @Test void rgbLatticePreservesReadableActionStatesInBothModes() {
+        for(ThemeMode mode:ThemeMode.values()) {
+            for(int r=0;r<=255;r+=17) for(int g=0;g<=255;g+=17) for(int b=0;b<=255;b+=17) {
+                int input=0xff000000 | r<<16 | g<<8 | b;
+                var roles=UnifiedPalette.accent(input,mode);
+                assertEquals(input,roles.base());
+                assertNotEquals(input,roles.strong());
+                assertNotEquals(roles.strong(),roles.hover());
+                assertNotEquals(roles.strong(),roles.pressed());
+                for(int fill:new int[]{roles.strong(),roles.hover(),roles.pressed()})
+                    assertTrue(UnifiedPalette.contrast(fill,roles.onAction())>=4.5,
+                            ()->mode+" "+Integer.toHexString(input)+" "+Integer.toHexString(fill));
+                int backdrop=mode==ThemeMode.DARK ? 0xff1d1f27
+                        : PaletteEngine.derive(input,mode)[ThemeToken.SURFACE_VARIANT.ordinal()];
+                assertTrue(UnifiedPalette.contrast(roles.marker(),backdrop)>=3);
+            }
+        }
+    }
 }

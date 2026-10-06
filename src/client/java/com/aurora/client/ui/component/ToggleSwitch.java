@@ -4,6 +4,8 @@ import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.util.Animation;
 import com.aurora.client.ui.util.RenderUtil;
+import com.aurora.client.ui.util.CubicBezier;
+import com.aurora.client.ui.util.TimedTransition;
 import com.aurora.client.util.AuroraAnim;
 import com.aurora.client.util.HoverAnim;
 import net.minecraft.client.gui.GuiGraphics;
@@ -88,6 +90,28 @@ public class ToggleSwitch extends Widget {
     private boolean previewMode = false;
 
     private Animation slideAnim;
+    private final TimedTransition pilotSlide=new TimedTransition(120,CubicBezier.EASE);
+    private final TimedTransition pilotHover=new TimedTransition(120,CubicBezier.EASE);
+    private boolean pilotPrimed;
+
+    /** Pack switch recipe: solid readable accent, white thumb, fixed capsule, no pulse. */
+    private void renderUnified(GuiGraphics g,float x,float y,float w,float h,int mx,int my) {
+        long now=System.nanoTime(); boolean on=getter.getAsBoolean();
+        if(!pilotPrimed) { pilotSlide.update(on ? 1 : 0,now);pilotHover.update(0,now);pilotPrimed=true; }
+        float t=(float)pilotSlide.update(on ? 1 : 0,now);
+        float hover=(float)pilotHover.update(!disabled && !previewMode && inBounds(mx,my,x,y,w,h) ? 1 : 0,now);
+        int inactive=MaterialSurface.color(ThemeToken.SURFACE_INSET);
+        int active=MaterialSurface.color(ThemeToken.ACCENT);
+        int fill=AuroraAnim.lerpArgb(inactive,active,t);
+        // Client adaptation: subtle hover wash distinguishes pointer state without a pulse.
+        fill=AuroraAnim.lerpArgb(fill,MaterialSurface.color(ThemeToken.ON_BACKGROUND),.08f*hover);
+        if(disabled) fill=AuroraAnim.lerpArgb(inactive,active,.35f*t);
+        RenderUtil.drawRoundedRectAA(g,x,y,w,h,h/2,fill);
+        RenderUtil.drawRoundedOutlineAA(g,x,y,w,h,h/2,1,MaterialSurface.color(ThemeToken.BORDER_HOVER));
+        float d=h-5, tx=x+2.5f+(w-h)*t;
+        RenderUtil.drawCircleAA(g,tx,y+2.5f,d,d,disabled ? MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED) : 0xffffffff);
+        if(focusedVisual && !disabled) RenderUtil.drawRoundedOutlineAA(g,x-2,y-2,w+4,h+4,h/2+2,1,active);
+    }
 
     /** §8.3 symmetric hover — 140 ms enter, 140 ms exit, continuous reversal. */
     private final HoverAnim hoverAnim = HoverAnim.symmetric(HOVER_MS);
@@ -147,6 +171,7 @@ public class ToggleSwitch extends Widget {
 
     @Override
     public void renderOverlay(GuiGraphics g, float x, float y, float w, float h, int mouseX, int mouseY) {
+        if(MaterialSurface.unified()) { renderUnified(g,x,y,w,h,mouseX,mouseY);return; }
         boolean on = getter.getAsBoolean();
         float t = advance(on); // advances once per frame; wall-clock real-dt
         boolean hovered = !previewMode && !disabled && inBounds(mouseX, mouseY, x, y, w, h);

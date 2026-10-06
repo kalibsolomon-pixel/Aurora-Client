@@ -185,7 +185,7 @@ class ConformanceManifestTest {
 
     /**
      * Argument-aware inventory of literal radii in the rounded-AA /
-     * squircle / glass-panel family. Every one of the (currently fourteen)
+     * squircle / glass-panel family. Every one of the (currently fifteen)
      * literal sites is classified; a NEW literal site fails this test until
      * it is either tokenized or added here with a ruling. The non-AA
      * exemption families (HudBackgrounds' sanctioned radius 2, the
@@ -204,6 +204,9 @@ class ConformanceManifestTest {
     @Test
     void radiusLiteralsAreExactlyTheClassifiedInventory() throws IOException {
         List<Site> classified = new ArrayList<>(List.of(
+                // DEGENERATE square leading markers: selection is a 2px straight rule.
+                new Site(SRC + "ui/component/MaterialSurface.java", "0"),
+                new Site(SRC + "ui/component/MaterialSurface.java", "0"),
                 // MECHANICAL scrollbar-thumb capsules (Square-exempt, C-7).
                 new Site(SRC + "ui/component/ScrollbarChrome.java", "2"),
                 new Site(SRC + "screen/ResourcePackBrowserScreen.java", "2"),
@@ -242,7 +245,7 @@ class ConformanceManifestTest {
         }
         assertEquals(new HashSet<>(classified), new HashSet<>(seen),
                 "unclassified or missing literal radius sites");
-        assertEquals(13, seen.size(), "inventory drift — sites: " + seen);
+        assertEquals(15, seen.size(), "inventory drift — sites: " + seen);
         assertEquals(classified.size(), seen.size(), "multiplicity drift");
     }
 

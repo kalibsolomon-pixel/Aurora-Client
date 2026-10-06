@@ -17,4 +17,9 @@ package com.aurora.client.ui.component;
  * vanilla classes.
  */
 public interface ThemedScreen {
+    /** Controlled visual pilot; the default keeps all comparison screens legacy. */
+    // An opted-in host must paint its neutral parent face/boundary in the
+    // cached overlay for both capture success and decline (RoundedPanel does
+    // this automatically). GlassSurface owns only the pre-dim backdrop work.
+    default boolean unifiedThemePilot() { return false; }
 }

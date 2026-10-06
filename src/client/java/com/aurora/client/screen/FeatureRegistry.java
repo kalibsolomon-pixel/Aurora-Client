@@ -1170,7 +1170,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                 },
                                 GlassStyle::displayName)
                                 .glassSegments(true)
-                                .description("How Aurora draws panel backgrounds. Frosted blurs whatever is behind each panel; Wireframe skips the blur and uses a flat translucent fill, which is cheaper to render and suits lower-end hardware. Corner Style and Background Opacity apply to both."),
+                                .description("Compatibility style for screens outside the unified theme pilot. Frosted blurs panel backgrounds; Wireframe uses a flat translucent fill. The Aurora settings window and Theme preview use the unified parent material in both choices. Corner Style and Background Opacity still apply."),
                         new ThemeOpacitySetting("Background Opacity",
                                 () -> cfg.themeOrDefault().backgroundOpacity,
                                 v -> {

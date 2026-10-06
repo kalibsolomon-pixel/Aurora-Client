@@ -9,6 +9,8 @@ import com.aurora.client.ui.interaction.SemanticControlGroup;
 import com.aurora.client.ui.interaction.SemanticSound;
 import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.ui.util.RenderUtil;
+import com.aurora.client.ui.util.TimedTransition;
+import com.aurora.client.ui.util.CubicBezier;
 import com.aurora.client.util.AuroraAnim;
 import com.aurora.client.util.HoverAnim;
 import net.minecraft.client.Minecraft;
@@ -61,6 +63,7 @@ public class SegmentedControl extends Widget {
 
     /** Canonical hover animators — pointer-only, one per segment, long-lived (C-5). */
     private final HoverAnim[] segmentHovers;
+    private final TimedTransition[] pilotHovers;
 
     /** C-5: one semantic control per segment — materialized only when a host asks. */
     private SemanticActionControl[] segmentControls;
@@ -90,8 +93,10 @@ public class SegmentedControl extends Widget {
         this.selectedIndex = selectedIndex;
         this.onSelect = onSelect;
         this.segmentHovers = new HoverAnim[options.length];
+        this.pilotHovers=new TimedTransition[options.length];
         for (int i = 0; i < options.length; i++) {
             this.segmentHovers[i] = HoverAnim.symmetric(HOVER_MS);
+            this.pilotHovers[i]=new TimedTransition(120,CubicBezier.EASE,0);
         }
     }
 
@@ -124,10 +129,10 @@ public class SegmentedControl extends Widget {
 
     @Override
     public void renderShapes(GuiGraphics g, float x, float y, float w, float h) {
-        if (glassEnabled) return; // segments are live glass; track base suppressed
+        if (MaterialSurface.unified() || glassEnabled) return; // segments are live glass; track base suppressed
         float radius = Math.min(trackH / 2f, ThemeManager.current().roundness().radiusSmall());
         RenderUtil.drawRoundedRectAA(g, x, y, w, trackH, radius,
-                ThemeManager.color(ThemeToken.SURFACE_VARIANT));
+                MaterialSurface.color(ThemeToken.SURFACE_VARIANT));
     }
 
     /**
@@ -139,7 +144,7 @@ public class SegmentedControl extends Widget {
     public void renderGlassPass(GuiGraphics g, float x, float y, float w, float h) {
         glassPassFrame = GlassSurface.frame();
         passDrewSegments = false;
-        if (!glassEnabled) return;
+        if (MaterialSurface.unified() || !glassEnabled) return;
         float radius = Math.min(trackH / 2f, ThemeManager.current().roundness().radiusSmall());
         int selected = Math.max(0, Math.min(options.length - 1, selectedIndex.getAsInt()));
         passDrewSegments = true;
@@ -171,7 +176,7 @@ public class SegmentedControl extends Widget {
         // painted in place now through the shared GlassSurface helper
         // (identical calls).
         boolean glassOk = false;
-        if (glassEnabled) {
+        if (!MaterialSurface.unified() && glassEnabled) {
             if (glassPassFrame == GlassSurface.frame()) {
                 glassOk = passDrewSegments;
             } else {
@@ -190,7 +195,7 @@ public class SegmentedControl extends Widget {
                 // Flat fallback: track base first (it was suppressed from the
                 // cached layer), then the flat segment fills.
                 RenderUtil.drawRoundedRectAA(g, x, y, w, trackH, radius,
-                        ThemeManager.color(ThemeToken.SURFACE_VARIANT));
+                        MaterialSurface.color(ThemeToken.SURFACE_VARIANT));
             }
         }
 
@@ -207,6 +212,8 @@ public class SegmentedControl extends Widget {
             // selection read.
             float hoverT = segmentHovers[i].update(
                     !disabled && inBounds(mouseX, mouseY, sx, y, sw, trackH));
+            if(MaterialSurface.unified()) hoverT=pilotHovers[i].update(
+                    !disabled && inBounds(mouseX,mouseY,sx,y,sw,trackH) ? 1 : 0,System.nanoTime());
 
             // Semantic sync (the EnumSetting discipline): bounds + pointer
             // mirror the painted segment each frame; the hairline reads the
@@ -218,12 +225,13 @@ public class SegmentedControl extends Widget {
                 control.updatePointer(mouseX, mouseY);
             }
 
-            if (!glassOk && isSelected) {
+            if(MaterialSurface.unified()) MaterialSurface.selection(g,sx,y,sw,trackH,radius,isSelected,disabled ? 0 : hoverT);
+            else if (!glassOk && isSelected) {
                 RenderUtil.drawRoundedRectAA(g, sx, y, sw, trackH, radius,
-                        ThemeManager.color(ThemeToken.ACCENT));
+                        MaterialSurface.color(ThemeToken.ACCENT));
             }
 
-            if (!disabled && hoverT > 0f) {
+            if (!MaterialSurface.unified() && !disabled && hoverT > 0f) {
                 RenderUtil.drawRoundedRectAA(g, sx, y, sw, trackH, radius,
                         alpha(ThemeToken.ON_BACKGROUND, (0x1A / 255f) * hoverT));
             }
@@ -232,14 +240,14 @@ public class SegmentedControl extends Widget {
             // independent channel from both the selection fill and hover wash.
             if (control != null && control.isFocused()) {
                 RenderUtil.drawRoundedOutlineAA(g, sx, y, sw, trackH, radius, 1.0f,
-                        ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
+                        ThemeManager.withAlpha(MaterialSurface.color(ThemeToken.ACCENT), 0x99));
             }
 
-            int color = disabled ? ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED)
-                    : isSelected ? ThemeManager.color(ThemeToken.ON_ACCENT)
+            int color = disabled ? MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED)
+                    : isSelected ? MaterialSurface.color(MaterialSurface.unified() ? ThemeToken.ON_BACKGROUND : ThemeToken.ON_ACCENT)
                     : AuroraAnim.lerpArgb(
-                            ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY),
-                            ThemeManager.color(ThemeToken.ON_BACKGROUND), hoverT);
+                            MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY),
+                            MaterialSurface.color(ThemeToken.ON_BACKGROUND), hoverT);
 
             AuroraFontRenderer.drawCentered(g, tr, options[i], Math.round(sx + sw / 2f),
                     Math.round(y + (trackH - tr.lineHeight) / 2f), color);
@@ -319,7 +327,7 @@ public class SegmentedControl extends Widget {
     }
 
     private static int alpha(ThemeToken t, float a) {
-        return (Math.round(a * 255f) << 24) | (ThemeManager.color(t) & 0x00FFFFFF);
+        return (Math.round(a * 255f) << 24) | (MaterialSurface.color(t) & 0x00FFFFFF);
     }
 
     private int segStart(int i, float x, float w) {

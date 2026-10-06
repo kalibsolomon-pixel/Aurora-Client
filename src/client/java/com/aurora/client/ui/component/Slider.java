@@ -3,6 +3,8 @@ package com.aurora.client.ui.component;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.util.RenderUtil;
+import com.aurora.client.ui.util.TimedTransition;
+import com.aurora.client.ui.util.CubicBezier;
 import com.aurora.client.util.HoverAnim;
 import net.minecraft.client.gui.GuiGraphics;
 import org.lwjgl.glfw.GLFW;
@@ -73,6 +75,7 @@ public class Slider extends Widget {
     /** Opt-in focus paint (the row owns the focus lifecycle); never set => zero new pixels. */
     private boolean focusedVisual = false;
     private HoverAnim hoverAnim = new HoverAnim(140L);
+    private final TimedTransition pilotHover=new TimedTransition(120,CubicBezier.EASE,0);
 
     public Slider(DoubleSupplier getter, DoubleConsumer setter, double min, double max, double step) {
         this.getter = getter;
@@ -148,7 +151,8 @@ public class Slider extends Widget {
         // pointer owning an active manipulation must not lose feedback
         // because it crossed a geometry edge (pre-existing, deliberate).
         boolean hovered = !disabled && (dragging || inBounds(mouseX, mouseY, x - 4, ty - 6, w + 8, TRACK_H + 12));
-        float hT = hoverAnim.update(hovered);
+        float hT = MaterialSurface.unified() ? pilotHover.update(hovered ? 1 : 0,System.nanoTime())
+                : hoverAnim.update(hovered);
 
         float t = (float) ((getter.getAsDouble() - min) / (max - min));
         t = Math.max(0f, Math.min(1f, t));
@@ -159,13 +163,13 @@ public class Slider extends Widget {
 
         // Knob — center stays exactly at the value coordinate; the canonical
         // drag grip grows the RADIUS around that center (no center shift).
-        float knobR = canonical && dragging ? KNOB_R_DRAG : KNOB_R;
+        float knobR = !MaterialSurface.unified() && canonical && dragging ? KNOB_R_DRAG : KNOB_R;
         float knobX = x + filledW;
         float knobY = ty + TRACK_H / 2f;
         RenderUtil.drawRoundedRectAA(g, knobX - knobR, knobY - knobR, knobR * 2f, knobR * 2f, knobR, knob());
 
         if (hT > 0f) {
-            int onBg = ThemeManager.color(ThemeToken.ON_BACKGROUND) & 0x00FFFFFF;
+            int onBg = MaterialSurface.color(ThemeToken.ON_BACKGROUND) & 0x00FFFFFF;
             int a = Math.round(48 * hT);
             RenderUtil.drawRoundedOutlineAA(g, x - 3f, ty - 3f, w + 6f, TRACK_H + 6f,
                     TRACK_H / 2f + 3f, 1.0f, (a << 24) | onBg);
@@ -178,22 +182,22 @@ public class Slider extends Widget {
         if (canonical && focusedVisual) {
             RenderUtil.drawRoundedOutlineAA(g, x - 3f, ty - 3f, w + 6f, TRACK_H + 6f,
                     TRACK_H / 2f + 3f, 1.0f,
-                    ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
+                    ThemeManager.withAlpha(MaterialSurface.color(ThemeToken.ACCENT), 0x99));
         }
     }
 
     private int trackBase() {
-        return disabled ? ThemeManager.color(ThemeToken.SURFACE_INSET)
-                : ThemeManager.color(ThemeToken.SURFACE_VARIANT);
+        return disabled ? MaterialSurface.color(ThemeToken.SURFACE_INSET)
+                : MaterialSurface.color(ThemeToken.SURFACE_VARIANT);
     }
 
     private int fill() {
-        return disabled ? ThemeManager.color(ThemeToken.BORDER)
-                : ThemeManager.color(ThemeToken.ACCENT);
+        return disabled ? MaterialSurface.color(ThemeToken.BORDER)
+                : MaterialSurface.color(ThemeToken.ACCENT);
     }
 
     private int knob() {
-        return disabled ? ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED) : 0xFFFFFFFF;
+        return disabled ? MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED) : 0xFFFFFFFF;
     }
 
     @Override
