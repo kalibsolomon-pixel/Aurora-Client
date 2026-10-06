@@ -243,7 +243,7 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
         lastWidth = width;
         Font tr = Minecraft.getInstance().font;
         boolean disabled = isDisabled();
-        renderLabelWithTooltip(ctx, label, x + 12, y + (CONTROL_H - tr.lineHeight) / 2,
+        renderLabelWithTooltip(ctx, com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(tr,label,Math.max(0,width-(BTN_W+38)),0), x + 12, y + (CONTROL_H - tr.lineHeight) / 2,
                 AuroraTheme.TEXT_PRIMARY, mouseX, mouseY, disabled);
 
         // Cache arrow glyphs first (their width reserves space for the label).

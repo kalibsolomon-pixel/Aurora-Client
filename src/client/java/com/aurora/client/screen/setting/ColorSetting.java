@@ -90,7 +90,7 @@ public class ColorSetting extends FeatureSetting {
     public void render(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
         var tr = Minecraft.getInstance().font;
         boolean disabled = isDisabled();
-        renderLabelWithTooltip(ctx, label, x + 12, y + (ROW_H_COLLAPSED - tr.lineHeight) / 2,
+        renderLabelWithTooltip(ctx, com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(tr,label,Math.max(0,width-(swatchW+38)),0), x + 12, y + (ROW_H_COLLAPSED - tr.lineHeight) / 2,
                 AuroraTheme.TEXT_PRIMARY, mouseX, mouseY, disabled);
 
         swatchX = x + width - swatchW - 14;
@@ -127,12 +127,14 @@ public class ColorSetting extends FeatureSetting {
         previewW = totalW;
 
         drawSatLitPadCached(ctx);
+        ctx.enableScissor(padX,padY,padX+PAD_SIZE,padY+PAD_SIZE);
         int cx = padX + Math.round(s * PAD_SIZE);
         int cy = padY + Math.round((1f - l) * PAD_SIZE);
         ctx.fill(cx - 1, padY, cx + 1, padY + PAD_SIZE, 0x80000000);
         ctx.fill(padX, cy - 1, padX + PAD_SIZE, cy + 1, 0x80000000);
         ctx.fill(cx - 3, cy - 3, cx + 3, cy + 3, 0xFFFFFFFF);
         ctx.fill(cx - 2, cy - 2, cx + 2, cy + 2, ColorEntryHelper.hslaToArgb(h, s, l, 1f));
+        ctx.disableScissor();
 
         drawHueStrip(ctx);
         int hueMark = hueY + Math.round(h * PAD_SIZE);

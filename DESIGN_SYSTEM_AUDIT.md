@@ -698,3 +698,38 @@ semantic interaction/availability, native activation, narration, sound, data col
 config/profile persistence and GL interlocks remain required. The earlier intermittent
 automated glyph-capture issue is a historical unresolved observation, not a claimed
 renderer fix; current native evidence is recorded in `UNIFIED_THEME_PILOT.md`.
+
+## Approved follow-up: standalone cards, 2026-10-06
+
+**UNIFIED THEME — card refinement (2026-10-06):** follow-up visual feedback
+supersedes the enclosing-window treatment. Title, main settings/modules and manager
+screens have no enclosing background window: visible standalone cards own blur;
+detail/editor/browser windows retain their container, with separate blurred action
+cards. Aurora Settings on the title screen is neutral. New Profile, Reset, Done
+and other shared buttons use translucent faces over independently pooled blur.
+Ordinary embedded controls still inherit their card; floating popups remain opaque.
+The renderer's bounded pool, priority degradation and screenshot/session/menu/resource
+guards remain authoritative. Capture count now follows visible standalone cards.
+
+Production appearance is Dark only. Legacy LIGHT configs/profiles migrate to DARK;
+resolution and the dirty-check normalize it too. The Mode selector, Theme preview,
+and Text & Fonts/Theme/Interface header popouts are retired. These settings remain
+inline, with font/accent/corners/opacity customization intact. Repeated feature and
+manager headings are removed; Better Hitreg's attached author credit remains.
+
+Bundled text fonts rasterize at 9 px rather than 11 px; icon fonts remain unchanged.
+Button/segment/setting labels reserve control/value space and ellipsize with native
+font measurements, preserving full semantic labels. UI scroll tracks use a finite
+90 ms glide with one rounded geometry position for all layers, immediate thumb
+dragging and exact rest; the pure legacy exponential API remains for diagnostics.
+Typing resumes in a visible search after selection, without taking input from a
+key-capture/editor or an open browser modal. Slider knobs paint above hover/focus.
+Swatch color/checker pixels share a device-pixel rounded mask at rest and hover;
+swatch cache eviction occurs only between frames, protecting deferred draws.
+
+Blur remains 28 logical px (64 device px cap), saturation 1.35, brightness .92,
+with the existing frost curve. Neutral card density is saved opacity ×255×.68;
+primary actions retain a legibility floor while remaining translucent. Data/status
+colors and explicit player overrides retain meaning; HUD backing remains neutral.
+
+The preceding rollout inventory is historical where this follow-up changes ownership, appearance choices, headings, motion or typography. See UNIFIED_THEME_PILOT.md and the external card-refinement evidence.

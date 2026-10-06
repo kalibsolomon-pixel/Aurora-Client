@@ -146,7 +146,7 @@ public class SegmentedSetting<E extends Enum<E>> extends FeatureSetting {
         lastWidth = width;
         Font tr = Minecraft.getInstance().font;
         boolean disabled = isDisabled();
-        renderLabelWithTooltip(ctx, label, x + TRACK_PAD_X, y + 6, AuroraTheme.IOS_LABEL, mouseX, mouseY, disabled);
+        renderLabelWithTooltip(ctx, com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(tr,label,Math.max(0,width-(24)),0), x + TRACK_PAD_X, y + 6, AuroraTheme.IOS_LABEL, mouseX, mouseY, disabled);
 
         lastTrackX = x + TRACK_PAD_X;
         lastTrackW = width - TRACK_PAD_X * 2;

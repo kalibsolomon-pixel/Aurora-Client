@@ -150,7 +150,7 @@ public class KeybindSetting extends FeatureSetting {
         boolean disabled = reconcileDisabledState();
 
         // Keybind rows intentionally skip the label-hover description tooltip.
-        ctx.drawString(tr, label, x + 12, y + (CONTROL_H - tr.lineHeight) / 2,
+        ctx.drawString(tr, com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(tr,label,Math.max(0,width-BTN_W-38),0), x + 12, y + (CONTROL_H - tr.lineHeight) / 2,
                 disabled ? AuroraTheme.TEXT_DIM : AuroraTheme.TEXT_PRIMARY, false);
 
         int btnX = x + width - BTN_W - 14;

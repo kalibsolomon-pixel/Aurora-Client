@@ -12,9 +12,9 @@ import net.minecraft.client.gui.screens.options.OptionsScreen;
 import net.minecraft.client.gui.screens.worldselection.SelectWorldScreen;
 import net.minecraft.network.chat.Component;
 
-/** Vanilla panorama with one unified parent material and the shared action buttons.
- * Menu backdrop validity is declared for this frame only. Settings is the primary
- * action; vanilla-backed semantic widgets keep their established input routing.
+/** Vanilla panorama with independently blurred neutral action cards.
+ * Menu backdrop validity is declared for this frame only; vanilla-backed
+ * semantic widgets keep their established input routing.
  */
 public class AuroraTitleScreen extends Screen implements ThemedScreen {
 
@@ -53,7 +53,7 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
         addBtn(centerX, startY + step * 2, Component.literal("Aurora Settings"),
                 "Open Aurora's settings.",
                 () -> this.minecraft.setScreen(AuroraScreen.create()),
-                true);
+                false);
         // "Mods" button retired — duplicated Aurora Settings while no
         // compatible Mod Menu artifact is published for 1.21.11. The
         // reflective shim AuroraModMenuApi stays in place for a future
@@ -92,13 +92,11 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
         // moment this returns).
         GlassSurface.renderMenuPanorama(this, ctx, delta);
 
-        int panelX = this.width/2 - BUTTON_W/2 - 12;
-        int panelY = this.height/2 + BUTTON_STACK_OFFSET - 12;
-        float radius = com.aurora.client.theme.ThemeManager.current().roundness().radiusLarge();
         GlassSurface.beginGlassPass();
-        GlassSurface.container(ctx,panelX,panelY,BUTTON_W+24,198,radius);
+        for (var widget : this.children()) {
+            if (widget instanceof ButtonWidget button) button.renderGlassPass(ctx);
+        }
         GlassSurface.overlayDim(ctx,this.width,this.height);
-        MaterialSurface.parent(ctx,panelX,panelY,BUTTON_W+24,198,radius);
 
         // Buttons (and other drawable children)
         super.render(ctx, mouseX, mouseY, delta);

@@ -225,7 +225,7 @@ public class KeyListSetting extends FeatureSetting {
         if (tr == null) return;
         boolean disabled = reconcileDisabledState();
 
-        renderLabelWithTooltip(ctx, label, x + 12, y + 4,
+        renderLabelWithTooltip(ctx, com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(tr,label,Math.max(0,width-(24)),0), x + 12, y + 4,
                 disabled ? AuroraTheme.TEXT_DIM : AuroraTheme.TEXT_PRIMARY, mouseX, mouseY, disabled);
 
         List<Integer> items = safeList();

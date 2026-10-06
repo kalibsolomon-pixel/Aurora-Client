@@ -101,6 +101,11 @@ public final class SmoothScroll {
 
     private final DoubleSupplier tauMs;
     private double snapEpsilon = 0.25;
+    private boolean boundedMotion;
+    private double motionFrom, motionStartMs;
+
+    /** Finite 90 ms wheel glide: all layers share one position and settle exactly. */
+    public SmoothScroll boundedMotion() { boundedMotion = true; return this; }
 
     /** Thumb drag state; grabOffsetY = cursor Y minus thumb top when the drag began. */
     private boolean dragging = false;
@@ -130,12 +135,13 @@ public final class SmoothScroll {
         return this;
     }
 
-    public double current() { return current; }
+    public double current() { return boundedMotion ? Math.rint(current) : current; }
     public double target() { return target; }
 
     /** Jumps position and target to {@code v} (no easing). Unclamped — caller's business. */
     public void set(double v) {
         current = target = v;
+        motionFrom = v;
     }
 
     /**
@@ -188,6 +194,15 @@ public final class SmoothScroll {
         if (target < 0) target = 0;
         if (target > maxScroll) target = maxScroll;
 
+        if (boundedMotion) {
+            if (dragging) { motionFrom = current = target; motionStartMs = nowMs-90; return current; }
+            if (motionStartMs == 0) motionStartMs = nowMs;
+            double t = Math.max(0, Math.min(1, (nowMs - motionStartMs) / 90.0));
+            double eased = 1 - Math.pow(1-t, 3);
+            current = Math.max(0, Math.min(maxScroll, motionFrom + (target-motionFrom)*eased));
+            return current;
+        }
+
         double alpha = 1.0 - Math.exp(-dt / tauMs.getAsDouble());
         double diff = target - current;
         current += diff * alpha;
@@ -207,6 +222,10 @@ public final class SmoothScroll {
      * @return the new {@link #target()}
      */
     public double wheel(double vertical, double step, double maxScroll) {
+        if (boundedMotion) {
+            motionFrom = current;
+            motionStartMs = lastTickMs;
+        }
         target -= vertical * step;
         if (target < 0) target = 0;
         if (target > maxScroll) target = maxScroll;

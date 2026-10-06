@@ -114,7 +114,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
      * List scrolling (R2 Part C): τ = 60 ms easing, wheel step 30, and the
      * draggable hover-responsive thumb both manager screens adopted together.
      */
-    protected final SmoothScroll scroll = new SmoothScroll(60.0);
+    protected final SmoothScroll scroll = new SmoothScroll(60.0).boundedMotion();
 
     /** Inline rename editor state. {@code -1} = not editing. */
     protected int editingIndex = -1;
@@ -336,8 +336,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         // dim (painted by overlayDim); the tracked scissor lets the deferred
         // row rims keep the list clip.
         GlassSurface.beginGlassPass();
-        GlassSurface.container(ctx,listX-12,listClipTop()-12,listWidth()+24,
-                listClipBottom()-listClipTop()+24,ThemeManager.current().roundness().radiusLarge());
+
         rowGlassDrawn.clear();
         onBeginRowGlassPass();
         ClipBand band = listBand(listX);
@@ -365,11 +364,10 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         // ---- 2. Dim — end of the glass pass (token-driven; dark in both modes by design) ----
         GlassSurface.overlayDim(ctx, this.width, this.height);
 
-        MaterialSurface.parent(ctx,listX-12,listClipTop()-12,listWidth()+24,
-                listClipBottom()-listClipTop()+24,ThemeManager.current().roundness().radiusLarge());
+
 
         // ---- 3. Content ----
-        ctx.drawString(this.font, this.title, 16, 42, ThemeManager.color(ThemeToken.ON_OVERLAY), false);
+        // Toolbar already identifies this screen; omit the duplicate heading.
 
         ctx.enableScissor(listX - 4, listClipTop(), listX + listWidth() + 4, listClipBottom());
         if (rows.isEmpty()) {
@@ -399,7 +397,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         // scissor, before the thumb — an opaque-token sibling of the thumb's
         // own over-the-dim layer, never glass.
         ScrollFade.drawTop(ctx, listX - 4, listWidth() + 8, listClipTop(), ScrollFade.FADE_PX,
-                scroll.current(), ThemeManager.color(ThemeToken.SURFACE));
+                scroll.current(), ThemeManager.color(ThemeToken.OVERLAY_DIM));
 
         // The list's scrollbar thumb — after the content scissor (it is
         // content, painted opaque over the dim like every other thumb).
@@ -518,7 +516,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
     protected void paintFlatRow(GuiGraphics ctx, int x, int y, int w) {
         float radius = ThemeManager.current().roundness().radiusSmall();
         MaterialSurface.cached(ctx,x,y,w,rowHeight(),radius,
-                ThemeManager.color(ThemeToken.MATERIAL_RAISED),ThemeManager.color(ThemeToken.BORDER),110,false);
+                ThemeManager.color(ThemeToken.WINDOW_FILL),ThemeManager.color(ThemeToken.BORDER),110,false);
     }
 
     /**
@@ -556,6 +554,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
                                                   Runnable rowSurfacePass, Runnable rowButtonsPass,
                                                   BooleanSupplier glassDrew) {
         if (MaterialSurface.unified()) {
+            rowSurfacePass.run();
             rowButtonsPass.run();
             return;
         }

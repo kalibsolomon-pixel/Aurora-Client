@@ -1035,26 +1035,36 @@ at a time through the roadmap below.
 
 ## 18. Implementation roadmap
 
-**UNIFIED THEME — production rollout (2026-10-06):** the user accepted the
-Launcher-derived pilot and requested adoption across the mod, plus removal of the
-Frosted/Wireframe option cards. Every production `ThemedScreen` now uses the approved
-material. `UnifiedPalette` roles also project through legacy tokens and `AuroraTheme`,
-so custom rows, cards and remaining facade readers share the neutral hierarchy.
-`theme.GlassStyle` and its persisted field/selector/render guard are retired;
-`ThemeMigrator` removes only the old structured `glassStyle` member from configs
-and profiles. Accent, mode, roundness, density, presets and preview remain.
+**UNIFIED THEME — card refinement (2026-10-06):** follow-up visual feedback
+supersedes the enclosing-window treatment. Title, main settings/modules and manager
+screens have no enclosing background window: visible standalone cards own blur;
+detail/editor/browser windows retain their container, with separate blurred action
+cards. Aurora Settings on the title screen is neutral. New Profile, Reset, Done
+and other shared buttons use translucent faces over independently pooled blur.
+Ordinary embedded controls still inherit their card; floating popups remain opaque.
+The renderer's bounded pool, priority degradation and screenshot/session/menu/resource
+guards remain authoritative. Capture count now follows visible standalone cards.
 
-Parents own at most one backdrop capture per frame; the cached neutral face and
-boundary draw above dim on success or decline. Embedded controls never capture.
-Floating tooltips, enum popups and browser/map modals have opaque cached backing.
-Soft selection uses a wash and cached halo, with no left indicator bars; primary
-actions use readable strong fills and a slightly stronger halo. Shared controls,
-custom pills, browser categories/cards and icon actions use the 120 ms CSS easing.
-Blur requests 28 logical px (64 device px cap), saturation 1.35 and brightness .92.
-`WINDOW_FILL` alpha is the sole density application point: saved opacity ×255×.68.
-Saved preference values are not rewritten. Fixed HUD status colors, represented
-item/color/map data and explicit player color overrides remain data. HUD backing
-uses the same Dark neutral family in both UI modes, without live blur.
+Production appearance is Dark only. Legacy LIGHT configs/profiles migrate to DARK;
+resolution and the dirty-check normalize it too. The Mode selector, Theme preview,
+and Text & Fonts/Theme/Interface header popouts are retired. These settings remain
+inline, with font/accent/corners/opacity customization intact. Repeated feature and
+manager headings are removed; Better Hitreg's attached author credit remains.
+
+Bundled text fonts rasterize at 9 px rather than 11 px; icon fonts remain unchanged.
+Button/segment/setting labels reserve control/value space and ellipsize with native
+font measurements, preserving full semantic labels. UI scroll tracks use a finite
+90 ms glide with one rounded geometry position for all layers, immediate thumb
+dragging and exact rest; the pure legacy exponential API remains for diagnostics.
+Typing resumes in a visible search after selection, without taking input from a
+key-capture/editor or an open browser modal. Slider knobs paint above hover/focus.
+Swatch color/checker pixels share a device-pixel rounded mask at rest and hover;
+swatch cache eviction occurs only between frames, protecting deferred draws.
+
+Blur remains 28 logical px (64 device px cap), saturation 1.35, brightness .92,
+with the existing frost curve. Neutral card density is saved opacity ×255×.68;
+primary actions retain a legibility floor while remaining translucent. Data/status
+colors and explicit player overrides retain meaning; HUD backing remains neutral.
 
 The old per-element lighting/rim recipes below are historical/diagnostic paths,
 superseded for production by this rollout. The diagnostic `BlurTestScreen` retains

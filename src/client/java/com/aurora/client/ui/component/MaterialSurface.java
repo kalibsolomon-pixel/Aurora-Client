@@ -70,6 +70,7 @@ public final class MaterialSurface {
         if(selected) selectionGlow(g,x,y,w,h,radius);
         int neutral = AuroraAnim.lerpArgb(color(ThemeToken.SURFACE_VARIANT),
                 ThemeManager.color(ThemeToken.MATERIAL_HOVER), hover);
+        neutral = ThemeManager.withAlpha(neutral, ThemeManager.color(ThemeToken.WINDOW_FILL) >>> 24);
         if (hover == 0 || hover == 1) {
             cached(g,x,y,w,h,radius,neutral,0,(selected ? 2 : 1)+(hover==1 ? 100 : 0),false);
             return;

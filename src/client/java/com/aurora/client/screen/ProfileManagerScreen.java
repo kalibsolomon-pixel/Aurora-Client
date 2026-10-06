@@ -269,7 +269,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         // fallback is drawn here, for a row whose glass declined: the
         // opacity-tracked surface + hairline border, identical for every
         // row (active included — selection is the Active badge alone).
-        if (!rowGlassDrawn.getOrDefault(name, false)) {
+        if (MaterialSurface.unified() || !rowGlassDrawn.getOrDefault(name, false)) {
             if (isActive) MaterialSurface.selection(ctx,x,y,w,rowHeight(),
                     ThemeManager.current().roundness().radiusSmall(),true,0);
             else paintFlatRow(ctx, x, y, w);
@@ -461,7 +461,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         // (the hint text and the Create button signal the open editor; no
         // accent on the container surface in either path). Its surface was
         // painted in the glass pass; only the flat fallback is drawn here.
-        if (!createRowGlassDrawn) {
+        if (MaterialSurface.unified() || !createRowGlassDrawn) {
             paintFlatRow(ctx, x, y, w);
         }
         // Hint label in the name area (field draws over it).
@@ -488,6 +488,8 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
      * drew (false = the content pass draws the flat row).
      */
     private boolean renderRowSurface(GuiGraphics ctx, int x, int y, int w) {
+        if (MaterialSurface.unified()) return GlassSurface.card(ctx,x,y,w,ROW_H,
+                ThemeManager.current().roundness().radiusSmall());
         paintRowShadow(ctx, x, y, w);
         return GlassSurface.container(ctx, x, y, w, ROW_H,
                 ThemeManager.current().roundness().radiusSmall(), BlurPanelRenderer.Priority.ROW);

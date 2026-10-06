@@ -134,10 +134,12 @@ public final class ThemeMigrator {
 
         JsonElement mode = theme.get("mode");
         if (mode != null && !mode.isJsonNull()) {
-            boolean valid = mode.isJsonPrimitive() && isKnownModeName(mode.getAsString());
+            boolean valid = mode.isJsonPrimitive() && ThemeMode.DARK.name().equals(mode.getAsString());
             if (!valid) {
-                log.warn("Theme config: unrecognized 'mode' value {}; resetting to DARK", mode);
-                theme.remove("mode");
+                if (mode.isJsonPrimitive() && ThemeMode.LIGHT.name().equalsIgnoreCase(mode.getAsString()))
+                    log.info("Theme config: retired LIGHT appearance migrated to DARK");
+                else log.warn("Theme config: unrecognized 'mode' value {}; resetting to DARK", mode);
+                theme.addProperty("mode",ThemeMode.DARK.name());
                 dirty = true;
             }
         }

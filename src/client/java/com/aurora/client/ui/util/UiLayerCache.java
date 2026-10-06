@@ -69,6 +69,19 @@ public final class UiLayerCache implements RenderUtil.RectSink {
     }
 
     /** Upload the captured pixels and stamp the version they represent. */
+    public void clipRounded(float x, float y, float width, float height, float radius) {
+        if (image == null) return;
+        float r = Math.min(radius, Math.min(width,height)/2);
+        for (int py=0;py<h;py++) for(int px=0;px<w;px++) {
+            double qx=Math.abs(px+.5-x-width/2)-(width/2-r);
+            double qy=Math.abs(py+.5-y-height/2)-(height/2-r);
+            double distance=Math.hypot(Math.max(qx,0),Math.max(qy,0))+Math.min(Math.max(qx,qy),0)-r;
+            int coverage=(int)Math.round(Math.max(0,Math.min(1,.5-distance))*255);
+            int color=image.getPixel(px,py);
+            image.setPixel(px,py,(Math.min(color>>>24,coverage)<<24)|(color&0xffffff));
+        }
+    }
+
     public void commit(long v) {
         if (image == null) return;
         ensureGpu();

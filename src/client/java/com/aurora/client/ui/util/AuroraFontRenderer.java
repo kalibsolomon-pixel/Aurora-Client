@@ -253,11 +253,14 @@ public class AuroraFontRenderer {
      * three-dot idiom some rows use — that spelling stays theirs.
      */
     public static String ellipsize(Font font, String s, int maxW, int minLen) {
+        if (maxW <= 0) return "";
         if (font.width(s) <= maxW) return s;
         String ell = "…";
+        if (font.width(ell) > maxW) return font.plainSubstrByWidth(s,maxW);
         while (s.length() > minLen && font.width(s + ell) > maxW) {
-            s = s.substring(0, s.length() - 1);
+            s = s.substring(0, s.offsetByCodePoints(s.length(), -1));
         }
+        if (font.width(s + ell) > maxW) return font.plainSubstrByWidth(s,maxW-font.width(ell)) + ell;
         return s + ell;
     }
 

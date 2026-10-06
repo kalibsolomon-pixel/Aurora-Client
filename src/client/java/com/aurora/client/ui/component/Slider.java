@@ -166,7 +166,6 @@ public class Slider extends Widget {
         float knobR = !MaterialSurface.unified() && canonical && dragging ? KNOB_R_DRAG : KNOB_R;
         float knobX = x + filledW;
         float knobY = ty + TRACK_H / 2f;
-        RenderUtil.drawRoundedRectAA(g, knobX - knobR, knobY - knobR, knobR * 2f, knobR * 2f, knobR, knob());
 
         if (hT > 0f) {
             int onBg = MaterialSurface.color(ThemeToken.ON_BACKGROUND) & 0x00FFFFFF;
@@ -184,6 +183,7 @@ public class Slider extends Widget {
                     TRACK_H / 2f + 3f, 1.0f,
                     ThemeManager.withAlpha(MaterialSurface.color(ThemeToken.ACCENT), 0x99));
         }
+        RenderUtil.drawRoundedRectAA(g, knobX - knobR, knobY - knobR, knobR * 2f, knobR * 2f, knobR, knob());
     }
 
     private int trackBase() {

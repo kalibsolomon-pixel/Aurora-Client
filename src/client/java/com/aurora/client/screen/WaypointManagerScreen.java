@@ -1,5 +1,7 @@
 package com.aurora.client.screen;
 
+import com.aurora.client.ui.component.MaterialSurface;
+
 import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.config.AuroraConfig.Waypoint;
 import com.aurora.client.feature.impl.WaypointFeature;
@@ -205,8 +207,10 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
         paintTemplatedRowSurface(ctx, x, y,
                 () -> {
                     paintRowShadow(ctx, x, y, w);
-                    rowGlassDrawn.put(wp, GlassSurface.control(ctx, x, y, w, ROW_H,
-                            ThemeManager.current().roundness().radiusSmall(), BlurPanelRenderer.Priority.ROW));
+                    rowGlassDrawn.put(wp, MaterialSurface.unified()
+                            ? GlassSurface.card(ctx,x,y,w,ROW_H,ThemeManager.current().roundness().radiusSmall())
+                            : GlassSurface.control(ctx, x, y, w, ROW_H,
+                                ThemeManager.current().roundness().radiusSmall(), BlurPanelRenderer.Priority.ROW));
                 },
                 () -> {
                     int by = y + 4;
@@ -243,7 +247,7 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
         // under the dim — see paintRowGlassPass. Only the flat fallback
         // (surface fill + border) is drawn here, for a row whose glass
         // declined; it returns unchanged from the pre-glass look.
-        if (!rowGlassDrawn.getOrDefault(wp, false)) {
+        if (MaterialSurface.unified() || !rowGlassDrawn.getOrDefault(wp, false)) {
             paintFlatRow(ctx, x, y, w);
         }
 

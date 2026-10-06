@@ -21,6 +21,8 @@ class UnifiedPilotContractTest {
         original.roundness=ThemeRoundness.SQUARE;original.mode=ThemeMode.LIGHT;
         original.backgroundOpacity=.37;
         String json=gson.toJson(original);
+        original.mode=ThemeMode.DARK;
+        String expected=gson.toJson(original);
         var profile=new com.google.gson.JsonObject();
         profile.add("theme",com.google.gson.JsonParser.parseString(json));
         profile.getAsJsonObject("theme").addProperty("glassStyle",style);
@@ -29,7 +31,7 @@ class UnifiedPilotContractTest {
         var fields=new java.util.HashMap<String,com.google.gson.JsonElement>();
         fields.put("theme",profile.get("theme"));
         ThemeMigrator.migrateProfileFields(fields,org.slf4j.LoggerFactory.getLogger("UnifiedPilotTest"));
-        assertEquals(json,gson.toJson(fields.get("theme")));
+        assertEquals(expected,gson.toJson(gson.fromJson(fields.get("theme"),ThemeDefinition.class)));
         var migrated=com.google.gson.JsonParser.parseString(ThemeMigrator.migrateConfigJson(
                 legacyJson,org.slf4j.LoggerFactory.getLogger("UnifiedPilotTest"))).getAsJsonObject();
         var loaded=gson.fromJson(migrated.get("theme"),ThemeDefinition.class);
@@ -40,7 +42,7 @@ class UnifiedPilotContractTest {
         assertEquals(original.roundness,loaded.roundness);
         assertEquals(original.mode,loaded.mode);
         assertEquals(.37,loaded.backgroundOpacity);
-        assertEquals(json,gson.toJson(loaded),"resolution must never rewrite saved preferences");
+        assertEquals(expected,gson.toJson(loaded),"resolution must never rewrite saved preferences");
     }
 
     @Test void everyProductionAuroraHostUsesTheApprovedMaterial() throws Exception {

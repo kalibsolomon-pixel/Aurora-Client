@@ -116,22 +116,19 @@ class SegmentedSettingPilotTest {
     // ---- Topology ----
 
     @Test
-    void productionInventoryHasModeAndCornerRowsWithFivePeers() throws Exception {
+    void productionInventoryHasOnlyCornerRowWithThreePeers() throws Exception {
         String registry = java.nio.file.Files.readString(java.nio.file.Path.of(
                 "src/client/java/com/aurora/client/screen/FeatureRegistry.java"));
-        assertEquals(2, registry.split("new SegmentedSetting\\<>\\(", -1).length - 1,
-                "exactly two constructions");
-        assertTrue(registry.contains("ThemeMode.class"));
+        assertEquals(1, registry.split("new SegmentedSetting\\<>\\(", -1).length - 1,
+                "exactly one construction");
+        assertFalse(registry.contains("ThemeMode.class"));
         assertTrue(registry.contains("ThemeRoundness.class"));
         assertFalse(registry.contains("GlassStyle.class"));
 
         AtomicReference<ThemeRoundness> r = new AtomicReference<>(ThemeRoundness.ROUND);
         SegmentedSetting<ThemeRoundness> corner = new SegmentedSetting<>("Corner Style",
                 ThemeRoundness.class, r::get, r::set);
-        assertEquals(2, row.interactionControls().size(), "Mode: Dark/Light");
-        assertEquals(3, corner.interactionControls().size(), "Corner Style: three peers");
-        assertEquals(5, row.interactionControls().size() + corner.interactionControls().size(),
-                "five production segmented peers in total");
+        assertEquals(3, corner.interactionControls().size(), "Corner Style: three production peers");
     }
 
     @Test

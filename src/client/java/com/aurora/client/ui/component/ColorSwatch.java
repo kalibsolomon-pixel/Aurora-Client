@@ -149,6 +149,7 @@ public class ColorSwatch extends Widget {
 
     @Override
     public void renderOverlay(GuiGraphics g, float x, float y, float w, float h, int mouseX, int mouseY) {
+        x=Math.round(x); y=Math.round(y); w=Math.round(w); h=Math.round(h);
         int color = getter.getAsInt();
         float radius = Math.min(h / 2f, ThemeManager.current().roundness().radiusSmall());
 
@@ -167,7 +168,7 @@ public class ColorSwatch extends Widget {
         float hT = hoverAnim.update(hover);
         boolean rest = !disabled && !selected && hT <= 0f;
 
-        if (rest) {
+        if (rest || canonical) {
             // Audit P2 residue: a grid/list of swatches re-submitting the
             // checkerboard + color fill + border per frame is the same
             // fill-volume class as the rows/cards — at rest the whole stack
@@ -236,18 +237,14 @@ public class ColorSwatch extends Widget {
     // entry, which by definition was not blitted this frame — so disposing
     // it mid-frame cannot destroy a texture with pending GuiRenderState
     // blits (AGENTS.md §6 convention 10).
-    private static final int SWATCH_TPL_CAP = 24;
-    private static final Map<Long, UiLayerCache> SWATCH_TEMPLATES =
-            new LinkedHashMap<>(16, 0.75f, true) {
-                @Override
-                protected boolean removeEldestEntry(Map.Entry<Long, UiLayerCache> eldest) {
-                    if (size() > SWATCH_TPL_CAP) {
-                        eldest.getValue().dispose();
-                        return true;
-                    }
-                    return false;
-                }
-            };
+    private static final int SWATCH_TPL_CAP = 64;
+    private static final Map<Long, UiLayerCache> SWATCH_TEMPLATES = new LinkedHashMap<>(64, .75f, true);
+    public static void beginFrame() {
+        var entries = SWATCH_TEMPLATES.entrySet().iterator();
+        while (SWATCH_TEMPLATES.size() > SWATCH_TPL_CAP && entries.hasNext()) {
+            var entry = entries.next(); entry.getValue().dispose(); entries.remove();
+        }
+    }
 
     private static void blitSwatchTemplate(GuiGraphics g, float x, float y, float w, float h,
                                            int color, float radius, boolean checkerboard) {
@@ -281,6 +278,8 @@ public class ColorSwatch extends Widget {
             } finally {
                 RenderUtil.endCapture(prev);
             }
+            // Checker cells and the sampled color share an exact device-pixel silhouette.
+            cache.clipRounded(scale,scale,w*scale,h*scale,radius*scale);
             cache.commit(key);
         }
         cache.blitAt(g, Math.round(x) - 1, Math.round(y) - 1, Math.round(w) + 2, Math.round(h) + 2);

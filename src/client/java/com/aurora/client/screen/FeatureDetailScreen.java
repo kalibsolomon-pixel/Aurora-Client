@@ -70,7 +70,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
     private final Screen parent;
     private final FeatureMetadata meta;
     /** τ = 60 ms, snap 0.25, wheel step 30, no thumb — the screen's exact pre-R2 feel. */
-    private final SmoothScroll scroll = new SmoothScroll(60.0);
+    private final SmoothScroll scroll = new SmoothScroll(60.0).boundedMotion();
     private FeatureSetting activeDragSetting = null;
 
     /**
@@ -450,8 +450,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         // scaled glyphs) would violate the no-new-visual-style constraint.
         if (this.font != null) {
             int titleX = listX + 12;
-            ctx.drawString(this.font, meta.displayName, titleX, TITLE_Y,
-                    ThemeManager.color(ThemeToken.ON_OVERLAY), false);
+            // Feature identity is already established by the navigation card.
             if (meta.subtitle != null && !meta.subtitle.isEmpty()) {
                 ctx.drawString(this.font, meta.subtitle, titleX,
                         TITLE_Y + this.font.lineHeight + 1,
@@ -608,6 +607,11 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
     public boolean charTyped(net.minecraft.client.input.CharacterEvent _ev) {
         FeatureSetting focused = FeatureSetting.getFocused();
         if (focused != null && focused.onCharTyped(_ev)) return true;
+        if (FeatureSetting.hasActiveCapture()) return true;
+        for (FeatureSetting s : meta.settings) if (s.resumeSearch(_ev)) {
+            this.setFocused(null); // the setting's EditBox now owns typing, not the former action
+            return true;
+        }
         return super.charTyped(_ev);
     }
 

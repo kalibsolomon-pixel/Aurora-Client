@@ -249,7 +249,7 @@ public class SegmentedControl extends Widget {
                             MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY),
                             MaterialSurface.color(ThemeToken.ON_BACKGROUND), hoverT);
 
-            AuroraFontRenderer.drawCentered(g, tr, options[i], Math.round(sx + sw / 2f),
+            AuroraFontRenderer.drawCentered(g, tr, AuroraFontRenderer.ellipsize(tr,options[i],Math.max(0,(int)sw-6),0), Math.round(sx + sw / 2f),
                     Math.round(y + (trackH - tr.lineHeight) / 2f), color);
         }
     }

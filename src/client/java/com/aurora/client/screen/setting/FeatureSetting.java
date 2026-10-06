@@ -89,6 +89,11 @@ public abstract class FeatureSetting {
     /** The setting currently owning key capture, or null. */
     private static FeatureSetting captureOwner;
 
+    public static boolean hasActiveCapture() { return captureOwner != null; }
+
+    /** Typing may resume a visible search, without taking keys from an editor/capture. */
+    public boolean resumeSearch(net.minecraft.client.input.CharacterEvent event) { return false; }
+
     /**
      * Claims exclusive capture ownership, cancelling any previous owner.
      * Returns false (and claims nothing) when this setting is disabled —

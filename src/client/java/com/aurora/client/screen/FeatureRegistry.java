@@ -1130,7 +1130,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                 ));
 
         addWithSettings(SETTINGS, "theme", "Theme",
-                "Customize Aurora's accent color, light or dark mode, corner style, and the density of its diffuse panel backgrounds.",
+                "Customize Aurora's accent color, corner style, and the density of its diffuse card backgrounds.",
                 () -> cfg.themeEnabled, v -> cfg.themeEnabled = v,
                 List.of(
                         new AccentSetting("Accent Color",
@@ -1141,15 +1141,6 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                     persistThemeChange();
                                 })
                                 .description("The color used for primary actions, selections, highlights and HUD accents. Pick a preset swatch, or open Custom to use the color picker."),
-                        new SegmentedSetting<>("Mode", ThemeMode.class,
-                                () -> cfg.themeOrDefault().mode != null ? cfg.themeOrDefault().mode : ThemeMode.DARK,
-                                v -> {
-                                    cfg.themeOrDefault().mode = v;
-                                    com.aurora.client.theme.ThemeManager.reload();
-                                    persistThemeChange();
-                                })
-                                .glassSegments(true) // glass pilot: Theme screen only
-                                .description("Choose a dark or light appearance. Your accent color stays selected in either mode."),
                         new SegmentedSetting<>("Corner Style", ThemeRoundness.class,
                                 () -> cfg.themeOrDefault().roundness != null ? cfg.themeOrDefault().roundness : ThemeRoundness.ROUND,
                                 v -> {
@@ -1167,9 +1158,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                     com.aurora.client.theme.ThemeManager.reload();
                                     persistThemeChange();
                                 })
-                                .description("How dense Aurora's panel backgrounds are. The unified material keeps a diffuse backdrop visible at 100%; lower values make it clearer. Drag previews the change live; release saves it."),
-                        new ThemePreviewSetting("Live Preview")
-                                .description("A live mock-up using the exact colors and corner style the UI will use — changes apply here instantly, before you leave this screen.")
+                                .description("How dense Aurora's card backgrounds are. Lower values make the backdrop clearer. Drag previews the change live; release saves it.")
                 ));
 
         addWithSettings(SETTINGS, "interface", "Interface",

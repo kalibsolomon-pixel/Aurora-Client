@@ -303,6 +303,7 @@ public class EffectExpiryListSetting extends FeatureSetting {
         searchField.setX(x + 12);
         searchField.setY(y + 6);
         searchField.setWidth(searchW);
+        searchFrame = com.aurora.client.ui.component.GlassSurface.frame();
         searchField.render(ctx, mouseX, mouseY, 0f);
 
         // "+" add button — raised glass (flat pill on decline); ItemScale's
@@ -462,4 +463,15 @@ public class EffectExpiryListSetting extends FeatureSetting {
         releaseFocus();
         foundEffect = null;
     }
+    private long searchFrame = Long.MIN_VALUE;
+    @Override public boolean resumeSearch(net.minecraft.client.input.CharacterEvent event) {
+        var band = FeatureSetting.hostBand();
+        long frame=com.aurora.client.ui.component.GlassSurface.frame();
+        if (isDisabled() || searchFrame < frame-1
+                || !band.intersects(searchField.getX(),searchField.getY(),searchField.getWidth(),searchField.getHeight())) return false;
+        searchField.setFocused(true);
+        requestFocus();
+        return searchField.charTyped(event);
+    }
+
 }

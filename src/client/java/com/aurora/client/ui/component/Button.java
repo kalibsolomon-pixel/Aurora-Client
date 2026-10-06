@@ -94,6 +94,10 @@ public class Button extends Widget {
         boolean pulse=System.currentTimeMillis()-pressDownStartMs < 120 && pressDownStartMs>=0;
         float press=(float)pilotPress.update(!disabled && (pointerHeld || pulse) ? 1 : 0,now);
         float r=ThemeManager.current().roundness().radiusSmall();
+        if(glassPassFrame != GlassSurface.frame() && !disabled) {
+            GlassSurface.beginAboveDim();
+            try { GlassSurface.card(g,x,y,w,h,r); } finally { GlassSurface.endAboveDim(); }
+        }
         int fill=ThemeManager.color(primary ? ThemeToken.ACTION_STRONG : ThemeToken.MATERIAL_RAISED);
         int over=ThemeManager.color(primary ? ThemeToken.ACTION_HOVER : ThemeToken.MATERIAL_HOVER);
         int down=ThemeManager.color(primary ? ThemeToken.ACTION_PRESSED : ThemeToken.MATERIAL_PRESSED);
@@ -102,7 +106,9 @@ public class Button extends Widget {
         if(destructive) { fill=ThemeManager.color(ThemeToken.STATUS_ERROR); over=fill;down=fill;text=0xff101116; }
         fill=AuroraAnim.lerpArgb(AuroraAnim.lerpArgb(fill,over,hover),down,press);
         if(disabled) { fill=AuroraAnim.lerpArgb(fill,ThemeManager.color(ThemeToken.MATERIAL_PANEL),.65f);text=MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED); }
-        float py=y+press; // one logical pixel; bounds and semantic geometry stay unchanged
+        fill=ThemeManager.withAlpha(fill, destructive ? 220 : primary ? Math.max(128,ThemeManager.color(ThemeToken.WINDOW_FILL) >>> 24)
+                : ThemeManager.color(ThemeToken.WINDOW_FILL) >>> 24);
+        float py=y; // Card, blur mask, focus and label share one stationary geometry.
         int kind=(destructive ? 30 : primary ? 20 : 10)+(disabled ? 4 : hover==1 ? 1 : 0);
         if((hover==0 || hover==1) && press==0)
             MaterialSurface.cached(g,x,py,w,h,r,fill,edge,kind,true);
@@ -114,7 +120,8 @@ public class Button extends Widget {
         if(focused && !disabled) RenderUtil.drawRoundedOutlineAA(g,x-2,y-2,w+4,h+4,MaterialSurface.outsetRadius(r,2),1,
                 MaterialSurface.color(ThemeToken.ACCENT));
         Font font=Minecraft.getInstance().font;
-        if(font!=null) AuroraFontRenderer.drawCentered(g,font,label,Math.round(x+w/2),
+        if(font!=null) AuroraFontRenderer.drawCentered(g,font,
+                AuroraFontRenderer.ellipsize(font,label.getString(),Math.max(0,(int)w-20),0),Math.round(x+w/2),
                 Math.round(py+(h-font.lineHeight)/2)+1,text);
     }
 
@@ -306,7 +313,10 @@ public class Button extends Widget {
     @Override
     public void renderGlassPass(GuiGraphics g, float x, float y, float w, float h) {
         glassPassFrame = GlassSurface.frame();
-        if(MaterialSurface.unified()) { glassPassDrew=false; return; }
+        if(MaterialSurface.unified()) {
+            glassPassDrew = !disabled && GlassSurface.card(g,x,y,w,h,ThemeManager.current().roundness().radiusSmall());
+            return;
+        }
         float radius = ThemeManager.current().roundness().radiusSmall();
         boolean eligible = glassEligible(currentScale());
         if (eligible) {

@@ -159,8 +159,8 @@ public class AuroraScreen extends Screen implements ThemedScreen {
      * the active tab's position advances, the inactive one stays frozen).
      */
     private final SmoothScroll[] scrolls = {
-            new SmoothScroll(AuroraScreen::scrollTauMs).setSnapEpsilon(0.1),
-            new SmoothScroll(AuroraScreen::scrollTauMs).setSnapEpsilon(0.1),
+            new SmoothScroll(AuroraScreen::scrollTauMs).boundedMotion().setSnapEpsilon(0.1),
+            new SmoothScroll(AuroraScreen::scrollTauMs).boundedMotion().setSnapEpsilon(0.1),
     };
     private FeatureSetting activeDragSetting = null;
 
@@ -667,7 +667,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         // bit in the version hash, which forces the re-raster on the switch).
         GlassSurface.beginGlassPass();
         float radius = ThemeManager.current().roundness().radius();
-        boolean glassWindow = GlassSurface.container(g, boxX(), boxY(), BOX_W, BOX_H, radius);
+        boolean glassWindow = false; // Visible cards own the material; no enclosing window.
 
         com.mojang.blaze3d.pipeline.RenderTarget main = this.minecraft != null ? this.minecraft.getMainRenderTarget() : null;
         int fbW = (main != null && main.width > 0) ? main.width : this.width;
@@ -723,6 +723,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     private void captureStatic(GuiGraphics g, boolean glassWindow) {
         float bx = boxX(), by = boxY();
         float radius = ThemeManager.current().roundness().radius();
+        if (MaterialSurface.unified()) return; // no enclosing fill, border or shadow
 
         for (int i = 1; i <= 3; i++) {
             int a = Math.max(0, 35 - i * 10);
@@ -805,16 +806,15 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         float ctrlRadius = ThemeManager.current().roundness().radiusSmall();
         for (int i = 0; i < 2; i++) {
             float catY = by + TAB_FIRST_Y + i * TAB_PITCH;
-            chipGlass[i] = GlassSurface.control(g, bx + 8, catY, 64, TAB_H,
-                    ctrlRadius, selectedCategory == i);
+            chipGlass[i] = GlassSurface.card(g, bx + 8, catY, 64, TAB_H, ctrlRadius);
         }
         float profY = by + TAB_FIRST_Y + 2 * TAB_PITCH;
-        profGlass = GlassSurface.control(g, bx + 8, profY, 64, TAB_H, ctrlRadius);
+        profGlass = GlassSurface.card(g, bx + 8, profY, 64, TAB_H, ctrlRadius);
 
         if (selectedCategory == 0) {
             float mx = mainX(), my = mainY();
-            layoutGlass[0] = GlassSurface.control(g, mx, my, 20, 20, ctrlRadius, !gridLayout);
-            layoutGlass[1] = GlassSurface.control(g, mx + 24, my, 20, 20, ctrlRadius, gridLayout);
+            layoutGlass[0] = GlassSurface.card(g, mx, my, 20, 20, ctrlRadius);
+            layoutGlass[1] = GlassSurface.card(g, mx + 24, my, 20, 20, ctrlRadius);
             // Search field — positioned here (the pass runs before
             // renderModulesLive positions it again) and driven through its
             // own split (EditBoxMixin carries the frame-stamp scheme).
@@ -834,7 +834,9 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                     highlightedTileGlass[i] = false;
                     continue;
                 }
-                if (MaterialSurface.unified()) { highlightedTileGlass[i]=false;continue; }
+                if (MaterialSurface.unified()) {
+                    highlightedTileGlass[i]=GlassSurface.card(g,b[0],b[1],b[2],b[3],ctrlRadius);continue;
+                }
                 if (mods.get(i).isEnabled()) {
                     highlightedTileGlass[i] = GlassSurface.control(g,
                             b[0], b[1], b[2], b[3], ctrlRadius, true,
@@ -850,6 +852,9 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             GlassSurface.enableScissor(g, vp.x, vp.y, vp.xEnd(), vp.yEnd());
             float y = my + 38 - (float) scrolls[1].current();
             for (FeatureMetadata m : FeatureRegistry.settings()) {
+                int sectionH = 22 + (m.settingsDetailOnly ? SETTINGS_HINT_H
+                        : m.settings.stream().mapToInt(s -> s.height()+4).sum());
+                if(vp.intersects(mx,y,254,sectionH)) GlassSurface.card(g,mx,y,254,sectionH,ctrlRadius);
                 y += 22; // header row — plain text + an opaque toggle, no glass
                 if (m.settingsDetailOnly) {
                     y += SETTINGS_HINT_H;
@@ -1090,6 +1095,9 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         g.enableScissor(vp.x, vp.y, vp.xEnd(), vp.yEnd());
         float y = my + 38 - (float) scrolls[1].current();
         for (FeatureMetadata m : FeatureRegistry.settings()) {
+            int sectionH = 22 + (m.settingsDetailOnly ? SETTINGS_HINT_H
+                    : m.settings.stream().mapToInt(s -> s.height()+4).sum());
+            if(vp.intersects(mx,y,254,sectionH)) MaterialSurface.parent(g,mx,y,254,sectionH,ctrlRadius);
             int headerH = 22;
             if (vp.intersects(mx + 4, y, CONTENT_W - 4, headerH)) {
                 // Header navigation (C-2b): the entries WITH a detail
@@ -1595,6 +1603,17 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     public boolean charTyped(net.minecraft.client.input.CharacterEvent _ev) {
         FeatureSetting focused = FeatureSetting.getFocused();
         if (focused != null && focusedSettingVisible && focused.onCharTyped(_ev)) return true;
+        if (FeatureSetting.hasActiveCapture()) return true;
+        if (selectedCategory == 0 && searchField != null && searchField.visible) {
+            this.setFocused(searchField);
+            searchField.setFocused(true);
+            return searchField.charTyped(_ev);
+        }
+        if (selectedCategory == 1) for (FeatureMetadata m : FeatureRegistry.settings())
+            for (FeatureSetting s : m.settings) if (s.resumeSearch(_ev)) {
+                this.setFocused(null);
+                return true;
+            }
         return super.charTyped(_ev);
     }
 

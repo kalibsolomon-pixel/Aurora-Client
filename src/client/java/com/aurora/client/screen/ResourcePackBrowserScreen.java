@@ -267,9 +267,9 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
      * screen's old 64 ms (decided: only observable below ~15 fps) and its
      * nanoTime clock replaces currentTimeMillis (established unobservable).
      */
-    private final SmoothScroll gridScroll = new SmoothScroll(80.0);
+    private final SmoothScroll gridScroll = new SmoothScroll(80.0).boundedMotion();
     /** Sidebar scroll — same glide; wheel step 28, thumb min 24. */
-    private final SmoothScroll sidebarScroll = new SmoothScroll(80.0);
+    private final SmoothScroll sidebarScroll = new SmoothScroll(80.0).boundedMotion();
 
     // ---- Canonical hover state (keyed by stable identity: "tab:"+index,
     // "card:"+projectId) ----
@@ -1904,7 +1904,10 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
 
     @Override
     public boolean charTyped(net.minecraft.client.input.CharacterEvent _ev) {
-        if (searchField != null && searchField.isFocused()) {
+        if (detailOpenT > 0f) return super.charTyped(_ev);
+        if (searchField != null && searchField.visible && searchField.active) {
+            this.setFocused(searchField);
+            searchField.setFocused(true);
             if (searchField.charTyped(_ev)) return true;
         }
         return super.charTyped(_ev);

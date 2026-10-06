@@ -17,8 +17,10 @@ import java.util.Set;
 
 /**
  * The shared material coordinator. Unified production screens allow one neutral
- * WINDOW-priority parent capture per frame, with cached face/boundary above dim;
- * embedded controls never capture and floating surfaces use opaque backing.
+ * independently blurred standalone cards and optional detail/editor windows,
+ * with cached translucent faces above dim. Embedded controls never capture;
+ * floating surfaces use opaque backing. The renderer's bounded output pool
+ * and screenshot/session/menu/resource guards apply to every card.
  * The recipe documentation below describes the retained legacy/diagnostic path.
  *
  * The one shared implementation of Aurora's glass-surface idiom — the
@@ -145,7 +147,7 @@ public final class GlassSurface {
 
     /** Frame epoch — bumped once per frame from the render-tick mixin. */
     private static long frame = 0L;
-    private static boolean unifiedParentClaimed;
+    // Each visible standalone card owns a bounded pooled blur output.
     /** Frame in which {@link #overlayDim} last painted (-1 = never). */
     private static long dimFrame = -1L;
     /** Frame in which {@link #beginGlassPass} was last called (-1 = never). */
@@ -180,7 +182,8 @@ public final class GlassSurface {
             aboveDimDepth = 0;
         }
         trackedClip = null;
-        unifiedParentClaimed = false;
+
+        ColorSwatch.beginFrame();
         frame++;
     }
 
@@ -310,6 +313,12 @@ public final class GlassSurface {
      *
      * @return whether glass drew; {@code false} ⇒ caller paints its flat look
      */
+    /** Standalone card: call before dim; paint its translucent face after dim. */
+    public static boolean card(GuiGraphics g, float x, float y, float w, float h, float radius) {
+        return paint(g,x,y,w,h,radius,UNIFIED_LIGHTING,ThemeManager.color(ThemeToken.WINDOW_FILL),
+                BlurPanelRenderer.Priority.CONTROL);
+    }
+
     public static boolean container(GuiGraphics g, float x, float y, float w, float h, float radius) {
         return container(g, x, y, w, h, radius, BlurPanelRenderer.Priority.WINDOW);
     }
@@ -564,11 +573,8 @@ public final class GlassSurface {
                     + "in the glass pass, before GlassSurface.overlayDim");
         }
         boolean unified = MaterialSurface.unified();
-        // Only the parent window owns capture; repeated rows and embedded controls never sample.
-        if (unified) {
-            if (priority != BlurPanelRenderer.Priority.WINDOW || unifiedParentClaimed) return false;
-            unifiedParentClaimed = true;
-        }
+        // Explicit standalone cards may capture alongside a detail window.
+        // Ordinary embedded controls still decline in control(), before this path.
         // WINDOW is the parent owner; embedded controls never sample this backdrop.
         boolean drew = unified
                 ? BlurPanelRenderer.renderUnifiedPanel(g,x,y,w,h,radius,

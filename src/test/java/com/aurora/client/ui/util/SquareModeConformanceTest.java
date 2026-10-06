@@ -61,11 +61,11 @@ class SquareModeConformanceTest {
         String src = read("src/client/java/com/aurora/client/screen/AuroraScreen.java");
         // Isolated raised-glass path (paintGlassPass) — sidebar tabs,
         // Profiles, and the layout pair all share the resolved token.
-        assertTrue(src.contains("chipGlass[i] = GlassSurface.control(g, bx + 8, catY, 64, TAB_H,"),
+        assertTrue(src.contains("chipGlass[i] = GlassSurface.card(g, bx + 8, catY, 64, TAB_H,"),
                 "chip glass uses the resolved control radius");
-        assertTrue(src.contains("profGlass = GlassSurface.control(g, bx + 8, profY, 64, TAB_H, ctrlRadius)"),
+        assertTrue(src.contains("profGlass = GlassSurface.card(g, bx + 8, profY, 64, TAB_H, ctrlRadius)"),
                 "Profiles glass uses the resolved control radius");
-        assertTrue(src.contains("layoutGlass[0] = GlassSurface.control(g, mx, my, 20, 20, ctrlRadius"),
+        assertTrue(src.contains("layoutGlass[0] = GlassSurface.card(g, mx, my, 20, 20, ctrlRadius"),
                 "layout-button glass uses the resolved control radius");
         // Tiles intentionally split by state: neutral is embedded; enabled
         // is isolated stained glass. Both consume the same resolved radius.

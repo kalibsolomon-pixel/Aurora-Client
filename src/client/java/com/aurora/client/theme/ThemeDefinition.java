@@ -13,7 +13,7 @@ public class ThemeDefinition {
     /** Factory default panel-background density (maximum diffuse material). */
     public static final double DEFAULT_BACKGROUND_OPACITY = 1.0;
 
-    /** Brightness mode the theme renders in. */
+    /** Legacy persistence member; supported rendering and migrated preferences are DARK. */
     public ThemeMode mode = ThemeMode.DARK;
 
     /**
@@ -67,7 +67,7 @@ public class ThemeDefinition {
     public static ThemeDefinition copyOf(ThemeDefinition other) {
         ThemeDefinition copy = new ThemeDefinition();
         if (other != null) {
-            copy.mode = other.mode != null ? other.mode : ThemeMode.DARK;
+            copy.mode = ThemeMode.DARK; // legacy LIGHT preferences resolve to the supported appearance
             copy.accent = other.accent;
             copy.roundness = other.roundness != null ? other.roundness : ThemeRoundness.ROUND;
             copy.backgroundOpacity = normalizedOpacity(other.backgroundOpacity);

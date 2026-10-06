@@ -85,7 +85,7 @@ public final class FeatureMetadata {
 
     public boolean isEnabled() { return getEnabled.getAsBoolean(); }
     public void setEnabled(boolean v) { setEnabled.accept(v); }
-    public boolean hasDetail() { return !settings.isEmpty(); }
+    public boolean hasDetail() { return !settings.isEmpty() && !List.of("text_fonts", "theme", "interface").contains(id); }
 
     /**
      * Reset this feature's config fields to their factory defaults.
