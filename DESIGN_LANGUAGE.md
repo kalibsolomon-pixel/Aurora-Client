@@ -1158,3 +1158,16 @@ scaling, extra blur/glow, theme taxonomy removal or gameplay change. Search add
 icons use native-pixel FreeType ink without resampling and unchanged button
 geometry. Existing focus, switch, slider, roundness, opacity and tooltip policy
 remain. Owner visual acceptance remains open; see OWNER_UI_CORRECTIONS.md.
+
+
+### Completed desktop verification and capture ownership (2026-10-06)
+
+AuroraScreen and FeatureDetailScreen opt into `ThemedScreen.parentGlassOnly()`.
+`GlassSurface.card` declines before capture for embedded cards in these hosts;
+their existing cached surfaces paint under the single parent window. Other
+standalone-card hosts retain their existing behavior. Live GUI-scale 3/4 checks
+confirmed one parent panel per frame, zero child-card captures/declines and no
+pool exhaustion. Ordinary inline Settings captions/status subtitles also keep
+left alignment. Final build/test: 415 passing; five new client screenshots plus
+alternate-scale evidence are linked in OWNER_UI_CORRECTIONS.md. Owner visual
+acceptance remains the gate for broader rollout and legacy taxonomy removal.

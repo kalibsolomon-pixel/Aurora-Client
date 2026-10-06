@@ -50,6 +50,10 @@ class OwnerCorrectionTest {
         String row = source("screen/setting/FeatureSetting.java");
         assertTrue(row.contains("int textX = x + box.x()"));
         assertTrue(row.contains("drawValueLine(ctx, x + box.x()"));
+        assertFalse(row.contains("drawCenteredLines(font, ctx, wrappedLabel"));
+        String toggle = source("screen/setting/BooleanSetting.java");
+        assertTrue(toggle.contains("int lineX = x + LABEL_PAD;"));
+        assertFalse(toggle.contains("drawValueLineCentered(ctx, x + LABEL_PAD"));
         String items = source("screen/setting/ItemScaleSetting.java");
         assertFalse(items.contains("7 * 36"));
         assertTrue(items.contains("getOrCreateSliders(id)) h += slider.height()"));

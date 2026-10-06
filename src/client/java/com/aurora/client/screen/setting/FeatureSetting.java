@@ -616,7 +616,8 @@ public abstract class FeatureSetting {
         int count = Math.min(2, wrappedLabel.size());
         int top = y - (count - 1) * (font.lineHeight + 2) / 2;
         int finalColor = disabled ? MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED) : color;
-        com.aurora.client.ui.util.RenderUtil.drawCenteredLines(font, ctx, wrappedLabel, x, top, width, finalColor);
+        for (int i = 0; i < count; i++)
+            ctx.drawString(font, wrappedLabel.get(i), x, top + i * (font.lineHeight + 2), finalColor, false);
         trackLabelHover(tooltipKey(), this::currentDescription, x, top, width,
                 count * (font.lineHeight + 2), mouseX, mouseY, disabled);
     }

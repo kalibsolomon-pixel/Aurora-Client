@@ -41,6 +41,7 @@ import net.minecraft.network.chat.Component;
  */
 public class FeatureDetailScreen extends Screen implements ThemedScreen {
     @Override public boolean unifiedTheme() { return true; }
+    @Override public boolean parentGlassOnly() { return true; }
 
 
     private int LIST_W = 320;

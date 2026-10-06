@@ -315,6 +315,8 @@ public final class GlassSurface {
      */
     /** Standalone card: call before dim; paint its translucent face after dim. */
     public static boolean card(GuiGraphics g, float x, float y, float w, float h, float radius) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc != null && mc.screen instanceof ThemedScreen screen && screen.parentGlassOnly()) return false;
         return paint(g,x,y,w,h,radius,UNIFIED_LIGHTING,ThemeManager.color(ThemeToken.WINDOW_FILL),
                 BlurPanelRenderer.Priority.CONTROL);
     }

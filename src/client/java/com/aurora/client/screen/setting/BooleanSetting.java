@@ -185,7 +185,7 @@ public class BooleanSetting extends FeatureSetting {
             boolean disabled = isDisabled();
             for (int li = 0; li < cachedLines.size(); li++) {
                 var line = cachedLines.get(li);
-                int lineX = x + LABEL_PAD + (cachedLabelArea - tr.width(line)) / 2;
+                int lineX = x + LABEL_PAD;
                 ctx.drawString(tr, line, lineX, textY, MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
                 // Each wrapped line of the label text is a dwell region for
                 // the description tooltip — hover the label itself, no badge.
@@ -196,7 +196,7 @@ public class BooleanSetting extends FeatureSetting {
             }
             // §4 live-value subtitle (base mechanism): one small secondary
             // line under the label block.
-            drawValueLineCentered(ctx, x + LABEL_PAD, textY + 2, cachedLabelArea, disabled);
+            drawValueLine(ctx, x + LABEL_PAD, textY + 2, disabled);
 
         }
         float switchX = controlX(x, width, 28);

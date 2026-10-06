@@ -22,4 +22,7 @@ public interface ThemedScreen {
     // cached overlay for both capture success and decline (RoundedPanel does
     // this automatically). GlassSurface owns only the pre-dim backdrop work.
     default boolean unifiedTheme() { return true; }
+
+    /** Embedded cards in a parent window use cached materials, never another capture. */
+    default boolean parentGlassOnly() { return false; }
 }

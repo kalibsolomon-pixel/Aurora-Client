@@ -2720,6 +2720,18 @@ attached credit subtitles stay in the compact header.
 NativeIconGeometry rounds canvas bounds, never ink, to a multiple of twice the
 GUI scale. Transparent centered padding permits exact 1:1 integer GUI blits;
 FreeType cache/fallback ownership remains in MaterialIconRenderer. Add-button
-fallback surfaces use AA primitives at their existing 24×20 geometry. Container
-capture, embedded/floating materials and theme architecture are unchanged.
+fallback surfaces use AA primitives at their existing 24×20 geometry. Renderer, shaders, embedded/floating materials and theme architecture are preserved.
 Verification and remaining visual acceptance: OWNER_UI_CORRECTIONS.md.
+
+
+### Completed desktop verification and capture ownership (2026-10-06)
+
+AuroraScreen and FeatureDetailScreen opt into `ThemedScreen.parentGlassOnly()`.
+`GlassSurface.card` declines before capture for embedded cards in these hosts;
+their existing cached surfaces paint under the single parent window. Other
+standalone-card hosts retain their existing behavior. Live GUI-scale 3/4 checks
+confirmed one parent panel per frame, zero child-card captures/declines and no
+pool exhaustion. Ordinary inline Settings captions/status subtitles also keep
+left alignment. Final build/test: 415 passing; five new client screenshots plus
+alternate-scale evidence are linked in OWNER_UI_CORRECTIONS.md. Owner visual
+acceptance remains the gate for broader rollout and legacy taxonomy removal.

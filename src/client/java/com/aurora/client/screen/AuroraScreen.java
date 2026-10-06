@@ -115,6 +115,7 @@ import java.util.Map;
  */
 public class AuroraScreen extends Screen implements ThemedScreen {
     @Override public boolean unifiedTheme() { return true; }
+    @Override public boolean parentGlassOnly() { return true; }
 
 
     /** §8.3 canonical hover duration — sidebar chrome, cards, headers alike (C-2b). */
