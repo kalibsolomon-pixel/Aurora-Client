@@ -1,6 +1,8 @@
 # Compact Aurora UI pilot — 2026-10-06
 
-Status: implemented UX-0–3 layout pilot, awaiting **user visual acceptance**.
+Status: historical UX-0–3 layout record. The owner correction pass supersedes
+its card proportions, branding placement, Configure arrows and Pack-only row
+measurement scope; see OWNER_UI_CORRECTIONS.md. **User visual acceptance remains open.**
 The user's subsequent correction is authoritative: setting labels and section
 captions retain the original left alignment and 12px text inset. This is a compact
 geometry pass within the approved unified theme, not a new design language.

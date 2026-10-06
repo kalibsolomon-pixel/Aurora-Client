@@ -2184,18 +2184,23 @@ device-pixel-snapped thumbs on `AuroraScreen` plus the shared Profile/Waypoint m
 screens before the user accepts the pilot. No Phase D classes/treatments were restored, no
 blur/render passes were added, and the Phase B timing constants remain frozen.
 
-## Compact UI pilot — 2026-10-06 (awaiting user visual acceptance)
+## Compact UI pilot — owner corrections, 2026-10-06 (awaiting visual acceptance)
 
-UX-0–3 layout only: `ui/util/UiDensity` owns preferred compact frames, card/row
-metrics and responsive bounds. `SettingRowLayout` measures active-font labels and
-control/value/track rectangles before row-height, paint and input walks. The
-shared setting adapters opt in only while Pack Tweaks is open and clear on close;
-all other details retain the legacy path. Main Aurora uses the 344×224 frame,
-80×52 grid, 32px list rows, white supplied brand mark and explicit Configure
-chevrons. Pack Tweaks uses a stationary frame ≤344×300 with 12px viewport margins.
-Labels remain **left-aligned with the previous 12px inset**, per user correction;
-section headings stay uppercase. Native font size, unified materials, blur, focus,
-CSS easing and ROUND/SQUARE policy remain unchanged. No gameplay/config-schema
-changes: Pack Tweaks still has its existing nine controls, OR/set-all bundle
-semantics and reset prefixes. See `COMPACT_UI_PILOT.md` for exact metrics, tests,
-runtime evidence, deferred issues and visual-review gate. UX-4–7 remain deferred.
+`ui/util/UiDensity` owns the preferred 344×224 main frame, square 80×80 grid
+cards with the accepted 6px gaps, 32px list rows, and detail frames ≤344×300
+with 12px viewport margins. Main settings use AURORA text only, without a
+sidebar divider or card chevrons. Whole-card toggles and right-click detail
+opening remain. The title menu places the official white logo above its five
+text-only action cards (48px preferred, constrained by available height).
+
+Compatible FeatureDetailScreen rows now share `SettingRowLayout`: original
+left alignment and 12px inset, measured label/control/value geometry, 24px
+simple rows, 28px eligible inline sliders, and ≥36px stacked/wrapped fallback.
+Boolean live-value subtitles reserve height. Item Scale's nested sliders opt in
+and its extent sums their actual heights; complex editors retain specialized
+geometry. Measurements clear on close. Pack Tweaks grouping and behavior stay
+unchanged. Native icon ink is transparently padded to even GUI-unit dimensions
+so integer blits cannot resample it; both search add-button fallback surfaces
+use AA primitives. No schema, gameplay, theme taxonomy, shader, palette or
+motion redesign. See OWNER_UI_CORRECTIONS.md for verification limits. Broader
+production rollout and behavioral additions remain deferred.

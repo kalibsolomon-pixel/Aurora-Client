@@ -66,7 +66,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
     private FeatureSetting activeDragSetting = null;
     private FeatureSetting fixedHeaderSetting;
     private int bodyTop() { return TOP_PAD + (fixedHeaderSetting == null ? 0 : fixedHeaderSetting.fixedHeaderHeight()); }
-    private boolean compact() { return "pack_tweaks".equals(meta.id); }
+    private boolean compact() { return true; }
     private com.aurora.client.ui.util.UiDensity.Rect compactFrame;
     private void measureRows() {
         if (compact()) for (FeatureSetting setting : meta.settings) setting.measureCompact(LIST_W);
@@ -420,8 +420,8 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         ctx.disableScissor();
         if (compact()) {
             com.aurora.client.ui.util.AuroraBrand.draw(ctx, listX + 8, compactFrame.y() + 4, 24);
-            String breadcrumb = com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(this.font, "Pack Tweaks", Math.max(0, resetBtn.getX() - listX - 44), 0);
-            ctx.drawString(this.font, breadcrumb, listX + 40, compactFrame.y() + 12, MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
+            String breadcrumb = com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(this.font, meta.displayName, Math.max(0, resetBtn.getX() - listX - 44), 0);
+            ctx.drawString(this.font, breadcrumb, listX + 40, (meta.subtitle == null || meta.subtitle.isEmpty() ? compactFrame.y() + 12 : compactFrame.y() + 7), MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
             if (maxScroll > 0) {
                 var thumb = com.aurora.client.ui.component.ScrollbarChrome.thumb(scroll, bodyTop(), bodyBottom() - bodyTop(), maxScroll, 24, this.minecraft.getWindow().getGuiScale());
                 com.aurora.client.ui.component.ScrollbarChrome.draw(ctx, listX + LIST_W - 4, thumb, scroll.isDragging(), ThemeToken.ON_BACKGROUND);
@@ -464,11 +464,11 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         // Aurora has no large/bold text idiom and inventing one (pose-
         // scaled glyphs) would violate the no-new-visual-style constraint.
         if (this.font != null) {
-            int titleX = listX + 12;
+            int titleX = listX + 40;
             // Feature identity is already established by the navigation card.
             if (meta.subtitle != null && !meta.subtitle.isEmpty()) {
-                ctx.drawString(this.font, meta.subtitle, titleX,
-                        TITLE_Y + this.font.lineHeight + 1,
+                ctx.drawString(this.font, AuroraFontRenderer.ellipsize(this.font, meta.subtitle, Math.max(0, resetBtn.getX() - titleX - 4), 0), titleX,
+                        compactFrame.y() + 7 + this.font.lineHeight + 1,
                         ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_OVERLAY),0xAA), false);
             }
         }

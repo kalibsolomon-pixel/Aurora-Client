@@ -4,15 +4,15 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class CompactGeometryTest {
-    @Test void preferredMainFitsNineCardsAndFiveListRows() {
+    @Test void preferredMainFitsSixSquareCardsAndFiveListRows() {
         var frame = UiDensity.mainFrame(640, 360);
         var body = UiDensity.mainContent(frame);
         assertEquals(344, frame.width()); assertEquals(224, frame.height());
         assertEquals(252, body.width()); assertEquals(176, body.height());
         assertEquals(3, UiDensity.columns(body.width()));
-        assertTrue(UiDensity.extent(3, UiDensity.CARD_HEIGHT, UiDensity.GRID_GAP) <= body.height());
+        assertTrue(UiDensity.extent(2, UiDensity.CARD_HEIGHT, UiDensity.GRID_GAP) <= body.height());
         assertTrue(UiDensity.extent(5, UiDensity.LIST_HEIGHT, UiDensity.ROW_GAP) <= body.height());
-        assertTrue(UiDensity.extent(4, UiDensity.CARD_HEIGHT, UiDensity.GRID_GAP) > body.height());
+        assertTrue(UiDensity.extent(3, UiDensity.CARD_HEIGHT, UiDensity.GRID_GAP) > body.height());
         assertTrue(UiDensity.extent(6, UiDensity.LIST_HEIGHT, UiDensity.ROW_GAP) > body.height());
     }
     @Test void constrainedFramesAndTheirContentStayInsideTheViewport() {

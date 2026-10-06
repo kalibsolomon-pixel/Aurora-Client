@@ -34,11 +34,15 @@ import java.util.function.Supplier;
 public abstract class FeatureSetting {
     public final String label;
 
-    /** Pack Tweaks opts in before any height, paint or input walk. Other hosts keep legacy rows. */
+    /** Detail hosts measure simple rows before height, paint and input walks; custom editors retain their own geometry. */
     protected com.aurora.client.ui.util.SettingRowLayout compactRow;
     private int compactWidth = -1;
     private long compactFontKey = Long.MIN_VALUE;
     public final void measureCompact(int width) {
+        measureCompactChildren(width);
+        if (!(this instanceof BooleanSetting || this instanceof SliderSetting || this instanceof EnumSetting<?>
+                || this instanceof KeybindSetting || this instanceof ColorSetting || this instanceof ButtonSetting
+                || this instanceof SectionHeaderSetting)) return;
         Font font = Minecraft.getInstance().font;
         long key = ThemeManager.generation() * 65537L
                 + com.aurora.client.config.AuroraConfig.get().activeFont.ordinal() * 31L
@@ -54,10 +58,13 @@ public abstract class FeatureSetting {
         String measuredLabel = kind == com.aurora.client.ui.util.SettingRowLayout.Kind.SECTION
                 ? label.toUpperCase(java.util.Locale.ROOT) : label;
         compactRow = com.aurora.client.ui.util.SettingRowLayout.measure(kind, measuredLabel, width, font.lineHeight, font::width);
+        if (this instanceof BooleanSetting) compactRow = compactRow.withSubtitle(valueLineHeight(font), font.lineHeight);
         compactWidth = width;
         compactFontKey = key;
     }
-    public final void clearCompactMeasurement() { compactRow = null; compactWidth = -1; }
+    public final void clearCompactMeasurement() { compactRow = null; compactWidth = -1; clearCompactChildren(); }
+    protected void measureCompactChildren(int width) {}
+    protected void clearCompactChildren() {}
     protected final int controlX(int x, int width, int controlWidth) {
         return compactRow == null ? x + width - controlWidth - 14 : x + compactRow.control().x();
     }
@@ -80,7 +87,7 @@ public abstract class FeatureSetting {
     protected final void renderCompactLabel(GuiGraphics ctx, int x, int y, int mouseX, int mouseY, int color) {
         Font font = Minecraft.getInstance().font;
         var box = compactRow.label();
-        int textY = y + box.y() + (box.height() - compactRow.lines().size() * (font.lineHeight + 1)) / 2;
+        int textY = y + box.y() + (box.height() - (compactRow.lines().size() * (font.lineHeight + 1) + valueLineHeight(font))) / 2;
         for (String line : compactRow.lines()) {
             int textX = x + box.x();
             ctx.drawString(font, line, textX, textY, color, false);
@@ -88,6 +95,7 @@ public abstract class FeatureSetting {
                     mouseX, mouseY, isDisabled());
             textY += font.lineHeight + 1;
         }
+        drawValueLine(ctx, x + box.x(), textY + 2, isDisabled());
     }
 
 

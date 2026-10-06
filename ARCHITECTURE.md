@@ -2697,25 +2697,29 @@ and sanitize before Discord, with world/name/address opt-ins default off. The se
 Python development receiver is test tooling outside the runtime artifact; actual launcher
 receiver/privacy UI remains unimplemented in this repository.
 
-## Compact density and measured row pilot — 2026-10-06
+## Compact density and measured rows — owner corrections, 2026-10-06
 
-`UiDensity` is independent of the theme-token engine. Its integer GUI-pixel
-rectangles bound the main frame to 344×224 (8px viewport margins) and Pack Tweaks
-to 344×300 (12px margins). At main widths <320, navigation moves to a horizontal
-band; grid columns derive from content width (1–3). `AuroraScreen` caches the
-content ClipBand at init/resize, reuses card-bound arrays, and computes scrolling
-from the same painted height and an extent without trailing gap. Configure uses
-one stable, hosted IconAction per eligible card with a 24px hit box and 16px
-bundled chevron; it opens detail independently of the card toggle.
+UiDensity remains independent of theme tokens. Main frame: 344×224; square
+80×80 grid at 6px gaps; cached content ClipBand and reused card-bound arrays.
+Card semantics occupy the full card after removal of Configure actions;
+right-click still opens detail. Main branding is text-only. AuroraTitleScreen
+centers the supplied mark above the existing five-card stack without changing
+button dimensions, action routing or material passes.
 
-`FeatureSetting.measureCompact` caches immutable `SettingRowLayout` by width,
-active font, renderer and theme generation. Boolean, Slider, Enum, Keybind, Color
-and Button share its label/control/value geometry; labels retain left alignment
-and a 12px inset. Only Pack Tweaks opts in. Inline sliders require >=120px usable
-track and a single-line measured label; otherwise they stack at >=36px. Knob
-clearance is included in allocation. Enum expansion floats above all normal rows,
-resolves against the body ClipBand and reserves no compact row height. Compact
-popup input has priority over underlying rows. Color expansion preserves the
-existing editor and adds its existing body height to the measured collapsed row.
-Other detail screens and complex editors retain their legacy layout. The scoped
-measurement clears during teardown. Details and acceptance gate: COMPACT_UI_PILOT.md.
+All FeatureDetailScreen hosts use the bounded ≤344×300 compact frame and
+measure compatible rows before height/paint/input walks. FeatureSetting caches
+SettingRowLayout by width/font/renderer/theme; custom editors are excluded from
+simple-row measurement. Item Scale propagates measurement into nested sliders,
+uses actual heights for extent and clears child measurements on teardown.
+Boolean status subtitles remain visible and reserve measured space. Left inset
+is 12px; inline sliders retain ≥120px useful track and unchanged knob clearance.
+Enums retain floating popup paint/input priority and ClipBand placement; color
+editors retain their expanded body. Header titles use feature metadata and
+attached credit subtitles stay in the compact header.
+
+NativeIconGeometry rounds canvas bounds, never ink, to a multiple of twice the
+GUI scale. Transparent centered padding permits exact 1:1 integer GUI blits;
+FreeType cache/fallback ownership remains in MaterialIconRenderer. Add-button
+fallback surfaces use AA primitives at their existing 24×20 geometry. Container
+capture, embedded/floating materials and theme architecture are unchanged.
+Verification and remaining visual acceptance: OWNER_UI_CORRECTIONS.md.

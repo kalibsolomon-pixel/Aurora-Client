@@ -146,12 +146,12 @@ public final class MaterialIconRenderer {
             }
         }
 
-        float guiW = r.width() / (float) guiScale;
-        float guiH = r.height() / (float) guiScale;
+        int guiW = r.width() / guiScale;
+        int guiH = r.height() / guiScale;
         int x = Math.round(cx - guiW / 2f);
         int y = Math.round(cy - guiH / 2f);
         g.blit(RenderPipelines.GUI_TEXTURED, r.id(), x, y, 0f, 0f,
-                Math.max(1, Math.round(guiW)), Math.max(1, Math.round(guiH)),
+                guiW, guiH,
                 r.width(), r.height(), r.width(), r.height(), argb);
     }
 
@@ -185,11 +185,16 @@ public final class MaterialIconRenderer {
             ByteBuffer src = bitmap.buffer(pitch * h);
 
             // Alpha-only gray raster → white RGBA (ARGB ints; NativeImage converts to ABGR).
-            NativeImage img = new NativeImage(NativeImage.Format.RGBA, w, h, false);
+            // Pad, never scale, the native ink to an even GUI-unit canvas.
+            // Integer GUI blits then preserve every raster pixel at all scales.
+            int canvasW = NativeIconGeometry.canvasSize(w, cachedGuiScale);
+            int canvasH = NativeIconGeometry.canvasSize(h, cachedGuiScale);
+            int offsetX = (canvasW - w) / 2, offsetY = (canvasH - h) / 2;
+            NativeImage img = new NativeImage(NativeImage.Format.RGBA, canvasW, canvasH, true);
             for (int y = 0; y < h; y++) {
                 for (int x = 0; x < w; x++) {
                     int a = src.get(y * pitch + x) & 0xFF;
-                    img.setPixel(x, y, (a << 24) | 0x00FFFFFF);
+                    img.setPixel(x + offsetX, y + offsetY, (a << 24) | 0x00FFFFFF);
                 }
             }
 
@@ -198,7 +203,7 @@ public final class MaterialIconRenderer {
             DynamicTexture tex = new DynamicTexture(() -> "aurora_icon_glyph_" + seq, img);
             Minecraft.getInstance().getTextureManager().register(id, tex);
             tex.upload();
-            return new Raster(id, w, h);
+            return new Raster(id, canvasW, canvasH);
         } catch (Throwable t) {
             LOG.warn("[Aurora] Material icon rasterization failed for U+{}; falling back to glyph atlas",
                     Integer.toHexString(codepoint), t);

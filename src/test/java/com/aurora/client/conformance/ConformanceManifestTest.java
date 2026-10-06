@@ -197,8 +197,8 @@ class ConformanceManifestTest {
      * three ColorPicker frames are DATA-DRIVEN color-picking surfaces
      * (§16 exception domain); the layout pair's six icon strokes are
      * REPRESENTATIONAL icon content (C-5 preserved the vector icons
-     * verbatim); the sidebar's two 0.5-radius strokes are degenerate
-     * hairline geometry (the 1px divider, and the 6×1 list-icon line — no
+     * verbatim); the sidebar's 0.5-radius stroke is degenerate
+     * hairline geometry (the 6×1 list-icon line — no
      * visible corner in any roundness mode).
      */
     @Test
@@ -218,9 +218,7 @@ class ConformanceManifestTest {
                 new Site(SRC + "screen/AuroraScreen.java", "1"),
                 new Site(SRC + "screen/AuroraScreen.java", "1"),
                 new Site(SRC + "screen/AuroraScreen.java", "1"),
-                // DEGENERATE hairline strokes (the 1px divider + the icon's
-                // 6×1 line — width-1 geometry has no corner to square).
-                new Site(SRC + "screen/AuroraScreen.java", "0.5f"),
+                // DEGENERATE layout icon stroke: a 6×1 line has no visible corner.
                 new Site(SRC + "screen/AuroraScreen.java", "0.5f")));
 
         List<Site> seen = new ArrayList<>();
@@ -242,7 +240,7 @@ class ConformanceManifestTest {
         }
         assertEquals(new HashSet<>(classified), new HashSet<>(seen),
                 "unclassified or missing literal radius sites");
-        assertEquals(13, seen.size(), "inventory drift — sites: " + seen);
+        assertEquals(12, seen.size(), "inventory drift — sites: " + seen);
         assertEquals(classified.size(), seen.size(), "multiplicity drift");
     }
 
@@ -295,16 +293,16 @@ class ConformanceManifestTest {
         int modules = countOccurrences(read(SRC + "module/ModuleManager.java"), "new Module(");
         int segmentedPeers = com.aurora.client.theme.ThemeRoundness.values().length;
         int hosted = 3 + 10 + segmentedPeers;               // enums + accent + segmented peers
-        int screenOwned = 2 + 1 + 2 + modules + modules + 0 + 4;      // tabs, profiles, layout, tiles, configure, nav, toggles
+        int screenOwned = 2 + 1 + 2 + modules + 0 + 4;      // tabs, profiles, layout, tiles, nav, toggles
         assertEquals(37, modules, "ModuleManager tile count");
         assertEquals(3, segmentedPeers, "Corner Style is the only segmented row");
         assertEquals(16, hosted, "component-owned hosted controls");
-        assertEquals(83, screenOwned, "screen-owned chrome controls");
-        assertEquals(99, hosted + screenOwned, "AuroraScreen total semantic controls");
+        assertEquals(46, screenOwned, "screen-owned chrome controls");
+        assertEquals(62, hosted + screenOwned, "AuroraScreen total semantic controls");
 
         String src = read(SRC + "screen/AuroraScreen.java");
-        assertEquals(8, countOccurrences(src, "semanticHost.register("),
-                "the hosted and configure loops + six identity-stable factory registration sites");
+        assertEquals(7, countOccurrences(src, "semanticHost.register("),
+                "the hosted loop + six identity-stable factory registration sites");
         // Registration is init/factory-only: every register site must sit
         // after a private control factory (or the init loop), never inside a
         // render walk — the frame path checks availability, never membership.

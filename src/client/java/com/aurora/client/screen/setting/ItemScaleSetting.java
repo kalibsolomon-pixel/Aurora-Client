@@ -297,15 +297,25 @@ public class ItemScaleSetting extends FeatureSetting {
         return null;
     }
 
+    private int compactChildrenWidth = -1;
+    @Override protected void measureCompactChildren(int width) {
+        compactChildrenWidth = Math.max(1, width - 16);
+        for (var sliders : itemSliders.values()) for (var slider : sliders) slider.measureCompact(compactChildrenWidth);
+    }
+    @Override protected void clearCompactChildren() {
+        compactChildrenWidth = -1;
+        for (var sliders : itemSliders.values()) for (var slider : sliders) slider.clearCompactMeasurement();
+    }
+
     @Override
     public int baseHeight() {
         // Search bar (32px) + lists of items
-        int h = 38;
+        int h = 38 + (foundItem != null ? 12 : 0);
         AuroraConfig cfg = AuroraConfig.get();
         for (String id : cfg.itemScales.keySet()) {
             h += ITEM_ROW_STRIDE; // Row header height
             if (expandedStates.getOrDefault(id, false)) {
-                h += 7 * 36; // 7 sliders, each is 36px tall
+                for (var slider : getOrCreateSliders(id)) h += slider.height();
             }
         }
         return h;
@@ -469,7 +479,7 @@ public class ItemScaleSetting extends FeatureSetting {
     }
 
     private List<SliderSetting> getOrCreateSliders(String idStr) {
-        return itemSliders.computeIfAbsent(idStr, id -> {
+        var sliders = itemSliders.computeIfAbsent(idStr, id -> {
             List<SliderSetting> list = new ArrayList<>();
             // Getter and setters referencing config directly
             list.add(SliderSetting.of("Scale",
@@ -544,6 +554,8 @@ public class ItemScaleSetting extends FeatureSetting {
 
             return list;
         });
+        if (compactChildrenWidth > 0) for (var slider : sliders) slider.measureCompact(compactChildrenWidth);
+        return sliders;
     }
 
     @Override public void renderFixedHeader(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
@@ -582,8 +594,8 @@ public class ItemScaleSetting extends FeatureSetting {
             plusGlass = GlassSurface.control(ctx, plusX, plusY, 24, 20, plusR);
         }
         if (!plusGlass) {
-            AuroraShapes.panel(ctx, plusX, plusY, 24, 20, plusBg, AuroraTheme.RADIUS_SMALL);
-            AuroraShapes.outline(ctx, plusX, plusY, 24, 20, plusBorder, AuroraTheme.RADIUS_SMALL);
+            com.aurora.client.ui.util.RenderUtil.drawRoundedRectAA(ctx, plusX, plusY, 24, 20, plusR, plusBg);
+            com.aurora.client.ui.util.RenderUtil.drawRoundedOutlineAA(ctx, plusX, plusY, 24, 20, plusR, 1, plusBorder);
         }
         addAction.paintGlyph(ctx, tr, plusX, plusY, 24, 20);
 

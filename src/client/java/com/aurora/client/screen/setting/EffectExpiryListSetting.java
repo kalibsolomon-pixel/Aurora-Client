@@ -369,8 +369,8 @@ public class EffectExpiryListSetting extends FeatureSetting {
             plusGlass = GlassSurface.control(ctx, plusX, plusY, 24, 20, plusR);
         }
         if (!plusGlass) {
-            AuroraShapes.panel(ctx, plusX, plusY, 24, 20, plusBg, AuroraTheme.RADIUS_SMALL);
-            AuroraShapes.outline(ctx, plusX, plusY, 24, 20, plusBorder, AuroraTheme.RADIUS_SMALL);
+            com.aurora.client.ui.util.RenderUtil.drawRoundedRectAA(ctx, plusX, plusY, 24, 20, plusR, plusBg);
+            com.aurora.client.ui.util.RenderUtil.drawRoundedOutlineAA(ctx, plusX, plusY, 24, 20, plusR, 1, plusBorder);
         }
         addAction.paintGlyph(ctx, tr, plusX, plusY, 24, 20);
 

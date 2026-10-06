@@ -226,7 +226,6 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             HoverAnim.symmetric(HOVER_MS),
     };
     /** One control per module card, keyed by stable module id (finite: the ModuleManager set). */
-    private final Map<String, com.aurora.client.ui.component.IconAction> configureActions = new HashMap<>();
     private final Map<String, SemanticActionControl> tileControls = new HashMap<>();
     /** Settings-header navigation, keyed by entry id — only entries with a detail screen. */
     private final Map<String, SemanticActionControl> headerNavControls = new HashMap<>();
@@ -323,14 +322,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         layoutControls[1] = layoutControl(1);
         for (Module m : ModuleManager.getInstance().getModules()) {
             tileControls.put(m.id, tileControl(m));
-            FeatureMetadata metadata = findMeta(m.id);
-            if (metadata != null && metadata.hasDetail()) {
-                var action = configureActions.computeIfAbsent(m.id, id -> new com.aurora.client.ui.component.IconAction("\uE5CF",
-                        SemanticAction.button(Component.literal("Configure " + m.name), () -> Component.literal("Open settings for " + m.name),
-                                Component::empty, () -> true, () -> this.minecraft.setScreen(new FeatureDetailScreen(this, metadata))),
-                        () -> MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), () -> MaterialSurface.color(ThemeToken.ON_BACKGROUND)).visualEm(16));
-                semanticHost.register(action.interactionControl());
-            }
+
         }
 
         // HOSTABLE_NOW only: ask every inline component for the semantic
@@ -735,7 +727,6 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                     : alpha(ThemeToken.ON_BACKGROUND, 0x13 / 255f));
         }
 
-        if (!narrowNavigation()) RenderUtil.drawRoundedRectAA(g, bx + 72, by + 36, 1, BOX_H - 44, 0.5f, alpha(ThemeToken.ON_BACKGROUND, 0x08f));
     }
 
     /**
@@ -879,9 +870,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         // corners and the glass corners derive from one radius (C-7).
         float ctrlRadius = ThemeManager.current().roundness().radiusSmall();
 
-        int markSize = BOX_W < 300 ? 24 : com.aurora.client.ui.util.UiDensity.MARK;
-        com.aurora.client.ui.util.AuroraBrand.draw(g, (int) bx + 8, (int) by + (32 - markSize) / 2, markSize);
-        if (BOX_W >= 300) g.drawString(tr, "AURORA", (int) bx + 40, (int) by + 12, MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
+        g.drawString(tr, "AURORA", (int) bx + 16, (int) by + 12, MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
 
         String[] cats = {"Mods", "Settings"};
         for (int i = 0; i < 2; i++) {
@@ -1039,13 +1028,9 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 // The walk only reaches tiles that intersect the viewport,
                 // so this re-mark IS the ClipBand truth (C-2 partial
                 // visibility: any non-empty intersection is available).
-                control.setBounds((int) cx, (int) cy, (int) cw - (configureActions.containsKey(m.id) ? 24 : 0), (int) ch);
+                control.setBounds((int) cx, (int) cy, (int) cw, (int) ch);
                 control.setAvailable(true);
                 control.updatePointer(mouseX, mouseY);
-            }
-            var configure = configureActions.get(m.id);
-            if (configure != null) {
-                configure.interactionControl().setAvailable(true);
             }
             boolean on = m.isEnabled();
 
@@ -1074,7 +1059,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             }
 
             if (gridLayout) {
-                drawTileIcon(g, tr, m, cx + 24, cy + 14, 20f, on, highlightedGlass);
+                drawTileIcon(g, tr, m, cx + cw / 2f, cy + 30, 28f, on, highlightedGlass);
                 int labelWidth = Math.max(0, (int) cw - 6);
                 long labelVersion = ThemeManager.generation() * 65537L + labelWidth * 31L
                         + (AuroraConfig.get().activeFont == null ? 0 : AuroraConfig.get().activeFont.ordinal())
@@ -1082,11 +1067,11 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 if (labelVersion != moduleLabelVersion) { moduleLabelLines.clear(); moduleLabelVersion = labelVersion; }
                 var lines = moduleLabelLines.computeIfAbsent(m.name,
                         name -> com.aurora.client.ui.util.WordWrap.lines(name, labelWidth, 2, tr::width));
-                RenderUtil.drawCenteredLines(tr, g, lines, cx + 3, cy + ch - 23, labelWidth,
+                RenderUtil.drawCenteredLines(tr, g, lines, cx + 3, cy + ch - 27, labelWidth,
                         MaterialSurface.color(ThemeToken.ON_BACKGROUND));
             } else {
                 drawTileIcon(g, tr, m, cx + 20, cy + ch / 2f, 16f, on, highlightedGlass);
-                int nameWidth = Math.max(1, (int) cw - 64);
+                int nameWidth = Math.max(1, (int) cw - 48);
                 long labelVersion = ThemeManager.generation() * 65537L + nameWidth * 31L
                         + AuroraConfig.get().activeFont.ordinal() + AuroraConfig.get().textRendererMode.ordinal() * 256L;
                 if (labelVersion != moduleLabelVersion) { moduleLabelLines.clear(); moduleLabelVersion = labelVersion; }
@@ -1094,7 +1079,6 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 RenderUtil.drawCenteredLines(tr, g, nameLines, cx + 32, cy + (ch - nameLines.size() * 10) / 2, nameWidth,
                         MaterialSurface.color(ThemeToken.ON_BACKGROUND));
             }
-            if (configure != null) configure.paint(g, tr, (int) (cx + cw - 24), (int) cy, 24, 24, mouseX, mouseY);
         }
         if (mods.isEmpty()) {
             g.drawString(tr, "No modules found.", (int) (mx + 12), (int) (my + 45), MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED), false);
@@ -1464,10 +1448,6 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 if (b == null) continue;
                 if (vp.contains(mouseX, mouseY)
                         && mouseX >= b[0] && mouseX <= b[0] + b[2] && mouseY >= b[1] && mouseY <= b[1] + b[3]) {
-                    var configure = configureActions.get(m.id);
-                    if (button == 0 && configure != null && mouseX >= b[0] + b[2] - 24 && mouseY < b[1] + 24) {
-                        return configure.clicked(mouseX, mouseY, button);
-                    }
                     if (button == 1) {
                         // Secondary (pointer-specific) card action: open the
                         // detail screen. One activation click at the site —

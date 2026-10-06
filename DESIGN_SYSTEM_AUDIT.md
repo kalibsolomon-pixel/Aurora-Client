@@ -742,18 +742,20 @@ colors and explicit player overrides retain meaning; HUD backing remains neutral
 
 The preceding rollout inventory is historical where this follow-up changes ownership, appearance choices, headings, motion or typography. See UNIFIED_THEME_PILOT.md and the external card-refinement evidence.
 
-## Compact pilot audit addendum — 2026-10-06
+## Compact pilot audit addendum — owner corrections, 2026-10-06
 
-The UX-0–3 visual pilot adds a density owner and pre-paint measured rows, a smaller
-main frame, supplied branding and explicit hosted Configure chevrons, plus a
-Pack Tweaks-only compact detail path. The old 180px scroll/194px paint mismatch
-is removed from AuroraScreen: both now use its measured content ClipBand.
-Enum popup height reservation is removed only on the compact path; popup paint
-and input remain above the underlying rows. Label alignment retains the prior
-left-aligned 12px inset after user feedback. New deterministic geometry tests
-cover frame bounds/capacity, wrapping, track eligibility, target edges and
-no-popup-reservation geometry; existing semantic/sound/material tests remain.
-The source inventory gains a separate Configure action per eligible module;
-existing tile toggles and Settings controls keep their behavior. No new feature,
-master gate, migration, shader/material redesign or broad detail rollout landed.
-Review scope, runtime evidence and deferred behavior defects: COMPACT_UI_PILOT.md.
+Owner review supersedes the initial compact grid/branding/Configure choices:
+80×80 square cards restore the icon-over-name composition at accepted 6px gaps;
+main header is text-only, sidebar divider and Configure chevrons are removed.
+The main semantic inventory drops 37 separate Configure actions (99→62 total),
+while card toggles, right-click detail access and existing navigation remain.
+The menu mark now stands above its text-only button stack, per owner correction.
+
+The approved Pack Tweaks measurement extends to compatible FeatureDetailScreen
+rows, including Item Scale/Alerts and nested Item Scale sliders. Specialized
+editors retain their own geometry; value-line subtitles remain. Shared native
+icon canvas padding fixes integer-blit resampling, with AA add-button fallback
+surfaces at unchanged dimensions. Targeted contracts pin layout, icon ownership,
+semantic inventory, subtitle space and material boundaries. No new feature,
+master gate, migration, shader/material redesign or legacy taxonomy removal.
+Runtime verification limits and visual-review gate: OWNER_UI_CORRECTIONS.md.

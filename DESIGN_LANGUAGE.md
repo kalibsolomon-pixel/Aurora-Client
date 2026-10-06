@@ -1140,19 +1140,21 @@ interaction contract can deliver them consistently and user control is clear.
 Explore refraction/distortion only through the dedicated process in §7.2, after the existing
 material system is coherent. It is not part of the v3 baseline.
 
-## Compact pilot addendum — 2026-10-06
+## Compact pilot addendum — owner corrections, 2026-10-06
 
-Keep the approved unified theme and native text size. Compactness is geometry,
-not a new palette, pose scale, blur recipe or animation. The main window is
-344×224; sidebar peers are 56×24 at 28px pitch, grid cards 80×52 with 6px gaps,
-list cards 32px high with 4px gaps. Pack Tweaks alone pilots the compact detail
-frame. Simple rows are 24px, inline sliders 28px, stacked/wrapped rows >=36px.
-Settings labels and uppercase section captions stay left-aligned at the previous
-12px inset, per user feedback during the pilot. Values remain separate from labels.
-The supplied mark is a white, untinted 256px derivative, shown at 28px in main
-and 24px in Pack Tweaks; main omits the wordmark at constrained width before
-search/actions. No extra glow or blur is added. Configure chevrons are explicit
-24px targets, using existing action focus/narration/sound semantics. Delayed
-description help remains 1500ms dwell/200ms fade; F1 help is deferred.
-User visual acceptance remains open; this pilot does not authorize wider rollout
-or Pack Tweaks behavioral expansion. See COMPACT_UI_PILOT.md.
+Keep the approved unified palette, material, native text size and motion. Main
+settings use AURORA text only and separation by space/material without a sidebar
+divider. Grid cards are square 80×80, retain 6px gaps, and center icon/name with
+no chevron or reserved chevron space. Detail opening remains right-click.
+The title menu displays the official white mark centered above the text-only
+cards, with a preferred 48px mark and 12px gap; the combined group is centered.
+
+Pack Tweaks is the compact detail reference. Compatible ordinary detail rows
+share the original left-aligned 12px label inset and measured right controls;
+simple rows are 24px, eligible inline sliders 28px, stacked/wrapped rows ≥36px.
+Status subtitles reserve room. Specialized editors preserve their semantics;
+Item Scale's nested ordinary sliders use the same layout rules. No text/pose
+scaling, extra blur/glow, theme taxonomy removal or gameplay change. Search add
+icons use native-pixel FreeType ink without resampling and unchanged button
+geometry. Existing focus, switch, slider, roundness, opacity and tooltip policy
+remain. Owner visual acceptance remains open; see OWNER_UI_CORRECTIONS.md.

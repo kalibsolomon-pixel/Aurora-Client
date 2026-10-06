@@ -42,6 +42,14 @@ public record SettingRowLayout(int height, List<String> lines, UiDensity.Rect la
         return new SettingRowLayout(h, List.copyOf(lines), label, control, value, inline);
     }
 
+    /** Reserve live status/credit content without changing control dimensions. */
+    public SettingRowLayout withSubtitle(int subtitleHeight, int lineHeight) {
+        if (subtitleHeight <= 0) return this;
+        int h = Math.max(height, lines.size() * (lineHeight + 1) + subtitleHeight + 8);
+        return new SettingRowLayout(h, lines, new UiDensity.Rect(label.x(), 0, label.width(), h),
+                new UiDensity.Rect(control.x(), (h - control.height()) / 2, control.width(), control.height()), value, inline);
+    }
+
     /** A 24px-high pointer target around the unchanged control visual. */
     public UiDensity.Rect controlHit() {
         int h = Math.max(24, control.height());

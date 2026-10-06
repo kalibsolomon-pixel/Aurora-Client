@@ -346,8 +346,8 @@ class AuroraScreenNavigationTest {
         assertTrue(tabFactory.contains("SemanticSound.NONE, true, true)"));
         // Profiles/cards/headers/toggles: SemanticAction.button — exactly
         // one ACTIVATION per accepted activation, played by the adapter.
-        assertEquals(5, count(src, "SemanticAction.button("),
-                "profiles, tiles, configure, header nav, header toggles construct via button()");
+        assertEquals(4, count(src, "SemanticAction.button("),
+                "profiles, tiles, header nav, header toggles construct via button()");
         // The host never plays sounds; hover/focus/rejection are silent.
         String hostSrc = read(Path.of(
                 "src/client/java/com/aurora/client/ui/interaction/SemanticControlHost.java"));

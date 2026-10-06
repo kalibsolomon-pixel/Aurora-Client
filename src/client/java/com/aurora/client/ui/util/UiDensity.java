@@ -5,7 +5,7 @@ public final class UiDensity {
     private UiDensity() {}
     public static final int MAIN_WIDTH = 344, MAIN_HEIGHT = 224;
     public static final int HEADER = 32, SIDEBAR = 72, INSET = 8;
-    public static final int CARD_WIDTH = 80, CARD_HEIGHT = 52, GRID_GAP = 6;
+    public static final int CARD_WIDTH = 80, CARD_HEIGHT = CARD_WIDTH, GRID_GAP = 6;
     public static final int LIST_HEIGHT = 32, ROW_GAP = 4;
     public static final int SIMPLE_ROW = 24, STACKED_ROW = 36, INLINE_SLIDER = 28;
     public static final int MIN_TRACK = 120, MARK = 28;

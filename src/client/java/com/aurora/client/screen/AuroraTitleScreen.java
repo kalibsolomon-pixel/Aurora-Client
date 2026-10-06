@@ -22,12 +22,14 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
     private static final int BUTTON_W = 220;
     private static final int BUTTON_H = 30;
     private static final int BUTTON_GAP = 6;
-    /**
-     * Vertical offset of the stack's top from screen center. The 5-button
-     * stack is 5*30 + 4*6 = 174 px tall, so -87 centers it exactly — the
-     * logo block is gone and nothing else anchors the layout.
-     */
-    private static final int BUTTON_STACK_OFFSET = -87;
+    private static final int STACK_HEIGHT = 5 * BUTTON_H + 4 * BUTTON_GAP;
+    private static final int BRAND_SIZE = 48;
+    private static final int BRAND_GAP = 12;
+    private int brandSize() { return Math.max(0, Math.min(BRAND_SIZE, this.height - 16 - STACK_HEIGHT - BRAND_GAP)); }
+    private int stackTop() {
+        int brandBand = brandSize() == 0 ? 0 : brandSize() + BRAND_GAP;
+        return Math.max(8, (this.height - STACK_HEIGHT - brandBand) / 2) + brandBand;
+    }
 
     public AuroraTitleScreen() {
         super(Component.translatable("aurora.title"));
@@ -36,7 +38,7 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
     @Override
     protected void init() {
         int centerX = this.width / 2 - BUTTON_W / 2;
-        int startY = this.height / 2 + BUTTON_STACK_OFFSET;
+        int startY = stackTop();
         int step = BUTTON_H + BUTTON_GAP;
 
         addBtn(centerX, startY + step * 0, Component.translatable("aurora.button.singleplayer"),
@@ -97,6 +99,11 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
             if (widget instanceof ButtonWidget button) button.renderGlassPass(ctx);
         }
         GlassSurface.overlayDim(ctx,this.width,this.height);
+
+        // Standalone official mark above the action stack; no surface or blur pass.
+        int mark = brandSize();
+        if (mark > 0) com.aurora.client.ui.util.AuroraBrand.draw(ctx,
+                (this.width - mark) / 2, stackTop() - BRAND_GAP - mark, mark);
 
         // Buttons (and other drawable children)
         super.render(ctx, mouseX, mouseY, delta);
