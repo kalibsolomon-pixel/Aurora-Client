@@ -2183,3 +2183,19 @@ device-pixel-snapped thumbs on `AuroraScreen` plus the shared Profile/Waypoint m
 `ScrollbarChrome.Thumb` is the shared paint/hit/grab geometry. Do not broadly migrate other
 screens before the user accepts the pilot. No Phase D classes/treatments were restored, no
 blur/render passes were added, and the Phase B timing constants remain frozen.
+
+## Compact UI pilot — 2026-10-06 (awaiting user visual acceptance)
+
+UX-0–3 layout only: `ui/util/UiDensity` owns preferred compact frames, card/row
+metrics and responsive bounds. `SettingRowLayout` measures active-font labels and
+control/value/track rectangles before row-height, paint and input walks. The
+shared setting adapters opt in only while Pack Tweaks is open and clear on close;
+all other details retain the legacy path. Main Aurora uses the 344×224 frame,
+80×52 grid, 32px list rows, white supplied brand mark and explicit Configure
+chevrons. Pack Tweaks uses a stationary frame ≤344×300 with 12px viewport margins.
+Labels remain **left-aligned with the previous 12px inset**, per user correction;
+section headings stay uppercase. Native font size, unified materials, blur, focus,
+CSS easing and ROUND/SQUARE policy remain unchanged. No gameplay/config-schema
+changes: Pack Tweaks still has its existing nine controls, OR/set-all bundle
+semantics and reset prefixes. See `COMPACT_UI_PILOT.md` for exact metrics, tests,
+runtime evidence, deferred issues and visual-review gate. UX-4–7 remain deferred.

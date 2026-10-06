@@ -741,3 +741,19 @@ primary actions retain a legibility floor while remaining translucent. Data/stat
 colors and explicit player overrides retain meaning; HUD backing remains neutral.
 
 The preceding rollout inventory is historical where this follow-up changes ownership, appearance choices, headings, motion or typography. See UNIFIED_THEME_PILOT.md and the external card-refinement evidence.
+
+## Compact pilot audit addendum — 2026-10-06
+
+The UX-0–3 visual pilot adds a density owner and pre-paint measured rows, a smaller
+main frame, supplied branding and explicit hosted Configure chevrons, plus a
+Pack Tweaks-only compact detail path. The old 180px scroll/194px paint mismatch
+is removed from AuroraScreen: both now use its measured content ClipBand.
+Enum popup height reservation is removed only on the compact path; popup paint
+and input remain above the underlying rows. Label alignment retains the prior
+left-aligned 12px inset after user feedback. New deterministic geometry tests
+cover frame bounds/capacity, wrapping, track eligibility, target edges and
+no-popup-reservation geometry; existing semantic/sound/material tests remain.
+The source inventory gains a separate Configure action per eligible module;
+existing tile toggles and Settings controls keep their behavior. No new feature,
+master gate, migration, shader/material redesign or broad detail rollout landed.
+Review scope, runtime evidence and deferred behavior defects: COMPACT_UI_PILOT.md.

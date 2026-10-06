@@ -1139,3 +1139,20 @@ interaction contract can deliver them consistently and user control is clear.
 
 Explore refraction/distortion only through the dedicated process in §7.2, after the existing
 material system is coherent. It is not part of the v3 baseline.
+
+## Compact pilot addendum — 2026-10-06
+
+Keep the approved unified theme and native text size. Compactness is geometry,
+not a new palette, pose scale, blur recipe or animation. The main window is
+344×224; sidebar peers are 56×24 at 28px pitch, grid cards 80×52 with 6px gaps,
+list cards 32px high with 4px gaps. Pack Tweaks alone pilots the compact detail
+frame. Simple rows are 24px, inline sliders 28px, stacked/wrapped rows >=36px.
+Settings labels and uppercase section captions stay left-aligned at the previous
+12px inset, per user feedback during the pilot. Values remain separate from labels.
+The supplied mark is a white, untinted 256px derivative, shown at 28px in main
+and 24px in Pack Tweaks; main omits the wordmark at constrained width before
+search/actions. No extra glow or blur is added. Configure chevrons are explicit
+24px targets, using existing action focus/narration/sound semantics. Delayed
+description help remains 1500ms dwell/200ms fade; F1 help is deferred.
+User visual acceptance remains open; this pilot does not authorize wider rollout
+or Pack Tweaks behavioral expansion. See COMPACT_UI_PILOT.md.

@@ -2696,3 +2696,26 @@ telemetry and arbitrary server metadata are excluded. Launcher must independentl
 and sanitize before Discord, with world/name/address opt-ins default off. The separate
 Python development receiver is test tooling outside the runtime artifact; actual launcher
 receiver/privacy UI remains unimplemented in this repository.
+
+## Compact density and measured row pilot — 2026-10-06
+
+`UiDensity` is independent of the theme-token engine. Its integer GUI-pixel
+rectangles bound the main frame to 344×224 (8px viewport margins) and Pack Tweaks
+to 344×300 (12px margins). At main widths <320, navigation moves to a horizontal
+band; grid columns derive from content width (1–3). `AuroraScreen` caches the
+content ClipBand at init/resize, reuses card-bound arrays, and computes scrolling
+from the same painted height and an extent without trailing gap. Configure uses
+one stable, hosted IconAction per eligible card with a 24px hit box and 16px
+bundled chevron; it opens detail independently of the card toggle.
+
+`FeatureSetting.measureCompact` caches immutable `SettingRowLayout` by width,
+active font, renderer and theme generation. Boolean, Slider, Enum, Keybind, Color
+and Button share its label/control/value geometry; labels retain left alignment
+and a 12px inset. Only Pack Tweaks opts in. Inline sliders require >=120px usable
+track and a single-line measured label; otherwise they stack at >=36px. Knob
+clearance is included in allocation. Enum expansion floats above all normal rows,
+resolves against the body ClipBand and reserves no compact row height. Compact
+popup input has priority over underlying rows. Color expansion preserves the
+existing editor and adds its existing body height to the measured collapsed row.
+Other detail screens and complex editors retain their legacy layout. The scoped
+measurement clears during teardown. Details and acceptance gate: COMPACT_UI_PILOT.md.
