@@ -552,7 +552,7 @@ public final class GlassSurface {
         // WINDOW is the parent owner; embedded controls never sample this backdrop.
         boolean drew = unified
                 ? BlurPanelRenderer.renderUnifiedPanel(g,x,y,w,h,radius,
-                    BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX,UNIFIED_LIGHTING,priority)
+                    28f*Math.max(1,(int)Minecraft.getInstance().getWindow().getGuiScale()),UNIFIED_LIGHTING,priority)
                 : BlurPanelRenderer.renderPanel(g,x,y,w,h,radius,
                     BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX,lighting,priority);
         if (!drew) {

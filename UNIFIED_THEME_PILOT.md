@@ -42,8 +42,8 @@ Dark ordinary surfaces and status colors are independent of accent. The stored b
 remains the user's identity color; OnePlus Red (`#eb0029`) remains the factory choice.
 Strong action, action hover/pressed, on-action, soft selection, marker and outline
 are separate roles. Primary actions are solid and stronger; selected modules and
-navigation use a translucent base wash plus a small leading marker, without a bright
-full perimeter. Keyboard focus has a separate geometry-following outline. Its outside radius
+navigation use a translucent base wash plus a soft accent halo, without left selection
+bars or a bright full perimeter. Keyboard focus has a separate geometry-following outline. Its outside radius
 stays exactly zero in Square, while circular/mechanical switch and slider geometry
 retains the existing exception.
 
@@ -74,13 +74,24 @@ its mock toggle in the live overlay; it remains non-interactive.
 
 The parent window alone captures and blurs the valid world or explicitly declared
 menu panorama. It uses the shared renderer with zero decorative edge/gradient
-lighting; its neutral face, opacity and thin boundary are painted once by the
+lighting; its neutral face, density and thin boundary are painted once by the
 existing cached overlay. This makes successful and declined capture use the same
 tint placement, instead of dimming only the successful face. The pre-dim capture,
 scissor tracking, overlay dim, screenshot interlock, pool priorities, capacity guards,
-thread rules and GL restoration remain shared. No distortion was added. The existing
-24-device-pixel blur and opacity coupling are retained as Client adaptations, not a
-literal claim that device pixels equal Launcher CSS pixels.
+thread rules and GL restoration remain shared. The 2026-10-06 user review refinement
+adopts Launcher's Borealis diffusion: **28 logical pixels of requested blur**, capped
+at the existing 64-device-pixel renderer limit, **saturation 135% and brightness 92%**.
+The existing opacity/frost curve still controls diffusion strength. The source's
+distorted appearance comes from these backdrop filters; it has no lens/UV warp.
+Compatibility draws explicitly reset filter uniforms to (1,1).
+
+The pilot's one window fill application point maps the resolved saved alpha to
+`round(alpha * .68)`. At 100% saved opacity the maximum tint is 173/255, exposing
+the diffuse backdrop instead of hiding it under an opaque face. At 0% it remains 0.
+This is a material-density adaptation, not a saved-value/default change or a second
+GPU opacity multiplier. The settings description explains the pilot behavior;
+comparison screens retain their exact original opacity mapping. Light retains
+its existing neutral RGB companion under the same material-density mapping.
 
 Embedded cards, buttons, segments, fields and preview panels never request another
 capture or glossy rim. At rest and settled hover, selected/neutral surfaces use a
@@ -95,7 +106,20 @@ Floating description tooltips use an independently opaque raised face, stronger
 neutral edge and a restrained shadow. Their face/edge/shadow rasterize once and fade
 by texture alpha, including during the existing 200 ms fade. They do not sample the
 window again or inherit its opacity. Button shadows are also cached and retained
-through press/hover. No per-component framebuffer blur was introduced for shadows.
+through press/hover. Selected peers and enabled cards gain a restrained accent halo;
+primary actions gain a slightly stronger halo. The falloff is rasterized once into
+the existing size/role/theme cache, then blitted throughout hover/press. It follows
+custom accents, has no animation/pulse, and adds no child capture or per-frame
+shadow rasterization. Left selection bars were removed from both settled and live
+transition paths at the user's request. No per-component framebuffer blur was
+introduced for shadows.
+
+Settled button face, edge, elevation and primary halo share one template/blit;
+only an active hover/press transition separates the cached elevation from its
+live face. Renderer texture binds/deletes use vanilla's `GlStateManager` cache,
+including around the managed output upload. The saved state now snapshots unit
+zero's texture/sampler independently and restores the original active texture
+unit, rather than assuming unit zero was active on entry.
 
 The pilot calls the same renderer through a narrow entry point that bypasses only
 the retained legacy style-choice guard. All automatic decline paths remain valid.
@@ -134,14 +158,22 @@ commit throttles remain owned by their original semantic/native paths.
 Deterministic tests cover neutral/status independence, all three action contrasts,
 dark/bright/saturated/neutral/red/violet/cyan/amber accents, a 4,096-color RGB lattice
 in both modes, exact easing endpoints/samples/monotonicity/retargeting, profile/config
-migration preservation and the scoped material/capture/safety boundary. The final full suite reports **393 tests, 0 failures, 0 errors, 0 skipped**;
+migration preservation and the scoped material/capture/safety boundary, including
+pilot density versus unchanged saved/legacy opacity and explicit filter reset.
+The final full suite reports **394 tests, 0 failures, 0 errors, 0 skipped**;
 `gradlew.bat --no-daemon test build` succeeds. Existing
 renderer reliability and semantic interaction tests remain in the full suite.
 
 Local `runClient` probes reach the production hosts from a normal client startup and
 capture Dark Round, Dark Square, Light, Violet, a dark accent at 45% opacity with
 Wireframe stored, primary hover, independent focus and the actual description
-tooltip. Vanilla screenshots exercise automatic suppression and its usable fallback.
+tooltip. Vanilla screenshots exercise automatic suppression and material fallback.
+Review refinement captures exposed intermittent missing glyphs in automated
+screenshot/fallback frames, including with accent glow disabled. Texture-state
+restoration was corrected, but that did not eliminate this capture defect. The
+fallback visual check remains unresolved; this revision needs correction before
+acceptance or broader rollout. Normal settled captures are available for reviewing
+the requested blur, glow and selection treatment.
 The probes are developer-local and excluded from the final artifact. No world was
 joined; world-backdrop visual acceptance and physical-input feel remain user checks.
 

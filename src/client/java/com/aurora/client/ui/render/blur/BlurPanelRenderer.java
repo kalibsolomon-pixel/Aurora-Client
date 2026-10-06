@@ -5,6 +5,7 @@ import com.aurora.client.theme.GlassStyle;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.ui.util.RenderUtil;
 import com.mojang.blaze3d.opengl.GlTexture;
+import com.mojang.blaze3d.opengl.GlStateManager;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.textures.GpuTexture;
@@ -44,6 +45,8 @@ import java.util.concurrent.atomic.AtomicLong;
  *       math against one fixed top-slightly-right light. Raised and
  *       depressed treatments are simple inversions of the same two
  *       terms.</li>
+ *   <li><b>Unified parent filter</b> — Launcher Borealis saturation 135%
+ *       and brightness 92% after blur; compatibility draws use identity.</li>
  * </ol>
  *
  * <p><b>Explicitly out of scope, by decision:</b> SDF-normal-based
@@ -65,8 +68,10 @@ import java.util.concurrent.atomic.AtomicLong;
  * This renderer applies <b>no</b> opacity of its own. The theme's
  * Background Opacity is applied exactly once, in the {@code WINDOW_FILL}
  * token's alpha (resolved in {@code ThemeResolver}), which the caller's
- * translucent panel fill uses when tinting on top of this blur. Do NOT
- * multiply any opacity factor into this pipeline — a second application
+ * translucent panel fill uses when tinting on top of this blur.
+ * The unified pilot maps that fill alpha to maximum 68% material density
+ * at the caller's same single fill point; saved and legacy alpha are unchanged.
+ * Do NOT multiply any opacity factor into this pipeline — a second application
  * point here is precisely the bug class that broke the previous attempt.
  *
  * <p>The rim highlight is a TWO-HALF system driven by the one Background
@@ -436,7 +441,7 @@ public final class BlurPanelRenderer {
 
     // ---- uniform locations ----
     private static int uBlurInput, uBlurDir, uBlurTexel, uBlurScale, uBlurSigma;
-    private static int uCompInput, uCompUvRect, uCompHalfSize, uCompRadius;
+    private static int uCompInput, uCompUvRect, uCompHalfSize, uCompRadius, uBackdropFilter;
     private static int uLight, uEdgeWidth, uEdgeStrength, uGradStrength, uDepressed, uRimBlend;
 
     private static String lastOutcome = "not run";
@@ -1036,7 +1041,7 @@ public final class BlurPanelRenderer {
             int panH = y1 - y0;
 
             Frame frame = new Frame(main, x0, y0, regX, regY, regW, regH,
-                    cw, ch, panW, panH, scale, radius, cornerRadiusGui, lighting, priority, captureSource);
+                    cw, ch, panW, panH, scale, radius, cornerRadiusGui, lighting, priority, captureSource, unified);
             return frame.run(g, guiX, guiY, guiW, guiH);
         } catch (Declined d) {
             // Declines escaping Frame.run before its own catch (e.g. pool
@@ -1076,6 +1081,8 @@ public final class BlurPanelRenderer {
         final Priority priority;
         /** Synthetic capture source (test harness), or null for live capture. */
         final CaptureSource capture;
+        /** Launcher Borealis diffusion only for the opted-in pilot parent. */
+        final boolean unified;
         /** Pooled output texture for this call — one per concurrent panel per frame. */
         PanelOutput out;
         /** Game's draw target at entry — snapshotted BEFORE any of our GL binds. */
@@ -1084,7 +1091,7 @@ public final class BlurPanelRenderer {
         Frame(RenderTarget main, int x0, int y0, int regX, int regY,
               int regW, int regH, int cw, int ch, int panW, int panH,
               int scale, float radius, float cornerRadiusGui, Lighting lighting,
-              Priority priority, CaptureSource capture) {
+              Priority priority, CaptureSource capture, boolean unified) {
             this.main = main; this.x0 = x0; this.y0 = y0;
             this.regX = regX; this.regY = regY;
             this.regW = regW; this.regH = regH;
@@ -1095,6 +1102,7 @@ public final class BlurPanelRenderer {
             this.lighting = lighting;
             this.priority = priority;
             this.capture = capture;
+            this.unified = unified;
         }
 
         boolean run(GuiGraphics g, float guiX, float guiY, float guiW, float guiH) {
@@ -1162,6 +1170,9 @@ public final class BlurPanelRenderer {
                 drainGlErrors();
                 final boolean perf = GlassStats.ENABLED;
                 long t = perf ? System.nanoTime() : 0L;
+                // Keep vanilla's binding cache in sync with our raw-GL passes
+                // and the managed DynamicTexture upload that follows them.
+                GlStateManager._activeTexture(GL13.GL_TEXTURE0);
                 ensureChainTextures(cw, ch);
                 ensureCompositeTarget(panW, panH);
                 if (perf) { GlassStats.otherNs += System.nanoTime() - t; t = System.nanoTime(); }
@@ -1398,9 +1409,12 @@ public final class BlurPanelRenderer {
             GL11.glViewport(0, 0, panW, panH);
             prepareFullscreenDraw();
             GL20.glUseProgram(compositeProgram);
-            GL13.glActiveTexture(GL13.GL_TEXTURE0);
-            GL11.glBindTexture(GL11.GL_TEXTURE_2D, blurTex[0]);
+            GlStateManager._activeTexture(GL13.GL_TEXTURE0);
+            GlStateManager._bindTexture(blurTex[0]);
             GL20.glUniform1i(uCompInput, 0);
+            // CSS filter order: blur, saturate(135%), brightness(.92).
+            // Explicit legacy identity each draw prevents cross-host leakage.
+            GL20.glUniform2f(uBackdropFilter, unified ? 1.35f : 1f, unified ? .92f : 1f);
             // Normalize the panel's sub-rect by the chain texture's ACTUAL
             // size (chainW/chainH), not this panel's logical cw/ch — the
             // textures are grow-only and shared, so cw/ch are sub-rect
@@ -1503,7 +1517,7 @@ public final class BlurPanelRenderer {
         deleteChain();
         if (worldReaderFbo != 0) { GL30.glDeleteFramebuffers(worldReaderFbo); worldReaderFbo = 0; }
         if (compositeFbo != 0) { GL30.glDeleteFramebuffers(compositeFbo); compositeFbo = 0; }
-        if (compositeTex != 0) { GL11.glDeleteTextures(compositeTex); compositeTex = 0; }
+        if (compositeTex != 0) { GlStateManager._deleteTexture(compositeTex); compositeTex = 0; }
         if (blurProgram != 0) { GL20.glDeleteProgram(blurProgram); blurProgram = 0; }
         if (compositeProgram != 0) { GL20.glDeleteProgram(compositeProgram); compositeProgram = 0; }
         if (emptyVao != 0) { GL30.glDeleteVertexArrays(emptyVao); emptyVao = 0; }
@@ -1527,6 +1541,7 @@ public final class BlurPanelRenderer {
             uBlurScale = GL20.glGetUniformLocation(blurProgram, "uScale");
             uBlurSigma = GL20.glGetUniformLocation(blurProgram, "uSigma");
             uCompInput = GL20.glGetUniformLocation(compositeProgram, "uInput");
+            uBackdropFilter = GL20.glGetUniformLocation(compositeProgram, "uBackdropFilter");
             uCompUvRect = GL20.glGetUniformLocation(compositeProgram, "uUvRect");
             uCompHalfSize = GL20.glGetUniformLocation(compositeProgram, "uHalfSize");
             uCompRadius = GL20.glGetUniformLocation(compositeProgram, "uRadius");
@@ -1577,8 +1592,8 @@ public final class BlurPanelRenderer {
         if (w <= chainW && h <= chainH && blurFbo[0] != 0) return;
         deleteChain();
         for (int i = 0; i < 2; i++) {
-            blurTex[i] = GL11.glGenTextures();
-            GL11.glBindTexture(GL11.GL_TEXTURE_2D, blurTex[i]);
+            blurTex[i] = GlStateManager._genTexture();
+            GlStateManager._bindTexture(blurTex[i]);
             GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA8, w, h, 0,
                     GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, (ByteBuffer) null);
             GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR);
@@ -1597,10 +1612,10 @@ public final class BlurPanelRenderer {
     private static void deleteChain() {
         for (int i = 0; i < 2; i++) {
             if (blurFbo[i] != 0) { GL30.glDeleteFramebuffers(blurFbo[i]); blurFbo[i] = 0; }
-            if (blurTex[i] != 0) { GL11.glDeleteTextures(blurTex[i]); blurTex[i] = 0; }
+            if (blurTex[i] != 0) { GlStateManager._deleteTexture(blurTex[i]); blurTex[i] = 0; }
         }
         if (halfFbo != 0) { GL30.glDeleteFramebuffers(halfFbo); halfFbo = 0; }
-        if (halfTex != 0) { GL11.glDeleteTextures(halfTex); halfTex = 0; }
+        if (halfTex != 0) { GlStateManager._deleteTexture(halfTex); halfTex = 0; }
         halfW = 0;
         halfH = 0;
         chainW = 0;
@@ -1617,9 +1632,9 @@ public final class BlurPanelRenderer {
     private static void ensureHalfTarget(int w, int h) {
         if (w <= halfW && h <= halfH && halfFbo != 0) return;
         if (halfFbo != 0) GL30.glDeleteFramebuffers(halfFbo);
-        if (halfTex != 0) GL11.glDeleteTextures(halfTex);
-        halfTex = GL11.glGenTextures();
-        GL11.glBindTexture(GL11.GL_TEXTURE_2D, halfTex);
+        if (halfTex != 0) GlStateManager._deleteTexture(halfTex);
+        halfTex = GlStateManager._genTexture();
+        GlStateManager._bindTexture(halfTex);
         GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA8, w, h, 0,
                 GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, (ByteBuffer) null);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR);
@@ -1640,9 +1655,9 @@ public final class BlurPanelRenderer {
         // reallocation churn.
         if (w <= outW && h <= outH && compositeFbo != 0) return;
         if (compositeFbo != 0) GL30.glDeleteFramebuffers(compositeFbo);
-        if (compositeTex != 0) GL11.glDeleteTextures(compositeTex);
-        compositeTex = GL11.glGenTextures();
-        GL11.glBindTexture(GL11.GL_TEXTURE_2D, compositeTex);
+        if (compositeTex != 0) GlStateManager._deleteTexture(compositeTex);
+        compositeTex = GlStateManager._genTexture();
+        GlStateManager._bindTexture(compositeTex);
         GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA8, w, h, 0,
                 GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, (ByteBuffer) null);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR);
@@ -1661,8 +1676,8 @@ public final class BlurPanelRenderer {
         GL11.glViewport(0, 0, w, h);
         prepareFullscreenDraw();
         GL20.glUseProgram(blurProgram);
-        GL13.glActiveTexture(GL13.GL_TEXTURE0);
-        GL11.glBindTexture(GL11.GL_TEXTURE_2D, inputTex);
+        GlStateManager._activeTexture(GL13.GL_TEXTURE0);
+        GlStateManager._bindTexture(inputTex);
         GL20.glUniform1i(uBlurInput, 0);
         GL20.glUniform2f(uBlurDir, dirX, dirY);
         // Sub-rect contract (see BLUR_FS): texel = one REAL texture texel;
@@ -1954,8 +1969,9 @@ public final class BlurPanelRenderer {
      * convention you MUST change the upload/blit side to match; they are
      * documented as a pair.
      *
-     * <p>No tint, no opacity, and nothing beyond the two declared lighting
-     * terms here — no SDF-normal reconstruction, no specular exponent, no
+     * <p>No tint or opacity. The unified parent additionally uses Launcher's
+     * saturation/brightness filter; compatibility uses identity values. No
+     * SDF-normal reconstruction, no specular exponent, no
      * refraction/distortion. The tint (carrying the theme's Background
      * Opacity at its ONE application point) is drawn by the caller as a
      * separate translucent fill on top of this texture.
@@ -1965,6 +1981,7 @@ public final class BlurPanelRenderer {
             in vec2 vUv;
             out vec4 fragColor;
             uniform sampler2D uInput;
+            uniform vec2 uBackdropFilter; // saturation, brightness; (1,1) for compatibility
             uniform vec4 uUvRect;   // panel's sub-rect in chain UV space
             uniform vec2 uHalfSize; // panel half-size in device pixels
             uniform float uRadius;  // corner radius in device pixels
@@ -1979,6 +1996,9 @@ public final class BlurPanelRenderer {
             void main() {
                 vec2 uv = mix(uUvRect.xy, uUvRect.zw, vUv);
                 vec3 blurred = texture(uInput, uv).rgb;
+                float luma = dot(blurred, vec3(0.213, 0.715, 0.072));
+                blurred = clamp(mix(vec3(luma), blurred, uBackdropFilter.x), 0.0, 1.0);
+                blurred *= uBackdropFilter.y;
                 vec2 p = (vUv - 0.5) * 2.0 * uHalfSize;       // device px from center
                 vec2 q = abs(p) - (uHalfSize - uRadius);
                 float d = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - uRadius;
@@ -2071,6 +2091,7 @@ public final class BlurPanelRenderer {
         private static final java.util.ArrayDeque<SavedGlState> POOL = new java.util.ArrayDeque<>();
         int program;
         int texture;
+        int activeTexture;
         int readFbo;
         int drawFbo;
         int vao;
@@ -2086,7 +2107,13 @@ public final class BlurPanelRenderer {
 
         private void capture() {
             program = GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM);
+            activeTexture = GL11.glGetInteger(GL13.GL_ACTIVE_TEXTURE);
+            // The composite uses unit zero. Snapshot that unit's bindings,
+            // even when vanilla left another unit active at entry.
+            GL13.glActiveTexture(GL13.GL_TEXTURE0);
             texture = GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D);
+            sampler0 = GL11.glGetInteger(GL33.GL_SAMPLER_BINDING);
+            GL13.glActiveTexture(activeTexture);
             readFbo = GL11.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING);
             drawFbo = GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING);
             vao = GL11.glGetInteger(GL30.GL_VERTEX_ARRAY_BINDING);
@@ -2097,7 +2124,6 @@ public final class BlurPanelRenderer {
             depthTest = GL11.glGetBoolean(GL11.GL_DEPTH_TEST);
             cullFace = GL11.glGetBoolean(GL11.GL_CULL_FACE);
             scissorTest = GL11.glGetBoolean(GL11.GL_SCISSOR_TEST);
-            sampler0 = GL11.glGetInteger(GL33.GL_SAMPLER_BINDING);
         }
 
         static SavedGlState save() {
@@ -2109,14 +2135,15 @@ public final class BlurPanelRenderer {
 
         void restore() {
             GL20.glUseProgram(program);
-            GL13.glActiveTexture(GL13.GL_TEXTURE0);
-            GL11.glBindTexture(GL11.GL_TEXTURE_2D, texture);
+            GlStateManager._activeTexture(GL13.GL_TEXTURE0);
+            GlStateManager._bindTexture(texture);
             GL30.glBindVertexArray(vao);
             if (blend) GL11.glEnable(GL11.GL_BLEND); else GL11.glDisable(GL11.GL_BLEND);
             if (depthTest) GL11.glEnable(GL11.GL_DEPTH_TEST); else GL11.glDisable(GL11.GL_DEPTH_TEST);
             if (cullFace) GL11.glEnable(GL11.GL_CULL_FACE); else GL11.glDisable(GL11.GL_CULL_FACE);
             if (scissorTest) GL11.glEnable(GL11.GL_SCISSOR_TEST); else GL11.glDisable(GL11.GL_SCISSOR_TEST);
             GL33.glBindSampler(0, sampler0);
+            GlStateManager._activeTexture(activeTexture);
             GL11.glColorMask(colorMask.get(0) != 0, colorMask.get(1) != 0,
                     colorMask.get(2) != 0, colorMask.get(3) != 0);
             GL30.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, readFbo);

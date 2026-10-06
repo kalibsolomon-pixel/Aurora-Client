@@ -90,6 +90,19 @@ success/decline, while embedded controls never capture. Light uses Client
 compatibility colors. See [UNIFIED_THEME_PILOT.md](UNIFIED_THEME_PILOT.md) for exact
 roles, motion, ownership, measured work and the pending visual-review gate.
 
+The 2026-10-06 review refinement removes selection bars and caches soft accent
+halos on selected peers/primary actions. The unified parent passes saturation 1.35
+and brightness .92 to the shared compositor; every compatibility draw explicitly
+resets those uniforms to identity (1,1). Blur requests 28 logical pixels with the
+existing 64-device-pixel cap and frost curve. Only the pilot's window fill maps the
+saved alpha to `round(alpha * .68)`, once, so its diffuse backdrop remains visible
+at maximum density. Stored preferences and legacy resolved alpha are unchanged.
+Raw blur texture operations now use `GlStateManager` generation/bind/delete calls
+so its cache agrees with actual GL during managed output uploads. Saved state
+captures unit zero's texture/sampler separately and restores the entry active unit.
+The runtime sentinel probe checks nonzero-unit entry and subsequent managed binds.
+Automated screenshot fallback glyph loss remains an unresolved visual check.
+
 ```
 AuroraConfig.theme (ThemeDefinition)
    │  ThemeFeature.onTick → ThemeManager.sync()   6-field dirty-check per tick

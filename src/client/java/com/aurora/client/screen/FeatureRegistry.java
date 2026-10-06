@@ -1178,7 +1178,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                     com.aurora.client.theme.ThemeManager.reload();
                                     persistThemeChange();
                                 })
-                                .description("How transparent Aurora's panel backgrounds are. 100% is fully opaque; lower values let the world behind show through. Only transparency changes — the colors stay derived from your accent. Drag updates the look live; the change is saved when you release."),
+                                .description("How dense Aurora's panel backgrounds are. The unified pilot keeps a frosted backdrop visible at 100%; lower values make it clearer. Other screens keep their existing opacity behavior. Drag previews the change live; release saves it."),
                         new ThemePreviewSetting("Live Preview")
                                 .description("A live mock-up using the exact colors and corner style the UI will use — changes apply here instantly, before you leave this screen.")
                 ));

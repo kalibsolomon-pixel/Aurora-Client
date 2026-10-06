@@ -63,7 +63,13 @@ public final class MaterialSurface {
         };
         int result = ThemeManager.color(role);
         return token == ThemeToken.WINDOW_FILL
-                ? ThemeManager.withAlpha(result, ThemeManager.color(ThemeToken.WINDOW_FILL) >>> 24) : result;
+                ? ThemeManager.withAlpha(result, windowFillAlpha(ThemeManager.color(ThemeToken.WINDOW_FILL) >>> 24)) : result;
+    }
+
+    /** Single window-tint application point. Maximum density retains the
+     * Launcher-like diffuse backdrop; the stored opacity is never rewritten. */
+    public static int windowFillAlpha(int opacityAlpha) {
+        return Math.round(Math.max(0,Math.min(255,opacityAlpha)) * .68f);
     }
 
     /** Outside focus follows the corner family: Square must remain exactly square. */
@@ -76,6 +82,7 @@ public final class MaterialSurface {
     /** Same role geometry and backing for success/decline. Child roles never sample. */
     public static void selection(GuiGraphics g, float x, float y, float w, float h,
                                  float radius, boolean selected, float hover) {
+        if(selected) selectionGlow(g,x,y,w,h,radius);
         int neutral = AuroraAnim.lerpArgb(color(ThemeToken.SURFACE_VARIANT),
                 ThemeManager.color(ThemeToken.MATERIAL_HOVER), hover);
         if (hover == 0 || hover == 1) {
@@ -85,9 +92,13 @@ public final class MaterialSurface {
         RenderUtil.drawRoundedRectAA(g,x,y,w,h,radius,neutral);
         if (selected) {
             RenderUtil.drawRoundedRectAA(g,x,y,w,h,radius,selectedFill());
-            // Compact leading marker carries persistent state, no full perimeter.
-            RenderUtil.drawRoundedRectAA(g,x+2,y+(h-Math.min(16,Math.max(2,h-10)))/2,2,Math.min(16,Math.max(2,h-10)),0,color(ThemeToken.ACCENT));
         }
+    }
+
+    /** Stable accent shadow for selected peers.
+     * Only the cache rasterizes the falloff; this path is one textured draw. */
+    private static void selectionGlow(GuiGraphics g,float x,float y,float w,float h,float radius) {
+        cached(g,x,y,w,h,radius,0,0,90,false);
     }
 
     // Primitive packed geometry key: no record/boxing/lambda allocation per control per frame.
@@ -110,7 +121,9 @@ public final class MaterialSurface {
                                int fill,int border,int kind,boolean shadow,float opacity) {
         var mc=Minecraft.getInstance();
         int scale=Math.max(1,(int)mc.getWindow().getGuiScale());
-        int pad=shadow ? 10 : 2;
+        boolean primaryHalo=kind==81 || (shadow && (kind==20 || kind==21));
+        boolean accentHalo=primaryHalo || kind==90;
+        int pad=accentHalo ? 14 : shadow ? 10 : 2;
         int width=Math.round(w), height=Math.round(h), round=Math.round(radius);
         long key=((long)width<<48) | ((long)height<<32) | ((long)round<<16) | ((long)kind<<1) | (shadow ? 1 : 0);
         var cache=TEMPLATES.get(key);
@@ -120,12 +133,20 @@ public final class MaterialSurface {
             cache.ensureSize((width+pad*2)*scale,(height+pad*2)*scale); cache.clear();
             var previous=RenderUtil.beginCapture(cache.sink());
             try {
+                if(accentHalo) {
+                    int rgb=ThemeManager.color(primaryHalo ? ThemeToken.ACTION_STRONG : ThemeToken.ACCENT_MARKER)&0xffffff;
+                    int offset=primaryHalo ? 3 : 2;
+                    for(int spread=9;spread>=1;spread--) {
+                        int alpha=Math.round((primaryHalo ? 12 : 8)*(float)Math.exp(-spread*spread/32d));
+                        RenderUtil.drawRoundedRectAA(g,pad-spread,pad+offset-spread,
+                                w+spread*2,h+spread*2,outsetRadius(radius,spread),(alpha<<24)|rgb);
+                    }
+                }
                 if(shadow) AuroraShapes.dropShadow(g,pad,pad+3,width,height,round,.25f);
                 if(fill!=0) RenderUtil.drawRoundedRectAA(g,pad,pad,w,h,radius,fill);
                 if(border!=0) RenderUtil.drawRoundedOutlineAA(g,pad,pad,w,h,radius,1,border);
                 if(kind==2 || kind==102) {
                     RenderUtil.drawRoundedRectAA(g,pad,pad,w,h,radius,selectedFill());
-                    RenderUtil.drawRoundedRectAA(g,pad+2,pad+(h-Math.min(16,Math.max(2,h-10)))/2,2,Math.min(16,Math.max(2,h-10)),0,color(ThemeToken.ACCENT));
                 }
             } finally { RenderUtil.endCapture(previous); }
             cache.commit(version);

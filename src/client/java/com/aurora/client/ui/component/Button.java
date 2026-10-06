@@ -104,10 +104,10 @@ public class Button extends Widget {
         if(disabled) { fill=AuroraAnim.lerpArgb(fill,ThemeManager.color(ThemeToken.MATERIAL_PANEL),.65f);text=MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED); }
         float py=y+press; // one logical pixel; bounds and semantic geometry stay unchanged
         int kind=(destructive ? 30 : primary ? 20 : 10)+(disabled ? 4 : hover==1 ? 1 : 0);
-        MaterialSurface.cached(g,x,py,w,h,r,0,0,80,true);
         if((hover==0 || hover==1) && press==0)
-            MaterialSurface.cached(g,x,py,w,h,r,fill,edge,kind,false);
+            MaterialSurface.cached(g,x,py,w,h,r,fill,edge,kind,true);
         else {
+            MaterialSurface.cached(g,x,py,w,h,r,0,0,primary && !disabled && !destructive ? 81 : 80,true);
             RenderUtil.drawRoundedRectAA(g,x,py,w,h,r,fill);
             RenderUtil.drawRoundedOutlineAA(g,x,py,w,h,r,1,edge);
         }

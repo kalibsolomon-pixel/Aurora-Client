@@ -70,6 +70,27 @@ class UnifiedPilotContractTest {
         }
     }
 
+    @Test void pilotDensityExposesBackdropWithoutChangingSavedOrLegacyOpacity() {
+        int previous=-1;
+        for(int alpha=0;alpha<=255;alpha++) {
+            int density=com.aurora.client.ui.component.MaterialSurface.windowFillAlpha(alpha);
+            assertTrue(density>=previous);
+            assertTrue(density<=alpha);
+            previous=density;
+        }
+        assertEquals(0,com.aurora.client.ui.component.MaterialSurface.windowFillAlpha(0));
+        assertEquals(173,com.aurora.client.ui.component.MaterialSurface.windowFillAlpha(255));
+        for(ThemeMode mode:ThemeMode.values()) {
+            var original=ThemeDefinition.defaults(); original.mode=mode;
+            for(double opacity:new double[]{0,.37,1}) {
+                original.backgroundOpacity=opacity;
+                var resolved=ThemeResolver.resolve(original,true);
+                assertEquals(Math.round(opacity*255),resolved.color(ThemeToken.WINDOW_FILL)>>>24);
+                assertEquals(opacity,original.backgroundOpacity);
+            }
+        }
+    }
+
     @Test void rendererRetainsSafetyGuardsAndBypassesOnlyLegacyStyle() throws Exception {
         String renderer=read("ui/render/blur/BlurPanelRenderer.java");
         assertTrue(renderer.contains("if (!unified && captureSource == null && ThemeManager.current().glassStyle() == GlassStyle.TRANSPARENT)"));
@@ -77,5 +98,7 @@ class UnifiedPilotContractTest {
         for(String guard:new String[]{"permanentlyDisabled","suppressGlassUntilMs","menuBackdropValid()"})
             assertTrue(renderer.indexOf(guard,body)>body,guard);
         assertTrue(read("ui/component/GlassSurface.java").contains("new BlurPanelRenderer.Lighting(true,0,0)"));
+        assertTrue(renderer.contains("unified ? 1.35f : 1f, unified ? .92f : 1f"),
+                "filter state must explicitly reset for compatibility hosts");
     }
 }

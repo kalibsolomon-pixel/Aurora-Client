@@ -637,7 +637,7 @@ user accepts this visual direction.
 historical; its enabled-card isolated-glass exception is superseded only in
 `AuroraScreen` and Theme detail/preview. Those hosts use the Launcher-derived Dark
 neutral hierarchy, distinct strong action/soft selection roles, parent-owned capture,
-cached neutral child faces, compact markers, independent focus, and cached opaque
+cached neutral child faces, soft accent halos, independent focus, and cached opaque
 floating tooltip backing. Legacy facade colors and comparison screens remain.
 
 The persisted Frosted/TRANSPARENT choices, custom accent, OnePlus default, mode,
@@ -649,3 +649,15 @@ remain; scoped menu probes measured fewer captures and AA submissions and exerci
 screenshot suppression. See [UNIFIED_THEME_PILOT.md](UNIFIED_THEME_PILOT.md) for the
 exact recipes, adaptations, evidence limits and user checklist. Do not infer
 production acceptance or remove legacy style taxonomy from this addendum.
+
+User review on 2026-10-06 requested removal of left selection bars and Launcher
+backdrop diffusion/accent glow. The pilot now requests 28 logical px blur (bounded
+by the existing 64-device-px cap), saturation 135%, brightness 92%, and maps its
+single window tint alpha to at most 68% density. This exposes blur at the default
+saved opacity without rewriting it; legacy opacity remains unchanged. Selected
+peers and primary buttons use cached accent halos without child captures. This
+refinement still needs user visual acceptance.
+Automated screenshot fallback captures revealed intermittent missing glyphs,
+including with glow disabled. Corrected texture-cache/active-unit restoration is
+runtime verified, but the capture defect persists; the pilot needs correction
+before visual acceptance or broader rollout.

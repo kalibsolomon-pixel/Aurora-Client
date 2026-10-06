@@ -319,6 +319,19 @@ specified in [UNIFIED_THEME_PILOT.md](UNIFIED_THEME_PILOT.md). This supersedes t
 old material recipe only in those hosts. Frosted/Wireframe remain stored and active
 on comparison screens. **User visual review is pending; no production rollout.**
 
+**Review refinement (2026-10-06):** left selection bars were removed at the user's
+request. Selected peers keep soft fill and a cached accent halo; primary buttons
+gain a slightly stronger cached halo. The parent uses Launcher Borealis diffusion
+(28 logical px blur, bounded by the renderer's 64-device-px cap, saturation 1.35,
+brightness .92). Its single tint alpha maps the saved opacity to a maximum 68%
+density, so default settings expose the backdrop. This is a pilot-only material
+mapping at the existing fill application point, not a schema/default rewrite or a
+second opacity factor in the GPU pipeline. Comparison hosts retain exact opacity.
+The shared renderer also preserves the entry active texture unit and unit-zero
+bindings through vanilla's texture-state cache. Automated screenshot fallback
+captures still intermittently lose glyphs; acceptance and broader rollout remain
+blocked on that visual check (see UNIFIED_THEME_PILOT.md).
+
 **The one-sentence model:** the user picks ONE accent color (+ mode, roundness, opacity);
 `PaletteEngine` derives every UI color from it; tokens are read through a cached
 `ResolvedTheme`; legacy statics are a write-only-from-one-place facade.
