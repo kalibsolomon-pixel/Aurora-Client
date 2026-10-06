@@ -126,7 +126,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     private float BOX_W = com.aurora.client.ui.util.UiDensity.MAIN_WIDTH;
     private float BOX_H = com.aurora.client.ui.util.UiDensity.MAIN_HEIGHT;
 
-    // Sidebar nav tabs: one pitch drives every tab's Y (22px tab + 6px gap),
+    // Sidebar nav tabs: one pitch drives every tab's Y (24px tab + 4px gap),
     // so the three gaps cannot drift apart. TAB_H must stay in sync with the
     // painted chip height below.
     private static final float TAB_FIRST_Y = 40;
@@ -149,7 +149,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
      * distinct clusters — was a bare 8, only twice the row gap). The
      * render, scroll-height, and click walks must all use this.
      */
-    private static final int SETTINGS_ENTRY_GAP = 16;
+    private static final int SETTINGS_ENTRY_GAP = 20;
 
     private int selectedCategory = 0; // 0: Mods, 1: Settings
     private boolean gridLayout = AuroraConfig.get().moduleGridView; // false: list, true: grid
@@ -843,9 +843,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             GlassSurface.enableScissor(g, vp.x, vp.y, vp.xEnd(), vp.yEnd());
             float y = viewTop() - (float) scrolls[1].current();
             for (FeatureMetadata m : FeatureRegistry.settings()) {
-                int sectionH = 22 + (m.settingsDetailOnly ? SETTINGS_HINT_H
-                        : m.settings.stream().mapToInt(s -> s.height()+4).sum());
-                if(vp.intersects(mx,y,contentWidth(),sectionH)) GlassSurface.card(g,mx,y,contentWidth(),sectionH,ctrlRadius);
+                // Settings groups share the enclosing window; only their controls own surfaces.
                 y += 22; // header row — plain text + an opaque toggle, no glass
                 if (m.settingsDetailOnly) {
                     y += SETTINGS_HINT_H;
@@ -894,7 +892,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             // Raised glass was painted pre-dim: neutral for the inactive tab,
             // accent-stained for the selected tab. Preserve the established
             // flat fallback if the glass renderer declines this frame.
-            if(MaterialSurface.unified()) MaterialSurface.selection(g,bx+8,catY,64,22,ctrlRadius,sel,hoverT);
+            if(MaterialSurface.unified()) MaterialSurface.selection(g,catX,catY,56,TAB_H,ctrlRadius,sel,hoverT);
             else if (!chipGlass[i]) {
                 if (sel) {
                     RenderUtil.drawRoundedRectAA(g, catX, catY, 56, 24, ctrlRadius,
@@ -913,7 +911,8 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             g.drawString(tr, cats[i], (int) (catX + 8), (int) (catY + 7), txt, false);
             // Keyboard focus: the Button-family 1 px accent hairline — an
             // independent channel from both the selection tint and hover.
-            if (control != null && control.isFocused()) {
+            // A selected unified tab already owns the accent edge. Focus must not add a second rim.
+            if (control != null && control.isFocused() && (!MaterialSurface.unified() || !sel)) {
                 RenderUtil.drawRoundedOutlineAA(g, catX, catY, 56, 24, ctrlRadius, 1.0f,
                         ThemeManager.withAlpha(MaterialSurface.color(ThemeToken.ACCENT), 0x99));
             }
@@ -930,7 +929,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         }
         // Profiles is neutral raised glass; retain its hover fallback when
         // live glass is unavailable.
-        if(MaterialSurface.unified()) MaterialSurface.selection(g,bx+8,profY,64,22,ctrlRadius,false,profT);
+        if(MaterialSurface.unified()) MaterialSurface.selection(g,profX,profY,56,TAB_H,ctrlRadius,false,profT);
         else if (!profGlass && profT > 0f) {
             RenderUtil.drawRoundedRectAA(g, profX, profY, 56, 24, ctrlRadius,
                     AuroraAnim.lerpArgb(0x00000000,
@@ -1096,9 +1095,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         g.enableScissor(vp.x, vp.y, vp.xEnd(), vp.yEnd());
         float y = viewTop() - (float) scrolls[1].current();
         for (FeatureMetadata m : FeatureRegistry.settings()) {
-            int sectionH = 22 + (m.settingsDetailOnly ? SETTINGS_HINT_H
-                    : m.settings.stream().mapToInt(s -> s.height()+4).sum());
-            if(vp.intersects(mx,y,contentWidth(),sectionH)) MaterialSurface.parent(g,mx,y,contentWidth(),sectionH,ctrlRadius);
+            // Section headings and spacing provide grouping, without nested frames.
             int headerH = 22;
             if (vp.intersects(mx + 4, y, contentWidth() - 4, headerH)) {
                 // Header navigation (C-2b): the entries WITH a detail

@@ -1187,3 +1187,14 @@ roundness/motion, behavior and parent-only capture ownership remain unchanged.
 GUI scales 3/4 and a constrained window were reviewed; the 421-test build passed.
 See OWNER_MENU_GEOMETRY.md for exact geometry, files and fresh screenshots.
 This supersedes the previous menu dimensions; UX-4 and broader rollout remain deferred.
+
+## Settings group spacing and sidebar edges — 2026-10-06
+
+Separate logical settings groups with left-aligned headings and spacing, rather
+than framed section cards. AuroraScreen's Settings entries share a 20px gap
+across painting, scroll measurement and pointer handling; the enclosing window
+and functional controls retain their boundaries. Sidebar tabs and Profiles now
+paint within the same 56×24 bounds used for hit testing and focus. A selected
+unified tab owns its single accent edge; an unselected keyboard-focused tab
+still receives a visible focus outline. Live GUI-scale 3 review confirmed these
+changes and one parent glass capture per frame. The full 421-test build passed.
