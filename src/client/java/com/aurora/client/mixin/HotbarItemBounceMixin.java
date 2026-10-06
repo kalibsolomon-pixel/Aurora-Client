@@ -16,7 +16,7 @@ public abstract class HotbarItemBounceMixin {
 
     @Inject(method = "renderItemHotbar", at = @At("TAIL"), require = 1)
     private void aurora$drawBounceOverlay(GuiGraphics ctx, DeltaTracker tickCounter, CallbackInfo ci) {
-        if (!AuroraConfig.get().hotbarBounceEnabled) return;
+        if (!AuroraConfig.get().smoothAnimationsEnabled || !AuroraConfig.get().hotbarBounceEnabled) return;
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
         HotbarBounceTracker.tickAndRender(ctx, mc);

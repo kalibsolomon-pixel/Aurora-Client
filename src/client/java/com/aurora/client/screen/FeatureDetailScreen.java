@@ -70,7 +70,18 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
     private boolean compact() { return true; }
     private com.aurora.client.ui.util.UiDensity.Rect compactFrame;
     private void measureRows() {
-        if (compact()) for (FeatureSetting setting : meta.settings) setting.measureCompact(LIST_W);
+        if (compact()) for (FeatureSetting setting : meta.settings) {
+            if (setting.isVisible()) setting.measureCompact(LIST_W);
+            else {
+                for (SemanticActionControl control : setting.interactionControls()) {
+                    control.setAvailable(false);
+                    if (this.getFocused() == control) this.setFocused(null);
+                }
+                setting.onInteractionAvailabilityChanged(false);
+                if (FeatureSetting.getFocused() == setting) FeatureSetting.clearFocus();
+                if (activeDragSetting == setting) activeDragSetting = null;
+            }
+        }
     }
     private int bodyBottom() { return compact() ? compactFrame.y() + compactFrame.height() - 8 : Math.max(bodyTop() + 1, this.height - 30); }
     private int bodyHeight(FeatureSetting setting) { return setting.height() - (setting == fixedHeaderSetting ? setting.fixedHeaderHeight() : 0); }
@@ -126,6 +137,12 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         this.meta = meta;
     }
 
+    /** Features with a dedicated destination skip the generic settings wrapper. */
+    public static Screen destination(Screen parent, FeatureMetadata meta) {
+        return "resourcepack_browser".equals(meta.id)
+                ? new ResourcePackBrowserScreen(parent) : new FeatureDetailScreen(parent, meta);
+    }
+
     @Override
     protected void init() {
         if (compact()) {
@@ -146,7 +163,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
                 Component.literal("Done"),
                 "Close this screen and return.",
                 this::onClose).glassBackground(true);
-        this.doneBtn.primary(unifiedTheme());
+        // Closing is neutral chrome, matching Reset and the other screens' Done buttons.
         this.addRenderableWidget(this.doneBtn);
 
         // Reset-to-defaults button immediately to the left of Done. Persists
@@ -229,6 +246,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         measureRows();
         fixedHeaderSetting = null;
         for (FeatureSetting setting : meta.settings) {
+            if (!setting.isVisible()) continue;
             boolean pin = fixedHeaderSetting == null && setting.fixedHeaderHeight() > 0;
             setting.pinHeader(pin);
             if (pin) fixedHeaderSetting = setting;
@@ -237,7 +255,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         FeatureSetting.setHostBand(new com.aurora.client.ui.util.ClipBand(
                 listX + 8, bodyTop(), LIST_W - 16, bodyBottom() - bodyTop()));
         int totalRowsH = 0;
-        for (FeatureSetting setting : meta.settings) totalRowsH += bodyHeight(setting) + ROW_GAP;
+        for (FeatureSetting setting : meta.settings) if (setting.isVisible()) totalRowsH += bodyHeight(setting) + ROW_GAP;
         if (totalRowsH > 0) totalRowsH -= ROW_GAP;
         double maxScroll = Math.max(0, totalRowsH - (bodyBottom() - bodyTop()));
 
@@ -288,7 +306,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         int fbH = (main != null && main.height > 0) ? main.height : this.height;
         int guiScale = Math.max(1, (int) this.minecraft.getWindow().getGuiScale());
         int fingerprint = 0;
-        for (FeatureSetting s : meta.settings) fingerprint = fingerprint * 31 + s.shapeFingerprint();
+        for (FeatureSetting s : meta.settings) if (s.isVisible()) fingerprint = fingerprint * 31 + s.shapeFingerprint();
         long chromeVersion = ThemeManager.generation() * 1_000_003L
                 ^ ((long) totalRowsH * 31L)
                 ^ ((long) fbW * 7919L)
@@ -316,6 +334,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
             try {
                 int yy = bodyTop() - (int) scroll.current();
                 for (FeatureSetting s : meta.settings) {
+                    if (!s.isVisible()) continue;
                     int h = bodyHeight(s);
                     if (yy + h > bodyTop() && yy < bodyBottom()) {
                         s.renderShapes(ctx, listX, settingY(s, yy), LIST_W, 0, 0);
@@ -349,6 +368,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         GlassSurface.enableScissor(ctx, listX + 8, bodyTop(), listX + LIST_W - 8, bodyBottom());
         int gy = bodyTop() - (int) scroll.current();
         for (FeatureSetting s : meta.settings) {
+            if (!s.isVisible()) continue;
             int gh = bodyHeight(s);
             var controls = s.interactionControls();
             if (!controls.isEmpty()) {
@@ -408,6 +428,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         // Live overlay: text, hover feedback, animated values.
         int y = bodyTop() - (int) scroll.current();
         for (FeatureSetting s : meta.settings) {
+            if (!s.isVisible()) continue;
             int h = bodyHeight(s);
             if (y + h > bodyTop() && y < bodyBottom()) {
                 s.renderOverlay(ctx, listX, settingY(s, y), LIST_W, mouseX, mouseY);
@@ -416,7 +437,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         }
 
         if (compact()) for (FeatureSetting setting : meta.settings)
-            if (setting instanceof com.aurora.client.screen.setting.EnumSetting<?> row && row.popupOpen())
+            if (setting instanceof com.aurora.client.screen.setting.EnumSetting<?> row && setting.isVisible() && row.popupOpen())
                 row.renderFloatingOverlay(ctx, mouseX, mouseY);
         ctx.disableScissor();
         if (compact()) {
@@ -436,6 +457,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         // cannot retain keyboard availability; the pinned Add control owns its header.
         var bodyBand = FeatureSetting.hostBand();
         for (FeatureSetting setting : meta.settings) {
+            if (!setting.isVisible()) continue;
             var controls = registeredSettingControls.get(setting);
             if (controls == null) continue;
             for (SemanticActionControl control : controls) {
@@ -526,7 +548,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         int listX = (this.width - LIST_W) / 2;
         if (compact() && mouseX >= listX + LIST_W - 8 && mouseX < listX + LIST_W + 2 && mouseY >= bodyTop() && mouseY < bodyBottom()) {
             int extent = -ROW_GAP;
-            for (FeatureSetting setting : meta.settings) extent += bodyHeight(setting) + ROW_GAP;
+            for (FeatureSetting setting : meta.settings) if (setting.isVisible()) extent += bodyHeight(setting) + ROW_GAP;
             double max = Math.max(0, extent - (bodyBottom() - bodyTop()));
             if (button == 0 && max > 0) {
                 scroll.beginThumbDrag(Math.max(0, Math.min(scroll.thumbHeight(bodyBottom() - bodyTop(), max, 24), mouseY - scroll.thumbY(bodyTop(), bodyBottom() - bodyTop(), max, 24))));
@@ -536,7 +558,8 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         if (compact() && FeatureSetting.hostBand().contains(mouseX, mouseY)) {
             int popupY = bodyTop() - (int) scroll.current();
             for (FeatureSetting setting : meta.settings) {
-                if (setting instanceof com.aurora.client.screen.setting.EnumSetting<?> row && row.popupOpen())
+                if (!setting.isVisible()) continue;
+                if (setting instanceof com.aurora.client.screen.setting.EnumSetting<?> row && setting.isVisible() && row.popupOpen())
                     return row.mouseClicked(mouseX, mouseY, button, listX, popupY, LIST_W);
                 popupY += bodyHeight(setting) + ROW_GAP;
             }
@@ -546,6 +569,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         if (!FeatureSetting.hostBand().contains(mouseX, mouseY)) return false;
         int y = bodyTop() - (int) scroll.current();
         for (FeatureSetting s : meta.settings) {
+            if (!s.isVisible()) continue;
             int h = bodyHeight(s);
             // Pointer dispatch and paint share the fixed body band.
             if (y + h > bodyTop() && y < bodyBottom()
@@ -579,7 +603,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         double mouseX = _ev.x(); double mouseY = _ev.y(); int button = _ev.button();
         if (compact() && scroll.isDragging()) {
             int extent = -ROW_GAP;
-            for (FeatureSetting setting : meta.settings) extent += bodyHeight(setting) + ROW_GAP;
+            for (FeatureSetting setting : meta.settings) if (setting.isVisible()) extent += bodyHeight(setting) + ROW_GAP;
             scroll.dragThumb(mouseY, bodyTop(), bodyBottom() - bodyTop(), Math.max(0, extent - (bodyBottom() - bodyTop())), 24, false);
             return true;
         }
@@ -609,7 +633,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         // Input-time bound deliberately computed as before (no trailing-gap
         // subtraction) — the render-time advance() re-clamps each frame.
         int totalH = 0;
-        for (FeatureSetting s : meta.settings) totalH += bodyHeight(s) + ROW_GAP;
+        for (FeatureSetting s : meta.settings) if (s.isVisible()) totalH += bodyHeight(s) + ROW_GAP;
         if (totalH > 0) totalH -= ROW_GAP;
         double maxScroll = Math.max(0, totalH - (bodyBottom() - bodyTop()));
 
@@ -650,7 +674,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         FeatureSetting focused = FeatureSetting.getFocused();
         if (focused != null && focused.onCharTyped(_ev)) return true;
         if (FeatureSetting.hasActiveCapture()) return true;
-        for (FeatureSetting s : meta.settings) if (s.resumeSearch(_ev)) {
+        for (FeatureSetting s : meta.settings) if (s.isVisible() && s.resumeSearch(_ev)) {
             this.setFocused(null); // the setting's EditBox now owns typing, not the former action
             return true;
         }

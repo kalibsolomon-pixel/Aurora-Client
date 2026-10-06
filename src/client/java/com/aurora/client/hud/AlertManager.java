@@ -11,12 +11,12 @@ import java.util.Deque;
 
 /**
  * Unified alert queue for all notification-style features (low durability,
- * low hunger, effect expiry, etc.).
+ * effect expiry, etc.).
  *
  * <p>Features call {@link #fire} when a threshold is crossed. The most
  * recent alert is stored as the "active" alert; the renderer
  * ({@link AlertRenderer}) fades it in/out over its duration. Alerts are
- * queued FIFO so a burst of different warnings (e.g. armor + hunger
+ * queued FIFO so a burst of different warnings (e.g. armor + effects
  * simultaneously) don't overwrite each other instantly — each gets its
  * full screen-time unless superseded by a higher-priority alert.
  *
@@ -29,9 +29,9 @@ public final class AlertManager {
     public enum Priority {
         /** Informational (e.g. effect expiring soon). Lowest urgency. */
         INFO(0),
-        /** Warning (e.g. low durability, low hunger). */
+        /** Warning (e.g. low durability). */
         WARNING(1),
-        /** Critical (e.g. about to break / starve). */
+        /** Critical (e.g. about to break). */
         CRITICAL(2);
 
         final int level;
@@ -42,16 +42,19 @@ public final class AlertManager {
         public final String title;
         public final String subtitle;
         public final ItemStack iconStack;
+        public final net.minecraft.resources.Identifier iconSprite;
         public final int color;         // ARGB
         public final Priority priority;
         public final long startMs;
         public final long durationMs;
 
         Alert(String title, String subtitle, ItemStack iconStack,
-              int color, Priority priority, long startMs, long durationMs) {
+              int color, Priority priority, long startMs, long durationMs,
+              net.minecraft.resources.Identifier iconSprite) {
             this.title = title;
             this.subtitle = subtitle;
             this.iconStack = iconStack;
+            this.iconSprite = iconSprite;
             this.color = color;
             this.priority = priority;
             this.startMs = startMs;
@@ -82,8 +85,16 @@ public final class AlertManager {
     public static synchronized void fire(String title, String subtitle,
                                           ItemStack iconStack, int color,
                                           Priority priority, long durationMs) {
+        fire(title, subtitle, iconStack, color, priority, durationMs, null);
+    }
+
+    /** Effect alerts use their vanilla status-effect sprite instead of an item. */
+    public static synchronized void fire(String title, String subtitle,
+                                          ItemStack iconStack, int color,
+                                          Priority priority, long durationMs,
+                                          net.minecraft.resources.Identifier iconSprite) {
         Alert a = new Alert(title, subtitle, iconStack, color, priority,
-                System.currentTimeMillis(), durationMs);
+                System.currentTimeMillis(), durationMs, iconSprite);
 
         if (active == null || active.isExpired() || priority.level > active.priority.level) {
             active = a;
@@ -133,20 +144,16 @@ public final class AlertManager {
     private static void playAlertSound() {
         AuroraConfig cfg = AuroraConfig.get();
         if (!cfg.armorAlertSound) return;
-        Minecraft mc = Minecraft.getInstance();
-        if (mc == null || mc.player == null) return;
-        SoundEvent ev = soundForChoice(cfg.armorAlertSoundChoice);
-        if (ev != null) {
-            mc.player.playSound(ev, 1.0f, 0.6f);
-        }
+        playPreview();
     }
 
     /** Shared preview used by the "Test Sound" button in the Alerts UI. */
     public static void playPreview() {
         Minecraft mc = Minecraft.getInstance();
-        if (mc == null || mc.player == null) return;
+        if (mc == null) return;
         SoundEvent ev = soundForChoice(AuroraConfig.get().armorAlertSoundChoice);
-        if (ev != null) mc.player.playSound(ev, 1.0f, 0.6f);
+        if (ev != null) mc.getSoundManager().play(
+                net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(ev, 1.0f));
     }
 
     private static SoundEvent soundForChoice(AuroraConfig.ArmorAlertSoundChoice c) {
@@ -156,7 +163,6 @@ public final class AlertManager {
             case EXPERIENCE_ORB -> SoundEvents.EXPERIENCE_ORB_PICKUP;
             case BELL           -> SoundEvents.BELL_BLOCK;
             case ARMOR_EQUIP    -> SoundEvents.ARMOR_EQUIP_GENERIC.value();
-            case ARROW_HIT      -> SoundEvents.ARROW_HIT_PLAYER;
             case ANVIL_LAND     -> SoundEvents.ANVIL_LAND;
             case NOTE_BASS      -> SoundEvents.NOTE_BLOCK_BASS.value();
         };

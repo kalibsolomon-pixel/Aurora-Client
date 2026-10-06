@@ -26,6 +26,8 @@
     "MixinOverlayTexture",
     "EquipmentLayerRendererMixin",
     "ReloadableTextureMixin",
+    "GlintRenderTypesMixin",
+    "GlintBufferSourceMixin",
     "InGameHudPotionOverlayMixin",
     "NoFogMixin",
     "UnderwaterClarityMixin",

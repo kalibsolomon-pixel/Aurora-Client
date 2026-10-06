@@ -9,6 +9,8 @@ import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.client.renderer.Sheets;
+import com.aurora.client.util.HitColorTrimRenderTypes;
 import net.minecraft.resources.Identifier;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -64,7 +66,7 @@ public abstract class EquipmentLayerRendererMixin {
      * parameter without needing a thread-local bridge.
      */
     @ModifyArg(method = INNER,
-               at = @At(value = "INVOKE", target = SUBMIT_MODEL),
+               at = @At(value = "INVOKE", target = SUBMIT_MODEL, ordinal = 0),
                index = 5,
                require = 0)
     private int aurora$applyHurtOverlay(int original,
@@ -75,4 +77,27 @@ public abstract class EquipmentLayerRendererMixin {
         return OverlayTexture.pack(OverlayTexture.u(0.0F),
                                    OverlayTexture.v(living.hasRedOverlay));
     }
+
+    /** Trims retain their atlas sprite UVs but need an overlay-aware shader. */
+    @WrapOperation(method = INNER,
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/Sheets;armorTrimsSheet(Z)Lnet/minecraft/client/renderer/rendertype/RenderType;"),
+            require = 1)
+    private RenderType aurora$swapTrimRenderType(boolean decal, Operation<RenderType> original) {
+        AuroraConfig cfg = AuroraConfig.get();
+        if (!(cfg.hitColorEnabled && cfg.hitColorTintArmor && cfg.hitColorTintArmorTrims))
+            return original.call(decal);
+        return decal ? HitColorTrimRenderTypes.decal() : RenderTypes.entityCutoutNoCullZOffset(Sheets.ARMOR_TRIMS_SHEET);
+    }
+
+    /** Third submission is the trim pass; the intervening glint pass stays untouched. */
+    @ModifyArg(method = INNER,
+            at = @At(value = "INVOKE", target = SUBMIT_MODEL, ordinal = 2),
+            index = 5, require = 1)
+    private int aurora$applyTrimHurtOverlay(int original, @Local(argsOnly = true) Object renderState) {
+        AuroraConfig cfg = AuroraConfig.get();
+        if (!(cfg.hitColorEnabled && cfg.hitColorTintArmor && cfg.hitColorTintArmorTrims)) return original;
+        if (!(renderState instanceof LivingEntityRenderState living)) return original;
+        return OverlayTexture.pack(OverlayTexture.u(0.0F), OverlayTexture.v(living.hasRedOverlay));
+    }
+
 }

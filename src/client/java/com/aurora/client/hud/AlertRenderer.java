@@ -3,7 +3,6 @@ package com.aurora.client.hud;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.world.item.ItemStack;
 
 /**
  * Renders the active {@link AlertManager.Alert} popup: centered on screen,
@@ -33,7 +32,7 @@ public final class AlertRenderer {
                 ? tr.width(alert.subtitle) : 0;
         int contentW = Math.max(textW, subW);
 
-        boolean hasIcon = alert.iconStack != null && !alert.iconStack.isEmpty();
+        boolean hasIcon = alert.iconSprite != null || alert.iconStack != null && !alert.iconStack.isEmpty();
         int iconSize = 24;
         int padding = 6;
         int gap = hasIcon ? padding : 0;
@@ -43,11 +42,6 @@ public final class AlertRenderer {
         int subH = subW > 0 ? tr.lineHeight + 2 : 0;
         int boxH = Math.max(iconSize, titleH + subH) + padding * 2;
 
-        int bgAlpha = Math.round(0xC0 * alpha);
-        int bg = (bgAlpha << 24) | (com.aurora.client.theme.ThemeManager.color(
-                com.aurora.client.theme.ThemeToken.HUD_BACKDROP_TOP) & 0x00ffffff);
-        int borderAlpha = Math.round(0xFF * alpha);
-        int borderColor = (borderAlpha << 24) | (alert.color & 0x00FFFFFF);
         int textAlpha = Math.round(0xFF * alpha);
         int textColor = (textAlpha << 24) | (alert.color & 0x00FFFFFF);
 
@@ -59,16 +53,14 @@ public final class AlertRenderer {
         int x = cx - boxW / 2;
         int y = cy - boxH / 2;
 
-        // Background
-        int radius = com.aurora.client.theme.ThemeManager.current().roundness().radiusSmall();
-        com.aurora.client.util.RoundedRect.fill(ctx,x,y,x+boxW,y+boxH,radius,bg);
-        // Severity is data; keep its fixed hue on the themed chrome.
-        com.aurora.client.util.RoundedRect.outline(ctx,x,y,x+boxW,y+boxH,radius,borderColor);
-
         int contentX = x + padding;
         if (hasIcon) {
             int iconY = y + (boxH - iconSize) / 2;
-            ctx.renderItem(alert.iconStack,
+            if (alert.iconSprite != null) {
+                ctx.blitSprite(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED,
+                        alert.iconSprite, contentX + (iconSize - 18) / 2,
+                        iconY + (iconSize - 18) / 2, 18, 18);
+            } else ctx.renderItem(alert.iconStack,
                     contentX + (iconSize - 16) / 2,
                     iconY + (iconSize - 16) / 2);
             contentX += iconSize + gap;

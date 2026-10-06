@@ -18,7 +18,9 @@ public class ReflexScheduler {
         return instance;
     }
 
-    private final float alpha = 0.85f;
+    private final float alpha = 0.2f;
+    private final AutomaticReflexPolicy automatic = new AutomaticReflexPolicy();
+    private boolean capabilitiesChecked;
     private Long estimateCpuTime = null;
 
     private final int gpuWindowSize = 60;
@@ -58,6 +60,7 @@ public class ReflexScheduler {
     }
 
     public void updateGpuTime(long gpuTimeNs) {
+        if (!automatic.acceptGpuSample(gpuTimeNs)) return;
         gpuTimeRingBuffer[ringBufferIndex] = gpuTimeNs;
         ringBufferIndex = (ringBufferIndex + 1) % gpuWindowSize;
         validSamples = Math.min(validSamples + 1, gpuWindowSize);
@@ -67,11 +70,13 @@ public class ReflexScheduler {
         if (validSamples == 0) return null;
 
         float weightedSum = 0;
+        float weightSum = 0;
         for (int i = 0; i < validSamples; i++) {
             int idx = (ringBufferIndex - 1 - i + gpuWindowSize) % gpuWindowSize;
             weightedSum += gpuTimeRingBuffer[idx] * gpuWeights[i];
+            weightSum += gpuWeights[i];
         }
-        return (long) weightedSum;
+        return (long) (weightedSum / weightSum);
     }
 
     private Long calculateWaitTime() {
@@ -107,7 +112,7 @@ public class ReflexScheduler {
                         - estimateCpuTime - System.nanoTime();
             }
 
-            waitTime -= com.aurora.client.config.AuroraConfig.get().reflexWaitTimeOffset;
+
             if (waitTime > 0) {
                 return waitTime;
             } else {
@@ -119,14 +124,22 @@ public class ReflexScheduler {
     private static final double NS_TO_SECONDS = 1e-9;
 
     public void waitBeforeRender() {
-        while (true) {
-            Long waitTime = calculateWaitTime();
-            boolean enabled = com.aurora.client.config.AuroraConfig.get().reflexEnabled;
-            if (waitTime != null && enabled) {
-                GLFW.glfwWaitEventsTimeout(waitTime * NS_TO_SECONDS);
-            } else {
-                break;
-            }
+        // Measurements determine the pacing budget. No wait in menus, while paused,
+        // or out of focus; no sleep until we have a useful GPU-bound queue.
+        Long wait = calculateWaitTime(); // retire completed samples even during warmup / CPU-bound frames
+        Long gpu = getEstimateGpuTime();
+        var client = net.minecraft.client.Minecraft.getInstance();
+        if (gpu == null || estimateCpuTime == null || client.player == null
+                || client.screen != null || !client.isWindowActive() || client.isPaused()) {
+            return;
+        }
+        long budget = AutomaticReflexPolicy.waitBudget(estimateCpuTime, gpu, validSamples, gpuTimeCollectorDeque.size());
+        long deadline = System.nanoTime() + budget;
+        while (budget > 0) {
+            long remaining = deadline - System.nanoTime();
+            if (wait == null || remaining <= 0) break;
+            GLFW.glfwWaitEventsTimeout(Math.min(wait, remaining) * NS_TO_SECONDS);
+            wait = calculateWaitTime();
         }
     }
 
@@ -183,7 +196,7 @@ public class ReflexScheduler {
     // BlurPanelRenderer's permanentlyDisabled latch: on ANY unexpected
     // failure inside a render hook, log once with the stack and disable
     // pacing for the rest of the session instead of ever throwing into
-    // vanilla. The reflexEnabled setting is untouched — the next launch
+    // vanilla. The failure latch is session-scoped — the next launch
     // retries.
 
     private boolean sessionDisabled = false;
@@ -214,7 +227,7 @@ public class ReflexScheduler {
         sessionDisabled = true;
         LOGGER.error("[Reflex] unexpected exception inside the Reflex render hook — Reflex latency "
                 + "pacing is now disabled for the rest of this session so it cannot interfere with "
-                + "the game (the reflexEnabled setting is untouched; pacing returns on next launch). "
+                + "the game (automatic pacing returns on next launch). "
                 + "Skipping pacing changes nothing else about gameplay. Cause:", cause);
         try {
             // Drain half-processed collectors; reset() releases their outstanding
@@ -235,6 +248,19 @@ public class ReflexScheduler {
     /** Frame head (runTick HEAD): pace, then open a new GPU timing window. */
     public void beginFrame() {
         runGuarded(() -> {
+            if (!capabilitiesChecked) {
+                capabilitiesChecked = true;
+                var caps = org.lwjgl.opengl.GL.getCapabilities();
+                if (!caps.OpenGL33 && !caps.GL_ARB_timer_query) {
+                    disableForSession(new UnsupportedOperationException("GPU timestamp queries unavailable"));
+                    return;
+                }
+            }
+            automatic.observeQueue(gpuTimeCollectorDeque.size());
+            if (automatic.failed()) {
+                disableForSession(new IllegalStateException("Unreliable GPU timings or persistently stalled queue"));
+                return;
+            }
             waitBeforeRender();
             cpuTimeCollect.startCollect();
             renderQueueAdd();
@@ -249,20 +275,10 @@ public class ReflexScheduler {
     /** Just after GameRenderer.render: harvest this frame's CPU timing. */
     public void endFrame() {
         runGuarded(() -> {
-            Long cpuTime = null;
-            if (!gpuTimeCollectorDeque.isEmpty()) {
-                gpuTimeCollectorDeque.getFirst().startQueryCheck();
-            }
-            if (!gpuTimeCollectorDeque.isEmpty() && gpuTimeCollectorDeque.getFirst().startTimeSystem != null) {
-                if (cpuTimeCollect.startTime != null) {
-                    cpuTime = gpuTimeCollectorDeque.getFirst().startTimeSystem - cpuTimeCollect.startTime;
-                }
-            } else {
-                cpuTimeCollect.endCollect();
-                cpuTime = cpuTimeCollect.getCpuTime();
-            }
+            cpuTimeCollect.endCollect();
+            Long cpuTime = cpuTimeCollect.getCpuTime();
             cpuTimeCollect.reset();
-            if (cpuTime != null) {
+            if (cpuTime != null && cpuTime > 0 && cpuTime < 250_000_000L) {
                 updateCpuTime(cpuTime);
             }
         });

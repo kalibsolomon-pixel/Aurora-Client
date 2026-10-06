@@ -38,7 +38,6 @@ public class FeatureManager {
         register(new ItemPhysicsFeature());
         register(new ParticleControlFeature());
         register(new ShieldStatusFeature());
-        register(new StatsTrackerFeature());
         register(new ThemeFeature());
         register(new StatusAlertFeature());
         for (Feature f : features.values()) {

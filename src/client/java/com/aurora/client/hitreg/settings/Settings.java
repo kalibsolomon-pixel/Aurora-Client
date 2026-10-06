@@ -1,7 +1,6 @@
 package com.aurora.client.hitreg.settings;
 
 import com.aurora.client.config.AuroraConfig;
-import com.aurora.client.feature.impl.StatsTrackerFeature;
 import com.aurora.client.hitreg.Hitreg;
 
 /**
@@ -90,13 +89,6 @@ public final class Settings {
         cfg.fightStatsPlaytimeSeconds += Math.max(0L, duration);
         AuroraConfig.save();
 
-        // Session-side record for the Stats Overlay (fights, fight time,
-        // last fight's accuracies). The swing/hit counters are still intact
-        // here: Hitreg.tick clears them only on the next tick once
-        // `fighting` has dropped.
-        StatsTrackerFeature stats = StatsTrackerFeature.get();
-        if (stats != null) {
-            stats.recordFight(duration, Hitreg.yourHits, Hitreg.yourSwings, Hitreg.theirHits, Hitreg.theirSwings);
-        }
+
     }
 }

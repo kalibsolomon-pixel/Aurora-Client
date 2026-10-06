@@ -604,7 +604,7 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
                 AuroraClient.captureLayouts(AuroraClient.modules());
                 AuroraConfig.save();
                 if (this.minecraft != null) {
-                    this.minecraft.setScreen(new FeatureDetailScreen(this, fm));
+                    this.minecraft.setScreen(FeatureDetailScreen.destination(this, fm));
                 }
                 return;
             }

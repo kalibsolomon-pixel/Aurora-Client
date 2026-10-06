@@ -61,9 +61,9 @@ class AuroraScreenNavigationTest {
         // C-5: the layout pair joined the hosted chrome.
         assertTrue(src.contains("layoutControls[0] = layoutControl(0);"));
         assertTrue(src.contains("layoutControls[1] = layoutControl(1);"));
-        // Module cards: one control per ModuleManager module (37 tiles).
+        // Module cards: one control per ModuleManager module (34 tiles).
         assertTrue(src.contains("for (Module m : ModuleManager.getInstance().getModules()) {\n            tileControls.put(m.id, tileControl(m));"));
-        assertEquals(37, count(modules, "new Module("), "the grid's tile inventory (ModuleManager)");
+        assertEquals(34, count(modules, "new Module("), "the grid's tile inventory (ModuleManager)");
         // Settings headers: navigation only for entries with a detail screen;
         // header toggles for all four entries.
         assertTrue(src.contains("if (metadata.hasDetail()) {\n                headerNavControls.put(metadata.id, headerNavControl(metadata));\n            }"));

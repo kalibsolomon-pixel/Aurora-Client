@@ -7,7 +7,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.core.Holder;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.food.FoodData;
 
 import java.util.HashMap;
 import java.util.Iterator;
@@ -16,8 +15,6 @@ import java.util.Map;
 /**
  * Fires {@link AlertManager} popups for:
  * <ul>
- *   <li><b>Low hunger</b> — when the player's food level drops below the
- *       configured threshold (falling-edge so it doesn't repeat).</li>
  *   <li><b>Effect expiry</b> — when an active potion effect's remaining
  *       duration drops below the configured threshold (seconds). Uses
  *       per-effect tracking so each effect alerts once per application.
@@ -38,7 +35,6 @@ public class StatusAlertFeature implements Feature {
 
     /** Tracks which effects have already fired their expiry alert. */
     private final Map<Holder<MobEffect>, Boolean> alertedEffects = new HashMap<>();
-    private boolean wasLowHunger = false;
 
     @Override public String id() { return ID; }
 
@@ -47,32 +43,7 @@ public class StatusAlertFeature implements Feature {
         if (client == null || client.player == null) return;
         AuroraConfig cfg = AuroraConfig.get();
 
-        checkHunger(client, cfg);
         checkEffects(client, cfg);
-    }
-
-    // ===== Hunger =====
-
-    private void checkHunger(Minecraft client, AuroraConfig cfg) {
-        if (!cfg.hungerAlertEnabled) {
-            wasLowHunger = false;
-            return;
-        }
-
-        FoodData food = client.player.getFoodData();
-        if (food == null) return;
-
-        int level = food.getFoodLevel();
-        int threshold = Math.max(1, Math.min(20, cfg.hungerAlertThreshold));
-        boolean nowLow = level <= threshold;
-
-        if (nowLow && !wasLowHunger) {
-            AlertManager.fire("LOW HUNGER",
-                    level + " / 20 drumsticks",
-                    null, com.aurora.client.theme.HudStatus.ALERT_CAUTION,
-                    AlertManager.Priority.WARNING, 3_000L);
-        }
-        wasLowHunger = nowLow;
     }
 
     // ===== Effect expiry =====
@@ -131,7 +102,10 @@ public class StatusAlertFeature implements Feature {
                 if (name == null || name.isEmpty()) name = "Effect";
                 AlertManager.fire("EFFECT EXPIRING",
                         name + " · " + Math.max(0, remainingSecs) + "s",
-                        null, 0xFF88CCFF, AlertManager.Priority.INFO, 3_000L);
+                        null, 0xFF88CCFF, AlertManager.Priority.INFO, 3_000L,
+                        net.minecraft.resources.Identifier.fromNamespaceAndPath(
+                                net.minecraft.resources.Identifier.parse(effectId).getNamespace(),
+                                "mob_effect/" + net.minecraft.resources.Identifier.parse(effectId).getPath()));
                 alertedEffects.put(effect, true);
             } else if (remainingSecs > thresholdSecs) {
                 // Effect was re-applied or has plenty of time — reset.

@@ -55,6 +55,15 @@ dependencies {
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 
+    // Modrinth serves WebP icons; normalize them to PNG before NativeImage upload.
+    implementation "com.twelvemonkeys.imageio:imageio-webp:3.12.0"
+    ["imageio-core", "imageio-metadata", "imageio-webp"].each {
+        include "com.twelvemonkeys.imageio:${it}:3.12.0"
+    }
+    ["common-lang", "common-io", "common-image"].each {
+        include "com.twelvemonkeys.common:${it}:3.12.0"
+    }
+
 	testImplementation sourceSets.client.output
 	testImplementation "org.junit.jupiter:junit-jupiter:5.11.4"
 	testRuntimeOnly "org.junit.platform:junit-platform-launcher"

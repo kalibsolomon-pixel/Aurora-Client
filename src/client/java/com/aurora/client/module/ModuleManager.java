@@ -34,7 +34,6 @@ public class ModuleManager {
         modules.add(new Module("potion_hud", "Potion HUD", "A cleaner replacement for the default status-effect icons, listing your active potion effects with a readable countdown timer."));
         modules.add(new Module("ping", "Ping", "Surfaces connection latency as real numbers — as a HUD readout, as a value in the tab list, and optionally under player nametags."));
         modules.add(new Module("totem_pop", "Totem Pop Counter", "Counts how many Totems of Undying you've popped, and optionally tracks nearby players' pops too."));
-        modules.add(new Module("stats", "Stats Overlay", "A combat readout — kills, deaths, K/D and session time, plus Better Hitreg's fight statistics: fights, fight time and last-fight accuracy."));
         modules.add(new Module("waypoints", "Waypoints", "Place persistent world markers rendered as beacon beams and/or block highlights."));
         modules.add(new Module("container_preview", "Container Preview", "Hover over a shulker box (or your ender chest) in any inventory to see its full contents in a grid tooltip."));
         modules.add(new Module("item_physics", "Item Physics", "Gives dropped items more natural physics — they lie flat where they land instead of hovering and spinning."));
@@ -42,13 +41,11 @@ public class ModuleManager {
         modules.add(new Module("item_scale", "Item Scale", "Customize the scale, rotation, and screen translation of individual item models."));
         modules.add(new Module("held_item_seams", "Held Item Seam Fix", "Hides the hairline seams that can appear between the faces of your first-person held items at certain camera angles."));
         modules.add(new Module("animations", "Animations", "Swing & view-bob curves, classic 1.8-style damage camera tilt, retro backwards-walking & sneak poses, idle held-item sway, and smooth entity rotation."));
-        modules.add(new Module("hotbar_bounce", "Hotbar Bounce", "Pops a small bounce/pulse on a hotbar slot the moment an item lands in it or a stack grows."));
         modules.add(new Module("keystrokes", "Keystrokes", "Displays your WASD, mouse, jump, and sneak keys as a HUD overlay that lights up in real time as you press them."));
         modules.add(new Module("minimap", "Minimap", "A top-down map of the world around you, shown as a HUD overlay. Renders terrain, waypoints, and nearby entities as colored dots."));
         modules.add(new Module("world_map", "World Map", "A full-screen, pannable world map of your explored terrain."));
         modules.add(new Module("resourcepack_browser", "Resourcepack Browser", "Browse and install community resource packs directly from Modrinth. Search, preview, and one-click install straight into your resourcepacks folder."));
-        modules.add(new Module("reflex", "Minecraft Reflex", "Uses the Nvidia Reflex principle to reduce rendering latency — locks frame pacing by estimating CPU and GPU time so input is sampled as late as possible."));
-        modules.add(new Module("miscellaneous", "Miscellaneous", "A temporary home for smaller settings without a dedicated screen of their own yet — smooth camera, frame pacing, latency, input handling, server-list dragging."));
+        modules.add(new Module("miscellaneous", "Display Settings", "Display and responsiveness controls — smooth camera, frame pacing, latency, input handling, server-list dragging."));
     }
 
     public List<Module> getModules() {

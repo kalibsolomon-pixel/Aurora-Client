@@ -1,13 +1,11 @@
 package com.aurora.client.hud.module;
 
-import com.aurora.client.AuroraClient;
+import com.aurora.client.util.HudBackgrounds;
 import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.util.CachedValue;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
 
@@ -42,13 +40,9 @@ public class ArmorModule extends HudModule {
     private static final int BAR_FILL_W = 12;
     private static final int BAR_FRAME = 0xFF000000;
 
-    /** A single hotbar slot, cropped from the vanilla {@code hud/hotbar} strip. */
-    private static final Identifier HOTBAR_SLOT_TEX =
-            Identifier.fromNamespaceAndPath(AuroraClient.MOD_ID, "textures/gui/hotbar_slot.png");
-    /** Native edge length of a single hotbar slot (24×24 incl. its border). */
-    private static final int SLOT = 24;
-    /** Vertical spacing between stacked hotbar slots in the VANILLA layout. */
-    private static final int VANILLA_GAP = 2;
+    private static final int SLOT = HudBackgrounds.iconSlotSize(ICON);
+    // Adjacent slot edges touch, with no shared/overlapping border pixels.
+    private static final int VANILLA_GAP = 0;
 
     private final CachedValue<Integer> cachedWidth = new CachedValue<>(150L, this::computeWidth);
 
@@ -101,7 +95,7 @@ public class ArmorModule extends HudModule {
         if (isVanillaBg()) {
             boolean hasText = fmt != AuroraConfig.ArmorDurabilityFormat.NONE;
             if (cfg.armorHorizontal) {
-                int cellW = Math.max(SLOT, maxText);
+                int cellW = Math.max(SLOT, maxText + 2);
                 return 4 * cellW + 3 * VANILLA_GAP;
             } else {
                 return SLOT + (hasText ? TEXT_GAP + Math.max(maxText, 0) : 0);
@@ -142,7 +136,7 @@ public class ArmorModule extends HudModule {
             if (horizontal) {
                 return SLOT + (hasText ? TEXT_GAP + lineH : 0);
             } else {
-                // Vertical VANILLA: 4 stacked 24×24 hotbar slots with gaps.
+                // Vertical VANILLA: 4 touching slots sized to leave clearance around the icons.
                 return (SLOT * 4) + (VANILLA_GAP * 3);
             }
         }
@@ -181,7 +175,7 @@ public class ArmorModule extends HudModule {
         AuroraConfig.ArmorDurabilityFormat fmt = cfg.armorDurabilityFormat;
         if (fmt == null) fmt = AuroraConfig.ArmorDurabilityFormat.REMAINING;
         ItemStack[] stacks = pieces(client);
-        int color = com.aurora.client.theme.HudText.color(cfg.hudColor);
+        int color = com.aurora.client.theme.HudText.color(cfg.armorHudTextColor, cfg.hudColor);
         boolean drawBars = cfg.armorShowDurabilityBars;
 
         if (cfg.armorHorizontal) {
@@ -239,7 +233,7 @@ public class ArmorModule extends HudModule {
 
     /**
      * VANILLA (hotbar-slot) render: each of the 4 armor pieces sits inside its
-     * own authentic vanilla hotbar-slot graphic (24×24). Supports both vertical
+     * own resource-pack offhand slot, sized to fit the icon with clearance. Supports both vertical
      * and horizontal layouts. The 16×16 item icon is centered inside the slot,
      * the vanilla durability bar sits at the bottom of the slot, and the
      * configured durability text/percentage is drawn OUTSIDE the slot.
@@ -249,7 +243,7 @@ public class ArmorModule extends HudModule {
         AuroraConfig cfg = AuroraConfig.get();
         AuroraConfig.ArmorDurabilityFormat fmt = cfg.armorDurabilityFormat;
         if (fmt == null) fmt = AuroraConfig.ArmorDurabilityFormat.REMAINING;
-        int textColor = com.aurora.client.theme.HudText.color(cfg.hudColor);
+        int textColor = com.aurora.client.theme.HudText.color(cfg.armorHudTextColor, cfg.hudColor);
         boolean drawBars = cfg.armorShowDurabilityBars;
         boolean horizontal = cfg.armorHorizontal;
 
@@ -264,7 +258,7 @@ public class ArmorModule extends HudModule {
                     maxText = Math.max(maxText, tr.width(formatDurability(s, fmt)));
                 }
             }
-            cellW = Math.max(SLOT, maxText);
+            cellW = Math.max(SLOT, maxText + 2);
         }
 
         int textSpace = (fmt != AuroraConfig.ArmorDurabilityFormat.NONE && tr != null) ? tr.lineHeight + TEXT_GAP : 0;
@@ -282,16 +276,13 @@ public class ArmorModule extends HudModule {
                 slotY = y + i * (SLOT + VANILLA_GAP);
             }
 
-            // The hotbar-slot graphic (cropped from the vanilla hotbar strip).
-            ctx.blit(RenderPipelines.GUI_TEXTURED, HOTBAR_SLOT_TEX,
-                    slotX, slotY, 0f, 0f,
-                    SLOT, SLOT, SLOT, SLOT, SLOT, SLOT);
+            HudBackgrounds.slot(ctx, slotX, slotY, SLOT, SLOT, 1);
 
             if (s == null || s.isEmpty()) continue;
 
-            // Center the 16×16 item icon inside the 24×24 slot (4px inset).
-            int iconX = slotX + 4;
-            int iconY = slotY + 4;
+            // Center the 16×16 item icon inside the scaled slot, clear of the border.
+            int iconX = slotX + (SLOT - ICON) / 2;
+            int iconY = slotY + (SLOT - ICON) / 2;
             ctx.renderItem(s, iconX, iconY);
 
             // Vanilla durability bar inside the slot at the same icon-relative

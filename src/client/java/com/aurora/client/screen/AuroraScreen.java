@@ -491,7 +491,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 () -> true,
                 () -> {
                     if (this.minecraft != null) {
-                        this.minecraft.setScreen(new FeatureDetailScreen(this, m));
+                        this.minecraft.setScreen(FeatureDetailScreen.destination(this, m));
                     }
                 }),
                 MinecraftSemanticFeedback.INSTANCE,
@@ -1456,7 +1456,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                         if (fm != null && fm.hasDetail() && this.minecraft != null) {
                             MinecraftSemanticFeedback.INSTANCE
                                     .play(SemanticSound.ACTIVATION);
-                            this.minecraft.setScreen(new FeatureDetailScreen(this, fm));
+                            this.minecraft.setScreen(FeatureDetailScreen.destination(this, fm));
                         }
                         return true;
                     }

@@ -39,7 +39,6 @@ public final class FeatureIcons {
         ICONS.put("potion_hud",            "\uE3F3"); // healing
         ICONS.put("ping",                  "\uEF06"); // android_cell_4_bar (signal)
         ICONS.put("totem_pop",             "\uE800"); // exposure_plus_1 (pop counter)
-        ICONS.put("stats",                 "\uE24B"); // assessment (bar chart)
         ICONS.put("waypoints",             "\uE0C8"); // location_on (pin)
         ICONS.put("container_preview",     "\uE1A1"); // inventory_2 (shulker preview)
         ICONS.put("item_physics",          "\uE574"); // category (shapes physics)
@@ -51,7 +50,6 @@ public final class FeatureIcons {
         ICONS.put("minimap",               "\uE2C5"); // file_map
         ICONS.put("world_map",             "\uF3CA"); // map_search
         ICONS.put("resourcepack_browser",  "\uE8B0"); // browse_gallery (grid of tiles)
-        ICONS.put("reflex",                "\uE3E7"); // flash_on
         // Moved to the Modules grid 2026-09-10 (was a Settings-tab entry).
         // The eight former Settings-tab tiles merged into "miscellaneous"
         // (2026-09-09) had their own glyphs (videocam, av_timer, flash_on,
@@ -62,7 +60,6 @@ public final class FeatureIcons {
 
         // ============ SETTINGS TAB ============
         ICONS.put("custom_title",          "\uE264"); // title
-        ICONS.put("hotbar_bounce",         "\uE8D5"); // swap_vert (a Modules-grid card)
 
         // Dropdown chevrons (EnumSetting) — referenced by codepoint here so
         // subset_script.py includes them in the material-symbols font subset.

@@ -2,6 +2,7 @@ package com.aurora.client.hud.module;
 
 import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.util.CachedValue;
+import com.aurora.client.util.HudBackgrounds;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -80,7 +81,13 @@ public class PotionModule extends HudModule {
         return mc.player.getActiveEffects();
     }
 
-    @Override protected AuroraConfig.HudBackground backgroundMode() { return AuroraConfig.get().potionBgMode; }
+    private static boolean vanillaSlots() { return AuroraConfig.get().potionBgMode == AuroraConfig.HudBackground.VANILLA; }
+    private static int iconWidth() { return vanillaSlots() ? HudBackgrounds.iconSlotSize(ICON) : ICON; }
+    private static int rowHeight() { return vanillaSlots() ? iconWidth() : ROW_H; }
+    private static int rowStride() { return vanillaSlots() ? rowHeight() : ROW_H + ROW_GAP; }
+    @Override protected AuroraConfig.HudBackground backgroundMode() {
+        return vanillaSlots() ? AuroraConfig.HudBackground.NONE : AuroraConfig.get().potionBgMode;
+    }
     @Override protected int backgroundColor() { return AuroraConfig.get().potionBgColor; }
 
     @Override
@@ -102,9 +109,9 @@ public class PotionModule extends HudModule {
             maxTextW = Math.max(maxTextW, tr.width(nameWithLevel(e)));
             maxTextW = Math.max(maxTextW, tr.width(timeText(e)));
         }
-        int width = ICON + ICON_GAP + maxTextW + 4;
+        int width = iconWidth() + ICON_GAP + maxTextW + 4;
         int rows = Math.max(1, active.size());
-        int height = rows * ROW_H + (rows - 1) * ROW_GAP;
+        int height = (rows - 1) * rowStride() + rowHeight();
         return new int[] { width, height };
     }
 
@@ -174,11 +181,12 @@ public class PotionModule extends HudModule {
         int row = 0;
 
         for (MobEffectInstance e : active) {
-            int rowY = y + row * (ROW_H + ROW_GAP);
+            int rowY = y + row * rowStride();
 
             // Real vanilla 18×18 status-effect sprite, vertically centered
             // inside the row band.
-            drawEffectIcon(ctx, e, x, rowY + (ROW_H - ICON) / 2);
+            if (vanillaSlots()) HudBackgrounds.slot(ctx, x, rowY, iconWidth(), rowHeight(), 1);
+            drawEffectIcon(ctx, e, x + (iconWidth() - ICON) / 2, rowY + (rowHeight() - ICON) / 2);
 
             // Two-line text column (Inventory HUD+ style):
             //   line 1 — "Effect Name II"           in white
@@ -186,10 +194,10 @@ public class PotionModule extends HudModule {
             //              minutes (if any) in green,
             //              ":SS" or bare "SS" in white,
             //              or "∞" in white for effects ≥ 1 hour / truly infinite.
-            int textX = x + ICON + ICON_GAP;
-            int line1Y = rowY + 2;
+            int textX = x + iconWidth() + ICON_GAP;
+            int line1Y = rowY + (rowHeight() - (tr.lineHeight * 2 + 1)) / 2;
             int line2Y = line1Y + tr.lineHeight + 1;
-            ctx.drawString(tr, nameWithLevel(e), textX, line1Y, 0xFFFFFFFF, false);
+            ctx.drawString(tr, nameWithLevel(e), textX, line1Y, textColor(0xFFFFFFFF), false);
             drawTimer(ctx, tr, e, textX, line2Y);
 
             row++;
@@ -207,6 +215,11 @@ public class PotionModule extends HudModule {
      *       "largest interval left" rule from the spec).</li>
      * </ul>
      */
+    private static int textColor(int fallback) {
+        Integer override = AuroraConfig.get().potionHudTextColor;
+        return override == null ? fallback : override;
+    }
+
     private static void drawTimer(GuiGraphics ctx, Font tr, MobEffectInstance e,
                                   int x, int y) {
         String mins = minutesString(e);
@@ -214,10 +227,10 @@ public class PotionModule extends HudModule {
         int cx = x;
         if (mins != null) {
             // Green minutes — the HUD's shared "plentiful time" status color.
-            ctx.drawString(tr, mins, cx, y, com.aurora.client.theme.HudStatus.ON, false);
+            ctx.drawString(tr, mins, cx, y, textColor(com.aurora.client.theme.HudStatus.ON), false);
             cx += tr.width(mins);
         }
-        ctx.drawString(tr, secs, cx, y, 0xFFFFFFFF, false);     // seconds / infinity — white
+        ctx.drawString(tr, secs, cx, y, textColor(0xFFFFFFFF), false);     // seconds / infinity — white
     }
 
     /**

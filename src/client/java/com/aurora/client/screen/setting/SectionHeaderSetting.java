@@ -28,7 +28,7 @@ public class SectionHeaderSetting extends FeatureSetting {
      * this, so the blank band before a header is this + the row gap while
      * the band after it is the row gap alone.
      */
-    private static final int SECTION_GAP_ABOVE = 10;
+    private static final int SECTION_GAP_ABOVE = 18;
     /** Vertical baseline for the label inside {@link #ROW_H}. */
     private static final int LABEL_Y = 6;
     /**
@@ -42,12 +42,12 @@ public class SectionHeaderSetting extends FeatureSetting {
         super(label);
     }
 
-    @Override public int baseHeight() { return compactRow == null ? SECTION_GAP_ABOVE + ROW_H : compactRow.height(); }
-    @Override public int height()     { return compactRow == null ? SECTION_GAP_ABOVE + ROW_H : compactRow.height(); }
+    @Override public int baseHeight() { return SECTION_GAP_ABOVE + (compactRow == null ? ROW_H : compactRow.height()); }
+    @Override public int height()     { return baseHeight(); }
 
     @Override
     public void render(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
-        if (compactRow != null) { renderCompactLabel(ctx, x, y, mouseX, mouseY, AuroraTheme.sectionCaption()); return; }
+        if (compactRow != null) { renderCompactLabel(ctx, x, y + SECTION_GAP_ABOVE, mouseX, mouseY, AuroraTheme.sectionCaption()); return; }
         Font tr = Minecraft.getInstance().font;
         // Section label — dimmed uppercase, aligned with the indent of
         // the regular setting rows below it. No strikethrough separator;

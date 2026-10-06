@@ -34,6 +34,13 @@ import java.util.function.Supplier;
 public abstract class FeatureSetting {
     public final String label;
 
+    private java.util.function.BooleanSupplier visibility = () -> true;
+    public FeatureSetting visibleWhen(java.util.function.BooleanSupplier condition) {
+        visibility = condition;
+        return this;
+    }
+    public final boolean isVisible() { return visibility.getAsBoolean(); }
+
     /** Detail hosts measure simple rows before height, paint and input walks; custom editors retain their own geometry. */
     protected com.aurora.client.ui.util.SettingRowLayout compactRow;
     private int compactWidth = -1;

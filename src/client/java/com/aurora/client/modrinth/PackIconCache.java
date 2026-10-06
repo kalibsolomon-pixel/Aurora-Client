@@ -14,8 +14,6 @@ import java.time.Duration;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * On-demand thumbnail cache for Modrinth resource-pack icons.
@@ -32,7 +30,7 @@ import java.util.regex.Pattern;
  * a cache clear are impossible.
  *
  * <p>Failures (404, broken PNG, network) remove the URL from the in-flight
- * set so the next render frame can retry — a single transient failure no
+ * set with a 30-second backoff before retrying — a single transient failure no
  * longer permanently blacklists an icon.
  */
 public final class PackIconCache {
@@ -81,19 +79,16 @@ public final class PackIconCache {
     /**
      * URLs with an in-flight or completed-and-cached fetch. A URL is removed
      * from this set on any failure (HTTP error, exception, decode error) so
-     * the next render frame can retry — previously a single transient failure
+     * a later request can retry after a 30-second backoff — previously a single transient failure
      * permanently blacklisted the icon for the entire session.
      */
     private static final java.util.Set<String> REQUESTED = java.util.concurrent.ConcurrentHashMap.newKeySet();
     private static int counter = 0;
 
-    /**
-     * Matches any Modrinth CDN thumbnail size suffix, e.g. {@code _96.webp},
-     * {@code _128.webp}, {@code _256.webp}, {@code _512.webp}. The CDN stores
-     * the canonical PNG at the path <em>minus</em> the size suffix, so
-     * {@code .../hash_256.webp} → {@code .../hash.png}.
-     */
-    private static final Pattern WEBP_SIZE_SUFFIX = Pattern.compile("_\\d+\\.webp$");
+    private static final Map<String, Long> RETRY_AFTER = new LinkedHashMap<>() {
+        @Override protected boolean removeEldestEntry(Map.Entry<String, Long> entry) { return size() > MAX_ICONS; }
+    };
+    private static int generation;
 
     private PackIconCache() {}
 
@@ -108,98 +103,65 @@ public final class PackIconCache {
         return e == null ? null : e.textureId;
     }
 
-    /**
-     * Rewrite a Modrinth CDN icon URL to a PNG the client can actually decode.
-     *
-     * <p>{@link NativeImage#read} only supports PNG. Modrinth's search API
-     * returns WebP thumbnails with a {@code _NNN.webp} size suffix, but the
-     * canonical PNG lives at the same path <em>minus</em> the suffix. This
-     * handles <strong>any</strong> numeric size (not just a hardcoded few)
-     * via regex, plus the bare {@code .webp} fallback.
-     */
-    private static String toPngUrl(String url) {
-        if (url == null) return null;
-        Matcher m = WEBP_SIZE_SUFFIX.matcher(url);
-        if (m.find()) {
-            return url.substring(0, m.start()) + ".png";
-        }
-        if (url.endsWith(".webp")) {
-            return url.substring(0, url.length() - 5) + ".png";
-        }
-        return url;
-    }
-
-    /**
-     * Kick off a background fetch for {@code url} if one isn't already in
-     * flight. Safe to call every frame — duplicate requests are ignored.
-     *
-     * <p>On any failure (HTTP non-2xx, network exception, empty body, or
-     * decode error) the URL is removed from the in-flight set so the next
-     * render frame retries. This ensures transient failures don't leave an
-     * icon permanently broken.
-     */
+    /** Fetch the actual CDN image and normalize it off-thread; never guess a PNG filename. */
     public static void requestAsync(String url) {
-        if (url == null) return;
-        if (LOADED.containsKey(url)) return;
-        if (!REQUESTED.add(url)) return; // already in-flight or cached
-
-        // Rewrite WebP thumbnails to PNG — NativeImage can't decode WebP.
-        String fetchUrl = toPngUrl(url);
-
+        if (url == null || url.isBlank() || LOADED.containsKey(url)) return;
+        if (System.nanoTime() < RETRY_AFTER.getOrDefault(url, 0L)) return;
+        if (!REQUESTED.add(url)) return;
+        int requestGeneration = generation;
         try {
-            HttpRequest req = HttpRequest.newBuilder(URI.create(fetchUrl))
+            HttpRequest req = HttpRequest.newBuilder(URI.create(url))
                     .timeout(Duration.ofSeconds(15))
                     .header("User-Agent", "AuroraClient (resourcepack browser icon)")
                     .GET().build();
-            ModrinthApi.httpClient().sendAsync(req, HttpResponse.BodyHandlers.ofByteArray())
-                    .thenAccept(resp -> {
-                        if (resp.statusCode() / 100 != 2) {
-                            REQUESTED.remove(url); // allow retry next frame
-                            return;
-                        }
-                        byte[] bytes = resp.body();
-                        if (bytes == null || bytes.length == 0) {
-                            REQUESTED.remove(url); // allow retry next frame
-                            return;
-                        }
-                        // Decode + upload on the render thread.
-                        Minecraft.getInstance().execute(() -> uploadOnRenderThread(url, bytes));
-                    })
-                    .exceptionally(t -> {
-                        AuroraClient.LOGGER.debug("Icon fetch failed for {}: {}", url, t.toString());
-                        REQUESTED.remove(url); // allow retry next frame
-                        return null;
-                    });
-        } catch (Throwable t) {
-            AuroraClient.LOGGER.debug("Icon fetch dispatch failed for {}: {}", url, t.toString());
-            REQUESTED.remove(url); // allow retry next frame
-        }
+            ModrinthApi.httpClient().sendAsync(req, HttpResponse.BodyHandlers.ofInputStream())
+                    .thenAcceptAsync(resp -> {
+                        try (var body = resp.body()) {
+                            if (resp.statusCode() / 100 != 2) throw new java.io.IOException("HTTP " + resp.statusCode());
+                            byte[] bytes = body.readNBytes(PackIconDecoder.MAX_BYTES + 1);
+                            byte[] png = PackIconDecoder.png(bytes);
+                            Minecraft.getInstance().execute(() -> {
+                                if (generation == requestGeneration) uploadOnRenderThread(url, png);
+                            });
+                        } catch (Exception error) { failure(url, error, requestGeneration); }
+                    }, ModrinthApi.IO_EXECUTOR)
+                    .exceptionally(error -> { failure(url, error, requestGeneration); return null; });
+        } catch (Exception error) { failure(url, error, requestGeneration); }
+    }
+
+    private static void failure(String url, Throwable error, int requestGeneration) {
+        Minecraft.getInstance().execute(() -> {
+            if (generation != requestGeneration) return;
+            REQUESTED.remove(url);
+            RETRY_AFTER.put(url, System.nanoTime() + Duration.ofSeconds(30).toNanos());
+            AuroraClient.LOGGER.debug("Icon load failed for {}: {}", url, error.toString());
+        });
     }
 
     private static void uploadOnRenderThread(String url, byte[] pngBytes) {
+        NativeImage img = null;
+        DynamicTexture tex = null;
+        Identifier id = null;
         try {
-            NativeImage img = NativeImage.read(pngBytes);
+            img = NativeImage.read(pngBytes);
             int w = img.getWidth();
             int h = img.getHeight();
             int idx = counter++;
-            Identifier id = Identifier.fromNamespaceAndPath(AuroraClient.MOD_ID, "modrinth_icon/" + idx);
-            DynamicTexture tex = new DynamicTexture(() -> "modrinth_icon_" + idx, img);
+            id = Identifier.fromNamespaceAndPath(AuroraClient.MOD_ID, "modrinth_icon/" + idx);
+            tex = new DynamicTexture(() -> "modrinth_icon_" + idx, img);
             Minecraft.getInstance().getTextureManager().register(id, tex);
             // CRITICAL: register() only maps the id; the pixel data isn't
-            // actually uploaded to the GPU until upload() is called.
-            // Without this the texture is registered but renders blank.
+            // explicitly uploaded here after registration.
             tex.upload();
             // Store original dimensions so the blit can use the correct
             // source texture size (non-square icons are handled by the
             // blitIcon method which reads srcW/srcH from the entry).
             LOADED.put(url, new Entry(id, tex, w, h));
         } catch (Throwable t) {
-            AuroraClient.LOGGER.debug("Icon decode failed for {}: {}", url, t.toString());
-            // Decode failed — allow a retry on the next render frame. Some
-            // icons arrive in a format NativeImage can't read on the first
-            // pass; removing from REQUESTED gives them another chance rather
-            // than permanently blacklisting the URL.
-            REQUESTED.remove(url);
+            if (id != null) Minecraft.getInstance().getTextureManager().release(id);
+            if (tex != null) tex.close();
+            else if (img != null) img.close();
+            failure(url, t, generation);
         }
     }
 
@@ -210,6 +172,8 @@ public final class PackIconCache {
      * so re-opening the browser doesn't re-download everything.
      */
     public static void clear() {
+        generation++;
+        RETRY_AFTER.clear();
         Iterator<Map.Entry<String, Entry>> it = LOADED.entrySet().iterator();
         while (it.hasNext()) {
             Entry e = it.next().getValue();
@@ -223,9 +187,11 @@ public final class PackIconCache {
     /** Pipeline id for blitting cached icons via {@link RenderPipelines#GUI_TEXTURED}. */
     public static void blitIcon(net.minecraft.client.gui.GuiGraphics g, Identifier id,
                                  int x, int y, int size) {
-        // The tint argument (0xFFFFFFFF = white, full alpha) is required —
-        // the GUI_TEXTURED pipeline multiplies texture color by it, and
-        // omitting it can render the texture invisible.
-        g.blit(RenderPipelines.GUI_TEXTURED, id, x, y, 0f, 0f, size, size, size, size, 0xFFFFFFFF);
+        Entry entry = LOADED.values().stream().filter(e -> e.textureId.equals(id)).findFirst().orElse(null);
+        if (entry == null) return;
+        float fit = Math.min(size / (float) entry.srcW, size / (float) entry.srcH);
+        int w = Math.max(1, Math.round(entry.srcW * fit)), h = Math.max(1, Math.round(entry.srcH * fit));
+        g.blit(RenderPipelines.GUI_TEXTURED, id, x + (size - w) / 2, y + (size - h) / 2,
+                0f, 0f, w, h, entry.srcW, entry.srcH, entry.srcW, entry.srcH, 0xFFFFFFFF);
     }
 }

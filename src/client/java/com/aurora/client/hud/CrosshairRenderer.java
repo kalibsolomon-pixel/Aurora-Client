@@ -5,6 +5,9 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.CameraType;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.resources.Identifier;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
@@ -47,6 +50,9 @@ import java.util.function.Predicate;
  * fixed-grid canvas.
  */
 public final class CrosshairRenderer {
+    private static final Identifier ATTACK_FULL = Identifier.withDefaultNamespace("hud/crosshair_attack_indicator_full");
+    private static final Identifier ATTACK_BACKGROUND = Identifier.withDefaultNamespace("hud/crosshair_attack_indicator_background");
+    private static final Identifier ATTACK_PROGRESS = Identifier.withDefaultNamespace("hud/crosshair_attack_indicator_progress");
 
     public void render(GuiGraphics ctx) {
         AuroraConfig cfg = AuroraConfig.get();
@@ -82,6 +88,38 @@ public final class CrosshairRenderer {
                 useIndicator ? cfg.crosshairIndicatorCustomHeight : cfg.crosshairCustomHeight);
 
         ctx.pose().popMatrix();
+        if (cfg.crosshairAttackIndicatorEnabled && client.player != null && !client.player.isSpectator()) {
+            var layout = CrosshairAttackIndicator.layout(cfg.crosshairAttackIndicatorSize, style, size, thick, gap,
+                    useIndicator ? cfg.crosshairIndicatorCustomWidth : cfg.crosshairCustomWidth,
+                    useIndicator ? cfg.crosshairIndicatorCustomHeight : cfg.crosshairCustomHeight);
+            drawAttackIndicator(ctx, client, cx, cy, layout);
+        }
+    }
+
+    private static void drawAttackIndicator(GuiGraphics ctx, Minecraft client, int cx, int cy,
+                                            CrosshairAttackIndicator.Layout layout) {
+        LocalPlayer player = client.player;
+        float cooldown = player.getAttackStrengthScale(0.0f);
+        boolean ready = cooldown >= 1.0f && player.getCurrentItemAttackStrengthDelay() > 5.0f
+                && client.crosshairPickEntity instanceof LivingEntity target && target.isAlive();
+        var attackRange = player.getActiveItem().get(DataComponents.ATTACK_RANGE);
+        if (ready && attackRange != null) {
+            ready = client.hitResult != null && attackRange.isInRange(player, client.hitResult.getLocation());
+        }
+        if (!ready && cooldown >= 1.0f) return;
+
+        ctx.pose().pushMatrix();
+        ctx.pose().translate(cx, cy + layout.top());
+        ctx.pose().scale(layout.scale(), layout.scale());
+        if (ready) {
+            ctx.blitSprite(RenderPipelines.CROSSHAIR, ATTACK_FULL, -8, 0, 16, 16);
+        } else {
+            ctx.blitSprite(RenderPipelines.CROSSHAIR, ATTACK_BACKGROUND, -8, 0, 16, 4);
+            int progress = Math.clamp((int) (cooldown * 17), 0, 16);
+            if (progress > 0) ctx.blitSprite(RenderPipelines.CROSSHAIR, ATTACK_PROGRESS,
+                    16, 4, 0, 0, -8, 0, progress, 4);
+        }
+        ctx.pose().popMatrix();
     }
 
     /**
@@ -101,9 +139,7 @@ public final class CrosshairRenderer {
                                  int cx, int cy, int size, int thick, int gap, int color,
                                  boolean[] customPixels, int customW, int customH) {
         switch (safe(style)) {
-            case DOT    -> drawDot(ctx, cx, cy, size, color);
-            case CIRCLE -> drawCircle(ctx, cx, cy, size, gap, color);
-            case SQUARE -> drawSquare(ctx, cx, cy, size, thick, gap, color);
+            case DOT, CIRCLE, SQUARE -> drawRaster(ctx, safe(style), cx, cy, size, thick, gap, color);
             case CROSS  -> drawCross(ctx, cx, cy, size, thick, gap, color);
             case CUSTOM -> drawCustom(ctx, cx, cy, size, color, customPixels, customW, customH);
         }
@@ -140,16 +176,31 @@ public final class CrosshairRenderer {
     // by (-0.5, -0.5), so a single-pixel center column at column index `cx`
     // visually straddles the screen seam.
 
-    private static void drawDot(GuiGraphics ctx, int cx, int cy, int size, int color) {
-        // Symmetric extents: size=1 Ã¢â€ â€™ [cx, cx+1), size=2 Ã¢â€ â€™ [cx-1, cx+1),
-        // size=3 Ã¢â€ â€™ [cx-1, cx+2). The post-translate seam is at cx, so all
-        // odd sizes are visibly centered on the seam.
-        int half = size / 2;
-        int x1 = cx - half;
-        int y1 = cy - half;
-        ctx.fill(x1, y1, x1 + size, y1 + size, color);
-    }
+    private record RasterKey(AuroraConfig.CrosshairStyle style, int size, int thickness, int gap, double scale) {}
+    private static final java.util.Map<RasterKey, java.util.List<CrosshairRaster.Run>> RASTERS =
+            new java.util.LinkedHashMap<>(16, 0.75f, true) {
+                @Override protected boolean removeEldestEntry(java.util.Map.Entry<RasterKey, java.util.List<CrosshairRaster.Run>> entry) {
+                    return size() > 16;
+                }
+            };
 
+    private static void drawRaster(GuiGraphics ctx, AuroraConfig.CrosshairStyle style,
+                                   int cx, int cy, int size, int thickness, int gap, int color) {
+        double scale = Minecraft.getInstance().getWindow().getGuiScale();
+        var key = new RasterKey(style, size, thickness, gap, scale);
+        var runs = RASTERS.computeIfAbsent(key,
+                k -> CrosshairRaster.raster(k.style(), k.size(), k.thickness(), k.gap(), k.scale()));
+        ctx.pose().pushMatrix();
+        // Undo the caller's half-pixel bias for symmetric even device-pixel bounds.
+        ctx.pose().translate(cx + 0.5f, cy + 0.5f);
+        ctx.pose().scale((float) (1.0 / scale), (float) (1.0 / scale));
+        for (var run : runs) {
+            int alpha = ((color >>> 24) * run.alpha() + 127) / 255;
+            if (alpha > 0) ctx.fill(run.x(), run.y(), run.x() + run.width(), run.y() + 1,
+                    (alpha << 24) | (color & 0x00ffffff));
+        }
+        ctx.pose().popMatrix();
+    }
     private static void drawCross(GuiGraphics ctx, int cx, int cy, int size, int thick, int gap, int color) {
         int halfT = thick / 2;
         int innerLeft = cx - gap;
@@ -174,82 +225,6 @@ public final class CrosshairRenderer {
         if (gap == 0) {
             ctx.fill(armLeft, armTop, armRight, armBottom, color);
         }
-    }
-
-    private static void drawSquare(GuiGraphics ctx, int cx, int cy, int size, int thick, int gap, int color) {
-        int x1 = cx - size;
-        int y1 = cy - size;
-        int x2 = cx + size + 1;
-        int y2 = cy + size + 1;
-        
-        int gapL = cx - gap;
-        int gapR = cx + gap + (thick % 2);
-        int gapT = cy - gap;
-        int gapB = cy + gap + (thick % 2);
-
-        if (gap == 0) {
-            ctx.fill(x1, y1, x2, y1 + thick, color);
-            ctx.fill(x1, y2 - thick, x2, y2, color);
-            ctx.fill(x1, y1, x1 + thick, y2, color);
-            ctx.fill(x2 - thick, y1, x2, y2, color);
-        } else {
-            // Top edge
-            if (gapL > x1) ctx.fill(x1, y1, gapL, y1 + thick, color);
-            if (gapR < x2) ctx.fill(gapR, y1, x2, y1 + thick, color);
-            // Bottom edge
-            if (gapL > x1) ctx.fill(x1, y2 - thick, gapL, y2, color);
-            if (gapR < x2) ctx.fill(gapR, y2 - thick, x2, y2, color);
-            // Left edge
-            if (gapT > y1) ctx.fill(x1, Math.max(y1 + thick, gapR < x2 ? y1 : y1), x1 + thick, gapT, color);
-            if (gapB < y2) ctx.fill(x1, gapB, x1 + thick, Math.min(y2 - thick, gapR < x2 ? y2 : y2), color);
-            // Right edge
-            if (gapT > y1) ctx.fill(x2 - thick, Math.max(y1 + thick, gapR < x2 ? y1 : y1), x2, gapT, color);
-            if (gapB < y2) ctx.fill(x2 - thick, gapB, x2, Math.min(y2 - thick, gapR < x2 ? y2 : y2), color);
-            
-            // To ensure corners are properly connected when gap doesn't completely remove them:
-            if (gapT > y1) {
-                ctx.fill(x1, y1, x1 + thick, y1 + thick, color);
-                ctx.fill(x2 - thick, y1, x2, y1 + thick, color);
-            }
-            if (gapB < y2) {
-                ctx.fill(x1, y2 - thick, x1 + thick, y2, color);
-                ctx.fill(x2 - thick, y2 - thick, x2, y2, color);
-            }
-        }
-    }
-
-    private static void drawCircle(GuiGraphics ctx, int cx, int cy, int radius, int gap, int color) {
-        int r = Math.max(1, radius);
-        int x = r;
-        int y = 0;
-        int err = 1 - x;
-        while (x >= y) {
-            plot8(ctx, cx, cy, x, y, gap, color);
-            y++;
-            if (err < 0) {
-                err += 2 * y + 1;
-            } else {
-                x--;
-                err += 2 * (y - x) + 1;
-            }
-        }
-    }
-
-    private static void plot8(GuiGraphics ctx, int cx, int cy, int x, int y, int gap, int color) {
-        if (x >= gap && y >= gap) {
-            pixel(ctx, cx + x, cy + y, color);
-            pixel(ctx, cx - x, cy + y, color);
-            pixel(ctx, cx + x, cy - y, color);
-            pixel(ctx, cx - x, cy - y, color);
-            pixel(ctx, cx + y, cy + x, color);
-            pixel(ctx, cx - y, cy + x, color);
-            pixel(ctx, cx + y, cy - x, color);
-            pixel(ctx, cx - y, cy - x, color);
-        }
-    }
-
-    private static void pixel(GuiGraphics ctx, int x, int y, int color) {
-        ctx.fill(x, y, x + 1, y + 1, color);
     }
 
     /**

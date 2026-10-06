@@ -40,7 +40,10 @@ class OwnerCorrectionTest {
         assertFalse(main.contains("bx + 72, by + 36, 1"));
         assertTrue(main.contains("cx + cw / 2f, cy + 30, 28f"));
         assertTrue(main.contains("button == 1"));
-        assertTrue(main.contains("new FeatureDetailScreen(this, fm)"));
+        assertTrue(main.contains("FeatureDetailScreen.destination(this, fm)"));
+        String detail = source("screen/FeatureDetailScreen.java");
+        assertTrue(detail.contains("new ResourcePackBrowserScreen(parent)"));
+        assertTrue(detail.contains("new FeatureDetailScreen(parent, meta)"));
     }
     @Test void sharedDetailsUseMeasuredLeftLabelsAndNestedItemSlidersUseActualHeights() throws Exception {
         String host = source("screen/FeatureDetailScreen.java");

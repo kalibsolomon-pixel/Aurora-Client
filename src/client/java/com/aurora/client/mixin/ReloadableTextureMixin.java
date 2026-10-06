@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * Enchant Glint Recolor — the single injection point.
+ * Enchant Glint Color — texture-mask injection point; render types are selected separately.
  *
  * <p>Targeted at {@link ReloadableTexture} (not its file-backed subclass
  * {@code SimpleTexture}, whose mixin would need to shadow an inherited

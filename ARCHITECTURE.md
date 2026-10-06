@@ -7,6 +7,15 @@ root — findings and prioritized plan from the 2026-09-04 full GUI audit).
 
 ---
 
+
+2026-10-06 feature update: Stats Overlay and its passive tracker are removed;
+Hotbar Bounce is an Animations sub-toggle; Miscellaneous is labeled Display
+Settings (stable id retained). Reflex is an automatic measured runtime service,
+with bounded waits and session fail-off, rather than a configurable feature.
+Keystrokes now uses Aurora surfaces/borders, stable soft accent press states,
+mouse-cell CPS, equal optional MMB columns and a labeled space key. The current
+grid has 34 tiles, 25 runtime Features and 12 HUD modules.
+
 ## 0. Historical repository state (2026-09-08)
 
 **`master` is the canonical, current branch.** Everything the GUI work depends on is committed
@@ -1590,7 +1599,7 @@ with two precision notes):
   belongs to, and C-5 establishes that contract (C-3 the arrow group).
   Remaining gap: immediate hover, no semantic controls, no peer-group
   semantics — all land with C-5. No one-off peer primitive was built.
-- **37 module tiles — COMPOUND CARDS**: one control per module, keyed by
+- **34 module tiles — COMPOUND CARDS**: one control per module, keyed by
   stable module id (finite: the ModuleManager set; search filtering changes
   only availability, never the control set). Primary action (left click /
   Enter / Space) toggles the module through the action — exactly one
@@ -1622,7 +1631,7 @@ with two precision notes):
 
 Traversal order (child-list = Tab order, unavailable controls skipped):
 search field (Modules only — hidden on Settings) → Mods → Settings →
-Profiles → [Modules: 37 tiles in ModuleManager grid order | Settings:
+Profiles → [Modules: 34 tiles in ModuleManager grid order | Settings:
 custom_title toggle, text_fonts nav+toggle, its 2 enums, theme nav+toggle,
 Accent's 10 peers (+ non-hosting rows), interface nav+toggle, its enum].
 Sound ownership: every accepted activation lives in the action (tabs carry

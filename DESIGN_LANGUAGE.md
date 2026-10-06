@@ -1198,3 +1198,11 @@ paint within the same 56×24 bounds used for hit testing and focus. A selected
 unified tab owns its single accent edge; an unselected keyboard-focused tab
 still receives a visible focus outline. Live GUI-scale 3 review confirmed these
 changes and one parent glass capture per frame. The full 421-test build passed.
+
+Feature detail screens also reserve an 18px blank band above each section
+caption, including compact rows. This spacing is included in the shared row
+height so painting, scrolling and pointer routing advance by the same amount.
+
+Top-right Done buttons use the same neutral treatment as Reset, without the
+primary button's accent fill or glow. This applies across feature details,
+the profile/waypoint managers and the resource pack browser.

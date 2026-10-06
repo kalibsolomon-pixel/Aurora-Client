@@ -6,6 +6,9 @@ import com.aurora.client.hud.HudAnchor;
 import com.aurora.client.util.AuroraKey;
 import com.aurora.client.util.CachedValue;
 import com.aurora.client.util.RoundedRect;
+import com.aurora.client.util.AuroraShapes;
+import com.aurora.client.theme.ThemeManager;
+import com.aurora.client.theme.ThemeToken;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.minecraft.client.KeyMapping;
@@ -18,7 +21,7 @@ import java.util.List;
 
 /**
  * Keystrokes overlay — a single cohesive panel of rounded key cells that
- * light up (animated accent blend + subtle scale-up) as inputs are pressed.
+ * light up (animated soft accent fill and outline) as inputs are pressed.
  *
  * <p>Layout, top to bottom (every row optional):
  * <pre>
@@ -48,7 +51,7 @@ public class KeystrokesModule extends HudModule {
     /** Square key cell edge. */
     private static final int CELL = 22;
     /** Gap between keys and between rows. */
-    private static final int GAP = 2;
+    private static final int GAP = 3;
     /** Cluster width: three key columns. */
     private static final int WIDTH = CELL * 3 + GAP * 2;
     /**
@@ -59,7 +62,7 @@ public class KeystrokesModule extends HudModule {
      * rectangular chrome must not copy this pattern — tokenize instead.
      */
     private static final int KEY_RADIUS = 3;
-    private static final int SPACE_H = 10;
+    private static final int SPACE_H = 16;
     private static final int CPS_H = 11;
     private static final int EXTRA_COLS = 3;
     /** Rendered extra-key slot cap. */
@@ -76,7 +79,7 @@ public class KeystrokesModule extends HudModule {
     /** Idle key fill: ~18% white glass over the backing panel. */
     private static int idleBackground() {
         return com.aurora.client.theme.ThemeManager.withAlpha(com.aurora.client.theme.ThemeManager.color(
-                com.aurora.client.theme.ThemeToken.HUD_BACKDROP_TOP),0xCC);
+                com.aurora.client.theme.ThemeToken.SURFACE),0xEE);
     }
 
     // ---- Press animation speeds (lerp factors, per second) ----
@@ -95,6 +98,11 @@ public class KeystrokesModule extends HudModule {
 
     /** CPS text — integer values, so a 100 ms rebuild cap is imperceptible. */
     private final CachedValue<String> cpsText = new CachedValue<>(100L, this::buildCpsText);
+
+    private final CachedValue<String[]> mouseCps = new CachedValue<>(100L,
+            () -> new String[]{ClickTrackerFeature.LEFT.get() + " CPS", ClickTrackerFeature.RIGHT.get() + " CPS"});
+
+    private static int mouseHeight(AuroraConfig cfg) { return CELL + (cfg.keystrokesShowCps ? 10 : 0); }
 
     public KeystrokesModule() {
         super(ID);
@@ -152,8 +160,8 @@ public class KeystrokesModule extends HudModule {
         int h = 0;
         int rows = 0;
         if (cfg.keystrokesShowMovement) { h += CELL * 2; rows += 2; }
-        if (cfg.keystrokesShowMouse)    { h += CELL;     rows += 1; }
-        if (cfg.keystrokesShowCps)      { h += CPS_H;    rows += 1; }
+        if (cfg.keystrokesShowMouse)    { h += mouseHeight(cfg); rows += 1; }
+        if (cfg.keystrokesShowCps && !cfg.keystrokesShowMouse)      { h += CPS_H;    rows += 1; }
         if (cfg.keystrokesShowSpacebar) { h += SPACE_H;  rows += 1; }
         if (cfg.keystrokesShowExtra)    { h += CELL;     rows += 1; }
         int ex = extraCount(cfg);
@@ -221,23 +229,23 @@ public class KeystrokesModule extends HudModule {
         if (cfg.keystrokesShowMouse) {
             advance(SLOT_LMB, down(opts.keyAttack), dt);
             advance(SLOT_RMB, down(opts.keyUse), dt);
+            int mouseH = mouseHeight(cfg);
             if (showMid) {
                 advance(SLOT_MMB, down(opts.keyPickItem), dt);
-                int mW = 12; // 27 + 2 + 12 + 2 + 27 = WIDTH
-                int side = WIDTH / 2 - mW / 2 - GAP;
-                drawKey(ctx, font, x, cy, side, CELL, SLOT_LMB, accent, labelColor);
-                drawKey(ctx, font, x + WIDTH / 2 - mW / 2, cy, mW, CELL, SLOT_MMB, accent, labelColor);
-                drawKey(ctx, font, x + WIDTH / 2 + mW / 2 + GAP, cy, side, CELL, SLOT_RMB, accent, labelColor);
+                drawKey(ctx, font, x, cy, CELL, mouseH, SLOT_LMB, accent, labelColor);
+                drawKey(ctx, font, x + CELL + GAP, cy, CELL, mouseH, SLOT_MMB, accent, labelColor);
+                drawKey(ctx, font, x + (CELL + GAP) * 2, cy, CELL, mouseH, SLOT_RMB, accent, labelColor);
             } else {
                 int side = (WIDTH - GAP) / 2;
-                drawKey(ctx, font, x, cy, side, CELL, SLOT_LMB, accent, labelColor);
-                drawKey(ctx, font, x + side + GAP, cy, side, CELL, SLOT_RMB, accent, labelColor);
+                drawKey(ctx, font, x, cy, side, mouseH, SLOT_LMB, accent, labelColor);
+                drawKey(ctx, font, x + side + GAP, cy, WIDTH - side - GAP, mouseH, SLOT_RMB, accent, labelColor);
             }
-            cy += CELL + GAP;
+            cy += mouseH + GAP;
         }
 
         // ---- CPS readout (event-based rolling 1-second counters) ----
-        if (cfg.keystrokesShowCps) {
+        if (cfg.keystrokesShowCps && !cfg.keystrokesShowMouse) {
+            AuroraShapes.panel(ctx, x, cy, WIDTH, CPS_H, idleBackground(), KEY_RADIUS);
             String text = cpsText.get();
             int tw = font.width(text);
             ctx.drawString(font, text, x + (WIDTH - tw) / 2,
@@ -279,15 +287,29 @@ public class KeystrokesModule extends HudModule {
 
     /**
      * Draws one rounded key cell. The press value drives a background blend
-     * from idle glass to the accent color plus a subtle 1px scale-up once
-     * mostly pressed; the label is always centered.
+     * from the themed idle surface to a soft accent highlight; the label is always centered.
      */
     private void drawKey(GuiGraphics ctx, Font font, int x, int y, int w, int h,
                          int slot, int accent, int labelColor) {
         float t = press[slot];
-        int grow = t >= 0.5f ? 1 : 0;
-        RoundedRect.fill(ctx, x - grow, y - grow, x + w + grow, y + h + grow,
-                KEY_RADIUS, blend(idleBackground(), accent, t));
+        // Stable geometry: color/border feedback stays inside the key instead of
+        // growing into its neighbors. Aurora surface and outline roles unify the HUD.
+        AuroraShapes.panel(ctx, x, y, w, h, blend(idleBackground(), accent, t * 0.28f), KEY_RADIUS);
+        AuroraShapes.outline(ctx, x, y, w, h,
+                blend(ThemeManager.color(ThemeToken.TILE_OUTLINE), accent, t * 0.85f), KEY_RADIUS);
+        if (t > 0.01f) RoundedRect.fill(ctx, x + 5, y + h - 3, x + w - 5, y + h - 2,
+                1, ThemeManager.withAlpha(accent, Math.round(t * 220)));
+        boolean mouseWithCps = h > CELL && slot >= SLOT_LMB && slot <= SLOT_RMB;
+        int labelY = mouseWithCps ? y + 5 : y + (h - font.lineHeight) / 2;
+        if (mouseWithCps && slot != SLOT_MMB) {
+            String count = mouseCps.get()[slot == SLOT_LMB ? 0 : 1];
+            float scale = Math.min(0.75f, (w - 6f) / font.width(count));
+            ctx.pose().pushMatrix();
+            ctx.pose().translate(x + (w - font.width(count) * scale) / 2f, y + h - 12);
+            ctx.pose().scale(scale, scale);
+            ctx.drawString(font, count, 0, 0, labelColor, false);
+            ctx.pose().popMatrix();
+        }
 
         String label = labels[slot];
         if (label == null || label.isEmpty()) return;
@@ -295,12 +317,12 @@ public class KeystrokesModule extends HudModule {
         if (lw <= 0) return;
         if (lw <= w - 4) {
             ctx.drawString(font, label, x + (w - lw) / 2,
-                    y + (h - font.lineHeight) / 2, labelColor, false);
+                    labelY, labelColor, false);
         } else {
             // Long bind names shrink to fit instead of overflowing the cell.
             float s = (w - 4f) / lw;
             int tx = x + Math.max(2, Math.round((w - lw * s) / 2f));
-            int ty = y + (h - font.lineHeight) / 2;
+            int ty = labelY;
             ctx.pose().pushMatrix();
             ctx.pose().translate(tx, ty);
             ctx.pose().scale(s, s);
@@ -389,15 +411,9 @@ public class KeystrokesModule extends HudModule {
                 com.aurora.client.theme.ThemeToken.ACCENT) : c;
     }
 
-    /**
-     * Key labels follow the mod-wide HUD text color — the same sentinel
-     * contract as every other hudColor reader ({@link
-     * com.aurora.client.theme.HudText}): 0 follows the theme accent, an
-     * explicit color wins. Before the sentinel this guard fell back to white,
-     * which was dead code in practice (hudColor's old default was white).
-     */
+    /** Per-feature key label override, inheriting legacy HUD color until customized. */
     private static int labelColor(AuroraConfig cfg) {
-        return com.aurora.client.theme.HudText.color(cfg.hudColor);
+        return cfg.keystrokesTextColor == null ? ThemeManager.color(ThemeToken.ON_SURFACE) : cfg.keystrokesTextColor;
     }
 
     private static int extraCount(AuroraConfig cfg) {
@@ -416,10 +432,10 @@ public class KeystrokesModule extends HudModule {
         putLabel(font, SLOT_A, bindLabel(opts.keyLeft, "A"));
         putLabel(font, SLOT_S, bindLabel(opts.keyDown, "S"));
         putLabel(font, SLOT_D, bindLabel(opts.keyRight, "D"));
-        putLabel(font, SLOT_LMB, "L");
-        putLabel(font, SLOT_MMB, "M");
-        putLabel(font, SLOT_RMB, "R");
-        putLabel(font, SLOT_SPACE, "");
+        putLabel(font, SLOT_LMB, "LMB");
+        putLabel(font, SLOT_MMB, "MMB");
+        putLabel(font, SLOT_RMB, "RMB");
+        putLabel(font, SLOT_SPACE, bindLabel(opts.keyJump, "SPACE"));
         putLabel(font, SLOT_SNEAK, bindLabel(opts.keyShift, "SHIFT"));
         putLabel(font, SLOT_SPRINT, bindLabel(opts.keySprint, "CTRL"));
 

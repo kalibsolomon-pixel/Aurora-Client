@@ -837,6 +837,16 @@ public class PixelCanvasSetting extends FeatureSetting {
     }
 
     @Override
+    public void onInteractionAvailabilityChanged(boolean available) {
+        if (available) return;
+        if (widthField != null) widthField.setFocused(false);
+        if (heightField != null) heightField.setFocused(false);
+        dragging = false;
+        dragButton = -1;
+        releaseFocus();
+    }
+
+    @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
         if (dragging && button == dragButton) {
             dragging = false;

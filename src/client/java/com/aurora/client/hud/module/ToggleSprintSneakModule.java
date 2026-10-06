@@ -30,7 +30,10 @@ public class ToggleSprintSneakModule extends HudModule {
     // (com.aurora.client.theme.HudStatus); label text stays plain white.
     private static final int COLOR_ON    = com.aurora.client.theme.HudStatus.ON;
     private static final int COLOR_OFF   = com.aurora.client.theme.HudStatus.OFF;
-    private static final int COLOR_LABEL = 0xFFFFFFFF;
+    private static int textColor(int fallback) {
+        Integer override = AuroraConfig.get().toggleSprintSneakTextColor;
+        return override == null ? fallback : override;
+    }
 
     // Pre-built strings and Component instances — these never change at runtime.
     private static final String LABEL_SPRINT = "Sprint: ";
@@ -163,21 +166,21 @@ public class ToggleSprintSneakModule extends HudModule {
 
         int drawX = x;
         if (sprint) {
-            ctx.drawString(tr, BRACKET_SPRINT, drawX, y, COLOR_ON, false);
+            ctx.drawString(tr, BRACKET_SPRINT, drawX, y, textColor(COLOR_ON), false);
             drawX += tr.width(BRACKET_SPRINT);
         }
         if (sprint && sneak) {
-            ctx.drawString(tr, SEPARATOR, drawX, y, COLOR_LABEL, false);
+            ctx.drawString(tr, SEPARATOR, drawX, y, textColor(0xFFFFFFFF), false);
             drawX += tr.width(SEPARATOR);
         }
         if (sneak) {
-            ctx.drawString(tr, BRACKET_SNEAK, drawX, y, COLOR_ON, false);
+            ctx.drawString(tr, BRACKET_SNEAK, drawX, y, textColor(COLOR_ON), false);
         }
     }
 
     private static void drawRow(GuiGraphics ctx, Font tr, int x, int y,
                                 Component label, int labelWidth, boolean on) {
-        ctx.drawString(tr, label, x, y, COLOR_LABEL, false);
-        ctx.drawString(tr, on ? TEXT_ON : TEXT_OFF, x + labelWidth, y, on ? COLOR_ON : COLOR_OFF, false);
+        ctx.drawString(tr, label, x, y, textColor(0xFFFFFFFF), false);
+        ctx.drawString(tr, on ? TEXT_ON : TEXT_OFF, x + labelWidth, y, textColor(on ? COLOR_ON : COLOR_OFF), false);
     }
 }

@@ -20,7 +20,7 @@ import java.util.function.Consumer;
  * Registry of feature metadata. Features are split into two tabs:
  * <ul>
  *   <li><b>Modules</b> â€” Aurora's gameplay/visual features (the grid),
- *       plus the combined "Miscellaneous" entry that groups the smaller
+ *       plus the combined "Display Settings" entry that groups the smaller
  *       settings (camera, frame pacer, latency, input, servers)
  *       behind one detail screen - an explicit
  *       "for now" grouping (moved here from Settings 2026-09-10)</li>
@@ -129,7 +129,7 @@ public final class FeatureRegistry {
                                 .description("Shrinks the burst of totem particles that erupts when you pop a Totem of Undying. Lower values clear the screen faster so you can see the fight again sooner after a pop — a common competitive preference. 100% is vanilla size."),
 
                         new SectionHeaderSetting("Shield"),
-                        new BooleanSetting("Enabled",
+                        new BooleanSetting("Custom Model",
                                 () -> cfg.shieldTweaksEnabled,
                                 v -> cfg.shieldTweaksEnabled = v)
                                 .description("Repositions your held shield in first person so it blocks less of your view while still protecting you — making it easier to track an opponent while blocking. Turn off to keep the vanilla shield position."),
@@ -145,7 +145,7 @@ public final class FeatureRegistry {
                                     case COMPACT -> "Uniformly shrinks the shield while keeping its default position.";
                                 }),
 
-                        new BooleanSetting("Enabled",
+                        new BooleanSetting("Shield Status",
                                 () -> cfg.shieldStatusEnabled,
                                 v -> cfg.shieldStatusEnabled = v)
                                 .description("Tints rendered shields by status. Your shield shows the Available color at all times, except during the brief cooldown after an axe disables it — then it turns Disabled. Other players' and mobs' cooldowns aren't synced, so theirs always show Available."),
@@ -167,7 +167,7 @@ public final class FeatureRegistry {
                                 () -> cfg.lavaFogMultiplier,
                                 v -> cfg.lavaFogMultiplier = v, 1.0, 50.0)
                                 .description("Pushes back the thick orange fog when your head is submerged in lava, letting you see further through it. Invaluable for spotting ancient debris or an exit while swimming lava in the Nether. Higher = clearer."),
-                        new BooleanSetting("Hide Lava Orange Overlay",
+                        new BooleanSetting("Hide 1st Person Fire",
                                 () -> cfg.lavaHideOverlay,
                                 v -> cfg.lavaHideOverlay = v)
                                 .description("Hides the orange tint when submerged. Also hides the on-fire screen tint.")
@@ -260,6 +260,8 @@ public final class FeatureRegistry {
                 "Turns sprint and sneak into press-once toggles instead of hold-to-keep keys. Tap to start sprinting or sneaking and it stays active until you tap again — saving your fingers on long journeys and letting you hold a sneak edge without keeping a key pressed. An optional HUD shows which toggles are active.",
                 () -> cfg.toggleSprintSneakEnabled, v -> cfg.toggleSprintSneakEnabled = v,
                 List.of(
+                        new ColorSetting("Text Color", () -> cfg.toggleSprintSneakTextColor == null ? 0xFFFFFFFF : cfg.toggleSprintSneakTextColor, v -> cfg.toggleSprintSneakTextColor = v)
+                                .description("Text color for this HUD only. Reset restores its default color."),
                         new KeybindSetting("Toggle Sprint Key",
                                 () -> cfg.toggleSprintKey, v -> cfg.toggleSprintKey = v)
                                 .description("Press once to start sprinting, again to stop."),
@@ -285,20 +287,32 @@ public final class FeatureRegistry {
                                 () -> cfg.sprintHudBgColor, v -> cfg.sprintHudBgColor = v)
                 ));
 
-        // ---- Alerts (combined: armor durability + hunger + effect expiry) ----
+        // ---- Alerts (combined: armor durability + effect expiry) ----
         // Single module consolidating all on-screen popup warnings. Master
         // toggle is ON if ANY sub-alert is on; the setter flips all together.
         addWithSettings(MODULES, "alerts", "Alerts",
-                "On-screen popup warnings for low armor durability, low hunger, and potion effects about to expire. Never get caught off-guard by breaking gear, starvation, or a buff running out mid-fight. All alerts share the same popup and sound system.",
+                "Icon and text warnings for low armor durability and potion effects about to expire. Get warned before gear breaks or a buff runs out mid-fight. All alerts share the same sound system.",
                 () -> cfg.armorAlertEnabled || cfg.toolDurabilityAlertEnabled
-                        || cfg.hungerAlertEnabled || cfg.effectExpiryAlertEnabled,
+                        || cfg.effectExpiryAlertEnabled,
                 v -> {
                     cfg.armorAlertEnabled = v;
                     cfg.toolDurabilityAlertEnabled = v;
-                    cfg.hungerAlertEnabled = v;
                     cfg.effectExpiryAlertEnabled = v;
                 },
                 List.of(
+                        new SectionHeaderSetting("Effect Expiry"),
+                        new BooleanSetting("Effect Expiry Alert",
+                                () -> cfg.effectExpiryAlertEnabled,
+                                v -> cfg.effectExpiryAlertEnabled = v)
+                                .description("Fires a popup when an active potion effect is about to run out, so you can re-apply it before it's gone. Master switch for everything in this section: with it off, no effect ever alerts, regardless of the per-effect list below."),
+                        SliderSetting.ofInt("Expiry Threshold (seconds)",
+                                () -> cfg.effectExpiryThresholdSeconds,
+                                v -> cfg.effectExpiryThresholdSeconds = v, 1, 60)
+                                .description("How many seconds before an effect expires the alert should fire. 10 seconds gives you time to re-buff; lower values alert closer to the wire."),
+
+                        new SectionHeaderSetting("Per-Effect Alerts"),
+                        new EffectExpiryListSetting(),
+
                         new SectionHeaderSetting("Armor & Tools"),
                         new BooleanSetting("Armor Durability Alert",
                                 () -> cfg.armorAlertEnabled,
@@ -312,29 +326,6 @@ public final class FeatureRegistry {
                                 () -> cfg.armorAlertThresholdPct,
                                 v -> cfg.armorAlertThresholdPct = v, 1, 100)
                                 .description("Durability percentage at which the warning fires. Higher values warn you earlier (more lead time to react); lower values only alert at the last moment. Around 10-15% gives a good balance."),
-
-                        new SectionHeaderSetting("Hunger"),
-                        new BooleanSetting("Low Hunger Alert",
-                                () -> cfg.hungerAlertEnabled,
-                                v -> cfg.hungerAlertEnabled = v)
-                                .description("Fires a popup when your hunger drumsticks drop below the threshold."),
-                        SliderSetting.ofInt("Hunger Threshold",
-                                () -> cfg.hungerAlertThreshold,
-                                v -> cfg.hungerAlertThreshold = v, 1, 20)
-                                .description("Hunger level (in drumsticks) at which the alert fires. 6 is a good default — it gives you time to eat before you start starving."),
-
-                        new SectionHeaderSetting("Effect Expiry"),
-                        new BooleanSetting("Effect Expiry Alert",
-                                () -> cfg.effectExpiryAlertEnabled,
-                                v -> cfg.effectExpiryAlertEnabled = v)
-                                .description("Fires a popup when an active potion effect is about to run out, so you can re-apply it before it's gone. Master switch for everything in this section: with it off, no effect ever alerts, regardless of the per-effect list below."),
-                        SliderSetting.ofInt("Expiry Threshold (seconds)",
-                                () -> cfg.effectExpiryThresholdSeconds,
-                                v -> cfg.effectExpiryThresholdSeconds = v, 1, 60)
-                                .description("How many seconds before an effect expires the alert should fire. 10 seconds gives you time to re-buff; lower values alert closer to the wire."),
-
-                        new SectionHeaderSetting("Per-Effect Alerts"),
-                        new EffectExpiryListSetting(),
 
                         new SectionHeaderSetting("Sound"),
                         new BooleanSetting("Play Sound",
@@ -350,7 +341,7 @@ public final class FeatureRegistry {
                                 com.aurora.client.feature.impl.ArmorAlertFeature::playPreview)
                                 .description("Plays the currently selected alert sound once so you can preview it.")
                 ),
-                List.of("armorAlert", "toolDurability", "hungerAlert", "effectExpiry"));
+                List.of("armorAlert", "toolDurability", "effectExpiry"));
 
         addWithSettings(MODULES, "crosshair", "Crosshair",
                 "Replaces the vanilla crosshair with a fully customizable one — pick a preset shape or draw your own, set its size, thickness, gap and color, and add a separate indicator that appears when an attackable entity is in reach. A clearer, personalized crosshair makes aiming and reach timing easier.",
@@ -366,19 +357,26 @@ public final class FeatureRegistry {
                         SliderSetting.ofInt("Size", () -> cfg.crosshairSize, v -> cfg.crosshairSize = v, 1, 20)
                                 .description("Overall scale, length, or radius of the crosshair."),
                         SliderSetting.ofInt("Thickness", () -> cfg.crosshairThickness, v -> cfg.crosshairThickness = v, 1, 6)
-                                .description("Thickness of the crosshair. Ignored for CIRCLE and CUSTOM styles.")
-                                .disabled(() -> cfg.crosshairStyle == AuroraConfig.CrosshairStyle.CIRCLE || cfg.crosshairStyle == AuroraConfig.CrosshairStyle.CUSTOM),
+                                .description("Stroke width of preset shapes. Custom canvases use their painted pixels.")
+                                .visibleWhen(() -> cfg.crosshairStyle != AuroraConfig.CrosshairStyle.CUSTOM),
                         SliderSetting.ofInt("Gap", () -> cfg.crosshairGap, v -> cfg.crosshairGap = v, 0, 10)
-                                .description("Creates broken shapes. Only enabled for CIRCLE or SQUARE.")
-                                .disabled(() -> cfg.crosshairStyle != AuroraConfig.CrosshairStyle.CIRCLE && cfg.crosshairStyle != AuroraConfig.CrosshairStyle.SQUARE),
+                                .description("Center opening for dots and crosses; breaks the sides of circles and squares.")
+                                .visibleWhen(() -> cfg.crosshairStyle != AuroraConfig.CrosshairStyle.CUSTOM),
                         new ColorSetting("Color", () -> cfg.crosshairColor, v -> cfg.crosshairColor = v),
-                        new PixelCanvasSetting("Custom Canvas (used when style = CUSTOM)",
+                        new PixelCanvasSetting("Custom Canvas",
                                 () -> cfg.crosshairCustomPixels, v -> cfg.crosshairCustomPixels = v,
                                 () -> cfg.crosshairCustomWidth, v -> cfg.crosshairCustomWidth = v,
                                 () -> cfg.crosshairCustomHeight, v -> cfg.crosshairCustomHeight = v)
                                 .description("Left-click to paint, right-click to erase, drag to stroke. Enter any width × height up to "
                                         + PixelCanvasSetting.MAX_DIM + " and press Apply — growing the grid first measures the real render cost on your machine. Default restores the vanilla 15×15 crosshair shape.")
-                                .disabled(() -> cfg.crosshairStyle != AuroraConfig.CrosshairStyle.CUSTOM),
+                                .visibleWhen(() -> cfg.crosshairStyle == AuroraConfig.CrosshairStyle.CUSTOM),
+                        new BooleanSetting("Attack Indicator",
+                                () -> cfg.crosshairAttackIndicatorEnabled, v -> cfg.crosshairAttackIndicatorEnabled = v)
+                                .description("Shows attack cooldown beneath the crosshair, plus a ready marker when aiming at a living target."),
+                        SliderSetting.ofInt("Attack Indicator Size %", () -> cfg.crosshairAttackIndicatorSize,
+                                v -> cfg.crosshairAttackIndicatorSize = v, 25, 300)
+                                .description("Scales the attack indicator independently. 100% is vanilla size. It stays in its vanilla position unless the crosshair overlaps it, then moves below the crosshair with vanilla spacing.")
+                                .disabled(() -> !cfg.crosshairAttackIndicatorEnabled),
                         new BooleanSetting("Indicator (entity in reach)",
                                 () -> cfg.crosshairIndicatorEnabled, v -> cfg.crosshairIndicatorEnabled = v),
                         new EnumSetting<>("Indicator Style", AuroraConfig.CrosshairStyle.class,
@@ -389,10 +387,10 @@ public final class FeatureRegistry {
                                 .disabled(() -> !cfg.crosshairIndicatorEnabled),
                         SliderSetting.ofInt("Indicator Thickness",
                                 () -> cfg.crosshairIndicatorThickness, v -> cfg.crosshairIndicatorThickness = v, 1, 6)
-                                .disabled(() -> !cfg.crosshairIndicatorEnabled || cfg.crosshairIndicatorStyle == AuroraConfig.CrosshairStyle.CIRCLE || cfg.crosshairIndicatorStyle == AuroraConfig.CrosshairStyle.CUSTOM),
+                                .disabled(() -> !cfg.crosshairIndicatorEnabled).visibleWhen(() -> cfg.crosshairIndicatorStyle != AuroraConfig.CrosshairStyle.CUSTOM),
                         SliderSetting.ofInt("Indicator Gap",
                                 () -> cfg.crosshairIndicatorGap, v -> cfg.crosshairIndicatorGap = v, 0, 10)
-                                .disabled(() -> !cfg.crosshairIndicatorEnabled || (cfg.crosshairIndicatorStyle != AuroraConfig.CrosshairStyle.CIRCLE && cfg.crosshairIndicatorStyle != AuroraConfig.CrosshairStyle.SQUARE)),
+                                .disabled(() -> !cfg.crosshairIndicatorEnabled).visibleWhen(() -> cfg.crosshairIndicatorStyle != AuroraConfig.CrosshairStyle.CUSTOM),
                         new ColorSetting("Indicator Color",
                                 () -> cfg.crosshairIndicatorColor, v -> cfg.crosshairIndicatorColor = v)
                                 .disabled(() -> !cfg.crosshairIndicatorEnabled),
@@ -401,7 +399,7 @@ public final class FeatureRegistry {
                                 () -> cfg.crosshairIndicatorCustomWidth, v -> cfg.crosshairIndicatorCustomWidth = v,
                                 () -> cfg.crosshairIndicatorCustomHeight, v -> cfg.crosshairIndicatorCustomHeight = v)
                                 .description("Drawn when aiming at a targetable entity. Left-click paints, right-click erases.")
-                                .disabled(() -> !cfg.crosshairIndicatorEnabled || cfg.crosshairIndicatorStyle != AuroraConfig.CrosshairStyle.CUSTOM)
+                                .disabled(() -> !cfg.crosshairIndicatorEnabled).visibleWhen(() -> cfg.crosshairIndicatorStyle == AuroraConfig.CrosshairStyle.CUSTOM)
                 ));
 addWithSettings(MODULES, "hitbox", "Hitbox",
                 "Draws entity hitboxes with your own color, line width, and optional eye-level and look-direction lines — a cleaner, always-on replacement for vanilla's F3+B boxes. Seeing exact hitboxes helps you understand reach and where an entity can actually be hit. Movement smoothing is automatic: Aurora detects servers that bundle or throttle movement packets (like minemen.club's anticheat) and smooths the hitbox in real time, so it never stutters or jumps.",
@@ -464,15 +462,27 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                         new BooleanSetting("Tint Armor",
                                 () -> cfg.hitColorTintArmor,
                                 v -> cfg.hitColorTintArmor = v)
-                                .description("Also tints worn armor with the flash color when an entity is hurt.")
+                                .description("Also tints worn armor with the flash color when an entity is hurt."),
+                        new BooleanSetting("Tint Armor Trims",
+                                () -> cfg.hitColorTintArmorTrims,
+                                v -> cfg.hitColorTintArmorTrims = v)
+                                .description("Also applies the damage flash to armor trim patterns. Requires Tint Armor.")
+                                .disabled(() -> !cfg.hitColorTintArmor)
                 ));
 
         addWithSettings(MODULES, "glint_color", "Glint Color",
-                "Recolors the enchantment glint — the animated shimmer on enchanted items, tools, and worn armor. Vanilla's purple sheen is subtle and every enchantment looks the same; a bright custom color makes enchanted gear instantly recognizable in your hotbar, hand, and inventory.",
+                "Recolors the enchantment glint on items and armor. Alternative Glint also supports dark colors as moving shadows, with intensity independent of color brightness.",
                 () -> cfg.glintColorEnabled, v -> cfg.glintColorEnabled = v,
                 List.of(
                         new ColorSetting("Glint Color", () -> cfg.glintColor, v -> cfg.glintColor = v)
-                                .description("The tint multiplied onto the glint's shimmer pattern. The color's opacity scales the glint's strength — lower alpha gives a subtler shimmer. Vanilla's glint is a dim purple."),
+                                .description("The enchantment glint color. Opacity controls strength. Enable Alternative Glint to make dark colors visible as moving shadows."),
+                        new BooleanSetting("Alternative Glint",
+                                () -> cfg.glintColorAlternative,
+                                v -> cfg.glintColorAlternative = v)
+                                .description("Uses the enchantment texture as a moving pattern mask, so dark colors can cast shadows and light colors can create highlights at the same intensity. Black becomes a visible shadow glint. Turn off to use the original additive shimmer."),
+                        SliderSetting.ofInt("Intensity (%)", () -> cfg.glintColorIntensity,
+                                v -> cfg.glintColorIntensity = v, 0, 100)
+                                .description("Strength of the glint, multiplied by the selected color's opacity and Minecraft's glint strength. Alternative Glint makes this equally effective for dark and light colors."),
                         new BooleanSetting("Tint Armor",
                                 () -> cfg.glintColorTintArmor,
                                 v -> cfg.glintColorTintArmor = v)
@@ -485,6 +495,8 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                 "A configurable corner readout of useful at-a-glance info — FPS, coordinates, time of day, facing, biome, dimension, light level, playtime and more. Toggle exactly the rows you want so you get the data you care about without opening the F3 debug screen.",
                 () -> cfg.infoEnabled, v -> cfg.infoEnabled = v,
                 List.of(
+                        new ColorSetting("Text Color", () -> cfg.infoModuleTextColor == null ? com.aurora.client.theme.HudText.color(cfg.hudColor) : cfg.infoModuleTextColor, v -> cfg.infoModuleTextColor = v)
+                                .description("Text color for this HUD only. Reset restores its default color."),
                         new BooleanSetting("Show FPS", () -> cfg.showFps, v -> cfg.showFps = v),
                         new BooleanSetting("Show Coords", () -> cfg.showCoords, v -> cfg.showCoords = v),
                         new BooleanSetting("Show Time", () -> cfg.showTime, v -> cfg.showTime = v),
@@ -520,11 +532,9 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                         new BooleanSetting("Playtime per-World",
                                 () -> cfg.infoPlaytimePerWorld, v -> cfg.infoPlaytimePerWorld = v)
                                 .description("On = show time spent in the current world / server only. Off = show the global lifetime total."),
-                        new ColorSetting("HUD Component Color", () -> cfg.hudColor, v -> cfg.hudColor = v)
-                                .description("Text color shared by the plain-readout HUD modules (this one, CPS, Stats, Totem Pops, Reach, Armor text, Keystrokes labels and Ping's unknown state). Defaults to following your theme accent; pick an explicit color to override it."),
                         new EnumSetting<>("Background", AuroraConfig.HudBackground.class,
                                 () -> cfg.infoBgMode, v -> cfg.infoBgMode = v)
-                                .description("Backdrop drawn behind the HUD text. NONE is transparent; SOLID fills a panel with the color below (best for readability over bright scenery); AURORA uses neutral themed chrome; VANILLA uses Minecraft's slot texture."),
+                                .description("Backdrop drawn behind the HUD text. NONE is transparent; SOLID fills a panel with the color below (best for readability over bright scenery); VANILLA uses Minecraft's slot texture."),
                         new ColorSetting("Background Color (when SOLID)",
                                 () -> cfg.infoBgColor, v -> cfg.infoBgColor = v)
                                 .description("The fill color and opacity used when Background is set to SOLID. Ignored for other background modes.")
@@ -534,6 +544,8 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                 "Shows your current clicks-per-second as a HUD counter. Handy for practicing a consistent attack rhythm in PvP, verifying a clicking technique, or just satisfying curiosity about your click speed.",
                 () -> cfg.cpsEnabled, v -> cfg.cpsEnabled = v,
                 List.of(
+                        new ColorSetting("Text Color", () -> cfg.cpsTextColor == null ? com.aurora.client.theme.HudText.color(cfg.hudColor) : cfg.cpsTextColor, v -> cfg.cpsTextColor = v)
+                                .description("Text color for this HUD only. Reset restores its default color."),
                         new EnumSetting<>("Background", AuroraConfig.HudBackground.class,
                                 () -> cfg.cpsBgMode, v -> cfg.cpsBgMode = v),
                         new ColorSetting("Background Color (when SOLID)",
@@ -544,6 +556,8 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                 "Displays your four equipped armor pieces and their remaining durability on the HUD. Lets you watch your protection at a glance without opening the inventory, so you know when to repair or swap before something breaks mid-fight.",
                 () -> cfg.armorHudEnabled, v -> cfg.armorHudEnabled = v,
                 List.of(
+                        new ColorSetting("Text Color", () -> cfg.armorHudTextColor == null ? com.aurora.client.theme.HudText.color(cfg.hudColor) : cfg.armorHudTextColor, v -> cfg.armorHudTextColor = v)
+                                .description("Text color for this HUD only. Reset restores its default color."),
                         new EnumSetting<>("Durability Format",
                                 AuroraConfig.ArmorDurabilityFormat.class,
                                 () -> cfg.armorDurabilityFormat,
@@ -559,8 +573,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                 .valueDescriptions(bg -> switch (bg) {
                                     case NONE -> "No background behind the armor icons.";
                                     case SOLID -> "Fills a panel behind the armor icons with the color below.";
-                                    case AURORA -> "Aurora's themed gradient panel behind the armor icons.";
-                                    case VANILLA -> "Each armor piece sits inside an authentic vanilla hotbar slot, with the durability readout drawn outside the slot — the look popularised by Uku's ArmorHUD.";
+                                    case VANILLA -> "Each armor piece sits inside Minecraft's resource-pack offhand slot with vanilla spacing; durability text appears beside it.";
                                 }),
                         new ColorSetting("Background Color (when SOLID)",
                                 () -> cfg.armorHudBgColor, v -> cfg.armorHudBgColor = v)
@@ -570,6 +583,8 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                 "Shows the exact distance to the last entity you attacked. A practical tool for understanding your effective reach in PvP and for spotting suspiciously long reaches from others. Updates each time you land a hit.",
                 () -> cfg.reachEnabled, v -> cfg.reachEnabled = v,
                 List.of(
+                        new ColorSetting("Text Color", () -> cfg.reachDisplayTextColor == null ? com.aurora.client.theme.HudText.color(cfg.hudColor) : cfg.reachDisplayTextColor, v -> cfg.reachDisplayTextColor = v)
+                                .description("Text color for this HUD only. Reset restores its default color."),
                         new EnumSetting<>("Background", AuroraConfig.HudBackground.class,
                                 () -> cfg.reachBgMode, v -> cfg.reachBgMode = v),
                         new ColorSetting("Background Color (when SOLID)",
@@ -580,6 +595,8 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                 "A cleaner replacement for the default status-effect icons, listing your active potion effects with a readable countdown timer. Makes it easy to track when buffs like Strength or Fire Resistance are about to expire so you can re-apply them in time.",
                 () -> cfg.potionHudEnabled, v -> cfg.potionHudEnabled = v,
                 List.of(
+                        new ColorSetting("Text Color", () -> cfg.potionHudTextColor == null ? 0xFFFFFFFF : cfg.potionHudTextColor, v -> cfg.potionHudTextColor = v)
+                                .description("Text color for this HUD only. Reset restores its default color."),
                         new EnumSetting<>("Background", AuroraConfig.HudBackground.class,
                                 () -> cfg.potionBgMode, v -> cfg.potionBgMode = v),
                         new ColorSetting("Background Color (when SOLID)",
@@ -591,6 +608,8 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                 () -> cfg.pingHudEnabled || cfg.tabPingEnabled,
                 v -> { cfg.pingHudEnabled = v; cfg.tabPingEnabled = v; },
                 List.of(
+                        new ColorSetting("Text Color", () -> cfg.pingHudTextColor == null ? com.aurora.client.theme.HudText.color(cfg.hudColor) : cfg.pingHudTextColor, v -> cfg.pingHudTextColor = v)
+                                .description("Text color for this HUD only. Reset restores its default color."),
                         new BooleanSetting("Show Ping HUD",
                                 () -> cfg.pingHudEnabled,
                                 v -> cfg.pingHudEnabled = v)
@@ -610,6 +629,8 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                 "Counts how many Totems of Undying you've popped, and optionally tracks nearby players' pops too. In crystal PvP and similar fights, knowing how many totems an opponent has burned through tells you how close they are to being finishable.",
                 () -> cfg.totemPopEnabled, v -> cfg.totemPopEnabled = v,
                 List.of(
+                        new ColorSetting("Text Color", () -> cfg.totemPopTextColor == null ? com.aurora.client.theme.HudText.color(cfg.hudColor) : cfg.totemPopTextColor, v -> cfg.totemPopTextColor = v)
+                                .description("Text color for this HUD only. Reset restores its default color."),
                         new KeybindSetting("Reset Counter Key",
                                 () -> cfg.totemResetKey, v -> cfg.totemResetKey = v)
                                 .description("Press to clear self pops and all tracked players. Defaults to unbound."),
@@ -693,13 +714,11 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                         var q = com.aurora.client.hitreg.Hitreg.last100Regs;
                         return q.inconsistencySampleSize() == 0 ? "no hits tracked yet" : q.getInconsistencyRatio() + "% misplaced";
                     }));
-            hitregRows.add(hitregToggle(com.aurora.client.hitreg.settings.Toggle.TRACK_FIGHTS, "Track Fight Statistics")
-                    .description("Record each completed fight (10 seconds to 10 minutes long, with at least one landed hit) into the Stats Overlay: fight count, time spent fighting, and both players' accuracy for the last fight. Defaults on; the old post-fight chat summary is gone."));
             // §3 footer: the only group on this screen whose purpose the
             // header + labels genuinely don't convey (the "Alert" toggles
             // no longer alert anything — chat output was retired; the
             // figures are the point now).
-            hitregRows.add(new SectionFooterSetting("The alert toggles surface live figures from your rolling hit sample under their labels; Track Fight Statistics records completed fights into the Stats Overlay."));
+            hitregRows.add(new SectionFooterSetting("The alert toggles surface live figures from your rolling hit sample under their labels."));
 
             hitregRows.add(new SectionHeaderSetting("Audio"));
             hitregRows.add(hitregToggle(com.aurora.client.hitreg.settings.Toggle.SILENCE_OTHER_FIGHTS, "Mute Other Fights")
@@ -811,74 +830,15 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
             hitregRows.add(new SectionHeaderSetting("Maintenance"));
             hitregRows.add(ButtonSetting.semantic("Reset Tracked Stats", "Reset",
                     () -> com.aurora.client.hitreg.Hitreg.last100Regs = new com.aurora.client.hitreg.util.RegQueue(100))
-                    .description("Clears the rolling last-100-hits sample behind the delay/ghost/misplace figures in Tracking. Does not touch fight statistics — those live in the Stats Overlay."));
+                    .description("Clears the rolling last-100-hits sample behind the delay/ghost/misplace figures in Tracking. Does not change the practice scoreboard or lifetime fight counters."));
 
             addWithSettings(MODULES, com.aurora.client.hitreg.BetterHitreg.FEATURE_ID, "Better Hitreg",
-                    "Client-side hit registration feedback for PvP, from BetterHitreg by Jass: your hit sound, the target's hurt animation and particles play the instant you swing instead of after the server's round trip, while the server's late copy is suppressed. Also tracks ghosted and misplaced hits, records fight statistics into the Stats Overlay, and adds reach/jump rings, target and server hitboxes, sound muffling, and a practice arena.",
+                    "Client-side hit registration feedback for PvP, from BetterHitreg by Jass: your hit sound, the target's hurt animation and particles play the instant you swing instead of after the server's round trip, while the server's late copy is suppressed. Also tracks ghosted and misplaced hits, adds reach/jump rings, target and server hitboxes, sound muffling, and a practice arena.",
                     () -> cfg.hitregEnabled, v -> cfg.hitregEnabled = v,
                     hitregRows,
                     List.of("hitreg"));
             MODULES.get(MODULES.size() - 1).subtitle("Original project by Jass");
         }
-
-        addWithSettings(MODULES, "stats", "Stats Overlay",
-                "A combat readout — kills, deaths, K/D and session time, plus fight statistics from Better Hitreg: fights this session and lifetime, time spent fighting, and the last fight's duration with both players' accuracy. Session counters reset when you choose; lifetime fight totals persist across sessions and profiles. (Totem pops have their own dedicated counter module.)",
-                () -> cfg.statsEnabled, v -> cfg.statsEnabled = v,
-                List.of(
-                        new BooleanSetting("Show Kills",
-                                () -> cfg.statsShowKills, v -> cfg.statsShowKills = v)
-                                .description("Kills landed this session. Attributed heuristically from melee hits, so ranged finishes and assists may not always be counted."),
-                        new BooleanSetting("Show Deaths",
-                                () -> cfg.statsShowDeaths, v -> cfg.statsShowDeaths = v)
-                                .description("How many times you have died this session."),
-                        new BooleanSetting("Show K/D",
-                                () -> cfg.statsShowKd, v -> cfg.statsShowKd = v)
-                                .description("Kill/death ratio. Deaths are floored at 1 so a clean session reads as your kill count."),
-                        new BooleanSetting("Show Session Time",
-                                () -> cfg.statsShowSession, v -> cfg.statsShowSession = v)
-                                .description("Wall-clock time since the session began or you last reset the counters."),
-                        new SectionHeaderSetting("Fights"),
-                        new BooleanSetting("Show Fights",
-                                () -> cfg.statsShowFights, v -> cfg.statsShowFights = v)
-                                .description("Tracked fights this session and your lifetime total. A fight is an exchange of 10 seconds to 10 minutes with at least one landed hit, ended by the two of you separating by more than 30 blocks (Better Hitreg's tracker; needs its Track Fight Statistics toggle on)."),
-                        new BooleanSetting("Show Fight Time",
-                                () -> cfg.statsShowFightTime, v -> cfg.statsShowFightTime = v)
-                                .description("Time spent inside tracked fights, this session and lifetime. Different from Session time, which is plain wall-clock since your last reset."),
-                        new BooleanSetting("Show Last Fight",
-                                () -> cfg.statsShowLastFight, v -> cfg.statsShowLastFight = v)
-                                .description("Duration of the last tracked fight and both players' accuracy (landed hits over swings), the same figures the original mod printed after a fight."),
-                        new SectionHeaderSetting("Session"),
-                        new KeybindSetting("Reset Key",
-                                () -> cfg.statsResetKey, v -> cfg.statsResetKey = v)
-                                .description("Press to reset the Stats overlay counters. Defaults to unbound."),
-                        new EnumSetting<>("Background", AuroraConfig.HudBackground.class,
-                                () -> cfg.statsBgMode, v -> cfg.statsBgMode = v),
-                        new ColorSetting("Background Color (when SOLID)",
-                                () -> cfg.statsBgColor, v -> cfg.statsBgColor = v),
-
-                        // §7.3: destructive actions go last, isolated in their own
-                        // section — never interleaved with adjustable settings. The
-                        // resets used to sit inside their data sections (Reset
-                        // Lifetime Fight Totals mid-Fights, Reset Stats as the
-                        // first Session row). Order within the section runs
-                        // least-to-most destructive: session counters, then the
-                        // persisted lifetime totals.
-                        new SectionHeaderSetting("Maintenance"),
-                        ButtonSetting.semantic("Reset Stats", "Reset",
-                                () -> {
-                                    com.aurora.client.feature.impl.StatsTrackerFeature feat =
-                                            com.aurora.client.feature.impl.StatsTrackerFeature.get();
-                                    if (feat != null) feat.resetAll();
-                                })
-                                .description("Clears the session counters back to zero: kills, deaths, the session timer, session fights and the last-fight readout. Lifetime fight totals are kept."),
-                        ButtonSetting.semantic("Reset Lifetime Fight Totals", "Reset",
-                                () -> {
-                                    com.aurora.client.feature.impl.StatsTrackerFeature feat =
-                                            com.aurora.client.feature.impl.StatsTrackerFeature.get();
-                                    if (feat != null) feat.resetLifetimeFightTotals();
-                                })
-                                .description("Zeroes the persisted lifetime fight count and fight time. Separate from Reset Stats on purpose: these survive sessions and profile switches like playtime, so a session reset never touches them. Better Hitreg's own Reset Tracked Stats clears something else again — its rolling delay/ghost/misplace sample.")
-                ));
 
         addWithSettings(MODULES, "waypoints", "Waypoints",
                 "Place persistent world markers rendered as beacon beams and/or block highlights with a name and distance label. Find your way back to bases, mines, or points of interest — and have a waypoint dropped automatically wherever you die so you can recover your stuff.",
@@ -1171,15 +1131,6 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                 .description("The framerate Aurora screens run at. 'Unlimited' removes the cap so the GUI matches your main FPS.")
                 ));
 
-        addWithSettings(MODULES, "reflex", "Minecraft Reflex",
-                "Uses the Nvidia Reflex principle to reduce rendering latency in Minecraft, automatically locking the frame by estimating the CPU and GPU time. Allows any GPU to use.",
-                () -> cfg.reflexEnabled, v -> cfg.reflexEnabled = v,
-                List.of(
-                        SliderSetting.ofInt("Wait Time Offset",
-                                () -> cfg.reflexWaitTimeOffset, v -> cfg.reflexWaitTimeOffset = v, -5000000, 5000000)
-                                .description("Wait time offset in nanoseconds. Increase if GPU utilization drops, decrease (negative) if latency increases.")
-                ));
-
         addWithSettings(MODULES, "animations", "Animations",
                 "Animation & movement polish: swing & view-bob curves, classic 1.8-style damage camera tilt, configurable idle held-item sway with multiple movement curves, and frame-rate-independent entity movement smoothing that rounds off per-tick knockback kinks and absorbs multiplayer server throttle jitter.",
                 () -> cfg.smoothAnimationsEnabled, v -> cfg.smoothAnimationsEnabled = v,
@@ -1258,6 +1209,9 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                 v -> cfg.idleSwayStrength = v, 0.0, 10.0)
                                 .description("How pronounced the idle sway is. 1.0 is a gentle breath; 5.0+ is dramatic drift. Some curves (Circular, Lissajous) shine at high values."),
 
+                        new SectionHeaderSetting("Hotbar"),
+                        new BooleanSetting("Hotbar Bounce", () -> cfg.hotbarBounceEnabled, v -> cfg.hotbarBounceEnabled = v)
+                                .description("Pulses the hotbar slot when a pickup adds an item or grows its stack. Requires Animations to be enabled."),
                         new SectionHeaderSetting("Entity Movement"),
                         new BooleanSetting("Smooth Entity Movement",
                                 () -> cfg.entityMovementSmoothingEnabled,
@@ -1272,17 +1226,15 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                         "smoothAnimations", "swingStyle",
                         "viewBobAmplitude", "idleSway",
                         "entityMovementSmoothing",
-                        "damageTilt"));
-
-        add(MODULES, "hotbar_bounce", "Hotbar Bounce",
-                "Pops a small bounce/pulse on a hotbar slot the moment an item lands in it or a stack grows. Gives you instant peripheral feedback that a pickup happened without looking down at the slot — handy when mining or fighting. Purely cosmetic.",
-                () -> cfg.hotbarBounceEnabled, v -> cfg.hotbarBounceEnabled = v);
+                        "damageTilt", "hotbarBounce"));
 
         // ---- Keystrokes Display ----
         addWithSettings(MODULES, "keystrokes", "Keystrokes",
-                "A clean keystroke overlay: movement keys, mouse buttons, a CPS counter and jump/sneak inputs shown as one cohesive panel that lights up with a smooth animated accent while pressed. Popular for PvP montages, streaming, and analyzing your inputs. Fully draggable and resizable in the HUD editor.",
+                "A themed keystroke overlay with matching key surfaces, fine borders and soft press highlights: movement keys, mouse buttons, a CPS counter and jump/sneak inputs shown as one cohesive panel that lights up with a smooth animated accent while pressed. Popular for PvP montages, streaming, and analyzing your inputs. Fully draggable and resizable in the HUD editor.",
                 () -> cfg.keystrokesEnabled, v -> cfg.keystrokesEnabled = v,
                 List.of(
+                        new ColorSetting("Text Color", () -> cfg.keystrokesTextColor == null ? com.aurora.client.theme.ThemeManager.color(com.aurora.client.theme.ThemeToken.ON_SURFACE) : cfg.keystrokesTextColor, v -> cfg.keystrokesTextColor = v)
+                                .description("Text color for this HUD only. Reset restores its default color."),
                         new BooleanSetting("Show WASD Keys",
                                 () -> cfg.keystrokesShowMovement,
                                 v -> cfg.keystrokesShowMovement = v)
@@ -1364,8 +1316,8 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
         // config fields - none of these had a reachable reset before
         // (Settings-tab entries had no detail screen), so this is new
         // capability, consistent with the other combined features.
-        addWithSettings(MODULES, "miscellaneous", "Miscellaneous",
-                "A temporary home for smaller settings that have not been given a dedicated feature screen of their own yet: smooth camera, frame pacing, a global frame cap, latency, input handling, and server-list dragging. Each keeps its own enable toggle and settings under its section; open the feature to configure them.",
+        addWithSettings(MODULES, "miscellaneous", "Display Settings",
+                "Display and responsiveness controls: smooth camera, frame pacing, a global frame cap, latency, input handling, and server-list dragging. Each keeps its own enable toggle and settings under its section; open the feature to configure them.",
                         () -> cfg.smoothCamera || cfg.smoothFramePacer || cfg.lowLatencyRender
                         || cfg.inputSamplingDecoupled
                         || cfg.serverListDragReorder || cfg.frameCapFps > 0,

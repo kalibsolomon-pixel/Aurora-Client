@@ -18,11 +18,8 @@ import net.minecraft.client.gui.GuiGraphics;
  * is re-read from the config every frame, exactly like every other
  * settings row.
  *
- * <p>Parameters: the preview draws with fixed demo dimensions (size 7,
- * thickness 2, gap 2) at a stable size in the row — its job is the
- * SHAPE, the one thing no other control on the screen shows; Size /
- * Thickness / Gap sliders and the Color swatch already surface their own
- * values at a glance (§4's exclusion clause, applied to §5). Color is
+ * <p>Parameters: size, thickness and gap follow the current config, so
+ * adjusting a slider shows the same geometry as the HUD. Color is
  * the theme's {@code ON_BACKGROUND} token so the shape stays legible on
  * the inset panel in both modes rather than inheriting a user color
  * that could vanish against it. The {@code CUSTOM} preset previews the
@@ -39,10 +36,6 @@ public class CrosshairPreviewSetting extends FeatureSetting {
     private static final int PAD_X = 12;
     private static final int PAD_Y = 5;
 
-    /** Demo dimensions — sized so every preset (and CUSTOM at 3×7=21px) fits the box legibly. */
-    private static final int DEMO_SIZE = 7;
-    private static final int DEMO_THICK = 2;
-    private static final int DEMO_GAP = 2;
 
     public CrosshairPreviewSetting(String label) {
         super(label);
@@ -69,13 +62,15 @@ public class CrosshairPreviewSetting extends FeatureSetting {
 
         // The caller-owned half-pixel translate, same as the HUD path —
         // the shape code's centering contract.
+        ctx.enableScissor(bx, by, bx + bw, by + bh);
         ctx.pose().pushMatrix();
         ctx.pose().translate(-0.5f, -0.5f);
         CrosshairRenderer.drawShape(ctx, cfg.crosshairStyle, cx, cy,
-                DEMO_SIZE, DEMO_THICK, DEMO_GAP,
+                Math.max(1, cfg.crosshairSize), Math.max(1, cfg.crosshairThickness), Math.max(0, cfg.crosshairGap),
                 ThemeManager.color(ThemeToken.ON_BACKGROUND),
                 cfg.crosshairCustomPixels, cfg.crosshairCustomWidth, cfg.crosshairCustomHeight);
         ctx.pose().popMatrix();
+        ctx.disableScissor();
     }
 
     @Override

@@ -294,11 +294,11 @@ class ConformanceManifestTest {
         int segmentedPeers = com.aurora.client.theme.ThemeRoundness.values().length;
         int hosted = 3 + 10 + segmentedPeers;               // enums + accent + segmented peers
         int screenOwned = 2 + 1 + 2 + modules + 0 + 4;      // tabs, profiles, layout, tiles, nav, toggles
-        assertEquals(37, modules, "ModuleManager tile count");
+        assertEquals(34, modules, "ModuleManager tile count");
         assertEquals(3, segmentedPeers, "Corner Style is the only segmented row");
         assertEquals(16, hosted, "component-owned hosted controls");
-        assertEquals(46, screenOwned, "screen-owned chrome controls");
-        assertEquals(62, hosted + screenOwned, "AuroraScreen total semantic controls");
+        assertEquals(43, screenOwned, "screen-owned chrome controls");
+        assertEquals(59, hosted + screenOwned, "AuroraScreen total semantic controls");
 
         String src = read(SRC + "screen/AuroraScreen.java");
         assertEquals(7, countOccurrences(src, "semanticHost.register("),

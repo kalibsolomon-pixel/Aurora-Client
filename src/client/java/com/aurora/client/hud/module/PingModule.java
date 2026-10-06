@@ -70,6 +70,7 @@ public class PingModule extends HudModule {
         int color = ms < 0
                 ? com.aurora.client.theme.HudText.color(AuroraConfig.get().hudColor)
                 : pingColor(ms);
+        if (AuroraConfig.get().pingHudTextColor != null) color = AuroraConfig.get().pingHudTextColor;
         ctx.drawString(tr, buildText(), x, y, color, false);
     }
 
@@ -82,5 +83,5 @@ public class PingModule extends HudModule {
     public static int pingColor(int ms) {
         return com.aurora.client.theme.HudStatus.latencyColor(ms);
     }
-    @Override public String featureRegistryId() { return "ping_hud"; }
+    @Override public String featureRegistryId() { return "ping"; }
 }

@@ -129,8 +129,6 @@ public class AuroraConfig {
     public boolean customTitleScreen = true;
     /** Global viewing preference, retained across screens, restarts and profile switches. */
     public boolean moduleGridView = true;
-    public boolean reflexEnabled = false;
-    public int reflexWaitTimeOffset = 0;
 
     public enum TextRendererMode {
         OFF("Off"),
@@ -344,9 +342,15 @@ public class AuroraConfig {
     public boolean hitColorEnabled = false;
     public int hitColor = 0x66FF0000; // ARGB: ~40% red, similar to vanilla flash
     public boolean hitColorTintArmor = true; // also tint armor when an entity is hurt
+    /** Optional hurt overlay on the separate armor-trim pass. Requires Tint Armor. */
+    public boolean hitColorTintArmorTrims = false;
     // ---- Enchant Glint Recolor (mirrors the Hit Color field set) ----
     public boolean glintColorEnabled = false;
-    /** ARGB tint multiplied onto the glint pattern; alpha scales strength. */
+    /** Opt-in mask blending so dark glints can cast moving shadows. */
+    public boolean glintColorAlternative = false;
+    /** Mask opacity in percent, independent of RGB brightness. */
+    public int glintColorIntensity = 100;
+    /** RGB drawn through the glint mask; alpha scales its coverage. */
     public int glintColor = 0xFFFF0000;
     public boolean glintColorTintArmor = true; // also recolor worn-armor glint
     // ---- Info module (FPS / coords / time toggles) ----
@@ -362,6 +366,18 @@ public class AuroraConfig {
      * configs that persisted the old white default 0xFFFFFFFF.
      */
     public int     hudColor   = 0;
+
+    // Null preserves legacy HUD colors; each feature can override its own text independently.
+    public Integer infoModuleTextColor = null;
+    public Integer cpsTextColor = null;
+    public Integer armorHudTextColor = null;
+    public Integer reachDisplayTextColor = null;
+    public Integer potionHudTextColor = null;
+    public Integer pingHudTextColor = null;
+    public Integer totemPopTextColor = null;
+    public Integer keystrokesTextColor = null;
+    public Integer toggleSprintSneakTextColor = null;
+
 
     // ---- Info module — extended survival/QoL rows ----
     /** "Facing: N (-12°)" — cardinal direction + yaw degrees. */
@@ -429,14 +445,12 @@ public class AuroraConfig {
     public boolean armorHorizontal = false;
 
     public enum ArmorAlertSoundChoice {
-        PLING, EXPERIENCE_ORB, BELL, ARMOR_EQUIP, ARROW_HIT, ANVIL_LAND, NOTE_BASS
+        // Saved selections of the removed arrow sound fall back to Pling.
+        @com.google.gson.annotations.SerializedName(value = "PLING", alternate = {"ARROW_HIT"})
+        PLING, EXPERIENCE_ORB, BELL, ARMOR_EQUIP, ANVIL_LAND, NOTE_BASS
     }
 
-    // ---- Status Alerts (hunger + effect expiry) ----
-    /** Alert when the player's hunger drops below the threshold. */
-    public boolean hungerAlertEnabled = true;
-    /** Hunger level (0..20 drumsticks) below which the alert fires. */
-    public int hungerAlertThreshold = 6;
+    // ---- Status Alerts (effect expiry) ----
     /** Alert when a potion effect is about to expire (seconds remaining). */
     public boolean effectExpiryAlertEnabled = true;
     /** Seconds remaining at which the effect-expiry alert fires. */
@@ -516,7 +530,7 @@ public class AuroraConfig {
 
     public boolean potionHudEnabled = true;
 
-    public enum HudBackground { NONE, SOLID, AURORA, VANILLA }
+    public enum HudBackground { NONE, @com.google.gson.annotations.SerializedName(value = "SOLID", alternate = {"AURORA"}) SOLID, VANILLA }
 
     // ---- Totem tweaks ----
     public boolean totemTweaksEnabled = false;
@@ -620,16 +634,11 @@ public class AuroraConfig {
     public boolean lavaHideOverlay = false;   // true = cancel orange overlay entirely
 
     // Per-module background settings
-    /**
-     * Info HUD background mode. Defaults to {@code AURORA} (R6 Part 2): the
-     * corner readout's panel is the theme-derived HUD_BACKDROP gradient —
-     * near-black hued toward the accent at the top, accent at the bottom —
-     * so the panel follows the theme like the rest of the HUD accents.
-     */
-    public HudBackground infoBgMode = HudBackground.AURORA;
+    /** Default plain HUD backdrop; legacy AURORA modes migrate to SOLID. */
+    public HudBackground infoBgMode = HudBackground.SOLID;
     public int infoBgColor = 0x80000000;
 
-    public HudBackground keystrokesBgMode = HudBackground.SOLID;
+    public HudBackground keystrokesBgMode = HudBackground.NONE;
     public int keystrokesBgColor = 0xFF14141C;
 
     public HudBackground cpsBgMode = HudBackground.NONE;
@@ -660,28 +669,6 @@ public class AuroraConfig {
     /** Append "[N]" to other players' nametags showing their totem pop count. */
     public boolean nametagTotemPopsEnabled = true;
 
-    // ---- Stats overlay (per-session combat stats) ----
-    public boolean statsEnabled     = false;
-    /** Kills this session (melee, heuristically attributed). */
-    public boolean statsShowKills   = true;
-    /** Your deaths this session. */
-    public boolean statsShowDeaths  = true;
-    /** Kill/death ratio (deaths floored at 1). */
-    public boolean statsShowKd      = true;
-    /** Wall-clock time since the session began / last reset. */
-    public boolean statsShowSession = true;
-    // Fight rows — data comes from Better Hitreg's fight tracker (see
-    // StatsTrackerFeature#recordFight): a fight is 10 s–10 min of exchange
-    // with at least one landed hit, ended by leaving the 30-block radius.
-    /** "Fights: N (M total)" — fights this session and the lifetime total. */
-    public boolean statsShowFights  = true;
-    /** "Fight Time: Xm Ys (Zh total)" — time spent in tracked fights, session and lifetime. */
-    public boolean statsShowFightTime = true;
-    /** "Last Fight: 1m 12s · You 62% · Them 45%" — duration and both accuracies of the last tracked fight. */
-    public boolean statsShowLastFight = true;
-    public HudBackground statsBgMode = HudBackground.NONE;
-    public int statsBgColor = 0x80000000;
-
     // ---- Aurora keybinds ----
     // Stored as raw GLFW key codes. -1 means unbound. Polled directly via
     // AuroraKey rather than registered with vanilla's KeyMapping system,
@@ -697,8 +684,6 @@ public class AuroraConfig {
     public int hitboxToggleKey = -1;
     /** Press to call {@code TotemPopFeature.resetAll()}. -1 = unbound. */
     public int totemResetKey   = -1;
-    /** Press to reset the Stats overlay counters. -1 = unbound. */
-    public int statsResetKey   = -1;
     /** Press to drop a waypoint at the player's current block position. -1 = unbound. */
     public int waypointDropKey = -1;
     /** Press to open the Waypoint Manager screen. -1 = unbound. */
@@ -798,6 +783,8 @@ public class AuroraConfig {
     public int     crosshairSize      = 5;
     public int     crosshairThickness = 1;
     public int     crosshairGap       = 2;
+    public boolean crosshairAttackIndicatorEnabled = false;
+    public int crosshairAttackIndicatorSize = 100;
     public boolean crosshairIndicatorEnabled = false;
     public CrosshairStyle crosshairIndicatorStyle = CrosshairStyle.CROSS;
     public int crosshairIndicatorSize = 5;
@@ -1130,7 +1117,7 @@ public class AuroraConfig {
     /** Show a cardinal-direction compass (N/E/S/W) ring around the minimap. */
     public boolean minimapShowCompass = true;
     /** Minimap background mode. */
-    public HudBackground minimapBgMode = HudBackground.AURORA;
+    public HudBackground minimapBgMode = HudBackground.SOLID;
     /**
      * Minimap border/frame color (ARGB). {@code 0} (factory default) is the
      * follow-accent sentinel resolved via {@code HudText.color()} — ring and

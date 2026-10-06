@@ -95,8 +95,8 @@ class RolloutStatesTest {
     }
 
     @Test
-    void productionEnumInventoryHoldsAtTwentySixRows() {
-        // Source-level inventory pin: the docs record "all 26 production
+    void productionEnumInventoryHoldsAtTwentyFiveRows() {
+        // Source-level inventory pin: the docs record "all 25 production
         // EnumSetting rows construct in FeatureRegistry" (FeatureRegistry
         // itself is not headless-loadable — its lambdas capture the live
         // config). Any added/removed enum row must consciously update this
@@ -105,7 +105,7 @@ class RolloutStatesTest {
             String src = new String(java.nio.file.Files.readAllBytes(java.nio.file.Path.of(
                     "src/client/java/com/aurora/client/screen/FeatureRegistry.java")));
             int count = src.split("new EnumSetting<>", -1).length - 1;
-            assertEquals(26, count,
+            assertEquals(25, count,
                     "production EnumSetting construction sites (inventory drift guard)");
         } catch (java.io.IOException e) {
             fail("FeatureRegistry.java not readable from the test working dir: " + e.getMessage());
@@ -133,16 +133,16 @@ class RolloutStatesTest {
     }
 
     @Test
-    void productionColorRowInventoryHoldsAtTwentySixRows() {
-        // Same source-level inventory pin as the enums: 26 ColorSetting rows
-        // construct in FeatureRegistry (28 overall — the other two are
+    void productionColorRowInventoryHoldsAtThirtyThreeRows() {
+        // Ten per-HUD controls replace one global control: 33 ColorSetting rows
+        // construct in FeatureRegistry (35 overall — the other two are
         // AccentSetting's embedded picker and ParticleRowSetting's overlay
         // row, both ColorSetting-class and both canonical by construction).
         try {
             String src = new String(java.nio.file.Files.readAllBytes(java.nio.file.Path.of(
                     "src/client/java/com/aurora/client/screen/FeatureRegistry.java")));
             int count = src.split("new ColorSetting", -1).length - 1;
-            assertEquals(26, count,
+            assertEquals(33, count,
                     "production ColorSetting construction sites (inventory drift guard)");
         } catch (java.io.IOException e) {
             fail("FeatureRegistry.java not readable from the test working dir: " + e.getMessage());
@@ -196,7 +196,7 @@ class RolloutStatesTest {
     }
 
     @Test
-    void productionKeybindInventoryHoldsAtSeventeenRows() {
+    void productionKeybindInventoryHoldsAtSixteenRows() {
         // Source-level inventory pin: the docs record "all 17 production
         // KeybindSetting rows construct in FeatureRegistry" (16 mirror an
         // Aurora KeyMapping, Stats Reset is Aurora-UI-only; the vanilla
@@ -208,7 +208,7 @@ class RolloutStatesTest {
             String src = new String(java.nio.file.Files.readAllBytes(java.nio.file.Path.of(
                     "src/client/java/com/aurora/client/screen/FeatureRegistry.java")));
             int count = src.split("new KeybindSetting", -1).length - 1;
-            assertEquals(17, count,
+            assertEquals(16, count,
                     "production KeybindSetting construction sites (inventory drift guard)");
         } catch (java.io.IOException e) {
             fail("FeatureRegistry.java not readable from the test working dir: " + e.getMessage());

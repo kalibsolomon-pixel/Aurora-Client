@@ -26,7 +26,10 @@ public class ToggleIndividualModule extends HudModule {
     // (com.aurora.client.theme.HudStatus); label text stays plain white.
     private static final int COLOR_ON    = com.aurora.client.theme.HudStatus.ON;
     private static final int COLOR_OFF   = com.aurora.client.theme.HudStatus.OFF;
-    private static final int COLOR_LABEL = 0xFFFFFFFF;
+    private static int textColor(int fallback) {
+        Integer override = AuroraConfig.get().toggleSprintSneakTextColor;
+        return override == null ? fallback : override;
+    }
 
     /** Which toggle this instance renders. */
     public enum Kind { SPRINT, SNEAK }
@@ -59,7 +62,7 @@ public class ToggleIndividualModule extends HudModule {
         // These module ids don't map to any FeatureRegistry entry, so the
         // HUD editor's X-button falls back to hiding just this one module
         // rather than disabling the whole feature.
-        return id();
+        return "toggle_sprint_sneak";
     }
 
     @Override
@@ -131,7 +134,7 @@ public class ToggleIndividualModule extends HudModule {
         ensureLabelWidth(tr);
 
         boolean on = isOn();
-        ctx.drawString(tr, labelComponent, x, y, COLOR_LABEL, false);
-        ctx.drawString(tr, on ? "ON" : "OFF", x + cachedLabelW, y, on ? COLOR_ON : COLOR_OFF, false);
+        ctx.drawString(tr, labelComponent, x, y, textColor(0xFFFFFFFF), false);
+        ctx.drawString(tr, on ? "ON" : "OFF", x + cachedLabelW, y, textColor(on ? COLOR_ON : COLOR_OFF), false);
     }
 }
