@@ -43,9 +43,9 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
     @Override public boolean unifiedTheme() { return true; }
 
 
-    private static final int LIST_W = 320;
-    private static final int TOP_PAD = 60;
-    private static final int ROW_GAP = 6;
+    private int LIST_W = 320;
+    private int TOP_PAD = 60;
+    private int ROW_GAP = 6;
 
     private static final int DONE_W = 64;
     private static final int DONE_H = 22;
@@ -66,7 +66,12 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
     private FeatureSetting activeDragSetting = null;
     private FeatureSetting fixedHeaderSetting;
     private int bodyTop() { return TOP_PAD + (fixedHeaderSetting == null ? 0 : fixedHeaderSetting.fixedHeaderHeight()); }
-    private int bodyBottom() { return Math.max(bodyTop() + 1, this.height - 30); }
+    private boolean compact() { return "pack_tweaks".equals(meta.id); }
+    private com.aurora.client.ui.util.UiDensity.Rect compactFrame;
+    private void measureRows() {
+        if (compact()) for (FeatureSetting setting : meta.settings) setting.measureCompact(LIST_W);
+    }
+    private int bodyBottom() { return compact() ? compactFrame.y() + compactFrame.height() - 8 : Math.max(bodyTop() + 1, this.height - 30); }
     private int bodyHeight(FeatureSetting setting) { return setting.height() - (setting == fixedHeaderSetting ? setting.fixedHeaderHeight() : 0); }
     private int settingY(FeatureSetting setting, int bodyY) { return bodyY - (setting == fixedHeaderSetting ? setting.fixedHeaderHeight() : 0); }
 
@@ -122,6 +127,12 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
 
     @Override
     protected void init() {
+        if (compact()) {
+            compactFrame = com.aurora.client.ui.util.UiDensity.detailFrame(this.width, this.height);
+            LIST_W = compactFrame.width(); TOP_PAD = compactFrame.y() + 36;
+            ROW_GAP = com.aurora.client.ui.util.UiDensity.ROW_GAP;
+            measureRows();
+        }
         // Done — the rollout's vanilla-backed representative (Phase A): the
         // SemanticAction owns the behavior callback while vanilla keeps the
         // pointer/keyboard/focus routing AND the click sound (the action is
@@ -157,6 +168,10 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         // Custom-painted semantic controls join vanilla's child/narratable
         // lifecycle without joining its render list. Their setting remains
         // the sole pixel and clipped-pointer owner.
+        if (compact()) {
+            doneBtn.setX(compactFrame.x() + LIST_W - 64 - 8); doneBtn.setY(compactFrame.y() + 6);
+            resetBtn.setX(doneBtn.getX() - 54 - 4); resetBtn.setY(doneBtn.getY()); resetBtn.setWidth(54);
+        }
         registeredSettingControls.clear();
         for (FeatureSetting setting : meta.settings) {
             var controls = setting.interactionControls();
@@ -210,6 +225,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
 
     @Override
     public void render(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
+        measureRows();
         fixedHeaderSetting = null;
         for (FeatureSetting setting : meta.settings) {
             boolean pin = fixedHeaderSetting == null && setting.fixedHeaderHeight() > 0;
@@ -230,8 +246,8 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         final int WINDOW_PAD_TOP    = 10;
         final int WINDOW_PAD_BOTTOM = 10;
 
-        int windowY = TOP_PAD - WINDOW_PAD_TOP;
-        int windowH = bodyBottom() - windowY + WINDOW_PAD_BOTTOM;
+        int windowY = compact() ? compactFrame.y() : TOP_PAD - WINDOW_PAD_TOP;
+        int windowH = compact() ? compactFrame.height() : bodyBottom() - windowY + WINDOW_PAD_BOTTOM;
 
         // ---- 1. Glass pass — every glass surface paints BEFORE the dim ----
         // (§6 convention 6, structural: the ManagerListScreen skeleton.) The
@@ -398,7 +414,19 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
             y += h + ROW_GAP;
         }
 
+        if (compact()) for (FeatureSetting setting : meta.settings)
+            if (setting instanceof com.aurora.client.screen.setting.EnumSetting<?> row && row.popupOpen())
+                row.renderFloatingOverlay(ctx, mouseX, mouseY);
         ctx.disableScissor();
+        if (compact()) {
+            com.aurora.client.ui.util.AuroraBrand.draw(ctx, listX + 8, compactFrame.y() + 4, 24);
+            String breadcrumb = com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(this.font, "Pack Tweaks", Math.max(0, resetBtn.getX() - listX - 44), 0);
+            ctx.drawString(this.font, breadcrumb, listX + 40, compactFrame.y() + 12, MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
+            if (maxScroll > 0) {
+                var thumb = com.aurora.client.ui.component.ScrollbarChrome.thumb(scroll, bodyTop(), bodyBottom() - bodyTop(), maxScroll, 24, this.minecraft.getWindow().getGuiScale());
+                com.aurora.client.ui.component.ScrollbarChrome.draw(ctx, listX + LIST_W - 4, thumb, scroll.isDragging(), ThemeToken.ON_BACKGROUND);
+            }
+        }
 
         if (fixedHeaderSetting != null)
             fixedHeaderSetting.renderFixedHeader(ctx, listX, TOP_PAD, LIST_W, mouseX, mouseY);
@@ -493,7 +521,25 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         if (this.getFocused() instanceof SemanticActionControl) this.setFocused(null);
         if (super.mouseClicked(_ev, _doubleClicked)) return true;
         
+        measureRows();
         int listX = (this.width - LIST_W) / 2;
+        if (compact() && mouseX >= listX + LIST_W - 8 && mouseX < listX + LIST_W + 2 && mouseY >= bodyTop() && mouseY < bodyBottom()) {
+            int extent = -ROW_GAP;
+            for (FeatureSetting setting : meta.settings) extent += bodyHeight(setting) + ROW_GAP;
+            double max = Math.max(0, extent - (bodyBottom() - bodyTop()));
+            if (button == 0 && max > 0) {
+                scroll.beginThumbDrag(Math.max(0, Math.min(scroll.thumbHeight(bodyBottom() - bodyTop(), max, 24), mouseY - scroll.thumbY(bodyTop(), bodyBottom() - bodyTop(), max, 24))));
+                return true;
+            }
+        }
+        if (compact() && FeatureSetting.hostBand().contains(mouseX, mouseY)) {
+            int popupY = bodyTop() - (int) scroll.current();
+            for (FeatureSetting setting : meta.settings) {
+                if (setting instanceof com.aurora.client.screen.setting.EnumSetting<?> row && row.popupOpen())
+                    return row.mouseClicked(mouseX, mouseY, button, listX, popupY, LIST_W);
+                popupY += bodyHeight(setting) + ROW_GAP;
+            }
+        }
         if (fixedHeaderSetting != null && mouseY >= TOP_PAD && mouseY < bodyTop()
                 && fixedHeaderSetting.mouseClicked(mouseX, mouseY, button, listX, TOP_PAD, LIST_W)) return true;
         if (!FeatureSetting.hostBand().contains(mouseX, mouseY)) return false;
@@ -530,6 +576,12 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
     @Override
     public boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent _ev, double dx, double dy) {
         double mouseX = _ev.x(); double mouseY = _ev.y(); int button = _ev.button();
+        if (compact() && scroll.isDragging()) {
+            int extent = -ROW_GAP;
+            for (FeatureSetting setting : meta.settings) extent += bodyHeight(setting) + ROW_GAP;
+            scroll.dragThumb(mouseY, bodyTop(), bodyBottom() - bodyTop(), Math.max(0, extent - (bodyBottom() - bodyTop())), 24, false);
+            return true;
+        }
         if (activeDragSetting != null
                 && activeDragSetting.mouseDragged(mouseX, mouseY, button, dx, dy, 0, 0, LIST_W)) {
             return true;
@@ -540,6 +592,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
     @Override
     public boolean mouseReleased(net.minecraft.client.input.MouseButtonEvent _ev) {
         double mouseX = _ev.x(); double mouseY = _ev.y(); int button = _ev.button();
+        scroll.endThumbDrag();
         if (activeDragSetting != null) {
             activeDragSetting.mouseReleased(mouseX, mouseY, button);
             activeDragSetting = null;
@@ -635,6 +688,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         for (FeatureSetting s : meta.settings) {
             s.pinHeader(false);
             s.onDetailScreenClose();
+            s.clearCompactMeasurement();
         }
         chromeCache.dispose();
         rowCache.dispose();

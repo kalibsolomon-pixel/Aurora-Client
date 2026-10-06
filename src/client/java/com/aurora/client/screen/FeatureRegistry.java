@@ -122,13 +122,13 @@ public final class FeatureRegistry {
                     cfg.lavaClarityEnabled       = v;
                 },
                 java.util.Arrays.asList(
-                        new SectionHeaderSetting("Totem"),
+                        new SectionHeaderSetting("Particles / Presentation"),
                         SliderSetting.ofInt("Particle Size %",
                                 () -> cfg.totemParticleScale,
                                 v -> cfg.totemParticleScale = v, 25, 100)
                                 .description("Shrinks the burst of totem particles that erupts when you pop a Totem of Undying. Lower values clear the screen faster so you can see the fight again sooner after a pop — a common competitive preference. 100% is vanilla size."),
 
-                        new SectionHeaderSetting("Shield Style"),
+                        new SectionHeaderSetting("Shield"),
                         new BooleanSetting("Enabled",
                                 () -> cfg.shieldTweaksEnabled,
                                 v -> cfg.shieldTweaksEnabled = v)
@@ -145,7 +145,6 @@ public final class FeatureRegistry {
                                     case COMPACT -> "Uniformly shrinks the shield while keeping its default position.";
                                 }),
 
-                        new SectionHeaderSetting("Shield Statuses"),
                         new BooleanSetting("Enabled",
                                 () -> cfg.shieldStatusEnabled,
                                 v -> cfg.shieldStatusEnabled = v)
@@ -159,7 +158,7 @@ public final class FeatureRegistry {
                                 v -> cfg.shieldStatusDisabledColor = v)
                                 .description("Applied to your shield only during the cooldown that follows an axe disabling it (the 'rendered unusable' window). Note: the alpha channel controls tint strength, not transparency — lower alpha gives a subtler tint."),
 
-                        new SectionHeaderSetting("Water & Lava"),
+                        new SectionHeaderSetting("Environment / Clarity"),
                         SliderSetting.of("Underwater Fog Multiplier",
                                 () -> cfg.underwaterFogMultiplier,
                                 v -> cfg.underwaterFogMultiplier = v, 1.0, 50.0)
