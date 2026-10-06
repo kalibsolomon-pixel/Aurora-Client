@@ -2217,3 +2217,19 @@ pool exhaustion. Ordinary inline Settings captions/status subtitles also keep
 left alignment. Final build/test: 415 passing; five new client screenshots plus
 alternate-scale evidence are linked in OWNER_UI_CORRECTIONS.md. Owner visual
 acceptance remains the gate for broader rollout and legacy taxonomy removal.
+
+## Owner menu geometry correction — 2026-10-06
+
+The owner's latest instruction retains the main-menu mark at its original 48px
+preferred size and narrows all five menu cards to 180px. `MenuComposition` owns
+the single centered logo/card composition: identical 180×22 paint/hit bounds,
+4px gaps, 26px pitch, 126px card stack and 186px complete preferred height.
+The mark reduces only for constrained height; supported logical viewports are
+at least 240×160. The original white 256px asset and textured rendering remain.
+FeatureDetailScreen headers are feature identity only: no Aurora mark, title
+and attached subtitle at the same frame-left +12px inset as row labels, with
+Reset/Done retained. Main settings branding/cards, compact rows, theme recipes,
+roundness/motion, behavior and parent-only capture ownership remain unchanged.
+GUI scales 3/4 and a constrained window were reviewed; the 421-test build passed.
+See OWNER_MENU_GEOMETRY.md for exact geometry, files and fresh screenshots.
+This supersedes the previous menu dimensions; UX-4 and broader rollout remain deferred.

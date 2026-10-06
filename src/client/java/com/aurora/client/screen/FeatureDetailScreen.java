@@ -420,9 +420,9 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
                 row.renderFloatingOverlay(ctx, mouseX, mouseY);
         ctx.disableScissor();
         if (compact()) {
-            com.aurora.client.ui.util.AuroraBrand.draw(ctx, listX + 8, compactFrame.y() + 4, 24);
-            String breadcrumb = com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(this.font, meta.displayName, Math.max(0, resetBtn.getX() - listX - 44), 0);
-            ctx.drawString(this.font, breadcrumb, listX + 40, (meta.subtitle == null || meta.subtitle.isEmpty() ? compactFrame.y() + 12 : compactFrame.y() + 7), MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
+            int titleX = com.aurora.client.ui.util.UiDensity.detailTitleX(compactFrame);
+            String breadcrumb = com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(this.font, meta.displayName, Math.max(0, resetBtn.getX() - titleX - 4), 0);
+            ctx.drawString(this.font, breadcrumb, titleX, (meta.subtitle == null || meta.subtitle.isEmpty() ? compactFrame.y() + 12 : compactFrame.y() + 7), MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
             if (maxScroll > 0) {
                 var thumb = com.aurora.client.ui.component.ScrollbarChrome.thumb(scroll, bodyTop(), bodyBottom() - bodyTop(), maxScroll, 24, this.minecraft.getWindow().getGuiScale());
                 com.aurora.client.ui.component.ScrollbarChrome.draw(ctx, listX + LIST_W - 4, thumb, scroll.isDragging(), ThemeToken.ON_BACKGROUND);
@@ -465,7 +465,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         // Aurora has no large/bold text idiom and inventing one (pose-
         // scaled glyphs) would violate the no-new-visual-style constraint.
         if (this.font != null) {
-            int titleX = listX + 40;
+            int titleX = com.aurora.client.ui.util.UiDensity.detailTitleX(compactFrame);
             // Feature identity is already established by the navigation card.
             if (meta.subtitle != null && !meta.subtitle.isEmpty()) {
                 ctx.drawString(this.font, AuroraFontRenderer.ellipsize(this.font, meta.subtitle, Math.max(0, resetBtn.getX() - titleX - 4), 0), titleX,

@@ -24,6 +24,8 @@ public final class UiDensity {
         int h = Math.min(300, Math.max(1, height - 24));
         return new Rect((width - w) / 2, (height - h) / 2, w, h);
     }
+    /** Feature identity starts at the same content inset as the ordinary row labels. */
+    public static int detailTitleX(Rect frame) { return frame.x() + 12; }
     public static Rect mainContent(Rect frame) {
         boolean horizontal = frame.width() < 320;
         int left = horizontal ? INSET : SIDEBAR + INSET;

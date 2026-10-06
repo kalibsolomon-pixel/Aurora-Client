@@ -18,18 +18,7 @@ import net.minecraft.network.chat.Component;
  */
 public class AuroraTitleScreen extends Screen implements ThemedScreen {
 
-    // Button stack
-    private static final int BUTTON_W = 220;
-    private static final int BUTTON_H = 30;
-    private static final int BUTTON_GAP = 6;
-    private static final int STACK_HEIGHT = 5 * BUTTON_H + 4 * BUTTON_GAP;
-    private static final int BRAND_SIZE = 48;
-    private static final int BRAND_GAP = 12;
-    private int brandSize() { return Math.max(0, Math.min(BRAND_SIZE, this.height - 16 - STACK_HEIGHT - BRAND_GAP)); }
-    private int stackTop() {
-        int brandBand = brandSize() == 0 ? 0 : brandSize() + BRAND_GAP;
-        return Math.max(8, (this.height - STACK_HEIGHT - brandBand) / 2) + brandBand;
-    }
+    private com.aurora.client.ui.util.MenuComposition.Layout composition;
 
     public AuroraTitleScreen() {
         super(Component.translatable("aurora.title"));
@@ -37,22 +26,20 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
 
     @Override
     protected void init() {
-        int centerX = this.width / 2 - BUTTON_W / 2;
-        int startY = stackTop();
-        int step = BUTTON_H + BUTTON_GAP;
+        composition = com.aurora.client.ui.util.MenuComposition.layout(this.width, this.height);
 
-        addBtn(centerX, startY + step * 0, Component.translatable("aurora.button.singleplayer"),
+        addBtn(0, Component.translatable("aurora.button.singleplayer"),
                 "Browse and play singleplayer worlds.",
                 () -> this.minecraft.setScreen(new SelectWorldScreen(this)),
                 false);
-        ButtonWidget multiplayerBtn = addBtn(centerX, startY + step * 1, Component.translatable("aurora.button.multiplayer"),
+        ButtonWidget multiplayerBtn = addBtn(1, Component.translatable("aurora.button.multiplayer"),
                 "Browse multiplayer servers.",
                 () -> this.minecraft.setScreen(new JoinMultiplayerScreen(this)),
                 false);
         if (this.minecraft != null) {
             multiplayerBtn.active = this.minecraft.allowsMultiplayer();
         }
-        addBtn(centerX, startY + step * 2, Component.literal("Aurora Settings"),
+        addBtn(2, Component.literal("Aurora Settings"),
                 "Open Aurora's settings.",
                 () -> this.minecraft.setScreen(AuroraScreen.create()),
                 false);
@@ -60,22 +47,23 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
         // compatible Mod Menu artifact is published for 1.21.11. The
         // reflective shim AuroraModMenuApi stays in place for a future
         // re-enable once Mod Menu ships a stable 1.21.11 release.
-        addBtn(centerX, startY + step * 3, Component.translatable("aurora.button.options"),
+        addBtn(3, Component.translatable("aurora.button.options"),
                 "Open Minecraft's options.",
                 () -> this.minecraft.setScreen(new OptionsScreen(this, this.minecraft.options)),
                 false);
-        addBtn(centerX, startY + step * 4, Component.translatable("aurora.button.quit"),
+        addBtn(4, Component.translatable("aurora.button.quit"),
                 "Quit Minecraft.",
                 () -> this.minecraft.stop(),
                 false);
     }
 
-    private ButtonWidget addBtn(int x, int y, Component label, String description,
+    private ButtonWidget addBtn(int index, Component label, String description,
                                 Runnable onPress, boolean primary) {
         // Vanilla-backed semantic button: vanilla keeps the pointer/keyboard/
         // focus routing and the click sound; the semantic action owns only the
         // behavior callback plus narration metadata.
-        ButtonWidget btn = ButtonWidget.semantic(x, y, BUTTON_W, BUTTON_H, label, description, onPress);
+        var bounds = composition.card(index);
+        ButtonWidget btn = ButtonWidget.semantic(bounds.x(), bounds.y(), bounds.width(), bounds.height(), label, description, onPress);
         // Standard glass treatment: neutral raised for actions, accent-
         // stained for the primary (selected/primary is the only stained
         // scope — §6 convention 3); primary(true) keeps the flat-fallback
@@ -101,9 +89,9 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
         GlassSurface.overlayDim(ctx,this.width,this.height);
 
         // Standalone official mark above the action stack; no surface or blur pass.
-        int mark = brandSize();
-        if (mark > 0) com.aurora.client.ui.util.AuroraBrand.draw(ctx,
-                (this.width - mark) / 2, stackTop() - BRAND_GAP - mark, mark);
+        var mark = composition.logo();
+        if (mark.width() > 0) com.aurora.client.ui.util.AuroraBrand.draw(ctx,
+                mark.x(), mark.y(), mark.width());
 
         // Buttons (and other drawable children)
         super.render(ctx, mouseX, mouseY, delta);

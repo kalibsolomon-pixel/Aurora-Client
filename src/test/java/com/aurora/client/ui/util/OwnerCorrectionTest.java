@@ -70,8 +70,8 @@ class OwnerCorrectionTest {
     }
     @Test void mainMenuMarkStandsAboveTheCardsAndButtonsStayTextOnly() throws Exception {
         String menu = source("screen/AuroraTitleScreen.java");
-        assertTrue(menu.contains("stackTop() - BRAND_GAP - mark"));
-        assertTrue(menu.contains("(this.width - mark) / 2"));
+        assertTrue(menu.contains("composition.logo()"));
+        assertTrue(menu.contains("mark.x(), mark.y(), mark.width()"));
         assertTrue(menu.contains("AuroraBrand.draw(ctx"));
         assertFalse(menu.contains("auroraBrand(true)"));
         assertFalse(source("ui/component/Button.java").contains("auroraBrand"));
