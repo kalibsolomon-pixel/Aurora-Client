@@ -36,6 +36,7 @@ public final class ThemeResolver {
         // Single source of truth: one accent + one mode → the whole palette.
         int accent = PaletteEngine.normalizeAccent(def.accent);
         int[] c = PaletteEngine.derive(accent, def.mode);
+        UnifiedPalette.populate(c, accent, def.mode);
         applyBackgroundOpacity(c, def.backgroundOpacity);
         return new ResolvedTheme(def, true, c);
     }
@@ -114,6 +115,7 @@ public final class ThemeResolver {
         c[ThemeToken.HUD_BACKDROP_TOP.ordinal()]       = 0xFF050810;
         c[ThemeToken.HUD_BACKDROP_BOT.ordinal()]       = 0xFF0A4DBF;
 
+        UnifiedPalette.populate(c, ThemeDefinition.DEFAULT_ACCENT, ThemeMode.DARK);
         applyBackgroundOpacity(c, source.backgroundOpacity);
 
         return new ResolvedTheme(source, false, c);
