@@ -310,6 +310,15 @@ the constant; `385e704`).
 
 ## 5. Theme/token architecture (COSMIC-style)
 
+**UNIFIED THEME PILOT (2026-10-06):** the additive Launcher-derived foundation is
+active only in `AuroraScreen` and Theme's `FeatureDetailScreen`. Dark neutrals no
+longer depend on accent inside that boundary; legacy tokens/facade and other hosts
+retain the architecture below. Parent-only blur, cached neutral face/boundary,
+soft selection versus strong action, CSS easing and retained customization are
+specified in [UNIFIED_THEME_PILOT.md](UNIFIED_THEME_PILOT.md). This supersedes the
+old material recipe only in those hosts. Frosted/Wireframe remain stored and active
+on comparison screens. **User visual review is pending; no production rollout.**
+
 **The one-sentence model:** the user picks ONE accent color (+ mode, roundness, opacity);
 `PaletteEngine` derives every UI color from it; tokens are read through a cached
 `ResolvedTheme`; legacy statics are a write-only-from-one-place facade.

@@ -1040,6 +1040,17 @@ at a time through the roadmap below.
 
 ## 18. Implementation roadmap
 
+**UNIFIED THEME PILOT (2026-10-06):** the Launcher-derived Dark role system and
+120 ms CSS-ease control recipe now have a controlled production pilot in
+`AuroraScreen` and Theme detail/preview. The existing interaction contracts remain
+binding; visual/motion recipes below continue on comparison hosts. Within the pilot,
+selected uses soft tint + compact marker, primary uses a readable strong solid,
+parents own capture, embedded children do not, and floating tooltips own stable
+opaque backing with a cached shadow. ROUND/SQUARE and opacity remain customization,
+Light is compatibility-only, and Frosted/Wireframe remain persisted outside the
+pilot. [UNIFIED_THEME_PILOT.md](UNIFIED_THEME_PILOT.md) is the precise pilot record.
+**Visual acceptance is pending; this is not Phase E or production-rollout closure.**
+
 Every phase begins with a narrow pilot and evidence review before broad rollout.
 
 ### Phase A — Interaction foundation

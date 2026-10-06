@@ -80,6 +80,16 @@ modrinth/             keyless REST client + icon cache (feeds pack browser)
 
 ## 2. Theme/token system — the data flow
 
+**UNIFIED THEME PILOT (2026-10-06):** `ThemeResolver` also resolves `UnifiedPalette`'s
+independent Dark neutral/status and action/selection/marker roles. Scoped
+`MaterialSurface.color` reads them only on `AuroraScreen` and the Theme detail host;
+there is no global facade projection or serialization change. The unified renderer
+entry bypasses only legacy style selection and retains the same safety guards.
+Parent capture remains pre-dim; its sole cached face/edge sits above dim for coherent
+success/decline, while embedded controls never capture. Light uses Client
+compatibility colors. See [UNIFIED_THEME_PILOT.md](UNIFIED_THEME_PILOT.md) for exact
+roles, motion, ownership, measured work and the pending visual-review gate.
+
 ```
 AuroraConfig.theme (ThemeDefinition)
    │  ThemeFeature.onTick → ThemeManager.sync()   6-field dirty-check per tick

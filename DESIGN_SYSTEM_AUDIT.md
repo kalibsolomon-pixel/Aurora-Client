@@ -630,3 +630,22 @@ against detail/title/manager controls before rollout; decide whether connected s
 controls should share one group material; and consider a later renderer-level unification of
 blur/tint/rim device rectangles. Do not roll the embedded rule across production until the
 user accepts this visual direction.
+
+## Unified theme pilot addendum (2026-10-06)
+
+**UNIFIED THEME PILOT — visual review pending.** The prior Phase E record remains
+historical; its enabled-card isolated-glass exception is superseded only in
+`AuroraScreen` and Theme detail/preview. Those hosts use the Launcher-derived Dark
+neutral hierarchy, distinct strong action/soft selection roles, parent-owned capture,
+cached neutral child faces, compact markers, independent focus, and cached opaque
+floating tooltip backing. Legacy facade colors and comparison screens remain.
+
+The persisted Frosted/TRANSPARENT choices, custom accent, OnePlus default, mode,
+roundness, opacity, profiles and live preview are retained. CSS Bézier X inversion
+and finite 120 ms transitions replace the pilot's spring/scale presentation while
+keeping existing semantic/native input and sound ownership. Light is Client
+compatibility, with no fabricated Launcher reference. Existing reliability tests
+remain; scoped menu probes measured fewer captures and AA submissions and exercised
+screenshot suppression. See [UNIFIED_THEME_PILOT.md](UNIFIED_THEME_PILOT.md) for the
+exact recipes, adaptations, evidence limits and user checklist. Do not infer
+production acceptance or remove legacy style taxonomy from this addendum.
