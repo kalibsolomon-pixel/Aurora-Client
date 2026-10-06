@@ -66,6 +66,11 @@ public final class MaterialSurface {
                 ? ThemeManager.withAlpha(result, ThemeManager.color(ThemeToken.WINDOW_FILL) >>> 24) : result;
     }
 
+    /** Outside focus follows the corner family: Square must remain exactly square. */
+    public static float outsetRadius(float radius,float outset) {
+        return radius==0 ? 0 : radius+outset;
+    }
+
     public static int selectedFill() { return ThemeManager.color(ThemeToken.SELECTION_SOFT); }
 
     /** Same role geometry and backing for success/decline. Child roles never sample. */

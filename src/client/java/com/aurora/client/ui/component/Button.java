@@ -111,7 +111,7 @@ public class Button extends Widget {
             RenderUtil.drawRoundedRectAA(g,x,py,w,h,r,fill);
             RenderUtil.drawRoundedOutlineAA(g,x,py,w,h,r,1,edge);
         }
-        if(focused && !disabled) RenderUtil.drawRoundedOutlineAA(g,x-2,y-2,w+4,h+4,r+2,1,
+        if(focused && !disabled) RenderUtil.drawRoundedOutlineAA(g,x-2,y-2,w+4,h+4,MaterialSurface.outsetRadius(r,2),1,
                 MaterialSurface.color(ThemeToken.ACCENT));
         Font font=Minecraft.getInstance().font;
         if(font!=null) AuroraFontRenderer.drawCentered(g,font,label,Math.round(x+w/2),

@@ -62,6 +62,14 @@ class UnifiedPilotContractTest {
         assertFalse(floating.substring(floating.indexOf("public static void floating")).contains("WINDOW_FILL"));
     }
 
+    @Test void outsideFocusKeepsTheSquareCornerContract() {
+        for(ThemeRoundness style:ThemeRoundness.values()) {
+            float radius=style.radiusSmall();
+            float actual=com.aurora.client.ui.component.MaterialSurface.outsetRadius(radius,2);
+            assertEquals(style==ThemeRoundness.SQUARE ? 0 : radius+2,actual);
+        }
+    }
+
     @Test void rendererRetainsSafetyGuardsAndBypassesOnlyLegacyStyle() throws Exception {
         String renderer=read("ui/render/blur/BlurPanelRenderer.java");
         assertTrue(renderer.contains("if (!unified && captureSource == null && ThemeManager.current().glassStyle() == GlassStyle.TRANSPARENT)"));

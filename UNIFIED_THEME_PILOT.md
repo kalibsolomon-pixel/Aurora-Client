@@ -43,7 +43,9 @@ remains the user's identity color; OnePlus Red (`#eb0029`) remains the factory c
 Strong action, action hover/pressed, on-action, soft selection, marker and outline
 are separate roles. Primary actions are solid and stronger; selected modules and
 navigation use a translucent base wash plus a small leading marker, without a bright
-full perimeter. Keyboard focus has a separate geometry-following outline.
+full perimeter. Keyboard focus has a separate geometry-following outline. Its outside radius
+stays exactly zero in Square, while circular/mechanical switch and slider geometry
+retains the existing exception.
 
 The Java custom-color policy ports Launcher's HSL lightness band `.34–.62` and
 white-versus-ink (`#101116`) foreground choice. Each action state is checked against
@@ -132,7 +134,7 @@ commit throttles remain owned by their original semantic/native paths.
 Deterministic tests cover neutral/status independence, all three action contrasts,
 dark/bright/saturated/neutral/red/violet/cyan/amber accents, a 4,096-color RGB lattice
 in both modes, exact easing endpoints/samples/monotonicity/retargeting, profile/config
-migration preservation and the scoped material/capture/safety boundary. The final full suite reports **392 tests, 0 failures, 0 errors, 0 skipped**;
+migration preservation and the scoped material/capture/safety boundary. The final full suite reports **393 tests, 0 failures, 0 errors, 0 skipped**;
 `gradlew.bat --no-daemon test build` succeeds. Existing
 renderer reliability and semantic interaction tests remain in the full suite.
 

@@ -195,7 +195,7 @@ public abstract class EditBoxMixin implements GlassEditBox {
         }
 
         if(MaterialSurface.unified() && focused && self.active)
-            RenderUtil.drawRoundedOutlineAA(ctx,x-2,y-2,w+4,h+4,radius+2,1,MaterialSurface.color(ThemeToken.ACCENT));
+            RenderUtil.drawRoundedOutlineAA(ctx,x-2,y-2,w+4,h+4,MaterialSurface.outsetRadius(radius,2),1,MaterialSurface.color(ThemeToken.ACCENT));
         // Cancel the vanilla render so its background/border never appear.
         ci.cancel();
     }
