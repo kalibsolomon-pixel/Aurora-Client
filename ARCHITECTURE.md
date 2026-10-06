@@ -237,6 +237,13 @@ Conventions (violating these has caused real bugs — full list in AGENTS.md §6
 
 ## 4. Screen inventory (glass status verified in code, 2026-09-04)
 
+**Current override — UNIFIED THEME PILOT (2026-10-06):** the inventory below records
+legacy recipes. `AuroraScreen` and only the Theme detail view now use parent-only
+capture, cached neutral window chrome and flat embedded controls/preview/fields.
+Both persisted styles use that treatment inside the pilot; other hosts keep the
+comparison paths. Floating tooltips are independently opaque cached material.
+User visual acceptance is pending; see `UNIFIED_THEME_PILOT.md`.
+
 | Screen | Glass status | Notes |
 |---|---|---|
 | `AuroraScreen` (main Mods+Settings) | Full | Depressed window + raised tiles/chips/layout buttons; `UiLayerCache` static chrome; fps-adaptive smooth scroll; own scrollbar. Sidebar chips/tiles use literal radii 5/6/4 (audit D-note). **Structural pre-dim pass (2026-09-11)**: window + chrome + tiles (tracked scissor, ROW priority) / Settings-tab inline `renderGlassPass` walk → `overlayDim` → cached blit + content; the cache never holds glass |

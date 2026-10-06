@@ -728,7 +728,14 @@ claims/declines.
 Enrollment history: glass started as a Theme-screen pilot, then a staged
 `GLASS_PILOT_IDS` set (`theme`, `block_overlay`, `pack_tweaks`) in
 `FeatureDetailScreen`. That mechanism is retired (landed 2026-09-05) — glass
-flags now default ON mod-wide. Status below is committed `master`.
+flags now default ON mod-wide. The table records those legacy material recipes.
+
+**Current override — UNIFIED THEME PILOT (2026-10-06):** `AuroraScreen` and the
+Theme detail view, including its preview and fields, use one parent capture, a cached
+neutral window face, and flat embedded controls with separate primary/selection/focus
+roles. Neither saved Frosted nor Wireframe requests child glass or glossy rims in
+these hosts. Other detail views and comparison screens retain the table's legacy
+recipes. User visual acceptance is pending; see `UNIFIED_THEME_PILOT.md` before rollout.
 
 | Screen | Status | Detail |
 |---|---|---|

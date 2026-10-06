@@ -389,6 +389,13 @@ Aurora's enabled module cards and selected navigation/view peers are canonical e
 Their unselected peers remain neutral raised glass when the whole control group is intended
 to read as a set of physical frosted controls.
 
+**UNIFIED THEME PILOT override (2026-10-06):** that isolated stained-card exception
+remains a compatibility recipe outside the pilot. Inside `AuroraScreen` and the Theme
+detail view, selected cards/navigation use embedded soft selection plus a compact
+marker, primary buttons use solid action roles, and no child requests glass or a
+glossy rim. The parent owns the only capture; floating tooltips use independent opaque
+cached material. Review remains pending; see `UNIFIED_THEME_PILOT.md`.
+
 Floating tooltip material is stable token-backed chrome rather than live glass. It uses one
 low-emphasis edge and shadow, respects theme roundness, and does not inherit the window's
 opacity merely because it originated inside that window. This is a material-depth decision,
