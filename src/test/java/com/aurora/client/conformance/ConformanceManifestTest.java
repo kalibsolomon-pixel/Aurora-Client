@@ -295,16 +295,16 @@ class ConformanceManifestTest {
         int modules = countOccurrences(read(SRC + "module/ModuleManager.java"), "new Module(");
         int segmentedPeers = com.aurora.client.theme.ThemeRoundness.values().length;
         int hosted = 3 + 10 + segmentedPeers;               // enums + accent + segmented peers
-        int screenOwned = 2 + 1 + 2 + modules + 0 + 4;      // tabs, profiles, layout, tiles, nav, toggles
+        int screenOwned = 2 + 1 + 2 + modules + modules + 0 + 4;      // tabs, profiles, layout, tiles, configure, nav, toggles
         assertEquals(37, modules, "ModuleManager tile count");
         assertEquals(3, segmentedPeers, "Corner Style is the only segmented row");
         assertEquals(16, hosted, "component-owned hosted controls");
-        assertEquals(46, screenOwned, "screen-owned chrome controls");
-        assertEquals(62, hosted + screenOwned, "AuroraScreen total semantic controls");
+        assertEquals(83, screenOwned, "screen-owned chrome controls");
+        assertEquals(99, hosted + screenOwned, "AuroraScreen total semantic controls");
 
         String src = read(SRC + "screen/AuroraScreen.java");
-        assertEquals(7, countOccurrences(src, "semanticHost.register("),
-                "the init-time hosted loop + six identity-stable factory registration sites");
+        assertEquals(8, countOccurrences(src, "semanticHost.register("),
+                "the hosted and configure loops + six identity-stable factory registration sites");
         // Registration is init/factory-only: every register site must sit
         // after a private control factory (or the init loop), never inside a
         // render walk — the frame path checks availability, never membership.

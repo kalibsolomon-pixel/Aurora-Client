@@ -62,7 +62,7 @@ class AuroraScreenNavigationTest {
         assertTrue(src.contains("layoutControls[0] = layoutControl(0);"));
         assertTrue(src.contains("layoutControls[1] = layoutControl(1);"));
         // Module cards: one control per ModuleManager module (37 tiles).
-        assertTrue(src.contains("for (Module m : ModuleManager.getInstance().getModules()) {\n            tileControls.put(m.id, tileControl(m));\n        }"));
+        assertTrue(src.contains("for (Module m : ModuleManager.getInstance().getModules()) {\n            tileControls.put(m.id, tileControl(m));"));
         assertEquals(37, count(modules, "new Module("), "the grid's tile inventory (ModuleManager)");
         // Settings headers: navigation only for entries with a detail screen;
         // header toggles for all four entries.
@@ -332,7 +332,7 @@ class AuroraScreenNavigationTest {
         assertTrue(click.contains("nav.activateFromPointer(mouseX, mouseY, button)"));
         // The navigation zone keeps priority below the toggle zone and
         // stays inside the C-1 viewport gate (pinned by the coupling test).
-        assertTrue(click.contains("mouseX >= mx + 4 && mouseX <= mx + 254 - 42"));
+        assertTrue(click.contains("mouseX >= mx + 4 && mouseX <= mx + contentWidth() - 42"));
     }
 
     @Test
@@ -346,8 +346,8 @@ class AuroraScreenNavigationTest {
         assertTrue(tabFactory.contains("SemanticSound.NONE, true, true)"));
         // Profiles/cards/headers/toggles: SemanticAction.button — exactly
         // one ACTIVATION per accepted activation, played by the adapter.
-        assertEquals(4, count(src, "SemanticAction.button("),
-                "profiles, tiles, header nav, header toggles construct via button()");
+        assertEquals(5, count(src, "SemanticAction.button("),
+                "profiles, tiles, configure, header nav, header toggles construct via button()");
         // The host never plays sounds; hover/focus/rejection are silent.
         String hostSrc = read(Path.of(
                 "src/client/java/com/aurora/client/ui/interaction/SemanticControlHost.java"));
@@ -409,7 +409,7 @@ class AuroraScreenNavigationTest {
         assertTrue(cull >= 0 && mark > cull, "card availability follows the viewport cull");
         // Headers + toggles: marked inside the vp.intersects header branch.
         String settings = bodyOf(src, "private void renderSettingsLive(");
-        int headerGate = settings.indexOf("if (vp.intersects(mx + 4, y, CONTENT_W - 4, headerH))");
+        int headerGate = settings.indexOf("if (vp.intersects(mx + 4, y, contentWidth() - 4, headerH))");
         int navMark = settings.indexOf("nav.setAvailable(true);");
         int toggleMark = settings.indexOf("tc.setAvailable(true);");
         assertTrue(headerGate >= 0 && navMark > headerGate && toggleMark > headerGate,

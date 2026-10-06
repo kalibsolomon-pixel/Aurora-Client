@@ -77,7 +77,7 @@ class AuroraScreenViewportCouplingTest {
         String src = screenSource();
         assertTrue(src.contains("} else if (vp.contains(mouseX, mouseY)) {"),
                 "the whole Settings-tab walk must be inside the viewport gate");
-        assertTrue(src.contains("if (vp.intersects(mx + 4, y, 246, rh)\n"
+        assertTrue(src.contains("if (vp.intersects(mx + 4, y, (contentWidth() - 8), rh)\n"
                         + "                                && s.mouseClicked("),
                 "rows skipped by the render walk must be skipped by the click walk");
     }

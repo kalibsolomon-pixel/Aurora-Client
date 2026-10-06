@@ -74,6 +74,13 @@ public final class IconAction {
             120,com.aurora.client.ui.util.CubicBezier.EASE,0);
     private float materialHoverT;
     private SemanticActionControl control;
+    private float visualEm = MaterialIconRenderer.NATURAL_EM_GUI;
+
+    /** Host-local icon size; interaction and focus geometry stay owned by the hit box. */
+    public IconAction visualEm(float size) {
+        visualEm = Float.isFinite(size) ? Math.max(1, Math.min(32, size)) : MaterialIconRenderer.NATURAL_EM_GUI;
+        return this;
+    }
 
     /** Colors are suppliers so theme-derived values stay live across reloads. */
     public IconAction(String glyph, SemanticAction action,
@@ -143,7 +150,7 @@ public final class IconAction {
                 ? ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED)
                 : AuroraAnim.lerpArgb(restColor.getAsInt(), hoverColor.getAsInt(), hoverT());
         MaterialIconRenderer.drawIcon(g, font, glyph.get(), x + w / 2f, y + h / 2f,
-                emFor(w, h), color);
+                visualEm == MaterialIconRenderer.NATURAL_EM_GUI ? emFor(w, h) : Math.min(visualEm, Math.min(w, h) - 2), color);
         paintHairline(g, x, y, w, h);
     }
 
