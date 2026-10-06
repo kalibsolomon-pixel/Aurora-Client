@@ -42,11 +42,12 @@ public class SectionHeaderSetting extends FeatureSetting {
         super(label);
     }
 
-    @Override public int baseHeight() { return SECTION_GAP_ABOVE + ROW_H; }
-    @Override public int height()     { return SECTION_GAP_ABOVE + ROW_H; }
+    @Override public int baseHeight() { return compactRow == null ? SECTION_GAP_ABOVE + ROW_H : compactRow.height(); }
+    @Override public int height()     { return compactRow == null ? SECTION_GAP_ABOVE + ROW_H : compactRow.height(); }
 
     @Override
     public void render(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
+        if (compactRow != null) { renderCompactLabel(ctx, x, y, mouseX, mouseY, AuroraTheme.sectionCaption()); return; }
         Font tr = Minecraft.getInstance().font;
         // Section label — dimmed uppercase, aligned with the indent of
         // the regular setting rows below it. No strikethrough separator;

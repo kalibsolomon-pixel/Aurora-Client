@@ -104,6 +104,7 @@ public class BooleanSetting extends FeatureSetting {
 
     @Override
     public int baseHeight() {
+        if (compactRow != null) return compactRow.height();
         Font tr = Minecraft.getInstance().font;
         if (tr == null) return MIN_ROW_H;
         ensureLayout(tr);
@@ -159,10 +160,10 @@ public class BooleanSetting extends FeatureSetting {
         lastWidth = width;
         Font tr = Minecraft.getInstance().font;
         if (tr == null) return;
-        ensureLayout(tr);
+        if (compactRow == null) ensureLayout(tr);
 
-        float switchX = x + width - 28 - 14;
-        float switchY = y + (cachedBaseHeight - 15) / 2.0f;
+        float switchX = controlX(x, width, 28);
+        float switchY = controlY(y, baseHeight(), 15);
         toggle.layout(switchX, switchY, 28, 15);
         syncToggleState(x, y, width, -1, -1);
         toggle.renderShapes(ctx, switchX, switchY, 28, 15);
@@ -173,30 +174,33 @@ public class BooleanSetting extends FeatureSetting {
         lastWidth = width;
         Font tr = Minecraft.getInstance().font;
         if (tr == null) return;
-        ensureLayout(tr);
+        if (compactRow == null) ensureLayout(tr);
 
-        int controlH = cachedBaseHeight;
-        int textBlockH = cachedLines.size() * (tr.lineHeight + 1) + valueLineHeight(tr);
-        int textY = y + (controlH - textBlockH) / 2;
-        String key = tooltipKey();
-        boolean disabled = isDisabled();
-        for (int li = 0; li < cachedLines.size(); li++) {
-            var line = cachedLines.get(li);
-            int lineX = x + LABEL_PAD + (cachedLabelArea - tr.width(line)) / 2;
-            ctx.drawString(tr, line, lineX, textY, MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
-            // Each wrapped line of the label text is a dwell region for
-            // the description tooltip — hover the label itself, no badge.
-            // The description supplier is only evaluated while hovered.
-            trackLabelHover(key, this::currentDescription, lineX, textY,
-                    tr.width(line), tr.lineHeight, mouseX, mouseY, disabled);
-            textY += tr.lineHeight + 1;
+        int controlH = baseHeight();
+        if (compactRow != null) renderCompactLabel(ctx, x, y, mouseX, mouseY, MaterialSurface.color(ThemeToken.ON_BACKGROUND));
+        else {
+            int textBlockH = cachedLines.size() * (tr.lineHeight + 1) + valueLineHeight(tr);
+            int textY = y + (controlH - textBlockH) / 2;
+            String key = tooltipKey();
+            boolean disabled = isDisabled();
+            for (int li = 0; li < cachedLines.size(); li++) {
+                var line = cachedLines.get(li);
+                int lineX = x + LABEL_PAD + (cachedLabelArea - tr.width(line)) / 2;
+                ctx.drawString(tr, line, lineX, textY, MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
+                // Each wrapped line of the label text is a dwell region for
+                // the description tooltip — hover the label itself, no badge.
+                // The description supplier is only evaluated while hovered.
+                trackLabelHover(key, this::currentDescription, lineX, textY,
+                        tr.width(line), tr.lineHeight, mouseX, mouseY, disabled);
+                textY += tr.lineHeight + 1;
+            }
+            // §4 live-value subtitle (base mechanism): one small secondary
+            // line under the label block.
+            drawValueLineCentered(ctx, x + LABEL_PAD, textY + 2, cachedLabelArea, disabled);
+
         }
-        // §4 live-value subtitle (base mechanism): one small secondary
-        // line under the label block.
-        drawValueLineCentered(ctx, x + LABEL_PAD, textY + 2, cachedLabelArea, disabled);
-
-        float switchX = x + width - 28 - 14;
-        float switchY = y + (controlH - 15) / 2.0f;
+        float switchX = controlX(x, width, 28);
+        float switchY = controlY(y, controlH, 15);
         toggle.layout(switchX, switchY, 28, 15);
         syncToggleState(x, y, width, mouseX, mouseY);
         toggle.renderOverlay(ctx, switchX, switchY, 28, 15, mouseX, mouseY);
@@ -215,7 +219,7 @@ public class BooleanSetting extends FeatureSetting {
     private void syncToggleState(int x, int y, int width, int mouseX, int mouseY) {
         toggle.disabled(isDisabled());
         if (interactionControl != null) {
-            interactionControl.setBounds(x, y, width, cachedBaseHeight);
+            interactionControl.setBounds(x, y, width, baseHeight());
             interactionControl.updatePointer(mouseX, mouseY);
         }
         toggle.focusedVisual(interactionControl != null && interactionControl.isFocused());
@@ -228,6 +232,7 @@ public class BooleanSetting extends FeatureSetting {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button, int rowX, int rowY, int rowWidth) {
+        syncCompactControl(rowX, rowY);
         if (isDisabled()) return false;
         if (button != 0) return false;
         int controlH = baseHeight();

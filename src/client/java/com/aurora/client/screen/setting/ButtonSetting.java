@@ -83,8 +83,8 @@ public class ButtonSetting extends FeatureSetting {
     @Override public ButtonSetting description(String desc) { super.description(desc); return this; }
     @Override public ButtonSetting description(java.util.function.Supplier<String> desc) { super.description(desc); return this; }
 
-    @Override public int baseHeight() { return CONTROL_H; }
-    @Override public int height() { return CONTROL_H + descriptionHeight(lastWidth); }
+    @Override public int baseHeight() { return compactRow == null ? CONTROL_H : compactRow.height(); }
+    @Override public int height() { return baseHeight() + descriptionHeight(lastWidth); }
 
     /**
      * Pre-dim surface (§6 convention 6): the embedded shared Button already
@@ -97,8 +97,8 @@ public class ButtonSetting extends FeatureSetting {
     @Override
     public void renderGlassPass(GuiGraphics ctx, int x, int y, int width) {
         if (!com.aurora.client.ui.component.GlassSurface.passOpen()) return; // legacy frame order
-        int btnX = x + width - BTN_W - 14;
-        int btnY = y + (CONTROL_H - BTN_H) / 2;
+        int btnX = controlX(x, width, BTN_W);
+        int btnY = controlY(y, CONTROL_H, BTN_H);
         button.layout(btnX, btnY, BTN_W, BTN_H);
         interactionControl.setBounds(btnX, btnY, BTN_W, BTN_H);
         boolean disabled = isDisabled();
@@ -113,13 +113,15 @@ public class ButtonSetting extends FeatureSetting {
         if (tr == null) return;
 
         // Left side of the row is the label; the button sits on the right.
-        renderWrappedLabel(ctx, label, x + 12, y + (CONTROL_H - tr.lineHeight) / 2, Math.max(0,width-(BTN_W+38)), AuroraTheme.TEXT_PRIMARY, mouseX, mouseY, isDisabled());
+        if (compactRow != null) renderCompactLabel(ctx, x, y, mouseX, mouseY, AuroraTheme.TEXT_PRIMARY);
+        else renderWrappedLabel(ctx, label, x + 12, y + (CONTROL_H - tr.lineHeight) / 2, Math.max(0,width-(BTN_W+38)), AuroraTheme.TEXT_PRIMARY, mouseX, mouseY, isDisabled());
 
-        int btnX = x + width - BTN_W - 14;
-        int btnY = y + (CONTROL_H - BTN_H) / 2;
+        int btnX = controlX(x, width, BTN_W);
+        int btnY = controlY(y, CONTROL_H, BTN_H);
 
         button.layout(btnX, btnY, BTN_W, BTN_H);
         syncInteraction(btnX, btnY, mouseX, mouseY);
+        syncCompactControl(x, y);
         button.render(ctx, btnX, btnY, BTN_W, BTN_H, mouseX, mouseY);
 
         renderDescription(ctx, x, y + CONTROL_H, width);
@@ -127,6 +129,7 @@ public class ButtonSetting extends FeatureSetting {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button, int rowX, int rowY, int rowWidth) {
+        syncCompactControl(rowX, rowY);
         if (button != 0) return false;
         return interactionControl.activateFromPointer(mouseX, mouseY, button);
     }

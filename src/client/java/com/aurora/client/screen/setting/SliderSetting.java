@@ -156,8 +156,8 @@ public class SliderSetting extends FeatureSetting {
         return this;
     }
 
-    @Override public int baseHeight() { return CONTROL_H; }
-    @Override public int height() { return CONTROL_H + descriptionHeight(lastWidth); }
+    @Override public int baseHeight() { return compactRow == null ? CONTROL_H : compactRow.height(); }
+    @Override public int height() { return baseHeight() + descriptionHeight(lastWidth); }
 
     /**
      * The cached layer (track) depends on the slider's disabled color —
@@ -177,13 +177,15 @@ public class SliderSetting extends FeatureSetting {
     /** Total horizontal inset of the track from the row (both sides combined). */
     protected int trackInset() { return 24; }
 
+    private int trackWidgetY(int y) { return compactRow == null ? y : y + compactRow.control().y() - CONTROL_H + 12; }
+
     private void layoutTrack(int x, int y, int width) {
         lastWidth = width;
-        int trackX = x + 12;
-        int trackW = width - trackInset();
+        int trackX = compactRow == null ? x + 12 : x + compactRow.control().x();
+        int trackW = compactRow == null ? width - trackInset() : compactRow.control().width();
         lastTrackX = trackX;
         lastTrackW = trackW;
-        slider.layout(trackX, y, trackW, CONTROL_H);
+        slider.layout(trackX, trackWidgetY(y), trackW, CONTROL_H);
     }
 
     /** Label + cached value readout (or the edit field while editing). Reads the value through the slider's getter. */
@@ -193,7 +195,8 @@ public class SliderSetting extends FeatureSetting {
         boolean disabled = isDisabled();
         double value = slider.value();
 
-        renderWrappedLabel(ctx, label, x + 12, y + 6, Math.max(0,width-38-tr.width(valueText(value))), MaterialSurface.color(ThemeToken.ON_BACKGROUND), mouseX, mouseY, disabled);
+        if (compactRow != null) renderCompactLabel(ctx, x, y, mouseX, mouseY, MaterialSurface.color(ThemeToken.ON_BACKGROUND));
+        else renderWrappedLabel(ctx, label, x + 12, y + 6, Math.max(0,width-38-tr.width(valueText(value))), MaterialSurface.color(ThemeToken.ON_BACKGROUND), mouseX, mouseY, disabled);
 
         // A click elsewhere on the screen clears row focus before the clicked
         // row re-claims it — focus loss without a click on THIS row is the
@@ -217,21 +220,21 @@ public class SliderSetting extends FeatureSetting {
             cachedStrW = tr.width(cachedStr);
             cachedKey = key;
         }
-        lastReadoutRight = x + width - 14;
+        lastReadoutRight = compactRow == null ? x + width - 14 : x + compactRow.value().x() + compactRow.value().width();
         lastReadoutW = cachedStrW;
 
         // Highlight the value in accent when this slider holds focus, so the
         // user can see at a glance which slider scroll/keys go to.
         boolean focused = (!disabled && FeatureSetting.getFocused() == this);
         int valueColor = disabled ? MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED) : (focused ? MaterialSurface.color(ThemeToken.ACCENT) : MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY));
-        ctx.drawString(tr, cachedStr, x + width - cachedStrW - 14, y + 6, valueColor, false);
+        ctx.drawString(tr, cachedStr, compactRow == null ? x + width - cachedStrW - 14 : x + compactRow.value().x() + (compactRow.value().width() - cachedStrW) / 2, compactRow == null ? y + 6 : y + (compactRow.value().height() - tr.lineHeight) / 2, valueColor, false);
     }
 
     /** Cacheable static track layer (depends only on the roundness token). */
     protected void drawTrackShapes(GuiGraphics ctx, int x, int y, int width) {
         layoutTrack(x, y, width);
         slider.disabled(isDisabled());
-        slider.renderShapes(ctx, lastTrackX, y, lastTrackW, CONTROL_H);
+        slider.renderShapes(ctx, lastTrackX, trackWidgetY(y), lastTrackW, CONTROL_H);
     }
 
     /** Live track layer: fill, knob, hover ring — tracks value and hover. */
@@ -241,7 +244,7 @@ public class SliderSetting extends FeatureSetting {
         // Canonical focus paint: the row owns keyboard focus (its readout
         // already highlights); mirror it onto the track hairline.
         slider.focusedVisual(!isDisabled() && FeatureSetting.getFocused() == this);
-        slider.renderOverlay(ctx, lastTrackX, y, lastTrackW, CONTROL_H, mouseX, mouseY);
+        slider.renderOverlay(ctx, lastTrackX, trackWidgetY(y), lastTrackW, CONTROL_H, mouseX, mouseY);
     }
 
     private long valueKey(double v) {
@@ -289,8 +292,8 @@ public class SliderSetting extends FeatureSetting {
     private void layoutValueField(int x, int y, int width) {
         // Vertically centered on where the readout text sits (y+6, ~9px line)
         // so opening the editor doesn't visibly jump the value's position.
-        valueField.setX(x + width - 14 - VALUE_FIELD_W);
-        valueField.setY(y + 2);
+        valueField.setX(compactRow == null ? x + width - 14 - VALUE_FIELD_W : x + compactRow.value().x());
+        valueField.setY(compactRow == null ? y + 2 : y + (compactRow.value().height() - VALUE_FIELD_H) / 2);
         valueField.setWidth(VALUE_FIELD_W);
     }
 
@@ -362,6 +365,8 @@ public class SliderSetting extends FeatureSetting {
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button, int rowX, int rowY, int rowWidth) {
         if (isDisabled()) return false;
+        layoutTrack(rowX, rowY, rowWidth);
+        if (compactRow != null && editable && !editingValue && button == 0 && compactRow.value().contains(mouseX - rowX, mouseY - rowY)) { openValueEdit(); return true; }
         if (editingValue && valueField != null) {
             // Inside the field: keep editing. Elsewhere in the row: commit and
             // let the click do its normal job (e.g. start a slider drag).

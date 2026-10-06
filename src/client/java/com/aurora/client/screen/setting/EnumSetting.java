@@ -127,6 +127,7 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
     private boolean passDrewButton = false;
 
     private int lastBtnX, lastBtnY;
+    private int lastPopupBorder;
     private int lastWidth = 240;
 
     private String cachedName;
@@ -212,6 +213,7 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
     }
 
     @Override public int baseHeight() {
+        if (compactRow != null) return compactRow.height();
         int h = CONTROL_H;
         if (expanded) {
             h += Math.min(5, values.length) * OPT_H + 6;
@@ -231,8 +233,8 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
     public void renderGlassPass(GuiGraphics ctx, int x, int y, int width) {
         if (!GlassSurface.passOpen()) return; // legacy frame order — render paints in place
         glassPassFrame = GlassSurface.frame();
-        int btnX = x + width - BTN_W - 14;
-        int btnY = y + (CONTROL_H - BTN_H) / 2;
+        int btnX = controlX(x, width, BTN_W);
+        int btnY = controlY(y, CONTROL_H, BTN_H);
         float glassR = Math.min(BTN_H / 2f, ThemeManager.current().roundness().radiusSmall());
         passDrewButton = glassButton && !isDisabled()
                 && GlassSurface.control(ctx, btnX, btnY, BTN_W, BTN_H, glassR);
@@ -243,7 +245,8 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
         lastWidth = width;
         Font tr = Minecraft.getInstance().font;
         boolean disabled = isDisabled();
-        renderWrappedLabel(ctx, label, x + 12, y + (CONTROL_H - tr.lineHeight) / 2, Math.max(0,width-(BTN_W+38)), AuroraTheme.TEXT_PRIMARY, mouseX, mouseY, disabled);
+        if (compactRow != null) renderCompactLabel(ctx, x, y, mouseX, mouseY, AuroraTheme.TEXT_PRIMARY);
+        else renderWrappedLabel(ctx, label, x + 12, y + (CONTROL_H - tr.lineHeight) / 2, Math.max(0,width-(BTN_W+38)), AuroraTheme.TEXT_PRIMARY, mouseX, mouseY, disabled);
 
         // Cache arrow glyphs first (their width reserves space for the label).
         if (cachedUpArrow == null) {
@@ -267,8 +270,8 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
             cachedName = name;
         }
 
-        int btnX = x + width - BTN_W - 14;
-        int btnY = y + (CONTROL_H - BTN_H) / 2;
+        int btnX = controlX(x, width, BTN_W);
+        int btnY = controlY(y, CONTROL_H, BTN_H);
         lastBtnX = btnX;
         lastBtnY = btnY;
 
@@ -284,7 +287,7 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
         // widget state. A host that never asks keeps it null: canonical
         // visuals without semantic capabilities it has not adopted.
         if (interactionControl != null) {
-            interactionControl.setBounds(btnX, btnY, BTN_W, BTN_H);
+            if (compactRow == null) interactionControl.setBounds(btnX, btnY, BTN_W, BTN_H); else syncCompactControl(x, y);
             interactionControl.updatePointer(mouseX, mouseY);
             focusedVisual = interactionControl.isFocused();
         }
@@ -364,6 +367,20 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
                 arrowX + arrowW / 2f, arrowY + tr.lineHeight / 2f,
                 MaterialIconRenderer.NATURAL_EM_GUI, arrowColor);
 
+        lastPopupBorder = borderTint;
+        if (compactRow == null) renderFloatingOverlay(ctx, mouseX, mouseY);
+
+        renderDescription(ctx, x, y + baseHeight(), width);
+    }
+
+
+    public boolean popupOpen() { return expanded; }
+    /** The compact host paints floating options after every normal row. */
+    public void renderFloatingOverlay(GuiGraphics ctx, int mouseX, int mouseY) {
+        Font tr = Minecraft.getInstance().font;
+        E current = getter.get();
+        int btnX = lastBtnX, btnY = lastBtnY;
+        int borderTint = lastPopupBorder;
         if (expanded) {
             int visibleCount = Math.min(5, values.length);
             int dropdownH = visibleCount * OPT_H + 4;
@@ -434,18 +451,18 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
             }
         }
 
-        renderDescription(ctx, x, y + baseHeight(), width);
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button, int rowX, int rowY, int rowWidth) {
+        syncCompactControl(rowX, rowY);
         if (isDisabled()) return false;
         if (button != 0) return false;
 
-        int btnX = rowX + rowWidth - BTN_W - 14;
-        int btnY = rowY + (CONTROL_H - BTN_H) / 2;
+        int btnX = controlX(rowX, rowWidth, BTN_W);
+        int btnY = controlY(rowY, CONTROL_H, BTN_H);
 
-        boolean clickedButton = Widget.inBounds(mouseX, mouseY, btnX, btnY, BTN_W, BTN_H);
+        boolean clickedButton = compactRow == null ? Widget.inBounds(mouseX, mouseY, btnX, btnY, BTN_W, BTN_H) : compactControlContains(mouseX, mouseY, rowX, rowY);
 
         if (clickedButton) {
             // Semantic host (the detail screen marks the control available

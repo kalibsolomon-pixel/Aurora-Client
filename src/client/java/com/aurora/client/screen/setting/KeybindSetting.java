@@ -122,8 +122,8 @@ public class KeybindSetting extends FeatureSetting {
     @Override public KeybindSetting description(String desc) { super.description(desc); return this; }
     @Override public KeybindSetting description(Supplier<String> desc) { super.description(desc); return this; }
 
-    @Override public int baseHeight() { return CONTROL_H; }
-    @Override public int height()     { return CONTROL_H + descriptionHeight(lastWidth); }
+    @Override public int baseHeight() { return compactRow == null ? CONTROL_H : compactRow.height(); }
+    @Override public int height()     { return baseHeight() + descriptionHeight(lastWidth); }
 
     /**
      * Pre-dim surface (the split's surface half): the pill's raised glass,
@@ -135,8 +135,8 @@ public class KeybindSetting extends FeatureSetting {
         if (!GlassSurface.passOpen()) return; // legacy frame order — render paints in place
         boolean disabled = reconcileDisabledState();
         glassPassFrame = GlassSurface.frame();
-        int btnX = x + width - BTN_W - 14;
-        int btnY = y + (CONTROL_H - BTN_H) / 2;
+        int btnX = controlX(x, width, BTN_W);
+        int btnY = controlY(y, CONTROL_H, BTN_H);
         float glassR = Math.min(BTN_H / 2f, ThemeManager.current().roundness().radiusSmall());
         passDrewPill = !disabled
                 && GlassSurface.control(ctx, btnX, btnY, BTN_W, BTN_H, glassR, listening);
@@ -150,11 +150,12 @@ public class KeybindSetting extends FeatureSetting {
         boolean disabled = reconcileDisabledState();
 
         // Keybind rows intentionally skip the label-hover description tooltip.
-        ctx.drawString(tr, com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(tr,label,Math.max(0,width-BTN_W-38),0), x + 12, y + (CONTROL_H - tr.lineHeight) / 2,
+        if (compactRow != null) renderCompactLabel(ctx, x, y, mouseX, mouseY, AuroraTheme.TEXT_PRIMARY);
+        else ctx.drawString(tr, com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(tr,label,Math.max(0,width-BTN_W-38),0), x + 12, y + (CONTROL_H - tr.lineHeight) / 2,
                 disabled ? AuroraTheme.TEXT_DIM : AuroraTheme.TEXT_PRIMARY, false);
 
-        int btnX = x + width - BTN_W - 14;
-        int btnY = y + (CONTROL_H - BTN_H) / 2;
+        int btnX = controlX(x, width, BTN_W);
+        int btnY = controlY(y, CONTROL_H, BTN_H);
         lastBtnX = btnX;
         lastBtnY = btnY;
 
@@ -163,7 +164,7 @@ public class KeybindSetting extends FeatureSetting {
         if (MaterialSurface.unified()) hT = materialHover.update(hoverTarget(hover, disabled) ? 1 : 0,System.nanoTime());
 
         if (interactionControl != null) {
-            interactionControl.setBounds(btnX, btnY, BTN_W, BTN_H);
+            if (compactRow == null) interactionControl.setBounds(btnX, btnY, BTN_W, BTN_H); else syncCompactControl(x, y);
             interactionControl.updatePointer(mouseX, mouseY);
             focusedVisual = interactionControl.isFocused() && !disabled;
         }
@@ -227,9 +228,10 @@ public class KeybindSetting extends FeatureSetting {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button, int rowX, int rowY, int rowWidth) {
+        syncCompactControl(rowX, rowY);
         if (reconcileDisabledState()) return false;
         if (button != 0) return false;
-        boolean onBtn = Widget.inBounds(mouseX, mouseY, lastBtnX, lastBtnY, BTN_W, BTN_H);
+        boolean onBtn = compactRow == null ? Widget.inBounds(mouseX, mouseY, lastBtnX, lastBtnY, BTN_W, BTN_H) : compactControlContains(mouseX, mouseY, rowX, rowY);
         if (!onBtn) {
             // Click outside the pill cancels listen mode without committing.
             if (listening) {

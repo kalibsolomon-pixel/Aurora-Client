@@ -83,23 +83,24 @@ public class ColorSetting extends FeatureSetting {
         this.swatch = new ColorSwatch(getter, null).canonicalStates();
     }
 
-    @Override public int baseHeight() { return expanded ? ROW_H_EXPANDED : ROW_H_COLLAPSED; }
+    @Override public int baseHeight() { return compactRow == null ? (expanded ? ROW_H_EXPANDED : ROW_H_COLLAPSED) : compactRow.height() + (expanded ? EXPANDED_BODY : 0); }
     @Override public int height() { return baseHeight(); }
 
     @Override
     public void render(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
         var tr = Minecraft.getInstance().font;
         boolean disabled = isDisabled();
-        renderWrappedLabel(ctx, label, x + 12, y + (ROW_H_COLLAPSED - tr.lineHeight) / 2, Math.max(0,width-(swatchW+38)), AuroraTheme.TEXT_PRIMARY, mouseX, mouseY, disabled);
+        if (compactRow != null) renderCompactLabel(ctx, x, y, mouseX, mouseY, AuroraTheme.TEXT_PRIMARY);
+        else renderWrappedLabel(ctx, label, x + 12, y + (ROW_H_COLLAPSED - tr.lineHeight) / 2, Math.max(0,width-(swatchW+38)), AuroraTheme.TEXT_PRIMARY, mouseX, mouseY, disabled);
 
-        swatchX = x + width - swatchW - 14;
-        swatchY = y + (ROW_H_COLLAPSED - swatchH) / 2;
+        swatchX = controlX(x, width, swatchW);
+        swatchY = controlY(y, ROW_H_COLLAPSED, swatchH);
         swatch.disabled(disabled);
         swatch.layout(swatchX, swatchY, swatchW, swatchH);
         // Mirror the semantic control's geometry, pointer, and vanilla focus
         // into the swatch every frame (the BooleanSetting sync discipline).
         if (interactionControl != null) {
-            interactionControl.setBounds(swatchX, swatchY, swatchW, swatchH);
+            if (compactRow == null) interactionControl.setBounds(swatchX, swatchY, swatchW, swatchH); else syncCompactControl(x, y);
             interactionControl.updatePointer(mouseX, mouseY);
             swatch.focusedVisual(interactionControl.isFocused());
         }
@@ -113,7 +114,7 @@ public class ColorSetting extends FeatureSetting {
 
         int totalW = PAD_SIZE + STRIP_GAP + STRIP_W + STRIP_GAP + STRIP_W;
         int startX = x + (width - totalW) / 2;
-        int bodyTop = y + ROW_H_COLLAPSED + 8;
+        int bodyTop = y + (compactRow == null ? ROW_H_COLLAPSED : compactRow.height()) + 8;
 
         padX = startX;
         padY = bodyTop;
@@ -151,11 +152,13 @@ public class ColorSetting extends FeatureSetting {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button, int rowX, int rowY, int rowWidth) {
+        syncCompactControl(rowX, rowY);
         if (isDisabled()) return false;
         if (button != 0) return false;
+        if (compactRow != null) { swatchX = controlX(rowX, rowWidth, swatchW); swatchY = controlY(rowY, ROW_H_COLLAPSED, swatchH); }
 
-        if (mouseX >= swatchX && mouseX < swatchX + swatchW
-                && mouseY >= swatchY && mouseY < swatchY + swatchH) {
+        if (compactRow != null ? compactControlContains(mouseX, mouseY, rowX, rowY) : (mouseX >= swatchX && mouseX < swatchX + swatchW
+                && mouseY >= swatchY && mouseY < swatchY + swatchH)) {
             // Semantic host: the control owns activation — exactly-once
             // behavior + one activation click on open/close. Hosts that
             // never ask for the control keep the direct path.

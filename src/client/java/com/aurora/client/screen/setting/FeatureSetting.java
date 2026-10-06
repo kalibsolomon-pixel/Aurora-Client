@@ -34,6 +34,63 @@ import java.util.function.Supplier;
 public abstract class FeatureSetting {
     public final String label;
 
+    /** Pack Tweaks opts in before any height, paint or input walk. Other hosts keep legacy rows. */
+    protected com.aurora.client.ui.util.SettingRowLayout compactRow;
+    private int compactWidth = -1;
+    private long compactFontKey = Long.MIN_VALUE;
+    public final void measureCompact(int width) {
+        Font font = Minecraft.getInstance().font;
+        long key = ThemeManager.generation() * 65537L
+                + com.aurora.client.config.AuroraConfig.get().activeFont.ordinal() * 31L
+                + com.aurora.client.config.AuroraConfig.get().textRendererMode.ordinal();
+        if (compactRow != null && compactWidth == width && compactFontKey == key) return;
+        var kind = this instanceof BooleanSetting ? com.aurora.client.ui.util.SettingRowLayout.Kind.BOOLEAN
+                : this instanceof SliderSetting ? com.aurora.client.ui.util.SettingRowLayout.Kind.SLIDER
+                : this instanceof EnumSetting<?> ? com.aurora.client.ui.util.SettingRowLayout.Kind.ENUM
+                : this instanceof KeybindSetting ? com.aurora.client.ui.util.SettingRowLayout.Kind.KEYBIND
+                : this instanceof ColorSetting ? com.aurora.client.ui.util.SettingRowLayout.Kind.COLOR
+                : this instanceof ButtonSetting ? com.aurora.client.ui.util.SettingRowLayout.Kind.BUTTON
+                : com.aurora.client.ui.util.SettingRowLayout.Kind.SECTION;
+        String measuredLabel = kind == com.aurora.client.ui.util.SettingRowLayout.Kind.SECTION
+                ? label.toUpperCase(java.util.Locale.ROOT) : label;
+        compactRow = com.aurora.client.ui.util.SettingRowLayout.measure(kind, measuredLabel, width, font.lineHeight, font::width);
+        compactWidth = width;
+        compactFontKey = key;
+    }
+    public final void clearCompactMeasurement() { compactRow = null; compactWidth = -1; }
+    protected final int controlX(int x, int width, int controlWidth) {
+        return compactRow == null ? x + width - controlWidth - 14 : x + compactRow.control().x();
+    }
+    protected final int controlY(int y, int rowHeight, int controlHeight) {
+        return compactRow == null ? y + (rowHeight - controlHeight) / 2 : y + compactRow.control().y();
+    }
+    protected final boolean compactControlContains(double mouseX, double mouseY, int x, int y) {
+        return compactRow != null && compactRow.controlHit().contains(mouseX - x, mouseY - y);
+    }
+    protected final void syncCompactControl(int x, int y) {
+        if (compactRow == null) return;
+        var control = interactionControl();
+        if (control == null) return;
+        if (this instanceof BooleanSetting) control.setBounds(x, y, compactWidth, compactRow.height());
+        else {
+            var hit = compactRow.controlHit();
+            control.setBounds(x + hit.x(), y + hit.y(), hit.width(), hit.height());
+        }
+    }
+    protected final void renderCompactLabel(GuiGraphics ctx, int x, int y, int mouseX, int mouseY, int color) {
+        Font font = Minecraft.getInstance().font;
+        var box = compactRow.label();
+        int textY = y + box.y() + (box.height() - compactRow.lines().size() * (font.lineHeight + 1)) / 2;
+        for (String line : compactRow.lines()) {
+            int textX = x + box.x();
+            ctx.drawString(font, line, textX, textY, color, false);
+            trackLabelHover(tooltipKey(), this::currentDescription, textX, textY, font.width(line), font.lineHeight,
+                    mouseX, mouseY, isDisabled());
+            textY += font.lineHeight + 1;
+        }
+    }
+
+
     private String staticDescription;
     private Supplier<String> dynamicDescription;
 
