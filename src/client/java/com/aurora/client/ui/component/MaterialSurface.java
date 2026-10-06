@@ -72,12 +72,13 @@ public final class MaterialSurface {
                 ThemeManager.color(ThemeToken.MATERIAL_HOVER), hover);
         neutral = ThemeManager.withAlpha(neutral, ThemeManager.color(ThemeToken.WINDOW_FILL) >>> 24);
         if (hover == 0 || hover == 1) {
-            cached(g,x,y,w,h,radius,neutral,0,(selected ? 2 : 1)+(hover==1 ? 100 : 0),false);
+            cached(g,x,y,w,h,radius,neutral,selected ? ThemeManager.color(ThemeToken.ACCENT_MARKER) : 0,(selected ? 2 : 1)+(hover==1 ? 100 : 0),false);
             return;
         }
         RenderUtil.drawRoundedRectAA(g,x,y,w,h,radius,neutral);
         if (selected) {
             RenderUtil.drawRoundedRectAA(g,x,y,w,h,radius,selectedFill());
+            RenderUtil.drawRoundedOutlineAA(g,x,y,w,h,radius,1,ThemeManager.color(ThemeToken.ACCENT_MARKER));
         }
     }
 
@@ -147,10 +148,11 @@ public final class MaterialSurface {
                 }
                 if(shadow) AuroraShapes.dropShadow(g,pad,pad+3,width,height,round,.25f);
                 if(fill!=0) RenderUtil.drawRoundedRectAA(g,pad,pad,w,h,radius,fill);
-                if(border!=0) RenderUtil.drawRoundedOutlineAA(g,pad,pad,w,h,radius,1,border);
+
                 if(kind==2 || kind==102) {
                     RenderUtil.drawRoundedRectAA(g,pad,pad,w,h,radius,selectedFill());
                 }
+                if(border!=0) RenderUtil.drawRoundedOutlineAA(g,pad,pad,w,h,radius,1,border);
             } finally { RenderUtil.endCapture(previous); }
             cache.commit(version);
         }

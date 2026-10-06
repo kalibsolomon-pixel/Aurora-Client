@@ -281,6 +281,17 @@ public class EffectExpiryListSetting extends FeatureSetting {
      */
     @Override
     public void renderGlassPass(GuiGraphics ctx, int x, int y, int width) {
+        if (!isHeaderPinned()) renderFixedHeaderGlass(ctx, x, y, width);
+    }
+
+    @Override public int fixedHeaderHeight() { return 32; }
+    private java.util.List<com.aurora.client.ui.interaction.SemanticActionControl> pinnedControls;
+    @Override public java.util.List<com.aurora.client.ui.interaction.SemanticActionControl> fixedHeaderControls() {
+        if (pinnedControls == null) pinnedControls = java.util.List.of(addAction.interactionControl());
+        return pinnedControls;
+    }
+
+    @Override public void renderFixedHeaderGlass(GuiGraphics ctx, int x, int y, int width) {
         if (!GlassSurface.passOpen()) return; // legacy frame order — render paints in place
         glassPassFrame = GlassSurface.frame();
         int searchW = width - 56;
@@ -298,6 +309,39 @@ public class EffectExpiryListSetting extends FeatureSetting {
     public void render(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
         Font tr = Minecraft.getInstance().font;
 
+        if (!isHeaderPinned()) renderFixedHeader(ctx, x, y, width, mouseX, mouseY);
+
+        // "Suggested effect" preview — its real status-effect sprite
+        // beside the text (ItemScale's "Add: <name>" line).
+        int currentY = y + 32;
+        if (foundEffect != null) {
+            MobEffect eff = BuiltInRegistries.MOB_EFFECT.getValue(foundEffect);
+            ctx.blitSprite(RenderPipelines.GUI_TEXTURED,
+                    Identifier.fromNamespaceAndPath(foundEffect.getNamespace(),
+                            "mob_effect/" + foundEffect.getPath()),
+                    x + 12, currentY - 2, ICON_SIZE, ICON_SIZE);
+            ctx.drawString(tr, "Add: " + displayNameFor(eff, foundEffect), x + 12 + ICON_SIZE + 4, currentY,
+                    ThemeManager.color(ThemeToken.SEMANTIC_SUCCESS), false);
+            currentY += 12;
+        }
+
+        // 2. Added-effects list — alphabetical (ItemScale sorts its ids the
+        //    same way). Only added effects render: the perf point of the
+        //    search-then-add model. Each row's trailing remove control is
+        //    the row's icon action (C-4), painted by the container in the
+        //    row's trailing 16×16 zone.
+        for (String effectId : sortedIncluded()) {
+            EffectRowSetting row = rowFor(effectId);
+            row.render(ctx, x, currentY, width, mouseX, mouseY);
+            int rightX = x + width - 24;
+            rowRemoveAction(effectId).paint(ctx, tr, rightX - 16,
+                    currentY + (EffectRowSetting.ROW_H - 16) / 2, 16, 16, mouseX, mouseY);
+            currentY += EffectRowSetting.STRIDE;
+        }
+    }
+
+    @Override public void renderFixedHeader(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
+        Font tr = Minecraft.getInstance().font;
         // 1. Search bar — themed background/outline drawn by EditBoxMixin.
         int searchW = width - 56;
         searchField.setX(x + 12);
@@ -330,33 +374,6 @@ public class EffectExpiryListSetting extends FeatureSetting {
         }
         addAction.paintGlyph(ctx, tr, plusX, plusY, 24, 20);
 
-        // "Suggested effect" preview — its real status-effect sprite
-        // beside the text (ItemScale's "Add: <name>" line).
-        int currentY = y + 32;
-        if (foundEffect != null) {
-            MobEffect eff = BuiltInRegistries.MOB_EFFECT.getValue(foundEffect);
-            ctx.blitSprite(RenderPipelines.GUI_TEXTURED,
-                    Identifier.fromNamespaceAndPath(foundEffect.getNamespace(),
-                            "mob_effect/" + foundEffect.getPath()),
-                    x + 12, currentY - 2, ICON_SIZE, ICON_SIZE);
-            ctx.drawString(tr, "Add: " + displayNameFor(eff, foundEffect), x + 12 + ICON_SIZE + 4, currentY,
-                    ThemeManager.color(ThemeToken.SEMANTIC_SUCCESS), false);
-            currentY += 12;
-        }
-
-        // 2. Added-effects list — alphabetical (ItemScale sorts its ids the
-        //    same way). Only added effects render: the perf point of the
-        //    search-then-add model. Each row's trailing remove control is
-        //    the row's icon action (C-4), painted by the container in the
-        //    row's trailing 16×16 zone.
-        for (String effectId : sortedIncluded()) {
-            EffectRowSetting row = rowFor(effectId);
-            row.render(ctx, x, currentY, width, mouseX, mouseY);
-            int rightX = x + width - 24;
-            rowRemoveAction(effectId).paint(ctx, tr, rightX - 16,
-                    currentY + (EffectRowSetting.ROW_H - 16) / 2, 16, 16, mouseX, mouseY);
-            currentY += EffectRowSetting.STRIDE;
-        }
     }
 
     @Override
@@ -364,7 +381,7 @@ public class EffectExpiryListSetting extends FeatureSetting {
         // Forward click to search bar — the field's EXACT painted rect
         // ([rowY+6, rowY+24); the old [rowY+5, rowY+25) band was 2px taller
         // than the painted field — C-8, half-open at both edges).
-        if (mouseY >= rowY + 6 && mouseY < rowY + 24) {
+        if (mouseY >= searchField.getY() && mouseY < searchField.getY() + searchField.getHeight()) {
             int searchW = rowWidth - 56;
             if (mouseX >= rowX + 12 && mouseX < rowX + 12 + searchW) {
                 searchField.setFocused(true);
@@ -468,7 +485,7 @@ public class EffectExpiryListSetting extends FeatureSetting {
         var band = FeatureSetting.hostBand();
         long frame=com.aurora.client.ui.component.GlassSurface.frame();
         if (isDisabled() || searchFrame < frame-1
-                || !band.intersects(searchField.getX(),searchField.getY(),searchField.getWidth(),searchField.getHeight())) return false;
+                || (!isHeaderPinned() && !band.intersects(searchField.getX(),searchField.getY(),searchField.getWidth(),searchField.getHeight()))) return false;
         searchField.setFocused(true);
         requestFocus();
         return searchField.charTyped(event);

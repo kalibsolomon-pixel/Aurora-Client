@@ -1,5 +1,7 @@
 package com.aurora.client.screen;
 
+import com.aurora.client.config.AuroraConfig;
+
 import com.aurora.client.module.Module;
 import com.aurora.client.module.ModuleManager;
 import com.aurora.client.screen.setting.FeatureSetting;
@@ -147,7 +149,9 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     private static final int SETTINGS_ENTRY_GAP = 16;
 
     private int selectedCategory = 0; // 0: Mods, 1: Settings
-    private boolean gridLayout = true; // false: list, true: grid
+    private boolean gridLayout = AuroraConfig.get().moduleGridView; // false: list, true: grid
+    private final Map<String, List<String>> moduleLabelLines = new java.util.HashMap<>();
+    private long moduleLabelVersion = Long.MIN_VALUE;
 
     private EditBox searchField;
     private String searchQuery = "";
@@ -424,6 +428,8 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                     MinecraftSemanticFeedback.INSTANCE
                             .play(SemanticSound.ACTIVATION);
                     gridLayout = grid;
+                    AuroraConfig.get().moduleGridView = grid;
+                    AuroraConfig.save();
                 },
                 SemanticSound.NONE, true, true),
                 MinecraftSemanticFeedback.INSTANCE,
@@ -667,7 +673,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         // bit in the version hash, which forces the re-raster on the switch).
         GlassSurface.beginGlassPass();
         float radius = ThemeManager.current().roundness().radius();
-        boolean glassWindow = false; // Visible cards own the material; no enclosing window.
+        boolean glassWindow = GlassSurface.container(g, boxX(), boxY(), BOX_W, BOX_H, radius);
 
         com.mojang.blaze3d.pipeline.RenderTarget main = this.minecraft != null ? this.minecraft.getMainRenderTarget() : null;
         int fbW = (main != null && main.width > 0) ? main.width : this.width;
@@ -723,7 +729,6 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     private void captureStatic(GuiGraphics g, boolean glassWindow) {
         float bx = boxX(), by = boxY();
         float radius = ThemeManager.current().roundness().radius();
-        if (MaterialSurface.unified()) return; // no enclosing fill, border or shadow
 
         for (int i = 1; i <= 3; i++) {
             int a = Math.max(0, 35 - i * 10);
@@ -1068,9 +1073,15 @@ public class AuroraScreen extends Screen implements ThemedScreen {
 
             if (gridLayout) {
                 drawTileIcon(g, tr, m, cx + cw / 2f, cy + 30, 28f, on, highlightedGlass);
-                String name = fit(tr, m.name, (int) cw - 8);
-                g.drawString(tr, name, (int) (cx + (cw - tr.width(name)) / 2f), (int) (cy + ch - 20),
-                        MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
+                int labelWidth = Math.max(0, (int) cw - 6);
+                long labelVersion = ThemeManager.generation() * 65537L + labelWidth * 31L
+                        + (AuroraConfig.get().activeFont == null ? 0 : AuroraConfig.get().activeFont.ordinal())
+                        + (AuroraConfig.get().textRendererMode == null ? 0 : AuroraConfig.get().textRendererMode.ordinal() * 256L);
+                if (labelVersion != moduleLabelVersion) { moduleLabelLines.clear(); moduleLabelVersion = labelVersion; }
+                var lines = moduleLabelLines.computeIfAbsent(m.name,
+                        name -> com.aurora.client.ui.util.WordWrap.lines(name, labelWidth, 2, tr::width));
+                RenderUtil.drawCenteredLines(tr, g, lines, cx + 3, cy + ch - 27, labelWidth,
+                        MaterialSurface.color(ThemeToken.ON_BACKGROUND));
             } else {
                 drawTileIcon(g, tr, m, cx + 20, cy + ch / 2f, 16f, on, highlightedGlass);
                 String name = fit(tr, m.name, 130);

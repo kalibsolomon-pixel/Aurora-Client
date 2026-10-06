@@ -54,7 +54,9 @@ public class BooleanSetting extends FeatureSetting {
     private int lastWidth = 240;
 
     private int cachedLabelArea = -1;
-    private List<FormattedCharSequence> cachedLines;
+    private List<String> cachedLines;
+    private com.aurora.client.config.AuroraConfig.FontType cachedFont;
+    private com.aurora.client.config.AuroraConfig.TextRendererMode cachedRendererMode;
     private int cachedBaseHeight;
 
     /** Shared themed switch — owns the pill/thumb drawing + slide animation. */
@@ -87,8 +89,12 @@ public class BooleanSetting extends FeatureSetting {
 
     private void ensureLayout(Font tr) {
         int labelArea = Math.max(40, lastWidth - LABEL_PAD - RIGHT_RESERVE);
-        if (labelArea == cachedLabelArea && cachedLines != null) return;
-        cachedLines = tr.split(labelText, labelArea);
+        var activeFont = com.aurora.client.config.AuroraConfig.get().activeFont;
+        var rendererMode = com.aurora.client.config.AuroraConfig.get().textRendererMode;
+        if (labelArea == cachedLabelArea && cachedLines != null && activeFont == cachedFont && rendererMode == cachedRendererMode) return;
+        cachedFont = activeFont;
+        cachedRendererMode = rendererMode;
+        cachedLines = com.aurora.client.ui.util.WordWrap.lines(label, labelArea, 2, tr::width);
         int blockH = cachedLines.size() * (tr.lineHeight + 1) + valueLineHeight(tr);
         cachedBaseHeight = cachedLines.isEmpty()
                 ? MIN_ROW_H
@@ -176,17 +182,18 @@ public class BooleanSetting extends FeatureSetting {
         boolean disabled = isDisabled();
         for (int li = 0; li < cachedLines.size(); li++) {
             var line = cachedLines.get(li);
-            ctx.drawString(tr, line, x + LABEL_PAD, textY, MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
+            int lineX = x + LABEL_PAD + (cachedLabelArea - tr.width(line)) / 2;
+            ctx.drawString(tr, line, lineX, textY, MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
             // Each wrapped line of the label text is a dwell region for
             // the description tooltip — hover the label itself, no badge.
             // The description supplier is only evaluated while hovered.
-            trackLabelHover(key, this::currentDescription, x + LABEL_PAD, textY,
+            trackLabelHover(key, this::currentDescription, lineX, textY,
                     tr.width(line), tr.lineHeight, mouseX, mouseY, disabled);
             textY += tr.lineHeight + 1;
         }
         // §4 live-value subtitle (base mechanism): one small secondary
         // line under the label block.
-        drawValueLine(ctx, x + LABEL_PAD, textY + 2, disabled);
+        drawValueLineCentered(ctx, x + LABEL_PAD, textY + 2, cachedLabelArea, disabled);
 
         float switchX = x + width - 28 - 14;
         float switchY = y + (controlH - 15) / 2.0f;

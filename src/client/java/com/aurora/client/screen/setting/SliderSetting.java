@@ -193,7 +193,7 @@ public class SliderSetting extends FeatureSetting {
         boolean disabled = isDisabled();
         double value = slider.value();
 
-        renderLabelWithTooltip(ctx, com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(tr,label,Math.max(0,width-38-tr.width(valueText(value))),0), x + 12, y + 6, MaterialSurface.color(ThemeToken.ON_BACKGROUND), mouseX, mouseY, disabled);
+        renderWrappedLabel(ctx, label, x + 12, y + 6, Math.max(0,width-38-tr.width(valueText(value))), MaterialSurface.color(ThemeToken.ON_BACKGROUND), mouseX, mouseY, disabled);
 
         // A click elsewhere on the screen clears row focus before the clicked
         // row re-claims it — focus loss without a click on THIS row is the

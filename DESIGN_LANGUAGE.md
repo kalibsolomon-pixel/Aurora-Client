@@ -376,13 +376,15 @@ Do not over-layer glass. Nested material levels must explain structure, not show
 renderer. Small transient rows inside an already-material container may remain flat when a
 second glass layer adds no semantic depth or when its opaque content would hide the material.
 
-**Production ownership rule (approved 2026-10-06):** one enclosing parent owns
-the backdrop capture/blur. Its neutral cached face and edge draw after dim even when
-capture declines. Every embedded control/selected peer stays flat; soft selection
-wash/halo and strong primary action are distinct roles, with no left indicator bars
-or glossy child rims. Independently floating tooltip/popup/modal faces are opaque
-cached material with restrained elevation. Old isolated stained-card exceptions are
-superseded in production. See `UNIFIED_THEME_PILOT.md` for the approved rollout.
+**Production ownership rule (updated 2026-10-06):** enclosing windows own a
+stationary blurred boundary and neutral cached face. Visible standalone cards may
+also sample the backdrop through `GlassSurface.card`; ordinary embedded controls
+inherit their containing material. Active feature cards use an accent outline,
+wash and halo, without left indicator bars. Search fields retain their neutral
+edge while editing. Scrollable content is clipped inside the stationary frame;
+search/add headers stay fixed above that body. Overflow text stays centered and
+wraps only at whole-word boundaries. Floating tooltip/popup/modal faces remain
+opaque cached material with restrained elevation. See `UNIFIED_THEME_PILOT.md`.
 
 Floating tooltip material is stable token-backed chrome rather than live glass. It uses one
 low-emphasis edge and shadow, respects theme roundness, and does not inherit the window's
@@ -1035,12 +1037,18 @@ at a time through the roadmap below.
 
 ## 18. Implementation roadmap
 
-**UNIFIED THEME — card refinement (2026-10-06):** follow-up visual feedback
-supersedes the enclosing-window treatment. Title, main settings/modules and manager
-screens have no enclosing background window: visible standalone cards own blur;
-detail/editor/browser windows retain their container, with separate blurred action
-cards. Aurora Settings on the title screen is neutral. New Profile, Reset, Done
-and other shared buttons use translucent faces over independently pooled blur.
+**UNIFIED THEME — fixed-window correction (2026-10-06):** the latest user
+feedback restores enclosing blur and outlines on the main Modules/Settings screen
+and Profile/Waypoint managers. The frame is stationary; only its interior content
+scrolls. Detail windows now have a viewport-sized stationary frame and separately
+pinned search/add headers for Particles, Item Scale and Alerts. Title keeps its five
+independent neutral blurred cards without an enclosing panel. Shared neutral action
+cards (including HUD editor Aurora Settings/Reset Positions) have no painted outline;
+primary/destructive actions and keyboard focus keep their established cues. Active
+feature cards/selected peers use a bright accent outline over their wash and halo.
+Search fields retain a neutral resting edge while typing, with the caret as focus cue.
+The global `moduleGridView` preference saves immediately and survives reopening,
+restart and profile switches (excluded from profile snapshots).
 Ordinary embedded controls still inherit their card; floating popups remain opaque.
 The renderer's bounded pool, priority degradation and screenshot/session/menu/resource
 guards remain authoritative. Capture count now follows visible standalone cards.
@@ -1052,8 +1060,10 @@ inline, with font/accent/corners/opacity customization intact. Repeated feature 
 manager headings are removed; Better Hitreg's attached author credit remains.
 
 Bundled text fonts rasterize at 9 px rather than 11 px; icon fonts remain unchanged.
-Button/segment/setting labels reserve control/value space and ellipsize with native
-font measurements, preserving full semantic labels. UI scroll tracks use a finite
+Text reserves control/value space using native font measurements. Overflow layouts
+are centered and wrap only between whole words, never split words across lines;
+bounded ellipsis is the fallback for a word wider than its column. Full semantic
+labels remain available. Cached wrapping invalidates on width/font/theme changes. UI scroll tracks use a finite
 90 ms glide with one rounded geometry position for all layers, immediate thumb
 dragging and exact rest; the pure legacy exponential API remains for diagnostics.
 Typing resumes in a visible search after selection, without taking input from a

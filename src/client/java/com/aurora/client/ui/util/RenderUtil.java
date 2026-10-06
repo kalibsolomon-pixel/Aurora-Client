@@ -533,4 +533,14 @@ public class RenderUtil {
             count++;
         }
     }
+
+    /** Centered measured text, with breaks only between whole words. */
+    public static void drawCenteredLines(Font font, GuiGraphics graphics, java.util.List<String> lines,
+                                          float x, float y, float width, int color) {
+        for (int i = 0; i < lines.size(); i++) {
+            String line = lines.get(i);
+            graphics.drawString(font, line, Math.round(x + (width - font.width(line)) / 2),
+                    Math.round(y + i * (font.lineHeight + 2)), color, false);
+        }
+    }
 }

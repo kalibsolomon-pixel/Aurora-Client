@@ -101,7 +101,7 @@ public class Button extends Widget {
         int fill=ThemeManager.color(primary ? ThemeToken.ACTION_STRONG : ThemeToken.MATERIAL_RAISED);
         int over=ThemeManager.color(primary ? ThemeToken.ACTION_HOVER : ThemeToken.MATERIAL_HOVER);
         int down=ThemeManager.color(primary ? ThemeToken.ACTION_PRESSED : ThemeToken.MATERIAL_PRESSED);
-        int edge=MaterialSurface.color(ThemeToken.BORDER_HOVER);
+        int edge=primary || destructive ? MaterialSurface.color(ThemeToken.BORDER_HOVER) : 0;
         int text=ThemeManager.color(primary ? ThemeToken.ON_ACTION : ThemeToken.MATERIAL_TEXT);
         if(destructive) { fill=ThemeManager.color(ThemeToken.STATUS_ERROR); over=fill;down=fill;text=0xff101116; }
         fill=AuroraAnim.lerpArgb(AuroraAnim.lerpArgb(fill,over,hover),down,press);

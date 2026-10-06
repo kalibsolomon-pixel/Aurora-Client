@@ -336,6 +336,9 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         // dim (painted by overlayDim); the tracked scissor lets the deferred
         // row rims keep the list clip.
         GlassSurface.beginGlassPass();
+        float frameRadius = ThemeManager.current().roundness().radius();
+        GlassSurface.container(ctx, listX - 8, listClipTop() - 8, listWidth() + 16,
+                listClipBottom() - listClipTop() + 16, frameRadius);
 
         rowGlassDrawn.clear();
         onBeginRowGlassPass();
@@ -363,6 +366,8 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
 
         // ---- 2. Dim — end of the glass pass (token-driven; dark in both modes by design) ----
         GlassSurface.overlayDim(ctx, this.width, this.height);
+        MaterialSurface.parent(ctx, listX - 8, listClipTop() - 8, listWidth() + 16,
+                listClipBottom() - listClipTop() + 16, frameRadius);
 
 
 

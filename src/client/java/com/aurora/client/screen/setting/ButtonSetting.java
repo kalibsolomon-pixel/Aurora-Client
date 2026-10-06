@@ -113,8 +113,7 @@ public class ButtonSetting extends FeatureSetting {
         if (tr == null) return;
 
         // Left side of the row is the label; the button sits on the right.
-        renderLabelWithTooltip(ctx, com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(tr,label,Math.max(0,width-(BTN_W+38)),0), x + 12, y + (CONTROL_H - tr.lineHeight) / 2,
-                AuroraTheme.TEXT_PRIMARY, mouseX, mouseY);
+        renderWrappedLabel(ctx, label, x + 12, y + (CONTROL_H - tr.lineHeight) / 2, Math.max(0,width-(BTN_W+38)), AuroraTheme.TEXT_PRIMARY, mouseX, mouseY, isDisabled());
 
         int btnX = x + width - BTN_W - 14;
         int btnY = y + (CONTROL_H - BTN_H) / 2;

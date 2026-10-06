@@ -67,8 +67,8 @@ class PhaseC8EdgeGeometryTest {
         };
         for (String f : rows) {
             String s = source(f);
-            assertTrue(s.contains("mouseY >= rowY + 6 && mouseY < rowY + 24"),
-                    Path.of(f).getFileName() + " hit band must be the painted field [y+6, y+24)");
+            assertTrue(s.contains("mouseY >= searchField.getY() && mouseY < searchField.getY() + searchField.getHeight()"),
+                    Path.of(f).getFileName() + " hit band must follow the actual painted field, including its pinned header");
             assertFalse(s.contains("mouseY >= rowY + 5 && mouseY < rowY + 25"),
                     Path.of(f).getFileName() + " 2px-taller band must not return");
             assertTrue(s.contains("setY(y + 6)") || s.contains("setY(y + 6);"),

@@ -107,6 +107,11 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
         super(Component.literal("Aurora HUD Editor"));
     }
 
+    private java.util.List<String> guideLines = java.util.List.of();
+    private int guideWidth = -1;
+    private AuroraConfig.FontType guideFont;
+    private AuroraConfig.TextRendererMode guideRendererMode;
+
     @Override
     protected void init() {
         int w = 120;
@@ -203,18 +208,16 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
 
         super.render(ctx, mouseX, mouseY, delta);
 
-        ctx.pose().pushMatrix();
-        ctx.pose().translate(8.0f, 8.0f);
-        ctx.pose().scale(0.75f, 0.75f);
-        // C-8 truthfulness fix: the old hint read "X: disable", claiming an
-        // X KEY shortcut that does not exist (this screen never bound a key
-        // handler). The disable affordance is the X BADGE click — the hint
-        // now says exactly that (no key was invented to satisfy the old
-        // text).
-        ctx.drawString(this.font,
-                "Drag body: move  |  Drag corner: resize  |  RClick: hide  |  Shift+RClick: lock  |  Shift+LClick: settings  |  X badge: disable",
-                0, 0, ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_OVERLAY), 0xDD), false);
-        ctx.pose().popMatrix();
+        int hintWidth = Math.max(1, this.width - 152);
+        if (hintWidth != guideWidth || AuroraConfig.get().activeFont != guideFont || AuroraConfig.get().textRendererMode != guideRendererMode) {
+            guideWidth = hintWidth; guideFont = AuroraConfig.get().activeFont;
+            guideRendererMode = AuroraConfig.get().textRendererMode;
+            guideLines = com.aurora.client.ui.util.WordWrap.lines(
+                    "Drag body: move | Drag corner: resize | RClick: hide | Shift+RClick: lock | Shift+LClick: settings | X badge: disable",
+                    hintWidth, 3, this.font::width);
+        }
+        com.aurora.client.ui.util.RenderUtil.drawCenteredLines(this.font, ctx, guideLines, 8, 8, hintWidth,
+                ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_OVERLAY), 0xDD));
     }
 
     @Override

@@ -173,6 +173,14 @@ public abstract class FeatureSetting {
 
     public abstract int baseHeight();
 
+    private boolean headerPinned;
+    public int fixedHeaderHeight() { return 0; }
+    public final void pinHeader(boolean pinned) { headerPinned = pinned; }
+    public final boolean isHeaderPinned() { return headerPinned; }
+    public void renderFixedHeader(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {}
+    public void renderFixedHeaderGlass(GuiGraphics ctx, int x, int y, int width) {}
+    public java.util.List<com.aurora.client.ui.interaction.SemanticActionControl> fixedHeaderControls() { return java.util.List.of(); }
+
     public abstract void render(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY);
 
     /**
@@ -407,6 +415,16 @@ public abstract class FeatureSetting {
         }
     }
 
+    protected void drawValueLineCentered(GuiGraphics ctx, int x, int y, int width, boolean disabled) {
+        if (valueLine == null || disabled) return;
+        String value = valueLine.get();
+        if (value == null || value.isEmpty()) return;
+        Font font = Minecraft.getInstance().font;
+        String fitted = com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(font, value, width, 0);
+        ctx.drawString(font, fitted, x + (width - font.width(fitted)) / 2, y,
+                MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
+    }
+
     // ===== Label-hover description tooltip =====
     //
     // There is no separate help badge anymore: the setting's label text
@@ -507,6 +525,35 @@ public abstract class FeatureSetting {
         ctx.drawString(tr, text, x, y, finalColor, false);
         trackLabelHover(tooltipKey(), this::currentDescription, x, y,
                 tr.width(text), tr.lineHeight, mouseX, mouseY, disabled);
+    }
+
+    private String wrappedText;
+    private int wrappedWidth = -1;
+    private long wrappedGeneration = -1;
+    private List<String> wrappedLabel = java.util.List.of();
+    private com.aurora.client.config.AuroraConfig.FontType wrappedFont;
+    private com.aurora.client.config.AuroraConfig.TextRendererMode wrappedRendererMode;
+
+    /** Two measured lines within the label column; cache layout until text/width/font changes. */
+    protected void renderWrappedLabel(GuiGraphics ctx, String text, int x, int y, int width,
+                                      int color, int mouseX, int mouseY, boolean disabled) {
+        Font font = Minecraft.getInstance().font;
+        if (font == null || width <= 0) return;
+        long generation = ThemeManager.generation();
+        var activeFont = com.aurora.client.config.AuroraConfig.get().activeFont;
+        var rendererMode = com.aurora.client.config.AuroraConfig.get().textRendererMode;
+        if (!text.equals(wrappedText) || width != wrappedWidth || generation != wrappedGeneration || activeFont != wrappedFont || rendererMode != wrappedRendererMode) {
+            wrappedText = text; wrappedWidth = width; wrappedGeneration = generation;
+            wrappedFont = activeFont;
+            wrappedRendererMode = rendererMode;
+            wrappedLabel = com.aurora.client.ui.util.WordWrap.lines(text, width, 2, font::width);
+        }
+        int count = Math.min(2, wrappedLabel.size());
+        int top = y - (count - 1) * (font.lineHeight + 2) / 2;
+        int finalColor = disabled ? MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED) : color;
+        com.aurora.client.ui.util.RenderUtil.drawCenteredLines(font, ctx, wrappedLabel, x, top, width, finalColor);
+        trackLabelHover(tooltipKey(), this::currentDescription, x, top, width,
+                count * (font.lineHeight + 2), mouseX, mouseY, disabled);
     }
 
     /**

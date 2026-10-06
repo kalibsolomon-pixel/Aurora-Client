@@ -142,7 +142,7 @@ public abstract class EditBoxMixin implements GlassEditBox {
         if (glassOk) {
             // Focus ring on glass — a translucent hairline that brightens
             // the rim without stacking a second surface.
-            if (focused) {
+            if (focused && !MaterialSurface.unified()) {
                 RenderUtil.drawRoundedOutlineAA(ctx, x, y, w, h, radius, 1.0f,
                         ThemeManager.withAlpha(MaterialSurface.color(ThemeToken.ACCENT), 0x99));
             }
@@ -194,8 +194,7 @@ public abstract class EditBoxMixin implements GlassEditBox {
             RenderUtil.drawRoundedOutlineAA(ctx, x, y, w, h, radius, 1.0f, borderCol);
         }
 
-        if(MaterialSurface.unified() && focused && self.active)
-            RenderUtil.drawRoundedOutlineAA(ctx,x-2,y-2,w+4,h+4,MaterialSurface.outsetRadius(radius,2),1,MaterialSurface.color(ThemeToken.ACCENT));
+        // The caret indicates editing; active fields retain the neutral resting edge.
         // Cancel the vanilla render so its background/border never appear.
         ci.cancel();
     }

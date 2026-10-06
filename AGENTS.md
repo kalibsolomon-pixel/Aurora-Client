@@ -310,12 +310,18 @@ the constant; `385e704`).
 
 ## 5. Theme/token architecture (COSMIC-style)
 
-**UNIFIED THEME — card refinement (2026-10-06):** follow-up visual feedback
-supersedes the enclosing-window treatment. Title, main settings/modules and manager
-screens have no enclosing background window: visible standalone cards own blur;
-detail/editor/browser windows retain their container, with separate blurred action
-cards. Aurora Settings on the title screen is neutral. New Profile, Reset, Done
-and other shared buttons use translucent faces over independently pooled blur.
+**UNIFIED THEME — fixed-window correction (2026-10-06):** the latest user
+feedback restores enclosing blur and outlines on the main Modules/Settings screen
+and Profile/Waypoint managers. The frame is stationary; only its interior content
+scrolls. Detail windows now have a viewport-sized stationary frame and separately
+pinned search/add headers for Particles, Item Scale and Alerts. Title keeps its five
+independent neutral blurred cards without an enclosing panel. Shared neutral action
+cards (including HUD editor Aurora Settings/Reset Positions) have no painted outline;
+primary/destructive actions and keyboard focus keep their established cues. Active
+feature cards/selected peers use a bright accent outline over their wash and halo.
+Search fields retain a neutral resting edge while typing, with the caret as focus cue.
+The global `moduleGridView` preference saves immediately and survives reopening,
+restart and profile switches (excluded from profile snapshots).
 Ordinary embedded controls still inherit their card; floating popups remain opaque.
 The renderer's bounded pool, priority degradation and screenshot/session/menu/resource
 guards remain authoritative. Capture count now follows visible standalone cards.
@@ -327,8 +333,10 @@ inline, with font/accent/corners/opacity customization intact. Repeated feature 
 manager headings are removed; Better Hitreg's attached author credit remains.
 
 Bundled text fonts rasterize at 9 px rather than 11 px; icon fonts remain unchanged.
-Button/segment/setting labels reserve control/value space and ellipsize with native
-font measurements, preserving full semantic labels. UI scroll tracks use a finite
+Text reserves control/value space using native font measurements. Overflow layouts
+are centered and wrap only between whole words, never split words across lines;
+bounded ellipsis is the fallback for a word wider than its column. Full semantic
+labels remain available. Cached wrapping invalidates on width/font/theme changes. UI scroll tracks use a finite
 90 ms glide with one rounded geometry position for all layers, immediate thumb
 dragging and exact rest; the pure legacy exponential API remains for diagnostics.
 Typing resumes in a visible search after selection, without taking input from a
@@ -740,9 +748,9 @@ flags now default ON mod-wide. The table records those legacy material recipes.
 
 | Screen / element | Current unified treatment |
 |---|---|
-| `AuroraScreen` | Standalone blurred sidebar/module/inline-settings cards, no enclosing window |
-| Every `FeatureDetailScreen` | Container plus blurred Reset/Done/action cards; no repeated feature heading |
-| Profile and Waypoint managers (`ManagerListScreen`) | Independently blurred rows and toolbar/actions, translucent faces, no list window or duplicate heading |
+| `AuroraScreen` | Stationary enclosing blurred frame/outline; independent sidebar/module/settings cards; pinned module search and layout controls |
+| Every `FeatureDetailScreen` | Stationary viewport-sized container; clipped scrolling body and pinned search/add header; blurred actions; no repeated feature heading |
+| Profile and Waypoint managers (`ManagerListScreen`) | Stationary blurred list frame/outline, independent row/action cards; no duplicate heading |
 | `AuroraTitleScreen` | Declared panorama; five independent neutral blurred cards; no enclosing panel |
 | `ColorPickerScreen` | One parent for the editor; Apply primary; represented gradients/alpha/checkerboard remain data |
 | `ResourcePackBrowserScreen` | One parent for the browser; embedded sidebar, cards and install actions; soft category selection; opaque detail modal |
@@ -2122,6 +2130,13 @@ look at the features that consume bundled assets.**
   selected/primary, and update the rollout table in §6.
 - To debug glass: `BlurTestScreen` (bind `blur_test`), `[S]` crash canary, renderer logs
   `[BlurPanel]` decline reasons (`lastOutcome`).
+- **Overflow review is mandatory (user instruction, 2026-10-06):** text fitting must
+  preserve centered alignment. Move text onto a second line only at whole-word
+  boundaries; never split a word between lines or use left/right alignment to make
+  it fit. Measure using the active font and actual available column, including
+  controls/icons/padding. Check long labels at small and large viewports and both
+  Mods layouts. If one whole word cannot fit, use a bounded ellipsis rather than
+  overflow or hyphenation. Cache fitted layouts by text, width and active font.
 - **Before calling any UI or feature change complete, check whether it could scale badly.**
   Widget-cache reconciliation patterns, per-frame allocations, anything that could be O(n²)
   or worse — especially on screens whose lists can grow large (Profiles, Waypoints, the

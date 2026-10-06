@@ -13,7 +13,6 @@ import com.aurora.client.ui.component.ThemedScreen;
 import com.aurora.client.ui.interaction.SemanticActionControl;
 import com.aurora.client.ui.interaction.SemanticControlGroup;
 import com.aurora.client.ui.util.RenderUtil;
-import com.aurora.client.util.ScrollFade;
 import com.aurora.client.util.SmoothScroll;
 import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.ui.util.UiLayerCache;
@@ -48,13 +47,6 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
     private static final int TOP_PAD = 60;
     private static final int ROW_GAP = 6;
 
-    /**
-     * Top of the scroll-fade band (DESIGN_LANGUAGE §8): just below the
-     * title / Done-Reset chrome band. Rows fade out as they approach it
-     * instead of sliding over the title; above it they are fully hidden.
-     */
-    private static final int TOP_FADE_Y = 40;
-
     private static final int DONE_W = 64;
     private static final int DONE_H = 22;
     private static final int DONE_RIGHT_MARGIN = 16;
@@ -72,15 +64,14 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
     /** τ = 60 ms, snap 0.25, wheel step 30, no thumb — the screen's exact pre-R2 feel. */
     private final SmoothScroll scroll = new SmoothScroll(60.0).boundedMotion();
     private FeatureSetting activeDragSetting = null;
+    private FeatureSetting fixedHeaderSetting;
+    private int bodyTop() { return TOP_PAD + (fixedHeaderSetting == null ? 0 : fixedHeaderSetting.fixedHeaderHeight()); }
+    private int bodyBottom() { return Math.max(bodyTop() + 1, this.height - 30); }
+    private int bodyHeight(FeatureSetting setting) { return setting.height() - (setting == fixedHeaderSetting ? setting.fixedHeaderHeight() : 0); }
+    private int settingY(FeatureSetting setting, int bodyY) { return bodyY - (setting == fixedHeaderSetting ? setting.fixedHeaderHeight() : 0); }
 
-    /**
-     * Static-layer caches (§8 fix, 2026-09-12): the window chrome and the
-     * rows' cacheable shapes rasterize into SEPARATE layers — the chrome
-     * blits unscissored (the window panel may slide under the title band),
-     * the row layer blits under the TOP_FADE_Y scissor so row content can
-     * never paint over the title/subtitle/Done-Reset band at any Background
-     * Opacity. Same raster triggers as the former single cache.
-     */
+
+    /** Independent caches: stationary chrome and scrolling body shapes. */
     private final UiLayerCache chromeCache = new UiLayerCache();
     private final UiLayerCache rowCache = new UiLayerCache();
 
@@ -219,30 +210,28 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
 
     @Override
     public void render(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
-        // C-8: publish this screen's effective row clip (the fade-boundary
-        // scissor the overlay walk uses — same formula, computed here once)
-        // so floating row geometry (EnumSetting's popup) resolves placement
-        // against the pixels this screen actually shows.
-        double fadeK0 = ScrollFade.engagement(scroll.current(), ScrollFade.FADE_PX);
-        int fadeTop0 = TOP_FADE_Y + (int) Math.round((1.0 - fadeK0) * ScrollFade.FADE_PX);
+        fixedHeaderSetting = null;
+        for (FeatureSetting setting : meta.settings) {
+            boolean pin = fixedHeaderSetting == null && setting.fixedHeaderHeight() > 0;
+            setting.pinHeader(pin);
+            if (pin) fixedHeaderSetting = setting;
+        }
+        int listX = (this.width - LIST_W) / 2;
         FeatureSetting.setHostBand(new com.aurora.client.ui.util.ClipBand(
-                0, fadeTop0, this.width, this.height - fadeTop0));
-
+                listX + 8, bodyTop(), LIST_W - 16, bodyBottom() - bodyTop()));
         int totalRowsH = 0;
-        for (FeatureSetting s : meta.settings) totalRowsH += s.height() + ROW_GAP;
-        if (totalRowsH > 0) totalRowsH -= ROW_GAP; // trailing gap not drawn
-        double maxScroll = Math.max(0, totalRowsH - (this.height - TOP_PAD - 40));
+        for (FeatureSetting setting : meta.settings) totalRowsH += bodyHeight(setting) + ROW_GAP;
+        if (totalRowsH > 0) totalRowsH -= ROW_GAP;
+        double maxScroll = Math.max(0, totalRowsH - (bodyBottom() - bodyTop()));
 
         scroll.advance(maxScroll);
 
-        int listX = (this.width - LIST_W) / 2;
-
-        // ---- One unified container window ----
+        // ---- One stationary container window ----
         final int WINDOW_PAD_TOP    = 10;
         final int WINDOW_PAD_BOTTOM = 10;
 
-        int windowY = TOP_PAD - (int) scroll.current() - WINDOW_PAD_TOP;
-        int windowH = totalRowsH + WINDOW_PAD_TOP + WINDOW_PAD_BOTTOM;
+        int windowY = TOP_PAD - WINDOW_PAD_TOP;
+        int windowH = bodyBottom() - windowY + WINDOW_PAD_BOTTOM;
 
         // ---- 1. Glass pass — every glass surface paints BEFORE the dim ----
         // (§6 convention 6, structural: the ManagerListScreen skeleton.) The
@@ -284,13 +273,13 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         int fingerprint = 0;
         for (FeatureSetting s : meta.settings) fingerprint = fingerprint * 31 + s.shapeFingerprint();
         long chromeVersion = ThemeManager.generation() * 1_000_003L
-                ^ ((long) (int) scroll.current() * 104729L)
                 ^ ((long) totalRowsH * 31L)
                 ^ ((long) fbW * 7919L)
                 ^ ((long) fbH * 17L)
                 ^ ((long) guiScale * 65537L)
                 ^ (glassWindow ? 0x5BD1B2C1L : 0L); // glass state changes cached fill presence
-        long rowVersion = chromeVersion ^ ((long) fingerprint * 100_000_009L);
+        long rowVersion = chromeVersion ^ ((long) fingerprint * 100_000_009L)
+                ^ ((long) (int) scroll.current() * 104729L) ^ bodyTop();
 
         if (!chromeCache.isCurrent(chromeVersion)) {
             chromeCache.ensureSize(fbW, fbH);
@@ -308,11 +297,11 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
             rowCache.clear();
             RenderUtil.RectSink prev = RenderUtil.beginCapture(rowCache.sink());
             try {
-                int yy = TOP_PAD - (int) scroll.current();
+                int yy = bodyTop() - (int) scroll.current();
                 for (FeatureSetting s : meta.settings) {
-                    int h = s.height();
-                    if (yy + h > 0 && yy < this.height) {
-                        s.renderShapes(ctx, listX, yy, LIST_W, 0, 0);
+                    int h = bodyHeight(s);
+                    if (yy + h > bodyTop() && yy < bodyBottom()) {
+                        s.renderShapes(ctx, listX, settingY(s, yy), LIST_W, 0, 0);
                     }
                     yy += h + ROW_GAP;
                 }
@@ -339,9 +328,11 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         // element when declined. EnumSetting's expanded popup is the one
         // deliberate above-the-dim surface (§9): it keeps painting in the
         // content pass through GlassSurface.aboveDimControl.
-        int gy = TOP_PAD - (int) scroll.current();
+        if (fixedHeaderSetting != null) fixedHeaderSetting.renderFixedHeaderGlass(ctx, listX, TOP_PAD, LIST_W);
+        GlassSurface.enableScissor(ctx, listX + 8, bodyTop(), listX + LIST_W - 8, bodyBottom());
+        int gy = bodyTop() - (int) scroll.current();
         for (FeatureSetting s : meta.settings) {
-            int gh = s.height();
+            int gh = bodyHeight(s);
             var controls = s.interactionControls();
             if (!controls.isEmpty()) {
                 // C-4 dynamic-set diff: mutation-time list changes (rows
@@ -364,17 +355,19 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
                         }
                     }
                 }
-                boolean available = gy + gh > TOP_FADE_Y && gy < this.height;
+                boolean available = s == fixedHeaderSetting || gy + gh > bodyTop() && gy < bodyBottom();
                 for (SemanticActionControl control : controls) {
                     control.setAvailable(available);
                 }
                 s.onInteractionAvailabilityChanged(available);
             }
-            if (gy + gh > 0 && gy < this.height) {
-                s.renderGlassPass(ctx, listX, gy, LIST_W);
+            if (gy + gh > bodyTop() && gy < bodyBottom()) {
+                s.renderGlassPass(ctx, listX, settingY(s, gy), LIST_W);
             }
             gy += gh + ROW_GAP;
         }
+
+        GlassSurface.disableScissor(ctx);
 
         // Chrome buttons' surfaces — the ButtonWidget discipline from
         // ManagerListScreen; their super.render below then paints labels only.
@@ -386,50 +379,44 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         // on any glass body paint is reported as an ordering violation.
         GlassSurface.overlayDim(ctx, this.width, this.height);
 
-        // Cached chrome — one textured blit (a content layer above the dim,
-        // exactly where it always sat). UNSCISSED: the window panel is a
-        // container, and containers may slide up under the title band; only
-        // ROW content stops at the fade boundary.
+        // Stationary frame chrome sits above dim and outside the body scissor.
         chromeCache.blit(ctx, this.width, this.height);
 
-        // Design language §8 — top-edge scroll fade, the scissored shape.
-        // Rows (cached shapes AND live overlay) are clipped to a boundary
-        // that starts just below the title/subtitle/Done-Reset band and
-        // descends from TOP_FADE_Y+FADE_PX to TOP_FADE_Y as the fade
-        // engages (a resting list clips nothing — byte-identical at
-        // rest). The scissor, not a painted cap, is what stops rows from
-        // sliding over the title: the pilot's capped-fade variant veiled
-        // by WINDOW_FILL's alpha — the user-tunable Background Opacity —
-        // so at low opacity its "opaque" cover hid nothing and the
-        // title/content overlap returned (reproduced on Minimap + Better
-        // Hitreg at opacity 0.1). A GL scissor is opacity-independent and
-        // is the same mechanism every other scrollable screen already
-        // uses; the gradient below then only SOFTENS the boundary, fading
-        // rows into the window's own tint (WINDOW_FILL verbatim).
-        double fadeK = ScrollFade.engagement(scroll.current(), ScrollFade.FADE_PX);
-        int fadeTop = TOP_FADE_Y + (int) Math.round((1.0 - fadeK) * ScrollFade.FADE_PX);
-        ctx.enableScissor(0, fadeTop, this.width, this.height);
+        // Only the body scrolls; the frame and search header have fixed geometry.
+        ctx.enableScissor(listX + 8, bodyTop(), listX + LIST_W - 8, bodyBottom());
 
         // Rows' cached shape layer — the second blit, under the boundary.
         rowCache.blit(ctx, this.width, this.height);
 
         // Live overlay: text, hover feedback, animated values.
-        int y = TOP_PAD - (int) scroll.current();
+        int y = bodyTop() - (int) scroll.current();
         for (FeatureSetting s : meta.settings) {
-            int h = s.height();
-            if (y + h > 0 && y < this.height) {
-                s.renderOverlay(ctx, listX, y, LIST_W, mouseX, mouseY);
+            int h = bodyHeight(s);
+            if (y + h > bodyTop() && y < bodyBottom()) {
+                s.renderOverlay(ctx, listX, settingY(s, y), LIST_W, mouseX, mouseY);
             }
             y += h + ROW_GAP;
         }
 
         ctx.disableScissor();
 
-        // The §8 gradient — softens the scissor boundary into the window's
-        // own tint. Painted after the scissor closes and before the chrome
-        // buttons/title so those stay crisp on top of it.
-        ScrollFade.drawTop(ctx, listX, LIST_W, TOP_FADE_Y, ScrollFade.FADE_PX,
-                scroll.current(), MaterialSurface.color(ThemeToken.WINDOW_FILL));
+        if (fixedHeaderSetting != null)
+            fixedHeaderSetting.renderFixedHeader(ctx, listX, TOP_PAD, LIST_W, mouseX, mouseY);
+
+        // Reconcile nested controls against their final painted bounds. Hidden rows
+        // cannot retain keyboard availability; the pinned Add control owns its header.
+        var bodyBand = FeatureSetting.hostBand();
+        for (FeatureSetting setting : meta.settings) {
+            var controls = registeredSettingControls.get(setting);
+            if (controls == null) continue;
+            for (SemanticActionControl control : controls) {
+                boolean header = setting == fixedHeaderSetting && setting.fixedHeaderControls().contains(control)
+                        && control.getY() >= TOP_PAD && control.getBottom() <= bodyTop();
+                boolean visible = bodyBand.intersects(control.getX(), control.getY(), control.getWidth(), control.getHeight());
+                control.setAvailable(control.isAvailable() && (header || visible));
+                if (!control.isAvailable() && this.getFocused() == control) this.setFocused(null);
+            }
+        }
 
         // Children: Done button.
         super.render(ctx, mouseX, mouseY, delta);
@@ -507,15 +494,15 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         if (super.mouseClicked(_ev, _doubleClicked)) return true;
         
         int listX = (this.width - LIST_W) / 2;
-        int y = TOP_PAD - (int) scroll.current();
+        if (fixedHeaderSetting != null && mouseY >= TOP_PAD && mouseY < bodyTop()
+                && fixedHeaderSetting.mouseClicked(mouseX, mouseY, button, listX, TOP_PAD, LIST_W)) return true;
+        if (!FeatureSetting.hostBand().contains(mouseX, mouseY)) return false;
+        int y = bodyTop() - (int) scroll.current();
         for (FeatureSetting s : meta.settings) {
-            int h = s.height();
-            // Hit-testing agrees with the scroll fade (§8): the part of a
-            // row hidden by the fade band (above TOP_FADE_Y) is not
-            // clickable — the same render-truth rule ManagerListScreen
-            // applies to its scissored clip band.
-            if (mouseY >= TOP_FADE_Y && y + h > TOP_FADE_Y && y < this.height
-                    && s.mouseClicked(mouseX, mouseY, button, listX, y, LIST_W)) {
+            int h = bodyHeight(s);
+            // Pointer dispatch and paint share the fixed body band.
+            if (y + h > bodyTop() && y < bodyBottom()
+                    && s.mouseClicked(mouseX, mouseY, button, listX, settingY(s, y), LIST_W)) {
                 activeDragSetting = s;
                 // Mirror focus onto the exact control under the accepted
                 // click when the setting exposes several (ItemScale's rows,
@@ -568,8 +555,9 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         // Input-time bound deliberately computed as before (no trailing-gap
         // subtraction) — the render-time advance() re-clamps each frame.
         int totalH = 0;
-        for (FeatureSetting s : meta.settings) totalH += s.height() + ROW_GAP;
-        double maxScroll = Math.max(0, totalH - (this.height - TOP_PAD - 40));
+        for (FeatureSetting s : meta.settings) totalH += bodyHeight(s) + ROW_GAP;
+        if (totalH > 0) totalH -= ROW_GAP;
+        double maxScroll = Math.max(0, totalH - (bodyBottom() - bodyTop()));
 
         scroll.wheel(vertical, 30, maxScroll);
         return true;
@@ -645,6 +633,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         // query) before the screen tears down. Without this, state leaks
         // into the next open because settings instances are reused.
         for (FeatureSetting s : meta.settings) {
+            s.pinHeader(false);
             s.onDetailScreenClose();
         }
         chromeCache.dispose();

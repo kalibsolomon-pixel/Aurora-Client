@@ -90,8 +90,7 @@ public class ColorSetting extends FeatureSetting {
     public void render(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
         var tr = Minecraft.getInstance().font;
         boolean disabled = isDisabled();
-        renderLabelWithTooltip(ctx, com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(tr,label,Math.max(0,width-(swatchW+38)),0), x + 12, y + (ROW_H_COLLAPSED - tr.lineHeight) / 2,
-                AuroraTheme.TEXT_PRIMARY, mouseX, mouseY, disabled);
+        renderWrappedLabel(ctx, label, x + 12, y + (ROW_H_COLLAPSED - tr.lineHeight) / 2, Math.max(0,width-(swatchW+38)), AuroraTheme.TEXT_PRIMARY, mouseX, mouseY, disabled);
 
         swatchX = x + width - swatchW - 14;
         swatchY = y + (ROW_H_COLLAPSED - swatchH) / 2;

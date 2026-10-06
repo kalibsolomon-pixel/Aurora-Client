@@ -164,6 +164,12 @@ public abstract class SearchListSetting<T extends FeatureSetting> extends Featur
      */
     @Override
     public void renderGlassPass(GuiGraphics ctx, int x, int y, int width) {
+        if (!isHeaderPinned()) renderFixedHeaderGlass(ctx, x, y, width);
+    }
+
+    @Override public int fixedHeaderHeight() { return 30; }
+
+    @Override public void renderFixedHeaderGlass(GuiGraphics ctx, int x, int y, int width) {
         if (!com.aurora.client.ui.component.GlassSurface.passOpen()) return; // legacy frame order
         searchField.setX(x + 12);
         searchField.setY(y + 6);
@@ -175,6 +181,29 @@ public abstract class SearchListSetting<T extends FeatureSetting> extends Featur
     public void render(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
         recomputeFiltered();
 
+        if (!isHeaderPinned()) renderFixedHeader(ctx, x, y, width, mouseX, mouseY);
+
+        // 2. Filtered rows. The container's bottom is computed ONCE —
+        // calling baseHeight() inside the loop would re-sum every row's
+        // height per iteration (the O(rows²) shape §10 warns about; rows
+        // are memoized so it was cheap-but-quadratic even at Particles'
+        // ~100 rows).
+        int contentBottom = y + baseHeight();
+        int currentY = y + SEARCH_H;
+        for (T row : filtered) {
+            int h = row.height();
+            var band = FeatureSetting.hostBand();
+            if (currentY + h > band.y && currentY < Math.min(contentBottom, band.yEnd())) {
+                row.render(ctx, x, currentY, width, mouseX, mouseY);
+            } else {
+                for (var control : row.interactionControls()) control.setAvailable(false);
+            }
+            currentY += h + ROW_GAP;
+        }
+    }
+
+    @Override public void renderFixedHeader(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
+        Font tr = Minecraft.getInstance().font;
         // 1. Search bar — the themed background, centered text, and
         // outline are all drawn by EditBoxMixin (which fully replaces
         // the vanilla EditBox render on FeatureDetailScreen), so we
@@ -186,20 +215,6 @@ public abstract class SearchListSetting<T extends FeatureSetting> extends Featur
         searchFrame = com.aurora.client.ui.component.GlassSurface.frame();
         searchField.render(ctx, mouseX, mouseY, 0f);
 
-        // 2. Filtered rows. The container's bottom is computed ONCE —
-        // calling baseHeight() inside the loop would re-sum every row's
-        // height per iteration (the O(rows²) shape §10 warns about; rows
-        // are memoized so it was cheap-but-quadratic even at Particles'
-        // ~100 rows).
-        int contentBottom = y + baseHeight();
-        int currentY = y + SEARCH_H;
-        for (T row : filtered) {
-            int h = row.height();
-            if (currentY + h > 0 && currentY < contentBottom) {
-                row.render(ctx, x, currentY, width, mouseX, mouseY);
-            }
-            currentY += h + ROW_GAP;
-        }
     }
 
     @Override
@@ -210,7 +225,7 @@ public abstract class SearchListSetting<T extends FeatureSetting> extends Featur
         // field renders at rowY+6 with height 18, i.e. [rowY+6, rowY+24);
         // the old [rowY+5, rowY+25) band was 2px taller than the painted
         // field). Half-open: the bottom edge row is not part of the field.
-        if (mouseY >= rowY + 6 && mouseY < rowY + 24) {
+        if (mouseY >= searchField.getY() && mouseY < searchField.getY() + searchField.getHeight()) {
             int searchW = rowWidth - 24;
             if (mouseX >= rowX + 12 && mouseX < rowX + 12 + searchW) {
                 searchField.setFocused(true);
@@ -298,7 +313,7 @@ public abstract class SearchListSetting<T extends FeatureSetting> extends Featur
         var band = FeatureSetting.hostBand();
         long frame=com.aurora.client.ui.component.GlassSurface.frame();
         if (isDisabled() || searchFrame < frame-1
-                || !band.intersects(searchField.getX(),searchField.getY(),searchField.getWidth(),searchField.getHeight())) return false;
+                || (!isHeaderPinned() && !band.intersects(searchField.getX(),searchField.getY(),searchField.getWidth(),searchField.getHeight()))) return false;
         searchField.setFocused(true);
         requestFocus();
         return searchField.charTyped(event);

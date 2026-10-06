@@ -5,12 +5,18 @@ adoption across every UI screen/element plus removal of the Frosted/Wireframe ca
 This supersedes the former two-host boundary and review stop. The filename remains
 stable for existing project links; this document now records production state.
 
-**UNIFIED THEME — card refinement (2026-10-06):** follow-up visual feedback
-supersedes the enclosing-window treatment. Title, main settings/modules and manager
-screens have no enclosing background window: visible standalone cards own blur;
-detail/editor/browser windows retain their container, with separate blurred action
-cards. Aurora Settings on the title screen is neutral. New Profile, Reset, Done
-and other shared buttons use translucent faces over independently pooled blur.
+**UNIFIED THEME — fixed-window correction (2026-10-06):** the latest user
+feedback restores enclosing blur and outlines on the main Modules/Settings screen
+and Profile/Waypoint managers. The frame is stationary; only its interior content
+scrolls. Detail windows now have a viewport-sized stationary frame and separately
+pinned search/add headers for Particles, Item Scale and Alerts. Title keeps its five
+independent neutral blurred cards without an enclosing panel. Shared neutral action
+cards (including HUD editor Aurora Settings/Reset Positions) have no painted outline;
+primary/destructive actions and keyboard focus keep their established cues. Active
+feature cards/selected peers use a bright accent outline over their wash and halo.
+Search fields retain a neutral resting edge while typing, with the caret as focus cue.
+The global `moduleGridView` preference saves immediately and survives reopening,
+restart and profile switches (excluded from profile snapshots).
 Ordinary embedded controls still inherit their card; floating popups remain opaque.
 The renderer's bounded pool, priority degradation and screenshot/session/menu/resource
 guards remain authoritative. Capture count now follows visible standalone cards.
@@ -22,8 +28,10 @@ inline, with font/accent/corners/opacity customization intact. Repeated feature 
 manager headings are removed; Better Hitreg's attached author credit remains.
 
 Bundled text fonts rasterize at 9 px rather than 11 px; icon fonts remain unchanged.
-Button/segment/setting labels reserve control/value space and ellipsize with native
-font measurements, preserving full semantic labels. UI scroll tracks use a finite
+Text reserves control/value space using native font measurements. Overflow layouts
+are centered and wrap only between whole words, never split words across lines;
+bounded ellipsis is the fallback for a word wider than its column. Full semantic
+labels remain available. Cached wrapping invalidates on width/font/theme changes. UI scroll tracks use a finite
 90 ms glide with one rounded geometry position for all layers, immediate thumb
 dragging and exact rest; the pure legacy exponential API remains for diagnostics.
 Typing resumes in a visible search after selection, without taking input from a
@@ -67,9 +75,9 @@ API is a separate presentation API, not the removed Frosted/Wireframe taxonomy.
 
 | Screen / element | Current unified treatment |
 |---|---|
-| `AuroraScreen` | Standalone blurred sidebar/module/inline-settings cards, no enclosing window |
-| Every `FeatureDetailScreen` | Container plus blurred Reset/Done/action cards; no repeated feature heading |
-| Profile and Waypoint managers (`ManagerListScreen`) | Independently blurred rows and toolbar/actions, translucent faces, no list window or duplicate heading |
+| `AuroraScreen` | Stationary enclosing blurred frame/outline; independent sidebar/module/settings cards; pinned module search and layout controls |
+| Every `FeatureDetailScreen` | Stationary viewport-sized container; clipped scrolling body and pinned search/add header; blurred actions; no repeated feature heading |
+| Profile and Waypoint managers (`ManagerListScreen`) | Stationary blurred list frame/outline, independent row/action cards; no duplicate heading |
 | `AuroraTitleScreen` | Declared panorama; five independent neutral blurred cards; no enclosing panel |
 | `ColorPickerScreen` | One parent for the editor; Apply primary; represented gradients/alpha/checkerboard remain data |
 | `ResourcePackBrowserScreen` | One parent for the browser; embedded sidebar, cards and install actions; soft category selection; opaque detail modal |
@@ -93,7 +101,23 @@ gradients/checkerboards and mechanical knobs remain data/geometry exceptions.
 
 ## Verification and limits
 
-The card-refinement production build passed 398 tests in 41 suites, with zero
+The fixed-window correction passes 402 tests in 42 suites, including measured
+whole-word wrapping and Unicode/narrow-column fallbacks. Four native passes
+covered 22 cases at 1600×1000 and 854×480 (GUI scale 2), with zero GL errors.
+Native wheel input kept the Particles header at y=66 and body at y=90 across top,
+middle and bottom list positions. Both layout actions survived a fresh screen;
+the saved config contains `moduleGridView`, while the active profile omits it.
+The smaller-window capture shows centered `Resourcepack` / `Browser` lines with
+no divided word. HUD guidance, settings labels, action borders, selected-card
+outlines, neutral search focus and stationary frames were inspected. Screenshot
+suppression was exercised on all hosts. Probes used menu panorama backgrounds;
+no loaded-world gameplay/map-terrain validation is claimed. A focused native check
+confirmed that hidden rows have no keyboard availability while the pinned Add control
+remains available. Font/renderer-mode cache invalidation was finalized afterward and
+included in the final production test/build.
+Temporary entrypoint/probe changes and the local runtime config were restored.
+
+The preceding card-refinement production build passed 398 tests in 41 suites, with zero
 failures/errors/skips. A 13-host native pass and five-case focused follow-up each
 reported zero GL errors. The focused pass verified Dark-only Theme without preview,
 rounded white/yellow swatch containment, slider knob ordering, 9% density cards,

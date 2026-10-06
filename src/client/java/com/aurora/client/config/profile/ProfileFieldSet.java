@@ -45,6 +45,7 @@ public final class ProfileFieldSet {
      */
     public static final Set<String> EXCLUDED = Set.of(
             "activeProfile",
+            "moduleGridView",
             "playtimeTotalMs",
             "playtimePerWorld",
             "fightStatsTotalFights",

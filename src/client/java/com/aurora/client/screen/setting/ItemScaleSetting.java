@@ -321,6 +321,17 @@ public class ItemScaleSetting extends FeatureSetting {
      */
     @Override
     public void renderGlassPass(GuiGraphics ctx, int x, int y, int width) {
+        if (!isHeaderPinned()) renderFixedHeaderGlass(ctx, x, y, width);
+    }
+
+    @Override public int fixedHeaderHeight() { return 32; }
+    private java.util.List<com.aurora.client.ui.interaction.SemanticActionControl> pinnedControls;
+    @Override public java.util.List<com.aurora.client.ui.interaction.SemanticActionControl> fixedHeaderControls() {
+        if (pinnedControls == null) pinnedControls = java.util.List.of(addAction.interactionControl());
+        return pinnedControls;
+    }
+
+    @Override public void renderFixedHeaderGlass(GuiGraphics ctx, int x, int y, int width) {
         if (!GlassSurface.passOpen()) return; // legacy frame order — render paints in place
         glassPassFrame = GlassSurface.frame();
         int searchW = width - 56;
@@ -339,44 +350,7 @@ public class ItemScaleSetting extends FeatureSetting {
         Font tr = Minecraft.getInstance().font;
         AuroraConfig cfg = AuroraConfig.get();
 
-        // 1. Search bar — the themed background, centered text, and
-        // outline are all drawn by EditBoxMixin (which fully replaces
-        // the vanilla EditBox render on FeatureDetailScreen), so we
-        // just position the field and let it render itself.
-        int searchW = width - 56;
-        searchField.setX(x + 12);
-        searchField.setY(y + 6);
-        searchField.setWidth(searchW);
-        searchFrame = com.aurora.client.ui.component.GlassSurface.frame();
-        searchField.render(ctx, mouseX, mouseY, 0f);
-
-        // Draw "+" add button — raised glass (flat pill on decline). If the
-        // screen ran this row's glass pass this frame the surface is already
-        // on screen UNDER the dim and only its result matters here;
-        // otherwise (legacy frame order) it is painted in place now through
-        // the shared GlassSurface helper (identical calls). C-4 rollout: the
-        // canonical hover (one animator) drives the flat fallback AND the
-        // glyph — the whole action eases (was an immediate boolean).
-        int plusX = x + width - 36;
-        int plusY = y + 5;
-        addAction.syncChannels(plusX, plusY, 24, 20, mouseX, mouseY);
-        float plusT = addAction.hoverT();
-        int plusBg = ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_BACKGROUND),
-                (int) (0x2E + (0x66 - 0x2E) * plusT));
-        int plusBorder = AuroraAnim.lerpArgb(
-                AuroraTheme.BORDER_OFF, AuroraTheme.BORDER_ON_HOVER, plusT);
-        float plusR = Math.min(20 / 2f, ThemeManager.current().roundness().radiusSmall());
-        boolean plusGlass;
-        if (glassPassFrame == GlassSurface.frame()) {
-            plusGlass = passDrewPlus;
-        } else {
-            plusGlass = GlassSurface.control(ctx, plusX, plusY, 24, 20, plusR);
-        }
-        if (!plusGlass) {
-            AuroraShapes.panel(ctx, plusX, plusY, 24, 20, plusBg, AuroraTheme.RADIUS_SMALL);
-            AuroraShapes.outline(ctx, plusX, plusY, 24, 20, plusBorder, AuroraTheme.RADIUS_SMALL);
-        }
-        addAction.paintGlyph(ctx, tr, plusX, plusY, 24, 20);
+        if (!isHeaderPinned()) renderFixedHeader(ctx, x, y, width, mouseX, mouseY);
 
         // Draw "suggested item" preview if found — with its real icon
         // (crisp flat-sprite path) beside the text.
@@ -572,12 +546,55 @@ public class ItemScaleSetting extends FeatureSetting {
         });
     }
 
+    @Override public void renderFixedHeader(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
+        Font tr = Minecraft.getInstance().font;
+        // 1. Search bar — the themed background, centered text, and
+        // outline are all drawn by EditBoxMixin (which fully replaces
+        // the vanilla EditBox render on FeatureDetailScreen), so we
+        // just position the field and let it render itself.
+        int searchW = width - 56;
+        searchField.setX(x + 12);
+        searchField.setY(y + 6);
+        searchField.setWidth(searchW);
+        searchFrame = com.aurora.client.ui.component.GlassSurface.frame();
+        searchField.render(ctx, mouseX, mouseY, 0f);
+
+        // Draw "+" add button — raised glass (flat pill on decline). If the
+        // screen ran this row's glass pass this frame the surface is already
+        // on screen UNDER the dim and only its result matters here;
+        // otherwise (legacy frame order) it is painted in place now through
+        // the shared GlassSurface helper (identical calls). C-4 rollout: the
+        // canonical hover (one animator) drives the flat fallback AND the
+        // glyph — the whole action eases (was an immediate boolean).
+        int plusX = x + width - 36;
+        int plusY = y + 5;
+        addAction.syncChannels(plusX, plusY, 24, 20, mouseX, mouseY);
+        float plusT = addAction.hoverT();
+        int plusBg = ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_BACKGROUND),
+                (int) (0x2E + (0x66 - 0x2E) * plusT));
+        int plusBorder = AuroraAnim.lerpArgb(
+                AuroraTheme.BORDER_OFF, AuroraTheme.BORDER_ON_HOVER, plusT);
+        float plusR = Math.min(20 / 2f, ThemeManager.current().roundness().radiusSmall());
+        boolean plusGlass;
+        if (glassPassFrame == GlassSurface.frame()) {
+            plusGlass = passDrewPlus;
+        } else {
+            plusGlass = GlassSurface.control(ctx, plusX, plusY, 24, 20, plusR);
+        }
+        if (!plusGlass) {
+            AuroraShapes.panel(ctx, plusX, plusY, 24, 20, plusBg, AuroraTheme.RADIUS_SMALL);
+            AuroraShapes.outline(ctx, plusX, plusY, 24, 20, plusBorder, AuroraTheme.RADIUS_SMALL);
+        }
+        addAction.paintGlyph(ctx, tr, plusX, plusY, 24, 20);
+
+    }
+
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button, int rowX, int rowY, int rowWidth) {
         // Forward click to search bar — the field's EXACT painted rect
         // ([rowY+6, rowY+24); the old [rowY+5, rowY+25) band was 2px taller
         // than the painted field — C-8, half-open at both edges).
-        if (mouseY >= rowY + 6 && mouseY < rowY + 24) {
+        if (mouseY >= searchField.getY() && mouseY < searchField.getY() + searchField.getHeight()) {
             int searchW = rowWidth - 56;
             if (mouseX >= rowX + 12 && mouseX < rowX + 12 + searchW) {
                 searchField.setFocused(true);
@@ -761,7 +778,7 @@ public class ItemScaleSetting extends FeatureSetting {
         var band = FeatureSetting.hostBand();
         long frame=com.aurora.client.ui.component.GlassSurface.frame();
         if (isDisabled() || searchFrame < frame-1
-                || !band.intersects(searchField.getX(),searchField.getY(),searchField.getWidth(),searchField.getHeight())) return false;
+                || (!isHeaderPinned() && !band.intersects(searchField.getX(),searchField.getY(),searchField.getWidth(),searchField.getHeight()))) return false;
         searchField.setFocused(true);
         requestFocus();
         return searchField.charTyped(event);

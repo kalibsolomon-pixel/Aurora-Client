@@ -127,6 +127,8 @@ public class AuroraConfig {
 
     // ---- General ----
     public boolean customTitleScreen = true;
+    /** Global viewing preference, retained across screens, restarts and profile switches. */
+    public boolean moduleGridView = true;
     public boolean reflexEnabled = false;
     public int reflexWaitTimeOffset = 0;
 
