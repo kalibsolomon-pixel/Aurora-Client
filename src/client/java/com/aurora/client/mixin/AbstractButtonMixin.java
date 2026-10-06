@@ -2,9 +2,7 @@ package com.aurora.client.mixin;
 
 import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.ui.component.Button;
-import com.aurora.client.util.HoverAnim;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
@@ -17,47 +15,16 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/**
- * Phase C-6: Aurora painting/motion ONLY on the vanilla button family of the
- * customized selection screens — vanilla {@code AbstractButton}/{@code Button}
- * keeps every interaction semantic (pointer/Enter/Space activation, disabled
- * authority, focus traversal, narration, and the activation click sound).
- *
- * <p><b>Ownership boundary (the C-6 rule):</b> this mixin cancels only
- * {@code renderWidget} (pixels) and never intercepts an input event. The two
- * @Inject HEAD hooks on {@code onClick}/{@code keyPressed} are pure
- * OBSERVATIONS — they arm the press animation and never cancel, consume,
- * call {@code onPress}, play a sound, or alter active/focused state. The
- * vanilla activation funnel (verified in the 1.21.11 bytecode:
- * {@code mouseClicked → playDownSound + onClick} and
- * {@code keyPressed → playDownSound + onPress}) fires exactly once per
- * accepted activation on each input path, so arming at both observation
- * sites — which are disjoint by input path — yields exactly one arm per
- * activation, keyboard included (the old onClick-only observation never
- * animated a keyboard press).
- *
- * <p><b>Shared visuals (no second implementation):</b> the surface, colors,
- * radius, focus hairline, label centering, and the press-scale timeline all
- * come from the canonical shared Button — {@link Button#paintFlatSecondary}
- * (a pure visual painter) and {@link Button#pressScaleAt} (the shared
- * 90 ms/180 ms timeline). Hover is the §8.3 canonical
- * {@link HoverAnim#symmetric(long) symmetric 140 ms} — pointer-only
- * ({@code active && isHovered()}, never {@code isHovered() || isFocused()};
- * disabled has no hover target, exactly like the shared Button), so keyboard
- * focus is carried by the Button-family hairline alone. Vanilla
- * {@code AbstractWidget.render} sets {@code isHovered} without consulting
- * {@code active} (bytecode), so the explicit {@code active} gate is
- * required for the canonical disabled behavior.
- *
- * <p><b>Lifecycle:</b> all animation state is per-widget @Unique instance
- * fields — a button's hover/press state dies with the widget on screen
- * close/reinit; there is no static map and nothing leaks across screens.
+/** Shared unified Button painting on Aurora's two customized vanilla selection screens.
+ * Vanilla retains activation, focus traversal, narration and click sounds. Input
+ * hooks only observe accepted presses and arm the shared animation; only painting
+ * is cancelled. One painter lives with each vanilla widget and reuses its label.
  */
 @Mixin(AbstractButton.class)
 public abstract class AbstractButtonMixin {
 
-    /** §8.3 canonical hover — one long-lived animator per widget (C-6). */
-    @Unique private final HoverAnim aurora$hover = HoverAnim.symmetric(140L);
+    /** Shared CSS motion, one long-lived painter per vanilla widget. */
+    @Unique private Button aurora$painter;
 
     /**
      * Press-observation state: the start stamp feeds the shared timeline
@@ -97,18 +64,15 @@ public abstract class AbstractButtonMixin {
     private void aurora$renderCustomWidget(GuiGraphics ctx, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         if (aurora$shouldApplyStyle()) {
             AbstractButton self = (AbstractButton) (Object) this;
-            Font tr = Minecraft.getInstance().font;
             // Pointer-only hover target, gated by vanilla's authoritative
             // active flag — disabled buttons have no hover target (the
             // shared Button's contract; an in-flight hover eases back to
             // rest on the enable→disable transition).
-            float hoverT = aurora$hover.update(self.active && self.isHovered());
             // The whole visual — press-scale pose, token radius, colors,
             // focus hairline, centered label — is the shared painter's.
-            Button.paintFlatSecondary(ctx, tr, self.getMessage(),
-                    self.getX(), self.getY(), self.getWidth(), self.getHeight(),
-                    hoverT, Button.pressScaleAt(aurora$pressStartMs),
-                    self.isFocused(), self.active);
+            if (aurora$painter == null) aurora$painter = new Button(self.getMessage(), () -> {});
+            aurora$painter.label(self.getMessage()).focused(self.isFocused()).disabled(!self.active);
+            aurora$painter.renderOverlay(ctx,self.getX(),self.getY(),self.getWidth(),self.getHeight(),mouseX,mouseY);
             ci.cancel();
         }
     }
@@ -123,6 +87,7 @@ public abstract class AbstractButtonMixin {
         if (aurora$shouldApplyStyle()) {
             aurora$pressStartMs = System.currentTimeMillis();
             aurora$pressCount++;
+            if (aurora$painter != null) aurora$painter.triggerPressAnimation();
         }
     }
 
@@ -141,6 +106,7 @@ public abstract class AbstractButtonMixin {
                 && ((AbstractButton) (Object) this).isActive()) {
             aurora$pressStartMs = System.currentTimeMillis();
             aurora$pressCount++;
+            if (aurora$painter != null) aurora$painter.triggerPressAnimation();
         }
     }
 }

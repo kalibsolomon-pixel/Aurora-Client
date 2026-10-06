@@ -153,10 +153,8 @@ public final class ThemeManager {
         boolean roundnessChanged = roundness != last.roundness();
         double opacity = ThemeDefinition.normalizedOpacity(def.backgroundOpacity);
         boolean opacityChanged = Double.compare(opacity, last.backgroundOpacity()) != 0;
-        GlassStyle glassStyle = def.glassStyle != null ? def.glassStyle : GlassStyle.FROSTED;
-        boolean glassStyleChanged = glassStyle != last.glassStyle();
         if (enabledChanged || accentChanged || modeChanged
-                || roundnessChanged || opacityChanged || glassStyleChanged) {
+                || roundnessChanged || opacityChanged) {
             reload();
         }
     }

@@ -143,7 +143,7 @@ public enum ThemeToken {
     /** HUD panel gradient — bottom stop. */
     HUD_BACKDROP_BOT,
 
-    // Unified theme pilot roles: additive; legacy consumers retain their palette.
+    // Unified roles: also projected through legacy tokens and the static facade.
     MATERIAL_CANVAS, MATERIAL_PANEL, MATERIAL_RAISED, MATERIAL_HOVER,
     MATERIAL_PRESSED, MATERIAL_SUNKEN, MATERIAL_BORDER, MATERIAL_BORDER_STRONG,
     MATERIAL_TEXT, MATERIAL_TEXT_SECONDARY, MATERIAL_TEXT_MUTED,

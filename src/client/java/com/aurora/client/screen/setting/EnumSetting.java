@@ -3,6 +3,7 @@ package com.aurora.client.screen.setting;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.component.GlassSurface;
+import com.aurora.client.ui.component.MaterialSurface;
 import com.aurora.client.ui.component.Widget;
 import com.aurora.client.ui.interaction.MinecraftSemanticFeedback;
 import com.aurora.client.ui.interaction.SemanticAction;
@@ -141,6 +142,8 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
 
     /** §8.3 canonical hover — symmetric 140 ms, pointer-only target. */
     private final HoverAnim hoverAnim = HoverAnim.symmetric(140L);
+    private final com.aurora.client.ui.util.TimedTransition materialHover = new com.aurora.client.ui.util.TimedTransition(
+            120,com.aurora.client.ui.util.CubicBezier.EASE,0);
     /** Mirrored from the semantic control's vanilla focus each frame. */
     private boolean focusedVisual = false;
     /** Lazy — created when a host asks {@link #interactionControl()} for it. */
@@ -274,6 +277,7 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
         // Canonical mode drives the animator from the POINTER only; legacy
         // keeps the shipped pin-at-1-while-expanded target.
         float hT = hoverAnim.update(hoverTarget(hover, disabled));
+        if (MaterialSurface.unified()) hT = materialHover.update(hoverTarget(hover, disabled) ? 1 : 0,System.nanoTime());
 
         // Mirror the semantic control's geometry, pointer, and vanilla focus
         // into this row every frame (the BooleanSetting sync discipline) — a
@@ -312,7 +316,17 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
         } else {
             glassOk = false;
         }
-        if (!glassOk) {
+        if (MaterialSurface.unified()) {
+            int face = disabled ? ThemeManager.color(ThemeToken.MATERIAL_PANEL) : AuroraAnim.lerpArgb(
+                    ThemeManager.color(ThemeToken.MATERIAL_RAISED),ThemeManager.color(ThemeToken.MATERIAL_HOVER),hT);
+            if (hT==0 || hT==1) MaterialSurface.cached(ctx,btnX,btnY,BTN_W,BTN_H,AuroraTheme.RADIUS_SMALL,
+                    face,ThemeManager.color(ThemeToken.BORDER_HOVER),112+(disabled ? 2 : hT==1 ? 1 : 0),false);
+            else {
+                RenderUtil.drawRoundedRectAA(ctx,btnX,btnY,BTN_W,BTN_H,AuroraTheme.RADIUS_SMALL,face);
+                RenderUtil.drawRoundedOutlineAA(ctx,btnX,btnY,BTN_W,BTN_H,AuroraTheme.RADIUS_SMALL,1,
+                        ThemeManager.color(ThemeToken.BORDER_HOVER));
+            }
+        } else if (!glassOk) {
             RenderUtil.drawSquircle(ctx, btnX, btnY, BTN_W, BTN_H, AuroraTheme.RADIUS_SMALL, fillTint);
             RenderUtil.drawSquircleOutline(ctx, btnX, btnY, BTN_W, BTN_H, AuroraTheme.RADIUS_SMALL, 1.0f, borderTint);
         }
@@ -374,7 +388,9 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
             // integration uses.
             float popR = Math.min(dropdownH / 2f, ThemeManager.current().roundness().radiusSmall());
             boolean popGlass = glassButton && GlassSurface.aboveDimControl(ctx, btnX, dropdownY, BTN_W, dropdownH, popR);
-            if (!popGlass) {
+            if (MaterialSurface.unified() && !popGlass) {
+                MaterialSurface.floating(ctx,btnX,dropdownY,BTN_W,dropdownH,Math.round(popR),1);
+            } else if (!popGlass) {
                 RenderUtil.drawSquircle(ctx, btnX, dropdownY, BTN_W, dropdownH, AuroraTheme.RADIUS_SMALL, ThemeManager.surfaceColor(ThemeToken.SURFACE));
                 RenderUtil.drawSquircleOutline(ctx, btnX, dropdownY, BTN_W, dropdownH, AuroraTheme.RADIUS_SMALL, 1.0f, borderTint);
             }
@@ -388,7 +404,10 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
 
                     boolean optHover = Widget.inBounds(mouseX, mouseY, btnX, optY, BTN_W, OPT_H);
 
-                    if (optHover) {
+                    if (MaterialSurface.unified()) {
+                        MaterialSurface.selection(ctx,btnX+2,optY,BTN_W-4,OPT_H,
+                                ThemeManager.current().roundness().radiusSmall(),val==current,optHover ? 1 : 0);
+                    } else if (optHover) {
                         ctx.fill(btnX + 2, optY, btnX + BTN_W - 2, optY + OPT_H, ThemeManager.surfaceColor(ThemeToken.SURFACE_VARIANT));
                     }
 
@@ -397,7 +416,7 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
                     int optColor = optHover ? AuroraTheme.TEXT_PRIMARY : AuroraTheme.TEXT_SECONDARY;
 
                     if (val == current) {
-                        optColor = AuroraTheme.TEXT_ACCENT;
+                        optColor = MaterialSurface.unified() ? AuroraTheme.TEXT_PRIMARY : AuroraTheme.TEXT_ACCENT;
                     }
 
                     ctx.drawString(tr, optName, optTextX, optTextY, optColor, false);

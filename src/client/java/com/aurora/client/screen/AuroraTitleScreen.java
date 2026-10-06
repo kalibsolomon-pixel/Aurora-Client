@@ -1,5 +1,6 @@
 package com.aurora.client.screen;
 
+import com.aurora.client.ui.component.MaterialSurface;
 import com.aurora.client.ui.component.Button;
 import com.aurora.client.ui.component.ButtonWidget;
 import com.aurora.client.ui.component.GlassSurface;
@@ -11,46 +12,9 @@ import net.minecraft.client.gui.screens.options.OptionsScreen;
 import net.minecraft.client.gui.screens.worldselection.SelectWorldScreen;
 import net.minecraft.network.chat.Component;
 
-/**
- * Aurora's title screen: vanilla's own panorama underneath, Aurora's glass
- * buttons floating over it.
- *
- * <p>The screen draws NO custom branding — the former emblem, diamond
- * backdrop and starfield blits were removed outright (their PNGs deleted;
- * the starfield's own survival on the two selection screens ended
- * 2026-09-12, when {@code SelectionScreenBackgroundMixin} was removed and
- * those screens went back to the vanilla backdrop — their themed buttons
- * and search fields stay, via {@code AbstractButtonMixin}/{@code EditBoxMixin}).
- * The backdrop is vanilla's rotating title panorama, drawn by
- * {@code Screen.renderPanorama} exactly as vanilla's own title screen draws
- * it (vanilla {@code TitleScreen.renderBackground} is empty and
- * {@code render} calls {@code renderPanorama} directly — mirrored here
- * rather than going through {@code renderBackground}, which would stack the
- * menu-background texture and the accessibility blur on top of it).
- *
- * <p><b>Glass over the panorama.</b> On 1.21.11 {@code CubeMap.render}
- * issues an eager Blaze3D render pass straight into the main render
- * target's color texture — the same texture the glass pipeline's world
- * reader wraps — so right after {@code renderPanorama} returns, the
- * panorama pixels are genuinely capturable. Since 2026-09-12 the screen
- * says so through the shared helper —
- * {@link GlassSurface#renderMenuPanorama}, which draws the panorama and
- * stamps {@code BlurPanelRenderer.noteMenuBackdropDrawn()}, a
- * frame-scoped declaration that is the only exemption from the renderer's
- * menu-context guard (see that method for why the exemption cannot leak to
- * any other caller; {@code AuroraScreen} declares the same way from its
- * own {@code renderBackground} when no world is loaded). The buttons are
- * then ordinary shared
- * {@link ButtonWidget}s on the standard glass treatment — chrome-only
- * depth, like {@code ColorPickerScreen}/{@code HudEditorScreen}: no
- * window, no dim, just glass controls over the live panorama, with the
- * complete flat look whenever glass declines (Wireframe style, F2
- * suppression, a frame the panorama did not draw).
- *
- * <p>The 5-button stack uses the shared themed {@link ButtonWidget}
- * (the canonical {@code ui.component.Button} under the hood) — Aurora
- * Settings is the {@code primary} variant, which on glass is the
- * accent-STAINED treatment (the ColorPicker Apply convention).
+/** Vanilla panorama with one unified parent material and the shared action buttons.
+ * Menu backdrop validity is declared for this frame only. Settings is the primary
+ * action; vanilla-backed semantic widgets keep their established input routing.
  */
 public class AuroraTitleScreen extends Screen implements ThemedScreen {
 
@@ -128,8 +92,22 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
         // moment this returns).
         GlassSurface.renderMenuPanorama(this, ctx, delta);
 
+        int panelX = this.width/2 - BUTTON_W/2 - 12;
+        int panelY = this.height/2 + BUTTON_STACK_OFFSET - 12;
+        float radius = com.aurora.client.theme.ThemeManager.current().roundness().radiusLarge();
+        GlassSurface.beginGlassPass();
+        GlassSurface.container(ctx,panelX,panelY,BUTTON_W+24,198,radius);
+        GlassSurface.overlayDim(ctx,this.width,this.height);
+        MaterialSurface.parent(ctx,panelX,panelY,BUTTON_W+24,198,radius);
+
         // Buttons (and other drawable children)
         super.render(ctx, mouseX, mouseY, delta);
+    }
+
+    @Override
+    public void removed() {
+        super.removed();
+        MaterialSurface.disposeTemplates();
     }
 
     @Override

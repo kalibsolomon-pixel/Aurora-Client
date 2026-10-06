@@ -7,7 +7,7 @@ root — findings and prioritized plan from the 2026-09-04 full GUI audit).
 
 ---
 
-## 0. READ THIS FIRST — repo state (verified from git, 2026-09-08)
+## 0. Historical repository state (2026-09-08)
 
 **`master` is the canonical, current branch.** Everything the GUI work depends on is committed
 there: the mod-wide "glass everywhere" rollout, the ResourcePack browser glass wave, the
@@ -24,8 +24,7 @@ the dim via a queue in `GlassSurface`); **B and C were discarded** — B boosted
 `Lighting.raised()` preset with no real effect on the target screens but a real side
 effect on every other raised control mod-wide. No unmerged local branches remain.
 
-The live dev config (`run/config/aurora.json`) currently runs `glassStyle: TRANSPARENT` with
-`backgroundOpacity: 0.1` — the user is actively exercising the flat-style escape hatch.
+**Current theme state (2026-10-06):** the approved unified material replaces Frosted/Wireframe everywhere in production. The development config is runtime/user-owned; do not infer production settings from it.
 
 ---
 
@@ -33,14 +32,13 @@ The live dev config (`run/config/aurora.json`) currently runs `glassStyle: TRANS
 
 ```
 Theme system (source of truth)
-  theme/ThemeDefinition      persisted: accent, ThemeMode, ThemeRoundness, GlassStyle, backgroundOpacity
-  theme/ThemeManager         lifecycle: reload() / sync() (per-tick 6-field dirty check) / generation stamp
+  theme/ThemeDefinition      persisted: accent, ThemeMode, ThemeRoundness, backgroundOpacity
+  theme/ThemeManager         lifecycle: reload() / sync() (per-tick 5-field dirty check) / generation stamp
   theme/ThemeResolver        two paths: PaletteEngine.derive (theme on) | fixed factory palette (theme off)
   theme/PaletteEngine        pure function: accent + mode → ~40 tokens; HSL, contrast-checked text
   theme/ResolvedTheme        immutable ordinal-indexed int[]; color(token) is one array read; project()→AuroraTheme
   theme/ThemeToken           ~40 role-named tokens (ACCENT*, SURFACE*, ON_*, BORDER*, SEMANTIC_*, …)
   theme/ThemeRoundness       ROUND/SLIGHTLY_ROUND/SQUARE → RADIUS 10/6/0, RADIUS_LARGE 14/8/0, RADIUS_SMALL 6/3/0
-  theme/GlassStyle           FROSTED/TRANSPARENT — rendering-technique switch (see §3)
   util/AuroraTheme           LEGACY projection facade: ~30 files read its statics; ResolvedTheme.project()
                              is the ONLY writer. Names lie: IOS_BLUE/ACCENT_* hold OnePlus RED.
 
@@ -80,32 +78,35 @@ modrinth/             keyless REST client + icon cache (feeds pack browser)
 
 ## 2. Theme/token system — the data flow
 
-**UNIFIED THEME PILOT (2026-10-06):** `ThemeResolver` also resolves `UnifiedPalette`'s
-independent Dark neutral/status and action/selection/marker roles. Scoped
-`MaterialSurface.color` reads them only on `AuroraScreen` and the Theme detail host;
-there is no global facade projection or serialization change. The unified renderer
-entry bypasses only legacy style selection and retains the same safety guards.
-Parent capture remains pre-dim; its sole cached face/edge sits above dim for coherent
-success/decline, while embedded controls never capture. Light uses Client
-compatibility colors. See [UNIFIED_THEME_PILOT.md](UNIFIED_THEME_PILOT.md) for exact
-roles, motion, ownership, measured work and the pending visual-review gate.
+**UNIFIED THEME — production rollout (2026-10-06):** the user accepted the
+Launcher-derived pilot and requested adoption across the mod, plus removal of the
+Frosted/Wireframe option cards. Every production `ThemedScreen` now uses the approved
+material. `UnifiedPalette` roles also project through legacy tokens and `AuroraTheme`,
+so custom rows, cards and remaining facade readers share the neutral hierarchy.
+`theme.GlassStyle` and its persisted field/selector/render guard are retired;
+`ThemeMigrator` removes only the old structured `glassStyle` member from configs
+and profiles. Accent, mode, roundness, density, presets and preview remain.
 
-The 2026-10-06 review refinement removes selection bars and caches soft accent
-halos on selected peers/primary actions. The unified parent passes saturation 1.35
-and brightness .92 to the shared compositor; every compatibility draw explicitly
-resets those uniforms to identity (1,1). Blur requests 28 logical pixels with the
-existing 64-device-pixel cap and frost curve. Only the pilot's window fill maps the
-saved alpha to `round(alpha * .68)`, once, so its diffuse backdrop remains visible
-at maximum density. Stored preferences and legacy resolved alpha are unchanged.
-Raw blur texture operations now use `GlStateManager` generation/bind/delete calls
-so its cache agrees with actual GL during managed output uploads. Saved state
-captures unit zero's texture/sampler separately and restores the entry active unit.
-The runtime sentinel probe checks nonzero-unit entry and subsequent managed binds.
-Automated screenshot fallback glyph loss remains an unresolved visual check.
+Parents own at most one backdrop capture per frame; the cached neutral face and
+boundary draw above dim on success or decline. Embedded controls never capture.
+Floating tooltips, enum popups and browser/map modals have opaque cached backing.
+Soft selection uses a wash and cached halo, with no left indicator bars; primary
+actions use readable strong fills and a slightly stronger halo. Shared controls,
+custom pills, browser categories/cards and icon actions use the 120 ms CSS easing.
+Blur requests 28 logical px (64 device px cap), saturation 1.35 and brightness .92.
+`WINDOW_FILL` alpha is the sole density application point: saved opacity ×255×.68.
+Saved preference values are not rewritten. Fixed HUD status colors, represented
+item/color/map data and explicit player color overrides remain data. HUD backing
+uses the same Dark neutral family in both UI modes, without live blur.
+
+The old per-element lighting/rim recipes below are historical/diagnostic paths,
+superseded for production by this rollout. The diagnostic `BlurTestScreen` retains
+its synthetic controls and lighting comparisons. Details and verification limits:
+[UNIFIED_THEME_PILOT.md](UNIFIED_THEME_PILOT.md).
 
 ```
 AuroraConfig.theme (ThemeDefinition)
-   │  ThemeFeature.onTick → ThemeManager.sync()   6-field dirty-check per tick
+   │  ThemeFeature.onTick → ThemeManager.sync()   5-field dirty-check per tick
    ▼
 ThemeManager.reload() → ThemeResolver.resolve(def, themeEnabled)
    ▼                        ├─ PaletteEngine.derive(accent, mode)   (theme on)
@@ -132,16 +133,12 @@ Key invariants (protected — see AGENTS.md §5/§6 for the full rules):
 - Semantic tokens (`SEMANTIC_ERROR/SUCCESS/WARNING`) are fixed-hue, NOT accent-derived — but
   adoption is sparse (12 references mod-wide; the HUD layer doesn't use them at all).
 
-### GlassStyle (Frosted / Wireframe) — the second non-color token
+### Retired style taxonomy (2026-10-06)
 
-FROSTED (default) = the glass pipeline runs. TRANSPARENT = `BlurPanelRenderer.renderPanel`
-declines in a single early-return guard **before any GL work**, so every glass consumer takes
-the flat translucent fill it is already required to draw (the fallback contract). No call site
-knows the setting exists; Corner Style and Background Opacity keep their meanings in both
-styles. TRANSPARENT therefore also skips the entire capture/blur/readback cost — a real perf
-escape hatch, currently in active use in the dev config. Display label is "Wireframe"
-(renamed from "Transparent" 2026-09-12); the enum constant and persisted value stay
-`TRANSPARENT`, so existing configs parse unchanged — label change only, no migration.
+Frosted/Wireframe cards, the persisted `ThemeDefinition.glassStyle`, enum and renderer
+decline guard were removed at the user's request. Config and profile migration removes
+the obsolete member while preserving accent, mode, corners and opacity. Production
+uses the single approved material; safety declines still keep complete fallback chrome.
 
 ## 3. Glass material pipeline (`BlurPanelRenderer`, 1755 lines)
 
@@ -250,29 +247,20 @@ Conventions (violating these has caused real bugs — full list in AGENTS.md §6
 
 ## 4. Screen inventory (glass status verified in code, 2026-09-04)
 
-**Current override — UNIFIED THEME PILOT (2026-10-06):** the inventory below records
-legacy recipes. `AuroraScreen` and only the Theme detail view now use parent-only
-capture, cached neutral window chrome and flat embedded controls/preview/fields.
-Both persisted styles use that treatment inside the pilot; other hosts keep the
-comparison paths. Floating tooltips are independently opaque cached material.
-User visual acceptance is pending; see `UNIFIED_THEME_PILOT.md`.
+**Current inventory (2026-10-06):**
 
-| Screen | Glass status | Notes |
-|---|---|---|
-| `AuroraScreen` (main Mods+Settings) | Full | Depressed window + raised tiles/chips/layout buttons; `UiLayerCache` static chrome; fps-adaptive smooth scroll; own scrollbar. Sidebar chips/tiles use literal radii 5/6/4 (audit D-note). **Structural pre-dim pass (2026-09-11)**: window + chrome + tiles (tracked scissor, ROW priority) / Settings-tab inline `renderGlassPass` walk → `overlayDim` → cached blit + content; the cache never holds glass |
-| `FeatureDetailScreen` (all 45 detail views) | Full | Depressed window (content-height-sized, scrolls with rows); per-setting glass via `FeatureSetting.renderGlassPass` (geometry-passing); Done/Reset shared glass buttons; `UiLayerCache`; fixed-τ=60 smooth scroll. **Structural pre-dim pass (2026-09-10, the pilot beyond the manager pair)**; `EnumSetting`'s popup above-dim via `aboveDimControl` |
-| `ResourcePackBrowserScreen` | Full (2026-09-04 wave; cards flat 2026-09-08; structural pass 2026-09-11 — rollout complete) | Depressed glass sidebar (`surfaceColor(SURFACE)` tint) + detail modal; active tab's accent-lerp wash IS its glass tint (explicit-tint `control` overload, painted in the pass); tokenized radii; `EditBox` search; own toast/spinner/hover-map/scroll; cards deliberately FLAT (audit R9/B2 closed 2026-09-08: their opaque hover-lerp tint hid the blur, so per-card glass was pure cost + the main pool-exhaustion driver, B1 now halved — install buttons remain glass, DETAIL priority, driven in the pass via the shared `forEachVisibleCard` walk); dim at `0x55` strength via `overlayDim`'s argb overload; modal = above-the-dim layer (`aboveDimContainer` + `beginAboveDim` zone for its buttons) |
-| `ProfileManagerScreen` | Full | Depressed neutral glass rows (selection = Active badge only), glass toolbar buttons; structural glass pass → `overlayDim` → content, `renderBackground` world-gated (audit B3 closed 2026-09-05); row glass pass still uncapped |
-| `WaypointManagerScreen` | Full | Raised glass rows + header buttons; structural glass pass → `overlayDim` → content (audit B4 closed 2026-09-05) |
-| `ColorPickerScreen` | Chrome-only, by design | Apply=stained / Cancel=neutral glass; editing surfaces + hex field opaque; literal radii 4/6; ~2000 fills/frame uncached |
-| `HudEditorScreen` | Chrome-only | Two glass `ButtonWidget`s; opaque editor chrome by design |
-| `EditBoxMixin` search fields (Particles, Item Scale, RP browser, Modules grid + vanilla multiplayer/world-select) | Full | Raised glass, focus = caret + accent hairline; THE canonical search bar |
-| Setting widgets: `EnumSetting`, `KeybindSetting`, `KeyListSetting`, `ItemScaleSetting`(+), `ButtonSetting`, `SegmentedSetting` | Full (defaults on) | Glass pills/buttons; `PixelCanvasSetting` + `StringListSetting` buttons remain flat (inconsistent) |
-| `ThemePreviewSetting` + `SegmentedControl` | Full (original pilot) | Card/chip/segments glass |
-| `WorldMapScreen` | Not started | Flat: void fill + tile blits + `RoundedPanel` prompt + flat buttons; own pan/zoom drag |
-| `AuroraTitleScreen` | Not started | 3 texture blits + flat themed buttons; no `RenderUtil` use at all |
-| `BlurTestScreen` | Dev harness | A/B radii, synthetic capture FBO, lighting presets, `[S]` crash canary |
-| Toggles, sliders, HUD modules, tooltips | Never glass, by convention | Opaque token surfaces |
+| Screen / element | Current unified treatment |
+|---|---|
+| `AuroraScreen`, every `FeatureDetailScreen` | One parent capture, cached neutral face/boundary, embedded controls, soft selection, strong primary actions |
+| Profile and Waypoint managers (`ManagerListScreen`) | One parent list panel; opaque raised rows; active profile wash/halo; toolbar and row actions share Button |
+| `AuroraTitleScreen` | Declared vanilla panorama; one parent for the five-button stack; Settings is primary |
+| `ColorPickerScreen` | One parent for the editor; Apply primary; represented gradients/alpha/checkerboard remain data |
+| `ResourcePackBrowserScreen` | One parent for the browser; embedded sidebar, cards and install actions; soft category selection; opaque detail modal |
+| `HudEditorScreen`, `WorldMapScreen` | Shared themed controls; editor/map data remain visible; map prompt is opaque floating material, with no misleading world capture |
+| Edit boxes, enum/keybind/key-list pills, segments, toggles, sliders, swatches, preview, icon actions | Shared roles/corners; no child capture; enum popup has independent opaque backing |
+| Aurora-styled vanilla world/multiplayer selection | Shared Button painter and themed fields; native interaction/narration/sound remain authoritative |
+| HUD backgrounds, keycaps, alerts | Dark neutral chrome without blur; severity, represented shapes, explicit colors and vanilla/solid background modes retained |
+| `BlurTestScreen` | Diagnostic data/renderer fixture; production adoption does not alter the synthetic reference images |
 
 Settings-widget vocabulary (`screen/setting/`, base class `FeatureSetting`): Boolean, Button,
 Color (embedded HSL picker), DoubleSlider, Enum (dropdown popup; canonical Phase B states are

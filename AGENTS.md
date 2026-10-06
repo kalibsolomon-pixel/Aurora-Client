@@ -310,43 +310,37 @@ the constant; `385e704`).
 
 ## 5. Theme/token architecture (COSMIC-style)
 
-**UNIFIED THEME PILOT (2026-10-06):** the additive Launcher-derived foundation is
-active only in `AuroraScreen` and Theme's `FeatureDetailScreen`. Dark neutrals no
-longer depend on accent inside that boundary; legacy tokens/facade and other hosts
-retain the architecture below. Parent-only blur, cached neutral face/boundary,
-soft selection versus strong action, CSS easing and retained customization are
-specified in [UNIFIED_THEME_PILOT.md](UNIFIED_THEME_PILOT.md). This supersedes the
-old material recipe only in those hosts. Frosted/Wireframe remain stored and active
-on comparison screens. **User visual review is pending; no production rollout.**
+**UNIFIED THEME — production rollout (2026-10-06):** the user accepted the
+Launcher-derived pilot and requested adoption across the mod, plus removal of the
+Frosted/Wireframe option cards. Every production `ThemedScreen` now uses the approved
+material. `UnifiedPalette` roles also project through legacy tokens and `AuroraTheme`,
+so custom rows, cards and remaining facade readers share the neutral hierarchy.
+`theme.GlassStyle` and its persisted field/selector/render guard are retired;
+`ThemeMigrator` removes only the old structured `glassStyle` member from configs
+and profiles. Accent, mode, roundness, density, presets and preview remain.
 
-**Review refinement (2026-10-06):** left selection bars were removed at the user's
-request. Selected peers keep soft fill and a cached accent halo; primary buttons
-gain a slightly stronger cached halo. The parent uses Launcher Borealis diffusion
-(28 logical px blur, bounded by the renderer's 64-device-px cap, saturation 1.35,
-brightness .92). Its single tint alpha maps the saved opacity to a maximum 68%
-density, so default settings expose the backdrop. This is a pilot-only material
-mapping at the existing fill application point, not a schema/default rewrite or a
-second opacity factor in the GPU pipeline. Comparison hosts retain exact opacity.
-The shared renderer also preserves the entry active texture unit and unit-zero
-bindings through vanilla's texture-state cache. Automated screenshot fallback
-captures still intermittently lose glyphs; acceptance and broader rollout remain
-blocked on that visual check (see UNIFIED_THEME_PILOT.md).
+Parents own at most one backdrop capture per frame; the cached neutral face and
+boundary draw above dim on success or decline. Embedded controls never capture.
+Floating tooltips, enum popups and browser/map modals have opaque cached backing.
+Soft selection uses a wash and cached halo, with no left indicator bars; primary
+actions use readable strong fills and a slightly stronger halo. Shared controls,
+custom pills, browser categories/cards and icon actions use the 120 ms CSS easing.
+Blur requests 28 logical px (64 device px cap), saturation 1.35 and brightness .92.
+`WINDOW_FILL` alpha is the sole density application point: saved opacity ×255×.68.
+Saved preference values are not rewritten. Fixed HUD status colors, represented
+item/color/map data and explicit player color overrides remain data. HUD backing
+uses the same Dark neutral family in both UI modes, without live blur.
 
-**The one-sentence model:** the user picks ONE accent color (+ mode, roundness, opacity);
-`PaletteEngine` derives every UI color from it; tokens are read through a cached
-`ResolvedTheme`; legacy statics are a write-only-from-one-place facade.
-
-**Current color baseline (2026-09-24):** Phase D's contrast architecture was implemented,
-manually reviewed, and intentionally reverted for visual preference. Phase C color behavior is
-authoritative while Phase E material refinement proceeds. Do not reintroduce the reverted
-Phase D contrast derivations, readability plates, or semantic status/focus color system unless
-the user explicitly requests a separate conservative contrast effort.
+The old per-element lighting/rim recipes below are historical/diagnostic paths,
+superseded for production by this rollout. The diagnostic `BlurTestScreen` retains
+its synthetic controls and lighting comparisons. Details and verification limits:
+[UNIFIED_THEME_PILOT.md](UNIFIED_THEME_PILOT.md).
 
 ### Data flow (who writes what)
 
 ```
-AuroraConfig.theme : ThemeDefinition   (accent int, ThemeMode, ThemeRoundness, GlassStyle, backgroundOpacity)
-        │  ThemeFeature.onTick → ThemeManager.sync()   (6-field dirty-check per tick)
+AuroraConfig.theme : ThemeDefinition   (accent int, ThemeMode, ThemeRoundness, backgroundOpacity)
+        │  ThemeFeature.onTick → ThemeManager.sync()   (5-field dirty-check per tick)
         ▼
 ThemeManager.reload()  →  ThemeResolver.resolve(def, cfg.themeEnabled)
         ▼                                     │
@@ -367,25 +361,14 @@ ResolvedTheme  (immutable ordinal-indexed int[]; volatile static in ThemeManager
 - **`ThemeManager.reload()`** re-reads config → resolve → project → bump generation. Call
   on config load, profile apply, and any theme edit. **`sync()`** is the per-tick cheap
   dirty-check (accent/mode/roundness/opacity/enabled) that also catches profile switches.
-- **`PaletteEngine`** rules: backgrounds take accent *hue only* with mode-locked lightness
-  (dark ~6–15%, light ~90–97% — a near-white accent can't wash out the UI); text is
-  contrast-checked via relative luminance; simple HSL, never throws on any input.
-- **`ThemeResolver`** has two paths: derived palette (`themeEnabled`) and a verbatim fixed
-  *factory palette* (theme off — intentionally not the derived form of the defaults).
+- **`UnifiedPalette`** is authoritative for production: Dark neutrals are fixed; action states and marker are contrast-checked. `PaletteEngine` supplies the retained Light companion and legacy semantic values.
+- **`ThemeResolver`** resolves unified roles and projects their aliases in both paths: the user definition when enabled, factory OnePlus Red/Dark when off. The off path remembers the user definition for dirty-checking.
   **`applyBackgroundOpacity` stamps the opacity onto the `WINDOW_FILL` token's ALPHA ONLY —
   this is the single opacity application point for the whole UI (§6).**
 - **`ThemeRoundness`** (Stage 3's non-color token): ROUND/SLIGHTLY_ROUND/SQUARE →
   `RADIUS` 10/6/0, `RADIUS_LARGE` 14/8/0, `RADIUS_SMALL` 6/3/0, projected like colors.
   Knobs/thumbs stay circular in every mode.
-- **`GlassStyle`** (the second non-color token): FROSTED (default) / TRANSPARENT.
-  A *rendering-technique* switch, not a look of its own — TRANSPARENT makes
-  `BlurPanelRenderer.renderPanel` decline in a single early-return guard, so every
-  glass consumer takes the flat fallback it is already required to draw (§6
-  fallback contract). No call site knows the setting exists. Corner Style and
-  Background Opacity keep their exact meanings in both styles (they live in the
-  caller's fill, which the renderer never touches), and TRANSPARENT pays none of
-  the capture/blur/readback cost. Surfaced as a `SegmentedSetting` ("Glass Style")
-  between Corner Style and Background Opacity on the Theme screen.
+- **Retired style setting (2026-10-06):** Frosted/Wireframe no longer exist in the UI or schema; config/profile migration drops the old member.
 - **`ThemePresets`**: 9 curated accents (Blue…Teal; RED `0xFFEB0029` "OnePlus Red" is
   factory default). No preset ids stored — just RGB values.
 - **`ThemeMigrator`**: one-way sanitize/migrate of legacy JSON (`themePrimaryColor` →
@@ -743,28 +726,21 @@ Enrollment history: glass started as a Theme-screen pilot, then a staged
 `FeatureDetailScreen`. That mechanism is retired (landed 2026-09-05) — glass
 flags now default ON mod-wide. The table records those legacy material recipes.
 
-**Current override — UNIFIED THEME PILOT (2026-10-06):** `AuroraScreen` and the
-Theme detail view, including its preview and fields, use one parent capture, a cached
-neutral window face, and flat embedded controls with separate primary/selection/focus
-roles. Neither saved Frosted nor Wireframe requests child glass or glossy rims in
-these hosts. Other detail views and comparison screens retain the table's legacy
-recipes. User visual acceptance is pending; see `UNIFIED_THEME_PILOT.md` before rollout.
+**Current production inventory (2026-10-06):**
 
-| Screen | Status | Detail |
-|---|---|---|
-| `AuroraScreen` (main settings) | **Full** | Depressed glass window + raised glass tiles, search chip, profile button, layout buttons; world-gated — and since 2026-09-12 the no-world path draws the shared menu-panorama backdrop + declaration (`GlassSurface.renderMenuPanorama` from `renderBackground`), so opening the screen from the title screen shows real panorama-blurred glass under Frosted instead of the flat fallback (flat look under Wireframe/decline unchanged). **Structural pre-dim pass (2026-09-11)**: `beginGlassPass` → window + chips/Profiles/layout/search field + tiles (tracked scissor, ROW priority) or the Settings tab's inline `renderGlassPass` walk (same scissor) → `overlayDim` → cached blit + content. `UiLayerCache` never holds glass (panels are texture blits bypassing the fill-capture sink); the Theme preview card gained its glass surface here for the first time |
-| `FeatureDetailScreen` (all 45 detail views) | **Full** | Retires `GLASS_PILOT_IDS`; depressed glass window + glass Done/Reset for every feature. **Structural pre-dim pass (2026-09-10, the Part B pilot)**: `beginGlassPass` → every surface (window via `GlassSurface.container`, the four pill widgets, segments, `ButtonSetting`, the search/numeric fields, preview card, Done/Reset) → `GlassSurface.overlayDim` → cached blit + content. UiLayerCache unaffected: panels are texture blits that bypass the fill-capture sink, and the cached chrome stays a content layer above the dim. `EnumSetting`'s expanded popup stays above the dim via `GlassSurface.aboveDimControl` |
-| `ProfileManagerScreen` | **Full** | Rows are this screen's containers: DEPRESSED neutral glass (`WINDOW_FILL` only; the active-row `stainedTint` read as an accent-tinted container — user-flagged twice). Selection shown solely by the accent Active badge; New Profile/Done/Duplicate/Create all neutral raised |
-| Theme screen widgets (`ThemePreviewSetting`, `SegmentedControl`) | **Full** (the original pilot) | Preview card/chips/buttons glass; segments neutral-unselected/stained-selected |
-| `EditBoxMixin` search fields (Particles, Item Scale, ResourcePacks, Modules grid, + themed vanilla screens) | **Full** | Raised glass, focus = caret + accent hairline ring, tint constant; flat fallback without a world |
-| Setting widgets: `EnumSetting` (button + expanded popup), `KeybindSetting`, `KeyListSetting`, `ItemScaleSetting`, `ButtonSetting`, `SegmentedSetting` | **Full** (defaults flipped opt-in → default-on) | `FeatureRegistry` still contains now-redundant `.glassButton(true)`/`.glassSegments(true)` "pilot" calls (lines ~86, 96, 180, 292) — harmless cleanup candidates |
-| `ColorPickerScreen` | **Chrome-only, by design** | Apply = STAINED, Cancel = neutral raised; editing surfaces + hex field deliberately opaque |
-| `HudEditorScreen` | **Chrome-only** | Two floating action buttons, neutral raised ("navigation action, not a primary state") |
-| `WaypointManagerScreen` | **Full** | Raised glass rows + header/add buttons |
-| `ResourcePackBrowserScreen` | **Full** (2026-09-04; cards flat 2026-09-08; structural pass 2026-09-11 — closing the rollout) | Depressed glass sidebar (SURFACE-token tint via `GlassSurface.container`) + detail modal; **cards FLAT by decision (audit R9/B2)** — their opaque hover-lerp tint fully occluded the blur, so per-card glass was pure cost and the main output-pool driver (B1 halved; each card's install button is still a glass `Button`, DETAIL priority, driven in the pass under the tracked grid clip via the shared `forEachVisibleCard` culling walk with `drivenPhase` stamping); active category tab = raised glass whose accent-lerp wash IS its tint (the explicit-tint `GlassSurface.control` overload, evaluated in the pass); the dim runs at this screen's original `0x55` strength through `overlayDim`'s argb overload; the detail modal is the screen's one ABOVE-the-dim layer — panel via `GlassSurface.aboveDimContainer`, its buttons driven inside a `beginAboveDim`/`endAboveDim` zone; inactive tabs stay flat by design — small transient rows inside an already-glass container; install/Retry/Close buttons are the shared `Button` painter (Install = stained primary, Retry = destructive, progress/Done = neutral; **success-green is not expressible through `Button` — mapped to stained/neutral, flagged**); `renderBackground` world-gating; tokenized radii. Thumbnails, toast, scrollbars stay opaque/unchanged per convention |
-| `WorldMapScreen` | **Chrome-only** (2026-09-08) | The 3 toolbar buttons + the prompt's Cancel in NEUTRAL raised glass (`ButtonWidget.glassBackground`), prompt Create in STAINED (primary-action convention), and the create-waypoint prompt itself on DEPRESSED `GlassSurface.container` glass (WINDOW priority, `WINDOW_FILL` tint — the pack-browser detail-modal treatment; flat `RoundedPanel` fallback on decline); the name field was already raised glass via `EditBoxMixin`. `renderBackground` world-gate added (skip vanilla backdrop sandwich in-world — also saves its blur post-chain under a viewport the map fills anyway). Map content — void, tiles, waypoint markers, player arrow, bottom readouts — deliberately untouched; the readouts keep hardcoded white/gray because they float over map data where a mode-locked `ON_*` text token could go dark-on-dark in light mode. Glass samples the live backdrop behind the screen, NOT the map tiles: 1.21.11's deferred `GuiRenderState` means tile blits never reach the main target before the blur pass reads it — the same physics every glass surface has (only eager passes, like the title screen's panorama, are capturable) |
-| `AuroraTitleScreen` | **Chrome-only** (2026-09-08) | 5 floating glass buttons over the live vanilla panorama (4 neutral raised, Aurora Settings accent-stained — the ColorPicker-Apply convention); custom logo/backdrop/starfield blits and their PNGs removed (`title_background.png` went too when the selection-screen starfield was removed 2026-09-12). The screen calls `renderPanorama` then `BlurPanelRenderer.noteMenuBackdropDrawn()` — the frame-scoped declaration that is the one menu-context-guard exemption (§6 convention 5) — so the buttons blur the panorama through the ordinary world-reader capture; flat fallback whenever glass declines |
-| Toggles, sliders, HUD modules, tooltips/dropdowns-as-tooltips | **Never glass, by convention** | Opaque token surfaces |
+| Screen / element | Current unified treatment |
+|---|---|
+| `AuroraScreen`, every `FeatureDetailScreen` | One parent capture, cached neutral face/boundary, embedded controls, soft selection, strong primary actions |
+| Profile and Waypoint managers (`ManagerListScreen`) | One parent list panel; opaque raised rows; active profile wash/halo; toolbar and row actions share Button |
+| `AuroraTitleScreen` | Declared vanilla panorama; one parent for the five-button stack; Settings is primary |
+| `ColorPickerScreen` | One parent for the editor; Apply primary; represented gradients/alpha/checkerboard remain data |
+| `ResourcePackBrowserScreen` | One parent for the browser; embedded sidebar, cards and install actions; soft category selection; opaque detail modal |
+| `HudEditorScreen`, `WorldMapScreen` | Shared themed controls; editor/map data remain visible; map prompt is opaque floating material, with no misleading world capture |
+| Edit boxes, enum/keybind/key-list pills, segments, toggles, sliders, swatches, preview, icon actions | Shared roles/corners; no child capture; enum popup has independent opaque backing |
+| Aurora-styled vanilla world/multiplayer selection | Shared Button painter and themed fields; native interaction/narration/sound remain authoritative |
+| HUD backgrounds, keycaps, alerts | Dark neutral chrome without blur; severity, represented shapes, explicit colors and vanilla/solid background modes retained |
+| `BlurTestScreen` | Diagnostic data/renderer fixture; production adoption does not alter the synthetic reference images |
+
 
 `BlurTestScreen` is the development harness (A/B radius toggles, synthetic capture FBO,
 `CaptureSource` override, lighting presets) — not user-facing.

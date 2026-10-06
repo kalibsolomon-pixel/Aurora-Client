@@ -36,7 +36,7 @@ public class Button extends Widget {
     private static final long PRESS_DOWN_MS = 90L;
     private static final long PRESS_UP_MS = 180L;
 
-    private final Component label;
+    private Component label;
     private final Runnable onPress;
     private boolean primary;
 
@@ -198,6 +198,9 @@ public class Button extends Widget {
         this.glassStyle = s;
         return this;
     }
+
+    /** Update a vanilla-backed label without replacing its animation state. */
+    public Button label(Component value) { this.label=value; return this; }
 
     public Component label() {
         return label;

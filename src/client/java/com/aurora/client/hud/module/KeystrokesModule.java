@@ -74,7 +74,10 @@ public class KeystrokesModule extends HudModule {
 
     // ---- Palette ----
     /** Idle key fill: ~18% white glass over the backing panel. */
-    private static final int KEY_IDLE_BG = 0x2EFFFFFF;
+    private static int idleBackground() {
+        return com.aurora.client.theme.ThemeManager.withAlpha(com.aurora.client.theme.ThemeManager.color(
+                com.aurora.client.theme.ThemeToken.HUD_BACKDROP_TOP),0xCC);
+    }
 
     // ---- Press animation speeds (lerp factors, per second) ----
     private static final float PRESS_SPEED = 26f;
@@ -284,7 +287,7 @@ public class KeystrokesModule extends HudModule {
         float t = press[slot];
         int grow = t >= 0.5f ? 1 : 0;
         RoundedRect.fill(ctx, x - grow, y - grow, x + w + grow, y + h + grow,
-                KEY_RADIUS, blend(KEY_IDLE_BG, accent, t));
+                KEY_RADIUS, blend(idleBackground(), accent, t));
 
         String label = labels[slot];
         if (label == null || label.isEmpty()) return;

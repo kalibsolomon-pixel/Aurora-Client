@@ -41,7 +41,7 @@ import net.minecraft.network.chat.Component;
  * paints in the content pass through {@code GlassSurface.aboveDimControl}.
  */
 public class FeatureDetailScreen extends Screen implements ThemedScreen {
-    @Override public boolean unifiedThemePilot() { return "theme".equals(meta.id); }
+    @Override public boolean unifiedTheme() { return true; }
 
 
     private static final int LIST_W = 320;
@@ -143,7 +143,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
                 Component.literal("Done"),
                 "Close this screen and return.",
                 this::onClose).glassBackground(true);
-        this.doneBtn.primary(unifiedThemePilot());
+        this.doneBtn.primary(unifiedTheme());
         this.addRenderableWidget(this.doneBtn);
 
         // Reset-to-defaults button immediately to the left of Done. Persists
@@ -436,14 +436,14 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
 
         // Design language §1 — screen title + attached subtitle. One title
         // per detail screen: the feature's name, full-strength
-        // ON_BACKGROUND, left-aligned above the window at the content
+        // ON_OVERLAY, left-aligned above the window at the content
         // column's text margin. The spec believed this title already
         // existed ("no change to its existing token or position") — it
         // never did; the TITLE_* constants this implements were reserved
         // in the initial commit and never drawn, so the first clause (one
         // title per screen) is the evident intent being implemented. The
         // optional credit line (FeatureMetadata.subtitle) is ATTACHED
-        // directly beneath the title in ON_BACKGROUND_SECONDARY, no extra
+        // directly beneath the title in subdued ON_OVERLAY, no extra
         // margin — replacing the old placement vertically centered on the
         // Done row. "Smaller" collapses to the app's single 9px type size;
         // Aurora has no large/bold text idiom and inventing one (pose-
@@ -451,11 +451,11 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         if (this.font != null) {
             int titleX = listX + 12;
             ctx.drawString(this.font, meta.displayName, titleX, TITLE_Y,
-                    MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
+                    ThemeManager.color(ThemeToken.ON_OVERLAY), false);
             if (meta.subtitle != null && !meta.subtitle.isEmpty()) {
                 ctx.drawString(this.font, meta.subtitle, titleX,
                         TITLE_Y + this.font.lineHeight + 1,
-                        MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
+                        ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_OVERLAY),0xAA), false);
             }
         }
 
@@ -625,7 +625,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
      */
     @Override
     public void removed() {
-        if(unifiedThemePilot()) MaterialSurface.disposeTemplates();
+        if(unifiedTheme()) MaterialSurface.disposeTemplates();
         closeTransientState();
         super.removed();
     }

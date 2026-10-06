@@ -1,23 +1,9 @@
 package com.aurora.client.theme;
 
-/**
- * The single home of the theme's color derivation. Stage 1 kept a verbatim
- * port of the legacy {@code AuroraTheme.updateColors()} here; Stage 2
- * replaces that with the real COSMIC-style engine in {@link PaletteEngine} —
- * a pure function (accent + mode in, full token set out) that derives the
- * entire palette from a single accent color.
- *
- * <p>The additive Launcher-derived unified roles resolve alongside this
- * compatibility palette. Only the two unified pilot hosts read those roles;
- * legacy tokens and facade projection remain unchanged (UNIFIED_THEME_PILOT.md).
- *
- * <p>Two resolution paths exist:
- * <ul>
- *   <li><b>Accents enabled</b> (user theme on): every token is derived by
- *       {@link PaletteEngine#derive} from the definition's accent + mode.</li>
- *   <li><b>Accents disabled</b>: a fixed factory palette is used (unchanged
- *       from Stage 1, so the "theme off" look is stable).</li>
- * </ul>
+/** Resolves the approved Launcher-derived material roles for every UI consumer.
+ * Dark neutrals are independent of accent; Light retains the Client companion.
+ * Legacy tokens project the same roles through AuroraTheme. Saved identity and
+ * customization remain intact, including while the fixed factory theme is active.
  */
 public final class ThemeResolver {
 
@@ -41,16 +27,16 @@ public final class ThemeResolver {
         int accent = PaletteEngine.normalizeAccent(def.accent);
         int[] c = PaletteEngine.derive(accent, def.mode);
         UnifiedPalette.populate(c, accent, def.mode);
+        applyUnifiedRoles(c);
         applyBackgroundOpacity(c, def.backgroundOpacity);
         return new ResolvedTheme(def, true, c);
     }
 
     /**
      * The fixed factory palette used when the user's custom colors are
-     * disabled. Verbatim copy of the legacy "restore defaults" table
-     * (including the former {@code HudBackgrounds} HUD constants) — see
-     * the class javadoc for why this is intentionally not the derived
-     * form of the default seeds.
+     * disabled. The legacy seed table preserves fixed identity colors;
+     * unified roles then project the same neutral Red/Dark chrome as the
+     * enabled theme without changing the user's stored definition.
      */
     public static ResolvedTheme factoryPalette() {
         return factoryPalette(ThemeDefinition.defaults());
@@ -120,21 +106,59 @@ public final class ThemeResolver {
         c[ThemeToken.HUD_BACKDROP_BOT.ordinal()]       = 0xFF0A4DBF;
 
         UnifiedPalette.populate(c, ThemeDefinition.DEFAULT_ACCENT, ThemeMode.DARK);
+        applyUnifiedRoles(c);
         applyBackgroundOpacity(c, source.backgroundOpacity);
 
         return new ResolvedTheme(source, false, c);
     }
 
-    /**
-     * Re-stamp the panel/window fill's <b>alpha channel only</b> to the
-     * user's background opacity — hue and lightness stay untouched, so the
-     * opacity slider adjusts translucency, never color. Opacity is expected
-     * to arrive already normalized ({@link ThemeDefinition#copyOf} does
-     * that); this method clamps defensively anyway.
-     */
+    /** Project the unified roles through every existing token/facade reader. */
+    private static void applyUnifiedRoles(int[] c) {
+        c[ThemeToken.SECONDARY_ACCENT.ordinal()] = c[ThemeToken.ACCENT_MARKER.ordinal()];
+        c[ThemeToken.BORDER_ACCENT_HOVER.ordinal()] = c[ThemeToken.ACCENT_MARKER.ordinal()];
+        c[ThemeToken.BACKGROUND.ordinal()] = c[ThemeToken.MATERIAL_CANVAS.ordinal()];
+        c[ThemeToken.SURFACE.ordinal()] = c[ThemeToken.MATERIAL_PANEL.ordinal()];
+        c[ThemeToken.WINDOW_FILL.ordinal()] = c[ThemeToken.MATERIAL_PANEL.ordinal()];
+        c[ThemeToken.SURFACE_VARIANT.ordinal()] = c[ThemeToken.MATERIAL_RAISED.ordinal()];
+        c[ThemeToken.SURFACE_INSET.ordinal()] = c[ThemeToken.MATERIAL_SUNKEN.ordinal()];
+        c[ThemeToken.BORDER.ordinal()] = c[ThemeToken.MATERIAL_BORDER.ordinal()];
+        c[ThemeToken.WINDOW_OUTLINE.ordinal()] = c[ThemeToken.MATERIAL_BORDER.ordinal()];
+        c[ThemeToken.BORDER_HOVER.ordinal()] = c[ThemeToken.MATERIAL_BORDER_STRONG.ordinal()];
+        c[ThemeToken.WINDOW_HIGHLIGHT.ordinal()] = c[ThemeToken.MATERIAL_BORDER_STRONG.ordinal()];
+        c[ThemeToken.ON_BACKGROUND.ordinal()] = c[ThemeToken.MATERIAL_TEXT.ordinal()];
+        c[ThemeToken.ON_SURFACE.ordinal()] = c[ThemeToken.MATERIAL_TEXT.ordinal()];
+        c[ThemeToken.ON_BACKGROUND_SECONDARY.ordinal()] = c[ThemeToken.MATERIAL_TEXT_SECONDARY.ordinal()];
+        c[ThemeToken.ON_BACKGROUND_MUTED.ordinal()] = c[ThemeToken.MATERIAL_TEXT_MUTED.ordinal()];
+        c[ThemeToken.ON_BACKGROUND_FAINT.ordinal()] = c[ThemeToken.MATERIAL_TEXT_MUTED.ordinal()];
+        c[ThemeToken.ON_ACCENT.ordinal()] = c[ThemeToken.ON_ACTION.ordinal()];
+        c[ThemeToken.ACCENT_HOVER.ordinal()] = c[ThemeToken.ACTION_HOVER.ordinal()];
+        c[ThemeToken.ACCENT_PRESSED.ordinal()] = c[ThemeToken.ACTION_PRESSED.ordinal()];
+        c[ThemeToken.ACCENT_GRAD_TOP.ordinal()] = c[ThemeToken.ACTION_STRONG.ordinal()];
+        c[ThemeToken.ACCENT_GRAD_TOP_HOVER.ordinal()] = c[ThemeToken.ACTION_HOVER.ordinal()];
+        c[ThemeToken.ACCENT_GRAD_BOT.ordinal()] = c[ThemeToken.ACTION_STRONG.ordinal()];
+        c[ThemeToken.TILE_FILL.ordinal()] = c[ThemeToken.MATERIAL_RAISED.ordinal()];
+        c[ThemeToken.TILE_FILL_HOVER.ordinal()] = c[ThemeToken.MATERIAL_HOVER.ordinal()];
+        c[ThemeToken.TILE_GRAD_TOP.ordinal()] = c[ThemeToken.MATERIAL_RAISED.ordinal()];
+        c[ThemeToken.TILE_GRAD_BOT.ordinal()] = c[ThemeToken.MATERIAL_RAISED.ordinal()];
+        c[ThemeToken.TILE_OUTLINE.ordinal()] = c[ThemeToken.MATERIAL_BORDER.ordinal()];
+        c[ThemeToken.TILE_OUTLINE_STRONG.ordinal()] = c[ThemeToken.MATERIAL_BORDER_STRONG.ordinal()];
+        // World-overlay backing remains dark in both UI modes so fixed HUD
+        // status hues and explicit player-selected text colors retain their context.
+        c[ThemeToken.HUD_BACKDROP_TOP.ordinal()] = 0xff16171d;
+        c[ThemeToken.HUD_BACKDROP_BOT.ordinal()] = 0xff1d1f27;
+        c[ThemeToken.BACKDROP_TOP_DARK.ordinal()] = c[ThemeToken.MATERIAL_CANVAS.ordinal()];
+        c[ThemeToken.BACKDROP_TOP_LIGHT.ordinal()] = c[ThemeToken.MATERIAL_PANEL.ordinal()];
+        c[ThemeToken.BACKDROP_BOT_DARK.ordinal()] = c[ThemeToken.MATERIAL_SUNKEN.ordinal()];
+        c[ThemeToken.BACKDROP_BOT_LIGHT.ordinal()] = c[ThemeToken.MATERIAL_CANVAS.ordinal()];
+    }
+
+    /** Single window-density mapping; saved preferences remain unchanged. */
+    public static int backgroundAlpha(double opacity) {
+        return Math.round((float)ThemeDefinition.normalizedOpacity(opacity) * 255f * .68f);
+    }
+
     private static void applyBackgroundOpacity(int[] colors, double opacity) {
-        if (Double.isNaN(opacity)) opacity = ThemeDefinition.DEFAULT_BACKGROUND_OPACITY;
-        int alpha = Math.round((float) Math.max(0d, Math.min(1d, opacity)) * 255f);
+        int alpha = backgroundAlpha(opacity);
         int fill = colors[ThemeToken.WINDOW_FILL.ordinal()];
         colors[ThemeToken.WINDOW_FILL.ordinal()] = (alpha << 24) | (fill & 0x00FFFFFF);
     }

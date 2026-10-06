@@ -72,12 +72,6 @@ public final class ResolvedTheme {
     /** Panel/window background alpha, 0..1 (always normalized). */
     public double backgroundOpacity() { return source.backgroundOpacity; }
 
-    /**
-     * Whether panels render as blurred glass or flat translucent fills
-     * (never null — normalized). Read by {@code BlurPanelRenderer} as an
-     * early-return guard; see {@link GlassStyle}.
-     */
-    public GlassStyle glassStyle() { return source.glassStyle; }
 
     /**
      * Pastel tone (opaque ARGB) of the currently selected accent — the

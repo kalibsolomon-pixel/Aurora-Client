@@ -263,7 +263,7 @@ public final class SemanticFamilyManifest {
             java.util.Map.entry(SRC + "ui/component/ColorSwatch.java", "HoverAnim.symmetric(140"),
             java.util.Map.entry(SRC + "ui/component/SegmentedControl.java", "HoverAnim.symmetric(140"),
             java.util.Map.entry(SRC + "ui/component/IconAction.java", "HoverAnim.symmetric(HOVER_MS"),
-            java.util.Map.entry(SRC + "mixin/AbstractButtonMixin.java", "HoverAnim.symmetric(140"),
+            java.util.Map.entry(SRC + "mixin/AbstractButtonMixin.java", "@Unique private Button aurora$painter"),
             java.util.Map.entry(SRC + "screen/setting/EnumSetting.java", "HoverAnim.symmetric(140"),
             java.util.Map.entry(SRC + "screen/setting/KeybindSetting.java", "HoverAnim.symmetric(140"),
             java.util.Map.entry(SRC + "screen/setting/KeyListSetting.java", "HoverAnim.symmetric(140"),

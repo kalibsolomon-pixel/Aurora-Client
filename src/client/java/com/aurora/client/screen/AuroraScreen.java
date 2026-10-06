@@ -112,7 +112,7 @@ import java.util.Map;
  * silent no-op on the active layout, Left/Right ring).
  */
 public class AuroraScreen extends Screen implements ThemedScreen {
-    @Override public boolean unifiedThemePilot() { return true; }
+    @Override public boolean unifiedTheme() { return true; }
 
 
     /** §8.3 canonical hover duration — sidebar chrome, cards, headers alike (C-2b). */
@@ -1611,7 +1611,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
 
     @Override
     public void removed() {
-        if(unifiedThemePilot()) MaterialSurface.disposeTemplates();
+        if(unifiedTheme()) MaterialSurface.disposeTemplates();
         invalidateSettingsSemantics();
         FeatureSetting.clearHostBand(); // C-8 — drop the published host band
         super.removed();

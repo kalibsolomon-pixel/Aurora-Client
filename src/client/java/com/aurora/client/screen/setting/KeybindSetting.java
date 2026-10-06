@@ -3,6 +3,7 @@ package com.aurora.client.screen.setting;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.component.GlassSurface;
+import com.aurora.client.ui.component.MaterialSurface;
 import com.aurora.client.ui.component.Widget;
 import com.aurora.client.ui.interaction.MinecraftSemanticFeedback;
 import com.aurora.client.ui.interaction.SemanticAction;
@@ -97,6 +98,8 @@ public class KeybindSetting extends FeatureSetting {
     private int lastWidth = 240;
     private boolean listening = false;
     private final HoverAnim hoverAnim = HoverAnim.symmetric(140L);
+    private final com.aurora.client.ui.util.TimedTransition materialHover = new com.aurora.client.ui.util.TimedTransition(
+            120,com.aurora.client.ui.util.CubicBezier.EASE,0);
     private boolean focusedVisual = false;
     private SemanticActionControl interactionControl;
 
@@ -157,6 +160,7 @@ public class KeybindSetting extends FeatureSetting {
 
         boolean hover = Widget.inBounds(mouseX, mouseY, btnX, btnY, BTN_W, BTN_H);
         float hT = hoverAnim.update(hoverTarget(hover, disabled));
+        if (MaterialSurface.unified()) hT = materialHover.update(hoverTarget(hover, disabled) ? 1 : 0,System.nanoTime());
 
         if (interactionControl != null) {
             interactionControl.setBounds(btnX, btnY, BTN_W, BTN_H);
@@ -193,7 +197,9 @@ public class KeybindSetting extends FeatureSetting {
         } else {
             glassOk = false;
         }
-        if (!glassOk) {
+        if (MaterialSurface.unified()) {
+            MaterialSurface.selection(ctx,btnX,btnY,BTN_W,BTN_H,AuroraTheme.RADIUS_SMALL,listening,disabled ? 0 : hT);
+        } else if (!glassOk) {
             RenderUtil.drawSquircle(ctx, btnX, btnY, BTN_W, BTN_H, AuroraTheme.RADIUS_SMALL,
                     listening ? AuroraTheme.IOS_BLUE_PRESSED : fillTint);
             RenderUtil.drawSquircleOutline(ctx, btnX, btnY, BTN_W, BTN_H, AuroraTheme.RADIUS_SMALL, 1.0f,
@@ -210,7 +216,7 @@ public class KeybindSetting extends FeatureSetting {
         // Trim long names so they fit in the pill (keep at least 3 chars + ellipsis).
         labelText = AuroraFontRenderer.ellipsize(tr, labelText, BTN_W - 8, 3);
         int labelW = tr.width(labelText);
-        int textCol = listening ? ThemeManager.color(ThemeToken.ON_ACCENT) : textColor;
+        int textCol = listening ? MaterialSurface.color(ThemeToken.ON_BACKGROUND) : textColor;
         ctx.drawString(tr, labelText,
                 btnX + (BTN_W - labelW) / 2,
                 btnY + (BTN_H - tr.lineHeight) / 2 + 1,

@@ -376,26 +376,13 @@ Do not over-layer glass. Nested material levels must explain structure, not show
 renderer. Small transient rows inside an already-material container may remain flat when a
 second glass layer adds no semantic depth or when its opaque content would hide the material.
 
-**Nested-material ownership rule (Phase E pilot):** an enclosing window or panel owns the
-backdrop sample, blur, and outer rim. A child that is only an interaction subdivision of that
-same region uses an embedded control treatment: a centrally derived local tint plus its
-existing hover/focus/state overlays, with no second backdrop sample and no child rim. A child
-still requests isolated glass when it is a genuinely separate raised object, crosses a parent
-boundary, or floats independently. Stained state remains permitted on an embedded control;
-the stain communicates selection/primary emphasis, not another structural layer. A selected
-card or selected peer may instead remain isolated raised stained glass when frost,
-directional lighting, and the glossy rim are the product's intended persistent highlight;
-Aurora's enabled module cards and selected navigation/view peers are canonical exceptions.
-Their unselected peers remain neutral raised glass when the whole control group is intended
-to read as a set of physical frosted controls.
-
-**UNIFIED THEME PILOT override (2026-10-06):** that isolated stained-card exception
-remains a compatibility recipe outside the pilot. Inside `AuroraScreen` and the Theme
-detail view, selected cards/navigation use embedded soft selection plus a cached
-accent halo, primary buttons use solid action roles and a slightly stronger halo,
-and no child requests glass or a
-glossy rim. The parent owns the only capture; floating tooltips use independent opaque
-cached material. Review remains pending; see `UNIFIED_THEME_PILOT.md`.
+**Production ownership rule (approved 2026-10-06):** one enclosing parent owns
+the backdrop capture/blur. Its neutral cached face and edge draw after dim even when
+capture declines. Every embedded control/selected peer stays flat; soft selection
+wash/halo and strong primary action are distinct roles, with no left indicator bars
+or glossy child rims. Independently floating tooltip/popup/modal faces are opaque
+cached material with restrained elevation. Old isolated stained-card exceptions are
+superseded in production. See `UNIFIED_THEME_PILOT.md` for the approved rollout.
 
 Floating tooltip material is stable token-backed chrome rather than live glass. It uses one
 low-emphasis edge and shadow, respects theme roundness, and does not inherit the window's
@@ -409,7 +396,7 @@ The following are both design and renderer-safety rules:
 - Background Opacity has one application point: `WINDOW_FILL` alpha. Do not multiply a
   second opacity factor into the material. Centrally defined rim/frost derivations from that
   value are not additional user-facing opacity controls.
-- Containers are depressed; controls are raised; stained surfaces remain selected/primary.
+- Production parents use neutral lighting; children are flat. Raised/depressed lighting presets remain renderer diagnostic references.
 - Every glass surface body is submitted before the screen dim. Content is drawn after the
   dim. Deferred rim finishing occurs at the established phase boundary.
 - Popup/modal surfaces intentionally above the dim use the explicit above-dim path.
@@ -1048,23 +1035,31 @@ at a time through the roadmap below.
 
 ## 18. Implementation roadmap
 
-**UNIFIED THEME PILOT (2026-10-06):** the Launcher-derived Dark role system and
-120 ms CSS-ease control recipe now have a controlled production pilot in
-`AuroraScreen` and Theme detail/preview. The existing interaction contracts remain
-binding; visual/motion recipes below continue on comparison hosts. Within the pilot,
-selected uses soft tint + restrained cached glow (left bars removed on user review),
-primary uses a readable strong solid with a slightly stronger cached glow,
-parents own capture, embedded children do not, and floating tooltips own stable
-opaque backing with a cached shadow. ROUND/SQUARE and opacity remain customization,
-Light is compatibility-only, and Frosted/Wireframe remain persisted outside the
-pilot. [UNIFIED_THEME_PILOT.md](UNIFIED_THEME_PILOT.md) is the precise pilot record.
-**Visual acceptance is pending; this is not Phase E or production-rollout closure.**
+**UNIFIED THEME — production rollout (2026-10-06):** the user accepted the
+Launcher-derived pilot and requested adoption across the mod, plus removal of the
+Frosted/Wireframe option cards. Every production `ThemedScreen` now uses the approved
+material. `UnifiedPalette` roles also project through legacy tokens and `AuroraTheme`,
+so custom rows, cards and remaining facade readers share the neutral hierarchy.
+`theme.GlassStyle` and its persisted field/selector/render guard are retired;
+`ThemeMigrator` removes only the old structured `glassStyle` member from configs
+and profiles. Accent, mode, roundness, density, presets and preview remain.
 
-The review refinement adopts Launcher's Borealis backdrop diffusion: 28 logical px
-blur (existing 64-device-px safety cap), saturation 135%, brightness 92%. Parent tint
-uses the saved opacity as density with a 68% maximum, applied only once by the
-cached face. Maximum density now retains a diffuse backdrop in the pilot; comparison
-screens retain their prior opacity behavior. The tooltip remains independently opaque.
+Parents own at most one backdrop capture per frame; the cached neutral face and
+boundary draw above dim on success or decline. Embedded controls never capture.
+Floating tooltips, enum popups and browser/map modals have opaque cached backing.
+Soft selection uses a wash and cached halo, with no left indicator bars; primary
+actions use readable strong fills and a slightly stronger halo. Shared controls,
+custom pills, browser categories/cards and icon actions use the 120 ms CSS easing.
+Blur requests 28 logical px (64 device px cap), saturation 1.35 and brightness .92.
+`WINDOW_FILL` alpha is the sole density application point: saved opacity ×255×.68.
+Saved preference values are not rewritten. Fixed HUD status colors, represented
+item/color/map data and explicit player color overrides remain data. HUD backing
+uses the same Dark neutral family in both UI modes, without live blur.
+
+The old per-element lighting/rim recipes below are historical/diagnostic paths,
+superseded for production by this rollout. The diagnostic `BlurTestScreen` retains
+its synthetic controls and lighting comparisons. Details and verification limits:
+[UNIFIED_THEME_PILOT.md](UNIFIED_THEME_PILOT.md).
 
 Every phase begins with a narrow pilot and evidence review before broad rollout.
 

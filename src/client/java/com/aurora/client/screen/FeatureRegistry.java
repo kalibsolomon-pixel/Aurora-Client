@@ -4,7 +4,6 @@ import com.aurora.client.AuroraClient;
 import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.config.profile.ProfileManager;
 import com.aurora.client.screen.setting.*;
-import com.aurora.client.theme.GlassStyle;
 import com.aurora.client.theme.ThemeMode;
 import com.aurora.client.theme.ThemeRoundness;
 import net.minecraft.core.particles.ParticleType;
@@ -526,7 +525,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                 .description("Text color shared by the plain-readout HUD modules (this one, CPS, Stats, Totem Pops, Reach, Armor text, Keystrokes labels and Ping's unknown state). Defaults to following your theme accent; pick an explicit color to override it."),
                         new EnumSetting<>("Background", AuroraConfig.HudBackground.class,
                                 () -> cfg.infoBgMode, v -> cfg.infoBgMode = v)
-                                .description("Backdrop drawn behind the HUD text. NONE is transparent; SOLID fills a panel with the color below (best for readability over bright scenery); other modes use the theme's blurred/translucent styles."),
+                                .description("Backdrop drawn behind the HUD text. NONE is transparent; SOLID fills a panel with the color below (best for readability over bright scenery); AURORA uses neutral themed chrome; VANILLA uses Minecraft's slot texture."),
                         new ColorSetting("Background Color (when SOLID)",
                                 () -> cfg.infoBgColor, v -> cfg.infoBgColor = v)
                                 .description("The fill color and opacity used when Background is set to SOLID. Ignored for other background modes.")
@@ -1094,7 +1093,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                 List.of("fixHeldItemSeams", "heldItemInflation"));
 
         add(SETTINGS, "custom_title", "Custom Title",
-                "Replaces Minecraft's default main menu with Aurora's themed title screen — glass buttons floating over the vanilla panorama — and themes the buttons and search field on the world-select and multiplayer screens. Purely cosmetic; turn it off to restore the vanilla menu. Takes effect the next time you return to the main menu.",
+                "Replaces Minecraft's default main menu with Aurora's themed title screen — a diffuse panel and themed buttons over the vanilla panorama — and themes the buttons and search field on the world-select and multiplayer screens. Purely cosmetic; turn it off to restore the vanilla menu. Takes effect the next time you return to the main menu.",
                 () -> cfg.customTitleScreen, v -> cfg.customTitleScreen = v);
 
         addWithSettings(MODULES, "resourcepack_browser", "Resourcepack Browser",
@@ -1131,7 +1130,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                 ));
 
         addWithSettings(SETTINGS, "theme", "Theme",
-                "Customize Aurora Client's appearance, COSMIC-style: pick one accent color and the whole palette — backgrounds, surfaces, text — is derived automatically and stays legible. Light and dark mode, corner roundness, and background opacity included.",
+                "Customize Aurora's accent color, light or dark mode, corner style, and the density of its diffuse panel backgrounds.",
                 () -> cfg.themeEnabled, v -> cfg.themeEnabled = v,
                 List.of(
                         new AccentSetting("Accent Color",
@@ -1141,7 +1140,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                     com.aurora.client.theme.ThemeManager.reload();
                                     persistThemeChange();
                                 })
-                                .description("The one color the whole theme is built from. Pick a preset swatch, or open Custom to use the color picker — every background, border, and text color is derived from it automatically."),
+                                .description("The color used for primary actions, selections, highlights and HUD accents. Pick a preset swatch, or open Custom to use the color picker."),
                         new SegmentedSetting<>("Mode", ThemeMode.class,
                                 () -> cfg.themeOrDefault().mode != null ? cfg.themeOrDefault().mode : ThemeMode.DARK,
                                 v -> {
@@ -1150,7 +1149,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                     persistThemeChange();
                                 })
                                 .glassSegments(true) // glass pilot: Theme screen only
-                                .description("Whether Aurora's UI renders in a dark or light palette. Both are derived from your accent, with text contrast checked automatically. There is no Auto mode — Minecraft has no reliable OS dark-mode signal."),
+                                .description("Choose a dark or light appearance. Your accent color stays selected in either mode."),
                         new SegmentedSetting<>("Corner Style", ThemeRoundness.class,
                                 () -> cfg.themeOrDefault().roundness != null ? cfg.themeOrDefault().roundness : ThemeRoundness.ROUND,
                                 v -> {
@@ -1161,16 +1160,6 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                 ThemeRoundness::displayName)
                                 .glassSegments(true) // glass pilot: Theme screen only
                                 .description("How round Aurora's panels and buttons are: Round (the classic look), Slightly Round, or Square. Applies everywhere corners are drawn — including this screen."),
-                        new SegmentedSetting<>("Glass Style", GlassStyle.class,
-                                () -> cfg.themeOrDefault().glassStyle != null ? cfg.themeOrDefault().glassStyle : GlassStyle.FROSTED,
-                                v -> {
-                                    cfg.themeOrDefault().glassStyle = v;
-                                    com.aurora.client.theme.ThemeManager.reload();
-                                    persistThemeChange();
-                                },
-                                GlassStyle::displayName)
-                                .glassSegments(true)
-                                .description("Compatibility style for screens outside the unified theme pilot. Frosted blurs panel backgrounds; Wireframe uses a flat translucent fill. The Aurora settings window and Theme preview use the unified parent material in both choices. Corner Style and Background Opacity still apply."),
                         new ThemeOpacitySetting("Background Opacity",
                                 () -> cfg.themeOrDefault().backgroundOpacity,
                                 v -> {
@@ -1178,7 +1167,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                     com.aurora.client.theme.ThemeManager.reload();
                                     persistThemeChange();
                                 })
-                                .description("How dense Aurora's panel backgrounds are. The unified pilot keeps a frosted backdrop visible at 100%; lower values make it clearer. Other screens keep their existing opacity behavior. Drag previews the change live; release saves it."),
+                                .description("How dense Aurora's panel backgrounds are. The unified material keeps a diffuse backdrop visible at 100%; lower values make it clearer. Drag previews the change live; release saves it."),
                         new ThemePreviewSetting("Live Preview")
                                 .description("A live mock-up using the exact colors and corner style the UI will use — changes apply here instantly, before you leave this screen.")
                 ));

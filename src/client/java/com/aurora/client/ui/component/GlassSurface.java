@@ -16,6 +16,11 @@ import java.util.List;
 import java.util.Set;
 
 /**
+ * The shared material coordinator. Unified production screens allow one neutral
+ * WINDOW-priority parent capture per frame, with cached face/boundary above dim;
+ * embedded controls never capture and floating surfaces use opaque backing.
+ * The recipe documentation below describes the retained legacy/diagnostic path.
+ *
  * The one shared implementation of Aurora's glass-surface idiom — the
  * material every glass window, panel, row, button, chip and search field
  * is made of — plus the screen-level ordering guard that keeps every
@@ -62,8 +67,7 @@ import java.util.Set;
  * whatever that screen's flat chrome is — fallback chrome legitimately
  * differs per screen, so it is deliberately not part of this helper).
  * Decline reasons are the renderer's: no world and no declared menu
- * backdrop, Wireframe glass style,
- * screenshot interlock, tiny rect, session latch, pool exhaustion.
+ * backdrop, screenshot interlock, tiny rect, session latch, pool exhaustion.
  *
  * <p><b>Overlays on glass.</b> Hover/focus never change the tint; callers
  * that want a hover wash or focus hairline draw it AFTER a {@code true}
@@ -141,6 +145,7 @@ public final class GlassSurface {
 
     /** Frame epoch — bumped once per frame from the render-tick mixin. */
     private static long frame = 0L;
+    private static boolean unifiedParentClaimed;
     /** Frame in which {@link #overlayDim} last painted (-1 = never). */
     private static long dimFrame = -1L;
     /** Frame in which {@link #beginGlassPass} was last called (-1 = never). */
@@ -164,6 +169,7 @@ public final class GlassSurface {
      * flushed) is reported here.
      */
     public static void beginFrame() {
+        MaterialSurface.beginFrame();
         if (!pendingRims.isEmpty()) {
             report("glass pass opened (beginGlassPass) but overlayDim never painted — "
                     + pendingRims.size() + " deferred rim finish(es) were painted nowhere");
@@ -174,6 +180,7 @@ public final class GlassSurface {
             aboveDimDepth = 0;
         }
         trackedClip = null;
+        unifiedParentClaimed = false;
         frame++;
     }
 
@@ -424,6 +431,10 @@ public final class GlassSurface {
      * @return whether glass drew; {@code false} ⇒ caller paints its flat look
      */
     public static boolean aboveDimControl(GuiGraphics g, float x, float y, float w, float h, float radius) {
+        if (MaterialSurface.unified()) {
+            MaterialSurface.floating(g,Math.round(x),Math.round(y),Math.round(w),Math.round(h),Math.round(radius),1);
+            return true;
+        }
         if (!liveWorldBackdrop() && !BlurPanelRenderer.menuBackdropValid()) return false;
         if (!BlurPanelRenderer.renderPanel(g, x, y, w, h, radius,
                 BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX, BlurPanelRenderer.Lighting.raised())) {
@@ -447,6 +458,10 @@ public final class GlassSurface {
      */
     public static boolean aboveDimContainer(GuiGraphics g, float x, float y, float w, float h, float radius,
                                             ThemeToken surface) {
+        if (MaterialSurface.unified()) {
+            MaterialSurface.floating(g,Math.round(x),Math.round(y),Math.round(w),Math.round(h),Math.round(radius),1);
+            return true;
+        }
         if (!liveWorldBackdrop() && !BlurPanelRenderer.menuBackdropValid()) return false;
         if (!BlurPanelRenderer.renderPanel(g, x, y, w, h, radius,
                 BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX, BlurPanelRenderer.Lighting.depressed(),
@@ -549,6 +564,11 @@ public final class GlassSurface {
                     + "in the glass pass, before GlassSurface.overlayDim");
         }
         boolean unified = MaterialSurface.unified();
+        // Only the parent window owns capture; repeated rows and embedded controls never sample.
+        if (unified) {
+            if (priority != BlurPanelRenderer.Priority.WINDOW || unifiedParentClaimed) return false;
+            unifiedParentClaimed = true;
+        }
         // WINDOW is the parent owner; embedded controls never sample this backdrop.
         boolean drew = unified
                 ? BlurPanelRenderer.renderUnifiedPanel(g,x,y,w,h,radius,

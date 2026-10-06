@@ -1,5 +1,6 @@
 package com.aurora.client.screen;
 
+import com.aurora.client.ui.component.MaterialSurface;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.component.ButtonWidget;
@@ -291,7 +292,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
     @Override
     public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float delta) {
         if (GlassSurface.liveWorldBackdrop()) return;
-        super.renderBackground(g, mouseX, mouseY, delta);
+        GlassSurface.renderMenuPanorama(this,g,delta);
     }
 
     /**
@@ -335,6 +336,8 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         // dim (painted by overlayDim); the tracked scissor lets the deferred
         // row rims keep the list clip.
         GlassSurface.beginGlassPass();
+        GlassSurface.container(ctx,listX-12,listClipTop()-12,listWidth()+24,
+                listClipBottom()-listClipTop()+24,ThemeManager.current().roundness().radiusLarge());
         rowGlassDrawn.clear();
         onBeginRowGlassPass();
         ClipBand band = listBand(listX);
@@ -362,13 +365,16 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         // ---- 2. Dim — end of the glass pass (token-driven; dark in both modes by design) ----
         GlassSurface.overlayDim(ctx, this.width, this.height);
 
+        MaterialSurface.parent(ctx,listX-12,listClipTop()-12,listWidth()+24,
+                listClipBottom()-listClipTop()+24,ThemeManager.current().roundness().radiusLarge());
+
         // ---- 3. Content ----
         ctx.drawString(this.font, this.title, 16, 42, ThemeManager.color(ThemeToken.ON_OVERLAY), false);
 
         ctx.enableScissor(listX - 4, listClipTop(), listX + listWidth() + 4, listClipBottom());
         if (rows.isEmpty()) {
             ctx.drawString(this.font, emptyMessage(), listX + 8, listTop() + 10,
-                    ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_OVERLAY), 0x88), false);
+                    ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
         }
 
         int y = listTop() - (int) scroll.current();
@@ -393,7 +399,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         // scissor, before the thumb — an opaque-token sibling of the thumb's
         // own over-the-dim layer, never glass.
         ScrollFade.drawTop(ctx, listX - 4, listWidth() + 8, listClipTop(), ScrollFade.FADE_PX,
-                scroll.current(), ThemeManager.color(ThemeToken.OVERLAY_DIM));
+                scroll.current(), ThemeManager.color(ThemeToken.SURFACE));
 
         // The list's scrollbar thumb — after the content scissor (it is
         // content, painted opaque over the dim like every other thumb).
@@ -511,10 +517,8 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
      */
     protected void paintFlatRow(GuiGraphics ctx, int x, int y, int w) {
         float radius = ThemeManager.current().roundness().radiusSmall();
-        RenderUtil.drawRoundedRectAA(ctx, x, y, w, rowHeight(), radius,
-                ThemeManager.surfaceColor(ThemeToken.SURFACE));
-        RenderUtil.drawRoundedOutlineAA(ctx, x, y, w, rowHeight(), radius, 1.0f,
-                ThemeManager.color(ThemeToken.BORDER));
+        MaterialSurface.cached(ctx,x,y,w,rowHeight(),radius,
+                ThemeManager.color(ThemeToken.MATERIAL_RAISED),ThemeManager.color(ThemeToken.BORDER),110,false);
     }
 
     /**
@@ -551,6 +555,10 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
     protected final void paintTemplatedRowSurface(GuiGraphics ctx, int x, int y,
                                                   Runnable rowSurfacePass, Runnable rowButtonsPass,
                                                   BooleanSupplier glassDrew) {
+        if (MaterialSurface.unified()) {
+            rowButtonsPass.run();
+            return;
+        }
         RenderUtil.RectSink prev = RenderUtil.beginCapture(RenderUtil.DISCARD_SINK);
         try {
             rowSurfacePass.run();
@@ -622,6 +630,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
     @Override
     public void removed() {
         super.removed();
+        MaterialSurface.disposeTemplates();
         if (rowTplTinted != null) { rowTplTinted.dispose(); rowTplTinted = null; }
         if (rowTplBare != null) { rowTplBare.dispose(); rowTplBare = null; }
     }

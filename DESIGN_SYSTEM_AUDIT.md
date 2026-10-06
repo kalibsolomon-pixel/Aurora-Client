@@ -661,3 +661,40 @@ Automated screenshot fallback captures revealed intermittent missing glyphs,
 including with glow disabled. Corrected texture-cache/active-unit restoration is
 runtime verified, but the capture defect persists; the pilot needs correction
 before visual acceptance or broader rollout.
+
+
+## Approved unified production rollout (2026-10-06)
+
+**UNIFIED THEME — production rollout (2026-10-06):** the user accepted the
+Launcher-derived pilot and requested adoption across the mod, plus removal of the
+Frosted/Wireframe option cards. Every production `ThemedScreen` now uses the approved
+material. `UnifiedPalette` roles also project through legacy tokens and `AuroraTheme`,
+so custom rows, cards and remaining facade readers share the neutral hierarchy.
+`theme.GlassStyle` and its persisted field/selector/render guard are retired;
+`ThemeMigrator` removes only the old structured `glassStyle` member from configs
+and profiles. Accent, mode, roundness, density, presets and preview remain.
+
+Parents own at most one backdrop capture per frame; the cached neutral face and
+boundary draw above dim on success or decline. Embedded controls never capture.
+Floating tooltips, enum popups and browser/map modals have opaque cached backing.
+Soft selection uses a wash and cached halo, with no left indicator bars; primary
+actions use readable strong fills and a slightly stronger halo. Shared controls,
+custom pills, browser categories/cards and icon actions use the 120 ms CSS easing.
+Blur requests 28 logical px (64 device px cap), saturation 1.35 and brightness .92.
+`WINDOW_FILL` alpha is the sole density application point: saved opacity ×255×.68.
+Saved preference values are not rewritten. Fixed HUD status colors, represented
+item/color/map data and explicit player color overrides remain data. HUD backing
+uses the same Dark neutral family in both UI modes, without live blur.
+
+The old per-element lighting/rim recipes below are historical/diagnostic paths,
+superseded for production by this rollout. The diagnostic `BlurTestScreen` retains
+its synthetic controls and lighting comparisons. Details and verification limits:
+[UNIFIED_THEME_PILOT.md](UNIFIED_THEME_PILOT.md).
+
+The preceding pilot review gate was satisfied by the user's explicit acceptance
+and instruction to apply the theme throughout the mod. Its "do not remove taxonomy"
+and comparison-host boundaries are historical, superseded by this request. Existing
+semantic interaction/availability, native activation, narration, sound, data colors,
+config/profile persistence and GL interlocks remain required. The earlier intermittent
+automated glyph-capture issue is a historical unresolved observation, not a claimed
+renderer fix; current native evidence is recorded in `UNIFIED_THEME_PILOT.md`.

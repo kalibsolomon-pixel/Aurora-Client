@@ -1,6 +1,5 @@
 package com.aurora.client.screen.setting;
 
-import com.aurora.client.theme.GlassStyle;
 import com.aurora.client.theme.ThemeMode;
 import com.aurora.client.theme.ThemeRoundness;
 import com.aurora.client.ui.component.SegmentedControl;
@@ -117,27 +116,22 @@ class SegmentedSettingPilotTest {
     // ---- Topology ----
 
     @Test
-    void productionInventoryIsThreeThemeRowsWithSevenPeers() throws Exception {
+    void productionInventoryHasModeAndCornerRowsWithFivePeers() throws Exception {
         String registry = java.nio.file.Files.readString(java.nio.file.Path.of(
                 "src/client/java/com/aurora/client/screen/FeatureRegistry.java"));
-        assertEquals(3, registry.split("new SegmentedSetting\\<>\\(", -1).length - 1,
-                "exactly three constructions");
+        assertEquals(2, registry.split("new SegmentedSetting\\<>\\(", -1).length - 1,
+                "exactly two constructions");
         assertTrue(registry.contains("ThemeMode.class"));
         assertTrue(registry.contains("ThemeRoundness.class"));
-        assertTrue(registry.contains("GlassStyle.class"));
+        assertFalse(registry.contains("GlassStyle.class"));
 
         AtomicReference<ThemeRoundness> r = new AtomicReference<>(ThemeRoundness.ROUND);
         SegmentedSetting<ThemeRoundness> corner = new SegmentedSetting<>("Corner Style",
                 ThemeRoundness.class, r::get, r::set);
-        AtomicReference<GlassStyle> gs = new AtomicReference<>(GlassStyle.FROSTED);
-        SegmentedSetting<GlassStyle> glass = new SegmentedSetting<>("Glass Style",
-                GlassStyle.class, gs::get, gs::set);
         assertEquals(2, row.interactionControls().size(), "Mode: Dark/Light");
         assertEquals(3, corner.interactionControls().size(), "Corner Style: three peers");
-        assertEquals(2, glass.interactionControls().size(), "Glass Style: two peers");
-        assertEquals(7, row.interactionControls().size() + corner.interactionControls().size()
-                        + glass.interactionControls().size(),
-                "seven production segmented peers in total");
+        assertEquals(5, row.interactionControls().size() + corner.interactionControls().size(),
+                "five production segmented peers in total");
     }
 
     @Test

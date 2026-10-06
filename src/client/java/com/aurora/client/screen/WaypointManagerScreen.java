@@ -270,7 +270,7 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
             String name = fitName(wp.name == null ? "" : wp.name);
             ctx.drawString(this.font, name,
                     cx, y + (ROW_H - this.font.lineHeight) / 2,
-                    ThemeManager.color(ThemeToken.ON_OVERLAY), false);
+                    ThemeManager.color(ThemeToken.ON_BACKGROUND), false);
         }
         cx += NAME_W + CONTROL_GAP;
 
@@ -278,7 +278,7 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
         String coords = wp.x + ", " + wp.y + ", " + wp.z;
         ctx.drawString(this.font, coords,
                 cx, y + (ROW_H - this.font.lineHeight) / 2,
-                ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_OVERLAY), 0x88), false);
+                ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_BACKGROUND), 0x88), false);
         cx += COORDS_W + CONTROL_GAP;
 
         // Row buttons — surfaces already painted in the glass pass; these

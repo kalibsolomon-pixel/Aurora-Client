@@ -1,5 +1,6 @@
 package com.aurora.client.worldmap.screen;
 
+import com.aurora.client.ui.component.MaterialSurface;
 import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.config.AuroraConfig.Waypoint;
 import com.aurora.client.feature.impl.WaypointFeature;
@@ -343,6 +344,7 @@ public class WorldMapScreen extends Screen implements ThemedScreen {
 
     @Override
     public void removed() {
+        MaterialSurface.disposeTemplates();
         // Leave the engine on the live dimension for background capture.
         WorldMapClient wm = WorldMapClient.get();
         if (wm != null) wm.restoreLiveDimension();
@@ -388,9 +390,8 @@ public class WorldMapScreen extends Screen implements ThemedScreen {
         // any decline (menu context, screenshot interlock, TRANSPARENT style)
         // the flat panel returns unchanged.
         float radius = ThemeManager.current().roundness().radius();
-        boolean glassDrew = GlassSurface.container(g, promptPanelX, promptPanelY,
-                PROMPT_W, PROMPT_H, radius);
-        promptPanel.renderShapes(g, promptPanelX, promptPanelY, PROMPT_W, PROMPT_H, glassDrew);
+        // Map tiles are deferred GUI data; the prompt needs its own opaque backing.
+        MaterialSurface.floating(g,promptPanelX,promptPanelY,PROMPT_W,PROMPT_H,Math.round(radius),1);
         g.drawString(this.font, "Add waypoint at " + promptWorldX + ", " + promptWorldZ,
                 promptPanelX + 10, promptPanelY + 12,
                 ThemeManager.color(ThemeToken.ON_SURFACE), false);

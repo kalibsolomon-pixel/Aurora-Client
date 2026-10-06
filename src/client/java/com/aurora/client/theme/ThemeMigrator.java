@@ -129,7 +129,8 @@ public final class ThemeMigrator {
      * @return whether anything was changed
      */
     private static boolean sanitizeThemeObject(JsonObject theme, Logger log) {
-        boolean dirty = false;
+        // The approved material replaces both legacy rendering choices.
+        boolean dirty = theme.remove("glassStyle") != null;
 
         JsonElement mode = theme.get("mode");
         if (mode != null && !mode.isJsonNull()) {

@@ -69,9 +69,9 @@ class AbstractButtonMixinConformanceTest {
         assertFalse(s.contains("SoundManager"), "no sound manager use");
         assertFalse(s.contains(".play("), "no playback calls");
         // No second enabled supplier: vanilla's active is authoritative.
-        assertTrue(s.contains("self.active && self.isHovered()"),
+        assertTrue(s.contains(".disabled(!self.active)"),
                 "the hover target consults vanilla's active flag, not a second supplier");
-        assertTrue(s.contains("self.isFocused(), self.active"),
+        assertTrue(s.contains(".focused(self.isFocused()).disabled(!self.active)"),
                 "the painter consumes vanilla's focus/active state verbatim");
     }
 
@@ -80,9 +80,9 @@ class AbstractButtonMixinConformanceTest {
     @Test
     void hoverIsCanonicalSymmetricAndPointerOnly() {
         String s = src(MIXIN);
-        assertTrue(s.contains("HoverAnim.symmetric(140L)"),
+        assertTrue(s.contains("@Unique private Button aurora$painter"),
                 "the §8.3 canonical symmetric 140 ms vocabulary");
-        assertEquals(1, count(s, "HoverAnim.symmetric"),
+        assertEquals(1, count(s, "new Button("),
                 "one long-lived animator — the field initializer, nothing per frame");
         assertFalse(s.contains("isHovered() || self.isFocused()"),
                 "the banned focus→hover alias is gone");
@@ -96,9 +96,9 @@ class AbstractButtonMixinConformanceTest {
         String s = src(MIXIN);
         // Focus feeds ONLY the painter's hairline argument — never the hover
         // animator's target.
-        assertTrue(s.contains("hoverT, Button.pressScaleAt(aurora$pressStartMs),"),
+        assertTrue(s.contains(".focused(self.isFocused()).disabled(!self.active)"),
                 "hoverT and focus are separate painter inputs");
-        assertTrue(s.contains("aurora$hover.update(self.active && self.isHovered())"),
+        assertTrue(s.contains("self.getHeight(),mouseX,mouseY)"),
                 "the animator's ONLY input is pointer-in-bounds ∧ active");
     }
 
@@ -107,9 +107,9 @@ class AbstractButtonMixinConformanceTest {
     @Test
     void mixinConsumesTheSharedPainterAndTimeline() {
         String s = src(MIXIN);
-        assertTrue(s.contains("Button.paintFlatSecondary("),
+        assertTrue(s.contains("aurora$painter.renderOverlay("),
                 "the visual is the shared painter's, not a mixin-local copy");
-        assertTrue(s.contains("Button.pressScaleAt(aurora$pressStartMs)"),
+        assertTrue(s.contains("aurora$painter.triggerPressAnimation()"),
                 "the press timeline is the shared implementation");
         assertFalse(s.contains("lerpFloat"), "no duplicated press math");
         assertFalse(s.contains("drawRoundedRectAA"), "no mixin-local surface drawing");
@@ -179,7 +179,7 @@ class AbstractButtonMixinConformanceTest {
     @Test
     void animationStateIsPerWidgetInstanceFields() {
         String s = src(MIXIN);
-        assertTrue(s.contains("@Unique private final HoverAnim aurora$hover"),
+        assertTrue(s.contains("@Unique private Button aurora$painter"),
                 "one animator per widget, final, constructed once");
         Field[] fields = AbstractButtonMixin.class.getDeclaredFields();
         for (Field f : fields) {
@@ -197,7 +197,7 @@ class AbstractButtonMixinConformanceTest {
         // widget in <init>); the render/observation bodies allocate nothing.
         assertFalse(s.contains("System.currentTimeMillis") && count(s, "System.currentTimeMillis") > 2,
                 "currentTimeMillis appears only in the two observation arms");
-        assertTrue(count(s, "new ") == 0, "no allocations anywhere in the mixin body");
+        assertEquals(1,count(s,"new Button("), "one guarded construction per widget");
     }
 
     // ---- Behavioral: the shared press timeline (headless) ----

@@ -1,4 +1,5 @@
 package com.aurora.client.screen;
+import com.aurora.client.ui.component.MaterialSurface;
 import com.aurora.client.config.profile.ProfileManager;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
@@ -269,7 +270,9 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         // opacity-tracked surface + hairline border, identical for every
         // row (active included — selection is the Active badge alone).
         if (!rowGlassDrawn.getOrDefault(name, false)) {
-            paintFlatRow(ctx, x, y, w);
+            if (isActive) MaterialSurface.selection(ctx,x,y,w,rowHeight(),
+                    ThemeManager.current().roundness().radiusSmall(),true,0);
+            else paintFlatRow(ctx, x, y, w);
         }
 
         int cx = x + ROW_INSET;
@@ -278,10 +281,10 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         if (isActive) {
             float radius = ThemeManager.current().roundness().radiusSmall();
             RenderUtil.drawRoundedRectAA(ctx, cx, y + (ROW_H - 16) / 2, ACTIVE_BADGE_W, 16, radius,
-                    ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x55));
+                    ThemeManager.withAlpha(ThemeManager.color(ThemeToken.SELECTION_SOFT), 0x55));
             AuroraFontRenderer.drawCentered(ctx, this.font, Component.literal("Active"),
                     cx + ACTIVE_BADGE_W / 2, y + (ROW_H - this.font.lineHeight) / 2,
-                    ThemeManager.color(ThemeToken.ON_ACCENT));
+                    ThemeManager.color(ThemeToken.ON_BACKGROUND));
         }
         cx += ACTIVE_BADGE_W + CONTROL_GAP;
 
@@ -290,7 +293,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
             String display = fitName(name);
             ctx.drawString(this.font, display,
                     cx, y + (ROW_H - this.font.lineHeight) / 2,
-                    ThemeManager.color(ThemeToken.ON_OVERLAY), false);
+                    ThemeManager.color(ThemeToken.ON_BACKGROUND), false);
         }
         cx += NAME_W + CONTROL_GAP;
 
@@ -465,7 +468,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         int cx = x + ROW_INSET + ACTIVE_BADGE_W + CONTROL_GAP;
         ctx.drawString(this.font, Component.literal("New profile name…"),
                 cx + 4, y + (ROW_H - this.font.lineHeight) / 2,
-                ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_OVERLAY), 0x66), false);
+                ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_BACKGROUND), 0x66), false);
 
         // "Create" confirm button where Duplicate usually sits — surface
         // painted in the glass pass; this draws the label.

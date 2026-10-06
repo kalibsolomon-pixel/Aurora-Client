@@ -1,7 +1,6 @@
 package com.aurora.client.ui.render.blur;
 
 import com.aurora.client.AuroraClient;
-import com.aurora.client.theme.GlassStyle;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.ui.util.RenderUtil;
 import com.mojang.blaze3d.opengl.GlTexture;
@@ -940,22 +939,7 @@ public final class BlurPanelRenderer {
         if (priority == null) priority = Priority.CONTROL;
         lastOutcome = "rendered";
         if (permanentlyDisabled) { lastOutcome = "disabled (earlier failure)"; return false; }
-        // Glass Style: the user's Wireframe choice (enum `TRANSPARENT`) is
-        // expressed through the
-        // SAME fallback contract every glass consumer already implements —
-        // decline, and the caller draws its flat translucent fill (§6's
-        // fallback contract). That is why this is one guard here instead of a
-        // branch at ~20 call sites, and why Corner Style and Background
-        // Opacity keep their exact meanings in both styles: they live in the
-        // caller's fill, which this renderer never touches. Placed before any
-        // GL state is read or written, so Wireframe also pays none of the
-        // capture/blur/readback cost.
-        // The synthetic harness (BlurTestScreen) is exempt, like the
-        // menu-context guard below: it exists to exercise this pipeline.
-        if (!unified && captureSource == null && ThemeManager.current().glassStyle() == GlassStyle.TRANSPARENT) {
-            lastOutcome = "transparent style (glass off)";
-            return false;
-        }
+
         if (System.currentTimeMillis() < suppressGlassUntilMs) {
             // Screenshot interlock (see suppressGlassUntilMs): fall back to
             // the caller's opaque rendering while vanilla's grab machinery

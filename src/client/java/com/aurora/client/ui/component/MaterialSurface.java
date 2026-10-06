@@ -10,27 +10,10 @@ import net.minecraft.client.Minecraft;
 import com.aurora.client.ui.util.UiLayerCache;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
-/**
- * Material treatments for surfaces that do not need another live-backdrop
- * glass sample.
- *
- * <p>The unified pilot reads separate neutral/action/selection roles here.
- * Its parent captures pre-dim, then the host paints one cached neutral face
- * and boundary above dim. Embedded children never capture; floating faces
- * retain independent opaque backing. Legacy recipes below remain outside
- * the two opt-in hosts (UNIFIED_THEME_PILOT.md).
- *
- * <p>A child already enclosed by window/panel glass uses
- * {@link #embeddedControl}: its parent owns blur and the outer rim, while
- * the child contributes only a restrained local tint. Selected/primary
- * children may still use the established stained tint because that tint
- * communicates state; neutral children never add another opacity-driven
- * {@code WINDOW_FILL} layer. This is Phase E's central nested-material rule.
- *
- * <p>A transient surface drawn above ordinary content uses
- * {@link #floating}: a stable semantic {@code SURFACE} backing, one
- * low-emphasis edge and the existing shadow. Neither path invokes the blur
- * renderer, allocates per frame, or creates another rim owner.
+/** Shared cached material for parent faces, embedded controls and opaque floating layers.
+ * The parent alone captures the backdrop before dim; its neutral face/boundary
+ * is painted after dim. Selection is a soft wash and halo, primary is a readable
+ * strong action. No child allocates another blur output or owns a glossy rim.
  */
 public final class MaterialSurface {
 
@@ -39,13 +22,16 @@ public final class MaterialSurface {
     /** Local neutral tint over a parent material; not a second opacity control. */
     static final int EMBEDDED_ALPHA = 0x24;
 
-    /** Screen-owned pilot boundary; never persisted or applied to another screen. */
+    /** Production screen context; includes the explicitly Aurora-styled vanilla selection screens. */
     public static boolean unified() {
         Minecraft mc = Minecraft.getInstance();
-        return mc != null && mc.screen instanceof ThemedScreen screen && screen.unifiedThemePilot();
+        return mc != null && (mc.screen instanceof ThemedScreen screen && screen.unifiedTheme()
+                || com.aurora.client.config.AuroraConfig.get().customTitleScreen &&
+                   (mc.screen instanceof net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen
+                    || mc.screen instanceof net.minecraft.client.gui.screens.worldselection.SelectWorldScreen));
     }
 
-    /** Compatibility mapping used only by pilot painters. */
+    /** Compatibility mapping for material-aware painters. */
     public static int color(ThemeToken token) {
         if (!unified()) return ThemeManager.color(token);
         ThemeToken role = switch (token) {
@@ -62,19 +48,18 @@ public final class MaterialSurface {
             default -> token;
         };
         int result = ThemeManager.color(role);
-        return token == ThemeToken.WINDOW_FILL
-                ? ThemeManager.withAlpha(result, windowFillAlpha(ThemeManager.color(ThemeToken.WINDOW_FILL) >>> 24)) : result;
-    }
-
-    /** Single window-tint application point. Maximum density retains the
-     * Launcher-like diffuse backdrop; the stored opacity is never rewritten. */
-    public static int windowFillAlpha(int opacityAlpha) {
-        return Math.round(Math.max(0,Math.min(255,opacityAlpha)) * .68f);
+        return token == ThemeToken.WINDOW_FILL ? ThemeManager.color(token) : result;
     }
 
     /** Outside focus follows the corner family: Square must remain exactly square. */
     public static float outsetRadius(float radius,float outset) {
         return radius==0 ? 0 : radius+outset;
+    }
+
+    /** Cached parent face, drawn once above the screen dim even when capture declines. */
+    public static void parent(GuiGraphics g, float x, float y, float w, float h, float radius) {
+        cached(g,x,y,w,h,radius,ThemeManager.color(ThemeToken.WINDOW_FILL),
+                color(ThemeToken.BORDER),120,true);
     }
 
     public static int selectedFill() { return ThemeManager.color(ThemeToken.SELECTION_SOFT); }
@@ -103,8 +88,25 @@ public final class MaterialSurface {
 
     // Primitive packed geometry key: no record/boxing/lambda allocation per control per frame.
     private static final Long2ObjectOpenHashMap<UiLayerCache> TEMPLATES = new Long2ObjectOpenHashMap<>();
+    private static net.minecraft.client.gui.screens.Screen templateOwner;
+    private static int templateWidth, templateHeight, templateScale;
 
-    /** Called from the pilot hosts' existing screen-removal boundary, between frames. */
+    /** Release stale screen/resize geometry before this frame records any GUI draws.
+     * Also covers Aurora-styled vanilla screens, which have no custom removed hook. */
+    public static void beginFrame() {
+        Minecraft mc=Minecraft.getInstance();
+        if(mc==null) return;
+        var window=mc.getWindow();
+        int width=window.getGuiScaledWidth(),height=window.getGuiScaledHeight();
+        int scale=Math.max(1,(int)window.getGuiScale());
+        if(templateOwner!=mc.screen || templateWidth!=width || templateHeight!=height || templateScale!=scale) {
+            disposeTemplates();
+            templateOwner=mc.screen;
+            templateWidth=width;templateHeight=height;templateScale=scale;
+        }
+    }
+
+    /** Called at each production screen's removal boundary, between frames. */
     public static void disposeTemplates() {
         for(UiLayerCache cache:TEMPLATES.values()) cache.dispose();
         TEMPLATES.clear();

@@ -35,7 +35,7 @@ class AuroraScreenSemanticHostingTest {
         String settings = settingsRegistryBlock();
         assertEquals(3, count(settings, "new EnumSetting<>("), "hostable enum triggers");
         assertEquals(1, count(settings, "new AccentSetting("), "one ten-peer accent row");
-        assertEquals(3, count(settings, "new SegmentedSetting<>("), "C-5 rows");
+        assertEquals(2, count(settings, "new SegmentedSetting<>("), "Mode and Corner Style rows");
         assertEquals(1, count(settings, "new ThemeOpacitySetting("), "deferred continuous control");
         assertEquals(1, count(settings, "new ThemePreviewSetting("), "preview/data row");
     }

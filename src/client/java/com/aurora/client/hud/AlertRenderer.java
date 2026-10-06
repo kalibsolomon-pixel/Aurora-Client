@@ -44,7 +44,8 @@ public final class AlertRenderer {
         int boxH = Math.max(iconSize, titleH + subH) + padding * 2;
 
         int bgAlpha = Math.round(0xC0 * alpha);
-        int bg = (bgAlpha << 24);
+        int bg = (bgAlpha << 24) | (com.aurora.client.theme.ThemeManager.color(
+                com.aurora.client.theme.ThemeToken.HUD_BACKDROP_TOP) & 0x00ffffff);
         int borderAlpha = Math.round(0xFF * alpha);
         int borderColor = (borderAlpha << 24) | (alert.color & 0x00FFFFFF);
         int textAlpha = Math.round(0xFF * alpha);
@@ -59,12 +60,10 @@ public final class AlertRenderer {
         int y = cy - boxH / 2;
 
         // Background
-        ctx.fill(x, y, x + boxW, y + boxH, bg);
-        // Border (4 edges)
-        ctx.fill(x, y, x + boxW, y + 1, borderColor);
-        ctx.fill(x, y + boxH - 1, x + boxW, y + boxH, borderColor);
-        ctx.fill(x, y, x + 1, y + boxH, borderColor);
-        ctx.fill(x + boxW - 1, y, x + boxW, y + boxH, borderColor);
+        int radius = com.aurora.client.theme.ThemeManager.current().roundness().radiusSmall();
+        com.aurora.client.util.RoundedRect.fill(ctx,x,y,x+boxW,y+boxH,radius,bg);
+        // Severity is data; keep its fixed hue on the themed chrome.
+        com.aurora.client.util.RoundedRect.outline(ctx,x,y,x+boxW,y+boxH,radius,borderColor);
 
         int contentX = x + padding;
         if (hasIcon) {

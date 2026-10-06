@@ -1,4 +1,5 @@
 package com.aurora.client.screen;
+import com.aurora.client.ui.component.MaterialSurface;
 import com.aurora.client.ui.util.AuroraFontRenderer;
 
 import com.aurora.client.modrinth.ModrinthApi;
@@ -286,6 +287,13 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
     // (see renderSidebar), so hover progress returns to 0 the moment the
     // pointer leaves the tab while the tab stays visibly selected.
     private final Map<String, HoverAnim> hovers = new HashMap<>();
+    private final Map<String,com.aurora.client.ui.util.TimedTransition> materialHovers = new HashMap<>();
+
+    private float materialHover(String key, boolean target) {
+        if (!MaterialSurface.unified()) return hoverAnim(key).update(target);
+        return materialHovers.computeIfAbsent(key,k -> new com.aurora.client.ui.util.TimedTransition(
+                120,com.aurora.client.ui.util.CubicBezier.EASE,0)).update(target ? 1 : 0,System.nanoTime());
+    }
 
     private HoverAnim hoverAnim(String key) {
         return hovers.computeIfAbsent(key, k -> HoverAnim.symmetric(HOVER_MS));
@@ -614,6 +622,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
             Set<String> liveHoverKeys = new java.util.HashSet<>(liveIds.size());
             for (String id : liveIds) liveHoverKeys.add("card:" + id);
             hovers.keySet().removeIf(k -> k.startsWith("card:") && !liveHoverKeys.contains(k));
+            materialHovers.keySet().removeIf(k -> k.startsWith("card:") && !liveHoverKeys.contains(k));
         }
         String err = pendingError.getAndSet(null);
         if (err != null) {
@@ -734,6 +743,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         // design (§9) and paints in the content phase through the above-dim
         // escape hatches.
         GlassSurface.beginGlassPass();
+        GlassSurface.container(g,8,4,this.width-16,this.height-12,AuroraTheme.RADIUS_LARGE);
         paintGlassPass(g, mouseX, mouseY);
 
         // ---- 2. Dim — this screen's original 0x55 strength of the OVERLAY_DIM ----
@@ -741,6 +751,8 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         // the glass pass and flushes the deferred rims.
         GlassSurface.overlayDim(g, this.width, this.height,
                 ThemeManager.withAlpha(ThemeManager.color(ThemeToken.OVERLAY_DIM), 0x55));
+
+        MaterialSurface.parent(g,8,4,this.width-16,this.height-12,AuroraTheme.RADIUS_LARGE);
 
         // ---- 3. Content ----
         // ---- Sidebar ----
@@ -912,7 +924,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
                 boolean visible = tabY + TAB_H > clipTop && tabY < clipBot;
                 boolean hover = visible && Widget.inBounds(mouseX, mouseY, tabX, tabY, tabW, TAB_H)
                         && mouseY >= clipTop && mouseY < clipBot;
-                activeTabT = hoverAnim("tab:" + i).update(hover);
+                activeTabT = materialHover("tab:" + i,hover);
                 SemanticActionControl control = tabControl(i);
                 control.setBounds(tabX, tabY, tabW, TAB_H);
                 control.setAvailable(visible && !modalInteractive());
@@ -982,7 +994,10 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         // the dim (see render()); when it engaged, the flat fill + outline
         // are suppressed here (the glass rim replaces the outline — no
         // double outline).
-        if (!sidebarGlass) {
+        if (MaterialSurface.unified()) {
+            MaterialSurface.cached(g,panelX,panelY,panelW,panelH,AuroraTheme.RADIUS_LARGE,
+                    ThemeManager.color(ThemeToken.MATERIAL_PANEL),ThemeManager.color(ThemeToken.BORDER),111,false);
+        } else if (!sidebarGlass) {
             RenderUtil.drawRoundedRectAA(g, panelX, panelY, panelW, panelH, AuroraTheme.RADIUS_LARGE,
                     ThemeManager.surfaceColor(ThemeToken.SURFACE));
             RenderUtil.drawRoundedOutlineAA(g, panelX, panelY, panelW, panelH, AuroraTheme.RADIUS_LARGE,
@@ -1042,7 +1057,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
             // accent wash itself (visible at hoverT == 0), hover composes on
             // top as the transient 0.30→0.40 strengthening — the four states
             // (inactive/active × rest/hover) never collapse.
-            float t = isActive ? activeTabT : hoverAnim("tab:" + i).update(hover);
+            float t = isActive ? activeTabT : materialHover("tab:" + i,hover);
 
             int fill;
             int textCol;
@@ -1065,7 +1080,11 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
             }
 
             float tabR = Math.min(TAB_H / 2f, AuroraTheme.RADIUS_SMALL);
-            if (isActive) {
+            if (MaterialSurface.unified()) {
+                MaterialSurface.selection(g,tabX,tabY,tabW,TAB_H,tabR,isActive,t);
+                textCol = isActive ? AuroraTheme.TEXT_PRIMARY
+                        : AuroraAnim.lerpArgb(AuroraTheme.TEXT_SECONDARY,AuroraTheme.TEXT_PRIMARY,t);
+            } else if (isActive) {
                 // Selected/primary element — its glass surface (panel +
                 // accent-wash tint + rim) was painted pre-dim by the glass
                 // pass; only the label renders here. On decline the flat
@@ -1111,7 +1130,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         // surfaceColor(SURFACE): the exact color the panel body already has
         // at the clip boundary in both the glass and fallback looks.
         ScrollFade.drawTop(g, panelX, panelW, clipTop, ScrollFade.FADE_PX,
-                sidebarScroll.current(), ThemeManager.surfaceColor(ThemeToken.SURFACE));
+                sidebarScroll.current(), ThemeManager.color(ThemeToken.SURFACE));
 
         // Sidebar scroll indicator (only if content overflows) — painted
         // exactly as before R2; SmoothScroll supplies geometry/drag state.
@@ -1132,7 +1151,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
 
     private void renderCard(GuiGraphics g, ModrinthProject p, int x, int y, int mouseX, int mouseY) {
         boolean cardHover = Widget.inBounds(mouseX, mouseY, x, y, CARD_W, CARD_H);
-        float t = hoverAnim("card:" + p.projectId).update(cardHover);
+        float t = materialHover("card:" + p.projectId,cardHover);
 
         // Card body — deliberately FLAT (audit R9/B1/B2, 2026-09-08): the
         // hover-lerp tint below is fully opaque, so when this was a per-card
@@ -1257,7 +1276,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         // surfaces to go flat when a frame over-subscribes the pool.
         return switch (phase) {
             case CardState.IDLE -> new Button(Component.literal("Install"), () -> {}, true)
-                    .glassStyle(Button.GlassStyle.STAINED).priority(BlurPanelRenderer.Priority.DETAIL);
+                    .glassStyle(Button.GlassStyle.STAINED).primary(true).priority(BlurPanelRenderer.Priority.DETAIL);
             case CardState.RESOLVING -> new Button(Component.literal("Resolving…"), () -> {})
                     .glassBackground(true).priority(BlurPanelRenderer.Priority.DETAIL);
             case CardState.DOWNLOADING -> new Button(Component.literal("Downloading…"), () -> {})
@@ -1543,7 +1562,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         // wants the vanilla backdrop as before, so the override is
         // conditional on the same validity check the renderer uses.
         if (liveWorldBackdrop()) return;
-        super.renderBackground(g, mouseX, mouseY, delta);
+        GlassSurface.renderMenuPanorama(this,g,delta);
     }
 
     // ------------------------------------------------------------------
@@ -2025,6 +2044,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
     @Override
     public void removed() {
         super.removed();
+        MaterialSurface.disposeTemplates();
         if (cardTpl != null) { cardTpl.dispose(); cardTpl = null; }
     }
 

@@ -1,5 +1,6 @@
 package com.aurora.client.screen;
 
+import com.aurora.client.ui.component.MaterialSurface;
 import com.aurora.client.AuroraClient;
 import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.hud.HudAnchor;
@@ -182,13 +183,14 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
     @Override
     public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float delta) {
         if (this.minecraft != null && this.minecraft.level != null) return;
-        super.renderBackground(g, mouseX, mouseY, delta);
+        com.aurora.client.ui.component.GlassSurface.renderMenuPanorama(this,g,delta);
     }
 
     @Override
     public void render(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
         // Themed overlay dim, alpha-scaled to this screen's original 0x60
         // strength (full-strength OVERLAY_DIM is 0x99).
+        // Keep the editing canvas visible; the shared controls own their opaque faces.
         ctx.fill(0, 0, this.width, this.height,
                 ThemeManager.withAlpha(ThemeManager.color(ThemeToken.OVERLAY_DIM), 0x60));
 
@@ -213,6 +215,12 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
                 "Drag body: move  |  Drag corner: resize  |  RClick: hide  |  Shift+RClick: lock  |  Shift+LClick: settings  |  X badge: disable",
                 0, 0, ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_OVERLAY), 0xDD), false);
         ctx.pose().popMatrix();
+    }
+
+    @Override
+    public void removed() {
+        super.removed();
+        MaterialSurface.disposeTemplates();
     }
 
     /** Apply the active drag (move or resize) using current MouseHandler position. */

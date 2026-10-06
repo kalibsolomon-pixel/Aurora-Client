@@ -6,6 +6,7 @@ import com.aurora.client.hud.module.KeystrokesModule;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.component.GlassSurface;
+import com.aurora.client.ui.component.MaterialSurface;
 import com.aurora.client.ui.component.Widget;
 import com.aurora.client.ui.interaction.MinecraftSemanticFeedback;
 import com.aurora.client.ui.interaction.SemanticAction;
@@ -114,6 +115,8 @@ public class KeyListSetting extends FeatureSetting {
     private boolean listening = false;
     private int lastX, lastY, lastW = 240;
     private final HoverAnim hoverAnim = HoverAnim.symmetric(140L);
+    private final com.aurora.client.ui.util.TimedTransition materialHover = new com.aurora.client.ui.util.TimedTransition(
+            120,com.aurora.client.ui.util.CubicBezier.EASE,0);
     private SemanticActionControl interactionControl;
 
     // ---- C-4 rollout: the chips' semantic adapter (painter stays exempt) ----
@@ -267,6 +270,7 @@ public class KeyListSetting extends FeatureSetting {
         int addY = iy + 4;
         boolean addHover = Widget.inBounds(mouseX, mouseY, addX, addY, addW, ADD_H);
         float hT = hoverAnim.update(addHover && !disabled);
+        if (MaterialSurface.unified()) hT = materialHover.update(addHover && !disabled ? 1 : 0,System.nanoTime());
 
         if (interactionControl != null) {
             interactionControl.setBounds(addX, addY, addW, ADD_H);
@@ -298,7 +302,9 @@ public class KeyListSetting extends FeatureSetting {
         } else {
             glassOk = false;
         }
-        if (!glassOk) {
+        if (MaterialSurface.unified()) {
+            MaterialSurface.selection(ctx,addX,addY,addW,ADD_H,AuroraTheme.RADIUS_SMALL,listening,disabled ? 0 : hT);
+        } else if (!glassOk) {
             RenderUtil.drawSquircle(ctx, addX, addY, addW, ADD_H, AuroraTheme.RADIUS_SMALL,
                     listening ? AuroraTheme.IOS_BLUE_PRESSED : fillTint);
             RenderUtil.drawSquircleOutline(ctx, addX, addY, addW, ADD_H, AuroraTheme.RADIUS_SMALL, 1.0f,
@@ -309,7 +315,7 @@ public class KeyListSetting extends FeatureSetting {
                 : items.size() >= KeystrokesModule.MAX_EXTRA_KEYS ? "List full (12 max)"
                 : "+ Add Key";
         int addTextW = tr.width(addText);
-        int textCol = listening ? ThemeManager.color(ThemeToken.ON_ACCENT) : textColor;
+        int textCol = listening ? MaterialSurface.color(ThemeToken.ON_BACKGROUND) : textColor;
         ctx.drawString(tr, addText, addX + (addW - addTextW) / 2,
                 addY + (ADD_H - tr.lineHeight) / 2 + 1, textCol, false);
     }

@@ -70,6 +70,9 @@ public final class IconAction {
     private final java.util.function.IntSupplier restColor;
     private final java.util.function.IntSupplier hoverColor;
     private final HoverAnim hover = HoverAnim.symmetric(HOVER_MS);
+    private final com.aurora.client.ui.util.TimedTransition materialHover = new com.aurora.client.ui.util.TimedTransition(
+            120,com.aurora.client.ui.util.CubicBezier.EASE,0);
+    private float materialHoverT;
     private SemanticActionControl control;
 
     /** Colors are suppliers so theme-derived values stay live across reloads. */
@@ -111,7 +114,7 @@ public final class IconAction {
 
     /** Current hover progress — for hosts painting their own glyph/badge pixels. */
     public float hoverT() {
-        return hover.current();
+        return MaterialSurface.unified() ? materialHoverT : hover.current();
     }
 
     public boolean isFocused() {
@@ -138,7 +141,7 @@ public final class IconAction {
     public void paintGlyph(GuiGraphics g, Font font, int x, int y, int w, int h) {
         int color = !action.enabled()
                 ? ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED)
-                : AuroraAnim.lerpArgb(restColor.getAsInt(), hoverColor.getAsInt(), hover.current());
+                : AuroraAnim.lerpArgb(restColor.getAsInt(), hoverColor.getAsInt(), hoverT());
         MaterialIconRenderer.drawIcon(g, font, glyph.get(), x + w / 2f, y + h / 2f,
                 emFor(w, h), color);
         paintHairline(g, x, y, w, h);
@@ -152,6 +155,7 @@ public final class IconAction {
     public void syncChannels(int x, int y, int w, int h, double mouseX, double mouseY) {
         boolean target = action.enabled() && Widget.inBounds(mouseX, mouseY, x, y, w, h);
         hover.update(target);
+        if (MaterialSurface.unified()) materialHoverT=materialHover.update(target ? 1 : 0,System.nanoTime());
         if (control != null) {
             control.setBounds(x, y, w, h);
             control.updatePointer(mouseX, mouseY);

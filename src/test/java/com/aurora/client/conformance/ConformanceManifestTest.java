@@ -294,15 +294,14 @@ class ConformanceManifestTest {
     void auroraScreenSemanticInventoryMatchesLiveSource() throws IOException {
         int modules = countOccurrences(read(SRC + "module/ModuleManager.java"), "new Module(");
         int segmentedPeers = com.aurora.client.theme.ThemeMode.values().length
-                + com.aurora.client.theme.ThemeRoundness.values().length
-                + com.aurora.client.theme.GlassStyle.values().length;
+                + com.aurora.client.theme.ThemeRoundness.values().length;
         int hosted = 3 + 10 + segmentedPeers;               // enums + accent + segmented peers
         int screenOwned = 2 + 1 + 2 + modules + 3 + 4;      // tabs, profiles, layout, tiles, nav, toggles
         assertEquals(37, modules, "ModuleManager tile count");
-        assertEquals(7, segmentedPeers, "segmented peers (Mode 2 + Corner 3 + Glass 2)");
-        assertEquals(20, hosted, "component-owned hosted controls");
+        assertEquals(5, segmentedPeers, "segmented peers (Mode 2 + Corner 3)");
+        assertEquals(18, hosted, "component-owned hosted controls");
         assertEquals(49, screenOwned, "screen-owned chrome controls");
-        assertEquals(69, hosted + screenOwned, "AuroraScreen total semantic controls");
+        assertEquals(67, hosted + screenOwned, "AuroraScreen total semantic controls");
 
         String src = read(SRC + "screen/AuroraScreen.java");
         assertEquals(7, countOccurrences(src, "semanticHost.register("),

@@ -1,5 +1,6 @@
 package com.aurora.client.screen;
 
+import com.aurora.client.ui.component.MaterialSurface;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.component.Button;
@@ -136,7 +137,7 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
         if (pickerSupportable) {
             hexField = new EditBox(
                     this.font,
-                    previewX, previewY + previewH + 10, previewW, 18,
+                    previewX + 32, previewY + previewH + 10, previewW - 32, 18,
                     Component.literal("Hex")
             );
             hexField.setMaxLength(9);
@@ -204,19 +205,26 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
     @Override
     public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float delta) {
         if (this.minecraft != null && this.minecraft.level != null) return;
-        super.renderBackground(g, mouseX, mouseY, delta);
+        com.aurora.client.ui.component.GlassSurface.renderMenuPanorama(this,g,delta);
     }
 
     @Override
     public void render(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
         // Themed overlay dim (token-driven; dark in both modes by design).
-        ctx.fill(0, 0, this.width, this.height, ThemeManager.color(ThemeToken.OVERLAY_DIM));
+        var radius = ThemeManager.current().roundness().radiusLarge();
+        int panelX = padX-12, panelY = padY-22;
+        int panelW = alphaX+alphaW-padX+24, panelH = previewY+previewH+40-panelY;
+        com.aurora.client.ui.component.GlassSurface.beginGlassPass();
+        if (pickerSupportable) com.aurora.client.ui.component.GlassSurface.container(ctx,panelX,panelY,panelW,panelH,radius);
+        com.aurora.client.ui.component.GlassSurface.overlayDim(ctx,this.width,this.height);
+        if (pickerSupportable) MaterialSurface.parent(ctx,panelX,panelY,panelW,panelH,radius);
 
         super.render(ctx, mouseX, mouseY, delta);
         Font tr = this.font;
         // Text directly on the overlay uses ON_OVERLAY (light in both modes).
         int onOverlay = ThemeManager.color(ThemeToken.ON_OVERLAY);
-        int labelCol = ThemeManager.withAlpha(onOverlay, 0x99);
+        int labelCol = pickerSupportable ? ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY)
+                : ThemeManager.withAlpha(onOverlay, 0x99);
 
         AuroraFontRenderer.drawCentered(ctx, tr, this.title, this.width / 2, 20, onOverlay);
 
@@ -377,6 +385,7 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
     @Override
     public void removed() {
         super.removed();
+        MaterialSurface.disposeTemplates();
         padCache.dispose();
         hueCache.dispose();
         alphaCache.dispose();

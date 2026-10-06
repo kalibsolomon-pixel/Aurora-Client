@@ -204,7 +204,7 @@ class PackTabsPilotTest {
     @Test
     void screenDrivesTabHoverFromThePointerOnly() throws Exception {
         String src = screenSource();
-        assertTrue(src.contains("activeTabT = hoverAnim(\"tab:\" + i).update(hover);"),
+        assertTrue(src.contains("activeTabT = materialHover(\"tab:\" + i,hover);"),
                 "the active tab's animator must advance from the pointer only");
         assertFalse(src.contains("hover || isActive"),
                 "the hover||selected conflation is banned — selection reads through the persistent wash");
@@ -220,7 +220,7 @@ class PackTabsPilotTest {
         assertTrue(src.contains("private static final long HOVER_MS      = 140L;"));
         assertFalse(src.contains("HoverEase"), "the local 150 ms animator family is retired");
         assertFalse(src.contains("easeOutCubic(t)"), "no local eased-hover copy may remain");
-        assertTrue(src.contains("float t = hoverAnim(\"card:\" + p.projectId).update(cardHover);"),
+        assertTrue(src.contains("float t = materialHover(\"card:\" + p.projectId,cardHover);"),
                 "card-body hover rides the same canonical animator");
         assertTrue(src.contains("hovers.keySet().removeIf(k -> k.startsWith(\"card:\")"),
                 "card animator keys are pruned with their CardState");
