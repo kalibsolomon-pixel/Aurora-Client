@@ -240,11 +240,9 @@ public class AuroraConfig {
      * the 1.21.11 game loop only calls that method while the vanilla
      * framerate option is below its Unlimited sentinel (260) — a cap hooked
      * there is silently dead whenever the user runs vanilla "Unlimited",
-     * which is exactly when a custom cap is most wanted. The cap composes
-     * with every other limiter by the anchor invariant: each pacer is an
-     * independent "wait until my target", so the tightest active constraint
-     * (vanilla option, vanilla's iconified/AFK/menu throttles, the Aurora
-     * GUI cap, this cap) always wins and none can defeat another.
+     * which is exactly when a custom cap is most wanted. FramePacing resolves
+     * the tightest applicable effective native/global/GUI target and assigns
+     * one wait owner. Post-swap never raises a tighter native restriction.
      */
     public int frameCapFps = 0;
 

@@ -2269,3 +2269,14 @@ paint within the same 56×24 bounds used for hit testing and focus. A selected
 unified tab owns its single accent edge; an unselected keyboard-focused tab
 still receives a visible focus outline. Live GUI-scale 3 review confirmed these
 changes and one parent glass capture per frame. The full 421-test build passed.
+
+
+## C-PERF.3 native throttle precedence (2026-10-17)
+
+`FramePacing` now resolves the effective native/global/applicable GUI limits and
+shares one owner/deadline between the existing frame-head and post-swap hooks.
+This supersedes the historical independent-anchor composition claim above.
+Native menu/AFK/iconified restrictions cannot be raised by Aurora GUI/adaptive
+pacing; native Unlimited stays inactive, and positive global caps still work.
+PARK and its defaults are unchanged. See [CPERF3_NATIVE_THROTTLE.md](CPERF3_NATIVE_THROTTLE.md)
+for sentinel/applicability rules, transition handling, tests and runtime limits.
