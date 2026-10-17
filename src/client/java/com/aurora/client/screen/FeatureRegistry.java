@@ -1354,21 +1354,22 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                 .valueDescriptions(s -> switch (s) {
                                     case VANILLA -> "Disabled â€” uses Minecraft's default frame pacing. Notice the jitter at high FPS caps above ~64.";
                                     case PARK -> "Default. Sleeps for most of the wait, spinning only the final half-millisecond. Measured the most stable frame times of any strategy at 60 fps while using the least CPU - cool and quiet with nothing given up.";
-                                    case HYBRID -> "Sleeps when far from the frame deadline, then spins for the last two milliseconds. Measured no more precise than Park for extra CPU; kept for configs that set it before.";
+                                    case HYBRID -> "Sleeps until the configured Park Threshold, then spins to the deadline. Low CPU uses the shorter Spin Threshold instead. Kept for existing manual configurations.";
                                     case SPIN -> "Pure busy-loop. Maximum precision (sub-microsecond) but wastes a CPU core. Useful for benchmarking only.";
                                 }),
-                        new BooleanSetting("Low CPU Mode (laptops)",
+                        new BooleanSetting("Low CPU (Hybrid only)",
                                 () -> cfg.framePacerLowCpuMode,
                                 v -> cfg.framePacerLowCpuMode = v)
-                                .description("Pushes the sleep window further out for ~1-2ms less precision in exchange for cooler CPU. Great for laptops on battery."),
+                                .description("Hybrid only: parks until the configured Spin Threshold, shortening its planned spin window. Park and Spin are unchanged. Timing precision and actual CPU effects depend on the system.")
+                                .disabled(() -> cfg.framePacingStrategy != AuroraConfig.PacingStrategy.HYBRID),
                         SliderSetting.ofInt("Spin Threshold (Âµs)",
                                 () -> cfg.framePacerSpinThresholdMicros,
                                 v -> cfg.framePacerSpinThresholdMicros = v, 100, 2000)
-                                .description("Microseconds before the frame deadline to switch to pure spin. Lower = lower CPU, higher = more precise timing."),
+                                .description("Planned spin tail in microseconds for Park, and for Hybrid with Low CPU enabled. Manual values are preserved; actual timing and CPU use depend on the system. Spin ignores this threshold."),
                         SliderSetting.ofInt("Park Threshold (Âµs)",
                                 () -> cfg.framePacerParkThresholdMicros,
                                 v -> cfg.framePacerParkThresholdMicros = v, 1000, 8000)
-                                .description("When to switch from coarse OS-level sleep to fine yield-spin. Higher = lower CPU, lower = more stable timing."),
+                                .description("Planned spin window in microseconds for Hybrid with Low CPU off. A higher value reserves more active spinning. Park and Spin ignore this threshold."),
 
                         new SectionHeaderSetting("Frame Cap"),
                         SliderSetting.ofInt("Global Frame Cap",

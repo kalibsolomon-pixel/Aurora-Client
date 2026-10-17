@@ -51,7 +51,7 @@ public abstract class MinecraftClientRenderMixin {
         double target = FramePacing.INSTANCE.beginFrame(limit, org.lwjgl.glfw.GLFW.glfwGetTime());
         if (target != 0.0) {
             if (customPacer) FramePacer.waitUntil(target, cfg);
-            else FramePacer.waitUntilHybrid(target, 2000, 500);
+            else FramePacer.waitUntilHybrid(target, 2000);
         }
 
         if (!cfg.inputSamplingDecoupled) return;

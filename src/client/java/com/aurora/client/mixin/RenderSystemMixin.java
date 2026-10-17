@@ -28,7 +28,7 @@ public abstract class RenderSystemMixin {
         if (!wait.cancelNative()) return;
         if (wait.waitTarget() != 0.0) {
             if (customPacer) FramePacer.waitUntil(wait.waitTarget(), cfg);
-            else FramePacer.waitUntilHybrid(wait.waitTarget(), 2000, 500);
+            else FramePacer.waitUntilHybrid(wait.waitTarget(), 2000);
         }
         ci.cancel();
     }

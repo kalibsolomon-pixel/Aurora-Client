@@ -228,9 +228,9 @@ public class AuroraConfig {
     // — every existing config has the field explicitly persisted, which wins
     // verbatim on load.
     public PacingStrategy framePacingStrategy = PacingStrategy.PARK;
-    public int framePacerSpinThresholdMicros = 500;   // switch to pure spin within this much of target
-    public int framePacerParkThresholdMicros = 2000;  // switch from park to yield within this
-    public boolean framePacerLowCpuMode = false;      // longer parks, gives up some precision
+    public int framePacerSpinThresholdMicros = 500;   // PARK spin tail; also HYBRID with Low CPU
+    public int framePacerParkThresholdMicros = 2000;  // HYBRID spin window with Low CPU off
+    public boolean framePacerLowCpuMode = false;      // HYBRID only: use the shorter configured spin tail
 
     /**
      * Global frame cap in FPS: 0 = Off (default), 10..2000 when active.

@@ -68,15 +68,15 @@ public final class FramePacer {
 
     /**
      * Two-stage wait: park while far away, spin once within
-     * {@code spinThresholdMicros} of the target. The audit measured no
+     * {@code spinWindowMicros} of the target. The audit measured no
      * precision gain over {@link #waitUntilPark} (whose shorter spin tail
      * already covers the last half-millisecond) for the longer spin window's
      * extra CPU.
      */
-    public static void waitUntilHybrid(double target, int parkThresholdMicros, int spinThresholdMicros) {
-        // Stage 1 — park while still > parkThreshold away.
+    public static void waitUntilHybrid(double target, int spinWindowMicros) {
+        // Stage 1 — park until the planned spin window begins.
         double now = GLFW.glfwGetTime();
-        double parkUntil = target - parkThresholdMicros / 1_000_000.0;
+        double parkUntil = target - spinWindowMicros / 1_000_000.0;
         if (parkUntil > now) {
             long parkNanos = (long) ((parkUntil - now) * 1_000_000_000.0);
             if (parkNanos > 0) LockSupport.parkNanos(parkNanos);
@@ -88,25 +88,28 @@ public final class FramePacer {
         }
     }
 
+    /**
+     * HYBRID alone uses the Low CPU modifier. It parks until the configured
+     * shorter spin tail instead of increasing its active-spinning window.
+     * Values are normalized for dispatch only; saved thresholds are untouched.
+     */
+    static int hybridSpinWindowMicros(int spinThresholdMicros, int parkThresholdMicros, boolean lowCpu) {
+        int spinTail = Math.max(50, spinThresholdMicros);
+        int parkTail = Math.max(spinTail + 100, parkThresholdMicros);
+        return lowCpu ? Math.min(parkTail, spinTail) : parkTail;
+    }
+
     /** Dispatch to the configured strategy (null falls back to PARK, the factory default). */
     public static void waitUntil(double target, AuroraConfig cfg) {
         AuroraConfig.PacingStrategy strat = cfg.framePacingStrategy;
         if (strat == null) strat = AuroraConfig.PacingStrategy.PARK;
 
         int spinTail = Math.max(50, cfg.framePacerSpinThresholdMicros);
-        int parkTail = Math.max(spinTail + 100, cfg.framePacerParkThresholdMicros);
-
-        // Low CPU mode pushes the park threshold further out, so we park
-        // longer and spin/yield less. Costs ~1-2ms precision but keeps the
-        // CPU cool — useful on laptops.
-        if (cfg.framePacerLowCpuMode) {
-            parkTail = Math.max(parkTail, 4000);
-        }
-
         switch (strat) {
             case VANILLA -> { /* unreachable; callers gate on this */ }
             case PARK -> waitUntilPark(target, spinTail);
-            case HYBRID -> waitUntilHybrid(target, parkTail, spinTail);
+            case HYBRID -> waitUntilHybrid(target, hybridSpinWindowMicros(
+                    cfg.framePacerSpinThresholdMicros, cfg.framePacerParkThresholdMicros, cfg.framePacerLowCpuMode));
             case SPIN -> waitUntilSpin(target);
         }
     }

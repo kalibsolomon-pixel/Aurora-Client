@@ -2280,3 +2280,14 @@ Native menu/AFK/iconified restrictions cannot be raised by Aurora GUI/adaptive
 pacing; native Unlimited stays inactive, and positive global caps still work.
 PARK and its defaults are unchanged. See [CPERF3_NATIVE_THROTTLE.md](CPERF3_NATIVE_THROTTLE.md)
 for sentinel/applicability rules, transition handling, tests and runtime limits.
+
+
+## C-PERF.3 Low CPU semantics (2026-10-17)
+
+Low CPU is explicitly HYBRID-only. It uses the configured shorter spin tail
+instead of increasing the active spin window to at least 4000 microseconds.
+The UI disables it on other strategies while retaining its saved value. PARK,
+SPIN, all defaults, configuration keys and manual thresholds remain unchanged.
+See [CPERF3_VALIDATION.md](CPERF3_VALIDATION.md) for policy, compatibility,
+automated tests, disposable Java 21/OpenGL/Sodium smoke results and limitations.
+No measured CPU-saving claim or PARK tuning is made.
