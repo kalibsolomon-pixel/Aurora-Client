@@ -66,6 +66,33 @@ public final class FramePacer {
         }
     }
 
+    /** Same one-park/one-spin decisions; enabled diagnostics only. */
+    private static void waitUntilParkMeasured(double target, int spinTailMicros) {
+        double now = GLFW.glfwGetTime();
+        double remaining = target - now;
+        if (remaining <= 0) {
+            ParkDiagnostics.INSTANCE.record(now, target, now, now, 0, 0, false);
+            return;
+        }
+        long parkNanos = (long) ((remaining - spinTailMicros / 1_000_000.0) * 1_000_000_000.0);
+        long actualNanos = 0;
+        if (parkNanos > 0) {
+            long before = System.nanoTime();
+            LockSupport.parkNanos(parkNanos);
+            actualNanos = System.nanoTime() - before;
+        }
+        double spinStart = GLFW.glfwGetTime();
+        double exit = spinStart;
+        boolean entered = spinStart < target;
+        if (entered) {
+            do {
+                Thread.onSpinWait();
+            } while ((exit = GLFW.glfwGetTime()) < target);
+        }
+        ParkDiagnostics.INSTANCE.record(now, target, spinStart, exit,
+                Math.max(0, parkNanos), actualNanos, entered);
+    }
+
     /**
      * Two-stage wait: park while far away, spin once within
      * {@code spinWindowMicros} of the target. The audit measured no
@@ -107,7 +134,10 @@ public final class FramePacer {
         int spinTail = Math.max(50, cfg.framePacerSpinThresholdMicros);
         switch (strat) {
             case VANILLA -> { /* unreachable; callers gate on this */ }
-            case PARK -> waitUntilPark(target, spinTail);
+            case PARK -> {
+                if (ParkDiagnostics.INSTANCE.isEnabled()) waitUntilParkMeasured(target, spinTail);
+                else waitUntilPark(target, spinTail);
+            }
             case HYBRID -> waitUntilHybrid(target, hybridSpinWindowMicros(
                     cfg.framePacerSpinThresholdMicros, cfg.framePacerParkThresholdMicros, cfg.framePacerLowCpuMode));
             case SPIN -> waitUntilSpin(target);

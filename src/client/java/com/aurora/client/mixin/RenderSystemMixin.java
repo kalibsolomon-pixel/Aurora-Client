@@ -24,7 +24,12 @@ public abstract class RenderSystemMixin {
                 && cfg.framePacingStrategy != AuroraConfig.PacingStrategy.VANILLA;
         var limit = FramePacing.resolve(fps, cfg.frameCapFps, cfg.guiFpsLimit,
                 auroraGui, customPacer, cfg.lowLatencyRender && cfg.adaptiveRenderSleeping);
-        var wait = FramePacing.INSTANCE.postSwap(limit, GLFW.glfwGetTime());
+        double pacingNow = GLFW.glfwGetTime();
+        if (com.aurora.client.util.ParkDiagnostics.INSTANCE.isEnabled()) {
+            com.aurora.client.util.ParkDiagnosticsControl.observe(limit, cfg, customPacer,
+                    mc != null && mc.isWindowActive(), pacingNow);
+        }
+        var wait = FramePacing.INSTANCE.postSwap(limit, pacingNow);
         if (!wait.cancelNative()) return;
         if (wait.waitTarget() != 0.0) {
             if (customPacer) FramePacer.waitUntil(wait.waitTarget(), cfg);

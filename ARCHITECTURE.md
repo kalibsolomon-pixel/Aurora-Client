@@ -2771,3 +2771,16 @@ paint within the same 56×24 bounds used for hit testing and focus. A selected
 unified tab owns its single accent edge; an unselected keyboard-focused tab
 still receives a visible focus outline. Live GUI-scale 3 review confirmed these
 changes and one parent glass capture per frame. The full 421-test build passed.
+
+## C-PERF.1A PARK diagnostics (2026-10-17)
+
+`ParkDiagnostics` observes existing `FramePacing` ownership and reanchor decisions;
+`FramePacer` selects a separate measured PARK method only during explicit collection.
+Disabled dispatch retains the original PARK implementation. No deadline, native
+precedence, HYBRID, input/event ordering or Reflex policy changes. GLFW remains
+the scheduler clock; Java nanoseconds bracket only the park primitive. Six fixed
+histograms and primitive counters retain one homogeneous segment, reset on
+observed conditions changes with discard/transition totals. Developer commands
+are JVM-opt-in and session activation is separate; output is an explicit immutable
+copy followed by bounded asynchronous JSON export. No persisted settings or
+per-frame diagnostic objects. Details: [CPERF1A_DIAGNOSTICS_VALIDATION.md](CPERF1A_DIAGNOSTICS_VALIDATION.md).

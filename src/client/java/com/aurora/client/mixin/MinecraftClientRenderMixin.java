@@ -48,7 +48,12 @@ public abstract class MinecraftClientRenderMixin {
         var limit = FramePacing.resolve(self.getFramerateLimitTracker().getFramerateLimit(),
                 cfg.frameCapFps, cfg.guiFpsLimit, auroraGui, customPacer,
                 cfg.lowLatencyRender && cfg.adaptiveRenderSleeping);
-        double target = FramePacing.INSTANCE.beginFrame(limit, org.lwjgl.glfw.GLFW.glfwGetTime());
+        double pacingNow = org.lwjgl.glfw.GLFW.glfwGetTime();
+        if (com.aurora.client.util.ParkDiagnostics.INSTANCE.isEnabled()) {
+            com.aurora.client.util.ParkDiagnosticsControl.observe(limit, cfg, customPacer,
+                    self.isWindowActive(), pacingNow);
+        }
+        double target = FramePacing.INSTANCE.beginFrame(limit, pacingNow);
         if (target != 0.0) {
             if (customPacer) FramePacer.waitUntil(target, cfg);
             else FramePacer.waitUntilHybrid(target, 2000);

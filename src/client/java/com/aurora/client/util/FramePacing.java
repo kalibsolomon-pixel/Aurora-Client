@@ -89,6 +89,7 @@ public final class FramePacing {
         double frameTime = 1.0 / decision.fps();
         if (!scheduled.equals(decision)) reset(decision);
         if (nextTarget == 0.0 || now > nextTarget + frameTime * 0.5) {
+            if (ParkDiagnostics.INSTANCE.isEnabled()) ParkDiagnostics.INSTANCE.anchor(nextTarget == 0.0);
             nextTarget = now + frameTime;
             return 0.0;
         }

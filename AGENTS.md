@@ -2291,3 +2291,18 @@ SPIN, all defaults, configuration keys and manual thresholds remain unchanged.
 See [CPERF3_VALIDATION.md](CPERF3_VALIDATION.md) for policy, compatibility,
 automated tests, disposable Java 21/OpenGL/Sodium smoke results and limitations.
 No measured CPU-saving claim or PARK tuning is made.
+
+## C-PERF.1A PARK timing diagnostics (2026-10-17)
+
+`util/ParkDiagnostics` is a bounded render-thread collector behind an explicit
+developer session. `-Daurora.parkDiagnostics=true` registers local `/aurorapark`
+start/stop/reset/status/snapshot commands; collection still starts OFF. No config
+or profile fields. The original disabled PARK method remains intact; the measured
+dispatch records one park and its spin tail using GLFW deadline/spin timestamps
+and self-contained Java park-call elapsed timing. The existing two scheduler hooks
+attribute global/adaptive frame-head and post-swap owners; no native/Reflex waits
+are counted. Settings/owner/focus changes reset the current segment, with session
+transition/discard totals retained. Snapshots are immutable bounded copies;
+JSON formatting/writes run asynchronously, with one export in flight. See
+[CPERF1A_DIAGNOSTICS_VALIDATION.md](CPERF1A_DIAGNOSTICS_VALIDATION.md) for formulas,
+buckets, activation, observer-effect evidence and remaining validation limits.
