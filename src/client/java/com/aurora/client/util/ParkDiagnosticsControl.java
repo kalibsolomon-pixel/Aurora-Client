@@ -25,6 +25,10 @@ public final class ParkDiagnosticsControl {
         // Initialize the bounded storage during mod startup, never on the
         // first disabled frame. This does not enable collection or read a clock.
         ParkDiagnostics.INSTANCE.isEnabled();
+        // Freeze the independent experimental opt-in during Aurora startup.
+        if (FramePacer.EXPERIMENTAL_PARK_REPARK) {
+            AuroraClient.LOGGER.info("[PARK experiment] Bounded re-park enabled; maximum 2 calls, fixed 1ms retry.");
+        }
         if (!Boolean.getBoolean("aurora.parkDiagnostics")) return;
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registry) -> dispatcher.register(
                 literal("aurorapark")
@@ -61,7 +65,8 @@ public final class ParkDiagnosticsControl {
                 ? AuroraConfig.PacingStrategy.PARK : cfg.framePacingStrategy;
         String actualStrategy = switch (decision.owner()) {
             case NONE, NATIVE -> "NONE";
-            default -> customPacer ? strategy.name() : "HYBRID_FALLBACK";
+            default -> customPacer ? (strategy == AuroraConfig.PacingStrategy.PARK
+                    && FramePacer.EXPERIMENTAL_PARK_REPARK ? "PARK_REPARK" : strategy.name()) : "HYBRID_FALLBACK";
         };
         ParkDiagnostics.INSTANCE.observe(owner, actualStrategy, decision.fps(), cfg.frameCapFps,
                 cfg.guiFpsLimit, cfg.framePacerSpinThresholdMicros, cfg.framePacerParkThresholdMicros,

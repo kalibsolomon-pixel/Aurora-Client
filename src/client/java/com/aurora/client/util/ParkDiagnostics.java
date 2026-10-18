@@ -11,8 +11,11 @@ import java.util.UUID;
  */
 public final class ParkDiagnostics {
     public enum Owner { NONE, NATIVE, FRAME_HEAD_GLOBAL, FRAME_HEAD_ADAPTIVE, POST_SWAP }
-    public enum Metric { REQUESTED_PARK, ACTUAL_PARK, WAKE_ERROR, SPIN_WALL, TOTAL_WAIT_WALL, DEADLINE_ERROR }
-    private static final Metric[] METRICS = Metric.values();
+    public enum Metric { REQUESTED_PARK, ACTUAL_PARK, WAKE_ERROR, SPIN_WALL, TOTAL_WAIT_WALL, DEADLINE_ERROR,
+        TOTAL_PARK_ELAPSED, FINAL_PARK_WAKE_ERROR, REMAINING_AFTER_FIRST_PARK, REMAINING_AT_FINAL_SPIN_CHECK,
+        FIRST_REQUESTED_PARK, FIRST_ACTUAL_PARK, FIRST_WAKE_ERROR }
+    // The final three names are schema-2 export aliases, not additional storage.
+    private static final Metric[] METRICS = Arrays.copyOf(Metric.values(), 10);
     public static final ParkDiagnostics INSTANCE = new ParkDiagnostics();
     private final Histogram[] histograms = new Histogram[METRICS.length];
     private boolean enabled, hasContext;
@@ -24,6 +27,7 @@ public final class ParkDiagnostics {
     private long segment, discardedInvocations, fpsChanges, ownerChanges, focusChanges, conditionChanges;
     private long invocations, activeWaits, lateEntries, tooShortToPark, parkCalls, spinEntered, spinOnly;
     private long earlyParkReturns, lateParkReturns, initialAnchors, lateReanchors;
+    private long eligibleRetries, retriesTaken, interruptedRetries, retryLimitExhaustions;
 
     public ParkDiagnostics() {
         for (int i = 0; i < histograms.length; i++) histograms[i] = new Histogram();
@@ -89,7 +93,7 @@ public final class ParkDiagnostics {
 
     /** Arming is separate from recovery; neither is a PARK invocation. */
     public void anchor(boolean initial) {
-        if (!enabled || !strategy.equals("PARK")) return;
+        if (!enabled || !(strategy.equals("PARK") || strategy.equals("PARK_REPARK"))) return;
         if (initial) initialAnchors = increment(initialAnchors);
         else lateReanchors = increment(lateReanchors);
     }
@@ -127,9 +131,34 @@ public final class ParkDiagnostics {
         histograms[Metric.DEADLINE_ERROR.ordinal()].record(nanos(exit - target));
     }
 
+    /** Schema 2 only. Existing park counters/histograms keep FIRST-call semantics. */
+    public void recordExperimental(double entry, double target, double spinStart, double exit,
+                                   long firstRequestedNanos, long firstActualNanos, boolean enteredSpin,
+                                   double firstReturn, long retryActualNanos,
+                                   boolean eligible, boolean retry, boolean interrupted) {
+        if (!enabled || !strategy.equals("PARK_REPARK") || invocations == Long.MAX_VALUE) return;
+        record(entry, target, spinStart, exit, firstRequestedNanos, firstActualNanos, enteredSpin);
+        if (eligible) eligibleRetries++;
+        if (interrupted) interruptedRetries++;
+        if (retry) {
+            retriesTaken++;
+            if (FramePacer.experimentalRetryEligible(target - spinStart, Math.max(50, spinMicros))) {
+                retryLimitExhaustions++;
+            }
+        }
+        histograms[Metric.TOTAL_PARK_ELAPSED.ordinal()].record(add(firstActualNanos, retryActualNanos));
+        if (firstRequestedNanos > 0) {
+            histograms[Metric.FINAL_PARK_WAKE_ERROR.ordinal()].record(retry
+                    ? retryActualNanos - FramePacer.EXPERIMENTAL_RETRY_NANOS : firstActualNanos - firstRequestedNanos);
+            histograms[Metric.REMAINING_AFTER_FIRST_PARK.ordinal()].record(nanos(target - firstReturn));
+        }
+        histograms[Metric.REMAINING_AT_FINAL_SPIN_CHECK.ordinal()].record(nanos(target - spinStart));
+    }
+
     private void clearMeasurements() {
         invocations = activeWaits = lateEntries = tooShortToPark = parkCalls = spinEntered = spinOnly = 0;
         earlyParkReturns = lateParkReturns = initialAnchors = lateReanchors = 0;
+        eligibleRetries = retriesTaken = interruptedRetries = retryLimitExhaustions = 0;
         for (Histogram h : histograms) h.clear();
     }
 
@@ -140,9 +169,19 @@ public final class ParkDiagnostics {
     /** Explicit, bounded writer-thread copy outside wait operations; no automatic exports. */
     public Snapshot snapshot(double now) {
         double end = enabled ? now : stopped;
+        boolean experimental = strategy.equals("PARK_REPARK");
         var distributions = new java.util.ArrayList<Distribution>(histograms.length);
-        for (Metric m : METRICS) distributions.add(new Distribution(m, histograms[m.ordinal()].snapshot()));
-        return new Snapshot(1, build, sessionId, enabled, segment,
+        for (Metric m : METRICS) {
+            if (!experimental && m.ordinal() >= 6) break;
+            Metric label = experimental ? switch (m) {
+                case REQUESTED_PARK -> Metric.FIRST_REQUESTED_PARK;
+                case ACTUAL_PARK -> Metric.FIRST_ACTUAL_PARK;
+                case WAKE_ERROR -> Metric.FIRST_WAKE_ERROR;
+                default -> m;
+            } : m;
+            distributions.add(new Distribution(label, histograms[m.ordinal()].snapshot()));
+        }
+        return new Snapshot(experimental ? 2 : 1, build, sessionId, enabled, segment,
                 nanos(end - started), nanos(end - segmentStarted),
                 new Conditions(owner, strategy, fps, globalCap, guiCap, spinMicros,
                         Math.max(50, spinMicros), parkMicros, lowCpu, focused),
@@ -150,6 +189,16 @@ public final class ParkDiagnostics {
                         spinEntered, spinOnly, earlyParkReturns, lateParkReturns, initialAnchors, lateReanchors),
                 new Transitions(fpsChanges, ownerChanges, focusChanges, conditionChanges, discardedInvocations),
                 Histogram.UPPER_EXCLUSIVE, List.copyOf(distributions),
+                new ParkPath(experimental ? "EXPERIMENTAL_BOUNDED_REPARK" : "REFERENCE",
+                        FramePacer.EXPERIMENTAL_PARK_REPARK, experimental ? 2 : 1,
+                        experimental ? FramePacer.EXPERIMENTAL_RETRY_NANOS : 0,
+                        experimental ? "First park occurred; R >= normalized S + 1ms; no interruption observed at entry or before retry; at most one retry."
+                                : "No retry."),
+                experimental ? new ReparkCounters(invocations, invocations - parkCalls,
+                        parkCalls - retriesTaken, retriesTaken, parkCalls, eligibleRetries, retriesTaken,
+                        interruptedRetries, retryLimitExhaustions, add(parkCalls, retriesTaken),
+                        retriesTaken == 0 ? 0 : FramePacer.EXPERIMENTAL_RETRY_NANOS,
+                        retriesTaken == 0 ? 0 : FramePacer.EXPERIMENTAL_RETRY_NANOS) : null,
                 "Current segment only; prior segments discarded. Durations/errors in ns; wall time, not CPU. "
                         + "GLFW deadlines/spin; System.nanoTime park elapsed, never mixed. "
                         + "Buckets [lower,upper), null endpoints unbounded; percentile rank buckets approximate. "
@@ -157,7 +206,14 @@ public final class ParkDiagnostics {
                         + "Native/Reflex/VSync/GPU/frame work excluded; invocations are not frame IDs. "
                         + "No added per-iteration clocks. Exit uses final GLFW condition read, before aggregation. "
                         + "Clock/read/preemption overhead included; sub-clock differences unreliable. "
-                        + "Counters saturate at Long.MAX_VALUE; wait samples freeze at that invocation count.");
+                        + "Counters saturate at Long.MAX_VALUE; wait samples freeze at that invocation count. "
+                        + (experimental ? "Schema 2: counters.parkCalls/earlyParkReturns/lateParkReturns are FIRST calls only. "
+                        + "TOTAL_PARK_ELAPSED and REMAINING_AT_FINAL_SPIN_CHECK: all invocations (expired entry included). "
+                        + "FINAL_PARK_WAKE_ERROR and REMAINING_AFTER_FIRST_PARK: invocations with a first park. "
+                        + "Total parked elapsed sums call brackets only; retry-limit exhaustion means R >= S + 1ms after retry. "
+                        + "eligibleRetries = retriesTaken + retriesSkippedInterruption; totalParkCalls saturates. "
+                        + "Retry can consume task-scheduler permits or oversleep; task responsiveness is not guaranteed equivalent."
+                        : "Schema 1 metrics and populations unchanged; parkPath is additive identity metadata."));
     }
 
     public record Conditions(Owner owner, String strategy, int effectiveFps, int configuredGlobalFps,
@@ -173,10 +229,18 @@ public final class ParkDiagnostics {
     public record HistogramSnapshot(long count, Long minNanos, Long maxNanos, Long meanNanos,
                                     Bucket approximateP50, Bucket approximateP95, Bucket approximateP99,
                                     List<Long> buckets) {}
+    public record ParkPath(String path, boolean experimentalFlag, int maximumParkCalls,
+                           long retryRequestNanos, String retryEligibility) {}
+    public record ReparkCounters(long totalParkInvocations, long zeroParkInvocations,
+                                 long oneParkInvocations, long twoParkInvocations, long firstParkCalls,
+                                 long eligibleRetries, long retriesTaken, long retriesSkippedInterruption,
+                                 long retryLimitExhaustions, long totalParkCalls,
+                                 long retryRequestMinNanos, long retryRequestMaxNanos) {}
     public record Snapshot(int schemaVersion, String clientBuild, String sessionId, boolean active,
                            long segment, long sessionDurationNanos, long segmentDurationNanos,
                            Conditions conditions, Counters counters, Transitions transitions,
                            List<Long> bucketUpperExclusiveNanos, List<Distribution> distributions,
+                           ParkPath parkPath, ReparkCounters reparkCounters,
                            String limitations) {}
 
     /** 25us central buckets, exponential tails and explicit under/overflow. */

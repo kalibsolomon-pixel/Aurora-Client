@@ -2784,3 +2784,21 @@ observed conditions changes with discard/transition totals. Developer commands
 are JVM-opt-in and session activation is separate; output is an explicit immutable
 copy followed by bounded asynchronous JSON export. No persisted settings or
 per-frame diagnostic objects. Details: [CPERF1A_DIAGNOSTICS_VALIDATION.md](CPERF1A_DIAGNOSTICS_VALIDATION.md).
+
+## C-PERF.2A bounded re-parking experiment (2026-10-17)
+
+Startup-only `-Daurora.experimentalParkRepark=true` selects an isolated PARK
+implementation, independently of diagnostic activation. Absent/false retains
+both original reference methods. After the unchanged first park, one fixed 1ms
+retry is allowed only with normalized spin reserve + 1ms remaining and no observed
+interruption. The same absolute deadline controls the final spin; no third park,
+task/event pumping, reanchor, tuning or persisted setting is introduced. PARK/500
+remains the default. A retry can consume Minecraft task-scheduler permits or
+oversleep, so equivalent task responsiveness is not guaranteed.
+
+Reference exports retain schema 1's six metrics/populations with additive path
+identity. Experimental exports use schema 2, `PARK_REPARK` segment identity,
+explicit first-call labels, retry counters and four additional bounded histograms.
+The collector never supplies scheduling decisions. See
+[CPERF2A_REPARK_IMPLEMENTATION.md](CPERF2A_REPARK_IMPLEMENTATION.md) for validation,
+population contracts and limitations. No performance improvement is established.

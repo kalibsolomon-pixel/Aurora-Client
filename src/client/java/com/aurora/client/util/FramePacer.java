@@ -39,6 +39,27 @@ import java.util.concurrent.locks.LockSupport;
  */
 public final class FramePacer {
 
+    // Process-only developer opt-in. Never persisted or changed during a session.
+    static final boolean EXPERIMENTAL_PARK_REPARK = Boolean.getBoolean("aurora.experimentalParkRepark");
+    static final long EXPERIMENTAL_RETRY_NANOS = 1_000_000L;
+
+    /** Minimal boundary for deterministic tests of the isolated experiment. */
+    interface ExperimentalWait {
+        double time();
+        long nanoTime();
+        void park(long nanos);
+        void spin();
+        boolean isInterrupted();
+    }
+
+    private static final ExperimentalWait EXPERIMENTAL_WAIT = new ExperimentalWait() {
+        public double time() { return GLFW.glfwGetTime(); }
+        public long nanoTime() { return System.nanoTime(); }
+        public void park(long nanos) { LockSupport.parkNanos(nanos); }
+        public void spin() { Thread.onSpinWait(); }
+        public boolean isInterrupted() { return Thread.currentThread().isInterrupted(); }
+    };
+
     private FramePacer() {}
 
     /** Pure busy-spin. Max precision, full CPU core spin. */
@@ -46,6 +67,67 @@ public final class FramePacer {
         while (GLFW.glfwGetTime() < target) {
             Thread.onSpinWait();
         }
+    }
+
+    /** Time eligibility only; interruption vetoes the single retry separately. */
+    static boolean experimentalRetryEligible(double remaining, int spinTailMicros) {
+        return remaining >= spinTailMicros / 1_000_000.0 + 0.001;
+    }
+
+    /**
+     * Isolated C-PERF.2A path. The first request matches reference PARK exactly.
+     * One fixed 1ms retry requires the full configured reserve plus 1ms remaining.
+     * A second immediate return MUST go to the deadline spin, never a retry loop.
+     * The nullable observer changes collection only, never scheduling decisions.
+     * No tasks/events are serviced here; a retry can consume a Minecraft unpark
+     * permit and can oversleep. Neither the reserve nor responsiveness is guaranteed.
+     */
+    static void waitUntilParkExperimental(double target, int spinTailMicros,
+                                          ExperimentalWait wait, ParkDiagnostics observer) {
+        double now = wait.time();
+        double remaining = target - now;
+        if (remaining <= 0) {
+            if (observer != null) observer.recordExperimental(now, target, now, now,
+                    0, 0, false, now, 0, false, false, false);
+            return;
+        }
+        long parkNanos = (long) ((remaining - spinTailMicros / 1_000_000.0) * 1_000_000_000.0);
+        boolean interruptedAtEntry = wait.isInterrupted();
+        long actualNanos = 0;
+        if (parkNanos > 0) {
+            long before = observer != null ? wait.nanoTime() : 0;
+            wait.park(parkNanos);
+            if (observer != null) actualNanos = wait.nanoTime() - before;
+        }
+        double firstReturn = wait.time();
+        double spinStart = firstReturn;
+        boolean eligible = parkNanos > 0 && experimentalRetryEligible(target - firstReturn, spinTailMicros);
+        boolean retry = false;
+        boolean interrupted = false;
+        long retryActualNanos = 0;
+        if (eligible) {
+            interrupted = wait.isInterrupted() || interruptedAtEntry;
+            // A final non-clearing check bounds the race without clearing/restoring
+            // the flag. An interrupt after this check may still wake the retry.
+            if (!interrupted) interrupted = wait.isInterrupted();
+            if (!interrupted) {
+                retry = true;
+                long before = observer != null ? wait.nanoTime() : 0;
+                wait.park(EXPERIMENTAL_RETRY_NANOS);
+                if (observer != null) retryActualNanos = wait.nanoTime() - before;
+                spinStart = wait.time();
+            }
+        }
+        double exit = spinStart;
+        boolean entered = spinStart < target;
+        if (entered) {
+            do {
+                wait.spin();
+            } while ((exit = wait.time()) < target);
+        }
+        if (observer != null) observer.recordExperimental(now, target, spinStart, exit,
+                Math.max(0, parkNanos), actualNanos, entered, firstReturn,
+                retryActualNanos, eligible, retry, interrupted);
     }
 
     /**
@@ -135,8 +217,13 @@ public final class FramePacer {
         switch (strat) {
             case VANILLA -> { /* unreachable; callers gate on this */ }
             case PARK -> {
-                if (ParkDiagnostics.INSTANCE.isEnabled()) waitUntilParkMeasured(target, spinTail);
-                else waitUntilPark(target, spinTail);
+                if (EXPERIMENTAL_PARK_REPARK) {
+                    waitUntilParkExperimental(target, spinTail, EXPERIMENTAL_WAIT,
+                            ParkDiagnostics.INSTANCE.isEnabled() ? ParkDiagnostics.INSTANCE : null);
+                } else {
+                    if (ParkDiagnostics.INSTANCE.isEnabled()) waitUntilParkMeasured(target, spinTail);
+                    else waitUntilPark(target, spinTail);
+                }
             }
             case HYBRID -> waitUntilHybrid(target, hybridSpinWindowMicros(
                     cfg.framePacerSpinThresholdMicros, cfg.framePacerParkThresholdMicros, cfg.framePacerLowCpuMode));

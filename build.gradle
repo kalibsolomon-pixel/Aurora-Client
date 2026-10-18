@@ -71,6 +71,15 @@ dependencies {
 
 tasks.named("test") {
 	useJUnitPlatform()
+	// Mojang's default Log4j config rotates relative logs/ at JVM startup.
+	// Keep source-contract tests rooted here, but isolate every test execution's
+	// generated logs. This override belongs only to the test JVM, never runClient.
+	systemProperty 'log4j.configurationFile', file('src/test/resources/aurora-test-log4j2.xml').toURI().toString()
+	doFirst {
+		def testLogDirectory = java.nio.file.Files.createTempDirectory('aurora-client-tests-').toFile()
+		systemProperty 'aurora.testLogDirectory', testLogDirectory.absolutePath
+		logger.lifecycle("Test logs: ${testLogDirectory}")
+	}
 }
 
 tasks.withType(ProcessResources).configureEach {

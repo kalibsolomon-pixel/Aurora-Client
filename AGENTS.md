@@ -2306,3 +2306,20 @@ transition/discard totals retained. Snapshots are immutable bounded copies;
 JSON formatting/writes run asynchronously, with one export in flight. See
 [CPERF1A_DIAGNOSTICS_VALIDATION.md](CPERF1A_DIAGNOSTICS_VALIDATION.md) for formulas,
 buckets, activation, observer-effect evidence and remaining validation limits.
+
+## C-PERF.2A developer re-parking experiment (2026-10-17)
+
+`-Daurora.experimentalParkRepark=true` is read once at startup and selects a
+separate PARK path, with diagnostics either Off or On. Both reference methods
+remain unchanged; absent/false keeps production PARK/500. The unchanged first
+park may be followed by exactly one fixed 1ms request only when normalized spin
+reserve + 1ms remains and no interruption was observed. Interrupt status and the
+absolute deadline/final spin are preserved. No tuning, config/profile field,
+task/event pumping, hook relocation, FPS ownership or default change.
+
+Experimental diagnostic segments are labeled `PARK_REPARK` and export schema 2
+with explicit first-call metrics, 0/1/2-call counts and four additional bounded
+distributions. Reference schema 1 retains its original interpretation plus
+additive path metadata. The retry can consume a task-scheduler permit or
+oversleep; equivalent responsiveness and performance gains are unproven.
+See [CPERF2A_REPARK_IMPLEMENTATION.md](CPERF2A_REPARK_IMPLEMENTATION.md).
