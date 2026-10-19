@@ -2896,3 +2896,6 @@ below them, preserving selection priority without covering neighboring icons.
 Minimap distance labels also reserve compass positions. Performance and native
 scale evidence, including the remaining 4K CPU tradeoff, are recorded in
 MAPPING_PIXEL_RENDERING_REPORT.md.
+Disconnect callbacks schedule minimap/marker GPU cleanup on Minecraft's client
+executor; shutdown cleanup remains on the stopping client thread. Native log
+checks reject texture-close or render-thread violations as failed acceptance.

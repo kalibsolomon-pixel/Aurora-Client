@@ -2409,3 +2409,6 @@ offering map names at alternate positions (260 obstacle slots, 64 names). Minima
 distance labels exclude compass letters and each other. See
 MAPPING_PIXEL_RENDERING_REPORT.md for native scale screenshots and bounded timing,
 including the measured CPU cost of higher-density output at 4K.
+Disconnect cleanup is marshalled onto the client thread: Fabric's disconnect
+callback can arrive on Netty, where releasing native GPU textures is invalid.
+The native mapping runner rejects wrong-render-thread/texture-close warnings.

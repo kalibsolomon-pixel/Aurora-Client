@@ -51,7 +51,9 @@ public final class MinimapModule extends HudModule {
     public MinimapModule() {
         super(ID);
         resetLayoutToDefaults();
-        ClientPlayConnectionEvents.DISCONNECT.register((handler, mc) -> { release(); MapMarkers.dispose(); });
+        // Fabric disconnect may arrive on Netty. GPU resources and cache state
+        // belong to the render/client thread, including during reconnect.
+        ClientPlayConnectionEvents.DISCONNECT.register((handler, mc) -> mc.execute(() -> { release(); MapMarkers.dispose(); }));
         ClientLifecycleEvents.CLIENT_STOPPING.register(mc -> { release(); MapMarkers.dispose(); });
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(mc -> {
             if (!AuroraConfig.get().minimapEnabled || mc.level == null) release();
