@@ -12,7 +12,7 @@ import sys
 REPO = Path(__file__).resolve().parents[1]
 
 
-def prepare(root, reference=False, classes_from=None):
+def prepare(root, reference=False, classes_from=None, cache_regions=None):
     assert not root.exists(), root
     source = Path.home() / 'AppData/Local/Temp/aii-s1'
     root.mkdir(parents=True)
@@ -23,10 +23,15 @@ def prepare(root, reference=False, classes_from=None):
     shutil.copy2(source / 'game/options.txt', game / 'options.txt')
     cfg = json.loads((game / 'config/aurora.json').read_text())
     cfg.update(minimapEnabled=True, worldMapEnabled=True, waypointsEnabled=True)
+    if cache_regions is not None:
+        assert 8 <= cache_regions <= 256
+        cfg['worldMapCacheRegions'] = cache_regions
     (game / 'config/aurora.json').write_text(json.dumps(cfg, indent=2))
     for path in (game / 'config/profiles').glob('*.json'):
         data = json.loads(path.read_text())
         data['fields'].update({k: cfg[k] for k in ('minimapEnabled', 'worldMapEnabled', 'waypointsEnabled')})
+        if cache_regions is not None:
+            data['fields']['worldMapCacheRegions'] = cache_regions
         path.write_text(json.dumps(data, indent=2))
     spec = json.loads((source / 'launch-private.json').read_text())
     spec['workingDirectory'] = str(game)
@@ -75,5 +80,6 @@ if __name__ == '__main__':
     parser.add_argument('root', type=Path)
     parser.add_argument('--reference', action='store_true')
     parser.add_argument('--classes-from', type=Path)
+    parser.add_argument('--cache-regions', type=int, choices=range(8, 257))
     args = parser.parse_args()
-    prepare(args.root.resolve(), args.reference, args.classes_from)
+    prepare(args.root.resolve(), args.reference, args.classes_from, args.cache_regions)

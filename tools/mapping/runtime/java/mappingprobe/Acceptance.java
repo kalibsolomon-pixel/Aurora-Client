@@ -34,6 +34,17 @@ public final class Acceptance implements ClientModInitializer {
     private static String identity;
     private static final boolean RESUME = Boolean.getBoolean("aurora.mapping.resume");
     private static final boolean MULTIPLAYER = Boolean.getBoolean("aurora.mapping.multiplayer");
+    private static final boolean EXTENDED = Boolean.getBoolean("aurora.mapping.extended");
+    private static int explorationStep, maxResident, maxLoads, maxOverviews, maxRegionTextures, maxOverviewTextures;
+    private static final List<Map<String, Object>> observed = new ArrayList<>();
+    private static Object field(Object owner, String name) throws ReflectiveOperationException {
+        var field = owner.getClass().getDeclaredField(name); field.setAccessible(true);
+        return field.get(owner);
+    }
+    private static void moveToRegion(Minecraft mc) {
+        int x = (explorationStep % 8) * 512 + 256, z = (explorationStep / 8) * 512 + 256;
+        command(mc, "tp @a " + x + " 180 " + z + " 0 45");
+    }
     private static void connect(Minecraft mc) {
         String address = "127.0.0.1:25579";
         net.minecraft.client.gui.screens.ConnectScreen.startConnecting(new TitleScreen(), mc,
@@ -91,7 +102,8 @@ public final class Acceptance implements ClientModInitializer {
                 if (MULTIPLAYER) next(100);
                 else {
                     command(mc, "gamemode spectator @a"); command(mc, "tp @a 0 100 0 0 30");
-                    next(RESUME ? 90 : 1);
+                    if (EXTENDED) { moveToRegion(mc); next(200); }
+                    else next(RESUME ? 90 : 1);
                 }
             }
             return;
@@ -111,10 +123,76 @@ public final class Acceptance implements ClientModInitializer {
                 mc.createWorldOpenFlows().openWorld("Cperf1a", () -> mc.setScreen(new TitleScreen())); next(17);
             }
             if (stage == 102 && elapsed() > 4 && mc.getOverlay() == null) { connect(mc); next(103); }
+            if (stage == 203 && elapsed() > 4 && mc.getOverlay() == null) {
+                mc.createWorldOpenFlows().openWorld("Cperf1a", () -> mc.setScreen(new TitleScreen())); next(204);
+            }
             return;
         }
         var cfg = AuroraConfig.get(); var feature = WaypointFeature.get(); var engine = WorldMapClient.get();
+        if (EXTENDED && engine.identity() != null) {
+            Object live = field(engine, "live");
+            var regions = (com.aurora.client.worldmap.cache.RegionCache) field(live, "regions");
+            maxResident = Math.max(maxResident, regions.size());
+            maxLoads = Math.max(maxLoads, (int) field(live, "loads"));
+            var overviewTiles = (Map<?, ?>) field(field(live, "overviews"), "tiles");
+            maxOverviews = Math.max(maxOverviews, overviewTiles.size());
+            int regionTextures = 0, overviewTextures = 0;
+            for (Object tile : ((Map<?, ?>) field(regions, "tiles")).values())
+                if (((com.aurora.client.worldmap.cache.RegionCache.RegionTile) tile).textureId() != null) regionTextures++;
+            for (Object tile : overviewTiles.values())
+                if (((com.aurora.client.worldmap.cache.OverviewCache.OverviewTile) tile).textureId() != null) overviewTextures++;
+            maxRegionTextures = Math.max(maxRegionTextures, regionTextures);
+            maxOverviewTextures = Math.max(maxOverviewTextures, overviewTextures);
+        }
         switch (stage) {
+            case 200 -> {
+                if (elapsed() < 4) return;
+                int x = (explorationStep % 8) * 512 + 256, z = (explorationStep / 8) * 512 + 256;
+                int pixel = engine.sampleSurfaceAbgr(x, z);
+                boolean arrived = Math.abs(mc.player.getX() - x) < 2 && Math.abs(mc.player.getZ() - z) < 2;
+                if (!arrived || pixel == 0) {
+                    if (elapsed() > 25) throw new IllegalStateException("Region capture timed out at " + explorationStep);
+                    return;
+                }
+                observed.add(Map.of("x", x, "z", z, "abgr", pixel));
+                System.out.println("[mapping-extended] observed " + explorationStep + " regions=" + maxResident);
+                if (++explorationStep < 40) { moveToRegion(mc); next(200); }
+                else {
+                    check("forty-observed-region-centers", observed.size() == 40);
+                    check("eight-region-residency-bound", maxResident <= 8);
+                    check("eight-inflight-load-bound", maxLoads <= 8);
+                    check("overview-residency-bound", maxOverviews <= 2048);
+                    engine.flushDirty(); mc.setScreen(new WorldMapScreen());
+                    for (int i = 0; i < 5; i++) mc.screen.mouseScrolled(220, 140, 0, -1);
+                    next(201);
+                }
+            }
+            case 201 -> {
+                if (elapsed() < 10) return;
+                shot(mc, "extended-overview");
+                var coordinates = mc.screen.children().stream().filter(w -> w instanceof EditBox)
+                        .map(w -> (EditBox) w).findFirst().orElseThrow();
+                coordinates.setValue("2048 1280");
+                mc.screen.children().stream().filter(w -> w instanceof ButtonWidget b && b.getMessage().getString().equals("Go"))
+                        .map(w -> (ButtonWidget) w).findFirst().orElseThrow().onPress(null);
+                next(202);
+            }
+            case 202 -> {
+                if (elapsed() < 12) return;
+                shot(mc, "extended-large-map");
+                Files.writeString(output.resolve("observed-regions.json"), new GsonBuilder().setPrettyPrinting()
+                        .create().toJson(Map.of("identity", identity, "dimensionFolder", MapIdentity.dimensionFolder(dim(mc)),
+                                "points", observed, "maxResident", maxResident, "maxLoads", maxLoads, "maxOverviews", maxOverviews,
+                                "maxRegionTextures", maxRegionTextures, "maxOverviewTextures", maxOverviewTextures)));
+                next(203); mc.setScreen(null); mc.disconnectFromWorld(Component.literal("Extended persistence check"));
+            }
+            case 204 -> {
+                if (elapsed() < 15) return;
+                check("extended-reconnect-identity", identity.equals(MapIdentity.current().key()));
+                check("extended-reconnect-terrain", engine.sampleSurfaceAbgr(mc.player.blockPosition().getX(), mc.player.blockPosition().getZ()) != 0);
+                shot(mc, "extended-reconnect"); next(205);
+            }
+            case 205 -> { if (elapsed() > 5) finish(mc); }
             case 100 -> {
                 if (elapsed() < 20) return;
                 check("multiplayer-address-identity", identity.equals("map-" + MapIdentity.digest("server:127.0.0.1:25579")));
@@ -297,6 +375,7 @@ public final class Acceptance implements ClientModInitializer {
             Map<String,Object> report = new LinkedHashMap<>();
             report.put("checks", checks); report.put("frames", frameCount); report.put("resume", RESUME);
             report.put("multiplayer", MULTIPLAYER);
+            report.put("extended", EXTENDED);
             report.put("elapsedSeconds", (System.nanoTime() - started) / 1e9);
             report.put("mods", net.fabricmc.loader.api.FabricLoader.getInstance().getAllMods().stream()
                     .map(m -> m.getMetadata().getId() + ":" + m.getMetadata().getVersion()).sorted().toList());

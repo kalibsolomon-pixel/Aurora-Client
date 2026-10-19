@@ -16,7 +16,7 @@ sys.path.insert(0, 'C:/Dev/aurora-launcher/tools/benchmark')
 from process_capture import Reader
 
 
-def run(root, resume, multiplayer=False, runtime_root=None):
+def run(root, resume, multiplayer=False, runtime_root=None, extended=False):
     assert (root / 'DISPOSABLE-RESEARCH.txt').is_file()
     manifest = root / 'runtime-manifest.json'
     if manifest.exists():
@@ -45,6 +45,9 @@ def run(root, resume, multiplayer=False, runtime_root=None):
         args.append('-Daurora.mapping.resume=true')
     if multiplayer:
         args.append('-Daurora.mapping.multiplayer=true')
+    if extended:
+        assert not multiplayer and not resume
+        args.append('-Daurora.mapping.extended=true')
     name = 'resume' if resume else 'acceptance'
     samples = []
     with (root / (name + '-stdout.log')).open('xb') as out, (root / (name + '-stderr.log')).open('xb') as err:
@@ -78,5 +81,6 @@ if __name__ == '__main__':
     parser.add_argument('--resume', action='store_true')
     parser.add_argument('--multiplayer', action='store_true')
     parser.add_argument('--runtime-root', type=Path)
+    parser.add_argument('--extended', action='store_true')
     args = parser.parse_args()
-    raise SystemExit(run(args.root.resolve(), args.resume, args.multiplayer, args.runtime_root))
+    raise SystemExit(run(args.root.resolve(), args.resume, args.multiplayer, args.runtime_root, args.extended))

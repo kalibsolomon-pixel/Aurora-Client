@@ -23,6 +23,16 @@ frozen `--runtime-root ROOT` can validate final visual/input fixes against the s
 persisted game directory while retaining all previous runtime artifacts.
 `--multiplayer` uses only the disposable loopback server at 127.0.0.1:25579.
 
+For native eviction pressure, prepare another new frozen fixture with
+`--reference --cache-regions 8` (config and active profiles), build
+`mappingProbeJar`, and run `mapping_run.py ROOT --extended`. This mode visits
+forty region centers, waiting for actual client terrain capture at each. It
+records peak full-resolution/overview residency and in-flight loads, browses the
+resulting map at far zoom, and reconnects. It never fabricates terrain pixels.
+After normal exit, run `mapping_verify_regions.py ROOT` to verify every observed
+pixel and chunk stamp against the durable GZIP files. Keep its raw world and
+identity private; the aggregate `region-integrity.json` is suitable for review.
+
 `mappingPerfJar` builds the performance workload. It is a preserved copy of the
 previous stress observer, with a disposable scene reset before positive setup
 assertions. Replace only the research jar classpath entry with the new jar;
