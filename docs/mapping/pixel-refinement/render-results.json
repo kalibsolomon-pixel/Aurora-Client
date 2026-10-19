@@ -1,0 +1,1162 @@
+{
+  "reference-03": {
+    "report": {
+      "checks": [
+        {
+          "stage": 301,
+          "passed": true,
+          "check": "stationary-terrain-no-repaint"
+        },
+        {
+          "stage": 302,
+          "passed": true,
+          "check": "native-framebuffer-0"
+        },
+        {
+          "stage": 304,
+          "passed": true,
+          "check": "manager-controls-bounded-0"
+        },
+        {
+          "stage": 302,
+          "passed": true,
+          "check": "native-framebuffer-1"
+        },
+        {
+          "stage": 304,
+          "passed": true,
+          "check": "manager-controls-bounded-1"
+        },
+        {
+          "stage": 302,
+          "passed": true,
+          "check": "native-framebuffer-2"
+        },
+        {
+          "stage": 304,
+          "passed": true,
+          "check": "manager-controls-bounded-2"
+        },
+        {
+          "stage": 302,
+          "passed": true,
+          "check": "native-framebuffer-3"
+        },
+        {
+          "stage": 304,
+          "passed": true,
+          "check": "manager-controls-bounded-3"
+        },
+        {
+          "stage": 302,
+          "passed": true,
+          "check": "native-framebuffer-4"
+        },
+        {
+          "stage": 304,
+          "passed": true,
+          "check": "manager-controls-bounded-4"
+        },
+        {
+          "stage": 302,
+          "passed": true,
+          "check": "native-framebuffer-5"
+        },
+        {
+          "stage": 304,
+          "passed": true,
+          "check": "manager-controls-bounded-5"
+        },
+        {
+          "stage": 307,
+          "passed": true,
+          "check": "render-resource-reload"
+        },
+        {
+          "stage": 310,
+          "passed": true,
+          "check": "render-waypoints-preserved"
+        }
+      ],
+      "frames": 11704,
+      "resume": false,
+      "multiplayer": false,
+      "extended": false,
+      "rendering": true,
+      "clock": {
+        "nanoBefore": 226881352870900,
+        "qpcTick": 2268813529874,
+        "qpcFrequency": 10000000,
+        "nanoAfter": 226881352997500
+      },
+      "elapsedSeconds": 121.7596326,
+      "mods": [
+        "aurora:3.0.0",
+        "aurora_mapping_acceptance:1.0.0",
+        "entityculling:1.11.3",
+        "fabric-api-base:1.0.5+4ebb5c083e",
+        "fabric-api-lookup-api-v1:1.6.114+20dc27073e",
+        "fabric-api:0.141.4+1.21.11",
+        "fabric-biome-api-v1:17.1.1+4fc5413f3e",
+        "fabric-block-api-v1:1.1.10+4ebb5c083e",
+        "fabric-block-view-api-v2:1.0.39+4ebb5c083e",
+        "fabric-client-gametest-api-v1:4.3.5+bfe9fcf43e",
+        "fabric-command-api-v2:2.4.7+6b42a6003e",
+        "fabric-content-registries-v0:10.2.14+4fc5413f3e",
+        "fabric-convention-tags-v1:2.1.55+7f945d5b3e",
+        "fabric-convention-tags-v2:2.17.3+8ef948ba3e",
+        "fabric-crash-report-info-v1:0.3.23+4ebb5c083e",
+        "fabric-data-attachment-api-v1:1.8.48+eed0806f3e",
+        "fabric-data-generation-api-v1:23.4.1+69974c4e3e",
+        "fabric-dimensions-v1:4.0.28+4fc5413f3e",
+        "fabric-entity-events-v1:3.1.1+1d0ab4303e",
+        "fabric-events-interaction-v0:4.1.1+3b89ecf63e",
+        "fabric-game-rule-api-v1:2.0.3+4fc5413f3e",
+        "fabric-gametest-api-v1:3.1.27+4fc5413f3e",
+        "fabric-item-api-v1:11.5.20+d0c46b9e3e",
+        "fabric-item-group-api-v1:4.2.36+4fc5413f3e",
+        "fabric-key-binding-api-v1:1.1.7+4fc5413f3e",
+        "fabric-lifecycle-events-v1:2.6.15+4ebb5c083e",
+        "fabric-loot-api-v2:3.0.73+3f89f5a53e",
+        "fabric-loot-api-v3:2.0.20+78c8b4663e",
+        "fabric-message-api-v1:6.1.12+4ebb5c083e",
+        "fabric-model-loading-api-v1:6.0.15+4fc5413f3e",
+        "fabric-networking-api-v1:5.1.6+6b6d71a53e",
+        "fabric-object-builder-api-v1:21.1.40+4fc5413f3e",
+        "fabric-particles-v1:4.2.12+4fc5413f3e",
+        "fabric-recipe-api-v1:8.2.4+4ebb5c083e",
+        "fabric-registry-sync-v0:6.2.6+1718722b3e",
+        "fabric-renderer-api-v1:8.0.3+f4ffd2e53e",
+        "fabric-renderer-indigo:5.0.3+f4ffd2e53e",
+        "fabric-rendering-fluids-v1:3.1.43+4ebb5c083e",
+        "fabric-rendering-v1:16.2.10+0290ad933e",
+        "fabric-resource-conditions-api-v1:5.0.35+4fc5413f3e",
+        "fabric-resource-loader-v0:3.3.4+4fc5413f3e",
+        "fabric-resource-loader-v1:1.0.10+78c8b4663e",
+        "fabric-screen-api-v1:3.1.7+4ebb5c083e",
+        "fabric-screen-handler-api-v1:1.3.162+4fc5413f3e",
+        "fabric-serialization-api-v1:1.0.5+4ebb5c083e",
+        "fabric-sound-api-v1:1.0.51+4fc5413f3e",
+        "fabric-tag-api-v1:1.2.20+4fc5413f3e",
+        "fabric-transfer-api-v1:6.0.25+4fc5413f3e",
+        "fabric-transitive-access-wideners-v1:7.1.0+014c8cec3e",
+        "fabricloader:0.19.2",
+        "ferritecore:8.2.0",
+        "immediatelyfast:1.14.3+1.21.11",
+        "java:21",
+        "lithium:0.21.4+mc1.21.11",
+        "lithostitched:1.7.2",
+        "minecraft:1.21.11",
+        "mixinextras:0.5.4",
+        "net_lenni0451_reflect:1.6.2",
+        "sodium:0.8.14+mc1.21.11",
+        "tectonic:3.0.19",
+        "terralith:2.6.1",
+        "transition:1.0.26",
+        "trender:1.0.17"
+      ]
+    },
+    "process": {
+      "pid": 22852,
+      "creationId": "134368906476783343",
+      "exitCode": 0
+    },
+    "logChecks": {
+      "wrongRenderThread": 1,
+      "failedTextureClose": 1
+    },
+    "runtimeManifestSha256": "8b80751c9a955a688c4f1be9625f8f8b33190c0b52e5777260ebf7fb6cd53932",
+    "probeSha256": "d6534284b165d06ec9243cfe0a2735f1cb1960695ae96ce9ce28516f643cb74e",
+    "renderEvidence": [
+      {
+        "width": 1920,
+        "hudScale": 1.0,
+        "circle": true,
+        "case": 0,
+        "guiScale": 2,
+        "height": 1080
+      },
+      {
+        "width": 1920,
+        "hudScale": 1.25,
+        "circle": false,
+        "case": 1,
+        "guiScale": 3,
+        "height": 1080
+      },
+      {
+        "width": 2560,
+        "hudScale": 1.0,
+        "circle": true,
+        "case": 2,
+        "guiScale": 3,
+        "height": 1440
+      },
+      {
+        "width": 2560,
+        "hudScale": 1.25,
+        "circle": false,
+        "case": 3,
+        "guiScale": 4,
+        "height": 1440
+      },
+      {
+        "width": 3840,
+        "hudScale": 1.0,
+        "circle": true,
+        "case": 4,
+        "guiScale": 4,
+        "height": 2160
+      },
+      {
+        "width": 3840,
+        "hudScale": 1.25,
+        "circle": false,
+        "case": 5,
+        "guiScale": 6,
+        "height": 2160
+      }
+    ],
+    "rotation4K": {
+      "frames": 1439,
+      "seconds": 11.9942128,
+      "fps": 119.89115283997629,
+      "medianMs": 8.3333,
+      "p95Ms": 8.3656,
+      "p99Ms": 8.541382,
+      "over50ms": 0,
+      "invalidFocusFrames": 0,
+      "cpuPercentOneCore": 71.08247647836932,
+      "peakRssMiB": 2092.44140625
+    },
+    "rotationMethod": "Stage 310 heads, 2 <= elapsed < 14 seconds; linear CPU endpoint interpolation after native QPC calibration; peak sampled RSS in interval."
+  },
+  "candidate-06": {
+    "report": {
+      "checks": [
+        {
+          "check": "stationary-terrain-no-repaint",
+          "passed": true,
+          "stage": 301
+        },
+        {
+          "check": "native-framebuffer-0",
+          "passed": true,
+          "stage": 302
+        },
+        {
+          "check": "manager-controls-bounded-0",
+          "passed": true,
+          "stage": 304
+        },
+        {
+          "check": "native-framebuffer-1",
+          "passed": true,
+          "stage": 302
+        },
+        {
+          "check": "manager-controls-bounded-1",
+          "passed": true,
+          "stage": 304
+        },
+        {
+          "check": "native-framebuffer-2",
+          "passed": true,
+          "stage": 302
+        },
+        {
+          "check": "manager-controls-bounded-2",
+          "passed": true,
+          "stage": 304
+        },
+        {
+          "check": "native-framebuffer-3",
+          "passed": true,
+          "stage": 302
+        },
+        {
+          "check": "manager-controls-bounded-3",
+          "passed": true,
+          "stage": 304
+        },
+        {
+          "check": "native-framebuffer-4",
+          "passed": true,
+          "stage": 302
+        },
+        {
+          "check": "manager-controls-bounded-4",
+          "passed": true,
+          "stage": 304
+        },
+        {
+          "check": "native-framebuffer-5",
+          "passed": true,
+          "stage": 302
+        },
+        {
+          "check": "manager-controls-bounded-5",
+          "passed": true,
+          "stage": 304
+        },
+        {
+          "check": "render-resource-reload",
+          "passed": true,
+          "stage": 307
+        },
+        {
+          "check": "render-waypoints-preserved",
+          "passed": true,
+          "stage": 310
+        }
+      ],
+      "frames": 11655,
+      "resume": false,
+      "multiplayer": false,
+      "extended": false,
+      "rendering": true,
+      "clock": {
+        "nanoBefore": 227519745653600,
+        "qpcTick": 2275197457136,
+        "qpcFrequency": 10000000,
+        "nanoAfter": 227519745727200
+      },
+      "elapsedSeconds": 121.3951848,
+      "mods": [
+        "aurora:3.0.0",
+        "aurora_mapping_acceptance:1.0.0",
+        "entityculling:1.11.3",
+        "fabric-api-base:1.0.5+4ebb5c083e",
+        "fabric-api-lookup-api-v1:1.6.114+20dc27073e",
+        "fabric-api:0.141.4+1.21.11",
+        "fabric-biome-api-v1:17.1.1+4fc5413f3e",
+        "fabric-block-api-v1:1.1.10+4ebb5c083e",
+        "fabric-block-view-api-v2:1.0.39+4ebb5c083e",
+        "fabric-client-gametest-api-v1:4.3.5+bfe9fcf43e",
+        "fabric-command-api-v2:2.4.7+6b42a6003e",
+        "fabric-content-registries-v0:10.2.14+4fc5413f3e",
+        "fabric-convention-tags-v1:2.1.55+7f945d5b3e",
+        "fabric-convention-tags-v2:2.17.3+8ef948ba3e",
+        "fabric-crash-report-info-v1:0.3.23+4ebb5c083e",
+        "fabric-data-attachment-api-v1:1.8.48+eed0806f3e",
+        "fabric-data-generation-api-v1:23.4.1+69974c4e3e",
+        "fabric-dimensions-v1:4.0.28+4fc5413f3e",
+        "fabric-entity-events-v1:3.1.1+1d0ab4303e",
+        "fabric-events-interaction-v0:4.1.1+3b89ecf63e",
+        "fabric-game-rule-api-v1:2.0.3+4fc5413f3e",
+        "fabric-gametest-api-v1:3.1.27+4fc5413f3e",
+        "fabric-item-api-v1:11.5.20+d0c46b9e3e",
+        "fabric-item-group-api-v1:4.2.36+4fc5413f3e",
+        "fabric-key-binding-api-v1:1.1.7+4fc5413f3e",
+        "fabric-lifecycle-events-v1:2.6.15+4ebb5c083e",
+        "fabric-loot-api-v2:3.0.73+3f89f5a53e",
+        "fabric-loot-api-v3:2.0.20+78c8b4663e",
+        "fabric-message-api-v1:6.1.12+4ebb5c083e",
+        "fabric-model-loading-api-v1:6.0.15+4fc5413f3e",
+        "fabric-networking-api-v1:5.1.6+6b6d71a53e",
+        "fabric-object-builder-api-v1:21.1.40+4fc5413f3e",
+        "fabric-particles-v1:4.2.12+4fc5413f3e",
+        "fabric-recipe-api-v1:8.2.4+4ebb5c083e",
+        "fabric-registry-sync-v0:6.2.6+1718722b3e",
+        "fabric-renderer-api-v1:8.0.3+f4ffd2e53e",
+        "fabric-renderer-indigo:5.0.3+f4ffd2e53e",
+        "fabric-rendering-fluids-v1:3.1.43+4ebb5c083e",
+        "fabric-rendering-v1:16.2.10+0290ad933e",
+        "fabric-resource-conditions-api-v1:5.0.35+4fc5413f3e",
+        "fabric-resource-loader-v0:3.3.4+4fc5413f3e",
+        "fabric-resource-loader-v1:1.0.10+78c8b4663e",
+        "fabric-screen-api-v1:3.1.7+4ebb5c083e",
+        "fabric-screen-handler-api-v1:1.3.162+4fc5413f3e",
+        "fabric-serialization-api-v1:1.0.5+4ebb5c083e",
+        "fabric-sound-api-v1:1.0.51+4fc5413f3e",
+        "fabric-tag-api-v1:1.2.20+4fc5413f3e",
+        "fabric-transfer-api-v1:6.0.25+4fc5413f3e",
+        "fabric-transitive-access-wideners-v1:7.1.0+014c8cec3e",
+        "fabricloader:0.19.2",
+        "ferritecore:8.2.0",
+        "immediatelyfast:1.14.3+1.21.11",
+        "java:21",
+        "lithium:0.21.4+mc1.21.11",
+        "lithostitched:1.7.2",
+        "minecraft:1.21.11",
+        "mixinextras:0.5.4",
+        "net_lenni0451_reflect:1.6.2",
+        "sodium:0.8.14+mc1.21.11",
+        "tectonic:3.0.19",
+        "terralith:2.6.1",
+        "transition:1.0.26",
+        "trender:1.0.17"
+      ]
+    },
+    "process": {
+      "pid": 15608,
+      "creationId": "134368912854904430",
+      "exitCode": 0
+    },
+    "logChecks": {
+      "wrongRenderThread": 12,
+      "failedTextureClose": 12
+    },
+    "runtimeManifestSha256": "7a96883f9eb7434af01c51ca759744cd5f56a61b45cc9d62a1d38d8e3d09ff74",
+    "probeSha256": "d6534284b165d06ec9243cfe0a2735f1cb1960695ae96ce9ce28516f643cb74e",
+    "renderEvidence": [
+      {
+        "guiScale": 2,
+        "case": 0,
+        "circle": true,
+        "hudScale": 1.0,
+        "width": 1920,
+        "height": 1080
+      },
+      {
+        "guiScale": 3,
+        "case": 1,
+        "circle": false,
+        "hudScale": 1.25,
+        "width": 1920,
+        "height": 1080
+      },
+      {
+        "guiScale": 3,
+        "case": 2,
+        "circle": true,
+        "hudScale": 1.0,
+        "width": 2560,
+        "height": 1440
+      },
+      {
+        "guiScale": 4,
+        "case": 3,
+        "circle": false,
+        "hudScale": 1.25,
+        "width": 2560,
+        "height": 1440
+      },
+      {
+        "guiScale": 4,
+        "case": 4,
+        "circle": true,
+        "hudScale": 1.0,
+        "width": 3840,
+        "height": 2160
+      },
+      {
+        "guiScale": 6,
+        "case": 5,
+        "circle": false,
+        "hudScale": 1.25,
+        "width": 3840,
+        "height": 2160
+      }
+    ],
+    "rotation4K": {
+      "frames": 1439,
+      "seconds": 11.9896084,
+      "fps": 119.93719494625029,
+      "medianMs": 8.3333,
+      "p95Ms": 8.3337,
+      "p99Ms": 8.473417999999997,
+      "over50ms": 0,
+      "invalidFocusFrames": 0,
+      "cpuPercentOneCore": 82.34484335837756,
+      "peakRssMiB": 2071.29296875
+    },
+    "rotationMethod": "Stage 310 heads, 2 <= elapsed < 14 seconds; linear CPU endpoint interpolation after native QPC calibration; peak sampled RSS in interval."
+  },
+  "candidate-07": {
+    "report": {
+      "checks": [
+        {
+          "passed": true,
+          "stage": 301,
+          "check": "stationary-terrain-no-repaint"
+        },
+        {
+          "passed": true,
+          "stage": 302,
+          "check": "native-framebuffer-0"
+        },
+        {
+          "passed": true,
+          "stage": 304,
+          "check": "manager-controls-bounded-0"
+        },
+        {
+          "passed": true,
+          "stage": 302,
+          "check": "native-framebuffer-1"
+        },
+        {
+          "passed": true,
+          "stage": 304,
+          "check": "manager-controls-bounded-1"
+        },
+        {
+          "passed": true,
+          "stage": 302,
+          "check": "native-framebuffer-2"
+        },
+        {
+          "passed": true,
+          "stage": 304,
+          "check": "manager-controls-bounded-2"
+        },
+        {
+          "passed": true,
+          "stage": 302,
+          "check": "native-framebuffer-3"
+        },
+        {
+          "passed": true,
+          "stage": 304,
+          "check": "manager-controls-bounded-3"
+        },
+        {
+          "passed": true,
+          "stage": 302,
+          "check": "native-framebuffer-4"
+        },
+        {
+          "passed": true,
+          "stage": 304,
+          "check": "manager-controls-bounded-4"
+        },
+        {
+          "passed": true,
+          "stage": 302,
+          "check": "native-framebuffer-5"
+        },
+        {
+          "passed": true,
+          "stage": 304,
+          "check": "manager-controls-bounded-5"
+        },
+        {
+          "passed": true,
+          "stage": 307,
+          "check": "render-resource-reload"
+        },
+        {
+          "passed": true,
+          "stage": 310,
+          "check": "render-waypoints-preserved"
+        }
+      ],
+      "frames": 11670,
+      "resume": false,
+      "multiplayer": false,
+      "extended": false,
+      "rendering": true,
+      "clock": {
+        "nanoBefore": 228405589411300,
+        "qpcTick": 2284055894702,
+        "qpcFrequency": 10000000,
+        "nanoAfter": 228405589474500
+      },
+      "elapsedSeconds": 121.7480305,
+      "mods": [
+        "aurora:3.0.0",
+        "aurora_mapping_acceptance:1.0.0",
+        "entityculling:1.11.3",
+        "fabric-api-base:1.0.5+4ebb5c083e",
+        "fabric-api-lookup-api-v1:1.6.114+20dc27073e",
+        "fabric-api:0.141.4+1.21.11",
+        "fabric-biome-api-v1:17.1.1+4fc5413f3e",
+        "fabric-block-api-v1:1.1.10+4ebb5c083e",
+        "fabric-block-view-api-v2:1.0.39+4ebb5c083e",
+        "fabric-client-gametest-api-v1:4.3.5+bfe9fcf43e",
+        "fabric-command-api-v2:2.4.7+6b42a6003e",
+        "fabric-content-registries-v0:10.2.14+4fc5413f3e",
+        "fabric-convention-tags-v1:2.1.55+7f945d5b3e",
+        "fabric-convention-tags-v2:2.17.3+8ef948ba3e",
+        "fabric-crash-report-info-v1:0.3.23+4ebb5c083e",
+        "fabric-data-attachment-api-v1:1.8.48+eed0806f3e",
+        "fabric-data-generation-api-v1:23.4.1+69974c4e3e",
+        "fabric-dimensions-v1:4.0.28+4fc5413f3e",
+        "fabric-entity-events-v1:3.1.1+1d0ab4303e",
+        "fabric-events-interaction-v0:4.1.1+3b89ecf63e",
+        "fabric-game-rule-api-v1:2.0.3+4fc5413f3e",
+        "fabric-gametest-api-v1:3.1.27+4fc5413f3e",
+        "fabric-item-api-v1:11.5.20+d0c46b9e3e",
+        "fabric-item-group-api-v1:4.2.36+4fc5413f3e",
+        "fabric-key-binding-api-v1:1.1.7+4fc5413f3e",
+        "fabric-lifecycle-events-v1:2.6.15+4ebb5c083e",
+        "fabric-loot-api-v2:3.0.73+3f89f5a53e",
+        "fabric-loot-api-v3:2.0.20+78c8b4663e",
+        "fabric-message-api-v1:6.1.12+4ebb5c083e",
+        "fabric-model-loading-api-v1:6.0.15+4fc5413f3e",
+        "fabric-networking-api-v1:5.1.6+6b6d71a53e",
+        "fabric-object-builder-api-v1:21.1.40+4fc5413f3e",
+        "fabric-particles-v1:4.2.12+4fc5413f3e",
+        "fabric-recipe-api-v1:8.2.4+4ebb5c083e",
+        "fabric-registry-sync-v0:6.2.6+1718722b3e",
+        "fabric-renderer-api-v1:8.0.3+f4ffd2e53e",
+        "fabric-renderer-indigo:5.0.3+f4ffd2e53e",
+        "fabric-rendering-fluids-v1:3.1.43+4ebb5c083e",
+        "fabric-rendering-v1:16.2.10+0290ad933e",
+        "fabric-resource-conditions-api-v1:5.0.35+4fc5413f3e",
+        "fabric-resource-loader-v0:3.3.4+4fc5413f3e",
+        "fabric-resource-loader-v1:1.0.10+78c8b4663e",
+        "fabric-screen-api-v1:3.1.7+4ebb5c083e",
+        "fabric-screen-handler-api-v1:1.3.162+4fc5413f3e",
+        "fabric-serialization-api-v1:1.0.5+4ebb5c083e",
+        "fabric-sound-api-v1:1.0.51+4fc5413f3e",
+        "fabric-tag-api-v1:1.2.20+4fc5413f3e",
+        "fabric-transfer-api-v1:6.0.25+4fc5413f3e",
+        "fabric-transitive-access-wideners-v1:7.1.0+014c8cec3e",
+        "fabricloader:0.19.2",
+        "ferritecore:8.2.0",
+        "immediatelyfast:1.14.3+1.21.11",
+        "java:21",
+        "lithium:0.21.4+mc1.21.11",
+        "lithostitched:1.7.2",
+        "minecraft:1.21.11",
+        "mixinextras:0.5.4",
+        "net_lenni0451_reflect:1.6.2",
+        "sodium:0.8.14+mc1.21.11",
+        "tectonic:3.0.19",
+        "terralith:2.6.1",
+        "transition:1.0.26",
+        "trender:1.0.17"
+      ]
+    },
+    "process": {
+      "pid": 14808,
+      "creationId": "134368921726486668",
+      "exitCode": 0
+    },
+    "logChecks": {
+      "wrongRenderThread": 13,
+      "failedTextureClose": 13
+    },
+    "runtimeManifestSha256": "da9717984ae462de553e2f93ad159c71bc9b57541fc5971d8833aaf5047d54a5",
+    "probeSha256": "d6534284b165d06ec9243cfe0a2735f1cb1960695ae96ce9ce28516f643cb74e",
+    "renderEvidence": [
+      {
+        "case": 0,
+        "circle": true,
+        "hudScale": 1.0,
+        "width": 1920,
+        "height": 1080,
+        "guiScale": 2
+      },
+      {
+        "case": 1,
+        "circle": false,
+        "hudScale": 1.25,
+        "width": 1920,
+        "height": 1080,
+        "guiScale": 3
+      },
+      {
+        "case": 2,
+        "circle": true,
+        "hudScale": 1.0,
+        "width": 2560,
+        "height": 1440,
+        "guiScale": 3
+      },
+      {
+        "case": 3,
+        "circle": false,
+        "hudScale": 1.25,
+        "width": 2560,
+        "height": 1440,
+        "guiScale": 4
+      },
+      {
+        "case": 4,
+        "circle": true,
+        "hudScale": 1.0,
+        "width": 3840,
+        "height": 2160,
+        "guiScale": 4
+      },
+      {
+        "case": 5,
+        "circle": false,
+        "hudScale": 1.25,
+        "width": 3840,
+        "height": 2160,
+        "guiScale": 6
+      }
+    ],
+    "rotation4K": {
+      "frames": 1440,
+      "seconds": 11.9916665,
+      "fps": 120.0000016678249,
+      "medianMs": 8.3333,
+      "p95Ms": 8.3337,
+      "p99Ms": 8.663092,
+      "over50ms": 0,
+      "invalidFocusFrames": 0,
+      "cpuPercentOneCore": 72.26585444327333,
+      "peakRssMiB": 2111.9609375
+    },
+    "rotationMethod": "Stage 310 heads, 2 <= elapsed < 14 seconds; linear CPU endpoint interpolation after native QPC calibration; peak sampled RSS in interval."
+  },
+  "candidate-08": {
+    "report": {
+      "checks": [
+        {
+          "stage": 301,
+          "passed": true,
+          "check": "stationary-terrain-no-repaint"
+        },
+        {
+          "stage": 302,
+          "passed": true,
+          "check": "native-framebuffer-0"
+        },
+        {
+          "stage": 304,
+          "passed": true,
+          "check": "manager-controls-bounded-0"
+        },
+        {
+          "stage": 302,
+          "passed": true,
+          "check": "native-framebuffer-1"
+        },
+        {
+          "stage": 304,
+          "passed": true,
+          "check": "manager-controls-bounded-1"
+        },
+        {
+          "stage": 302,
+          "passed": true,
+          "check": "native-framebuffer-2"
+        },
+        {
+          "stage": 304,
+          "passed": true,
+          "check": "manager-controls-bounded-2"
+        },
+        {
+          "stage": 302,
+          "passed": true,
+          "check": "native-framebuffer-3"
+        },
+        {
+          "stage": 304,
+          "passed": true,
+          "check": "manager-controls-bounded-3"
+        },
+        {
+          "stage": 302,
+          "passed": true,
+          "check": "native-framebuffer-4"
+        },
+        {
+          "stage": 304,
+          "passed": true,
+          "check": "manager-controls-bounded-4"
+        },
+        {
+          "stage": 302,
+          "passed": true,
+          "check": "native-framebuffer-5"
+        },
+        {
+          "stage": 304,
+          "passed": true,
+          "check": "manager-controls-bounded-5"
+        },
+        {
+          "stage": 307,
+          "passed": true,
+          "check": "render-resource-reload"
+        },
+        {
+          "stage": 310,
+          "passed": true,
+          "check": "render-waypoints-preserved"
+        }
+      ],
+      "frames": 11672,
+      "resume": false,
+      "multiplayer": false,
+      "extended": false,
+      "rendering": true,
+      "clock": {
+        "nanoBefore": 229215365812500,
+        "qpcTick": 2292153658730,
+        "qpcFrequency": 10000000,
+        "nanoAfter": 229215365900400
+      },
+      "elapsedSeconds": 121.800896,
+      "mods": [
+        "aurora:3.0.0",
+        "aurora_mapping_acceptance:1.0.0",
+        "entityculling:1.11.3",
+        "fabric-api-base:1.0.5+4ebb5c083e",
+        "fabric-api-lookup-api-v1:1.6.114+20dc27073e",
+        "fabric-api:0.141.4+1.21.11",
+        "fabric-biome-api-v1:17.1.1+4fc5413f3e",
+        "fabric-block-api-v1:1.1.10+4ebb5c083e",
+        "fabric-block-view-api-v2:1.0.39+4ebb5c083e",
+        "fabric-client-gametest-api-v1:4.3.5+bfe9fcf43e",
+        "fabric-command-api-v2:2.4.7+6b42a6003e",
+        "fabric-content-registries-v0:10.2.14+4fc5413f3e",
+        "fabric-convention-tags-v1:2.1.55+7f945d5b3e",
+        "fabric-convention-tags-v2:2.17.3+8ef948ba3e",
+        "fabric-crash-report-info-v1:0.3.23+4ebb5c083e",
+        "fabric-data-attachment-api-v1:1.8.48+eed0806f3e",
+        "fabric-data-generation-api-v1:23.4.1+69974c4e3e",
+        "fabric-dimensions-v1:4.0.28+4fc5413f3e",
+        "fabric-entity-events-v1:3.1.1+1d0ab4303e",
+        "fabric-events-interaction-v0:4.1.1+3b89ecf63e",
+        "fabric-game-rule-api-v1:2.0.3+4fc5413f3e",
+        "fabric-gametest-api-v1:3.1.27+4fc5413f3e",
+        "fabric-item-api-v1:11.5.20+d0c46b9e3e",
+        "fabric-item-group-api-v1:4.2.36+4fc5413f3e",
+        "fabric-key-binding-api-v1:1.1.7+4fc5413f3e",
+        "fabric-lifecycle-events-v1:2.6.15+4ebb5c083e",
+        "fabric-loot-api-v2:3.0.73+3f89f5a53e",
+        "fabric-loot-api-v3:2.0.20+78c8b4663e",
+        "fabric-message-api-v1:6.1.12+4ebb5c083e",
+        "fabric-model-loading-api-v1:6.0.15+4fc5413f3e",
+        "fabric-networking-api-v1:5.1.6+6b6d71a53e",
+        "fabric-object-builder-api-v1:21.1.40+4fc5413f3e",
+        "fabric-particles-v1:4.2.12+4fc5413f3e",
+        "fabric-recipe-api-v1:8.2.4+4ebb5c083e",
+        "fabric-registry-sync-v0:6.2.6+1718722b3e",
+        "fabric-renderer-api-v1:8.0.3+f4ffd2e53e",
+        "fabric-renderer-indigo:5.0.3+f4ffd2e53e",
+        "fabric-rendering-fluids-v1:3.1.43+4ebb5c083e",
+        "fabric-rendering-v1:16.2.10+0290ad933e",
+        "fabric-resource-conditions-api-v1:5.0.35+4fc5413f3e",
+        "fabric-resource-loader-v0:3.3.4+4fc5413f3e",
+        "fabric-resource-loader-v1:1.0.10+78c8b4663e",
+        "fabric-screen-api-v1:3.1.7+4ebb5c083e",
+        "fabric-screen-handler-api-v1:1.3.162+4fc5413f3e",
+        "fabric-serialization-api-v1:1.0.5+4ebb5c083e",
+        "fabric-sound-api-v1:1.0.51+4fc5413f3e",
+        "fabric-tag-api-v1:1.2.20+4fc5413f3e",
+        "fabric-transfer-api-v1:6.0.25+4fc5413f3e",
+        "fabric-transitive-access-wideners-v1:7.1.0+014c8cec3e",
+        "fabricloader:0.19.2",
+        "ferritecore:8.2.0",
+        "immediatelyfast:1.14.3+1.21.11",
+        "java:21",
+        "lithium:0.21.4+mc1.21.11",
+        "lithostitched:1.7.2",
+        "minecraft:1.21.11",
+        "mixinextras:0.5.4",
+        "net_lenni0451_reflect:1.6.2",
+        "sodium:0.8.14+mc1.21.11",
+        "tectonic:3.0.19",
+        "terralith:2.6.1",
+        "transition:1.0.26",
+        "trender:1.0.17"
+      ]
+    },
+    "process": {
+      "pid": 19204,
+      "creationId": "134368929819349310",
+      "exitCode": 0
+    },
+    "logChecks": {
+      "wrongRenderThread": 13,
+      "failedTextureClose": 13
+    },
+    "runtimeManifestSha256": "4b0fd40369d2f9dd64aa182a58f2d7fb1a299e94235d407283b44c49b555352c",
+    "probeSha256": "d6534284b165d06ec9243cfe0a2735f1cb1960695ae96ce9ce28516f643cb74e",
+    "renderEvidence": [
+      {
+        "guiScale": 2,
+        "height": 1080,
+        "width": 1920,
+        "hudScale": 1.0,
+        "circle": true,
+        "case": 0
+      },
+      {
+        "guiScale": 3,
+        "height": 1080,
+        "width": 1920,
+        "hudScale": 1.25,
+        "circle": false,
+        "case": 1
+      },
+      {
+        "guiScale": 3,
+        "height": 1440,
+        "width": 2560,
+        "hudScale": 1.0,
+        "circle": true,
+        "case": 2
+      },
+      {
+        "guiScale": 4,
+        "height": 1440,
+        "width": 2560,
+        "hudScale": 1.25,
+        "circle": false,
+        "case": 3
+      },
+      {
+        "guiScale": 4,
+        "height": 2160,
+        "width": 3840,
+        "hudScale": 1.0,
+        "circle": true,
+        "case": 4
+      },
+      {
+        "guiScale": 6,
+        "height": 2160,
+        "width": 3840,
+        "hudScale": 1.25,
+        "circle": false,
+        "case": 5
+      }
+    ],
+    "rotation4K": {
+      "frames": 1438,
+      "seconds": 11.9917246,
+      "fps": 119.8326385847787,
+      "medianMs": 8.3333,
+      "p95Ms": 8.37122,
+      "p99Ms": 8.819184000000003,
+      "over50ms": 0,
+      "invalidFocusFrames": 0,
+      "cpuPercentOneCore": 73.4919433000654,
+      "peakRssMiB": 2117.125
+    },
+    "rotationMethod": "Stage 310 heads, 2 <= elapsed < 14 seconds; linear CPU endpoint interpolation after native QPC calibration; peak sampled RSS in interval."
+  },
+  "candidate-09": {
+    "report": {
+      "checks": [
+        {
+          "passed": true,
+          "stage": 301,
+          "check": "stationary-terrain-no-repaint"
+        },
+        {
+          "passed": true,
+          "stage": 302,
+          "check": "native-framebuffer-0"
+        },
+        {
+          "passed": true,
+          "stage": 304,
+          "check": "manager-controls-bounded-0"
+        },
+        {
+          "passed": true,
+          "stage": 302,
+          "check": "native-framebuffer-1"
+        },
+        {
+          "passed": true,
+          "stage": 304,
+          "check": "manager-controls-bounded-1"
+        },
+        {
+          "passed": true,
+          "stage": 302,
+          "check": "native-framebuffer-2"
+        },
+        {
+          "passed": true,
+          "stage": 304,
+          "check": "manager-controls-bounded-2"
+        },
+        {
+          "passed": true,
+          "stage": 302,
+          "check": "native-framebuffer-3"
+        },
+        {
+          "passed": true,
+          "stage": 304,
+          "check": "manager-controls-bounded-3"
+        },
+        {
+          "passed": true,
+          "stage": 302,
+          "check": "native-framebuffer-4"
+        },
+        {
+          "passed": true,
+          "stage": 304,
+          "check": "manager-controls-bounded-4"
+        },
+        {
+          "passed": true,
+          "stage": 302,
+          "check": "native-framebuffer-5"
+        },
+        {
+          "passed": true,
+          "stage": 304,
+          "check": "manager-controls-bounded-5"
+        },
+        {
+          "passed": true,
+          "stage": 307,
+          "check": "render-resource-reload"
+        },
+        {
+          "passed": true,
+          "stage": 310,
+          "check": "render-waypoints-preserved"
+        }
+      ],
+      "frames": 11676,
+      "resume": false,
+      "multiplayer": false,
+      "extended": false,
+      "rendering": true,
+      "clock": {
+        "nanoBefore": 229885183134900,
+        "qpcTick": 2298851831946,
+        "qpcFrequency": 10000000,
+        "nanoAfter": 229885183200100
+      },
+      "elapsedSeconds": 121.9595128,
+      "mods": [
+        "aurora:3.0.0",
+        "aurora_mapping_acceptance:1.0.0",
+        "entityculling:1.11.3",
+        "fabric-api-base:1.0.5+4ebb5c083e",
+        "fabric-api-lookup-api-v1:1.6.114+20dc27073e",
+        "fabric-api:0.141.4+1.21.11",
+        "fabric-biome-api-v1:17.1.1+4fc5413f3e",
+        "fabric-block-api-v1:1.1.10+4ebb5c083e",
+        "fabric-block-view-api-v2:1.0.39+4ebb5c083e",
+        "fabric-client-gametest-api-v1:4.3.5+bfe9fcf43e",
+        "fabric-command-api-v2:2.4.7+6b42a6003e",
+        "fabric-content-registries-v0:10.2.14+4fc5413f3e",
+        "fabric-convention-tags-v1:2.1.55+7f945d5b3e",
+        "fabric-convention-tags-v2:2.17.3+8ef948ba3e",
+        "fabric-crash-report-info-v1:0.3.23+4ebb5c083e",
+        "fabric-data-attachment-api-v1:1.8.48+eed0806f3e",
+        "fabric-data-generation-api-v1:23.4.1+69974c4e3e",
+        "fabric-dimensions-v1:4.0.28+4fc5413f3e",
+        "fabric-entity-events-v1:3.1.1+1d0ab4303e",
+        "fabric-events-interaction-v0:4.1.1+3b89ecf63e",
+        "fabric-game-rule-api-v1:2.0.3+4fc5413f3e",
+        "fabric-gametest-api-v1:3.1.27+4fc5413f3e",
+        "fabric-item-api-v1:11.5.20+d0c46b9e3e",
+        "fabric-item-group-api-v1:4.2.36+4fc5413f3e",
+        "fabric-key-binding-api-v1:1.1.7+4fc5413f3e",
+        "fabric-lifecycle-events-v1:2.6.15+4ebb5c083e",
+        "fabric-loot-api-v2:3.0.73+3f89f5a53e",
+        "fabric-loot-api-v3:2.0.20+78c8b4663e",
+        "fabric-message-api-v1:6.1.12+4ebb5c083e",
+        "fabric-model-loading-api-v1:6.0.15+4fc5413f3e",
+        "fabric-networking-api-v1:5.1.6+6b6d71a53e",
+        "fabric-object-builder-api-v1:21.1.40+4fc5413f3e",
+        "fabric-particles-v1:4.2.12+4fc5413f3e",
+        "fabric-recipe-api-v1:8.2.4+4ebb5c083e",
+        "fabric-registry-sync-v0:6.2.6+1718722b3e",
+        "fabric-renderer-api-v1:8.0.3+f4ffd2e53e",
+        "fabric-renderer-indigo:5.0.3+f4ffd2e53e",
+        "fabric-rendering-fluids-v1:3.1.43+4ebb5c083e",
+        "fabric-rendering-v1:16.2.10+0290ad933e",
+        "fabric-resource-conditions-api-v1:5.0.35+4fc5413f3e",
+        "fabric-resource-loader-v0:3.3.4+4fc5413f3e",
+        "fabric-resource-loader-v1:1.0.10+78c8b4663e",
+        "fabric-screen-api-v1:3.1.7+4ebb5c083e",
+        "fabric-screen-handler-api-v1:1.3.162+4fc5413f3e",
+        "fabric-serialization-api-v1:1.0.5+4ebb5c083e",
+        "fabric-sound-api-v1:1.0.51+4fc5413f3e",
+        "fabric-tag-api-v1:1.2.20+4fc5413f3e",
+        "fabric-transfer-api-v1:6.0.25+4fc5413f3e",
+        "fabric-transitive-access-wideners-v1:7.1.0+014c8cec3e",
+        "fabricloader:0.19.2",
+        "ferritecore:8.2.0",
+        "immediatelyfast:1.14.3+1.21.11",
+        "java:21",
+        "lithium:0.21.4+mc1.21.11",
+        "lithostitched:1.7.2",
+        "minecraft:1.21.11",
+        "mixinextras:0.5.4",
+        "net_lenni0451_reflect:1.6.2",
+        "sodium:0.8.14+mc1.21.11",
+        "tectonic:3.0.19",
+        "terralith:2.6.1",
+        "transition:1.0.26",
+        "trender:1.0.17"
+      ]
+    },
+    "process": {
+      "pid": 15920,
+      "creationId": "134368936510873445",
+      "exitCode": 0
+    },
+    "logChecks": {
+      "wrongRenderThread": 0,
+      "failedTextureClose": 0
+    },
+    "runtimeManifestSha256": "cc77bf79d90aa57c4e838933dfd144d1b81bbe44dfa5dd644248c4ade03aeb45",
+    "probeSha256": "d6534284b165d06ec9243cfe0a2735f1cb1960695ae96ce9ce28516f643cb74e",
+    "renderEvidence": [
+      {
+        "case": 0,
+        "circle": true,
+        "hudScale": 1.0,
+        "width": 1920,
+        "height": 1080,
+        "guiScale": 2
+      },
+      {
+        "case": 1,
+        "circle": false,
+        "hudScale": 1.25,
+        "width": 1920,
+        "height": 1080,
+        "guiScale": 3
+      },
+      {
+        "case": 2,
+        "circle": true,
+        "hudScale": 1.0,
+        "width": 2560,
+        "height": 1440,
+        "guiScale": 3
+      },
+      {
+        "case": 3,
+        "circle": false,
+        "hudScale": 1.25,
+        "width": 2560,
+        "height": 1440,
+        "guiScale": 4
+      },
+      {
+        "case": 4,
+        "circle": true,
+        "hudScale": 1.0,
+        "width": 3840,
+        "height": 2160,
+        "guiScale": 4
+      },
+      {
+        "case": 5,
+        "circle": false,
+        "hudScale": 1.25,
+        "width": 3840,
+        "height": 2160,
+        "guiScale": 6
+      }
+    ],
+    "rotation4K": {
+      "frames": 1440,
+      "seconds": 11.9916664,
+      "fps": 120.00000266851987,
+      "medianMs": 8.3333,
+      "p95Ms": 8.39808,
+      "p99Ms": 8.675735999999999,
+      "over50ms": 0,
+      "invalidFocusFrames": 0,
+      "cpuPercentOneCore": 66.26190985822336,
+      "peakRssMiB": 2106.0859375
+    },
+    "rotationMethod": "Stage 310 heads, 2 <= elapsed < 14 seconds; linear CPU endpoint interpolation after native QPC calibration; peak sampled RSS in interval."
+  }
+}

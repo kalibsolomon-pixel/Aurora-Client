@@ -1,0 +1,2169 @@
+{
+  "scope": "One reference and two sequential candidate captures; no FPS gain claimed",
+  "runs": {
+    "reference-01": {
+      "fixture": "aurora-mapping-pixel-perf-reference-01",
+      "review": {
+        "kind": "stress",
+        "frames": 22568,
+        "phases": [
+          {
+            "count": 7175,
+            "minMs": 4.2452,
+            "medianMs": 8.3333,
+            "p95Ms": 8.38886,
+            "p99Ms": 9.119762000000001,
+            "maxMs": 22.7399,
+            "intervalsOver50Ms": 0,
+            "intervalsOver100Ms": 0,
+            "maxIntervalsOver50MsInOneSecond": 0,
+            "preUpdateDisplayIntervals": {
+              "count": 7175,
+              "minMs": 2.334,
+              "medianMs": 8.3701,
+              "p95Ms": 9.497059999999998,
+              "p99Ms": 10.419526000000003,
+              "maxMs": 28.0201,
+              "intervalsOver50Ms": 0,
+              "intervalsOver100Ms": 0
+            },
+            "fps": 119.61299396680226,
+            "phase": 1,
+            "seconds": 59.9851217,
+            "invalidStateFrames": 0,
+            "invalidStateFraction": 0.0,
+            "heapUsedMiBMin": 613.9034576416016,
+            "heapUsedMiBMax": 1032.6261596679688,
+            "heapCommittedMiBMax": 1110.0,
+            "entitiesMin": 406,
+            "entitiesMax": 413,
+            "positionFirst": [
+              0.5,
+              95.0,
+              0.5
+            ],
+            "positionLast": [
+              0.5,
+              95.0,
+              0.5
+            ],
+            "serverAverageTickMsMax": 3.982224,
+            "processContext": {
+              "samples": 120,
+              "seconds": 59.7309876,
+              "cpuPercentOneCore": 108.21958182389069,
+              "rssMiBMin": 1951.59765625,
+              "rssMiBMax": 1977.796875,
+              "availableMiBMin": 17966.1953125
+            }
+          },
+          {
+            "count": 7181,
+            "minMs": 1.5071,
+            "medianMs": 8.3333,
+            "p95Ms": 8.3846,
+            "p99Ms": 8.927899999999998,
+            "maxMs": 51.396,
+            "intervalsOver50Ms": 1,
+            "intervalsOver100Ms": 0,
+            "maxIntervalsOver50MsInOneSecond": 1,
+            "preUpdateDisplayIntervals": {
+              "count": 7181,
+              "minMs": 0.5344,
+              "medianMs": 8.3311,
+              "p95Ms": 10.6798,
+              "p99Ms": 12.554419999999993,
+              "maxMs": 51.3766,
+              "intervalsOver50Ms": 1,
+              "intervalsOver100Ms": 0
+            },
+            "fps": 119.69236372320171,
+            "phase": 2,
+            "seconds": 59.9954732,
+            "invalidStateFrames": 0,
+            "invalidStateFraction": 0.0,
+            "heapUsedMiBMin": 676.5850830078125,
+            "heapUsedMiBMax": 1276.0064239501953,
+            "heapCommittedMiBMax": 1414.0,
+            "entitiesMin": 11,
+            "entitiesMax": 414,
+            "positionFirst": [
+              0.5,
+              95.0,
+              0.5
+            ],
+            "positionLast": [
+              1216.5,
+              120.0,
+              0.5
+            ],
+            "serverAverageTickMsMax": 4.310405,
+            "processContext": {
+              "samples": 119,
+              "seconds": 59.2232789,
+              "cpuPercentOneCore": 192.51825822159944,
+              "rssMiBMin": 1901.9921875,
+              "rssMiBMax": 2317.3359375,
+              "availableMiBMin": 17665.5078125
+            }
+          },
+          {
+            "count": 4495,
+            "minMs": 0.9944,
+            "medianMs": 8.3335,
+            "p95Ms": 33.3337,
+            "p99Ms": 33.345817999999994,
+            "maxMs": 50.0037,
+            "intervalsOver50Ms": 1,
+            "intervalsOver100Ms": 0,
+            "maxIntervalsOver50MsInOneSecond": 1,
+            "preUpdateDisplayIntervals": {
+              "count": 4495,
+              "minMs": 0.5005,
+              "medianMs": 8.3885,
+              "p95Ms": 33.92545,
+              "p99Ms": 35.99127800000001,
+              "maxMs": 41.1868,
+              "intervalsOver50Ms": 0,
+              "intervalsOver100Ms": 0
+            },
+            "fps": 75.0465121419747,
+            "phase": 3,
+            "seconds": 59.896188,
+            "invalidStateFrames": 0,
+            "invalidStateFraction": 0.0,
+            "heapUsedMiBMin": 792.5,
+            "heapUsedMiBMax": 1297.5,
+            "heapCommittedMiBMax": 1414.0,
+            "entitiesMin": 11,
+            "entitiesMax": 11,
+            "positionFirst": [
+              1216.5,
+              120.0,
+              0.5
+            ],
+            "positionLast": [
+              1216.5,
+              120.0,
+              0.5
+            ],
+            "serverAverageTickMsMax": 1.337392,
+            "processContext": {
+              "samples": 120,
+              "seconds": 59.7132725,
+              "cpuPercentOneCore": 38.93606735420504,
+              "rssMiBMin": 2281.75,
+              "rssMiBMax": 2316.05078125,
+              "availableMiBMin": 17632.46875
+            }
+          }
+        ],
+        "startup": {
+          "minecraft-constructor-start": 11956.19775,
+          "aurora-initialize-start": 12599.96615,
+          "aurora-initialize-end": 12736.43375,
+          "research-initializer": 12736.81645,
+          "minecraft-constructor-end": 16303.89705,
+          "main-menu-renderable": 20998.10575,
+          "world-open-request": 24031.41215,
+          "scene-setup-start": 28861.96585,
+          "first-interactive-frame": 29199.36345,
+          "scene-setup-complete": 30238.78515,
+          "phase-1": 60246.23315,
+          "phase-2": 120240.12375,
+          "phase-3": 180245.24695,
+          "phase-4": 240240.57495,
+          "measurement-complete": 240241.18285,
+          "world-disconnected": 240606.60525
+        },
+        "limitations": [
+          "Frame head and pre-updateDisplay intervals are software observations",
+          "JFR and sampling observer cost is not subtracted",
+          "No physical presentation or input-to-photon result"
+        ],
+        "validState": true,
+        "clockBracketNs": 89300,
+        "framebuffer": [
+          1280,
+          720
+        ],
+        "wholeProcessContext": {
+          "seconds": 240.5500743,
+          "cpuPercentOneCore": 207.4931805581238,
+          "peakRssMiB": 2340.89453125
+        }
+      },
+      "runtimeManifestSha256": "8b80751c9a955a688c4f1be9625f8f8b33190c0b52e5777260ebf7fb6cd53932",
+      "inputManifestSha256": "c05c665560d004569e029bf4a811ed6f923e81947c28e215ff992e74db582382",
+      "observerSha256": "7a1558acdc8e4a9ef871a222146adfd2aec3a13a6fd451871875f291aaaba383",
+      "jfr": {
+        "events": {
+          "jdk.ExecutionSample": 6714,
+          "jdk.GCHeapSummary": 380,
+          "jdk.GCPhasePause": 237,
+          "jdk.GarbageCollection": 190,
+          "jdk.ObjectAllocationSample": 17866,
+          "minecraft.ClientFps": 215,
+          "minecraft.LoadWorld": 1,
+          "minecraft.NetworkSummary": 42,
+          "minecraft.ServerTickTime": 215
+        },
+        "gcPauseCount": 237,
+        "observedEventSpanSeconds": 227.6670798,
+        "sampledAllocationWeightBytes": 64082079200,
+        "sampledAllocationMiBPerSecond": 268.43333313115727,
+        "garbageCollectors": {
+          "G1New": 143,
+          "G1Old": 47
+        },
+        "gcPauseTotalMs": 1479.109299999999,
+        "gcPauseMaxMs": 28.1745,
+        "gcHeapUsedMiBRange": [
+          287.0885238647461,
+          1315.0
+        ],
+        "sampledThreads": [
+          [
+            "Render thread",
+            10568
+          ],
+          [
+            "Server thread",
+            1953
+          ],
+          [
+            "CullThread",
+            1394
+          ],
+          [
+            "Netty Local IO #2",
+            776
+          ],
+          [
+            "Netty Local IO #1",
+            639
+          ],
+          [
+            "Worker-Main-9",
+            437
+          ],
+          [
+            "Worker-Main-11",
+            364
+          ],
+          [
+            "Worker-Main-18",
+            336
+          ],
+          [
+            "Sound engine",
+            328
+          ],
+          [
+            "Worker-Main-6",
+            311
+          ],
+          [
+            "Worker-Main-25",
+            272
+          ],
+          [
+            "IO-Worker-4",
+            259
+          ],
+          [
+            "Worker-Main-27",
+            254
+          ],
+          [
+            "Chunk Render Task Executor #5",
+            239
+          ],
+          [
+            "Worker-Main-8",
+            230
+          ],
+          [
+            "Worker-Main-23",
+            229
+          ],
+          [
+            "Worker-Main-12",
+            228
+          ],
+          [
+            "Chunk Render Task Executor #1",
+            227
+          ],
+          [
+            "Worker-Main-20",
+            222
+          ],
+          [
+            "Chunk Render Task Executor #7",
+            218
+          ]
+        ],
+        "sampledExecutionTop": [
+          [
+            "java.util.Arrays.fill",
+            481
+          ],
+          [
+            "net.minecraft.world.level.levelgen.synth.ImprovedNoise.p",
+            326
+          ],
+          [
+            "net.minecraft.world.level.levelgen.synth.PerlinNoise.getValue",
+            313
+          ],
+          [
+            "net.caffeinemc.mods.sodium.client.render.immediate.model.EntityRenderer.renderCuboid",
+            251
+          ],
+          [
+            "com.google.common.collect.RegularImmutableMap.get",
+            247
+          ],
+          [
+            "net.minecraft.util.SimpleBitStorage.lithium$compact",
+            225
+          ],
+          [
+            "com.mojang.blaze3d.vertex.VertexConsumer.setColor",
+            148
+          ],
+          [
+            "it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap.get",
+            83
+          ],
+          [
+            "java.util.Objects.hashCode",
+            81
+          ],
+          [
+            "java.lang.StringBuilder.<init>",
+            73
+          ],
+          [
+            "org.joml.Matrix3f.rotateZYX",
+            67
+          ],
+          [
+            "org.joml.Matrix4f.rotateAffineZYX",
+            63
+          ],
+          [
+            "net.minecraft.world.level.block.state.BlockBehaviour$BlockStateBase.getRenderShape",
+            61
+          ],
+          [
+            "net.minecraft.util.SimpleBitStorage.getAll",
+            60
+          ],
+          [
+            "com.mojang.blaze3d.platform.TextureUtil.solidify",
+            59
+          ],
+          [
+            "net.minecraft.client.renderer.texture.SpriteContents.scanSpriteContents",
+            59
+          ],
+          [
+            "net.minecraft.client.model.geom.ModelPart.translateAndRotate",
+            56
+          ],
+          [
+            "net.minecraft.world.level.block.state.BlockBehaviour$BlockStateBase.skipRendering",
+            56
+          ],
+          [
+            "net.minecraft.client.gui.render.state.GuiRenderState.hasIntersection",
+            53
+          ],
+          [
+            "java.util.HashMap.computeIfAbsent",
+            53
+          ]
+        ],
+        "allocationWeightTop": [
+          [
+            "net.caffeinemc.mods.sodium.client.render.frapi.mesh.MutableMeshImpl.<init>",
+            4893486368
+          ],
+          [
+            "org.objectweb.asm.ClassReader.readUtf",
+            3795835048
+          ],
+          [
+            "java.lang.Object.clone",
+            3489627952
+          ],
+          [
+            "com.ibm.icu.text.Bidi.getDirProps",
+            2701071080
+          ],
+          [
+            "java.lang.invoke.DirectMethodHandle.allocateInstance",
+            2698483096
+          ],
+          [
+            "java.util.ArrayList.grow",
+            1524451720
+          ],
+          [
+            "java.lang.Double.valueOf",
+            1480547760
+          ],
+          [
+            "it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap.<init>",
+            1211654800
+          ],
+          [
+            "com.mojang.blaze3d.vertex.PoseStack$Pose.<init>",
+            1193572936
+          ],
+          [
+            "java.lang.StringUTF16.newBytesFor",
+            1099486152
+          ],
+          [
+            "net.minecraft.world.level.levelgen.DensityFunctions$Spline.compute",
+            961159008
+          ],
+          [
+            "net.minecraft.client.renderer.entity.SheepRenderer.createRenderState",
+            858101480
+          ],
+          [
+            "com.ibm.icu.text.Bidi.<init>",
+            839391904
+          ],
+          [
+            "com.mojang.serialization.DataResult.success",
+            829037416
+          ],
+          [
+            "java.lang.ThreadLocal$ThreadLocalMap.set",
+            826133464
+          ],
+          [
+            "net.minecraft.client.renderer.feature.NameTagFeatureRenderer$Storage.add",
+            790328760
+          ],
+          [
+            "java.util.Arrays.copyOf",
+            765561032
+          ],
+          [
+            "net.minecraft.world.level.levelgen.DensityFunctions$Ap2.fillArray",
+            690374016
+          ],
+          [
+            "java.util.ImmutableCollections$AbstractImmutableList.iterator",
+            669135992
+          ],
+          [
+            "com.google.common.collect.Lists.newArrayList",
+            655072984
+          ]
+        ],
+        "nearestAuroraExecution": [
+          [
+            "com.aurora.client.worldmap.capture.ChunkCapturer.sampleColumn",
+            206
+          ],
+          [
+            "com.aurora.client.hud.WorldLineRenderer.drawLine",
+            178
+          ],
+          [
+            "com.aurora.client.hud.module.MinimapModule.renderContent",
+            50
+          ],
+          [
+            "com.aurora.client.util.FramePacer.waitUntilPark",
+            49
+          ],
+          [
+            "com.aurora.client.hud.HitboxRenderer.render",
+            34
+          ],
+          [
+            "com.aurora.client.util.AuroraHealthSnapshots.get",
+            28
+          ],
+          [
+            "com.aurora.client.feature.impl.ThrottleDetector.pushGap",
+            25
+          ],
+          [
+            "com.aurora.client.worldmap.cache.RegionCache.peek",
+            21
+          ],
+          [
+            "com.aurora.client.hud.module.ArmorModule.renderContent",
+            18
+          ],
+          [
+            "com.aurora.client.hud.HitboxRenderer.drawEntity",
+            17
+          ],
+          [
+            "com.aurora.client.hud.module.MinimapModule.paint",
+            17
+          ],
+          [
+            "com.aurora.client.ui.render.blur.BlurPanelRenderer$Frame.readback",
+            14
+          ],
+          [
+            "com.aurora.client.worldmap.MapTransform.clampScale",
+            14
+          ],
+          [
+            "com.aurora.client.ui.util.RenderUtil$GuiRectSink.rect",
+            10
+          ],
+          [
+            "com.aurora.client.hud.WorldLineRenderer.drawBoxOutline",
+            9
+          ],
+          [
+            "com.aurora.client.ui.util.AuroraFontRenderer$1.accept",
+            7
+          ],
+          [
+            "com.aurora.client.hud.module.InfoModule.renderContent",
+            7
+          ],
+          [
+            "com.aurora.client.feature.impl.ThrottleDetector.sample",
+            7
+          ],
+          [
+            "com.aurora.client.util.AuroraHealthSnapshots.put",
+            5
+          ],
+          [
+            "com.aurora.client.worldmap.MapMarkers.player",
+            5
+          ]
+        ],
+        "nearestAuroraAllocationWeights": [
+          [
+            "com.aurora.client.hud.module.ArmorModule.renderContent",
+            397659056
+          ],
+          [
+            "com.aurora.client.hud.module.MinimapModule.renderContent",
+            298407688
+          ],
+          [
+            "com.aurora.client.util.AuroraHealthSnapshots.put",
+            187641984
+          ],
+          [
+            "com.aurora.client.ui.util.AuroraFontRenderer$1.accept",
+            150811568
+          ],
+          [
+            "com.aurora.client.hud.module.MinimapModule.drawCaption",
+            150559248
+          ],
+          [
+            "com.aurora.client.hud.module.InfoModule.renderContent",
+            145786136
+          ],
+          [
+            "com.aurora.client.feature.impl.ThrottleDetector.sample",
+            101451256
+          ],
+          [
+            "com.aurora.client.hud.module.CpsModule.renderContent",
+            65905016
+          ],
+          [
+            "com.aurora.client.hud.module.PingModule.renderContent",
+            49209416
+          ],
+          [
+            "com.aurora.client.hud.module.CpsModule.getWidth",
+            45020632
+          ],
+          [
+            "com.aurora.client.ui.util.RenderUtil$GuiRectSink.rect",
+            40151904
+          ],
+          [
+            "com.aurora.client.util.RoundedRect.applyCornerFill",
+            38575328
+          ],
+          [
+            "com.aurora.client.worldmap.cache.RegionCache$RegionTile.snapshotPixels",
+            36195360
+          ],
+          [
+            "com.aurora.client.worldmap.MapMarkers.player",
+            17065736
+          ],
+          [
+            "com.aurora.client.ui.util.RenderUtil.drawCenteredLines",
+            17057120
+          ],
+          [
+            "com.aurora.client.worldmap.capture.ChunkCapturer.sampleColumn",
+            16734984
+          ],
+          [
+            "com.aurora.client.hud.HitboxRenderer.resolveTarget",
+            15179744
+          ],
+          [
+            "com.aurora.client.hud.module.ArmorModule.formatDurability",
+            14696344
+          ],
+          [
+            "com.aurora.client.hud.module.ToggleSprintSneakModule.drawRow",
+            13288616
+          ],
+          [
+            "com.aurora.client.feature.impl.ThrottleDetector.computeMedianFactor",
+            8761912
+          ]
+        ],
+        "nearestAuroraAllocationTypes": [
+          [
+            "com.aurora.client.util.AuroraHealthSnapshots.put -> java.util.WeakHashMap$Entry",
+            185513160
+          ],
+          [
+            "com.aurora.client.hud.module.ArmorModule.renderContent -> [I",
+            174683184
+          ],
+          [
+            "com.aurora.client.ui.util.AuroraFontRenderer$1.accept -> net.minecraft.client.gui.font.glyphs.BakedSheetGlyph$GlyphInstance",
+            94874816
+          ],
+          [
+            "com.aurora.client.feature.impl.ThrottleDetector.sample -> [J",
+            91602008
+          ],
+          [
+            "com.aurora.client.hud.module.ArmorModule.renderContent -> [B",
+            88127488
+          ],
+          [
+            "com.aurora.client.hud.module.MinimapModule.drawCaption -> [B",
+            68208784
+          ],
+          [
+            "com.aurora.client.hud.module.MinimapModule.drawCaption -> [Ljava.lang.Object;",
+            48000640
+          ],
+          [
+            "com.aurora.client.hud.module.InfoModule.renderContent -> com.ibm.icu.text.BidiRun",
+            47893576
+          ],
+          [
+            "com.aurora.client.hud.module.ArmorModule.renderContent -> com.ibm.icu.text.Bidi",
+            46315864
+          ],
+          [
+            "com.aurora.client.hud.module.MinimapModule.renderContent -> net.minecraft.client.gui.render.state.ColoredRectangleRenderState",
+            43104824
+          ],
+          [
+            "com.aurora.client.hud.module.MinimapModule.renderContent -> org.joml.Matrix3x2f",
+            40115032
+          ],
+          [
+            "com.aurora.client.hud.module.MinimapModule.renderContent -> [Ljava.lang.Object;",
+            39514560
+          ],
+          [
+            "com.aurora.client.worldmap.cache.RegionCache$RegionTile.snapshotPixels -> [I",
+            36195360
+          ],
+          [
+            "com.aurora.client.hud.module.MinimapModule.renderContent -> net.minecraft.client.gui.navigation.ScreenPosition",
+            32685120
+          ],
+          [
+            "com.aurora.client.ui.util.AuroraFontRenderer$1.accept -> [Ljava.lang.Object;",
+            31208032
+          ],
+          [
+            "com.aurora.client.hud.module.MinimapModule.renderContent -> net.minecraft.client.gui.navigation.ScreenRectangle",
+            29292968
+          ],
+          [
+            "com.aurora.client.hud.module.CpsModule.getWidth -> org.apache.commons.lang3.mutable.MutableFloat",
+            27200616
+          ],
+          [
+            "com.aurora.client.hud.module.MinimapModule.renderContent -> [I",
+            27134888
+          ],
+          [
+            "com.aurora.client.hud.module.ArmorModule.renderContent -> [Ljava.lang.Object;",
+            25209952
+          ],
+          [
+            "com.aurora.client.ui.util.AuroraFontRenderer$1.accept -> net.minecraft.network.chat.Style",
+            24207768
+          ]
+        ],
+        "sampledRegionKeyAllocationWeight": 0,
+        "limitations": [
+          "Whole recording includes setup/startup/save",
+          "Statistical samples and weights; not exact CPU/allocated bytes",
+          "Nearest Aurora caller includes downstream vanilla work"
+        ]
+      }
+    },
+    "candidate-03": {
+      "fixture": "aurora-mapping-pixel-perf-candidate-03",
+      "review": {
+        "kind": "stress",
+        "frames": 22632,
+        "phases": [
+          {
+            "count": 7161,
+            "minMs": 4.1309,
+            "medianMs": 8.3333,
+            "p95Ms": 8.4243,
+            "p99Ms": 9.072959999999998,
+            "maxMs": 23.6904,
+            "intervalsOver50Ms": 0,
+            "intervalsOver100Ms": 0,
+            "maxIntervalsOver50MsInOneSecond": 0,
+            "preUpdateDisplayIntervals": {
+              "count": 7161,
+              "minMs": 2.4529,
+              "medianMs": 8.3126,
+              "p95Ms": 9.6504,
+              "p99Ms": 10.781779999999955,
+              "maxMs": 29.0761,
+              "intervalsOver50Ms": 0,
+              "intervalsOver100Ms": 0
+            },
+            "fps": 119.36819191139428,
+            "phase": 1,
+            "seconds": 59.9908559,
+            "invalidStateFrames": 0,
+            "invalidStateFraction": 0.0,
+            "heapUsedMiBMin": 624.2629699707031,
+            "heapUsedMiBMax": 1030.9690399169922,
+            "heapCommittedMiBMax": 1107.0,
+            "entitiesMin": 405,
+            "entitiesMax": 408,
+            "positionFirst": [
+              0.5,
+              95.0,
+              0.5
+            ],
+            "positionLast": [
+              0.5,
+              95.0,
+              0.5
+            ],
+            "serverAverageTickMsMax": 3.896301,
+            "processContext": {
+              "samples": 119,
+              "seconds": 59.2144179,
+              "cpuPercentOneCore": 100.45589758301077,
+              "rssMiBMin": 1893.1328125,
+              "rssMiBMax": 1980.37890625,
+              "availableMiBMin": 18001.70703125
+            }
+          },
+          {
+            "count": 7195,
+            "minMs": 1.0352,
+            "medianMs": 8.3333,
+            "p95Ms": 8.40054,
+            "p99Ms": 8.816061999999993,
+            "maxMs": 20.9978,
+            "intervalsOver50Ms": 0,
+            "intervalsOver100Ms": 0,
+            "maxIntervalsOver50MsInOneSecond": 0,
+            "preUpdateDisplayIntervals": {
+              "count": 7195,
+              "minMs": 0.4697,
+              "medianMs": 8.31,
+              "p95Ms": 10.63953,
+              "p99Ms": 11.833805999999985,
+              "maxMs": 23.2132,
+              "intervalsOver50Ms": 0,
+              "intervalsOver100Ms": 0
+            },
+            "fps": 119.92784993867345,
+            "phase": 2,
+            "seconds": 59.994405,
+            "invalidStateFrames": 0,
+            "invalidStateFraction": 0.0,
+            "heapUsedMiBMin": 650.9554748535156,
+            "heapUsedMiBMax": 1279.4482116699219,
+            "heapCommittedMiBMax": 1414.0,
+            "entitiesMin": 11,
+            "entitiesMax": 408,
+            "positionFirst": [
+              0.5,
+              95.0,
+              0.5
+            ],
+            "positionLast": [
+              1216.5,
+              120.0,
+              0.5
+            ],
+            "serverAverageTickMsMax": 4.130509,
+            "processContext": {
+              "samples": 119,
+              "seconds": 59.2166649,
+              "cpuPercentOneCore": 172.98762125997408,
+              "rssMiBMin": 1956.65625,
+              "rssMiBMax": 2314.2578125,
+              "availableMiBMin": 17699.2109375
+            }
+          },
+          {
+            "count": 4497,
+            "minMs": 1.0926,
+            "medianMs": 8.3335,
+            "p95Ms": 33.3338,
+            "p99Ms": 33.354368,
+            "maxMs": 39.0574,
+            "intervalsOver50Ms": 0,
+            "intervalsOver100Ms": 0,
+            "maxIntervalsOver50MsInOneSecond": 0,
+            "preUpdateDisplayIntervals": {
+              "count": 4497,
+              "minMs": 0.4897,
+              "medianMs": 8.3652,
+              "p95Ms": 33.96782,
+              "p99Ms": 35.35474,
+              "maxMs": 42.1631,
+              "intervalsOver50Ms": 0,
+              "intervalsOver100Ms": 0
+            },
+            "fps": 75.03748795808505,
+            "phase": 3,
+            "seconds": 59.9300446,
+            "invalidStateFrames": 0,
+            "invalidStateFraction": 0.0,
+            "heapUsedMiBMin": 794.1871871948242,
+            "heapUsedMiBMax": 1300.7976837158203,
+            "heapCommittedMiBMax": 1414.0,
+            "entitiesMin": 11,
+            "entitiesMax": 11,
+            "positionFirst": [
+              1216.5,
+              120.0,
+              0.5
+            ],
+            "positionLast": [
+              1216.5,
+              120.0,
+              0.5
+            ],
+            "serverAverageTickMsMax": 1.423876,
+            "processContext": {
+              "samples": 120,
+              "seconds": 59.7180523,
+              "cpuPercentOneCore": 32.784265805668284,
+              "rssMiBMin": 2317.66796875,
+              "rssMiBMax": 2330.48046875,
+              "availableMiBMin": 17724.73046875
+            }
+          }
+        ],
+        "startup": {
+          "minecraft-constructor-start": 12081.9339,
+          "research-initializer": 12542.0861,
+          "aurora-initialize-start": 13350.6195,
+          "aurora-initialize-end": 13643.0808,
+          "minecraft-constructor-end": 16158.4503,
+          "main-menu-renderable": 20904.829,
+          "world-open-request": 23938.1388,
+          "scene-setup-start": 28751.1442,
+          "first-interactive-frame": 29133.9976,
+          "scene-setup-complete": 30180.6155,
+          "phase-1": 60183.3266,
+          "phase-2": 120182.9338,
+          "phase-3": 180186.9968,
+          "phase-4": 240184.4168,
+          "measurement-complete": 240185.107,
+          "world-disconnected": 240601.0601
+        },
+        "limitations": [
+          "Frame head and pre-updateDisplay intervals are software observations",
+          "JFR and sampling observer cost is not subtracted",
+          "No physical presentation or input-to-photon result"
+        ],
+        "validState": true,
+        "clockBracketNs": 60000,
+        "framebuffer": [
+          1280,
+          720
+        ],
+        "wholeProcessContext": {
+          "seconds": 240.6156762,
+          "cpuPercentOneCore": 196.52709560242693,
+          "peakRssMiB": 2330.48046875
+        }
+      },
+      "runtimeManifestSha256": "da9717984ae462de553e2f93ad159c71bc9b57541fc5971d8833aaf5047d54a5",
+      "inputManifestSha256": "c05c665560d004569e029bf4a811ed6f923e81947c28e215ff992e74db582382",
+      "observerSha256": "7a1558acdc8e4a9ef871a222146adfd2aec3a13a6fd451871875f291aaaba383",
+      "jfr": {
+        "events": {
+          "jdk.ExecutionSample": 7105,
+          "jdk.GCHeapSummary": 402,
+          "jdk.GCPhasePause": 251,
+          "jdk.GarbageCollection": 201,
+          "jdk.ObjectAllocationSample": 18007,
+          "minecraft.ClientFps": 215,
+          "minecraft.LoadWorld": 1,
+          "minecraft.NetworkSummary": 42,
+          "minecraft.ServerTickTime": 215
+        },
+        "gcPauseCount": 251,
+        "observedEventSpanSeconds": 227.8408956,
+        "sampledAllocationWeightBytes": 64746281016,
+        "sampledAllocationMiBPerSecond": 271.0087015993136,
+        "garbageCollectors": {
+          "G1New": 151,
+          "G1Old": 50
+        },
+        "gcPauseTotalMs": 1488.8071999999997,
+        "gcPauseMaxMs": 23.5536,
+        "gcHeapUsedMiBRange": [
+          282.9385299682617,
+          1319.0621643066406
+        ],
+        "sampledThreads": [
+          [
+            "Render thread",
+            10434
+          ],
+          [
+            "Server thread",
+            1955
+          ],
+          [
+            "CullThread",
+            1440
+          ],
+          [
+            "Netty Local IO #2",
+            644
+          ],
+          [
+            "Netty Local IO #1",
+            536
+          ],
+          [
+            "Worker-Main-1",
+            444
+          ],
+          [
+            "Worker-Main-24",
+            443
+          ],
+          [
+            "Sound engine",
+            351
+          ],
+          [
+            "Worker-Main-18",
+            335
+          ],
+          [
+            "Worker-Main-19",
+            325
+          ],
+          [
+            "Worker-Main-25",
+            314
+          ],
+          [
+            "Worker-Main-3",
+            304
+          ],
+          [
+            "Chunk Render Task Executor #1",
+            290
+          ],
+          [
+            "Chunk Render Task Executor #5",
+            280
+          ],
+          [
+            "Chunk Render Task Executor #4",
+            276
+          ],
+          [
+            "Worker-Main-15",
+            271
+          ],
+          [
+            "Chunk Render Task Executor #3",
+            271
+          ],
+          [
+            "Chunk Render Task Executor #6",
+            268
+          ],
+          [
+            "Worker-Main-26",
+            267
+          ],
+          [
+            "Chunk Render Task Executor #0",
+            267
+          ]
+        ],
+        "sampledExecutionTop": [
+          [
+            "java.util.Arrays.fill",
+            501
+          ],
+          [
+            "net.minecraft.util.SimpleBitStorage.lithium$compact",
+            312
+          ],
+          [
+            "net.minecraft.world.level.levelgen.synth.ImprovedNoise.p",
+            312
+          ],
+          [
+            "net.minecraft.world.level.levelgen.synth.PerlinNoise.getValue",
+            289
+          ],
+          [
+            "com.google.common.collect.RegularImmutableMap.get",
+            249
+          ],
+          [
+            "com.mojang.blaze3d.vertex.VertexConsumer.setColor",
+            136
+          ],
+          [
+            "org.joml.Matrix3f.equals",
+            130
+          ],
+          [
+            "net.minecraft.world.level.block.state.BlockBehaviour$BlockStateBase.getRenderShape",
+            110
+          ],
+          [
+            "net.caffeinemc.mods.sodium.client.render.immediate.model.EntityRenderer.renderCuboid",
+            104
+          ],
+          [
+            "net.caffeinemc.mods.sodium.client.render.model.AbstractBlockRenderContext.bufferDefaultModel",
+            102
+          ],
+          [
+            "it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap.get",
+            91
+          ],
+          [
+            "com.mojang.blaze3d.platform.TextureUtil.solidify",
+            80
+          ],
+          [
+            "java.util.HashMap.computeIfAbsent",
+            75
+          ],
+          [
+            "org.lwjgl.glfw.GLFW.glfwGetTime",
+            74
+          ],
+          [
+            "java.util.Objects.hashCode",
+            67
+          ],
+          [
+            "java.lang.invoke.DirectMethodHandle.allocateInstance",
+            66
+          ],
+          [
+            "net.minecraft.util.CubicSpline$Multipoint.apply",
+            63
+          ],
+          [
+            "net.minecraft.util.CubicSpline$Multipoint.create",
+            62
+          ],
+          [
+            "org.joml.Matrix3f.rotateZYX",
+            56
+          ],
+          [
+            "net.minecraft.client.gui.render.state.GuiRenderState.hasIntersection",
+            55
+          ]
+        ],
+        "allocationWeightTop": [
+          [
+            "net.caffeinemc.mods.sodium.client.render.frapi.mesh.MutableMeshImpl.<init>",
+            4822133168
+          ],
+          [
+            "jdk.internal.util.ReferencedKeyMap.entryKey",
+            3722958544
+          ],
+          [
+            "com.ibm.icu.text.Bidi.getDirProps",
+            2821602984
+          ],
+          [
+            "java.lang.invoke.DirectMethodHandle.allocateInstance",
+            2658862056
+          ],
+          [
+            "java.lang.Object.clone",
+            2598469456
+          ],
+          [
+            "it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap.<init>",
+            2260825936
+          ],
+          [
+            "java.util.ArrayList.grow",
+            1658005552
+          ],
+          [
+            "it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap.clone",
+            1308328096
+          ],
+          [
+            "java.lang.Double.valueOf",
+            1173125944
+          ],
+          [
+            "net.minecraft.client.renderer.entity.SheepRenderer.createRenderState",
+            1122150704
+          ],
+          [
+            "com.mojang.blaze3d.vertex.PoseStack$Pose.<init>",
+            1117260888
+          ],
+          [
+            "net.minecraft.client.gui.font.glyphs.BakedSheetGlyph.createGlyph",
+            1107329784
+          ],
+          [
+            "com.ibm.icu.text.Bidi.<init>",
+            1040299784
+          ],
+          [
+            "net.minecraft.client.gui.Font$GlyphVisitor.forMultiBufferSource",
+            940585504
+          ],
+          [
+            "java.lang.ThreadLocal$ThreadLocalMap.set",
+            775121184
+          ],
+          [
+            "java.util.HashMap.newNode",
+            689059352
+          ],
+          [
+            "net.minecraft.world.level.levelgen.DensityFunctions$Ap2.fillArray",
+            658742312
+          ],
+          [
+            "java.util.ImmutableCollections$AbstractImmutableList.iterator",
+            626056912
+          ],
+          [
+            "net.minecraft.world.level.levelgen.DensityFunctions$HolderHolder.mapAll",
+            606309808
+          ],
+          [
+            "net.minecraft.client.gui.font.glyphs.BakedSheetGlyph.render",
+            568059952
+          ]
+        ],
+        "nearestAuroraExecution": [
+          [
+            "com.aurora.client.worldmap.capture.ChunkCapturer.sampleColumn",
+            214
+          ],
+          [
+            "com.aurora.client.hud.WorldLineRenderer.drawLine",
+            164
+          ],
+          [
+            "com.aurora.client.util.FramePacer.waitUntilPark",
+            74
+          ],
+          [
+            "com.aurora.client.ui.util.UiLayerCache.blitAt",
+            56
+          ],
+          [
+            "com.aurora.client.hud.HitboxRenderer.render",
+            43
+          ],
+          [
+            "com.aurora.client.worldmap.WorldMapClient.sampleSurfaceAbgr",
+            29
+          ],
+          [
+            "com.aurora.client.ui.render.blur.BlurPanelRenderer$Frame.readback",
+            15
+          ],
+          [
+            "com.aurora.client.hud.HitboxRenderer.drawEntity",
+            15
+          ],
+          [
+            "com.aurora.client.util.AuroraHealthSnapshots.get",
+            14
+          ],
+          [
+            "com.aurora.client.worldmap.MapTransform.clampScale",
+            14
+          ],
+          [
+            "com.aurora.client.hud.WorldLineRenderer.drawBoxOutline",
+            13
+          ],
+          [
+            "com.aurora.client.worldmap.MapMarkers.text",
+            13
+          ],
+          [
+            "com.aurora.client.feature.impl.ThrottleDetector.pushGap",
+            12
+          ],
+          [
+            "com.aurora.client.ui.util.UiLayerCache.rect",
+            10
+          ],
+          [
+            "com.aurora.client.hud.module.MinimapModule.renderContent",
+            10
+          ],
+          [
+            "com.aurora.client.hud.module.ArmorModule.renderContent",
+            10
+          ],
+          [
+            "com.aurora.client.ui.util.RenderUtil$GuiRectSink.rect",
+            9
+          ],
+          [
+            "com.aurora.client.ui.util.AuroraFontRenderer$1.accept",
+            8
+          ],
+          [
+            "com.aurora.client.ui.util.UiLayerCache.writeScaledAbgr",
+            7
+          ],
+          [
+            "com.aurora.client.worldmap.storage.WorldMapStorage.writeRegion",
+            7
+          ]
+        ],
+        "nearestAuroraAllocationWeights": [
+          [
+            "com.aurora.client.hud.module.ArmorModule.renderContent",
+            417619376
+          ],
+          [
+            "com.aurora.client.worldmap.MapMarkers.text",
+            322182512
+          ],
+          [
+            "com.aurora.client.ui.util.AuroraFontRenderer$1.accept",
+            268579928
+          ],
+          [
+            "com.aurora.client.ui.util.UiLayerCache.blitAt",
+            242084576
+          ],
+          [
+            "com.aurora.client.hud.module.MinimapModule.drawCaption",
+            147609056
+          ],
+          [
+            "com.aurora.client.util.AuroraHealthSnapshots.put",
+            147172680
+          ],
+          [
+            "com.aurora.client.hud.module.InfoModule.renderContent",
+            145869208
+          ],
+          [
+            "com.aurora.client.feature.impl.ThrottleDetector.computeMedianFactor",
+            91092136
+          ],
+          [
+            "com.aurora.client.feature.impl.ThrottleDetector.sample",
+            79703208
+          ],
+          [
+            "com.aurora.client.hud.module.ToggleSprintSneakModule.drawRow",
+            75797208
+          ],
+          [
+            "com.aurora.client.util.RoundedRect.applyCornerFill",
+            65607264
+          ],
+          [
+            "com.aurora.client.worldmap.capture.ChunkCapturer.sampleColumn",
+            55535616
+          ],
+          [
+            "com.aurora.client.ui.util.RenderUtil$GuiRectSink.rect",
+            50516976
+          ],
+          [
+            "com.aurora.client.hud.module.CpsModule.renderContent",
+            34696408
+          ],
+          [
+            "com.aurora.client.hud.module.MinimapModule.renderContent",
+            26580656
+          ],
+          [
+            "com.aurora.client.hud.module.PingModule.renderContent",
+            22468376
+          ],
+          [
+            "com.aurora.client.hud.WorldLineRenderer.getLineBuffer",
+            21604104
+          ],
+          [
+            "com.aurora.client.config.AuroraConfig.load",
+            18293000
+          ],
+          [
+            "com.aurora.client.worldmap.cache.RegionCache$RegionTile.snapshotPixels",
+            15111096
+          ],
+          [
+            "com.aurora.client.hud.module.ReachModule.getWidth",
+            11940456
+          ]
+        ],
+        "nearestAuroraAllocationTypes": [
+          [
+            "com.aurora.client.hud.module.ArmorModule.renderContent -> [I",
+            244242408
+          ],
+          [
+            "com.aurora.client.ui.util.AuroraFontRenderer$1.accept -> net.minecraft.client.gui.font.glyphs.BakedSheetGlyph$GlyphInstance",
+            184220456
+          ],
+          [
+            "com.aurora.client.util.AuroraHealthSnapshots.put -> java.util.WeakHashMap$Entry",
+            147172680
+          ],
+          [
+            "com.aurora.client.feature.impl.ThrottleDetector.computeMedianFactor -> [I",
+            89521040
+          ],
+          [
+            "com.aurora.client.hud.module.MinimapModule.drawCaption -> net.minecraft.client.StringSplitter$$Lambda+0x00000001012410d8.1582499778",
+            81161432
+          ],
+          [
+            "com.aurora.client.feature.impl.ThrottleDetector.sample -> [J",
+            79703208
+          ],
+          [
+            "com.aurora.client.ui.util.AuroraFontRenderer$1.accept -> net.minecraft.network.chat.Style",
+            72880856
+          ],
+          [
+            "com.aurora.client.ui.util.UiLayerCache.blitAt -> net.minecraft.client.gui.render.state.BlitRenderState",
+            70889448
+          ],
+          [
+            "com.aurora.client.worldmap.MapMarkers.text -> java.lang.StringBuilder",
+            69839952
+          ],
+          [
+            "com.aurora.client.worldmap.MapMarkers.text -> [I",
+            63197160
+          ],
+          [
+            "com.aurora.client.hud.module.ToggleSprintSneakModule.drawRow -> net.minecraft.client.gui.Font$PreparedTextBuilder",
+            62827552
+          ],
+          [
+            "com.aurora.client.hud.module.InfoModule.renderContent -> [I",
+            59316232
+          ],
+          [
+            "com.aurora.client.ui.util.UiLayerCache.blitAt -> [Ljava.lang.Object;",
+            56550568
+          ],
+          [
+            "com.aurora.client.worldmap.capture.ChunkCapturer.sampleColumn -> net.minecraft.core.BlockPos$MutableBlockPos",
+            51428200
+          ],
+          [
+            "com.aurora.client.worldmap.MapMarkers.text -> com.ibm.icu.text.BidiRun",
+            51382760
+          ],
+          [
+            "com.aurora.client.worldmap.MapMarkers.text -> [Ljava.lang.Object;",
+            49731912
+          ],
+          [
+            "com.aurora.client.ui.util.UiLayerCache.blitAt -> org.joml.Matrix3x2f",
+            46328400
+          ],
+          [
+            "com.aurora.client.hud.module.MinimapModule.drawCaption -> java.util.ArrayList",
+            40118696
+          ],
+          [
+            "com.aurora.client.hud.module.InfoModule.renderContent -> [Ljava.lang.Object;",
+            30392576
+          ],
+          [
+            "com.aurora.client.ui.util.UiLayerCache.blitAt -> net.minecraft.client.gui.render.TextureSetup",
+            30253744
+          ]
+        ],
+        "sampledRegionKeyAllocationWeight": 0,
+        "limitations": [
+          "Whole recording includes setup/startup/save",
+          "Statistical samples and weights; not exact CPU/allocated bytes",
+          "Nearest Aurora caller includes downstream vanilla work"
+        ]
+      }
+    },
+    "candidate-04": {
+      "fixture": "aurora-mapping-pixel-perf-candidate-04",
+      "review": {
+        "kind": "stress",
+        "frames": 22635,
+        "phases": [
+          {
+            "count": 7169,
+            "minMs": 3.8207,
+            "medianMs": 8.3333,
+            "p95Ms": 8.37158,
+            "p99Ms": 9.281171999999989,
+            "maxMs": 23.6675,
+            "intervalsOver50Ms": 0,
+            "intervalsOver100Ms": 0,
+            "maxIntervalsOver50MsInOneSecond": 0,
+            "preUpdateDisplayIntervals": {
+              "count": 7169,
+              "minMs": 2.3881,
+              "medianMs": 8.3245,
+              "p95Ms": 9.6848,
+              "p99Ms": 10.568607999999992,
+              "maxMs": 29.3409,
+              "intervalsOver50Ms": 0,
+              "intervalsOver100Ms": 0
+            },
+            "fps": 119.48959259649219,
+            "phase": 1,
+            "seconds": 59.996857,
+            "invalidStateFrames": 0,
+            "invalidStateFraction": 0.0,
+            "heapUsedMiBMin": 622.6612777709961,
+            "heapUsedMiBMax": 1023.319206237793,
+            "heapCommittedMiBMax": 1102.0,
+            "entitiesMin": 409,
+            "entitiesMax": 414,
+            "positionFirst": [
+              0.5,
+              95.0,
+              0.5
+            ],
+            "positionLast": [
+              0.5,
+              95.0,
+              0.5
+            ],
+            "serverAverageTickMsMax": 4.085331,
+            "processContext": {
+              "samples": 119,
+              "seconds": 59.2257228,
+              "cpuPercentOneCore": 103.57619476785854,
+              "rssMiBMin": 1959.9375,
+              "rssMiBMax": 1965.6171875,
+              "availableMiBMin": 17777.76171875
+            }
+          },
+          {
+            "count": 7185,
+            "minMs": 1.2013,
+            "medianMs": 8.3333,
+            "p95Ms": 8.343539999999999,
+            "p99Ms": 8.964483999999999,
+            "maxMs": 37.4983,
+            "intervalsOver50Ms": 0,
+            "intervalsOver100Ms": 0,
+            "maxIntervalsOver50MsInOneSecond": 0,
+            "preUpdateDisplayIntervals": {
+              "count": 7185,
+              "minMs": 0.5111,
+              "medianMs": 8.3235,
+              "p95Ms": 10.631780000000001,
+              "p99Ms": 11.621984000000001,
+              "maxMs": 44.5784,
+              "intervalsOver50Ms": 0,
+              "intervalsOver100Ms": 0
+            },
+            "fps": 119.77199692571538,
+            "phase": 2,
+            "seconds": 59.9889806,
+            "invalidStateFrames": 0,
+            "invalidStateFraction": 0.0,
+            "heapUsedMiBMin": 664.0340881347656,
+            "heapUsedMiBMax": 1260.0,
+            "heapCommittedMiBMax": 1417.0,
+            "entitiesMin": 11,
+            "entitiesMax": 414,
+            "positionFirst": [
+              0.5,
+              95.0,
+              0.5
+            ],
+            "positionLast": [
+              1216.5,
+              120.0,
+              0.5
+            ],
+            "serverAverageTickMsMax": 4.078713,
+            "processContext": {
+              "samples": 120,
+              "seconds": 59.7236593,
+              "cpuPercentOneCore": 185.20193889057296,
+              "rssMiBMin": 1961.76953125,
+              "rssMiBMax": 2308.671875,
+              "availableMiBMin": 17444.5390625
+            }
+          },
+          {
+            "count": 4493,
+            "minMs": 1.4269,
+            "medianMs": 8.3335,
+            "p95Ms": 33.3338,
+            "p99Ms": 33.389739999999996,
+            "maxMs": 43.2159,
+            "intervalsOver50Ms": 0,
+            "intervalsOver100Ms": 0,
+            "maxIntervalsOver50MsInOneSecond": 0,
+            "preUpdateDisplayIntervals": {
+              "count": 4493,
+              "minMs": 0.5752,
+              "medianMs": 8.4009,
+              "p95Ms": 34.31714,
+              "p99Ms": 35.63696399999999,
+              "maxMs": 39.3996,
+              "intervalsOver50Ms": 0,
+              "intervalsOver100Ms": 0
+            },
+            "fps": 74.98451168458796,
+            "phase": 3,
+            "seconds": 59.9190406,
+            "invalidStateFrames": 0,
+            "invalidStateFraction": 0.0,
+            "heapUsedMiBMin": 780.0837173461914,
+            "heapUsedMiBMax": 1310.6336059570312,
+            "heapCommittedMiBMax": 1417.0,
+            "entitiesMin": 11,
+            "entitiesMax": 12,
+            "positionFirst": [
+              1216.5,
+              120.0,
+              0.5
+            ],
+            "positionLast": [
+              1216.5,
+              120.0,
+              0.5
+            ],
+            "serverAverageTickMsMax": 1.368967,
+            "processContext": {
+              "samples": 119,
+              "seconds": 59.2298884,
+              "cpuPercentOneCore": 37.75015554478067,
+              "rssMiBMin": 2247.13671875,
+              "rssMiBMax": 2328.38671875,
+              "availableMiBMin": 17435.921875
+            }
+          }
+        ],
+        "startup": {
+          "minecraft-constructor-start": 12117.8109,
+          "aurora-initialize-start": 12874.4662,
+          "aurora-initialize-end": 13012.9374,
+          "research-initializer": 13018.4401,
+          "minecraft-constructor-end": 16288.1418,
+          "main-menu-renderable": 21026.1889,
+          "world-open-request": 24059.4969,
+          "first-interactive-frame": 29141.494,
+          "scene-setup-start": 29141.8861,
+          "scene-setup-complete": 30503.9894,
+          "phase-1": 60505.5254,
+          "phase-2": 120511.1689,
+          "phase-3": 180509.8906,
+          "phase-4": 240507.5098,
+          "measurement-complete": 240508.3462,
+          "world-disconnected": 240890.9013
+        },
+        "limitations": [
+          "Frame head and pre-updateDisplay intervals are software observations",
+          "JFR and sampling observer cost is not subtracted",
+          "No physical presentation or input-to-photon result"
+        ],
+        "validState": true,
+        "clockBracketNs": 66800,
+        "framebuffer": [
+          1280,
+          720
+        ],
+        "wholeProcessContext": {
+          "seconds": 240.6388677,
+          "cpuPercentOneCore": 204.13109265972497,
+          "peakRssMiB": 2328.38671875
+        }
+      },
+      "runtimeManifestSha256": "4b0fd40369d2f9dd64aa182a58f2d7fb1a299e94235d407283b44c49b555352c",
+      "inputManifestSha256": "c05c665560d004569e029bf4a811ed6f923e81947c28e215ff992e74db582382",
+      "observerSha256": "7a1558acdc8e4a9ef871a222146adfd2aec3a13a6fd451871875f291aaaba383",
+      "jfr": {
+        "events": {
+          "jdk.ExecutionSample": 6976,
+          "jdk.GCHeapSummary": 398,
+          "jdk.GCPhasePause": 249,
+          "jdk.GarbageCollection": 199,
+          "jdk.ObjectAllocationSample": 17579,
+          "minecraft.ClientFps": 216,
+          "minecraft.LoadWorld": 1,
+          "minecraft.NetworkSummary": 42,
+          "minecraft.ServerTickTime": 216
+        },
+        "gcPauseCount": 249,
+        "observedEventSpanSeconds": 227.4629369,
+        "sampledAllocationWeightBytes": 64049835696,
+        "sampledAllocationMiBPerSecond": 268.5390600586914,
+        "garbageCollectors": {
+          "G1New": 149,
+          "G1Old": 50
+        },
+        "gcPauseTotalMs": 1542.3115000000012,
+        "gcPauseMaxMs": 26.5904,
+        "gcHeapUsedMiBRange": [
+          284.7994384765625,
+          1326.1250915527344
+        ],
+        "sampledThreads": [
+          [
+            "Render thread",
+            10388
+          ],
+          [
+            "Server thread",
+            1816
+          ],
+          [
+            "CullThread",
+            1428
+          ],
+          [
+            "Netty Local IO #2",
+            626
+          ],
+          [
+            "Netty Local IO #1",
+            566
+          ],
+          [
+            "Worker-Main-4",
+            460
+          ],
+          [
+            "Worker-Main-20",
+            443
+          ],
+          [
+            "Worker-Main-21",
+            434
+          ],
+          [
+            "Worker-Main-19",
+            426
+          ],
+          [
+            "Worker-Main-9",
+            338
+          ],
+          [
+            "Sound engine",
+            338
+          ],
+          [
+            "IO-Worker-2",
+            285
+          ],
+          [
+            "Chunk Render Task Executor #6",
+            280
+          ],
+          [
+            "Chunk Render Task Executor #3",
+            263
+          ],
+          [
+            "Worker-Main-3",
+            257
+          ],
+          [
+            "Worker-Main-13",
+            252
+          ],
+          [
+            "Chunk Render Task Executor #2",
+            243
+          ],
+          [
+            "Chunk Render Task Executor #1",
+            239
+          ],
+          [
+            "Chunk Render Task Executor #5",
+            236
+          ],
+          [
+            "Chunk Render Task Executor #0",
+            223
+          ]
+        ],
+        "sampledExecutionTop": [
+          [
+            "java.util.Arrays.fill",
+            501
+          ],
+          [
+            "net.minecraft.world.level.levelgen.synth.ImprovedNoise.p",
+            360
+          ],
+          [
+            "net.minecraft.util.SimpleBitStorage.lithium$compact",
+            310
+          ],
+          [
+            "net.minecraft.world.level.biome.BiomeManager.getBiome",
+            268
+          ],
+          [
+            "net.minecraft.world.level.levelgen.synth.PerlinNoise.getValue",
+            228
+          ],
+          [
+            "com.mojang.blaze3d.vertex.VertexConsumer.setColor",
+            174
+          ],
+          [
+            "org.joml.Matrix3f.equals",
+            134
+          ],
+          [
+            "java.util.Objects.hashCode",
+            88
+          ],
+          [
+            "net.caffeinemc.mods.sodium.client.render.immediate.model.EntityRenderer.renderCuboid",
+            85
+          ],
+          [
+            "net.minecraft.world.level.block.state.BlockBehaviour$BlockStateBase.skipRendering",
+            82
+          ],
+          [
+            "org.joml.Matrix4f.rotateAffineZYX",
+            78
+          ],
+          [
+            "com.mojang.blaze3d.platform.TextureUtil.solidify",
+            77
+          ],
+          [
+            "net.minecraft.util.CubicSpline$Multipoint.create",
+            68
+          ],
+          [
+            "net.minecraft.world.level.block.state.BlockBehaviour$BlockStateBase.getRenderShape",
+            67
+          ],
+          [
+            "java.lang.StringBuilder.<init>",
+            65
+          ],
+          [
+            "net.minecraft.util.CubicSpline$Multipoint.apply",
+            64
+          ],
+          [
+            "java.util.HashMap.computeIfAbsent",
+            61
+          ],
+          [
+            "it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap.get",
+            61
+          ],
+          [
+            "net.minecraft.util.SimpleBitStorage.getAll",
+            53
+          ],
+          [
+            "net.minecraft.server.level.ServerChunkCache.getChunk",
+            49
+          ]
+        ],
+        "allocationWeightTop": [
+          [
+            "net.caffeinemc.mods.sodium.client.render.frapi.mesh.MutableMeshImpl.<init>",
+            4747637536
+          ],
+          [
+            "java.io.ByteArrayOutputStream.<init>",
+            3940426384
+          ],
+          [
+            "java.lang.invoke.DirectMethodHandle.allocateInstance",
+            3272804176
+          ],
+          [
+            "java.lang.Object.clone",
+            2975496584
+          ],
+          [
+            "com.ibm.icu.text.Bidi.getDirProps",
+            2724779768
+          ],
+          [
+            "it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap.<init>",
+            1688808944
+          ],
+          [
+            "net.minecraft.client.gui.font.glyphs.BakedSheetGlyph.createGlyph",
+            1330970512
+          ],
+          [
+            "java.util.ArrayList.grow",
+            1291638424
+          ],
+          [
+            "java.lang.Double.valueOf",
+            1252845200
+          ],
+          [
+            "net.minecraft.world.level.levelgen.DensityFunctions$Ap2.fillArray",
+            1083260096
+          ],
+          [
+            "com.ibm.icu.text.Bidi.<init>",
+            985866984
+          ],
+          [
+            "jdk.internal.misc.Unsafe.allocateInstance",
+            943724520
+          ],
+          [
+            "com.mojang.blaze3d.vertex.PoseStack$Pose.<init>",
+            861069952
+          ],
+          [
+            "java.lang.ThreadLocal$ThreadLocalMap.set",
+            846726400
+          ],
+          [
+            "net.minecraft.client.renderer.entity.SheepRenderer.createRenderState",
+            753863864
+          ],
+          [
+            "net.minecraft.client.renderer.feature.NameTagFeatureRenderer$Storage.add",
+            738606192
+          ],
+          [
+            "java.util.ImmutableCollections$AbstractImmutableList.iterator",
+            671350504
+          ],
+          [
+            "java.util.Arrays.copyOf",
+            667105704
+          ],
+          [
+            "com.google.common.collect.Lists.newArrayList",
+            656498288
+          ],
+          [
+            "net.minecraft.client.gui.Font.prepareText",
+            611868536
+          ]
+        ],
+        "nearestAuroraExecution": [
+          [
+            "com.aurora.client.worldmap.capture.ChunkCapturer.sampleColumn",
+            245
+          ],
+          [
+            "com.aurora.client.hud.WorldLineRenderer.drawLine",
+            193
+          ],
+          [
+            "com.aurora.client.ui.util.UiLayerCache.blitAt",
+            46
+          ],
+          [
+            "com.aurora.client.util.FramePacer.waitUntilPark",
+            41
+          ],
+          [
+            "com.aurora.client.hud.HitboxRenderer.render",
+            40
+          ],
+          [
+            "com.aurora.client.feature.impl.ThrottleDetector.sample",
+            30
+          ],
+          [
+            "com.aurora.client.worldmap.cache.RegionCache.peek",
+            22
+          ],
+          [
+            "com.aurora.client.util.AuroraHealthSnapshots.get",
+            21
+          ],
+          [
+            "com.aurora.client.hud.HitboxRenderer.drawEntity",
+            16
+          ],
+          [
+            "com.aurora.client.hud.module.ArmorModule.renderContent",
+            15
+          ],
+          [
+            "com.aurora.client.ui.util.UiLayerCache.rect",
+            13
+          ],
+          [
+            "com.aurora.client.hud.module.MinimapModule.renderContent",
+            12
+          ],
+          [
+            "com.aurora.client.ui.render.blur.BlurPanelRenderer$Frame.readback",
+            11
+          ],
+          [
+            "com.aurora.client.ui.util.AuroraFontRenderer$1.accept",
+            9
+          ],
+          [
+            "com.aurora.client.hud.module.InfoModule.renderContent",
+            9
+          ],
+          [
+            "com.aurora.client.hud.WorldLineRenderer.drawBoxOutline",
+            8
+          ],
+          [
+            "com.aurora.client.ui.util.RenderUtil$GuiRectSink.rect",
+            7
+          ],
+          [
+            "com.aurora.client.ui.util.AuroraFontRenderer.isAuroraSurface",
+            7
+          ],
+          [
+            "com.aurora.client.worldmap.MapMarkers.text",
+            7
+          ],
+          [
+            "com.aurora.client.ui.util.UiLayerCache.writeScaledAbgr",
+            6
+          ]
+        ],
+        "nearestAuroraAllocationWeights": [
+          [
+            "com.aurora.client.hud.module.ArmorModule.renderContent",
+            551134992
+          ],
+          [
+            "com.aurora.client.worldmap.MapMarkers.text",
+            321956592
+          ],
+          [
+            "com.aurora.client.ui.util.UiLayerCache.blitAt",
+            250342648
+          ],
+          [
+            "com.aurora.client.hud.module.InfoModule.renderContent",
+            205743120
+          ],
+          [
+            "com.aurora.client.ui.util.AuroraFontRenderer$1.accept",
+            203370760
+          ],
+          [
+            "com.aurora.client.hud.module.CpsModule.renderContent",
+            155109616
+          ],
+          [
+            "com.aurora.client.util.AuroraHealthSnapshots.put",
+            149526992
+          ],
+          [
+            "com.aurora.client.util.RoundedRect.applyCornerFill",
+            76612024
+          ],
+          [
+            "com.aurora.client.feature.impl.ThrottleDetector.sample",
+            58562832
+          ],
+          [
+            "com.aurora.client.hud.module.MinimapModule.renderContent",
+            56211912
+          ],
+          [
+            "com.aurora.client.ui.util.RenderUtil$GuiRectSink.rect",
+            50776448
+          ],
+          [
+            "com.aurora.client.hud.module.MinimapModule.drawCaption",
+            48264712
+          ],
+          [
+            "com.aurora.client.hud.module.PingModule.renderContent",
+            39017016
+          ],
+          [
+            "com.aurora.client.worldmap.cache.RegionCache$RegionTile.snapshotPixels",
+            27589216
+          ],
+          [
+            "com.aurora.client.hud.module.InfoModule.getWidth",
+            24561976
+          ],
+          [
+            "com.aurora.client.hud.module.ToggleSprintSneakModule.drawRow",
+            23240656
+          ],
+          [
+            "com.aurora.client.ui.util.RenderUtil.drawCenteredLines",
+            21737032
+          ],
+          [
+            "com.aurora.client.worldmap.capture.ChunkCapturer.sampleColumn",
+            20216968
+          ],
+          [
+            "com.aurora.client.util.reflex.GpuTimeCollector.startQueryCheck",
+            16104096
+          ],
+          [
+            "com.aurora.client.screen.FeatureRegistry.init",
+            11502792
+          ]
+        ],
+        "nearestAuroraAllocationTypes": [
+          [
+            "com.aurora.client.hud.module.ArmorModule.renderContent -> [I",
+            222875920
+          ],
+          [
+            "com.aurora.client.util.AuroraHealthSnapshots.put -> java.util.WeakHashMap$Entry",
+            148479024
+          ],
+          [
+            "com.aurora.client.ui.util.AuroraFontRenderer$1.accept -> net.minecraft.client.gui.font.glyphs.BakedSheetGlyph$GlyphInstance",
+            110612256
+          ],
+          [
+            "com.aurora.client.hud.module.ArmorModule.renderContent -> [B",
+            106748224
+          ],
+          [
+            "com.aurora.client.hud.module.InfoModule.renderContent -> [I",
+            91436784
+          ],
+          [
+            "com.aurora.client.hud.module.CpsModule.renderContent -> [I",
+            79481768
+          ],
+          [
+            "com.aurora.client.ui.util.AuroraFontRenderer$1.accept -> net.minecraft.network.chat.Style",
+            77636312
+          ],
+          [
+            "com.aurora.client.ui.util.UiLayerCache.blitAt -> org.joml.Matrix3x2f",
+            73098224
+          ],
+          [
+            "com.aurora.client.ui.util.UiLayerCache.blitAt -> net.minecraft.client.gui.render.state.BlitRenderState",
+            70426016
+          ],
+          [
+            "com.aurora.client.worldmap.MapMarkers.text -> [I",
+            67425616
+          ],
+          [
+            "com.aurora.client.hud.module.ArmorModule.renderContent -> java.util.HashMap$Node",
+            61180904
+          ],
+          [
+            "com.aurora.client.ui.util.UiLayerCache.blitAt -> net.minecraft.client.gui.render.TextureSetup",
+            58485440
+          ],
+          [
+            "com.aurora.client.feature.impl.ThrottleDetector.sample -> [J",
+            58245224
+          ],
+          [
+            "com.aurora.client.worldmap.MapMarkers.text -> net.minecraft.client.gui.render.state.GuiTextRenderState",
+            57481616
+          ],
+          [
+            "com.aurora.client.hud.module.CpsModule.renderContent -> [B",
+            55471696
+          ],
+          [
+            "com.aurora.client.hud.module.ArmorModule.renderContent -> [Lnet.minecraft.client.renderer.item.ItemStackRenderState$LayerRenderState;",
+            50662688
+          ],
+          [
+            "com.aurora.client.worldmap.MapMarkers.text -> [Ljava.lang.Object;",
+            47890576
+          ],
+          [
+            "com.aurora.client.hud.module.MinimapModule.renderContent -> net.minecraft.network.chat.contents.PlainTextContents$LiteralContents",
+            43302848
+          ],
+          [
+            "com.aurora.client.worldmap.MapMarkers.text -> [B",
+            35825320
+          ],
+          [
+            "com.aurora.client.util.RoundedRect.applyCornerFill -> net.minecraft.client.gui.render.state.ColoredRectangleRenderState",
+            30363952
+          ]
+        ],
+        "sampledRegionKeyAllocationWeight": 0,
+        "limitations": [
+          "Whole recording includes setup/startup/save",
+          "Statistical samples and weights; not exact CPU/allocated bytes",
+          "Nearest Aurora caller includes downstream vanilla work"
+        ]
+      },
+      "scope": "Final rendering implementation; subsequent change only marshals disconnect cleanup to client executor, outside measured phases."
+    }
+  }
+}

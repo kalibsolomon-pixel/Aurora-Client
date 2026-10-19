@@ -1,0 +1,18 @@
+{
+  "java": 21,
+  "command": "gradlew.bat test build",
+  "tests": {
+    "tests": 575,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "productionJar": "aurora-3.0.0.jar",
+  "productionJarSha256": "0b12166a8996175360cc561df69a12140bfd4870d5c0042e1b473b46f9293b17",
+  "diagnosticClassesInProduction": false,
+  "finalRuntimeManifestSha256": "cc77bf79d90aa57c4e838933dfd144d1b81bbe44dfa5dd644248c4ade03aeb45",
+  "nativeRenderingChecks": 15,
+  "nativeFunctionalChecks": 22,
+  "nativeGpuCleanupLogChecksPassed": true,
+  "finalNativeSnapshotsMatchCurrentBuild": true
+}

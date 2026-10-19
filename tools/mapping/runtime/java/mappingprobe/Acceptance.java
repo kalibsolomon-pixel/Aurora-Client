@@ -25,6 +25,8 @@ public final class Acceptance implements ClientModInitializer {
     private static final List<Map<String,Object>> checks = new ArrayList<>();
     private static final long[] frames = new long[100_000];
     private static final int[] stages = new int[100_000];
+    private static final int[] states = new int[100_000];
+    private static final Map<String,Object> clock = new LinkedHashMap<>();
     private static int frameCount, stage;
     private static long started, stageAt, head, titleAt;
     private static boolean opening, finishing;
@@ -35,6 +37,19 @@ public final class Acceptance implements ClientModInitializer {
     private static final boolean RESUME = Boolean.getBoolean("aurora.mapping.resume");
     private static final boolean MULTIPLAYER = Boolean.getBoolean("aurora.mapping.multiplayer");
     private static final boolean EXTENDED = Boolean.getBoolean("aurora.mapping.extended");
+    private static final boolean RENDERING = Boolean.getBoolean("aurora.mapping.rendering");
+    private static final int[][] SIZES = {{1920,1080,2},{1920,1080,3},{2560,1440,3},{2560,1440,4},{3840,2160,4},{3840,2160,6}};
+    private static int renderCase;
+    private static long stableRevision, stableAt, stationaryPaint;
+    private static final List<Map<String,Object>> renderEvidence = new ArrayList<>();
+    private static void renderingSize(Minecraft mc) {
+        int[] size = SIZES[renderCase];
+        mc.setScreen(null); mc.getWindow().setWindowed(size[0],size[1]);
+        mc.options.guiScale().set(size[2]); mc.resizeDisplay();
+        var cfg = AuroraConfig.get(); cfg.minimapCircular = renderCase % 2 == 0;
+        var minimap = com.aurora.client.AuroraClient.modules().get("minimap");
+        minimap.scale = renderCase % 2 == 0 ? 1 : 1.25f;
+    }
     private static int explorationStep, maxResident, maxLoads, maxOverviews, maxRegionTextures, maxOverviewTextures;
     private static final List<Map<String, Object>> observed = new ArrayList<>();
     private static Object field(Object owner, String name) throws ReflectiveOperationException {
@@ -73,7 +88,12 @@ public final class Acceptance implements ClientModInitializer {
     }
     public static void end() {
         if (output == null || finishing || driving) return;
-        if (frameCount < frames.length) { frames[frameCount] = head; stages[frameCount++] = stage; }
+        if (frameCount < frames.length) {
+            var mc = Minecraft.getInstance();
+            frames[frameCount] = head; stages[frameCount] = stage;
+            states[frameCount++] = (mc.level != null ? 1 : 0) | (mc.isWindowActive() ? 2 : 0)
+                    | (mc.isPaused() ? 4 : 0) | (mc.screen != null ? 8 : 0);
+        }
     }
     private static void next(int value) { stage = value; stageAt = System.nanoTime(); }
     private static double elapsed() { return (System.nanoTime() - stageAt) / 1e9; }
@@ -99,10 +119,32 @@ public final class Acceptance implements ClientModInitializer {
             }
             if (mc.level != null && mc.player != null && mc.screen == null) {
                 started = System.nanoTime(); identity = MapIdentity.current().key();
+                clock.put("nanoBefore",System.nanoTime());
+                clock.put("qpcTick",org.lwjgl.glfw.GLFW.glfwGetTimerValue());
+                clock.put("qpcFrequency",org.lwjgl.glfw.GLFW.glfwGetTimerFrequency());
+                clock.put("nanoAfter",System.nanoTime());
                 if (MULTIPLAYER) next(100);
                 else {
                     command(mc, "gamemode spectator @a"); command(mc, "tp @a 0 100 0 0 30");
-                    if (EXTENDED) { moveToRegion(mc); next(200); }
+                    if (RENDERING) {
+                        command(mc,"tick freeze");
+                        mc.getTutorial().setStep(net.minecraft.client.tutorial.TutorialSteps.NONE);
+                        var cfg = AuroraConfig.get();
+                        cfg.hitboxEnabled = false; cfg.hitregEnabled = false;
+                        cfg.minimapShowCoords = true; cfg.minimapShowBiome = true; cfg.minimapSize = 128;
+                        cfg.minimapRotateWithPlayer = true; cfg.minimapBorderColor = 0; cfg.minimapCoordColor = -1;
+                        cfg.waypointDisplay = AuroraConfig.WaypointDisplay.BOTH; cfg.waypointLabelScale = 1.25;
+                        cfg.textRendererMode = AuroraConfig.TextRendererMode.AURORA_ONLY; cfg.activeFont = AuroraConfig.FontType.INTER;
+                        var feature = WaypointFeature.get();
+                        for (int i = 0; i < 18; i++) {
+                            var marker = new Waypoint("Marker " + (i + 1), (i % 6) * 12 - 30, 80,
+                                    20 + (i / 6) * 24, dim(mc), new int[]{0xFF66CCFF,0xFFFFB46E,0xFFA8D9AE}[i % 3]);
+                            marker.marker = AuroraConfig.WaypointMarker.values()[i % 3]; marker.group = "Rendering";
+                            feature.addWaypoint(marker); if (i == 0) target = marker;
+                        }
+                        feature.navigateTo(target); renderingSize(mc); next(300);
+                    }
+                    else if (EXTENDED) { moveToRegion(mc); next(200); }
                     else next(RESUME ? 90 : 1);
                 }
             }
@@ -145,6 +187,62 @@ public final class Acceptance implements ClientModInitializer {
             maxOverviewTextures = Math.max(maxOverviewTextures, overviewTextures);
         }
         switch (stage) {
+            case 300 -> {
+                long revision = engine.terrainRevision();
+                if (revision != stableRevision) { stableRevision = revision; stableAt = System.nanoTime(); }
+                if (elapsed() > 60) throw new IllegalStateException("Terrain never settled");
+                if (elapsed() < 15 || System.nanoTime() - stableAt < 2_000_000_000L) return;
+                stationaryPaint = (long) field(com.aurora.client.AuroraClient.modules().get("minimap"), "lastPaint"); next(301);
+            }
+            case 301 -> {
+                if (elapsed() < 3) return;
+                check("stationary-terrain-no-repaint", stationaryPaint == (long) field(com.aurora.client.AuroraClient.modules().get("minimap"), "lastPaint"));
+                next(302);
+            }
+            case 302 -> {
+                if (elapsed() < 3) return;
+                int[] size = SIZES[renderCase];
+                check("native-framebuffer-" + renderCase, mc.getWindow().getWidth() == size[0] && mc.getWindow().getHeight() == size[1]);
+                renderEvidence.add(Map.of("case",renderCase,"width",mc.getWindow().getWidth(),"height",mc.getWindow().getHeight(),
+                        "guiScale",mc.getWindow().getGuiScale(),"circle",cfg.minimapCircular,
+                        "hudScale",com.aurora.client.AuroraClient.modules().get("minimap").scale));
+                shot(mc,"pixels-"+renderCase+"-hud"); mc.setScreen(new WorldMapScreen()); next(303);
+            }
+            case 303 -> {
+                if (elapsed() < 3) return;
+                shot(mc,"pixels-"+renderCase+"-map"); mc.setScreen(new WaypointManagerScreen(new WorldMapScreen())); next(304);
+            }
+            case 304 -> {
+                if (elapsed() < 2) return;
+                check("manager-controls-bounded-"+renderCase, mc.screen.children().size() < 100);
+                shot(mc,"pixels-"+renderCase+"-manager"); mc.setScreen(new WaypointEditScreen(new WorldMapScreen(), target, false)); next(305);
+            }
+            case 305 -> {
+                if (elapsed() < 2) return;
+                shot(mc,"pixels-"+renderCase+"-editor"); mc.setScreen(null);
+                if (++renderCase < SIZES.length) { renderingSize(mc); next(302); }
+                else {
+                    mc.setScreen(new com.aurora.client.screen.HudEditorScreen()); next(306);
+                }
+            }
+            case 306 -> {
+                if (elapsed() < 3) return;
+                shot(mc,"pixels-hud-editor"); mc.setScreen(null); mc.reloadResourcePacks(); next(307);
+            }
+            case 307 -> {
+                if (elapsed() < 10 || mc.getOverlay()!=null) return;
+                check("render-resource-reload", engine.sampleSurfaceAbgr(0,0)!=0);
+                mc.options.guiScale().set(6); mc.resizeDisplay(); cfg.minimapCircular=true;
+                command(mc,"tp @a 0 100 0 0 30"); next(310);
+            }
+            case 310 -> {
+                mc.player.setYRot(mc.player.getYRot()+.5f);
+                if (elapsed() < 15) return;
+                check("render-waypoints-preserved", feature.currentWorldWaypoints().contains(target));
+                shot(mc,"pixels-final-hud");
+                Files.writeString(output.resolve("render-evidence.json"),new GsonBuilder().setPrettyPrinting().create().toJson(renderEvidence));
+                finish(mc);
+            }
             case 200 -> {
                 if (elapsed() < 4) return;
                 int x = (explorationStep % 8) * 512 + 256, z = (explorationStep / 8) * 512 + 256;
@@ -275,14 +373,24 @@ public final class Acceptance implements ClientModInitializer {
             }
             case 5 -> {
                 if (elapsed() < 3) return;
+                var colorField = mc.screen.children().stream().filter(w -> w instanceof EditBox).map(w -> (EditBox) w).toList().get(5);
+                int originalColor = target.color;
+                colorField.setValue("FF112233");
+                check("color-preview-is-transactional", target.color == originalColor
+                        && ((Waypoint)field(mc.screen,"draft")).color == 0xFF112233);
+                mc.screen.children().stream().filter(w -> w instanceof ButtonWidget b && b.getMessage().getString().equals("Cancel"))
+                        .map(w -> (ButtonWidget)w).findFirst().orElseThrow().onPress(null);
+                check("color-preview-cancel-preserves-record", target.color == originalColor);
+                mc.setScreen(new WaypointEditScreen(new WorldMapScreen(), target, false));
                 var fields = mc.screen.children().stream().filter(w -> w instanceof EditBox).map(w -> (EditBox) w).toList();
                 fields.get(0).setValue("Acceptance edited"); fields.get(1).setValue("24 70 32");
                 fields.get(3).setValue("Acceptance"); fields.get(4).setValue("Native lifecycle check");
-                fields.get(5).setValue("FF66CCFF");
+                fields.get(5).setValue("FF3399CC");
                 shot(mc, "editor");
                 mc.screen.children().stream().filter(w -> w instanceof ButtonWidget b && b.getMessage().getString().equals("Save"))
                         .map(w -> (ButtonWidget) w).findFirst().orElseThrow().onPress(null);
                 check("editor-propagated", target.name.equals("Acceptance edited") && target.x == 24 && target.group.equals("Acceptance"));
+                check("editor-color-saved", target.color == 0xFF3399CC);
                 List<Waypoint> list = feature.currentWorldWaypoints();
                 for (int i = 0; i < 10_000; i++) {
                     Waypoint w = new Waypoint("Stress " + i, (i % 100) * 16 - 800, 64,
@@ -376,13 +484,15 @@ public final class Acceptance implements ClientModInitializer {
             report.put("checks", checks); report.put("frames", frameCount); report.put("resume", RESUME);
             report.put("multiplayer", MULTIPLAYER);
             report.put("extended", EXTENDED);
+            report.put("rendering", RENDERING);
+            report.put("clock", clock);
             report.put("elapsedSeconds", (System.nanoTime() - started) / 1e9);
             report.put("mods", net.fabricmc.loader.api.FabricLoader.getInstance().getAllMods().stream()
                     .map(m -> m.getMetadata().getId() + ":" + m.getMetadata().getVersion()).sorted().toList());
             Files.writeString(output.resolve(RESUME ? "resume-report.json" : "acceptance-report.json"), new GsonBuilder().setPrettyPrinting().create().toJson(report));
             try (var writer = Files.newBufferedWriter(output.resolve(RESUME ? "resume-frames.csv" : "acceptance-frames.csv"))) {
-                writer.write("head_ns,stage\n");
-                for (int i = 0; i < frameCount; i++) writer.write(frames[i] + "," + stages[i] + "\n");
+                writer.write("head_ns,stage,state\n");
+                for (int i = 0; i < frameCount; i++) writer.write(frames[i] + "," + stages[i] + "," + states[i] + "\n");
             }
         } catch (Exception error) { error.printStackTrace(); }
         mc.stop();

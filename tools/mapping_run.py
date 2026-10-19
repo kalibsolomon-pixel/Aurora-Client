@@ -16,7 +16,7 @@ sys.path.insert(0, 'C:/Dev/aurora-launcher/tools/benchmark')
 from process_capture import Reader
 
 
-def run(root, resume, multiplayer=False, runtime_root=None, extended=False):
+def run(root, resume, multiplayer=False, runtime_root=None, extended=False, rendering=False, review_seconds=120):
     assert (root / 'DISPOSABLE-RESEARCH.txt').is_file()
     manifest = root / 'runtime-manifest.json'
     if manifest.exists():
@@ -40,7 +40,7 @@ def run(root, resume, multiplayer=False, runtime_root=None, extended=False):
     entries = [str(probe) if 'aurora-research-named.jar' in item else item for item in entries]
     assert str(probe) in entries
     args = [a for a in spec['jvmArgs'] if not a.startswith('-Daurora.research.')]
-    args += ['-Daurora.mapping.output=' + str(root), '-Daurora.mapping.reviewSeconds=120']
+    args += ['-Daurora.mapping.output=' + str(root), '-Daurora.mapping.reviewSeconds=' + str(review_seconds)]
     if resume:
         args.append('-Daurora.mapping.resume=true')
     if multiplayer:
@@ -48,6 +48,9 @@ def run(root, resume, multiplayer=False, runtime_root=None, extended=False):
     if extended:
         assert not multiplayer and not resume
         args.append('-Daurora.mapping.extended=true')
+    if rendering:
+        assert not multiplayer and not resume and not extended
+        args.append('-Daurora.mapping.rendering=true')
     name = 'resume' if resume else 'acceptance'
     samples = []
     with (root / (name + '-stdout.log')).open('xb') as out, (root / (name + '-stderr.log')).open('xb') as err:
@@ -71,6 +74,11 @@ def run(root, resume, multiplayer=False, runtime_root=None, extended=False):
             writer = csv.DictWriter(stream, fieldnames=list(samples[0])); writer.writeheader(); writer.writerows(samples)
     report = json.loads((root / (name + '-report.json')).read_text())
     failures = [r for r in report['checks'] if not r['passed']]
+    log = (root / (name + '-stdout.log')).read_text(encoding='utf-8', errors='replace')
+    log_checks = dict(wrongRenderThread=log.count('Rendersystem called from wrong thread'),
+                      failedTextureClose=log.count('Failed to close texture'))
+    (root / (name + '-log-checks.json')).write_text(json.dumps(log_checks, indent=2) + '\n')
+    failures += [dict(check=key, count=value) for key, value in log_checks.items() if value]
     print(json.dumps(dict(exitCode=child.returncode, checks=len(report['checks']), failures=failures)), flush=True)
     return int(child.returncode != 0 or bool(failures))
 
@@ -82,5 +90,7 @@ if __name__ == '__main__':
     parser.add_argument('--multiplayer', action='store_true')
     parser.add_argument('--runtime-root', type=Path)
     parser.add_argument('--extended', action='store_true')
+    parser.add_argument('--rendering', action='store_true')
+    parser.add_argument('--review-seconds', type=int, choices=range(0,601), default=120)
     args = parser.parse_args()
-    raise SystemExit(run(args.root.resolve(), args.resume, args.multiplayer, args.runtime_root, args.extended))
+    raise SystemExit(run(args.root.resolve(), args.resume, args.multiplayer, args.runtime_root, args.extended, args.rendering, args.review_seconds))
