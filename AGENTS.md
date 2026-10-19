@@ -2425,3 +2425,15 @@ constructor layout at registration (`HudModule.captureDefaultLayout`) so Reset P
 restores each module's own home; Toggle Sprint/Sneak defaults to the bottom-right corner.
 Description tooltips: first dwell 1500 ms, adjacent labels open instantly. Native capture
 probe: `tools/gui` (disposable fixtures only). See GUI_PREMIUM_DESIGN_AUDIT_REPORT.md.
+
+## Config persistence reliability (2026-10-19)
+
+`config/AtomicJsonWriter` is the persistence primitive for `aurora.json` and profiles: one
+ordered daemon worker per owner, latest-wins per file, unique fsynced temp + atomic replace,
+bounded retry ONLY for Windows' transient replace refusal (AccessDenied when any process
+holds the destination open — reproduced in tools/persistence), content kept pending rather
+than dropped, bounded `flush` for shutdown (`saveBlocking`/`saveCurrentBlocking` go through
+the same worker). Profiles read/scan/delete through its read-your-writes view
+(`latest`/`delete`), so create→switch and delete ordering are correct before the disk
+catches up. Aurora-UI keybind changes also save vanilla options (otherwise options.txt
+overwrote them at boot). See CONFIG_PERSISTENCE_RELIABILITY_REPORT.md.

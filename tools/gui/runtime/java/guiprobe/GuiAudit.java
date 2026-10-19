@@ -211,6 +211,7 @@ public final class GuiAudit implements ClientModInitializer {
     }
 
     static void setupActions() {
+        if (plan.equals("persist")) { PersistAudit.plan(Integer.getInteger("aurora.gui.phase", 1)); return; }
         FeatureRegistry.modules(); FeatureRegistry.settings();
         boolean full = plan.equals("full");
         actions.add(() -> shot("gameplay-hud"));
@@ -302,7 +303,7 @@ public final class GuiAudit implements ClientModInitializer {
             }
             report.put("checks", checks);
             report.put("shots", shots);
-            Files.writeString(root.resolve("report.json"), new GsonBuilder().setPrettyPrinting().create().toJson(report));
+            Files.writeString(root.resolve(plan.equals("persist") ? "report-phase" + Integer.getInteger("aurora.gui.phase", 1) + ".json" : "report.json"), new GsonBuilder().setPrettyPrinting().create().toJson(report));
         } catch (Exception failure) { failure.printStackTrace(); }
         mc.stop();
     }

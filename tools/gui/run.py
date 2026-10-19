@@ -40,12 +40,33 @@ def prepare(name, renderer, plan, sizes, jar):
     return root
 
 
+def relaunch(root, phase):
+    """Launch (again) in the same disposable game dir with per-phase logs."""
+    import subprocess
+    assert (root / 'DISPOSABLE-RESEARCH.txt').is_file()
+    spec = json.loads((root / 'launch-private.json').read_text())
+    jvm = [a for a in spec['jvmArgs'] if not a.startswith('-Daurora.gui.phase=')] + [f'-Daurora.gui.phase={phase}']
+    with (root / f'stdout-phase{phase}.log').open('wb') as out, (root / f'stderr-phase{phase}.log').open('wb') as err:
+        code = subprocess.run([spec['executable'], *jvm, '-cp', spec['classpath'], spec['mainClass'], *spec['args']],
+                              cwd=spec['workingDirectory'], stdout=out, stderr=err, creationflags=subprocess.CREATE_NO_WINDOW).returncode
+    (root / f'exit-phase{phase}.json').write_text(json.dumps(dict(exitCode=code)))
+    print('phase', phase, 'exitCode', code, flush=True)
+    return code
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('name')
     parser.add_argument('--renderer', choices=['vulkan', 'opengl', 'sodium'], default='opengl')
-    parser.add_argument('--plan', choices=['full', 'scale'], default='full')
+    parser.add_argument('--plan', choices=['full', 'scale', 'persist'], default='full')
+    parser.add_argument('--phase', type=int, default=1, help='persist plan phase')
+    parser.add_argument('--reuse', action='store_true', help='relaunch an existing fixture (same game dir)')
     parser.add_argument('--sizes', default='1920x1080@3')
     parser.add_argument('--jar', help='explicit Aurora jar (defaults to build/libs)')
     o = parser.parse_args()
-    raise SystemExit(launch(prepare(o.name, o.renderer, o.plan, o.sizes, o.jar)))
+    if o.reuse:
+        raise SystemExit(relaunch(ROOT / o.name, o.phase))
+    root = prepare(o.name, o.renderer, o.plan, o.sizes, o.jar)
+    if o.plan == 'persist':
+        raise SystemExit(relaunch(root, o.phase))
+    raise SystemExit(launch(root))

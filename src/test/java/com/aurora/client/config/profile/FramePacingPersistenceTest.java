@@ -87,6 +87,23 @@ class FramePacingPersistenceTest {
         assertFalse(AuroraConfig.get().framePacerLowCpuMode);
     }
 
+    @Test void createThenImmediateSwitchSeesTheQueuedProfileAndDeleteIsNotUndone() throws Exception {
+        // Regression (2026-10-19 relaunch acceptance): create() queues the
+        // file asynchronously; switchTo() used to scan the directory before
+        // it existed and silently refuse the switch.
+        var manager = ProfileManager.getInstance();
+        String name = "ryw-" + System.nanoTime();
+        assertTrue(manager.create(name));
+        assertTrue(manager.switchTo(name), "switching to a just-created profile must work");
+        assertEquals(name, manager.currentProfile());
+        assertTrue(manager.switchTo("default"));
+        assertTrue(manager.delete(name));
+        assertFalse(manager.listProfileNames().contains(name), "a queued delete is visible at once");
+        assertTrue(AuroraConfig.flushPending(5000));
+        manager.saveCurrentBlocking();
+        assertFalse(Files.exists(temporary.resolve("profiles/" + name + ".json")), "no queued save resurrects it");
+    }
+
     private static void assertSettings(AuroraConfig.PacingStrategy strategy, boolean lowCpu, int spin, int park) {
         AuroraConfig cfg = AuroraConfig.get();
         assertEquals(strategy, cfg.framePacingStrategy);

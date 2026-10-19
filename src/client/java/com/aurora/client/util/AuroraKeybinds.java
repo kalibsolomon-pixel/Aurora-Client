@@ -125,6 +125,7 @@ public final class AuroraKeybinds {
      */
     public static void tick() {
         boolean anyMappingChange = false;
+        boolean pushedFromConfig = false;
         for (Entry e : ENTRIES) {
             int mappingGlfw = currentGlfw(e.mapping);
             int cfgGlfw = e.getter.getAsInt();
@@ -142,6 +143,7 @@ public final class AuroraKeybinds {
                 applyToMapping(e.mapping, cfgGlfw);
                 e.lastSeenGlfw = cfgGlfw;
                 anyMappingChange = true;
+                pushedFromConfig = true;
             }
         }
         if (anyMappingChange) {
@@ -149,6 +151,16 @@ public final class AuroraKeybinds {
             // programmatic setKey() — vanilla only does this when its
             // own controls screen closes.
             KeyMapping.resetMapping();
+        }
+        if (pushedFromConfig) {
+            // Persist the vanilla side too. options.txt is loaded before this
+            // reconciler runs at boot, so an Aurora-UI rebind that only
+            // reached aurora.json was overwritten by the stale options.txt
+            // binding on the next launch (found by the 2026-10-19 relaunch
+            // acceptance; CONFIG_PERSISTENCE_RELIABILITY_REPORT.md). Vanilla's
+            // own Controls screen saves options the same way.
+            var mc = net.minecraft.client.Minecraft.getInstance();
+            if (mc != null && mc.options != null) mc.options.save();
         }
     }
 

@@ -11,15 +11,12 @@ import net.fabricmc.loader.api.FabricLoader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
  * Simple GSON-backed config. Persists to {@code config/aurora.json}.
@@ -61,12 +58,10 @@ public class AuroraConfig {
      * "seemingly random" multiplayer disconnects — the server stops receiving
      * keepalive responses within its timeout window and drops us.
      */
-    private static final ExecutorService SAVE_EXECUTOR =
-            Executors.newSingleThreadExecutor(r -> {
-                Thread t = new Thread(r, "Aurora-ConfigSave");
-                t.setDaemon(true);
-                return t;
-            });
+    private static final AtomicJsonWriter WRITER = new AtomicJsonWriter("Aurora-ConfigSave");
+
+    /** Upper bound the shutdown flush may wait for the final config write. */
+    public static final long SHUTDOWN_FLUSH_MS = 3000L;
 
     /**
      * Snapshot of factory defaults — built once at class init from a fresh
@@ -1182,6 +1177,7 @@ public class AuroraConfig {
 
     public static void load() {
         try {
+            AtomicJsonWriter.deleteStaleTemps(CONFIG_PATH);
             if (Files.exists(CONFIG_PATH)) {
                 String json = Files.readString(CONFIG_PATH);
                 // Theme pre-pass: fold legacy themePrimary/themeSecondary keys
@@ -1227,7 +1223,7 @@ public class AuroraConfig {
      * <p>Serialization happens on the calling thread (normally the client tick
      * thread) so we read a consistent snapshot — GSON is not safe against
      * concurrent mutation of the live maps by other tick logic. The resulting
-     * JSON string is then handed to {@link #SAVE_EXECUTOR} for the actual disk
+     * JSON string is then handed to {@link #WRITER} for the actual disk
      * write, which is the slow / unpredictable part (filesystem + antivirus).
      * Keeping that off the main thread prevents it from stalling packet
      * handling and dropping the player from servers.
@@ -1243,51 +1239,32 @@ public class AuroraConfig {
             AuroraClient.LOGGER.error("Failed to serialize Aurora config", t);
             return;
         }
-        SAVE_EXECUTOR.submit(() -> writeJsonAtomic(json));
+        WRITER.submit(CONFIG_PATH, json);
     }
 
     /**
-     * Persist the config synchronously (blocking). Should only be used during
-     * shutdown — the async {@link #save()} enqueues work onto a daemon thread
-     * that the JVM will not wait for on exit, so a final save must be done
-     * inline to guarantee it lands on disk.
+     * Persist the config and wait (bounded) until it is on disk. Used on JVM
+     * shutdown, where the daemon writer would otherwise be killed. The write
+     * goes through the SAME ordered writer as {@link #save()}: an older queued
+     * async snapshot is superseded and can never land after this one, and no
+     * second thread competes for the temp file (both happened before
+     * 2026-10-19 — CONFIG_PERSISTENCE_RELIABILITY_REPORT.md).
+     *
+     * @return true if the write was confirmed on disk within the bound
      */
-    public static void saveBlocking() {
+    public static boolean saveBlocking() {
         try {
-            writeJsonAtomic(GSON.toJson(INSTANCE));
+            WRITER.submit(CONFIG_PATH, GSON.toJson(INSTANCE));
         } catch (Throwable t) {
-            AuroraClient.LOGGER.error("Failed to save Aurora config", t);
+            AuroraClient.LOGGER.error("Failed to serialize Aurora config", t);
+            return false;
         }
+        boolean ok = WRITER.flush(SHUTDOWN_FLUSH_MS);
+        if (!ok) AuroraClient.LOGGER.error("Aurora config was NOT confirmed saved; the previous aurora.json is intact");
+        return ok;
     }
 
-    /**
-     * Write the JSON to the config path atomically: write to a sibling
-     * {@code .tmp} file then move it into place. A crash or shutdown mid-write
-     * therefore can never corrupt or truncate the existing config.
-     */
-    private static void writeJsonAtomic(String json) {
-        Path tmp = CONFIG_PATH.resolveSibling(CONFIG_PATH.getFileName() + ".tmp");
-        try {
-            Files.createDirectories(CONFIG_PATH.getParent());
-            Files.writeString(tmp, json);
-            // Prefer an atomic same-volume rename (default on Windows / most
-            // POSIX FS). Fall back to a plain replace if the FS doesn't support
-            // atomic moves so the save still lands rather than being dropped.
-            try {
-                Files.move(tmp, CONFIG_PATH,
-                        StandardCopyOption.REPLACE_EXISTING,
-                        StandardCopyOption.ATOMIC_MOVE);
-            } catch (java.nio.file.AtomicMoveNotSupportedException amnse) {
-                Files.move(tmp, CONFIG_PATH, StandardCopyOption.REPLACE_EXISTING);
-            }
-        } catch (IOException e) {
-            AuroraClient.LOGGER.error("Failed to save Aurora config", e);
-            // Best-effort cleanup of the orphaned temp file.
-            try { Files.deleteIfExists(tmp); } catch (IOException ignored) {}
-        } catch (Throwable t) {
-            AuroraClient.LOGGER.error("Unexpected error saving Aurora config", t);
-            try { Files.deleteIfExists(tmp); } catch (IOException ignored) {}
-        }
-    }
+    /** Waits (bounded) for queued config writes; true if all landed. */
+    public static boolean flushPending(long timeoutMs) { return WRITER.flush(timeoutMs); }
 }
 

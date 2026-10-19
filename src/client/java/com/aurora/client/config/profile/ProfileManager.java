@@ -16,8 +16,6 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.nio.file.*;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 
 /**
@@ -63,15 +61,11 @@ public class ProfileManager {
 
     /**
      * Dedicated single-thread daemon executor for profile disk writes.
-     * Mirrors {@code AuroraConfig.SAVE_EXECUTOR}'s rationale: disk I/O is
+     * Mirrors {@code AuroraConfig.WRITER}'s rationale: disk I/O is
      * slow/unpredictable and must not stall the client tick thread.
      */
-    private static final ExecutorService SAVE_EXECUTOR =
-            Executors.newSingleThreadExecutor(r -> {
-                Thread t = new Thread(r, "Aurora-ProfileSave");
-                t.setDaemon(true);
-                return t;
-            });
+    private static final com.aurora.client.config.AtomicJsonWriter WRITER =
+            new com.aurora.client.config.AtomicJsonWriter("Aurora-ProfileSave");
 
     private static final ProfileManager INSTANCE = new ProfileManager();
 
@@ -130,6 +124,8 @@ public class ProfileManager {
         catch (IOException e) {
             AuroraClient.LOGGER.error("ProfileManager: could not create profiles dir", e);
         }
+        // Temp files left by a crash mid-write never affect the real profile; tidy them.
+        for (String name : scanNames()) com.aurora.client.config.AtomicJsonWriter.deleteStaleTemps(pathFor(name));
 
         ensureDefaultProfileExists();
 
@@ -213,7 +209,7 @@ public class ProfileManager {
         p.name = newName;
         Path oldFile = pathFor(oldName);
         writeProfileFile(p);
-        try { Files.deleteIfExists(oldFile); } catch (IOException ignored) {}
+        WRITER.delete(oldFile); // ordered after any queued write for the old name
         if (currentProfileName.equals(oldName)) {
             currentProfileName = newName;
             AuroraConfig.get().activeProfile = newName;
@@ -232,12 +228,9 @@ public class ProfileManager {
     public boolean delete(String name) {
         if ("default".equals(name) || !nameExists(name)) return false;
         if (currentProfileName.equals(name)) return false; // never delete active
-        try {
-            Files.deleteIfExists(pathFor(name));
-        } catch (IOException e) {
-            AuroraClient.LOGGER.error("ProfileManager: failed to delete '{}'", name, e);
-            return false;
-        }
+        // Ordered through the writer: a still-queued save for this profile can
+        // no longer land after the delete and resurrect it.
+        WRITER.delete(pathFor(name));
         invalidateCache();
         return true;
     }
@@ -312,14 +305,12 @@ public class ProfileManager {
         p.name = currentProfileName;
         Profile existing = readProfileFile(currentProfileName);
         p.createdAtMs = (existing != null) ? existing.createdAtMs : System.currentTimeMillis();
-        final String json;
-        try {
-            json = GSON.toJson(p);
-        } catch (Throwable t) {
-            AuroraClient.LOGGER.error("ProfileManager: failed to serialize profile '{}'", p.name, t);
-            return;
-        }
-        writeProfileFileSync(json, pathFor(p.name), p.name);
+        writeProfileFile(p);
+        // Through the SAME ordered writer as the async path, then a bounded
+        // wait: the old inline write raced a queued async write for the same
+        // fixed .tmp path, and that older snapshot could land afterwards.
+        if (!WRITER.flush(com.aurora.client.config.AuroraConfig.SHUTDOWN_FLUSH_MS))
+            AuroraClient.LOGGER.error("ProfileManager: profile '{}' was NOT confirmed saved; the previous file is intact", p.name);
     }
 
     // ------------------------------------------------------------------
@@ -467,9 +458,14 @@ public class ProfileManager {
 
     private Profile readProfileFile(String name) {
         Path file = pathFor(name);
-        if (!Files.exists(file)) return null;
+        // Read-your-writes: a queued/in-flight write (or delete) is newer than
+        // the disk. Reading the disk here let create→switchTo fail (the new
+        // file was not written yet) and could apply a stale profile.
+        String pending = WRITER.latest(file);
+        if (pending == com.aurora.client.config.AtomicJsonWriter.DELETED) return null;
+        if (pending == null && !Files.exists(file)) return null;
         try {
-            String json = Files.readString(file);
+            String json = pending != null ? pending : Files.readString(file);
             Profile p = GSON.fromJson(json, Profile.class);
             if (p == null) return null;
             if (p.fields == null) p.fields = new LinkedHashMap<>();
@@ -493,31 +489,7 @@ public class ProfileManager {
             AuroraClient.LOGGER.error("ProfileManager: failed to serialize profile '{}'", p.name, t);
             return;
         }
-        final Path target = pathFor(p.name);
-        SAVE_EXECUTOR.submit(() -> writeProfileFileSync(json, target, p.name));
-    }
-
-    /**
-     * Inline atomic write — used by {@link #writeProfileFile} (via the save
-     * executor) and by {@link #saveCurrentBlocking()} on shutdown, where the
-     * daemon executor would be killed before finishing.
-     */
-    private static void writeProfileFileSync(String json, Path target, String name) {
-        Path tmp = target.resolveSibling(target.getFileName() + ".tmp");
-        try {
-            Files.createDirectories(target.getParent());
-            Files.writeString(tmp, json);
-            try {
-                Files.move(tmp, target,
-                        StandardCopyOption.REPLACE_EXISTING,
-                        StandardCopyOption.ATOMIC_MOVE);
-            } catch (AtomicMoveNotSupportedException amnse) {
-                Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING);
-            }
-        } catch (Throwable t) {
-            AuroraClient.LOGGER.error("ProfileManager: failed to write profile '{}'", name, t);
-            try { Files.deleteIfExists(tmp); } catch (IOException ignored) {}
-        }
+        WRITER.submit(pathFor(p.name), json);
     }
 
     // ------------------------------------------------------------------
@@ -541,6 +513,18 @@ public class ProfileManager {
             }
         } catch (IOException e) {
             AuroraClient.LOGGER.error("ProfileManager: failed to scan profiles dir", e);
+        }
+        // Overlay queued writes/deletes so a just-created profile exists and a
+        // just-deleted one does not, before the disk catches up.
+        for (var e : WRITER.latestAll().entrySet()) {
+            if (!PROFILES_DIR.equals(e.getKey().getParent())) continue;
+            String fileName = e.getKey().getFileName().toString();
+            names.removeIf(n -> pathFor(n).getFileName().toString().equals(fileName));
+            if (e.getValue() == com.aurora.client.config.AtomicJsonWriter.DELETED) continue;
+            try {
+                Profile prof = GSON.fromJson(e.getValue(), Profile.class);
+                names.add(prof != null && prof.name != null && !prof.name.isEmpty() ? prof.name : stripJsonExt(fileName));
+            } catch (RuntimeException ignored) { }
         }
         Collections.sort(names);
         return names;
