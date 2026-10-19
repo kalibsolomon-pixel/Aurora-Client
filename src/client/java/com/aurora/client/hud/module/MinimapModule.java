@@ -45,6 +45,8 @@ public final class MinimapModule extends HudModule {
     private List<Entity> entities = List.of();
     private long lastEntities;
     private Object entityLevel;
+    private final com.aurora.client.worldmap.MarkerLabelLayout distanceLabels = new com.aurora.client.worldmap.MarkerLabelLayout();
+    private final int[] cardinalX = new int[4], cardinalY = new int[4], cardinalWidth = new int[4];
 
     public MinimapModule() {
         super(ID);
@@ -94,7 +96,8 @@ public final class MinimapModule extends HudModule {
                 || previousTerrain != cfg.minimapShowTerrain || previousBorder != border || previousAlpha != alpha;
         boolean motion = Math.abs(px - previousX) + Math.abs(pz - previousZ) > zoom / (double) size * .25
                 || (cfg.minimapRotateWithPlayer && Math.abs(yaw - previousYaw) > .2);
-        if (changed || ((motion || previousRevision != revision) && now - lastPaint >= 50_000_000L)) {
+        if (textureSize < 0 || previousLevel != mc.level
+                || ((changed || motion || previousRevision != revision) && now - lastPaint >= 50_000_000L)) {
             ensureTexture(size, physicalSize);
             if (engine != null && cfg.minimapShowTerrain) engine.requestMinimap(px, pz, zoom);
             paint(engine, px, pz, size, zoom, cos, sin, cfg, border, alpha);
@@ -120,6 +123,15 @@ public final class MinimapModule extends HudModule {
         double centerX = x + 1 + size * .5, centerY = y + 1 + size * .5;
         double scale = size / (double) zoom;
         double limit = size * .5 - 6;
+        distanceLabels.reset();
+        if (cfg.minimapShowCompass) for (int i = 0; i < 4; i++) {
+            double angle = i * Math.PI * .5 - rotation;
+            cardinalX[i] = (int) Math.round(centerX + Math.sin(angle) * (size * .5 - 10));
+            cardinalY[i] = (int) Math.round(centerY - Math.cos(angle) * (size * .5 - 10));
+            cardinalWidth[i] = mc.font.width(CARDINALS[i]);
+            distanceLabels.reserve(cardinalX[i] - cardinalWidth[i] * .5f - 2, cardinalY[i] - 6,
+                    cardinalWidth[i] + 4, mc.font.lineHeight + 4);
+        }
         WaypointFeature feature = WaypointFeature.get();
         if (cfg.minimapShowWaypoints && feature != null) {
             int labels = 0;
@@ -131,15 +143,22 @@ public final class MinimapModule extends HudModule {
                 int markerX = (int) Math.round(centerX + sx * clamp);
                 int markerY = (int) Math.round(centerY + sy * clamp);
                 MapMarkers.waypoint(g, markerX, markerY, w, w.id.equals(feature.navigationId()));
-                if (clamp < 1 && cfg.minimapShowWaypointDistance && labels++ < 4) {
+                if (clamp < 1 && cfg.minimapShowWaypointDistance && labels < 4) {
                     String text = Math.round(Math.hypot(dx, dz)) + "m";
                     int width = mc.font.width(text);
                     int tx = (int) MapTransform.bounded(markerX - width * .5,
                             x + 8, x + size - width - 8);
                     // Keep labels towards the map interior, inside a circular mask as well.
                     int ty = markerY < centerY ? markerY + 7 : markerY - 13;
-                    if (!cfg.minimapCircular || Math.hypot(tx + width * .5 - centerX, ty + 4 - centerY) < limit - width * .5)
-                        MapMarkers.text(g, mc.font, text, tx, ty, 0xFFFFFFFF, true);
+                    for (int attempt = 0; attempt < 2; attempt++) {
+                        int rowY = ty + attempt * (markerY < centerY ? 1 : -1) * (mc.font.lineHeight + 3);
+                        if (cfg.minimapCircular && Math.hypot(tx + width * .5 - centerX, rowY + 4 - centerY) >= limit - width * .5) continue;
+                        if (!distanceLabels.place(tx + width * .5f, rowY + mc.font.lineHeight,
+                                width + 4, mc.font.lineHeight + 2, g.guiWidth(), g.guiHeight())) continue;
+                        MapMarkers.text(g, mc.font, text, distanceLabels.centerX() - width * .5f,
+                                distanceLabels.bottomY() - mc.font.lineHeight, 0xFFFFFFFF, true);
+                        labels++; break;
+                    }
                 }
             }
         }
@@ -169,15 +188,12 @@ public final class MinimapModule extends HudModule {
         }
         if (cfg.minimapShowSelfArrow) {
             double heading = Math.toRadians(yaw) - rotation;
-            MapMarkers.player(g, (int) centerX, (int) centerY, -Math.sin(heading), Math.cos(heading));
+            MapMarkers.minimapPlayer(g, (int) centerX, (int) centerY, -Math.sin(heading), Math.cos(heading));
         }
         if (cfg.minimapShowCompass) {
-            double radius = size * .5 - 10;
             for (int i = 0; i < 4; i++) {
-                double angle = i * Math.PI * .5 - rotation;
-                int tx = (int) Math.round(centerX + Math.sin(angle) * radius);
-                int ty = (int) Math.round(centerY - Math.cos(angle) * radius);
-                MapMarkers.text(g, mc.font, CARDINALS[i], tx - mc.font.width(CARDINALS[i]) * .5f, ty - 4, border, true);
+                MapMarkers.text(g, mc.font, CARDINALS[i], cardinalX[i] - cardinalWidth[i] * .5f,
+                        cardinalY[i] - 4, border, true);
             }
         }
         int textY = y + size + 4;

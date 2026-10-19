@@ -2403,3 +2403,9 @@ existing native FreeType icon renderer. World-map terrain/LOD rendering is uncha
 Block highlights retain their fill and use WorldLineRenderer's two-device-pixel
 outline with double-precision camera subtraction. The shared span rasterizer now
 includes exact-integer left edges; PixelCacheTest protects coverage and ABGR copies.
+Stable arrow orientations are cached separately for minimap and world map; turning
+remains continuous AA. MarkerLabelLayout reserves icons, player and chrome before
+offering map names at alternate positions (260 obstacle slots, 64 names). Minimap
+distance labels exclude compass letters and each other. See
+MAPPING_PIXEL_RENDERING_REPORT.md for native scale screenshots and bounded timing,
+including the measured CPU cost of higher-density output at 4K.

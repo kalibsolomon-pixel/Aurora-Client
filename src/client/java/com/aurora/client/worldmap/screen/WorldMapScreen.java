@@ -117,17 +117,33 @@ public final class WorldMapScreen extends Screen implements ThemedScreen {
         Waypoint hovered = null;
         var feature = WaypointFeature.get();
         nameLayout.reset();
+        nameLayout.reserve(4, 4, Math.min(width - 8, 506), 56);
+        nameLayout.reserve(4, height - 47, width - 8, 43);
+        if (minecraft.player != null && minecraft.level != null
+                && dimension().equals(minecraft.level.dimension().identifier().toString()))
+            nameLayout.reserve(screenX(minecraft.player.getX()) - 8, screenZ(minecraft.player.getZ()) - 8, 16, 16);
+        // Establish every icon's exclusion before offering names. A later icon
+        // must never overwrite an already-painted label in a dense group.
         for (Waypoint marker : markers) {
             int x = screenX(marker.x + .5), y = screenZ(marker.z + .5);
             if (x < -8 || y < -8 || x > width + 8 || y > height + 8) continue;
             boolean selected = feature != null && marker.id.equals(feature.navigationId());
             MapMarkers.waypoint(g, x, y, marker, selected);
+            nameLayout.reserve(x - 7, y - 7, 14, 14);
             if (Math.abs(mx - x) < 8 && Math.abs(my - y) < 8) hovered = marker;
+        }
+        for (Waypoint marker : markers) {
+            int x = screenX(marker.x + .5), y = screenZ(marker.z + .5);
+            if (x < -8 || y < -8 || x > width + 8 || y > height + 8) continue;
+            boolean selected = feature != null && marker.id.equals(feature.navigationId());
             if (AuroraConfig.get().worldMapShowWaypointNames && (viewport.scale() >= 1 || selected)) {
                 String name = AuroraFontRenderer.ellipsize(font, marker.name, Math.min(150, width - 24), 1);
                 int textWidth = font.width(name);
-                if (nameLayout.place(x + 8 + textWidth * .5f, y + font.lineHeight - 4,
-                        textWidth + 8, font.lineHeight + 6, width, height)) {
+                float labelW = textWidth + 8, labelH = font.lineHeight + 6;
+                if (nameLayout.place(x + 12 + labelW * .5f, y + labelH * .5f, labelW, labelH, width, height)
+                        || nameLayout.place(x - 12 - labelW * .5f, y + labelH * .5f, labelW, labelH, width, height)
+                        || nameLayout.place(x, y - 10, labelW, labelH, width, height)
+                        || nameLayout.place(x, y + 10 + labelH, labelW, labelH, width, height)) {
                     MapMarkers.labelPlate(g, nameLayout.centerX(), nameLayout.bottomY() - (font.lineHeight + 6) * .5f,
                             textWidth + 8, font.lineHeight + 6, marker.color);
                     MapMarkers.text(g, font, name, nameLayout.centerX() - textWidth * .5f,

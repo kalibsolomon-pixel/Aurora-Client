@@ -17,6 +17,7 @@ public final class MapMarkers {
     private static final Long2ObjectLinkedOpenHashMap<Template> templates = new Long2ObjectLinkedOpenHashMap<>(32);
     private static long frame = -1;
     private static int pixels;
+    private static final long[] lastArrowPose = {Long.MIN_VALUE, Long.MIN_VALUE};
     private static final class Template {
         final UiLayerCache cache = new UiLayerCache();
         final int width, height;
@@ -62,17 +63,22 @@ public final class MapMarkers {
     }
     public static void dispose() {
         for (Template t : templates.values()) t.cache.dispose();
-        templates.clear(); pixels = 0; frame = -1;
+        templates.clear(); pixels = 0; frame = -1; java.util.Arrays.fill(lastArrowPose, Long.MIN_VALUE);
     }
     private static void layer(GuiGraphics g, float cx, float cy, float width, float height,
                                float radius, int kind, int color) {
+        layer(g, cx, cy, width, height, radius, kind, color, 0);
+    }
+    private static void layer(GuiGraphics g, float cx, float cy, float width, float height,
+                               float radius, int kind, int color, int direction) {
         prune();
         float d = density(g), gui = Minecraft.getInstance().getWindow().getGuiScale();
         int pw = Math.max(2, Math.round(width * d)), ph = Math.max(2, Math.round(height * d));
         int canvasW = NativeIconGeometry.canvasSize(pw, 1) + 2;
         int canvasH = NativeIconGeometry.canvasSize(ph, 1) + 2;
         int pr = Math.round(radius * d), stroke = Math.max(1, Math.round(d * .75f));
-        long key = (long) pw << 44 | (long) ph << 28 | (long) pr << 16 | (long) stroke << 8 | kind;
+        long key = (long) pw << 44 | (long) ph << 28
+                | (kind == 4 ? (long) direction << 8 | 4 : (long) pr << 16 | (long) stroke << 8 | kind);
         Template t = templates.getAndMoveToLast(key);
         if (t == null) {
             // Release only entries from completed frames; never a texture referenced this frame.
@@ -86,19 +92,19 @@ public final class MapMarkers {
                 // Same engine/quality when an unusually large HUD exhausts the bounded cache.
                 float x = pixelX(g, cx, cy) / gui, y = pixelY(g, cx, cy) / gui;
                 g.pose().pushMatrix(); g.pose().identity();
-                paint(g, x - pw / gui / 2, y - ph / gui / 2, pw / gui, ph / gui, pr / gui, stroke / gui, kind, color);
+                paint(g, x - pw / gui / 2, y - ph / gui / 2, pw / gui, ph / gui, pr / gui, stroke / gui, kind, color, direction);
                 g.pose().popMatrix(); return;
             }
             t = new Template(canvasW, canvasH); t.cache.ensureSize(canvasW, canvasH); t.cache.clear();
             RenderUtil.RectSink previous = RenderUtil.beginCapture(t.cache.sink());
-            try { paint(g, (canvasW - pw) / (2 * gui), (canvasH - ph) / (2 * gui), pw / gui, ph / gui, pr / gui, stroke / gui, kind, -1); }
+            try { paint(g, (canvasW - pw) / (2 * gui), (canvasH - ph) / (2 * gui), pw / gui, ph / gui, pr / gui, stroke / gui, kind, -1, direction); }
             finally { RenderUtil.endCapture(previous); }
             t.cache.commit(key); templates.putAndMoveToLast(key, t); pixels += canvasW * canvasH;
         }
         t.used = frame;
         blitPixels(g, t.cache, pixelX(g, cx, cy) - t.width / 2, pixelY(g, cx, cy) - t.height / 2, t.width, t.height, color);
     }
-    private static void paint(GuiGraphics g, float x, float y, float w, float h, float r, float stroke, int kind, int color) {
+    private static void paint(GuiGraphics g, float x, float y, float w, float h, float r, float stroke, int kind, int color, int direction) {
         if (kind == 1) RenderUtil.drawRoundedOutlineAA(g, x, y, w, h, r, stroke, color);
         else if (kind == 2) {
             RenderUtil.drawRoundedRectAA(g, x + w * .4f, y, w * .2f, h, w * .1f, color);
@@ -106,6 +112,10 @@ public final class MapMarkers {
         } else if (kind == 3) {
             RenderUtil.drawTriangleAA(g, x + w / 2, y, x + w, y + h / 2, x, y + h / 2, color);
             RenderUtil.drawTriangleAA(g, x, y + h / 2, x + w, y + h / 2, x + w / 2, y + h, color);
+        } else if (kind == 4) {
+            double angle = direction * Math.PI / 32768;
+            arrow(g, x + w / 2, y + h / 2, (float) Math.cos(angle), (float) Math.sin(angle), w * 6 / 14, 0xE0181A1F);
+            arrow(g, x + w / 2, y + h / 2, (float) Math.cos(angle), (float) Math.sin(angle), w * 4.25f / 14, -1);
         } else RenderUtil.drawRoundedRectAA(g, x, y, w, h, r, color);
     }
     public static void waypoint(GuiGraphics g, float x, float y, Waypoint waypoint, boolean selected) {
@@ -123,12 +133,31 @@ public final class MapMarkers {
         layer(g, cx, cy, width, height, radius, 1, 0xD0000000 | (color & 0xffffff));
     }
     public static void player(GuiGraphics g, float x, float y, double dx, double dz) {
-        float gui = Minecraft.getInstance().getWindow().getGuiScale(), scale = density(g) / gui;
+        player(g, x, y, dx, dz, 0);
+    }
+    public static void minimapPlayer(GuiGraphics g, float x, float y, double dx, double dz) {
+        player(g, x, y, dx, dz, 1);
+    }
+    private static void player(GuiGraphics g, float x, float y, double dx, double dz, int view) {
+        float d = density(g), gui = Minecraft.getInstance().getWindow().getGuiScale(), scale = d / gui;
+        int direction = directionCode(dx, dz);
+        long pose = (long) Math.round(14 * d) << 32 | direction;
+        boolean unchanged = lastArrowPose[view] == pose;
+        lastArrowPose[view] = pose;
+        if (unchanged) {
+            layer(g, x, y, 14, 14, 0, 4, -1, direction);
+            return;
+        }
         float cx = pixelX(g, x, y) / gui, cy = pixelY(g, x, y) / gui;
         g.pose().pushMatrix(); g.pose().identity();
         arrow(g, cx, cy, (float) dx, (float) dz, 6 * scale, 0xE0181A1F);
         arrow(g, cx, cy, (float) dx, (float) dz, 4.25f * scale, 0xFFFFFFFF);
         g.pose().popMatrix();
+    }
+    /** Sub-hundredth-pixel equivalence at supported sizes, avoiding floating-point
+     * cancellation noise in heading-up mode. Turning arrows still rasterize live. */
+    static int directionCode(double dx, double dy) {
+        return (int) Math.round(Math.atan2(dy, dx) * 32768 / Math.PI) & 65535;
     }
     private static void arrow(GuiGraphics g, float x, float y, float dx, float dy, float size, int color) {
         RenderUtil.drawTriangleAA(g, x + dx * size, y + dy * size,

@@ -2890,3 +2890,9 @@ positions snap to device pixels; the configured font backend remains authoritati
 Manager/editor retain existing themed controls and add shared marker previews.
 World-space slab edges use the existing pixel-width line pipeline; 3D beam geometry
 and mapping persistence are not converted to CPU raster data.
+Stable directions reuse arrow layers independently in minimap/map views. A bounded
+label layout reserves all marker positions before offering names beside, above or
+below them, preserving selection priority without covering neighboring icons.
+Minimap distance labels also reserve compass positions. Performance and native
+scale evidence, including the remaining 4K CPU tradeoff, are recorded in
+MAPPING_PIXEL_RENDERING_REPORT.md.
