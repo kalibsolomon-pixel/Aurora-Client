@@ -1,0 +1,308 @@
+{
+  "acceptance-report.json": {
+    "checks": [
+      {
+        "stage": 1,
+        "check": "terrain-captured",
+        "passed": true
+      },
+      {
+        "stage": 2,
+        "check": "waypoint-in-shared-nearby-view",
+        "passed": true
+      },
+      {
+        "stage": 41,
+        "check": "map-drag-accepted",
+        "passed": true
+      },
+      {
+        "stage": 43,
+        "check": "map-create-opens-editor",
+        "passed": true
+      },
+      {
+        "stage": 43,
+        "check": "map-created-waypoint-shared",
+        "passed": true
+      },
+      {
+        "stage": 5,
+        "check": "editor-propagated",
+        "passed": true
+      },
+      {
+        "stage": 6,
+        "check": "many-waypoint-draw-cap",
+        "passed": true
+      },
+      {
+        "stage": 6,
+        "check": "navigation-priority",
+        "passed": true
+      },
+      {
+        "stage": 6,
+        "check": "bounded-manager-controls",
+        "passed": true
+      },
+      {
+        "stage": 8,
+        "check": "archive-independent-from-live-terrain",
+        "passed": true
+      },
+      {
+        "stage": 9,
+        "check": "dimension-world-isolation",
+        "passed": true
+      },
+      {
+        "stage": 10,
+        "check": "return-to-original-dimension",
+        "passed": true
+      },
+      {
+        "stage": 11,
+        "check": "disable-releases-live-context",
+        "passed": true
+      },
+      {
+        "stage": 12,
+        "check": "minimap-only-engine",
+        "passed": true
+      },
+      {
+        "stage": 12,
+        "check": "settings-reset-preserves-waypoints",
+        "passed": true
+      },
+      {
+        "stage": 13,
+        "check": "resource-reload-terrain",
+        "passed": true
+      },
+      {
+        "stage": 17,
+        "check": "reconnect-identity",
+        "passed": true
+      },
+      {
+        "stage": 17,
+        "check": "reconnect-waypoint-id",
+        "passed": true
+      },
+      {
+        "stage": 17,
+        "check": "reconnect-terrain",
+        "passed": true
+      }
+    ],
+    "frames": 29270,
+    "elapsedSeconds": 270.4541584,
+    "resume": false,
+    "mods": [
+      "aurora:3.0.0",
+      "aurora_mapping_acceptance:1.0.0",
+      "entityculling:1.11.3",
+      "fabric-api-base:1.0.5+4ebb5c083e",
+      "fabric-api-lookup-api-v1:1.6.114+20dc27073e",
+      "fabric-api:0.141.4+1.21.11",
+      "fabric-biome-api-v1:17.1.1+4fc5413f3e",
+      "fabric-block-api-v1:1.1.10+4ebb5c083e",
+      "fabric-block-view-api-v2:1.0.39+4ebb5c083e",
+      "fabric-client-gametest-api-v1:4.3.5+bfe9fcf43e",
+      "fabric-command-api-v2:2.4.7+6b42a6003e",
+      "fabric-content-registries-v0:10.2.14+4fc5413f3e",
+      "fabric-convention-tags-v1:2.1.55+7f945d5b3e",
+      "fabric-convention-tags-v2:2.17.3+8ef948ba3e",
+      "fabric-crash-report-info-v1:0.3.23+4ebb5c083e",
+      "fabric-data-attachment-api-v1:1.8.48+eed0806f3e",
+      "fabric-data-generation-api-v1:23.4.1+69974c4e3e",
+      "fabric-dimensions-v1:4.0.28+4fc5413f3e",
+      "fabric-entity-events-v1:3.1.1+1d0ab4303e",
+      "fabric-events-interaction-v0:4.1.1+3b89ecf63e",
+      "fabric-game-rule-api-v1:2.0.3+4fc5413f3e",
+      "fabric-gametest-api-v1:3.1.27+4fc5413f3e",
+      "fabric-item-api-v1:11.5.20+d0c46b9e3e",
+      "fabric-item-group-api-v1:4.2.36+4fc5413f3e",
+      "fabric-key-binding-api-v1:1.1.7+4fc5413f3e",
+      "fabric-lifecycle-events-v1:2.6.15+4ebb5c083e",
+      "fabric-loot-api-v2:3.0.73+3f89f5a53e",
+      "fabric-loot-api-v3:2.0.20+78c8b4663e",
+      "fabric-message-api-v1:6.1.12+4ebb5c083e",
+      "fabric-model-loading-api-v1:6.0.15+4fc5413f3e",
+      "fabric-networking-api-v1:5.1.6+6b6d71a53e",
+      "fabric-object-builder-api-v1:21.1.40+4fc5413f3e",
+      "fabric-particles-v1:4.2.12+4fc5413f3e",
+      "fabric-recipe-api-v1:8.2.4+4ebb5c083e",
+      "fabric-registry-sync-v0:6.2.6+1718722b3e",
+      "fabric-renderer-api-v1:8.0.3+f4ffd2e53e",
+      "fabric-renderer-indigo:5.0.3+f4ffd2e53e",
+      "fabric-rendering-fluids-v1:3.1.43+4ebb5c083e",
+      "fabric-rendering-v1:16.2.10+0290ad933e",
+      "fabric-resource-conditions-api-v1:5.0.35+4fc5413f3e",
+      "fabric-resource-loader-v0:3.3.4+4fc5413f3e",
+      "fabric-resource-loader-v1:1.0.10+78c8b4663e",
+      "fabric-screen-api-v1:3.1.7+4ebb5c083e",
+      "fabric-screen-handler-api-v1:1.3.162+4fc5413f3e",
+      "fabric-serialization-api-v1:1.0.5+4ebb5c083e",
+      "fabric-sound-api-v1:1.0.51+4fc5413f3e",
+      "fabric-tag-api-v1:1.2.20+4fc5413f3e",
+      "fabric-transfer-api-v1:6.0.25+4fc5413f3e",
+      "fabric-transitive-access-wideners-v1:7.1.0+014c8cec3e",
+      "fabricloader:0.19.2",
+      "ferritecore:8.2.0",
+      "immediatelyfast:1.14.3+1.21.11",
+      "java:21",
+      "lithium:0.21.4+mc1.21.11",
+      "lithostitched:1.7.2",
+      "minecraft:1.21.11",
+      "mixinextras:0.5.4",
+      "net_lenni0451_reflect:1.6.2",
+      "sodium:0.8.14+mc1.21.11",
+      "tectonic:3.0.19",
+      "terralith:2.6.1",
+      "transition:1.0.26",
+      "trender:1.0.17"
+    ]
+  },
+  "resume-report.json": {
+    "checks": [
+      {
+        "stage": 90,
+        "passed": true,
+        "check": "relaunch-waypoint-id-and-edit"
+      },
+      {
+        "stage": 90,
+        "passed": true,
+        "check": "relaunch-large-list"
+      },
+      {
+        "stage": 90,
+        "passed": true,
+        "check": "relaunch-terrain"
+      }
+    ],
+    "frames": 12964,
+    "elapsedSeconds": 140.6064691,
+    "resume": true,
+    "mods": [
+      "aurora:3.0.0",
+      "aurora_mapping_acceptance:1.0.0",
+      "entityculling:1.11.3",
+      "fabric-api-base:1.0.5+4ebb5c083e",
+      "fabric-api-lookup-api-v1:1.6.114+20dc27073e",
+      "fabric-api:0.141.4+1.21.11",
+      "fabric-biome-api-v1:17.1.1+4fc5413f3e",
+      "fabric-block-api-v1:1.1.10+4ebb5c083e",
+      "fabric-block-view-api-v2:1.0.39+4ebb5c083e",
+      "fabric-client-gametest-api-v1:4.3.5+bfe9fcf43e",
+      "fabric-command-api-v2:2.4.7+6b42a6003e",
+      "fabric-content-registries-v0:10.2.14+4fc5413f3e",
+      "fabric-convention-tags-v1:2.1.55+7f945d5b3e",
+      "fabric-convention-tags-v2:2.17.3+8ef948ba3e",
+      "fabric-crash-report-info-v1:0.3.23+4ebb5c083e",
+      "fabric-data-attachment-api-v1:1.8.48+eed0806f3e",
+      "fabric-data-generation-api-v1:23.4.1+69974c4e3e",
+      "fabric-dimensions-v1:4.0.28+4fc5413f3e",
+      "fabric-entity-events-v1:3.1.1+1d0ab4303e",
+      "fabric-events-interaction-v0:4.1.1+3b89ecf63e",
+      "fabric-game-rule-api-v1:2.0.3+4fc5413f3e",
+      "fabric-gametest-api-v1:3.1.27+4fc5413f3e",
+      "fabric-item-api-v1:11.5.20+d0c46b9e3e",
+      "fabric-item-group-api-v1:4.2.36+4fc5413f3e",
+      "fabric-key-binding-api-v1:1.1.7+4fc5413f3e",
+      "fabric-lifecycle-events-v1:2.6.15+4ebb5c083e",
+      "fabric-loot-api-v2:3.0.73+3f89f5a53e",
+      "fabric-loot-api-v3:2.0.20+78c8b4663e",
+      "fabric-message-api-v1:6.1.12+4ebb5c083e",
+      "fabric-model-loading-api-v1:6.0.15+4fc5413f3e",
+      "fabric-networking-api-v1:5.1.6+6b6d71a53e",
+      "fabric-object-builder-api-v1:21.1.40+4fc5413f3e",
+      "fabric-particles-v1:4.2.12+4fc5413f3e",
+      "fabric-recipe-api-v1:8.2.4+4ebb5c083e",
+      "fabric-registry-sync-v0:6.2.6+1718722b3e",
+      "fabric-renderer-api-v1:8.0.3+f4ffd2e53e",
+      "fabric-renderer-indigo:5.0.3+f4ffd2e53e",
+      "fabric-rendering-fluids-v1:3.1.43+4ebb5c083e",
+      "fabric-rendering-v1:16.2.10+0290ad933e",
+      "fabric-resource-conditions-api-v1:5.0.35+4fc5413f3e",
+      "fabric-resource-loader-v0:3.3.4+4fc5413f3e",
+      "fabric-resource-loader-v1:1.0.10+78c8b4663e",
+      "fabric-screen-api-v1:3.1.7+4ebb5c083e",
+      "fabric-screen-handler-api-v1:1.3.162+4fc5413f3e",
+      "fabric-serialization-api-v1:1.0.5+4ebb5c083e",
+      "fabric-sound-api-v1:1.0.51+4fc5413f3e",
+      "fabric-tag-api-v1:1.2.20+4fc5413f3e",
+      "fabric-transfer-api-v1:6.0.25+4fc5413f3e",
+      "fabric-transitive-access-wideners-v1:7.1.0+014c8cec3e",
+      "fabricloader:0.19.2",
+      "ferritecore:8.2.0",
+      "immediatelyfast:1.14.3+1.21.11",
+      "java:21",
+      "lithium:0.21.4+mc1.21.11",
+      "lithostitched:1.7.2",
+      "minecraft:1.21.11",
+      "mixinextras:0.5.4",
+      "net_lenni0451_reflect:1.6.2",
+      "sodium:0.8.14+mc1.21.11",
+      "tectonic:3.0.19",
+      "terralith:2.6.1",
+      "transition:1.0.26",
+      "trender:1.0.17"
+    ]
+  },
+  "manualNativeObservations": [
+    "Brief M press opens map with final queued-key handler",
+    "Right-click opens new-waypoint editor",
+    "Native text entry and Save return to map",
+    "Near-camera beam fade restores the world view"
+  ],
+  "screenshots": [
+    {
+      "file": "docs/mapping/screenshots/mapping-world-map.png",
+      "sha256": "597e5b901f51e3fa96218b1b63f98dd7bfc24a2e01f4aeabd8f00bd9350231c6",
+      "sourceFixture": "aurora-mapping-acceptance-04"
+    },
+    {
+      "file": "docs/mapping/screenshots/mapping-world-map-overview.png",
+      "sha256": "70566738e697dab741670472fa2c9d5344f2a1524a0c49d6ae8f62371818403b",
+      "sourceFixture": "aurora-mapping-acceptance-04"
+    },
+    {
+      "file": "docs/mapping/screenshots/mapping-editor-scale3.png",
+      "sha256": "3af20751ee0d95b99b75f0a4133e991adf5621638b292990da4cdc32559a1540",
+      "sourceFixture": "aurora-mapping-acceptance-04"
+    },
+    {
+      "file": "docs/mapping/screenshots/mapping-manager-scale4.png",
+      "sha256": "ba717d70aeead31ac245348fcc467db013cd4dc11a3a45fdb485a59f705c39b6",
+      "sourceFixture": "aurora-mapping-acceptance-04"
+    },
+    {
+      "file": "docs/mapping/screenshots/mapping-relaunch.png",
+      "sha256": "e08b9d55baee50e647a6d378df46c0d8535dc7373198224f8360cbe2d70a8154",
+      "sourceFixture": "aurora-mapping-acceptance-04"
+    }
+  ],
+  "excludedPerformanceRuns": [
+    {
+      "fixture": "aurora-mapping-reference-03",
+      "reason": "Focus invalid in 100% of measured frames; native 10 FPS background throttle. No foreground performance claim."
+    },
+    {
+      "fixture": "aurora-mapping-reference-02",
+      "reason": "No-op fill setup failures"
+    },
+    {
+      "fixture": "aurora-mapping-baseline-01 / candidate-01",
+      "reason": "Historical reference classpath retained"
+    }
+  ],
+  "pending": [
+    "Foreground matched performance comparison",
+    "Loopback multiplayer acceptance",
+    "Native visual review stopped by physical Escape"
+  ]
+}
