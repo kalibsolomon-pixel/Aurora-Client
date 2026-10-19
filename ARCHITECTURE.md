@@ -2868,4 +2868,8 @@ payloads reuse immutable zeros without allocating/uploading empty overview textu
 Nearby double-sided beams fade away from the camera. Mapping toggle/open/drop
 actions consume queued vanilla key presses through AuroraKeybinds; held-state
 features keep their existing polling behavior. See the implementation report for
-evidence exclusions and incomplete final performance/MP acceptance.
+evidence exclusions, completed bounded foreground/SP/MP acceptance and remaining
+hardware/soak limits. Native cache-pressure traversal produced 41 partial regions
+and 1,540 captured chunks while retaining at most eight full tiles/eight in-flight
+loads; all forty sampled observations matched durable payloads. Cache-capacity
+changes apply to new contexts. No whole-game FPS improvement is established.

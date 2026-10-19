@@ -113,3 +113,54 @@ freeze client classes/resources; probes are opt-in and absent from ordinary jars
 `Temp/aurora-mapping-multiplayer-01` and `...server-01` are prepared, not run.
 Use the final frozen runtime override when resuming that MP fixture; copy-only
 SP data has already been supplied to verify world isolation.
+
+## Resumed acceptance (2026-10-19)
+
+The owner explicitly resumed the work. Foreground reference-04 and final-03 both
+exited normally with zero invalid-focus frames. Identical copied input manifests
+and identical performance probe hashes were verified. The paired results and
+whole-recording JFR summaries are in performance-results.json. No whole-game FPS
+improvement is claimed. Neither gameplay phase had a >50 ms interval. Mixed small
+P99 differences and modestly increased RSS are recorded rather than hidden.
+
+Loopback multiplayer-01 with final frozen production classes passed 7/7 checks:
+server-address identity, SP waypoint isolation, captured terrain, new-marker
+navigation selection, reconnect identity/waypoint/terrain. Its map was inspected
+visually and copied to screenshots/. Vanilla server-02 stopped normally with all
+dimensions saved. Initial server-01 was excluded before any client test because
+its flat-world fixture omitted layer settings; its closed stdin also prevented a
+console stop, so only that exact disposable server process was terminated.
+
+Extended-01 is now visiting forty genuine client-observed region centers with an
+eight-region cache, then browsing far LOD and reconnecting. No synthetic map pixels
+are seeded. Its config/profile cache override was set to eight after preparation;
+the original input manifest predates that explicit override. Future fixture
+preparation supports --cache-regions 8 so the manifest includes it directly.
+Final durable-pixel verification and documentation completion follow this run.
+
+## Completed bounded acceptance
+
+Extended-01 passed 6/6 native assertions and exited normally after 219.01 seconds.
+It created 41 partially observed region files with 1,540 stamped chunks. Independent
+post-exit verification matched all 40 recorded ABGR pixels and chunk stamps;
+43,327,693 decoded bytes / 172,203 compressed bytes. No invented terrain was seeded.
+Peak full tiles=8, in-flight loads=8, overview entries=390, full textures=2,
+overview textures=42. The larger-map and overview screenshots were inspected and
+preserved. Catch-up warnings during rapid native terrain generation are retained;
+this is functional pressure evidence, not a traversal FPS claim.
+
+Native assertions total 35 (19 SP + 3 relaunch + 7 MP + 6 extended). Foreground
+matched performance, loopback MP and cache-pressure/persistence are no longer
+pending. The final report supersedes the earlier interrupted status. Hardware,
+public-authenticated-server and multi-hour limitations remain explicitly stated.
+
+Final Java 21 ordinary test/build succeeded with tasks up to date; existing XML
+results confirm 565 tests, zero failures/errors/skips. Frozen final native classes
+and resources exactly match current build hashes. Production jar contains no
+research/ or mappingprobe/ classes. All selected screenshot hashes verified.
+Protected pacing/Reflex/Hitreg/glass/Launcher/build-policy files have no diff.
+No unexpected deletions; original run/ and the two original untracked notes remain
+untouched. All final clients exited normally and the corrected server stopped
+normally. No push, merge, publication or original-instance installation occurred.
+
+Acceptance evidence/tooling checkpoint: `d082494`. Final documentation follows in its own local commit.

@@ -2,11 +2,10 @@
 
 2026-10-19 · branch `codex/unified-mapping` · local work only
 
-**Status: implementation available for review; final acceptance is incomplete.**
-The owner stopped Computer Use with physical Escape during performance foreground
-selection. Desktop input stopped immediately. Foreground performance comparison
-and loopback multiplayer acceptance remain pending. Nothing was pushed, merged,
-published, or installed into an original instance.
+**Status: core implementation and bounded acceptance complete; ready for owner review.**
+The owner resumed the interrupted session. Foreground performance comparison,
+loopback multiplayer and observed-terrain eviction/persistence checks now pass.
+Nothing was pushed, merged, published, or installed into an original instance.
 
 ## A. Executive summary
 
@@ -23,8 +22,12 @@ and the glass renderer were not changed.
 
 565 automated tests and the final Java 21 build pass. A native single-player
 workflow passed 19 checks; a separate process relaunch passed three persistence
-checks. Actual screenshots were inspected. This does **not** constitute completed
-performance, multiplayer, multi-hour or broad hardware acceptance.
+checks. Multiplayer passed seven checks and extended cache pressure passed six,
+for 35 native assertions overall. Forty observed pixels were independently checked
+against durable region files. Actual screenshots were inspected. A foreground
+performance pair found no material regression within its bounded scope; it does
+not establish an FPS gain. Multi-hour and broad hardware acceptance remain outside
+this evidence.
 
 ## B. Architecture
 
@@ -83,6 +86,11 @@ reuse immutable zeros and avoid empty overview GPU uploads.
 [World map](docs/mapping/screenshots/mapping-world-map.png) and
 [far overview](docs/mapping/screenshots/mapping-world-map-overview.png) are actual
 1280×720 captures. Unexplored areas remain distinct from observed terrain.
+An additional [larger sparse map](docs/mapping/screenshots/mapping-extended-large-map.png)
+contains forty visited region centers: 41 partially explored region files and
+1,540 stamped chunks. This exceeds the eight-region cache used for that run and
+exercises eviction, disk-backed LOD and navigation across a 4,096×2,560-block grid.
+It is genuinely client-observed terrain, not synthetic filled map data.
 
 ## E. Waypoints
 
@@ -131,26 +139,47 @@ records with deterministic migration IDs, making repeated imports idempotent.
 
 ## G. Performance
 
-**No accepted foreground before/after comparison or FPS gain is claimed.**
+One sequential foreground reference/candidate pair completed normally, with
+zero invalid-focus frames. Frozen pre-change `fdc1ba5` classes and final production
+classes used identical copied input manifests and the identical observer jar
+(SHA-256 `7e2bf0a544aec34f075ed3b0016f85b1765c4551c30d64df465c70ad554b9ac1`).
+Java 21, G1/2048 MiB, PARK/500, automatic Reflex, Sodium, 1280×720 and the
+fixture's 120 FPS gameplay/30 FPS menu limits were unchanged. Each phase lasted
+60 seconds after a 30-second scene warmup; no builds, second client or dedicated
+server ran during measurement.
 
-Initial fixtures retained a historical reference classpath; those runs are
-excluded. A later reference reported no-op fill setup failures and is excluded.
-The corrected performance probe resets its disposable scene before positive
-setup assertions and uses identical observer binaries, copied inputs, Java 21,
-G1/2048 MiB, PARK/500, bounded automatic Reflex, Sodium and 1280×720.
+| Phase | P95 ms ref → final | P99 ms ref → final | CPU % of one core ref → final | Peak RSS MiB ref → final |
+| --- | --- | --- | --- | --- |
+| Stationary minimap | 8.344 → 8.402 | 8.975 → 9.197 | 109.62 → 108.17 | 1988.79 → 1995.88 |
+| Traversal, 20 × 64 blocks | 8.360 → 8.372 | 9.062 → 8.935 | 203.41 → 193.78 | 2324.84 → 2345.02 |
+| Alternating settings/gameplay | 33.334 → 33.334 | 33.347 → 33.355 | 35.51 → 33.70 | 2336.52 → 2362.78 |
 
-`aurora-mapping-reference-03` completed, but every measured frame lacked focus,
-activating native background throttling at approximately 10 FPS/100 ms. It is
-excluded from foreground conclusions. The final candidate was already running
-when desktop input was interrupted; it has a bounded automatic stop. Its raw
-results require review and are excluded from a comparison here.
+Gameplay averaged 119.36/119.60 FPS in the reference and 119.54/119.67 in the
+candidate. Neither gameplay phase had an interval above 50 ms. The alternating
+UI phase had one such interval in the reference and zero in the candidate. Its
+33.33 ms tail reflects the retained menu limit. Final memory was modestly higher
+(up to 26.26 MiB / 1.12% in these phases). Small mixed tail differences and lower
+observed CPU in one pair do **not** establish a repeatable FPS/CPU improvement or
+exclude rare regressions. No material regression appeared in this bounded pair.
 
-Structural bounds verified in code/tests: primitive region lookups retained;
-1–8 captures/tick; four new disk requests/tick; eight in-flight loads/context;
-64 queued worker tasks; two large texture operations/tick; bounded LRU caches;
-64 nearest markers by default; 16 world geometry markers by default; reusable
-label-layout buffers. These are implementation bounds, not measured FPS or GPU
-memory improvements. GPU residency and P95/P99 regression acceptance remain open.
+Whole-recording JFR allocation weights were 273.85 → 268.65 MiB/s; maximum GC
+pause was 30.09 → 29.32 ms. These are statistical samples including startup/setup/
+save, not exact phase allocations. Old minimap ring/entity paths no longer appear
+among the candidate's leading Aurora sample callers. Primitive region-key Long
+allocation weight remained zero in both. Raw and aggregate evidence is retained
+in `aurora-mapping-reference-04`, `aurora-mapping-final-03` and
+[performance-results.json](docs/mapping/performance-results.json).
+
+Structural bounds: 1–8 captures/tick; four new disk requests/tick; eight in-flight
+loads/context; 64 queued worker tasks; two large texture operations/tick; bounded
+LRUs; 64 nearest markers and 16 geometry markers by default; reusable label-layout
+buffers. The native extended run separately exercises an eight-region cache.
+Texture counts estimate payload residency, not driver allocation/VRAM telemetry.
+
+Earlier stale-classpath, failed-scene and unfocused runs remain excluded.
+`reference-03` had 100% unfocused measured frames. `final-02` overlapped a later
+build after desktop input stopped and is excluded regardless of its focus state.
+Those raw artifacts were retained rather than pooled into the accepted pair.
 
 ## H. Data integrity
 
@@ -162,9 +191,23 @@ transparent instead of containing uninitialized memory.
 
 Native checks passed archive/live separation, portal return, disabling/re-enabling,
 resource reload, disconnect/reconnect and process relaunch persistence. Identity
-hash tests distinguish former sanitizer collisions. Actual hosted multiplayer,
-modded portals and permanent disk-failure recovery have not received native
-acceptance. A failed filesystem can still leave unsaved changes at shutdown;
+hash tests distinguish former sanitizer collisions. A separate loopback vanilla
+server passed address identity, SP/MP waypoint isolation and reconnect persistence.
+The server saved every dimension and stopped normally. New map-created waypoint
+navigation selection was verified against the final editor implementation.
+
+Extended traversal visited forty region centers with an eight-region cache. All
+forty observed ABGR pixels and corresponding chunk stamps matched their durable
+GZIP files after normal exit. Forty-one region payloads decoded successfully
+(43,327,693 bytes total; 172,203 compressed bytes), with 1,540 captured chunks.
+Native peaks before reconnect were eight full-resolution tiles, eight in-flight
+loads, 390 overview entries, two full-resolution textures and 42 overview textures.
+Those texture payloads represent at most 2 MiB full-resolution plus 672 KiB overview
+GPU data in this run, excluding minimap, driver overhead and other Minecraft assets.
+The workflow completed in 219.01 seconds, including far-map browsing and reconnect.
+
+Public authenticated servers, modded portals and permanent disk-failure recovery
+have not received native acceptance. A failed filesystem can still leave unsaved changes at shutdown;
 that failure is logged rather than represented as success.
 
 ## I. Validation
@@ -179,7 +222,11 @@ that failure is logged rather than represented as success.
 | GUI/resolution evidence | Scale 3 at 1280×720; scale 4 at 1600×1000 |
 | Rendering environment | Minecraft 1.21.11, Fabric, Java 21, Sodium 0.8.14, AMD OpenGL |
 | Production jar inspection | No research/mapping-probe classes |
-| Foreground performance / loopback MP | Pending |
+| Foreground matched performance | Both normal exits; zero invalid-focus frames; results in §G |
+| Loopback multiplayer | 7/7 checks; normal client and corrected-server shutdown |
+| Extended native traversal/cache pressure | 6/6 checks; 40 visited centers; normal exit, 219.01 seconds |
+| Independent durable-region verification | 40/40 exact observed pixels and stamps; 41 valid region files |
+| Final normal Java 21 build after probes | Passed; ordinary tasks up to date, no probe classes in jar |
 
 Checks and screenshot hashes are in
 [validation-results.json](docs/mapping/validation-results.json). Resumption details
@@ -196,16 +243,25 @@ and excluded captures are in [PROGRESS.md](docs/mapping/PROGRESS.md).
 
 ## K. Workarounds and limitations
 
-Desktop validation stopped under the computer-use interruption rule after physical
-Escape. No further desktop input was issued. Loopback client/server fixtures are
-prepared but were not run. Foreground comparison must be repeated with verified
-focus before performance acceptance.
+The earlier physical-Escape stop was respected, then the owner explicitly resumed.
+The corrected final foreground pair, multiplayer workflow and extended observed-
+terrain run are complete. Initial server-01 was excluded before client testing
+because its flat-world generator lacked layers and its stdin pipe was closed;
+only that exact disposable process was terminated. Server-02 used explicit layers,
+accepted the client/reconnect, saved all dimensions and stopped normally.
 
-Long-duration multiplayer, huge physical explored archives, additional GPUs,
-modded-dimension transitions and automated death/respawn runtime regression checks
-remain unverified. Headless tests and bounded architecture do not replace those
-runtime scenarios. Minimap movement rasterization is capped at 20 Hz; it does not
-claim continuously transformed terrain. Map-created Y defaults to player height
+Multi-hour multiplayer, multi-gigabyte archives, additional GPUs, public server
+authentication, modded-dimension transitions and automated death/respawn runtime
+regression checks remain unverified. The 41-region test is a sparse, partially
+explored dataset; it is not a claim of exhaustive archive/soak coverage. Fast
+teleports during native generation produced integrated-server catch-up warnings;
+that workload is functional cache-pressure evidence, not a smooth-traversal FPS
+claim. The matched performance workload is reported separately.
+
+Advanced region-cache capacity applies when creating a context; reconnect after
+changing that setting. Headless tests and bounded architecture do not replace
+long-duration and broader hardware testing. Minimap movement rasterization is
+capped at 20 Hz; it does not claim continuously transformed terrain. Map-created Y defaults to player height
 and is editable, since retained color regions do not store height data.
 
 Save-folder moves and server-address aliases create separate identities; the
@@ -217,10 +273,14 @@ Legacy imports require the owner to identify the correct original world.
 - Starting commit: `fdc1ba5`, branch `codex/performance-initiative-ii`.
 - Working branch: `codex/unified-mapping`.
 - Local checkpoints: `702b8de` baseline/architecture; `555e404` shared mapping
-  implementation; `e63d27f` marker/viewport/input refinement and resumable tools.
+  implementation; `e63d27f` marker/viewport/input refinement and resumable tools;
+  `dfe1280` preserved the interrupted report and native evidence; `d082494` records
+  completed foreground/MP/extended acceptance and reproducible evidence tooling.
 - Implementation ending commit: `e63d27f`; this report/evidence is committed
-  separately. Resolve the reporting head with `git rev-parse HEAD`.
-- Starting status/inventory are preserved under `docs/mapping/`.
+  separately, with acceptance ending at `d082494`. Resolve the completed reporting
+  head with `git rev-parse HEAD` (also supplied in the completion message).
+- Starting status/inventory are preserved under `docs/mapping/`. The complete
+  [change inventory](docs/mapping/final-changes.txt) lists affected paths.
 - Pre-existing untracked `CPERF1B_PARK_BENCHMARK.md` and
   `CPERF2_PARK_WAKE_INVESTIGATION.md` remain untracked and unchanged by this task.
 - Original `run/` data and existing performance evidence were not execution
@@ -230,8 +290,14 @@ Legacy imports require the owner to identify the correct original world.
 
 ## M. Release readiness
 
-The implementation and available evidence are ready for owner/code review.
-**The initiative does not yet satisfy its complete acceptance definition.**
-Finish foreground performance comparison and loopback multiplayer validation,
-review resulting limits/regressions, and repeat any affected runtime checks before
-eventual integration or release. No release was published.
+**Ready for owner review and eventual integration, within the documented tested
+scope.** The unified engine, presentations, waypoint workflow, migration safeguards,
+565-test suite, native SP/relaunch/MP checks, larger observed-map cache-pressure
+checks and foreground comparison are complete. No unresolved core defect is known
+from this validation. Broader hardware, public-server and multi-hour coverage remain
+normal follow-up validation; no whole-game FPS gain is claimed.
+
+All validated changes are committed locally on `codex/unified-mapping`. The normal
+production artifact is `build/libs/aurora-3.0.0.jar` (SHA-256
+`1f40895e9c90d7e49a271dc68a0439c8add98529666eacd790dd9ce744e9095f`).
+No release was published.
