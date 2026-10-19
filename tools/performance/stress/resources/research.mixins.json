@@ -1,0 +1,7 @@
+{
+  "required": true,
+  "package": "research.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": ["FrameProbe", "InputProbe", "AuroraInitProbe", "CameraProbe", "SwapProbe"],
+  "injectors": { "defaultRequire": 1 }
+}

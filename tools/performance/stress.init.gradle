@@ -1,0 +1,47 @@
+// Opt-in named-namespace research mod. Normal build/run source sets are unchanged.
+gradle.projectsEvaluated {
+    def p = gradle.rootProject
+    def root = p.file(p.findProperty('researchRoot') ?: 'run/initiative-ii')
+    assert new File(root, 'DISPOSABLE-RESEARCH.txt').isFile()
+    def research = p.sourceSets.create('research') {
+        java.srcDir p.file('tools/performance/stress/java')
+        resources.srcDir p.file('tools/performance/stress/resources')
+        compileClasspath = p.sourceSets.client.compileClasspath + p.sourceSets.client.output
+        runtimeClasspath = output + compileClasspath
+    }
+    p.tasks.named('compileResearchJava') { options.release = 21 }
+    def researchJar = p.tasks.register('researchJar', Jar) {
+        from research.output
+        archiveFileName = 'aurora-research-named.jar'
+        destinationDirectory = new File(root, 'tooling')
+    }
+    p.tasks.register('researchRemapJar', p.tasks.named('remapJar').get().getClass().superclass) {
+        dependsOn researchJar
+        inputFile = researchJar.flatMap { it.archiveFile }
+        archiveFileName = 'aurora-research.jar'
+        destinationDirectory = new File(root, 'tooling')
+        addNestedDependencies = false
+    }
+    p.loom.runs.client.runDir(p.relativePath(new File(root, 'game')).replace('\\', '/'))
+    def run = p.tasks.named('runClient').get()
+    run.executable = p.findProperty('researchJava').toString()
+    run.maxHeapSize = (p.findProperty('researchHeap') ?: '2048m').toString()
+    run.minHeapSize = null
+    run.workingDir = new File(root, 'game')
+    run.classpath += p.files(researchJar)
+    run.jvmArgs '-Daurora.research.output=' + root.absolutePath,
+        '-Daurora.research.kind=' + (p.findProperty('researchKind') ?: 'baseline'),
+        '-Daurora.research.seconds=' + (p.findProperty('researchSeconds') ?: '90'),
+        '-Daurora.research.profile=' + (p.findProperty('researchProfile') ?: 'false')
+    run.args '--username', 'AuroraResearch', '--width', '1280', '--height', '720'
+    p.tasks.register('writeResearchLaunch') {
+        dependsOn researchJar
+        dependsOn run.taskDependencies.getDependencies(run)
+        doLast {
+            def spec = [executable: run.executable, jvmArgs: run.allJvmArgs,
+                classpath: run.classpath.asPath, mainClass: run.mainClass.get(), args: run.args,
+                workingDirectory: run.workingDir.absolutePath]
+            new File(root, 'launch-private.json').text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(spec))
+        }
+    }
+}

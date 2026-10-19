@@ -2339,3 +2339,15 @@ renames, server and locale changes refresh it. Existing persisted key text is
 unchanged. Profiling identified repeated sanitizing; a six-process Java 21 hot-path
 diagnostic removes stable-call allocation. This is not a measured FPS gain.
 See [CLIENT_RUNTIME_PERFORMANCE.md](CLIENT_RUNTIME_PERFORMANCE.md); 548 tests pass.
+
+## Performance Initiative II (2026-10-19)
+
+RegionCache uses Minecraft's existing primitive-key linked map. Both acquire and
+peek refresh LRU order, matching the former access-ordered LinkedHashMap's actual
+behavior. Eviction still closes the eldest tile; no world or renderer lifetime
+changes. Actual-class measurements remove 21 allocated bytes per hot lookup;
+six demanding gameplay runs do not establish a whole-game FPS improvement.
+PARK/500, bounded automatic Reflex and Launcher G1/2048 remain the reference.
+Research workloads live outside normal source sets in `tools/performance/stress`.
+See [PERFORMANCE_INITIATIVE_II_FINAL_REPORT.md](PERFORMANCE_INITIATIVE_II_FINAL_REPORT.md)
+and `tools/performance/INITIATIVE_II.md` for evidence and reproduction limits.

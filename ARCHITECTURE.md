@@ -2814,3 +2814,12 @@ by namespace, raw name/address and default locale (2026-10-19). Only identity
 changes sanitize again; no world/client object is retained, and persistent keys
 remain byte-compatible. See [CLIENT_RUNTIME_PERFORMANCE.md](CLIENT_RUNTIME_PERFORMANCE.md)
 for sampled attribution and the narrowly scoped allocation measurement.
+
+Performance Initiative II (2026-10-19) replaces RegionCache's boxed Long map with
+the already bundled fastutil Long2ObjectLinkedOpenHashMap. Primitive get-and-move
+preserves existing access-order eviction for acquire and peek; clear/eviction
+retain their tile cleanup paths. Persistence keys, tile pixels and stamps are
+unchanged. The accepted result is reduced lookup allocation, not a measured
+gameplay FPS increase. Separate opt-in research sources exercise complex scenes,
+traversal, UI and software timing; ordinary jars contain none of those probes.
+See `PERFORMANCE_INITIATIVE_II_FINAL_REPORT.md` for the bounded Windows evidence.

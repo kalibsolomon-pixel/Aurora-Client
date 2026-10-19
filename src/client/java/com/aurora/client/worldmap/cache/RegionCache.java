@@ -5,12 +5,11 @@ import com.mojang.blaze3d.platform.NativeImage;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.resources.Identifier;
+import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 /**
  * LRU cache of region tiles. One tile = 32×32 chunks = one 512×512
@@ -30,7 +29,7 @@ import java.util.Map;
  * plain-array snapshots handed over by {@code WorldMapClient}.
  *
  * <h2>Eviction</h2>
- * The map is {@code accessOrder=true}, so the eldest entry is the least
+ * Reads move their primitive key to the end, so the eldest entry is the least
  * recently <em>used</em> (rendered or captured), not the least recently
  * created. Evicted dirty tiles are flushed by the {@link EvictionListener}
  * (registered by {@code WorldMapClient}) before their memory is freed.
@@ -44,7 +43,9 @@ public final class RegionCache {
 
     private final int capacity;
     private final EvictionListener listener;
-    private final Map<Long, RegionTile> tiles = new LinkedHashMap<>(64, 0.75f, true);
+    // The minimap samples this map per texel. Primitive keys avoid boxing every
+    // lookup outside Long's tiny cache while retaining the original access LRU.
+    private final Long2ObjectLinkedOpenHashMap<RegionTile> tiles = new Long2ObjectLinkedOpenHashMap<>(64);
 
     public RegionCache(int capacity, EvictionListener listener) {
         this.capacity = Math.max(8, capacity);
@@ -66,7 +67,7 @@ public final class RegionCache {
      * disk load and flipping the flag when it completes.
      */
     public RegionTile acquire(long key) {
-        RegionTile tile = tiles.get(key);
+        RegionTile tile = tiles.getAndMoveToLast(key);
         if (tile == null) {
             tile = new RegionTile(key);
             tiles.put(key, tile);
@@ -75,9 +76,9 @@ public final class RegionCache {
         return tile;
     }
 
-    /** Like {@link #acquire} but never creates and does not bump LRU order. */
+    /** Like {@link #acquire} but never creates; resident reads still bump LRU order. */
     public RegionTile peek(long key) {
-        return tiles.get(key);
+        return tiles.getAndMoveToLast(key);
     }
 
     /** Snapshot of all live tiles (for autosave sweeps). */
