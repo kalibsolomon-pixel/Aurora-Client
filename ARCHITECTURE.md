@@ -2808,3 +2808,9 @@ mean spin wall fell 41–44%, but deadline P95/P99 repeatedly worsened. No produ
 default or scheduling implementation changes. The developer-only prototype is
 retained default-off for traceability. See [CPERF2B_RESULTS.md](CPERF2B_RESULTS.md)
 for the early rejection, raw evidence identities and observer/platform limits.
+
+WorldScope's stable identity queries now reuse one immutable string entry keyed
+by namespace, raw name/address and default locale (2026-10-19). Only identity
+changes sanitize again; no world/client object is retained, and persistent keys
+remain byte-compatible. See [CLIENT_RUNTIME_PERFORMANCE.md](CLIENT_RUNTIME_PERFORMANCE.md)
+for sampled attribution and the narrowly scoped allocation measurement.

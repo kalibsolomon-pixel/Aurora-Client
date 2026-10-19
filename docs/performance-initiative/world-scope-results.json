@@ -1,0 +1,69 @@
+{
+  "kind": "standalone-stable-key-diagnostic",
+  "warmupCalls": 100000,
+  "java": "21.0.7+6",
+  "jvmArguments": [
+    "-Xms512m",
+    "-Xmx512m"
+  ],
+  "sources": [
+    {
+      "path": "src/client/java/com/aurora/client/util/WorldScopeKey.java",
+      "sha256": "4651e18133546c8d3346c739f05910f6611ebddf0b0fabc82098f6cd3de1b6c0"
+    },
+    {
+      "path": "tools/performance/WorldScopeBenchmark.java",
+      "sha256": "737ec24672ff9936a85ef7b8cffc3e67c3c57f9e131655de7cd41add65798f59"
+    }
+  ],
+  "runs": [
+    {
+      "path": "legacy",
+      "calls": 500000,
+      "nsPerCall": 245.095,
+      "bytesPerCall": 1376.0,
+      "key": "sp:cperf1a_world_example",
+      "fork": 1
+    },
+    {
+      "path": "cached",
+      "calls": 500000,
+      "nsPerCall": 5.765,
+      "bytesPerCall": 0.0,
+      "key": "sp:cperf1a_world_example",
+      "fork": 2
+    },
+    {
+      "path": "cached",
+      "calls": 500000,
+      "nsPerCall": 5.856,
+      "bytesPerCall": 0.0,
+      "key": "sp:cperf1a_world_example",
+      "fork": 3
+    },
+    {
+      "path": "legacy",
+      "calls": 500000,
+      "nsPerCall": 244.934,
+      "bytesPerCall": 1375.437,
+      "key": "sp:cperf1a_world_example",
+      "fork": 4
+    },
+    {
+      "path": "legacy",
+      "calls": 500000,
+      "nsPerCall": 241.618,
+      "bytesPerCall": 1375.367,
+      "key": "sp:cperf1a_world_example",
+      "fork": 5
+    },
+    {
+      "path": "cached",
+      "calls": 500000,
+      "nsPerCall": 5.81,
+      "bytesPerCall": 0.0,
+      "key": "sp:cperf1a_world_example",
+      "fork": 6
+    }
+  ]
+}

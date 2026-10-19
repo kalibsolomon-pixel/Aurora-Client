@@ -2,6 +2,7 @@ package com.aurora.client.util;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ServerData;
+import java.util.Locale;
 
 /**
  * Resolves a stable identifier for the player's current world / server.
@@ -21,6 +22,7 @@ import net.minecraft.client.multiplayer.ServerData;
  * adding a separate sanitization step at every call site.
  */
 public final class WorldScope {
+    private static final WorldScopeKey KEYS = new WorldScopeKey();
 
     private WorldScope() {}
 
@@ -34,23 +36,15 @@ public final class WorldScope {
         // origin.
         if (mc.hasSingleplayerServer() && mc.getSingleplayerServer() != null) {
             String name = mc.getSingleplayerServer().getWorldData().getLevelName();
-            return "sp:" + sanitize(name);
+            return KEYS.resolve("sp:", name, Locale.getDefault());
         }
 
         ServerData server = mc.getCurrentServer();
         if (server != null && server.ip != null && !server.ip.isEmpty()) {
-            return "mp:" + sanitize(server.ip);
+            return KEYS.resolve("mp:", server.ip, Locale.getDefault());
         }
 
         return "none";
     }
 
-    private static String sanitize(String s) {
-        // Path separators and shell metacharacters out, lowercase for
-        // consistency between launches that may have stored the address
-        // with different casing.
-        return s.toLowerCase()
-                .replaceAll("[\\\\/:*?\"<>|]", "_")
-                .trim();
-    }
 }

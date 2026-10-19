@@ -2331,3 +2331,11 @@ spin wall but repeatedly worsened deadline P95/P99. Production PARK/500 stays;
 the prototype remains developer-only/default-off. Collection stopped after four
 valid processes on the fixed rejection screen, preserving two unused inputs.
 See [CPERF2B_RESULTS.md](CPERF2B_RESULTS.md) and `PERFORMANCE_INITIATIVE.md`.
+
+## World scope allocation (2026-10-19)
+
+`WorldScopeKey` caches one immutable key by namespace/source/default locale;
+renames, server and locale changes refresh it. Existing persisted key text is
+unchanged. Profiling identified repeated sanitizing; a six-process Java 21 hot-path
+diagnostic removes stable-call allocation. This is not a measured FPS gain.
+See [CLIENT_RUNTIME_PERFORMANCE.md](CLIENT_RUNTIME_PERFORMANCE.md); 548 tests pass.

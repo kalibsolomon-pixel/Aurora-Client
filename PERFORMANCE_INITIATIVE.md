@@ -31,7 +31,7 @@ JVM arguments, memory policies, readiness and its own overhead. No duplicate pac
 | --- | --- | --- |
 | A | Review existing evidence, protect inputs, fix bounded experiment criteria | Complete |
 | B | C-PERF.2B stopped after two pairs on repeated deadline regression; original PARK/500 retained | Complete |
-| C | Retained JFR allocation review identifies repeated WorldScope sanitizing; targeted validation next | Running |
+| C | Profile-attributed stable world-key cache; zero stable-call allocation in six-process diagnostic; 548 tests pass; live smoke in I | Implemented |
 | D | Audit existing instance policies, runtime authority, JVM validation and deterministic assembly | Pending |
 | E | Bounded, justified Java 21 heap/collector comparison; reuse existing pipeline and fixed worlds | Pending |
 | F–G | Preserve or improve existing presets and manual controls according to evidence; validate migration/readiness/UI | Pending |
