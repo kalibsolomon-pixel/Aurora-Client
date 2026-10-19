@@ -2802,3 +2802,9 @@ explicit first-call labels, retry counters and four additional bounded histogram
 The collector never supplies scheduling decisions. See
 [CPERF2A_REPARK_IMPLEMENTATION.md](CPERF2A_REPARK_IMPLEMENTATION.md) for validation,
 population contracts and limitations. No performance improvement is established.
+
+C-PERF.2B (2026-10-19) rejects promotion after two Windows comparison pairs:
+mean spin wall fell 41–44%, but deadline P95/P99 repeatedly worsened. No production
+default or scheduling implementation changes. The developer-only prototype is
+retained default-off for traceability. See [CPERF2B_RESULTS.md](CPERF2B_RESULTS.md)
+for the early rejection, raw evidence identities and observer/platform limits.

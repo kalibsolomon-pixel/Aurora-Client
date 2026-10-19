@@ -2323,3 +2323,11 @@ distributions. Reference schema 1 retains its original interpretation plus
 additive path metadata. The retry can consume a task-scheduler permit or
 oversleep; equivalent responsiveness and performance gains are unproven.
 See [CPERF2A_REPARK_IMPLEMENTATION.md](CPERF2A_REPARK_IMPLEMENTATION.md).
+
+## C-PERF.2B decision (2026-10-19)
+
+Bounded re-parking is rejected for promotion: two controlled Windows pairs reduced
+spin wall but repeatedly worsened deadline P95/P99. Production PARK/500 stays;
+the prototype remains developer-only/default-off. Collection stopped after four
+valid processes on the fixed rejection screen, preserving two unused inputs.
+See [CPERF2B_RESULTS.md](CPERF2B_RESULTS.md) and `PERFORMANCE_INITIATIVE.md`.

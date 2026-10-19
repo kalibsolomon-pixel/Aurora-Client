@@ -30,8 +30,8 @@ JVM arguments, memory policies, readiness and its own overhead. No duplicate pac
 | Phase | Work and decision | Status |
 | --- | --- | --- |
 | A | Review existing evidence, protect inputs, fix bounded experiment criteria | Complete |
-| B | Six-process C-PERF.2B; accept only repeatable lower spin without precision/stability regression; retain fixed 500 us unless justified | Running |
-| C | Attribute actual CPU/allocation hot paths before targeted Client changes; compare representative enabled features | Pending |
+| B | C-PERF.2B stopped after two pairs on repeated deadline regression; original PARK/500 retained | Complete |
+| C | Retained JFR allocation review identifies repeated WorldScope sanitizing; targeted validation next | Running |
 | D | Audit existing instance policies, runtime authority, JVM validation and deterministic assembly | Pending |
 | E | Bounded, justified Java 21 heap/collector comparison; reuse existing pipeline and fixed worlds | Pending |
 | F–G | Preserve or improve existing presets and manual controls according to evidence; validate migration/readiness/UI | Pending |
@@ -65,14 +65,19 @@ No new observer is assumed free. Raw and invalid runs remain retained.
 
 The six inputs are prepared in fresh ignored `run/cperf2b-benchmark/`, matching
 world identity `84b036cc3b191a066befc7968c88850c393520e3a69d68b369d19066365a352a`.
-`CPERF2B_PROTOCOL.md` fixes criteria before data. Run 1 reference passed input,
-warmup, two CSVs, two complete process captures, homogeneous primary export,
-camera, exact saved NBT and normal exit checks. Run 2 candidate is warming up.
-No comparative conclusion yet. Test/build passed: 546 tests, no failures/errors/skips.
-Logs, event times and camera PNGs remain in each ignored run directory.
+`CPERF2B_PROTOCOL.md` fixes criteria before data. Runs 1–4 passed all validity
+checks and ended normally. Both candidate/reference pairs fail the deadline-tail
+screen despite lower spin wall; see `CPERF2B_RESULTS.md`. Prepared 5/6 are unused,
+not invalid or replacement runs. Test/build passed: 546 tests, no failures/errors/skips.
+Logs, event times and camera PNGs remain in each ignored run directory, with a
+789-file completed-run SHA-256 manifest. Production defaults/source are unchanged.
 
-Next: finish run 2, then 3/4/5/6 and paired review. Use
-`tools/performance/cperf2b_review.py` only offline after each normal exit. Do not run
-preparation again or reuse a previous run. Continue through phases without routine
-owner approval. Record unavoidable setup/warmup gaps rather than implying identical
-timelines. Production source/defaults remain unchanged at this checkpoint.
+Next: Phase C, then the audited Launcher architecture and bounded JVM comparison.
+Retained P3-B.1a JFR windows are useful allocation leads, not valid performance
+comparisons: weighted statistical samples attribute 14.6/18.4 MB per 30-second
+window to WorldScope.sanitize. Its current per-frame/tick callers repeatedly
+compile a regex and construct identical keys. Full recording startup outliers
+were excluded by the existing resource window, not by a value filter. The private
+aggregation with source hashes is `run/performance-initiative/retained-allocation-review.json`.
+Do not rerun preparation or reuse benchmark outputs. Continue without routine
+owner approval; preserve all evidence and report practical limitations.
