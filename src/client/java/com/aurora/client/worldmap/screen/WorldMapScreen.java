@@ -127,9 +127,12 @@ public final class WorldMapScreen extends Screen implements ThemedScreen {
                 String name = AuroraFontRenderer.ellipsize(font, marker.name, Math.min(150, width - 24), 1);
                 int textWidth = font.width(name);
                 if (nameLayout.place(x + 8 + textWidth * .5f, y + font.lineHeight - 4,
-                        textWidth + 4, font.lineHeight + 2, width, height))
-                    g.drawString(font, name, (int) (nameLayout.centerX() - textWidth * .5),
-                            (int) nameLayout.bottomY() - font.lineHeight, 0xFFFFFFFF, true);
+                        textWidth + 8, font.lineHeight + 6, width, height)) {
+                    MapMarkers.labelPlate(g, nameLayout.centerX(), nameLayout.bottomY() - (font.lineHeight + 6) * .5f,
+                            textWidth + 8, font.lineHeight + 6, marker.color);
+                    MapMarkers.text(g, font, name, nameLayout.centerX() - textWidth * .5f,
+                            nameLayout.bottomY() - font.lineHeight - 3, 0xFFFFFFFF, false);
+                }
             }
         }
         if (minecraft.player != null && minecraft.level != null

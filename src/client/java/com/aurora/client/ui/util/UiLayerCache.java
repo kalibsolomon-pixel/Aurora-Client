@@ -9,6 +9,9 @@ import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.resources.Identifier;
 
 import java.util.concurrent.atomic.AtomicLong;
+import java.nio.IntBuffer;
+import java.util.Arrays;
+import org.lwjgl.system.MemoryUtil;
 
 /**
  * Off-screen static-layer cache for pixel-heavy Aurora screens. Mirrors the
@@ -38,6 +41,11 @@ public final class UiLayerCache implements RenderUtil.RectSink {
     private int w = -1;
     private int h = -1;
     private long version = Long.MIN_VALUE;
+    private int[] scaledRow;
+    private int[] maskRuns;
+    private int maskW, maskH;
+    private float maskRadius;
+    private boolean maskCircle;
 
     /** {@code true} when a texture for the current version exists and is current. */
     public boolean isCurrent(long v) {
@@ -65,6 +73,65 @@ public final class UiLayerCache implements RenderUtil.RectSink {
     public void clear() {
         if (image != null) {
             image.fillRect(0, 0, w, h, 0);
+        }
+    }
+
+    /** Upscale cached data, without resampling world columns or allocating per update.
+     * Expanded rows are copied in bulk; repeated source rows use native memcpy. */
+    public void writeScaledAbgr(int[] source, int sourceW, int sourceH) {
+        if (image == null || sourceW <= 0 || sourceH <= 0 || source.length != sourceW * sourceH)
+            throw new IllegalArgumentException("Valid source and allocated destination required");
+        if (scaledRow == null || scaledRow.length != w) scaledRow = new int[w];
+        long pointer = image.getPointer();
+        IntBuffer pixels = MemoryUtil.memIntBuffer(pointer, w * h);
+        int previousY = -1;
+        for (int y = 0; y < h; y++) {
+            int sourceY = y * sourceH / h;
+            if (sourceY == previousY) MemoryUtil.memCopy(pointer + (long) (y - 1) * w * 4, pointer + (long) y * w * 4, (long) w * 4);
+            else {
+                int row = sourceY * sourceW;
+                for (int x = 0; x < w; x++) scaledRow[x] = source[row + x * sourceW / w];
+                pixels.position(y * w); pixels.put(scaledRow);
+                previousY = sourceY;
+            }
+        }
+    }
+
+    /** Clip cached data with RenderUtil's exact coverage, rasterized only on geometry changes.
+     * Opaque interior spans need no work; transparent runs clear in bulk. */
+    public void clipShape(GuiGraphics g, boolean circle, float radiusPixels) {
+        if (image == null) return;
+        if (maskRuns == null || maskW != w || maskH != h || maskRadius != radiusPixels || maskCircle != circle) {
+            byte[] coverage = new byte[w * h];
+            RenderUtil.RectSink previous = RenderUtil.beginCapture((x1, y1, x2, y2, argb) -> {
+                int left = Math.max(0, x1), right = Math.min(w, x2);
+                if (right > left) for (int y = Math.max(0, y1); y < Math.min(h, y2); y++)
+                    Arrays.fill(coverage, y * w + left, y * w + right, (byte) (argb >>> 24));
+            });
+            float scale = Minecraft.getInstance().getWindow().getGuiScale();
+            try {
+                if (circle) RenderUtil.drawCircleAA(g, 0, 0, w / scale, h / scale, -1);
+                else RenderUtil.drawRoundedRectAA(g, 0, 0, w / scale, h / scale, radiusPixels / scale, -1);
+            } finally { RenderUtil.endCapture(previous); }
+            var runs = new it.unimi.dsi.fastutil.ints.IntArrayList(h * 12);
+            for (int start = 0; start < coverage.length;) {
+                int alpha = coverage[start] & 255, end = start + 1;
+                while (end < coverage.length && coverage[end] == coverage[start]) end++;
+                if (alpha != 255) { runs.add(start); runs.add(end - start); runs.add(alpha); }
+                start = end;
+            }
+            maskRuns = runs.toIntArray();
+            maskW = w; maskH = h; maskRadius = radiusPixels; maskCircle = circle;
+        }
+        long pointer = image.getPointer();
+        IntBuffer pixels = MemoryUtil.memIntBuffer(pointer, w * h);
+        for (int i = 0; i < maskRuns.length; i += 3) {
+            int start = maskRuns[i], length = maskRuns[i + 1], coverage = maskRuns[i + 2];
+            if (coverage == 0) MemoryUtil.memSet(pointer + (long) start * 4, 0, (long) length * 4);
+            else for (int p = start; p < start + length; p++) {
+                int color = pixels.get(p);
+                pixels.put(p, (Math.round((color >>> 24) * coverage / 255f) << 24) | (color & 0xffffff));
+            }
         }
     }
 
@@ -180,6 +247,7 @@ public final class UiLayerCache implements RenderUtil.RectSink {
         w = -1;
         h = -1;
         version = Long.MIN_VALUE;
+        scaledRow = null; maskRuns = null;
     }
 
     private void releaseTexture() {

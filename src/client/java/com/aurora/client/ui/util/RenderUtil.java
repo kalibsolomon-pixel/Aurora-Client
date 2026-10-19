@@ -163,7 +163,7 @@ public class RenderUtil {
             sink.rect(leftInt, y0, leftInt + 1, y1, scaleAlphaChannel(color, 1f - leftFrac));
         }
         // Fully-covered interior pixels.
-        int fullStart = leftInt + 1;
+        int fullStart = leftFrac > 0.001f ? leftInt + 1 : leftInt;
         int fullEnd = rightInt;
         if (fullEnd > fullStart) {
             sink.rect(fullStart, y0, fullEnd, y1, color);
@@ -172,6 +172,34 @@ public class RenderUtil {
         if (rightFrac > 0.001f) {
             sink.rect(rightInt, y0, rightInt + 1, y1, scaleAlphaChannel(color, rightFrac));
         }
+    }
+
+    /** Filled triangle using the same physical-pixel coverage spans as rounded shapes.
+     * No mesh, shader or texture allocation; useful for continuously turning indicators. */
+    public static void drawTriangleAA(GuiGraphics g, float ax, float ay, float bx, float by,
+                                      float cx, float cy, int color) {
+        float scale = Minecraft.getInstance().getWindow().getGuiScale();
+        ax *= scale; ay *= scale; bx *= scale; by *= scale; cx *= scale; cy *= scale;
+        float minY = Math.min(ay, Math.min(by, cy)), maxY = Math.max(ay, Math.max(by, cy));
+        if (!Float.isFinite(minY) || !Float.isFinite(maxY) || maxY <= minY) return;
+        RectSink sink = guiSink(g);
+        g.pose().pushMatrix();
+        g.pose().scale(1 / scale, 1 / scale);
+        for (int y = (int) Math.floor(minY); y < Math.ceil(maxY); y++) {
+            float top = Math.max(y, minY), bottom = Math.min(y + 1, maxY), mid = (top + bottom) * .5f;
+            float ab = edgeX(ax, ay, bx, by, mid), bc = edgeX(bx, by, cx, cy, mid), ca = edgeX(cx, cy, ax, ay, mid);
+            float left = Float.POSITIVE_INFINITY, right = Float.NEGATIVE_INFINITY;
+            if (Float.isFinite(ab)) { left = Math.min(left, ab); right = Math.max(right, ab); }
+            if (Float.isFinite(bc)) { left = Math.min(left, bc); right = Math.max(right, bc); }
+            if (Float.isFinite(ca)) { left = Math.min(left, ca); right = Math.max(right, ca); }
+            if (right > left) fillAARow(sink, left, y, right, scaleAlphaChannel(color, bottom - top));
+        }
+        g.pose().popMatrix();
+    }
+
+    private static float edgeX(float ax, float ay, float bx, float by, float y) {
+        return ay != by && y >= Math.min(ay, by) && y < Math.max(ay, by)
+                ? ax + (bx - ax) * (y - ay) / (by - ay) : Float.NaN;
     }
 
     /**

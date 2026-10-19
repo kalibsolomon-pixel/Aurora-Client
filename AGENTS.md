@@ -2387,3 +2387,19 @@ focus frames and no material regression in one bounded pair; no FPS gain is clai
 Forty observed region-center pixels/stamps matched durable files across 41 partial
 regions / 1,540 captured chunks, with eight resident full tiles and eight in-flight
 loads at peak. 565 tests pass; ordinary jars exclude all diagnostic probes.
+
+## Mapping per-pixel presentation (2026-10-19)
+
+Mapping chrome and silhouettes use RenderUtil's physical-pixel coverage through
+UiLayerCache. Minimap terrain is still sampled at the configured logical size,
+at most 20 Hz; bulk-expanded cached rows receive a native-resolution circle or
+theme-rounded square mask and border. Unchanged stationary terrain does not upload.
+Output is bounded to 2048² pixels; the HUD editor retires resized textures after
+the frame that referenced them. MapMarkers shares tintable AA marker/label layers
+(primitive-key cache, 128 entries / 16 MiB) across map, minimap, manager, editor and
+HUD labels. Only completed-frame entries may be evicted. Text retains Aurora's
+configured font path with device-aligned baselines; off-screen chevrons use the
+existing native FreeType icon renderer. World-map terrain/LOD rendering is unchanged.
+Block highlights retain their fill and use WorldLineRenderer's two-device-pixel
+outline with double-precision camera subtraction. The shared span rasterizer now
+includes exact-integer left edges; PixelCacheTest protects coverage and ABGR copies.

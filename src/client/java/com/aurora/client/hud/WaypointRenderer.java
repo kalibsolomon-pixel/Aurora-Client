@@ -3,6 +3,8 @@ package com.aurora.client.hud;
 import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.config.AuroraConfig.Waypoint;
 import com.aurora.client.feature.impl.WaypointFeature;
+import com.aurora.client.worldmap.MapMarkers;
+import com.aurora.client.ui.util.MaterialIconRenderer;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
@@ -199,7 +201,6 @@ public final class WaypointRenderer {
             double slant = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
             String name = (w.name == null || w.name.isEmpty()) ? "Waypoint" : w.name;
-            if (w.id.equals(feat.navigationId())) name = "» " + name;
             double scale = com.aurora.client.worldmap.MapTransform.bounded(cfg.waypointLabelScale, .5, 3);
             name = com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(font, name,
                     (int) Math.min(180, (sw - 16) / scale - 8), 1);
@@ -224,11 +225,11 @@ public final class WaypointRenderer {
             if (screenY < LABEL_EDGE_MARGIN) { screenY = LABEL_EDGE_MARGIN; clamped = true; }
             if (screenY > sh - LABEL_EDGE_MARGIN) { screenY = sh - LABEL_EDGE_MARGIN; clamped = true; }
 
-            float labelWidth = (float) ((Math.max(font.width(name), font.width(dist)) + 8) * scale);
+            float labelWidth = (float) ((Math.max(font.width(name) + 12, font.width(dist)) + 8) * scale);
             float labelHeight = (float) ((font.lineHeight * 2 + 6) * scale);
             if (!labelLayout.place(screenX, screenY, labelWidth, labelHeight, sw, sh)) continue;
             drawHudLabel(g, font, labelLayout.centerX(), labelLayout.bottomY(), name, dist,
-                    w.color, scale, clamped);
+                    w, w.id.equals(feat.navigationId()), scale, clamped);
         }
     }
 
@@ -241,12 +242,12 @@ public final class WaypointRenderer {
     private static void drawHudLabel(GuiGraphics g, Font font,
                                       float screenX, float screenY,
                                       String name, String dist,
-                                      int color, double scaleFactor,
+                                      Waypoint waypoint, boolean selected, double scaleFactor,
                                       boolean clamped) {
         float scale = (float) Math.max(0.5, scaleFactor);
         int nameW = font.width(name);
         int distW = font.width(dist);
-        int boxW  = Math.max(nameW, distW) + 8;
+        int boxW  = Math.max(nameW + 12, distW) + 8;
         int boxH  = font.lineHeight * 2 + 6;
 
         g.pose().pushMatrix();
@@ -254,33 +255,19 @@ public final class WaypointRenderer {
         g.pose().scale(scale, scale);
         g.pose().translate(-boxW / 2f, -boxH);
 
-        // Background plate.
-        g.fill(0, 0, boxW, boxH, 0x80000000);
-        // 1px accent border using the waypoint's own color, for at-a-
-        // glance association with the corresponding beam / block.
-        int borderColor = 0xFF000000 | (color & 0xFFFFFF);
-        g.fill(0, 0, boxW, 1, borderColor);
-        g.fill(0, boxH - 1, boxW, boxH, borderColor);
-        g.fill(0, 0, 1, boxH, borderColor);
-        g.fill(boxW - 1, 0, boxW, boxH, borderColor);
-
-        int textColor = 0xFF000000 | (color & 0xFFFFFF);
-        // Use the String drawString overloads instead of Component.literal
-        // — avoids 2 Component allocations per waypoint per frame. The name
-        // and dist strings are already computed above; no formatting needed.
-        g.drawString(font, name,
-                (boxW - nameW) / 2, 3, textColor, false);
-        g.drawString(font, dist,
-                (boxW - distW) / 2, 3 + font.lineHeight, 0xFFCCCCCC, false);
-
+        MapMarkers.labelPlate(g, boxW * .5f, boxH * .5f, boxW, boxH, waypoint.color);
+        MapMarkers.waypoint(g, 8, 8, waypoint, selected);
+        int textColor = 0xFF000000 | (waypoint.color & 0xFFFFFF);
+        MapMarkers.text(g, font, name, (boxW + 12 - nameW) * .5f, 3, textColor, false);
+        MapMarkers.text(g, font, dist, (boxW - distW) * .5f, 3 + font.lineHeight, 0xFFCCCCCC, false);
         if (clamped) {
-            // Small downward chevron below the box — same visual
-            // language vanilla uses for off-screen tracked waypoints.
-            int cx = boxW / 2;
-            int cy = boxH + 1;
-            g.fill(cx - 3, cy,     cx + 3, cy + 1, textColor);
-            g.fill(cx - 2, cy + 1, cx + 2, cy + 2, textColor);
-            g.fill(cx - 1, cy + 2, cx + 1, cy + 3, textColor);
+            float gui = Minecraft.getInstance().getWindow().getGuiScale();
+            float em = 8 * MapMarkers.density(g) / gui;
+            float cx = MapMarkers.pixelX(g, boxW * .5f, boxH + 4) / gui;
+            float cy = MapMarkers.pixelY(g, boxW * .5f, boxH + 4) / gui;
+            g.pose().pushMatrix(); g.pose().identity();
+            MaterialIconRenderer.drawIcon(g, font, "\uE5CF", cx, cy, em, textColor);
+            g.pose().popMatrix();
         }
 
         g.pose().popMatrix();
@@ -355,25 +342,24 @@ public final class WaypointRenderer {
      * block tall. {@code radius == 0} is a single block; {@code radius == r}
      * is a {@code (2r+1) × (2r+1)} flat slab one block high.
      *
-     * <p>Filled and outline are drawn with the same RenderType used by
-     * the rest of Aurora's world-space graphics ({@code debugQuads}) so
-     * blending and depth behave consistently.
+     * <p>The translucent fill retains the existing debug-quad pass. The outline
+     * uses Aurora's shared camera-relative GPU-expanded line path at a fixed
+     * device-pixel width, so distant edges do not shrink into subpixel slabs.
      */
     private static void drawBlockHighlight(PoseStack matrices, MultiBufferSource consumers,
                                             Waypoint w, Vec3 camPos, int radius,
                                             float r, float g, float b, float a) {
         matrices.pushPose();
-        matrices.translate(-camPos.x, -camPos.y, -camPos.z);
         Matrix4f m = matrices.last().pose();
 
         // Horizontal radius on X/Z; always a single block of height so the
         // overlay marks the floor tile without rising into a column.
-        float x1 = (float) (w.x - radius)     - HIGHLIGHT_EPSILON;
-        float y1 = (float)  w.y               - HIGHLIGHT_EPSILON;
-        float z1 = (float) (w.z - radius)     - HIGHLIGHT_EPSILON;
-        float x2 = (float) (w.x + radius + 1) + HIGHLIGHT_EPSILON;
-        float y2 = (float) (w.y + 1)          + HIGHLIGHT_EPSILON;
-        float z2 = (float) (w.z + radius + 1) + HIGHLIGHT_EPSILON;
+        float x1 = (float) (w.x - radius - camPos.x) - HIGHLIGHT_EPSILON;
+        float y1 = (float) (w.y - camPos.y) - HIGHLIGHT_EPSILON;
+        float z1 = (float) (w.z - radius - camPos.z) - HIGHLIGHT_EPSILON;
+        float x2 = (float) (w.x + radius + 1 - camPos.x) + HIGHLIGHT_EPSILON;
+        float y2 = (float) (w.y + 1 - camPos.y) + HIGHLIGHT_EPSILON;
+        float z2 = (float) (w.z + radius + 1 - camPos.z) + HIGHLIGHT_EPSILON;
 
         VertexConsumer buf = consumers.getBuffer(RenderTypes.debugQuads());
 
@@ -382,24 +368,13 @@ public final class WaypointRenderer {
         float fa = a * 0.35f;
         cubeFaces(buf, m, x1, y1, z1, x2, y2, z2, r, g, b, fa, true);
 
-        // Outline ring — thin slab on each axis-aligned face edge so the
-        // bounds remain crisp even when the player is far enough that
-        // the fill alpha washes out.
-        float oa = Math.min(1.0f, a + 0.15f);
-        float t = 0.025f; // outline thickness in blocks
-        // 12 edges as thin axis-aligned cuboids.
-        edge(buf, m, x1, y1, z1, x2, y1 + t, z1 + t, r, g, b, oa);
-        edge(buf, m, x1, y2 - t, z1, x2, y2,   z1 + t, r, g, b, oa);
-        edge(buf, m, x1, y1, z2 - t, x2, y1 + t, z2,   r, g, b, oa);
-        edge(buf, m, x1, y2 - t, z2 - t, x2, y2,   z2,   r, g, b, oa);
-        edge(buf, m, x1, y1, z1, x1 + t, y2, z1 + t, r, g, b, oa);
-        edge(buf, m, x2 - t, y1, z1, x2,   y2, z1 + t, r, g, b, oa);
-        edge(buf, m, x1, y1, z2 - t, x1 + t, y2, z2,   r, g, b, oa);
-        edge(buf, m, x2 - t, y1, z2 - t, x2,   y2, z2,   r, g, b, oa);
-        edge(buf, m, x1, y1, z1, x1 + t, y1 + t, z2, r, g, b, oa);
-        edge(buf, m, x2 - t, y1, z1, x2,   y1 + t, z2, r, g, b, oa);
-        edge(buf, m, x1, y2 - t, z1, x1 + t, y2,   z2, r, g, b, oa);
-        edge(buf, m, x2 - t, y2 - t, z1, x2,   y2,   z2, r, g, b, oa);
+        // Aurora's shared GPU-expanded lines retain a two-device-pixel stroke
+        // at any distance; camera subtraction stays in double precision.
+        WorldLineRenderer.drawBoxOutline(WorldLineRenderer.getLineBuffer(consumers, false), m, camPos,
+                w.x - radius - (double) HIGHLIGHT_EPSILON, w.y - (double) HIGHLIGHT_EPSILON,
+                w.z - radius - (double) HIGHLIGHT_EPSILON,
+                w.x + radius + 1d + HIGHLIGHT_EPSILON, w.y + 1d + HIGHLIGHT_EPSILON,
+                w.z + radius + 1d + HIGHLIGHT_EPSILON, r, g, b, Math.min(1, a + .15f), 2);
 
         matrices.popPose();
     }
@@ -428,14 +403,6 @@ public final class WaypointRenderer {
             quad(buf, m, x1, y2, z2, x1, y2, z1, x1, y1, z1, x1, y1, z2, r, g, b, a);
             quad(buf, m, x2, y2, z1, x2, y2, z2, x2, y1, z2, x2, y1, z1, r, g, b, a);
         }
-    }
-
-    /** Thin slab outline edge — implemented as a single-wound cuboid. */
-    private static void edge(VertexConsumer buf, Matrix4f m,
-                              float x1, float y1, float z1,
-                              float x2, float y2, float z2,
-                              float r, float g, float b, float a) {
-        cubeFaces(buf, m, x1, y1, z1, x2, y2, z2, r, g, b, a, false);
     }
 
 }

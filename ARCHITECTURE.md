@@ -2873,3 +2873,20 @@ hardware/soak limits. Native cache-pressure traversal produced 41 partial region
 and 1,540 captured chunks while retaining at most eight full tiles/eight in-flight
 loads; all forty sampled observations matched durable payloads. Cache-capacity
 changes apply to new contexts. No whole-game FPS improvement is established.
+
+## Mapping native-pixel presentation (2026-10-19)
+
+The mapping engine and world-map region/overview blits are unchanged. Presentation
+reuses RenderUtil coverage, UiLayerCache, NativeIconGeometry and MaterialIconRenderer.
+UiLayerCache can bulk-expand cached ABGR rows and clip them with cached coverage
+runs rasterized by RenderUtil; opaque interiors skip mask work and zero runs clear
+in bulk. This does not introduce a second mask/shader implementation or additional
+world-column sampling. A size² terrain sample becomes one bounded native-density
+cached minimap texture; stationary updates remain dirty-driven and motion is 20 Hz.
+MapMarkers uses native, tintable bounded layers for marker/label geometry, resolves
+HUD transforms before drawing, and keeps each current-frame texture alive. Turning
+arrows use the shared AA triangle primitive so yaw is continuous. Fractional HUD
+positions snap to device pixels; the configured font backend remains authoritative.
+Manager/editor retain existing themed controls and add shared marker previews.
+World-space slab edges use the existing pixel-width line pipeline; 3D beam geometry
+and mapping persistence are not converted to CPU raster data.

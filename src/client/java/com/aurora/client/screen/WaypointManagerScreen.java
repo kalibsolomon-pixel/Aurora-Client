@@ -168,9 +168,9 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
 
     @Override protected int listWidth() { return Math.min(460, this.width - 32); }
     @Override protected int rowHeight() { return ROW_H; }
-    @Override protected int nameColumnWidth() { return nameWidth(); }
+    @Override protected int nameColumnWidth() { return nameWidth() - 16; }
     @Override protected int editorFieldX(int listX) {
-        return listX + ROW_INSET + SWATCH_W + CONTROL_GAP;
+        return listX + ROW_INSET + SWATCH_W + CONTROL_GAP + 16;
     }
 
     @Override protected List<Waypoint> currentRows() {
@@ -355,8 +355,10 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
         // for that index).
         if (index != editingIndex) {
             String name = fitName(wp.name == null ? "" : wp.name);
+            com.aurora.client.worldmap.MapMarkers.waypoint(ctx, cx + 6, y + 10, wp,
+                    WaypointFeature.get() != null && wp.id.equals(WaypointFeature.get().navigationId()));
             ctx.drawString(this.font, name,
-                    cx, y + 6,
+                    cx + 16, y + 6,
                     ThemeManager.color(ThemeToken.ON_BACKGROUND), false);
         }
         cx += nameWidth() + CONTROL_GAP;

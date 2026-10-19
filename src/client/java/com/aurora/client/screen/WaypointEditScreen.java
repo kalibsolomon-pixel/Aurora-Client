@@ -48,6 +48,10 @@ public final class WaypointEditScreen extends Screen implements ThemedScreen {
             fields[i] = new EditBox(font, left + 112, y, panelWidth - 124, 18, Component.literal(labels[i]));
             fields[i].setMaxLength(i == 4 ? 256 : 128);
             fields[i].setValue(values[i] == null ? "" : values[i]);
+            if (i == 5) fields[i].setResponder(value -> {
+                String hex = value.replace("#", "");
+                if (hex.matches("[0-9a-fA-F]{8}")) draft.color = (int) Long.parseLong(hex, 16);
+            });
             fields[i].visible = (i >= 3) == details;
             addRenderableWidget(fields[i]);
         }
@@ -135,9 +139,10 @@ public final class WaypointEditScreen extends Screen implements ThemedScreen {
     @Override public void render(GuiGraphics g, int mx, int my, float delta) {
         MaterialSurface.floating(g, left, top, panelWidth, 160,
                 Math.round(ThemeManager.current().roundness().radius()), 1);
+        com.aurora.client.worldmap.MapMarkers.waypoint(g, left + 16, top + 12, draft, false);
         String heading = error.isEmpty() ? title.getString() : error;
-        g.drawString(font, com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(font, heading, panelWidth - 96, 1),
-                left + 12, top + 8, ThemeManager.color(ThemeToken.ON_SURFACE), false);
+        g.drawString(font, com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(font, heading, panelWidth - 112, 1),
+                left + 28, top + 8, ThemeManager.color(ThemeToken.ON_SURFACE), false);
         for (int i = details ? 3 : 0; i < (details ? 6 : 3); i++) g.drawString(font, labels[i], left + 12, top + 31 + (i % 3) * 21,
                 ThemeManager.color(ThemeToken.ON_SURFACE), false);
         super.render(g, mx, my, delta);

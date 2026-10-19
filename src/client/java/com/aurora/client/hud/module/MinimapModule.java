@@ -1,6 +1,5 @@
 package com.aurora.client.hud.module;
 
-import com.aurora.client.AuroraClient;
 import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.config.AuroraConfig.Waypoint;
 import com.aurora.client.feature.impl.WaypointFeature;
@@ -10,14 +9,12 @@ import com.aurora.client.theme.HudStatus;
 import com.aurora.client.worldmap.MapTransform;
 import com.aurora.client.worldmap.WorldMapClient;
 import com.aurora.client.worldmap.MapMarkers;
-import com.mojang.blaze3d.platform.NativeImage;
+import com.aurora.client.ui.util.UiLayerCache;
+import com.aurora.client.ui.util.RenderUtil;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.client.renderer.texture.DynamicTexture;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.animal.Animal;
@@ -32,14 +29,17 @@ import java.util.List;
  * and unchanged. Shape/background/border share the same masked texture (one blit). */
 public final class MinimapModule extends HudModule {
     public static final String ID = "minimap";
-    private static final Identifier TEXTURE = Identifier.fromNamespaceAndPath(AuroraClient.MOD_ID, "minimap_terrain");
     private static final String[] CARDINALS = {"N", "E", "S", "W"};
-    private DynamicTexture texture;
-    private NativeImage image;
+    private UiLayerCache terrain = new UiLayerCache();
+    private final java.util.ArrayList<UiLayerCache> retiredTerrains = new java.util.ArrayList<>();
+    private long terrainFrame = -1;
+    private int[] terrainPixels;
+    private int outputSize;
     private int textureSize = -1, previousZoom, previousBorder, previousAlpha;
     private boolean previousCircle, previousTerrain, previousRotate;
     private double previousX = Double.NaN, previousZ;
     private float previousYaw;
+    private float previousRadius;
     private long previousRevision = -1, lastPaint;
     private Object previousLevel;
     private List<Entity> entities = List.of();
@@ -49,8 +49,8 @@ public final class MinimapModule extends HudModule {
     public MinimapModule() {
         super(ID);
         resetLayoutToDefaults();
-        ClientPlayConnectionEvents.DISCONNECT.register((handler, mc) -> release());
-        ClientLifecycleEvents.CLIENT_STOPPING.register(mc -> release());
+        ClientPlayConnectionEvents.DISCONNECT.register((handler, mc) -> { release(); MapMarkers.dispose(); });
+        ClientLifecycleEvents.CLIENT_STOPPING.register(mc -> { release(); MapMarkers.dispose(); });
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(mc -> {
             if (!AuroraConfig.get().minimapEnabled || mc.level == null) release();
         });
@@ -70,9 +70,16 @@ public final class MinimapModule extends HudModule {
 
     @Override protected void renderContent(GuiGraphics g, Minecraft mc, int x, int y) {
         if (mc.level == null || mc.player == null) return;
+        long frame = com.aurora.client.ui.component.GlassSurface.frame();
+        if (terrainFrame != frame) {
+            for (UiLayerCache retired : retiredTerrains) retired.dispose();
+            retiredTerrains.clear(); terrainFrame = frame;
+        }
         var cfg = AuroraConfig.get();
         int size = size(), zoom = zoom();
         int border = HudText.color(cfg.minimapBorderColor);
+        float shapeRadius = cfg.minimapCircular ? size * .5f
+                : com.aurora.client.theme.ThemeManager.current().roundness().radiusSmall();
         int alpha = (int) (MapTransform.bounded(cfg.minimapTerrainAlpha, 0, 1) * 255);
         double px = mc.player.getX(), pz = mc.player.getZ();
         float yaw = mc.player.getYRot();
@@ -81,23 +88,35 @@ public final class MinimapModule extends HudModule {
         WorldMapClient engine = WorldMapClient.get();
         long revision = engine == null ? -1 : engine.terrainRevision();
         long now = System.nanoTime();
-        boolean changed = previousLevel != mc.level || textureSize != size || previousZoom != zoom
+        int physicalSize = Math.max(1, Math.min(2048, Math.round(size * MapMarkers.density(g))));
+        boolean changed = previousLevel != mc.level || textureSize != size || outputSize != physicalSize || previousZoom != zoom || previousRadius != shapeRadius
                 || previousCircle != cfg.minimapCircular || previousRotate != cfg.minimapRotateWithPlayer
                 || previousTerrain != cfg.minimapShowTerrain || previousBorder != border || previousAlpha != alpha;
         boolean motion = Math.abs(px - previousX) + Math.abs(pz - previousZ) > zoom / (double) size * .25
                 || (cfg.minimapRotateWithPlayer && Math.abs(yaw - previousYaw) > .2);
         if (changed || ((motion || previousRevision != revision) && now - lastPaint >= 50_000_000L)) {
-            ensureTexture(size);
+            ensureTexture(size, physicalSize);
             if (engine != null && cfg.minimapShowTerrain) engine.requestMinimap(px, pz, zoom);
             paint(engine, px, pz, size, zoom, cos, sin, cfg, border, alpha);
-            texture.upload();
+            terrain.writeScaledAbgr(terrainPixels, size, size);
+            float gui = mc.getWindow().getGuiScale();
+            float density = physicalSize / (float) size;
+            terrain.clipShape(g, cfg.minimapCircular, shapeRadius * density);
+            RenderUtil.RectSink previous = RenderUtil.beginCapture(terrain.sink());
+            try {
+                RenderUtil.drawRoundedOutlineAA(g, 0, 0, physicalSize / gui, physicalSize / gui,
+                        shapeRadius * density / gui, density / gui, border);
+            } finally { RenderUtil.endCapture(previous); }
+            terrain.commit(now);
             previousX = px; previousZ = pz; previousYaw = yaw;
             previousLevel = mc.level; previousZoom = zoom;
             previousCircle = cfg.minimapCircular; previousRotate = cfg.minimapRotateWithPlayer;
             previousTerrain = cfg.minimapShowTerrain; previousBorder = border; previousAlpha = alpha;
             previousRevision = revision; lastPaint = now;
+            previousRadius = shapeRadius;
         }
-        g.blit(RenderPipelines.GUI_TEXTURED, TEXTURE, x + 1, y + 1, 0, 0, size, size, size, size);
+        MapMarkers.blitPixels(g, terrain, MapMarkers.pixelX(g, x + 1, y + 1), MapMarkers.pixelY(g, x + 1, y + 1),
+                Math.round(size * MapMarkers.density(g)), Math.round(size * MapMarkers.density(g)), -1);
         double centerX = x + 1 + size * .5, centerY = y + 1 + size * .5;
         double scale = size / (double) zoom;
         double limit = size * .5 - 6;
@@ -120,7 +139,7 @@ public final class MinimapModule extends HudModule {
                     // Keep labels towards the map interior, inside a circular mask as well.
                     int ty = markerY < centerY ? markerY + 7 : markerY - 13;
                     if (!cfg.minimapCircular || Math.hypot(tx + width * .5 - centerX, ty + 4 - centerY) < limit - width * .5)
-                        g.drawString(mc.font, text, tx, ty, 0xFFFFFFFF, true);
+                        MapMarkers.text(g, mc.font, text, tx, ty, 0xFFFFFFFF, true);
                 }
             }
         }
@@ -145,7 +164,7 @@ public final class MinimapModule extends HudModule {
                 double sy = MapTransform.screenZ(dx, dz, cos, sin) * scale;
                 if (MapTransform.clampScale(sx, sy, limit, cfg.minimapCircular) < 1) continue;
                 int ex = (int) Math.round(centerX + sx), ey = (int) Math.round(centerY + sy);
-                g.fill(ex - 1, ey - 1, ex + 2, ey + 2, color); drawn++;
+                MapMarkers.dot(g, ex, ey, color); drawn++;
             }
         }
         if (cfg.minimapShowSelfArrow) {
@@ -158,7 +177,7 @@ public final class MinimapModule extends HudModule {
                 double angle = i * Math.PI * .5 - rotation;
                 int tx = (int) Math.round(centerX + Math.sin(angle) * radius);
                 int ty = (int) Math.round(centerY - Math.cos(angle) * radius);
-                g.drawString(mc.font, CARDINALS[i], tx - mc.font.width(CARDINALS[i]) / 2, ty - 4, border, true);
+                MapMarkers.text(g, mc.font, CARDINALS[i], tx - mc.font.width(CARDINALS[i]) * .5f, ty - 4, border, true);
             }
         }
         int textY = y + size + 4;
@@ -178,45 +197,42 @@ public final class MinimapModule extends HudModule {
     private void drawCaption(GuiGraphics g, Minecraft mc, String text, int x, int y, int color) {
         String fitted = mc.font.plainSubstrByWidth(text, getWidth() - 6);
         if (!fitted.equals(text)) fitted = mc.font.plainSubstrByWidth(text, getWidth() - 18) + "…";
-        g.drawString(mc.font, fitted, x + (getWidth() - mc.font.width(fitted)) / 2, y, color, true);
+        MapMarkers.text(g, mc.font, fitted, x + (getWidth() - mc.font.width(fitted)) * .5f, y, color, true);
     }
 
-    private void ensureTexture(int size) {
-        if (image != null && textureSize == size) return;
-        release();
-        image = new NativeImage(NativeImage.Format.RGBA, size, size, true);
-        texture = new DynamicTexture(() -> "minimap", image);
-        Minecraft.getInstance().getTextureManager().register(TEXTURE, texture);
-        textureSize = size;
+    private void ensureTexture(int size, int physicalSize) {
+        if (terrainPixels == null || textureSize != size) terrainPixels = new int[size * size];
+        if (textureSize != size || outputSize != physicalSize) {
+            // HUD editor can resize after the ordinary HUD has already queued a blit.
+            // Keep that texture alive until the next frame's submission boundary.
+            retiredTerrains.add(terrain); terrain = new UiLayerCache();
+            terrain.ensureSize(physicalSize, physicalSize);
+        }
+        textureSize = size; outputSize = physicalSize;
     }
 
     private void paint(WorldMapClient engine, double px, double pz, int size, int zoom,
                        double cos, double sin, AuroraConfig cfg, int border, int alpha) {
-        double center = size * .5, radius = center - .5;
+        double center = size * .5, blocks = zoom / (double) size;
+        // The terrain sampling budget stays size², independent of GUI/HUD density.
+        // Only the cached presentation is expanded before its native-resolution mask.
         for (int y = 0; y < size; y++) for (int x = 0; x < size; x++) {
             double sx = x + .5 - center, sy = y + .5 - center;
-            double distance = cfg.minimapCircular ? Math.hypot(sx, sy) : Math.max(Math.abs(sx), Math.abs(sy));
-            if (distance > radius + .5) { image.setPixel(x, y, 0); continue; }
-            if (distance >= radius - 1) {
-                int a = (int) ((border >>> 24) * Math.min(1, Math.max(0, radius + .5 - distance)));
-                image.setPixel(x, y, (a << 24) | (border & 0xFFFFFF)); continue;
-            }
-            int color = 0xFF171412; // ABGR unexplored/background
+            int color = 0xFF171412;
             if (cfg.minimapShowTerrain && engine != null) {
-                double blocks = zoom / (double) size;
                 int wx = (int) Math.floor(px + (sx * cos - sy * sin) * blocks);
                 int wz = (int) Math.floor(pz + (sx * sin + sy * cos) * blocks);
-                int terrain = engine.sampleSurfaceAbgr(wx, wz);
-                if ((terrain >>> 24) != 0) color = terrain;
+                int sampled = engine.sampleSurfaceAbgr(wx, wz);
+                if ((sampled >>> 24) != 0) color = sampled;
             }
-            image.setPixelABGR(x, y, (alpha << 24) | (color & 0xFFFFFF));
+            terrainPixels[y * size + x] = (alpha << 24) | (color & 0xFFFFFF);
         }
     }
 
     private void release() {
-        if (texture != null) Minecraft.getInstance().getTextureManager().release(TEXTURE);
-        else if (image != null) image.close();
-        texture = null; image = null; textureSize = -1;
+        terrain.dispose(); terrainPixels = null; textureSize = -1; outputSize = 0;
+        for (UiLayerCache retired : retiredTerrains) retired.dispose();
+        retiredTerrains.clear(); terrainFrame = -1;
         previousX = Double.NaN; previousRevision = -1; previousLevel = null;
         entities = List.of(); lastEntities = 0; entityLevel = null;
     }
