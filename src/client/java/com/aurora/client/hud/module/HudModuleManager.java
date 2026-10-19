@@ -19,6 +19,7 @@ public class HudModuleManager {
     private final Map<String, HudModule> modules = new LinkedHashMap<>();
 
     public void register(HudModule m) {
+        m.captureDefaultLayout(); // before AuroraClient applies saved layouts
         if (modules.put(m.id(), m) != null) {
             AuroraClient.LOGGER.warn("HUD module {} registered twice", m.id());
         }

@@ -57,6 +57,11 @@ public class ToggleSprintSneakModule extends HudModule {
 
     public ToggleSprintSneakModule() {
         super(ID);
+        // Default home: the bottom-right corner, which no other module claims.
+        // At TOP_LEFT (4,4) it rendered on top of the Info readout.
+        this.anchor = com.aurora.client.hud.HudAnchor.BOTTOM_RIGHT;
+        this.offsetX = -4;
+        this.offsetY = -4;
     }
 
     @Override protected AuroraConfig.HudBackground backgroundMode() { return AuroraConfig.get().sprintHudBgMode; }

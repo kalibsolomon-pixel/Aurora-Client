@@ -247,8 +247,25 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
     protected int leadingRowCount() { return 0; }
 
     protected int rowGap() { return 4; }
-    protected int listTop() { return 56; }
-    protected int listBottomPad() { return 50; }
+
+    // ---- Window geometry (premium-design audit, 2026-10-19) ----
+    //
+    // One centered window owns the whole screen: a header band (the screen's
+    // primary action leading, Done trailing) and the list beneath it. The
+    // toolbar used to float in the viewport corners, unaligned with the list
+    // frame and colliding with HUD modules; every chrome element now shares
+    // the list's column edges.
+    /** Header band height: 8 inset + 22 toolbar row + 8 inset. */
+    protected static final int HEADER_H = 38;
+    protected int windowMaxHeight() { return 420; }
+    protected int windowHeight() { return Math.max(96, Math.min(windowMaxHeight(), this.height - 24)); }
+    protected int windowTop() { return Math.max(4, (this.height - windowHeight()) / 2); }
+    protected int windowBottom() { return windowTop() + windowHeight(); }
+    protected int windowX() { return (this.width - listWidth()) / 2 - 8; }
+    protected int windowWidth() { return listWidth() + 16; }
+    protected int toolbarY() { return windowTop() + 8; }
+    protected int listTop() { return windowTop() + HEADER_H + 2; }
+    protected int listBottomPad() { return this.height - (windowBottom() - 8); }
 
     private int rowStep() { return rowHeight() + rowGap(); }
 
@@ -263,8 +280,12 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         // the shared row both manager screens ship.
         toolbarActionBtn = createToolbarActionBtn();
         if (toolbarActionBtn != null) this.addRenderableWidget(toolbarActionBtn);
+        if (toolbarActionBtn != null) {
+            toolbarActionBtn.setX(windowX() + 8);
+            toolbarActionBtn.setY(toolbarY());
+        }
         doneBtn = this.addRenderableWidget(ButtonWidget.semantic(
-                this.width - 80 - 16, 16, 80, 22,
+                windowX() + windowWidth() - 8 - 64, toolbarY(), 64, 22,
                 Component.literal("Done"),
                 "Close this screen and return.",
                 this::onClose).glassBackground(true));
@@ -337,8 +358,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         // row rims keep the list clip.
         GlassSurface.beginGlassPass();
         float frameRadius = ThemeManager.current().roundness().radius();
-        GlassSurface.container(ctx, listX - 8, listClipTop() - 8, listWidth() + 16,
-                listClipBottom() - listClipTop() + 16, frameRadius);
+        GlassSurface.container(ctx, windowX(), windowTop(), windowWidth(), windowHeight(), frameRadius);
 
         rowGlassDrawn.clear();
         onBeginRowGlassPass();
@@ -366,8 +386,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
 
         // ---- 2. Dim — end of the glass pass (token-driven; dark in both modes by design) ----
         GlassSurface.overlayDim(ctx, this.width, this.height);
-        MaterialSurface.parent(ctx, listX - 8, listClipTop() - 8, listWidth() + 16,
-                listClipBottom() - listClipTop() + 16, frameRadius);
+        MaterialSurface.parent(ctx, windowX(), windowTop(), windowWidth(), windowHeight(), frameRadius);
 
 
 
@@ -376,8 +395,12 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
 
         ctx.enableScissor(listX - 4, listClipTop(), listX + listWidth() + 4, listClipBottom());
         if (rows.isEmpty()) {
-            ctx.drawString(this.font, emptyMessage(), listX + 8, listTop() + 10,
-                    ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
+            // Empty state centered in the list well rather than pinned to its corner.
+            String empty = com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(this.font,
+                    emptyMessage().getString(), listWidth() - 16, 0);
+            com.aurora.client.ui.util.AuroraFontRenderer.drawCentered(ctx, this.font, empty,
+                    listX + listWidth() / 2, (listClipTop() + listClipBottom()) / 2 - this.font.lineHeight / 2,
+                    ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY));
         }
 
         int y = listTop() - (int) scroll.current();
@@ -401,8 +424,12 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         // hides anything above the boundary. Painted outside the content
         // scissor, before the thumb — an opaque-token sibling of the thumb's
         // own over-the-dim layer, never glass.
+        // Rows now sit inside the window, so they fade into its tint (not the dim).
+        int fadeSurface = MaterialSurface.color(ThemeToken.WINDOW_FILL);
         ScrollFade.drawTop(ctx, listX - 4, listWidth() + 8, listClipTop(), ScrollFade.FADE_PX,
-                scroll.current(), ThemeManager.color(ThemeToken.OVERLAY_DIM));
+                scroll.current(), fadeSurface);
+        ScrollFade.drawBottom(ctx, listX - 4, listWidth() + 8, listClipBottom(), ScrollFade.FADE_PX,
+                maxScroll - scroll.current(), fadeSurface);
 
         // The list's scrollbar thumb — after the content scissor (it is
         // content, painted opaque over the dim like every other thumb).

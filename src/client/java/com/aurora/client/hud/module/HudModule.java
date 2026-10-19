@@ -58,12 +58,27 @@ public abstract class HudModule {
      * constructors that set per-instance offsets) override this.
      */
     public void resetLayoutToDefaults() {
-        this.anchor  = HudAnchor.TOP_LEFT;
-        this.offsetX = 4;
-        this.offsetY = 4;
+        // The module's OWN default home, captured at registration (before any
+        // saved layout is applied). Resetting every module to TOP_LEFT (4,4)
+        // piled CPS, Ping, Reach, Totem Pops and Info onto one spot
+        // (premium-design audit, 2026-10-19).
+        this.anchor  = defaultAnchor != null ? defaultAnchor : HudAnchor.TOP_LEFT;
+        this.offsetX = defaultAnchor != null ? defaultOffsetX : 4;
+        this.offsetY = defaultAnchor != null ? defaultOffsetY : 4;
         this.scale   = 1.0f;
         this.enabled = true;
         this.locked  = false;
+    }
+
+    private HudAnchor defaultAnchor;
+    private int defaultOffsetX, defaultOffsetY;
+
+    /** Records the constructor-assigned layout as this module's reset target (first call wins). */
+    public final void captureDefaultLayout() {
+        if (defaultAnchor != null) return;
+        defaultAnchor = anchor;
+        defaultOffsetX = offsetX;
+        defaultOffsetY = offsetY;
     }
 
     public final String id() { return id; }

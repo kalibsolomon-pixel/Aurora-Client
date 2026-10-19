@@ -46,6 +46,7 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
     private float hue, sat, lit, alpha;
 
     private int padX, padY, padSize;
+    private int panelX, panelY, panelW, panelH;
     private int hueX, hueY, hueW, hueH;
     private int alphaX, alphaY, alphaW, alphaH;
     private int previewX, previewY, previewW, previewH;
@@ -113,11 +114,21 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
         // row, so an unclamped pad never overlaps them); below MIN_PAD the
         // editing surfaces are skipped (see pickerSupportable) instead of
         // generating overlapping or off-bounds controls.
-        int maxPad = Math.min(240, Math.min(cw - 200, ch - 160));
+        // One centered dialog (premium-design audit, 2026-10-19): the title
+        // sits in the panel's header band, every editing surface and both
+        // actions live INSIDE the panel (Apply previously straddled its
+        // bottom edge), and the panel is centered on both axes. The pad
+        // still shrinks with both axes; below MIN_PAD the editing surfaces
+        // are skipped (see pickerSupportable).
+        int maxPad = Math.min(240, Math.min(cw - 120, ch - 184));
         pickerSupportable = maxPad >= MIN_PAD;
         padSize = pickerSupportable ? maxPad : MIN_PAD; // unused when unsupported
-        padX = (cw - padSize - 80) / 2;
-        padY = 48;
+        panelW = padSize + 92;
+        panelH = padSize + 164;
+        panelX = (cw - panelW) / 2;
+        panelY = Math.max(4, (ch - panelH) / 2);
+        padX = panelX + 12;
+        padY = panelY + 46;
 
         hueW = 18;
         hueH = padSize;
@@ -130,14 +141,15 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
         alphaY = padY;
 
         previewX = padX;
-        previewY = padY + padSize + 14;
-        previewW = padSize;
-        previewH = 28;
+        previewY = padY + padSize + 22;
+        previewW = panelW - 24;
+        previewH = 24;
 
+        int hexY = previewY + previewH + 8;
         if (pickerSupportable) {
             hexField = new EditBox(
                     this.font,
-                    previewX + 32, previewY + previewH + 10, previewW - 32, 18,
+                    previewX + 28, hexY, 96, 18,
                     Component.literal("Hex")
             );
             hexField.setMaxLength(9);
@@ -148,21 +160,26 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
             hexField = null;
         }
 
-        int btnY = ch - 32;
+        // Actions: right-aligned inside the panel, primary rightmost (desktop
+        // convention); the unsupported fallback keeps them centered at the bottom.
+        int btnW = 64, btnH = 20;
+        int btnY = pickerSupportable ? hexY + 18 + 14 : ch - 32;
+        int applyX = pickerSupportable ? panelX + panelW - 12 - btnW : cw / 2 + 4;
+        int cancelX = pickerSupportable ? applyX - 6 - btnW : cw / 2 - 4 - btnW;
         this.addRenderableWidget(ButtonWidget.semantic(
-                cw / 2 - 110, btnY, 100, 20,
+                cancelX, btnY, btnW, btnH,
+                Component.literal("Cancel"),
+                "Discards any edits and returns.",
+                () -> this.minecraft.setScreen(parent)).glassBackground(true));
+
+        this.addRenderableWidget(ButtonWidget.semantic(
+                applyX, btnY, btnW, btnH,
                 Component.literal("Apply"),
                 "Applies the selected color and returns.",
                 () -> {
                     onApply.accept(currentArgb());
                     this.minecraft.setScreen(parent);
                 }).glassStyle(Button.GlassStyle.STAINED).primary(true));
-
-        this.addRenderableWidget(ButtonWidget.semantic(
-                cw / 2 + 10, btnY, 100, 20,
-                Component.literal("Cancel"),
-                "Discards any edits and returns.",
-                () -> this.minecraft.setScreen(parent)).glassBackground(true));
     }
 
     private int currentArgb() {
@@ -212,8 +229,6 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
     public void render(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
         // Themed overlay dim (token-driven; dark in both modes by design).
         var radius = ThemeManager.current().roundness().radiusLarge();
-        int panelX = padX-12, panelY = padY-22;
-        int panelW = alphaX+alphaW-padX+24, panelH = previewY+previewH+40-panelY;
         com.aurora.client.ui.component.GlassSurface.beginGlassPass();
         if (pickerSupportable) com.aurora.client.ui.component.GlassSurface.container(ctx,panelX,panelY,panelW,panelH,radius);
         com.aurora.client.ui.component.GlassSurface.overlayDim(ctx,this.width,this.height);
@@ -226,7 +241,9 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
         int labelCol = pickerSupportable ? ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY)
                 : ThemeManager.withAlpha(onOverlay, 0x99);
 
-        AuroraFontRenderer.drawCentered(ctx, tr, this.title, this.width / 2, 20, onOverlay);
+        if (pickerSupportable) ctx.drawString(tr, AuroraFontRenderer.ellipsize(tr, this.title.getString(), panelW - 24, 0),
+                panelX + 12, panelY + 13, MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
+        else AuroraFontRenderer.drawCentered(ctx, tr, this.title, this.width / 2, 20, onOverlay);
 
         // C-8 short-window graceful fail: below the supportable minimum the
         // editing surfaces are skipped (they could not fit without
@@ -282,10 +299,11 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
         RenderUtil.drawRoundedOutlineAA(ctx, previewX, previewY, previewW, previewH,
                 Math.min(previewH / 2f, ThemeManager.current().roundness().radiusSmall()), 1.0f, 0xFFFFFFFF);
 
-        ctx.drawString(tr, Component.literal("Hue"),   hueX - 4, hueY - 12, labelCol, false);
-        ctx.drawString(tr, Component.literal("Alpha"), alphaX - 8, alphaY - 12, labelCol, false);
+        // Strip captions centered over their strips; field captions share the content column.
+        AuroraFontRenderer.drawCentered(ctx, tr, Component.literal("Hue"), hueX + hueW / 2, hueY - 12, labelCol);
+        AuroraFontRenderer.drawCentered(ctx, tr, Component.literal("Alpha"), alphaX + alphaW / 2, alphaY - 12, labelCol);
         ctx.drawString(tr, Component.literal("Preview"), previewX, previewY - 12, labelCol, false);
-        ctx.drawString(tr, Component.literal("Hex:"), previewX, previewY + previewH + 12, labelCol, false);
+        ctx.drawString(tr, Component.literal("Hex"), previewX, previewY + previewH + 13, labelCol, false);
 
         // (No bespoke hex-field outline: the hex EditBox is themed end-to-end by
         // the mod-wide EditBoxMixin — fill, border, text and caret — through

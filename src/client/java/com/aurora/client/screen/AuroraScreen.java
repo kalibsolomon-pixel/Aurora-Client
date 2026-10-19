@@ -959,6 +959,8 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         ClipBand vp = contentViewport();
         ScrollFade.drawTop(g, vp.x, vp.width, vp.y, ScrollFade.FADE_PX,
                 scrolls[selectedCategory].current(), MaterialSurface.color(ThemeToken.WINDOW_FILL));
+        ScrollFade.drawBottom(g, vp.x, vp.width, vp.y + vp.height, ScrollFade.FADE_PX,
+                computeMaxScroll() - scrolls[selectedCategory].current(), MaterialSurface.color(ThemeToken.WINDOW_FILL));
 
         drawScrollbar(g);
     }
@@ -1081,7 +1083,16 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             }
         }
         if (mods.isEmpty()) {
-            g.drawString(tr, "No modules found.", (int) (mx + 12), (int) (my + 45), MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED), false);
+            // Empty search: centered in the content well with the query echoed back,
+            // plus a secondary hint, instead of a lone line pinned to the corner.
+            ClipBand well = contentViewport();
+            int cx = well.x + well.width / 2, cy = well.y + well.height / 2 - tr.lineHeight;
+            String headline = com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(tr,
+                    "No modules match “" + searchQuery.trim() + "”", well.width - 16, 1);
+            com.aurora.client.ui.util.AuroraFontRenderer.drawCentered(g, tr, headline, cx, cy,
+                    MaterialSurface.color(ThemeToken.ON_BACKGROUND));
+            com.aurora.client.ui.util.AuroraFontRenderer.drawCentered(g, tr, "Try a shorter or different search", cx,
+                    cy + tr.lineHeight + 4, MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED));
         }
         g.disableScissor();
     }

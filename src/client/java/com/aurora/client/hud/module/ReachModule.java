@@ -27,7 +27,7 @@ public class ReachModule extends HudModule {
         super(ID);
         this.anchor = com.aurora.client.hud.HudAnchor.TOP_LEFT;
         this.offsetX = 4;
-        this.offsetY = 80;
+        this.offsetY = 96; // its own row below Ping (both used to share y=80)
     }
 
     private String buildText() {

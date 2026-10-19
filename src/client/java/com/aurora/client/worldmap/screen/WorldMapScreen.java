@@ -45,33 +45,55 @@ public final class WorldMapScreen extends Screen implements ThemedScreen {
 
     public WorldMapScreen() { super(Component.literal("World Map")); }
 
+    // ---- Chrome geometry (premium-design audit, 2026-10-19) ----
+    // One top toolbar bar (navigation leading, screen actions trailing, Done
+    // last) and one slim bottom status bar. On narrow windows the toolbar
+    // wraps to two rows instead of overlapping. Everything between the bars
+    // is map; click/scroll guards use these same bounds.
+    private static final int BAR_PAD = 4, CTRL_H = 22, GAP = 6, STATUS_H = 20;
+    private int topBarH = 30;
+    private int topBarBottom() { return BAR_PAD + topBarH; }
+    private int statusTop() { return height - BAR_PAD - STATUS_H; }
+
     @Override protected void init() {
         viewport.constrainSize(width, height);
-        int gap = 6, left = 8;
-        int cell = Math.min(120, (width - 16 - 3 * gap) / 4);
-        dimensionButton = addRenderableWidget(ButtonWidget.semantic(left, 8, cell, 22,
-                Component.literal(dimensionLabel(cell)), "Browse dimension maps; live terrain capture continues.", () -> {
+        int inner = width - 2 * BAR_PAD - 2 * 6;
+        int left = BAR_PAD + 6, right = width - BAR_PAD - 6;
+        int dimW = 100, coordW = 96, goW = 36, doneW = 52;
+        int lead = dimW + GAP + coordW + 4 + goW;
+        int wideAction = 70;
+        int trail = 3 * wideAction + 2 * GAP + GAP + doneW;
+        boolean wide = lead + 12 + trail <= inner;
+        int actionW = wide ? wideAction : Math.max(40, (inner - dimW - 3 * GAP) / 3);
+        topBarH = wide ? 30 : 56;
+        int row1 = BAR_PAD + 4, row2 = row1 + CTRL_H + 4;
+        dimensionButton = addRenderableWidget(ButtonWidget.semantic(left, row1, dimW, CTRL_H,
+                Component.literal(dimensionLabel(dimW)), "Browse dimension maps; live terrain capture continues.", () -> {
                     WorldMapClient engine = WorldMapClient.get();
                     if (engine != null) engine.cycleDimension();
                     follow = false; markerRevision = -1;
-                    dimensionButton.setMessage(Component.literal(dimensionLabel(cell)));
+                    dimensionButton.setMessage(Component.literal(dimensionLabel(dimensionButton.getWidth())));
                 }));
-        addRenderableWidget(ButtonWidget.semantic(left + cell + gap, 8, cell, 22,
+        int coordX = wide ? left + dimW + GAP : left, coordY = (wide ? row1 : row2) + 2;
+        coordinates = new EditBox(font, coordX, coordY, coordW, 18, Component.literal("Go to X Z"));
+        coordinates.setMaxLength(40); coordinates.setHint(Component.literal("Go to X Z"));
+        addRenderableWidget(coordinates);
+        addRenderableWidget(ButtonWidget.semantic(coordX + coordW + 4, coordY - 2, goW, CTRL_H, Component.literal("Go"),
+                "Center the map at the entered block coordinates.", this::goToCoordinates));
+        int doneX = right - doneW, doneY = wide ? row1 : row2;
+        addRenderableWidget(ButtonWidget.semantic(doneX, doneY, doneW, CTRL_H,
+                Component.literal("Done"), "Close the map.", this::onClose));
+        int actionsRight = wide ? doneX - GAP : right;
+        int ax = actionsRight - 3 * actionW - 2 * GAP;
+        addRenderableWidget(ButtonWidget.semantic(ax, row1, actionW, CTRL_H,
                 Component.literal("Player"), "Return to the live dimension and follow the player. Shortcut P.", this::centerPlayer));
-        addRenderableWidget(ButtonWidget.semantic(left + 2 * (cell + gap), 8, cell, 22,
+        addRenderableWidget(ButtonWidget.semantic(ax + actionW + GAP, row1, actionW, CTRL_H,
                 Component.literal("Waypoints"), "Search, edit and organize this world's waypoints.",
                 () -> minecraft.setScreen(new WaypointManagerScreen(this))));
-        addRenderableWidget(ButtonWidget.semantic(left + 3 * (cell + gap), 8, cell, 22,
+        addRenderableWidget(ButtonWidget.semantic(ax + 2 * (actionW + GAP), row1, actionW, CTRL_H,
                 Component.literal("Settings"), "Map appearance, caching and legacy import.",
                 () -> minecraft.setScreen(new FeatureDetailScreen(this,
                         FeatureRegistry.modules().stream().filter(f -> f.id.equals("world_map")).findFirst().orElseThrow()))));
-        coordinates = new EditBox(font, 8, 38, 108, 18, Component.literal("Go to X Z"));
-        coordinates.setMaxLength(40); coordinates.setHint(Component.literal("Go to X Z"));
-        addRenderableWidget(coordinates);
-        addRenderableWidget(ButtonWidget.semantic(122, 37, 38, 20, Component.literal("Go"),
-                "Center the map at the entered block coordinates.", this::goToCoordinates));
-        addRenderableWidget(ButtonWidget.semantic(width - 56, height - 27, 48, 20,
-                Component.literal("Done"), "Close the map.", this::onClose));
         if (follow) centerPlayer();
         lastFrame = System.nanoTime();
     }
@@ -81,9 +103,21 @@ public final class WorldMapScreen extends Screen implements ThemedScreen {
         return engine == null ? "" : engine.dimensionId();
     }
     private String dimensionLabel(int width) {
-        String text = dimension();
-        if (text.startsWith("minecraft:")) text = text.substring(10);
-        return AuroraFontRenderer.ellipsize(font, text.replace('_', ' '), width - 10, 1);
+        return AuroraFontRenderer.ellipsize(font, displayDimension(dimension()), width - 10, 1);
+    }
+
+    /** "minecraft:the_nether" -> "The Nether"; modded ids keep only their path, title-cased. */
+    public static String displayDimension(String id) {
+        if (id == null || id.isEmpty()) return "Unknown";
+        String path = id.substring(id.indexOf(':') + 1);
+        StringBuilder out = new StringBuilder(path.length());
+        boolean upper = true;
+        for (char c : path.toCharArray()) {
+            if (c == '_' || c == '/' || c == '-') { out.append(' '); upper = true; continue; }
+            out.append(upper ? Character.toUpperCase(c) : c);
+            upper = false;
+        }
+        return out.toString();
     }
 
     private void centerPlayer() {
@@ -117,8 +151,8 @@ public final class WorldMapScreen extends Screen implements ThemedScreen {
         Waypoint hovered = null;
         var feature = WaypointFeature.get();
         nameLayout.reset();
-        nameLayout.reserve(4, 4, Math.min(width - 8, 506), 56);
-        nameLayout.reserve(4, height - 47, width - 8, 43);
+        nameLayout.reserve(BAR_PAD, BAR_PAD, width - 2 * BAR_PAD, topBarH);
+        nameLayout.reserve(BAR_PAD, statusTop(), width - 2 * BAR_PAD, STATUS_H);
         if (minecraft.player != null && minecraft.level != null
                 && dimension().equals(minecraft.level.dimension().identifier().toString()))
             nameLayout.reserve(screenX(minecraft.player.getX()) - 8, screenZ(minecraft.player.getZ()) - 8, 16, 16);
@@ -159,22 +193,28 @@ public final class WorldMapScreen extends Screen implements ThemedScreen {
         }
         g.disableScissor();
         // Opaque semantic surfaces keep controls readable over deferred terrain tiles.
-        MaterialSurface.floating(g, 4, 4, Math.min(width - 8, 506), 56,
-                Math.round(ThemeManager.current().roundness().radius()), 1);
-        MaterialSurface.floating(g, 4, height - 47, width - 8, 43,
-                Math.round(ThemeManager.current().roundness().radius()), 1);
-        String hint = "Drag · Scroll zoom · Right-click add · Click marker edit · P player";
-        g.drawString(font, AuroraFontRenderer.ellipsize(font, hint, width - 24, 1),
-                12, height - 41, ThemeManager.color(ThemeToken.ON_SURFACE), false);
+        int barR = Math.round(ThemeManager.current().roundness().radius());
+        MaterialSurface.floating(g, BAR_PAD, BAR_PAD, width - 2 * BAR_PAD, topBarH, barR, 1);
+        MaterialSurface.floating(g, BAR_PAD, statusTop(), width - 2 * BAR_PAD, STATUS_H,
+                Math.round(ThemeManager.current().roundness().radiusSmall()), 1);
+        int textY = statusTop() + (STATUS_H - font.lineHeight) / 2 + 1;
         String position = (int) Math.floor(viewport.worldX(mx, width)) + ", "
-                + (int) Math.floor(viewport.worldZ(my, height)) + "  ·  " +
+                + (int) Math.floor(viewport.worldZ(my, height)) + "  \u00b7  " +
                 String.format(java.util.Locale.ROOT, "%.2f px/block", viewport.scale());
-        g.drawString(font, AuroraFontRenderer.ellipsize(font, position, width - 80, 1),
-                12, height - 22, ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
-        if (!status.isEmpty()) g.drawString(font, AuroraFontRenderer.ellipsize(font, status, width - 180, 1),
-                168, 43, ThemeManager.color(ThemeToken.ON_SURFACE), false);
+        g.drawString(font, position, BAR_PAD + 8, textY, ThemeManager.color(ThemeToken.ON_SURFACE), false);
+        // Right side of the status bar: a transient status message, else the
+        // gesture hint (muted; dropped entirely when there is no room).
+        String trailing = status.isEmpty()
+                ? "Drag to pan  \u00b7  Scroll to zoom  \u00b7  Right-click to add  \u00b7  Click a marker to edit  \u00b7  P to follow"
+                : status;
+        int trailingRoom = width - 2 * BAR_PAD - 16 - font.width(position) - 16;
+        if (trailingRoom > 40) {
+            String fitted = AuroraFontRenderer.ellipsize(font, trailing, trailingRoom, 1);
+            g.drawString(font, fitted, width - BAR_PAD - 8 - font.width(fitted), textY,
+                    ThemeManager.color(status.isEmpty() ? ThemeToken.ON_BACKGROUND_MUTED : ThemeToken.ON_SURFACE), false);
+        }
         super.render(g, mx, my, delta);
-        if (hovered != null && my > 60 && my < height - 47) {
+        if (hovered != null && my > topBarBottom() && my < statusTop()) {
             String tooltip = hovered.name + " · " + hovered.x + ", " + hovered.y + ", " + hovered.z;
             int tw = Math.min(width - 16, font.width(tooltip) + 16);
             int tx = Math.max(4, Math.min(mx + 8, width - tw - 4));
@@ -250,7 +290,7 @@ public final class WorldMapScreen extends Screen implements ThemedScreen {
 
     @Override public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         if (super.mouseClicked(event, doubleClick)) return true;
-        if (event.y() < 62 || event.y() >= height - 47) return true;
+        if (event.y() < topBarBottom() || event.y() >= statusTop()) return true;
         if (event.button() == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
             for (Waypoint waypoint : markers) {
                 if (Math.abs(event.x() - screenX(waypoint.x + .5)) > 8
@@ -275,7 +315,7 @@ public final class WorldMapScreen extends Screen implements ThemedScreen {
     }
     @Override public boolean mouseReleased(MouseButtonEvent event) { dragging = false; return super.mouseReleased(event); }
     @Override public boolean mouseScrolled(double x, double y, double sx, double sy) {
-        if (sy == 0 || y < 62 || y >= height - 47) return false;
+        if (sy == 0 || y < topBarBottom() || y >= statusTop()) return false;
         follow = false; viewport.zoom(sy > 0 ? 2 : .5, x, y, width, height); return true;
     }
     @Override public boolean keyPressed(KeyEvent event) {

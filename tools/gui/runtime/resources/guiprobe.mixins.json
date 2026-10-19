@@ -1,0 +1,1 @@
+{"required":true,"package":"guiprobe.mixin","compatibilityLevel":"JAVA_21","client":["FrameHook","MouseAccess"],"injectors":{"defaultRequire":1}}

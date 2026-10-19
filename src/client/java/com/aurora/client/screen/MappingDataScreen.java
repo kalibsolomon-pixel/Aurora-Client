@@ -33,22 +33,25 @@ public final class MappingDataScreen extends Screen implements ThemedScreen {
                     if (feature != null) status = "Copied " + feature.importLegacy() + " waypoints; originals kept.";
                 }));
         waypoints.active = identity != null;
-        addRenderableWidget(ButtonWidget.semantic(x + 12, y + 132, w - 24, 20,
+        // Done is dismissal, not a third peer of the two import actions: a compact
+        // trailing button like every other Aurora dialog footer.
+        addRenderableWidget(ButtonWidget.semantic(x + w - 12 - 64, y + 132, 64, 20,
                 Component.literal("Done"), "Return to map settings.", this::onClose));
     }
     @Override public void render(GuiGraphics g, int mx, int my, float delta) {
         MaterialSurface.floating(g, x, y, w, 160, Math.round(ThemeManager.current().roundness().radius()), 1);
-        g.drawCenteredString(font, title, width / 2, y + 8, ThemeManager.color(ThemeToken.ON_SURFACE));
+        // Title shares the dialog's left content edge (no centered, shadowed heading).
+        g.drawString(font, title, x + 12, y + 10, ThemeManager.color(ThemeToken.ON_SURFACE), false);
         String text = "Older folders used world display names. Only import if this is the original world. "
                 + "Copied data stays isolated here; original files remain untouched.";
         int lineY = y + 24;
         for (var line : font.split(Component.literal(text), w - 24)) {
-            g.drawString(font, line, x + 12, lineY, ThemeManager.color(ThemeToken.ON_SURFACE), false); lineY += 10;
+            g.drawString(font, line, x + 12, lineY, ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY), false); lineY += 10;
         }
         var engine = WorldMapClient.get();
         String message = status.isEmpty() && engine != null ? engine.importStatus() : status;
-        g.drawString(font, com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(font, message, w - 24, 1),
-                x + 12, y + 120, ThemeManager.color(ThemeToken.ON_SURFACE), false);
+        g.drawString(font, com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(font, message, w - 24 - 64 - 8, 1),
+                x + 12, y + 138, ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
         super.render(g, mx, my, delta);
     }
     @Override public void onClose() { minecraft.setScreen(parent); }

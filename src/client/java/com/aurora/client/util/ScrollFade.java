@@ -74,4 +74,21 @@ public final class ScrollFade {
         g.fillGradient(x, boundaryY, x + w, boundaryY + fadeH,
                 (topA << 24) | rgb, rgb);
     }
+
+    /**
+     * Bottom-edge companion of {@link #drawTop} (premium-design audit,
+     * 2026-10-19): content that continues below the viewport fades into the
+     * surface over {@code fadeH} pixels above {@code boundaryY} instead of
+     * hard-cutting mid-tile. Engagement follows the REMAINING scroll distance,
+     * so the fade disappears exactly as the last row settles into view.
+     */
+    public static void drawBottom(GuiGraphics g, int x, int w, int boundaryY, int fadeH,
+                                  double remaining, int surfaceArgb) {
+        double k = engagement(remaining, fadeH);
+        if (k <= 0.0 || fadeH <= 0 || w <= 0) return;
+        int rgb = surfaceArgb & 0x00FFFFFF;
+        int bottomA = (int) (((surfaceArgb >>> 24) & 0xFF) * k);
+        if (bottomA <= 0) return;
+        g.fillGradient(x, boundaryY - fadeH, x + w, boundaryY, rgb, (bottomA << 24) | rgb);
+    }
 }

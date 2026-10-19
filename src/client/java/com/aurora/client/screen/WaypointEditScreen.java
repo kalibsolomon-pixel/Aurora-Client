@@ -57,21 +57,21 @@ public final class WaypointEditScreen extends Screen implements ThemedScreen {
         }
         int half = (panelWidth - 28) / 2;
         visible = addRenderableWidget(ButtonWidget.semantic(left + 10, top + 91, half, 20,
-                Component.literal(draft.visible ? "Visible" : "Hidden"), "Shows this waypoint on maps and in-world.",
-                () -> { draft.visible = !draft.visible; visible.setMessage(Component.literal(draft.visible ? "Visible" : "Hidden")); }));
+                Component.literal(visibilityLabel()), "Shows this waypoint on maps and in-world.",
+                () -> { draft.visible = !draft.visible; visible.setMessage(Component.literal(visibilityLabel())); }));
         marker = addRenderableWidget(ButtonWidget.semantic(left + 18 + half, top + 91, half, 20,
-                Component.literal("Marker: " + draft.marker), "Cycles the waypoint marker style.", () -> {
+                Component.literal(markerLabel()), "Cycles the waypoint marker style.", () -> {
                     var all = AuroraConfig.WaypointMarker.values();
                     draft.marker = all[(draft.marker.ordinal() + 1) % all.length];
-                    marker.setMessage(Component.literal("Marker: " + draft.marker));
+                    marker.setMessage(Component.literal(markerLabel()));
                 }));
         addRenderableWidget(ButtonWidget.semantic(left + 10, top + 136, half, 20,
                 Component.literal("Save"), "Saves this waypoint in the current world.", this::save)
                 .glassStyle(Button.GlassStyle.STAINED).primary(true));
         addRenderableWidget(ButtonWidget.semantic(left + 18 + half, top + 136, half, 20,
                 Component.literal("Cancel"), "Discards this edit.", this::onClose));
-        addRenderableWidget(ButtonWidget.semantic(left + panelWidth - 72, top + 3, 64, 18,
-                Component.literal(details ? "Location" : "Details"), "Switches editor fields.", () -> {
+        addRenderableWidget(ButtonWidget.semantic(left + panelWidth - 92, top + 3, 84, 18,
+                Component.literal(details ? "Show location" : "Show details"), "Switches between location fields and group, description and color.", () -> {
                     remember(); details = !details; rebuildWidgets();
                 }));
         WaypointFeature feature = WaypointFeature.get();
@@ -85,6 +85,12 @@ public final class WaypointEditScreen extends Screen implements ThemedScreen {
                 }));
         navigate.active = !creating;
         setInitialFocus(fields[details ? 3 : 0]);
+    }
+
+    private String visibilityLabel() { return draft.visible ? "Shown on maps" : "Hidden from maps"; }
+    private String markerLabel() {
+        String name = draft.marker.name();
+        return "Marker: " + name.charAt(0) + name.substring(1).toLowerCase(java.util.Locale.ROOT);
     }
 
     private boolean remember() {
@@ -140,11 +146,13 @@ public final class WaypointEditScreen extends Screen implements ThemedScreen {
         MaterialSurface.floating(g, left, top, panelWidth, 160,
                 Math.round(ThemeManager.current().roundness().radius()), 1);
         com.aurora.client.worldmap.MapMarkers.waypoint(g, left + 16, top + 12, draft, false);
+        // A validation error replaces the heading in the semantic error color, so
+        // it reads as feedback rather than as a renamed dialog.
         String heading = error.isEmpty() ? title.getString() : error;
-        g.drawString(font, com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(font, heading, panelWidth - 112, 1),
-                left + 28, top + 8, ThemeManager.color(ThemeToken.ON_SURFACE), false);
+        g.drawString(font, com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(font, heading, panelWidth - 132, 1),
+                left + 28, top + 8, ThemeManager.color(error.isEmpty() ? ThemeToken.ON_SURFACE : ThemeToken.STATUS_ERROR), false);
         for (int i = details ? 3 : 0; i < (details ? 6 : 3); i++) g.drawString(font, labels[i], left + 12, top + 31 + (i % 3) * 21,
-                ThemeManager.color(ThemeToken.ON_SURFACE), false);
+                ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
         super.render(g, mx, my, delta);
     }
     @Override public void onClose() { minecraft.setScreen(parent); }

@@ -69,6 +69,36 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
     private int bodyTop() { return TOP_PAD + (fixedHeaderSetting == null ? 0 : fixedHeaderSetting.fixedHeaderHeight()); }
     private boolean compact() { return true; }
     private com.aurora.client.ui.util.UiDensity.Rect compactFrame;
+    /** The largest frame the viewport allows; {@link #compactFrame} fits content inside it. */
+    private com.aurora.client.ui.util.UiDensity.Rect maxFrame;
+
+    /**
+     * Content-fitted frame (premium-design audit, 2026-10-19): a three-row
+     * screen no longer sits in a 300px window that is mostly empty well. The
+     * frame's TOP is chosen once per init (centering the content-fitted frame
+     * as opened) and never moves while the screen is open, so Done/Reset and
+     * the title stay put; only the bottom edge follows rows that appear or
+     * disappear, up to the viewport limit, beyond which the body scrolls.
+     */
+    private void fitFrame(boolean recenter) {
+        int total = 0;
+        for (FeatureSetting setting : meta.settings) if (setting.isVisible()) total += bodyHeight(setting) + ROW_GAP;
+        if (total > 0) total -= ROW_GAP;
+        int fixedHeader = fixedHeaderSetting == null ? 0 : fixedHeaderSetting.fixedHeaderHeight();
+        // The body must also be tall enough for any dropdown's popup, which is
+        // painted inside the body clip and would otherwise be cut off.
+        int popup = 0;
+        for (FeatureSetting setting : meta.settings)
+            if (setting.isVisible() && setting instanceof com.aurora.client.screen.setting.EnumSetting<?> row)
+                popup = Math.max(popup, row.popupHeight() + 30);
+        int wanted = Math.max(total == 0 ? 64 : 80, 36 + fixedHeader + Math.max(total, popup) + 8);
+        int top = recenter ? Math.max(maxFrame.y(), (this.height - Math.min(wanted, maxFrame.height())) / 2)
+                : compactFrame.y();
+        int limit = Math.min(maxFrame.y() + maxFrame.height(), this.height - 12) - top;
+        compactFrame = new com.aurora.client.ui.util.UiDensity.Rect(maxFrame.x(), top, maxFrame.width(),
+                Math.max(1, Math.min(wanted, limit)));
+        TOP_PAD = compactFrame.y() + 36;
+    }
     private void measureRows() {
         if (compact()) for (FeatureSetting setting : meta.settings) {
             if (setting.isVisible()) setting.measureCompact(LIST_W);
@@ -146,10 +176,12 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
     @Override
     protected void init() {
         if (compact()) {
-            compactFrame = com.aurora.client.ui.util.UiDensity.detailFrame(this.width, this.height);
+            maxFrame = com.aurora.client.ui.util.UiDensity.detailFrame(this.width, this.height);
+            compactFrame = maxFrame;
             LIST_W = compactFrame.width(); TOP_PAD = compactFrame.y() + 36;
             ROW_GAP = com.aurora.client.ui.util.UiDensity.ROW_GAP;
             measureRows();
+            fitFrame(true);
         }
         // Done — the rollout's vanilla-backed representative (Phase A): the
         // SemanticAction owns the behavior callback while vanilla keeps the
@@ -251,6 +283,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
             setting.pinHeader(pin);
             if (pin) fixedHeaderSetting = setting;
         }
+        if (compact()) fitFrame(false);
         int listX = (this.width - LIST_W) / 2;
         FeatureSetting.setHostBand(new com.aurora.client.ui.util.ClipBand(
                 listX + 8, bodyTop(), LIST_W - 16, bodyBottom() - bodyTop()));
@@ -312,6 +345,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
                 ^ ((long) fbW * 7919L)
                 ^ ((long) fbH * 17L)
                 ^ ((long) guiScale * 65537L)
+                ^ ((long) windowH * 2_147_483_647L)
                 ^ (glassWindow ? 0x5BD1B2C1L : 0L); // glass state changes cached fill presence
         long rowVersion = chromeVersion ^ ((long) fingerprint * 100_000_009L)
                 ^ ((long) (int) scroll.current() * 104729L) ^ bodyTop();
@@ -441,9 +475,20 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
                 row.renderFloatingOverlay(ctx, mouseX, mouseY);
         ctx.disableScissor();
         if (compact()) {
+            // Rows fade into the window tint at both clip edges while more content lies beyond.
+            int fadeSurface = MaterialSurface.color(ThemeToken.WINDOW_FILL);
+            if (totalRowsH == 0)
+                ctx.drawString(this.font, "This feature has no additional settings.", listX + 12, bodyTop() + 2,
+                        MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED), false);
+            com.aurora.client.util.ScrollFade.drawTop(ctx, listX + 8, LIST_W - 16, bodyTop(),
+                    com.aurora.client.util.ScrollFade.FADE_PX, scroll.current(), fadeSurface);
+            com.aurora.client.util.ScrollFade.drawBottom(ctx, listX + 8, LIST_W - 16, bodyBottom(),
+                    com.aurora.client.util.ScrollFade.FADE_PX, maxScroll - scroll.current(), fadeSurface);
+        }
+        if (compact()) {
             int titleX = com.aurora.client.ui.util.UiDensity.detailTitleX(compactFrame);
             String breadcrumb = com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(this.font, meta.displayName, Math.max(0, resetBtn.getX() - titleX - 4), 0);
-            ctx.drawString(this.font, breadcrumb, titleX, (meta.subtitle == null || meta.subtitle.isEmpty() ? compactFrame.y() + 12 : compactFrame.y() + 7), MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
+            ctx.drawString(this.font, breadcrumb, titleX, (meta.subtitle == null || meta.subtitle.isEmpty() ? compactFrame.y() + 13 : compactFrame.y() + 7), MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
             if (maxScroll > 0) {
                 var thumb = com.aurora.client.ui.component.ScrollbarChrome.thumb(scroll, bodyTop(), bodyBottom() - bodyTop(), maxScroll, 24, this.minecraft.getWindow().getGuiScale());
                 com.aurora.client.ui.component.ScrollbarChrome.draw(ctx, listX + LIST_W - 4, thumb, scroll.isDragging(), ThemeToken.ON_BACKGROUND);

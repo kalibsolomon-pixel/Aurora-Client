@@ -118,25 +118,25 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
     private List<Waypoint> reconciledRows;
     private int reconciledStart = -1;
 
-    @Override protected int listTop() { return 100; }
-    @Override protected int listBottomPad() { return 16; }
+    /** Search (18) + gap (6) + filter row (20) + gap (6) under the header band. */
+    @Override protected int listTop() { return windowTop() + HEADER_H + 52; }
 
     @Override protected void init() {
         super.init();
         int left = (width - listWidth()) / 2;
-        search = new EditBox(font, left, 45, listWidth(), 18, Component.literal("Search waypoints"));
+        search = new EditBox(font, left, windowTop() + HEADER_H, listWidth(), 18, Component.literal("Search waypoints"));
         search.setHint(Component.literal("Search name, group, dimension or description"));
         search.setValue(query);
         search.setResponder(value -> { commitEditors(); query = value; invalidateRows(); });
         addRenderableWidget(search);
         int cell = (listWidth() - 18) / 4;
-        addRenderableWidget(ButtonWidget.semantic(left, 69, cell, 20,
+        addRenderableWidget(ButtonWidget.semantic(left, windowTop() + HEADER_H + 24, cell, 20,
                 Component.literal(sortLabel()), "Cycles name, distance, creation and group sorting.",
                 () -> { commitEditors(); sort = (sort + 1) % 4; invalidateRows(); rebuildWidgets(); }));
-        addRenderableWidget(ButtonWidget.semantic(left + cell + 6, 69, cell, 20,
-                Component.literal(currentDimensionOnly ? "This dim" : "All dims"), "Filters the current dimension.",
+        addRenderableWidget(ButtonWidget.semantic(left + cell + 6, windowTop() + HEADER_H + 24, cell, 20,
+                Component.literal(currentDimensionOnly ? "This dimension" : "All dimensions"), "Filters the current dimension.",
                 () -> { commitEditors(); currentDimensionOnly = !currentDimensionOnly; invalidateRows(); rebuildWidgets(); }));
-        addRenderableWidget(ButtonWidget.semantic(left + 2 * (cell + 6), 69, cell, 20,
+        addRenderableWidget(ButtonWidget.semantic(left + 2 * (cell + 6), windowTop() + HEADER_H + 24, cell, 20,
                 Component.literal(font.plainSubstrByWidth(group.isEmpty() ? "All groups" : group, cell - 8)),
                 "Cycles waypoint groups. Edit a waypoint to assign its group.", () -> {
                     commitEditors();
@@ -149,7 +149,7 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
                     invalidateRows(); rebuildWidgets();
                 }));
         boolean hidden = AuroraConfig.get().waypointHiddenGroups != null && AuroraConfig.get().waypointHiddenGroups.contains(group);
-        ButtonWidget groupVisibility = addRenderableWidget(ButtonWidget.semantic(left + 3 * (cell + 6), 69, cell, 20,
+        ButtonWidget groupVisibility = addRenderableWidget(ButtonWidget.semantic(left + 3 * (cell + 6), windowTop() + HEADER_H + 24, cell, 20,
                 Component.literal(hidden ? "Show group" : "Hide group"), "Shows or hides the selected group on every map.", () -> {
                     var cfg = AuroraConfig.get();
                     if (cfg.waypointHiddenGroups == null) cfg.waypointHiddenGroups = new java.util.HashSet<>();
@@ -159,7 +159,7 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
         groupVisibility.active = !group.isEmpty();
     }
 
-    private String sortLabel() { return new String[]{"Name", "Distance", "Newest", "Group"}[sort]; }
+    private String sortLabel() { return "Sort: " + new String[]{"Name", "Distance", "Newest", "Group"}[sort]; }
     private void invalidateRows() { rowsRevision = -1; scroll.set(0); nameFitCache.clear(); }
 
     // ------------------------------------------------------------------
@@ -205,7 +205,9 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
     }
 
     @Override protected Component emptyMessage() {
-        return Component.literal("No waypoints in this world. Press Drop to add one.");
+        boolean filtering = !query.isEmpty() || !group.isEmpty() || currentDimensionOnly;
+        return Component.literal(filtering ? "No waypoints match the current search and filters."
+                : "No waypoints yet. Use Drop at Player Position or right-click the world map.");
     }
 
     @Override protected ButtonWidget createToolbarActionBtn() {

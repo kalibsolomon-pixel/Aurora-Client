@@ -50,10 +50,11 @@ public class ToggleIndividualModule extends HudModule {
         this.labelComponent = Component.literal(label);
         // Stack the two modules vertically by default (sprint above sneak)
         // so they don't overlap on first use.
-        this.defaultOffsetY = (kind == Kind.SPRINT ? 4 : 26);
+        // Bottom-right corner (sprint above sneak), clear of the Info readout.
+        this.defaultOffsetY = (kind == Kind.SPRINT ? -26 : -4);
         // Distinct default anchor/offset so the two halves start apart.
-        this.anchor  = HudAnchor.TOP_LEFT;
-        this.offsetX = 4;
+        this.anchor  = HudAnchor.BOTTOM_RIGHT;
+        this.offsetX = -4;
         this.offsetY = defaultOffsetY;
     }
 
@@ -77,8 +78,8 @@ public class ToggleIndividualModule extends HudModule {
      */
     @Override
     public void resetLayoutToDefaults() {
-        this.anchor  = HudAnchor.TOP_LEFT;
-        this.offsetX = 4;
+        this.anchor  = HudAnchor.BOTTOM_RIGHT;
+        this.offsetX = -4;
         this.offsetY = defaultOffsetY;
         this.scale   = 1.0f;
         this.enabled = true;

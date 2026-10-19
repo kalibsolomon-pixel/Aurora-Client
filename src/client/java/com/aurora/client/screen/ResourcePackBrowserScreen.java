@@ -1004,8 +1004,9 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
                     1.0f, AuroraTheme.WINDOW_OUTLINE);
         }
 
-        // "Categories" header
-        g.drawString(this.font, Component.literal("Categories"),
+        // Sidebar title. "Browse", not "Categories": the first section inside the
+        // list is itself headed "Categories", and the duplicate read as a glitch.
+        g.drawString(this.font, Component.literal("Browse"),
                 panelX + 10, panelY + 10, AuroraTheme.TEXT_SECONDARY, false);
 
         // Clip tabs to the sidebar body so they can scroll cleanly.

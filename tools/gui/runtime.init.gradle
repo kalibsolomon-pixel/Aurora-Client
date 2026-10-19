@@ -1,0 +1,22 @@
+// Opt-in GUI audit capture fixture. Ordinary builds never include the probe.
+gradle.projectsEvaluated {
+    def p = gradle.rootProject
+    def probe = p.sourceSets.create('guiProbe') {
+        java.srcDir p.file('tools/gui/runtime/java')
+        resources.srcDir p.file('tools/gui/runtime/resources')
+        compileClasspath = p.sourceSets.client.compileClasspath + p.sourceSets.client.output
+    }
+    p.tasks.named('compileGuiProbeJava') { options.release = 21 }
+    def probeJar = p.tasks.register('guiProbeJar', Jar) {
+        from probe.output
+        archiveFileName = 'aurora-gui-probe.jar'
+        destinationDirectory = p.file('build/gui-audit/tooling')
+    }
+    p.tasks.register('guiProbeRemapJar', p.tasks.named('remapJar').get().getClass().superclass) {
+        dependsOn probeJar
+        inputFile = probeJar.flatMap { it.archiveFile }
+        archiveFileName = 'aurora-gui-probe-production.jar'
+        destinationDirectory = p.file('build/gui-audit/tooling')
+        addNestedDependencies = false
+    }
+}

@@ -101,13 +101,24 @@ public class Button extends Widget {
         int fill=ThemeManager.color(primary ? ThemeToken.ACTION_STRONG : ThemeToken.MATERIAL_RAISED);
         int over=ThemeManager.color(primary ? ThemeToken.ACTION_HOVER : ThemeToken.MATERIAL_HOVER);
         int down=ThemeManager.color(primary ? ThemeToken.ACTION_PRESSED : ThemeToken.MATERIAL_PRESSED);
-        int edge=primary || destructive ? MaterialSurface.color(ThemeToken.BORDER_HOVER) : 0;
+        // Neutral action cards stay edgeless (owner ruling, UNIFIED_THEME_PILOT.md).
+        int edge=primary ? MaterialSurface.color(ThemeToken.BORDER_HOVER) : 0;
         int text=ThemeManager.color(primary ? ThemeToken.ON_ACTION : ThemeToken.MATERIAL_TEXT);
-        if(destructive) { fill=ThemeManager.color(ThemeToken.STATUS_ERROR); over=fill;down=fill;text=0xff101116; }
+        if(destructive) {
+            // Destructive keeps its red edge and label, but rests as a tinted chip and
+            // commits to the solid fill on hover/press: a list of rows must not repeat a
+            // solid "Delete" block on every line (premium-design audit, 2026-10-19).
+            int error=ThemeManager.color(ThemeToken.STATUS_ERROR);
+            edge=error;
+            fill=AuroraAnim.lerpArgb(ThemeManager.color(ThemeToken.MATERIAL_RAISED),error,.22f);
+            over=error;down=error;
+            text=AuroraAnim.lerpArgb(AuroraAnim.lerpArgb(error,0xffffffff,.55f),0xff101116,Math.max(hover,press));
+        }
         fill=AuroraAnim.lerpArgb(AuroraAnim.lerpArgb(fill,over,hover),down,press);
         if(disabled) { fill=AuroraAnim.lerpArgb(fill,ThemeManager.color(ThemeToken.MATERIAL_PANEL),.65f);text=MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED); }
-        fill=ThemeManager.withAlpha(fill, destructive ? 220 : primary ? Math.max(128,ThemeManager.color(ThemeToken.WINDOW_FILL) >>> 24)
-                : ThemeManager.color(ThemeToken.WINDOW_FILL) >>> 24);
+        int windowAlpha=ThemeManager.color(ThemeToken.WINDOW_FILL) >>> 24;
+        fill=ThemeManager.withAlpha(fill, destructive ? Math.round(AuroraAnim.lerp(Math.max(160,windowAlpha),220,Math.max(hover,press)))
+                : primary ? Math.max(128,windowAlpha) : windowAlpha);
         float py=y; // Card, blur mask, focus and label share one stationary geometry.
         int kind=(destructive ? 30 : primary ? 20 : 10)+(disabled ? 4 : hover==1 ? 1 : 0);
         if((hover==0 || hover==1) && press==0)

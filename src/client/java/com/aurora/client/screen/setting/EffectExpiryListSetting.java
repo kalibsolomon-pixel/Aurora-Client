@@ -269,7 +269,13 @@ public class EffectExpiryListSetting extends FeatureSetting {
         int h = 38;
         if (foundEffect != null) h += 12;
         h += AuroraConfig.get().effectExpiryIncludedEffects.size() * EffectRowSetting.STRIDE;
+        if (showsEmptyState()) h += 14;
         return h;
+    }
+
+    /** Fresh installs curate nothing: say so instead of leaving a blank section. */
+    private boolean showsEmptyState() {
+        return foundEffect == null && AuroraConfig.get().effectExpiryIncludedEffects.isEmpty();
     }
 
     /**
@@ -323,6 +329,12 @@ public class EffectExpiryListSetting extends FeatureSetting {
             ctx.drawString(tr, "Add: " + displayNameFor(eff, foundEffect), x + 12 + ICON_SIZE + 4, currentY,
                     ThemeManager.color(ThemeToken.SEMANTIC_SUCCESS), false);
             currentY += 12;
+        }
+
+        if (showsEmptyState()) {
+            ctx.drawString(tr, com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(tr,
+                    "No effects added yet — search above to add one.", width - 24, 1),
+                    x + 12, currentY, ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED), false);
         }
 
         // 2. Added-effects list — alphabetical (ItemScale sorts its ids the

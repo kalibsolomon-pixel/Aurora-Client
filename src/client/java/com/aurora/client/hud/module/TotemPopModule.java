@@ -28,7 +28,7 @@ public class TotemPopModule extends HudModule {
         super(ID);
         this.anchor = com.aurora.client.hud.HudAnchor.TOP_LEFT;
         this.offsetX = 4;
-        this.offsetY = 104;
+        this.offsetY = 112;
     }
 
     @Override public boolean isConfigEnabled() { return AuroraConfig.get().totemPopEnabled; }

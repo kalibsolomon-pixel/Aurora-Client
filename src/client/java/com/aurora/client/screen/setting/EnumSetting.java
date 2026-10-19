@@ -375,6 +375,9 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
 
 
     public boolean popupOpen() { return expanded; }
+
+    /** Height of the expanded option list — hosts size their body so it always fits. */
+    public int popupHeight() { return Math.min(5, values.length) * OPT_H + 4; }
     /** The compact host paints floating options after every normal row. */
     public void renderFloatingOverlay(GuiGraphics ctx, int mouseX, int mouseY) {
         Font tr = Minecraft.getInstance().font;

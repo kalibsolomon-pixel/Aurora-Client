@@ -59,7 +59,7 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
     //  structural neutrals (badge glyph / resize handle — same convention as
     //  every knob and thumb in the component framework).
     // ------------------------------------------------------------------
-    private int outlineEnabled()  { return ThemeManager.color(ThemeToken.SEMANTIC_SUCCESS); }
+    private int outlineEnabled()  { return ThemeManager.color(ThemeToken.ON_OVERLAY); }
     private int outlineDisabled() { return ThemeManager.color(ThemeToken.SEMANTIC_ERROR); }
     private int outlineDrag()     { return ThemeManager.color(ThemeToken.SEMANTIC_WARNING); }
     private int outlineLocked()   { return ThemeManager.color(ThemeToken.SECONDARY_ACCENT); }
@@ -71,7 +71,7 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
     private int lockIconBg()      { return (0xC0 << 24) | (ThemeManager.color(ThemeToken.SURFACE_INSET) & 0x00FFFFFF); }
     private int lockIconFg()      { return ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY); }
     /** Module label plate — overlay-dim RGB at the original 0xA0 strength. */
-    private int labelBg()         { return (0xA0 << 24) | (ThemeManager.color(ThemeToken.OVERLAY_DIM) & 0x00FFFFFF); }
+    private int labelBg()         { return (0xE6 << 24) | (MaterialSurface.color(ThemeToken.SURFACE_VARIANT) & 0x00FFFFFF); }
 
     private static final int CORNER_HIT_RADIUS = 6;
     // C-8 halo ruling (recorded, deliberate): the ±6 corner squares and the
@@ -117,8 +117,10 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
         int w = 120;
         int h = 20;
 
+        // Both editor actions sit in the top toolbar band; the center of the
+        // screen stays a clear gameplay preview (crosshair, hotbar context).
         this.addRenderableWidget(ButtonWidget.semantic(
-                (this.width - w) / 2, (this.height - h) / 2, w, h,
+                8, 8, w, h,
                 Component.literal("Aurora Settings"),
                 "Captures the current layout and opens Aurora's settings.",
                 () -> {
@@ -208,16 +210,34 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
 
         super.render(ctx, mouseX, mouseY, delta);
 
-        int hintWidth = Math.max(1, this.width - 152);
+        // Instructions: one compact floating pill above the hotbar instead of a
+        // full-width line across the top that collided with corner modules.
+        // Hidden while a drag is in progress so it never covers the target.
+        if (dragMode != DragMode.NONE) return;
+        int hintWidth = Math.max(1, Math.min(this.width - 32, 420));
         if (hintWidth != guideWidth || AuroraConfig.get().activeFont != guideFont || AuroraConfig.get().textRendererMode != guideRendererMode) {
             guideWidth = hintWidth; guideFont = AuroraConfig.get().activeFont;
             guideRendererMode = AuroraConfig.get().textRendererMode;
-            guideLines = com.aurora.client.ui.util.WordWrap.lines(
-                    "Drag body: move | Drag corner: resize | RClick: hide | Shift+RClick: lock | Shift+LClick: settings | X badge: disable",
-                    hintWidth, 3, this.font::width);
+            // Two balanced phrase groups; each wraps on its own only when narrow,
+            // so no instruction is ever split across lines mid-phrase.
+            java.util.List<String> lines = new java.util.ArrayList<>();
+            for (String group : new String[]{
+                    "Drag: move  ·  Corner: resize  ·  Right-click: hide",
+                    "Shift+right-click: lock  ·  Shift+click: settings  ·  X badge: disable"})
+                lines.addAll(com.aurora.client.ui.util.WordWrap.lines(group, hintWidth - 16, 2, this.font::width));
+            guideLines = lines;
         }
-        com.aurora.client.ui.util.RenderUtil.drawCenteredLines(this.font, ctx, guideLines, 8, 8, hintWidth,
-                ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_OVERLAY), 0xDD));
+        int lineH = this.font.lineHeight + 2;
+        int pillH = guideLines.size() * lineH + 8;
+        int textW = 0;
+        for (String line : guideLines) textW = Math.max(textW, this.font.width(line));
+        int pillW = Math.min(hintWidth, textW + 16);
+        int pillX = (this.width - pillW) / 2;
+        int pillY = this.height - 22 - 12 - pillH; // clear of the vanilla hotbar
+        MaterialSurface.floating(ctx, pillX, pillY, pillW, pillH,
+                Math.round(ThemeManager.current().roundness().radiusSmall()), 1f);
+        com.aurora.client.ui.util.RenderUtil.drawCenteredLines(this.font, ctx, guideLines, (this.width - hintWidth) / 2,
+                pillY + 5, hintWidth, MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY));
     }
 
     @Override
@@ -295,6 +315,12 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
             action.interactionControl().setAvailable(false);
         }
 
+        // Premium-design audit (2026-10-19): only the module under the pointer
+        // (or being dragged, or holding keyboard focus) shows its label,
+        // corner handles and close badge. Resting modules get a quiet neutral
+        // frame instead of a saturated status outline with a glow, so a busy
+        // layout no longer stacks overlapping labels and badges.
+        HudModule hoveredModule = dragMode == DragMode.NONE ? findAt(mouseX, mouseY) : active;
         for (HudModule m : mgr.all()) {
             if (!m.isConfigEnabled()) continue;
 
@@ -303,22 +329,17 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
             int x = m.anchor.applyX(this.width,  w) + m.offsetX;
             int y = m.anchor.applyY(this.height, h) + m.offsetY;
 
+            com.aurora.client.ui.component.IconAction action = m.enabled ? xAction(m) : null;
+            boolean emphasized = m == hoveredModule || m == active || (action != null && action.isFocused());
             int color = (m == active) ? outlineDrag()
                     : m.locked ? outlineLocked()
-                      : m.enabled ? outlineEnabled()
-                        : outlineDisabled();
-            
-            // Draw slight glowing effect around the outline for depth
-            int rgb = color & 0x00FFFFFF;
-            for (int i = 1; i <= 3; i++) {
-                int glowAlpha = Math.max(0, 50 - i * 15);
-                outline(ctx, x - 1 - i, y - 1 - i, x + w + 1 + i, y + h + 1 + i, (glowAlpha << 24) | rgb);
-            }
-            
-            outline(ctx, x - 1, y - 1, x + w + 1, y + h + 1, color);
+                      : !m.enabled ? outlineDisabled()
+                        : outlineEnabled();
+            outline(ctx, x - 1, y - 1, x + w + 1, y + h + 1,
+                    ThemeManager.withAlpha(color, emphasized ? 0xFF : 0x66));
 
-            // Corner handles (only on enabled, unlocked modules).
-            if (m.enabled && !m.locked) {
+            // Corner handles (only on the emphasized enabled, unlocked module).
+            if (emphasized && m.enabled && !m.locked) {
                 drawCornerHandle(ctx, x - 2, y - 2);                  // TL
                 drawCornerHandle(ctx, x + w - 2, y - 2);              // TR
                 drawCornerHandle(ctx, x - 2, y + h - 2);              // BL
@@ -327,17 +348,16 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
 
             // X icon (top-right INSIDE the AABB). Only on enabled modules — clicking
             // an X on a disabled module would be a no-op. C-4 pilot C: the badge
-            // gains the canonical channels — availability tied to its paint,
-            // pointer-only symmetric-140 hover (the badge bg eases toward
-            // full opacity), and the square focus hairline (this screen's
-            // status-overlay family keeps plain-fill geometry).
-            if (m.enabled) {
+            // keeps the canonical channels — availability tied to the module being
+            // enabled (keyboard focus can still reach it), pointer-only
+            // symmetric-140 hover, and the square focus hairline. It paints on the
+            // emphasized module only; any pointer that can click it hovers it.
+            if (action != null) {
                 int xIconX = x + w - X_ICON_SIZE - 2;
                 int xIconY = y + 2;
-                com.aurora.client.ui.component.IconAction action = xAction(m);
                 action.interactionControl().setAvailable(true);
                 action.syncChannels(xIconX, xIconY, X_ICON_SIZE, X_ICON_SIZE, mouseX, mouseY);
-                drawXIcon(ctx, xIconX, xIconY, action.hoverT());
+                if (emphasized) drawXIcon(ctx, xIconX, xIconY, action.hoverT());
                 if (action.isFocused()) {
                     int hair = ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99);
                     ctx.fill(xIconX - 1, xIconY - 1, xIconX, xIconY + X_ICON_SIZE, hair);
@@ -347,28 +367,32 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
                 }
             }
 
-            // Lock icon (top-left INSIDE the AABB) when locked.
+            // Lock icon (top-left INSIDE the AABB) when locked — state, so always shown.
             if (m.locked) {
                 drawLockIcon(ctx, x + 2, y + 2);
             }
 
-            // Label below.
-            String suffix = (!m.enabled ? " (off)" : "")
+            if (!emphasized) continue;
+            // Label below (above when there is no room), clamped on-screen.
+            String suffix = (!m.enabled ? " (hidden)" : "")
                     + (m.locked ? " (locked)" : "")
                     + (Math.abs(m.scale - 1f) > 0.01f ? String.format(" %.0f%%", m.scale * 100) : "");
             String label = m.displayName() + suffix;
-            int labelW = this.font.width(label) + 4;
-            int labelX = x;
-            int labelY = y + h + 2;
-            if (labelY + this.font.lineHeight + 2 > this.height) {
-                labelY = y - this.font.lineHeight - 4;
+            int labelW = this.font.width(label) + 8;
+            int labelH = this.font.lineHeight + 5;
+            int labelX = Math.max(2, Math.min(this.width - labelW - 2, x));
+            int labelY = y + h + 3;
+            if (labelY + labelH > this.height - 2) {
+                labelY = y - labelH - 3;
             }
-            ctx.fill(labelX, labelY, labelX + labelW, labelY + this.font.lineHeight + 2, labelBg());
-            ctx.drawString(this.font, label, labelX + 2, labelY + 2, 0xFFFFFFFF, false);
+            ctx.fill(labelX, labelY, labelX + labelW, labelY + labelH, labelBg());
+            ctx.drawString(this.font, label, labelX + 4, labelY + 3, MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
         }
     }
 
     private static void drawCornerHandle(GuiGraphics ctx, int cx, int cy) {
+        // A dark 1px ring keeps the white handle legible over bright terrain/sky.
+        ctx.fill(cx - 1, cy - 1, cx + 5, cy + 5, 0xA0000000);
         ctx.fill(cx, cy, cx + 4, cy + 4, CORNER_HANDLE);
     }
 

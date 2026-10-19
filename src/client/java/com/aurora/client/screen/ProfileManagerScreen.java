@@ -147,6 +147,9 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         return Component.literal("No profiles. Press \"New Profile\" to create one.");
     }
 
+    /** Profiles are few; a full-height window would be mostly empty well. */
+    @Override protected int windowMaxHeight() { return 260; }
+
     @Override protected int leadingRowCount() {
         return creatingNew && createField != null ? 1 : 0;
     }
