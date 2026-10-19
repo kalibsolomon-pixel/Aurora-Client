@@ -131,21 +131,28 @@ class TooltipFadeMigrationTest {
     }
 
     @Test
-    void tooltipIdentityRequiresItsOwnDwell() throws Exception {
-        // Label A fully dwelt and claimed; the pointer moves to label B.
-        // B must dwell its own 1500 ms — A's fade state must not let B's
-        // tooltip appear (and A's fade-out proceeds on eligibility alone).
+    void warmHandOffOpensTheNextLabelImmediatelyWithItsOwnContent() throws Exception {
+        // Premium-design audit (2026-10-19): only the FIRST tooltip pays the
+        // 1500 ms dwell. While A's tooltip is still on screen, moving to
+        // label B opens B's tooltip at once — with B's own description, never
+        // A's (identity is still per label; only the wait is skipped).
         hoverDweltFor("labelA", DWELL_MS + 100);
         assertTrue(claimed());
-        String contentA = (String) contentField.get(null);
         claimedField.setBoolean(null, false); // frame consumed A's claim
 
-        // B hovered for only 200 ms: no claim, content still A (frozen).
         FeatureSetting.trackLabelHover("labelB", () -> "desc B",
                 0, 0, 100, 9, 10, 4, false);
-        assertFalse(claimed(), "label B must not inherit label A's dwell");
-        assertEquals(contentA, contentField.get(null), "content identity is frozen per claim");
-        assertTrue(dwellMap.containsKey("labelB"), "B starts its own dwell clock");
+        assertTrue(claimed(), "a warm hand-off claims without a second dwell");
+        assertEquals("desc B", contentField.get(null), "the hand-off shows B's own content");
+    }
+
+    @Test
+    void coldLabelStillRequiresTheFullDwell() throws Exception {
+        contentField.set(null, null); // no tooltip on screen
+        FeatureSetting.trackLabelHover("cold", () -> "desc",
+                0, 0, 100, 9, 10, 4, false);
+        assertFalse(claimed(), "with nothing showing, a label must dwell first");
+        assertTrue(dwellMap.containsKey("cold"), "the dwell clock starts");
     }
 
     // ===== helpers =====

@@ -566,7 +566,11 @@ public abstract class FeatureSetting {
             return;
         }
         long now = System.currentTimeMillis();
-        long start = HOVER_DWELL.computeIfAbsent(key, k -> now);
+        // Warm hand-off (premium-design audit, 2026-10-19): while a description
+        // tooltip is still on screen (visible or fading out), the next label's
+        // tooltip opens immediately; only the FIRST tooltip pays the dwell.
+        boolean warm = tooltipContent != null && !text.equals(tooltipContent);
+        long start = HOVER_DWELL.computeIfAbsent(key, k -> warm ? now - HOVER_DWELL_MS : now);
         if (now - start >= HOVER_DWELL_MS) {
             tooltipClaimed = true;
             tooltipContent = text;
