@@ -2412,3 +2412,16 @@ including the measured CPU cost of higher-density output at 4K.
 Disconnect cleanup is marshalled onto the client thread: Fabric's disconnect
 callback can arrive on Netty, where releasing native GPU textures is invalid.
 The native mapping runner rejects wrong-render-thread/texture-close warnings.
+
+## GUI premium-design audit pass 1 (2026-10-19)
+
+Manager screens (`ManagerListScreen`) own one centered window: primary action leads its
+header, Done trails, Waypoint search/filters share the list column (`windowTop/HEADER_H`).
+`FeatureDetailScreen` frames fit their content (top fixed at init, bottom grows to the
+viewport limit, room reserved via `EnumSetting.popupHeight()`). `ScrollFade.drawBottom`
+complements the top fade. Unified destructive buttons rest as a tinted chip (red edge +
+label) and go solid on hover/press; neutral cards stay edgeless. HUD modules capture their
+constructor layout at registration (`HudModule.captureDefaultLayout`) so Reset Positions
+restores each module's own home; Toggle Sprint/Sneak defaults to the bottom-right corner.
+Description tooltips: first dwell 1500 ms, adjacent labels open instantly. Native capture
+probe: `tools/gui` (disposable fixtures only). See GUI_PREMIUM_DESIGN_AUDIT_REPORT.md.
