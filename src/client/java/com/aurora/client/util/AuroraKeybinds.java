@@ -72,6 +72,18 @@ public final class AuroraKeybinds {
 
     private static final List<Entry> ENTRIES = new ArrayList<>();
 
+    /** Toggle-style mapping actions consume queued presses so taps between client
+     * ticks are retained. Call even while a screen is open to discard stale input. */
+    public static boolean consumePress(String translationKey) {
+        for (Entry entry : ENTRIES) {
+            if (!entry.mapping.getName().equals(translationKey)) continue;
+            boolean pressed = false;
+            while (entry.mapping.consumeClick()) pressed = true;
+            return pressed;
+        }
+        return false;
+    }
+
     /**
      * Register one Aurora keybind with vanilla. The supplied
      * {@code defaultGlfw} is the factory default used when no

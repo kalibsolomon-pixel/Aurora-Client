@@ -735,6 +735,7 @@ public class AuroraConfig {
     public enum WaypointMarker { DIAMOND, SQUARE, CROSS }
 
     public int waypointMaxVisible = 64;
+    public int waypointWorldMarkerLimit = 16;
     public int waypointMaxDistance = 10000;
     public java.util.Set<String> waypointHiddenGroups = new java.util.HashSet<>();
     public java.util.Map<String, String> waypointNavigationByWorld = new java.util.HashMap<>();
@@ -1107,6 +1108,7 @@ public class AuroraConfig {
      * whenever the World Map feature is disabled; live sampling covers
      * everything in that case.
      */
+    @Deprecated // Legacy serialized preference; both map presentations now always share the engine.
     public boolean minimapUseWorldMapCache = true;
     /** Show waypoints from {@link com.aurora.client.feature.impl.WaypointFeature} as colored dots. */
     public boolean minimapShowWaypoints = true;

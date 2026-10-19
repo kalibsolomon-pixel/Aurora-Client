@@ -2375,3 +2375,11 @@ nearest-first render work and filters dimensions/hidden groups in every view.
 filters and bounds row-control residency to its viewport. Appearance Reset keeps
 waypoint records/navigation intact. Existing profile scoping remains unchanged.
 See `docs/mapping/PROGRESS.md` for current verification and remaining acceptance.
+
+Mapping refinement: HUD/map labels now reject overlaps; in-world beams have a
+separate default 16-marker limit and fade out within two blocks of the camera.
+Mapping action keys consume vanilla's queued presses (other hold features retain
+raw polling). New map-created waypoints become navigation selections so a dense
+nearest-marker budget cannot immediately hide the created marker. Native SP
+workflow and process relaunch passed; foreground performance and loopback MP
+acceptance remain pending after the owner stopped Computer Use with Escape.

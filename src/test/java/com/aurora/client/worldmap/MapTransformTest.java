@@ -37,4 +37,14 @@ class MapTransformTest {
         assertNotEquals(MapIdentity.dimensionFolder("a:b_c"), MapIdentity.dimensionFolder("a_b:c"));
         assertTrue(MapIdentity.dimensionFolder("../odd:dimension").matches("dim-[a-f0-9]{64}"));
     }
+    @Test void giantViewportsBoundTileResidencyWithoutDiscardingViewportEdges() {
+        MapViewport viewport = new MapViewport();
+        viewport.zoom(.0001, 2000, 1000, 3840, 2160);
+        for (int i = 0; i < 200; i++) viewport.advance(.016, 3840, 2160);
+        double tiles = (3840 / (512 * viewport.scale()) + 2) * (2160 / (512 * viewport.scale()) + 2);
+        assertTrue(tiles < 1400);
+        viewport.constrainSize(7680, 4320);
+        tiles = (7680 / (512 * viewport.scale()) + 2) * (4320 / (512 * viewport.scale()) + 2);
+        assertTrue(tiles < 1400);
+    }
 }

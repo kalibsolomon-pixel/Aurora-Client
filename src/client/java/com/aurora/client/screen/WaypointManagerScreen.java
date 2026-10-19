@@ -62,11 +62,11 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
     private static final int LIST_W       = 460;
 
     private static final int SWATCH_W     = 16;
-    private int nameWidth() { return Math.max(48, listWidth() - 16 - 22 - 3 * 44 - 18); }
+    private int nameWidth() { return Math.max(48, listWidth() - 16 - 22 - BTN_COPY_W - BTN_COLOR_W - BTN_DEL_W - 18); }
     private static final int COORDS_W     = 0;
     private static final int BTN_COPY_W   = 44;
     private static final int BTN_COLOR_W  = 44;
-    private static final int BTN_DEL_W    = 44;
+    private static final int BTN_DEL_W    = 56;
     private static final int CONTROL_GAP  = 6;
     private static final int ROW_INSET    = 8;
 

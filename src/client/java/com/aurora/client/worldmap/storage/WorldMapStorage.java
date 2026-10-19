@@ -12,8 +12,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.Locale;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -95,8 +93,7 @@ public final class WorldMapStorage {
     /**
      * Builds a storage rooted at
      * {@code config/aurora-worldmap/<sanitized scope>/<sanitized dimension>}
-     * and creates the directory tree eagerly so per-region saves never race
-     * {@code mkdirs}.
+     * for explicit legacy access. Directory creation is deferred to the IO worker.
      */
     public static WorldMapStorage forScopeDimension(String scope, String dimension) {
         Path root = FabricLoader.getInstance().getConfigDir()
@@ -286,10 +283,12 @@ public final class WorldMapStorage {
     }
 
     /** Immutable decoded region payload handed from the IO thread to the client thread. */
-    public record LoadedRegion(long key, long[] stamps, int[] pixels, boolean valid) {}
+    public record LoadedRegion(long key, long[] stamps, int[] pixels, boolean valid) {
+        public boolean empty() { return pixels == EMPTY_PIXELS; }
+    }
 
     /** Explicit, copy-only import: legacy folders cannot prove their original identity.
-     * Existing destination regions and original files are never replaced. */
+     * Existing destination chunks and original files are never replaced. */
     public boolean importLegacy(MapIdentity identity, String dimension, Consumer<String> completion) {
         Path legacy = FabricLoader.getInstance().getConfigDir().resolve("aurora-worldmap")
                 .resolve(sanitize(identity.legacyScope())).resolve(sanitize(dimension));

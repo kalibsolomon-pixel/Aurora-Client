@@ -219,13 +219,13 @@ public final class WorldMapClient {
         Context context = viewed();
         if (context == null) return null;
         var tile = context.overviews.acquire(key);
-        if (!tile.isLoaded() && !tile.loadRequested && requestsRemaining > 0 && context.loads < 8) {
+        if (!tile.isLoaded() && !tile.loadRequested) {
             RegionTile resident = context.regions.peek(key);
             if (resident != null && resident.isLoaded()) {
                 if (uploadsRemaining <= 0) return null;
                 uploadsRemaining--;
                 tile.paintAbgr(resident.snapshotPixels(), "resident");
-            } else {
+            } else if (requestsRemaining > 0 && context.loads < 8) {
                 requestsRemaining--;
                 context.loads++;
                 tile.loadRequested = true;
@@ -236,12 +236,13 @@ public final class WorldMapClient {
                             RegionTile current = context.regions.peek(key);
                             if (current != null && current.isLoaded())
                                 tile.paintAbgr(current.snapshotPixels(), "resident");
+                            else if (payload.empty()) tile.resolveEmpty();
                             else tile.paintAbgr(payload.pixels(), "disk");
                         }));
                 if (!queued) { context.loads--; tile.loadRequested = false; }
             }
         }
-        if (!tile.isLoaded()) return null;
+        if (!tile.isLoaded() || tile.isEmpty()) return null;
         if (tile.textureId() == null || tile.needsUpload()) {
             if (uploadsRemaining <= 0) return tile.textureId() == null ? null : tile;
             uploadsRemaining--;

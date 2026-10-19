@@ -40,6 +40,7 @@ import java.util.List;
  * dimension are silently skipped in both passes.
  */
 public final class WaypointRenderer {
+    private final com.aurora.client.worldmap.MarkerLabelLayout labelLayout = new com.aurora.client.worldmap.MarkerLabelLayout();
 
     /** Vertical extent of the beam in 1.21 overworld terms (-64 .. 320). */
     private static final float BEAM_BOTTOM = -64f;
@@ -51,6 +52,7 @@ public final class WaypointRenderer {
     public void renderWorld(WorldRenderContext ctx) {
         Minecraft mc = Minecraft.getInstance();
         if (mc == null || mc.level == null || mc.player == null) return;
+        if (mc.screen != null) return;
 
         AuroraConfig cfg = AuroraConfig.get();
         if (!cfg.waypointsEnabled) return;
@@ -80,9 +82,11 @@ public final class WaypointRenderer {
         boolean drawBlock = mode == AuroraConfig.WaypointDisplay.BLOCK
                          || mode == AuroraConfig.WaypointDisplay.BOTH;
 
+        int remaining = com.aurora.client.worldmap.MapTransform.bounded(cfg.waypointWorldMarkerLimit, 1, 64);
         for (Waypoint w : list) {
             if (w == null) continue;
             if (w.dimension != null && !w.dimension.equals(curDim)) continue;
+            if (remaining-- <= 0) break;
 
             int a = (w.color >>> 24) & 0xFF;
             int r = (w.color >> 16)  & 0xFF;
@@ -90,17 +94,24 @@ public final class WaypointRenderer {
             int b =  w.color         & 0xFF;
             if (a == 0) a = 0xFF;
 
-            if (drawBeam) {
+            double beamDistance = Math.hypot(w.x + .5 - camPos.x, w.z + .5 - camPos.z);
+            float beamOpacity = beamOpacity(beamDistance);
+            if (drawBeam && beamOpacity > 0) {
                 drawBeam(matrices, consumers, w.x + 0.5, w.z + 0.5, camPos,
-                        (float) cfg.waypointBeamWidth,
-                        r / 255f, g / 255f, b / 255f, a / 255f);
+                        (float) com.aurora.client.worldmap.MapTransform.bounded(cfg.waypointBeamWidth, .1, 1),
+                        r / 255f, g / 255f, b / 255f, (a / 255f) * beamOpacity);
             }
             if (drawBlock) {
                 drawBlockHighlight(matrices, consumers, w, camPos,
-                        Math.max(0, cfg.waypointBlockRadius),
+                        com.aurora.client.worldmap.MapTransform.bounded(cfg.waypointBlockRadius, 0, 16),
                         r / 255f, g / 255f, b / 255f, a / 255f);
             }
         }
+    }
+
+    /** A camera inside a double-sided beam otherwise sees an opaque full-screen wall. */
+    public static float beamOpacity(double horizontalDistance) {
+        return (float) com.aurora.client.worldmap.MapTransform.bounded((horizontalDistance - 2) / 6, 0, 1);
     }
 
     /**
@@ -113,6 +124,7 @@ public final class WaypointRenderer {
     public void renderHud(GuiGraphics g, DeltaTracker tickCounter) {
         Minecraft mc = Minecraft.getInstance();
         if (mc == null || mc.level == null || mc.player == null) return;
+        if (mc.screen != null) return;
         if (mc.options != null && mc.options.hideGui) return;
 
         AuroraConfig cfg = AuroraConfig.get();
@@ -132,6 +144,7 @@ public final class WaypointRenderer {
         int sw = g.guiWidth();
         int sh = g.guiHeight();
 
+        labelLayout.reset();
         for (Waypoint w : list) {
             if (w == null) continue;
             if (w.dimension != null && !w.dimension.equals(curDim)) continue;
@@ -186,10 +199,10 @@ public final class WaypointRenderer {
             double slant = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
             String name = (w.name == null || w.name.isEmpty()) ? "Waypoint" : w.name;
-            name = com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(font, name,
-                    (int) Math.min(180, (sw - LABEL_EDGE_MARGIN * 2) /
-                            Math.max(.5, Math.min(3, cfg.waypointLabelScale))) , 1);
             if (w.id.equals(feat.navigationId())) name = "» " + name;
+            double scale = com.aurora.client.worldmap.MapTransform.bounded(cfg.waypointLabelScale, .5, 3);
+            name = com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(font, name,
+                    (int) Math.min(180, (sw - 16) / scale - 8), 1);
             String dist = (int) Math.round(slant) + "m";
 
             // Off-screen / behind-camera handling. When the waypoint
@@ -211,8 +224,11 @@ public final class WaypointRenderer {
             if (screenY < LABEL_EDGE_MARGIN) { screenY = LABEL_EDGE_MARGIN; clamped = true; }
             if (screenY > sh - LABEL_EDGE_MARGIN) { screenY = sh - LABEL_EDGE_MARGIN; clamped = true; }
 
-            drawHudLabel(g, font, screenX, screenY, name, dist,
-                    w.color, com.aurora.client.worldmap.MapTransform.bounded(cfg.waypointLabelScale, .5, 3), clamped);
+            float labelWidth = (float) ((Math.max(font.width(name), font.width(dist)) + 8) * scale);
+            float labelHeight = (float) ((font.lineHeight * 2 + 6) * scale);
+            if (!labelLayout.place(screenX, screenY, labelWidth, labelHeight, sw, sh)) continue;
+            drawHudLabel(g, font, labelLayout.centerX(), labelLayout.bottomY(), name, dist,
+                    w.color, scale, clamped);
         }
     }
 

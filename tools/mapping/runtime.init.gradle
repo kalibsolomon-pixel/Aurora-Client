@@ -1,0 +1,30 @@
+// Disposable native acceptance only. Ordinary builds contain none of these classes.
+gradle.projectsEvaluated {
+    def p = gradle.rootProject
+    def root = p.file(p.findProperty('mappingRoot'))
+    assert new File(root, 'DISPOSABLE-RESEARCH.txt').isFile()
+    def probe = p.sourceSets.create('mappingProbe') {
+        java.srcDir p.file('tools/mapping/runtime/java')
+        resources.srcDir p.file('tools/mapping/runtime/resources')
+        compileClasspath = p.sourceSets.client.compileClasspath + p.sourceSets.client.output
+        runtimeClasspath = output + compileClasspath
+    }
+    p.tasks.named('compileMappingProbeJava') { options.release = 21 }
+    p.tasks.register('mappingProbeJar', Jar) {
+        from probe.output
+        archiveFileName = 'aurora-mapping-acceptance.jar'
+        destinationDirectory = new File(root, 'tooling')
+    }
+    def perf = p.sourceSets.create('mappingPerf') {
+        java.srcDir p.file('tools/mapping/performance/java')
+        resources.srcDir p.file('tools/mapping/performance/resources')
+        compileClasspath = p.sourceSets.client.compileClasspath + p.sourceSets.client.output
+        runtimeClasspath = output + compileClasspath
+    }
+    p.tasks.named('compileMappingPerfJava') { options.release = 21 }
+    p.tasks.register('mappingPerfJar', Jar) {
+        from perf.output
+        archiveFileName = 'aurora-mapping-performance.jar'
+        destinationDirectory = new File(root, 'tooling')
+    }
+}

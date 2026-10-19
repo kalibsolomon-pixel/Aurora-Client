@@ -7,12 +7,20 @@ public final class MapViewport {
     private boolean zooming;
 
     public double scale() { return scale; }
+    private static double minimum(int width, int height) {
+        return Math.max(1 / 16d, Math.sqrt(width * (double) height / 1200d) / 512);
+    }
+    public void constrainSize(int width, int height) {
+        scale = Math.max(scale, minimum(width, height));
+        target = scale; zooming = false;
+    }
     public double worldX(double screenX, int width) { return x + (screenX - width * .5) / scale; }
     public double worldZ(double screenY, int height) { return z + (screenY - height * .5) / scale; }
     public void zoom(double factor, double sx, double sy, int width, int height) {
         anchorX = worldX(sx, width); anchorZ = worldZ(sy, height);
         mouseX = sx; mouseY = sy;
-        target = MapTransform.bounded(target * factor, 1 / 16d, 16);
+        // Bound visible tile count at very large GUI viewports without blanking edges.
+        target = MapTransform.bounded(target * factor, minimum(width, height), 16);
         zooming = true;
     }
     public void advance(double seconds, int width, int height) {

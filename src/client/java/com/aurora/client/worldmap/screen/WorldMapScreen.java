@@ -41,10 +41,12 @@ public final class WorldMapScreen extends Screen implements ThemedScreen {
     private double markerX, markerZ, markerScale;
     private String markerDimension = "";
     private String status = "";
+    private final MarkerLabelLayout nameLayout = new MarkerLabelLayout();
 
     public WorldMapScreen() { super(Component.literal("World Map")); }
 
     @Override protected void init() {
+        viewport.constrainSize(width, height);
         int gap = 6, left = 8;
         int cell = Math.min(120, (width - 16 - 3 * gap) / 4);
         dimensionButton = addRenderableWidget(ButtonWidget.semantic(left, 8, cell, 22,
@@ -114,15 +116,21 @@ public final class WorldMapScreen extends Screen implements ThemedScreen {
         updateMarkers(now);
         Waypoint hovered = null;
         var feature = WaypointFeature.get();
+        nameLayout.reset();
         for (Waypoint marker : markers) {
             int x = screenX(marker.x + .5), y = screenZ(marker.z + .5);
             if (x < -8 || y < -8 || x > width + 8 || y > height + 8) continue;
             boolean selected = feature != null && marker.id.equals(feature.navigationId());
             MapMarkers.waypoint(g, x, y, marker, selected);
             if (Math.abs(mx - x) < 8 && Math.abs(my - y) < 8) hovered = marker;
-            if (AuroraConfig.get().worldMapShowWaypointNames && (viewport.scale() >= 1 || selected))
-                g.drawString(font, AuroraFontRenderer.ellipsize(font, marker.name,
-                        Math.min(150, width - x - 12), 1), x + 8, y - 4, 0xFFFFFFFF, true);
+            if (AuroraConfig.get().worldMapShowWaypointNames && (viewport.scale() >= 1 || selected)) {
+                String name = AuroraFontRenderer.ellipsize(font, marker.name, Math.min(150, width - 24), 1);
+                int textWidth = font.width(name);
+                if (nameLayout.place(x + 8 + textWidth * .5f, y + font.lineHeight - 4,
+                        textWidth + 4, font.lineHeight + 2, width, height))
+                    g.drawString(font, name, (int) (nameLayout.centerX() - textWidth * .5),
+                            (int) nameLayout.bottomY() - font.lineHeight, 0xFFFFFFFF, true);
+            }
         }
         if (minecraft.player != null && minecraft.level != null
                 && dimension().equals(minecraft.level.dimension().identifier().toString())) {
@@ -147,7 +155,7 @@ public final class WorldMapScreen extends Screen implements ThemedScreen {
         if (!status.isEmpty()) g.drawString(font, AuroraFontRenderer.ellipsize(font, status, width - 180, 1),
                 168, 43, ThemeManager.color(ThemeToken.ON_SURFACE), false);
         super.render(g, mx, my, delta);
-        if (hovered != null && mx > 164 && my > 60 && my < height - 47) {
+        if (hovered != null && my > 60 && my < height - 47) {
             String tooltip = hovered.name + " · " + hovered.x + ", " + hovered.y + ", " + hovered.z;
             int tw = Math.min(width - 16, font.width(tooltip) + 16);
             int tx = Math.max(4, Math.min(mx + 8, width - tw - 4));
@@ -167,25 +175,44 @@ public final class WorldMapScreen extends Screen implements ThemedScreen {
         int rx0 = (int) Math.floor(left / 512), rz0 = (int) Math.floor(top / 512);
         int rx1 = (int) Math.floor(viewport.worldX(width, width) / 512);
         int rz1 = (int) Math.floor(viewport.worldZ(height, height) / 512);
-        // Visible range only; highest GUI viewport still bounded at far zoom.
-        rx1 = Math.min(rx1, rx0 + 47); rz1 = Math.min(rz1, rz0 + 27);
-        for (int rz = rz0; rz <= rz1; rz++) for (int rx = rx0; rx <= rx1; rx++) {
-            long key = RegionCache.key(rx, rz);
-            net.minecraft.resources.Identifier texture;
-            int source;
-            if (viewport.scale() <= .25) {
-                var tile = engine.acquireOverviewForRender(key);
-                if (tile == null) continue;
-                texture = tile.textureId(); source = OverviewCache.SIZE;
-            } else {
-                var tile = engine.acquireForRender(key);
-                if (tile == null) continue;
-                texture = tile.textureId(); source = 512;
+        boolean overview = viewport.scale() <= .25 || (rx1 - rx0 + 1L) * (rz1 - rz0 + 1L)
+                > MapTransform.bounded(AuroraConfig.get().worldMapCacheRegions, 8, 256);
+        int cx = (rx0 + rx1) >> 1, cz = (rz0 + rz1) >> 1;
+        int rings = Math.max(Math.max(cx - rx0, rx1 - cx), Math.max(cz - rz0, rz1 - cz));
+        // Center-first IO and texture requests: a large pan never has to load an
+        // entire top-left quadrant before showing the area under the cursor.
+        for (int ring = 0; ring <= rings; ring++) {
+            for (int dx = -ring; dx <= ring; dx++) {
+                int rx = cx + dx;
+                if (rx < rx0 || rx > rx1) continue;
+                if (cz - ring >= rz0) drawRegion(g, engine, rx, cz - ring, overview);
+                if (ring > 0 && cz + ring <= rz1) drawRegion(g, engine, rx, cz + ring, overview);
             }
-            int x = screenX(rx * 512d), y = screenZ(rz * 512d);
-            int w = screenX((rx + 1) * 512d) - x, h = screenZ((rz + 1) * 512d) - y;
-            g.blit(RenderPipelines.GUI_TEXTURED, texture, x, y, 0, 0, w, h, source, source, source, source);
+            for (int dz = -ring + 1; dz < ring; dz++) {
+                int rz = cz + dz;
+                if (rz < rz0 || rz > rz1) continue;
+                if (cx - ring >= rx0) drawRegion(g, engine, cx - ring, rz, overview);
+                if (cx + ring <= rx1) drawRegion(g, engine, cx + ring, rz, overview);
+            }
         }
+    }
+
+    private void drawRegion(GuiGraphics g, WorldMapClient engine, int rx, int rz, boolean overview) {
+        long key = RegionCache.key(rx, rz);
+        net.minecraft.resources.Identifier texture;
+        int source;
+        if (overview) {
+            var tile = engine.acquireOverviewForRender(key);
+            if (tile == null) return;
+            texture = tile.textureId(); source = OverviewCache.SIZE;
+        } else {
+            var tile = engine.acquireForRender(key);
+            if (tile == null) return;
+            texture = tile.textureId(); source = 512;
+        }
+        int x = screenX(rx * 512d), y = screenZ(rz * 512d);
+        int w = screenX((rx + 1) * 512d) - x, h = screenZ((rz + 1) * 512d) - y;
+        g.blit(RenderPipelines.GUI_TEXTURED, texture, x, y, 0, 0, w, h, source, source, source, source);
     }
 
     private void updateMarkers(long now) {

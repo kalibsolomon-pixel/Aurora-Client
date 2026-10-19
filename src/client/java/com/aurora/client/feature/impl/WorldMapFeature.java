@@ -2,7 +2,7 @@ package com.aurora.client.feature.impl;
 
 import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.feature.Feature;
-import com.aurora.client.util.AuroraKey;
+import com.aurora.client.util.AuroraKeybinds;
 import com.aurora.client.worldmap.WorldMapClient;
 import com.aurora.client.worldmap.screen.WorldMapScreen;
 import net.minecraft.client.Minecraft;
@@ -16,7 +16,6 @@ import net.minecraft.client.Minecraft;
 public class WorldMapFeature implements Feature {
     public static final String ID = "world_map";
 
-    private final AuroraKey.EdgeDetector openEdge = new AuroraKey.EdgeDetector();
 
     @Override public String id() { return ID; }
 
@@ -31,7 +30,7 @@ public class WorldMapFeature implements Feature {
 
         // Open-map keybind — only in-game with no other screen open, and
         // only when the module card is enabled.
-        if (openEdge.justPressed(cfg.worldMapKey)
+        if (AuroraKeybinds.consumePress("key.aurora.world_map")
                 && cfg.worldMapEnabled
                 && client.screen == null
                 && client.player != null

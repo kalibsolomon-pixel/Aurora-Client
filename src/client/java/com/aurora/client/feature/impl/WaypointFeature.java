@@ -3,7 +3,7 @@ package com.aurora.client.feature.impl;
 import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.config.AuroraConfig.Waypoint;
 import com.aurora.client.feature.Feature;
-import com.aurora.client.util.AuroraKey;
+import com.aurora.client.util.AuroraKeybinds;
 import com.aurora.client.util.WorldScope;
 import com.aurora.client.worldmap.MapIdentity;
 import com.aurora.client.worldmap.MapTransform;
@@ -46,14 +46,13 @@ public class WaypointFeature implements Feature {
     private BlockPos lastLivingPos = null;
     private String   lastLivingDim = "minecraft:overworld";
     private String lastScope;
+    private Object lastLevel;
     private List<Waypoint> nearby = List.of();
     private List<Waypoint> normalizedList;
     private long revision;
     private int visibilityFingerprint;
     public long revision() { return revision; }
     public List<Waypoint> nearbyWaypoints() { return nearby; }
-    private final AuroraKey.EdgeDetector dropEdge    = new AuroraKey.EdgeDetector();
-    private final AuroraKey.EdgeDetector managerEdge = new AuroraKey.EdgeDetector();
 
     @Override public String id() { return ID; }
 
@@ -64,27 +63,28 @@ public class WaypointFeature implements Feature {
     public void onTick(Minecraft client) {
         if (client == null) return;
         AuroraConfig cfg = AuroraConfig.get();
-        int fingerprint = java.util.Objects.hash(cfg.waypointMaxVisible, cfg.waypointMaxDistance,
-                cfg.waypointHiddenGroups);
+        int fingerprint = 31 * (31 * cfg.waypointMaxVisible + cfg.waypointMaxDistance)
+                + (cfg.waypointHiddenGroups == null ? 0 : cfg.waypointHiddenGroups.hashCode());
         if (fingerprint != visibilityFingerprint) { visibilityFingerprint = fingerprint; revision++; }
 
         // Manual drop keybind — always live, independent of master enable
         // toggle so users can bind it once and never worry about the tile
         // being off.
-        if (dropEdge.justPressed(cfg.waypointDropKey)) {
+        if (AuroraKeybinds.consumePress("key.aurora.waypoint_drop") && client.screen == null) {
             dropAtPlayer("Waypoint", 0xFFFFAA00, false);
         }
 
         // Manager-open keybind. Only fires when no other screen is
         // currently open so it can't steal focus from chat / inventory.
-        if (managerEdge.justPressed(cfg.waypointManagerKey) && client.screen == null) {
+        if (AuroraKeybinds.consumePress("key.aurora.waypoint_manager") && client.screen == null && client.player != null) {
             client.setScreen(new com.aurora.client.screen.WaypointManagerScreen(null));
         }
 
         LocalPlayer p = client.player;
         String scope = scopeKey();
-        if (!java.util.Objects.equals(scope, lastScope)) {
+        if (!java.util.Objects.equals(scope, lastScope) || lastLevel != client.level) {
             wasAlive = true; lastLivingPos = null; lastScope = scope;
+            lastLevel = client.level;
             normalizedList = null; revision++;
         }
         if (p == null || scope == null) { wasAlive = true; lastLivingPos = null; nearby = List.of(); return; }
@@ -234,6 +234,7 @@ public class WaypointFeature implements Feature {
     // ===== Internals =====
 
     private void dropDeathWaypoint(AuroraConfig cfg) {
+        if (lastLivingPos == null) return;
         if (cfg.deathWaypointReplacesPrevious) {
             List<Waypoint> list = listForCurrentWorld(false);
             if (list != null) {

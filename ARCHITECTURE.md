@@ -2859,3 +2859,13 @@ atomic writes of the matching revision. Malformed files are preserved and made
 read-only. Explicit legacy import first saves current data, then copies/merges
 only unexplored chunks, retaining originals. Dimension metadata is versioned and
 bounded. Ordinary builds exclude all `tools/mapping` native acceptance probes.
+
+Refinement: viewport zoom bounds adapt to large GUI dimensions; LOD also accounts
+for the full-resolution cache budget. Requests visit central tiles first, resident
+overview downsampling is independent of disk-request saturation, and absent-region
+payloads reuse immutable zeros without allocating/uploading empty overview textures.
+`MarkerLabelLayout` reuses bounded rectangles for non-overlapping map/HUD names.
+Nearby double-sided beams fade away from the camera. Mapping toggle/open/drop
+actions consume queued vanilla key presses through AuroraKeybinds; held-state
+features keep their existing polling behavior. See the implementation report for
+evidence exclusions and incomplete final performance/MP acceptance.

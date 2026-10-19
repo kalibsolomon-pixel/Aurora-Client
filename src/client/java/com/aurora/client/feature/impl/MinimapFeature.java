@@ -2,7 +2,7 @@ package com.aurora.client.feature.impl;
 
 import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.feature.Feature;
-import com.aurora.client.util.AuroraKey;
+import com.aurora.client.util.AuroraKeybinds;
 import net.minecraft.client.Minecraft;
 
 /**
@@ -16,14 +16,14 @@ import net.minecraft.client.Minecraft;
 public class MinimapFeature implements Feature {
     public static final String ID = "minimap";
 
-    private final AuroraKey.EdgeDetector toggleEdge = new AuroraKey.EdgeDetector();
 
     @Override public String id() { return ID; }
 
     @Override
     public void onTick(Minecraft client) {
         AuroraConfig cfg = AuroraConfig.get();
-        if (toggleEdge.justPressed(cfg.minimapToggleKey)) {
+        boolean pressed = AuroraKeybinds.consumePress("key.aurora.minimap_toggle");
+        if (pressed && client.screen == null && client.player != null) {
             cfg.minimapEnabled = !cfg.minimapEnabled;
             AuroraConfig.save();
         }

@@ -68,7 +68,8 @@ public final class FeatureRegistry {
                 List.of(
                         new SectionHeaderSetting("Navigation & Appearance"),
                         mappingAction("Open World Map", "Browse explored terrain and edit waypoint markers.", screen ->
-                                net.minecraft.client.Minecraft.getInstance().setScreen(new com.aurora.client.worldmap.screen.WorldMapScreen())),
+                                net.minecraft.client.Minecraft.getInstance().setScreen(new com.aurora.client.worldmap.screen.WorldMapScreen()))
+                                .disabled(() -> net.minecraft.client.Minecraft.getInstance().level == null || !cfg.worldMapEnabled),
                         new BooleanSetting("Waypoint Names", () -> cfg.worldMapShowWaypointNames,
                                 v -> cfg.worldMapShowWaypointNames = v),
                         new SectionHeaderSetting("Capture & Caching"),
@@ -916,6 +917,9 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                         SliderSetting.ofInt("Visible Marker Limit", () -> cfg.waypointMaxVisible,
                                 v -> cfg.waypointMaxVisible = v, 8, 128)
                                 .description("Nearest-first marker budget shared by map views and in-world rendering. Navigation selection has priority."),
+                        SliderSetting.ofInt("World Beam Limit", () -> cfg.waypointWorldMarkerLimit,
+                                v -> cfg.waypointWorldMarkerLimit = v, 1, 64)
+                                .description("Limits in-world beam/block geometry. Labels avoid overlap and navigation selection is drawn first."),
                         SliderSetting.ofInt("In-World Range", () -> cfg.waypointMaxDistance,
                                 v -> cfg.waypointMaxDistance = v, 64, 30000)
                                 .description("Maximum horizontal distance for minimap and in-world markers. The world map follows its viewport."),

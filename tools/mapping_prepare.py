@@ -12,7 +12,7 @@ import sys
 REPO = Path(__file__).resolve().parents[1]
 
 
-def prepare(root, reference=False):
+def prepare(root, reference=False, classes_from=None):
     assert not root.exists(), root
     source = Path.home() / 'AppData/Local/Temp/aii-s1'
     root.mkdir(parents=True)
@@ -32,15 +32,34 @@ def prepare(root, reference=False):
     spec['workingDirectory'] = str(game)
     spec['jvmArgs'] = [('-Daurora.research.output=' + str(root)) if s.startswith('-Daurora.research.output=') else s for s in spec['jvmArgs']]
     launch = (REPO / '.gradle/loom-cache/launch.cfg').read_text()
+    historical = REPO / '.git/performance-initiative-ii/reference-client'
+    # The original matrix template is a REFERENCE launch. Normalize every
+    # classpath-group/JVM occurrence, not just the ordinary classpath.
+    for part in ('build/classes/java/client', 'build/resources/client'):
+        old = str(historical / part)
+        new = str(REPO / part)
+        spec['classpath'] = spec['classpath'].replace(old, new)
+        spec['jvmArgs'] = [arg.replace(old, new) for arg in spec['jvmArgs']]
+        launch = launch.replace(old, new)
     if reference:
         for part in ('build/classes/java/client', 'build/resources/client'):
-            shutil.copytree(REPO / part, root / part)
+            shutil.copytree((classes_from or REPO) / part, root / part)
             spec['classpath'] = spec['classpath'].replace(str(REPO / part), str(root / part))
+            spec['jvmArgs'] = [arg.replace(str(REPO / part), str(root / part)) for arg in spec['jvmArgs']]
             launch = launch.replace(str(REPO / part), str(root / part))
     config = root / 'frozen-launch.cfg'
     config.write_text(launch)
     spec['jvmArgs'] = ['-Dfabric.dli.config=' + str(config) if s.startswith('-Dfabric.dli.config=') else s for s in spec['jvmArgs']]
     (root / 'launch-private.json').write_text(json.dumps(spec, indent=2))
+    assert str(historical) not in json.dumps(spec).replace('\\\\', '\\')
+    expected = str(root if reference else REPO)
+    assert expected + '\\build\\classes\\java\\client' in spec['classpath']
+    if reference:
+        runtime = []
+        for path in sorted((root / 'build').rglob('*')):
+            if path.is_file():
+                runtime.append(dict(path=path.relative_to(root).as_posix(), sha256=hashlib.sha256(path.read_bytes()).hexdigest()))
+        (root / 'runtime-manifest.json').write_text(json.dumps(runtime, indent=2))
     inventory = []
     for path in game.rglob('*'):
         if path.is_file():
@@ -51,4 +70,10 @@ def prepare(root, reference=False):
 
 
 if __name__ == '__main__':
-    prepare(Path(sys.argv[1]).resolve(), '--reference' in sys.argv[2:])
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('root', type=Path)
+    parser.add_argument('--reference', action='store_true')
+    parser.add_argument('--classes-from', type=Path)
+    args = parser.parse_args()
+    prepare(args.root.resolve(), args.reference, args.classes_from)

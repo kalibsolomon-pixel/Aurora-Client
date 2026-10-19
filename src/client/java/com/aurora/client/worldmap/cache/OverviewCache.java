@@ -94,6 +94,7 @@ public final class OverviewCache {
         public volatile boolean loadRequested;
         volatile boolean loaded;
         volatile boolean uploadPending;
+        private boolean empty;
         /** One-shot debug logging latch ({@link #DEBUG_TILES}). */
         boolean loggedFullPaint;
 
@@ -106,6 +107,11 @@ public final class OverviewCache {
         }
 
         public boolean needsUpload() { return uploadPending; }
+        public boolean isEmpty() { return empty; }
+        public void resolveEmpty() {
+            image.fillRect(0, 0, SIZE, SIZE, 0);
+            loaded = true; empty = true; uploadPending = true;
+        }
 
         /** Texture identifier — only valid after {@link #ensureGpu()}. */
         public Identifier textureId() {
@@ -200,6 +206,7 @@ public final class OverviewCache {
         /** Full-image paint: the tile is now complete and renderable. */
         private void finishFullPaint(String source) {
             loaded = true;
+            empty = false;
             uploadPending = true;
             if (DEBUG_TILES && !loggedFullPaint) {
                 loggedFullPaint = true;
@@ -239,6 +246,7 @@ public final class OverviewCache {
 
         /** Partial (per-chunk) refresh: upload only; load state is unchanged. */
         private void finishPartialPaint() {
+            empty = false;
             uploadPending = true;
         }
 

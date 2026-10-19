@@ -44,6 +44,7 @@ public final class MinimapModule extends HudModule {
     private Object previousLevel;
     private List<Entity> entities = List.of();
     private long lastEntities;
+    private Object entityLevel;
 
     public MinimapModule() {
         super(ID);
@@ -123,12 +124,13 @@ public final class MinimapModule extends HudModule {
                 }
             }
         }
-        if (cfg.minimapShowEntities) {
-            if (now - lastEntities > 100_000_000L || previousLevel != mc.level) {
+        if (cfg.minimapShowEntities && (cfg.minimapShowPlayers || cfg.minimapShowHostiles || cfg.minimapShowPassives)) {
+            if (now - lastEntities > 100_000_000L || entityLevel != mc.level) {
                 double radius = zoom * .75;
                 entities = mc.level.getEntities(mc.player, new AABB(px - radius, mc.player.getY() - 64,
                         pz - radius, px + radius, mc.player.getY() + 64, pz + radius));
                 lastEntities = now;
+                entityLevel = mc.level;
             }
             int drawn = 0;
             for (Entity entity : entities) {
@@ -216,7 +218,7 @@ public final class MinimapModule extends HudModule {
         else if (image != null) image.close();
         texture = null; image = null; textureSize = -1;
         previousX = Double.NaN; previousRevision = -1; previousLevel = null;
-        entities = List.of(); lastEntities = 0;
+        entities = List.of(); lastEntities = 0; entityLevel = null;
     }
 
     @Override public void resetLayoutToDefaults() {

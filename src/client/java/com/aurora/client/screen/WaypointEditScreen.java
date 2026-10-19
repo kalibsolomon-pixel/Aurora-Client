@@ -115,7 +115,11 @@ public final class WaypointEditScreen extends Screen implements ThemedScreen {
         if (draft.name.isBlank()) draft.name = "Waypoint";
         WaypointFeature feature = WaypointFeature.get();
         if (feature == null) return;
-        if (creating) feature.addWaypoint(draft);
+        if (creating) {
+            feature.addWaypoint(draft);
+            // Keep a newly created marker visible under the bounded nearest-marker budget.
+            feature.navigateTo(draft);
+        }
         else if (feature.currentWorldWaypoints().contains(original)) {
             original.name = draft.name; original.x = draft.x; original.y = draft.y; original.z = draft.z;
             original.dimension = draft.dimension; original.group = draft.group; original.description = draft.description;
