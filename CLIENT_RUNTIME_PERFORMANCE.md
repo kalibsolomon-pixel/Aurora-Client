@@ -58,7 +58,9 @@ Raw fork output stays under `run/performance-initiative/world-scope-benchmark/`.
 The confirmed improvement is removal of redundant allocation on stable identity
 queries. The microdiagnostic cannot predict end-to-end CPU, GC or FPS gains;
 recording weights cannot be subtracted from another process as an exact saving.
-Live combined validation remains part of Phase I. Other leads do not justify a
+Live combined validation passed through native Launcher Play, fullscreen gameplay,
+normal shutdown and subsequent recovery; see the unified final report and
+Launcher's INTEGRATED_PERFORMANCE_RESULTS.md. Other leads do not justify a
 renderer/font/Reflex rewrite: HUD strings already refresh at 10 Hz, font visitors
 already cache segment styles, and downstream vanilla glyph work dominates some
 stacks. Sodium's chunk work and Better Hitreg timing are unchanged. Vulkan and
