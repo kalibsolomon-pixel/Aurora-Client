@@ -46,6 +46,16 @@ public final class FeatureRegistry {
         return SETTINGS;
     }
 
+    private static ButtonSetting mappingAction(String label, String description,
+            java.util.function.Consumer<net.minecraft.client.gui.screens.Screen> action) {
+        return ButtonSetting.semantic(label, "Open", () ->
+                action.accept(net.minecraft.client.Minecraft.getInstance().screen)).description(description);
+    }
+
+    private static FeatureMetadata find(String id) {
+        return modules().stream().filter(meta -> meta.id.equals(id)).findFirst().orElseThrow();
+    }
+
     private static void init() {
         initialized = true;
         AuroraConfig cfg = AuroraConfig.get();
@@ -56,15 +66,28 @@ public final class FeatureRegistry {
                 "A full-screen, pannable world map of your explored terrain. Chunks you visit are captured in the background and stitched into persistent region tiles on disk, so the map survives restarts and grows as you explore.",
                 () -> cfg.worldMapEnabled, v -> cfg.worldMapEnabled = v,
                 List.of(
+                        new SectionHeaderSetting("Navigation & Appearance"),
+                        mappingAction("Open World Map", "Browse explored terrain and edit waypoint markers.", screen ->
+                                net.minecraft.client.Minecraft.getInstance().setScreen(new com.aurora.client.worldmap.screen.WorldMapScreen())),
+                        new BooleanSetting("Waypoint Names", () -> cfg.worldMapShowWaypointNames,
+                                v -> cfg.worldMapShowWaypointNames = v),
+                        new SectionHeaderSetting("Capture & Caching"),
                         new KeybindSetting("Open Key",
                                 () -> cfg.worldMapKey, v -> cfg.worldMapKey = v)
                                 .description("The key that opens the fullscreen world map. Drag to pan, scroll to zoom, and use the dimension button to browse other dimensions' saved terrain. Press ESC or Backspace while rebinding to clear it."),
                         SliderSetting.ofInt("Capture Budget",
                                 () -> cfg.worldMapCaptureBudget, v -> cfg.worldMapCaptureBudget = v, 1, 8)
-                                .description("How many chunks the map may re-sample per game tick. Higher values fill the map faster but use more frame time; 2 keeps the cost under ~1-2ms per tick."),
+                                .description("Maximum changed or newly observed chunks captured per tick. Both maps share this work; default 2. World access stays on the client thread."),
                         SliderSetting.ofInt("Region Cache",
                                 () -> cfg.worldMapCacheRegions, v -> cfg.worldMapCacheRegions = v, 8, 192)
-                                .description("How many 512x512 region tiles (32x32 chunks each) stay in memory at full zoom detail. 64 covers a fully zoomed-out 1080p viewport; far zoom-out uses a separate lightweight overview layer and is not limited by this.")
+                                .description("Full-detail tiles per active dimension, approximately 1 MiB CPU plus up to 1 MiB GPU each. Applied when a context opens. Far zoom uses bounded 64x64 overview tiles."),
+                        new SectionHeaderSetting("Related Settings & Data"),
+                        mappingAction("Minimap Settings", "Shape, zoom, position and overlays.", screen ->
+                                net.minecraft.client.Minecraft.getInstance().setScreen(new FeatureDetailScreen(screen, find("minimap")))),
+                        mappingAction("Waypoint Settings", "Visibility, in-world markers and automatic death locations.", screen ->
+                                net.minecraft.client.Minecraft.getInstance().setScreen(new FeatureDetailScreen(screen, find("waypoints")))),
+                        mappingAction("Legacy Data Import", "Explicit copy from legacy display-name storage; originals are preserved.", screen ->
+                                net.minecraft.client.Minecraft.getInstance().setScreen(new MappingDataScreen(screen)))
                 ));
 
         addWithSettings(MODULES, "zoom", "Zoom",
@@ -889,6 +912,13 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                         SliderSetting.ofInt("Max Death Waypoints",
                                 () -> cfg.deathWaypointMaxCount, v -> cfg.deathWaypointMaxCount = v, 1, 20)
                                 .description("How many death waypoints to keep when Replace Previous is off; the oldest is pruned automatically. Death waypoints live in the Waypoints feature's list and also appear on the World Map as X markers."),
+                        new SectionHeaderSetting("Visibility & Limits"),
+                        SliderSetting.ofInt("Visible Marker Limit", () -> cfg.waypointMaxVisible,
+                                v -> cfg.waypointMaxVisible = v, 8, 128)
+                                .description("Nearest-first marker budget shared by map views and in-world rendering. Navigation selection has priority."),
+                        SliderSetting.ofInt("In-World Range", () -> cfg.waypointMaxDistance,
+                                v -> cfg.waypointMaxDistance = v, 64, 30000)
+                                .description("Maximum horizontal distance for minimap and in-world markers. The world map follows its viewport."),
                         new ColorSetting("Death Waypoint Color",
                                 () -> cfg.deathWaypointColor, v -> cfg.deathWaypointColor = v)
                 ));
@@ -919,9 +949,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                         SliderSetting.of("Terrain Alpha",
                                 () -> cfg.minimapTerrainAlpha, v -> cfg.minimapTerrainAlpha = v, 0.0, 1.0)
                                 .description("Opacity of the terrain layer. Lower values make the terrain translucent so the background shows through."),
-                        new BooleanSetting("Use World Map Cache",
-                                () -> cfg.minimapUseWorldMapCache, v -> cfg.minimapUseWorldMapCache = v)
-                                .description("Reads terrain from the World Map's captured region tiles — the same cache the fullscreen map draws — instead of re-sampling chunk data. Cheaper per frame and identical to the fullscreen map. Columns not yet captured (and everything, while the World Map feature is off) fall back to live chunk sampling."),
+                        new SectionFooterSetting("Both maps share captured terrain and persistent exploration. Capture continues while either map needs it."),
 
                         new SectionHeaderSetting("Overlays"),
                         new BooleanSetting("Show Waypoints",
@@ -951,6 +979,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                         new BooleanSetting("Show Coordinates",
                                 () -> cfg.minimapShowCoords, v -> cfg.minimapShowCoords = v)
                                 .description("Shows your current X/Y/Z below the minimap."),
+                        new BooleanSetting("Show Biome", () -> cfg.minimapShowBiome, v -> cfg.minimapShowBiome = v),
 
                         new SectionHeaderSetting("Zoom"),
                         SliderSetting.ofInt("Zoom (blocks across)",

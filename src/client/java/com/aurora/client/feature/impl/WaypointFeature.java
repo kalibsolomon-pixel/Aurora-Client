@@ -5,6 +5,9 @@ import com.aurora.client.config.AuroraConfig.Waypoint;
 import com.aurora.client.feature.Feature;
 import com.aurora.client.util.AuroraKey;
 import com.aurora.client.util.WorldScope;
+import com.aurora.client.worldmap.MapIdentity;
+import com.aurora.client.worldmap.MapTransform;
+import com.aurora.client.worldmap.WaypointQuery;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
@@ -42,6 +45,13 @@ public class WaypointFeature implements Feature {
     private boolean wasAlive = true;
     private BlockPos lastLivingPos = null;
     private String   lastLivingDim = "minecraft:overworld";
+    private String lastScope;
+    private List<Waypoint> nearby = List.of();
+    private List<Waypoint> normalizedList;
+    private long revision;
+    private int visibilityFingerprint;
+    public long revision() { return revision; }
+    public List<Waypoint> nearbyWaypoints() { return nearby; }
     private final AuroraKey.EdgeDetector dropEdge    = new AuroraKey.EdgeDetector();
     private final AuroraKey.EdgeDetector managerEdge = new AuroraKey.EdgeDetector();
 
@@ -54,6 +64,9 @@ public class WaypointFeature implements Feature {
     public void onTick(Minecraft client) {
         if (client == null) return;
         AuroraConfig cfg = AuroraConfig.get();
+        int fingerprint = java.util.Objects.hash(cfg.waypointMaxVisible, cfg.waypointMaxDistance,
+                cfg.waypointHiddenGroups);
+        if (fingerprint != visibilityFingerprint) { visibilityFingerprint = fingerprint; revision++; }
 
         // Manual drop keybind — always live, independent of master enable
         // toggle so users can bind it once and never worry about the tile
@@ -69,7 +82,17 @@ public class WaypointFeature implements Feature {
         }
 
         LocalPlayer p = client.player;
-        if (p == null) { wasAlive = true; lastLivingPos = null; return; }
+        String scope = scopeKey();
+        if (!java.util.Objects.equals(scope, lastScope)) {
+            wasAlive = true; lastLivingPos = null; lastScope = scope;
+            normalizedList = null; revision++;
+        }
+        if (p == null || scope == null) { wasAlive = true; lastLivingPos = null; nearby = List.of(); return; }
+
+        nearby = WaypointQuery.select(currentWorldWaypoints(),
+                client.level.dimension().identifier().toString(), cfg.waypointHiddenGroups,
+                navigationId(), p.getX(), p.getZ(),
+                MapTransform.bounded(cfg.waypointMaxDistance, 16, 30_000_000), cfg.waypointMaxVisible);
 
         boolean aliveNow = !p.isDeadOrDying();
 
@@ -114,22 +137,70 @@ public class WaypointFeature implements Feature {
 
     /** Appends a waypoint to the current world's list and persists. */
     public void addWaypoint(Waypoint w) {
-        if (w == null) return;
+        if (w == null || scopeKey() == null) return;
+        w.id = java.util.UUID.randomUUID().toString();
         listForCurrentWorld(true).add(w);
-        AuroraConfig.save();
+        touch();
     }
 
     /** Removes the given waypoint instance (identity match) from the current world. */
     public void remove(Waypoint w) {
         List<Waypoint> list = listForCurrentWorld(false);
         if (list == null) return;
-        if (list.removeIf(x -> x == w)) {
-            AuroraConfig.save();
+        if (list.removeIf(x -> x == w || (x != null && x.id != null && x.id.equals(w.id)))) {
+            if (w.id.equals(navigationId())) navigateTo(null);
+            touch();
         }
     }
 
     /** Persist after an in-place edit (rename / recolor / move). */
-    public void touch() { AuroraConfig.save(); }
+    public void touch() { revision++; AuroraConfig.save(); }
+
+    public static String scopeKey() {
+        MapIdentity identity = MapIdentity.current();
+        return identity == null ? null : identity.key();
+    }
+
+    public String navigationId() {
+        var map = AuroraConfig.get().waypointNavigationByWorld;
+        return map == null ? null : map.get(scopeKey());
+    }
+
+    public void navigateTo(Waypoint waypoint) {
+        String scope = scopeKey();
+        if (scope == null) return;
+        var cfg = AuroraConfig.get();
+        if (cfg.waypointNavigationByWorld == null) cfg.waypointNavigationByWorld = new java.util.HashMap<>();
+        if (waypoint == null) cfg.waypointNavigationByWorld.remove(scope);
+        else cfg.waypointNavigationByWorld.put(scope, waypoint.id);
+        touch();
+    }
+
+    /** User-requested copy from an ambiguous old display-name bucket. Original retained. */
+    public int importLegacy() {
+        MapIdentity identity = MapIdentity.current();
+        if (identity == null) return 0;
+        var old = AuroraConfig.get().waypointsByWorld.get(identity.legacyScope());
+        if (old == null) return 0;
+        List<Waypoint> target = listForCurrentWorld(true);
+        java.util.Set<String> ids = new java.util.HashSet<>();
+        for (Waypoint w : target) if (w != null) ids.add(w.id);
+        int count = 0;
+        com.google.gson.Gson gson = new com.google.gson.Gson();
+        for (int index = 0; index < old.size(); index++) {
+            Waypoint original = old.get(index);
+            if (original == null) continue;
+            // Deterministic legacy ID makes repeating the copy idempotent, including old files without IDs.
+            String id = java.util.UUID.nameUUIDFromBytes((identity.legacyScope() + "|" +
+                    index + "|" + original.name + "|" + original.createdAtMs)
+                    .getBytes(java.nio.charset.StandardCharsets.UTF_8)).toString();
+            if (!ids.add(id)) continue;
+            Waypoint copy = gson.fromJson(gson.toJson(original), Waypoint.class);
+            copy.id = id; target.add(copy); count++;
+        }
+        touch();
+        return count;
+    }
 
     /**
      * Returns a live view of the current world's waypoint list — mutations
@@ -138,7 +209,26 @@ public class WaypointFeature implements Feature {
      */
     public List<Waypoint> currentWorldWaypoints() {
         List<Waypoint> list = listForCurrentWorld(false);
-        return list == null ? java.util.Collections.emptyList() : list;
+        if (list == null) return List.of();
+        if (normalizedList != list) {
+            normalizedList = list;
+            revision++;
+            java.util.Set<String> ids = new java.util.HashSet<>();
+            boolean changed = false;
+            for (Waypoint w : list) {
+                if (w == null) continue;
+                if (w.id == null || w.id.isBlank() || !ids.add(w.id)) {
+                    w.id = java.util.UUID.randomUUID().toString(); ids.add(w.id); changed = true;
+                }
+                if (w.dimension == null) { w.dimension = "minecraft:overworld"; changed = true; }
+                if (w.name == null) { w.name = "Waypoint"; changed = true; }
+                if (w.group == null) { w.group = ""; changed = true; }
+                if (w.description == null) { w.description = ""; changed = true; }
+                if (w.marker == null) { w.marker = AuroraConfig.WaypointMarker.DIAMOND; changed = true; }
+            }
+            if (changed) touch();
+        }
+        return list;
     }
 
     // ===== Internals =====
@@ -148,7 +238,8 @@ public class WaypointFeature implements Feature {
             List<Waypoint> list = listForCurrentWorld(false);
             if (list != null) {
                 for (Iterator<Waypoint> it = list.iterator(); it.hasNext(); ) {
-                    if (it.next().death) it.remove();
+                    Waypoint marker = it.next();
+                    if (marker != null && marker.death) it.remove();
                 }
             }
         }
@@ -162,11 +253,11 @@ public class WaypointFeature implements Feature {
             if (list != null) {
                 int cap = Math.max(1, cfg.deathWaypointMaxCount);
                 int deaths = 0;
-                for (Waypoint x : list) if (x.death) deaths++;
+                for (Waypoint x : list) if (x != null && x.death) deaths++;
                 int excess = deaths - (cap - 1);
                 if (excess > 0) {
                     List<Waypoint> deathWps = new ArrayList<>();
-                    for (Waypoint x : list) if (x.death) deathWps.add(x);
+                    for (Waypoint x : list) if (x != null && x.death) deathWps.add(x);
                     deathWps.sort(java.util.Comparator.comparingLong(x -> x.createdAtMs));
                     for (int i = 0; i < excess && i < deathWps.size(); i++) {
                         list.remove(deathWps.get(i));
@@ -177,13 +268,14 @@ public class WaypointFeature implements Feature {
 
         // Prefer the cached pre-death pos when present; on the very first
         // tick after world join we might not have one yet.
-        BlockPos pos = lastLivingPos != null ? lastLivingPos : BlockPos.ZERO;
+        if (lastLivingPos == null) return;
+        BlockPos pos = lastLivingPos;
         String dim = lastLivingDim != null ? lastLivingDim : "minecraft:overworld";
         String label = "Death @ " + LocalTime.now().format(HHMM);
         Waypoint w = new Waypoint(label, pos.getX(), pos.getY(), pos.getZ(), dim, cfg.deathWaypointColor);
         w.death = true;
         listForCurrentWorld(true).add(w);
-        AuroraConfig.save();
+        touch();
     }
 
     private List<Waypoint> listForCurrentWorld(boolean createIfMissing) {
@@ -191,8 +283,8 @@ public class WaypointFeature implements Feature {
         if (cfg.waypointsByWorld == null) {
             cfg.waypointsByWorld = new java.util.HashMap<>();
         }
-        String key = WorldScope.current();
-        if ("none".equals(key)) return createIfMissing ? new ArrayList<>() : null;
+        String key = scopeKey();
+        if (key == null) return null;
         List<Waypoint> list = cfg.waypointsByWorld.get(key);
         if (list == null && createIfMissing) {
             list = new ArrayList<>();

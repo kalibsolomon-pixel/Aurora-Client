@@ -67,6 +67,7 @@ public final class ChunkCapturer {
                 | (cx & (WorldMapSize.CHUNKS - 1));
         tile.stamps[stampIdx] = now;
         tile.dirty = true;
+        tile.revision++;
         tile.uploadPending = true;
     }
 

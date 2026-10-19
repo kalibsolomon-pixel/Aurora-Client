@@ -6,6 +6,21 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 class RegionCacheTest {
+    @Test void dirtyRegionsCannotBeEvictedBeforePersistenceAndImagesStartTransparent() {
+        RegionCache cache = new RegionCache(8, RegionCache.RegionTile::release, tile -> !tile.dirty && !tile.saving);
+        try {
+            for (int i = 0; i < 8; i++) {
+                var tile = cache.acquire(i);
+                assertEquals(0, tile.image.getPixel(511, 511));
+                tile.dirty = true;
+            }
+            assertNull(cache.acquire(99)); assertEquals(8, cache.size());
+            var saved = cache.peek(3); saved.dirty = false; saved.saving = true;
+            assertNull(cache.acquire(99));
+            saved.saving = false;
+            assertNotNull(cache.acquire(99)); assertNull(cache.peek(3));
+        } finally { cache.closeAll(); }
+    }
     @Test void residentReadsPreserveAccessEvictionAndMissesDoNotCreate() {
         List<Long> evicted = new ArrayList<>();
         RegionCache cache = new RegionCache(8, tile -> { evicted.add(tile.key); tile.release(); });

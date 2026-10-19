@@ -10,6 +10,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.function.Predicate;
 
 /**
  * LRU cache of region tiles. One tile = 32×32 chunks = one 512×512
@@ -35,6 +36,7 @@ import java.util.Iterator;
  * (registered by {@code WorldMapClient}) before their memory is freed.
  */
 public final class RegionCache {
+    private static final java.util.concurrent.atomic.AtomicLong RESOURCE_SEQUENCE = new java.util.concurrent.atomic.AtomicLong();
 
     /** Notified on the client thread whenever a tile falls out of the LRU. */
     public interface EvictionListener {
@@ -43,13 +45,19 @@ public final class RegionCache {
 
     private final int capacity;
     private final EvictionListener listener;
+    private final Predicate<RegionTile> evictable;
     // The minimap samples this map per texel. Primitive keys avoid boxing every
     // lookup outside Long's tiny cache while retaining the original access LRU.
     private final Long2ObjectLinkedOpenHashMap<RegionTile> tiles = new Long2ObjectLinkedOpenHashMap<>(64);
 
     public RegionCache(int capacity, EvictionListener listener) {
-        this.capacity = Math.max(8, capacity);
+        this(capacity, listener, tile -> true);
+    }
+
+    public RegionCache(int capacity, EvictionListener listener, Predicate<RegionTile> evictable) {
+        this.capacity = Math.max(8, Math.min(256, capacity));
         this.listener = listener;
+        this.evictable = evictable;
     }
 
     /** Packs a region coordinate pair into a long map key. */
@@ -69,6 +77,7 @@ public final class RegionCache {
     public RegionTile acquire(long key) {
         RegionTile tile = tiles.getAndMoveToLast(key);
         if (tile == null) {
+            if (tiles.size() >= capacity && !evictOne()) return null;
             tile = new RegionTile(key);
             tiles.put(key, tile);
             evictOverflow();
@@ -108,6 +117,19 @@ public final class RegionCache {
             listener.onEvict(tile);
         }
     }
+
+    /** Dirty/saving tiles stay resident until their snapshot is durable. */
+    private boolean evictOne() {
+        Iterator<RegionTile> it = tiles.values().iterator();
+        while (it.hasNext()) {
+            RegionTile tile = it.next();
+            if (!evictable.test(tile)) continue;
+            it.remove();
+            listener.onEvict(tile);
+            return true;
+        }
+        return false;
+    }
     // ================================================================
     //  Tile
     // ================================================================
@@ -130,6 +152,7 @@ public final class RegionCache {
     public static final class RegionTile {
 
         public final long key;
+        private final long resourceSequence = RESOURCE_SEQUENCE.incrementAndGet();
         /** Per-chunk last-capture timestamp (ms); 0 = never captured. */
         public final long[] stamps = new long[WorldMapSize.CHUNKS * WorldMapSize.CHUNKS];
 
@@ -145,6 +168,9 @@ public final class RegionCache {
         public volatile boolean loadRequested;
         /** Disk load completed (or there was nothing on disk). */
         public volatile boolean loaded;
+        public boolean saving;
+        public boolean writable = true;
+        public long revision;
 
 
         RegionTile(long key) {
@@ -152,7 +178,7 @@ public final class RegionCache {
             // The NativeImage buffer is zero-initialized (transparent black
             // = "unexplored"); no explicit fill pass needed.
             this.image = new NativeImage(NativeImage.Format.RGBA,
-                    WorldMapSize.BLOCKS, WorldMapSize.BLOCKS, false);
+                    WorldMapSize.BLOCKS, WorldMapSize.BLOCKS, true);
         }
 
         public boolean isLoaded() { return loaded; }
@@ -171,7 +197,7 @@ public final class RegionCache {
             if (tex != null) return;
             Minecraft mc = Minecraft.getInstance();
             if (mc == null || mc.getTextureManager() == null) return;
-            String hex = Long.toHexString(key);
+            String hex = Long.toHexString(key) + "_" + resourceSequence;
             texId = Identifier.fromNamespaceAndPath(AuroraClient.MOD_ID, "worldmap/" + hex);
             tex = new DynamicTexture(() -> "worldmap_" + hex, image);
             mc.getTextureManager().register(texId, tex);

@@ -2823,3 +2823,39 @@ unchanged. The accepted result is reduced lookup allocation, not a measured
 gameplay FPS increase. Separate opt-in research sources exercise complex scenes,
 traversal, UI and software timing; ordinary jars contain none of those probes.
 See `PERFORMANCE_INITIATIVE_II_FINAL_REPORT.md` for the bounded Windows evidence.
+
+## Unified mapping engine (2026-10-19)
+
+`MapIdentity` resolves mapping identity from the authoritative integrated-server
+save directory or original multiplayer address; SHA-256 directory components
+avoid lossy sanitizer collisions. Legacy WorldScope remains the playtime and
+compatibility key. Display-name changes retain SP mapping identity; moving a save
+to another directory creates a separate identity. Unknown connection identities
+disable persistence rather than sharing a fallback world.
+
+`WorldMapClient` owns one live `Context` and an optional read-only archive
+`Context`. Context-local async mailboxes and requested-tile identity checks reject
+stale loads. Retired dirty contexts stay bounded/resident until saves complete;
+rapid returns reuse pending contexts. Permanent IO failure stops new contexts
+after four retained contexts and logs failures, with five-second retry backoff.
+Shutdown gives pending saves a bounded ten-second drain. Client-thread world
+access feeds ChunkCapturer; primitive RegionCache and OverviewCache retain tile
+reuse and LOD. Tile resources have unique lifetime IDs across simultaneous contexts.
+GPU creation/uploads are budgeted at two per tick; disk requests at four per tick
+and eight in flight per context, on a shared 64-task serial worker queue.
+
+MinimapModule is only a presentation: shared captured pixels, bounded 20 Hz
+motion refreshes, no unchanged stationary uploads, one masked terrain/frame blit.
+MapTransform and MapViewport own heading, clipping and cursor-anchored zoom math.
+WorldMapScreen culls regions and selects full-resolution/64x64 overview tiles.
+WaypointFeature owns live config records, stable IDs and navigation selection;
+WaypointQuery filters visibility/dimension/group and caps nearest-first marker
+sets. Manager search/sort results are revision-cached; controls are viewport-bounded.
+WaypointEditScreen stages edits transactionally for both map and manager.
+
+WMR surface v1 and experimental v2 reads remain compatible; GZIP integrity and
+payload boundaries are checked. Dirty tiles become clean only after successful
+atomic writes of the matching revision. Malformed files are preserved and made
+read-only. Explicit legacy import first saves current data, then copies/merges
+only unexplored chunks, retaining originals. Dimension metadata is versioned and
+bounded. Ordinary builds exclude all `tools/mapping` native acceptance probes.

@@ -93,6 +93,8 @@ public class AuroraConfig {
             int mod = field.getModifiers();
             if (java.lang.reflect.Modifier.isStatic(mod) || java.lang.reflect.Modifier.isFinal(mod)) continue;
             if (!field.getName().startsWith(camelCasePrefix)) continue;
+            // Waypoint records and navigation are user data, not appearance defaults.
+            if (field.getName().equals("waypointsByWorld") || field.getName().equals("waypointNavigationByWorld")) continue;
             try {
                 Object def = field.get(DEFAULTS);
                 // Object-valued fields must not alias the DEFAULTS snapshot
@@ -693,6 +695,11 @@ public class AuroraConfig {
      * Scoped per-world via {@link #waypointsByWorld}.
      */
     public static class Waypoint {
+        public String id = java.util.UUID.randomUUID().toString();
+        public boolean visible = true;
+        public String group = "";
+        public String description = "";
+        public WaypointMarker marker = WaypointMarker.DIAMOND;
         /** Display name. Editable in the manager screen. */
         public String name = "Waypoint";
         public int x = 0, y = 64, z = 0;
@@ -725,6 +732,14 @@ public class AuroraConfig {
      * </ul>
      */
     public enum WaypointDisplay { BEAM, BLOCK, BOTH }
+    public enum WaypointMarker { DIAMOND, SQUARE, CROSS }
+
+    public int waypointMaxVisible = 64;
+    public int waypointMaxDistance = 10000;
+    public java.util.Set<String> waypointHiddenGroups = new java.util.HashSet<>();
+    public java.util.Map<String, String> waypointNavigationByWorld = new java.util.HashMap<>();
+    public boolean minimapShowBiome = false;
+    public boolean worldMapShowWaypointNames = true;
 
     public boolean waypointsEnabled       = false;
     public WaypointDisplay waypointDisplay = WaypointDisplay.BEAM;

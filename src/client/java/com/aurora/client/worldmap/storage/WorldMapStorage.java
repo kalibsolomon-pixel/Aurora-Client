@@ -14,6 +14,11 @@ import java.nio.file.StandardCopyOption;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.RejectedExecutionException;
+import com.aurora.client.worldmap.MapIdentity;
 import java.util.function.Consumer;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
@@ -68,9 +73,14 @@ public final class WorldMapStorage {
     public static final int BLOCKS = CHUNKS * 16;              // 512
     public static final int PIXELS = BLOCKS * BLOCKS;          // 262144
     public static final int STAMP_COUNT = CHUNKS * CHUNKS;     // 1024
+    // Immutable borrowed zero payload for missing files; avoids 1 MiB allocation per
+    // unexplored region while panning. Consumers only read/copy these arrays.
+    private static final long[] EMPTY_STAMPS = new long[STAMP_COUNT];
+    private static final int[] EMPTY_PIXELS = new int[PIXELS];
 
     /** One shared daemon worker for all region IO — keeps seeks sequential. */
-    private static final ExecutorService IO = Executors.newSingleThreadExecutor(r -> {
+    private static final ThreadPoolExecutor IO = new ThreadPoolExecutor(1, 1, 0,
+            TimeUnit.MILLISECONDS, new ArrayBlockingQueue<>(64), r -> {
         Thread t = new Thread(r, "Aurora-WorldMap-IO");
         t.setDaemon(true);
         return t;
@@ -93,12 +103,62 @@ public final class WorldMapStorage {
                 .resolve("aurora-worldmap")
                 .resolve(sanitize(scope))
                 .resolve(sanitize(dimension));
-        try {
-            Files.createDirectories(root);
-        } catch (IOException e) {
-            AuroraClient.LOGGER.warn("[WorldMap] Could not create storage dir {}", root, e);
-        }
         return new WorldMapStorage(root);
+    }
+
+    public static WorldMapStorage forIdentity(MapIdentity identity, String dimension) {
+        return new WorldMapStorage(FabricLoader.getInstance().getConfigDir()
+                .resolve("aurora-worldmap").resolve(identity.key())
+                .resolve(MapIdentity.dimensionFolder(dimension)));
+    }
+
+    /** Test seam; no global Minecraft/Fabric state needed for format checks. */
+    public static WorldMapStorage at(Path directory) { return new WorldMapStorage(directory); }
+
+    /** Small versioned index preserves discovered modded dimensions across restarts. */
+    public static boolean rememberDimension(MapIdentity identity, String dimension, Consumer<java.util.List<String>> sink) {
+        Path index = FabricLoader.getInstance().getConfigDir().resolve("aurora-worldmap")
+                .resolve(identity.key()).resolve("dimensions.json");
+        return execute(() -> {
+            java.util.LinkedHashSet<String> dimensions = new java.util.LinkedHashSet<>();
+            try {
+                if (Files.exists(index)) {
+                    if (Files.size(index) > 65536) throw new IOException("Oversized dimension index");
+                    var root = com.google.gson.JsonParser.parseString(Files.readString(index)).getAsJsonObject();
+                    if (root.get("version").getAsInt() != 1) throw new IOException("Unknown dimension index version");
+                    for (var entry : root.getAsJsonArray("dimensions")) {
+                        String value = entry.getAsString();
+                        if (value.length() <= 256 && value.matches("[a-z0-9_.-]+:[a-z0-9_./-]+")) dimensions.add(value);
+                        if (dimensions.size() >= 256) break;
+                    }
+                }
+                if (dimensions.size() < 256) dimensions.add(dimension);
+                Files.createDirectories(index.getParent());
+                var root = new com.google.gson.JsonObject(); root.addProperty("version", 1);
+                root.add("dimensions", new com.google.gson.Gson().toJsonTree(dimensions));
+                Path temporary = index.resolveSibling("dimensions.json.tmp");
+                Files.writeString(temporary, root.toString());
+                try { Files.move(temporary, index, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE); }
+                catch (java.nio.file.AtomicMoveNotSupportedException unsupported) {
+                    Files.move(temporary, index, StandardCopyOption.REPLACE_EXISTING);
+                }
+            } catch (Exception malformed) {
+                AuroraClient.LOGGER.warn("[WorldMap] Dimension index preserved after read/write failure", malformed);
+            }
+            sink.accept(java.util.List.copyOf(dimensions));
+        });
+    }
+
+    public static boolean awaitIdle(long millis) {
+        java.util.concurrent.CountDownLatch barrier = new java.util.concurrent.CountDownLatch(1);
+        if (!execute(barrier::countDown)) return false;
+        try { return barrier.await(millis, TimeUnit.MILLISECONDS); }
+        catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); return false; }
+    }
+
+    private static boolean execute(Runnable task) {
+        try { IO.execute(task); return true; }
+        catch (RejectedExecutionException full) { return false; }
     }
 
     /**
@@ -136,15 +196,20 @@ public final class WorldMapStorage {
      * snapshots (already copied off the NativeImage on the client thread);
      * the IO thread only reads them.
      */
-    public void submitSave(long key, int rx, int rz, long[] stamps, int[] pixels) {
-        if (stamps == null || pixels == null) return;
+    public boolean submitSave(long key, int rx, int rz, long[] stamps, int[] pixels,
+                              Consumer<Boolean> completion) {
+        if (stamps == null || stamps.length != STAMP_COUNT || pixels == null || pixels.length != PIXELS)
+            throw new IllegalArgumentException("Invalid region snapshot dimensions");
         Path target = fileFor(rx, rz);
-        IO.execute(() -> {
+        return execute(() -> {
+            boolean saved = false;
             try {
                 writeRegion(target, stamps, pixels);
+                saved = true;
             } catch (Throwable t) {
-                AuroraClient.LOGGER.debug("[WorldMap] Failed to save region {}", target.getFileName(), t);
+                AuroraClient.LOGGER.warn("[WorldMap] Save failed; dirty region retained: {}", target.getFileName(), t);
             }
+            completion.accept(saved);
         });
     }
 
@@ -155,17 +220,19 @@ public final class WorldMapStorage {
      * the tile as loaded instead of spinning on reloads. Corrupt files are
      * logged and also downgrade to a zeroed payload.
      */
-    public void submitLoad(long key, int rx, int rz, Consumer<LoadedRegion> sink) {
+    public boolean submitLoad(long key, int rx, int rz, Consumer<LoadedRegion> sink) {
         Path target = fileFor(rx, rz);
-        IO.execute(() -> {
+        return execute(() -> {
             LoadedRegion loaded = null;
+            boolean valid = true;
             try {
                 loaded = readRegion(key, target);
             } catch (Throwable t) {
-                AuroraClient.LOGGER.debug("[WorldMap] Failed to load region {}", target.getFileName(), t);
+                valid = false;
+                AuroraClient.LOGGER.warn("[WorldMap] Unreadable region preserved without overwrite: {}", target.getFileName(), t);
             }
             if (loaded == null) {
-                loaded = new LoadedRegion(key, new long[STAMP_COUNT], new int[PIXELS]);
+                loaded = new LoadedRegion(key, EMPTY_STAMPS, EMPTY_PIXELS, valid);
             }
             sink.accept(loaded);
         });
@@ -176,6 +243,7 @@ public final class WorldMapStorage {
     // ================================================================
 
     private static void writeRegion(Path target, long[] stamps, int[] pixels) throws IOException {
+        Files.createDirectories(target.getParent());
         Path tmp = target.resolveSibling(target.getFileName() + ".tmp");
         try (DataOutputStream out = new DataOutputStream(new GZIPOutputStream(
                 new BufferedOutputStream(Files.newOutputStream(tmp), 1 << 16)))) {
@@ -186,7 +254,7 @@ public final class WorldMapStorage {
         }
         try {
             Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-        } catch (IOException atomicUnsupported) {
+        } catch (java.nio.file.AtomicMoveNotSupportedException atomicUnsupported) {
             // FS without atomic move (some network drives) — plain replace is
             // still crash-consistent enough: worst case the .tmp lingers.
             Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING);
@@ -197,9 +265,9 @@ public final class WorldMapStorage {
         if (!Files.exists(target)) return null;
         try (DataInputStream in = new DataInputStream(new GZIPInputStream(
                 new BufferedInputStream(Files.newInputStream(target), 1 << 16)))) {
-            if (in.readInt() != MAGIC) return null;
+            if (in.readInt() != MAGIC) throw new IOException("Wrong region magic");
             byte version = in.readByte();
-            if (version != 1 && version != 2) return null;
+            if (version != 1 && version != 2) throw new IOException("Unsupported region version " + version);
             long[] stamps = new long[STAMP_COUNT];
             for (int i = 0; i < STAMP_COUNT; i++) stamps[i] = in.readLong();
             int[] pixels = new int[PIXELS];
@@ -209,15 +277,63 @@ public final class WorldMapStorage {
                 // second layer follows. Skip it (nothing is read after this
                 // point, so a short skip is harmless) and keep the surface.
                 if (in.readByte() == 1) {
-                    in.skipBytes(STAMP_COUNT * 8);
-                    in.skipBytes(PIXELS * 4);
+                    in.skipNBytes(STAMP_COUNT * 8L + PIXELS * 4L);
                 }
             }
-            return new LoadedRegion(key, stamps, pixels);
+            if (in.read() != -1) throw new IOException("Unexpected trailing region payload");
+            return new LoadedRegion(key, stamps, pixels, true);
         }
     }
 
     /** Immutable decoded region payload handed from the IO thread to the client thread. */
-    public record LoadedRegion(long key, long[] stamps, int[] pixels) {}
+    public record LoadedRegion(long key, long[] stamps, int[] pixels, boolean valid) {}
+
+    /** Explicit, copy-only import: legacy folders cannot prove their original identity.
+     * Existing destination regions and original files are never replaced. */
+    public boolean importLegacy(MapIdentity identity, String dimension, Consumer<String> completion) {
+        Path legacy = FabricLoader.getInstance().getConfigDir().resolve("aurora-worldmap")
+                .resolve(sanitize(identity.legacyScope())).resolve(sanitize(dimension));
+        return importLegacyFrom(legacy, completion);
+    }
+
+    /** Copy-only migration test seam; caller supplies the already-resolved legacy directory. */
+    public boolean importLegacyFrom(Path legacy, Consumer<String> completion) {
+        return execute(() -> {
+            int copied = 0;
+            try {
+                Files.createDirectories(dir);
+                if (Files.isDirectory(legacy)) {
+                    try (var files = Files.newDirectoryStream(legacy, "r.*.*.wmr")) {
+                        for (Path source : files) {
+                            if (!source.getFileName().toString().matches("r\\.-?\\d+\\.-?\\d+\\.wmr")) continue;
+                            Path target = dir.resolve(source.getFileName());
+                            LoadedRegion data = readRegion(0, source);
+                            if (data == null) continue;
+                            if (Files.exists(target)) {
+                                LoadedRegion existing = readRegion(0, target);
+                                // Merge only unexplored destination chunks. Existing captures win.
+                                for (int chunk = 0; chunk < STAMP_COUNT; chunk++) {
+                                    if (existing.stamps()[chunk] != 0 || data.stamps()[chunk] == 0) continue;
+                                    int x = (chunk & 31) << 4, z = (chunk >>> 5) << 4;
+                                    for (int row = z; row < z + 16; row++)
+                                        System.arraycopy(data.pixels(), row * BLOCKS + x,
+                                                existing.pixels(), row * BLOCKS + x, 16);
+                                    existing.stamps()[chunk] = data.stamps()[chunk];
+                                }
+                                data = existing;
+                            }
+                            // Use the atomic writer, never copy a partial file into the destination.
+                            writeRegion(target, data.stamps(), data.pixels());
+                            copied++;
+                        }
+                    }
+                }
+                completion.accept("Imported " + copied + " legacy regions; originals preserved.");
+            } catch (Exception failure) {
+                AuroraClient.LOGGER.warn("[WorldMap] Legacy import stopped; originals preserved", failure);
+                completion.accept("Import stopped; originals preserved. Check the log.");
+            }
+        });
+    }
 }
 

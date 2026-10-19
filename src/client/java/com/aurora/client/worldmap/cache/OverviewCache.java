@@ -20,6 +20,7 @@ import java.util.Map;
  * dropped with the dimension context. Client thread only.
  */
 public final class OverviewCache {
+    private static final java.util.concurrent.atomic.AtomicLong RESOURCE_SEQUENCE = new java.util.concurrent.atomic.AtomicLong();
 
     /** One-shot full-paint logging when {@code -Daurora.worldmap.debugTiles=true}. */
     static final boolean DEBUG_TILES = Boolean.getBoolean("aurora.worldmap.debugTiles");
@@ -81,6 +82,7 @@ public final class OverviewCache {
     public static final class OverviewTile {
 
         public final long key;
+        private final long resourceSequence = RESOURCE_SEQUENCE.incrementAndGet();
         // useCalloc: unpainted texels must read as transparent black, never
         // malloc residue — per-chunk refreshes leave most texels untouched on
         // tiles that may already be rendered.
@@ -103,6 +105,8 @@ public final class OverviewCache {
             return loaded;
         }
 
+        public boolean needsUpload() { return uploadPending; }
+
         /** Texture identifier — only valid after {@link #ensureGpu()}. */
         public Identifier textureId() {
             return texId;
@@ -113,7 +117,7 @@ public final class OverviewCache {
             if (tex != null) return;
             Minecraft mc = Minecraft.getInstance();
             if (mc == null || mc.getTextureManager() == null) return;
-            String hex = Long.toHexString(key);
+            String hex = Long.toHexString(key) + "_" + resourceSequence;
             texId = Identifier.fromNamespaceAndPath(AuroraClient.MOD_ID, "worldmap/ov_" + hex);
             tex = new DynamicTexture(() -> "worldmap_ov_" + hex, image);
             mc.getTextureManager().register(texId, tex);
@@ -197,7 +201,6 @@ public final class OverviewCache {
         private void finishFullPaint(String source) {
             loaded = true;
             uploadPending = true;
-            flushUpload();
             if (DEBUG_TILES && !loggedFullPaint) {
                 loggedFullPaint = true;
                 logPaintSummary(source);
@@ -237,7 +240,6 @@ public final class OverviewCache {
         /** Partial (per-chunk) refresh: upload only; load state is unchanged. */
         private void finishPartialPaint() {
             uploadPending = true;
-            flushUpload();
         }
 
         /** Alpha-weighted 8×8 average read as ARGB via {@code getPixel}. */

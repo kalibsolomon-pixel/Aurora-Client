@@ -2351,3 +2351,27 @@ PARK/500, bounded automatic Reflex and Launcher G1/2048 remain the reference.
 Research workloads live outside normal source sets in `tools/performance/stress`.
 See [PERFORMANCE_INITIATIVE_II_FINAL_REPORT.md](PERFORMANCE_INITIATIVE_II_FINAL_REPORT.md)
 and `tools/performance/INITIATIVE_II.md` for evidence and reproduction limits.
+
+## Unified mapping initiative (2026-10-19)
+
+Minimap and world map now use `worldmap/WorldMapClient` as their authoritative
+observed-terrain source. The minimap no longer samples live columns on render.
+The engine runs while either terrain presentation needs it; disabling both closes
+contexts after durable saves. Live capture and read-only archive browsing have
+separate caches and unique texture lifetimes. Primitive RegionCache LRU stays;
+dirty/saving tiles cannot be evicted. IO requests/results/uploads are bounded.
+
+Mapping uses `MapIdentity` (hashed authoritative SP save directory / original MP
+address), leaving legacy WorldScope/playtime keys unchanged. Dimension folders
+are hashed; dimensions.json records visited modded dimensions. Old WMR v1/v2
+files remain readable. Legacy display-name data is imported explicitly through
+World Map settings → Legacy Data Import, by copying/merging unexplored chunks
+only; original data stays intact. Malformed regions are preserved without overwrite.
+
+WaypointFeature remains the single live waypoint owner, with stable IDs, group,
+description, style, visibility and world-scoped navigation. `WaypointQuery` caps
+nearest-first render work and filters dimensions/hidden groups in every view.
+`WaypointEditScreen` serves map and manager; manager adds search/sort/group/dimension
+filters and bounds row-control residency to its viewport. Appearance Reset keeps
+waypoint records/navigation intact. Existing profile scoping remains unchanged.
+See `docs/mapping/PROGRESS.md` for current verification and remaining acceptance.

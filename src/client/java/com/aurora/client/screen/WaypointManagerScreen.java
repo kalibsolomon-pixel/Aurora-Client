@@ -58,15 +58,15 @@ import java.util.Set;
  */
 public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
 
-    private static final int ROW_H        = 28;
+    private static final int ROW_H        = 36;
     private static final int LIST_W       = 460;
 
     private static final int SWATCH_W     = 16;
-    private static final int NAME_W       = 130;
-    private static final int COORDS_W     = 96;
-    private static final int BTN_COPY_W   = 48;
-    private static final int BTN_COLOR_W  = 48;
-    private static final int BTN_DEL_W    = 56;
+    private int nameWidth() { return Math.max(48, listWidth() - 16 - 22 - 3 * 44 - 18); }
+    private static final int COORDS_W     = 0;
+    private static final int BTN_COPY_W   = 44;
+    private static final int BTN_COLOR_W  = 44;
+    private static final int BTN_DEL_W    = 44;
     private static final int CONTROL_GAP  = 6;
     private static final int ROW_INSET    = 8;
 
@@ -100,21 +100,75 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
 
     // Row-control offsets from the row's left edge, shared by the glass pass
     // and the content pass so the two can never disagree on where a button is.
-    private static final int COPY_DX  = ROW_INSET + SWATCH_W + CONTROL_GAP + NAME_W + CONTROL_GAP + COORDS_W + CONTROL_GAP;
-    private static final int COLOR_DX = COPY_DX + BTN_COPY_W + CONTROL_GAP;
-    private static final int DEL_DX   = COLOR_DX + BTN_COLOR_W + CONTROL_GAP;
+    private int copyDx() { return ROW_INSET + SWATCH_W + CONTROL_GAP + nameWidth() + CONTROL_GAP; }
+    private int colorDx() { return copyDx() + BTN_COPY_W + CONTROL_GAP; }
+    private int delDx() { return colorDx() + BTN_COLOR_W + CONTROL_GAP; }
 
     public WaypointManagerScreen(Screen parent) {
         super(Component.literal("Waypoints — " + WorldScope.current()), parent);
     }
 
+    private EditBox search;
+    private String query = "", group = "";
+    private boolean currentDimensionOnly;
+    private int sort;
+    private long rowsRevision = -1, rowsSecond = -1;
+    private String rowsScope;
+    private List<Waypoint> filtered = List.of();
+    private List<Waypoint> reconciledRows;
+    private int reconciledStart = -1;
+
+    @Override protected int listTop() { return 100; }
+    @Override protected int listBottomPad() { return 16; }
+
+    @Override protected void init() {
+        super.init();
+        int left = (width - listWidth()) / 2;
+        search = new EditBox(font, left, 45, listWidth(), 18, Component.literal("Search waypoints"));
+        search.setHint(Component.literal("Search name, group, dimension or description"));
+        search.setValue(query);
+        search.setResponder(value -> { commitEditors(); query = value; invalidateRows(); });
+        addRenderableWidget(search);
+        int cell = (listWidth() - 18) / 4;
+        addRenderableWidget(ButtonWidget.semantic(left, 69, cell, 20,
+                Component.literal(sortLabel()), "Cycles name, distance, creation and group sorting.",
+                () -> { commitEditors(); sort = (sort + 1) % 4; invalidateRows(); rebuildWidgets(); }));
+        addRenderableWidget(ButtonWidget.semantic(left + cell + 6, 69, cell, 20,
+                Component.literal(currentDimensionOnly ? "This dim" : "All dims"), "Filters the current dimension.",
+                () -> { commitEditors(); currentDimensionOnly = !currentDimensionOnly; invalidateRows(); rebuildWidgets(); }));
+        addRenderableWidget(ButtonWidget.semantic(left + 2 * (cell + 6), 69, cell, 20,
+                Component.literal(font.plainSubstrByWidth(group.isEmpty() ? "All groups" : group, cell - 8)),
+                "Cycles waypoint groups. Edit a waypoint to assign its group.", () -> {
+                    commitEditors();
+                    java.util.TreeSet<String> groups = new java.util.TreeSet<>(); groups.add("");
+                    var feature = WaypointFeature.get();
+                    if (feature != null) for (Waypoint w : feature.currentWorldWaypoints())
+                        if (w != null && w.group != null && !w.group.isEmpty()) groups.add(w.group);
+                    var options = new java.util.ArrayList<>(groups);
+                    group = options.get((options.indexOf(group) + 1) % options.size());
+                    invalidateRows(); rebuildWidgets();
+                }));
+        boolean hidden = AuroraConfig.get().waypointHiddenGroups != null && AuroraConfig.get().waypointHiddenGroups.contains(group);
+        ButtonWidget groupVisibility = addRenderableWidget(ButtonWidget.semantic(left + 3 * (cell + 6), 69, cell, 20,
+                Component.literal(hidden ? "Show group" : "Hide group"), "Shows or hides the selected group on every map.", () -> {
+                    var cfg = AuroraConfig.get();
+                    if (cfg.waypointHiddenGroups == null) cfg.waypointHiddenGroups = new java.util.HashSet<>();
+                    if (!cfg.waypointHiddenGroups.remove(group)) cfg.waypointHiddenGroups.add(group);
+                    AuroraConfig.save(); rebuildWidgets();
+                }));
+        groupVisibility.active = !group.isEmpty();
+    }
+
+    private String sortLabel() { return new String[]{"Name", "Distance", "Newest", "Group"}[sort]; }
+    private void invalidateRows() { rowsRevision = -1; scroll.set(0); nameFitCache.clear(); }
+
     // ------------------------------------------------------------------
     //  Foundation hooks
     // ------------------------------------------------------------------
 
-    @Override protected int listWidth() { return LIST_W; }
+    @Override protected int listWidth() { return Math.min(460, this.width - 32); }
     @Override protected int rowHeight() { return ROW_H; }
-    @Override protected int nameColumnWidth() { return NAME_W; }
+    @Override protected int nameColumnWidth() { return nameWidth(); }
     @Override protected int editorFieldX(int listX) {
         return listX + ROW_INSET + SWATCH_W + CONTROL_GAP;
     }
@@ -122,7 +176,32 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
     @Override protected List<Waypoint> currentRows() {
         WaypointFeature feat = WaypointFeature.get();
         if (feat == null) return java.util.Collections.emptyList();
-        return feat.currentWorldWaypoints();
+        var mc = Minecraft.getInstance();
+        String scope = WaypointFeature.scopeKey();
+        long second = System.nanoTime() / 1_000_000_000L;
+        if (rowsRevision == feat.revision() && java.util.Objects.equals(scope, rowsScope)
+                && (sort != 1 || second == rowsSecond)) return filtered;
+        rowsRevision = feat.revision(); rowsScope = scope; rowsSecond = second;
+        String needle = query.toLowerCase(java.util.Locale.ROOT);
+        String dim = mc.level == null ? "" : mc.level.dimension().identifier().toString();
+        var rows = new java.util.ArrayList<Waypoint>();
+        for (Waypoint w : feat.currentWorldWaypoints()) {
+            if (w == null || (currentDimensionOnly && !dim.equals(w.dimension))) continue;
+            if (!group.isEmpty() && !group.equals(w.group)) continue;
+            if (!needle.isEmpty() && !(w.name + " " + w.group + " " + w.dimension + " " + w.description)
+                    .toLowerCase(java.util.Locale.ROOT).contains(needle)) continue;
+            rows.add(w);
+        }
+        java.util.Comparator<Waypoint> comparator = switch (sort) {
+            case 1 -> java.util.Comparator.comparingDouble(w -> mc.player == null ? 0 :
+                    com.aurora.client.worldmap.WaypointQuery.distanceSquared(w, mc.player.getX(), mc.player.getZ()));
+            case 2 -> java.util.Comparator.comparingLong((Waypoint w) -> w.createdAtMs).reversed();
+            case 3 -> java.util.Comparator.comparing(w -> w.group);
+            default -> java.util.Comparator.comparing(w -> w.name, String.CASE_INSENSITIVE_ORDER);
+        };
+        rows.sort(comparator);
+        filtered = List.copyOf(rows);
+        return filtered;
     }
 
     @Override protected Component emptyMessage() {
@@ -146,6 +225,10 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
 
     @Override
     protected void reconcileRowCaches(List<Waypoint> all) {
+        int first = Math.max(0, (int) scroll.current() / (ROW_H + 4) - 2);
+        if (reconciledRows == all && reconciledStart == first) return;
+        reconciledRows = all; reconciledStart = first;
+        int last = Math.min(all.size(), first + Math.max(1, height / (ROW_H + 4)) + 6);
         // Row-widget cache hygiene: reconcile against the LIVE list every
         // frame — entries for removed waypoints drop immediately, new
         // waypoints lazily create theirs. The old count-only guard missed
@@ -158,7 +241,7 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
         // override equals, so set membership and List.contains agree (both
         // identity). The name-fit cache clears with the row caches when
         // membership changes, to keep the map bounded.
-        Set<Waypoint> live = new HashSet<>(all);
+        Set<Waypoint> live = new HashSet<>(all.subList(Math.min(first, all.size()), last));
         boolean membershipChanged = rowCopyBtns.keySet().retainAll(live);
         membershipChanged |= rowColorBtns.keySet().retainAll(live);
         membershipChanged |= rowDeleteBtns.keySet().retainAll(live);
@@ -216,26 +299,26 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
                     int by = y + 4;
                     int bh = ROW_H - 8;
                     Button b = copyBtn(wp);
-                    b.layout(x + COPY_DX, by, BTN_COPY_W, bh);
+                    b.layout(x + copyDx(), by, BTN_COPY_W, bh);
                     // Same clip-band rule the content pass and the base hit
                     // test use (row rect vs listClipTop/Bottom), applied at
                     // the earliest point the geometry is known.
                     SemanticActionControl copyControl = copyControl(wp);
-                    copyControl.setBounds(x + COPY_DX, by, BTN_COPY_W, bh);
+                    copyControl.setBounds(x + copyDx(), by, BTN_COPY_W, bh);
                     copyControl.setAvailable(y + ROW_H > listClipTop() && y < listClipBottom());
-                    b.renderGlassPass(ctx, x + COPY_DX, by, BTN_COPY_W, bh);
+                    b.renderGlassPass(ctx, x + copyDx(), by, BTN_COPY_W, bh);
                     b = colorBtn(wp);
-                    b.layout(x + COLOR_DX, by, BTN_COLOR_W, bh);
+                    b.layout(x + colorDx(), by, BTN_COLOR_W, bh);
                     SemanticActionControl colorControl = colorControl(wp);
-                    colorControl.setBounds(x + COLOR_DX, by, BTN_COLOR_W, bh);
+                    colorControl.setBounds(x + colorDx(), by, BTN_COLOR_W, bh);
                     colorControl.setAvailable(y + ROW_H > listClipTop() && y < listClipBottom());
-                    b.renderGlassPass(ctx, x + COLOR_DX, by, BTN_COLOR_W, bh);
+                    b.renderGlassPass(ctx, x + colorDx(), by, BTN_COLOR_W, bh);
                     b = deleteBtn(wp);
-                    b.layout(x + DEL_DX, by, BTN_DEL_W, bh);
+                    b.layout(x + delDx(), by, BTN_DEL_W, bh);
                     SemanticActionControl deleteControl = deleteControl(wp);
-                    deleteControl.setBounds(x + DEL_DX, by, BTN_DEL_W, bh);
+                    deleteControl.setBounds(x + delDx(), by, BTN_DEL_W, bh);
                     deleteControl.setAvailable(y + ROW_H > listClipTop() && y < listClipBottom());
-                    b.renderGlassPass(ctx, x + DEL_DX, by, BTN_DEL_W, bh);
+                    b.renderGlassPass(ctx, x + delDx(), by, BTN_DEL_W, bh);
                 },
                 () -> rowGlassDrawn.getOrDefault(wp, false));
     }
@@ -273,15 +356,22 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
         if (index != editingIndex) {
             String name = fitName(wp.name == null ? "" : wp.name);
             ctx.drawString(this.font, name,
-                    cx, y + (ROW_H - this.font.lineHeight) / 2,
+                    cx, y + 6,
                     ThemeManager.color(ThemeToken.ON_BACKGROUND), false);
         }
-        cx += NAME_W + CONTROL_GAP;
+        cx += nameWidth() + CONTROL_GAP;
 
         // Coords (clickable: click to copy).
         String coords = wp.x + ", " + wp.y + ", " + wp.z;
+        var player = Minecraft.getInstance().player;
+        if (player != null && Minecraft.getInstance().level != null
+                && wp.dimension.equals(Minecraft.getInstance().level.dimension().identifier().toString()))
+            coords += " · " + Math.round(Math.sqrt(com.aurora.client.worldmap.WaypointQuery.distanceSquared(
+                    wp, player.getX(), player.getZ()))) + "m";
+        else coords += " · " + wp.dimension;
+        coords = this.font.plainSubstrByWidth(coords, nameWidth());
         ctx.drawString(this.font, coords,
-                cx, y + (ROW_H - this.font.lineHeight) / 2,
+                x + ROW_INSET + SWATCH_W + CONTROL_GAP, y + 21,
                 ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_BACKGROUND), 0x88), false);
         cx += COORDS_W + CONTROL_GAP;
 
@@ -292,25 +382,25 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
         // from the same clip band the base hit test clamps to, and the
         // provisional focus ring on the shared Button.
         Button copyBtn = copyBtn(wp);
-        copyBtn.layout(x + COPY_DX, y + 4, BTN_COPY_W, ROW_H - 8);
+        copyBtn.layout(x + copyDx(), y + 4, BTN_COPY_W, ROW_H - 8);
         SemanticActionControl copyControl = copyControl(wp);
-        syncRowControl(copyControl, x + COPY_DX, BTN_COPY_W, y, mouseX, mouseY);
+        syncRowControl(copyControl, x + copyDx(), BTN_COPY_W, y, mouseX, mouseY);
         copyBtn.focused(copyControl.isFocused());
-        copyBtn.render(ctx, x + COPY_DX, y + 4, BTN_COPY_W, ROW_H - 8, mouseX, mouseY);
+        copyBtn.render(ctx, x + copyDx(), y + 4, BTN_COPY_W, ROW_H - 8, mouseX, mouseY);
 
         Button colorBtn = colorBtn(wp);
-        colorBtn.layout(x + COLOR_DX, y + 4, BTN_COLOR_W, ROW_H - 8);
+        colorBtn.layout(x + colorDx(), y + 4, BTN_COLOR_W, ROW_H - 8);
         SemanticActionControl colorControl = colorControl(wp);
-        syncRowControl(colorControl, x + COLOR_DX, BTN_COLOR_W, y, mouseX, mouseY);
+        syncRowControl(colorControl, x + colorDx(), BTN_COLOR_W, y, mouseX, mouseY);
         colorBtn.focused(colorControl.isFocused());
-        colorBtn.render(ctx, x + COLOR_DX, y + 4, BTN_COLOR_W, ROW_H - 8, mouseX, mouseY);
+        colorBtn.render(ctx, x + colorDx(), y + 4, BTN_COLOR_W, ROW_H - 8, mouseX, mouseY);
 
         Button delBtn = deleteBtn(wp);
-        delBtn.layout(x + DEL_DX, y + 4, BTN_DEL_W, ROW_H - 8);
+        delBtn.layout(x + delDx(), y + 4, BTN_DEL_W, ROW_H - 8);
         SemanticActionControl delControl = deleteControl(wp);
-        syncRowControl(delControl, x + DEL_DX, BTN_DEL_W, y, mouseX, mouseY);
+        syncRowControl(delControl, x + delDx(), BTN_DEL_W, y, mouseX, mouseY);
         delBtn.focused(delControl.isFocused());
-        delBtn.render(ctx, x + DEL_DX, y + 4, BTN_DEL_W, ROW_H - 8, mouseX, mouseY);
+        delBtn.render(ctx, x + delDx(), y + 4, BTN_DEL_W, ROW_H - 8, mouseX, mouseY);
     }
 
     /** Shared per-frame row-control sync: bounds + clip-band availability + pointer hover for narration. */
@@ -359,31 +449,18 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
     /** Color — shared themed Button in neutral raised glass, with its Phase A semantic control; opens the shared color picker. */
     private Button colorBtn(Waypoint wp) {
         return rowColorBtns.computeIfAbsent(wp, k -> {
-            Button b = new Button("Color", () -> {}).glassBackground(true)
+            Button b = new Button("Edit", () -> {}).glassBackground(true)
                     .priority(BlurPanelRenderer.Priority.DETAIL);
             String where = where(k);
             SemanticActionControl control = new SemanticActionControl(SemanticAction.button(
-                    Component.literal("Color " + where),
-                    () -> Component.literal("Opens the color picker for this waypoint."),
+                    Component.literal("Edit " + where),
+                    () -> Component.literal("Edits this waypoint, including visibility, coordinates and group."),
                     () -> Component.empty(),
                     () -> true,
                     () -> {
                         commitEditors();
-                        if (this.minecraft != null) {
-                            this.minecraft.setScreen(new ColorPickerScreen(WaypointManagerScreen.this,
-                                    "Waypoint Color", k.color, argb -> {
-                                        // k IS the waypoint instance (identity-keyed), so
-                                        // resolve it in the live list by identity — never
-                                        // by position, which could target a different
-                                        // waypoint after any add/remove.
-                                        List<Waypoint> live = currentRows();
-                                        if (live.contains(k)) {
-                                            k.color = argb;
-                                            WaypointFeature feat = WaypointFeature.get();
-                                            if (feat != null) feat.touch();
-                                        }
-                                    }));
-                        }
+                        if (this.minecraft != null) this.minecraft.setScreen(
+                                new WaypointEditScreen(WaypointManagerScreen.this, k, false));
                     }),
                     MinecraftSemanticFeedback.INSTANCE,
                     b::triggerPressAnimation,
@@ -480,7 +557,7 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
 
         // Name area → enter inline edit mode for this row.
         int nameLeft = editorFieldX(listX);
-        if (mouseX >= nameLeft && mouseX < nameLeft + NAME_W) {
+        if (mouseX >= nameLeft && mouseX < nameLeft + nameWidth()) {
             startEditing(index, wp.name == null ? "" : wp.name);
             return true;
         }

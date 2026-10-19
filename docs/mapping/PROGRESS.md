@@ -37,3 +37,27 @@ disposable Java 21/Sodium runtime acceptance. No new library is needed.
 - Native baseline/final fixtures will be separate copied worlds/configurations.
 - Runtime measurements must distinguish component work from whole-game frame time.
 - Native visual/runtime acceptance and performance comparisons remain pending.
+
+## Implementation checkpoint
+
+Shared engine, hashed save/server identity, separate archive contexts, unique
+texture lifetimes, bounded disk/load/upload work, pending-save context reuse,
+failure backoff, dirty eviction protection and modded-dimension index implemented.
+Minimap is now a shared-data presentation with one cached masked terrain/border
+blit, bounded motion updates and tick-cached entity/waypoint overlays. Added
+waypoint IDs, description/group/style/visibility, bounded shared selection and
+navigation; transactional two-page editor; searchable/sortable/dimension/group
+filtered manager with viewport-bounded control caches. World map has eased
+cursor-anchored zoom, coordinate navigation, LOD, marker picking, settings links.
+Legacy import is explicit, copy-only, merges only previously unexplored chunks
+and preserves original files; repeated waypoint imports are idempotent. Settings
+reset no longer clears stored waypoint data. Old cache-choice field remains
+readable for config compatibility; shared data is now authoritative.
+
+562 tests passed at the latest checkpoint. New tests exercise format round-trips,
+malformed/legacy payloads, copy-only migration, cache pressure, identity collision
+resistance, map transforms and 10,000-waypoint selection. Reference and initial
+candidate native stress workloads exited normally. Candidate minimap visually
+inspected. Initial candidate precedes final lifecycle fixes and is diagnostic,
+not final acceptance. Dedicated native acceptance driver is under validation.
+Raw logs/worlds remain under new `Temp/aurora-mapping-*` roots.

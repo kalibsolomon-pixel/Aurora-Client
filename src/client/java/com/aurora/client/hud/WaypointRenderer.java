@@ -58,7 +58,7 @@ public final class WaypointRenderer {
         WaypointFeature feat = WaypointFeature.get();
         if (feat == null) return;
 
-        List<Waypoint> list = feat.currentWorldWaypoints();
+        List<Waypoint> list = feat.nearbyWaypoints();
         if (list.isEmpty()) return;
 
         Camera cam = mc.gameRenderer.getMainCamera();
@@ -120,7 +120,7 @@ public final class WaypointRenderer {
 
         WaypointFeature feat = WaypointFeature.get();
         if (feat == null) return;
-        List<Waypoint> list = feat.currentWorldWaypoints();
+        List<Waypoint> list = feat.nearbyWaypoints();
         if (list.isEmpty()) return;
 
         Camera cam = mc.gameRenderer.getMainCamera();
@@ -186,6 +186,10 @@ public final class WaypointRenderer {
             double slant = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
             String name = (w.name == null || w.name.isEmpty()) ? "Waypoint" : w.name;
+            name = com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(font, name,
+                    (int) Math.min(180, (sw - LABEL_EDGE_MARGIN * 2) /
+                            Math.max(.5, Math.min(3, cfg.waypointLabelScale))) , 1);
+            if (w.id.equals(feat.navigationId())) name = "» " + name;
             String dist = (int) Math.round(slant) + "m";
 
             // Off-screen / behind-camera handling. When the waypoint
@@ -208,7 +212,7 @@ public final class WaypointRenderer {
             if (screenY > sh - LABEL_EDGE_MARGIN) { screenY = sh - LABEL_EDGE_MARGIN; clamped = true; }
 
             drawHudLabel(g, font, screenX, screenY, name, dist,
-                    w.color, cfg.waypointLabelScale, clamped);
+                    w.color, com.aurora.client.worldmap.MapTransform.bounded(cfg.waypointLabelScale, .5, 3), clamped);
         }
     }
 
