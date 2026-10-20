@@ -100,6 +100,7 @@ public class BlurTestScreen extends Screen {
     // frame and handed to the renderer as a CaptureSource. The batched
     // fills are still drawn for the eye; this FBO is what the blur samples.
     private int backdropFbo;
+    private final PortableBlurRenderer.SyntheticBackdrop portableBackdrop = new PortableBlurRenderer.SyntheticBackdrop();
     private int backdropTex;
     private int backdropW = -1, backdropH = -1;
     private int backdropProgram = -1;
@@ -508,6 +509,7 @@ public class BlurTestScreen extends Screen {
         if (changed) ThemeManager.reload();
         // Release the synthetic backdrop target (the panel renderer owns
         // its own objects).
+        portableBackdrop.close();
         if (backdropFbo != 0) { GL30.glDeleteFramebuffers(backdropFbo); backdropFbo = 0; }
         if (backdropTex != 0) { GL11.glDeleteTextures(backdropTex); backdropTex = 0; }
         if (backdropProgram > 0) { GL20.glDeleteProgram(backdropProgram); backdropProgram = -1; }
@@ -524,6 +526,12 @@ public class BlurTestScreen extends Screen {
      * {@link #drawBackdrop} fills so the eye and the blur sample agree.
      */
     private BlurPanelRenderer.CaptureSource renderSyntheticBackdrop() {
+        if (!com.aurora.client.ui.render.RenderBackend.isOpenGl()) {
+            var main = Minecraft.getInstance().getMainRenderTarget();
+            return portableBackdrop.render(main.width, main.height,
+                    (float) Minecraft.getInstance().getWindow().getGuiScale(),
+                    mode == Backdrop.STRIPES, slideAccum, slideDetailAmp);
+        }
         try {
             // HISTORY: this pass originally restored only program/FBO/VAO and
             // leaked glDisable(GL_BLEND) into the rest of the frame. The GUI

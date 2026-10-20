@@ -9,13 +9,11 @@ import com.aurora.client.util.AuroraShapes;
 import com.aurora.client.util.AuroraTheme;
 import com.aurora.client.util.GridDims;
 import com.aurora.client.util.HoverAnim;
-import com.mojang.blaze3d.opengl.GlStateManager;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.network.chat.Component;
-import org.lwjgl.opengl.GL11;
 
 import java.util.function.Consumer;
 import java.util.function.IntConsumer;
@@ -495,7 +493,7 @@ public class PixelCanvasSetting extends FeatureSetting {
         if (hwContext == null) {
             String gpu = "unknown GPU";
             try {
-                String r = GlStateManager._getString(GL11.GL_RENDERER);
+                String r = com.mojang.blaze3d.systems.RenderSystem.getDevice().getRenderer();
                 if (r != null && !r.isBlank()) gpu = r.trim();
             } catch (Throwable ignored) {
             }

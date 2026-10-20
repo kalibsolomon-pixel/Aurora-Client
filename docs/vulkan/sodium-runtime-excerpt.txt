@@ -1,0 +1,72 @@
+[14:55:08] [Render thread/INFO]: [BlurPanel] programs ready (blur=7, composite=194).
+[14:55:08] [Render thread/INFO]: [BlurPanel] world capture probe: ambientFbo=0 readerFbo=27 mainTexGlId=2 center=(640,316) rgba=(27,37,96,0)
+[14:55:12] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] title-rendered=true
+[14:55:17] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] world-entered=true
+[14:55:25] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] fabric-entity-events=true
+[14:55:25] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] fabric-outline-events=true
+[14:55:28] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] targeted-block-outline=true
+[14:55:29] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] gameplay-attack-dispatched=true
+[14:55:32] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] gameplay-movement=true
+[14:55:46] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] detail-world_map=true
+[14:55:49] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] detail-zoom=true
+[14:55:52] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] detail-full_bright=true
+[14:55:55] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] detail-no_fog=true
+[14:55:58] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] detail-pack_tweaks=true
+[14:56:01] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] detail-player_health=true
+[14:56:04] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] detail-free_look=true
+[14:56:07] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] detail-saturation_bar=true
+[14:56:10] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] detail-block_overlay=true
+[14:56:13] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] detail-toggle_sprint_sneak=true
+[14:56:16] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] detail-alerts=true
+[14:56:19] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] detail-crosshair=true
+[14:56:22] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] detail-hitbox=true
+[14:56:25] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] detail-hit_color=true
+[14:56:28] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] detail-glint_color=true
+[14:56:31] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] detail-info_module=true
+[14:56:34] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] detail-cps=true
+[14:56:37] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] detail-armor_hud=true
+[14:56:40] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] detail-reach_display=true
+[14:56:43] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] detail-potion_hud=true
+[14:56:47] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] detail-ping=true
+[14:56:50] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] detail-totem_pop=true
+[14:56:53] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] detail-better_hitreg=true
+[14:56:56] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] detail-waypoints=true
+[14:56:59] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] detail-minimap=true
+[14:57:02] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] detail-container_preview=true
+[14:57:05] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] detail-item_physics=true
+[14:57:08] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] detail-particles=true
+[14:57:11] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] detail-item_scale=true
+[14:57:14] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] detail-held_item_seams=true
+[14:57:17] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] detail-resourcepack_browser=true
+[14:57:20] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] detail-animations=true
+[14:57:23] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] detail-keystrokes=true
+[14:57:26] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] detail-miscellaneous=true
+[14:57:29] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] detail-custom_title=true
+[14:57:32] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] detail-text_fonts=true
+[14:57:35] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] detail-theme=true
+[14:57:38] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] detail-interface=true
+[14:57:40] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] canvas-backend-hardware-query=true
+[14:57:43] [Render thread/INFO]: [BlurTest] opened (lighting=true depressed=false backdrop=STRIPES radius=24 corner=Round theme=DARK opacity=1.00)
+[14:57:43] [Render thread/INFO]: [BlurTest] state: backdrop=SOLID lighting=off radius=24 opacity=0.0 ping=solid
+[14:57:43] [Render thread/INFO]: [BlurTest] fps=30 (33.3 ms/frame) lighting=false depressed=false backdrop=SOLID
+[14:57:45] [Render thread/INFO]: [BlurTest] state: backdrop=STRIPES lighting=off radius=24 opacity=0.0 ping=blur
+[14:57:46] [Render thread/INFO]: [BlurTest] state: backdrop=STRIPES lighting=on depressed=off radius=24 opacity=0.5 ping=raised
+[14:57:48] [Render thread/INFO]: [BlurTest] state: backdrop=STRIPES lighting=on depressed=on radius=24 opacity=0.5 ping=depressed
+[14:57:48] [Render thread/INFO]: [BlurTest] fps=30 (33.3 ms/frame) lighting=true depressed=true backdrop=STRIPES
+[14:57:49] [Render thread/INFO]: [BlurTest] state: backdrop=STRIPES lighting=on radius=24 opacity=0.5 stress=100 ping=pool
+[14:57:49] [Render thread/WARN]: [BlurPanel] output pool exhausted (64 slots; demand last frame W=0 C=1 R=0 D=0) - lowest-priority panels render their flat fallback
+[14:57:50] [Render thread/INFO]: [BlurTest] stress N=100 glass=true fill=true drew/asked W=0/25 C=17/25 R=23/25 D=23/25 fps=30 (33.3 ms/frame)
+[14:57:51] [Render thread/INFO]: [BlurTest] stress N=100 glass=true fill=true drew/asked W=23/25 C=23/25 R=17/25 D=0/25 fps=5 (200.0 ms/frame)
+[14:57:51] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] glass-not-disabled=true
+[14:57:51] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] portable-texture-pool-bounded=true
+[14:57:56] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] reload-returned=true
+[14:57:59] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] portable-textures-released=true
+[14:58:00] [Render thread/INFO]: [BlurPanel] programs ready (blur=204, composite=205).
+[14:58:02] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] glass-reset-rendered=true
+[14:58:05] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] resize-scale3=true
+[14:58:08] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] resize-restored-scale2=true
+[14:58:12] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] world-survived=true
+[14:58:14] [Render thread/INFO]: Stopping!
+[14:58:14] [Server thread/INFO]: ThreadedAnvilChunkStorage (New World): All chunks are saved
+[14:58:14] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM1): All chunks are saved
+[14:58:14] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM-1): All chunks are saved

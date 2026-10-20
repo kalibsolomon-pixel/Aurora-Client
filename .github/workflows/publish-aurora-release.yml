@@ -99,6 +99,9 @@ jobs:
             --source-sha "$SOURCE_SHA" \
             --output release-bundle/release-metadata.json
           cp "source/build/libs/aurora-${RELEASE_VERSION}.jar" release-bundle/
+          if [[ -f "source/RELEASE_NOTES_${RELEASE_VERSION}.md" ]]; then
+            cp "source/RELEASE_NOTES_${RELEASE_VERSION}.md" release-bundle/release-notes.md
+          fi
           python3 tools/verify_release_artifact.py verify \
             --metadata release-bundle/release-metadata.json \
             --jar-dir release-bundle \
@@ -157,8 +160,11 @@ jobs:
           import json
           from pathlib import Path
           m = json.loads(Path('release-bundle/release-metadata.json').read_text())
+          notes = Path('release-bundle/release-notes.md')
+          introduction = notes.read_text(encoding='utf-8') if notes.is_file() else (
+              f"Aurora Client {m['version']} for Minecraft {m['minecraftVersion']}.\n")
           Path('release-notes.md').write_text(
-              f"Aurora Client {m['version']} for Minecraft {m['minecraftVersion']}.\n\n"
+              introduction.rstrip() + "\n\n" +
               f"Source commit: `{m['sourceSha']}`\n\n"
               f"Runtime JAR: `{m['fileName']}` ({m['sizeBytes']} bytes)\n\n"
               f"SHA-256: `{m['sha256']}`\n",

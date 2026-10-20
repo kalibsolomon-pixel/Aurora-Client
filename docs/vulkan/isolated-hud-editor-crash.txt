@@ -1,0 +1,74 @@
+#
+# A fatal error has been detected by the Java Runtime Environment:
+#
+#  EXCEPTION_ACCESS_VIOLATION (0xc0000005) at pc=0x00007fff8057e1b7, pid=16132, tid=29164
+#
+# JRE version: OpenJDK Runtime Environment Microsoft-11369940 (21.0.7+6) (build 21.0.7+6-LTS)
+# Java VM: OpenJDK 64-Bit Server VM Microsoft-11369940 (21.0.7+6-LTS, mixed mode, tiered, compressed oops, compressed class ptrs, g1 gc, windows-amd64)
+# Problematic frame:
+# C  [lwjgl_opengl.dll+0xe1b7]
+#
+# No core dump will be written. Minidumps are not enabled by default on client versions of Windows
+#
+# If you would like to submit a bug report, please visit:
+#   https://aka.ms/minecraftjavacrashes
+# The crash happened outside the Java Virtual Machine in native code.
+# See problematic frame for where to report the bug.
+#
+
+---------------  S U M M A R Y ------------
+
+Command Line: -Xmx2048m -Dfile.encoding=UTF-8 -Daurora.vulkan.output=C:\Dev\Aurora-Client\build\vulkan-investigation\isolate-original-01 -Daurora.vulkan.quick=true -Daurora.vulkan.isolate=true net.fabricmc.loader.impl.launch.knot.KnotClient --username VulkanResearch --version 1.21.11 --gameDir C:\Dev\Aurora-Client\build\vulkan-investigation\isolate-original-01\game --assetsDir C:\Users\kalib\AppData\Roaming\.minecraft\assets --assetIndex 29 --accessToken 0 --userType legacy --versionType release --width 1280 --height 720
+
+Host: Intel(R) Core(TM) i7-14700F, 28 cores, 31G,  Windows 11 , 64 bit Build 26100 (10.0.26100.9711)
+Time: Mon Oct 19 14:59:08 2026 Eastern Daylight Time elapsed time: 44.460178 seconds (0d 0h 0m 44s)
+
+---------------  T H R E A D  ---------------
+
+Current thread (0x0000029ddb2c3530):  JavaThread "Render thread"        [_thread_in_native, id=29164, stack(0x000000d9cb100000,0x000000d9cb200000) (1024K)]
+
+Stack: [0x000000d9cb100000,0x000000d9cb200000],  sp=0x000000d9cb1fdef8,  free space=1015k
+Native frames: (J=compiled Java code, j=interpreted, Vv=VM code, C=native code)
+C  [lwjgl_opengl.dll+0xe1b7]
+
+Java frames: (J=compiled Java code, j=interpreted, Vv=VM code)
+j  org.lwjgl.opengl.GL20C.glCreateShader(I)I+0
+j  org.lwjgl.opengl.GL20.glCreateShader(I)I+1
+j  com.aurora.client.ui.render.blur.BlurPanelRenderer.compile(ILjava/lang/String;)I+1
+j  com.aurora.client.ui.render.blur.BlurPanelRenderer.createProgram(Ljava/lang/String;Ljava/lang/String;)I+4
+j  com.aurora.client.ui.render.blur.BlurPanelRenderer.ensureReady()Z+26
+j  com.aurora.client.ui.render.blur.BlurPanelRenderer.renderPanelInternal(Lnet/minecraft/class_332;FFFFFFLcom/aurora/client/ui/render/blur/BlurPanelRenderer$Lighting;Lcom/aurora/client/ui/render/blur/BlurPanelRenderer$Priority;Lcom/aurora/client/ui/render/blur/BlurPanelRenderer$CaptureSource;Z)Z+187
+j  com.aurora.client.ui.render.blur.BlurPanelRenderer.renderUnifiedPanel(Lnet/minecraft/class_332;FFFFFFLcom/aurora/client/ui/render/blur/BlurPanelRenderer$Lighting;Lcom/aurora/client/ui/render/blur/BlurPanelRenderer$Priority;)Z+16
+j  com.aurora.client.ui.component.GlassSurface.paint(Lnet/minecraft/class_332;FFFFFLcom/aurora/client/ui/render/blur/BlurPanelRenderer$Lighting;ILcom/aurora/client/ui/render/blur/BlurPanelRenderer$Priority;)Z+73
+j  com.aurora.client.ui.component.GlassSurface.card(Lnet/minecraft/class_332;FFFFF)Z+64
+j  com.aurora.client.ui.component.Button.renderUnified(Lnet/minecraft/class_332;FFFFII)V+188
+j  com.aurora.client.ui.component.Button.renderOverlay(Lnet/minecraft/class_332;FFFFII)V+18
+j  com.aurora.client.ui.component.Widget.render(Lnet/minecraft/class_332;FFFFII)V+23
+j  com.aurora.client.ui.component.ButtonWidget.method_75752(Lnet/minecraft/class_332;IIF)V+101
+J 18650 c1 net.minecraft.class_4264.method_48579(Lnet/minecraft/class_332;IIF)V (47 bytes) @ 0x0000029de053502c [0x0000029de0534d40+0x00000000000002ec]
+J 18646 c1 net.minecraft.class_339.method_25394(Lnet/minecraft/class_332;IIF)V (69 bytes) @ 0x0000029de0533184 [0x0000029de0532ea0+0x00000000000002e4]
+J 19225 c1 net.minecraft.class_437.method_25394(Lnet/minecraft/class_332;IIF)V (49 bytes) @ 0x0000029de062c42c [0x0000029de062c0a0+0x000000000000038c]
+j  com.aurora.client.screen.HudEditorScreen.method_25394(Lnet/minecraft/class_332;IIF)V+60
+J 21838 c1 net.minecraft.class_437.method_47413(Lnet/minecraft/class_332;IIF)V (41 bytes) @ 0x0000029de0a243ec [0x0000029de0a23d00+0x00000000000006ec]
+J 23727 c1 net.minecraft.class_757.mixinextras$bridge$method_47413$67([Ljava/lang/Object;)Ljava/lang/Void; (68 bytes) @ 0x0000029de0aca09c [0x0000029de0ac9aa0+0x00000000000005fc]
+J 23726 c1 net.minecraft.class_757$$Lambda+0x00000001012e9238.call([Ljava/lang/Object;)Ljava/lang/Object; (5 bytes) @ 0x0000029de0ac913c [0x0000029de0ac90c0+0x000000000000007c]
+J 23721 c1 net.minecraft.class_757.wrapOperation$beb000$fabric-screen-api-v1$onRenderScreen(Lnet/minecraft/class_437;Lnet/minecraft/class_332;IIFLcom/llamalad7/mixinextras/injector/wrapoperation/Operation;)V (88 bytes) @ 0x0000029de0acb7bc [0x0000029de0aca800+0x0000000000000fbc]
+J 32395 c1 net.minecraft.class_757.method_3192(Lnet/minecraft/class_9779;Z)V (1038 bytes) @ 0x0000029de1371c94 [0x0000029de1371020+0x0000000000000c74]
+J 22893 c1 net.minecraft.class_310.method_1523(Z)V (1101 bytes) @ 0x0000029de0035a9c [0x0000029de0030a80+0x000000000000501c]
+j  net.minecraft.class_310.method_1514()V+102
+j  net.minecraft.client.main.Main.main([Ljava/lang/String;)V+1493
+j  java.lang.invoke.LambdaForm$DMH+0x00000001000dac00.invokeStaticInit(Ljava/lang/Object;Ljava/lang/Object;)V+10 java.base@21.0.7
+j  java.lang.invoke.LambdaForm$MH+0x00000001002e0c00.invokeExact_MT(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)V+19 java.base@21.0.7
+j  net.fabricmc.loader.impl.game.minecraft.MinecraftGameProvider.launch(Ljava/lang/ClassLoader;)V+74
+j  net.fabricmc.loader.impl.launch.knot.Knot.launch([Ljava/lang/String;Lnet/fabricmc/api/EnvType;)V+40
+j  net.fabricmc.loader.impl.launch.knot.KnotClient.main([Ljava/lang/String;)V+4
+v  ~StubRoutines::call_stub 0x0000029de62c100d
+
+siginfo: EXCEPTION_ACCESS_VIOLATION (0xc0000005), reading address 0x0000000000000e38
+
+
+Registers:
+RAX=0x0000029d81520d20, RBX=0x0000029e46b7d120, RCX=0x0000000000000000, RDX=0x000000d9cb1fdf88
+RSP=0x000000d9cb1fdef8, RBP=0x000000d9cb1fdf78, RSI=0x000000008a4a4d28, RDI=0x000000000000002a
+R8 =0x0000000000008b31, R9 =0x0000000000000002, R10=0x0000029de62ccddc, R11=0x00000000ac89ffa8
+R12=0x0000000000000000, R13=0x0000029e46b7d110, R14=0x000000d9cb1fdf98, R15=0x0000029ddb2c3530

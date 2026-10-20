@@ -111,4 +111,127 @@ class FramePacingPersistenceTest {
         assertEquals(spin, cfg.framePacerSpinThresholdMicros);
         assertEquals(park, cfg.framePacerParkThresholdMicros);
     }
+
+    @Test void releaseDefaultsArePortableIndependentAndKeepTheOwnersVisualChoices() throws Exception {
+        var first = new AuroraConfig();
+        var second = new AuroraConfig();
+        assertEquals(AuroraConfig.FontType.FIRA_SANS, first.activeFont);
+        assertEquals(AuroraConfig.TextRendererMode.ALL_TEXT, first.textRendererMode);
+        assertFalse(first.infoEnabled);
+        assertFalse(first.cpsEnabled);
+        assertTrue(first.keystrokesEnabled);
+        assertTrue(first.armorHudEnabled);
+        assertTrue(first.potionHudEnabled);
+        assertFalse(first.minimapEnabled);
+        assertFalse(first.hitregEnabled);
+        assertEquals(88, first.freeLookKey);
+        assertTrue(first.waypointsByWorld.isEmpty());
+        assertTrue(first.playtimePerWorld.isEmpty());
+        assertEquals(0, first.playtimeTotalMs);
+        assertEquals(0, first.fightStatsTotalFights);
+        assertNotSame(first.theme, second.theme);
+        assertNotSame(first.crosshairCustomPixels, second.crosshairCustomPixels);
+        first.moduleLayouts.get("minimap").offsetX = 999;
+        assertEquals(-5, second.moduleLayouts.get("minimap").offsetX);
+        try (var in = getClass().getResourceAsStream("/assets/aurora/defaults/3.1.0.json")) {
+            String resource = new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+            for (String forbidden : new String[]{"C:\\", "Users", "accessToken", "activeProfile",
+                    "waypointsByWorld", "waypointNavigationByWorld", "playtimeTotalMs",
+                    "playtimePerWorld", "fightStats", "framePacer", "worldMapCacheRegions"})
+                assertFalse(resource.contains(forbidden), forbidden);
+        }
+    }
+
+    @Test void freshLoadAndExistingUpgradePreserveTheirSeparateSettings() throws Exception {
+        assertTrue(AuroraConfig.flushPending(5000));
+        Path path = temporary.resolve("aurora.json");
+        Files.deleteIfExists(path);
+        AuroraConfig.load();
+        assertTrue(AuroraConfig.flushPending(5000));
+        var fresh = GSON.fromJson(Files.readString(path), AuroraConfig.class);
+        assertEquals(AuroraConfig.FontType.FIRA_SANS, fresh.activeFont);
+        assertEquals(-5, fresh.moduleLayouts.get("minimap").offsetX);
+        String old = "{\"activeFont\":\"INTER\",\"freeLookKey\":86,\"infoEnabled\":true,"
+                + "\"moduleLayouts\":{\"info\":{\"anchor\":\"BOTTOM_LEFT\",\"offsetX\":73,\"scale\":1.5}},"
+                + "\"playtimeTotalMs\":123456,\"waypointsByWorld\":{}}";
+        Files.writeString(path, old);
+        AuroraConfig.load();
+        var live = AuroraConfig.get();
+        assertEquals(AuroraConfig.FontType.INTER, live.activeFont);
+        assertEquals(86, live.freeLookKey);
+        assertTrue(live.infoEnabled);
+        assertEquals(73, live.moduleLayouts.get("info").offsetX);
+        assertEquals(123456, live.playtimeTotalMs);
+        assertEquals(old, Files.readString(path), "loading an existing config must not rewrite it");
+        assertTrue(live.keystrokesEnabled, "missing fields receive release defaults");
+        var manager = ProfileManager.getInstance();
+        var snapshot = manager.captureCurrent();
+        manager.applyProfile(snapshot);
+        assertEquals(73, live.moduleLayouts.get("info").offsetX);
+        assertEquals(AuroraConfig.FontType.INTER, live.activeFont);
+        assertEquals(86, live.freeLookKey);
+        AuroraConfig.save();
+        assertTrue(AuroraConfig.flushPending(5000));
+        AuroraConfig.load();
+        assertEquals(73, AuroraConfig.get().moduleLayouts.get("info").offsetX);
+    }
+
+    @Test void corruptInputIsBackedUpBeforeRecoveryCanSave() throws Exception {
+        assertTrue(AuroraConfig.flushPending(5000));
+        Path path = temporary.resolve("aurora.json");
+        String broken = "{broken config";
+        Files.writeString(path, broken);
+        AuroraConfig.load();
+        try (var backups = Files.list(temporary)) {
+            assertTrue(backups.filter(p -> p.getFileName().toString().startsWith("aurora.json.corrupt-"))
+                    .anyMatch(p -> { try { return Files.readString(p).equals(broken); }
+                        catch (Exception e) { return false; } }));
+        }
+        assertEquals(broken, Files.readString(path));
+    }
+
+    @Test void resetPositionsRestoresReleaseGeometryAndPreservesVisibilityAndLocks() {
+        for (String id : new String[]{"info", "cps", "armor", "reach", "ping", "potion",
+                "totem_pop", "toggle_sprint_sneak", "toggle_sprint", "toggle_sneak", "keystrokes", "minimap"}) {
+            var module = new com.aurora.client.hud.module.HudModule(id) {
+                public int getWidth() { return 20; }
+                public int getHeight() { return 20; }
+                protected void renderContent(net.minecraft.client.gui.GuiGraphics g,
+                        net.minecraft.client.Minecraft mc, int x, int y) {}
+            };
+            module.offsetX = 999;
+            module.enabled = false;
+            module.locked = true;
+            module.scale = 3;
+            module.resetLayoutToDefaults();
+            var expected = com.aurora.client.config.ReleaseDefaults.layout(id);
+            assertEquals(expected.anchor, module.anchor, id);
+            assertEquals(expected.offsetX, module.offsetX, id);
+            assertEquals(expected.offsetY, module.offsetY, id);
+            assertEquals(expected.scale, module.scale, id);
+            assertFalse(module.enabled, id);
+            assertTrue(module.locked, id);
+        }
+    }
+
+    @Test void defaultVisibleHudBoundsStaySeparateAtReleaseDisplaySizes() {
+        var defaults = new AuroraConfig();
+        // Conservative GUI-space envelopes: 4 armor slots, 8 effect rows,
+        // movement/mouse/space keys. The owner's minimap is disabled by default.
+        for (int[] size : new int[][]{{480,270},{640,360},{854,480},{960,540},{1280,720}}) {
+            var boxes = new java.util.ArrayList<int[]>();
+            for (Object[] spec : new Object[][]{{"armor",104,40},{"potion",190,224},
+                    {"keystrokes",72,105}}) {
+                var layout = defaults.moduleLayouts.get((String)spec[0]);
+                int w = Math.round((int)spec[1] * layout.scale);
+                int h = Math.round((int)spec[2] * layout.scale);
+                int x = layout.anchor.applyX(size[0], w) + layout.offsetX;
+                int y = layout.anchor.applyY(size[1], h) + layout.offsetY;
+                assertTrue(x >= 0 && y >= 0 && x+w <= size[0] && y+h <= size[1], (String)spec[0]);
+                for (int[] b : boxes)
+                    assertFalse(x < b[0]+b[2] && x+w > b[0] && y < b[1]+b[3] && y+h > b[1]);
+                boxes.add(new int[]{x,y,w,h});
+            }
+        }
+    }
 }

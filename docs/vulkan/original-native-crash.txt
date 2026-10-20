@@ -1,0 +1,72 @@
+#
+# A fatal error has been detected by the Java Runtime Environment:
+#
+#  EXCEPTION_ACCESS_VIOLATION (0xc0000005) at pc=0x00007fff809de1b7, pid=14492, tid=25000
+#
+# JRE version: OpenJDK Runtime Environment Microsoft-11369940 (21.0.7+6) (build 21.0.7+6-LTS)
+# Java VM: OpenJDK 64-Bit Server VM Microsoft-11369940 (21.0.7+6-LTS, mixed mode, tiered, compressed oops, compressed class ptrs, g1 gc, windows-amd64)
+# Problematic frame:
+# C  [lwjgl_opengl.dll+0xe1b7]
+#
+# No core dump will be written. Minidumps are not enabled by default on client versions of Windows
+#
+# If you would like to submit a bug report, please visit:
+#   https://aka.ms/minecraftjavacrashes
+# The crash happened outside the Java Virtual Machine in native code.
+# See problematic frame for where to report the bug.
+#
+
+---------------  S U M M A R Y ------------
+
+Command Line: -Xmx2048m -Dfile.encoding=UTF-8 net.fabricmc.loader.impl.launch.knot.KnotClient --username VulkanResearch --version 1.21.11 --gameDir C:\Dev\Aurora-Client\build\vulkan-investigation\production-original-01\game --assetsDir C:\Users\kalib\AppData\Roaming\.minecraft\assets --assetIndex 29 --accessToken 0 --userType legacy --versionType release --width 1280 --height 720
+
+Host: Intel(R) Core(TM) i7-14700F, 28 cores, 31G,  Windows 11 , 64 bit Build 26100 (10.0.26100.9711)
+Time: Mon Oct 19 14:43:33 2026 Eastern Daylight Time elapsed time: 18.811162 seconds (0d 0h 0m 18s)
+
+---------------  T H R E A D  ---------------
+
+Current thread (0x000001cf0202d910):  JavaThread "Render thread"        [_thread_in_native, id=25000, stack(0x000000c33d900000,0x000000c33da00000) (1024K)]
+
+Stack: [0x000000c33d900000,0x000000c33da00000],  sp=0x000000c33d9fe698,  free space=1017k
+Native frames: (J=compiled Java code, j=interpreted, Vv=VM code, C=native code)
+C  [lwjgl_opengl.dll+0xe1b7]
+
+Java frames: (J=compiled Java code, j=interpreted, Vv=VM code)
+j  org.lwjgl.opengl.GL20C.glCreateShader(I)I+0
+j  org.lwjgl.opengl.GL20.glCreateShader(I)I+1
+j  com.aurora.client.ui.render.blur.BlurPanelRenderer.compile(ILjava/lang/String;)I+1
+j  com.aurora.client.ui.render.blur.BlurPanelRenderer.createProgram(Ljava/lang/String;Ljava/lang/String;)I+4
+j  com.aurora.client.ui.render.blur.BlurPanelRenderer.ensureReady()Z+26
+j  com.aurora.client.ui.render.blur.BlurPanelRenderer.renderPanelInternal(Lnet/minecraft/class_332;FFFFFFLcom/aurora/client/ui/render/blur/BlurPanelRenderer$Lighting;Lcom/aurora/client/ui/render/blur/BlurPanelRenderer$Priority;Lcom/aurora/client/ui/render/blur/BlurPanelRenderer$CaptureSource;Z)Z+187
+j  com.aurora.client.ui.render.blur.BlurPanelRenderer.renderUnifiedPanel(Lnet/minecraft/class_332;FFFFFFLcom/aurora/client/ui/render/blur/BlurPanelRenderer$Lighting;Lcom/aurora/client/ui/render/blur/BlurPanelRenderer$Priority;)Z+16
+j  com.aurora.client.ui.component.GlassSurface.paint(Lnet/minecraft/class_332;FFFFFLcom/aurora/client/ui/render/blur/BlurPanelRenderer$Lighting;ILcom/aurora/client/ui/render/blur/BlurPanelRenderer$Priority;)Z+73
+j  com.aurora.client.ui.component.GlassSurface.card(Lnet/minecraft/class_332;FFFFF)Z+64
+j  com.aurora.client.ui.component.Button.renderGlassPass(Lnet/minecraft/class_332;FFFF)V+38
+j  com.aurora.client.ui.component.ButtonWidget.renderGlassPass(Lnet/minecraft/class_332;)V+80
+j  com.aurora.client.screen.AuroraTitleScreen.method_25394(Lnet/minecraft/class_332;IIF)V+62
+j  net.minecraft.class_437.method_47413(Lnet/minecraft/class_332;IIF)V+33
+j  net.minecraft.class_425.method_25394(Lnet/minecraft/class_332;IIF)V+128
+j  net.minecraft.class_757.method_3192(Lnet/minecraft/class_9779;Z)V+540
+j  net.minecraft.class_310.method_1523(Z)V+610
+j  net.minecraft.class_310.method_1514()V+102
+j  net.minecraft.client.main.Main.main([Ljava/lang/String;)V+1493
+j  java.lang.invoke.LambdaForm$DMH+0x00000001000dac00.invokeStaticInit(Ljava/lang/Object;Ljava/lang/Object;)V+10 java.base@21.0.7
+j  java.lang.invoke.LambdaForm$MH+0x00000001002e0c00.invokeExact_MT(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)V+19 java.base@21.0.7
+j  net.fabricmc.loader.impl.game.minecraft.MinecraftGameProvider.launch(Ljava/lang/ClassLoader;)V+74
+j  net.fabricmc.loader.impl.launch.knot.Knot.launch([Ljava/lang/String;Lnet/fabricmc/api/EnvType;)V+40
+j  net.fabricmc.loader.impl.launch.knot.KnotClient.main([Ljava/lang/String;)V+4
+v  ~StubRoutines::call_stub 0x000001cf0d03100d
+
+siginfo: EXCEPTION_ACCESS_VIOLATION (0xc0000005), reading address 0x0000000000000e38
+
+
+Registers:
+RAX=0x000001cf280857b0, RBX=0x000001cf2ec27f20, RCX=0x0000000000000000, RDX=0x000000c33d9fe728
+RSP=0x000000c33d9fe698, RBP=0x000000c33d9fe718, RSI=0x000001cf1f943c70, RDI=0x00000000000001b0
+R8 =0x0000000000008b31, R9 =0x0000000000000002, R10=0x000001cf0d03cddc, R11=0x00000000977725d8
+R12=0x0000000000000000, R13=0x000001cf2ec27f10, R14=0x000000c33d9fe738, R15=0x000001cf0202d910
+RIP=0x00007fff809de1b7, EFLAGS=0x0000000000010202
+
+XMM[0]=0x000001cf0dc4db40 0x00007fff8d64427f
+XMM[1]=0x0000000000000000 0x00000db000020000
+XMM[2]=0x0074007300200068 0x0074006900770020

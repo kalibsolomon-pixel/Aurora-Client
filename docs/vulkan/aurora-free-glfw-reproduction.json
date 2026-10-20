@@ -1,0 +1,19 @@
+{
+  "fixture": "pair-control-01",
+  "auroraPresent": false,
+  "mods": [
+    {
+      "file": "fabric-api-0.141.4+1.21.11.jar",
+      "sha256": "9286762874fd20d1d45e006d175fea8ff762da54e00946bbe952c4f61077159a"
+    },
+    {
+      "file": "VulkanMod-0.6.8+1.21.11.jar",
+      "sha256": "0cc162bfaf5c17474f2ed5cc82591f101bf4b72bad26ba45e4e6736e604aa9d8"
+    }
+  ],
+  "condition": "Paired Vulkan windows; Windows computer-use activate_window on the occluded control",
+  "nativeFault": "glfw.dll+0x101ab",
+  "javaPath": "RenderSystem.limitDisplayFPS -> GLFW event wait",
+  "exitCode": 3221226505,
+  "attribution": "Reproduces without Aurora; deeper GLFW/OS/driver/automation ownership unresolved"
+}

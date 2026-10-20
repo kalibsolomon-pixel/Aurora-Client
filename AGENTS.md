@@ -1,5 +1,16 @@
 # Aurora UI Engine — Project Guide
 
+## 3.1.0 release defaults (2026-10-20)
+
+`config/ReleaseDefaults` applies the reviewed portable resource
+`assets/aurora/defaults/3.1.0.json` at the end of each `AuroraConfig` constructor.
+Gson overlays existing config/profile values, so compatible saved preferences win
+and missing fields receive defaults. No live instance paths or world data ship.
+`tools/prepare_310_defaults.py` records the export allowlist. HUD Reset Positions
+uses independent resource layouts (including scale), preserving hidden/locked state.
+Malformed config input is backed up before recovery autosaves; if backup fails,
+config writes are disabled for that session. Release version is 3.1.0.
+
 A reference for humans and AI agent sessions working on this repo. Everything below was
 verified by reading the code on **2026-09-08** (`master` after the Better Hitreg integration
 landed in five commits on top of the cand-a rim-post-dim merge; §8 records what landed since
@@ -258,6 +269,10 @@ persistently stalled queue disable pacing for the session; no waits in menus,
 paused play or out of focus. AutomaticReflexPolicy and ReflexScheduler tests cover
 bounds, warmup, estimates and fail-off behavior. The grid now has 34 tiles, with
 25 runtime Features and 12 HUD modules.
+On Vulkan devices the timestamp optimization is skipped before entering GL;
+Blaze3D exposes no equivalent timestamp provider to this estimator. Ordinary
+frame caps/PARK remain available. See `VULKAN_COMPATIBILITY_REPORT.md` for the
+confirmed glass failure, backend correction and native acceptance evidence.
 
 ## 4. Feature catalog
 
@@ -589,6 +604,17 @@ lighting) → `glReadPixels` → `NativeImage`/`DynamicTexture` → ordinary `Gu
 Straight (non-premultiplied) alpha; RGBA8 intermediates on purpose. Readback is per panel,
 measured 2026-09-08 with `GlassStats` at ~0.2 ms per button-sized panel and ~0.55 ms per
 full-width list row, linear in panel count — accepted for simplicity/robustness.
+This describes the **OpenGL/Sodium** path. VulkanMod compatibility (2026-10-19)
+selects by the active `GpuDevice` (`ui/render/RenderBackend`), never by texture
+class: VulkanMod's `VkGpuTexture` subclasses `GlTexture` despite having no GL
+context. Non-GL glass uses `PortableBlurRenderer` and resource shaders through
+Blaze3D render passes: half/quarter downsample, separable Gaussian, matching
+lighting/coverage, and a unique GPU output per deferred GUI blit, without GL
+dispatch or CPU readback. Uniforms are immutable per submitted pass; replaced
+resources retire after the referencing GUI frame. Vulkan coordinates stay
+top-down throughout its negative-height viewport. `BlurTestScreen`'s synthetic
+controls use the same device path. See `VULKAN_COMPATIBILITY_REPORT.md` and the
+opt-in native regression fixture in `tools/vulkan/`.
 **The capture downsample is TWO ~2× `GL_LINEAR` blit steps through a half-res
 intermediate, never one 4× blit** (2026-09-09, the shimmer fix). A single 4× LINEAR blit
 is a point-ish sample — on the dev machine's Mesa driver it reads ~1 of every 16 source

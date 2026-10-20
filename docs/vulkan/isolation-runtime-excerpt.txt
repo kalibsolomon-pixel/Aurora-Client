@@ -1,0 +1,20 @@
+com.mojang.authlib.exceptions.InvalidCredentialsException: Status: 401
+	at knot//com.mojang.authlib.exceptions.MinecraftClientHttpException.toAuthenticationException(MinecraftClientHttpException.java:59)
+Caused by: com.mojang.authlib.exceptions.MinecraftClientHttpException: Status: 401
+[14:58:39] [Download-2/INFO]: Could not authorize you against Realms server: java.lang.RuntimeException: Failed to parse into SignedJWT: 0
+net.minecraft.class_4355: Realms authentication error with message 'java.lang.RuntimeException: Failed to parse into SignedJWT: 0'
+[14:58:39] [Render thread/ERROR]: [Reflex] unexpected exception inside the Reflex render hook — Reflex latency pacing is now disabled for the rest of this session so it cannot interfere with the game (automatic pacing returns on next launch). Skipping pacing changes nothing else about gameplay. Cause:
+java.lang.IllegalStateException: No GLCapabilities instance set for the current thread. Possible solutions:
+com.mojang.authlib.exceptions.MinecraftClientException: Failed to read from https://sessionserver.mojang.com/session/minecraft/profile/cc3b74096fd331aeb8ba6ebaf20c8f51?unsigned=false due to Read timed out
+Caused by: java.net.SocketTimeoutException: Read timed out
+[14:58:43] [IO-Worker-1/INFO]: Could not authorize you against Realms server: java.lang.RuntimeException: Failed to parse into SignedJWT: 0
+net.minecraft.class_4355: Realms authentication error with message 'java.lang.RuntimeException: Failed to parse into SignedJWT: 0'
+[14:58:48] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] title-rendered=true
+[14:58:51] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] world-entered=true
+[14:58:59] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] fabric-entity-events=true
+[14:58:59] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] fabric-outline-events=true
+[14:59:02] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] targeted-block-outline=true
+[14:59:04] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] gameplay-attack-dispatched=true
+[14:59:07] [Render thread/INFO]: [STDOUT]: [vulkan-acceptance] gameplay-movement=true
+# A fatal error has been detected by the Java Runtime Environment:
+#  EXCEPTION_ACCESS_VIOLATION (0xc0000005) at pc=0x00007fff8057e1b7, pid=16132, tid=29164

@@ -58,6 +58,7 @@ public abstract class HudModule {
      * constructors that set per-instance offsets) override this.
      */
     public void resetLayoutToDefaults() {
+        if (restoreReleaseLayout()) return;
         // The module's OWN default home, captured at registration (before any
         // saved layout is applied). Resetting every module to TOP_LEFT (4,4)
         // piled CPS, Ping, Reach, Totem Pops and Info onto one spot
@@ -72,6 +73,17 @@ public abstract class HudModule {
 
     private HudAnchor defaultAnchor;
     private int defaultOffsetX, defaultOffsetY;
+
+    /** Reset geometry only; hiding/locking a HUD must survive Reset Positions. */
+    protected final boolean restoreReleaseLayout() {
+        var layout = com.aurora.client.config.ReleaseDefaults.layout(id);
+        if (layout == null) return false;
+        anchor = layout.anchor;
+        offsetX = layout.offsetX;
+        offsetY = layout.offsetY;
+        scale = layout.scale;
+        return true;
+    }
 
     /** Records the constructor-assigned layout as this module's reset target (first call wins). */
     public final void captureDefaultLayout() {

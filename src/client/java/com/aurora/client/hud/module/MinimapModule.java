@@ -285,6 +285,7 @@ public final class MinimapModule extends HudModule {
     }
 
     @Override public void resetLayoutToDefaults() {
+        if (restoreReleaseLayout()) return;
         anchor = HudAnchor.TOP_RIGHT; offsetX = -4; offsetY = 4;
         scale = 1; enabled = true; locked = false;
     }

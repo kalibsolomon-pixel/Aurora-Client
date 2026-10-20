@@ -1,0 +1,280 @@
+{
+  "backend": "OpenGL",
+  "device": "AMD Radeon RX 9070 XT",
+  "frames": 7055,
+  "worldFrames": 6649,
+  "entityEvents": 6648,
+  "outlineEvents": 327,
+  "checks": [
+    {
+      "frames": 351,
+      "passed": true,
+      "check": "title-rendered"
+    },
+    {
+      "frames": 412,
+      "passed": true,
+      "check": "world-entered"
+    },
+    {
+      "frames": 822,
+      "passed": true,
+      "check": "fabric-entity-events"
+    },
+    {
+      "frames": 822,
+      "passed": true,
+      "check": "fabric-outline-events"
+    },
+    {
+      "frames": 1003,
+      "passed": true,
+      "check": "targeted-block-outline"
+    },
+    {
+      "frames": 1094,
+      "passed": true,
+      "check": "gameplay-attack-dispatched"
+    },
+    {
+      "frames": 1276,
+      "passed": true,
+      "check": "gameplay-movement"
+    },
+    {
+      "frames": 2092,
+      "passed": true,
+      "check": "detail-world_map"
+    },
+    {
+      "frames": 2274,
+      "passed": true,
+      "check": "detail-zoom"
+    },
+    {
+      "frames": 2456,
+      "passed": true,
+      "check": "detail-full_bright"
+    },
+    {
+      "frames": 2638,
+      "passed": true,
+      "check": "detail-no_fog"
+    },
+    {
+      "frames": 2819,
+      "passed": true,
+      "check": "detail-pack_tweaks"
+    },
+    {
+      "frames": 3001,
+      "passed": true,
+      "check": "detail-player_health"
+    },
+    {
+      "frames": 3183,
+      "passed": true,
+      "check": "detail-free_look"
+    },
+    {
+      "frames": 3301,
+      "passed": true,
+      "check": "detail-saturation_bar"
+    },
+    {
+      "frames": 3392,
+      "passed": true,
+      "check": "detail-block_overlay"
+    },
+    {
+      "frames": 3484,
+      "passed": true,
+      "check": "detail-toggle_sprint_sneak"
+    },
+    {
+      "frames": 3576,
+      "passed": true,
+      "check": "detail-alerts"
+    },
+    {
+      "frames": 3668,
+      "passed": true,
+      "check": "detail-crosshair"
+    },
+    {
+      "frames": 3760,
+      "passed": true,
+      "check": "detail-hitbox"
+    },
+    {
+      "frames": 3852,
+      "passed": true,
+      "check": "detail-hit_color"
+    },
+    {
+      "frames": 3944,
+      "passed": true,
+      "check": "detail-glint_color"
+    },
+    {
+      "frames": 4035,
+      "passed": true,
+      "check": "detail-info_module"
+    },
+    {
+      "frames": 4126,
+      "passed": true,
+      "check": "detail-cps"
+    },
+    {
+      "frames": 4218,
+      "passed": true,
+      "check": "detail-armor_hud"
+    },
+    {
+      "frames": 4310,
+      "passed": true,
+      "check": "detail-reach_display"
+    },
+    {
+      "frames": 4402,
+      "passed": true,
+      "check": "detail-potion_hud"
+    },
+    {
+      "frames": 4493,
+      "passed": true,
+      "check": "detail-ping"
+    },
+    {
+      "frames": 4584,
+      "passed": true,
+      "check": "detail-totem_pop"
+    },
+    {
+      "frames": 4675,
+      "passed": true,
+      "check": "detail-better_hitreg"
+    },
+    {
+      "frames": 4766,
+      "passed": true,
+      "check": "detail-waypoints"
+    },
+    {
+      "frames": 4857,
+      "passed": true,
+      "check": "detail-minimap"
+    },
+    {
+      "frames": 4949,
+      "passed": true,
+      "check": "detail-container_preview"
+    },
+    {
+      "frames": 5041,
+      "passed": true,
+      "check": "detail-item_physics"
+    },
+    {
+      "frames": 5133,
+      "passed": true,
+      "check": "detail-particles"
+    },
+    {
+      "frames": 5225,
+      "passed": true,
+      "check": "detail-item_scale"
+    },
+    {
+      "frames": 5316,
+      "passed": true,
+      "check": "detail-held_item_seams"
+    },
+    {
+      "frames": 5408,
+      "passed": true,
+      "check": "detail-resourcepack_browser"
+    },
+    {
+      "frames": 5499,
+      "passed": true,
+      "check": "detail-animations"
+    },
+    {
+      "frames": 5590,
+      "passed": true,
+      "check": "detail-keystrokes"
+    },
+    {
+      "frames": 5682,
+      "passed": true,
+      "check": "detail-miscellaneous"
+    },
+    {
+      "frames": 5774,
+      "passed": true,
+      "check": "detail-custom_title"
+    },
+    {
+      "frames": 5865,
+      "passed": true,
+      "check": "detail-text_fonts"
+    },
+    {
+      "frames": 5957,
+      "passed": true,
+      "check": "detail-theme"
+    },
+    {
+      "frames": 6049,
+      "passed": true,
+      "check": "detail-interface"
+    },
+    {
+      "frames": 6094,
+      "passed": true,
+      "check": "canvas-backend-hardware-query"
+    },
+    {
+      "frames": 6374,
+      "passed": true,
+      "check": "glass-not-disabled"
+    },
+    {
+      "frames": 6374,
+      "passed": true,
+      "check": "portable-texture-pool-bounded"
+    },
+    {
+      "frames": 6507,
+      "passed": true,
+      "check": "reload-returned"
+    },
+    {
+      "frames": 6598,
+      "passed": true,
+      "check": "portable-textures-released"
+    },
+    {
+      "frames": 6689,
+      "passed": true,
+      "check": "glass-reset-rendered"
+    },
+    {
+      "frames": 6781,
+      "passed": true,
+      "check": "resize-scale3"
+    },
+    {
+      "frames": 6873,
+      "passed": true,
+      "check": "resize-restored-scale2"
+    },
+    {
+      "frames": 7010,
+      "passed": true,
+      "check": "world-survived"
+    }
+  ]
+}

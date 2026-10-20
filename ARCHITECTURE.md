@@ -1,5 +1,12 @@
 # Aurora GUI System — Architecture Snapshot
 
+Release 3.1.0 (2026-10-20): portable constructor defaults are loaded from
+`assets/aurora/defaults/3.1.0.json` by `config/ReleaseDefaults`. Existing JSON
+overlays them rather than receiving a forced reset. Profiles use the same
+constructor snapshot. HUD geometry reset reads independent resource layouts,
+restores owner-selected scale, and preserves visibility/locks. Corrupt input is
+backed up before subsequent config writes; failed backup blocks those writes.
+
 A code-verified snapshot of Aurora's GUI system, written for a new session getting
 oriented. Companion documents: `AGENTS.md` (repo root — the broader project guide: feature
 catalog, build facts, config/profile system, known-work list) and `GUI_AUDIT.md` (this repo
@@ -52,7 +59,8 @@ Theme system (source of truth)
                              is the ONLY writer. Names lie: IOS_BLUE/ACCENT_* hold OnePlus RED.
 
 Glass material (per-element, per-frame)
-  ui/render/blur/BlurPanelRenderer   capture→blur→composite→readback→blit pipeline + rim-mask cache
+  ui/render/blur/BlurPanelRenderer   device selection + GL capture→blur→composite→readback→blit + rim-mask cache
+  ui/render/blur/PortableBlurRenderer  Vulkan GPU capture/downsample→blur→composite→GUI texture, no GL/readback
                                      + output-texture pool (24) + GlassStats instrumentation
   ui/render/blur/BlurTestScreen      dev harness (unbound keybind blur_test)
 
@@ -178,6 +186,23 @@ reader FBO wrapping the main color texture — 1.21.11's GUI records blits into 
 two-pass separable Gaussian on grow-only shared chain textures → composite pass (rounded-rect
 SDF coverage + two lighting terms) → `glReadPixels` readback into a pooled `NativeImage`/
 `DynamicTexture` (RGBA→ARGB Java loop) → ordinary `GuiGraphics.blit`.
+
+That is the OpenGL/Sodium implementation. Since 2026-10-19 the active device
+selects the backend before any native GL dispatch. A `GlTexture` check cannot
+identify it: VulkanMod subclasses that texture class but supplies a `VkGpuDevice`
+and a GLFW window with no GL context. Calling GL20 shader creation there caused
+a native access violation, beyond Java exception recovery.
+
+`PortableBlurRenderer` implements the same glass stages on Vulkan with Blaze3D
+render passes, half/quarter downsampling, GPU attachments and immutable per-pass
+uniform buffers. Each deferred GUI blit keeps a distinct GPU result; replaced
+resources retire after the referencing GUI frame, with device-managed GPU
+retirement. No CPU readback or GL state exists in that path. Texture coordinates
+remain top-down through VulkanMod's negative-height viewport. Both paths retain
+the opacity, lighting, output-priority and layering contracts below. The diagnostic
+Solid/Stripes backdrop also has a device-API path. Native pixel, pool-lifetime and
+gameplay regressions are opt-in under `tools/vulkan/`; see
+`VULKAN_COMPATIBILITY_REPORT.md` for pinned inputs, results and limits.
 
 **Lighting = exactly two terms** against one fixed light (`normalize(0.25, −1.0)`): a
 full-surface directional gradient and a fixed-width directional border stroke. Raised vs

@@ -1,0 +1,45 @@
+// Opt-in local reproduction only. Ordinary builds have no Vulkan dependency/probe.
+gradle.beforeProject { p ->
+    p.plugins.withId('net.fabricmc.fabric-loom-remap') {
+        p.dependencies.add('modLocalRuntime', p.files('build/vulkan-investigation/VulkanMod-0.6.8+1.21.11.jar'))
+    }
+}
+gradle.projectsEvaluated {
+    def p = gradle.rootProject
+    def probe = p.sourceSets.create('vulkanProbe') {
+        java.srcDir p.file('tools/vulkan/runtime/java')
+        resources.srcDir p.file('tools/vulkan/runtime/resources')
+        compileClasspath = p.sourceSets.client.compileClasspath + p.sourceSets.client.output
+    }
+    p.tasks.named('compileVulkanProbeJava') { options.release = 21 }
+    def probeJar = p.tasks.register('vulkanProbeJar', Jar) {
+        from probe.output
+        archiveFileName = 'aurora-vulkan-probe.jar'
+        destinationDirectory = p.file('build/vulkan-investigation/tooling')
+    }
+    def run = p.tasks.named('runClient').get()
+    p.tasks.register('vulkanProbeRemapJar', p.tasks.named('remapJar').get().getClass().superclass) {
+        dependsOn probeJar
+        inputFile = probeJar.flatMap { it.archiveFile }
+        archiveFileName = 'aurora-vulkan-probe-production.jar'
+        destinationDirectory = p.file('build/vulkan-investigation/tooling')
+        addNestedDependencies = false
+    }
+    if (p.file('build/vulkan-investigation/original-dev.jar').isFile()) {
+        p.tasks.register('originalRemapJar', p.tasks.named('remapJar').get().getClass().superclass) {
+            inputFile = p.file('build/vulkan-investigation/original-dev.jar')
+            archiveFileName = 'aurora-original.jar'
+            destinationDirectory = p.file('build/vulkan-investigation/tooling')
+            addNestedDependencies = false
+        }
+    }
+    p.tasks.register('writeVulkanLaunch') {
+        dependsOn run.taskDependencies.getDependencies(run)
+        dependsOn probeJar
+        doLast {
+            def spec = [classpath: run.classpath.asPath, jvmArgs: run.allJvmArgs,
+                mainClass: run.mainClass.get(), args: run.args]
+            p.file('build/vulkan-investigation/launch-template.json').text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(spec))
+        }
+    }
+}

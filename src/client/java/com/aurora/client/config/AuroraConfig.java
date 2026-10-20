@@ -25,6 +25,9 @@ import java.util.Set;
  * so adding or removing modules doesn't invalidate existing configs.
  */
 public class AuroraConfig {
+    /** Field initializers supply schema fallbacks; the reviewed portable resource supplies release defaults. */
+    public AuroraConfig() { ReleaseDefaults.apply(this); }
+
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final Path CONFIG_PATH =
         FabricLoader.getInstance().getConfigDir().resolve("aurora.json");
@@ -42,6 +45,7 @@ public class AuroraConfig {
      * a later existence probe would always say "existing".
      */
     private static boolean loadedFromExistingFile = false;
+    private static boolean configWritesBlocked = false;
 
     /** Whether the last {@link #load()} read a pre-existing config file. */
     static boolean loadedFromDisk() { return loadedFromExistingFile; }
@@ -1185,6 +1189,7 @@ public class AuroraConfig {
                 // members so one bad field can't take the whole config down.
                 json = ThemeMigrator.migrateConfigJson(json, AuroraClient.LOGGER);
                 AuroraConfig loaded = GSON.fromJson(json, AuroraConfig.class);
+                if (loaded == null) throw new com.google.gson.JsonParseException("Config is null");
                 if (loaded != null) {
                     loadedFromExistingFile = true;
                     if (loaded.moduleLayouts == null) loaded.moduleLayouts = new HashMap<>();
@@ -1207,6 +1212,7 @@ public class AuroraConfig {
                 // EffectExpiryMigrator can leave the inclusion list empty
                 // (the new paradigm's default) instead of pre-populating it.
                 loadedFromExistingFile = false;
+                INSTANCE = new AuroraConfig();
                 save();
             }
         } catch (Exception e) {
@@ -1214,6 +1220,15 @@ public class AuroraConfig {
             // file): either way fall back to the in-memory defaults -
             // loading must never crash client init.
             AuroraClient.LOGGER.error("Failed to load Aurora config", e);
+            INSTANCE = new AuroraConfig();
+            // Preserve recoverable input before later autosaves can replace it.
+            try {
+                if (Files.exists(CONFIG_PATH)) Files.copy(CONFIG_PATH,
+                        CONFIG_PATH.resolveSibling("aurora.json.corrupt-" + java.util.UUID.randomUUID() + ".bak"));
+            } catch (IOException backupFailure) {
+                configWritesBlocked = true;
+                AuroraClient.LOGGER.error("Config backup failed; config writes disabled to preserve original", backupFailure);
+            }
         }
     }
 
@@ -1232,6 +1247,7 @@ public class AuroraConfig {
      * thread would otherwise be killed before it could finish.
      */
     public static void save() {
+        if (configWritesBlocked) return;
         final String json;
         try {
             json = GSON.toJson(INSTANCE);
@@ -1253,6 +1269,7 @@ public class AuroraConfig {
      * @return true if the write was confirmed on disk within the bound
      */
     public static boolean saveBlocking() {
+        if (configWritesBlocked) return false;
         try {
             WRITER.submit(CONFIG_PATH, GSON.toJson(INSTANCE));
         } catch (Throwable t) {

@@ -250,6 +250,14 @@ public class ReflexScheduler {
         runGuarded(() -> {
             if (!capabilitiesChecked) {
                 capabilitiesChecked = true;
+                // Blaze3D exposes no backend-neutral GPU timestamp API. Never
+                // enter LWJGL's native GL dispatch on a Vulkan-only window.
+                if (!com.aurora.client.ui.render.RenderBackend.isOpenGl()) {
+                    sessionDisabled = true;
+                    LOGGER.info("[Reflex] GPU timestamp pacing unavailable on {}; frame caps remain active",
+                            com.mojang.blaze3d.systems.RenderSystem.getDevice().getBackendName());
+                    return;
+                }
                 var caps = org.lwjgl.opengl.GL.getCapabilities();
                 if (!caps.OpenGL33 && !caps.GL_ARB_timer_query) {
                     disableForSession(new UnsupportedOperationException("GPU timestamp queries unavailable"));

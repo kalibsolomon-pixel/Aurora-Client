@@ -3,6 +3,7 @@ package com.aurora.client.ui.render.blur;
 import com.aurora.client.AuroraClient;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.ui.util.RenderUtil;
+import com.aurora.client.ui.render.RenderBackend;
 import com.mojang.blaze3d.opengl.GlTexture;
 import com.mojang.blaze3d.opengl.GlStateManager;
 import com.mojang.blaze3d.platform.NativeImage;
@@ -29,6 +30,10 @@ import java.util.concurrent.atomic.AtomicLong;
  * Translucent blurred panel renderer — the deliberately conservative
  * rebuild of the removed glass system, now with a simple lighting
  * IMPRESSION layered on top of the verified blur+tint baseline. Scope:
+ * Non-OpenGL devices use {@link PortableBlurRenderer}: the same material
+ * stages through Blaze3D render passes, GPU textures and uniform buffers.
+ * Never probe GL entry points to discover a backend: VulkanMod's GL20
+ * shader dispatch can crash natively before a Java catch block can run.
  * <ol>
  *   <li><b>Blur</b> — a two-pass separable Gaussian over the backdrop the
  *       panel sits on (a padded region captured from the main render
@@ -261,12 +266,21 @@ public final class BlurPanelRenderer {
      * {@code null} (live capture).
      */
     public static final class CaptureSource {
+        public final com.mojang.blaze3d.textures.GpuTextureView textureView;
         public final int fbo;
         public final int width;
         public final int height;
 
         public CaptureSource(int fbo, int width, int height) {
+            this.textureView = null;
             this.fbo = fbo;
+            this.width = width;
+            this.height = height;
+        }
+
+        public CaptureSource(com.mojang.blaze3d.textures.GpuTextureView textureView, int width, int height) {
+            this.textureView = textureView;
+            this.fbo = 0;
             this.width = width;
             this.height = height;
         }
@@ -429,6 +443,7 @@ public final class BlurPanelRenderer {
 
     /** One pooled output slot: NativeImage + registered DynamicTexture. */
     private static final class PanelOutput {
+        final PortableBlurRenderer.Output portable = new PortableBlurRenderer.Output();
         NativeImage image;
         DynamicTexture texture;
         Identifier id;
@@ -981,7 +996,7 @@ public final class BlurPanelRenderer {
         float requested = Math.min(64f, Math.max(0f, blurRadiusPx));
         if (requested < MIN_EFFECTIVE_RADIUS_PX) { lastOutcome = "radius below minimum"; return false; }
         float radius = frostRadiusPx(requested);
-        if (!ensureReady()) { lastOutcome = "init failed (see log)"; return false; }
+        if (RenderBackend.isOpenGl() && !ensureReady()) { lastOutcome = "init failed (see log)"; return false; }
 
         long perfStart = GlassStats.ENABLED ? System.nanoTime() : 0L;
         try {
@@ -1096,6 +1111,10 @@ public final class BlurPanelRenderer {
             // blits and a shared texture would show the LAST upload in
             // every pending blit.
             out = nextOutput(priority);
+            if (!RenderBackend.isOpenGl()) {
+                return PortableBlurRenderer.render(g, out.portable, main, x0, y0, regX, regY,
+                        regW, regH, panW, panH, scale, radius, cornerRadiusGui, lighting, unified, capture);
+            }
             // Snapshot the source target BEFORE any of our own GL calls can
             // change the binding — this is the framebuffer holding everything
             // visually behind the panel right now.
@@ -1496,6 +1515,7 @@ public final class BlurPanelRenderer {
 
     /** Releases GPU/texture resources. Idempotent; safe on shutdown/reload. */
     public static void shutdown() {
+        PortableBlurRenderer.shutdown();
         releaseOutputs();
         releaseRimMasks();
         deleteChain();
@@ -1781,6 +1801,7 @@ public final class BlurPanelRenderer {
      * render-tick mixin, before any GUI rendering. Deliberately trivial.
      */
     public static void beginFrame() {
+        PortableBlurRenderer.beginFrame();
         GlassStats.flushFrame();
         // Drain queued rim-mask evictions FIRST. Everything in the queue was
         // last blitted in an epoch older than the frame that just finished,

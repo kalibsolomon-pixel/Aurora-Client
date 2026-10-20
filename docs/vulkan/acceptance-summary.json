@@ -1,0 +1,64 @@
+{
+  "date": "2026-10-19",
+  "minecraft": "1.21.11",
+  "loader": "0.19.2",
+  "fabricApi": "0.141.4+1.21.11",
+  "vulkanmod": "0.6.8+1.21.11",
+  "sodium": "0.8.14+mc1.21.11",
+  "java": "Microsoft OpenJDK 21.0.7+6 Windows x64",
+  "gpu": "AMD Radeon RX 9070 XT",
+  "driver": "32.0.31041.1004",
+  "unitTests": {
+    "tests": 575,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "runs": [
+    {
+      "fixture": "final-vulkan-02",
+      "renderer": "vulkan",
+      "backend": "Vulkan",
+      "device": "AMD Radeon RX 9070 XT",
+      "frames": 7009,
+      "worldFrames": 6628,
+      "checks": 66,
+      "passed": 66,
+      "captures": 60,
+      "exitCode": 0,
+      "stripeCorrelation": 0.9117822660125455,
+      "contrastRatio": 0.7143002375027455,
+      "artifactSha256": "511f36b74c48a328ab5bb356e547818bc42a1e63b2b3acda1b50cf01abeb5ea9"
+    },
+    {
+      "fixture": "final-opengl-02",
+      "renderer": "opengl",
+      "backend": "OpenGL",
+      "device": "AMD Radeon RX 9070 XT",
+      "frames": 7055,
+      "worldFrames": 6649,
+      "checks": 66,
+      "passed": 66,
+      "captures": 60,
+      "exitCode": 0,
+      "stripeCorrelation": 0.9117679507667641,
+      "contrastRatio": 0.7143587405695633,
+      "artifactSha256": "511f36b74c48a328ab5bb356e547818bc42a1e63b2b3acda1b50cf01abeb5ea9"
+    },
+    {
+      "fixture": "final-sodium-02",
+      "renderer": "sodium",
+      "backend": "OpenGL",
+      "device": "AMD Radeon RX 9070 XT",
+      "frames": 7056,
+      "worldFrames": 6648,
+      "checks": 66,
+      "passed": 66,
+      "captures": 60,
+      "exitCode": 0,
+      "stripeCorrelation": 0.9117679507667641,
+      "contrastRatio": 0.7143587405695633,
+      "artifactSha256": "511f36b74c48a328ab5bb356e547818bc42a1e63b2b3acda1b50cf01abeb5ea9"
+    }
+  ]
+}

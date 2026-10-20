@@ -117,6 +117,7 @@ public class KeystrokesModule extends HudModule {
 
     @Override
     public void resetLayoutToDefaults() {
+        if (restoreReleaseLayout()) return;
         this.anchor = HudAnchor.BOTTOM_LEFT;
         this.offsetX = 4;
         this.offsetY = 80;

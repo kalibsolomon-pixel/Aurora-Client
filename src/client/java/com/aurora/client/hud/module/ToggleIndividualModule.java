@@ -78,6 +78,7 @@ public class ToggleIndividualModule extends HudModule {
      */
     @Override
     public void resetLayoutToDefaults() {
+        if (restoreReleaseLayout()) return;
         this.anchor  = HudAnchor.BOTTOM_RIGHT;
         this.offsetX = -4;
         this.offsetY = defaultOffsetY;
