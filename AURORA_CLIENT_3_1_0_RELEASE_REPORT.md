@@ -111,6 +111,13 @@ See the Vulkan report for pinned dependencies, GPU/driver and upstream limits.
 - Initial new-test failures were incorrect test assumptions (Minimap enabled and
   counted as visible despite the reference disabling it); corrected to the actual
   reference. No product behavior was changed to satisfy those assumptions.
+- First Linux CI run correctly refused publication: three existing startup-flag
+  cases hardcoded `bin/java.exe`. The helper now selects `java` on Unix and
+  `java.exe` on Windows; no runtime frame-pacing code changed and no test is skipped.
+- Native image review was corrected to translate fixed-size panel sample points
+  with the actual framebuffer center. A restored 2560x1440 window had placed the
+  old hardcoded samples outside the panel; inspection confirmed real blur and
+  raised/depressed lighting, and the translated checks pass.
 - JAR inspected for embedded 3.1.0 identity, dependencies, exact defaults resource,
   unexpected data paths and diagnostic probes. Only six intended ImageIO support
   jars are nested. `git diff --check` passed.

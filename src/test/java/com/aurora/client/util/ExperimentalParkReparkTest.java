@@ -266,7 +266,8 @@ class ExperimentalParkReparkTest {
     @ParameterizedTest @ValueSource(strings = {"absent", "false", "true"})
     void startupPropertyIsIndependentAndReadOnceInFreshJvms(String value) throws Exception {
         var command = new ArrayList<String>();
-        command.add(Path.of(System.getProperty("java.home"), "bin", "java.exe").toString());
+        command.add(Path.of(System.getProperty("java.home"), "bin",
+                java.io.File.separatorChar == '\\' ? "java.exe" : "java").toString());
         if (!value.equals("absent")) command.add("-Daurora.experimentalParkRepark=" + value);
         command.add("-cp");
         command.add(Path.of(FramePacer.class.getProtectionDomain().getCodeSource().getLocation().toURI())
