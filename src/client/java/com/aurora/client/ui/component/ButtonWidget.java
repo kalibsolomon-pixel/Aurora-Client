@@ -119,9 +119,9 @@ public class ButtonWidget extends AbstractButton {
         return this;
     }
 
-    /** Neutral-card edge — forwarded to the painter (see {@link Button.Edge}). */
-    public ButtonWidget edge(Button.Edge e) {
-        painter.edge(e);
+    /** Themed card (Background Color fill + accent outline) — forwarded to the painter. */
+    public ButtonWidget themed(boolean t) {
+        painter.themed(t);
         return this;
     }
 

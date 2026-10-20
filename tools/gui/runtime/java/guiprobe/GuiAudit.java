@@ -306,6 +306,24 @@ public final class GuiAudit implements ClientModInitializer {
         actions.add(() -> shot("theme-custom-pickers-end"));
         actions.add(() -> { themeBackground(0xFF16171D); park(); mc.setScreen(null); });
         actions.add(() -> shot("gameplay-hud"));
+        // ---- Owner follow-up: themed buttons, glyph fallback ----
+        actions.add(() -> {
+            cfg.textRendererMode = AuroraConfig.TextRendererMode.ALL_TEXT;
+            cfg.activeFont = AuroraConfig.FontType.INTER;
+            // Scoreboard-style symbols, an emoji, CJK and a block: none are in Inter.
+            StringBuilder glyphs = new StringBuilder("say Glyphs:");
+            for (int cp : new int[]{0x24D8, 0x2691, 0x1F310, 0x23F2, 0x2694, 0x2726, 0x4E2D, 0x6587, 0x2588})
+                glyphs.append(' ').appendCodePoint(cp);
+            command(glyphs.toString());
+        });
+        actions.add(() -> shot("glyph-fallback"));
+        actions.add(() -> { themeBackground(0xFF22163A); cfg.themeOrDefault().accent = 0xFF43A047; com.aurora.client.theme.ThemeManager.reload(); });
+        addShots("hud-editor-purple-green", HudEditorScreen::new);
+        actions.add(() -> { park(); mc.setScreen(new JoinMultiplayerScreen(new AuroraTitleScreen())); });
+        actions.add(() -> shot("multiplayer-themed"));
+        actions.add(() -> { park(); mc.setScreen(new AuroraTitleScreen()); });
+        actions.add(() -> shot("title-themed"));
+        actions.add(() -> { themeBackground(0xFF16171D); cfg.themeOrDefault().accent = 0xFFEB0029; com.aurora.client.theme.ThemeManager.reload(); mc.setScreen(null); });
     }
 
     static void setupActions() {

@@ -30,14 +30,14 @@ class OwnerMenuGeometryTest {
         assertEquals(126, menu.stack().height());
         assertTrue(menu.stack().height() < 5 * 30 + 4 * 6);
         assertEquals(12, menu.stack().y() - menu.logo().y() - menu.logo().height());
-        assertEquals(180, menu.stack().width());
+        assertEquals(140, menu.stack().width()); // owner 2026-10-19: narrower again (was 180)
     }
 
     @Test void allFivePaintAndHitBoundsAreIdenticalAndDisjoint() {
         var menu = MenuComposition.layout(640,360);
         for (int i=0; i<MenuComposition.CARD_COUNT; i++) {
             var card = menu.card(i);
-            assertEquals(180,card.width()); assertEquals(22,card.height());
+            assertEquals(140,card.width()); assertEquals(22,card.height());
             assertTrue(card.height() < 30);
             assertTrue(card.contains(card.x(),card.y()));
             assertFalse(card.contains(card.x(),card.y()+card.height()));

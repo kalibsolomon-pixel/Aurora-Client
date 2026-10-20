@@ -39,3 +39,16 @@ Baseline = 926b109 jar, same plan and ImmediatelyFast 1.14.3:
 The frame times are capped and only show no regression. Not covered by automation: real
 mouse drags in the HUD editor, keyboard focus traversal of the new rows, Sodium/VulkanMod,
 other GPUs, Linux.
+
+## Follow-up (same day)
+
+| Before | After | Why |
+|---|---|---|
+| Title cards, Aurora-styled vanilla menu buttons and HUD editor buttons: plain glass at window opacity, grey/no edge | `Button.themed`: Theme Background Color fill (density floor 150/255 so it never reads as blank glass) + accent outline | Owner: buttons follow the Theme (outline choice: accent) |
+| Title cards 180 px wide | 140 px | Owner: narrower |
+| Keycaps chamfered on the logical grid (blocky) | Device-resolution AA caps/base/plate rasterized once per size into templates, blitted on the device grid; press offset snapped to whole device pixels | Owner: per-pixel rendering; one blit per layer keeps fill volume flat |
+| Custom fonts showed boxes for glyphs the TTF lacks | Every text font ends with a `reference` to `minecraft:default` | Missing glyphs (symbols, CJK, server resource-pack icons) render exactly as vanilla. A universal hi-def replacement is impossible: server icons exist only in the server's default-font bitmaps |
+
+Verified in `--plan owner` captures (fixture `owner-r2`): themed title/multiplayer/HUD-editor buttons
+(purple background, green accent), 140 px title cards, keycap press frames, and a chat line of
+ⓘ ⚑ 🌐 ⏲ ⚔ ✦ 中文 █ in Inter rendering through the fallback. 605 tests pass.

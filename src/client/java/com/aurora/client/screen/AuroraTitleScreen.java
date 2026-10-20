@@ -68,7 +68,8 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
         // stained for the primary (selected/primary is the only stained
         // scope — §6 convention 3); primary(true) keeps the flat-fallback
         // variant consistent with the stained treatment.
-        btn.glassStyle(primary ? Button.GlassStyle.STAINED : Button.GlassStyle.NEUTRAL).primary(primary);
+        btn.glassStyle(primary ? Button.GlassStyle.STAINED : Button.GlassStyle.NEUTRAL).primary(primary)
+                .themed(true); // Background Color fill + accent outline (owner, 2026-10-19)
         this.addRenderableWidget(btn);
         return btn;
     }

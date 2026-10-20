@@ -2,7 +2,7 @@ package com.aurora.client.ui.util;
 
 /** Pixel-snapped title-menu composition. Supported logical viewports are at least 240×160. */
 public final class MenuComposition {
-    public static final int CARD_COUNT = 5, CARD_WIDTH = 180, CARD_HEIGHT = 22, CARD_GAP = 4;
+    public static final int CARD_COUNT = 5, CARD_WIDTH = 140, CARD_HEIGHT = 22, CARD_GAP = 4;
     public static final int LOGO_SIZE = 48, LOGO_GAP = 12, MARGIN = 8;
     public static final int STACK_HEIGHT = CARD_COUNT * CARD_HEIGHT + (CARD_COUNT - 1) * CARD_GAP;
     private MenuComposition() {}

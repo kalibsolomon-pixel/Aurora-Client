@@ -1,14 +1,18 @@
 ﻿{
-    "providers":  [
-                      {
-                          "shift":  [
-                                        0,
-                                        0
-                                    ],
-                          "size":  9.0,
-                          "oversample":  8,
-                          "file":  "aurora:nunito-variable.ttf",
-                          "type":  "ttf"
-                      }
-                  ]
+  "providers": [
+    {
+      "shift": [
+        0,
+        0
+      ],
+      "size": 9.0,
+      "oversample": 8,
+      "file": "aurora:nunito-variable.ttf",
+      "type": "ttf"
+    },
+    {
+      "type": "reference",
+      "id": "minecraft:default"
+    }
+  ]
 }

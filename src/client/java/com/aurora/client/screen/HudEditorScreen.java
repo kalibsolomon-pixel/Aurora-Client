@@ -117,9 +117,9 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
         int w = 120;
         int h = 20;
 
-        // Owner correction (2026-10-19): Aurora Settings returns to the screen
-        // center over the crosshair and wears the accent outline of an enabled
-        // feature card; Reset Positions is a compact, grey-edged corner action.
+        // Owner corrections (2026-10-19): Aurora Settings sits over the
+        // crosshair, Reset Positions is a compact corner action, and both follow
+        // the Theme — Background Color fill with the accent outline.
         this.addRenderableWidget(ButtonWidget.semantic(
                 (this.width - w) / 2, (this.height - h) / 2, w, h,
                 Component.literal("Aurora Settings"),
@@ -130,7 +130,7 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
                     if (this.minecraft != null) {
                         this.minecraft.setScreen(AuroraScreen.create());
                     }
-                }).glassBackground(true).edge(com.aurora.client.ui.component.Button.Edge.ACCENT));
+                }).glassBackground(true).themed(true));
 
         // Label width + the painter's 20 px ellipsis reserve + 2 px breathing room.
         int resetW = Math.min(w, this.font.width("Reset Positions") + 22);
@@ -139,7 +139,7 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
                 this.width - resetW - 8, 8, resetW, resetH,
                 Component.literal("Reset Positions"),
                 "Moves every HUD module back to its default anchor, offset and scale.",
-                this::resetLayouts).glassBackground(true).edge(com.aurora.client.ui.component.Button.Edge.NEUTRAL));
+                this::resetLayouts).glassBackground(true).themed(true));
 
         // Phase C-4 pilot C: one icon action per HUD module's X badge —
         // the canonical contract (Tab/Enter/Space, focus hairline, canonical

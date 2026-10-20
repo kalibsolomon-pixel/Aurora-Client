@@ -5,7 +5,6 @@ import com.aurora.client.feature.impl.ClickTrackerFeature;
 import com.aurora.client.hud.HudAnchor;
 import com.aurora.client.util.AuroraKey;
 import com.aurora.client.util.CachedValue;
-import com.aurora.client.util.AuroraShapes;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
 import com.mojang.blaze3d.platform.InputConstants;
@@ -41,8 +40,8 @@ import java.util.List;
  *
  * <p>Rendering budget: no per-frame allocations. Labels are cached (refreshed
  * every 2 s to pick up rebinding), the CPS string is rebuilt at most 10x/s via
- * {@link CachedValue}, and the press animation is one {@code float} per slot
- * updated by a frame-rate-independent lerp.
+ * {@link CachedValue}, key shapes are cached device-resolution templates (one
+ * blit each), and the press animation is one interruptible ease-out per slot.
  */
 public class KeystrokesModule extends HudModule {
     public static final String ID = "keystrokes";
@@ -249,7 +248,7 @@ public class KeystrokesModule extends HudModule {
 
         // ---- CPS readout (event-based rolling 1-second counters) ----
         if (cfg.keystrokesShowCps && !cfg.keystrokesShowMouse) {
-            AuroraShapes.panel(ctx, x, cy, WIDTH, CPS_H, idleBackground(), KEY_RADIUS);
+            blitTemplate(ctx, TPL_PLATE, x, cy, WIDTH, CPS_H, accent, 1f);
             String text = cpsText.get();
             int tw = font.width(text);
             ctx.drawString(font, text, x + (WIDTH - tw) / 2,
@@ -289,28 +288,95 @@ public class KeystrokesModule extends HudModule {
         }
     }
 
+    // ---- Keycap templates (per-pixel rendering, 2026-10-19) ----
+    //
+    // Caps, bases and the CPS plate are anti-aliased at the device resolution
+    // (RenderUtil's coverage math, the Aurora UI's rounded corners) instead of
+    // the logical-pixel chamfers that read as blocky Minecraft UI. Drawing
+    // that live would submit hundreds of strip fills per key every frame, so
+    // each (shape, size) is rasterized once into a texture and blitted on the
+    // device grid; colour/theme/density changes re-raster in place. The press
+    // animation stays transform + opacity: the cap slides by a device-snapped
+    // offset and the pressed cap fades in over the idle one.
+    private static final int TPL_BASE = 0, TPL_IDLE = 1, TPL_PRESSED = 2, TPL_PLATE = 3;
+    /** AA margin around a template (logical px). */
+    private static final int TPL_PAD = 1;
+    private final it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap<com.aurora.client.ui.util.UiLayerCache> templates =
+            new it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap<>();
+
+    private com.aurora.client.ui.util.UiLayerCache template(GuiGraphics ctx, int kind, int w, int h, int accent) {
+        long key = ((long) kind << 40) | ((long) w << 20) | h;
+        var cache = templates.get(key);
+        if (cache == null) { cache = new com.aurora.client.ui.util.UiLayerCache(); templates.put(key, cache); }
+        float density = com.aurora.client.worldmap.MapMarkers.density(ctx);
+        int idle = idleBackground();
+        int outline = ThemeManager.color(ThemeToken.TILE_OUTLINE);
+        long version = ThemeManager.generation() * 1_000_003L ^ Float.floatToIntBits(density) * 7919L
+                ^ (long) accent * 31L ^ (long) idle * 131L ^ (long) outline * 524287L;
+        if (!cache.isCurrent(version)) {
+            float gui = (float) Minecraft.getInstance().getWindow().getGuiScale();
+            float f = density / gui; // logical units that land on device pixels at this density
+            int pw = Math.max(1, Math.round((w + TPL_PAD * 2) * density));
+            int ph = Math.max(1, Math.round((h + TPL_PAD * 2) * density));
+            cache.ensureSize(pw, ph);
+            cache.clear();
+            var previous = com.aurora.client.ui.util.RenderUtil.beginCapture(cache.sink());
+            try {
+                float x = TPL_PAD * f, y = TPL_PAD * f, cw = w * f, chh = h * f, r = KEY_RADIUS * f;
+                switch (kind) {
+                    case TPL_BASE -> com.aurora.client.ui.util.RenderUtil.drawRoundedRectAA(ctx, x, y, cw, chh, r,
+                            blend(idle, idle & 0xFF000000, 0.55f));
+                    case TPL_IDLE -> {
+                        com.aurora.client.ui.util.RenderUtil.drawRoundedRectAA(ctx, x, y, cw, chh, r, idle);
+                        // Hairline top light: the lit face of the resting cap.
+                        com.aurora.client.ui.util.RenderUtil.drawRoundedRectAA(ctx, x + r, y + f * .5f, cw - 2 * r, f * .75f, f * .375f, // capsule-ended hairline
+                                ThemeManager.withAlpha(0xFFFFFFFF, 0x26));
+                        com.aurora.client.ui.util.RenderUtil.drawRoundedOutlineAA(ctx, x, y, cw, chh, r, f, outline);
+                    }
+                    case TPL_PRESSED -> {
+                        com.aurora.client.ui.util.RenderUtil.drawRoundedRectAA(ctx, x, y, cw, chh, r, blend(idle, accent, 0.30f));
+                        com.aurora.client.ui.util.RenderUtil.drawRoundedOutlineAA(ctx, x, y, cw, chh, r, f, blend(outline, accent, 0.85f));
+                    }
+                    default -> com.aurora.client.ui.util.RenderUtil.drawRoundedRectAA(ctx, x, y, cw, chh, r, idle);
+                }
+            } finally {
+                com.aurora.client.ui.util.RenderUtil.endCapture(previous);
+            }
+            cache.commit(version);
+        }
+        return cache;
+    }
+
+    /** One template blit on the device grid, {@code alpha} 0..1 as a texture-alpha fade. */
+    private void blitTemplate(GuiGraphics ctx, int kind, float x, float y, int w, int h, int accent, float alpha) {
+        if (alpha <= 0.004f) return;
+        var cache = template(ctx, kind, w, h, accent);
+        float density = com.aurora.client.worldmap.MapMarkers.density(ctx);
+        int px = com.aurora.client.worldmap.MapMarkers.pixelX(ctx, x - TPL_PAD, y - TPL_PAD);
+        int py = com.aurora.client.worldmap.MapMarkers.pixelY(ctx, x - TPL_PAD, y - TPL_PAD);
+        int size = Math.max(1, Math.round((w + TPL_PAD * 2) * density)), sizeH = Math.max(1, Math.round((h + TPL_PAD * 2) * density));
+        com.aurora.client.worldmap.MapMarkers.blitPixels(ctx, cache, px, py, size, sizeH,
+                (Math.round(Math.min(1f, alpha) * 255) << 24) | 0xFFFFFF);
+    }
+
     /**
      * Draws one keycap. The cap ({@code h - DEPTH} tall) rests on a darker base
      * whose lower {@link #DEPTH} px read as the key's bottom edge; pressing
-     * translates the cap (and its label) down onto the base, so motion is a
-     * pure offset while the press value only crossfades tint and edge colour.
+     * slides the cap (and its label) down onto the base by a device-snapped
+     * offset while the accent-tinted pressed cap fades in over the idle one.
      */
     private void drawKey(GuiGraphics ctx, Font font, int x, int y, int w, int h,
                          int slot, int accent, int labelColor) {
         float t = press[slot];
-        int idle = idleBackground();
         int capH = h - DEPTH;
-        // Base: same footprint as the cap, shaded toward black — only its lower
-        // DEPTH px show at rest, nothing once the cap has landed.
-        AuroraShapes.panel(ctx, x, y + DEPTH, w, capH, blend(idle, idle & 0xFF000000, 0.55f), KEY_RADIUS);
+        float density = com.aurora.client.worldmap.MapMarkers.density(ctx);
+        // Whole device pixels only, so edges and text stay crisp mid-press.
+        float offset = Math.round(t * DEPTH * density) / density;
+        blitTemplate(ctx, TPL_BASE, x, y + DEPTH, w, capH, accent, 1f);
+        blitTemplate(ctx, TPL_IDLE, x, y + offset, w, capH, accent, 1f);
+        blitTemplate(ctx, TPL_PRESSED, x, y + offset, w, capH, accent, t);
         ctx.pose().pushMatrix();
-        ctx.pose().translate(0f, t * DEPTH);
-        AuroraShapes.panel(ctx, x, y, w, capH, blend(idle, accent, t * 0.30f), KEY_RADIUS);
-        // Hairline top light: the lit face of the cap, fading as it goes down.
-        ctx.fill(x + KEY_RADIUS, y, x + w - KEY_RADIUS, y + 1,
-                ThemeManager.withAlpha(0xFFFFFFFF, Math.round(0x26 * (1f - t))));
-        AuroraShapes.outline(ctx, x, y, w, capH,
-                blend(ThemeManager.color(ThemeToken.TILE_OUTLINE), accent, t * 0.85f), KEY_RADIUS);
+        ctx.pose().translate(0f, offset);
         drawKeyLabel(ctx, font, x, y, w, capH, slot, labelColor);
         ctx.pose().popMatrix();
     }
