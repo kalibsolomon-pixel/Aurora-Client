@@ -44,6 +44,8 @@ and checksummed without launching against or writing to that directory.
 
 Reference `aurora.json` SHA-256:
 `1bfa338e37fd45c35eaa99b1a068ee3bae4d548ee05c8a7bf48d3db09499c8b2`.
+Reference active profile SHA-256:
+`5e82a5502190a6dd1d93af00bc621547499cb81cc2da59d7fffc2e944d75ad9f`.
 The original Aurora config and profile still match their isolated copies.
 Four map files differed from the initial live-directory inventory during this
 session; no operation in this release writes to that source directory. They
@@ -83,9 +85,12 @@ for 1080p/1440p/4K and a smaller window. Effect rows and localized text have dyn
 dimensions; these checks are not a claim of universal containment for arbitrary
 effect counts, fonts, window sizes or GUI scales.
 
-Final packaged-3.1.0 native checks and default screenshots are being recorded in
-`build/vulkan-investigation/release-310-{opengl,sodium,vulkan}`. Final results
-are recorded in the publication addendum below rather than inferred from a build.
+Final packaged-3.1.0 checks passed on all three renderers: **31/31 checks per
+renderer**, **23 captures each**, normal exit code 0. The exact CI artifact was
+then tested independently on all three backends with the same passing results.
+Public evidence: `docs/releases/3.1.0/ci-native-acceptance.json`; selected screenshots
+and the first local-artifact matrix are adjacent. Full disposable fixtures are
+`build/vulkan-investigation/release-310-*` and `build/vulkan-investigation/ci310-*`.
 
 ## E. Compatibility
 
@@ -103,6 +108,8 @@ See the Vulkan report for pinned dependencies, GPU/driver and upstream limits.
 - Gradle test/build: 610 tests, zero failures/errors, one opt-in Windows stress
   comparison skipped. That longer comparison is not required for the regular suite.
 - Python release-tool/default checks: 32 passed.
+- Full Linux CI tests and clean rebuild both passed after correcting the portable
+  test helper. Workflow logs are retained locally in `build/release-3.1.0/ci-validation.log`.
 - Added five Java regressions: defaults/privacy/independence, fresh-vs-upgrade
   loading including profile/relaunch preservation, corrupt backup, position reset,
   and default HUD bounds.
@@ -126,31 +133,53 @@ See the Vulkan report for pinned dependencies, GPU/driver and upstream limits.
 
 Historical component evidence covers mapping SP/relaunch/loopback multiplayer,
 map-cache pressure, Premium GUI and config/profile persistence. The owner's
-acceptance supplements those records. Final 3.1.0 fixture outputs, exit status,
-fresh-default assertions and image checks are recorded below when complete.
+acceptance supplements those records. Final 3.1.0 checks exercised real integrated
+world entry, default font/HUD/layout assertions, movement/attack, world overlays,
+maps, waypoint/profile manager screens, color picker, feature grid, custom canvas,
+blur and lighting controls, texture-pool pressure, resource reload, reset, resize,
+dimension transitions and normal saved exit. The quick final matrix reuses the
+historical full 38-detail-screen traversal evidence; it does not claim to repeat it.
 No live Launcher instance, original config or original run directory is a test target.
 
 ## H. Release artifact
 
 - Filename: `aurora-3.1.0.jar`.
-- Local candidate: 3,208,004 bytes.
-- Local candidate SHA-256:
-  `37cabf84254632deedec910ffa775448c7bb7871366e3fe512f6ccf62550cea0`.
+- Official published artifact: **3,207,919 bytes**.
+- Official published SHA-256:
+  `415c9a24d87cee2633ca2f412c1a3c138a8285ab6779f0fcf85ef95f045d23c8`.
 - Embedded mod ID/version: `aurora` / `3.1.0`; environment `client`.
-- Defaults resource is present and byte-for-byte matches the reviewed source.
-- CI records the authoritative final artifact checksum; cross-platform archive
-  bytes are compared before approving publication.
+- Defaults resource is present and matches the reviewed values.
+- The Windows candidate was 3,208,004 bytes with SHA-256
+  `37cabf84254632deedec910ffa775448c7bb7871366e3fe512f6ccf62550cea0`.
+  Comparing every archive entry found only CRLF/LF differences in six text files;
+  all compiled classes, shaders, nested dependencies and other assets match.
+  The exact Linux CI JAR was nevertheless natively tested on all three renderers
+  before approval. Every tested CI copy and the public download have the official
+  checksum above. Complete metadata is in the CI native-acceptance JSON.
 
 ## I. Publication
 
-Publication must use workflow_dispatch on master, exact source SHA, stable
+Publication used workflow_dispatch on master, exact source SHA, stable
 channel and the aurora-production reviewer gate. The existing draft verification,
 sole-asset rule, collision refusal, immutable publication and anonymous download
 verification remain intact. Versioned release notes now travel with the verified
 candidate and are combined with its exact source/hash metadata by the workflow.
 
-Target identity: `v3.1.0`. No existing tag/release is replaced. Final source,
-workflow, release/asset URLs and checksum verification are recorded below.
+Source commit: `ba24a62ef2cc3ddabef440ce3a6a5bcb57540d0c`.
+Tag: `v3.1.0`, verified as the latest stable, published immutable release.
+Published 2026-10-20 at 03:00:28 America/New_York (07:00:28 UTC).
+
+- [Successful release workflow](https://github.com/kalibsolomon-pixel/Aurora-Client/actions/runs/39383217074).
+- [Official release and release notes](https://github.com/kalibsolomon-pixel/Aurora-Client/releases/tag/v3.1.0).
+- [Official JAR](https://github.com/kalibsolomon-pixel/Aurora-Client/releases/download/v3.1.0/aurora-3.1.0.jar).
+
+The existing reviewer gate was approved with the authenticated owner identity
+under the explicit Client 3.1.0 authorization, after exact-candidate acceptance.
+No gate was removed or bypassed. The workflow verified its draft target/sole
+asset, published separately, and passed anonymous redownload verification.
+An additional independent anonymous public download passed the same verifier,
+including exact size/hash, embedded identity and immutable metadata. No historical
+tag or artifact was replaced. The initial CI refusal created no release.
 
 ## J. Launcher integration
 
@@ -159,6 +188,11 @@ README documents the production manifest as a separate manual publication gate.
 The existing `release-manifest/aurora-releases.json` is not updated here, so a
 GitHub Client release alone does not advertise 3.1.0 to existing Launcher builds.
 The owner can coordinate that catalog update independently.
+A complete proposal is prepared at
+`docs/releases/3.1.0/launcher-manifest.proposed.json`; it adds the verified 3.1.0
+asset and preserves existing entries/dependency selections. It is not uploaded
+or applied, and those existing Launcher dependency pins remain subject to that
+separate catalog review.
 
 ## K. Remaining limitations
 
@@ -170,7 +204,10 @@ physical-display screenshot sweep at every supported size.
 
 ## L. Final repository and publication state
 
-See the publication addendum for the exact source commit, final artifact,
-workflow result, native result and repository status. Local reference copies,
+Release source/tag remain pinned to `ba24a62ef2cc3ddabef440ce3a6a5bcb57540d0c`.
+The final report and acceptance evidence are committed separately after publication
+on `codex/release-3.1.0` and pushed to that branch and master without rewriting
+history. The final tree has only the two pre-existing untracked benchmark notes;
+all release implementation/report changes are committed. Local reference copies,
 launch specs, full logs and temporary worlds remain ignored under build/;
 no account credentials or personal world data are packaged.

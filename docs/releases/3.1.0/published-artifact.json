@@ -1,0 +1,26 @@
+{
+  "metadata": {
+    "schemaVersion": 1,
+    "version": "3.1.0",
+    "channel": "stable",
+    "tag": "v3.1.0",
+    "sourceSha": "ba24a62ef2cc3ddabef440ce3a6a5bcb57540d0c",
+    "fileName": "aurora-3.1.0.jar",
+    "sizeBytes": 3207919,
+    "sha256": "415c9a24d87cee2633ca2f412c1a3c138a8285ab6779f0fcf85ef95f045d23c8",
+    "minecraftVersion": "1.21.11",
+    "buildFabricLoaderVersion": "0.19.2",
+    "buildFabricApiVersion": "0.141.4+1.21.11",
+    "modId": "aurora",
+    "minecraftRequirement": "~1.21.11",
+    "fabricLoaderRequirement": ">=0.16.0",
+    "fabricApiRequirement": "*",
+    "javaRequirement": ">=21"
+  },
+  "releaseUrl": "https://github.com/kalibsolomon-pixel/Aurora-Client/releases/tag/v3.1.0",
+  "assetUrl": "https://github.com/kalibsolomon-pixel/Aurora-Client/releases/download/v3.1.0/aurora-3.1.0.jar",
+  "workflowUrl": "https://github.com/kalibsolomon-pixel/Aurora-Client/actions/runs/39383217074",
+  "immutable": true,
+  "independentAnonymousDownloadVerified": true,
+  "launcherCatalogUpdated": false
+}
