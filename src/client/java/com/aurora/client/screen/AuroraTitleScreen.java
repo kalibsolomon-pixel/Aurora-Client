@@ -69,7 +69,7 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
         // scope — §6 convention 3); primary(true) keeps the flat-fallback
         // variant consistent with the stained treatment.
         btn.glassStyle(primary ? Button.GlassStyle.STAINED : Button.GlassStyle.NEUTRAL).primary(primary)
-                .themed(true); // Background Color fill + accent outline (owner, 2026-10-19)
+                .theming(Button.Theming.BACKGROUND); // Background Color + window opacity + lighter edge
         this.addRenderableWidget(btn);
         return btn;
     }

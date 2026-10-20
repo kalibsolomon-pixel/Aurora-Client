@@ -130,7 +130,7 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
                     if (this.minecraft != null) {
                         this.minecraft.setScreen(AuroraScreen.create());
                     }
-                }).glassBackground(true).themed(true));
+                }).glassBackground(true).theming(com.aurora.client.ui.component.Button.Theming.BACKGROUND_ACCENT));
 
         // Label width + the painter's 20 px ellipsis reserve + 2 px breathing room.
         int resetW = Math.min(w, this.font.width("Reset Positions") + 22);
@@ -139,7 +139,7 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
                 this.width - resetW - 8, 8, resetW, resetH,
                 Component.literal("Reset Positions"),
                 "Moves every HUD module back to its default anchor, offset and scale.",
-                this::resetLayouts).glassBackground(true).themed(true));
+                this::resetLayouts).glassBackground(true).theming(com.aurora.client.ui.component.Button.Theming.BACKGROUND_ACCENT));
 
         // Phase C-4 pilot C: one icon action per HUD module's X badge —
         // the canonical contract (Tab/Enter/Space, focus hairline, canonical

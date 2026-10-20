@@ -298,7 +298,14 @@ public class KeystrokesModule extends HudModule {
     // device grid; colour/theme/density changes re-raster in place. The press
     // animation stays transform + opacity: the cap slides by a device-snapped
     // offset and the pressed cap fades in over the idle one.
-    private static final int TPL_BASE = 0, TPL_IDLE = 1, TPL_PRESSED = 2, TPL_PLATE = 3;
+    //
+    // Layer order (fidelity fix, 2026-10-19): shell (the key's full silhouette,
+    // darker) -> opaque cap -> one rim stroked around the whole silhouette. The
+    // cap is opaque so the shell never shows through it as a band, and only the
+    // silhouette is stroked, so no cap edge curves inward over the lip as a
+    // stray line. No top hairline.
+    private static final int TPL_SHELL = 0, TPL_CAP = 1, TPL_CAP_PRESSED = 2, TPL_PLATE = 3,
+            TPL_RIM = 4, TPL_RIM_PRESSED = 5;
     /** AA margin around a template (logical px). */
     private static final int TPL_PAD = 1;
     private final it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap<com.aurora.client.ui.util.UiLayerCache> templates =
@@ -323,20 +330,16 @@ public class KeystrokesModule extends HudModule {
             var previous = com.aurora.client.ui.util.RenderUtil.beginCapture(cache.sink());
             try {
                 float x = TPL_PAD * f, y = TPL_PAD * f, cw = w * f, chh = h * f, r = KEY_RADIUS * f;
+                int cap = idle | 0xFF000000;
                 switch (kind) {
-                    case TPL_BASE -> com.aurora.client.ui.util.RenderUtil.drawRoundedRectAA(ctx, x, y, cw, chh, r,
-                            blend(idle, idle & 0xFF000000, 0.55f));
-                    case TPL_IDLE -> {
-                        com.aurora.client.ui.util.RenderUtil.drawRoundedRectAA(ctx, x, y, cw, chh, r, idle);
-                        // Hairline top light: the lit face of the resting cap.
-                        com.aurora.client.ui.util.RenderUtil.drawRoundedRectAA(ctx, x + r, y + f * .5f, cw - 2 * r, f * .75f, f * .375f, // capsule-ended hairline
-                                ThemeManager.withAlpha(0xFFFFFFFF, 0x26));
-                        com.aurora.client.ui.util.RenderUtil.drawRoundedOutlineAA(ctx, x, y, cw, chh, r, f, outline);
-                    }
-                    case TPL_PRESSED -> {
-                        com.aurora.client.ui.util.RenderUtil.drawRoundedRectAA(ctx, x, y, cw, chh, r, blend(idle, accent, 0.30f));
-                        com.aurora.client.ui.util.RenderUtil.drawRoundedOutlineAA(ctx, x, y, cw, chh, r, f, blend(outline, accent, 0.85f));
-                    }
+                    case TPL_SHELL -> com.aurora.client.ui.util.RenderUtil.drawRoundedRectAA(ctx, x, y, cw, chh, r,
+                            blend(cap, 0xFF000000, 0.45f));
+                    case TPL_CAP -> com.aurora.client.ui.util.RenderUtil.drawRoundedRectAA(ctx, x, y, cw, chh, r, cap);
+                    case TPL_CAP_PRESSED -> com.aurora.client.ui.util.RenderUtil.drawRoundedRectAA(ctx, x, y, cw, chh, r,
+                            blend(cap, accent | 0xFF000000, 0.30f));
+                    case TPL_RIM -> com.aurora.client.ui.util.RenderUtil.drawRoundedOutlineAA(ctx, x, y, cw, chh, r, f, outline);
+                    case TPL_RIM_PRESSED -> com.aurora.client.ui.util.RenderUtil.drawRoundedOutlineAA(ctx, x, y, cw, chh, r, f,
+                            blend(outline, accent, 0.85f));
                     default -> com.aurora.client.ui.util.RenderUtil.drawRoundedRectAA(ctx, x, y, cw, chh, r, idle);
                 }
             } finally {
@@ -360,10 +363,10 @@ public class KeystrokesModule extends HudModule {
     }
 
     /**
-     * Draws one keycap. The cap ({@code h - DEPTH} tall) rests on a darker base
-     * whose lower {@link #DEPTH} px read as the key's bottom edge; pressing
-     * slides the cap (and its label) down onto the base by a device-snapped
-     * offset while the accent-tinted pressed cap fades in over the idle one.
+     * Draws one keycap. The opaque cap ({@code h - DEPTH} tall) sits at the top
+     * of a darker shell whose lower {@link #DEPTH} px read as the key's bottom
+     * edge; pressing slides the cap (and its label) down onto it by a
+     * device-snapped offset while the accent-tinted cap and rim fade in.
      */
     private void drawKey(GuiGraphics ctx, Font font, int x, int y, int w, int h,
                          int slot, int accent, int labelColor) {
@@ -372,9 +375,11 @@ public class KeystrokesModule extends HudModule {
         float density = com.aurora.client.worldmap.MapMarkers.density(ctx);
         // Whole device pixels only, so edges and text stay crisp mid-press.
         float offset = Math.round(t * DEPTH * density) / density;
-        blitTemplate(ctx, TPL_BASE, x, y + DEPTH, w, capH, accent, 1f);
-        blitTemplate(ctx, TPL_IDLE, x, y + offset, w, capH, accent, 1f);
-        blitTemplate(ctx, TPL_PRESSED, x, y + offset, w, capH, accent, t);
+        blitTemplate(ctx, TPL_SHELL, x, y, w, h, accent, 1f);
+        blitTemplate(ctx, TPL_CAP, x, y + offset, w, capH, accent, 1f);
+        blitTemplate(ctx, TPL_CAP_PRESSED, x, y + offset, w, capH, accent, t);
+        blitTemplate(ctx, TPL_RIM, x, y, w, h, accent, 1f);
+        blitTemplate(ctx, TPL_RIM_PRESSED, x, y, w, h, accent, t);
         ctx.pose().pushMatrix();
         ctx.pose().translate(0f, offset);
         drawKeyLabel(ctx, font, x, y, w, capH, slot, labelColor);

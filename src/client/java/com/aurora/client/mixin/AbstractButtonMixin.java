@@ -70,7 +70,7 @@ public abstract class AbstractButtonMixin {
             // rest on the enable→disable transition).
             // The whole visual — press-scale pose, token radius, colors,
             // focus hairline, centered label — is the shared painter's.
-            if (aurora$painter == null) aurora$painter = new Button(self.getMessage(), () -> {}).themed(true);
+            if (aurora$painter == null) aurora$painter = new Button(self.getMessage(), () -> {}).theming(Button.Theming.BACKGROUND);
             aurora$painter.label(self.getMessage()).focused(self.isFocused()).disabled(!self.active);
             aurora$painter.renderOverlay(ctx,self.getX(),self.getY(),self.getWidth(),self.getHeight(),mouseX,mouseY);
             ci.cancel();

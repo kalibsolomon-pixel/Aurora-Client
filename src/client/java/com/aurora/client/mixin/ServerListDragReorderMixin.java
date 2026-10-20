@@ -2,11 +2,17 @@ package com.aurora.client.mixin;
 
 import com.aurora.client.AuroraClient;
 import com.aurora.client.config.AuroraConfig;
+import com.aurora.client.theme.ThemeManager;
+import com.aurora.client.theme.ThemeToken;
+import com.aurora.client.ui.component.MaterialSurface;
+import com.aurora.client.ui.util.RenderUtil;
+import com.aurora.client.util.AuroraShapes;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
 import net.minecraft.client.gui.screens.multiplayer.ServerSelectionList;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.multiplayer.ServerList;
@@ -17,30 +23,30 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 
 /**
- * Click-and-drag reordering for the multiplayer server list, with animated
- * select/move/place feedback.
+ * Click-and-drag reordering for the multiplayer server list.
  *
- * <p>Three visual phases make the motion legible:
+ * <p>Motion follows the premium-design rules (refined 2026-10-19):
  * <ul>
- *   <li><b>LIFT</b> — when a press becomes a drag, the source row fades and a
- *       ghost card rises out of it toward the cursor (~140ms, ease-out).</li>
- *   <li><b>MOVE</b> — the ghost follows the cursor as an elevated card
- *       (shadow + accent border), with a trailing smoothing so it glides. A
- *       live drop indicator (animated insert bar) tracks the target row, and
- *       a dashed placeholder marks the slot being moved.</li>
- *   <li><b>SETTLE</b> — on release the reorder commits immediately and the
- *       ghost glides from the release point into its new slot, scaling back
- *       to normal (~220ms, ease-in-out), then disappears.</li>
+ *   <li><b>Direct manipulation</b> — the lifted card tracks the pointer 1:1,
+ *       vertically only, keeping the exact point where it was grabbed (no jump
+ *       to a cursor offset, no trailing lag).</li>
+ *   <li><b>Lift</b> — 150 ms ease-out: the card scales to 1.02 and gains a
+ *       soft shadow and the accent selection edge; its slot underneath turns
+ *       into a quiet empty well.</li>
+ *   <li><b>Target</b> — a single accent insertion line glides (interruptible
+ *       exponential approach) to the gap the card will land in; it hides
+ *       when the card would stay put.</li>
+ *   <li><b>Settle</b> — on release the reorder commits immediately and the
+ *       card glides into its new slot (200 ms ease-out) while scale and
+ *       shadow relax. Esc cancels a drag and settles the card back home.</li>
+ *   <li>Near the list's top/bottom edge the list auto-scrolls, faster the
+ *       closer the pointer gets.</li>
  * </ul>
  *
  * <p>Normal clicks (no movement past the threshold) are passed through
- * untouched so selection / double-click-to-join keep working.
- *
- * <p>1.21.11 note: mouse handlers take a {@link MouseButtonEvent} record, and
- * {@code AbstractSelectionList#getEntryAtPosition} is protected, so rows are
- * hit-tested manually via {@code getRowTop}/{@code getRowBottom}. All motion
- * is driven by {@link System#nanoTime()} so it's frame-rate independent and
- * survives pauses / refocuses (dt is clamped).
+ * untouched so selection / double-click-to-join keep working. All motion is
+ * driven by {@link System#nanoTime()} (dt clamped), so it is frame-rate
+ * independent.
  */
 @Mixin(value = JoinMultiplayerScreen.class, priority = 1500)
 public abstract class ServerListDragReorderMixin extends Screen {
@@ -54,24 +60,24 @@ public abstract class ServerListDragReorderMixin extends Screen {
     // ---- Drag state ----
     @Unique private boolean aurora$dragArmed;
     @Unique private int aurora$dragFromIndex = -1;
-    @Unique private double aurora$dragPressX;
     @Unique private double aurora$dragPressY;
     @Unique private boolean aurora$dragActive;
     @Unique private int aurora$dragDropIndex = -1;
+    /** Pointer offset from the grabbed row's top, kept for the whole drag. */
+    @Unique private double aurora$grabDy;
 
     // ---- Animation state ----
     @Unique private int aurora$animPhase = AURORA_PHASE_NONE;
     @Unique private long aurora$animStartNs;
     @Unique private long aurora$lastFrameNs;
-    /** Ghost card position (top-left of its content box). */
-    @Unique private double aurora$ghostX;
+    /** Card top (GUI px); x is always the row column. */
     @Unique private double aurora$ghostY;
-    /** Where the settle animation starts (release cursor pos). */
-    @Unique private double aurora$settleFromX;
     @Unique private double aurora$settleFromY;
-    /** Target row index the ghost settles into. */
     @Unique private int aurora$settleToIndex = -1;
-    /** Snapshot of the dragged server captured at lift time. */
+    /** Lift progress 0..1 when the settle started (an early release settles from there). */
+    @Unique private double aurora$settleFromLift;
+    /** Insertion line y, eased toward its target; NaN = not shown yet. */
+    @Unique private double aurora$lineY = Double.NaN;
     @Unique private GhostSnapshot aurora$ghost;
 
     @Unique private static final int AURORA_PHASE_NONE = 0;
@@ -79,13 +85,16 @@ public abstract class ServerListDragReorderMixin extends Screen {
     @Unique private static final int AURORA_PHASE_MOVE = 2;
     @Unique private static final int AURORA_PHASE_SETTLE = 3;
 
-    @Unique private static final double AURORA_DRAG_THRESHOLD = 5.0;
-    @Unique private static final long AURORA_LIFT_MS = 140;
-    @Unique private static final long AURORA_SETTLE_MS = 220;
-    /** Ghost trailing time-constant in ms (smaller = snappier). */
-    @Unique private static final double AURORA_GHOST_TAU_MS = 55.0;
-    @Unique private static final int AURORA_ROW_HEIGHT = 36;
+    @Unique private static final double AURORA_DRAG_THRESHOLD = 4.0;
+    @Unique private static final long AURORA_LIFT_MS = 150;
+    @Unique private static final long AURORA_SETTLE_MS = 200;
+    @Unique private static final double AURORA_LIFT_SCALE = 1.02;
+    /** Insertion-line glide time constant (ms): quick, but never a teleport. */
+    @Unique private static final double AURORA_LINE_TAU_MS = 35.0;
+    /** Auto-scroll band at the list's edges (GUI px) and top speed (GUI px/s). */
+    @Unique private static final double AURORA_EDGE_BAND = 24.0, AURORA_EDGE_SPEED = 420.0;
     @Unique private static final int AURORA_GHOST_PAD = 8;
+    @Unique private static final float AURORA_LINE_H = 2f;
 
     protected ServerListDragReorderMixin(Component title) {
         super(title);
@@ -117,16 +126,11 @@ public abstract class ServerListDragReorderMixin extends Screen {
         return new GhostSnapshot(servers.get(index));
     }
 
-    // ---- Easing ----
+    // ---- Easing (fast ease-out: immediate response, quick settling) ----
     @Unique
-    private static double aurora$easeOutCubic(double t) {
+    private static double aurora$easeOut(double t) {
         double x = 1.0 - t;
         return 1.0 - x * x * x;
-    }
-
-    @Unique
-    private static double aurora$easeInOutCubic(double t) {
-        return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
     }
 
     @Unique
@@ -140,13 +144,8 @@ public abstract class ServerListDragReorderMixin extends Screen {
     }
 
     @Unique
-    private static long aurora$nowNs() {
-        return System.nanoTime();
-    }
-
-    @Unique
     private static double aurora$msSince(long startNs) {
-        return (aurora$nowNs() - startNs) / 1_000_000.0;
+        return (System.nanoTime() - startNs) / 1_000_000.0;
     }
 
     @Unique
@@ -154,45 +153,51 @@ public abstract class ServerListDragReorderMixin extends Screen {
         aurora$animPhase = AURORA_PHASE_NONE;
         aurora$ghost = null;
         aurora$settleToIndex = -1;
+        aurora$lineY = Double.NaN;
+    }
+
+    @Unique
+    private int aurora$rowHeight() {
+        return serverSelectionList.getRowBottom(0) - serverSelectionList.getRowTop(0);
     }
 
     // ---- Hit testing ----
     @Unique
     private int aurora$serverIndexAt(double mouseX, double mouseY) {
         if (serverSelectionList == null || servers == null) return -1;
-        int left = serverSelectionList.getX();
-        int right = serverSelectionList.getRight();
-        if (mouseX < left || mouseX > right) return -1;
+        if (mouseX < serverSelectionList.getX() || mouseX > serverSelectionList.getRight()) return -1;
         int count = servers.size();
         for (int i = 0; i < count; i++) {
-            int top = serverSelectionList.getRowTop(i);
-            int bottom = serverSelectionList.getRowBottom(i);
-            if (mouseY >= top && mouseY < bottom) return i;
+            if (mouseY >= serverSelectionList.getRowTop(i) && mouseY < serverSelectionList.getRowBottom(i)) return i;
         }
         return -1;
     }
 
-    // ---- Mouse handlers ----
+    /** Drop slot for the card's centre: the row it overlaps most, clamped to the list. */
+    @Unique
+    private int aurora$dropIndexFor(double cardTop) {
+        int count = servers.size();
+        if (count == 0) return -1;
+        double centre = cardTop + aurora$rowHeight() / 2.0;
+        for (int i = 0; i < count; i++) {
+            if (centre < serverSelectionList.getRowBottom(i)) return i;
+        }
+        return count - 1;
+    }
+
+    // ---- Mouse / key handlers ----
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         boolean result = super.mouseClicked(event, doubleClick);
         if (!aurora$enabled() || event.button() != GLFW.GLFW_MOUSE_BUTTON_LEFT) {
             return result;
         }
-        double mouseX = event.x();
-        double mouseY = event.y();
-        int idx = aurora$serverIndexAt(mouseX, mouseY);
-        if (idx >= 0) {
-            aurora$dragArmed = true;
-            aurora$dragFromIndex = idx;
-            aurora$dragPressX = mouseX;
-            aurora$dragPressY = mouseY;
-            aurora$dragActive = false;
-            aurora$dragDropIndex = idx;
-        } else {
-            aurora$dragArmed = false;
-            aurora$dragFromIndex = -1;
-        }
+        int idx = aurora$serverIndexAt(event.x(), event.y());
+        aurora$dragArmed = idx >= 0;
+        aurora$dragFromIndex = idx;
+        aurora$dragPressY = event.y();
+        aurora$dragActive = false;
+        aurora$dragDropIndex = idx;
         return result;
     }
 
@@ -202,18 +207,8 @@ public abstract class ServerListDragReorderMixin extends Screen {
         if (!aurora$enabled() || event.button() != GLFW.GLFW_MOUSE_BUTTON_LEFT || !aurora$dragArmed) {
             return result;
         }
-        double mouseX = event.x();
-        double mouseY = event.y();
-        if (!aurora$dragActive && Math.abs(mouseY - aurora$dragPressY) > AURORA_DRAG_THRESHOLD) {
-            aurora$beginLift(mouseX, mouseY);
-        }
-        if (aurora$dragActive && servers != null) {
-            int idx = aurora$serverIndexAt(mouseX, mouseY);
-            if (idx < 0 && serverSelectionList != null && servers.size() > 0) {
-                idx = (mouseY < serverSelectionList.getRowTop(0))
-                        ? 0 : servers.size() - 1;
-            }
-            if (idx >= 0) aurora$dragDropIndex = idx;
+        if (!aurora$dragActive && Math.abs(event.y() - aurora$dragPressY) > AURORA_DRAG_THRESHOLD) {
+            aurora$beginLift();
         }
         return result;
     }
@@ -231,57 +226,59 @@ public abstract class ServerListDragReorderMixin extends Screen {
         if (wasActive && aurora$enabled()
                 && event.button() == GLFW.GLFW_MOUSE_BUTTON_LEFT
                 && from >= 0 && servers != null && serverSelectionList != null) {
-            int to = aurora$serverIndexAt(event.x(), event.y());
-            if (to < 0) to = drop;
-            aurora$beginSettle(from, to, event.x(), event.y());
+            aurora$beginSettle(from, drop);
             // Swallow the release so vanilla can't misread the drag as a join.
             return true;
         }
-        // Click without drag: cancel any lingering animation and defer to vanilla.
-        aurora$resetAnim();
+        if (aurora$animPhase != AURORA_PHASE_SETTLE) aurora$resetAnim();
         return super.mouseReleased(event);
+    }
+
+    @Override
+    public boolean keyPressed(KeyEvent event) {
+        if (aurora$dragActive && event.key() == GLFW.GLFW_KEY_ESCAPE) {
+            // Cancel: the card glides back to where it came from, nothing moves.
+            int from = aurora$dragFromIndex;
+            aurora$dragArmed = false;
+            aurora$dragActive = false;
+            aurora$dragFromIndex = -1;
+            aurora$dragDropIndex = -1;
+            aurora$beginSettle(from, from);
+            return true;
+        }
+        return super.keyPressed(event);
     }
 
     // ---- Phase transitions ----
     @Unique
-    private void aurora$beginLift(double mouseX, double mouseY) {
+    private void aurora$beginLift() {
         aurora$dragActive = true;
         aurora$ghost = aurora$snapshot(aurora$dragFromIndex);
-        // Ghost starts at the source row's position, then rises toward cursor.
-        if (serverSelectionList != null) {
-            int left = serverSelectionList.getX();
-            aurora$ghostX = left;
-            aurora$ghostY = serverSelectionList.getRowTop(aurora$dragFromIndex);
-        } else {
-            aurora$ghostX = mouseX;
-            aurora$ghostY = mouseY;
-        }
+        int rowTop = serverSelectionList != null ? serverSelectionList.getRowTop(aurora$dragFromIndex) : (int) aurora$dragPressY;
+        // The card starts exactly where the row is and keeps the grab point.
+        aurora$grabDy = aurora$dragPressY - rowTop;
+        aurora$ghostY = rowTop;
+        aurora$lineY = Double.NaN;
         aurora$animPhase = AURORA_PHASE_LIFT;
-        aurora$animStartNs = aurora$nowNs();
+        aurora$animStartNs = System.nanoTime();
         aurora$lastFrameNs = aurora$animStartNs;
     }
 
     @Unique
-    private void aurora$beginSettle(int from, int to, double releaseX, double releaseY) {
-        // Commit the reorder immediately so the list state is correct; the
-        // ghost then animates from the release point into the new slot.
-        boolean moved = (to >= 0 && to < servers.size() && to != from);
-        if (moved) {
-            aurora$moveServer(from, to);
-            aurora$settleToIndex = to;
-        } else {
-            aurora$settleToIndex = from;
+    private void aurora$beginSettle(int from, int to) {
+        boolean moved = to >= 0 && to < servers.size() && to != from;
+        // Commit the reorder immediately so list state is correct; the card
+        // then glides into its new slot.
+        if (moved) aurora$moveServer(from, to);
+        aurora$settleToIndex = moved ? to : from;
+        aurora$settleFromLift = aurora$liftProgress();
+        if (aurora$ghost == null) {
+            aurora$ghost = aurora$snapshot(aurora$settleToIndex);
+            aurora$ghostY = serverSelectionList.getRowTop(aurora$settleToIndex);
         }
-        aurora$settleFromX = aurora$ghostX;
         aurora$settleFromY = aurora$ghostY;
-        // If we never lifted (e.g. released right at threshold), seed from cursor.
-        if (aurora$animPhase == AURORA_PHASE_NONE || aurora$ghost == null) {
-            aurora$ghost = aurora$snapshot(from);
-            aurora$settleFromX = releaseX;
-            aurora$settleFromY = releaseY;
-        }
         aurora$animPhase = AURORA_PHASE_SETTLE;
-        aurora$animStartNs = aurora$nowNs();
+        aurora$animStartNs = System.nanoTime();
     }
 
     @Unique
@@ -306,91 +303,58 @@ public abstract class ServerListDragReorderMixin extends Screen {
 
     // ---- Per-frame update (called from render) ----
     @Unique
-    private void aurora$updateAnim(double mouseX, double mouseY) {
-        long now = aurora$nowNs();
-        // Clamp dt to avoid huge jumps after a pause/refocus (max 100ms).
+    private void aurora$updateAnim(double mouseY) {
+        long now = System.nanoTime();
         double dtMs = aurora$clamp((now - aurora$lastFrameNs) / 1_000_000.0, 0.0, 100.0);
         aurora$lastFrameNs = now;
 
-        switch (aurora$animPhase) {
-            case AURORA_PHASE_LIFT: {
-                double t = aurora$clamp(aurora$msSince(aurora$animStartNs) / AURORA_LIFT_MS, 0, 1);
-                double e = aurora$easeOutCubic(t);
-                if (serverSelectionList != null) {
-                    double fromX = serverSelectionList.getX();
-                    double fromY = serverSelectionList.getRowTop(aurora$dragFromIndex);
-                    // Rise toward the cursor, offset so the ghost sits above the pointer.
-                    double targetX = mouseX - 40;
-                    double targetY = mouseY - AURORA_ROW_HEIGHT / 2.0 - 14;
-                    aurora$ghostX = aurora$lerp(fromX, targetX, e);
-                    aurora$ghostY = aurora$lerp(fromY, targetY, e) - (12 * e); // extra lift
-                }
-                if (t >= 1.0) {
-                    aurora$animPhase = AURORA_PHASE_MOVE;
-                    aurora$animStartNs = now;
-                }
-                break;
+        if (aurora$animPhase == AURORA_PHASE_LIFT || aurora$animPhase == AURORA_PHASE_MOVE) {
+            if (aurora$animPhase == AURORA_PHASE_LIFT && aurora$msSince(aurora$animStartNs) >= AURORA_LIFT_MS) {
+                aurora$animPhase = AURORA_PHASE_MOVE;
             }
-            case AURORA_PHASE_MOVE: {
-                // Smoothly trail the cursor (exponential smoothing, dt-aware).
-                double f = 1.0 - Math.exp(-dtMs / AURORA_GHOST_TAU_MS);
-                double targetX = mouseX - 40;
-                double targetY = mouseY - AURORA_ROW_HEIGHT / 2.0 - 14;
-                aurora$ghostX = aurora$lerp(aurora$ghostX, targetX, f);
-                aurora$ghostY = aurora$lerp(aurora$ghostY, targetY, f);
-                break;
+            // Auto-scroll while the pointer sits in the list's edge bands.
+            double top = serverSelectionList.getY(), bottom = serverSelectionList.getBottom();
+            double depth = mouseY < top + AURORA_EDGE_BAND ? -(top + AURORA_EDGE_BAND - mouseY)
+                    : mouseY > bottom - AURORA_EDGE_BAND ? mouseY - (bottom - AURORA_EDGE_BAND) : 0;
+            if (depth != 0) {
+                double speed = AURORA_EDGE_SPEED * aurora$clamp(depth / AURORA_EDGE_BAND, -1, 1);
+                serverSelectionList.setScrollAmount(serverSelectionList.scrollAmount() + speed * dtMs / 1000.0);
             }
-            case AURORA_PHASE_SETTLE: {
-                double t = aurora$clamp(aurora$msSince(aurora$animStartNs) / AURORA_SETTLE_MS, 0, 1);
-                double e = aurora$easeInOutCubic(t);
-                double toX, toY;
-                if (serverSelectionList != null && aurora$settleToIndex >= 0) {
-                    toX = serverSelectionList.getX();
-                    toY = serverSelectionList.getRowTop(aurora$settleToIndex);
-                } else {
-                    toX = aurora$settleFromX;
-                    toY = aurora$settleFromY;
-                }
-                aurora$ghostX = aurora$lerp(aurora$settleFromX, toX, e);
-                aurora$ghostY = aurora$lerp(aurora$settleFromY, toY, e);
-                if (t >= 1.0) {
-                    aurora$resetAnim();
-                }
-                break;
+            // Direct manipulation: 1:1 with the pointer, clamped to the list.
+            int h = aurora$rowHeight();
+            int first = serverSelectionList.getRowTop(0), last = serverSelectionList.getRowTop(Math.max(0, servers.size() - 1));
+            aurora$ghostY = aurora$clamp(mouseY - aurora$grabDy, Math.max(first, top - h / 2.0),
+                    Math.min(last, bottom - h / 2.0));
+            aurora$dragDropIndex = aurora$dropIndexFor(aurora$ghostY);
+
+            // Insertion line: the gap the card lands in (below the target when
+            // moving down, above it when moving up), eased so it glides.
+            int from = aurora$dragFromIndex, to = aurora$dragDropIndex;
+            if (to >= 0 && to != from) {
+                double target = to > from ? serverSelectionList.getRowBottom(to) + 1 : serverSelectionList.getRowTop(to) - 2;
+                aurora$lineY = Double.isNaN(aurora$lineY) ? target
+                        : aurora$lerp(aurora$lineY, target, 1.0 - Math.exp(-dtMs / AURORA_LINE_TAU_MS));
+            } else {
+                aurora$lineY = Double.NaN;
             }
-            default:
-                break;
+        } else if (aurora$animPhase == AURORA_PHASE_SETTLE) {
+            double t = aurora$clamp(aurora$msSince(aurora$animStartNs) / AURORA_SETTLE_MS, 0, 1);
+            int toY = aurora$settleToIndex >= 0 ? serverSelectionList.getRowTop(aurora$settleToIndex) : (int) aurora$settleFromY;
+            aurora$ghostY = aurora$lerp(aurora$settleFromY, toY, aurora$easeOut(t));
+            if (t >= 1.0) aurora$resetAnim();
         }
     }
 
-    /** Scale of the ghost card: lifts up to 1.05 during move, settles back to 1.0. */
+    /** Lift progress 0..1: rises over the lift, holds while moving, relaxes while settling. */
     @Unique
-    private double aurora$ghostScale() {
-        switch (aurora$animPhase) {
-            case AURORA_PHASE_LIFT: {
-                double t = aurora$clamp(aurora$msSince(aurora$animStartNs) / AURORA_LIFT_MS, 0, 1);
-                return aurora$lerp(1.0, 1.05, aurora$easeOutCubic(t));
-            }
-            case AURORA_PHASE_MOVE:
-                return 1.05;
-            case AURORA_PHASE_SETTLE: {
-                double t = aurora$clamp(aurora$msSince(aurora$animStartNs) / AURORA_SETTLE_MS, 0, 1);
-                return aurora$lerp(1.05, 1.0, aurora$easeInOutCubic(t));
-            }
-            default:
-                return 1.0;
-        }
-    }
-
-    /** Alpha for dimming the source slot while its content is "lifted out". */
-    @Unique
-    private double aurora$sourceDimAlpha() {
-        if (aurora$animPhase == AURORA_PHASE_LIFT) {
-            double t = aurora$clamp(aurora$msSince(aurora$animStartNs) / AURORA_LIFT_MS, 0, 1);
-            return aurora$easeOutCubic(t) * 0.55;
-        }
-        if (aurora$animPhase == AURORA_PHASE_MOVE) return 0.55;
-        return 0.0;
+    private double aurora$liftProgress() {
+        return switch (aurora$animPhase) {
+            case AURORA_PHASE_LIFT -> aurora$easeOut(aurora$clamp(aurora$msSince(aurora$animStartNs) / AURORA_LIFT_MS, 0, 1));
+            case AURORA_PHASE_MOVE -> 1.0;
+            case AURORA_PHASE_SETTLE -> aurora$settleFromLift
+                    * (1.0 - aurora$easeOut(aurora$clamp(aurora$msSince(aurora$animStartNs) / AURORA_SETTLE_MS, 0, 1)));
+            default -> 0.0;
+        };
     }
 
     // ---- Rendering ----
@@ -401,54 +365,46 @@ public abstract class ServerListDragReorderMixin extends Screen {
      * because {@code JoinMultiplayerScreen} doesn't declare its own render
      * method in 1.21.11 (it inherits {@link Screen#render}) — an
      * {@code @Inject(method="render")} would silently no-op against the
-     * synthetic bridge. Overriding guarantees our overlay runs every frame
-     * regardless of how the target declares render.
+     * synthetic bridge.
      */
     @Override
     public void render(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
         super.render(ctx, mouseX, mouseY, delta);
-        if (!aurora$enabled() || serverSelectionList == null) {
+        if (!aurora$enabled() || serverSelectionList == null || servers == null) {
             return;
         }
         try {
-            aurora$updateAnim(mouseX, mouseY);
+            if (aurora$animPhase == AURORA_PHASE_NONE) return;
+            aurora$updateAnim(mouseY);
+            if (aurora$animPhase == AURORA_PHASE_NONE) return;
 
-            int accent = AuroraConfig.get().themeOrDefault().accent | 0xFF000000;
-            int left = serverSelectionList.getX();
-            int right = serverSelectionList.getRight();
-
-            // 1) Dashed placeholder over the source slot while moving.
-            if (aurora$dragActive && aurora$dragFromIndex >= 0 && servers != null
-                    && aurora$dragFromIndex < servers.size()) {
-                int sTop = serverSelectionList.getRowTop(aurora$dragFromIndex);
-                int sBottom = serverSelectionList.getRowBottom(aurora$dragFromIndex);
-                double dim = aurora$sourceDimAlpha();
-                if (dim > 0.0) {
-                    // Dark veil so the lifted-out slot reads as empty even over
-                    // light rows. Alpha scales with the lift progress.
-                    int veil = (int) (dim * 140) << 24;
-                    ctx.fill(left, sTop, right, sBottom, veil);
+            int accent = ThemeManager.color(ThemeToken.ACCENT_MARKER);
+            int left = serverSelectionList.getRowLeft() - 2;
+            int width = serverSelectionList.getRowWidth() + 4;
+            float radius = ThemeManager.current().roundness().radiusSmall();
+            double lift = aurora$liftProgress();
+            ctx.enableScissor(serverSelectionList.getX(), serverSelectionList.getY(),
+                    serverSelectionList.getRight(), serverSelectionList.getBottom());
+            try {
+                // 1) The lifted card's slot reads as an empty well while it is away.
+                if (aurora$dragActive && aurora$dragFromIndex >= 0 && aurora$dragFromIndex < servers.size()) {
+                    int sTop = serverSelectionList.getRowTop(aurora$dragFromIndex);
+                    int sh = serverSelectionList.getRowBottom(aurora$dragFromIndex) - sTop;
+                    RenderUtil.drawRoundedRectAA(ctx, left, sTop, width, sh, radius,
+                            ThemeManager.withAlpha(ThemeManager.color(ThemeToken.MATERIAL_SUNKEN), (int) Math.round(0xC8 * lift)));
+                    RenderUtil.drawRoundedOutlineAA(ctx, left, sTop, width, sh, radius, 1,
+                            ThemeManager.withAlpha(MaterialSurface.color(ThemeToken.BORDER), (int) Math.round(0xFF * lift)));
                 }
-                aurora$drawDashedRect(ctx, left + 2, sTop + 2, right - 2, sBottom - 2, accent);
-            }
-
-            // 2) Drop indicator (animated insert bar) during a live drag.
-            if (aurora$dragActive && aurora$dragDropIndex >= 0) {
-                int row = aurora$dragDropIndex;
-                int top = serverSelectionList.getRowTop(row);
-                int bottom = serverSelectionList.getRowBottom(row);
-                int fill = (accent & 0x00FFFFFF) | 0x26000000; // ~15% highlight
-                ctx.fill(left, top, right, bottom, fill);
-                // Pulsing insert bar at the top edge of the target row.
-                double pulse = 0.5 + 0.5 * Math.sin(aurora$nowNs() / 200_000_000.0);
-                int barH = 2 + (int) (2 * pulse);
-                ctx.fill(left, top - barH, right, top + barH, accent);
-            }
-
-            // 3) Ghost card (lift / move / settle).
-            if (aurora$ghost != null
-                    && aurora$animPhase != AURORA_PHASE_NONE) {
-                aurora$drawGhost(ctx, accent, left, right);
+                // 2) One insertion line where the card will land.
+                if (aurora$dragActive && !Double.isNaN(aurora$lineY)) {
+                    // A capsule: its radius is half its thickness.
+                    RenderUtil.drawRoundedRectAA(ctx, left + 4, (float) aurora$lineY - AURORA_LINE_H / 2f, width - 8,
+                            AURORA_LINE_H, AURORA_LINE_H / 2f, accent);
+                }
+                // 3) The card itself.
+                if (aurora$ghost != null) aurora$drawGhost(ctx, accent, left, width, radius, lift);
+            } finally {
+                ctx.disableScissor();
             }
         } catch (Throwable ignored) {
             // Rendering must never crash the screen.
@@ -456,44 +412,29 @@ public abstract class ServerListDragReorderMixin extends Screen {
     }
 
     @Unique
-    private void aurora$drawGhost(GuiGraphics ctx, int accent, int listLeft, int listRight) {
+    private void aurora$drawGhost(GuiGraphics ctx, int accent, int left, int width, float radius, double lift) {
         Minecraft client = Minecraft.getInstance();
         if (client == null || client.font == null || aurora$ghost == null) return;
+        int h = aurora$rowHeight();
+        float y = (float) aurora$ghostY;
+        float scale = (float) aurora$lerp(1.0, AURORA_LIFT_SCALE, lift);
 
-        double scale = aurora$ghostScale();
-        int w = (listRight - listLeft);
-        int h = AURORA_ROW_HEIGHT;
-        // Scale around the card's horizontal center for a clean "grow" effect.
-        double drawW = w * scale;
-        double drawH = h * scale;
-        double offsetX = (drawW - w) / 2.0;
-        double offsetY = (drawH - h) / 2.0;
-        int x = (int) (aurora$ghostX - offsetX);
-        int y = (int) (aurora$ghostY - offsetY);
-        int ww = (int) drawW;
-        int hh = (int) drawH;
+        ctx.pose().pushMatrix();
+        // Scale around the card's centre (transform only; geometry stays put).
+        ctx.pose().translate(left + width / 2f, y + h / 2f);
+        ctx.pose().scale(scale, scale);
+        ctx.pose().translate(-width / 2f, -h / 2f);
+        AuroraShapes.dropShadow(ctx, 0, 3, width, h, Math.round(radius), (float) (0.55 * lift));
+        RenderUtil.drawRoundedRectAA(ctx, 0, 0, width, h, radius,
+                ThemeManager.withAlpha(ThemeManager.color(ThemeToken.MATERIAL_RAISED), 0xF4));
+        RenderUtil.drawRoundedOutlineAA(ctx, 0, 0, width, h, radius, 1,
+                com.aurora.client.util.AuroraAnim.lerpArgb(MaterialSurface.color(ThemeToken.BORDER), accent, (float) lift));
 
-        // Drop shadow (offset down-right, blurred look via stacked fills).
-        int shadowAlpha = aurora$animPhase == AURORA_PHASE_MOVE ? 0x66 : 0x44;
-        ctx.fill(x + 3, y + 5, x + ww + 3, y + hh + 5, (shadowAlpha << 24));
-        ctx.fill(x + 2, y + 3, x + ww + 2, y + hh + 3, ((shadowAlpha - 0x10) << 24));
-
-        // Card background.
-        ctx.fill(x, y, x + ww, y + hh, 0xF0101014);
-        // Accent left border bar.
-        ctx.fill(x, y, x + 3, y + hh, accent);
-        // Subtle top highlight.
-        ctx.fill(x + 3, y, x + ww, y + 1, 0x22FFFFFF);
-
-        // Content: server name + ping, scaled font positions.
         var font = client.font;
-        int textX = x + AURORA_GHOST_PAD;
-        int nameY = y + AURORA_GHOST_PAD - 1;
+        int nameY = AURORA_GHOST_PAD - 1;
+        ctx.drawString(font, Component.literal(aurora$ghost.name), AURORA_GHOST_PAD, nameY,
+                ThemeManager.color(ThemeToken.ON_BACKGROUND), false);
 
-        Component name = Component.literal(aurora$ghost.name);
-        ctx.drawString(font, name, textX, nameY, 0xFFFFFFFF, false);
-
-        // Ping chip on the right.
         String pingLabel;
         int pingColor;
         long ping = aurora$ghost.ping;
@@ -505,46 +446,19 @@ public abstract class ServerListDragReorderMixin extends Screen {
             pingLabel = ping + "ms";
             pingColor = ping < 50 ? 0xFF55FF55 : ping < 150 ? 0xFFFFFF55 : 0xFFFF5555;
         }
-        int pingW = font.width(pingLabel);
-        int chipX = x + ww - pingW - AURORA_GHOST_PAD - 6;
-        int chipY = nameY - 1;
-        ctx.fill(chipX, chipY, chipX + pingW + 6, chipY + font.lineHeight + 1, 0x33000000);
-        ctx.drawString(font, pingLabel, chipX + 3, chipY + 1, pingColor, false);
+        ctx.drawString(font, pingLabel, width - font.width(pingLabel) - AURORA_GHOST_PAD, nameY, pingColor, false);
 
-        // MOTD line (if present) below the name.
         if (aurora$ghost.motd != null) {
-            int motdY = nameY + font.lineHeight + 2;
-            // Truncate to card width so long MOTDs don't overflow.
             Component motd = aurora$ghost.motd;
             String plain = motd.getString();
-            int maxW = ww - AURORA_GHOST_PAD * 2;
+            int maxW = width - AURORA_GHOST_PAD * 2;
             if (font.width(plain) > maxW) {
                 plain = font.plainSubstrByWidth(plain, maxW - font.width("…")) + "…";
                 motd = Component.literal(plain).withStyle(motd.getStyle());
             }
-            ctx.drawString(font, motd, textX, motdY, 0xFFBBBBBB, false);
+            ctx.drawString(font, motd, AURORA_GHOST_PAD, nameY + font.lineHeight + 2,
+                    ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
         }
-    }
-
-    /**
-     * Draw a dashed rectangle outline by stamping short segments along each
-     * edge. Kept allocation-free for render-path safety.
-     */
-    @Unique
-    private void aurora$drawDashedRect(GuiGraphics ctx, int x0, int y0, int x1, int y1, int color) {
-        int dash = 4;
-        int gap = 3;
-        // Top & bottom
-        for (int x = x0; x < x1; x += dash + gap) {
-            int xe = Math.min(x + dash, x1);
-            ctx.fill(x, y0, xe, y0 + 1, color);
-            ctx.fill(x, y1 - 1, xe, y1, color);
-        }
-        // Left & right
-        for (int y = y0; y < y1; y += dash + gap) {
-            int ye = Math.min(y + dash, y1);
-            ctx.fill(x0, y, x0 + 1, ye, color);
-            ctx.fill(x1 - 1, y, x1, ye, color);
-        }
+        ctx.pose().popMatrix();
     }
 }

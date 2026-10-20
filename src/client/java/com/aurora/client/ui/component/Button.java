@@ -64,13 +64,24 @@ public class Button extends Widget {
     private GlassStyle glassStyle = GlassStyle.OFF;
 
     /**
-     * Themed action card (owner ruling 2026-10-19 for the title screen, the
-     * Aurora-styled vanilla menus and the HUD editor): the fill is the Theme's
-     * Background Color (window tint) and the edge its accent outline. The
-     * fill keeps a density floor so a low Background Opacity never leaves a
-     * blank glass slab over a bright world; opacity above the floor still applies.
+     * Theme-following treatments for neutral action cards (owner rulings,
+     * 2026-10-19). Neutral cards stay edgeless by default.
+     * <ul>
+     *   <li>{@code OUTLINED} — the usual raised fill plus a lighter edge from
+     *       the window-border family ({@code BORDER_HOVER} →
+     *       {@code MATERIAL_BORDER_STRONG}; the window's own {@code BORDER}
+     *       barely differs from a card fill): feature-detail Reset/Done.</li>
+     *   <li>{@code BACKGROUND} — Background Color fill at the window opacity
+     *       with that same lighter edge: title cards and the Aurora-styled
+     *       vanilla menu buttons.</li>
+     *   <li>{@code BACKGROUND_ACCENT} — Background Color fill with a density
+     *       floor (a low opacity never leaves a blank glass slab over the world)
+     *       and the accent outline: the HUD editor's two actions.</li>
+     * </ul>
      */
-    private boolean themed;
+    public enum Theming { NONE, OUTLINED, BACKGROUND, BACKGROUND_ACCENT }
+
+    private Theming theming = Theming.NONE;
     static final int THEMED_MIN_ALPHA = 150;
 
     /**
@@ -114,11 +125,10 @@ public class Button extends Widget {
         // Neutral action cards stay edgeless (owner ruling, UNIFIED_THEME_PILOT.md).
         int edge=primary ? MaterialSurface.color(ThemeToken.BORDER_HOVER) : 0;
         int text=ThemeManager.color(primary ? ThemeToken.ON_ACTION : ThemeToken.MATERIAL_TEXT);
-        boolean themedCard=themed && !primary && !destructive;
-        if(themedCard) {
-            fill=ThemeManager.color(ThemeToken.MATERIAL_PANEL);
-            edge=ThemeManager.color(ThemeToken.ACCENT_MARKER);
-        }
+        Theming look=primary || destructive ? Theming.NONE : theming;
+        if(look==Theming.BACKGROUND || look==Theming.BACKGROUND_ACCENT) fill=ThemeManager.color(ThemeToken.MATERIAL_PANEL);
+        if(look!=Theming.NONE) edge=look==Theming.BACKGROUND_ACCENT ? ThemeManager.color(ThemeToken.ACCENT_MARKER)
+                : MaterialSurface.color(ThemeToken.BORDER_HOVER); // the window edge family, one step lighter so it reads on a card
         if(destructive) {
             // Destructive keeps its red edge and label, but rests as a tinted chip and
             // commits to the solid fill on hover/press: a list of rows must not repeat a
@@ -133,9 +143,9 @@ public class Button extends Widget {
         if(disabled) { fill=AuroraAnim.lerpArgb(fill,ThemeManager.color(ThemeToken.MATERIAL_PANEL),.65f);text=MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED); }
         int windowAlpha=ThemeManager.color(ThemeToken.WINDOW_FILL) >>> 24;
         fill=ThemeManager.withAlpha(fill, destructive ? Math.round(AuroraAnim.lerp(Math.max(160,windowAlpha),220,Math.max(hover,press)))
-                : primary ? Math.max(128,windowAlpha) : themedCard ? Math.max(THEMED_MIN_ALPHA,windowAlpha) : windowAlpha);
+                : primary ? Math.max(128,windowAlpha) : look==Theming.BACKGROUND_ACCENT ? Math.max(THEMED_MIN_ALPHA,windowAlpha) : windowAlpha);
         float py=y; // Card, blur mask, focus and label share one stationary geometry.
-        int kind=(destructive ? 30 : primary ? 20 : themedCard ? 140 : 10)+(disabled ? 4 : hover==1 ? 1 : 0);
+        int kind=(destructive ? 30 : primary ? 20 : look==Theming.NONE ? 10 : 130+10*look.ordinal())+(disabled ? 4 : hover==1 ? 1 : 0);
         if((hover==0 || hover==1) && press==0)
             MaterialSurface.cached(g,x,py,w,h,r,fill,edge,kind,true);
         else {
@@ -232,9 +242,9 @@ public class Button extends Widget {
         return this;
     }
 
-    /** Background Color fill + accent outline — see {@link #themed}. */
-    public Button themed(boolean t) {
-        this.themed = t;
+    /** Theme-following card treatment — see {@link Theming}. */
+    public Button theming(Theming t) {
+        this.theming = t != null ? t : Theming.NONE;
         return this;
     }
 

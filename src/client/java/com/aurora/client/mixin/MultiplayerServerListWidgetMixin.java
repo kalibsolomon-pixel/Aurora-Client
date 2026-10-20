@@ -10,12 +10,15 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
+import com.mojang.blaze3d.pipeline.RenderPipeline;
+import net.minecraft.resources.Identifier;
 
 /**
- * Replaces vanilla's ping bars icon with a numerical ping value (e.g. "23ms")
- * in the same screen position. The icon is occluded by drawing a small filled
- * rectangle over it (matching the entry's hover state isn't worth it Ã¢ the
- * vanilla list rows don't have a strong background, so the cover blends in).
+ * Replaces vanilla's ping bars icon with a numerical ping value (e.g. "23ms").
+ * Vanilla's ping/pinging bars are simply not drawn (the incompatible and
+ * unreachable status icons still are); the label sits in the gutter to the
+ * right of the entry, past any "9999/9999" player count.
  *
  * Player count is not added here because vanilla already renders it.
  */
@@ -23,6 +26,19 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class MultiplayerServerListWidgetMixin {
 
     @Shadow @Final private ServerData serverData;
+
+    /** Skips the status icon's blit when it is one of the ping / pinging bar sprites. */
+    @WrapWithCondition(method = "renderContent", require = 0, at = @At(value = "INVOKE", ordinal = 0,
+            target = "Lnet/minecraft/client/gui/GuiGraphics;blitSprite(Lcom/mojang/blaze3d/pipeline/RenderPipeline;Lnet/minecraft/resources/Identifier;IIII)V"))
+    private boolean aurora$hidePingBars(GuiGraphics ctx, RenderPipeline pipeline, Identifier sprite, int x, int y, int w, int h) {
+        return !aurora$isPingBars(sprite);
+    }
+
+    /** {@code server_list/ping_N} and {@code server_list/pinging_N} — the bars the label replaces. */
+    @org.spongepowered.asm.mixin.Unique
+    private static boolean aurora$isPingBars(Identifier sprite) {
+        return sprite != null && sprite.getNamespace().equals("minecraft") && sprite.getPath().startsWith("server_list/ping");
+    }
 
     @Inject(method = "renderContent", at = @At("TAIL"), require = 0)
     private void aurora$replacePingIcon(
@@ -46,16 +62,6 @@ public abstract class MultiplayerServerListWidgetMixin {
         int entryWidth = self.getContentWidth();
 
         long ping = serverData.ping;
-
-        // Vanilla ping icon sits at the right edge. Player count text sits
-        // to its left and can be up to ~50px wide ("9999/9999"). To avoid
-        // overlap, we cover only the small icon area and place our label
-        // OUTSIDE the entry's right edge in the gutter, where there's space.
-        int iconRight = x + entryWidth - 5;
-        int iconLeft  = iconRight - 10;
-        int iconTop   = y + 1;
-        int iconBottom = iconTop + 8;
-        ctx.fill(iconLeft - 1, iconTop - 1, iconRight + 1, iconBottom + 1, 0xFF000000);
 
         String label;
         int color;

@@ -194,7 +194,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
                 DONE_W, DONE_H,
                 Component.literal("Done"),
                 "Close this screen and return.",
-                this::onClose).glassBackground(true);
+                this::onClose).glassBackground(true).theming(com.aurora.client.ui.component.Button.Theming.OUTLINED);
         // Closing is neutral chrome, matching Reset and the other screens' Done buttons.
         this.addRenderableWidget(this.doneBtn);
 
@@ -212,7 +212,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
                 () -> {
                     meta.reset();
                     AuroraConfig.save();
-                }).glassBackground(true);
+                }).glassBackground(true).theming(com.aurora.client.ui.component.Button.Theming.OUTLINED);
         this.addRenderableWidget(this.resetBtn);
 
         // Custom-painted semantic controls join vanilla's child/narratable

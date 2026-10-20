@@ -119,9 +119,9 @@ public class ButtonWidget extends AbstractButton {
         return this;
     }
 
-    /** Themed card (Background Color fill + accent outline) — forwarded to the painter. */
-    public ButtonWidget themed(boolean t) {
-        painter.themed(t);
+    /** Theme-following card treatment — forwarded to the painter (see {@link Button.Theming}). */
+    public ButtonWidget theming(Button.Theming t) {
+        painter.theming(t);
         return this;
     }
 

@@ -225,6 +225,14 @@ public final class GuiAudit implements ClientModInitializer {
         actions.add(() -> {}); // let the burst finish before the next action
     }
 
+    static double dragX, dragY;
+
+    static net.minecraft.client.gui.screens.multiplayer.ServerSelectionList serverList() {
+        for (var child : mc.screen.children())
+            if (child instanceof net.minecraft.client.gui.screens.multiplayer.ServerSelectionList list) return list;
+        throw new IllegalStateException("no server list on " + mc.screen);
+    }
+
     static void slot(int i) { mc.player.getInventory().setSelectedSlot(i); }
 
     static void themeBackground(int argb) {
@@ -319,8 +327,34 @@ public final class GuiAudit implements ClientModInitializer {
         actions.add(() -> shot("glyph-fallback"));
         actions.add(() -> { themeBackground(0xFF22163A); cfg.themeOrDefault().accent = 0xFF43A047; com.aurora.client.theme.ThemeManager.reload(); });
         addShots("hud-editor-purple-green", HudEditorScreen::new);
-        actions.add(() -> { park(); mc.setScreen(new JoinMultiplayerScreen(new AuroraTitleScreen())); });
+        actions.add(() -> {
+            // Four unreachable loopback entries: the list shows ping labels and status icons.
+            var list = new net.minecraft.client.multiplayer.ServerList(mc);
+            list.load();
+            for (String n : List.of("Alpha Network", "Bravo PvP", "Charlie SMP", "Delta Duels"))
+                list.add(new net.minecraft.client.multiplayer.ServerData(n, "127.0.0.1:1", net.minecraft.client.multiplayer.ServerData.Type.OTHER), false);
+            list.save();
+            park(); mc.setScreen(new JoinMultiplayerScreen(new AuroraTitleScreen()));
+        });
         actions.add(() -> shot("multiplayer-themed"));
+        // ---- Drag-and-drop: press row 0, lift, move down two rows, release ----
+        actions.add(() -> {
+            var list = serverList();
+            dragX = (list.getRowLeft() + list.getRowRight()) / 2.0;
+            dragY = (list.getRowTop(0) + list.getRowBottom(0)) / 2.0;
+            hover(dragX, dragY);
+            mc.screen.mouseClicked(new MouseButtonEvent(dragX, dragY, new MouseButtonInfo(0, 0)), false);
+        });
+        burst("drag-move", 18, () -> {
+            dragY += 5;
+            hover(dragX, dragY);
+            mc.screen.mouseDragged(new MouseButtonEvent(dragX, dragY, new MouseButtonInfo(0, 0)), 0, 5);
+        });
+        actions.add(() -> shot("drag-held"));
+        burst("drag-settle", 10, () -> {
+            if (burst == 10) mc.screen.mouseReleased(new MouseButtonEvent(dragX, dragY, new MouseButtonInfo(0, 0)));
+        });
+        actions.add(() -> { park(); shot("drag-done"); });
         actions.add(() -> { park(); mc.setScreen(new AuroraTitleScreen()); });
         actions.add(() -> shot("title-themed"));
         actions.add(() -> { themeBackground(0xFF16171D); cfg.themeOrDefault().accent = 0xFFEB0029; com.aurora.client.theme.ThemeManager.reload(); mc.setScreen(null); });

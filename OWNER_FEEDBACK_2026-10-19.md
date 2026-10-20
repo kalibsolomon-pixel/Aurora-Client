@@ -52,3 +52,17 @@ other GPUs, Linux.
 Verified in `--plan owner` captures (fixture `owner-r2`): themed title/multiplayer/HUD-editor buttons
 (purple background, green accent), 140 px title cards, keycap press frames, and a chat line of
 ⓘ ⚑ 🌐 ⏲ ⚔ ✦ 中文 █ in Inter rendering through the fallback. 605 tests pass.
+
+## Follow-up 2 (same day)
+
+| Before | After | Why |
+|---|---|---|
+| Keycaps: translucent cap over the shell (visible band) and a cap rim curving inward over the lip (stray strokes); top hairline | Shell (full silhouette) → opaque cap → one rim around the silhouette; no hairline | Owner: perfect fidelity |
+| Title / multiplayer cards with accent outline and a density floor | `Theming.BACKGROUND`: Background Color at the window opacity, lighter edge | Owner: no accent there; same kind of outline as the feature window |
+| Feature-detail Reset/Done edgeless | `Theming.OUTLINED`: lighter edge | Owner request |
+| Lighter edge token | `BORDER_HOVER` (`MATERIAL_BORDER_STRONG`), one step above the window's `BORDER`, which barely differs from a card fill | Captures showed `BORDER` near-invisible on cards |
+| Server rows: black rectangle painted over vanilla's ping bars | The ping/pinging bar sprites are not drawn (incompatible/unreachable icons still are) | Owner: remove the black boxes |
+| Drag: ghost jumped to a cursor offset, 55 ms trailing lag, pulsing bar + row flash, dashed border, ease-in-out settle | 1:1 vertical tracking with the grab point kept; 150 ms ease-out lift (1.02 scale, shadow, accent edge); one gliding insertion line; quiet empty well; 200 ms ease-out settle; Esc cancels; edge auto-scroll | Premium-design: direct manipulation, restraint, fast ease-out |
+
+Verified in `owner-r3`/`owner-r4` captures (four loopback servers; an 18-frame drag burst and a
+10-frame settle). HUD editor actions keep `BACKGROUND_ACCENT`.
