@@ -117,10 +117,11 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
         int w = 120;
         int h = 20;
 
-        // Both editor actions sit in the top toolbar band; the center of the
-        // screen stays a clear gameplay preview (crosshair, hotbar context).
+        // Owner correction (2026-10-19): Aurora Settings returns to the screen
+        // center over the crosshair and wears the accent outline of an enabled
+        // feature card; Reset Positions is a compact, grey-edged corner action.
         this.addRenderableWidget(ButtonWidget.semantic(
-                8, 8, w, h,
+                (this.width - w) / 2, (this.height - h) / 2, w, h,
                 Component.literal("Aurora Settings"),
                 "Captures the current layout and opens Aurora's settings.",
                 () -> {
@@ -129,13 +130,16 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
                     if (this.minecraft != null) {
                         this.minecraft.setScreen(AuroraScreen.create());
                     }
-                }).glassBackground(true));
+                }).glassBackground(true).edge(com.aurora.client.ui.component.Button.Edge.ACCENT));
 
+        // Label width + the painter's 20 px ellipsis reserve + 2 px breathing room.
+        int resetW = Math.min(w, this.font.width("Reset Positions") + 22);
+        int resetH = 16;
         this.addRenderableWidget(ButtonWidget.semantic(
-                this.width - w - 8, 8, w, h,
+                this.width - resetW - 8, 8, resetW, resetH,
                 Component.literal("Reset Positions"),
                 "Moves every HUD module back to its default anchor, offset and scale.",
-                this::resetLayouts).glassBackground(true));
+                this::resetLayouts).glassBackground(true).edge(com.aurora.client.ui.component.Button.Edge.NEUTRAL));
 
         // Phase C-4 pilot C: one icon action per HUD module's X badge —
         // the canonical contract (Tab/Enter/Space, focus hairline, canonical

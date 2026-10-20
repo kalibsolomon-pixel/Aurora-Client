@@ -10,6 +10,9 @@ public class ThemeDefinition {
     /** Factory default accent (formerly {@code themePrimaryColor}). OnePlus Red. */
     public static final int DEFAULT_ACCENT = 0xFFEB0029;
 
+    /** Factory window tint: the unified Dark panel graphite, so existing users see no change. */
+    public static final int DEFAULT_BACKGROUND = ThemePresets.BACKGROUND_GRAPHITE;
+
     /** Factory default panel-background density (maximum diffuse material). */
     public static final double DEFAULT_BACKGROUND_OPACITY = 1.0;
 
@@ -37,6 +40,13 @@ public class ThemeDefinition {
      * text use separate roles. Either a {@link ThemePresets} value or a custom RGB.
      */
     public int accent = DEFAULT_ACCENT;
+
+    /**
+     * Window tint (RGB; alpha ignored) — the colour of every Aurora window and
+     * its neutral material family. {@link #backgroundOpacity} still owns the
+     * translucency. {@link #DEFAULT_BACKGROUND} reproduces the stock palette.
+     */
+    public int background = DEFAULT_BACKGROUND;
 
     public ThemeDefinition() {}
 
@@ -69,6 +79,7 @@ public class ThemeDefinition {
         if (other != null) {
             copy.mode = ThemeMode.DARK; // legacy LIGHT preferences resolve to the supported appearance
             copy.accent = other.accent;
+            copy.background = 0xFF000000 | other.background;
             copy.roundness = other.roundness != null ? other.roundness : ThemeRoundness.ROUND;
             copy.backgroundOpacity = normalizedOpacity(other.backgroundOpacity);
         }

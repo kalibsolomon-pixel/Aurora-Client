@@ -145,6 +145,7 @@ public final class ThemeMigrator {
         }
 
         dirty |= sanitizeIntMember(theme, "accent", log);
+        dirty |= sanitizeIntMember(theme, "background", log);
         return dirty;
     }
 

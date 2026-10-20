@@ -146,7 +146,8 @@ public final class ThemeManager {
         ThemeDefinition def = cfg.themeOrDefault();
         ResolvedTheme last = current;
         boolean enabledChanged = cfg.themeEnabled != last.accentsEnabled();
-        boolean accentChanged = def.accent != last.accent();
+        boolean accentChanged = def.accent != last.accent()
+                || (0xFF000000 | def.background) != last.background();
         ThemeMode mode = ThemeMode.DARK; // normalize legacy LIGHT before the dirty check
         boolean modeChanged = mode != last.mode();
         ThemeRoundness roundness = def.roundness != null ? def.roundness : ThemeRoundness.ROUND;

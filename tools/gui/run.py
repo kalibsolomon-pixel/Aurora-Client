@@ -16,7 +16,7 @@ from reproduce import REPO, ROOT as VULKAN_ROOT, launch  # noqa: E402
 ROOT = REPO / 'build/gui-audit'
 
 
-def prepare(name, renderer, plan, sizes, jar):
+def prepare(name, renderer, plan, sizes, jar, extra_mods=()):
     ROOT.mkdir(parents=True, exist_ok=True)
     production.ROOT = ROOT  # outputs live under build/gui-audit
     # Reuse the Vulkan fixture's immutable saved world + VulkanMod input.
@@ -32,6 +32,8 @@ def prepare(name, renderer, plan, sizes, jar):
             old.unlink()
         shutil.copy2(jar, mods / Path(jar).name)
     shutil.copy2(ROOT / 'tooling/aurora-gui-probe-production.jar', root / 'game/mods/aurora-gui-probe.jar')
+    for extra in extra_mods:  # third-party compatibility inputs (e.g. ImmediatelyFast for glint batching)
+        shutil.copy2(extra, root / 'game/mods' / Path(extra).name)
     (root / 'DISPOSABLE-RESEARCH.txt').write_text('GUI audit capture fixture.\n')
     spec = json.loads((root / 'launch-private.json').read_text())
     spec['jvmArgs'] += ['-Daurora.gui.output=' + str(root), '-Daurora.gui.plan=' + plan, '-Daurora.gui.sizes=' + sizes]
@@ -58,15 +60,16 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('name')
     parser.add_argument('--renderer', choices=['vulkan', 'opengl', 'sodium'], default='opengl')
-    parser.add_argument('--plan', choices=['full', 'scale', 'persist'], default='full')
+    parser.add_argument('--plan', choices=['full', 'scale', 'persist', 'owner'], default='full')
     parser.add_argument('--phase', type=int, default=1, help='persist plan phase')
     parser.add_argument('--reuse', action='store_true', help='relaunch an existing fixture (same game dir)')
     parser.add_argument('--sizes', default='1920x1080@3')
     parser.add_argument('--jar', help='explicit Aurora jar (defaults to build/libs)')
+    parser.add_argument('--extra-mod', action='append', default=[], help='additional mod jar copied into the fixture')
     o = parser.parse_args()
     if o.reuse:
         raise SystemExit(relaunch(ROOT / o.name, o.phase))
-    root = prepare(o.name, o.renderer, o.plan, o.sizes, o.jar)
+    root = prepare(o.name, o.renderer, o.plan, o.sizes, o.jar, o.extra_mod)
     if o.plan == 'persist':
         raise SystemExit(relaunch(root, o.phase))
     raise SystemExit(launch(root))

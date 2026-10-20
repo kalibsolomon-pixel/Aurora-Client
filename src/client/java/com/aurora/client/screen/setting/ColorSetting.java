@@ -51,6 +51,8 @@ public class ColorSetting extends FeatureSetting {
     private final Consumer<Integer> setter;
 
     private boolean expanded = false;
+    /** Opaque colours only (theme accent/background): no opacity strip, alpha pinned to 1. */
+    private boolean opaque;
 
     private float h, s, l, a;
 
@@ -83,6 +85,13 @@ public class ColorSetting extends FeatureSetting {
         this.swatch = new ColorSwatch(getter, null).canonicalStates();
     }
 
+    /**
+     * Hides the opacity strip and pins alpha to 1 — for colours whose
+     * translucency is owned elsewhere (the theme colours; window opacity has
+     * its own slider).
+     */
+    public ColorSetting opaqueOnly() { opaque = true; return this; }
+
     @Override public int baseHeight() { return compactRow == null ? (expanded ? ROW_H_EXPANDED : ROW_H_COLLAPSED) : compactRow.height() + (expanded ? EXPANDED_BODY : 0); }
     @Override public int height() { return baseHeight(); }
 
@@ -112,7 +121,7 @@ public class ColorSetting extends FeatureSetting {
 
         if (!expanded) return;
 
-        int totalW = PAD_SIZE + STRIP_GAP + STRIP_W + STRIP_GAP + STRIP_W;
+        int totalW = PAD_SIZE + STRIP_GAP + STRIP_W + (opaque ? 0 : STRIP_GAP + STRIP_W);
         int startX = x + (width - totalW) / 2;
         int bodyTop = y + (compactRow == null ? ROW_H_COLLAPSED : compactRow.height()) + 8;
 
@@ -140,9 +149,11 @@ public class ColorSetting extends FeatureSetting {
         int hueMark = hueY + Math.round(h * PAD_SIZE);
         ctx.fill(hueX - 2, hueMark - 1, hueX + STRIP_W + 2, hueMark + 1, 0xFFFFFFFF);
 
-        drawAlphaStrip(ctx);
-        int alphaMark = alphaY + Math.round((1f - a) * PAD_SIZE);
-        ctx.fill(alphaX - 2, alphaMark - 1, alphaX + STRIP_W + 2, alphaMark + 1, 0xFFFFFFFF);
+        if (!opaque) {
+            drawAlphaStrip(ctx);
+            int alphaMark = alphaY + Math.round((1f - a) * PAD_SIZE);
+            ctx.fill(alphaX - 2, alphaMark - 1, alphaX + STRIP_W + 2, alphaMark + 1, 0xFFFFFFFF);
+        }
 
         drawCheckerboard(ctx, previewX, previewY, previewW, PREVIEW_H);
         ctx.fill(previewX, previewY, previewX + previewW, previewY + PREVIEW_H, ColorEntryHelper.hslaToArgb(h, s, l, a));
@@ -180,7 +191,7 @@ public class ColorSetting extends FeatureSetting {
             updateFromHue(mouseY);
             return true;
         }
-        if (Widget.inBounds(mouseX, mouseY, alphaX, alphaY, STRIP_W, PAD_SIZE)) {
+        if (!opaque && Widget.inBounds(mouseX, mouseY, alphaX, alphaY, STRIP_W, PAD_SIZE)) {
             dragging = DragTarget.ALPHA;
             updateFromAlpha(mouseY);
             return true;
@@ -213,7 +224,7 @@ public class ColorSetting extends FeatureSetting {
     private void seedFromCurrent() {
         int argb = getter.getAsInt();
         float[] hsla = ColorEntryHelper.argbToHsla(argb);
-        h = hsla[0]; s = hsla[1]; l = hsla[2]; a = hsla[3];
+        h = hsla[0]; s = hsla[1]; l = hsla[2]; a = opaque ? 1f : hsla[3];
     }
 
     /**

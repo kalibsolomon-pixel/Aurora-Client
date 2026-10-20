@@ -64,6 +64,41 @@ public final class UnifiedPalette {
         put(c, ThemeToken.STATUS_ERROR, 0xffff9a9a); put(c, ThemeToken.STATUS_WORKING, 0xff8fb7ff);
     }
 
+    /** The neutral material roles a Background Color re-tints (text and status roles stay fixed). */
+    private static final ThemeToken[] TINTED_NEUTRALS = {
+            ThemeToken.MATERIAL_CANVAS, ThemeToken.MATERIAL_PANEL, ThemeToken.MATERIAL_RAISED,
+            ThemeToken.MATERIAL_HOVER, ThemeToken.MATERIAL_PRESSED, ThemeToken.MATERIAL_SUNKEN,
+            ThemeToken.MATERIAL_BORDER, ThemeToken.MATERIAL_BORDER_STRONG};
+    /** Panel lightness ceiling: brighter picks are deepened so primary text stays readable. */
+    static final double MAX_PANEL_LIGHTNESS = .28;
+    /** Primary text against a tinted panel (before window translucency). */
+    static final double MIN_TEXT_CONTRAST = 7;
+
+    /**
+     * Re-tints the neutral material family toward {@code background}: the
+     * panel (the window fill) takes the chosen hue, saturation and lightness
+     * (lightness capped at {@link #MAX_PANEL_LIGHTNESS}), and every other
+     * neutral keeps its lightness step from the stock panel, so raised,
+     * pressed, sunken and border roles stay distinguishable on any tint. The
+     * stock graphite is an exact no-op.
+     */
+    public static void tintNeutrals(int[] c, int background) {
+        int panel = c[ThemeToken.MATERIAL_PANEL.ordinal()];
+        if (((background ^ panel) & 0xFFFFFF) == 0) return;
+        double[] tint = toHsl(background);
+        double target = Math.min(tint[2], MAX_PANEL_LIGHTNESS);
+        // Bright hues (yellow, cyan) are luminous even at low lightness: deepen
+        // until primary text keeps the 7:1 the stock panel and presets have.
+        int text = c[ThemeToken.MATERIAL_TEXT.ordinal()];
+        while (target > .04 && contrast(rgb(tint[0], tint[1], target), text) < MIN_TEXT_CONTRAST) target -= .01;
+        double stock = toHsl(panel)[2];
+        for (ThemeToken token : TINTED_NEUTRALS) {
+            int i = token.ordinal();
+            double lightness = clamp(toHsl(c[i])[2] - stock + target, .02, .90);
+            c[i] = (c[i] & 0xFF000000) | (rgb(tint[0], tint[1], lightness) & 0xFFFFFF);
+        }
+    }
+
     private static int neutralHover(int surface,int text) {
         int result=0xff000000;
         for(int shift:new int[]{16,8,0}) {

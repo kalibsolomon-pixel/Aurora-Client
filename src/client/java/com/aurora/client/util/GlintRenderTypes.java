@@ -20,6 +20,23 @@ public final class GlintRenderTypes {
     public static RenderType entity() { return Holder.ENTITY; }
     public static RenderType armor() { return Holder.ARMOR; }
 
+    private static java.util.Map<RenderType, RenderType> counterparts;
+
+    /** Vanilla foil type ↔ its masked equivalent, in both directions. */
+    public static java.util.Map<RenderType, RenderType> counterparts() {
+        if (counterparts == null) {
+            RenderType glint = com.aurora.client.mixin.RenderTypesGlintAccessor.aurora$glint();
+            RenderType translucent = com.aurora.client.mixin.RenderTypesGlintAccessor.aurora$glintTranslucent();
+            RenderType entity = com.aurora.client.mixin.RenderTypesGlintAccessor.aurora$entityGlint();
+            RenderType armor = com.aurora.client.mixin.RenderTypesGlintAccessor.aurora$armorEntityGlint();
+            counterparts = java.util.Map.of(glint, item(), item(), glint,
+                    translucent, translucent(), translucent(), translucent,
+                    entity, entity(), entity(), entity,
+                    armor, armor(), armor(), armor);
+        }
+        return counterparts;
+    }
+
     private static RenderPipeline pipeline() {
         RenderPipeline vanilla = RenderPipelines.GLINT;
         var builder = RenderPipeline.builder()

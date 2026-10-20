@@ -130,7 +130,7 @@ class PhaseC8ClipCouplingTest {
         String src = source(PROFILE);
         String body = methodBody(src, "protected boolean rowAreaClickFirst");
         assertNotNull(body);
-        assertTrue(body.contains("int rowY = listTop() - (int) scroll.current();"),
+        assertTrue(body.contains("cellY(0)") /* card grid: cellY derives from listTop() - scroll each call */,
                 "the create-row hit test must use the LIVE leading-row geometry, not control bounds");
         assertTrue(body.contains("createControl.isAvailable()"),
                 "activation must be availability-aware (clip-band gate), not bounds-only");

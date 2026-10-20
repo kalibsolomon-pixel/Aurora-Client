@@ -27,6 +27,7 @@ public final class ThemeResolver {
         int accent = PaletteEngine.normalizeAccent(def.accent);
         int[] c = PaletteEngine.derive(accent, def.mode);
         UnifiedPalette.populate(c, accent, def.mode);
+        UnifiedPalette.tintNeutrals(c, def.background);
         applyUnifiedRoles(c);
         applyBackgroundOpacity(c, def.backgroundOpacity);
         return new ResolvedTheme(def, true, c);

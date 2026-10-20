@@ -45,15 +45,25 @@ import java.util.Set;
  */
 public class ProfileManagerScreen extends ManagerListScreen<String> {
 
-    private static final int ROW_H = 30;
-    private static final int LIST_W = 420;
-
-    private static final int ACTIVE_BADGE_W = 56;
-    private static final int NAME_W = 150;
-    private static final int BTN_DUP_W = 72;
-    private static final int BTN_DEL_W = 64;
-    private static final int CONTROL_GAP = 6;
-    private static final int ROW_INSET = 10;
+    // ---- Card grid (owner request 2026-10-19: tiles, like the launcher's instances) ----
+    //
+    // Each profile is one card: name on top, the Active pill (or a hover
+    // hint) under it, Duplicate and Delete stacked at the bottom so every
+    // card in a row keeps its actions on the same lines. Columns follow the
+    // available width (at least one); the active card wears the accent
+    // selection outline the enabled feature cards use.
+    private static final int CARD_H = 92;
+    private static final int CARD_MIN_W = 132;
+    private static final int CARD_GAP = 8;
+    private static final int LIST_MAX_W = 444;
+    private static final int INSET = 8;
+    private static final int BTN_H = 18;
+    private static final int NAME_Y = 9;
+    private static final int PILL_Y = 24;
+    private static final int PILL_H = 14;
+    /** Upper action line (Duplicate / Create) and lower line (Delete), from the card top. */
+    private static final int UPPER_BTN_Y = CARD_H - INSET - BTN_H - 4 - BTN_H;
+    private static final int LOWER_BTN_Y = CARD_H - INSET - BTN_H;
 
     /**
      * Pending create: when the user clicks "New", we show an empty editor
@@ -96,10 +106,11 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
 
     private boolean createRowGlassDrawn = false;
 
-    // Row-control offsets from the row's left edge, shared by the glass pass
-    // and the content pass so the two can never disagree on where a button is.
-    private static final int DUP_DX = ROW_INSET + ACTIVE_BADGE_W + CONTROL_GAP + NAME_W + CONTROL_GAP;
-    private static final int DEL_DX = DUP_DX + BTN_DUP_W + CONTROL_GAP;
+    /** Per-card hover ease (canonical 140 ms), keyed and reconciled like the buttons. */
+    private final Map<String, com.aurora.client.util.HoverAnim> cardHover = new HashMap<>();
+
+    /** Card action width — shared by the glass and content passes so they never disagree. */
+    private int btnW() { return cellWidth() - INSET * 2; }
 
     public ProfileManagerScreen(Screen parent) {
         super(Component.literal("Profiles"), parent);
@@ -132,12 +143,14 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
     //  Foundation hooks
     // ------------------------------------------------------------------
 
-    @Override protected int listWidth() { return LIST_W; }
-    @Override protected int rowHeight() { return ROW_H; }
-    @Override protected int nameColumnWidth() { return NAME_W; }
-    @Override protected int editorFieldX(int listX) {
-        return listX + ROW_INSET + ACTIVE_BADGE_W + CONTROL_GAP;
-    }
+    @Override protected int listWidth() { return Math.max(CARD_MIN_W, Math.min(LIST_MAX_W, this.width - 40)); }
+    @Override protected int columns() { return Math.max(1, (listWidth() + CARD_GAP) / (CARD_MIN_W + CARD_GAP)); }
+    @Override protected int columnGap() { return CARD_GAP; }
+    @Override protected int rowGap() { return CARD_GAP; }
+    @Override protected int rowHeight() { return CARD_H; }
+    @Override protected int nameColumnWidth() { return cellWidth() - INSET * 2; }
+    @Override protected int editorFieldX(int cellX) { return cellX + INSET; }
+    @Override protected int editorFieldYOffset() { return NAME_Y - 4; }
 
     @Override protected List<String> currentRows() {
         return ProfileManager.getInstance().listProfileNames();
@@ -147,8 +160,15 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         return Component.literal("No profiles. Press \"New Profile\" to create one.");
     }
 
-    /** Profiles are few; a full-height window would be mostly empty well. */
-    @Override protected int windowMaxHeight() { return 260; }
+    /** Profile count from the last frame's single list fetch (−1 before the first frame). */
+    private int knownProfiles = -1;
+
+    /** The window hugs its cards (up to three rows, then the grid scrolls) — no empty well. */
+    @Override protected int windowMaxHeight() {
+        int items = (knownProfiles >= 0 ? knownProfiles : currentRows().size()) + leadingRowCount();
+        int rows = Math.max(1, Math.min(3, (items + columns() - 1) / columns()));
+        return HEADER_H + 2 + rows * (CARD_H + CARD_GAP) - CARD_GAP + 10;
+    }
 
     @Override protected int leadingRowCount() {
         return creatingNew && createField != null ? 1 : 0;
@@ -169,9 +189,11 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         // map (a List.contains scan per key) and ran every frame — with a
         // large profile list that alone dominated the frame (~5 ms at 2000
         // rows). (fixed in 0a0caaa; the rule is now standing — AGENTS.md §10)
+        knownProfiles = profiles.size();
         Set<String> live = new HashSet<>(profiles);
         boolean membershipChanged = dupBtns.keySet().retainAll(live);
         membershipChanged |= delBtns.keySet().retainAll(live);
+        cardHover.keySet().retainAll(live);
         // The row buttons' semantic controls drop with their buttons —
         // removeWidget takes the control out of the vanilla child/narratable
         // lists and clears screen focus if the removed control held it, so a
@@ -210,17 +232,18 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         // Availability follows the same clip-band rule as the row loop so a
         // create row scrolled out of the clip can neither be keyed nor
         // clicked while invisible.
-        createControl.setAvailable(creatingNew && y + ROW_H > listClipTop() && y < listClipBottom());
+        createControl.setAvailable(creatingNew && y + CARD_H > listClipTop() && y < listClipBottom());
         paintTemplatedRowSurface(ctx, x, y,
                 () -> createRowGlassDrawn = renderRowSurface(ctx, x, y, w),
                 () -> {
                     Button cb = createBtn();
-                    cb.layout(x + DUP_DX, y + 4, BTN_DUP_W, ROW_H - 8);
-                    createControl.setBounds(x + DUP_DX, y + 4, BTN_DUP_W, ROW_H - 8);
+                    int bx = x + INSET, by = y + LOWER_BTN_Y;
+                    cb.layout(bx, by, btnW(), BTN_H);
+                    createControl.setBounds(bx, by, btnW(), BTN_H);
                     boolean enabled = createEnabled();
                     cb.disabled(!enabled);
                     cb.focused(createControl.isFocused() && enabled);
-                    cb.renderGlassPass(ctx, x + DUP_DX, y + 4, BTN_DUP_W, ROW_H - 8);
+                    cb.renderGlassPass(ctx, bx, by, btnW(), BTN_H);
                 },
                 () -> createRowGlassDrawn);
     }
@@ -241,18 +264,18 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
                 () -> rowGlassDrawn.put(name, renderRowSurface(ctx, x, y, w)),
                 () -> {
                     Button db = dupBtn(name);
-                    db.layout(x + DUP_DX, y + 4, BTN_DUP_W, ROW_H - 8);
-                    syncDupControl(name, x + DUP_DX, y + 4, y);
-                    db.renderGlassPass(ctx, x + DUP_DX, y + 4, BTN_DUP_W, ROW_H - 8);
+                    db.layout(x + INSET, y + UPPER_BTN_Y, btnW(), BTN_H);
+                    syncDupControl(name, x + INSET, y + UPPER_BTN_Y, y);
+                    db.renderGlassPass(ctx, x + INSET, y + UPPER_BTN_Y, btnW(), BTN_H);
                 },
                 () -> rowGlassDrawn.getOrDefault(name, false));
     }
 
-    /** Per-frame Duplicate-control sync: bounds follow the row's live geometry, availability the clip band. Lazily creates the pair (the glass pass runs before the content pass on a row's first frame). */
+    /** Per-frame Duplicate-control sync: bounds follow the card's live geometry, availability the clip band. Lazily creates the pair (the glass pass runs before the content pass on a card's first frame). */
     private void syncDupControl(String name, int btnX, int btnY, int rowY) {
         SemanticActionControl control = dupControl(name);
-        control.setBounds(btnX, btnY, BTN_DUP_W, ROW_H - 8);
-        control.setAvailable(rowY + ROW_H > listClipTop() && rowY < listClipBottom());
+        control.setBounds(btnX, btnY, btnW(), BTN_H);
+        control.setAvailable(rowY + CARD_H > listClipTop() && rowY < listClipBottom());
     }
 
     @Override
@@ -266,68 +289,73 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
                             int mouseX, int mouseY) {
         boolean isActive = name.equals(active);
         boolean isDefault = "default".equals(name);
+        float radius = ThemeManager.current().roundness().radiusSmall();
+        boolean pointerIn = mouseX >= x && mouseX < x + w && mouseY >= y && mouseY < y + CARD_H
+                && mouseY >= listClipTop() && mouseY < listClipBottom();
+        float hover = cardHover.computeIfAbsent(name, k -> com.aurora.client.util.HoverAnim.symmetric(140L))
+                .update(pointerIn && !isActive);
 
-        // The row surface (shadow + depressed glass) was painted in the
-        // glass pass, under the dim — see paintRowGlassPass. Only the flat
-        // fallback is drawn here, for a row whose glass declined: the
-        // opacity-tracked surface + hairline border, identical for every
-        // row (active included — selection is the Active badge alone).
-        if (MaterialSurface.unified() || !rowGlassDrawn.getOrDefault(name, false)) {
-            if (isActive) MaterialSurface.selection(ctx,x,y,w,rowHeight(),
-                    ThemeManager.current().roundness().radiusSmall(),true,0);
+        // The card surface was painted in the glass pass, under the dim — see
+        // paintRowGlassPass. Here: the selection role (accent outline + soft
+        // stain on the active card, a hover lift on the others), or the flat
+        // fallback for a card whose glass declined.
+        if (MaterialSurface.unified()) {
+            MaterialSurface.selection(ctx, x, y, w, CARD_H, radius, isActive, hover);
+        } else if (!rowGlassDrawn.getOrDefault(name, false)) {
+            if (isActive) MaterialSurface.selection(ctx, x, y, w, CARD_H, radius, true, 0);
             else paintFlatRow(ctx, x, y, w);
         }
 
-        int cx = x + ROW_INSET;
-
-        // Active badge — accent chip with the contrast-checked on-accent text.
-        if (isActive) {
-            float radius = ThemeManager.current().roundness().radiusSmall();
-            RenderUtil.drawRoundedRectAA(ctx, cx, y + (ROW_H - 16) / 2, ACTIVE_BADGE_W, 16, radius,
-                    ThemeManager.withAlpha(ThemeManager.color(ThemeToken.SELECTION_SOFT), 0x55));
-            AuroraFontRenderer.drawCentered(ctx, this.font, Component.literal("Active"),
-                    cx + ACTIVE_BADGE_W / 2, y + (ROW_H - this.font.lineHeight) / 2,
+        // Name (or the inline editor over it).
+        if (index != editingIndex) {
+            AuroraFontRenderer.drawCentered(ctx, this.font, fitName(name), x + w / 2, y + NAME_Y,
                     ThemeManager.color(ThemeToken.ON_BACKGROUND));
         }
-        cx += ACTIVE_BADGE_W + CONTROL_GAP;
 
-        // Name (or inline editor).
-        if (index != editingIndex) {
-            String display = fitName(name);
-            ctx.drawString(this.font, display,
-                    cx, y + (ROW_H - this.font.lineHeight) / 2,
-                    ThemeManager.color(ThemeToken.ON_BACKGROUND), false);
+        // Active pill — the selection-soft chip under the name. Other cards
+        // fade in what a click does, only while hovered.
+        if (isActive) {
+            int pillW = this.font.width("Active") + 14;
+            RenderUtil.drawRoundedRectAA(ctx, x + (w - pillW) / 2f, y + PILL_Y, pillW, PILL_H, radius,
+                    ThemeManager.withAlpha(ThemeManager.color(ThemeToken.SELECTION_SOFT), 0x55));
+            AuroraFontRenderer.drawCentered(ctx, this.font, Component.literal("Active"),
+                    x + w / 2, y + PILL_Y + (PILL_H - this.font.lineHeight) / 2 + 1,
+                    ThemeManager.color(ThemeToken.ON_BACKGROUND));
+        } else if (hover > 0.01f) {
+            int muted = ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED);
+            AuroraFontRenderer.drawCentered(ctx, this.font, Component.literal("Click to switch"),
+                    x + w / 2, y + PILL_Y + (PILL_H - this.font.lineHeight) / 2 + 1,
+                    ThemeManager.withAlpha(muted, Math.round((muted >>> 24) * hover)));
         }
-        cx += NAME_W + CONTROL_GAP;
 
         // Duplicate — surface already painted in the glass pass; this draws
         // the label (or the flat fallback where glass declined). The semantic
         // control re-syncs here (same rect the glass pass computed): pointer
         // hover for narration and the provisional focus ring on the Button.
         Button dupBtn = dupBtn(name);
-        dupBtn.layout(x + DUP_DX, y + 4, BTN_DUP_W, ROW_H - 8);
-        syncDupControl(name, x + DUP_DX, y + 4, y);
+        dupBtn.layout(x + INSET, y + UPPER_BTN_Y, btnW(), BTN_H);
+        syncDupControl(name, x + INSET, y + UPPER_BTN_Y, y);
         SemanticActionControl dupControl = dupControls.get(name);
         if (dupControl != null) {
             dupControl.updatePointer(mouseX, mouseY);
             dupBtn.focused(dupControl.isFocused());
         }
-        dupBtn.render(ctx, x + DUP_DX, y + 4, BTN_DUP_W, ROW_H - 8, mouseX, mouseY);
+        dupBtn.render(ctx, x + INSET, y + UPPER_BTN_Y, btnW(), BTN_H, mouseX, mouseY);
 
         // Delete — shared Button, destructive variant (never glass); hidden
         // for the default + active profiles (non-deletable). Semantic control
         // keyed in lockstep; the accessible name carries the target profile.
         if (!isDefault && !isActive) {
             Button dBtn = delBtn(name);
-            dBtn.layout(x + DEL_DX, y + 4, BTN_DEL_W, ROW_H - 8);
+            dBtn.layout(x + INSET, y + LOWER_BTN_Y, btnW(), BTN_H);
             SemanticActionControl delControl = delControls.get(name);
             if (delControl != null) {
-                delControl.setBounds(x + DEL_DX, y + 4, BTN_DEL_W, ROW_H - 8);
-                delControl.setAvailable(y + ROW_H > listClipTop() && y < listClipBottom());
+                delControl.setBounds(x + INSET, y + LOWER_BTN_Y, btnW(), BTN_H);
+                delControl.setAvailable(y + CARD_H > listClipTop() && y < listClipBottom());
                 delControl.updatePointer(mouseX, mouseY);
                 dBtn.focused(delControl.isFocused());
             }
-            dBtn.render(ctx, x + DEL_DX, y + 4, BTN_DEL_W, ROW_H - 8, mouseX, mouseY);
+            dBtn.render(ctx, x + INSET, y + LOWER_BTN_Y, btnW(), BTN_H, mouseX, mouseY);
         }
     }
 
@@ -411,11 +439,11 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
      */
     private void syncCreateControl(int x, int y, int mouseX, int mouseY) {
         Button cb = createBtn();
-        int btnX = x + DUP_DX;
-        int btnY = y + 4;
-        cb.layout(btnX, btnY, BTN_DUP_W, ROW_H - 8);
-        createControl.setBounds(btnX, btnY, BTN_DUP_W, ROW_H - 8);
-        createControl.setAvailable(y + ROW_H > listClipTop() && y < listClipBottom());
+        int btnX = x + INSET;
+        int btnY = y + LOWER_BTN_Y;
+        cb.layout(btnX, btnY, btnW(), BTN_H);
+        createControl.setBounds(btnX, btnY, btnW(), BTN_H);
+        createControl.setAvailable(y + CARD_H > listClipTop() && y < listClipBottom());
         createControl.updatePointer(mouseX, mouseY);
         boolean enabled = createEnabled();
         cb.disabled(!enabled);
@@ -437,9 +465,8 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
      */
     private EditBox layoutEditField(List<String> profiles, int listX) {
         if (creatingNew && createField != null) {
-            int rowY = listTop() - (int) scroll.current();
-            createField.setX(editorFieldX(listX));
-            createField.setY(rowY + (ROW_H - 16) / 2);
+            createField.setX(editorFieldX(cellX(listX, 0)));
+            createField.setY(cellY(0) + editorFieldYOffset());
             return createField;
         }
         return layoutRenameField(profiles, listX);
@@ -452,7 +479,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
      */
     private boolean editFieldVisible(List<String> profiles) {
         if (creatingNew && createField != null) {
-            int fieldY = listTop() - (int) scroll.current() + (ROW_H - 16) / 2;
+            int fieldY = cellY(0) + editorFieldYOffset();
             return fieldY + 16 > listClipTop() && fieldY < listClipBottom();
         }
         return renameEditorVisible();
@@ -464,20 +491,19 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         // (the hint text and the Create button signal the open editor; no
         // accent on the container surface in either path). Its surface was
         // painted in the glass pass; only the flat fallback is drawn here.
-        if (MaterialSurface.unified() || !createRowGlassDrawn) {
+        if (MaterialSurface.unified()) {
+            MaterialSurface.selection(ctx, x, y, w, CARD_H, ThemeManager.current().roundness().radiusSmall(), false, 0);
+        } else if (!createRowGlassDrawn) {
             paintFlatRow(ctx, x, y, w);
         }
-        // Hint label in the name area (field draws over it).
-        int cx = x + ROW_INSET + ACTIVE_BADGE_W + CONTROL_GAP;
-        ctx.drawString(this.font, Component.literal("New profile name…"),
-                cx + 4, y + (ROW_H - this.font.lineHeight) / 2,
-                ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_BACKGROUND), 0x66), false);
+        AuroraFontRenderer.drawCentered(ctx, this.font, Component.literal("Enter to create · Esc to cancel"),
+                x + w / 2, y + PILL_Y + 8, ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED));
 
-        // "Create" confirm button where Duplicate usually sits — surface
+        // "Create" confirm button on the card's bottom action line — surface
         // painted in the glass pass; this draws the label.
         syncCreateControl(x, y, mouseX, mouseY);
         Button cb = createBtn();
-        cb.render(ctx, x + DUP_DX, y + 4, BTN_DUP_W, ROW_H - 8, mouseX, mouseY);
+        cb.render(ctx, x + INSET, y + LOWER_BTN_Y, btnW(), BTN_H, mouseX, mouseY);
     }
 
     /**
@@ -491,10 +517,10 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
      * drew (false = the content pass draws the flat row).
      */
     private boolean renderRowSurface(GuiGraphics ctx, int x, int y, int w) {
-        if (MaterialSurface.unified()) return GlassSurface.card(ctx,x,y,w,ROW_H,
+        if (MaterialSurface.unified()) return GlassSurface.card(ctx,x,y,w,CARD_H,
                 ThemeManager.current().roundness().radiusSmall());
         paintRowShadow(ctx, x, y, w);
-        return GlassSurface.container(ctx, x, y, w, ROW_H,
+        return GlassSurface.container(ctx, x, y, w, CARD_H,
                 ThemeManager.current().roundness().radiusSmall(), BlurPanelRenderer.Priority.ROW);
     }
 
@@ -526,11 +552,10 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         // fall-through.
         if (!creatingNew) return false;
         int listX = (this.width - listWidth()) / 2;
-        int rowY = listTop() - (int) scroll.current();
-        int btnX = listX + DUP_DX;
-        int btnY = rowY + 4;
-        boolean inButton = mouseX >= btnX && mouseX < btnX + BTN_DUP_W
-                && mouseY >= btnY && mouseY < btnY + (ROW_H - 8);
+        int btnX = cellX(listX, 0) + INSET;
+        int btnY = cellY(0) + LOWER_BTN_Y;
+        boolean inButton = mouseX >= btnX && mouseX < btnX + btnW()
+                && mouseY >= btnY && mouseY < btnY + BTN_H;
         if (!inButton) return false;
         if (createControl.isAvailable()) {
             createControl.activateFromPointer(mouseX, mouseY, 0);
@@ -558,8 +583,11 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
             return true;
         }
 
+        // The name line renames; everywhere else on the card switches.
         int nameLeft = editorFieldX(listX);
-        if (mouseX >= nameLeft && mouseX < nameLeft + NAME_W) {
+        int nameTop = cellY(leadingRowCount() + index) + editorFieldYOffset();
+        if (mouseX >= nameLeft && mouseX < nameLeft + nameColumnWidth()
+                && mouseY >= nameTop && mouseY < nameTop + 16) {
             startEditing(index, name);
             return true;
         }
@@ -612,8 +640,9 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
     private void beginCreate() {
         commitEditors();
         creatingNew = true;
-        createField = new EditBox(this.font, 0, 0, NAME_W, 16, Component.literal("Name"));
+        createField = new EditBox(this.font, 0, 0, nameColumnWidth(), 16, Component.literal("Name"));
         createField.setMaxLength(48);
+        createField.setHint(Component.literal("New profile name…")); // the field's own placeholder, above its fill
         createField.setFocused(true);
         scroll.set(0);
     }

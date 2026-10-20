@@ -28,6 +28,7 @@
     "ReloadableTextureMixin",
     "GlintRenderTypesMixin",
     "GlintBufferSourceMixin",
+    "RenderTypesGlintAccessor",
     "InGameHudPotionOverlayMixin",
     "NoFogMixin",
     "UnderwaterClarityMixin",

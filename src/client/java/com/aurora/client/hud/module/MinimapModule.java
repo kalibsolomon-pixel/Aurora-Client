@@ -7,6 +7,7 @@ import com.aurora.client.hud.HudAnchor;
 import com.aurora.client.theme.HudText;
 import com.aurora.client.theme.HudStatus;
 import com.aurora.client.worldmap.MapTransform;
+import com.aurora.client.worldmap.MinimapGrid;
 import com.aurora.client.worldmap.WorldMapClient;
 import com.aurora.client.worldmap.MapMarkers;
 import com.aurora.client.ui.util.UiLayerCache;
@@ -15,6 +16,7 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.animal.Animal;
@@ -25,15 +27,24 @@ import net.minecraft.world.phys.AABB;
 import java.util.List;
 
 /** Cached presentation of the shared map engine. No world-column reads in rendering.
- * Terrain raster/upload is capped at 20 Hz during motion and stops when stationary
- * and unchanged. Shape/background/border share the same masked texture (one blit). */
+ * Engine samples live in a world-aligned {@link MinimapGrid} that is only re-sampled
+ * when the player crosses a cell (overlap reused) or terrain changes (at most 20 Hz).
+ * Each frame with motion resamples that grid at device resolution from the
+ * partial-tick-interpolated pose, so terrain, markers and rotation glide with the
+ * camera instead of stepping at tick/sample cadence; a stationary map costs nothing.
+ * Shape/background/border share the same masked texture (one blit). */
 public final class MinimapModule extends HudModule {
     public static final String ID = "minimap";
     private static final String[] CARDINALS = {"N", "E", "S", "W"};
     private UiLayerCache terrain = new UiLayerCache();
     private final java.util.ArrayList<UiLayerCache> retiredTerrains = new java.util.ArrayList<>();
     private long terrainFrame = -1;
-    private int[] terrainPixels;
+    private final MinimapGrid grid = new MinimapGrid();
+    private final MinimapGrid.Sampler sampler = this::sampleCell;
+    private WorldMapClient samplerEngine;
+    private boolean samplerTerrain;
+    private double samplerCell = 1;
+    private long lastGridSample;
     private int outputSize;
     private int textureSize = -1, previousZoom, previousBorder, previousAlpha;
     private boolean previousCircle, previousTerrain, previousRotate;
@@ -85,27 +96,52 @@ public final class MinimapModule extends HudModule {
         float shapeRadius = cfg.minimapCircular ? size * .5f
                 : com.aurora.client.theme.ThemeManager.current().roundness().radiusSmall();
         int alpha = (int) (MapTransform.bounded(cfg.minimapTerrainAlpha, 0, 1) * 255);
-        double px = mc.player.getX(), pz = mc.player.getZ();
-        float yaw = mc.player.getYRot();
+        // Interpolate to the frame's camera pose (the same partial tick the camera
+        // uses), otherwise everything on the map steps at 20 TPS.
+        float partial = mc.getDeltaTracker().getGameTimeDeltaPartialTick(true);
+        double px = Mth.lerp(partial, mc.player.xo, mc.player.getX());
+        double pz = Mth.lerp(partial, mc.player.zo, mc.player.getZ());
+        float yaw = mc.player.getViewYRot(partial);
         double rotation = MapTransform.rotation(yaw, cfg.minimapRotateWithPlayer);
         double cos = Math.cos(rotation), sin = Math.sin(rotation);
         WorldMapClient engine = WorldMapClient.get();
         long revision = engine == null ? -1 : engine.terrainRevision();
         long now = System.nanoTime();
         int physicalSize = Math.max(1, Math.min(2048, Math.round(size * MapMarkers.density(g))));
+        double blocksPerTexel = zoom / (double) size;
+        // One cell per block when zoomed in; one cell per texel when zoomed out.
+        double cell = Math.max(1, blocksPerTexel);
+        int reach = (int) Math.ceil(size * .5 * blocksPerTexel * (cfg.minimapRotateWithPlayer ? Math.sqrt(2) : 1) / cell) + 2;
+        int cells = reach * 2 + 1;
+        int originX = (int) Math.floor(px / cell) - reach, originZ = (int) Math.floor(pz / cell) - reach;
         boolean changed = previousLevel != mc.level || textureSize != size || outputSize != physicalSize || previousZoom != zoom || previousRadius != shapeRadius
                 || previousCircle != cfg.minimapCircular || previousRotate != cfg.minimapRotateWithPlayer
-                || previousTerrain != cfg.minimapShowTerrain || previousBorder != border || previousAlpha != alpha;
-        boolean motion = Math.abs(px - previousX) + Math.abs(pz - previousZ) > zoom / (double) size * .25
-                || (cfg.minimapRotateWithPlayer && Math.abs(yaw - previousYaw) > .2);
-        if (textureSize < 0 || previousLevel != mc.level
-                || ((changed || motion || previousRevision != revision) && now - lastPaint >= 50_000_000L)) {
-            ensureTexture(size, physicalSize);
+                || previousTerrain != cfg.minimapShowTerrain || previousBorder != border || previousAlpha != alpha
+                || grid.size() != cells;
+        samplerEngine = engine; samplerTerrain = cfg.minimapShowTerrain; samplerCell = cell;
+        boolean gridUpdated = false;
+        if (changed || !grid.valid() || (previousRevision != revision && now - lastGridSample >= 50_000_000L)) {
             if (engine != null && cfg.minimapShowTerrain) engine.requestMinimap(px, pz, zoom);
-            paint(engine, px, pz, size, zoom, cos, sin, cfg, border, alpha);
-            terrain.writeScaledAbgr(terrainPixels, size, size);
+            grid.reset(cells, originX, originZ, sampler);
+            previousRevision = revision; lastGridSample = now; gridUpdated = true;
+        } else if (grid.moveTo(originX, originZ, sampler)) {
+            if (engine != null && cfg.minimapShowTerrain) engine.requestMinimap(px, pz, zoom);
+            gridUpdated = true;
+        }
+        float density = physicalSize / (float) size;
+        // Repaint once the pose moved a fifth of a device pixel (centre or rim).
+        boolean motion = (Math.abs(px - previousX) + Math.abs(pz - previousZ)) / blocksPerTexel * density > .2
+                || (cfg.minimapRotateWithPlayer && Math.abs(Math.toRadians(yaw - previousYaw)) * size * .5 * density > .2);
+        if (textureSize < 0 || changed || gridUpdated || motion) {
+            ensureTexture(size, physicalSize);
+            // Device pixel (X, Y) -> logical offset s = (X + .5) / density - size / 2 ->
+            // world offset R(rotation) * s * blocksPerTexel -> grid cell (world / cell - origin).
+            double k = blocksPerTexel / cell, step = k / density, half = .5 / density - size * .5;
+            double u0 = px / cell - grid.originX() + k * (half * cos - half * sin);
+            double v0 = pz / cell - grid.originZ() + k * (half * sin + half * cos);
+            terrain.writeAffineAbgr(grid.cells(), grid.size(), u0, v0,
+                    step * cos, step * sin, -step * sin, step * cos, alpha, EMPTY_ABGR);
             float gui = mc.getWindow().getGuiScale();
-            float density = physicalSize / (float) size;
             terrain.clipShape(g, cfg.minimapCircular, shapeRadius * density);
             RenderUtil.RectSink previous = RenderUtil.beginCapture(terrain.sink());
             try {
@@ -117,7 +153,7 @@ public final class MinimapModule extends HudModule {
             previousLevel = mc.level; previousZoom = zoom;
             previousCircle = cfg.minimapCircular; previousRotate = cfg.minimapRotateWithPlayer;
             previousTerrain = cfg.minimapShowTerrain; previousBorder = border; previousAlpha = alpha;
-            previousRevision = revision; lastPaint = now;
+            lastPaint = now;
             previousRadius = shapeRadius;
         }
         MapMarkers.blitPixels(g, terrain, MapMarkers.pixelX(g, x + 1, y + 1), MapMarkers.pixelY(g, x + 1, y + 1),
@@ -180,7 +216,8 @@ public final class MinimapModule extends HudModule {
                 if (entity instanceof Player) { if (!cfg.minimapShowPlayers) continue; color = 0xFFFFFFFF; }
                 else if (entity instanceof Monster) { if (!cfg.minimapShowHostiles) continue; color = HudStatus.DOT_HOSTILE; }
                 else { if (!cfg.minimapShowPassives) continue; color = entity instanceof Animal ? HudStatus.DOT_PASSIVE : HudStatus.DOT_NEUTRAL; }
-                double dx = entity.getX() - px, dz = entity.getZ() - pz;
+                double dx = Mth.lerp(partial, entity.xo, entity.getX()) - px;
+                double dz = Mth.lerp(partial, entity.zo, entity.getZ()) - pz;
                 double sx = MapTransform.screenX(dx, dz, cos, sin) * scale;
                 double sy = MapTransform.screenZ(dx, dz, cos, sin) * scale;
                 if (MapTransform.clampScale(sx, sy, limit, cfg.minimapCircular) < 1) continue;
@@ -219,7 +256,6 @@ public final class MinimapModule extends HudModule {
     }
 
     private void ensureTexture(int size, int physicalSize) {
-        if (terrainPixels == null || textureSize != size) terrainPixels = new int[size * size];
         if (textureSize != size || outputSize != physicalSize) {
             // HUD editor can resize after the ordinary HUD has already queued a blit.
             // Keep that texture alive until the next frame's submission boundary.
@@ -229,26 +265,19 @@ public final class MinimapModule extends HudModule {
         textureSize = size; outputSize = physicalSize;
     }
 
-    private void paint(WorldMapClient engine, double px, double pz, int size, int zoom,
-                       double cos, double sin, AuroraConfig cfg, int border, int alpha) {
-        double center = size * .5, blocks = zoom / (double) size;
-        // The terrain sampling budget stays size², independent of GUI/HUD density.
-        // Only the cached presentation is expanded before its native-resolution mask.
-        for (int y = 0; y < size; y++) for (int x = 0; x < size; x++) {
-            double sx = x + .5 - center, sy = y + .5 - center;
-            int color = 0xFF171412;
-            if (cfg.minimapShowTerrain && engine != null) {
-                int wx = (int) Math.floor(px + (sx * cos - sy * sin) * blocks);
-                int wz = (int) Math.floor(pz + (sx * sin + sy * cos) * blocks);
-                int sampled = engine.sampleSurfaceAbgr(wx, wz);
-                if ((sampled >>> 24) != 0) color = sampled;
-            }
-            terrainPixels[y * size + x] = (alpha << 24) | (color & 0xFFFFFF);
-        }
+    /** Background for cells without loaded terrain (and outside the grid). */
+    private static final int EMPTY_ABGR = 0xFF171412;
+
+    /** One engine sample for a world-aligned cell (its centre block). */
+    private int sampleCell(int cellX, int cellZ) {
+        if (!samplerTerrain || samplerEngine == null) return EMPTY_ABGR;
+        int sampled = samplerEngine.sampleSurfaceAbgr((int) Math.floor((cellX + .5) * samplerCell),
+                (int) Math.floor((cellZ + .5) * samplerCell));
+        return (sampled >>> 24) != 0 ? sampled : EMPTY_ABGR;
     }
 
     private void release() {
-        terrain.dispose(); terrainPixels = null; textureSize = -1; outputSize = 0;
+        terrain.dispose(); grid.invalidate(); samplerEngine = null; textureSize = -1; outputSize = 0;
         for (UiLayerCache retired : retiredTerrains) retired.dispose();
         retiredTerrains.clear(); terrainFrame = -1;
         previousX = Double.NaN; previousRevision = -1; previousLevel = null;

@@ -1,6 +1,7 @@
 package com.aurora.client.mixin;
 
 import com.aurora.client.util.GlintBuffers;
+import com.aurora.client.util.GlintRenderTypes;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.rendertype.RenderType;
@@ -12,6 +13,7 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import java.util.LinkedHashMap;
 import java.util.SequencedMap;
@@ -23,6 +25,21 @@ public abstract class GlintBufferSourceMixin {
     protected SequencedMap<RenderType, ByteBufferBuilder> fixedBuffers;
 
     @Unique private GlintBuffers.BufferOwner aurora$glintBuffers;
+
+    /**
+     * Sources built with a foil type already fixed (the level/entity source)
+     * get both modes' foil types fixed up front: a subclass that overrides
+     * getBuffer (ImmediatelyFast's batching source) never reaches the lazy hook
+     * below, and would otherwise draw the masked glint before its base item.
+     */
+    @Inject(method = "<init>", at = @At("RETURN"))
+    private void aurora$pairGlintTypes(ByteBufferBuilder shared, SequencedMap<RenderType, ByteBufferBuilder> fixed,
+                                       CallbackInfo ci) {
+        fixedBuffers = GlintBuffers.withCounterparts(fixedBuffers, GlintRenderTypes.counterparts(), buffer -> {
+            if (aurora$glintBuffers == null) aurora$glintBuffers = GlintBuffers.owner(this);
+            aurora$glintBuffers.add(buffer);
+        });
+    }
 
     @Inject(method = "getBuffer", at = @At("HEAD"))
     private void aurora$deferGlintUntilBase(RenderType type, CallbackInfoReturnable<VertexConsumer> cir) {

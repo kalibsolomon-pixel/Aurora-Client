@@ -168,6 +168,11 @@ public final class GuiAudit implements ClientModInitializer {
             } else if (stage == 1 && mc.player != null && mc.level != null && mc.screen == null) {
                 check("world-entered", true);
                 configure(); setupActions(); stage = 2; at = now;
+            } else if (stage == 2 && burst > 0) {
+                // Consecutive completed frames: motion smoothness is a per-frame property.
+                if (burstStep != null) burstStep.run();
+                shot(burstName + "-" + String.format("%02d", burst));
+                if (--burst == 0) at = System.nanoTime();
             } else if (stage == 2 && mc.getOverlay() == null && elapsed() > 0.9) {
                 if (action < actions.size()) { actions.get(action++).run(); at = System.nanoTime(); }
                 else finish();
@@ -210,8 +215,102 @@ public final class GuiAudit implements ClientModInitializer {
         actions.add(() -> shot(base));
     }
 
+    /** Remaining consecutive-frame captures (one per frame), with an optional per-frame step. */
+    static int burst;
+    static String burstName = "";
+    static Runnable burstStep;
+
+    static void burst(String name, int count, Runnable step) {
+        actions.add(() -> { burstName = name; burst = count; burstStep = step; });
+        actions.add(() -> {}); // let the burst finish before the next action
+    }
+
+    static void slot(int i) { mc.player.getInventory().setSelectedSlot(i); }
+
+    static void themeBackground(int argb) {
+        try {
+            var def = AuroraConfig.get().themeOrDefault();
+            def.getClass().getField("background").setInt(def, argb);
+            com.aurora.client.theme.ThemeManager.reload();
+        } catch (ReflectiveOperationException absent) { System.out.println("[gui-audit] no background field (baseline jar)"); }
+    }
+
+    /** Owner-feedback acceptance captures (2026-10-19): HUD editor, minimap, keystrokes, glint, profiles, theme. */
+    static void ownerActions() {
+        var cfg = AuroraConfig.get();
+        actions.add(() -> {
+            command("give @a diamond_sword[enchantments={sharpness:5}]");
+            command("give @a enchanted_book[stored_enchantments={mending:1}]");
+            cfg.glintColorEnabled = true; cfg.glintColorAlternative = true;
+            cfg.glintColor = 0xFF00E5FF; cfg.glintColorIntensity = 100; cfg.glintColorTintArmor = true;
+        });
+        // ---- Glint: enchanted vs plain held item, alternative then additive ----
+        actions.add(() -> slot(1));
+        actions.add(() -> shot("glint-alt-enchanted"));
+        actions.add(() -> slot(0));
+        actions.add(() -> shot("glint-alt-plain"));
+        actions.add(() -> { slot(1); cfg.glintColorAlternative = false; });
+        actions.add(() -> shot("glint-additive-enchanted"));
+        actions.add(() -> { cfg.glintColorAlternative = true; slot(0); });
+        // ---- Keystrokes: press W + LMB, then release (consecutive frames) ----
+        actions.add(() -> shot("keys-rest"));
+        burst("keys-press", 6, () -> { mc.options.keyUp.setDown(true); mc.options.keyAttack.setDown(true); });
+        burst("keys-release", 8, () -> { mc.options.keyUp.setDown(false); mc.options.keyAttack.setDown(false); });
+        // ---- Minimap: sprinting straight, then turning with rotate-with-player ----
+        // Flying at a fixed height so terrain never blocks the sprint.
+        actions.add(() -> { mc.player.getAbilities().flying = true; command("tp @a 0 140 0 0 0"); cfg.minimapRotateWithPlayer = false; });
+        actions.add(() -> { mc.options.keyUp.setDown(true); mc.options.keySprint.setDown(true); });
+        burst("minimap-walk", 12, () -> {});
+        actions.add(() -> { mc.options.keyUp.setDown(false); mc.options.keySprint.setDown(false); cfg.minimapRotateWithPlayer = true; });
+        burst("minimap-turn", 12, () -> { mc.player.turn(12, 0); });
+        actions.add(() -> cfg.minimapRotateWithPlayer = false);
+        // ---- HUD editor: centred accent Aurora Settings, compact grey Reset Positions ----
+        addShots("hud-editor", HudEditorScreen::new);
+        actions.add(() -> { var s = mc.screen; hover(s.width - 30, 14); });
+        actions.add(() -> shot("hud-editor-reset-hover"));
+        // ---- Profiles: card grid ----
+        actions.add(() -> {
+            var pm = ProfileManager.getInstance();
+            for (String n : List.of("PvP", "Building", "Speedrun – tuned performance", "Bedwars")) if (!pm.listProfileNames().contains(n)) pm.create(n);
+        });
+        addShots("profiles", () -> new ProfileManagerScreen(null));
+        actions.add(() -> { var s = mc.screen; hover(s.width / 2.0 + 60, s.height / 2.0 - 60); });
+        actions.add(() -> shot("profiles-hover"));
+        actions.add(() -> { park(); var s = (ProfileManagerScreen) mc.screen; invoke(s, "beginCreate", new Class<?>[0]); });
+        actions.add(() -> shot("profiles-create"));
+        // ---- Theme: Background Color presets and the opaque custom picker ----
+        var theme = FeatureRegistry.all().stream().filter(m -> m.id.equals("theme")).findFirst().orElseThrow();
+        addShots("theme-default", () -> new FeatureDetailScreen(null, theme));
+        actions.add(() -> themeBackground(0xFF13203A));
+        addShots("theme-background-blue", () -> new FeatureDetailScreen(null, theme));
+        actions.add(() -> { park(); aurora(0, true); });
+        actions.add(() -> shot("main-background-blue"));
+        actions.add(() -> themeBackground(0xFF22163A));
+        actions.add(() -> { park(); aurora(1, true); });
+        actions.add(() -> shot("settings-background-purple"));
+        actions.add(() -> {
+            themeBackground(0xFF3A6F2B); // custom: opens the Custom Background editor on revisit
+            for (var setting : theme.settings) {
+                if (!setting.getClass().getSimpleName().equals("AccentSetting")) continue;
+                try {
+                    var open = setting.getClass().getDeclaredField("editorOpen"); open.setAccessible(true); open.setBoolean(setting, true);
+                    var f = setting.getClass().getDeclaredField("customPicker"); f.setAccessible(true);
+                    Object picker = f.get(setting);
+                    var m = picker.getClass().getDeclaredMethod("toggleExpanded"); m.setAccessible(true); m.invoke(picker);
+                } catch (ReflectiveOperationException e) { throw new RuntimeException(e); }
+            }
+            park(); mc.setScreen(new FeatureDetailScreen(null, theme));
+        });
+        actions.add(() -> shot("theme-custom-pickers"));
+        actions.add(() -> scroll(-400));
+        actions.add(() -> shot("theme-custom-pickers-end"));
+        actions.add(() -> { themeBackground(0xFF16171D); park(); mc.setScreen(null); });
+        actions.add(() -> shot("gameplay-hud"));
+    }
+
     static void setupActions() {
         if (plan.equals("persist")) { PersistAudit.plan(Integer.getInteger("aurora.gui.phase", 1)); return; }
+        if (plan.equals("owner")) { FeatureRegistry.modules(); FeatureRegistry.settings(); ownerActions(); return; }
         FeatureRegistry.modules(); FeatureRegistry.settings();
         boolean full = plan.equals("full");
         actions.add(() -> shot("gameplay-hud"));

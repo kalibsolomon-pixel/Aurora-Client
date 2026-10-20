@@ -97,6 +97,30 @@ public final class UiLayerCache implements RenderUtil.RectSink {
         }
     }
 
+    /**
+     * Nearest-cell affine resample of an {@code n×n} ABGR grid: device pixel
+     * {@code (x, y)} reads cell {@code (u0 + x·duX + y·duY, v0 + x·dvX + y·dvY)}.
+     * Pixels landing outside the grid take {@code fallback}; every pixel gets
+     * {@code alpha}. Two adds and two casts per pixel, no allocation.
+     */
+    public void writeAffineAbgr(int[] grid, int n, double u0, double v0, double duX, double dvX,
+                                double duY, double dvY, int alpha, int fallback) {
+        if (image == null || n <= 0 || grid.length < n * n)
+            throw new IllegalArgumentException("Valid grid and allocated destination required");
+        if (scaledRow == null || scaledRow.length != w) scaledRow = new int[w];
+        IntBuffer pixels = MemoryUtil.memIntBuffer(image.getPointer(), w * h);
+        int a = alpha << 24, outside = a | (fallback & 0xFFFFFF);
+        for (int y = 0; y < h; y++) {
+            double u = u0 + y * duY, v = v0 + y * dvY;
+            for (int x = 0; x < w; x++, u += duX, v += dvX) {
+                // Cells in view sit well inside the grid; negative values are outside anyway.
+                int i = (int) u, j = (int) v;
+                scaledRow[x] = u < 0 || v < 0 || i >= n || j >= n ? outside : a | (grid[j * n + i] & 0xFFFFFF);
+            }
+            pixels.position(y * w); pixels.put(scaledRow);
+        }
+    }
+
     /** Clip cached data with RenderUtil's exact coverage, rasterized only on geometry changes.
      * Opaque interior spans need no work; transparent runs clear in bulk. */
     public void clipShape(GuiGraphics g, boolean circle, float radiusPixels) {

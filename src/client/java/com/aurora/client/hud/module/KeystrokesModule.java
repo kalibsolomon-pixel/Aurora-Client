@@ -5,7 +5,6 @@ import com.aurora.client.feature.impl.ClickTrackerFeature;
 import com.aurora.client.hud.HudAnchor;
 import com.aurora.client.util.AuroraKey;
 import com.aurora.client.util.CachedValue;
-import com.aurora.client.util.RoundedRect;
 import com.aurora.client.util.AuroraShapes;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
@@ -20,8 +19,9 @@ import net.minecraft.client.gui.GuiGraphics;
 import java.util.List;
 
 /**
- * Keystrokes overlay — a single cohesive panel of rounded key cells that
- * light up (animated soft accent fill and outline) as inputs are pressed.
+ * Keystrokes overlay — a single cohesive panel of rounded keycaps. Each cap
+ * sits {@link #DEPTH} px proud of a darker base (the visible bottom edge) and
+ * travels down onto it while pressed, picking up a soft accent tint and edge.
  *
  * <p>Layout, top to bottom (every row optional):
  * <pre>
@@ -82,14 +82,19 @@ public class KeystrokesModule extends HudModule {
                 com.aurora.client.theme.ThemeToken.SURFACE),0xEE);
     }
 
-    // ---- Press animation speeds (lerp factors, per second) ----
-    private static final float PRESS_SPEED = 26f;
-    private static final float RELEASE_SPEED = 12f;
+    /** Keycap travel: height of the visible bottom edge, consumed while pressed. */
+    static final int DEPTH = 2;
+
+    // ---- Press motion (premium-design press/recovery vocabulary) ----
+    /** Press lands fast so the cap tracks the finger; release settles a little slower. */
+    static final long PRESS_NS = 70_000_000L, RELEASE_NS = 140_000_000L;
 
     private final float[] press = new float[SLOTS];
+    private final float[] pressFrom = new float[SLOTS];
+    private final boolean[] pressTarget = new boolean[SLOTS];
+    private final long[] pressStart = new long[SLOTS], pressLeg = new long[SLOTS];
     private int visibleMask;
-    private long lastFrameNanos;
-
+    
     // ---- Label cache (bind names change only when keys are rebound) ----
     private static final long LABEL_REFRESH_MS = 2000L;
     private final String[] labels = new String[SLOTS];
@@ -187,11 +192,8 @@ public class KeystrokesModule extends HudModule {
 
         ensureLabels(font, opts, cfg, extraCount);
 
-        // Frame delta (clamped) for a frame-rate-independent press lerp.
+        // One clock per frame: every slot's ease-out is a pure function of it.
         long now = System.nanoTime();
-        float dt = lastFrameNanos == 0L ? 0f
-                : clampf((now - lastFrameNanos) / 1_000_000_000f, 0f, 0.25f);
-        lastFrameNanos = now;
 
         // Slots that just became visible (a row toggled on) snap to their
         // live input state instead of easing in from a stale value.
@@ -201,7 +203,9 @@ public class KeystrokesModule extends HudModule {
         if (newly != 0) {
             for (int i = 0; i < SLOTS; i++) {
                 if ((newly & (1 << i)) != 0) {
-                    press[i] = slotDown(opts, extra, extraCount, i) ? 1f : 0f;
+                    boolean down = slotDown(opts, extra, extraCount, i);
+                    press[i] = pressFrom[i] = down ? 1f : 0f;
+                    pressTarget[i] = down; pressLeg[i] = 0L;
                 }
             }
         }
@@ -212,26 +216,26 @@ public class KeystrokesModule extends HudModule {
 
         // ---- Movement (W centered over A S D) ----
         if (cfg.keystrokesShowMovement) {
-            advance(SLOT_W, down(opts.keyUp), dt);
+            advance(SLOT_W, down(opts.keyUp), now);
             drawKey(ctx, font, x + CELL + GAP, cy, CELL, CELL, SLOT_W, accent, labelColor);
             cy += CELL + GAP;
 
-            advance(SLOT_A, down(opts.keyLeft), dt);
+            advance(SLOT_A, down(opts.keyLeft), now);
             drawKey(ctx, font, x, cy, CELL, CELL, SLOT_A, accent, labelColor);
-            advance(SLOT_S, down(opts.keyDown), dt);
+            advance(SLOT_S, down(opts.keyDown), now);
             drawKey(ctx, font, x + CELL + GAP, cy, CELL, CELL, SLOT_S, accent, labelColor);
-            advance(SLOT_D, down(opts.keyRight), dt);
+            advance(SLOT_D, down(opts.keyRight), now);
             drawKey(ctx, font, x + (CELL + GAP) * 2, cy, CELL, CELL, SLOT_D, accent, labelColor);
             cy += CELL + GAP;
         }
 
         // ---- Mouse buttons (L / M / R, arranged like a mouse) ----
         if (cfg.keystrokesShowMouse) {
-            advance(SLOT_LMB, down(opts.keyAttack), dt);
-            advance(SLOT_RMB, down(opts.keyUse), dt);
+            advance(SLOT_LMB, down(opts.keyAttack), now);
+            advance(SLOT_RMB, down(opts.keyUse), now);
             int mouseH = mouseHeight(cfg);
             if (showMid) {
-                advance(SLOT_MMB, down(opts.keyPickItem), dt);
+                advance(SLOT_MMB, down(opts.keyPickItem), now);
                 drawKey(ctx, font, x, cy, CELL, mouseH, SLOT_LMB, accent, labelColor);
                 drawKey(ctx, font, x + CELL + GAP, cy, CELL, mouseH, SLOT_MMB, accent, labelColor);
                 drawKey(ctx, font, x + (CELL + GAP) * 2, cy, CELL, mouseH, SLOT_RMB, accent, labelColor);
@@ -255,15 +259,15 @@ public class KeystrokesModule extends HudModule {
 
         // ---- Spacebar ----
         if (cfg.keystrokesShowSpacebar) {
-            advance(SLOT_SPACE, down(opts.keyJump), dt);
+            advance(SLOT_SPACE, down(opts.keyJump), now);
             drawKey(ctx, font, x, cy, WIDTH, SPACE_H, SLOT_SPACE, accent, labelColor);
             cy += SPACE_H + GAP;
         }
 
         // ---- Sneak / Sprint ----
         if (cfg.keystrokesShowExtra) {
-            advance(SLOT_SNEAK, down(opts.keyShift), dt);
-            advance(SLOT_SPRINT, down(opts.keySprint), dt);
+            advance(SLOT_SNEAK, down(opts.keyShift), now);
+            advance(SLOT_SPRINT, down(opts.keySprint), now);
             int side = (WIDTH - GAP) / 2;
             drawKey(ctx, font, x, cy, side, CELL, SLOT_SNEAK, accent, labelColor);
             drawKey(ctx, font, x + side + GAP, cy, side, CELL, SLOT_SPRINT, accent, labelColor);
@@ -277,7 +281,7 @@ public class KeystrokesModule extends HudModule {
                 int i = r * EXTRA_COLS + c;
                 if (i >= extraCount) break;
                 Integer boxed = extra.get(i);
-                advance(SLOT_EXTRA0 + i, boxed != null && AuroraKey.isDown(boxed), dt);
+                advance(SLOT_EXTRA0 + i, boxed != null && AuroraKey.isDown(boxed), now);
                 drawKey(ctx, font, x + c * (CELL + GAP), cy, CELL, CELL,
                         SLOT_EXTRA0 + i, accent, labelColor);
             }
@@ -286,26 +290,40 @@ public class KeystrokesModule extends HudModule {
     }
 
     /**
-     * Draws one rounded key cell. The press value drives a background blend
-     * from the themed idle surface to a soft accent highlight; the label is always centered.
+     * Draws one keycap. The cap ({@code h - DEPTH} tall) rests on a darker base
+     * whose lower {@link #DEPTH} px read as the key's bottom edge; pressing
+     * translates the cap (and its label) down onto the base, so motion is a
+     * pure offset while the press value only crossfades tint and edge colour.
      */
     private void drawKey(GuiGraphics ctx, Font font, int x, int y, int w, int h,
                          int slot, int accent, int labelColor) {
         float t = press[slot];
-        // Stable geometry: color/border feedback stays inside the key instead of
-        // growing into its neighbors. Aurora surface and outline roles unify the HUD.
-        AuroraShapes.panel(ctx, x, y, w, h, blend(idleBackground(), accent, t * 0.28f), KEY_RADIUS);
-        AuroraShapes.outline(ctx, x, y, w, h,
+        int idle = idleBackground();
+        int capH = h - DEPTH;
+        // Base: same footprint as the cap, shaded toward black — only its lower
+        // DEPTH px show at rest, nothing once the cap has landed.
+        AuroraShapes.panel(ctx, x, y + DEPTH, w, capH, blend(idle, idle & 0xFF000000, 0.55f), KEY_RADIUS);
+        ctx.pose().pushMatrix();
+        ctx.pose().translate(0f, t * DEPTH);
+        AuroraShapes.panel(ctx, x, y, w, capH, blend(idle, accent, t * 0.30f), KEY_RADIUS);
+        // Hairline top light: the lit face of the cap, fading as it goes down.
+        ctx.fill(x + KEY_RADIUS, y, x + w - KEY_RADIUS, y + 1,
+                ThemeManager.withAlpha(0xFFFFFFFF, Math.round(0x26 * (1f - t))));
+        AuroraShapes.outline(ctx, x, y, w, capH,
                 blend(ThemeManager.color(ThemeToken.TILE_OUTLINE), accent, t * 0.85f), KEY_RADIUS);
-        if (t > 0.01f) RoundedRect.fill(ctx, x + 5, y + h - 3, x + w - 5, y + h - 2,
-                1, ThemeManager.withAlpha(accent, Math.round(t * 220)));
-        boolean mouseWithCps = h > CELL && slot >= SLOT_LMB && slot <= SLOT_RMB;
-        int labelY = mouseWithCps ? y + 5 : y + (h - font.lineHeight) / 2;
+        drawKeyLabel(ctx, font, x, y, w, capH, slot, labelColor);
+        ctx.pose().popMatrix();
+    }
+
+    private void drawKeyLabel(GuiGraphics ctx, Font font, int x, int y, int w, int h,
+                              int slot, int labelColor) {
+        boolean mouseWithCps = h > CELL - DEPTH && slot >= SLOT_LMB && slot <= SLOT_RMB;
+        int labelY = mouseWithCps ? y + 4 : y + (h - font.lineHeight) / 2 + 1;
         if (mouseWithCps && slot != SLOT_MMB) {
             String count = mouseCps.get()[slot == SLOT_LMB ? 0 : 1];
             float scale = Math.min(0.75f, (w - 6f) / font.width(count));
             ctx.pose().pushMatrix();
-            ctx.pose().translate(x + (w - font.width(count) * scale) / 2f, y + h - 12);
+            ctx.pose().translate(x + (w - font.width(count) * scale) / 2f, y + h - 10);
             ctx.pose().scale(scale, scale);
             ctx.drawString(font, count, 0, 0, labelColor, false);
             ctx.pose().popMatrix();
@@ -331,22 +349,33 @@ public class KeystrokesModule extends HudModule {
         }
     }
 
-    /** Frame-rate-independent lerp toward the pressed/released target. */
-    private void advance(int slot, boolean isDown, float dt) {
-        float target = isDown ? 1f : 0f;
-        float cur = press[slot];
-        if (cur == target) return;
-        float speed = target > cur ? PRESS_SPEED : RELEASE_SPEED;
-        float next = cur + (target - cur) * Math.min(1f, dt * speed);
-        press[slot] = Math.abs(target - next) < 0.004f ? target : next;
+    /**
+     * Interruptible ease-out toward the pressed/released state. A new target
+     * starts from the currently visible value, and the leg is shortened in
+     * proportion to the remaining distance, so rapid taps never snap or restart.
+     */
+    private void advance(int slot, boolean isDown, long now) {
+        if (isDown != pressTarget[slot]) {
+            pressTarget[slot] = isDown;
+            pressFrom[slot] = press[slot];
+            pressStart[slot] = now;
+            float distance = Math.abs((isDown ? 1f : 0f) - press[slot]);
+            pressLeg[slot] = Math.max(1L, Math.round((isDown ? PRESS_NS : RELEASE_NS) * (double) distance));
+        }
+        press[slot] = pressValue(pressFrom[slot], isDown, now - pressStart[slot], pressLeg[slot]);
+    }
+
+    /** Pure press curve: ease-out cubic from {@code from} to the target over {@code leg} ns. */
+    static float pressValue(float from, boolean down, long elapsed, long leg) {
+        float target = down ? 1f : 0f;
+        if (leg <= 0L || elapsed >= leg) return target;
+        float raw = Math.max(0f, elapsed / (float) leg);
+        float eased = 1f - (1f - raw) * (1f - raw) * (1f - raw);
+        return from + (target - from) * eased;
     }
 
     private static boolean down(KeyMapping km) {
         return km != null && km.isDown();
-    }
-
-    private static float clampf(float v, float lo, float hi) {
-        return Math.max(lo, Math.min(hi, v));
     }
 
     /** Per-channel ARGB lerp. */
@@ -464,8 +493,8 @@ public class KeystrokesModule extends HudModule {
                 if (key != null && !key.equals(InputConstants.UNKNOWN)) {
                     String s = key.getDisplayName().getString();
                     if (s != null) {
-                        s = s.trim();
-                        if (!s.isEmpty()) return s.length() > 8 ? s.substring(0, 8) : s;
+                        s = shortKeyName(s);
+                        if (!s.isEmpty()) return s;
                     }
                 }
             }
@@ -478,10 +507,33 @@ public class KeystrokesModule extends HudModule {
     private static String rawKeyName(int glfwKey) {
         try {
             String s = InputConstants.Type.KEYSYM.getOrCreate(glfwKey).getDisplayName().getString();
-            if (s != null && !s.isEmpty()) return s.length() > 8 ? s.substring(0, 8) : s;
+            if (s != null && !(s = shortKeyName(s)).isEmpty()) return s;
         } catch (Exception ignored) {
         }
         return "?" + glfwKey;
+    }
+
+    /**
+     * Keycap legend for a vanilla key name: side prefixes dropped and common
+     * modifiers abbreviated ("Left Shift" → "Shift", "Right Control" → "Ctrl"),
+     * so caps read like a keyboard instead of a truncated "Left Shi".
+     */
+    static String shortKeyName(String name) {
+        String s = name.trim();
+        if (s.startsWith("Left ")) s = s.substring(5);
+        else if (s.startsWith("Right ")) s = s.substring(6);
+        s = switch (s) {
+            case "Control" -> "Ctrl";
+            case "Escape" -> "Esc";
+            case "Backspace" -> "Bksp";
+            case "Caps Lock" -> "Caps";
+            case "Page Up" -> "PgUp";
+            case "Page Down" -> "PgDn";
+            case "Delete" -> "Del";
+            case "Insert" -> "Ins";
+            default -> s;
+        };
+        return s.length() > 8 ? s.substring(0, 8) : s;
     }
 
     private String buildCpsText() {

@@ -21,6 +21,40 @@ public final class GlintBuffers {
         return buffer;
     }
 
+    /**
+     * Construction-time pairing. Batching buffer sources (ImmediatelyFast's
+     * {@code BatchableBufferSource}) override {@code getBuffer} without calling
+     * super, so the lazy {@link #ensureFixed} hook never runs there and an
+     * unregistered foil type is batched by first use — before its base item,
+     * which fails the EQUAL depth test and drops the glint. Every source that
+     * registers a foil type as fixed therefore also gets that type's counterpart
+     * (vanilla ↔ Aurora masked), inserted right after it so the established
+     * flush order holds for both modes.
+     *
+     * @return {@code fixed} itself when nothing is missing, otherwise a new
+     *         ordered map; each added buffer is reported to {@code allocated}
+     */
+    public static SequencedMap<RenderType, ByteBufferBuilder> withCounterparts(
+            SequencedMap<RenderType, ByteBufferBuilder> fixed, java.util.Map<RenderType, RenderType> counterparts,
+            java.util.function.Consumer<ByteBufferBuilder> allocated) {
+        boolean missing = false;
+        for (RenderType type : fixed.keySet()) {
+            RenderType partner = counterparts.get(type);
+            if (partner != null && !fixed.containsKey(partner)) { missing = true; break; }
+        }
+        if (!missing) return fixed;
+        SequencedMap<RenderType, ByteBufferBuilder> paired = new java.util.LinkedHashMap<>();
+        for (var entry : fixed.entrySet()) {
+            paired.put(entry.getKey(), entry.getValue());
+            RenderType partner = counterparts.get(entry.getKey());
+            if (partner == null || fixed.containsKey(partner) || paired.containsKey(partner)) continue;
+            ByteBufferBuilder buffer = new ByteBufferBuilder(partner.bufferSize());
+            paired.put(partner, buffer);
+            allocated.accept(buffer);
+        }
+        return paired;
+    }
+
     private static final java.lang.ref.Cleaner CLEANER = java.lang.ref.Cleaner.create();
 
     /** A temporary BufferSource must not leak the additional native allocations. */

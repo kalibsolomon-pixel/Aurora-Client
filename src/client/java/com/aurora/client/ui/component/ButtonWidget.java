@@ -119,6 +119,12 @@ public class ButtonWidget extends AbstractButton {
         return this;
     }
 
+    /** Neutral-card edge — forwarded to the painter (see {@link Button.Edge}). */
+    public ButtonWidget edge(Button.Edge e) {
+        painter.edge(e);
+        return this;
+    }
+
     @Override
     public void onPress(InputWithModifiers input) {
         if(MaterialSurface.unified()) painter.triggerPressAnimation();

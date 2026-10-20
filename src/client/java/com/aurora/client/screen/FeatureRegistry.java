@@ -1133,6 +1133,15 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                     persistThemeChange();
                                 })
                                 .description("The color used for primary actions, selections, highlights and HUD accents. Pick a preset swatch, or open Custom to use the color picker."),
+                        new AccentSetting("Background Color", "background", "Custom Background",
+                                com.aurora.client.theme.ThemePresets.BACKGROUNDS,
+                                () -> cfg.themeOrDefault().background,
+                                v -> {
+                                    cfg.themeOrDefault().background = v;
+                                    com.aurora.client.theme.ThemeManager.reload();
+                                    persistThemeChange();
+                                })
+                                .description("The color tint of every Aurora window. Graphite is the original grey; pick a deep tone, or open Custom for any color. Very light colors are deepened so text stays readable. Translucency stays on Background Opacity."),
                         new SegmentedSetting<>("Corner Style", ThemeRoundness.class,
                                 () -> cfg.themeOrDefault().roundness != null ? cfg.themeOrDefault().roundness : ThemeRoundness.ROUND,
                                 v -> {

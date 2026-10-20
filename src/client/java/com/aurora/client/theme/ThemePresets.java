@@ -41,6 +41,35 @@ public final class ThemePresets {
             new Entry("Green",  GREEN),
             new Entry("Teal",   TEAL));
 
+    /** Factory window tint — the unified Dark panel graphite (no visible change). */
+    public static final int BACKGROUND_GRAPHITE = 0xFF16171D;
+
+    /**
+     * Window-tint presets for the Background Color picker: the default
+     * graphite plus deep tones of the accent hues (low lightness, so primary
+     * text keeps its contrast at every Background Opacity). Indigo is left
+     * out so the grid keeps the accent picker's ten cells with Custom.
+     */
+    public static final List<Entry> BACKGROUNDS = List.of(
+            new Entry("Graphite", BACKGROUND_GRAPHITE),
+            new Entry("Blue",   0xFF13203A),
+            new Entry("Purple", 0xFF22163A),
+            new Entry("Pink",   0xFF33162A),
+            new Entry("Red",    0xFF361518),
+            new Entry("Orange", 0xFF352010),
+            new Entry("Yellow", 0xFF312A10),
+            new Entry("Green",  0xFF142B1C),
+            new Entry("Teal",   0xFF0F2A2C));
+
+    /** The entry of {@code presets} whose RGB matches {@code argb}, or {@code null}. */
+    public static Entry matching(List<Entry> presets, int argb) {
+        int rgb = argb & 0x00FFFFFF;
+        for (Entry e : presets) {
+            if ((e.argb & 0x00FFFFFF) == rgb) return e;
+        }
+        return null;
+    }
+
     /**
      * A named preset accent. Exposed as a small value type so the debug
      * screen (and, later, the Stage 3 settings UI) can iterate names and

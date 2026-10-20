@@ -66,6 +66,9 @@ public final class ResolvedTheme {
     /** Source accent seed. */
     public int accent() { return source.accent; }
 
+    /** Source window tint (opaque RGB). */
+    public int background() { return source.background; }
+
     /** Corner-roundness family this theme renders with (never null — normalized). */
     public ThemeRoundness roundness() { return source.roundness; }
 

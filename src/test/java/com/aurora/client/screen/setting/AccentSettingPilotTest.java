@@ -122,8 +122,8 @@ class AccentSettingPilotTest {
         assertEquals(10, row.interactionControls().size(), "9 presets + Custom = 10 peers");
         String registry = java.nio.file.Files.readString(java.nio.file.Path.of(
                 "src/client/java/com/aurora/client/screen/FeatureRegistry.java"));
-        assertEquals(1, registry.split("new AccentSetting\\(", -1).length - 1,
-                "exactly one production construction");
+        assertEquals(2, registry.split("new AccentSetting\\(", -1).length - 1,
+                "Accent Color and Background Color are the two production constructions");
     }
 
     // ---- Selection source of truth ----
@@ -399,7 +399,9 @@ class AccentSettingPilotTest {
     @Test
     void embeddedCustomPickerIsAnUnmodifiedColorSetting() throws Exception {
         String source = src();
-        assertTrue(source.contains("new ColorSetting(\"Custom Accent\","));
+        assertTrue(source.contains("new ColorSetting(customLabel,"));
+        assertTrue(source.contains("\"Custom Accent\""), "the accent row keeps its Custom Accent label");
+        assertTrue(source.contains(".opaqueOnly()"), "theme colours hide the picker's opacity strip");
         assertFalse(source.contains("customPicker.interactionControl"),
                 "the embedded picker's semantic control is never materialized/forwarded");
         assertFalse(source.contains("customPicker.interactionControls"));

@@ -64,6 +64,17 @@ public class Button extends Widget {
     private GlassStyle glassStyle = GlassStyle.OFF;
 
     /**
+     * Opt-in resting edge for a neutral action card (unified path). Neutral
+     * cards stay edgeless by default (owner ruling); {@code NEUTRAL} borrows
+     * the window frame's grey {@code BORDER}, {@code ACCENT} the bright
+     * {@code ACCENT_MARKER} outline an enabled feature card wears. Primary and
+     * destructive variants keep their own edges.
+     */
+    public enum Edge { NONE, NEUTRAL, ACCENT }
+
+    private Edge edge = Edge.NONE;
+
+    /**
      * Hover crossfade — the §8.3 canonical symmetric mode (Phase B pilot,
      * 2026-09-15): 140 ms enter AND 140 ms exit, no snap from locked rest,
      * mid-flight reversal mirrors the raw progress fraction (the same
@@ -102,7 +113,9 @@ public class Button extends Widget {
         int over=ThemeManager.color(primary ? ThemeToken.ACTION_HOVER : ThemeToken.MATERIAL_HOVER);
         int down=ThemeManager.color(primary ? ThemeToken.ACTION_PRESSED : ThemeToken.MATERIAL_PRESSED);
         // Neutral action cards stay edgeless (owner ruling, UNIFIED_THEME_PILOT.md).
-        int edge=primary ? MaterialSurface.color(ThemeToken.BORDER_HOVER) : 0;
+        int edge=primary ? MaterialSurface.color(ThemeToken.BORDER_HOVER)
+                : this.edge==Edge.ACCENT ? ThemeManager.color(ThemeToken.ACCENT_MARKER)
+                : this.edge==Edge.NEUTRAL ? MaterialSurface.color(ThemeToken.BORDER) : 0;
         int text=ThemeManager.color(primary ? ThemeToken.ON_ACTION : ThemeToken.MATERIAL_TEXT);
         if(destructive) {
             // Destructive keeps its red edge and label, but rests as a tinted chip and
@@ -120,7 +133,8 @@ public class Button extends Widget {
         fill=ThemeManager.withAlpha(fill, destructive ? Math.round(AuroraAnim.lerp(Math.max(160,windowAlpha),220,Math.max(hover,press)))
                 : primary ? Math.max(128,windowAlpha) : windowAlpha);
         float py=y; // Card, blur mask, focus and label share one stationary geometry.
-        int kind=(destructive ? 30 : primary ? 20 : 10)+(disabled ? 4 : hover==1 ? 1 : 0);
+        int kind=(destructive ? 30 : primary ? 20 : 10)+(disabled ? 4 : hover==1 ? 1 : 0)
+                +(destructive || primary ? 0 : this.edge==Edge.NEUTRAL ? 40 : this.edge==Edge.ACCENT ? 60 : 0);
         if((hover==0 || hover==1) && press==0)
             MaterialSurface.cached(g,x,py,w,h,r,fill,edge,kind,true);
         else {
@@ -214,6 +228,12 @@ public class Button extends Widget {
     /** Glass pilot — full variant selector (neutral vs accent-stained). */
     public Button glassStyle(GlassStyle s) {
         this.glassStyle = s;
+        return this;
+    }
+
+    /** Resting edge of a neutral card — see {@link Edge}. */
+    public Button edge(Edge e) {
+        this.edge = e != null ? e : Edge.NONE;
         return this;
     }
 

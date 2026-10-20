@@ -64,4 +64,53 @@ class GlintBuffersTest {
             assertEquals(List.of(masked, original), new ArrayList<>(fixed.keySet()));
         } finally { fixed.values().forEach(ByteBufferBuilder::close); }
     }
+
+    /**
+     * Mimics ImmediatelyFast's BatchableBufferSource: getBuffer is overridden
+     * without calling super (so no lazy hook runs) and non-fixed types are
+     * batched by first use, ahead of every fixed buffer.
+     */
+    private static class FirstUseBatchingSource extends MultiBufferSource.BufferSource {
+        final List<RenderType> drawn = new ArrayList<>();
+        private final java.util.Set<RenderType> dynamic = new java.util.LinkedHashSet<>();
+        FirstUseBatchingSource(ByteBufferBuilder shared, SequencedMap<RenderType, ByteBufferBuilder> fixed) { super(shared, fixed); }
+        @Override public com.mojang.blaze3d.vertex.VertexConsumer getBuffer(RenderType type) {
+            if (!fixedBuffers.containsKey(type)) dynamic.add(type);
+            return null;
+        }
+        @Override public void endBatch() {
+            drawn.addAll(dynamic);
+            for (RenderType type : fixedBuffers.keySet()) if (!dynamic.contains(type)) drawn.add(type);
+        }
+    }
+
+    @Test void alternativeGlintDrawsAfterItsBaseInAnOverridingBatchingSource() {
+        var vanilla = type("minecraft", "pipeline/glint");
+        var masked = type("aurora", "pipeline/masked_glint");
+        var base = type("minecraft", "pipeline/item");
+        var sheet = type("minecraft", "pipeline/sheet");
+        try (var shared = new ByteBufferBuilder(256)) {
+            // Regression: the level source registers only the vanilla foil types, so the
+            // masked glint (requested first by getFoilBuffer) was batched before its item.
+            var unpaired = new LinkedHashMap<RenderType, ByteBufferBuilder>();
+            unpaired.put(sheet, new ByteBufferBuilder(64)); unpaired.put(vanilla, new ByteBufferBuilder(64));
+            var broken = new FirstUseBatchingSource(shared, unpaired);
+            broken.getBuffer(masked); broken.getBuffer(base); broken.endBatch();
+            assertTrue(broken.drawn.indexOf(masked) < broken.drawn.indexOf(base), "reproduces the dropped glint");
+
+            List<ByteBufferBuilder> added = new ArrayList<>();
+            var paired = GlintBuffers.withCounterparts(unpaired, java.util.Map.of(vanilla, masked, masked, vanilla), added::add);
+            try {
+                assertEquals(List.of(sheet, vanilla, masked), new ArrayList<>(paired.keySet()), "counterpart sits next to its partner");
+                assertEquals(1, added.size());
+                var fixed = new FirstUseBatchingSource(shared, paired);
+                fixed.getBuffer(masked); fixed.getBuffer(base); fixed.endBatch();
+                assertTrue(fixed.drawn.indexOf(base) < fixed.drawn.indexOf(masked), "glint waits for the base depth");
+                assertSame(paired, GlintBuffers.withCounterparts(paired, java.util.Map.of(vanilla, masked, masked, vanilla),
+                        b -> fail("complete maps allocate nothing")));
+            } finally { added.forEach(ByteBufferBuilder::close); }
+            assertSame(unpaired, GlintBuffers.withCounterparts(unpaired, java.util.Map.of(), b -> fail("no foil, no change")));
+            unpaired.values().forEach(ByteBufferBuilder::close);
+        }
+    }
 }

@@ -126,7 +126,7 @@ public class AccentSetting extends FeatureSetting {
      * appear hovered together. Keyed by grid index, long-lived for the
      * setting's lifetime (settings are long-lived singletons).
      */
-    private final HoverAnim[] cellHover = new HoverAnim[ThemePresets.ALL.size() + 1];
+    private final HoverAnim[] cellHover;
 
     /**
      * Per-peer semantic controls (focus/keyboard/narration), lazily
@@ -135,7 +135,7 @@ public class AccentSetting extends FeatureSetting {
      * discipline. Null until then; bounds + pointer sync from the render
      * walk each frame.
      */
-    private final SemanticActionControl[] peerControls = new SemanticActionControl[ThemePresets.ALL.size() + 1];
+    private final SemanticActionControl[] peerControls;
     /** Cached list view of {@link #peerControls} (the sweep walks it per frame). */
     private java.util.List<SemanticActionControl> peerControlList;
     /**
@@ -151,13 +151,36 @@ public class AccentSetting extends FeatureSetting {
 
     private int lastX, lastY, lastW;
 
+    /** The peers' values: the accent presets, or the window-tint presets for Background Color. */
+    private final java.util.List<ThemePresets.Entry> presets;
+    /** Lower-case role noun for narration ("accent", "background"). */
+    private final String role;
+    private final String customLabel;
+
     public AccentSetting(String label, IntSupplier getter, IntConsumer setter) {
+        this(label, "accent", "Custom Accent", ThemePresets.ALL, getter, setter);
+    }
+
+    /**
+     * The same peer grid for another theme colour (Background Color): its own
+     * preset list, custom-picker label and narration noun. The embedded custom
+     * picker never shows an opacity strip — theme colours are opaque RGB, and
+     * window translucency has its own Background Opacity slider.
+     */
+    public AccentSetting(String label, String role, String customLabel, java.util.List<ThemePresets.Entry> presets,
+                         IntSupplier getter, IntConsumer setter) {
         super(label);
+        if (presets.size() + 1 != PER_ROW * 2) throw new IllegalArgumentException("Two rows of peers expected");
+        this.presets = presets;
+        this.role = role;
+        this.customLabel = customLabel;
+        this.cellHover = new HoverAnim[presets.size() + 1];
+        this.peerControls = new SemanticActionControl[presets.size() + 1];
         this.getter = getter;
         this.setter = setter;
-        // Auto-open the editor when the saved accent is already custom, so
+        // Auto-open the editor when the saved value is already custom, so
         // the picker is right there on revisit.
-        this.editorOpen = ThemePresets.matching(getter.getAsInt()) == null;
+        this.editorOpen = ThemePresets.matching(presets, getter.getAsInt()) == null;
         this.customPicker = createCustomPicker();
     }
 
@@ -167,9 +190,9 @@ public class AccentSetting extends FeatureSetting {
      * left exactly as-is).
      */
     private ColorSetting createCustomPicker() {
-        return new ColorSetting("Custom Accent",
+        return new ColorSetting(customLabel,
                 this::currentAccent,
-                this::applyAccentLive);
+                this::applyAccentLive).opaqueOnly();
     }
 
     @Override public AccentSetting description(String desc) { super.description(desc); return this; }
@@ -243,8 +266,8 @@ public class AccentSetting extends FeatureSetting {
     // ------------------------------------------------------------------
 
     /** The cell count: 9 presets + the Custom slot. */
-    private static int peerCount() {
-        return ThemePresets.ALL.size() + 1;
+    private int peerCount() {
+        return presets.size() + 1;
     }
 
     /**
@@ -254,8 +277,8 @@ public class AccentSetting extends FeatureSetting {
      * disagree with the stored accent.
      */
     private boolean isPeerSelected(int i) {
-        if (i >= ThemePresets.ALL.size()) return ThemePresets.matching(currentAccent()) == null;
-        return ThemePresets.matching(currentAccent()) == ThemePresets.ALL.get(i);
+        if (i >= presets.size()) return ThemePresets.matching(presets, currentAccent()) == null;
+        return ThemePresets.matching(presets, currentAccent()) == presets.get(i);
     }
 
     /** The peer's canonical hover animator (lazily created, long-lived). */
@@ -319,19 +342,19 @@ public class AccentSetting extends FeatureSetting {
     private SemanticActionControl peerControl(int i) {
         SemanticActionControl control = peerControls[i];
         if (control != null) return control;
-        boolean custom = i >= ThemePresets.ALL.size();
-        String name = custom ? "Custom" : ThemePresets.ALL.get(i).name;
+        boolean custom = i >= presets.size();
+        String name = custom ? "Custom" : presets.get(i).name;
         control = new SemanticActionControl(new SemanticAction(
                 Component.literal(name),
                 () -> Component.literal(custom
-                        ? "Opens the accent color editor."
-                        : "Sets the theme accent to " + name + "."),
+                        ? "Opens the " + role + " color editor."
+                        : "Sets the theme " + role + " to " + name + "."),
                 () -> Component.literal(isPeerSelected(i) ? "Selected" : "Not selected"),
                 () -> !isDisabled(),
                 () -> {
                     boolean effect = custom
                             ? openCustomEditor()
-                            : applyPresetSelection(ThemePresets.ALL.get(i));
+                            : applyPresetSelection(presets.get(i));
                     if (effect) MinecraftSemanticFeedback.INSTANCE.play(SemanticSound.ACTIVATION);
                 },
                 SemanticSound.NONE, true, true),
@@ -376,8 +399,8 @@ public class AccentSetting extends FeatureSetting {
         lastW = width;
         // The nine preset swatch fills are constant → cacheable static layer.
         float swR = Math.min(SWATCH_H / 2.0f, AuroraTheme.RADIUS_SMALL);
-        for (int i = 0; i < ThemePresets.ALL.size(); i++) {
-            ThemePresets.Entry e = ThemePresets.ALL.get(i);
+        for (int i = 0; i < presets.size(); i++) {
+            ThemePresets.Entry e = presets.get(i);
             RenderUtil.drawRoundedRectAA(ctx, cellX(i, width), cellY(i), swatchW(width), SWATCH_H, swR, e.argb);
         }
     }
@@ -400,7 +423,7 @@ public class AccentSetting extends FeatureSetting {
                 AuroraTheme.IOS_LABEL, mouseX, mouseY, disabled);
 
         int accent = currentAccent();
-        ThemePresets.Entry preset = ThemePresets.matching(accent);
+        ThemePresets.Entry preset = ThemePresets.matching(presets, accent);
 
         float swR = Math.min(SWATCH_H / 2.0f, AuroraTheme.RADIUS_SMALL);
 
@@ -415,11 +438,11 @@ public class AccentSetting extends FeatureSetting {
         // interiors in renderShapes and the Custom fill below stay literal
         // in every state — represented color is data.
         for (int i = 0; i < peerCount(); i++) {
-            boolean isCustom = i >= ThemePresets.ALL.size();
+            boolean isCustom = i >= presets.size();
             int sx = cellX(i, width);
             int sy = cellY(i);
             int sw = swatchW(width);
-            boolean selected = isCustom ? preset == null : preset == ThemePresets.ALL.get(i);
+            boolean selected = isCustom ? preset == null : preset == presets.get(i);
             float hT = hoverOf(i).update(peerHoverTarget(hoverAt(mouseX, mouseY, sx, sy, sw), disabled));
 
             // Semantic sync (the EnumSetting discipline): bounds + pointer
@@ -451,7 +474,7 @@ public class AccentSetting extends FeatureSetting {
         // alpha-halving dim is gone; disabled communicates through the
         // label + absent hover affordance), or the neutral chrome fill
         // while inactive.
-        int ci = ThemePresets.ALL.size();
+        int ci = presets.size();
         int cx = cellX(ci, width);
         int cy = cellY(ci);
         int cw = swatchW(width);
@@ -512,10 +535,10 @@ public class AccentSetting extends FeatureSetting {
                     SemanticActionControl control = peerControls[i];
                     if (control != null && control.isAvailable()) {
                         control.activateFromPointer(mouseX, mouseY, button);
-                    } else if (i >= ThemePresets.ALL.size()) {
+                    } else if (i >= presets.size()) {
                         openCustomEditor();
                     } else {
-                        applyPresetSelection(ThemePresets.ALL.get(i));
+                        applyPresetSelection(presets.get(i));
                     }
                     return true;
                 }
