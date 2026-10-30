@@ -118,19 +118,48 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
     @Override public boolean parentGlassOnly() { return true; }
 
     // ---- Layout constants ----
-    private static final int SIDEBAR_W      = 130;
-    private static final int SIDEBAR_PAD    = 8;
-    private static final int TOP_BAR_H      = 44;
-    private static final int CARD_W         = 220;
-    private static final int CARD_H         = 96;
-    private static final int CARD_GAP       = 10;
-    private static final int LIST_TOP       = TOP_BAR_H + 12;
-    private static final int LIST_BOTTOM_PAD = 36;
-    private static final int THUMB_SIZE     = 64;
-    private static final int THUMB_PAD      = 10;
-    private static final int TAB_H          = 22;
-    private static final int TAB_GAP        = 4;
-    private static final int HEADER_H       = 16;       // sidebar section header row height
+    private static final int SIDEBAR_W      = 104;
+    private static final int SIDEBAR_PAD    = 6;
+    private static final int TOP_BAR_H      = 30;
+    private static final int CARD_W         = 260;
+    private static final int CARD_H         = 72;
+    private static final int CARD_GAP       = 6;
+    private static final int LIST_TOP       = TOP_BAR_H + 10;
+    private static final int LIST_BOTTOM_PAD = 10;
+    private static final int THUMB_SIZE     = 48;
+    private static final int THUMB_PAD      = 8;
+    private static final int TAB_H          = 16;
+    private static final int TAB_GAP        = 2;
+    private static final int HEADER_H       = 14;
+
+    // ---- Uniform window (compact pass, 2026-10-30) ----
+    // The browser keeps its own frame-relative layout but runs inside the shared Aurora
+    // window: init() narrows width/height to the frame, render translates by the frame
+    // origin (vanilla scissor honours the pose), input is shifted back, and the three
+    // backdrop captures plus the full-screen dim run in screen space.
+    private int ox, oy, fullW, fullH;
+
+    private void frameViewport() {
+        fullW = Minecraft.getInstance().getWindow().getGuiScaledWidth();
+        fullH = Minecraft.getInstance().getWindow().getGuiScaledHeight();
+        var frame = com.aurora.client.ui.util.UiDensity.window(fullW, fullH);
+        ox = frame.x(); oy = frame.y();
+        this.width = frame.width(); this.height = frame.height();
+    }
+
+    /** Runs {@code body} with the frame translation undone (screen-space coordinates). */
+    private <T> T screenSpace(GuiGraphics g, java.util.function.Supplier<T> body) {
+        g.pose().pushMatrix();
+        g.pose().translate(-ox, -oy);
+        try { return body.get(); } finally { g.pose().popMatrix(); }
+    }
+
+    private net.minecraft.client.input.MouseButtonEvent framed(net.minecraft.client.input.MouseButtonEvent ev) {
+        return new net.minecraft.client.input.MouseButtonEvent(ev.x() - ox, ev.y() - oy, ev.buttonInfo());
+    }
+
+    @Override
+    public void mouseMoved(double mouseX, double mouseY) { super.mouseMoved(mouseX - ox, mouseY - oy); }       // sidebar section header row height
     /** §8.3 canonical hover duration — tabs and card bodies alike (Phase B). */
     private static final long HOVER_MS      = 140L;
     // (removed SCROLL_EASE — scroll easing is delta-time based in render(),
@@ -544,18 +573,19 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
 
     @Override
     protected void init() {
+        frameViewport();
         // Search bar — positioned to the right of the sidebar.
         int fieldX = SIDEBAR_W + 16;
-        int fieldW = Math.min(420, this.width - fieldX - 120);
+        int fieldW = Math.max(40, this.width - fieldX - com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_W - 22);
         searchField = new EditBox(Minecraft.getInstance().font,
-                fieldX, 12, fieldW, 22, Component.literal("Search resource packs"));
+                fieldX, 7, fieldW, 16, Component.literal("Search resource packs"));
         searchField.setMaxLength(80);
         searchField.setHint(Component.literal("Search resource packs on Modrinth…"));
         searchField.setResponder(s -> { lastTypedMs = System.currentTimeMillis(); });
         this.addRenderableWidget(searchField);
 
         doneBtn = ButtonWidget.semantic(
-                this.width - 80 - 16, 12, 80, 22,
+                this.width - com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_W - 12, 7, com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_W, com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_H,
                 Component.literal("Done"),
                 "Close this screen and return.",
                 this::onClose).glassBackground(true);
@@ -697,6 +727,12 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float delta) {
+        g.pose().pushMatrix();
+        g.pose().translate(ox, oy);
+        try { renderFramed(g, mouseX - ox, mouseY - oy, delta); } finally { g.pose().popMatrix(); }
+    }
+
+    private void renderFramed(GuiGraphics g, int mouseX, int mouseY, float delta) {
         // Frame-rate-independent scroll easing (the shared SmoothScroll —
         // same tau = 80 ms glide). Advance toward the target every rendered
         // frame using the real elapsed wall-clock dt, so wheel scrolls glide
@@ -746,16 +782,16 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         // design (§9) and paints in the content phase through the above-dim
         // escape hatches.
         GlassSurface.beginGlassPass();
-        GlassSurface.container(g,8,4,this.width-16,this.height-12,AuroraTheme.RADIUS_LARGE);
+        screenSpace(g, () -> GlassSurface.container(g,ox,oy,this.width,this.height,AuroraTheme.RADIUS_LARGE));
         paintGlassPass(g, mouseX, mouseY);
 
         // ---- 2. Dim — this screen's original 0x55 strength of the OVERLAY_DIM ----
         // token, through the argb overload built for exactly this; it closes
         // the glass pass and flushes the deferred rims.
-        GlassSurface.overlayDim(g, this.width, this.height,
-                ThemeManager.withAlpha(ThemeManager.color(ThemeToken.OVERLAY_DIM), 0x55));
+        screenSpace(g, () -> { GlassSurface.overlayDim(g, fullW, fullH,
+                ThemeManager.withAlpha(ThemeManager.color(ThemeToken.OVERLAY_DIM), 0x55)); return null; });
 
-        MaterialSurface.parent(g,8,4,this.width-16,this.height-12,AuroraTheme.RADIUS_LARGE);
+        MaterialSurface.parent(g,0,0,this.width,this.height,AuroraTheme.RADIUS_LARGE);
 
         // ---- 3. Content ----
         // ---- Sidebar ----
@@ -771,7 +807,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         if (count > 0) {
             String countText = count + " pack" + (count == 1 ? "" : "s");
             g.drawString(this.font, Component.literal(countText),
-                    SIDEBAR_W + 16, 38, AuroraTheme.TEXT_SECONDARY, false);
+                    gridLeft(), TOP_BAR_H - 3, AuroraTheme.TEXT_SECONDARY, false);
         }
 
         // ---- Grid region ----
@@ -883,8 +919,8 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         // Sidebar — DEPRESSED container, SURFACE-token tint (whose alpha
         // carries the Background Opacity via surfaceColor — the single
         // application point). Flat panel returns in renderSidebar on decline.
-        sidebarGlass = GlassSurface.container(g, panelX, panelY, panelW, panelH,
-                AuroraTheme.RADIUS_LARGE, ThemeToken.SURFACE);
+        sidebarGlass = screenSpace(g, () -> GlassSurface.container(g, panelX + ox, panelY + oy, panelW, panelH,
+                AuroraTheme.RADIUS_LARGE, ThemeToken.SURFACE));
         paintActiveTabPass(g, mouseX, mouseY, panelX, panelY, panelW, panelH);
         paintCardButtonsPass(g);
         ((GlassEditBox) searchField).aurora$renderGlassPass(g);
@@ -965,9 +1001,9 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
                 gridLeft + cols * (CARD_W + CARD_GAP) - CARD_GAP + 4, listBottom);
         forEachVisibleCard(list, cols, gridLeft, listBottom, (p, x, y) -> {
             CardState st = cardStates.computeIfAbsent(p.projectId, k -> new CardState());
-            int btnW = 80, btnH = 18;
+            int btnW = 64, btnH = 14;
             int btnX = x + CARD_W - btnW - THUMB_PAD;
-            int btnY = y + CARD_H - btnH - 8;
+            int btnY = y + CARD_H - btnH - 6;
             Button installBtn = st.cardPhaseButtons[st.phase];
             if (installBtn == null) {
                 installBtn = newPhaseButton(st.phase, false);
@@ -1214,13 +1250,13 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         int textX = tx + THUMB_SIZE + THUMB_PAD;
         int textW = CARD_W - (textX - x) - THUMB_PAD;
         g.drawString(this.font, fitText("t:" + p.projectId, p.title, textW),
-                textX, y + 12, AuroraTheme.TEXT_PRIMARY, false);
+                textX, y + 8, AuroraTheme.TEXT_PRIMARY, false);
         g.drawString(this.font, "by " + fitText("a:" + p.projectId, p.author, textW),
-                textX, y + 12 + this.font.lineHeight + 2, AuroraTheme.TEXT_SECONDARY, false);
+                textX, y + 8 + this.font.lineHeight + 1, AuroraTheme.TEXT_SECONDARY, false);
         g.drawString(this.font, formatCount(p.downloads) + " downloads",
-                textX, y + 12 + (this.font.lineHeight + 2) * 2, AuroraTheme.TEXT_DIM, false);
+                textX, y + 8 + (this.font.lineHeight + 1) * 2, AuroraTheme.TEXT_DIM, false);
         g.drawString(this.font, fitText("d:" + p.projectId, p.description, textW),
-                textX, y + 12 + (this.font.lineHeight + 2) * 3, AuroraTheme.TEXT_SECONDARY, false);
+                textX, y + 8 + (this.font.lineHeight + 1) * 3, AuroraTheme.TEXT_SECONDARY, false);
 
         // Install button — the shared glass Button painter (the same
         // implementation ButtonWidget wraps for the Done button), laid out
@@ -1235,9 +1271,9 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         // the painter is constructed with a no-op action — the ButtonWidget
         // discipline.
         CardState st = cardStates.computeIfAbsent(p.projectId, k -> new CardState());
-        int btnW = 80, btnH = 18;
+        int btnW = 64, btnH = 14;
         int btnX = x + CARD_W - btnW - THUMB_PAD;
-        int btnY = y + CARD_H - btnH - 8;
+        int btnY = y + CARD_H - btnH - 6;
         int renderPhase = st.drivenPhase >= 0 ? st.drivenPhase : st.phase;
         Button installBtn = st.cardPhaseButtons[renderPhase];
         if (installBtn == null) {
@@ -1343,7 +1379,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
 
         // Dim backdrop fades in with the modal.
         int dimAlpha = (int) (180 * openT);
-        g.fill(0, 0, this.width, this.height, (dimAlpha << 24));
+        screenSpace(g, () -> { g.fill(0, 0, fullW, fullH, (dimAlpha << 24)); return null; });
 
         // C-8: the modal's geometry comes from the ONE truth (the same
         // helpers handleDetailClick hit-tests against), so the painted sheet
@@ -1365,8 +1401,8 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         // captures the already-dimmed screen as its backdrop, exactly as it
         // did before this screen migrated. On decline the flat fill + outline
         // return.
-        boolean modalGlass = GlassSurface.aboveDimContainer(g, modalX, modalY, modalW, modalH,
-                AuroraTheme.RADIUS_LARGE, ThemeToken.SURFACE);
+        boolean modalGlass = screenSpace(g, () -> GlassSurface.aboveDimContainer(g, modalX + ox, modalY + oy, modalW, modalH,
+                AuroraTheme.RADIUS_LARGE, ThemeToken.SURFACE));
         if (!modalGlass) {
             RenderUtil.drawRoundedRectAA(g, modalX, modalY, modalW, modalH,
                     AuroraTheme.RADIUS_LARGE, ThemeManager.surfaceColor(ThemeToken.SURFACE));
@@ -1403,7 +1439,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
                                             int mx, int my, int mw, int mh) {
         int pad = 18;
         CardState st = cardStates.computeIfAbsent(p.projectId, k -> new CardState());
-        int btnW = 130, btnH = 24;
+        int btnW = 110, btnH = 16;
         int btnX = mx + pad;
         int btnY = my + mh - pad - btnH;
         Button detailInstallBtn = st.modalPhaseButtons[st.phase];
@@ -1500,7 +1536,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         // hover for narration and the provisional focus ring. Clicks route
         // through handleDetailClick's control routing.
         CardState st = cardStates.computeIfAbsent(p.projectId, k -> new CardState());
-        int btnW = 130, btnH = 24;
+        int btnW = 110, btnH = 16;
         int btnX = mx + pad;
         int btnY = my + mh - pad - btnH;
         Button detailInstallBtn = st.modalPhaseButtons[st.phase];
@@ -1571,7 +1607,10 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         // wants the vanilla backdrop as before, so the override is
         // conditional on the same validity check the renderer uses.
         if (liveWorldBackdrop()) return;
-        GlassSurface.renderMenuPanorama(this,g,delta);
+        // The panorama spans the whole screen, not the framed viewport.
+        int w = this.width, h = this.height;
+        this.width = fullW; this.height = fullH;
+        try { GlassSurface.renderMenuPanorama(this,g,delta); } finally { this.width = w; this.height = h; }
     }
 
     // ------------------------------------------------------------------
@@ -1580,6 +1619,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
 
     @Override
     public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent ev, boolean dbl) {
+        ev = framed(ev);
         double mouseX = ev.x();
         double mouseY = ev.y();
         if (ev.button() != 0) return super.mouseClicked(ev, dbl);
@@ -1684,9 +1724,9 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         final boolean[] cardHit = {false};
         forEachVisibleCard(list, cols, gridLeft, gridBottom, (p, x, y) -> {
             if (cardHit[0]) return;
-            int btnW = 80, btnH = 18;
+            int btnW = 64, btnH = 14;
             int btnX = x + CARD_W - btnW - THUMB_PAD;
-            int btnY = y + CARD_H - btnH - 8;
+            int btnY = y + CARD_H - btnH - 6;
             if (Widget.inBounds(mouseX, mouseY, btnX, btnY, btnW, btnH)
                     && gridBand.contains(mouseX, mouseY)) {
                 CardState st = cardStates.get(p.projectId);
@@ -1753,7 +1793,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         }
 
         // Install button.
-        int btnW = 130, btnH = 24;
+        int btnW = 110, btnH = 16;
         int btnX = modalX + pad;
         int btnY = modalY + modalH - pad - btnH;
         if (Widget.inBounds(mouseX, mouseY, btnX, btnY, btnW, btnH)) {
@@ -1837,6 +1877,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontal, double vertical) {
+        mouseX -= ox; mouseY -= oy;
         // If the detail modal is open, let it consume scroll without bubbling.
         if (detailOpenT > 0.5f) return true;
 
@@ -1851,6 +1892,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
 
     @Override
     public boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent ev, double dx, double dy) {
+        ev = framed(ev);
         if (gridScroll.isDragging() && ev.button() == 0) {
             double mouseY = ev.y();
             double ms = maxScroll();
@@ -1880,6 +1922,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
 
     @Override
     public boolean mouseReleased(net.minecraft.client.input.MouseButtonEvent ev) {
+        ev = framed(ev);
         if (ev.button() == 0) {
             gridScroll.endThumbDrag();
             sidebarScroll.endThumbDrag();

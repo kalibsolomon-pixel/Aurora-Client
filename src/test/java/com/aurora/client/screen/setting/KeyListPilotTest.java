@@ -265,17 +265,17 @@ class KeyListPilotTest {
 
     /** Entry i's "−" button center in the headless (0,0,240) frame. */
     private static boolean clickRemove(Fixture f, int i) {
-        return f.row.mouseClicked(219.0, 29.0 + 20.0 * i, 0, 0, 0, 240);
+        return f.row.mouseClicked(219.0, 26.0 + 18.0 * i, 0, 0, 0, 240); // (ROW_H + 2)(i + 1) + ROW_H / 2, ROW_H = 16
     }
 
     private static void begin(Fixture f) {
         // Add-pill center in the headless (0,0,240) frame: x = 14 + 212/2,
-        // y = 20 + n*20 + 4 + 10. The semantic control (if a test created
+        // y = 18 + n*18 + 4 + 8 (compact ROW_H 16 / ADD_H 16). The semantic control (if a test created
         // one) has no render-driven bounds yet — mark it unavailable so the
         // headless direct path runs, exactly like an unhosted row.
         f.row.interactionControl().setAvailable(false);
         int n = f.list.size();
-        assertTrue(f.row.mouseClicked(120.0, 34.0 + 20.0 * n, 0, 0, 0, 240),
+        assertTrue(f.row.mouseClicked(120.0, 30.0 + 18.0 * n, 0, 0, 0, 240),
                 "headless direct add-pill activation");
         assertTrue(f.row.listeningState());
     }

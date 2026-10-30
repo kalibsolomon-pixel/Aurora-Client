@@ -86,9 +86,9 @@ import java.util.function.Supplier;
  */
 public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
     private static final int CONTROL_H = 28;
-    private static final int BTN_W = 100; // slightly wider to accommodate arrow indicators
-    private static final int BTN_H = 18;
-    private static final int OPT_H = 16;  // height of individual dropdown option
+    private static final int BTN_W = com.aurora.client.ui.util.UiDensity.ENUM_W;
+    private static final int BTN_H = com.aurora.client.ui.util.UiDensity.FIELD_H;
+    private static final int OPT_H = 14;  // height of individual dropdown option
 
     private static final net.minecraft.network.chat.Style SYMBOL_STYLE = net.minecraft.network.chat.Style.EMPTY
             .withFont(new net.minecraft.network.chat.FontDescription.Resource(

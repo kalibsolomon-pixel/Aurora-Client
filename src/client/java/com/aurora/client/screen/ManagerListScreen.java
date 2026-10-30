@@ -286,14 +286,15 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
     // frame and colliding with HUD modules; every chrome element now shares
     // the list's column edges.
     /** Header band height: 8 inset + 22 toolbar row + 8 inset. */
-    protected static final int HEADER_H = 38;
-    protected int windowMaxHeight() { return 420; }
-    protected int windowHeight() { return Math.max(96, Math.min(windowMaxHeight(), this.height - 24)); }
-    protected int windowTop() { return Math.max(4, (this.height - windowHeight()) / 2); }
+    protected static final int HEADER_H = com.aurora.client.ui.util.UiDensity.HEADER + 4;
+    /** Uniform window (compact pass, 2026-10-30): the same frame as every Aurora window. */
+    protected com.aurora.client.ui.util.UiDensity.Rect frame() { return com.aurora.client.ui.util.UiDensity.window(this.width, this.height); }
+    protected int windowHeight() { return frame().height(); }
+    protected int windowTop() { return frame().y(); }
     protected int windowBottom() { return windowTop() + windowHeight(); }
-    protected int windowX() { return (this.width - listWidth()) / 2 - 8; }
-    protected int windowWidth() { return listWidth() + 16; }
-    protected int toolbarY() { return windowTop() + 8; }
+    protected int windowX() { return frame().x(); }
+    protected int windowWidth() { return frame().width(); }
+    protected int toolbarY() { return windowTop() + (com.aurora.client.ui.util.UiDensity.HEADER - com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_H) / 2 + 1; }
     protected int listTop() { return windowTop() + HEADER_H + 2; }
     protected int listBottomPad() { return this.height - (windowBottom() - 8); }
 
@@ -313,9 +314,10 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         if (toolbarActionBtn != null) {
             toolbarActionBtn.setX(windowX() + 8);
             toolbarActionBtn.setY(toolbarY());
+            toolbarActionBtn.setHeight(com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_H);
         }
         doneBtn = this.addRenderableWidget(ButtonWidget.semantic(
-                windowX() + windowWidth() - 8 - 64, toolbarY(), 64, 22,
+                windowX() + windowWidth() - 8 - com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_W, toolbarY(), com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_W, com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_H,
                 Component.literal("Done"),
                 "Close this screen and return.",
                 this::onClose).glassBackground(true));

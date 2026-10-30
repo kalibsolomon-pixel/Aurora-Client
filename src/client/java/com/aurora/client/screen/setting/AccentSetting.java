@@ -88,11 +88,11 @@ import java.util.function.Supplier;
  */
 public class AccentSetting extends FeatureSetting {
 
-    private static final int LABEL_ROW_H = 28;
-    private static final int SWATCH_H = 24;
-    private static final int SWATCH_GAP = 6;
+    private static final int LABEL_ROW_H = 18;
+    private static final int SWATCH_H = 14;
+    private static final int SWATCH_GAP = 4;
     private static final int GRID_PAD_X = 12;
-    private static final int GRID_GAP_Y = 6;
+    private static final int GRID_GAP_Y = 4;
     /** 9 presets + the Custom slot = 10 cells, 5 per row. */
     private static final int PER_ROW = 5;
     private static final int EDITOR_TOP_GAP = 8;

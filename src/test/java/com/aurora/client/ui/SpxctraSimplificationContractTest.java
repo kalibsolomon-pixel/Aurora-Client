@@ -83,7 +83,7 @@ class SpxctraSimplificationContractTest {
         // A focus hairline drawn exactly over an accent selection edge is invisible; selected or
         // enabled peers get the Button family's ring 2px outside instead.
         String main = read("screen/AuroraScreen.java");
-        assertTrue(main.contains("drawRoundedOutlineAA(g, catX - 2, catY - 2, 60, TAB_H + 4"), "selected sidebar tab");
+        assertTrue(main.contains("drawRoundedOutlineAA(g, catX - 2, catY - 2, TAB_W + 4, TAB_H + 4"), "selected sidebar tab");
         assertTrue(main.contains("if (MaterialSurface.unified() && on) RenderUtil.drawRoundedOutlineAA(g, cx - 2, cy - 2"), "enabled tile");
         assertTrue(main.contains("if (MaterialSurface.unified() && selected) RenderUtil.drawRoundedOutlineAA(g, x - 2, y - 2"), "layout peer");
     }
@@ -107,6 +107,40 @@ class SpxctraSimplificationContractTest {
         assertEquals("Legacy 1.8", humanize.invoke(null, Sample.LEGACY_1_8));
         assertEquals("Sine breath", humanize.invoke(null, Sample.SINE_BREATH));
         assertEquals("Own label", humanize.invoke(null, Labelled.A_B));
+    }
+
+    @Test
+    void longListsOpenWithOnlyTheFirstSectionExpandedAndRowsFollowTheirSection() {
+        var a = new SectionHeaderSetting("A"); var b = new SectionHeaderSetting("B"); var c = new SectionHeaderSetting("C");
+        java.util.List<FeatureSetting> list = new java.util.ArrayList<>(List.of(a, b, c));
+        SectionHeaderSetting.bind(list, "test-long-" + System.nanoTime());
+        assertTrue(a.expanded(), "first section starts expanded");
+        assertFalse(b.expanded()); assertFalse(c.expanded());
+        // Rows belong to the caption above them and hide with it.
+        var row = new com.aurora.client.screen.setting.SectionFooterSetting("row under B");
+        List<FeatureSetting> withRow = List.of(a, b, row, c);
+        String owner = "test-rows-" + System.nanoTime();
+        SectionHeaderSetting.bind(withRow, owner);
+        assertFalse(row.isVisible(), "collapsed section hides its rows");
+        b.toggle();
+        assertTrue(row.isVisible(), "expanding shows them");
+        SectionHeaderSetting.bind(withRow, owner);
+        assertTrue(b.expanded(), "the choice is remembered for the session");
+        // Short lists open fully expanded.
+        var x = new SectionHeaderSetting("X"); var y = new SectionHeaderSetting("Y");
+        SectionHeaderSetting.bind(List.of(x, y), "test-short-" + System.nanoTime());
+        assertTrue(x.expanded() && y.expanded());
+    }
+
+    @Test
+    void consecutiveCollapsedCaptionsPackTightly() {
+        var a = new SectionHeaderSetting("A"); var b = new SectionHeaderSetting("B"); var c = new SectionHeaderSetting("C");
+        List<FeatureSetting> list = List.of(a, b, c);
+        SectionHeaderSetting.bind(list, "test-tight-" + System.nanoTime());   // b and c start collapsed
+        int band = new SectionHeaderSetting("ref").baseHeight();
+        SectionHeaderSetting.markLeading(list);
+        assertEquals(band, b.baseHeight(), "a caption after an EXPANDED section keeps its band");
+        assertTrue(c.baseHeight() < band, "a caption right under a collapsed caption drops its band");
     }
 
     @Test

@@ -39,7 +39,11 @@ public abstract class FeatureSetting {
         visibility = condition;
         return this;
     }
-    public final boolean isVisible() { return visibility.getAsBoolean(); }
+    /** The collapsible caption this row belongs to (null when ungrouped). */
+    private SectionHeaderSetting section;
+    final void section(SectionHeaderSetting header) { this.section = header; }
+    /** Visible when its own condition holds and its section (if any) is expanded. */
+    public final boolean isVisible() { return visibility.getAsBoolean() && (section == null || section.expanded()); }
 
     /** Detail hosts measure simple rows before height, paint and input walks; custom editors retain their own geometry. */
     protected com.aurora.client.ui.util.SettingRowLayout compactRow;

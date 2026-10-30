@@ -2483,3 +2483,14 @@ band (`SectionHeaderSetting.markLeading`). Dropdown values without labels are se
 controls use `MaterialSurface.floatingPanel` (panel tone; raised buttons vanished on the raised
 `floating` tone). Focus on a selected/enabled peer is an outset ring (it was invisible). Probe plans `glass`/`spx`
 and `tools/gui/glass_metrics.py` reproduce the evidence. See SPXCTRA_UI_SIMPLIFICATION_REPORT.md.
+
+## Compact pass (2026-10-30)
+
+`UiDensity.window` (420×272) is the single frame for every windowed Aurora screen (main,
+details, managers, waypoint editor, color picker, mapping data, pack browser via a translated
+viewport whose glass captures/dim run in screen space). Windowed hosts draw text with the
+`<font>_ui` variants (7.5 px; `AuroraFontRenderer.compactUi`, `ThemedScreen.compactText`).
+Row/control sizes live in `UiDensity` and `SettingRowLayout`; feature cards stay 80×80 (owner
+ruling). `SectionHeaderSetting` collapses its section (`bind`, `setDefaultExpanded`,
+`markLeading`); rows hide through `FeatureSetting.isVisible()`. Details: DESIGN_LANGUAGE.md
+"Compact pass" and SPXCTRA_UI_SIMPLIFICATION_REPORT.md §9.

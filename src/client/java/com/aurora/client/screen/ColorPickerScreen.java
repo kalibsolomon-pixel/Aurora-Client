@@ -123,19 +123,22 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
         // bottom edge), and the panel is centered on both axes. The pad
         // still shrinks with both axes; below MIN_PAD the editing surfaces
         // are skipped (see pickerSupportable).
-        int maxPad = Math.min(240, Math.min(cw - 120, ch - 184));
+        // Uniform window (compact pass, 2026-10-30): the shared Aurora frame. The pad and
+        // strips fill its left side; preview + hex form the right column; the actions sit
+        // on the bottom edge.
+        var frame = com.aurora.client.ui.util.UiDensity.window(cw, ch);
+        panelX = frame.x(); panelY = frame.y(); panelW = frame.width(); panelH = frame.height();
+        int header = com.aurora.client.ui.util.UiDensity.HEADER;
+        int bh = com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_H;
+        int maxPad = Math.min(panelH - header - 16 - bh - 16, panelW - 24 - 2 * 18 - 28 - 120);
         pickerSupportable = maxPad >= MIN_PAD;
         padSize = pickerSupportable ? maxPad : MIN_PAD; // unused when unsupported
-        panelW = padSize + 92;
-        panelH = padSize + 164;
-        panelX = (cw - panelW) / 2;
-        panelY = Math.max(4, (ch - panelH) / 2);
         padX = panelX + 12;
-        padY = panelY + 46;
+        padY = panelY + header + 16;
 
         hueW = 18;
         hueH = padSize;
-        hueX = padX + padSize + 20;
+        hueX = padX + padSize + 14;
         hueY = padY;
 
         alphaW = 18;
@@ -143,16 +146,16 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
         alphaX = hueX + hueW + 12;
         alphaY = padY;
 
-        previewX = padX;
-        previewY = padY + padSize + 22;
-        previewW = panelW - 24;
+        previewX = alphaX + alphaW + 20;
+        previewY = padY;
+        previewW = panelX + panelW - 12 - previewX;
         previewH = 24;
 
-        int hexY = previewY + previewH + 8;
+        int hexY = previewY + previewH + 22;
         if (pickerSupportable) {
             hexField = new EditBox(
                     this.font,
-                    previewX + 28, hexY, 96, 18,
+                    previewX, hexY, Math.min(96, previewW), 14,
                     Component.literal("Hex")
             );
             hexField.setMaxLength(9);
@@ -165,8 +168,8 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
 
         // Actions: right-aligned inside the panel, primary rightmost (desktop
         // convention); the unsupported fallback keeps them centered at the bottom.
-        int btnW = 64, btnH = 20;
-        int btnY = pickerSupportable ? hexY + 18 + 14 : ch - 32;
+        int btnW = 64, btnH = bh;
+        int btnY = pickerSupportable ? panelY + panelH - 8 - btnH : ch - 32;
         int applyX = pickerSupportable ? panelX + panelW - 12 - btnW : cw / 2 + 4;
         int cancelX = pickerSupportable ? applyX - 6 - btnW : cw / 2 - 4 - btnW;
         this.addRenderableWidget(ButtonWidget.semantic(
@@ -245,7 +248,7 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
                 : ThemeManager.withAlpha(onOverlay, 0x99);
 
         if (pickerSupportable) ctx.drawString(tr, AuroraFontRenderer.ellipsize(tr, this.title.getString(), panelW - 24, 0),
-                panelX + 12, panelY + 13, MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
+                panelX + 12, panelY + (com.aurora.client.ui.util.UiDensity.HEADER - tr.lineHeight) / 2 + 1, MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
         else AuroraFontRenderer.drawCentered(ctx, tr, this.title, this.width / 2, 20, onOverlay);
 
         // C-8 short-window graceful fail: below the supportable minimum the
@@ -306,7 +309,7 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
         AuroraFontRenderer.drawCentered(ctx, tr, Component.literal("Hue"), hueX + hueW / 2, hueY - 12, labelCol);
         AuroraFontRenderer.drawCentered(ctx, tr, Component.literal("Alpha"), alphaX + alphaW / 2, alphaY - 12, labelCol);
         ctx.drawString(tr, Component.literal("Preview"), previewX, previewY - 12, labelCol, false);
-        ctx.drawString(tr, Component.literal("Hex"), previewX, previewY + previewH + 13, labelCol, false);
+        ctx.drawString(tr, Component.literal("Hex"), previewX, previewY + previewH + 10, labelCol, false);
 
         // (No bespoke hex-field outline: the hex EditBox is themed end-to-end by
         // the mod-wide EditBoxMixin — fill, border, text and caret — through

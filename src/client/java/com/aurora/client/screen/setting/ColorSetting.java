@@ -56,7 +56,7 @@ public class ColorSetting extends FeatureSetting {
 
     private float h, s, l, a;
 
-    private int swatchX, swatchY, swatchW = 40, swatchH = 16;
+    private int swatchX, swatchY, swatchW = com.aurora.client.ui.util.UiDensity.SWATCH_W, swatchH = com.aurora.client.ui.util.UiDensity.SWATCH_H;
     private int padX, padY;
     private int hueX, hueY;
     private int alphaX, alphaY;

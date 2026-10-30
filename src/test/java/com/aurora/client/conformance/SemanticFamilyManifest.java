@@ -110,6 +110,7 @@ public final class SemanticFamilyManifest {
                     List.of(SRC + "ui/component/Button.java",
                             SRC + "ui/component/ButtonWidget.java",
                             SRC + "screen/setting/ButtonSetting.java",
+                            SRC + "screen/setting/SectionHeaderSetting.java",
                             SRC + "screen/setting/PixelCanvasSetting.java",
                             SRC + "screen/ManagerListScreen.java",
                             SRC + "screen/ProfileManagerScreen.java",
@@ -234,8 +235,6 @@ public final class SemanticFamilyManifest {
                     "PREVIEW — the real-shape crosshair preview; never consumes"),
             new NonFamily(SRC + "screen/setting/SectionFooterSetting.java",
                     "PASSIVE TEXT — group footer; never consumes"),
-            new NonFamily(SRC + "screen/setting/SectionHeaderSetting.java",
-                    "PASSIVE TEXT — group caption; no button behavior"),
             new NonFamily(SRC + "screen/ColorPickerScreen.java#surfaces",
                     "DIRECT-MANIPULATION DATA — pad/hue/alpha editing surfaces; Square-exempt "
                             + "data-driven frames; hex field's Escape is the screen's Cancel"),

@@ -77,8 +77,8 @@ import java.util.function.Supplier;
  */
 public class KeybindSetting extends FeatureSetting {
     private static final int CONTROL_H = 28;
-    private static final int BTN_W = 90;
-    private static final int BTN_H = 18;
+    private static final int BTN_W = com.aurora.client.ui.util.UiDensity.KEY_W;
+    private static final int BTN_H = com.aurora.client.ui.util.UiDensity.FIELD_H;
 
     private final IntSupplier getter;
     private final IntConsumer setter;

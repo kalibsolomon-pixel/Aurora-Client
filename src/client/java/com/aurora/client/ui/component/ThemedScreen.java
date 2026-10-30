@@ -25,4 +25,7 @@ public interface ThemedScreen {
 
     /** Embedded cards in a parent window use cached materials, never another capture. */
     default boolean parentGlassOnly() { return false; }
+
+    /** Windowed Aurora screens use the compact UI text size; open-canvas screens opt out. */
+    default boolean compactText() { return parentGlassOnly(); }
 }

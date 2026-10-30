@@ -59,6 +59,9 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
      * row label uses). Vertically it shares the Done/Reset row's band.
      */
     private static final int TITLE_Y = 16;
+    /** Body starts below the header band. */
+    private static final int BODY_TOP = com.aurora.client.ui.util.UiDensity.HEADER + 4;
+    private static final boolean UNIFORM_FRAME = true;
 
     private final Screen parent;
     private final FeatureMetadata meta;
@@ -81,6 +84,9 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
      * disappear, up to the viewport limit, beyond which the body scrolls.
      */
     private void fitFrame(boolean recenter) {
+        // Uniform window (compact pass, 2026-10-30): every detail screen uses the shared
+        // frame, so the window never resizes as sections expand or collapse.
+        if (UNIFORM_FRAME) { compactFrame = maxFrame; TOP_PAD = compactFrame.y() + BODY_TOP; return; }
         int total = 0;
         for (FeatureSetting setting : meta.settings) if (setting.isVisible()) total += bodyHeight(setting) + ROW_GAP;
         if (total > 0) total -= ROW_GAP;
@@ -175,14 +181,27 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
 
     @Override
     protected void init() {
+        com.aurora.client.screen.setting.SectionHeaderSetting.bind(meta.settings, meta.id);
         com.aurora.client.screen.setting.SectionHeaderSetting.markLeading(meta.settings);
         if (compact()) {
             maxFrame = com.aurora.client.ui.util.UiDensity.detailFrame(this.width, this.height);
             compactFrame = maxFrame;
-            LIST_W = compactFrame.width(); TOP_PAD = compactFrame.y() + 36;
+            LIST_W = compactFrame.width(); TOP_PAD = compactFrame.y() + BODY_TOP;
             ROW_GAP = com.aurora.client.ui.util.UiDensity.ROW_GAP;
             measureRows();
             fitFrame(true);
+            // Collapse categories by default only when the fully expanded list would scroll.
+            if (com.aurora.client.screen.setting.SectionHeaderSetting.setDefaultExpanded(meta.settings, true)) {
+                com.aurora.client.screen.setting.SectionHeaderSetting.markLeading(meta.settings);
+                measureRows();
+                int total = 0;
+                for (FeatureSetting setting : meta.settings) if (setting.isVisible()) total += setting.height() + ROW_GAP;
+                if (total > bodyBottom() - TOP_PAD) {
+                    com.aurora.client.screen.setting.SectionHeaderSetting.setDefaultExpanded(meta.settings, false);
+                    com.aurora.client.screen.setting.SectionHeaderSetting.markLeading(meta.settings);
+                    measureRows();
+                }
+            }
         }
         // Done — the rollout's vanilla-backed representative (Phase A): the
         // SemanticAction owns the behavior callback while vanilla keeps the
@@ -220,8 +239,11 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         // lifecycle without joining its render list. Their setting remains
         // the sole pixel and clipped-pointer owner.
         if (compact()) {
-            doneBtn.setX(compactFrame.x() + LIST_W - 64 - 8); doneBtn.setY(compactFrame.y() + 6);
-            resetBtn.setX(doneBtn.getX() - 54 - 4); resetBtn.setY(doneBtn.getY()); resetBtn.setWidth(54);
+            int bw = com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_W, bh = com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_H;
+            doneBtn.setWidth(bw); doneBtn.setHeight(bh);
+            doneBtn.setX(compactFrame.x() + LIST_W - bw - 6); doneBtn.setY(compactFrame.y() + (com.aurora.client.ui.util.UiDensity.HEADER - bh) / 2 + 1);
+            resetBtn.setWidth(bw); resetBtn.setHeight(bh);
+            resetBtn.setX(doneBtn.getX() - bw - 4); resetBtn.setY(doneBtn.getY());
         }
         registeredSettingControls.clear();
         for (FeatureSetting setting : meta.settings) {
@@ -490,7 +512,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         if (compact()) {
             int titleX = com.aurora.client.ui.util.UiDensity.detailTitleX(compactFrame);
             String breadcrumb = com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(this.font, meta.displayName, Math.max(0, resetBtn.getX() - titleX - 4), 0);
-            ctx.drawString(this.font, breadcrumb, titleX, (meta.subtitle == null || meta.subtitle.isEmpty() ? compactFrame.y() + 13 : compactFrame.y() + 7), MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
+            ctx.drawString(this.font, breadcrumb, titleX, (meta.subtitle == null || meta.subtitle.isEmpty() ? compactFrame.y() + (com.aurora.client.ui.util.UiDensity.HEADER - this.font.lineHeight) / 2 + 2 : compactFrame.y() + 3), MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
             if (maxScroll > 0) {
                 var thumb = com.aurora.client.ui.component.ScrollbarChrome.thumb(scroll, bodyTop(), bodyBottom() - bodyTop(), maxScroll, 24, this.minecraft.getWindow().getGuiScale());
                 com.aurora.client.ui.component.ScrollbarChrome.draw(ctx, listX + LIST_W - 4, thumb, scroll.isDragging(), ThemeToken.ON_BACKGROUND);
@@ -538,7 +560,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
             // Feature identity is already established by the navigation card.
             if (meta.subtitle != null && !meta.subtitle.isEmpty()) {
                 ctx.drawString(this.font, AuroraFontRenderer.ellipsize(this.font, meta.subtitle, Math.max(0, resetBtn.getX() - titleX - 4), 0), titleX,
-                        compactFrame.y() + 7 + this.font.lineHeight + 1,
+                        compactFrame.y() + 3 + this.font.lineHeight + 1,
                         ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_OVERLAY),0xAA), false);
             }
         }

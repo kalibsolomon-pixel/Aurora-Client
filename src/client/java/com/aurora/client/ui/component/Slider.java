@@ -60,7 +60,7 @@ import java.util.function.DoubleSupplier;
 public class Slider extends Widget {
 
     private static final float TRACK_H = 4f;
-    private static final float KNOB_R = 7f;
+    private static final float KNOB_R = 5f;
     /** Canonical-mode drag grip: knob radius while an accepted drag is active. */
     private static final float KNOB_R_DRAG = KNOB_R + 1f;
 

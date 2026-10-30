@@ -52,15 +52,15 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
     // card in a row keeps its actions on the same lines. Columns follow the
     // available width (at least one); the active card wears the accent
     // selection outline the enabled feature cards use.
-    private static final int CARD_H = 92;
-    private static final int CARD_MIN_W = 132;
+    private static final int CARD_H = 70;
+    private static final int CARD_MIN_W = 112;
     private static final int CARD_GAP = 8;
     private static final int LIST_MAX_W = 444;
-    private static final int INSET = 8;
-    private static final int BTN_H = 18;
-    private static final int NAME_Y = 9;
-    private static final int PILL_Y = 24;
-    private static final int PILL_H = 14;
+    private static final int INSET = 6;
+    private static final int BTN_H = 14;
+    private static final int NAME_Y = 6;
+    private static final int PILL_Y = 17;
+    private static final int PILL_H = 12;
     /** Upper action line (Duplicate / Create) and lower line (Delete), from the card top. */
     private static final int UPPER_BTN_Y = CARD_H - INSET - BTN_H - 4 - BTN_H;
     private static final int LOWER_BTN_Y = CARD_H - INSET - BTN_H;
@@ -143,7 +143,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
     //  Foundation hooks
     // ------------------------------------------------------------------
 
-    @Override protected int listWidth() { return Math.max(CARD_MIN_W, Math.min(LIST_MAX_W, this.width - 40)); }
+    @Override protected int listWidth() { return Math.max(CARD_MIN_W, windowWidth() - 16); }
     @Override protected int columns() { return Math.max(1, (listWidth() + CARD_GAP) / (CARD_MIN_W + CARD_GAP)); }
     @Override protected int columnGap() { return CARD_GAP; }
     @Override protected int rowGap() { return CARD_GAP; }
@@ -162,13 +162,6 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
 
     /** Profile count from the last frame's single list fetch (−1 before the first frame). */
     private int knownProfiles = -1;
-
-    /** The window hugs its cards (up to three rows, then the grid scrolls) — no empty well. */
-    @Override protected int windowMaxHeight() {
-        int items = (knownProfiles >= 0 ? knownProfiles : currentRows().size()) + leadingRowCount();
-        int rows = Math.max(1, Math.min(3, (items + columns() - 1) / columns()));
-        return HEADER_H + 2 + rows * (CARD_H + CARD_GAP) - CARD_GAP + 10;
-    }
 
     @Override protected int leadingRowCount() {
         return creatingNew && createField != null ? 1 : 0;

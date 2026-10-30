@@ -162,11 +162,11 @@ public class BooleanSetting extends FeatureSetting {
         if (tr == null) return;
         if (compactRow == null) ensureLayout(tr);
 
-        float switchX = controlX(x, width, 28);
-        float switchY = controlY(y, baseHeight(), 15);
-        toggle.layout(switchX, switchY, 28, 15);
+        float switchX = controlX(x, width, com.aurora.client.ui.util.UiDensity.TOGGLE_W);
+        float switchY = controlY(y, baseHeight(), com.aurora.client.ui.util.UiDensity.TOGGLE_H);
+        toggle.layout(switchX, switchY, com.aurora.client.ui.util.UiDensity.TOGGLE_W, com.aurora.client.ui.util.UiDensity.TOGGLE_H);
         syncToggleState(x, y, width, -1, -1);
-        toggle.renderShapes(ctx, switchX, switchY, 28, 15);
+        toggle.renderShapes(ctx, switchX, switchY, com.aurora.client.ui.util.UiDensity.TOGGLE_W, com.aurora.client.ui.util.UiDensity.TOGGLE_H);
     }
 
     @Override
@@ -199,11 +199,11 @@ public class BooleanSetting extends FeatureSetting {
             drawValueLine(ctx, x + LABEL_PAD, textY + 2, disabled);
 
         }
-        float switchX = controlX(x, width, 28);
-        float switchY = controlY(y, controlH, 15);
-        toggle.layout(switchX, switchY, 28, 15);
+        float switchX = controlX(x, width, com.aurora.client.ui.util.UiDensity.TOGGLE_W);
+        float switchY = controlY(y, controlH, com.aurora.client.ui.util.UiDensity.TOGGLE_H);
+        toggle.layout(switchX, switchY, com.aurora.client.ui.util.UiDensity.TOGGLE_W, com.aurora.client.ui.util.UiDensity.TOGGLE_H);
         syncToggleState(x, y, width, mouseX, mouseY);
-        toggle.renderOverlay(ctx, switchX, switchY, 28, 15, mouseX, mouseY);
+        toggle.renderOverlay(ctx, switchX, switchY, com.aurora.client.ui.util.UiDensity.TOGGLE_W, com.aurora.client.ui.util.UiDensity.TOGGLE_H, mouseX, mouseY);
 
         renderDescription(ctx, x, y + controlH, width);
     }

@@ -26,11 +26,14 @@ class EnumPilotTest {
         return new EnumSetting<>("Pilot", EightValues.class, v::get, v::set);
     }
 
-    // Row geometry constants mirrored from EnumSetting (BTN_W=100, BTN_H=18,
-    // trigger at x + width - BTN_W - 14, y + 5).
+    // Row geometry mirrored from EnumSetting (BTN_W = UiDensity.ENUM_W, BTN_H = FIELD_H,
+    // trigger at x + width - BTN_W - 14, vertically centered in the 28px legacy row).
     private static final int ROW_X = 0, ROW_Y = 0, ROW_W = 320;
-    private static final int BTN_X = ROW_X + ROW_W - 100 - 14;
-    private static final int BTN_Y = ROW_Y + 5;
+    private static final int BTN_W = com.aurora.client.ui.util.UiDensity.ENUM_W;
+    private static final int BTN_H = com.aurora.client.ui.util.UiDensity.FIELD_H;
+    private static final int OPT_H = 14;
+    private static final int BTN_X = ROW_X + ROW_W - BTN_W - 14;
+    private static final int BTN_Y = ROW_Y + (28 - BTN_H) / 2;
 
     @Test
     void constructionIsSymmetricCanonicalByDefault() {
@@ -112,7 +115,7 @@ class EnumPilotTest {
         // option row: consumed, collapse, no selection (index >= visible).
         // (The symmetric 2px TOP band is NOT safe — (int) truncation maps it
         // to option 0, shipped behavior this pilot leaves untouched.)
-        int footerBandY = BTN_Y + 18 + 2 + 5 * 16 + 3;
+        int footerBandY = BTN_Y + BTN_H + 2 + 5 * OPT_H + 3;
         assertTrue(row.mouseClicked(BTN_X + 10, footerBandY, 0, ROW_X, ROW_Y, ROW_W));
         assertFalse(row.expandedState());
         assertEquals(EightValues.A, v.get());

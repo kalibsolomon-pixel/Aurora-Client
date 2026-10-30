@@ -65,9 +65,9 @@ class OwnerCorrectionTest {
     @Test void statusSubtitlesFitAlongsideAnUnchangedSwitchAndLabelInset() {
         var row = SettingRowLayout.measure(SettingRowLayout.Kind.BOOLEAN, "Alert Delays", 344, 9, s -> s.length()*6)
                 .withSubtitle(12, 9);
-        assertTrue(row.height() >= 30);
+        assertTrue(row.height() >= 10 + 12, "one label line plus the subtitle fit");
         assertEquals(12, row.label().x());
-        assertEquals(28, row.control().width()); assertEquals(15, row.control().height());
+        assertEquals(UiDensity.TOGGLE_W, row.control().width()); assertEquals(UiDensity.TOGGLE_H, row.control().height());
         assertTrue(row.controlHit().y()+row.controlHit().height() <= row.height());
         assertTrue(row.label().width()+row.label().x() < row.control().x());
     }

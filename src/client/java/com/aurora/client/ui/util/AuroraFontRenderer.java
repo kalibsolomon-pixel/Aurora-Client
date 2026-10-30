@@ -17,6 +17,21 @@ public class AuroraFontRenderer {
 
     private static net.minecraft.network.chat.Style cachedStyle = null;
     private static AuroraConfig.FontType cachedFontType = null;
+    private static boolean cachedCompact = false;
+
+    /**
+     * Aurora's windowed screens (main, feature detail, managers, editors, pickers) draw text
+     * with the compact {@code <font>_ui} variant — the same face rasterized at 7.5 instead of
+     * 9 px, so it stays crisp (no pose scaling). The title screen, HUD editor, in-world HUD
+     * and vanilla screens keep the regular size. Width measurement goes through the same
+     * style, so layout and paint always agree.
+     */
+    public static boolean compactUi() {
+        if (isRenderingAuroraUI) return false;
+        Minecraft mc = Minecraft.getInstance();
+        return mc != null && mc.screen instanceof com.aurora.client.ui.component.ThemedScreen themed
+                && themed.compactText();
+    }
     private static volatile boolean isRenderingAuroraUI = false;
 
     public static void setRenderingAuroraUI(boolean rendering) {
@@ -68,7 +83,8 @@ public class AuroraFontRenderer {
         if (active == null || active == AuroraConfig.FontType.SANSSERIF) {
             return null;
         }
-        if (active == cachedFontType && cachedStyle != null) {
+        boolean compact = compactUi();
+        if (active == cachedFontType && compact == cachedCompact && cachedStyle != null) {
             return cachedStyle;
         }
         String path = null;
@@ -84,11 +100,13 @@ public class AuroraFontRenderer {
             case FIRA_SANS -> path = "fira_sans";
         }
         if (path != null) {
+            if (compact) path += "_ui";
             net.minecraft.network.chat.FontDescription fontDesc = new net.minecraft.network.chat.FontDescription.Resource(
                     net.minecraft.resources.Identifier.fromNamespaceAndPath("aurora", path)
             );
             cachedStyle = net.minecraft.network.chat.Style.EMPTY.withFont(fontDesc);
             cachedFontType = active;
+            cachedCompact = compact;
             return cachedStyle;
         }
         return null;

@@ -81,17 +81,17 @@ class SliderPilotTest {
         AtomicReference<Double> v = new AtomicReference<>(0.5);
         Slider s = slider(v, 0.5).canonicalStates();
         s.layout(100, 10, 200, 36);
-        assertEquals(7f, s.knobRadiusPx(), 0f, "rest radius");
+        assertEquals(5f, s.knobRadiusPx(), 0f, "rest radius (compact knob)");
         s.mouseClicked(150, 36, 0);
-        assertEquals(8f, s.knobRadiusPx(), 0f, "grip radius while dragging (center unchanged)");
+        assertEquals(6f, s.knobRadiusPx(), 0f, "grip radius while dragging (center unchanged)");
         s.mouseReleased(150, 36, 0);
-        assertEquals(7f, s.knobRadiusPx(), 0f, "back to rest instantly on release");
+        assertEquals(5f, s.knobRadiusPx(), 0f, "back to rest instantly on release");
 
         // Legacy mode never grips.
         Slider legacy = slider(v, 0.5);
         legacy.layout(100, 10, 200, 36);
         legacy.mouseClicked(150, 36, 0);
-        assertEquals(7f, legacy.knobRadiusPx(), 0f, "legacy rows keep the exact rest radius");
+        assertEquals(5f, legacy.knobRadiusPx(), 0f, "legacy rows keep the exact rest radius");
     }
 
     @Test

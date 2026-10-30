@@ -146,3 +146,37 @@ Reproduce: `./gradlew remapJar` and `./gradlew -I tools/gui/runtime.init.gradle 
 `python tools/gui/run.py <name> --plan full|spx|glass --jar <jar> [--jvm-arg=-Daurora.glassStats=true]`,
 `python tools/gui/glass_metrics.py <base> <final>`, `python tools/gui/spx_evidence.py <base> <final>`.
 
+
+## 9. Compact pass — uniform windows, smaller UI, collapsible sections (2026-10-30)
+
+Owner request: one window size for every Aurora screen, smaller text and controls, tighter
+spacing, less scrolling, expandable categories. Follow-up ruling mid-pass: keep the feature
+cards at their original 80×80 size and don't oversize the window (a first 520×320 draft
+with 64-px cards was rejected and replaced).
+
+| Before | After |
+|---|---|
+| Each screen picked its own size (main 344×224, details content-fit ≤344×300, managers up to 476×420, editors 344×160, pack browser full-screen) | One frame, `UiDensity.window` = 420×272 (shrinks with a 12 px margin), for main, all details, both managers, waypoint editor, color picker, mapping data and the pack browser |
+| 9 px UI text | 7.5 px `<font>_ui` variants of the same bundled face inside Aurora windows (crisp; measured with the same style). "Pack Tweaks" label 155 → 130 device px at GUI 3 |
+| 24 px rows (sliders 28, wrapped 36), 4–6 px gaps, 18 px controls, 18 px section band, 36 px header | 18 px rows (sliders 20, wrapped 28), 2 px gaps, 14 px controls, 8 px section band, 24 px header with 16 px buttons |
+| Long screens scroll through every option | Sections are collapsible categories; lists with ≥3 sections that would scroll open with only the first expanded; runs of collapsed captions pack tightly; choices remembered for the session |
+| Waypoint editor hid half its fields behind "Show details" | Location and Details both visible; Save/Cancel on the bottom edge |
+| Feature cards 80×80 | unchanged (owner ruling); grid shows 4 columns |
+
+Visible without scrolling at 1920×1080@3: Crosshair 11 settings (was 7); Better Hitreg all 8
+categories plus its first section; Display Settings all 6 categories (was a 19-row scroll);
+Waypoints 6 rows; the Settings tab rows at a 20 px pitch (was 30).
+
+Evidence: `docs/spxctra/compact/before-*.png` (3.1.0 baseline) and `after-*.png`
+(`build/gui-audit/compact3`, 102 captures, 41/41 probe checks, 0 glass-ordering reports) plus
+`after-sections-*.png` / `after-display-settings.png` from `compact3-states`.
+
+Tests: 622 passing. Updated tests that pinned the old geometry (row heights, control sizes,
+frame size, knob radius, dropdown/key-list click coordinates) to read `UiDensity`; added
+collapsible-section behaviour tests; `SectionHeaderSetting` moved from the passive list to
+the button-action family in the conformance manifest (it is now a keyboard-operable control).
+
+Limits: captured at 1920×1080@3 on OpenGL only; other GUI scales/renderers not re-run. Users
+on the vanilla font (SansSerif or text renderer Off) get the compact spacing but vanilla-size
+text. Collapsed state is session-only (not saved to the config). The world map, HUD editor
+and title screen are not windows and were left as they are.

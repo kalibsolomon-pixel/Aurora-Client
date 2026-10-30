@@ -58,15 +58,15 @@ import java.util.Set;
  */
 public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
 
-    private static final int ROW_H        = 36;
+    private static final int ROW_H        = 28;
     private static final int LIST_W       = 460;
 
-    private static final int SWATCH_W     = 16;
+    private static final int SWATCH_W     = 12;
     private int nameWidth() { return Math.max(48, listWidth() - 16 - 22 - BTN_COPY_W - BTN_COLOR_W - BTN_DEL_W - 18); }
     private static final int COORDS_W     = 0;
-    private static final int BTN_COPY_W   = 44;
-    private static final int BTN_COLOR_W  = 44;
-    private static final int BTN_DEL_W    = 56;
+    private static final int BTN_COPY_W   = 40;
+    private static final int BTN_COLOR_W  = 40;
+    private static final int BTN_DEL_W    = 48;
     private static final int CONTROL_GAP  = 6;
     private static final int ROW_INSET    = 8;
 
@@ -119,24 +119,24 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
     private int reconciledStart = -1;
 
     /** Search (18) + gap (6) + filter row (20) + gap (6) under the header band. */
-    @Override protected int listTop() { return windowTop() + HEADER_H + 52; }
+    @Override protected int listTop() { return windowTop() + HEADER_H + 38; }
 
     @Override protected void init() {
         super.init();
         int left = (width - listWidth()) / 2;
-        search = new EditBox(font, left, windowTop() + HEADER_H, listWidth(), 18, Component.literal("Search waypoints"));
+        search = new EditBox(font, left, windowTop() + HEADER_H, listWidth(), 14, Component.literal("Search waypoints"));
         search.setHint(Component.literal("Search name, group, dimension or description"));
         search.setValue(query);
         search.setResponder(value -> { commitEditors(); query = value; invalidateRows(); });
         addRenderableWidget(search);
         int cell = (listWidth() - 18) / 4;
-        addRenderableWidget(ButtonWidget.semantic(left, windowTop() + HEADER_H + 24, cell, 20,
+        addRenderableWidget(ButtonWidget.semantic(left, windowTop() + HEADER_H + 18, cell, 16,
                 Component.literal(sortLabel()), "Cycles name, distance, creation and group sorting.",
                 () -> { commitEditors(); sort = (sort + 1) % 4; invalidateRows(); rebuildWidgets(); }));
-        addRenderableWidget(ButtonWidget.semantic(left + cell + 6, windowTop() + HEADER_H + 24, cell, 20,
+        addRenderableWidget(ButtonWidget.semantic(left + cell + 6, windowTop() + HEADER_H + 18, cell, 16,
                 Component.literal(currentDimensionOnly ? "This dimension" : "All dimensions"), "Filters the current dimension.",
                 () -> { commitEditors(); currentDimensionOnly = !currentDimensionOnly; invalidateRows(); rebuildWidgets(); }));
-        addRenderableWidget(ButtonWidget.semantic(left + 2 * (cell + 6), windowTop() + HEADER_H + 24, cell, 20,
+        addRenderableWidget(ButtonWidget.semantic(left + 2 * (cell + 6), windowTop() + HEADER_H + 18, cell, 16,
                 Component.literal(font.plainSubstrByWidth(group.isEmpty() ? "All groups" : group, cell - 8)),
                 "Cycles waypoint groups. Edit a waypoint to assign its group.", () -> {
                     commitEditors();
@@ -149,7 +149,7 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
                     invalidateRows(); rebuildWidgets();
                 }));
         boolean hidden = AuroraConfig.get().waypointHiddenGroups != null && AuroraConfig.get().waypointHiddenGroups.contains(group);
-        ButtonWidget groupVisibility = addRenderableWidget(ButtonWidget.semantic(left + 3 * (cell + 6), windowTop() + HEADER_H + 24, cell, 20,
+        ButtonWidget groupVisibility = addRenderableWidget(ButtonWidget.semantic(left + 3 * (cell + 6), windowTop() + HEADER_H + 18, cell, 16,
                 Component.literal(hidden ? "Show group" : "Hide group"), "Shows or hides the selected group on every map.", () -> {
                     var cfg = AuroraConfig.get();
                     if (cfg.waypointHiddenGroups == null) cfg.waypointHiddenGroups = new java.util.HashSet<>();
@@ -166,7 +166,7 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
     //  Foundation hooks
     // ------------------------------------------------------------------
 
-    @Override protected int listWidth() { return Math.min(460, this.width - 32); }
+    @Override protected int listWidth() { return windowWidth() - 16; }
     @Override protected int rowHeight() { return ROW_H; }
     @Override protected int nameColumnWidth() { return nameWidth() - 16; }
     @Override protected int editorFieldX(int listX) {
@@ -357,10 +357,10 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
         // for that index).
         if (index != editingIndex) {
             String name = fitName(wp.name == null ? "" : wp.name);
-            com.aurora.client.worldmap.MapMarkers.waypoint(ctx, cx + 6, y + 10, wp,
+            com.aurora.client.worldmap.MapMarkers.waypoint(ctx, cx + 6, y + 8, wp,
                     WaypointFeature.get() != null && wp.id.equals(WaypointFeature.get().navigationId()));
             ctx.drawString(this.font, name,
-                    cx + 16, y + 6,
+                    cx + 16, y + 4,
                     ThemeManager.color(ThemeToken.ON_BACKGROUND), false);
         }
         cx += nameWidth() + CONTROL_GAP;
@@ -375,7 +375,7 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
         else coords += " · " + wp.dimension;
         coords = this.font.plainSubstrByWidth(coords, nameWidth());
         ctx.drawString(this.font, coords,
-                x + ROW_INSET + SWATCH_W + CONTROL_GAP, y + 21,
+                x + ROW_INSET + SWATCH_W + CONTROL_GAP, y + 16,
                 ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_BACKGROUND), 0x88), false);
         cx += COORDS_W + CONTROL_GAP;
 

@@ -415,8 +415,18 @@ public final class GuiAudit implements ClientModInitializer {
         actions.add(() -> shot("spx-display-settings"));
         actions.add(() -> scroll(-120));
         actions.add(() -> shot("spx-display-settings-pacer"));
+        // Collapsible sections: a long screen opens with only its first section expanded.
+        var hitreg = FeatureRegistry.all().stream().filter(m -> m.id.equals("better_hitreg")).findFirst().orElseThrow();
+        actions.add(() -> { park(); mc.setScreen(new FeatureDetailScreen(null, hitreg)); });
+        actions.add(() -> shot("spx-sections-collapsed"));
+        actions.add(() -> {
+            int seen = 0;
+            for (var setting : hitreg.settings)
+                if (setting instanceof com.aurora.client.screen.setting.SectionHeaderSetting h && ++seen == 3) h.toggle();
+        });
+        actions.add(() -> shot("spx-sections-one-expanded"));
         actions.add(() -> { park(); mc.setScreen(new WaypointManagerScreen(null)); });
-        actions.add(() -> { var s = mc.screen; hover(s.width * 0.803, s.height * 0.335); });
+        actions.add(() -> { var s = mc.screen; hover(s.width * 0.766, s.height * 0.344); });
         actions.add(() -> shot("spx-delete-hover"));
         actions.add(() -> { park(); mc.setScreen(new WorldMapScreen()); });
         actions.add(() -> shot("spx-world-map"));

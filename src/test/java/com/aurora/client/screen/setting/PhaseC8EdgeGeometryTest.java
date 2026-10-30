@@ -86,7 +86,9 @@ class PhaseC8EdgeGeometryTest {
     }
 
     /** dropdownH for a 5-option popup: 5*16 + 4 (OPT_H=16). */
-    private static final int DROPDOWN_H = 5 * 16 + 4;
+    private static final int DROPDOWN_H = 5 * 14 + 4;
+    /** Trigger height + its 2px gap (compact FIELD_H). */
+    private static final int BELOW = com.aurora.client.ui.util.UiDensity.FIELD_H + 2;
 
     @AfterEach
     void clearBand() {
@@ -98,7 +100,7 @@ class PhaseC8EdgeGeometryTest {
         FeatureSetting.setHostBand(new ClipBand(0, 0, 400, 300));
         EnumSetting<TenValues> row = ten();
         int btnY = 100;
-        assertEquals(btnY + 18 + 2, row.dropdownY(btnY, DROPDOWN_H),
+        assertEquals(btnY + BELOW, row.dropdownY(btnY, DROPDOWN_H),
                 "preferred placement is below the trigger");
     }
 
@@ -111,10 +113,9 @@ class PhaseC8EdgeGeometryTest {
         int btnY = 100;
         assertEquals(btnY - 2 - DROPDOWN_H, row.dropdownY(btnY, DROPDOWN_H),
                 "bottom-edge popup flips up");
-        // Just fitting below stays below: band bottom at 206 exactly fits
-        // btnY + 20 + 84.
-        FeatureSetting.setHostBand(new ClipBand(0, 0, 400, 206));
-        assertEquals(btnY + 20, row.dropdownY(btnY, DROPDOWN_H),
+        // Just fitting below stays below: a band bottom at btnY + BELOW + DROPDOWN_H fits exactly.
+        FeatureSetting.setHostBand(new ClipBand(0, 0, 400, btnY + BELOW + DROPDOWN_H));
+        assertEquals(btnY + BELOW, row.dropdownY(btnY, DROPDOWN_H),
                 "a popup that exactly fits below stays below (half-open band edge)");
     }
 

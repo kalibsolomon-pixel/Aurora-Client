@@ -1248,3 +1248,29 @@ recipe, 18px section band between groups). These rules are now normative:
   square outlined box.
 
 Evidence, measurements and limits: `SPXCTRA_UI_SIMPLIFICATION_REPORT.md`.
+
+## Compact pass — uniform window, smaller UI, collapsible sections (2026-10-30)
+
+Owner request: every Aurora window the same size, smaller text/controls, tighter spacing,
+less scrolling, and expandable categories for long option lists. Owner follow-up: feature
+cards keep their original 80×80 size; the window must not be oversized for the smaller UI.
+
+- **One window.** `UiDensity.window` (420×272 GUI px, shrunk to fit with a 12 px margin) is
+  the frame for the main screen, every feature detail screen, the Profile and Waypoint
+  managers, the waypoint editor, color picker, mapping data and the resource-pack browser
+  (which runs its layout inside the frame as a translated viewport). The title screen,
+  HUD editor and the full-screen world map are not windows and keep their layouts.
+- **Compact text.** Inside Aurora windows (`ThemedScreen.compactText`, default = windowed
+  hosts) text uses `<font>_ui`, the same bundled face rasterized at 7.5 instead of 9 px —
+  crisp, no pose scaling; measurement uses the same style. Vanilla-font users
+  (SansSerif / renderer Off) keep vanilla text.
+- **Compact metrics** (`UiDensity`): 24 px header band with 16 px header buttons; setting rows
+  18 px (sliders 20, wrapped 28) with 2 px gaps; 14 px field controls (dropdown 84 wide,
+  keybind/action 72); 24×12 toggles; 32×12 swatches; 5 px slider knob; section band 8 px.
+  Feature cards stay 80×80 with 6 px gaps (4 columns); list cards stay 32 px with 4 px gaps.
+- **Collapsible sections.** `SectionHeaderSetting` is a disclosure control (click, Enter or
+  Space; chevron at the trailing edge; focus ring). Lists with three or more sections open
+  with only the first expanded *when the fully expanded list would scroll*; otherwise all
+  open. A player's choice is remembered for the session per feature and caption. A caption
+  directly under a collapsed caption drops its band so collapsed runs read as one list.
+- **Waypoint editor** shows Location and Details together (the "Show details" switch is gone).

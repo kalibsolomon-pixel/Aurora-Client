@@ -24,6 +24,7 @@ class FontFallbackTest {
         try (var files = Files.list(FONTS)) {
             for (Path file : (Iterable<Path>) files.filter(p -> p.toString().endsWith(".json"))::iterator) {
                 if (file.getFileName().toString().equals("material_symbols.json")) continue; // icon font, explicit codepoints
+                // The *_ui variants (compact Aurora-window size) must fall back exactly like the originals.
                 String text = Files.readString(file, StandardCharsets.UTF_8).replace("﻿", "");
                 JsonArray providers = JsonParser.parseString(text).getAsJsonObject().getAsJsonArray("providers");
                 assertEquals("ttf", providers.get(0).getAsJsonObject().get("type").getAsString(), file + " keeps its TTF first");
@@ -33,6 +34,6 @@ class FontFallbackTest {
                 checked++;
             }
         }
-        assertEquals(9, checked, "all nine selectable text fonts");
+        assertEquals(18, checked, "all nine selectable text fonts and their compact UI variants");
     }
 }
