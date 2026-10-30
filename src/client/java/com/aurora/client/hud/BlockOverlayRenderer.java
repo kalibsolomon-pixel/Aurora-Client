@@ -88,7 +88,6 @@ public final class BlockOverlayRenderer {
                 float ob = ( outColor        & 0xFF) / 255f;
 
                 float widthPx = (float) Math.max(1.0, cfg.blockOverlayLineWidth);
-                boolean seeThrough = cfg.blockOverlaySeeThrough;
 
                 // Do NOT translate the pose stack by the camera. WorldLineRenderer
                 // subtracts the camera position in double precision per-vertex,
@@ -96,7 +95,9 @@ public final class BlockOverlayRenderer {
                 matrices.pushPose();
                 Matrix4f lineModel = matrices.last().pose();
 
-                VertexConsumer lineBuf = WorldLineRenderer.getLineBuffer(consumers, seeThrough);
+                // The see-through outline option is gone (owner ruling
+                // 2026-10-30); the outline keeps the see-through default.
+                VertexConsumer lineBuf = WorldLineRenderer.getLineBuffer(consumers);
 
                 double blockX = pos.getX();
                 double blockY = pos.getY();

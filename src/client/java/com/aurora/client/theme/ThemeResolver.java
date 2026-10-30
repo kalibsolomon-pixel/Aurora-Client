@@ -153,9 +153,16 @@ public final class ThemeResolver {
         c[ThemeToken.BACKDROP_BOT_LIGHT.ordinal()] = c[ThemeToken.MATERIAL_CANVAS.ordinal()];
     }
 
-    /** Single window-density mapping; saved preferences remain unchanged. */
+    /**
+     * Single window-density mapping; saved preferences remain unchanged.
+     * LINEAR since 2026-10-30 (owner ruling): the Background Opacity slider
+     * is the source of truth for the window — at 100% the window fill is
+     * FULLY OPAQUE (a solid color surface; the blur underneath is covered),
+     * at 0% it is fully clear. The former ×.68 density cap kept even the
+     * maximum see-through.
+     */
     public static int backgroundAlpha(double opacity) {
-        return Math.round((float)ThemeDefinition.normalizedOpacity(opacity) * 255f * .68f);
+        return Math.round((float)ThemeDefinition.normalizedOpacity(opacity) * 255f);
     }
 
     private static void applyBackgroundOpacity(int[] colors, double opacity) {

@@ -215,3 +215,35 @@ Limits: captured at 1920×1080@3 on OpenGL only. Drag-frame re-raster cost of th
 pad was NOT measured (the harness captures static frames): it is drag-only by construction —
 one device-area HSL pass per changed hue, strips trivially cheap; at rest every surface is
 one cached blit (the inline editor previously submitted ~1300 fills per rest frame).
+
+## 11. Owner punch list — eleven fixes from live verification (2026-10-30 evening)
+
+Verified against the running client by the owner; every item below is implemented, tested,
+and captured by harness run `compact3`.
+
+| # | Issue (owner's words, condensed) | Fix |
+|---|---|---|
+| 1 | Accent/Background Color don't need presets or the Custom label — one swatch that opens the picker | `AccentSetting` rewritten as the shared `ColorSetting` row (single 14×14 square swatch → inline picker) + the established 100 ms live-apply throttle (`ColorSetting.applyValue` seam). Preset grids, Custom pill, peer roving ring, hover animators: removed. `ThemePresets` survives only as the factory default. |
+| 2 | Text & Fonts dropdowns don't function when clicked | Root cause: compact `EnumSetting`s keep their 18 px row while expanded — the floating popup is painted by the HOST, and AuroraScreen (the only place text_fonts renders — it has no detail screen) never painted it. The Settings tab now paints open popups after the row walk and routes popup clicks FIRST (the FeatureDetailScreen discipline). Config-apply chain verified sound (setter→field→save; MixinFont re-reads per frame). |
+| 3 | Background Opacity must be the source of truth: max = solid color (no see-through, no blur), min = clear | Window fill alpha now LINEAR (`×255`, was `×255×.68` — the density cap kept even max see-through); frost now `requested × opacity` (the 1/6 floor kept a frosted slab at 0%), and below the effective minimum frost the glass panel declines entirely — the flat path carries the near-zero alpha directly. |
+| 4 | Clicking "Settings" overlaps the selection highlight — fix universally (also the Pack-Tweaks case) | The double was selection's accent edge + the focus ring 2 px outside (added the same morning; now reversed by ruling). Selected/enabled peers carry the selection alone everywhere: sidebar tabs, module tiles, layout pair, pack-browser sidebar, SegmentedControl segments, keybind listening pill. Section captions lose the boxed focus outline (which degenerated to four rules in Square mode, reading as a doubled divider) — focus brightens the caption + chevron like hover. |
+| 5 | Shield status overlay not vibrant; alpha must be the source of truth (max = texture fully covered, min = off) | The cutout render type made the old multiply-tint structurally unable to cover dark texels. Now a SECOND model pass: the same handle+plate parts through a pure-white atlas sprite (stitched into `minecraft:shield_patterns` by `assets/aurora/atlases/shield_patterns.json` + a 4×4 white texture) with `RenderTypes.entityTranslucent` and the status ARGB — real alpha blending over the textured shield. `resolveOverlayArgb()` returns the picker color verbatim; alpha 0 submits nothing. |
+| 6 | Remove "See-Through Outline" (Block Overlay) completely | Row + `blockOverlaySeeThrough` config field + renderer branch removed; the outline keeps the see-through (translucent lines) behavior. Note: the 3.1.0 release default JSON listed the field — dropped there too (its presence crashed config init; caught by the test suite). |
+| 7 | Remove "See-Through Wireframe" (Hitbox) completely | Same treatment (`hitboxSeeThrough`); the wireframe keeps translucent lines. `WorldLineRenderer.getLineBuffer(consumers)` is the see-through accessor; the waypoint highlight keeps its depth-tested `getOccludedLineBuffer`. |
+| 8 | Info HUD options grouped into loose dropdown categories | 16 flat rows → Text Color + Background rows on top, then four collapsible `SectionHeaderSetting` groups: Performance (FPS/Frame Time/Memory/Ping/CPS), Position (Coords/Facing/In-chunk/Chunk Coords/Y vs Sea), World (Time/Biome/Dimension/Light), Playtime (Show/per-World). |
+| 9 | "Preview" buttons → the "[->" symbol (Google font icon for quality) | `arrow_forward` (U+E5C8) added to the material-symbols subset (regenerated from the official variable font); ButtonSetting's no-text factory is now an icon-only 28 px face (`SettingRowLayout.Kind.ACTION`). Navigation rows (Manage Waypoints…, Open Browser…, mapping actions) wear it; genuine actions keep meaningful labels ("Drop", "Reset", "Preview" for Test Sound). |
+| 10 | Remove Swing Style from Animations (keep Swing Curve) | Row removed; `cfg.swingStyle` + the 1.8-arc mixin behavior persist unchanged for existing configs. |
+| 11 | Pack browser out of proportion — cards overlap, fall outside the window | Card width now DERIVES from the frame (`cardW()` = content column ÷ columns; one 202 px column at 336) instead of a fixed 260 px with negative centering; grid left is pinned to the content column; the scrollbar track sits inside the window's right gutter (was 22 px past the frame edge); scissor/ClipBand bottom pads clear the rounded corner (16 px) with a bottom scroll fade; the "N packs" header moved off the sidebar into the content column. |
+
+Tests: 601 passing (the 21 AccentSetting peer-pilot tests retired with the peer model;
+inventory/pin tests re-based: enum rows 25→24, density 173→255, focus-ring pins inverted
+per the ruling, the peer-selection conformance family removed, release-defaults JSON
+regenerated without the two deleted fields).
+
+Evidence: `docs/spxctra/compact3/after-*.png` (harness `compact3`, plan `full`,
+1920×1080@3, OpenGL, 41/41 checks).
+
+Limits: the shield overlay's in-world appearance is NOT runtime-verified (no shield in the
+fixture world) — the second-pass mechanism is vanilla-API standard, flagged for the owner's
+next live check. Dropdown popup fix verified by code path + harness checks; drag-frame
+behavior not scripted by the harness.

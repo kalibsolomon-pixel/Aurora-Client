@@ -34,7 +34,7 @@ class AuroraScreenSemanticHostingTest {
     void exactInlineInventoryIsReconfirmed() {
         String settings = settingsRegistryBlock();
         assertEquals(3, count(settings, "new EnumSetting<>("), "hostable enum triggers");
-        assertEquals(2, count(settings, "new AccentSetting("), "two ten-peer theme colour rows (Accent, Background)");
+        assertEquals(2, count(settings, "new AccentSetting("), "two theme colour rows (Accent, Background) — single-picker swatches since the 2026-10-30 ruling");
         assertEquals(1, count(settings, "new SegmentedSetting<>("), "Corner Style only");
         assertEquals(1, count(settings, "new ThemeOpacitySetting("), "deferred continuous control");
         assertEquals(0, count(settings, "new ThemePreviewSetting("), "preview retired");

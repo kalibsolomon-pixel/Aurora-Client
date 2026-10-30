@@ -6,7 +6,7 @@ import java.util.function.ToIntFunction;
 /** Immutable, pre-paint row measurement shared by layout, paint and pointer routing. */
 public record SettingRowLayout(int height, List<String> lines, UiDensity.Rect label,
                                UiDensity.Rect control, UiDensity.Rect value, boolean inline) {
-    public enum Kind { BOOLEAN, SLIDER, ENUM, KEYBIND, COLOR, BUTTON, SECTION }
+    public enum Kind { BOOLEAN, SLIDER, ENUM, KEYBIND, COLOR, BUTTON, ACTION, SECTION }
     /** Slider value readout column. */
     public static final int VALUE_W = 36;
     public static SettingRowLayout measure(Kind kind, String text, int width, int lineHeight,
@@ -14,6 +14,7 @@ public record SettingRowLayout(int height, List<String> lines, UiDensity.Rect la
         int pad = 8, gap = 6;
         int controlW = switch (kind) {
             case BOOLEAN -> UiDensity.TOGGLE_W; case ENUM -> UiDensity.ENUM_W; case KEYBIND, BUTTON -> UiDensity.KEY_W;
+            case ACTION -> UiDensity.ACTION_W;
             case COLOR -> UiDensity.SWATCH_W; case SLIDER -> 152; case SECTION -> 0;
         };
         int controlH = switch (kind) {

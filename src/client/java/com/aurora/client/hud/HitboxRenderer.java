@@ -91,9 +91,9 @@ public final class HitboxRenderer {
         if (consumers == null) return;
 
         // Use the proper lines() render type with per-vertex line width.
-        // See-through mode (default) uses linesTranslucent() for the Lunar look.
-        boolean seeThrough = cfg.hitboxSeeThrough;
-        VertexConsumer buf = WorldLineRenderer.getLineBuffer(consumers, seeThrough);
+        // The see-through wireframe option is gone (owner ruling 2026-10-30);
+        // the wireframe keeps the see-through (translucent) default.
+        VertexConsumer buf = WorldLineRenderer.getLineBuffer(consumers);
 
         // Match vanilla LevelRenderer: use the game-time partial tick (false) so
         // our interpolated AABB lines up with the camera and the entity model.

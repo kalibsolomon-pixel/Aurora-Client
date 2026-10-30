@@ -155,29 +155,16 @@ public final class BlurPanelRenderer {
     public static final float DEFAULT_BLUR_RADIUS_PX = 24f;
 
     /**
-     * Floor of the frost curve, as a fraction of the requested radius (4 px
-     * at the default): at the very bottom of the slider the glass is still
-     * glass — a hint of frost keeps the material and its light catch — but
-     * the backdrop reads through it almost unblurred.
-     */
-    public static final float MIN_FROST_FRACTION = 1f / 6f;
-
-    /**
-     * The blur radius a panel is rendered with, derived from Background
-     * Opacity: {@code requested × max(MIN_FROST_FRACTION, √opacity)}.
+     * The blur radius a panel is rendered with, derived LINEARLY from
+     * Background Opacity: {@code requested × opacity} (owner ruling
+     * 2026-10-30 — the slider is the source of truth).
      *
-     * <p>Why: the tint fill's alpha already reaches 0 at the slider's
-     * minimum (linear, no floor — {@code ThemeResolver.applyBackgroundOpacity}),
-     * yet a panel at 0% still read as a solid frosted slab, because the
-     * blur was a constant: at every opacity the backdrop inside the panel
-     * was replaced by a 24 px Gaussian of itself, which on any detailed
-     * backdrop destroys exactly the detail that would make the panel read
-     * as see-through. The frost is what "opaque" looked like at the low
-     * end. So the frost now follows the one opacity value like every other
-     * material term: clear glass at the bottom (√ keeps the ramp steep
-     * where it is visible — 0.05 → 5 px, 0.25 → 12 px, 0.5 → 17 px), the
-     * established full frost from ~70% up, where the fill dominates the
-     * read anyway.
+     * <p>At 0% the frost is 0 px: the window is CLEAR, its un-frosted
+     * backdrop reading straight through (the former 1/6 floor — and before
+     * that the constant 24 px — kept even the minimum reading as a frosted
+     * slab). At 100% the fill is fully opaque and covers the blur, so the
+     * window reads as solid color. In between, frost and fill alpha rise
+     * together on the one value.
      *
      * <p>This is a lighting-term-class derivation from the single opacity
      * value — the same category as {@code uRimBlend} and the rim finish's
@@ -185,9 +172,8 @@ public final class BlurPanelRenderer {
      * pipeline is multiplied by it (AGENTS.md §6, convention 1).
      */
     public static float frostRadiusPx(float requestedRadiusPx) {
-        double opacity = ThemeManager.current().backgroundOpacity();
-        float k = (float) Math.max(MIN_FROST_FRACTION, Math.sqrt(Math.max(0d, Math.min(1d, opacity))));
-        return requestedRadiusPx * k;
+        double opacity = Math.max(0d, Math.min(1d, ThemeManager.current().backgroundOpacity()));
+        return requestedRadiusPx * (float) opacity;
     }
 
     // ==================================================================================
@@ -996,6 +982,12 @@ public final class BlurPanelRenderer {
         float requested = Math.min(64f, Math.max(0f, blurRadiusPx));
         if (requested < MIN_EFFECTIVE_RADIUS_PX) { lastOutcome = "radius below minimum"; return false; }
         float radius = frostRadiusPx(requested);
+        // Opacity floor (owner ruling 2026-10-30): when the frost the slider
+        // asks for is below the effective minimum the panel declines — the
+        // caller's flat fill carries the (near-)zero alpha directly, so the
+        // window is genuinely CLEAR at the bottom of the slider instead of
+        // paying for a blur that must not be visible anyway.
+        if (radius < MIN_EFFECTIVE_RADIUS_PX) { lastOutcome = "frost below minimum (clear)"; return false; }
         if (RenderBackend.isOpenGl() && !ensureReady()) { lastOutcome = "init failed (see log)"; return false; }
 
         long perfStart = GlassStats.ENABLED ? System.nanoTime() : 0L;

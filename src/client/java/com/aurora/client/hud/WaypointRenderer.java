@@ -370,7 +370,7 @@ public final class WaypointRenderer {
 
         // Aurora's shared GPU-expanded lines retain a two-device-pixel stroke
         // at any distance; camera subtraction stays in double precision.
-        WorldLineRenderer.drawBoxOutline(WorldLineRenderer.getLineBuffer(consumers, false), m, camPos,
+        WorldLineRenderer.drawBoxOutline(WorldLineRenderer.getOccludedLineBuffer(consumers), m, camPos,
                 w.x - radius - (double) HIGHLIGHT_EPSILON, w.y - (double) HIGHLIGHT_EPSILON,
                 w.z - radius - (double) HIGHLIGHT_EPSILON,
                 w.x + radius + 1d + HIGHLIGHT_EPSILON, w.y + 1d + HIGHLIGHT_EPSILON,

@@ -326,7 +326,11 @@ public class ColorSetting extends FeatureSetting {
         releaseFocus();
     }
 
-    private void commit() { setter.accept(ColorEntryHelper.hslaToArgb(h, s, l, a)); }
+    private void commit() { applyValue(ColorEntryHelper.hslaToArgb(h, s, l, a)); }
+
+    /** The commit seam — subclasses (AccentSetting's throttled live apply)
+     *  intercept here; the plain row writes straight through. */
+    void applyValue(int argb) { setter.accept(argb); }
 
     private void updateFromPad(double mouseX, double mouseY) {
         s = clamp01((float) ((mouseX - padX) / PAD_SIZE));

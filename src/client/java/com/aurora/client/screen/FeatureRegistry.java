@@ -48,7 +48,8 @@ public final class FeatureRegistry {
 
     private static ButtonSetting mappingAction(String label, String description,
             java.util.function.Consumer<net.minecraft.client.gui.screens.Screen> action) {
-        return ButtonSetting.semantic(label, "Open", () ->
+        // Navigation actions wear the arrow glyph (owner ruling 2026-10-30).
+        return ButtonSetting.semantic(label, () ->
                 action.accept(net.minecraft.client.Minecraft.getInstance().screen)).description(description);
     }
 
@@ -176,11 +177,11 @@ public final class FeatureRegistry {
                         new ColorSetting("Available Color",
                                 () -> cfg.shieldStatusAvailableColor,
                                 v -> cfg.shieldStatusAvailableColor = v)
-                                .description("Applied to your shield whenever it is usable — including while actively blocking — and to all other entities' shields. Note: because shield rendering uses cutout blending, the alpha channel controls tint strength rather than transparency — lower alpha gives a subtler tint."),
+                                .description("A solid color overlay applied to your shield whenever it is usable — including while actively blocking — and to all other entities' shields. The picker's alpha is the overlay's opacity: maximum covers the shield entirely, minimum turns the overlay off."),
                         new ColorSetting("Disabled Color",
                                 () -> cfg.shieldStatusDisabledColor,
                                 v -> cfg.shieldStatusDisabledColor = v)
-                                .description("Applied to your shield only during the cooldown that follows an axe disabling it (the 'rendered unusable' window). Note: the alpha channel controls tint strength, not transparency — lower alpha gives a subtler tint."),
+                                .description("A solid color overlay applied to your shield only during the cooldown that follows an axe disabling it (the 'rendered unusable' window). The picker's alpha is the overlay's opacity: maximum covers the shield entirely, minimum turns the overlay off."),
 
                         new SectionHeaderSetting("Environment / Clarity"),
                         SliderSetting.of("Underwater Fog Multiplier",
@@ -259,10 +260,6 @@ public final class FeatureRegistry {
                                 () -> cfg.blockOverlayLineWidth,
                                 v -> cfg.blockOverlayLineWidth = v, 1.0, 6.0)
                                 .description("Thickness of the outline in screen pixels. Uses a GPU-side line expansion shader, so lines render cleanly at any width on all GPUs."),
-                        new BooleanSetting("See-Through Outline",
-                                () -> cfg.blockOverlaySeeThrough,
-                                v -> cfg.blockOverlaySeeThrough = v)
-                                .description("When on, the outline renders without depth testing, so it shows through the block itself — the Lunar/NoRisk style look. Turn off for a more subtle outline that is occluded by geometry in front."),
                         new BooleanSetting("Show Fill",
                                 () -> cfg.blockOverlayFillEnabled,
                                 v -> cfg.blockOverlayFillEnabled = v)
@@ -449,10 +446,6 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                 () -> cfg.hitboxLineWidth,
                                 v -> cfg.hitboxLineWidth = v, 0.1, 6.0)
                                 .description("Thickness of the hitbox outline in screen pixels. Uses a GPU-side line expansion shader, so lines render cleanly at any width on all GPUs."),
-                        new BooleanSetting("See-Through Wireframe",
-                                () -> cfg.hitboxSeeThrough,
-                                v -> cfg.hitboxSeeThrough = v)
-                                .description("When on, the full hitbox wireframe is always visible through the entity model — the signature Lunar/NoRisk competitive-client look. Turn off for depth-tested wireframe where edges behind geometry are properly occluded."),
                         new ColorSetting("Hitbox Color",
                                 () -> cfg.hitboxColor, v -> cfg.hitboxColor = v),
 
@@ -521,23 +514,16 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                 List.of(
                         new ColorSetting("Text Color", () -> cfg.infoModuleTextColor == null ? com.aurora.client.theme.HudText.color(cfg.hudColor) : cfg.infoModuleTextColor, v -> cfg.infoModuleTextColor = v)
                                 .description("Text color for this HUD only. Reset restores its default color."),
+                        new EnumSetting<>("Background", AuroraConfig.HudBackground.class,
+                                () -> cfg.infoBgMode, v -> cfg.infoBgMode = v)
+                                .description("Backdrop drawn behind the HUD text. NONE is transparent; SOLID fills a panel with the color below (best for readability over bright scenery); VANILLA uses Minecraft's slot texture."),
+                        new ColorSetting("Background Color (when SOLID)",
+                                () -> cfg.infoBgColor, v -> cfg.infoBgColor = v)
+                                .description("The fill color and opacity used when Background is set to SOLID. Ignored for other background modes."),
+                        // Loose dropdown categories (owner ruling 2026-10-30): the
+                        // flat toggle list became four collapsible groups.
+                        new SectionHeaderSetting("Performance"),
                         new BooleanSetting("Show FPS", () -> cfg.showFps, v -> cfg.showFps = v),
-                        new BooleanSetting("Show Coords", () -> cfg.showCoords, v -> cfg.showCoords = v),
-                        new BooleanSetting("Show Time", () -> cfg.showTime, v -> cfg.showTime = v),
-                        new BooleanSetting("Show Facing",
-                                () -> cfg.infoShowFacing, v -> cfg.infoShowFacing = v),
-                        new BooleanSetting("Show In-chunk Position",
-                                () -> cfg.infoShowChunkLocal, v -> cfg.infoShowChunkLocal = v),
-                        new BooleanSetting("Show Chunk Coords",
-                                () -> cfg.infoShowChunkCoords, v -> cfg.infoShowChunkCoords = v),
-                        new BooleanSetting("Show Y vs Sea Level",
-                                () -> cfg.infoShowYRelSea, v -> cfg.infoShowYRelSea = v),
-                        new BooleanSetting("Show Biome",
-                                () -> cfg.infoShowBiome, v -> cfg.infoShowBiome = v),
-                        new BooleanSetting("Show Dimension",
-                                () -> cfg.infoShowDimension, v -> cfg.infoShowDimension = v),
-                        new BooleanSetting("Show Light Level",
-                                () -> cfg.infoShowLightAtFeet, v -> cfg.infoShowLightAtFeet = v),
                         new BooleanSetting("Show Frame Time",
                                 () -> cfg.infoShowFrameTime, v -> cfg.infoShowFrameTime = v)
                                 .description("Average milliseconds per frame, derived from the FPS counter. Lower is smoother; watch for spikes that indicate stutter even when average FPS looks fine."),
@@ -550,18 +536,31 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                         new BooleanSetting("Show CPS",
                                 () -> cfg.infoShowCps, v -> cfg.infoShowCps = v)
                                 .description("Left/right mouse clicks per second over the last second — handy for monitoring click speed without a separate CPS overlay."),
+                        new SectionHeaderSetting("Position"),
+                        new BooleanSetting("Show Coords", () -> cfg.showCoords, v -> cfg.showCoords = v),
+                        new BooleanSetting("Show Facing",
+                                () -> cfg.infoShowFacing, v -> cfg.infoShowFacing = v),
+                        new BooleanSetting("Show In-chunk Position",
+                                () -> cfg.infoShowChunkLocal, v -> cfg.infoShowChunkLocal = v),
+                        new BooleanSetting("Show Chunk Coords",
+                                () -> cfg.infoShowChunkCoords, v -> cfg.infoShowChunkCoords = v),
+                        new BooleanSetting("Show Y vs Sea Level",
+                                () -> cfg.infoShowYRelSea, v -> cfg.infoShowYRelSea = v),
+                        new SectionHeaderSetting("World"),
+                        new BooleanSetting("Show Time", () -> cfg.showTime, v -> cfg.showTime = v),
+                        new BooleanSetting("Show Biome",
+                                () -> cfg.infoShowBiome, v -> cfg.infoShowBiome = v),
+                        new BooleanSetting("Show Dimension",
+                                () -> cfg.infoShowDimension, v -> cfg.infoShowDimension = v),
+                        new BooleanSetting("Show Light Level",
+                                () -> cfg.infoShowLightAtFeet, v -> cfg.infoShowLightAtFeet = v),
+                        new SectionHeaderSetting("Playtime"),
                         new BooleanSetting("Show Playtime",
                                 () -> cfg.infoShowPlaytime, v -> cfg.infoShowPlaytime = v)
                                 .description("Tracks real wall-clock time spent in any world. Pauses when the game is paused or no world is loaded."),
                         new BooleanSetting("Playtime per-World",
                                 () -> cfg.infoPlaytimePerWorld, v -> cfg.infoPlaytimePerWorld = v)
-                                .description("On = show time spent in the current world / server only. Off = show the global lifetime total."),
-                        new EnumSetting<>("Background", AuroraConfig.HudBackground.class,
-                                () -> cfg.infoBgMode, v -> cfg.infoBgMode = v)
-                                .description("Backdrop drawn behind the HUD text. NONE is transparent; SOLID fills a panel with the color below (best for readability over bright scenery); VANILLA uses Minecraft's slot texture."),
-                        new ColorSetting("Background Color (when SOLID)",
-                                () -> cfg.infoBgColor, v -> cfg.infoBgColor = v)
-                                .description("The fill color and opacity used when Background is set to SOLID. Ignored for other background modes.")
+                                .description("On = show time spent in the current world / server only. Off = show the global lifetime total.")
                 ));
 
         addWithSettings(MODULES, "cps", "CPS",
@@ -682,7 +681,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                         // intent (nothing harmless sits below it to mis-click).
                         // The reset used to sit between Reset Counter Key and
                         // Show Other Players.
-                        ButtonSetting.semantic("Reset Now",
+                        ButtonSetting.semantic("Reset Now", "Reset",
                                 () -> {
                                     com.aurora.client.feature.impl.TotemPopFeature f =
                                             com.aurora.client.feature.impl.TotemPopFeature.get();
@@ -875,7 +874,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                         mc.setScreen(new WaypointManagerScreen(mc.screen));
                                     }
                                 }),
-                        ButtonSetting.semantic("Drop at Player Position",
+                        ButtonSetting.semantic("Drop at Player Position", "Drop",
                                 () -> {
                                     com.aurora.client.feature.impl.WaypointFeature feat =
                                             com.aurora.client.feature.impl.WaypointFeature.get();
@@ -1132,16 +1131,15 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                     com.aurora.client.theme.ThemeManager.reload();
                                     persistThemeChange();
                                 })
-                                .description("The color used for primary actions, selections, highlights and HUD accents. Pick a preset swatch, or open Custom to use the color picker."),
-                        new AccentSetting("Background Color", "background", "Custom Background",
-                                com.aurora.client.theme.ThemePresets.BACKGROUNDS,
+                                .description("The color used for primary actions, selections, highlights and HUD accents. Click the swatch to open the color picker."),
+                        new AccentSetting("Background Color",
                                 () -> cfg.themeOrDefault().background,
                                 v -> {
                                     cfg.themeOrDefault().background = v;
                                     com.aurora.client.theme.ThemeManager.reload();
                                     persistThemeChange();
                                 })
-                                .description("The color tint of every Aurora window. Graphite is the original grey; pick a deep tone, or open Custom for any color. Very light colors are deepened so text stays readable. Translucency stays on Background Opacity."),
+                                .description("The color tint of every Aurora window. Very light colors are deepened so text stays readable. Translucency stays on Background Opacity."),
                         new SegmentedSetting<>("Corner Style", ThemeRoundness.class,
                                 () -> cfg.themeOrDefault().roundness != null ? cfg.themeOrDefault().roundness : ThemeRoundness.ROUND,
                                 v -> {
@@ -1191,15 +1189,9 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                     case CUBIC_OUT -> "Cubic ease-out. Fast windup, slow follow-through. Combat-snappy.";
                                     case QUARTIC_OUT -> "Quartic ease-out. Very snappy windup, long follow-through. The most 'punchy' curve. Recommended for swings.";
                                 }),
-                        new EnumSetting<>("Swing Style",
-                                AuroraConfig.SwingStyle.class,
-                                () -> cfg.swingStyle,
-                                v -> cfg.swingStyle = v)
-                                .valueDescriptions(s -> switch (s) {
-                                    case VANILLA -> "Modern curved first-person swing arc — the default look.";
-                                    case LEGACY_1_8 -> "Steeper, punchier old-style arc reminiscent of 1.8. Pairs well with the Quartic Out swing curve.";
-                                })
-                                .description("Overrides the shape of the first-person attack swing. Legacy 1.8 adds a sharper chop and a wider outward sweep."),
+                        // "Swing Style" (vanilla vs Legacy 1.8 arc) was removed
+                        // by owner ruling 2026-10-30; the persisted choice keeps
+                        // applying (the mixin reads cfg.swingStyle unchanged).
 
                         new SectionHeaderSetting("View Bob"),
                         new EnumSetting<>("View Bob Curve",

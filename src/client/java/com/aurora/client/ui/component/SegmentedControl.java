@@ -237,8 +237,11 @@ public class SegmentedControl extends Widget {
             }
 
             // Keyboard focus: the Button-family 1 px accent hairline — an
-            // independent channel from both the selection fill and hover wash.
-            if (control != null && control.isFocused()) {
+            // independent channel from hover. The SELECTED segment already
+            // owns the selection treatment; a second stroke on the same rect
+            // doubled the highlight, so focus paints only on unselected
+            // segments (owner ruling 2026-10-30).
+            if (control != null && control.isFocused() && !isSelected) {
                 RenderUtil.drawRoundedOutlineAA(g, sx, y, sw, trackH, radius, 1.0f,
                         ThemeManager.withAlpha(MaterialSurface.color(ThemeToken.ACCENT), 0x99));
             }

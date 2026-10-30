@@ -27,11 +27,17 @@ import java.util.function.Supplier;
  */
 public class ButtonSetting extends FeatureSetting {
     private static final int CONTROL_H = 28;
-    private static final int BTN_W = com.aurora.client.ui.util.UiDensity.KEY_W;
     private static final int BTN_H = com.aurora.client.ui.util.UiDensity.FIELD_H;
+    /** The icon-only navigation face (arrow_forward) — the owner's "[->"
+     *  symbol replacing the old default "Preview" text on every button whose
+     *  job is to take the user to another screen. */
+    private static final String NAVIGATE_GLYPH =
+            com.aurora.client.screen.FeatureIcons.get("_action_navigate");
 
     private final Button button;
     private final SemanticActionControl interactionControl;
+    /** True = icon-only navigation face; false = the explicit text label. */
+    private final boolean iconFace;
 
     private int lastWidth = 240;
 
@@ -39,8 +45,16 @@ public class ButtonSetting extends FeatureSetting {
                           Supplier<String> accessibleState,
                           Runnable onPress,
                           SemanticActionControl.PointerRouting pointerRouting) {
+        this(label, buttonText, false, accessibleState, onPress, pointerRouting);
+    }
+
+    private ButtonSetting(String label, String buttonText, boolean iconFace,
+                          Supplier<String> accessibleState,
+                          Runnable onPress,
+                          SemanticActionControl.PointerRouting pointerRouting) {
         super(label);
-        this.button = new Button(buttonText, () -> {}).glassBackground(true);
+        this.iconFace = iconFace;
+        this.button = new Button(iconFace ? "" : buttonText, () -> {}).glassBackground(true);
         SemanticAction action = SemanticAction.button(
                 Component.literal(label),
                 () -> {
@@ -63,9 +77,14 @@ public class ButtonSetting extends FeatureSetting {
                 pointerRouting);
     }
 
-    /** The semantic construction path — every ButtonSetting is semantic. */
+    /** The semantic construction path — every ButtonSetting is semantic.
+     *  The no-text factory is the NAVIGATION face: an arrow_forward glyph
+     *  instead of the old default "Preview" label (owner ruling 2026-10-30 —
+     *  the arrow means "goes to another screen"). Non-navigation actions
+     *  pass an explicit buttonText. */
     public static ButtonSetting semantic(String label, Runnable onPress) {
-        return semantic(label, "Preview", onPress);
+        return new ButtonSetting(label, "", true, null, onPress,
+                SemanticActionControl.PointerRouting.MANUAL);
     }
 
     public static ButtonSetting semantic(String label, String buttonText, Runnable onPress) {
@@ -86,6 +105,28 @@ public class ButtonSetting extends FeatureSetting {
     @Override public int baseHeight() { return compactRow == null ? CONTROL_H : compactRow.height(); }
     @Override public int height() { return baseHeight() + descriptionHeight(lastWidth); }
 
+    /** Compact layout kind: the narrow icon column for the navigation face. */
+    com.aurora.client.ui.util.SettingRowLayout.Kind compactKind() {
+        return iconFace
+                ? com.aurora.client.ui.util.SettingRowLayout.Kind.ACTION
+                : com.aurora.client.ui.util.SettingRowLayout.Kind.BUTTON;
+    }
+
+    private int btnW() { return iconFace ? com.aurora.client.ui.util.UiDensity.ACTION_W
+            : com.aurora.client.ui.util.UiDensity.KEY_W; }
+
+    /** The navigation arrow drawn where a text button carries its label. */
+    private void drawFace(GuiGraphics ctx, int btnX, int btnY, int w, int h) {
+        if (!iconFace) return;
+        Font tr = Minecraft.getInstance().font;
+        if (tr == null) return;
+        int color = isDisabled()
+                ? com.aurora.client.ui.component.MaterialSurface.color(com.aurora.client.theme.ThemeToken.ON_BACKGROUND_MUTED)
+                : com.aurora.client.ui.component.MaterialSurface.color(com.aurora.client.theme.ThemeToken.MATERIAL_TEXT);
+        com.aurora.client.ui.util.MaterialIconRenderer.drawIcon(ctx, tr, NAVIGATE_GLYPH,
+                btnX + w / 2f, btnY + h / 2f, 9, color);
+    }
+
     /**
      * Pre-dim surface (§6 convention 6): the embedded shared Button already
      * carries the split — this drives its glass pass at the row's live
@@ -97,13 +138,14 @@ public class ButtonSetting extends FeatureSetting {
     @Override
     public void renderGlassPass(GuiGraphics ctx, int x, int y, int width) {
         if (!com.aurora.client.ui.component.GlassSurface.passOpen()) return; // legacy frame order
-        int btnX = controlX(x, width, BTN_W);
+        int w = btnW();
+        int btnX = controlX(x, width, w);
         int btnY = controlY(y, CONTROL_H, BTN_H);
-        button.layout(btnX, btnY, BTN_W, BTN_H);
-        interactionControl.setBounds(btnX, btnY, BTN_W, BTN_H);
+        button.layout(btnX, btnY, w, BTN_H);
+        interactionControl.setBounds(btnX, btnY, w, BTN_H);
         boolean disabled = isDisabled();
         button.disabled(disabled).focused(interactionControl.isFocused() && !disabled);
-        button.renderGlassPass(ctx, btnX, btnY, BTN_W, BTN_H);
+        button.renderGlassPass(ctx, btnX, btnY, w, BTN_H);
     }
 
     @Override
@@ -114,15 +156,17 @@ public class ButtonSetting extends FeatureSetting {
 
         // Left side of the row is the label; the button sits on the right.
         if (compactRow != null) renderCompactLabel(ctx, x, y, mouseX, mouseY, AuroraTheme.TEXT_PRIMARY);
-        else renderWrappedLabel(ctx, label, x + 12, y + (CONTROL_H - tr.lineHeight) / 2, Math.max(0,width-(BTN_W+38)), AuroraTheme.TEXT_PRIMARY, mouseX, mouseY, isDisabled());
+        else renderWrappedLabel(ctx, label, x + 12, y + (CONTROL_H - tr.lineHeight) / 2, Math.max(0,width-(btnW()+38)), AuroraTheme.TEXT_PRIMARY, mouseX, mouseY, isDisabled());
 
-        int btnX = controlX(x, width, BTN_W);
+        int w = btnW();
+        int btnX = controlX(x, width, w);
         int btnY = controlY(y, CONTROL_H, BTN_H);
 
-        button.layout(btnX, btnY, BTN_W, BTN_H);
+        button.layout(btnX, btnY, w, BTN_H);
         syncInteraction(btnX, btnY, mouseX, mouseY);
         syncCompactControl(x, y);
-        button.render(ctx, btnX, btnY, BTN_W, BTN_H, mouseX, mouseY);
+        button.render(ctx, btnX, btnY, w, BTN_H, mouseX, mouseY);
+        drawFace(ctx, btnX, btnY, w, BTN_H);
 
         renderDescription(ctx, x, y + CONTROL_H, width);
     }
@@ -140,7 +184,7 @@ public class ButtonSetting extends FeatureSetting {
     }
 
     private void syncInteraction(int x, int y, int mouseX, int mouseY) {
-        interactionControl.setBounds(x, y, BTN_W, BTN_H);
+        interactionControl.setBounds(x, y, btnW(), BTN_H);
         interactionControl.updatePointer(mouseX, mouseY);
         boolean disabled = isDisabled();
         button.disabled(disabled).focused(interactionControl.isFocused() && !disabled);

@@ -135,7 +135,6 @@ class ConformanceManifestTest {
     @Test
     void behaviorSideSoundPlaysAreExactlyTheRecordedSet() throws IOException {
         Set<String> expected = Set.of(
-                SRC + "screen/setting/AccentSetting.java",
                 SRC + "screen/AuroraScreen.java",
                 SRC + "screen/ResourcePackBrowserScreen.java",
                 SRC + "ui/component/SegmentedControl.java");

@@ -85,13 +85,13 @@ class UnifiedPilotContractTest {
             previous=density;
         }
         assertEquals(0,ThemeResolver.backgroundAlpha(0));
-        assertEquals(173,ThemeResolver.backgroundAlpha(1));
+        assertEquals(255,ThemeResolver.backgroundAlpha(1)); // linear since 2026-10-30: the slider is the source of truth
         for(ThemeMode mode:ThemeMode.values()) {
             var original=ThemeDefinition.defaults(); original.mode=mode;
             for(double opacity:new double[]{0,.37,1}) {
                 original.backgroundOpacity=opacity;
                 var resolved=ThemeResolver.resolve(original,true);
-                assertEquals(Math.round((float)opacity*255f*.68f),resolved.color(ThemeToken.WINDOW_FILL)>>>24);
+                assertEquals(Math.round((float)opacity*255f),resolved.color(ThemeToken.WINDOW_FILL)>>>24);
                 assertEquals(opacity,original.backgroundOpacity);
             }
         }

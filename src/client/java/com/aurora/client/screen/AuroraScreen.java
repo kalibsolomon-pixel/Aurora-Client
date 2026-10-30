@@ -928,15 +928,13 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             g.drawString(tr, cats[i], (int) (catX + 8), (int) (catY + (TAB_H - tr.lineHeight) / 2 + 1), txt, false);
             // Keyboard focus: the Button-family 1 px accent hairline — an
             // independent channel from both the selection tint and hover.
-            // A selected unified tab already owns the accent edge, so its focus is the Button
-            // family's ring 2px OUTSIDE it — never a doubled edge, never invisible (Spxctra
-            // 2026-10-30: keyboard position previously vanished on the selected tab).
-            if (control != null && control.isFocused() && (!MaterialSurface.unified() || !sel)) {
+            // A SELECTED tab never takes a second indicator: its accent edge
+            // IS the treatment, so focus on a selected peer reads through the
+            // selection alone (owner ruling 2026-10-30 — the ring 2px outside
+            // the selection edge doubled the highlight on click).
+            if (control != null && control.isFocused() && !sel) {
                 RenderUtil.drawRoundedOutlineAA(g, catX, catY, TAB_W, TAB_H, ctrlRadius, 1.0f,
                         ThemeManager.withAlpha(MaterialSurface.color(ThemeToken.ACCENT), 0x99));
-            } else if (control != null && control.isFocused()) {
-                RenderUtil.drawRoundedOutlineAA(g, catX - 2, catY - 2, TAB_W + 4, TAB_H + 4,
-                        MaterialSurface.outsetRadius(ctrlRadius, 2), 1.0f, MaterialSurface.color(ThemeToken.ACCENT));
             }
         }
 
@@ -1076,12 +1074,12 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                         alpha(ThemeToken.ON_BACKGROUND, (0x1A / 255f) * hoverT));
             }
             // Keyboard focus: the Button-family hairline — independent of
-            // both the enabled stain and the hover wash.
-            if (control != null && control.isFocused()) {
-                // An enabled tile already wears the accent edge: focus moves 2px outside it.
-                if (MaterialSurface.unified() && on) RenderUtil.drawRoundedOutlineAA(g, cx - 2, cy - 2, cw + 4, ch + 4,
-                        MaterialSurface.outsetRadius(tileRadius, 2), 1.0f, MaterialSurface.color(ThemeToken.ACCENT));
-                else RenderUtil.drawRoundedOutlineAA(g, cx, cy, cw, ch, tileRadius, 1.0f,
+            // both the enabled stain and the hover wash. An enabled tile
+            // already wears the accent edge; a second ring outside it doubled
+            // the highlight, so a selected/enabled peer never takes one
+            // (owner ruling 2026-10-30).
+            if (control != null && control.isFocused() && !(MaterialSurface.unified() && on)) {
+                RenderUtil.drawRoundedOutlineAA(g, cx, cy, cw, ch, tileRadius, 1.0f,
                         ThemeManager.withAlpha(MaterialSurface.color(ThemeToken.ACCENT), 0x99));
             }
 
@@ -1237,6 +1235,19 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             }
             y += SETTINGS_ENTRY_GAP;
         }
+        // Compact EnumSettings keep their 18px row while expanded — the open
+        // popup is a FLOATING overlay the HOST must paint after the row walk
+        // (the FeatureDetailScreen discipline; before this, the Settings tab's
+        // two text_fonts dropdowns expanded invisibly — clicks "did nothing"
+        // and blind clicks could silently rewrite the config).
+        for (FeatureMetadata m : FeatureRegistry.settings()) {
+            for (FeatureSetting s : m.settings) {
+                if (s instanceof com.aurora.client.screen.setting.EnumSetting<?> row
+                        && s.isVisible() && row.popupOpen()) {
+                    row.renderFloatingOverlay(g, mouseX, mouseY);
+                }
+            }
+        }
         g.disableScissor();
     }
 
@@ -1280,12 +1291,10 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             }
         }
         // Keyboard focus: the Button-family hairline — independent of both
-        // the enabled stain and the hover wash.
-        if (focused) {
-            // A selected peer already wears the accent edge: focus moves 2px outside it.
-            if (MaterialSurface.unified() && selected) RenderUtil.drawRoundedOutlineAA(g, x - 2, y - 2, size + 4, size + 4,
-                    MaterialSurface.outsetRadius(ctrlRadius, 2), 1.0f, MaterialSurface.color(ThemeToken.ACCENT));
-            else RenderUtil.drawRoundedOutlineAA(g, x, y, size, size, ctrlRadius, 1.0f,
+        // the enabled stain and the hover wash. A selected peer already wears
+        // the accent edge; no second ring outside it (owner ruling 2026-10-30).
+        if (focused && !(MaterialSurface.unified() && selected)) {
+            RenderUtil.drawRoundedOutlineAA(g, x, y, size, size, ctrlRadius, 1.0f,
                     ThemeManager.withAlpha(MaterialSurface.color(ThemeToken.ACCENT), 0x99));
         }
         // Same contract as the tiles: on stained glass the icon takes the
@@ -1513,6 +1522,23 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 }
             }
         } else if (vp.contains(mouseX, mouseY)) {
+            // An open EnumSetting popup owns the pointer FIRST (the
+            // FeatureDetailScreen discipline): its option list floats over
+            // the rows, and clicks inside it select/collapse rather than
+            // hitting whatever row renders underneath.
+            if (button == 0) {
+                float py = viewTop() - (float) scrolls[1].current();
+                for (FeatureMetadata m : FeatureRegistry.settings()) {
+                    for (FeatureSetting s : m.settings) {
+                        if (!s.isVisible()) continue;
+                        if (s instanceof com.aurora.client.screen.setting.EnumSetting<?> row && row.popupOpen()
+                                && row.mouseClicked(mouseX, mouseY, button, (int) (mx + 4), (int) py, contentWidth() - 8)) {
+                            return true;
+                        }
+                        py += s.height() + SETTINGS_ROW_GAP;
+                    }
+                }
+            }
             float y = viewTop() - (float) scrolls[1].current();
             for (FeatureMetadata m : FeatureRegistry.settings()) {
                 // The toggle zone is deliberately ~10px wider than the

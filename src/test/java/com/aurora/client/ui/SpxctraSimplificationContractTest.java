@@ -79,13 +79,20 @@ class SpxctraSimplificationContractTest {
     }
 
     @Test
-    void focusStaysVisibleOnSelectedPeers() throws Exception {
-        // A focus hairline drawn exactly over an accent selection edge is invisible; selected or
-        // enabled peers get the Button family's ring 2px outside instead.
+    void focusNeverDoublesTheSelectedTreatment() throws Exception {
+        // Owner ruling 2026-10-30 (evening) REVERSES the morning ring-outside
+        // rule: a selected/enabled peer's accent edge IS the treatment — no
+        // second focus ring may overlap it. Unselected peers keep the 1px
+        // hairline (keyboard position stays visible where selection isn't).
         String main = read("screen/AuroraScreen.java");
-        assertTrue(main.contains("drawRoundedOutlineAA(g, catX - 2, catY - 2, TAB_W + 4, TAB_H + 4"), "selected sidebar tab");
-        assertTrue(main.contains("if (MaterialSurface.unified() && on) RenderUtil.drawRoundedOutlineAA(g, cx - 2, cy - 2"), "enabled tile");
-        assertTrue(main.contains("if (MaterialSurface.unified() && selected) RenderUtil.drawRoundedOutlineAA(g, x - 2, y - 2"), "layout peer");
+        assertFalse(main.contains("drawRoundedOutlineAA(g, catX - 2, catY - 2, TAB_W + 4, TAB_H + 4"),
+                "selected sidebar tab never takes a second ring");
+        assertFalse(main.contains("RenderUtil.drawRoundedOutlineAA(g, cx - 2, cy - 2"),
+                "enabled tile never takes a second ring");
+        assertFalse(main.contains("RenderUtil.drawRoundedOutlineAA(g, x - 2, y - 2"),
+                "layout peer never takes a second ring");
+        assertTrue(main.contains("if (control != null && control.isFocused() && !sel) {"),
+                "unselected tabs keep the focus hairline");
     }
 
     @Test

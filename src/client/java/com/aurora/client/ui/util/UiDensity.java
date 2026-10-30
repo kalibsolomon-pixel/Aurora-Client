@@ -36,6 +36,8 @@ public final class UiDensity {
     public static final int MIN_TRACK = 96, MARK = 28;
     /** Trailing field controls (dropdown, keybind, action button) and their widths. */
     public static final int FIELD_H = 14, ENUM_W = 84, KEY_W = 72;
+    /** Icon-only navigation action (arrow_forward glyph, no text). */
+    public static final int ACTION_W = 28;
     public static final int TOGGLE_W = 24, TOGGLE_H = 12;
     /** Color swatches are small SQUARES (owner ruling, 2026-10-30) — one
      * size for the field-height family, matching FIELD_H rows. */

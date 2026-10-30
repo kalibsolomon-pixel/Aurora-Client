@@ -72,6 +72,9 @@ public final class FeatureIcons {
         // lives on each SemanticAction's textual label.
         ICONS.put("_action_add",   "\uE147"); // add (plus)
         ICONS.put("_action_close", "\uE5CD"); // close (x)
+        // "Goes to another screen" — the navigation action's face (the
+        // owner's "[->" symbol), replacing the old default "Preview" text.
+        ICONS.put("_action_navigate", "\uE5C8"); // arrow_forward
     }
 
     private FeatureIcons() {}

@@ -525,7 +525,6 @@ public class AuroraConfig {
     public BlockOverlayMode blockOverlayMode = BlockOverlayMode.SOLID;
     public float   blockOverlayRainbowSpeed = 1.0f;        // cycles per second
     public double blockOverlayLineWidth = 2.0;    // line width in pixels (GPU-expanded)
-    public boolean blockOverlaySeeThrough = true; // see-through outline (Lunar/NoRisk style)
 
     public boolean potionHudEnabled = true;
 
@@ -825,7 +824,6 @@ public class AuroraConfig {
     public double hitboxLookLength = 2.0;
     public int hitboxColor = 0xFFFFFFFF;
     public double hitboxLineWidth = 2.0;          // line width in pixels (GPU-expanded)
-    public boolean hitboxSeeThrough = true;       // see-through wireframe (Lunar/NoRisk style)
     public boolean hitboxProjectileColorEnabled = false;
     public int hitboxProjectileColor = 0xFFFFFF00;
     public double hitboxProjectileLineWidth = 2.0;

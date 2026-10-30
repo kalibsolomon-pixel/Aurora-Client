@@ -1072,7 +1072,7 @@ Swatch color/checker pixels share a device-pixel rounded mask at rest and hover;
 swatch cache eviction occurs only between frames, protecting deferred draws.
 
 Blur remains 28 logical px (64 device px cap), saturation 1.35, brightness .92,
-with the existing frost curve. Neutral card density is saved opacity ×255×.68;
+with a LINEAR frost (requested × opacity, 0 at the floor since 2026-10-30). Window density is the saved opacity ×255 (solid at max since 2026-10-30);
 primary actions retain a legibility floor while remaining translucent. Data/status
 colors and explicit player overrides retain meaning; HUD backing remains neutral.
 

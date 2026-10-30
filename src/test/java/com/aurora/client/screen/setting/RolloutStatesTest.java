@@ -105,8 +105,8 @@ class RolloutStatesTest {
             String src = new String(java.nio.file.Files.readAllBytes(java.nio.file.Path.of(
                     "src/client/java/com/aurora/client/screen/FeatureRegistry.java")));
             int count = src.split("new EnumSetting<>", -1).length - 1;
-            assertEquals(25, count,
-                    "production EnumSetting construction sites (inventory drift guard)");
+            assertEquals(24, count,
+                    "production EnumSetting construction sites (inventory drift guard; 25→24 with Swing Style's removal, 2026-10-30)");
         } catch (java.io.IOException e) {
             fail("FeatureRegistry.java not readable from the test working dir: " + e.getMessage());
         }
@@ -150,22 +150,20 @@ class RolloutStatesTest {
     }
 
     @Test
-    void accentSettingCustomPickerIsCanonicalItsPresetGridIsNotColorSetting() {
-        // §8 classification pin: AccentSetting's Custom slot embeds a plain
-        // ColorSetting (canonical by construction like every other row);
-        // its preset grid is hand-rolled rendering, NOT a ColorSetting —
-        // the peer-selection family stays outside this rollout.
-        AtomicReference<Integer> accent = new AtomicReference<>(0xFFEB0029); // a preset value
+    void accentSettingIsTheCanonicalColorSettingRowWithAThrottledApply() {
+        // 2026-10-30 owner ruling: the preset peer grid and Custom slot are
+        // GONE — AccentSetting is the shared ColorSetting row (canonical by
+        // construction, single square swatch that opens the picker) with a
+        // throttled theme apply on top.
+        AtomicReference<Integer> accent = new AtomicReference<>(0xFFEB0029);
         AccentSetting row = new AccentSetting("Accent", accent::get, accent::set);
+        assertTrue(row instanceof ColorSetting, "the accent row IS the shared picker row");
         try {
-            var f = AccentSetting.class.getDeclaredField("customPicker");
-            f.setAccessible(true);
-            var picker = f.get(row);
             var swF = ColorSetting.class.getDeclaredField("swatch");
             swF.setAccessible(true);
-            var sw = swF.get(picker);
+            var sw = swF.get(row);
             assertTrue((boolean) sw.getClass().getMethod("canonical").invoke(sw),
-                    "the embedded Custom picker is a ColorSetting — canonical by construction");
+                    "the accent swatch is canonical by construction");
         } catch (ReflectiveOperationException e) {
             fail(e.toString());
         }

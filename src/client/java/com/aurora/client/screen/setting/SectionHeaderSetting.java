@@ -152,19 +152,19 @@ public class SectionHeaderSetting extends FeatureSetting {
         interactionControl.updatePointer(mouseX, mouseY);
         boolean over = mouseX >= x && mouseX < x + width && mouseY >= top && mouseY < top + h;
         float t = hover.update(over);
+        // Focus rides the SAME caption channel as hover — the caption and
+        // chevron brighten (never a boxed outline around the row: in Square
+        // mode that outline degenerated to four straight rules reading as a
+        // doubled divider around the section — owner ruling 2026-10-30).
+        float emphasis = Math.max(t, interactionControl.isFocused() ? 1f : 0f);
         int color = AuroraAnim.lerpArgb(AuroraTheme.sectionCaption(),
-                MaterialSurface.color(ThemeToken.ON_BACKGROUND), t * .6f);
+                MaterialSurface.color(ThemeToken.ON_BACKGROUND), emphasis * .6f);
         int textY = top + (h - tr.lineHeight) / 2 + 1;
         ctx.drawString(tr, label, x + LABEL_PAD, textY, color, false);
         // Trailing chevron (native-resolution icon): down = collapsed, up = expanded.
         com.aurora.client.ui.util.MaterialIconRenderer.drawIcon(ctx, tr,
                 com.aurora.client.screen.FeatureIcons.get(collapsed ? "_dropdown_expand_more" : "_dropdown_expand_less"),
                 x + width - 14, top + h / 2f, 9, color);
-        if (interactionControl.isFocused()) {
-            float r = ThemeManager.current().roundness().radiusSmall();
-            RenderUtil.drawRoundedOutlineAA(ctx, x + 4, top, width - 8, h, r, 1f,
-                    MaterialSurface.color(ThemeToken.ACCENT));
-        }
     }
 
     @Override

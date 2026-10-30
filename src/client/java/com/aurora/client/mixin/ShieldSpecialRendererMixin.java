@@ -1,43 +1,83 @@
 package com.aurora.client.mixin;
 
 import com.aurora.client.feature.impl.ShieldStatusFeature;
+import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.client.model.object.equipment.ShieldModel;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.client.resources.model.Material;
+import net.minecraft.client.resources.model.MaterialSet;
+import net.minecraft.client.resources.model.ModelBakery;
 import net.minecraft.client.renderer.special.ShieldSpecialRenderer;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.core.component.DataComponentMap;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.world.level.block.entity.BannerPatternLayers;
+import net.minecraft.core.component.DataComponents;
+import com.mojang.blaze3d.vertex.PoseStack;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.ModifyArg;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * Replaces the hardcoded {@code -1} (vanilla "no tint") color int passed
- * to {@code SubmitNodeCollector.submitModelPart} inside
- * {@link ShieldSpecialRenderer#submit} with the user-configured tint
- * resolved by {@link ShieldStatusFeature#resolveTintArgb()}.
+ * Submits a FLAT TRANSLUCENT STATUS OVERLAY over the shield model — a second
+ * pass of the same model parts through a pure-white atlas sprite and an
+ * {@code entityTranslucent} render type, vertex-colored with the status ARGB
+ * (owner ruling 2026-10-30: the picker's alpha is the source of truth —
+ * max covers the shield texture with solid color, min submits nothing).
  *
- * <p>The color int is multiplied by the texture sample, so the shield
- * texture's detail stays visible — RGB modulates color, alpha modulates
- * overall opacity. When the feature is off, {@code resolveTintArgb()}
- * returns {@code 0xFFFFFFFF} (== -1) so behavior is bit-for-bit vanilla.
+ * <p>The previous approach multiplied a tint through the shield's cutout
+ * render type, which can only ever darken/tint the texture — dark texels
+ * always read through, so the overlay never reached full vibrancy or full
+ * coverage. A translucent overlay pass blends real alpha over the textured
+ * base instead.
  *
- * <p><b>Scope:</b> only the no-pattern shield path (handle + plate
- * direct submits) is tinted. Banner-patterned shields submit through
- * {@code BannerRenderer.submitPatterns} which doesn't take a tint arg,
- * so those layers stay vanilla. Acceptable for v1 — most PvP shields
- * are blank.
+ * <p>Scope: only the no-pattern shield path (the same scope as the old
+ * tint) — banner-patterned shields submit through
+ * {@code BannerRenderer.submitPatterns} and stay vanilla.
  *
- * <p>Targets {@code submitModelPart} by name only (no descriptor) so the
- * annotation processor doesn't have to remap a long argument list. There
- * are two matching invokes (handle, plate); both are rewritten by the
- * single {@link ModifyArg} thanks to the default broadcast behavior.
+ * <p>Injected just before vanilla's {@code popPose} so the pose stack still
+ * carries the shield transform (at TAIL the transform would already be
+ * popped).
  */
 @Mixin(ShieldSpecialRenderer.class)
 public abstract class ShieldSpecialRendererMixin {
 
-    @ModifyArg(
-            method = "submit",
-            at = @At(value = "INVOKE",
-                    target = "Lnet/minecraft/client/renderer/SubmitNodeCollector;submitModelPart(Lnet/minecraft/client/model/geom/ModelPart;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/rendertype/RenderType;IILnet/minecraft/client/renderer/texture/TextureAtlasSprite;ZZILnet/minecraft/client/renderer/feature/ModelFeatureRenderer$CrumblingOverlay;I)V"),
-            index = 8)
-    private int aurora$tintShieldColor(int original) {
-        int tint = ShieldStatusFeature.resolveTintArgb();
-        return tint == ShieldStatusFeature.NO_TINT ? original : tint;
+    @Shadow @Final private MaterialSet materials;
+    @Shadow @Final private ShieldModel model;
+
+    /** Flat white sprite stitched into the shield atlas by
+     *  {@code assets/aurora/atlases/shield_patterns.json}. */
+    private static final Material AURORA$WHITE =
+            new Material(ModelBakery.NO_PATTERN_SHIELD.atlasLocation(),
+                    Identifier.fromNamespaceAndPath("aurora", "shield/white"));
+
+    @Inject(method = "submit", at = @At(value = "INVOKE",
+            target = "Lcom/mojang/blaze3d/vertex/PoseStack;popPose()V"))
+    private void aurora$statusOverlay(DataComponentMap argument, ItemDisplayContext displayContext,
+                                      PoseStack poseStack, SubmitNodeCollector collector,
+                                      int packedLight, int packedOverlay, boolean flat, int seed,
+                                      CallbackInfo ci) {
+        int color = ShieldStatusFeature.resolveOverlayArgb();
+        if ((color >>> 24) == 0) return; // off or zero opacity — vanilla shield
+        // Banner-patterned shields keep their patterns visible (the overlay
+        // would cover them) — same scope ruling as the old tint path.
+        if (!argument.getOrDefault(DataComponents.BANNER_PATTERNS, BannerPatternLayers.EMPTY)
+                .layers().isEmpty()) return;
+
+        TextureAtlasSprite white = materials.get(AURORA$WHITE);
+        if (white == null) return;
+        RenderType type = RenderTypes.entityTranslucent(AURORA$WHITE.atlasLocation());
+        ModelPart handle = model.handle();
+        ModelPart plate = model.plate();
+        collector.submitModelPart(handle, poseStack, type, packedLight, packedOverlay,
+                white, false, false, color, null, seed);
+        collector.submitModelPart(plate, poseStack, type, packedLight, packedOverlay,
+                white, false, false, color, null, seed);
     }
 }

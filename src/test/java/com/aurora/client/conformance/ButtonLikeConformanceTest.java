@@ -1,7 +1,7 @@
 package com.aurora.client.conformance;
 
 import com.aurora.client.screen.FeatureIcons;
-import com.aurora.client.screen.setting.AccentSetting;
+import com.aurora.client.screen.setting.ButtonSetting;
 import com.aurora.client.screen.setting.ColorSetting;
 import com.aurora.client.screen.setting.EnumSetting;
 import com.aurora.client.screen.setting.FeatureSetting;
@@ -9,7 +9,6 @@ import com.aurora.client.screen.setting.KeybindSetting;
 import com.aurora.client.screen.setting.KeyListSetting;
 import com.aurora.client.screen.setting.SegmentedSetting;
 import com.aurora.client.theme.ThemeMode;
-import com.aurora.client.theme.ThemePresets;
 import com.aurora.client.ui.component.IconAction;
 import com.aurora.client.ui.interaction.SemanticAction;
 import com.aurora.client.ui.interaction.SemanticActionControl;
@@ -212,21 +211,18 @@ class ButtonLikeConformanceTest {
     }
 
     private static Fixture accentPeer() {
-        AtomicInteger accent = new AtomicInteger(ThemePresets.RED);
-        AtomicInteger setterCalls = new AtomicInteger();
-        AccentSetting row = new AccentSetting("Accent Color", accent::get, v -> {
-            setterCalls.incrementAndGet();
-            accent.set(v);
-        });
+        // The preset peer grid was removed by the 2026-10-30 owner ruling; the
+        // theme rows are ColorSetting pickers whose activation toggles an
+        // editor (not a countable behavior). The registry's ButtonSetting
+        // actions take over this fixture slot — same button-like contract.
+        AtomicInteger presses = new AtomicInteger();
         AtomicBoolean disabled = new AtomicBoolean(false);
+        ButtonSetting row = ButtonSetting.semantic("Drop at Player Position", "Drop",
+                presses::incrementAndGet);
         row.disabled(disabled::get);
-        // Visual-order peers: Blue, Indigo, … Red(4) — Indigo(1) is a genuine change.
-        return new Fixture("accent peer", row.interactionControls().get(1),
-                setterCalls::get,
-                () -> {
-                    accent.set(ThemePresets.RED);
-                    setterCalls.set(0);
-                },
+        return new Fixture("registry action button", row.interactionControl(),
+                presses::get,
+                () -> presses.set(0),
                 () -> disabled.set(true), () -> disabled.set(false),
                 null);
     }

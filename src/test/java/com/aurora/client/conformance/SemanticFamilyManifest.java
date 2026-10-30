@@ -162,11 +162,9 @@ public final class SemanticFamilyManifest {
                             SRC + "screen/AuroraScreen.java"),
                     "Persistent selection never aliases hover; already-selected reactivation is "
                             + "a silent consumed no-op; arrows rove focus-only through the group ring."),
-            new Family("peer-selection", Hover.CANONICAL_140, Press.NONE_BY_DESIGN,
-                    Sound.BEHAVIOR_PLAY_ON_CHANGE, Keyboard.ENTER_SPACE, true, true, true, true,
-                    List.of(SRC + "screen/setting/AccentSetting.java"),
-                    "Selection derives from the literal value (no stored index); conditional "
-                            + "click only on genuine change; grid roving ring declared by the component."),
+            // "peer-selection" (AccentSetting's preset grid) was removed with the
+            // grid itself — owner ruling 2026-10-30; the row is the shared
+            // ColorSetting picker whose swatch is the ColorSwatch family.
             new Family("segmented", Hover.CANONICAL_140, Press.NONE_BY_DESIGN,
                     Sound.BEHAVIOR_PLAY_ON_CHANGE, Keyboard.ENTER_SPACE, true, true, true, true,
                     List.of(SRC + "ui/component/SegmentedControl.java",
@@ -266,7 +264,6 @@ public final class SemanticFamilyManifest {
             java.util.Map.entry(SRC + "screen/setting/EnumSetting.java", "HoverAnim.symmetric(140"),
             java.util.Map.entry(SRC + "screen/setting/KeybindSetting.java", "HoverAnim.symmetric(140"),
             java.util.Map.entry(SRC + "screen/setting/KeyListSetting.java", "HoverAnim.symmetric(140"),
-            java.util.Map.entry(SRC + "screen/setting/AccentSetting.java", "HoverAnim.symmetric(HOVER_MS"),
             java.util.Map.entry(SRC + "screen/ResourcePackBrowserScreen.java", "HoverAnim.symmetric(140"),
             java.util.Map.entry(SRC + "screen/AuroraScreen.java", "HoverAnim.symmetric(140"));
 }

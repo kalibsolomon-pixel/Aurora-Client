@@ -152,11 +152,17 @@ public final class WorldLineRenderer {
 
     /**
      * Convenience: resolves the correct line VertexConsumer from a
-     * MultiBufferSource. Uses {@link RenderTypes#linesTranslucent()} when
-     * {@code seeThrough} is true for the see-through look, otherwise
-     * {@link RenderTypes#lines()} for depth-tested wireframe.
+     * MultiBufferSource. Uses {@link RenderTypes#linesTranslucent()} — the
+     * see-through look (the see-through option itself was removed with the
+     * 2026-10-30 owner ruling; every caller keeps the former default).
      */
-    public static VertexConsumer getLineBuffer(MultiBufferSource consumers, boolean seeThrough) {
-        return consumers.getBuffer(seeThrough ? RenderTypes.linesTranslucent() : RenderTypes.lines());
+    public static VertexConsumer getLineBuffer(MultiBufferSource consumers) {
+        return consumers.getBuffer(RenderTypes.linesTranslucent());
+    }
+
+    /** Depth-tested lines (occluded by geometry) — the waypoint highlight's
+     *  established look; unchanged by the see-through removal. */
+    public static VertexConsumer getOccludedLineBuffer(MultiBufferSource consumers) {
+        return consumers.getBuffer(RenderTypes.lines());
     }
 }

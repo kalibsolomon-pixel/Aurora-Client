@@ -253,8 +253,8 @@ class PackTabsPilotTest {
     @Test
     void tabFocusIsTheButtonFamilyHairlineIndependentOfHoverAndSelection() throws Exception {
         String src = screenSource();
-        int i = src.indexOf("if (control.isFocused())");
-        assertTrue(i >= 0, "focus hairline gate not found");
+        int i = src.indexOf("if (control.isFocused() && !isActive) {");
+        assertTrue(i >= 0, "focus hairline gate not found (active tab never doubles its selection — owner ruling 2026-10-30)");
         String draw = src.substring(i, src.indexOf(';', i));
         assertTrue(draw.contains("ThemeToken.ACCENT") && draw.contains("0x99"),
                 "focus = the geometry-following 1 px accent hairline family");

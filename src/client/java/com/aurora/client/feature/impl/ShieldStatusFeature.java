@@ -7,7 +7,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Items;
 
 /**
- * Reader-only feature that resolves the per-shield tint color used by
+ * Reader-only feature that resolves the per-shield overlay color used by
  * {@code ShieldSpecialRendererMixin}. State (whose shield is being
  * drawn right now) is propagated via a thread-local set by:
  *
@@ -17,7 +17,7 @@ import net.minecraft.world.item.Items;
  * </ul>
  *
  * <p>Item-frame / dropped-item shield renders never set the holder, so
- * {@link #resolveTintArgb()} returns the AVAILABLE color for them when
+ * {@link #resolveOverlayArgb()} returns the AVAILABLE color for them when
  * the master toggle is on.
  *
  * <p>Status logic:
@@ -40,9 +40,6 @@ public class ShieldStatusFeature implements Feature {
     /** Sentinel for "no holder context" — distinct from any real entity id. */
     private static final int NO_HOLDER = Integer.MIN_VALUE;
 
-    /** Vanilla "no tint" color that {@code submitModelPart} expects. */
-    public static final int NO_TINT = 0xFFFFFFFF; // == -1
-
     private static final ThreadLocal<Integer> CURRENT_HOLDER_ID =
             ThreadLocal.withInitial(() -> NO_HOLDER);
 
@@ -56,23 +53,23 @@ public class ShieldStatusFeature implements Feature {
     public static void popHolder() { CURRENT_HOLDER_ID.set(NO_HOLDER); }
 
     /**
-     * Resolve the ARGB tint to multiply onto the next shield model
-     * submit. Returns {@link #NO_TINT} when the feature is off so the
-     * mixin can short-circuit to vanilla behavior.
+     * Resolve the ARGB color of the FLAT TRANSLUCENT overlay submitted over
+     * the shield model (see {@code ShieldSpecialRendererMixin}). Returns a
+     * color whose ALPHA is the true overlay opacity — the picker's alpha
+     * slider is the source of truth (owner ruling 2026-10-30): at A=255 the
+     * shield's texture is fully covered by the solid color; at A=0 (or when
+     * the feature is off) nothing is submitted and the shield renders
+     * vanilla. The former cutout-limited multiply tint could never cover the
+     * texture — dark texels always read through — which is why the overlay
+     * never felt vibrant.
      *
-     * <p>The shield's render type uses cutout blending (binary alpha
-     * test), so the alpha channel of a vertex color is <i>not</i>
-     * blended — it would just punch through or pass. To make the user's
-     * opacity slider actually feel like opacity, we reinterpret the
-     * picker's alpha as <b>tint strength</b>: at A=0 we return white
-     * (no tint, vanilla shield), at A=255 we return the full chosen
-     * RGB (max tint), and in between we lerp the RGB toward white. The
-     * output alpha byte is always {@code 0xFF} so the cutout test
-     * always passes.
+     * <p>The overlay rides a white sprite on the shield atlas through an
+     * {@code entityTranslucent} render type, so the vertex alpha blends
+     * normally — no cutout reinterpretation.
      */
-    public static int resolveTintArgb() {
+    public static int resolveOverlayArgb() {
         AuroraConfig cfg = AuroraConfig.get();
-        if (!cfg.shieldStatusEnabled) return NO_TINT;
+        if (!cfg.shieldStatusEnabled) return 0;
 
         int holderId = CURRENT_HOLDER_ID.get();
         Minecraft mc = Minecraft.getInstance();
@@ -102,28 +99,6 @@ public class ShieldStatusFeature implements Feature {
             // is emphatically an AVAILABLE state.
             picked = cfg.shieldStatusAvailableColor;
         }
-        return remapOpacityToTintStrength(picked);
-    }
-
-    /**
-     * Convert an ARGB picker color into a cutout-safe tint int that
-     * encodes the picker's alpha as tint strength against white.
-     *
-     * <p>For each channel: {@code out = lerp(255, channel, a/255)}.
-     * Equivalent to {@code out = 255 - (255 - channel) * a / 255},
-     * which keeps the math in int arithmetic.
-     */
-    private static int remapOpacityToTintStrength(int argb) {
-        int a = (argb >>> 24) & 0xFF;
-        if (a == 0)   return NO_TINT;            // fully transparent ⇒ no tint
-        if (a == 255) return 0xFF000000 | (argb & 0x00FFFFFF); // full strength
-
-        int r = (argb >>> 16) & 0xFF;
-        int g = (argb >>>  8) & 0xFF;
-        int b =  argb         & 0xFF;
-        int rOut = 255 - ((255 - r) * a) / 255;
-        int gOut = 255 - ((255 - g) * a) / 255;
-        int bOut = 255 - ((255 - b) * a) / 255;
-        return 0xFF000000 | (rOut << 16) | (gOut << 8) | bOut;
+        return picked;
     }
 }

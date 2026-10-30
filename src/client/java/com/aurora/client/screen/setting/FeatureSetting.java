@@ -64,7 +64,7 @@ public abstract class FeatureSetting {
                 : this instanceof EnumSetting<?> ? com.aurora.client.ui.util.SettingRowLayout.Kind.ENUM
                 : this instanceof KeybindSetting ? com.aurora.client.ui.util.SettingRowLayout.Kind.KEYBIND
                 : this instanceof ColorSetting ? com.aurora.client.ui.util.SettingRowLayout.Kind.COLOR
-                : this instanceof ButtonSetting ? com.aurora.client.ui.util.SettingRowLayout.Kind.BUTTON
+                : this instanceof ButtonSetting bs ? bs.compactKind()
                 : com.aurora.client.ui.util.SettingRowLayout.Kind.SECTION;
         compactRow = com.aurora.client.ui.util.SettingRowLayout.measure(kind, label, width, font.lineHeight, font::width);
         if (this instanceof BooleanSetting) compactRow = compactRow.withSubtitle(valueLineHeight(font), font.lineHeight);

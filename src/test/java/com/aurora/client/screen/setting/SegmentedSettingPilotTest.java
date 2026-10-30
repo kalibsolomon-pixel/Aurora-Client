@@ -250,7 +250,8 @@ class SegmentedSettingPilotTest {
         assertEquals(1, source.split(java.util.regex.Pattern.quote(
                 "ThemeManager.withAlpha(MaterialSurface.color(ThemeToken.ACCENT), 0x99)"), -1).length - 1,
                 "exactly one focus hairline site — independent of the selection fill");
-        assertTrue(source.contains("if (control != null && control.isFocused())"));
+        assertTrue(source.contains("if (control != null && control.isFocused() && !isSelected) {"),
+                "selected segment never takes a second stroke (owner ruling 2026-10-30)");
     }
 
     @Test

@@ -121,11 +121,17 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
     private static final int SIDEBAR_W      = 104;
     private static final int SIDEBAR_PAD    = 6;
     private static final int TOP_BAR_H      = 30;
-    private static final int CARD_W         = 260;
+    /** Card grid: one column that DERIVES from the frame (owner ruling
+     *  2026-10-30 — the old fixed 260 px cards overflowed the 336-wide
+     *  uniform window; everything below keys off {@link #cardW()}). */
+    private static final int CARD_MIN_W     = 180;
     private static final int CARD_H         = 72;
     private static final int CARD_GAP       = 6;
+    /** Right gutter inside the frame: scrollbar track + inset from the
+     *  window's rounded border. */
+    private static final int RIGHT_PAD      = 14;
     private static final int LIST_TOP       = TOP_BAR_H + 10;
-    private static final int LIST_BOTTOM_PAD = 10;
+    private static final int LIST_BOTTOM_PAD = 16;
     private static final int THUMB_SIZE     = 48;
     private static final int THUMB_PAD      = 8;
     private static final int TAB_H          = 16;
@@ -533,16 +539,16 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         if (cardTpl == null) cardTpl = new UiLayerCache();
         if (!cardTpl.isCurrent(version)) {
             int scale = Math.max(1, (int) Minecraft.getInstance().getWindow().getGuiScale());
-            cardTpl.ensureSize(CARD_W * scale, CARD_H * scale);
+            cardTpl.ensureSize(cardW() * scale, CARD_H * scale);
             cardTpl.clear();
             RenderUtil.RectSink prev = RenderUtil.beginCapture(cardTpl.sink());
             try {
                 // The t == 0 colors of the live branch in renderCard — keep
                 // the two in lockstep (theme-projected statics; the version
                 // key's generation stamp re-rasterizes on any theme change).
-                RenderUtil.drawRoundedRectAA(g, 0, 0, CARD_W, CARD_H, AuroraTheme.RADIUS,
+                RenderUtil.drawRoundedRectAA(g, 0, 0, cardW(), CARD_H, AuroraTheme.RADIUS,
                         AuroraTheme.IOS_SECONDARY_BG);
-                RenderUtil.drawRoundedOutlineAA(g, 0, 0, CARD_W, CARD_H, AuroraTheme.RADIUS, 1.0f,
+                RenderUtil.drawRoundedOutlineAA(g, 0, 0, cardW(), CARD_H, AuroraTheme.RADIUS, 1.0f,
                         AuroraTheme.TILE_OUTLINE_OFF);
                 int tx = THUMB_PAD;
                 int ty = (CARD_H - THUMB_SIZE) / 2;
@@ -562,7 +568,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         int scale = Math.max(1, (int) Minecraft.getInstance().getWindow().getGuiScale());
         return ThemeManager.generation() * 1_000_003L
                 ^ (long) scale * 65537L
-                ^ (long) CARD_W * 7919L
+                ^ (long) cardW() * 7919L
                 ^ (long) CARD_H * 104729L;
     }
 
@@ -816,7 +822,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         int listBottom = this.height - LIST_BOTTOM_PAD;
 
         g.enableScissor(gridLeft - 4, LIST_TOP - 2,
-                gridLeft + cols * (CARD_W + CARD_GAP) - CARD_GAP + 4, listBottom);
+                gridLeft + cols * (cardW() + CARD_GAP) - CARD_GAP + 4, listBottom);
 
         List<ModrinthProject> list = results;
         if (loading && list.isEmpty()) {
@@ -857,9 +863,17 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         // applies, keeping the fade's top color exactly what the backdrop
         // already is at that position.
         ScrollFade.drawTop(g, gridLeft - 4,
-                cols * (CARD_W + CARD_GAP) - CARD_GAP + 8,
+                cols * (cardW() + CARD_GAP) - CARD_GAP + 8,
                 LIST_TOP - 2, ScrollFade.FADE_PX,
                 gridScroll.current(),
+                ThemeManager.withAlpha(ThemeManager.color(ThemeToken.OVERLAY_DIM), 0x55));
+
+        // Bottom fade — the grid now clips INSIDE the window (owner ruling
+        // 2026-10-30); rows dissolve into the same dim veil at the fold.
+        ScrollFade.drawBottom(g, gridLeft - 4,
+                cols * (cardW() + CARD_GAP) - CARD_GAP + 8,
+                this.height - LIST_BOTTOM_PAD, ScrollFade.FADE_PX,
+                maxScroll() - gridScroll.current(),
                 ThemeManager.withAlpha(ThemeManager.color(ThemeToken.OVERLAY_DIM), 0x55));
 
         // Scrollbar thumb — only when content overflows.
@@ -890,7 +904,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
                                     CardVisitor visitor) {
         if (list.isEmpty() || cols <= 0) return;
         int rowH = CARD_H + CARD_GAP;
-        int colW = CARD_W + CARD_GAP;
+        int colW = cardW() + CARD_GAP;
         double topRow0 = LIST_TOP - gridScroll.current();
         int firstRow = Math.max(0, (int) Math.floor((LIST_TOP - CARD_H - topRow0) / rowH));
         int lastRow = (int) Math.floor((listBottom - topRow0) / rowH);
@@ -998,11 +1012,11 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         List<ModrinthProject> list = results;
         boolean modalInteractive = modalInteractive();
         GlassSurface.enableScissor(g, gridLeft - 4, LIST_TOP - 2,
-                gridLeft + cols * (CARD_W + CARD_GAP) - CARD_GAP + 4, listBottom);
+                gridLeft + cols * (cardW() + CARD_GAP) - CARD_GAP + 4, listBottom);
         forEachVisibleCard(list, cols, gridLeft, listBottom, (p, x, y) -> {
             CardState st = cardStates.computeIfAbsent(p.projectId, k -> new CardState());
             int btnW = 64, btnH = 14;
-            int btnX = x + CARD_W - btnW - THUMB_PAD;
+            int btnX = x + cardW() - btnW - THUMB_PAD;
             int btnY = y + CARD_H - btnH - 6;
             Button installBtn = st.cardPhaseButtons[st.phase];
             if (installBtn == null) {
@@ -1140,13 +1154,11 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
                 RenderUtil.drawRoundedRectAA(g, tabX, tabY, tabW, TAB_H, tabR, fill);
             }
 
-            // Keyboard focus: the Button-family 1 px accent hairline
-            // (geometry-following, 0x99) — an independent channel from both
-            // the wash (selection's carrier) and hover. It composes with the
-            // selected outline (0x55 accent underneath) without either state
-            // losing legibility: selection reads through the fill, focus
-            // through the stroke.
-            if (control.isFocused()) {
+            // Keyboard focus: the Button-family 1 px accent hairline. The
+            // ACTIVE tab already owns the selection accent edge — a second
+            // stroke on the same rect doubled the highlight, so focus paints
+            // only on inactive peers (owner ruling 2026-10-30).
+            if (control.isFocused() && !isActive) {
                 RenderUtil.drawRoundedOutlineAA(g, tabX, tabY, tabW, TAB_H, tabR, 1.0f,
                         ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
             }
@@ -1190,7 +1202,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
     }
 
     private void renderCard(GuiGraphics g, ModrinthProject p, int x, int y, int mouseX, int mouseY) {
-        boolean cardHover = Widget.inBounds(mouseX, mouseY, x, y, CARD_W, CARD_H);
+        boolean cardHover = Widget.inBounds(mouseX, mouseY, x, y, cardW(), CARD_H);
         float t = materialHover("card:" + p.projectId,cardHover);
 
         // Card body — deliberately FLAT (audit R9/B1/B2, 2026-09-08): the
@@ -1212,12 +1224,12 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         // (t > 0, animating or settled) paints the live shapes for those
         // frames — one card's worth, bounded.
         if (t == 0f) {
-            ensureCardTemplate(g).blitAt(g, x, y, CARD_W, CARD_H);
+            ensureCardTemplate(g).blitAt(g, x, y, cardW(), CARD_H);
         } else {
             int fill = AuroraAnim.lerpArgb(AuroraTheme.IOS_SECONDARY_BG, AuroraTheme.IOS_TERTIARY_BG, t);
-            RenderUtil.drawRoundedRectAA(g, x, y, CARD_W, CARD_H, AuroraTheme.RADIUS, fill);
+            RenderUtil.drawRoundedRectAA(g, x, y, cardW(), CARD_H, AuroraTheme.RADIUS, fill);
             int outline = AuroraAnim.lerpArgb(AuroraTheme.TILE_OUTLINE_OFF, AuroraTheme.TILE_OUTLINE_ON, t);
-            RenderUtil.drawRoundedOutlineAA(g, x, y, CARD_W, CARD_H, AuroraTheme.RADIUS, 1.0f, outline);
+            RenderUtil.drawRoundedOutlineAA(g, x, y, cardW(), CARD_H, AuroraTheme.RADIUS, 1.0f, outline);
 
             // Thumbnail inset (the frame outline below is hover-tinted).
             int tx = x + THUMB_PAD;
@@ -1248,7 +1260,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
 
         // Text
         int textX = tx + THUMB_SIZE + THUMB_PAD;
-        int textW = CARD_W - (textX - x) - THUMB_PAD;
+        int textW = cardW() - (textX - x) - THUMB_PAD;
         g.drawString(this.font, fitText("t:" + p.projectId, p.title, textW),
                 textX, y + 8, AuroraTheme.TEXT_PRIMARY, false);
         g.drawString(this.font, "by " + fitText("a:" + p.projectId, p.author, textW),
@@ -1272,7 +1284,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         // discipline.
         CardState st = cardStates.computeIfAbsent(p.projectId, k -> new CardState());
         int btnW = 64, btnH = 14;
-        int btnX = x + CARD_W - btnW - THUMB_PAD;
+        int btnX = x + cardW() - btnW - THUMB_PAD;
         int btnY = y + CARD_H - btnH - 6;
         int renderPhase = st.drivenPhase >= 0 ? st.drivenPhase : st.phase;
         Button installBtn = st.cardPhaseButtons[renderPhase];
@@ -1685,8 +1697,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         if (ms > 0) {
             int cols = columns();
             int gridLeft = gridLeft();
-            int gridRight = gridLeft + cols * (CARD_W + CARD_GAP) - CARD_GAP;
-            int trackX = gridRight + 8;
+            int trackX = scrollbarTrackX();
             int trackTop = LIST_TOP;
             int trackH = (this.height - LIST_BOTTOM_PAD) - LIST_TOP;
             double thumbH = gridScroll.thumbHeight(trackH, ms, 30);
@@ -1720,12 +1731,12 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         int gridLeft = gridLeft();
         int gridBottom = this.height - LIST_BOTTOM_PAD;
         ClipBand gridBand = new ClipBand(gridLeft - 4, LIST_TOP - 2,
-                cols * (CARD_W + CARD_GAP) - CARD_GAP + 8, gridBottom - (LIST_TOP - 2));
+                cols * (cardW() + CARD_GAP) - CARD_GAP + 8, gridBottom - (LIST_TOP - 2));
         final boolean[] cardHit = {false};
         forEachVisibleCard(list, cols, gridLeft, gridBottom, (p, x, y) -> {
             if (cardHit[0]) return;
             int btnW = 64, btnH = 14;
-            int btnX = x + CARD_W - btnW - THUMB_PAD;
+            int btnX = x + cardW() - btnW - THUMB_PAD;
             int btnY = y + CARD_H - btnH - 6;
             if (Widget.inBounds(mouseX, mouseY, btnX, btnY, btnW, btnH)
                     && gridBand.contains(mouseX, mouseY)) {
@@ -1739,7 +1750,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
                 cardHit[0] = true;
                 return;
             }
-            if (Widget.inBounds(mouseX, mouseY, x, y, CARD_W, CARD_H)
+            if (Widget.inBounds(mouseX, mouseY, x, y, cardW(), CARD_H)
                     && gridBand.contains(mouseX, mouseY)) {
                 openDetail(p);
                 cardHit[0] = true;
@@ -1855,8 +1866,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         double ms = maxScroll();
         if (ms <= 0) return;
 
-        int gridRight = gridLeft + cols * (CARD_W + CARD_GAP) - CARD_GAP;
-        int trackX = gridRight + 8;
+        int trackX = scrollbarTrackX();
         int trackW = 4;
         int trackTop = LIST_TOP;
         int trackH = listBottom - LIST_TOP;
@@ -2009,20 +2019,31 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
     //  Helpers
     // ------------------------------------------------------------------
 
+    /** Content column left edge — hard against the sidebar's gutter, never
+     *  centered (the old centering went NEGATIVE with wide cards and pushed
+     *  the grid outside the window on both sides). */
     private int gridLeft() {
-        int cols = columns();
-        int gridW = cols * (CARD_W + CARD_GAP) - CARD_GAP;
-        // Center the grid in the area to the right of the sidebar.
-        int areaLeft = SIDEBAR_W + 16;
-        int areaW = this.width - areaLeft - 16;
-        return areaLeft + (areaW - gridW) / 2;
+        return SIDEBAR_W + 16;
     }
 
+    /** Scrollbar track X — inside the window's right gutter (the old
+     *  gridRight+8 put the track outside the 336-wide frame entirely). */
+    private int scrollbarTrackX() {
+        return this.width - RIGHT_PAD + 5;
+    }
+
+    /** Card columns that fit the content column; one at the 336-wide frame. */
     private int columns() {
-        int areaLeft = SIDEBAR_W + 16;
-        int avail = this.width - areaLeft - 32;
-        int c = Math.max(1, avail / (CARD_W + CARD_GAP));
-        return Math.min(c, 6);
+        int avail = this.width - gridLeft() - RIGHT_PAD;
+        return Math.max(1, Math.min(6, avail / (CARD_MIN_W + CARD_GAP)));
+    }
+
+    /** Card width: fills the content column for the current column count —
+     *  always inside the window with the scrollbar gutter reserved. */
+    private int cardW() {
+        int avail = this.width - gridLeft() - RIGHT_PAD;
+        int c = columns();
+        return Math.max(120, (avail - (c - 1) * CARD_GAP) / c);
     }
 
     private String truncateToWidth(String s, int maxW) {

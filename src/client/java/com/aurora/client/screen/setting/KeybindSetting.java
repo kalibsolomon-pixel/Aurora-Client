@@ -208,7 +208,10 @@ public class KeybindSetting extends FeatureSetting {
                     listening ? AuroraTheme.IOS_BLUE : borderTint);
         }
 
-        if (focusedVisual) {
+        // Focus hairline — only when NOT listening: the listening state is
+        // the selected treatment (accent edge), and a second stroke on the
+        // same pill doubled the highlight (owner ruling 2026-10-30).
+        if (focusedVisual && !listening) {
             RenderUtil.drawRoundedOutlineAA(ctx, btnX, btnY, BTN_W, BTN_H,
                     AuroraTheme.RADIUS_SMALL, 1.0f,
                     ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
