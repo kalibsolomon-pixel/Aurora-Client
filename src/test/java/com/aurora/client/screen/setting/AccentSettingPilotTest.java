@@ -90,14 +90,16 @@ class AccentSettingPilotTest {
         return (Integer) field.get(null);
     }
 
-    /** Cell center in GUI coords, from the same constants the render uses. */
+    /** Cell center in GUI coords, from the same constants the render uses
+     *  (square presets at PRESET_S; the Custom slot a CUSTOM_W-wide pill). */
     private static double[] cellCenter(AccentSetting row, int i) throws Exception {
         int padX = staticInt("GRID_PAD_X"), gap = staticInt("SWATCH_GAP");
         int perRow = staticInt("PER_ROW"), h = staticInt("SWATCH_H"), gapY = staticInt("GRID_GAP_Y");
-        Field fx = f(row, "lastX"), fy = f(row, "lastY"), fw = f(row, "lastW");
-        int w = fw.getInt(row);
-        int sw = (w - padX * 2 - gap * (perRow - 1)) / perRow;
-        int cx = fx.getInt(row) + padX + (i % perRow) * (sw + gap) + sw / 2;
+        int preset = staticInt("PRESET_S"), custom = staticInt("CUSTOM_W");
+        int presets = ((List<?>) f(row, "presets").get(row)).size();
+        Field fx = f(row, "lastX"), fy = f(row, "lastY");
+        int sw = i >= presets ? custom : preset;
+        int cx = fx.getInt(row) + padX + (i % perRow) * (preset + gap) + sw / 2;
         int cy = fy.getInt(row) + staticInt("LABEL_ROW_H") + (i / perRow) * (h + gapY) + h / 2;
         return new double[]{cx, cy};
     }
@@ -277,7 +279,7 @@ class AccentSettingPilotTest {
         String source = src();
         assertFalse(source.contains("0x55FFFFFF"),
                 "no alpha-halving of represented color (the ColorSwatch data principle)");
-        assertTrue(source.contains("RenderUtil.drawRoundedRectAA(ctx, cellX(i, width), cellY(i), swatchW(width), SWATCH_H, swR, e.argb);"),
+        assertTrue(source.contains("RenderUtil.drawRoundedRectAA(ctx, cellX(i), cellY(i), cellW(i), SWATCH_H, swR, e.argb);"),
                 "preset interiors draw the literal preset value");
         assertTrue(source.contains("customFill | 0xFF000000"),
                 "the Custom preview draws its fill opaque and literal");

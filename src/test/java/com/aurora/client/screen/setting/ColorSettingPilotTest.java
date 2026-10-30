@@ -18,10 +18,10 @@ import static org.junit.jupiter.api.Assertions.*;
 class ColorSettingPilotTest {
 
     // ColorSetting assigns the swatch rect in render(); unrendered (headless)
-    // it keeps the field defaults — swatch at (0, 0), 40x16. Clicks target
-    // THAT rect: inside = (20, 8), outside = (100, 20).
+    // it keeps the field defaults — swatch at (0, 0), the UiDensity square
+    // (14x14). Clicks target THAT rect: inside = (7, 7), outside = (100, 20).
     private static final int ROW_X = 0, ROW_Y = 0, ROW_W = 320;
-    private static final double IN_X = 20, IN_Y = 8;
+    private static final double IN_X = 7, IN_Y = 7;
     private static final double OUT_X = 100, OUT_Y = 20;
 
     private static ColorSetting row(AtomicReference<Integer> v, AtomicInteger writes) {

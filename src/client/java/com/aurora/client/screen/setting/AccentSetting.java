@@ -90,6 +90,11 @@ public class AccentSetting extends FeatureSetting {
 
     private static final int LABEL_ROW_H = 18;
     private static final int SWATCH_H = 14;
+    /** Preset chips are SQUARES (owner ruling, 2026-10-30 — the same
+     *  small-square swatch family as the color rows); only the Custom slot
+     *  stays a wider labeled pill so its text fits. */
+    private static final int PRESET_S = 14;
+    private static final int CUSTOM_W = 46;
     private static final int SWATCH_GAP = 4;
     private static final int GRID_PAD_X = 12;
     private static final int GRID_GAP_Y = 4;
@@ -218,12 +223,13 @@ public class AccentSetting extends FeatureSetting {
 
     @Override public int height() { return baseHeight(); }
 
-    private int swatchW(int rowWidth) {
-        return (rowWidth - GRID_PAD_X * 2 - SWATCH_GAP * (PER_ROW - 1)) / PER_ROW;
+    /** Cell width: square presets, wider labeled Custom pill. */
+    private int cellW(int index) {
+        return index >= presets.size() ? CUSTOM_W : PRESET_S;
     }
 
-    private int cellX(int index, int rowWidth) {
-        return lastX + GRID_PAD_X + (index % PER_ROW) * (swatchW(rowWidth) + SWATCH_GAP);
+    private int cellX(int index) {
+        return lastX + GRID_PAD_X + (index % PER_ROW) * (PRESET_S + SWATCH_GAP);
     }
 
     private int cellY(int index) {
@@ -401,7 +407,7 @@ public class AccentSetting extends FeatureSetting {
         float swR = Math.min(SWATCH_H / 2.0f, AuroraTheme.RADIUS_SMALL);
         for (int i = 0; i < presets.size(); i++) {
             ThemePresets.Entry e = presets.get(i);
-            RenderUtil.drawRoundedRectAA(ctx, cellX(i, width), cellY(i), swatchW(width), SWATCH_H, swR, e.argb);
+            RenderUtil.drawRoundedRectAA(ctx, cellX(i), cellY(i), cellW(i), SWATCH_H, swR, e.argb);
         }
     }
 
@@ -439,9 +445,9 @@ public class AccentSetting extends FeatureSetting {
         // in every state — represented color is data.
         for (int i = 0; i < peerCount(); i++) {
             boolean isCustom = i >= presets.size();
-            int sx = cellX(i, width);
+            int sx = cellX(i);
             int sy = cellY(i);
-            int sw = swatchW(width);
+            int sw = cellW(i);
             boolean selected = isCustom ? preset == null : preset == presets.get(i);
             float hT = hoverOf(i).update(peerHoverTarget(hoverAt(mouseX, mouseY, sx, sy, sw), disabled));
 
@@ -475,9 +481,9 @@ public class AccentSetting extends FeatureSetting {
         // label + absent hover affordance), or the neutral chrome fill
         // while inactive.
         int ci = presets.size();
-        int cx = cellX(ci, width);
+        int cx = cellX(ci);
         int cy = cellY(ci);
-        int cw = swatchW(width);
+        int cw = cellW(ci);
         boolean customActive = preset == null;
         int customFill = customActive ? accent : (MaterialSurface.unified()
                 ? MaterialSurface.color(ThemeToken.SURFACE_VARIANT) : AuroraTheme.IOS_TERTIARY_BG);
@@ -527,9 +533,9 @@ public class AccentSetting extends FeatureSetting {
         // same either way — a rejected/disabled hit inside the grid never
         // falls through to the row's focus-drop below.
         if (!disabled && mouseY >= lastY + gridTopRel() && mouseY < cellY(PER_ROW) + SWATCH_H) {
-            int sw = swatchW(lastW);
             for (int i = 0; i < peerCount(); i++) {
-                int sx = cellX(i, lastW);
+                int sx = cellX(i);
+                int sw = cellW(i);
                 int sy = cellY(i);
                 if (Widget.inBounds(mouseX, mouseY, sx, sy, sw, SWATCH_H)) {
                     SemanticActionControl control = peerControls[i];

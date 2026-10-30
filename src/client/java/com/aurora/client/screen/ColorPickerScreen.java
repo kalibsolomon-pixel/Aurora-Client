@@ -73,20 +73,22 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
     /** Whether this window can show the editing surfaces at all (set by init). */
     private boolean pickerSupportable = true;
 
-    // ---- R8 (audit): cached editing surfaces ----
-    // The pad, hue strip, alpha strip and preview checkerboard are ~2800
-    // plain fill submissions EVERY frame at rest — pure static cost through
-    // the same GuiRenderState path that made the list screens crawl. Each
-    // surface rasterizes once into its own small buffer (identical output:
-    // the integer-cell loops and AA outlines go through the capture sink at
-    // exact device alignment) and blits per frame; the version keys are
-    // deliberately INDEPENDENT so a drag only re-rasterizes the surfaces
+    // ---- R8 (audit): cached editing surfaces; per-pixel gradients ----
+    // The pad, hue strip, alpha strip and preview checkerboard rasterize
+    // once into their own small buffers and blit per frame; the version keys
+    // are deliberately INDEPENDENT so a drag only re-rasterizes the surfaces
     // whose values it actually changes:
     //   pad   ← hue only (sat/lit move the live markers, not the pad)
     //   hue   ← nothing  (value-independent gradient)
     //   alpha ← hue+sat+lit (alpha itself only moves the live marker)
     //   preview base ← nothing (checker + frame; the color fill stays live,
     //                   one plain fill)
+    // Since 2026-10-30 the gradient surfaces are PER-DEVICE-PIXEL rasters
+    // (UiLayerCache.writeArgb): every physical pixel carries its exactly
+    // sampled HSL/alpha color — the former 40×40 GUI-cell grid and 1-GUI-px
+    // strip rows banded visibly at every GUI scale. A hue drag re-rasterizes
+    // the pad each frame (~device pad area in plain float math — measured in
+    // the low single-digit ms at GUI scale 4, drag-only); strips are cheap.
     private final UiLayerCache padCache = new UiLayerCache();
     private final UiLayerCache hueCache = new UiLayerCache();
     private final UiLayerCache alphaCache = new UiLayerCache();
@@ -148,14 +150,18 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
 
         previewX = alphaX + alphaW + 20;
         previewY = padY;
-        previewW = panelX + panelW - 12 - previewX;
-        previewH = 24;
+        // The preview is a SQUARE sample (owner ruling, 2026-10-30 — was a
+        // wide previewW×24 rectangle); the hex field keeps the right
+        // column's full width, not the sample's.
+        int rightColW = panelX + panelW - 12 - previewX;
+        previewW = Math.max(24, Math.min(48, rightColW));
+        previewH = previewW;
 
         int hexY = previewY + previewH + 22;
         if (pickerSupportable) {
             hexField = new EditBox(
                     this.font,
-                    previewX, hexY, Math.min(96, previewW), 14,
+                    previewX, hexY, Math.min(96, Math.max(previewW, rightColW)), 14,
                     Component.literal("Hex")
             );
             hexField.setMaxLength(9);
@@ -266,7 +272,7 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
         }
 
         int scale = Math.max(1, (int) Minecraft.getInstance().getWindow().getGuiScale());
-        drawCachedSurface(ctx, padCache,
+        UiLayerCache.drawSurface(ctx, padCache,
                 scale * 31L ^ padSize ^ bits(hue), padX, padY, padSize, padSize,
                 () -> drawPadInto(ctx, 0, 0));
 
@@ -277,19 +283,19 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
         ctx.fill(markX - 3, markY - 3, markX + 3, markY + 3, 0xFFFFFFFF);
         ctx.fill(markX - 2, markY - 2, markX + 2, markY + 2, currentArgb() | 0xFF000000);
 
-        drawCachedSurface(ctx, hueCache,
+        UiLayerCache.drawSurface(ctx, hueCache,
                 scale * 31L ^ hueW * 7919L ^ hueH * 17L, hueX, hueY, hueW, hueH,
                 () -> drawHueInto(ctx, 0, 0));
         int hueMark = hueY + (int)(hue * hueH);
         ctx.fill(hueX - 2, hueMark - 1, hueX + hueW + 2, hueMark + 1, 0xFFFFFFFF);
 
-        drawCachedSurface(ctx, alphaCache,
+        UiLayerCache.drawSurface(ctx, alphaCache,
                 scale * 31L ^ bits(hue) * 31L ^ bits(sat) * 17L ^ bits(lit), alphaX, alphaY, alphaW, alphaH,
                 () -> drawAlphaInto(ctx, 0, 0));
         int alphaMark = alphaY + (int)((1f - alpha) * alphaH);
         ctx.fill(alphaX - 2, alphaMark - 1, alphaX + alphaW + 2, alphaMark + 1, 0xFFFFFFFF);
 
-        drawCachedSurface(ctx, previewCache,
+        UiLayerCache.drawSurface(ctx, previewCache,
                 scale * 31L ^ previewW * 7919L ^ previewH * 17L, previewX, previewY, previewW, previewH,
                 () -> drawCheckerboard(ctx, 0, 0, previewW, previewH));
         ctx.fill(previewX, previewY, previewX + previewW, previewY + previewH, currentArgb());
@@ -319,44 +325,28 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
     /** Version helper: stable key contribution for a float. */
     private static long bits(float f) { return Float.floatToIntBits(f) & 0xFFFFFFFFL; }
 
-    /**
-     * The cache discipline for one editing surface: if the buffer is not
-     * current for {@code version}, rasterize {@code raster} (drawing at
-     * LOCAL coordinates — the capture sink maps them to the buffer's
-     * physical pixels) and commit; then one positional blit at {@code (x,y)}.
-     */
-    private static void drawCachedSurface(GuiGraphics ctx, UiLayerCache cache, long version,
-                                          int x, int y, int wLogical, int hLogical, Runnable raster) {
-        if (!cache.isCurrent(version)) {
-            int scale = Math.max(1, (int) Minecraft.getInstance().getWindow().getGuiScale());
-            cache.ensureSize(wLogical * scale, hLogical * scale);
-            cache.clear();
-            RenderUtil.RectSink prev = RenderUtil.beginCapture(cache.sink());
-            try {
-                raster.run();
-            } finally {
-                RenderUtil.endCapture(prev);
-            }
-            cache.commit(version);
-        }
-        cache.blitAt(ctx, x, y, wLogical, hLogical);
+    /** Current GUI scale as an int ≥ 1. */
+    private static int guiScale() {
+        return Math.max(1, (int) Minecraft.getInstance().getWindow().getGuiScale());
     }
 
-    /** Saturation/lightness pad at local coordinates (capture-aware cells + the fixed white frame). */
+    /**
+     * Saturation/lightness pad at local coordinates — PER-DEVICE-PIXEL
+     * gradient (2026-10-30): every physical pixel samples the exact HSL
+     * value at its own center (was a 40×40 grid of GUI-pixel cells, which
+     * read as blocky bands at every GUI scale). The gradient is the data
+     * being edited, so it is written with {@link UiLayerCache#writeArgb};
+     * only the structural white frame goes through the capture sink.
+     */
     private void drawPadInto(GuiGraphics ctx, int ox, int oy) {
-        int steps = 40;
-        for (int sx = 0; sx < steps; sx++) {
-            float s = sx / (float)(steps - 1);
-            int x0 = ox + (sx * padSize) / steps;
-            int x1 = ox + ((sx + 1) * padSize) / steps;
-            for (int sy = 0; sy < steps; sy++) {
-                float l = 1f - (sy / (float)(steps - 1));
-                int argb = ColorEntryHelper.hslaToArgb(hue, s, l, 1f);
-                int y0 = oy + (sy * padSize) / steps;
-                int y1 = oy + ((sy + 1) * padSize) / steps;
-                RenderUtil.fillLogical(ctx, x0, y0, x1, y1, argb);
-            }
-        }
+        int scale = guiScale();
+        int dev = padSize * scale;
+        padCache.writeArgb((px, py) -> ColorEntryHelper.hslaToArgb(hue,
+                (px + 0.5f) / dev, 1f - (py + 0.5f) / dev, 1f));
+        // Rounded data-surface corners to match the frame's radius 6
+        // (ColorSwatch's clipRounded discipline — same silhouette as the
+        // outline drawn on top below).
+        padCache.clipRounded(0, 0, dev, dev, 6 * scale);
         // Content-frame white around the pad — structural neutral (see class
         // javadoc). DATA-DRIVEN exemption (C-7 ruling): the pad/hue/alpha
         // gradient surfaces are color-picking data (DESIGN_LANGUAGE §16);
@@ -366,29 +356,42 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
         RenderUtil.drawRoundedOutlineAA(ctx, ox, oy, padSize, padSize, 6, 1.0f, 0xFFFFFFFF);
     }
 
-    /** Hue strip at local coordinates. */
+    /** Hue strip at local coordinates — one exact hue per device pixel row. */
     private void drawHueInto(GuiGraphics ctx, int ox, int oy) {
-        for (int py = 0; py < hueH; py++) {
-            float h = py / (float) hueH;
-            int argb = ColorEntryHelper.hslaToArgb(h, 1f, 0.5f, 1f);
-            RenderUtil.fillLogical(ctx, ox, oy + py, ox + hueW, oy + py + 1, argb);
-        }
+        int scale = guiScale();
+        int devW = hueW * scale, devH = hueH * scale;
+        hueCache.writeArgb((px, py) -> ColorEntryHelper.hslaToArgb((py + 0.5f) / devH, 1f, 0.5f, 1f));
+        hueCache.clipRounded(0, 0, devW, devH, 6 * scale);
         // Content-frame white around the hue strip — structural neutral;
         // data-driven exemption as above (C-7).
         RenderUtil.drawRoundedOutlineAA(ctx, ox, oy, hueW, hueH, 6, 1.0f, 0xFFFFFFFF);
     }
 
-    /** Alpha strip (checkerboard + gradient) at local coordinates. */
+    /** Alpha strip (checkerboard + gradient) at local coordinates — the
+     *  gradient is composited over the checker per device pixel. */
     private void drawAlphaInto(GuiGraphics ctx, int ox, int oy) {
-        drawCheckerboard(ctx, ox, oy, alphaW, alphaH);
-        for (int py = 0; py < alphaH; py++) {
-            float a = 1f - (py / (float) alphaH);
-            int argb = ColorEntryHelper.hslaToArgb(hue, sat, lit, a);
-            RenderUtil.fillLogical(ctx, ox, oy + py, ox + alphaW, oy + py + 1, argb);
-        }
+        int scale = guiScale();
+        int devW = alphaW * scale, devH = alphaH * scale, cell = 4 * scale;
+        alphaCache.writeArgb((px, py) -> {
+            int bg = ((px / cell) + (py / cell)) % 2 == 0 ? 0xFF555555 : 0xFFAAAAAA;
+            return compositeOver(ColorEntryHelper.hslaToArgb(hue, sat, lit, 1f - (py + 0.5f) / devH), bg);
+        });
+        alphaCache.clipRounded(0, 0, devW, devH, 6 * scale);
         // Content-frame white around the alpha strip — structural neutral;
         // data-driven exemption as above (C-7).
         RenderUtil.drawRoundedOutlineAA(ctx, ox, oy, alphaW, alphaH, 6, 1.0f, 0xFFFFFFFF);
+    }
+
+    /** Source-over composite of {@code src} (ARGB) over opaque {@code bg} —
+     *  the same blend the GUI applies to translucent fills. */
+    private static int compositeOver(int src, int bg) {
+        int sa = (src >>> 24) & 0xFF;
+        if (sa == 255) return src;
+        int inv = 255 - sa;
+        int r = ((src >>> 16) & 0xFF) * sa + ((bg >>> 16) & 0xFF) * inv;
+        int g = ((src >>> 8) & 0xFF) * sa + ((bg >>> 8) & 0xFF) * inv;
+        int b = (src & 0xFF) * sa + (bg & 0xFF) * inv;
+        return 0xFF000000 | ((r / 255) << 16) | ((g / 255) << 8) | (b / 255);
     }
 
     private void drawCheckerboard(GuiGraphics ctx, int x, int y, int w, int h) {

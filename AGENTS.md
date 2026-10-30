@@ -2486,11 +2486,19 @@ and `tools/gui/glass_metrics.py` reproduce the evidence. See SPXCTRA_UI_SIMPLIFI
 
 ## Compact pass (2026-10-30)
 
-`UiDensity.window` (420×272) is the single frame for every windowed Aurora screen (main,
+`UiDensity.window` (336×288 after the same-day follow-up — the content well shows exactly a
+3×3 grid of the 80×80 cards; first shipped 420×272/4 columns) is the single frame for every
+windowed Aurora screen (main,
 details, managers, waypoint editor, color picker, mapping data, pack browser via a translated
 viewport whose glass captures/dim run in screen space). Windowed hosts draw text with the
-`<font>_ui` variants (7.5 px; `AuroraFontRenderer.compactUi`, `ThemedScreen.compactText`).
+`<font>_ui` variants (8 px; `AuroraFontRenderer.compactUi`, `ThemedScreen.compactText`; was
+7.5 px at first, 9 px before the pass).
 Row/control sizes live in `UiDensity` and `SettingRowLayout`; feature cards stay 80×80 (owner
-ruling). `SectionHeaderSetting` collapses its section (`bind`, `setDefaultExpanded`,
+ruling). Color swatches are 14×14 squares (`UiDensity.SWATCH_W/H`; the accent preset chips
+are the same squares, its Custom slot a wider labeled pill), and both color pickers
+(`ColorPickerScreen` and `ColorSetting`'s inline editor) rasterize their pad/strips PER
+DEVICE PIXEL (`UiLayerCache.writeArgb` + the shared `UiLayerCache.drawSurface` cache
+discipline) — the former 40×40/32×32 GUI-cell pads banded visibly at every GUI scale.
+`SectionHeaderSetting` collapses its section (`bind`, `setDefaultExpanded`,
 `markLeading`); rows hide through `FeatureSetting.isVisible()`. Details: DESIGN_LANGUAGE.md
-"Compact pass" and SPXCTRA_UI_SIMPLIFICATION_REPORT.md §9.
+"Compact pass" and SPXCTRA_UI_SIMPLIFICATION_REPORT.md §9–10.

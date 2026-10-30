@@ -156,8 +156,8 @@ with 64-px cards was rejected and replaced).
 
 | Before | After |
 |---|---|
-| Each screen picked its own size (main 344×224, details content-fit ≤344×300, managers up to 476×420, editors 344×160, pack browser full-screen) | One frame, `UiDensity.window` = 420×272 (shrinks with a 12 px margin), for main, all details, both managers, waypoint editor, color picker, mapping data and the pack browser |
-| 9 px UI text | 7.5 px `<font>_ui` variants of the same bundled face inside Aurora windows (crisp; measured with the same style). "Pack Tweaks" label 155 → 130 device px at GUI 3 |
+| Each screen picked its own size (main 344×224, details content-fit ≤344×300, managers up to 476×420, editors 344×160, pack browser full-screen) | One frame, `UiDensity.window` = 420×272 (336×288 after the §10 follow-up; shrinks with a 12 px margin), for main, all details, both managers, waypoint editor, color picker, mapping data and the pack browser |
+| 9 px UI text | 7.5 px `<font>_ui` variants of the same bundled face inside Aurora windows (8 px after the §10 follow-up; crisp; measured with the same style) |
 | 24 px rows (sliders 28, wrapped 36), 4–6 px gaps, 18 px controls, 18 px section band, 36 px header | 18 px rows (sliders 20, wrapped 28), 2 px gaps, 14 px controls, 8 px section band, 24 px header with 16 px buttons |
 | Long screens scroll through every option | Sections are collapsible categories; lists with ≥3 sections that would scroll open with only the first expanded; runs of collapsed captions pack tightly; choices remembered for the session |
 | Waypoint editor hid half its fields behind "Show details" | Location and Details both visible; Save/Cancel on the bottom edge |
@@ -180,3 +180,38 @@ Limits: captured at 1920×1080@3 on OpenGL only; other GUI scales/renderers not 
 on the vanilla font (SansSerif or text renderer Off) get the compact spacing but vanilla-size
 text. Collapsed state is session-only (not saved to the config). The world map, HUD editor
 and title screen are not windows and were left as they are.
+
+## 10. Compact follow-up — 3×3 grid, 8 px text, square swatches, per-pixel pickers (2026-10-30)
+
+Owner follow-up on the shipped compact pass: the window should show approximately a 3×3
+card grid; window text slightly larger than 7.5 px (8 px); every color-picker swatch a
+small square instead of a rectangle; and the color pickers rendered per-pixel so gradients
+blend smoothly instead of reading as blocky cells.
+
+| Before (§9 as shipped) | After |
+|---|---|
+| Window 420×272, 4 card columns, 2 rows fully visible | Window 336×288: the content well (254×252) shows EXACTLY 3 columns × 3 rows of the unchanged 80×80 cards. Card hover washes, enabled stains, focus hairlines and selection outlines are all derived from the card bounds, so they resized with the frame automatically (`cardBounds` walks `UiDensity` geometry); `columns()` clamps unchanged |
+| `<font>_ui` rasterized at 7.5 px | 8.0 px in all nine `_ui` providers (same faces, same oversample) |
+| Swatches 32×12 rectangles (rows), wide preset chips (accent grid), 4:1 preview bars (both pickers) | 14×14 squares everywhere a color is picked or shown: `UiDensity.SWATCH_W/H` = 14/14 (rows), accent presets 14×14 (`PRESET_S`; only Custom stays a wider labeled pill so "Custom" fits), picker previews square (48×48 in `ColorPickerScreen`, 22×22 in the inline editor). Waypoint chips were already 12×12 squares |
+| Pad drawn as a 40×40 grid of GUI-pixel cells (32×32 in the inline editor); strips one GUI px per row — visible banding/posterization at every GUI scale | `UiLayerCache.writeArgb` writes one exactly-sampled HSL/alpha value per DEVICE pixel into each surface's buffer; alpha strips composite the gradient over the checkerboard per pixel; rounded data-surface corners via the ColorSwatch `clipRounded` discipline. Shared cache/rasterize/blit helper `UiLayerCache.drawSurface`; version keys unchanged (pad ← hue, strips ← h/s/l), re-raster only on the drag that changes the displayed value. Buffers disposed while collapsed and on screen close |
+
+The full-screen `ColorPickerScreen` (kept for the GUI audit harness) and the production
+`ColorSetting` inline editor (what feature rows actually open) both took the per-pixel path —
+the inline editor previously re-submitted ~1300 plain fills every frame at rest; it now blits
+three cached textures.
+
+Tests: `CompactGeometryTest` re-pinned to 336×288 / 3 columns / 3 card rows / 7 list rows;
+`ColorSettingPilotTest` click coordinates follow the 14×14 default swatch rect;
+`AccentSettingPilotTest` geometry helper + one source pin updated for the square presets.
+622 tests, 0 failures (1 skipped, unchanged).
+
+Evidence: `docs/spxctra/compact2/after-*.png` (harness run `compact2`, plan `full`,
+1920×1080@3, OpenGL, 41/41 harness checks passed, 101 frames captured) — main grid exactly
+3×3 with no cut cards, color picker with smooth pad/strips and the square preview, Hit
+Color detail (square row swatch), Theme detail (square preset chips + the Custom pill),
+plus managers/settings/pack-browser frames at the new frame size.
+
+Limits: captured at 1920×1080@3 on OpenGL only. Drag-frame re-raster cost of the per-pixel
+pad was NOT measured (the harness captures static frames): it is drag-only by construction —
+one device-area HSL pass per changed hue, strips trivially cheap; at rest every surface is
+one cached blit (the inline editor previously submitted ~1300 fills per rest frame).

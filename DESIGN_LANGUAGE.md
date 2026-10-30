@@ -1255,19 +1255,30 @@ Owner request: every Aurora window the same size, smaller text/controls, tighter
 less scrolling, and expandable categories for long option lists. Owner follow-up: feature
 cards keep their original 80×80 size; the window must not be oversized for the smaller UI.
 
-- **One window.** `UiDensity.window` (420×272 GUI px, shrunk to fit with a 12 px margin) is
+- **One window.** `UiDensity.window` (336×288 GUI px after the same-day follow-up, shrunk to
+  fit with a 12 px margin) is
   the frame for the main screen, every feature detail screen, the Profile and Waypoint
   managers, the waypoint editor, color picker, mapping data and the resource-pack browser
-  (which runs its layout inside the frame as a translated viewport). The title screen,
+  (which runs its layout inside the frame as a translated viewport). The content well
+  (254×252) shows exactly a 3×3 grid of the 80×80 cards — the owner's target; the first
+  draft of the pass was 420×272 with 4 columns. The title screen,
   HUD editor and the full-screen world map are not windows and keep their layouts.
 - **Compact text.** Inside Aurora windows (`ThemedScreen.compactText`, default = windowed
-  hosts) text uses `<font>_ui`, the same bundled face rasterized at 7.5 instead of 9 px —
+  hosts) text uses `<font>_ui`, the same bundled face rasterized at 8 instead of 9 px —
   crisp, no pose scaling; measurement uses the same style. Vanilla-font users
   (SansSerif / renderer Off) keep vanilla text.
 - **Compact metrics** (`UiDensity`): 24 px header band with 16 px header buttons; setting rows
   18 px (sliders 20, wrapped 28) with 2 px gaps; 14 px field controls (dropdown 84 wide,
-  keybind/action 72); 24×12 toggles; 32×12 swatches; 5 px slider knob; section band 8 px.
-  Feature cards stay 80×80 with 6 px gaps (4 columns); list cards stay 32 px with 4 px gaps.
+  keybind/action 72); 24×12 toggles; 14×14 square color swatches (accent presets the same
+  squares, its Custom slot a wider labeled pill); 5 px slider knob; section band 8 px.
+  Feature cards stay 80×80 with 6 px gaps (3 columns, 3 rows visible); list cards stay
+  32 px with 4 px gaps.
+- **Per-pixel color gradients.** Both color pickers (`ColorPickerScreen` and
+  `ColorSetting`'s expanded inline editor) rasterize the saturation/lightness pad and the
+  hue/alpha strips one sample per DEVICE pixel into small `UiLayerCache` buffers
+  (`writeArgb`), blitted per frame and re-rasterized only for the value they display —
+  the former GUI-cell grids (40×40 / 32×32) banded visibly at every GUI scale. Preview
+  samples are squares, not wide bars.
 - **Collapsible sections.** `SectionHeaderSetting` is a disclosure control (click, Enter or
   Space; chevron at the trailing edge; focus ring). Lists with three or more sections open
   with only the first expanded *when the fully expanded list would scroll*; otherwise all

@@ -21,7 +21,7 @@ public class AuroraFontRenderer {
 
     /**
      * Aurora's windowed screens (main, feature detail, managers, editors, pickers) draw text
-     * with the compact {@code <font>_ui} variant — the same face rasterized at 7.5 instead of
+     * with the compact {@code <font>_ui} variant — the same face rasterized at 8 instead of
      * 9 px, so it stays crisp (no pose scaling). The title screen, HUD editor, in-world HUD
      * and vanilla screens keep the regular size. Width measurement goes through the same
      * style, so layout and paint always agree.

@@ -13,7 +13,9 @@ public final class UiDensity {
     private UiDensity() {}
 
     // ---- The one window frame ----
-    public static final int WINDOW_WIDTH = 420, WINDOW_HEIGHT = 272, WINDOW_MARGIN = 12;
+    /** 336×288: the content well (254×252) shows EXACTLY a 3×3 grid of the
+     * 80×80 cards — the owner's "approximately 3×3" target (2026-10-30). */
+    public static final int WINDOW_WIDTH = 336, WINDOW_HEIGHT = 288, WINDOW_MARGIN = 12;
     /** Legacy names for the frame; kept so existing callers read the uniform size. */
     public static final int MAIN_WIDTH = WINDOW_WIDTH, MAIN_HEIGHT = WINDOW_HEIGHT;
 
@@ -34,7 +36,10 @@ public final class UiDensity {
     public static final int MIN_TRACK = 96, MARK = 28;
     /** Trailing field controls (dropdown, keybind, action button) and their widths. */
     public static final int FIELD_H = 14, ENUM_W = 84, KEY_W = 72;
-    public static final int TOGGLE_W = 24, TOGGLE_H = 12, SWATCH_W = 32, SWATCH_H = 12;
+    public static final int TOGGLE_W = 24, TOGGLE_H = 12;
+    /** Color swatches are small SQUARES (owner ruling, 2026-10-30) — one
+     * size for the field-height family, matching FIELD_H rows. */
+    public static final int SWATCH_W = 14, SWATCH_H = 14;
     /** Section caption row and the band above a non-leading caption. */
     public static final int SECTION_ROW = 14, SECTION_GAP = 8;
 
@@ -45,6 +50,7 @@ public final class UiDensity {
     }
 
     /** The uniform window: {@value #WINDOW_WIDTH}×{@value #WINDOW_HEIGHT}, centered, shrunk to fit. */
+    // Window history: 420×272 (4-column grid) → 336×288 (3×3 grid, 2026-10-30).
     public static Rect window(int width, int height) {
         int w = Math.min(WINDOW_WIDTH, Math.max(1, width - 2 * WINDOW_MARGIN));
         int h = Math.min(WINDOW_HEIGHT, Math.max(1, height - 2 * WINDOW_MARGIN));

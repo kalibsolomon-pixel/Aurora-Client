@@ -19,8 +19,9 @@ import java.util.function.IntSupplier;
 /**
  * Color setting — collapsed swatch + expanded HSL picker. Wave D rebuild
  * swaps {@link com.aurora.client.util.RoundedRect} chrome for AuroraShapes
- * + theme colors and adds a hover halo to the swatch ring. HSL math, pad
- * cache, drag state machine — all unchanged from prior waves.
+ * + theme colors and adds a hover halo to the swatch ring. HSL math and the
+ * drag state machine are unchanged from prior waves; the pad/strips render
+ * per device pixel (2026-10-30 — see the surface fields below).
  *
  * <p><b>Phase B ROLLOUT (2026-09-16):</b> canonical swatch states are this
  * row class's only behavior (see {@link ColorSwatch}'s class javadoc —
@@ -40,11 +41,11 @@ public class ColorSetting extends FeatureSetting {
     private static final int PAD_SIZE   = 130;
     private static final int STRIP_W    = 16;
     private static final int STRIP_GAP  = 10;
-    private static final int PREVIEW_H  = 22;
+    /** Square preview sample (owner ruling, 2026-10-30 — was totalW×22). */
+    private static final int PREVIEW_S  = 22;
     private static final int VPAD       = 14;
-    private static final int PAD_STEPS  = 32;
 
-    private static final int EXPANDED_BODY = PAD_SIZE + VPAD + PREVIEW_H + VPAD;
+    private static final int EXPANDED_BODY = PAD_SIZE + VPAD + PREVIEW_S + VPAD;
     private static final int ROW_H_EXPANDED = ROW_H_COLLAPSED + EXPANDED_BODY;
 
     private final IntSupplier getter;
@@ -65,8 +66,21 @@ public class ColorSetting extends FeatureSetting {
     private enum DragTarget { NONE, PAD, HUE, ALPHA }
     private DragTarget dragging = DragTarget.NONE;
 
-    private float cachedHueForPad = -1f;
-    private final int[] padCache = new int[PAD_STEPS * PAD_STEPS];
+    // ---- Per-pixel editing surfaces (2026-10-30) ----
+    // The pad/strips rasterize per DEVICE pixel (UiLayerCache.writeArgb) into
+    // small buffers and blit per frame — the former 32×32 GUI-cell pad and
+    // 1-GUI-px strip rows banded visibly at every GUI scale. Version keys:
+    // pad ← scale+hue, hue ← scale, alpha ← scale+h/s/l. Buffers are dropped
+    // while collapsed (dispose is idempotent) so a closed editor owns no
+    // GPU memory.
+    private final com.aurora.client.ui.util.UiLayerCache padSurface = new com.aurora.client.ui.util.UiLayerCache();
+    private final com.aurora.client.ui.util.UiLayerCache hueSurface = new com.aurora.client.ui.util.UiLayerCache();
+    private final com.aurora.client.ui.util.UiLayerCache alphaSurface = new com.aurora.client.ui.util.UiLayerCache();
+    /** Stable version contribution for a float. */
+    private static long bits(float f) { return Float.floatToIntBits(f) & 0xFFFFFFFFL; }
+    private static int guiScale() {
+        return Math.max(1, (int) Minecraft.getInstance().getWindow().getGuiScale());
+    }
 
     /** Shared themed swatch — owns the checkerboard + fill + ring/halo rendering. */
     private final ColorSwatch swatch;
@@ -99,6 +113,11 @@ public class ColorSetting extends FeatureSetting {
     public void render(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
         var tr = Minecraft.getInstance().font;
         boolean disabled = isDisabled();
+        if (!expanded) { // a collapsed row owns no editing-surface memory
+            padSurface.dispose();
+            hueSurface.dispose();
+            alphaSurface.dispose();
+        }
         if (compactRow != null) renderCompactLabel(ctx, x, y, mouseX, mouseY, AuroraTheme.TEXT_PRIMARY);
         else renderWrappedLabel(ctx, label, x + 12, y + (ROW_H_COLLAPSED - tr.lineHeight) / 2, Math.max(0,width-(swatchW+38)), AuroraTheme.TEXT_PRIMARY, mouseX, mouseY, disabled);
 
@@ -133,7 +152,7 @@ public class ColorSetting extends FeatureSetting {
         alphaY = padY;
         previewX = padX;
         previewY = padY + PAD_SIZE + 8;
-        previewW = totalW;
+        previewW = PREVIEW_S;
 
         drawSatLitPadCached(ctx);
         ctx.enableScissor(padX,padY,padX+PAD_SIZE,padY+PAD_SIZE);
@@ -155,9 +174,9 @@ public class ColorSetting extends FeatureSetting {
             ctx.fill(alphaX - 2, alphaMark - 1, alphaX + STRIP_W + 2, alphaMark + 1, 0xFFFFFFFF);
         }
 
-        drawCheckerboard(ctx, previewX, previewY, previewW, PREVIEW_H);
-        ctx.fill(previewX, previewY, previewX + previewW, previewY + PREVIEW_H, ColorEntryHelper.hslaToArgb(h, s, l, a));
-        AuroraShapes.outline(ctx, previewX, previewY, previewW, PREVIEW_H,
+        drawCheckerboard(ctx, previewX, previewY, previewW, PREVIEW_S);
+        ctx.fill(previewX, previewY, previewX + previewW, previewY + PREVIEW_S, ColorEntryHelper.hslaToArgb(h, s, l, a));
+        AuroraShapes.outline(ctx, previewX, previewY, previewW, PREVIEW_S,
                 AuroraTheme.ACCENT_BLUE, 0);
     }
 
@@ -301,6 +320,9 @@ public class ColorSetting extends FeatureSetting {
     public void onDetailScreenClose() {
         expanded = false;
         dragging = DragTarget.NONE;
+        padSurface.dispose();
+        hueSurface.dispose();
+        alphaSurface.dispose();
         releaseFocus();
     }
 
@@ -322,44 +344,49 @@ public class ColorSetting extends FeatureSetting {
         commit();
     }
 
+    /** Source-over composite of {@code src} (ARGB) over opaque {@code bg}. */
+    private static int compositeOver(int src, int bg) {
+        int sa = (src >>> 24) & 0xFF;
+        if (sa == 255) return src;
+        int inv = 255 - sa;
+        int r = ((src >>> 16) & 0xFF) * sa + ((bg >>> 16) & 0xFF) * inv;
+        int g = ((src >>> 8) & 0xFF) * sa + ((bg >>> 8) & 0xFF) * inv;
+        int b = (src & 0xFF) * sa + (bg & 0xFF) * inv;
+        return 0xFF000000 | ((r / 255) << 16) | ((g / 255) << 8) | (b / 255);
+    }
+
     private void drawSatLitPadCached(GuiGraphics ctx) {
-        if (Math.abs(h - cachedHueForPad) > 0.0001f) {
-            for (int sx = 0; sx < PAD_STEPS; sx++) {
-                float ss = sx / (float) (PAD_STEPS - 1);
-                for (int sy = 0; sy < PAD_STEPS; sy++) {
-                    float ll = 1f - (sy / (float) (PAD_STEPS - 1));
-                    padCache[sy * PAD_STEPS + sx] = ColorEntryHelper.hslaToArgb(h, ss, ll, 1f);
-                }
-            }
-            cachedHueForPad = h;
-        }
-        for (int sx = 0; sx < PAD_STEPS; sx++) {
-            int x0 = padX + (sx * PAD_SIZE) / PAD_STEPS;
-            int x1 = padX + ((sx + 1) * PAD_SIZE) / PAD_STEPS;
-            for (int sy = 0; sy < PAD_STEPS; sy++) {
-                int y0 = padY + (sy * PAD_SIZE) / PAD_STEPS;
-                int y1 = padY + ((sy + 1) * PAD_SIZE) / PAD_STEPS;
-                ctx.fill(x0, y0, x1, y1, padCache[sy * PAD_STEPS + sx]);
-            }
-        }
-        AuroraShapes.outline(ctx, padX, padY, PAD_SIZE, PAD_SIZE, AuroraTheme.ACCENT_BLUE, 0);
+        int scale = guiScale();
+        com.aurora.client.ui.util.UiLayerCache.drawSurface(ctx, padSurface,
+                scale * 31L ^ bits(h), padX, padY, PAD_SIZE, PAD_SIZE, () -> {
+                    int dev = PAD_SIZE * scale;
+                    padSurface.writeArgb((px, py) -> ColorEntryHelper.hslaToArgb(h,
+                            (px + 0.5f) / dev, 1f - (py + 0.5f) / dev, 1f));
+                    AuroraShapes.outline(ctx, 0, 0, PAD_SIZE, PAD_SIZE, AuroraTheme.ACCENT_BLUE, 0);
+                });
     }
 
     private void drawHueStrip(GuiGraphics ctx) {
-        for (int py = 0; py < PAD_SIZE; py++) {
-            float hh = py / (float) PAD_SIZE;
-            ctx.fill(hueX, hueY + py, hueX + STRIP_W, hueY + py + 1, ColorEntryHelper.hslaToArgb(hh, 1f, 0.5f, 1f));
-        }
-        AuroraShapes.outline(ctx, hueX, hueY, STRIP_W, PAD_SIZE, AuroraTheme.ACCENT_BLUE, 0);
+        int scale = guiScale();
+        com.aurora.client.ui.util.UiLayerCache.drawSurface(ctx, hueSurface,
+                scale * 31L, hueX, hueY, STRIP_W, PAD_SIZE, () -> {
+                    int devH = PAD_SIZE * scale;
+                    hueSurface.writeArgb((px, py) -> ColorEntryHelper.hslaToArgb((py + 0.5f) / devH, 1f, 0.5f, 1f));
+                    AuroraShapes.outline(ctx, 0, 0, STRIP_W, PAD_SIZE, AuroraTheme.ACCENT_BLUE, 0);
+                });
     }
 
     private void drawAlphaStrip(GuiGraphics ctx) {
-        drawCheckerboard(ctx, alphaX, alphaY, STRIP_W, PAD_SIZE);
-        for (int py = 0; py < PAD_SIZE; py++) {
-            float aa = 1f - (py / (float) PAD_SIZE);
-            ctx.fill(alphaX, alphaY + py, alphaX + STRIP_W, alphaY + py + 1, ColorEntryHelper.hslaToArgb(h, s, l, aa));
-        }
-        AuroraShapes.outline(ctx, alphaX, alphaY, STRIP_W, PAD_SIZE, AuroraTheme.ACCENT_BLUE, 0);
+        int scale = guiScale();
+        com.aurora.client.ui.util.UiLayerCache.drawSurface(ctx, alphaSurface,
+                scale * 31L ^ bits(h) * 31L ^ bits(s) * 17L ^ bits(l), alphaX, alphaY, STRIP_W, PAD_SIZE, () -> {
+                    int devW = STRIP_W * scale, devH = PAD_SIZE * scale, cell = 4 * scale;
+                    alphaSurface.writeArgb((px, py) -> {
+                        int bg = ((px / cell) + (py / cell)) % 2 == 0 ? 0xFF555555 : 0xFFAAAAAA;
+                        return compositeOver(ColorEntryHelper.hslaToArgb(h, s, l, 1f - (py + 0.5f) / devH), bg);
+                    });
+                    AuroraShapes.outline(ctx, 0, 0, STRIP_W, PAD_SIZE, AuroraTheme.ACCENT_BLUE, 0);
+                });
     }
 
     private static void drawCheckerboard(GuiGraphics ctx, int x, int y, int w, int h) {

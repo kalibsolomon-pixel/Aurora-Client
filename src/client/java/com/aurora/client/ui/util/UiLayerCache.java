@@ -76,6 +76,58 @@ public final class UiLayerCache implements RenderUtil.RectSink {
         }
     }
 
+    /**
+     * Direct per-device-pixel writer: fills the WHOLE buffer with ARGB colors
+     * from {@code argbAt(x, y)} (device-pixel coordinates, top-left origin,
+     * one invocation per pixel). The color picker's gradient surfaces use this
+     * instead of integer GUI-cell fills — every physical pixel gets its exact
+     * sampled color, so the pad/strips render with true per-pixel gradients
+     * (no visible banding at any GUI scale). Bulk row writes; no allocation.
+     */
+    public void writeArgb(java.util.function.IntBinaryOperator argbAt) {
+        if (image == null) return;
+        if (scaledRow == null || scaledRow.length != w) scaledRow = new int[w];
+        IntBuffer pixels = MemoryUtil.memIntBuffer(image.getPointer(), w * h);
+        for (int y = 0; y < h; y++) {
+            for (int x = 0; x < w; x++) {
+                scaledRow[x] = argbToAbgr(argbAt.applyAsInt(x, y));
+            }
+            pixels.position(y * w);
+            pixels.put(scaledRow);
+        }
+    }
+
+    /** ARGB to the buffer's raw ABGR int layout. */
+    private static int argbToAbgr(int c) {
+        return ((c & 0xFF) << 16) | (c & 0xFF00) | ((c >>> 16) & 0xFF) | (c & 0xFF000000);
+    }
+
+    /**
+     * The cache discipline for one editing surface: if the buffer is not
+     * current for {@code version}, size it to {@code wLogical × hLogical}
+     * (scaled to device pixels), clear it, run {@code raster} (draw at LOCAL
+     * logical coordinates — the capture sink maps fills to the buffer's
+     * physical pixels, and {@link #writeArgb} writes device pixels directly;
+     * both compose in draw order) and commit; then one positional blit at
+     * {@code (x, y)}. Shared by the color-picker surfaces.
+     */
+    public static void drawSurface(GuiGraphics g, UiLayerCache cache, long version,
+                                   int x, int y, int wLogical, int hLogical, Runnable raster) {
+        if (!cache.isCurrent(version)) {
+            int scale = Math.max(1, (int) Minecraft.getInstance().getWindow().getGuiScale());
+            cache.ensureSize(wLogical * scale, hLogical * scale);
+            cache.clear();
+            RenderUtil.RectSink prev = RenderUtil.beginCapture(cache.sink());
+            try {
+                raster.run();
+            } finally {
+                RenderUtil.endCapture(prev);
+            }
+            cache.commit(version);
+        }
+        cache.blitAt(g, x, y, wLogical, hLogical);
+    }
+
     /** Upscale cached data, without resampling world columns or allocating per update.
      * Expanded rows are copied in bulk; repeated source rows use native memcpy. */
     public void writeScaledAbgr(int[] source, int sourceW, int sourceH) {

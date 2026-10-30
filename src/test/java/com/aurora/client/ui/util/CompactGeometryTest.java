@@ -4,17 +4,18 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class CompactGeometryTest {
-    @Test void uniformWindowFitsEightFullSizeCardsAndSixListRows() {
+    @Test void uniformWindowShowsAThreeByThreeCardGridAndSevenListRows() {
         var frame = UiDensity.mainFrame(640, 360);
         var body = UiDensity.mainContent(frame);
-        assertEquals(420, frame.width()); assertEquals(272, frame.height());
-        assertEquals(338, body.width()); assertEquals(236, body.height());
+        assertEquals(336, frame.width()); assertEquals(288, frame.height());
+        assertEquals(254, body.width()); assertEquals(252, body.height());
         assertEquals(80, UiDensity.CARD_WIDTH); // feature cards keep their original size
-        assertEquals(4, UiDensity.columns(body.width()));
-        assertTrue(UiDensity.extent(2, UiDensity.CARD_HEIGHT, UiDensity.GRID_GAP) <= body.height());
-        assertTrue(UiDensity.extent(6, UiDensity.LIST_HEIGHT, UiDensity.LIST_GAP) <= body.height());
-        assertTrue(UiDensity.extent(3, UiDensity.CARD_HEIGHT, UiDensity.GRID_GAP) > body.height());
-        assertTrue(UiDensity.extent(7, UiDensity.LIST_HEIGHT, UiDensity.LIST_GAP) > body.height());
+        assertEquals(3, UiDensity.columns(body.width()));
+        // the owner's 3×3 target: three card rows fit, a fourth does not
+        assertTrue(UiDensity.extent(3, UiDensity.CARD_HEIGHT, UiDensity.GRID_GAP) <= body.height());
+        assertTrue(UiDensity.extent(4, UiDensity.CARD_HEIGHT, UiDensity.GRID_GAP) > body.height());
+        assertTrue(UiDensity.extent(7, UiDensity.LIST_HEIGHT, UiDensity.LIST_GAP) <= body.height());
+        assertTrue(UiDensity.extent(8, UiDensity.LIST_HEIGHT, UiDensity.LIST_GAP) > body.height());
     }
     @Test void everyWindowedScreenSharesOneFrame() {
         for (int[] size : new int[][]{{640,360},{480,270},{960,540},{1280,720}}) {
