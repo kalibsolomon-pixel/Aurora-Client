@@ -68,6 +68,27 @@ class SpxctraSimplificationContractTest {
     }
 
     @Test
+    void controlHostingPanelsSitOneToneBelowTheirControls() throws Exception {
+        // A raised button on a raised floating surface is invisible; hosts use the panel tone.
+        String material = read("ui/component/MaterialSurface.java");
+        int panel = material.indexOf("public static void floatingPanel(");
+        assertTrue(panel >= 0 && material.substring(panel, panel + 400).contains("ThemeToken.MATERIAL_PANEL"));
+        assertTrue(read("worldmap/screen/WorldMapScreen.java").contains("MaterialSurface.floatingPanel(g, BAR_PAD, BAR_PAD"));
+        assertTrue(read("screen/WaypointEditScreen.java").contains("MaterialSurface.floatingPanel(g, left, top"));
+        assertTrue(read("screen/MappingDataScreen.java").contains("MaterialSurface.floatingPanel(g, x, y"));
+    }
+
+    @Test
+    void focusStaysVisibleOnSelectedPeers() throws Exception {
+        // A focus hairline drawn exactly over an accent selection edge is invisible; selected or
+        // enabled peers get the Button family's ring 2px outside instead.
+        String main = read("screen/AuroraScreen.java");
+        assertTrue(main.contains("drawRoundedOutlineAA(g, catX - 2, catY - 2, 60, TAB_H + 4"), "selected sidebar tab");
+        assertTrue(main.contains("if (MaterialSurface.unified() && on) RenderUtil.drawRoundedOutlineAA(g, cx - 2, cy - 2"), "enabled tile");
+        assertTrue(main.contains("if (MaterialSurface.unified() && selected) RenderUtil.drawRoundedOutlineAA(g, x - 2, y - 2"), "layout peer");
+    }
+
+    @Test
     void sectionCaptionsRenderAsAuthored() throws Exception {
         assertFalse(read("screen/setting/SectionHeaderSetting.java").contains("toUpperCase"));
         assertFalse(read("screen/setting/FeatureSetting.java").contains("label.toUpperCase"));

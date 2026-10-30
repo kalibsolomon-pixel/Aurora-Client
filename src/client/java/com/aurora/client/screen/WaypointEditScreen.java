@@ -146,8 +146,8 @@ public final class WaypointEditScreen extends Screen implements ThemedScreen {
         return super.keyPressed(event);
     }
     @Override public void render(GuiGraphics g, int mx, int my, float delta) {
-        MaterialSurface.floating(g, left, top, panelWidth, 160,
-                Math.round(ThemeManager.current().roundness().radius()), 1);
+        MaterialSurface.floatingPanel(g, left, top, panelWidth, 160,
+                Math.round(ThemeManager.current().roundness().radius()));
         com.aurora.client.worldmap.MapMarkers.waypoint(g, left + 16, top + 12, draft, false);
         // A validation error replaces the heading in the semantic error color, so
         // it reads as feedback rather than as a renamed dialog.

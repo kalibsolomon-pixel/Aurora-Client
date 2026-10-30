@@ -197,9 +197,9 @@ public final class WorldMapScreen extends Screen implements ThemedScreen {
         g.disableScissor();
         // Opaque semantic surfaces keep controls readable over deferred terrain tiles.
         int barR = Math.round(ThemeManager.current().roundness().radius());
-        MaterialSurface.floating(g, BAR_PAD, BAR_PAD, width - 2 * BAR_PAD, topBarH, barR, 1);
-        MaterialSurface.floating(g, BAR_PAD, statusTop(), width - 2 * BAR_PAD, STATUS_H,
-                Math.round(ThemeManager.current().roundness().radiusSmall()), 1);
+        MaterialSurface.floatingPanel(g, BAR_PAD, BAR_PAD, width - 2 * BAR_PAD, topBarH, barR);
+        MaterialSurface.floatingPanel(g, BAR_PAD, statusTop(), width - 2 * BAR_PAD, STATUS_H,
+                Math.round(ThemeManager.current().roundness().radiusSmall()));
         int textY = statusTop() + (STATUS_H - font.lineHeight) / 2 + 1;
         String position = (int) Math.floor(viewport.worldX(mx, width)) + ", "
                 + (int) Math.floor(viewport.worldZ(my, height)) + "  \u00b7  " +

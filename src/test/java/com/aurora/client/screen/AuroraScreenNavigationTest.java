@@ -387,7 +387,8 @@ class AuroraScreenNavigationTest {
         for (String site : new String[]{
                 "if (control != null && control.isFocused())",
                 "if (profilesControl != null && profilesControl.isFocused())",
-                "if (control != null && control.isFocused()) {\n                RenderUtil.drawRoundedOutlineAA(g, cx, cy, cw, ch, tileRadius",
+                "if (control != null && control.isFocused()) {\n                // An enabled tile already wears the accent edge: focus moves 2px outside it.",
+                "else RenderUtil.drawRoundedOutlineAA(g, cx, cy, cw, ch, tileRadius",
                 "if (nav.isFocused())"}) {
             assertTrue(src.contains(site), "focus site missing: " + site);
         }

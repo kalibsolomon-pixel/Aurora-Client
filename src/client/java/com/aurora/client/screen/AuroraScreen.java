@@ -912,10 +912,15 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             g.drawString(tr, cats[i], (int) (catX + 8), (int) (catY + 7), txt, false);
             // Keyboard focus: the Button-family 1 px accent hairline — an
             // independent channel from both the selection tint and hover.
-            // A selected unified tab already owns the accent edge. Focus must not add a second rim.
+            // A selected unified tab already owns the accent edge, so its focus is the Button
+            // family's ring 2px OUTSIDE it — never a doubled edge, never invisible (Spxctra
+            // 2026-10-30: keyboard position previously vanished on the selected tab).
             if (control != null && control.isFocused() && (!MaterialSurface.unified() || !sel)) {
                 RenderUtil.drawRoundedOutlineAA(g, catX, catY, 56, 24, ctrlRadius, 1.0f,
                         ThemeManager.withAlpha(MaterialSurface.color(ThemeToken.ACCENT), 0x99));
+            } else if (control != null && control.isFocused()) {
+                RenderUtil.drawRoundedOutlineAA(g, catX - 2, catY - 2, 60, TAB_H + 4,
+                        MaterialSurface.outsetRadius(ctrlRadius, 2), 1.0f, MaterialSurface.color(ThemeToken.ACCENT));
             }
         }
 
@@ -1057,7 +1062,10 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             // Keyboard focus: the Button-family hairline — independent of
             // both the enabled stain and the hover wash.
             if (control != null && control.isFocused()) {
-                RenderUtil.drawRoundedOutlineAA(g, cx, cy, cw, ch, tileRadius, 1.0f,
+                // An enabled tile already wears the accent edge: focus moves 2px outside it.
+                if (MaterialSurface.unified() && on) RenderUtil.drawRoundedOutlineAA(g, cx - 2, cy - 2, cw + 4, ch + 4,
+                        MaterialSurface.outsetRadius(tileRadius, 2), 1.0f, MaterialSurface.color(ThemeToken.ACCENT));
+                else RenderUtil.drawRoundedOutlineAA(g, cx, cy, cw, ch, tileRadius, 1.0f,
                         ThemeManager.withAlpha(MaterialSurface.color(ThemeToken.ACCENT), 0x99));
             }
 
@@ -1258,7 +1266,10 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         // Keyboard focus: the Button-family hairline — independent of both
         // the enabled stain and the hover wash.
         if (focused) {
-            RenderUtil.drawRoundedOutlineAA(g, x, y, size, size, ctrlRadius, 1.0f,
+            // A selected peer already wears the accent edge: focus moves 2px outside it.
+            if (MaterialSurface.unified() && selected) RenderUtil.drawRoundedOutlineAA(g, x - 2, y - 2, size + 4, size + 4,
+                    MaterialSurface.outsetRadius(ctrlRadius, 2), 1.0f, MaterialSurface.color(ThemeToken.ACCENT));
+            else RenderUtil.drawRoundedOutlineAA(g, x, y, size, size, ctrlRadius, 1.0f,
                     ThemeManager.withAlpha(MaterialSurface.color(ThemeToken.ACCENT), 0x99));
         }
         // Same contract as the tiles: on stained glass the icon takes the

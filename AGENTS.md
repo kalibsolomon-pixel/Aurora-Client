@@ -2479,5 +2479,7 @@ browser, plus the existing main/detail): measured 19.9→1 captures/frame on Way
 (owner rulings). Manager rows have no per-row border; pack cards' Install is neutral (modal
 keeps the primary). Section captions render as authored; a leading caption drops its top
 band (`SectionHeaderSetting.markLeading`). Dropdown values without labels are sentence case
-(`EnumSetting.humanize`). Sidebar inactive items are flat at rest. Probe plans `glass`/`spx`
+(`EnumSetting.humanize`). Sidebar inactive items are flat at rest. Opaque panels that host
+controls use `MaterialSurface.floatingPanel` (panel tone; raised buttons vanished on the raised
+`floating` tone). Focus on a selected/enabled peer is an outset ring (it was invisible). Probe plans `glass`/`spx`
 and `tools/gui/glass_metrics.py` reproduce the evidence. See SPXCTRA_UI_SIMPLIFICATION_REPORT.md.

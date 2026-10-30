@@ -185,6 +185,18 @@ public final class MaterialSurface {
         RenderUtil.drawRoundedRectAA(g, x, y, w, h, radius, fill);
     }
 
+    /**
+     * Opaque panel that HOSTS controls (map toolbar/status bar, the waypoint editor dialog):
+     * the window's panel tone, so raised controls sit one step above it exactly as they do
+     * on every translucent window. {@link #floating} stays the raised tone for tooltips and
+     * popups, which host no controls of their own.
+     */
+    public static void floatingPanel(GuiGraphics g, int x, int y, int w, int h, int radius) {
+        if (!unified()) { floating(g, x, y, w, h, radius, 1); return; }
+        cached(g,x,y,w,h,radius,ThemeManager.color(ThemeToken.MATERIAL_PANEL),
+                color(ThemeToken.BORDER_HOVER),5,true,1);
+    }
+
     public static void floating(GuiGraphics g, int x, int y, int w, int h,
                                 int radius, float fade) {
         float t = Math.max(0f, Math.min(1f, fade));

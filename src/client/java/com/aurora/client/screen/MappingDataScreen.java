@@ -42,7 +42,7 @@ public final class MappingDataScreen extends Screen implements ThemedScreen {
                 Component.literal("Done"), "Return to map settings.", this::onClose));
     }
     @Override public void render(GuiGraphics g, int mx, int my, float delta) {
-        MaterialSurface.floating(g, x, y, w, 160, Math.round(ThemeManager.current().roundness().radius()), 1);
+        MaterialSurface.floatingPanel(g, x, y, w, 160, Math.round(ThemeManager.current().roundness().radius()));
         // Title shares the dialog's left content edge (no centered, shadowed heading).
         g.drawString(font, title, x + 12, y + 10, ThemeManager.color(ThemeToken.ON_SURFACE), false);
         String text = "Older folders used world display names. Only import if this is the original world. "

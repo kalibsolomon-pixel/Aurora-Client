@@ -1238,6 +1238,12 @@ recipe, 18px section band between groups). These rules are now normative:
   header band already separates it; later captions keep the group band.
 - **Inactive sidebar items are flat at rest** (§11.11); hover shows a face, focus keeps
   its outline, the selected item keeps wash + edge.
+- **Panels that host controls use the panel tone.** An opaque surface carrying buttons
+  (map toolbar/status bar, waypoint editor, mapping data) uses `MaterialSurface.floatingPanel`
+  so controls sit one tone above it; `floating` (raised tone) stays for tooltips/popups.
+- **Focus never hides under selection.** A focused element that already wears the accent
+  selection edge (selected tab, enabled tile, selected layout peer) draws its focus ring
+  2 px outside that edge.
 - **Previews follow roundness.** The crosshair preview is a rounded inset tone, not a
   square outlined box.
 
