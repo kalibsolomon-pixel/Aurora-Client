@@ -360,8 +360,75 @@ public final class GuiAudit implements ClientModInitializer {
         actions.add(() -> { themeBackground(0xFF16171D); cfg.themeOrDefault().accent = 0xFFEB0029; com.aurora.client.theme.ThemeManager.reload(); mc.setScreen(null); });
     }
 
+    /**
+     * Glass-capture measurement (Spxctra pass, 2026-10-30): dwells ~3 s on each windowed
+     * screen between log markers so the [GlassStats] lines (-Daurora.glassStats=true) in
+     * between can be attributed to that screen. No screenshots beyond one per screen.
+     */
+    static void glassActions() {
+        var pm = ProfileManager.getInstance();
+        actions.add(() -> { for (String n : List.of("PvP", "Building", "Speedrun")) if (!pm.listProfileNames().contains(n)) pm.create(n); });
+        actions.add(() -> { removeAllWaypoints(); seedWaypoints(40); });
+        var worldMap = FeatureRegistry.all().stream().filter(m -> m.id.equals("world_map")).findFirst().orElseThrow();
+        Map<String, java.util.function.Supplier<Screen>> screens = new LinkedHashMap<>();
+        screens.put("main-grid", () -> { AuroraConfig.get().moduleGridView = true; return new AuroraScreen(); });
+        screens.put("detail-world_map", () -> new FeatureDetailScreen(null, worldMap));
+        screens.put("waypoints-dense", () -> new WaypointManagerScreen(null));
+        screens.put("profiles", () -> new ProfileManagerScreen(null));
+        screens.put("waypoint-edit", () -> new WaypointEditScreen(null, WaypointFeature.get().currentWorldWaypoints().get(3), false));
+        screens.put("color-picker", () -> new ColorPickerScreen(null, "Block Overlay Color", 0xC04FC3F7, v -> {}));
+        screens.put("world-map", WorldMapScreen::new);
+        screens.put("pack-browser", () -> new ResourcePackBrowserScreen(null));
+        screens.put("mapping-data", () -> new MappingDataScreen(null));
+        for (var e : screens.entrySet()) {
+            actions.add(() -> { park(); mc.setScreen(e.getValue().get()); });
+            actions.add(() -> {}); // settle (pack browser loads, templates warm)
+            actions.add(() -> System.out.println("[gui-audit] glass-begin " + e.getKey()));
+            for (int i = 0; i < 4; i++) actions.add(() -> {});
+            actions.add(() -> { System.out.println("[gui-audit] glass-end " + e.getKey()); shot("glass-" + e.getKey()); });
+        }
+        actions.add(() -> { park(); mc.setScreen(null); });
+    }
+
+    static void key(int code) {
+        if (mc.screen != null) mc.screen.keyPressed(new net.minecraft.client.input.KeyEvent(code, 0, 0));
+    }
+
+    /** Interaction-state evidence for the Spxctra pass (1920x1080@3 GUI coordinates). */
+    static void spxActions() {
+        actions.add(() -> { removeAllWaypoints(); seedWaypoints(12); });
+        // Inactive sidebar item: flat at rest, face on hover.
+        actions.add(() -> { park(); aurora(0, true); });
+        actions.add(() -> hover(181, 147));
+        actions.add(() -> shot("spx-sidebar-hover"));
+        // Keyboard focus walks the sidebar/toolbar without a pointer.
+        actions.add(() -> { park(); key(org.lwjgl.glfw.GLFW.GLFW_KEY_TAB); key(org.lwjgl.glfw.GLFW.GLFW_KEY_TAB); });
+        actions.add(() -> shot("spx-main-focus"));
+        var worldMap = FeatureRegistry.all().stream().filter(m -> m.id.equals("world_map")).findFirst().orElseThrow();
+        actions.add(() -> { park(); mc.setScreen(new FeatureDetailScreen(null, worldMap)); });
+        actions.add(() -> hover(439, 107));
+        actions.add(() -> shot("spx-field-hover"));
+        actions.add(() -> { park(); for (int i = 0; i < 3; i++) key(org.lwjgl.glfw.GLFW.GLFW_KEY_TAB); });
+        actions.add(() -> shot("spx-detail-focus"));
+        var display = FeatureRegistry.all().stream().filter(m -> m.id.equals("miscellaneous")).findFirst().orElseThrow();
+        actions.add(() -> { park(); mc.setScreen(new FeatureDetailScreen(null, display)); });
+        actions.add(() -> shot("spx-display-settings"));
+        actions.add(() -> scroll(-120));
+        actions.add(() -> shot("spx-display-settings-pacer"));
+        actions.add(() -> { park(); mc.setScreen(new WaypointManagerScreen(null)); });
+        actions.add(() -> { var s = mc.screen; hover(s.width * 0.803, s.height * 0.335); });
+        actions.add(() -> shot("spx-delete-hover"));
+        actions.add(() -> { park(); mc.setScreen(new WorldMapScreen()); });
+        actions.add(() -> shot("spx-world-map"));
+        actions.add(() -> { park(); mc.setScreen(new WaypointEditScreen(null, WaypointFeature.get().currentWorldWaypoints().get(3), false)); });
+        actions.add(() -> shot("spx-waypoint-edit"));
+        actions.add(() -> { park(); mc.setScreen(null); });
+    }
+
     static void setupActions() {
+        if (plan.equals("spx")) { FeatureRegistry.modules(); FeatureRegistry.settings(); spxActions(); return; }
         if (plan.equals("persist")) { PersistAudit.plan(Integer.getInteger("aurora.gui.phase", 1)); return; }
+        if (plan.equals("glass")) { FeatureRegistry.modules(); FeatureRegistry.settings(); glassActions(); return; }
         if (plan.equals("owner")) { FeatureRegistry.modules(); FeatureRegistry.settings(); ownerActions(); return; }
         FeatureRegistry.modules(); FeatureRegistry.settings();
         boolean full = plan.equals("full");

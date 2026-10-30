@@ -18,6 +18,9 @@ import org.lwjgl.glfw.GLFW;
 
 /** One transactional editor for manager and world map. Cancel never mutates a waypoint. */
 public final class WaypointEditScreen extends Screen implements ThemedScreen {
+    /** The window owns the one backdrop capture; child buttons/rows use cached faces
+     *  (a per-button blur tinted each control by whatever sat behind it). */
+    @Override public boolean parentGlassOnly() { return true; }
     private final Screen parent;
     private final Waypoint original;
     private final Waypoint draft;

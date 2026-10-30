@@ -295,6 +295,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
 
         for (FeatureMetadata m : FeatureRegistry.settings()) {
             sectionToggles.put(m.id, new ToggleSwitch(m::isEnabled, m::setEnabled));
+            com.aurora.client.screen.setting.SectionHeaderSetting.markLeading(m.settings);
         }
 
         searchField = new EditBox(this.font, 0, 0, 202, 20, Component.literal("Search..."));
@@ -892,7 +893,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             // Raised glass was painted pre-dim: neutral for the inactive tab,
             // accent-stained for the selected tab. Preserve the established
             // flat fallback if the glass renderer declines this frame.
-            if(MaterialSurface.unified()) MaterialSurface.selection(g,catX,catY,56,TAB_H,ctrlRadius,sel,hoverT);
+            if(MaterialSurface.unified()) MaterialSurface.selection(g,catX,catY,56,TAB_H,ctrlRadius,sel,hoverT,true);
             else if (!chipGlass[i]) {
                 if (sel) {
                     RenderUtil.drawRoundedRectAA(g, catX, catY, 56, 24, ctrlRadius,
@@ -929,7 +930,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         }
         // Profiles is neutral raised glass; retain its hover fallback when
         // live glass is unavailable.
-        if(MaterialSurface.unified()) MaterialSurface.selection(g,profX,profY,56,TAB_H,ctrlRadius,false,profT);
+        if(MaterialSurface.unified()) MaterialSurface.selection(g,profX,profY,56,TAB_H,ctrlRadius,false,profT,true);
         else if (!profGlass && profT > 0f) {
             RenderUtil.drawRoundedRectAA(g, profX, profY, 56, 24, ctrlRadius,
                     AuroraAnim.lerpArgb(0x00000000,

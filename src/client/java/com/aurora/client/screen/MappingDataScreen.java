@@ -13,6 +13,9 @@ import net.minecraft.network.chat.Component;
 
 /** Explicit recoverable legacy import. Never offers deletion of map or waypoint data. */
 public final class MappingDataScreen extends Screen implements ThemedScreen {
+    /** The window owns the one backdrop capture; child buttons/rows use cached faces
+     *  (a per-button blur tinted each control by whatever sat behind it). */
+    @Override public boolean parentGlassOnly() { return true; }
     private final Screen parent;
     private String status = "";
     private int x, y, w;

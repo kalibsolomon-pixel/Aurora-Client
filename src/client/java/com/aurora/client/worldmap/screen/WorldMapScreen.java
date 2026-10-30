@@ -31,6 +31,9 @@ import java.util.List;
 /** Unified explored map: cursor-anchored smooth zoom, clipped region LOD,
  * separate archive browsing, shared waypoint editor and coordinate navigation. */
 public final class WorldMapScreen extends Screen implements ThemedScreen {
+    /** The window owns the one backdrop capture; child buttons/rows use cached faces
+     *  (a per-button blur tinted each control by whatever sat behind it). */
+    @Override public boolean parentGlassOnly() { return true; }
     private final MapViewport viewport = new MapViewport();
     private boolean follow = true, dragging;
     private ButtonWidget dimensionButton;

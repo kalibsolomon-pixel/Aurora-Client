@@ -303,7 +303,8 @@ public class KeyListSetting extends FeatureSetting {
             glassOk = false;
         }
         if (MaterialSurface.unified()) {
-            MaterialSurface.selection(ctx,addX,addY,addW,ADD_H,AuroraTheme.RADIUS_SMALL,listening,disabled ? 0 : hT);
+            if (listening) MaterialSurface.selection(ctx,addX,addY,addW,ADD_H,AuroraTheme.RADIUS_SMALL,true,0);
+            else MaterialSurface.field(ctx,addX,addY,addW,ADD_H,AuroraTheme.RADIUS_SMALL,hT,disabled);
         } else if (!glassOk) {
             RenderUtil.drawSquircle(ctx, addX, addY, addW, ADD_H, AuroraTheme.RADIUS_SMALL,
                     listening ? AuroraTheme.IOS_BLUE_PRESSED : fillTint);

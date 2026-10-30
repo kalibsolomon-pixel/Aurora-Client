@@ -4,7 +4,6 @@ import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.hud.CrosshairRenderer;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
-import com.aurora.client.util.AuroraShapes;
 import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.gui.GuiGraphics;
 
@@ -53,8 +52,10 @@ public class CrosshairPreviewSetting extends FeatureSetting {
         int by = y + PAD_Y;
         int bw = width - PAD_X * 2;
         int bh = PREVIEW_H - PAD_Y * 2;
-        AuroraShapes.panel(ctx, bx, by, bw, bh, AuroraTheme.PANEL_INSET, 0);
-        AuroraShapes.outline(ctx, bx, by, bw, bh, AuroraTheme.BORDER_OFF, 0);
+        // One rounded inset tone, no outline: the well reads by tone alone and follows the
+        // theme's corner style like every other rectangular chrome (Spxctra 2026-10-30).
+        com.aurora.client.ui.util.RenderUtil.drawRoundedRectAA(ctx, bx, by, bw, bh, AuroraTheme.RADIUS_SMALL,
+                com.aurora.client.ui.component.MaterialSurface.color(ThemeToken.SURFACE_INSET));
 
         AuroraConfig cfg = AuroraConfig.get();
         int cx = x + width / 2;

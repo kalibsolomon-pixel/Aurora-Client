@@ -2463,3 +2463,21 @@ the same worker). Profiles read/scan/delete through its read-your-writes view
 (`latest`/`delete`), so create→switch and delete ordering are correct before the disk
 catches up. Aurora-UI keybind changes also save vanilla options (otherwise options.txt
 overwrote them at boot). See CONFIG_PERSISTENCE_RELIABILITY_REPORT.md.
+
+## Spxctra UI simplification pass (2026-10-30)
+
+Branch `spxctra/ui-simplification`. Design skills live in `.claude/skills/` (provenance in
+`.claude/skills/PROVENANCE.md`; the unlicensed Vercel skill stays local-only). Shared rules,
+now in DESIGN_LANGUAGE.md "Spxctra simplification pass":
+`MaterialSurface` draws no accent halo (selection = wash + one accent edge; primary = fill).
+`MaterialSurface.field` is the single face for setting-row dropdowns/keybinds/key-list add,
+and every plain neutral or destructive `Button` wears the same opaque, edgeless, shadowless
+face (destructive = red label at rest, solid red on hover/press). Windowed screens declare
+`parentGlassOnly()` (managers, waypoint editor, world map, color picker, mapping data, pack
+browser, plus the existing main/detail): measured 19.9→1 captures/frame on Waypoints (40),
+14→1 Profiles, 9→2 pack browser. Title cards and the HUD editor keep standalone glass
+(owner rulings). Manager rows have no per-row border; pack cards' Install is neutral (modal
+keeps the primary). Section captions render as authored; a leading caption drops its top
+band (`SectionHeaderSetting.markLeading`). Dropdown values without labels are sentence case
+(`EnumSetting.humanize`). Sidebar inactive items are flat at rest. Probe plans `glass`/`spx`
+and `tools/gui/glass_metrics.py` reproduce the evidence. See SPXCTRA_UI_SIMPLIFICATION_REPORT.md.

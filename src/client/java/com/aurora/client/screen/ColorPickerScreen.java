@@ -39,6 +39,9 @@ import java.util.function.IntConsumer;
  * field stays opaque (text entry is never glass).
  */
 public class ColorPickerScreen extends Screen implements ThemedScreen {
+    /** The window owns the one backdrop capture; child buttons/rows use cached faces
+     *  (a per-button blur tinted each control by whatever sat behind it). */
+    @Override public boolean parentGlassOnly() { return true; }
 
     private final Screen parent;
     private final IntConsumer onApply;

@@ -113,6 +113,9 @@ import java.util.concurrent.atomic.AtomicReference;
  * {@link AtomicReference} snapshot that {@link #tick()} drains.
  */
 public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
+    /** The window owns the one backdrop capture; child buttons/rows use cached faces
+     *  (a per-button blur tinted each control by whatever sat behind it). */
+    @Override public boolean parentGlassOnly() { return true; }
 
     // ---- Layout constants ----
     private static final int SIDEBAR_W      = 130;
@@ -967,7 +970,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
             int btnY = y + CARD_H - btnH - 8;
             Button installBtn = st.cardPhaseButtons[st.phase];
             if (installBtn == null) {
-                installBtn = newPhaseButton(st.phase);
+                installBtn = newPhaseButton(st.phase, false);
                 st.cardPhaseButtons[st.phase] = installBtn;
             }
             installBtn.layout(btnX, btnY, btnW, btnH);
@@ -1238,7 +1241,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         int renderPhase = st.drivenPhase >= 0 ? st.drivenPhase : st.phase;
         Button installBtn = st.cardPhaseButtons[renderPhase];
         if (installBtn == null) {
-            installBtn = newPhaseButton(renderPhase);
+            installBtn = newPhaseButton(renderPhase, false);
             st.cardPhaseButtons[renderPhase] = installBtn;
         }
         installBtn.layout(btnX, btnY, btnW, btnH);
@@ -1271,13 +1274,18 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
      * success-green fills are not expressible through the shared painter
      * without modifying it, which this change is forbidden to do.
      */
-    private static Button newPhaseButton(int phase) {
+    private static Button newPhaseButton(int phase, boolean modal) {
         // Per-card buttons: DETAIL priority — one per visible card, the
         // pool's largest repeated demand on a big grid (R10), and the first
         // surfaces to go flat when a frame over-subscribes the pool.
+        // Only the detail modal's Install is primary: a grid that repeats a
+        // primary fill on every card has no primary action (Spxctra 2026-10-30).
         return switch (phase) {
-            case CardState.IDLE -> new Button(Component.literal("Install"), () -> {}, true)
-                    .glassStyle(Button.GlassStyle.STAINED).primary(true).priority(BlurPanelRenderer.Priority.DETAIL);
+            case CardState.IDLE -> modal
+                    ? new Button(Component.literal("Install"), () -> {}, true)
+                            .glassStyle(Button.GlassStyle.STAINED).primary(true).priority(BlurPanelRenderer.Priority.DETAIL)
+                    : new Button(Component.literal("Install"), () -> {})
+                            .glassBackground(true).priority(BlurPanelRenderer.Priority.DETAIL);
             case CardState.RESOLVING -> new Button(Component.literal("Resolving…"), () -> {})
                     .glassBackground(true).priority(BlurPanelRenderer.Priority.DETAIL);
             case CardState.DOWNLOADING -> new Button(Component.literal("Downloading…"), () -> {})
@@ -1400,7 +1408,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         int btnY = my + mh - pad - btnH;
         Button detailInstallBtn = st.modalPhaseButtons[st.phase];
         if (detailInstallBtn == null) {
-            detailInstallBtn = newPhaseButton(st.phase);
+            detailInstallBtn = newPhaseButton(st.phase, true);
             st.modalPhaseButtons[st.phase] = detailInstallBtn;
         }
         detailInstallBtn.layout(btnX, btnY, btnW, btnH);
@@ -1497,7 +1505,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         int btnY = my + mh - pad - btnH;
         Button detailInstallBtn = st.modalPhaseButtons[st.phase];
         if (detailInstallBtn == null) {
-            detailInstallBtn = newPhaseButton(st.phase);
+            detailInstallBtn = newPhaseButton(st.phase, true);
             st.modalPhaseButtons[st.phase] = detailInstallBtn;
         }
         detailInstallBtn.layout(btnX, btnY, btnW, btnH);

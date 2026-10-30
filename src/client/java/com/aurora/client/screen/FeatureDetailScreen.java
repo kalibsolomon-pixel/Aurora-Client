@@ -175,6 +175,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
 
     @Override
     protected void init() {
+        com.aurora.client.screen.setting.SectionHeaderSetting.markLeading(meta.settings);
         if (compact()) {
             maxFrame = com.aurora.client.ui.util.UiDensity.detailFrame(this.width, this.height);
             compactFrame = maxFrame;
@@ -275,6 +276,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
 
     @Override
     public void render(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
+        com.aurora.client.screen.setting.SectionHeaderSetting.markLeading(meta.settings);
         measureRows();
         fixedHeaderSetting = null;
         for (FeatureSetting setting : meta.settings) {

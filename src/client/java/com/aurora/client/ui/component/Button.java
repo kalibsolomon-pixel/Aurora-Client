@@ -127,29 +127,34 @@ public class Button extends Widget {
         int text=ThemeManager.color(primary ? ThemeToken.ON_ACTION : ThemeToken.MATERIAL_TEXT);
         Theming look=primary || destructive ? Theming.NONE : theming;
         if(look==Theming.BACKGROUND || look==Theming.BACKGROUND_ACCENT) fill=ThemeManager.color(ThemeToken.MATERIAL_PANEL);
+        // Every plain neutral/destructive action wears the field face of MaterialSurface#field:
+        // opaque raised tone, no edge, no shadow — legible at any window opacity and identical
+        // to the dropdowns/keybinds beside it (Spxctra 2026-10-30). Without a per-button blur a
+        // window-opacity face vanished into its window.
+        boolean asField=!primary && look==Theming.NONE;
         if(look!=Theming.NONE) edge=look==Theming.BACKGROUND_ACCENT ? ThemeManager.color(ThemeToken.ACCENT_MARKER)
                 : MaterialSurface.color(ThemeToken.BORDER_HOVER); // the window edge family, one step lighter so it reads on a card
         if(destructive) {
-            // Destructive keeps its red edge and label, but rests as a tinted chip and
-            // commits to the solid fill on hover/press: a list of rows must not repeat a
-            // solid "Delete" block on every line (premium-design audit, 2026-10-19).
+            // Destructive rests exactly like its neutral siblings except for its red label,
+            // and commits to the solid red fill on hover/press. A list must not repeat a red
+            // outlined block on every row (premium audit 2026-10-19; Spxctra 2026-10-30
+            // removed the remaining resting edge and tint — the word carries the meaning).
             int error=ThemeManager.color(ThemeToken.STATUS_ERROR);
-            edge=error;
-            fill=AuroraAnim.lerpArgb(ThemeManager.color(ThemeToken.MATERIAL_RAISED),error,.22f);
+            edge=0;
+            fill=ThemeManager.color(ThemeToken.MATERIAL_RAISED);
             over=error;down=error;
             text=AuroraAnim.lerpArgb(AuroraAnim.lerpArgb(error,0xffffffff,.55f),0xff101116,Math.max(hover,press));
         }
         fill=AuroraAnim.lerpArgb(AuroraAnim.lerpArgb(fill,over,hover),down,press);
         if(disabled) { fill=AuroraAnim.lerpArgb(fill,ThemeManager.color(ThemeToken.MATERIAL_PANEL),.65f);text=MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED); }
         int windowAlpha=ThemeManager.color(ThemeToken.WINDOW_FILL) >>> 24;
-        fill=ThemeManager.withAlpha(fill, destructive ? Math.round(AuroraAnim.lerp(Math.max(160,windowAlpha),220,Math.max(hover,press)))
-                : primary ? Math.max(128,windowAlpha) : look==Theming.BACKGROUND_ACCENT ? Math.max(THEMED_MIN_ALPHA,windowAlpha) : windowAlpha);
+        fill=ThemeManager.withAlpha(fill, asField ? 255 : primary ? Math.max(128,windowAlpha) : look==Theming.BACKGROUND_ACCENT ? Math.max(THEMED_MIN_ALPHA,windowAlpha) : windowAlpha);
         float py=y; // Card, blur mask, focus and label share one stationary geometry.
-        int kind=(destructive ? 30 : primary ? 20 : look==Theming.NONE ? 10 : 130+10*look.ordinal())+(disabled ? 4 : hover==1 ? 1 : 0);
+        int kind=(destructive ? 30 : primary ? 20 : asField ? 170 : 130+10*look.ordinal())+(disabled ? 4 : hover==1 ? 1 : 0);
         if((hover==0 || hover==1) && press==0)
-            MaterialSurface.cached(g,x,py,w,h,r,fill,edge,kind,true);
+            MaterialSurface.cached(g,x,py,w,h,r,fill,edge,kind,!asField);
         else {
-            MaterialSurface.cached(g,x,py,w,h,r,0,0,primary && !disabled && !destructive ? 81 : 80,true);
+            if(!asField) MaterialSurface.cached(g,x,py,w,h,r,0,0,80,true);
             RenderUtil.drawRoundedRectAA(g,x,py,w,h,r,fill);
             RenderUtil.drawRoundedOutlineAA(g,x,py,w,h,r,1,edge);
         }

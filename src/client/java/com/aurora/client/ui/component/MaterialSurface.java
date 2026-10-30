@@ -12,7 +12,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 /** Shared cached material for parent faces, embedded controls and opaque floating layers.
  * The parent alone captures the backdrop before dim; its neutral face/boundary
- * is painted after dim. Selection is a soft wash and halo, primary is a readable
+ * is painted after dim. Selection is a soft wash and one accent edge, primary is a readable
  * strong action. No child allocates another blur output or owns a glossy rim.
  */
 public final class MaterialSurface {
@@ -67,7 +67,22 @@ public final class MaterialSurface {
     /** Same role geometry and backing for success/decline. Child roles never sample. */
     public static void selection(GuiGraphics g, float x, float y, float w, float h,
                                  float radius, boolean selected, float hover) {
-        if(selected) selectionGlow(g,x,y,w,h,radius);
+        selection(g,x,y,w,h,radius,selected,hover,false);
+    }
+
+    /**
+     * {@code flatRest}: an unselected peer has no resting face and only gains the neutral
+     * face while hovered (sidebar items inside an already-material window, §11.11).
+     */
+    public static void selection(GuiGraphics g, float x, float y, float w, float h,
+                                 float radius, boolean selected, float hover, boolean flatRest) {
+        if(flatRest && !selected) {
+            if(hover<=0) return;
+            int face = ThemeManager.withAlpha(ThemeManager.color(ThemeToken.MATERIAL_HOVER),
+                    Math.round((ThemeManager.color(ThemeToken.WINDOW_FILL) >>> 24) * Math.min(1f,hover)));
+            RenderUtil.drawRoundedRectAA(g,x,y,w,h,radius,face);
+            return;
+        }
         int neutral = AuroraAnim.lerpArgb(color(ThemeToken.SURFACE_VARIANT),
                 ThemeManager.color(ThemeToken.MATERIAL_HOVER), hover);
         neutral = ThemeManager.withAlpha(neutral, ThemeManager.color(ThemeToken.WINDOW_FILL) >>> 24);
@@ -82,11 +97,22 @@ public final class MaterialSurface {
         }
     }
 
-    /** Stable accent shadow for selected peers.
-     * Only the cache rasterizes the falloff; this path is one textured draw. */
-    private static void selectionGlow(GuiGraphics g,float x,float y,float w,float h,float radius) {
-        cached(g,x,y,w,h,radius,0,0,90,false);
+    /**
+     * The one face for trailing field controls in setting rows — dropdown, keybind and row
+     * action button share it so a settings column never mixes three treatments. Opaque
+     * raised tone (legible at any window opacity), no outline; hover lifts the tone.
+     */
+    public static void field(GuiGraphics g, float x, float y, float w, float h,
+                             float radius, float hover, boolean disabled) {
+        int face = disabled ? ThemeManager.color(ThemeToken.MATERIAL_PANEL) : AuroraAnim.lerpArgb(
+                ThemeManager.color(ThemeToken.MATERIAL_RAISED), ThemeManager.color(ThemeToken.MATERIAL_HOVER), hover);
+        if (disabled || hover == 0 || hover == 1)
+            cached(g,x,y,w,h,radius,face,0,FIELD_KIND+(disabled ? 2 : hover==1 ? 1 : 0),false);
+        else RenderUtil.drawRoundedRectAA(g,x,y,w,h,radius,face);
     }
+
+    /** Cache kind family reserved for {@link #field}. */
+    static final int FIELD_KIND = 112;
 
     // Primitive packed geometry key: no record/boxing/lambda allocation per control per frame.
     private static final Long2ObjectOpenHashMap<UiLayerCache> TEMPLATES = new Long2ObjectOpenHashMap<>();
@@ -125,9 +151,9 @@ public final class MaterialSurface {
                                int fill,int border,int kind,boolean shadow,float opacity) {
         var mc=Minecraft.getInstance();
         int scale=Math.max(1,(int)mc.getWindow().getGuiScale());
-        boolean primaryHalo=kind==81 || (shadow && (kind==20 || kind==21));
-        boolean accentHalo=primaryHalo || kind==90;
-        int pad=accentHalo ? 14 : shadow ? 10 : 2;
+        // No accent halos (Spxctra simplification, 2026-10-30): selection is the wash and
+        // one accent edge; a primary action is its strong fill. Glow added no information.
+        int pad=shadow ? 10 : 2;
         int width=Math.round(w), height=Math.round(h), round=Math.round(radius);
         long key=((long)width<<48) | ((long)height<<32) | ((long)round<<16) | ((long)kind<<1) | (shadow ? 1 : 0);
         var cache=TEMPLATES.get(key);
@@ -137,15 +163,6 @@ public final class MaterialSurface {
             cache.ensureSize((width+pad*2)*scale,(height+pad*2)*scale); cache.clear();
             var previous=RenderUtil.beginCapture(cache.sink());
             try {
-                if(accentHalo) {
-                    int rgb=ThemeManager.color(primaryHalo ? ThemeToken.ACTION_STRONG : ThemeToken.ACCENT_MARKER)&0xffffff;
-                    int offset=primaryHalo ? 3 : 2;
-                    for(int spread=9;spread>=1;spread--) {
-                        int alpha=Math.round((primaryHalo ? 12 : 8)*(float)Math.exp(-spread*spread/32d));
-                        RenderUtil.drawRoundedRectAA(g,pad-spread,pad+offset-spread,
-                                w+spread*2,h+spread*2,outsetRadius(radius,spread),(alpha<<24)|rgb);
-                    }
-                }
                 if(shadow) AuroraShapes.dropShadow(g,pad,pad+3,width,height,round,.25f);
                 if(fill!=0) RenderUtil.drawRoundedRectAA(g,pad,pad,w,h,radius,fill);
 

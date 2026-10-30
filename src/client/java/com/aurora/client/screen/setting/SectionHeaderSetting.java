@@ -7,8 +7,8 @@ import net.minecraft.client.gui.GuiGraphics;
 
 /**
  * Non-interactive divider row used to delineate sub-feature sections
- * inside a single feature's settings list. Renders a small uppercase
- * label aligned with the rest of the settings rows (no trailing
+ * inside a single feature's settings list. Renders the muted label as
+ * authored (no forced capitals — Spxctra 2026-10-30) aligned with the rest of the settings rows (no trailing
  * separator line), with more blank space packed above it than sits
  * below it (design language §2's section-header rhythm).
  *
@@ -38,22 +38,39 @@ public class SectionHeaderSetting extends FeatureSetting {
      */
     private static final int LABEL_PAD = 12;
 
+    /**
+     * True when this caption is the first visible row of its list: the window's header band
+     * already separates it, so the extra band above would only be dead space.
+     */
+    private boolean leading;
+
     public SectionHeaderSetting(String label) {
         super(label);
     }
 
-    @Override public int baseHeight() { return SECTION_GAP_ABOVE + (compactRow == null ? ROW_H : compactRow.height()); }
+    /** Marks the first visible row (if it is a caption) as leading; clears every other caption. */
+    public static void markLeading(java.util.List<? extends FeatureSetting> settings) {
+        boolean first = true;
+        for (FeatureSetting s : settings) {
+            if (!s.isVisible()) continue;
+            if (s instanceof SectionHeaderSetting h) h.leading = first;
+            first = false;
+        }
+    }
+
+    private int gapAbove() { return leading ? 0 : SECTION_GAP_ABOVE; }
+
+    @Override public int baseHeight() { return gapAbove() + (compactRow == null ? ROW_H : compactRow.height()); }
     @Override public int height()     { return baseHeight(); }
 
     @Override
     public void render(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
-        if (compactRow != null) { renderCompactLabel(ctx, x, y + SECTION_GAP_ABOVE, mouseX, mouseY, AuroraTheme.sectionCaption()); return; }
+        if (compactRow != null) { renderCompactLabel(ctx, x, y + gapAbove(), mouseX, mouseY, AuroraTheme.sectionCaption()); return; }
         Font tr = Minecraft.getInstance().font;
-        // Section label — dimmed uppercase, aligned with the indent of
-        // the regular setting rows below it. No strikethrough separator;
-        // the caption alone is enough to read as a section break.
-        String text = label.toUpperCase();
-        ctx.drawString(tr, text, x + LABEL_PAD, y + SECTION_GAP_ABOVE + LABEL_Y,
+        // Section label — muted, as authored, aligned with the indent of
+        // the regular setting rows below it. No separator; the caption
+        // alone is enough to read as a section break.
+        ctx.drawString(tr, label, x + LABEL_PAD, y + gapAbove() + LABEL_Y,
                 AuroraTheme.sectionCaption(), false);
     }
 

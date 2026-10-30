@@ -203,7 +203,28 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
     }
 
     private String displayName(E v) {
-        return labelFn != null ? labelFn.apply(v) : v.name();
+        return labelFn != null ? labelFn.apply(v) : humanize(v);
+    }
+
+    /**
+     * Fallback value label: a custom {@code toString()} wins; otherwise the constant in
+     * sentence case — {@code BRACKETED_TEXT} → "Bracketed text", {@code LEGACY_1_8} →
+     * "Legacy 1.8" — so dropdowns never show raw identifiers (Spxctra 2026-10-30).
+     */
+    static String humanize(Enum<?> v) {
+        String own = v.toString();
+        if (!own.equals(v.name())) return own;
+        String n = v.name();
+        StringBuilder out = new StringBuilder(n.length());
+        for (int i = 0; i < n.length(); i++) {
+            char c = n.charAt(i);
+            if (c == '_') {
+                boolean digits = i > 0 && i + 1 < n.length()
+                        && Character.isDigit(n.charAt(i - 1)) && Character.isDigit(n.charAt(i + 1));
+                out.append(digits ? '.' : ' ');
+            } else out.append(out.length() == 0 ? Character.toUpperCase(c) : Character.toLowerCase(c));
+        }
+        return out.toString();
     }
 
     /** Truncate long values with an ellipsis (matches the mod's plainSubstrByWidth convention). */
@@ -319,15 +340,7 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
             glassOk = false;
         }
         if (MaterialSurface.unified()) {
-            int face = disabled ? ThemeManager.color(ThemeToken.MATERIAL_PANEL) : AuroraAnim.lerpArgb(
-                    ThemeManager.color(ThemeToken.MATERIAL_RAISED),ThemeManager.color(ThemeToken.MATERIAL_HOVER),hT);
-            if (hT==0 || hT==1) MaterialSurface.cached(ctx,btnX,btnY,BTN_W,BTN_H,AuroraTheme.RADIUS_SMALL,
-                    face,ThemeManager.color(ThemeToken.BORDER_HOVER),112+(disabled ? 2 : hT==1 ? 1 : 0),false);
-            else {
-                RenderUtil.drawRoundedRectAA(ctx,btnX,btnY,BTN_W,BTN_H,AuroraTheme.RADIUS_SMALL,face);
-                RenderUtil.drawRoundedOutlineAA(ctx,btnX,btnY,BTN_W,BTN_H,AuroraTheme.RADIUS_SMALL,1,
-                        ThemeManager.color(ThemeToken.BORDER_HOVER));
-            }
+            MaterialSurface.field(ctx,btnX,btnY,BTN_W,BTN_H,AuroraTheme.RADIUS_SMALL,hT,disabled);
         } else if (!glassOk) {
             RenderUtil.drawSquircle(ctx, btnX, btnY, BTN_W, BTN_H, AuroraTheme.RADIUS_SMALL, fillTint);
             RenderUtil.drawSquircleOutline(ctx, btnX, btnY, BTN_W, BTN_H, AuroraTheme.RADIUS_SMALL, 1.0f, borderTint);

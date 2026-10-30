@@ -199,7 +199,8 @@ public class KeybindSetting extends FeatureSetting {
             glassOk = false;
         }
         if (MaterialSurface.unified()) {
-            MaterialSurface.selection(ctx,btnX,btnY,BTN_W,BTN_H,AuroraTheme.RADIUS_SMALL,listening,disabled ? 0 : hT);
+            if (listening) MaterialSurface.selection(ctx,btnX,btnY,BTN_W,BTN_H,AuroraTheme.RADIUS_SMALL,true,0);
+            else MaterialSurface.field(ctx,btnX,btnY,BTN_W,BTN_H,AuroraTheme.RADIUS_SMALL,hT,disabled);
         } else if (!glassOk) {
             RenderUtil.drawSquircle(ctx, btnX, btnY, BTN_W, BTN_H, AuroraTheme.RADIUS_SMALL,
                     listening ? AuroraTheme.IOS_BLUE_PRESSED : fillTint);

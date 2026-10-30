@@ -62,9 +62,7 @@ public abstract class FeatureSetting {
                 : this instanceof ColorSetting ? com.aurora.client.ui.util.SettingRowLayout.Kind.COLOR
                 : this instanceof ButtonSetting ? com.aurora.client.ui.util.SettingRowLayout.Kind.BUTTON
                 : com.aurora.client.ui.util.SettingRowLayout.Kind.SECTION;
-        String measuredLabel = kind == com.aurora.client.ui.util.SettingRowLayout.Kind.SECTION
-                ? label.toUpperCase(java.util.Locale.ROOT) : label;
-        compactRow = com.aurora.client.ui.util.SettingRowLayout.measure(kind, measuredLabel, width, font.lineHeight, font::width);
+        compactRow = com.aurora.client.ui.util.SettingRowLayout.measure(kind, label, width, font.lineHeight, font::width);
         if (this instanceof BooleanSetting) compactRow = compactRow.withSubtitle(valueLineHeight(font), font.lineHeight);
         compactWidth = width;
         compactFontKey = key;

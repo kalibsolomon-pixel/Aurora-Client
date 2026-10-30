@@ -1206,3 +1206,39 @@ height so painting, scrolling and pointer routing advance by the same amount.
 Top-right Done buttons use the same neutral treatment as Reset, without the
 primary button's accent fill or glow. This applies across feature details,
 the profile/waypoint managers and the resource pack browser.
+
+## Spxctra simplification pass — 2026-10-30
+
+Applied under the owner's Spxctra Design Language brief (simplicity first; atmosphere
+through restraint, not effects). Owner rulings recorded above still win where they are
+specific (title cards, HUD editor actions, Reset/Done edges, search-field edge, blur
+recipe, 18px section band between groups). These rules are now normative:
+
+- **One emphasis per state.** Selected/on = soft wash + one 1px accent edge. Primary =
+  strong fill. No accent glow or halo anywhere (`MaterialSurface` no longer rasterizes
+  one). Glow carried no information the wash/edge/fill did not.
+- **One face for neutral controls.** Dropdowns, keybinds and key-list add buttons share
+  `MaterialSurface.field`, and every plain neutral (and resting destructive) `Button` wears
+  the same face: opaque raised tone, no outline, no shadow, hover lifts the tone. It stays
+  legible at any window opacity and a settings column never mixes treatments. A listening
+  keybind keeps the selection treatment; themed buttons (title, HUD editor, Reset/Done)
+  keep their owner-specified treatments.
+- **One capture per window.** A screen with an enclosing window declares
+  `ThemedScreen.parentGlassOnly()`; child buttons/rows paint cached faces. Per-button
+  blur tinted each control by whatever sat behind it (sky-blue chips, brown buttons) and
+  multiplied GPU work. Exceptions: the title screen's independent cards (owner ruling)
+  and the window-less HUD editor.
+- **Repeated rows rest quietly.** Manager rows separate by spacing and tone (no per-row
+  border inside a bordered window). Destructive actions rest like their neutral siblings
+  with a red label and commit to solid red on hover/press. A grid has no repeated primary
+  action: pack cards' Install is neutral; the detail modal keeps the one primary Install.
+- **Copy, not identifiers.** Section captions render as authored (no forced capitals).
+  Dropdown values without explicit labels render in sentence case (`LEGACY_1_8` →
+  "Legacy 1.8"). A caption that opens a list drops the band above it — the window's
+  header band already separates it; later captions keep the group band.
+- **Inactive sidebar items are flat at rest** (§11.11); hover shows a face, focus keeps
+  its outline, the selected item keeps wash + edge.
+- **Previews follow roundness.** The crosshair preview is a rounded inset tone, not a
+  square outlined box.
+
+Evidence, measurements and limits: `SPXCTRA_UI_SIMPLIFICATION_REPORT.md`.

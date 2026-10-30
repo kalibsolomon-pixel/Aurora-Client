@@ -104,6 +104,9 @@ import java.util.function.BooleanSupplier;
  * {@code AbstractContainerScreen} shape) is the honest fit for that.
  */
 public abstract class ManagerListScreen<T> extends Screen implements ThemedScreen {
+    /** The window owns the one backdrop capture; child buttons/rows use cached faces
+     *  (a per-button blur tinted each control by whatever sat behind it). */
+    @Override public boolean parentGlassOnly() { return true; }
 
     protected final Screen parent;
 
@@ -570,14 +573,16 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
     }
 
     /**
-     * The flat row body (surface fill + hairline border) for a row whose
+     * The flat row body (surface fill, no border) for a row whose
      * glass declined — identical for every row; selection is never carried
      * by the container surface on either screen.
      */
     protected void paintFlatRow(GuiGraphics ctx, int x, int y, int w) {
         float radius = ThemeManager.current().roundness().radiusSmall();
+        // Rows separate by spacing and tone; the window already owns the one outline
+        // (Spxctra 2026-10-30: no repeated per-row border inside a bordered window).
         MaterialSurface.cached(ctx,x,y,w,rowHeight(),radius,
-                ThemeManager.color(ThemeToken.WINDOW_FILL),ThemeManager.color(ThemeToken.BORDER),110,false);
+                ThemeManager.color(ThemeToken.WINDOW_FILL),0,110,false);
     }
 
     /**
