@@ -1,7 +1,8 @@
 # Aurora GUI System — Architecture Snapshot
 
-Release 3.1.0 (2026-10-20): portable constructor defaults are loaded from
-`assets/aurora/defaults/3.1.0.json` by `config/ReleaseDefaults`. Existing JSON
+Release 3.2.0 (2026-10-30): portable constructor defaults are loaded from
+`assets/aurora/defaults/3.2.0.json` by `config/ReleaseDefaults` (the reviewed
+3.1.0 export verbatim, renamed with the release). Existing JSON
 overlays them rather than receiving a forced reset. Profiles use the same
 constructor snapshot. HUD geometry reset reads independent resource layouts,
 restores owner-selected scale, and preserves visibility/locks. Corrupt input is

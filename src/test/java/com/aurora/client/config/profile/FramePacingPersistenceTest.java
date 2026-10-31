@@ -133,7 +133,7 @@ class FramePacingPersistenceTest {
         assertNotSame(first.crosshairCustomPixels, second.crosshairCustomPixels);
         first.moduleLayouts.get("minimap").offsetX = 999;
         assertEquals(-5, second.moduleLayouts.get("minimap").offsetX);
-        try (var in = getClass().getResourceAsStream("/assets/aurora/defaults/3.1.0.json")) {
+        try (var in = getClass().getResourceAsStream("/assets/aurora/defaults/3.2.0.json")) {
             String resource = new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
             for (String forbidden : new String[]{"C:\\", "Users", "accessToken", "activeProfile",
                     "waypointsByWorld", "waypointNavigationByWorld", "playtimeTotalMs",

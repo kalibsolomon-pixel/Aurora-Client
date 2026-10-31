@@ -1,4 +1,4 @@
-"""Guard the portable default export and the packaged 3.1.0 identity contract."""
+"""Guard the portable default export and the packaged 3.2.0 identity contract."""
 import json
 import re
 import unittest
@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class ReleaseDefaultsTest(unittest.TestCase):
     def test_only_allowlisted_portable_fields_are_bundled(self):
-        data = json.loads((ROOT / 'src/client/resources/assets/aurora/defaults/3.1.0.json').read_text())
+        data = json.loads((ROOT / 'src/client/resources/assets/aurora/defaults/3.2.0.json').read_text())
         for key in data:
             self.assertTrue(key in EXACT or key.startswith(PREFIXES), key)
         self.assertNotIn('stats', data['moduleLayouts'])
@@ -36,9 +36,9 @@ class ReleaseDefaultsTest(unittest.TestCase):
 
     def test_release_version_and_resource_wiring(self):
         properties = (ROOT / 'gradle.properties').read_text()
-        self.assertRegex(properties, r'(?m)^mod_version=3\.1\.0$')
+        self.assertRegex(properties, r'(?m)^mod_version=3\.2\.0$')
         source = (ROOT / 'src/client/java/com/aurora/client/config/ReleaseDefaults.java').read_text()
-        self.assertIn('/assets/aurora/defaults/3.1.0.json', source)
+        self.assertIn('/assets/aurora/defaults/3.2.0.json', source)
         metadata = json.loads((ROOT / 'src/client/resources/fabric.mod.json').read_text())
         self.assertEqual('${version}', metadata['version'])
         self.assertEqual('~1.21.11', metadata['depends']['minecraft'])
