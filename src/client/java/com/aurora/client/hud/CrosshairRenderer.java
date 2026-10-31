@@ -124,16 +124,14 @@ public final class CrosshairRenderer {
 
     /**
      * Draws one crosshair shape centered on {@code (cx, cy)} — the single
-     * implementation behind both the in-game HUD crosshair and the settings
-     * screen's preset preview row ({@code CrosshairPreviewSetting}), so the
-     * two can never drift apart (the {@code ItemSpriteRenderer} principle:
-     * one pipeline, two call sites). The caller owns the half-pixel
+     * implementation behind every caller (the in-game HUD crosshair today;
+     * formerly the settings screen's preset preview rows, removed by owner
+     * ruling 2026-10-30). The caller owns the half-pixel
      * translate — apply {@code translate(-0.5, -0.5)} before calling to get
      * the seam-straddling centering the HUD path uses.
      *
      * <p>For {@code CUSTOM}, the canvas pixels/dims are passed in by the
-     * caller (the HUD path selects main vs indicator canvas; the preview
-     * always shows the main one).
+     * caller (the HUD path selects main vs indicator canvas).
      */
     public static void drawShape(GuiGraphics ctx, AuroraConfig.CrosshairStyle style,
                                  int cx, int cy, int size, int thick, int gap, int color,

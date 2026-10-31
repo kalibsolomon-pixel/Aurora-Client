@@ -229,8 +229,8 @@ public final class SemanticFamilyManifest {
                             + "toggle, non-interactive painter buttons"),
             new NonFamily(SRC + "screen/WaypointManagerScreen.java#chips",
                     "DATA-ONLY — ColorSwatch.dataOnly() display chips (no interaction state)"),
-            new NonFamily(SRC + "screen/setting/CrosshairPreviewSetting.java",
-                    "PREVIEW — the real-shape crosshair preview; never consumes"),
+            // CrosshairPreviewSetting was removed by owner ruling 2026-10-30
+            // (the crosshair screen shows its controls only).
             new NonFamily(SRC + "screen/setting/SectionFooterSetting.java",
                     "PASSIVE TEXT — group footer; never consumes"),
             new NonFamily(SRC + "screen/ColorPickerScreen.java#surfaces",

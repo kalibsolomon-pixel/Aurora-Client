@@ -1099,9 +1099,11 @@ Verified by DevPilot `s4` boots (stashed baseline + post-change captures +
 functional hit-test clicks proving the new 38/42 geometry in
 `.devpilot-pilot/s4-*`).
 
-The crosshair previews are centered 36x36 square wells (owner ruling
-2026-10-30 night) and the indicator selector gained its own preview row
-(`CrosshairPreviewSetting(label, indicator)` — the §5 follow-up noted below).
+The crosshair preview rows were REMOVED by owner ruling 2026-10-30 night
+(`CrosshairPreviewSetting` deleted; the screen shows only its controls). The
+original §5 preview shipped 2026-09-10 (drawn through the real
+`CrosshairRenderer.drawShape`), was squared 2026-10-30, then removed the same
+night.
 
 Landed 2026-09-10 after that: **the §5 crosshair preset preview** — the
 last unsatisfied candidate from the spec's original §5 list. The crosshair

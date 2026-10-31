@@ -368,10 +368,6 @@ public final class FeatureRegistry {
                 "Replaces the vanilla crosshair with a fully customizable one — pick a preset shape or draw your own, set its size, thickness, gap and color, and add a separate indicator that appears when an attackable entity is in reach. A clearer, personalized crosshair makes aiming and reach timing easier.",
                 () -> cfg.crosshairEnabled, v -> cfg.crosshairEnabled = v,
                 List.of(
-                        // §5: leading live preview of the selected preset's
-                        // shape — the real CrosshairRenderer shape code, so
-                        // what you see here is what renders in-game.
-                        new CrosshairPreviewSetting("Preset Preview"),
                         new EnumSetting<>("Style", AuroraConfig.CrosshairStyle.class,
                                 () -> cfg.crosshairStyle, v -> cfg.crosshairStyle = v)
                                 .description("The crosshair shape. Presets include classic cross, dot, and others; CUSTOM uses the pixel canvas you draw below. Size/Thickness/Gap apply to the presets."),
@@ -400,9 +396,6 @@ public final class FeatureRegistry {
                                 .disabled(() -> !cfg.crosshairAttackIndicatorEnabled),
                         new BooleanSetting("Indicator (entity in reach)",
                                 () -> cfg.crosshairIndicatorEnabled, v -> cfg.crosshairIndicatorEnabled = v),
-                        // Square specimen box for the indicator's own shape
-                        // selector (the §5 follow-up, owner ruling 2026-10-30).
-                        new CrosshairPreviewSetting("Indicator Preview", true),
                         new EnumSetting<>("Indicator Style", AuroraConfig.CrosshairStyle.class,
                                 () -> cfg.crosshairIndicatorStyle, v -> cfg.crosshairIndicatorStyle = v)
                                 .disabled(() -> !cfg.crosshairIndicatorEnabled),

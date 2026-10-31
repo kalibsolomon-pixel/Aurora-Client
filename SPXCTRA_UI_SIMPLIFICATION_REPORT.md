@@ -262,3 +262,12 @@ renamed toggle on the crosshair detail, the Text & Fonts entry without its maste
 In-world shield pixels: not captured (no shield available in the verification world's
 inventory; commands disabled) — sprite resolution is log-verified, blend is
 entityTranslucent standard, and the fallback can no longer paint black.
+
+## 13. Preview removal (2026-10-30 night, follow-up)
+
+The crosshair preview rows (main + indicator) are removed entirely by owner ruling —
+`CrosshairPreviewSetting` deleted (it shipped 2026-09-10 as the §5 preview, was squared
+earlier the same day, then removed). The crosshair screen keeps every control: Style leads,
+the indicator block follows its toggle, nothing else changed. 601 tests green
+(the conformance manifest's NonFamily entry retired with the class); harness `compact5`
+41/41 checks, evidence in `docs/spxctra/compact5/`.
