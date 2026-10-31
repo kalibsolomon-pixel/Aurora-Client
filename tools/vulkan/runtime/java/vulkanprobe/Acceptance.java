@@ -149,8 +149,12 @@ public final class Acceptance implements ClientModInitializer {
         });
         actions.add(() -> shot("10b-custom-canvas"));
         actions.add(() -> { mc.setScreen(new BlurTestScreen()); state("backdrop=SOLID lighting=off radius=24 opacity=0.0 ping=solid"); });
-        actions.add(() -> { shot("11-glass-solid"); state("backdrop=STRIPES lighting=off radius=24 opacity=0.0 ping=blur"); });
-        actions.add(() -> { shot("12-glass-stripes"); state("backdrop=STRIPES lighting=on depressed=off radius=24 opacity=0.5 ping=raised"); });
+        // Since the 2026-10-30 linear-frost ruling, opacity 0 declines the panel
+        // entirely (clear glass), so the Gaussian contrast check runs at a real
+        // frost (0.5) and a second capture pins the clear-at-zero behavior.
+        actions.add(() -> { shot("11-glass-solid"); state("backdrop=STRIPES lighting=off radius=24 opacity=0.5 ping=blur"); });
+        actions.add(() -> { shot("12-glass-stripes"); state("backdrop=STRIPES lighting=off radius=24 opacity=0.0 ping=clear"); });
+        actions.add(() -> { shot("12b-glass-clear"); state("backdrop=STRIPES lighting=on depressed=off radius=24 opacity=0.5 ping=raised"); });
         actions.add(() -> { shot("13-glass-raised"); state("backdrop=STRIPES lighting=on depressed=on radius=24 opacity=0.5 ping=depressed"); });
         actions.add(() -> { shot("14-glass-depressed"); state("backdrop=STRIPES lighting=on radius=24 opacity=0.5 stress=100 ping=pool"); });
         actions.add(() -> { shot("15-glass-pool"); check("glass-not-disabled", !debug().contains("disabled")); check("portable-texture-pool-bounded",portableTextures()<=321); mc.setScreen(null); });

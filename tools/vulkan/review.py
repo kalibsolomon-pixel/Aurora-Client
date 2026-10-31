@@ -28,6 +28,13 @@ def review(root):
     attenuation = statistics.pstdev(inside)/statistics.pstdev(outside)
     checks['stripe-orientation-and-phase'] = correlation > .85
     checks['gaussian-reduces-stripe-contrast'] = .1 < attenuation < .98
+    # At opacity 0 the linear-frost rule declines the panel entirely: the
+    # stripes must read through unblurred (the 2026-10-30 owner ruling).
+    clear = images['12b-glass-clear']
+    clear_outside = [statistics.mean(pixel(clear,950,y)) for y in range(305,440)]
+    clear_inside = [statistics.mean(pixel(clear,700,y)) for y in range(305,440)]
+    clear_attenuation = statistics.pstdev(clear_inside)/max(statistics.pstdev(clear_outside), 1e-9)
+    checks['panel-clear-at-zero-opacity'] = clear_attenuation > .98
     raised = images['13-glass-raised']
     depressed = images['14-glass-depressed']
     def light_difference(rows):
@@ -40,12 +47,12 @@ def review(root):
         checks[name] = message not in log
     checks['no-device-pipeline-compile-failure'] = not any(message in log for message in ("Couldn't compile",'Caught exception compiling pipeline','Exception while compiling pipeline'))
     output = dict(backend=report['backend'],frames=report['frames'],worldFrames=report['worldFrames'],
-                  captures=len(images),stripeCorrelation=correlation,contrastRatio=attenuation,
+                  captures=len(images),stripeCorrelation=correlation,contrastRatio=attenuation,clearAttenuation=clear_attenuation,
                   upperLightingDelta=upper,lowerLightingDelta=lower,checks=checks)
     (root / 'review.json').write_text(json.dumps(output,indent=2))
     failures = [key for key,value in checks.items() if not value]
     print(json.dumps(dict(backend=report['backend'],checks=len(checks),captures=len(images),failed=failures,
-                         stripeCorrelation=correlation,contrastRatio=attenuation),indent=2))
+                         stripeCorrelation=correlation,contrastRatio=attenuation,clearAttenuation=clear_attenuation),indent=2))
     return int(bool(failures))
 
 
