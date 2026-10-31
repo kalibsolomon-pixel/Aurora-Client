@@ -247,3 +247,18 @@ Limits: the shield overlay's in-world appearance is NOT runtime-verified (no shi
 fixture world) — the second-pass mechanism is vanilla-API standard, flagged for the owner's
 next live check. Dropdown popup fix verified by code path + harness checks; drag-frame
 behavior not scripted by the harness.
+
+## 12. Second punch list — four fixes from live verification (2026-10-30 night)
+
+| # | Issue | Fix |
+|---|---|---|
+| 1 | Crosshair preview spans the window's width; make it a smaller square display box, for the regular crosshair AND the indicator | `CrosshairPreviewSetting` now renders a centered 36×36 square inset well (row 44 px, was 48 full-width) and gained an indicator variant (`Indicator Preview`, leading the Indicator Style selector — the long-noted §5 follow-up) that previews `crosshairIndicator*` fields through the same real-shape code path. |
+| 2 | Rename "Attack Indicator" → "Vanilla Attack Indicator" | Renamed (registry label; config field and behavior unchanged). |
+| 3 | Remove the Text & Fonts master toggle (the two dropdowns carry everything); the dropdown options don't activate when clicked | Toggle removed via the new `FeatureMetadata.noSettingsToggle` flag (the Settings tab skips building/drawing it; the entry's enable getter is constant-true). Click bug ROOT CAUSE: AuroraScreen's popup-click routing loop computed the row Y WITHOUT the per-entry header/hint bands, so the popup's input rect sat above where it painted — every option click fell into the "outside → collapse+consume" branch (popups visibly opened, clicks did nothing). The walk now mirrors renderSettingsLive's y accounting exactly. |
+| 4 | Shield overlay renders only black at varying opacities — it must follow the color pickers | The white overlay sprite never stitched: `AtlasManager.get()` silently falls back to the atlas's MISSING sprite (black/magenta) for unstitched materials, so color × missingno read as black. Cross-namespace `assets/aurora/atlases/shield_patterns.json` sources were ignored; the working registration is the minecraft-namespace override `assets/minecraft/atlases/shield_patterns.json` (vanilla's three sources + our `aurora:shield/white`). The mixin now detects the fallback by sprite name, logs once, and skips the overlay (never black); a resolve log confirms the live path (`[ShieldStatus] overlay sprite resolved: aurora:shield/white` — observed in the dev client after the fix). The old black report itself proves the vertex-color path carries the picker RGB (color × missingno = black); with the white sprite, color × white = color. |
+
+Evidence: `docs/spxctra/compact4/` (harness `compact4`, 41/41 checks) — square previews + the
+renamed toggle on the crosshair detail, the Text & Fonts entry without its master toggle.
+In-world shield pixels: not captured (no shield available in the verification world's
+inventory; commands disabled) — sprite resolution is log-verified, blend is
+entityTranslucent standard, and the fallback can no longer paint black.

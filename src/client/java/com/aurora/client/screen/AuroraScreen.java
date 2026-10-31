@@ -301,7 +301,9 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         sectionToggles.clear();
 
         for (FeatureMetadata m : FeatureRegistry.settings()) {
-            sectionToggles.put(m.id, new ToggleSwitch(m::isEnabled, m::setEnabled));
+            if (!m.noSettingsToggle) {
+                sectionToggles.put(m.id, new ToggleSwitch(m::isEnabled, m::setEnabled));
+            }
             com.aurora.client.screen.setting.SectionHeaderSetting.bind(m.settings, m.id);
             com.aurora.client.screen.setting.SectionHeaderSetting.markLeading(m.settings);
         }
@@ -1525,18 +1527,29 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             // An open EnumSetting popup owns the pointer FIRST (the
             // FeatureDetailScreen discipline): its option list floats over
             // the rows, and clicks inside it select/collapse rather than
-            // hitting whatever row renders underneath.
+            // hitting whatever row renders underneath. The walk MUST mirror
+            // renderSettingsLive's y accounting exactly (header band, hint,
+            // rows, entry gap) — the popup's INPUT rect derives from the
+            // same rowY; a missing header offset made every option click
+            // land in the outside-collapse branch (the "dropdowns do
+            // nothing" report, 2026-10-30).
             if (button == 0) {
                 float py = viewTop() - (float) scrolls[1].current();
                 for (FeatureMetadata m : FeatureRegistry.settings()) {
-                    for (FeatureSetting s : m.settings) {
-                        if (!s.isVisible()) continue;
-                        if (s instanceof com.aurora.client.screen.setting.EnumSetting<?> row && row.popupOpen()
-                                && row.mouseClicked(mouseX, mouseY, button, (int) (mx + 4), (int) py, contentWidth() - 8)) {
-                            return true;
+                    py += SETTINGS_HEADER_H;
+                    if (m.settingsDetailOnly) {
+                        py += SETTINGS_HINT_H;
+                    } else {
+                        for (FeatureSetting s : m.settings) {
+                            if (!s.isVisible()) continue;
+                            if (s instanceof com.aurora.client.screen.setting.EnumSetting<?> row && row.popupOpen()
+                                    && row.mouseClicked(mouseX, mouseY, button, (int) (mx + 4), (int) py, contentWidth() - 8)) {
+                                return true;
+                            }
+                            py += s.height() + SETTINGS_ROW_GAP;
                         }
-                        py += s.height() + SETTINGS_ROW_GAP;
                     }
+                    py += SETTINGS_ENTRY_GAP;
                 }
             }
             float y = viewTop() - (float) scrolls[1].current();

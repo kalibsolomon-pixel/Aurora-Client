@@ -391,7 +391,7 @@ public final class FeatureRegistry {
                                 .description("Left-click to paint, right-click to erase, drag to stroke. Enter any width × height up to "
                                         + PixelCanvasSetting.MAX_DIM + " and press Apply — growing the grid first measures the real render cost on your machine. Default restores the vanilla 15×15 crosshair shape.")
                                 .visibleWhen(() -> cfg.crosshairStyle == AuroraConfig.CrosshairStyle.CUSTOM),
-                        new BooleanSetting("Attack Indicator",
+                        new BooleanSetting("Vanilla Attack Indicator",
                                 () -> cfg.crosshairAttackIndicatorEnabled, v -> cfg.crosshairAttackIndicatorEnabled = v)
                                 .description("Shows attack cooldown beneath the crosshair, plus a ready marker when aiming at a living target."),
                         SliderSetting.ofInt("Attack Indicator Size %", () -> cfg.crosshairAttackIndicatorSize,
@@ -400,6 +400,9 @@ public final class FeatureRegistry {
                                 .disabled(() -> !cfg.crosshairAttackIndicatorEnabled),
                         new BooleanSetting("Indicator (entity in reach)",
                                 () -> cfg.crosshairIndicatorEnabled, v -> cfg.crosshairIndicatorEnabled = v),
+                        // Square specimen box for the indicator's own shape
+                        // selector (the §5 follow-up, owner ruling 2026-10-30).
+                        new CrosshairPreviewSetting("Indicator Preview", true),
                         new EnumSetting<>("Indicator Style", AuroraConfig.CrosshairStyle.class,
                                 () -> cfg.crosshairIndicatorStyle, v -> cfg.crosshairIndicatorStyle = v)
                                 .disabled(() -> !cfg.crosshairIndicatorEnabled),
@@ -1107,8 +1110,8 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
 
         addWithSettings(SETTINGS, "text_fonts", "Text & Fonts",
                 "Choose the font Aurora uses across its own screens and, optionally, across all of Minecraft's vanilla UI. Pick a rendering scope and a Google Font — the choice applies live.",
-                () -> cfg.textRendererMode != AuroraConfig.TextRendererMode.OFF,
-                v -> cfg.textRendererMode = v ? AuroraConfig.TextRendererMode.AURORA_ONLY : AuroraConfig.TextRendererMode.OFF,
+                () -> true,
+                v -> {},
                 List.of(
                         new EnumSetting<>("Text Renderer", AuroraConfig.TextRendererMode.class,
                                 () -> cfg.textRendererMode, v -> cfg.textRendererMode = v)
@@ -1118,7 +1121,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                 () -> cfg.activeFont, v -> cfg.activeFont = v)
                                 .labels(AuroraConfig.FontType::getLabel)
                                 .description("The Google Font applied to text. SansSerif restores Minecraft's default font.")
-                ));
+                )).noSettingsToggle(true); // owner ruling 2026-10-30: the Text Renderer dropdown owns the scope; no master toggle
 
         addWithSettings(SETTINGS, "theme", "Theme",
                 "Customize Aurora's accent color, corner style, and the density of its diffuse card backgrounds.",
@@ -1483,12 +1486,14 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
         return sb.toString();
     }
 
-    private static void addWithSettings(List<FeatureMetadata> bucket, String id,
+    private static FeatureMetadata addWithSettings(List<FeatureMetadata> bucket, String id,
                                         String displayName, String description,
                                         BooleanSupplier getter, Consumer<Boolean> setter,
                                         List<FeatureSetting> settings) {
-        bucket.add(new FeatureMetadata(id, displayName, description, getter, setter,
-                new ArrayList<>(settings)));
+        FeatureMetadata meta = new FeatureMetadata(id, displayName, description, getter, setter,
+                new ArrayList<>(settings));
+        bucket.add(meta);
+        return meta;
     }
 
     /**
@@ -1496,13 +1501,15 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
      * combined features whose underlying config fields don't share a
      * single camelCase prefix derived from the feature id.
      */
-    private static void addWithSettings(List<FeatureMetadata> bucket, String id,
+    private static FeatureMetadata addWithSettings(List<FeatureMetadata> bucket, String id,
                                         String displayName, String description,
                                         BooleanSupplier getter, Consumer<Boolean> setter,
                                         List<FeatureSetting> settings,
                                         List<String> resetPrefixes) {
-        bucket.add(new FeatureMetadata(id, displayName, description, getter, setter,
-                new ArrayList<>(settings), resetPrefixes));
+        FeatureMetadata meta = new FeatureMetadata(id, displayName, description, getter, setter,
+                new ArrayList<>(settings), resetPrefixes);
+        bucket.add(meta);
+        return meta;
     }
 
     /**

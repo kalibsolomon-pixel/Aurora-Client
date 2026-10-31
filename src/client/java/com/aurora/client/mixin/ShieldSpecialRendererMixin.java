@@ -57,6 +57,10 @@ public abstract class ShieldSpecialRendererMixin {
             new Material(ModelBakery.NO_PATTERN_SHIELD.atlasLocation(),
                     Identifier.fromNamespaceAndPath("aurora", "shield/white"));
 
+    /** One-shot diagnostics for the sprite-resolution fallback. */
+    private static boolean aurora$warnedMissingSprite;
+    private static boolean aurora$loggedResolved;
+
     @Inject(method = "submit", at = @At(value = "INVOKE",
             target = "Lcom/mojang/blaze3d/vertex/PoseStack;popPose()V"))
     private void aurora$statusOverlay(DataComponentMap argument, ItemDisplayContext displayContext,
@@ -71,7 +75,25 @@ public abstract class ShieldSpecialRendererMixin {
                 .layers().isEmpty()) return;
 
         TextureAtlasSprite white = materials.get(AURORA$WHITE);
-        if (white == null) return;
+        // AtlasManager.get falls back to the atlas's MISSING sprite for any
+        // material that did not stitch — a missing white sprite tinted the
+        // shield black (the 2026-10-30 evening report). Detect it by name
+        // (a real resolution always echoes the requested texture id) and
+        // fail safe to the vanilla shield instead.
+        if (!AURORA$WHITE.texture().equals(white.contents().name())) {
+            if (!aurora$warnedMissingSprite) {
+                aurora$warnedMissingSprite = true;
+                com.aurora.client.AuroraClient.LOGGER.warn(
+                        "[ShieldStatus] white overlay sprite {} did not stitch into {} (resolved {}); overlay disabled",
+                        AURORA$WHITE.texture(), AURORA$WHITE.atlasLocation(), white.contents().name());
+            }
+            return;
+        }
+        if (!aurora$loggedResolved) {
+            aurora$loggedResolved = true;
+            com.aurora.client.AuroraClient.LOGGER.info(
+                    "[ShieldStatus] overlay sprite resolved: {}", white.contents().name());
+        }
         RenderType type = RenderTypes.entityTranslucent(AURORA$WHITE.atlasLocation());
         ModelPart handle = model.handle();
         ModelPart plate = model.plate();

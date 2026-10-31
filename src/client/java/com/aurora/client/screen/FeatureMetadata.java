@@ -47,6 +47,22 @@ public final class FeatureMetadata {
      */
     public boolean settingsDetailOnly;
 
+    /**
+     * When true, the Settings tab renders this entry WITHOUT its master
+     * toggle — just the header and the inline rows (owner ruling
+     * 2026-10-30: Text & Fonts' enable state is meaningless next to its
+     * Text Renderer dropdown, which already carries Off/Aurora UI Only/All
+     * Text). The entry keeps a constant-true enable supplier for the
+     * registry's shape; inert on Modules-tab entries.
+     */
+    public boolean noSettingsToggle;
+
+    /** Fluent setter for {@link #noSettingsToggle}. */
+    public FeatureMetadata noSettingsToggle(boolean v) {
+        this.noSettingsToggle = v;
+        return this;
+    }
+
     public FeatureMetadata(String id, String displayName, String description,
                            BooleanSupplier getEnabled, Consumer<Boolean> setEnabled) {
         this(id, displayName, description, getEnabled, setEnabled, new ArrayList<>(), Collections.emptyList());
