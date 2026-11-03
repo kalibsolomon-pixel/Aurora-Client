@@ -27,7 +27,7 @@ class AuroraScreenNavigationTest {
 
     private static String read(Path path) {
         try {
-            return Files.readString(path);
+            return Files.readString(path).replace("\r\n", "\n");
         } catch (java.io.IOException e) {
             return fail(path + " not readable: " + e);
         }

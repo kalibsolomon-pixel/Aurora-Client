@@ -26,7 +26,7 @@ class AuroraScreenViewportCouplingTest {
 
     private static String screenSource() {
         try {
-            return Files.readString(SCREEN);
+            return Files.readString(SCREEN).replace("\r\n", "\n");
         } catch (java.io.IOException e) {
             return fail("AuroraScreen.java not readable from the test working dir: " + e);
         }

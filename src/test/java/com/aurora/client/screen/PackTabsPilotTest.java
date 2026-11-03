@@ -42,7 +42,7 @@ class PackTabsPilotTest {
             "src/client/java/com/aurora/client/screen/ResourcePackBrowserScreen.java";
 
     private static String screenSource() throws Exception {
-        return java.nio.file.Files.readString(java.nio.file.Path.of(SCREEN_SRC));
+        return java.nio.file.Files.readString(java.nio.file.Path.of(SCREEN_SRC)).replace("\r\n", "\n");
     }
 
     // ---- The tab action model, built exactly as the screen's tabControl ----

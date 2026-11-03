@@ -16,7 +16,7 @@ public final class ReleaseDefaults {
     private ReleaseDefaults() {}
 
     private static JsonObject read() {
-        try (var stream = ReleaseDefaults.class.getResourceAsStream("/assets/aurora/defaults/3.2.0.json")) {
+        try (var stream = ReleaseDefaults.class.getResourceAsStream("/assets/aurora/defaults/3.2.1.json")) {
             if (stream == null) throw new IllegalStateException("Missing Aurora release defaults");
             return JsonParser.parseReader(new InputStreamReader(stream, StandardCharsets.UTF_8)).getAsJsonObject();
         } catch (java.io.IOException e) {

@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class SpxctraSimplificationContractTest {
 
     private static String read(String rel) throws Exception {
-        return Files.readString(Path.of("src/client/java/com/aurora/client/" + rel));
+        return Files.readString(Path.of("src/client/java/com/aurora/client/" + rel)).replace("\r\n", "\n");
     }
 
     @Test

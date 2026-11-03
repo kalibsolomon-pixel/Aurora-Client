@@ -34,7 +34,7 @@ class PhaseC8ClipCouplingTest {
 
     private static String source(Path p) {
         try {
-            return Files.readString(p);
+            return Files.readString(p).replace("\r\n", "\n");
         } catch (java.io.IOException e) {
             return fail("not readable from the test working dir: " + e);
         }

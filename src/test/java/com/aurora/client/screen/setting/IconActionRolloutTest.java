@@ -47,7 +47,7 @@ class IconActionRolloutTest {
 
     private static String src(String path) {
         try {
-            return java.nio.file.Files.readString(java.nio.file.Path.of(path));
+            return java.nio.file.Files.readString(java.nio.file.Path.of(path)).replace("\r\n", "\n");
         } catch (java.io.IOException e) {
             return fail(path + " not readable: " + e);
         }

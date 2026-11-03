@@ -23,7 +23,7 @@ class ColorSwatchDataOnlyTest {
             "src/client/java/com/aurora/client/screen/WaypointManagerScreen.java";
 
     private static String read(String path) throws Exception {
-        return java.nio.file.Files.readString(java.nio.file.Path.of(path));
+        return java.nio.file.Files.readString(java.nio.file.Path.of(path)).replace("\r\n", "\n");
     }
 
     private static ColorSwatch swatch(int color, Runnable onClick) {

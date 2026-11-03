@@ -35,7 +35,7 @@ def export(source: Path, target: Path):
     return selected
 
 if __name__ == "__main__":
-    # The 3.2.0 resource carries the reviewed 3.1.0 export verbatim; only the
+    # The 3.2.1 resource carries the reviewed 3.1.0 export verbatim; only the
     # packaged resource name follows the release version.
     export(Path("build/release-3.1.0/reference/aurora.json"),
-           Path("src/client/resources/assets/aurora/defaults/3.2.0.json"))
+           Path("src/client/resources/assets/aurora/defaults/3.2.1.json"))

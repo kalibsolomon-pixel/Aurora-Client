@@ -1,9 +1,9 @@
 # Aurora UI Engine — Project Guide
 
-## 3.2.0 release defaults (2026-10-30)
+## 3.2.1 release defaults (2026-11-03)
 
 `config/ReleaseDefaults` applies the reviewed portable resource
-`assets/aurora/defaults/3.2.0.json` at the end of each `AuroraConfig` constructor.
+`assets/aurora/defaults/3.2.1.json` at the end of each `AuroraConfig` constructor.
 The resource carries the reviewed 3.1.0 export verbatim (the 2026-10-20 pass);
 only the packaged resource name follows the release version. Gson overlays
 existing config/profile values, so compatible saved preferences win
@@ -11,7 +11,7 @@ and missing fields receive defaults. No live instance paths or world data ship.
 `tools/prepare_310_defaults.py` records the export allowlist. HUD Reset Positions
 uses independent resource layouts (including scale), preserving hidden/locked state.
 Malformed config input is backed up before recovery autosaves; if backup fails,
-config writes are disabled for that session. Release version is 3.2.0.
+config writes are disabled for that session. Release version is 3.2.1.
 
 A reference for humans and AI agent sessions working on this repo. Everything below was
 verified by reading the code on **2026-09-08** (`master` after the Better Hitreg integration

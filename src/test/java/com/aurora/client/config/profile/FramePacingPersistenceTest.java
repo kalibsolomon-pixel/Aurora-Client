@@ -77,6 +77,26 @@ class FramePacingPersistenceTest {
         }
     }
 
+    @Test void retiredEntityMovementSettingsDoNotDiscardOtherPreferences() throws Exception {
+        var oldFields = GSON.fromJson("""
+                {
+                    "entityMovementSmoothingEnabled": true,
+                    "entityMovementSmoothingStrength": 0.5,
+                    "zoomEnabled": false
+                }
+                """, com.google.gson.JsonObject.class);
+        Files.writeString(temporary.resolve("aurora.json"), oldFields.toString());
+        AuroraConfig.load();
+        assertFalse(AuroraConfig.get().zoomEnabled);
+
+        AuroraConfig.get().zoomEnabled = true;
+        var oldProfile = new com.google.gson.JsonObject();
+        oldProfile.addProperty("name", "old");
+        oldProfile.add("fields", oldFields);
+        ProfileManager.getInstance().applyProfile(GSON.fromJson(oldProfile, Profile.class));
+        assertFalse(AuroraConfig.get().zoomEnabled);
+    }
+
     @Test void olderProfilesKeepDefaultsAndRemovedStrategyKeepsTheExistingNullFallback() {
         var manager = ProfileManager.getInstance();
         manager.applyProfile(GSON.fromJson("{\"name\":\"old\",\"fields\":{\"framePacerLowCpuMode\":true}}", Profile.class));
@@ -133,7 +153,7 @@ class FramePacingPersistenceTest {
         assertNotSame(first.crosshairCustomPixels, second.crosshairCustomPixels);
         first.moduleLayouts.get("minimap").offsetX = 999;
         assertEquals(-5, second.moduleLayouts.get("minimap").offsetX);
-        try (var in = getClass().getResourceAsStream("/assets/aurora/defaults/3.2.0.json")) {
+        try (var in = getClass().getResourceAsStream("/assets/aurora/defaults/3.2.1.json")) {
             String resource = new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
             for (String forbidden : new String[]{"C:\\", "Users", "accessToken", "activeProfile",
                     "waypointsByWorld", "waypointNavigationByWorld", "playtimeTotalMs",

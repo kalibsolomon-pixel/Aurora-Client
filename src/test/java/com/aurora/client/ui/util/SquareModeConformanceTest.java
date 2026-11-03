@@ -20,7 +20,7 @@ class SquareModeConformanceTest {
 
     private static String read(String path) {
         try {
-            return Files.readString(Path.of(path));
+            return Files.readString(Path.of(path)).replace("\r\n", "\n");
         } catch (java.io.IOException e) {
             return fail("source not readable: " + path);
         }
