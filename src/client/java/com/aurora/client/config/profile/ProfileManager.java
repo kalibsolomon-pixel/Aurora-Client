@@ -497,6 +497,9 @@ public class ProfileManager {
     // ------------------------------------------------------------------
 
     private List<String> scanNames() {
+        // Snapshot first. A queued operation can finish during the directory scan
+        // and disappear from the writer before a later snapshot could see it.
+        var pending = WRITER.latestAll();
         List<String> names = new ArrayList<>();
         try (DirectoryStream<Path> ds = Files.newDirectoryStream(PROFILES_DIR, "*.json")) {
             for (Path p : ds) {
@@ -516,7 +519,7 @@ public class ProfileManager {
         }
         // Overlay queued writes/deletes so a just-created profile exists and a
         // just-deleted one does not, before the disk catches up.
-        for (var e : WRITER.latestAll().entrySet()) {
+        for (var e : pending.entrySet()) {
             if (!PROFILES_DIR.equals(e.getKey().getParent())) continue;
             String fileName = e.getKey().getFileName().toString();
             names.removeIf(n -> pathFor(n).getFileName().toString().equals(fileName));
