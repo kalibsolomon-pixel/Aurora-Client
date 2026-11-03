@@ -1168,7 +1168,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                 ));
 
         addWithSettings(MODULES, "animations", "Animations",
-                "Animation & movement polish: swing & view-bob curves, classic 1.8-style damage camera tilt, configurable idle held-item sway with multiple movement curves, and frame-rate-independent entity movement smoothing that rounds off per-tick knockback kinks and absorbs multiplayer server throttle jitter.",
+                "Animation & movement polish: swing & view-bob curves, classic 1.8-style damage camera tilt, configurable idle held-item sway with multiple movement curves, and the hotbar pickup bounce.",
                 () -> cfg.smoothAnimationsEnabled, v -> cfg.smoothAnimationsEnabled = v,
                 List.of(
                         new SectionHeaderSetting("Swing"),
@@ -1241,21 +1241,13 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
 
                         new SectionHeaderSetting("Hotbar"),
                         new BooleanSetting("Hotbar Bounce", () -> cfg.hotbarBounceEnabled, v -> cfg.hotbarBounceEnabled = v)
-                                .description("Pulses the hotbar slot when a pickup adds an item or grows its stack. Requires Animations to be enabled."),
-                        new SectionHeaderSetting("Entity Movement"),
-                        new BooleanSetting("Smooth Entity Movement",
-                                () -> cfg.entityMovementSmoothingEnabled,
-                                v -> cfg.entityMovementSmoothingEnabled = v)
-                                .description("Eases other entities' rendered positions toward their tick-interpolated targets every frame. This smooths out the per-tick \"kinks\" that make knockback arcs look disjointed (velocity changes abruptly between ticks), and absorbs the freeze-then-leap jitter of multiplayer servers that bundle or throttle movement packets. Strength auto-scales with the detected server throttle. Your own player is never smoothed."),
-                        SliderSetting.of("Smoothing Strength",
-                                () -> cfg.entityMovementSmoothingStrength,
-                                v -> cfg.entityMovementSmoothingStrength = v, 0.0, 1.0).percent()
-                                .description("How aggressively entity positions are eased. 0% is a barely-there rounding of per-tick kinks (great for singleplayer); 100% is a very smooth glide that masks heavy server-side throttling. On throttled PvP servers the effective smoothing is automatically increased beyond this setting.")
+                                .description("Pulses the hotbar slot when a pickup adds an item or grows its stack. Requires Animations to be enabled.")
+                        // (Entity Movement Smoothing section removed 2026-11-03
+                        // by owner ruling — see AGENTS.md §8.)
                 ),
                 java.util.List.of(
                         "smoothAnimations", "swingStyle",
                         "viewBobAmplitude", "idleSway",
-                        "entityMovementSmoothing",
                         "damageTilt", "hotbarBounce"));
 
         // ---- Keystrokes Display ----

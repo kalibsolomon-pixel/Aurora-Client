@@ -91,7 +91,8 @@ AuroraClient.java          Mod entrypoint: registers keybinds, HUD callbacks, fe
 │                          (config-backed), HitregMigrator (one-shot Properties import).
 ├── feature/               Feature SYSTEM (see §3). Feature.java = interface;
 │   └── impl/              25 runtime Feature singletons + helper classes
-│                           (ThrottleDetector, EntityMovementSmoother, …).
+│                           (HitboxPositionSmoother, …; EntityMovementSmoother and
+│                           ThrottleDetector were removed 2026-11-03, §8).
 ├── module/                PRESENTATION-ONLY view-models for the settings grid
 │                           (Module, ModuleManager). NOT runtime logic. Hardcoded
 │                           list of 34 ids — can drift from FeatureRegistry (§3).
@@ -314,7 +315,7 @@ confirmed glass failure, backend correction and native acceptance evidence.
 | Item Scale (`item_scale`) | Per-item held scale/rotation/translation; per-hand defaults | `HeldItemRendererTweaksMixin`, `setting/ItemScaleSetting`, `ui/util/ItemSpriteRenderer` + `mixin/ItemStackRenderStateAccessor` |
 | Held Item Seam Fix (`held_item_seams`) | Hides the hairline texture-bleed seams between first-person held-item faces (visible at some camera angles, worse with hi-res packs) via a uniform sub-pixel scale-up — default 1.001 (0.1%), "Fix Strength" slider 0–50 per-mille, mixin clamps 1.0–1.05 | `HeldItemSeamFixMixin` only (no Feature object); written in the initial commit but inert until 2026-09-11 — see §8 |
 | Resourcepack Browser (`resourcepack_browser`) | Modrinth search/install for resource packs into `resourcepacks/` (never auto-enables). Opening from the grid goes directly to the dedicated browser via `FeatureDetailScreen.destination`, skipping the one-button detail wrapper (2026-10-06). Icons fetch the actual CDN URL rather than guessing PNG counterparts: `PackIconDecoder` uses bundled pure-Java WebP ImageIO, validates encoded size (512 KiB) and dimensions (1024×1024) before decoding, normalizes to PNG off-thread, then uploads on the render thread. Adapted Launcher artwork normalization/coalescing; retains the session LRU, a 30-second failure backoff, stale-callback suppression after clear, and aspect-preserving blits. | `ResourcePackBrowserScreen`, `modrinth/ModrinthApi`, `modrinth/PackIconCache` |
-| Animations (`animations`) | Swing curve (the Swing Style VANILLA/1.8 selector was removed from the UI 2026-10-30 — the persisted cfg field still drives the mixin), view-bob curve/amplitude, 1.7/1.8 damage tilt, idle held-item sway, Hotbar Bounce (moved here 2026-10-06; gated by the Animations master and reset with this feature), frame-rate-independent entity movement smoothing (tau scales with server packet bundling) | `HeldItemRendererMixin`, `GameRendererBobMixin`, `DamageTiltMixin`, `LivingEntityRendererExtractMixin` + `EntityMovementSmoother`, `util/AnimationCurves`, cross-cutting `ThrottleDetector` |
+| Animations (`animations`) | Swing curve (the Swing Style VANILLA/1.8 selector was removed from the UI 2026-10-30 — the persisted cfg field still drives the mixin), view-bob curve/amplitude, 1.7/1.8 damage tilt, idle held-item sway, Hotbar Bounce (moved here 2026-10-06; gated by the Animations master and reset with this feature). The entity movement smoothing section (body-position exponential filter over remote entities, `EntityMovementSmoother` + `ThrottleDetector`) was REMOVED 2026-11-03 by owner ruling — R2-C measured a median 0.114 blocks of render-position lag; vanilla interpolation is the only path again | `HeldItemRendererMixin`, `GameRendererBobMixin`, `DamageTiltMixin`, `util/AnimationCurves` |
 | Keystrokes (`keystrokes`) | Key-panel overlay: WASD/mouse/CPS/space/sneak/sprint + up to 12 custom keys; Aurora surface keycaps, fine themed borders, soft accent press fills without growth; CPS sits under LMB/RMB (standalone only with mouse hidden), three equal columns when MMB is shown, and a labeled space key. Pressed-key accent follows the theme accent by default (`keystrokesAccentColor == 0`, R6 P2; explicit color overrides); key labels use their own Text Color override (default ON_SURFACE); new configurations default to no outer backing panel | `hud/module/KeystrokesModule` |
 | Display Settings (`miscellaneous`, stable id retained) — **moved to the MODULES grid 2026-09-10** | The 2026-09-09 consolidation of the tiles that used to sit below Interface (Smooth Camera, Frame Pacer, Low Latency, Tick Sync, Decoupled Input, Drag-to-Reorder Servers, Compliance Mode, Accessibility — Compliance/Accessibility removed entirely 2026-09-12, **Tick Sync removed entirely 2026-09-13**, see §8) behind one tile + detail screen; grid right-click opens the same detail screen as every other tile — an explicit "for now" grouping, not a taxonomy decision. The Low Latency section was audited 2026-09-11 (§8): the dead Zero-Latency Camera and High-Frequency Input rows are gone, Adaptive Render Sleeping is genuinely gated on the section's Enabled toggle, and descriptions match verified behavior. **Disable VSync's fullscreen-transition hole (F11 silently re-enabling vsync behind the toggle, wedged until cycled off/on) was fixed 2026-09-13 — §8.** The **Frame Pacer's YIELD strategy was removed 2026-09-13** (a genuine `Thread.yield()` implementation was measured with the audit's `perf` harness and proved identical to SPIN — full core, precision within noise; §8) and **new configs default to PARK** (was HYBRID; persisted strategies load verbatim — §8). A **Frame Cap section was added 2026-09-13** (between Frame Pacer and Low Latency): the global `frameCapFps` (0 = Off, 10–2000) enforced at the top of each frame in `MinecraftClientRenderMixin` — see §8's 2026-09-13 entry for why it lives there and how it composes with every other limiter | `FeatureRegistry` MODULES entry (byte-verbatim settings + unified reset), `ModuleManager` grid card, "?" (`question_mark` U+EB8B) icon |
 
@@ -342,9 +343,6 @@ the constant; `385e704`).
 
 ### Cross-cutting systems worth knowing
 
-- **`ThrottleDetector`**: measures server movement-packet bundling (median inter-move tick
-  gap, 32 samples) → factor 1–6. Feeds `EntityMovementSmoother` only. Was also feeding
-  hitbox smoothing, which was reverted (§9).
 - **WorldScope** (`util/WorldScope`): stable per-world id (`mp:<ip>` / `sp:<level>`) keys
   waypoints, playtime, and worldmap storage folders.
 
@@ -2114,7 +2112,8 @@ look at the features that consume bundled assets.**
 **Deliberate reverts (don't "restore" casually)**
 - Hitbox positional smoothing: `HitboxPositionSmoother` exists but `HitboxRenderer`
   deliberately renders at vanilla interpolation — the smoother desynced boxes from models.
-  `ThrottleDetector.sample()` still runs; its output now only scales entity-model smoothing.
+- Entity movement smoothing + `ThrottleDetector`: REMOVED entirely (2026-11-03, §8) —
+  not merely reverted; do not resurrect without a new owner ruling.
 - `WindowMixin` / `RenderTargetMixin` are registered but intentionally EMPTY (abandoned FSR
   idea; 1.21.11 GPU API rewrite crash) — kept for config compatibility.
 - `MixinGuiGraphics` is an unregistered stub (superseded by `MixinFont`).
@@ -2513,3 +2512,20 @@ discipline) — the former 40×40/32×32 GUI-cell pads banded visibly at every G
 `SectionHeaderSetting` collapses its section (`bind`, `setDefaultExpanded`,
 `markLeading`); rows hide through `FeatureSetting.isVisible()`. Details: DESIGN_LANGUAGE.md
 "Compact pass" and SPXCTRA_UI_SIMPLIFICATION_REPORT.md §9–10.
+
+## Entity movement smoothing removal (2026-11-03)
+
+Branch `responsiveness-r2-ab` (owner directive: the owner runs the feature disabled and no
+longer wants it maintained; product-simplification, not a perf claim — R2-C measured the
+filter's median render-position offset at 0.114 blocks when enabled, but the owner's config
+never had it active). Removed completely: `feature/impl/EntityMovementSmoother` + its
+`aurora$smoothMovement` hook in `LivingEntityRendererExtractMixin` (the health-capture hook
+on the same method stays), `feature/impl/ThrottleDetector` (its only remaining reader was
+the smoother — hitbox smoothing had already been reverted 2026-09; `HitboxRenderer`'s
+"harmless" per-frame `sample()` call and the world-join reset went with it), config fields
+`entityMovementSmoothingEnabled`/`entityMovementSmoothingStrength` (stale JSON keys in old
+configs/profiles are ignored on load like every unknown field — no migration machinery),
+the Animations detail screen's "Entity Movement" section + `entityMovementSmoothing` reset
+prefix, and the §2/§3/§4 doc rows here. Vanilla `LivingEntityRenderState` interpolation is
+the only entity-position path again; `HitboxPositionSmoother` (a separate, still-live
+system used by the hitbox feature's world-join reset) is untouched.

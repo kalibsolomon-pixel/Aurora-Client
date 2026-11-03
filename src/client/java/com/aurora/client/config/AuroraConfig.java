@@ -284,16 +284,10 @@ public class AuroraConfig {
     /** Movement curve shaping the idle sway oscillation. */
     public IdleSwayCurve idleSwayCurve = IdleSwayCurve.SINE_BREATH;
 
-    // ---- Entity Movement Smoothing ----
-    /**
-     * Eases other entities' rendered positions toward their tick-interpolated
-     * targets every frame, smoothing out per-tick "kinks" (especially during
-     * knockback arcs) and the freeze-then-leap cadence of throttled servers.
-     * Auto-scales with the detected server bundling factor.
-     */
-    public boolean entityMovementSmoothingEnabled = true;
-    /** 0.0 = barely-there, 1.0 = very smooth glide. */
-    public double entityMovementSmoothingStrength = 0.3;
+    // (Entity Movement Smoothing — entityMovementSmoothingEnabled/Strength —
+    // was removed 2026-11-03 by owner ruling; see AGENTS.md §8. Stale JSON
+    // keys in old configs/profiles are ignored on load like every unknown
+    // field, so no migration is needed.)
 
     /**
      * Movement curves for idle held-item sway. Each shapes the oscillation
