@@ -23,6 +23,14 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  *  - FreeLook active: re-applies the stored detached yaw/pitch.
  *  - Smooth-camera enabled (and FreeLook off): re-applies an exponentially
  *    smoothed yaw/pitch instead of vanilla's snap-to-latest.
+ *
+ * <p>Vanilla 1.21.11 {@code Camera.setup} reaches its entity-rotation
+ * {@code setRotation} through two mutually exclusive arms — the
+ * minecart-lerp branch (ordinal 0) and the common path (ordinal 1). The
+ * handler is injected after BOTH (verified against the mapped jar during the
+ * 2026-11-03 responsiveness audit); before that it hung on ordinal 1 only,
+ * so while riding a minecart with experimental lerp behavior neither
+ * FreeLook nor Smooth Camera applied at all.
  */
 @Mixin(Camera.class)
 public abstract class CameraUpdateMixin {
@@ -32,13 +40,21 @@ public abstract class CameraUpdateMixin {
 
     @Inject(
             method = "setup",
-            at = @At(
-                    value = "INVOKE",
-                    target = "Lnet/minecraft/client/Camera;setRotation(FF)V",
-                    ordinal = 1,
-                    shift = At.Shift.AFTER
-            ),
-            require = 1
+            at = {
+                    @At(
+                            value = "INVOKE",
+                            target = "Lnet/minecraft/client/Camera;setRotation(FF)V",
+                            ordinal = 0,
+                            shift = At.Shift.AFTER
+                    ),
+                    @At(
+                            value = "INVOKE",
+                            target = "Lnet/minecraft/client/Camera;setRotation(FF)V",
+                            ordinal = 1,
+                            shift = At.Shift.AFTER
+                    )
+            },
+            require = 2
     )
     private void aurora$applyRotation(
             Level level, Entity focusedEntity, boolean thirdPerson,

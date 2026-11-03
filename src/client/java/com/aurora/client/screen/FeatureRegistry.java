@@ -1359,10 +1359,10 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                         new BooleanSetting("Enabled",
                                 () -> cfg.smoothCamera,
                                 v -> cfg.smoothCamera = v)
-                                .description("Adds inertia to your mouse look so the camera eases into and out of movement instead of stopping instantly. Gives panning a weighty, cinematic feel — great for recording or relaxed play. Note: it adds aim latency, so competitive players usually leave it off."),
+                                .description("Adds inertia to your view so the camera eases into and out of mouse movement instead of stopping instantly. Gives panning a weighty, cinematic feel — great for recording or relaxed play. Only the view is filtered: your real aim (attacks, block picking, what the server sees) keeps following the mouse instantly, so while the view is catching up the center of the screen briefly points away from where you actually hit. Keep it off for competitive aiming."),
                         SliderSetting.of("Strength",
                                 () -> cfg.smoothCameraStrength, v -> cfg.smoothCameraStrength = v, 0.05, 1.0)
-                                .description("How much smoothing is applied. Low values add a barely-there glide that still feels responsive; high values produce heavy, floaty camera drift with noticeable lag between your mouse and the view. Start around 0.2-0.3 if you want subtle smoothing."),
+                                .description("How much smoothing is applied. Low values add a barely-there glide that still feels responsive; high values produce heavy, floaty camera drift with noticeable lag between your mouse and the view. Start around 0.2-0.3 if you want subtle smoothing. Frame-rate independent: the same strength feels identical at 60, 120 or 240 FPS (strength is calibrated to the 60 FPS feel)."),
 
                         new SectionHeaderSetting("Frame Pacer"),
                         new BooleanSetting("Enabled",
