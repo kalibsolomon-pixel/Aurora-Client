@@ -49,11 +49,12 @@ acceptance](releases/PUBLISHED_2026-11-11.md) record the exact source and SHA-25
 Every publication uses the protected release workflow and a verified draft.
 The Latest label selects 26.3; PR #14 applies that choice at publication too.
 
-The current 3.4.0 source candidate builds the complete parity set from one
-commit. CI tests each line. Publication requires all fourteen native matrix rows
-and the unchanged overhead gate, bound to runtime/build/pin inputs, then verifies
-every JAR through handoff, draft and public redownload. No 3.4.0 tag or public
-release is created by completing step 5.5.
+[3.4.0](https://github.com/kalibsolomon-pixel/Aurora-Client/releases/tag/v3.4.0)
+is published and Latest: all three lines built from one commit,
+[7b51088](https://github.com/kalibsolomon-pixel/Aurora-Client/commit/7b510887c67a3884bd1ef300c7ac344d4a027505).
+Publication required all fourteen native matrix rows and the unchanged overhead
+gate, bound to runtime/build/pin inputs, then verified every JAR through handoff,
+draft and anonymous public redownload. [Artifact identities](releases/PUBLISHED_2026-11-11.md#340-parity-release).
 
 ## Acceptance and contributor readiness
 

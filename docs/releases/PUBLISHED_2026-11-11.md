@@ -62,3 +62,21 @@ python tools/verify_release_artifact.py public \
   --metadata docs/releases/evidence/3.3.0-artifact.json \
   --download-dir build/public-release-verification
 ```
+
+## 3.4.0 parity release
+
+[Aurora Client 3.4.0](https://github.com/kalibsolomon-pixel/Aurora-Client/releases/tag/v3.4.0)
+is the first release with all three supported lines built from one tree (ADR 0008)
+and is Latest. Exact source: [7b51088](https://github.com/kalibsolomon-pixel/Aurora-Client/commit/7b510887c67a3884bd1ef300c7ac344d4a027505).
+Published through the protected workflow (run 43064127581) as a verified draft
+with that exact target, then anonymously redownloaded and verified.
+
+- aurora-3.4.0-mc26.1.2.jar, 3,306,957 bytes; SHA-256 `7df204d3c59892d10fd16a3a382d2ace27383aaed0682fbb0688a3d707b37100`.
+- aurora-3.4.0-mc26.2.jar, 3,285,147 bytes; SHA-256 `7dce642c6fdadc8788eed24db1e9a73bb82d6ecffe7ebaab71fee3727ec81b9e`.
+- aurora-3.4.0-mc26.3.jar, 3,292,796 bytes; SHA-256 `854ee8a7ff9adc4810a9f8f6df68b7f1338ea380a68ff8b9b008c44e32df5fe6`.
+
+Acceptance is [step 5.5](../port/step-5.5.md) and its
+[per-run evidence](evidence/3.4.0-parity.json). The first dispatch (run 43062815017)
+stopped at the evidence gate before any GitHub write: the fingerprint's file order
+differed between Windows and Linux. The verifier was fixed (PR #19) without editing
+the evidence, and the same pinned source was dispatched again.
