@@ -13,9 +13,10 @@ import net.minecraft.client.Minecraft;
 public final class ShapeBenchmark {
     private static final int WARMUP = 120, SAMPLES = 600;
     private static final long[] nanos = new long[SAMPLES];
+    private static final long[] intervals = new long[SAMPLES];
     private static Path result;
     private static int frames;
-    private static long start, firstFills, firstQuads;
+    private static long start, previousStart, firstFills, firstQuads;
 
     private ShapeBenchmark() {}
 
@@ -23,6 +24,7 @@ public final class ShapeBenchmark {
         result = output;
         frames = 0;
         start = 0;
+        previousStart = 0;
     }
 
     public static void begin() {
@@ -32,6 +34,8 @@ public final class ShapeBenchmark {
             firstQuads = NativeShapeRenderer.quadsSubmitted();
         }
         start = System.nanoTime();
+        if (frames >= WARMUP && previousStart != 0) intervals[frames - WARMUP] = start - previousStart;
+        previousStart = start;
     }
 
     public static void end() {
@@ -44,6 +48,8 @@ public final class ShapeBenchmark {
         long quads = NativeShapeRenderer.quadsSubmitted() - firstQuads;
         long[] sorted = nanos.clone();
         Arrays.sort(sorted);
+        long[] sortedIntervals = intervals.clone();
+        Arrays.sort(sortedIntervals);
         double mean = Arrays.stream(nanos).average().orElseThrow() / 1_000_000.0;
         var window = Minecraft.getInstance().getWindow();
         var data = new LinkedHashMap<String, Object>();
@@ -56,6 +62,8 @@ public final class ShapeBenchmark {
         data.put("guiScale", window.getGuiScale());
         data.put("meanMs", mean);
         data.put("p95Ms", sorted[(int) Math.ceil(SAMPLES * .95) - 1] / 1_000_000.0);
+        data.put("frameIntervalMeanMs", Arrays.stream(intervals).average().orElseThrow() / 1_000_000.0);
+        data.put("frameIntervalP95Ms", sortedIntervals[(int) Math.ceil(SAMPLES * .95) - 1] / 1_000_000.0);
         data.put("fillsPerFrame", (double) fills / SAMPLES);
         data.put("shaderQuadsPerFrame", (double) quads / SAMPLES);
         try {

@@ -32,6 +32,20 @@ per frame. The original fill counter does not count shader quads. These runs
 exclude deferred rendering and GPU cost; they do not establish an end-to-end
 speedup.
 
+A later pair used the same disposable 26.3 OpenGL game directory, window,
+theme, 40 waypoints and GUI cap, with a fresh boot per path. Each run warmed up
+120 manager frames and sampled 600:
+
+| Path | Extraction mean / p95 | Frame interval mean / p95 | Fill / quad submissions per frame |
+|---|---|---|---|
+| CPU | 17.771 / 18.706 ms | 21.506 / 23.167 ms | 6,766 / 0 |
+| Shader | 0.120 / 0.157 ms | 16.667 / 17.970 ms | 0 / 33 |
+
+Frame intervals span successive manager extractions, including the 60 FPS GUI
+cap and any waits; they do not isolate GPU time. This single pair is diagnostic
+for this fixture and hardware, not a broad frame-rate or GPU result. The world
+continues to advance between boots.
+
 The default Round/33% waypoint screen was also inspected on native Vulkan; the
 Square/19% screen was inspected on OpenGL. The Aurora feature screen's grid and
 list layouts were inspected on 26.3 OpenGL at 854 x 480 and 1280 x 720, in the
@@ -42,8 +56,11 @@ a world on 26.1.2 OpenGL, 26.1.2 VulkanMod 0.6.8 and 26.2 native Vulkan. The
 VulkanMod log contained `Element Normal not found in elements [Position, Color,
 UV0, UV2]` during startup both with the prototype enabled and disabled in the
 same fixture; this is not a clean compatibility result. The cases were also
-inspected on 26.3 OpenGL with Sodium 0.9.2 and Iris 1.11.7 installed, without a
-shader pack. Shader edges are smoother than
+inspected on 26.3 OpenGL with Sodium 0.9.2 and Iris 1.11.7, both without a
+shader pack and in a world with Complementary Unbound r5.9.3 active. Iris
+logged missing overrides for the existing hit-color armor and item-cutout
+pipelines in both shader-enabled and shader-disabled runs of that same fixture;
+this is not a clean shader-pack compatibility result. Shader edges are smoother than
 the CPU's pixel-row approximation; the paths are not pixel-identical.
 Screenshots remain under `build/step6-shader-test/`, `build/step6-261-opengl/`
 `build/step6-262-vulkan/` and `build/step6-263-iris/` locally.

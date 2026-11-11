@@ -50,9 +50,10 @@ This verifies native handlers and persistence; it does not synthesize OS keys
 or replace a physical-input/accessibility audit.
 
 The shape benchmark measures elapsed time inside the manager's extraction method
-and `RenderUtil` fill and experimental shader quad submissions. It can include waits inside that method;
-it is not a CPU-only timer. Deferred GUI processing, total GPU time, frame
-pacing and cold cache creation are outside its scope. Compare runs with the same
+and `RenderUtil` fill and experimental shader quad submissions. It also measures
+the interval between successive extractions, including frame pacing and waits.
+Extraction time can include waits; it is not a CPU-only timer. Neither measure
+isolates GPU time, and cold cache creation is outside the samples. Compare runs with the same
 window, GUI scale, theme, backend, world and mod set; record these independently.
 The `waypoints40` command requires an empty waypoint scope and a second marker,
 `SHAPE-BENCHMARK-DISPOSABLE.txt`, in the actual game directory. Create a fresh
