@@ -24,7 +24,7 @@ Standing rule: **no new features until the port to the newest Minecraft release 
 |---|---|---|
 | 1 | Fail-soft mixins, one feature catalog, `breaks` list, copy-diagnostics report | Built, PR #2 |
 | 2 | Fair-play classification, default-off switches | Built, PR #3 |
-| 3 | Core Gradle module for the Minecraft-free packages, measure and set the overhead budget, third-party notices, repo cleanup | Core module (PR #4) and overhead budget (PR #6) built; notices and cleanup not started |
+| 3 | Core Gradle module for the Minecraft-free packages, measure and set the overhead budget, third-party notices, repo cleanup | Core module (PR #4), overhead budget (PR #6) and notices (PR #7) built; cleanup not started |
 | 4 | Port 26.1, then 26.2, then the newest release; release the newest; freeze 1.21.11 | Not started |
 | 5 | Extract the ports; move mixins, the glass renderer and Fabric API calls into the version adapter | Not started |
 | 6 | Shader-drawn shapes behind `RenderUtil` | Not started |
@@ -32,7 +32,7 @@ Standing rule: **no new features until the port to the newest Minecraft release 
 
 ## Current status
 
-Six pull requests are open and stacked. **None is merged: merging is blocked for the assistant, so the owner has to merge them, in this order.**
+Seven pull requests are open and stacked. **None is merged: merging is blocked for the assistant, so the owner has to merge them, in this order.**
 
 | PR | Branch | Contents | CI |
 |---|---|---|---|
@@ -42,6 +42,7 @@ Six pull requests are open and stacked. **None is merged: merging is blocked for
 | [#4](https://github.com/kalibsolomon-pixel/Aurora-Client/pull/4) | `feat/core-module` | Roadmap step 3, the core module (stacked on #3) | See the PR |
 | [#5](https://github.com/kalibsolomon-pixel/Aurora-Client/pull/5) | `feat/fair-play-decisions` | The owner's three fair-play decisions (stacked on #4) | See the PR |
 | [#6](https://github.com/kalibsolomon-pixel/Aurora-Client/pull/6) | `feat/overhead-budget` | Roadmap step 3, the overhead budget (stacked on #5) | See the PR |
+| #7 | `feat/third-party-notices` | Roadmap step 3, third-party notices (stacked on #6) | See the PR |
 
 This file was committed with PR #3 and is updated in PR #4.
 
@@ -94,6 +95,13 @@ Answered 2026-11-11: yes to all three.
 - Budget, at about 1.5 times the baseline: 0.25 ms mean, 0.40 ms p95, 0 glass, 100 fills. `tools/overhead_check.py` is now a release step; the final build passed it.
 - Every test boot's game window now opens on the second monitor.
 
+### Step 3, third-party notices, in PR #7
+
+- `THIRD_PARTY_NOTICES.md` at the repo root and in the jar: Better Hitreg (Apache 2.0), Freelook++ (MIT), HitColor (MIT), AppleSkin (Unlicense), eight fonts under the SIL Open Font License, Material Symbols (Apache 2.0) and the TwelveMonkeys image libraries (BSD 3-Clause), each with its full license text copied from upstream.
+- The font folder's `license.txt` named a font Aurora no longer ships; it now lists the real fonts.
+- Found: the TwelveMonkeys jars inside the mod carry no license file, so the jar had no BSD notice until now. HitColor's repository has no LICENSE file; only its Modrinth page says MIT.
+- A test fails if a font, a bundled library or a credit in the source is missing from the notices.
+
 ## Open decisions for the owner
 
 None at the moment.
@@ -104,15 +112,16 @@ None at the moment.
 - The tier-1 mod matrix (Sodium, Iris, VulkanMod, ImmediatelyFast, EntityCulling, Lithium, Mod Menu) has not been booted with these changes.
 - Whether 26.3 is the newest Minecraft release.
 - Apollo's license terms and how servers detect Lunar Client.
-- Whether Better Hitreg's Apache-2.0 listing on Modrinth matches the terms its author gave.
+- Whether Better Hitreg's Apache-2.0 listing on Modrinth matches the terms its author gave. Its repository's LICENSE is stock Apache 2.0.
+- HitColor's license: its repository has no LICENSE file; only Modrinth says MIT.
 
 ## Next steps
 
-1. Merge PR #1 to #6, in order.
+1. Merge PR #1 to #7, in order.
 2. Do the on-screen check and boot the mod matrix with `-Daurora.diagnostics.log=true`.
 3. Continue step 3:
    - ~~Move the Minecraft-free packages into a core Gradle module.~~ Done in PR #4. `module/` stayed in the client: `Module` reads the settings registry.
    - ~~Measure Aurora's per-frame cost and set the overhead budget as a number.~~ Done in PR #6.
-   - Add a third-party notices file (Better Hitreg, Freelook++, AppleSkin, HitColor, bundled fonts, Apache license text).
+   - ~~Add a third-party notices file.~~ Done in PR #7.
    - Replace the history in `AGENTS.md` with a short contributor guide and move the root-level reports under `docs/`.
 4. Then step 4, the port.
