@@ -11,7 +11,7 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * What happened to each Aurora mixin in this session (ADR 0004).
  *
- * <p>Written by {@link AuroraMixinPlugin} and {@link AuroraMixinErrorHandler}
+ * <p>Written by {@code AuroraMixinPlugin} and {@code AuroraMixinErrorHandler}
  * while the game's classes load, on whichever thread loads them, and read
  * from the client thread by {@link FeatureHealth}. Mixin names are relative
  * to the mixin package, exactly as {@code aurora.mixins.json} lists them
@@ -22,6 +22,12 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public final class MixinHealth {
     private MixinHealth() {}
+
+    /** The package every Aurora mixin lives in, as named in {@code aurora.mixins.json}. */
+    public static final String MIXIN_PACKAGE = "com.aurora.client.mixin";
+
+    /** Comma-separated mixin names, as listed in {@code aurora.mixins.json}, to skip. */
+    public static final String DISABLE_PROPERTY = "aurora.mixin.disable";
 
     /** Why a mixin is not doing its job. */
     public enum Cause {
@@ -104,7 +110,7 @@ public final class MixinHealth {
 
     /** Mixin class name to the name used in {@code aurora.mixins.json}. */
     static String shortName(String mixinClassName) {
-        String prefix = AuroraMixinPlugin.MIXIN_PACKAGE + ".";
+        String prefix = MIXIN_PACKAGE + ".";
         String dotted = mixinClassName.replace('/', '.');
         return dotted.startsWith(prefix) ? dotted.substring(prefix.length()) : dotted;
     }

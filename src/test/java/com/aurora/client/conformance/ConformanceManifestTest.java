@@ -1,5 +1,6 @@
 package com.aurora.client.conformance;
 
+import com.aurora.client.SourceTree;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -17,6 +18,7 @@ import static com.aurora.client.conformance.SemanticFamilyManifest.CANONICAL_HOV
 import static com.aurora.client.conformance.SemanticFamilyManifest.FAMILIES;
 import static com.aurora.client.conformance.SemanticFamilyManifest.NON_FAMILIES;
 import static com.aurora.client.conformance.SemanticFamilyManifest.SRC;
+import static com.aurora.client.conformance.SemanticFamilyManifest.CORE;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -258,7 +260,7 @@ class ConformanceManifestTest {
     @Test
     void clipBandConsumersAreTheCompleteCoupledSet() throws IOException {
         Set<String> expected = Set.of(
-                SRC + "ui/util/ClipBand.java",
+                CORE + "ui/util/ClipBand.java",
                 SRC + "screen/AuroraScreen.java",
                 SRC + "screen/ManagerListScreen.java",
                 SRC + "screen/ResourcePackBrowserScreen.java",
@@ -334,9 +336,9 @@ class ConformanceManifestTest {
     // ------------------------------------------------------------------
 
     private static List<String> javaFiles() throws IOException {
-        try (Stream<Path> files = Files.walk(Path.of(SRC))) {
+        try (Stream<Path> files = SourceTree.javaFiles()) {
             List<String> out = new ArrayList<>();
-            files.filter(p -> p.toString().endsWith(".java"))
+            files
                     .filter(p -> !p.toString().endsWith("DevPilot.java"))
                     .forEach(p -> out.add(p.toString().replace('\\', '/')));
             return out;

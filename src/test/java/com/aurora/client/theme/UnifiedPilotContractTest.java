@@ -1,5 +1,6 @@
 package com.aurora.client.theme;
 
+import com.aurora.client.SourceTree;
 import com.google.gson.Gson;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -10,8 +11,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /** Migration and capture-ownership boundaries of the production rollout. */
 class UnifiedPilotContractTest {
-    private static final Path SRC=Path.of("src/client/java/com/aurora/client");
-    private String read(String path) throws Exception { return Files.readString(SRC.resolve(path)).replace("\r\n","\n"); }
+    private String read(String path) { return SourceTree.read(path); }
 
     @ParameterizedTest @ValueSource(strings={"FROSTED","TRANSPARENT"})
     void legacyConfigAndProfileDropOnlyRetiredStyle(String style) {

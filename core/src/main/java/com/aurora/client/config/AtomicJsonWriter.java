@@ -1,6 +1,7 @@
 package com.aurora.client.config;
 
-import com.aurora.client.AuroraClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -49,6 +50,7 @@ import java.util.Map;
  * </ul>
  */
 public final class AtomicJsonWriter {
+    private static final Logger LOGGER = LoggerFactory.getLogger("Aurora");
 
     /** File-system seam (tests inject deterministic faults). */
     public interface FileOps {
@@ -175,7 +177,7 @@ public final class AtomicJsonWriter {
             while (!settled(target)) {
                 long left = deadline - System.nanoTime();
                 if (left <= 0) {
-                    AuroraClient.LOGGER.error("[{}] flush timed out with {} write(s) pending", name, queue.size() + (inFlight != null ? 1 : 0));
+                    LOGGER.error("[{}] flush timed out with {} write(s) pending", name, queue.size() + (inFlight != null ? 1 : 0));
                     return false;
                 }
                 try { lock.wait(Math.max(1, left / 1_000_000L)); }
@@ -233,11 +235,11 @@ public final class AtomicJsonWriter {
                         job.round++;
                         job.notBeforeNanos = System.nanoTime() + roundDelayMs * job.round * 1_000_000L;
                         queue.put(job.target, job);
-                        AuroraClient.LOGGER.warn("[{}] {} still locked; keeping the new content pending (round {}/{})",
+                        LOGGER.warn("[{}] {} still locked; keeping the new content pending (round {}/{})",
                                 name, job.target.getFileName(), job.round + 1, MAX_ROUNDS);
                     } else {
                         failures++;
-                        AuroraClient.LOGGER.error("[{}] giving up on {} after {} rounds; the previous file is intact, "
+                        LOGGER.error("[{}] giving up on {} after {} rounds; the previous file is intact, "
                                 + "the next save will try again", name, job.target.getFileName(), MAX_ROUNDS);
                     }
                 }
@@ -254,7 +256,7 @@ public final class AtomicJsonWriter {
         try {
             files.writeDurably(tmp, job.content);
         } catch (IOException | RuntimeException e) {
-            AuroraClient.LOGGER.error("[{}] could not write {}", name, tmp.getFileName(), e);
+            LOGGER.error("[{}] could not write {}", name, tmp.getFileName(), e);
             deleteQuietly(tmp);
             return false;
         }
@@ -262,7 +264,7 @@ public final class AtomicJsonWriter {
         for (int attempt = 0; attempt <= BURST_BACKOFF_MS.length; attempt++) {
             try {
                 files.replace(tmp, job.target);
-                if (attempt > 0) AuroraClient.LOGGER.info("[{}] {} replaced after {} transient retr{}", name,
+                if (attempt > 0) LOGGER.info("[{}] {} replaced after {} transient retr{}", name,
                         job.target.getFileName(), attempt, attempt == 1 ? "y" : "ies");
                 return true;
             } catch (IOException e) {
@@ -275,7 +277,7 @@ public final class AtomicJsonWriter {
                 break;
             }
         }
-        AuroraClient.LOGGER.warn("[{}] replacing {} failed: {}", name, job.target.getFileName(), String.valueOf(last));
+        LOGGER.warn("[{}] replacing {} failed: {}", name, job.target.getFileName(), String.valueOf(last));
         deleteQuietly(tmp);
         return false;
     }
@@ -293,7 +295,7 @@ public final class AtomicJsonWriter {
                 catch (InterruptedException ie) { Thread.currentThread().interrupt(); break; }
             }
         }
-        AuroraClient.LOGGER.warn("[{}] deleting {} failed: {}", name, job.target.getFileName(), String.valueOf(last));
+        LOGGER.warn("[{}] deleting {} failed: {}", name, job.target.getFileName(), String.valueOf(last));
         return false;
     }
 

@@ -131,16 +131,12 @@ class ColorSwatchDataOnlyTest {
         // HoverAnim.symmetric's internal factory construction.
         String swatch = read(SWATCH_SRC);
         String slider = read("src/client/java/com/aurora/client/ui/component/Slider.java");
-        String hoverAnim = read("src/client/java/com/aurora/client/util/HoverAnim.java");
+        String hoverAnim = read("core/src/main/java/com/aurora/client/util/HoverAnim.java");
         assertEquals(1, swatch.split("new HoverAnim\\(", -1).length - 1);
         assertEquals(1, slider.split("new HoverAnim\\(", -1).length - 1);
         assertEquals(1, hoverAnim.split("new HoverAnim\\(", -1).length - 1);
         // ...and no other production file constructs one.
-        java.nio.file.Path root = java.nio.file.Path.of("src/client/java/com/aurora/client");
-        long others = java.util.stream.Stream.concat(
-                        java.nio.file.Files.walk(root),
-                        java.util.stream.Stream.empty())
-                .filter(p -> p.toString().endsWith(".java"))
+        long others = com.aurora.client.SourceTree.javaFiles()
                 .filter(p -> !p.toString().contains("DevPilot")
                         && !p.toString().contains(".mimosa")
                         && !p.toString().endsWith("ColorSwatch.java")

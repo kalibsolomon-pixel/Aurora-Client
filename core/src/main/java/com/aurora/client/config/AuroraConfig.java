@@ -1,12 +1,12 @@
 package com.aurora.client.config;
 
-import com.aurora.client.AuroraClient;
 import com.aurora.client.hud.HudAnchor;
 import com.aurora.client.theme.ThemeDefinition;
 import com.aurora.client.theme.ThemeMigrator;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import net.fabricmc.loader.api.FabricLoader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -29,8 +29,9 @@ public class AuroraConfig {
     public AuroraConfig() { ReleaseDefaults.apply(this); }
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-    private static final Path CONFIG_PATH =
-        FabricLoader.getInstance().getConfigDir().resolve("aurora.json");
+    private static final Logger LOGGER = LoggerFactory.getLogger("Aurora");
+
+    private static Path configPath() { return ConfigDirectory.get().resolve("aurora.json"); }
 
     private static AuroraConfig INSTANCE = new AuroraConfig();
 
@@ -673,15 +674,16 @@ public class AuroraConfig {
     public boolean nametagTotemPopsEnabled = false; // off in a fresh install (ADR 0007)
 
     // ---- Aurora keybinds ----
-    // Stored as raw GLFW key codes. -1 means unbound. Polled directly via
+    // Stored as raw GLFW key codes (literals: the core cannot see LWJGL;
+    // AuroraConfigKeyDefaultsTest checks them). -1 means unbound. Polled directly via
     // AuroraKey rather than registered with vanilla's KeyMapping system,
     // so they don't appear in the vanilla controls menu and rebind from
     // each feature's own settings page.
-    public int zoomKey         = org.lwjgl.glfw.GLFW.GLFW_KEY_C;
-    public int freeLookKey     = org.lwjgl.glfw.GLFW.GLFW_KEY_V;
-    public int toggleSprintKey = org.lwjgl.glfw.GLFW.GLFW_KEY_J;
-    public int toggleSneakKey  = org.lwjgl.glfw.GLFW.GLFW_KEY_K;
-    public int hudEditorKey    = org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_SHIFT;
+    public int zoomKey         = 67;  // GLFW_KEY_C
+    public int freeLookKey     = 86;  // GLFW_KEY_V
+    public int toggleSprintKey = 74;  // GLFW_KEY_J
+    public int toggleSneakKey  = 75;  // GLFW_KEY_K
+    public int hudEditorKey    = 344; // GLFW_KEY_RIGHT_SHIFT
     /** Press to toggle the hitbox sub-toggles ({@link #hitboxEnabled} +
      *  {@link #hitboxTargetEnabled}) on/off together. -1 = unbound. */
     public int hitboxToggleKey = -1;
@@ -1154,7 +1156,7 @@ public class AuroraConfig {
     /**
      * GLFW key that opens the fullscreen world map. Default M.
      */
-    public int worldMapKey = org.lwjgl.glfw.GLFW.GLFW_KEY_M;
+    public int worldMapKey = 77; // GLFW_KEY_M
 
     /**
      * Maximum chunks re-sampled into region tiles per client tick — the
@@ -1184,13 +1186,13 @@ public class AuroraConfig {
 
     public static void load() {
         try {
-            AtomicJsonWriter.deleteStaleTemps(CONFIG_PATH);
-            if (Files.exists(CONFIG_PATH)) {
-                String json = Files.readString(CONFIG_PATH);
+            AtomicJsonWriter.deleteStaleTemps(configPath());
+            if (Files.exists(configPath())) {
+                String json = Files.readString(configPath());
                 // Theme pre-pass: fold legacy themePrimary/themeSecondary keys
                 // into the structured "theme" object and drop malformed theme
                 // members so one bad field can't take the whole config down.
-                json = ThemeMigrator.migrateConfigJson(json, AuroraClient.LOGGER);
+                json = ThemeMigrator.migrateConfigJson(json, LOGGER);
                 AuroraConfig loaded = GSON.fromJson(json, AuroraConfig.class);
                 if (loaded == null) throw new com.google.gson.JsonParseException("Config is null");
                 if (loaded != null) {
@@ -1222,15 +1224,15 @@ public class AuroraConfig {
             // IOException (disk problems) or JsonSyntaxException (corrupt
             // file): either way fall back to the in-memory defaults -
             // loading must never crash client init.
-            AuroraClient.LOGGER.error("Failed to load Aurora config", e);
+            LOGGER.error("Failed to load Aurora config", e);
             INSTANCE = new AuroraConfig();
             // Preserve recoverable input before later autosaves can replace it.
             try {
-                if (Files.exists(CONFIG_PATH)) Files.copy(CONFIG_PATH,
-                        CONFIG_PATH.resolveSibling("aurora.json.corrupt-" + java.util.UUID.randomUUID() + ".bak"));
+                if (Files.exists(configPath())) Files.copy(configPath(),
+                        configPath().resolveSibling("aurora.json.corrupt-" + java.util.UUID.randomUUID() + ".bak"));
             } catch (IOException backupFailure) {
                 configWritesBlocked = true;
-                AuroraClient.LOGGER.error("Config backup failed; config writes disabled to preserve original", backupFailure);
+                LOGGER.error("Config backup failed; config writes disabled to preserve original", backupFailure);
             }
         }
     }
@@ -1255,10 +1257,10 @@ public class AuroraConfig {
         try {
             json = serialize();
         } catch (Throwable t) {
-            AuroraClient.LOGGER.error("Failed to serialize Aurora config", t);
+            LOGGER.error("Failed to serialize Aurora config", t);
             return;
         }
-        WRITER.submit(CONFIG_PATH, json);
+        WRITER.submit(configPath(), json);
     }
 
     /**
@@ -1274,13 +1276,13 @@ public class AuroraConfig {
     public static boolean saveBlocking() {
         if (configWritesBlocked) return false;
         try {
-            WRITER.submit(CONFIG_PATH, serialize());
+            WRITER.submit(configPath(), serialize());
         } catch (Throwable t) {
-            AuroraClient.LOGGER.error("Failed to serialize Aurora config", t);
+            LOGGER.error("Failed to serialize Aurora config", t);
             return false;
         }
         boolean ok = WRITER.flush(SHUTDOWN_FLUSH_MS);
-        if (!ok) AuroraClient.LOGGER.error("Aurora config was NOT confirmed saved; the previous aurora.json is intact");
+        if (!ok) LOGGER.error("Aurora config was NOT confirmed saved; the previous aurora.json is intact");
         return ok;
     }
 

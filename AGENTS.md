@@ -44,7 +44,7 @@ like the glass renderer: read `hitreg/BetterHitreg.java`'s notes before touching
 
 | Fact | Value |
 |---|---|
-| Build | Gradle + Fabric Loom (`fabric-loom-remap` 1.16-SNAPSHOT), `splitEnvironmentSourceSets()` — all code lives in the **client** source set |
+| Build | Gradle + Fabric Loom (`fabric-loom-remap` 1.16-SNAPSHOT), `splitEnvironmentSourceSets()` — Minecraft-dependent code lives in the **client** source set; Minecraft-free code in the `core` Gradle module (see the end of this file) |
 | Java | 21 |
 | Minecraft | **1.21.11** (`gradle.properties`) with official Mojang mappings |
 | Fabric API | 0.141.4+1.21.11; loader 0.19.2 |
@@ -2602,3 +2602,32 @@ configs and profiles keep their own values.
 When adding a feature or a switch that shows something about other players, or a view
 vanilla does not allow: class it Information advantage (or list the switch in
 `offByDefault`), default it off, and regenerate the document.
+
+## Core module (2026-11-11)
+
+Roadmap step 3, first part (ADR 0003). `core/` is a plain `java-library` Gradle module with
+no Minecraft, Fabric, LWJGL, Mixin or Log4j on its classpath (Gson, SLF4J and the WebP
+decoder are `compileOnly`). It holds the 75 classes that were already Minecraft-free (plus `ConfigDirectory`), in their
+original packages: `AuroraConfig` and the profile/persistence classes, `FeatureCatalog`,
+`MixinHealth`/`FeatureHealth`/`MixinAudit`, the theme engine including `ThemeManager`, the
+launcher bridge, the Modrinth records and icon decoder, and pure layout/animation/map math.
+The root build compiles against it and packs its classes into the one mod jar; there is no
+nested jar. `tools/core_candidates.py` lists every client class that could move next.
+
+Rules that follow from this:
+- Package names are shared between `src/client/java` and `core/src/main/java`. Look in both.
+- Core code logs through SLF4J (`LoggerFactory.getLogger("Aurora")`), never
+  `AuroraClient.LOGGER`.
+- `config/ConfigDirectory` replaces `FabricLoader.getConfigDir()` in the core. The client
+  sets it first thing in `onInitializeClient`; reading it earlier throws. Tests set it to a
+  temporary directory.
+- `AuroraConfig`'s default keys are GLFW codes written as literals;
+  `AuroraConfigKeyDefaultsTest` checks them against LWJGL.
+- Source-contract tests read production files through the test helper `SourceTree`, which
+  covers both roots. A test that walks only `src/client/java` misses the core.
+- `RecentErrors` stays in the client: it is a Log4j appender. `hitreg/` stays whole in the
+  client even where a class would qualify, because it is kept verbatim.
+
+Verified by the full test suite, a jar check (the same 467 classes plus `ConfigDirectory`)
+and a dev-client boot into the saved world (all 72 mixins applied; config read from and
+written to `run/config`, only playtime changed).

@@ -43,6 +43,10 @@ Open for the owner:
 - Entity Health has no separate switch for players. The whole feature is off by default, which covers "entity health for players", but a player who turns it on gets mobs and players together.
 - Other players' totem pops are still counted while the nametag switch is off; they are just not shown.
 
+## Step 3 status
+
+The core module is built on `feat/core-module`: 75 already Minecraft-free classes moved into `core/`, a Gradle module that cannot compile a Minecraft, Fabric, LWJGL, Mixin or Log4j import. Three small couplings were cut on the way (the config directory, the client logger, two health constants). Verified by the test suite and a dev-client boot. Still to do in step 3: the overhead budget, the third-party notices and the repo cleanup.
+
 ## Standing rules until the port ships
 
 - No new features. Only fixes and the work in steps 1 to 3.

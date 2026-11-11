@@ -1,5 +1,6 @@
 package com.aurora.client.screen;
 
+import com.aurora.client.SourceTree;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
@@ -122,7 +123,7 @@ class AuroraScreenViewportCouplingTest {
                 "src/client/java/com/aurora/client/screen/AuroraScreen.java",
                 "src/client/java/com/aurora/client/screen/ManagerListScreen.java",
                 "src/client/java/com/aurora/client/screen/ResourcePackBrowserScreen.java");
-        try (Stream<Path> files = Files.walk(Path.of("src/client/java"))) {
+        try (Stream<Path> files = SourceTree.javaFiles()) {
             List<String> adopters = new ArrayList<>();
             files.filter(p -> sourcePath(p).endsWith(".java"))
                     .filter(p -> !sourcePath(p).endsWith("ui/util/ClipBand.java"))
@@ -138,7 +139,7 @@ class AuroraScreenViewportCouplingTest {
                     });
             assertTrue(expected.containsAll(adopters) && adopters.containsAll(expected),
                     "ClipBand adopters must be exactly the C-1/C-8 consumer set — found: " + adopters);
-        } catch (java.io.IOException e) {
+        } catch (java.io.UncheckedIOException e) {
             fail("source walk failed: " + e);
         }
     }

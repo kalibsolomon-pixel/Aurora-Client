@@ -31,7 +31,7 @@ class IconActionPilotTest {
     private static final String HUD_EDITOR =
             "src/client/java/com/aurora/client/screen/HudEditorScreen.java";
     private static final String FEATURE_ICONS =
-            "src/client/java/com/aurora/client/screen/FeatureIcons.java";
+            "core/src/main/java/com/aurora/client/screen/FeatureIcons.java";
 
     private static String src(String path) {
         try {
