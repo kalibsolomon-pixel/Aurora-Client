@@ -6,7 +6,7 @@ import com.aurora.client.hud.HudAnchor;
 import com.aurora.client.util.CachedValue;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 
 /**
@@ -126,7 +126,7 @@ public class ToggleIndividualModule extends HudModule {
     }
 
     @Override
-    protected void renderContent(GuiGraphics ctx, Minecraft client, int x, int y) {
+    protected void renderContent(GuiGraphicsExtractor ctx, Minecraft client, int x, int y) {
         AuroraConfig cfg = AuroraConfig.get();
         if (!cfg.toggleSprintSneakEnabled) return;
         if (!cfg.toggleSprintSneakHudEnabled) return;
@@ -136,7 +136,7 @@ public class ToggleIndividualModule extends HudModule {
         ensureLabelWidth(tr);
 
         boolean on = isOn();
-        ctx.drawString(tr, labelComponent, x, y, textColor(0xFFFFFFFF), false);
-        ctx.drawString(tr, on ? "ON" : "OFF", x + cachedLabelW, y, textColor(on ? COLOR_ON : COLOR_OFF), false);
+        ctx.text(tr, labelComponent, x, y, textColor(0xFFFFFFFF), false);
+        ctx.text(tr, on ? "ON" : "OFF", x + cachedLabelW, y, textColor(on ? COLOR_ON : COLOR_OFF), false);
     }
 }

@@ -8,7 +8,7 @@ import com.aurora.client.theme.ThemeRoundness;
 import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.util.RenderUtil;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import org.lwjgl.opengl.GL11;
@@ -94,7 +94,7 @@ public class BlurTestScreen extends Screen {
     private long lastFpsLogMs;
 
     // ---- Synthetic backdrop target (test harness) ----
-    // Batched GuiGraphics fills only reach the framebuffer when the GUI
+    // Batched GuiGraphicsExtractor fills only reach the framebuffer when the GUI
     // batch flushes — AFTER renderPanel's immediate capture — so the
     // SOLID/STRIPES controls are rendered into this dedicated FBO each
     // frame and handed to the renderer as a CaptureSource. The batched
@@ -163,7 +163,7 @@ public class BlurTestScreen extends Screen {
      * the vanilla behavior — this is test-harness only.
      */
     @Override
-    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float delta) {
+    public void extractBackground(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
         // no-op by design (see javadoc)
     }
 
@@ -257,7 +257,7 @@ public class BlurTestScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float delta) {
+    public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
         pollStateFile();
 
         // 1. Static backdrop (negative/positive controls). The batched fills
@@ -307,15 +307,15 @@ public class BlurTestScreen extends Screen {
         String light = lightingOn ? ("ON " + (depressedMode ? "DEPRESSED" : "RAISED")) : "OFF";
         String status = ok ? "Panel: BLURRED (r " + (int) blurRadius + ") | Lighting: " + light
                            : "Panel: FALLBACK - " + BlurPanelRenderer.lastOutcome();
-        g.drawString(this.font, status, tx, ty, body, false);
-        g.drawString(this.font, "Backdrop: " + mode.label
+        g.text(this.font, status, tx, ty, body, false);
+        g.text(this.font, "Backdrop: " + mode.label
                         + " | Corner: " + ThemeManager.current().roundness().displayName()
                         + " | Theme: " + ThemeManager.current().mode()
                         + " | Op: " + Math.round(ThemeManager.current().backgroundOpacity() * 100) + "%",
                 tx, ty + 12, dim, false);
-        g.drawString(this.font, "[B]ackdrop  [L]ighting  [M] raised/depressed  [C]orner  [N] theme  [+/-] radius  [O/P] opacity",
+        g.text(this.font, "[B]ackdrop  [L]ighting  [M] raised/depressed  [C]orner  [N] theme  [+/-] radius  [O/P] opacity",
                 tx, ty + 26, dim, false);
-        g.drawString(this.font, "Light: fixed top, ~14 deg right. Opacity = WINDOW_FILL alpha (single application point).",
+        g.text(this.font, "Light: fixed top, ~14 deg right. Opacity = WINDOW_FILL alpha (single application point).",
                 tx, ty + 38, dim, false);
 
         // 5. One fps line every 5 s — the frame-cost check (and soak monitor).
@@ -329,7 +329,7 @@ public class BlurTestScreen extends Screen {
                     lightingOn, depressedMode, mode);
         }
 
-        super.render(g, mouseX, mouseY, delta);
+        super.extractRenderState(g, mouseX, mouseY, delta);
     }
 
     @Override
@@ -455,7 +455,7 @@ public class BlurTestScreen extends Screen {
      * panels in a 12-column grid at the top-left, tier assigned by position
      * in RENDER order — first quarter DETAIL, then ROW, CONTROL, WINDOW last.
      */
-    private void renderStress(GuiGraphics g, BlurPanelRenderer.CaptureSource captureSource) {
+    private void renderStress(GuiGraphicsExtractor g, BlurPanelRenderer.CaptureSource captureSource) {
         BlurPanelRenderer.Priority[] order = BlurPanelRenderer.Priority.values();
         int[] asked = new int[order.length];
         int[] drew = new int[order.length];
@@ -474,7 +474,7 @@ public class BlurTestScreen extends Screen {
             RenderUtil.drawRoundedRectAA(g, x, y, STRESS_W, STRESS_H, r, drewGlass ? tint : 0xE0202020);
             RenderUtil.drawRoundedOutlineAA(g, x, y, STRESS_W, STRESS_H, r, 1.0f,
                     drewGlass ? 0xFF40D080 : 0xFFE05050);
-            g.drawString(this.font, p.name().charAt(0) + (drewGlass ? "" : " x"),
+            g.text(this.font, p.name().charAt(0) + (drewGlass ? "" : " x"),
                     (int) x + 3, (int) y + 3, drewGlass ? 0xFFFFFFFF : 0xFFFF8080, false);
         }
         long now = System.currentTimeMillis();
@@ -713,7 +713,7 @@ public class BlurTestScreen extends Screen {
      * accent columns), or the pattern the panel samples will never line up
      * with the pattern the eye sees outside it.
      */
-    private void drawBackdrop(GuiGraphics g) {
+    private void drawBackdrop(GuiGraphicsExtractor g) {
         if (mode == Backdrop.SOLID) {
             g.fill(0, 0, this.width, this.height, 0xFF85878C);
             return;

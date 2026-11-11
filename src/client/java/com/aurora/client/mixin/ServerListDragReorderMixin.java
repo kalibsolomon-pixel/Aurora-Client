@@ -8,7 +8,7 @@ import com.aurora.client.ui.component.MaterialSurface;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.util.AuroraShapes;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
 import net.minecraft.client.gui.screens.multiplayer.ServerSelectionList;
@@ -368,8 +368,8 @@ public abstract class ServerListDragReorderMixin extends Screen {
      * synthetic bridge.
      */
     @Override
-    public void render(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
-        super.render(ctx, mouseX, mouseY, delta);
+    public void extractRenderState(GuiGraphicsExtractor ctx, int mouseX, int mouseY, float delta) {
+        super.extractRenderState(ctx, mouseX, mouseY, delta);
         if (!aurora$enabled() || serverSelectionList == null || servers == null) {
             return;
         }
@@ -412,7 +412,7 @@ public abstract class ServerListDragReorderMixin extends Screen {
     }
 
     @Unique
-    private void aurora$drawGhost(GuiGraphics ctx, int accent, int left, int width, float radius, double lift) {
+    private void aurora$drawGhost(GuiGraphicsExtractor ctx, int accent, int left, int width, float radius, double lift) {
         Minecraft client = Minecraft.getInstance();
         if (client == null || client.font == null || aurora$ghost == null) return;
         int h = aurora$rowHeight();
@@ -432,7 +432,7 @@ public abstract class ServerListDragReorderMixin extends Screen {
 
         var font = client.font;
         int nameY = AURORA_GHOST_PAD - 1;
-        ctx.drawString(font, Component.literal(aurora$ghost.name), AURORA_GHOST_PAD, nameY,
+        ctx.text(font, Component.literal(aurora$ghost.name), AURORA_GHOST_PAD, nameY,
                 ThemeManager.color(ThemeToken.ON_BACKGROUND), false);
 
         String pingLabel;
@@ -446,7 +446,7 @@ public abstract class ServerListDragReorderMixin extends Screen {
             pingLabel = ping + "ms";
             pingColor = ping < 50 ? 0xFF55FF55 : ping < 150 ? 0xFFFFFF55 : 0xFFFF5555;
         }
-        ctx.drawString(font, pingLabel, width - font.width(pingLabel) - AURORA_GHOST_PAD, nameY, pingColor, false);
+        ctx.text(font, pingLabel, width - font.width(pingLabel) - AURORA_GHOST_PAD, nameY, pingColor, false);
 
         if (aurora$ghost.motd != null) {
             Component motd = aurora$ghost.motd;
@@ -456,7 +456,7 @@ public abstract class ServerListDragReorderMixin extends Screen {
                 plain = font.plainSubstrByWidth(plain, maxW - font.width("…")) + "…";
                 motd = Component.literal(plain).withStyle(motd.getStyle());
             }
-            ctx.drawString(font, motd, AURORA_GHOST_PAD, nameY + font.lineHeight + 2,
+            ctx.text(font, motd, AURORA_GHOST_PAD, nameY + font.lineHeight + 2,
                     ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
         }
         ctx.pose().popMatrix();

@@ -15,7 +15,7 @@ import com.aurora.client.util.AuroraAnim;
 import com.aurora.client.util.HoverAnim;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 
 import java.util.Arrays;
@@ -128,7 +128,7 @@ public class SegmentedControl extends Widget {
     }
 
     @Override
-    public void renderShapes(GuiGraphics g, float x, float y, float w, float h) {
+    public void renderShapes(GuiGraphicsExtractor g, float x, float y, float w, float h) {
         if (MaterialSurface.unified() || glassEnabled) return; // segments are live glass; track base suppressed
         float radius = Math.min(trackH / 2f, ThemeManager.current().roundness().radiusSmall());
         RenderUtil.drawRoundedRectAA(g, x, y, w, trackH, radius,
@@ -141,7 +141,7 @@ public class SegmentedControl extends Widget {
      * here so the tint can never disagree with the label pass.
      */
     @Override
-    public void renderGlassPass(GuiGraphics g, float x, float y, float w, float h) {
+    public void renderGlassPass(GuiGraphicsExtractor g, float x, float y, float w, float h) {
         glassPassFrame = GlassSurface.frame();
         passDrewSegments = false;
         if (MaterialSurface.unified() || !glassEnabled) return;
@@ -159,7 +159,7 @@ public class SegmentedControl extends Widget {
     }
 
     @Override
-    public void renderOverlay(GuiGraphics g, float x, float y, float w, float h, int mouseX, int mouseY) {
+    public void renderOverlay(GuiGraphicsExtractor g, float x, float y, float w, float h, int mouseX, int mouseY) {
         Font tr = Minecraft.getInstance().font;
         if (tr == null) return;
 

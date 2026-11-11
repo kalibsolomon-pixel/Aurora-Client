@@ -7,7 +7,7 @@ import com.aurora.client.ui.component.ButtonWidget;
 import com.aurora.client.ui.component.MaterialSurface;
 import com.aurora.client.ui.component.ThemedScreen;
 import com.aurora.client.worldmap.WorldMapClient;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
@@ -44,21 +44,21 @@ public final class MappingDataScreen extends Screen implements ThemedScreen {
         addRenderableWidget(ButtonWidget.semantic(x + w - 12 - 64, y + h - 8 - bh, 64, bh,
                 Component.literal("Done"), "Return to map settings.", this::onClose));
     }
-    @Override public void render(GuiGraphics g, int mx, int my, float delta) {
+    @Override public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float delta) {
         MaterialSurface.floatingPanel(g, x, y, w, h, Math.round(ThemeManager.current().roundness().radius()));
         // Title shares the dialog's left content edge (no centered, shadowed heading).
-        g.drawString(font, title, x + 12, y + (com.aurora.client.ui.util.UiDensity.HEADER - font.lineHeight) / 2 + 1, ThemeManager.color(ThemeToken.ON_SURFACE), false);
+        g.text(font, title, x + 12, y + (com.aurora.client.ui.util.UiDensity.HEADER - font.lineHeight) / 2 + 1, ThemeManager.color(ThemeToken.ON_SURFACE), false);
         String text = "Older folders used world display names. Only import if this is the original world. "
                 + "Copied data stays isolated here; original files remain untouched.";
         int lineY = y + com.aurora.client.ui.util.UiDensity.HEADER + 4;
         for (var line : font.split(Component.literal(text), w - 24)) {
-            g.drawString(font, line, x + 12, lineY, ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY), false); lineY += 10;
+            g.text(font, line, x + 12, lineY, ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY), false); lineY += 10;
         }
         var engine = WorldMapClient.get();
         String message = status.isEmpty() && engine != null ? engine.importStatus() : status;
-        g.drawString(font, com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(font, message, w - 24 - 64 - 8, 1),
+        g.text(font, com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(font, message, w - 24 - 64 - 8, 1),
                 x + 12, y + h - 8 - (com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_H + font.lineHeight) / 2, ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
-        super.render(g, mx, my, delta);
+        super.extractRenderState(g, mx, my, delta);
     }
     @Override public void onClose() { minecraft.setScreen(parent); }
     @Override public boolean isPauseScreen() { return false; }

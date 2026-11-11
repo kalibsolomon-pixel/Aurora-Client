@@ -15,7 +15,7 @@ import com.aurora.client.util.AuroraTheme;
 import com.aurora.client.util.HoverAnim;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 
@@ -251,7 +251,7 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
      * a pass on a scrolling frame lands exactly where the content will.
      */
     @Override
-    public void renderGlassPass(GuiGraphics ctx, int x, int y, int width) {
+    public void renderGlassPass(GuiGraphicsExtractor ctx, int x, int y, int width) {
         if (!GlassSurface.passOpen()) return; // legacy frame order — render paints in place
         glassPassFrame = GlassSurface.frame();
         int btnX = controlX(x, width, BTN_W);
@@ -262,7 +262,7 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
     }
 
     @Override
-    public void render(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
+    public void render(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {
         lastWidth = width;
         Font tr = Minecraft.getInstance().font;
         boolean disabled = isDisabled();
@@ -359,7 +359,7 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
         // Draw the option name centered within the space left of the arrow.
         int textX = btnX + (BTN_W - arrowReserve - cachedNameW) / 2;
         int textY = btnY + (BTN_H - tr.lineHeight) / 2 + 1;
-        ctx.drawString(tr, name, textX, textY, textColor, false);
+        ctx.text(tr, name, textX, textY, textColor, false);
 
         // Draw the Material Symbols arrow icon on the right. Rendered at the
         // font's natural em size, but through MaterialIconRenderer so the
@@ -392,7 +392,7 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
     /** Height of the expanded option list — hosts size their body so it always fits. */
     public int popupHeight() { return Math.min(5, values.length) * OPT_H + 4; }
     /** The compact host paints floating options after every normal row. */
-    public void renderFloatingOverlay(GuiGraphics ctx, int mouseX, int mouseY) {
+    public void renderFloatingOverlay(GuiGraphicsExtractor ctx, int mouseX, int mouseY) {
         Font tr = Minecraft.getInstance().font;
         E current = getter.get();
         int btnX = lastBtnX, btnY = lastBtnY;
@@ -451,7 +451,7 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
                         optColor = MaterialSurface.unified() ? AuroraTheme.TEXT_PRIMARY : AuroraTheme.TEXT_ACCENT;
                     }
 
-                    ctx.drawString(tr, optName, optTextX, optTextY, optColor, false);
+                    ctx.text(tr, optName, optTextX, optTextY, optColor, false);
                 }
             }
 

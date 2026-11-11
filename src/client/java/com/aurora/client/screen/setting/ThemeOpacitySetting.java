@@ -2,7 +2,7 @@ package com.aurora.client.screen.setting;
 
 import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.ui.component.Slider;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.function.DoubleConsumer;
@@ -76,20 +76,20 @@ public class ThemeOpacitySetting extends SliderSetting {
     @Override protected int trackInset() { return 26; }
 
     @Override
-    public void render(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
+    public void render(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {
         renderShapes(ctx, x, y, width, mouseX, mouseY);
         renderOverlay(ctx, x, y, width, mouseX, mouseY);
     }
 
     @Override
-    public void renderShapes(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
+    public void renderShapes(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {
         // Track only — static given the roundness token, so it lives in the
         // cached static layer (drawn through the shared themed slider).
         drawTrackShapes(ctx, x, y, width);
     }
 
     @Override
-    public void renderOverlay(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
+    public void renderOverlay(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {
         // Flush a deferred live apply once the throttle interval elapsed.
         if (throttle.due()) flushPending();
 

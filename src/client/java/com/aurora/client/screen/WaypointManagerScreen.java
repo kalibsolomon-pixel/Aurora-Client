@@ -18,7 +18,7 @@ import com.aurora.client.ui.interaction.SemanticActionControl;
 import com.aurora.client.ui.render.blur.BlurPanelRenderer;
 import com.aurora.client.util.WorldScope;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -285,7 +285,7 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
      * glass — its pass is a no-op by eligibility, called for uniformity.
      */
     @Override
-    protected void paintRowGlassPass(GuiGraphics ctx, int x, int y, int w, Waypoint wp) {
+    protected void paintRowGlassPass(GuiGraphicsExtractor ctx, int x, int y, int w, Waypoint wp) {
         // Static shapes (rings + row tint) come from the shared row template
         // (see ManagerListScreen); the row panel still renders live below, and
         // the Copy/Color/Delete buttons supply their own surfaces.
@@ -326,7 +326,7 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
     }
 
     @Override
-    protected void paintRow(GuiGraphics ctx, int x, int y, int w, Waypoint wp, int index,
+    protected void paintRow(GuiGraphicsExtractor ctx, int x, int y, int w, Waypoint wp, int index,
                             int mouseX, int mouseY) {
         // The row surface (shadow + glass) was painted in the glass pass,
         // under the dim — see paintRowGlassPass. Only the flat fallback
@@ -359,7 +359,7 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
             String name = fitName(wp.name == null ? "" : wp.name);
             com.aurora.client.worldmap.MapMarkers.waypoint(ctx, cx + 6, y + 8, wp,
                     WaypointFeature.get() != null && wp.id.equals(WaypointFeature.get().navigationId()));
-            ctx.drawString(this.font, name,
+            ctx.text(this.font, name,
                     cx + 16, y + 4,
                     ThemeManager.color(ThemeToken.ON_BACKGROUND), false);
         }
@@ -374,7 +374,7 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
                     wp, player.getX(), player.getZ()))) + "m";
         else coords += " · " + wp.dimension;
         coords = this.font.plainSubstrByWidth(coords, nameWidth());
-        ctx.drawString(this.font, coords,
+        ctx.text(this.font, coords,
                 x + ROW_INSET + SWATCH_W + CONTROL_GAP, y + 16,
                 ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_BACKGROUND), 0x88), false);
         cx += COORDS_W + CONTROL_GAP;
@@ -595,7 +595,7 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
     // ------------------------------------------------------------------
 
     @Override
-    protected void paintEditorGlassPass(GuiGraphics ctx, List<Waypoint> rows, int listX) {
+    protected void paintEditorGlassPass(GuiGraphicsExtractor ctx, List<Waypoint> rows, int listX) {
         // Position ALWAYS (fresh bounds every frame — a hidden editor must
         // never keep a stale rect in the band), then paint only when a
         // pixel is visible. The base scissors this call to the list clip.
@@ -604,7 +604,7 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
     }
 
     @Override
-    protected void paintTail(GuiGraphics ctx, int mouseX, int mouseY, float delta,
+    protected void paintTail(GuiGraphicsExtractor ctx, int mouseX, int mouseY, float delta,
                              List<Waypoint> rows, int listX) {
         // Transient toast for clipboard copies. Fades over the last 250ms
         // of its lifetime so the visual confirmation isn't jarring.

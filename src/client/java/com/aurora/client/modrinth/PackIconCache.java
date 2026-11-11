@@ -185,7 +185,7 @@ public final class PackIconCache {
     }
 
     /** Pipeline id for blitting cached icons via {@link RenderPipelines#GUI_TEXTURED}. */
-    public static void blitIcon(net.minecraft.client.gui.GuiGraphics g, Identifier id,
+    public static void blitIcon(net.minecraft.client.gui.GuiGraphicsExtractor g, Identifier id,
                                  int x, int y, int size) {
         Entry entry = LOADED.values().stream().filter(e -> e.textureId.equals(id)).findFirst().orElse(null);
         if (entry == null) return;

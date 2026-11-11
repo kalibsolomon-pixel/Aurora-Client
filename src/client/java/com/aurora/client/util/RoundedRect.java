@@ -1,6 +1,6 @@
 package com.aurora.client.util;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -24,7 +24,7 @@ public final class RoundedRect {
     private static final Map<Integer, float[][]> CORNER_FILL_CACHE = new HashMap<>();
     private static final Map<Integer, int[][]> CORNER_OUTLINE_CACHE = new HashMap<>();
 
-    public static void fill(GuiGraphics ctx, int x1, int y1, int x2, int y2, int radius, int color) {
+    public static void fill(GuiGraphicsExtractor ctx, int x1, int y1, int x2, int y2, int radius, int color) {
         if (radius <= 0) {
             ctx.fill(x1, y1, x2, y2, color);
             return;
@@ -48,7 +48,7 @@ public final class RoundedRect {
         applyCornerFill(ctx, x2 - r, y2 - r, r, color, mask, true, true);
     }
 
-    public static void outline(GuiGraphics ctx, int x1, int y1, int x2, int y2, int radius, int color) {
+    public static void outline(GuiGraphicsExtractor ctx, int x1, int y1, int x2, int y2, int radius, int color) {
         int r = Math.max(0, Math.min(radius, Math.min((x2 - x1) / 2, (y2 - y1) / 2)));
 
         ctx.fill(x1 + r, y1,         x2 - r, y1 + 1,     color);
@@ -108,7 +108,7 @@ public final class RoundedRect {
      * <p>The mask is the cached antialiasing coverage table; {@code flipX}
      * and {@code flipY} mirror it for the other three corners.
      */
-    private static void applyCornerFill(GuiGraphics ctx, int cellX, int cellY, int r, int color,
+    private static void applyCornerFill(GuiGraphicsExtractor ctx, int cellX, int cellY, int r, int color,
                                         float[][] mask, boolean flipX, boolean flipY) {
         // alpha of the body (the mask's max value, used to detect full-opacity runs).
         for (int y = 0; y < r; y++) {

@@ -1,7 +1,7 @@
 package com.aurora.client.mixin;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.multiplayer.ServerSelectionList;
 import net.minecraft.client.multiplayer.ServerData;
 import org.spongepowered.asm.mixin.Final;
@@ -29,8 +29,8 @@ public abstract class MultiplayerServerListWidgetMixin {
 
     /** Skips the status icon's blit when it is one of the ping / pinging bar sprites. */
     @WrapWithCondition(method = "renderContent", require = 0, at = @At(value = "INVOKE", ordinal = 0,
-            target = "Lnet/minecraft/client/gui/GuiGraphics;blitSprite(Lcom/mojang/blaze3d/pipeline/RenderPipeline;Lnet/minecraft/resources/Identifier;IIII)V"))
-    private boolean aurora$hidePingBars(GuiGraphics ctx, RenderPipeline pipeline, Identifier sprite, int x, int y, int w, int h) {
+            target = "Lnet/minecraft/client/gui/GuiGraphicsExtractor;blitSprite(Lcom/mojang/blaze3d/pipeline/RenderPipeline;Lnet/minecraft/resources/Identifier;IIII)V"))
+    private boolean aurora$hidePingBars(GuiGraphicsExtractor ctx, RenderPipeline pipeline, Identifier sprite, int x, int y, int w, int h) {
         return !aurora$isPingBars(sprite);
     }
 
@@ -42,7 +42,7 @@ public abstract class MultiplayerServerListWidgetMixin {
 
     @Inject(method = "renderContent", at = @At("TAIL"), require = 0)
     private void aurora$replacePingIcon(
-            GuiGraphics ctx, int mouseX, int mouseY, boolean hovered, float tickDelta,
+            GuiGraphicsExtractor ctx, int mouseX, int mouseY, boolean hovered, float tickDelta,
             CallbackInfo ci) {
 
         if (serverData == null) return;
@@ -86,7 +86,7 @@ public abstract class MultiplayerServerListWidgetMixin {
         // applies to our latency label in AURORA_ONLY mode.
         com.aurora.client.ui.util.AuroraFontRenderer.setRenderingAuroraUI(true);
         try {
-            ctx.drawString(client.font, label, textX, textY, color, false);
+            ctx.text(client.font, label, textX, textY, color, false);
         } finally {
             com.aurora.client.ui.util.AuroraFontRenderer.setRenderingAuroraUI(false);
         }

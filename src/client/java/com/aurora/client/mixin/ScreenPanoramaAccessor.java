@@ -1,6 +1,6 @@
 package com.aurora.client.mixin;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Invoker;
@@ -19,5 +19,5 @@ import org.spongepowered.asm.mixin.gen.Invoker;
 public interface ScreenPanoramaAccessor {
 
     @Invoker("renderPanorama")
-    void aurora$invokeRenderPanorama(GuiGraphics graphics, float partialTick);
+    void aurora$invokeRenderPanorama(GuiGraphicsExtractor graphics, float partialTick);
 }

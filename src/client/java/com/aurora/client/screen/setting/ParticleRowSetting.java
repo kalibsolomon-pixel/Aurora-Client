@@ -5,7 +5,7 @@ import com.aurora.client.ui.interaction.SemanticActionControl;
 import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 /**
  * Collapsible row for the per-particle controls list.
@@ -133,12 +133,12 @@ public class ParticleRowSetting extends FeatureSetting {
     }
 
     @Override
-    public void render(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
+    public void render(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {
         Font tr = Minecraft.getInstance().font;
         int textY = y + (HEADER_H - tr.lineHeight) / 2;
 
         // Display name on the left.
-        ctx.drawString(tr, label, x + 12, textY, AuroraTheme.IOS_LABEL, false);
+        ctx.text(tr, label, x + 12, textY, AuroraTheme.IOS_LABEL, false);
 
         // State summary on the right, before the disclosure slot.
         Boolean v = AuroraConfig.get().particleVisibility.get(particleId);
@@ -148,7 +148,7 @@ public class ParticleRowSetting extends FeatureSetting {
         String summary = on ? Math.round(scale * 100f) + "%" : "Off";
         int sumW = tr.width(summary);
         int rightEdge = x + width - 12;
-        ctx.drawString(tr, summary, rightEdge - CHEV_SLOT - sumW, textY,
+        ctx.text(tr, summary, rightEdge - CHEV_SLOT - sumW, textY,
                 on ? AuroraTheme.IOS_SECONDARY_LABEL : AuroraTheme.IOS_TERTIARY_LABEL, false);
 
         // Color swatch indicator between summary and disclosure, so the

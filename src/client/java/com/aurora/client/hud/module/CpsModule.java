@@ -5,7 +5,7 @@ import com.aurora.client.feature.impl.ClickTrackerFeature;
 import com.aurora.client.util.CachedValue;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 /**
  * "L: 5 CPS   R: 2 CPS" single-line display.
@@ -53,11 +53,11 @@ public class CpsModule extends HudModule {
     }
 
     @Override
-    protected void renderContent(GuiGraphics ctx, Minecraft client, int x, int y) {
+    protected void renderContent(GuiGraphicsExtractor ctx, Minecraft client, int x, int y) {
         if (!AuroraConfig.get().cpsEnabled) return;
         Font tr = client.font;
         if (tr == null) return;
-        ctx.drawString(tr, textCache.get(), x, y,
+        ctx.text(tr, textCache.get(), x, y,
                 com.aurora.client.theme.HudText.color(AuroraConfig.get().cpsTextColor, AuroraConfig.get().hudColor), false);
     }
 }

@@ -5,7 +5,7 @@ import com.aurora.client.feature.impl.ToggleSprintFeature;
 import com.aurora.client.util.CachedValue;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 
 /**
@@ -140,7 +140,7 @@ public class ToggleSprintSneakModule extends HudModule {
     }
 
     @Override
-    protected void renderContent(GuiGraphics ctx, Minecraft client, int x, int y) {
+    protected void renderContent(GuiGraphicsExtractor ctx, Minecraft client, int x, int y) {
         AuroraConfig cfg = AuroraConfig.get();
         if (!cfg.toggleSprintSneakEnabled) return;
         if (!cfg.toggleSprintSneakHudEnabled) return;
@@ -164,28 +164,28 @@ public class ToggleSprintSneakModule extends HudModule {
      * Renders the compact single-line bracketed status. Draws nothing
      * when neither toggle is active.
      */
-    private void renderBracketed(GuiGraphics ctx, Font tr, int x, int y) {
+    private void renderBracketed(GuiGraphicsExtractor ctx, Font tr, int x, int y) {
         boolean sprint = ToggleSprintFeature.isSprintToggled();
         boolean sneak  = ToggleSprintFeature.isSneakToggled();
         if (!sprint && !sneak) return;
 
         int drawX = x;
         if (sprint) {
-            ctx.drawString(tr, BRACKET_SPRINT, drawX, y, textColor(COLOR_ON), false);
+            ctx.text(tr, BRACKET_SPRINT, drawX, y, textColor(COLOR_ON), false);
             drawX += tr.width(BRACKET_SPRINT);
         }
         if (sprint && sneak) {
-            ctx.drawString(tr, SEPARATOR, drawX, y, textColor(0xFFFFFFFF), false);
+            ctx.text(tr, SEPARATOR, drawX, y, textColor(0xFFFFFFFF), false);
             drawX += tr.width(SEPARATOR);
         }
         if (sneak) {
-            ctx.drawString(tr, BRACKET_SNEAK, drawX, y, textColor(COLOR_ON), false);
+            ctx.text(tr, BRACKET_SNEAK, drawX, y, textColor(COLOR_ON), false);
         }
     }
 
-    private static void drawRow(GuiGraphics ctx, Font tr, int x, int y,
+    private static void drawRow(GuiGraphicsExtractor ctx, Font tr, int x, int y,
                                 Component label, int labelWidth, boolean on) {
-        ctx.drawString(tr, label, x, y, textColor(0xFFFFFFFF), false);
-        ctx.drawString(tr, on ? TEXT_ON : TEXT_OFF, x + labelWidth, y, textColor(on ? COLOR_ON : COLOR_OFF), false);
+        ctx.text(tr, label, x, y, textColor(0xFFFFFFFF), false);
+        ctx.text(tr, on ? TEXT_ON : TEXT_OFF, x + labelWidth, y, textColor(on ? COLOR_ON : COLOR_OFF), false);
     }
 }

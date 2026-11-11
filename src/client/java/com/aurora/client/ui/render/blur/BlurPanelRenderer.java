@@ -10,7 +10,7 @@ import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.textures.GpuTexture;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.resources.Identifier;
@@ -63,7 +63,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * The composite shader outputs <b>STRAIGHT (non-premultiplied) alpha</b>:
  * RGB is the blurred backdrop sample, A is the rounded-rect coverage mask
  * (commented at the shader's output line below). The texture is uploaded
- * straight-alpha and drawn through {@code GuiGraphics.blit} with the
+ * straight-alpha and drawn through {@code GuiGraphicsExtractor.blit} with the
  * standard GUI pipeline (src-alpha / 1-minus-src-alpha) — the same path
  * every vanilla GUI texture takes, so no custom blend state exists
  * anywhere in this class.
@@ -107,7 +107,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * <h2>Final blit path</h2>
  * The composite is read back ({@code glReadPixels}) into a
  * {@link NativeImage}-backed {@link DynamicTexture} and drawn with the
- * standard {@code GuiGraphics.blit} so it composites in correct GUI draw
+ * standard {@code GuiGraphicsExtractor.blit} so it composites in correct GUI draw
  * order — the identical, proven mechanism {@code UiLayerCache} uses. The
  * per-frame readback costs ~1-2 ms for one panel-sized region; simple and
  * proven beats fast and fragile for this foundation pass.
@@ -242,7 +242,7 @@ public final class BlurPanelRenderer {
      * proportionally over the panel's screen region) instead of the live
      * framebuffer.
      *
-     * <p>Why this exists: batched {@code GuiGraphics} fills (like the test
+     * <p>Why this exists: batched {@code GuiGraphicsExtractor} fills (like the test
      * screen's SOLID/STRIPES backdrop) only reach the framebuffer when the
      * GUI batch flushes — AFTER the immediate GL capture inside
      * {@code renderPanel} — so without this override a "static backdrop"
@@ -376,7 +376,7 @@ public final class BlurPanelRenderer {
     private static int outW, outH;
 
     // ---- output texture pool (registered with the TextureManager) ----
-    // 1.21.11's GuiGraphics RECORDS blits into a deferred GuiRenderState;
+    // 1.21.11's GuiGraphicsExtractor RECORDS blits into a deferred GuiRenderState;
     // there is no flush API. Two glass panels blitted in the same frame
     // therefore cannot share one texture object — the second upload would
     // retroactively change the first (still-pending) blit. Each concurrent
@@ -649,7 +649,7 @@ public final class BlurPanelRenderer {
      * <p>Re-captures and re-blurs on EVERY call, by design: the backdrop is
      * live (the world moves behind the panel), so caching would freeze it.
      *
-     * @param g the screen's GuiGraphics
+     * @param g the screen's GuiGraphicsExtractor
      * @param guiX/guiY/guiW/guiH panel rect in GUI-space units
      * @param cornerRadiusGui rounded-corner radius in GUI units (matches the
      *                        theme corner style the caller draws with)
@@ -658,7 +658,7 @@ public final class BlurPanelRenderer {
      *                     return {@code false} — the "before" case of a
      *                     before/after screenshot
      */
-    public static boolean renderPanel(GuiGraphics g, float guiX, float guiY, float guiW, float guiH,
+    public static boolean renderPanel(GuiGraphicsExtractor g, float guiX, float guiY, float guiW, float guiH,
                                       float cornerRadiusGui, float blurRadiusPx) {
         return renderPanel(g, guiX, guiY, guiW, guiH, cornerRadiusGui, blurRadiusPx, null);
     }
@@ -672,21 +672,21 @@ public final class BlurPanelRenderer {
      *
      * @param lighting lighting parameters, or null to disable lighting
      */
-    public static boolean renderPanel(GuiGraphics g, float guiX, float guiY, float guiW, float guiH,
+    public static boolean renderPanel(GuiGraphicsExtractor g, float guiX, float guiY, float guiW, float guiH,
                                       float cornerRadiusGui, float blurRadiusPx, Lighting lighting) {
         return renderPanel(g, guiX, guiY, guiW, guiH, cornerRadiusGui, blurRadiusPx, lighting,
                 Priority.CONTROL, null);
     }
 
     /**
-     * {@link #renderPanel(GuiGraphics, float, float, float, float, float, float, Lighting)}
+     * {@link #renderPanel(GuiGraphicsExtractor, float, float, float, float, float, float, Lighting)}
      * with an explicit degradation {@link Priority}. The lighting-only
      * variants default to {@link Priority#CONTROL}; windows/containers pass
      * {@link Priority#WINDOW}, repeated rows/tiles/cards {@link Priority#ROW},
      * and repeated small elements inside them {@link Priority#DETAIL}. Only
      * consulted on frames whose demand exceeds the output pool.
      */
-    public static boolean renderPanel(GuiGraphics g, float guiX, float guiY, float guiW, float guiH,
+    public static boolean renderPanel(GuiGraphicsExtractor g, float guiX, float guiY, float guiW, float guiH,
                                       float cornerRadiusGui, float blurRadiusPx, Lighting lighting,
                                       Priority priority) {
         return renderPanel(g, guiX, guiY, guiW, guiH, cornerRadiusGui, blurRadiusPx, lighting,
@@ -715,7 +715,7 @@ public final class BlurPanelRenderer {
      * finish driven by the one opacity value — NOT an opacity application
      * point (it changes no fill alpha).
      */
-    public static void drawRimFinish(GuiGraphics g, float x, float y, float w, float h, float cornerRadiusGui) {
+    public static void drawRimFinish(GuiGraphicsExtractor g, float x, float y, float w, float h, float cornerRadiusGui) {
         double opacity = ThemeManager.current().backgroundOpacity();
         int alpha = Math.round((float) (opacity * opacity) * 255f);
         if (alpha <= 0) return;
@@ -791,7 +791,7 @@ public final class BlurPanelRenderer {
      *
      * <p>HISTORY (the "Reset kills glass for the session" bug): this used to
      * be a wholesale {@code releaseRimMasks()} on overflow, called from the
-     * middle of a frame's rendering. 1.21.11's {@code GuiGraphics} RECORDS
+     * middle of a frame's rendering. 1.21.11's {@code GuiGraphicsExtractor} RECORDS
      * blits into a deferred {@code GuiRenderState} and there is no flush API,
      * so masks already blitted earlier in that same frame were still pending
      * when their {@code DynamicTexture} was closed. At submit time the driver
@@ -913,7 +913,7 @@ public final class BlurPanelRenderer {
      * @param captureSource synthetic backdrop FBO, or null to capture the
      *                      live framebuffer behind the panel
      */
-    public static boolean renderPanel(GuiGraphics g, float guiX, float guiY, float guiW, float guiH,
+    public static boolean renderPanel(GuiGraphicsExtractor g, float guiX, float guiY, float guiW, float guiH,
                                       float cornerRadiusGui, float blurRadiusPx, Lighting lighting,
                                       CaptureSource captureSource) {
         return renderPanel(g, guiX, guiY, guiW, guiH, cornerRadiusGui, blurRadiusPx, lighting,
@@ -927,7 +927,7 @@ public final class BlurPanelRenderer {
      * @param priority degradation priority under pool pressure (null =
      *                 {@link Priority#CONTROL}); see {@link Priority}
      */
-    public static boolean renderPanel(GuiGraphics g, float guiX, float guiY, float guiW, float guiH,
+    public static boolean renderPanel(GuiGraphicsExtractor g, float guiX, float guiY, float guiW, float guiH,
                                       float cornerRadiusGui, float blurRadiusPx, Lighting lighting,
                                       Priority priority, CaptureSource captureSource) {
         return renderPanelInternal(g,guiX,guiY,guiW,guiH,cornerRadiusGui,blurRadiusPx,
@@ -936,12 +936,12 @@ public final class BlurPanelRenderer {
 
     /** Unified pilot: bypasses only the retained legacy style preference.
      * Every capture, screenshot, scissor, capacity and GL safety guard remains shared. */
-    public static boolean renderUnifiedPanel(GuiGraphics g,float x,float y,float w,float h,float r,
+    public static boolean renderUnifiedPanel(GuiGraphicsExtractor g,float x,float y,float w,float h,float r,
                                              float blur,Lighting lighting,Priority priority) {
         return renderPanelInternal(g,x,y,w,h,r,blur,lighting,priority,null,true);
     }
 
-    private static boolean renderPanelInternal(GuiGraphics g,float guiX,float guiY,float guiW,float guiH,
+    private static boolean renderPanelInternal(GuiGraphicsExtractor g,float guiX,float guiY,float guiW,float guiH,
             float cornerRadiusGui,float blurRadiusPx,Lighting lighting,Priority priority,
             CaptureSource captureSource,boolean unified) {
         if (priority == null) priority = Priority.CONTROL;
@@ -1011,7 +1011,7 @@ public final class BlurPanelRenderer {
 
             // Panel rect in device pixels, clamped to the framebuffer.
             // Derived from (int)guiX * scale — the SAME quantization the
-            // final GuiGraphics.blit applies (it can only place the quad at
+            // final GuiGraphicsExtractor.blit applies (it can only place the quad at
             // integer GUI coordinates) — NOT round(guiX * scale). HISTORY:
             // round() disagreed with the blit grid by up to one GUI pixel
             // for fractional panel positions (e.g. a centered panel at odd
@@ -1111,10 +1111,10 @@ public final class BlurPanelRenderer {
             this.unified = unified;
         }
 
-        boolean run(GuiGraphics g, float guiX, float guiY, float guiW, float guiH) {
+        boolean run(GuiGraphicsExtractor g, float guiX, float guiY, float guiW, float guiH) {
             // Claim this call's pooled output texture FIRST (see the output
             // pool note above): each concurrent panel in a frame needs its
-            // own texture object, because 1.21.11's GuiGraphics defers all
+            // own texture object, because 1.21.11's GuiGraphicsExtractor defers all
             // blits and a shared texture would show the LAST upload in
             // every pending blit.
             out = nextOutput(priority);
@@ -1503,7 +1503,7 @@ public final class BlurPanelRenderer {
         // --- 5. Blit through the normal GUI path (straight-alpha texture,
         // standard src-alpha GUI blending) so the panel composites in
         // correct draw order — the same mechanism UiLayerCache uses.
-        private void blit(GuiGraphics g, float guiX, float guiY, float guiW, float guiH) {
+        private void blit(GuiGraphicsExtractor g, float guiX, float guiY, float guiW, float guiH) {
             // The quad is placed at the panel's CLIPPED device rect mapped
             // back to GUI units and sized to the clipped texture — a panel
             // partially offscreen (e.g. a long scrolled settings window)

@@ -10,7 +10,7 @@ import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
 import net.minecraft.client.gui.screens.worldselection.SelectWorldScreen;
@@ -96,7 +96,7 @@ public abstract class EditBoxMixin implements GlassEditBox {
      * field's current bounds — the screen positions it before calling.
      */
     @Override
-    public void aurora$renderGlassPass(GuiGraphics ctx) {
+    public void aurora$renderGlassPass(GuiGraphicsExtractor ctx) {
         EditBox self = (EditBox) (Object) this;
         aurora$glassPassFrame = GlassSurface.frame();
         aurora$glassPassDrew = self.visible && aurora$themedScreen(Minecraft.getInstance())
@@ -105,7 +105,7 @@ public abstract class EditBoxMixin implements GlassEditBox {
     }
 
     @Inject(method = "renderWidget", at = @At("HEAD"), cancellable = true)
-    private void aurora$renderCustomStyle(GuiGraphics ctx, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+    private void aurora$renderCustomStyle(GuiGraphicsExtractor ctx, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         Minecraft mc = Minecraft.getInstance();
         if (!aurora$themedScreen(mc)) return;
 
@@ -160,7 +160,7 @@ public abstract class EditBoxMixin implements GlassEditBox {
         if (value.isEmpty()) {
             // Placeholder hint text
             if (hint != null) {
-                ctx.drawString(font, hint, innerX, textY,
+                ctx.text(font, hint, innerX, textY,
                         MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED), false);
             }
         } else {
@@ -168,7 +168,7 @@ public abstract class EditBoxMixin implements GlassEditBox {
             // queries stay visible as the user types.
             int safeDisp = Math.min(displayPos, value.length());
             String visible = value.substring(safeDisp);
-            ctx.drawString(font, visible, innerX - safeDisp, textY, textCol, false);
+            ctx.text(font, visible, innerX - safeDisp, textY, textCol, false);
         }
         ctx.disableScissor();
 

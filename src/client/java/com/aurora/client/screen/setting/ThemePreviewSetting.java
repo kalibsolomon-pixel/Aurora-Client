@@ -13,7 +13,7 @@ import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 /**
  * Non-interactive live-preview card for the theme settings screen (Stage 3)
@@ -81,13 +81,13 @@ public class ThemePreviewSetting extends FeatureSetting {
     @Override public int height() { return PREVIEW_H; }
 
     @Override
-    public void render(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
+    public void render(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {
         renderShapes(ctx, x, y, width, mouseX, mouseY);
         renderOverlay(ctx, x, y, width, mouseX, mouseY);
     }
 
     @Override
-    public void renderShapes(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
+    public void renderShapes(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {
         if(MaterialSurface.unified()) return;
         // The preview card + mock controls are the shared themed components
         // themselves — a theme reload is literally the preview update.
@@ -150,7 +150,7 @@ public class ThemePreviewSetting extends FeatureSetting {
      * glass integration uses.
      */
     @Override
-    public void renderGlassPass(GuiGraphics ctx, int x, int y, int width) {
+    public void renderGlassPass(GuiGraphicsExtractor ctx, int x, int y, int width) {
         if(MaterialSurface.unified()) return;
         int cardX = x + PAD_X;
         int cardY = y + PAD_Y;
@@ -193,7 +193,7 @@ public class ThemePreviewSetting extends FeatureSetting {
     }
 
     @Override
-    public void renderOverlay(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
+    public void renderOverlay(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {
         Font tr = Minecraft.getInstance().font;
         int px = x + PAD_X;
         int py = y + PAD_Y;
@@ -219,9 +219,9 @@ public class ThemePreviewSetting extends FeatureSetting {
 
         int tx = px + 12;
         int ty = py + 10;
-        ctx.drawString(tr, "Primary text", tx, ty, MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
-        ctx.drawString(tr, "Secondary text", tx, ty + 12, MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
-        ctx.drawString(tr, "Muted text", tx, ty + 24, MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED), false);
+        ctx.text(tr, "Primary text", tx, ty, MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
+        ctx.text(tr, "Secondary text", tx, ty + 12, MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
+        ctx.text(tr, "Muted text", tx, ty + 24, MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED), false);
     }
 
     @Override

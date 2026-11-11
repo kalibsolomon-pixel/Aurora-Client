@@ -13,7 +13,7 @@ import com.mojang.blaze3d.textures.TextureFormat;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.texture.AbstractTexture;
 import net.minecraft.resources.Identifier;
@@ -84,7 +84,7 @@ final class PortableBlurRenderer {
         }
     }
 
-    static boolean render(GuiGraphics graphics, Output output, RenderTarget main,
+    static boolean render(GuiGraphicsExtractor graphics, Output output, RenderTarget main,
                           int x, int y, int rx, int ry, int rw, int rh,
                           int width, int height, int scale, float radius, float corner,
                           BlurPanelRenderer.Lighting lighting, boolean unified,

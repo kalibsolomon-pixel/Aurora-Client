@@ -83,13 +83,13 @@ public abstract class MixinFont {
     }
 
     // ========================================================================
-    //  prepareText interception (MC 1.21.11+ path — used by GuiGraphics)
+    //  prepareText interception (MC 1.21.11+ path — used by GuiGraphicsExtractor)
     //
-    //  In MC 1.21.11, GuiGraphics.drawString was refactored to call
+    //  In MC 1.21.11, GuiGraphicsExtractor.drawString was refactored to call
     //  Font.prepareText directly instead of Font.drawInBatch. Since the
     //  drawInBatch interceptors above don't catch this path, we must also
     //  intercept prepareText to ensure the custom font is applied to ALL
-    //  text rendered through GuiGraphics (module labels, detail screens,
+    //  text rendered through GuiGraphicsExtractor (module labels, detail screens,
     //  vanilla menus, buttons, etc.).
     // ========================================================================
 

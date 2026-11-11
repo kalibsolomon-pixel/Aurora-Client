@@ -12,7 +12,7 @@ import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.network.chat.Component;
@@ -29,7 +29,7 @@ import java.util.List;
  *       and submits 3D geometry: the beam column and/or block highlight
  *       cubes. Pure vertex output via {@code RenderTypes.debugQuads()}.</li>
  *   <li>{@link #renderHud} — hooks {@code HudRenderCallback} and draws the
- *       screen-space name + distance labels using {@link GuiGraphics}.
+ *       screen-space name + distance labels using {@link GuiGraphicsExtractor}.
  *       Uses {@link net.minecraft.client.renderer.GameRenderer#projectPointToScreen}
  *       (the same projector vanilla 1.21+ uses for tracked waypoints) so
  *       labels stay perfectly aligned with the world point. Drawing on
@@ -119,11 +119,11 @@ public final class WaypointRenderer {
     /**
      * HUD-phase label pass. Iterates every active waypoint, projects its
      * anchor point through {@link net.minecraft.client.renderer.GameRenderer#projectPointToScreen},
-     * and draws the name + distance with {@link GuiGraphics}. Off-screen
+     * and draws the name + distance with {@link GuiGraphicsExtractor}. Off-screen
      * waypoints are clamped to the screen edge with a small directional
      * arrow so users always know where they are.
      */
-    public void renderHud(GuiGraphics g, DeltaTracker tickCounter) {
+    public void renderHud(GuiGraphicsExtractor g, DeltaTracker tickCounter) {
         Minecraft mc = Minecraft.getInstance();
         if (mc == null || mc.level == null || mc.player == null) return;
         if (mc.screen != null) return;
@@ -239,7 +239,7 @@ public final class WaypointRenderer {
      * for hierarchy. When {@code clamped} is true a small chevron is
      * drawn under the label to signal "this waypoint is off-screen".
      */
-    private static void drawHudLabel(GuiGraphics g, Font font,
+    private static void drawHudLabel(GuiGraphicsExtractor g, Font font,
                                       float screenX, float screenY,
                                       String name, String dist,
                                       Waypoint waypoint, boolean selected, double scaleFactor,

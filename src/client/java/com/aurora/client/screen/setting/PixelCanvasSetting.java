@@ -11,7 +11,7 @@ import com.aurora.client.util.GridDims;
 import com.aurora.client.util.HoverAnim;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.network.chat.Component;
 
@@ -24,7 +24,7 @@ import java.util.function.Supplier;
  * Pixel-canvas editor row for the crosshair CUSTOM style.
  *
  * <p><b>Rendering (performance fix, 2026-08-29):</b> the grid used to be
- * submitted as 4 {@code GuiGraphics.fill()} calls per cell — every frame
+ * submitted as 4 {@code GuiGraphicsExtractor.fill()} calls per cell — every frame
  * (4,356 submissions + ~8.7k allocations at the 33×33 preset, ~12.8 ms
  * CPU/frame measured). The whole grid is now rasterized once into a
  * {@link CanvasTexture} (NativeImage → DynamicTexture) and drawn as ONE
@@ -244,7 +244,7 @@ public class PixelCanvasSetting extends FeatureSetting {
      * guards identically.
      */
     @Override
-    public void renderGlassPass(GuiGraphics ctx, int x, int y, int width) {
+    public void renderGlassPass(GuiGraphicsExtractor ctx, int x, int y, int width) {
         if (!com.aurora.client.ui.component.GlassSurface.passOpen()) return; // legacy frame order
         if (isDisabled()) return;
         Font tr = Minecraft.getInstance().font;
@@ -264,7 +264,7 @@ public class PixelCanvasSetting extends FeatureSetting {
     }
 
     @Override
-    public void render(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
+    public void render(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {
         lastWidth = width;
         Font tr = Minecraft.getInstance().font;
         if (tr == null) return;
@@ -292,7 +292,7 @@ public class PixelCanvasSetting extends FeatureSetting {
         RenderUtil.drawSquircleOutline(ctx, clearBtnX, clearBtnY, CLEAR_BTN_W, CLEAR_BTN_H, AuroraTheme.RADIUS_SMALL, 1.0f, clearBorder);
         String clearLabel = "Clear";
         int clearLabelW = tr.width(clearLabel);
-        ctx.drawString(tr, clearLabel,
+        ctx.text(tr, clearLabel,
                 clearBtnX + (CLEAR_BTN_W - clearLabelW) / 2,
                 clearBtnY + (CLEAR_BTN_H - tr.lineHeight) / 2 + 1,
                 clearText, false);
@@ -309,7 +309,7 @@ public class PixelCanvasSetting extends FeatureSetting {
         widthField.setY(sizeRowY + (SIZE_ROW_H - FIELD_H) / 2);
         widthField.setWidth(FIELD_W);
         int sepX = wx + FIELD_W + 2;
-        ctx.drawString(tr, "×", sepX + 1, sizeRowY + (SIZE_ROW_H - tr.lineHeight) / 2,
+        ctx.text(tr, "×", sepX + 1, sizeRowY + (SIZE_ROW_H - tr.lineHeight) / 2,
                 AuroraTheme.TEXT_SECONDARY, false);
         int hx = sepX + tr.width("×") + 4;
         heightField.setX(hx);
@@ -325,8 +325,8 @@ public class PixelCanvasSetting extends FeatureSetting {
         drawDefaultButton(ctx, tr, mouseX, mouseY, disabled);
 
         if (!disabled) {
-            widthField.render(ctx, mouseX, mouseY, 0f);
-            heightField.render(ctx, mouseX, mouseY, 0f);
+            widthField.extractRenderState(ctx, mouseX, mouseY, 0f);
+            heightField.extractRenderState(ctx, mouseX, mouseY, 0f);
         }
 
         // Canvas origin — assigned BEFORE anything reads it this frame
@@ -338,7 +338,7 @@ public class PixelCanvasSetting extends FeatureSetting {
         // Status line — drawn under the canvas (never overlaps the fields
         // or buttons; transient until the next action).
         if (status != null) {
-            ctx.drawString(tr, status, x + 14, canvasY + getCanvasH() + 5,
+            ctx.text(tr, status, x + 14, canvasY + getCanvasH() + 5,
                     statusIsError ? STATUS_ERR : STATUS_INFO, false);
         }
 
@@ -380,9 +380,9 @@ public class PixelCanvasSetting extends FeatureSetting {
                         + String.format(java.util.Locale.ROOT, "%.1f", warnMeasuredMs)
                         + " ms per redraw — may impact FPS while editing.";
             }
-            ctx.drawString(tr, l1, x + 22, wpy + 6, AuroraTheme.TEXT_PRIMARY, false);
+            ctx.text(tr, l1, x + 22, wpy + 6, AuroraTheme.TEXT_PRIMARY, false);
             String l2 = hardwareContext();
-            ctx.drawString(tr, l2, x + 22, wpy + 6 + tr.lineHeight + 2, STATUS_INFO, false);
+            ctx.text(tr, l2, x + 22, wpy + 6 + tr.lineHeight + 2, STATUS_INFO, false);
 
             warnBtnY = wpy + 6 + (tr.lineHeight + 2) * 2 + 2;
             warnBtnApplyX = x + 22;
@@ -396,7 +396,7 @@ public class PixelCanvasSetting extends FeatureSetting {
         renderDescription(ctx, x, y + getControlH(), width);
     }
 
-    private void drawApplyButton(GuiGraphics ctx, Font tr, int mouseX, int mouseY, boolean disabled) {
+    private void drawApplyButton(GuiGraphicsExtractor ctx, Font tr, int mouseX, int mouseY, boolean disabled) {
         boolean hover = !disabled && Widget.inBounds(mouseX, mouseY, applyBtnX, applyBtnY, APPLY_W, CLEAR_BTN_H);
         float t = applyHoverAnim.update(hover);
         int fill   = disabled ? 0x22FFFFFF : AuroraAnim.lerpArgb(AuroraTheme.PANEL_OFF, AuroraTheme.PANEL_OFF_HOVER, t);
@@ -405,7 +405,7 @@ public class PixelCanvasSetting extends FeatureSetting {
         RenderUtil.drawSquircle(ctx, applyBtnX, applyBtnY, APPLY_W, CLEAR_BTN_H, AuroraTheme.RADIUS_SMALL, fill);
         RenderUtil.drawSquircleOutline(ctx, applyBtnX, applyBtnY, APPLY_W, CLEAR_BTN_H, AuroraTheme.RADIUS_SMALL, 1.0f, border);
         String lbl = "Apply";
-        ctx.drawString(tr, lbl, applyBtnX + (APPLY_W - tr.width(lbl)) / 2,
+        ctx.text(tr, lbl, applyBtnX + (APPLY_W - tr.width(lbl)) / 2,
                 applyBtnY + (CLEAR_BTN_H - tr.lineHeight) / 2 + 1, text, false);
         if (applyControl == null) applyControl = createControl("Apply Resolution",
                 "Apply the entered canvas width and height.", this::onApplyClicked);
@@ -414,7 +414,7 @@ public class PixelCanvasSetting extends FeatureSetting {
         drawFocusHairline(ctx, applyControl, applyBtnX, applyBtnY, APPLY_W, CLEAR_BTN_H, disabled);
     }
 
-    private void drawDefaultButton(GuiGraphics ctx, Font tr, int mouseX, int mouseY, boolean disabled) {
+    private void drawDefaultButton(GuiGraphicsExtractor ctx, Font tr, int mouseX, int mouseY, boolean disabled) {
         boolean hover = !disabled && Widget.inBounds(mouseX, mouseY, defaultBtnX, defaultBtnY, DEFAULT_W, CLEAR_BTN_H);
         float t = defaultHoverAnim.update(hover);
         int fill   = disabled ? 0x22FFFFFF : AuroraAnim.lerpArgb(AuroraTheme.PANEL_OFF, AuroraTheme.PANEL_OFF_HOVER, t);
@@ -423,7 +423,7 @@ public class PixelCanvasSetting extends FeatureSetting {
         RenderUtil.drawSquircle(ctx, defaultBtnX, defaultBtnY, DEFAULT_W, CLEAR_BTN_H, AuroraTheme.RADIUS_SMALL, fill);
         RenderUtil.drawSquircleOutline(ctx, defaultBtnX, defaultBtnY, DEFAULT_W, CLEAR_BTN_H, AuroraTheme.RADIUS_SMALL, 1.0f, border);
         String lbl = "Default";
-        ctx.drawString(tr, lbl, defaultBtnX + (DEFAULT_W - tr.width(lbl)) / 2,
+        ctx.text(tr, lbl, defaultBtnX + (DEFAULT_W - tr.width(lbl)) / 2,
                 defaultBtnY + (CLEAR_BTN_H - tr.lineHeight) / 2 + 1, text, false);
         if (defaultControl == null) defaultControl = createControl("Restore Default Shape",
                 "Restore the vanilla 15×15 crosshair shape.", this::applyVanillaDefault);
@@ -434,7 +434,7 @@ public class PixelCanvasSetting extends FeatureSetting {
 
     /** The Button-family geometry-following focus hairline (EnumSetting's
      *  idiom): visible without hover, never while disabled. */
-    private void drawFocusHairline(GuiGraphics ctx,
+    private void drawFocusHairline(GuiGraphicsExtractor ctx,
                                    com.aurora.client.ui.interaction.SemanticActionControl control,
                                    int bx, int by, int bw, int bh, boolean disabled) {
         if (disabled || control == null || !control.isFocused()) return;
@@ -473,14 +473,14 @@ public class PixelCanvasSetting extends FeatureSetting {
         return java.util.List.of(clearControl, applyControl, defaultControl);
     }
 
-    private void drawWarnButton(GuiGraphics ctx, Font tr, int bx, int by, int bw, int bh,
+    private void drawWarnButton(GuiGraphicsExtractor ctx, Font tr, int bx, int by, int bw, int bh,
                                 String lbl, int mouseX, int mouseY, boolean enabled) {
         boolean hover = enabled && Widget.inBounds(mouseX, mouseY, bx, by, bw, bh);
         int fill = enabled ? (hover ? 0x66FFFFFF : 0x44FFFFFF) : 0x22FFFFFF;
         int text = enabled ? AuroraTheme.TEXT_PRIMARY : AuroraTheme.TEXT_DIM;
         RenderUtil.drawSquircle(ctx, bx, by, bw, bh, AuroraTheme.RADIUS_SMALL, fill);
         RenderUtil.drawSquircleOutline(ctx, bx, by, bw, bh, AuroraTheme.RADIUS_SMALL, 1.0f, 0x44FFFFFF);
-        ctx.drawString(tr, lbl, bx + (bw - tr.width(lbl)) / 2,
+        ctx.text(tr, lbl, bx + (bw - tr.width(lbl)) / 2,
                 by + (bh - tr.lineHeight) / 2 + 1, text, false);
     }
 
@@ -627,7 +627,7 @@ public class PixelCanvasSetting extends FeatureSetting {
      *  512 fully transparent, off-screen fills — identical allocation +
      *  submission work, invisible output. Runs on the render thread the
      *  first time a benchmark is pending; ~1 ms once per session. */
-    private void probePerFillCost(GuiGraphics ctx) {
+    private void probePerFillCost(GuiGraphicsExtractor ctx) {
         if (measuredPerFillMs > 0 || benchPending == null) return;
         long t0 = System.nanoTime();
         for (int i = 0; i < PERFILL_PROBE_FILLS; i++) {

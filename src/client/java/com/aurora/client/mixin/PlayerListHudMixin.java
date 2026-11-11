@@ -2,7 +2,7 @@ package com.aurora.client.mixin;
 
 import com.aurora.client.config.AuroraConfig;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.PlayerTabOverlay;
 import net.minecraft.client.multiplayer.PlayerInfo;
 import org.spongepowered.asm.mixin.Mixin;
@@ -25,7 +25,7 @@ public abstract class PlayerListHudMixin {
             require = 1
     )
     private void aurora$replacePingWithNumber(
-            GuiGraphics ctx,
+            GuiGraphicsExtractor ctx,
             int width,
             int x,
             int y,
@@ -54,7 +54,7 @@ public abstract class PlayerListHudMixin {
         // applies to our ping number in AURORA_ONLY mode.
         com.aurora.client.ui.util.AuroraFontRenderer.setRenderingAuroraUI(true);
         try {
-            ctx.drawString(client.font, Component, drawX, y, color, false);
+            ctx.text(client.font, Component, drawX, y, color, false);
         } finally {
             com.aurora.client.ui.util.AuroraFontRenderer.setRenderingAuroraUI(false);
         }

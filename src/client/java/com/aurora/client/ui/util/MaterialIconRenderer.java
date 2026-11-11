@@ -5,7 +5,7 @@ import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.font.providers.FreeTypeUtil;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.texture.DynamicTexture;
@@ -111,7 +111,7 @@ public final class MaterialIconRenderer {
      * {@code drawString} with pose scaling) whenever the crisp path is
      * unavailable, so call sites need no fallback logic of their own.
      */
-    public static void drawIcon(GuiGraphics g, Font font, String icon, float cx, float cy, float emGui, int argb) {
+    public static void drawIcon(GuiGraphicsExtractor g, Font font, String icon, float cx, float cy, float emGui, int argb) {
         if (icon == null || icon.isEmpty()) return;
         Minecraft mc = Minecraft.getInstance();
         if (mc == null || mc.getWindow() == null) return;
@@ -274,7 +274,7 @@ public final class MaterialIconRenderer {
      * previous call-site math so the fallback is visually what shipped
      * before this renderer existed.
      */
-    private static void drawVanillaScaled(GuiGraphics g, Font font, String icon, float cx, float cy, float emGui, int argb) {
+    private static void drawVanillaScaled(GuiGraphicsExtractor g, Font font, String icon, float cx, float cy, float emGui, int argb) {
         Component comp = Component.literal(icon).withStyle(SYMBOL_STYLE);
         int gw = Math.max(1, font.width(comp));
         int gh = Math.max(1, font.lineHeight);
@@ -282,7 +282,7 @@ public final class MaterialIconRenderer {
         g.pose().pushMatrix();
         g.pose().translate(cx, cy);
         g.pose().scale(scale, scale);
-        g.drawString(font, comp.getVisualOrderText(), -gw / 2, -gh / 2, argb, false);
+        g.text(font, comp.getVisualOrderText(), -gw / 2, -gh / 2, argb, false);
         g.pose().popMatrix();
     }
 }

@@ -14,7 +14,7 @@ import com.aurora.client.ui.interaction.SemanticSound;
 import com.aurora.client.ui.render.blur.BlurPanelRenderer;
 import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.ui.util.RenderUtil;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -219,7 +219,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
     // ------------------------------------------------------------------
 
     @Override
-    protected void paintLeadingRowGlassPass(GuiGraphics ctx, int x, int y, int w, int leadIndex) {
+    protected void paintLeadingRowGlassPass(GuiGraphicsExtractor ctx, int x, int y, int w, int leadIndex) {
         // Same template treatment as normal rows (the create row shares the
         // row geometry; its Create button sits at Duplicate's offset).
         // Availability follows the same clip-band rule as the row loop so a
@@ -242,13 +242,13 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
     }
 
     @Override
-    protected void paintLeadingRow(GuiGraphics ctx, int x, int y, int w, int leadIndex,
+    protected void paintLeadingRow(GuiGraphicsExtractor ctx, int x, int y, int w, int leadIndex,
                                    int mouseX, int mouseY) {
         renderCreateRow(ctx, x, y, w, mouseX, mouseY);
     }
 
     @Override
-    protected void paintRowGlassPass(GuiGraphics ctx, int x, int y, int w, String name) {
+    protected void paintRowGlassPass(GuiGraphicsExtractor ctx, int x, int y, int w, String name) {
         // Static shapes (rings + row tint) come from the shared row template
         // (see ManagerListScreen); the row panel renders live below, and the
         // Duplicate button supplies its own surface. Delete is destructive
@@ -272,12 +272,12 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
     }
 
     @Override
-    protected void paintRow(GuiGraphics ctx, int x, int y, int w, String name, int index,
+    protected void paintRow(GuiGraphicsExtractor ctx, int x, int y, int w, String name, int index,
                             int mouseX, int mouseY) {
         renderRow(ctx, x, y, w, name, index, ProfileManager.getInstance().currentProfile(), mouseX, mouseY);
     }
 
-    private void renderRow(GuiGraphics ctx, int x, int y, int w,
+    private void renderRow(GuiGraphicsExtractor ctx, int x, int y, int w,
                             String name, int index, String active,
                             int mouseX, int mouseY) {
         boolean isActive = name.equals(active);
@@ -478,7 +478,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         return renameEditorVisible();
     }
 
-    private void renderCreateRow(GuiGraphics ctx, int x, int y, int w,
+    private void renderCreateRow(GuiGraphicsExtractor ctx, int x, int y, int w,
                                   int mouseX, int mouseY) {
         // The create editor is a neutral card identical to the other rows
         // (the hint text and the Create button signal the open editor; no
@@ -509,7 +509,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
      * accent-tinted container, flagged twice). Returns whether the glass
      * drew (false = the content pass draws the flat row).
      */
-    private boolean renderRowSurface(GuiGraphics ctx, int x, int y, int w) {
+    private boolean renderRowSurface(GuiGraphicsExtractor ctx, int x, int y, int w) {
         if (MaterialSurface.unified()) return GlassSurface.card(ctx,x,y,w,CARD_H,
                 ThemeManager.current().roundness().radiusSmall());
         paintRowShadow(ctx, x, y, w);
@@ -680,7 +680,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
     // ------------------------------------------------------------------
 
     @Override
-    protected void paintEditorGlassPass(GuiGraphics ctx, List<String> rows, int listX) {
+    protected void paintEditorGlassPass(GuiGraphicsExtractor ctx, List<String> rows, int listX) {
         // Position ALWAYS (fresh bounds every frame — a hidden editor must
         // never keep a stale rect its last visible frame could leave in the
         // band), then paint only when a pixel is visible. The base scissors
@@ -691,7 +691,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
     }
 
     @Override
-    protected void paintTail(GuiGraphics ctx, int mouseX, int mouseY, float delta,
+    protected void paintTail(GuiGraphicsExtractor ctx, int mouseX, int mouseY, float delta,
                              List<String> rows, int listX) {
         // Inline editors render on top so the caret draws above row fills,
         // and UNDER THE LIST CLIP (C-8 — renderEditorClipped): a partially

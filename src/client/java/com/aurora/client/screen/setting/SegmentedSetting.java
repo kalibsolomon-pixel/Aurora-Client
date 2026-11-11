@@ -4,7 +4,7 @@ import com.aurora.client.ui.component.SegmentedControl;
 import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -117,7 +117,7 @@ public class SegmentedSetting<E extends Enum<E>> extends FeatureSetting {
      * exactly where the labels will.
      */
     @Override
-    public void renderGlassPass(GuiGraphics ctx, int x, int y, int width) {
+    public void renderGlassPass(GuiGraphicsExtractor ctx, int x, int y, int width) {
         if (!com.aurora.client.ui.component.GlassSurface.passOpen()) return; // legacy frame order
         control.glassEnabled(glass);
         control.layout(x + TRACK_PAD_X, y + 16, width - TRACK_PAD_X * 2, TRACK_H);
@@ -125,13 +125,13 @@ public class SegmentedSetting<E extends Enum<E>> extends FeatureSetting {
     }
 
     @Override
-    public void render(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
+    public void render(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {
         renderShapes(ctx, x, y, width, mouseX, mouseY);
         renderOverlay(ctx, x, y, width, mouseX, mouseY);
     }
 
     @Override
-    public void renderShapes(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
+    public void renderShapes(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {
         lastWidth = width;
         lastTrackX = x + TRACK_PAD_X;
         lastTrackW = width - TRACK_PAD_X * 2;
@@ -142,7 +142,7 @@ public class SegmentedSetting<E extends Enum<E>> extends FeatureSetting {
     }
 
     @Override
-    public void renderOverlay(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
+    public void renderOverlay(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {
         lastWidth = width;
         Font tr = Minecraft.getInstance().font;
         boolean disabled = isDisabled();

@@ -33,7 +33,7 @@ import com.aurora.client.util.HoverAnim;
 import com.aurora.client.util.ScrollFade;
 import com.aurora.client.util.SmoothScroll;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -613,10 +613,10 @@ public class AuroraScreen extends Screen implements ThemedScreen {
      * background for the flat look, as before glass.
      */
     @Override
-    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float delta) {
+    public void extractBackground(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
         if (liveWorldBackdrop()) return;
         if (GlassSurface.renderMenuPanorama(this, g, delta)) return;
-        super.renderBackground(g, mouseX, mouseY, delta);
+        super.extractBackground(g, mouseX, mouseY, delta);
     }
 
     /**
@@ -648,7 +648,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float delta) {
+    public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
         measureSettingsRows();
         tickSmoothScroll();
         semanticHost.beginAvailabilitySweep();
@@ -723,12 +723,12 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         // focus even though its action already rejects activation.
         semanticHost.finishAvailabilitySweep();
 
-        super.render(g, mouseX, mouseY, delta);
+        super.extractRenderState(g, mouseX, mouseY, delta);
         FeatureSetting.drawPendingTooltip(g, this.width, this.height);
     }
 
     /** Static chrome + settled toggle tracks, rasterized once into the cache. */
-    private void captureStatic(GuiGraphics g, boolean glassWindow) {
+    private void captureStatic(GuiGraphicsExtractor g, boolean glassWindow) {
         float bx = boxX(), by = boxY();
         float radius = ThemeManager.current().roundness().radius();
 
@@ -802,7 +802,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
      * (the same walk {@code renderSettingsLive} performs). Hover never
      * changes a tint — the washes are content, painted after the dim.
      */
-    private void paintGlassPass(GuiGraphics g, List<Module> mods) {
+    private void paintGlassPass(GuiGraphicsExtractor g, List<Module> mods) {
         float bx = boxX(), by = boxY();
         ClipBand vp = contentViewport();
         // C-7: every control-scaled chrome radius on this screen (chips,
@@ -881,14 +881,14 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         }
     }
 
-    private void renderLive(GuiGraphics g, List<Module> mods, int mouseX, int mouseY, float delta) {
+    private void renderLive(GuiGraphicsExtractor g, List<Module> mods, int mouseX, int mouseY, float delta) {
         float bx = boxX(), by = boxY();
         Font tr = this.font;
         // Same token as paintGlassPass's glass surfaces — the flat fallback
         // corners and the glass corners derive from one radius (C-7).
         float ctrlRadius = ThemeManager.current().roundness().radiusSmall();
 
-        g.drawString(tr, "AURORA", (int) bx + 12, (int) by + (com.aurora.client.ui.util.UiDensity.HEADER - tr.lineHeight) / 2 + 1, MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
+        g.text(tr, "AURORA", (int) bx + 12, (int) by + (com.aurora.client.ui.util.UiDensity.HEADER - tr.lineHeight) / 2 + 1, MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
 
         String[] cats = {"Mods", "Settings"};
         for (int i = 0; i < 2; i++) {
@@ -927,7 +927,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                     : AuroraAnim.lerpArgb(
                             MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED),
                             MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), hoverT);
-            g.drawString(tr, cats[i], (int) (catX + 8), (int) (catY + (TAB_H - tr.lineHeight) / 2 + 1), txt, false);
+            g.text(tr, cats[i], (int) (catX + 8), (int) (catY + (TAB_H - tr.lineHeight) / 2 + 1), txt, false);
             // Keyboard focus: the Button-family 1 px accent hairline — an
             // independent channel from both the selection tint and hover.
             // A SELECTED tab never takes a second indicator: its accent edge
@@ -957,7 +957,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                     AuroraAnim.lerpArgb(0x00000000,
                             ThemeManager.surfaceColor(ThemeToken.SURFACE_VARIANT), profT));
         }
-        g.drawString(tr, "Profiles", (int) (profX + 8), (int) (profY + (TAB_H - tr.lineHeight) / 2 + 1),
+        g.text(tr, "Profiles", (int) (profX + 8), (int) (profY + (TAB_H - tr.lineHeight) / 2 + 1),
                 AuroraAnim.lerpArgb(
                         MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED),
                         MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), profT), false);
@@ -987,7 +987,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         drawScrollbar(g);
     }
 
-    private void renderModulesLive(GuiGraphics g, List<Module> mods, int mouseX, int mouseY, float delta) {
+    private void renderModulesLive(GuiGraphicsExtractor g, List<Module> mods, int mouseX, int mouseY, float delta) {
         float mx = mainX(), my = mainY();
         Font tr = this.font;
         ClipBand vp = contentViewport();
@@ -1026,7 +1026,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         // not for rendering) so typed text + caret actually draw. Its glass
         // surface was already painted pre-dim (paintGlassPass drives the
         // EditBoxMixin split); renderWidget draws content only.
-        searchField.render(g, mouseX, mouseY, delta);
+        searchField.extractRenderState(g, mouseX, mouseY, delta);
 
         g.enableScissor(vp.x, vp.y, vp.xEnd(), vp.yEnd());
         // Same theme-resolved control radius the glass pass paints the tiles
@@ -1122,7 +1122,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         g.disableScissor();
     }
 
-    private void renderSettingsLive(GuiGraphics g, int mouseX, int mouseY, float delta, float ctrlRadius) {
+    private void renderSettingsLive(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta, float ctrlRadius) {
         float mx = mainX(), my = mainY();
         Font tr = this.font;
         searchField.visible = false;
@@ -1144,7 +1144,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 boolean navHover = m.hasDetail()
                         && Widget.inBounds(mouseX, mouseY, mx + 4, y, contentWidth() - 4 - 42, headerH);
                 float navT = m.hasDetail() ? (MaterialSurface.unified() ? pilotHover(pilotHeaderHovers,m.id,navHover) : headerHover(m.id).update(navHover)) : 0f;
-                g.drawString(tr, m.displayName, (int) (mx + 4), (int) (y + (SETTINGS_HEADER_H - tr.lineHeight) / 2 + 1), MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
+                g.text(tr, m.displayName, (int) (mx + 4), (int) (y + (SETTINGS_HEADER_H - tr.lineHeight) / 2 + 1), MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
                 // Detail-screen affordance: a header click opens the entry's
                 // detail screen (the Settings tab's counterpart of the
                 // Modules tab's right-click-to-detail) — the chevron marks
@@ -1196,7 +1196,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 // click. The hint height must match the walks in
                 // computeMaxScroll and mouseClicked.
                 if (vp.intersects(mx + 4, y, contentWidth() - 4, SETTINGS_HINT_H)) {
-                    g.drawString(tr, "Click to configure", (int) (mx + 4), (int) (y + 1),
+                    g.text(tr, "Click to configure", (int) (mx + 4), (int) (y + 1),
                             MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED), false);
                 }
                 y += SETTINGS_HINT_H;
@@ -1264,7 +1264,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
      * icons are unchanged; the flat unselected base now lerps to its hover
      * endpoint instead of snapping.
      */
-    private void drawLayoutButton(GuiGraphics g, float x, float y, float size, boolean selected,
+    private void drawLayoutButton(GuiGraphicsExtractor g, float x, float y, float size, boolean selected,
                                   float hoverT, boolean focused, boolean list, boolean btnGlass) {
         // Same theme-resolved control radius as the glass pass's surfaces of
         // this pair (C-7 — was a literal 4 that ignored Square mode).
@@ -1337,7 +1337,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     }
 
     /** Render a module's icon (FeatureIcons glyph via the material-symbols font). */
-    private void drawTileIcon(GuiGraphics g, Font tr, Module m, float cx, float cy, float targetPx,
+    private void drawTileIcon(GuiGraphicsExtractor g, Font tr, Module m, float cx, float cy, float targetPx,
                               boolean on, boolean stainedGlass) {
         String glyph = FeatureIcons.get(m.id);
         if (glyph.isEmpty()) return;
@@ -1416,7 +1416,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 maxScroll, 24, this.minecraft.getWindow().getGuiScale());
     }
 
-    private void drawScrollbar(GuiGraphics g) {
+    private void drawScrollbar(GuiGraphicsExtractor g) {
         double maxScroll = computeMaxScroll();
         if (maxScroll <= 0) return;
         ScrollbarChrome.Thumb thumb = thumb(maxScroll);

@@ -2,7 +2,7 @@ package com.aurora.client.feature.impl;
 
 import com.aurora.client.util.RoundedRect;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.world.item.ItemStack;
 
 /**
@@ -20,7 +20,7 @@ public final class HotbarBounceTracker {
 
     private HotbarBounceTracker() {}
 
-    public static void tickAndRender(GuiGraphics ctx, Minecraft mc) {
+    public static void tickAndRender(GuiGraphicsExtractor ctx, Minecraft mc) {
         if (mc.player == null) return;
 
         if (!initialized) {

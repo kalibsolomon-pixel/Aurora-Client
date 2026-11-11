@@ -1,7 +1,7 @@
 package com.aurora.client.util;
 
 import com.aurora.client.config.AuroraConfig;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.resources.Identifier;
 
@@ -18,12 +18,12 @@ public final class HudBackgrounds {
     private static final int RADIUS = 2;
     private static final Identifier OFFHAND = Identifier.withDefaultNamespace("hud/hotbar_offhand_left");
 
-    public static void draw(GuiGraphics ctx, int x, int y, int w, int h,
+    public static void draw(GuiGraphicsExtractor ctx, int x, int y, int w, int h,
                             AuroraConfig.HudBackground mode, int color) {
         draw(ctx, x, y, w, h, mode, color, 1);
     }
 
-    public static void draw(GuiGraphics ctx, int x, int y, int w, int h,
+    public static void draw(GuiGraphicsExtractor ctx, int x, int y, int w, int h,
                             AuroraConfig.HudBackground mode, int color, float alpha) {
         if (mode == null || alpha <= 0.001f) return;
         switch (mode) {
@@ -34,7 +34,7 @@ public final class HudBackgrounds {
     }
 
     /** Crop the 22x22 offhand slot, excluding its unused hotbar attachment margin. */
-    public static void slot(GuiGraphics ctx, int x, int y, int width, int height, float alpha) {
+    public static void slot(GuiGraphicsExtractor ctx, int x, int y, int width, int height, float alpha) {
         if (width <= 0 || height <= 0 || alpha <= 0.001f) return;
         ctx.pose().pushMatrix();
         ctx.pose().translate(x, y);

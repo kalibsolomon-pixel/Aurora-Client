@@ -1,5 +1,6 @@
 plugins {
-	id 'net.fabricmc.fabric-loom-remap' version "${loom_version}"
+	// 26.1 is the first unobfuscated Minecraft: this Loom does not remap (Fabric, 2026-03-14).
+	id 'net.fabricmc.fabric-loom' version "${loom_version}"
 	id 'maven-publish'
 }
 
@@ -35,8 +36,8 @@ loom {
 		// Disables the strict version validation check inside the development sandbox env
 		property "fabric.skipDependencyCheck", "true"
 		vmArg "-Dfabric.skipDependencyCheck=true"
-		property "fabric.modVersion.minecraft", "1.21.11"
-		vmArg "-Dfabric.modVersion.minecraft=1.21.11"
+		property "fabric.modVersion.minecraft", "26.1.2"
+		vmArg "-Dfabric.modVersion.minecraft=26.1.2"
 	}
 
 	mods {
@@ -51,11 +52,10 @@ loom {
 dependencies {
 	// To change the versions see the gradle.properties file
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	mappings loom.officialMojangMappings()
-	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
 
 	// Fabric API. This is technically optional, but you probably want it anyway.
-	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 
     // Modrinth serves WebP icons; normalize them to PNG before NativeImage upload.
     implementation "com.twelvemonkeys.imageio:imageio-webp:3.12.0"
@@ -98,12 +98,12 @@ tasks.withType(ProcessResources).configureEach {
 }
 
 tasks.withType(JavaCompile).configureEach {
-	it.options.release = 21
+	it.options.release = 25
 }
 
 afterEvaluate {
 	runClient {
-		jvmArgs "-Dfabric.skipDependencyCheck=true", "-Dfabric.modVersion.minecraft=1.21.11"
+		jvmArgs "-Dfabric.skipDependencyCheck=true", "-Dfabric.modVersion.minecraft=26.1.2"
 	}
 }
 
@@ -116,8 +116,8 @@ java {
 	// Re-enable only if you need sources for maven publishing, and never ship it to players.
 	// withSourcesJar()
 
-	sourceCompatibility = JavaVersion.VERSION_21
-	targetCompatibility = JavaVersion.VERSION_21
+	sourceCompatibility = JavaVersion.VERSION_25
+	targetCompatibility = JavaVersion.VERSION_25
 }
 
 tasks.withType(Jar).configureEach {

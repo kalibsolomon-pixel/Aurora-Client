@@ -11,7 +11,7 @@ import com.aurora.client.util.AuroraShapes;
 import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -286,7 +286,7 @@ public class EffectExpiryListSetting extends FeatureSetting {
      * hook verbatim.
      */
     @Override
-    public void renderGlassPass(GuiGraphics ctx, int x, int y, int width) {
+    public void renderGlassPass(GuiGraphicsExtractor ctx, int x, int y, int width) {
         if (!isHeaderPinned()) renderFixedHeaderGlass(ctx, x, y, width);
     }
 
@@ -297,7 +297,7 @@ public class EffectExpiryListSetting extends FeatureSetting {
         return pinnedControls;
     }
 
-    @Override public void renderFixedHeaderGlass(GuiGraphics ctx, int x, int y, int width) {
+    @Override public void renderFixedHeaderGlass(GuiGraphicsExtractor ctx, int x, int y, int width) {
         if (!GlassSurface.passOpen()) return; // legacy frame order — render paints in place
         glassPassFrame = GlassSurface.frame();
         int searchW = width - 56;
@@ -312,7 +312,7 @@ public class EffectExpiryListSetting extends FeatureSetting {
     }
 
     @Override
-    public void render(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
+    public void render(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {
         Font tr = Minecraft.getInstance().font;
 
         if (!isHeaderPinned()) renderFixedHeader(ctx, x, y, width, mouseX, mouseY);
@@ -326,13 +326,13 @@ public class EffectExpiryListSetting extends FeatureSetting {
                     Identifier.fromNamespaceAndPath(foundEffect.getNamespace(),
                             "mob_effect/" + foundEffect.getPath()),
                     x + 12, currentY - 2, ICON_SIZE, ICON_SIZE);
-            ctx.drawString(tr, "Add: " + displayNameFor(eff, foundEffect), x + 12 + ICON_SIZE + 4, currentY,
+            ctx.text(tr, "Add: " + displayNameFor(eff, foundEffect), x + 12 + ICON_SIZE + 4, currentY,
                     ThemeManager.color(ThemeToken.SEMANTIC_SUCCESS), false);
             currentY += 12;
         }
 
         if (showsEmptyState()) {
-            ctx.drawString(tr, com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(tr,
+            ctx.text(tr, com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(tr,
                     "No effects added yet — search above to add one.", width - 24, 1),
                     x + 12, currentY, ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED), false);
         }
@@ -352,7 +352,7 @@ public class EffectExpiryListSetting extends FeatureSetting {
         }
     }
 
-    @Override public void renderFixedHeader(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
+    @Override public void renderFixedHeader(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {
         Font tr = Minecraft.getInstance().font;
         // 1. Search bar — themed background/outline drawn by EditBoxMixin.
         int searchW = width - 56;
@@ -360,7 +360,7 @@ public class EffectExpiryListSetting extends FeatureSetting {
         searchField.setY(y + 6);
         searchField.setWidth(searchW);
         searchFrame = com.aurora.client.ui.component.GlassSurface.frame();
-        searchField.render(ctx, mouseX, mouseY, 0f);
+        searchField.extractRenderState(ctx, mouseX, mouseY, 0f);
 
         // "+" add button — raised glass (flat pill on decline); ItemScale's
         // in-place/stamped split verbatim. C-4 pilot B: the canonical hover

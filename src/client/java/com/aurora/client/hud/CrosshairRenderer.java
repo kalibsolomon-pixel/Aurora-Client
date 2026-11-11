@@ -2,7 +2,7 @@ package com.aurora.client.hud;
 
 import com.aurora.client.config.AuroraConfig;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.renderer.RenderPipelines;
@@ -24,7 +24,7 @@ import java.util.function.Predicate;
  * that replaces the default whenever the player is aiming at a targetable
  * entity within attack reach.
  *
- * <p><b>Centering note:</b> {@code GuiGraphics.fill()} takes integer pixel
+ * <p><b>Centering note:</b> {@code GuiGraphicsExtractor.fill()} takes integer pixel
  * coordinates, so a single-pixel-wide center column technically can't sit
  * on the screen's logical center seam (which is at {@code scaledWidth/2.0},
  * a half-integer position relative to drawn pixel grid). To put the
@@ -38,7 +38,7 @@ import java.util.function.Predicate;
  * technically half a pixel off-center toward the lower-right. Most people
  * never notice, but Aurora's crosshair is supposed to be visibly precise.
  *
- * <p>Note: {@link GuiGraphics#getMatrices()} in 1.21.8 returns a
+ * <p>Note: {@link GuiGraphicsExtractor#getMatrices()} in 1.21.8 returns a
  * {@code Matrix3x2fStack} (HUD-only 2D), so we use {@code pushMatrix()},
  * {@code popMatrix()}, and the 2-arg {@code translate(x, y)}, not the 3D
  * {@code PoseStack} API.
@@ -54,7 +54,7 @@ public final class CrosshairRenderer {
     private static final Identifier ATTACK_BACKGROUND = Identifier.withDefaultNamespace("hud/crosshair_attack_indicator_background");
     private static final Identifier ATTACK_PROGRESS = Identifier.withDefaultNamespace("hud/crosshair_attack_indicator_progress");
 
-    public void render(GuiGraphics ctx) {
+    public void render(GuiGraphicsExtractor ctx) {
         AuroraConfig cfg = AuroraConfig.get();
         if (!cfg.crosshairEnabled) return;
 
@@ -96,7 +96,7 @@ public final class CrosshairRenderer {
         }
     }
 
-    private static void drawAttackIndicator(GuiGraphics ctx, Minecraft client, int cx, int cy,
+    private static void drawAttackIndicator(GuiGraphicsExtractor ctx, Minecraft client, int cx, int cy,
                                             CrosshairAttackIndicator.Layout layout) {
         LocalPlayer player = client.player;
         float cooldown = player.getAttackStrengthScale(0.0f);
@@ -133,7 +133,7 @@ public final class CrosshairRenderer {
      * <p>For {@code CUSTOM}, the canvas pixels/dims are passed in by the
      * caller (the HUD path selects main vs indicator canvas).
      */
-    public static void drawShape(GuiGraphics ctx, AuroraConfig.CrosshairStyle style,
+    public static void drawShape(GuiGraphicsExtractor ctx, AuroraConfig.CrosshairStyle style,
                                  int cx, int cy, int size, int thick, int gap, int color,
                                  boolean[] customPixels, int customW, int customH) {
         switch (safe(style)) {
@@ -182,7 +182,7 @@ public final class CrosshairRenderer {
                 }
             };
 
-    private static void drawRaster(GuiGraphics ctx, AuroraConfig.CrosshairStyle style,
+    private static void drawRaster(GuiGraphicsExtractor ctx, AuroraConfig.CrosshairStyle style,
                                    int cx, int cy, int size, int thickness, int gap, int color) {
         double scale = Minecraft.getInstance().getWindow().getGuiScale();
         var key = new RasterKey(style, size, thickness, gap, scale);
@@ -199,7 +199,7 @@ public final class CrosshairRenderer {
         }
         ctx.pose().popMatrix();
     }
-    private static void drawCross(GuiGraphics ctx, int cx, int cy, int size, int thick, int gap, int color) {
+    private static void drawCross(GuiGraphicsExtractor ctx, int cx, int cy, int size, int thick, int gap, int color) {
         int halfT = thick / 2;
         int innerLeft = cx - gap;
         int innerRight = cx + gap + (thick % 2);
@@ -243,7 +243,7 @@ public final class CrosshairRenderer {
      * <p>Defensive: if the array is null or matches no valid dims, draws
      * nothing rather than crashing.
      */
-    private static void drawCustom(GuiGraphics ctx, int cx, int cy, int size, int color,
+    private static void drawCustom(GuiGraphicsExtractor ctx, int cx, int cy, int size, int color,
                                    boolean[] pixels, int cfgW, int cfgH) {
         if (pixels == null || pixels.length == 0) return;
 

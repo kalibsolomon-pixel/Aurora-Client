@@ -3,7 +3,7 @@ package com.aurora.client.ui.util;
 import com.aurora.client.AuroraClient;
 import com.mojang.blaze3d.platform.NativeImage;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.resources.Identifier;
@@ -111,7 +111,7 @@ public final class UiLayerCache implements RenderUtil.RectSink {
      * both compose in draw order) and commit; then one positional blit at
      * {@code (x, y)}. Shared by the color-picker surfaces.
      */
-    public static void drawSurface(GuiGraphics g, UiLayerCache cache, long version,
+    public static void drawSurface(GuiGraphicsExtractor g, UiLayerCache cache, long version,
                                    int x, int y, int wLogical, int hLogical, Runnable raster) {
         if (!cache.isCurrent(version)) {
             int scale = Math.max(1, (int) Minecraft.getInstance().getWindow().getGuiScale());
@@ -175,7 +175,7 @@ public final class UiLayerCache implements RenderUtil.RectSink {
 
     /** Clip cached data with RenderUtil's exact coverage, rasterized only on geometry changes.
      * Opaque interior spans need no work; transparent runs clear in bulk. */
-    public void clipShape(GuiGraphics g, boolean circle, float radiusPixels) {
+    public void clipShape(GuiGraphicsExtractor g, boolean circle, float radiusPixels) {
         if (image == null) return;
         if (maskRuns == null || maskW != w || maskH != h || maskRadius != radiusPixels || maskCircle != circle) {
             byte[] coverage = new byte[w * h];
@@ -243,7 +243,7 @@ public final class UiLayerCache implements RenderUtil.RectSink {
     }
 
     /** One textured draw covering the logical screen at native resolution. */
-    public void blit(GuiGraphics g, int logicalW, int logicalH) {
+    public void blit(GuiGraphicsExtractor g, int logicalW, int logicalH) {
         blitAt(g, 0, 0, logicalW, logicalH);
     }
 
@@ -255,12 +255,12 @@ public final class UiLayerCache implements RenderUtil.RectSink {
      * template-local coordinates, blitted per row at each row's position, so
      * scrolling never re-rasterizes.
      */
-    public void blitAt(GuiGraphics g, int x, int y, int logicalW, int logicalH) {
+    public void blitAt(GuiGraphicsExtractor g, int x, int y, int logicalW, int logicalH) {
         blitAt(g,x,y,logicalW,logicalH,-1);
     }
 
     /** Alpha-modulated reuse of a stable template (floating material fades). */
-    public void blitAt(GuiGraphics g,int x,int y,int logicalW,int logicalH,int tint) {
+    public void blitAt(GuiGraphicsExtractor g,int x,int y,int logicalW,int logicalH,int tint) {
         if (tex == null || w <= 0 || h <= 0) return;
         g.blit(RenderPipelines.GUI_TEXTURED, texId,
                 x, y, 0f, 0f, logicalW, logicalH, w, h, w, h, tint);

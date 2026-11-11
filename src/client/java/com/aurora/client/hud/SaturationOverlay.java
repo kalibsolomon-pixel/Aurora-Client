@@ -4,7 +4,7 @@ import com.aurora.client.AuroraClient;
 import com.aurora.client.config.AuroraConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.world.food.FoodData;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.resources.Identifier;
@@ -46,7 +46,7 @@ public final class SaturationOverlay {
      * Render the saturation overlay. {@code top} and {@code right} are the
      * same values vanilla's renderFood uses internally ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â see InGameHudMixin.
      */
-    public static void render(GuiGraphics ctx, Player player, int top, int right) {
+    public static void render(GuiGraphicsExtractor ctx, Player player, int top, int right) {
         if (!AuroraConfig.get().saturationBarEnabled) return;
         if (player == null) return;
 

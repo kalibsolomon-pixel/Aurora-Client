@@ -7,7 +7,7 @@ import com.aurora.client.ui.component.Slider;
 import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.network.chat.Component;
 
@@ -189,7 +189,7 @@ public class SliderSetting extends FeatureSetting {
     }
 
     /** Label + cached value readout (or the edit field while editing). Reads the value through the slider's getter. */
-    protected void drawLabelRow(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
+    protected void drawLabelRow(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {
         lastWidth = width;
         Font tr = Minecraft.getInstance().font;
         boolean disabled = isDisabled();
@@ -210,7 +210,7 @@ public class SliderSetting extends FeatureSetting {
         if (editingValue && valueField != null) {
             layoutValueField(x, y, width);
             valueField.setEditable(!disabled);
-            valueField.render(ctx, mouseX, mouseY, 0f);
+            valueField.extractRenderState(ctx, mouseX, mouseY, 0f);
             return;
         }
 
@@ -227,18 +227,18 @@ public class SliderSetting extends FeatureSetting {
         // user can see at a glance which slider scroll/keys go to.
         boolean focused = (!disabled && FeatureSetting.getFocused() == this);
         int valueColor = disabled ? MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED) : (focused ? MaterialSurface.color(ThemeToken.ACCENT) : MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY));
-        ctx.drawString(tr, cachedStr, compactRow == null ? x + width - cachedStrW - 14 : x + compactRow.value().x() + (compactRow.value().width() - cachedStrW) / 2, compactRow == null ? y + 6 : y + (compactRow.value().height() - tr.lineHeight) / 2, valueColor, false);
+        ctx.text(tr, cachedStr, compactRow == null ? x + width - cachedStrW - 14 : x + compactRow.value().x() + (compactRow.value().width() - cachedStrW) / 2, compactRow == null ? y + 6 : y + (compactRow.value().height() - tr.lineHeight) / 2, valueColor, false);
     }
 
     /** Cacheable static track layer (depends only on the roundness token). */
-    protected void drawTrackShapes(GuiGraphics ctx, int x, int y, int width) {
+    protected void drawTrackShapes(GuiGraphicsExtractor ctx, int x, int y, int width) {
         layoutTrack(x, y, width);
         slider.disabled(isDisabled());
         slider.renderShapes(ctx, lastTrackX, trackWidgetY(y), lastTrackW, CONTROL_H);
     }
 
     /** Live track layer: fill, knob, hover ring — tracks value and hover. */
-    protected void drawTrackOverlay(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
+    protected void drawTrackOverlay(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {
         layoutTrack(x, y, width);
         slider.disabled(isDisabled());
         // Canonical focus paint: the row owns keyboard focus (its readout
@@ -338,7 +338,7 @@ public class SliderSetting extends FeatureSetting {
      * the row geometry the screen passes — the same rect render computes.
      */
     @Override
-    public void renderGlassPass(GuiGraphics ctx, int x, int y, int width) {
+    public void renderGlassPass(GuiGraphicsExtractor ctx, int x, int y, int width) {
         if (!com.aurora.client.ui.component.GlassSurface.passOpen()) return; // legacy frame order
         if (!editingValue || valueField == null || isDisabled()) return;
         layoutValueField(x, y, width);
@@ -351,7 +351,7 @@ public class SliderSetting extends FeatureSetting {
     }
 
     @Override
-    public void render(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
+    public void render(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {
         drawLabelRow(ctx, x, y, width, mouseX, mouseY);
         drawTrackShapes(ctx, x, y, width);
         drawTrackOverlay(ctx, x, y, width, mouseX, mouseY);

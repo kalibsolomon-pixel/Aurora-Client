@@ -2,7 +2,7 @@ package com.aurora.client.ui.util;
 
 import com.aurora.client.mixin.ItemStackRenderStateAccessor;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
@@ -19,7 +19,7 @@ import java.util.Map;
  * Crisp flat-sprite item icon rendering for UI lists (the Item Scale
  * configurator's added-item tabs).
  *
- * <p>{@link GuiGraphics#renderItem} submits the item through the 3D model
+ * <p>{@link GuiGraphicsExtractor#renderItem} submits the item through the 3D model
  * pipeline (perspective transform, directional light) — correct for hotbars
  * and tooltips, but soft and inconsistently lit in dense UI lists. This
  * renderer instead resolves the item's <b>flat GUI sprite</b> through the
@@ -33,7 +33,7 @@ import java.util.Map;
  * take the sprite path (tools, weapons, ingots — most plain items).
  * Tinted items (grass, leather, potions) and multi-layer or special models
  * (bows, tridents) would mis-color or mis-composite as a flat sprite, so
- * they fall back to the standard {@link GuiGraphics#renderItem}. The
+ * they fall back to the standard {@link GuiGraphicsExtractor#renderItem}. The
  * outcome is cached per item id for the session — resolution is a full
  * model-graph walk, and the result is stable until a resource reload
  * rebuilds the atlas.
@@ -50,19 +50,19 @@ public final class ItemSpriteRenderer {
     /**
      * Draws {@code stack}'s icon at {@code (x, y)} in crisp flat-sprite form
      * when the item qualifies, otherwise through the standard 3D
-     * {@link GuiGraphics#renderItem} path.
+     * {@link GuiGraphicsExtractor#renderItem} path.
      */
-    public static void renderIcon(GuiGraphics g, ItemStack stack, int x, int y, int size) {
+    public static void renderIcon(GuiGraphicsExtractor g, ItemStack stack, int x, int y, int size) {
         if (stack == null || stack.isEmpty()) return;
         Minecraft mc = Minecraft.getInstance();
         if (mc == null || mc.player == null || mc.level == null) {
-            g.renderItem(stack, x, y);
+            g.item(stack, x, y);
             return;
         }
 
         TextureAtlasSprite sprite = resolve(mc, stack);
         if (sprite == null) {
-            g.renderItem(stack, x, y);
+            g.item(stack, x, y);
             return;
         }
 
@@ -72,7 +72,7 @@ public final class ItemSpriteRenderer {
     }
 
     /** Convenience overload for the standard 16px list icon. */
-    public static void renderIcon(GuiGraphics g, ItemStack stack, int x, int y) {
+    public static void renderIcon(GuiGraphicsExtractor g, ItemStack stack, int x, int y) {
         renderIcon(g, stack, x, y, 16);
     }
 

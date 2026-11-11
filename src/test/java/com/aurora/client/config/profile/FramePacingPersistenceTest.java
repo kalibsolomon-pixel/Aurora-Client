@@ -278,7 +278,7 @@ class FramePacingPersistenceTest {
             var module = new com.aurora.client.hud.module.HudModule(id) {
                 public int getWidth() { return 20; }
                 public int getHeight() { return 20; }
-                protected void renderContent(net.minecraft.client.gui.GuiGraphics g,
+                protected void renderContent(net.minecraft.client.gui.GuiGraphicsExtractor g,
                         net.minecraft.client.Minecraft mc, int x, int y) {}
             };
             module.offsetX = 999;

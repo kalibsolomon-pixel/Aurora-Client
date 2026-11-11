@@ -12,7 +12,7 @@ import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.ui.util.UiLayerCache;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.network.chat.Component;
@@ -232,13 +232,13 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
      * fallback wants the vanilla backdrop as before.
      */
     @Override
-    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float delta) {
+    public void extractBackground(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
         if (this.minecraft != null && this.minecraft.level != null) return;
         com.aurora.client.ui.component.GlassSurface.renderMenuPanorama(this,g,delta);
     }
 
     @Override
-    public void render(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
+    public void extractRenderState(GuiGraphicsExtractor ctx, int mouseX, int mouseY, float delta) {
         // Themed overlay dim (token-driven; dark in both modes by design).
         var radius = ThemeManager.current().roundness().radiusLarge();
         com.aurora.client.ui.component.GlassSurface.beginGlassPass();
@@ -246,14 +246,14 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
         com.aurora.client.ui.component.GlassSurface.overlayDim(ctx,this.width,this.height);
         if (pickerSupportable) MaterialSurface.parent(ctx,panelX,panelY,panelW,panelH,radius);
 
-        super.render(ctx, mouseX, mouseY, delta);
+        super.extractRenderState(ctx, mouseX, mouseY, delta);
         Font tr = this.font;
         // Text directly on the overlay uses ON_OVERLAY (light in both modes).
         int onOverlay = ThemeManager.color(ThemeToken.ON_OVERLAY);
         int labelCol = pickerSupportable ? ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY)
                 : ThemeManager.withAlpha(onOverlay, 0x99);
 
-        if (pickerSupportable) ctx.drawString(tr, AuroraFontRenderer.ellipsize(tr, this.title.getString(), panelW - 24, 0),
+        if (pickerSupportable) ctx.text(tr, AuroraFontRenderer.ellipsize(tr, this.title.getString(), panelW - 24, 0),
                 panelX + 12, panelY + (com.aurora.client.ui.util.UiDensity.HEADER - tr.lineHeight) / 2 + 1, MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
         else AuroraFontRenderer.drawCentered(ctx, tr, this.title, this.width / 2, 20, onOverlay);
 
@@ -314,8 +314,8 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
         // Strip captions centered over their strips; field captions share the content column.
         AuroraFontRenderer.drawCentered(ctx, tr, Component.literal("Hue"), hueX + hueW / 2, hueY - 12, labelCol);
         AuroraFontRenderer.drawCentered(ctx, tr, Component.literal("Alpha"), alphaX + alphaW / 2, alphaY - 12, labelCol);
-        ctx.drawString(tr, Component.literal("Preview"), previewX, previewY - 12, labelCol, false);
-        ctx.drawString(tr, Component.literal("Hex"), previewX, previewY + previewH + 10, labelCol, false);
+        ctx.text(tr, Component.literal("Preview"), previewX, previewY - 12, labelCol, false);
+        ctx.text(tr, Component.literal("Hex"), previewX, previewY + previewH + 10, labelCol, false);
 
         // (No bespoke hex-field outline: the hex EditBox is themed end-to-end by
         // the mod-wide EditBoxMixin — fill, border, text and caret — through
@@ -338,7 +338,7 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
      * being edited, so it is written with {@link UiLayerCache#writeArgb};
      * only the structural white frame goes through the capture sink.
      */
-    private void drawPadInto(GuiGraphics ctx, int ox, int oy) {
+    private void drawPadInto(GuiGraphicsExtractor ctx, int ox, int oy) {
         int scale = guiScale();
         int dev = padSize * scale;
         padCache.writeArgb((px, py) -> ColorEntryHelper.hslaToArgb(hue,
@@ -357,7 +357,7 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
     }
 
     /** Hue strip at local coordinates — one exact hue per device pixel row. */
-    private void drawHueInto(GuiGraphics ctx, int ox, int oy) {
+    private void drawHueInto(GuiGraphicsExtractor ctx, int ox, int oy) {
         int scale = guiScale();
         int devW = hueW * scale, devH = hueH * scale;
         hueCache.writeArgb((px, py) -> ColorEntryHelper.hslaToArgb((py + 0.5f) / devH, 1f, 0.5f, 1f));
@@ -369,7 +369,7 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
 
     /** Alpha strip (checkerboard + gradient) at local coordinates — the
      *  gradient is composited over the checker per device pixel. */
-    private void drawAlphaInto(GuiGraphics ctx, int ox, int oy) {
+    private void drawAlphaInto(GuiGraphicsExtractor ctx, int ox, int oy) {
         int scale = guiScale();
         int devW = alphaW * scale, devH = alphaH * scale, cell = 4 * scale;
         alphaCache.writeArgb((px, py) -> {
@@ -394,7 +394,7 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
         return 0xFF000000 | ((r / 255) << 16) | ((g / 255) << 8) | (b / 255);
     }
 
-    private void drawCheckerboard(GuiGraphics ctx, int x, int y, int w, int h) {
+    private void drawCheckerboard(GuiGraphicsExtractor ctx, int x, int y, int w, int h) {
         int cell = 4;
         for (int dy = 0; dy < h; dy += cell) {
             for (int dx = 0; dx < w; dx += cell) {

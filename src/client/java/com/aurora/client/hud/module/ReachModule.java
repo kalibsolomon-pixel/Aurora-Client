@@ -5,7 +5,7 @@ import com.aurora.client.feature.impl.ReachTrackerFeature;
 import com.aurora.client.util.CachedValue;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 /**
  * "Reach: 3.12b" â€” fades smoothly over the last {@value #FADE_WINDOW_MS}ms
@@ -57,7 +57,7 @@ public class ReachModule extends HudModule {
     }
 
     @Override
-    protected void renderContent(GuiGraphics ctx, Minecraft client, int x, int y) {
+    protected void renderContent(GuiGraphicsExtractor ctx, Minecraft client, int x, int y) {
         if (!AuroraConfig.get().reachEnabled) return;
         Font tr = client.font;
         if (tr == null) return;
@@ -76,7 +76,7 @@ public class ReachModule extends HudModule {
         if (alpha <= 1) return;
 
         int color = (alpha << 24) | (baseColor & 0x00FFFFFF);
-        ctx.drawString(tr, textCache.get(), x, y, color, false);
+        ctx.text(tr, textCache.get(), x, y, color, false);
     }
 
     /**

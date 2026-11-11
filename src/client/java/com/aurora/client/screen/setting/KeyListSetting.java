@@ -17,7 +17,7 @@ import com.aurora.client.util.AuroraTheme;
 import com.aurora.client.util.HoverAnim;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 
@@ -204,7 +204,7 @@ public class KeyListSetting extends FeatureSetting {
      * entry) — keep the two in lockstep.
      */
     @Override
-    public void renderGlassPass(GuiGraphics ctx, int x, int y, int width) {
+    public void renderGlassPass(GuiGraphicsExtractor ctx, int x, int y, int width) {
         if (!GlassSurface.passOpen()) return; // legacy frame order — render paints in place
         glassPassFrame = GlassSurface.frame();
         int addX = x + 14;
@@ -216,7 +216,7 @@ public class KeyListSetting extends FeatureSetting {
     }
 
     @Override
-    public void render(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
+    public void render(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {
         lastX = x;
         lastY = y;
         lastW = width;
@@ -259,7 +259,7 @@ public class KeyListSetting extends FeatureSetting {
             String display = boxed == null ? "?" : cachedName(boxed);
             int maxW = width - BTN_SIZE - 44;
             display = AuroraFontRenderer.ellipsize(tr, display, maxW, 3);
-            ctx.drawString(tr, display, x + 16, iy + (ROW_H - tr.lineHeight) / 2,
+            ctx.text(tr, display, x + 16, iy + (ROW_H - tr.lineHeight) / 2,
                     disabled ? AuroraTheme.TEXT_DIM : AuroraTheme.TEXT_SECONDARY, false);
             iy += ROW_H + 2;
         }
@@ -317,7 +317,7 @@ public class KeyListSetting extends FeatureSetting {
                 : "+ Add Key";
         int addTextW = tr.width(addText);
         int textCol = listening ? MaterialSurface.color(ThemeToken.ON_BACKGROUND) : textColor;
-        ctx.drawString(tr, addText, addX + (addW - addTextW) / 2,
+        ctx.text(tr, addText, addX + (addW - addTextW) / 2,
                 addY + (ADD_H - tr.lineHeight) / 2 + 1, textCol, false);
     }
 

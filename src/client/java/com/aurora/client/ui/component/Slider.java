@@ -6,7 +6,7 @@ import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.ui.util.TimedTransition;
 import com.aurora.client.ui.util.CubicBezier;
 import com.aurora.client.util.HoverAnim;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.function.DoubleConsumer;
@@ -139,13 +139,13 @@ public class Slider extends Widget {
     }
 
     @Override
-    public void renderShapes(GuiGraphics g, float x, float y, float w, float h) {
+    public void renderShapes(GuiGraphicsExtractor g, float x, float y, float w, float h) {
         float ty = y + h - 12f;
         RenderUtil.drawRoundedRectAA(g, x, ty, w, TRACK_H, TRACK_H / 2f, trackBase());
     }
 
     @Override
-    public void renderOverlay(GuiGraphics g, float x, float y, float w, float h, int mouseX, int mouseY) {
+    public void renderOverlay(GuiGraphicsExtractor g, float x, float y, float w, float h, int mouseX, int mouseY) {
         float ty = y + h - 12f;
         // Dragging keeps the hover channel alive outside the bounds — the
         // pointer owning an active manipulation must not lose feedback

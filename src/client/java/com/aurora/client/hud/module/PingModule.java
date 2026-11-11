@@ -4,7 +4,7 @@ import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.util.CachedValue;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.multiplayer.PlayerInfo;
 
 /**
@@ -62,7 +62,7 @@ public class PingModule extends HudModule {
     @Override protected int backgroundColor() { return 0x80000000; }
 
     @Override
-    protected void renderContent(GuiGraphics ctx, Minecraft client, int x, int y) {
+    protected void renderContent(GuiGraphicsExtractor ctx, Minecraft client, int x, int y) {
         if (!AuroraConfig.get().pingHudEnabled) return;
         Font tr = client.font;
         if (tr == null) return;
@@ -71,7 +71,7 @@ public class PingModule extends HudModule {
                 ? com.aurora.client.theme.HudText.color(AuroraConfig.get().hudColor)
                 : pingColor(ms);
         if (AuroraConfig.get().pingHudTextColor != null) color = AuroraConfig.get().pingHudTextColor;
-        ctx.drawString(tr, buildText(), x, y, color, false);
+        ctx.text(tr, buildText(), x, y, color, false);
     }
 
     /**

@@ -142,7 +142,7 @@ class AbstractButtonMixinConformanceTest {
     void sharedPainterIsPureVisualsAndOwnsNoSemantics() throws Exception {
         Class<?> button = Class.forName("com.aurora.client.ui.component.Button");
         Method paint = button.getDeclaredMethod("paintFlatSecondary",
-                net.minecraft.client.gui.GuiGraphics.class,
+                net.minecraft.client.gui.GuiGraphicsExtractor.class,
                 net.minecraft.client.gui.Font.class,
                 net.minecraft.network.chat.Component.class,
                 int.class, int.class, int.class, int.class,

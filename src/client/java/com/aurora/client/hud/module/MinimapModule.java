@@ -15,7 +15,7 @@ import com.aurora.client.ui.util.RenderUtil;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -84,7 +84,7 @@ public final class MinimapModule extends HudModule {
                 * (Minecraft.getInstance().font.lineHeight + 2);
     }
 
-    @Override protected void renderContent(GuiGraphics g, Minecraft mc, int x, int y) {
+    @Override protected void renderContent(GuiGraphicsExtractor g, Minecraft mc, int x, int y) {
         if (mc.level == null || mc.player == null) return;
         long frame = com.aurora.client.ui.component.GlassSurface.frame();
         if (terrainFrame != frame) {
@@ -250,7 +250,7 @@ public final class MinimapModule extends HudModule {
         }
     }
 
-    private void drawCaption(GuiGraphics g, Minecraft mc, String text, int x, int y, int color) {
+    private void drawCaption(GuiGraphicsExtractor g, Minecraft mc, String text, int x, int y, int color) {
         String fitted = mc.font.plainSubstrByWidth(text, getWidth() - 6);
         if (!fitted.equals(text)) fitted = mc.font.plainSubstrByWidth(text, getWidth() - 18) + "…";
         MapMarkers.text(g, mc.font, fitted, x + (getWidth() - mc.font.width(fitted)) * .5f, y, color, true);

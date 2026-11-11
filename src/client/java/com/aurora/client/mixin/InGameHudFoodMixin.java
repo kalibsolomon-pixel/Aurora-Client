@@ -1,7 +1,7 @@
 package com.aurora.client.mixin;
 
 import com.aurora.client.hud.SaturationOverlay;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.world.entity.player.Player;
 import org.spongepowered.asm.mixin.Mixin;
@@ -20,7 +20,7 @@ public class InGameHudFoodMixin {
 
     @Inject(method = "renderFood", at = @At("RETURN"), require = 0)
     private void aurora$renderSaturation(
-            GuiGraphics context,
+            GuiGraphicsExtractor context,
             Player player,
             int top,
             int right,

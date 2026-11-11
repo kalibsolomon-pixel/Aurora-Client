@@ -9,7 +9,7 @@ import com.aurora.client.ui.component.Button;
 import com.aurora.client.ui.component.ButtonWidget;
 import com.aurora.client.ui.component.MaterialSurface;
 import com.aurora.client.ui.component.ThemedScreen;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
@@ -154,7 +154,7 @@ public final class WaypointEditScreen extends Screen implements ThemedScreen {
         if (event.key() == GLFW.GLFW_KEY_ENTER || event.key() == GLFW.GLFW_KEY_KP_ENTER) { save(); return true; }
         return super.keyPressed(event);
     }
-    @Override public void render(GuiGraphics g, int mx, int my, float delta) {
+    @Override public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float delta) {
         MaterialSurface.floatingPanel(g, left, top, panelWidth, frameHeight,
                 Math.round(ThemeManager.current().roundness().radius()));
         int headerMid = top + com.aurora.client.ui.util.UiDensity.HEADER / 2;
@@ -162,14 +162,14 @@ public final class WaypointEditScreen extends Screen implements ThemedScreen {
         // A validation error replaces the heading in the semantic error color, so
         // it reads as feedback rather than as a renamed dialog.
         String heading = error.isEmpty() ? title.getString() : error;
-        g.drawString(font, com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(font, heading, panelWidth - 40, 1),
+        g.text(font, com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(font, heading, panelWidth - 40, 1),
                 left + 28, headerMid - font.lineHeight / 2 + 1, ThemeManager.color(error.isEmpty() ? ThemeToken.ON_SURFACE : ThemeToken.STATUS_ERROR), false);
         for (int group = 0; group < 2; group++)
-            g.drawString(font, GROUPS[group], left + 12, fieldY(group * 3) - CAPTION,
+            g.text(font, GROUPS[group], left + 12, fieldY(group * 3) - CAPTION,
                     MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED), false);
-        for (int i = 0; i < 6; i++) g.drawString(font, labels[i], left + 12, fieldY(i) + (FIELD_H - font.lineHeight) / 2 + 1,
+        for (int i = 0; i < 6; i++) g.text(font, labels[i], left + 12, fieldY(i) + (FIELD_H - font.lineHeight) / 2 + 1,
                 ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
-        super.render(g, mx, my, delta);
+        super.extractRenderState(g, mx, my, delta);
     }
     @Override public void onClose() { minecraft.setScreen(parent); }
     @Override public boolean isPauseScreen() { return false; }

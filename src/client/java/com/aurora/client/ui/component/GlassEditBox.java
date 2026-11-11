@@ -1,6 +1,6 @@
 package com.aurora.client.ui.component;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 /**
  * Glass-pass hook for the mod-wide themed {@code EditBox} — implemented
@@ -31,5 +31,5 @@ public interface GlassEditBox {
      * renderer may decline, in which case the field's render draws its
      * flat fill instead.
      */
-    void aurora$renderGlassPass(GuiGraphics g);
+    void aurora$renderGlassPass(GuiGraphicsExtractor g);
 }
