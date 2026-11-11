@@ -3,5 +3,6 @@
   "id": "parityprobe",
   "version": "1",
   "environment": "client",
-  "entrypoints": {"client": ["parityprobe.ParityProbe"]}
+  "entrypoints": {"client": ["parityprobe.ParityProbe"]},
+  "mixins": ["parityprobe.mixins.json"]
 }

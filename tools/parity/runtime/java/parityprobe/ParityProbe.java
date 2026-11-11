@@ -3,6 +3,7 @@ package parityprobe;
 import com.aurora.client.adapter.NativeKeyboard;
 import com.aurora.client.adapter.NativeUi;
 import com.aurora.client.config.AuroraConfig;
+import com.aurora.client.feature.impl.WaypointFeature;
 import com.aurora.client.screen.*;
 import com.aurora.client.screen.setting.KeybindSetting;
 import com.aurora.client.theme.ThemeManager;
@@ -57,6 +58,30 @@ public final class ParityProbe implements ClientModInitializer {
         switch (args[0]) {
             case "settings" -> NativeUi.setScreen(client, AuroraScreen.create());
             case "world" -> NativeUi.setScreen(client, null);
+            case "waypoints40" -> {
+                if (client.level == null) throw new IllegalStateException("A world must be loaded");
+                var feature = WaypointFeature.get();
+                if (feature == null || WaypointFeature.scopeKey() == null)
+                    throw new IllegalStateException("Waypoint scope is unavailable");
+                if (!Files.isRegularFile(client.gameDirectory.toPath().resolve("SHAPE-BENCHMARK-DISPOSABLE.txt")))
+                    throw new IllegalStateException("Shape benchmark fixture marker missing from game directory");
+                if (!feature.currentWorldWaypoints().isEmpty())
+                    throw new IllegalStateException("Shape benchmark requires a world with no waypoints");
+                String dimension = client.level.dimension().identifier().toString();
+                for (int i = 0; i < 40; i++) {
+                    feature.addWaypoint(new AuroraConfig.Waypoint("Benchmark " + (i + 1),
+                            i * 16, 64, 0, dimension, 0xFF4FC3F7));
+                }
+                if (feature.currentWorldWaypoints().size() != 40) throw new AssertionError("Expected 40 waypoints");
+                NativeUi.setScreen(client, new WaypointManagerScreen(null));
+            }
+            case "shape-benchmark" -> {
+                if (!(NativeUi.screen(client) instanceof WaypointManagerScreen)
+                        || WaypointFeature.get().currentWorldWaypoints().size() != 40)
+                    throw new IllegalStateException("Run waypoints40 first");
+                Files.deleteIfExists(root.resolve("shape-benchmark.json"));
+                ShapeBenchmark.arm(root.resolve("shape-benchmark.json"));
+            }
             case "stop" -> client.stop();
             case "resize" -> client.getWindow().setWindowed(Integer.parseInt(args[1]), Integer.parseInt(args[2]));
             case "layout" -> {

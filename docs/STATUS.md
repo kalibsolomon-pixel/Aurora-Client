@@ -76,7 +76,8 @@ are retained in `docs/history/`.
 
 ## Remaining direction
 
-Step 6 (shader-drawn shapes) and step 7 (Apollo restrictions, then friends/status,
+Step 6 (shader-drawn shapes) has a [preliminary 40-waypoint baseline](reports/2026-11-11-step-6-baseline.md);
+the shader implementation and comparison remain outstanding. Step 7 (Apollo restrictions, then friends/status,
 possible NeoForge and limited optimizations) remain future work. No new gameplay
 features are included in this restructure. Apollo licensing/detection needs
 verification before implementation. Better Hitreg author-permission provenance
@@ -85,7 +86,7 @@ notices follow the published upstream licenses and are not new permission claims
 
 ## Next work
 
-Step 5.5 (ADR 0008) is complete; step 6 (shader-drawn shapes) is next.
+Step 5.5 (ADR 0008) is complete; step 6 (shader-drawn shapes) is in progress.
 The earlier 26.3 OpenGL overhead failure was resolved before 3.3.0 publication;
 the failed historical measurements remain documented. Broader release validation
 should add a packaged-client launcher boot, multiplayer and another GPU or
