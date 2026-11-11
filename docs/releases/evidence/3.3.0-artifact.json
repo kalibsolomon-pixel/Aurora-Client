@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 2,
+  "version": "3.3.0",
+  "channel": "stable",
+  "tag": "v3.3.0",
+  "sourceSha": "3562d0907aba7178be9262afae314c845d92149a",
+  "fileName": "aurora-3.3.0-mc26.3.jar",
+  "sizeBytes": 3287057,
+  "sha256": "b23f1919d432bc3ff3cc375ae06c5fbec3433da7cf03b4cec798133135887aee",
+  "minecraftVersion": "26.3",
+  "buildFabricLoaderVersion": "0.20.1",
+  "buildFabricApiVersion": "0.166.0+26.3",
+  "modId": "aurora",
+  "minecraftRequirement": "~26.3",
+  "fabricLoaderRequirement": ">=0.16.0",
+  "fabricApiRequirement": "*",
+  "javaRequirement": ">=25"
+}
