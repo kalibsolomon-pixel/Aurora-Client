@@ -89,14 +89,14 @@ Existing development Java 25/LWJGL native-access/deprecation warnings remain.
 
 Five new, actual client screenshots after the capture correction:
 
-- [Main Mods](C:/Users/kalib/.codex/visualizations/2026/10/06/01a11030-ac6c-7070-922a-87cda5952ab9/owner-corrections/01-main-mods.png)
-- [Main menu — logo above cards](C:/Users/kalib/.codex/visualizations/2026/10/06/01a11030-ac6c-7070-922a-87cda5952ab9/owner-corrections/02-menu-branding.png)
-- [Pack Tweaks](C:/Users/kalib/.codex/visualizations/2026/10/06/01a11030-ac6c-7070-922a-87cda5952ab9/owner-corrections/03-pack-tweaks.png)
-- [Item Scale](C:/Users/kalib/.codex/visualizations/2026/10/06/01a11030-ac6c-7070-922a-87cda5952ab9/owner-corrections/04-item-scale.png)
-- [Alerts](C:/Users/kalib/.codex/visualizations/2026/10/06/01a11030-ac6c-7070-922a-87cda5952ab9/owner-corrections/05-alerts.png)
-- [Alternate GUI scale 4 plus](C:/Users/kalib/.codex/visualizations/2026/10/06/01a11030-ac6c-7070-922a-87cda5952ab9/owner-corrections/06-item-scale-gui4.png)
-- [Final left-aligned Settings](C:/Users/kalib/.codex/visualizations/2026/10/06/01a11030-ac6c-7070-922a-87cda5952ab9/owner-corrections/07-settings-navigation.png)
-- [Representative Zoom keybind](C:/Users/kalib/.codex/visualizations/2026/10/06/01a11030-ac6c-7070-922a-87cda5952ab9/owner-corrections/11-zoom-keybind.png)
+- [Main Mods](../../C:/Users/kalib/.codex/visualizations/2026/10/06/01a11030-ac6c-7070-922a-87cda5952ab9/owner-corrections/01-main-mods.png)
+- [Main menu — logo above cards](../../C:/Users/kalib/.codex/visualizations/2026/10/06/01a11030-ac6c-7070-922a-87cda5952ab9/owner-corrections/02-menu-branding.png)
+- [Pack Tweaks](../../C:/Users/kalib/.codex/visualizations/2026/10/06/01a11030-ac6c-7070-922a-87cda5952ab9/owner-corrections/03-pack-tweaks.png)
+- [Item Scale](../../C:/Users/kalib/.codex/visualizations/2026/10/06/01a11030-ac6c-7070-922a-87cda5952ab9/owner-corrections/04-item-scale.png)
+- [Alerts](../../C:/Users/kalib/.codex/visualizations/2026/10/06/01a11030-ac6c-7070-922a-87cda5952ab9/owner-corrections/05-alerts.png)
+- [Alternate GUI scale 4 plus](../../C:/Users/kalib/.codex/visualizations/2026/10/06/01a11030-ac6c-7070-922a-87cda5952ab9/owner-corrections/06-item-scale-gui4.png)
+- [Final left-aligned Settings](../../C:/Users/kalib/.codex/visualizations/2026/10/06/01a11030-ac6c-7070-922a-87cda5952ab9/owner-corrections/07-settings-navigation.png)
+- [Representative Zoom keybind](../../C:/Users/kalib/.codex/visualizations/2026/10/06/01a11030-ac6c-7070-922a-87cda5952ab9/owner-corrections/11-zoom-keybind.png)
 
 ## Git
 

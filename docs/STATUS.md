@@ -1,6 +1,6 @@
 # Aurora Client: plan, roadmap and current status
 
-Written 2026-11-11. This is the handover note for the direction work that started on 2026-11-10. The decisions themselves are in [docs/adr/](adr/) and the order of work is in [ROADMAP.md](ROADMAP.md); this file says what was agreed, what has been built, and what comes next.
+Written 2026-11-11. This is the handover note for the direction work that started on 2026-11-10. The decisions themselves are in [docs/adr/](adr) and the order of work is in [ROADMAP.md](ROADMAP.md); this file says what was agreed, what has been built, and what comes next.
 
 ## What we agreed
 
@@ -24,15 +24,15 @@ Standing rule: **no new features until the port to the newest Minecraft release 
 |---|---|---|
 | 1 | Fail-soft mixins, one feature catalog, `breaks` list, copy-diagnostics report | Built, PR #2 |
 | 2 | Fair-play classification, default-off switches | Built, PR #3 |
-| 3 | Core Gradle module for the Minecraft-free packages, measure and set the overhead budget, third-party notices, repo cleanup | Core module (PR #4), overhead budget (PR #6) and notices (PR #7) built; cleanup not started |
-| 4 | Port 26.1, then 26.2, then the newest release; release the newest; freeze 1.21.11 | Not started |
+| 3 | Core Gradle module for the Minecraft-free packages, measure and set the overhead budget, third-party notices, repo cleanup | Built: core module (PR #4), overhead budget (PR #6), notices (PR #7), cleanup (PR #8) |
+| 4 | Port 26.1, then 26.2, then 26.3; release 26.3; freeze 1.21.11 | Not started |
 | 5 | Extract the ports; move mixins, the glass renderer and Fabric API calls into the version adapter | Not started |
 | 6 | Shader-drawn shapes behind `RenderUtil` | Not started |
 | 7 | Later, in order: Apollo restriction support, friends and status, NeoForge if asked, small vanilla optimizations | Not started |
 
 ## Current status
 
-Seven pull requests are open and stacked. **None is merged: merging is blocked for the assistant, so the owner has to merge them, in this order.**
+Eight pull requests are open and stacked. **None is merged: merging is blocked for the assistant, so the owner has to merge them, in this order.**
 
 | PR | Branch | Contents | CI |
 |---|---|---|---|
@@ -43,6 +43,7 @@ Seven pull requests are open and stacked. **None is merged: merging is blocked f
 | [#5](https://github.com/kalibsolomon-pixel/Aurora-Client/pull/5) | `feat/fair-play-decisions` | The owner's three fair-play decisions (stacked on #4) | See the PR |
 | [#6](https://github.com/kalibsolomon-pixel/Aurora-Client/pull/6) | `feat/overhead-budget` | Roadmap step 3, the overhead budget (stacked on #5) | See the PR |
 | [#7](https://github.com/kalibsolomon-pixel/Aurora-Client/pull/7) | `feat/third-party-notices` | Roadmap step 3, third-party notices (stacked on #6) | See the PR |
+| [#8](https://github.com/kalibsolomon-pixel/Aurora-Client/pull/8) | `chore/repo-cleanup` | Roadmap step 3, repo cleanup (stacked on #7) | See the PR |
 
 This file was committed with PR #3 and is updated in PR #4.
 
@@ -102,6 +103,16 @@ Answered 2026-11-11: yes to all three.
 - Found: the TwelveMonkeys jars inside the mod carry no license file, so the jar had no BSD notice until now. HitColor's repository has no LICENSE file; only its Modrinth page says MIT.
 - A test fails if a font, a bundled library or a credit in the source is missing from the notices.
 
+### Step 3, repo cleanup, in PR #8
+
+- `AGENTS.md` is now a short contributor and agent guide: direction, build and run, layout, and every standing rule in one or two lines. The 2,700-line history it replaced is kept verbatim in `docs/history/AGENTS-2026-11-11.md`; older "AGENTS.md §N" citations point there.
+- The 40 reports at the repo root moved under `docs/`: five living references to `docs/`, release notes to `docs/releases/`, the rest to `docs/reports/`. Relative links were repaired; the publish workflow now reads release notes from `docs/releases/`.
+- The repo root now holds only the build, `README.md`, `AGENTS.md`, `LICENSE` and `THIRD_PARTY_NOTICES.md`.
+
+### Port target
+
+26.3 is the release the port targets (owner, 2026-11-11). ADR 0002 and the roadmap now name it.
+
 ## Open decisions for the owner
 
 None at the moment.
@@ -110,18 +121,17 @@ None at the moment.
 
 - The feature card tooltip, the detail-screen header and the Copy Diagnostics button have not been looked at on screen. The clipboard path was not exercised.
 - The tier-1 mod matrix (Sodium, Iris, VulkanMod, ImmediatelyFast, EntityCulling, Lithium, Mod Menu) has not been booted with these changes.
-- Whether 26.3 is the newest Minecraft release.
 - Apollo's license terms and how servers detect Lunar Client.
 - Whether Better Hitreg's Apache-2.0 listing on Modrinth matches the terms its author gave. Its repository's LICENSE is stock Apache 2.0.
 - HitColor's license: its repository has no LICENSE file; only Modrinth says MIT.
 
 ## Next steps
 
-1. Merge PR #1 to #7, in order.
+1. Merge PR #1 to #8, in order.
 2. Do the on-screen check and boot the mod matrix with `-Daurora.diagnostics.log=true`.
 3. Continue step 3:
    - ~~Move the Minecraft-free packages into a core Gradle module.~~ Done in PR #4. `module/` stayed in the client: `Module` reads the settings registry.
    - ~~Measure Aurora's per-frame cost and set the overhead budget as a number.~~ Done in PR #6.
    - ~~Add a third-party notices file.~~ Done in PR #7.
-   - Replace the history in `AGENTS.md` with a short contributor guide and move the root-level reports under `docs/`.
+   - ~~Replace the history in `AGENTS.md` and move the root-level reports under `docs/`.~~ Done in PR #8.
 4. Then step 4, the port.

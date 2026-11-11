@@ -11,7 +11,12 @@ targets Minecraft 1.21.11. Build and test with the checked-in Gradle wrapper:
 The runtime mod is `build/libs/aurora-<version>.jar`. Do not place a sources JAR
 in a player's `mods/` directory. See `gradle.properties` and the built JAR's
 `fabric.mod.json` for the exact version and dependency declarations. The
-project is licensed under MIT; see `LICENSE`.
+project is licensed under MIT; see `LICENSE`. Code, fonts and libraries from
+other projects are listed in `THIRD_PARTY_NOTICES.md`.
+
+Contributors start with `AGENTS.md`. Decisions are in `docs/adr/`, the plan in
+`docs/ROADMAP.md`, reference documents in `docs/` and dated reports in
+`docs/reports/`.
 
 ## Manual production releases
 

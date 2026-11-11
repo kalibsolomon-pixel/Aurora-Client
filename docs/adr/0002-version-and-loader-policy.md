@@ -7,7 +7,7 @@ date: 2026-11-10
 
 The main branch tracks the newest Minecraft release and receives all feature work. One previous version lives on a frozen branch that gets only crash and security fixes. Nothing is ever built for two versions at once, so no source preprocessor (Stonecutter or similar) is used. Minecraft's code is unobfuscated from 26.1 onward, which makes forward ports cheap and backports expensive; the policy follows that asymmetry.
 
-Ports step through every intermediate release in order as build-and-boot checkpoints (for the first port: 26.1, then 26.2, then the newest), but only the newest is released and supported. This keeps each batch of breakages small and attributable.
+Ports step through every intermediate release in order as build-and-boot checkpoints (for the first port: 26.1, then 26.2, then 26.3, the release the owner set as the target on 2026-11-11), but only the newest is released and supported. This keeps each batch of breakages small and attributable.
 
 Aurora ships for Fabric only. NeoForge is deferred until there is real demand; the door is kept open by confining Fabric API usage (about 16 classes at the time of writing) to the version adapter described in ADR 0003.
 

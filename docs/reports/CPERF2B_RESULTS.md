@@ -70,7 +70,7 @@ sample-identical. Internal HUD cadence is not presentation or input-to-photon
 latency. Histogram percentiles are rank buckets, never exact interpolated values.
 
 `python -B tools/performance/cperf2b_review.py 1 2 3 4` rebuilds offline reviews.
-[Machine-readable results](docs/performance-initiative/cperf2b-results.json) retain
+[Machine-readable results](../performance-initiative/cperf2b-results.json) retain
 histograms, counters, resource context and raw capture hashes. Ignored run folders
 retain CSVs, exports, process samples, event timestamps, camera PNGs and logs;
 `completed-run-manifest.json` inventories 789 completed-run files by SHA-256.

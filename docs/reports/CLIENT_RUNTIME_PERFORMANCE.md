@@ -49,7 +49,7 @@ calling thread's allocated bytes. It is a hot-path diagnostic, not Minecraft.
 | Original expression | 245.095 / 244.934 / 241.618 | 1376.000 / 1375.437 / 1375.367 |
 | Stable cached key | 5.765 / 5.856 / 5.810 | 0 / 0 / 0 |
 
-[Machine-readable measurements](docs/performance-initiative/world-scope-results.json)
+[Machine-readable measurements](../performance-initiative/world-scope-results.json)
 include source hashes. Compile `tools/performance/WorldScopeBenchmark.java` together
 with `WorldScopeKey.java` using `javac --release 21 -d <fresh-output>`, then invoke
 `com.aurora.client.util.WorldScopeBenchmark legacy` or `cached` with that classpath.

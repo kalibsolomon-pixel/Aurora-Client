@@ -32,7 +32,7 @@ A profiler run on 2026-11-11 measured how much this leaves out. JFR sampled the 
 
 The untimed remainder is mostly the mouse-delta, font-width, entity-smoothing and font-decoration hooks.
 
-**Glass captures** are glass panels claimed from the renderer's output pool. **UI fills** are `RenderUtil` fills; MC 1.21.11's GUI recording makes their cost grow faster than their count (see AGENTS.md section 10).
+**Glass captures** are glass panels claimed from the renderer's output pool. **UI fills** are `RenderUtil` fills; MC 1.21.11's GUI recording makes their cost grow faster than their count (see section 10 of [the old guide](history/AGENTS-2026-11-11.md)).
 
 ## Baseline runs
 

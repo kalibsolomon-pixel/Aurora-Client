@@ -138,7 +138,7 @@ colors and explicit player overrides retain meaning; HUD backing remains neutral
 The old per-element lighting/rim recipes below are historical/diagnostic paths,
 superseded for production by this rollout. The diagnostic `BlurTestScreen` retains
 its synthetic controls and lighting comparisons. Details and verification limits:
-[UNIFIED_THEME_PILOT.md](UNIFIED_THEME_PILOT.md).
+[UNIFIED_THEME_PILOT.md](reports/UNIFIED_THEME_PILOT.md).
 
 ```
 AuroraConfig.theme (ThemeDefinition)
@@ -2809,7 +2809,7 @@ histograms and primitive counters retain one homogeneous segment, reset on
 observed conditions changes with discard/transition totals. Developer commands
 are JVM-opt-in and session activation is separate; output is an explicit immutable
 copy followed by bounded asynchronous JSON export. No persisted settings or
-per-frame diagnostic objects. Details: [CPERF1A_DIAGNOSTICS_VALIDATION.md](CPERF1A_DIAGNOSTICS_VALIDATION.md).
+per-frame diagnostic objects. Details: [CPERF1A_DIAGNOSTICS_VALIDATION.md](reports/CPERF1A_DIAGNOSTICS_VALIDATION.md).
 
 ## C-PERF.2A bounded re-parking experiment (2026-10-17)
 
@@ -2826,19 +2826,19 @@ Reference exports retain schema 1's six metrics/populations with additive path
 identity. Experimental exports use schema 2, `PARK_REPARK` segment identity,
 explicit first-call labels, retry counters and four additional bounded histograms.
 The collector never supplies scheduling decisions. See
-[CPERF2A_REPARK_IMPLEMENTATION.md](CPERF2A_REPARK_IMPLEMENTATION.md) for validation,
+[CPERF2A_REPARK_IMPLEMENTATION.md](reports/CPERF2A_REPARK_IMPLEMENTATION.md) for validation,
 population contracts and limitations. No performance improvement is established.
 
 C-PERF.2B (2026-10-19) rejects promotion after two Windows comparison pairs:
 mean spin wall fell 41–44%, but deadline P95/P99 repeatedly worsened. No production
 default or scheduling implementation changes. The developer-only prototype is
-retained default-off for traceability. See [CPERF2B_RESULTS.md](CPERF2B_RESULTS.md)
+retained default-off for traceability. See [CPERF2B_RESULTS.md](reports/CPERF2B_RESULTS.md)
 for the early rejection, raw evidence identities and observer/platform limits.
 
 WorldScope's stable identity queries now reuse one immutable string entry keyed
 by namespace, raw name/address and default locale (2026-10-19). Only identity
 changes sanitize again; no world/client object is retained, and persistent keys
-remain byte-compatible. See [CLIENT_RUNTIME_PERFORMANCE.md](CLIENT_RUNTIME_PERFORMANCE.md)
+remain byte-compatible. See [CLIENT_RUNTIME_PERFORMANCE.md](reports/CLIENT_RUNTIME_PERFORMANCE.md)
 for sampled attribution and the narrowly scoped allocation measurement.
 
 Performance Initiative II (2026-10-19) replaces RegionCache's boxed Long map with
