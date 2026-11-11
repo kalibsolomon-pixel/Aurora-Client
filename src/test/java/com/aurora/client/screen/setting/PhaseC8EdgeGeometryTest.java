@@ -1,5 +1,6 @@
 package com.aurora.client.screen.setting;
 
+import com.aurora.client.SourceTree;
 import com.aurora.client.ui.util.ClipBand;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -22,7 +23,7 @@ class PhaseC8EdgeGeometryTest {
 
     private static String source(String rel) {
         try {
-            return Files.readString(Path.of(rel));
+            return Files.readString(SourceTree.resolve(rel));
         } catch (java.io.IOException e) {
             return fail("not readable from the test working dir: " + e);
         }
@@ -37,22 +38,22 @@ class PhaseC8EdgeGeometryTest {
         // detail-screen/Aurora fields had the fall-through (screen closed
         // on first press).
         String[] fields = {
-                "src/client/java/com/aurora/client/screen/setting/SearchListSetting.java",
-                "src/client/java/com/aurora/client/screen/setting/ItemScaleSetting.java",
-                "src/client/java/com/aurora/client/screen/setting/EffectExpiryListSetting.java",
-                "src/client/java/com/aurora/client/screen/setting/PixelCanvasSetting.java",
-                "src/client/java/com/aurora/client/screen/AuroraScreen.java",
+                SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/setting/SearchListSetting.java",
+                SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/setting/ItemScaleSetting.java",
+                SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/setting/EffectExpiryListSetting.java",
+                SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/setting/PixelCanvasSetting.java",
+                SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/AuroraScreen.java",
         };
         for (String f : fields) {
             String s = source(f);
             assertTrue(s.contains("KEY_ESCAPE"),
-                    Path.of(f).getFileName() + " must handle Escape for its focused field");
+                    SourceTree.resolve(f).getFileName() + " must handle Escape for its focused field");
             assertTrue(s.contains("setFocused(false)"),
-                    Path.of(f).getFileName() + " must UNFOCUS the field (not close the screen)");
+                    SourceTree.resolve(f).getFileName() + " must UNFOCUS the field (not close the screen)");
         }
         // The capture families' Escape semantics (clear-binding / cancel
         // capture) are their own and must not be swept into this rule.
-        String keybind = source("src/client/java/com/aurora/client/screen/setting/KeybindSetting.java");
+        String keybind = source(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/setting/KeybindSetting.java");
         assertTrue(keybind.contains("KEY_ESCAPE"), "Keybind keeps its clear-to-UNBOUND rule");
     }
 
@@ -61,18 +62,18 @@ class PhaseC8EdgeGeometryTest {
     @Test
     void searchHitBandsEqualThePaintedFields() {
         String[] rows = {
-                "src/client/java/com/aurora/client/screen/setting/SearchListSetting.java",
-                "src/client/java/com/aurora/client/screen/setting/ItemScaleSetting.java",
-                "src/client/java/com/aurora/client/screen/setting/EffectExpiryListSetting.java",
+                SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/setting/SearchListSetting.java",
+                SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/setting/ItemScaleSetting.java",
+                SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/setting/EffectExpiryListSetting.java",
         };
         for (String f : rows) {
             String s = source(f);
             assertTrue(s.contains("mouseY >= searchField.getY() && mouseY < searchField.getY() + searchField.getHeight()"),
-                    Path.of(f).getFileName() + " hit band must follow the actual painted field, including its pinned header");
+                    SourceTree.resolve(f).getFileName() + " hit band must follow the actual painted field, including its pinned header");
             assertFalse(s.contains("mouseY >= rowY + 5 && mouseY < rowY + 25"),
-                    Path.of(f).getFileName() + " 2px-taller band must not return");
+                    SourceTree.resolve(f).getFileName() + " 2px-taller band must not return");
             assertTrue(s.contains("setY(y + 6)") || s.contains("setY(y + 6);"),
-                    Path.of(f).getFileName() + " paints its field at y+6 (the band's truth)");
+                    SourceTree.resolve(f).getFileName() + " paints its field at y+6 (the band's truth)");
         }
     }
 
@@ -137,7 +138,7 @@ class PhaseC8EdgeGeometryTest {
 
     @Test
     void renderAndClickShareTheResolvedPlacement() {
-        String s = source("src/client/java/com/aurora/client/screen/setting/EnumSetting.java");
+        String s = source(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/setting/EnumSetting.java");
         assertEquals(2, countOccurrences(s, "int dropdownY = dropdownY(btnY, dropdownH);"),
                 "the render walk AND the click walk must resolve placement through the one helper");
         assertTrue(s.contains("int dropdownY(int btnY, int dropdownH)"),
@@ -148,12 +149,12 @@ class PhaseC8EdgeGeometryTest {
 
     @Test
     void hostsPublishTheirBand() {
-        String detail = source("src/client/java/com/aurora/client/screen/FeatureDetailScreen.java");
+        String detail = source(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/FeatureDetailScreen.java");
         assertTrue(detail.contains("FeatureSetting.setHostBand("),
                 "FeatureDetailScreen publishes its fade-boundary clip");
         assertTrue(detail.contains("FeatureSetting.clearHostBand()"),
                 "FeatureDetailScreen clears the band on teardown");
-        String aurora = source("src/client/java/com/aurora/client/screen/AuroraScreen.java");
+        String aurora = source(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/AuroraScreen.java");
         assertTrue(aurora.contains("FeatureSetting.setHostBand(contentViewport())"),
                 "AuroraScreen publishes its C-1 content viewport");
         assertTrue(aurora.contains("FeatureSetting.clearHostBand()"),
@@ -191,7 +192,7 @@ class PhaseC8EdgeGeometryTest {
 
     @Test
     void colorPickerFailsGracefullyBelowTheSupportableMinimum() {
-        String s = source("src/client/java/com/aurora/client/screen/ColorPickerScreen.java");
+        String s = source(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/ColorPickerScreen.java");
         assertTrue(s.contains("pickerSupportable = maxPad >= MIN_PAD"),
                 "supportability is an explicit computed decision");
         assertTrue(s.contains("Window too small for the color picker"),
@@ -206,7 +207,7 @@ class PhaseC8EdgeGeometryTest {
 
     @Test
     void pixelCanvasWarningPanelOwnsItsRegion() {
-        String s = source("src/client/java/com/aurora/client/screen/setting/PixelCanvasSetting.java");
+        String s = source(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/setting/PixelCanvasSetting.java");
         // The panel consumes every click inside its rect; the buttons act
         // only in the decision state (measuring-state clicks are inert).
         String clickBody = methodBody(s, "public boolean mouseClicked");

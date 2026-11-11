@@ -22,8 +22,8 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class AuroraScreenViewportCouplingTest {
 
-    private static final Path SCREEN = Path.of(
-            "src/client/java/com/aurora/client/screen/AuroraScreen.java");
+    private static final Path SCREEN = SourceTree.resolve(
+            SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/AuroraScreen.java");
 
     private static String screenSource() {
         try {
@@ -120,9 +120,9 @@ class AuroraScreenViewportCouplingTest {
         // The pin keeps walking the tree so any FURTHER adopter still shows
         // up here and must be justified in this test.
         List<String> expected = List.of(
-                "src/client/java/com/aurora/client/screen/AuroraScreen.java",
-                "src/client/java/com/aurora/client/screen/ManagerListScreen.java",
-                "src/client/java/com/aurora/client/screen/ResourcePackBrowserScreen.java");
+                SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/AuroraScreen.java",
+                SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/ManagerListScreen.java",
+                SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/ResourcePackBrowserScreen.java");
         try (Stream<Path> files = SourceTree.javaFiles()) {
             List<String> adopters = new ArrayList<>();
             files.filter(p -> sourcePath(p).endsWith(".java"))

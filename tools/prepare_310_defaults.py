@@ -2,6 +2,8 @@
 
 Reads an isolated copy only. Never reads or modifies a live instance.
 """
+
+from source_tree import client_path
 import json
 from pathlib import Path
 
@@ -15,7 +17,7 @@ waypointShow deathWaypoint crosshair hitbox particle containerPreview itemPhysic
 keystrokes minimap worldMapShow resourcepackBrowser
 """.split())
 EXACT = set("""
-customTitleScreen moduleGridView textRendererMode activeFont themeEnabled theme
+keybindVersion customTitleScreen moduleGridView textRendererMode activeFont themeEnabled theme
 showFps showCoords showTime hudColor pingHudEnabled nametagPingEnabled nametagTotemPopsEnabled
 hudEditorKey waypointDropKey waypointManagerKey waypointMaxVisible
 waypointWorldMarkerLimit waypointMaxDistance waypointsEnabled worldMapEnabled
@@ -38,4 +40,4 @@ if __name__ == "__main__":
     # The 3.2.0 resource carries the reviewed 3.1.0 export verbatim; only the
     # packaged resource name follows the release version.
     export(Path("build/release-3.1.0/reference/aurora.json"),
-           Path("src/client/resources/assets/aurora/defaults/3.2.0.json"))
+           client_path("resources/assets/aurora/defaults/3.2.0.json"))

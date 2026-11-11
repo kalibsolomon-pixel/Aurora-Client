@@ -1,0 +1,17 @@
+name: Proposal
+description: Discuss a focused improvement before implementing it.
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the player or contributor workflow and a concrete example.
+    validations:
+      required: true
+  - type: textarea
+    id: approach
+    attributes:
+      label: Proposed behavior and alternatives
+      description: Consider fair play, performance, compatibility and the roadmap.
+    validations:
+      required: true

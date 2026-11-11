@@ -1,22 +1,52 @@
 # Aurora Client
 
-Aurora Client is a client-side Fabric mod for Minecraft. The current source
-targets Minecraft 26.3 and requires Java 25. Build and test with the checked-in Gradle wrapper:
+Aurora Client is a client-side Fabric mod with 38 quality-of-life, PvP and
+performance features, a themed GUI and optional glass. It works in any
+Fabric-compatible launcher and has no telemetry or paid cosmetics. See the
+[feature and fair-play catalog](docs/FAIR_PLAY.md).
+
+The current source targets Minecraft 26.3 and requires Java 25. Build and test
+with the checked-in Gradle wrapper:
 
 ```sh
 ./gradlew test
 ./gradlew build
 ```
 
-The runtime mod is `build/libs/aurora-<version>.jar`. Do not place a sources JAR
+The runtime mod is `build/libs/aurora-<version>-mc<minecraft>.jar`. Do not place a sources JAR
 in a player's `mods/` directory. See `gradle.properties` and the built JAR's
 `fabric.mod.json` for the exact version and dependency declarations. The
 project is licensed under MIT; see `LICENSE`. Code, fonts and libraries from
 other projects are listed in `THIRD_PARTY_NOTICES.md`.
 
-Contributors start with `AGENTS.md`. Decisions are in `docs/adr/`, the plan in
+Contributors start with [CONTRIBUTING.md](CONTRIBUTING.md) and `AGENTS.md`.
+Report vulnerabilities using [SECURITY.md](SECURITY.md).
+Decisions are in `docs/adr/`, the plan in
 `docs/ROADMAP.md`, reference documents in `docs/` and dated reports in
 `docs/reports/`.
+
+## Installation and version policy
+
+Download the JAR matching your Minecraft version from
+[GitHub Releases](https://github.com/kalibsolomon-pixel/Aurora-Client/releases).
+Install Fabric Loader and the matching Fabric API, then put the Aurora JAR in
+that instance's `mods` folder. Install only one Aurora JAR; core and ports are
+already bundled.
+
+This restructure prepares distinct artifacts for **26.1.2**, **26.2** and **26.3**.
+Feature development follows the newest Minecraft release. The previous
+maintained version is frozen to crash and security fixes; older checkpoint
+artifacts remain available without parallel feature development. There is no
+universal JAR across these versions. Check release notes for availability.
+
+Sodium is optional. Minecraft 26.2+ provides native Vulkan. Iris is an OpenGL
+shader mod; Vulkan shader mods need their own compatibility evidence. See the
+[pinned tested matrix](docs/MOD_MATRIX.md).
+
+Information-advantage features ship off. Existing settings are migrated. Respect
+server rules. Broken Aurora mixins disable affected features for the session and
+report through Display Settings → Support → **Copy Diagnostics**; nothing is
+uploaded automatically.
 
 ## Manual production releases
 
@@ -55,7 +85,8 @@ the default `master` branch. Its publication job uses the existing
    update visible to launcher users.
 
 The tag is always `v<version>`, and the single release asset is named
-`aurora-<version>.jar`. `stable` requires `X.Y.Z`; `beta` requires
+`aurora-<version>-mc<minecraft>.jar`. Keep **make_latest** off for checkpoint
+releases. `stable` requires `X.Y.Z`; `beta` requires
 `X.Y.Z-beta.N`; `nightly` requires `X.Y.Z-nightly.YYYYMMDD`. Beta and nightly
 are GitHub prereleases. The developer chooses the next version; this workflow
 never chooses or increments one. Existing tags and releases, including the

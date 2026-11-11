@@ -71,3 +71,22 @@ All tooling references are `tools/verify_release_artifact.py`.
 - Never delete or recreate a published release to repair metadata.
 - Never reuse or re-push a tag that a published release has used.
 - Never force-push tags or rewrite pushed history.
+
+## Separate Minecraft artifacts (2026-11-11)
+
+Every release contains one Minecraft-specific runtime JAR named
+`aurora-<version>-mc<minecraft>.jar`. The verifier checks that the filename,
+source `minecraft_version` and embedded Fabric requirement agree. It rejects
+mixed or ambiguous output directories. Core and ports are included in that JAR.
+
+The initial distribution uses fresh, distinct Aurora versions: 3.2.2 for the
+26.1.2 checkpoint, 3.2.3 for 26.2, and 3.3.0 for 26.3 with the layer extraction.
+Each release targets its own exact source commit and uses the existing immutable
+`v<version>` tag scheme. These are separate branch builds, not simultaneous
+multi-version compilation. Leave `make_latest` off for checkpoint releases;
+only the newest Minecraft line is marked latest.
+
+Local runtime acceptance evidence, including the overhead check, is required
+before dispatch. Hosted CI builds cannot stand in for a GPU boot. The protected
+environment, draft verification, exact target and anonymous download checks
+remain mandatory even when GitHub work is authorized autonomously.

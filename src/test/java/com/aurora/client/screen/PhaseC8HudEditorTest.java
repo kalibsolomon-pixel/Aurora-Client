@@ -1,5 +1,6 @@
 package com.aurora.client.screen;
 
+import com.aurora.client.SourceTree;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
@@ -16,8 +17,8 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class PhaseC8HudEditorTest {
 
-    private static final Path SCREEN = Path.of(
-            "src/client/java/com/aurora/client/screen/HudEditorScreen.java");
+    private static final Path SCREEN = SourceTree.resolve(
+            SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/HudEditorScreen.java");
 
     private static String source() {
         try {

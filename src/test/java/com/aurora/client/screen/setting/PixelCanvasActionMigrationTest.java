@@ -1,5 +1,6 @@
 package com.aurora.client.screen.setting;
 
+import com.aurora.client.SourceTree;
 import com.aurora.client.ui.interaction.SemanticActionControl;
 import com.aurora.client.util.HoverAnim;
 import org.junit.jupiter.api.Test;
@@ -32,8 +33,8 @@ class PixelCanvasActionMigrationTest {
         // Source-pinned: the field initializers must construct the §8.3
         // symmetric animator — the legacy snap-in constructor is banned
         // for these three actions.
-        String src = java.nio.file.Files.readString(java.nio.file.Path.of(
-                "src/client/java/com/aurora/client/screen/setting/PixelCanvasSetting.java"));
+        String src = java.nio.file.Files.readString(SourceTree.resolve(
+                SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/setting/PixelCanvasSetting.java"));
         for (String field : new String[]{"clearHoverAnim", "defaultHoverAnim", "applyHoverAnim"}) {
             int i = src.indexOf("HoverAnim " + field + " = ");
             assertTrue(i >= 0, field + " declaration not found");
@@ -45,8 +46,8 @@ class PixelCanvasActionMigrationTest {
 
     @Test
     void legacyHoverAnimConstructorIsGoneFromPixelCanvas() throws Exception {
-        String src = java.nio.file.Files.readString(java.nio.file.Path.of(
-                "src/client/java/com/aurora/client/screen/setting/PixelCanvasSetting.java"));
+        String src = java.nio.file.Files.readString(SourceTree.resolve(
+                SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/setting/PixelCanvasSetting.java"));
         assertFalse(src.contains("new HoverAnim("),
                 "no legacy snap-in HoverAnim construction may remain in PixelCanvasSetting");
     }
@@ -73,8 +74,8 @@ class PixelCanvasActionMigrationTest {
         // contract instead (the RolloutStatesTest pattern): exactly three
         // controls, visual order Clear → Apply → Default, distinct
         // accessible names, authoritative disabled gate.
-        String src = java.nio.file.Files.readString(java.nio.file.Path.of(
-                "src/client/java/com/aurora/client/screen/setting/PixelCanvasSetting.java"));
+        String src = java.nio.file.Files.readString(SourceTree.resolve(
+                SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/setting/PixelCanvasSetting.java"));
         assertTrue(src.contains("return java.util.List.of(clearControl, applyControl, defaultControl)"),
                 "traversal order must be visual/read: Clear, Apply, Default");
         assertTrue(src.contains("\"Clear Canvas\""));
@@ -92,9 +93,9 @@ class PixelCanvasActionMigrationTest {
         // pill is legitimately canonical (pilot 7); only its "−" chips are
         // the deferred family, and those are pinned by KeyListPilotTest.
         for (String path : new String[]{
-                "src/client/java/com/aurora/client/screen/setting/ItemScaleSetting.java",
-                "src/client/java/com/aurora/client/screen/setting/EffectRowSetting.java"}) {
-            String src = java.nio.file.Files.readString(java.nio.file.Path.of(path));
+                SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/setting/ItemScaleSetting.java",
+                SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/setting/EffectRowSetting.java"}) {
+            String src = java.nio.file.Files.readString(SourceTree.resolve(path));
             assertFalse(src.contains("HoverAnim.symmetric"),
                     path + " glyph family must remain outside this migration");
         }

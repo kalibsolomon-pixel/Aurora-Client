@@ -1,0 +1,14 @@
+// Small Minecraft-free interfaces shared by core and the active adapter.
+plugins { id 'java-library' }
+java { sourceCompatibility = JavaVersion.VERSION_21; targetCompatibility = JavaVersion.VERSION_21 }
+tasks.withType(JavaCompile).configureEach { options.release = 21; options.encoding = 'UTF-8' }
+
+// Dependency isolation is a build contract, checked in the owning project.
+tasks.register('verifyLayering') {
+    doLast {
+        configurations.compileClasspath.resolvedConfiguration.resolvedArtifacts.each { artifact ->
+            throw new GradleException("Ports must depend only on the JDK: ${artifact.moduleVersion.id}")
+        }
+    }
+}
+tasks.named('check') { dependsOn 'verifyLayering' }

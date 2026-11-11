@@ -11,6 +11,7 @@ repositories {
 }
 
 dependencies {
+	api project(':ports')
 	compileOnly "com.google.code.gson:gson:${rootProject.gson_version}"
 	compileOnly "org.slf4j:slf4j-api:${rootProject.slf4j_version}"
 	// Bundled into the mod jar by the root build (Modrinth icon decoding).
@@ -26,3 +27,16 @@ tasks.withType(JavaCompile).configureEach {
 	it.options.release = 21
 	it.options.encoding = 'UTF-8'
 }
+
+// Dependency isolation is a build contract, checked in the owning project.
+tasks.register('verifyLayering') {
+    doLast {
+        configurations.compileClasspath.resolvedConfiguration.resolvedArtifacts.each { artifact ->
+            def group = artifact.moduleVersion.id.group
+            if (group ==~ /(?:net\.minecraft|com\.mojang|net\.fabricmc.*|org\.lwjgl.*|org\.spongepowered.*|org\.apache\.logging.*)/) {
+                throw new GradleException("Core has a native dependency: ${artifact.moduleVersion.id}")
+            }
+        }
+    }
+}
+tasks.named('check') { dependsOn 'verifyLayering' }

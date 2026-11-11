@@ -1,5 +1,6 @@
 package com.aurora.client.ui.util;
 
+import com.aurora.client.SourceTree;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -17,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * default font instead of rendering as missing-glyph boxes.
  */
 class FontFallbackTest {
-    private static final Path FONTS = Path.of("src/client/resources/assets/aurora/font");
+    private static final Path FONTS = SourceTree.resolve(SourceTree.ADAPTER + "/src/client/resources/assets/aurora/font");
 
     @Test void everyTextFontFallsBackToTheVanillaDefaultFont() throws Exception {
         int checked = 0;

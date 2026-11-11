@@ -1,5 +1,6 @@
 package com.aurora.client.util;
 
+import com.aurora.client.SourceTree;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -33,7 +34,7 @@ class FramePacerLowCpuTest {
     }
 
     @Test void parkAndSpinAlgorithmsAndDispatchRemainUnchanged() throws Exception {
-        String s = Files.readString(Path.of("src/client/java/com/aurora/client/util/FramePacer.java"))
+        String s = Files.readString(SourceTree.resolve(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/util/FramePacer.java"))
                 .replace("\r\n", "\n").replace("com.aurora.client.util.FrameClock.seconds()", "GLFW.glfwGetTime()");
         assertTrue(s.contains("else waitUntilPark(target, spinTail);"));
         assertTrue(s.contains("case SPIN -> waitUntilSpin(target);"));
@@ -54,7 +55,7 @@ class FramePacerLowCpuTest {
     }
 
     @Test void unsupportedControlCombinationsAreExplicitAndTheValueSurvivesSwitches() throws Exception {
-        String ui = Files.readString(Path.of("src/client/java/com/aurora/client/screen/FeatureRegistry.java"));
+        String ui = Files.readString(SourceTree.resolve(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/FeatureRegistry.java"));
         int start = ui.indexOf("new BooleanSetting(\"Low CPU (Hybrid only)\"");
         String control = ui.substring(start, ui.indexOf("SliderSetting.ofInt", start));
         assertTrue(control.contains("Park and Spin are unchanged"));

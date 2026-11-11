@@ -1,5 +1,6 @@
 package com.aurora.client.util;
 
+import com.aurora.client.SourceTree;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -110,7 +111,7 @@ class FramePacingTest {
     }
 
     @Test void hooksUseTheTrackerAndOnlyCancelAfterTheOwnershipCheck() throws Exception {
-        Path root = Path.of("src/client/java/com/aurora/client/mixin");
+        Path root = SourceTree.resolve(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/mixin");
         String head = Files.readString(root.resolve("MinecraftClientRenderMixin.java"));
         String post = Files.readString(root.resolve("RenderSystemMixin.java"));
         assertTrue(head.contains("getFramerateLimitTracker().getFramerateLimit()"));

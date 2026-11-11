@@ -1,5 +1,6 @@
 package com.aurora.client.ui.component;
 
+import com.aurora.client.SourceTree;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.atomic.AtomicInteger;
@@ -18,12 +19,12 @@ import static org.junit.jupiter.api.Assertions.*;
 class ColorSwatchDataOnlyTest {
 
     private static final String SWATCH_SRC =
-            "src/client/java/com/aurora/client/ui/component/ColorSwatch.java";
+            SourceTree.ADAPTER + "/src/client/java/com/aurora/client/ui/component/ColorSwatch.java";
     private static final String WAYPOINTS_SRC =
-            "src/client/java/com/aurora/client/screen/WaypointManagerScreen.java";
+            SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/WaypointManagerScreen.java";
 
     private static String read(String path) throws Exception {
-        return java.nio.file.Files.readString(java.nio.file.Path.of(path));
+        return java.nio.file.Files.readString(SourceTree.resolve(path));
     }
 
     private static ColorSwatch swatch(int color, Runnable onClick) {
@@ -112,7 +113,7 @@ class ColorSwatchDataOnlyTest {
 
     @Test
     void interactiveColorSettingRemainsCanonical() throws Exception {
-        String src = read("src/client/java/com/aurora/client/screen/setting/ColorSetting.java");
+        String src = read(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/setting/ColorSetting.java");
         assertTrue(src.contains("new ColorSetting(\"Custom Accent\",")
                         || src.contains("this.swatch = new ColorSwatch(getter, null).canonicalStates();"),
                 "sanity anchor");
@@ -130,13 +131,13 @@ class ColorSwatchDataOnlyTest {
         // Slider's default (ThemePreview mock only, untouched), and
         // HoverAnim.symmetric's internal factory construction.
         String swatch = read(SWATCH_SRC);
-        String slider = read("src/client/java/com/aurora/client/ui/component/Slider.java");
+        String slider = read(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/ui/component/Slider.java");
         String hoverAnim = read("core/src/main/java/com/aurora/client/util/HoverAnim.java");
         assertEquals(1, swatch.split("new HoverAnim\\(", -1).length - 1);
         assertEquals(1, slider.split("new HoverAnim\\(", -1).length - 1);
         assertEquals(1, hoverAnim.split("new HoverAnim\\(", -1).length - 1);
         // ...and no other production file constructs one.
-        long others = com.aurora.client.SourceTree.javaFiles()
+        long others = SourceTree.javaFiles()
                 .filter(p -> !p.toString().contains("DevPilot")
                         && !p.toString().contains(".mimosa")
                         && !p.toString().endsWith("ColorSwatch.java")

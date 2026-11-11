@@ -1,5 +1,6 @@
 package com.aurora.client.screen.setting;
 
+import com.aurora.client.SourceTree;
 import com.aurora.client.ui.component.IconAction;
 import com.aurora.client.ui.interaction.SemanticAction;
 import com.aurora.client.ui.interaction.SemanticActionControl;
@@ -29,25 +30,25 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class IconActionRolloutTest {
 
-    private static final String SRC = "src/client/java/com/aurora/client/ui/component/IconAction.java";
+    private static final String SRC = SourceTree.ADAPTER + "/src/client/java/com/aurora/client/ui/component/IconAction.java";
     private static final String ITEM_SCALE =
-            "src/client/java/com/aurora/client/screen/setting/ItemScaleSetting.java";
+            SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/setting/ItemScaleSetting.java";
     private static final String EFFECT_EXPIRY =
-            "src/client/java/com/aurora/client/screen/setting/EffectExpiryListSetting.java";
+            SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/setting/EffectExpiryListSetting.java";
     private static final String EFFECT_ROW =
-            "src/client/java/com/aurora/client/screen/setting/EffectRowSetting.java";
+            SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/setting/EffectRowSetting.java";
     private static final String PARTICLE_ROW =
-            "src/client/java/com/aurora/client/screen/setting/ParticleRowSetting.java";
+            SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/setting/ParticleRowSetting.java";
     private static final String SEARCH_LIST =
-            "src/client/java/com/aurora/client/screen/setting/SearchListSetting.java";
+            SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/setting/SearchListSetting.java";
     private static final String KEY_LIST =
-            "src/client/java/com/aurora/client/screen/setting/KeyListSetting.java";
+            SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/setting/KeyListSetting.java";
     private static final String FEATURE_ICONS =
             "core/src/main/java/com/aurora/client/screen/FeatureIcons.java";
 
     private static String src(String path) {
         try {
-            return java.nio.file.Files.readString(java.nio.file.Path.of(path));
+            return java.nio.file.Files.readString(SourceTree.resolve(path));
         } catch (java.io.IOException e) {
             return fail(path + " not readable: " + e);
         }

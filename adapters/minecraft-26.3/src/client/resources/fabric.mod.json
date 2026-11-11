@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "id": "aurora",
+  "version": "${version}",
+  "name": "Aurora Client",
+  "icon": "assets/aurora/icon.png",
+  "description": "Client-side quality-of-life, combat feedback and performance features with a themed interface.",
+  "authors": [
+    "Kalib"
+  ],
+  "contact": {
+    "homepage": "https://github.com/kalibsolomon-pixel/Aurora-Client",
+    "sources": "https://github.com/kalibsolomon-pixel/Aurora-Client",
+    "issues": "https://github.com/kalibsolomon-pixel/Aurora-Client/issues"
+  },
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "com.aurora.client.AuroraClient"
+    ]
+  },
+  "mixins": [
+    "aurora.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": "~26.3",
+    "java": ">=25",
+    "fabric-api": "*"
+  },
+  "suggests": {
+    "modmenu": "*"
+  },
+  "breaks": {
+    "betterhitreg": "*"
+  }
+}

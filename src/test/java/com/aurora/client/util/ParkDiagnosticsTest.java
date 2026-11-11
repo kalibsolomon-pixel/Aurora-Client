@@ -1,5 +1,6 @@
 package com.aurora.client.util;
 
+import com.aurora.client.SourceTree;
 import com.google.gson.GsonBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -284,8 +285,8 @@ class ParkDiagnosticsTest {
     }
 
     @Test void instrumentationKeepsTheClockAndAllocationBoundaryAndDeveloperGate() throws Exception {
-        Path root = Path.of("src/client/java/com/aurora/client");
-        String pacer = Files.readString(root.resolve("util/FramePacer.java"));
+        Path root = SourceTree.resolve(SourceTree.ADAPTER + "/src/client/java/com/aurora/client");
+        String pacer = SourceTree.read("util/FramePacer.java");
         String measured = pacer.substring(pacer.indexOf("private static void waitUntilParkMeasured"),
                 pacer.indexOf("public static void waitUntilHybrid"));
         assertEquals(2, measured.split("System.nanoTime\\(\\)", -1).length - 1);
@@ -298,6 +299,6 @@ class ParkDiagnosticsTest {
         assertTrue(controls.contains("if (!Boolean.getBoolean(\"aurora.parkDiagnostics\")) return;"));
         assertTrue(controls.indexOf("CompletableFuture.runAsync") < controls.indexOf("Files.createDirectories"));
         assertTrue(controls.contains("EXPORTING.compareAndSet(false, true)"));
-        assertFalse(com.aurora.client.SourceTree.read("config/AuroraConfig.java").contains("parkDiagnostics"));
+        assertFalse(SourceTree.read("config/AuroraConfig.java").contains("parkDiagnostics"));
     }
 }

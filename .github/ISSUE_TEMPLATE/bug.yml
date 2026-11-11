@@ -1,0 +1,33 @@
+name: Bug report
+description: Report a reproducible Aurora problem.
+body:
+  - type: input
+    id: versions
+    attributes:
+      label: Aurora and Minecraft versions
+      placeholder: Aurora 3.3.0, Minecraft 26.3, Fabric Loader version
+    validations:
+      required: true
+  - type: input
+    id: backend
+    attributes:
+      label: Graphics backend, GPU and operating system
+      placeholder: OpenGL or Vulkan, GPU/driver, OS
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps, expected behavior and actual result
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Redacted diagnostics and log
+      description: Use Display Settings → Support → Copy Diagnostics. Remove personal paths and account/server details from logs. Do not attach tokens or private configs.
+  - type: textarea
+    id: mods
+    attributes:
+      label: Other mods and relevant settings
+      description: Include exact versions; Iris applies to OpenGL only.

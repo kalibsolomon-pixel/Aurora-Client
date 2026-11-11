@@ -6,12 +6,14 @@ need no import, so they are found by matching simple class names in the source.
 
 Usage: python tools/core_candidates.py [package ...]
 """
+
+from source_tree import client_path
 import os
 import re
 import sys
 
 HERE = os.path.dirname(__file__)
-ROOTS = [os.path.join(HERE, "..", "src", "client", "java"), os.path.join(HERE, "..", "core", "src", "main", "java")]
+ROOTS = [str(client_path("java")), os.path.join(HERE, "..", "core", "src", "main", "java"), os.path.join(HERE, "..", "ports", "src", "main", "java")]
 FORBIDDEN = re.compile(
     r"^import\s+(static\s+)?(net\.minecraft|com\.mojang|net\.fabricmc|org\.lwjgl"
     r"|org\.spongepowered|com\.llamalad7|com\.terraformersmc|org\.apache\.logging)\b",

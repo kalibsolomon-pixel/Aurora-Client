@@ -1,5 +1,6 @@
 package com.aurora.client.screen;
 
+import com.aurora.client.SourceTree;
 import com.aurora.client.ui.util.ClipBand;
 import org.junit.jupiter.api.Test;
 
@@ -23,14 +24,14 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class PhaseC8ClipCouplingTest {
 
-    private static final Path MANAGER = Path.of(
-            "src/client/java/com/aurora/client/screen/ManagerListScreen.java");
-    private static final Path PROFILE = Path.of(
-            "src/client/java/com/aurora/client/screen/ProfileManagerScreen.java");
-    private static final Path WAYPOINT = Path.of(
-            "src/client/java/com/aurora/client/screen/WaypointManagerScreen.java");
-    private static final Path PACKS = Path.of(
-            "src/client/java/com/aurora/client/screen/ResourcePackBrowserScreen.java");
+    private static final Path MANAGER = SourceTree.resolve(
+            SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/ManagerListScreen.java");
+    private static final Path PROFILE = SourceTree.resolve(
+            SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/ProfileManagerScreen.java");
+    private static final Path WAYPOINT = SourceTree.resolve(
+            SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/WaypointManagerScreen.java");
+    private static final Path PACKS = SourceTree.resolve(
+            SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/ResourcePackBrowserScreen.java");
 
     private static String source(Path p) {
         try {

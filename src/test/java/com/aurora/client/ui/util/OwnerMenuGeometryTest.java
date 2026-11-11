@@ -1,5 +1,6 @@
 package com.aurora.client.ui.util;
 
+import com.aurora.client.SourceTree;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import javax.imageio.ImageIO;
@@ -13,7 +14,7 @@ class OwnerMenuGeometryTest {
             assertEquals(frame.x() + 12, UiDensity.detailTitleX(frame));
             assertTrue(UiDensity.detailTitleX(frame) < frame.x() + 40);
         }
-        String detail = Files.readString(Path.of("src/client/java/com/aurora/client/screen/FeatureDetailScreen.java"));
+        String detail = Files.readString(SourceTree.resolve(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/FeatureDetailScreen.java"));
         assertFalse(detail.contains("AuroraBrand"));
         assertFalse(detail.contains("listX + 40"));
         assertTrue(detail.contains("UiDensity.detailTitleX(compactFrame)"));
@@ -69,7 +70,7 @@ class OwnerMenuGeometryTest {
     }
 
     @Test void guiScalesThreeAndFourRetainNativeAssetResolutionAndIntegerEdges() throws Exception {
-        var asset = ImageIO.read(Path.of("src/client/resources/assets/aurora/textures/ui/aurora_mark.png").toFile());
+        var asset = ImageIO.read(SourceTree.resolve(SourceTree.ADAPTER + "/src/client/resources/assets/aurora/textures/ui/aurora_mark.png").toFile());
         assertEquals(256,asset.getWidth()); assertEquals(asset.getWidth(),asset.getHeight());
         for (int scale : new int[]{3,4}) {
             var menu = MenuComposition.layout((2560+scale-1)/scale,(1412+scale-1)/scale);
@@ -80,12 +81,12 @@ class OwnerMenuGeometryTest {
     }
 
     @Test void screenUsesTheSameGeometryForAllButtonsAndTheTexturedUntintedMark() throws Exception {
-        String menu = Files.readString(Path.of("src/client/java/com/aurora/client/screen/AuroraTitleScreen.java"));
+        String menu = Files.readString(SourceTree.resolve(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/AuroraTitleScreen.java"));
         assertTrue(menu.contains("MenuComposition.layout(this.width, this.height)"));
         assertTrue(menu.contains("var bounds = composition.card(index)"));
         assertTrue(menu.contains("bounds.width(), bounds.height(), label"));
         assertTrue(menu.contains("mark.x(), mark.y(), mark.width()"));
-        String brand = Files.readString(Path.of("src/client/java/com/aurora/client/ui/util/AuroraBrand.java"));
+        String brand = Files.readString(SourceTree.resolve(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/ui/util/AuroraBrand.java"));
         assertTrue(brand.contains("RenderPipelines.GUI_TEXTURED"));
         assertFalse(brand.contains("ThemeManager"));
         assertFalse(brand.contains("GlassSurface"));

@@ -1,5 +1,6 @@
 package com.aurora.client.ui.component;
 
+import com.aurora.client.SourceTree;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
@@ -10,19 +11,19 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class MaterialSurfaceContractTest {
 
-    private static final Path SOURCE = Path.of(
-            "src/client/java/com/aurora/client/ui/component/MaterialSurface.java");
+    private static final Path SOURCE = SourceTree.resolve(
+            SourceTree.ADAPTER + "/src/client/java/com/aurora/client/ui/component/MaterialSurface.java");
 
     @Test
     void parentWindowHostsSuppressStandaloneChildCaptures() throws Exception {
-        String glass = Files.readString(Path.of("src/client/java/com/aurora/client/ui/component/GlassSurface.java"));
+        String glass = Files.readString(SourceTree.resolve(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/ui/component/GlassSurface.java"));
         int card = glass.indexOf("public static boolean card(");
         int container = glass.indexOf("public static boolean container(", card);
         String body = glass.substring(card, container);
         assertTrue(body.contains("screen.parentGlassOnly()) return false"));
         assertTrue(body.indexOf("return false") < body.indexOf("return paint"));
         for (String host : new String[]{"AuroraScreen", "FeatureDetailScreen"}) {
-            String source = Files.readString(Path.of("src/client/java/com/aurora/client/screen/" + host + ".java"));
+            String source = Files.readString(SourceTree.resolve(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/" + host + ".java"));
             assertTrue(source.contains("boolean parentGlassOnly() { return true; }"));
         }
     }

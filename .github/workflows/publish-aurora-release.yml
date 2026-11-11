@@ -17,6 +17,11 @@ on:
           - stable
           - beta
           - nightly
+      make_latest:
+        description: 'Mark as latest (enable only for the newest Minecraft release)'
+        required: true
+        default: false
+        type: boolean
       source_ref:
         description: 'Exact source commit SHA, branch, or tag to build'
         required: true
@@ -98,7 +103,8 @@ jobs:
             --version "$RELEASE_VERSION" --channel "$RELEASE_CHANNEL" \
             --source-sha "$SOURCE_SHA" \
             --output release-bundle/release-metadata.json
-          cp "source/build/libs/aurora-${RELEASE_VERSION}.jar" release-bundle/
+          asset="$(python3 -c 'import json; print(json.load(open("release-bundle/release-metadata.json"))["fileName"])')"
+          cp "source/build/libs/$asset" release-bundle/
           # Release notes live in docs/releases/ (moved from the repo root 2026-11-11).
           if [[ -f "source/docs/releases/RELEASE_NOTES_${RELEASE_VERSION}.md" ]]; then
             cp "source/docs/releases/RELEASE_NOTES_${RELEASE_VERSION}.md" release-bundle/release-notes.md
@@ -127,6 +133,7 @@ jobs:
       RELEASE_VERSION: ${{ inputs.version }}
       RELEASE_CHANNEL: ${{ inputs.channel }}
       SOURCE_SHA: ${{ needs.validate.outputs.source_sha }}
+      MAKE_LATEST: ${{ inputs.make_latest }}
     steps:
       - name: Check out reviewed release tooling
         uses: actions/checkout@v6
@@ -177,22 +184,23 @@ jobs:
         shell: bash
         run: |
           tag="v${RELEASE_VERSION}"
-          flags=()
+          asset="$(python3 -c 'import json; print(json.load(open("release-bundle/release-metadata.json"))["fileName"])')"
+          flags=(--latest="$MAKE_LATEST")
           if [[ "$RELEASE_CHANNEL" != stable ]]; then
             flags+=(--prerelease --latest=false)
           fi
           gh release create "$tag" -R "$GITHUB_REPOSITORY" \
             --draft --target "$SOURCE_SHA" \
-            --title "Aurora Client ${RELEASE_VERSION}" \
+            --title "Aurora Client ${RELEASE_VERSION} for Minecraft $(python3 -c 'import json; print(json.load(open("release-bundle/release-metadata.json"))["minecraftVersion"])')" \
             --notes-file release-notes.md "${flags[@]}"
-          gh release upload "$tag" "release-bundle/aurora-${RELEASE_VERSION}.jar" \
+          gh release upload "$tag" "release-bundle/$asset" \
             -R "$GITHUB_REPOSITORY"
           python3 tools/verify_release_artifact.py draft \
             --repo "$GITHUB_REPOSITORY" \
             --metadata release-bundle/release-metadata.json
           mkdir -p draft-download
           gh release download "$tag" -R "$GITHUB_REPOSITORY" \
-            --pattern "aurora-${RELEASE_VERSION}.jar" --dir draft-download
+            --pattern "$asset" --dir draft-download
           python3 tools/verify_release_artifact.py verify \
             --metadata release-bundle/release-metadata.json \
             --jar-dir draft-download \

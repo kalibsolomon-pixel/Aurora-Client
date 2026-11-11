@@ -8,12 +8,12 @@ This guide is short on purpose. The full engineering history it replaced, includ
 
 - Decisions are ADRs in [docs/adr/](docs/adr/). Read the relevant one before proposing multi-version builds, an own UI renderer, vanilla rendering optimizations, telemetry or changes to feature defaults.
 - The order of work is [docs/ROADMAP.md](docs/ROADMAP.md); where it stands is [docs/STATUS.md](docs/STATUS.md).
-- **No new features until the port to the newest Minecraft release ships.** Only fixes and roadmap steps 1 to 3.
+- **No new features until the port to the newest Minecraft release ships.** Only fixes and authorized roadmap work; the owner explicitly authorized step 5 before publication.
 
 ## Build, test, run
 
 - Java 25 target, Gradle wrapper, Fabric Loom. Versions are in `gradle.properties`.
-- `./gradlew test` runs the suite; `./gradlew build` writes `build/libs/aurora-<version>.jar`. `withSourcesJar()` stays disabled: a sources jar in `mods/` crashes Mixin at launch.
+- `./gradlew test` runs the suite; `./gradlew build` writes `build/libs/aurora-<version>-mc<minecraft>.jar`. `withSourcesJar()` stays disabled: a sources jar in `mods/` crashes Mixin at launch.
 - `./gradlew runClient` starts a dev client in `run/`. `run/` is the owner's live dev config and is not tracked; back up `run/config/aurora.json`, `run/config/profiles/` and `run/options.txt` before a test boot and restore them after. `--args='--quickPlaySingleplayer "New World"'` joins the saved world.
 - For ports, prefer a disposable copy of the world/config: `./gradlew runClient -Paurora.runDir=build/<fixture>/game`. This Loom property selects the actual game directory; overriding the task's working directory can be superseded by Loom. On Windows, use a Gradle init script to pass quick-play arguments containing spaces (the matrix runner does this). Test native backends with `--graphicsBackend OPENGL` / `VULKAN` in JavaExec's arguments.
 - Useful launch options (pass with `JAVA_TOOL_OPTIONS`): `-Daurora.diagnostics.log=true` writes the diagnostics report to the log after joining a world, `-Daurora.diagnostics.runs=N` repeats it, `-Daurora.mixin.disable=A,B` switches mixins off.
@@ -24,9 +24,10 @@ This guide is short on purpose. The full engineering history it replaced, includ
 
 | Where | What |
 |---|---|
+| `ports/src/main/java` | Native-free draw, text, clock, input and world interfaces |
 | `core/src/main/java` | Gradle module with nothing from Minecraft, Fabric, LWJGL, Mixin or Log4j on its classpath (ADR 0003): config and profiles, the feature catalog, health records, the theme engine, diagnostics, launcher bridge, Modrinth records, pure layout and map math |
-| `src/client/java` | Everything that touches Minecraft: mixins, screens, HUD, renderers, features, `hitreg/` |
-| `src/client/resources` | Assets, `aurora.mixins.json`, `fabric.mod.json`, `assets/aurora/defaults/3.2.0.json` |
+| `adapters/minecraft-26.3/src/client/java` | Everything that touches Minecraft: mixins, screens, HUD, renderers, features, `hitreg/` |
+| `adapters/minecraft-26.3/src/client/resources` | Assets, `aurora.mixins.json`, `fabric.mod.json`, `assets/aurora/defaults/3.2.0.json` |
 | `src/test/java` | All tests, including source-contract tests that read production files through `SourceTree` |
 | `docs/` | Living references; `docs/reports/` dated reports and audits; `docs/releases/` release notes and evidence; `docs/history/` the old guide |
 
@@ -94,6 +95,6 @@ The full conventions and their history are §6 of the old guide; violating them 
 
 ## Workflow
 
-- Work on a branch; the owner merges pull requests. Stack dependent branches and say so in the PR.
+- Work on a branch. The owner authorized autonomous GitHub integration and publication for this restructure; keep release verification and immutable-release safeguards. Stack dependent branches and say so in the PR.
 - When a change alters how something works, update the doc that describes it in the same change: the ADR, `docs/ROADMAP.md`, `docs/STATUS.md`, or the relevant reference in `docs/`.
 - Reference documents: [ARCHITECTURE](docs/ARCHITECTURE.md), [DESIGN_LANGUAGE](docs/DESIGN_LANGUAGE.md), [RELEASE_PROCESS](docs/RELEASE_PROCESS.md), [FAIR_PLAY](docs/FAIR_PLAY.md), [OVERHEAD_BUDGET](docs/OVERHEAD_BUDGET.md), [MOD_MATRIX](docs/MOD_MATRIX.md), [LAUNCHER_ACTIVITY_PROTOCOL](docs/LAUNCHER_ACTIVITY_PROTOCOL.md), [HITREG_INTEGRATION_CATALOG](docs/HITREG_INTEGRATION_CATALOG.md).

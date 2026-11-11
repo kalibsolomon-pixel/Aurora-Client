@@ -2,6 +2,11 @@
 
 ADR 0004 promises a tested set of popular mods. This file records what was booted with Aurora and what happened. Rerun it for every Minecraft version Aurora is ported to, before release.
 
+Current release-candidate results are in [step 5 acceptance](port/step-5.md).
+The port-checkpoint measurements below are retained as historical evidence.
+Iris applies only to OpenGL; native Vulkan shader mods need separate pins and
+acceptance. Forced-Iris Vulkan failures below are excluded from required rows.
+
 ## How to run it
 
 1. Back up `run/config/aurora.json`, `run/config/profiles/` and `run/options.txt`.

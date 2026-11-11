@@ -1,7 +1,7 @@
 package com.aurora.client.ui.util;
 
 import java.util.List;
-import java.util.function.ToIntFunction;
+import com.aurora.client.port.TextMetrics;
 
 /** Immutable, pre-paint row measurement shared by layout, paint and pointer routing. */
 public record SettingRowLayout(int height, List<String> lines, UiDensity.Rect label,
@@ -10,7 +10,7 @@ public record SettingRowLayout(int height, List<String> lines, UiDensity.Rect la
     /** Slider value readout column. */
     public static final int VALUE_W = 36;
     public static SettingRowLayout measure(Kind kind, String text, int width, int lineHeight,
-                                           ToIntFunction<String> measure) {
+                                           TextMetrics measure) {
         int pad = 8, gap = 6;
         int controlW = switch (kind) {
             case BOOLEAN -> UiDensity.TOGGLE_W; case ENUM -> UiDensity.ENUM_W; case KEYBIND, BUTTON -> UiDensity.KEY_W;
@@ -29,7 +29,7 @@ public record SettingRowLayout(int height, List<String> lines, UiDensity.Rect la
             labelW = Math.min(112, Math.max(1, width / 3));
             // Reserve the unchanged 7px knob and its AA edge inside the host clip.
             controlW = width - 2 * pad - labelW - 2 * gap - VALUE_W - 8;
-            inline = controlW >= UiDensity.MIN_TRACK && measure.applyAsInt(text) <= labelW - 4;
+            inline = controlW >= UiDensity.MIN_TRACK && measure.width(text) <= labelW - 4;
             h = inline ? UiDensity.INLINE_SLIDER : UiDensity.STACKED_ROW;
             if (!inline) labelW = Math.max(1, width - 2 * pad - gap - VALUE_W);
             value = new UiDensity.Rect(inline ? pad + labelW + gap : width - pad - VALUE_W,

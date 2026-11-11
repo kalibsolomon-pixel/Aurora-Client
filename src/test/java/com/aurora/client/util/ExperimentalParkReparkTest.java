@@ -1,5 +1,6 @@
 package com.aurora.client.util;
 
+import com.aurora.client.SourceTree;
 import com.google.gson.GsonBuilder;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -239,7 +240,7 @@ class ExperimentalParkReparkTest {
     }
 
     @Test void bothReferenceMethodBodiesRemainPinnedAndDispatchAndNormalizationStayIsolated() throws Exception {
-        String s = Files.readString(Path.of("src/client/java/com/aurora/client/util/FramePacer.java")).replace("\r\n", "\n").replace("com.aurora.client.util.FrameClock.seconds()", "GLFW.glfwGetTime()");
+        String s = Files.readString(SourceTree.resolve(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/util/FramePacer.java")).replace("\r\n", "\n").replace("com.aurora.client.util.FrameClock.seconds()", "GLFW.glfwGetTime()");
         assertEquals("682728fccccd05cb3dd25e03b6aa5cb10672ba3e57e499953f497937ddbfa1a3",
                 hashMethod(s, "    public static void waitUntilPark("));
         assertEquals("d9827dccdb59d1be90081af299b17482a346327a50b6766e32ce76a0afd02824",
@@ -266,12 +267,13 @@ class ExperimentalParkReparkTest {
     @ParameterizedTest @ValueSource(strings = {"absent", "false", "true"})
     void startupPropertyIsIndependentAndReadOnceInFreshJvms(String value) throws Exception {
         var command = new ArrayList<String>();
-        command.add(Path.of(System.getProperty("java.home"), "bin",
+        command.add(SourceTree.resolve(System.getProperty("java.home"), "bin",
                 java.io.File.separatorChar == '\\' ? "java.exe" : "java").toString());
         if (!value.equals("absent")) command.add("-Daurora.experimentalParkRepark=" + value);
         command.add("-cp");
-        command.add(Path.of(FramePacer.class.getProtectionDomain().getCodeSource().getLocation().toURI())
-                + java.io.File.pathSeparator + Path.of(FlagProbe.class.getProtectionDomain().getCodeSource().getLocation().toURI()));
+        command.add(SourceTree.resolve(FramePacer.class.getProtectionDomain().getCodeSource().getLocation().toURI())
+                + java.io.File.pathSeparator + SourceTree.resolve(com.aurora.client.port.ClockPort.class.getProtectionDomain().getCodeSource().getLocation().toURI())
+                + java.io.File.pathSeparator + SourceTree.resolve(FlagProbe.class.getProtectionDomain().getCodeSource().getLocation().toURI()));
         command.add(FlagProbe.class.getName());
         command.add(String.valueOf(value.equals("true")));
         var p = new ProcessBuilder(command).redirectErrorStream(true).start();

@@ -1,5 +1,6 @@
 package com.aurora.client.screen;
 
+import com.aurora.client.SourceTree;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
@@ -18,12 +19,12 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class AuroraScreenNavigationTest {
 
-    private static final Path SCREEN = Path.of(
-            "src/client/java/com/aurora/client/screen/AuroraScreen.java");
-    private static final Path REGISTRY = Path.of(
-            "src/client/java/com/aurora/client/screen/FeatureRegistry.java");
-    private static final Path MODULES = Path.of(
-            "src/client/java/com/aurora/client/module/ModuleManager.java");
+    private static final Path SCREEN = SourceTree.resolve(
+            SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/AuroraScreen.java");
+    private static final Path REGISTRY = SourceTree.resolve(
+            SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/FeatureRegistry.java");
+    private static final Path MODULES = SourceTree.resolve(
+            SourceTree.ADAPTER + "/src/client/java/com/aurora/client/module/ModuleManager.java");
 
     private static String read(Path path) {
         try {
@@ -353,8 +354,8 @@ class AuroraScreenNavigationTest {
         assertEquals(4, count(src, "SemanticAction.button("),
                 "profiles, tiles, header nav, header toggles construct via button()");
         // The host never plays sounds; hover/focus/rejection are silent.
-        String hostSrc = read(Path.of(
-                "src/client/java/com/aurora/client/ui/interaction/SemanticControlHost.java"));
+        String hostSrc = read(SourceTree.resolve(
+                SourceTree.ADAPTER + "/src/client/java/com/aurora/client/ui/interaction/SemanticControlHost.java"));
         assertFalse(hostSrc.contains("play("));
     }
 

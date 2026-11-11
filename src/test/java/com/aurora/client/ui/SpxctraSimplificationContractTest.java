@@ -1,5 +1,6 @@
 package com.aurora.client.ui;
 
+import com.aurora.client.SourceTree;
 import com.aurora.client.screen.setting.FeatureSetting;
 import com.aurora.client.screen.setting.SectionHeaderSetting;
 import org.junit.jupiter.api.Test;
@@ -17,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class SpxctraSimplificationContractTest {
 
     private static String read(String rel) throws Exception {
-        return Files.readString(Path.of("src/client/java/com/aurora/client/" + rel));
+        return Files.readString(SourceTree.resolve(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/" + rel));
     }
 
     @Test

@@ -25,6 +25,12 @@
     ]
   },
   "notes": [
-    "Minecraft 26.3 includes native OpenGL and Vulkan renderers. Sodium supports both; VulkanMod is superseded."
-  ]
+    "Minecraft 26.3 includes native OpenGL and Vulkan renderers. Sodium supports both; VulkanMod is superseded.",
+    "Iris is an OpenGL shader mod and is excluded from Vulkan checks. Vulkan shader mods such as Beryl require a separately pinned optional set."
+  ],
+  "set_backends": {
+    "B-sodium-iris": [
+      "OPENGL"
+    ]
+  }
 }
