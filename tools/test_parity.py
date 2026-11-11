@@ -1,5 +1,6 @@
 """Parity release invariants: complete artifact sets and source-bound GPU gates."""
 import copy
+import hashlib
 import json
 from pathlib import Path
 import tempfile
@@ -98,6 +99,34 @@ class ParityTest(unittest.TestCase):
             bad[3][field] = value
             with self.subTest(field=field), self.assertRaises(ValueError): acceptance.validate_runs(bad)
         with self.assertRaises(ValueError): acceptance.validate_runs(runs[:-1])
+
+    def test_fingerprint_order_is_the_same_on_every_host(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            for name in ('build.gradle', 'settings.gradle', 'gradle.properties', 'core/build.gradle', 'ports/build.gradle',
+                         'gradle/minecraft-versions.json', 'tools/parity_acceptance.py', 'tools/parity.py'):
+                (root / name).parent.mkdir(parents=True, exist_ok=True)
+                (root / name).write_text(name)
+            for directory in ('core/src/main', 'ports/src/main', 'tools/matrix'):
+                (root / directory).mkdir(parents=True, exist_ok=True)
+            (root / 'adapters/x').mkdir(parents=True)
+            # Case-sensitive order puts "Zed" first; the Windows order the evidence used puts "a_b" first.
+            (root / 'adapters/x/Zed.java').write_text('z')
+            (root / 'adapters/x/a_b.java').write_text('a')
+            fed = []
+
+            class Recorder:
+                def update(self, data):
+                    fed.append(data)
+
+                def hexdigest(self):
+                    return ''
+
+            real = hashlib.sha256
+            with patch.object(acceptance.hashlib, 'sha256', side_effect=lambda *a: Recorder() if not a else real(*a)):
+                acceptance.fingerprint(root)
+            names = [d.rstrip(b'\0').decode() for d in fed if d.endswith(b'\0')]
+            self.assertLess(names.index('adapters/x/a_b.java'), names.index('adapters/x/Zed.java'))
 
     def test_acceptance_rejects_stale_sources_and_missing_rows(self):
         with self.assertRaises(ValueError): acceptance.verify(ROOT, dict(sourceInputsSha256='old', rows=[]))
