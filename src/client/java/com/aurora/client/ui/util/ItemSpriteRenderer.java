@@ -106,7 +106,8 @@ public final class ItemSpriteRenderer {
                 return new Resolution(null); // empty or multi-layer model
             }
 
-            List<BakedQuad> quads = layers[0].prepareQuadList();
+            if (!(layers[0] instanceof com.aurora.client.mixin.ItemLayerQuadsAccessor layer)) return new Resolution(null);
+            List<BakedQuad> quads = layer.aurora$quads().all();
             if (quads == null || quads.isEmpty()) return new Resolution(null);
 
             TextureAtlasSprite sprite = null;

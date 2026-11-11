@@ -453,7 +453,7 @@ public class EffectExpiryListSetting extends FeatureSetting {
             // C-8 Escape rule: unfocus + consume while typing (the
             // fall-through used to close the whole screen); the second
             // press reaches the screen.
-            if (_kev.key() == org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE) {
+            if (_kev.key() == com.mojang.blaze3d.platform.InputConstants.KEY_ESCAPE) {
                 searchField.setFocused(false);
                 releaseFocus();
                 return true;

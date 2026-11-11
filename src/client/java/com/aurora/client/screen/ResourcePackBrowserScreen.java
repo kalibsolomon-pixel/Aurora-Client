@@ -1634,7 +1634,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         ev = framed(ev);
         double mouseX = ev.x();
         double mouseY = ev.y();
-        if (ev.button() != 0) return super.mouseClicked(ev, dbl);
+        if (ev.button() != com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) return super.mouseClicked(ev, dbl);
 
         // The manager screens' rule: a click drops a semantic control's
         // vanilla focus first; the routing below re-focuses the control it
@@ -1666,7 +1666,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
                     && Widget.inBounds(mouseX, mouseY, tabX, tabY, tabW, rowH)
                     && mouseY >= clipTop && mouseY < clipBot) {
                 SemanticActionControl control = tabControls[i];
-                if (control != null && control.activateFromPointer(mouseX, mouseY, 0)) {
+                if (control != null && control.activateFromPointer(mouseX, mouseY, 1)) {
                     this.setFocused(control);
                 } else if (control == null) {
                     selectCategory(tab); // pre-first-render click — cannot normally happen
@@ -1743,7 +1743,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
                 CardState st = cardStates.get(p.projectId);
                 if (st != null) {
                     SemanticActionControl control = st.cardPhaseControls[st.phase];
-                    if (control != null && control.activateFromPointer(mouseX, mouseY, 0)) {
+                    if (control != null && control.activateFromPointer(mouseX, mouseY, 1)) {
                         this.setFocused(control);
                     }
                 }
@@ -1798,7 +1798,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
                 // The action is closeDetail itself, which clears focus —
                 // no re-focus here (a control whose action tears its own
                 // surface down must not end up focused).
-                control.activateFromPointer(mouseX, mouseY, 0);
+                control.activateFromPointer(mouseX, mouseY, 1);
             }
             return true; // consumed either way
         }
@@ -1811,7 +1811,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
             if (detailProject != null) {
                 CardState st = cardStates.get(detailProject.projectId);
                 SemanticActionControl control = st == null ? null : st.modalPhaseControls[st.phase];
-                if (control != null && control.activateFromPointer(mouseX, mouseY, 0)) {
+                if (control != null && control.activateFromPointer(mouseX, mouseY, 1)) {
                     this.setFocused(control);
                 }
             }
@@ -1903,7 +1903,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
     @Override
     public boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent ev, double dx, double dy) {
         ev = framed(ev);
-        if (gridScroll.isDragging() && ev.button() == 0) {
+        if (gridScroll.isDragging() && ev.button() == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) {
             double mouseY = ev.y();
             double ms = maxScroll();
             if (ms <= 0) return true;
@@ -1915,7 +1915,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
             gridScroll.dragThumb(mouseY, trackTop, trackH, ms, 30, true);
             return true;
         }
-        if (sidebarScroll.isDragging() && ev.button() == 0) {
+        if (sidebarScroll.isDragging() && ev.button() == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) {
             double mouseY = ev.y();
             double sbMax = sidebarMaxScroll();
             if (sbMax <= 0) return true;
@@ -1933,7 +1933,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
     @Override
     public boolean mouseReleased(net.minecraft.client.input.MouseButtonEvent ev) {
         ev = framed(ev);
-        if (ev.button() == 0) {
+        if (ev.button() == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) {
             gridScroll.endThumbDrag();
             sidebarScroll.endThumbDrag();
         }
@@ -1945,13 +1945,13 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
     @Override
     public boolean keyPressed(net.minecraft.client.input.KeyEvent _kev) {
         // ESC closes the detail modal first, then the screen.
-        if (_kev.key() == org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE && detailOpenT > 0f) {
+        if (_kev.key() == com.mojang.blaze3d.platform.InputConstants.KEY_ESCAPE && detailOpenT > 0f) {
             closeDetail();
             return true;
         }
         if (searchField != null && searchField.isFocused()) {
             int key = _kev.key();
-            if (key == org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE) {
+            if (key == com.mojang.blaze3d.platform.InputConstants.KEY_ESCAPE) {
                 searchField.setFocused(false);
                 return true;
             }

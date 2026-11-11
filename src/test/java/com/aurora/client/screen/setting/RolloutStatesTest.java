@@ -176,7 +176,7 @@ class RolloutStatesTest {
 
     @Test
     void keybindConstructionIsCanonicalWithNoOptInEscape() {
-        AtomicReference<Integer> v = new AtomicReference<>(org.lwjgl.glfw.GLFW.GLFW_KEY_J);
+        AtomicReference<Integer> v = new AtomicReference<>(com.mojang.blaze3d.platform.InputConstants.KEY_J);
         KeybindSetting row = new KeybindSetting("R", v::get, v::set);
         assertNotNull(row.interactionControl(),
                 "every construction produces the semantic adapter — canonical by default");
@@ -216,15 +216,15 @@ class RolloutStatesTest {
     @Test
     void multipleKeybindRowsHoldExactlyOneCaptureOwner() {
         java.util.concurrent.atomic.AtomicInteger a = new java.util.concurrent.atomic.AtomicInteger(
-                org.lwjgl.glfw.GLFW.GLFW_KEY_J);
+                com.mojang.blaze3d.platform.InputConstants.KEY_J);
         java.util.concurrent.atomic.AtomicInteger b = new java.util.concurrent.atomic.AtomicInteger(
-                org.lwjgl.glfw.GLFW.GLFW_KEY_K);
+                com.mojang.blaze3d.platform.InputConstants.KEY_K);
         java.util.concurrent.atomic.AtomicInteger writes = new java.util.concurrent.atomic.AtomicInteger();
         java.util.concurrent.atomic.AtomicInteger saves = new java.util.concurrent.atomic.AtomicInteger();
         KeybindSetting rowA = new KeybindSetting("A", a::get, v -> { writes.incrementAndGet(); a.set(v); }, saves::incrementAndGet);
         KeybindSetting rowB = new KeybindSetting("B", b::get, v -> { writes.incrementAndGet(); b.set(v); }, saves::incrementAndGet);
 
-        assertTrue(rowA.mouseClicked(1, 1, 0, 0, 0, 320));
+        assertTrue(rowA.mouseClicked(1, 1, 1, 0, 0, 320));
         assertTrue(rowA.listeningState());
         // Activating B while A listens cancels A's ownership structurally
         // (beginListening) — never two simultaneous listening owners.
@@ -234,10 +234,10 @@ class RolloutStatesTest {
         assertFalse(rowA.listeningState(), "A must be torn down when B takes ownership");
 
         // The stale owner's key event is inert; B's is the one capture.
-        assertFalse(rowA.onKeyPress(org.lwjgl.glfw.GLFW.GLFW_KEY_F7, 0));
-        assertTrue(rowB.onKeyPress(org.lwjgl.glfw.GLFW.GLFW_KEY_F7, 0));
-        assertEquals((int) org.lwjgl.glfw.GLFW.GLFW_KEY_F7, b.get());
-        assertEquals((int) org.lwjgl.glfw.GLFW.GLFW_KEY_J, a.get(), "no double capture through the stale owner");
+        assertFalse(rowA.onKeyPress(com.mojang.blaze3d.platform.InputConstants.KEY_F7, 0));
+        assertTrue(rowB.onKeyPress(com.mojang.blaze3d.platform.InputConstants.KEY_F7, 0));
+        assertEquals((int) com.mojang.blaze3d.platform.InputConstants.KEY_F7, b.get());
+        assertEquals((int) com.mojang.blaze3d.platform.InputConstants.KEY_J, a.get(), "no double capture through the stale owner");
         assertEquals(1, writes.get(), "exactly one write");
         assertEquals(1, saves.get(), "exactly one save");
         assertFalse(rowB.listeningState());

@@ -170,7 +170,7 @@ public class SectionHeaderSetting extends FeatureSetting {
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button,
                                 int rowX, int rowY, int rowWidth) {
-        if (button != 0) return false;
+        if (button != com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) return false;
         int top = rowY + gapAbove();
         int h = baseHeight() - gapAbove();
         if (mouseX < rowX || mouseX >= rowX + rowWidth || mouseY < top || mouseY >= top + h) return false;

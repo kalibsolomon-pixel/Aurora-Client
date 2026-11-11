@@ -296,6 +296,7 @@ public final class FeatureCatalog {
         mixin("ReflexMinecraftMixin", "automatic latency reduction");
         mixin("GpuDeviceTimestampAccessor", "automatic latency reduction");
         mixin("ItemStackRenderStateAccessor", "flat item icons in Aurora screens");
+        mixin("ItemLayerQuadsAccessor", "flat item icons in Aurora screens");
         mixin("ScreenPanoramaAccessor", "blurred glass over the menu panorama");
         for (String hitreg : List.of("ArmorMixin", "AttackMixin", "ChunkMixin", "DamageMixin", "EntityAccessor",
                 "GlowMixin", "NetworkMixin", "ParticleMixin", "PlayerMixin", "RenderMixin", "ServerMixin",

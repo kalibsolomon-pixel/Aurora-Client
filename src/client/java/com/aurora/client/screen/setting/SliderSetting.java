@@ -366,7 +366,7 @@ public class SliderSetting extends FeatureSetting {
     public boolean mouseClicked(double mouseX, double mouseY, int button, int rowX, int rowY, int rowWidth) {
         if (isDisabled()) return false;
         layoutTrack(rowX, rowY, rowWidth);
-        if (compactRow != null && editable && !editingValue && button == 0 && compactRow.value().contains(mouseX - rowX, mouseY - rowY)) { openValueEdit(); return true; }
+        if (compactRow != null && editable && !editingValue && button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT && compactRow.value().contains(mouseX - rowX, mouseY - rowY)) { openValueEdit(); return true; }
         if (editingValue && valueField != null) {
             // Inside the field: keep editing. Elsewhere in the row: commit and
             // let the click do its normal job (e.g. start a slider drag).
@@ -378,7 +378,7 @@ public class SliderSetting extends FeatureSetting {
                 return true;
             }
             commitValueEdit(); // falls through — the click proceeds
-        } else if (editable && button == 0) {
+        } else if (editable && button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) {
             // Readout rect (padded to a comfortable click target) opens the editor.
             int hitW = Math.max(lastReadoutW, 30) + 6;
             if (lastReadoutRight > 0
@@ -397,14 +397,14 @@ public class SliderSetting extends FeatureSetting {
     public boolean onKeyPress(net.minecraft.client.input.KeyEvent _kev) {
         if (isDisabled()) return false;
         if (editingValue && valueField != null) {
-            if (_kev.key() == org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER
-                    || _kev.key() == org.lwjgl.glfw.GLFW.GLFW_KEY_KP_ENTER) {
+            if (_kev.key() == com.mojang.blaze3d.platform.InputConstants.KEY_RETURN
+                    || _kev.key() == com.mojang.blaze3d.platform.InputConstants.KEY_NUMPADENTER) {
                 commitValueEdit();
                 // Keep the row focused so arrow keys adjust the slider right after.
                 requestFocus();
                 return true;
             }
-            if (_kev.key() == org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE) {
+            if (_kev.key() == com.mojang.blaze3d.platform.InputConstants.KEY_ESCAPE) {
                 cancelValueEdit();
                 return true;
             }

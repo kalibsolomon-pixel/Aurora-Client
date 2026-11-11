@@ -3,7 +3,7 @@ package com.aurora.client.screen.setting;
 import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.ui.component.Slider;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 
 import java.util.function.DoubleConsumer;
 import java.util.function.DoubleSupplier;
@@ -99,7 +99,7 @@ public class ThemeOpacitySetting extends SliderSetting {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button, int rowX, int rowY, int rowWidth) {
-        if (isDisabled() || button != 0) return false;
+        if (isDisabled() || button != com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) return false;
         if (mouseY < rowY + CONTROL_H - 18 || mouseY > rowY + CONTROL_H - 2) return false;
         if (mouseX < lastTrackX - 4 || mouseX > lastTrackX + lastTrackW + 4) return false;
         dragging = true;
@@ -111,14 +111,14 @@ public class ThemeOpacitySetting extends SliderSetting {
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dx, double dy, int rowX, int rowY, int rowWidth) {
-        if (!dragging || button != 0) return false;
+        if (!dragging || button != com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) return false;
         applyFromMouse(mouseX);
         return true;
     }
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        if (button == 0 && dragging) {
+        if (button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT && dragging) {
             dragging = false;
             // Final commit: apply whatever is still unapplied, then persist.
             // Focus is intentionally kept (matches the other slider rows) so
@@ -132,14 +132,14 @@ public class ThemeOpacitySetting extends SliderSetting {
 
     @Override
     public boolean onKeyPress(int keyCode, int modifiers) {
-        boolean shift = (modifiers & GLFW.GLFW_MOD_SHIFT) != 0;
-        boolean ctrl  = (modifiers & GLFW.GLFW_MOD_CONTROL) != 0;
+        boolean shift = (modifiers & InputConstants.MOD_SHIFT) != 0;
+        boolean ctrl  = (modifiers & InputConstants.MOD_CONTROL) != 0;
         double mult = shift ? 10.0 : (ctrl ? 0.1 : 1.0);
-        if (keyCode == GLFW.GLFW_KEY_LEFT || keyCode == GLFW.GLFW_KEY_DOWN) {
+        if (keyCode == InputConstants.KEY_LEFT || keyCode == InputConstants.KEY_DOWN) {
             nudge(-STEP * mult);
             return true;
         }
-        if (keyCode == GLFW.GLFW_KEY_RIGHT || keyCode == GLFW.GLFW_KEY_UP) {
+        if (keyCode == InputConstants.KEY_RIGHT || keyCode == InputConstants.KEY_UP) {
             nudge(STEP * mult);
             return true;
         }

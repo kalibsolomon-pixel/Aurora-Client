@@ -42,7 +42,7 @@ class SliderPilotTest {
 
         // Click at 25% of the track (x=150): value = 0.1 + 0.25*0.9 = 0.325 → snapped to 0.35? No:
         // 0.325/0.05 = 6.5 → round-half-up = 7 → 0.35. Assert through the slider's own snap.
-        assertTrue(s.mouseClicked(150, 10 + 36 - 12 + 2, 0));
+        assertTrue(s.mouseClicked(150, 10 + 36 - 12 + 2, 1));
         assertTrue(s.isDragging());
         assertEquals(snap(0.1 + 0.25 * 0.9), v.get(), 1e-9);
     }
@@ -52,13 +52,13 @@ class SliderPilotTest {
         AtomicReference<Double> v = new AtomicReference<>(0.5);
         Slider s = slider(v, 0.5);
         s.layout(100, 10, 200, 36);
-        s.mouseClicked(150, 36, 0);
+        s.mouseClicked(150, 36, 1);
 
-        s.mouseDragged(400, 40, 0, 0, 0);   // beyond right edge (track is x=100..300)
+        s.mouseDragged(400, 40, 1, 0, 0);   // beyond right edge (track is x=100..300)
         assertEquals(1.0, v.get(), 1e-9, "clamps to max");
-        s.mouseDragged(20, 40, 0, 0, 0);    // beyond left edge
+        s.mouseDragged(20, 40, 1, 0, 0);    // beyond left edge
         assertEquals(0.1, v.get(), 1e-9, "clamps to min");
-        s.mouseDragged(300, 40, 0, 0, 0);   // exact right edge of track
+        s.mouseDragged(300, 40, 1, 0, 0);   // exact right edge of track
         assertEquals(1.0, v.get(), 1e-9);
         assertTrue(s.isDragging(), "drag survives pointer outside the bounds");
     }
@@ -68,10 +68,10 @@ class SliderPilotTest {
         AtomicReference<Double> v = new AtomicReference<>(0.5);
         Slider s = slider(v, 0.5);
         s.layout(100, 10, 200, 36);
-        s.mouseClicked(150, 36, 0);
-        s.mouseDragged(-500, -500, 0, 0, 0);
+        s.mouseClicked(150, 36, 1);
+        s.mouseDragged(-500, -500, 1, 0, 0);
         assertEquals(0.1, v.get(), 1e-9);
-        assertTrue(s.mouseReleased(-500, -500, 0));
+        assertTrue(s.mouseReleased(-500, -500, 1));
         assertFalse(s.isDragging());
         assertEquals(0.1, v.get(), 1e-9, "value remains the final clamped value");
     }
@@ -82,15 +82,15 @@ class SliderPilotTest {
         Slider s = slider(v, 0.5).canonicalStates();
         s.layout(100, 10, 200, 36);
         assertEquals(5f, s.knobRadiusPx(), 0f, "rest radius (compact knob)");
-        s.mouseClicked(150, 36, 0);
+        s.mouseClicked(150, 36, 1);
         assertEquals(6f, s.knobRadiusPx(), 0f, "grip radius while dragging (center unchanged)");
-        s.mouseReleased(150, 36, 0);
+        s.mouseReleased(150, 36, 1);
         assertEquals(5f, s.knobRadiusPx(), 0f, "back to rest instantly on release");
 
         // Legacy mode never grips.
         Slider legacy = slider(v, 0.5);
         legacy.layout(100, 10, 200, 36);
-        legacy.mouseClicked(150, 36, 0);
+        legacy.mouseClicked(150, 36, 1);
         assertEquals(5f, legacy.knobRadiusPx(), 0f, "legacy rows keep the exact rest radius");
     }
 
@@ -99,13 +99,13 @@ class SliderPilotTest {
         AtomicReference<Double> v = new AtomicReference<>(0.5);
         Slider s = slider(v, 0.5).canonicalStates().disabled(true);
         s.layout(100, 10, 200, 36);
-        assertFalse(s.mouseClicked(150, 36, 0));
+        assertFalse(s.mouseClicked(150, 36, 1));
         assertFalse(s.isDragging());
-        assertFalse(s.onKeyPress(org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT, 0));
+        assertFalse(s.onKeyPress(com.mojang.blaze3d.platform.InputConstants.KEY_RIGHT, 0));
         assertEquals(0.5, v.get(), 1e-9);
 
         s.disabled(false);
-        assertTrue(s.onKeyPress(org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT, 0));
+        assertTrue(s.onKeyPress(com.mojang.blaze3d.platform.InputConstants.KEY_RIGHT, 0));
         assertEquals(0.55, v.get(), 1e-9, "one step per accepted key");
     }
 
@@ -113,19 +113,19 @@ class SliderPilotTest {
     void keyboardStepsClampAtBothEndsAndHonorModifiers() {
         AtomicReference<Double> v = new AtomicReference<>(0.55);
         Slider s = slider(v, 0.55);
-        assertTrue(s.onKeyPress(org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT, 0));
+        assertTrue(s.onKeyPress(com.mojang.blaze3d.platform.InputConstants.KEY_LEFT, 0));
         assertEquals(0.5, v.get(), 1e-9);
-        assertTrue(s.onKeyPress(org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT,
-                org.lwjgl.glfw.GLFW.GLFW_MOD_SHIFT)); // ×10
+        assertTrue(s.onKeyPress(com.mojang.blaze3d.platform.InputConstants.KEY_RIGHT,
+                com.mojang.blaze3d.platform.InputConstants.MOD_SHIFT)); // ×10
         assertEquals(1.0, v.get(), 1e-9, "shift ×10 lands on max");
-        assertTrue(s.onKeyPress(org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT, 0));
+        assertTrue(s.onKeyPress(com.mojang.blaze3d.platform.InputConstants.KEY_RIGHT, 0));
         assertEquals(1.0, v.get(), 1e-9, "clamped at max");
         // Ctrl ×0.1 makes a 0.005 delta, which snap(0.05) rounds away — the
         // key is consumed but the micro-step is sub-step: existing semantics.
-        assertTrue(s.onKeyPress(org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT,
-                org.lwjgl.glfw.GLFW.GLFW_MOD_CONTROL));
+        assertTrue(s.onKeyPress(com.mojang.blaze3d.platform.InputConstants.KEY_LEFT,
+                com.mojang.blaze3d.platform.InputConstants.MOD_CONTROL));
         assertEquals(1.0, v.get(), 1e-9, "sub-step micro-deltas round away under snap");
-        for (int i = 0; i < 40; i++) s.onKeyPress(org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT, 0);
+        for (int i = 0; i < 40; i++) s.onKeyPress(com.mojang.blaze3d.platform.InputConstants.KEY_LEFT, 0);
         assertEquals(0.1, v.get(), 1e-9, "clamped at min after repeated decrements");
     }
 

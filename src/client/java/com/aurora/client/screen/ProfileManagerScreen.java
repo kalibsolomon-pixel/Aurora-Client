@@ -19,7 +19,7 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -551,7 +551,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
                 && mouseY >= btnY && mouseY < btnY + BTN_H;
         if (!inButton) return false;
         if (createControl.isAvailable()) {
-            createControl.activateFromPointer(mouseX, mouseY, 0);
+            createControl.activateFromPointer(mouseX, mouseY, 1);
         }
         return true;
     }
@@ -563,12 +563,12 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         // sound + focus participation), Delete likewise. A rejected click
         // (missed bounds) falls through to the next handler, as before.
         SemanticActionControl dupControl = dupControls.get(name);
-        if (dupControl != null && dupControl.activateFromPointer(mouseX, mouseY, 0)) {
+        if (dupControl != null && dupControl.activateFromPointer(mouseX, mouseY, 1)) {
             this.setFocused(dupControl);
             return true;
         }
         SemanticActionControl delControl = delControls.get(name);
-        if (delControl != null && delControl.activateFromPointer(mouseX, mouseY, 0)) {
+        if (delControl != null && delControl.activateFromPointer(mouseX, mouseY, 1)) {
             // NO re-focus: the action just deleted this profile's row and the
             // control is unregistered by the next reconcile — refocusing
             // would point keyboard focus at a control about to leave the
@@ -605,11 +605,11 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         // scrolled out of the clip band is SUSPENDED (no keys routed), not
         // cancelled; scrolling back restores typing with focus and value.
         if (createField != null && createField.isFocused() && editFieldVisible(currentRows())) {
-            if (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER) {
+            if (key == InputConstants.KEY_RETURN || key == InputConstants.KEY_NUMPADENTER) {
                 commitCreate();
                 return true;
             }
-            if (key == GLFW.GLFW_KEY_ESCAPE) {
+            if (key == InputConstants.KEY_ESCAPE) {
                 cancelCreate();
                 return true;
             }

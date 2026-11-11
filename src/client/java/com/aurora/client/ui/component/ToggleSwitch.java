@@ -243,7 +243,7 @@ public class ToggleSwitch extends Widget {
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
-        if (disabled || button != 0 || !inBounds(mx, my, x, y, w, h)) return false;
+        if (disabled || button != com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT || !inBounds(mx, my, x, y, w, h)) return false;
         toggle();
         return true;
     }

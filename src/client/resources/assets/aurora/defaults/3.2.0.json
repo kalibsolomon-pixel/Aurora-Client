@@ -1,4 +1,5 @@
 {
+  "keybindVersion": 1,
   "customTitleScreen": true,
   "moduleGridView": true,
   "textRendererMode": "ALL_TEXT",
@@ -150,13 +151,13 @@
   "totemPopBgMode": "NONE",
   "totemPopBgColor": -2147483648,
   "nametagTotemPopsEnabled": false,
-  "zoomKey": 67,
-  "freeLookKey": 88,
-  "toggleSprintKey": 341,
+  "zoomKey": 6,
+  "freeLookKey": 27,
+  "toggleSprintKey": 224,
   "toggleSneakKey": -1,
-  "hudEditorKey": 344,
-  "hitboxToggleKey": 66,
-  "totemResetKey": 75,
+  "hudEditorKey": 229,
+  "hitboxToggleKey": 5,
+  "totemResetKey": 14,
   "waypointDropKey": -1,
   "waypointManagerKey": -1,
   "waypointMaxVisible": 64,
@@ -813,6 +814,6 @@
   "minimapBorderColor": 0,
   "minimapCoordColor": -1,
   "worldMapEnabled": false,
-  "worldMapKey": 89,
+  "worldMapKey": 28,
   "resourcepackBrowserEnabled": true
 }

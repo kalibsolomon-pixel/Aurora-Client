@@ -1,7 +1,7 @@
 package com.aurora.client.config;
 
 import org.junit.jupiter.api.Test;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.regex.Matcher;
@@ -16,14 +16,24 @@ import static org.junit.jupiter.api.Assertions.*;
 class AuroraConfigKeyDefaultsTest {
     private static final Path SOURCE = Path.of("core/src/main/java/com/aurora/client/config/AuroraConfig.java");
 
-    @Test void literalKeyDefaultsAreTheGlfwCodesTheyName() throws Exception {
+    @Test void literalKeyDefaultsAreTheSdlScancodesTheyName() throws Exception {
         String src = Files.readString(SOURCE);
-        assertInitializer(src, "zoomKey", GLFW.GLFW_KEY_C);
-        assertInitializer(src, "freeLookKey", GLFW.GLFW_KEY_V);
-        assertInitializer(src, "toggleSprintKey", GLFW.GLFW_KEY_J);
-        assertInitializer(src, "toggleSneakKey", GLFW.GLFW_KEY_K);
-        assertInitializer(src, "hudEditorKey", GLFW.GLFW_KEY_RIGHT_SHIFT);
-        assertInitializer(src, "worldMapKey", GLFW.GLFW_KEY_M);
+        assertInitializer(src, "zoomKey", InputConstants.KEY_C);
+        assertInitializer(src, "freeLookKey", InputConstants.KEY_V);
+        assertInitializer(src, "toggleSprintKey", InputConstants.KEY_J);
+        assertInitializer(src, "toggleSneakKey", InputConstants.KEY_K);
+        assertInitializer(src, "hudEditorKey", InputConstants.KEY_RSHIFT);
+        assertInitializer(src, "worldMapKey", InputConstants.KEY_M);
+        for (String field : KeybindMigrator.KEY_FIELDS) {
+            if (!java.util.Set.of("zoomKey", "freeLookKey", "toggleSprintKey", "toggleSneakKey", "hudEditorKey", "worldMapKey").contains(field))
+                assertInitializer(src, field, -1);
+        }
+        try (var in = getClass().getResourceAsStream("/assets/aurora/defaults/3.2.0.json")) {
+            var defaults = com.google.gson.JsonParser.parseReader(new java.io.InputStreamReader(in)).getAsJsonObject();
+            assertEquals(KeybindMigrator.VERSION, defaults.get("keybindVersion").getAsInt());
+            for (String field : KeybindMigrator.KEY_FIELDS) if (defaults.has(field))
+                assertNotEquals(0, defaults.get(field).getAsInt(), field + " must use Aurora's -1 unbound sentinel");
+        }
     }
 
     private static void assertInitializer(String src, String field, int expected) {

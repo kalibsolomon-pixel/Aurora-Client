@@ -79,7 +79,7 @@ public final class SemanticActionControl extends AbstractWidget {
 
     /** Pointer entry point used by manually routed, clipped setting rows. */
     public boolean activateFromPointer(double mouseX, double mouseY, int button) {
-        if (!available || button != 0 || !contains(mouseX, mouseY)) return false;
+        if (!available || button != com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT || !contains(mouseX, mouseY)) return false;
         return action.activate(feedback, acceptedVisualFeedback);
     }
 

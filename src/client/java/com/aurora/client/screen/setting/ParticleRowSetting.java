@@ -182,7 +182,7 @@ public class ParticleRowSetting extends FeatureSetting {
         // disclosure action (exactly-once + the one click) when hosted; the
         // shared toggle path beside it covers the pre-first-ask window.
         if (mouseY < rowY + HEADER_H) {
-            if (button == 0
+            if (button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT
                     && mouseX >= rowX && mouseX < rowX + rowWidth
                     && mouseY >= rowY) {
                 if (disclosure.clicked(mouseX, mouseY, button)) {

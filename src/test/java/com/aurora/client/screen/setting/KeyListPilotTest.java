@@ -3,7 +3,7 @@ package com.aurora.client.screen.setting;
 import com.aurora.client.ui.interaction.SemanticFeedback;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,9 +22,9 @@ import static org.junit.jupiter.api.Assertions.*;
  * deliberately not the single-Keybind clear-to-UNBOUND rule.
  */
 class KeyListPilotTest {
-    private static final int A = GLFW.GLFW_KEY_F1;
-    private static final int B = GLFW.GLFW_KEY_F2;
-    private static final int C = GLFW.GLFW_KEY_F3;
+    private static final int A = InputConstants.KEY_F1;
+    private static final int B = InputConstants.KEY_F2;
+    private static final int C = InputConstants.KEY_F3;
 
     @AfterEach
     void clearGlobalOwners() {
@@ -73,8 +73,8 @@ class KeyListPilotTest {
         assertTrue(f.list.isEmpty(), "the Enter/Space activation event must not become an entry");
 
         // The NEXT event captures — Enter itself is an ordinary bindable key.
-        assertTrue(f.row.onKeyPress(GLFW.GLFW_KEY_ENTER, 0));
-        assertEquals(List.of(GLFW.GLFW_KEY_ENTER), f.list);
+        assertTrue(f.row.onKeyPress(InputConstants.KEY_RETURN, 0));
+        assertEquals(List.of(InputConstants.KEY_RETURN), f.list);
         assertEquals(1, f.saves.get());
         assertFalse(f.row.listeningState());
     }
@@ -112,20 +112,20 @@ class KeyListPilotTest {
     void escapeAndBackspaceCancelWithoutMutationAndDeleteStaysBindable() {
         Fixture escape = fixture(List.of(A));
         begin(escape);
-        assertTrue(escape.row.onKeyPress(GLFW.GLFW_KEY_ESCAPE, 0));
+        assertTrue(escape.row.onKeyPress(InputConstants.KEY_ESCAPE, 0));
         assertEquals(List.of(A), escape.list, "ESC cancels — NOT the Keybind clear rule");
         assertEquals(0, escape.saves.get());
 
         Fixture backspace = fixture(List.of(A));
         begin(backspace);
-        assertTrue(backspace.row.onKeyPress(GLFW.GLFW_KEY_BACKSPACE, 0));
+        assertTrue(backspace.row.onKeyPress(InputConstants.KEY_BACKSPACE, 0));
         assertEquals(List.of(A), backspace.list);
         assertEquals(0, backspace.saves.get());
 
         Fixture delete = fixture();
         begin(delete);
-        assertTrue(delete.row.onKeyPress(GLFW.GLFW_KEY_DELETE, 0));
-        assertEquals(List.of(GLFW.GLFW_KEY_DELETE), delete.list,
+        assertTrue(delete.row.onKeyPress(InputConstants.KEY_DELETE, 0));
+        assertEquals(List.of(InputConstants.KEY_DELETE), delete.list,
                 "Delete remains an ordinary bindable key");
         assertEquals(1, delete.saves.get());
     }
@@ -161,7 +161,7 @@ class KeyListPilotTest {
     void disabledRejectsAddAndRemoveWithoutSaveOrSound() {
         Fixture f = fixture(List.of(A));
         f.disabled.set(true);
-        assertFalse(f.row.mouseClicked(1, 1, 0, 0, 0, 320));
+        assertFalse(f.row.mouseClicked(1, 1, 1, 0, 0, 320));
         var control = f.row.interactionControl();
         assertFalse(control.action().enabled());
         assertFalse(control.action().activate(SemanticFeedback.NONE, null));
@@ -203,7 +203,7 @@ class KeyListPilotTest {
     @Test
     void keyListAndKeybindCanNeverBothOwnCapture() {
         Fixture kl = fixture(List.of(A));
-        AtomicInteger kb = new AtomicInteger(GLFW.GLFW_KEY_J);
+        AtomicInteger kb = new AtomicInteger(InputConstants.KEY_J);
         AtomicInteger kbSaves = new AtomicInteger();
         KeybindSetting keybind = new KeybindSetting("K", kb::get, v -> kb.set(v), kbSaves::incrementAndGet);
 
@@ -265,7 +265,7 @@ class KeyListPilotTest {
 
     /** Entry i's "−" button center in the headless (0,0,240) frame. */
     private static boolean clickRemove(Fixture f, int i) {
-        return f.row.mouseClicked(219.0, 26.0 + 18.0 * i, 0, 0, 0, 240); // (ROW_H + 2)(i + 1) + ROW_H / 2, ROW_H = 16
+        return f.row.mouseClicked(219.0, 26.0 + 18.0 * i, 1, 0, 0, 240); // (ROW_H + 2)(i + 1) + ROW_H / 2, ROW_H = 16
     }
 
     private static void begin(Fixture f) {
@@ -275,7 +275,7 @@ class KeyListPilotTest {
         // headless direct path runs, exactly like an unhosted row.
         f.row.interactionControl().setAvailable(false);
         int n = f.list.size();
-        assertTrue(f.row.mouseClicked(120.0, 30.0 + 18.0 * n, 0, 0, 0, 240),
+        assertTrue(f.row.mouseClicked(120.0, 30.0 + 18.0 * n, 1, 0, 0, 240),
                 "headless direct add-pill activation");
         assertTrue(f.row.listeningState());
     }

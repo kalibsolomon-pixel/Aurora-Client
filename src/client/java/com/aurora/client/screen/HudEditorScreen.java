@@ -455,7 +455,7 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
         int x = hit.anchor.applyX(this.width,  sw) + hit.offsetX;
         int y = hit.anchor.applyY(this.height, sh) + hit.offsetY;
 
-        if (button == 1) {
+        if (button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_RIGHT) {
             // Right-click: shift = toggle lock; otherwise hide/show
             if (shift) {
                 hit.locked = !hit.locked;
@@ -465,7 +465,7 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
             return true;
         }
 
-        if (button == 0) {
+        if (button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) {
             // Shift+left = open settings detail, regardless of icon hits.
             if (shift) {
                 openSettingsFor(hit);
@@ -533,7 +533,7 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
     @Override
     public boolean mouseReleased(net.minecraft.client.input.MouseButtonEvent _ev) {
         double mouseX = _ev.x(); double mouseY = _ev.y(); int button = _ev.button();
-        if (button == 0 && active != null) {
+        if (button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT && active != null) {
             // Snap-on-release intentionally removed — the module's
             // raw drag position is preserved as-is. The anchor is
             // re-resolved (without a grid snap) so the relative offset

@@ -19,7 +19,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 
 import java.util.function.IntConsumer;
 import java.util.function.IntSupplier;
@@ -27,7 +27,7 @@ import java.util.function.Supplier;
 
 /**
  * Row that displays and rebinds a single Aurora keybind. Stores the bound
- * key as a GLFW int (see {@link AuroraKey#UNBOUND}). Click the right-
+ * key as a SDL scancode (see {@link AuroraKey#UNBOUND}). Click the right-
  * hand pill to enter listen mode, then any next key press is captured.
  *
  * <p>Special keys while listening:
@@ -62,7 +62,7 @@ import java.util.function.Supplier;
  * child and returns through Minecraft's child dispatch before capture is
  * armed for a later event. The next screen-dispatched key reaches
  * {@link #onKeyPress}; Enter/Space cannot self-bind on the activation event.
- * Pointer events are not bindable in Aurora's raw-GLFW-int vocabulary. While
+ * Pointer events are not bindable in Aurora's SDL-scancode vocabulary. While
  * listening, the next pointer press cancels and is consumed by
  * {@link com.aurora.client.screen.FeatureDetailScreen} before any underlying
  * control can activate.
@@ -234,7 +234,7 @@ public class KeybindSetting extends FeatureSetting {
     public boolean mouseClicked(double mouseX, double mouseY, int button, int rowX, int rowY, int rowWidth) {
         syncCompactControl(rowX, rowY);
         if (reconcileDisabledState()) return false;
-        if (button != 0) return false;
+        if (button != com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) return false;
         boolean onBtn = compactRow == null ? Widget.inBounds(mouseX, mouseY, lastBtnX, lastBtnY, BTN_W, BTN_H) : compactControlContains(mouseX, mouseY, rowX, rowY);
         if (!onBtn) {
             // Click outside the pill cancels listen mode without committing.
@@ -285,7 +285,7 @@ public class KeybindSetting extends FeatureSetting {
         }
 
         // ESC / BACKSPACE clears the binding. Match vanilla controls UX.
-        if (keyCode == GLFW.GLFW_KEY_ESCAPE || keyCode == GLFW.GLFW_KEY_BACKSPACE) {
+        if (keyCode == InputConstants.KEY_ESCAPE || keyCode == InputConstants.KEY_BACKSPACE) {
             setter.accept(AuroraKey.UNBOUND);
         } else {
             setter.accept(keyCode);
@@ -371,13 +371,13 @@ public class KeybindSetting extends FeatureSetting {
         return cachedKeyName;
     }
 
-    /** Friendly name for a GLFW key code. Falls back to the raw int. */
-    public static String keyName(int glfwKey) {
-        if (glfwKey == AuroraKey.UNBOUND) return "Unbound";
+    /** Friendly name for a SDL scancode. Falls back to the raw int. */
+    public static String keyName(int scancode) {
+        if (scancode == AuroraKey.UNBOUND) return "Unbound";
         try {
-            return InputConstants.Type.KEYSYM.getOrCreate(glfwKey).getDisplayName().getString();
+            return InputConstants.Type.KEYBOARD.getOrCreate(scancode).getDisplayName().getString();
         } catch (Exception e) {
-            return "Key " + glfwKey;
+            return "Key " + scancode;
         }
     }
 

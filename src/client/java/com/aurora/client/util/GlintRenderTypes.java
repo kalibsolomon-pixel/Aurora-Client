@@ -1,60 +1,69 @@
 package com.aurora.client.util;
 
-import com.mojang.blaze3d.pipeline.BlendFunction;
-import com.mojang.blaze3d.pipeline.ColorTargetState;
-import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.platform.BlendFactor;
+import com.aurora.client.config.AuroraConfig;
+import com.mojang.renderpearl.api.pipeline.*;
 import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.client.renderer.rendertype.LayeringTransform;
-import net.minecraft.client.renderer.rendertype.OutputTarget;
-import net.minecraft.client.renderer.rendertype.RenderSetup;
-import net.minecraft.client.renderer.rendertype.RenderType;
-import net.minecraft.client.renderer.rendertype.TextureTransform;
+import net.minecraft.client.renderer.oit.OitPipelineSet;
+import net.minecraft.client.renderer.rendertype.PreparedRenderType;
 import net.minecraft.resources.Identifier;
+import java.util.EnumMap;
+import java.util.IdentityHashMap;
+import java.util.Map;
 
-/** Same geometry, depth, scrolling and targets as vanilla; color blends through a mask. */
+/** Preserve vanilla's combined glint / OIT passes; change only the mask composition. */
 public final class GlintRenderTypes {
+    private static final Map<RenderPipeline, RenderPipeline> PIPELINES = new IdentityHashMap<>();
+    private static final Map<OitPipelineSet, OitPipelineSet> OIT = new IdentityHashMap<>();
     private GlintRenderTypes() {}
-    public static RenderType item() { return Holder.ITEM; }
-    public static RenderType translucent() { return Holder.TRANSLUCENT; }
-    public static RenderType entity() { return Holder.ENTITY; }
-    public static RenderType armor() { return Holder.ARMOR; }
 
-    private static RenderPipeline pipeline() {
-        RenderPipeline vanilla = RenderPipelines.GLINT;
-        var builder = RenderPipeline.builder()
-                .withLocation(Identifier.fromNamespaceAndPath("aurora", "pipeline/masked_glint"))
-                .withVertexShader(vanilla.getVertexShader())
-                .withFragmentShader(Identifier.fromNamespaceAndPath("aurora", "core/masked_glint"))
-                .withVertexBinding(0, vanilla.getVertexFormatBinding(0)).withPrimitiveTopology(vanilla.getPrimitiveTopology())
-                // Vanilla glint's depth test, depth write, cull and write mask; Aurora's own blend.
-                .withDepthStencilState(java.util.Optional.ofNullable(vanilla.getDepthStencilState()))
-                .withCull(vanilla.isCull())
-                .withColorTargetState(new ColorTargetState(java.util.Optional.of(new BlendFunction(
-                        BlendFactor.SRC_ALPHA, BlendFactor.ONE_MINUS_SRC_ALPHA, BlendFactor.ZERO, BlendFactor.ONE)),
-                        vanilla.getColorTargetState().format(), vanilla.getColorTargetState().writeMask()));
-        for (var layout : vanilla.getBindGroupLayouts()) builder.withBindGroupLayout(layout);
-        return builder.build();
+    public static PreparedRenderType alternative(PreparedRenderType original) {
+        AuroraConfig cfg = AuroraConfig.get();
+        if (!(cfg.glintColorEnabled && cfg.glintColorAlternative)) return original;
+        if (!cfg.glintColorTintArmor && original.name().contains("armor")) return original;
+        RenderPipeline pipeline = masked(original.pipeline());
+        OitPipelineSet oit = original.oitPipelineSet();
+        if (oit != null && pipeline != original.pipeline()) {
+            oit = OIT.computeIfAbsent(oit, set -> new OitPipelineSet(masked(set.depthBoundsPipeline()),
+                    masked(set.transmittancePipeline()), masked(set.accumulatePipeline())));
+        }
+        if (pipeline == original.pipeline()) return original;
+        return new PreparedRenderType(original.name(), pipeline, oit, original.dynamicTransforms(),
+                original.scissorState(), original.textures());
     }
 
-    private static RenderType type(String name, Identifier texture, TextureTransform transform,
-                                   boolean armor, boolean translucent) {
-        var builder = RenderSetup.builder(Holder.PIPELINE)
-                .withTexture("Sampler0", texture).setTextureTransform(transform);
-        if (armor) builder.setLayeringTransform(LayeringTransform.VIEW_OFFSET_Z_LAYERING);
-        if (translucent) builder.setOutputTarget(OutputTarget.ITEM_ENTITY_TARGET);
-        return RenderType.create("aurora_masked_" + name, builder.createRenderSetup());
+    private static RenderPipeline masked(RenderPipeline original) {
+        boolean separate = original == RenderPipelines.GLINT;
+        if (!separate && !original.getShaderDefines().flags().contains("GLINT")) return original;
+        Identifier fragment = original.getShaders().get(ShaderType.FRAGMENT);
+        if (fragment == null || !fragment.getNamespace().equals("minecraft")) return original;
+        String path = fragment.getPath();
+        if (!(path.equals("core/item") || path.equals("core/entity") || separate)) return original;
+        return PIPELINES.computeIfAbsent(original, key -> new MaskedPipeline(key, separate));
     }
 
-    private static final class Holder {
-        private static final RenderPipeline PIPELINE = pipeline();
-        private static final RenderType ITEM = type("glint", GlintColor.GLINT_ITEM,
-                TextureTransform.GLINT_TEXTURING, false, false);
-        private static final RenderType TRANSLUCENT = type("glint_translucent", GlintColor.GLINT_ITEM,
-                TextureTransform.GLINT_TEXTURING, false, true);
-        private static final RenderType ENTITY = type("entity_glint", GlintColor.GLINT_ITEM,
-                TextureTransform.ENTITY_GLINT_TEXTURING, false, false);
-        private static final RenderType ARMOR = type("armor_entity_glint", GlintColor.GLINT_ARMOR,
-                TextureTransform.ARMOR_ENTITY_GLINT_TEXTURING, true, false);
+    private static final class MaskedPipeline extends RenderPipeline {
+        MaskedPipeline(RenderPipeline base, boolean separate) {
+            super(Identifier.fromNamespaceAndPath("aurora", base.getLocation().getPath() + "_masked"),
+                    shaders(base, separate), base.getShaderDefines(), base.getBindGroupLayouts(),
+                    colors(base, separate), base.getDepthStencilState(), base.getPolygonMode(), base.isCull(),
+                    base.getVertexFormatBindings().toArray(com.mojang.renderpearl.api.vertex.VertexFormat[]::new),
+                    base.getPrimitiveTopology(), base.pushConstantSize(), base.getSortKey());
+        }
+
+        private static Map<ShaderType, Identifier> shaders(RenderPipeline base, boolean separate) {
+            var shaders = new EnumMap<ShaderType, Identifier>(ShaderType.class);
+            shaders.putAll(base.getShaders());
+            shaders.put(ShaderType.FRAGMENT, Identifier.fromNamespaceAndPath("aurora", separate
+                    ? "core/masked_glint" : base.getShaders().get(ShaderType.FRAGMENT).getPath() + "_masked_glint"));
+            return shaders;
+        }
+
+        private static ColorTargetState[] colors(RenderPipeline base, boolean separate) {
+            var colors = base.getColorTargetStates().toArray(ColorTargetState[]::new);
+            if (separate) colors[0] = new ColorTargetState(java.util.Optional.of(new BlendFunction(
+                    BlendFactor.SRC_ALPHA, BlendFactor.ONE_MINUS_SRC_ALPHA, BlendFactor.ZERO, BlendFactor.ONE)),
+                    colors[0].format(), colors[0].writeMask());
+            return colors;
+        }
     }
 }

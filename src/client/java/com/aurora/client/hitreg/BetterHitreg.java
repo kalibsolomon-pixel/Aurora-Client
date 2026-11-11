@@ -101,7 +101,7 @@ public final class BetterHitreg {
 
     /**
      * Keybind dispatch — the original END_CLIENT_TICK body with vanilla
-     * {@code KeyMapping.consumeClick()} replaced by Aurora's GLFW edge
+     * {@code KeyMapping.consumeClick()} replaced by Aurora's keyboard edge
      * detectors (which already carry the "no screen open" guard the
      * original applied by hand). Cooldowns are kept as-is.
      */

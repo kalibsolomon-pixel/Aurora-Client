@@ -20,7 +20,7 @@ import net.minecraft.network.chat.Component;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 
 import java.lang.reflect.Field;
 import java.util.List;
@@ -147,7 +147,7 @@ class ButtonLikeConformanceTest {
     }
 
     private static Fixture keybindArm() {
-        AtomicInteger binding = new AtomicInteger(GLFW.GLFW_KEY_J);
+        AtomicInteger binding = new AtomicInteger(InputConstants.KEY_J);
         KeybindSetting row = new KeybindSetting("Pilot Key", binding::get, binding::set);
         AtomicBoolean disabled = new AtomicBoolean(false);
         row.disabled(disabled::get);
@@ -159,7 +159,7 @@ class ButtonLikeConformanceTest {
     }
 
     private static Fixture keylistAdd() {
-        AtomicReference<List<Integer>> keys = new AtomicReference<>(List.of(GLFW.GLFW_KEY_H));
+        AtomicReference<List<Integer>> keys = new AtomicReference<>(List.of(InputConstants.KEY_H));
         KeyListSetting row = new KeyListSetting("Pilot Keys", keys::get, keys::set);
         AtomicBoolean disabled = new AtomicBoolean(false);
         row.disabled(disabled::get);
@@ -262,12 +262,12 @@ class ButtonLikeConformanceTest {
         f.control.setAvailable(true);
         f.control.setBounds(10, 20, 90, 18);
 
-        assertTrue(f.control.activateFromPointer(55, 29, 0),
+        assertTrue(f.control.activateFromPointer(55, 29, 1),
                 f.family + ": in-bounds accepted pointer activation");
         assertEquals(1, f.executions.get(), f.family + ": exactly one behavior run");
         // Out-of-bounds and non-primary buttons never activate.
-        assertFalse(f.control.activateFromPointer(500, 500, 0));
-        assertFalse(f.control.activateFromPointer(55, 29, 1));
+        assertFalse(f.control.activateFromPointer(500, 500, 1));
+        assertFalse(f.control.activateFromPointer(55, 29, 3));
         assertEquals(1, f.executions.get(), f.family + ": rejected presses stay inert");
     }
 
@@ -280,12 +280,12 @@ class ButtonLikeConformanceTest {
         f.control.setFocused(true);
 
         f.reset.run();
-        assertTrue(f.control.keyPressed(new KeyEvent(GLFW.GLFW_KEY_ENTER, 0, 0)),
+        assertTrue(f.control.keyPressed(new KeyEvent(InputConstants.KEY_RETURN, 0, 0)),
                 f.family + ": Enter is consumed by the focused control");
         assertEquals(1, f.executions.get(), f.family + ": Enter = exactly one activation");
 
         f.reset.run();
-        assertTrue(f.control.keyPressed(new KeyEvent(GLFW.GLFW_KEY_SPACE, 0, 0)),
+        assertTrue(f.control.keyPressed(new KeyEvent(InputConstants.KEY_SPACE, 0, 0)),
                 f.family + ": Space is consumed by the focused control");
         assertEquals(1, f.executions.get(), f.family + ": Space = exactly one activation");
     }
@@ -300,10 +300,10 @@ class ButtonLikeConformanceTest {
         f.disable.run();
         int soundsBefore = PLAIN_SOUNDS.get();
 
-        assertFalse(f.control.activateFromPointer(55, 29, 0), f.family + ": pointer rejected");
-        assertTrue(f.control.keyPressed(new KeyEvent(GLFW.GLFW_KEY_ENTER, 0, 0)),
+        assertFalse(f.control.activateFromPointer(55, 29, 1), f.family + ": pointer rejected");
+        assertTrue(f.control.keyPressed(new KeyEvent(InputConstants.KEY_RETURN, 0, 0)),
                 f.family + ": the rejected selection key is still CONSUMED (cannot fall through)");
-        assertTrue(f.control.keyPressed(new KeyEvent(GLFW.GLFW_KEY_SPACE, 0, 0)));
+        assertTrue(f.control.keyPressed(new KeyEvent(InputConstants.KEY_SPACE, 0, 0)));
         assertEquals(0, f.executions.get(), f.family + ": no behavior through the gate");
         assertEquals(soundsBefore, PLAIN_SOUNDS.get(), f.family + ": no sound through the gate");
         assertFalse(f.control.action().enabled(), f.family + ": the gate is the action's own");
@@ -318,7 +318,7 @@ class ButtonLikeConformanceTest {
         f.control.setBounds(10, 20, 90, 18);
         f.control.setAvailable(false);
 
-        assertFalse(f.control.activateFromPointer(55, 29, 0),
+        assertFalse(f.control.activateFromPointer(55, 29, 1),
                 f.family + ": an unavailable control cannot activate");
         assertEquals(0, f.executions.get());
         assertNull(f.control.nextFocusPath(new FocusNavigationEvent.TabNavigation(true)),

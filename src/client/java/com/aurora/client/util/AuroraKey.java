@@ -4,13 +4,10 @@ import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.Minecraft;
 
 /**
- * Polls raw GLFW key state for Aurora-owned keybinds, bypassing vanilla's
- * {@code KeyMapping} system entirely. This keeps Aurora keybinds out of
- * the vanilla controls menu (configured via per-feature settings rows in
- * Aurora's own UI instead) and makes config-driven rebinding trivial:
- * each feature stores its bound key as a single GLFW int in
- * {@code AuroraConfig}, polls via {@link #isDown(int)} every tick, and
- * uses {@link EdgeDetector} for one-shot toggles.
+ * Polls SDL physical scancodes for Aurora-owned held bindings. AuroraKeybinds
+ * also exposes and synchronizes them through vanilla Controls. Each feature
+ * reads its current binding from AuroraConfig and uses EdgeDetector for
+ * one-shot actions.
  *
  * <p>Convention: {@code -1} means "unbound". {@link #isDown(int)} short-
  * circuits to {@code false} for unbound keys so features can call it
@@ -22,16 +19,16 @@ public final class AuroraKey {
     private AuroraKey() {}
 
     /**
-     * Live held-state for a GLFW key code, suppressed while any
+     * Live held-state for an SDL scancode, suppressed while any
      * {@link net.minecraft.client.gui.screens.Screen} is open so Aurora
      * keybinds don't fire while the user is typing in chat, navigating
      * menus, or interacting with the Aurora settings UI itself.
      * {@code false} for {@link #UNBOUND}.
      */
-    public static boolean isDown(int glfwKey) {
-        if (glfwKey == UNBOUND) return false;
+    public static boolean isDown(int scancodeKey) {
+        if (scancodeKey == UNBOUND) return false;
         if (suppressed()) return false;
-        return isDownRaw(glfwKey);
+        return isDownRaw(scancodeKey);
     }
 
     /**
@@ -40,12 +37,12 @@ public final class AuroraKey {
      * key state across screen transitions and avoid spurious edge fires
      * when a screen closes with the key still held.
      */
-    private static boolean isDownRaw(int glfwKey) {
-        if (glfwKey == UNBOUND) return false;
+    private static boolean isDownRaw(int scancodeKey) {
+        if (scancodeKey == UNBOUND) return false;
         Minecraft mc = Minecraft.getInstance();
         if (mc == null || mc.getWindow() == null) return false;
         try {
-            return InputConstants.isKeyDown(mc.getWindow(), glfwKey);
+            return InputConstants.isKeyDown(scancodeKey);
         } catch (Exception e) {
             return false;
         }
@@ -69,8 +66,8 @@ public final class AuroraKey {
         private boolean wasDown = false;
 
         /** Polls and returns true exactly once per press, in-game only. */
-        public boolean justPressed(int glfwKey) {
-            boolean rawDown = isDownRaw(glfwKey);
+        public boolean justPressed(int scancodeKey) {
+            boolean rawDown = isDownRaw(scancodeKey);
             boolean edge = rawDown && !wasDown && !suppressed();
             wasDown = rawDown;
             return edge;

@@ -619,7 +619,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
             int extent = -ROW_GAP;
             for (FeatureSetting setting : meta.settings) if (setting.isVisible()) extent += bodyHeight(setting) + ROW_GAP;
             double max = Math.max(0, extent - (bodyBottom() - bodyTop()));
-            if (button == 0 && max > 0) {
+            if (button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT && max > 0) {
                 scroll.beginThumbDrag(Math.max(0, Math.min(scroll.thumbHeight(bodyBottom() - bodyTop(), max, 24), mouseY - scroll.thumbY(bodyTop(), bodyBottom() - bodyTop(), max, 24))));
                 return true;
             }

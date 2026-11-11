@@ -55,7 +55,7 @@ public final class BlurPanelRenderer {
         public static Lighting depressed() { return new Lighting(true, 0.45f, 0.10f); }
     }
 
-    public record CaptureSource(com.mojang.blaze3d.textures.GpuTextureView textureView, int width, int height) {}
+    public record CaptureSource(com.mojang.renderpearl.api.textures.GpuTextureView textureView, int width, int height) {}
     public enum Priority { WINDOW, CONTROL, ROW, DETAIL; static final int COUNT = values().length; }
     private static final float MIN_EFFECTIVE_RADIUS_PX = 1.5f;
     private static final long SCREENSHOT_SUPPRESS_MS = 400L;

@@ -9,7 +9,7 @@ import net.minecraft.client.input.KeyEvent;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 
 import java.lang.reflect.Field;
 import java.util.List;
@@ -142,10 +142,10 @@ class SegmentedSettingPilotTest {
                 peers.stream().map(p -> p.action().accessibleName().getString()).toList(),
                 "attach order is visual order");
 
-        KeyEvent right = new KeyEvent(GLFW.GLFW_KEY_RIGHT, 0, 0);
-        KeyEvent up = new KeyEvent(GLFW.GLFW_KEY_UP, 0, 0);
+        KeyEvent right = new KeyEvent(InputConstants.KEY_RIGHT, 0, 0);
+        KeyEvent up = new KeyEvent(InputConstants.KEY_UP, 0, 0);
         assertSame(peers.get(1), group.rovingTarget(right, peers.get(0)));
-        assertSame(peers.get(0), group.rovingTarget(new KeyEvent(GLFW.GLFW_KEY_LEFT, 0, 0), peers.get(1)),
+        assertSame(peers.get(0), group.rovingTarget(new KeyEvent(InputConstants.KEY_LEFT, 0, 0), peers.get(1)),
                 "wrap");
         assertNull(group.rovingTarget(up, peers.get(0)),
                 "cross-axis keys are not the horizontal ring's");
@@ -170,10 +170,10 @@ class SegmentedSettingPilotTest {
     @Test
     void pointerSelectionCommitsExactlyOncePerPath() {
         // Legacy path (host never materialized controls): silent single commit.
-        assertTrue(row.mouseClicked(segCenter(1, 2)[0], segCenter(1, 2)[1], 0, 0, 0, 240));
+        assertTrue(row.mouseClicked(segCenter(1, 2)[0], segCenter(1, 2)[1], 1, 0, 0, 240));
         assertEquals(1, setterCalls.get());
         assertEquals(ThemeMode.LIGHT, mode.get());
-        assertTrue(row.mouseClicked(segCenter(1, 2)[0], segCenter(1, 2)[1], 0, 0, 0, 240),
+        assertTrue(row.mouseClicked(segCenter(1, 2)[0], segCenter(1, 2)[1], 1, 0, 0, 240),
                 "reselecting the selected peer stays consumed");
         assertEquals(1, setterCalls.get(), "no second commit on the selected no-op");
 
@@ -182,10 +182,10 @@ class SegmentedSettingPilotTest {
         // exactly-one activation click.
         materializeWithBounds(row, 2);
         List<SemanticActionControl> peers = row.interactionControls();
-        assertTrue(row.mouseClicked(segCenter(0, 2)[0], segCenter(0, 2)[1], 0, 0, 0, 240));
+        assertTrue(row.mouseClicked(segCenter(0, 2)[0], segCenter(0, 2)[1], 1, 0, 0, 240));
         assertEquals(2, setterCalls.get());
         assertEquals(ThemeMode.DARK, mode.get());
-        assertTrue(row.mouseClicked(segCenter(0, 2)[0], segCenter(0, 2)[1], 0, 0, 0, 240));
+        assertTrue(row.mouseClicked(segCenter(0, 2)[0], segCenter(0, 2)[1], 1, 0, 0, 240));
         assertEquals(2, setterCalls.get(), "selected reactivation is inert through the action too");
     }
 
@@ -198,12 +198,12 @@ class SegmentedSettingPilotTest {
         // which renderOverlay syncs from the row every frame — mirror that
         // sync (the row-level guard below is the same-frame backstop).
         ((SegmentedControl) f(row, "control").get(row)).disabled(true);
-        assertFalse(row.mouseClicked(segCenter(1, 2)[0], segCenter(1, 2)[1], 0, 0, 0, 240),
+        assertFalse(row.mouseClicked(segCenter(1, 2)[0], segCenter(1, 2)[1], 1, 0, 0, 240),
                 "the row rejects pointer activation while disabled");
-        assertFalse(peers.get(1).activateFromPointer(segCenter(1, 2)[0], segCenter(1, 2)[1], 0),
+        assertFalse(peers.get(1).activateFromPointer(segCenter(1, 2)[0], segCenter(1, 2)[1], 1),
                 "the semantic action's enabled gate rejects too");
         peers.get(1).setFocused(true);
-        assertTrue(peers.get(1).keyPressed(new KeyEvent(GLFW.GLFW_KEY_ENTER, 0, 0)),
+        assertTrue(peers.get(1).keyPressed(new KeyEvent(InputConstants.KEY_RETURN, 0, 0)),
                 "a targeted disabled selection is consumed (cannot fall through)");
         assertEquals(0, setterCalls.get());
         assertEquals("Not selected", peers.get(1).action().state().getString(),
@@ -217,13 +217,13 @@ class SegmentedSettingPilotTest {
         materializeWithBounds(row, 2);
         List<SemanticActionControl> peers = row.interactionControls();
         peers.get(1).setFocused(true);
-        assertTrue(peers.get(1).keyPressed(new KeyEvent(GLFW.GLFW_KEY_SPACE, 0, 0)));
+        assertTrue(peers.get(1).keyPressed(new KeyEvent(InputConstants.KEY_SPACE, 0, 0)));
         assertEquals(1, setterCalls.get());
         assertEquals(ThemeMode.LIGHT, mode.get());
-        assertTrue(peers.get(1).keyPressed(new KeyEvent(GLFW.GLFW_KEY_ENTER, 0, 0)),
+        assertTrue(peers.get(1).keyPressed(new KeyEvent(InputConstants.KEY_RETURN, 0, 0)),
                 "selected reactivation stays consumed");
         assertEquals(1, setterCalls.get());
-        assertFalse(peers.get(0).keyPressed(new KeyEvent(GLFW.GLFW_KEY_RIGHT, 0, 0)),
+        assertFalse(peers.get(0).keyPressed(new KeyEvent(InputConstants.KEY_RIGHT, 0, 0)),
                 "arrows are the group's, not the control's — the C-3 seam owns them");
         assertEquals(1, setterCalls.get(), "an arrow press never commits");
     }

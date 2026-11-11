@@ -4,7 +4,6 @@ import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.util.FramePacer;
 import com.aurora.client.util.FramePacing;
 import net.minecraft.client.FramerateLimiter;
-import org.lwjgl.glfw.GLFW;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -25,7 +24,7 @@ public abstract class RenderSystemMixin {
                 && cfg.framePacingStrategy != AuroraConfig.PacingStrategy.VANILLA;
         var limit = FramePacing.resolve(fps, cfg.frameCapFps, cfg.guiFpsLimit,
                 auroraGui, customPacer, cfg.lowLatencyRender && cfg.adaptiveRenderSleeping);
-        double pacingNow = GLFW.glfwGetTime();
+        double pacingNow = com.aurora.client.util.FrameClock.seconds();
         if (com.aurora.client.util.ParkDiagnostics.INSTANCE.isEnabled()) {
             com.aurora.client.util.ParkDiagnosticsControl.observe(limit, cfg, customPacer,
                     mc != null && mc.isWindowActive(), pacingNow);

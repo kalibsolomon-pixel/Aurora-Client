@@ -206,7 +206,7 @@ class FramePacingPersistenceTest {
         assertTrue(first.potionHudEnabled);
         assertFalse(first.minimapEnabled);
         assertFalse(first.hitregEnabled);
-        assertEquals(88, first.freeLookKey);
+        assertEquals(27, first.freeLookKey); // SDL X (release resource overlay)
         assertTrue(first.waypointsByWorld.isEmpty());
         assertTrue(first.playtimePerWorld.isEmpty());
         assertEquals(0, first.playtimeTotalMs);
@@ -240,7 +240,7 @@ class FramePacingPersistenceTest {
         AuroraConfig.load();
         var live = AuroraConfig.get();
         assertEquals(AuroraConfig.FontType.INTER, live.activeFont);
-        assertEquals(86, live.freeLookKey);
+        assertEquals(25, live.freeLookKey); // migrated SDL V
         assertTrue(live.infoEnabled);
         assertEquals(73, live.moduleLayouts.get("info").offsetX);
         assertEquals(123456, live.playtimeTotalMs);
@@ -251,7 +251,7 @@ class FramePacingPersistenceTest {
         manager.applyProfile(snapshot);
         assertEquals(73, live.moduleLayouts.get("info").offsetX);
         assertEquals(AuroraConfig.FontType.INTER, live.activeFont);
-        assertEquals(86, live.freeLookKey);
+        assertEquals(25, live.freeLookKey); // migrated SDL V
         AuroraConfig.save();
         assertTrue(AuroraConfig.flushPending(5000));
         AuroraConfig.load();

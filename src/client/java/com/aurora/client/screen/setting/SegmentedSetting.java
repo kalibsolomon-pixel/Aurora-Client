@@ -158,7 +158,7 @@ public class SegmentedSetting<E extends Enum<E>> extends FeatureSetting {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button, int rowX, int rowY, int rowWidth) {
-        if (isDisabled() || button != 0) return false;
+        if (isDisabled() || button != com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) return false;
         if (lastTrackW <= 0) return false; // not laid out yet
         return control.mouseClicked(mouseX, mouseY, button);
     }

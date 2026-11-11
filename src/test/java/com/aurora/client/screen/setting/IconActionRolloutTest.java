@@ -6,7 +6,7 @@ import com.aurora.client.ui.interaction.SemanticActionControl;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.Component;
 import org.junit.jupiter.api.Test;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -99,12 +99,12 @@ class IconActionRolloutTest {
 
     @Test
     void keyListChipControlsAreHostedInVisualOrderWithTheAddLast() {
-        KeyListFixture f = new KeyListFixture(List.of(GLFW.GLFW_KEY_J, GLFW.GLFW_KEY_K));
+        KeyListFixture f = new KeyListFixture(List.of(InputConstants.KEY_J, InputConstants.KEY_K));
         List<SemanticActionControl> controls = f.row.interactionControls();
         assertEquals(3, controls.size(), "two chips + the add action");
-        assertEquals("Remove key " + KeybindSetting.keyName(GLFW.GLFW_KEY_J),
+        assertEquals("Remove key " + KeybindSetting.keyName(InputConstants.KEY_J),
                 controls.get(0).action().accessibleName().getString());
-        assertEquals("Remove key " + KeybindSetting.keyName(GLFW.GLFW_KEY_K),
+        assertEquals("Remove key " + KeybindSetting.keyName(InputConstants.KEY_K),
                 controls.get(1).action().accessibleName().getString());
         assertEquals("Extra Keys: Add Key", controls.get(2).action().accessibleName().getString());
         // Stable across asks without mutation — no per-frame construction.
@@ -117,12 +117,12 @@ class IconActionRolloutTest {
 
     @Test
     void keyListChipKeyboardRemovalRunsTheOnePathExactlyOnce() {
-        KeyListFixture f = new KeyListFixture(List.of(GLFW.GLFW_KEY_J, GLFW.GLFW_KEY_K));
+        KeyListFixture f = new KeyListFixture(List.of(InputConstants.KEY_J, InputConstants.KEY_K));
         SemanticActionControl chipK = f.row.interactionControls().get(1);
         chipK.setAvailable(true);
         chipK.setFocused(true);
-        assertTrue(chipK.keyPressed(new KeyEvent(GLFW.GLFW_KEY_ENTER, 0, 0)));
-        assertEquals(List.of(GLFW.GLFW_KEY_J), f.list, "exactly that entry removed (by value)");
+        assertTrue(chipK.keyPressed(new KeyEvent(InputConstants.KEY_RETURN, 0, 0)));
+        assertEquals(List.of(InputConstants.KEY_J), f.list, "exactly that entry removed (by value)");
         assertEquals(1, f.saves.get(), "one save per removal");
         // The stale control is gone from the rebuilt list; the surviving
         // chip's control is untouched.
@@ -131,9 +131,9 @@ class IconActionRolloutTest {
         assertFalse(after.contains(chipK), "stale control pruned with its entry");
         // Enter on the dead control can never replay the removal.
         chipK.setAvailable(true);
-        assertTrue(chipK.keyPressed(new KeyEvent(GLFW.GLFW_KEY_ENTER, 0, 0)));
+        assertTrue(chipK.keyPressed(new KeyEvent(InputConstants.KEY_RETURN, 0, 0)));
         assertEquals(1, f.saves.get(), "the removed action is no longer wired to the list");
-        assertEquals(List.of(GLFW.GLFW_KEY_J), f.list);
+        assertEquals(List.of(InputConstants.KEY_J), f.list);
     }
 
     @Test
@@ -141,9 +141,9 @@ class IconActionRolloutTest {
         KeyListFixture f = new KeyListFixture(List.of());
         // capture-add through the row's own capture path (begin → key)
         beginCapture(f);
-        assertTrue(f.row.onKeyPress(GLFW.GLFW_KEY_J, 0));
+        assertTrue(f.row.onKeyPress(InputConstants.KEY_J, 0));
         beginCapture(f);
-        assertTrue(f.row.onKeyPress(GLFW.GLFW_KEY_K, 0));
+        assertTrue(f.row.onKeyPress(InputConstants.KEY_K, 0));
         List<SemanticActionControl> two = f.row.interactionControls();
         assertEquals(3, two.size());
         // remove both through their actions' behavior
@@ -154,11 +154,11 @@ class IconActionRolloutTest {
         assertEquals(1, empty.size(), "the add action alone remains");
         // re-add: exactly one new control, no duplicates
         beginCapture(f);
-        assertTrue(f.row.onKeyPress(GLFW.GLFW_KEY_K, 0));
+        assertTrue(f.row.onKeyPress(InputConstants.KEY_K, 0));
         List<SemanticActionControl> re = f.row.interactionControls();
         assertEquals(2, re.size());
         assertSame(re.get(re.size() - 1), empty.get(0), "the add control is stable");
-        assertEquals("Remove key " + KeybindSetting.keyName(GLFW.GLFW_KEY_K),
+        assertEquals("Remove key " + KeybindSetting.keyName(InputConstants.KEY_K),
                 re.get(0).action().accessibleName().getString());
     }
 
@@ -170,15 +170,15 @@ class IconActionRolloutTest {
 
     @Test
     void keyListChipGateFollowsTheRowDisabledState() {
-        KeyListFixture f = new KeyListFixture(List.of(GLFW.GLFW_KEY_J));
+        KeyListFixture f = new KeyListFixture(List.of(InputConstants.KEY_J));
         f.disabled.set(true);
         SemanticActionControl chip = f.row.interactionControls().get(0);
         assertFalse(chip.action().enabled(), "the row's disabled gate is authoritative");
         chip.setAvailable(true);
         chip.setFocused(true);
-        assertTrue(chip.keyPressed(new KeyEvent(GLFW.GLFW_KEY_ENTER, 0, 0)),
+        assertTrue(chip.keyPressed(new KeyEvent(InputConstants.KEY_RETURN, 0, 0)),
                 "a targeted disabled selection is consumed (cannot fall through)");
-        assertEquals(List.of(GLFW.GLFW_KEY_J), f.list);
+        assertEquals(List.of(InputConstants.KEY_J), f.list);
         assertEquals(0, f.saves.get());
     }
 

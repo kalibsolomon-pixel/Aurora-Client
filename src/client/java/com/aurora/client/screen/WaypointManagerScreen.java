@@ -540,17 +540,17 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
         // focus participation). A rejected click (missed bounds) falls
         // through to the next handler, as before.
         SemanticActionControl copyControl = rowCopyControls.get(wp);
-        if (copyControl != null && copyControl.activateFromPointer(mouseX, mouseY, 0)) {
+        if (copyControl != null && copyControl.activateFromPointer(mouseX, mouseY, 1)) {
             this.setFocused(copyControl);
             return true;
         }
         SemanticActionControl colorControl = rowColorControls.get(wp);
-        if (colorControl != null && colorControl.activateFromPointer(mouseX, mouseY, 0)) {
+        if (colorControl != null && colorControl.activateFromPointer(mouseX, mouseY, 1)) {
             this.setFocused(colorControl);
             return true;
         }
         SemanticActionControl delControl = rowDeleteControls.get(wp);
-        if (delControl != null && delControl.activateFromPointer(mouseX, mouseY, 0)) {
+        if (delControl != null && delControl.activateFromPointer(mouseX, mouseY, 1)) {
             // NO re-focus: the action just removed this row, and the control
             // is unregistered by the next reconcile — refocusing would point
             // keyboard focus at a control about to leave the screen (the

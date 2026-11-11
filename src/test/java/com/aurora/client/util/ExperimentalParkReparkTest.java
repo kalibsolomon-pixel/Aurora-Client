@@ -239,7 +239,7 @@ class ExperimentalParkReparkTest {
     }
 
     @Test void bothReferenceMethodBodiesRemainPinnedAndDispatchAndNormalizationStayIsolated() throws Exception {
-        String s = Files.readString(Path.of("src/client/java/com/aurora/client/util/FramePacer.java")).replace("\r\n", "\n");
+        String s = Files.readString(Path.of("src/client/java/com/aurora/client/util/FramePacer.java")).replace("\r\n", "\n").replace("com.aurora.client.util.FrameClock.seconds()", "GLFW.glfwGetTime()");
         assertEquals("682728fccccd05cb3dd25e03b6aa5cb10672ba3e57e499953f497937ddbfa1a3",
                 hashMethod(s, "    public static void waitUntilPark("));
         assertEquals("d9827dccdb59d1be90081af299b17482a346327a50b6766e32ce76a0afd02824",

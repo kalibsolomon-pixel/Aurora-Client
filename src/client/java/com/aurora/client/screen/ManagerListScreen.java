@@ -24,7 +24,7 @@ import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -752,7 +752,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         double mouseX = _ev.x();
         double mouseY = _ev.y();
         int button = _ev.button();
-        if (button != 0) return super.mouseClicked(_ev, _doubleClicked);
+        if (button != com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) return super.mouseClicked(_ev, _doubleClicked);
 
         // FeatureDetailScreen's rule: a click drops a semantic control's
         // vanilla focus first, so focus never lingers somewhere the pointer
@@ -832,7 +832,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
 
     @Override
     public boolean mouseDragged(MouseButtonEvent _ev, double dx, double dy) {
-        if (scroll.isDragging() && _ev.button() == 0) {
+        if (scroll.isDragging() && _ev.button() == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) {
             // Direct manipulation: the position pins to the cursor while
             // dragging and eases again on release.
             scroll.dragThumb(_ev.y(), listClipTop(), listClipBottom() - listClipTop(),
@@ -869,11 +869,11 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         // not silently own the keyboard.
         if (nameField != null && nameField.isFocused() && renameEditorVisible()) {
             int key = _kev.key();
-            if (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER) {
+            if (key == InputConstants.KEY_RETURN || key == InputConstants.KEY_NUMPADENTER) {
                 commitEdit();
                 return true;
             }
-            if (key == GLFW.GLFW_KEY_ESCAPE) {
+            if (key == InputConstants.KEY_ESCAPE) {
                 cancelEdit();
                 return true;
             }

@@ -4,7 +4,7 @@ import com.aurora.client.ui.interaction.SemanticFeedback;
 import com.aurora.client.util.AuroraKey;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -23,8 +23,8 @@ import static org.junit.jupiter.api.Assertions.*;
  * real Minecraft child dispatch are covered by the DevPilot runtime mode.
  */
 class KeybindPilotTest {
-    private static final int ORIGINAL = GLFW.GLFW_KEY_J;
-    private static final int CAPTURED = GLFW.GLFW_KEY_F7;
+    private static final int ORIGINAL = InputConstants.KEY_J;
+    private static final int CAPTURED = InputConstants.KEY_F7;
 
     @AfterEach
     void clearGlobalOwners() {
@@ -94,8 +94,8 @@ class KeybindPilotTest {
                 "the Enter/Space activation event must not self-bind");
         assertEquals(0, f.saves.get());
 
-        assertTrue(f.row.onKeyPress(GLFW.GLFW_KEY_ENTER, 0));
-        assertEquals(GLFW.GLFW_KEY_ENTER, f.binding.get());
+        assertTrue(f.row.onKeyPress(InputConstants.KEY_RETURN, 0));
+        assertEquals(InputConstants.KEY_RETURN, f.binding.get());
         assertEquals(1, f.saves.get());
         assertFalse(f.row.listeningState());
     }
@@ -122,7 +122,7 @@ class KeybindPilotTest {
         Fixture f = fixture();
         f.disabled.set(true);
 
-        assertFalse(f.row.mouseClicked(1, 1, 0, 0, 0, 320));
+        assertFalse(f.row.mouseClicked(1, 1, 1, 0, 0, 320));
         assertFalse(f.row.listeningState());
         var control = f.row.interactionControl();
         assertFalse(control.action().enabled());
@@ -180,22 +180,22 @@ class KeybindPilotTest {
     void escapeAndBackspacePreserveTheExistingClearSemantics() {
         Fixture escape = fixture();
         begin(escape);
-        assertTrue(escape.row.onKeyPress(GLFW.GLFW_KEY_ESCAPE, 0));
+        assertTrue(escape.row.onKeyPress(InputConstants.KEY_ESCAPE, 0));
         assertEquals(AuroraKey.UNBOUND, escape.binding.get());
         assertEquals(1, escape.writes.get());
         assertEquals(1, escape.saves.get());
 
         Fixture backspace = fixture();
         begin(backspace);
-        assertTrue(backspace.row.onKeyPress(GLFW.GLFW_KEY_BACKSPACE, 0));
+        assertTrue(backspace.row.onKeyPress(InputConstants.KEY_BACKSPACE, 0));
         assertEquals(AuroraKey.UNBOUND, backspace.binding.get());
         assertEquals(1, backspace.writes.get());
         assertEquals(1, backspace.saves.get());
 
         Fixture delete = fixture();
         begin(delete);
-        assertTrue(delete.row.onKeyPress(GLFW.GLFW_KEY_DELETE, 0));
-        assertEquals(GLFW.GLFW_KEY_DELETE, delete.binding.get(),
+        assertTrue(delete.row.onKeyPress(InputConstants.KEY_DELETE, 0));
+        assertEquals(InputConstants.KEY_DELETE, delete.binding.get(),
                 "Delete remains an ordinary bindable key");
     }
 
@@ -216,7 +216,7 @@ class KeybindPilotTest {
     }
 
     private static void begin(Fixture f) {
-        assertTrue(f.row.mouseClicked(1, 1, 0, 0, 0, 320));
+        assertTrue(f.row.mouseClicked(1, 1, 1, 0, 0, 320));
         assertTrue(f.row.listeningState());
     }
 

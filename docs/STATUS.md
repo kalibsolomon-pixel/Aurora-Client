@@ -25,14 +25,14 @@ Standing rule: **no new features until the port to the newest Minecraft release 
 | 1 | Fail-soft mixins, one feature catalog, `breaks` list, copy-diagnostics report | Built, PR #2 |
 | 2 | Fair-play classification, default-off switches | Built, PR #3 |
 | 3 | Core Gradle module for the Minecraft-free packages, measure and set the overhead budget, third-party notices, repo cleanup | Built: core module (PR #4), overhead budget (PR #6), notices (PR #7), cleanup (PR #8) |
-| 4 | Port 26.1, then 26.2, then 26.3; release 26.3; freeze 1.21.11 | 26.1 checkpoint built (PR #10); 26.2 built on `port/26.2`, stacked on #10; 26.3 next |
+| 4 | Port 26.1, then 26.2, then 26.3; release 26.3; freeze 1.21.11 | 26.1 checkpoint built (PR #10); 26.2 built (PR #11); 26.3 builds and boots on `port/26.3`, stacked on #11; owner review and release remain |
 | 5 | Extract the ports; move mixins, the glass renderer and Fabric API calls into the version adapter | Not started |
 | 6 | Shader-drawn shapes behind `RenderUtil` | Not started |
 | 7 | Later, in order: Apollo restriction support, friends and status, NeoForge if asked, small vanilla optimizations | Not started |
 
 ## Current status
 
-The pull requests below are open and stacked; the 26.2 checkpoint on `port/26.2` is stacked on #10. **None is merged: merging is blocked for the assistant, so the owner has to merge them, in this order.**
+The pull requests below are open and stacked; the 26.3 port on `port/26.3` is stacked on #11. **None is merged: merging is blocked for the assistant, so the owner has to merge them, in this order.**
 
 | PR | Branch | Contents | CI |
 |---|---|---|---|
@@ -46,7 +46,8 @@ The pull requests below are open and stacked; the 26.2 checkpoint on `port/26.2`
 | [#8](https://github.com/kalibsolomon-pixel/Aurora-Client/pull/8) | `chore/repo-cleanup` | Roadmap step 3, repo cleanup (stacked on #7) | See the PR |
 | [#9](https://github.com/kalibsolomon-pixel/Aurora-Client/pull/9) | `chore/pre-port-checks` | Step 1's on-screen check and the tested mod matrix (stacked on #8) | See the PR |
 | [#10](https://github.com/kalibsolomon-pixel/Aurora-Client/pull/10) | `port/26.1` | Roadmap step 4: the 26.1 checkpoint (stacked on #9) | Passing |
-| 26.2 checkpoint | `port/26.2` | Roadmap step 4: the 26.2 checkpoint (stacked on #10) | See the PR |
+| [#11](https://github.com/kalibsolomon-pixel/Aurora-Client/pull/11) | `port/26.2` | Roadmap step 4: the 26.2 checkpoint (stacked on #10) | See the PR |
+| 26.3 port (draft) | `port/26.3` | Roadmap step 4: SDL and RenderPearl port, stacked on #11; OpenGL overhead blocks release | See the PR |
 
 This file was committed with PR #3 and is updated in PR #4.
 
@@ -153,3 +154,7 @@ Answered 2026-11-11: yes to all three.
    - ~~Add a third-party notices file.~~ Done in PR #7.
    - ~~Replace the history in `AGENTS.md` and move the root-level reports under `docs/`.~~ Done in PR #8.
 4. Step 4, the port: 26.1 is built (PR #10); 26.2 is built on `port/26.2`; next is 26.3 (SDL replaces GLFW: keybind migration). Rerun the mod matrix for each.
+
+### Minecraft 26.3 port
+
+Built on `port/26.3`, stacked on PR #11 (`port/26.2`). SDL keyboard and mouse input, saved binding migration, RenderPearl GPU APIs, native glass, combined glint/OIT and hurt armor are adapted. Both native backends boot with all 73 mixins. See [port/26.3.md](port/26.3.md) for validation and remaining limits. OpenGL baseline/stack overhead still exceeds the release budget, so the 26.3 PR is a draft and publication is blocked. Native Vulkan baseline/stack and OpenGL Sodium + Iris pass their budget checks. Iris fails on forced Vulkan even with Aurora disabled. This branch does not publish a release or lift the feature freeze.

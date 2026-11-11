@@ -66,3 +66,7 @@ Every run had no fills and no glass captures. The owner's config stays under the
 
 - This machine cannot stand in for low-end hardware. Testers' reports show the same figures, and those decide how the defaults are set for weak machines (ADR 0005), not this release check.
 - Only singleplayer was measured. On a busy server, more entities mean more work for the hitbox and entity-health paths.
+
+## Minecraft 26.3 validation
+
+The unchanged gate passes for the native Vulkan baseline and performance stack, and for OpenGL Sodium + Iris. The unprofiled OpenGL baseline and performance stack still exceed it after two warm-ups. This blocks publication of the 26.3 port. A separate JFR diagnostic boot had lower steady-state costs, but does not override the failing gate. See [MOD_MATRIX.md](MOD_MATRIX.md) for the measured ranges and test conditions. Neither the budget nor the warm-up rule was relaxed.

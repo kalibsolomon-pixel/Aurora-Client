@@ -1,7 +1,7 @@
 package com.aurora.client.mixin;
 
 import com.aurora.client.config.AuroraConfig;
-import net.minecraft.client.renderer.ItemInHandRenderer;
+import net.minecraft.client.renderer.FirstPersonHandsAndItemsRenderer;
 import com.mojang.blaze3d.vertex.PoseStack;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -24,12 +24,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * the method early-returns when the player is scoping, and a TAIL-only
  * pop would leak the pushed pose on every scoping frame.
  */
-@Mixin(ItemInHandRenderer.class)
+@Mixin(FirstPersonHandsAndItemsRenderer.class)
 public abstract class HeldItemSeamFixMixin {
 
     @Inject(method = "submitArmWithItem", at = @At("HEAD"))
     private void aurora$pushSeamScale(
-            net.minecraft.client.player.AbstractClientPlayer player,
+            net.minecraft.client.renderer.state.level.PlayerRenderState player,
+            net.minecraft.client.renderer.state.level.FirstPersonHandsAndItemsRenderState handState,
             float tickProgress, float pitch, net.minecraft.world.InteractionHand hand,
             float swingProgress, net.minecraft.world.item.ItemStack item,
             float equipProgress, PoseStack matrices,
@@ -47,7 +48,8 @@ public abstract class HeldItemSeamFixMixin {
 
     @Inject(method = "submitArmWithItem", at = @At("RETURN"))
     private void aurora$popSeamScale(
-            net.minecraft.client.player.AbstractClientPlayer player,
+            net.minecraft.client.renderer.state.level.PlayerRenderState player,
+            net.minecraft.client.renderer.state.level.FirstPersonHandsAndItemsRenderState handState,
             float tickProgress, float pitch, net.minecraft.world.InteractionHand hand,
             float swingProgress, net.minecraft.world.item.ItemStack item,
             float equipProgress, PoseStack matrices,

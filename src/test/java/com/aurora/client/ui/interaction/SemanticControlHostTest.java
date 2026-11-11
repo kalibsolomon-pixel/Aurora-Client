@@ -112,11 +112,11 @@ class SemanticControlHostTest {
         disabled.setFocused(true);
         hidden.setFocused(true);
 
-        assertFalse(disabled.activateFromPointer(5, 5, 0));
-        assertTrue(disabled.keyPressed(new KeyEvent(257, 0, 0)),
+        assertFalse(disabled.activateFromPointer(5, 5, 1));
+        assertTrue(disabled.keyPressed(new KeyEvent( 40, 0, 0)),
                 "a targeted disabled selection is consumed");
-        assertFalse(hidden.activateFromPointer(5, 5, 0));
-        assertFalse(hidden.keyPressed(new KeyEvent(257, 0, 0)));
+        assertFalse(hidden.activateFromPointer(5, 5, 1));
+        assertFalse(hidden.keyPressed(new KeyEvent( 40, 0, 0)));
         assertEquals(0, calls.get());
     }
 

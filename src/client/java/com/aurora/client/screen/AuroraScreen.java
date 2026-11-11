@@ -1479,13 +1479,13 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             // the enabled gate, exactly-one activation click, and the silent
             // selected no-op all live in the action. Consumed either way (the
             // 4px gap between the zones stays inert, as before).
-            if (button == 0 && mouseX >= toolbarX() && mouseX <= toolbarX() + TOOL && mouseY >= my && mouseY <= my + TOOL) {
+            if (button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT && mouseX >= toolbarX() && mouseX <= toolbarX() + TOOL && mouseY >= my && mouseY <= my + TOOL) {
                 if (layoutControls[0] != null && layoutControls[0].activateFromPointer(mouseX, mouseY, button)) {
                     this.setFocused(layoutControls[0]);
                 }
                 return true;
             }
-            if (button == 0 && mouseX >= toolbarX() + TOOL_STEP && mouseX <= toolbarX() + TOOL_STEP + TOOL && mouseY >= my && mouseY <= my + TOOL) {
+            if (button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT && mouseX >= toolbarX() + TOOL_STEP && mouseX <= toolbarX() + TOOL_STEP + TOOL && mouseY >= my && mouseY <= my + TOOL) {
                 if (layoutControls[1] != null && layoutControls[1].activateFromPointer(mouseX, mouseY, button)) {
                     this.setFocused(layoutControls[1]);
                 }
@@ -1498,7 +1498,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 if (b == null) continue;
                 if (vp.contains(mouseX, mouseY)
                         && mouseX >= b[0] && mouseX <= b[0] + b[2] && mouseY >= b[1] && mouseY <= b[1] + b[3]) {
-                    if (button == 1) {
+                    if (button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_RIGHT) {
                         // Secondary (pointer-specific) card action: open the
                         // detail screen. One activation click at the site —
                         // parity with the Settings header that opens the same
@@ -1512,7 +1512,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                         }
                         return true;
                     }
-                    if (button == 0) {
+                    if (button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) {
                         // Primary card action: toggle through the semantic
                         // control (exactly-once activation + the one click).
                         SemanticActionControl control = tileControls.get(m.id);
@@ -1533,7 +1533,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             // same rowY; a missing header offset made every option click
             // land in the outside-collapse branch (the "dropdowns do
             // nothing" report, 2026-10-30).
-            if (button == 0) {
+            if (button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) {
                 float py = viewTop() - (float) scrolls[1].current();
                 for (FeatureMetadata m : FeatureRegistry.settings()) {
                     py += SETTINGS_HEADER_H;
@@ -1561,7 +1561,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 // viewport gate above now intersects it with the visible
                 // band like every other target. The control owns the one
                 // activation (toggle + save + the switch's thumb pulse).
-                if (button == 0 && mouseX >= mx + contentWidth() - 40 && mouseX <= mx + contentWidth() && mouseY >= y && mouseY <= y + SETTINGS_HEADER_H) {
+                if (button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT && mouseX >= mx + contentWidth() - 40 && mouseX <= mx + contentWidth() && mouseY >= y && mouseY <= y + SETTINGS_HEADER_H) {
                     SemanticActionControl tc = headerToggleControls.get(m.id);
                     if (tc != null && tc.activateFromPointer(mouseX, mouseY, button)) {
                         this.setFocused(tc);
@@ -1572,7 +1572,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 // it) opens the detail screen through its navigation
                 // control — the toggle zone above keeps priority. Walk must
                 // mirror renderSettingsLive.
-                if (button == 0 && m.hasDetail() && this.minecraft != null
+                if (button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT && m.hasDetail() && this.minecraft != null
                         && mouseX >= mx + 4 && mouseX <= mx + contentWidth() - 42
                         && mouseY >= y && mouseY <= y + 22 + (m.settingsDetailOnly ? SETTINGS_HINT_H : 0)) {
                     SemanticActionControl nav = headerNavControls.get(m.id);
@@ -1608,7 +1608,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         }
 
         double maxScroll = computeMaxScroll();
-        if (maxScroll > 0 && button == 0 && mouseX >= mx + contentWidth() && mouseX < mx + contentWidth() + 10 && mouseY >= viewTop() && mouseY <= viewBot()) {
+        if (maxScroll > 0 && button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT && mouseX >= mx + contentWidth() && mouseX < mx + contentWidth() + 10 && mouseY >= viewTop() && mouseY <= viewBot()) {
             // Grab-where-clicked: the grab offset is the cursor's distance
             // from the thumb's top at click time — the screen's historical
             // drag semantics.
@@ -1664,7 +1664,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         // fall-through used to close the whole screen on the first press.
         // The second press (no active field) reaches the screen.
         if (searchField != null && searchField.isFocused()
-                && _kev.key() == org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE) {
+                && _kev.key() == com.mojang.blaze3d.platform.InputConstants.KEY_ESCAPE) {
             searchField.setFocused(false);
             return true;
         }

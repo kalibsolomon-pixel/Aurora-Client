@@ -11,7 +11,7 @@ import com.aurora.client.util.ColorEntryHelper;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 
 import java.util.function.Consumer;
 import java.util.function.IntSupplier;
@@ -135,8 +135,8 @@ public class ColorSetting extends FeatureSetting {
         swatch.renderOverlay(ctx, swatchX, swatchY, swatchW, swatchH, mouseX, mouseY);
         
 
-        // Hover halo around swatch Ã¢â‚¬â€  translucent white outer ring that brightens on hover.
-        // Swatch ring Ã¢â‚¬â€  aurora cyan.
+        // Hover halo around swatch â€â€  translucent white outer ring that brightens on hover.
+        // Swatch ring â€â€  aurora cyan.
 
         if (!expanded) return;
 
@@ -184,7 +184,7 @@ public class ColorSetting extends FeatureSetting {
     public boolean mouseClicked(double mouseX, double mouseY, int button, int rowX, int rowY, int rowWidth) {
         syncCompactControl(rowX, rowY);
         if (isDisabled()) return false;
-        if (button != 0) return false;
+        if (button != com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) return false;
         if (compactRow != null) { swatchX = controlX(rowX, rowWidth, swatchW); swatchY = controlY(rowY, ROW_H_COLLAPSED, swatchH); }
 
         if (compactRow != null ? compactControlContains(mouseX, mouseY, rowX, rowY) : (mouseX >= swatchX && mouseX < swatchX + swatchW
@@ -220,7 +220,7 @@ public class ColorSetting extends FeatureSetting {
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dx, double dy, int rowX, int rowY, int rowWidth) {
-        if (button != 0 || dragging == DragTarget.NONE) return false;
+        if (button != com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT || dragging == DragTarget.NONE) return false;
         switch (dragging) {
             case PAD   -> updateFromPad(mouseX, mouseY);
             case HUE   -> updateFromHue(mouseY);
@@ -303,7 +303,7 @@ public class ColorSetting extends FeatureSetting {
     @Override
     public boolean onKeyPress(int keyCode, int modifiers) {
         if (!expanded) return false;
-        if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
+        if (keyCode == InputConstants.KEY_ESCAPE) {
             expanded = false;
             releaseFocus();
             return true;

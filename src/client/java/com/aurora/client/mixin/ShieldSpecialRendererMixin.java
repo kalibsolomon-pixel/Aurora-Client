@@ -99,8 +99,8 @@ public abstract class ShieldSpecialRendererMixin {
         ModelPart handle = model.handle();
         ModelPart plate = model.plate();
         collector.submitModelPart(handle, poseStack, type, packedLight, packedOverlay,
-                white, color, null, seed);
+                white, color, seed);
         collector.submitModelPart(plate, poseStack, type, packedLight, packedOverlay,
-                white, color, null, seed);
+                white, color, seed);
     }
 }

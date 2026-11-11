@@ -11,12 +11,12 @@ import java.util.function.IntConsumer;
 import java.util.function.IntSupplier;
 
 /**
- * Bridges Aurora's config-as-source-of-truth keybinds (raw GLFW ints
+ * Bridges Aurora's config-as-source-of-truth keybinds (raw SDL ints
  * stored on {@link com.aurora.client.config.AuroraConfig}) with vanilla
  * Minecraft {@link KeyMapping} entries shown in the vanilla controls
  * menu under category {@code "Aurora Client"}.
  *
- * <p>Aurora still polls GLFW directly through {@link AuroraKey} — the
+ * <p>Aurora still polls SDL directly through {@link AuroraKey} — the
  * vanilla {@link KeyMapping} is registered <em>only</em> so the binding
  * appears in vanilla's controls UI and so rebinding from either UI
  * stays in sync.
@@ -60,13 +60,13 @@ public final class AuroraKeybinds {
         final KeyMapping mapping;
         final IntSupplier getter;
         final IntConsumer setter;
-        int lastSeenGlfw;
+        int lastSeenScancode;
 
-        Entry(KeyMapping mapping, IntSupplier getter, IntConsumer setter, int lastSeenGlfw) {
+        Entry(KeyMapping mapping, IntSupplier getter, IntConsumer setter, int lastSeenScancode) {
             this.mapping = mapping;
             this.getter = getter;
             this.setter = setter;
-            this.lastSeenGlfw = lastSeenGlfw;
+            this.lastSeenScancode = lastSeenScancode;
         }
     }
 
@@ -86,36 +86,36 @@ public final class AuroraKeybinds {
 
     /**
      * Register one Aurora keybind with vanilla. The supplied
-     * {@code defaultGlfw} is the factory default used when no
+     * {@code defaultScancode} is the factory default used when no
      * options.txt entry exists yet; the actual <em>initial</em> bound
      * key is taken from the config getter so the vanilla UI immediately
      * reflects what's stored on disk.
      *
      * @param translationKey vanilla {@link KeyMapping} translation key
      *                       (e.g. {@code "key.aurora.zoom"}).
-     * @param defaultGlfw    factory-default GLFW key code shown in
+     * @param defaultScancode    factory-default SDL key code shown in
      *                       vanilla's "RESET" affordance.
      * @param getter         reads the current Aurora config value.
-     * @param setter         writes a new GLFW int back into the config.
+     * @param setter         writes a new SDL int back into the config.
      */
     public static void register(String translationKey,
-                                int defaultGlfw,
+                                int defaultScancode,
                                 IntSupplier getter,
                                 IntConsumer setter) {
         KeyMapping mapping = new KeyMapping(
                 translationKey,
-                InputConstants.Type.KEYSYM,
-                defaultGlfw,
+                InputConstants.Type.KEYBOARD,
+                defaultScancode,
                 CATEGORY);
         KeyMappingHelper.registerKeyMapping(mapping);
 
         // Force the mapping to match config NOW — KeyMappingHelper /
         // vanilla options.txt may have rebound it to a stale value
         // during options load. Aurora config is the source of truth.
-        int cfgGlfw = getter.getAsInt();
-        applyToMapping(mapping, cfgGlfw);
+        int cfgScancode = getter.getAsInt();
+        applyToMapping(mapping, cfgScancode);
 
-        ENTRIES.add(new Entry(mapping, getter, setter, cfgGlfw));
+        ENTRIES.add(new Entry(mapping, getter, setter, cfgScancode));
     }
 
     /**
@@ -127,21 +127,21 @@ public final class AuroraKeybinds {
         boolean anyMappingChange = false;
         boolean pushedFromConfig = false;
         for (Entry e : ENTRIES) {
-            int mappingGlfw = currentGlfw(e.mapping);
-            int cfgGlfw = e.getter.getAsInt();
+            int mappingScancode = currentScancode(e.mapping);
+            int cfgScancode = e.getter.getAsInt();
 
-            if (mappingGlfw != e.lastSeenGlfw) {
+            if (mappingScancode != e.lastSeenScancode) {
                 // Vanilla controls screen edited the binding → push it
-                // into Aurora config. Note this also brings cfgGlfw
+                // into Aurora config. Note this also brings cfgScancode
                 // back in line on the next read.
-                e.setter.accept(mappingGlfw);
-                e.lastSeenGlfw = mappingGlfw;
-            } else if (cfgGlfw != e.lastSeenGlfw) {
+                e.setter.accept(mappingScancode);
+                e.lastSeenScancode = mappingScancode;
+            } else if (cfgScancode != e.lastSeenScancode) {
                 // KeybindSetting (Aurora UI) edited the config → push
                 // back into the KeyMapping so the vanilla UI shows the
                 // same value.
-                applyToMapping(e.mapping, cfgGlfw);
-                e.lastSeenGlfw = cfgGlfw;
+                applyToMapping(e.mapping, cfgScancode);
+                e.lastSeenScancode = cfgScancode;
                 anyMappingChange = true;
                 pushedFromConfig = true;
             }
@@ -165,13 +165,13 @@ public final class AuroraKeybinds {
     }
 
     /**
-     * Returns the GLFW key code currently bound to {@code mapping},
+     * Returns the SDL key code currently bound to {@code mapping},
      * or {@link AuroraKey#UNBOUND} if it's unbound.
      */
-    private static int currentGlfw(KeyMapping mapping) {
+    private static int currentScancode(KeyMapping mapping) {
         InputConstants.Key key = KeyMappingHelper.getBoundKeyOf(mapping);
         if (key == null || key.equals(InputConstants.UNKNOWN)) return AuroraKey.UNBOUND;
-        if (key.getType() != InputConstants.Type.KEYSYM) {
+        if (key.getType() != InputConstants.Type.KEYBOARD) {
             // Mouse buttons or scancodes — Aurora has no representation
             // for those today, treat as unbound for sync purposes so we
             // don't clobber the config with -1 incorrectly. Returning
@@ -181,11 +181,11 @@ public final class AuroraKeybinds {
         return key.getValue();
     }
 
-    /** Pushes a GLFW int into the underlying {@link KeyMapping}. */
-    private static void applyToMapping(KeyMapping mapping, int glfw) {
-        InputConstants.Key key = (glfw == AuroraKey.UNBOUND)
+    /** Pushes a SDL int into the underlying {@link KeyMapping}. */
+    private static void applyToMapping(KeyMapping mapping, int scancode) {
+        InputConstants.Key key = (scancode == AuroraKey.UNBOUND)
                 ? InputConstants.UNKNOWN
-                : InputConstants.Type.KEYSYM.getOrCreate(glfw);
+                : InputConstants.Type.KEYBOARD.getOrCreate(scancode);
         mapping.setKey(key);
     }
 }

@@ -259,7 +259,7 @@ public class SegmentedControl extends Widget {
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
-        if (disabled || button != 0 || !inBounds(mx, my, x, y, w, trackH)) return false;
+        if (disabled || button != com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT || !inBounds(mx, my, x, y, w, trackH)) return false;
         for (int i = 0; i < options.length; i++) {
             int sx = segStart(i, x, w);
             int sw = segWidth(i, x, w);

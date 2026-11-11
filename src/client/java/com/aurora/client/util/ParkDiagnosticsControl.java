@@ -7,7 +7,6 @@ import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallba
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.network.chat.Component;
-import org.lwjgl.glfw.GLFW;
 
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
@@ -35,7 +34,7 @@ public final class ParkDiagnosticsControl {
                         .then(literal("start").executes(c -> start(c.getSource())))
                         .then(literal("reset").executes(c -> start(c.getSource())))
                         .then(literal("stop").executes(c -> {
-                            ParkDiagnostics.INSTANCE.stop(GLFW.glfwGetTime());
+                            ParkDiagnostics.INSTANCE.stop(com.aurora.client.util.FrameClock.seconds());
                             return feedback(c.getSource(), "PARK diagnostics OFF; data retained for snapshot.");
                         }))
                         .then(literal("status").executes(c -> feedback(c.getSource(),
@@ -47,7 +46,7 @@ public final class ParkDiagnosticsControl {
     private static int start(FabricClientCommandSource source) {
         String build = FabricLoader.getInstance().getModContainer("aurora")
                 .map(m -> m.getMetadata().getVersion().getFriendlyString()).orElse("unknown");
-        ParkDiagnostics.INSTANCE.start(build, GLFW.glfwGetTime());
+        ParkDiagnostics.INSTANCE.start(build, com.aurora.client.util.FrameClock.seconds());
         return feedback(source, "PARK diagnostics ACTIVE; fresh session. Snapshot exports only the current segment.");
     }
 
@@ -75,7 +74,7 @@ public final class ParkDiagnosticsControl {
 
     private static int export(FabricClientCommandSource source) {
         if (!EXPORTING.compareAndSet(false, true)) return feedback(source, "A PARK snapshot export is already in progress.");
-        var snapshot = ParkDiagnostics.INSTANCE.snapshot(GLFW.glfwGetTime());
+        var snapshot = ParkDiagnostics.INSTANCE.snapshot(com.aurora.client.util.FrameClock.seconds());
         var directory = FabricLoader.getInstance().getGameDir().resolve("debug/aurora-park");
         var file = directory.resolve(snapshot.sessionId() + "-" + java.util.UUID.randomUUID() + ".json");
         // Explicit bounded copy above is outside the wait. Formatting and disk I/O
