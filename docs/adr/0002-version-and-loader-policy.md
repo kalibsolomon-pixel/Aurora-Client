@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: partially superseded by ADR 0008 (version maintenance and the 1.8.9 framing); loader policy stands
 date: 2026-11-10
 ---
 
