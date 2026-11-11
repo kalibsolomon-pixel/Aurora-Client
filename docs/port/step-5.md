@@ -84,8 +84,8 @@ not claim a new exhaustive accessibility audit or testing every feature state.
 
 ## Release boundary and limits
 
-This candidate is locally accepted; integration and immutable publication are
-separate steps. Multiplayer, shader packs, a production launcher, low-end
+This candidate was accepted, merged in PR #13 and published as 3.3.0. The
+immutable public JAR passed anonymous redownload and identity/digest checks. Multiplayer, shader packs, a production launcher, low-end
 hardware and every mod/screen combination remain unverified. The owner
 explicitly authorized GitHub integration and release work. Checkpoint 26.1.2
 and 26.2 artifacts come from their own historical source plus packaging and

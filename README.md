@@ -33,7 +33,8 @@ Install Fabric Loader and the matching Fabric API, then put the Aurora JAR in
 that instance's `mods` folder. Install only one Aurora JAR; core and ports are
 already bundled.
 
-This restructure prepares distinct artifacts for **26.1.2**, **26.2** and **26.3**.
+Distinct artifacts target **26.1.2**, **26.2** and **26.3**.
+See [release availability and source evidence](docs/STATUS.md).
 Feature development follows the newest Minecraft release. The previous
 maintained version is frozen to crash and security fixes; older checkpoint
 artifacts remain available without parallel feature development. There is no

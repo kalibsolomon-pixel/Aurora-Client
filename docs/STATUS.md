@@ -8,7 +8,7 @@ Updated 2026-11-11. See [ROADMAP](ROADMAP.md) for the order of work,
 Roadmap steps 1–3 and the 26.1.2, 26.2 and 26.3 ports are merged through PRs
 #1–#12. The owner authorized autonomous GitHub integration and publication.
 
-Step 5 is implemented on `refactor/version-adapter`: core → ports, with all
+Step 5 is merged in [PR #13](https://github.com/kalibsolomon-pixel/Aurora-Client/pull/13): core → ports, with all
 Minecraft/Fabric code and resources under `adapters/minecraft-26.3/`. Five ports
 serve real core consumers: draw coverage, text measurement, frame clock, key
 state and world identity. Every mixin and the entire glass renderer belong to
@@ -20,13 +20,13 @@ exclusion and includes core and ports in the single runtime artifact.
 
 ## Distribution
 
-Separate Minecraft-specific JARs are being prepared:
+Separate Minecraft-specific JARs have independent source commits and release checks:
 
 | Minecraft | Aurora | Maintenance after publication |
 |---|---|---|
-| 26.1.2 | 3.2.2 | Archived forward-port checkpoint |
-| 26.2 | 3.2.3 | Frozen to crash and security fixes |
-| 26.3 | 3.3.0 | All feature work; includes step 5 |
+| 26.1.2 | [3.2.2](https://github.com/kalibsolomon-pixel/Aurora-Client/releases/tag/v3.2.2) | Archived forward-port checkpoint |
+| 26.2 | [3.2.3](https://github.com/kalibsolomon-pixel/Aurora-Client/releases/tag/v3.2.3) | Frozen to crash and security fixes |
+| 26.3 | [3.3.0](https://github.com/kalibsolomon-pixel/Aurora-Client/releases/tag/v3.3.0) | All feature work; includes step 5 |
 
 There was never a universal-JAR decision. ADR 0002 originally published only
 the newest checkpoint; the owner's 2026-11-11 revision also publishes 26.1/26.2
@@ -34,8 +34,11 @@ artifacts. Artifact availability is separate from ongoing feature maintenance.
 Filenames identify both Aurora and Minecraft versions. Release tags remain
 `v<aurora-version>`; every artifact has its own exact source and digest.
 
-Publication remains a separate draft-verification step through the protected
-release workflow. Do not infer release availability from a merged PR or CI JAR.
+All three versions are published. Each immutable JAR passed anonymous
+redownload and digest/identity checks. [Published artifact identities and
+acceptance](releases/PUBLISHED_2026-11-11.md) record the exact source and SHA-256.
+Every publication uses the protected release workflow and a verified draft.
+The Latest label selects 26.3; PR #14 applies that choice at publication too.
 
 ## Acceptance and contributor readiness
 
@@ -62,3 +65,12 @@ features are included in this restructure. Apollo licensing/detection needs
 verification before implementation. Better Hitreg author-permission provenance
 and HitColor's missing repository LICENSE remain documented follow-ups; existing
 notices follow the published upstream licenses and are not new permission claims.
+
+## Next work
+
+Step 6 is the next implementation task: benchmark shader-drawn shapes against
+the existing raster caches before choosing the path. Broader release validation
+should add a packaged-client launcher boot, multiplayer and another GPU or
+lower-end machine. Vulkan shader-mod support requires a separate pinned build
+and shader-pack checks. A broken-feature indicator on grid cards remains a
+small UI proposal, not part of the completed restructure.

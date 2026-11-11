@@ -23,9 +23,9 @@ a port test. The default `run/` directory may contain the owner's live settings.
 
 ## Choose work
 
-Bug fixes, documentation, tests and port improvements are welcome. New gameplay
-features remain on hold until the newest port ships. Discuss feature proposals
-in an issue first; decisions are recorded in [ADRs](docs/adr/). Favor small PRs
+Bug fixes, documentation, tests and port improvements are welcome. The 26.3 port has
+shipped; work continues in roadmap order. Discuss feature proposals in an issue
+first; decisions are recorded in [ADRs](docs/adr/). Favor small PRs
 with one concrete problem and a clear before/after example.
 
 Native Minecraft/Fabric code belongs in the version adapter. Pure policy belongs
