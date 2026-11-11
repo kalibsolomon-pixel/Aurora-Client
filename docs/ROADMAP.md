@@ -19,7 +19,7 @@ Steps 1 to 3 happen on 1.21.11 and each makes the port cheaper or safer. Nothing
 1. **Fail-soft foundation (1.21.11).** Single feature registry that records each feature's mixins. Fail-soft mixins with a per-feature health flag. A `breaks` list in `fabric.mod.json`. The copy-diagnostics report with its built-in benchmark. *Built 2026-11-11 on `feat/fail-soft-foundation`; see "Step 1 status" below.*
 2. **Fair play (1.21.11).** Classify every feature. Make minimap player dots, player entity health, other players' totem pops and FreeLook default-off. Document Better Hitreg as local feedback only. *Built 2026-11-11 on `feat/fair-play-defaults`; see "Step 2 status" below.*
 3. **Groundwork (1.21.11).** Move the already Minecraft-free packages into a core Gradle module. Measure the overhead baseline and set the budget. Add third-party notices. Clean up the repo for contributors.
-4. **Port.** 26.1, then 26.2, then the newest release, each made to build and boot. Release the newest. Freeze 1.21.11 to crash and security fixes.
+4. **Port.** 26.1, then 26.2, then 26.3, each made to build and boot. Release 26.3, the target set by the owner on 2026-11-11. Freeze 1.21.11 to crash and security fixes.
 5. **Extract the layers.** Define the ports from what actually broke. Move every mixin, the glass renderer and the Fabric API calls into the version adapter.
 6. **Shader-drawn shapes.** Behind `RenderUtil`, measured against the existing caches.
 7. **Later, in this order.** Apollo restriction support, once its license and detection behaviour are checked. Friends and online status. NeoForge if asked for. Small vanilla optimizations under the ADR 0005 rule as they turn up.
@@ -64,7 +64,6 @@ The core module is built on `feat/core-module`: 75 already Minecraft-free classe
 ## Still to verify
 
 - Nothing in step 2 was checked in a running game. The defaults are verified on a real config object in tests.
-- Whether 26.3 is the newest Minecraft release. Sodium listings showed builds for 26.1, 26.2 and 26.3 on 2026-11-10; the newest was not confirmed.
 - Apollo's license terms, and whether registering its plugin channel is how servers identify Lunar Client.
 - Whether Better Hitreg's Apache-2.0 listing matches the terms its author gave for the integration. Its repository's LICENSE is the stock Apache 2.0 text, and the notices follow it.
 - HitColor's repository has no LICENSE file; only Modrinth says MIT. Asking harimasa to add one would settle it.

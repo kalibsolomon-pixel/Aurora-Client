@@ -25,7 +25,7 @@ Standing rule: **no new features until the port to the newest Minecraft release 
 | 1 | Fail-soft mixins, one feature catalog, `breaks` list, copy-diagnostics report | Built, PR #2 |
 | 2 | Fair-play classification, default-off switches | Built, PR #3 |
 | 3 | Core Gradle module for the Minecraft-free packages, measure and set the overhead budget, third-party notices, repo cleanup | Built: core module (PR #4), overhead budget (PR #6), notices (PR #7), cleanup (PR #8) |
-| 4 | Port 26.1, then 26.2, then the newest release; release the newest; freeze 1.21.11 | Not started |
+| 4 | Port 26.1, then 26.2, then 26.3; release 26.3; freeze 1.21.11 | Not started |
 | 5 | Extract the ports; move mixins, the glass renderer and Fabric API calls into the version adapter | Not started |
 | 6 | Shader-drawn shapes behind `RenderUtil` | Not started |
 | 7 | Later, in order: Apollo restriction support, friends and status, NeoForge if asked, small vanilla optimizations | Not started |
@@ -109,6 +109,10 @@ Answered 2026-11-11: yes to all three.
 - The 40 reports at the repo root moved under `docs/`: five living references to `docs/`, release notes to `docs/releases/`, the rest to `docs/reports/`. Relative links were repaired; the publish workflow now reads release notes from `docs/releases/`.
 - The repo root now holds only the build, `README.md`, `AGENTS.md`, `LICENSE` and `THIRD_PARTY_NOTICES.md`.
 
+### Port target
+
+26.3 is the release the port targets (owner, 2026-11-11). ADR 0002 and the roadmap now name it.
+
 ## Open decisions for the owner
 
 None at the moment.
@@ -117,7 +121,6 @@ None at the moment.
 
 - The feature card tooltip, the detail-screen header and the Copy Diagnostics button have not been looked at on screen. The clipboard path was not exercised.
 - The tier-1 mod matrix (Sodium, Iris, VulkanMod, ImmediatelyFast, EntityCulling, Lithium, Mod Menu) has not been booted with these changes.
-- Whether 26.3 is the newest Minecraft release.
 - Apollo's license terms and how servers detect Lunar Client.
 - Whether Better Hitreg's Apache-2.0 listing on Modrinth matches the terms its author gave. Its repository's LICENSE is stock Apache 2.0.
 - HitColor's license: its repository has no LICENSE file; only Modrinth says MIT.
