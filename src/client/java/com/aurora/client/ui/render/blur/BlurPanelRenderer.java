@@ -951,7 +951,8 @@ public final class BlurPanelRenderer {
         // output pool, and the pause around screenshots that prevents a
         // native crash. Without either, every caller takes its flat fallback.
         if (com.aurora.client.health.MixinHealth.failed("MinecraftClientRenderMixin")
-                || com.aurora.client.health.MixinHealth.failed("ScreenshotMixin")) {
+                || com.aurora.client.health.MixinHealth.failed("ScreenshotMixin")
+                || com.aurora.client.health.MixinHealth.failed("GuiRendererGlassMixin")) {
             lastOutcome = "disabled (a required hook could not be applied)";
             return false;
         }
@@ -1122,6 +1123,19 @@ public final class BlurPanelRenderer {
                 return PortableBlurRenderer.render(g, out.portable, main, x0, y0, regX, regY,
                         regW, regH, panW, panH, scale, radius, cornerRadiusGui, lighting, unified, capture);
             }
+            // 26.1 extracts the whole GUI before rendering it, so the main
+            // target does not hold this frame's world yet. Size the output
+            // now (it must not be recreated once a blit references it),
+            // record the blit, and queue the GL work for runPendingCaptures,
+            // which GuiRendererGlassMixin calls once the world is drawn.
+            ensureOutputTexture(out, panW, panH);
+            blit(g, guiX, guiY, guiW, guiH);
+            PENDING.add(this);
+            return true;
+        }
+
+        /** The queued GL work: capture, blur, composite and read back into this panel's output. */
+        void execute() {
             // Snapshot the source target BEFORE any of our own GL calls can
             // change the binding — this is the framebuffer holding everything
             // visually behind the panel right now.
@@ -1193,17 +1207,13 @@ public final class BlurPanelRenderer {
                 composite();
                 if (perf) { GlassStats.compositeNs += System.nanoTime() - t; t = System.nanoTime(); }
                 readback();
-                if (perf) { t = System.nanoTime(); }
-                blit(g, guiX, guiY, guiW, guiH);
-                if (perf) { GlassStats.blitNs += System.nanoTime() - t; }
-                return true;
             } catch (Declined d) {
-                // Expected, transient decline (reader unavailable, pool
-                // exhausted): restore below, then let the caller draw its
-                // opaque fallback. Never disables the renderer.
+                // Expected, transient decline (reader unavailable): the blit is
+                // already recorded, so leave the output clear rather than show
+                // a stale panel. Never disables the renderer.
                 if (GlassStats.ENABLED) GlassStats.decline(d.getMessage());
                 lastOutcome = d.getMessage();
-                return false;
+                clearOutput();
             } finally {
                 saved.restore();
                 // Pixel-buffer hygiene: the texture upload path may leave a
@@ -1503,6 +1513,13 @@ public final class BlurPanelRenderer {
         // --- 5. Blit through the normal GUI path (straight-alpha texture,
         // standard src-alpha GUI blending) so the panel composites in
         // correct draw order — the same mechanism UiLayerCache uses.
+        /** A transparent output: the panel's blit is recorded, but its capture declined. */
+        private void clearOutput() {
+            if (out == null || out.image == null) return;
+            out.image.fillRect(0, 0, out.image.getWidth(), out.image.getHeight(), 0);
+            out.texture.upload();
+        }
+
         private void blit(GuiGraphicsExtractor g, float guiX, float guiY, float guiW, float guiH) {
             // The quad is placed at the panel's CLIPPED device rect mapped
             // back to GUI units and sized to the clipped texture — a panel
@@ -1808,9 +1825,37 @@ public final class BlurPanelRenderer {
      * {@link #nextOutput}) — called once per frame from the client
      * render-tick mixin, before any GUI rendering. Deliberately trivial.
      */
+    /** GL panels requested during this frame's GUI extraction, run by {@link #runPendingCaptures}. */
+    private static final java.util.ArrayList<Frame> PENDING = new java.util.ArrayList<>();
+
+    /**
+     * Runs the queued GL captures. Called by {@code GuiRendererGlassMixin} once
+     * this frame's world (or panorama) is in the main target and before any GUI
+     * element is drawn. Render thread.
+     */
+    public static void runPendingCaptures() {
+        if (PENDING.isEmpty()) return;
+        try {
+            for (Frame f : PENDING) {
+                if (permanentlyDisabled) break;
+                f.execute();
+            }
+        } catch (Throwable t) {
+            AuroraClient.LOGGER.error("[BlurPanel] render failed - blur panels disabled for this session.", t);
+            permanentlyDisabled = true;
+            lastOutcome = "failed (see log)";
+        } finally {
+            PENDING.clear();
+        }
+    }
+
     public static void beginFrame() {
         PortableBlurRenderer.beginFrame();
         GlassStats.flushFrame();
+        // Captures queued by a frame whose GUI was extracted but never rendered
+        // (26.1 can skip rendering while the window is inactive) are dropped:
+        // their output slots are about to be reused.
+        PENDING.clear();
         // Drain queued rim-mask evictions FIRST. Everything in the queue was
         // last blitted in an epoch older than the frame that just finished,
         // so no GuiRenderState can still reference it (see

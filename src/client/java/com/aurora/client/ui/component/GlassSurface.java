@@ -553,25 +553,11 @@ public final class GlassSurface {
         if (liveWorldBackdrop()) return false;
         // Without the invoker mixin the screen keeps vanilla's own backdrop (flat fallback).
         if (!(screen instanceof com.aurora.client.mixin.ScreenPanoramaAccessor panorama)) return false;
+        // 26.1 records the panorama here; GuiRenderer draws it before the queued
+        // glass captures run (BlurPanelRenderer.runPendingCaptures).
         panorama.aurora$invokeRenderPanorama(g, delta);
-        // 26.1: extractPanorama only records the panorama and GuiRenderer draws it later
-        // in the frame, after the glass has captured. Draw the cube map into the main
-        // target now, as vanilla will (same pitch, same spin), so the capture holds it.
-        var state = g.guiRenderState.panoramaRenderState;
-        if (state != null) menuCubeMap().render(10.0F, state.spin());
         BlurPanelRenderer.noteMenuBackdropDrawn();
         return true;
-    }
-
-    private static net.minecraft.client.renderer.CubeMap menuCubeMap;
-
-    /** Aurora's own handle on vanilla's panorama; the textures are vanilla's, already registered. */
-    private static net.minecraft.client.renderer.CubeMap menuCubeMap() {
-        if (menuCubeMap == null) {
-            menuCubeMap = new net.minecraft.client.renderer.CubeMap(
-                    net.minecraft.resources.Identifier.withDefaultNamespace("textures/gui/title/background/panorama"));
-        }
-        return menuCubeMap;
     }
 
     /**
