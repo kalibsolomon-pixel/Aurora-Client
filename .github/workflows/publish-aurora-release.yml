@@ -211,7 +211,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
-          gh release edit "v${RELEASE_VERSION}" --draft=false \
+          gh release edit "v${RELEASE_VERSION}" --draft=false --latest="$MAKE_LATEST" \
             -R "$GITHUB_REPOSITORY"
       - name: Anonymously redownload and inspect the public JAR
         run: >-
