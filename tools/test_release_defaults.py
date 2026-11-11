@@ -36,12 +36,13 @@ class ReleaseDefaultsTest(unittest.TestCase):
 
     def test_release_version_and_resource_wiring(self):
         properties = (ROOT / 'gradle.properties').read_text()
-        self.assertRegex(properties, r'(?m)^mod_version=3\.2\.0$')
+        self.assertRegex(properties, r'(?m)^mod_version=\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?$')
         source = (ROOT / 'core/src/main/java/com/aurora/client/config/ReleaseDefaults.java').read_text()
         self.assertIn('/assets/aurora/defaults/3.2.0.json', source)
         metadata = json.loads((ROOT / 'src/client/resources/fabric.mod.json').read_text())
         self.assertEqual('${version}', metadata['version'])
-        self.assertEqual('~1.21.11', metadata['depends']['minecraft'])
+        minecraft = re.search(r'(?m)^minecraft_version=(.+)$', properties).group(1)
+        self.assertEqual('~' + minecraft, metadata['depends']['minecraft'])
 
 
 if __name__ == '__main__':

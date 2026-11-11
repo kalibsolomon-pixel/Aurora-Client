@@ -18,7 +18,7 @@ from pathlib import Path
 
 
 REPO_ID = "kalibsolomon-pixel/Aurora-Client"
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 VERSION_PATTERN = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z][0-9A-Za-z.-]*)?\Z")
 SHA_PATTERN = re.compile(r"[0-9a-f]{40}\Z")
 HASH_PATTERN = re.compile(r"[0-9a-f]{64}\Z")
@@ -59,9 +59,9 @@ def read_properties(path: Path) -> dict[str, str]:
     return values
 
 
-def find_runtime_jar(directory: Path, version: str) -> Path:
+def find_runtime_jar(directory: Path, version: str, minecraft_version: str) -> Path:
     jars = sorted(directory.glob("*.jar"))
-    expected = directory / f"aurora-{version}.jar"
+    expected = directory / f"aurora-{version}-mc{minecraft_version}.jar"
     if len(jars) != 1 or jars[0] != expected or not expected.is_file():
         raise ReleaseError(
             f"expected exactly one runtime JAR named {expected.name}; found {[p.name for p in jars]}"
@@ -137,7 +137,7 @@ def inspect_candidate(root: Path, jar_dir: Path, version: str, channel: str, sou
     for property_name in ("loader_version", "fabric_api_version"):
         if not properties.get(property_name):
             raise ReleaseError(f"gradle.properties is missing {property_name}")
-    jar = find_runtime_jar(jar_dir, version)
+    jar = find_runtime_jar(jar_dir, version, minecraft_version)
     identity = inspect_jar(jar, version, minecraft_version)
     sha256, size = digest_and_size(jar)
     return {
@@ -169,7 +169,10 @@ def load_metadata(path: Path) -> dict:
         raise ReleaseError("release metadata lacks a version or channel")
     if value.get("tag") != require_version(version, channel):
         raise ReleaseError("release tag does not match the version")
-    if value.get("fileName") != f"aurora-{version}.jar":
+    minecraft = value.get("minecraftVersion")
+    if not isinstance(minecraft, str) or not re.fullmatch(r"[0-9]+(?:\.[0-9]+){1,2}", minecraft):
+        raise ReleaseError("release metadata has an invalid Minecraft version")
+    if value.get("fileName") != f"aurora-{version}-mc{minecraft}.jar":
         raise ReleaseError("release asset filename does not match the version")
     if not isinstance(value.get("sourceSha"), str) or not SHA_PATTERN.fullmatch(value["sourceSha"]):
         raise ReleaseError("release metadata has an invalid source SHA")

@@ -24,6 +24,12 @@
     ]
   },
   "notes": [
-    "Minecraft 26.2 provides native Vulkan and Sodium supports it. The separate VulkanMod row is replaced by native/Sodium Vulkan runs."
-  ]
+    "Minecraft 26.2 provides native Vulkan and Sodium supports it. The separate VulkanMod row is replaced by native/Sodium Vulkan runs.",
+    "Iris is an OpenGL shader mod and is excluded from Vulkan checks. Vulkan shader mods such as Beryl require a separately pinned optional set."
+  ],
+  "set_backends": {
+    "B-sodium-iris": [
+      "OPENGL"
+    ]
+  }
 }

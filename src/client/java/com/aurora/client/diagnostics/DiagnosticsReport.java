@@ -60,7 +60,7 @@ public final class DiagnosticsReport {
     public static void tick(Minecraft mc) {
         FrameBenchmark.tick();
         if (!LOG_ONCE || logged >= LOG_RUNS || FrameBenchmark.running()) return;
-        ticksInWorld = mc.level == null ? 0 : ticksInWorld + 1;
+        ticksInWorld = mc.level == null || mc.gui.screen() != null ? 0 : ticksInWorld + 1;
         if (ticksInWorld < 60) return;
         int run = ++logged;
         FrameBenchmark.start(0, MEASURE_SECONDS, RenderUtil::fillsSubmitted, BlurPanelRenderer::capturesSubmitted,

@@ -127,6 +127,7 @@ tasks.withType(Jar).configureEach {
 }
 
 jar {
+	archiveClassifier = "mc${project.minecraft_version}"
 	def projectName = project.name
 	inputs.property "projectName", projectName
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE

@@ -1,0 +1,92 @@
+{
+  "date": "2026-11-11",
+  "version": "3.2.3",
+  "minecraft": "26.2",
+  "warmup_runs": 2,
+  "results": [
+    {
+      "backend": "OPENGL",
+      "log_sha256": "139b5283b23018cca78a2fa46f57530e7ceccf6e45847b9b1f3873e9babf0c87",
+      "runs": [
+        {
+          "run": 1,
+          "mean_ms": 0.386,
+          "p95_ms": 0.733,
+          "verdict": "OVER: CPU mean 0.386 ms > 0.250 ms, CPU p95 0.733 ms > 0.400 ms"
+        },
+        {
+          "run": 2,
+          "mean_ms": 0.257,
+          "p95_ms": 0.488,
+          "verdict": "OVER: CPU mean 0.257 ms > 0.250 ms, CPU p95 0.488 ms > 0.400 ms"
+        },
+        {
+          "run": 3,
+          "mean_ms": 0.22,
+          "p95_ms": 0.302,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "run": 4,
+          "mean_ms": 0.219,
+          "p95_ms": 0.296,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "run": 5,
+          "mean_ms": 0.219,
+          "p95_ms": 0.3,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "run": 6,
+          "mean_ms": 0.215,
+          "p95_ms": 0.297,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        }
+      ]
+    },
+    {
+      "backend": "VULKAN",
+      "log_sha256": "a5c9fb6bd40891a1a3019bb871e729b108f01a95023eb526fbb07f64f44b7b42",
+      "runs": [
+        {
+          "run": 1,
+          "mean_ms": 0.36,
+          "p95_ms": 0.615,
+          "verdict": "OVER: CPU mean 0.360 ms > 0.250 ms, CPU p95 0.615 ms > 0.400 ms"
+        },
+        {
+          "run": 2,
+          "mean_ms": 0.242,
+          "p95_ms": 0.383,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "run": 3,
+          "mean_ms": 0.188,
+          "p95_ms": 0.241,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "run": 4,
+          "mean_ms": 0.183,
+          "p95_ms": 0.225,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "run": 5,
+          "mean_ms": 0.174,
+          "p95_ms": 0.216,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "run": 6,
+          "mean_ms": 0.17,
+          "p95_ms": 0.203,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        }
+      ]
+    }
+  ]
+}
