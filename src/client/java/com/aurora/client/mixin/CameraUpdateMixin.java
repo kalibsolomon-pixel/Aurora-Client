@@ -11,7 +11,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.Camera;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.level.Level;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -30,8 +29,11 @@ public abstract class CameraUpdateMixin {
     @Shadow
     protected abstract void setRotation(float yaw, float pitch);
 
+    @Shadow
+    private Entity entity;
+
     @Inject(
-            method = "setup",
+            method = "alignWithEntity",
             at = @At(
                     value = "INVOKE",
                     target = "Lnet/minecraft/client/Camera;setRotation(FF)V",
@@ -39,11 +41,9 @@ public abstract class CameraUpdateMixin {
                     shift = At.Shift.AFTER
             )
     )
-    private void aurora$applyRotation(
-            Level level, Entity focusedEntity, boolean thirdPerson,
-            boolean inverseView, float tickDelta, CallbackInfo ci) {
+    private void aurora$applyRotation(float tickDelta, CallbackInfo ci) {
 
-        if (!(focusedEntity instanceof LocalPlayer)) return;
+        if (!(entity instanceof LocalPlayer)) return;
 
         // Priority: FreeLook wins over smooth camera.
         if (AuroraConfig.get().freeLookEnabled && FreeLookFeature.isActive()) {

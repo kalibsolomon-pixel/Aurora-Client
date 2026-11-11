@@ -16,7 +16,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(Gui.class)
 public class InGameHudMixin {
 
-    @Inject(method = "renderCrosshair", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "extractCrosshair", at = @At("HEAD"), cancellable = true)
     private void aurora$hideVanillaCrosshair(GuiGraphicsExtractor context, DeltaTracker tickCounter, CallbackInfo ci) {
         if (AuroraConfig.get().crosshairEnabled) {
             ci.cancel();

@@ -4,6 +4,7 @@ import com.aurora.client.config.AuroraConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GameRenderer;
 import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 import com.mojang.math.Axis;
@@ -32,15 +33,17 @@ public abstract class DamageTiltMixin {
             method = "bobHurt",
             at = @At("TAIL")
     )
-    private void aurora$applyRollTilt(PoseStack matrices, float tickDelta, CallbackInfo ci) {
+    private void aurora$applyRollTilt(CameraRenderState state, PoseStack matrices, CallbackInfo ci) {
         AuroraConfig cfg = AuroraConfig.get();
         if (!cfg.smoothAnimationsEnabled || !cfg.damageTiltEnabled) return;
 
         Minecraft mc = Minecraft.getInstance();
         if (mc.getCameraEntity() == null) return;
         if (!(mc.getCameraEntity() instanceof LivingEntity entity)) return;
+        // 26.1 extracts the interpolated hurt time into the camera state, as vanilla's bobHurt reads it.
+        if (state.entityRenderState == null || !state.entityRenderState.isLiving) return;
 
-        float hurtTime = entity.hurtTime - tickDelta;
+        float hurtTime = state.entityRenderState.hurtTime;
         if (hurtTime <= 0f) return;
 
         // Vanilla maxHurtTime is 10

@@ -23,15 +23,16 @@ public abstract class ReflexMinecraftMixin {
     }
 
     @Inject(
-            method = "runTick",
-            at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/platform/Window;updateDisplay(Lcom/mojang/blaze3d/TracyFrameCapture;)V")
+            // 26.1: the frame is rendered in renderFrame and swapped by RenderSystem.flipFrame.
+            method = "renderFrame",
+            at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/systems/RenderSystem;flipFrame(Lcom/mojang/blaze3d/TracyFrameCapture;)V")
     )
     private void aurora$reflexBeforeFlush(CallbackInfo ci) {
         ReflexScheduler.getInstance().beforeFlush();
     }
 
     @Inject(
-            method = "runTick",
+            method = "renderFrame",
             at = @At(
                     value = "INVOKE",
                     target = "Lnet/minecraft/client/renderer/GameRenderer;render(Lnet/minecraft/client/DeltaTracker;Z)V",

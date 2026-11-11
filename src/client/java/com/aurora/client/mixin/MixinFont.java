@@ -20,11 +20,11 @@ public abstract class MixinFont {
     // ========================================================================
 
     @Inject(
-            method = "drawInBatch(Ljava/lang/String;FFIZLorg/joml/Matrix4f;Lnet/minecraft/client/renderer/MultiBufferSource;Lnet/minecraft/client/gui/Font$DisplayMode;II)V",
+            method = "drawInBatch(Ljava/lang/String;FFIZLorg/joml/Matrix4fc;Lnet/minecraft/client/renderer/MultiBufferSource;Lnet/minecraft/client/gui/Font$DisplayMode;II)V",
             at = @At("HEAD"),
             cancellable = true
     )
-    private void drawInBatchStringIntercept(String text, float x, float y, int color, boolean dropShadow, org.joml.Matrix4f matrix, net.minecraft.client.renderer.MultiBufferSource bufferSource, net.minecraft.client.gui.Font.DisplayMode displayMode, int backgroundColor, int light, CallbackInfo ci) {
+    private void drawInBatchStringIntercept(String text, float x, float y, int color, boolean dropShadow, org.joml.Matrix4fc matrix, net.minecraft.client.renderer.MultiBufferSource bufferSource, net.minecraft.client.gui.Font.DisplayMode displayMode, int backgroundColor, int light, CallbackInfo ci) {
         Style style = AuroraFontRenderer.getActiveStyle();
         if (style != null && text != null) {
             // Plain strings never carry their own font, so it's always safe
@@ -37,7 +37,7 @@ public abstract class MixinFont {
     }
 
     @ModifyVariable(
-            method = "drawInBatch(Lnet/minecraft/network/chat/Component;FFIZLorg/joml/Matrix4f;Lnet/minecraft/client/renderer/MultiBufferSource;Lnet/minecraft/client/gui/Font$DisplayMode;II)V",
+            method = "drawInBatch(Lnet/minecraft/network/chat/Component;FFIZLorg/joml/Matrix4fc;Lnet/minecraft/client/renderer/MultiBufferSource;Lnet/minecraft/client/gui/Font$DisplayMode;II)V",
             at = @At("HEAD"),
             argsOnly = true,
             ordinal = 0
@@ -58,7 +58,7 @@ public abstract class MixinFont {
     }
 
     @ModifyVariable(
-            method = "drawInBatch(Lnet/minecraft/util/FormattedCharSequence;FFIZLorg/joml/Matrix4f;Lnet/minecraft/client/renderer/MultiBufferSource;Lnet/minecraft/client/gui/Font$DisplayMode;II)V",
+            method = "drawInBatch(Lnet/minecraft/util/FormattedCharSequence;FFIZLorg/joml/Matrix4fc;Lnet/minecraft/client/renderer/MultiBufferSource;Lnet/minecraft/client/gui/Font$DisplayMode;II)V",
             at = @At("HEAD"),
             argsOnly = true,
             ordinal = 0

@@ -40,9 +40,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * tint) — banner-patterned shields submit through
  * {@code BannerRenderer.submitPatterns} and stay vanilla.
  *
- * <p>Injected just before vanilla's {@code popPose} so the pose stack still
- * carries the shield transform (at TAIL the transform would already be
- * popped).
+ * <p>Injected at TAIL, where the pose stack still carries the shield
+ * transform: 26.1's {@code submit} no longer pushes or pops it (1.21.11
+ * injected just before its {@code popPose}).
  */
 @Mixin(ShieldSpecialRenderer.class)
 public abstract class ShieldSpecialRendererMixin {
@@ -60,8 +60,10 @@ public abstract class ShieldSpecialRendererMixin {
     private static boolean aurora$warnedMissingSprite;
     private static boolean aurora$loggedResolved;
 
-    @Inject(method = "submit", at = @At(value = "INVOKE",
-            target = "Lcom/mojang/blaze3d/vertex/PoseStack;popPose()V"))
+    // 26.1's submit no longer pushes or pops the pose stack, so TAIL still carries the
+    // shield transform. Exact descriptor: the Object-typed bridge must not get a second overlay.
+    @Inject(method = "submit(Lnet/minecraft/core/component/DataComponentMap;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;IIZI)V",
+            at = @At("TAIL"))
     private void aurora$statusOverlay(DataComponentMap argument,
                                       PoseStack poseStack, SubmitNodeCollector collector,
                                       int packedLight, int packedOverlay, boolean flat, int seed,

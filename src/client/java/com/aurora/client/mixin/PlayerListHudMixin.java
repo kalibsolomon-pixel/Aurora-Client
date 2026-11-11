@@ -19,7 +19,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class PlayerListHudMixin {
 
     @Inject(
-            method = "renderPingIcon",
+            method = "extractPingIcon",
             at = @At("HEAD"),
             cancellable = true
     )

@@ -28,7 +28,7 @@ public abstract class MultiplayerServerListWidgetMixin {
     @Shadow @Final private ServerData serverData;
 
     /** Skips the status icon's blit when it is one of the ping / pinging bar sprites. */
-    @WrapWithCondition(method = "renderContent", require = 0, at = @At(value = "INVOKE", ordinal = 0,
+    @WrapWithCondition(method = "extractContent", require = 0, at = @At(value = "INVOKE", ordinal = 0,
             target = "Lnet/minecraft/client/gui/GuiGraphicsExtractor;blitSprite(Lcom/mojang/blaze3d/pipeline/RenderPipeline;Lnet/minecraft/resources/Identifier;IIII)V"))
     private boolean aurora$hidePingBars(GuiGraphicsExtractor ctx, RenderPipeline pipeline, Identifier sprite, int x, int y, int w, int h) {
         return !aurora$isPingBars(sprite);
@@ -40,7 +40,7 @@ public abstract class MultiplayerServerListWidgetMixin {
         return sprite != null && sprite.getNamespace().equals("minecraft") && sprite.getPath().startsWith("server_list/ping");
     }
 
-    @Inject(method = "renderContent", at = @At("TAIL"), require = 0)
+    @Inject(method = "extractContent", at = @At("TAIL"), require = 0)
     private void aurora$replacePingIcon(
             GuiGraphicsExtractor ctx, int mouseX, int mouseY, boolean hovered, float tickDelta,
             CallbackInfo ci) {

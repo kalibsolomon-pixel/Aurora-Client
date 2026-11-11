@@ -18,6 +18,6 @@ import org.spongepowered.asm.mixin.gen.Invoker;
 @Mixin(Screen.class)
 public interface ScreenPanoramaAccessor {
 
-    @Invoker("renderPanorama")
+    @Invoker("extractPanorama")
     void aurora$invokeRenderPanorama(GuiGraphicsExtractor graphics, float partialTick);
 }

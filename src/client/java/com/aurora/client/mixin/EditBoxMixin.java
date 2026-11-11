@@ -104,7 +104,7 @@ public abstract class EditBoxMixin implements GlassEditBox {
                         ThemeManager.current().roundness().radiusSmall());
     }
 
-    @Inject(method = "renderWidget", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "extractWidgetRenderState", at = @At("HEAD"), cancellable = true)
     private void aurora$renderCustomStyle(GuiGraphicsExtractor ctx, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         Minecraft mc = Minecraft.getInstance();
         if (!aurora$themedScreen(mc)) return;

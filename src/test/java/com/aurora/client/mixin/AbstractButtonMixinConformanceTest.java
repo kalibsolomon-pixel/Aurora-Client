@@ -44,10 +44,11 @@ class AbstractButtonMixinConformanceTest {
                 "the two-screen gate is preserved");
         assertTrue(s.contains("getClass() == net.minecraft.client.gui.components.Button.Plain.class"),
                 "exact Button.Plain match (ImageButton & future subclasses stay vanilla)");
-        // The painter cancels ONLY renderWidget — never an input handler.
+        // The painter cancels ONLY the widget render (renderWidget before 26.1,
+        // extractWidgetRenderState since) — never an input handler.
         assertEquals(1, count(s, "cancellable = true"),
-                "exactly one cancellable inject (renderWidget)");
-        assertTrue(s.contains("method = \"renderWidget\""));
+                "exactly one cancellable inject (the widget render)");
+        assertTrue(s.contains("method = \"extractWidgetRenderState\""));
         // The two observation hooks are HEAD-only, and the single
         // cancellable=true already pins that neither of them cancels.
         assertTrue(s.contains("method = \"onClick\", at = @At(\"HEAD\")"));

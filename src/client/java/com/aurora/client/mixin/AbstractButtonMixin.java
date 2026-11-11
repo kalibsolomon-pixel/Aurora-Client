@@ -60,7 +60,7 @@ public abstract class AbstractButtonMixin {
         return ((Object) this).getClass() == net.minecraft.client.gui.components.Button.Plain.class;
     }
 
-    @Inject(method = "renderWidget", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "extractWidgetRenderState", at = @At("HEAD"), cancellable = true)
     private void aurora$renderCustomWidget(GuiGraphicsExtractor ctx, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         if (aurora$shouldApplyStyle()) {
             AbstractButton self = (AbstractButton) (Object) this;

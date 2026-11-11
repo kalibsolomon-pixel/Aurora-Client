@@ -18,7 +18,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(Gui.class)
 public class InGameHudFoodMixin {
 
-    @Inject(method = "renderFood", at = @At("RETURN"), require = 0)
+    @Inject(method = "extractFood", at = @At("RETURN"), require = 0)
     private void aurora$renderSaturation(
             GuiGraphicsExtractor context,
             Player player,
