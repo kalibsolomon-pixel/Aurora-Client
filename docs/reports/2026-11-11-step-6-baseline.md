@@ -46,6 +46,11 @@ cap and any waits; they do not isolate GPU time. This single pair is diagnostic
 for this fixture and hardware, not a broad frame-rate or GPU result. The world
 continues to advance between boots.
 
+In-world 40-waypoint screens were additionally inspected at 854 x 480 / scale 2
+on 26.1.2 OpenGL and VulkanMod, and 26.2 OpenGL and native Vulkan, using the
+Round/33% theme. The 26.1.2 OpenGL waypoint screen was also inspected at
+Square/19%; the feature grid was inspected on 26.1.2 VulkanMod and 26.2 Vulkan.
+
 The default Round/33% waypoint screen was also inspected on native Vulkan; the
 Square/19% screen was inspected on OpenGL. The Aurora feature screen's grid and
 list layouts were inspected on 26.3 OpenGL at 854 x 480 and 1280 x 720, in the
@@ -67,8 +72,7 @@ Screenshots remain under `build/step6-shader-test/`, `build/step6-261-opengl/`
 
 The shader remains disabled by default. Triangle rasterization, cases outside
 its parameter range and layer captures still use the CPU path. Runtime testing
-of further backend combinations and real screens on the other Minecraft lines,
-shader-mod compatibility, additional viewport and appearance cases,
+of further shader-mod combinations, real-screen and appearance cases,
 frame-level/GPU measurements and the release overhead gate
 remain outstanding. Retain caches until individual removal is supported by
 measurement.
