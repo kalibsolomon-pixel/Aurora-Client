@@ -24,13 +24,15 @@ Separate Minecraft-specific JARs have independent source commits and release che
 
 | Minecraft | Aurora | Maintenance after publication |
 |---|---|---|
-| 26.1.2 | [3.2.2](https://github.com/kalibsolomon-pixel/Aurora-Client/releases/tag/v3.2.2) | Archived forward-port checkpoint |
-| 26.2 | [3.2.3](https://github.com/kalibsolomon-pixel/Aurora-Client/releases/tag/v3.2.3) | Frozen to crash and security fixes |
+| 26.1.2 | [3.2.2](https://github.com/kalibsolomon-pixel/Aurora-Client/releases/tag/v3.2.2) | Full parity from the next release (ADR 0008) |
+| 26.2 | [3.2.3](https://github.com/kalibsolomon-pixel/Aurora-Client/releases/tag/v3.2.3) | Full parity from the next release (ADR 0008) |
 | 26.3 | [3.3.0](https://github.com/kalibsolomon-pixel/Aurora-Client/releases/tag/v3.3.0) | All feature work; includes step 5 |
 
-There was never a universal-JAR decision. ADR 0002 originally published only
-the newest checkpoint; the owner's 2026-11-11 revision also publishes 26.1/26.2
-artifacts. Artifact availability is separate from ongoing feature maintenance.
+There was never a universal-JAR decision, and ADR 0008 keeps it that way. The
+owner's 2026-11-11 revision goes further than the earlier checkpoint publication:
+from the next release onward, artifact availability and feature maintenance are
+joined — every line from 26.1 onward builds from one source tree and receives all
+feature work. Published JARs stay immutable; parity applies to future releases.
 Filenames identify both Aurora and Minecraft versions. Release tags remain
 `v<aurora-version>`; every artifact has its own exact source and digest.
 
@@ -68,8 +70,11 @@ notices follow the published upstream licenses and are not new permission claims
 
 ## Next work
 
-Step 6 is the next implementation task: benchmark shader-drawn shapes against
-the existing raster caches before choosing the path. Broader release validation
+Step 5.5 (ADR 0008) is the next implementation task: create the 26.1 and 26.2
+adapters under the PR #13 layout in the master source tree, wire per-line
+release builds with per-line matrix and overhead gates, and only then resume
+step 6 (shader-drawn shapes). The standing 26.3 OpenGL overhead-gate failure
+blocks every future release until resolved. Broader release validation
 should add a packaged-client launcher boot, multiplayer and another GPU or
 lower-end machine. Vulkan shader-mod support requires a separate pinned build
 and shader-pack checks. A broken-feature indicator on grid cards remains a
