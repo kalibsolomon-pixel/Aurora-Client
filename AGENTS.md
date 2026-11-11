@@ -2513,3 +2513,12 @@ discipline) — the former 40×40/32×32 GUI-cell pads banded visibly at every G
 `SectionHeaderSetting` collapses its section (`bind`, `setDefaultExpanded`,
 `markLeading`); rows hide through `FeatureSetting.isVisible()`. Details: DESIGN_LANGUAGE.md
 "Compact pass" and SPXCTRA_UI_SIMPLIFICATION_REPORT.md §9–10.
+
+## Direction and roadmap (2026-11-10)
+
+Product direction, layering, version policy, fail-soft mixins, performance scope,
+UI rendering and fair-play decisions are recorded as ADRs in `docs/adr/` (0001-0007).
+The agreed order of work is `docs/ROADMAP.md`. Until the port to the newest Minecraft
+release ships, no new features are added: only fixes and roadmap steps 1-3. Read the
+relevant ADR before proposing multi-version builds, an own UI renderer, vanilla
+rendering optimizations, telemetry, or changes to feature defaults.

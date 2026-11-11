@@ -1,0 +1,58 @@
+{
+  "backend": "OpenGL",
+  "device": "AMD Radeon RX 9070 XT",
+  "plan": "branding",
+  "frames": 783,
+  "screenFrameMsP50": 16.6494,
+  "screenFrameMsP95": 17.2868,
+  "screenFrames": 782,
+  "checks": [
+    {
+      "frames": 603,
+      "check": "title-rendered",
+      "passed": true
+    },
+    {
+      "frames": 722,
+      "check": "modmenu-opened",
+      "passed": true
+    }
+  ],
+  "shots": [
+    {
+      "name": "1920x1080-s3-title",
+      "screen": "AuroraTitleScreen",
+      "framebuffer": "1920x1080",
+      "guiScale": 3,
+      "glass": "rendered"
+    },
+    {
+      "name": "1920x1080-s3-title-hover",
+      "screen": "AuroraTitleScreen",
+      "framebuffer": "1920x1080",
+      "guiScale": 3,
+      "glass": "rendered"
+    },
+    {
+      "name": "1280x720-s2-title",
+      "screen": "AuroraTitleScreen",
+      "framebuffer": "1280x720",
+      "guiScale": 2,
+      "glass": "rendered"
+    },
+    {
+      "name": "1280x720-s2-title-hover",
+      "screen": "AuroraTitleScreen",
+      "framebuffer": "1280x720",
+      "guiScale": 2,
+      "glass": "rendered"
+    },
+    {
+      "name": "1920x1080-s3-modmenu",
+      "screen": "ModsScreen",
+      "framebuffer": "1920x1080",
+      "guiScale": 3,
+      "glass": "rendered"
+    }
+  ]
+}

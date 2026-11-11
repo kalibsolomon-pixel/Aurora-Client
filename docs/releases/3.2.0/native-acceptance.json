@@ -1,0 +1,82 @@
+{
+ "sourceCommit": "0b1e41ab59731d6e39eeb06141ff319b7b558f41",
+ "artifact": {
+  "schemaVersion": 1,
+  "version": "3.2.0",
+  "channel": "stable",
+  "tag": "v3.2.0",
+  "sourceSha": "0b1e41ab59731d6e39eeb06141ff319b7b558f41",
+  "fileName": "aurora-3.2.0.jar",
+  "sizeBytes": 3211226,
+  "sha256": "fb7a7c0c10c383fd55da13627614099b35501d831b9372cac196bbb73ffaebb8",
+  "minecraftVersion": "1.21.11",
+  "buildFabricLoaderVersion": "0.19.2",
+  "buildFabricApiVersion": "0.141.4+1.21.11",
+  "modId": "aurora",
+  "minecraftRequirement": "~1.21.11",
+  "fabricLoaderRequirement": ">=0.16.0",
+  "fabricApiRequirement": "*",
+  "javaRequirement": ">=21"
+ },
+ "probeScenario": "BlurTestScreen stripe capture moved to opacity 0.5 (real frost under the 2026-10-30 linear-frost ruling; the former opacity 0 state relied on the removed max(1/6, sqrt) floor) plus a new 12b-glass-clear capture pinning clear-at-zero (attenuation ~1.0). Stale-expectation run candidate-32-vulkan (panel declined at opacity 0) is retained as evidence of the fixture gap.",
+ "runs": [
+  {
+   "renderer": "vulkan",
+   "artifactSha256": "fb7a7c0c10c383fd55da13627614099b35501d831b9372cac196bbb73ffaebb8",
+   "backend": "Vulkan",
+   "frames": 7040,
+   "worldFrames": 6637,
+   "captures": 61,
+   "stripeCorrelation": 0.9013062945008415,
+   "contrastRatio": 0.20417651933267353,
+   "clearAttenuation": 1.0,
+   "upperLightingDelta": 4.518518518518519,
+   "lowerLightingDelta": -16.583333333333332,
+   "checksPassed": 67,
+   "checksFailed": [],
+   "exitCode": 0,
+   "fixture": "build/vulkan-investigation/candidate-32c-vulkan"
+  },
+  {
+   "renderer": "opengl",
+   "artifactSha256": "fb7a7c0c10c383fd55da13627614099b35501d831b9372cac196bbb73ffaebb8",
+   "backend": "OpenGL",
+   "frames": 7133,
+   "worldFrames": 6706,
+   "captures": 61,
+   "stripeCorrelation": 0.9009710977284145,
+   "contrastRatio": 0.20369417445006638,
+   "clearAttenuation": 1.0,
+   "upperLightingDelta": 4.555555555555554,
+   "lowerLightingDelta": -16.583333333333336,
+   "checksPassed": 67,
+   "checksFailed": [],
+   "exitCode": 0,
+   "fixture": "build/vulkan-investigation/candidate-32c-opengl"
+  },
+  {
+   "renderer": "sodium",
+   "artifactSha256": "fb7a7c0c10c383fd55da13627614099b35501d831b9372cac196bbb73ffaebb8",
+   "backend": "OpenGL",
+   "frames": 7108,
+   "worldFrames": 6675,
+   "captures": 61,
+   "stripeCorrelation": 0.9009710977284145,
+   "contrastRatio": 0.20369417445006638,
+   "clearAttenuation": 1.0,
+   "upperLightingDelta": 4.555555555555554,
+   "lowerLightingDelta": -16.583333333333336,
+   "checksPassed": 67,
+   "checksFailed": [],
+   "exitCode": 0,
+   "fixture": "build/vulkan-investigation/candidate-32c-sodium"
+  }
+ ],
+ "windowsLocalBuildRuns": {
+  "note": "The Windows-local candidate build (source-identical, tools-only delta) passed the same 67/67 matrix before publication; see fixtures candidate-32b-*.",
+  "sha256": "0b31d1218ec3c1982d67ecdd2f3897967b7a86209ed2ed08ee4af26bd6332a30",
+  "sizeBytes": 3211288,
+  "sourceSha": "b71119babeefa511c967f089013c822715fd868d"
+ },
+ "host": "Recorded Windows/AMD host (RX 9070 XT), 1280x720, GUI scale 2, Java 21 (Launcher runtime delta)."
+}

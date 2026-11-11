@@ -60,7 +60,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('name')
     parser.add_argument('--renderer', choices=['vulkan', 'opengl', 'sodium'], default='opengl')
-    parser.add_argument('--plan', choices=['full', 'scale', 'persist', 'owner', 'glass', 'spx'], default='full')
+    parser.add_argument('--plan', choices=['full', 'scale', 'persist', 'owner', 'glass', 'spx', 'branding'], default='full')
     parser.add_argument('--phase', type=int, default=1, help='persist plan phase')
     parser.add_argument('--reuse', action='store_true', help='relaunch an existing fixture (same game dir)')
     parser.add_argument('--sizes', default='1920x1080@3')

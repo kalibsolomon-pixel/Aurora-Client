@@ -4,7 +4,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.resources.Identifier;
 
-/** Supplied white mark, cropped and padded once offline. No theme tint or effect pass. */
+/** Supplied ribbon SVG, aspect-fitted offline by tools/prepare_brand.py. No theme tint or effect pass. */
 public final class AuroraBrand {
     private static final Identifier MARK = Identifier.fromNamespaceAndPath("aurora", "textures/ui/aurora_mark.png");
     private AuroraBrand() {}
