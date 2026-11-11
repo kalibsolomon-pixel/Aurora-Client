@@ -15,5 +15,4 @@ each supported line's compatibility and overhead checks to pass. Published
 
 This restructure adds no gameplay features or new defaults. Shader-drawn
 shapes remain roadmap step 6. See [step 5.5 acceptance](../port/step-5.5.md)
-for verification coverage and limits. These are candidate notes; merging the
-restructure does not publish a release.
+for verification coverage and limits.
