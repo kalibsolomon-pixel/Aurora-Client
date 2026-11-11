@@ -66,9 +66,10 @@ public final class MinimapModule extends HudModule {
         // belong to the render/client thread, including during reconnect.
         ClientPlayConnectionEvents.DISCONNECT.register((handler, mc) -> mc.execute(() -> { release(); MapMarkers.dispose(); }));
         ClientLifecycleEvents.CLIENT_STOPPING.register(mc -> { release(); MapMarkers.dispose(); });
-        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(mc -> {
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(
+                com.aurora.client.diagnostics.Timed.endTick(mc -> {
             if (!AuroraConfig.get().minimapEnabled || mc.level == null) release();
-        });
+        }));
     }
 
     private static int size() { return MapTransform.bounded(AuroraConfig.get().minimapSize, 64, 256); }

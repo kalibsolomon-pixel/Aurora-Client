@@ -2639,3 +2639,22 @@ Rules that follow from this:
 Verified by the full test suite, a jar check (the same 467 classes plus `ConfigDirectory`)
 and a dev-client boot into the saved world (all 72 mixins applied; config read from and
 written to `run/config`, only playtime changed).
+
+## Overhead budget (2026-11-11)
+
+Roadmap step 3, ADR 0005. `diagnostics/AuroraCost` (core) adds up the render-thread time
+spent inside Aurora's own entry points; `diagnostics/Timed` (client) wraps each HUD,
+world-render and client-tick callback at registration, so a new callback must be
+registered through it (`EVENT.register(Timed.hud(...))`). Nested brackets count once;
+waits (frame pacing, Reflex) are never inside one. `hitreg/` is not wrapped (verbatim).
+`FrameBenchmark` records that total per frame plus `BlurPanelRenderer.capturesSubmitted()`
+and `RenderUtil.fillsSubmitted()`, and every diagnostics report ends its benchmark with an
+`overhead budget:` verdict from `diagnostics/OverheadBudget` (judged only in a world with
+no screen open).
+
+Budget: Aurora CPU per frame at most 0.25 ms mean and 0.40 ms p95, no glass captures and
+at most 100 UI fills per frame, with factory defaults. Baseline 0.15 to 0.18 ms mean on the
+dev machine; a JFR run put timer coverage at about 79% (the rest is mixin hooks) and the
+hitbox renderer at over half the timed work. `-Daurora.diagnostics.runs=N` logs N reports
+back to back; `tools/overhead_check.py` drops two warm-up runs and fails on any run over
+budget. It is a step in RELEASE_PROCESS.md. Details: `docs/OVERHEAD_BUDGET.md`.

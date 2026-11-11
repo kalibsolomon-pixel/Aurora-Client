@@ -18,7 +18,7 @@ public final class DiagnosticsText {
     /** Facts about the session that only the running game knows. */
     public record Environment(String auroraVersion, String minecraftVersion, String loaderVersion,
                               String renderBackend, String gpu, String window, String measuredOn,
-                              List<String> settings) {}
+                              boolean budgetApplies, List<String> settings) {}
 
     public static String format(Environment env, List<String> mods, FrameBenchmark.Stats stats,
                                 List<String> recentErrors) {
@@ -86,9 +86,23 @@ public final class DiagnosticsText {
                     stats.frames(), stats.averageFps(), stats.onePercentLowFps()));
             out.append(String.format(Locale.ROOT, "- frame time: %.2f ms median, %.2f ms p95, %.2f ms p99, %.2f ms worst\n",
                     stats.medianMs(), stats.p95Ms(), stats.p99Ms(), stats.maxMs()));
-            out.append(String.format(Locale.ROOT, "- Aurora UI fills per frame: %.1f\n", stats.fillsPerFrame()));
+            out.append(String.format(Locale.ROOT, "- Aurora CPU per frame: %.3f ms mean, %.3f ms median, %.3f ms p95\n",
+                    stats.auroraMeanMs(), stats.auroraMedianMs(), stats.auroraP95Ms()));
+            out.append(String.format(Locale.ROOT, "- Aurora UI fills per frame: %.1f, glass captures per frame: %.1f\n",
+                    stats.fillsPerFrame(), stats.glassPerFrame()));
+            out.append(budgetLine(env, stats));
         }
         if (!env.settings().isEmpty()) out.append("- settings: ").append(String.join(", ", env.settings())).append('\n');
+    }
+
+    /** The ADR 0005 verdict. The budget is defined in a world with no screen open, so only judged there. */
+    private static String budgetLine(Environment env, FrameBenchmark.Stats stats) {
+        if (!env.budgetApplies()) return "- overhead budget: not judged (only measured in a world with no screen open)\n";
+        List<String> over = OverheadBudget.exceeded(stats);
+        return over.isEmpty()
+                ? String.format(Locale.ROOT, "- overhead budget: within (CPU mean %.2f ms, p95 %.2f ms, no glass, %.0f fills)\n",
+                        OverheadBudget.CPU_MEAN_MS, OverheadBudget.CPU_P95_MS, OverheadBudget.FILLS_PER_FRAME)
+                : "- overhead budget: OVER: " + String.join(", ", over) + "\n";
     }
 
     /** Remove the home directory and the account name of the operating-system user. */

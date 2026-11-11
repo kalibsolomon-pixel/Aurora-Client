@@ -15,6 +15,6 @@ Small optimizations of vanilla code are still allowed when all three hold:
 
 ## Consequences
 
-- The overhead budget blocks a release that exceeds it. Its value is not set yet; it is measured from a baseline during roadmap step 3.
+- The overhead budget blocks a release that exceeds it. Set 2026-11-11 from a measured baseline: Aurora CPU per frame at most 0.25 ms mean and 0.40 ms p95, no glass captures and at most 100 UI fills per frame, in a world with no screen open and factory defaults. Baseline, method and release check: [OVERHEAD_BUDGET.md](../OVERHEAD_BUDGET.md).
 - The budget is expressed in terms that carry across machines: Aurora's CPU time per frame, glass captures per frame, fills per frame. The development machine (discrete GPU, no integrated graphics, 1440p at 240 Hz) cannot stand in for low-end hardware.
 - Frame-time numbers for weak hardware come from testers through the benchmark in the diagnostics report (ADR 0004). Those numbers decide the default glass setting.

@@ -3,6 +3,7 @@ package com.aurora.client.diagnostics;
 import com.aurora.client.AuroraClient;
 import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.ui.render.RenderBackend;
+import com.aurora.client.ui.render.blur.BlurPanelRenderer;
 import com.aurora.client.ui.util.RenderUtil;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.loader.api.FabricLoader;
@@ -32,7 +33,8 @@ public final class DiagnosticsReport {
         Minecraft mc = Minecraft.getInstance();
         // The benchmark is about the game, not about the Aurora screen this was pressed on.
         if (mc.screen != null && mc.level != null) mc.setScreen(null);
-        boolean started = FrameBenchmark.start(WARMUP_SECONDS, MEASURE_SECONDS, RenderUtil::fillsSubmitted, stats -> {
+        boolean started = FrameBenchmark.start(WARMUP_SECONDS, MEASURE_SECONDS, RenderUtil::fillsSubmitted,
+                BlurPanelRenderer::capturesSubmitted, stats -> {
             try {
                 Minecraft client = Minecraft.getInstance();
                 client.keyboardHandler.setClipboard(build(stats));
@@ -50,18 +52,20 @@ public final class DiagnosticsReport {
      * of the clipboard. For scripted boots (the tested mod matrix).
      */
     private static final boolean LOG_ONCE = Boolean.getBoolean("aurora.diagnostics.log");
+    /** {@code -Daurora.diagnostics.runs=N}: log N reports back to back, for a stable overhead baseline. */
+    private static final int LOG_RUNS = Math.max(1, Integer.getInteger("aurora.diagnostics.runs", 1));
     private static int ticksInWorld;
-    private static boolean logged;
+    private static int logged;
 
     /** Once per client tick. */
     public static void tick(Minecraft mc) {
         FrameBenchmark.tick();
-        if (!LOG_ONCE || logged) return;
+        if (!LOG_ONCE || logged >= LOG_RUNS || FrameBenchmark.running()) return;
         ticksInWorld = mc.level == null ? 0 : ticksInWorld + 1;
         if (ticksInWorld < 60) return;
-        logged = true;
-        FrameBenchmark.start(0, MEASURE_SECONDS, RenderUtil::fillsSubmitted,
-                stats -> AuroraClient.LOGGER.info("[diagnostics]\n{}", build(stats)));
+        int run = ++logged;
+        FrameBenchmark.start(0, MEASURE_SECONDS, RenderUtil::fillsSubmitted, BlurPanelRenderer::capturesSubmitted,
+                stats -> AuroraClient.LOGGER.info("[diagnostics] run {} of {}\n{}", run, LOG_RUNS, build(stats)));
     }
 
     /** The report for the current session. */
@@ -76,6 +80,7 @@ public final class DiagnosticsReport {
                 gpu(),
                 mc.getWindow().getWidth() + "x" + mc.getWindow().getHeight() + ", GUI scale " + mc.getWindow().getGuiScale(),
                 measuredOn(mc),
+                mc.level != null && mc.screen == null,
                 settings(mc));
         return DiagnosticsText.format(env, mods(loader), stats, RecentErrors.lines());
     }

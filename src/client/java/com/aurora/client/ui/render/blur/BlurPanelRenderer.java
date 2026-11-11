@@ -420,6 +420,8 @@ public final class BlurPanelRenderer {
     private static long slotEpoch = -1;
     /** Output slots claimed in the current epoch (pool-exhaustion guard). */
     private static int claimsThisFrame = 0;
+    /** Panels claimed since the game started; the diagnostics benchmark averages it (ADR 0005). */
+    private static long claimsTotal = 0;
     /** Round-robin cursor over {@link #outputs} within the current epoch. */
     private static int outputCursor = 0;
     /** Staleness safety net for paths that render without beginFrame(). */
@@ -575,6 +577,11 @@ public final class BlurPanelRenderer {
      */
     public static void noteScreenshotGrab() {
         suppressGlassUntilMs = System.currentTimeMillis() + SCREENSHOT_SUPPRESS_MS;
+    }
+
+    /** Glass panels captured since the game started (one pool claim each). Render thread. */
+    public static long capturesSubmitted() {
+        return claimsTotal;
     }
 
     /**
@@ -1784,6 +1791,7 @@ public final class BlurPanelRenderer {
             throw new Declined("output pool exhausted this frame (" + priority + ")");
         }
         claimsThisFrame++;
+        claimsTotal++;
         claimedThisFrame[tier]++;
         if (GlassStats.ENABLED) GlassStats.claim(priority);
         PanelOutput out = outputs[outputCursor];

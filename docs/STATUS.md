@@ -24,7 +24,7 @@ Standing rule: **no new features until the port to the newest Minecraft release 
 |---|---|---|
 | 1 | Fail-soft mixins, one feature catalog, `breaks` list, copy-diagnostics report | Built, PR #2 |
 | 2 | Fair-play classification, default-off switches | Built, PR #3 |
-| 3 | Core Gradle module for the Minecraft-free packages, measure and set the overhead budget, third-party notices, repo cleanup | Core module built, PR #4; the rest not started |
+| 3 | Core Gradle module for the Minecraft-free packages, measure and set the overhead budget, third-party notices, repo cleanup | Core module (PR #4) and overhead budget (PR #6) built; notices and cleanup not started |
 | 4 | Port 26.1, then 26.2, then the newest release; release the newest; freeze 1.21.11 | Not started |
 | 5 | Extract the ports; move mixins, the glass renderer and Fabric API calls into the version adapter | Not started |
 | 6 | Shader-drawn shapes behind `RenderUtil` | Not started |
@@ -32,7 +32,7 @@ Standing rule: **no new features until the port to the newest Minecraft release 
 
 ## Current status
 
-Five pull requests are open and stacked. **None is merged: merging is blocked for the assistant, so the owner has to merge them, in this order.**
+Six pull requests are open and stacked. **None is merged: merging is blocked for the assistant, so the owner has to merge them, in this order.**
 
 | PR | Branch | Contents | CI |
 |---|---|---|---|
@@ -41,6 +41,7 @@ Five pull requests are open and stacked. **None is merged: merging is blocked fo
 | [#3](https://github.com/kalibsolomon-pixel/Aurora-Client/pull/3) | `feat/fair-play-defaults` | Roadmap step 2, and this file | Passing |
 | [#4](https://github.com/kalibsolomon-pixel/Aurora-Client/pull/4) | `feat/core-module` | Roadmap step 3, the core module (stacked on #3) | See the PR |
 | [#5](https://github.com/kalibsolomon-pixel/Aurora-Client/pull/5) | `feat/fair-play-decisions` | The owner's three fair-play decisions (stacked on #4) | See the PR |
+| #6 | `feat/overhead-budget` | Roadmap step 3, the overhead budget (stacked on #5) | See the PR |
 
 This file was committed with PR #3 and is updated in PR #4.
 
@@ -84,6 +85,15 @@ Answered 2026-11-11: yes to all three.
 - Also fixed: three scripts still pointed at the client paths of classes PR #4 moved (`tools/gen_fair_play_doc.py`, `tools/test_release_defaults.py`, `subset_script.py`).
 - Verified by the test suite and a boot on the real dev config: the migration ran once for the config and once for the profile, and Full Bright and No Fog stayed on there. Not checked in game: a player label, since singleplayer has no other players.
 
+### Step 3, the overhead budget, in PR #6
+
+- Aurora now measures its own CPU time per frame: every HUD, world-render and tick callback it registers is timed (`diagnostics/Timed`, `diagnostics/AuroraCost`), and waits are not counted. Glass captures are counted too.
+- The diagnostics report shows both, with the fills, and says whether the run was within the budget.
+- Baseline on this machine with factory defaults: 0.15 to 0.18 ms mean, 0.18 to 0.24 ms p95, no glass, no fills. The owner's config with more features on: about 0.23 ms mean.
+- A profiler run found the timers cover about 79% of Aurora's per-frame work; the rest is small mixin hooks. The hitbox renderer is the largest single cost.
+- Budget, at about 1.5 times the baseline: 0.25 ms mean, 0.40 ms p95, 0 glass, 100 fills. `tools/overhead_check.py` is now a release step; the final build passed it.
+- Every test boot's game window now opens on the second monitor.
+
 ## Open decisions for the owner
 
 None at the moment.
@@ -98,11 +108,11 @@ None at the moment.
 
 ## Next steps
 
-1. Merge PR #1, then #2, then #3, then #4, then #5.
+1. Merge PR #1 to #6, in order.
 2. Do the on-screen check and boot the mod matrix with `-Daurora.diagnostics.log=true`.
 3. Continue step 3:
    - ~~Move the Minecraft-free packages into a core Gradle module.~~ Done in PR #4. `module/` stayed in the client: `Module` reads the settings registry.
-   - Measure Aurora's per-frame cost and set the overhead budget as a number.
+   - ~~Measure Aurora's per-frame cost and set the overhead budget as a number.~~ Done in PR #6.
    - Add a third-party notices file (Better Hitreg, Freelook++, AppleSkin, HitColor, bundled fonts, Apache license text).
    - Replace the history in `AGENTS.md` with a short contributor guide and move the root-level reports under `docs/`.
 4. Then step 4, the port.
