@@ -104,6 +104,36 @@ class FramePacingPersistenceTest {
         assertFalse(Files.exists(temporary.resolve("profiles/" + name + ".json")), "no queued save resurrects it");
     }
 
+    @Test void aWriteOrDeleteThatLandsDuringTheDirectoryScanIsStillSeen() {
+        // Regression (2026-11-10 CI flake in the test above): the name scan read
+        // the directory before snapshotting the writer's pending operations, so
+        // an operation the worker finished in between was in neither view: a
+        // just-created profile was missing, a just-deleted one still listed.
+        // Filler profiles lengthen the directory read to widen that window.
+        var manager = ProfileManager.getInstance();
+        String stem = "scan-" + System.nanoTime();
+        var fillers = new java.util.ArrayList<String>();
+        try {
+            for (int i = 0; i < 48; i++) {
+                String filler = stem + "-f" + i;
+                assertTrue(manager.create(filler));
+                fillers.add(filler);
+            }
+            manager.saveCurrentBlocking();
+            for (int i = 0; i < 40; i++) {
+                String name = stem + "-" + i;
+                assertTrue(manager.create(name));   // queued; the worker starts at once
+                assertTrue(manager.listProfileNames().contains(name), "created profile missing on iteration " + i);
+                manager.saveCurrentBlocking();      // the new file is on disk
+                assertTrue(manager.delete(name));   // queued; the worker starts at once
+                assertFalse(manager.listProfileNames().contains(name), "deleted profile listed on iteration " + i);
+            }
+        } finally {
+            for (String filler : fillers) manager.delete(filler);
+            manager.saveCurrentBlocking();
+        }
+    }
+
     private static void assertSettings(AuroraConfig.PacingStrategy strategy, boolean lowCpu, int spin, int park) {
         AuroraConfig cfg = AuroraConfig.get();
         assertEquals(strategy, cfg.framePacingStrategy);

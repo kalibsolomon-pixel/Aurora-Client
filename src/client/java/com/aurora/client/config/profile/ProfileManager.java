@@ -497,6 +497,12 @@ public class ProfileManager {
     // ------------------------------------------------------------------
 
     private List<String> scanNames() {
+        // Snapshot the writer BEFORE reading the directory. Taken afterwards,
+        // an operation the worker finished between the two reads was in
+        // neither view: a just-created profile was missing and a just-deleted
+        // one stayed listed. In this order anything absent from the snapshot
+        // had already reached the disk when the directory was read.
+        var pending = WRITER.latestAll();
         List<String> names = new ArrayList<>();
         try (DirectoryStream<Path> ds = Files.newDirectoryStream(PROFILES_DIR, "*.json")) {
             for (Path p : ds) {
@@ -516,7 +522,7 @@ public class ProfileManager {
         }
         // Overlay queued writes/deletes so a just-created profile exists and a
         // just-deleted one does not, before the disk catches up.
-        for (var e : WRITER.latestAll().entrySet()) {
+        for (var e : pending.entrySet()) {
             if (!PROFILES_DIR.equals(e.getKey().getParent())) continue;
             String fileName = e.getKey().getFileName().toString();
             names.removeIf(n -> pathFor(n).getFileName().toString().equals(fileName));
