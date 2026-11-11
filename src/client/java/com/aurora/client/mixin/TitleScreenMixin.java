@@ -60,7 +60,7 @@ public abstract class TitleScreenMixin extends Screen {
         Minecraft client = Minecraft.getInstance();
         if (client == null) return;
 
-        client.setScreen(new AuroraTitleScreen());
+        client.gui.setScreen(new AuroraTitleScreen());
         ci.cancel();
     }
 
@@ -79,7 +79,7 @@ public abstract class TitleScreenMixin extends Screen {
 
         Button auroraButton = Button.builder(
                         Component.literal("Aurora Settings"),
-                        btn -> Minecraft.getInstance().setScreen(AuroraScreen.create()))
+                        btn -> Minecraft.getInstance().gui.setScreen(AuroraScreen.create()))
                 .bounds(x, y, btnWidth, btnHeight)
                 .build();
         this.addRenderableWidget(auroraButton);

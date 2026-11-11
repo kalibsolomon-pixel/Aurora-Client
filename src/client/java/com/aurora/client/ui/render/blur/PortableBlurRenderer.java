@@ -9,9 +9,8 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.textures.GpuTexture;
 import com.mojang.blaze3d.textures.GpuTextureView;
-import com.mojang.blaze3d.textures.TextureFormat;
+import com.mojang.blaze3d.GpuFormat;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
@@ -24,7 +23,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.OptionalInt;
 
 /**
  * Glass through Blaze3D's device/command API. No GL ids, context, pixel-store,
@@ -42,10 +40,10 @@ final class PortableBlurRenderer {
     private static final RenderPipeline PATTERN = pipeline("glass_pattern");
     private static final List<Output> live = new ArrayList<>();
     private static final List<AutoCloseable> retired = new ArrayList<>();
-    /** Passes requested during this frame's GUI extraction (26.1), run by {@link #runPending}. */
+    /** Passes requested during this frame's GUI extraction, run by {@link #runPending}. */
     private static final List<Runnable> PENDING = new ArrayList<>();
 
-    /** Runs the queued passes; called with the OpenGL captures, after the world is drawn. */
+    /** Runs the queued passes; called after the world/panorama, before GUI rendering. */
     static void runPending() {
         try {
             for (Runnable passes : PENDING) passes.run();
@@ -61,11 +59,13 @@ final class PortableBlurRenderer {
                 .withLocation(Identifier.fromNamespaceAndPath("aurora", "pipeline/" + name))
                 .withVertexShader(Identifier.fromNamespaceAndPath("aurora", "core/glass"))
                 .withFragmentShader(Identifier.fromNamespaceAndPath("aurora", "core/" + name))
-                .withVertexFormat(DefaultVertexFormat.POSITION, VertexFormat.Mode.TRIANGLES)
-                .withSampler("InputTexture").withUniform("GlassParams", UniformType.UNIFORM_BUFFER)
+                .withVertexBinding(0, DefaultVertexFormat.POSITION)
+                .withPrimitiveTopology(com.mojang.blaze3d.PrimitiveTopology.TRIANGLES)
+                .withBindGroupLayout(com.mojang.blaze3d.pipeline.BindGroupLayout.builder()
+                        .withSampler("InputTexture").withUniform("GlassParams", UniformType.UNIFORM_BUFFER).build())
                 // No depth state means no depth test or write (as vanilla's GUI pipelines); no blend.
                 .withDepthStencilState(Optional.empty())
-                .withColorTargetState(new ColorTargetState(Optional.empty(), ColorTargetState.WRITE_ALL))
+                .withColorTargetState(ColorTargetState.DEFAULT)
                 .withCull(false).build();
     }
 
@@ -87,7 +87,7 @@ final class PortableBlurRenderer {
             var device = RenderSystem.getDevice();
             texture = device.createTexture(id.toString(), GpuTexture.USAGE_RENDER_ATTACHMENT
                     | GpuTexture.USAGE_TEXTURE_BINDING | GpuTexture.USAGE_COPY_SRC,
-                    TextureFormat.RGBA8, width, height, 1, 1);
+                    GpuFormat.RGBA8_UNORM, width, height, 1, 1);
             textureView = device.createTextureView(texture);
             sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR);
             Minecraft.getInstance().getTextureManager().register(id, this);
@@ -155,7 +155,7 @@ final class PortableBlurRenderer {
         params[21] = BlurPanelRenderer.LIGHT_DIR_Y;
         float[] composite = params.clone();
         PENDING.add(() -> {
-            pass(output, 0, COPY, capture != null ? capture.textureView : main.getColorTextureView(), half, copyIn);
+            pass(output, 0, COPY, capture != null ? capture.textureView() : main.getColorTextureView(), half, copyIn);
             pass(output, 1, COPY, half.getTextureView(), a, copyDown);
             pass(output, 2, BLUR, a.getTextureView(), b, blurX);
             pass(output, 3, BLUR, b.getTextureView(), c, blurY);
@@ -189,7 +189,7 @@ final class PortableBlurRenderer {
             params[8] = width; params[9] = height;
             params[10] = scale; params[11] = stripes ? 1 : 0;
             Target target = target(output, 0, width, height);
-            pass(output, 0, PATTERN, Minecraft.getInstance().getMainRenderTarget().getColorTextureView(), target, params);
+            pass(output, 0, PATTERN, Minecraft.getInstance().gameRenderer.mainRenderTarget().getColorTextureView(), target, params);
             return new BlurPanelRenderer.CaptureSource(target.getTextureView(), width, height);
         }
 
@@ -225,12 +225,12 @@ final class PortableBlurRenderer {
             output.previous[index] = params.clone();
         }
         try (var pass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(
-                () -> "Aurora glass", target.getTextureView(), OptionalInt.empty())) {
+                () -> "Aurora glass", target.getTextureView(), Optional.empty())) {
             pass.setPipeline(pipeline);
-            pass.setVertexBuffer(0, triangle);
+            pass.setVertexBuffer(0, triangle.slice());
             pass.setUniform("GlassParams", output.uniforms[index]);
             pass.bindTexture("InputTexture", input, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
-            pass.draw(0, 3);
+            pass.draw(3, 1, 0, 0);
         }
     }
 

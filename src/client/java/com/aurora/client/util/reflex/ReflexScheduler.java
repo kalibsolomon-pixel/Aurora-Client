@@ -130,7 +130,7 @@ public class ReflexScheduler {
         Long gpu = getEstimateGpuTime();
         var client = net.minecraft.client.Minecraft.getInstance();
         if (gpu == null || estimateCpuTime == null || client.player == null
-                || client.screen != null || !client.isWindowActive() || client.isPaused()) {
+                || client.gui.screen() != null || !client.isWindowActive() || client.isPaused()) {
             return;
         }
         long budget = AutomaticReflexPolicy.waitBudget(estimateCpuTime, gpu, validSamples, gpuTimeCollectorDeque.size());
@@ -231,7 +231,7 @@ public class ReflexScheduler {
                 + "Skipping pacing changes nothing else about gameplay. Cause:", cause);
         try {
             // Drain half-processed collectors; reset() releases their outstanding
-            // GL query objects. Cleanup must never re-throw — this runs inside
+            // GPU query pools. Cleanup must never re-throw — this runs inside
             // the failure handler on the render thread.
             for (GpuTimeCollector c : gpuTimeCollectorDeque) {
                 collectorPool.returnObject(c);
@@ -250,19 +250,12 @@ public class ReflexScheduler {
         runGuarded(() -> {
             if (!capabilitiesChecked) {
                 capabilitiesChecked = true;
-                // Blaze3D exposes no backend-neutral GPU timestamp API. Never
-                // enter LWJGL's native GL dispatch on a Vulkan-only window.
-                if (!com.aurora.client.ui.render.RenderBackend.isOpenGl()) {
-                    sessionDisabled = true;
-                    LOGGER.info("[Reflex] GPU timestamp pacing unavailable on {}; frame caps remain active",
-                            com.mojang.blaze3d.systems.RenderSystem.getDevice().getBackendName());
+                if (!(com.mojang.blaze3d.systems.RenderSystem.getDevice()
+                        instanceof com.aurora.client.mixin.GpuDeviceTimestampAccessor)) {
+                    disableForSession(new UnsupportedOperationException("GPU clock hook unavailable"));
                     return;
                 }
-                var caps = org.lwjgl.opengl.GL.getCapabilities();
-                if (!caps.OpenGL33 && !caps.GL_ARB_timer_query) {
-                    disableForSession(new UnsupportedOperationException("GPU timestamp queries unavailable"));
-                    return;
-                }
+
             }
             automatic.observeQueue(gpuTimeCollectorDeque.size());
             if (automatic.failed()) {
@@ -275,7 +268,7 @@ public class ReflexScheduler {
         });
     }
 
-    /** Just before the swapchain present (Window.updateDisplay). */
+    /** Just before the swapchain present (GpuSurface.present). */
     public void beforeFlush() {
         runGuarded(this::renderQueueEndInsert);
     }

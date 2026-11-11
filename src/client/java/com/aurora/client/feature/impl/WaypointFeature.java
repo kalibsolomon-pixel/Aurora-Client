@@ -70,14 +70,14 @@ public class WaypointFeature implements Feature {
         // Manual drop keybind — always live, independent of master enable
         // toggle so users can bind it once and never worry about the tile
         // being off.
-        if (AuroraKeybinds.consumePress("key.aurora.waypoint_drop") && client.screen == null) {
+        if (AuroraKeybinds.consumePress("key.aurora.waypoint_drop") && client.gui.screen() == null) {
             dropAtPlayer("Waypoint", 0xFFFFAA00, false);
         }
 
         // Manager-open keybind. Only fires when no other screen is
         // currently open so it can't steal focus from chat / inventory.
-        if (AuroraKeybinds.consumePress("key.aurora.waypoint_manager") && client.screen == null && client.player != null) {
-            client.setScreen(new com.aurora.client.screen.WaypointManagerScreen(null));
+        if (AuroraKeybinds.consumePress("key.aurora.waypoint_manager") && client.gui.screen() == null && client.player != null) {
+            client.gui.setScreen(new com.aurora.client.screen.WaypointManagerScreen(null));
         }
 
         LocalPlayer p = client.player;

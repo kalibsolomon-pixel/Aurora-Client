@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.ModifyArg;
  * phase mismatch and visible jitter when view bob is on).
  *
  * <p>Targets the {@code swingArm(float, PoseStack, int, HumanoidArm)} call
- * inside {@code renderArmWithItem}; the first arg is swing progress (0..1).
+ * inside {@code submitArmWithItem}; the first arg is swing progress (0..1).
  * View bob applies via a separate path already curved by
  * {@code GameRendererBobMixin}.
  *
@@ -33,7 +33,7 @@ import org.spongepowered.asm.mixin.injection.ModifyArg;
 public abstract class HeldItemRendererMixin {
 
     @ModifyArg(
-            method = "renderArmWithItem",
+            method = "submitArmWithItem",
             at = @At(value = "INVOKE",
                     target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;swingArm(FLcom/mojang/blaze3d/vertex/PoseStack;ILnet/minecraft/world/entity/HumanoidArm;)V"),
             index = 0

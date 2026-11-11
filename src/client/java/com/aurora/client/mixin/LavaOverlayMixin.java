@@ -2,7 +2,7 @@ package com.aurora.client.mixin;
 
 import com.aurora.client.config.AuroraConfig;
 import net.minecraft.client.renderer.ScreenEffectRenderer;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import com.mojang.blaze3d.vertex.PoseStack;
 import org.spongepowered.asm.mixin.Mixin;
@@ -26,8 +26,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(ScreenEffectRenderer.class)
 public abstract class LavaOverlayMixin {
 
-    @Inject(method = "renderFire", at = @At("HEAD"), cancellable = true)
-    private static void aurora$cancelLavaOverlay(PoseStack matrices, MultiBufferSource vcp, TextureAtlasSprite sprite, CallbackInfo ci) {
+    @Inject(method = "submitFire", at = @At("HEAD"), cancellable = true)
+    private static void aurora$cancelLavaOverlay(PoseStack matrices, SubmitNodeCollector vcp, TextureAtlasSprite sprite, CallbackInfo ci) {
         AuroraConfig cfg = AuroraConfig.get();
         if (!cfg.lavaClarityEnabled) return;
         if (!cfg.lavaHideOverlay) return;

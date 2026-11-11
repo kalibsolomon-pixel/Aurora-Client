@@ -84,10 +84,10 @@ public abstract class EditBoxMixin implements GlassEditBox {
     @Unique
     private static boolean aurora$themedScreen(Minecraft mc) {
         if (!AuroraConfig.get().customTitleScreen) return false;
-        if (mc == null || mc.screen == null) return false;
-        return mc.screen instanceof JoinMultiplayerScreen
-                || mc.screen instanceof SelectWorldScreen
-                || mc.screen instanceof com.aurora.client.ui.component.ThemedScreen;
+        if (mc == null || mc.gui.screen() == null) return false;
+        return mc.gui.screen() instanceof JoinMultiplayerScreen
+                || mc.gui.screen() instanceof SelectWorldScreen
+                || mc.gui.screen() instanceof com.aurora.client.ui.component.ThemedScreen;
     }
 
     /**

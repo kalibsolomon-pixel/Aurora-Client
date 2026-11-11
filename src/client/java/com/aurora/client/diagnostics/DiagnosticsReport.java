@@ -2,7 +2,6 @@ package com.aurora.client.diagnostics;
 
 import com.aurora.client.AuroraClient;
 import com.aurora.client.config.AuroraConfig;
-import com.aurora.client.ui.render.RenderBackend;
 import com.aurora.client.ui.render.blur.BlurPanelRenderer;
 import com.aurora.client.ui.util.RenderUtil;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -32,7 +31,7 @@ public final class DiagnosticsReport {
     public static void runAndCopy() {
         Minecraft mc = Minecraft.getInstance();
         // The benchmark is about the game, not about the Aurora screen this was pressed on.
-        if (mc.screen != null && mc.level != null) mc.setScreen(null);
+        if (mc.gui.screen() != null && mc.level != null) mc.gui.setScreen(null);
         boolean started = FrameBenchmark.start(WARMUP_SECONDS, MEASURE_SECONDS, RenderUtil::fillsSubmitted,
                 BlurPanelRenderer::capturesSubmitted, stats -> {
             try {
@@ -76,11 +75,11 @@ public final class DiagnosticsReport {
                 version(loader, "aurora"),
                 SharedConstants.getCurrentVersion().name(),
                 version(loader, "fabricloader"),
-                RenderBackend.isOpenGl() ? "OpenGL" : "not OpenGL (Vulkan or other)",
+                RenderSystem.getDevice().getDeviceInfo().backendName(),
                 gpu(),
                 mc.getWindow().getWidth() + "x" + mc.getWindow().getHeight() + ", GUI scale " + mc.getWindow().getGuiScale(),
                 measuredOn(mc),
-                mc.level != null && mc.screen == null,
+                mc.level != null && mc.gui.screen() == null,
                 settings(mc));
         return DiagnosticsText.format(env, mods(loader), stats, RecentErrors.lines());
     }
@@ -92,7 +91,7 @@ public final class DiagnosticsReport {
     private static String gpu() {
         try {
             var device = RenderSystem.getDevice();
-            return device.getRenderer() + " (" + device.getVersion() + ")";
+            return device.getDeviceInfo().name() + " (" + device.getDeviceInfo().driverInfo() + ")";
         } catch (Throwable t) {
             return "unknown";
         }
@@ -102,7 +101,7 @@ public final class DiagnosticsReport {
     private static String measuredOn(Minecraft mc) {
         if (mc.level == null) return "in a menu, where Minecraft limits the frame rate";
         String where = mc.hasSingleplayerServer() ? "in a singleplayer world" : "on a multiplayer server";
-        return mc.screen == null ? where : where + " with a screen open";
+        return mc.gui.screen() == null ? where : where + " with a screen open";
     }
 
     private static List<String> settings(Minecraft mc) {
@@ -137,7 +136,7 @@ public final class DiagnosticsReport {
 
     private static void toast(Minecraft mc, String title, String message) {
         try {
-            SystemToast.add(mc.getToastManager(), SystemToast.SystemToastId.PERIODIC_NOTIFICATION,
+            SystemToast.add(mc.gui.toastManager(), SystemToast.SystemToastId.PERIODIC_NOTIFICATION,
                     Component.literal(title), Component.literal(message));
         } catch (Throwable ignored) {}
     }

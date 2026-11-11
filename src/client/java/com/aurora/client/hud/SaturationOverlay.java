@@ -52,7 +52,7 @@ public final class SaturationOverlay {
 
         Minecraft client = Minecraft.getInstance();
         if (client == null || client.options == null) return;
-        if (client.options.hideGui) return;
+        if (client.gui.hud.isHidden()) return;
         // Same caveat as HudModuleManager: in 1.21.11 showDebugScreen()
         // returns true whenever ANY debug entry is enabled (e.g. F3+B
         // hitboxes), not just the F3 text overlay. Gate on the actual

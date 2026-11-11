@@ -415,7 +415,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 null,
                 () -> true,
                 () -> {
-                    if (this.minecraft != null) this.minecraft.setScreen(new ProfileManagerScreen(this));
+                    if (this.minecraft != null) this.minecraft.gui.setScreen(new ProfileManagerScreen(this));
                 }),
                 MinecraftSemanticFeedback.INSTANCE,
                 null, // no press animation — the screen transition is the feedback
@@ -502,7 +502,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 () -> true,
                 () -> {
                     if (this.minecraft != null) {
-                        this.minecraft.setScreen(FeatureDetailScreen.destination(this, m));
+                        this.minecraft.gui.setScreen(FeatureDetailScreen.destination(this, m));
                     }
                 }),
                 MinecraftSemanticFeedback.INSTANCE,
@@ -590,7 +590,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
 
     @Override
     public void onClose() {
-        if (this.minecraft != null) this.minecraft.setScreen(null);
+        if (this.minecraft != null) this.minecraft.gui.setScreen(null);
     }
 
     @Override
@@ -677,7 +677,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         float radius = ThemeManager.current().roundness().radius();
         boolean glassWindow = GlassSurface.container(g, boxX(), boxY(), BOX_W, BOX_H, radius);
 
-        com.mojang.blaze3d.pipeline.RenderTarget main = this.minecraft != null ? this.minecraft.getMainRenderTarget() : null;
+        com.mojang.blaze3d.pipeline.RenderTarget main = this.minecraft != null ? this.minecraft.gameRenderer.mainRenderTarget() : null;
         int fbW = (main != null && main.width > 0) ? main.width : this.width;
         int fbH = (main != null && main.height > 0) ? main.height : this.height;
         int guiScale = Math.max(1, (int) this.minecraft.getWindow().getGuiScale());
@@ -1508,7 +1508,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                         if (fm != null && fm.hasDetail() && this.minecraft != null) {
                             MinecraftSemanticFeedback.INSTANCE
                                     .play(SemanticSound.ACTIVATION);
-                            this.minecraft.setScreen(FeatureDetailScreen.destination(this, fm));
+                            this.minecraft.gui.setScreen(FeatureDetailScreen.destination(this, fm));
                         }
                         return true;
                     }

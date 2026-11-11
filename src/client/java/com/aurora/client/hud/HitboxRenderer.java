@@ -7,7 +7,6 @@ import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.Camera;
-import net.minecraft.client.renderer.MultiBufferSource;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.world.entity.Entity;
@@ -81,75 +80,75 @@ public final class HitboxRenderer {
         // hitboxes always draw and EntityRenderDispatcherMixin suppresses the
         // vanilla pass so the two never overlap. F3+B is not consulted.
 
-        Camera cam = client.gameRenderer.getMainCamera();
+        Camera cam = client.gameRenderer.mainCamera();
         if (cam == null) return;
         Vec3 camPos = cam.position();
 
         PoseStack matrices = ctx.poseStack();
         if (matrices == null) return;
-        MultiBufferSource consumers = ctx.bufferSource();
-        if (consumers == null) return;
+        try (WorldGeometryBuffers consumers = WorldGeometryBuffers.begin()) {
 
-        // Use the proper lines() render type with per-vertex line width.
-        // The see-through wireframe option is gone (owner ruling 2026-10-30);
-        // the wireframe keeps the see-through (translucent) default.
-        VertexConsumer buf = WorldLineRenderer.getLineBuffer(consumers);
+            // Use the proper lines() render type with per-vertex line width.
+            // The see-through wireframe option is gone (owner ruling 2026-10-30);
+            // the wireframe keeps the see-through (translucent) default.
+            VertexConsumer buf = WorldLineRenderer.getLineBuffer(consumers);
 
-        // Match vanilla LevelRenderer: use the game-time partial tick (false) so
-        // our interpolated AABB lines up with the camera and the entity model.
-        float tickDelta = client.getDeltaTracker().getGameTimeDeltaPartialTick(false);
+            // Match vanilla LevelRenderer: use the game-time partial tick (false) so
+            // our interpolated AABB lines up with the camera and the entity model.
+            float tickDelta = client.getDeltaTracker().getGameTimeDeltaPartialTick(false);
 
-        // ThrottleDetector is kept sampling (harmless, no-op side effects) for
-        // potential future diagnostic use. Its output no longer influences the
-        // rendered position — see class javadoc for why smoothing was removed.
-        ThrottleDetector.sample(client);
+            // ThrottleDetector is kept sampling (harmless, no-op side effects) for
+            // potential future diagnostic use. Its output no longer influences the
+            // rendered position — see class javadoc for why smoothing was removed.
+            ThrottleDetector.sample(client);
 
-        Entity activeTarget = resolveTarget(client);
+            Entity activeTarget = resolveTarget(client);
 
-        // IMPORTANT: Do NOT translate the pose stack by the camera position.
-        // WorldLineRenderer subtracts the camera position in double precision
-        // before casting to float, which prevents precision loss at large world
-        // coordinates. The matrix here is the raw model-view matrix.
-        matrices.pushPose();
-        Matrix4f model = matrices.last().pose();
+            // IMPORTANT: Do NOT translate the pose stack by the camera position.
+            // WorldLineRenderer subtracts the camera position in double precision
+            // before casting to float, which prevents precision loss at large world
+            // coordinates. The matrix here is the raw model-view matrix.
+            matrices.pushPose();
+            Matrix4f model = matrices.last().pose();
 
-        for (Entity entity : client.level.entitiesForRendering()) {
-            if (entity == null || entity.isSpectator()) continue;
-            if (entity == client.getCameraEntity() && !cam.isDetached()) continue;
+            for (Entity entity : client.level.entitiesForRendering()) {
+                if (entity == null || entity.isSpectator()) continue;
+                if (entity == client.getCameraEntity() && !cam.isDetached()) continue;
 
-            // Anti-cheat: never reveal entities that are invisible to the local
-            // player. Aurora's hitboxes are a visualization aid, not a wallhack --
-            // showing the box of an entity under the Invisibility effect (or one
-            // the player can't otherwise see) would betray its exact position,
-            // size and orientation. The local player is exempt so you can still
-            // see your own box in third person / while invisible yourself.
-            // Mirrors the isInvisible / isInvisibleToPlayer gate already used by
-            // PlayerHealthLabelMixin, but read off the live Entity.
-            if (client.player != null && entity != client.player) {
-                if (entity.isInvisible() || entity.isInvisibleTo(client.player)) continue;
+                // Anti-cheat: never reveal entities that are invisible to the local
+                // player. Aurora's hitboxes are a visualization aid, not a wallhack --
+                // showing the box of an entity under the Invisibility effect (or one
+                // the player can't otherwise see) would betray its exact position,
+                // size and orientation. The local player is exempt so you can still
+                // see your own box in third person / while invisible yourself.
+                // Mirrors the isInvisible / isInvisibleToPlayer gate already used by
+                // PlayerHealthLabelMixin, but read off the live Entity.
+                if (client.player != null && entity != client.player) {
+                    if (entity.isInvisible() || entity.isInvisibleTo(client.player)) continue;
+                }
+
+                boolean isTarget = (entity == activeTarget);
+                boolean drawThisOne = isTarget ? cfg.hitboxTargetEnabled : cfg.hitboxEnabled;
+                if (!drawThisOne) continue;
+
+                int color;
+                float widthPx;
+                if (entity instanceof Projectile && cfg.hitboxProjectileColorEnabled) {
+                    color = cfg.hitboxProjectileColor;
+                    widthPx = (float) Math.max(0.1, cfg.hitboxProjectileLineWidth);
+                } else {
+                    color = isTarget ? cfg.hitboxTargetColor : cfg.hitboxColor;
+                    widthPx = (float) Math.max(0.1, cfg.hitboxLineWidth);
+                }
+                boolean drawEyeLine  = isTarget ? cfg.hitboxTargetEyeLine       : cfg.hitboxEyeLine;
+                boolean drawLookLine = isTarget ? cfg.hitboxTargetLookDirection : cfg.hitboxLookDirection;
+
+                drawEntity(buf, model, camPos, entity, tickDelta, color,
+                        drawEyeLine, drawLookLine, cfg.hitboxLookLength, widthPx);
             }
 
-            boolean isTarget = (entity == activeTarget);
-            boolean drawThisOne = isTarget ? cfg.hitboxTargetEnabled : cfg.hitboxEnabled;
-            if (!drawThisOne) continue;
-
-            int color;
-            float widthPx;
-            if (entity instanceof Projectile && cfg.hitboxProjectileColorEnabled) {
-                color = cfg.hitboxProjectileColor;
-                widthPx = (float) Math.max(0.1, cfg.hitboxProjectileLineWidth);
-            } else {
-                color = isTarget ? cfg.hitboxTargetColor : cfg.hitboxColor;
-                widthPx = (float) Math.max(0.1, cfg.hitboxLineWidth);
-            }
-            boolean drawEyeLine  = isTarget ? cfg.hitboxTargetEyeLine       : cfg.hitboxEyeLine;
-            boolean drawLookLine = isTarget ? cfg.hitboxTargetLookDirection : cfg.hitboxLookDirection;
-
-            drawEntity(buf, model, camPos, entity, tickDelta, color,
-                    drawEyeLine, drawLookLine, cfg.hitboxLookLength, widthPx);
+            matrices.popPose();
         }
-
-        matrices.popPose();
     }
 
     private static Entity resolveTarget(Minecraft client) {

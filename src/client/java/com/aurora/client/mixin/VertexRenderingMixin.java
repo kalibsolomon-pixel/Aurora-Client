@@ -1,44 +1,18 @@
 package com.aurora.client.mixin;
 
-import com.aurora.client.feature.impl.BlockOverlayFeature;
-import net.minecraft.client.renderer.ShapeRenderer;
+import net.minecraft.client.renderer.feature.ShapeOutlineFeatureRenderer;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
 
-/**
- * Recolors the targeted-block wireframe outline. When the outline sub-toggle
- * is off, returns fully-transparent black so the wireframe is effectively
- * hidden — the face fill (if enabled) still renders separately via
- * BlockOverlayRenderer.
- *
- * <p>1.21.11: {@code BlockOutlineRenderState#drawOutline} was removed;
- * the actual draw moved to {@link ShapeRenderer#renderShape(
- * com.mojang.blaze3d.vertex.PoseStack,
- * com.mojang.blaze3d.vertex.VertexConsumer,
- * net.minecraft.world.phys.shapes.VoxelShape,
- * double, double, double, int, float)}. We retarget there and override
- * the {@code int color} argument.
- *
- * <p>Caveat: {@code ShapeRenderer.renderShape} is used by multiple debug
- * draws (block outline, lookat/raycast debug, etc.). The recolor will
- * apply to anything that funnels through this method while the feature is
- * enabled. In practice the targeted-block outline is the only ShapeRenderer
- * caller in a normal play session, so the impact is intentional.
- */
-@Mixin(ShapeRenderer.class)
+/** Hides vanilla's targeted-block wireframe while Aurora draws its own outline/fill.
+ * 26.2 builds those edges in ShapeOutlineFeatureRenderer before GPU submission. */
+@Mixin(ShapeOutlineFeatureRenderer.class)
 public abstract class VertexRenderingMixin {
 
-    /**
-     * {@code renderShape} doesn't call the per-edge helper directly — it
-     * builds an {@code invokedynamic} lambda that {@code VoxelShape.forAllEdges}
-     * later invokes for every edge. The actual {@code int} color reaches the
-     * vertex buffer via {@code VertexConsumer.setColor(int)} calls inside
-     * the lambda body ({@code lambda$renderShape$0} in 26.1, {@code method_62299} before). We inject there and override
-     * every {@code setColor} argument.
-     */
+    /** The edge lambda supplies the color to each emitted vertex. */
     @ModifyArg(
-            method = "lambda$renderShape$0(Lcom/mojang/blaze3d/vertex/VertexConsumer;Lcom/mojang/blaze3d/vertex/PoseStack$Pose;DDDIFDDDDDD)V",
+            method = "lambda$buildGroup$0(Lorg/joml/Vector3f;Lcom/mojang/blaze3d/vertex/VertexConsumer;Lcom/mojang/blaze3d/vertex/PoseStack$Pose;IFDDDDDD)V",
             at = @At(value = "INVOKE",
                     target = "Lcom/mojang/blaze3d/vertex/VertexConsumer;setColor(I)Lcom/mojang/blaze3d/vertex/VertexConsumer;")
     )

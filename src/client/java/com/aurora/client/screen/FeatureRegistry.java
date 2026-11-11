@@ -51,7 +51,7 @@ public final class FeatureRegistry {
             java.util.function.Consumer<net.minecraft.client.gui.screens.Screen> action) {
         // Navigation actions wear the arrow glyph (owner ruling 2026-10-30).
         return ButtonSetting.semantic(label, () ->
-                action.accept(net.minecraft.client.Minecraft.getInstance().screen)).description(description);
+                action.accept(net.minecraft.client.Minecraft.getInstance().gui.screen())).description(description);
     }
 
     private static FeatureMetadata find(String id) {
@@ -70,7 +70,7 @@ public final class FeatureRegistry {
                 List.of(
                         new SectionHeaderSetting("Navigation & Appearance"),
                         mappingAction("Open World Map", "Browse explored terrain and edit waypoint markers.", screen ->
-                                net.minecraft.client.Minecraft.getInstance().setScreen(new com.aurora.client.worldmap.screen.WorldMapScreen()))
+                                net.minecraft.client.Minecraft.getInstance().gui.setScreen(new com.aurora.client.worldmap.screen.WorldMapScreen()))
                                 .disabled(() -> net.minecraft.client.Minecraft.getInstance().level == null || !cfg.worldMapEnabled),
                         new BooleanSetting("Waypoint Names", () -> cfg.worldMapShowWaypointNames,
                                 v -> cfg.worldMapShowWaypointNames = v),
@@ -86,11 +86,11 @@ public final class FeatureRegistry {
                                 .description("Full-detail tiles per active dimension, approximately 1 MiB CPU plus up to 1 MiB GPU each. Applied when a context opens. Far zoom uses bounded 64x64 overview tiles."),
                         new SectionHeaderSetting("Related Settings & Data"),
                         mappingAction("Minimap Settings", "Shape, zoom, position and overlays.", screen ->
-                                net.minecraft.client.Minecraft.getInstance().setScreen(new FeatureDetailScreen(screen, find("minimap")))),
+                                net.minecraft.client.Minecraft.getInstance().gui.setScreen(new FeatureDetailScreen(screen, find("minimap")))),
                         mappingAction("Waypoint Settings", "Visibility, in-world markers and automatic death locations.", screen ->
-                                net.minecraft.client.Minecraft.getInstance().setScreen(new FeatureDetailScreen(screen, find("waypoints")))),
+                                net.minecraft.client.Minecraft.getInstance().gui.setScreen(new FeatureDetailScreen(screen, find("waypoints")))),
                         mappingAction("Legacy Data Import", "Explicit copy from legacy display-name storage; originals are preserved.", screen ->
-                                net.minecraft.client.Minecraft.getInstance().setScreen(new MappingDataScreen(screen)))
+                                net.minecraft.client.Minecraft.getInstance().gui.setScreen(new MappingDataScreen(screen)))
                 ));
 
         addWithSettings("zoom",
@@ -872,7 +872,7 @@ addWithSettings("hitbox",
                                 () -> {
                                     net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
                                     if (mc != null) {
-                                        mc.setScreen(new WaypointManagerScreen(mc.screen));
+                                        mc.gui.setScreen(new WaypointManagerScreen(mc.gui.screen()));
                                     }
                                 }),
                         ButtonSetting.semantic("Drop at Player Position", "Drop",
@@ -1096,7 +1096,7 @@ addWithSettings("hitbox",
                                 () -> {
                                     net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
                                     if (mc != null) {
-                                        mc.setScreen(new ResourcePackBrowserScreen(mc.screen));
+                                        mc.gui.setScreen(new ResourcePackBrowserScreen(mc.gui.screen()));
                                     }
                                 })
                                 .description("Opens the Modrinth resource-pack browser. Search, preview, and install packs straight into your game.")

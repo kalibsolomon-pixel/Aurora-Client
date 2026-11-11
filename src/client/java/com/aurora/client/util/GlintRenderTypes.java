@@ -3,8 +3,7 @@ package com.aurora.client.util;
 import com.mojang.blaze3d.pipeline.BlendFunction;
 import com.mojang.blaze3d.pipeline.ColorTargetState;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.platform.DestFactor;
-import com.mojang.blaze3d.platform.SourceFactor;
+import com.mojang.blaze3d.platform.BlendFactor;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.rendertype.LayeringTransform;
 import net.minecraft.client.renderer.rendertype.OutputTarget;
@@ -21,41 +20,20 @@ public final class GlintRenderTypes {
     public static RenderType entity() { return Holder.ENTITY; }
     public static RenderType armor() { return Holder.ARMOR; }
 
-    private static java.util.Map<RenderType, RenderType> counterparts;
-
-    /** Vanilla foil type ↔ its masked equivalent, in both directions. */
-    public static java.util.Map<RenderType, RenderType> counterparts() {
-        // The accessor's static methods are unusable stubs when its mixin
-        // did not apply; with no pairs, every caller leaves vanilla alone.
-        if (com.aurora.client.health.MixinHealth.failed("RenderTypesGlintAccessor")) return java.util.Map.of();
-        if (counterparts == null) {
-            RenderType glint = com.aurora.client.mixin.RenderTypesGlintAccessor.aurora$glint();
-            RenderType translucent = com.aurora.client.mixin.RenderTypesGlintAccessor.aurora$glintTranslucent();
-            RenderType entity = com.aurora.client.mixin.RenderTypesGlintAccessor.aurora$entityGlint();
-            RenderType armor = com.aurora.client.mixin.RenderTypesGlintAccessor.aurora$armorEntityGlint();
-            counterparts = java.util.Map.of(glint, item(), item(), glint,
-                    translucent, translucent(), translucent(), translucent,
-                    entity, entity(), entity(), entity,
-                    armor, armor(), armor(), armor);
-        }
-        return counterparts;
-    }
-
     private static RenderPipeline pipeline() {
         RenderPipeline vanilla = RenderPipelines.GLINT;
         var builder = RenderPipeline.builder()
                 .withLocation(Identifier.fromNamespaceAndPath("aurora", "pipeline/masked_glint"))
                 .withVertexShader(vanilla.getVertexShader())
                 .withFragmentShader(Identifier.fromNamespaceAndPath("aurora", "core/masked_glint"))
-                .withVertexFormat(vanilla.getVertexFormat(), vanilla.getVertexFormatMode())
+                .withVertexBinding(0, vanilla.getVertexFormatBinding(0)).withPrimitiveTopology(vanilla.getPrimitiveTopology())
                 // Vanilla glint's depth test, depth write, cull and write mask; Aurora's own blend.
                 .withDepthStencilState(java.util.Optional.ofNullable(vanilla.getDepthStencilState()))
                 .withCull(vanilla.isCull())
                 .withColorTargetState(new ColorTargetState(java.util.Optional.of(new BlendFunction(
-                        SourceFactor.SRC_ALPHA, DestFactor.ONE_MINUS_SRC_ALPHA, SourceFactor.ZERO, DestFactor.ONE)),
-                        vanilla.getColorTargetState().writeMask()));
-        for (String sampler : vanilla.getSamplers()) builder.withSampler(sampler);
-        for (var uniform : vanilla.getUniforms()) builder.withUniform(uniform.name(), uniform.type());
+                        BlendFactor.SRC_ALPHA, BlendFactor.ONE_MINUS_SRC_ALPHA, BlendFactor.ZERO, BlendFactor.ONE)),
+                        vanilla.getColorTargetState().format(), vanilla.getColorTargetState().writeMask()));
+        for (var layout : vanilla.getBindGroupLayouts()) builder.withBindGroupLayout(layout);
         return builder.build();
     }
 

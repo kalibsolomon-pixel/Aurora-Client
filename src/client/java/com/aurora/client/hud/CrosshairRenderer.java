@@ -61,7 +61,7 @@ public final class CrosshairRenderer {
         Minecraft client = Minecraft.getInstance();
         if (client == null || client.options == null) return;
         if (client.options.getCameraType() != CameraType.FIRST_PERSON) return;
-        if (client.screen != null) return;
+        if (client.gui.screen() != null) return;
 
         int cx = ctx.guiWidth() / 2;
         int cy = ctx.guiHeight() / 2;

@@ -13,7 +13,6 @@ import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.phys.Vec3;
@@ -54,7 +53,7 @@ public final class WaypointRenderer {
     public void renderWorld(LevelRenderContext ctx) {
         Minecraft mc = Minecraft.getInstance();
         if (mc == null || mc.level == null || mc.player == null) return;
-        if (mc.screen != null) return;
+        if (mc.gui.screen() != null) return;
 
         AuroraConfig cfg = AuroraConfig.get();
         if (!cfg.waypointsEnabled) return;
@@ -65,48 +64,48 @@ public final class WaypointRenderer {
         List<Waypoint> list = feat.nearbyWaypoints();
         if (list.isEmpty()) return;
 
-        Camera cam = mc.gameRenderer.getMainCamera();
+        Camera cam = mc.gameRenderer.mainCamera();
         if (cam == null) return;
         PoseStack matrices = ctx.poseStack();
         if (matrices == null) return;
-        MultiBufferSource consumers = ctx.bufferSource();
-        if (consumers == null) return;
+        try (WorldGeometryBuffers consumers = WorldGeometryBuffers.begin()) {
 
-        String curDim = mc.level.dimension().identifier().toString();
-        Vec3 camPos = cam.position();
-        Font font = mc.font;
+            String curDim = mc.level.dimension().identifier().toString();
+            Vec3 camPos = cam.position();
+            Font font = mc.font;
 
-        AuroraConfig.WaypointDisplay mode = cfg.waypointDisplay == null
-                ? AuroraConfig.WaypointDisplay.BEAM
-                : cfg.waypointDisplay;
-        boolean drawBeam  = mode == AuroraConfig.WaypointDisplay.BEAM
-                         || mode == AuroraConfig.WaypointDisplay.BOTH;
-        boolean drawBlock = mode == AuroraConfig.WaypointDisplay.BLOCK
-                         || mode == AuroraConfig.WaypointDisplay.BOTH;
+            AuroraConfig.WaypointDisplay mode = cfg.waypointDisplay == null
+                    ? AuroraConfig.WaypointDisplay.BEAM
+                    : cfg.waypointDisplay;
+            boolean drawBeam  = mode == AuroraConfig.WaypointDisplay.BEAM
+                             || mode == AuroraConfig.WaypointDisplay.BOTH;
+            boolean drawBlock = mode == AuroraConfig.WaypointDisplay.BLOCK
+                             || mode == AuroraConfig.WaypointDisplay.BOTH;
 
-        int remaining = com.aurora.client.worldmap.MapTransform.bounded(cfg.waypointWorldMarkerLimit, 1, 64);
-        for (Waypoint w : list) {
-            if (w == null) continue;
-            if (w.dimension != null && !w.dimension.equals(curDim)) continue;
-            if (remaining-- <= 0) break;
+            int remaining = com.aurora.client.worldmap.MapTransform.bounded(cfg.waypointWorldMarkerLimit, 1, 64);
+            for (Waypoint w : list) {
+                if (w == null) continue;
+                if (w.dimension != null && !w.dimension.equals(curDim)) continue;
+                if (remaining-- <= 0) break;
 
-            int a = (w.color >>> 24) & 0xFF;
-            int r = (w.color >> 16)  & 0xFF;
-            int g = (w.color >> 8)   & 0xFF;
-            int b =  w.color         & 0xFF;
-            if (a == 0) a = 0xFF;
+                int a = (w.color >>> 24) & 0xFF;
+                int r = (w.color >> 16)  & 0xFF;
+                int g = (w.color >> 8)   & 0xFF;
+                int b =  w.color         & 0xFF;
+                if (a == 0) a = 0xFF;
 
-            double beamDistance = Math.hypot(w.x + .5 - camPos.x, w.z + .5 - camPos.z);
-            float beamOpacity = beamOpacity(beamDistance);
-            if (drawBeam && beamOpacity > 0) {
-                drawBeam(matrices, consumers, w.x + 0.5, w.z + 0.5, camPos,
-                        (float) com.aurora.client.worldmap.MapTransform.bounded(cfg.waypointBeamWidth, .1, 1),
-                        r / 255f, g / 255f, b / 255f, (a / 255f) * beamOpacity);
-            }
-            if (drawBlock) {
-                drawBlockHighlight(matrices, consumers, w, camPos,
-                        com.aurora.client.worldmap.MapTransform.bounded(cfg.waypointBlockRadius, 0, 16),
-                        r / 255f, g / 255f, b / 255f, a / 255f);
+                double beamDistance = Math.hypot(w.x + .5 - camPos.x, w.z + .5 - camPos.z);
+                float beamOpacity = beamOpacity(beamDistance);
+                if (drawBeam && beamOpacity > 0) {
+                    drawBeam(matrices, consumers, w.x + 0.5, w.z + 0.5, camPos,
+                            (float) com.aurora.client.worldmap.MapTransform.bounded(cfg.waypointBeamWidth, .1, 1),
+                            r / 255f, g / 255f, b / 255f, (a / 255f) * beamOpacity);
+                }
+                if (drawBlock) {
+                    drawBlockHighlight(matrices, consumers, w, camPos,
+                            com.aurora.client.worldmap.MapTransform.bounded(cfg.waypointBlockRadius, 0, 16),
+                            r / 255f, g / 255f, b / 255f, a / 255f);
+                }
             }
         }
     }
@@ -126,8 +125,8 @@ public final class WaypointRenderer {
     public void renderHud(GuiGraphicsExtractor g, DeltaTracker tickCounter) {
         Minecraft mc = Minecraft.getInstance();
         if (mc == null || mc.level == null || mc.player == null) return;
-        if (mc.screen != null) return;
-        if (mc.options != null && mc.options.hideGui) return;
+        if (mc.gui.screen() != null) return;
+        if (mc.options != null && mc.gui.hud.isHidden()) return;
 
         AuroraConfig cfg = AuroraConfig.get();
         if (!cfg.waypointsEnabled || !cfg.waypointShowLabel) return;
@@ -137,7 +136,7 @@ public final class WaypointRenderer {
         List<Waypoint> list = feat.nearbyWaypoints();
         if (list.isEmpty()) return;
 
-        Camera cam = mc.gameRenderer.getMainCamera();
+        Camera cam = mc.gameRenderer.mainCamera();
         if (cam == null) return;
 
         String curDim = mc.level.dimension().identifier().toString();
@@ -280,7 +279,7 @@ public final class WaypointRenderer {
      * {@code (centerX, centerZ)} with side length {@code width}, double-
      * wound so the beam is visible from inside the column too.
      */
-    private static void drawBeam(PoseStack matrices, MultiBufferSource consumers,
+    private static void drawBeam(PoseStack matrices, WorldGeometryBuffers consumers,
                                   double centerX, double centerZ, Vec3 camPos,
                                   float width,
                                   float r, float g, float b, float a) {
@@ -346,7 +345,7 @@ public final class WaypointRenderer {
      * uses Aurora's shared camera-relative GPU-expanded line path at a fixed
      * device-pixel width, so distant edges do not shrink into subpixel slabs.
      */
-    private static void drawBlockHighlight(PoseStack matrices, MultiBufferSource consumers,
+    private static void drawBlockHighlight(PoseStack matrices, WorldGeometryBuffers consumers,
                                             Waypoint w, Vec3 camPos, int radius,
                                             float r, float g, float b, float a) {
         matrices.pushPose();

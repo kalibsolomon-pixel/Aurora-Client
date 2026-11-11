@@ -29,7 +29,7 @@ public class AuroraFontRenderer {
     public static boolean compactUi() {
         if (isRenderingAuroraUI) return false;
         Minecraft mc = Minecraft.getInstance();
-        return mc != null && mc.screen instanceof com.aurora.client.ui.component.ThemedScreen themed
+        return mc != null && mc.gui.screen() instanceof com.aurora.client.ui.component.ThemedScreen themed
                 && themed.compactText();
     }
     private static volatile boolean isRenderingAuroraUI = false;
@@ -134,12 +134,12 @@ public class AuroraFontRenderer {
     private static boolean isAuroraSurface() {
         if (isRenderingAuroraUI) return true;
         Minecraft mc = Minecraft.getInstance();
-        if (mc == null || mc.screen == null) return false;
+        if (mc == null || mc.gui.screen() == null) return false;
         // Any screen implemented by Aurora Client lives somewhere under
         // com.aurora.client. (screens, ui, hud, etc.). Matching the package
         // root instead of a single sub-package keeps this robust as new
         // screens/components are added anywhere in the mod.
-        return mc.screen.getClass().getName().startsWith("com.aurora.client.");
+        return mc.gui.screen().getClass().getName().startsWith("com.aurora.client.");
     }
 
     /**

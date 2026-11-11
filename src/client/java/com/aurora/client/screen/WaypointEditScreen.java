@@ -171,6 +171,6 @@ public final class WaypointEditScreen extends Screen implements ThemedScreen {
                 ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
         super.extractRenderState(g, mx, my, delta);
     }
-    @Override public void onClose() { minecraft.setScreen(parent); }
+    @Override public void onClose() { minecraft.gui.setScreen(parent); }
     @Override public boolean isPauseScreen() { return false; }
 }

@@ -104,7 +104,8 @@ class UnifiedPilotContractTest {
         for(String guard:new String[]{"permanentlyDisabled","suppressGlassUntilMs","menuBackdropValid()"})
             assertTrue(renderer.indexOf(guard,body)>body,guard);
         assertTrue(read("ui/component/GlassSurface.java").contains("new BlurPanelRenderer.Lighting(true,0,0)"));
-        assertTrue(renderer.contains("unified ? 1.35f : 1f, unified ? .92f : 1f"),
+        assertTrue(read("ui/render/blur/PortableBlurRenderer.java").contains("params[16] = unified ? 1.35f : 1;")
+                && read("ui/render/blur/PortableBlurRenderer.java").contains("params[17] = unified ? .92f : 1;"),
                 "filter state must explicitly reset for compatibility hosts");
     }
 }

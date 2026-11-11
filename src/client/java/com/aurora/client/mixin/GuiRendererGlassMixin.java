@@ -19,7 +19,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(GuiRenderer.class)
 public abstract class GuiRendererGlassMixin {
 
-    @Inject(method = "render(Lcom/mojang/blaze3d/buffers/GpuBufferSlice;)V",
+    @Inject(method = "render()V",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/render/GuiRenderer;prepare()V"))
     private void aurora$runGlassCaptures(CallbackInfo ci) {
         BlurPanelRenderer.runPendingCaptures();

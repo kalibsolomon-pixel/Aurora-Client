@@ -22,8 +22,8 @@ public class HudEditorFeature implements Feature {
         if (client == null) return;
         int key = AuroraConfig.get().hudEditorKey;
         if (edge.justPressed(key)) {
-            if (client.screen == null && client.player != null) {
-                client.setScreen(new HudEditorScreen());
+            if (client.gui.screen() == null && client.player != null) {
+                client.gui.setScreen(new HudEditorScreen());
             }
         }
     }

@@ -18,7 +18,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * mipmap-induced seams. At 1.005 you may notice items look very slightly
  * larger but seams are aggressively hidden.
  *
- * <p>Targets renderArmWithItem at HEAD: pushes a scale onto the matrix
+ * <p>Targets submitArmWithItem at HEAD: pushes a scale onto the matrix
  * stack so all subsequent positioning math operates on the scaled space.
  * The matching pop is at RETURN (every return, not just the last one) —
  * the method early-returns when the player is scoping, and a TAIL-only
@@ -27,7 +27,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(ItemInHandRenderer.class)
 public abstract class HeldItemSeamFixMixin {
 
-    @Inject(method = "renderArmWithItem", at = @At("HEAD"))
+    @Inject(method = "submitArmWithItem", at = @At("HEAD"))
     private void aurora$pushSeamScale(
             net.minecraft.client.player.AbstractClientPlayer player,
             float tickProgress, float pitch, net.minecraft.world.InteractionHand hand,
@@ -45,7 +45,7 @@ public abstract class HeldItemSeamFixMixin {
         matrices.scale(s, s, s);
     }
 
-    @Inject(method = "renderArmWithItem", at = @At("RETURN"))
+    @Inject(method = "submitArmWithItem", at = @At("RETURN"))
     private void aurora$popSeamScale(
             net.minecraft.client.player.AbstractClientPlayer player,
             float tickProgress, float pitch, net.minecraft.world.InteractionHand hand,

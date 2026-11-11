@@ -30,18 +30,18 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
 
         addBtn(0, Component.translatable("aurora.button.singleplayer"),
                 "Browse and play singleplayer worlds.",
-                () -> this.minecraft.setScreen(new SelectWorldScreen(this)),
+                () -> this.minecraft.gui.setScreen(new SelectWorldScreen(this)),
                 false);
         ButtonWidget multiplayerBtn = addBtn(1, Component.translatable("aurora.button.multiplayer"),
                 "Browse multiplayer servers.",
-                () -> this.minecraft.setScreen(new JoinMultiplayerScreen(this)),
+                () -> this.minecraft.gui.setScreen(new JoinMultiplayerScreen(this)),
                 false);
         if (this.minecraft != null) {
             multiplayerBtn.active = this.minecraft.allowsMultiplayer();
         }
         addBtn(2, Component.literal("Aurora Settings"),
                 "Open Aurora's settings.",
-                () -> this.minecraft.setScreen(AuroraScreen.create()),
+                () -> this.minecraft.gui.setScreen(AuroraScreen.create()),
                 false);
         // "Mods" button retired — duplicated Aurora Settings while no
         // compatible Mod Menu artifact is published for 1.21.11. The
@@ -49,7 +49,7 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
         // re-enable once Mod Menu ships a stable 1.21.11 release.
         addBtn(3, Component.translatable("aurora.button.options"),
                 "Open Minecraft's options.",
-                () -> this.minecraft.setScreen(new OptionsScreen(this, this.minecraft.options, false)),
+                () -> this.minecraft.gui.setScreen(new OptionsScreen(this, this.minecraft.options, false)),
                 false);
         addBtn(4, Component.translatable("aurora.button.quit"),
                 "Quit Minecraft.",

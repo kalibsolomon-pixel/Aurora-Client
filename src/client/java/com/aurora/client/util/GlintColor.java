@@ -134,7 +134,7 @@ public final class GlintColor {
         // play; releasing a texture one of its PendingReloads still holds
         // would apply() onto a closed texture. Leave the change pending
         // (last* not updated) so the next tick retries.
-        if (client.getOverlay() != null) return;
+        if (client.gui.overlay() != null) return;
 
         lastColor = color;
         lastIntensity = intensity;

@@ -23,7 +23,7 @@ import com.mojang.blaze3d.Blaze3D;
  * First-person held-item tweaks: shield style preset, main/off-hand scale.
  *
  * <p><b>Injection timing:</b> we hook just BEFORE vanilla's internal
- * {@code renderItem} call inside {@code renderArmWithItem} (1.21.11; the
+ * {@code renderItem} call inside {@code submitArmWithItem} (1.21.11; the
  * method was renamed from {@code renderFirstPersonItem} pre-1.21.11). By
  * that point vanilla has applied hand-position, swing, block-raise, and
  * base item-display transforms; our matrix operations stack on top.
@@ -52,11 +52,11 @@ public abstract class HeldItemRendererTweaksMixin {
      * Push the local player as the shield-tint context holder before
      * vanilla draws the first-person held item. Paired with
      * {@link #aurora$popShieldHolder} at RETURN so any shield model
-     * submitted during {@code renderArmWithItem} sees the right holder.
+     * submitted during {@code submitArmWithItem} sees the right holder.
      * Runs unconditionally — {@link ShieldStatusFeature#resolveTintArgb()}
      * already short-circuits when the feature is off.
      */
-    @Inject(method = "renderArmWithItem(Lnet/minecraft/client/player/AbstractClientPlayer;FFLnet/minecraft/world/InteractionHand;FLnet/minecraft/world/item/ItemStack;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;I)V",
+    @Inject(method = "submitArmWithItem(Lnet/minecraft/client/player/AbstractClientPlayer;FFLnet/minecraft/world/InteractionHand;FLnet/minecraft/world/item/ItemStack;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;I)V",
             at = @At("HEAD"))
     private void aurora$pushShieldHolder(AbstractClientPlayer player,
                                          float tickDelta, float pitch, InteractionHand hand,
@@ -67,7 +67,7 @@ public abstract class HeldItemRendererTweaksMixin {
         if (player != null) ShieldStatusFeature.pushHolder(player.getId());
     }
 
-    @Inject(method = "renderArmWithItem(Lnet/minecraft/client/player/AbstractClientPlayer;FFLnet/minecraft/world/InteractionHand;FLnet/minecraft/world/item/ItemStack;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;I)V",
+    @Inject(method = "submitArmWithItem(Lnet/minecraft/client/player/AbstractClientPlayer;FFLnet/minecraft/world/InteractionHand;FLnet/minecraft/world/item/ItemStack;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;I)V",
             at = @At("RETURN"))
     private void aurora$popShieldHolder(AbstractClientPlayer player,
                                         float tickDelta, float pitch, InteractionHand hand,
@@ -78,7 +78,7 @@ public abstract class HeldItemRendererTweaksMixin {
         ShieldStatusFeature.popHolder();
     }
 
-    @Inject(method = "renderArmWithItem(Lnet/minecraft/client/player/AbstractClientPlayer;FFLnet/minecraft/world/InteractionHand;FLnet/minecraft/world/item/ItemStack;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;I)V",
+    @Inject(method = "submitArmWithItem(Lnet/minecraft/client/player/AbstractClientPlayer;FFLnet/minecraft/world/InteractionHand;FLnet/minecraft/world/item/ItemStack;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;I)V",
             at = @At(value = "INVOKE",
                     target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;renderItem(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemDisplayContext;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;I)V",
                     shift = At.Shift.BEFORE))
