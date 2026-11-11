@@ -2,7 +2,7 @@
 
 Client-side implementation only. Aurora Launcher remains the sole Discord owner;
 its repository was inspected read-only and has no implemented receiver yet.
-See [LAUNCHER_ACTIVITY_PROTOCOL.md](LAUNCHER_ACTIVITY_PROTOCOL.md) for the complete
+See [LAUNCHER_ACTIVITY_PROTOCOL.md](../LAUNCHER_ACTIVITY_PROTOCOL.md) for the complete
 wire contract, privacy boundary and exact next launcher task.
 
 ## Baseline and scope

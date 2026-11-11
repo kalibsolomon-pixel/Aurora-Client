@@ -67,7 +67,7 @@ navigation priority. Minecraft yaw-zero/south behavior is corrected.
 
 Native circular and square views, heading-up orientation, biome text, marker
 crowding and post-relaunch terrain were inspected. See the
-[relaunch screenshot](docs/mapping/screenshots/mapping-relaunch.png).
+[relaunch screenshot](../mapping/screenshots/mapping-relaunch.png).
 
 ## D. World map
 
@@ -83,10 +83,10 @@ crop explored viewport edges. Central tiles request data first. Resident overvie
 generation remains available while disk requests are saturated; missing regions
 reuse immutable zeros and avoid empty overview GPU uploads.
 
-[World map](docs/mapping/screenshots/mapping-world-map.png) and
-[far overview](docs/mapping/screenshots/mapping-world-map-overview.png) are actual
+[World map](../mapping/screenshots/mapping-world-map.png) and
+[far overview](../mapping/screenshots/mapping-world-map-overview.png) are actual
 1280×720 captures. Unexplored areas remain distinct from observed terrain.
-An additional [larger sparse map](docs/mapping/screenshots/mapping-extended-large-map.png)
+An additional [larger sparse map](../mapping/screenshots/mapping-extended-large-map.png)
 contains forty visited region centers: 41 partially explored region files and
 1,540 stamped chunks. This exceeds the eight-region cache used for that run and
 exercises eviction, disk-backed LOD and navigation across a 4,096×2,560-block grid.
@@ -114,8 +114,8 @@ Beams fade near the camera, fixing the observed full-screen wall when standing
 inside an opaque double-sided beam.
 
 Native stress used 10,002 waypoints. The
-[1600×1000 manager at GUI scale 4](docs/mapping/screenshots/mapping-manager-scale4.png)
-and [editor at GUI scale 3](docs/mapping/screenshots/mapping-editor-scale3.png)
+[1600×1000 manager at GUI scale 4](../mapping/screenshots/mapping-manager-scale4.png)
+and [editor at GUI scale 3](../mapping/screenshots/mapping-editor-scale3.png)
 were visually inspected. The native M key, right-click form, typing and Save were
 also exercised through desktop input.
 
@@ -168,7 +168,7 @@ save, not exact phase allocations. Old minimap ring/entity paths no longer appea
 among the candidate's leading Aurora sample callers. Primitive region-key Long
 allocation weight remained zero in both. Raw and aggregate evidence is retained
 in `aurora-mapping-reference-04`, `aurora-mapping-final-03` and
-[performance-results.json](docs/mapping/performance-results.json).
+[performance-results.json](../mapping/performance-results.json).
 
 Structural bounds: 1–8 captures/tick; four new disk requests/tick; eight in-flight
 loads/context; 64 queued worker tasks; two large texture operations/tick; bounded
@@ -229,8 +229,8 @@ that failure is logged rather than represented as success.
 | Final normal Java 21 build after probes | Passed; ordinary tasks up to date, no probe classes in jar |
 
 Checks and screenshot hashes are in
-[validation-results.json](docs/mapping/validation-results.json). Resumption details
-and excluded captures are in [PROGRESS.md](docs/mapping/PROGRESS.md).
+[validation-results.json](../mapping/validation-results.json). Resumption details
+and excluded captures are in [PROGRESS.md](../mapping/PROGRESS.md).
 
 ## J. Rejected approaches
 
@@ -280,7 +280,7 @@ Legacy imports require the owner to identify the correct original world.
   separately, with acceptance ending at `d082494`. Resolve the completed reporting
   head with `git rev-parse HEAD` (also supplied in the completion message).
 - Starting status/inventory are preserved under `docs/mapping/`. The complete
-  [change inventory](docs/mapping/final-changes.txt) lists affected paths.
+  [change inventory](../mapping/final-changes.txt) lists affected paths.
 - Pre-existing untracked `CPERF1B_PARK_BENCHMARK.md` and
   `CPERF2_PARK_WAKE_INVESTIGATION.md` remain untracked and unchanged by this task.
 - Original `run/` data and existing performance evidence were not execution

@@ -66,28 +66,28 @@ No clean/reset, unexpected deletion, unrelated normalization or push.
 
 ## Exact files changed
 
-- [AGENTS.md](C:/Dev/Aurora-Client/AGENTS.md)
-- [ARCHITECTURE.md](C:/Dev/Aurora-Client/ARCHITECTURE.md)
-- [DESIGN_LANGUAGE.md](C:/Dev/Aurora-Client/DESIGN_LANGUAGE.md)
-- [OWNER_MENU_GEOMETRY.md](C:/Dev/Aurora-Client/OWNER_MENU_GEOMETRY.md)
-- [src/client/java/com/aurora/client/screen/AuroraTitleScreen.java](C:/Dev/Aurora-Client/src/client/java/com/aurora/client/screen/AuroraTitleScreen.java)
-- [src/client/java/com/aurora/client/screen/FeatureDetailScreen.java](C:/Dev/Aurora-Client/src/client/java/com/aurora/client/screen/FeatureDetailScreen.java)
-- [src/client/java/com/aurora/client/ui/util/MenuComposition.java](C:/Dev/Aurora-Client/src/client/java/com/aurora/client/ui/util/MenuComposition.java)
-- [src/client/java/com/aurora/client/ui/util/UiDensity.java](C:/Dev/Aurora-Client/src/client/java/com/aurora/client/ui/util/UiDensity.java)
-- [src/test/java/com/aurora/client/ui/util/OwnerCorrectionTest.java](C:/Dev/Aurora-Client/src/test/java/com/aurora/client/ui/util/OwnerCorrectionTest.java)
-- [src/test/java/com/aurora/client/ui/util/OwnerMenuGeometryTest.java](C:/Dev/Aurora-Client/src/test/java/com/aurora/client/ui/util/OwnerMenuGeometryTest.java)
+- [AGENTS.md](../history/AGENTS-2026-11-11.md)
+- [ARCHITECTURE.md](../ARCHITECTURE.md)
+- [DESIGN_LANGUAGE.md](../DESIGN_LANGUAGE.md)
+- [OWNER_MENU_GEOMETRY.md](OWNER_MENU_GEOMETRY.md)
+- [src/client/java/com/aurora/client/screen/AuroraTitleScreen.java](../../src/client/java/com/aurora/client/screen/AuroraTitleScreen.java)
+- [src/client/java/com/aurora/client/screen/FeatureDetailScreen.java](../../src/client/java/com/aurora/client/screen/FeatureDetailScreen.java)
+- [src/client/java/com/aurora/client/ui/util/MenuComposition.java](../../core/src/main/java/com/aurora/client/ui/util/MenuComposition.java)
+- [src/client/java/com/aurora/client/ui/util/UiDensity.java](../../core/src/main/java/com/aurora/client/ui/util/UiDensity.java)
+- [src/test/java/com/aurora/client/ui/util/OwnerCorrectionTest.java](../../src/test/java/com/aurora/client/ui/util/OwnerCorrectionTest.java)
+- [src/test/java/com/aurora/client/ui/util/OwnerMenuGeometryTest.java](../../src/test/java/com/aurora/client/ui/util/OwnerMenuGeometryTest.java)
 
 The logo texture and AuroraBrand renderer are unchanged from the starting HEAD.
 
 ## New runtime screenshots
 
-- [Zoom — logo-free header, GUI 3](C:/Users/kalib/.codex/visualizations/2026/10/06/01a11030-ac6c-7070-922a-87cda5952ab9/menu-geometry/01-zoom-header-gui3.png)
-- [Main menu — original logo and narrower cards, GUI 3](C:/Users/kalib/.codex/visualizations/2026/10/06/01a11030-ac6c-7070-922a-87cda5952ab9/menu-geometry/02-main-menu-gui3.png)
-- [Constrained window](C:/Users/kalib/.codex/visualizations/2026/10/06/01a11030-ac6c-7070-922a-87cda5952ab9/menu-geometry/03-constrained-menu.png)
-- [Pack Tweaks — logo-free header, GUI 3](C:/Users/kalib/.codex/visualizations/2026/10/06/01a11030-ac6c-7070-922a-87cda5952ab9/menu-geometry/04-pack-tweaks-gui3.png)
-- [Main menu, GUI 4](C:/Users/kalib/.codex/visualizations/2026/10/06/01a11030-ac6c-7070-922a-87cda5952ab9/menu-geometry/05-main-menu-gui4.png)
-- [Zoom, GUI 4](C:/Users/kalib/.codex/visualizations/2026/10/06/01a11030-ac6c-7070-922a-87cda5952ab9/menu-geometry/06-zoom-header-gui4.png)
-- [Pack Tweaks, GUI 4](C:/Users/kalib/.codex/visualizations/2026/10/06/01a11030-ac6c-7070-922a-87cda5952ab9/menu-geometry/07-pack-tweaks-gui4.png)
+- [Zoom — logo-free header, GUI 3](../../C:/Users/kalib/.codex/visualizations/2026/10/06/01a11030-ac6c-7070-922a-87cda5952ab9/menu-geometry/01-zoom-header-gui3.png)
+- [Main menu — original logo and narrower cards, GUI 3](../../C:/Users/kalib/.codex/visualizations/2026/10/06/01a11030-ac6c-7070-922a-87cda5952ab9/menu-geometry/02-main-menu-gui3.png)
+- [Constrained window](../../C:/Users/kalib/.codex/visualizations/2026/10/06/01a11030-ac6c-7070-922a-87cda5952ab9/menu-geometry/03-constrained-menu.png)
+- [Pack Tweaks — logo-free header, GUI 3](../../C:/Users/kalib/.codex/visualizations/2026/10/06/01a11030-ac6c-7070-922a-87cda5952ab9/menu-geometry/04-pack-tweaks-gui3.png)
+- [Main menu, GUI 4](../../C:/Users/kalib/.codex/visualizations/2026/10/06/01a11030-ac6c-7070-922a-87cda5952ab9/menu-geometry/05-main-menu-gui4.png)
+- [Zoom, GUI 4](../../C:/Users/kalib/.codex/visualizations/2026/10/06/01a11030-ac6c-7070-922a-87cda5952ab9/menu-geometry/06-zoom-header-gui4.png)
+- [Pack Tweaks, GUI 4](../../C:/Users/kalib/.codex/visualizations/2026/10/06/01a11030-ac6c-7070-922a-87cda5952ab9/menu-geometry/07-pack-tweaks-gui4.png)
 
 ## Git
 

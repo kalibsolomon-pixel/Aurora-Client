@@ -1,6 +1,6 @@
 # Aurora launcher activity protocol v1
 
-Phase E1 adds an explicitly negotiated v2 identity extension documented in [PHASE_E1_ACTIVITY_PROTOCOL.md](PHASE_E1_ACTIVITY_PROTOCOL.md). The v1 contract below remains unchanged.
+Phase E1 adds an explicitly negotiated v2 identity extension documented in [PHASE_E1_ACTIVITY_PROTOCOL.md](reports/PHASE_E1_ACTIVITY_PROTOCOL.md). The v1 contract below remains unchanged.
 
 Target: Aurora Client 2.1.2 / Minecraft 1.21.11 / Fabric / Java 21. The mod reports
 authenticated local gameplay identity. **Aurora Launcher is the sole Discord owner**:

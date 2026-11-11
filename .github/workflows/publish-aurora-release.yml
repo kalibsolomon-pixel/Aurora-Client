@@ -99,8 +99,9 @@ jobs:
             --source-sha "$SOURCE_SHA" \
             --output release-bundle/release-metadata.json
           cp "source/build/libs/aurora-${RELEASE_VERSION}.jar" release-bundle/
-          if [[ -f "source/RELEASE_NOTES_${RELEASE_VERSION}.md" ]]; then
-            cp "source/RELEASE_NOTES_${RELEASE_VERSION}.md" release-bundle/release-notes.md
+          # Release notes live in docs/releases/ (moved from the repo root 2026-11-11).
+          if [[ -f "source/docs/releases/RELEASE_NOTES_${RELEASE_VERSION}.md" ]]; then
+            cp "source/docs/releases/RELEASE_NOTES_${RELEASE_VERSION}.md" release-bundle/release-notes.md
           fi
           python3 tools/verify_release_artifact.py verify \
             --metadata release-bundle/release-metadata.json \

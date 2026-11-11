@@ -1,6 +1,6 @@
 # Aurora Client roadmap
 
-Agreed 2026-11-10. The decisions behind this order are in [docs/adr/](adr/):
+Agreed 2026-11-10. The decisions behind this order are in [docs/adr/](adr):
 
 | ADR | Decision |
 |---|---|
@@ -45,7 +45,7 @@ Still open:
 
 ## Step 3 status
 
-The core module is built on `feat/core-module`: 75 already Minecraft-free classes moved into `core/`, a Gradle module that cannot compile a Minecraft, Fabric, LWJGL, Mixin or Log4j import. Three small couplings were cut on the way (the config directory, the client logger, two health constants). Verified by the test suite and a dev-client boot. The overhead budget is set on `feat/overhead-budget`: Aurora CPU per frame at most 0.25 ms mean and 0.40 ms p95, no glass and at most 100 fills, in a world with factory defaults, about 1.5 times the measured baseline. Every diagnostics report judges its run, and `tools/overhead_check.py` is a release step ([OVERHEAD_BUDGET.md](OVERHEAD_BUDGET.md)). Third-party notices are on `feat/third-party-notices`: `THIRD_PARTY_NOTICES.md` ships in the jar and a test keeps it complete. Still to do in step 3: the repo cleanup.
+The core module is built on `feat/core-module`: 75 already Minecraft-free classes moved into `core/`, a Gradle module that cannot compile a Minecraft, Fabric, LWJGL, Mixin or Log4j import. Three small couplings were cut on the way (the config directory, the client logger, two health constants). Verified by the test suite and a dev-client boot. The overhead budget is set on `feat/overhead-budget`: Aurora CPU per frame at most 0.25 ms mean and 0.40 ms p95, no glass and at most 100 fills, in a world with factory defaults, about 1.5 times the measured baseline. Every diagnostics report judges its run, and `tools/overhead_check.py` is a release step ([OVERHEAD_BUDGET.md](OVERHEAD_BUDGET.md)). Third-party notices are on `feat/third-party-notices`: `THIRD_PARTY_NOTICES.md` ships in the jar and a test keeps it complete. The repo cleanup is on `chore/repo-cleanup`. With it, step 3 is built.
 
 ## Standing rules until the port ships
 
@@ -54,7 +54,7 @@ The core module is built on `feat/core-module`: 75 already Minecraft-free classe
 ## Housekeeping in step 3
 
 - **Third-party notices.** Done: `THIRD_PARTY_NOTICES.md` covers Better Hitreg, Freelook++, AppleSkin, HitColor, the bundled fonts and the bundled TwelveMonkeys libraries, with every license text.
-- **Repo cleanup.** A short contributor and agent guide in place of the history in `AGENTS.md`. The reports at the repo root move under `docs/`.
+- **Repo cleanup.** Done on `chore/repo-cleanup`: `AGENTS.md` is a short contributor and agent guide, its history kept verbatim in `docs/history/`, and the reports from the repo root are under `docs/`.
 
 ## Goals
 

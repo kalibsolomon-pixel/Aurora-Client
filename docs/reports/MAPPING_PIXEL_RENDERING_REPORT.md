@@ -65,17 +65,17 @@ overviews, explicitly separate from the native edge evidence.
 
 | Reference / final | Native pixels |
 | --- | --- |
-| Circular edge before | ![Reference circular minimap edge](docs/mapping/pixel-refinement/before-circle-edge-4k.png) |
-| Circular edge after | ![Native coverage circular edge](docs/mapping/pixel-refinement/after-circle-edge-4k.png) |
+| Circular edge before | ![Reference circular minimap edge](../mapping/pixel-refinement/before-circle-edge-4k.png) |
+| Circular edge after | ![Native coverage circular edge](../mapping/pixel-refinement/after-circle-edge-4k.png) |
 
-[Minimap scales](docs/mapping/pixel-refinement/final-hud-scales.png) ·
-[Map scales](docs/mapping/pixel-refinement/final-map-scales.png) ·
-[Manager scales](docs/mapping/pixel-refinement/final-manager-scales.png) ·
-[Editor scales](docs/mapping/pixel-refinement/final-editor-scales.png).
-Native close-ups show the [square corner](docs/mapping/pixel-refinement/final-square-edge-4k.png),
-[map icons and labels](docs/mapping/pixel-refinement/final-map-markers-4k.png), and
-[editor typography](docs/mapping/pixel-refinement/final-editor-detail-4k.png), plus
-the [in-world marker](docs/mapping/pixel-refinement/final-world-marker-4k.png).
+[Minimap scales](../mapping/pixel-refinement/final-hud-scales.png) ·
+[Map scales](../mapping/pixel-refinement/final-map-scales.png) ·
+[Manager scales](../mapping/pixel-refinement/final-manager-scales.png) ·
+[Editor scales](../mapping/pixel-refinement/final-editor-scales.png).
+Native close-ups show the [square corner](../mapping/pixel-refinement/final-square-edge-4k.png),
+[map icons and labels](../mapping/pixel-refinement/final-map-markers-4k.png), and
+[editor typography](../mapping/pixel-refinement/final-editor-detail-4k.png), plus
+the [in-world marker](../mapping/pixel-refinement/final-world-marker-4k.png).
 
 ## Performance
 

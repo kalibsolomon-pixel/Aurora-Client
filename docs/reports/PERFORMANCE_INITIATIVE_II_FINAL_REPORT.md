@@ -25,9 +25,9 @@ actual swap calls improve the timing evidence, but physical input-to-photon
 latency remains unmeasured.
 
 Machine-readable results, per-run distributions, attribution and raw-artifact
-hashes are in [results.json](docs/performance-initiative-ii/results.json).
+hashes are in [results.json](../performance-initiative-ii/results.json).
 Reproduction and validity rules are in
-[INITIATIVE_II.md](tools/performance/INITIATIVE_II.md). Raw captures stay private.
+[INITIATIVE_II.md](../../tools/performance/INITIATIVE_II.md). Raw captures stay private.
 
 ## B. Realistic workload results
 

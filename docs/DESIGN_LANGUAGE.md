@@ -1079,7 +1079,7 @@ colors and explicit player overrides retain meaning; HUD backing remains neutral
 The old per-element lighting/rim recipes below are historical/diagnostic paths,
 superseded for production by this rollout. The diagnostic `BlurTestScreen` retains
 its synthetic controls and lighting comparisons. Details and verification limits:
-[UNIFIED_THEME_PILOT.md](UNIFIED_THEME_PILOT.md).
+[UNIFIED_THEME_PILOT.md](reports/UNIFIED_THEME_PILOT.md).
 
 Every phase begins with a narrow pilot and evidence review before broad rollout.
 
