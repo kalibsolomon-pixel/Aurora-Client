@@ -1834,6 +1834,16 @@ public final class BlurPanelRenderer {
      * element is drawn. Render thread.
      */
     public static void runPendingCaptures() {
+        if (!RenderBackend.isOpenGl()) {
+            try {
+                PortableBlurRenderer.runPending();
+            } catch (Throwable t) {
+                AuroraClient.LOGGER.error("[BlurPanel] render failed - blur panels disabled for this session.", t);
+                permanentlyDisabled = true;
+                lastOutcome = "failed (see log)";
+            }
+            return;
+        }
         if (PENDING.isEmpty()) return;
         try {
             for (Frame f : PENDING) {

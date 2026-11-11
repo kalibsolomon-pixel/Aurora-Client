@@ -42,6 +42,17 @@ final class PortableBlurRenderer {
     private static final RenderPipeline PATTERN = pipeline("glass_pattern");
     private static final List<Output> live = new ArrayList<>();
     private static final List<AutoCloseable> retired = new ArrayList<>();
+    /** Passes requested during this frame's GUI extraction (26.1), run by {@link #runPending}. */
+    private static final List<Runnable> PENDING = new ArrayList<>();
+
+    /** Runs the queued passes; called with the OpenGL captures, after the world is drawn. */
+    static void runPending() {
+        try {
+            for (Runnable passes : PENDING) passes.run();
+        } finally {
+            PENDING.clear();
+        }
+    }
     private static long sequence;
     private static GpuBuffer triangle;
 
@@ -108,21 +119,25 @@ final class PortableBlurRenderer {
         Target c = target(output, 3, quarterW, quarterH);
         Target result = target(output, 4, width, height);
 
+        // 26.1 extracts the whole GUI before rendering it: the targets are sized
+        // and the blit recorded now, but the passes run from runPending, once
+        // the world is in the main target (see BlurPanelRenderer.runPendingCaptures).
+        // Each pass keeps its own copy of the parameters.
         float[] params = new float[PARAM_BYTES / 4];
         // Vulkan attachments and GUI samplers both use top-down texture UVs.
         // Never carry the GL framebuffer's bottom-left convention across devices.
         rect(params, rx / (float) main.width, ry / (float) main.height,
                 (rx + rw) / (float) main.width, (ry + rh) / (float) main.height);
-        pass(output, 0, COPY, capture != null ? capture.textureView : main.getColorTextureView(), half, params);
+        float[] copyIn = params.clone();
         rect(params, 0, 0, 1, 1);
-        pass(output, 1, COPY, half.getTextureView(), a, params);
+        float[] copyDown = params.clone();
         params[4] = 1f / quarterW;
         params[5] = 0;
         params[6] = Math.max(.65f, radius * .25f / 2f);
-        pass(output, 2, BLUR, a.getTextureView(), b, params);
+        float[] blurX = params.clone();
         params[4] = 0;
         params[5] = 1f / quarterH;
-        pass(output, 3, BLUR, b.getTextureView(), c, params);
+        float[] blurY = params.clone();
 
         rect(params, (x - rx) / (float) rw, (y - ry) / (float) rh,
                 (x + width - rx) / (float) rw, (y + height - ry) / (float) rh);
@@ -138,7 +153,14 @@ final class PortableBlurRenderer {
         params[17] = unified ? .92f : 1;
         params[20] = BlurPanelRenderer.LIGHT_DIR_X;
         params[21] = BlurPanelRenderer.LIGHT_DIR_Y;
-        pass(output, 4, COMPOSITE, c.getTextureView(), result, params);
+        float[] composite = params.clone();
+        PENDING.add(() -> {
+            pass(output, 0, COPY, capture != null ? capture.textureView : main.getColorTextureView(), half, copyIn);
+            pass(output, 1, COPY, half.getTextureView(), a, copyDown);
+            pass(output, 2, BLUR, a.getTextureView(), b, blurX);
+            pass(output, 3, BLUR, b.getTextureView(), c, blurY);
+            pass(output, 4, COMPOSITE, c.getTextureView(), result, composite);
+        });
         graphics.blit(RenderPipelines.GUI_TEXTURED, result.id,
                 Math.round(x / (float) scale), Math.round(y / (float) scale), 0f, 0f,
                 Math.round(width / (float) scale), Math.round(height / (float) scale),
@@ -213,6 +235,7 @@ final class PortableBlurRenderer {
     }
 
     static void beginFrame() {
+        PENDING.clear(); // a frame extracted but never rendered
         for (AutoCloseable resource : retired) close(resource);
         retired.clear();
     }
