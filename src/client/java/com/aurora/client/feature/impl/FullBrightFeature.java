@@ -29,6 +29,9 @@ public class FullBrightFeature implements Feature {
     @Override
     public void onTick(Minecraft client) {
         if (client == null || client.options == null) return;
+        // Gamma is written through SimpleOptionMixin; without it there is
+        // nothing this feature can do, and the casts below would fail.
+        if (com.aurora.client.health.MixinHealth.failed("SimpleOptionMixin")) return;
         AuroraConfig cfg = AuroraConfig.get();
 
         OptionInstance<Double> gamma = client.options.gamma();

@@ -600,7 +600,7 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
         // never keep a stale rect in the band), then paint only when a
         // pixel is visible. The base scissors this call to the list clip.
         if (layoutRenameField(rows, listX) == null || !renameEditorVisible()) return;
-        ((GlassEditBox) nameField).aurora$renderGlassPass(ctx);
+        if (nameField instanceof GlassEditBox glassField) glassField.aurora$renderGlassPass(ctx);
     }
 
     @Override

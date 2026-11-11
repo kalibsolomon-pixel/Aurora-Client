@@ -98,9 +98,10 @@ public final class ItemSpriteRenderer {
             mc.getItemModelResolver().updateForTopItem(state, stack,
                     ItemDisplayContext.GUI, mc.level, mc.player, 0);
 
-            ItemStackRenderState.LayerRenderState[] layers =
-                    ((ItemStackRenderStateAccessor) state).aurora$layers();
-            int count = ((ItemStackRenderStateAccessor) state).aurora$activeLayerCount();
+            // Without the accessor mixin there are no layers to read: take the 3D fallback.
+            if (!(state instanceof ItemStackRenderStateAccessor access)) return new Resolution(null);
+            ItemStackRenderState.LayerRenderState[] layers = access.aurora$layers();
+            int count = access.aurora$activeLayerCount();
             if (layers == null || count != 1 || layers[0] == null) {
                 return new Resolution(null); // empty or multi-layer model
             }

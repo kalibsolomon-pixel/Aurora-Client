@@ -937,7 +937,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
                 AuroraTheme.RADIUS_LARGE, ThemeToken.SURFACE));
         paintActiveTabPass(g, mouseX, mouseY, panelX, panelY, panelW, panelH);
         paintCardButtonsPass(g);
-        ((GlassEditBox) searchField).aurora$renderGlassPass(g);
+        if (searchField instanceof GlassEditBox glassField) glassField.aurora$renderGlassPass(g);
         if (doneBtn != null) doneBtn.renderGlassPass(g);
     }
 

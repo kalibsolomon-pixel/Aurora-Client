@@ -104,6 +104,40 @@ class FramePacingPersistenceTest {
         assertFalse(Files.exists(temporary.resolve("profiles/" + name + ".json")), "no queued save resurrects it");
     }
 
+    @Test void aSwitchHeldOffForABrokenMixinIsSavedAsThePlayerSetIt() throws Exception {
+        // ADR 0004: a mixin that could not apply turns its feature off for the
+        // session only. Neither aurora.json nor the profile may record that.
+        var live = AuroraConfig.get();
+        boolean original = live.zoomEnabled;
+        live.zoomEnabled = true;
+        try {
+            com.aurora.client.health.HealthTestAccess.fail("GameRendererMixin");
+            com.aurora.client.health.FeatureHealth.enforce(live);
+            assertFalse(live.zoomEnabled, "held off in the running game");
+
+            assertTrue(AuroraConfig.saveBlocking());
+            Path configFile = temporary.resolve("aurora.json");
+            var saved = com.google.gson.JsonParser.parseString(java.nio.file.Files.readString(configFile)).getAsJsonObject();
+            assertTrue(saved.get("zoomEnabled").getAsBoolean(), "aurora.json keeps the player's value");
+            assertTrue(ProfileManager.getInstance().captureCurrent().fields.get("zoomEnabled").getAsBoolean(),
+                    "the profile snapshot keeps the player's value");
+
+            // A feature reset replaces the value on purpose and is held off again.
+            AuroraConfig.resetByPrefix("zoomEnabled");
+            assertFalse(live.zoomEnabled);
+
+            // Applying a profile replaces every value; the hold is re-applied at once.
+            ProfileManager.getInstance().applyProfile(ProfileManager.getInstance().captureCurrent());
+            assertFalse(live.zoomEnabled);
+            assertTrue(ProfileManager.getInstance().captureCurrent().fields.get("zoomEnabled").getAsBoolean());
+        } finally {
+            com.aurora.client.health.HealthTestAccess.reset(live);
+            live.zoomEnabled = original;
+            AuroraConfig.saveBlocking();
+        }
+        assertEquals(original, live.zoomEnabled);
+    }
+
     @Test void aWriteOrDeleteThatLandsDuringTheDirectoryScanIsStillSeen() {
         // Regression (2026-11-10 CI flake in the test above): the name scan read
         // the directory before snapshotting the writer's pending operations, so

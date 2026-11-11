@@ -25,7 +25,7 @@ class AuroraScreenSemanticHostingTest {
     private static String settingsRegistryBlock() {
         String src = read(REGISTRY);
         int start = src.indexOf("// ============ SETTINGS TAB ============");
-        int end = src.indexOf("addWithSettings(MODULES, \"animations\"", start);
+        int end = src.indexOf("addWithSettings(\"animations\"", start);
         assertTrue(start >= 0 && end > start, "settings registry block moved unexpectedly");
         return src.substring(start, end);
     }

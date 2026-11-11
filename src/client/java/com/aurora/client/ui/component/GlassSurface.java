@@ -551,7 +551,9 @@ public final class GlassSurface {
      */
     public static boolean renderMenuPanorama(Screen screen, GuiGraphics g, float delta) {
         if (liveWorldBackdrop()) return false;
-        ((com.aurora.client.mixin.ScreenPanoramaAccessor) screen).aurora$invokeRenderPanorama(g, delta);
+        // Without the invoker mixin the screen keeps vanilla's own backdrop (flat fallback).
+        if (!(screen instanceof com.aurora.client.mixin.ScreenPanoramaAccessor panorama)) return false;
+        panorama.aurora$invokeRenderPanorama(g, delta);
         BlurPanelRenderer.noteMenuBackdropDrawn();
         return true;
     }

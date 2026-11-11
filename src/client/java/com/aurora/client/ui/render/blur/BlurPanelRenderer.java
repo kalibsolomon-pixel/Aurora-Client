@@ -940,6 +940,14 @@ public final class BlurPanelRenderer {
         if (priority == null) priority = Priority.CONTROL;
         lastOutcome = "rendered";
         if (permanentlyDisabled) { lastOutcome = "disabled (earlier failure)"; return false; }
+        // Glass depends on two hooks: the per-frame stamp that recycles its
+        // output pool, and the pause around screenshots that prevents a
+        // native crash. Without either, every caller takes its flat fallback.
+        if (com.aurora.client.health.MixinHealth.failed("MinecraftClientRenderMixin")
+                || com.aurora.client.health.MixinHealth.failed("ScreenshotMixin")) {
+            lastOutcome = "disabled (a required hook could not be applied)";
+            return false;
+        }
 
         if (System.currentTimeMillis() < suppressGlassUntilMs) {
             // Screenshot interlock (see suppressGlassUntilMs): fall back to

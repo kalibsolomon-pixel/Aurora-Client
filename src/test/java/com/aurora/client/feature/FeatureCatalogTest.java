@@ -1,0 +1,130 @@
+package com.aurora.client.feature;
+
+import com.aurora.client.config.AuroraConfig;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import org.junit.jupiter.api.Test;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * Keeps the one feature list (ADR 0004) in agreement with the files that
+ * must match it: the mixin config, the settings registry and the config
+ * schema. A mixin added without a binding, a feature added to one place
+ * only, or a gate that names a field that does not exist fails here.
+ */
+class FeatureCatalogTest {
+    private static final Path MIXIN_CONFIG = Path.of("src/client/resources/aurora.mixins.json");
+    private static final Path REGISTRY = Path.of("src/client/java/com/aurora/client/screen/FeatureRegistry.java");
+
+    private static JsonObject mixinConfig() throws Exception {
+        return JsonParser.parseString(Files.readString(MIXIN_CONFIG)).getAsJsonObject();
+    }
+
+    @Test void everyMixinInTheConfigHasABindingInTheSameOrder() throws Exception {
+        List<String> listed = new ArrayList<>();
+        JsonArray client = mixinConfig().getAsJsonArray("client");
+        for (JsonElement e : client) listed.add(e.getAsString());
+
+        List<String> bound = new ArrayList<>();
+        for (FeatureCatalog.MixinBinding b : FeatureCatalog.mixins()) bound.add(b.mixin());
+
+        assertEquals(listed, bound,
+                "FeatureCatalog must bind exactly the mixins aurora.mixins.json lists, in the same order");
+        assertEquals(listed.size(), new HashSet<>(listed).size(), "a mixin is listed twice");
+    }
+
+    @Test void theConfigIsFailSoftAndNamesThePlugin() throws Exception {
+        JsonObject config = mixinConfig();
+        assertFalse(config.get("required").getAsBoolean(),
+                "required:true stops the game when any one mixin cannot apply (ADR 0004)");
+        assertEquals("com.aurora.client.health.AuroraMixinPlugin", config.get("plugin").getAsString());
+        assertEquals(1, config.getAsJsonObject("injectors").get("defaultRequire").getAsInt(),
+                "defaultRequire must stay 1: it is what turns a missed injection into a reported failure");
+        // Classes inside a mixin package cannot be loaded as ordinary classes.
+        assertFalse(config.get("plugin").getAsString().startsWith(config.get("package").getAsString() + "."));
+    }
+
+    @Test void everyBindingNamesRealFeatures() {
+        for (FeatureCatalog.MixinBinding b : FeatureCatalog.mixins()) {
+            assertFalse(b.provides().isBlank(), b.mixin() + " must say what it provides");
+            for (String feature : b.features()) {
+                assertNotNull(FeatureCatalog.feature(feature),
+                        b.mixin() + " names unknown feature '" + feature + "'");
+            }
+        }
+    }
+
+    @Test void everyGateIsAPublicBooleanConfigField() throws Exception {
+        for (FeatureCatalog.MixinBinding b : FeatureCatalog.mixins()) {
+            for (String gate : b.gates()) {
+                Field f;
+                try {
+                    f = AuroraConfig.class.getField(gate);
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError(b.mixin() + " gates on '" + gate + "', which is not an AuroraConfig field");
+                }
+                assertEquals(boolean.class, f.getType(), b.mixin() + " gate '" + gate + "' must be a boolean");
+                assertFalse(Modifier.isStatic(f.getModifiers()), gate + " must be an instance field");
+            }
+        }
+    }
+
+    @Test void theRegistryRegistersExactlyTheCatalogFeatures() throws Exception {
+        String source = Files.readString(REGISTRY);
+        Matcher m = Pattern.compile(
+                "\\badd(?:WithSettings)?\\(\\s*(\"[^\"]*\"|com\\.aurora\\.client\\.hitreg\\.BetterHitreg\\.FEATURE_ID),")
+                .matcher(source);
+        List<String> registered = new ArrayList<>();
+        while (m.find()) {
+            String raw = m.group(1);
+            registered.add(raw.startsWith("\"") ? raw.substring(1, raw.length() - 1) : "better_hitreg");
+        }
+
+        Set<String> catalog = new HashSet<>();
+        for (FeatureCatalog.Feature f : FeatureCatalog.features()) catalog.add(f.id());
+        assertEquals(catalog, new HashSet<>(registered),
+                "FeatureRegistry and FeatureCatalog must list the same feature ids");
+        assertEquals(registered.size(), new HashSet<>(registered).size(), "a feature is registered twice");
+
+        // The Settings tab is drawn in registration order; the catalog records the same order.
+        List<String> settingsInCatalog = new ArrayList<>();
+        for (FeatureCatalog.Feature f : FeatureCatalog.featuresOn(FeatureCatalog.Tab.SETTINGS)) {
+            settingsInCatalog.add(f.id());
+        }
+        List<String> settingsRegistered = new ArrayList<>(registered);
+        settingsRegistered.retainAll(settingsInCatalog);
+        assertEquals(settingsInCatalog, settingsRegistered);
+
+        // Names and tabs live in the catalog only.
+        assertFalse(source.contains("add(MODULES,") || source.contains("add(SETTINGS,")
+                        || source.contains("addWithSettings(MODULES,") || source.contains("addWithSettings(SETTINGS,"),
+                "FeatureRegistry must take a feature's tab and name from FeatureCatalog");
+    }
+
+    @Test void gridCardsHaveASummaryAndSettingsEntriesDoNot() {
+        for (FeatureCatalog.Feature f : FeatureCatalog.features()) {
+            assertFalse(f.name().isBlank(), f.id());
+            if (f.tab() == FeatureCatalog.Tab.MODULES) assertFalse(f.summary().isBlank(), f.id() + " needs card text");
+            else assertTrue(f.summary().isEmpty(), f.id() + " has no card");
+        }
+        assertEquals(34, FeatureCatalog.featuresOn(FeatureCatalog.Tab.MODULES).size());
+        assertEquals(4, FeatureCatalog.featuresOn(FeatureCatalog.Tab.SETTINGS).size());
+    }
+}

@@ -304,7 +304,7 @@ public class EffectExpiryListSetting extends FeatureSetting {
         searchField.setX(x + 12);
         searchField.setY(y + 6);
         searchField.setWidth(searchW);
-        ((GlassEditBox) searchField).aurora$renderGlassPass(ctx);
+        if (searchField instanceof GlassEditBox glassField) glassField.aurora$renderGlassPass(ctx);
         int plusX = x + width - 36;
         int plusY = y + 5;
         float plusR = Math.min(20 / 2f, ThemeManager.current().roundness().radiusSmall());

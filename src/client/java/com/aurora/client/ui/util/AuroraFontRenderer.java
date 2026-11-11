@@ -59,6 +59,7 @@ public class AuroraFontRenderer {
      * </ul>
      */
     public static net.minecraft.network.chat.Style getActiveStyle() {
+        if (com.aurora.client.health.MixinHealth.failed("MixinFont")) return null;
         AuroraConfig cfg = AuroraConfig.get();
         AuroraConfig.TextRendererMode mode = cfg.textRendererMode;
         if (mode == null) return null;

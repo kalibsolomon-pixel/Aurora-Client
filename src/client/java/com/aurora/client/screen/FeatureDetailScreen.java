@@ -512,7 +512,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         if (compact()) {
             int titleX = com.aurora.client.ui.util.UiDensity.detailTitleX(compactFrame);
             String breadcrumb = com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(this.font, meta.displayName, Math.max(0, resetBtn.getX() - titleX - 4), 0);
-            ctx.drawString(this.font, breadcrumb, titleX, (meta.subtitle == null || meta.subtitle.isEmpty() ? compactFrame.y() + (com.aurora.client.ui.util.UiDensity.HEADER - this.font.lineHeight) / 2 + 2 : compactFrame.y() + 3), MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
+            ctx.drawString(this.font, breadcrumb, titleX, (meta.headerLine() == null || meta.headerLine().isEmpty() ? compactFrame.y() + (com.aurora.client.ui.util.UiDensity.HEADER - this.font.lineHeight) / 2 + 2 : compactFrame.y() + 3), MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
             if (maxScroll > 0) {
                 var thumb = com.aurora.client.ui.component.ScrollbarChrome.thumb(scroll, bodyTop(), bodyBottom() - bodyTop(), maxScroll, 24, this.minecraft.getWindow().getGuiScale());
                 com.aurora.client.ui.component.ScrollbarChrome.draw(ctx, listX + LIST_W - 4, thumb, scroll.isDragging(), ThemeToken.ON_BACKGROUND);
@@ -558,8 +558,8 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         if (this.font != null) {
             int titleX = com.aurora.client.ui.util.UiDensity.detailTitleX(compactFrame);
             // Feature identity is already established by the navigation card.
-            if (meta.subtitle != null && !meta.subtitle.isEmpty()) {
-                ctx.drawString(this.font, AuroraFontRenderer.ellipsize(this.font, meta.subtitle, Math.max(0, resetBtn.getX() - titleX - 4), 0), titleX,
+            if (meta.headerLine() != null && !meta.headerLine().isEmpty()) {
+                ctx.drawString(this.font, AuroraFontRenderer.ellipsize(this.font, meta.headerLine(), Math.max(0, resetBtn.getX() - titleX - 4), 0), titleX,
                         compactFrame.y() + 3 + this.font.lineHeight + 1,
                         ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_OVERLAY),0xAA), false);
             }

@@ -63,16 +63,19 @@ class AuroraScreenNavigationTest {
         assertTrue(src.contains("layoutControls[1] = layoutControl(1);"));
         // Module cards: one control per ModuleManager module (34 tiles).
         assertTrue(src.contains("for (Module m : ModuleManager.getInstance().getModules()) {\n            tileControls.put(m.id, tileControl(m));"));
-        assertEquals(34, count(modules, "new Module("), "the grid's tile inventory (ModuleManager)");
+        // ModuleManager derives its cards from FeatureCatalog (ADR 0004).
+        assertTrue(modules.contains("FeatureCatalog.featuresOn(FeatureCatalog.Tab.MODULES)"));
+        assertEquals(34, com.aurora.client.feature.FeatureCatalog.featuresOn(com.aurora.client.feature.FeatureCatalog.Tab.MODULES).size(),
+                "the grid's tile inventory (FeatureCatalog)");
         // Settings headers: navigation only for entries with a detail screen;
         // header toggles for all four entries.
         assertTrue(src.contains("if (metadata.hasDetail()) {\n                headerNavControls.put(metadata.id, headerNavControl(metadata));\n            }"));
         assertTrue(src.contains("headerToggleControls.put(metadata.id, headerToggleControl(metadata));"));
-        assertEquals(4, count(registry, "SETTINGS, \""),
+        assertEquals(4, com.aurora.client.feature.FeatureCatalog.featuresOn(com.aurora.client.feature.FeatureCatalog.Tab.SETTINGS).size(),
                 "four Settings-tab entries (custom_title, text_fonts, theme, interface)");
         // custom_title is registered without settings (grouping chrome, no
-        // navigation zone) — the 5-arg add() leaves its settings empty.
-        assertTrue(registry.contains("add(SETTINGS, \"custom_title\""));
+        // navigation zone) — the 4-arg add() leaves its settings empty.
+        assertTrue(registry.contains(" add(\"custom_title\""));
     }
 
     @Test
@@ -369,7 +372,7 @@ class AuroraScreenNavigationTest {
         assertTrue(src.contains("Component.literal(gridLayout == grid ? \"Selected\" : \"Not selected\")"));
         // Module card: name + description + Enabled/Disabled state.
         assertTrue(src.contains("Component.literal(m.isEnabled() ? \"Enabled\" : \"Disabled\")"));
-        assertTrue(src.contains("() -> Component.literal(m.description)"));
+        assertTrue(src.contains("() -> Component.literal(m.hoverText())"));
         // Header toggle: label + On/Off.
         assertTrue(src.contains("Component.literal(m.isEnabled() ? \"On\" : \"Off\")"));
         // Profiles + header nav: action labels with descriptions.

@@ -474,7 +474,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         if (control != null) return control;
         control = new SemanticActionControl(SemanticAction.button(
                 Component.literal(m.name),
-                () -> Component.literal(m.description),
+                () -> Component.literal(m.hoverText()),
                 () -> Component.literal(m.isEnabled() ? "Enabled" : "Disabled"),
                 () -> true,
                 m::toggle),
@@ -832,7 +832,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             searchField.setX(Math.round(toolbarX() + 2 * TOOL_STEP));
             searchField.setY(Math.round(my));
             searchField.setWidth(searchWidth());
-            ((GlassEditBox) searchField).aurora$renderGlassPass(g);
+            if (searchField instanceof GlassEditBox glassField) glassField.aurora$renderGlassPass(g);
 
             GlassSurface.enableScissor(g, vp.x, vp.y, vp.xEnd(), vp.yEnd());
             if (highlightedTileGlass.length < mods.size()) {

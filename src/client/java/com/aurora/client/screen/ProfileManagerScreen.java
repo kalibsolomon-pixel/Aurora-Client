@@ -687,7 +687,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         // this call to the list clip (C-8).
         EditBox field = layoutEditField(rows, listX);
         if (field == null || !editFieldVisible(rows)) return;
-        ((GlassEditBox) field).aurora$renderGlassPass(ctx);
+        if (field instanceof GlassEditBox glassField) glassField.aurora$renderGlassPass(ctx);
     }
 
     @Override

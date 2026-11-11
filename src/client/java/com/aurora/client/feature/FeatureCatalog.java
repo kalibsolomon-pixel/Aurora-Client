@@ -1,0 +1,230 @@
+package com.aurora.client.feature;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * The one list of Aurora's features and of the mixins each one depends on
+ * (ADR 0004).
+ *
+ * <p>Everything else derives from here: the Modules grid
+ * ({@code module/ModuleManager}) builds its cards from the
+ * {@link Tab#MODULES} entries in this order, {@code screen/FeatureRegistry}
+ * takes each entry's name and tab from here and adds only the settings UI,
+ * and {@code health/FeatureHealth} uses the mixin bindings to turn a feature
+ * off when one of its mixins could not be applied. {@code FeatureCatalogTest}
+ * keeps this file, {@code aurora.mixins.json}, {@code FeatureRegistry} and
+ * {@code AuroraConfig} in agreement.
+ *
+ * <p>No Minecraft imports: this class belongs to the Minecraft-free core
+ * (ADR 0003).
+ */
+public final class FeatureCatalog {
+    private FeatureCatalog() {}
+
+    /** Which tab of the main Aurora screen shows the feature. */
+    public enum Tab { MODULES, SETTINGS }
+
+    /**
+     * A user-facing feature.
+     *
+     * @param summary the short text on the feature's grid card; empty for
+     *                Settings-tab entries, which have no card
+     */
+    public record Feature(String id, String name, String summary, Tab tab) {}
+
+    /**
+     * What one mixin is for.
+     *
+     * @param mixin    name as listed in {@code aurora.mixins.json}
+     * @param provides what stops working without it, as a phrase that
+     *                 completes "Not working in this session: ..."
+     * @param features ids of the features that need it; empty for mixins
+     *                 that serve Aurora as a whole
+     * @param gates    boolean {@code AuroraConfig} fields that are forced off
+     *                 for the session when the mixin is not working, so the
+     *                 rest of the feature does not run half-attached
+     */
+    public record MixinBinding(String mixin, String provides, List<String> features, List<String> gates) {}
+
+    private static final Map<String, Feature> FEATURES = new LinkedHashMap<>();
+    private static final Map<String, MixinBinding> MIXINS = new LinkedHashMap<>();
+
+    /** Every feature: the Modules grid in card order, then the Settings tab in display order. */
+    public static List<Feature> features() {
+        return Collections.unmodifiableList(new ArrayList<>(FEATURES.values()));
+    }
+
+    /** The features on one tab, in display order. */
+    public static List<Feature> featuresOn(Tab tab) {
+        List<Feature> out = new ArrayList<>();
+        for (Feature f : FEATURES.values()) if (f.tab() == tab) out.add(f);
+        return Collections.unmodifiableList(out);
+    }
+
+    /** The feature with this id, or null. */
+    public static Feature feature(String id) { return FEATURES.get(id); }
+
+    /** The feature with this id; an unknown id is a programming error. */
+    public static Feature require(String id) {
+        Feature f = FEATURES.get(id);
+        if (f == null) throw new IllegalStateException("Feature '" + id + "' is not in FeatureCatalog");
+        return f;
+    }
+
+    /** Every mixin binding, in {@code aurora.mixins.json} order. */
+    public static List<MixinBinding> mixins() {
+        return Collections.unmodifiableList(new ArrayList<>(MIXINS.values()));
+    }
+
+    /** The binding for this mixin name, or null. */
+    public static MixinBinding mixin(String name) { return MIXINS.get(name); }
+
+    private static void module(String id, String name, String summary) {
+        FEATURES.put(id, new Feature(id, name, summary, Tab.MODULES));
+    }
+
+    private static void setting(String id, String name) {
+        FEATURES.put(id, new Feature(id, name, "", Tab.SETTINGS));
+    }
+
+    /** Starts a binding; chain {@link Binding#gates} when the mixin has config gates. */
+    private static Binding mixin(String name, String provides, String... features) {
+        Binding b = new Binding(name, provides, List.of(features));
+        MIXINS.put(name, new MixinBinding(name, provides, b.features, List.of()));
+        return b;
+    }
+
+    private record Binding(String name, String provides, List<String> features) {
+        void gates(String... gates) {
+            MIXINS.put(name, new MixinBinding(name, provides, features, List.of(gates)));
+        }
+    }
+
+    static {
+        // ---- Modules grid, in card order ----
+        module("zoom", "Zoom", "Optical-style zoom bound to a key. Hold it to narrow your field of view and magnify whatever you're looking at.");
+        module("full_bright", "Full Bright", "Overrides Minecraft's gamma so dark areas become fully visible. Caves, the underwater, and night-time terrain light up.");
+        module("no_fog", "No Fog", "Pushes back the distance fog that normally hides far terrain. You see further across oceans and open landscapes.");
+        module("pack_tweaks", "Pack Tweaks", "A bundle of small quality-of-life visual tweaks — totem particle size, shield rendering, and water/lava clarity.");
+        module("player_health", "Entity Health", "Floats a numeric health value above mobs and players so you can read exactly how much damage is left to deal.");
+        module("free_look", "FreeLook", "Hold a key to swivel the camera around your character without changing the direction you're actually moving or facing.");
+        module("saturation_bar", "Saturation Bar", "Overlays your hidden saturation level on top of the food bar.");
+        module("block_overlay", "Block Overlay", "Replaces the thin vanilla block-selection box with a customizable outline and/or colored fill.");
+        module("toggle_sprint_sneak", "Toggle Sprint/Sneak", "Turns sprint and sneak into press-once toggles instead of hold-to-keep keys.");
+        module("alerts", "Alerts", "On-screen popup warnings for low armor durability, low hunger, and potion effects about to expire. All alerts share the same popup and sound system.");
+        module("crosshair", "Crosshair", "Replaces the vanilla crosshair with a fully customizable one.");
+        module("hitbox", "Hitbox", "Draws entity hitboxes with your own color, line width, and optional eye-level and look-direction lines.");
+        module("better_hitreg", "Better Hitreg", "Client-side hit registration feedback for PvP — plays your hit sound and hurt animation the instant you swing instead of waiting for the server, tracks ghosted and misplaced hits, and adds reach rings, target hitboxes and a practice arena. Original project by Jass.");
+        module("hit_color", "Hit Color", "Recolors the red flash that overlays an entity when it takes damage.");
+        module("glint_color", "Glint Color", "Recolors the animated shimmer that enchanted items and armor give off.");
+        module("info_module", "Info HUD", "A configurable corner readout of useful at-a-glance info — FPS, coordinates, time of day, facing, biome, dimension, light level, playtime and more.");
+        module("cps", "CPS", "Shows your current clicks-per-second as a HUD counter.");
+        module("armor_hud", "Armor HUD", "Displays your four equipped armor pieces and their remaining durability on the HUD.");
+        module("reach_display", "Reach Display", "Shows the exact distance to the last entity you attacked.");
+        module("potion_hud", "Potion HUD", "A cleaner replacement for the default status-effect icons, listing your active potion effects with a readable countdown timer.");
+        module("ping", "Ping", "Surfaces connection latency as real numbers — as a HUD readout, as a value in the tab list, and optionally under player nametags.");
+        module("totem_pop", "Totem Pop Counter", "Counts how many Totems of Undying you've popped, and optionally tracks nearby players' pops too.");
+        module("waypoints", "Waypoints", "Place persistent world markers rendered as beacon beams and/or block highlights.");
+        module("container_preview", "Container Preview", "Hover over a shulker box (or your ender chest) in any inventory to see its full contents in a grid tooltip.");
+        module("item_physics", "Item Physics", "Gives dropped items more natural physics — they lie flat where they land instead of hovering and spinning.");
+        module("particles", "Particles", "Per-particle control over every vanilla particle type — hide ones you find distracting and resize the rest.");
+        module("item_scale", "Item Scale", "Customize the scale, rotation, and screen translation of individual item models.");
+        module("held_item_seams", "Held Item Seam Fix", "Hides the hairline seams that can appear between the faces of your first-person held items at certain camera angles.");
+        module("animations", "Animations", "Swing & view-bob curves, classic 1.8-style damage camera tilt, retro backwards-walking & sneak poses, idle held-item sway, and smooth entity rotation.");
+        module("keystrokes", "Keystrokes", "Displays your WASD, mouse, jump, and sneak keys as a HUD overlay that lights up in real time as you press them.");
+        module("minimap", "Minimap", "A top-down map of the world around you, shown as a HUD overlay. Renders terrain, waypoints, and nearby entities as colored dots.");
+        module("world_map", "World Map", "A full-screen, pannable world map of your explored terrain.");
+        module("resourcepack_browser", "Resourcepack Browser", "Browse and install community resource packs directly from Modrinth. Search, preview, and one-click install straight into your resourcepacks folder.");
+        module("miscellaneous", "Display Settings", "Display and responsiveness controls — smooth camera, frame pacing, latency, input handling, server-list dragging.");
+
+        // ---- Settings tab, in display order ----
+        setting("custom_title", "Custom Title");
+        setting("text_fonts", "Text & Fonts");
+        setting("theme", "Theme");
+        setting("interface", "Interface");
+
+        // ---- Mixins, in aurora.mixins.json order ----
+        mixin("WindowMixin", "nothing (kept empty for compatibility)");
+        mixin("TitleScreenMixin", "the Aurora title screen", "custom_title").gates("customTitleScreen");
+        mixin("InGameHudMixin", "hiding the vanilla crosshair under Aurora's", "crosshair").gates("crosshairEnabled");
+        mixin("GameRendererMixin", "zooming the view", "zoom").gates("zoomEnabled");
+        mixin("RenderTargetMixin", "nothing (kept empty for compatibility)");
+        mixin("PlayerListHudMixin", "numeric ping in the tab list", "ping").gates("tabPingEnabled");
+        mixin("InGameHudFoodMixin", "the saturation overlay on the food bar", "saturation_bar").gates("saturationBarEnabled");
+        mixin("MouseMixin", "adjusting zoom with the scroll wheel", "zoom");
+        mixin("EntityMixin", "the FreeLook camera", "free_look").gates("freeLookEnabled");
+        mixin("CameraUpdateMixin", "the FreeLook camera and camera smoothing", "free_look", "miscellaneous")
+                .gates("freeLookEnabled", "smoothCamera");
+        mixin("VertexRenderingMixin", "replacing the vanilla block outline", "block_overlay").gates("blockOverlayEnabled");
+        mixin("SimpleOptionMixin", "raising brightness past the vanilla limit", "full_bright").gates("fullBright");
+        mixin("EntityRenderDispatcherMixin", "replacing the vanilla hitboxes", "hitbox")
+                .gates("hitboxEnabled", "hitboxTargetEnabled");
+        mixin("RenderSystemMixin", "Aurora's frame limiter after each frame", "miscellaneous")
+                .gates("smoothFramePacer", "adaptiveRenderSleeping");
+        mixin("GameRendererBobMixin", "the view-bob curve", "animations");
+        mixin("HeldItemRendererMixin", "the swing animation curve", "animations");
+        mixin("MouseAccessor", "decoupled mouse input", "miscellaneous").gates("inputSamplingDecoupled");
+        mixin("MinecraftClientRenderMixin", "frame pacing, decoupled mouse input and blurred glass", "miscellaneous")
+                .gates("smoothFramePacer", "adaptiveRenderSleeping", "inputSamplingDecoupled");
+        mixin("MixinOverlayTexture", "recoloring the hurt flash", "hit_color").gates("hitColorEnabled");
+        mixin("EquipmentLayerRendererMixin", "tinting armor and trims with the hit color", "hit_color")
+                .gates("hitColorTintArmor", "hitColorTintArmorTrims");
+        mixin("ReloadableTextureMixin", "recoloring the enchantment glint", "glint_color").gates("glintColorEnabled");
+        mixin("GlintRenderTypesMixin", "Alternative Glint", "glint_color").gates("glintColorAlternative");
+        mixin("GlintBufferSourceMixin", "Alternative Glint", "glint_color").gates("glintColorAlternative");
+        mixin("RenderTypesGlintAccessor", "Alternative Glint", "glint_color").gates("glintColorAlternative");
+        mixin("InGameHudPotionOverlayMixin", "hiding the vanilla effect icons behind the Potion HUD", "potion_hud");
+        mixin("NoFogMixin", "pushing back the distance fog", "no_fog").gates("noFogEnabled");
+        mixin("UnderwaterClarityMixin", "underwater clarity", "pack_tweaks").gates("underwaterClarityEnabled");
+        mixin("MouseClickTrackerMixin", "counting clicks for the CPS readouts", "cps", "keystrokes", "info_module");
+        mixin("DamageTiltMixin", "the 1.8-style damage tilt", "animations").gates("damageTiltEnabled");
+        mixin("HotbarItemBounceMixin", "the hotbar item bounce", "animations").gates("hotbarBounceEnabled");
+        mixin("PlayerEntityRendererMixin", "ping and totem pops under nametags", "ping", "totem_pop")
+                .gates("nametagPingEnabled", "nametagTotemPopsEnabled");
+        mixin("LivingEntityRendererExtractMixin", "entity movement smoothing and entity health labels", "animations", "player_health")
+                .gates("entityMovementSmoothingEnabled", "playerHealthIndicators");
+        mixin("LavaClarityMixin", "lava clarity", "pack_tweaks").gates("lavaClarityEnabled");
+        mixin("LavaOverlayMixin", "hiding the lava overlay", "pack_tweaks").gates("lavaHideOverlay");
+        mixin("ClientPlayerAttackMixin", "limiting entity health to entities you attacked", "player_health")
+                .gates("playerHealthOnlyAttacked");
+        mixin("ClientPlayNetworkHandlerWorldJoinMixin", "clearing per-entity caches when you change worlds");
+        mixin("TotemParticleMixin", "totem particle size", "pack_tweaks").gates("totemTweaksEnabled");
+        mixin("HeldItemRendererTweaksMixin", "item scale, idle sway and shield position", "item_scale", "animations", "pack_tweaks")
+                .gates("itemScaleEnabled", "idleSwayEnabled", "shieldTweaksEnabled");
+        mixin("HeldItemSeamFixMixin", "the held item seam fix", "held_item_seams").gates("fixHeldItemSeams");
+        mixin("PlayerHealthLabelMixin", "entity health labels", "player_health").gates("playerHealthIndicators");
+        mixin("ParticleAccessor", "resizing and recoloring particles", "particles", "pack_tweaks")
+                .gates("particleControlsEnabled", "totemTweaksEnabled");
+        mixin("ClientPacketListenerEntityEventMixin", "counting totem pops", "totem_pop").gates("totemPopEnabled");
+        mixin("ItemTooltipImageMixin", "container previews in tooltips", "container_preview").gates("containerPreviewEnabled");
+        mixin("ItemContainerContentsTooltipMixin", "container previews in tooltips", "container_preview")
+                .gates("containerPreviewEnabled");
+        mixin("ItemEntityRendererExtractMixin", "dropped item physics", "item_physics").gates("itemPhysicsEnabled");
+        mixin("ItemEntityRendererSubmitMixin", "dropped item physics", "item_physics").gates("itemPhysicsEnabled");
+        mixin("ParticleEngineMixin", "hiding, resizing and recoloring particles", "particles").gates("particleControlsEnabled");
+        mixin("PlayerItemInHandLayerMixin", "the shield status color in third person", "pack_tweaks").gates("shieldStatusEnabled");
+        mixin("ShieldSpecialRendererMixin", "the shield status color", "pack_tweaks").gates("shieldStatusEnabled");
+        mixin("MixinFont", "Aurora's fonts", "text_fonts");
+        mixin("ScreenshotMixin", "blurred glass (it cannot be paused safely during screenshots)");
+        mixin("AbstractButtonMixin", "Aurora styling on vanilla buttons", "custom_title");
+        mixin("EditBoxMixin", "Aurora styling on text fields", "custom_title");
+        mixin("ServerListDragReorderMixin", "drag-to-reorder in the server list", "miscellaneous").gates("serverListDragReorder");
+        mixin("MultiplayerServerListWidgetMixin", "numeric ping in the server list", "ping");
+        mixin("ClientLevelWorldMapMixin", "refreshing the maps when a block changes", "world_map", "minimap");
+        mixin("ReflexMinecraftMixin", "automatic latency reduction");
+        mixin("ItemStackRenderStateAccessor", "flat item icons in Aurora screens");
+        mixin("ScreenPanoramaAccessor", "blurred glass over the menu panorama");
+        for (String hitreg : List.of("ArmorMixin", "AttackMixin", "ChunkMixin", "DamageMixin", "EntityAccessor",
+                "GlowMixin", "NetworkMixin", "ParticleMixin", "PlayerMixin", "RenderMixin", "ServerMixin",
+                "SoundMixin", "SourceMixin")) {
+            // Better Hitreg's timing core only works whole: one missing piece
+            // (the server-copy cancel without the local replay, say) is worse
+            // than none, so any failure turns the entire feature off.
+            mixin("hitreg." + hitreg, "Better Hitreg", "better_hitreg").gates("hitregEnabled");
+        }
+    }
+}

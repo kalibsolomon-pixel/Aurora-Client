@@ -47,6 +47,15 @@ public class Module {
         return cachedMeta;
     }
 
+    /**
+     * The card's hover text: the summary, preceded by what is not working in
+     * this session when one of the feature's mixins could not be applied.
+     */
+    public String hoverText() {
+        String note = com.aurora.client.health.FeatureHealth.noteFor(id);
+        return note == null ? description : note + " " + description;
+    }
+
     public boolean isEnabled() {
         FeatureMetadata fm = meta();
         return fm != null && fm.isEnabled();

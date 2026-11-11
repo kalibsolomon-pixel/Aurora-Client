@@ -289,11 +289,12 @@ class ConformanceManifestTest {
      */
     @Test
     void auroraScreenSemanticInventoryMatchesLiveSource() throws IOException {
-        int modules = countOccurrences(read(SRC + "module/ModuleManager.java"), "new Module(");
+        // The grid's cards are derived from FeatureCatalog (ADR 0004).
+        int modules = com.aurora.client.feature.FeatureCatalog.featuresOn(com.aurora.client.feature.FeatureCatalog.Tab.MODULES).size();
         int segmentedPeers = com.aurora.client.theme.ThemeRoundness.values().length;
         int hosted = 3 + 10 + segmentedPeers;               // enums + accent + segmented peers
         int screenOwned = 2 + 1 + 2 + modules + 0 + 4;      // tabs, profiles, layout, tiles, nav, toggles
-        assertEquals(34, modules, "ModuleManager tile count");
+        assertEquals(34, modules, "FeatureCatalog module tile count");
         assertEquals(3, segmentedPeers, "Corner Style is the only segmented row");
         assertEquals(16, hosted, "component-owned hosted controls");
         assertEquals(43, screenOwned, "screen-owned chrome controls");

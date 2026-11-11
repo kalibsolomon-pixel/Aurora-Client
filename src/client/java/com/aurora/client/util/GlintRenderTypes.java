@@ -24,6 +24,9 @@ public final class GlintRenderTypes {
 
     /** Vanilla foil type ↔ its masked equivalent, in both directions. */
     public static java.util.Map<RenderType, RenderType> counterparts() {
+        // The accessor's static methods are unusable stubs when its mixin
+        // did not apply; with no pairs, every caller leaves vanilla alone.
+        if (com.aurora.client.health.MixinHealth.failed("RenderTypesGlintAccessor")) return java.util.Map.of();
         if (counterparts == null) {
             RenderType glint = com.aurora.client.mixin.RenderTypesGlintAccessor.aurora$glint();
             RenderType translucent = com.aurora.client.mixin.RenderTypesGlintAccessor.aurora$glintTranslucent();

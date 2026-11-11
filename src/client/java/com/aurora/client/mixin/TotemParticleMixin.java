@@ -33,7 +33,8 @@ public abstract class TotemParticleMixin {
         if (!cfg.totemTweaksEnabled) return;
         float factor = Math.max(25, Math.min(100, cfg.totemParticleScale)) / 100.0f;
 
-        ParticleAccessor self = (ParticleAccessor) (Object) this;
+        // ParticleAccessor is a separate mixin; without it there is no scale to set.
+        if (!((Object) this instanceof ParticleAccessor self)) return;
         self.aurora$setScale(self.aurora$getScale() * factor);
     }
 }

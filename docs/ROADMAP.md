@@ -16,13 +16,22 @@ Agreed 2026-11-10. The decisions behind this order are in [docs/adr/](adr/):
 
 Steps 1 to 3 happen on 1.21.11 and each makes the port cheaper or safer. Nothing after step 4 is designed before the port shows where the breaks are.
 
-1. **Fail-soft foundation (1.21.11).** Single feature registry that records each feature's mixins. Fail-soft mixins with a per-feature health flag. A `breaks` list in `fabric.mod.json`. The copy-diagnostics report with its built-in benchmark.
+1. **Fail-soft foundation (1.21.11).** Single feature registry that records each feature's mixins. Fail-soft mixins with a per-feature health flag. A `breaks` list in `fabric.mod.json`. The copy-diagnostics report with its built-in benchmark. *Built 2026-11-11 on `feat/fail-soft-foundation`; see "Step 1 status" below.*
 2. **Fair play (1.21.11).** Classify every feature. Make minimap player dots, player entity health, other players' totem pops and FreeLook default-off. Document Better Hitreg as local feedback only.
 3. **Groundwork (1.21.11).** Move the already Minecraft-free packages into a core Gradle module. Measure the overhead baseline and set the budget. Add third-party notices. Clean up the repo for contributors.
 4. **Port.** 26.1, then 26.2, then the newest release, each made to build and boot. Release the newest. Freeze 1.21.11 to crash and security fixes.
 5. **Extract the layers.** Define the ports from what actually broke. Move every mixin, the glass renderer and the Fabric API calls into the version adapter.
 6. **Shader-drawn shapes.** Behind `RenderUtil`, measured against the existing caches.
 7. **Later, in this order.** Apollo restriction support, once its license and detection behaviour are checked. Friends and online status. NeoForge if asked for. Small vanilla optimizations under the ADR 0005 rule as they turn up.
+
+## Step 1 status
+
+Built and verified by automated tests and three dev-client boots (unmodified; ten mixins disabled plus one broken injection point; one mixin disabled with the report logged). Still open before step 1 counts as done:
+
+- Look at the feature card tooltip, the detail-screen header and the Copy Diagnostics button on screen. They were not checked visually.
+- Boot the tier-1 matrix (Sodium, Iris, VulkanMod, ImmediatelyFast, EntityCulling, Lithium, Mod Menu) with `-Daurora.diagnostics.log=true` and read each report.
+- The `breaks` list holds only the standalone Better Hitreg mod. Add a mod when a boot shows it cannot work with Aurora, not before.
+- `FeatureManager` still lists the runtime tick services by hand. It is not a list of features, so it was left alone.
 
 ## Standing rules until the port ships
 
