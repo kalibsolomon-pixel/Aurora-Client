@@ -41,7 +41,7 @@ Six pull requests are open and stacked. **None is merged: merging is blocked for
 | [#3](https://github.com/kalibsolomon-pixel/Aurora-Client/pull/3) | `feat/fair-play-defaults` | Roadmap step 2, and this file | Passing |
 | [#4](https://github.com/kalibsolomon-pixel/Aurora-Client/pull/4) | `feat/core-module` | Roadmap step 3, the core module (stacked on #3) | See the PR |
 | [#5](https://github.com/kalibsolomon-pixel/Aurora-Client/pull/5) | `feat/fair-play-decisions` | The owner's three fair-play decisions (stacked on #4) | See the PR |
-| #6 | `feat/overhead-budget` | Roadmap step 3, the overhead budget (stacked on #5) | See the PR |
+| [#6](https://github.com/kalibsolomon-pixel/Aurora-Client/pull/6) | `feat/overhead-budget` | Roadmap step 3, the overhead budget (stacked on #5) | See the PR |
 
 This file was committed with PR #3 and is updated in PR #4.
 
