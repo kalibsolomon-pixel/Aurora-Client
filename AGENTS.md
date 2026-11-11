@@ -94,4 +94,4 @@ The full conventions and their history are §6 of the old guide; violating them 
 
 - Work on a branch; the owner merges pull requests. Stack dependent branches and say so in the PR.
 - When a change alters how something works, update the doc that describes it in the same change: the ADR, `docs/ROADMAP.md`, `docs/STATUS.md`, or the relevant reference in `docs/`.
-- Reference documents: [ARCHITECTURE](docs/ARCHITECTURE.md), [DESIGN_LANGUAGE](docs/DESIGN_LANGUAGE.md), [RELEASE_PROCESS](docs/RELEASE_PROCESS.md), [FAIR_PLAY](docs/FAIR_PLAY.md), [OVERHEAD_BUDGET](docs/OVERHEAD_BUDGET.md), [LAUNCHER_ACTIVITY_PROTOCOL](docs/LAUNCHER_ACTIVITY_PROTOCOL.md), [HITREG_INTEGRATION_CATALOG](docs/HITREG_INTEGRATION_CATALOG.md).
+- Reference documents: [ARCHITECTURE](docs/ARCHITECTURE.md), [DESIGN_LANGUAGE](docs/DESIGN_LANGUAGE.md), [RELEASE_PROCESS](docs/RELEASE_PROCESS.md), [FAIR_PLAY](docs/FAIR_PLAY.md), [OVERHEAD_BUDGET](docs/OVERHEAD_BUDGET.md), [MOD_MATRIX](docs/MOD_MATRIX.md), [LAUNCHER_ACTIVITY_PROTOCOL](docs/LAUNCHER_ACTIVITY_PROTOCOL.md), [HITREG_INTEGRATION_CATALOG](docs/HITREG_INTEGRATION_CATALOG.md).

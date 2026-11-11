@@ -28,8 +28,8 @@ Steps 1 to 3 happen on 1.21.11 and each makes the port cheaper or safer. Nothing
 
 Built and verified by automated tests and three dev-client boots (unmodified; ten mixins disabled plus one broken injection point; one mixin disabled with the report logged). Still open before step 1 counts as done:
 
-- Look at the feature card tooltip, the detail-screen header and the Copy Diagnostics button on screen. They were not checked visually.
-- Boot the tier-1 matrix (Sodium, Iris, VulkanMod, ImmediatelyFast, EntityCulling, Lithium, Mod Menu) with `-Daurora.diagnostics.log=true` and read each report.
+- ~~Look at the detail-screen header and the Copy Diagnostics button on screen.~~ Checked 2026-11-11: the header names what is not working, and the report reaches the clipboard. The grid card has no visible tooltip at all: its note only reaches screen-reader narration. Open for the owner whether a broken feature should show on its card.
+- ~~Boot the tier-1 matrix.~~ Done 2026-11-11 on 1.21.11, all three sets pass: [MOD_MATRIX.md](MOD_MATRIX.md). Rerun it for each ported version with `tools/matrix/`.
 - The `breaks` list holds only the standalone Better Hitreg mod. Add a mod when a boot shows it cannot work with Aurora, not before.
 - `FeatureManager` still lists the runtime tick services by hand. It is not a list of features, so it was left alone.
 
