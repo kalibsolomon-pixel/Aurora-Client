@@ -25,6 +25,8 @@ public class AuroraClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         LOGGER.info("Initializing Aurora Client...");
+        com.aurora.client.config.ConfigDirectory.set(
+                net.fabricmc.loader.api.FabricLoader.getInstance().getConfigDir());
 
         com.aurora.client.util.ParkDiagnosticsControl.initialize();
 

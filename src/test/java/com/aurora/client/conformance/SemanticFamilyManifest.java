@@ -102,6 +102,8 @@ public final class SemanticFamilyManifest {
 
     /** Root-relative source helper. */
     public static final String SRC = "src/client/java/com/aurora/client/";
+    /** The Minecraft-free core module (ADR 0003). */
+    public static final String CORE = "core/src/main/java/com/aurora/client/";
 
     /** The production conformance families (§7 of the closure task — actual families only). */
     public static final List<Family> FAMILIES = List.of(
@@ -195,7 +197,7 @@ public final class SemanticFamilyManifest {
                             + "except ColorPicker's hex field (intentional screen-level Cancel)."),
             new Family("scroll-host", Hover.DIRECT_MANIPULATION, Press.N_A,
                     Sound.NONE_BY_CONTRACT, Keyboard.N_A, false, false, false, true,
-                    List.of(SRC + "ui/util/ClipBand.java",
+                    List.of(CORE + "ui/util/ClipBand.java",
                             SRC + "screen/AuroraScreen.java",
                             SRC + "screen/ManagerListScreen.java",
                             SRC + "screen/ResourcePackBrowserScreen.java",

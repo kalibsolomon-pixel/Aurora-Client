@@ -1,40 +1,23 @@
 package com.aurora.client.config.profile;
 
 import com.aurora.client.config.AuroraConfig;
+import com.aurora.client.config.ConfigDirectory;
 import com.google.gson.Gson;
-import net.fabricmc.loader.impl.FabricLoaderImpl;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
-import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.*;
 
 class FramePacingPersistenceTest {
     @TempDir static Path temporary;
-    private static Object priorConfigDir;
-    private static Field configDir;
     private static final Gson GSON = new Gson();
 
-    @BeforeAll static void isolateAllPersistenceFromDeveloperSettings() throws Exception {
-        configDir = FabricLoaderImpl.class.getDeclaredField("configDir");
-        configDir.setAccessible(true);
-        priorConfigDir = configDir.get(FabricLoaderImpl.INSTANCE);
-        configDir.set(FabricLoaderImpl.INSTANCE, temporary);
-        // These owners cache their paths at initialization. Fail before any
-        // write if another test initialized either with a different location.
-        for (var owner : new Class<?>[]{AuroraConfig.class, ProfileManager.class}) {
-            String name = owner == AuroraConfig.class ? "CONFIG_PATH" : "PROFILES_DIR";
-            Field path = owner.getDeclaredField(name);
-            path.setAccessible(true);
-            assertEquals(temporary, ((Path) path.get(null)).getParent());
-        }
-    }
-
-    @AfterAll static void restoreLoaderPath() throws Exception {
-        configDir.set(FabricLoaderImpl.INSTANCE, priorConfigDir);
+    @BeforeAll static void isolateAllPersistenceFromDeveloperSettings() {
+        // AuroraConfig and ProfileManager resolve their paths from this on every use.
+        ConfigDirectory.set(temporary);
     }
 
     @Test void factoryDefaultsAreStillTheAuditedDefaults() {

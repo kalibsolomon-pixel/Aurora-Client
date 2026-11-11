@@ -1,14 +1,15 @@
 package com.aurora.client.config.profile;
 
-import com.aurora.client.AuroraClient;
 import com.aurora.client.config.AuroraConfig;
+import com.aurora.client.config.ConfigDirectory;
 import com.aurora.client.theme.ThemeDefinition;
 import com.aurora.client.theme.ThemeMigrator;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParseException;
-import net.fabricmc.loader.api.FabricLoader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -53,8 +54,9 @@ import java.util.function.Consumer;
  */
 public class ProfileManager {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-    private static final Path PROFILES_DIR =
-            FabricLoader.getInstance().getConfigDir().resolve("profiles");
+    private static final Logger LOGGER = LoggerFactory.getLogger("Aurora");
+
+    private static Path profilesDir() { return ConfigDirectory.get().resolve("profiles"); }
 
     /** Factory-default snapshot built once from a fresh AuroraConfig instance. */
     private static final AuroraConfig DEFAULTS = new AuroraConfig();
@@ -102,7 +104,7 @@ public class ProfileManager {
         for (Consumer<String> l : switchListeners) {
             try { l.accept(name); }
             catch (Throwable t) {
-                AuroraClient.LOGGER.warn("ProfileManager: switch listener threw", t);
+                LOGGER.warn("ProfileManager: switch listener threw", t);
             }
         }
     }
@@ -120,9 +122,9 @@ public class ProfileManager {
      * <p>Must be called AFTER {@link AuroraConfig#load()}.
      */
     public void load() {
-        try { Files.createDirectories(PROFILES_DIR); }
+        try { Files.createDirectories(profilesDir()); }
         catch (IOException e) {
-            AuroraClient.LOGGER.error("ProfileManager: could not create profiles dir", e);
+            LOGGER.error("ProfileManager: could not create profiles dir", e);
         }
         // Temp files left by a crash mid-write never affect the real profile; tidy them.
         for (String name : scanNames()) com.aurora.client.config.AtomicJsonWriter.deleteStaleTemps(pathFor(name));
@@ -148,11 +150,11 @@ public class ProfileManager {
         p.name = "default";
         p.createdAtMs = System.currentTimeMillis();
         writeProfileFile(p);
-        AuroraClient.LOGGER.info("ProfileManager: created default profile");
+        LOGGER.info("ProfileManager: created default profile");
     }
 
     private boolean hasAnyProfileFile() {
-        try (DirectoryStream<Path> ds = Files.newDirectoryStream(PROFILES_DIR, "*.json")) {
+        try (DirectoryStream<Path> ds = Files.newDirectoryStream(profilesDir(), "*.json")) {
             return ds.iterator().hasNext();
         } catch (IOException e) {
             return false;
@@ -310,7 +312,7 @@ public class ProfileManager {
         // wait: the old inline write raced a queued async write for the same
         // fixed .tmp path, and that older snapshot could land afterwards.
         if (!WRITER.flush(com.aurora.client.config.AuroraConfig.SHUTDOWN_FLUSH_MS))
-            AuroraClient.LOGGER.error("ProfileManager: profile '{}' was NOT confirmed saved; the previous file is intact", p.name);
+            LOGGER.error("ProfileManager: profile '{}' was NOT confirmed saved; the previous file is intact", p.name);
     }
 
     // ------------------------------------------------------------------
@@ -332,7 +334,7 @@ public class ProfileManager {
                 JsonElement el = GSON.toJsonTree(value, f.getGenericType());
                 p.fields.put(f.getName(), el);
             } catch (Throwable t) {
-                AuroraClient.LOGGER.warn(
+                LOGGER.warn(
                         "ProfileManager: skipped field '{}' during capture", f.getName(), t);
             }
         }
@@ -350,7 +352,7 @@ public class ProfileManager {
         // Pre-pass: fold legacy themePrimary/themeSecondary entries into the
         // structured "theme" object so old profiles keep their customization.
         if (p != null) {
-            ThemeMigrator.migrateProfileFields(p.fields, AuroraClient.LOGGER);
+            ThemeMigrator.migrateProfileFields(p.fields, LOGGER);
         }
         // 1. Reset all profile-scoped fields to factory defaults so any
         //    setting absent from the profile (e.g. a newly-added setting)
@@ -366,7 +368,7 @@ public class ProfileManager {
                 else if (def instanceof java.util.List<?> l) def = new java.util.ArrayList<>(l);
                 f.set(live, def);
             } catch (Throwable t) {
-                AuroraClient.LOGGER.warn(
+                LOGGER.warn(
                         "ProfileManager: could not reset field '{}' to default", f.getName(), t);
             }
         }
@@ -376,7 +378,7 @@ public class ProfileManager {
         for (Map.Entry<String, JsonElement> e : p.fields.entrySet()) {
             String fieldName = e.getKey();
             if (!liveNames.contains(fieldName) || !ProfileFieldSet.isProfileScoped(fieldName)) {
-                AuroraClient.LOGGER.warn(
+                LOGGER.warn(
                         "ProfileManager: profile '{}' references field '{}' which no longer exists; skipped",
                         p.name, fieldName);
                 continue;
@@ -389,10 +391,10 @@ public class ProfileManager {
                 Object value = GSON.fromJson(e.getValue(), t);
                 f.set(live, value);
             } catch (NoSuchFieldException nsfe) {
-                AuroraClient.LOGGER.warn(
+                LOGGER.warn(
                         "ProfileManager: field '{}' removed since profile was saved; skipped", fieldName);
             } catch (Throwable t) {
-                AuroraClient.LOGGER.warn(
+                LOGGER.warn(
                         "ProfileManager: failed to restore field '{}'; skipped", fieldName, t);
             }
         }
@@ -414,7 +416,7 @@ public class ProfileManager {
     private void applyProfileByName(String name) {
         Profile p = readProfileFile(name);
         if (p == null) {
-            AuroraClient.LOGGER.warn(
+            LOGGER.warn(
                     "ProfileManager: profile '{}' missing; falling back to defaults only", name);
             p = new Profile(name); // empty → live config stays at defaults after reset
         }
@@ -460,7 +462,7 @@ public class ProfileManager {
     // ------------------------------------------------------------------
 
     private Path pathFor(String name) {
-        return PROFILES_DIR.resolve(sanitizeName(name) + ".json");
+        return profilesDir().resolve(sanitizeName(name) + ".json");
     }
 
     private Profile readProfileFile(String name) {
@@ -479,7 +481,7 @@ public class ProfileManager {
             if (p.name == null || p.name.isEmpty()) p.name = name;
             return p;
         } catch (IOException | JsonParseException e) {
-            AuroraClient.LOGGER.error("ProfileManager: failed to read profile '{}'", name, e);
+            LOGGER.error("ProfileManager: failed to read profile '{}'", name, e);
             return null;
         }
     }
@@ -493,7 +495,7 @@ public class ProfileManager {
         try {
             json = GSON.toJson(p);
         } catch (Throwable t) {
-            AuroraClient.LOGGER.error("ProfileManager: failed to serialize profile '{}'", p.name, t);
+            LOGGER.error("ProfileManager: failed to serialize profile '{}'", p.name, t);
             return;
         }
         WRITER.submit(pathFor(p.name), json);
@@ -511,7 +513,7 @@ public class ProfileManager {
         // had already reached the disk when the directory was read.
         var pending = WRITER.latestAll();
         List<String> names = new ArrayList<>();
-        try (DirectoryStream<Path> ds = Files.newDirectoryStream(PROFILES_DIR, "*.json")) {
+        try (DirectoryStream<Path> ds = Files.newDirectoryStream(profilesDir(), "*.json")) {
             for (Path p : ds) {
                 try {
                     String json = Files.readString(p);
@@ -521,16 +523,16 @@ public class ProfileManager {
                             : stripJsonExt(p.getFileName().toString());
                     names.add(n);
                 } catch (Exception e) {
-                    AuroraClient.LOGGER.warn("ProfileManager: skipping unreadable profile {}", p, e);
+                    LOGGER.warn("ProfileManager: skipping unreadable profile {}", p, e);
                 }
             }
         } catch (IOException e) {
-            AuroraClient.LOGGER.error("ProfileManager: failed to scan profiles dir", e);
+            LOGGER.error("ProfileManager: failed to scan profiles dir", e);
         }
         // Overlay queued writes/deletes so a just-created profile exists and a
         // just-deleted one does not, before the disk catches up.
         for (var e : pending.entrySet()) {
-            if (!PROFILES_DIR.equals(e.getKey().getParent())) continue;
+            if (!profilesDir().equals(e.getKey().getParent())) continue;
             String fileName = e.getKey().getFileName().toString();
             names.removeIf(n -> pathFor(n).getFileName().toString().equals(fileName));
             if (e.getValue() == com.aurora.client.config.AtomicJsonWriter.DELETED) continue;

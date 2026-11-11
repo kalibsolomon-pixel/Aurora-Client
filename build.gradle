@@ -3,6 +3,8 @@ plugins {
 	id 'maven-publish'
 }
 
+evaluationDependsOn(':core')
+
 version = project.mod_version
 group = project.maven_group
 
@@ -64,6 +66,9 @@ dependencies {
         include "com.twelvemonkeys.common:${it}:3.12.0"
     }
 
+	// The Minecraft-free core (ADR 0003); its classes are packed into this jar below.
+	implementation project(':core')
+
 	testImplementation sourceSets.client.output
 	testImplementation "org.junit.jupiter:junit-jupiter:5.11.4"
 	testRuntimeOnly "org.junit.platform:junit-platform-launcher"
@@ -123,6 +128,8 @@ jar {
 	def projectName = project.name
 	inputs.property "projectName", projectName
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+	from(project(':core').sourceSets.main.output)
 
 	from("LICENSE") {
 		rename { "${it}_$projectName"}

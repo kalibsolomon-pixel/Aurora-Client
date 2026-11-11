@@ -24,10 +24,9 @@ import java.util.Set;
  * a mixin package cannot be loaded as ordinary classes.
  */
 public final class AuroraMixinPlugin implements IMixinConfigPlugin {
-    public static final String MIXIN_PACKAGE = "com.aurora.client.mixin";
+    public static final String MIXIN_PACKAGE = MixinHealth.MIXIN_PACKAGE;
 
-    /** Comma-separated mixin names, as listed in {@code aurora.mixins.json}, to skip. */
-    public static final String DISABLE_PROPERTY = "aurora.mixin.disable";
+    public static final String DISABLE_PROPERTY = MixinHealth.DISABLE_PROPERTY;
 
     private static final Logger LOGGER = LoggerFactory.getLogger("aurora/health");
 

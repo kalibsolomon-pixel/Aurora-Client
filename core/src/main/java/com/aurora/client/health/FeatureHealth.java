@@ -121,7 +121,7 @@ public final class FeatureHealth {
         }
         return "Not working in this session: " + String.join("; ", lost) + ". "
                 + (byOption
-                    ? "Turned off with -D" + AuroraMixinPlugin.DISABLE_PROPERTY + "."
+                    ? "Turned off with -D" + MixinHealth.DISABLE_PROPERTY + "."
                     : "Aurora could not attach to this game or mod set.");
     }
 

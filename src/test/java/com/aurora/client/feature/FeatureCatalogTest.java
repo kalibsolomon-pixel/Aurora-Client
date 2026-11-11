@@ -1,5 +1,6 @@
 package com.aurora.client.feature;
 
+import com.aurora.client.SourceTree;
 import com.aurora.client.config.AuroraConfig;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -183,15 +184,14 @@ class FeatureCatalogTest {
      * vanilla sends the document names.
      */
     @Test void nothingInTheModSendsToAServerExceptTheTwoDocumentedKeys() throws Exception {
-        Path root = Path.of("src/client/java/com/aurora/client");
         List<String> forbidden = List.of("Serverbound", "ClientPlayNetworking", "PayloadTypeRegistry",
                 "CustomPacketPayload", "tickRateManager", "sendCommand(", "sendUnsignedCommand(");
         List<String> chatSends = new ArrayList<>();
         List<String> optionBroadcasts = new ArrayList<>();
-        try (var files = Files.walk(root)) {
-            for (Path file : (Iterable<Path>) files.filter(p -> p.toString().endsWith(".java"))::iterator) {
+        try (var files = SourceTree.javaFiles()) {
+            for (Path file : (Iterable<Path>) files::iterator) {
                 String source = Files.readString(file);
-                String name = root.relativize(file).toString().replace('\\', '/');
+                String name = SourceTree.relative(file);
                 for (String token : forbidden) {
                     assertFalse(source.contains(token), name + " uses " + token + " (ADR 0007: no non-vanilla packets, no tick changes)");
                 }
@@ -203,7 +203,7 @@ class FeatureCatalogTest {
         assertEquals(List.of("hitreg/BetterHitreg.java"), optionBroadcasts, "Switch Hand is the only options broadcast");
 
         // Better Hitreg watches your attack; it must never be able to cancel or change it.
-        String attack = Files.readString(root.resolve("mixin/hitreg/AttackMixin.java"));
+        String attack = SourceTree.read("mixin/hitreg/AttackMixin.java");
         assertTrue(attack.contains("@Inject(method = \"attack\", at = @At(\"HEAD\"))"),
                 "the attack hook must stay a plain, non-cancellable HEAD inject");
         assertFalse(attack.contains("cancellable"));

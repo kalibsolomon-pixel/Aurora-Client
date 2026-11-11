@@ -24,7 +24,7 @@ Standing rule: **no new features until the port to the newest Minecraft release 
 |---|---|---|
 | 1 | Fail-soft mixins, one feature catalog, `breaks` list, copy-diagnostics report | Built, PR #2 |
 | 2 | Fair-play classification, default-off switches | Built, PR #3 |
-| 3 | Core Gradle module for the Minecraft-free packages, measure and set the overhead budget, third-party notices, repo cleanup | Not started |
+| 3 | Core Gradle module for the Minecraft-free packages, measure and set the overhead budget, third-party notices, repo cleanup | Core module built, PR #4; the rest not started |
 | 4 | Port 26.1, then 26.2, then the newest release; release the newest; freeze 1.21.11 | Not started |
 | 5 | Extract the ports; move mixins, the glass renderer and Fabric API calls into the version adapter | Not started |
 | 6 | Shader-drawn shapes behind `RenderUtil` | Not started |
@@ -32,15 +32,16 @@ Standing rule: **no new features until the port to the newest Minecraft release 
 
 ## Current status
 
-Three pull requests are open and stacked. **None is merged: merging is blocked for the assistant, so the owner has to merge them, in this order.**
+Four pull requests are open and stacked. **None is merged: merging is blocked for the assistant, so the owner has to merge them, in this order.**
 
 | PR | Branch | Contents | CI |
 |---|---|---|---|
 | [#1](https://github.com/kalibsolomon-pixel/Aurora-Client/pull/1) | `chore/branding-and-direction` | Branding, the ADRs and roadmap, and a fix for a real race in profile listing | Passing |
 | [#2](https://github.com/kalibsolomon-pixel/Aurora-Client/pull/2) | `feat/fail-soft-foundation` | Roadmap step 1, and LF line endings on checkout | Passing |
-| [#3](https://github.com/kalibsolomon-pixel/Aurora-Client/pull/3) | `feat/fair-play-defaults` | Roadmap step 2 | Passing |
+| [#3](https://github.com/kalibsolomon-pixel/Aurora-Client/pull/3) | `feat/fair-play-defaults` | Roadmap step 2, and this file | Passing |
+| [#4](https://github.com/kalibsolomon-pixel/Aurora-Client/pull/4) | `feat/core-module` | Roadmap step 3, the core module (stacked on #3) | See the PR |
 
-This file is on `feat/fair-play-defaults` and is **not committed**.
+This file was committed with PR #3 and is updated in PR #4.
 
 ### Step 1, in PR #2
 
@@ -64,6 +65,14 @@ This file is on `feat/fair-play-defaults` and is **not committed**.
 - Other players' totem pops were on nametags by default even with the Totem Pop feature off.
 - The real default of a setting is its field initializer overlaid by `assets/aurora/defaults/3.2.0.json`. Full Bright and No Fog ship **on** there; Better Hitreg ships **off**.
 
+### Step 3 so far, in PR #4
+
+- New Gradle module `core/` with nothing from Minecraft, Fabric, LWJGL, Mixin or Log4j on its classpath. Its classes go into the same mod jar.
+- 75 classes moved there, each keeping its package: the config and profiles, the feature catalog, mixin and feature health, the theme engine, the launcher bridge, the Modrinth records and pure layout and map math.
+- Cut on the way: the config directory is now set by the client at start (`config/ConfigDirectory`), the core logs through SLF4J, and two health constants moved into `MixinHealth`. The default keys are GLFW codes written as literals, checked by a test.
+- Source-contract tests now read both source roots. The fair-play packet scan had been walking only the client folder and would have missed the core.
+- Verified by the test suite and one dev-client boot into the saved world.
+
 ## Open decisions for the owner
 
 1. **Should Full Bright and No Fog ship off?** They are on in a fresh install. ADR 0007 keeps their defaults, so they were not changed. The assistant's recommendation is to ship them off: they are the two shipped-on features a server owner is most likely to question.
@@ -80,11 +89,11 @@ This file is on `feat/fair-play-defaults` and is **not committed**.
 
 ## Next steps
 
-1. Merge PR #1, then #2, then #3.
+1. Merge PR #1, then #2, then #3, then #4.
 2. Answer the open decisions above.
 3. Do the on-screen check and boot the mod matrix with `-Daurora.diagnostics.log=true`.
 4. Start step 3:
-   - Move the Minecraft-free packages (`theme`, `module`, `feature/FeatureCatalog`, `health`, most of `config`, `modrinth`, `launcher`) into a core Gradle module.
+   - ~~Move the Minecraft-free packages into a core Gradle module.~~ Done in PR #4. `module/` stayed in the client: `Module` reads the settings registry.
    - Measure Aurora's per-frame cost and set the overhead budget as a number.
    - Add a third-party notices file (Better Hitreg, Freelook++, AppleSkin, HitColor, bundled fonts, Apache license text).
    - Replace the history in `AGENTS.md` with a short contributor guide and move the root-level reports under `docs/`.

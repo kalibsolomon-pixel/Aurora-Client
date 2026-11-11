@@ -298,6 +298,6 @@ class ParkDiagnosticsTest {
         assertTrue(controls.contains("if (!Boolean.getBoolean(\"aurora.parkDiagnostics\")) return;"));
         assertTrue(controls.indexOf("CompletableFuture.runAsync") < controls.indexOf("Files.createDirectories"));
         assertTrue(controls.contains("EXPORTING.compareAndSet(false, true)"));
-        assertFalse(Files.readString(root.resolve("config/AuroraConfig.java")).contains("parkDiagnostics"));
+        assertFalse(com.aurora.client.SourceTree.read("config/AuroraConfig.java").contains("parkDiagnostics"));
     }
 }

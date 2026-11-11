@@ -1,0 +1,28 @@
+// Minecraft-free core (ADR 0003). Nothing from Minecraft, Fabric, LWJGL or Mixin is on
+// this module's classpath, so a class here cannot import them. Its few libraries are
+// compileOnly: Gson and SLF4J ship with the game, and the root build bundles the WebP
+// decoder. The root build also packs these classes into the mod jar.
+plugins {
+	id 'java-library'
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	compileOnly "com.google.code.gson:gson:${rootProject.gson_version}"
+	compileOnly "org.slf4j:slf4j-api:${rootProject.slf4j_version}"
+	// Bundled into the mod jar by the root build (Modrinth icon decoding).
+	compileOnly "com.twelvemonkeys.imageio:imageio-webp:3.12.0"
+}
+
+java {
+	sourceCompatibility = JavaVersion.VERSION_21
+	targetCompatibility = JavaVersion.VERSION_21
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 21
+	it.options.encoding = 'UTF-8'
+}
