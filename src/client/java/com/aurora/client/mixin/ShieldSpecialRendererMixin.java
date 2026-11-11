@@ -4,16 +4,15 @@ import com.aurora.client.feature.impl.ShieldStatusFeature;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.object.equipment.ShieldModel;
 import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.Sheets;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
-import net.minecraft.client.resources.model.Material;
-import net.minecraft.client.resources.model.MaterialSet;
-import net.minecraft.client.resources.model.ModelBakery;
+import net.minecraft.client.resources.model.sprite.SpriteGetter;
+import net.minecraft.client.resources.model.sprite.SpriteId;
 import net.minecraft.client.renderer.special.ShieldSpecialRenderer;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.level.block.entity.BannerPatternLayers;
 import net.minecraft.core.component.DataComponents;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -48,13 +47,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(ShieldSpecialRenderer.class)
 public abstract class ShieldSpecialRendererMixin {
 
-    @Shadow @Final private MaterialSet materials;
+    @Shadow @Final private SpriteGetter sprites;
     @Shadow @Final private ShieldModel model;
 
     /** Flat white sprite stitched into the shield atlas by
      *  {@code assets/aurora/atlases/shield_patterns.json}. */
-    private static final Material AURORA$WHITE =
-            new Material(ModelBakery.NO_PATTERN_SHIELD.atlasLocation(),
+    private static final SpriteId AURORA$WHITE =
+            new SpriteId(Sheets.SHIELD_BASE_NO_PATTERN.atlasLocation(),
                     Identifier.fromNamespaceAndPath("aurora", "shield/white"));
 
     /** One-shot diagnostics for the sprite-resolution fallback. */
@@ -63,7 +62,7 @@ public abstract class ShieldSpecialRendererMixin {
 
     @Inject(method = "submit", at = @At(value = "INVOKE",
             target = "Lcom/mojang/blaze3d/vertex/PoseStack;popPose()V"))
-    private void aurora$statusOverlay(DataComponentMap argument, ItemDisplayContext displayContext,
+    private void aurora$statusOverlay(DataComponentMap argument,
                                       PoseStack poseStack, SubmitNodeCollector collector,
                                       int packedLight, int packedOverlay, boolean flat, int seed,
                                       CallbackInfo ci) {
@@ -74,7 +73,7 @@ public abstract class ShieldSpecialRendererMixin {
         if (!argument.getOrDefault(DataComponents.BANNER_PATTERNS, BannerPatternLayers.EMPTY)
                 .layers().isEmpty()) return;
 
-        TextureAtlasSprite white = materials.get(AURORA$WHITE);
+        TextureAtlasSprite white = sprites.get(AURORA$WHITE);
         // AtlasManager.get falls back to the atlas's MISSING sprite for any
         // material that did not stitch — a missing white sprite tinted the
         // shield black (the 2026-10-30 evening report). Detect it by name

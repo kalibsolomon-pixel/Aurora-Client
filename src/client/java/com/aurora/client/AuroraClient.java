@@ -8,11 +8,11 @@ import com.aurora.client.diagnostics.Timed;
 import com.aurora.client.hud.HudRenderer;
 import com.aurora.client.hud.module.*;
 import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.minecraft.resources.Identifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
 import com.aurora.client.hud.HitboxRenderer;
 
 public class AuroraClient implements ClientModInitializer {
@@ -105,13 +105,13 @@ public class AuroraClient implements ClientModInitializer {
         moduleManager.register(new MinimapModule());
 
         HitboxRenderer hitboxRenderer = new HitboxRenderer();
-        WorldRenderEvents.AFTER_ENTITIES.register(Timed.afterEntities(hitboxRenderer::render));
+        LevelRenderEvents.AFTER_TRANSLUCENT_FEATURES.register(Timed.afterFeatures(hitboxRenderer::render));
 
         BlockOverlayRenderer blockOverlayRenderer = new BlockOverlayRenderer();
-        WorldRenderEvents.BEFORE_BLOCK_OUTLINE.register(Timed.beforeBlockOutline(blockOverlayRenderer::onBeforeBlockOutline));
+        LevelRenderEvents.BEFORE_BLOCK_OUTLINE.register(Timed.beforeBlockOutline(blockOverlayRenderer::onBeforeBlockOutline));
 
         // Container preview — map Aurora's tooltip data to its renderer.
-        net.fabricmc.fabric.api.client.rendering.v1.TooltipComponentCallback.EVENT.register(data -> {
+        net.fabricmc.fabric.api.client.rendering.v1.ClientTooltipComponentCallback.EVENT.register(data -> {
             if (data instanceof com.aurora.client.hud.preview.AuroraContainerTooltipData acd) {
                 return new com.aurora.client.hud.preview.AuroraContainerTooltipComponent(acd);
             }
@@ -119,8 +119,9 @@ public class AuroraClient implements ClientModInitializer {
         });
 
         com.aurora.client.hud.WaypointRenderer waypointRenderer = new com.aurora.client.hud.WaypointRenderer();
-        WorldRenderEvents.AFTER_ENTITIES.register(Timed.afterEntities(waypointRenderer::renderWorld));
-        HudRenderCallback.EVENT.register(Timed.hud((ctx, tickCounter) -> {
+        LevelRenderEvents.AFTER_TRANSLUCENT_FEATURES.register(Timed.afterFeatures(waypointRenderer::renderWorld));
+        // HUD layers draw after vanilla's, in this registration order (as HudRenderCallback did).
+        HudElementRegistry.addLast(id("waypoint_labels"), Timed.hud((ctx, tickCounter) -> {
             com.aurora.client.ui.util.AuroraFontRenderer.setRenderingAuroraUI(true);
             try {
                 waypointRenderer.renderHud(ctx, tickCounter);
@@ -129,7 +130,7 @@ public class AuroraClient implements ClientModInitializer {
             }
         }));
 
-        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_WORLD_TICK.register(Timed.endWorldTick(
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_LEVEL_TICK.register(Timed.endLevelTick(
                 client -> com.aurora.client.util.OverlayReloadListener.callEvent()));
 
         // Enchant Glint Recolor: END_CLIENT_TICK (not WORLD) so glint config
@@ -183,12 +184,12 @@ public class AuroraClient implements ClientModInitializer {
         ProfileManager.getInstance().onProfileApplied(n -> applyLayouts(moduleManager));
 
         hudRenderer = new HudRenderer();
-        HudRenderCallback.EVENT.register(Timed.hud(hudRenderer::render));
+        HudElementRegistry.addLast(id("hud_modules"), Timed.hud(hudRenderer::render));
 
         // Unified alert popup renderer — serves all alert sources
         // (durability, hunger, effect expiry).
         com.aurora.client.hud.AlertRenderer alertRenderer = new com.aurora.client.hud.AlertRenderer();
-        HudRenderCallback.EVENT.register(Timed.hud((ctx, tickCounter) -> {
+        HudElementRegistry.addLast(id("alerts"), Timed.hud((ctx, tickCounter) -> {
             com.aurora.client.ui.util.AuroraFontRenderer.setRenderingAuroraUI(true);
             try {
                 alertRenderer.render(ctx);

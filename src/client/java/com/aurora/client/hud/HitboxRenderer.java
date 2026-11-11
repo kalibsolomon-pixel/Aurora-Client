@@ -3,7 +3,7 @@ package com.aurora.client.hud;
 import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.feature.impl.HitboxPositionSmoother;
 import com.aurora.client.feature.impl.ThrottleDetector;
-import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.Camera;
@@ -71,7 +71,7 @@ public final class HitboxRenderer {
         HitboxPositionSmoother.clearAll();
     }
 
-    public void render(WorldRenderContext ctx) {
+    public void render(LevelRenderContext ctx) {
         Minecraft client = Minecraft.getInstance();
         if (client == null || client.level == null) return;
 
@@ -85,9 +85,9 @@ public final class HitboxRenderer {
         if (cam == null) return;
         Vec3 camPos = cam.position();
 
-        PoseStack matrices = ctx.matrices();
+        PoseStack matrices = ctx.poseStack();
         if (matrices == null) return;
-        MultiBufferSource consumers = ctx.consumers();
+        MultiBufferSource consumers = ctx.bufferSource();
         if (consumers == null) return;
 
         // Use the proper lines() render type with per-vertex line width.

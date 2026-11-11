@@ -3,7 +3,7 @@ package com.aurora.client.ui.render.blur;
 import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.pipeline.RenderTarget;
-import com.mojang.blaze3d.platform.DepthTestFunction;
+import com.mojang.blaze3d.pipeline.ColorTargetState;
 import com.mojang.blaze3d.shaders.UniformType;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
@@ -23,6 +23,7 @@ import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.OptionalInt;
 
 /**
@@ -51,8 +52,10 @@ final class PortableBlurRenderer {
                 .withFragmentShader(Identifier.fromNamespaceAndPath("aurora", "core/" + name))
                 .withVertexFormat(DefaultVertexFormat.POSITION, VertexFormat.Mode.TRIANGLES)
                 .withSampler("InputTexture").withUniform("GlassParams", UniformType.UNIFORM_BUFFER)
-                .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST).withDepthWrite(false)
-                .withCull(false).withoutBlend().build();
+                // No depth state means no depth test or write (as vanilla's GUI pipelines); no blend.
+                .withDepthStencilState(Optional.empty())
+                .withColorTargetState(new ColorTargetState(Optional.empty(), ColorTargetState.WRITE_ALL))
+                .withCull(false).build();
     }
 
     static final class Output {

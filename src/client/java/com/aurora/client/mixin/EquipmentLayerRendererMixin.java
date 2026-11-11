@@ -24,7 +24,7 @@ import org.spongepowered.asm.mixin.injection.ModifyArg;
  * {@link OverlayTexture} the way the body's render type does, so the body
  * flashes red but armor stays unchanged. The fix (mirrors Animatium and
  * Lunar's HitColor): swap the render type to
- * {@link RenderTypes#entityCutoutNoCullZOffset(Identifier)} -- which is the
+ * {@link RenderTypes#entityCutoutZOffset(Identifier)} -- which is the
  * standard entity render type and correctly samples the overlay texture --
  * and pass through the entity's hurt overlay UV so the swapped pipeline
  * reuses the same red row our {@link MixinOverlayTexture} writes for the
@@ -52,7 +52,7 @@ public abstract class EquipmentLayerRendererMixin {
     private RenderType aurora$swapArmorRenderType(Identifier texture, Operation<RenderType> original) {
         AuroraConfig cfg = AuroraConfig.get();
         if (cfg.hitColorEnabled && cfg.hitColorTintArmor) {
-            return RenderTypes.entityCutoutNoCullZOffset(texture);
+            return RenderTypes.entityCutoutZOffset(texture);
         }
         return original.call(texture);
     }
@@ -80,19 +80,18 @@ public abstract class EquipmentLayerRendererMixin {
 
     /** Trims retain their atlas sprite UVs but need an overlay-aware shader. */
     @WrapOperation(method = INNER,
-            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/Sheets;armorTrimsSheet(Z)Lnet/minecraft/client/renderer/rendertype/RenderType;"),
-            require = 1)
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/Sheets;armorTrimsSheet(Z)Lnet/minecraft/client/renderer/rendertype/RenderType;"))
     private RenderType aurora$swapTrimRenderType(boolean decal, Operation<RenderType> original) {
         AuroraConfig cfg = AuroraConfig.get();
         if (!(cfg.hitColorEnabled && cfg.hitColorTintArmor && cfg.hitColorTintArmorTrims))
             return original.call(decal);
-        return decal ? HitColorTrimRenderTypes.decal() : RenderTypes.entityCutoutNoCullZOffset(Sheets.ARMOR_TRIMS_SHEET);
+        return decal ? HitColorTrimRenderTypes.decal() : RenderTypes.entityCutoutZOffset(Sheets.ARMOR_TRIMS_SHEET);
     }
 
     /** Third submission is the trim pass; the intervening glint pass stays untouched. */
     @ModifyArg(method = INNER,
             at = @At(value = "INVOKE", target = SUBMIT_MODEL, ordinal = 2),
-            index = 5, require = 1)
+            index = 5)
     private int aurora$applyTrimHurtOverlay(int original, @Local(argsOnly = true) Object renderState) {
         AuroraConfig cfg = AuroraConfig.get();
         if (!(cfg.hitColorEnabled && cfg.hitColorTintArmor && cfg.hitColorTintArmorTrims)) return original;

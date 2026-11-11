@@ -34,7 +34,7 @@ class OwnerCorrectionTest {
         assertEquals(UiDensity.CARD_WIDTH, UiDensity.CARD_HEIGHT);
         assertEquals(6, UiDensity.GRID_GAP);
         String main = source("screen/AuroraScreen.java");
-        assertTrue(main.contains("g.drawString(tr, \"AURORA\""));
+        assertTrue(main.contains("g.text(tr, \"AURORA\""));
         assertFalse(main.contains("AuroraBrand.draw"));
         assertFalse(main.contains("configureActions"));
         assertFalse(main.contains("bx + 72, by + 36, 1"));

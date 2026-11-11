@@ -113,7 +113,9 @@ public final class ChunkCapturer {
 
             int tint = -1;
             try {
-                tint = colors.getColor(state, level, POS, 0);
+                // 26.1: colours come from per-state tint sources; none means untinted (-1, as before).
+                var source = colors.getTintSource(state, 0);
+                if (source != null) tint = source.colorInWorld(state, level, POS);
             } catch (Throwable ignored) {}
 
             int r, gr, b;

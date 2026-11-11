@@ -8,7 +8,7 @@ import com.aurora.client.util.CachedValue;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
 import com.mojang.blaze3d.platform.InputConstants;
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Options;
@@ -561,7 +561,7 @@ public class KeystrokesModule extends HudModule {
     private static String bindLabel(KeyMapping km, String fallback) {
         try {
             if (km != null) {
-                InputConstants.Key key = KeyBindingHelper.getBoundKeyOf(km);
+                InputConstants.Key key = KeyMappingHelper.getBoundKeyOf(km);
                 if (key != null && !key.equals(InputConstants.UNKNOWN)) {
                     String s = key.getDisplayName().getString();
                     if (s != null) {

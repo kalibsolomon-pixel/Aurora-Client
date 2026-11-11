@@ -2,7 +2,7 @@ package com.aurora.client.launcher;
 
 import com.aurora.client.AuroraClient;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientWorldEvents;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLevelEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ServerData;
@@ -20,7 +20,7 @@ public final class LauncherActivityIntegration {
             bridge = new LauncherActivityBridge(bootstrap, AuroraClient.LOGGER::debug);
             LauncherActivityBridge active = bridge;
             ClientLifecycleEvents.CLIENT_STARTED.register(client -> report(active, client));
-            ClientWorldEvents.AFTER_CLIENT_WORLD_CHANGE.register((client, world) -> report(active, client));
+            ClientLevelEvents.AFTER_CLIENT_LEVEL_CHANGE.register((client, world) -> report(active, client));
             ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> report(active, client));
             // Fabric 0.141.4 world-change callback excludes null worlds. DISCONNECT is
             // required and fires before teardown; do not project the still-loaded level here.

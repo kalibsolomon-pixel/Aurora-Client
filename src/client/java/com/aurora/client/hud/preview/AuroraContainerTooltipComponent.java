@@ -42,7 +42,7 @@ public final class AuroraContainerTooltipComponent implements ClientTooltipCompo
     }
 
     @Override
-    public void renderImage(Font font, int x, int y, int w, int h, GuiGraphicsExtractor g) {
+    public void extractImage(Font font, int x, int y, int w, int h, GuiGraphicsExtractor g) {
         int gridW = data.columns * SLOT + PAD * 2;
         int gridH = data.rows * SLOT + PAD * 2;
 

@@ -113,7 +113,7 @@ class AbstractButtonMixinConformanceTest {
                 "the press timeline is the shared implementation");
         assertFalse(s.contains("lerpFloat"), "no duplicated press math");
         assertFalse(s.contains("drawRoundedRectAA"), "no mixin-local surface drawing");
-        assertFalse(s.contains("drawString"), "no mixin-local text drawing");
+        assertFalse(s.contains("drawString") || s.contains(".text("), "no mixin-local text drawing");
         assertFalse(s.contains("cachedLabel"), "the label-width cache went with the old painter");
     }
 

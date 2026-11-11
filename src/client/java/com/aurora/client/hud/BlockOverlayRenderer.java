@@ -2,10 +2,10 @@ package com.aurora.client.hud;
 
 import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.feature.impl.BlockOverlayFeature;
-import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Camera;
-import net.minecraft.client.renderer.state.BlockOutlineRenderState;
+import net.minecraft.client.renderer.state.level.BlockOutlineRenderState;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -56,7 +56,7 @@ public final class BlockOverlayRenderer {
      */
     private static final float EPSILON = 0.001f;
 
-    public boolean onBeforeBlockOutline(WorldRenderContext ctx, BlockOutlineRenderState bors) {
+    public boolean onBeforeBlockOutline(LevelRenderContext ctx, BlockOutlineRenderState bors) {
         AuroraConfig cfg = AuroraConfig.get();
         boolean drawFill    = BlockOverlayFeature.isFillVisible();
         boolean drawOutline = BlockOverlayFeature.isOutlineVisible();
@@ -71,8 +71,8 @@ public final class BlockOverlayRenderer {
         Minecraft mc = Minecraft.getInstance();
         if (mc == null || mc.level == null) return true;
 
-        MultiBufferSource consumers = ctx.consumers();
-        PoseStack matrices = ctx.matrices();
+        MultiBufferSource consumers = ctx.bufferSource();
+        PoseStack matrices = ctx.poseStack();
         Camera cam = mc.gameRenderer.getMainCamera();
         if (consumers == null || matrices == null || cam == null) return true;
 

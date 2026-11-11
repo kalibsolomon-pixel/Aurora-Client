@@ -14,7 +14,7 @@ public final class HitColorTrimRenderTypes {
 
     private static final class Holder {
         private static final RenderType DECAL = RenderType.create("aurora_hit_color_trim_decal",
-                RenderSetup.builder(RenderPipelines.ENTITY_DECAL)
+                RenderSetup.builder(RenderPipelines.ARMOR_DECAL_CUTOUT_NO_CULL)
                         .withTexture("Sampler0", Sheets.ARMOR_TRIMS_SHEET)
                         .useLightmap().useOverlay()
                         .setLayeringTransform(LayeringTransform.VIEW_OFFSET_Z_LAYERING)

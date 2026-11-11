@@ -49,7 +49,7 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
         // re-enable once Mod Menu ships a stable 1.21.11 release.
         addBtn(3, Component.translatable("aurora.button.options"),
                 "Open Minecraft's options.",
-                () -> this.minecraft.setScreen(new OptionsScreen(this, this.minecraft.options)),
+                () -> this.minecraft.setScreen(new OptionsScreen(this, this.minecraft.options, false)),
                 false);
         addBtn(4, Component.translatable("aurora.button.quit"),
                 "Quit Minecraft.",

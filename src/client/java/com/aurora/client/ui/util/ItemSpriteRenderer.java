@@ -4,7 +4,7 @@ import com.aurora.client.mixin.ItemStackRenderStateAccessor;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.client.resources.model.geometry.BakedQuad;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.resources.Identifier;
@@ -111,8 +111,8 @@ public final class ItemSpriteRenderer {
 
             TextureAtlasSprite sprite = null;
             for (BakedQuad q : quads) {
-                if (q.isTinted()) return new Resolution(null); // flat blit can't tint
-                TextureAtlasSprite s = q.sprite();
+                if (q.materialInfo().isTinted()) return new Resolution(null); // flat blit can't tint
+                TextureAtlasSprite s = q.materialInfo().sprite();
                 if (s == null) return new Resolution(null);
                 if (sprite == null) sprite = s;
                 else if (sprite != s) return new Resolution(null); // mixed sprites ≠ flat item

@@ -154,7 +154,7 @@ class AuroraScreenNavigationTest {
     void registrationIsInitOnlyInVisualOrder() {
         String src = read(SCREEN);
         int init = src.indexOf("protected void init()");
-        int render = src.indexOf("public void render(", init);
+        int render = src.indexOf("public void extractRenderState(", init);
         String initBody = src.substring(init, render);
         // Visual order: search field first (top of the content column),
         // then the sidebar, then module cards, then the Settings walk.
@@ -183,7 +183,7 @@ class AuroraScreenNavigationTest {
     @Test
     void noPerFrameConstructionOrRegistration() {
         String src = read(SCREEN);
-        int render = src.indexOf("public void render(");
+        int render = src.indexOf("public void extractRenderState(");
         String renderAndAfter = src.substring(render);
         assertFalse(renderAndAfter.contains("semanticHost.register("),
                 "controls must not be registered in the frame path");

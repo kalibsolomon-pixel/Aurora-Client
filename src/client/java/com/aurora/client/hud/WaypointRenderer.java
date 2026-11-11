@@ -7,7 +7,7 @@ import com.aurora.client.worldmap.MapMarkers;
 import com.aurora.client.ui.util.MaterialIconRenderer;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
@@ -25,10 +25,10 @@ import java.util.List;
  * Beacon-style waypoint visualization with two render passes:
  *
  * <ul>
- *   <li>{@link #renderWorld} — hooks {@code WorldRenderEvents.AFTER_ENTITIES}
+ *   <li>{@link #renderWorld} — hooks {@code LevelRenderEvents.AFTER_TRANSLUCENT_FEATURES}
  *       and submits 3D geometry: the beam column and/or block highlight
  *       cubes. Pure vertex output via {@code RenderTypes.debugQuads()}.</li>
- *   <li>{@link #renderHud} — hooks {@code HudRenderCallback} and draws the
+ *   <li>{@link #renderHud} — is a HUD element ({@code HudElementRegistry}) and draws the
  *       screen-space name + distance labels using {@link GuiGraphicsExtractor}.
  *       Uses {@link net.minecraft.client.renderer.GameRenderer#projectPointToScreen}
  *       (the same projector vanilla 1.21+ uses for tracked waypoints) so
@@ -51,7 +51,7 @@ public final class WaypointRenderer {
     /** Padding from screen edges when a waypoint is off-screen. */
     private static final int LABEL_EDGE_MARGIN = 24;
 
-    public void renderWorld(WorldRenderContext ctx) {
+    public void renderWorld(LevelRenderContext ctx) {
         Minecraft mc = Minecraft.getInstance();
         if (mc == null || mc.level == null || mc.player == null) return;
         if (mc.screen != null) return;
@@ -67,9 +67,9 @@ public final class WaypointRenderer {
 
         Camera cam = mc.gameRenderer.getMainCamera();
         if (cam == null) return;
-        PoseStack matrices = ctx.matrices();
+        PoseStack matrices = ctx.poseStack();
         if (matrices == null) return;
-        MultiBufferSource consumers = ctx.consumers();
+        MultiBufferSource consumers = ctx.bufferSource();
         if (consumers == null) return;
 
         String curDim = mc.level.dimension().identifier().toString();

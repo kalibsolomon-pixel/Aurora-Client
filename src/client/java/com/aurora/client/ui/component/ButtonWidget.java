@@ -165,7 +165,7 @@ public class ButtonWidget extends AbstractButton {
     }
 
     @Override
-    protected void renderContents(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
+    protected void extractContents(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
         painter.disabled(!this.active);
         // Provisional Phase A focus treatment — the same 1 px accent hairline
         // the semantic controls draw, synced from vanilla's own focus so

@@ -65,7 +65,7 @@ public class InfoModule extends HudModule {
         }
         if (cfg.infoShowChunkCoords && player != null) {
             ChunkPos cp = player.chunkPosition();
-            lines.add("Chunk: " + cp.x + ", " + cp.z);
+            lines.add("Chunk: " + cp.x() + ", " + cp.z());
         }
         if (cfg.infoShowYRelSea && player != null && level != null) {
             int y = player.blockPosition().getY();

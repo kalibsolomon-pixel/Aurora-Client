@@ -1,32 +1,32 @@
 package com.aurora.client.diagnostics;
 
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
-import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElement;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
 
 /**
  * Wraps an Aurora callback so its time counts toward {@link AuroraCost}
- * (ADR 0005). Use at registration: {@code EVENT.register(Timed.hud(r::render))}.
+ * (ADR 0005). Use at registration: {@code HudElementRegistry.addLast(id, Timed.hud(r::render))}.
  * The wrapper is built once, so a timed callback allocates nothing per call.
  */
 public final class Timed {
     private Timed() {}
 
-    public static HudRenderCallback hud(HudRenderCallback body) {
+    public static HudElement hud(HudElement body) {
         return (graphics, delta) -> {
             long t = AuroraCost.begin();
-            try { body.onHudRender(graphics, delta); } finally { AuroraCost.end(t); }
+            try { body.extractRenderState(graphics, delta); } finally { AuroraCost.end(t); }
         };
     }
 
-    public static WorldRenderEvents.AfterEntities afterEntities(WorldRenderEvents.AfterEntities body) {
+    public static LevelRenderEvents.AfterTranslucentFeatures afterFeatures(LevelRenderEvents.AfterTranslucentFeatures body) {
         return ctx -> {
             long t = AuroraCost.begin();
-            try { body.afterEntities(ctx); } finally { AuroraCost.end(t); }
+            try { body.afterTranslucentFeatures(ctx); } finally { AuroraCost.end(t); }
         };
     }
 
-    public static WorldRenderEvents.BeforeBlockOutline beforeBlockOutline(WorldRenderEvents.BeforeBlockOutline body) {
+    public static LevelRenderEvents.BeforeBlockOutline beforeBlockOutline(LevelRenderEvents.BeforeBlockOutline body) {
         return (ctx, outline) -> {
             long t = AuroraCost.begin();
             try { return body.beforeBlockOutline(ctx, outline); } finally { AuroraCost.end(t); }
@@ -47,7 +47,7 @@ public final class Timed {
         };
     }
 
-    public static ClientTickEvents.EndWorldTick endWorldTick(ClientTickEvents.EndWorldTick body) {
+    public static ClientTickEvents.EndLevelTick endLevelTick(ClientTickEvents.EndLevelTick body) {
         return level -> {
             long t = AuroraCost.begin();
             try { body.onEndTick(level); } finally { AuroraCost.end(t); }

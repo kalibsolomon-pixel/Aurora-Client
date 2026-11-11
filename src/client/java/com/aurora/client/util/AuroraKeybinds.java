@@ -1,7 +1,7 @@
 package com.aurora.client.util;
 
 import com.mojang.blaze3d.platform.InputConstants;
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.resources.Identifier;
 
@@ -107,9 +107,9 @@ public final class AuroraKeybinds {
                 InputConstants.Type.KEYSYM,
                 defaultGlfw,
                 CATEGORY);
-        KeyBindingHelper.registerKeyBinding(mapping);
+        KeyMappingHelper.registerKeyMapping(mapping);
 
-        // Force the mapping to match config NOW — KeyBindingHelper /
+        // Force the mapping to match config NOW — KeyMappingHelper /
         // vanilla options.txt may have rebound it to a stale value
         // during options load. Aurora config is the source of truth.
         int cfgGlfw = getter.getAsInt();
@@ -169,7 +169,7 @@ public final class AuroraKeybinds {
      * or {@link AuroraKey#UNBOUND} if it's unbound.
      */
     private static int currentGlfw(KeyMapping mapping) {
-        InputConstants.Key key = KeyBindingHelper.getBoundKeyOf(mapping);
+        InputConstants.Key key = KeyMappingHelper.getBoundKeyOf(mapping);
         if (key == null || key.equals(InputConstants.UNKNOWN)) return AuroraKey.UNBOUND;
         if (key.getType() != InputConstants.Type.KEYSYM) {
             // Mouse buttons or scancodes — Aurora has no representation
