@@ -32,7 +32,7 @@ Standing rule: **no new features until the port to the newest Minecraft release 
 
 ## Current status
 
-Eight pull requests are open and stacked. **None is merged: merging is blocked for the assistant, so the owner has to merge them, in this order.**
+Nine pull requests are open and stacked. **None is merged: merging is blocked for the assistant, so the owner has to merge them, in this order.**
 
 | PR | Branch | Contents | CI |
 |---|---|---|---|
@@ -44,6 +44,7 @@ Eight pull requests are open and stacked. **None is merged: merging is blocked f
 | [#6](https://github.com/kalibsolomon-pixel/Aurora-Client/pull/6) | `feat/overhead-budget` | Roadmap step 3, the overhead budget (stacked on #5) | See the PR |
 | [#7](https://github.com/kalibsolomon-pixel/Aurora-Client/pull/7) | `feat/third-party-notices` | Roadmap step 3, third-party notices (stacked on #6) | See the PR |
 | [#8](https://github.com/kalibsolomon-pixel/Aurora-Client/pull/8) | `chore/repo-cleanup` | Roadmap step 3, repo cleanup (stacked on #7) | See the PR |
+| #9 | `chore/pre-port-checks` | Step 1's on-screen check and the tested mod matrix (stacked on #8) | See the PR |
 
 This file was committed with PR #3 and is updated in PR #4.
 
@@ -113,25 +114,28 @@ Answered 2026-11-11: yes to all three.
 
 26.3 is the release the port targets (owner, 2026-11-11). ADR 0002 and the roadmap now name it.
 
+### Pre-port checks, in PR #9
+
+- **On screen.** The detail-screen header shows "Not working in this session: zooming the view" for a broken feature, and the Copy Diagnostics run puts the full report on the clipboard (checked through a temporary in-game probe, not by hand). The grid card shows nothing: its note only reaches screen-reader narration, because cards have no hover tooltip.
+- **Mod matrix, 1.21.11.** Three boots: Sodium, Lithium, ImmediatelyFast, EntityCulling and Mod Menu; Sodium and Iris; VulkanMod. All pass: every mixin applied, every feature working, no Aurora warnings, normal close. [MOD_MATRIX.md](MOD_MATRIX.md); tooling in `tools/matrix/`.
+
 ## Open decisions for the owner
 
-None at the moment.
+1. **Should a broken feature show on its grid card?** Today only its detail screen says so. A small marker or a second line on the card would make it visible from the grid; cards are deliberately minimal, so this is a design call.
 
 ## Not yet verified
 
-- The feature card tooltip, the detail-screen header and the Copy Diagnostics button have not been looked at on screen. The clipboard path was not exercised.
-- The tier-1 mod matrix (Sodium, Iris, VulkanMod, ImmediatelyFast, EntityCulling, Lithium, Mod Menu) has not been booted with these changes.
 - Apollo's license terms and how servers detect Lunar Client.
 - Whether Better Hitreg's Apache-2.0 listing on Modrinth matches the terms its author gave. Its repository's LICENSE is stock Apache 2.0.
 - HitColor's license: its repository has no LICENSE file; only Modrinth says MIT.
 
 ## Next steps
 
-1. Merge PR #1 to #8, in order.
-2. Do the on-screen check and boot the mod matrix with `-Daurora.diagnostics.log=true`.
-3. Continue step 3:
+1. Merge PR #1 to #9, in order.
+2. Answer the open decision above.
+3. Step 3 is built:
    - ~~Move the Minecraft-free packages into a core Gradle module.~~ Done in PR #4. `module/` stayed in the client: `Module` reads the settings registry.
    - ~~Measure Aurora's per-frame cost and set the overhead budget as a number.~~ Done in PR #6.
    - ~~Add a third-party notices file.~~ Done in PR #7.
    - ~~Replace the history in `AGENTS.md` and move the root-level reports under `docs/`.~~ Done in PR #8.
-4. Then step 4, the port.
+4. Step 4, the port: 26.1 first, on `port/26.1`, then 26.2 and 26.3. Rerun the mod matrix for each.
