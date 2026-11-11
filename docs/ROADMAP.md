@@ -17,7 +17,7 @@ Agreed 2026-11-10. The decisions behind this order are in [docs/adr/](adr/):
 Steps 1 to 3 happen on 1.21.11 and each makes the port cheaper or safer. Nothing after step 4 is designed before the port shows where the breaks are.
 
 1. **Fail-soft foundation (1.21.11).** Single feature registry that records each feature's mixins. Fail-soft mixins with a per-feature health flag. A `breaks` list in `fabric.mod.json`. The copy-diagnostics report with its built-in benchmark. *Built 2026-11-11 on `feat/fail-soft-foundation`; see "Step 1 status" below.*
-2. **Fair play (1.21.11).** Classify every feature. Make minimap player dots, player entity health, other players' totem pops and FreeLook default-off. Document Better Hitreg as local feedback only.
+2. **Fair play (1.21.11).** Classify every feature. Make minimap player dots, player entity health, other players' totem pops and FreeLook default-off. Document Better Hitreg as local feedback only. *Built 2026-11-11 on `feat/fair-play-defaults`; see "Step 2 status" below.*
 3. **Groundwork (1.21.11).** Move the already Minecraft-free packages into a core Gradle module. Measure the overhead baseline and set the budget. Add third-party notices. Clean up the repo for contributors.
 4. **Port.** 26.1, then 26.2, then the newest release, each made to build and boot. Release the newest. Freeze 1.21.11 to crash and security fixes.
 5. **Extract the layers.** Define the ports from what actually broke. Move every mixin, the glass renderer and the Fabric API calls into the version adapter.
@@ -32,6 +32,16 @@ Built and verified by automated tests and three dev-client boots (unmodified; te
 - Boot the tier-1 matrix (Sodium, Iris, VulkanMod, ImmediatelyFast, EntityCulling, Lithium, Mod Menu) with `-Daurora.diagnostics.log=true` and read each report.
 - The `breaks` list holds only the standalone Better Hitreg mod. Add a mod when a boot shows it cannot work with Aurora, not before.
 - `FeatureManager` still lists the runtime tick services by hand. It is not a list of features, so it was left alone.
+
+## Step 2 status
+
+Every feature has a fair-play class in `FeatureCatalog`, published as [FAIR_PLAY.md](FAIR_PLAY.md). Two defaults changed: FreeLook and other players' totem pops on nametags now ship off. The other two items on the list were already off in the release defaults (minimap player dots, and Entity Health as a whole). Existing installs keep what they had.
+
+Open for the owner:
+
+- Full Bright and No Fog ship on. ADR 0007 keeps them; they are the two shipped-on features a server owner is most likely to question.
+- Entity Health has no separate switch for players. The whole feature is off by default, which covers "entity health for players", but a player who turns it on gets mobs and players together.
+- Other players' totem pops are still counted while the nametag switch is off; they are just not shown.
 
 ## Standing rules until the port ships
 
@@ -49,6 +59,7 @@ Built and verified by automated tests and three dev-client boots (unmodified; te
 
 ## Still to verify
 
+- Nothing in step 2 was checked in a running game. The defaults are verified on a real config object in tests.
 - Whether 26.3 is the newest Minecraft release. Sodium listings showed builds for 26.1, 26.2 and 26.3 on 2026-11-10; the newest was not confirmed.
 - Apollo's license terms, and whether registering its plugin channel is how servers identify Lunar Client.
 - Whether Better Hitreg's Apache-2.0 listing matches the terms its author gave for the integration.

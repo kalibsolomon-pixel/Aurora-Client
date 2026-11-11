@@ -16,7 +16,11 @@ First default-off list:
 
 Everything else keeps its current default, including hitboxes (vanilla F3+B shows them), Full Bright, No Fog and toggle sprint.
 
-Better Hitreg stays in the client at its current default by owner decision. It is recorded as local feedback only: it sends no packets and changes no timing on the wire. It is the feature a server owner is most likely to ask about, so that description must stay accurate.
+Noted 2026-11-11 while implementing this: Full Bright and No Fog ship on in a fresh install (the release defaults set both true). They are visibility aids, kept on by this decision, and `docs/FAIR_PLAY.md` says so plainly. Whether they should stay on is open for the owner.
+
+Better Hitreg stays in the client at its current default by owner decision. It is recorded as local feedback only: it does not change what the game sends for movement or combat, or when. It is the feature a server owner is most likely to ask about, so that description must stay accurate.
+
+Corrected 2026-11-11 after reading the code. The first wording said it "sends no packets", which was not exact: two optional keys, unbound by default, send something when pressed. Switch Hand changes the vanilla Main Hand option, and the practice scoreboard's Send key posts the score as a chat message. Its current default is off: the release defaults ship `hitregEnabled` false.
 
 ## Apollo
 
@@ -30,6 +34,8 @@ Apollo work does not start until two things are checked: Apollo's license terms,
 - **Full Apollo client support.** Rejected: collecting Lunar-only treatment by looking like Lunar puts Aurora's reputation in another company's hands.
 
 ## Consequences
+
+- The classification lives in `FeatureCatalog` and is published as `docs/FAIR_PLAY.md`. Tests keep the two identical, check that every switch on the default-off list is off in a fresh install, and scan the source for anything that sends to a server.
 
 - Saved preferences still win over defaults, so existing players keep what they had enabled.
 - No feature may send non-vanilla packets or alter client tick or packet timing. Tick Sync was removed in September 2026 for this reason.
