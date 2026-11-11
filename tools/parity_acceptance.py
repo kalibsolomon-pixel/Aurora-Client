@@ -26,7 +26,10 @@ def fingerprint(root):
         paths += [p for p in (root / directory).rglob('*') if p.is_file()
                   and '/src/test/' not in p.as_posix() and '__pycache__' not in p.parts]
     digest = hashlib.sha256()
-    for p in sorted(set(paths)):
+    # Path ordering is case-insensitive on Windows and case-sensitive on Linux, so a digest
+    # recorded on one host never verified on the other. Fix the order to the Windows one
+    # the recorded evidence used: lower-cased path components.
+    for p in sorted(set(paths), key=lambda p: p.relative_to(root).as_posix().lower().split('/')):
         digest.update(p.relative_to(root).as_posix().encode() + b'\0')
         # Git's LF checkout is the identity on both Windows and Linux.
         data = p.read_bytes()
