@@ -32,7 +32,7 @@ Standing rule: **no new features until the port to the newest Minecraft release 
 
 ## Current status
 
-Four pull requests are open and stacked. **None is merged: merging is blocked for the assistant, so the owner has to merge them, in this order.**
+Five pull requests are open and stacked. **None is merged: merging is blocked for the assistant, so the owner has to merge them, in this order.**
 
 | PR | Branch | Contents | CI |
 |---|---|---|---|
@@ -40,6 +40,7 @@ Four pull requests are open and stacked. **None is merged: merging is blocked fo
 | [#2](https://github.com/kalibsolomon-pixel/Aurora-Client/pull/2) | `feat/fail-soft-foundation` | Roadmap step 1, and LF line endings on checkout | Passing |
 | [#3](https://github.com/kalibsolomon-pixel/Aurora-Client/pull/3) | `feat/fair-play-defaults` | Roadmap step 2, and this file | Passing |
 | [#4](https://github.com/kalibsolomon-pixel/Aurora-Client/pull/4) | `feat/core-module` | Roadmap step 3, the core module (stacked on #3) | See the PR |
+| [#5](https://github.com/kalibsolomon-pixel/Aurora-Client/pull/5) | `feat/fair-play-decisions` | The owner's three fair-play decisions (stacked on #4) | See the PR |
 
 This file was committed with PR #3 and is updated in PR #4.
 
@@ -63,7 +64,7 @@ This file was committed with PR #3 and is updated in PR #4.
 
 - ADR 0007 said Better Hitreg "sends no packets". Two optional, unbound keys do send when pressed (Switch Hand, and the practice scoreboard's Send). The ADR and the document are corrected.
 - Other players' totem pops were on nametags by default even with the Totem Pop feature off.
-- The real default of a setting is its field initializer overlaid by `assets/aurora/defaults/3.2.0.json`. Full Bright and No Fog ship **on** there; Better Hitreg ships **off**.
+- The real default of a setting is its field initializer overlaid by `assets/aurora/defaults/3.2.0.json`. Better Hitreg ships **off** there; Full Bright and No Fog shipped **on** until PR #5.
 
 ### Step 3 so far, in PR #4
 
@@ -73,11 +74,19 @@ This file was committed with PR #3 and is updated in PR #4.
 - Source-contract tests now read both source roots. The fair-play packet scan had been walking only the client folder and would have missed the core.
 - Verified by the test suite and one dev-client boot into the saved world.
 
+### The owner's decisions, in PR #5
+
+Answered 2026-11-11: yes to all three.
+
+- Full Bright and No Fog now ship off. ADR 0007 is amended and `FAIR_PLAY.md` regenerated. Existing installs keep what they had.
+- Entity Health has a new **Show Players** switch, off by default; with it off only mobs get a label. A config or profile saved before the switch existed has no value for it, so it takes the saved Entity Health switch: whoever had Entity Health on keeps seeing players.
+- The `breaks` id `betterhitreg` is confirmed; nothing changed.
+- Also fixed: three scripts still pointed at the client paths of classes PR #4 moved (`tools/gen_fair_play_doc.py`, `tools/test_release_defaults.py`, `subset_script.py`).
+- Verified by the test suite and a boot on the real dev config: the migration ran once for the config and once for the profile, and Full Bright and No Fog stayed on there. Not checked in game: a player label, since singleplayer has no other players.
+
 ## Open decisions for the owner
 
-1. **Should Full Bright and No Fog ship off?** They are on in a fresh install. ADR 0007 keeps their defaults, so they were not changed. The assistant's recommendation is to ship them off: they are the two shipped-on features a server owner is most likely to question.
-2. **Entity Health has no separate switch for players.** The whole feature is off by default. Is that enough, or should players get their own switch?
-3. **The `breaks` list** holds only the standalone Better Hitreg mod, under the assumed id `betterhitreg`. Confirm the id.
+None at the moment.
 
 ## Not yet verified
 
@@ -89,12 +98,11 @@ This file was committed with PR #3 and is updated in PR #4.
 
 ## Next steps
 
-1. Merge PR #1, then #2, then #3, then #4.
-2. Answer the open decisions above.
-3. Do the on-screen check and boot the mod matrix with `-Daurora.diagnostics.log=true`.
-4. Start step 3:
+1. Merge PR #1, then #2, then #3, then #4, then #5.
+2. Do the on-screen check and boot the mod matrix with `-Daurora.diagnostics.log=true`.
+3. Continue step 3:
    - ~~Move the Minecraft-free packages into a core Gradle module.~~ Done in PR #4. `module/` stayed in the client: `Module` reads the settings registry.
    - Measure Aurora's per-frame cost and set the overhead budget as a number.
    - Add a third-party notices file (Better Hitreg, Freelook++, AppleSkin, HitColor, bundled fonts, Apache license text).
    - Replace the history in `AGENTS.md` with a short contributor guide and move the root-level reports under `docs/`.
-5. Then step 4, the port.
+4. Then step 4, the port.

@@ -188,10 +188,10 @@ public final class FeatureCatalog {
         // Full Bright and No Fog are visibility aids that ship ON. ADR 0007 keeps
         // their defaults by owner decision, so they are not in the advantage
         // class; the notes say plainly what they do and that they are on.
-        classify("full_bright", FairPlay.VANILLA_INFORMATION, "Extends the vanilla Brightness setting past its maximum, so unlit areas are visible. On in a fresh install.");
-        classify("no_fog", FairPlay.VANILLA_INFORMATION, "Pushes distance fog back, so terrain inside your render distance is visible sooner than in vanilla. On in a fresh install.");
+        classify("full_bright", FairPlay.VANILLA_INFORMATION, "Extends the vanilla Brightness setting past its maximum, so unlit areas are visible. Off in a fresh install.", "fullBright");
+        classify("no_fog", FairPlay.VANILLA_INFORMATION, "Pushes distance fog back, so terrain inside your render distance is visible sooner than in vanilla. Off in a fresh install.", "noFogEnabled");
         classify("pack_tweaks", FairPlay.COSMETIC, "Totem particle size, first-person shield position and a tint for your own shield's cooldown. Its water and lava clarity switches improve visibility inside fluids and ship off.", "underwaterClarityEnabled", "lavaClarityEnabled");
-        classify("player_health", FairPlay.INFORMATION_ADVANTAGE, "Shows the health of nearby mobs and players above them. Vanilla does not show other players' health.", "playerHealthIndicators");
+        classify("player_health", FairPlay.INFORMATION_ADVANTAGE, "Shows the health of nearby mobs and players above them. Vanilla does not show other players' health. Players have their own switch, also off.", "playerHealthIndicators", "playerHealthShowPlayers");
         classify("free_look", FairPlay.INFORMATION_ADVANTAGE, "Lets the camera look around without turning the character, a view vanilla does not allow.", "freeLookEnabled");
         classify("saturation_bar", FairPlay.VANILLA_INFORMATION, "Shows your own saturation on the food bar.");
         classify("block_overlay", FairPlay.COSMETIC, "Restyles the outline of the block you are looking at.");

@@ -3,7 +3,7 @@ import subprocess
 
 # Forward slashes work on both Windows and POSIX (regenerated on Linux for
 # Phase C-4's add/close glyphs; historically run on Windows).
-with open('src/client/java/com/aurora/client/screen/FeatureIcons.java', 'r', encoding='utf-8') as f:
+with open('core/src/main/java/com/aurora/client/screen/FeatureIcons.java', 'r', encoding='utf-8') as f:
     content = f.read()
 
 # Extract \uXXXX
