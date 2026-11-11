@@ -26,6 +26,9 @@ All tooling references are `tools/verify_release_artifact.py`.
    - `verify` the metadata against the built JAR directory.
    - `collision` — the intended tag AND release must be unused. A burned tag
      name fails here and is a hard stop, never a retry.
+   - **Overhead budget (ADR 0005).** Boot the candidate with factory defaults
+     and six diagnostics runs, then `python tools/overhead_check.py`. Over
+     budget is a hard stop. Protocol: `docs/OVERHEAD_BUDGET.md`.
 2. **Create the release as a DRAFT with an explicit exact target.**
    ```sh
    gh release create v<X.Y.Z> \

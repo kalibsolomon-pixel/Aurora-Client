@@ -45,7 +45,7 @@ Still open:
 
 ## Step 3 status
 
-The core module is built on `feat/core-module`: 75 already Minecraft-free classes moved into `core/`, a Gradle module that cannot compile a Minecraft, Fabric, LWJGL, Mixin or Log4j import. Three small couplings were cut on the way (the config directory, the client logger, two health constants). Verified by the test suite and a dev-client boot. Still to do in step 3: the overhead budget, the third-party notices and the repo cleanup.
+The core module is built on `feat/core-module`: 75 already Minecraft-free classes moved into `core/`, a Gradle module that cannot compile a Minecraft, Fabric, LWJGL, Mixin or Log4j import. Three small couplings were cut on the way (the config directory, the client logger, two health constants). Verified by the test suite and a dev-client boot. The overhead budget is set on `feat/overhead-budget`: Aurora CPU per frame at most 0.25 ms mean and 0.40 ms p95, no glass and at most 100 fills, in a world with factory defaults, about 1.5 times the measured baseline. Every diagnostics report judges its run, and `tools/overhead_check.py` is a release step ([OVERHEAD_BUDGET.md](OVERHEAD_BUDGET.md)). Still to do in step 3: the third-party notices and the repo cleanup.
 
 ## Standing rules until the port ships
 
@@ -59,7 +59,7 @@ The core module is built on `feat/core-module`: 75 already Minecraft-free classe
 ## Goals
 
 - Release within two weeks of Sodium supporting a new Minecraft version (loose goal, once step 5 is done).
-- A numeric per-frame overhead budget that blocks releases. The value is set in step 3.
+- A numeric per-frame overhead budget that blocks releases: set in step 3, see [OVERHEAD_BUDGET.md](OVERHEAD_BUDGET.md).
 
 ## Still to verify
 

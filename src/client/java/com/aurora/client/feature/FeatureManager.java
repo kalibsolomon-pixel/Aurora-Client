@@ -1,5 +1,6 @@
 package com.aurora.client.feature;
 
+import com.aurora.client.diagnostics.Timed;
 import com.aurora.client.AuroraClient;
 import com.aurora.client.feature.impl.*;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -48,7 +49,7 @@ public class FeatureManager {
             }
         }
 
-        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+        ClientTickEvents.END_CLIENT_TICK.register(Timed.endTick(client -> {
             for (Feature f : features.values()) {
                 try {
                     f.onTick(client);
@@ -56,7 +57,7 @@ public class FeatureManager {
                     AuroraClient.LOGGER.error("Feature {} crashed on tick", f.id(), e);
                 }
             }
-        });
+        }));
     }
 
     public void register(Feature f) {

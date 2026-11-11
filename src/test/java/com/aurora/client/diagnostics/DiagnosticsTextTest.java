@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class DiagnosticsTextTest {
     private static final DiagnosticsText.Environment ENV = new DiagnosticsText.Environment(
             "3.2.0", "1.21.11", "0.19.2", "OpenGL", "Some GPU (4.6)", "2560x1440, GUI scale 3",
-            "in a singleplayer world", List.of("fps limit 260", "vsync off"));
+            "in a singleplayer world", true, List.of("fps limit 260", "vsync off"));
 
     @BeforeEach @AfterEach void clean() {
         HealthTestAccess.reset(null);
@@ -28,7 +28,7 @@ class DiagnosticsTextTest {
         long[] intervals = new long[128];
         for (int i = 0; i < 99; i++) intervals[i] = 4_000_000L;
         intervals[99] = 40_000_000L;
-        FrameBenchmark.Stats stats = FrameBenchmark.Stats.of(intervals, 100, 1200);
+        FrameBenchmark.Stats stats = FrameBenchmark.Stats.of(intervals, null, 100, 1200, 0);
 
         assertEquals(100, stats.frames());
         assertEquals(0.436, stats.seconds(), 1e-9);
@@ -40,17 +40,40 @@ class DiagnosticsTextTest {
         assertEquals(12.0, stats.fillsPerFrame(), 1e-9);
     }
 
+    @Test void statsSummarizeAuroraTimeAndGlassPerFrame() {
+        long[] intervals = {4_000_000L, 4_000_000L, 4_000_000L, 4_000_000L};
+        long[] aurora = {100_000L, 200_000L, 300_000L, 1_000_000L};
+        FrameBenchmark.Stats stats = FrameBenchmark.Stats.of(intervals, aurora, 4, 0, 6);
+        assertEquals(0.4, stats.auroraMeanMs(), 1e-9);
+        assertEquals(0.2, stats.auroraMedianMs(), 1e-9);
+        assertEquals(1.0, stats.auroraP95Ms(), 1e-9);
+        assertEquals(1.5, stats.glassPerFrame(), 1e-9);
+    }
+
+    @Test void nestedAuroraBracketsCountOnce() throws Exception {
+        long before = AuroraCost.totalNanos();
+        long outer = AuroraCost.begin();
+        long inner = AuroraCost.begin();
+        Thread.sleep(2);
+        AuroraCost.end(inner);
+        long afterInner = AuroraCost.totalNanos();
+        AuroraCost.end(outer);
+        long spent = AuroraCost.totalNanos() - before;
+        assertEquals(before, afterInner, "an inner bracket adds nothing on its own");
+        assertTrue(spent >= 2_000_000L && spent < 1_000_000_000L, "counted once: " + spent);
+    }
+
     @Test void noFramesMeansNoStats() {
-        assertNull(FrameBenchmark.Stats.of(new long[4], 0, 0));
-        assertNull(FrameBenchmark.Stats.of(null, 3, 0));
+        assertNull(FrameBenchmark.Stats.of(new long[4], null, 0, 0, 0));
+        assertNull(FrameBenchmark.Stats.of(null, null, 3, 0, 0));
     }
 
     @Test void aRunDiscardsWarmupAndReportsOnce() throws Exception {
         FrameBenchmark.Stats[] result = new FrameBenchmark.Stats[1];
         int[] calls = {0};
         long[] fills = {0};
-        assertTrue(FrameBenchmark.start(0, 0.05, () -> fills[0], stats -> { result[0] = stats; calls[0]++; }));
-        assertFalse(FrameBenchmark.start(0, 0.05, () -> 0, stats -> {}), "one run at a time");
+        assertTrue(FrameBenchmark.start(0, 0.05, () -> fills[0], () -> 0, stats -> { result[0] = stats; calls[0]++; }));
+        assertFalse(FrameBenchmark.start(0, 0.05, () -> 0, () -> 0, stats -> {}), "one run at a time");
         long end = System.nanoTime() + 2_000_000_000L;
         while (FrameBenchmark.running() && System.nanoTime() < end) {
             FrameBenchmark.onFrame();
@@ -68,14 +91,15 @@ class DiagnosticsTextTest {
     @Test void aHealthyReportListsEnvironmentBenchmarkAndMods() {
         long[] intervals = {4_000_000L, 4_000_000L, 4_000_000L, 4_000_000L};
         String report = DiagnosticsText.format(ENV, List.of("aurora 3.2.0", "sodium 0.6.0"),
-                FrameBenchmark.Stats.of(intervals, 4, 40), List.of());
+                FrameBenchmark.Stats.of(intervals, null, 4, 40, 0), List.of());
 
         assertTrue(report.startsWith("Aurora Client diagnostics\nAurora 3.2.0 | Minecraft 1.21.11 | Fabric Loader 0.19.2\n"), report);
         assertTrue(report.contains("Renderer: OpenGL | Some GPU (4.6)\n"));
         assertTrue(report.contains("No Aurora mixin has failed so far"), "the audit has not run in a unit test");
         assertTrue(report.contains("Benchmark (0.0 s, in a singleplayer world)\n- 4 frames, 250.0 fps average, 250.0 fps 1% low\n"), report);
         assertTrue(report.contains("- frame time: 4.00 ms median, 4.00 ms p95, 4.00 ms p99, 4.00 ms worst\n"));
-        assertTrue(report.contains("- Aurora UI fills per frame: 10.0\n"));
+        assertTrue(report.contains("- Aurora CPU per frame: 0.000 ms mean, 0.000 ms median, 0.000 ms p95\n"), report);
+        assertTrue(report.contains("- Aurora UI fills per frame: 10.0, glass captures per frame: 0.0\n"), report);
         assertTrue(report.contains("- settings: fps limit 260, vsync off\n"));
         assertTrue(report.contains("Recent Aurora warnings and errors (0)\n- none\n"));
         assertTrue(report.contains("Mods (2)\n- aurora 3.2.0\n- sodium 0.6.0\n"));
@@ -114,5 +138,22 @@ class DiagnosticsTextTest {
         assertEquals(20, kept.size(), "bounded");
         assertEquals("line 10", kept.get(0));
         assertEquals("line 29", kept.get(19));
+    }
+
+    @Test void theOverheadBudgetIsJudgedOnlyInAWorldWithNoScreen() {
+        long[] intervals = {4_000_000L, 4_000_000L, 4_000_000L, 4_000_000L};
+        long[] cheap = {100_000L, 100_000L, 100_000L, 100_000L};
+        long[] costly = {300_000L, 300_000L, 300_000L, 900_000L};
+        String within = DiagnosticsText.format(ENV, List.of(), FrameBenchmark.Stats.of(intervals, cheap, 4, 0, 0), List.of());
+        assertTrue(within.contains("- overhead budget: within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)\n"), within);
+
+        String over = DiagnosticsText.format(ENV, List.of(), FrameBenchmark.Stats.of(intervals, costly, 4, 0, 4), List.of());
+        assertTrue(over.contains("- overhead budget: OVER: CPU mean 0.450 ms > 0.250 ms, CPU p95 0.900 ms > 0.400 ms, "
+                + "glass captures 1.000 > 0.000\n"), over);
+
+        DiagnosticsText.Environment menu = new DiagnosticsText.Environment("3.2.0", "1.21.11", "0.19.2", "OpenGL",
+                "Some GPU (4.6)", "2560x1440, GUI scale 3", "in a menu", false, List.of());
+        String notJudged = DiagnosticsText.format(menu, List.of(), FrameBenchmark.Stats.of(intervals, costly, 4, 0, 4), List.of());
+        assertTrue(notJudged.contains("- overhead budget: not judged"), notJudged);
     }
 }

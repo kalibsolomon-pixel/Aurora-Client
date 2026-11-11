@@ -4,6 +4,7 @@ import com.aurora.client.hud.BlockOverlayRenderer;
 import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.config.profile.ProfileManager;
 import com.aurora.client.feature.FeatureManager;
+import com.aurora.client.diagnostics.Timed;
 import com.aurora.client.hud.HudRenderer;
 import com.aurora.client.hud.module.*;
 import net.fabricmc.api.ClientModInitializer;
@@ -77,14 +78,14 @@ public class AuroraClient implements ClientModInitializer {
             com.aurora.client.health.MixinAudit.run(AuroraClient.class.getClassLoader());
             com.aurora.client.health.FeatureHealth.enforce(AuroraConfig.get());
         });
-        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.START_CLIENT_TICK.register(
-                client -> com.aurora.client.health.FeatureHealth.enforce(AuroraConfig.get()));
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.START_CLIENT_TICK.register(Timed.startTick(
+                client -> com.aurora.client.health.FeatureHealth.enforce(AuroraConfig.get())));
 
         // Diagnostics report (ADR 0004): remember recent Aurora warnings, and
         // let a benchmark that saw no frames still finish.
         com.aurora.client.diagnostics.RecentErrors.install();
-        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(
-                com.aurora.client.diagnostics.DiagnosticsReport::tick);
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(Timed.endTick(
+                com.aurora.client.diagnostics.DiagnosticsReport::tick));
 
         moduleManager = new HudModuleManager();
         moduleManager.register(new InfoModule());
@@ -104,10 +105,10 @@ public class AuroraClient implements ClientModInitializer {
         moduleManager.register(new MinimapModule());
 
         HitboxRenderer hitboxRenderer = new HitboxRenderer();
-        WorldRenderEvents.AFTER_ENTITIES.register(hitboxRenderer::render);
+        WorldRenderEvents.AFTER_ENTITIES.register(Timed.afterEntities(hitboxRenderer::render));
 
         BlockOverlayRenderer blockOverlayRenderer = new BlockOverlayRenderer();
-        WorldRenderEvents.BEFORE_BLOCK_OUTLINE.register(blockOverlayRenderer::onBeforeBlockOutline);
+        WorldRenderEvents.BEFORE_BLOCK_OUTLINE.register(Timed.beforeBlockOutline(blockOverlayRenderer::onBeforeBlockOutline));
 
         // Container preview — map Aurora's tooltip data to its renderer.
         net.fabricmc.fabric.api.client.rendering.v1.TooltipComponentCallback.EVENT.register(data -> {
@@ -118,50 +119,50 @@ public class AuroraClient implements ClientModInitializer {
         });
 
         com.aurora.client.hud.WaypointRenderer waypointRenderer = new com.aurora.client.hud.WaypointRenderer();
-        WorldRenderEvents.AFTER_ENTITIES.register(waypointRenderer::renderWorld);
-        HudRenderCallback.EVENT.register((ctx, tickCounter) -> {
+        WorldRenderEvents.AFTER_ENTITIES.register(Timed.afterEntities(waypointRenderer::renderWorld));
+        HudRenderCallback.EVENT.register(Timed.hud((ctx, tickCounter) -> {
             com.aurora.client.ui.util.AuroraFontRenderer.setRenderingAuroraUI(true);
             try {
                 waypointRenderer.renderHud(ctx, tickCounter);
             } finally {
                 com.aurora.client.ui.util.AuroraFontRenderer.setRenderingAuroraUI(false);
             }
-        });
+        }));
 
-        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_WORLD_TICK.register(
-                client -> com.aurora.client.util.OverlayReloadListener.callEvent());
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_WORLD_TICK.register(Timed.endWorldTick(
+                client -> com.aurora.client.util.OverlayReloadListener.callEvent()));
 
         // Enchant Glint Recolor: END_CLIENT_TICK (not WORLD) so glint config
         // edits apply even from no-world screens; ticks run between frames,
         // which is what makes the texture reload safe (GlintColor.tick).
-        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(
-                client -> com.aurora.client.util.GlintColor.tick());
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(Timed.endTick(
+                client -> com.aurora.client.util.GlintColor.tick()));
 
         // Two-way sync between Aurora config and the vanilla KeyMapping
         // entries we registered above. END_CLIENT_TICK runs every tick
         // regardless of world state, so rebinds made from the vanilla
         // controls screen (no world tick happens while it's open) are
         // still picked up the moment the screen closes.
-        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(
-                client -> com.aurora.client.util.AuroraKeybinds.tick());
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(Timed.endTick(
+                client -> com.aurora.client.util.AuroraKeybinds.tick()));
 
         // Isolated blur-panel test screen — verification harness for the
         // blur+tint panel foundation. Opens only in-world with no other
         // screen open; never reachable from another Aurora screen.
         final com.aurora.client.util.AuroraKey.EdgeDetector blurTestEdge =
                 new com.aurora.client.util.AuroraKey.EdgeDetector();
-        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(client -> {
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(Timed.endTick(client -> {
             if (blurTestEdge.justPressed(AuroraConfig.get().blurTestKey)
                     && client.screen == null && client.player != null) {
                 client.setScreen(new com.aurora.client.ui.render.blur.BlurTestScreen());
             }
-        });
+        }));
 
         // Snapshot the local ender chest while its screen is open so we can
         // preview its contents from the item tooltip later.
         final String enderChestTitle =
                 net.minecraft.network.chat.Component.translatable("container.enderchest").getString();
-        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(client -> {
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(Timed.endTick(client -> {
             if (!AuroraConfig.get().containerPreviewEnabled) return;
             if (!AuroraConfig.get().containerPreviewEnderChest) return;
             if (client.screen instanceof net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?> acs
@@ -170,7 +171,7 @@ public class AuroraClient implements ClientModInitializer {
                     && acs.getTitle().getString().equals(enderChestTitle)) {
                 com.aurora.client.hud.preview.EnderChestSnapshot.capture(cm);
             }
-        });
+        }));
 
         // Hydrate module state from saved layouts (if any).
         applyLayouts(moduleManager);
@@ -182,19 +183,19 @@ public class AuroraClient implements ClientModInitializer {
         ProfileManager.getInstance().onProfileApplied(n -> applyLayouts(moduleManager));
 
         hudRenderer = new HudRenderer();
-        HudRenderCallback.EVENT.register(hudRenderer::render);
+        HudRenderCallback.EVENT.register(Timed.hud(hudRenderer::render));
 
         // Unified alert popup renderer — serves all alert sources
         // (durability, hunger, effect expiry).
         com.aurora.client.hud.AlertRenderer alertRenderer = new com.aurora.client.hud.AlertRenderer();
-        HudRenderCallback.EVENT.register((ctx, tickCounter) -> {
+        HudRenderCallback.EVENT.register(Timed.hud((ctx, tickCounter) -> {
             com.aurora.client.ui.util.AuroraFontRenderer.setRenderingAuroraUI(true);
             try {
                 alertRenderer.render(ctx);
             } finally {
                 com.aurora.client.ui.util.AuroraFontRenderer.setRenderingAuroraUI(false);
             }
-        });
+        }));
 
         // Persist module layouts on exit so the drag editor's changes stick.
         // Uses the BLOCKING save variant here: the async save() hands its disk
