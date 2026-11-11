@@ -9,6 +9,10 @@ on: [pull_request, push]
 jobs:
   build:
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        minecraft: ['26.1.2', '26.2', '26.3']
     steps:
       - name: checkout repository
         uses: actions/checkout@v6
@@ -22,11 +26,13 @@ jobs:
       - name: make gradle wrapper executable
         run: chmod +x ./gradlew
       - name: test release tools and portable defaults
+        env:
+          AURORA_MINECRAFT: ${{ matrix.minecraft }}
         run: python3 -B -m unittest discover -s tools -p 'test_*.py'
       - name: build
-        run: ./gradlew build
+        run: python3 tools/parity.py --minecraft '${{ matrix.minecraft }}'
       - name: capture build artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: Artifacts
-          path: build/libs/
+          name: Minecraft-${{ matrix.minecraft }}
+          path: build/minecraft-${{ matrix.minecraft }}/libs/

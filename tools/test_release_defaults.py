@@ -1,6 +1,7 @@
 """Guard the portable default export and the packaged 3.2.0 identity contract."""
 
 from source_tree import client_path
+import os
 import json
 import re
 import unittest
@@ -43,7 +44,7 @@ class ReleaseDefaultsTest(unittest.TestCase):
         self.assertIn('/assets/aurora/defaults/3.2.0.json', source)
         metadata = json.loads(client_path('resources/fabric.mod.json').read_text())
         self.assertEqual('${version}', metadata['version'])
-        minecraft = re.search(r'(?m)^minecraft_version=(.+)$', properties).group(1)
+        minecraft = os.environ.get('AURORA_MINECRAFT', re.search(r'(?m)^minecraft_version=(.+)$', properties).group(1))
         self.assertEqual('~' + minecraft, metadata['depends']['minecraft'])
 
 

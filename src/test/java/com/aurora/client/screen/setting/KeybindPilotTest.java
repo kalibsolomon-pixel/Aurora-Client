@@ -23,8 +23,8 @@ import static org.junit.jupiter.api.Assertions.*;
  * real Minecraft child dispatch are covered by the DevPilot runtime mode.
  */
 class KeybindPilotTest {
-    private static final int ORIGINAL = InputConstants.KEY_J;
-    private static final int CAPTURED = InputConstants.KEY_F7;
+    private static final int ORIGINAL = com.aurora.client.TestKeyboard.stored(InputConstants.KEY_J);
+    private static final int CAPTURED = com.aurora.client.TestKeyboard.stored(InputConstants.KEY_F7);
 
     @AfterEach
     void clearGlobalOwners() {
@@ -76,7 +76,7 @@ class KeybindPilotTest {
         assertFalse(f.row.hoverTarget(false, false),
                 "listening with the pointer away must allow hover to settle at zero");
 
-        assertTrue(f.row.onKeyPress(CAPTURED, 0));
+        assertTrue(f.row.onKeyPress(com.aurora.client.TestKeyboard.nativeKey(CAPTURED), 0));
         assertFalse(f.row.listeningState());
         assertTrue(control.isFocused(), "successful capture keeps stable keyboard focus");
     }
@@ -95,7 +95,7 @@ class KeybindPilotTest {
         assertEquals(0, f.saves.get());
 
         assertTrue(f.row.onKeyPress(InputConstants.KEY_RETURN, 0));
-        assertEquals(InputConstants.KEY_RETURN, f.binding.get());
+        assertEquals(com.aurora.client.TestKeyboard.stored(InputConstants.KEY_RETURN), f.binding.get());
         assertEquals(1, f.saves.get());
         assertFalse(f.row.listeningState());
     }
@@ -105,13 +105,13 @@ class KeybindPilotTest {
         Fixture f = fixture();
         begin(f);
 
-        assertTrue(f.row.onKeyPress(CAPTURED, 0));
+        assertTrue(f.row.onKeyPress(com.aurora.client.TestKeyboard.nativeKey(CAPTURED), 0));
         assertEquals(CAPTURED, f.binding.get());
         assertEquals(1, f.writes.get());
         assertEquals(1, f.saves.get());
         assertFalse(f.row.listeningState());
 
-        assertFalse(f.row.onKeyPress(CAPTURED, 0),
+        assertFalse(f.row.onKeyPress(com.aurora.client.TestKeyboard.nativeKey(CAPTURED), 0),
                 "a repeat after capture no longer belongs to the control");
         assertEquals(1, f.writes.get());
         assertEquals(1, f.saves.get());
@@ -122,7 +122,7 @@ class KeybindPilotTest {
         Fixture f = fixture();
         f.disabled.set(true);
 
-        assertFalse(f.row.mouseClicked(1, 1, 1, 0, 0, 320));
+        assertFalse(f.row.mouseClicked(1, 1, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT, 0, 0, 320));
         assertFalse(f.row.listeningState());
         var control = f.row.interactionControl();
         assertFalse(control.action().enabled());
@@ -143,7 +143,7 @@ class KeybindPilotTest {
         assertFalse(f.row.listeningState());
         assertEquals(ORIGINAL, f.binding.get());
 
-        assertFalse(f.row.onKeyPress(CAPTURED, 0));
+        assertFalse(f.row.onKeyPress(com.aurora.client.TestKeyboard.nativeKey(CAPTURED), 0));
         assertEquals(ORIGINAL, f.binding.get());
         assertEquals(0, f.writes.get());
         assertEquals(0, f.saves.get());
@@ -155,7 +155,7 @@ class KeybindPilotTest {
         begin(f);
         f.disabled.set(true);
 
-        assertTrue(f.row.onKeyPress(CAPTURED, 0),
+        assertTrue(f.row.onKeyPress(com.aurora.client.TestKeyboard.nativeKey(CAPTURED), 0),
                 "an event delivered to the stale owner is consumed-but-inert");
         assertFalse(f.row.listeningState());
         assertEquals(ORIGINAL, f.binding.get());
@@ -195,7 +195,7 @@ class KeybindPilotTest {
         Fixture delete = fixture();
         begin(delete);
         assertTrue(delete.row.onKeyPress(InputConstants.KEY_DELETE, 0));
-        assertEquals(InputConstants.KEY_DELETE, delete.binding.get(),
+        assertEquals(com.aurora.client.TestKeyboard.stored(InputConstants.KEY_DELETE), delete.binding.get(),
                 "Delete remains an ordinary bindable key");
     }
 
@@ -216,7 +216,7 @@ class KeybindPilotTest {
     }
 
     private static void begin(Fixture f) {
-        assertTrue(f.row.mouseClicked(1, 1, 1, 0, 0, 320));
+        assertTrue(f.row.mouseClicked(1, 1, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT, 0, 0, 320));
         assertTrue(f.row.listeningState());
     }
 

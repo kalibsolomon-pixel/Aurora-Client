@@ -14,6 +14,11 @@ core (and ports on 26.3) are already included.
 
 ## Artifact identity
 
+The maintenance descriptions above record the checkpoint policy at publication.
+[ADR 0008](../adr/0008-full-feature-parity-across-supported-versions.md) supersedes
+that policy for future releases: all three lines receive full feature parity
+from the common source tree. These published binaries remain immutable.
+
 - [aurora-3.2.2-mc26.1.2.jar](https://github.com/kalibsolomon-pixel/Aurora-Client/releases/download/v3.2.2/aurora-3.2.2-mc26.1.2.jar), 3,284,354 bytes. [Verification metadata](evidence/3.2.2-artifact.json); SHA-256 `53b654d2f237b0c42843183ac6e1e1ce6e93f59ec3ef2a1d974cab079b9296db`.
 - [aurora-3.2.3-mc26.2.jar](https://github.com/kalibsolomon-pixel/Aurora-Client/releases/download/v3.2.3/aurora-3.2.3-mc26.2.jar), 3,267,031 bytes. [Verification metadata](evidence/3.2.3-artifact.json); SHA-256 `4fa7ddb76d35cdea724c566902858f45c4a228c63c0d4468ce91ff2774eb5941`.
 - [aurora-3.3.0-mc26.3.jar](https://github.com/kalibsolomon-pixel/Aurora-Client/releases/download/v3.3.0/aurora-3.3.0-mc26.3.jar), 3,287,057 bytes. [Verification metadata](evidence/3.3.0-artifact.json); SHA-256 `b23f1919d432bc3ff3cc375ae06c5fbec3433da7cf03b4cec798133135887aee`.

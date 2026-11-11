@@ -225,7 +225,7 @@ class RolloutStatesTest {
         KeybindSetting rowA = new KeybindSetting("A", a::get, v -> { writes.incrementAndGet(); a.set(v); }, saves::incrementAndGet);
         KeybindSetting rowB = new KeybindSetting("B", b::get, v -> { writes.incrementAndGet(); b.set(v); }, saves::incrementAndGet);
 
-        assertTrue(rowA.mouseClicked(1, 1, 1, 0, 0, 320));
+        assertTrue(rowA.mouseClicked(1, 1, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT, 0, 0, 320));
         assertTrue(rowA.listeningState());
         // Activating B while A listens cancels A's ownership structurally
         // (beginListening) — never two simultaneous listening owners.
@@ -237,7 +237,7 @@ class RolloutStatesTest {
         // The stale owner's key event is inert; B's is the one capture.
         assertFalse(rowA.onKeyPress(com.mojang.blaze3d.platform.InputConstants.KEY_F7, 0));
         assertTrue(rowB.onKeyPress(com.mojang.blaze3d.platform.InputConstants.KEY_F7, 0));
-        assertEquals((int) com.mojang.blaze3d.platform.InputConstants.KEY_F7, b.get());
+        assertEquals(com.aurora.client.TestKeyboard.stored(com.mojang.blaze3d.platform.InputConstants.KEY_F7), b.get());
         assertEquals((int) com.mojang.blaze3d.platform.InputConstants.KEY_J, a.get(), "no double capture through the stale owner");
         assertEquals(1, writes.get(), "exactly one write");
         assertEquals(1, saves.get(), "exactly one save");

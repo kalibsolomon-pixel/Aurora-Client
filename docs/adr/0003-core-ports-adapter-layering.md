@@ -13,7 +13,8 @@ The codebase is split by which way dependencies point, not by kind of code:
 
 "Features" is not a layer. Each feature is core logic plus adapter hooks.
 
-The payoff is cheaper ports and a testable core, not multi-version builds (see ADR 0002).
+The payoff is cheaper ports and a testable core. ADR 0008 subsequently extends
+this structure to full-parity builds across every supported line.
 
 ## Considered options
 
@@ -47,3 +48,16 @@ renderer or implement step 6. Entity rendering still uses native entities inside
 the adapter; a broad entity abstraction would be speculative while those hooks
 remain native. Existing pure geometry and smoothing policies already accept
 primitive values. Further extraction should follow a concrete consumer.
+
+## Parity build extension (step 5.5, 2026-11-11)
+
+All three adapters now live in one tree. The root facade selects exactly one
+native classpath per invocation with `aurora.minecraft`; `tools/parity.py` builds
+the complete set sequentially, compiling unchanged core and ports once.
+Outputs are isolated per Minecraft version. `adapters/shared` holds behavior
+that still imports Minecraft and therefore cannot enter core: the feature
+registry, screens, settings, widgets and stable native hooks. Small `NativeUi`
+and `NativeKeyboard` bridges hide real differences observed across these
+three adapters. Rendering, mixin signatures, native timing/input and shaders
+remain version-owned. There is no source preprocessor, runtime version detection
+or universal JAR. Duplicate shared/native paths fail the build.

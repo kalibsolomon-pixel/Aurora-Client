@@ -26,7 +26,6 @@ import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import com.mojang.blaze3d.platform.InputConstants;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -1011,7 +1010,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
     public void onClose() {
         commitEditors();
         saveOnClose();
-        if (this.minecraft != null) this.minecraft.gui.setScreen(parent);
+        if (this.minecraft != null) com.aurora.client.adapter.NativeUi.setScreen(this.minecraft, parent);
     }
 
     @Override

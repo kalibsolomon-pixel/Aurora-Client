@@ -22,9 +22,9 @@ import static org.junit.jupiter.api.Assertions.*;
  * deliberately not the single-Keybind clear-to-UNBOUND rule.
  */
 class KeyListPilotTest {
-    private static final int A = InputConstants.KEY_F1;
-    private static final int B = InputConstants.KEY_F2;
-    private static final int C = InputConstants.KEY_F3;
+    private static final int A = com.aurora.client.TestKeyboard.stored(InputConstants.KEY_F1);
+    private static final int B = com.aurora.client.TestKeyboard.stored(InputConstants.KEY_F2);
+    private static final int C = com.aurora.client.TestKeyboard.stored(InputConstants.KEY_F3);
 
     @AfterEach
     void clearGlobalOwners() {
@@ -57,7 +57,7 @@ class KeyListPilotTest {
         assertTrue(control.isFocused());
         assertTrue(f.row.listeningState());
 
-        assertTrue(f.row.onKeyPress(A, 0));
+        assertTrue(f.row.onKeyPress(com.aurora.client.TestKeyboard.nativeKey(A), 0));
         assertFalse(f.row.listeningState());
         assertTrue(control.isFocused(), "capture keeps stable keyboard focus on the add action");
     }
@@ -74,7 +74,7 @@ class KeyListPilotTest {
 
         // The NEXT event captures — Enter itself is an ordinary bindable key.
         assertTrue(f.row.onKeyPress(InputConstants.KEY_RETURN, 0));
-        assertEquals(List.of(InputConstants.KEY_RETURN), f.list);
+        assertEquals(List.of(com.aurora.client.TestKeyboard.stored(InputConstants.KEY_RETURN)), f.list);
         assertEquals(1, f.saves.get());
         assertFalse(f.row.listeningState());
     }
@@ -83,13 +83,13 @@ class KeyListPilotTest {
     void successfulAddAppendsMutatesAndSavesExactlyOnce() {
         Fixture f = fixture(List.of(A, B));
         begin(f);
-        assertTrue(f.row.onKeyPress(C, 0));
+        assertTrue(f.row.onKeyPress(com.aurora.client.TestKeyboard.nativeKey(C), 0));
         assertEquals(List.of(A, B, C), f.list);
         assertEquals(1, f.mutations.get());
         assertEquals(1, f.saves.get());
         assertFalse(f.row.listeningState());
 
-        assertFalse(f.row.onKeyPress(C, 0),
+        assertFalse(f.row.onKeyPress(com.aurora.client.TestKeyboard.nativeKey(C), 0),
                 "a repeat after capture no longer belongs to the control");
         assertEquals(1, f.mutations.get());
         assertEquals(1, f.saves.get());
@@ -101,7 +101,7 @@ class KeyListPilotTest {
         // pilot corrects the persistence half — no mutation, no save.
         Fixture f = fixture(List.of(A, B));
         begin(f);
-        assertTrue(f.row.onKeyPress(A, 0));
+        assertTrue(f.row.onKeyPress(com.aurora.client.TestKeyboard.nativeKey(A), 0));
         assertEquals(List.of(A, B), f.list);
         assertEquals(0, f.mutations.get());
         assertEquals(0, f.saves.get());
@@ -125,7 +125,7 @@ class KeyListPilotTest {
         Fixture delete = fixture();
         begin(delete);
         assertTrue(delete.row.onKeyPress(InputConstants.KEY_DELETE, 0));
-        assertEquals(List.of(InputConstants.KEY_DELETE), delete.list,
+        assertEquals(List.of(com.aurora.client.TestKeyboard.stored(InputConstants.KEY_DELETE)), delete.list,
                 "Delete remains an ordinary bindable key");
         assertEquals(1, delete.saves.get());
     }
@@ -145,7 +145,7 @@ class KeyListPilotTest {
     void emptyListTransitionsBothWays() throws Exception {
         Fixture f = fixture();
         begin(f);
-        assertTrue(f.row.onKeyPress(A, 0));
+        assertTrue(f.row.onKeyPress(com.aurora.client.TestKeyboard.nativeKey(A), 0));
         assertEquals(List.of(A), f.list);
         // Remove the only entry → back to empty, no stale hit geometry.
         assertTrue(clickRemove(f, 0));
@@ -153,7 +153,7 @@ class KeyListPilotTest {
         assertEquals(2, f.saves.get());
         // And back up from empty again.
         begin(f);
-        assertTrue(f.row.onKeyPress(B, 0));
+        assertTrue(f.row.onKeyPress(com.aurora.client.TestKeyboard.nativeKey(B), 0));
         assertEquals(List.of(B), f.list);
     }
 
@@ -161,7 +161,7 @@ class KeyListPilotTest {
     void disabledRejectsAddAndRemoveWithoutSaveOrSound() {
         Fixture f = fixture(List.of(A));
         f.disabled.set(true);
-        assertFalse(f.row.mouseClicked(1, 1, 1, 0, 0, 320));
+        assertFalse(f.row.mouseClicked(1, 1, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT, 0, 0, 320));
         var control = f.row.interactionControl();
         assertFalse(control.action().enabled());
         assertFalse(control.action().activate(SemanticFeedback.NONE, null));
@@ -178,7 +178,7 @@ class KeyListPilotTest {
 
         // A stale event racing the gate is consumed-but-inert — the
         // reconcile (render) has not run yet, so the owner still routes.
-        assertTrue(f.row.onKeyPress(B, 0));
+        assertTrue(f.row.onKeyPress(com.aurora.client.TestKeyboard.nativeKey(B), 0));
         assertEquals(List.of(A), f.list);
         assertEquals(0, f.saves.get());
         assertFalse(f.row.listeningState());
@@ -259,13 +259,13 @@ class KeyListPilotTest {
         assertEquals(List.of(A), f.list);
         assertTrue(control.isFocused());
         begin(f); // add still works after the mutation
-        assertTrue(f.row.onKeyPress(C, 0));
+        assertTrue(f.row.onKeyPress(com.aurora.client.TestKeyboard.nativeKey(C), 0));
         assertEquals(List.of(A, C), f.list);
     }
 
     /** Entry i's "−" button center in the headless (0,0,240) frame. */
     private static boolean clickRemove(Fixture f, int i) {
-        return f.row.mouseClicked(219.0, 26.0 + 18.0 * i, 1, 0, 0, 240); // (ROW_H + 2)(i + 1) + ROW_H / 2, ROW_H = 16
+        return f.row.mouseClicked(219.0, 26.0 + 18.0 * i, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT, 0, 0, 240); // (ROW_H + 2)(i + 1) + ROW_H / 2, ROW_H = 16
     }
 
     private static void begin(Fixture f) {
@@ -275,7 +275,7 @@ class KeyListPilotTest {
         // headless direct path runs, exactly like an unhosted row.
         f.row.interactionControl().setAvailable(false);
         int n = f.list.size();
-        assertTrue(f.row.mouseClicked(120.0, 30.0 + 18.0 * n, 1, 0, 0, 240),
+        assertTrue(f.row.mouseClicked(120.0, 30.0 + 18.0 * n, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT, 0, 0, 240),
                 "headless direct add-pill activation");
         assertTrue(f.row.listeningState());
     }

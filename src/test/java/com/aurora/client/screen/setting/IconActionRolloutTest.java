@@ -100,12 +100,12 @@ class IconActionRolloutTest {
 
     @Test
     void keyListChipControlsAreHostedInVisualOrderWithTheAddLast() {
-        KeyListFixture f = new KeyListFixture(List.of(InputConstants.KEY_J, InputConstants.KEY_K));
+        KeyListFixture f = new KeyListFixture(List.of(com.aurora.client.TestKeyboard.stored(InputConstants.KEY_J), com.aurora.client.TestKeyboard.stored(InputConstants.KEY_K)));
         List<SemanticActionControl> controls = f.row.interactionControls();
         assertEquals(3, controls.size(), "two chips + the add action");
-        assertEquals("Remove key " + KeybindSetting.keyName(InputConstants.KEY_J),
+        assertEquals("Remove key " + KeybindSetting.keyName(com.aurora.client.TestKeyboard.stored(InputConstants.KEY_J)),
                 controls.get(0).action().accessibleName().getString());
-        assertEquals("Remove key " + KeybindSetting.keyName(InputConstants.KEY_K),
+        assertEquals("Remove key " + KeybindSetting.keyName(com.aurora.client.TestKeyboard.stored(InputConstants.KEY_K)),
                 controls.get(1).action().accessibleName().getString());
         assertEquals("Extra Keys: Add Key", controls.get(2).action().accessibleName().getString());
         // Stable across asks without mutation — no per-frame construction.
@@ -118,12 +118,12 @@ class IconActionRolloutTest {
 
     @Test
     void keyListChipKeyboardRemovalRunsTheOnePathExactlyOnce() {
-        KeyListFixture f = new KeyListFixture(List.of(InputConstants.KEY_J, InputConstants.KEY_K));
+        KeyListFixture f = new KeyListFixture(List.of(com.aurora.client.TestKeyboard.stored(InputConstants.KEY_J), com.aurora.client.TestKeyboard.stored(InputConstants.KEY_K)));
         SemanticActionControl chipK = f.row.interactionControls().get(1);
         chipK.setAvailable(true);
         chipK.setFocused(true);
         assertTrue(chipK.keyPressed(new KeyEvent(InputConstants.KEY_RETURN, 0, 0)));
-        assertEquals(List.of(InputConstants.KEY_J), f.list, "exactly that entry removed (by value)");
+        assertEquals(List.of(com.aurora.client.TestKeyboard.stored(InputConstants.KEY_J)), f.list, "exactly that entry removed (by value)");
         assertEquals(1, f.saves.get(), "one save per removal");
         // The stale control is gone from the rebuilt list; the surviving
         // chip's control is untouched.
@@ -134,7 +134,7 @@ class IconActionRolloutTest {
         chipK.setAvailable(true);
         assertTrue(chipK.keyPressed(new KeyEvent(InputConstants.KEY_RETURN, 0, 0)));
         assertEquals(1, f.saves.get(), "the removed action is no longer wired to the list");
-        assertEquals(List.of(InputConstants.KEY_J), f.list);
+        assertEquals(List.of(com.aurora.client.TestKeyboard.stored(InputConstants.KEY_J)), f.list);
     }
 
     @Test
@@ -159,7 +159,7 @@ class IconActionRolloutTest {
         List<SemanticActionControl> re = f.row.interactionControls();
         assertEquals(2, re.size());
         assertSame(re.get(re.size() - 1), empty.get(0), "the add control is stable");
-        assertEquals("Remove key " + KeybindSetting.keyName(InputConstants.KEY_K),
+        assertEquals("Remove key " + KeybindSetting.keyName(com.aurora.client.TestKeyboard.stored(InputConstants.KEY_K)),
                 re.get(0).action().accessibleName().getString());
     }
 
@@ -171,7 +171,7 @@ class IconActionRolloutTest {
 
     @Test
     void keyListChipGateFollowsTheRowDisabledState() {
-        KeyListFixture f = new KeyListFixture(List.of(InputConstants.KEY_J));
+        KeyListFixture f = new KeyListFixture(List.of(com.aurora.client.TestKeyboard.stored(InputConstants.KEY_J)));
         f.disabled.set(true);
         SemanticActionControl chip = f.row.interactionControls().get(0);
         assertFalse(chip.action().enabled(), "the row's disabled gate is authoritative");
@@ -179,7 +179,7 @@ class IconActionRolloutTest {
         chip.setFocused(true);
         assertTrue(chip.keyPressed(new KeyEvent(InputConstants.KEY_RETURN, 0, 0)),
                 "a targeted disabled selection is consumed (cannot fall through)");
-        assertEquals(List.of(InputConstants.KEY_J), f.list);
+        assertEquals(List.of(com.aurora.client.TestKeyboard.stored(InputConstants.KEY_J)), f.list);
         assertEquals(0, f.saves.get());
     }
 

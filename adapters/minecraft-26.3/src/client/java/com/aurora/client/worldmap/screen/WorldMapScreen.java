@@ -16,7 +16,6 @@ import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.worldmap.*;
 import com.aurora.client.worldmap.cache.OverviewCache;
 import com.aurora.client.worldmap.cache.RegionCache;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
@@ -92,10 +91,10 @@ public final class WorldMapScreen extends Screen implements ThemedScreen {
                 Component.literal("Player"), "Return to the live dimension and follow the player. Shortcut P.", this::centerPlayer));
         addRenderableWidget(ButtonWidget.semantic(ax + actionW + GAP, row1, actionW, CTRL_H,
                 Component.literal("Waypoints"), "Search, edit and organize this world's waypoints.",
-                () -> minecraft.gui.setScreen(new WaypointManagerScreen(this))));
+                () -> com.aurora.client.adapter.NativeUi.setScreen(minecraft, new WaypointManagerScreen(this))));
         addRenderableWidget(ButtonWidget.semantic(ax + 2 * (actionW + GAP), row1, actionW, CTRL_H,
                 Component.literal("Settings"), "Map appearance, caching and legacy import.",
-                () -> minecraft.gui.setScreen(new FeatureDetailScreen(this,
+                () -> com.aurora.client.adapter.NativeUi.setScreen(minecraft, new FeatureDetailScreen(this,
                         FeatureRegistry.modules().stream().filter(f -> f.id.equals("world_map")).findFirst().orElseThrow()))));
         if (follow) centerPlayer();
         lastFrame = System.nanoTime();
@@ -298,7 +297,7 @@ public final class WorldMapScreen extends Screen implements ThemedScreen {
             for (Waypoint waypoint : markers) {
                 if (Math.abs(event.x() - screenX(waypoint.x + .5)) > 8
                         || Math.abs(event.y() - screenZ(waypoint.z + .5)) > 8) continue;
-                minecraft.gui.setScreen(new WaypointEditScreen(this, waypoint, false)); return true;
+                com.aurora.client.adapter.NativeUi.setScreen(minecraft, new WaypointEditScreen(this, waypoint, false)); return true;
             }
             dragging = true; follow = false; setFocused(null); return true;
         }
@@ -307,7 +306,7 @@ public final class WorldMapScreen extends Screen implements ThemedScreen {
             int z = (int) Math.floor(viewport.worldZ(event.y(), height));
             int y = minecraft.player == null ? 64 : minecraft.player.blockPosition().getY();
             // Color regions do not contain heights: the editor exposes Y explicitly.
-            minecraft.gui.setScreen(new WaypointEditScreen(this,
+            com.aurora.client.adapter.NativeUi.setScreen(minecraft, new WaypointEditScreen(this,
                     new Waypoint("Waypoint", x, y, z, dimension(), 0xFFFFAA00), true)); return true;
         }
         return false;
@@ -343,6 +342,6 @@ public final class WorldMapScreen extends Screen implements ThemedScreen {
     @Override public void onClose() {
         WorldMapClient engine = WorldMapClient.get();
         if (engine != null) engine.restoreLiveDimension();
-        minecraft.gui.setScreen(null);
+        com.aurora.client.adapter.NativeUi.setScreen(minecraft, null);
     }
 }

@@ -41,7 +41,8 @@ class AbstractButtonMixinConformanceTest {
         String s = src(MIXIN);
         assertTrue(s.contains("if (!AuroraConfig.get().customTitleScreen) return false;"),
                 "the customTitleScreen gate is preserved verbatim");
-        assertTrue(s.contains("JoinMultiplayerScreen || mc.gui.screen() instanceof SelectWorldScreen"),
+        String screen = "com.aurora.client.adapter.NativeUi.screen(mc)";
+        assertTrue(s.contains("JoinMultiplayerScreen || " + screen + " instanceof SelectWorldScreen"),
                 "the two-screen gate is preserved");
         assertTrue(s.contains("getClass() == net.minecraft.client.gui.components.Button.Plain.class"),
                 "exact Button.Plain match (ImageButton & future subclasses stay vanilla)");

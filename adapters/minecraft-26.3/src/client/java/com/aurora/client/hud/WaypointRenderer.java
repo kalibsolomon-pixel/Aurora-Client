@@ -14,7 +14,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 
@@ -53,7 +52,7 @@ public final class WaypointRenderer {
     public void renderWorld(LevelRenderContext ctx) {
         Minecraft mc = Minecraft.getInstance();
         if (mc == null || mc.level == null || mc.player == null) return;
-        if (mc.gui.screen() != null) return;
+        if (com.aurora.client.adapter.NativeUi.screen(mc) != null) return;
 
         AuroraConfig cfg = AuroraConfig.get();
         if (!cfg.waypointsEnabled) return;
@@ -125,7 +124,7 @@ public final class WaypointRenderer {
     public void renderHud(GuiGraphicsExtractor g, DeltaTracker tickCounter) {
         Minecraft mc = Minecraft.getInstance();
         if (mc == null || mc.level == null || mc.player == null) return;
-        if (mc.gui.screen() != null) return;
+        if (com.aurora.client.adapter.NativeUi.screen(mc) != null) return;
         if (mc.options != null && mc.gui.hud.isHidden()) return;
 
         AuroraConfig cfg = AuroraConfig.get();

@@ -189,7 +189,7 @@ final class PortableBlurRenderer {
             params[8] = width; params[9] = height;
             params[10] = scale; params[11] = stripes ? 1 : 0;
             Target target = target(output, 0, width, height);
-            pass(output, 0, PATTERN, Minecraft.getInstance().gameRenderer.mainRenderTarget().getColorTextureView(), target, params);
+            pass(output, 0, PATTERN, com.aurora.client.adapter.NativeUi.mainTarget(Minecraft.getInstance()).getColorTextureView(), target, params);
             return new BlurPanelRenderer.CaptureSource(target.getTextureView(), width, height);
         }
 

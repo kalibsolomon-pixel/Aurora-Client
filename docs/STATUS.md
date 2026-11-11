@@ -14,13 +14,20 @@ serve real core consumers: draw coverage, text measurement, frame clock, key
 state and world identity. Every mixin and the entire glass renderer belong to
 the adapter. Root Gradle commands and the native UI pipeline are preserved.
 
-The Java suite discovers 661 tests (660 pass, one opt-in stress test is skipped).
-All 34 Python release/default tests pass. The build checks native dependency
-exclusion and includes core and ports in the single runtime artifact.
+Step 5.5 adds the 26.1 and 26.2 adapters to this tree, with 188 shared
+Minecraft-facing implementations and common assets. Version-specific rendering,
+mixins and input stay in native adapters. One shared registry owns all 38
+features. `python tools/parity.py` builds/tests all three lines; each output is
+isolated under `build/minecraft-<version>/libs/`.
+
+The Java suite discovers 660 tests on 26.1.2/26.2 and 662 on 26.3 (one opt-in
+stress test skipped per line). All 42 Python release/default/parity tests pass.
+The build checks native dependency exclusion and shared/native source ownership,
+and includes core and ports in each runtime artifact.
 
 ## Distribution
 
-Separate Minecraft-specific JARs have independent source commits and release checks:
+The published checkpoints have independent source commits and release checks:
 
 | Minecraft | Aurora | Maintenance after publication |
 |---|---|---|
@@ -42,9 +49,16 @@ acceptance](releases/PUBLISHED_2026-11-11.md) record the exact source and SHA-25
 Every publication uses the protected release workflow and a verified draft.
 The Latest label selects 26.3; PR #14 applies that choice at publication too.
 
+The current 3.4.0 source candidate builds the complete parity set from one
+commit. CI tests each line. Publication requires all fourteen native matrix rows
+and the unchanged overhead gate, bound to runtime/build/pin inputs, then verifies
+every JAR through handoff, draft and public redownload. No 3.4.0 tag or public
+release is created by completing step 5.5.
+
 ## Acceptance and contributor readiness
 
-See [step 5 evidence](port/step-5.md) and [the compatibility matrix](MOD_MATRIX.md).
+See [step 5.5 evidence](port/step-5.5.md), [step 5 evidence](port/step-5.md)
+and [the compatibility matrix](MOD_MATRIX.md).
 Iris is tested only on OpenGL. Native Vulkan has its own baseline/performance
 rows. Beryl is a possible separate shader-mod check; no Fabric 26.3 version was
 returned by its Modrinth version query, so it is not advertised as tested.
@@ -70,11 +84,9 @@ notices follow the published upstream licenses and are not new permission claims
 
 ## Next work
 
-Step 5.5 (ADR 0008) is the next implementation task: create the 26.1 and 26.2
-adapters under the PR #13 layout in the master source tree, wire per-line
-release builds with per-line matrix and overhead gates, and only then resume
-step 6 (shader-drawn shapes). The standing 26.3 OpenGL overhead-gate failure
-blocks every future release until resolved. Broader release validation
+Step 5.5 (ADR 0008) is complete; step 6 (shader-drawn shapes) is next.
+The earlier 26.3 OpenGL overhead failure was resolved before 3.3.0 publication;
+the failed historical measurements remain documented. Broader release validation
 should add a packaged-client launcher boot, multiplayer and another GPU or
 lower-end machine. Vulkan shader-mod support requires a separate pinned build
 and shader-pack checks. A broken-feature indicator on grid cards remains a

@@ -2,7 +2,9 @@
 
 ADR 0004 promises a tested set of popular mods. This file records what was booted with Aurora and what happened. Rerun it for every Minecraft version Aurora is ported to, before release.
 
-Current release-candidate results are in [step 5 acceptance](port/step-5.md).
+Current parity-candidate results are in [step 5.5 acceptance](port/step-5.5.md).
+The earlier [step 5 acceptance](port/step-5.md) resolved the initial 26.3
+OpenGL overhead failure before 3.3.0 shipped.
 The port-checkpoint measurements below are retained as historical evidence.
 Iris applies only to OpenGL; native Vulkan shader mods need separate pins and
 acceptance. Forced-Iris Vulkan failures below are excluded from required rows.
@@ -16,7 +18,31 @@ acceptance. Forced-Iris Vulkan failures below are excluded from required rows.
 
 For port checks, copy the world/config into a disposable game directory and pass `--run-dir <copy>` to the runner. On 26.2 and later add `--graphics-backend OPENGL` or `VULKAN`; it checks the backend reported by diagnostics. Use `--runs 6` and `python tools/overhead_check.py <set-latest.log>` for the release overhead check (two warm-ups, at least three judged runs).
 
-A set passes when every Aurora mixin applies, no feature is reported as not working, no Aurora warning or error is logged, and the game closes normally. Runs 2 and 3 are the warm figures; run 1 is warm-up.
+The runner selects `-Paurora.minecraft` from the pins, verifies staged mod
+versions/hashes, and closes only game windows opened during that invocation.
+Do not run builds or other GPU tests during judged measurements. The owner’s
+live `run/` is not a parity fixture.
+
+## Required parity release rows
+
+Every release from the common source tree must pass all of these rows. Pins
+declare applicable backends; Iris is always OpenGL-only. 26.1.2 Vulkan uses
+VulkanMod rather than a native Minecraft backend.
+
+| Minecraft | OpenGL | Vulkan |
+|---|---|---|
+| 26.1.2 | baseline, A-performance-stack, B-sodium-iris | C-vulkanmod |
+| 26.2 | baseline, A-performance-stack, B-sodium-iris | baseline, A-performance-stack |
+| 26.3 | baseline, A-performance-stack, B-sodium-iris | baseline, A-performance-stack |
+
+That is fourteen boots, six reports per boot, with all four judged runs within
+0.25 ms mean / 0.40 ms p95, zero glass captures and at most 100 fills. Every
+adapter must report its complete native mixin set and all features working.
+`tools/parity_acceptance.py` validates complete row coverage and binds the
+retained evidence to the runtime/build/pin inputs. The publication workflow
+fails closed when the evidence is missing, stale, incomplete or over budget.
+
+A set passes when every Aurora mixin applies, no feature is reported as not working, no Aurora warning or error is logged, and the game closes normally. A three-report boot is only a quick compatibility check; parity acceptance requires six reports and judges runs 3–6.
 
 ## Minecraft 1.21.11, 2026-11-11
 

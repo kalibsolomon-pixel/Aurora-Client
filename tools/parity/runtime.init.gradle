@@ -1,0 +1,16 @@
+// Opt-in acceptance probe, never a production source set or runtime dependency.
+gradle.projectsEvaluated {
+    def p = gradle.rootProject
+    def probe = p.sourceSets.create('parityProbe') {
+        java.srcDir p.file('tools/parity/runtime/java')
+        resources.srcDir p.file('tools/parity/runtime/resources')
+        compileClasspath = p.sourceSets.client.compileClasspath + p.sourceSets.client.output
+    }
+    p.tasks.named('compileParityProbeJava') { options.release = 25; options.encoding = 'UTF-8' }
+    p.tasks.register('parityProbeJar', Jar) {
+        dependsOn p.tasks.named('clientClasses')
+        from probe.output
+        archiveFileName = 'parity-probe.jar'
+        destinationDirectory = p.layout.buildDirectory.dir('acceptance-tooling')
+    }
+}

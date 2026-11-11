@@ -7,8 +7,17 @@ plugins {
 evaluationDependsOn(':core')
 evaluationDependsOn(':ports')
 
-// This checkout builds exactly one version adapter. Older releases use their own branches.
-def adapterRoot = file("adapters/minecraft-${project.minecraft_version}")
+// One facade, one explicitly selected native classpath; core and ports are reused.
+def supportedVersions = new groovy.json.JsonSlurper().parse(file('gradle/minecraft-versions.json'))
+def selectedMinecraft = providers.gradleProperty('aurora.minecraft').getOrElse(project.minecraft_version)
+def nativeVersion = supportedVersions[selectedMinecraft]
+if (nativeVersion == null) throw new GradleException("Unsupported Minecraft ${selectedMinecraft}; choose ${supportedVersions.keySet()}")
+ext.minecraft_version = selectedMinecraft
+ext.fabric_api_version = nativeVersion.fabricApi
+def adapterRoot = file("adapters/${nativeVersion.adapter}")
+def sharedAdapterRoot = file('adapters/shared')
+layout.buildDirectory = file("build/minecraft-${selectedMinecraft}")
+sourceSets.test.java.srcDir(new File(adapterRoot, 'src/test/java'))
 
 version = project.mod_version
 group = project.maven_group
@@ -34,8 +43,8 @@ repositories {
 
 loom {
 	splitEnvironmentSourceSets()
-	sourceSets.client.java.setSrcDirs([new File(adapterRoot, 'src/client/java')])
-	sourceSets.client.resources.setSrcDirs([new File(adapterRoot, 'src/client/resources')])
+	sourceSets.client.java.setSrcDirs([new File(sharedAdapterRoot, 'src/client/java'), new File(adapterRoot, 'src/client/java')])
+	sourceSets.client.resources.setSrcDirs([new File(sharedAdapterRoot, 'src/client/resources'), new File(adapterRoot, 'src/client/resources')])
 	enableTransitiveAccessWideners = true
 
 	runConfigs.configureEach {
@@ -108,6 +117,7 @@ tasks.withType(ProcessResources).configureEach {
 
 tasks.withType(JavaCompile).configureEach {
 	it.options.release = 25
+	it.options.encoding = 'UTF-8'
 }
 
 afterEvaluate {
@@ -132,6 +142,18 @@ java {
 // Resolve each pure module's classpath from its own project task (parallel-safe).
 tasks.register('verifyLayering') { dependsOn ':core:verifyLayering', ':ports:verifyLayering' }
 tasks.named('check') { dependsOn 'verifyLayering' }
+tasks.register('verifyAdapterOwnership') {
+	doLast {
+		['java', 'resources'].each { kind ->
+			def shared = new File(sharedAdapterRoot, "src/client/${kind}")
+			fileTree(new File(adapterRoot, "src/client/${kind}")).files.each { nativeFile ->
+				def relative = new File(adapterRoot, "src/client/${kind}").toPath().relativize(nativeFile.toPath())
+				if (new File(shared, relative.toString()).isFile()) throw new GradleException("Duplicate adapter source/resource: ${relative}")
+			}
+		}
+	}
+}
+tasks.named('check') { dependsOn 'verifyAdapterOwnership' }
 
 tasks.withType(Jar).configureEach {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE

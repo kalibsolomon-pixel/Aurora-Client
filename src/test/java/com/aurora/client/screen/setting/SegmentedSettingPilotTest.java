@@ -171,10 +171,10 @@ class SegmentedSettingPilotTest {
     @Test
     void pointerSelectionCommitsExactlyOncePerPath() {
         // Legacy path (host never materialized controls): silent single commit.
-        assertTrue(row.mouseClicked(segCenter(1, 2)[0], segCenter(1, 2)[1], 1, 0, 0, 240));
+        assertTrue(row.mouseClicked(segCenter(1, 2)[0], segCenter(1, 2)[1], com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT, 0, 0, 240));
         assertEquals(1, setterCalls.get());
         assertEquals(ThemeMode.LIGHT, mode.get());
-        assertTrue(row.mouseClicked(segCenter(1, 2)[0], segCenter(1, 2)[1], 1, 0, 0, 240),
+        assertTrue(row.mouseClicked(segCenter(1, 2)[0], segCenter(1, 2)[1], com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT, 0, 0, 240),
                 "reselecting the selected peer stays consumed");
         assertEquals(1, setterCalls.get(), "no second commit on the selected no-op");
 
@@ -183,10 +183,10 @@ class SegmentedSettingPilotTest {
         // exactly-one activation click.
         materializeWithBounds(row, 2);
         List<SemanticActionControl> peers = row.interactionControls();
-        assertTrue(row.mouseClicked(segCenter(0, 2)[0], segCenter(0, 2)[1], 1, 0, 0, 240));
+        assertTrue(row.mouseClicked(segCenter(0, 2)[0], segCenter(0, 2)[1], com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT, 0, 0, 240));
         assertEquals(2, setterCalls.get());
         assertEquals(ThemeMode.DARK, mode.get());
-        assertTrue(row.mouseClicked(segCenter(0, 2)[0], segCenter(0, 2)[1], 1, 0, 0, 240));
+        assertTrue(row.mouseClicked(segCenter(0, 2)[0], segCenter(0, 2)[1], com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT, 0, 0, 240));
         assertEquals(2, setterCalls.get(), "selected reactivation is inert through the action too");
     }
 
@@ -199,7 +199,7 @@ class SegmentedSettingPilotTest {
         // which renderOverlay syncs from the row every frame — mirror that
         // sync (the row-level guard below is the same-frame backstop).
         ((SegmentedControl) f(row, "control").get(row)).disabled(true);
-        assertFalse(row.mouseClicked(segCenter(1, 2)[0], segCenter(1, 2)[1], 1, 0, 0, 240),
+        assertFalse(row.mouseClicked(segCenter(1, 2)[0], segCenter(1, 2)[1], com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT, 0, 0, 240),
                 "the row rejects pointer activation while disabled");
         assertFalse(peers.get(1).activateFromPointer(segCenter(1, 2)[0], segCenter(1, 2)[1], 1),
                 "the semantic action's enabled gate rejects too");

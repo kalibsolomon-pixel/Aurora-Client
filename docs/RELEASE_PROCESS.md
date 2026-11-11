@@ -37,15 +37,16 @@ All tooling references are `tools/verify_release_artifact.py`.
      --target <exact source commit SHA, full 40 hex> \
      --title "Aurora Client <X.Y.Z>" \
      --notes-file <notes> \
-     <exact approved aurora-<X.Y.Z>.jar>
+     <all approved aurora-<X.Y.Z>-mc<minecraft>.jar files>
    ```
    The `--draft` and `--target <full SHA>` flags are mandatory. Never create a
    published release directly.
 3. **Verify the draft** with the `draft` subcommand (it locates the draft via
    the authenticated release listing — drafts are not reachable through
    `releases/tags/<tag>` — and fails closed unless the draft's
-   `target_commitish` equals the exact source SHA, the asset's name/size/state
-   and digest match the candidate, and the release is still a draft).
+   `target_commitish` equals the exact source SHA, every asset's name/size/state
+   and digest match the candidate, the asset set is complete with no extras,
+   and the release is still a draft). Redownload and reverify every draft JAR.
 4. **Publish as a separate, explicit step.**
    ```sh
    gh release edit v<X.Y.Z> --repo kalibsolomon-pixel/Aurora-Client --draft=false
@@ -72,19 +73,47 @@ All tooling references are `tools/verify_release_artifact.py`.
 - Never reuse or re-push a tag that a published release has used.
 - Never force-push tags or rewrite pushed history.
 
-## Separate Minecraft artifacts (2026-11-11)
+## Full-parity Minecraft artifacts (step 5.5, 2026-11-11)
 
-Every release contains one Minecraft-specific runtime JAR named
-`aurora-<version>-mc<minecraft>.jar`. The verifier checks that the filename,
-source `minecraft_version` and embedded Fabric requirement agree. It rejects
-mixed or ambiguous output directories. Core and ports are included in that JAR.
+Starting with the 3.4.0 candidate, a release contains one Minecraft-specific
+runtime JAR per supported line, all with the same Aurora version and exact
+source commit. `gradle/minecraft-versions.json` is the complete required set.
+`python tools/parity.py` tests and builds every line from that tree; outputs are
+`build/minecraft-<minecraft>/libs/aurora-<version>-mc<minecraft>.jar`. Core and
+ports are bundled in every JAR and reused during sequential local builds.
+
+Use `verify_release_artifact.py inspect --parity --source-root <source>
+--jar-dir <source>/build --version <version> --channel <channel>
+--source-sha <full SHA> --output <metadata.json>`. Each line's output directory
+must contain exactly its one pinned JAR. Schema 3 metadata binds the complete
+set to one version/channel/source; schema 2 single-artifact metadata remains
+readable for historical releases. Bundle, draft and public verification reject
+missing, extra, duplicate, wrong-line or mixed-source artifacts.
+
+Before dispatch, run all applicable rows in [MOD_MATRIX](MOD_MATRIX.md) with
+six diagnostics reports each, then record acceptance:
+
+```
+python tools/parity_acceptance.py record --logs build/step5.5/acceptance --evidence docs/releases/evidence/3.4.0-parity.json
+python tools/parity_acceptance.py verify --evidence docs/releases/evidence/3.4.0-parity.json
+```
+
+The log layout is `<logs>/<minecraft>/<backend>/<set>-latest.log`, alongside
+the matrix runner's result JSON. Every row must close normally, apply all of
+that adapter's mixins, report all features working and no Aurora warning/error,
+and pass the unchanged overhead gate after exactly two warm-ups. The release
+workflow requires this evidence and compares its runtime/build/pin input digest
+with the requested source. Any relevant edit invalidates the evidence. One
+failing line blocks publication of the entire set. Review raw logs and visual
+acceptance alongside the retained per-run figures and log hashes.
 
 The initial distribution uses fresh, distinct Aurora versions: 3.2.2 for the
 26.1.2 checkpoint, 3.2.3 for 26.2, and 3.3.0 for 26.3 with the layer extraction.
-Each release targets its own exact source commit and uses the existing immutable
-`v<version>` tag scheme. These are separate branch builds, not simultaneous
-multi-version compilation. Leave `make_latest` off for checkpoint releases;
-only the newest Minecraft line is marked latest.
+Those historical releases target their own exact source commits and remain
+immutable. Future parity releases use one `v<version>` tag with all versioned
+assets from the same commit. The protected workflow still creates a draft,
+verifies and redownloads the complete set, publishes separately, then
+anonymously downloads and verifies each asset. It never modifies an old release.
 
 Local runtime acceptance evidence, including the overhead check, is required
 before dispatch. Hosted CI builds cannot stand in for a GPU boot. The protected
@@ -96,7 +125,9 @@ remain mandatory even when GitHub work is authorized autonomously.
 Pass `--latest` explicitly when publishing the verified draft, as well as when
 creating it. GitHub did not preserve the draft's `--latest=false` selection for
 the 26.1.2 checkpoint; its asset identity remained correct. The workflow now
-applies `make_latest` at publication. Only the newest Minecraft line is latest.
+applies `make_latest` at publication. A parity release includes every supported
+line; the Latest label now points to that complete release. Historical
+checkpoint releases remain outside that selection.
 
 The repository's Latest label is a distribution pointer. Selecting an already
 verified newest release as Latest changes no tag, source target or runtime

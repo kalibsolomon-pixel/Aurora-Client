@@ -262,11 +262,11 @@ class ButtonLikeConformanceTest {
         f.control.setAvailable(true);
         f.control.setBounds(10, 20, 90, 18);
 
-        assertTrue(f.control.activateFromPointer(55, 29, 1),
+        assertTrue(f.control.activateFromPointer(55, 29, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT),
                 f.family + ": in-bounds accepted pointer activation");
         assertEquals(1, f.executions.get(), f.family + ": exactly one behavior run");
         // Out-of-bounds and non-primary buttons never activate.
-        assertFalse(f.control.activateFromPointer(500, 500, 1));
+        assertFalse(f.control.activateFromPointer(500, 500, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT));
         assertFalse(f.control.activateFromPointer(55, 29, 3));
         assertEquals(1, f.executions.get(), f.family + ": rejected presses stay inert");
     }
@@ -300,7 +300,7 @@ class ButtonLikeConformanceTest {
         f.disable.run();
         int soundsBefore = PLAIN_SOUNDS.get();
 
-        assertFalse(f.control.activateFromPointer(55, 29, 1), f.family + ": pointer rejected");
+        assertFalse(f.control.activateFromPointer(55, 29, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT), f.family + ": pointer rejected");
         assertTrue(f.control.keyPressed(new KeyEvent(InputConstants.KEY_RETURN, 0, 0)),
                 f.family + ": the rejected selection key is still CONSUMED (cannot fall through)");
         assertTrue(f.control.keyPressed(new KeyEvent(InputConstants.KEY_SPACE, 0, 0)));
@@ -318,7 +318,7 @@ class ButtonLikeConformanceTest {
         f.control.setBounds(10, 20, 90, 18);
         f.control.setAvailable(false);
 
-        assertFalse(f.control.activateFromPointer(55, 29, 1),
+        assertFalse(f.control.activateFromPointer(55, 29, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT),
                 f.family + ": an unavailable control cannot activate");
         assertEquals(0, f.executions.get());
         assertNull(f.control.nextFocusPath(new FocusNavigationEvent.TabNavigation(true)),

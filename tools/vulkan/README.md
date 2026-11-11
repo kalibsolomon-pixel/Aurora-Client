@@ -1,5 +1,12 @@
 # Native renderer compatibility fixture
 
+Historical Minecraft 1.21.11 fixture: run these commands from the matching
+checkpoint source and JAR. `tools/gui/run.py` reuses the same pinned launcher.
+Neither launcher is a 26.x parity fixture, and its `build/libs` lookup must not
+select a current per-version artifact. For current acceptance, use
+[`tools/matrix/run.py`](../matrix/run.py), the [native parity probe](../parity/README.md)
+and [step 5.5's recorded protocol](../../docs/port/step-5.5.md).
+
 These opt-in tools launch real Minecraft clients in new directories below
 `build/vulkan-investigation/`. They never launch against the live `run/` directory.
 The gameplay driver modifies only its marked, copied world and configuration.

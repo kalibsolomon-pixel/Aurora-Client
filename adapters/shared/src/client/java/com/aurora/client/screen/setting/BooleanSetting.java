@@ -1,0 +1,254 @@
+package com.aurora.client.screen.setting;
+
+import com.mojang.blaze3d.platform.InputConstants;
+import com.aurora.client.ui.component.ToggleSwitch;
+import com.aurora.client.ui.interaction.MinecraftSemanticFeedback;
+import com.aurora.client.ui.interaction.SemanticAction;
+import com.aurora.client.ui.interaction.SemanticActionControl;
+import com.aurora.client.util.AuroraTheme;
+import com.aurora.client.ui.component.MaterialSurface;
+import com.aurora.client.theme.ThemeToken;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.network.chat.Component;
+
+import java.util.List;
+import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+
+/**
+ * iOS UISwitch — pill-shaped toggle with a circular thumb that slides on
+ * a spring curve between off and on.
+ *
+ * <p><b>Visual spec</b> (matching Apple's UISwitch dark mode):
+ * <ul>
+ *   <li>Track: 28×15 px capsule (see {@link ToggleSwitch}). Off:
+ *       {@code SURFACE_VARIANT}. On: {@code ACCENT}. Color crossfades on
+ *       the same curve as the thumb position.</li>
+ *   <li>Thumb: circle inset 2.5 px from each side of the track. Pure white.</li>
+ *   <li>Slide: exponential approach on real delta time.</li>
+ * </ul>
+ *
+ * <p><b>Phase B state pilot:</b> the row mirrors its disabled gate into the
+ * widget every frame (the toggle carries the disabled treatment) and — when
+ * the host screen runs the semantic lifecycle — exposes a
+ * {@link SemanticActionControl}: the whole-row hit target stays the pointer
+ * path, and the control adds focus traversal, Enter/Space activation (the
+ * same toggle + save exactly once), the one semantic activation click, and
+ * on/off narration (design language §11.4). Hosts that never mark the
+ * control available keep the exact legacy pointer-only behavior through
+ * the availability gate.
+ */
+public class BooleanSetting extends FeatureSetting {
+    private static final int MIN_ROW_H = 28;
+    private static final int TRACK_W = 36;
+    private static final int LABEL_PAD = 12;
+    private static final int RIGHT_RESERVE = TRACK_W + 28;
+
+    private final BooleanSupplier getter;
+    private final Consumer<Boolean> setter;
+    private final Component labelText;
+
+    private int lastWidth = 240;
+
+    private int cachedLabelArea = -1;
+    private List<String> cachedLines;
+    private com.aurora.client.config.AuroraConfig.FontType cachedFont;
+    private com.aurora.client.config.AuroraConfig.TextRendererMode cachedRendererMode;
+    private int cachedBaseHeight;
+
+    /** Shared themed switch — owns the pill/thumb drawing + slide animation. */
+    private final ToggleSwitch toggle;
+    /** Phase B: focus/keyboard/narration adapter (lazy — see {@link #interactionControl()}). */
+    private SemanticActionControl interactionControl;
+
+    public BooleanSetting(String label, BooleanSupplier getter, Consumer<Boolean> setter) {
+        super(label);
+        this.getter = getter;
+        this.setter = setter;
+        this.labelText = Component.literal(label);
+        this.toggle = new ToggleSwitch(getter, setter);
+    }
+
+    @Override public BooleanSetting description(String desc) { super.description(desc); return this; }
+    @Override public BooleanSetting description(Supplier<String> desc) { super.description(desc); return this; }
+
+    /**
+     * §4 live-value subtitle — the mechanism lives on the
+     * {@link FeatureSetting} base; this override only restores the
+     * covariant return type and re-invalidates this widget's label
+     * layout cache (the subtitle line changes the row's height).
+     */
+    @Override public BooleanSetting valueLine(Supplier<String> supplier) {
+        super.valueLine(supplier);
+        cachedLabelArea = -1; // force a height re-layout
+        return this;
+    }
+
+    private void ensureLayout(Font tr) {
+        int labelArea = Math.max(40, lastWidth - LABEL_PAD - RIGHT_RESERVE);
+        var activeFont = com.aurora.client.config.AuroraConfig.get().activeFont;
+        var rendererMode = com.aurora.client.config.AuroraConfig.get().textRendererMode;
+        if (labelArea == cachedLabelArea && cachedLines != null && activeFont == cachedFont && rendererMode == cachedRendererMode) return;
+        cachedFont = activeFont;
+        cachedRendererMode = rendererMode;
+        cachedLines = com.aurora.client.ui.util.WordWrap.lines(label, labelArea, 2, tr::width);
+        int blockH = cachedLines.size() * (tr.lineHeight + 1) + valueLineHeight(tr);
+        cachedBaseHeight = cachedLines.isEmpty()
+                ? MIN_ROW_H
+                : Math.max(MIN_ROW_H, blockH + 12);
+        cachedLabelArea = labelArea;
+    }
+
+    @Override
+    public int baseHeight() {
+        if (compactRow != null) return compactRow.height();
+        Font tr = Minecraft.getInstance().font;
+        if (tr == null) return MIN_ROW_H;
+        ensureLayout(tr);
+        return cachedBaseHeight;
+    }
+
+    @Override
+    public int height() { return baseHeight() + descriptionHeight(lastWidth); }
+
+    @Override
+    public int shapeFingerprint() {
+        return toggle.shapeFingerprint();
+    }
+
+    /**
+     * The toggle's semantic control: focus traversal, Enter/Space
+     * activation (the same toggle+save the pointer path runs, exactly
+     * once), the semantic activation click, and on/off narration. The
+     * enabled gate mirrors the row's disabled supplier.
+     */
+    @Override
+    public SemanticActionControl interactionControl() {
+        if (interactionControl == null) {
+            interactionControl = new SemanticActionControl(SemanticAction.button(
+                    labelText,
+                    () -> {
+                        String description = currentDescription();
+                        return description != null
+                                ? Component.literal(description)
+                                : Component.empty();
+                    },
+                    () -> Component.literal(getter.getAsBoolean() ? "On" : "Off"),
+                    () -> !isDisabled(),
+                    () -> {
+                        toggle.toggle();
+                        com.aurora.client.config.AuroraConfig.save();
+                    }),
+                    MinecraftSemanticFeedback.INSTANCE,
+                    null,
+                    SemanticActionControl.PointerRouting.MANUAL);
+        }
+        return interactionControl;
+    }
+
+    @Override
+    public void render(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {
+        renderShapes(ctx, x, y, width, mouseX, mouseY);
+        renderOverlay(ctx, x, y, width, mouseX, mouseY);
+    }
+
+    @Override
+    public void renderShapes(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {
+        lastWidth = width;
+        Font tr = Minecraft.getInstance().font;
+        if (tr == null) return;
+        if (compactRow == null) ensureLayout(tr);
+
+        float switchX = controlX(x, width, com.aurora.client.ui.util.UiDensity.TOGGLE_W);
+        float switchY = controlY(y, baseHeight(), com.aurora.client.ui.util.UiDensity.TOGGLE_H);
+        toggle.layout(switchX, switchY, com.aurora.client.ui.util.UiDensity.TOGGLE_W, com.aurora.client.ui.util.UiDensity.TOGGLE_H);
+        syncToggleState(x, y, width, -1, -1);
+        toggle.renderShapes(ctx, switchX, switchY, com.aurora.client.ui.util.UiDensity.TOGGLE_W, com.aurora.client.ui.util.UiDensity.TOGGLE_H);
+    }
+
+    @Override
+    public void renderOverlay(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {
+        lastWidth = width;
+        Font tr = Minecraft.getInstance().font;
+        if (tr == null) return;
+        if (compactRow == null) ensureLayout(tr);
+
+        int controlH = baseHeight();
+        if (compactRow != null) renderCompactLabel(ctx, x, y, mouseX, mouseY, MaterialSurface.color(ThemeToken.ON_BACKGROUND));
+        else {
+            int textBlockH = cachedLines.size() * (tr.lineHeight + 1) + valueLineHeight(tr);
+            int textY = y + (controlH - textBlockH) / 2;
+            String key = tooltipKey();
+            boolean disabled = isDisabled();
+            for (int li = 0; li < cachedLines.size(); li++) {
+                var line = cachedLines.get(li);
+                int lineX = x + LABEL_PAD;
+                ctx.text(tr, line, lineX, textY, MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
+                // Each wrapped line of the label text is a dwell region for
+                // the description tooltip — hover the label itself, no badge.
+                // The description supplier is only evaluated while hovered.
+                trackLabelHover(key, this::currentDescription, lineX, textY,
+                        tr.width(line), tr.lineHeight, mouseX, mouseY, disabled);
+                textY += tr.lineHeight + 1;
+            }
+            // §4 live-value subtitle (base mechanism): one small secondary
+            // line under the label block.
+            drawValueLine(ctx, x + LABEL_PAD, textY + 2, disabled);
+
+        }
+        float switchX = controlX(x, width, com.aurora.client.ui.util.UiDensity.TOGGLE_W);
+        float switchY = controlY(y, controlH, com.aurora.client.ui.util.UiDensity.TOGGLE_H);
+        toggle.layout(switchX, switchY, com.aurora.client.ui.util.UiDensity.TOGGLE_W, com.aurora.client.ui.util.UiDensity.TOGGLE_H);
+        syncToggleState(x, y, width, mouseX, mouseY);
+        toggle.renderOverlay(ctx, switchX, switchY, com.aurora.client.ui.util.UiDensity.TOGGLE_W, com.aurora.client.ui.util.UiDensity.TOGGLE_H, mouseX, mouseY);
+
+        renderDescription(ctx, x, y + controlH, width);
+    }
+
+    /**
+     * Per-frame sync of the row's gate into the widget (the disabled
+     * treatment), of the semantic control's bounds (the whole-row hit band —
+     * the same rect the row click delegates, so the control's pointer gate
+     * and focus ring geometry agree with the row), and of the control's
+     * focus into the paint (the provisional hairline) — a focused toggle
+     * always corresponds to real keyboard focus.
+     */
+    private void syncToggleState(int x, int y, int width, int mouseX, int mouseY) {
+        toggle.disabled(isDisabled());
+        if (interactionControl != null) {
+            interactionControl.setBounds(x, y, width, baseHeight());
+            interactionControl.updatePointer(mouseX, mouseY);
+        }
+        toggle.focusedVisual(interactionControl != null && interactionControl.isFocused());
+    }
+
+    /** Whether the row's toggle is a non-interactive preview (rollout test visibility). */
+    boolean togglePreviewMode() {
+        return toggle.isPreviewMode();
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button, int rowX, int rowY, int rowWidth) {
+        syncCompactControl(rowX, rowY);
+        if (isDisabled()) return false;
+        if (button != com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) return false;
+        int controlH = baseHeight();
+        if (mouseY < rowY || mouseY > rowY + controlH) return false;
+        if (mouseX < rowX || mouseX > rowX + rowWidth) return false;
+        // Semantic host (the detail screen marks the control available and
+        // runs the lifecycle): the control owns activation — exactly-once
+        // behavior + the semantic click + focus participation. Legacy hosts
+        // (AuroraScreen's inline tab — its availability sweep is the Phase C
+        // deferral) keep the direct path, byte-for-byte today's behavior.
+        if (interactionControl != null && interactionControl.isAvailable()) {
+            return interactionControl.activateFromPointer(mouseX, mouseY, button);
+        }
+        toggle.toggle();
+        com.aurora.client.config.AuroraConfig.save();
+        return true;
+    }
+}

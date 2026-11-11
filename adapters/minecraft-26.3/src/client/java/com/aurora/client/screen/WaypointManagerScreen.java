@@ -463,7 +463,7 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
                     () -> true,
                     () -> {
                         commitEditors();
-                        if (this.minecraft != null) this.minecraft.gui.setScreen(
+                        if (this.minecraft != null) com.aurora.client.adapter.NativeUi.setScreen(this.minecraft,
                                 new WaypointEditScreen(WaypointManagerScreen.this, k, false));
                     }),
                     MinecraftSemanticFeedback.INSTANCE,

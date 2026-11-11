@@ -1666,7 +1666,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
                     && Widget.inBounds(mouseX, mouseY, tabX, tabY, tabW, rowH)
                     && mouseY >= clipTop && mouseY < clipBot) {
                 SemanticActionControl control = tabControls[i];
-                if (control != null && control.activateFromPointer(mouseX, mouseY, 1)) {
+                if (control != null && control.activateFromPointer(mouseX, mouseY, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT)) {
                     this.setFocused(control);
                 } else if (control == null) {
                     selectCategory(tab); // pre-first-render click — cannot normally happen
@@ -1743,7 +1743,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
                 CardState st = cardStates.get(p.projectId);
                 if (st != null) {
                     SemanticActionControl control = st.cardPhaseControls[st.phase];
-                    if (control != null && control.activateFromPointer(mouseX, mouseY, 1)) {
+                    if (control != null && control.activateFromPointer(mouseX, mouseY, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT)) {
                         this.setFocused(control);
                     }
                 }
@@ -1798,7 +1798,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
                 // The action is closeDetail itself, which clears focus —
                 // no re-focus here (a control whose action tears its own
                 // surface down must not end up focused).
-                control.activateFromPointer(mouseX, mouseY, 1);
+                control.activateFromPointer(mouseX, mouseY, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT);
             }
             return true; // consumed either way
         }
@@ -1811,7 +1811,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
             if (detailProject != null) {
                 CardState st = cardStates.get(detailProject.projectId);
                 SemanticActionControl control = st == null ? null : st.modalPhaseControls[st.phase];
-                if (control != null && control.activateFromPointer(mouseX, mouseY, 1)) {
+                if (control != null && control.activateFromPointer(mouseX, mouseY, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT)) {
                     this.setFocused(control);
                 }
             }
@@ -2114,7 +2114,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         // inside the cache, so re-opening the browser is instant instead of
         // re-downloading every icon. Earlier versions called clear() here,
         // which made every re-open pay the full network cost again.
-        if (this.minecraft != null) this.minecraft.gui.setScreen(parent);
+        if (this.minecraft != null) com.aurora.client.adapter.NativeUi.setScreen(this.minecraft, parent);
     }
 
     @Override

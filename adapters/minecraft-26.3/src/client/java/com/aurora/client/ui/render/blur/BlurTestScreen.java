@@ -423,7 +423,7 @@ public class BlurTestScreen extends Screen {
             mc.execute(() -> {
                 try {
                     net.minecraft.client.Screenshot.grab(mc.gameDirectory, null,
-                            mc.gameRenderer.mainRenderTarget(), 1,
+                            com.aurora.client.adapter.NativeUi.mainTarget(mc), 1,
                             c -> com.aurora.client.AuroraClient.LOGGER.info("[BlurTest] grab: {}", c.getString()));
                     com.aurora.client.AuroraClient.LOGGER.info("[BlurTest] grab issued (deferred, F2-equivalent context)");
                 } catch (Throwable t) {
@@ -506,7 +506,7 @@ public class BlurTestScreen extends Screen {
      * {@link #drawBackdrop} fills so the eye and the blur sample agree.
      */
     private BlurPanelRenderer.CaptureSource renderSyntheticBackdrop() {
-        var main = Minecraft.getInstance().gameRenderer.mainRenderTarget();
+        var main = com.aurora.client.adapter.NativeUi.mainTarget(Minecraft.getInstance());
         return portableBackdrop.render(main.width, main.height,
                 (float) Minecraft.getInstance().getWindow().getGuiScale(),
                 mode == Backdrop.STRIPES, slideAccum, slideDetailAmp);

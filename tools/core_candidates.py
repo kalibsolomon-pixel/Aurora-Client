@@ -14,6 +14,7 @@ import sys
 
 HERE = os.path.dirname(__file__)
 ROOTS = [str(client_path("java")), os.path.join(HERE, "..", "core", "src", "main", "java"), os.path.join(HERE, "..", "ports", "src", "main", "java")]
+ROOTS.append(os.path.join(HERE, '..', 'adapters', 'shared', 'src', 'client', 'java'))
 FORBIDDEN = re.compile(
     r"^import\s+(static\s+)?(net\.minecraft|com\.mojang|net\.fabricmc|org\.lwjgl"
     r"|org\.spongepowered|com\.llamalad7|com\.terraformersmc|org\.apache\.logging)\b",

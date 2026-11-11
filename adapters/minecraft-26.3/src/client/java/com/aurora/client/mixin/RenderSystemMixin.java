@@ -18,8 +18,8 @@ public abstract class RenderSystemMixin {
     private static void aurora$preciseLimit(int fps, CallbackInfo ci) {
         AuroraConfig cfg = AuroraConfig.get();
         net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
-        boolean auroraGui = mc != null && mc.gui.screen() != null
-                && mc.gui.screen().getClass().getName().startsWith("com.aurora.client.screen");
+        boolean auroraGui = mc != null && com.aurora.client.adapter.NativeUi.screen(mc) != null
+                && com.aurora.client.adapter.NativeUi.screen(mc).getClass().getName().startsWith("com.aurora.client.screen");
         boolean customPacer = cfg.smoothFramePacer
                 && cfg.framePacingStrategy != AuroraConfig.PacingStrategy.VANILLA;
         var limit = FramePacing.resolve(fps, cfg.frameCapFps, cfg.guiFpsLimit,

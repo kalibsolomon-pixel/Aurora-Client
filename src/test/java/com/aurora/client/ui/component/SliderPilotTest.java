@@ -42,7 +42,7 @@ class SliderPilotTest {
 
         // Click at 25% of the track (x=150): value = 0.1 + 0.25*0.9 = 0.325 → snapped to 0.35? No:
         // 0.325/0.05 = 6.5 → round-half-up = 7 → 0.35. Assert through the slider's own snap.
-        assertTrue(s.mouseClicked(150, 10 + 36 - 12 + 2, 1));
+        assertTrue(s.mouseClicked(150, 10 + 36 - 12 + 2, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT));
         assertTrue(s.isDragging());
         assertEquals(snap(0.1 + 0.25 * 0.9), v.get(), 1e-9);
     }
@@ -52,13 +52,13 @@ class SliderPilotTest {
         AtomicReference<Double> v = new AtomicReference<>(0.5);
         Slider s = slider(v, 0.5);
         s.layout(100, 10, 200, 36);
-        s.mouseClicked(150, 36, 1);
+        s.mouseClicked(150, 36, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT);
 
-        s.mouseDragged(400, 40, 1, 0, 0);   // beyond right edge (track is x=100..300)
+        s.mouseDragged(400, 40, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT, 0, 0);   // beyond right edge (track is x=100..300)
         assertEquals(1.0, v.get(), 1e-9, "clamps to max");
-        s.mouseDragged(20, 40, 1, 0, 0);    // beyond left edge
+        s.mouseDragged(20, 40, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT, 0, 0);    // beyond left edge
         assertEquals(0.1, v.get(), 1e-9, "clamps to min");
-        s.mouseDragged(300, 40, 1, 0, 0);   // exact right edge of track
+        s.mouseDragged(300, 40, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT, 0, 0);   // exact right edge of track
         assertEquals(1.0, v.get(), 1e-9);
         assertTrue(s.isDragging(), "drag survives pointer outside the bounds");
     }
@@ -68,10 +68,10 @@ class SliderPilotTest {
         AtomicReference<Double> v = new AtomicReference<>(0.5);
         Slider s = slider(v, 0.5);
         s.layout(100, 10, 200, 36);
-        s.mouseClicked(150, 36, 1);
-        s.mouseDragged(-500, -500, 1, 0, 0);
+        s.mouseClicked(150, 36, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT);
+        s.mouseDragged(-500, -500, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT, 0, 0);
         assertEquals(0.1, v.get(), 1e-9);
-        assertTrue(s.mouseReleased(-500, -500, 1));
+        assertTrue(s.mouseReleased(-500, -500, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT));
         assertFalse(s.isDragging());
         assertEquals(0.1, v.get(), 1e-9, "value remains the final clamped value");
     }
@@ -82,15 +82,15 @@ class SliderPilotTest {
         Slider s = slider(v, 0.5).canonicalStates();
         s.layout(100, 10, 200, 36);
         assertEquals(5f, s.knobRadiusPx(), 0f, "rest radius (compact knob)");
-        s.mouseClicked(150, 36, 1);
+        s.mouseClicked(150, 36, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT);
         assertEquals(6f, s.knobRadiusPx(), 0f, "grip radius while dragging (center unchanged)");
-        s.mouseReleased(150, 36, 1);
+        s.mouseReleased(150, 36, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT);
         assertEquals(5f, s.knobRadiusPx(), 0f, "back to rest instantly on release");
 
         // Legacy mode never grips.
         Slider legacy = slider(v, 0.5);
         legacy.layout(100, 10, 200, 36);
-        legacy.mouseClicked(150, 36, 1);
+        legacy.mouseClicked(150, 36, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT);
         assertEquals(5f, legacy.knobRadiusPx(), 0f, "legacy rows keep the exact rest radius");
     }
 
@@ -99,7 +99,7 @@ class SliderPilotTest {
         AtomicReference<Double> v = new AtomicReference<>(0.5);
         Slider s = slider(v, 0.5).canonicalStates().disabled(true);
         s.layout(100, 10, 200, 36);
-        assertFalse(s.mouseClicked(150, 36, 1));
+        assertFalse(s.mouseClicked(150, 36, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT));
         assertFalse(s.isDragging());
         assertFalse(s.onKeyPress(com.mojang.blaze3d.platform.InputConstants.KEY_RIGHT, 0));
         assertEquals(0.5, v.get(), 1e-9);
