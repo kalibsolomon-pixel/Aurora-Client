@@ -3,6 +3,7 @@
   "id": "aurora",
   "version": "${version}",
   "name": "Aurora Client",
+  "icon": "assets/aurora/icon.png",
   "description": "A lightweight Fabric client with QoL features, zoom, full bright, and a custom title screen.",
   "authors": [
     "Kalib"

@@ -1,0 +1,39 @@
+{
+  "changedRevisionFailures": [
+    "com.aurora.client.screen.AuroraScreenNavigationTest.canonicalHoverVocabularyAcrossAdoptedFamilies()",
+    "com.aurora.client.screen.AuroraScreenNavigationTest.exactManualControlInventory()",
+    "com.aurora.client.screen.AuroraScreenNavigationTest.focusIsTheButtonFamilyHairlineAndNeverHover()",
+    "com.aurora.client.screen.AuroraScreenNavigationTest.layoutPairAdoptsThePeerSelectionContract()",
+    "com.aurora.client.screen.AuroraScreenNavigationTest.registrationIsInitOnlyInVisualOrder()",
+    "com.aurora.client.screen.AuroraScreenNavigationTest.soundOwnershipModel()",
+    "com.aurora.client.screen.AuroraScreenSemanticHostingTest.availabilityUsesTheC1ClipBandAndActionableControlRect()",
+    "com.aurora.client.screen.AuroraScreenViewportCouplingTest.settingsClickWalkIsGatedToTheViewport()",
+    "com.aurora.client.screen.AuroraScreenViewportCouplingTest.settingsWalkFiresAvailabilityChanges()",
+    "com.aurora.client.screen.AuroraScreenViewportCouplingTest.tileCullHoverAndClickUseTheViewport()",
+    "com.aurora.client.screen.PackTabsPilotTest.selectedTabRemainsFocusableAndTraversable()",
+    "com.aurora.client.screen.PhaseC8ClipCouplingTest.managerKeyboardAndPointerRoutesAreBandGated()",
+    "com.aurora.client.screen.setting.SegmentedSettingPilotTest.hoverIsCanonicalPointerOnlyAndNeverGatedOnSelection()",
+    "com.aurora.client.ui.SpxctraSimplificationContractTest.trailingFieldControlsShareOneFace()",
+    "com.aurora.client.ui.util.SquareModeConformanceTest.managerToastRoutesThroughThemeRoundness()"
+  ],
+  "unchangedHEADFailures": [
+    "com.aurora.client.screen.AuroraScreenNavigationTest.canonicalHoverVocabularyAcrossAdoptedFamilies()",
+    "com.aurora.client.screen.AuroraScreenNavigationTest.exactManualControlInventory()",
+    "com.aurora.client.screen.AuroraScreenNavigationTest.focusIsTheButtonFamilyHairlineAndNeverHover()",
+    "com.aurora.client.screen.AuroraScreenNavigationTest.layoutPairAdoptsThePeerSelectionContract()",
+    "com.aurora.client.screen.AuroraScreenNavigationTest.registrationIsInitOnlyInVisualOrder()",
+    "com.aurora.client.screen.AuroraScreenNavigationTest.soundOwnershipModel()",
+    "com.aurora.client.screen.AuroraScreenSemanticHostingTest.availabilityUsesTheC1ClipBandAndActionableControlRect()",
+    "com.aurora.client.screen.AuroraScreenViewportCouplingTest.settingsClickWalkIsGatedToTheViewport()",
+    "com.aurora.client.screen.AuroraScreenViewportCouplingTest.settingsWalkFiresAvailabilityChanges()",
+    "com.aurora.client.screen.AuroraScreenViewportCouplingTest.tileCullHoverAndClickUseTheViewport()",
+    "com.aurora.client.screen.PackTabsPilotTest.selectedTabRemainsFocusableAndTraversable()",
+    "com.aurora.client.screen.PhaseC8ClipCouplingTest.managerKeyboardAndPointerRoutesAreBandGated()",
+    "com.aurora.client.screen.setting.IconActionRolloutTest.effectRowRemoveUsesThePrimitiveUnderContainerOwnership()",
+    "com.aurora.client.screen.setting.SegmentedSettingPilotTest.hoverIsCanonicalPointerOnlyAndNeverGatedOnSelection()",
+    "com.aurora.client.ui.SpxctraSimplificationContractTest.trailingFieldControlsShareOneFace()",
+    "com.aurora.client.ui.component.ColorSwatchDataOnlyTest.dataOnlyRenderNeverComputesInteractionState()",
+    "com.aurora.client.ui.util.SquareModeConformanceTest.managerToastRoutesThroughThemeRoundness()"
+  ],
+  "newFailures": []
+}

@@ -150,6 +150,12 @@ public final class GuiAudit implements ClientModInitializer {
                         } else {
                             resize(sizes[0]);
                             check("title-rendered", true);
+                            if (plan.equals("branding")) {
+                                park();
+                                mc.setScreen(AuroraModMenuApi.openOrFallback(new AuroraTitleScreen()));
+                                stage = 12; at = now;
+                                return;
+                            }
                             mc.createWorldOpenFlows().openWorld("New World", () -> mc.setScreen(new TitleScreen()));
                             stage = 1; at = now;
                         }
@@ -165,6 +171,12 @@ public final class GuiAudit implements ClientModInitializer {
                 }
             } else if (stage == 11) {
                 if (elapsed() > 0.6) { shot("title-hover"); park(); stage = 0; at = now - 3_000_000_000L; }
+            } else if (stage == 12 && elapsed() > 2) {
+                check("modmenu-opened", mc.screen.getClass().getSimpleName().equals("ModsScreen"));
+                shot("modmenu");
+                stage = 13; at = now;
+            } else if (stage == 13 && elapsed() > 1) {
+                finish();
             } else if (stage == 1 && mc.player != null && mc.level != null && mc.screen == null) {
                 check("world-entered", true);
                 configure(); setupActions(); stage = 2; at = now;
