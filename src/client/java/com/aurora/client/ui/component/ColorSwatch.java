@@ -287,7 +287,7 @@ public class ColorSwatch extends Widget {
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
-        if (dataOnly || disabled || button != 0 || !inBounds(mx, my, x, y, w, h)) return false;
+        if (dataOnly || disabled || button != com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT || !inBounds(mx, my, x, y, w, h)) return false;
         if (onClick != null) onClick.run();
         return true;
     }

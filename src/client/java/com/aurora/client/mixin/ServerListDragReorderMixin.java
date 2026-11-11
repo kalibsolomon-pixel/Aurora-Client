@@ -17,7 +17,7 @@ import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.multiplayer.ServerList;
 import net.minecraft.network.chat.Component;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -189,7 +189,7 @@ public abstract class ServerListDragReorderMixin extends Screen {
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         boolean result = super.mouseClicked(event, doubleClick);
-        if (!aurora$enabled() || event.button() != GLFW.GLFW_MOUSE_BUTTON_LEFT) {
+        if (!aurora$enabled() || event.button() != InputConstants.MOUSE_BUTTON_LEFT) {
             return result;
         }
         int idx = aurora$serverIndexAt(event.x(), event.y());
@@ -204,7 +204,7 @@ public abstract class ServerListDragReorderMixin extends Screen {
     @Override
     public boolean mouseDragged(MouseButtonEvent event, double deltaX, double deltaY) {
         boolean result = super.mouseDragged(event, deltaX, deltaY);
-        if (!aurora$enabled() || event.button() != GLFW.GLFW_MOUSE_BUTTON_LEFT || !aurora$dragArmed) {
+        if (!aurora$enabled() || event.button() != InputConstants.MOUSE_BUTTON_LEFT || !aurora$dragArmed) {
             return result;
         }
         if (!aurora$dragActive && Math.abs(event.y() - aurora$dragPressY) > AURORA_DRAG_THRESHOLD) {
@@ -224,7 +224,7 @@ public abstract class ServerListDragReorderMixin extends Screen {
         aurora$dragDropIndex = -1;
 
         if (wasActive && aurora$enabled()
-                && event.button() == GLFW.GLFW_MOUSE_BUTTON_LEFT
+                && event.button() == InputConstants.MOUSE_BUTTON_LEFT
                 && from >= 0 && servers != null && serverSelectionList != null) {
             aurora$beginSettle(from, drop);
             // Swallow the release so vanilla can't misread the drag as a join.
@@ -236,7 +236,7 @@ public abstract class ServerListDragReorderMixin extends Screen {
 
     @Override
     public boolean keyPressed(KeyEvent event) {
-        if (aurora$dragActive && event.key() == GLFW.GLFW_KEY_ESCAPE) {
+        if (aurora$dragActive && event.key() == InputConstants.KEY_ESCAPE) {
             // Cancel: the card glides back to where it came from, nothing moves.
             int from = aurora$dragFromIndex;
             aurora$dragArmed = false;

@@ -1,15 +1,15 @@
 package com.aurora.client.ui.render.blur;
 
-import com.mojang.blaze3d.buffers.GpuBuffer;
-import com.mojang.blaze3d.pipeline.RenderPipeline;
+import com.mojang.renderpearl.api.buffers.GpuBuffer;
+import com.mojang.renderpearl.api.pipeline.RenderPipeline;
 import com.mojang.blaze3d.pipeline.RenderTarget;
-import com.mojang.blaze3d.pipeline.ColorTargetState;
-import com.mojang.blaze3d.shaders.UniformType;
+import com.mojang.renderpearl.api.pipeline.ColorTargetState;
+import com.mojang.renderpearl.api.pipeline.UniformType;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.textures.FilterMode;
-import com.mojang.blaze3d.textures.GpuTexture;
-import com.mojang.blaze3d.textures.GpuTextureView;
-import com.mojang.blaze3d.GpuFormat;
+import com.mojang.renderpearl.api.textures.FilterMode;
+import com.mojang.renderpearl.api.textures.GpuTexture;
+import com.mojang.renderpearl.api.textures.GpuTextureView;
+import com.mojang.renderpearl.api.GpuFormat;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -60,9 +60,9 @@ final class PortableBlurRenderer {
                 .withVertexShader(Identifier.fromNamespaceAndPath("aurora", "core/glass"))
                 .withFragmentShader(Identifier.fromNamespaceAndPath("aurora", "core/" + name))
                 .withVertexBinding(0, DefaultVertexFormat.POSITION)
-                .withPrimitiveTopology(com.mojang.blaze3d.PrimitiveTopology.TRIANGLES)
-                .withBindGroupLayout(com.mojang.blaze3d.pipeline.BindGroupLayout.builder()
-                        .withSampler("InputTexture").withUniform("GlassParams", UniformType.UNIFORM_BUFFER).build())
+                .withPrimitiveTopology(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.TRIANGLES)
+                .withBindGroupLayout(com.mojang.renderpearl.api.pipeline.BindGroupLayout.builder()
+                        .withUniform("InputTexture", UniformType.COMBINED_IMAGE_SAMPLER).withUniform("GlassParams", UniformType.UNIFORM_BUFFER).build())
                 // No depth state means no depth test or write (as vanilla's GUI pipelines); no blend.
                 .withDepthStencilState(Optional.empty())
                 .withColorTargetState(ColorTargetState.DEFAULT)
@@ -226,10 +226,10 @@ final class PortableBlurRenderer {
         }
         try (var pass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(
                 () -> "Aurora glass", target.getTextureView(), Optional.empty())) {
-            pass.setPipeline(pipeline);
+            pass.setPipeline(RenderSystem.getCompiledPipeline(pipeline));
             pass.setVertexBuffer(0, triangle.slice());
             pass.setUniform("GlassParams", output.uniforms[index]);
-            pass.bindTexture("InputTexture", input, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
+            pass.setUniform("InputTexture", input, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
             pass.draw(3, 1, 0, 0);
         }
     }

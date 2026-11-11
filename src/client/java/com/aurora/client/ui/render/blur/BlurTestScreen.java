@@ -321,7 +321,7 @@ public class BlurTestScreen extends Screen {
     @Override
     public boolean keyPressed(net.minecraft.client.input.KeyEvent kev) {
         int keyCode = kev.key();
-        if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_B) {
+        if (keyCode == com.mojang.blaze3d.platform.InputConstants.KEY_B) {
             mode = switch (mode) {
                 case SOLID -> Backdrop.STRIPES;
                 case STRIPES -> Backdrop.WORLD;
@@ -330,25 +330,25 @@ public class BlurTestScreen extends Screen {
             com.aurora.client.AuroraClient.LOGGER.info("[BlurTest] B: backdrop={}", mode);
             return true;
         }
-        if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_EQUAL || keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_KP_ADD) {
+        if (keyCode == com.mojang.blaze3d.platform.InputConstants.KEY_EQUALS || keyCode == com.mojang.blaze3d.platform.InputConstants.KEY_ADD) {
             blurRadius = Math.min(64f, blurRadius + 4f);
             return true;
         }
-        if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_MINUS || keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_KP_SUBTRACT) {
+        if (keyCode == com.mojang.blaze3d.platform.InputConstants.KEY_MINUS || keyCode == org.lwjgl.sdl.SDLScancode.SDL_SCANCODE_KP_MINUS) {
             blurRadius = Math.max(0f, blurRadius - 4f);
             return true;
         }
-        if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_L) {
+        if (keyCode == com.mojang.blaze3d.platform.InputConstants.KEY_L) {
             lightingOn = !lightingOn;
             com.aurora.client.AuroraClient.LOGGER.info("[BlurTest] L: lighting={}", lightingOn);
             return true;
         }
-        if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_M) {
+        if (keyCode == com.mojang.blaze3d.platform.InputConstants.KEY_M) {
             depressedMode = !depressedMode;
             com.aurora.client.AuroraClient.LOGGER.info("[BlurTest] M: depressed={}", depressedMode);
             return true;
         }
-        if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_C) {
+        if (keyCode == com.mojang.blaze3d.platform.InputConstants.KEY_C) {
             // Cycle corner style IN MEMORY (restored on close, never saved).
             ThemeRoundness[] vals = ThemeRoundness.values();
             ThemeRoundness cur = AuroraConfig.get().themeOrDefault().roundness;
@@ -358,7 +358,7 @@ public class BlurTestScreen extends Screen {
             com.aurora.client.AuroraClient.LOGGER.info("[BlurTest] C: corner={}", next.displayName());
             return true;
         }
-        if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_N) {
+        if (keyCode == com.mojang.blaze3d.platform.InputConstants.KEY_N) {
             // Flip Dark/Light IN MEMORY (restored on close, never saved).
             ThemeMode cur = AuroraConfig.get().themeOrDefault().mode;
             AuroraConfig.get().themeOrDefault().mode = (cur == ThemeMode.LIGHT) ? ThemeMode.DARK : ThemeMode.LIGHT;
@@ -367,14 +367,14 @@ public class BlurTestScreen extends Screen {
                     AuroraConfig.get().themeOrDefault().mode);
             return true;
         }
-        if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_O
-                || keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_P) {
+        if (keyCode == com.mojang.blaze3d.platform.InputConstants.KEY_O
+                || keyCode == com.mojang.blaze3d.platform.InputConstants.KEY_P) {
             // Live opacity knob: adjusts the theme's backgroundOpacity IN
             // MEMORY (restored on close). This is the same single value
             // ThemeResolver stamps into WINDOW_FILL's alpha — the ONE
             // documented opacity application point — so no second
             // application point is created by the knob.
-            double step = (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_P) ? 0.05 : -0.05;
+            double step = (keyCode == com.mojang.blaze3d.platform.InputConstants.KEY_P) ? 0.05 : -0.05;
             AuroraConfig cfg = AuroraConfig.get();
             double next = Math.max(0.05, Math.min(1.0,
                     ThemeDefinition.normalizedOpacity(cfg.themeOrDefault().backgroundOpacity) + step));
@@ -384,7 +384,7 @@ public class BlurTestScreen extends Screen {
                     (char) keyCode, String.format(java.util.Locale.ROOT, "%.2f", next));
             return true;
         }
-        if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_G) {
+        if (keyCode == com.mojang.blaze3d.platform.InputConstants.KEY_G) {
             // R10 stress: cycle the extra panel count through the pool sizes
             // of interest (0 = off).
             int[] steps = {0, 24, 32, 48, 64, 96, 120};
@@ -394,7 +394,7 @@ public class BlurTestScreen extends Screen {
             com.aurora.client.AuroraClient.LOGGER.info("[BlurTest] G: stress={}", stressN);
             return true;
         }
-        if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_S) {
+        if (keyCode == com.mojang.blaze3d.platform.InputConstants.KEY_S) {
             // Crash CANARY, deliberately re-enabled now that the screenshot
             // interlock exists (see BlurPanelRenderer's screenshot-interlock
             // note): [S] drives the real vanilla grab — the identical path

@@ -2,7 +2,7 @@ package com.aurora.client.ui.interaction;
 
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.input.KeyEvent;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -166,14 +166,14 @@ public final class SemanticControlGroup {
 
     private int step(int key) {
         return switch (geometry) {
-            case HORIZONTAL -> key == GLFW.GLFW_KEY_LEFT ? -1
-                    : key == GLFW.GLFW_KEY_RIGHT ? 1 : 0;
-            case VERTICAL -> key == GLFW.GLFW_KEY_UP ? -1
-                    : key == GLFW.GLFW_KEY_DOWN ? 1 : 0;
-            case GRID -> key == GLFW.GLFW_KEY_LEFT ? -1
-                    : key == GLFW.GLFW_KEY_RIGHT ? 1
-                    : key == GLFW.GLFW_KEY_UP ? -columns
-                    : key == GLFW.GLFW_KEY_DOWN ? columns
+            case HORIZONTAL -> key == InputConstants.KEY_LEFT ? -1
+                    : key == InputConstants.KEY_RIGHT ? 1 : 0;
+            case VERTICAL -> key == InputConstants.KEY_UP ? -1
+                    : key == InputConstants.KEY_DOWN ? 1 : 0;
+            case GRID -> key == InputConstants.KEY_LEFT ? -1
+                    : key == InputConstants.KEY_RIGHT ? 1
+                    : key == InputConstants.KEY_UP ? -columns
+                    : key == InputConstants.KEY_DOWN ? columns
                     : 0;
         };
     }

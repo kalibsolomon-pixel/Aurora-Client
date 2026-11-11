@@ -234,7 +234,7 @@ public class BooleanSetting extends FeatureSetting {
     public boolean mouseClicked(double mouseX, double mouseY, int button, int rowX, int rowY, int rowWidth) {
         syncCompactControl(rowX, rowY);
         if (isDisabled()) return false;
-        if (button != 0) return false;
+        if (button != com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) return false;
         int controlH = baseHeight();
         if (mouseY < rowY || mouseY > rowY + controlH) return false;
         if (mouseX < rowX || mouseX > rowX + rowWidth) return false;

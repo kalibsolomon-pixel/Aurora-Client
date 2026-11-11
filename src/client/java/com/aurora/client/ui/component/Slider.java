@@ -7,7 +7,7 @@ import com.aurora.client.ui.util.TimedTransition;
 import com.aurora.client.ui.util.CubicBezier;
 import com.aurora.client.util.HoverAnim;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 
 import java.util.function.DoubleConsumer;
 import java.util.function.DoubleSupplier;
@@ -202,7 +202,7 @@ public class Slider extends Widget {
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
-        if (disabled || button != 0) return false;
+        if (disabled || button != com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) return false;
         if (!inBounds(mx, my, x - 4, trackY() - 6, w + 8, TRACK_H + 12)) return false;
         dragging = true;
         applyFromMouse(mx);
@@ -211,14 +211,14 @@ public class Slider extends Widget {
 
     @Override
     public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
-        if (!dragging || button != 0) return false;
+        if (!dragging || button != com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) return false;
         applyFromMouse(mx);
         return true;
     }
 
     @Override
     public boolean mouseReleased(double mx, double my, int button) {
-        if (button == 0 && dragging) {
+        if (button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT && dragging) {
             dragging = false;
             return true;
         }
@@ -228,14 +228,14 @@ public class Slider extends Widget {
     @Override
     public boolean onKeyPress(int keyCode, int modifiers) {
         if (disabled) return false;
-        boolean shift = (modifiers & GLFW.GLFW_MOD_SHIFT) != 0;
-        boolean ctrl = (modifiers & GLFW.GLFW_MOD_CONTROL) != 0;
+        boolean shift = (modifiers & InputConstants.MOD_SHIFT) != 0;
+        boolean ctrl = (modifiers & InputConstants.MOD_CONTROL) != 0;
         double mult = shift ? 10.0 : (ctrl ? 0.1 : 1.0);
-        if (keyCode == GLFW.GLFW_KEY_LEFT || keyCode == GLFW.GLFW_KEY_DOWN) {
+        if (keyCode == InputConstants.KEY_LEFT || keyCode == InputConstants.KEY_DOWN) {
             applyDelta(-step * mult);
             return true;
         }
-        if (keyCode == GLFW.GLFW_KEY_RIGHT || keyCode == GLFW.GLFW_KEY_UP) {
+        if (keyCode == InputConstants.KEY_RIGHT || keyCode == InputConstants.KEY_UP) {
             applyDelta(step * mult);
             return true;
         }

@@ -522,7 +522,7 @@ public class AuroraConfig {
         BRACKETED_TEXT
     }
 
-    // Block Overlay â€” outline + face fill on the targeted block.
+    // Block Overlay — outline + face fill on the targeted block.
     public boolean blockOverlayEnabled = true;             // master toggle
     public boolean blockOverlayOutlineEnabled = true;      // sub-toggle: wireframe outline
     public int     blockOverlayOutlineColor = 0xFF000000;  // outline ARGB
@@ -545,7 +545,7 @@ public class AuroraConfig {
     public ShieldStyle shieldStyle = ShieldStyle.VANILLA;
 
     public enum ShieldStyle {
-        /** Vanilla rendering â€” no transform applied. */
+        /** Vanilla rendering — no transform applied. */
         VANILLA,
         /** Translate downward to clear the field of view, slight scale-down. */
         LOWERED,
@@ -638,7 +638,7 @@ public class AuroraConfig {
     public boolean underwaterClarityEnabled = false;
     public double underwaterFogMultiplier = 8.0;
 
-    // Lava clarity â€” same idea, separate fog modifier + screen overlay tint.
+    // Lava clarity — same idea, separate fog modifier + screen overlay tint.
     public boolean lavaClarityEnabled = false;
     public double  lavaFogMultiplier = 8.0;
     public boolean lavaHideOverlay = false;   // true = cancel orange overlay entirely
@@ -680,16 +680,17 @@ public class AuroraConfig {
     public boolean nametagTotemPopsEnabled = false; // off in a fresh install (ADR 0007)
 
     // ---- Aurora keybinds ----
-    // Stored as raw GLFW key codes (literals: the core cannot see LWJGL;
+    // Stored as SDL physical scancodes (literals: the core cannot see LWJGL;
     // AuroraConfigKeyDefaultsTest checks them). -1 means unbound. Polled directly via
-    // AuroraKey rather than registered with vanilla's KeyMapping system,
-    // so they don't appear in the vanilla controls menu and rebind from
-    // each feature's own settings page.
-    public int zoomKey         = 67;  // GLFW_KEY_C
-    public int freeLookKey     = 86;  // GLFW_KEY_V
-    public int toggleSprintKey = 74;  // GLFW_KEY_J
-    public int toggleSneakKey  = 75;  // GLFW_KEY_K
-    public int hudEditorKey    = 344; // GLFW_KEY_RIGHT_SHIFT
+    // AuroraKey polls held state; AuroraKeybinds syncs these with vanilla Controls.
+    /** Persisted keyboard format; profile-scoped so imported profiles migrate independently. */
+    public int keybindVersion = KeybindMigrator.VERSION;
+
+    public int zoomKey         = 6;  // SDL scancode C
+    public int freeLookKey     = 25;  // SDL scancode V
+    public int toggleSprintKey = 13;  // SDL scancode J
+    public int toggleSneakKey  = 14;  // SDL scancode K
+    public int hudEditorKey    = 229; // SDL scancode Right Shift
     /** Press to toggle the hitbox sub-toggles ({@link #hitboxEnabled} +
      *  {@link #hitboxTargetEnabled}) on/off together. -1 = unbound. */
     public int hitboxToggleKey = -1;
@@ -950,7 +951,7 @@ public class AuroraConfig {
     /** Backing panel opacity, 0..1. Key labels are unaffected. */
     public double keystrokesBgOpacity = 0.55;
     /**
-     * Additional tracked keys as raw GLFW codes (e.g. GLFW_KEY_F = 70),
+     * Additional tracked keys as SDL scancodes (e.g. F = 9),
      * auto-arranged in rows of three below the standard rows. Capped at
      * {@link com.aurora.client.hud.module.KeystrokesModule#MAX_EXTRA_KEYS}.
      */
@@ -1160,9 +1161,9 @@ public class AuroraConfig {
     public boolean worldMapEnabled = true;
 
     /**
-     * GLFW key that opens the fullscreen world map. Default M.
+     * SDL key that opens the fullscreen world map. Default M.
      */
-    public int worldMapKey = 77; // GLFW_KEY_M
+    public int worldMapKey = 16; // SDL scancode M
 
     /**
      * Maximum chunks re-sampled into region tiles per client tick — the
@@ -1200,6 +1201,7 @@ public class AuroraConfig {
                 // members so one bad field can't take the whole config down.
                 json = ThemeMigrator.migrateConfigJson(json, LOGGER);
                 json = PlayerHealthMigrator.migrateConfigJson(json, LOGGER);
+                json = KeybindMigrator.migrateConfigJson(json, LOGGER);
                 AuroraConfig loaded = GSON.fromJson(json, AuroraConfig.class);
                 if (loaded == null) throw new com.google.gson.JsonParseException("Config is null");
                 if (loaded != null) {

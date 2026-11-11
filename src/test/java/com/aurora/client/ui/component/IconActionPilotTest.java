@@ -5,7 +5,7 @@ import com.aurora.client.ui.interaction.SemanticActionControl;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.Component;
 import org.junit.jupiter.api.Test;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -61,18 +61,18 @@ class IconActionPilotTest {
 
         // Unhosted (never asked): the pointer route declines — callers keep
         // their legacy fallback for this window.
-        assertFalse(a.clicked(5, 5, 0));
+        assertFalse(a.clicked(5, 5, 1));
 
         // Hosted + available + in bounds: exactly one domain action.
         first.setAvailable(true);
         first.setBounds(0, 0, 16, 16);
-        assertTrue(a.clicked(5, 5, 0));
+        assertTrue(a.clicked(5, 5, 1));
         assertEquals(1, calls.get());
         // Out of bounds is rejected by the control's own geometry truth.
-        assertFalse(a.clicked(50, 50, 0));
+        assertFalse(a.clicked(50, 50, 1));
         assertEquals(1, calls.get());
         // Non-primary buttons are not activations.
-        assertFalse(a.clicked(5, 5, 1));
+        assertFalse(a.clicked(5, 5, 3));
         assertEquals(1, calls.get());
     }
 
@@ -83,8 +83,8 @@ class IconActionPilotTest {
         SemanticActionControl control = a.interactionControl();
         control.setAvailable(true);
         control.setFocused(true);
-        assertTrue(control.keyPressed(new KeyEvent(GLFW.GLFW_KEY_ENTER, 0, 0)));
-        assertTrue(control.keyPressed(new KeyEvent(GLFW.GLFW_KEY_SPACE, 0, 0)));
+        assertTrue(control.keyPressed(new KeyEvent(InputConstants.KEY_RETURN, 0, 0)));
+        assertTrue(control.keyPressed(new KeyEvent(InputConstants.KEY_SPACE, 0, 0)));
         assertEquals(2, calls.get(), "Enter and Space each run the SAME action once");
     }
 
@@ -97,9 +97,9 @@ class IconActionPilotTest {
         control.setAvailable(true);
         control.setBounds(0, 0, 16, 16);
         enabled.set(false);
-        assertFalse(a.clicked(5, 5, 0), "no pointer action while disabled");
+        assertFalse(a.clicked(5, 5, 1), "no pointer action while disabled");
         control.setFocused(true);
-        assertTrue(control.keyPressed(new KeyEvent(GLFW.GLFW_KEY_ENTER, 0, 0)),
+        assertTrue(control.keyPressed(new KeyEvent(InputConstants.KEY_RETURN, 0, 0)),
                 "a targeted disabled selection is consumed (cannot fall through)");
         assertEquals(0, calls.get());
         // The hover target is disabled-driven too — no affordance animation.

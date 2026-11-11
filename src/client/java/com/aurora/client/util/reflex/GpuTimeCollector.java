@@ -1,6 +1,6 @@
 package com.aurora.client.util.reflex;
 
-import com.mojang.blaze3d.systems.GpuQueryPool;
+import com.mojang.renderpearl.api.commands.GpuQueryPool;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.aurora.client.mixin.GpuDeviceTimestampAccessor;
 
@@ -21,7 +21,7 @@ public class GpuTimeCollector {
     /** Logs the dropped-sample warning once per session; DEBUG afterwards. */
     private static boolean loggedNullStartDrop = false;
 
-    private static com.mojang.blaze3d.systems.GpuDevice calibratedDevice;
+    private static com.mojang.renderpearl.api.device.GpuDevice calibratedDevice;
     private static long gpuSystemOffset;
 
     long gpuToSystem(long gpu) {
@@ -32,8 +32,7 @@ public class GpuTimeCollector {
             }
             // Vulkan's clock read submits and waits for a query. Calibrate once
             // per device, as vanilla's GPU profiler does, never once per frame.
-            long now = nanoseconds(clock.aurora$timestampNow());
-            gpuSystemOffset = System.nanoTime() - now;
+            gpuSystemOffset = clock.aurora$timestampCalibrationOffset();
             calibratedDevice = device;
         }
         return gpu + gpuSystemOffset;

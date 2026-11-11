@@ -56,7 +56,7 @@ public abstract class AttackMixin {
         hit.swordHadSharpness = MultiVersion.hasSharpness();
         hit.sprintWasReset = sprintIsReset;
         hit.wasNewTarget = lastTarget != target.getId();
-        hit.wasHitByAnother = target.invulnerableTime > 10 && sinceLastHit >= 1000;
+        hit.wasHitByAnother = target.getInvulnerableTime() > 10 && sinceLastHit >= 1000;
         hit.wasInvisible = target.isInvisible();
 
         if (!hitEarly) {

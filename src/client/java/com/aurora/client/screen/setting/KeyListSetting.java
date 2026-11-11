@@ -19,7 +19,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -29,7 +29,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /**
- * Editor for a list of raw GLFW key codes (the Keystrokes overlay's
+ * Editor for a list of raw SDL scancodes (the Keystrokes overlay's
  * "Extra Keys"). One row per entry with a "−" remove button, plus an
  * "Add Key" pill that enters listen mode — the next key pressed is
  * appended. ESC and BACKSPACE cancel the capture without changing the
@@ -86,7 +86,7 @@ import java.util.function.Supplier;
  * Button-family hairline, Enter/Space removal, "Remove key &lt;name&gt;"
  * narration, exactly-once routing, and — new, replacing silence — one
  * activation click per removal. Pointer and keyboard converge on the ONE
- * {@link #removeEntry} path; chips are identity-keyed by their GLFW value
+ * {@link #removeEntry} path; chips are identity-keyed by their SDL scancode
  * (unique in the list — capture rejects duplicates), never by row index.
  *
  * <p>Glass: the "Add Key" pill matches {@link KeybindSetting}'s pill —
@@ -121,7 +121,7 @@ public class KeyListSetting extends FeatureSetting {
 
     // ---- C-4 rollout: the chips' semantic adapter (painter stays exempt) ----
 
-    /** One remove action per listed key, keyed by the GLFW VALUE (unique —
+    /** One remove action per listed key, keyed by the SDL SCANCODE (unique —
      *  capture rejects duplicates; row indexes shift on removal, values
      *  don't). Long-lived; pruned with its entry. */
     private final Map<Integer, com.aurora.client.ui.component.IconAction> chipRemoveActions = new HashMap<>();
@@ -174,7 +174,7 @@ public class KeyListSetting extends FeatureSetting {
         chipsVersion++;
     }
 
-    /** User-facing key names, memoized by GLFW value (no per-frame formatting). */
+    /** User-facing key names, memoized by SDL scancode (no per-frame formatting). */
     private final Map<Integer, String> nameCache = new HashMap<>();
 
     public KeyListSetting(String label, Supplier<List<Integer>> getter, Consumer<List<Integer>> setter) {
@@ -324,7 +324,7 @@ public class KeyListSetting extends FeatureSetting {
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button, int rowX, int rowY, int rowWidth) {
         if (isDisabled()) return false; // authoritative at action time, not render time
-        if (button != 0) return false;
+        if (button != com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) return false;
 
         List<Integer> items = safeList();
         int iy = lastY + ROW_H + 2;
@@ -384,7 +384,7 @@ public class KeyListSetting extends FeatureSetting {
         // ESC / BACKSPACE cancel without changing the list — the multi-value
         // analogue of the single-Keybind clear rule (there is no one value
         // to clear). Delete and every other keycode are ordinary entries.
-        if (keyCode != GLFW.GLFW_KEY_ESCAPE && keyCode != GLFW.GLFW_KEY_BACKSPACE) {
+        if (keyCode != InputConstants.KEY_ESCAPE && keyCode != InputConstants.KEY_BACKSPACE) {
             addEntry(keyCode);
             // Duplicate / full-list capture: accepted no-op close. No
             // mutation, therefore no save.
@@ -497,10 +497,10 @@ public class KeyListSetting extends FeatureSetting {
         return sb.toString();
     }
 
-    private String cachedName(int glfwKey) {
+    private String cachedName(int scancode) {
         // Memoized — the ellipsized per-frame render path must not format
         // key names through InputConstants every frame.
-        return nameCache.computeIfAbsent(glfwKey, KeybindSetting::keyName);
+        return nameCache.computeIfAbsent(scancode, KeybindSetting::keyName);
     }
 
     private List<Integer> safeList() {

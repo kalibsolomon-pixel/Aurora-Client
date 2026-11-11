@@ -1,7 +1,7 @@
 # Aurora Client
 
 Aurora Client is a client-side Fabric mod for Minecraft. The current source
-targets Minecraft 26.2 (the second forward-port checkpoint) and requires Java 25. Build and test with the checked-in Gradle wrapper:
+targets Minecraft 26.3 and requires Java 25. Build and test with the checked-in Gradle wrapper:
 
 ```sh
 ./gradlew test

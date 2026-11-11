@@ -110,11 +110,11 @@ public class AuroraClient implements ClientModInitializer {
         moduleManager.register(new MinimapModule());
 
         HitboxRenderer hitboxRenderer = new HitboxRenderer();
-        LevelRenderEvents.AFTER_TRANSLUCENT_FEATURES.register(Timed.afterFeatures(hitboxRenderer::render));
+        LevelRenderEvents.END_MAIN.register(Timed.endMain(hitboxRenderer::render));
 
         BlockOverlayRenderer blockOverlayRenderer = new BlockOverlayRenderer();
         LevelRenderEvents.BEFORE_BLOCK_OUTLINE.register(Timed.beforeBlockOutline(blockOverlayRenderer::onBeforeBlockOutline));
-        LevelRenderEvents.AFTER_TRANSLUCENT_FEATURES.register(Timed.afterFeatures(blockOverlayRenderer::render));
+        LevelRenderEvents.END_MAIN.register(Timed.endMain(blockOverlayRenderer::render));
 
         // Container preview — map Aurora's tooltip data to its renderer.
         net.fabricmc.fabric.api.client.rendering.v1.ClientTooltipComponentCallback.EVENT.register(data -> {
@@ -125,7 +125,7 @@ public class AuroraClient implements ClientModInitializer {
         });
 
         com.aurora.client.hud.WaypointRenderer waypointRenderer = new com.aurora.client.hud.WaypointRenderer();
-        LevelRenderEvents.AFTER_TRANSLUCENT_FEATURES.register(Timed.afterFeatures(waypointRenderer::renderWorld));
+        LevelRenderEvents.END_MAIN.register(Timed.endMain(waypointRenderer::renderWorld));
         // HUD layers draw after vanilla's, in this registration order (as HudRenderCallback did).
         HudElementRegistry.addLast(id("waypoint_labels"), Timed.hud((ctx, tickCounter) -> {
             com.aurora.client.ui.util.AuroraFontRenderer.setRenderingAuroraUI(true);
@@ -272,23 +272,23 @@ public class AuroraClient implements ClientModInitializer {
         AuroraConfig cfg = AuroraConfig.get();
         com.aurora.client.util.AuroraKeybinds.register(
                 "key.aurora.zoom",
-                org.lwjgl.glfw.GLFW.GLFW_KEY_C,
+                com.mojang.blaze3d.platform.InputConstants.KEY_C,
                 () -> cfg.zoomKey,            v -> cfg.zoomKey = v);
         com.aurora.client.util.AuroraKeybinds.register(
                 "key.aurora.free_look",
-                org.lwjgl.glfw.GLFW.GLFW_KEY_V,
+                com.mojang.blaze3d.platform.InputConstants.KEY_V,
                 () -> cfg.freeLookKey,        v -> cfg.freeLookKey = v);
         com.aurora.client.util.AuroraKeybinds.register(
                 "key.aurora.toggle_sprint",
-                org.lwjgl.glfw.GLFW.GLFW_KEY_J,
+                com.mojang.blaze3d.platform.InputConstants.KEY_J,
                 () -> cfg.toggleSprintKey,    v -> cfg.toggleSprintKey = v);
         com.aurora.client.util.AuroraKeybinds.register(
                 "key.aurora.toggle_sneak",
-                org.lwjgl.glfw.GLFW.GLFW_KEY_K,
+                com.mojang.blaze3d.platform.InputConstants.KEY_K,
                 () -> cfg.toggleSneakKey,     v -> cfg.toggleSneakKey = v);
         com.aurora.client.util.AuroraKeybinds.register(
                 "key.aurora.hud_editor",
-                org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_SHIFT,
+                com.mojang.blaze3d.platform.InputConstants.KEY_RSHIFT,
                 () -> cfg.hudEditorKey,       v -> cfg.hudEditorKey = v);
         com.aurora.client.util.AuroraKeybinds.register(
                 "key.aurora.hitbox_toggle",
@@ -308,7 +308,7 @@ public class AuroraClient implements ClientModInitializer {
                 () -> cfg.waypointManagerKey, v -> cfg.waypointManagerKey = v);
         com.aurora.client.util.AuroraKeybinds.register(
                 "key.aurora.world_map",
-                org.lwjgl.glfw.GLFW.GLFW_KEY_M,
+                com.mojang.blaze3d.platform.InputConstants.KEY_M,
                 () -> cfg.worldMapKey,         v -> cfg.worldMapKey = v);
         com.aurora.client.util.AuroraKeybinds.register(
                 "key.aurora.minimap_toggle",

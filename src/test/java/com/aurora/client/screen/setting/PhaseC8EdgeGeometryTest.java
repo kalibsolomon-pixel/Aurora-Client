@@ -45,7 +45,7 @@ class PhaseC8EdgeGeometryTest {
         };
         for (String f : fields) {
             String s = source(f);
-            assertTrue(s.contains("GLFW_KEY_ESCAPE"),
+            assertTrue(s.contains("KEY_ESCAPE"),
                     Path.of(f).getFileName() + " must handle Escape for its focused field");
             assertTrue(s.contains("setFocused(false)"),
                     Path.of(f).getFileName() + " must UNFOCUS the field (not close the screen)");
@@ -53,7 +53,7 @@ class PhaseC8EdgeGeometryTest {
         // The capture families' Escape semantics (clear-binding / cancel
         // capture) are their own and must not be swept into this rule.
         String keybind = source("src/client/java/com/aurora/client/screen/setting/KeybindSetting.java");
-        assertTrue(keybind.contains("GLFW_KEY_ESCAPE"), "Keybind keeps its clear-to-UNBOUND rule");
+        assertTrue(keybind.contains("KEY_ESCAPE"), "Keybind keeps its clear-to-UNBOUND rule");
     }
 
     // ---- Search-band exact bounds (§16) ----
@@ -196,7 +196,7 @@ class PhaseC8EdgeGeometryTest {
                 "supportability is an explicit computed decision");
         assertTrue(s.contains("Window too small for the color picker"),
                 "the unsupported configuration renders a message, not overlapping controls");
-        assertTrue(s.contains("button == 0 && pickerSupportable"),
+        assertTrue(s.contains("button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT && pickerSupportable"),
                 "surface input paths are gated off when unsupported");
         assertFalse(s.contains("Math.max(60,"),
                 "the overlap-causing 60px pad floor must not return");

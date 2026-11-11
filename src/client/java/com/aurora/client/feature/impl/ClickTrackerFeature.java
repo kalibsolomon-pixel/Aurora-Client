@@ -6,7 +6,7 @@ import net.minecraft.client.Minecraft;
 
 /**
  * Holds the global CPS trackers. Clicks are recorded directly from the
- * {@code MouseHandler.onMouseButton} GLFW callback via {@link com.aurora.client.mixin.MouseClickTrackerMixin},
+ * {@code MouseHandler.onMouseButton} SDL callback via {@link com.aurora.client.mixin.MouseClickTrackerMixin},
  * not polled from key state. That avoids two bugs:
  * <ul>
  *   <li>{@code KeyMapping#isPressed()} consumes presses, racing vanilla's own callers.</li>

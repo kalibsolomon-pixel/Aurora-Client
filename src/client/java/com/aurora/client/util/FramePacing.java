@@ -3,7 +3,7 @@ package com.aurora.client.util;
 /**
  * FPS-limit precedence and the single deadline shared by the two pacing hooks.
  * Minecraft supplies an effective tracker limit, never the raw option. All time
- * inputs are GLFW seconds; this class does not wait or inspect window state.
+ * inputs are SDL seconds; this class does not wait or inspect window state.
  */
 public final class FramePacing {
     public enum Owner { NONE, NATIVE, FRAME_HEAD, POST_SWAP }

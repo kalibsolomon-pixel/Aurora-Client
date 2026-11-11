@@ -28,18 +28,18 @@ class SemanticActionControlTest {
         control.setAvailable(true);
         control.setBounds(10, 20, 90, 18);
 
-        assertTrue(control.activateFromPointer(11, 21, 0));
+        assertTrue(control.activateFromPointer(11, 21, 1));
         assertEquals(1, behavior.get());
         assertEquals(1, sounds.get());
         assertEquals(1, visuals.get());
 
         control.setFocused(true);
-        assertTrue(control.keyPressed(new KeyEvent(257, 0, 0))); // Enter
+        assertTrue(control.keyPressed(new KeyEvent( 40, 0, 0))); // Enter
         assertEquals(2, behavior.get());
         assertEquals(2, sounds.get());
         assertEquals(2, visuals.get());
 
-        assertTrue(control.keyPressed(new KeyEvent(32, 0, 0))); // Space
+        assertTrue(control.keyPressed(new KeyEvent( 44, 0, 0))); // Space
         assertEquals(3, behavior.get());
         assertEquals(3, sounds.get());
         assertEquals(3, visuals.get());
@@ -57,9 +57,9 @@ class SemanticActionControlTest {
         control.setBounds(10, 20, 90, 18);
         control.setFocused(true);
 
-        assertFalse(control.activateFromPointer(11, 21, 0));
-        assertTrue(control.keyPressed(new KeyEvent(257, 0, 0)));
-        assertTrue(control.keyPressed(new KeyEvent(32, 0, 0)));
+        assertFalse(control.activateFromPointer(11, 21, 1));
+        assertTrue(control.keyPressed(new KeyEvent( 40, 0, 0)));
+        assertTrue(control.keyPressed(new KeyEvent( 44, 0, 0)));
         assertEquals(0, behavior.get());
         assertEquals(0, sounds.get());
         assertEquals(0, visuals.get());
@@ -76,11 +76,11 @@ class SemanticActionControlTest {
         control.setBounds(10, 20, 90, 18);
         control.setAvailable(true);
 
-        assertFalse(control.keyPressed(new KeyEvent(257, 0, 0)));
+        assertFalse(control.keyPressed(new KeyEvent( 40, 0, 0)));
         assertNotNull(control.nextFocusPath(new FocusNavigationEvent.TabNavigation(true)));
         control.setFocused(true);
         control.setAvailable(false);
-        assertFalse(control.keyPressed(new KeyEvent(257, 0, 0)));
+        assertFalse(control.keyPressed(new KeyEvent( 40, 0, 0)));
         assertEquals(0, behavior.get());
     }
 
@@ -131,6 +131,9 @@ class SemanticActionControlTest {
     }
 
     private static final class CapturingNarration implements NarrationElementOutput {
+        @Override public net.minecraft.client.gui.narration.NarrationTrigger narrationTrigger() {
+            return net.minecraft.client.gui.narration.NarrationTrigger.KEYBOARD;
+        }
         private final Map<NarratedElementType, List<String>> values =
                 new EnumMap<>(NarratedElementType.class);
 

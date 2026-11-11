@@ -35,7 +35,7 @@ public class ChunkMixin {
     //version 26+
     @Inject(method = "prepareChunkRenders", at = @At("HEAD"))
     // 26.1 dropped the camera position parameters from prepareChunkRenders (Aurora port; logic unchanged).
-    private void onPrepareChunkRenders(Matrix4fc modelViewMatrix, CallbackInfoReturnable<ChunkSectionsToRender> cir) {
+    private void onPrepareChunkRenders(Matrix4fc modelViewMatrix, boolean translucent, CallbackInfoReturnable<ChunkSectionsToRender> cir) {
         if (Toggle.VOID_WORLD.toggled() && Hitreg.client.player != null && Hitreg.client.level != null) visibleSections.clear();
     }
 

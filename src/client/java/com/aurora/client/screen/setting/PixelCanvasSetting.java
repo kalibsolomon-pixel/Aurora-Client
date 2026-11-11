@@ -735,7 +735,7 @@ public class PixelCanvasSetting extends FeatureSetting {
         // consumed-but-inert, the disabled-button discipline everywhere
         // else (the pre-C-8 fall-through let a measuring-state click on
         // the disabled buttons escape the panel).
-        if ((warnPending != null || benchPending != null) && button == 0) {
+        if ((warnPending != null || benchPending != null) && button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) {
             int wpy = canvasY + getCanvasH() + 6;
             int wpx = rowX + 14;
             int wpw = rowWidth - 28;
@@ -757,7 +757,7 @@ public class PixelCanvasSetting extends FeatureSetting {
         }
 
         // Resolution fields.
-        if (button == 0 && mouseY >= sizeRowY && mouseY < sizeRowY + SIZE_ROW_H) {
+        if (button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT && mouseY >= sizeRowY && mouseY < sizeRowY + SIZE_ROW_H) {
             boolean onW = mouseX >= widthField.getX() && mouseX < widthField.getX() + FIELD_W;
             boolean onH = mouseX >= heightField.getX() && mouseX < heightField.getX() + FIELD_W;
             if (onW || onH) {
@@ -781,7 +781,7 @@ public class PixelCanvasSetting extends FeatureSetting {
         }
 
         // Default button: restore the vanilla 15×15 pattern.
-        if (button == 0
+        if (button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT
                 && Widget.inBounds(mouseX, mouseY, defaultBtnX, defaultBtnY, DEFAULT_W, CLEAR_BTN_H)) {
             if (defaultControl != null && defaultControl.isAvailable()) {
                 return defaultControl.activateFromPointer(mouseX, mouseY, button);
@@ -791,7 +791,7 @@ public class PixelCanvasSetting extends FeatureSetting {
         }
 
         // Clear button.
-        if (button == 0
+        if (button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT
                 && Widget.inBounds(mouseX, mouseY, clearBtnX, clearBtnY, CLEAR_BTN_W, CLEAR_BTN_H)) {
             if (clearControl != null && clearControl.isAvailable()) {
                 return clearControl.activateFromPointer(mouseX, mouseY, button);
@@ -803,13 +803,13 @@ public class PixelCanvasSetting extends FeatureSetting {
         // Canvas hits.
         int[] cell = cellAt(mouseX, mouseY);
         if (cell == null) return false;
-        if (button != 0 && button != 1) return false;
+        if (button != com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT && button != com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_RIGHT) return false;
 
         widthField.setFocused(false);
         heightField.setFocused(false);
         releaseFocus();
 
-        applyCell(cell[0], cell[1], button == 0);
+        applyCell(cell[0], cell[1], button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT);
         dragging = true;
         dragButton = button;
         lastCellX = cell[0];
@@ -828,7 +828,7 @@ public class PixelCanvasSetting extends FeatureSetting {
         }
         if (cell[0] == lastCellX && cell[1] == lastCellY) return true;
 
-        fillLine(lastCellX, lastCellY, cell[0], cell[1], button == 0);
+        fillLine(lastCellX, lastCellY, cell[0], cell[1], button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT);
         lastCellX = cell[0];
         lastCellY = cell[1];
         return true;
@@ -869,7 +869,7 @@ public class PixelCanvasSetting extends FeatureSetting {
                 // active (vanilla EditBox ignores Escape, so the press used
                 // to fall through and close the whole screen); the second
                 // press reaches the screen.
-                if (_kev.key() == org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE) {
+                if (_kev.key() == com.mojang.blaze3d.platform.InputConstants.KEY_ESCAPE) {
                     widthField.setFocused(false);
                     heightField.setFocused(false);
                     releaseFocus();

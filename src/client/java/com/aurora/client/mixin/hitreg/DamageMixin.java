@@ -51,7 +51,7 @@ public abstract class DamageMixin {
     private void handleDamageEvent(DamageSource damageSource, CallbackInfo ci) {
         if (damageSource instanceof DontAnimate) {
             LivingEntity entity = (LivingEntity) (Object) this;
-            entity.invulnerableTime = 20;
+            entity.setInvulnerableTime(20);
             lastDamageSource = damageSource;
 
             lastDamageStamp = MultiVersion.getLevelTime(entity);

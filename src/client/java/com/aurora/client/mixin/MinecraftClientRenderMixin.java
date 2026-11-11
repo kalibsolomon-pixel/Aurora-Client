@@ -24,12 +24,19 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(value = Minecraft.class, priority = 10000)
 public abstract class MinecraftClientRenderMixin {
     @org.spongepowered.asm.mixin.injection.ModifyArg(method = "renderFrame",
-            at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/systems/GpuSurface$PresentMode;getSupportedVsyncMode(Ljava/util/Collection;Z)Lcom/mojang/blaze3d/systems/GpuSurface$PresentMode;"), index = 1)
+            at = @At(value = "INVOKE", target = "Lcom/mojang/renderpearl/api/device/GpuSurface$PresentMode;getSupportedVsyncMode(Ljava/util/Collection;Z)Lcom/mojang/renderpearl/api/device/GpuSurface$PresentMode;"), index = 1)
     private boolean aurora$surfaceVsync(boolean vanilla) {
         AuroraConfig cfg = AuroraConfig.get();
         return cfg.lowLatencyRender && cfg.disableVSync ? false : vanilla;
     }
 
+
+    /** Loading and disconnect screens also render outside runTick. */
+    @Inject(method = "renderFrame", at = @At("HEAD"))
+    private void aurora$beginGlassFrame(boolean advanceGameTime, CallbackInfo ci) {
+        com.aurora.client.ui.render.blur.BlurPanelRenderer.beginFrame();
+        com.aurora.client.ui.component.GlassSurface.beginFrame();
+    }
 
     @Inject(method = "runTick", at = @At("HEAD"))
     private void aurora$applyMouseDeltaPerFrame(boolean tick, CallbackInfo ci) {
@@ -37,14 +44,6 @@ public abstract class MinecraftClientRenderMixin {
         AuroraConfig cfg = AuroraConfig.get();
         // Diagnostics benchmark: one volatile read unless a run is in progress.
         com.aurora.client.diagnostics.FrameBenchmark.onFrame();
-
-        // Exact frame-boundary stamp for the glass panel output pool — must
-        // run once per frame BEFORE any GUI rendering (see BlurPanelRenderer
-        // .beginFrame / nextOutput for why an exact signal is required).
-        com.aurora.client.ui.render.blur.BlurPanelRenderer.beginFrame();
-        // Same boundary for the glass-surface phase stamp (glass pass → dim →
-        // content): resets "dim painted" so every frame starts in the pass.
-        com.aurora.client.ui.component.GlassSurface.beginFrame();
 
         // Use the effective native target, including menu/AFK/iconified
         // restrictions. A positive global cap must also work when Minecraft
@@ -57,7 +56,7 @@ public abstract class MinecraftClientRenderMixin {
         var limit = FramePacing.resolve(self.getFramerateLimitTracker().getFramerateLimit(),
                 cfg.frameCapFps, cfg.guiFpsLimit, auroraGui, customPacer,
                 cfg.lowLatencyRender && cfg.adaptiveRenderSleeping);
-        double pacingNow = org.lwjgl.glfw.GLFW.glfwGetTime();
+        double pacingNow = com.aurora.client.util.FrameClock.seconds();
         if (com.aurora.client.util.ParkDiagnostics.INSTANCE.isEnabled()) {
             com.aurora.client.util.ParkDiagnosticsControl.observe(limit, cfg, customPacer,
                     self.isWindowActive(), pacingNow);

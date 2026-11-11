@@ -1,0 +1,30 @@
+{
+  "minecraft": "26.3",
+  "mods": {
+    "sodium": "mc26.3-0.9.2-fabric",
+    "iris": "1.11.7+26.3-fabric",
+    "immediatelyfast": "1.17.1+26.3-fabric",
+    "entityculling": "1.11.3",
+    "lithium": "mc26.3-0.26.3-fabric",
+    "modmenu": "21.0.0",
+    "placeholder-api": "3.2.0+26.3"
+  },
+  "sets": {
+    "baseline": [],
+    "A-performance-stack": [
+      "sodium",
+      "lithium",
+      "immediatelyfast",
+      "entityculling",
+      "modmenu",
+      "placeholder-api"
+    ],
+    "B-sodium-iris": [
+      "sodium",
+      "iris"
+    ]
+  },
+  "notes": [
+    "Minecraft 26.3 includes native OpenGL and Vulkan renderers. Sodium supports both; VulkanMod is superseded."
+  ]
+}

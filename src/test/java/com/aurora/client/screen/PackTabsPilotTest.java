@@ -107,22 +107,22 @@ class PackTabsPilotTest {
         // Keyboard activation of an inactive tab: exactly one category change.
         simpCtl.setFocused(true);
         assertTrue(simpCtl.keyPressed(new net.minecraft.client.input.KeyEvent(
-                org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER, 0, 0)));
+                com.mojang.blaze3d.platform.InputConstants.KEY_RETURN, 0, 0)));
         assertEquals(1, clicks.get(), "one category transition");
         assertTrue(fx.isActive("simplistic"));
 
         // Activating the already-selected tab (Space): consumed, no-op, no
         // submission, no repeated selection sound.
         assertTrue(simpCtl.keyPressed(new net.minecraft.client.input.KeyEvent(
-                org.lwjgl.glfw.GLFW.GLFW_KEY_SPACE, 0, 0)));
+                com.mojang.blaze3d.platform.InputConstants.KEY_SPACE, 0, 0)));
         assertEquals(1, clicks.get(), "reselection must not re-submit");
         assertEquals(1, fx.submissions.get());
 
         // Pointer path on a different inactive tab: one transition; pointer
         // hit on the selected tab: consumed no-op.
-        assertTrue(themedCtl.activateFromPointer(60, 80, 0));
+        assertTrue(themedCtl.activateFromPointer(60, 80, 1));
         assertEquals(2, clicks.get());
-        assertTrue(themedCtl.activateFromPointer(60, 80, 0));
+        assertTrue(themedCtl.activateFromPointer(60, 80, 1));
         assertEquals(2, clicks.get(), "selected-tab click is a no-op");
         assertEquals(2, fx.submissions.get());
 
@@ -265,7 +265,7 @@ class PackTabsPilotTest {
     @Test
     void tabClicksRouteThroughTheSemanticControl() throws Exception {
         String src = screenSource();
-        assertTrue(src.contains("control.activateFromPointer(mouseX, mouseY, 0)"),
+        assertTrue(src.contains("control.activateFromPointer(mouseX, mouseY, 1)"),
                 "pointer selection routes through the tab's semantic action");
         assertTrue(src.contains("tabControls[i]"),
                 "the click walk resolves the per-tab control");
@@ -296,6 +296,9 @@ class PackTabsPilotTest {
     }
 
     private static final class CapturingNarration implements NarrationElementOutput {
+        @Override public net.minecraft.client.gui.narration.NarrationTrigger narrationTrigger() {
+            return net.minecraft.client.gui.narration.NarrationTrigger.KEYBOARD;
+        }
         private final Map<NarratedElementType, List<String>> values =
                 new EnumMap<>(NarratedElementType.class);
 

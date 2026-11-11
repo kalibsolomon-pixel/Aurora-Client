@@ -17,7 +17,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -473,7 +473,7 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
     public boolean mouseClicked(double mouseX, double mouseY, int button, int rowX, int rowY, int rowWidth) {
         syncCompactControl(rowX, rowY);
         if (isDisabled()) return false;
-        if (button != 0) return false;
+        if (button != com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) return false;
 
         int btnX = controlX(rowX, rowWidth, BTN_W);
         int btnY = controlY(rowY, CONTROL_H, BTN_H);
@@ -644,15 +644,15 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
     @Override
     public boolean onKeyPress(int keyCode, int modifiers) {
         if (!expanded) return false;
-        if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
+        if (keyCode == InputConstants.KEY_ESCAPE) {
             expanded = false;
             releaseFocus();
             return true;
         }
-        if (keyCode == GLFW.GLFW_KEY_DOWN) {
+        if (keyCode == InputConstants.KEY_DOWN) {
             return onScroll(-1);
         }
-        if (keyCode == GLFW.GLFW_KEY_UP) {
+        if (keyCode == InputConstants.KEY_UP) {
             return onScroll(1);
         }
         return false;

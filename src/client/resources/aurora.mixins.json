@@ -63,6 +63,7 @@
     "ReflexMinecraftMixin",
     "GpuDeviceTimestampAccessor",
     "ItemStackRenderStateAccessor",
+    "ItemLayerQuadsAccessor",
     "ScreenPanoramaAccessor",
     "hitreg.ArmorMixin",
     "hitreg.AttackMixin",

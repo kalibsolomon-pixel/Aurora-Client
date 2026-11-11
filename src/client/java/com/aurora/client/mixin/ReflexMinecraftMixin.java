@@ -25,7 +25,7 @@ public abstract class ReflexMinecraftMixin {
     @Inject(
             // 26.2 presents the rendered frame through the active GPU surface.
             method = "renderFrame",
-            at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/systems/GpuSurface;present()V")
+            at = @At(value = "INVOKE", target = "Lcom/mojang/renderpearl/api/device/GpuSurface;present()V")
     )
     private void aurora$reflexBeforeFlush(CallbackInfo ci) {
         ReflexScheduler.getInstance().beforeFlush();
@@ -35,7 +35,7 @@ public abstract class ReflexMinecraftMixin {
             method = "renderFrame",
             at = @At(
                     value = "INVOKE",
-                    target = "Lnet/minecraft/client/renderer/GameRenderer;render(Lnet/minecraft/client/DeltaTracker;Z)V",
+                    target = "Lnet/minecraft/client/renderer/GameRenderer;render()V",
                     shift = At.Shift.AFTER
             )
     )

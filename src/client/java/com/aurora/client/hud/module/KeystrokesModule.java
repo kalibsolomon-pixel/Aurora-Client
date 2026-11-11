@@ -36,7 +36,7 @@ import java.util.List;
  * <p>Input detection reuses the parts of this mod that already work:
  * movement/mouse/space/sneak via polled vanilla {@code KeyMapping.isDown()}
  * (rebind-aware, doesn't consume presses), CPS via {@link ClickTrackerFeature}'s
- * event-based trackers, extra keys via raw GLFW state through {@link AuroraKey}.
+ * event-based trackers, extra keys via raw SDL state through {@link AuroraKey}.
  *
  * <p>Rendering budget: no per-frame allocations. Labels are cached (refreshed
  * every 2 s to pick up rebinding), the CPS string is rebuilt at most 10x/s via
@@ -576,13 +576,13 @@ public class KeystrokesModule extends HudModule {
         return fallback;
     }
 
-    private static String rawKeyName(int glfwKey) {
+    private static String rawKeyName(int scancodeKey) {
         try {
-            String s = InputConstants.Type.KEYSYM.getOrCreate(glfwKey).getDisplayName().getString();
+            String s = InputConstants.Type.KEYBOARD.getOrCreate(scancodeKey).getDisplayName().getString();
             if (s != null && !(s = shortKeyName(s)).isEmpty()) return s;
         } catch (Exception ignored) {
         }
-        return "?" + glfwKey;
+        return "?" + scancodeKey;
     }
 
     /**

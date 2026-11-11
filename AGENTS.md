@@ -1,6 +1,6 @@
 # Aurora Client: contributor and agent guide
 
-Aurora (`com.aurora.client`, mod id `aurora`) is a client-side Fabric mod for Minecraft 26.2: 38 quality-of-life, PvP and performance features (listed in `docs/FAIR_PLAY.md`) inside a themed GUI with a glass material. MIT licensed; code, fonts and libraries from other projects are listed in `THIRD_PARTY_NOTICES.md`.
+Aurora (`com.aurora.client`, mod id `aurora`) is a client-side Fabric mod for Minecraft 26.3: 38 quality-of-life, PvP and performance features (listed in `docs/FAIR_PLAY.md`) inside a themed GUI with a glass material. MIT licensed; code, fonts and libraries from other projects are listed in `THIRD_PARTY_NOTICES.md`.
 
 This guide is short on purpose. The full engineering history it replaced, including every investigation and the reasoning behind each rule below, is in [docs/history/AGENTS-2026-11-11.md](docs/history/AGENTS-2026-11-11.md). Older code comments and reports that cite "AGENTS.md §N" mean a section of that file.
 
@@ -41,6 +41,7 @@ Package names are shared between the two source roots, so look in both. `tools/c
 - A new field that changes behaviour for existing installs needs a migrator (pattern: `ThemeMigrator`, `PlayerHealthMigrator`), run on `aurora.json` and on every profile applied. Profiles snapshot every profile-scoped field and reset absent ones to defaults.
 - Per-feature reset is `AuroraConfig.resetByPrefix`; field names must share the feature's camelCase prefix or list their prefixes explicitly.
 - Saves go through `AtomicJsonWriter` (async, atomic, ordered). Never block the tick thread on disk.
+- Keyboard bindings use SDL physical scancodes on 26.3. `KeybindMigrator` converts legacy GLFW values independently for config and imported profiles; keep its profile-scoped format marker. The core stores literals and never imports SDL.
 - Binding an Aurora key by editing `aurora.json` alone does not stick: the vanilla binding in `options.txt` must change too.
 - `feature/FeatureCatalog` is the one list of features and of the mixins each needs. Adding a feature: a catalog entry, a `FeatureRegistry` entry and a mixin binding for each new mixin. `FeatureCatalogTest` checks they agree.
 

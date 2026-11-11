@@ -25,7 +25,7 @@ import static com.aurora.client.hitreg.Hitreg.*;
 @Mixin(EntityRenderer.class)
 public abstract class RenderMixin {
     @Inject(method = "shouldRender", at = @At("HEAD"), cancellable = true)
-    private void entity(Entity entity, Frustum frustum, double x, double y, double z, CallbackInfoReturnable<Boolean> cir) {
+    private void entity(Entity entity, Frustum frustum, double x, double y, double z, float partialTicks, CallbackInfoReturnable<Boolean> cir) {
         if (entity instanceof Player || entity instanceof Display.TextDisplay) {
             if (!shouldRender(entity)) cir.setReturnValue(false);
         }

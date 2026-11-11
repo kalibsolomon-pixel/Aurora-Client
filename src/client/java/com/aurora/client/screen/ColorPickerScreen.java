@@ -425,7 +425,7 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
         // Editing surfaces exist only in the supportable configuration
         // (C-8) — below the minimum there is nothing to drag; the buttons
         // are vanilla children and keep working.
-        if (button == 0 && pickerSupportable) {
+        if (button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT && pickerSupportable) {
             if (inBounds(mouseX, mouseY, padX, padY, padSize, padSize)) {
                 dragging = DragTarget.PAD;
                 updateFromPad(mouseX, mouseY);
@@ -448,7 +448,7 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
     @Override
     public boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent _ev, double dx, double dy) {
         double mouseX = _ev.x(); double mouseY = _ev.y(); int button = _ev.button();
-        if (button == 0 && pickerSupportable && dragging != DragTarget.NONE) {
+        if (button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT && pickerSupportable && dragging != DragTarget.NONE) {
             switch (dragging) {
                 case PAD -> updateFromPad(mouseX, mouseY);
                 case HUE -> updateFromHue(mouseY);

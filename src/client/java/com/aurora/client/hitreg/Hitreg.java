@@ -110,7 +110,7 @@ public class Hitreg {
         if (swinging && !wasSwinging) yourSwings++;
         wasSwinging = swinging;
 
-        if (client.player.invulnerableTime == 20) lastTickHit = tick;
+        if (client.player.getInvulnerableTime() == 20) lastTickHit = tick;
         if (bothAlive && client.player.getEyePosition().distanceToSqr(Render.getClosestPoint(client.player, target)) <= 9) lastTickInRange = tick;
         else lastTickOutOfRange = tick;
         if (client.options.keyJump.isDown() && MultiVersion.isOnGround(client.player)) lastTickJumped = tick;

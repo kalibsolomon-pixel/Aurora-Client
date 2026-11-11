@@ -1,4 +1,5 @@
-#version 150
+#version 330
+#extension GL_ARB_separate_shader_objects : require
 uniform sampler2D InputTexture;
 layout(std140) uniform GlassParams {
     vec4 UvRect;
@@ -8,8 +9,8 @@ layout(std140) uniform GlassParams {
     vec4 Filter;
     vec4 Light;
 };
-in vec2 vUv;
-out vec4 fragColor;
+layout(location = 0) in vec2 vUv;
+layout(location = 0) out vec4 fragColor;
 float detailHash(uint x, uint y) {
     uint h = (x * 73856093u) ^ (y * 19349663u);
     h ^= h >> 13;

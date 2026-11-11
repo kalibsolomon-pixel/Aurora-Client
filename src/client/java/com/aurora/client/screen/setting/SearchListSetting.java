@@ -282,7 +282,7 @@ public abstract class SearchListSetting<T extends FeatureSetting> extends Featur
             // consumed — vanilla EditBox does not consume Escape, so the
             // pre-C-8 fall-through closed the whole screen on the first
             // press. The second press (no active field) reaches the screen.
-            if (_kev.key() == org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE) {
+            if (_kev.key() == com.mojang.blaze3d.platform.InputConstants.KEY_ESCAPE) {
                 searchField.setFocused(false);
                 releaseFocus();
                 return true;

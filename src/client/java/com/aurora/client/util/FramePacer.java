@@ -1,13 +1,12 @@
 package com.aurora.client.util;
 
 import com.aurora.client.config.AuroraConfig;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.concurrent.locks.LockSupport;
 
 /**
  * Frame pacing implementations. Each {@code waitUntil} method blocks until
- * GLFW time reaches {@code target} (in seconds), using a different strategy.
+ * SDL time reaches {@code target} (in seconds), using a different strategy.
  *
  * <p>Background: vanilla MC uses {@code Thread.sleep} for frame pacing,
  * which on Windows is locked to the OS scheduler quantum (~15.625 ms by
@@ -53,7 +52,7 @@ public final class FramePacer {
     }
 
     private static final ExperimentalWait EXPERIMENTAL_WAIT = new ExperimentalWait() {
-        public double time() { return GLFW.glfwGetTime(); }
+        public double time() { return com.aurora.client.util.FrameClock.seconds(); }
         public long nanoTime() { return System.nanoTime(); }
         public void park(long nanos) { LockSupport.parkNanos(nanos); }
         public void spin() { Thread.onSpinWait(); }
@@ -64,7 +63,7 @@ public final class FramePacer {
 
     /** Pure busy-spin. Max precision, full CPU core spin. */
     public static void waitUntilSpin(double target) {
-        while (GLFW.glfwGetTime() < target) {
+        while (com.aurora.client.util.FrameClock.seconds() < target) {
             Thread.onSpinWait();
         }
     }
@@ -135,7 +134,7 @@ public final class FramePacer {
      * the last {@code spinTailMicros} for precision. Low CPU usage.
      */
     public static void waitUntilPark(double target, int spinTailMicros) {
-        double now = GLFW.glfwGetTime();
+        double now = com.aurora.client.util.FrameClock.seconds();
         double remaining = target - now;
         if (remaining <= 0) return;
         // Leave the spin tail unaccounted, park the rest
@@ -143,14 +142,14 @@ public final class FramePacer {
         if (parkNanos > 0) {
             LockSupport.parkNanos(parkNanos);
         }
-        while (GLFW.glfwGetTime() < target) {
+        while (com.aurora.client.util.FrameClock.seconds() < target) {
             Thread.onSpinWait();
         }
     }
 
     /** Same one-park/one-spin decisions; enabled diagnostics only. */
     private static void waitUntilParkMeasured(double target, int spinTailMicros) {
-        double now = GLFW.glfwGetTime();
+        double now = com.aurora.client.util.FrameClock.seconds();
         double remaining = target - now;
         if (remaining <= 0) {
             ParkDiagnostics.INSTANCE.record(now, target, now, now, 0, 0, false);
@@ -163,13 +162,13 @@ public final class FramePacer {
             LockSupport.parkNanos(parkNanos);
             actualNanos = System.nanoTime() - before;
         }
-        double spinStart = GLFW.glfwGetTime();
+        double spinStart = com.aurora.client.util.FrameClock.seconds();
         double exit = spinStart;
         boolean entered = spinStart < target;
         if (entered) {
             do {
                 Thread.onSpinWait();
-            } while ((exit = GLFW.glfwGetTime()) < target);
+            } while ((exit = com.aurora.client.util.FrameClock.seconds()) < target);
         }
         ParkDiagnostics.INSTANCE.record(now, target, spinStart, exit,
                 Math.max(0, parkNanos), actualNanos, entered);
@@ -184,7 +183,7 @@ public final class FramePacer {
      */
     public static void waitUntilHybrid(double target, int spinWindowMicros) {
         // Stage 1 — park until the planned spin window begins.
-        double now = GLFW.glfwGetTime();
+        double now = com.aurora.client.util.FrameClock.seconds();
         double parkUntil = target - spinWindowMicros / 1_000_000.0;
         if (parkUntil > now) {
             long parkNanos = (long) ((parkUntil - now) * 1_000_000_000.0);
@@ -192,7 +191,7 @@ public final class FramePacer {
         }
 
         // Stage 2 — spin to target.
-        while (GLFW.glfwGetTime() < target) {
+        while (com.aurora.client.util.FrameClock.seconds() < target) {
             Thread.onSpinWait();
         }
     }

@@ -2,9 +2,11 @@ package com.aurora.client.mixin;
 
 import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.feature.impl.ShieldStatusFeature;
-import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.client.renderer.entity.state.AvatarRenderState;
+import net.minecraft.client.renderer.state.level.PlayerRenderState;
+import net.minecraft.client.renderer.state.level.FirstPersonHandsAndItemsRenderState;
 import net.minecraft.client.renderer.SubmitNodeCollector;
-import net.minecraft.client.renderer.ItemInHandRenderer;
+import net.minecraft.client.renderer.FirstPersonHandsAndItemsRenderer;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -38,7 +40,7 @@ import com.mojang.blaze3d.Blaze3D;
  * hand. Range 50..150% per hand. Shields are excluded so that the
  * shield-style preset retains its own scale.
  */
-@Mixin(ItemInHandRenderer.class)
+@Mixin(FirstPersonHandsAndItemsRenderer.class)
 public abstract class HeldItemRendererTweaksMixin {
 
     /**
@@ -56,20 +58,20 @@ public abstract class HeldItemRendererTweaksMixin {
      * Runs unconditionally — {@link ShieldStatusFeature#resolveTintArgb()}
      * already short-circuits when the feature is off.
      */
-    @Inject(method = "submitArmWithItem(Lnet/minecraft/client/player/AbstractClientPlayer;FFLnet/minecraft/world/InteractionHand;FLnet/minecraft/world/item/ItemStack;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;I)V",
+    @Inject(method = "submitArmWithItem(Lnet/minecraft/client/renderer/state/level/PlayerRenderState;Lnet/minecraft/client/renderer/state/level/FirstPersonHandsAndItemsRenderState;FFLnet/minecraft/world/InteractionHand;FLnet/minecraft/world/item/ItemStack;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;I)V",
             at = @At("HEAD"))
-    private void aurora$pushShieldHolder(AbstractClientPlayer player,
+    private void aurora$pushShieldHolder(PlayerRenderState playerState, FirstPersonHandsAndItemsRenderState handState,
                                          float tickDelta, float pitch, InteractionHand hand,
                                          float swingProgress, ItemStack stack,
                                          float equipProgress, PoseStack matrices,
                                          SubmitNodeCollector vertices,
                                          int light, CallbackInfo ci) {
-        if (player != null) ShieldStatusFeature.pushHolder(player.getId());
+        if (playerState.avatarRenderState != null) ShieldStatusFeature.pushHolder(playerState.avatarRenderState.id);
     }
 
-    @Inject(method = "submitArmWithItem(Lnet/minecraft/client/player/AbstractClientPlayer;FFLnet/minecraft/world/InteractionHand;FLnet/minecraft/world/item/ItemStack;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;I)V",
+    @Inject(method = "submitArmWithItem(Lnet/minecraft/client/renderer/state/level/PlayerRenderState;Lnet/minecraft/client/renderer/state/level/FirstPersonHandsAndItemsRenderState;FFLnet/minecraft/world/InteractionHand;FLnet/minecraft/world/item/ItemStack;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;I)V",
             at = @At("RETURN"))
-    private void aurora$popShieldHolder(AbstractClientPlayer player,
+    private void aurora$popShieldHolder(PlayerRenderState playerState, FirstPersonHandsAndItemsRenderState handState,
                                         float tickDelta, float pitch, InteractionHand hand,
                                         float swingProgress, ItemStack stack,
                                         float equipProgress, PoseStack matrices,
@@ -78,16 +80,18 @@ public abstract class HeldItemRendererTweaksMixin {
         ShieldStatusFeature.popHolder();
     }
 
-    @Inject(method = "submitArmWithItem(Lnet/minecraft/client/player/AbstractClientPlayer;FFLnet/minecraft/world/InteractionHand;FLnet/minecraft/world/item/ItemStack;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;I)V",
+    @Inject(method = "submitArmWithItem(Lnet/minecraft/client/renderer/state/level/PlayerRenderState;Lnet/minecraft/client/renderer/state/level/FirstPersonHandsAndItemsRenderState;FFLnet/minecraft/world/InteractionHand;FLnet/minecraft/world/item/ItemStack;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;I)V",
             at = @At(value = "INVOKE",
-                    target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;renderItem(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemDisplayContext;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;I)V",
+                    target = "Lnet/minecraft/client/renderer/item/ItemStackRenderState;submit(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;III)V",
                     shift = At.Shift.BEFORE))
-    private void aurora$applyTweaks(AbstractClientPlayer player,
+    private void aurora$applyTweaks(PlayerRenderState playerState, FirstPersonHandsAndItemsRenderState handState,
                                     float tickDelta, float pitch, InteractionHand hand,
                                     float swingProgress, ItemStack stack,
                                     float equipProgress, PoseStack matrices,
                                     SubmitNodeCollector vertices,
                                     int light, CallbackInfo ci) {
+        AvatarRenderState player = playerState.avatarRenderState;
+        if (player == null) return;
         AuroraConfig cfg = AuroraConfig.get();
         boolean isShield = stack != null && stack.is(Items.SHIELD);
 
@@ -109,13 +113,13 @@ public abstract class HeldItemRendererTweaksMixin {
                         }
                         // Apply rotations (pitch, yaw, roll)
                         if (data.pitch != 0.0f) {
-                            matrices.mulPose(Axis.XP.rotationDegrees(data.pitch));
+                            matrices.rotate(Axis.XP.rotationDegrees(data.pitch));
                         }
                         if (data.yaw != 0.0f) {
-                            matrices.mulPose(Axis.YP.rotationDegrees(data.yaw));
+                            matrices.rotate(Axis.YP.rotationDegrees(data.yaw));
                         }
                         if (data.roll != 0.0f) {
-                            matrices.mulPose(Axis.ZP.rotationDegrees(data.roll));
+                            matrices.rotate(Axis.ZP.rotationDegrees(data.roll));
                         }
                         // Apply scale
                         if (data.scale != 1.0f) {
@@ -149,8 +153,8 @@ public abstract class HeldItemRendererTweaksMixin {
                 && cfg.swingStyle == AuroraConfig.SwingStyle.LEGACY_1_8
                 && swingProgress > 0f && swingProgress < 1f) {
             HumanoidArm arm = (hand == InteractionHand.MAIN_HAND)
-                    ? player.getMainArm()
-                    : player.getMainArm().getOpposite();
+                    ? player.mainArm
+                    : player.mainArm.getOpposite();
             applyLegacySwingArc(matrices, swingProgress, arm);
         }
 
@@ -166,7 +170,7 @@ public abstract class HeldItemRendererTweaksMixin {
             float s = (float) Math.max(0.0, Math.min(10.0, cfg.idleSwayStrength));
             float[] off = idleSwayOffset(t + phase, s, cfg.idleSwayCurve);
             matrices.translate(off[0], off[1], 0.0f);
-            matrices.mulPose(Axis.ZP.rotationDegrees(off[2]));
+            matrices.rotate(Axis.ZP.rotationDegrees(off[2]));
         }
     }
 
@@ -240,7 +244,7 @@ public abstract class HeldItemRendererTweaksMixin {
     private static void applyShieldStyle(PoseStack matrices,
                                          AuroraConfig.ShieldStyle style,
                                          InteractionHand hand,
-                                         AbstractClientPlayer player) {
+                                         AvatarRenderState player) {
         if (style == null) return;
 
         // Off-hand on right-handed player -> shield is at screen LEFT, X<0.
@@ -252,8 +256,8 @@ public abstract class HeldItemRendererTweaksMixin {
         // (vanilla position, scaled down) so the shield can actually
         // protect the player visually. Other styles keep their look.
         boolean blocking = player != null
-                && player.isUsingItem()
-                && player.getUsedItemHand() == hand;
+                && player.isUsingItem
+                && player.useItemHand == hand;
 
         if (style == AuroraConfig.ShieldStyle.SIDE && blocking) {
             // Compact-ish during block: vanilla position, slightly smaller
@@ -272,7 +276,7 @@ public abstract class HeldItemRendererTweaksMixin {
             }
             case SIDE -> {
                 matrices.translate(xSign * -0.15f, -0.10f, 0.0f);
-                matrices.mulPose(Axis.YP.rotationDegrees(xSign * 75.0f));
+                matrices.rotate(Axis.YP.rotationDegrees(xSign * 75.0f));
                 matrices.scale(0.80f, 0.80f, 0.80f);
             }
             case COMPACT -> {
@@ -299,8 +303,8 @@ public abstract class HeldItemRendererTweaksMixin {
         float sign = (arm == HumanoidArm.RIGHT) ? -1f : 1f;
 
         // Steeper forward pitch (the classic "chop" arc).
-        matrices.mulPose(Axis.XP.rotationDegrees(sign * 18f * bump));
+        matrices.rotate(Axis.XP.rotationDegrees(sign * 18f * bump));
         // A touch of outward yaw sweep for the wider old-school arc.
-        matrices.mulPose(Axis.YP.rotationDegrees(sign * 10f * bump));
+        matrices.rotate(Axis.YP.rotationDegrees(sign * 10f * bump));
     }
 }

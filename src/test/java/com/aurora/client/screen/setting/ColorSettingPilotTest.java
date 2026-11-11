@@ -53,16 +53,16 @@ class ColorSettingPilotTest {
         AtomicInteger writes = new AtomicInteger();
         ColorSetting row = row(v, writes);
 
-        assertFalse(row.mouseClicked(OUT_X, OUT_Y, 0, ROW_X, ROW_Y, ROW_W)); // outside the swatch
-        assertTrue(row.mouseClicked(IN_X, IN_Y, 0, ROW_X, ROW_Y, ROW_W));
+        assertFalse(row.mouseClicked(OUT_X, OUT_Y, 1, ROW_X, ROW_Y, ROW_W)); // outside the swatch
+        assertTrue(row.mouseClicked(IN_X, IN_Y, 1, ROW_X, ROW_Y, ROW_W));
         assertTrue((boolean) field(row, "expanded"), "first click opens the editor");
-        assertTrue(row.mouseClicked(IN_X, IN_Y, 0, ROW_X, ROW_Y, ROW_W));
+        assertTrue(row.mouseClicked(IN_X, IN_Y, 1, ROW_X, ROW_Y, ROW_W));
         assertFalse((boolean) field(row, "expanded"), "second click closes it");
         assertEquals(0, writes.get(), "opening/closing never writes the color value");
         assertEquals(0xFF30A5FF, v.get());
 
         // Right-click never opens.
-        assertFalse(row.mouseClicked(IN_X, IN_Y, 1, ROW_X, ROW_Y, ROW_W));
+        assertFalse(row.mouseClicked(IN_X, IN_Y, 3, ROW_X, ROW_Y, ROW_W));
         assertFalse((boolean) field(row, "expanded"));
     }
 
@@ -72,13 +72,13 @@ class ColorSettingPilotTest {
         AtomicInteger writes = new AtomicInteger();
         ColorSetting row = row(v, writes);
         row.disabled(() -> true);
-        assertFalse(row.mouseClicked(IN_X, IN_Y, 0, ROW_X, ROW_Y, ROW_W));
+        assertFalse(row.mouseClicked(IN_X, IN_Y, 1, ROW_X, ROW_Y, ROW_W));
         assertFalse((boolean) field(row, "expanded"), "a disabled color row must not open");
-        assertFalse(row.onKeyPress(org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE, 0));
+        assertFalse(row.onKeyPress(com.mojang.blaze3d.platform.InputConstants.KEY_ESCAPE, 0));
         assertEquals(0, writes.get());
 
         row.disabled(() -> false);
-        assertTrue(row.mouseClicked(IN_X, IN_Y, 0, ROW_X, ROW_Y, ROW_W));
+        assertTrue(row.mouseClicked(IN_X, IN_Y, 1, ROW_X, ROW_Y, ROW_W));
         assertTrue((boolean) field(row, "expanded"));
     }
 
@@ -87,11 +87,11 @@ class ColorSettingPilotTest {
         AtomicReference<Integer> v = new AtomicReference<>();
         AtomicInteger writes = new AtomicInteger();
         ColorSetting row = row(v, writes);
-        assertFalse(row.onKeyPress(org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE, 0),
+        assertFalse(row.onKeyPress(com.mojang.blaze3d.platform.InputConstants.KEY_ESCAPE, 0),
                 "collapsed Escape is the screen's, not the picker's");
 
-        row.mouseClicked(IN_X, IN_Y, 0, ROW_X, ROW_Y, ROW_W);
-        assertTrue(row.onKeyPress(org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE, 0),
+        row.mouseClicked(IN_X, IN_Y, 1, ROW_X, ROW_Y, ROW_W);
+        assertTrue(row.onKeyPress(com.mojang.blaze3d.platform.InputConstants.KEY_ESCAPE, 0),
                 "Escape while expanded belongs to the picker");
         assertFalse((boolean) field(row, "expanded"));
         assertEquals(0, writes.get(), "dismissal never writes the value");
@@ -116,7 +116,7 @@ class ColorSettingPilotTest {
         AtomicReference<Integer> v = new AtomicReference<>();
         AtomicInteger writes = new AtomicInteger();
         ColorSetting row = row(v, writes);
-        row.mouseClicked(IN_X, IN_Y, 0, ROW_X, ROW_Y, ROW_W);
+        row.mouseClicked(IN_X, IN_Y, 1, ROW_X, ROW_Y, ROW_W);
         row.onDetailScreenClose();
         assertFalse((boolean) field(row, "expanded"),
                 "no stale expanded state or registry focus across screen opens");

@@ -250,8 +250,8 @@ public class Render {
         Vec3 cameraPosition = camera.position();
 
         //version 1.21.8-
-        //ms.mulPose(Axis.XP.rotationDegrees(camera.getXRot()));
-        //ms.mulPose(Axis.YP.rotationDegrees(camera.getYRot() + 180f));
+        //ms.rotate(Axis.XP.rotationDegrees(camera.getXRot()));
+        //ms.rotate(Axis.YP.rotationDegrees(camera.getYRot() + 180f));
 
         //version 1.21.10-
         //Matrix4f mat = ms.last().pose();

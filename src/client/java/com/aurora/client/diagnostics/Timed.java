@@ -25,10 +25,10 @@ public final class Timed {
         };
     }
 
-    public static LevelRenderEvents.AfterTranslucentFeatures afterFeatures(LevelRenderEvents.AfterTranslucentFeatures body) {
+    public static LevelRenderEvents.EndMain endMain(LevelRenderEvents.EndMain body) {
         return ctx -> {
             long t = AuroraCost.begin();
-            try { body.afterTranslucentFeatures(ctx); } finally { AuroraCost.end(t); }
+            try { body.endMain(ctx); } finally { AuroraCost.end(t); }
         };
     }
 

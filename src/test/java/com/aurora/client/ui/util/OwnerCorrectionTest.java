@@ -39,7 +39,7 @@ class OwnerCorrectionTest {
         assertFalse(main.contains("configureActions"));
         assertFalse(main.contains("bx + 72, by + 36, 1"));
         assertTrue(main.contains("cx + cw / 2f, cy + 30, 28f"));
-        assertTrue(main.contains("button == 1"));
+        assertTrue(main.contains("button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_RIGHT"));
         assertTrue(main.contains("FeatureDetailScreen.destination(this, fm)"));
         String detail = source("screen/FeatureDetailScreen.java");
         assertTrue(detail.contains("new ResourcePackBrowserScreen(parent)"));

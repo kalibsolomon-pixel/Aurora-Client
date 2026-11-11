@@ -4,7 +4,7 @@ import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.Component;
 import org.junit.jupiter.api.Test;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -50,14 +50,14 @@ class SemanticControlGroupTest {
             group.attach(m[i]);
         }
 
-        assertSame(m[1], group.rovingTarget(key(GLFW.GLFW_KEY_RIGHT), m[0]));
-        assertSame(m[2], group.rovingTarget(key(GLFW.GLFW_KEY_RIGHT), m[1]));
-        assertSame(m[0], group.rovingTarget(key(GLFW.GLFW_KEY_RIGHT), m[2]), "wrap forward");
-        assertSame(m[2], group.rovingTarget(key(GLFW.GLFW_KEY_LEFT), m[0]), "wrap backward");
-        assertSame(m[0], group.rovingTarget(key(GLFW.GLFW_KEY_LEFT), m[1]));
+        assertSame(m[1], group.rovingTarget(key(InputConstants.KEY_RIGHT), m[0]));
+        assertSame(m[2], group.rovingTarget(key(InputConstants.KEY_RIGHT), m[1]));
+        assertSame(m[0], group.rovingTarget(key(InputConstants.KEY_RIGHT), m[2]), "wrap forward");
+        assertSame(m[2], group.rovingTarget(key(InputConstants.KEY_LEFT), m[0]), "wrap backward");
+        assertSame(m[0], group.rovingTarget(key(InputConstants.KEY_LEFT), m[1]));
         // Cross-axis keys are NOT the group's — they fall through untouched.
-        assertNull(group.rovingTarget(key(GLFW.GLFW_KEY_UP), m[0]));
-        assertNull(group.rovingTarget(key(GLFW.GLFW_KEY_DOWN), m[0]));
+        assertNull(group.rovingTarget(key(InputConstants.KEY_UP), m[0]));
+        assertNull(group.rovingTarget(key(InputConstants.KEY_DOWN), m[0]));
     }
 
     @Test
@@ -70,10 +70,10 @@ class SemanticControlGroupTest {
         group.attach(top);
         group.attach(bottom);
 
-        assertSame(bottom, group.rovingTarget(key(GLFW.GLFW_KEY_DOWN), top));
-        assertSame(top, group.rovingTarget(key(GLFW.GLFW_KEY_UP), bottom));
-        assertNull(group.rovingTarget(key(GLFW.GLFW_KEY_LEFT), top));
-        assertNull(group.rovingTarget(key(GLFW.GLFW_KEY_RIGHT), top));
+        assertSame(bottom, group.rovingTarget(key(InputConstants.KEY_DOWN), top));
+        assertSame(top, group.rovingTarget(key(InputConstants.KEY_UP), bottom));
+        assertNull(group.rovingTarget(key(InputConstants.KEY_LEFT), top));
+        assertNull(group.rovingTarget(key(InputConstants.KEY_RIGHT), top));
     }
 
     @Test
@@ -87,13 +87,13 @@ class SemanticControlGroupTest {
             group.attach(m[i]);
         }
 
-        assertSame(m[5], group.rovingTarget(key(GLFW.GLFW_KEY_RIGHT), m[4]), "row tail continues into next row");
-        assertSame(m[4], group.rovingTarget(key(GLFW.GLFW_KEY_LEFT), m[5]));
-        assertSame(m[7], group.rovingTarget(key(GLFW.GLFW_KEY_DOWN), m[2]));
-        assertSame(m[2], group.rovingTarget(key(GLFW.GLFW_KEY_UP), m[7]));
-        assertSame(m[9], group.rovingTarget(key(GLFW.GLFW_KEY_LEFT), m[0]), "wrap backward over the ring");
-        assertSame(m[0], group.rovingTarget(key(GLFW.GLFW_KEY_RIGHT), m[9]), "wrap forward over the ring");
-        assertSame(m[4], group.rovingTarget(key(GLFW.GLFW_KEY_DOWN), m[9]), "row wrap is over the ordered list");
+        assertSame(m[5], group.rovingTarget(key(InputConstants.KEY_RIGHT), m[4]), "row tail continues into next row");
+        assertSame(m[4], group.rovingTarget(key(InputConstants.KEY_LEFT), m[5]));
+        assertSame(m[7], group.rovingTarget(key(InputConstants.KEY_DOWN), m[2]));
+        assertSame(m[2], group.rovingTarget(key(InputConstants.KEY_UP), m[7]));
+        assertSame(m[9], group.rovingTarget(key(InputConstants.KEY_LEFT), m[0]), "wrap backward over the ring");
+        assertSame(m[0], group.rovingTarget(key(InputConstants.KEY_RIGHT), m[9]), "wrap forward over the ring");
+        assertSame(m[4], group.rovingTarget(key(InputConstants.KEY_DOWN), m[9]), "row wrap is over the ordered list");
     }
 
     @Test
@@ -119,11 +119,11 @@ class SemanticControlGroupTest {
             group.attach(c);
         }
 
-        assertSame(b, group.rovingTarget(key(GLFW.GLFW_KEY_RIGHT), a),
+        assertSame(b, group.rovingTarget(key(InputConstants.KEY_RIGHT), a),
                 "unavailable, action-disabled, and non-focusable members are all skipped");
         assertEquals(0, silent.get());
         // The reverse direction skips the same members.
-        assertSame(a, group.rovingTarget(key(GLFW.GLFW_KEY_LEFT), b));
+        assertSame(a, group.rovingTarget(key(InputConstants.KEY_LEFT), b));
     }
 
     @Test
@@ -139,8 +139,8 @@ class SemanticControlGroupTest {
             makeEligible(m[i]);
             group.attach(m[i]);
         }
-        KeyEvent down = key(GLFW.GLFW_KEY_DOWN);
-        KeyEvent up = key(GLFW.GLFW_KEY_UP);
+        KeyEvent down = key(InputConstants.KEY_DOWN);
+        KeyEvent up = key(InputConstants.KEY_UP);
 
         // Direct row target clipped: skip to the next member in direction.
         m[6].setAvailable(false);
@@ -165,13 +165,13 @@ class SemanticControlGroupTest {
         SemanticActionControl only = control("only", () -> true, calls);
         makeEligible(only);
         group.attach(only);
-        assertNull(group.rovingTarget(key(GLFW.GLFW_KEY_RIGHT), only),
+        assertNull(group.rovingTarget(key(InputConstants.KEY_RIGHT), only),
                 "a degenerate ring has nowhere to rove — the key falls through");
 
         SemanticActionControl disabled = control("disabled", () -> false, calls);
         makeEligible(disabled);
         group.attach(disabled);
-        assertNull(group.rovingTarget(key(GLFW.GLFW_KEY_RIGHT), only),
+        assertNull(group.rovingTarget(key(InputConstants.KEY_RIGHT), only),
                 "eligible current + ineligible rest also falls through");
     }
 
@@ -184,12 +184,12 @@ class SemanticControlGroupTest {
         SemanticActionControl stranger = control("stranger", () -> true, new AtomicInteger());
         makeEligible(stranger);
 
-        assertNull(group.rovingTarget(key(GLFW.GLFW_KEY_TAB), a));
-        assertNull(group.rovingTarget(key(GLFW.GLFW_KEY_ENTER), a));
-        assertNull(group.rovingTarget(key(GLFW.GLFW_KEY_SPACE), a));
-        assertNull(group.rovingTarget(key(GLFW.GLFW_KEY_RIGHT), stranger),
+        assertNull(group.rovingTarget(key(InputConstants.KEY_TAB), a));
+        assertNull(group.rovingTarget(key(InputConstants.KEY_RETURN), a));
+        assertNull(group.rovingTarget(key(InputConstants.KEY_SPACE), a));
+        assertNull(group.rovingTarget(key(InputConstants.KEY_RIGHT), stranger),
                 "a control that was never attached is not roved");
-        assertNull(group.rovingTarget(key(GLFW.GLFW_KEY_RIGHT), null));
+        assertNull(group.rovingTarget(key(InputConstants.KEY_RIGHT), null));
     }
 
     @Test
@@ -230,12 +230,12 @@ class SemanticControlGroupTest {
         group.attach(b);
 
         AtomicReference<GuiEventListener> focused = new AtomicReference<>(a);
-        assertTrue(SemanticControlGroup.rove(focused.get(), key(GLFW.GLFW_KEY_RIGHT), focused::set));
+        assertTrue(SemanticControlGroup.rove(focused.get(), key(InputConstants.KEY_RIGHT), focused::set));
         assertSame(b, focused.get(), "the consumer receives the roving target — the screen's setFocused");
         assertEquals(0, callsA.get() + callsB.get(),
                 "manual activation: an arrow NEVER runs a behavior — selection stays on Enter/Space/click");
         // The move is one keypress one step: the new focus owner's LEFT goes back.
-        assertTrue(SemanticControlGroup.rove(focused.get(), key(GLFW.GLFW_KEY_LEFT), focused::set));
+        assertTrue(SemanticControlGroup.rove(focused.get(), key(InputConstants.KEY_LEFT), focused::set));
         assertSame(a, focused.get());
     }
 
@@ -245,7 +245,7 @@ class SemanticControlGroupTest {
         SemanticActionControl plain = control("plain", () -> true, calls);
         makeEligible(plain);
         AtomicReference<GuiEventListener> focused = new AtomicReference<>(plain);
-        assertFalse(SemanticControlGroup.rove(focused.get(), key(GLFW.GLFW_KEY_RIGHT), focused::set));
+        assertFalse(SemanticControlGroup.rove(focused.get(), key(InputConstants.KEY_RIGHT), focused::set));
         assertSame(plain, focused.get(), "an ungrouped focused control is untouched");
 
         SemanticControlGroup group = SemanticControlGroup.horizontal();
@@ -257,10 +257,10 @@ class SemanticControlGroupTest {
         group.attach(b);
         a.setAvailable(false); // e.g. scrolled out of the clip band between frames
         focused.set(a);
-        assertFalse(SemanticControlGroup.rove(focused.get(), key(GLFW.GLFW_KEY_RIGHT), focused::set));
+        assertFalse(SemanticControlGroup.rove(focused.get(), key(InputConstants.KEY_RIGHT), focused::set));
         assertSame(a, focused.get(), "an unavailable focus owner does not rove");
 
         focused.set(null);
-        assertFalse(SemanticControlGroup.rove(focused.get(), key(GLFW.GLFW_KEY_RIGHT), focused::set));
+        assertFalse(SemanticControlGroup.rove(focused.get(), key(InputConstants.KEY_RIGHT), focused::set));
     }
 }

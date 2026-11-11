@@ -2,7 +2,8 @@ package com.aurora.client.util;
 
 import org.junit.jupiter.api.Test;
 import org.lwjgl.BufferUtils;
-import org.lwjgl.glfw.GLFW;
+import org.lwjgl.sdl.SDLInit;
+import org.lwjgl.sdl.SDLVideo;
 import org.lwjgl.opengl.GL;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -22,7 +23,7 @@ class GlintShaderGpuTest {
 
     private static String fragment() throws Exception {
         String source = resource("assets/aurora/shaders/core/masked_glint.fsh");
-        var matcher = Pattern.compile("#moj_import <minecraft:([^>]+)>").matcher(source);
+        var matcher = Pattern.compile("#include <minecraft:([^>]+)>").matcher(source);
         StringBuilder expanded = new StringBuilder();
         while (matcher.find()) matcher.appendReplacement(expanded, java.util.regex.Matcher.quoteReplacement(
                 resource("assets/minecraft/shaders/include/" + matcher.group(1)).replace("#version 330", "")));
@@ -51,21 +52,23 @@ class GlintShaderGpuTest {
     }
 
     @Test void realShaderMakesBlackShadowsAndWhiteHighlightsAtEqualStrength() throws Exception {
-        assumeTrue(GLFW.glfwInit(), "No GLFW display available");
-        GLFW.glfwDefaultWindowHints();
-        GLFW.glfwWindowHint(GLFW.GLFW_VISIBLE, GLFW.GLFW_FALSE);
-        GLFW.glfwWindowHint(GLFW.GLFW_CONTEXT_VERSION_MAJOR, 3);
-        GLFW.glfwWindowHint(GLFW.GLFW_CONTEXT_VERSION_MINOR, 3);
-        GLFW.glfwWindowHint(GLFW.GLFW_OPENGL_PROFILE, GLFW.GLFW_OPENGL_CORE_PROFILE);
-        long window = GLFW.glfwCreateWindow(16, 16, "Glint shader test", 0, 0);
+        assumeTrue(SDLInit.SDL_Init(SDLInit.SDL_INIT_VIDEO), "No SDL display available");
+        SDLVideo.SDL_GL_SetAttribute(SDLVideo.SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+        SDLVideo.SDL_GL_SetAttribute(SDLVideo.SDL_GL_CONTEXT_MINOR_VERSION, 3);
+        SDLVideo.SDL_GL_SetAttribute(SDLVideo.SDL_GL_CONTEXT_PROFILE_MASK, SDLVideo.SDL_GL_CONTEXT_PROFILE_CORE);
+        long window = SDLVideo.SDL_CreateWindow("Glint shader test", 16, 16, SDLVideo.SDL_WINDOW_OPENGL | SDLVideo.SDL_WINDOW_HIDDEN);
+        long context = 0;
         try {
-            assumeTrue(window != 0, "No OpenGL context available");
-            GLFW.glfwMakeContextCurrent(window); GL.createCapabilities();
+            assumeTrue(window != 0, "No OpenGL window available");
+            context = SDLVideo.SDL_GL_CreateContext(window);
+            assumeTrue(context != 0, "No OpenGL context available");
+            SDLVideo.SDL_GL_MakeCurrent(window, context); GL.createCapabilities();
             int vertex = shader(GL_VERTEX_SHADER, """
                     #version 330
-                    out float sphericalVertexDistance;
-                    out float cylindricalVertexDistance;
-                    out vec2 texCoord0;
+                    #extension GL_ARB_separate_shader_objects : require
+                    layout(location = 0) out float sphericalVertexDistance;
+                    layout(location = 1) out float cylindricalVertexDistance;
+                    layout(location = 2) out vec2 texCoord0;
                     void main() {
                         vec2 p = vec2((gl_VertexID << 1) & 2, gl_VertexID & 2);
                         gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0);
@@ -107,8 +110,9 @@ class GlintShaderGpuTest {
             assertEquals(GL_NO_ERROR, glGetError());
         } finally {
             GL.setCapabilities(null);
-            if (window != 0) GLFW.glfwDestroyWindow(window);
-            GLFW.glfwTerminate();
+            if (context != 0) SDLVideo.SDL_GL_DestroyContext(context);
+            if (window != 0) SDLVideo.SDL_DestroyWindow(window);
+            SDLInit.SDL_Quit();
         }
     }
 }

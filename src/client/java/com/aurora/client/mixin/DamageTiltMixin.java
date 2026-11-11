@@ -60,7 +60,7 @@ public abstract class DamageTiltMixin {
         float sign = computeRollSign(entity);
 
         float roll = magnitude * sign;
-        matrices.mulPose(Axis.ZP.rotationDegrees(roll));
+        matrices.rotate(Axis.ZP.rotationDegrees(roll));
     }
 
     /**

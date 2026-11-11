@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
-import com.mojang.blaze3d.pipeline.RenderPipeline;
+import com.mojang.renderpearl.api.pipeline.RenderPipeline;
 import net.minecraft.resources.Identifier;
 
 /**
@@ -29,7 +29,7 @@ public abstract class MultiplayerServerListWidgetMixin {
 
     /** Skips the status icon's blit when it is one of the ping / pinging bar sprites. */
     @WrapWithCondition(method = "extractContent", require = 0, at = @At(value = "INVOKE", ordinal = 0,
-            target = "Lnet/minecraft/client/gui/GuiGraphicsExtractor;blitSprite(Lcom/mojang/blaze3d/pipeline/RenderPipeline;Lnet/minecraft/resources/Identifier;IIII)V"))
+            target = "Lnet/minecraft/client/gui/GuiGraphicsExtractor;blitSprite(Lcom/mojang/renderpearl/api/pipeline/RenderPipeline;Lnet/minecraft/resources/Identifier;IIII)V"))
     private boolean aurora$hidePingBars(GuiGraphicsExtractor ctx, RenderPipeline pipeline, Identifier sprite, int x, int y, int w, int h) {
         return !aurora$isPingBars(sprite);
     }

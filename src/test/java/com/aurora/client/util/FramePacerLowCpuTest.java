@@ -34,7 +34,7 @@ class FramePacerLowCpuTest {
 
     @Test void parkAndSpinAlgorithmsAndDispatchRemainUnchanged() throws Exception {
         String s = Files.readString(Path.of("src/client/java/com/aurora/client/util/FramePacer.java"))
-                .replace("\r\n", "\n");
+                .replace("\r\n", "\n").replace("com.aurora.client.util.FrameClock.seconds()", "GLFW.glfwGetTime()");
         assertTrue(s.contains("else waitUntilPark(target, spinTail);"));
         assertTrue(s.contains("case SPIN -> waitUntilSpin(target);"));
         assertTrue(s.contains("if (strat == null) strat = AuroraConfig.PacingStrategy.PARK;"));

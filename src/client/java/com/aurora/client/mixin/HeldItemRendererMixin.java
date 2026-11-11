@@ -1,7 +1,7 @@
 package com.aurora.client.mixin;
 
 import com.aurora.client.util.AnimationCurves;
-import net.minecraft.client.renderer.ItemInHandRenderer;
+import net.minecraft.client.renderer.FirstPersonHandsAndItemsRenderer;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
@@ -29,13 +29,13 @@ import org.spongepowered.asm.mixin.injection.ModifyArg;
  * implementation {@code @Inject}ed the private {@code swingArm} method with
  * {@code require = 0}, so a signature drift would make it silently no-op.)
  */
-@Mixin(ItemInHandRenderer.class)
+@Mixin(FirstPersonHandsAndItemsRenderer.class)
 public abstract class HeldItemRendererMixin {
 
     @ModifyArg(
             method = "submitArmWithItem",
             at = @At(value = "INVOKE",
-                    target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;swingArm(FLcom/mojang/blaze3d/vertex/PoseStack;ILnet/minecraft/world/entity/HumanoidArm;)V"),
+                    target = "Lnet/minecraft/client/renderer/FirstPersonHandsAndItemsRenderer;swingArm(FLcom/mojang/blaze3d/vertex/PoseStack;ILnet/minecraft/world/entity/HumanoidArm;)V"),
             index = 0
     )
     private float aurora$curveSwingArg(float t) {

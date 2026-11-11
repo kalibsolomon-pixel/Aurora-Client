@@ -1,6 +1,6 @@
 package com.aurora.client.util.reflex;
 
-import org.lwjgl.glfw.GLFW;
+import java.util.concurrent.locks.LockSupport;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -121,8 +121,6 @@ public class ReflexScheduler {
         }
     }
 
-    private static final double NS_TO_SECONDS = 1e-9;
-
     public void waitBeforeRender() {
         // Measurements determine the pacing budget. No wait in menus, while paused,
         // or out of focus; no sleep until we have a useful GPU-bound queue.
@@ -138,7 +136,9 @@ public class ReflexScheduler {
         while (budget > 0) {
             long remaining = deadline - System.nanoTime();
             if (wait == null || remaining <= 0) break;
-            GLFW.glfwWaitEventsTimeout(Math.min(wait, remaining) * NS_TO_SECONDS);
+            // Keep SDL events queued for vanilla to dispatch; never consume them here.
+            LockSupport.parkNanos(Math.min(wait, remaining));
+            if (Thread.currentThread().isInterrupted()) break;
             wait = calculateWaitTime();
         }
     }

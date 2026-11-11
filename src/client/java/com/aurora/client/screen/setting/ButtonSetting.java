@@ -174,7 +174,7 @@ public class ButtonSetting extends FeatureSetting {
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button, int rowX, int rowY, int rowWidth) {
         syncCompactControl(rowX, rowY);
-        if (button != 0) return false;
+        if (button != com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) return false;
         return interactionControl.activateFromPointer(mouseX, mouseY, button);
     }
 

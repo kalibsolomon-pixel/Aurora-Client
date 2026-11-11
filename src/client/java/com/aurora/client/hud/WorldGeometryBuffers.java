@@ -7,7 +7,7 @@ import net.minecraft.client.renderer.rendertype.PreparedRenderType;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import java.util.LinkedHashMap;
 
-/** Immediate world overlays through 26.2's staged vertex and prepared render APIs. */
+/** Immediate world overlays through the native staged vertex and render-pass APIs. */
 public final class WorldGeometryBuffers implements AutoCloseable {
     private static WorldGeometryBuffers instance;
     private final StagedVertexBuffer vertices = new StagedVertexBuffer(() -> "Aurora world overlays", 16384);
@@ -27,9 +27,16 @@ public final class WorldGeometryBuffers implements AutoCloseable {
     @Override public void close() {
         try {
             vertices.upload();
-            for (Batch batch : batches.values()) {
-                var info = vertices.getExecuteInfo(batch.draw());
-                if (info != null) batch.type().drawFromBuffer(info);
+            if (!batches.isEmpty()) {
+                var target = net.minecraft.client.Minecraft.getInstance().gameRenderer.mainRenderTarget();
+                try (var pass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(
+                        () -> "Aurora world overlays", target.getColorTextureView(), java.util.Optional.empty(),
+                        target.getDepthTextureView(), java.util.OptionalDouble.empty())) {
+                    for (Batch batch : batches.values()) {
+                        var info = vertices.getExecuteInfo(batch.draw());
+                        if (info != null) batch.type().drawFromBuffer(info, pass);
+                    }
+                }
             }
         } finally {
             vertices.endFrame();

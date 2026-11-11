@@ -24,7 +24,7 @@ import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 
 import java.util.List;
 
@@ -294,7 +294,7 @@ public final class WorldMapScreen extends Screen implements ThemedScreen {
     @Override public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         if (super.mouseClicked(event, doubleClick)) return true;
         if (event.y() < topBarBottom() || event.y() >= statusTop()) return true;
-        if (event.button() == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
+        if (event.button() == InputConstants.MOUSE_BUTTON_LEFT) {
             for (Waypoint waypoint : markers) {
                 if (Math.abs(event.x() - screenX(waypoint.x + .5)) > 8
                         || Math.abs(event.y() - screenZ(waypoint.z + .5)) > 8) continue;
@@ -302,7 +302,7 @@ public final class WorldMapScreen extends Screen implements ThemedScreen {
             }
             dragging = true; follow = false; setFocused(null); return true;
         }
-        if (event.button() == GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
+        if (event.button() == InputConstants.MOUSE_BUTTON_RIGHT) {
             int x = (int) Math.floor(viewport.worldX(event.x(), width));
             int z = (int) Math.floor(viewport.worldZ(event.y(), height));
             int y = minecraft.player == null ? 64 : minecraft.player.blockPosition().getY();
@@ -323,13 +323,13 @@ public final class WorldMapScreen extends Screen implements ThemedScreen {
     }
     @Override public boolean keyPressed(KeyEvent event) {
         if (coordinates.isFocused()) {
-            if (event.key() == GLFW.GLFW_KEY_ENTER) { goToCoordinates(); return true; }
+            if (event.key() == InputConstants.KEY_RETURN) { goToCoordinates(); return true; }
             return super.keyPressed(event);
         }
         switch (event.key()) {
-            case GLFW.GLFW_KEY_P -> { centerPlayer(); return true; }
-            case GLFW.GLFW_KEY_EQUAL, GLFW.GLFW_KEY_KP_ADD -> { follow = false; viewport.zoom(2, width * .5, height * .5, width, height); return true; }
-            case GLFW.GLFW_KEY_MINUS, GLFW.GLFW_KEY_KP_SUBTRACT -> { follow = false; viewport.zoom(.5, width * .5, height * .5, width, height); return true; }
+            case InputConstants.KEY_P -> { centerPlayer(); return true; }
+            case InputConstants.KEY_EQUALS, InputConstants.KEY_ADD -> { follow = false; viewport.zoom(2, width * .5, height * .5, width, height); return true; }
+            case InputConstants.KEY_MINUS, org.lwjgl.sdl.SDLScancode.SDL_SCANCODE_KP_MINUS -> { follow = false; viewport.zoom(.5, width * .5, height * .5, width, height); return true; }
         }
         if (event.key() == AuroraConfig.get().worldMapKey) { onClose(); return true; }
         return super.keyPressed(event);

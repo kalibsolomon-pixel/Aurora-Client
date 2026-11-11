@@ -56,7 +56,7 @@ public final class ParkDiagnostics {
     }
 
     /**
-     * Called from the existing two hooks using their existing GLFW timestamp.
+     * Called from the existing two hooks using their existing SDL timestamp.
      * Only the newest homogeneous segment survives. Transition totals are
      * session-wide; FPS refers to the effective target, not the vanilla option.
      */
@@ -99,7 +99,7 @@ public final class ParkDiagnostics {
     }
 
     /**
-     * GLFW seconds: entry, deadline, spin start and exit. Java nanoseconds:
+     * SDL seconds: entry, deadline, spin start and exit. Java nanoseconds:
      * actual park elapsed ONLY (self-contained subtraction at the call site).
      * requestedNanos is the exact long supplied to parkNanos, or zero if skipped.
      */
@@ -200,11 +200,11 @@ public final class ParkDiagnostics {
                         retriesTaken == 0 ? 0 : FramePacer.EXPERIMENTAL_RETRY_NANOS,
                         retriesTaken == 0 ? 0 : FramePacer.EXPERIMENTAL_RETRY_NANOS) : null,
                 "Current segment only; prior segments discarded. Durations/errors in ns; wall time, not CPU. "
-                        + "GLFW deadlines/spin; System.nanoTime park elapsed, never mixed. "
+                        + "SDL deadlines/spin; System.nanoTime park elapsed, never mixed. "
                         + "Buckets [lower,upper), null endpoints unbounded; percentile rank buckets approximate. "
                         + "PARK does not use the configured park threshold (HYBRID only). "
                         + "Native/Reflex/VSync/GPU/frame work excluded; invocations are not frame IDs. "
-                        + "No added per-iteration clocks. Exit uses final GLFW condition read, before aggregation. "
+                        + "No added per-iteration clocks. Exit uses final SDL condition read, before aggregation. "
                         + "Clock/read/preemption overhead included; sub-clock differences unreliable. "
                         + "Counters saturate at Long.MAX_VALUE; wait samples freeze at that invocation count. "
                         + (experimental ? "Schema 2: counters.parkCalls/earlyParkReturns/lateParkReturns are FIRST calls only. "

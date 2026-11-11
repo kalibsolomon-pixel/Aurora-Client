@@ -293,7 +293,7 @@ class ParkDiagnosticsTest {
         assertFalse(measured.contains("new "));
         assertFalse(measured.contains("synchronized"));
         assertTrue(measured.contains("actualNanos = System.nanoTime() - before"));
-        assertTrue(measured.contains("while ((exit = GLFW.glfwGetTime()) < target)"));
+        assertTrue(measured.contains("while ((exit = com.aurora.client.util.FrameClock.seconds()) < target)"));
         String controls = Files.readString(root.resolve("util/ParkDiagnosticsControl.java"));
         assertTrue(controls.contains("if (!Boolean.getBoolean(\"aurora.parkDiagnostics\")) return;"));
         assertTrue(controls.indexOf("CompletableFuture.runAsync") < controls.indexOf("Files.createDirectories"));
