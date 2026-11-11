@@ -1431,7 +1431,12 @@ addWithSettings("hitbox",
                         new BooleanSetting("Enabled",
                                 () -> cfg.serverListDragReorder,
                                 v -> cfg.serverListDragReorder = v)
-                                .description("Lets you reorder servers in the Multiplayer server list by click-and-drag instead of vanilla's up/down arrow buttons. Click and hold a server, drag it to a new position, and release — the new order is saved instantly. Normal clicks still select and join servers as usual.")
+                                .description("Lets you reorder servers in the Multiplayer server list by click-and-drag instead of vanilla's up/down arrow buttons. Click and hold a server, drag it to a new position, and release — the new order is saved instantly. Normal clicks still select and join servers as usual."),
+
+                        new SectionHeaderSetting("Support"),
+                        ButtonSetting.semantic("Copy Diagnostics", "Copy",
+                                com.aurora.client.diagnostics.DiagnosticsReport::runAndCopy)
+                                .description("Closes this menu, measures frame times for 5 seconds, then copies a text report to your clipboard: your mod list, any Aurora feature that could not start and why, the renderer, recent Aurora errors and the frame-time result. Nothing is sent anywhere; paste it where you are asking for help. It contains no account, world or server names.")
                 ),
                 // Union of the original tiles' config fields (see the
                 // resetByPrefix comment on pack_tweaks for prefix rules).

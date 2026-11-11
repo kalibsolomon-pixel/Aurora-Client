@@ -28,6 +28,8 @@ public abstract class MinecraftClientRenderMixin {
     private void aurora$applyMouseDeltaPerFrame(boolean tick, CallbackInfo ci) {
         Minecraft self = (Minecraft) (Object) this;
         AuroraConfig cfg = AuroraConfig.get();
+        // Diagnostics benchmark: one volatile read unless a run is in progress.
+        com.aurora.client.diagnostics.FrameBenchmark.onFrame();
 
         // Exact frame-boundary stamp for the glass panel output pool — must
         // run once per frame BEFORE any GUI rendering (see BlurPanelRenderer

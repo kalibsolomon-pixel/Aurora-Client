@@ -155,7 +155,7 @@ public final class FeatureCatalog {
         mixin("RenderTargetMixin", "nothing (kept empty for compatibility)");
         mixin("PlayerListHudMixin", "numeric ping in the tab list", "ping").gates("tabPingEnabled");
         mixin("InGameHudFoodMixin", "the saturation overlay on the food bar", "saturation_bar").gates("saturationBarEnabled");
-        mixin("MouseMixin", "adjusting zoom with the scroll wheel", "zoom").gates("zoomEnabled");
+        mixin("MouseMixin", "adjusting zoom with the scroll wheel", "zoom");
         mixin("EntityMixin", "the FreeLook camera", "free_look").gates("freeLookEnabled");
         mixin("CameraUpdateMixin", "the FreeLook camera and camera smoothing", "free_look", "miscellaneous")
                 .gates("freeLookEnabled", "smoothCamera");

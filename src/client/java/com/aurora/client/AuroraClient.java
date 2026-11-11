@@ -78,6 +78,12 @@ public class AuroraClient implements ClientModInitializer {
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.START_CLIENT_TICK.register(
                 client -> com.aurora.client.health.FeatureHealth.enforce(AuroraConfig.get()));
 
+        // Diagnostics report (ADR 0004): remember recent Aurora warnings, and
+        // let a benchmark that saw no frames still finish.
+        com.aurora.client.diagnostics.RecentErrors.install();
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(
+                com.aurora.client.diagnostics.DiagnosticsReport::tick);
+
         moduleManager = new HudModuleManager();
         moduleManager.register(new InfoModule());
         moduleManager.register(new CpsModule());

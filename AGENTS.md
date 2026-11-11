@@ -2564,3 +2564,18 @@ mixins applied"), then with ten mixins disabled by option and one injection poin
 purpose (11 of 72 reported, game ran and shut down normally, `aurora.json` and the active
 profile unchanged apart from playtime). Not yet checked: the card tooltip and header text
 on screen, and the tier-1 mod matrix.
+
+## Diagnostics report (2026-11-11)
+
+Roadmap step 1, last part (ADR 0004). Display Settings → Support → "Copy Diagnostics" runs
+`diagnostics/DiagnosticsReport.runAndCopy`: it closes the menu, `FrameBenchmark` records
+frame intervals for 5 seconds (after 0.5 s warm-up) from the frame-head mixin, and the text
+report goes to the clipboard: versions, renderer and GPU, features and mixins that are not
+working and why, the frame-time result with the relevant settings, the last 20 Aurora
+warnings (`RecentErrors`, an in-memory Log4j appender) and the top-level mod list. Nothing
+is sent anywhere. The report names no account, world or server, and `DiagnosticsText.scrub`
+removes the operating-system user's home path and name.
+`-Daurora.diagnostics.log=true` writes the same report to the log three seconds after a
+world is joined, for scripted boots of the tested mod matrix. Verified by a dev-client boot
+with one mixin disabled (report logged, 575 frames measured). The button itself and the
+clipboard path were not exercised on screen.
