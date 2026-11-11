@@ -105,8 +105,12 @@ public class AuroraConfig {
                 else if (def instanceof Set<?> s) def = new HashSet<>(s);
                 else if (def instanceof List<?> l) def = new ArrayList<>(l);
                 field.set(INSTANCE, def);
+                // A reset replaces the player's value on purpose; whatever
+                // FeatureHealth remembered for a held-off switch is stale.
+                com.aurora.client.health.FeatureHealth.forget(field.getName());
             } catch (IllegalAccessException ignored) {}
         }
+        com.aurora.client.health.FeatureHealth.enforce(INSTANCE);
     }
 
     /** Convenience: reset every prefix in the given list. */
@@ -1248,7 +1252,7 @@ public class AuroraConfig {
         if (configWritesBlocked) return;
         final String json;
         try {
-            json = GSON.toJson(INSTANCE);
+            json = serialize();
         } catch (Throwable t) {
             AuroraClient.LOGGER.error("Failed to serialize Aurora config", t);
             return;
@@ -1269,7 +1273,7 @@ public class AuroraConfig {
     public static boolean saveBlocking() {
         if (configWritesBlocked) return false;
         try {
-            WRITER.submit(CONFIG_PATH, GSON.toJson(INSTANCE));
+            WRITER.submit(CONFIG_PATH, serialize());
         } catch (Throwable t) {
             AuroraClient.LOGGER.error("Failed to serialize Aurora config", t);
             return false;
@@ -1277,6 +1281,23 @@ public class AuroraConfig {
         boolean ok = WRITER.flush(SHUTDOWN_FLUSH_MS);
         if (!ok) AuroraClient.LOGGER.error("Aurora config was NOT confirmed saved; the previous aurora.json is intact");
         return ok;
+    }
+
+    /**
+     * The config as it should be written to disk. Switches that
+     * {@link com.aurora.client.health.FeatureHealth} is holding off for this
+     * session (a mixin could not be applied) are written with the player's
+     * own value, so a broken session never overwrites a saved preference.
+     * With nothing held off this is exactly {@code GSON.toJson(INSTANCE)}.
+     */
+    private static String serialize() {
+        Map<String, Boolean> kept = com.aurora.client.health.FeatureHealth.rememberedValues();
+        if (kept.isEmpty()) return GSON.toJson(INSTANCE);
+        com.google.gson.JsonObject tree = GSON.toJsonTree(INSTANCE).getAsJsonObject();
+        for (Map.Entry<String, Boolean> e : kept.entrySet()) {
+            if (tree.has(e.getKey())) tree.addProperty(e.getKey(), e.getValue());
+        }
+        return GSON.toJson(tree);
     }
 
     /** Waits (bounded) for queued config writes; true if all landed. */

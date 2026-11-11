@@ -30,5 +30,8 @@
   },
   "suggests": {
     "modmenu": "*"
+  },
+  "breaks": {
+    "betterhitreg": "*"
   }
 }

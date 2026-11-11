@@ -64,7 +64,9 @@ public abstract class MinecraftClientRenderMixin {
         if (self.mouseHandler == null || self.player == null) return;
         if (!self.mouseHandler.isMouseGrabbed()) return;
 
-        MouseAccessor mouseAccess = (MouseAccessor) self.mouseHandler;
+        // MouseAccessor is a separate mixin; if it could not be applied the
+        // handler does not carry the interface (ADR 0004).
+        if (!(self.mouseHandler instanceof MouseAccessor mouseAccess)) return;
         double dx = mouseAccess.aurora$getCursorDeltaX();
         double dy = mouseAccess.aurora$getCursorDeltaY();
         if (dx == 0.0 && dy == 0.0) return;

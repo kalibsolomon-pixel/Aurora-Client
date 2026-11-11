@@ -2,6 +2,7 @@ package com.aurora.client.screen;
 
 import com.aurora.client.AuroraClient;
 import com.aurora.client.config.AuroraConfig;
+import com.aurora.client.feature.FeatureCatalog;
 import com.aurora.client.config.profile.ProfileManager;
 import com.aurora.client.screen.setting.*;
 import com.aurora.client.theme.ThemeMode;
@@ -63,7 +64,7 @@ public final class FeatureRegistry {
 
         // ============ MODULES TAB ============
 
-        addWithSettings(MODULES, "world_map", "World Map",
+        addWithSettings("world_map",
                 "A full-screen, pannable world map of your explored terrain. Chunks you visit are captured in the background and stitched into persistent region tiles on disk, so the map survives restarts and grows as you explore.",
                 () -> cfg.worldMapEnabled, v -> cfg.worldMapEnabled = v,
                 List.of(
@@ -92,7 +93,7 @@ public final class FeatureRegistry {
                                 net.minecraft.client.Minecraft.getInstance().setScreen(new MappingDataScreen(screen)))
                 ));
 
-        addWithSettings(MODULES, "zoom", "Zoom",
+        addWithSettings("zoom",
                 "Optical-style zoom bound to a key. Hold it to narrow your field of view and magnify whatever you're looking at — useful for spotting distant players, reading far-off signs, or lining up ranged shots without a spyglass.",
                 () -> cfg.zoomEnabled, v -> cfg.zoomEnabled = v,
                 List.of(
@@ -107,7 +108,7 @@ public final class FeatureRegistry {
                                 .description("How gradually the zoom eases in and out when you press/release the key. Low values snap instantly; higher values give a smooth cinematic glide. Purely a feel preference — no effect on performance.")
                 ));
 
-        addWithSettings(MODULES, "full_bright", "Full Bright",
+        addWithSettings("full_bright",
                 "Overrides Minecraft's gamma so dark areas become fully visible. Caves, the underwater, and night-time terrain light up as if you had permanent Night Vision — without the screen-edge pulsing of the real potion effect.",
                 () -> cfg.fullBright, v -> cfg.fullBright = v,
                 List.of(
@@ -117,7 +118,7 @@ public final class FeatureRegistry {
                                 .description("How aggressively darkness is lifted. 100% is vanilla 'Bright'; higher values flatten shadows further until even unlit caves are clearly readable. Very high values wash out the world's contrast — most players prefer 500-1000%.")
                 ));
 
-        addWithSettings(MODULES, "no_fog", "No Fog",
+        addWithSettings("no_fog",
                 "Pushes back the distance fog that normally hides far terrain. You see further across oceans and open landscapes, but the game has to render more of the world each frame — so higher settings cost FPS.",
                 () -> cfg.noFogEnabled, v -> cfg.noFogEnabled = v,
                 List.of(
@@ -133,7 +134,7 @@ public final class FeatureRegistry {
         // its own SectionHeaderSetting divider so the settings list stays
         // legible. Master toggle is ON if ANY sub-feature flag is on; the
         // setter flips all sub-flags together.
-        addWithSettings(MODULES, "pack_tweaks", "Pack Tweaks",
+        addWithSettings("pack_tweaks",
                 "A bundle of small quality-of-life visual tweaks — totem particle size, shield rendering, and water/lava clarity. Toggling the bundle on enables all of them; expand it to fine-tune each one individually.",
                 () -> cfg.totemTweaksEnabled
                         || cfg.shieldTweaksEnabled
@@ -208,7 +209,7 @@ public final class FeatureRegistry {
                         "underwaterClarity", "underwaterFog",
                         "lavaClarity", "lavaFog", "lavaHide"));
 
-        addWithSettings(MODULES, "player_health", "Entity Health",
+        addWithSettings("player_health",
                 "Shows how much health nearby mobs and players have left, either as a precise number or as a row of heart icons that mirror the vanilla HUD. Great for judging whether one more hit will finish a target — in PvP and against tanky mobs alike.",
                 () -> cfg.playerHealthIndicators, v -> cfg.playerHealthIndicators = v,
                 List.of(
@@ -227,7 +228,7 @@ public final class FeatureRegistry {
                                 .description("Only show the health number above entities you've actually hit this session, instead of every entity in view. Keeps the screen uncluttered in crowded areas while still tracking your current targets.")
                 ));
 
-        addWithSettings(MODULES, "free_look", "FreeLook",
+        addWithSettings("free_look",
                 "Hold a key to swivel the camera around your character without changing the direction you're actually moving or facing. Great for watching your back while running, lining up a scenic screenshot, or keeping an enemy in view while retreating. Releasing the key snaps your view back to where it was.",
                 () -> cfg.freeLookEnabled, v -> cfg.freeLookEnabled = v,
                 List.of(
@@ -241,11 +242,11 @@ public final class FeatureRegistry {
                                 .description("Multiplier on top of vanilla MouseHandler sensitivity. 1.0 = native feel.")
                 ));
 
-        add(MODULES, "saturation_bar", "Saturation Bar",
+        add("saturation_bar",
                 "Overlays your hidden saturation level on top of the food bar. Saturation is the buffer that must drain before your hunger shanks start dropping — seeing it tells you exactly when you'll next need to eat, so you can manage food efficiently and avoid wasting it.",
                 () -> cfg.saturationBarEnabled, v -> cfg.saturationBarEnabled = v);
 
-        addWithSettings(MODULES, "block_overlay", "Block Overlay",
+        addWithSettings("block_overlay",
                 "Replaces the thin vanilla block-selection box with a customizable outline and/or colored fill on whatever block you're aiming at. Makes your target far easier to see, which helps with precise building, mining the right block, and lining up clutch placements.",
                 () -> cfg.blockOverlayEnabled, v -> cfg.blockOverlayEnabled = v,
                 List.of(
@@ -277,7 +278,7 @@ public final class FeatureRegistry {
                                 .description("How fast the hue cycles when Color Mode is RAINBOW. Low values drift slowly through the spectrum; high values strobe quickly. Has no effect in STATIC mode.")
                 ));
 
-        addWithSettings(MODULES, "toggle_sprint_sneak", "Toggle Sprint/Sneak",
+        addWithSettings("toggle_sprint_sneak",
                 "Turns sprint and sneak into press-once toggles instead of hold-to-keep keys. Tap to start sprinting or sneaking and it stays active until you tap again — saving your fingers on long journeys and letting you hold a sneak edge without keeping a key pressed. An optional HUD shows which toggles are active.",
                 () -> cfg.toggleSprintSneakEnabled, v -> cfg.toggleSprintSneakEnabled = v,
                 List.of(
@@ -311,7 +312,7 @@ public final class FeatureRegistry {
         // ---- Alerts (combined: armor durability + effect expiry) ----
         // Single module consolidating all on-screen popup warnings. Master
         // toggle is ON if ANY sub-alert is on; the setter flips all together.
-        addWithSettings(MODULES, "alerts", "Alerts",
+        addWithSettings("alerts",
                 "Icon and text warnings for low armor durability and potion effects about to expire. Get warned before gear breaks or a buff runs out mid-fight. All alerts share the same sound system.",
                 () -> cfg.armorAlertEnabled || cfg.toolDurabilityAlertEnabled
                         || cfg.effectExpiryAlertEnabled,
@@ -364,7 +365,7 @@ public final class FeatureRegistry {
                 ),
                 List.of("armorAlert", "toolDurability", "effectExpiry"));
 
-        addWithSettings(MODULES, "crosshair", "Crosshair",
+        addWithSettings("crosshair",
                 "Replaces the vanilla crosshair with a fully customizable one — pick a preset shape or draw your own, set its size, thickness, gap and color, and add a separate indicator that appears when an attackable entity is in reach. A clearer, personalized crosshair makes aiming and reach timing easier.",
                 () -> cfg.crosshairEnabled, v -> cfg.crosshairEnabled = v,
                 List.of(
@@ -418,7 +419,7 @@ public final class FeatureRegistry {
                                 .description("Drawn when aiming at a targetable entity. Left-click paints, right-click erases.")
                                 .disabled(() -> !cfg.crosshairIndicatorEnabled).visibleWhen(() -> cfg.crosshairIndicatorStyle == AuroraConfig.CrosshairStyle.CUSTOM)
                 ));
-addWithSettings(MODULES, "hitbox", "Hitbox",
+addWithSettings("hitbox",
                 "Draws entity hitboxes with your own color, line width, and optional eye-level and look-direction lines — a cleaner, always-on replacement for vanilla's F3+B boxes. Seeing exact hitboxes helps you understand reach and where an entity can actually be hit. Movement smoothing is automatic: Aurora detects servers that bundle or throttle movement packets (like minemen.club's anticheat) and smooths the hitbox in real time, so it never stutters or jumps.",
                 () -> cfg.hitboxEnabled || cfg.hitboxTargetEnabled,
                 v -> { cfg.hitboxEnabled = v; cfg.hitboxTargetEnabled = v; },
@@ -466,7 +467,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                 .description("Color used for the entity you're currently aiming at, to make it stand out.")
                 ));
 
-        addWithSettings(MODULES, "hit_color", "Hit Color",
+        addWithSettings("hit_color",
                 "Recolors the red flash that overlays an entity when it takes damage. A brighter or more saturated flash makes it much easier to confirm your hits landed during a fast fight — useful feedback in PvP and mob grinding.",
                 () -> cfg.hitColorEnabled, v -> cfg.hitColorEnabled = v,
                 List.of(
@@ -483,7 +484,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                 .disabled(() -> !cfg.hitColorTintArmor)
                 ));
 
-        addWithSettings(MODULES, "glint_color", "Glint Color",
+        addWithSettings("glint_color",
                 "Recolors the enchantment glint on items and armor. Alternative Glint also supports dark colors as moving shadows, with intensity independent of color brightness.",
                 () -> cfg.glintColorEnabled, v -> cfg.glintColorEnabled = v,
                 List.of(
@@ -504,7 +505,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
 
         // HUD MODULES â€” each has Background mode + Background Color
 
-        addWithSettings(MODULES, "info_module", "Info HUD",
+        addWithSettings("info_module",
                 "A configurable corner readout of useful at-a-glance info — FPS, coordinates, time of day, facing, biome, dimension, light level, playtime and more. Toggle exactly the rows you want so you get the data you care about without opening the F3 debug screen.",
                 () -> cfg.infoEnabled, v -> cfg.infoEnabled = v,
                 List.of(
@@ -559,7 +560,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                 .description("On = show time spent in the current world / server only. Off = show the global lifetime total.")
                 ));
 
-        addWithSettings(MODULES, "cps", "CPS",
+        addWithSettings("cps",
                 "Shows your current clicks-per-second as a HUD counter. Handy for practicing a consistent attack rhythm in PvP, verifying a clicking technique, or just satisfying curiosity about your click speed.",
                 () -> cfg.cpsEnabled, v -> cfg.cpsEnabled = v,
                 List.of(
@@ -571,7 +572,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                 () -> cfg.cpsBgColor, v -> cfg.cpsBgColor = v)
                 ));
 
-        addWithSettings(MODULES, "armor_hud", "Armor HUD",
+        addWithSettings("armor_hud",
                 "Displays your four equipped armor pieces and their remaining durability on the HUD. Lets you watch your protection at a glance without opening the inventory, so you know when to repair or swap before something breaks mid-fight.",
                 () -> cfg.armorHudEnabled, v -> cfg.armorHudEnabled = v,
                 List.of(
@@ -598,7 +599,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                 () -> cfg.armorHudBgColor, v -> cfg.armorHudBgColor = v)
                 ));
 
-        addWithSettings(MODULES, "reach_display", "Reach Display",
+        addWithSettings("reach_display",
                 "Shows the exact distance to the last entity you attacked. A practical tool for understanding your effective reach in PvP and for spotting suspiciously long reaches from others. Updates each time you land a hit.",
                 () -> cfg.reachEnabled, v -> cfg.reachEnabled = v,
                 List.of(
@@ -610,7 +611,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                 () -> cfg.reachBgColor, v -> cfg.reachBgColor = v)
                 ));
 
-        addWithSettings(MODULES, "potion_hud", "Potion HUD",
+        addWithSettings("potion_hud",
                 "A cleaner replacement for the default status-effect icons, listing your active potion effects with a readable countdown timer. Makes it easy to track when buffs like Strength or Fire Resistance are about to expire so you can re-apply them in time.",
                 () -> cfg.potionHudEnabled, v -> cfg.potionHudEnabled = v,
                 List.of(
@@ -622,7 +623,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                 () -> cfg.potionBgColor, v -> cfg.potionBgColor = v)
                 ));
 
-        addWithSettings(MODULES, "ping", "Ping",
+        addWithSettings("ping",
                 "Surfaces connection latency as real numbers instead of the vague signal-bar icon — as a HUD readout, as a value in the tab list, and optionally under player nametags. Knowing actual ping helps you account for hit registration delay on a server and spot laggy players.",
                 () -> cfg.pingHudEnabled || cfg.tabPingEnabled,
                 v -> { cfg.pingHudEnabled = v; cfg.tabPingEnabled = v; },
@@ -644,7 +645,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                 ),
                 List.of("pingHud", "tabPing", "nametagPing"));
 
-        addWithSettings(MODULES, "totem_pop", "Totem Pop Counter",
+        addWithSettings("totem_pop",
                 "Counts how many Totems of Undying you've popped, and optionally tracks nearby players' pops too. In crystal PvP and similar fights, knowing how many totems an opponent has burned through tells you how close they are to being finishable.",
                 () -> cfg.totemPopEnabled, v -> cfg.totemPopEnabled = v,
                 List.of(
@@ -851,7 +852,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                     () -> com.aurora.client.hitreg.Hitreg.last100Regs = new com.aurora.client.hitreg.util.RegQueue(100))
                     .description("Clears the rolling last-100-hits sample behind the delay/ghost/misplace figures in Tracking. Does not change the practice scoreboard or lifetime fight counters."));
 
-            addWithSettings(MODULES, com.aurora.client.hitreg.BetterHitreg.FEATURE_ID, "Better Hitreg",
+            addWithSettings(com.aurora.client.hitreg.BetterHitreg.FEATURE_ID,
                     "Client-side hit registration feedback for PvP, from BetterHitreg by Jass: your hit sound, the target's hurt animation and particles play the instant you swing instead of after the server's round trip, while the server's late copy is suppressed. Also tracks ghosted and misplaced hits, adds reach/jump rings, target and server hitboxes, sound muffling, and a practice arena.",
                     () -> cfg.hitregEnabled, v -> cfg.hitregEnabled = v,
                     hitregRows,
@@ -859,7 +860,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
             MODULES.get(MODULES.size() - 1).subtitle("Original project by Jass");
         }
 
-        addWithSettings(MODULES, "waypoints", "Waypoints",
+        addWithSettings("waypoints",
                 "Place persistent world markers rendered as beacon beams and/or block highlights with a name and distance label. Find your way back to bases, mines, or points of interest — and have a waypoint dropped automatically wherever you die so you can recover your stuff.",
                 () -> cfg.waypointsEnabled, v -> cfg.waypointsEnabled = v,
                 List.of(
@@ -922,7 +923,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                 () -> cfg.deathWaypointColor, v -> cfg.deathWaypointColor = v)
                 ));
 
-        addWithSettings(MODULES, "minimap", "Minimap",
+        addWithSettings("minimap",
                 "A top-down map of the world around you, shown as a HUD overlay. Renders terrain sampled from loaded chunks, with waypoints and nearby entities drawn as colored dots. Optional circular frame, auto-rotation to match your facing, and a compass so you always know where north is.",
                 () -> cfg.minimapEnabled, v -> cfg.minimapEnabled = v,
                 List.of(
@@ -995,7 +996,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                 ),
                 List.of("minimap"));
 
-        addWithSettings(MODULES, "container_preview", "Container Preview",
+        addWithSettings("container_preview",
                 "Hover over a shulker box (or your ender chest) in any inventory to see its full contents in a grid tooltip — no need to place and open it. Massively speeds up sorting storage and finding the right shulker at a glance.",
                 () -> cfg.containerPreviewEnabled, v -> cfg.containerPreviewEnabled = v,
                 List.of(
@@ -1011,7 +1012,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                 v -> cfg.containerPreviewShowCounts = v)
                 ));
 
-        addWithSettings(MODULES, "item_physics", "Item Physics",
+        addWithSettings("item_physics",
                 "Gives dropped items more natural physics — they lie flat where they land instead of hovering and spinning, and tumble realistically while airborne. Purely cosmetic flair that makes loot on the ground look more grounded and tactile.",
                 () -> cfg.itemPhysicsEnabled, v -> cfg.itemPhysicsEnabled = v,
                 List.of(
@@ -1043,12 +1044,12 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
         for (Identifier id : particleIds) {
             particleRows.add(new ParticleRowSetting(id.toString(), humanizeParticleId(id.getPath())));
         }
-        addWithSettings(MODULES, "particles", "Particles",
+        addWithSettings("particles",
                 "Per-particle control over every vanilla particle type — hide ones you find distracting, resize the rest, or recolor them with a custom tint. Use the search bar to quickly find a specific particle by name. Great for cutting visual clutter (e.g. hiding explosion or splash-potion particles in busy fights) or reducing particle load for a small FPS gain.",
                 () -> cfg.particleControlsEnabled, v -> cfg.particleControlsEnabled = v,
                 List.of(new ParticleConfigSetting(particleRows)));
 
-        addWithSettings(MODULES, "item_scale", "Item Scale",
+        addWithSettings("item_scale",
                 "Customize the scale, rotation (pitch, yaw, roll), and screen translation of individual item models. Type any item name in the search bar and click '+' to start customizing its model to fit your visual preferences.",
                 () -> cfg.itemScaleEnabled, v -> cfg.itemScaleEnabled = v,
                 List.of(
@@ -1067,7 +1068,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                 // prefixes (the FeatureMetadata javadoc's reason resetPrefixes exist).
                 List.of("itemScale", "mainHandDefaultScale", "offHandDefaultScale"));
 
-        addWithSettings(MODULES, "held_item_seams", "Held Item Seam Fix",
+        addWithSettings("held_item_seams",
                 "Removes the hairline seams that can appear between the faces of your first-person held items — thin texture-bleed lines that show up at certain camera angles, especially with higher-resolution resource packs. A tiny uniform scale-up (a fraction of a pixel by default) overlaps the adjacent cube faces just enough to hide them without visibly changing the item's size.",
                 () -> cfg.fixHeldItemSeams, v -> cfg.fixHeldItemSeams = v,
                 List.of(
@@ -1079,11 +1080,11 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                 // Field names share no common camelCase prefix, so reset them explicitly.
                 List.of("fixHeldItemSeams", "heldItemInflation"));
 
-        add(SETTINGS, "custom_title", "Custom Title",
+        add("custom_title",
                 "Replaces Minecraft's default main menu with Aurora's themed title screen — a diffuse panel and themed buttons over the vanilla panorama — and themes the buttons and search field on the world-select and multiplayer screens. Purely cosmetic; turn it off to restore the vanilla menu. Takes effect the next time you return to the main menu.",
                 () -> cfg.customTitleScreen, v -> cfg.customTitleScreen = v);
 
-        addWithSettings(MODULES, "resourcepack_browser", "Resourcepack Browser",
+        addWithSettings("resourcepack_browser",
                 "Browse and install community resource packs directly from Modrinth — no browser, no manual file dropping. Search by name, preview the top results with thumbnails and download counts, then one-click install straight into your resourcepacks folder. Installed packs still need to be enabled in Options → Resource Packs, just like any manually-added pack.",
                 () -> cfg.resourcepackBrowserEnabled, v -> cfg.resourcepackBrowserEnabled = v,
                 List.of(
@@ -1101,7 +1102,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
 
         // ============ SETTINGS TAB ============
 
-        addWithSettings(SETTINGS, "text_fonts", "Text & Fonts",
+        addWithSettings("text_fonts",
                 "Choose the font Aurora uses across its own screens and, optionally, across all of Minecraft's vanilla UI. Pick a rendering scope and a Google Font — the choice applies live.",
                 () -> true,
                 v -> {},
@@ -1116,7 +1117,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                 .description("The Google Font applied to text. SansSerif restores Minecraft's default font.")
                 )).noSettingsToggle(true); // owner ruling 2026-10-30: the Text Renderer dropdown owns the scope; no master toggle
 
-        addWithSettings(SETTINGS, "theme", "Theme",
+        addWithSettings("theme",
                 "Customize Aurora's accent color, corner style, and the density of its diffuse card backgrounds.",
                 () -> cfg.themeEnabled, v -> cfg.themeEnabled = v,
                 List.of(
@@ -1156,7 +1157,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                 .description("How dense Aurora's card backgrounds are. Lower values make the backdrop clearer. Drag previews the change live; release saves it.")
                 ));
 
-        addWithSettings(SETTINGS, "interface", "Interface",
+        addWithSettings("interface",
                 "Caps the framerate while an Aurora screen is open, independent of Minecraft's main FPS cap. A lower limit keeps the UI smooth while freeing GPU time for the world behind it.",
                 () -> cfg.guiFpsLimit != 1000,
                 v -> cfg.guiFpsLimit = v ? 60 : 1000,
@@ -1167,7 +1168,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                                 .description("The framerate Aurora screens run at. 'Unlimited' removes the cap so the GUI matches your main FPS.")
                 ));
 
-        addWithSettings(MODULES, "animations", "Animations",
+        addWithSettings("animations",
                 "Animation & movement polish: swing & view-bob curves, classic 1.8-style damage camera tilt, configurable idle held-item sway with multiple movement curves, and frame-rate-independent entity movement smoothing that rounds off per-tick knockback kinks and absorbs multiplayer server throttle jitter.",
                 () -> cfg.smoothAnimationsEnabled, v -> cfg.smoothAnimationsEnabled = v,
                 List.of(
@@ -1259,7 +1260,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
                         "damageTilt", "hotbarBounce"));
 
         // ---- Keystrokes Display ----
-        addWithSettings(MODULES, "keystrokes", "Keystrokes",
+        addWithSettings("keystrokes",
                 "A themed keystroke overlay with matching key surfaces, fine borders and soft press highlights: movement keys, mouse buttons, a CPS counter and jump/sneak inputs shown as one cohesive panel that lights up with a smooth animated accent while pressed. Popular for PvP montages, streaming, and analyzing your inputs. Fully draggable and resizable in the HUD editor.",
                 () -> cfg.keystrokesEnabled, v -> cfg.keystrokesEnabled = v,
                 List.of(
@@ -1346,7 +1347,7 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
         // config fields - none of these had a reachable reset before
         // (Settings-tab entries had no detail screen), so this is new
         // capability, consistent with the other combined features.
-        addWithSettings(MODULES, "miscellaneous", "Display Settings",
+        addWithSettings("miscellaneous",
                 "Display and responsiveness controls: smooth camera, frame pacing, a global frame cap, latency, input handling, and server-list dragging. Each keeps its own enable toggle and settings under its section; open the feature to configure them.",
                         () -> cfg.smoothCamera || cfg.smoothFramePacer || cfg.lowLatencyRender
                         || cfg.inputSamplingDecoupled
@@ -1454,9 +1455,17 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
         return new ColorSetting(label, color::argb, color::set);
     }
 
-    private static void add(List<FeatureMetadata> bucket, String id, String displayName,
-                            String description, BooleanSupplier getter, Consumer<Boolean> setter) {
-        bucket.add(new FeatureMetadata(id, displayName, description, getter, setter));
+    /**
+     * The feature's name and tab come from {@link FeatureCatalog}, the one
+     * list of features; this class adds only the description and settings UI.
+     */
+    private static List<FeatureMetadata> bucketFor(FeatureCatalog.Feature feature) {
+        return feature.tab() == FeatureCatalog.Tab.SETTINGS ? SETTINGS : MODULES;
+    }
+
+    private static void add(String id, String description, BooleanSupplier getter, Consumer<Boolean> setter) {
+        FeatureCatalog.Feature feature = FeatureCatalog.require(id);
+        bucketFor(feature).add(new FeatureMetadata(id, feature.name(), description, getter, setter));
     }
 
     /** Converts a particle registry path like {@code "dripping_water"}
@@ -1479,13 +1488,13 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
         return sb.toString();
     }
 
-    private static FeatureMetadata addWithSettings(List<FeatureMetadata> bucket, String id,
-                                        String displayName, String description,
+    private static FeatureMetadata addWithSettings(String id, String description,
                                         BooleanSupplier getter, Consumer<Boolean> setter,
                                         List<FeatureSetting> settings) {
-        FeatureMetadata meta = new FeatureMetadata(id, displayName, description, getter, setter,
+        FeatureCatalog.Feature feature = FeatureCatalog.require(id);
+        FeatureMetadata meta = new FeatureMetadata(id, feature.name(), description, getter, setter,
                 new ArrayList<>(settings));
-        bucket.add(meta);
+        bucketFor(feature).add(meta);
         return meta;
     }
 
@@ -1494,14 +1503,14 @@ addWithSettings(MODULES, "hitbox", "Hitbox",
      * combined features whose underlying config fields don't share a
      * single camelCase prefix derived from the feature id.
      */
-    private static FeatureMetadata addWithSettings(List<FeatureMetadata> bucket, String id,
-                                        String displayName, String description,
+    private static FeatureMetadata addWithSettings(String id, String description,
                                         BooleanSupplier getter, Consumer<Boolean> setter,
                                         List<FeatureSetting> settings,
                                         List<String> resetPrefixes) {
-        FeatureMetadata meta = new FeatureMetadata(id, displayName, description, getter, setter,
+        FeatureCatalog.Feature feature = FeatureCatalog.require(id);
+        FeatureMetadata meta = new FeatureMetadata(id, feature.name(), description, getter, setter,
                 new ArrayList<>(settings), resetPrefixes);
-        bucket.add(meta);
+        bucketFor(feature).add(meta);
         return meta;
     }
 

@@ -100,7 +100,25 @@ public final class FeatureMetadata {
     }
 
     public boolean isEnabled() { return getEnabled.getAsBoolean(); }
-    public void setEnabled(boolean v) { setEnabled.accept(v); }
+    public void setEnabled(boolean v) {
+        setEnabled.accept(v);
+        // A switch held off because its mixin is not working goes straight
+        // back off, in the same call, so the UI never shows it on for a tick.
+        com.aurora.client.health.FeatureHealth.enforce(AuroraConfig.get());
+    }
+
+    /** Why this feature is not fully working in this session, or null when it is healthy. */
+    public String healthNote() { return com.aurora.client.health.FeatureHealth.noteFor(id); }
+
+    /**
+     * The line under the feature's title on its detail screen: what is not
+     * working in this session when a mixin failed, otherwise the credit
+     * {@link #subtitle} (null for most features).
+     */
+    public String headerLine() {
+        String broken = com.aurora.client.health.FeatureHealth.headlineFor(id);
+        return broken != null ? broken : subtitle;
+    }
     public boolean hasDetail() { return !settings.isEmpty() && !List.of("text_fonts", "theme", "interface").contains(id); }
 
     /**

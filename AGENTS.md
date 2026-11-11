@@ -178,6 +178,10 @@ subset. (The former `module_icons/` PNG set + stray design-source SVGs + the sta
 
 ## 3. How the feature system works — three parallel registries
 
+> **Superseded 2026-11-10:** `feature/FeatureCatalog` is now the one list of features and
+> of the mixins each needs; the grid cards and `FeatureRegistry` names derive from it. See
+> "Fail-soft mixins and the feature catalog" at the end of this file. The text below is history.
+
 There is **no single registry**. Three structures must stay conceptually in sync:
 
 1. **`feature/FeatureManager`** — 25 long-lived `Feature` singletons with
@@ -2522,3 +2526,41 @@ The agreed order of work is `docs/ROADMAP.md`. Until the port to the newest Mine
 release ships, no new features are added: only fixes and roadmap steps 1-3. Read the
 relevant ADR before proposing multi-version builds, an own UI renderer, vanilla
 rendering optimizations, telemetry, or changes to feature defaults.
+
+## Fail-soft mixins and the feature catalog (2026-11-10)
+
+Roadmap step 1 (ADR 0004). `feature/FeatureCatalog` (no Minecraft imports) is the one list
+of features (id, name, grid-card text, tab) and of every mixin's binding: what it provides,
+which features need it, and which boolean `AuroraConfig` fields ("gates") are held off when
+it is not working. `module/ModuleManager` builds its cards from it; `screen/FeatureRegistry`
+takes each feature's name and tab from it (`add("id", description, ...)`) and adds only the
+settings UI. `FeatureManager` is unchanged: it ticks runtime services, it is not a list of
+features. To add a feature: catalog entry, registry entry, and a binding for each new mixin.
+`FeatureCatalogTest` fails when the catalog, `aurora.mixins.json`, the registry or a gate
+name disagree.
+
+`aurora.mixins.json` is `required: false` with plugin `health/AuroraMixinPlugin` (it must
+live outside the mixin package). A mixin that cannot apply no longer stops the game:
+`AuroraMixinErrorHandler` records it in `health/MixinHealth` (other mods' mixin errors pass
+through untouched), `MixinAudit` loads every target class at `CLIENT_STARTED` and marks any
+mixin that neither applied nor failed, and `FeatureHealth.enforce` (every tick; one
+comparison when healthy) holds the failed mixin's gates at `false`. The player's own value
+is remembered and written back by `AuroraConfig.serialize()` and
+`ProfileManager.captureCurrent()`, so a broken session never changes a saved preference.
+The feature's card tooltip and detail-screen header say what is not working.
+`-Daurora.mixin.disable=A,hitreg.B` switches mixins off by name (support and testing).
+
+Rules that follow from this:
+- A mixin may partly apply (its other injectors stay in). Anything it does must be gated by
+  a config field listed as its gate, or be harmless on its own.
+- A mixin-added interface may be absent. Use `x instanceof TheAccessor a`, never a bare
+  cast; static accessors need a `MixinHealth.failed("Name")` check before the call.
+- Glass declines when `MinecraftClientRenderMixin` or `ScreenshotMixin` is not working.
+- `fabric.mod.json` `breaks` lists `betterhitreg` (Aurora contains that mod). Nothing else
+  is listed because nothing else has been tested and found bad.
+
+Verified 2026-11-10 by two dev-client boots into a saved world: unmodified ("All 72 Aurora
+mixins applied"), then with ten mixins disabled by option and one injection point broken on
+purpose (11 of 72 reported, game ran and shut down normally, `aurora.json` and the active
+profile unchanged apart from playtime). Not yet checked: the card tooltip and header text
+on screen, and the tier-1 mod matrix.

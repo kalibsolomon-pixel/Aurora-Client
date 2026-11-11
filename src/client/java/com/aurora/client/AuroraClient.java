@@ -67,6 +67,17 @@ public class AuroraClient implements ClientModInitializer {
         featureManager = new FeatureManager();
         featureManager.registerAll();
 
+        // Fail-soft mixins (ADR 0004). Once startup is over, settle which
+        // Aurora mixins applied; from then on hold the switches of any
+        // feature whose mixin is not working at off. With every mixin
+        // healthy the per-tick call is a single comparison.
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents.CLIENT_STARTED.register(client -> {
+            com.aurora.client.health.MixinAudit.run(AuroraClient.class.getClassLoader());
+            com.aurora.client.health.FeatureHealth.enforce(AuroraConfig.get());
+        });
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.START_CLIENT_TICK.register(
+                client -> com.aurora.client.health.FeatureHealth.enforce(AuroraConfig.get()));
+
         moduleManager = new HudModuleManager();
         moduleManager.register(new InfoModule());
         moduleManager.register(new CpsModule());

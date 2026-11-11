@@ -327,7 +327,8 @@ public class ProfileManager {
         AuroraConfig live = AuroraConfig.get();
         for (Field f : profileFields()) {
             try {
-                Object value = f.get(live);
+                // A switch held off for this session is saved as the player set it.
+                Object value = com.aurora.client.health.FeatureHealth.persistedValue(f.getName(), f.get(live));
                 JsonElement el = GSON.toJsonTree(value, f.getGenericType());
                 p.fields.put(f.getName(), el);
             } catch (Throwable t) {
@@ -402,6 +403,12 @@ public class ProfileManager {
         live.theme = live.theme != null
                 ? ThemeDefinition.copyOf(live.theme)
                 : ThemeDefinition.defaults();
+
+        // Every profile-scoped value was just replaced: what FeatureHealth
+        // remembered belongs to the previous profile. Re-apply its holds to
+        // the new values straight away.
+        for (Field f : profileFields()) com.aurora.client.health.FeatureHealth.forget(f.getName());
+        com.aurora.client.health.FeatureHealth.enforce(live);
     }
 
     private void applyProfileByName(String name) {
