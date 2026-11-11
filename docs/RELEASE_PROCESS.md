@@ -90,3 +90,15 @@ Local runtime acceptance evidence, including the overhead check, is required
 before dispatch. Hosted CI builds cannot stand in for a GPU boot. The protected
 environment, draft verification, exact target and anonymous download checks
 remain mandatory even when GitHub work is authorized autonomously.
+
+## Latest release selection
+
+Pass `--latest` explicitly when publishing the verified draft, as well as when
+creating it. GitHub did not preserve the draft's `--latest=false` selection for
+the 26.1.2 checkpoint; its asset identity remained correct. The workflow now
+applies `make_latest` at publication. Only the newest Minecraft line is latest.
+
+The repository's Latest label is a distribution pointer. Selecting an already
+verified newest release as Latest changes no tag, source target or runtime
+asset. This does not permit rewriting a published release's identity or repairing
+failed artifact verification. Those failures still require owner review.
