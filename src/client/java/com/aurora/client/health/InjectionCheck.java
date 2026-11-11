@@ -22,12 +22,15 @@ import java.util.List;
  * a Minecraft update would stop the game instead of turning one feature off.
  *
  * <p>An injector marked {@code require = 0} is optional and never reported.
+ * MixinExtras injectors ({@code @WrapOperation} and friends) are not judged:
+ * MixinExtras applies them after this plugin's {@code postApply} runs, so
+ * their call sites do not exist yet here (seen on 26.1 with the armor-trim
+ * wrap, which the exported class showed applied).
  */
 final class InjectionCheck {
     private InjectionCheck() {}
 
     private static final String SPONGE_INJECTORS = "Lorg/spongepowered/asm/mixin/injection/";
-    private static final String MIXINEXTRAS_INJECTORS = "Lcom/llamalad7/mixinextras/injector/";
 
     /** Names of the mixin's required injectors that no code in {@code target} calls. Empty when all applied. */
     static List<String> unmatched(ClassNode target, ClassNode mixin) {
@@ -46,7 +49,7 @@ final class InjectionCheck {
     private static AnnotationNode injector(MethodNode m) {
         for (List<AnnotationNode> list : List.of(nonNull(m.visibleAnnotations), nonNull(m.invisibleAnnotations))) {
             for (AnnotationNode a : list) {
-                if (a.desc.startsWith(SPONGE_INJECTORS) || a.desc.startsWith(MIXINEXTRAS_INJECTORS)) return a;
+                if (a.desc.startsWith(SPONGE_INJECTORS)) return a;
             }
         }
         return null;

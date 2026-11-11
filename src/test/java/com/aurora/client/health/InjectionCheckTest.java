@@ -75,6 +75,13 @@ class InjectionCheckTest {
                 mixin(handler("aurora$needed", 1))));
     }
 
+    @Test void aMixinExtrasInjectorIsNotJudgedBecauseItAppliesLater() {
+        MethodNode wrap = handler("aurora$wrap", null);
+        wrap.visibleAnnotations.get(0).desc = "Lcom/llamalad7/mixinextras/injector/wrapoperation/WrapOperation;";
+        String merged = "wrapOperation$zza000$aurora$wrap";
+        assertEquals(List.of(), InjectionCheck.unmatched(target(List.of(merged), List.of()), mixin(wrap)));
+    }
+
     @Test void aMethodThatIsNotAnInjectorIsIgnored() {
         MethodNode plain = new MethodNode(Opcodes.ACC_PRIVATE, "aurora$helper", DESC, null, null);
         assertEquals(List.of(), InjectionCheck.unmatched(target(List.of("aurora$helper"), List.of()), mixin(plain)));
