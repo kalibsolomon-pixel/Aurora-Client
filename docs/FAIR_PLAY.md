@@ -24,9 +24,11 @@ The whole mod has two places that send anything to a server. Both are in Better 
 A new install has these off. A player has to turn each one on.
 
 - FreeLook
-- Entity Health, which shows the health of mobs and players
+- Entity Health, which shows the health of mobs; showing other players' health is a second switch, also off
 - Other players' totem pop counts, on the HUD and on nametags
 - Dots for other players on the minimap
+- Full Bright, which raises brightness past the vanilla maximum
+- No Fog, which pushes distance fog back
 - Water and lava clarity (Pack Tweaks)
 - Better Hitreg, and inside it the reach rings, extra hitboxes and hiding of other fights
 
@@ -34,8 +36,6 @@ Changing a default does not change an existing install: a player who already had
 
 ## On in a fresh install, and worth knowing
 
-- Full Bright raises brightness past the vanilla maximum.
-- No Fog pushes distance fog back.
 - Hitboxes are drawn, as vanilla's F3+B draws them.
 
 ## Every feature
@@ -43,10 +43,10 @@ Changing a default does not change an existing install: a player who already had
 | Feature | Class | What it does |
 |---|---|---|
 | Zoom | Vanilla equivalent | Narrows the field of view while a key is held, as the vanilla spyglass does. |
-| Full Bright | Vanilla equivalent | Extends the vanilla Brightness setting past its maximum, so unlit areas are visible. On in a fresh install. |
-| No Fog | Vanilla equivalent | Pushes distance fog back, so terrain inside your render distance is visible sooner than in vanilla. On in a fresh install. |
+| Full Bright | Vanilla equivalent | Extends the vanilla Brightness setting past its maximum, so unlit areas are visible. Off in a fresh install. |
+| No Fog | Vanilla equivalent | Pushes distance fog back, so terrain inside your render distance is visible sooner than in vanilla. Off in a fresh install. |
 | Pack Tweaks | Cosmetic | Totem particle size, first-person shield position and a tint for your own shield's cooldown. Its water and lava clarity switches improve visibility inside fluids and ship off. |
-| Entity Health | Information advantage | Shows the health of nearby mobs and players above them. Vanilla does not show other players' health. |
+| Entity Health | Information advantage | Shows the health of nearby mobs and players above them. Vanilla does not show other players' health. Players have their own switch, also off. |
 | FreeLook | Information advantage | Lets the camera look around without turning the character, a view vanilla does not allow. |
 | Saturation Bar | Vanilla equivalent | Shows your own saturation on the food bar. |
 | Block Overlay | Cosmetic | Restyles the outline of the block you are looking at. |

@@ -2,6 +2,7 @@ package com.aurora.client.config.profile;
 
 import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.config.ConfigDirectory;
+import com.aurora.client.config.PlayerHealthMigrator;
 import com.aurora.client.theme.ThemeDefinition;
 import com.aurora.client.theme.ThemeMigrator;
 import com.google.gson.Gson;
@@ -353,6 +354,7 @@ public class ProfileManager {
         // structured "theme" object so old profiles keep their customization.
         if (p != null) {
             ThemeMigrator.migrateProfileFields(p.fields, LOGGER);
+            PlayerHealthMigrator.migrateProfileFields(p.fields, LOGGER);
         }
         // 1. Reset all profile-scoped fields to factory defaults so any
         //    setting absent from the profile (e.g. a newly-added setting)

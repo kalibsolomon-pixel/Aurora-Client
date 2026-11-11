@@ -37,7 +37,7 @@ class ReleaseDefaultsTest(unittest.TestCase):
     def test_release_version_and_resource_wiring(self):
         properties = (ROOT / 'gradle.properties').read_text()
         self.assertRegex(properties, r'(?m)^mod_version=3\.2\.0$')
-        source = (ROOT / 'src/client/java/com/aurora/client/config/ReleaseDefaults.java').read_text()
+        source = (ROOT / 'core/src/main/java/com/aurora/client/config/ReleaseDefaults.java').read_text()
         self.assertIn('/assets/aurora/defaults/3.2.0.json', source)
         metadata = json.loads((ROOT / 'src/client/resources/fabric.mod.json').read_text())
         self.assertEqual('${version}', metadata['version'])

@@ -37,10 +37,10 @@ Built and verified by automated tests and three dev-client boots (unmodified; te
 
 Every feature has a fair-play class in `FeatureCatalog`, published as [FAIR_PLAY.md](FAIR_PLAY.md). Two defaults changed: FreeLook and other players' totem pops on nametags now ship off. The other two items on the list were already off in the release defaults (minimap player dots, and Entity Health as a whole). Existing installs keep what they had.
 
-Open for the owner:
+Decided by the owner on 2026-11-11 and built on `feat/fair-play-decisions`: Full Bright and No Fog now ship off, and Entity Health has a separate switch for players, also off. A config or profile saved before that switch existed keeps showing players if Entity Health was on. The `breaks` id `betterhitreg` is confirmed.
 
-- Full Bright and No Fog ship on. ADR 0007 keeps them; they are the two shipped-on features a server owner is most likely to question.
-- Entity Health has no separate switch for players. The whole feature is off by default, which covers "entity health for players", but a player who turns it on gets mobs and players together.
+Still open:
+
 - Other players' totem pops are still counted while the nametag switch is off; they are just not shown.
 
 ## Step 3 status

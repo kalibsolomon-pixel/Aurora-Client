@@ -2594,10 +2594,18 @@ send (the only two are Better Hitreg's unbound Switch Hand and scoreboard Send k
 
 The effective default of a field is its initializer overlaid by
 `assets/aurora/defaults/3.2.0.json`; change both, and read the resource before assuming a
-default (Full Bright, No Fog and hitboxes ship ON there; Better Hitreg, minimap and world
-map ship OFF). Changed in this step: `freeLookEnabled` and `nametagTotemPopsEnabled` are
-now false in both places, so the resource is no longer the 3.1.0 export verbatim. Saved
-configs and profiles keep their own values.
+default (hitboxes ship ON there; Better Hitreg, minimap and world map ship OFF). Changed
+in this step: `freeLookEnabled` and `nametagTotemPopsEnabled` are now false in both places,
+so the resource is no longer the 3.1.0 export verbatim. Saved configs and profiles keep
+their own values.
+
+Owner decisions, also 2026-11-11 (PR #5): `fullBright` and `noFogEnabled` now ship off in
+both places. Entity Health gained `playerHealthShowPlayers` (off): with it off, the
+render-state extract skips players, so only mobs get a label. Configs and profiles saved
+before the switch existed have no key for it, so `config/PlayerHealthMigrator` (run beside
+`ThemeMigrator` on `aurora.json` and on every profile applied) sets it to the saved
+`playerHealthIndicators`: whoever had Entity Health on keeps seeing players. The `breaks`
+id `betterhitreg` is confirmed.
 
 When adding a feature or a switch that shows something about other players, or a view
 vanilla does not allow: class it Information advantage (or list the switch in

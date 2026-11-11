@@ -596,6 +596,12 @@ public class AuroraConfig {
     // ---- Player health indicators ----
     public boolean playerHealthIndicators = false;
     public boolean playerHealthOnlyAttacked = false;
+    /**
+     * Also label other players, not only mobs (ADR 0007: an information
+     * advantage, so off by default). Configs and profiles saved before this
+     * switch existed are carried over by {@link PlayerHealthMigrator}.
+     */
+    public boolean playerHealthShowPlayers = false;
 
     /**
      * How entity health is displayed above their heads when
@@ -1193,6 +1199,7 @@ public class AuroraConfig {
                 // into the structured "theme" object and drop malformed theme
                 // members so one bad field can't take the whole config down.
                 json = ThemeMigrator.migrateConfigJson(json, LOGGER);
+                json = PlayerHealthMigrator.migrateConfigJson(json, LOGGER);
                 AuroraConfig loaded = GSON.fromJson(json, AuroraConfig.class);
                 if (loaded == null) throw new com.google.gson.JsonParseException("Config is null");
                 if (loaded != null) {

@@ -8,6 +8,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -47,7 +48,10 @@ public abstract class LivingEntityRendererExtractMixin {
                                        float partialTick,
                                        CallbackInfo ci) {
         if (entity == null || state == null) return;
-        if (!AuroraConfig.get().playerHealthIndicators) return;
+        AuroraConfig cfg = AuroraConfig.get();
+        if (!cfg.playerHealthIndicators) return;
+        // No snapshot means no label (PlayerHealthLabelMixin).
+        if (entity instanceof Player && !cfg.playerHealthShowPlayers) return;
         AuroraHealthSnapshots.put(state, new AuroraHealthSnapshots.Snapshot(
                 entity.getHealth(),
                 entity.getMaxHealth(),

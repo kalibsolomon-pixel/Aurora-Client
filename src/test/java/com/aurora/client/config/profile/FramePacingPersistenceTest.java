@@ -97,9 +97,12 @@ class FramePacingPersistenceTest {
                         name + " (" + feature.name() + ") must be off in a fresh install");
             }
         }
-        // docs/FAIR_PLAY.md tells server owners these three are on.
-        assertTrue(fresh.fullBright);
-        assertTrue(fresh.noFogEnabled);
+        // Owner decision 2026-11-11: these two ship off now; the loop above covers
+        // them through the catalog, checked here by name so a catalog edit can't drop them.
+        assertFalse(fresh.fullBright);
+        assertFalse(fresh.noFogEnabled);
+        assertFalse(fresh.playerHealthShowPlayers);
+        // docs/FAIR_PLAY.md tells server owners this one is on.
         assertTrue(fresh.hitboxEnabled);
     }
 

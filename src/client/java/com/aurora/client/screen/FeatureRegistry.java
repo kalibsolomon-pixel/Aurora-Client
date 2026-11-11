@@ -225,7 +225,11 @@ public final class FeatureRegistry {
                         new BooleanSetting("Only Attacked",
                                 () -> cfg.playerHealthOnlyAttacked,
                                 v -> cfg.playerHealthOnlyAttacked = v)
-                                .description("Only show the health number above entities you've actually hit this session, instead of every entity in view. Keeps the screen uncluttered in crowded areas while still tracking your current targets.")
+                                .description("Only show the health number above entities you've actually hit this session, instead of every entity in view. Keeps the screen uncluttered in crowded areas while still tracking your current targets."),
+                        new BooleanSetting("Show Players",
+                                () -> cfg.playerHealthShowPlayers,
+                                v -> cfg.playerHealthShowPlayers = v)
+                                .description("Also show other players' health, not only mobs'. Off by default: vanilla does not show other players' health, and some servers do not allow it.")
                 ));
 
         addWithSettings("free_look",

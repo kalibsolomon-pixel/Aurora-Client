@@ -10,13 +10,13 @@ Competitive servers ban clients by reputation, and Compliance Mode was removed i
 First default-off list:
 
 - Minimap entity dots for players
-- Entity health for players
+- Entity health for players (its own switch since 2026-11-11; before that the whole feature was off)
 - Other players' totem pop counts
 - FreeLook
 
 Everything else keeps its current default, including hitboxes (vanilla F3+B shows them), Full Bright, No Fog and toggle sprint.
 
-Noted 2026-11-11 while implementing this: Full Bright and No Fog ship on in a fresh install (the release defaults set both true). They are visibility aids, kept on by this decision, and `docs/FAIR_PLAY.md` says so plainly. Whether they should stay on is open for the owner.
+Amended 2026-11-11 by the owner: Full Bright and No Fog now ship off too. They had shipped on (the release defaults set both true) and are the two shipped-on features a server owner was most likely to question. Entity Health gained a separate players switch, off by default.
 
 Better Hitreg stays in the client at its current default by owner decision. It is recorded as local feedback only: it does not change what the game sends for movement or combat, or when. It is the feature a server owner is most likely to ask about, so that description must stay accurate.
 
