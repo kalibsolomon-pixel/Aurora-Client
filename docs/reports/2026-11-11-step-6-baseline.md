@@ -22,8 +22,36 @@ row-template path is bypassed when `MaterialSurface.unified()` is active, so
 the result must not be described as a measurement of every cache variant.
 The screenshot and raw fixture remain under `build/step6-baseline/` locally.
 
-The probe also builds for 26.1.2 and 26.2, but this run does not validate their
-runtime behavior. Compare the same fixture and settings after implementation,
-measure deferred/frame-level effects independently, and retain caches until
-their individual removal is supported by measurement. No shader has been
-implemented or validated by this preliminary baseline.
+## Experimental shader comparison
+
+An opt-in prototype (`-Daurora.shapes.shader=true`) was subsequently run with
+the same world and settings on 26.3 OpenGL. One run measured 0.104 ms mean,
+0.118 ms p95, and zero CPU rasterizer fills per frame in the same interval. A
+second boot measured 0.118 ms mean, 0.185 ms p95, zero fills and 33 shader quads
+per frame. The original fill counter does not count shader quads. These runs
+exclude deferred rendering and GPU cost; they do not establish an end-to-end
+speedup.
+
+The default Round/33% waypoint screen was also inspected on native Vulkan; the
+Square/19% screen was inspected on OpenGL. The Aurora feature screen's grid and
+list layouts were inspected on 26.3 OpenGL at 854 x 480 and 1280 x 720, in the
+Round/33% theme. A separate OpenGL fixture compares
+fractional-position rounded fills, circles, outlines, squircles, clipping and a
+rotated pose against the CPU path. The same shape cases were inspected without
+a world on 26.1.2 OpenGL, 26.1.2 VulkanMod 0.6.8 and 26.2 native Vulkan. The
+VulkanMod log contained `Element Normal not found in elements [Position, Color,
+UV0, UV2]` during startup both with the prototype enabled and disabled in the
+same fixture; this is not a clean compatibility result. The cases were also
+inspected on 26.3 OpenGL with Sodium 0.9.2 and Iris 1.11.7 installed, without a
+shader pack. Shader edges are smoother than
+the CPU's pixel-row approximation; the paths are not pixel-identical.
+Screenshots remain under `build/step6-shader-test/`, `build/step6-261-opengl/`
+`build/step6-262-vulkan/` and `build/step6-263-iris/` locally.
+
+The shader remains disabled by default. Triangle rasterization, cases outside
+its parameter range and layer captures still use the CPU path. Runtime testing
+of further backend combinations and real screens on the other Minecraft lines,
+shader-mod compatibility, additional viewport and appearance cases,
+frame-level/GPU measurements and the release overhead gate
+remain outstanding. Retain caches until individual removal is supported by
+measurement.

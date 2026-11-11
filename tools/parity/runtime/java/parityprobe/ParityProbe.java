@@ -82,6 +82,11 @@ public final class ParityProbe implements ClientModInitializer {
                 Files.deleteIfExists(root.resolve("shape-benchmark.json"));
                 ShapeBenchmark.arm(root.resolve("shape-benchmark.json"));
             }
+            case "waypoints-screen" -> {
+                if (client.level == null) throw new IllegalStateException("A world must be loaded");
+                NativeUi.setScreen(client, new WaypointManagerScreen(null));
+            }
+            case "shape-cases" -> NativeUi.setScreen(client, new ShapeTestScreen());
             case "stop" -> client.stop();
             case "resize" -> client.getWindow().setWindowed(Integer.parseInt(args[1]), Integer.parseInt(args[2]));
             case "layout" -> {

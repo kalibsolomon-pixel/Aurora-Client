@@ -24,7 +24,9 @@ Use native desktop screenshots to inspect the resulting screen.
 |---|---|
 | `world` | Wait for a loaded world, then close the current screen |
 | `waypoints40` | Seed 40 rows in an empty disposable waypoint scope and open their manager |
+| `waypoints-screen` | Open the waypoint manager without changing its rows |
 | `shape-benchmark` | Measure 120 warm-up and 600 sampled manager extraction frames; write `shape-benchmark.json` |
+| `shape-cases` | Open fixed shape, scissor and transform cases for visual comparison |
 | `settings` | Open Aurora settings |
 | `resize 854 480` | Set the native window size |
 | `layout grid` / `layout list` | Open the selected feature layout |
@@ -48,10 +50,12 @@ This verifies native handlers and persistence; it does not synthesize OS keys
 or replace a physical-input/accessibility audit.
 
 The shape benchmark measures elapsed time inside the manager's extraction method
-and `RenderUtil` fill submissions only. It can include waits inside that method;
+and `RenderUtil` fill and experimental shader quad submissions. It can include waits inside that method;
 it is not a CPU-only timer. Deferred GUI processing, total GPU time, frame
 pacing and cold cache creation are outside its scope. Compare runs with the same
 window, GUI scale, theme, backend, world and mod set; record these independently.
 The `waypoints40` command requires an empty waypoint scope and a second marker,
 `SHAPE-BENCHMARK-DISPOSABLE.txt`, in the actual game directory. Create a fresh
 disposable configuration for each new seed; the command refuses existing rows.
+Pass `-Daurora.shapes.shader=true` to the game JVM to compare the experimental
+live shader path with the default CPU path. Caches retain CPU capture coverage.

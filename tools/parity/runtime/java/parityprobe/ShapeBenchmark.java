@@ -1,6 +1,7 @@
 package parityprobe;
 
 import com.aurora.client.ui.util.RenderUtil;
+import com.aurora.client.ui.util.NativeShapeRenderer;
 import com.google.gson.GsonBuilder;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -14,7 +15,7 @@ public final class ShapeBenchmark {
     private static final long[] nanos = new long[SAMPLES];
     private static Path result;
     private static int frames;
-    private static long start, firstFills;
+    private static long start, firstFills, firstQuads;
 
     private ShapeBenchmark() {}
 
@@ -26,7 +27,10 @@ public final class ShapeBenchmark {
 
     public static void begin() {
         if (result == null) return;
-        if (frames == WARMUP) firstFills = RenderUtil.fillsSubmitted();
+        if (frames == WARMUP) {
+            firstFills = RenderUtil.fillsSubmitted();
+            firstQuads = NativeShapeRenderer.quadsSubmitted();
+        }
         start = System.nanoTime();
     }
 
@@ -37,6 +41,7 @@ public final class ShapeBenchmark {
         if (frames >= WARMUP) nanos[frames - WARMUP] = elapsed;
         if (++frames != WARMUP + SAMPLES) return;
         long fills = RenderUtil.fillsSubmitted() - firstFills;
+        long quads = NativeShapeRenderer.quadsSubmitted() - firstQuads;
         long[] sorted = nanos.clone();
         Arrays.sort(sorted);
         double mean = Arrays.stream(nanos).average().orElseThrow() / 1_000_000.0;
@@ -52,6 +57,7 @@ public final class ShapeBenchmark {
         data.put("meanMs", mean);
         data.put("p95Ms", sorted[(int) Math.ceil(SAMPLES * .95) - 1] / 1_000_000.0);
         data.put("fillsPerFrame", (double) fills / SAMPLES);
+        data.put("shaderQuadsPerFrame", (double) quads / SAMPLES);
         try {
             Files.writeString(result, new GsonBuilder().setPrettyPrinting().create().toJson(data) + "\n");
         } catch (Exception failure) {

@@ -77,7 +77,7 @@ are retained in `docs/history/`.
 ## Remaining direction
 
 Step 6 (shader-drawn shapes) has a [preliminary 40-waypoint baseline](reports/2026-11-11-step-6-baseline.md);
-the shader implementation and comparison remain outstanding. Step 7 (Apollo restrictions, then friends/status,
+an experimental opt-in shader and preliminary comparison exist, but acceptance remains outstanding. Step 7 (Apollo restrictions, then friends/status,
 possible NeoForge and limited optimizations) remain future work. No new gameplay
 features are included in this restructure. Apollo licensing/detection needs
 verification before implementation. Better Hitreg author-permission provenance
