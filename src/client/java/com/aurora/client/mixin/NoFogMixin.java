@@ -23,7 +23,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(AtmosphericFogEnvironment.class)
 public abstract class NoFogMixin {
 
-    @Inject(method = "setupFog", at = @At("TAIL"), require = 1)
+    @Inject(method = "setupFog", at = @At("TAIL"))
     private void aurora$multiplyFog(FogData data, Camera camera,
                                     ClientLevel world, float viewDistance,
                                     DeltaTracker tickCounter, CallbackInfo ci) {

@@ -40,8 +40,7 @@ public abstract class VertexRenderingMixin {
     @ModifyArg(
             method = "method_62299(Lcom/mojang/blaze3d/vertex/VertexConsumer;Lcom/mojang/blaze3d/vertex/PoseStack$Pose;DDDIFDDDDDD)V",
             at = @At(value = "INVOKE",
-                    target = "Lcom/mojang/blaze3d/vertex/VertexConsumer;setColor(I)Lcom/mojang/blaze3d/vertex/VertexConsumer;"),
-            require = 1
+                    target = "Lcom/mojang/blaze3d/vertex/VertexConsumer;setColor(I)Lcom/mojang/blaze3d/vertex/VertexConsumer;")
     )
     private static int aurora$recolorOutlineSetColor(int originalColor) {
         return aurora$mapColor(originalColor);

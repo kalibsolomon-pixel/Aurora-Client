@@ -24,7 +24,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(value = Minecraft.class, priority = 10000)
 public abstract class MinecraftClientRenderMixin {
 
-    @Inject(method = "runTick", at = @At("HEAD"), require = 1)
+    @Inject(method = "runTick", at = @At("HEAD"))
     private void aurora$applyMouseDeltaPerFrame(boolean tick, CallbackInfo ci) {
         Minecraft self = (Minecraft) (Object) this;
         AuroraConfig cfg = AuroraConfig.get();

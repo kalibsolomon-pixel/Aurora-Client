@@ -27,7 +27,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(ItemInHandRenderer.class)
 public abstract class HeldItemSeamFixMixin {
 
-    @Inject(method = "renderArmWithItem", at = @At("HEAD"), require = 1)
+    @Inject(method = "renderArmWithItem", at = @At("HEAD"))
     private void aurora$pushSeamScale(
             net.minecraft.client.player.AbstractClientPlayer player,
             float tickProgress, float pitch, net.minecraft.world.InteractionHand hand,
@@ -45,7 +45,7 @@ public abstract class HeldItemSeamFixMixin {
         matrices.scale(s, s, s);
     }
 
-    @Inject(method = "renderArmWithItem", at = @At("RETURN"), require = 1)
+    @Inject(method = "renderArmWithItem", at = @At("RETURN"))
     private void aurora$popSeamScale(
             net.minecraft.client.player.AbstractClientPlayer player,
             float tickProgress, float pitch, net.minecraft.world.InteractionHand hand,

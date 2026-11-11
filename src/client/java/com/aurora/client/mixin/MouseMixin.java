@@ -15,7 +15,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(MouseHandler.class)
 public abstract class MouseMixin {
 
-    @Inject(method = "onScroll", at = @At("HEAD"), cancellable = true, require = 1)
+    @Inject(method = "onScroll", at = @At("HEAD"), cancellable = true)
     private void aurora$interceptScroll(long window, double horizontal, double vertical, CallbackInfo ci) {
         if (ZoomFeature.isActive()) {
             ZoomFeature.onScroll(vertical);

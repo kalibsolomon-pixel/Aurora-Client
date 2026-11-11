@@ -26,7 +26,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(ScreenEffectRenderer.class)
 public abstract class LavaOverlayMixin {
 
-    @Inject(method = "renderFire", at = @At("HEAD"), cancellable = true, require = 1)
+    @Inject(method = "renderFire", at = @At("HEAD"), cancellable = true)
     private static void aurora$cancelLavaOverlay(PoseStack matrices, MultiBufferSource vcp, TextureAtlasSprite sprite, CallbackInfo ci) {
         AuroraConfig cfg = AuroraConfig.get();
         if (!cfg.lavaClarityEnabled) return;

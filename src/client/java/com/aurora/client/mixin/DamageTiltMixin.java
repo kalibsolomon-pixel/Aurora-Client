@@ -30,8 +30,7 @@ public abstract class DamageTiltMixin {
 
     @Inject(
             method = "bobHurt",
-            at = @At("TAIL"),
-            require = 1
+            at = @At("TAIL")
     )
     private void aurora$applyRollTilt(PoseStack matrices, float tickDelta, CallbackInfo ci) {
         AuroraConfig cfg = AuroraConfig.get();

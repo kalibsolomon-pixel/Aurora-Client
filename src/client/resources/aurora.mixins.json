@@ -79,6 +79,6 @@
     "hitreg.SourceMixin"
   ],
   "injectors": {
-    "defaultRequire": 1
+    "defaultRequire": 0
   }
 }

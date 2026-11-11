@@ -67,6 +67,21 @@ public final class AuroraMixinPlugin implements IMixinConfigPlugin {
 
     @Override
     public void postApply(String targetClassName, ClassNode targetClass, String mixinClassName, IMixinInfo mixinInfo) {
-        MixinHealth.noteApplied(MixinHealth.shortName(mixinClassName));
+        String name = MixinHealth.shortName(mixinClassName);
+        MixinHealth.noteApplied(name);
+        // Injection points are checked here, not by Mixin's require (see InjectionCheck).
+        List<String> unmatched;
+        try {
+            unmatched = InjectionCheck.unmatched(targetClass, mixinInfo.getClassNode(0));
+        } catch (Throwable t) {
+            LOGGER.warn("Could not check the injection points of {}", name, t);
+            return;
+        }
+        if (!unmatched.isEmpty()) {
+            String detail = "no injection point matched for " + String.join(", ", unmatched);
+            LOGGER.error("Mixin {} applied to {} but {}; the features that need it are off for this session.",
+                    name, targetClassName, detail);
+            MixinHealth.noteFailure(name, targetClassName, MixinHealth.Cause.APPLY_FAILED, detail);
+        }
     }
 }

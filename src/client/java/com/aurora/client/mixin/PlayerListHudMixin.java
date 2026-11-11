@@ -21,8 +21,7 @@ public abstract class PlayerListHudMixin {
     @Inject(
             method = "renderPingIcon",
             at = @At("HEAD"),
-            cancellable = true,
-            require = 1
+            cancellable = true
     )
     private void aurora$replacePingWithNumber(
             GuiGraphicsExtractor ctx,

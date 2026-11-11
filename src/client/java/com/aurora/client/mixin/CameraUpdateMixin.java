@@ -37,8 +37,7 @@ public abstract class CameraUpdateMixin {
                     target = "Lnet/minecraft/client/Camera;setRotation(FF)V",
                     ordinal = 1,
                     shift = At.Shift.AFTER
-            ),
-            require = 1
+            )
     )
     private void aurora$applyRotation(
             Level level, Entity focusedEntity, boolean thirdPerson,
