@@ -120,7 +120,6 @@ public abstract class PlayerHealthLabelMixin {
                 label,
                 !state.isDiscrete,
                 color,
-                state.distanceToCameraSq,
                 camera);
     }
 

@@ -182,7 +182,7 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
                 cancelX, btnY, btnW, btnH,
                 Component.literal("Cancel"),
                 "Discards any edits and returns.",
-                () -> this.minecraft.setScreen(parent)).glassBackground(true));
+                () -> this.minecraft.gui.setScreen(parent)).glassBackground(true));
 
         this.addRenderableWidget(ButtonWidget.semantic(
                 applyX, btnY, btnW, btnH,
@@ -190,7 +190,7 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
                 "Applies the selected color and returns.",
                 () -> {
                     onApply.accept(currentArgb());
-                    this.minecraft.setScreen(parent);
+                    this.minecraft.gui.setScreen(parent);
                 }).glassStyle(Button.GlassStyle.STAINED).primary(true));
     }
 
@@ -496,6 +496,6 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
 
     @Override
     public void onClose() {
-        this.minecraft.setScreen(parent);
+        this.minecraft.gui.setScreen(parent);
     }
 }

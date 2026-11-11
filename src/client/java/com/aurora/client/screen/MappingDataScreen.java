@@ -60,6 +60,6 @@ public final class MappingDataScreen extends Screen implements ThemedScreen {
                 x + 12, y + h - 8 - (com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_H + font.lineHeight) / 2, ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
         super.extractRenderState(g, mx, my, delta);
     }
-    @Override public void onClose() { minecraft.setScreen(parent); }
+    @Override public void onClose() { minecraft.gui.setScreen(parent); }
     @Override public boolean isPauseScreen() { return false; }
 }

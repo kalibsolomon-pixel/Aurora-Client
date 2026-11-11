@@ -25,10 +25,10 @@ public final class MaterialSurface {
     /** Production screen context; includes the explicitly Aurora-styled vanilla selection screens. */
     public static boolean unified() {
         Minecraft mc = Minecraft.getInstance();
-        return mc != null && (mc.screen instanceof ThemedScreen screen && screen.unifiedTheme()
+        return mc != null && (mc.gui.screen() instanceof ThemedScreen screen && screen.unifiedTheme()
                 || com.aurora.client.config.AuroraConfig.get().customTitleScreen &&
-                   (mc.screen instanceof net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen
-                    || mc.screen instanceof net.minecraft.client.gui.screens.worldselection.SelectWorldScreen));
+                   (mc.gui.screen() instanceof net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen
+                    || mc.gui.screen() instanceof net.minecraft.client.gui.screens.worldselection.SelectWorldScreen));
     }
 
     /** Compatibility mapping for material-aware painters. */
@@ -127,9 +127,9 @@ public final class MaterialSurface {
         var window=mc.getWindow();
         int width=window.getGuiScaledWidth(),height=window.getGuiScaledHeight();
         int scale=Math.max(1,(int)window.getGuiScale());
-        if(templateOwner!=mc.screen || templateWidth!=width || templateHeight!=height || templateScale!=scale) {
+        if(templateOwner!=mc.gui.screen() || templateWidth!=width || templateHeight!=height || templateScale!=scale) {
             disposeTemplates();
-            templateOwner=mc.screen;
+            templateOwner=mc.gui.screen();
             templateWidth=width;templateHeight=height;templateScale=scale;
         }
     }

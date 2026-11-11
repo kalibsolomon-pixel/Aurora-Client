@@ -176,34 +176,13 @@ decline guard were removed at the user's request. Config and profile migration r
 the obsolete member while preserving accent, mode, corners and opacity. Production
 uses the single approved material; safety declines still keep complete fallback chrome.
 
-## 3. Glass material pipeline (`BlurPanelRenderer`, 1755 lines)
+## 3. Glass material pipeline (`BlurPanelRenderer`, `PortableBlurRenderer`)
 
-Read the class javadoc before touching anything in it — it encodes hard-won lessons.
+As of the 26.2 checkpoint, every backend uses Minecraft's Blaze3D device and command API. There is no raw OpenGL capture, shader compilation or CPU readback in Aurora's glass path. Minecraft and Sodium support native Vulkan in 26.2; a separate VulkanMod path is no longer needed.
 
-**Pipeline per panel, per frame** (live backdrop is never cached, by design):
-`glBlitFramebuffer` capture of a padded region from the main render target (via a persistent
-reader FBO wrapping the main color texture — 1.21.11's GUI records blits into a deferred
-`GuiRenderState`, so the world lives in the MAIN target, not the ambient binding) → quarter-res
-two-pass separable Gaussian on grow-only shared chain textures → composite pass (rounded-rect
-SDF coverage + two lighting terms) → `glReadPixels` readback into a pooled `NativeImage`/
-`DynamicTexture` (RGBA→ARGB Java loop) → ordinary `GuiGraphics.blit`.
+During GUI extraction, each panel claims a distinct pooled output, sizes its targets, records its GUI blit and queues the passes. `GuiRendererGlassMixin` submits the queue after the current world or declared menu panorama is drawn and before GUI rendering. A padded sub-rect of the main target is downsampled to half/quarter resolution, blurred in two separable Gaussian passes, then composited with rounded coverage and lighting. The caller applies the `WINDOW_FILL` tint once.
 
-That is the OpenGL/Sodium implementation. Since 2026-10-19 the active device
-selects the backend before any native GL dispatch. A `GlTexture` check cannot
-identify it: VulkanMod subclasses that texture class but supplies a `VkGpuDevice`
-and a GLFW window with no GL context. Calling GL20 shader creation there caused
-a native access violation, beyond Java exception recovery.
-
-`PortableBlurRenderer` implements the same glass stages on Vulkan with Blaze3D
-render passes, half/quarter downsampling, GPU attachments and immutable per-pass
-uniform buffers. Each deferred GUI blit keeps a distinct GPU result; replaced
-resources retire after the referencing GUI frame, with device-managed GPU
-retirement. No CPU readback or GL state exists in that path. Texture coordinates
-remain top-down through VulkanMod's negative-height viewport. Both paths retain
-the opacity, lighting, output-priority and layering contracts below. The diagnostic
-Solid/Stripes backdrop also has a device-API path. Native pixel, pool-lifetime and
-gameplay regressions are opt-in under `tools/vulkan/`; see
-`VULKAN_COMPATIBILITY_REPORT.md` for pinned inputs, results and limits.
+`PortableBlurRenderer` keeps immutable parameters for every submitted pass. Replaced textures and buffers retire at the next frame boundary; the GPU backend owns their native lifetime. Extraction queues discarded by an unrendered frame are cleared by `beginFrame()`. The diagnostic Solid/Stripes backdrop uses the same device API.
 
 **Lighting = exactly two terms** against one fixed light (`normalize(0.25, −1.0)`): a
 full-surface directional gradient and a fixed-width directional border stroke. Raised vs
@@ -219,23 +198,12 @@ depressed = inversion of both terms. SDF-normal lighting, specular, refraction, 
   texture per device rect+radius, 16-entry cap) with alpha = opacity². Solid pastel at
   100% opacity.
 
-**Reliability machinery** (each entry fixed a real crash/bug — do not "simplify"):
-- `permanentlyDisabled` latch: any unexpected GL failure disables glass for the session
-  (callers take flat fallbacks). Deliberate safety net; no recovery path except shutdown —
-  an open judgment call, see AGENTS.md §9.
-- Screenshot (F2) interlock: `ScreenshotMixin` → `noteScreenshotGrab()` suppresses glass 400 ms;
-  plus neutral PACK/UNPACK pixel-store state and zeroed pack-buffer bindings at pipeline
-  entry/exit (a stale `PACK_ROW_LENGTH` was an out-of-bounds native write → real JVM crashes).
-- GL error-queue drain before capture so the latch only fires on OUR errors.
-- Rim-mask eviction: cold-only + destruction deferred to `beginFrame()` — destroying a texture
-  mid-frame that a pending deferred blit still references was the "Reset kills glass" bug.
-- Output pool: 24 pooled output textures, epoch-stamped per frame (`beginFrame()` from the
-  render-tick mixin). Concurrent panels each need their own texture (deferred blits).
-  **Exhaustion declines extra panels** → flat-fallback flicker; observed live on 2026-09-04
-  (see `GUI_AUDIT.md` B1).
-- Instrumentation: `-Daurora.glassStats=true` → per-phase ms/panel log line every 60 frames
-  (capture/blur/composite/readGL/loop/upload/blit). Zero cost otherwise. Run this BEFORE any
-  glass perf work.
+**Reliability machinery**:
+- An unexpected device/render failure disables glass for the session; callers retain their flat fallback.
+- `ScreenshotMixin` suppresses glass for 400 ms during F2 captures. Blaze3D owns native pixel-store/readback state.
+- Rim masks evict cold entries and defer destruction to `beginFrame()` so recorded GUI blits retain their textures.
+- The 64-slot output pool tracks demand by window/control/row/detail priority. Exhaustion declines extra panels for that frame.
+- `-Daurora.glassStats=true` reports extraction and command-submission CPU time, panel counts and declines every 60 frames. These are CPU measurements, not GPU duration. `Timed` also counts command submission toward Aurora's own CPU overhead.
 
 **The glass integration idiom** — one implementation, `ui/component/GlassSurface`
 (`GUI_AUDIT.md` R1; adopted by `ProfileManagerScreen`, `WaypointManagerScreen`, `Button`,

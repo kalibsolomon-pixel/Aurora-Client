@@ -1,9 +1,9 @@
 package com.aurora.client.util.reflex;
 
-import org.lwjgl.opengl.GL32C;
-import org.lwjgl.opengl.GL33C;
+import com.mojang.blaze3d.systems.GpuQueryPool;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.aurora.client.mixin.GpuDeviceTimestampAccessor;
 
-import org.lwjgl.opengl.GL11C;
 import static com.aurora.client.AuroraClient.LOGGER;
 
 public class GpuTimeCollector {
@@ -14,18 +14,33 @@ public class GpuTimeCollector {
     public Integer startTimeQuery = null;
     public Integer endTimeQuery = null;
 
+    private GpuQueryPool queries;
     private Runnable startCallback = null;
     private Runnable endCallback = null;
 
     /** Logs the dropped-sample warning once per session; DEBUG afterwards. */
     private static boolean loggedNullStartDrop = false;
 
+    private static com.mojang.blaze3d.systems.GpuDevice calibratedDevice;
+    private static long gpuSystemOffset;
+
     long gpuToSystem(long gpu) {
-        long[] t = new long[1];
-        GL33C.glGetInteger64v(GL33C.GL_TIMESTAMP, t);
-        long system = System.nanoTime();
-        long gpuToSystemOffset = system - t[0];
-        return gpu + gpuToSystemOffset;
+        var device = RenderSystem.getDevice();
+        if (calibratedDevice != device) {
+            if (!(device instanceof GpuDeviceTimestampAccessor clock)) {
+                throw new IllegalStateException("GPU clock hook unavailable");
+            }
+            // Vulkan's clock read submits and waits for a query. Calibrate once
+            // per device, as vanilla's GPU profiler does, never once per frame.
+            long now = nanoseconds(clock.aurora$timestampNow());
+            gpuSystemOffset = System.nanoTime() - now;
+            calibratedDevice = device;
+        }
+        return gpu + gpuSystemOffset;
+    }
+
+    private long nanoseconds(long timestamp) {
+        return (long) (timestamp * (double) RenderSystem.getDevice().getDeviceInfo().timestampPeriod());
     }
 
     GpuTimeCollector() {
@@ -37,12 +52,10 @@ public class GpuTimeCollector {
     }
 
     public void startQueryInsert() {
-        startTimeQuery = GL32C.glGenQueries();
-        GL33C.glQueryCounter(startTimeQuery, GL33C.GL_TIMESTAMP);
+        queries = RenderSystem.getDevice().createTimestampQueryPool(2);
+        startTimeQuery = 0;
+        RenderSystem.getDevice().createCommandEncoder().writeTimestamp(queries, startTimeQuery);
         startQueryInserted = true;
-        if (startTimeQuery == null) {
-            throw new RuntimeException("Could not find query insertion time");
-        }
     }
 
     public void startQueryCheck() {
@@ -56,9 +69,9 @@ public class GpuTimeCollector {
         // (completed normally, or dropped by endQueryCheck's interrupted-frame
         // path): nothing to poll, startTimeGpu legitimately stays null.
         if (startTimeGpu == null && startTimeQuery != null) {
-            if (GL33C.glGetQueryObjecti64(startTimeQuery, GL33C.GL_QUERY_RESULT_AVAILABLE) == GL11C.GL_TRUE) {
-                startTimeGpu = GL33C.glGetQueryObjecti64(startTimeQuery, GL33C.GL_QUERY_RESULT);
-                GL32C.glDeleteQueries(startTimeQuery);
+            var value = queries.getValue(startTimeQuery);
+            if (value.isPresent()) {
+                startTimeGpu = nanoseconds(value.orElseThrow());
                 startTimeQuery = null;
 
                 startTimeSystem = gpuToSystem(startTimeGpu);
@@ -79,8 +92,8 @@ public class GpuTimeCollector {
             throw new IllegalStateException("startQueryInsert() must be called before endQueryInsert()");
         }
 
-        endTimeQuery = GL32C.glGenQueries();
-        GL33C.glQueryCounter(endTimeQuery, GL33C.GL_TIMESTAMP);
+        endTimeQuery = 1;
+        RenderSystem.getDevice().createCommandEncoder().writeTimestamp(queries, endTimeQuery);
 
         endQueryInserted = true;
     }
@@ -98,29 +111,16 @@ public class GpuTimeCollector {
             return true;
         }
 
-        if (GL33C.glGetQueryObjecti64(endTimeQuery, GL33C.GL_QUERY_RESULT_AVAILABLE) == GL11C.GL_TRUE) {
-            endTimeGpu = GL33C.glGetQueryObjecti64(endTimeQuery, GL33C.GL_QUERY_RESULT);
-            GL32C.glDeleteQueries(endTimeQuery);
+        var value = queries.getValue(endTimeQuery);
+        if (value.isPresent()) {
+            endTimeGpu = nanoseconds(value.orElseThrow());
             endTimeQuery = null;
 
             startQueryCheck();
             if (startTimeGpu == null) {
-                // The end timestamp retired but the start query has no result
-                // available — a legal GL state (glQueryCounter results may
-                // complete out of order) and the reliable outcome of a frame
-                // whose begin→end query cycle was interrupted mid-pair (a
-                // server transfer / disconnect runs queued tasks mid-frame,
-                // inside runTick and again inside disconnect's own task
-                // drain). Threw here until 2026-09-13: the IllegalStateException
-                // propagated through the runTick injection into vanilla's
-                // disconnect/render flow and crashed a real game. One frame's
-                // GPU sample is not crash-worthy — drop it, release the
-                // orphaned query, report "done". The end callback must NOT
-                // run: endTimeSystem needs startTimeSystem, which is missing.
-                if (startTimeQuery != null) {
-                    GL32C.glDeleteQueries(startTimeQuery);
-                    startTimeQuery = null;
-                }
+                // An interrupted frame may leave an incomplete pair. Drop that
+                // sample without propagating into vanilla's disconnect/render flow.
+                startTimeQuery = null;
                 if (!loggedNullStartDrop) {
                     loggedNullStartDrop = true;
                     LOGGER.warn("[Reflex] GPU start-timestamp query had no result when the end query "
@@ -133,7 +133,9 @@ public class GpuTimeCollector {
                 return true;
             }
 
-            endTimeSystem = gpuToSystem(endTimeGpu);
+            // Calibrate the pair once; a second clock read would add calibration
+            // jitter to the GPU duration used by the pacing policy.
+            endTimeSystem = startTimeSystem + (endTimeGpu - startTimeGpu);
             if (endCallback != null) {
                 endCallback.run();
             }
@@ -148,13 +150,11 @@ public class GpuTimeCollector {
         // collectors (stale-frame removal, an interrupted frame, the
         // session-disable drain in ReflexScheduler) would otherwise leak them
         // in the driver. Always called on the render thread.
-        if (startTimeQuery != null) {
-            GL32C.glDeleteQueries(startTimeQuery);
-            startTimeQuery = null;
-        }
-        if (endTimeQuery != null) {
-            GL32C.glDeleteQueries(endTimeQuery);
-            endTimeQuery = null;
+        startTimeQuery = null;
+        endTimeQuery = null;
+        if (queries != null) {
+            queries.close();
+            queries = null;
         }
         startTimeSystem = null;
         endTimeSystem = null;

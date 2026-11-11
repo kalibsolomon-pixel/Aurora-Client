@@ -1,6 +1,6 @@
 # Aurora Client: contributor and agent guide
 
-Aurora (`com.aurora.client`, mod id `aurora`) is a client-side Fabric mod for Minecraft 1.21.11: 38 quality-of-life, PvP and performance features (listed in `docs/FAIR_PLAY.md`) inside a themed GUI with a glass material. MIT licensed; code, fonts and libraries from other projects are listed in `THIRD_PARTY_NOTICES.md`.
+Aurora (`com.aurora.client`, mod id `aurora`) is a client-side Fabric mod for Minecraft 26.2: 38 quality-of-life, PvP and performance features (listed in `docs/FAIR_PLAY.md`) inside a themed GUI with a glass material. MIT licensed; code, fonts and libraries from other projects are listed in `THIRD_PARTY_NOTICES.md`.
 
 This guide is short on purpose. The full engineering history it replaced, including every investigation and the reasoning behind each rule below, is in [docs/history/AGENTS-2026-11-11.md](docs/history/AGENTS-2026-11-11.md). Older code comments and reports that cite "AGENTS.md §N" mean a section of that file.
 
@@ -12,9 +12,10 @@ This guide is short on purpose. The full engineering history it replaced, includ
 
 ## Build, test, run
 
-- Java 21 target, Gradle wrapper, Fabric Loom. Versions are in `gradle.properties`.
+- Java 25 target, Gradle wrapper, Fabric Loom. Versions are in `gradle.properties`.
 - `./gradlew test` runs the suite; `./gradlew build` writes `build/libs/aurora-<version>.jar`. `withSourcesJar()` stays disabled: a sources jar in `mods/` crashes Mixin at launch.
 - `./gradlew runClient` starts a dev client in `run/`. `run/` is the owner's live dev config and is not tracked; back up `run/config/aurora.json`, `run/config/profiles/` and `run/options.txt` before a test boot and restore them after. `--args='--quickPlaySingleplayer "New World"'` joins the saved world.
+- For ports, prefer a disposable copy of the world/config: `./gradlew runClient -Paurora.runDir=build/<fixture>/game`. This Loom property selects the actual game directory; overriding the task's working directory can be superseded by Loom. On Windows, use a Gradle init script to pass quick-play arguments containing spaces (the matrix runner does this). Test native backends with `--graphicsBackend OPENGL` / `VULKAN` in JavaExec's arguments.
 - Useful launch options (pass with `JAVA_TOOL_OPTIONS`): `-Daurora.diagnostics.log=true` writes the diagnostics report to the log after joining a world, `-Daurora.diagnostics.runs=N` repeats it, `-Daurora.mixin.disable=A,B` switches mixins off.
 - Checkout is LF on every platform (`.gitattributes`); source-contract tests match multi-line snippets with `\n`.
 - Scripts regenerate checked-in files: `tools/gen_fair_play_doc.py` (FAIR_PLAY.md), `tools/gen_third_party_notices.py` (the notices and the font license), `subset_script.py` at the root (the icon font subset). Tests fail when a generated file is stale.
@@ -73,7 +74,7 @@ The full conventions and their history are §6 of the old guide; violating them 
 5. With no world loaded, glass declines and the caller draws its flat fallback, unless the screen declared a menu backdrop this frame (`GlassSurface.renderMenuPanorama`).
 6. Every glass surface paints in the screen's glass pass, before `GlassSurface.overlayDim`; content paints after. The guard reports violations: read the report's stack, don't count reports.
 7. Each panel samples only its own sub-rect of the blur chain.
-8. Screenshots (F2) suppress glass for 400 ms; keep the pixel-store and pack-buffer resets.
+8. Screenshots (F2) suppress glass for 400 ms. Glass uses Blaze3D on both OpenGL and native Vulkan; the backend owns readback and native state.
 9. Focus and hover are carried by caret, text colour, focus ring or scale, never by changing the tint.
 10. Never destroy a texture mid-frame: `GuiGraphics` blits are deferred, so queue evictions and free them in `beginFrame()`.
 11. Drain the GL error queue before polling `glGetError`.

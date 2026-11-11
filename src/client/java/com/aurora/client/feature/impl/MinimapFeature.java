@@ -23,7 +23,7 @@ public class MinimapFeature implements Feature {
     public void onTick(Minecraft client) {
         AuroraConfig cfg = AuroraConfig.get();
         boolean pressed = AuroraKeybinds.consumePress("key.aurora.minimap_toggle");
-        if (pressed && client.screen == null && client.player != null) {
+        if (pressed && client.gui.screen() == null && client.player != null) {
             cfg.minimapEnabled = !cfg.minimapEnabled;
             AuroraConfig.save();
         }

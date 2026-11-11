@@ -493,7 +493,7 @@ public class PixelCanvasSetting extends FeatureSetting {
         if (hwContext == null) {
             String gpu = "unknown GPU";
             try {
-                String r = com.mojang.blaze3d.systems.RenderSystem.getDevice().getRenderer();
+                String r = com.mojang.blaze3d.systems.RenderSystem.getDevice().getDeviceInfo().name();
                 if (r != null && !r.isBlank()) gpu = r.trim();
             } catch (Throwable ignored) {
             }

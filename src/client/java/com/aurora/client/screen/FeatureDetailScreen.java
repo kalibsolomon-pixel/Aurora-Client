@@ -358,7 +358,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         // content height (expanded editors), framebuffer size, and GUI scale.
         // The row layer adds the settings' shape fingerprints.
         com.mojang.blaze3d.pipeline.RenderTarget main =
-                this.minecraft != null ? this.minecraft.getMainRenderTarget() : null;
+                this.minecraft != null ? this.minecraft.gameRenderer.mainRenderTarget() : null;
         int fbW = (main != null && main.width > 0) ? main.width : this.width;
         int fbH = (main != null && main.height > 0) ? main.height : this.height;
         int guiScale = Math.max(1, (int) this.minecraft.getWindow().getGuiScale());
@@ -754,7 +754,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
     public void onClose() {
         AuroraConfig.save();
         closeTransientState();
-        if (this.minecraft != null) this.minecraft.setScreen(parent);
+        if (this.minecraft != null) this.minecraft.gui.setScreen(parent);
     }
 
     /**

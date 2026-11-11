@@ -32,10 +32,10 @@ public class WorldMapFeature implements Feature {
         // only when the module card is enabled.
         if (AuroraKeybinds.consumePress("key.aurora.world_map")
                 && cfg.worldMapEnabled
-                && client.screen == null
+                && client.gui.screen() == null
                 && client.player != null
                 && client.level != null) {
-            client.setScreen(new WorldMapScreen());
+            client.gui.setScreen(new WorldMapScreen());
         }
 
         WorldMapClient.tick(client);

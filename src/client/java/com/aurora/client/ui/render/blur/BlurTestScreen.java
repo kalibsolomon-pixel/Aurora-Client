@@ -11,10 +11,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import org.lwjgl.opengl.GL11;
-import org.lwjgl.opengl.GL20;
-import org.lwjgl.opengl.GL30;
-import org.lwjgl.opengl.GL33;
 
 /**
  * Blur + lighting verification screen — one panel, three backdrops, a
@@ -99,17 +95,7 @@ public class BlurTestScreen extends Screen {
     // SOLID/STRIPES controls are rendered into this dedicated FBO each
     // frame and handed to the renderer as a CaptureSource. The batched
     // fills are still drawn for the eye; this FBO is what the blur samples.
-    private int backdropFbo;
     private final PortableBlurRenderer.SyntheticBackdrop portableBackdrop = new PortableBlurRenderer.SyntheticBackdrop();
-    private int backdropTex;
-    private int backdropW = -1, backdropH = -1;
-    private int backdropProgram = -1;
-    private int backdropVao = -1;
-    private int uBackdropMode = -1;
-    private int uBackdropSize = -1;
-    private int uBackdropScale = -1;
-    private int uBackdropSlide = -1;
-    private int uBackdropDetailAmp = -1;
 
     // ---- Controlled-motion experiment (2026-09-09 shimmer investigation) ----
     // slide=<float device px/frame> scrolls the synthetic STRIPES pattern
@@ -437,7 +423,7 @@ public class BlurTestScreen extends Screen {
             mc.execute(() -> {
                 try {
                     net.minecraft.client.Screenshot.grab(mc.gameDirectory, null,
-                            mc.getMainRenderTarget(), 1,
+                            mc.gameRenderer.mainRenderTarget(), 1,
                             c -> com.aurora.client.AuroraClient.LOGGER.info("[BlurTest] grab: {}", c.getString()));
                     com.aurora.client.AuroraClient.LOGGER.info("[BlurTest] grab issued (deferred, F2-equivalent context)");
                 } catch (Throwable t) {
@@ -510,12 +496,6 @@ public class BlurTestScreen extends Screen {
         // Release the synthetic backdrop target (the panel renderer owns
         // its own objects).
         portableBackdrop.close();
-        if (backdropFbo != 0) { GL30.glDeleteFramebuffers(backdropFbo); backdropFbo = 0; }
-        if (backdropTex != 0) { GL11.glDeleteTextures(backdropTex); backdropTex = 0; }
-        if (backdropProgram > 0) { GL20.glDeleteProgram(backdropProgram); backdropProgram = -1; }
-        if (backdropVao > 0) { GL30.glDeleteVertexArrays(backdropVao); backdropVao = -1; }
-        backdropW = -1;
-        backdropH = -1;
         super.removed();
     }
 
@@ -526,193 +506,12 @@ public class BlurTestScreen extends Screen {
      * {@link #drawBackdrop} fills so the eye and the blur sample agree.
      */
     private BlurPanelRenderer.CaptureSource renderSyntheticBackdrop() {
-        if (!com.aurora.client.ui.render.RenderBackend.isOpenGl()) {
-            var main = Minecraft.getInstance().getMainRenderTarget();
-            return portableBackdrop.render(main.width, main.height,
-                    (float) Minecraft.getInstance().getWindow().getGuiScale(),
-                    mode == Backdrop.STRIPES, slideAccum, slideDetailAmp);
-        }
-        try {
-            // HISTORY: this pass originally restored only program/FBO/VAO and
-            // leaked glDisable(GL_BLEND) into the rest of the frame. The GUI
-            // batch flushes at frame end under whatever state remains, so the
-            // LAST queued fill simply replaced pixels — the panel tint painted
-            // fully opaque no matter how low Background Opacity was set
-            // (looked like "the opacity setting is broken"; really a state
-            // leak). SavedGlState now brackets the pass exactly like the
-            // renderer's own GL work.
-            BlurPanelRenderer.SavedGlState gl = BlurPanelRenderer.SavedGlState.save();
-            try {
-                ensureSyntheticBackdrop();
-                GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, backdropFbo);
-                GL11.glViewport(0, 0, backdropW, backdropH);
-                GL11.glDisable(GL11.GL_BLEND);
-                GL11.glDisable(GL11.GL_DEPTH_TEST);
-                GL11.glDisable(GL11.GL_CULL_FACE);
-                GL11.glDisable(GL11.GL_SCISSOR_TEST);
-                GL33.glBindSampler(0, 0);
-                GL20.glUseProgram(backdropProgram);
-                GL20.glUniform1i(uBackdropMode, mode == Backdrop.SOLID ? 0 : 1);
-                GL20.glUniform2f(uBackdropSize, backdropW, backdropH);
-                GL20.glUniform1f(uBackdropScale,
-                        (float) Minecraft.getInstance().getWindow().getGuiScale());
-                if (uBackdropSlide >= 0) GL20.glUniform1f(uBackdropSlide, slideAccum);
-                if (uBackdropDetailAmp >= 0) GL20.glUniform1f(uBackdropDetailAmp, slideDetailAmp);
-                GL30.glBindVertexArray(backdropVao);
-                GL11.glDrawArrays(GL11.GL_TRIANGLES, 0, 3);
-            } finally {
-                gl.restore();
-            }
-            return new BlurPanelRenderer.CaptureSource(backdropFbo, backdropW, backdropH);
-        } catch (Throwable t) {
-            com.aurora.client.AuroraClient.LOGGER.error("[BlurTest] synthetic backdrop failed", t);
-            return null;
-        }
+        var main = Minecraft.getInstance().gameRenderer.mainRenderTarget();
+        return portableBackdrop.render(main.width, main.height,
+                (float) Minecraft.getInstance().getWindow().getGuiScale(),
+                mode == Backdrop.STRIPES, slideAccum, slideDetailAmp);
     }
 
-    private void ensureSyntheticBackdrop() {
-        // Allocated at the MAIN TARGET's device resolution (not GUI size):
-        // the capture's source-rect mapping then reduces 1:1 with zero
-        // Math.round quantization, and the stripe edges generated below
-        // land on exact device pixels exactly like the batched fills the
-        // eye compares against. (HISTORY: a GUI-resolution target forced
-        // the capture rect through device->GUI rounding — up to half a GUI
-        // pixel of extra shift — on top of the half-band phase offset fixed
-        // in the STRIPES shader below.)
-        Minecraft mc = Minecraft.getInstance();
-        int w = Math.max(4, mc.getMainRenderTarget().width);
-        int h = Math.max(4, mc.getMainRenderTarget().height);
-        if (w == backdropW && h == backdropH && backdropFbo != 0) return;
-        if (backdropFbo != 0) GL30.glDeleteFramebuffers(backdropFbo);
-        if (backdropTex != 0) GL11.glDeleteTextures(backdropTex);
-        backdropTex = GL11.glGenTextures();
-        GL11.glBindTexture(GL11.GL_TEXTURE_2D, backdropTex);
-        GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA8, w, h, 0,
-                GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, (java.nio.ByteBuffer) null);
-        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR);
-        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_LINEAR);
-        backdropFbo = GL30.glGenFramebuffers();
-        GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, backdropFbo);
-        GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, GL30.GL_COLOR_ATTACHMENT0,
-                GL11.GL_TEXTURE_2D, backdropTex, 0);
-        backdropW = w;
-        backdropH = h;
-        if (backdropProgram < 0) {
-            String vs = """
-                    #version 150
-                    out vec2 vUv;
-                    void main() {
-                        vec2 pos = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2));
-                        vUv = pos;
-                        gl_Position = vec4(pos * 2.0 - 1.0, 0.0, 1.0);
-                    }
-                    """;
-            String fs = """
-                    #version 150
-                    in vec2 vUv;
-                    out vec4 fragColor;
-                    uniform int uMode;
-                    uniform vec2 uSize;   // device px (main target size)
-                    uniform float uScale; // GUI scale factor
-                    uniform float uSlide; // stripe scroll phase, device px (0 = static)
-                    uniform float uDetailAmp; // per-pixel hash detail amplitude (0 = off)
-                    // Deterministic uint32 hash of a pixel coordinate — plain
-                    // wraparound arithmetic, bit-identical to the offline
-                    // analyzer's numpy uint32 mirror (shimmer experiment).
-                    float detailHash(uint x, uint y) {
-                        uint h = (x * 73856093u) ^ (y * 19349663u);
-                        h ^= h >> 13;
-                        h *= 1274126177u;
-                        h ^= h >> 16;
-                        return float(h & 255u) / 255.0;
-                    }
-                    void main() {
-                        if (uMode == 0) {
-                            // SOLID — same flat gray as the batched fill (0xFF85878C).
-                            fragColor = vec4(0.522, 0.529, 0.549, 1.0);
-                        } else {
-                            // STRIPES — a PHASE-EXACT, device-resolution duplicate
-                            // of the batched fills in drawBackdrop: 8-GUI-px
-                            // horizontal bands starting LIGHT at the top row,
-                            // 2-GUI-px accents at every 64 GUI px. This FBO is what
-                            // the panel SAMPLES; the batched fills are what the EYE
-                            // compares against — any phase/position difference
-                            // between the two reads as the backdrop being
-                            // compressed/shifted behind the panel (most visible at
-                            // low blur radii, where the pattern stays legible).
-                            // HISTORY: the original bands ran on
-                            // fract(vUv.y * h / 8) — a pattern offset HALF A BAND
-                            // from drawBackdrop's (vUv.y = 0 is the FBO's BOTTOM
-                            // row, and the viewport-edge phase lands mid-band), and
-                            // the accents were 1 px wide one column early, so
-                            // inside/outside alignment could never read correct at
-                            // any radius.
-                            // Pixel-center math: top-down row center
-                            // rc = uSize.y * (1 - vUv.y); light band iff
-                            // floor(rc / (8*uScale)) is even, i.e.
-                            // fract(rc / (16*uScale)) < 0.5. Column center
-                            // cc = uSize.x * vUv.x; accent iff
-                            // fract(cc / (64*uScale)) < 2/64.
-                            // uSlide offsets rc — the pattern scrolls DOWNWARD on
-                            // screen as the phase grows (known sub-pixel motion for
-                            // the shimmer experiment; see slidePxPerFrame).
-                            float rc = uSize.y * (1.0 - vUv.y) + uSlide;
-                            float band = 1.0 - step(0.5, fract(rc / (16.0 * uScale)));
-                            vec3 col = mix(vec3(0.161, 0.173, 0.200),
-                                           vec3(0.800, 0.812, 0.839), band);
-                            float cc = uSize.x * vUv.x;
-                            float accent = 1.0 - step(2.0 / 64.0, fract(cc / (64.0 * uScale)));
-                            vec3 outc = mix(col, vec3(0.549, 0.290, 0.314), accent);
-                            if (uDetailAmp > 0.0) {
-                                // Aliasing-rich detail: +-uDetailAmp hash noise on
-                                // the LUMINANCE axis, sliding with the bands.
-                                float det = detailHash(uint(floor(cc)), uint(floor(rc))) - 0.5;
-                                outc = clamp(outc + vec3(det * 2.0 * uDetailAmp), 0.0, 1.0);
-                            }
-                            fragColor = vec4(outc, 1.0);
-                        }
-                    }
-                    """;
-            int v = GL20.glCreateShader(GL20.GL_VERTEX_SHADER);
-            GL20.glShaderSource(v, vs);
-            GL20.glCompileShader(v);
-            int f = GL20.glCreateShader(GL20.GL_FRAGMENT_SHADER);
-            GL20.glShaderSource(f, fs);
-            GL20.glCompileShader(f);
-            int p = GL20.glCreateProgram();
-            GL20.glAttachShader(p, v);
-            GL20.glAttachShader(p, f);
-            GL20.glLinkProgram(p);
-            if (GL20.glGetProgrami(p, GL20.GL_LINK_STATUS) == GL11.GL_FALSE) {
-                throw new IllegalStateException("synthetic backdrop link failed: "
-                        + GL20.glGetProgramInfoLog(p, 4096));
-            }
-            GL20.glDeleteShader(v);
-            GL20.glDeleteShader(f);
-            backdropProgram = p;
-            uBackdropMode = GL20.glGetUniformLocation(p, "uMode");
-            uBackdropSize = GL20.glGetUniformLocation(p, "uSize");
-            uBackdropScale = GL20.glGetUniformLocation(p, "uScale");
-            uBackdropSlide = GL20.glGetUniformLocation(p, "uSlide");
-            uBackdropDetailAmp = GL20.glGetUniformLocation(p, "uDetailAmp");
-            backdropVao = GL30.glGenVertexArrays();
-        }
-    }
-
-    /**
-     * Static backdrop fills — the simplest possible thing that still makes
-     * blur visually obvious. SOLID is the negative control (a correct blur
-     * leaves it unchanged; lighting deltas are pure lighting); STRIPES is
-     * the positive control: 8-GUI-px alternating bands plus thin vertical
-     * accents, guaranteed non-animating, so at a large radius the bands
-     * must visibly smear into flat gray.
-     *
-     * <p>These fills are also the <b>phase reference</b> for the synthetic
-     * FBO's STRIPES mode: the shader in {@link #ensureSyntheticBackdrop()}
-     * must stay pixel-exact with what is drawn here (same band phase, same
-     * accent columns), or the pattern the panel samples will never line up
-     * with the pattern the eye sees outside it.
-     */
     private void drawBackdrop(GuiGraphicsExtractor g) {
         if (mode == Backdrop.SOLID) {
             g.fill(0, 0, this.width, this.height, 0xFF85878C);

@@ -23,9 +23,9 @@ public abstract class ReflexMinecraftMixin {
     }
 
     @Inject(
-            // 26.1: the frame is rendered in renderFrame and swapped by RenderSystem.flipFrame.
+            // 26.2 presents the rendered frame through the active GPU surface.
             method = "renderFrame",
-            at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/systems/RenderSystem;flipFrame(Lcom/mojang/blaze3d/TracyFrameCapture;)V")
+            at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/systems/GpuSurface;present()V")
     )
     private void aurora$reflexBeforeFlush(CallbackInfo ci) {
         ReflexScheduler.getInstance().beforeFlush();

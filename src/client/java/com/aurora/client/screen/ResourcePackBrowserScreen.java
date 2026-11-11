@@ -2114,7 +2114,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         // inside the cache, so re-opening the browser is instant instead of
         // re-downloading every icon. Earlier versions called clear() here,
         // which made every re-open pay the full network cost again.
-        if (this.minecraft != null) this.minecraft.setScreen(parent);
+        if (this.minecraft != null) this.minecraft.gui.setScreen(parent);
     }
 
     @Override

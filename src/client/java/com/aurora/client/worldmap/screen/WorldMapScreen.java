@@ -92,10 +92,10 @@ public final class WorldMapScreen extends Screen implements ThemedScreen {
                 Component.literal("Player"), "Return to the live dimension and follow the player. Shortcut P.", this::centerPlayer));
         addRenderableWidget(ButtonWidget.semantic(ax + actionW + GAP, row1, actionW, CTRL_H,
                 Component.literal("Waypoints"), "Search, edit and organize this world's waypoints.",
-                () -> minecraft.setScreen(new WaypointManagerScreen(this))));
+                () -> minecraft.gui.setScreen(new WaypointManagerScreen(this))));
         addRenderableWidget(ButtonWidget.semantic(ax + 2 * (actionW + GAP), row1, actionW, CTRL_H,
                 Component.literal("Settings"), "Map appearance, caching and legacy import.",
-                () -> minecraft.setScreen(new FeatureDetailScreen(this,
+                () -> minecraft.gui.setScreen(new FeatureDetailScreen(this,
                         FeatureRegistry.modules().stream().filter(f -> f.id.equals("world_map")).findFirst().orElseThrow()))));
         if (follow) centerPlayer();
         lastFrame = System.nanoTime();
@@ -298,7 +298,7 @@ public final class WorldMapScreen extends Screen implements ThemedScreen {
             for (Waypoint waypoint : markers) {
                 if (Math.abs(event.x() - screenX(waypoint.x + .5)) > 8
                         || Math.abs(event.y() - screenZ(waypoint.z + .5)) > 8) continue;
-                minecraft.setScreen(new WaypointEditScreen(this, waypoint, false)); return true;
+                minecraft.gui.setScreen(new WaypointEditScreen(this, waypoint, false)); return true;
             }
             dragging = true; follow = false; setFocused(null); return true;
         }
@@ -307,7 +307,7 @@ public final class WorldMapScreen extends Screen implements ThemedScreen {
             int z = (int) Math.floor(viewport.worldZ(event.y(), height));
             int y = minecraft.player == null ? 64 : minecraft.player.blockPosition().getY();
             // Color regions do not contain heights: the editor exposes Y explicitly.
-            minecraft.setScreen(new WaypointEditScreen(this,
+            minecraft.gui.setScreen(new WaypointEditScreen(this,
                     new Waypoint("Waypoint", x, y, z, dimension(), 0xFFFFAA00), true)); return true;
         }
         return false;
@@ -343,6 +343,6 @@ public final class WorldMapScreen extends Screen implements ThemedScreen {
     @Override public void onClose() {
         WorldMapClient engine = WorldMapClient.get();
         if (engine != null) engine.restoreLiveDimension();
-        minecraft.setScreen(null);
+        minecraft.gui.setScreen(null);
     }
 }

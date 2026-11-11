@@ -9,89 +9,10 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(value = Font.class, priority = 1500)
 public abstract class MixinFont {
-
-    // ========================================================================
-    //  drawInBatch interception (legacy path — still used by some callers)
-    // ========================================================================
-
-    @Inject(
-            method = "drawInBatch(Ljava/lang/String;FFIZLorg/joml/Matrix4fc;Lnet/minecraft/client/renderer/MultiBufferSource;Lnet/minecraft/client/gui/Font$DisplayMode;II)V",
-            at = @At("HEAD"),
-            cancellable = true
-    )
-    private void drawInBatchStringIntercept(String text, float x, float y, int color, boolean dropShadow, org.joml.Matrix4fc matrix, net.minecraft.client.renderer.MultiBufferSource bufferSource, net.minecraft.client.gui.Font.DisplayMode displayMode, int backgroundColor, int light, CallbackInfo ci) {
-        Style style = AuroraFontRenderer.getActiveStyle();
-        if (style != null && text != null) {
-            // Plain strings never carry their own font, so it's always safe
-            // to apply the configured custom font.
-            Component comp = Component.literal(text).withStyle(style);
-            Font self = (Font) (Object) this;
-            self.drawInBatch(comp, x, y, color, dropShadow, matrix, bufferSource, displayMode, backgroundColor, light);
-            ci.cancel();
-        }
-    }
-
-    @ModifyVariable(
-            method = "drawInBatch(Lnet/minecraft/network/chat/Component;FFIZLorg/joml/Matrix4fc;Lnet/minecraft/client/renderer/MultiBufferSource;Lnet/minecraft/client/gui/Font$DisplayMode;II)V",
-            at = @At("HEAD"),
-            argsOnly = true,
-            ordinal = 0
-    )
-    private Component modifyDrawInBatchComponent(Component component) {
-        Style style = AuroraFontRenderer.getActiveStyle();
-        if (style != null && component != null) {
-            // Preserve components that already specify a font (e.g. Material
-            // Symbols icon glyphs) — overriding them with the user's text font
-            // would render the icon codepoints as broken / missing glyphs.
-            net.minecraft.network.chat.FontDescription componentFont = component.getStyle().getFont();
-            if (componentFont != AuroraFontRenderer.DEFAULT_FONT) {
-                return component;
-            }
-            return component.copy().withStyle(style);
-        }
-        return component;
-    }
-
-    @ModifyVariable(
-            method = "drawInBatch(Lnet/minecraft/util/FormattedCharSequence;FFIZLorg/joml/Matrix4fc;Lnet/minecraft/client/renderer/MultiBufferSource;Lnet/minecraft/client/gui/Font$DisplayMode;II)V",
-            at = @At("HEAD"),
-            argsOnly = true,
-            ordinal = 0
-    )
-    private FormattedCharSequence modifyDrawInBatchSequence(FormattedCharSequence text) {
-        Style style = AuroraFontRenderer.getActiveStyle();
-        if (style != null && text != null) {
-            // Skip sequences that already carry a font (e.g. Material Symbols
-            // icon glyphs). Overriding them would render the icons as broken
-            // glyphs.
-            if (sequenceHasCustomFont(text)) {
-                return text;
-            }
-            // Swap ONLY the font, preserving every other per-character style
-            // attribute. Flattening the sequence to a plain string here (the
-            // old approach) destroyed the per-segment colors vanilla's
-            // CommandSuggestions attaches to the chat input — and every
-            // other styled sequence (colored chat, tooltips, …).
-            return AuroraFontRenderer.withCustomFont(text, style);
-        }
-        return text;
-    }
-
-    // ========================================================================
-    //  prepareText interception (MC 1.21.11+ path — used by GuiGraphicsExtractor)
-    //
-    //  In MC 1.21.11, GuiGraphicsExtractor.drawString was refactored to call
-    //  Font.prepareText directly instead of Font.drawInBatch. Since the
-    //  drawInBatch interceptors above don't catch this path, we must also
-    //  intercept prepareText to ensure the custom font is applied to ALL
-    //  text rendered through GuiGraphicsExtractor (module labels, detail screens,
-    //  vanilla menus, buttons, etc.).
-    // ========================================================================
 
     @Inject(
             method = "prepareText(Ljava/lang/String;FFIZI)Lnet/minecraft/client/gui/Font$PreparedText;",

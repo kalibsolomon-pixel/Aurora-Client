@@ -54,7 +54,7 @@ public final class AuroraKey {
     /** True when any GUI/screen is open — Aurora keybinds suppress here. */
     private static boolean suppressed() {
         Minecraft mc = Minecraft.getInstance();
-        return mc != null && mc.screen != null;
+        return mc != null && mc.gui.screen() != null;
     }
 
     /**

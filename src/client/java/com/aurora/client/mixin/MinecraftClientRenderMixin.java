@@ -23,6 +23,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  */
 @Mixin(value = Minecraft.class, priority = 10000)
 public abstract class MinecraftClientRenderMixin {
+    @org.spongepowered.asm.mixin.injection.ModifyArg(method = "renderFrame",
+            at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/systems/GpuSurface$PresentMode;getSupportedVsyncMode(Ljava/util/Collection;Z)Lcom/mojang/blaze3d/systems/GpuSurface$PresentMode;"), index = 1)
+    private boolean aurora$surfaceVsync(boolean vanilla) {
+        AuroraConfig cfg = AuroraConfig.get();
+        return cfg.lowLatencyRender && cfg.disableVSync ? false : vanilla;
+    }
+
 
     @Inject(method = "runTick", at = @At("HEAD"))
     private void aurora$applyMouseDeltaPerFrame(boolean tick, CallbackInfo ci) {
@@ -43,8 +50,8 @@ public abstract class MinecraftClientRenderMixin {
         // restrictions. A positive global cap must also work when Minecraft
         // skips limitDisplayFPS at Unlimited. One shared deadline owns both
         // hooks; post-swap rechecks restrictions after event pumping.
-        boolean auroraGui = self.screen != null
-                && self.screen.getClass().getName().startsWith("com.aurora.client.screen");
+        boolean auroraGui = self.gui.screen() != null
+                && self.gui.screen().getClass().getName().startsWith("com.aurora.client.screen");
         boolean customPacer = cfg.smoothFramePacer
                 && cfg.framePacingStrategy != AuroraConfig.PacingStrategy.VANILLA;
         var limit = FramePacing.resolve(self.getFramerateLimitTracker().getFramerateLimit(),

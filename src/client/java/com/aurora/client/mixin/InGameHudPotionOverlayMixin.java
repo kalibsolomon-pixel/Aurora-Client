@@ -2,7 +2,7 @@ package com.aurora.client.mixin;
 
 import com.aurora.client.config.AuroraConfig;
 import net.minecraft.client.DeltaTracker;
-import net.minecraft.client.gui.Gui;
+import net.minecraft.client.gui.Hud;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * HUD module is enabled. Aurora draws its own per-effect rows so vanilla's
  * top-right effect strip would otherwise overlap.
  */
-@Mixin(Gui.class)
+@Mixin(Hud.class)
 public abstract class InGameHudPotionOverlayMixin {
 
     @Inject(method = "extractEffects", at = @At("HEAD"), cancellable = true)

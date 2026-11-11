@@ -2,7 +2,7 @@ package com.aurora.client.mixin;
 
 import com.aurora.client.hud.SaturationOverlay;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.Gui;
+import net.minecraft.client.gui.Hud;
 import net.minecraft.world.entity.player.Player;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -15,7 +15,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  *
  * <p>Approach borrowed from AppleSkin (Unlicense).
  */
-@Mixin(Gui.class)
+@Mixin(Hud.class)
 public class InGameHudFoodMixin {
 
     @Inject(method = "extractFood", at = @At("RETURN"), require = 0)

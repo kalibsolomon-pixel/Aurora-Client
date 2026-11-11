@@ -128,7 +128,7 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
                     AuroraClient.captureLayouts(AuroraClient.modules());
                     AuroraConfig.save();
                     if (this.minecraft != null) {
-                        this.minecraft.setScreen(AuroraScreen.create());
+                        this.minecraft.gui.setScreen(AuroraScreen.create());
                     }
                 }).glassBackground(true).theming(com.aurora.client.ui.component.Button.Theming.BACKGROUND_ACCENT));
 
@@ -632,7 +632,7 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
                 AuroraClient.captureLayouts(AuroraClient.modules());
                 AuroraConfig.save();
                 if (this.minecraft != null) {
-                    this.minecraft.setScreen(FeatureDetailScreen.destination(this, fm));
+                    this.minecraft.gui.setScreen(FeatureDetailScreen.destination(this, fm));
                 }
                 return;
             }
@@ -644,7 +644,7 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
         AuroraClient.captureLayouts(AuroraClient.modules());
         AuroraConfig.save();
         Minecraft client = Minecraft.getInstance();
-        if (client != null) client.setScreen(null);
+        if (client != null) client.gui.setScreen(null);
     }
 
     @Override

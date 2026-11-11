@@ -12,6 +12,12 @@ import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
 public final class Timed {
     private Timed() {}
 
+    /** Deferred GPU work is submitted after GUI extraction and needs its own CPU bracket. */
+    public static void glass(Runnable body) {
+        long t = AuroraCost.begin();
+        try { body.run(); } finally { AuroraCost.end(t); }
+    }
+
     public static HudElement hud(HudElement body) {
         return (graphics, delta) -> {
             long t = AuroraCost.begin();

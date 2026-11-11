@@ -248,14 +248,12 @@ public final class FeatureCatalog {
         mixin("HeldItemRendererMixin", "the swing animation curve", "animations");
         mixin("MouseAccessor", "decoupled mouse input", "miscellaneous").gates("inputSamplingDecoupled");
         mixin("MinecraftClientRenderMixin", "frame pacing, decoupled mouse input and blurred glass", "miscellaneous")
-                .gates("smoothFramePacer", "adaptiveRenderSleeping", "inputSamplingDecoupled");
+                .gates("smoothFramePacer", "adaptiveRenderSleeping", "inputSamplingDecoupled", "lowLatencyRender", "disableVSync");
         mixin("MixinOverlayTexture", "recoloring the hurt flash", "hit_color").gates("hitColorEnabled");
         mixin("EquipmentLayerRendererMixin", "tinting armor and trims with the hit color", "hit_color")
                 .gates("hitColorTintArmor", "hitColorTintArmorTrims");
         mixin("ReloadableTextureMixin", "recoloring the enchantment glint", "glint_color").gates("glintColorEnabled");
         mixin("GlintRenderTypesMixin", "Alternative Glint", "glint_color").gates("glintColorAlternative");
-        mixin("GlintBufferSourceMixin", "Alternative Glint", "glint_color").gates("glintColorAlternative");
-        mixin("RenderTypesGlintAccessor", "Alternative Glint", "glint_color").gates("glintColorAlternative");
         mixin("InGameHudPotionOverlayMixin", "hiding the vanilla effect icons behind the Potion HUD", "potion_hud");
         mixin("NoFogMixin", "pushing back the distance fog", "no_fog").gates("noFogEnabled");
         mixin("UnderwaterClarityMixin", "underwater clarity", "pack_tweaks").gates("underwaterClarityEnabled");
@@ -296,6 +294,7 @@ public final class FeatureCatalog {
         mixin("MultiplayerServerListWidgetMixin", "numeric ping in the server list", "ping");
         mixin("ClientLevelWorldMapMixin", "refreshing the maps when a block changes", "world_map", "minimap");
         mixin("ReflexMinecraftMixin", "automatic latency reduction");
+        mixin("GpuDeviceTimestampAccessor", "automatic latency reduction");
         mixin("ItemStackRenderStateAccessor", "flat item icons in Aurora screens");
         mixin("ScreenPanoramaAccessor", "blurred glass over the menu panorama");
         for (String hitreg : List.of("ArmorMixin", "AttackMixin", "ChunkMixin", "DamageMixin", "EntityAccessor",

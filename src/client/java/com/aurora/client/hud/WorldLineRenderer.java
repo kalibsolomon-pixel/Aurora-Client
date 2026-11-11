@@ -1,7 +1,6 @@
 package com.aurora.client.hud;
 
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -152,17 +151,17 @@ public final class WorldLineRenderer {
 
     /**
      * Convenience: resolves the correct line VertexConsumer from a
-     * MultiBufferSource. Uses {@link RenderTypes#linesTranslucent()} — the
+     * WorldGeometryBuffers. Uses {@link RenderTypes#linesTranslucent()} — the
      * see-through look (the see-through option itself was removed with the
      * 2026-10-30 owner ruling; every caller keeps the former default).
      */
-    public static VertexConsumer getLineBuffer(MultiBufferSource consumers) {
+    public static VertexConsumer getLineBuffer(WorldGeometryBuffers consumers) {
         return consumers.getBuffer(RenderTypes.linesTranslucent());
     }
 
     /** Depth-tested lines (occluded by geometry) — the waypoint highlight's
      *  established look; unchanged by the see-through removal. */
-    public static VertexConsumer getOccludedLineBuffer(MultiBufferSource consumers) {
+    public static VertexConsumer getOccludedLineBuffer(WorldGeometryBuffers consumers) {
         return consumers.getBuffer(RenderTypes.lines());
     }
 }

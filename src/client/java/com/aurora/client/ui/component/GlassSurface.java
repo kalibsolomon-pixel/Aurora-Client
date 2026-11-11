@@ -293,7 +293,7 @@ public final class GlassSurface {
      */
     private static void report(String what) {
         Minecraft mc = Minecraft.getInstance();
-        String screen = mc != null && mc.screen != null ? mc.screen.getClass().getName() : "<no screen>";
+        String screen = mc != null && mc.gui.screen() != null ? mc.gui.screen().getClass().getName() : "<no screen>";
         if (!reported.add(screen + "|" + what)) return;
         String msg = "[GlassSurface] " + what + " on " + screen + " (AGENTS.md §6, layering contract)";
         if (FabricLoader.getInstance().isDevelopmentEnvironment()) {
@@ -316,7 +316,7 @@ public final class GlassSurface {
     /** Standalone card: call before dim; paint its translucent face after dim. */
     public static boolean card(GuiGraphicsExtractor g, float x, float y, float w, float h, float radius) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc != null && mc.screen instanceof ThemedScreen screen && screen.parentGlassOnly()) return false;
+        if (mc != null && mc.gui.screen() instanceof ThemedScreen screen && screen.parentGlassOnly()) return false;
         return paint(g,x,y,w,h,radius,UNIFIED_LIGHTING,ThemeManager.color(ThemeToken.WINDOW_FILL),
                 BlurPanelRenderer.Priority.CONTROL);
     }

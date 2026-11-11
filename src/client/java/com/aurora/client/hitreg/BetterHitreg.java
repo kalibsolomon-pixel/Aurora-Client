@@ -86,7 +86,7 @@ public final class BetterHitreg {
         ClientTickEvents.START_CLIENT_TICK.register(mc -> tick());
 
         LevelRenderEvents.END_MAIN.register(context -> {
-            Render.render(context.gameRenderer().getMainCamera());
+            Render.render(context.gameRenderer().mainCamera());
         });
 
         HudElementRegistry.addLast(com.aurora.client.AuroraClient.id("hitreg_score"), (context, tickCounter) -> {
@@ -109,7 +109,7 @@ public final class BetterHitreg {
         AuroraConfig cfg = AuroraConfig.get();
         boolean enabled = cfg.hitregEnabled;
 
-        if (settingsEdge.justPressed(cfg.hitregSettingsKey) && enabled && mc.screen == null) {
+        if (settingsEdge.justPressed(cfg.hitregSettingsKey) && enabled && mc.gui.screen() == null) {
             openSettings(mc);
         }
 
@@ -147,10 +147,10 @@ public final class BetterHitreg {
     public static void openSettings(Minecraft mc) {
         for (FeatureMetadata fm : FeatureRegistry.modules()) {
             if (FEATURE_ID.equals(fm.id)) {
-                mc.setScreen(new FeatureDetailScreen(null, fm));
+                mc.gui.setScreen(new FeatureDetailScreen(null, fm));
                 return;
             }
         }
-        mc.setScreen(com.aurora.client.screen.AuroraScreen.create());
+        mc.gui.setScreen(com.aurora.client.screen.AuroraScreen.create());
     }
 }

@@ -39,8 +39,8 @@ public abstract class AbstractButtonMixin {
     private boolean aurora$shouldApplyStyle() {
         if (!AuroraConfig.get().customTitleScreen) return false;
         Minecraft mc = Minecraft.getInstance();
-        if (mc == null || mc.screen == null) return false;
-        if (!(mc.screen instanceof JoinMultiplayerScreen || mc.screen instanceof SelectWorldScreen)) return false;
+        if (mc == null || mc.gui.screen() == null) return false;
+        if (!(mc.gui.screen() instanceof JoinMultiplayerScreen || mc.gui.screen() instanceof SelectWorldScreen)) return false;
 
         // Only the standard vanilla button — exactly what Button.builder()
         // constructs. On 1.21.11 that is the inner subclass Button.Plain

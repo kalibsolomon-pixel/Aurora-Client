@@ -1011,7 +1011,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
     public void onClose() {
         commitEditors();
         saveOnClose();
-        if (this.minecraft != null) this.minecraft.setScreen(parent);
+        if (this.minecraft != null) this.minecraft.gui.setScreen(parent);
     }
 
     @Override
