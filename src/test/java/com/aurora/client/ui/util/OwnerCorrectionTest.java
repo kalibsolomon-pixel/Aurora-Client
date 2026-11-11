@@ -1,5 +1,6 @@
 package com.aurora.client.ui.util;
 
+import com.aurora.client.SourceTree;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
@@ -7,7 +8,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class OwnerCorrectionTest {
     private String source(String path) throws Exception {
-        return Files.readString(Path.of("src/client/java/com/aurora/client/" + path));
+        return Files.readString(SourceTree.resolve(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/" + path));
     }
     @Test void nativeInkSurvivesOddBoundsAtEverySupportedScale() {
         for (int scale = 1; scale <= 6; scale++) for (int ink = 1; ink <= 192; ink++) {

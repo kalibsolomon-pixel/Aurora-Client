@@ -49,7 +49,15 @@ if "--window-script" in args:
     del args[i:i + 2]
 PINS = json.loads(Path(args[0]).read_text())
 JARS, OUT = Path(args[1]), Path(args[2])
-only = args[3:] or list(PINS["sets"])
+requested = args[3:]
+only = requested or list(PINS["sets"])
+for name in list(only):
+    allowed = PINS.get("set_backends", {}).get(name)
+    if graphics_backend and allowed and graphics_backend not in allowed:
+        if requested:
+            sys.exit(f"{name} supports {allowed}, not {graphics_backend}")
+        print(f"Skipping {name} on {graphics_backend}: supports {allowed}", flush=True)
+        only.remove(name)
 MODS, LOG = run_dir / "mods", run_dir / "logs" / "latest.log"
 OUT = OUT.resolve()
 OUT.mkdir(parents=True, exist_ok=True)

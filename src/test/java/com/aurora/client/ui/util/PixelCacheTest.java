@@ -23,10 +23,10 @@ class PixelCacheTest {
     }
     private static int[] row(float left, float right, int color) throws Exception {
         int[] result = new int[8];
-        RenderUtil.RectSink sink = (x1,y1,x2,y2,argb) -> {
+        com.aurora.client.port.DrawSurface sink = (x1,y1,x2,y2,argb) -> {
             for (int x = x1; x < x2; x++) { assertEquals(0, result[x], "coverage spans must not overlap"); result[x] = argb; }
         };
-        Method method = RenderUtil.class.getDeclaredMethod("fillAARow", RenderUtil.RectSink.class, float.class, float.class, float.class, int.class);
+        Method method = ShapeRasterizer.class.getDeclaredMethod("fillAARow", com.aurora.client.port.DrawSurface.class, float.class, float.class, float.class, int.class);
         method.setAccessible(true); method.invoke(null, sink, left, 0f, right, color);
         return result;
     }

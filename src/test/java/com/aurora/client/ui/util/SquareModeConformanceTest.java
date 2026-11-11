@@ -1,5 +1,6 @@
 package com.aurora.client.ui.util;
 
+import com.aurora.client.SourceTree;
 import com.aurora.client.theme.ThemeRoundness;
 import org.junit.jupiter.api.Test;
 
@@ -20,7 +21,7 @@ class SquareModeConformanceTest {
 
     private static String read(String path) {
         try {
-            return Files.readString(Path.of(path));
+            return Files.readString(SourceTree.resolve(path));
         } catch (java.io.IOException e) {
             return fail("source not readable: " + path);
         }
@@ -58,7 +59,7 @@ class SquareModeConformanceTest {
 
     @Test
     void auroraScreenChromeResolvesThroughRadiusSmallInBothPaths() {
-        String src = read("src/client/java/com/aurora/client/screen/AuroraScreen.java");
+        String src = read(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/AuroraScreen.java");
         // Isolated raised-glass path (paintGlassPass) — sidebar tabs,
         // Profiles, and the layout pair all share the resolved token.
         assertTrue(src.contains("chipGlass[i] = GlassSurface.card(g, catX, catY, TAB_W, TAB_H,"),
@@ -91,7 +92,7 @@ class SquareModeConformanceTest {
 
     @Test
     void auroraScreenChromeLiteralsAreGone() {
-        String src = read("src/client/java/com/aurora/client/screen/AuroraScreen.java");
+        String src = read(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/AuroraScreen.java");
         assertFalse(src.contains("64, TAB_H, 5"), "the chip literal 5 must not return");
         assertFalse(src.contains("64, 22, 5,"), "the flat chip literal 5 must not return");
         assertFalse(src.contains("20, 20, 4,"), "the layout-button literal 4 must not return");
@@ -102,13 +103,13 @@ class SquareModeConformanceTest {
 
     @Test
     void auroraScreenScrollbarThumbStaysAMechanicalCapsule() {
-        String src = read("src/client/java/com/aurora/client/ui/component/ScrollbarChrome.java");
+        String src = read(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/ui/component/ScrollbarChrome.java");
         // MECHANICAL exemption (C-7 ruling): the 3px thumb's capsule radius 2
         // is direct-manipulation chrome (the toggle/slider track family) —
         // pinned so it is not re-filed as a Square-mode bug.
         assertTrue(src.contains("3, (float) thumb.height(), 2,"),
                 "the scrollbar thumb keeps its mechanical capsule radius");
-        String host = read("src/client/java/com/aurora/client/screen/AuroraScreen.java");
+        String host = read(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/AuroraScreen.java");
         assertTrue(host.contains("MECHANICAL"),
                 "the exemption stays documented at the site");
     }
@@ -119,7 +120,7 @@ class SquareModeConformanceTest {
 
     @Test
     void managerToastRoutesThroughThemeRoundness() {
-        String src = read("src/client/java/com/aurora/client/screen/ManagerListScreen.java");
+        String src = read(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/ManagerListScreen.java");
         assertTrue(src.contains("toast.render(ctx, this.font, this.width, this.height,\n"
                         + "                ThemeManager.current().roundness().radiusSmall());"),
                 "the manager toast is ordinary feedback chrome — tokenized");
@@ -127,7 +128,7 @@ class SquareModeConformanceTest {
                 "the toast literal 4 must not return");
         // The pack browser's toast already passed the token — both screens
         // now share one radius policy.
-        String rpbs = read("src/client/java/com/aurora/client/screen/ResourcePackBrowserScreen.java");
+        String rpbs = read(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/ResourcePackBrowserScreen.java");
         assertTrue(rpbs.contains("AuroraTheme.RADIUS_SMALL") || rpbs.contains("radiusSmall()"),
                 "the pack browser toast keeps its tokenized radius");
     }
@@ -138,7 +139,7 @@ class SquareModeConformanceTest {
 
     @Test
     void colorPickerPreviewFollowsThemeRoundnessStripsStayDataDriven() {
-        String src = read("src/client/java/com/aurora/client/screen/ColorPickerScreen.java");
+        String src = read(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/ColorPickerScreen.java");
         assertTrue(src.contains("Math.min(previewH / 2f, ThemeManager.current().roundness().radiusSmall())"),
                 "the preview sample uses the ColorSwatch roundness pattern");
         assertFalse(src.contains("previewW, previewH, 4,"),
@@ -157,7 +158,7 @@ class SquareModeConformanceTest {
 
     @Test
     void keystrokesKeycapRadiusIsAnExplicitRepresentationalExemption() {
-        String src = read("src/client/java/com/aurora/client/hud/module/KeystrokesModule.java");
+        String src = read(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/hud/module/KeystrokesModule.java");
         assertTrue(src.contains("private static final int KEY_RADIUS = 3;"),
                 "the keycap radius stays the representational constant");
         assertTrue(src.contains("Square-mode-exempt"),
@@ -166,7 +167,7 @@ class SquareModeConformanceTest {
 
     @Test
     void hudBackgroundPanelsKeepTheirSanctionedBoxyDeviation() {
-        String src = read("src/client/java/com/aurora/client/util/HudBackgrounds.java");
+        String src = read(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/util/HudBackgrounds.java");
         assertTrue(src.contains("private static final int RADIUS = 2;"),
                 "the HUD panel radius stays the sanctioned constant");
         assertTrue(src.contains("Square-mode-exempt"),
@@ -180,8 +181,8 @@ class SquareModeConformanceTest {
 
     @Test
     void toggleAndSliderMechanicalShapesAreNotSquared() {
-        String toggle = read("src/client/java/com/aurora/client/ui/component/ToggleSwitch.java");
-        String slider = read("src/client/java/com/aurora/client/ui/component/Slider.java");
+        String toggle = read(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/ui/component/ToggleSwitch.java");
+        String slider = read(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/ui/component/Slider.java");
         // The capsule tracks and circular knobs are the recorded mechanical
         // exemptions (AGENTS.md §5: "Knobs/thumbs stay circular in every
         // mode"); ToggleSwitch's own comment records why radiusSmall once
@@ -196,7 +197,7 @@ class SquareModeConformanceTest {
 
     @Test
     void hudEditorChromeIsAlreadySquareConformantInBothModes() {
-        String src = read("src/client/java/com/aurora/client/screen/HudEditorScreen.java");
+        String src = read(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/HudEditorScreen.java");
         // C-7 ruling: the editor's status-overlay chrome (outlines, badges,
         // label plates) is plain fill rectangles — square in BOTH modes, so
         // Square conformance is satisfied by construction. ROUND-mode

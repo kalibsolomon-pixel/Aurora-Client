@@ -3,13 +3,15 @@
 Install build-time dependencies with: python -m pip install resvg-py==0.5.0 Pillow
 The original SVG stays bundled; no runtime SVG library or rendering pass is needed.
 """
+
+from source_tree import client_path
 from io import BytesIO
 from pathlib import Path
 
 from PIL import Image
 import resvg_py
 
-ROOT = Path(__file__).resolve().parents[1] / "src/client/resources/assets/aurora"
+ROOT = client_path("resources/assets/aurora")
 
 
 def main():

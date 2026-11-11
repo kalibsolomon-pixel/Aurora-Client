@@ -18,8 +18,8 @@ import static org.junit.jupiter.api.Assertions.*;
  * tools/licenses/), then run it.
  */
 class ThirdPartyNoticesTest {
-    private static final Path NOTICES = Path.of("THIRD_PARTY_NOTICES.md");
-    private static final Path FONTS = Path.of("src/client/resources/assets/aurora/font");
+    private static final Path NOTICES = SourceTree.resolve("THIRD_PARTY_NOTICES.md");
+    private static final Path FONTS = SourceTree.resolve(SourceTree.ADAPTER + "/src/client/resources/assets/aurora/font");
     private static final List<String> PROJECTS = List.of("BetterHitreg", "Freelook++", "HitColor", "AppleSkin");
 
     private static String read(Path p) throws Exception {
@@ -41,7 +41,7 @@ class ThirdPartyNoticesTest {
 
     @Test void everyLicenseTextIsReproducedVerbatim() throws Exception {
         String notices = read(NOTICES);
-        try (Stream<Path> files = Files.list(Path.of("tools/licenses"))) {
+        try (Stream<Path> files = Files.list(SourceTree.resolve("tools/licenses"))) {
             for (Path license : (Iterable<Path>) files::iterator) {
                 String body = read(license).strip();
                 assertTrue(notices.contains(body), license.getFileName() + " is not reproduced in THIRD_PARTY_NOTICES.md");
@@ -51,7 +51,7 @@ class ThirdPartyNoticesTest {
 
     @Test void everyBundledJarIsCovered() throws Exception {
         String notices = read(NOTICES);
-        String build = read(Path.of("build.gradle"));
+        String build = read(SourceTree.resolve("build.gradle"));
         // Jar-in-jar libraries are the names in a list whose .each block runs `include`.
         Matcher lists = Pattern.compile("\\[([^\\]]*)\\]\\.each \\{\\s*include").matcher(build);
         List<String> jars = new ArrayList<>();

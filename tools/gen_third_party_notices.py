@@ -4,6 +4,8 @@ The texts are copied from their upstream sources (see each section), never
 retyped. Run after adding a font, a bundled library or code from another
 project, then commit both. ThirdPartyNoticesTest checks the result.
 """
+
+from source_tree import client_path
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -125,5 +127,5 @@ fonts += ["",
           "Copyright 2026 Google LLC, licensed under the Apache License, Version 2.0.",
           "Its text is in THIRD_PARTY_NOTICES.md at the root of the Aurora jar.",
           "", text("OFL-1.1.txt"), ""]
-(ROOT / "src/client/resources/assets/aurora/font/license.txt").write_text("\n".join(fonts), encoding="utf-8", newline="\n")
+client_path('resources/assets/aurora/font/license.txt').write_text("\n".join(fonts), encoding="utf-8", newline="\n")
 print("wrote THIRD_PARTY_NOTICES.md and assets/aurora/font/license.txt")

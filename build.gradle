@@ -5,6 +5,10 @@ plugins {
 }
 
 evaluationDependsOn(':core')
+evaluationDependsOn(':ports')
+
+// This checkout builds exactly one version adapter. Older releases use their own branches.
+def adapterRoot = file("adapters/minecraft-${project.minecraft_version}")
 
 version = project.mod_version
 group = project.maven_group
@@ -30,6 +34,8 @@ repositories {
 
 loom {
 	splitEnvironmentSourceSets()
+	sourceSets.client.java.setSrcDirs([new File(adapterRoot, 'src/client/java')])
+	sourceSets.client.resources.setSrcDirs([new File(adapterRoot, 'src/client/resources')])
 	enableTransitiveAccessWideners = true
 
 	runConfigs.configureEach {
@@ -38,8 +44,8 @@ loom {
 		// Disables the strict version validation check inside the development sandbox env
 		property "fabric.skipDependencyCheck", "true"
 		vmArg "-Dfabric.skipDependencyCheck=true"
-		property "fabric.modVersion.minecraft", "26.3"
-		vmArg "-Dfabric.modVersion.minecraft=26.3"
+		property "fabric.modVersion.minecraft", project.minecraft_version
+		vmArg "-Dfabric.modVersion.minecraft=${project.minecraft_version}"
 	}
 
 	mods {
@@ -78,6 +84,7 @@ dependencies {
 
 tasks.named("test") {
 	useJUnitPlatform()
+	systemProperty 'aurora.adapterRoot', project.relativePath(adapterRoot).replace('\\', '/')
 	// Mojang's default Log4j config rotates relative logs/ at JVM startup.
 	// Keep source-contract tests rooted here, but isolate every test execution's
 	// generated logs. This override belongs only to the test JVM, never runClient.
@@ -105,7 +112,7 @@ tasks.withType(JavaCompile).configureEach {
 
 afterEvaluate {
 	runClient {
-		jvmArgs "-Dfabric.skipDependencyCheck=true", "-Dfabric.modVersion.minecraft=26.3"
+		jvmArgs "-Dfabric.skipDependencyCheck=true", "-Dfabric.modVersion.minecraft=${project.minecraft_version}"
 	}
 }
 
@@ -122,16 +129,22 @@ java {
 	targetCompatibility = JavaVersion.VERSION_25
 }
 
+// Resolve each pure module's classpath from its own project task (parallel-safe).
+tasks.register('verifyLayering') { dependsOn ':core:verifyLayering', ':ports:verifyLayering' }
+tasks.named('check') { dependsOn 'verifyLayering' }
+
 tasks.withType(Jar).configureEach {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 jar {
+	archiveClassifier = "mc${project.minecraft_version}"
 	def projectName = project.name
 	inputs.property "projectName", projectName
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
 	from(project(':core').sourceSets.main.output)
+	from(project(':ports').sourceSets.main.output)
 
 	from("LICENSE") {
 		rename { "${it}_$projectName"}

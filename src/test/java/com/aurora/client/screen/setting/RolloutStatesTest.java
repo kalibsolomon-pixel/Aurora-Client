@@ -1,5 +1,6 @@
 package com.aurora.client.screen.setting;
 
+import com.aurora.client.SourceTree;
 import com.aurora.client.ui.component.Slider;
 import com.aurora.client.ui.component.ToggleSwitch;
 import org.junit.jupiter.api.Test;
@@ -102,8 +103,8 @@ class RolloutStatesTest {
         // config). Any added/removed enum row must consciously update this
         // count together with ARCHITECTURE.md.
         try {
-            String src = new String(java.nio.file.Files.readAllBytes(java.nio.file.Path.of(
-                    "src/client/java/com/aurora/client/screen/FeatureRegistry.java")));
+            String src = new String(java.nio.file.Files.readAllBytes(SourceTree.resolve(
+                    SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/FeatureRegistry.java")));
             int count = src.split("new EnumSetting<>", -1).length - 1;
             assertEquals(24, count,
                     "production EnumSetting construction sites (inventory drift guard; 25→24 with Swing Style's removal, 2026-10-30)");
@@ -139,8 +140,8 @@ class RolloutStatesTest {
         // AccentSetting's embedded picker and ParticleRowSetting's overlay
         // row, both ColorSetting-class and both canonical by construction).
         try {
-            String src = new String(java.nio.file.Files.readAllBytes(java.nio.file.Path.of(
-                    "src/client/java/com/aurora/client/screen/FeatureRegistry.java")));
+            String src = new String(java.nio.file.Files.readAllBytes(SourceTree.resolve(
+                    SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/FeatureRegistry.java")));
             int count = src.split("new ColorSetting", -1).length - 1;
             assertEquals(33, count,
                     "production ColorSetting construction sites (inventory drift guard)");
@@ -203,8 +204,8 @@ class RolloutStatesTest {
         // this rollout). Any added/removed keybind row must consciously
         // update this count together with ARCHITECTURE.md.
         try {
-            String src = new String(java.nio.file.Files.readAllBytes(java.nio.file.Path.of(
-                    "src/client/java/com/aurora/client/screen/FeatureRegistry.java")));
+            String src = new String(java.nio.file.Files.readAllBytes(SourceTree.resolve(
+                    SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/FeatureRegistry.java")));
             int count = src.split("new KeybindSetting", -1).length - 1;
             assertEquals(16, count,
                     "production KeybindSetting construction sites (inventory drift guard)");

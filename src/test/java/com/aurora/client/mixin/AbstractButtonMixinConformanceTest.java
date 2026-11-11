@@ -1,5 +1,6 @@
 package com.aurora.client.mixin;
 
+import com.aurora.client.SourceTree;
 import com.aurora.client.util.HoverAnim;
 import org.junit.jupiter.api.Test;
 
@@ -21,13 +22,13 @@ import java.lang.reflect.Modifier;
 class AbstractButtonMixinConformanceTest {
 
     private static final String MIXIN =
-            "src/client/java/com/aurora/client/mixin/AbstractButtonMixin.java";
+            SourceTree.ADAPTER + "/src/client/java/com/aurora/client/mixin/AbstractButtonMixin.java";
     private static final String BUTTON =
-            "src/client/java/com/aurora/client/ui/component/Button.java";
+            SourceTree.ADAPTER + "/src/client/java/com/aurora/client/ui/component/Button.java";
 
     private static String src(String path) {
         try {
-            return java.nio.file.Files.readString(java.nio.file.Path.of(path));
+            return java.nio.file.Files.readString(SourceTree.resolve(path));
         } catch (java.io.IOException e) {
             return fail(path + " not readable: " + e);
         }

@@ -1,5 +1,6 @@
 package com.aurora.client.screen;
 
+import com.aurora.client.SourceTree;
 import com.aurora.client.ui.interaction.SemanticAction;
 import com.aurora.client.ui.interaction.SemanticActionControl;
 import com.aurora.client.ui.interaction.SemanticFeedback;
@@ -39,10 +40,10 @@ import static org.junit.jupiter.api.Assertions.*;
 class PackTabsPilotTest {
 
     private static final String SCREEN_SRC =
-            "src/client/java/com/aurora/client/screen/ResourcePackBrowserScreen.java";
+            SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/ResourcePackBrowserScreen.java";
 
     private static String screenSource() throws Exception {
-        return java.nio.file.Files.readString(java.nio.file.Path.of(SCREEN_SRC));
+        return java.nio.file.Files.readString(SourceTree.resolve(SCREEN_SRC));
     }
 
     // ---- The tab action model, built exactly as the screen's tabControl ----

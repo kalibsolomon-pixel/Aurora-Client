@@ -1,5 +1,6 @@
 package com.aurora.client.screen;
 
+import com.aurora.client.SourceTree;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
@@ -9,10 +10,10 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /** Phase C-2 source-contract pins for AuroraScreen's semantic host boundary. */
 class AuroraScreenSemanticHostingTest {
-    private static final Path SCREEN = Path.of(
-            "src/client/java/com/aurora/client/screen/AuroraScreen.java");
-    private static final Path REGISTRY = Path.of(
-            "src/client/java/com/aurora/client/screen/FeatureRegistry.java");
+    private static final Path SCREEN = SourceTree.resolve(
+            SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/AuroraScreen.java");
+    private static final Path REGISTRY = SourceTree.resolve(
+            SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/FeatureRegistry.java");
 
     private static String read(Path path) {
         try {
@@ -103,8 +104,8 @@ class AuroraScreenSemanticHostingTest {
         assertTrue(search >= 0 && semantics > search,
                 "search is the explicit first child; semantic controls follow");
 
-        String preview = read(Path.of(
-                "src/client/java/com/aurora/client/screen/setting/ThemePreviewSetting.java"));
+        String preview = read(SourceTree.resolve(
+                SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/setting/ThemePreviewSetting.java"));
         assertFalse(preview.contains("interactionControl("));
         assertTrue(preview.contains("// Non-interactive preview: never consume."));
     }

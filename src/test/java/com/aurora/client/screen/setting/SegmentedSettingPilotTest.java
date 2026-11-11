@@ -1,5 +1,6 @@
 package com.aurora.client.screen.setting;
 
+import com.aurora.client.SourceTree;
 import com.aurora.client.theme.ThemeMode;
 import com.aurora.client.theme.ThemeRoundness;
 import com.aurora.client.ui.component.SegmentedControl;
@@ -39,13 +40,13 @@ import static org.junit.jupiter.api.Assertions.*;
 class SegmentedSettingPilotTest {
 
     private static final String SRC =
-            "src/client/java/com/aurora/client/ui/component/SegmentedControl.java";
+            SourceTree.ADAPTER + "/src/client/java/com/aurora/client/ui/component/SegmentedControl.java";
     private static final String SETTING_SRC =
-            "src/client/java/com/aurora/client/screen/setting/SegmentedSetting.java";
+            SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/setting/SegmentedSetting.java";
 
     private static String src(String path) {
         try {
-            return java.nio.file.Files.readString(java.nio.file.Path.of(path));
+            return java.nio.file.Files.readString(SourceTree.resolve(path));
         } catch (java.io.IOException e) {
             return fail(path + " not readable: " + e);
         }
@@ -117,8 +118,8 @@ class SegmentedSettingPilotTest {
 
     @Test
     void productionInventoryHasOnlyCornerRowWithThreePeers() throws Exception {
-        String registry = java.nio.file.Files.readString(java.nio.file.Path.of(
-                "src/client/java/com/aurora/client/screen/FeatureRegistry.java"));
+        String registry = java.nio.file.Files.readString(SourceTree.resolve(
+                SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/FeatureRegistry.java"));
         assertEquals(1, registry.split("new SegmentedSetting\\<>\\(", -1).length - 1,
                 "exactly one construction");
         assertFalse(registry.contains("ThemeMode.class"));
@@ -291,10 +292,10 @@ class SegmentedSettingPilotTest {
 
     @Test
     void hostsStayGenericAboutSegments() throws Exception {
-        String aurora = java.nio.file.Files.readString(java.nio.file.Path.of(
-                "src/client/java/com/aurora/client/screen/AuroraScreen.java"));
-        String detail = java.nio.file.Files.readString(java.nio.file.Path.of(
-                "src/client/java/com/aurora/client/screen/FeatureDetailScreen.java"));
+        String aurora = java.nio.file.Files.readString(SourceTree.resolve(
+                SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/AuroraScreen.java"));
+        String detail = java.nio.file.Files.readString(SourceTree.resolve(
+                SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/FeatureDetailScreen.java"));
         for (String host : new String[]{aurora, detail}) {
             assertTrue(host.contains("List.copyOf(setting.interactionControls())")
                             || host.contains("setting.interactionControls()"),

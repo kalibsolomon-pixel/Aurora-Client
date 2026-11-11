@@ -69,4 +69,17 @@ Every run had no fills and no glass captures. The owner's config stays under the
 
 ## Minecraft 26.3 validation
 
-The unchanged gate passes for the native Vulkan baseline and performance stack, and for OpenGL Sodium + Iris. The unprofiled OpenGL baseline and performance stack still exceed it after two warm-ups. This blocks publication of the 26.3 port. A separate JFR diagnostic boot had lower steady-state costs, but does not override the failing gate. See [MOD_MATRIX.md](MOD_MATRIX.md) for the measured ranges and test conditions. Neither the budget nor the warm-up rule was relaxed.
+The step 5 candidate passes the unchanged gate on native OpenGL and Vulkan,
+with and without the pinned performance stack, plus Sodium + Iris on OpenGL.
+Runs 3 through 6 are judged after exactly two warm-ups. Native entity sampling
+now reuses bounded position records, and its pure core policy sorts the median
+window only when samples change, once per frame. Per-frame easing is unchanged.
+The automated benchmark waits for a world with no screen open before it starts.
+
+OpenGL baseline: 0.141 to 0.154 ms mean, 0.175 to 0.219 ms p95. Vulkan baseline:
+0.157 to 0.170 ms mean, 0.196 to 0.223 ms p95. All judged runs submit zero fills
+and glass captures. See [step 5 acceptance](port/step-5.md) and the checked-in
+[per-run evidence](releases/evidence/3.3.0-overhead.json). Earlier failing port
+measurements remain in [MOD_MATRIX.md](MOD_MATRIX.md); the limit and warm-up
+rule were not relaxed. These results describe this singleplayer fixture and
+hardware, not every world or low-end machine.

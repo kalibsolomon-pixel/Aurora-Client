@@ -1,0 +1,241 @@
+{
+  "version": "3.3.0",
+  "minecraft": "26.3",
+  "date": "2026-11-11",
+  "warmup_runs": 2,
+  "judged_runs": [
+    3,
+    4,
+    5,
+    6
+  ],
+  "cpu_mean_limit_ms": 0.25,
+  "cpu_p95_limit_ms": 0.4,
+  "results": [
+    {
+      "backend": "OPENGL",
+      "set": "A-performance-stack",
+      "log_sha256": "abd2f6c46a65a09f4e70f351d279df2c9ccb953c6fb171222e6ecea2507aebf8",
+      "all_mixins_applied": 73,
+      "aurora_warnings_errors": 0,
+      "runs": [
+        {
+          "run": 1,
+          "mean_ms": 0.476,
+          "p95_ms": 0.757,
+          "verdict": "OVER: CPU mean 0.476 ms > 0.250 ms, CPU p95 0.757 ms > 0.400 ms"
+        },
+        {
+          "run": 2,
+          "mean_ms": 0.215,
+          "p95_ms": 0.42,
+          "verdict": "OVER: CPU p95 0.420 ms > 0.400 ms"
+        },
+        {
+          "run": 3,
+          "mean_ms": 0.148,
+          "p95_ms": 0.212,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "run": 4,
+          "mean_ms": 0.139,
+          "p95_ms": 0.187,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "run": 5,
+          "mean_ms": 0.131,
+          "p95_ms": 0.166,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "run": 6,
+          "mean_ms": 0.136,
+          "p95_ms": 0.179,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        }
+      ]
+    },
+    {
+      "backend": "OPENGL",
+      "set": "B-sodium-iris",
+      "log_sha256": "ab039db352893e925ec1210b4b59d51d1576417426a097cb0a4f57bac674c23c",
+      "all_mixins_applied": 73,
+      "aurora_warnings_errors": 0,
+      "runs": [
+        {
+          "run": 1,
+          "mean_ms": 0.477,
+          "p95_ms": 0.741,
+          "verdict": "OVER: CPU mean 0.477 ms > 0.250 ms, CPU p95 0.741 ms > 0.400 ms"
+        },
+        {
+          "run": 2,
+          "mean_ms": 0.219,
+          "p95_ms": 0.423,
+          "verdict": "OVER: CPU p95 0.423 ms > 0.400 ms"
+        },
+        {
+          "run": 3,
+          "mean_ms": 0.15,
+          "p95_ms": 0.218,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "run": 4,
+          "mean_ms": 0.15,
+          "p95_ms": 0.203,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "run": 5,
+          "mean_ms": 0.145,
+          "p95_ms": 0.192,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "run": 6,
+          "mean_ms": 0.144,
+          "p95_ms": 0.187,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        }
+      ]
+    },
+    {
+      "backend": "OPENGL",
+      "set": "baseline",
+      "log_sha256": "b23f27109c3d981843ad0f81b5830bd7f0ec9f15b205d32999e0cb0ff14191b3",
+      "all_mixins_applied": 73,
+      "aurora_warnings_errors": 0,
+      "runs": [
+        {
+          "run": 1,
+          "mean_ms": 0.331,
+          "p95_ms": 0.63,
+          "verdict": "OVER: CPU mean 0.331 ms > 0.250 ms, CPU p95 0.630 ms > 0.400 ms"
+        },
+        {
+          "run": 2,
+          "mean_ms": 0.209,
+          "p95_ms": 0.346,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "run": 3,
+          "mean_ms": 0.154,
+          "p95_ms": 0.219,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "run": 4,
+          "mean_ms": 0.15,
+          "p95_ms": 0.201,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "run": 5,
+          "mean_ms": 0.147,
+          "p95_ms": 0.19,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "run": 6,
+          "mean_ms": 0.141,
+          "p95_ms": 0.175,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        }
+      ]
+    },
+    {
+      "backend": "VULKAN",
+      "set": "A-performance-stack",
+      "log_sha256": "26d9f3d74ed17c8801d2f8027f7b73e05518d712a3946a224eb8edcade889e68",
+      "all_mixins_applied": 73,
+      "aurora_warnings_errors": 0,
+      "runs": [
+        {
+          "run": 1,
+          "mean_ms": 0.516,
+          "p95_ms": 0.831,
+          "verdict": "OVER: CPU mean 0.516 ms > 0.250 ms, CPU p95 0.831 ms > 0.400 ms"
+        },
+        {
+          "run": 2,
+          "mean_ms": 0.212,
+          "p95_ms": 0.413,
+          "verdict": "OVER: CPU p95 0.413 ms > 0.400 ms"
+        },
+        {
+          "run": 3,
+          "mean_ms": 0.163,
+          "p95_ms": 0.234,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "run": 4,
+          "mean_ms": 0.153,
+          "p95_ms": 0.216,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "run": 5,
+          "mean_ms": 0.144,
+          "p95_ms": 0.188,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "run": 6,
+          "mean_ms": 0.146,
+          "p95_ms": 0.191,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        }
+      ]
+    },
+    {
+      "backend": "VULKAN",
+      "set": "baseline",
+      "log_sha256": "45aa1811b40d4aa6ced4cb77c8e8527c40771b6304d7bd200879beb4711a2777",
+      "all_mixins_applied": 73,
+      "aurora_warnings_errors": 0,
+      "runs": [
+        {
+          "run": 1,
+          "mean_ms": 0.309,
+          "p95_ms": 0.535,
+          "verdict": "OVER: CPU mean 0.309 ms > 0.250 ms, CPU p95 0.535 ms > 0.400 ms"
+        },
+        {
+          "run": 2,
+          "mean_ms": 0.205,
+          "p95_ms": 0.342,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "run": 3,
+          "mean_ms": 0.163,
+          "p95_ms": 0.223,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "run": 4,
+          "mean_ms": 0.17,
+          "p95_ms": 0.218,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "run": 5,
+          "mean_ms": 0.157,
+          "p95_ms": 0.196,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "run": 6,
+          "mean_ms": 0.157,
+          "p95_ms": 0.207,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        }
+      ]
+    }
+  ]
+}

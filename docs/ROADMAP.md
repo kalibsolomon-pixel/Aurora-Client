@@ -1,74 +1,44 @@
 # Aurora Client roadmap
 
-Agreed 2026-11-10. The decisions behind this order are in [docs/adr/](adr):
+Agreed 2026-11-10; revised by the owner on 2026-11-11. Decisions are in [ADRs](adr/)
+and current evidence is summarized in [STATUS](STATUS.md).
 
-| ADR | Decision |
-|---|---|
-| [0001](adr/0001-single-open-mod-that-runs-anywhere.md) | One open-source mod that runs in any launcher; no telemetry, no cosmetics, limited social |
-| [0002](adr/0002-version-and-loader-policy.md) | Forward-only versions, newest plus one frozen; Fabric-only releases |
-| [0003](adr/0003-core-ports-adapter-layering.md) | Core, ports, version adapter |
-| [0004](adr/0004-fail-soft-mixins-and-single-feature-registry.md) | Fail-soft mixins, one feature registry, tested matrix, diagnostics report |
-| [0005](adr/0005-performance-scope-and-overhead-budget.md) | Overhead budget; no competing engine; rule for vanilla optimizations |
-| [0006](adr/0006-shader-drawn-shapes-no-own-ui-renderer.md) | Shader-drawn shapes through Minecraft's pipeline; no own UI renderer |
-| [0007](adr/0007-fair-play-classification-and-apollo-scope.md) | Fair-play classification, default-off list, Apollo scope |
+| Step | Work | State |
+|---|---|---|
+| 1 | Fail-soft mixins, one feature catalog, diagnostics and a proven breaks list | Merged, PR #2; UI/clipboard and mod-matrix evidence recorded |
+| 2 | Fair-play classes and advantage defaults off | Merged, PR #3 and #5; generated FAIR_PLAY.md |
+| 3 | Minecraft-free core, numeric overhead budget, notices, contributor cleanup | Merged, PR #4 and #6–#9 |
+| 4 | Port sequentially through 26.1.2, 26.2 and 26.3; publish individual artifacts | All ports merged (#10–#12); publication being completed |
+| 5 | Extract ports and make the version adapter own all mixins, glass and Fabric calls | Implemented on refactor/version-adapter; acceptance and integration being completed |
+| 6 | Shader-drawn shapes behind RenderUtil, measured against current caches | Planned |
+| 7 | Apollo restrictions, friends/status, NeoForge if requested, limited vanilla optimizations | Deferred in that order |
 
-## Order of work
+The owner explicitly authorized step 5 before publication. New gameplay features
+remain on hold until the newest port ships. The shape extraction in step 5 keeps
+the existing coverage math and Minecraft renderer; it does not implement step 6.
 
-Steps 1 to 3 happen on 1.21.11 and each makes the port cheaper or safer. Nothing after step 4 is designed before the port shows where the breaks are.
+## Version and release policy
 
-1. **Fail-soft foundation (1.21.11).** Single feature registry that records each feature's mixins. Fail-soft mixins with a per-feature health flag. A `breaks` list in `fabric.mod.json`. The copy-diagnostics report with its built-in benchmark. *Built 2026-11-11 on `feat/fail-soft-foundation`; see "Step 1 status" below.*
-2. **Fair play (1.21.11).** Classify every feature. Make minimap player dots, player entity health, other players' totem pops and FreeLook default-off. Document Better Hitreg as local feedback only. *Built 2026-11-11 on `feat/fair-play-defaults`; see "Step 2 status" below.*
-3. **Groundwork (1.21.11).** Move the already Minecraft-free packages into a core Gradle module. Measure the overhead baseline and set the budget. Add third-party notices. Clean up the repo for contributors.
-4. **Port.** 26.1, then 26.2, then 26.3, each made to build and boot. Release 26.3, the target set by the owner on 2026-11-11. Freeze 1.21.11 to crash and security fixes. *26.1, 26.2 and 26.3 build and boot; see [26.3 evidence](port/26.3.md). OpenGL overhead validation blocks publication; owner review and the production release remain.*
-5. **Extract the layers.** Define the ports from what actually broke. Move every mixin, the glass renderer and the Fabric API calls into the version adapter.
-6. **Shader-drawn shapes.** Behind `RenderUtil`, measured against the existing caches.
-7. **Later, in this order.** Apollo restriction support, once its license and detection behaviour are checked. Friends and online status. NeoForge if asked for. Small vanilla optimizations under the ADR 0005 rule as they turn up.
+Each Minecraft line gets its own JAR. The owner revised the original newest-only
+publication rule to include 26.1 and 26.2 checkpoint artifacts. This does not add
+a universal JAR or simultaneous multi-version feature builds. Feature work stays
+on 26.3; 26.2 becomes the previous frozen line; 26.1.2 is archived. Older releases
+remain immutable. See [ADR 0002](adr/0002-version-and-loader-policy.md).
 
-## Step 1 status
+The target is a release within two weeks of Sodium supporting a new Minecraft
+version once the extracted layers are established. Every release must pass the
+[overhead budget](OVERHEAD_BUDGET.md), applicable [compatibility matrix](MOD_MATRIX.md)
+and [immutable-release procedure](RELEASE_PROCESS.md).
 
-Built and verified by automated tests and three dev-client boots (unmodified; ten mixins disabled plus one broken injection point; one mixin disabled with the report logged). Still open before step 1 counts as done:
+## Later work and unresolved evidence
 
-- ~~Look at the detail-screen header and the Copy Diagnostics button on screen.~~ Checked 2026-11-11: the header names what is not working, and the report reaches the clipboard. The grid card has no visible tooltip at all: its note only reaches screen-reader narration. Open for the owner whether a broken feature should show on its card.
-- ~~Boot the tier-1 matrix.~~ Done 2026-11-11 on 1.21.11, all three sets pass: [MOD_MATRIX.md](MOD_MATRIX.md). Rerun it for each ported version with `tools/matrix/`.
-- The `breaks` list holds only the standalone Better Hitreg mod. Add a mod when a boot shows it cannot work with Aurora, not before.
-- `FeatureManager` still lists the runtime tick services by hand. It is not a list of features, so it was left alone.
+Apollo support only honors server restrictions and requires licensing/detection
+research first. Social is friends and online status without chat or telemetry;
+it remains optional. NeoForge requires demand. Vanilla optimizations must meet
+the three rules in ADR 0005. No competing renderer is planned.
 
-## Step 2 status
+Better Hitreg's author-permission provenance and HitColor's missing repository
+LICENSE remain upstream follow-ups. The current notices reproduce the licenses
+published by those projects. Preserve the vendored hitreg timing core.
 
-Every feature has a fair-play class in `FeatureCatalog`, published as [FAIR_PLAY.md](FAIR_PLAY.md). Two defaults changed: FreeLook and other players' totem pops on nametags now ship off. The other two items on the list were already off in the release defaults (minimap player dots, and Entity Health as a whole). Existing installs keep what they had.
-
-Decided by the owner on 2026-11-11 and built on `feat/fair-play-decisions`: Full Bright and No Fog now ship off, and Entity Health has a separate switch for players, also off. A config or profile saved before that switch existed keeps showing players if Entity Health was on. The `breaks` id `betterhitreg` is confirmed.
-
-Still open:
-
-- Other players' totem pops are still counted while the nametag switch is off; they are just not shown.
-
-## Step 3 status
-
-The core module is built on `feat/core-module`: 75 already Minecraft-free classes moved into `core/`, a Gradle module that cannot compile a Minecraft, Fabric, LWJGL, Mixin or Log4j import. Three small couplings were cut on the way (the config directory, the client logger, two health constants). Verified by the test suite and a dev-client boot. The overhead budget is set on `feat/overhead-budget`: Aurora CPU per frame at most 0.25 ms mean and 0.40 ms p95, no glass and at most 100 fills, in a world with factory defaults, about 1.5 times the measured baseline. Every diagnostics report judges its run, and `tools/overhead_check.py` is a release step ([OVERHEAD_BUDGET.md](OVERHEAD_BUDGET.md)). Third-party notices are on `feat/third-party-notices`: `THIRD_PARTY_NOTICES.md` ships in the jar and a test keeps it complete. The repo cleanup is on `chore/repo-cleanup`. With it, step 3 is built.
-
-## Standing rules until the port ships
-
-- No new features. Only fixes and the work in steps 1 to 3.
-
-## Housekeeping in step 3
-
-- **Third-party notices.** Done: `THIRD_PARTY_NOTICES.md` covers Better Hitreg, Freelook++, AppleSkin, HitColor, the bundled fonts and the bundled TwelveMonkeys libraries, with every license text.
-- **Repo cleanup.** Done on `chore/repo-cleanup`: `AGENTS.md` is a short contributor and agent guide, its history kept verbatim in `docs/history/`, and the reports from the repo root are under `docs/`.
-
-## Goals
-
-- Release within two weeks of Sodium supporting a new Minecraft version (loose goal, once step 5 is done).
-- A numeric per-frame overhead budget that blocks releases: set in step 3, see [OVERHEAD_BUDGET.md](OVERHEAD_BUDGET.md).
-
-## Still to verify
-
-- Nothing in step 2 was checked in a running game. The defaults are verified on a real config object in tests.
-- Apollo's license terms, and whether registering its plugin channel is how servers identify Lunar Client.
-- Whether Better Hitreg's Apache-2.0 listing matches the terms its author gave for the integration. Its repository's LICENSE is the stock Apache 2.0 text, and the notices follow it.
-- HitColor's repository has no LICENSE file; only Modrinth says MIT. Asking harimasa to add one would settle it.
-
-## Costs accepted knowingly
-
-- Stepping through every intermediate version adds build-and-boot passes on versions that are never released.
-- Friends and status is a backend to operate, even without chat.
+The earlier detailed roadmap/status notes are preserved in [history](history/).

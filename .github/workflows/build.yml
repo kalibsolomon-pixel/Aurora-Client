@@ -21,6 +21,8 @@ jobs:
           distribution: 'microsoft'
       - name: make gradle wrapper executable
         run: chmod +x ./gradlew
+      - name: test release tools and portable defaults
+        run: python3 -B -m unittest discover -s tools -p 'test_*.py'
       - name: build
         run: ./gradlew build
       - name: capture build artifacts

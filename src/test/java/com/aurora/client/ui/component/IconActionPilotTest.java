@@ -1,5 +1,6 @@
 package com.aurora.client.ui.component;
 
+import com.aurora.client.SourceTree;
 import com.aurora.client.ui.interaction.SemanticAction;
 import com.aurora.client.ui.interaction.SemanticActionControl;
 import net.minecraft.client.input.KeyEvent;
@@ -23,19 +24,19 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class IconActionPilotTest {
 
-    private static final String SRC = "src/client/java/com/aurora/client/ui/component/IconAction.java";
+    private static final String SRC = SourceTree.ADAPTER + "/src/client/java/com/aurora/client/ui/component/IconAction.java";
     private static final String ITEM_SCALE =
-            "src/client/java/com/aurora/client/screen/setting/ItemScaleSetting.java";
+            SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/setting/ItemScaleSetting.java";
     private static final String EFFECT_EXPIRY =
-            "src/client/java/com/aurora/client/screen/setting/EffectExpiryListSetting.java";
+            SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/setting/EffectExpiryListSetting.java";
     private static final String HUD_EDITOR =
-            "src/client/java/com/aurora/client/screen/HudEditorScreen.java";
+            SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/HudEditorScreen.java";
     private static final String FEATURE_ICONS =
             "core/src/main/java/com/aurora/client/screen/FeatureIcons.java";
 
     private static String src(String path) {
         try {
-            return java.nio.file.Files.readString(java.nio.file.Path.of(path));
+            return java.nio.file.Files.readString(SourceTree.resolve(path));
         } catch (java.io.IOException e) {
             return fail(path + " not readable: " + e);
         }
@@ -196,8 +197,8 @@ class IconActionPilotTest {
 
     @Test
     void hostRegistersDynamicSetsThroughTheFrameDiff() throws Exception {
-        String detail = java.nio.file.Files.readString(java.nio.file.Path.of(
-                "src/client/java/com/aurora/client/screen/FeatureDetailScreen.java"));
+        String detail = java.nio.file.Files.readString(SourceTree.resolve(
+                SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/FeatureDetailScreen.java"));
         assertTrue(detail.contains("registeredSettingControls"));
         assertTrue(detail.contains("sameControlList(prev, controls)"));
         assertTrue(detail.contains("this.removeWidget(c);"),
@@ -215,7 +216,7 @@ class IconActionPilotTest {
         assertTrue(icons.contains("\"_action_close\""));
         try {
             var subset = new java.io.FileInputStream(
-                    "src/client/resources/assets/aurora/font/material_symbols_rounded.ttf");
+                    SourceTree.ADAPTER + "/src/client/resources/assets/aurora/font/material_symbols_rounded.ttf");
             subset.close();
         } catch (java.io.IOException e) {
             fail("subset font missing: " + e);

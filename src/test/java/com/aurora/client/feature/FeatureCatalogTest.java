@@ -31,8 +31,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * only, or a gate that names a field that does not exist fails here.
  */
 class FeatureCatalogTest {
-    private static final Path MIXIN_CONFIG = Path.of("src/client/resources/aurora.mixins.json");
-    private static final Path REGISTRY = Path.of("src/client/java/com/aurora/client/screen/FeatureRegistry.java");
+    private static final Path MIXIN_CONFIG = SourceTree.resolve(SourceTree.ADAPTER + "/src/client/resources/aurora.mixins.json");
+    private static final Path REGISTRY = SourceTree.resolve(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/FeatureRegistry.java");
 
     private static JsonObject mixinConfig() throws Exception {
         return JsonParser.parseString(Files.readString(MIXIN_CONFIG)).getAsJsonObject();
@@ -140,7 +140,7 @@ class FeatureCatalogTest {
 
     @Test void everySwitchThatShipsOffIsABooleanConfigFieldAndOffInTheReleaseDefaults() throws Exception {
         JsonObject releaseDefaults = JsonParser.parseString(Files.readString(
-                Path.of("src/client/resources/assets/aurora/defaults/3.2.0.json"))).getAsJsonObject();
+                SourceTree.resolve(SourceTree.ADAPTER + "/src/client/resources/assets/aurora/defaults/3.2.0.json"))).getAsJsonObject();
         for (FeatureCatalog.Feature f : FeatureCatalog.features()) {
             for (String name : f.offByDefault()) {
                 Field field;
@@ -170,7 +170,7 @@ class FeatureCatalogTest {
     }
 
     @Test void theFairPlayDocumentRepeatsTheCatalog() throws Exception {
-        String doc = Files.readString(Path.of("docs/FAIR_PLAY.md"));
+        String doc = Files.readString(SourceTree.resolve("docs/FAIR_PLAY.md"));
         for (FeatureCatalog.FairPlay c : FeatureCatalog.FairPlay.values()) {
             assertTrue(doc.contains("| " + c.label + " | " + c.meaning + " |"), "class row for " + c);
         }

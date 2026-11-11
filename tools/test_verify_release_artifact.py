@@ -30,7 +30,7 @@ class ReleaseArtifactTests(unittest.TestCase):
             "loader_version=0.19.2\nfabric_api_version=0.141.4+1.21.11\n",
             encoding="utf-8",
         )
-        self.jar = self.jars / "aurora-2.1.1.jar"
+        self.jar = self.jars / "aurora-2.1.1-mc1.21.11.jar"
         self.write_jar()
 
     def write_jar(self, *, mod_id="aurora", version=VERSION, depends=None, metadata=True):
@@ -92,6 +92,19 @@ class ReleaseArtifactTests(unittest.TestCase):
         with self.assertRaisesRegex(release.ReleaseError, "exactly one"):
             self.inspect()
 
+    def test_filename_must_identify_the_declared_minecraft_version(self):
+        self.jar.rename(self.jars / "aurora-2.1.1-mc26.3.jar")
+        with self.assertRaisesRegex(release.ReleaseError, "exactly one"):
+            self.inspect()
+
+    def test_handoff_cannot_change_minecraft_without_changing_the_asset(self):
+        metadata = self.inspect()
+        metadata["minecraftVersion"] = "26.3"
+        path = self.root / "candidate.json"
+        path.write_text(json.dumps(metadata), encoding="utf-8")
+        with self.assertRaisesRegex(release.ReleaseError, "filename"):
+            release.load_metadata(path)
+
     def test_invalid_archive(self):
         self.jar.write_bytes(b"not a zip")
         with self.assertRaisesRegex(release.ReleaseError, "valid readable archive"):
@@ -141,7 +154,7 @@ class ReleaseArtifactTests(unittest.TestCase):
 
     def test_correct_draft_asset_and_public_immutability(self):
         metadata = self.inspect()
-        url = f"https://github.com/{release.REPO_ID}/releases/download/v2.1.1/aurora-2.1.1.jar"
+        url = f"https://github.com/{release.REPO_ID}/releases/download/v2.1.1/aurora-2.1.1-mc1.21.11.jar"
         state = {
             "tag_name": "v2.1.1", "draft": True, "target_commitish": SHA,
             "prerelease": False,
@@ -211,7 +224,7 @@ class ReleaseArtifactTests(unittest.TestCase):
 
     def test_draft_must_not_already_be_immutable(self):
         metadata = self.inspect()
-        url = f"https://github.com/{release.REPO_ID}/releases/download/v2.1.1/aurora-2.1.1.jar"
+        url = f"https://github.com/{release.REPO_ID}/releases/download/v2.1.1/aurora-2.1.1-mc1.21.11.jar"
         state = {
             "tag_name": "v2.1.1", "draft": True, "target_commitish": SHA,
             "prerelease": False, "immutable": True,
