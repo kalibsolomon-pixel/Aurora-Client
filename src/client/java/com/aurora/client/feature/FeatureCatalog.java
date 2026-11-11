@@ -29,12 +29,41 @@ public final class FeatureCatalog {
     public enum Tab { MODULES, SETTINGS }
 
     /**
+     * What a feature means for fair play (ADR 0007). The wording here is what
+     * {@code docs/FAIR_PLAY.md} tells server owners, so it must stay true.
+     */
+    public enum FairPlay {
+        COSMETIC("Cosmetic", "Changes only how things look or sound on your own screen."),
+        VANILLA_INFORMATION("Vanilla equivalent",
+                "Shows your own state or information the vanilla game already presents, or extends a setting or tool vanilla already has."),
+        INFORMATION_ADVANTAGE("Information advantage",
+                "Shows something about other players or the world that vanilla does not present, or allows a view vanilla does not. Ships off."),
+        LOCAL_TIMING("Local timing",
+                "Changes when something happens on your own screen. What the game sends to the server, and when, is unchanged.");
+
+        public final String label;
+        public final String meaning;
+
+        FairPlay(String label, String meaning) {
+            this.label = label;
+            this.meaning = meaning;
+        }
+    }
+
+    /**
      * A user-facing feature.
      *
-     * @param summary the short text on the feature's grid card; empty for
-     *                Settings-tab entries, which have no card
+     * @param summary      the short text on the feature's grid card; empty for
+     *                     Settings-tab entries, which have no card
+     * @param fairPlay     the feature's fair-play class
+     * @param fairPlayNote what the feature does, in terms a server owner can check
+     * @param offByDefault boolean {@code AuroraConfig} fields that must be
+     *                     {@code false} in a fresh install: the feature's own
+     *                     switch when the whole feature is an information
+     *                     advantage, otherwise the switches inside it that are
      */
-    public record Feature(String id, String name, String summary, Tab tab) {}
+    public record Feature(String id, String name, String summary, Tab tab,
+                          FairPlay fairPlay, String fairPlayNote, List<String> offByDefault) {}
 
     /**
      * What one mixin is for.
@@ -84,11 +113,18 @@ public final class FeatureCatalog {
     public static MixinBinding mixin(String name) { return MIXINS.get(name); }
 
     private static void module(String id, String name, String summary) {
-        FEATURES.put(id, new Feature(id, name, summary, Tab.MODULES));
+        FEATURES.put(id, new Feature(id, name, summary, Tab.MODULES, null, "", List.of()));
     }
 
     private static void setting(String id, String name) {
-        FEATURES.put(id, new Feature(id, name, "", Tab.SETTINGS));
+        FEATURES.put(id, new Feature(id, name, "", Tab.SETTINGS, null, "", List.of()));
+    }
+
+    /** Records a feature's fair-play class; every feature gets exactly one call. */
+    private static void classify(String id, FairPlay fairPlay, String note, String... offByDefault) {
+        Feature f = require(id);
+        if (f.fairPlay() != null) throw new IllegalStateException("Feature '" + id + "' is classified twice");
+        FEATURES.put(id, new Feature(f.id(), f.name(), f.summary(), f.tab(), fairPlay, note, List.of(offByDefault)));
     }
 
     /** Starts a binding; chain {@link Binding#gates} when the mixin has config gates. */
@@ -146,6 +182,49 @@ public final class FeatureCatalog {
         setting("text_fonts", "Text & Fonts");
         setting("theme", "Theme");
         setting("interface", "Interface");
+
+        // ---- Fair play (ADR 0007). docs/FAIR_PLAY.md repeats these lines. ----
+        classify("zoom", FairPlay.VANILLA_INFORMATION, "Narrows the field of view while a key is held, as the vanilla spyglass does.");
+        // Full Bright and No Fog are visibility aids that ship ON. ADR 0007 keeps
+        // their defaults by owner decision, so they are not in the advantage
+        // class; the notes say plainly what they do and that they are on.
+        classify("full_bright", FairPlay.VANILLA_INFORMATION, "Extends the vanilla Brightness setting past its maximum, so unlit areas are visible. On in a fresh install.");
+        classify("no_fog", FairPlay.VANILLA_INFORMATION, "Pushes distance fog back, so terrain inside your render distance is visible sooner than in vanilla. On in a fresh install.");
+        classify("pack_tweaks", FairPlay.COSMETIC, "Totem particle size, first-person shield position and a tint for your own shield's cooldown. Its water and lava clarity switches improve visibility inside fluids and ship off.", "underwaterClarityEnabled", "lavaClarityEnabled");
+        classify("player_health", FairPlay.INFORMATION_ADVANTAGE, "Shows the health of nearby mobs and players above them. Vanilla does not show other players' health.", "playerHealthIndicators");
+        classify("free_look", FairPlay.INFORMATION_ADVANTAGE, "Lets the camera look around without turning the character, a view vanilla does not allow.", "freeLookEnabled");
+        classify("saturation_bar", FairPlay.VANILLA_INFORMATION, "Shows your own saturation on the food bar.");
+        classify("block_overlay", FairPlay.COSMETIC, "Restyles the outline of the block you are looking at.");
+        classify("toggle_sprint_sneak", FairPlay.VANILLA_INFORMATION, "Press-once sprint and sneak, as vanilla's accessibility options offer.");
+        classify("alerts", FairPlay.VANILLA_INFORMATION, "Warns about your own armor durability and your own expiring effects.");
+        classify("crosshair", FairPlay.COSMETIC, "Replaces the crosshair's shape and color.");
+        classify("hitbox", FairPlay.VANILLA_INFORMATION, "Draws entity hitboxes, as vanilla's F3+B does, with custom colors.");
+        classify("better_hitreg", FairPlay.LOCAL_TIMING, "Plays your hit's sound, hurt animation and particles on your screen at once instead of waiting for the server's copy. It does not change what the game sends for movement or combat, or when. Two optional keys, unbound by default, send something when pressed: Switch Hand changes the vanilla Main Hand option, and the practice scoreboard's Send key posts the score as a chat message. The feature is off in a fresh install, and so are its reach rings, extra hitboxes and hiding of other fights.", "hitregEnabled", "hitregRenderHitbox", "hitregRenderServerHitbox", "hitregRenderYourReach", "hitregRenderTheirReach", "hitregRenderYourJump", "hitregRenderTheirJump", "hitregHideOtherFights");
+        classify("hit_color", FairPlay.COSMETIC, "Recolors the flash on an entity that takes damage.");
+        classify("glint_color", FairPlay.COSMETIC, "Recolors the enchantment glint.");
+        classify("info_module", FairPlay.VANILLA_INFORMATION, "Shows FPS, coordinates, time, biome and similar readouts that the F3 screen also has.");
+        classify("cps", FairPlay.VANILLA_INFORMATION, "Counts your own clicks.");
+        classify("armor_hud", FairPlay.VANILLA_INFORMATION, "Shows your own armor and its durability.");
+        classify("reach_display", FairPlay.VANILLA_INFORMATION, "Shows the distance of your own last hit.");
+        classify("potion_hud", FairPlay.VANILLA_INFORMATION, "Lists your own active effects, as the vanilla effect icons do.");
+        classify("ping", FairPlay.VANILLA_INFORMATION, "Shows latency as numbers: your own, and other players' as the tab list already reports it.");
+        classify("totem_pop", FairPlay.VANILLA_INFORMATION, "Counts your own totem pops. Counting other players' pops, on the HUD or on their nametags, is an information advantage and ships off.", "totemShowOthers", "nametagTotemPopsEnabled");
+        classify("waypoints", FairPlay.VANILLA_INFORMATION, "Marks positions you chose, and where you died, from your own coordinates.");
+        classify("container_preview", FairPlay.VANILLA_INFORMATION, "Shows a shulker box's contents as a grid instead of vanilla's text list, and your ender chest as you last saw it.");
+        classify("item_physics", FairPlay.COSMETIC, "Changes how dropped items lie and tumble on your screen.");
+        classify("particles", FairPlay.COSMETIC, "Hides, resizes or recolors particle types on your screen.");
+        classify("item_scale", FairPlay.COSMETIC, "Changes the size and position of the item in your hand.");
+        classify("held_item_seams", FairPlay.COSMETIC, "Hides texture seams on the item in your hand.");
+        classify("animations", FairPlay.COSMETIC, "Changes swing, view-bob and damage-tilt animations and smooths how other entities move on your screen.");
+        classify("keystrokes", FairPlay.VANILLA_INFORMATION, "Shows your own key and mouse presses.");
+        classify("minimap", FairPlay.VANILLA_INFORMATION, "A map of terrain your client has loaded, with your waypoints and dots for nearby mobs. Dots for other players are an information advantage and ship off.", "minimapShowPlayers");
+        classify("world_map", FairPlay.VANILLA_INFORMATION, "A full-screen map of terrain you have already visited.");
+        classify("resourcepack_browser", FairPlay.COSMETIC, "Downloads resource packs from Modrinth.");
+        classify("miscellaneous", FairPlay.LOCAL_TIMING, "Frame pacing, a frame cap, vsync control and the point within a frame where mouse movement is applied. The rate and content of what is sent to the server are unchanged.");
+        classify("custom_title", FairPlay.COSMETIC, "Aurora's title screen and menu styling.");
+        classify("text_fonts", FairPlay.COSMETIC, "Changes the font.");
+        classify("theme", FairPlay.COSMETIC, "Changes the colors of Aurora's own screens.");
+        classify("interface", FairPlay.COSMETIC, "Limits the frame rate of Aurora's own screens.");
 
         // ---- Mixins, in aurora.mixins.json order ----
         mixin("WindowMixin", "nothing (kept empty for compatibility)");

@@ -2579,3 +2579,26 @@ removes the operating-system user's home path and name.
 world is joined, for scripted boots of the tested mod matrix. Verified by a dev-client boot
 with one mixin disabled (report logged, 575 frames measured). The button itself and the
 clipboard path were not exercised on screen.
+
+## Fair-play classification (2026-11-11)
+
+Roadmap step 2 (ADR 0007). Every `FeatureCatalog.Feature` carries a `FairPlay` class
+(Cosmetic, Vanilla equivalent, Information advantage, Local timing), a one-sentence note a
+server owner can check, and `offByDefault`: the boolean `AuroraConfig` fields that must be
+false in a fresh install. `docs/FAIR_PLAY.md` is generated from the catalog by
+`tools/gen_fair_play_doc.py`; never edit it by hand. `FeatureCatalogTest` fails when the
+document and catalog differ, when an advantage feature names no off switch, or when any
+source file gains a custom packet, plugin channel, tick-rate change, or a third outbound
+send (the only two are Better Hitreg's unbound Switch Hand and scoreboard Send keys).
+`FramePacingPersistenceTest` checks the effective defaults on a real `AuroraConfig`.
+
+The effective default of a field is its initializer overlaid by
+`assets/aurora/defaults/3.2.0.json`; change both, and read the resource before assuming a
+default (Full Bright, No Fog and hitboxes ship ON there; Better Hitreg, minimap and world
+map ship OFF). Changed in this step: `freeLookEnabled` and `nametagTotemPopsEnabled` are
+now false in both places, so the resource is no longer the 3.1.0 export verbatim. Saved
+configs and profiles keep their own values.
+
+When adding a feature or a switch that shows something about other players, or a view
+vanilla does not allow: class it Information advantage (or list the switch in
+`offByDefault`), default it off, and regenerate the document.

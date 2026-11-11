@@ -118,6 +118,97 @@ class FeatureCatalogTest {
                 "FeatureRegistry must take a feature's tab and name from FeatureCatalog");
     }
 
+    // ---- Fair play (ADR 0007) ----
+
+    @Test void everyFeatureHasAFairPlayClassAndAPlainNote() {
+        for (FeatureCatalog.Feature f : FeatureCatalog.features()) {
+            assertNotNull(f.fairPlay(), f.id() + " has no fair-play class");
+            assertFalse(f.fairPlayNote().isBlank(), f.id() + " has no fair-play note");
+            assertTrue(f.fairPlayNote().endsWith("."), f.id() + " note must be a sentence");
+            assertFalse(f.fairPlayNote().contains("|"), f.id() + " note would break the document's table");
+            if (f.fairPlay() == FeatureCatalog.FairPlay.INFORMATION_ADVANTAGE) {
+                assertFalse(f.offByDefault().isEmpty(),
+                        f.id() + " is an information advantage and must name the switch that ships off");
+            }
+        }
+    }
+
+    @Test void everySwitchThatShipsOffIsABooleanConfigFieldAndOffInTheReleaseDefaults() throws Exception {
+        JsonObject releaseDefaults = JsonParser.parseString(Files.readString(
+                Path.of("src/client/resources/assets/aurora/defaults/3.2.0.json"))).getAsJsonObject();
+        for (FeatureCatalog.Feature f : FeatureCatalog.features()) {
+            for (String name : f.offByDefault()) {
+                Field field;
+                try {
+                    field = AuroraConfig.class.getField(name);
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError(f.id() + " names '" + name + "', which is not an AuroraConfig field");
+                }
+                assertEquals(boolean.class, field.getType(), name);
+                // The effective default is checked on a real config in FramePacingPersistenceTest;
+                // this catches the release-defaults file turning one back on.
+                if (releaseDefaults.has(name)) {
+                    assertFalse(releaseDefaults.get(name).getAsBoolean(),
+                            name + " must be off in the release defaults (ADR 0007)");
+                }
+            }
+        }
+    }
+
+    @Test void theFourAgreedSwitchesShipOff() {
+        // ADR 0007's first default-off list, by the switch that implements each item.
+        assertTrue(FeatureCatalog.require("free_look").offByDefault().contains("freeLookEnabled"));
+        assertTrue(FeatureCatalog.require("player_health").offByDefault().contains("playerHealthIndicators"));
+        assertTrue(FeatureCatalog.require("totem_pop").offByDefault().containsAll(List.of("totemShowOthers", "nametagTotemPopsEnabled")));
+        assertTrue(FeatureCatalog.require("minimap").offByDefault().contains("minimapShowPlayers"));
+        assertEquals(FeatureCatalog.FairPlay.LOCAL_TIMING, FeatureCatalog.require("better_hitreg").fairPlay());
+    }
+
+    @Test void theFairPlayDocumentRepeatsTheCatalog() throws Exception {
+        String doc = Files.readString(Path.of("docs/FAIR_PLAY.md"));
+        for (FeatureCatalog.FairPlay c : FeatureCatalog.FairPlay.values()) {
+            assertTrue(doc.contains("| " + c.label + " | " + c.meaning + " |"), "class row for " + c);
+        }
+        for (FeatureCatalog.Feature f : FeatureCatalog.features()) {
+            String row = "| " + f.name() + " | " + f.fairPlay().label + " | " + f.fairPlayNote() + " |";
+            assertTrue(doc.contains(row),
+                    "docs/FAIR_PLAY.md is out of date for " + f.id() + "; run python tools/gen_fair_play_doc.py");
+        }
+    }
+
+    /**
+     * The document tells server owners that Aurora sends nothing of its own.
+     * This scans every source file so that stays true: no custom packets or
+     * channels, no tick-rate changes, and exactly the two user-triggered
+     * vanilla sends the document names.
+     */
+    @Test void nothingInTheModSendsToAServerExceptTheTwoDocumentedKeys() throws Exception {
+        Path root = Path.of("src/client/java/com/aurora/client");
+        List<String> forbidden = List.of("Serverbound", "ClientPlayNetworking", "PayloadTypeRegistry",
+                "CustomPacketPayload", "tickRateManager", "sendCommand(", "sendUnsignedCommand(");
+        List<String> chatSends = new ArrayList<>();
+        List<String> optionBroadcasts = new ArrayList<>();
+        try (var files = Files.walk(root)) {
+            for (Path file : (Iterable<Path>) files.filter(p -> p.toString().endsWith(".java"))::iterator) {
+                String source = Files.readString(file);
+                String name = root.relativize(file).toString().replace('\\', '/');
+                for (String token : forbidden) {
+                    assertFalse(source.contains(token), name + " uses " + token + " (ADR 0007: no non-vanilla packets, no tick changes)");
+                }
+                if (source.contains("sendChat(")) chatSends.add(name);
+                if (source.contains("broadcastOptions(")) optionBroadcasts.add(name);
+            }
+        }
+        assertEquals(List.of("hitreg/BetterHitreg.java"), chatSends, "the practice scoreboard's Send key is the only chat send");
+        assertEquals(List.of("hitreg/BetterHitreg.java"), optionBroadcasts, "Switch Hand is the only options broadcast");
+
+        // Better Hitreg watches your attack; it must never be able to cancel or change it.
+        String attack = Files.readString(root.resolve("mixin/hitreg/AttackMixin.java"));
+        assertTrue(attack.contains("@Inject(method = \"attack\", at = @At(\"HEAD\"))"),
+                "the attack hook must stay a plain, non-cancellable HEAD inject");
+        assertFalse(attack.contains("cancellable"));
+    }
+
     @Test void gridCardsHaveASummaryAndSettingsEntriesDoNot() {
         for (FeatureCatalog.Feature f : FeatureCatalog.features()) {
             assertFalse(f.name().isBlank(), f.id());

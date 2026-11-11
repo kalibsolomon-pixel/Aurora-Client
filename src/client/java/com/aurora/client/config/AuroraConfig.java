@@ -490,7 +490,8 @@ public class AuroraConfig {
     public boolean toolDurabilityAlertEnabled = true;
 
     // ---- Batch 2 features ----
-    public boolean freeLookEnabled       = true;
+    /** Off in a fresh install: an information advantage (ADR 0007). */
+    public boolean freeLookEnabled       = false;
     public double freeLookSensitivity    = 1.0;  // 0.1..3.0 multiplier on MouseHandler delta
     public boolean saturationBarEnabled  = true;
     public boolean tabPingEnabled        = true;
@@ -669,7 +670,7 @@ public class AuroraConfig {
     public HudBackground totemPopBgMode = HudBackground.NONE;
     public int totemPopBgColor = 0x80000000;
     /** Append "[N]" to other players' nametags showing their totem pop count. */
-    public boolean nametagTotemPopsEnabled = true;
+    public boolean nametagTotemPopsEnabled = false; // off in a fresh install (ADR 0007)
 
     // ---- Aurora keybinds ----
     // Stored as raw GLFW key codes. -1 means unbound. Polled directly via
@@ -1125,7 +1126,7 @@ public class AuroraConfig {
     /** Show passive/neutral mobs as green dots. */
     public boolean minimapShowPassives = true;
     /** Show other players as white dots. */
-    public boolean minimapShowPlayers = true;
+    public boolean minimapShowPlayers = false; // off in a fresh install (ADR 0007)
     /** Show a directional arrow for the player at the center. */
     public boolean minimapShowSelfArrow = true;
     /** Show a coordinate readout below the minimap. */

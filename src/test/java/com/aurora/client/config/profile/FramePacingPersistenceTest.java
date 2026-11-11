@@ -104,6 +104,38 @@ class FramePacingPersistenceTest {
         assertFalse(Files.exists(temporary.resolve("profiles/" + name + ".json")), "no queued save resurrects it");
     }
 
+    @Test void aFreshInstallHasEveryFairPlaySwitchOff() throws Exception {
+        // ADR 0007. The effective default is the field initializer overlaid by
+        // the release-defaults resource, so it is checked on a real instance.
+        AuroraConfig fresh = new AuroraConfig();
+        for (var feature : com.aurora.client.feature.FeatureCatalog.features()) {
+            for (String name : feature.offByDefault()) {
+                assertFalse(AuroraConfig.class.getField(name).getBoolean(fresh),
+                        name + " (" + feature.name() + ") must be off in a fresh install");
+            }
+        }
+        // docs/FAIR_PLAY.md tells server owners these three are on.
+        assertTrue(fresh.fullBright);
+        assertTrue(fresh.noFogEnabled);
+        assertTrue(fresh.hitboxEnabled);
+    }
+
+    @Test void aSavedPreferenceBeatsAChangedDefault() throws Exception {
+        // A player who had FreeLook on before it became default-off keeps it on.
+        var live = AuroraConfig.get();
+        boolean original = live.freeLookEnabled;
+        try {
+            live.freeLookEnabled = true;
+            assertTrue(AuroraConfig.saveBlocking());
+            live.freeLookEnabled = false;
+            AuroraConfig.load();
+            assertTrue(AuroraConfig.get().freeLookEnabled, "the saved value wins over the new default");
+        } finally {
+            AuroraConfig.get().freeLookEnabled = original;
+            AuroraConfig.saveBlocking();
+        }
+    }
+
     @Test void aSwitchHeldOffForABrokenMixinIsSavedAsThePlayerSetIt() throws Exception {
         // ADR 0004: a mixin that could not apply turns its feature off for the
         // session only. Neither aurora.json nor the profile may record that.
