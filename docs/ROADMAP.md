@@ -45,7 +45,7 @@ Still open:
 
 ## Step 3 status
 
-The core module is built on `feat/core-module`: 75 already Minecraft-free classes moved into `core/`, a Gradle module that cannot compile a Minecraft, Fabric, LWJGL, Mixin or Log4j import. Three small couplings were cut on the way (the config directory, the client logger, two health constants). Verified by the test suite and a dev-client boot. The overhead budget is set on `feat/overhead-budget`: Aurora CPU per frame at most 0.25 ms mean and 0.40 ms p95, no glass and at most 100 fills, in a world with factory defaults, about 1.5 times the measured baseline. Every diagnostics report judges its run, and `tools/overhead_check.py` is a release step ([OVERHEAD_BUDGET.md](OVERHEAD_BUDGET.md)). Still to do in step 3: the third-party notices and the repo cleanup.
+The core module is built on `feat/core-module`: 75 already Minecraft-free classes moved into `core/`, a Gradle module that cannot compile a Minecraft, Fabric, LWJGL, Mixin or Log4j import. Three small couplings were cut on the way (the config directory, the client logger, two health constants). Verified by the test suite and a dev-client boot. The overhead budget is set on `feat/overhead-budget`: Aurora CPU per frame at most 0.25 ms mean and 0.40 ms p95, no glass and at most 100 fills, in a world with factory defaults, about 1.5 times the measured baseline. Every diagnostics report judges its run, and `tools/overhead_check.py` is a release step ([OVERHEAD_BUDGET.md](OVERHEAD_BUDGET.md)). Third-party notices are on `feat/third-party-notices`: `THIRD_PARTY_NOTICES.md` ships in the jar and a test keeps it complete. Still to do in step 3: the repo cleanup.
 
 ## Standing rules until the port ships
 
@@ -53,7 +53,7 @@ The core module is built on `feat/core-module`: 75 already Minecraft-free classe
 
 ## Housekeeping in step 3
 
-- **Third-party notices.** One file covering Better Hitreg, Freelook++, AppleSkin, HitColor and the bundled fonts, with the Apache license text included. Modrinth lists Better Hitreg as Apache-2.0; the repo currently carries only the MIT `LICENSE`.
+- **Third-party notices.** Done: `THIRD_PARTY_NOTICES.md` covers Better Hitreg, Freelook++, AppleSkin, HitColor, the bundled fonts and the bundled TwelveMonkeys libraries, with every license text.
 - **Repo cleanup.** A short contributor and agent guide in place of the history in `AGENTS.md`. The reports at the repo root move under `docs/`.
 
 ## Goals
@@ -66,7 +66,8 @@ The core module is built on `feat/core-module`: 75 already Minecraft-free classe
 - Nothing in step 2 was checked in a running game. The defaults are verified on a real config object in tests.
 - Whether 26.3 is the newest Minecraft release. Sodium listings showed builds for 26.1, 26.2 and 26.3 on 2026-11-10; the newest was not confirmed.
 - Apollo's license terms, and whether registering its plugin channel is how servers identify Lunar Client.
-- Whether Better Hitreg's Apache-2.0 listing matches the terms its author gave for the integration.
+- Whether Better Hitreg's Apache-2.0 listing matches the terms its author gave for the integration. Its repository's LICENSE is the stock Apache 2.0 text, and the notices follow it.
+- HitColor's repository has no LICENSE file; only Modrinth says MIT. Asking harimasa to add one would settle it.
 
 ## Costs accepted knowingly
 

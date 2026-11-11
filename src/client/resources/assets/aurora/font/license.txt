@@ -1,12 +1,18 @@
-Copyright 2014-2021 Adobe (http://www.adobe.com/), with Reserved Font
-Name 'Source'. Source is a trademark of Adobe in the United States
-and/or other countries.
+The fonts in this folder, except material_symbols_rounded.ttf, are licensed
+under the SIL Open Font License, Version 1.1, reproduced below.
 
-This Font Software is licensed under the SIL Open Font License,
-Version 1.1.
+Fira Sans Medium (fira-sans-medium.ttf): Digitized data copyright 2012-2016, The Mozilla Foundation and Telefonica S.A.
+Inter Medium and Medium Italic (inter-frozen-medium.ttf, inter-frozen-medium-italic.ttf): Copyright 2016 The Inter Project Authors
+JetBrains Mono Medium (jetbrains-mono-medium.ttf): Copyright 2020 The JetBrains Mono Project Authors (https://github.com/JetBrains/JetBrainsMono)
+Nunito (nunito-variable.ttf): Copyright 2014 The Nunito Project Authors (https://github.com/googlefonts/nunito)
+Oswald (oswald-variable.ttf): Copyright 2016 The Oswald Project Authors (https://github.com/googlefonts/OswaldFont)
+Poppins Medium (poppins-medium.ttf): Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins)
+Quicksand (quicksand-variable.ttf): Copyright 2019 The Quicksand Project Authors (https://github.com/andrew-paglinawan/QuicksandFamily.git), with Reserved Font Name "Quicksand"
+Roboto (roboto-variable.ttf): Copyright 2011 The Roboto Project Authors (https://github.com/googlefonts/roboto-classic)
 
-This license is copied below, and is also available with a FAQ at:
-http://scripts.sil.org/OFL
+material_symbols_rounded.ttf is a subset of Material Symbols Rounded,
+Copyright 2026 Google LLC, licensed under the Apache License, Version 2.0.
+Its text is in THIRD_PARTY_NOTICES.md at the root of the Aurora jar.
 
 -----------------------------------------------------------
 SIL OPEN FONT LICENSE Version 1.1 - 26 February 2007

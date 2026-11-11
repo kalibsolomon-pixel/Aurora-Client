@@ -134,6 +134,8 @@ jar {
 	from("LICENSE") {
 		rename { "${it}_$projectName"}
 	}
+	// Licenses of the code, fonts and libraries Aurora contains (tools/gen_third_party_notices.py).
+	from("THIRD_PARTY_NOTICES.md")
 }
 
 // configure the maven publication

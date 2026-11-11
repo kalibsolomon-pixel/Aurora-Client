@@ -2175,8 +2175,9 @@ look at the features that consume bundled assets.**
 - ~~`assets/aurora/textures/gui/module_icons/` ships two dev scripts + `settings.svg`~~
   **Resolved (2026-09-11, audit D9)**: the whole unused PNG mechanism
   (`ModuleIconRegistry` + the 22 PNGs + the scripts + the SVG) was deleted, along with the
-  four design-source SVGs in `textures/gui/` and root-level `inspect_font3.py`. Font
-  `license.txt` still covers a removed font (Source Sans Pro).
+  four design-source SVGs in `textures/gui/` and root-level `inspect_font3.py`. The font
+  `license.txt` covered a removed font (Source Sans Pro) until 2026-11-11; it is now
+  generated with `THIRD_PARTY_NOTICES.md` (see the end of this file).
 - No TODO/FIXME comments exist in `com/aurora` — intent lives in long javadocs. Read them;
   they record 1.21.11 API renames (`setupFog`, `swingArm`, `EntityHitboxDebugRenderer.
   emitGizmos`, …) and the reasons behind the conventions above.
@@ -2658,3 +2659,16 @@ dev machine; a JFR run put timer coverage at about 79% (the rest is mixin hooks)
 hitbox renderer at over half the timed work. `-Daurora.diagnostics.runs=N` logs N reports
 back to back; `tools/overhead_check.py` drops two warm-up runs and fails on any run over
 budget. It is a step in RELEASE_PROCESS.md. Details: `docs/OVERHEAD_BUDGET.md`.
+
+## Third-party notices (2026-11-11)
+
+Roadmap step 3. `THIRD_PARTY_NOTICES.md` (repo root, also packed into the jar root) lists
+everything Aurora contains from other projects and reproduces each license: Better Hitreg
+(Apache 2.0), Freelook++ (MIT), HitColor (MIT per Modrinth; its repository has no LICENSE
+file), AppleSkin (Unlicense), eight OFL 1.1 text fonts, Material Symbols Rounded (Apache
+2.0) and the six TwelveMonkeys ImageIO jars (BSD 3-Clause; the jars carry no license of
+their own). `tools/gen_third_party_notices.py` writes it and `assets/aurora/font/license.txt`
+from the upstream texts in `tools/licenses/`; never edit either by hand.
+`ThirdPartyNoticesTest` fails when a font file, a jar-in-jar library or a source credit
+("adapted from", "ported from", "borrowed from", "port of") is not covered, or a license
+text is not reproduced verbatim.
