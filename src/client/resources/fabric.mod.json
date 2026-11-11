@@ -4,13 +4,14 @@
   "version": "${version}",
   "name": "Aurora Client",
   "icon": "assets/aurora/icon.png",
-  "description": "A lightweight Fabric client with QoL features, zoom, full bright, and a custom title screen.",
+  "description": "Client-side quality-of-life, combat feedback and performance features with a themed interface.",
   "authors": [
     "Kalib"
   ],
   "contact": {
-    "homepage": "https://example.com",
-    "sources": "https://example.com"
+    "homepage": "https://github.com/kalibsolomon-pixel/Aurora-Client",
+    "sources": "https://github.com/kalibsolomon-pixel/Aurora-Client",
+    "issues": "https://github.com/kalibsolomon-pixel/Aurora-Client/issues"
   },
   "license": "MIT",
   "environment": "client",

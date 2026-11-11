@@ -8,7 +8,7 @@ targets Minecraft 1.21.11. Build and test with the checked-in Gradle wrapper:
 ./gradlew build
 ```
 
-The runtime mod is `build/libs/aurora-<version>.jar`. Do not place a sources JAR
+The runtime mod is `build/libs/aurora-<version>-mc<minecraft>.jar`. Do not place a sources JAR
 in a player's `mods/` directory. See `gradle.properties` and the built JAR's
 `fabric.mod.json` for the exact version and dependency declarations. The
 project is licensed under MIT; see `LICENSE`. Code, fonts and libraries from
@@ -55,9 +55,13 @@ the default `master` branch. Its publication job uses the existing
    update visible to launcher users.
 
 The tag is always `v<version>`, and the single release asset is named
-`aurora-<version>.jar`. `stable` requires `X.Y.Z`; `beta` requires
+`aurora-<version>-mc<minecraft>.jar`. `stable` requires `X.Y.Z`; `beta` requires
 `X.Y.Z-beta.N`; `nightly` requires `X.Y.Z-nightly.YYYYMMDD`. Beta and nightly
 are GitHub prereleases. The developer chooses the next version; this workflow
 never chooses or increments one. Existing tags and releases, including the
 immutable `v2.1.1` release with no runtime asset, are never repaired by this
 workflow.
+
+## Minecraft 26.1.2 checkpoint
+
+This branch prepares Aurora 3.2.2 for Minecraft 26.1.2. New feature work and current contributor guidance are on the default branch.

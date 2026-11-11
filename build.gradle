@@ -33,6 +33,7 @@ loom {
 	enableTransitiveAccessWideners = true
 
 	runConfigs.configureEach {
+		runDir project.relativePath(file(project.findProperty('aurora.runDir') ?: 'run'))
 		// Disables the strict version validation check inside the development sandbox env
 		property "fabric.skipDependencyCheck", "true"
 		vmArg "-Dfabric.skipDependencyCheck=true"
@@ -125,6 +126,7 @@ tasks.withType(Jar).configureEach {
 }
 
 jar {
+	archiveClassifier = "mc${project.minecraft_version}"
 	def projectName = project.name
 	inputs.property "projectName", projectName
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
