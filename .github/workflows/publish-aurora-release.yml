@@ -86,12 +86,13 @@ jobs:
         with:
           java-version: '25'
           distribution: microsoft
-      - name: Run every test
+      - name: Build and test every supported Minecraft line from the same source
         working-directory: source
-        run: ./gradlew test
-      - name: Build the release candidate from the same source
-        working-directory: source
-        run: ./gradlew build --rerun-tasks
+        run: python3 tools/parity.py
+      - name: Require GPU matrix and overhead acceptance for every line
+        run: >-
+          python3 tools/parity_acceptance.py verify --source-root source
+          --evidence "source/docs/releases/evidence/${RELEASE_VERSION}-parity.json"
       - name: Verify JAR identity, version, size, and SHA-256
         env:
           SOURCE_SHA: ${{ steps.source.outputs.sha }}
@@ -99,12 +100,17 @@ jobs:
         run: |
           mkdir -p release-bundle
           python3 tools/verify_release_artifact.py inspect \
-            --source-root source --jar-dir source/build/libs \
+            --parity --source-root source --jar-dir source/build \
             --version "$RELEASE_VERSION" --channel "$RELEASE_CHANNEL" \
             --source-sha "$SOURCE_SHA" \
             --output release-bundle/release-metadata.json
-          asset="$(python3 -c 'import json; print(json.load(open("release-bundle/release-metadata.json"))["fileName"])')"
-          cp "source/build/libs/$asset" release-bundle/
+          python3 - <<'PY'
+          import json, shutil
+          from pathlib import Path
+          m = json.loads(Path('release-bundle/release-metadata.json').read_text())
+          for a in m['artifacts']:
+              shutil.copy2(Path('source/build') / ('minecraft-' + a['minecraftVersion']) / 'libs' / a['fileName'], 'release-bundle')
+          PY
           # Release notes live in docs/releases/ (moved from the repo root 2026-11-11).
           if [[ -f "source/docs/releases/RELEASE_NOTES_${RELEASE_VERSION}.md" ]]; then
             cp "source/docs/releases/RELEASE_NOTES_${RELEASE_VERSION}.md" release-bundle/release-notes.md
@@ -122,7 +128,7 @@ jobs:
           if-no-files-found: error
 
   publish:
-    name: Approve and publish verified JAR
+    name: Approve and publish verified parity set
     needs: validate
     if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-24.04
@@ -170,37 +176,36 @@ jobs:
           m = json.loads(Path('release-bundle/release-metadata.json').read_text())
           notes = Path('release-bundle/release-notes.md')
           introduction = notes.read_text(encoding='utf-8') if notes.is_file() else (
-              f"Aurora Client {m['version']} for Minecraft {m['minecraftVersion']}.\n")
+              f"Aurora Client {m['version']} for Minecraft {', '.join(m['minecraftVersions'])}.\n")
+          assets = '\n\n'.join(f"Runtime JAR: `{a['fileName']}` ({a['sizeBytes']} bytes)\n\nSHA-256: `{a['sha256']}`" for a in m['artifacts'])
           Path('release-notes.md').write_text(
               introduction.rstrip() + "\n\n" +
               f"Source commit: `{m['sourceSha']}`\n\n"
-              f"Runtime JAR: `{m['fileName']}` ({m['sizeBytes']} bytes)\n\n"
-              f"SHA-256: `{m['sha256']}`\n",
+              + assets + '\n',
               encoding='utf-8')
           PY
-      - name: Create draft, upload, and verify its sole asset
+      - name: Create draft, upload, and verify the complete artifact set
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
           tag="v${RELEASE_VERSION}"
-          asset="$(python3 -c 'import json; print(json.load(open("release-bundle/release-metadata.json"))["fileName"])')"
           flags=(--latest="$MAKE_LATEST")
           if [[ "$RELEASE_CHANNEL" != stable ]]; then
             flags+=(--prerelease --latest=false)
           fi
           gh release create "$tag" -R "$GITHUB_REPOSITORY" \
             --draft --target "$SOURCE_SHA" \
-            --title "Aurora Client ${RELEASE_VERSION} for Minecraft $(python3 -c 'import json; print(json.load(open("release-bundle/release-metadata.json"))["minecraftVersion"])')" \
+            --title "Aurora Client ${RELEASE_VERSION}" \
             --notes-file release-notes.md "${flags[@]}"
-          gh release upload "$tag" "release-bundle/$asset" \
+          gh release upload "$tag" release-bundle/*.jar \
             -R "$GITHUB_REPOSITORY"
           python3 tools/verify_release_artifact.py draft \
             --repo "$GITHUB_REPOSITORY" \
             --metadata release-bundle/release-metadata.json
           mkdir -p draft-download
           gh release download "$tag" -R "$GITHUB_REPOSITORY" \
-            --pattern "$asset" --dir draft-download
+            --pattern "aurora-${RELEASE_VERSION}-mc*.jar" --dir draft-download
           python3 tools/verify_release_artifact.py verify \
             --metadata release-bundle/release-metadata.json \
             --jar-dir draft-download \
@@ -213,7 +218,7 @@ jobs:
         run: |
           gh release edit "v${RELEASE_VERSION}" --draft=false --latest="$MAKE_LATEST" \
             -R "$GITHUB_REPOSITORY"
-      - name: Anonymously redownload and inspect the public JAR
+      - name: Anonymously redownload and inspect every public JAR
         run: >-
           python3 tools/verify_release_artifact.py public
           --repo "$GITHUB_REPOSITORY"
@@ -228,8 +233,9 @@ jobs:
           m = json.loads(Path('release-bundle/release-metadata.json').read_text())
           print(f"## Aurora Client {m['version']} ({m['channel']})")
           print(f"Source commit: `{m['sourceSha']}`")
-          print(f"Public JAR: `{m['fileName']}` ({m['sizeBytes']} bytes)")
-          print(f"SHA-256: `{m['sha256']}`")
+          for a in m['artifacts']:
+              print(f"Public JAR: `{a['fileName']}` ({a['sizeBytes']} bytes)")
+              print(f"SHA-256: `{a['sha256']}`")
           print("Anonymous public redownload and JAR metadata inspection passed.")
           print("Launcher manifest publication is a separate manual step.")
           PY

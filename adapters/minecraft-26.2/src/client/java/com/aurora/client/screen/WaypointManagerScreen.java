@@ -1,0 +1,641 @@
+package com.aurora.client.screen;
+
+import com.aurora.client.ui.component.MaterialSurface;
+
+import com.aurora.client.config.AuroraConfig;
+import com.aurora.client.config.AuroraConfig.Waypoint;
+import com.aurora.client.feature.impl.WaypointFeature;
+import com.aurora.client.theme.ThemeManager;
+import com.aurora.client.theme.ThemeToken;
+import com.aurora.client.ui.component.Button;
+import com.aurora.client.ui.component.ButtonWidget;
+import com.aurora.client.ui.component.ColorSwatch;
+import com.aurora.client.ui.component.GlassEditBox;
+import com.aurora.client.ui.component.GlassSurface;
+import com.aurora.client.ui.interaction.MinecraftSemanticFeedback;
+import com.aurora.client.ui.interaction.SemanticAction;
+import com.aurora.client.ui.interaction.SemanticActionControl;
+import com.aurora.client.ui.render.blur.BlurPanelRenderer;
+import com.aurora.client.util.WorldScope;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.network.chat.Component;
+
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+/**
+ * Lists the current world's waypoints. Each row exposes: color swatch,
+ * editable name, integer coordinates, color-edit button, delete button.
+ * Top toolbar provides "Drop at current position" and "Done".
+ *
+ * <p>On the shared component framework, atop the {@link ManagerListScreen}
+ * foundation (audit R3): the frame order, scroll + scrollbar, toast and
+ * inline rename lifecycle come from the base; this class owns the row
+ * content and actions — row swatches are the shared {@link ColorSwatch},
+ * row actions are the canonical themed {@link Button} (delete uses its
+ * destructive variant), row chrome resolves through theme tokens, and the
+ * inline rename field is themed by the mod-wide {@code EditBoxMixin} via
+ * the {@link com.aurora.client.ui.component.ThemedScreen} marker.
+ *
+ * <p>Glass rollout: each row is its own RAISED glass panel — controls/rows
+ * float above the world (there is no containing window panel on this
+ * screen, so nothing takes the depressed treatment here; the Profile
+ * screen's rows do — a deliberate per-screen §6 ruling kept by the base).
+ * Row action buttons are neutral raised glass via the shared Button; the
+ * Drop button — the screen's single primary action — uses accent-STAINED
+ * glass. The color swatch and the inline rename field stay opaque: the
+ * swatch displays user color content at full fidelity (the picker-pad
+ * rule), and text-entry fields are never glass. On renderer decline (no
+ * world, screenshot suppression) the flat surface fills + borders return
+ * unchanged.
+ */
+public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
+
+    private static final int ROW_H        = 28;
+    private static final int LIST_W       = 460;
+
+    private static final int SWATCH_W     = 12;
+    private int nameWidth() { return Math.max(48, listWidth() - 16 - 22 - BTN_COPY_W - BTN_COLOR_W - BTN_DEL_W - 18); }
+    private static final int COORDS_W     = 0;
+    private static final int BTN_COPY_W   = 40;
+    private static final int BTN_COLOR_W  = 40;
+    private static final int BTN_DEL_W    = 48;
+    private static final int CONTROL_GAP  = 6;
+    private static final int ROW_INSET    = 8;
+
+    // Shared per-row widgets, keyed by the waypoint INSTANCE — the same
+    // identity WaypointFeature.remove() matches, and the objects in the
+    // live list are stable across frames (edits mutate in place). Keying
+    // by position (the old scheme) let a remove-then-add between frames
+    // reuse a stale entry for a different waypoint; keying by identity and
+    // reconciling against the live list every frame (see
+    // reconcileRowCaches) can never point an action at the wrong object.
+    // Waypoint does not override equals/hashCode, so HashMap compares by
+    // identity — exactly right.
+    private final Map<Waypoint, Button> rowCopyBtns = new HashMap<>();
+    private final Map<Waypoint, Button> rowColorBtns = new HashMap<>();
+    private final Map<Waypoint, Button> rowDeleteBtns = new HashMap<>();
+    private final Map<Waypoint, ColorSwatch> rowSwatches = new HashMap<>();
+
+    /**
+     * The semantic controls behind the row buttons (Phase A full rollout),
+     * keyed in lockstep with their buttons — created together, and dropped
+     * together in {@link #reconcileRowCaches} (removal also unregisters the
+     * control from the screen, which clears focus if it held it). The shared
+     * Button remains the sole pixel and press-animation owner; the control
+     * owns the enabled gate, the activation convergence, narration, and the
+     * semantic click. Color/Delete joined Copy in the full rollout; Delete's
+     * accessible name carries the target waypoint.
+     */
+    private final Map<Waypoint, SemanticActionControl> rowCopyControls = new HashMap<>();
+    private final Map<Waypoint, SemanticActionControl> rowColorControls = new HashMap<>();
+    private final Map<Waypoint, SemanticActionControl> rowDeleteControls = new HashMap<>();
+
+    // Row-control offsets from the row's left edge, shared by the glass pass
+    // and the content pass so the two can never disagree on where a button is.
+    private int copyDx() { return ROW_INSET + SWATCH_W + CONTROL_GAP + nameWidth() + CONTROL_GAP; }
+    private int colorDx() { return copyDx() + BTN_COPY_W + CONTROL_GAP; }
+    private int delDx() { return colorDx() + BTN_COLOR_W + CONTROL_GAP; }
+
+    public WaypointManagerScreen(Screen parent) {
+        super(Component.literal("Waypoints — " + WorldScope.current()), parent);
+    }
+
+    private EditBox search;
+    private String query = "", group = "";
+    private boolean currentDimensionOnly;
+    private int sort;
+    private long rowsRevision = -1, rowsSecond = -1;
+    private String rowsScope;
+    private List<Waypoint> filtered = List.of();
+    private List<Waypoint> reconciledRows;
+    private int reconciledStart = -1;
+
+    /** Search (18) + gap (6) + filter row (20) + gap (6) under the header band. */
+    @Override protected int listTop() { return windowTop() + HEADER_H + 38; }
+
+    @Override protected void init() {
+        super.init();
+        int left = (width - listWidth()) / 2;
+        search = new EditBox(font, left, windowTop() + HEADER_H, listWidth(), 14, Component.literal("Search waypoints"));
+        search.setHint(Component.literal("Search name, group, dimension or description"));
+        search.setValue(query);
+        search.setResponder(value -> { commitEditors(); query = value; invalidateRows(); });
+        addRenderableWidget(search);
+        int cell = (listWidth() - 18) / 4;
+        addRenderableWidget(ButtonWidget.semantic(left, windowTop() + HEADER_H + 18, cell, 16,
+                Component.literal(sortLabel()), "Cycles name, distance, creation and group sorting.",
+                () -> { commitEditors(); sort = (sort + 1) % 4; invalidateRows(); rebuildWidgets(); }));
+        addRenderableWidget(ButtonWidget.semantic(left + cell + 6, windowTop() + HEADER_H + 18, cell, 16,
+                Component.literal(currentDimensionOnly ? "This dimension" : "All dimensions"), "Filters the current dimension.",
+                () -> { commitEditors(); currentDimensionOnly = !currentDimensionOnly; invalidateRows(); rebuildWidgets(); }));
+        addRenderableWidget(ButtonWidget.semantic(left + 2 * (cell + 6), windowTop() + HEADER_H + 18, cell, 16,
+                Component.literal(font.plainSubstrByWidth(group.isEmpty() ? "All groups" : group, cell - 8)),
+                "Cycles waypoint groups. Edit a waypoint to assign its group.", () -> {
+                    commitEditors();
+                    java.util.TreeSet<String> groups = new java.util.TreeSet<>(); groups.add("");
+                    var feature = WaypointFeature.get();
+                    if (feature != null) for (Waypoint w : feature.currentWorldWaypoints())
+                        if (w != null && w.group != null && !w.group.isEmpty()) groups.add(w.group);
+                    var options = new java.util.ArrayList<>(groups);
+                    group = options.get((options.indexOf(group) + 1) % options.size());
+                    invalidateRows(); rebuildWidgets();
+                }));
+        boolean hidden = AuroraConfig.get().waypointHiddenGroups != null && AuroraConfig.get().waypointHiddenGroups.contains(group);
+        ButtonWidget groupVisibility = addRenderableWidget(ButtonWidget.semantic(left + 3 * (cell + 6), windowTop() + HEADER_H + 18, cell, 16,
+                Component.literal(hidden ? "Show group" : "Hide group"), "Shows or hides the selected group on every map.", () -> {
+                    var cfg = AuroraConfig.get();
+                    if (cfg.waypointHiddenGroups == null) cfg.waypointHiddenGroups = new java.util.HashSet<>();
+                    if (!cfg.waypointHiddenGroups.remove(group)) cfg.waypointHiddenGroups.add(group);
+                    AuroraConfig.save(); rebuildWidgets();
+                }));
+        groupVisibility.active = !group.isEmpty();
+    }
+
+    private String sortLabel() { return "Sort: " + new String[]{"Name", "Distance", "Newest", "Group"}[sort]; }
+    private void invalidateRows() { rowsRevision = -1; scroll.set(0); nameFitCache.clear(); }
+
+    // ------------------------------------------------------------------
+    //  Foundation hooks
+    // ------------------------------------------------------------------
+
+    @Override protected int listWidth() { return windowWidth() - 16; }
+    @Override protected int rowHeight() { return ROW_H; }
+    @Override protected int nameColumnWidth() { return nameWidth() - 16; }
+    @Override protected int editorFieldX(int listX) {
+        return listX + ROW_INSET + SWATCH_W + CONTROL_GAP + 16;
+    }
+
+    @Override protected List<Waypoint> currentRows() {
+        WaypointFeature feat = WaypointFeature.get();
+        if (feat == null) return java.util.Collections.emptyList();
+        var mc = Minecraft.getInstance();
+        String scope = WaypointFeature.scopeKey();
+        long second = System.nanoTime() / 1_000_000_000L;
+        if (rowsRevision == feat.revision() && java.util.Objects.equals(scope, rowsScope)
+                && (sort != 1 || second == rowsSecond)) return filtered;
+        rowsRevision = feat.revision(); rowsScope = scope; rowsSecond = second;
+        String needle = query.toLowerCase(java.util.Locale.ROOT);
+        String dim = mc.level == null ? "" : mc.level.dimension().identifier().toString();
+        var rows = new java.util.ArrayList<Waypoint>();
+        for (Waypoint w : feat.currentWorldWaypoints()) {
+            if (w == null || (currentDimensionOnly && !dim.equals(w.dimension))) continue;
+            if (!group.isEmpty() && !group.equals(w.group)) continue;
+            if (!needle.isEmpty() && !(w.name + " " + w.group + " " + w.dimension + " " + w.description)
+                    .toLowerCase(java.util.Locale.ROOT).contains(needle)) continue;
+            rows.add(w);
+        }
+        java.util.Comparator<Waypoint> comparator = switch (sort) {
+            case 1 -> java.util.Comparator.comparingDouble(w -> mc.player == null ? 0 :
+                    com.aurora.client.worldmap.WaypointQuery.distanceSquared(w, mc.player.getX(), mc.player.getZ()));
+            case 2 -> java.util.Comparator.comparingLong((Waypoint w) -> w.createdAtMs).reversed();
+            case 3 -> java.util.Comparator.comparing(w -> w.group);
+            default -> java.util.Comparator.comparing(w -> w.name, String.CASE_INSENSITIVE_ORDER);
+        };
+        rows.sort(comparator);
+        filtered = List.copyOf(rows);
+        return filtered;
+    }
+
+    @Override protected Component emptyMessage() {
+        boolean filtering = !query.isEmpty() || !group.isEmpty() || currentDimensionOnly;
+        return Component.literal(filtering ? "No waypoints match the current search and filters."
+                : "No waypoints yet. Use Drop at Player Position or right-click the world map.");
+    }
+
+    @Override protected ButtonWidget createToolbarActionBtn() {
+        // Drop is the screen's single primary action → accent-STAINED glass
+        // (Done, from the base, is a plain action → neutral).
+        return ButtonWidget.semantic(
+                16, 16, 160, 22,
+                Component.literal("Drop at Player Position"),
+                "Drops a new waypoint at your current position.",
+                () -> {
+                    WaypointFeature feat = WaypointFeature.get();
+                    if (feat == null) return;
+                    feat.dropAtPlayer("Waypoint", 0xFFFFAA00, false);
+                    rebuildNameField();
+                }).glassStyle(Button.GlassStyle.STAINED).primary(true);
+    }
+
+    @Override
+    protected void reconcileRowCaches(List<Waypoint> all) {
+        int first = Math.max(0, (int) scroll.current() / (ROW_H + 4) - 2);
+        if (reconciledRows == all && reconciledStart == first) return;
+        reconciledRows = all; reconciledStart = first;
+        int last = Math.min(all.size(), first + Math.max(1, height / (ROW_H + 4)) + 6);
+        // Row-widget cache hygiene: reconcile against the LIVE list every
+        // frame — entries for removed waypoints drop immediately, new
+        // waypoints lazily create theirs. The old count-only guard missed
+        // remove-then-add sequences that kept the count identical.
+        //
+        // Reconciled against a SET: retainAll(List) costs O(rows²) per map
+        // (a List.contains scan per key) and FOUR maps ran it every frame —
+        // with a large waypoint list that alone dominated the frame (~1.5 ms
+        // at 2000 rows; fixed in 0a0caaa). Same semantics: Waypoint does not
+        // override equals, so set membership and List.contains agree (both
+        // identity). The name-fit cache clears with the row caches when
+        // membership changes, to keep the map bounded.
+        Set<Waypoint> live = new HashSet<>(all.subList(Math.min(first, all.size()), last));
+        boolean membershipChanged = rowCopyBtns.keySet().retainAll(live);
+        membershipChanged |= rowColorBtns.keySet().retainAll(live);
+        membershipChanged |= rowDeleteBtns.keySet().retainAll(live);
+        membershipChanged |= rowSwatches.keySet().retainAll(live);
+        // The row buttons' semantic controls drop with their buttons —
+        // removeWidget takes the control out of the vanilla child/narratable
+        // lists and clears screen focus if the removed control held it, so a
+        // deleted waypoint can never leave a stale focusable region behind.
+        reconcileSemanticControls(rowCopyControls, live);
+        reconcileSemanticControls(rowColorControls, live);
+        reconcileSemanticControls(rowDeleteControls, live);
+        if (membershipChanged) nameFitCache.clear();
+    }
+
+    /** Unregisters and drops the row controls whose waypoint is no longer live. */
+    private void reconcileSemanticControls(Map<Waypoint, SemanticActionControl> controls,
+                                           Set<Waypoint> live) {
+        for (var it = controls.entrySet().iterator(); it.hasNext(); ) {
+            var entry = it.next();
+            if (!live.contains(entry.getKey())) {
+                unregisterSemanticControl(entry.getValue());
+                it.remove();
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------
+    //  Row passes
+    // ------------------------------------------------------------------
+
+    /**
+     * Glass pass for one row: the row's own RAISED glass surface (its own
+     * correctly-cropped backdrop slice — per-element capture, never a
+     * squished parent rect; neutral WINDOW_FILL tint, whose alpha is the
+     * Background Opacity — single application point; the glass rim replaces
+     * the hairline border) plus the surfaces of its Copy/Color buttons.
+     * The glow rings are the row's drop shadow, i.e. part of the surface,
+     * so they belong here too. Delete is the destructive variant and never
+     * glass — its pass is a no-op by eligibility, called for uniformity.
+     */
+    @Override
+    protected void paintRowGlassPass(GuiGraphicsExtractor ctx, int x, int y, int w, Waypoint wp) {
+        // Static shapes (rings + row tint) come from the shared row template
+        // (see ManagerListScreen); the row panel still renders live below, and
+        // the Copy/Color/Delete buttons supply their own surfaces.
+        paintTemplatedRowSurface(ctx, x, y,
+                () -> {
+                    paintRowShadow(ctx, x, y, w);
+                    rowGlassDrawn.put(wp, MaterialSurface.unified()
+                            ? GlassSurface.card(ctx,x,y,w,ROW_H,ThemeManager.current().roundness().radiusSmall())
+                            : GlassSurface.control(ctx, x, y, w, ROW_H,
+                                ThemeManager.current().roundness().radiusSmall(), BlurPanelRenderer.Priority.ROW));
+                },
+                () -> {
+                    int by = y + 4;
+                    int bh = ROW_H - 8;
+                    Button b = copyBtn(wp);
+                    b.layout(x + copyDx(), by, BTN_COPY_W, bh);
+                    // Same clip-band rule the content pass and the base hit
+                    // test use (row rect vs listClipTop/Bottom), applied at
+                    // the earliest point the geometry is known.
+                    SemanticActionControl copyControl = copyControl(wp);
+                    copyControl.setBounds(x + copyDx(), by, BTN_COPY_W, bh);
+                    copyControl.setAvailable(y + ROW_H > listClipTop() && y < listClipBottom());
+                    b.renderGlassPass(ctx, x + copyDx(), by, BTN_COPY_W, bh);
+                    b = colorBtn(wp);
+                    b.layout(x + colorDx(), by, BTN_COLOR_W, bh);
+                    SemanticActionControl colorControl = colorControl(wp);
+                    colorControl.setBounds(x + colorDx(), by, BTN_COLOR_W, bh);
+                    colorControl.setAvailable(y + ROW_H > listClipTop() && y < listClipBottom());
+                    b.renderGlassPass(ctx, x + colorDx(), by, BTN_COLOR_W, bh);
+                    b = deleteBtn(wp);
+                    b.layout(x + delDx(), by, BTN_DEL_W, bh);
+                    SemanticActionControl deleteControl = deleteControl(wp);
+                    deleteControl.setBounds(x + delDx(), by, BTN_DEL_W, bh);
+                    deleteControl.setAvailable(y + ROW_H > listClipTop() && y < listClipBottom());
+                    b.renderGlassPass(ctx, x + delDx(), by, BTN_DEL_W, bh);
+                },
+                () -> rowGlassDrawn.getOrDefault(wp, false));
+    }
+
+    @Override
+    protected void paintRow(GuiGraphicsExtractor ctx, int x, int y, int w, Waypoint wp, int index,
+                            int mouseX, int mouseY) {
+        // The row surface (shadow + glass) was painted in the glass pass,
+        // under the dim — see paintRowGlassPass. Only the flat fallback
+        // (surface fill + border) is drawn here, for a row whose glass
+        // declined; it returns unchanged from the pre-glass look.
+        if (MaterialSurface.unified() || !rowGlassDrawn.getOrDefault(wp, false)) {
+            paintFlatRow(ctx, x, y, w);
+        }
+
+        int cx = x + ROW_INSET;
+        int cy = y + (ROW_H - SWATCH_W) / 2;
+
+        // Color swatch — the shared ColorSwatch component as a DISPLAY-ONLY
+        // data sample (checkerboard so alpha-carrying waypoint colors read
+        // correctly, dataOnly so it never claims the pointer — the former
+        // spurious legacy hover halo is gone, Phase B's E-class cleanup).
+        // Not clickable; the Color button beside it owns the edit action.
+        // Stays opaque: it displays user color content at full fidelity,
+        // byte-identical in every pointer state.
+        ColorSwatch swatch = rowSwatches.computeIfAbsent(wp,
+                k -> new ColorSwatch(() -> wp.color, null).checkerboard(true).dataOnly());
+        swatch.layout(cx, cy, SWATCH_W, SWATCH_W);
+        swatch.render(ctx, cx, cy, SWATCH_W, SWATCH_W, mouseX, mouseY);
+        cx += SWATCH_W + CONTROL_GAP;
+
+        // Name (or inline editor — when editing, the field is drawn from
+        // the tail pass so the row body skips drawing the name text
+        // for that index).
+        if (index != editingIndex) {
+            String name = fitName(wp.name == null ? "" : wp.name);
+            com.aurora.client.worldmap.MapMarkers.waypoint(ctx, cx + 6, y + 8, wp,
+                    WaypointFeature.get() != null && wp.id.equals(WaypointFeature.get().navigationId()));
+            ctx.text(this.font, name,
+                    cx + 16, y + 4,
+                    ThemeManager.color(ThemeToken.ON_BACKGROUND), false);
+        }
+        cx += nameWidth() + CONTROL_GAP;
+
+        // Coords (clickable: click to copy).
+        String coords = wp.x + ", " + wp.y + ", " + wp.z;
+        var player = Minecraft.getInstance().player;
+        if (player != null && Minecraft.getInstance().level != null
+                && wp.dimension.equals(Minecraft.getInstance().level.dimension().identifier().toString()))
+            coords += " · " + Math.round(Math.sqrt(com.aurora.client.worldmap.WaypointQuery.distanceSquared(
+                    wp, player.getX(), player.getZ()))) + "m";
+        else coords += " · " + wp.dimension;
+        coords = this.font.plainSubstrByWidth(coords, nameWidth());
+        ctx.text(this.font, coords,
+                x + ROW_INSET + SWATCH_W + CONTROL_GAP, y + 16,
+                ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_BACKGROUND), 0x88), false);
+        cx += COORDS_W + CONTROL_GAP;
+
+        // Row buttons — surfaces already painted in the glass pass; these
+        // renders draw labels (or the flat fallback where glass declined).
+        // Each button's semantic control re-syncs here (same rect the glass
+        // pass computed): pointer-hover state for narration, availability
+        // from the same clip band the base hit test clamps to, and the
+        // provisional focus ring on the shared Button.
+        Button copyBtn = copyBtn(wp);
+        copyBtn.layout(x + copyDx(), y + 4, BTN_COPY_W, ROW_H - 8);
+        SemanticActionControl copyControl = copyControl(wp);
+        syncRowControl(copyControl, x + copyDx(), BTN_COPY_W, y, mouseX, mouseY);
+        copyBtn.focused(copyControl.isFocused());
+        copyBtn.render(ctx, x + copyDx(), y + 4, BTN_COPY_W, ROW_H - 8, mouseX, mouseY);
+
+        Button colorBtn = colorBtn(wp);
+        colorBtn.layout(x + colorDx(), y + 4, BTN_COLOR_W, ROW_H - 8);
+        SemanticActionControl colorControl = colorControl(wp);
+        syncRowControl(colorControl, x + colorDx(), BTN_COLOR_W, y, mouseX, mouseY);
+        colorBtn.focused(colorControl.isFocused());
+        colorBtn.render(ctx, x + colorDx(), y + 4, BTN_COLOR_W, ROW_H - 8, mouseX, mouseY);
+
+        Button delBtn = deleteBtn(wp);
+        delBtn.layout(x + delDx(), y + 4, BTN_DEL_W, ROW_H - 8);
+        SemanticActionControl delControl = deleteControl(wp);
+        syncRowControl(delControl, x + delDx(), BTN_DEL_W, y, mouseX, mouseY);
+        delBtn.focused(delControl.isFocused());
+        delBtn.render(ctx, x + delDx(), y + 4, BTN_DEL_W, ROW_H - 8, mouseX, mouseY);
+    }
+
+    /** Shared per-frame row-control sync: bounds + clip-band availability + pointer hover for narration. */
+    private void syncRowControl(SemanticActionControl control, int btnX, int btnW, int rowY,
+                                int mouseX, int mouseY) {
+        control.setBounds(btnX, rowY + 4, btnW, ROW_H - 8);
+        control.setAvailable(rowY + ROW_H > listClipTop() && rowY < listClipBottom());
+        control.updatePointer(mouseX, mouseY);
+    }
+
+    /** Copy — the shared themed Button in neutral raised glass, with its Phase A semantic control. */
+    private Button copyBtn(Waypoint wp) {
+        return rowCopyBtns.computeIfAbsent(wp, k -> {
+            Button b = new Button("Copy", () -> {}).glassBackground(true)
+                    .priority(BlurPanelRenderer.Priority.DETAIL);
+            // The action owns the real behavior exactly once; the Button keeps
+            // the pixels, hover, press animation (via triggerPressAnimation),
+            // and per-frame bounds. Always enabled — the manager enforces no
+            // availability rule for copy; visibility gating comes from the
+            // control's per-frame availability instead.
+            SemanticActionControl control = new SemanticActionControl(SemanticAction.button(
+                    Component.literal("Copy " + where(k)),
+                    () -> Component.literal("Copies this waypoint's coordinates to the clipboard."),
+                    () -> Component.literal("Coordinates: " + k.x + " " + k.y + " " + k.z),
+                    () -> true,
+                    () -> {
+                        commitEditors();
+                        copyToClipboard(k.x + " " + k.y + " " + k.z);
+                        flash("Copied: " + k.x + " " + k.y + " " + k.z);
+                    }),
+                    MinecraftSemanticFeedback.INSTANCE,
+                    b::triggerPressAnimation,
+                    SemanticActionControl.PointerRouting.MANUAL);
+            rowCopyControls.put(k, control);
+            registerSemanticControl(control);
+            return b;
+        });
+    }
+
+    /** The semantic control behind a Copy button (creating the button pair on demand). */
+    private SemanticActionControl copyControl(Waypoint wp) {
+        copyBtn(wp);
+        return rowCopyControls.get(wp);
+    }
+
+    /** Color — shared themed Button in neutral raised glass, with its Phase A semantic control; opens the shared color picker. */
+    private Button colorBtn(Waypoint wp) {
+        return rowColorBtns.computeIfAbsent(wp, k -> {
+            Button b = new Button("Edit", () -> {}).glassBackground(true)
+                    .priority(BlurPanelRenderer.Priority.DETAIL);
+            String where = where(k);
+            SemanticActionControl control = new SemanticActionControl(SemanticAction.button(
+                    Component.literal("Edit " + where),
+                    () -> Component.literal("Edits this waypoint, including visibility, coordinates and group."),
+                    () -> Component.empty(),
+                    () -> true,
+                    () -> {
+                        commitEditors();
+                        if (this.minecraft != null) com.aurora.client.adapter.NativeUi.setScreen(this.minecraft,
+                                new WaypointEditScreen(WaypointManagerScreen.this, k, false));
+                    }),
+                    MinecraftSemanticFeedback.INSTANCE,
+                    b::triggerPressAnimation,
+                    SemanticActionControl.PointerRouting.MANUAL);
+            rowColorControls.put(k, control);
+            registerSemanticControl(control);
+            return b;
+        });
+    }
+
+    /** The semantic control behind a Color button (creating the button pair on demand). */
+    private SemanticActionControl colorControl(Waypoint wp) {
+        colorBtn(wp);
+        return rowColorControls.get(wp);
+    }
+
+    /**
+     * Delete — shared Button in its destructive (semantic-error) variant,
+     * with its Phase A semantic control. The accessible name carries the
+     * target waypoint so a narrator announces what would be removed.
+     * Destructive keeps the flat look by design (the shared Button skips
+     * glass for destructive) — error semantics must not read as glass chrome.
+     */
+    private Button deleteBtn(Waypoint wp) {
+        return rowDeleteBtns.computeIfAbsent(wp, k -> {
+            Button b = new Button("Delete", () -> {}).destructive(true);
+            SemanticActionControl control = new SemanticActionControl(SemanticAction.button(
+                    Component.literal("Delete " + where(k)),
+                    () -> Component.literal("Removes this waypoint from the current world."),
+                    () -> Component.empty(),
+                    () -> true,
+                    () -> {
+                        commitEditors();
+                        WaypointFeature feat = WaypointFeature.get();
+                        if (feat != null) feat.remove(k);
+                        rebuildNameField();
+                    }),
+                    MinecraftSemanticFeedback.INSTANCE,
+                    b::triggerPressAnimation,
+                    SemanticActionControl.PointerRouting.MANUAL);
+            rowDeleteControls.put(k, control);
+            registerSemanticControl(control);
+            return b;
+        });
+    }
+
+    /** The semantic control behind a Delete button (creating the button pair on demand). */
+    private SemanticActionControl deleteControl(Waypoint wp) {
+        deleteBtn(wp);
+        return rowDeleteControls.get(wp);
+    }
+
+    /** The accessible-name form of a waypoint: its name, or its coordinates when unnamed. */
+    private static String where(Waypoint wp) {
+        return (wp.name == null || wp.name.isBlank())
+                ? "waypoint " + wp.x + " " + wp.y + " " + wp.z
+                : wp.name;
+    }
+
+    // ------------------------------------------------------------------
+    //  Input
+    // ------------------------------------------------------------------
+
+    @Override
+    protected boolean editorClickFirst(MouseButtonEvent _ev, boolean _doubleClicked) {
+        return nameField != null && nameField.mouseClicked(_ev, _doubleClicked);
+    }
+
+    @Override
+    protected boolean rowClicked(double mouseX, double mouseY, int listX, Waypoint wp, int index) {
+        // Shared row buttons see the click first — each routes through its
+        // semantic control (enabled gate + exactly-once activation + sound +
+        // focus participation). A rejected click (missed bounds) falls
+        // through to the next handler, as before.
+        SemanticActionControl copyControl = rowCopyControls.get(wp);
+        if (copyControl != null && copyControl.activateFromPointer(mouseX, mouseY, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT)) {
+            this.setFocused(copyControl);
+            return true;
+        }
+        SemanticActionControl colorControl = rowColorControls.get(wp);
+        if (colorControl != null && colorControl.activateFromPointer(mouseX, mouseY, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT)) {
+            this.setFocused(colorControl);
+            return true;
+        }
+        SemanticActionControl delControl = rowDeleteControls.get(wp);
+        if (delControl != null && delControl.activateFromPointer(mouseX, mouseY, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT)) {
+            // NO re-focus: the action just removed this row, and the control
+            // is unregistered by the next reconcile — refocusing would point
+            // keyboard focus at a control about to leave the screen (the
+            // stale-focus-after-removal rule). The click rule above already
+            // dropped focus.
+            return true;
+        }
+
+        // Name area → enter inline edit mode for this row.
+        int nameLeft = editorFieldX(listX);
+        if (mouseX >= nameLeft && mouseX < nameLeft + nameWidth()) {
+            startEditing(index, wp.name == null ? "" : wp.name);
+            return true;
+        }
+        return false;
+    }
+
+    // ------------------------------------------------------------------
+    //  Rename apply + editor upkeep
+    // ------------------------------------------------------------------
+
+    @Override
+    protected void applyRename(Waypoint wp, String newValue) {
+        wp.name = newValue;
+        WaypointFeature feat = WaypointFeature.get();
+        if (feat != null) feat.touch();
+    }
+
+    @Override
+    protected void commitEditors() {
+        commitEdit();
+    }
+
+    private void rebuildNameField() {
+        if (editingIndex >= currentRows().size()) {
+            cancelEdit();
+        }
+    }
+
+    // ------------------------------------------------------------------
+    //  Frame tails (screen-owned order)
+    // ------------------------------------------------------------------
+
+    @Override
+    protected void paintEditorGlassPass(GuiGraphicsExtractor ctx, List<Waypoint> rows, int listX) {
+        // Position ALWAYS (fresh bounds every frame — a hidden editor must
+        // never keep a stale rect in the band), then paint only when a
+        // pixel is visible. The base scissors this call to the list clip.
+        if (layoutRenameField(rows, listX) == null || !renameEditorVisible()) return;
+        if (nameField instanceof GlassEditBox glassField) glassField.aurora$renderGlassPass(ctx);
+    }
+
+    @Override
+    protected void paintTail(GuiGraphicsExtractor ctx, int mouseX, int mouseY, float delta,
+                             List<Waypoint> rows, int listX) {
+        // Transient toast for clipboard copies. Fades over the last 250ms
+        // of its lifetime so the visual confirmation isn't jarring.
+        renderToast(ctx);
+
+        // Inline name editor sits on top of its row — rendered after the
+        // toast so its caret and selection draw above everything (this
+        // screen's historical order; the Profile screen draws its editor
+        // first), and UNDER THE LIST CLIP via renderEditorClipped (C-8): a
+        // partially visible editor paints only its visible pixels, a fully
+        // hidden one nothing (bounds still refreshed every frame by the
+        // layout call in the glass pass above). Its surface was painted in
+        // the glass pass; this draws content only.
+        EditBox editor = layoutRenameField(rows, listX);
+        if (editor != null && renameEditorVisible()) {
+            renderEditorClipped(ctx, editor, listX, mouseX, mouseY, delta);
+        }
+    }
+
+    // ------------------------------------------------------------------
+    //  Helpers
+    // ------------------------------------------------------------------
+
+    private void copyToClipboard(String text) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc == null || mc.keyboardHandler == null) return;
+        mc.keyboardHandler.setClipboard(text);
+    }
+
+    @Override
+    protected void saveOnClose() {
+        AuroraConfig.save();
+    }
+}

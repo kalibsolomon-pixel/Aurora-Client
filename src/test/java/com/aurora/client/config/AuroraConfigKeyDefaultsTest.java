@@ -18,12 +18,12 @@ class AuroraConfigKeyDefaultsTest {
 
     @Test void literalKeyDefaultsAreTheSdlScancodesTheyName() throws Exception {
         String src = Files.readString(SOURCE);
-        assertInitializer(src, "zoomKey", InputConstants.KEY_C);
-        assertInitializer(src, "freeLookKey", InputConstants.KEY_V);
-        assertInitializer(src, "toggleSprintKey", InputConstants.KEY_J);
-        assertInitializer(src, "toggleSneakKey", InputConstants.KEY_K);
-        assertInitializer(src, "hudEditorKey", InputConstants.KEY_RSHIFT);
-        assertInitializer(src, "worldMapKey", InputConstants.KEY_M);
+        assertInitializer(src, "zoomKey", com.aurora.client.TestKeyboard.stored(InputConstants.KEY_C));
+        assertInitializer(src, "freeLookKey", com.aurora.client.TestKeyboard.stored(InputConstants.KEY_V));
+        assertInitializer(src, "toggleSprintKey", com.aurora.client.TestKeyboard.stored(InputConstants.KEY_J));
+        assertInitializer(src, "toggleSneakKey", com.aurora.client.TestKeyboard.stored(InputConstants.KEY_K));
+        assertInitializer(src, "hudEditorKey", com.aurora.client.TestKeyboard.stored(InputConstants.KEY_RSHIFT));
+        assertInitializer(src, "worldMapKey", com.aurora.client.TestKeyboard.stored(InputConstants.KEY_M));
         for (String field : KeybindMigrator.KEY_FIELDS) {
             if (!java.util.Set.of("zoomKey", "freeLookKey", "toggleSprintKey", "toggleSneakKey", "hudEditorKey", "worldMapKey").contains(field))
                 assertInitializer(src, field, -1);

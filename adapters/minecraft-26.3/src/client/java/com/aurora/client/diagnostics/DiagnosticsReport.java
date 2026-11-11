@@ -31,7 +31,7 @@ public final class DiagnosticsReport {
     public static void runAndCopy() {
         Minecraft mc = Minecraft.getInstance();
         // The benchmark is about the game, not about the Aurora screen this was pressed on.
-        if (mc.gui.screen() != null && mc.level != null) mc.gui.setScreen(null);
+        if (com.aurora.client.adapter.NativeUi.screen(mc) != null && mc.level != null) com.aurora.client.adapter.NativeUi.setScreen(mc, null);
         boolean started = FrameBenchmark.start(WARMUP_SECONDS, MEASURE_SECONDS, RenderUtil::fillsSubmitted,
                 BlurPanelRenderer::capturesSubmitted, stats -> {
             try {
@@ -62,7 +62,7 @@ public final class DiagnosticsReport {
         if (!LOG_ONCE || logged >= LOG_RUNS || FrameBenchmark.running()) return;
         // A level exists while ReceivingLevelScreen is still loading. Measuring
         // there consumes warm-up runs before the workload is actually available.
-        ticksInWorld = mc.level == null || mc.gui.screen() != null ? 0 : ticksInWorld + 1;
+        ticksInWorld = mc.level == null || com.aurora.client.adapter.NativeUi.screen(mc) != null ? 0 : ticksInWorld + 1;
         if (ticksInWorld < 60) return;
         int run = ++logged;
         FrameBenchmark.start(0, MEASURE_SECONDS, RenderUtil::fillsSubmitted, BlurPanelRenderer::capturesSubmitted,
@@ -81,7 +81,7 @@ public final class DiagnosticsReport {
                 gpu(),
                 mc.getWindow().getWidth() + "x" + mc.getWindow().getHeight() + ", GUI scale " + mc.getWindow().getGuiScale(),
                 measuredOn(mc),
-                mc.level != null && mc.gui.screen() == null,
+                mc.level != null && com.aurora.client.adapter.NativeUi.screen(mc) == null,
                 settings(mc));
         return DiagnosticsText.format(env, mods(loader), stats, RecentErrors.lines());
     }
@@ -103,7 +103,7 @@ public final class DiagnosticsReport {
     private static String measuredOn(Minecraft mc) {
         if (mc.level == null) return "in a menu, where Minecraft limits the frame rate";
         String where = mc.hasSingleplayerServer() ? "in a singleplayer world" : "on a multiplayer server";
-        return mc.gui.screen() == null ? where : where + " with a screen open";
+        return com.aurora.client.adapter.NativeUi.screen(mc) == null ? where : where + " with a screen open";
     }
 
     private static List<String> settings(Minecraft mc) {

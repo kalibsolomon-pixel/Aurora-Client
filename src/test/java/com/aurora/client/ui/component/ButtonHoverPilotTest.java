@@ -73,7 +73,7 @@ class ButtonHoverPilotTest {
         Button b = new Button("Test", clicks::incrementAndGet);
         b.layout(10, 20, 90, 18);
         b.hoverAnimator().update(true); // ~0 progress — nowhere near settled
-        assertTrue(b.mouseClicked(15, 25, 1));
+        assertTrue(b.mouseClicked(15, 25, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT));
         assertEquals(1, clicks.get());
     }
 

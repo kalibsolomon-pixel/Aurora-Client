@@ -1,6 +1,6 @@
 # Aurora Client: contributor and agent guide
 
-Aurora (`com.aurora.client`, mod id `aurora`) is a client-side Fabric mod for Minecraft 26.3: 38 quality-of-life, PvP and performance features (listed in `docs/FAIR_PLAY.md`) inside a themed GUI with a glass material. MIT licensed; code, fonts and libraries from other projects are listed in `THIRD_PARTY_NOTICES.md`.
+Aurora (`com.aurora.client`, mod id `aurora`) is a client-side Fabric mod for Minecraft 26.1.2, 26.2 and 26.3: 38 quality-of-life, PvP and performance features (listed in `docs/FAIR_PLAY.md`) inside a themed GUI with a glass material. MIT licensed; code, fonts and libraries from other projects are listed in `THIRD_PARTY_NOTICES.md`.
 
 This guide is short on purpose. The full engineering history it replaced, including every investigation and the reasoning behind each rule below, is in [docs/history/AGENTS-2026-11-11.md](docs/history/AGENTS-2026-11-11.md). Older code comments and reports that cite "AGENTS.md §N" mean a section of that file.
 
@@ -8,12 +8,12 @@ This guide is short on purpose. The full engineering history it replaced, includ
 
 - Decisions are ADRs in [docs/adr/](docs/adr/). Read the relevant one before proposing multi-version builds, an own UI renderer, vanilla rendering optimizations, telemetry or changes to feature defaults.
 - The order of work is [docs/ROADMAP.md](docs/ROADMAP.md); where it stands is [docs/STATUS.md](docs/STATUS.md).
-- The 26.3 port shipped as 3.3.0 and step 5 is complete. Follow roadmap order; shader-drawn shapes are step 6.
+- The 26.3 port shipped as 3.3.0. Steps 5 and 5.5 are complete; all supported adapters build from one tree. Shader-drawn shapes are next, step 6.
 
 ## Build, test, run
 
-- Java 25 target, Gradle wrapper, Fabric Loom. Versions are in `gradle.properties`.
-- `./gradlew test` runs the suite; `./gradlew build` writes `build/libs/aurora-<version>-mc<minecraft>.jar`. `withSourcesJar()` stays disabled: a sources jar in `mods/` crashes Mixin at launch.
+- Java 25 target, Gradle wrapper, Fabric Loom. Shared versions are in `gradle.properties`; supported lines and Fabric API pins are in `gradle/minecraft-versions.json`.
+- `python tools/parity.py` tests/builds every supported line from one tree, reusing core/ports. `./gradlew test build -Paurora.minecraft=26.2` selects one line (default 26.3), writing `build/minecraft-<minecraft>/libs/aurora-<version>-mc<minecraft>.jar`. Quote the `-P...` argument in PowerShell. `withSourcesJar()` stays disabled: a sources jar in `mods/` crashes Mixin at launch.
 - `./gradlew runClient` starts a dev client in `run/`. `run/` is the owner's live dev config and is not tracked; back up `run/config/aurora.json`, `run/config/profiles/` and `run/options.txt` before a test boot and restore them after. `--args='--quickPlaySingleplayer "New World"'` joins the saved world.
 - For ports, prefer a disposable copy of the world/config: `./gradlew runClient -Paurora.runDir=build/<fixture>/game`. This Loom property selects the actual game directory; overriding the task's working directory can be superseded by Loom. On Windows, use a Gradle init script to pass quick-play arguments containing spaces (the matrix runner does this). Test native backends with `--graphicsBackend OPENGL` / `VULKAN` in JavaExec's arguments.
 - On the owner's workstation, keep test instances on the second, portrait monitor.
@@ -27,12 +27,12 @@ This guide is short on purpose. The full engineering history it replaced, includ
 |---|---|
 | `ports/src/main/java` | Native-free draw, text, clock, input and world interfaces |
 | `core/src/main/java` | Gradle module with nothing from Minecraft, Fabric, LWJGL, Mixin or Log4j on its classpath (ADR 0003): config and profiles, the feature catalog, health records, the theme engine, diagnostics, launcher bridge, Modrinth records, pure layout and map math |
-| `adapters/minecraft-26.3/src/client/java` | Everything that touches Minecraft: mixins, screens, HUD, renderers, features, `hitreg/` |
-| `adapters/minecraft-26.3/src/client/resources` | Assets, `aurora.mixins.json`, `fabric.mod.json`, `assets/aurora/defaults/3.2.0.json` |
-| `src/test/java` | All tests, including source-contract tests that read production files through `SourceTree` |
+| `adapters/shared/src/client` | Common Minecraft-facing behavior and assets, including the feature registry, most UI, and default export |
+| `adapters/minecraft-26.1`, `minecraft-26.2`, `minecraft-26.3` | Version-specific renderers, mixins, native bindings, manifests and shaders; 26.1 pins 26.1.2 |
+| `src/test/java`, `adapters/minecraft-*/src/test/java` | Common behavior/source contracts plus native shader and narration fixtures |
 | `docs/` | Living references; `docs/reports/` dated reports and audits; `docs/releases/` release notes and evidence; `docs/history/` the old guide |
 
-Package names are shared between the two source roots, so look in both. `tools/core_candidates.py` lists client classes that could move to the core.
+Package names span core, ports, shared adapter and selected native adapter, so search all of them. Duplicate shared/native source or resource paths fail the build. `tools/core_candidates.py` lists client classes that could move to the core.
 
 ## Rules
 
@@ -43,7 +43,7 @@ Package names are shared between the two source roots, so look in both. `tools/c
 - A new field that changes behaviour for existing installs needs a migrator (pattern: `ThemeMigrator`, `PlayerHealthMigrator`), run on `aurora.json` and on every profile applied. Profiles snapshot every profile-scoped field and reset absent ones to defaults.
 - Per-feature reset is `AuroraConfig.resetByPrefix`; field names must share the feature's camelCase prefix or list their prefixes explicitly.
 - Saves go through `AtomicJsonWriter` (async, atomic, ordered). Never block the tick thread on disk.
-- Keyboard bindings use SDL physical scancodes on 26.3. `KeybindMigrator` converts legacy GLFW values independently for config and imported profiles; keep its profile-scoped format marker. The core stores literals and never imports SDL.
+- Keyboard bindings store SDL scancode identifiers on every line. `NativeKeyboard`/`NativePorts` translate on GLFW hosts. `KeybindMigrator` converts legacy GLFW values independently for config and imported profiles; keep its profile-scoped format marker. The core stores literals and never imports SDL.
 - Binding an Aurora key by editing `aurora.json` alone does not stick: the vanilla binding in `options.txt` must change too.
 - `feature/FeatureCatalog` is the one list of features and of the mixins each needs. Adding a feature: a catalog entry, a `FeatureRegistry` entry and a mixin binding for each new mixin. `FeatureCatalogTest` checks they agree.
 

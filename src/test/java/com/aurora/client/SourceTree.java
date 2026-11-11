@@ -15,7 +15,8 @@ public final class SourceTree {
     public static final String ADAPTER = System.getProperty("aurora.adapterRoot", "adapters/minecraft-26.3");
     public static final Path CLIENT = Path.of(ADAPTER, "src/client/java");
     public static final Path CORE = Path.of("core/src/main/java");
-    public static final List<Path> ROOTS = List.of(CLIENT, CORE, Path.of("ports/src/main/java"));
+    public static final Path SHARED = Path.of("adapters/shared/src/client/java");
+    public static final List<Path> ROOTS = List.of(CLIENT, SHARED, CORE, Path.of("ports/src/main/java"));
     private static final String PACKAGE = "com/aurora/client/";
 
     private SourceTree() {}
@@ -30,6 +31,11 @@ public final class SourceTree {
         String marker = "src/client/java/" + PACKAGE;
         int at = path.indexOf(marker);
         if (at >= 0 && path.endsWith(".java")) return file(path.substring(at + marker.length()));
+        if (!Files.exists(candidate)) {
+            String resourceMarker = "src/client/resources/";
+            int resource = path.indexOf(resourceMarker);
+            if (resource >= 0) return Path.of("adapters/shared/src/client/resources").resolve(path.substring(resource + resourceMarker.length()));
+        }
         return candidate;
     }
 

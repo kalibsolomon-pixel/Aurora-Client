@@ -1,0 +1,233 @@
+package com.aurora.client.screen.setting;
+
+import com.aurora.client.theme.ThemeManager;
+import com.aurora.client.theme.ThemeToken;
+import com.aurora.client.ui.component.Button;
+import com.aurora.client.ui.component.MaterialSurface;
+import com.aurora.client.ui.component.RoundedPanel;
+import com.aurora.client.ui.component.Slider;
+import com.aurora.client.ui.component.ToggleSwitch;
+import com.aurora.client.ui.render.blur.BlurPanelRenderer;
+import com.aurora.client.ui.util.AuroraFontRenderer;
+import com.aurora.client.ui.util.RenderUtil;
+import com.aurora.client.util.AuroraTheme;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+
+/**
+ * Non-interactive live-preview card for the theme settings screen (Stage 3)
+ * — the COSMIC Appearance panel's "see it before you leave" affordance.
+ *
+ * <p>Renders a mock card holding the four control archetypes — primary and
+ * secondary buttons, an on-state toggle, a slider, and primary/secondary
+ * text — so any accent/mode/roundness/opacity change is visible instantly.
+ *
+ * <p><b>Zero separate color logic:</b> every color and radius is read from
+ * the same cached, re-projected token facade ({@code AuroraTheme.*}) the
+ * real UI reads. A theme reload is literally the preview update — nothing
+ * is recomputed here.
+ *
+ * <p>All shapes render through the mod's high-res engine
+ * ({@link RenderUtil} AA family): physical-pixel scanlines with analytic
+ * sub-pixel coverage — smooth, crisp curves at any GUI scale.
+ */
+public class ThemePreviewSetting extends FeatureSetting {
+
+    private static final int PREVIEW_H = 88;
+    private static final int PAD_X = 12;
+    private static final int PAD_Y = 8;
+
+    // Mock control geometry (logical px).
+    private static final int BTN_W = 54;
+    private static final int BTN_H = 18;
+    private static final int TOGGLE_W = 28;
+    private static final int TOGGLE_H = 16;
+    private static final int CHIP_W = 26;
+    private static final int CHIP_H = 10;
+
+    public ThemePreviewSetting(String label) {
+        super(label);
+    }
+
+    // The preview is literally the shared components themselves — a mock
+    // card holding the four control archetypes, so any theme change shows
+    // up instantly with zero separate color logic. Glass pilot: the card
+    // body, the accent chip, and the two mock buttons' surfaces are LIVE
+    // glass (renderGlassPass — the buttons follow ButtonSetting's embedded
+    // Button discipline, surface pre-dim + label in renderOverlay); the
+    // RoundedPanel here is only the opaque FALLBACK; the primary button
+    // uses accent-STAINED glass (selected/primary family) and the secondary
+    // button NEUTRAL glass (raised, like every control on this screen).
+    // The mock toggle and slider deliberately stay OPAQUE — glass on the
+    // real toggle/slider family was reverted (too small to carry the
+    // treatment); the preview shows that final state.
+    private final RoundedPanel card = new RoundedPanel(false, ThemeToken.SURFACE);
+    // Mocks: the toggle opts into previewMode (no hover response — a
+    // decorative toggle must not read as interactive), and the slider stays
+    // on the legacy direct construction (no canonicalStates), same rule.
+    private final ToggleSwitch toggle = new ToggleSwitch(() -> true, v -> {}).previewMode();
+    private final Slider slider = new Slider(() -> 0.6, v -> {}, 0, 1, 0.01);
+    private final Button primaryBtn = new Button("Button", () -> {}, true)
+            .glassStyle(Button.GlassStyle.STAINED);
+    private final Button secondaryBtn = new Button("Button", () -> {}).glassBackground(true);
+
+    // (The glass pass used to remember the card/chip rects here from the
+    // cache-dirty-only renderShapes run; the screen now passes the row's
+    // live geometry into renderGlassPass, so the rects derive directly —
+    // no stale-rect dependency, same values renderShapes computes.)
+
+    @Override public int baseHeight() { return PREVIEW_H; }
+    @Override public int height() { return PREVIEW_H; }
+
+    @Override
+    public void render(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {
+        renderShapes(ctx, x, y, width, mouseX, mouseY);
+        renderOverlay(ctx, x, y, width, mouseX, mouseY);
+    }
+
+    @Override
+    public void renderShapes(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {
+        if(MaterialSurface.unified()) return;
+        // The preview card + mock controls are the shared themed components
+        // themselves — a theme reload is literally the preview update.
+        int px = x + PAD_X;
+        int py = y + PAD_Y;
+        int pw = width - PAD_X * 2;
+        int ph = PREVIEW_H - PAD_Y;
+
+        // Glass pilot: the card's SURFACE fill + outline and the accent chip
+        // are NOT drawn into the cached layer — they are live glass drawn
+        // each frame by renderGlassPass (before the cached layer blit, so
+        // the mock controls rasterized into the cache still stack on top of
+        // them); that pass receives the row's live geometry from the screen.
+        // The toggle and slider render fully into the cache (opaque by design).
+
+        int togX = px + 12;
+        int togY = py + 52;
+        toggle.renderShapes(ctx, togX, togY, TOGGLE_W, TOGGLE_H);
+
+        int slX = togX + TOGGLE_W + 14;
+        int slY = togY + TOGGLE_H / 2 - 2;
+        int slW = 64;
+        slider.layout(slX, slY - 4, slW, 16);
+        slider.renderShapes(ctx, slX, slY - 4, slW, 16);
+        slider.renderOverlay(ctx, slX, slY - 4, slW, 16, -1, -1);
+
+        int b1x = px + pw - BTN_W - 12;
+        int b1y = py + 10;
+        int b2y = b1y + BTN_H + 8;
+        // The mock buttons' SURFACES are live glass driven by renderGlassPass
+        // (same split as ButtonSetting's embedded Button); their labels draw
+        // in renderOverlay below. Never here: Button.renderOverlay called
+        // from this cacheable-shapes phase takes its in-place surface branch
+        // on any screen whose pass didn't drive the button — on a structural
+        // screen that paints a glass body wherever renderShapes runs (on
+        // AuroraScreen's Settings tab: after the dim — the §6 layering
+        // violation this file once shipped).
+
+        // Accent chip — rect derived in the glass pass from the same row
+        // geometry; the chip itself is live stained glass in renderGlassPass
+        // (flat accent = the fallback).
+    }
+
+    /**
+     * Live glass pass (Glass pilot) — called every frame by the theme detail
+     * screen right after the window's own glass and the static-cache capture
+     * pass, and before the overlay dim + cached blit so cached content
+     * (texts, thumbs, knobs) stacks above the glass. The screen passes the
+     * row's live geometry (same values renderShapes derives), so a scroll
+     * frame paints at the position the cached layer blits to.
+     *
+     * <p>Treatments per the catalog: the card container is NEUTRAL RAISED
+     * glass (a control-holding card reads as floating above the recessed
+     * window — the pilot's "recessed well vs raised card" flag, answered);
+     * the accent chip is accent-STAINED raised glass. The toggle and slider
+     * are deliberately opaque (drawn fully into the cached layer — the glass
+     * treatment was reverted for those element types). Elements fall back to
+     * their old opaque look whenever the blur renderer declines (screenshot
+     * suppression, tiny panel, failure) — the same fallback contract every
+     * glass integration uses.
+     */
+    @Override
+    public void renderGlassPass(GuiGraphicsExtractor ctx, int x, int y, int width) {
+        if(MaterialSurface.unified()) return;
+        int cardX = x + PAD_X;
+        int cardY = y + PAD_Y;
+        int cardW = width - PAD_X * 2;
+        int cardH = PREVIEW_H - PAD_Y;
+        if (cardW <= 0 || cardH <= 0) return;
+        float radius = ThemeManager.current().roundness().radius();
+        // Through the shared GlassSurface helper since the §6-convention-6
+        // rollout: identical gate/tint/lighting, and on a screen running the
+        // structural pass the rim finish defers past the dim like every
+        // other surface's (previously the raw idiom painted it in place,
+        // which a veiled rim on a migrated screen would betray). The card
+        // is RAISED at WINDOW priority (a control-holding card floating
+        // above the recessed window); the chip is accent-STAINED raised.
+        boolean ok = com.aurora.client.ui.component.GlassSurface.control(ctx,
+                cardX, cardY, cardW, cardH, radius, false,
+                BlurPanelRenderer.Priority.WINDOW);
+        if (!ok) {
+            card.renderShapes(ctx, cardX, cardY, cardW, cardH);
+        }
+
+        // Accent chip — stained family; draws its own flat fallback on decline.
+        int chipX = cardX + cardW - 12 - 26;
+        int chipY = cardY + cardH - 16;
+        float chipR = Math.min(CHIP_H / 2.0f, ThemeManager.current().roundness().radiusSmall());
+        if (!com.aurora.client.ui.component.GlassSurface.stainedControl(ctx,
+                chipX, chipY, CHIP_W, CHIP_H, chipR)) {
+            RenderUtil.drawRoundedRectAA(ctx, chipX, chipY, CHIP_W, CHIP_H, chipR,
+                    AuroraTheme.IOS_BLUE);
+        }
+
+        // The mock buttons' glass surfaces — the ButtonSetting discipline:
+        // driven HERE (pre-dim, under the screen's tracked scissor like the
+        // card) so their renderOverlay calls paint the label only. Same
+        // geometry renderShapes/renderOverlay derive from the row params.
+        int b1x = cardX + cardW - BTN_W - 12;
+        int b1y = cardY + 10;
+        primaryBtn.renderGlassPass(ctx, b1x, b1y, BTN_W, BTN_H);
+        secondaryBtn.renderGlassPass(ctx, b1x, b1y + BTN_H + 8, BTN_W, BTN_H);
+    }
+
+    @Override
+    public void renderOverlay(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {
+        Font tr = Minecraft.getInstance().font;
+        int px = x + PAD_X;
+        int py = y + PAD_Y;
+        int pw = width - PAD_X * 2;
+
+        if(MaterialSurface.unified()) {
+            MaterialSurface.cached(ctx,px,py,pw,PREVIEW_H-PAD_Y,
+                    ThemeManager.current().roundness().radius(),MaterialSurface.color(ThemeToken.SURFACE_VARIANT),
+                    MaterialSurface.color(ThemeToken.BORDER),40,false);
+            toggle.renderOverlay(ctx,px+12,py+52,TOGGLE_W,TOGGLE_H,-1,-1);
+            slider.layout(px+12+TOGGLE_W+14,py+52+TOGGLE_H/2-6,64,16);
+            slider.renderShapes(ctx,px+12+TOGGLE_W+14,py+52+TOGGLE_H/2-6,64,16);
+            slider.renderOverlay(ctx,px+12+TOGGLE_W+14,py+52+TOGGLE_H/2-6,64,16,-1,-1);
+        }
+        // Mock buttons — content only: the pass stamped their frames, so
+        // these renderOverlay calls draw each Button's label (and its flat
+        // fallback when the glass declined). On a screen that never drove
+        // the pass they would paint the surface in place (the legacy order).
+        int b1x = px + pw - BTN_W - 12;
+        int b1y = py + 10;
+        primaryBtn.renderOverlay(ctx, b1x, b1y, BTN_W, BTN_H, -1, -1);
+        secondaryBtn.renderOverlay(ctx, b1x, b1y + BTN_H + 8, BTN_W, BTN_H, -1, -1);
+
+        int tx = px + 12;
+        int ty = py + 10;
+        ctx.text(tr, "Primary text", tx, ty, MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
+        ctx.text(tr, "Secondary text", tx, ty + 12, MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
+        ctx.text(tr, "Muted text", tx, ty + 24, MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED), false);
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button,
+                                int rowX, int rowY, int rowWidth) {
+        // Non-interactive preview: never consume.
+        return false;
+    }
+}

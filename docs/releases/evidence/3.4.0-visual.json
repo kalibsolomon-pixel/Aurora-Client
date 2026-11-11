@@ -1,0 +1,677 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-11-11",
+  "system": "Windows 11, RX 9070 XT, Java 25",
+  "settings": [
+    "Dark ROUND/0.33",
+    "Dark SQUARE/0.19"
+  ],
+  "viewports": [
+    "854x480",
+    "1280x900"
+  ],
+  "layouts": [
+    "grid",
+    "list"
+  ],
+  "scope": "Native handler, persistence and screenshot acceptance; no OS keystroke synthesis or exhaustive accessibility audit",
+  "reproductionProbeSha256": "754dbdf769ca4327adaa3b55219871d4e7b5f4f13baed5254e468766d23938d1",
+  "boots": [
+    {
+      "minecraft": "26.1.2",
+      "backend": "OPENGL",
+      "scope": "UI and restart input",
+      "logSha256": "75bb1634f1b82c61fbda24c6cfc2279dc673a8bdd6a61755bff4c7f595dad467",
+      "screenshots": [
+        {
+          "path": "build/step5.5/visual/26.1.2/OPENGL/1280-detail-animations.png",
+          "sha256": "f2a7c75c3ab51f61467ec7f9fc9bf51aac193bdf48e63b0ef925ac9a6bb169b6"
+        },
+        {
+          "path": "build/step5.5/visual/26.1.2/OPENGL/1280-detail-theme.png",
+          "sha256": "25cc0165c63d2974dd211092bc3e46890a8ef866006f0dbbb69eb5070aa06245"
+        },
+        {
+          "path": "build/step5.5/visual/26.1.2/OPENGL/1280-ROUND-grid-long.png",
+          "sha256": "bf7e027470762f748a948a71a85c9892924e07fda21dc13a59c676252fa8ceeb"
+        },
+        {
+          "path": "build/step5.5/visual/26.1.2/OPENGL/1280-ROUND-grid.png",
+          "sha256": "e26920a5e4682e4acf2b91ea3f158ed4e61090d6c8999646ccc4c32c75edc117"
+        },
+        {
+          "path": "build/step5.5/visual/26.1.2/OPENGL/1280-ROUND-list-long.png",
+          "sha256": "a8be822007f909c436cf7027d7a30b78dfdd4ad0b587a7490ea9e86e4cf1ac99"
+        },
+        {
+          "path": "build/step5.5/visual/26.1.2/OPENGL/1280-ROUND-list.png",
+          "sha256": "947160a8e2cd1363a22746c0443fb58e8f8352e2954381400fffe3c9d78a881b"
+        },
+        {
+          "path": "build/step5.5/visual/26.1.2/OPENGL/1280-SQUARE-grid-long.png",
+          "sha256": "958059adda04991dabefa64e3036c2aaceb07ab3571c7d9cb4ac22525e6cc4d4"
+        },
+        {
+          "path": "build/step5.5/visual/26.1.2/OPENGL/1280-SQUARE-grid.png",
+          "sha256": "5ff1e78f24ed71a94a48eb5bc4467085af9e1ee2c996c326f3765288d63a6a62"
+        },
+        {
+          "path": "build/step5.5/visual/26.1.2/OPENGL/1280-SQUARE-list-long.png",
+          "sha256": "ebe9f8ecfc479e96703a4d936d681f1321dca0580eaac139cb7c457f51d72de4"
+        },
+        {
+          "path": "build/step5.5/visual/26.1.2/OPENGL/1280-SQUARE-list.png",
+          "sha256": "4f0013e0a7bc7902149a9fb1e2aa7128659fd3e0935cacbb625fe2b37d34a172"
+        },
+        {
+          "path": "build/step5.5/visual/26.1.2/OPENGL/854-detail-animations.png",
+          "sha256": "71e0d3a408ed2ad5924c373be1650a9ad1b15e1d2458bdf809273e8639b57cae"
+        },
+        {
+          "path": "build/step5.5/visual/26.1.2/OPENGL/854-detail-theme.png",
+          "sha256": "86e8ea31f80b0cecb6cb022c93fb553ee2140de0c9908c58c102eb2d2004ac30"
+        },
+        {
+          "path": "build/step5.5/visual/26.1.2/OPENGL/854-ROUND-grid-long.png",
+          "sha256": "81f6aa08e25e846fd916a9e667fabe8e0e37974cfa1c631b9728a9cfe1d34d1a"
+        },
+        {
+          "path": "build/step5.5/visual/26.1.2/OPENGL/854-ROUND-grid.png",
+          "sha256": "b2ac80c72264924e63aef59eb0e14a014ad21ecd08252b5830cfe2113e9e1ffc"
+        },
+        {
+          "path": "build/step5.5/visual/26.1.2/OPENGL/854-ROUND-list-long.png",
+          "sha256": "b445435db4a54f0c5b998acdb699210c82733a85965c47d15f3a965816bdfba3"
+        },
+        {
+          "path": "build/step5.5/visual/26.1.2/OPENGL/854-ROUND-list.png",
+          "sha256": "1b71571a4ca5525ddbcbf929bbaa3258bb25d805d5b7cd7b292dfd914a67adaf"
+        },
+        {
+          "path": "build/step5.5/visual/26.1.2/OPENGL/854-SQUARE-grid-long.png",
+          "sha256": "8beffe323936e6a4b064bf95926352b3ed924e03b15f4add7db1603462fe00de"
+        },
+        {
+          "path": "build/step5.5/visual/26.1.2/OPENGL/854-SQUARE-grid.png",
+          "sha256": "b762993859f25200126a28f7c7f0825aed8ab1e4cae692409a1b8c25bb9e3193"
+        },
+        {
+          "path": "build/step5.5/visual/26.1.2/OPENGL/854-SQUARE-list-long.png",
+          "sha256": "363e806334d57c728b3066c409fe13861b976795258da38126c207961b5671e0"
+        },
+        {
+          "path": "build/step5.5/visual/26.1.2/OPENGL/854-SQUARE-list.png",
+          "sha256": "73ff87dbb90ca08f09764e9921ee9a3ce17a1de302971f5b809f65337d7734ea"
+        },
+        {
+          "path": "build/step5.5/visual/26.1.2/OPENGL/menu-settings.png",
+          "sha256": "e1599c96e94d8cd613b3c4e65a621bf10c4383fe8e6c18d144bbc20eefb69234"
+        },
+        {
+          "path": "build/step5.5/visual/26.1.2/OPENGL/menu.png",
+          "sha256": "1e35d95d8ae382410e33149758dc5f77af4a3a17d9c9e802f643bad4d7ff5e51"
+        },
+        {
+          "path": "build/step5.5/visual/26.1.2/OPENGL/search-focus.png",
+          "sha256": "3a8a23d69ea17c45bcec71490e0414b6fd94aec4f9aa0add6e1a9a8a8bfdce80"
+        }
+      ]
+    },
+    {
+      "minecraft": "26.1.2",
+      "backend": "VULKANMOD",
+      "scope": "UI and restart input",
+      "logSha256": "1528a1490b23c570eeb6fddb8ea7f5f433cabefcb64c27514442d767c76b4224",
+      "screenshots": [
+        {
+          "path": "build/step5.5/visual/26.1.2/VULKANMOD/1280-detail-animations.png",
+          "sha256": "5ae978e670e23325a202c535b1dec3ade6a621cd92b519f293886339ec3b010f"
+        },
+        {
+          "path": "build/step5.5/visual/26.1.2/VULKANMOD/1280-detail-theme.png",
+          "sha256": "6ab252600cb27adbe04f421bf294b53e076008b9e142358bb49b40e4473cf82d"
+        },
+        {
+          "path": "build/step5.5/visual/26.1.2/VULKANMOD/1280-ROUND-grid-long.png",
+          "sha256": "1b2cea8358645be1d0f87f7c642b28e72ab3d66ecde59149f12e90f1867b78a4"
+        },
+        {
+          "path": "build/step5.5/visual/26.1.2/VULKANMOD/1280-ROUND-grid.png",
+          "sha256": "ac782e4ec109836de7308a92e6697e11585d9456a50a7b53a77f20bcbd0993b9"
+        },
+        {
+          "path": "build/step5.5/visual/26.1.2/VULKANMOD/1280-ROUND-list-long.png",
+          "sha256": "b12e09f937e29fff199e8e8a01669bfa7dee763291f82c1fb6820b2afc715d22"
+        },
+        {
+          "path": "build/step5.5/visual/26.1.2/VULKANMOD/1280-ROUND-list.png",
+          "sha256": "b27fff9aca61942fbe9ab87fc5779640df42aa1f227ebb148d2367b141a7ca0d"
+        },
+        {
+          "path": "build/step5.5/visual/26.1.2/VULKANMOD/1280-SQUARE-grid-long.png",
+          "sha256": "4e26e6a4d75b966d4d40db7a0c6ea15c2a886aa78c3bf4381e3c20acc57d53c0"
+        },
+        {
+          "path": "build/step5.5/visual/26.1.2/VULKANMOD/1280-SQUARE-grid.png",
+          "sha256": "987800ee873c822dcf559b0afd502056d149c99016cd00e2e25d74c30aa98b29"
+        },
+        {
+          "path": "build/step5.5/visual/26.1.2/VULKANMOD/1280-SQUARE-list-long.png",
+          "sha256": "8113b4d73bbee49bdedbb05f0c6c718fb5db299fe96a6662209dc91f26704ad9"
+        },
+        {
+          "path": "build/step5.5/visual/26.1.2/VULKANMOD/1280-SQUARE-list.png",
+          "sha256": "119ea8f3bc9c5256d0981ba8f113ce0205e29716d3d7d0aa9a504c7bf6da27c5"
+        },
+        {
+          "path": "build/step5.5/visual/26.1.2/VULKANMOD/854-detail-animations.png",
+          "sha256": "a5861de4016e04f8fb6251865d287b74b0d977b7be943837168e57744a5df711"
+        },
+        {
+          "path": "build/step5.5/visual/26.1.2/VULKANMOD/854-detail-theme.png",
+          "sha256": "d8b10ba13ceb329451e47c403038bf8783d6520e52cf2209b2d93adde035c817"
+        },
+        {
+          "path": "build/step5.5/visual/26.1.2/VULKANMOD/854-ROUND-grid-long.png",
+          "sha256": "b4e9e16cde16e5fc45a174ea202d125aee73776b0f31b9d50a8539bd13b17e13"
+        },
+        {
+          "path": "build/step5.5/visual/26.1.2/VULKANMOD/854-ROUND-grid.png",
+          "sha256": "0b801b7c0e15ec03d5371d725e21d36b1e457d0f345fbfa584361b9e8bac09d5"
+        },
+        {
+          "path": "build/step5.5/visual/26.1.2/VULKANMOD/854-ROUND-list-long.png",
+          "sha256": "7d22d8f5421e7768f9ab4d6f04d35dd63c22f837e0292252d8d96720d5bcd909"
+        },
+        {
+          "path": "build/step5.5/visual/26.1.2/VULKANMOD/854-ROUND-list.png",
+          "sha256": "f227903b6d4269921c056ecc742165cd301213359610ae4e717986f15afb9591"
+        },
+        {
+          "path": "build/step5.5/visual/26.1.2/VULKANMOD/854-SQUARE-grid-long.png",
+          "sha256": "0a945f54d0a4d49ef827ac37eebf40295f3f5032daada99d426e4195a113f719"
+        },
+        {
+          "path": "build/step5.5/visual/26.1.2/VULKANMOD/854-SQUARE-grid.png",
+          "sha256": "d4715011627ce0337fdbe6b562b4368e7a8db06382e766cb93f69a17731815f9"
+        },
+        {
+          "path": "build/step5.5/visual/26.1.2/VULKANMOD/854-SQUARE-list-long.png",
+          "sha256": "ac030769110656e3bc546bfb2b125d0afef55c401499ed63994a706674cfb04a"
+        },
+        {
+          "path": "build/step5.5/visual/26.1.2/VULKANMOD/854-SQUARE-list.png",
+          "sha256": "e11b2651611e62e1c0116e484825936e1318423b391fd92abf7efc42bb951fa7"
+        },
+        {
+          "path": "build/step5.5/visual/26.1.2/VULKANMOD/menu-settings.png",
+          "sha256": "ca245469a40d62ddb565bb67ae3cea15323940ca63624c1da1cd4ca1ae275907"
+        },
+        {
+          "path": "build/step5.5/visual/26.1.2/VULKANMOD/menu.png",
+          "sha256": "9163df30bb858ee9d0ef6fdce5a5def2b153c2fc66e4ebdb6e1c9bd82e233c8d"
+        },
+        {
+          "path": "build/step5.5/visual/26.1.2/VULKANMOD/search-focus.png",
+          "sha256": "5d65ccc30130dc0667d5b19629b1aea232f2e58e3f5a057e7edbeb5eec093feb"
+        }
+      ]
+    },
+    {
+      "minecraft": "26.2",
+      "backend": "OPENGL",
+      "scope": "UI and restart input",
+      "logSha256": "616f6dcc2883a39b18e7c015fe21488e1e432187fcb603c776f70ba0c694e7be",
+      "screenshots": [
+        {
+          "path": "build/step5.5/visual/26.2/OPENGL/1280-detail-animations.png",
+          "sha256": "fc6bfbcb8036a782f5b2e5991b4f82295111437c026a994ebec05ed2b7aa0ca2"
+        },
+        {
+          "path": "build/step5.5/visual/26.2/OPENGL/1280-detail-theme.png",
+          "sha256": "13f30d27783b0047b8b91a4c54ce0e8a961c20efbe927e0a0b238a74b473153c"
+        },
+        {
+          "path": "build/step5.5/visual/26.2/OPENGL/1280-ROUND-grid-long.png",
+          "sha256": "730b46269a7f17d810223c4da7e2eb688f3ae8897a31a46a3b5ec6d644752c22"
+        },
+        {
+          "path": "build/step5.5/visual/26.2/OPENGL/1280-ROUND-grid.png",
+          "sha256": "94f399e6ace927dea4bb349f4ce73117a06ec87f38c1e3509d5f1ad78ce8d4b9"
+        },
+        {
+          "path": "build/step5.5/visual/26.2/OPENGL/1280-ROUND-list-long.png",
+          "sha256": "277402a378537ecea79cdc4458a9752201e02d5e292635a0108040cc7079325c"
+        },
+        {
+          "path": "build/step5.5/visual/26.2/OPENGL/1280-ROUND-list.png",
+          "sha256": "1a80691f20a4b2d2750ab72331046250431516fd443c7d158c5ef930b7a0a1ed"
+        },
+        {
+          "path": "build/step5.5/visual/26.2/OPENGL/1280-SQUARE-grid-long.png",
+          "sha256": "5c8df7a0e4bbfd52a6accd3fb9d5b79ac80156990ff4e4d3afc33c12e4fd7167"
+        },
+        {
+          "path": "build/step5.5/visual/26.2/OPENGL/1280-SQUARE-grid.png",
+          "sha256": "cff05226c646feadf87a2ef4647f84b997fa1cd799131b2a18439eeebb84cb57"
+        },
+        {
+          "path": "build/step5.5/visual/26.2/OPENGL/1280-SQUARE-list-long.png",
+          "sha256": "258cfef393f57bde20afbe92c1b7cda20bc2619359dca9d6af516aacbe6eb44c"
+        },
+        {
+          "path": "build/step5.5/visual/26.2/OPENGL/1280-SQUARE-list.png",
+          "sha256": "8e3b307f969a67f71f9bed31b759dcf6d5e63343804d6e9402599c429f404958"
+        },
+        {
+          "path": "build/step5.5/visual/26.2/OPENGL/854-detail-animations.png",
+          "sha256": "991d29603c7dfe06f81661051647e2c861eaca2773a0860efc7f81994c96531d"
+        },
+        {
+          "path": "build/step5.5/visual/26.2/OPENGL/854-detail-theme.png",
+          "sha256": "0ad4ec0bc59a4f5530d5dc847db54c33500d84d9bb2d16e3ecc0a2c29f37a825"
+        },
+        {
+          "path": "build/step5.5/visual/26.2/OPENGL/854-ROUND-grid-long.png",
+          "sha256": "49922eda82f53120b5189f5eb45a66f64f08115479e7e38a408e843ff1f3a289"
+        },
+        {
+          "path": "build/step5.5/visual/26.2/OPENGL/854-ROUND-grid.png",
+          "sha256": "e815e55cd895a788e1b336fbba011c71d210dbeb5341c48a0f288758909e0013"
+        },
+        {
+          "path": "build/step5.5/visual/26.2/OPENGL/854-ROUND-list-long.png",
+          "sha256": "04b1a1425441c8b77d97bd32d9c1c20e0965ac71e42674b80c05d4984758d24a"
+        },
+        {
+          "path": "build/step5.5/visual/26.2/OPENGL/854-ROUND-list.png",
+          "sha256": "0e3218f0f6bf78884f09d313897f6ce628ebc1cf531e885b1b706938f4834abd"
+        },
+        {
+          "path": "build/step5.5/visual/26.2/OPENGL/854-SQUARE-grid-long.png",
+          "sha256": "f371fb2c190365846df2d431460c53c571c93e9587b9fa6e3f0dd12ddf1147b8"
+        },
+        {
+          "path": "build/step5.5/visual/26.2/OPENGL/854-SQUARE-grid.png",
+          "sha256": "46b850582d3ef532cfe83ef7958776bec7f19ca96b947e45541d78274d9907f6"
+        },
+        {
+          "path": "build/step5.5/visual/26.2/OPENGL/854-SQUARE-list-long.png",
+          "sha256": "ef29bbeb0c7b030ac0bfd3a33e9b9c0f518f3b07859cb21f0e57a7e480f8c186"
+        },
+        {
+          "path": "build/step5.5/visual/26.2/OPENGL/854-SQUARE-list.png",
+          "sha256": "799bbab6e59894b6652990a09aae104c5ac60b581fd1a5523aa8bc93d5b48c98"
+        },
+        {
+          "path": "build/step5.5/visual/26.2/OPENGL/menu-settings.png",
+          "sha256": "faebb795d1e52cfb3c557f5af8c3d176d8680dd0a039b454f0de824ad89f3cc9"
+        },
+        {
+          "path": "build/step5.5/visual/26.2/OPENGL/menu.png",
+          "sha256": "a4e0f02929292621de4b890c8061e18370343969c4d11d487276c81ba1d29871"
+        },
+        {
+          "path": "build/step5.5/visual/26.2/OPENGL/search-focus.png",
+          "sha256": "8d2b7f7696ed06a3cb5d3240822016dc5ecb3439510ad36effdb05039dc1f018"
+        }
+      ]
+    },
+    {
+      "minecraft": "26.2",
+      "backend": "VULKAN",
+      "scope": "UI and restart input",
+      "logSha256": "bb8322e957d81bf2e3a26084cf5b4394d6363449c306858bf294f215a6df6aa7",
+      "screenshots": [
+        {
+          "path": "build/step5.5/visual/26.2/VULKAN/1280-detail-animations.png",
+          "sha256": "5384e020388b5e94dc7cab1b81510cb8f57fd6a8f5d43c316cfa459a68406c3d"
+        },
+        {
+          "path": "build/step5.5/visual/26.2/VULKAN/1280-detail-theme.png",
+          "sha256": "f870a78765eae2620083a40dd9d069d0c90c46eb41f9da28464cc5fdad7bc5e8"
+        },
+        {
+          "path": "build/step5.5/visual/26.2/VULKAN/1280-ROUND-grid-long.png",
+          "sha256": "d22535305dac780833f9983ef8e1917a4c46aa18ef317df18e3d0891e31fe16b"
+        },
+        {
+          "path": "build/step5.5/visual/26.2/VULKAN/1280-ROUND-grid.png",
+          "sha256": "261cd1736e73b708cc68b81ab6f2263f436ece446eaf15a2814615107f95eae7"
+        },
+        {
+          "path": "build/step5.5/visual/26.2/VULKAN/1280-ROUND-list-long.png",
+          "sha256": "58b695e4b62587f12243b82ac4c6ee639608a11ae8d2b51b82c29d53e33b9191"
+        },
+        {
+          "path": "build/step5.5/visual/26.2/VULKAN/1280-ROUND-list.png",
+          "sha256": "cf76057fd3ca30e74fb032dab3b331b21dc795e75768b9d11adf24317e271f4e"
+        },
+        {
+          "path": "build/step5.5/visual/26.2/VULKAN/1280-SQUARE-grid-long.png",
+          "sha256": "111471a6904a7c015050dd328d4c6496c5cf7aac03e2c8d6a06e480e722945f2"
+        },
+        {
+          "path": "build/step5.5/visual/26.2/VULKAN/1280-SQUARE-grid.png",
+          "sha256": "91bd0aecf31334b0bbbb42bc739289078efab9a3f368d254540091f019d3dfda"
+        },
+        {
+          "path": "build/step5.5/visual/26.2/VULKAN/1280-SQUARE-list-long.png",
+          "sha256": "8371f45404263e441b974239c891808cb45f6c2b95aed26bf6a7552dddb33d7c"
+        },
+        {
+          "path": "build/step5.5/visual/26.2/VULKAN/1280-SQUARE-list.png",
+          "sha256": "264c16da8cdf4446b5e5604ac233e39127049449115103ef5f87b9c092c44203"
+        },
+        {
+          "path": "build/step5.5/visual/26.2/VULKAN/854-detail-animations.png",
+          "sha256": "92734f5ae5523827077f66da6bb7fbc2d82212ef8a99317b584211957b1282b0"
+        },
+        {
+          "path": "build/step5.5/visual/26.2/VULKAN/854-detail-theme.png",
+          "sha256": "5493b24419673693e0f375fdb372a5138b5f876e95a32ae5aa8b13e33b6860c7"
+        },
+        {
+          "path": "build/step5.5/visual/26.2/VULKAN/854-ROUND-grid-long.png",
+          "sha256": "841a2bd93ac04eb96d7614b5ab5ce29ea62170976a1e01e427ded4d87d97a172"
+        },
+        {
+          "path": "build/step5.5/visual/26.2/VULKAN/854-ROUND-grid.png",
+          "sha256": "f9698779d42afaef9591d1a9e44af8cafc301de474f12d29fd269bb43b7b0f71"
+        },
+        {
+          "path": "build/step5.5/visual/26.2/VULKAN/854-ROUND-list-long.png",
+          "sha256": "dbaf04a27624f61e572f7de776dc6e2ae7d1d3b966a7db31e79a5721658ffcf2"
+        },
+        {
+          "path": "build/step5.5/visual/26.2/VULKAN/854-ROUND-list.png",
+          "sha256": "bcfd69ab7a604d0a6cfd6c81deec6a61fc1dabfb84232caf9c9ead24a5dea5f2"
+        },
+        {
+          "path": "build/step5.5/visual/26.2/VULKAN/854-SQUARE-grid-long.png",
+          "sha256": "f8f069d54ab26f3895d93bd52eaf1cef2805c34243f27d94919484d02def8b27"
+        },
+        {
+          "path": "build/step5.5/visual/26.2/VULKAN/854-SQUARE-grid.png",
+          "sha256": "e744119de8d142415ee7090b93fb8b1626b57dc1b6778aaa3ccbfc8d24d7a078"
+        },
+        {
+          "path": "build/step5.5/visual/26.2/VULKAN/854-SQUARE-list-long.png",
+          "sha256": "704700b4f479d51709c0dff4f07b94ddaadc88f93aa8fde0c57dd577fadd7bbc"
+        },
+        {
+          "path": "build/step5.5/visual/26.2/VULKAN/854-SQUARE-list.png",
+          "sha256": "1be60f8bb74acd7ed33062b979373186171af9153cc66638eb174ef84c50d527"
+        },
+        {
+          "path": "build/step5.5/visual/26.2/VULKAN/menu-settings.png",
+          "sha256": "9fe08f51ea4b0c00dbd6c381207e29cedeb4e7512c60513d71e226461d2cb7d3"
+        },
+        {
+          "path": "build/step5.5/visual/26.2/VULKAN/menu.png",
+          "sha256": "cf5e07c5f77cc836d17139ad9bb34d38f2dd3f5443cc19947a7626d809494808"
+        },
+        {
+          "path": "build/step5.5/visual/26.2/VULKAN/search-focus.png",
+          "sha256": "5343f354f87509a8af148f4db1ed047373e99027789b9852d0e4cb813483b265"
+        }
+      ]
+    },
+    {
+      "minecraft": "26.3",
+      "backend": "OPENGL",
+      "scope": "UI and restart input",
+      "logSha256": "4ec8d239a5fedbc71689344229e52963889d4ed7d934795480b482c526a12ce7",
+      "screenshots": [
+        {
+          "path": "build/step5.5/visual/26.3/OPENGL/1280-detail-animations.png",
+          "sha256": "c2529c990a1e64f9b804ca08937e1144410004dc224a7c70b0e05d3bc56e45e6"
+        },
+        {
+          "path": "build/step5.5/visual/26.3/OPENGL/1280-detail-theme.png",
+          "sha256": "3194ba128ec833bd1ce77c30fe4d7f9aacec6a126cfdf265a1f40e7e275161f5"
+        },
+        {
+          "path": "build/step5.5/visual/26.3/OPENGL/1280-ROUND-grid.png",
+          "sha256": "3c287a1ac6b6fb7c5309d57fad0bda40ecd9b1495c9c315c215ff8d5a73415f5"
+        },
+        {
+          "path": "build/step5.5/visual/26.3/OPENGL/1280-ROUND-list.png",
+          "sha256": "fa8f14ec9b136ce79d10539c2322367398cc194e7c89be5039645c4d0ccd168d"
+        },
+        {
+          "path": "build/step5.5/visual/26.3/OPENGL/1280-SQUARE-grid.png",
+          "sha256": "218552b23251cd866488700b350f19aaafd56f33903f4a52ba307f103d289ba2"
+        },
+        {
+          "path": "build/step5.5/visual/26.3/OPENGL/1280-SQUARE-list.png",
+          "sha256": "4f98332e135d76e93b215719f84a75653e783719fa41129ddc0e55da12e9b1d9"
+        },
+        {
+          "path": "build/step5.5/visual/26.3/OPENGL/854-detail-animations.png",
+          "sha256": "ceaec2c180fbc8905a2f97c2613e068b1c72382165c663de74b0a4f636dd4657"
+        },
+        {
+          "path": "build/step5.5/visual/26.3/OPENGL/854-detail-theme.png",
+          "sha256": "e0c7f5c8bbab4aa207d905a93f625a67fedd8ca2949f9b5a3e5034350dfde2c5"
+        },
+        {
+          "path": "build/step5.5/visual/26.3/OPENGL/854-ROUND-grid.png",
+          "sha256": "4ed0223f4c7d070b6cab7b01415c737a02db384dbb2df0e2627300a87d705ebf"
+        },
+        {
+          "path": "build/step5.5/visual/26.3/OPENGL/854-ROUND-list.png",
+          "sha256": "13dcaf66b3ec5ba4da0a4586886b736bd8a6f09a9071fe736b9a67a3eaf0548b"
+        },
+        {
+          "path": "build/step5.5/visual/26.3/OPENGL/854-SQUARE-grid.png",
+          "sha256": "fe10763da4caedf3f390f6f16d351f5ada54a43dd98317e78b122a94e1869b67"
+        },
+        {
+          "path": "build/step5.5/visual/26.3/OPENGL/854-SQUARE-list.png",
+          "sha256": "f8e13f8301ffce59893884e9509ba7e2f65c7309c43f76c5fcf7c9f181d465d8"
+        },
+        {
+          "path": "build/step5.5/visual/26.3/OPENGL/menu-settings.png",
+          "sha256": "2c6d81be9e1d049019a7408c148abd8a986f3c00cc1ceb31b849b54e7fcd6ce2"
+        },
+        {
+          "path": "build/step5.5/visual/26.3/OPENGL/menu.png",
+          "sha256": "2189d8cbd7232fa2f679b839989d50d496c641d3ebaabf53c1586f0f8c25d727"
+        },
+        {
+          "path": "build/step5.5/visual/26.3/OPENGL/search-focus.png",
+          "sha256": "24b26b9be4ebc6a47819ce6ef62396f245c94810c2185b8e47775123540da330"
+        }
+      ]
+    },
+    {
+      "minecraft": "26.3",
+      "backend": "VULKAN",
+      "scope": "UI and restart input",
+      "logSha256": "77987cbe1a675a8ca2eedf6e261e025d77491e3339408e531a1f5e24a1370b91",
+      "screenshots": [
+        {
+          "path": "build/step5.5/visual/26.3/VULKAN/1280-detail-animations.png",
+          "sha256": "438353bbc97c1803f7cd12f1eae088c588c7be737c6bfa2282eab4d2bb7851d1"
+        },
+        {
+          "path": "build/step5.5/visual/26.3/VULKAN/1280-detail-theme.png",
+          "sha256": "40b62feb908a4e657431f4c1c4c49e560d23839e7cf1054c1611beb205afff90"
+        },
+        {
+          "path": "build/step5.5/visual/26.3/VULKAN/1280-ROUND-grid.png",
+          "sha256": "7c2f90457b17b2bb18edace890fda8e6b8702404945d6d92d9c673af881d9a0e"
+        },
+        {
+          "path": "build/step5.5/visual/26.3/VULKAN/1280-ROUND-list.png",
+          "sha256": "9066f26ee14de22d3808b85ad4395c74720fa8e95c1a1d04200aac1d4366ea7f"
+        },
+        {
+          "path": "build/step5.5/visual/26.3/VULKAN/1280-SQUARE-grid.png",
+          "sha256": "f94947546d21c981700b15d5ae41742fc39e50dbc9278442031f52ff64fd23bc"
+        },
+        {
+          "path": "build/step5.5/visual/26.3/VULKAN/1280-SQUARE-list.png",
+          "sha256": "d007bb441515374318a3bc24c078ae80304ab338a7c36da1004bb87f2222df3e"
+        },
+        {
+          "path": "build/step5.5/visual/26.3/VULKAN/854-detail-animations.png",
+          "sha256": "6abe075109db60b0c3e37abe01b2c1047280abaa6e562b05107efc521e9eaded"
+        },
+        {
+          "path": "build/step5.5/visual/26.3/VULKAN/854-detail-theme.png",
+          "sha256": "16ce725497778d12f1912c031a4adf0e433b161649785fb3b2ab34e9c26b141e"
+        },
+        {
+          "path": "build/step5.5/visual/26.3/VULKAN/854-ROUND-grid.png",
+          "sha256": "837e94dd00592eb1f502d06b5a3a22f456ad9b166e6c00c22fb3498dacf144d7"
+        },
+        {
+          "path": "build/step5.5/visual/26.3/VULKAN/854-ROUND-list.png",
+          "sha256": "89c2ae5a3c25545e438f5fe808e5d22db7c0aa04bdb28221424ea604924095db"
+        },
+        {
+          "path": "build/step5.5/visual/26.3/VULKAN/854-SQUARE-grid.png",
+          "sha256": "494c2de13f8d00e0856122bf7ea15471979f866816ecb1a5b56466677a089e3d"
+        },
+        {
+          "path": "build/step5.5/visual/26.3/VULKAN/854-SQUARE-list.png",
+          "sha256": "564b5adc1305b65b347b782e6bd79858d720285aa96df2335eab222bab0b825f"
+        },
+        {
+          "path": "build/step5.5/visual/26.3/VULKAN/menu-settings.png",
+          "sha256": "620c1775ffa92eb856d1c928b67cb29bc81c5d3e19cff0e53b94ade89dea725b"
+        },
+        {
+          "path": "build/step5.5/visual/26.3/VULKAN/menu.png",
+          "sha256": "91221abf8b2cb7ce2b98f8165dd09d9d3cd2e68836b737f8cf1614fcbe293de4"
+        },
+        {
+          "path": "build/step5.5/visual/26.3/VULKAN/search-focus.png",
+          "sha256": "e356ad762c408a4c74c6b528bed4df7ebb2da3e11428fbb88d35883107defdda"
+        }
+      ]
+    },
+    {
+      "minecraft": "26.1.2",
+      "backend": "OPENGL",
+      "scope": "Long labels and F7 HUD keycap",
+      "logSha256": "a0b039085b1957bd8a9bf574009c2fb0055e4d62cdcec8926b33d4c182db3364",
+      "screenshots": [
+        {
+          "path": "build/step5.5/overflow/26.1.2/OPENGL/1280-ROUND-grid.png",
+          "sha256": "db119a259bc417375e3134653ba37a5ff3aeb50cb71464f43e95dff7043badc7"
+        },
+        {
+          "path": "build/step5.5/overflow/26.1.2/OPENGL/1280-ROUND-list.png",
+          "sha256": "d211f7625cfb6e4fe719c0e82f94475f2b74d4355ab6f170a39260d5a36cef2a"
+        },
+        {
+          "path": "build/step5.5/overflow/26.1.2/OPENGL/854-ROUND-grid.png",
+          "sha256": "b7173162428d7df8ebfe386e991f2bff7397295db300f7ab13b3cb4836f60a84"
+        },
+        {
+          "path": "build/step5.5/overflow/26.1.2/OPENGL/854-ROUND-list.png",
+          "sha256": "5973b75e92f737ba7424c8d5e87602ca32553e6af0a2626f5119c454f77a2aef"
+        },
+        {
+          "path": "build/step5.5/overflow/26.1.2/OPENGL/menu-settings.png",
+          "sha256": "e03472645e4c68720128dc87d65e473c04baa08dd366fc39709a7a0e8f97ae07"
+        },
+        {
+          "path": "build/step5.5/overflow/26.1.2/OPENGL/menu.png",
+          "sha256": "3d7e608c34030ff11f72fda768f547cb761edb564b4a31ee5b949df540e384f9"
+        },
+        {
+          "path": "build/step5.5/overflow/26.1.2/OPENGL/search-focus.png",
+          "sha256": "3e733cc6a6411f53adda979958a15aa224daecb56646ae223c6bf240b86c0721"
+        },
+        {
+          "path": "build/step5.5/overflow/26.1.2/OPENGL/world-keycaps.png",
+          "sha256": "3b7aa3c2bc594c412e33983133d49ce8911eb31443624caad6d32fd01c96aac5"
+        }
+      ]
+    },
+    {
+      "minecraft": "26.2",
+      "backend": "OPENGL",
+      "scope": "Long labels and F7 HUD keycap",
+      "logSha256": "b793011fbe644f5bb06b740adf2221476b130d4269c7312cd3d482dc7da2524e",
+      "screenshots": [
+        {
+          "path": "build/step5.5/overflow/26.2/OPENGL/1280-ROUND-grid.png",
+          "sha256": "4265b6841611e0c0e529ca250d49e59f511c40cf446f42e08da444321bb67807"
+        },
+        {
+          "path": "build/step5.5/overflow/26.2/OPENGL/1280-ROUND-list.png",
+          "sha256": "ca35b9573c8b474e73f258fc66544be63a63cd9e0bf0e3b22ce6bbb9c74c0404"
+        },
+        {
+          "path": "build/step5.5/overflow/26.2/OPENGL/854-ROUND-grid.png",
+          "sha256": "0235e27b4068fea4a56158578e4647c60c8b7ee4d733c397efac4cf2933e6d4c"
+        },
+        {
+          "path": "build/step5.5/overflow/26.2/OPENGL/854-ROUND-list.png",
+          "sha256": "6b9d203a6ec835bd0476b2d5f8373344cd188cf59599a574c680a1d4ed4842ae"
+        },
+        {
+          "path": "build/step5.5/overflow/26.2/OPENGL/menu-settings.png",
+          "sha256": "de29aa7db2c057a8a7918ff990294496d8da5dc9e86db4204905bda715df0a3e"
+        },
+        {
+          "path": "build/step5.5/overflow/26.2/OPENGL/menu.png",
+          "sha256": "21b14abc0e03257fc4a5d84cb917236f067c9977f8bb0c1b11e4604c32bf35e6"
+        },
+        {
+          "path": "build/step5.5/overflow/26.2/OPENGL/search-focus.png",
+          "sha256": "af7bb113ef590a9153a9bf7331a0448a63d3712ac33b40dc34519a288770a5cc"
+        },
+        {
+          "path": "build/step5.5/overflow/26.2/OPENGL/world-keycaps.png",
+          "sha256": "e3be932495d030c3ead30745a8d82665317f7095382f54a261d11e30861f0fdd"
+        }
+      ]
+    },
+    {
+      "minecraft": "26.3",
+      "backend": "OPENGL",
+      "scope": "Long labels and F7 HUD keycap",
+      "logSha256": "db1005d643c7fabf658576b20b70d4bb6666e48b98efcbf2f1074184639f2d70",
+      "screenshots": [
+        {
+          "path": "build/step5.5/overflow/26.3/OPENGL/1280-ROUND-grid.png",
+          "sha256": "6806206f9a05c71ce19df945699cf2f4396fcdcfd63436c14d316c808e2ab76a"
+        },
+        {
+          "path": "build/step5.5/overflow/26.3/OPENGL/1280-ROUND-list.png",
+          "sha256": "6cced10df70e999692bba0853c904f8e133e8e292aff8d4522288b9e588a351d"
+        },
+        {
+          "path": "build/step5.5/overflow/26.3/OPENGL/854-ROUND-grid.png",
+          "sha256": "78ab3aec6c602396edcc0c4d32cc7afd99a77101609db808acaf073044909fa4"
+        },
+        {
+          "path": "build/step5.5/overflow/26.3/OPENGL/854-ROUND-list.png",
+          "sha256": "0090ff3737ba642cb2b69f2dffbe632650f318a0733a5328e6ca3b71111c8840"
+        },
+        {
+          "path": "build/step5.5/overflow/26.3/OPENGL/menu-settings.png",
+          "sha256": "5a002b4d0c9775b3a340631627b71b003a8604849e66eea1820dd4d9af67739c"
+        },
+        {
+          "path": "build/step5.5/overflow/26.3/OPENGL/menu.png",
+          "sha256": "5d0a4f99501fab29e2ebbe0a1492b287ea3b2d2e0ade1a177b8e344e8b299b9a"
+        },
+        {
+          "path": "build/step5.5/overflow/26.3/OPENGL/search-focus.png",
+          "sha256": "8da19ca68479ff2b3ab9ba073e080c8cf68a5a460a9d6f1c0196e3646e343524"
+        },
+        {
+          "path": "build/step5.5/overflow/26.3/OPENGL/world-keycaps.png",
+          "sha256": "827eab5d8a5469835c0f1b9fcf238e1a50486fb8da23a9458139fb4c4652c6c9"
+        }
+      ]
+    }
+  ]
+}

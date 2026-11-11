@@ -121,9 +121,9 @@ class PackTabsPilotTest {
 
         // Pointer path on a different inactive tab: one transition; pointer
         // hit on the selected tab: consumed no-op.
-        assertTrue(themedCtl.activateFromPointer(60, 80, 1));
+        assertTrue(themedCtl.activateFromPointer(60, 80, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT));
         assertEquals(2, clicks.get());
-        assertTrue(themedCtl.activateFromPointer(60, 80, 1));
+        assertTrue(themedCtl.activateFromPointer(60, 80, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT));
         assertEquals(2, clicks.get(), "selected-tab click is a no-op");
         assertEquals(2, fx.submissions.get());
 
@@ -266,7 +266,7 @@ class PackTabsPilotTest {
     @Test
     void tabClicksRouteThroughTheSemanticControl() throws Exception {
         String src = screenSource();
-        assertTrue(src.contains("control.activateFromPointer(mouseX, mouseY, 1)"),
+        assertTrue(src.contains("control.activateFromPointer(mouseX, mouseY, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT)"),
                 "pointer selection routes through the tab's semantic action");
         assertTrue(src.contains("tabControls[i]"),
                 "the click walk resolves the per-tab control");
@@ -296,10 +296,7 @@ class PackTabsPilotTest {
         assertFalse(src.contains("GLFW_KEY_DOWN"));
     }
 
-    private static final class CapturingNarration implements NarrationElementOutput {
-        @Override public net.minecraft.client.gui.narration.NarrationTrigger narrationTrigger() {
-            return net.minecraft.client.gui.narration.NarrationTrigger.KEYBOARD;
-        }
+    private static final class CapturingNarration extends com.aurora.client.NativeNarrationOutput {
         private final Map<NarratedElementType, List<String>> values =
                 new EnumMap<>(NarratedElementType.class);
 

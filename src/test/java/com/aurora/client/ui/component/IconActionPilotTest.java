@@ -62,15 +62,15 @@ class IconActionPilotTest {
 
         // Unhosted (never asked): the pointer route declines — callers keep
         // their legacy fallback for this window.
-        assertFalse(a.clicked(5, 5, 1));
+        assertFalse(a.clicked(5, 5, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT));
 
         // Hosted + available + in bounds: exactly one domain action.
         first.setAvailable(true);
         first.setBounds(0, 0, 16, 16);
-        assertTrue(a.clicked(5, 5, 1));
+        assertTrue(a.clicked(5, 5, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT));
         assertEquals(1, calls.get());
         // Out of bounds is rejected by the control's own geometry truth.
-        assertFalse(a.clicked(50, 50, 1));
+        assertFalse(a.clicked(50, 50, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT));
         assertEquals(1, calls.get());
         // Non-primary buttons are not activations.
         assertFalse(a.clicked(5, 5, 3));
@@ -98,7 +98,7 @@ class IconActionPilotTest {
         control.setAvailable(true);
         control.setBounds(0, 0, 16, 16);
         enabled.set(false);
-        assertFalse(a.clicked(5, 5, 1), "no pointer action while disabled");
+        assertFalse(a.clicked(5, 5, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT), "no pointer action while disabled");
         control.setFocused(true);
         assertTrue(control.keyPressed(new KeyEvent(InputConstants.KEY_RETURN, 0, 0)),
                 "a targeted disabled selection is consumed (cannot fall through)");
@@ -216,7 +216,7 @@ class IconActionPilotTest {
         assertTrue(icons.contains("\"_action_close\""));
         try {
             var subset = new java.io.FileInputStream(
-                    SourceTree.ADAPTER + "/src/client/resources/assets/aurora/font/material_symbols_rounded.ttf");
+                    SourceTree.resolve(SourceTree.ADAPTER + "/src/client/resources/assets/aurora/font/material_symbols_rounded.ttf").toFile());
             subset.close();
         } catch (java.io.IOException e) {
             fail("subset font missing: " + e);

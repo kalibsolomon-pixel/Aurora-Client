@@ -128,7 +128,7 @@ public class ReflexScheduler {
         Long gpu = getEstimateGpuTime();
         var client = net.minecraft.client.Minecraft.getInstance();
         if (gpu == null || estimateCpuTime == null || client.player == null
-                || client.gui.screen() != null || !client.isWindowActive() || client.isPaused()) {
+                || com.aurora.client.adapter.NativeUi.screen(client) != null || !client.isWindowActive() || client.isPaused()) {
             return;
         }
         long budget = AutomaticReflexPolicy.waitBudget(estimateCpuTime, gpu, validSamples, gpuTimeCollectorDeque.size());

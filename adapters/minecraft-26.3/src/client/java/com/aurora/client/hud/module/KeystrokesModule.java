@@ -98,6 +98,7 @@ public class KeystrokesModule extends HudModule {
     private static final long LABEL_REFRESH_MS = 2000L;
     private final String[] labels = new String[SLOTS];
     private final int[] labelWidths = new int[SLOTS];
+    private final HudTextCache textCache = new HudTextCache(SLOTS + 3);
     private long labelStamp;
 
     /** CPS text — integer values, so a 100 ms rebuild cap is imperceptible. */
@@ -252,7 +253,7 @@ public class KeystrokesModule extends HudModule {
             blitTemplate(ctx, TPL_PLATE, x, cy, WIDTH, CPS_H, accent, 1f);
             String text = cpsText.get();
             int tw = font.width(text);
-            ctx.text(font, text, x + (WIDTH - tw) / 2,
+            ctx.text(font, textCache.text(SLOTS, text), x + (WIDTH - tw) / 2,
                     cy + (CPS_H - font.lineHeight) / 2, labelColor, false);
             cy += CPS_H + GAP;
         }
@@ -397,7 +398,7 @@ public class KeystrokesModule extends HudModule {
             ctx.pose().pushMatrix();
             ctx.pose().translate(x + (w - font.width(count) * scale) / 2f, y + h - 10);
             ctx.pose().scale(scale, scale);
-            ctx.text(font, count, 0, 0, labelColor, false);
+            ctx.text(font, textCache.text(SLOTS + 1 + (slot == SLOT_LMB ? 0 : 1), count), 0, 0, labelColor, false);
             ctx.pose().popMatrix();
         }
 
@@ -406,7 +407,7 @@ public class KeystrokesModule extends HudModule {
         int lw = labelWidths[slot];
         if (lw <= 0) return;
         if (lw <= w - 4) {
-            ctx.text(font, label, x + (w - lw) / 2,
+            ctx.text(font, textCache.text(slot, label), x + (w - lw) / 2,
                     labelY, labelColor, false);
         } else {
             // Long bind names shrink to fit instead of overflowing the cell.
@@ -416,7 +417,7 @@ public class KeystrokesModule extends HudModule {
             ctx.pose().pushMatrix();
             ctx.pose().translate(tx, ty);
             ctx.pose().scale(s, s);
-            ctx.text(font, label, 0, 0, labelColor, false);
+            ctx.text(font, textCache.text(slot, label), 0, 0, labelColor, false);
             ctx.pose().popMatrix();
         }
     }

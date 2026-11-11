@@ -1,0 +1,388 @@
+package com.aurora.client.screen.setting;
+
+import com.aurora.client.theme.ThemeManager;
+import com.aurora.client.theme.ThemeToken;
+import com.aurora.client.ui.component.GlassSurface;
+import com.aurora.client.ui.component.MaterialSurface;
+import com.aurora.client.ui.component.Widget;
+import com.aurora.client.ui.interaction.MinecraftSemanticFeedback;
+import com.aurora.client.ui.interaction.SemanticAction;
+import com.aurora.client.ui.interaction.SemanticActionControl;
+import com.aurora.client.ui.util.AuroraFontRenderer;
+import com.aurora.client.ui.util.RenderUtil;
+import com.aurora.client.util.AuroraAnim;
+import com.aurora.client.util.AuroraKey;
+import com.aurora.client.util.AuroraTheme;
+import com.aurora.client.util.HoverAnim;
+import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.network.chat.Component;
+
+import java.util.function.IntConsumer;
+import java.util.function.IntSupplier;
+import java.util.function.Supplier;
+
+/**
+ * Row that displays and rebinds a single Aurora keybind. Stores the bound
+ * key as a SDL scancode (see {@link AuroraKey#UNBOUND}). Click the right-
+ * hand pill to enter listen mode, then any next key press is captured.
+ *
+ * <p>Special keys while listening:
+ * <ul>
+ *   <li>{@code ESC} — clear the binding (sets to {@link AuroraKey#UNBOUND}).</li>
+ *   <li>{@code BACKSPACE} — same as ESC, mirrors vanilla controls UX.</li>
+ * </ul>
+ *
+ * <p><b>Phase B ROLLOUT (2026-09-16):</b> the canonical state/capture
+ * model is this class's only behavior — the pilot's
+ * {@code canonicalStates()} opt-in was removed with the flag (the
+ * EnumSetting end state; every production row constructs through
+ * FeatureRegistry and no mock/direct consumer exists). Canonical
+ * channels overlap rather than alias one another:
+ * <ul>
+ *   <li>the bound value is persistent config data;</li>
+ *   <li>hover is pointer-only {@link HoverAnim#symmetric(long) symmetric
+ *       140 ms} motion;</li>
+ *   <li>focus is the semantic child's keyboard-navigation target;</li>
+ *   <li>listening is persistent modal ownership of the next accepted key,
+ *       carried by the existing stained pill + explicit prompt;</li>
+ *   <li>disabled is an authoritative interaction gate. Entering disabled
+ *       while listening cancels capture without changing or saving the
+ *       binding.</li>
+ * </ul>
+ * Listening still uses {@link FeatureSetting#requestFocus()} for capture
+ * routing, but it is never derived from semantic focus and never drives
+ * hover. Focus may therefore exist with or without listening, and listening
+ * remains visible after the pointer leaves the trigger.
+ *
+ * <p>The activation event that enters listening is owned by the semantic
+ * child and returns through Minecraft's child dispatch before capture is
+ * armed for a later event. The next screen-dispatched key reaches
+ * {@link #onKeyPress}; Enter/Space cannot self-bind on the activation event.
+ * Pointer events are not bindable in Aurora's SDL-scancode vocabulary. While
+ * listening, the next pointer press cancels and is consumed by
+ * {@link com.aurora.client.screen.FeatureDetailScreen} before any underlying
+ * control can activate.
+ *
+ * <p>Glass rollout: the pill renders as RAISED glass — neutral
+ * {@code WINDOW_FILL} tint at rest, accent-STAINED tint while listening
+ * (the active state reads through the tint, never through the lighting
+ * orientation; the stained alpha follows the Background Opacity slider
+ * through {@link ThemeManager#stainedTint()}'s fixed floor — single
+ * application point). On decline (menu context, screenshot suppression,
+ * failure) the complete flat pill returns unchanged.
+ */
+public class KeybindSetting extends FeatureSetting {
+    private static final int CONTROL_H = 28;
+    private static final int BTN_W = com.aurora.client.ui.util.UiDensity.KEY_W;
+    private static final int BTN_H = com.aurora.client.ui.util.UiDensity.FIELD_H;
+
+    private final IntSupplier getter;
+    private final IntConsumer setter;
+    private final Runnable saveAction;
+
+    /**
+     * Glass-pass bookkeeping (the {@code Button} scheme, §6 convention 6):
+     * the frame in which {@link #renderGlassPass} painted the pill pre-dim
+     * and whether it drew. In that frame {@link #render} paints content
+     * only (or the flat pill on decline); otherwise the surface paints in
+     * place — the legacy order, pixel-identical.
+     */
+    private long glassPassFrame = -1L;
+    private boolean passDrewPill = false;
+
+    private int lastBtnX, lastBtnY;
+    private int lastWidth = 240;
+    private boolean listening = false;
+    private final HoverAnim hoverAnim = HoverAnim.symmetric(140L);
+    private final com.aurora.client.ui.util.TimedTransition materialHover = new com.aurora.client.ui.util.TimedTransition(
+            120,com.aurora.client.ui.util.CubicBezier.EASE,0);
+    private boolean focusedVisual = false;
+    private SemanticActionControl interactionControl;
+
+    /** Cached user-facing name; the bound code normally changes only on capture. */
+    private int cachedKey = Integer.MIN_VALUE;
+    private String cachedKeyName = "Unbound";
+
+    public KeybindSetting(String label, IntSupplier getter, IntConsumer setter) {
+        this(label, getter, setter, com.aurora.client.config.AuroraConfig::save);
+    }
+
+    /** Package-private save seam for deterministic exactly-once tests. */
+    KeybindSetting(String label, IntSupplier getter, IntConsumer setter, Runnable saveAction) {
+        super(label);
+        this.getter = getter;
+        this.setter = setter;
+        this.saveAction = saveAction;
+    }
+
+    @Override public KeybindSetting description(String desc) { super.description(desc); return this; }
+    @Override public KeybindSetting description(Supplier<String> desc) { super.description(desc); return this; }
+
+    @Override public int baseHeight() { return compactRow == null ? CONTROL_H : compactRow.height(); }
+    @Override public int height()     { return baseHeight() + descriptionHeight(lastWidth); }
+
+    /**
+     * Pre-dim surface (the split's surface half): the pill's raised glass,
+     * neutral at rest / accent-stained while listening — the tint state is
+     * read here so it can never disagree with the content pass.
+     */
+    @Override
+    public void renderGlassPass(GuiGraphicsExtractor ctx, int x, int y, int width) {
+        if (!GlassSurface.passOpen()) return; // legacy frame order — render paints in place
+        boolean disabled = reconcileDisabledState();
+        glassPassFrame = GlassSurface.frame();
+        int btnX = controlX(x, width, BTN_W);
+        int btnY = controlY(y, CONTROL_H, BTN_H);
+        float glassR = Math.min(BTN_H / 2f, ThemeManager.current().roundness().radiusSmall());
+        passDrewPill = !disabled
+                && GlassSurface.control(ctx, btnX, btnY, BTN_W, BTN_H, glassR, listening);
+    }
+
+    @Override
+    public void render(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {
+        lastWidth = width;
+        Font tr = Minecraft.getInstance().font;
+        if (tr == null) return;
+        boolean disabled = reconcileDisabledState();
+
+        // Keybind rows intentionally skip the label-hover description tooltip.
+        if (compactRow != null) renderCompactLabel(ctx, x, y, mouseX, mouseY, AuroraTheme.TEXT_PRIMARY);
+        else ctx.text(tr, com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(tr,label,Math.max(0,width-BTN_W-38),0), x + 12, y + (CONTROL_H - tr.lineHeight) / 2,
+                disabled ? AuroraTheme.TEXT_DIM : AuroraTheme.TEXT_PRIMARY, false);
+
+        int btnX = controlX(x, width, BTN_W);
+        int btnY = controlY(y, CONTROL_H, BTN_H);
+        lastBtnX = btnX;
+        lastBtnY = btnY;
+
+        boolean hover = Widget.inBounds(mouseX, mouseY, btnX, btnY, BTN_W, BTN_H);
+        float hT = hoverAnim.update(hoverTarget(hover, disabled));
+        if (MaterialSurface.unified()) hT = materialHover.update(hoverTarget(hover, disabled) ? 1 : 0,System.nanoTime());
+
+        if (interactionControl != null) {
+            if (compactRow == null) interactionControl.setBounds(btnX, btnY, BTN_W, BTN_H); else syncCompactControl(x, y);
+            interactionControl.updatePointer(mouseX, mouseY);
+            focusedVisual = interactionControl.isFocused() && !disabled;
+        }
+
+        int fillTint   = disabled
+                ? ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_BACKGROUND), 0x22)
+                : AuroraAnim.lerpArgb(AuroraTheme.PANEL_OFF, AuroraTheme.PANEL_OFF_HOVER, hT);
+        int borderTint = disabled
+                ? ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_BACKGROUND), 0x33)
+                : AuroraAnim.lerpArgb(AuroraTheme.BORDER_OFF, AuroraTheme.BORDER_OFF_HOVER, hT);
+        int textColor  = disabled ? AuroraTheme.TEXT_DIM
+                : AuroraAnim.lerpArgb(AuroraTheme.TEXT_SECONDARY, AuroraTheme.TEXT_PRIMARY, hT);
+
+        // Glass: raised glass replaces the flat fill + outline (the glass
+        // rim replaces the border — no double outline). Neutral tint at
+        // rest; the ACCENT-STAINED tint while listening is the "next key
+        // press will be captured" cue (the same selected-control tint the
+        // segmented controls use). On decline the complete flat pill
+        // (fill + outline) returns. Hover keeps the text-color cue; the
+        // tint stays constant, exactly like every other glass control. If
+        // the screen ran this row's glass pass this frame the surface is
+        // already on screen UNDER the dim and only its result matters
+        // here; otherwise (legacy frame order) it is painted in place now
+        // through the shared GlassSurface helper (identical calls).
+        float glassR = Math.min(BTN_H / 2f, ThemeManager.current().roundness().radiusSmall());
+        boolean glassOk;
+        if (glassPassFrame == GlassSurface.frame()) {
+            glassOk = passDrewPill;
+        } else if (!disabled) {
+            glassOk = GlassSurface.control(ctx, btnX, btnY, BTN_W, BTN_H, glassR, listening);
+        } else {
+            glassOk = false;
+        }
+        if (MaterialSurface.unified()) {
+            if (listening) MaterialSurface.selection(ctx,btnX,btnY,BTN_W,BTN_H,AuroraTheme.RADIUS_SMALL,true,0);
+            else MaterialSurface.field(ctx,btnX,btnY,BTN_W,BTN_H,AuroraTheme.RADIUS_SMALL,hT,disabled);
+        } else if (!glassOk) {
+            RenderUtil.drawSquircle(ctx, btnX, btnY, BTN_W, BTN_H, AuroraTheme.RADIUS_SMALL,
+                    listening ? AuroraTheme.IOS_BLUE_PRESSED : fillTint);
+            RenderUtil.drawSquircleOutline(ctx, btnX, btnY, BTN_W, BTN_H, AuroraTheme.RADIUS_SMALL, 1.0f,
+                    listening ? AuroraTheme.IOS_BLUE : borderTint);
+        }
+
+        // Focus hairline — only when NOT listening: the listening state is
+        // the selected treatment (accent edge), and a second stroke on the
+        // same pill doubled the highlight (owner ruling 2026-10-30).
+        if (focusedVisual && !listening) {
+            RenderUtil.drawRoundedOutlineAA(ctx, btnX, btnY, BTN_W, BTN_H,
+                    AuroraTheme.RADIUS_SMALL, 1.0f,
+                    ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
+        }
+
+        String labelText = listening ? "> press key <" : currentKeyName();
+        // Trim long names so they fit in the pill (keep at least 3 chars + ellipsis).
+        labelText = AuroraFontRenderer.ellipsize(tr, labelText, BTN_W - 8, 3);
+        int labelW = tr.width(labelText);
+        int textCol = listening ? MaterialSurface.color(ThemeToken.ON_BACKGROUND) : textColor;
+        ctx.text(tr, labelText,
+                btnX + (BTN_W - labelW) / 2,
+                btnY + (BTN_H - tr.lineHeight) / 2 + 1,
+                textCol, false);
+
+        renderDescription(ctx, x, y + CONTROL_H, width);
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button, int rowX, int rowY, int rowWidth) {
+        syncCompactControl(rowX, rowY);
+        if (reconcileDisabledState()) return false;
+        if (button != com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) return false;
+        boolean onBtn = compactRow == null ? Widget.inBounds(mouseX, mouseY, lastBtnX, lastBtnY, BTN_W, BTN_H) : compactControlContains(mouseX, mouseY, rowX, rowY);
+        if (!onBtn) {
+            // Click outside the pill cancels listen mode without committing.
+            if (listening) {
+                cancelListening();
+                return true;
+            }
+            return false;
+        }
+        // A semantic host owns entry (one activation sound). The direct
+        // path exists for headless/manual hosts and stays silent.
+        if (interactionControl != null && interactionControl.isAvailable()) {
+            return interactionControl.activateFromPointer(mouseX, mouseY, button);
+        }
+        if (listening) cancelListening(); else beginListening();
+        return true;
+    }
+
+    /**
+     * Closing the detail screen while listening must not leave this row
+     * holding the static focus registry into the next screen — same
+     * lifecycle contract as KeyListSetting.
+     */
+    @Override
+    public void onDetailScreenClose() {
+        cancelListening();
+    }
+
+    @Override
+    public void onDetailScreenOpen() {
+        cancelListening();
+    }
+
+    @Override
+    public void onInteractionAvailabilityChanged(boolean available) {
+        if (!available) cancelListening();
+    }
+
+    @Override
+    public boolean onKeyPress(int keyCode, int modifiers) {
+        if (!listening) return false;
+
+        if (reconcileDisabledState()) {
+            // The event reached a capture owner whose gate changed since the
+            // last frame. Consume-but-inert: no write/save and no fallthrough
+            // into another control.
+            return true;
+        }
+
+        // ESC / BACKSPACE clears the binding. Match vanilla controls UX.
+        if (keyCode == InputConstants.KEY_ESCAPE || keyCode == InputConstants.KEY_BACKSPACE) {
+            setter.accept(AuroraKey.UNBOUND);
+        } else {
+            setter.accept(com.aurora.client.adapter.NativeKeyboard.toStored(keyCode));
+        }
+        saveAction.run();
+        finishListening();
+        return true;
+    }
+
+    /** Canonical semantic adapter: focus/Enter/Space/narration + enabled gate. */
+    @Override
+    public SemanticActionControl interactionControl() {
+        if (interactionControl == null) {
+            interactionControl = new SemanticActionControl(SemanticAction.button(
+                    Component.literal(label),
+                    () -> {
+                        String description = currentDescription();
+                        return description != null ? Component.literal(description) : Component.empty();
+                    },
+                    () -> Component.literal(listening
+                            ? "Waiting for key input. Current binding: " + currentKeyName()
+                            : "Bound to " + currentKeyName()),
+                    () -> !isDisabled(),
+                    this::beginListening),
+                    MinecraftSemanticFeedback.INSTANCE,
+                    null,
+                    SemanticActionControl.PointerRouting.MANUAL);
+        }
+        return interactionControl;
+    }
+
+    private void beginListening() {
+        if (isDisabled() || listening) return;
+        // Claims the shared exclusive slot (FeatureSetting) — any Keybind
+        // OR KeyList owner is cancelled first; there is never two.
+        if (!claimCaptureOwnership()) return;
+        listening = true;
+        requestFocus();
+    }
+
+    /** Release clears listening + focus via {@link #onCancelCapture}. */
+    private void finishListening() {
+        releaseCaptureOwnership();
+    }
+
+    private void cancelListening() {
+        finishListening();
+    }
+
+    /**
+     * Cancels the one capture owner (any family — usually this one's
+     * screen's keybind rows) and reports whether the pointer event was
+     * consumed. Delegates to the shared {@link FeatureSetting} slot; kept
+     * as a family-named alias for the tests and the runtime harness.
+     */
+    public static boolean cancelActiveCapture() {
+        return FeatureSetting.cancelActiveCapture();
+    }
+
+    @Override
+    protected void onCancelCapture() {
+        listening = false;
+        releaseFocus();
+    }
+
+    /** Disabled can change asynchronously with respect to capture events. */
+    private boolean reconcileDisabledState() {
+        boolean disabled = isDisabled();
+        if (disabled && listening) cancelListening();
+        return disabled;
+    }
+
+    boolean hoverTarget(boolean pointerOver, boolean disabled) {
+        return pointerOver && !disabled;
+    }
+
+    private String currentKeyName() {
+        int key = getter.getAsInt();
+        if (key != cachedKey) {
+            cachedKey = key;
+            cachedKeyName = keyName(key);
+        }
+        return cachedKeyName;
+    }
+
+    /** Friendly name for a SDL scancode. Falls back to the raw int. */
+    public static String keyName(int scancode) {
+        if (scancode == AuroraKey.UNBOUND) return "Unbound";
+        try {
+            return com.aurora.client.adapter.NativeKeyboard.key(scancode).getDisplayName().getString();
+        } catch (Exception e) {
+            return "Key " + scancode;
+        }
+    }
+
+    // Package-private state probes for focused tests and the runtime harness.
+    HoverAnim hoverAnimator() { return hoverAnim; }
+    boolean listeningState() { return listening; }
+    boolean focusedVisualState() { return focusedVisual; }
+    boolean reconcileStateForTest() { return reconcileDisabledState(); }
+}

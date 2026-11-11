@@ -38,13 +38,13 @@ class ColorSwatchDataOnlyTest {
         s.layout(10, 10, 16, 16);
         assertTrue(s.isDataOnly());
         // In-bounds left-click on a DATA sample: not consumed, no callback.
-        assertFalse(s.mouseClicked(15, 15, 1));
+        assertFalse(s.mouseClicked(15, 15, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT));
         assertEquals(0, clicks.get());
         // The interactive default is unchanged: same click consumes + runs.
         ColorSwatch live = swatch(0xFF3B82F6, clicks::incrementAndGet);
         live.layout(10, 10, 16, 16);
         assertFalse(live.isDataOnly());
-        assertTrue(live.mouseClicked(15, 15, 1));
+        assertTrue(live.mouseClicked(15, 15, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT));
         assertEquals(1, clicks.get());
     }
 

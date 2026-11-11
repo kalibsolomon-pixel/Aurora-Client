@@ -8,22 +8,40 @@ classpath. See [ADR 0003](adr/0003-core-ports-adapter-layering.md).
 |---|---|
 | `ports/src/main/java` | `DrawSurface`, `TextMetrics`, `ClockPort`, `InputPort`, `WorldPort` |
 | `core/src/main/java` | Config/profile persistence and migration; feature/fair-play catalog; theme/layout/shape coverage; health and diagnostics policies; frame pacing; movement cadence; key edges; world identity |
-| `adapters/minecraft-26.3/src/client/java` | Minecraft screens, HUD/world rendering, mixins, glass, native input and Fabric lifecycle bindings |
-| `adapters/minecraft-26.3/src/client/resources` | Fabric/mixin metadata, defaults, fonts, textures and native-pipeline shaders |
+| `adapters/shared/src/client` | Common Minecraft-facing feature registration, screens, settings, widgets and stable hooks; shared defaults, fonts and textures |
+| `adapters/minecraft-26.1`, `minecraft-26.2`, `minecraft-26.3` | Version-owned rendering, mixins, input and Fabric bindings; native manifests and shaders |
 | `src/test/java` | Behavior and source-contract tests across all three layers |
+| `adapters/minecraft-*/src/test/java` | Native shader and narration fixtures used by the common test suite |
 
-The root Gradle project builds the adapter selected by `minecraft_version` and
+The root Gradle project builds the adapter selected by `-Paurora.minecraft=<version>`
+(default `minecraft_version` in `gradle.properties`) and
 packages core and ports classes into one runtime JAR. Players install only that
 JAR and its declared Fabric dependencies. Each Minecraft version has its own
-artifact; older checkpoints are built from their version branches.
+artifact. [ADR 0008](adr/0008-full-feature-parity-across-supported-versions.md)
+requires every supported line to build from this same source tree. Pins and
+adapter names live in `gradle/minecraft-versions.json`; outputs are isolated in
+`build/minecraft-<version>/`. `python tools/parity.py` builds/tests every line
+sequentially, reusing compiled core/ports outputs. Native classpaths never mix.
+No source preprocessor or universal runtime JAR is involved.
+
+Shared Minecraft-facing code is still adapter code, compiled against each native
+classpath. It cannot move into the Minecraft-free core. Duplicate paths between
+shared and selected sources/resources fail the build; there is no override order.
 
 ## Native bindings
 
 `NativePorts.install()` runs first in the client initializer. It binds the native
-SDL clock, physical key polling and current-world identity. The clock must use
+SDL clock on 26.3 or GLFW clock on older lines, key polling and current-world identity. The clock must use
 the same epoch as vanilla's frame deadlines and must not change during play.
 Input and world queries run on the client thread. No Minecraft object crosses
 these interfaces or is retained by core.
+
+`NativeUi` owns screen access/transition and main-target lookup, whose locations
+changed between Minecraft lines. `NativeKeyboard` translates host key values at
+the controls/rebinding seam. Config and profiles store the same SDL scancode
+identifiers on every line; the existing per-config/per-profile migrator upgrades
+older GLFW data. Older hosts translate back only for native polling and vanilla
+controls. UI input comparisons use that host's `InputConstants`.
 
 `RenderUtil` owns native transforms and fill accounting. It sends physical-pixel
 rectangles to core's `ShapeRasterizer` through `DrawSurface`. Both live GUI and
@@ -33,7 +51,10 @@ roadmap step 6.
 
 ## Feature and failure contracts
 
-`FeatureCatalog` is the single feature/mixin/fair-play inventory. Adapter hooks
+`FeatureCatalog` is the single feature/mixin/fair-play inventory. Each adapter's
+`aurora.mixins.json` selects its applicable bindings from that inventory; the
+health audit counts those hooks rather than treating another line's hooks as
+missing. Unknown or duplicate manifest bindings fail validation. Adapter hooks
 read current config fields; health enforcement holds broken features off for the
 session without overwriting saved values. Mixins remain fail-soft and accessors
 are guarded. See [FAIR_PLAY](FAIR_PLAY.md) and [ADR 0004](adr/0004-fail-soft-mixins-and-single-feature-registry.md).
@@ -44,9 +65,12 @@ the unchanged [overhead budget](OVERHEAD_BUDGET.md).
 
 ## Working on the code
 
-Use `./gradlew test build`. Source-contract tests use `SourceTree`, and Python
+Use `python tools/parity.py` for all supported lines, or
+`./gradlew test build -Paurora.minecraft=26.2` for one. Source-contract tests use `SourceTree`, and Python
 tools use `tools/source_tree.py`; neither should assume the old `src/client`
-location. New native hooks belong in the active adapter. New policy belongs in
+location. `AURORA_MINECRAFT` selects a line for Python source checks. Shared
+behavior belongs in `adapters/shared`; genuinely native differences belong in
+each version adapter. New policy belongs in
 core when it can be expressed without native objects. Add a port only when a
 real caller needs it, and test behavior through that interface.
 

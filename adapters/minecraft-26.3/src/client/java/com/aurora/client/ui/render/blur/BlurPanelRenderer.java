@@ -484,7 +484,7 @@ public final class BlurPanelRenderer {
         }
 
         Minecraft mc = Minecraft.getInstance();
-        RenderTarget main = mc != null ? mc.gameRenderer.mainRenderTarget() : null;
+        RenderTarget main = mc != null ? com.aurora.client.adapter.NativeUi.mainTarget(mc) : null;
         if (main == null || main.width <= 0 || main.height <= 0) { lastOutcome = "no main target"; return false; }
         // With no level, capture only a panorama explicitly declared this frame.
         // Otherwise the main target may be empty or contain a stale world frame.

@@ -21,7 +21,7 @@ class KeybindMigratorTest {
             if (key.getKey().equals("key.keyboard.unknown") || key.getKey().equals("key.keyboard.f25")) {
                 assertEquals(-1, migrated, key.getKey());
             } else {
-                assertEquals(InputConstants.getKey(key.getKey()).getValue(), migrated, key.getKey());
+                assertEquals(com.aurora.client.TestKeyboard.stored(InputConstants.getKey(key.getKey()).getValue()), migrated, key.getKey());
             }
         }
     }
@@ -35,14 +35,27 @@ class KeybindMigratorTest {
         assertEquals(actual, KeybindMigrator.KEY_FIELDS);
     }
 
+    @Test void canonicalKeysRoundTripOnGlfwHosts() throws Exception {
+        JsonObject legacy = JsonParser.parseString(Files.readString(
+                Path.of("src/test/resources/config/legacy-keybinds-26.2.json"))).getAsJsonObject();
+        for (var key : legacy.entrySet()) {
+            int nativeCode = key.getValue().getAsInt();
+            int stored = KeybindMigrator.fromGlfw(nativeCode);
+            if (stored >= 0) assertEquals(nativeCode, KeyboardCodes.toGlfw(stored), key.getKey());
+        }
+        assertEquals(-1, KeyboardCodes.toGlfw(-1));
+        assertEquals(-1, KeyboardCodes.toGlfw(511));
+        assertEquals(-1, KeyboardCodes.toGlfw(Integer.MAX_VALUE));
+    }
+
     @Test void configAndImportedProfilesMigrateIndependentlyAndExactlyOnce() {
         String json = "{\"zoomKey\":67,\"freeLookKey\":86,\"hudEditorKey\":344,"
                 + "\"hitregScoreSendKey\":-1,\"keystrokesExtraKeys\":[65,290,333],\"other\":23}";
         String first = KeybindMigrator.migrateConfigJson(json, LOG);
         JsonObject migrated = JsonParser.parseString(first).getAsJsonObject();
-        assertEquals(InputConstants.KEY_C, migrated.get("zoomKey").getAsInt());
-        assertEquals(InputConstants.KEY_V, migrated.get("freeLookKey").getAsInt());
-        assertEquals(InputConstants.KEY_RSHIFT, migrated.get("hudEditorKey").getAsInt());
+        assertEquals(com.aurora.client.TestKeyboard.stored(InputConstants.KEY_C), migrated.get("zoomKey").getAsInt());
+        assertEquals(com.aurora.client.TestKeyboard.stored(InputConstants.KEY_V), migrated.get("freeLookKey").getAsInt());
+        assertEquals(com.aurora.client.TestKeyboard.stored(InputConstants.KEY_RSHIFT), migrated.get("hudEditorKey").getAsInt());
         assertEquals(-1, migrated.get("hitregScoreSendKey").getAsInt());
         assertEquals("[4,58,86]", migrated.get("keystrokesExtraKeys").toString());
         assertEquals(23, migrated.get("other").getAsInt());

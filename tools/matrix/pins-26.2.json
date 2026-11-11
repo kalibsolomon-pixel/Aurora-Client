@@ -10,6 +10,7 @@
     "placeholder-api": "3.1.0-beta.1+26.2"
   },
   "sets": {
+    "baseline": [],
     "A-performance-stack": [
       "sodium",
       "lithium",

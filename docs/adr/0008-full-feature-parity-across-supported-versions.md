@@ -18,7 +18,7 @@ The window only grows: when a new Minecraft version is ported, its adapter is ad
 ## Consequences
 
 - Every feature is written once but accepted once per line: mod-matrix boots and the overhead gate run per line, per release. Release effort grows linearly with the window, and the Sodium two-week goal becomes harder to hold; cadence is judged per release.
-- No source preprocessor (Stonecutter or similar) is introduced. Version differences live in adapter modules, never in conditional code; anything shared enough to duplicate in two adapters belongs in core or ports (ADR 0003).
-- The standing 26.3 OpenGL overhead-gate failure blocks every line's release until it is resolved; gates are never loosened to ship parity.
-- Prerequisite engineering: the published 26.1 and 26.2 JARs were built from pre-refactor branches, so their adapters do not exist in the current layout. Creating them is the first roadmap task, before new feature work.
-- RELEASE_PROCESS and MOD_MATRIX gain per-line release gates when the restructure lands, in the same change that adds the builds.
+- No source preprocessor (Stonecutter or similar) is introduced. Version differences live in native adapters, never in runtime version branches. Common Minecraft-facing behavior lives in `adapters/shared`; native-free policy and interfaces belong in core or ports (ADR 0003).
+- An overhead-gate failure on any supported line blocks the entire parity release; gates are never loosened to ship parity. The original 26.3 port failure was resolved by step 5 (see its acceptance evidence); step 5.5 reruns acceptance for every current adapter.
+- Prerequisite engineering: the published 26.1 and 26.2 JARs were built from pre-refactor branches. Step 5.5 creates their adapters in the common tree before new feature work; [acceptance](../port/step-5.5.md) records the completed restructure.
+- RELEASE_PROCESS and MOD_MATRIX now require per-line release gates, alongside the per-line builds.

@@ -83,3 +83,15 @@ and glass captures. See [step 5 acceptance](port/step-5.md) and the checked-in
 measurements remain in [MOD_MATRIX.md](MOD_MATRIX.md); the limit and warm-up
 rule were not relaxed. These results describe this singleplayer fixture and
 hardware, not every world or low-end machine.
+
+## Full-parity validation
+
+Step 5.5 reruns the unchanged gate on every supported version and applicable
+mod/backend row. A complete release requires fourteen six-report boots, with
+exactly two warm-ups each. The matrix runner stamps its runtime/build/pin inputs
+before each boot; stale results cannot become current acceptance. The release
+workflow verifies the complete evidence against its selected source before
+publication. See [step 5.5 acceptance](port/step-5.5.md) and
+[per-run evidence](releases/evidence/3.4.0-parity.json). A failure on one line
+blocks the entire set; the original 26.3 port failures and preliminary parity
+failure remain recorded separately.

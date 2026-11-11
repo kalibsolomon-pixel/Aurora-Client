@@ -11,8 +11,15 @@
     "placeholder-api": "3.0.0+26.1"
   },
   "sets": {
+    "baseline": [],
     "A-performance-stack": ["sodium", "lithium", "immediatelyfast", "entityculling", "modmenu", "placeholder-api"],
     "B-sodium-iris": ["sodium", "iris"],
     "C-vulkanmod": ["vulkanmod"]
+  },
+  "set_backends": {
+    "baseline": ["OPENGL"],
+    "A-performance-stack": ["OPENGL"],
+    "B-sodium-iris": ["OPENGL"],
+    "C-vulkanmod": ["VULKANMOD"]
   }
 }

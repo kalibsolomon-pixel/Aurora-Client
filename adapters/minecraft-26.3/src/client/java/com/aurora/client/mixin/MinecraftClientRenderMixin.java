@@ -34,6 +34,8 @@ public abstract class MinecraftClientRenderMixin {
     /** Loading and disconnect screens also render outside runTick. */
     @Inject(method = "renderFrame", at = @At("HEAD"))
     private void aurora$beginGlassFrame(boolean advanceGameTime, CallbackInfo ci) {
+        // The staged overlay pools recycle at the frame boundary, not per overlay draw.
+        com.aurora.client.diagnostics.Timed.glass(com.aurora.client.hud.WorldGeometryBuffers::frameEnd);
         com.aurora.client.ui.render.blur.BlurPanelRenderer.beginFrame();
         com.aurora.client.ui.component.GlassSurface.beginFrame();
     }
@@ -49,8 +51,8 @@ public abstract class MinecraftClientRenderMixin {
         // restrictions. A positive global cap must also work when Minecraft
         // skips limitDisplayFPS at Unlimited. One shared deadline owns both
         // hooks; post-swap rechecks restrictions after event pumping.
-        boolean auroraGui = self.gui.screen() != null
-                && self.gui.screen().getClass().getName().startsWith("com.aurora.client.screen");
+        boolean auroraGui = com.aurora.client.adapter.NativeUi.screen(self) != null
+                && com.aurora.client.adapter.NativeUi.screen(self).getClass().getName().startsWith("com.aurora.client.screen");
         boolean customPacer = cfg.smoothFramePacer
                 && cfg.framePacingStrategy != AuroraConfig.PacingStrategy.VANILLA;
         var limit = FramePacing.resolve(self.getFramerateLimitTracker().getFramerateLimit(),

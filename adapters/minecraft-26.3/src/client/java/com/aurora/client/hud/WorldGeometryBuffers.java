@@ -28,7 +28,7 @@ public final class WorldGeometryBuffers implements AutoCloseable {
         try {
             vertices.upload();
             if (!batches.isEmpty()) {
-                var target = net.minecraft.client.Minecraft.getInstance().gameRenderer.mainRenderTarget();
+                var target = com.aurora.client.adapter.NativeUi.mainTarget(net.minecraft.client.Minecraft.getInstance());
                 try (var pass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(
                         () -> "Aurora world overlays", target.getColorTextureView(), java.util.Optional.empty(),
                         target.getDepthTextureView(), java.util.OptionalDouble.empty())) {
@@ -39,9 +39,14 @@ public final class WorldGeometryBuffers implements AutoCloseable {
                 }
             }
         } finally {
-            vertices.endFrame();
+            vertices.endDraw();
             batches.clear();
         }
+    }
+
+    /** Recycles the staged GPU pools once per frame, from the frame-head hook inside Aurora's timing bracket. */
+    public static void frameEnd() {
+        if (instance != null) instance.vertices.endFrame();
     }
 
     public static void shutdown() {

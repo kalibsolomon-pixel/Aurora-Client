@@ -124,11 +124,17 @@ def digest_and_size(path: Path) -> tuple[str, int]:
     return digest.hexdigest(), size
 
 
-def inspect_candidate(root: Path, jar_dir: Path, version: str, channel: str, source_sha: str) -> dict:
+def inspect_candidate(root: Path, jar_dir: Path, version: str, channel: str, source_sha: str,
+                      minecraft: str | None = None) -> dict:
     tag = require_version(version, channel)
     if not SHA_PATTERN.fullmatch(source_sha):
         raise ReleaseError("source SHA must be a full lowercase commit SHA")
     properties = read_properties(root / "gradle.properties")
+    if minecraft is not None:
+        versions = json.loads((root / 'gradle/minecraft-versions.json').read_text(encoding='utf-8'))
+        if minecraft not in versions:
+            raise ReleaseError("unsupported Minecraft line")
+        properties.update(minecraft_version=minecraft, fabric_api_version=versions[minecraft]['fabricApi'])
     if properties.get("mod_version") != version:
         raise ReleaseError("gradle.properties mod_version differs from the requested version")
     minecraft_version = properties.get("minecraft_version")
@@ -161,6 +167,26 @@ def load_metadata(path: Path) -> dict:
         value = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeError, json.JSONDecodeError) as error:
         raise ReleaseError("release metadata is unreadable or malformed") from error
+    return validate_metadata(value)
+
+
+def validate_metadata(value: dict) -> dict:
+    if isinstance(value, dict) and type(value.get('schemaVersion')) is int and value.get('schemaVersion') == 3:
+        artifacts = value.get('artifacts')
+        versions = value.get('minecraftVersions')
+        if not isinstance(artifacts, list) or not artifacts or not isinstance(versions, list):
+            raise ReleaseError('parity metadata requires a complete artifact list')
+        supported = json.loads((Path(__file__).resolve().parents[1] / 'gradle/minecraft-versions.json').read_text(encoding='utf-8'))
+        if versions != list(supported):
+            raise ReleaseError('parity metadata omits or changes a supported Minecraft line')
+        for item in artifacts:
+            validate_metadata(item)
+            if item.get('schemaVersion') != SCHEMA_VERSION or any(item.get(k) != value.get(k) for k in ('version', 'channel', 'tag', 'sourceSha')):
+                raise ReleaseError('parity artifacts must share one version, channel and exact source')
+        actual = [item['minecraftVersion'] for item in artifacts]
+        if actual != versions or len(set(actual)) != len(actual):
+            raise ReleaseError('missing, duplicated or reordered parity artifacts')
+        return value
     if (not isinstance(value, dict) or type(value.get("schemaVersion")) is not int
             or value["schemaVersion"] != SCHEMA_VERSION):
         raise ReleaseError("release metadata schema is unsupported")
@@ -181,6 +207,27 @@ def load_metadata(path: Path) -> dict:
     if type(value.get("sizeBytes")) is not int or value["sizeBytes"] <= 0:
         raise ReleaseError("release metadata has an invalid size")
     return value
+
+
+def inspect_parity_candidate(root: Path, version: str, channel: str, source_sha: str) -> dict:
+    versions = json.loads((root / 'gradle/minecraft-versions.json').read_text(encoding='utf-8'))
+    artifacts = [inspect_candidate(root, root / f'build/minecraft-{mc}/libs', version, channel, source_sha, mc)
+                 for mc in versions]
+    return validate_metadata(dict(schemaVersion=3, version=version, channel=channel,
+                                  tag=require_version(version, channel), sourceSha=source_sha,
+                                  minecraftVersions=list(versions), artifacts=artifacts))
+
+
+def artifact_entries(metadata: dict) -> list[dict]:
+    return metadata['artifacts'] if metadata['schemaVersion'] == 3 else [metadata]
+
+
+def verify_candidates(metadata: dict, directory: Path, version: str, channel: str, source_sha: str) -> None:
+    entries = artifact_entries(metadata)
+    if {p.name for p in directory.glob('*.jar')} != {m['fileName'] for m in entries}:
+        raise ReleaseError('bundle must contain exactly the complete expected runtime JAR set')
+    for item in entries:
+        verify_bundle(item, directory / item['fileName'], version, channel, source_sha)
 
 
 def verify_bundle(metadata: dict, jar: Path, version: str, channel: str, source_sha: str) -> None:
@@ -280,6 +327,15 @@ def find_draft_by_tag(repo: str, tag: str) -> dict:
 
 
 def validate_release_state(release: dict, metadata: dict, *, draft: bool) -> str | None:
+    if metadata['schemaVersion'] == 3:
+        assets = release.get('assets')
+        expected = {m['fileName'] for m in metadata['artifacts']}
+        if not isinstance(assets, list) or len(assets) != len(expected) or {a.get('name') for a in assets} != expected:
+            raise ReleaseError('release must contain exactly every supported Minecraft artifact')
+        for item in metadata['artifacts']:
+            asset = next(a for a in assets if a['name'] == item['fileName'])
+            validate_release_state({**release, 'assets': [asset]}, item, draft=draft)
+        return None
     if release.get("tag_name") != metadata["tag"] or release.get("draft") is not draft:
         raise ReleaseError("release tag or draft state is wrong")
     if release.get("target_commitish") != metadata["sourceSha"]:
@@ -354,6 +410,7 @@ def main() -> None:
     inspect.add_argument("--channel", required=True)
     inspect.add_argument("--source-sha", required=True)
     inspect.add_argument("--output", type=Path, required=True)
+    inspect.add_argument('--parity', action='store_true', help='Inspect every pinned line from one source tree')
     verify = sub.add_parser("verify")
     verify.add_argument("--metadata", type=Path, required=True)
     verify.add_argument("--jar-dir", type=Path, required=True)
@@ -374,13 +431,14 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.command == "inspect":
-        metadata = inspect_candidate(args.source_root, args.jar_dir, args.version, args.channel, args.source_sha)
+        metadata = (inspect_parity_candidate(args.source_root, args.version, args.channel, args.source_sha)
+                    if args.parity else inspect_candidate(args.source_root, args.jar_dir, args.version, args.channel, args.source_sha))
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
         print(json.dumps(metadata, sort_keys=True))
     elif args.command == "verify":
         metadata = load_metadata(args.metadata)
-        verify_bundle(metadata, args.jar_dir / metadata["fileName"], args.version, args.channel, args.source_sha)
+        verify_candidates(metadata, args.jar_dir, args.version, args.channel, args.source_sha)
         print(json.dumps(metadata, sort_keys=True))
     elif args.command == "collision":
         check_collision(args.repo, args.version, args.channel)
@@ -398,11 +456,13 @@ def main() -> None:
         )
         if release is None:
             raise ReleaseError("published release does not exist; publication is a separate owner step")
-        url = validate_release_state(release, metadata, draft=False)
-        jar = args.download_dir / metadata["fileName"]
-        download_public(url, jar, metadata["sizeBytes"])
-        verify_bundle(metadata, jar, metadata["version"], metadata["channel"], metadata["sourceSha"])
-        print(f"anonymous public JAR verified: {metadata['sizeBytes']} bytes, sha256:{metadata['sha256']}")
+        validate_release_state(release, metadata, draft=False)
+        for item in artifact_entries(metadata):
+            url = next(a['browser_download_url'] for a in release['assets'] if a['name'] == item['fileName'])
+            jar = args.download_dir / item['fileName']
+            download_public(url, jar, item['sizeBytes'])
+            verify_bundle(item, jar, item['version'], item['channel'], item['sourceSha'])
+            print(f"anonymous public JAR verified: {item['fileName']}, sha256:{item['sha256']}")
 
 
 if __name__ == "__main__":

@@ -106,7 +106,30 @@ public final class FeatureCatalog {
 
     /** Every mixin binding, in {@code aurora.mixins.json} order. */
     public static List<MixinBinding> mixins() {
-        return Collections.unmodifiableList(new ArrayList<>(MIXINS.values()));
+        return ActiveMixins.BINDINGS;
+    }
+
+    /** The adapter manifest selects native hooks; their feature/gate definitions stay here. */
+    private static final class ActiveMixins {
+        static final List<MixinBinding> BINDINGS = load();
+        private static List<MixinBinding> load() {
+            try (var stream = FeatureCatalog.class.getResourceAsStream("/aurora.mixins.json")) {
+                if (stream == null) throw new IllegalStateException("Missing adapter mixin manifest");
+                var manifest = com.google.gson.JsonParser.parseReader(
+                        new java.io.InputStreamReader(stream, java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject();
+                List<MixinBinding> result = new ArrayList<>();
+                var names = new java.util.HashSet<String>();
+                for (var entry : manifest.getAsJsonArray("client")) {
+                    String name = entry.getAsString();
+                    MixinBinding binding = MIXINS.get(name);
+                    if (binding == null || !names.add(name)) throw new IllegalStateException("Unknown or duplicate adapter mixin: " + name);
+                    result.add(binding);
+                }
+                return List.copyOf(result);
+            } catch (java.io.IOException e) {
+                throw new java.io.UncheckedIOException(e);
+            }
+        }
     }
 
     /** The binding for this mixin name, or null. */
@@ -254,6 +277,8 @@ public final class FeatureCatalog {
                 .gates("hitColorTintArmor", "hitColorTintArmorTrims");
         mixin("ReloadableTextureMixin", "recoloring the enchantment glint", "glint_color").gates("glintColorEnabled");
         mixin("GlintRenderTypesMixin", "Alternative Glint", "glint_color").gates("glintColorAlternative");
+        mixin("GlintBufferSourceMixin", "Alternative Glint", "glint_color").gates("glintColorAlternative");
+        mixin("RenderTypesGlintAccessor", "Alternative Glint", "glint_color").gates("glintColorAlternative");
         mixin("InGameHudPotionOverlayMixin", "hiding the vanilla effect icons behind the Potion HUD", "potion_hud");
         mixin("NoFogMixin", "pushing back the distance fog", "no_fog").gates("noFogEnabled");
         mixin("UnderwaterClarityMixin", "underwater clarity", "pack_tweaks").gates("underwaterClarityEnabled");

@@ -102,7 +102,7 @@ public final class SemanticFamilyManifest {
                          String notes) {}
 
     /** Root-relative source helper. */
-    public static final String SRC = SourceTree.ADAPTER + "/src/client/java/com/aurora/client/";
+    public static final String SRC = "src/client/java/com/aurora/client/";
     /** The Minecraft-free core module (ADR 0003). */
     public static final String CORE = "core/src/main/java/com/aurora/client/";
 

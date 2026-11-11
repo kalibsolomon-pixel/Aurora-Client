@@ -62,7 +62,7 @@ class ConformanceManifestTest {
     void manifestFilesExist() {
         for (SemanticFamilyManifest.Family f : FAMILIES) {
             for (String file : f.files()) {
-                assertTrue(Files.exists(Path.of(file)), "manifest family " + f.id() + " file missing: " + file);
+                assertTrue(Files.exists(SourceTree.resolve(file)), "manifest family " + f.id() + " file missing: " + file);
             }
         }
         for (SemanticFamilyManifest.NonFamily nf : NON_FAMILIES) {
@@ -70,7 +70,7 @@ class ConformanceManifestTest {
             // DevPilot is deliberately untracked and may be absent from a
             // release source tree; every production exemption must exist.
             if (path.equals(SRC + "DevPilot.java")) continue;
-            assertTrue(Files.exists(Path.of(path)), "non-family file missing: " + path);
+            assertTrue(Files.exists(SourceTree.resolve(path)), "non-family file missing: " + path);
         }
     }
 
@@ -340,13 +340,14 @@ class ConformanceManifestTest {
             List<String> out = new ArrayList<>();
             files
                     .filter(p -> !p.toString().endsWith("DevPilot.java"))
-                    .forEach(p -> out.add(p.toString().replace('\\', '/')));
+                    .forEach(p -> out.add(p.startsWith(SourceTree.CLIENT) || p.startsWith(SourceTree.SHARED)
+                            ? SRC + SourceTree.relative(p) : p.toString().replace('\\', '/')));
             return out;
         }
     }
 
     private static String read(String file) throws IOException {
-        return Files.readString(Path.of(file));
+        return Files.readString(SourceTree.resolve(file));
     }
 
     private static int countOccurrences(String haystack, String needle) {

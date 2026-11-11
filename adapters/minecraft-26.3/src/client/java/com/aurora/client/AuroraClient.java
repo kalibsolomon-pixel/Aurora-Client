@@ -161,8 +161,8 @@ public class AuroraClient implements ClientModInitializer {
                 new com.aurora.client.util.AuroraKey.EdgeDetector();
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(Timed.endTick(client -> {
             if (blurTestEdge.justPressed(AuroraConfig.get().blurTestKey)
-                    && client.gui.screen() == null && client.player != null) {
-                client.gui.setScreen(new com.aurora.client.ui.render.blur.BlurTestScreen());
+                    && com.aurora.client.adapter.NativeUi.screen(client) == null && client.player != null) {
+                com.aurora.client.adapter.NativeUi.setScreen(client, new com.aurora.client.ui.render.blur.BlurTestScreen());
             }
         }));
 
@@ -173,7 +173,7 @@ public class AuroraClient implements ClientModInitializer {
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(Timed.endTick(client -> {
             if (!AuroraConfig.get().containerPreviewEnabled) return;
             if (!AuroraConfig.get().containerPreviewEnderChest) return;
-            if (client.gui.screen() instanceof net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?> acs
+            if (com.aurora.client.adapter.NativeUi.screen(client) instanceof net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?> acs
                     && acs.getMenu() instanceof net.minecraft.world.inventory.ChestMenu cm
                     && cm.getRowCount() == 3
                     && acs.getTitle().getString().equals(enderChestTitle)) {

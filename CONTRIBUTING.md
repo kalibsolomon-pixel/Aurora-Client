@@ -2,20 +2,22 @@
 
 Aurora is a client-side Fabric mod. Start with [AGENTS.md](AGENTS.md),
 [the architecture](docs/ARCHITECTURE.md) and [the roadmap](docs/ROADMAP.md).
-Feature development targets the newest Minecraft version. Separate older-version
-artifacts do not require every change to be backported.
+Every supported Minecraft line receives the current features from this source
+tree (ADR 0008). Native differences belong in the version adapters.
 
 ## Set up
 
 Install Java 25, clone the repository and use the checked-in Gradle wrapper:
 
 ```sh
-./gradlew test build
+python tools/parity.py
 python -m unittest discover -s tools -p 'test_*.py'
 ```
 
 On Windows use `gradlew.bat`. No IDE or launcher is required. The runtime artifact
-is `build/libs/aurora-<version>-mc<minecraft>.jar`; core and ports are bundled.
+is `build/minecraft-<minecraft>/libs/aurora-<version>-mc<minecraft>.jar`; core and ports are bundled.
+For one line use `./gradlew test build -Paurora.minecraft=26.2` (quote the
+property argument in PowerShell). Python source checks use `AURORA_MINECRAFT`.
 
 Use `./gradlew runClient -Paurora.runDir=build/contributor-game` for a disposable
 game directory. Create a throwaway world there. Never upgrade a personal save for

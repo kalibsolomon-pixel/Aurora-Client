@@ -64,7 +64,7 @@ class EnumPilotTest {
         EnumSetting<EightValues> row = eight(v);
         // Open the popup (direct path — the semantic control is not created
         // until a semantic host asks for it).
-        assertTrue(row.mouseClicked(BTN_X + 10, BTN_Y + 9, 1, ROW_X, ROW_Y, ROW_W));
+        assertTrue(row.mouseClicked(BTN_X + 10, BTN_Y + 9, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT, ROW_X, ROW_Y, ROW_W));
         assertTrue(row.expandedState());
         assertFalse(row.hoverTarget(false, false),
                 "expanded must NOT drive the hover target (expanded is not hover)");
@@ -79,11 +79,11 @@ class EnumPilotTest {
         AtomicReference<EightValues> v = new AtomicReference<>();
         EnumSetting<EightValues> row = eight(v);
         // Outside the pill: not consumed while collapsed.
-        assertFalse(row.mouseClicked(5, 5, 1, ROW_X, ROW_Y, ROW_W));
+        assertFalse(row.mouseClicked(5, 5, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT, ROW_X, ROW_Y, ROW_W));
 
-        assertTrue(row.mouseClicked(BTN_X + 10, BTN_Y + 9, 1, ROW_X, ROW_Y, ROW_W));
+        assertTrue(row.mouseClicked(BTN_X + 10, BTN_Y + 9, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT, ROW_X, ROW_Y, ROW_W));
         assertTrue(row.expandedState(), "first click opens");
-        assertTrue(row.mouseClicked(BTN_X + 10, BTN_Y + 9, 1, ROW_X, ROW_Y, ROW_W));
+        assertTrue(row.mouseClicked(BTN_X + 10, BTN_Y + 9, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT, ROW_X, ROW_Y, ROW_W));
         assertFalse(row.expandedState(), "second click on the trigger closes");
         assertEquals(EightValues.A, v.get(), "trigger clicks never change the value");
 
@@ -96,11 +96,11 @@ class EnumPilotTest {
     void outsideClickCollapsesAndConsumesWhileExpanded() {
         AtomicReference<EightValues> v = new AtomicReference<>();
         EnumSetting<EightValues> row = eight(v);
-        row.mouseClicked(BTN_X + 10, BTN_Y + 9, 1, ROW_X, ROW_Y, ROW_W);
+        row.mouseClicked(BTN_X + 10, BTN_Y + 9, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT, ROW_X, ROW_Y, ROW_W);
 
         // A click far from trigger and popup: consumed (never falls through
         // to whatever renders underneath) and collapses.
-        assertTrue(row.mouseClicked(40, 200, 1, ROW_X, ROW_Y, ROW_W));
+        assertTrue(row.mouseClicked(40, 200, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT, ROW_X, ROW_Y, ROW_W));
         assertFalse(row.expandedState());
         assertEquals(EightValues.A, v.get(), "outside dismissal never changes the value");
     }
@@ -109,14 +109,14 @@ class EnumPilotTest {
     void popupFooterBandClickCollapsesWithoutSelecting() {
         AtomicReference<EightValues> v = new AtomicReference<>();
         EnumSetting<EightValues> row = eight(v);
-        row.mouseClicked(BTN_X + 10, BTN_Y + 9, 1, ROW_X, ROW_Y, ROW_W);
+        row.mouseClicked(BTN_X + 10, BTN_Y + 9, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT, ROW_X, ROW_Y, ROW_W);
 
         // Inside the dropdown rect but in the 2px footer band below the last
         // option row: consumed, collapse, no selection (index >= visible).
         // (The symmetric 2px TOP band is NOT safe — (int) truncation maps it
         // to option 0, shipped behavior this pilot leaves untouched.)
         int footerBandY = BTN_Y + BTN_H + 2 + 5 * OPT_H + 3;
-        assertTrue(row.mouseClicked(BTN_X + 10, footerBandY, 1, ROW_X, ROW_Y, ROW_W));
+        assertTrue(row.mouseClicked(BTN_X + 10, footerBandY, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT, ROW_X, ROW_Y, ROW_W));
         assertFalse(row.expandedState());
         assertEquals(EightValues.A, v.get());
     }
@@ -126,14 +126,14 @@ class EnumPilotTest {
         AtomicReference<EightValues> v = new AtomicReference<>();
         EnumSetting<EightValues> row = eight(v);
         row.disabled(() -> true);
-        assertFalse(row.mouseClicked(BTN_X + 10, BTN_Y + 9, 1, ROW_X, ROW_Y, ROW_W));
+        assertFalse(row.mouseClicked(BTN_X + 10, BTN_Y + 9, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT, ROW_X, ROW_Y, ROW_W));
         assertFalse(row.expandedState(), "a disabled enum must not open");
         assertFalse(row.onKeyPress(com.mojang.blaze3d.platform.InputConstants.KEY_ESCAPE, 0));
         assertFalse(row.onKeyPress(com.mojang.blaze3d.platform.InputConstants.KEY_DOWN, 0));
         assertEquals(EightValues.A, v.get());
 
         row.disabled(() -> false);
-        assertTrue(row.mouseClicked(BTN_X + 10, BTN_Y + 9, 1, ROW_X, ROW_Y, ROW_W));
+        assertTrue(row.mouseClicked(BTN_X + 10, BTN_Y + 9, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT, ROW_X, ROW_Y, ROW_W));
         assertTrue(row.expandedState());
     }
 
@@ -144,7 +144,7 @@ class EnumPilotTest {
         // Collapsed: Escape is not the enum's to consume (screen close).
         assertFalse(row.onKeyPress(com.mojang.blaze3d.platform.InputConstants.KEY_ESCAPE, 0));
 
-        row.mouseClicked(BTN_X + 10, BTN_Y + 9, 1, ROW_X, ROW_Y, ROW_W);
+        row.mouseClicked(BTN_X + 10, BTN_Y + 9, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT, ROW_X, ROW_Y, ROW_W);
         assertTrue(row.onKeyPress(com.mojang.blaze3d.platform.InputConstants.KEY_ESCAPE, 0),
                 "Escape while expanded belongs to the popup, not the screen");
         assertFalse(row.expandedState());
@@ -158,7 +158,7 @@ class EnumPilotTest {
         // Collapsed: arrows are not consumed.
         assertFalse(row.onKeyPress(com.mojang.blaze3d.platform.InputConstants.KEY_DOWN, 0));
 
-        row.mouseClicked(BTN_X + 10, BTN_Y + 9, 1, ROW_X, ROW_Y, ROW_W);
+        row.mouseClicked(BTN_X + 10, BTN_Y + 9, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT, ROW_X, ROW_Y, ROW_W);
         assertTrue(row.onKeyPress(com.mojang.blaze3d.platform.InputConstants.KEY_DOWN, 0), "8 options scroll");
         assertEquals(1, scrollOffset(row));
         assertTrue(row.onKeyPress(com.mojang.blaze3d.platform.InputConstants.KEY_UP, 0));
@@ -169,7 +169,7 @@ class EnumPilotTest {
 
         AtomicReference<TwoValues> v2 = new AtomicReference<>(TwoValues.X);
         EnumSetting<TwoValues> two = new EnumSetting<>("Two", TwoValues.class, v2::get, v2::set);
-        two.mouseClicked(BTN_X + 10, BTN_Y + 9, 1, ROW_X, ROW_Y, ROW_W);
+        two.mouseClicked(BTN_X + 10, BTN_Y + 9, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT, ROW_X, ROW_Y, ROW_W);
         assertFalse(two.onKeyPress(com.mojang.blaze3d.platform.InputConstants.KEY_DOWN, 0),
                 "≤5 options never scroll — the key falls through");
     }
@@ -191,7 +191,7 @@ class EnumPilotTest {
     void detailScreenCloseResetsPopupState() {
         AtomicReference<EightValues> v = new AtomicReference<>();
         EnumSetting<EightValues> row = eight(v);
-        row.mouseClicked(BTN_X + 10, BTN_Y + 9, 1, ROW_X, ROW_Y, ROW_W);
+        row.mouseClicked(BTN_X + 10, BTN_Y + 9, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT, ROW_X, ROW_Y, ROW_W);
         row.onKeyPress(com.mojang.blaze3d.platform.InputConstants.KEY_DOWN, 0);
         row.onDetailScreenClose();
         assertFalse(row.expandedState(), "no stale expanded state across screen opens");
@@ -202,7 +202,7 @@ class EnumPilotTest {
     void losingHostAvailabilityCollapsesPopupAndReleasesKeyboardOwnership() {
         AtomicReference<EightValues> v = new AtomicReference<>();
         EnumSetting<EightValues> row = eight(v);
-        row.mouseClicked(BTN_X + 10, BTN_Y + 9, 1, ROW_X, ROW_Y, ROW_W);
+        row.mouseClicked(BTN_X + 10, BTN_Y + 9, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT, ROW_X, ROW_Y, ROW_W);
         row.onKeyPress(com.mojang.blaze3d.platform.InputConstants.KEY_DOWN, 0);
         assertTrue(row.expandedState());
         assertSame(row, FeatureSetting.getFocused());

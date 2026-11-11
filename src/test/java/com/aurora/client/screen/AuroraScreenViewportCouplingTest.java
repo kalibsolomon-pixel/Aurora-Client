@@ -120,9 +120,9 @@ class AuroraScreenViewportCouplingTest {
         // The pin keeps walking the tree so any FURTHER adopter still shows
         // up here and must be justified in this test.
         List<String> expected = List.of(
-                SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/AuroraScreen.java",
-                SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/ManagerListScreen.java",
-                SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/ResourcePackBrowserScreen.java");
+                "screen/AuroraScreen.java",
+                "screen/ManagerListScreen.java",
+                "screen/ResourcePackBrowserScreen.java");
         try (Stream<Path> files = SourceTree.javaFiles()) {
             List<String> adopters = new ArrayList<>();
             files.filter(p -> sourcePath(p).endsWith(".java"))
@@ -145,6 +145,6 @@ class AuroraScreenViewportCouplingTest {
     }
 
     private static String sourcePath(Path path) {
-        return path.toString().replace('\\', '/');
+        return SourceTree.relative(path);
     }
 }
