@@ -5,7 +5,7 @@ import com.aurora.client.ui.component.Button;
 import com.aurora.client.ui.component.ButtonWidget;
 import com.aurora.client.ui.component.GlassSurface;
 import com.aurora.client.ui.component.ThemedScreen;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
 import net.minecraft.client.gui.screens.options.OptionsScreen;
@@ -49,7 +49,7 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
         // re-enable once Mod Menu ships a stable 1.21.11 release.
         addBtn(3, Component.translatable("aurora.button.options"),
                 "Open Minecraft's options.",
-                () -> this.minecraft.setScreen(new OptionsScreen(this, this.minecraft.options)),
+                () -> this.minecraft.setScreen(new OptionsScreen(this, this.minecraft.options, false)),
                 false);
         addBtn(4, Component.translatable("aurora.button.quit"),
                 "Quit Minecraft.",
@@ -75,7 +75,7 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
     }
 
     @Override
-    public void render(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
+    public void extractRenderState(GuiGraphicsExtractor ctx, int mouseX, int mouseY, float delta) {
         // Vanilla's rotating panorama via the shared menu-backdrop helper —
         // the same draw + frame-scoped declaration any Aurora screen makes
         // from its renderBackground (CubeMap.render is an eager pass against
@@ -95,7 +95,7 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
                 mark.x(), mark.y(), mark.width());
 
         // Buttons (and other drawable children)
-        super.render(ctx, mouseX, mouseY, delta);
+        super.extractRenderState(ctx, mouseX, mouseY, delta);
     }
 
     @Override

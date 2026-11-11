@@ -56,8 +56,12 @@ class FeatureCatalogTest {
         assertFalse(config.get("required").getAsBoolean(),
                 "required:true stops the game when any one mixin cannot apply (ADR 0004)");
         assertEquals("com.aurora.client.health.AuroraMixinPlugin", config.get("plugin").getAsString());
-        assertEquals(1, config.getAsJsonObject("injectors").get("defaultRequire").getAsInt(),
-                "defaultRequire must stay 1: it is what turns a missed injection into a reported failure");
+        // A failed require check throws an Error that Mixin treats as fatal, so the game
+        // would stop; InjectionCheck reports a missed injection instead (found on 26.1).
+        assertEquals(0, config.getAsJsonObject("injectors").get("defaultRequire").getAsInt(),
+                "defaultRequire must be 0; InjectionCheck turns a missed injection into a reported failure");
+        assertTrue(SourceTree.read("health/AuroraMixinPlugin.java").contains("InjectionCheck.unmatched("),
+                "the plugin must check injection points after each mixin applies");
         // Classes inside a mixin package cannot be loaded as ordinary classes.
         assertFalse(config.get("plugin").getAsString().startsWith(config.get("package").getAsString() + "."));
     }

@@ -9,7 +9,7 @@ import com.aurora.client.ui.component.MaterialSurface;
 import com.aurora.client.theme.ThemeToken;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.network.chat.Component;
 
@@ -150,13 +150,13 @@ public class BooleanSetting extends FeatureSetting {
     }
 
     @Override
-    public void render(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
+    public void render(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {
         renderShapes(ctx, x, y, width, mouseX, mouseY);
         renderOverlay(ctx, x, y, width, mouseX, mouseY);
     }
 
     @Override
-    public void renderShapes(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
+    public void renderShapes(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {
         lastWidth = width;
         Font tr = Minecraft.getInstance().font;
         if (tr == null) return;
@@ -170,7 +170,7 @@ public class BooleanSetting extends FeatureSetting {
     }
 
     @Override
-    public void renderOverlay(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
+    public void renderOverlay(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {
         lastWidth = width;
         Font tr = Minecraft.getInstance().font;
         if (tr == null) return;
@@ -186,7 +186,7 @@ public class BooleanSetting extends FeatureSetting {
             for (int li = 0; li < cachedLines.size(); li++) {
                 var line = cachedLines.get(li);
                 int lineX = x + LABEL_PAD;
-                ctx.drawString(tr, line, lineX, textY, MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
+                ctx.text(tr, line, lineX, textY, MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
                 // Each wrapped line of the label text is a dwell region for
                 // the description tooltip — hover the label itself, no badge.
                 // The description supplier is only evaluated while hovered.

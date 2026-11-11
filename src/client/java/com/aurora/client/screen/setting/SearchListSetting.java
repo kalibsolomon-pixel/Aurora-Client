@@ -3,7 +3,7 @@ package com.aurora.client.screen.setting;
 import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.network.chat.Component;
 
@@ -163,13 +163,13 @@ public abstract class SearchListSetting<T extends FeatureSetting> extends Featur
      * the row geometry the screen passes — the same rect render computes.
      */
     @Override
-    public void renderGlassPass(GuiGraphics ctx, int x, int y, int width) {
+    public void renderGlassPass(GuiGraphicsExtractor ctx, int x, int y, int width) {
         if (!isHeaderPinned()) renderFixedHeaderGlass(ctx, x, y, width);
     }
 
     @Override public int fixedHeaderHeight() { return 30; }
 
-    @Override public void renderFixedHeaderGlass(GuiGraphics ctx, int x, int y, int width) {
+    @Override public void renderFixedHeaderGlass(GuiGraphicsExtractor ctx, int x, int y, int width) {
         if (!com.aurora.client.ui.component.GlassSurface.passOpen()) return; // legacy frame order
         searchField.setX(x + 12);
         searchField.setY(y + 6);
@@ -178,7 +178,7 @@ public abstract class SearchListSetting<T extends FeatureSetting> extends Featur
     }
 
     @Override
-    public void render(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
+    public void render(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {
         recomputeFiltered();
 
         if (!isHeaderPinned()) renderFixedHeader(ctx, x, y, width, mouseX, mouseY);
@@ -202,7 +202,7 @@ public abstract class SearchListSetting<T extends FeatureSetting> extends Featur
         }
     }
 
-    @Override public void renderFixedHeader(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
+    @Override public void renderFixedHeader(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {
         Font tr = Minecraft.getInstance().font;
         // 1. Search bar — the themed background, centered text, and
         // outline are all drawn by EditBoxMixin (which fully replaces
@@ -213,7 +213,7 @@ public abstract class SearchListSetting<T extends FeatureSetting> extends Featur
         searchField.setY(y + 6);
         searchField.setWidth(searchW);
         searchFrame = com.aurora.client.ui.component.GlassSurface.frame();
-        searchField.render(ctx, mouseX, mouseY, 0f);
+        searchField.extractRenderState(ctx, mouseX, mouseY, 0f);
 
     }
 

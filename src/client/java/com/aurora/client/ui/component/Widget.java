@@ -1,6 +1,6 @@
 package com.aurora.client.ui.component;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 /**
  * Base class for Aurora's reusable, theme-aware widgets.
@@ -36,13 +36,13 @@ public abstract class Widget {
     public float getHeight() { return h; }
 
     /** Full render: static shapes, then the live overlay. */
-    public void render(GuiGraphics g, float x, float y, float w, float h, int mouseX, int mouseY) {
+    public void render(GuiGraphicsExtractor g, float x, float y, float w, float h, int mouseX, int mouseY) {
         renderShapes(g, x, y, w, h);
         renderOverlay(g, x, y, w, h, mouseX, mouseY);
     }
 
     /** Cacheable static geometry (no hover/animation/value state). Default no-op. */
-    public void renderShapes(GuiGraphics g, float x, float y, float w, float h) {
+    public void renderShapes(GuiGraphicsExtractor g, float x, float y, float w, float h) {
     }
 
     /**
@@ -56,11 +56,11 @@ public abstract class Widget {
      * A screen that never calls this gets the widget's legacy behavior:
      * surface painted in place during {@link #renderOverlay}. Default no-op.
      */
-    public void renderGlassPass(GuiGraphics g, float x, float y, float w, float h) {
+    public void renderGlassPass(GuiGraphicsExtractor g, float x, float y, float w, float h) {
     }
 
     /** Live geometry: hover, animation, text. Default no-op. */
-    public void renderOverlay(GuiGraphics g, float x, float y, float w, float h, int mouseX, int mouseY) {
+    public void renderOverlay(GuiGraphicsExtractor g, float x, float y, float w, float h, int mouseX, int mouseY) {
     }
 
     /** Stable fingerprint of the cacheable shape layer. Default 0 (theme generation stamp handles theme changes). */

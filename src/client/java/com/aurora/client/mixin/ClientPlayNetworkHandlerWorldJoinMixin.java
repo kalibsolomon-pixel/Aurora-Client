@@ -45,13 +45,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(ClientPacketListener.class)
 public abstract class ClientPlayNetworkHandlerWorldJoinMixin {
 
-    @Inject(method = "handleLogin", at = @At("HEAD"), require = 1)
+    @Inject(method = "handleLogin", at = @At("HEAD"))
     private void aurora$clearOnJoin(ClientboundLoginPacket packet, CallbackInfo ci) {
         aurora$resetRenderCaches();
         AttackedPlayerTracker.clear();
     }
 
-    @Inject(method = "handleRespawn", at = @At("HEAD"), require = 1)
+    @Inject(method = "handleRespawn", at = @At("HEAD"))
     private void aurora$clearOnRespawn(ClientboundRespawnPacket packet, CallbackInfo ci) {
         aurora$resetRenderCaches();
         AttackedPlayerTracker.clear();

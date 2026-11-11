@@ -155,7 +155,7 @@ class IconActionPilotTest {
         assertTrue(s.contains("private void removeItem(String idStr)"),
                 "the ONE removal path — action and legacy fallback converge");
         assertTrue(s.contains("rebuildRowControlList();"), "mutation rebuilds the host-visible list");
-        assertFalse(s.contains("ctx.drawString(tr, \"x\""), "the text x is gone");
+        assertFalse(s.contains("ctx.drawString(tr, \"x\"") || s.contains("ctx.text(tr, \"x\""), "the text x is gone");
         // Neighboring controls: the expand band and the delete zone stay
         // disjoint (the click walk keeps its zone order).
         assertTrue(s.contains("mouseX >= rightX - 16 && mouseX < rightX"));

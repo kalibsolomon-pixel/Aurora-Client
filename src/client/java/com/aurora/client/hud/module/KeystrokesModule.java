@@ -8,12 +8,12 @@ import com.aurora.client.util.CachedValue;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
 import com.mojang.blaze3d.platform.InputConstants;
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Options;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 import java.util.List;
 
@@ -180,7 +180,7 @@ public class KeystrokesModule extends HudModule {
     }
 
     @Override
-    protected void renderContent(GuiGraphics ctx, Minecraft client, int x, int y) {
+    protected void renderContent(GuiGraphicsExtractor ctx, Minecraft client, int x, int y) {
         AuroraConfig cfg = AuroraConfig.get();
         Font font = client.font;
         Options opts = client.options;
@@ -252,7 +252,7 @@ public class KeystrokesModule extends HudModule {
             blitTemplate(ctx, TPL_PLATE, x, cy, WIDTH, CPS_H, accent, 1f);
             String text = cpsText.get();
             int tw = font.width(text);
-            ctx.drawString(font, text, x + (WIDTH - tw) / 2,
+            ctx.text(font, text, x + (WIDTH - tw) / 2,
                     cy + (CPS_H - font.lineHeight) / 2, labelColor, false);
             cy += CPS_H + GAP;
         }
@@ -312,7 +312,7 @@ public class KeystrokesModule extends HudModule {
     private final it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap<com.aurora.client.ui.util.UiLayerCache> templates =
             new it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap<>();
 
-    private com.aurora.client.ui.util.UiLayerCache template(GuiGraphics ctx, int kind, int w, int h, int accent) {
+    private com.aurora.client.ui.util.UiLayerCache template(GuiGraphicsExtractor ctx, int kind, int w, int h, int accent) {
         long key = ((long) kind << 40) | ((long) w << 20) | h;
         var cache = templates.get(key);
         if (cache == null) { cache = new com.aurora.client.ui.util.UiLayerCache(); templates.put(key, cache); }
@@ -352,7 +352,7 @@ public class KeystrokesModule extends HudModule {
     }
 
     /** One template blit on the device grid, {@code alpha} 0..1 as a texture-alpha fade. */
-    private void blitTemplate(GuiGraphics ctx, int kind, float x, float y, int w, int h, int accent, float alpha) {
+    private void blitTemplate(GuiGraphicsExtractor ctx, int kind, float x, float y, int w, int h, int accent, float alpha) {
         if (alpha <= 0.004f) return;
         var cache = template(ctx, kind, w, h, accent);
         float density = com.aurora.client.worldmap.MapMarkers.density(ctx);
@@ -369,7 +369,7 @@ public class KeystrokesModule extends HudModule {
      * edge; pressing slides the cap (and its label) down onto it by a
      * device-snapped offset while the accent-tinted cap and rim fade in.
      */
-    private void drawKey(GuiGraphics ctx, Font font, int x, int y, int w, int h,
+    private void drawKey(GuiGraphicsExtractor ctx, Font font, int x, int y, int w, int h,
                          int slot, int accent, int labelColor) {
         float t = press[slot];
         int capH = h - DEPTH;
@@ -387,7 +387,7 @@ public class KeystrokesModule extends HudModule {
         ctx.pose().popMatrix();
     }
 
-    private void drawKeyLabel(GuiGraphics ctx, Font font, int x, int y, int w, int h,
+    private void drawKeyLabel(GuiGraphicsExtractor ctx, Font font, int x, int y, int w, int h,
                               int slot, int labelColor) {
         boolean mouseWithCps = h > CELL - DEPTH && slot >= SLOT_LMB && slot <= SLOT_RMB;
         int labelY = mouseWithCps ? y + 4 : y + (h - font.lineHeight) / 2 + 1;
@@ -397,7 +397,7 @@ public class KeystrokesModule extends HudModule {
             ctx.pose().pushMatrix();
             ctx.pose().translate(x + (w - font.width(count) * scale) / 2f, y + h - 10);
             ctx.pose().scale(scale, scale);
-            ctx.drawString(font, count, 0, 0, labelColor, false);
+            ctx.text(font, count, 0, 0, labelColor, false);
             ctx.pose().popMatrix();
         }
 
@@ -406,7 +406,7 @@ public class KeystrokesModule extends HudModule {
         int lw = labelWidths[slot];
         if (lw <= 0) return;
         if (lw <= w - 4) {
-            ctx.drawString(font, label, x + (w - lw) / 2,
+            ctx.text(font, label, x + (w - lw) / 2,
                     labelY, labelColor, false);
         } else {
             // Long bind names shrink to fit instead of overflowing the cell.
@@ -416,7 +416,7 @@ public class KeystrokesModule extends HudModule {
             ctx.pose().pushMatrix();
             ctx.pose().translate(tx, ty);
             ctx.pose().scale(s, s);
-            ctx.drawString(font, label, 0, 0, labelColor, false);
+            ctx.text(font, label, 0, 0, labelColor, false);
             ctx.pose().popMatrix();
         }
     }
@@ -561,7 +561,7 @@ public class KeystrokesModule extends HudModule {
     private static String bindLabel(KeyMapping km, String fallback) {
         try {
             if (km != null) {
-                InputConstants.Key key = KeyBindingHelper.getBoundKeyOf(km);
+                InputConstants.Key key = KeyMappingHelper.getBoundKeyOf(km);
                 if (key != null && !key.equals(InputConstants.UNKNOWN)) {
                     String s = key.getDisplayName().getString();
                     if (s != null) {

@@ -1,0 +1,18 @@
+{
+  "minecraft": "26.1.2",
+  "mods": {
+    "sodium": "mc26.1.2-0.9.2-fabric",
+    "iris": "1.11.4+26.1-fabric",
+    "vulkanmod": "0.6.8+26.1.2",
+    "immediatelyfast": "1.15.3+26.1-fabric",
+    "entityculling": "1.11.3",
+    "lithium": "mc26.1.2-0.24.7-fabric",
+    "modmenu": "18.0.2",
+    "placeholder-api": "3.0.0+26.1"
+  },
+  "sets": {
+    "A-performance-stack": ["sodium", "lithium", "immediatelyfast", "entityculling", "modmenu", "placeholder-api"],
+    "B-sodium-iris": ["sodium", "iris"],
+    "C-vulkanmod": ["vulkanmod"]
+  }
+}

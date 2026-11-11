@@ -7,7 +7,7 @@ import com.aurora.client.ui.interaction.SemanticActionControl;
 import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 
 import java.util.function.Supplier;
@@ -116,7 +116,7 @@ public class ButtonSetting extends FeatureSetting {
             : com.aurora.client.ui.util.UiDensity.KEY_W; }
 
     /** The navigation arrow drawn where a text button carries its label. */
-    private void drawFace(GuiGraphics ctx, int btnX, int btnY, int w, int h) {
+    private void drawFace(GuiGraphicsExtractor ctx, int btnX, int btnY, int w, int h) {
         if (!iconFace) return;
         Font tr = Minecraft.getInstance().font;
         if (tr == null) return;
@@ -136,7 +136,7 @@ public class ButtonSetting extends FeatureSetting {
      * frame; when no pass ran, it keeps painting in place (legacy order).
      */
     @Override
-    public void renderGlassPass(GuiGraphics ctx, int x, int y, int width) {
+    public void renderGlassPass(GuiGraphicsExtractor ctx, int x, int y, int width) {
         if (!com.aurora.client.ui.component.GlassSurface.passOpen()) return; // legacy frame order
         int w = btnW();
         int btnX = controlX(x, width, w);
@@ -149,7 +149,7 @@ public class ButtonSetting extends FeatureSetting {
     }
 
     @Override
-    public void render(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
+    public void render(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {
         lastWidth = width;
         Font tr = Minecraft.getInstance().font;
         if (tr == null) return;

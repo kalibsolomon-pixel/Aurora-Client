@@ -20,11 +20,11 @@ public abstract class MixinFont {
     // ========================================================================
 
     @Inject(
-            method = "drawInBatch(Ljava/lang/String;FFIZLorg/joml/Matrix4f;Lnet/minecraft/client/renderer/MultiBufferSource;Lnet/minecraft/client/gui/Font$DisplayMode;II)V",
+            method = "drawInBatch(Ljava/lang/String;FFIZLorg/joml/Matrix4fc;Lnet/minecraft/client/renderer/MultiBufferSource;Lnet/minecraft/client/gui/Font$DisplayMode;II)V",
             at = @At("HEAD"),
             cancellable = true
     )
-    private void drawInBatchStringIntercept(String text, float x, float y, int color, boolean dropShadow, org.joml.Matrix4f matrix, net.minecraft.client.renderer.MultiBufferSource bufferSource, net.minecraft.client.gui.Font.DisplayMode displayMode, int backgroundColor, int light, CallbackInfo ci) {
+    private void drawInBatchStringIntercept(String text, float x, float y, int color, boolean dropShadow, org.joml.Matrix4fc matrix, net.minecraft.client.renderer.MultiBufferSource bufferSource, net.minecraft.client.gui.Font.DisplayMode displayMode, int backgroundColor, int light, CallbackInfo ci) {
         Style style = AuroraFontRenderer.getActiveStyle();
         if (style != null && text != null) {
             // Plain strings never carry their own font, so it's always safe
@@ -37,7 +37,7 @@ public abstract class MixinFont {
     }
 
     @ModifyVariable(
-            method = "drawInBatch(Lnet/minecraft/network/chat/Component;FFIZLorg/joml/Matrix4f;Lnet/minecraft/client/renderer/MultiBufferSource;Lnet/minecraft/client/gui/Font$DisplayMode;II)V",
+            method = "drawInBatch(Lnet/minecraft/network/chat/Component;FFIZLorg/joml/Matrix4fc;Lnet/minecraft/client/renderer/MultiBufferSource;Lnet/minecraft/client/gui/Font$DisplayMode;II)V",
             at = @At("HEAD"),
             argsOnly = true,
             ordinal = 0
@@ -58,7 +58,7 @@ public abstract class MixinFont {
     }
 
     @ModifyVariable(
-            method = "drawInBatch(Lnet/minecraft/util/FormattedCharSequence;FFIZLorg/joml/Matrix4f;Lnet/minecraft/client/renderer/MultiBufferSource;Lnet/minecraft/client/gui/Font$DisplayMode;II)V",
+            method = "drawInBatch(Lnet/minecraft/util/FormattedCharSequence;FFIZLorg/joml/Matrix4fc;Lnet/minecraft/client/renderer/MultiBufferSource;Lnet/minecraft/client/gui/Font$DisplayMode;II)V",
             at = @At("HEAD"),
             argsOnly = true,
             ordinal = 0
@@ -83,13 +83,13 @@ public abstract class MixinFont {
     }
 
     // ========================================================================
-    //  prepareText interception (MC 1.21.11+ path — used by GuiGraphics)
+    //  prepareText interception (MC 1.21.11+ path — used by GuiGraphicsExtractor)
     //
-    //  In MC 1.21.11, GuiGraphics.drawString was refactored to call
+    //  In MC 1.21.11, GuiGraphicsExtractor.drawString was refactored to call
     //  Font.prepareText directly instead of Font.drawInBatch. Since the
     //  drawInBatch interceptors above don't catch this path, we must also
     //  intercept prepareText to ensure the custom font is applied to ALL
-    //  text rendered through GuiGraphics (module labels, detail screens,
+    //  text rendered through GuiGraphicsExtractor (module labels, detail screens,
     //  vanilla menus, buttons, etc.).
     // ========================================================================
 

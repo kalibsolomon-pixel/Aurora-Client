@@ -44,10 +44,11 @@ class AbstractButtonMixinConformanceTest {
                 "the two-screen gate is preserved");
         assertTrue(s.contains("getClass() == net.minecraft.client.gui.components.Button.Plain.class"),
                 "exact Button.Plain match (ImageButton & future subclasses stay vanilla)");
-        // The painter cancels ONLY renderWidget — never an input handler.
+        // The painter cancels ONLY the widget render (renderWidget before 26.1,
+        // extractWidgetRenderState since) — never an input handler.
         assertEquals(1, count(s, "cancellable = true"),
-                "exactly one cancellable inject (renderWidget)");
-        assertTrue(s.contains("method = \"renderWidget\""));
+                "exactly one cancellable inject (the widget render)");
+        assertTrue(s.contains("method = \"extractWidgetRenderState\""));
         // The two observation hooks are HEAD-only, and the single
         // cancellable=true already pins that neither of them cancels.
         assertTrue(s.contains("method = \"onClick\", at = @At(\"HEAD\")"));
@@ -113,7 +114,7 @@ class AbstractButtonMixinConformanceTest {
                 "the press timeline is the shared implementation");
         assertFalse(s.contains("lerpFloat"), "no duplicated press math");
         assertFalse(s.contains("drawRoundedRectAA"), "no mixin-local surface drawing");
-        assertFalse(s.contains("drawString"), "no mixin-local text drawing");
+        assertFalse(s.contains("drawString") || s.contains(".text("), "no mixin-local text drawing");
         assertFalse(s.contains("cachedLabel"), "the label-width cache went with the old painter");
     }
 
@@ -142,7 +143,7 @@ class AbstractButtonMixinConformanceTest {
     void sharedPainterIsPureVisualsAndOwnsNoSemantics() throws Exception {
         Class<?> button = Class.forName("com.aurora.client.ui.component.Button");
         Method paint = button.getDeclaredMethod("paintFlatSecondary",
-                net.minecraft.client.gui.GuiGraphics.class,
+                net.minecraft.client.gui.GuiGraphicsExtractor.class,
                 net.minecraft.client.gui.Font.class,
                 net.minecraft.network.chat.Component.class,
                 int.class, int.class, int.class, int.class,

@@ -6,7 +6,7 @@ import com.aurora.client.util.CachedValue;
 import com.aurora.client.util.WorldScope;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
@@ -65,7 +65,7 @@ public class InfoModule extends HudModule {
         }
         if (cfg.infoShowChunkCoords && player != null) {
             ChunkPos cp = player.chunkPosition();
-            lines.add("Chunk: " + cp.x + ", " + cp.z);
+            lines.add("Chunk: " + cp.x() + ", " + cp.z());
         }
         if (cfg.infoShowYRelSea && player != null && level != null) {
             int y = player.blockPosition().getY();
@@ -206,7 +206,7 @@ public class InfoModule extends HudModule {
     }
 
     @Override
-    protected void renderContent(GuiGraphics ctx, Minecraft client, int x, int y) {
+    protected void renderContent(GuiGraphicsExtractor ctx, Minecraft client, int x, int y) {
         AuroraConfig cfg = AuroraConfig.get();
         if (!cfg.infoEnabled) return;
         Font tr = client.font;
@@ -215,7 +215,7 @@ public class InfoModule extends HudModule {
         int lh = tr.lineHeight + 1;
         List<String> lines = linesCache.get();
         for (int i = 0; i < lines.size(); i++) {
-            ctx.drawString(tr, lines.get(i), x, y + i * lh, color, false);
+            ctx.text(tr, lines.get(i), x, y + i * lh, color, false);
         }
     }
     @Override public String featureRegistryId() { return "info_module"; }

@@ -17,7 +17,7 @@ import com.aurora.client.ui.util.UiLayerCache;
 import com.aurora.client.util.ScrollFade;
 import com.aurora.client.util.SmoothScroll;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.CharacterEvent;
@@ -191,7 +191,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
     // Both manager screens paint, per visible row and per frame, a large
     // number of small AA strip fills: six shadow-ring outlines plus the
     // rounded tint fills of the row surface and its glass buttons — on the
-    // order of a thousand GuiGraphics.fill submissions per row. MC 1.21.11's
+    // order of a thousand GuiGraphicsExtractor.fill submissions per row. MC 1.21.11's
     // GuiRenderState runs an intersection search over the elements recorded
     // SO FAR for every submitted fill, so a frame of N disjoint fills costs
     // O(N²) — 15 rows ≈ 15–20k fills ≈ 300+ ms/frame (the 2–3 fps bug), while
@@ -343,7 +343,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
      * and the opaque fallback wants the vanilla backdrop as before.
      */
     @Override
-    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float delta) {
+    public void extractBackground(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
         if (GlassSurface.liveWorldBackdrop()) return;
         GlassSurface.renderMenuPanorama(this,g,delta);
     }
@@ -365,7 +365,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
      * </ol>
      */
     @Override
-    public void render(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
+    public void extractRenderState(GuiGraphicsExtractor ctx, int mouseX, int mouseY, float delta) {
         int listX = (this.width - listWidth()) / 2;
         List<T> rows = currentRows();
         // One list fetch per frame drives everything below — the easing
@@ -469,7 +469,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         // content, painted opaque over the dim like every other thumb).
         drawScrollbar(ctx, mouseX, mouseY, listX, maxScroll);
 
-        super.render(ctx, mouseX, mouseY, delta);
+        super.extractRenderState(ctx, mouseX, mouseY, delta);
 
         paintTail(ctx, mouseX, mouseY, delta, rows, listX);
 
@@ -534,16 +534,16 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
      * panel (its chosen §6 role), records whether glass drew in
      * {@link #rowGlassDrawn}, and lays out + glass-passes any row buttons.
      */
-    protected abstract void paintRowGlassPass(GuiGraphics ctx, int x, int y, int w, T row);
+    protected abstract void paintRowGlassPass(GuiGraphicsExtractor ctx, int x, int y, int w, T row);
 
     /** Content pass for one row: text, badges, swatches, button labels and flat fallbacks. */
-    protected abstract void paintRow(GuiGraphics ctx, int x, int y, int w, T row, int index, int mouseX, int mouseY);
+    protected abstract void paintRow(GuiGraphicsExtractor ctx, int x, int y, int w, T row, int index, int mouseX, int mouseY);
 
     /** Glass pass for leading row {@code leadIndex}; default nothing (no leading rows by default). */
-    protected void paintLeadingRowGlassPass(GuiGraphics ctx, int x, int y, int w, int leadIndex) {}
+    protected void paintLeadingRowGlassPass(GuiGraphicsExtractor ctx, int x, int y, int w, int leadIndex) {}
 
     /** Content pass for leading row {@code leadIndex}; default nothing. */
-    protected void paintLeadingRow(GuiGraphics ctx, int x, int y, int w, int leadIndex, int mouseX, int mouseY) {}
+    protected void paintLeadingRow(GuiGraphicsExtractor ctx, int x, int y, int w, int leadIndex, int mouseX, int mouseY) {}
 
     /** Called at the top of each frame's glass pass, right after {@code rowGlassDrawn} clears. */
     protected void onBeginRowGlassPass() {}
@@ -552,21 +552,21 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
     protected abstract void reconcileRowCaches(List<T> rows);
 
     /** Paints the inline editor's glass surface at its laid-out position (inside the glass pass). */
-    protected abstract void paintEditorGlassPass(GuiGraphics ctx, List<T> rows, int listX);
+    protected abstract void paintEditorGlassPass(GuiGraphicsExtractor ctx, List<T> rows, int listX);
 
     /**
      * The frame's tail, after {@code super.render}: the inline editor and
      * the toast, in the screen's own historical order (the two screens
      * disagree; the base does not force a winner).
      */
-    protected abstract void paintTail(GuiGraphics ctx, int mouseX, int mouseY, float delta, List<T> rows, int listX);
+    protected abstract void paintTail(GuiGraphicsExtractor ctx, int mouseX, int mouseY, float delta, List<T> rows, int listX);
 
     // ------------------------------------------------------------------
     //  Shared row painters
     // ------------------------------------------------------------------
 
     /** The soft glow rings — the row's drop shadow (structural black), part of the surface pass. */
-    protected void paintRowShadow(GuiGraphics ctx, int x, int y, int w) {
+    protected void paintRowShadow(GuiGraphicsExtractor ctx, int x, int y, int w) {
         float radius = ThemeManager.current().roundness().radiusSmall();
         for (int i = 1; i <= 6; i++) {
             int shadowAlpha = Math.max(0, 30 - i * 5);
@@ -579,7 +579,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
      * glass declined — identical for every row; selection is never carried
      * by the container surface on either screen.
      */
-    protected void paintFlatRow(GuiGraphics ctx, int x, int y, int w) {
+    protected void paintFlatRow(GuiGraphicsExtractor ctx, int x, int y, int w) {
         float radius = ThemeManager.current().roundness().radiusSmall();
         // Rows separate by spacing and tone; the window already owns the one outline
         // (Spxctra 2026-10-30: no repeated per-row border inside a bordered window).
@@ -618,7 +618,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
      * variant (tinted vs shadow-only; declined rows paint their flat body
      * live in the content pass as before).
      */
-    protected final void paintTemplatedRowSurface(GuiGraphics ctx, int x, int y,
+    protected final void paintTemplatedRowSurface(GuiGraphicsExtractor ctx, int x, int y,
                                                   Runnable rowSurfacePass, Runnable rowButtonsPass,
                                                   BooleanSupplier glassDrew) {
         if (MaterialSurface.unified()) {
@@ -654,7 +654,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
     }
 
     /** The (lazily rasterized, version-keyed) row template for either variant. */
-    private UiLayerCache ensureRowTemplate(GuiGraphics ctx, boolean tinted) {
+    private UiLayerCache ensureRowTemplate(GuiGraphicsExtractor ctx, boolean tinted) {
         UiLayerCache cache = tinted ? rowTplTinted : rowTplBare;
         long version = rowTemplateVersion();
         if (cache == null) cache = new UiLayerCache();
@@ -685,7 +685,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
      * surface per size/variant, so per-button state (press, decline) never
      * invalidates the row raster.
      */
-    protected void captureRowSurfaceShapes(GuiGraphics ctx, float x, float y, float w, boolean tinted) {
+    protected void captureRowSurfaceShapes(GuiGraphicsExtractor ctx, float x, float y, float w, boolean tinted) {
         paintRowShadow(ctx, (int) x, (int) y, (int) w);
         if (tinted) {
             RenderUtil.drawRoundedRectAA(ctx, x, y, w, rowHeight(),
@@ -732,7 +732,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
      * {@link SmoothScroll}. Never glass — thumbs are opaque token surfaces
      * by the mod-wide conventions.
      */
-    private void drawScrollbar(GuiGraphics ctx, int mouseX, int mouseY, int listX, double maxScroll) {
+    private void drawScrollbar(GuiGraphicsExtractor ctx, int mouseX, int mouseY, int listX, double maxScroll) {
         if (maxScroll <= 0) return;
         int trackTop = listClipTop();
         int trackH = listClipBottom() - trackTop;
@@ -978,11 +978,11 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
      * nothing. Call from the screen tail in place of a raw
      * {@code EditBox.render}.
      */
-    protected void renderEditorClipped(GuiGraphics ctx, EditBox field, int listX,
+    protected void renderEditorClipped(GuiGraphicsExtractor ctx, EditBox field, int listX,
                                        int mouseX, int mouseY, float delta) {
         if (field == null) return;
         ctx.enableScissor(listX - 4, listClipTop(), listX + listWidth() + 4, listClipBottom());
-        field.render(ctx, mouseX, mouseY, delta);
+        field.extractRenderState(ctx, mouseX, mouseY, delta);
         ctx.disableScissor();
     }
 
@@ -996,7 +996,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
     }
 
     /** Renders the toast; call from the screen's tail (screen-owned order). */
-    protected void renderToast(GuiGraphics ctx) {
+    protected void renderToast(GuiGraphicsExtractor ctx) {
         // C-7: the toast is ordinary rectangular feedback chrome — its radius
         // resolves through the theme (was a literal 4 that ignored Square
         // mode). The pack browser's toast already passes the same token.

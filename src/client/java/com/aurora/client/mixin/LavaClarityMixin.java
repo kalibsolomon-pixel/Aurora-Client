@@ -22,7 +22,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(LavaFogEnvironment.class)
 public abstract class LavaClarityMixin {
 
-    @Inject(method = "setupFog", at = @At("TAIL"), require = 1)
+    @Inject(method = "setupFog", at = @At("TAIL"))
     private void aurora$multiplyLavaFog(FogData data, Camera camera,
                                         ClientLevel world, float viewDistance,
                                         DeltaTracker tickCounter, CallbackInfo ci) {

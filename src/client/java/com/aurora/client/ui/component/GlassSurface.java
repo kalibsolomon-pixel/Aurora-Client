@@ -7,7 +7,7 @@ import com.aurora.client.ui.render.blur.BlurPanelRenderer;
 import com.aurora.client.ui.util.RenderUtil;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 
 import java.util.ArrayList;
@@ -216,17 +216,17 @@ public final class GlassSurface {
 
     /**
      * Scissor wrapper for surfaces painted under a clip: forwards to
-     * {@link GuiGraphics#enableScissor} and records the clip so a deferred
+     * {@link GuiGraphicsExtractor#enableScissor} and records the clip so a deferred
      * rim can re-apply it when it is finally painted after the dim. Use
      * this (not the raw call) around any glass surface inside the pass.
      */
-    public static void enableScissor(GuiGraphics g, int x0, int y0, int x1, int y1) {
+    public static void enableScissor(GuiGraphicsExtractor g, int x0, int y0, int x1, int y1) {
         g.enableScissor(x0, y0, x1, y1);
         trackedClip = new int[] {x0, y0, x1, y1};
     }
 
     /** Counterpart of {@link #enableScissor}. */
-    public static void disableScissor(GuiGraphics g) {
+    public static void disableScissor(GuiGraphicsExtractor g) {
         g.disableScissor();
         trackedClip = null;
     }
@@ -239,16 +239,16 @@ public final class GlassSurface {
      * Right after the fill, paints every rim finish deferred by the pass,
      * each under the clip its surface was painted with.
      */
-    public static void overlayDim(GuiGraphics g, int width, int height) {
+    public static void overlayDim(GuiGraphicsExtractor g, int width, int height) {
         overlayDim(g, width, height, ThemeManager.color(ThemeToken.OVERLAY_DIM));
     }
 
     /**
-     * {@link #overlayDim(GuiGraphics, int, int)} with an explicit color, for
+     * {@link #overlayDim(GuiGraphicsExtractor, int, int)} with an explicit color, for
      * screens whose dim is a derived strength of the {@code OVERLAY_DIM}
      * token (e.g. the pack browser's {@code withAlpha(…, 0x55)}).
      */
-    public static void overlayDim(GuiGraphics g, int width, int height, int argb) {
+    public static void overlayDim(GuiGraphicsExtractor g, int width, int height, int argb) {
         if (passFrame != frame) {
             report("overlayDim painted with no beginGlassPass this frame — the screen's rim "
                     + "finishes are veiled with the surface bodies; open the pass at the top of render");
@@ -264,7 +264,7 @@ public final class GlassSurface {
     }
 
     /** Paints the deferred rims, each under its own recorded clip. */
-    private static void flushRims(GuiGraphics g) {
+    private static void flushRims(GuiGraphicsExtractor g) {
         int[] active = null;
         for (PendingRim rim : pendingRims) {
             if (!sameClip(active, rim.clip)) {
@@ -314,25 +314,25 @@ public final class GlassSurface {
      * @return whether glass drew; {@code false} ⇒ caller paints its flat look
      */
     /** Standalone card: call before dim; paint its translucent face after dim. */
-    public static boolean card(GuiGraphics g, float x, float y, float w, float h, float radius) {
+    public static boolean card(GuiGraphicsExtractor g, float x, float y, float w, float h, float radius) {
         Minecraft mc = Minecraft.getInstance();
         if (mc != null && mc.screen instanceof ThemedScreen screen && screen.parentGlassOnly()) return false;
         return paint(g,x,y,w,h,radius,UNIFIED_LIGHTING,ThemeManager.color(ThemeToken.WINDOW_FILL),
                 BlurPanelRenderer.Priority.CONTROL);
     }
 
-    public static boolean container(GuiGraphics g, float x, float y, float w, float h, float radius) {
+    public static boolean container(GuiGraphicsExtractor g, float x, float y, float w, float h, float radius) {
         return container(g, x, y, w, h, radius, BlurPanelRenderer.Priority.WINDOW);
     }
 
     /**
-     * {@link #container(GuiGraphics, float, float, float, float, float)}
+     * {@link #container(GuiGraphicsExtractor, float, float, float, float, float)}
      * with an explicit degradation priority — for container-styled ROWS
      * (the Profiles list), which are repeated and must degrade before the
      * screen's real window under output-pool pressure
      * ({@link BlurPanelRenderer.Priority#ROW}).
      */
-    public static boolean container(GuiGraphics g, float x, float y, float w, float h, float radius,
+    public static boolean container(GuiGraphicsExtractor g, float x, float y, float w, float h, float radius,
                                     BlurPanelRenderer.Priority priority) {
         return paint(g, x, y, w, h, radius, MaterialSurface.unified() ? UNIFIED_LIGHTING : BlurPanelRenderer.Lighting.depressed(),
                 ThemeManager.color(ThemeToken.WINDOW_FILL), priority);
@@ -347,7 +347,7 @@ public final class GlassSurface {
      *
      * @return whether glass drew; {@code false} ⇒ caller paints its flat look
      */
-    public static boolean container(GuiGraphics g, float x, float y, float w, float h, float radius,
+    public static boolean container(GuiGraphicsExtractor g, float x, float y, float w, float h, float radius,
                                     ThemeToken surface) {
         return paint(g, x, y, w, h, radius, MaterialSurface.unified() ? UNIFIED_LIGHTING : BlurPanelRenderer.Lighting.depressed(),
                 ThemeManager.surfaceColor(surface), BlurPanelRenderer.Priority.WINDOW);
@@ -360,16 +360,16 @@ public final class GlassSurface {
      *
      * @return whether glass drew; {@code false} ⇒ caller paints its flat look
      */
-    public static boolean control(GuiGraphics g, float x, float y, float w, float h, float radius) {
+    public static boolean control(GuiGraphicsExtractor g, float x, float y, float w, float h, float radius) {
         return control(g, x, y, w, h, radius, false, BlurPanelRenderer.Priority.CONTROL);
     }
 
     /**
-     * {@link #control(GuiGraphics, float, float, float, float, float)} with
+     * {@link #control(GuiGraphicsExtractor, float, float, float, float, float)} with
      * an explicit degradation priority — for control-styled ROWS (the
      * Waypoints list, {@link BlurPanelRenderer.Priority#ROW}).
      */
-    public static boolean control(GuiGraphics g, float x, float y, float w, float h, float radius,
+    public static boolean control(GuiGraphicsExtractor g, float x, float y, float w, float h, float radius,
                                   BlurPanelRenderer.Priority priority) {
         return control(g, x, y, w, h, radius, false, priority);
     }
@@ -382,7 +382,7 @@ public final class GlassSurface {
      *
      * @return whether glass drew; {@code false} ⇒ caller paints its flat look
      */
-    public static boolean stainedControl(GuiGraphics g, float x, float y, float w, float h, float radius) {
+    public static boolean stainedControl(GuiGraphicsExtractor g, float x, float y, float w, float h, float radius) {
         return control(g, x, y, w, h, radius, true, BlurPanelRenderer.Priority.CONTROL);
     }
 
@@ -393,7 +393,7 @@ public final class GlassSurface {
      *
      * @return whether glass drew; {@code false} ⇒ caller paints its flat look
      */
-    public static boolean control(GuiGraphics g, float x, float y, float w, float h, float radius,
+    public static boolean control(GuiGraphicsExtractor g, float x, float y, float w, float h, float radius,
                                   boolean stained) {
         return control(g, x, y, w, h, radius, stained, BlurPanelRenderer.Priority.CONTROL);
     }
@@ -404,7 +404,7 @@ public final class GlassSurface {
      * other control entry point lands here. Repeated small controls inside
      * rows/cards pass {@link BlurPanelRenderer.Priority#DETAIL}.
      */
-    public static boolean control(GuiGraphics g, float x, float y, float w, float h, float radius,
+    public static boolean control(GuiGraphicsExtractor g, float x, float y, float w, float h, float radius,
                                   boolean stained, BlurPanelRenderer.Priority priority) {
         if (MaterialSurface.unified()) return false;
         return paint(g, x, y, w, h, radius, BlurPanelRenderer.Lighting.raised(),
@@ -421,7 +421,7 @@ public final class GlassSurface {
      * caller's one application of a theme-derived strength — never a second
      * multiplier stacked on another tint.
      */
-    public static boolean control(GuiGraphics g, float x, float y, float w, float h, float radius, int tint) {
+    public static boolean control(GuiGraphicsExtractor g, float x, float y, float w, float h, float radius, int tint) {
         if (MaterialSurface.unified()) return false;
         return paint(g, x, y, w, h, radius, BlurPanelRenderer.Lighting.raised(), tint,
                 BlurPanelRenderer.Priority.CONTROL);
@@ -441,7 +441,7 @@ public final class GlassSurface {
      *
      * @return whether glass drew; {@code false} ⇒ caller paints its flat look
      */
-    public static boolean aboveDimControl(GuiGraphics g, float x, float y, float w, float h, float radius) {
+    public static boolean aboveDimControl(GuiGraphicsExtractor g, float x, float y, float w, float h, float radius) {
         if (MaterialSurface.unified()) {
             MaterialSurface.floating(g,Math.round(x),Math.round(y),Math.round(w),Math.round(h),Math.round(radius),1);
             return true;
@@ -467,7 +467,7 @@ public final class GlassSurface {
      *
      * @return whether glass drew; {@code false} ⇒ caller paints its flat look
      */
-    public static boolean aboveDimContainer(GuiGraphics g, float x, float y, float w, float h, float radius,
+    public static boolean aboveDimContainer(GuiGraphicsExtractor g, float x, float y, float w, float h, float radius,
                                             ThemeToken surface) {
         if (MaterialSurface.unified()) {
             MaterialSurface.floating(g,Math.round(x),Math.round(y),Math.round(w),Math.round(h),Math.round(radius),1);
@@ -549,10 +549,12 @@ public final class GlassSurface {
      *         world behind the screen this returns {@code false} and the
      *         caller keeps its world-gated path
      */
-    public static boolean renderMenuPanorama(Screen screen, GuiGraphics g, float delta) {
+    public static boolean renderMenuPanorama(Screen screen, GuiGraphicsExtractor g, float delta) {
         if (liveWorldBackdrop()) return false;
         // Without the invoker mixin the screen keeps vanilla's own backdrop (flat fallback).
         if (!(screen instanceof com.aurora.client.mixin.ScreenPanoramaAccessor panorama)) return false;
+        // 26.1 records the panorama here; GuiRenderer draws it before the queued
+        // glass captures run (BlurPanelRenderer.runPendingCaptures).
         panorama.aurora$invokeRenderPanorama(g, delta);
         BlurPanelRenderer.noteMenuBackdropDrawn();
         return true;
@@ -562,7 +564,7 @@ public final class GlassSurface {
      * The idiom itself, in its one fixed order: gate → blur → tint → rim,
      * with the rim deferred past the dim while a glass pass is open.
      */
-    private static boolean paint(GuiGraphics g, float x, float y, float w, float h, float radius,
+    private static boolean paint(GuiGraphicsExtractor g, float x, float y, float w, float h, float radius,
                                  BlurPanelRenderer.Lighting lighting, int tint,
                                  BlurPanelRenderer.Priority priority) {
         // Capture validity: a live world, OR a menu backdrop a caller has
@@ -607,7 +609,7 @@ public final class GlassSurface {
     }
 
     /** Cheap probe for an untracked scissor: are the surface's corners inside the active clip? */
-    private static boolean cornersInScissor(GuiGraphics g, float x, float y, float w, float h) {
+    private static boolean cornersInScissor(GuiGraphicsExtractor g, float x, float y, float w, float h) {
         int x0 = (int) x, y0 = (int) y, x1 = (int) (x + w) - 1, y1 = (int) (y + h) - 1;
         return g.containsPointInScissor(x0, y0) && g.containsPointInScissor(x1, y0)
                 && g.containsPointInScissor(x0, y1) && g.containsPointInScissor(x1, y1);

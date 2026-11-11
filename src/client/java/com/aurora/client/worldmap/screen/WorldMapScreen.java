@@ -17,7 +17,7 @@ import com.aurora.client.worldmap.*;
 import com.aurora.client.worldmap.cache.OverviewCache;
 import com.aurora.client.worldmap.cache.RegionCache;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
@@ -142,8 +142,8 @@ public final class WorldMapScreen extends Screen implements ThemedScreen {
         } catch (RuntimeException invalid) { status = "Enter two coordinates: X Z"; }
     }
 
-    @Override public void renderBackground(GuiGraphics g, int mx, int my, float delta) {}
-    @Override public void render(GuiGraphics g, int mx, int my, float delta) {
+    @Override public void extractBackground(GuiGraphicsExtractor g, int mx, int my, float delta) {}
+    @Override public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float delta) {
         long now = System.nanoTime();
         viewport.advance((now - lastFrame) / 1_000_000_000d, width, height); lastFrame = now;
         if (follow && minecraft.player != null) viewport.center(minecraft.player.getX(), minecraft.player.getZ());
@@ -204,7 +204,7 @@ public final class WorldMapScreen extends Screen implements ThemedScreen {
         String position = (int) Math.floor(viewport.worldX(mx, width)) + ", "
                 + (int) Math.floor(viewport.worldZ(my, height)) + "  \u00b7  " +
                 String.format(java.util.Locale.ROOT, "%.2f px/block", viewport.scale());
-        g.drawString(font, position, BAR_PAD + 8, textY, ThemeManager.color(ThemeToken.ON_SURFACE), false);
+        g.text(font, position, BAR_PAD + 8, textY, ThemeManager.color(ThemeToken.ON_SURFACE), false);
         // Right side of the status bar: a transient status message, else the
         // gesture hint (muted; dropped entirely when there is no room).
         String trailing = status.isEmpty()
@@ -213,16 +213,16 @@ public final class WorldMapScreen extends Screen implements ThemedScreen {
         int trailingRoom = width - 2 * BAR_PAD - 16 - font.width(position) - 16;
         if (trailingRoom > 40) {
             String fitted = AuroraFontRenderer.ellipsize(font, trailing, trailingRoom, 1);
-            g.drawString(font, fitted, width - BAR_PAD - 8 - font.width(fitted), textY,
+            g.text(font, fitted, width - BAR_PAD - 8 - font.width(fitted), textY,
                     ThemeManager.color(status.isEmpty() ? ThemeToken.ON_BACKGROUND_MUTED : ThemeToken.ON_SURFACE), false);
         }
-        super.render(g, mx, my, delta);
+        super.extractRenderState(g, mx, my, delta);
         if (hovered != null && my > topBarBottom() && my < statusTop()) {
             String tooltip = hovered.name + " · " + hovered.x + ", " + hovered.y + ", " + hovered.z;
             int tw = Math.min(width - 16, font.width(tooltip) + 16);
             int tx = Math.max(4, Math.min(mx + 8, width - tw - 4));
             MaterialSurface.floating(g, tx, my + 10, tw, 22, 4, 1);
-            g.drawString(font, AuroraFontRenderer.ellipsize(font, tooltip, tw - 12, 1), tx + 6, my + 17,
+            g.text(font, AuroraFontRenderer.ellipsize(font, tooltip, tw - 12, 1), tx + 6, my + 17,
                     ThemeManager.color(ThemeToken.ON_SURFACE), false);
         }
     }
@@ -230,7 +230,7 @@ public final class WorldMapScreen extends Screen implements ThemedScreen {
     private int screenX(double x) { return (int) Math.floor((x - viewport.x) * viewport.scale() + width * .5); }
     private int screenZ(double z) { return (int) Math.floor((z - viewport.z) * viewport.scale() + height * .5); }
 
-    private void drawTerrain(GuiGraphics g) {
+    private void drawTerrain(GuiGraphicsExtractor g) {
         WorldMapClient engine = WorldMapClient.get();
         if (engine == null) return;
         double left = viewport.worldX(0, width), top = viewport.worldZ(0, height);
@@ -259,7 +259,7 @@ public final class WorldMapScreen extends Screen implements ThemedScreen {
         }
     }
 
-    private void drawRegion(GuiGraphics g, WorldMapClient engine, int rx, int rz, boolean overview) {
+    private void drawRegion(GuiGraphicsExtractor g, WorldMapClient engine, int rx, int rz, boolean overview) {
         long key = RegionCache.key(rx, rz);
         net.minecraft.resources.Identifier texture;
         int source;

@@ -34,14 +34,13 @@ public abstract class VertexRenderingMixin {
      * builds an {@code invokedynamic} lambda that {@code VoxelShape.forAllEdges}
      * later invokes for every edge. The actual {@code int} color reaches the
      * vertex buffer via {@code VertexConsumer.setColor(int)} calls inside
-     * the lambda body ({@code method_62299}). We inject there and override
+     * the lambda body ({@code lambda$renderShape$0} in 26.1, {@code method_62299} before). We inject there and override
      * every {@code setColor} argument.
      */
     @ModifyArg(
-            method = "method_62299(Lcom/mojang/blaze3d/vertex/VertexConsumer;Lcom/mojang/blaze3d/vertex/PoseStack$Pose;DDDIFDDDDDD)V",
+            method = "lambda$renderShape$0(Lcom/mojang/blaze3d/vertex/VertexConsumer;Lcom/mojang/blaze3d/vertex/PoseStack$Pose;DDDIFDDDDDD)V",
             at = @At(value = "INVOKE",
-                    target = "Lcom/mojang/blaze3d/vertex/VertexConsumer;setColor(I)Lcom/mojang/blaze3d/vertex/VertexConsumer;"),
-            require = 1
+                    target = "Lcom/mojang/blaze3d/vertex/VertexConsumer;setColor(I)Lcom/mojang/blaze3d/vertex/VertexConsumer;")
     )
     private static int aurora$recolorOutlineSetColor(int originalColor) {
         return aurora$mapColor(originalColor);

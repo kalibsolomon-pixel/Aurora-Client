@@ -17,7 +17,7 @@ import com.aurora.client.util.HoverAnim;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 
@@ -131,7 +131,7 @@ public class KeybindSetting extends FeatureSetting {
      * read here so it can never disagree with the content pass.
      */
     @Override
-    public void renderGlassPass(GuiGraphics ctx, int x, int y, int width) {
+    public void renderGlassPass(GuiGraphicsExtractor ctx, int x, int y, int width) {
         if (!GlassSurface.passOpen()) return; // legacy frame order — render paints in place
         boolean disabled = reconcileDisabledState();
         glassPassFrame = GlassSurface.frame();
@@ -143,7 +143,7 @@ public class KeybindSetting extends FeatureSetting {
     }
 
     @Override
-    public void render(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
+    public void render(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {
         lastWidth = width;
         Font tr = Minecraft.getInstance().font;
         if (tr == null) return;
@@ -151,7 +151,7 @@ public class KeybindSetting extends FeatureSetting {
 
         // Keybind rows intentionally skip the label-hover description tooltip.
         if (compactRow != null) renderCompactLabel(ctx, x, y, mouseX, mouseY, AuroraTheme.TEXT_PRIMARY);
-        else ctx.drawString(tr, com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(tr,label,Math.max(0,width-BTN_W-38),0), x + 12, y + (CONTROL_H - tr.lineHeight) / 2,
+        else ctx.text(tr, com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(tr,label,Math.max(0,width-BTN_W-38),0), x + 12, y + (CONTROL_H - tr.lineHeight) / 2,
                 disabled ? AuroraTheme.TEXT_DIM : AuroraTheme.TEXT_PRIMARY, false);
 
         int btnX = controlX(x, width, BTN_W);
@@ -222,7 +222,7 @@ public class KeybindSetting extends FeatureSetting {
         labelText = AuroraFontRenderer.ellipsize(tr, labelText, BTN_W - 8, 3);
         int labelW = tr.width(labelText);
         int textCol = listening ? MaterialSurface.color(ThemeToken.ON_BACKGROUND) : textColor;
-        ctx.drawString(tr, labelText,
+        ctx.text(tr, labelText,
                 btnX + (BTN_W - labelW) / 2,
                 btnY + (BTN_H - tr.lineHeight) / 2 + 1,
                 textCol, false);

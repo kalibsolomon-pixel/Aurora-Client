@@ -12,7 +12,7 @@ import com.aurora.client.util.AuroraAnim;
 import com.aurora.client.util.HoverAnim;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 
 import java.util.HashMap;
@@ -108,7 +108,7 @@ public class Button extends Widget {
         return false;
     }
 
-    private void renderUnified(GuiGraphics g,float x,float y,float w,float h,int mx,int my) {
+    private void renderUnified(GuiGraphicsExtractor g,float x,float y,float w,float h,int mx,int my) {
         long now=System.nanoTime();
         if(!pilotMotionPrimed) { pilotHover.update(0,now); pilotPress.update(0,now); pilotMotionPrimed=true; }
         float hover=(float)pilotHover.update(!disabled && inBounds(mx,my,x,y,w,h) ? 1 : 0,now);
@@ -312,7 +312,7 @@ public class Button extends Widget {
      * {@link #renderOverlay}'s flat branch and {@code GlassSurface.paint}'s
      * tints).
      */
-    private static void blitSurfaceTemplate(GuiGraphics g, float x, float y, float w, float h,
+    private static void blitSurfaceTemplate(GuiGraphicsExtractor g, float x, float y, float w, float h,
                                             float radius, int kind) {
         long key = templateKey(w, h, kind);
         UiLayerCache cache = SURFACE_TEMPLATES.get(key);
@@ -358,7 +358,7 @@ public class Button extends Widget {
     }
 
     @Override
-    public void renderGlassPass(GuiGraphics g, float x, float y, float w, float h) {
+    public void renderGlassPass(GuiGraphicsExtractor g, float x, float y, float w, float h) {
         glassPassFrame = GlassSurface.frame();
         if(MaterialSurface.unified()) {
             glassPassDrew = !disabled && GlassSurface.card(g,x,y,w,h,ThemeManager.current().roundness().radiusSmall());
@@ -387,7 +387,7 @@ public class Button extends Widget {
     }
 
     @Override
-    public void renderOverlay(GuiGraphics g, float x, float y, float w, float h, int mouseX, int mouseY) {
+    public void renderOverlay(GuiGraphicsExtractor g, float x, float y, float w, float h, int mouseX, int mouseY) {
         if(MaterialSurface.unified()) { renderUnified(g,x,y,w,h,mouseX,mouseY); return; }
         Font tr = Minecraft.getInstance().font;
         if (tr == null) return;
@@ -554,7 +554,7 @@ public class Button extends Widget {
      * substitute), and the centered non-shadowed label. Consumers own all
      * interaction state; this method activates nothing.
      */
-    public static void paintFlatSecondary(GuiGraphics g, Font tr, Component label,
+    public static void paintFlatSecondary(GuiGraphicsExtractor g, Font tr, Component label,
                                            int x, int y, int w, int h,
                                            float hoverT, float scale,
                                            boolean focused, boolean active) {

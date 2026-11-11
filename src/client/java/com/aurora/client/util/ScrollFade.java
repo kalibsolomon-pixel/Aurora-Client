@@ -1,6 +1,6 @@
 package com.aurora.client.util;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 /**
  * Top-edge scroll fade (DESIGN_LANGUAGE §8): scrollable content fades into
@@ -63,7 +63,7 @@ public final class ScrollFade {
      * not what hides content (see the class javadoc for why a painted
      * cover cannot do that).
      */
-    public static void drawTop(GuiGraphics g, int x, int w, int boundaryY, int fadeH,
+    public static void drawTop(GuiGraphicsExtractor g, int x, int w, int boundaryY, int fadeH,
                                double scrollPos, int surfaceArgb) {
         double k = engagement(scrollPos, fadeH);
         if (k <= 0.0 || fadeH <= 0 || w <= 0) return;
@@ -82,7 +82,7 @@ public final class ScrollFade {
      * hard-cutting mid-tile. Engagement follows the REMAINING scroll distance,
      * so the fade disappears exactly as the last row settles into view.
      */
-    public static void drawBottom(GuiGraphics g, int x, int w, int boundaryY, int fadeH,
+    public static void drawBottom(GuiGraphicsExtractor g, int x, int w, int boundaryY, int fadeH,
                                   double remaining, int surfaceArgb) {
         double k = engagement(remaining, fadeH);
         if (k <= 0.0 || fadeH <= 0 || w <= 0) return;

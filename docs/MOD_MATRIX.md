@@ -26,3 +26,16 @@ In every set all 72 Aurora mixins applied, every feature reported as working, an
 Pinned versions and file hashes: `tools/matrix/pins-1.21.11.json`; `fetch.py` refuses a file whose SHA-512 differs from Modrinth's.
 
 Not covered: shader packs under Iris, multiplayer, a production launcher, and opening Aurora's screens with these mods (the reports measure in-world only).
+
+## Minecraft 26.1.2, 2026-11-11 (port branch)
+
+Dev client from `port/26.1`, Fabric Loader 0.20.1, Fabric API 0.155.3+26.1.2, a 26.1 copy of the owner's world and config; same machine and method as above. Pins: `tools/matrix/pins-26.1.2.json`.
+
+| Set | Mods | Renderer | Result | Aurora CPU per frame, run 3 (mean) |
+|---|---|---|---|---|
+| A | Sodium 0.9.2, Lithium 0.24.7, ImmediatelyFast 1.15.3, EntityCulling 1.11.3, Mod Menu 18.0.2, Text Placeholder API 3.0.0 | OpenGL | Pass | 0.195 ms |
+| B | Sodium 0.9.2, Iris 1.11.4 (no shader pack) | OpenGL | Pass | 0.195 ms |
+| C | VulkanMod 0.6.8 | Vulkan | Pass | 0.212 ms |
+
+All 73 mixins applied in every set, every feature reported as working, no Aurora warning or error was logged, and every boot closed normally. Run 2 of each set was slightly over budget (0.243 to 0.264 ms mean): with these mods the warm-up takes a little longer than on 1.21.11. Not checked: Aurora's glass under VulkanMod by eye (Minecraft's screenshot grab returns a black image under VulkanMod in the dev client; the glass ran one panel per frame without errors).
+

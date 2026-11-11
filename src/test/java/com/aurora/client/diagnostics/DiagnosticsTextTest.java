@@ -113,7 +113,8 @@ class DiagnosticsTextTest {
 
         assertTrue(report.contains("Features not fully working (1)\n- Zoom: Not working in this session: zooming the view."), report);
         assertTrue(report.contains("- Aurora in general: blurred glass"));
-        assertTrue(report.contains("Mixins not working (2 of 72)\n- GameRendererMixin could not be applied - injection point not found\n"), report);
+        int total = com.aurora.client.feature.FeatureCatalog.mixins().size();
+        assertTrue(report.contains("Mixins not working (2 of " + total + ")\n- GameRendererMixin could not be applied - injection point not found\n"), report);
         assertTrue(report.contains("Benchmark\n- not available: no frames were measured\n"));
         assertTrue(report.contains("Recent Aurora warnings and errors (1)\n- 12:00:00 ERROR Aurora: something\n"));
     }

@@ -6,7 +6,7 @@ import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.ui.util.UiLayerCache;
 import com.aurora.client.util.HoverAnim;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -148,7 +148,7 @@ public class ColorSwatch extends Widget {
     }
 
     @Override
-    public void renderOverlay(GuiGraphics g, float x, float y, float w, float h, int mouseX, int mouseY) {
+    public void renderOverlay(GuiGraphicsExtractor g, float x, float y, float w, float h, int mouseX, int mouseY) {
         x=Math.round(x); y=Math.round(y); w=Math.round(w); h=Math.round(h);
         int color = getter.getAsInt();
         float radius = Math.min(h / 2f, ThemeManager.current().roundness().radiusSmall());
@@ -246,7 +246,7 @@ public class ColorSwatch extends Widget {
         }
     }
 
-    private static void blitSwatchTemplate(GuiGraphics g, float x, float y, float w, float h,
+    private static void blitSwatchTemplate(GuiGraphicsExtractor g, float x, float y, float w, float h,
                                            int color, float radius, boolean checkerboard) {
         int scale = Math.max(1, (int) Minecraft.getInstance().getWindow().getGuiScale());
         long key = ThemeManager.generation() * 1_000_003L
@@ -306,7 +306,7 @@ public class ColorSwatch extends Widget {
      * {@code RenderUtil.drawRoundedRectAA}, so the checker silhouette matches
      * the fill exactly.
      */
-    private static void drawCheckerboard(GuiGraphics g, float x, float y, float w, float h, float radius) {
+    private static void drawCheckerboard(GuiGraphicsExtractor g, float x, float y, float w, float h, float radius) {
         int cell = 4;
         float r = Math.min(radius, Math.min(w, h) / 2f);
         float cyTop = y + r;

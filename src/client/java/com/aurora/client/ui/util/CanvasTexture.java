@@ -3,7 +3,7 @@ package com.aurora.client.ui.util;
 import com.aurora.client.AuroraClient;
 import com.mojang.blaze3d.platform.NativeImage;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.resources.Identifier;
@@ -15,7 +15,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * "resolve once, cache, blit" fix for the per-cell fill cost.
  *
  * <p><b>Why this exists (measured 2026-08-29):</b> the editor used to
- * submit every grid cell as individual {@code GuiGraphics.fill()} calls
+ * submit every grid cell as individual {@code GuiGraphicsExtractor.fill()} calls
  * (checker background + on-overlay + two 1-px border strips = 4 fills per
  * cell, every frame). At the 33×33 preset that is 4,356 fill submissions
  * per frame, and each submission allocates a fresh
@@ -130,7 +130,7 @@ public final class CanvasTexture {
     }
 
     /** One textured draw of the cached grid at logical position (x, y). */
-    public void blit(GuiGraphics g, int x, int y, int gridW, int gridH, int cellPx) {
+    public void blit(GuiGraphicsExtractor g, int x, int y, int gridW, int gridH, int cellPx) {
         if (tex == null) return;
         int w = gridW * cellPx;
         int h = gridH * cellPx;

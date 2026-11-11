@@ -5,7 +5,7 @@ import com.aurora.client.feature.impl.TotemPopFeature;
 import com.aurora.client.util.CachedValue;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -79,7 +79,7 @@ public class TotemPopModule extends HudModule {
     }
 
     @Override
-    protected void renderContent(GuiGraphics ctx, Minecraft client, int x, int y) {
+    protected void renderContent(GuiGraphicsExtractor ctx, Minecraft client, int x, int y) {
         if (!AuroraConfig.get().totemPopEnabled) return;
         Font tr = client.font;
         if (tr == null) return;
@@ -87,7 +87,7 @@ public class TotemPopModule extends HudModule {
         int lh = tr.lineHeight + 1;
         List<String> lines = linesCache.get();
         for (int i = 0; i < lines.size(); i++) {
-            ctx.drawString(tr, lines.get(i), x, y + i * lh, color, false);
+            ctx.text(tr, lines.get(i), x, y + i * lh, color, false);
         }
     }
 

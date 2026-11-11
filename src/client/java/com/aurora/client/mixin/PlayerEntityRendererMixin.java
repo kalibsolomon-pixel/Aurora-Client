@@ -39,8 +39,7 @@ public abstract class PlayerEntityRendererMixin {
 
     @Inject(
             method = "extractRenderState(Lnet/minecraft/world/entity/Avatar;Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;F)V",
-            at = @At("TAIL"),
-            require = 1
+            at = @At("TAIL")
     )
     private void aurora$decorateNameTag(Avatar entity, AvatarRenderState state, float partial, CallbackInfo ci) {
         if (state == null || state.nameTag == null) return;

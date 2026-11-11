@@ -5,7 +5,7 @@ import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.ui.util.RenderUtil;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 
 /**
@@ -34,7 +34,7 @@ public final class Toast {
     }
 
     /** Draw the toast if one is active; call once per frame after the screen's content. */
-    public void render(GuiGraphics g, Font font, int screenW, int screenH, int radius) {
+    public void render(GuiGraphicsExtractor g, Font font, int screenW, int screenH, int radius) {
         if (text == null || System.currentTimeMillis() >= untilMs) return;
         long remaining = untilMs - System.currentTimeMillis();
         int alpha = (int) Math.min(255, remaining > FADE_TAIL_MS ? BASE_ALPHA : remaining * BASE_ALPHA / FADE_TAIL_MS);

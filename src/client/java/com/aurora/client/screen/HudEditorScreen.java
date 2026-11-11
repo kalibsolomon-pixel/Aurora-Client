@@ -15,7 +15,7 @@ import com.aurora.client.ui.component.Widget;
 import java.util.HashMap;
 import java.util.Map;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
@@ -192,13 +192,13 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
      * backdrop in any context where glass cannot engage.
      */
     @Override
-    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float delta) {
+    public void extractBackground(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
         if (this.minecraft != null && this.minecraft.level != null) return;
         com.aurora.client.ui.component.GlassSurface.renderMenuPanorama(this,g,delta);
     }
 
     @Override
-    public void render(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
+    public void extractRenderState(GuiGraphicsExtractor ctx, int mouseX, int mouseY, float delta) {
         // Themed overlay dim, alpha-scaled to this screen's original 0x60
         // strength (full-strength OVERLAY_DIM is 0x99).
         // Keep the editing canvas visible; the shared controls own their opaque faces.
@@ -212,7 +212,7 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
             drawOutlines(ctx, mouseX, mouseY);
         }
 
-        super.render(ctx, mouseX, mouseY, delta);
+        super.extractRenderState(ctx, mouseX, mouseY, delta);
 
         // Instructions: one compact floating pill above the hotbar instead of a
         // full-width line across the top that collided with corner modules.
@@ -307,7 +307,7 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
     private boolean pivotIsRight()  { return grabbedTopLeft   || grabbedBottomLeft; }
     private boolean pivotIsBottom() { return grabbedTopLeft   || grabbedTopRight; }
 
-    private void drawOutlines(GuiGraphics ctx, int mouseX, int mouseY) {
+    private void drawOutlines(GuiGraphicsExtractor ctx, int mouseX, int mouseY) {
         HudModuleManager mgr = AuroraClient.modules();
         if (mgr == null) return;
 
@@ -390,17 +390,17 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
                 labelY = y - labelH - 3;
             }
             ctx.fill(labelX, labelY, labelX + labelW, labelY + labelH, labelBg());
-            ctx.drawString(this.font, label, labelX + 4, labelY + 3, MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
+            ctx.text(this.font, label, labelX + 4, labelY + 3, MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
         }
     }
 
-    private static void drawCornerHandle(GuiGraphics ctx, int cx, int cy) {
+    private static void drawCornerHandle(GuiGraphicsExtractor ctx, int cx, int cy) {
         // A dark 1px ring keeps the white handle legible over bright terrain/sky.
         ctx.fill(cx - 1, cy - 1, cx + 5, cy + 5, 0xA0000000);
         ctx.fill(cx, cy, cx + 4, cy + 4, CORNER_HANDLE);
     }
 
-    private void drawXIcon(GuiGraphics ctx, int x, int y, float hoverT) {
+    private void drawXIcon(GuiGraphicsExtractor ctx, int x, int y, float hoverT) {
         // Filled background square + diagonal cross "X" on top. C-4: the
         // canonical hover eases the background's alpha (0xC0 → 0xF0) —
         // pointer-only, symmetric 140 ms via the icon action.
@@ -414,7 +414,7 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
         }
     }
 
-    private void drawLockIcon(GuiGraphics ctx, int x, int y) {
+    private void drawLockIcon(GuiGraphicsExtractor ctx, int x, int y) {
         // Crude lock icon: filled body + shackle.
         ctx.fill(x, y, x + LOCK_ICON_SIZE, y + LOCK_ICON_SIZE, lockIconBg());
         // Body
@@ -425,7 +425,7 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
         ctx.fill(x + LOCK_ICON_SIZE - 3, y + 2, x + LOCK_ICON_SIZE - 2, y + 4, lockIconFg());
     }
 
-    private static void outline(GuiGraphics ctx, int x1, int y1, int x2, int y2, int color) {
+    private static void outline(GuiGraphicsExtractor ctx, int x1, int y1, int x2, int y2, int color) {
         ctx.fill(x1, y1, x2, y1 + 1, color);
         ctx.fill(x1, y2 - 1, x2, y2, color);
         ctx.fill(x1, y1, x1 + 1, y2, color);

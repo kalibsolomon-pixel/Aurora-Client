@@ -52,7 +52,7 @@ public final class WorldMapClient {
         ClientChunkEvents.CHUNK_LOAD.register((level, chunk) -> {
             WorldMapClient wm = instance;
             if (captureEnabled && wm.level == level)
-                wm.pending.add(chunk.getPos().toLong());
+                wm.pending.add(chunk.getPos().pack());
         });
         ClientPlayConnectionEvents.DISCONNECT.register((handler, mc) -> { instance.leave(); MapIdentity.clear(); });
         ClientLifecycleEvents.CLIENT_STOPPING.register(mc -> instance.shutdown());
@@ -61,7 +61,7 @@ public final class WorldMapClient {
     public static void onBlockChanged(ClientLevel level, BlockPos pos) {
         WorldMapClient wm = instance;
         if (captureEnabled && wm != null && wm.level == level)
-            wm.pending.add(ChunkPos.asLong(pos.getX() >> 4, pos.getZ() >> 4));
+            wm.pending.add(ChunkPos.pack(pos.getX() >> 4, pos.getZ() >> 4));
     }
 
     public static void tick(Minecraft mc) {
@@ -102,7 +102,7 @@ public final class WorldMapClient {
                 for (int z = -ring; z <= ring; z++) for (int x = -ring; x <= ring; x++) {
                     if (Math.max(Math.abs(x), Math.abs(z)) != ring) continue;
                     if (mc.level.getChunkSource().hasChunk(cx + x, cz + z))
-                        wm.pending.add(ChunkPos.asLong(cx + x, cz + z));
+                        wm.pending.add(ChunkPos.pack(cx + x, cz + z));
                 }
             }
         }

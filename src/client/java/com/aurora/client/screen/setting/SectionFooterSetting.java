@@ -3,7 +3,7 @@ package com.aurora.client.screen.setting;
 import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 
@@ -58,14 +58,14 @@ public class SectionFooterSetting extends FeatureSetting {
     public int height() { return baseHeight(); }
 
     @Override
-    public void render(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
+    public void render(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {
         Font tr = Minecraft.getInstance().font;
         if (tr == null) return;
         lastWidth = width;
         ensureLines(tr, width);
         int ty = y + PAD_ABOVE;
         for (FormattedCharSequence line : cachedLines) {
-            ctx.drawString(tr, line, x + LABEL_PAD, ty, AuroraTheme.TEXT_DIM, false);
+            ctx.text(tr, line, x + LABEL_PAD, ty, AuroraTheme.TEXT_DIM, false);
             ty += tr.lineHeight + 1;
         }
     }

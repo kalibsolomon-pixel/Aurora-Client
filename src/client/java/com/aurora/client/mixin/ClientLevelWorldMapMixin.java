@@ -27,7 +27,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(ClientLevel.class)
 public abstract class ClientLevelWorldMapMixin {
 
-    @Inject(method = "setBlocksDirty", at = @At("HEAD"), require = 1)
+    @Inject(method = "setBlocksDirty", at = @At("HEAD"))
     private void aurora$onBlocksDirty(BlockPos pos, BlockState oldState, BlockState newState,
                                       CallbackInfo ci) {
         WorldMapClient.onBlockChanged((ClientLevel) (Object) this, pos);

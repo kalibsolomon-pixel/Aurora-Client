@@ -9,7 +9,7 @@ import com.aurora.client.util.AuroraShapes;
 import com.aurora.client.util.AuroraTheme;
 import com.aurora.client.util.ColorEntryHelper;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 
@@ -110,7 +110,7 @@ public class ColorSetting extends FeatureSetting {
     @Override public int height() { return baseHeight(); }
 
     @Override
-    public void render(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
+    public void render(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {
         var tr = Minecraft.getInstance().font;
         boolean disabled = isDisabled();
         if (!expanded) { // a collapsed row owns no editing-surface memory
@@ -359,7 +359,7 @@ public class ColorSetting extends FeatureSetting {
         return 0xFF000000 | ((r / 255) << 16) | ((g / 255) << 8) | (b / 255);
     }
 
-    private void drawSatLitPadCached(GuiGraphics ctx) {
+    private void drawSatLitPadCached(GuiGraphicsExtractor ctx) {
         int scale = guiScale();
         com.aurora.client.ui.util.UiLayerCache.drawSurface(ctx, padSurface,
                 scale * 31L ^ bits(h), padX, padY, PAD_SIZE, PAD_SIZE, () -> {
@@ -370,7 +370,7 @@ public class ColorSetting extends FeatureSetting {
                 });
     }
 
-    private void drawHueStrip(GuiGraphics ctx) {
+    private void drawHueStrip(GuiGraphicsExtractor ctx) {
         int scale = guiScale();
         com.aurora.client.ui.util.UiLayerCache.drawSurface(ctx, hueSurface,
                 scale * 31L, hueX, hueY, STRIP_W, PAD_SIZE, () -> {
@@ -380,7 +380,7 @@ public class ColorSetting extends FeatureSetting {
                 });
     }
 
-    private void drawAlphaStrip(GuiGraphics ctx) {
+    private void drawAlphaStrip(GuiGraphicsExtractor ctx) {
         int scale = guiScale();
         com.aurora.client.ui.util.UiLayerCache.drawSurface(ctx, alphaSurface,
                 scale * 31L ^ bits(h) * 31L ^ bits(s) * 17L ^ bits(l), alphaX, alphaY, STRIP_W, PAD_SIZE, () -> {
@@ -393,7 +393,7 @@ public class ColorSetting extends FeatureSetting {
                 });
     }
 
-    private static void drawCheckerboard(GuiGraphics ctx, int x, int y, int w, int h) {
+    private static void drawCheckerboard(GuiGraphicsExtractor ctx, int x, int y, int w, int h) {
         int cell = 4;
         for (int dy = 0; dy < h; dy += cell) {
             for (int dx = 0; dx < w; dx += cell) {

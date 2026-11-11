@@ -259,7 +259,7 @@ class IconActionRolloutTest {
     @Test
     void effectRowRemoveUsesThePrimitiveUnderContainerOwnership() {
         String row = src(EFFECT_ROW);
-        assertFalse(row.contains("drawString(tr, \"x\""), "the text x is gone");
+        assertFalse(row.contains("drawString(tr, \"x\"") || row.contains("text(tr, \"x\""), "the text x is gone");
         assertTrue(row.contains("the container's icon action (C-4)"),
                 "the row documents where its remove control went");
 

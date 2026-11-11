@@ -2,7 +2,7 @@ package com.aurora.client.ui.util;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 import java.util.List;
@@ -13,7 +13,7 @@ public class RenderUtil {
      * A destination for rasterized integer-pixel rectangles. The mod's
      * high-res AA engine rasterizes per <b>physical device pixel</b>; this
      * interface lets the exact same row/coverage math write either into a
-     * live {@link GuiGraphics} (screen path) or into an off-screen cache
+     * live {@link GuiGraphicsExtractor} (screen path) or into an off-screen cache
      * buffer ({@code UiLayerCache}) â€” one rasterizer, two destinations, no
      * quality difference.
      */
@@ -23,20 +23,20 @@ public class RenderUtil {
     }
 
     /**
-     * Live-GuiGraphics sink. Folds into the pose's {@code 1/guiScale} frame
+     * Live-GuiGraphicsExtractor sink. Folds into the pose's {@code 1/guiScale} frame
      * the AA draw methods set up, so physical ints land on exact device
      * pixels exactly as before this was factored out.
      */
     private static final class GuiRectSink implements RectSink {
-        private final GuiGraphics graphics;
-        GuiRectSink(GuiGraphics graphics) { this.graphics = graphics; }
+        private final GuiGraphicsExtractor graphics;
+        GuiRectSink(GuiGraphicsExtractor graphics) { this.graphics = graphics; }
         @Override public void rect(int x1, int y1, int x2, int y2, int argb) {
             FILLS_SUBMITTED.incrementAndGet();
             graphics.fill(x1, y1, x2, y2, argb);
         }
     }
 
-    private static RectSink guiSink(GuiGraphics graphics) {
+    private static RectSink guiSink(GuiGraphicsExtractor graphics) {
         RectSink capture = CAPTURE_SINK.get();
         return capture != null ? capture : new GuiRectSink(graphics);
     }
@@ -84,12 +84,12 @@ public class RenderUtil {
      * (checkerboards, gradient cells): during a capture pass the rect goes
      * to the active sink in physical pixels ({@code ·guiScale}; integer
      * input, so device alignment is exact), live it is an ordinary
-     * {@link GuiGraphics#fill}. Output is identical through both
+     * {@link GuiGraphicsExtractor#fill}. Output is identical through both
      * destinations — a GUI fill at integer logical coordinates and a
      * sink-rect at the scaled integers cover the same device pixels, and a
      * 1:1 blit of the captured buffer lands them back on those pixels.
      */
-    public static void fillLogical(GuiGraphics g, int x1, int y1, int x2, int y2, int argb) {
+    public static void fillLogical(GuiGraphicsExtractor g, int x1, int y1, int x2, int y2, int argb) {
         RectSink capture = CAPTURE_SINK.get();
         if (capture == null) {
             g.fill(x1, y1, x2, y2, argb);
@@ -176,7 +176,7 @@ public class RenderUtil {
 
     /** Filled triangle using the same physical-pixel coverage spans as rounded shapes.
      * No mesh, shader or texture allocation; useful for continuously turning indicators. */
-    public static void drawTriangleAA(GuiGraphics g, float ax, float ay, float bx, float by,
+    public static void drawTriangleAA(GuiGraphicsExtractor g, float ax, float ay, float bx, float by,
                                       float cx, float cy, int color) {
         float scale = Minecraft.getInstance().getWindow().getGuiScale();
         ax *= scale; ay *= scale; bx *= scale; by *= scale; cx *= scale; cy *= scale;
@@ -208,7 +208,7 @@ public class RenderUtil {
      * its alpha channel via {@link #fillAARow}, producing a smooth curve
      * instead of a jagged integer staircase.
      */
-    public static void drawRoundedRectAA(GuiGraphics graphics, float x, float y, float width, float height, float radius, int color) {
+    public static void drawRoundedRectAA(GuiGraphicsExtractor graphics, float x, float y, float width, float height, float radius, int color) {
         if (width <= 0 || height <= 0) return;
 
                 float scale = (float) Minecraft.getInstance().getWindow().getGuiScale();
@@ -275,7 +275,7 @@ public class RenderUtil {
      * for toggle knobs and other shapes that must stay fully round
      * regardless of the theme's corner-roundness setting.
      */
-    public static void drawCircleAA(GuiGraphics graphics, float x, float y, float width, float height, int color) {
+    public static void drawCircleAA(GuiGraphicsExtractor graphics, float x, float y, float width, float height, int color) {
         if (width <= 0 || height <= 0) return;
 
         float scale = (float) Minecraft.getInstance().getWindow().getGuiScale();
@@ -310,7 +310,7 @@ public class RenderUtil {
      * into the surface â€” no faceted staircase on small radii. Recommended
      * for the search bar focus ring and any thin-stroked control.
      */
-    public static void drawRoundedOutlineAA(GuiGraphics graphics, float x, float y, float width, float height, float radius, float thickness, int color) {
+    public static void drawRoundedOutlineAA(GuiGraphicsExtractor graphics, float x, float y, float width, float height, float radius, float thickness, int color) {
         if (width <= 0 || height <= 0) return;
 
                 float scale = (float) Minecraft.getInstance().getWindow().getGuiScale();
@@ -395,7 +395,7 @@ public class RenderUtil {
      * Draws a filled squircle (superellipse with exponent 5.0) with physical-pixel resolution matching.
      * Uses a single-pass row-by-row horizontal span render to prevent overlap artifacts and double-blending lines.
      */
-    public static void drawSquircle(GuiGraphics graphics, float x, float y, float width, float height, float radius, int color) {
+    public static void drawSquircle(GuiGraphicsExtractor graphics, float x, float y, float width, float height, float radius, int color) {
         if (width <= 0 || height <= 0) return;
 
                 float scale = (float) Minecraft.getInstance().getWindow().getGuiScale();
@@ -453,7 +453,7 @@ public class RenderUtil {
     /**
      * Draws an outlined squircle (superellipse with exponent 5.0) with physical-pixel resolution matching.
      */
-    public static void drawSquircleOutline(GuiGraphics graphics, float x, float y, float width, float height, float radius, float thickness, int color) {
+    public static void drawSquircleOutline(GuiGraphicsExtractor graphics, float x, float y, float width, float height, float radius, float thickness, int color) {
         if (width <= 0 || height <= 0) return;
 
                 float scale = (float) Minecraft.getInstance().getWindow().getGuiScale();
@@ -538,11 +538,11 @@ public class RenderUtil {
     /**
      * Helper to render word-wrapped string text within a specified bounding width.
      */
-    public static void drawWordWrap(Font font, GuiGraphics graphics, String text, float x, float y, float maxWidth, int color) {
+    public static void drawWordWrap(Font font, GuiGraphicsExtractor graphics, String text, float x, float y, float maxWidth, int color) {
         List<FormattedCharSequence> lines = font.split(Component.literal(text), (int) maxWidth);
         float currentY = y;
         for (FormattedCharSequence line : lines) {
-            graphics.drawString(font, line, (int) x, (int) currentY, color, false);
+            graphics.text(font, line, (int) x, (int) currentY, color, false);
             currentY += font.lineHeight + 2;
         }
     }
@@ -550,24 +550,24 @@ public class RenderUtil {
     /**
      * Helper to render word-wrapped string text with a capped maximum line count.
      */
-    public static void drawWordWrapMaxLines(Font font, GuiGraphics graphics, String text, float x, float y, float maxWidth, int maxLines, int color) {
+    public static void drawWordWrapMaxLines(Font font, GuiGraphicsExtractor graphics, String text, float x, float y, float maxWidth, int maxLines, int color) {
         List<FormattedCharSequence> lines = font.split(Component.literal(text), (int) maxWidth);
         float currentY = y;
         int count = 0;
         for (FormattedCharSequence line : lines) {
             if (count >= maxLines) break;
-            graphics.drawString(font, line, (int) x, (int) currentY, color, false);
+            graphics.text(font, line, (int) x, (int) currentY, color, false);
             currentY += font.lineHeight + 2;
             count++;
         }
     }
 
     /** Centered measured text, with breaks only between whole words. */
-    public static void drawCenteredLines(Font font, GuiGraphics graphics, java.util.List<String> lines,
+    public static void drawCenteredLines(Font font, GuiGraphicsExtractor graphics, java.util.List<String> lines,
                                           float x, float y, float width, int color) {
         for (int i = 0; i < lines.size(); i++) {
             String line = lines.get(i);
-            graphics.drawString(font, line, Math.round(x + (width - font.width(line)) / 2),
+            graphics.text(font, line, Math.round(x + (width - font.width(line)) / 2),
                     Math.round(y + i * (font.lineHeight + 2)), color, false);
         }
     }

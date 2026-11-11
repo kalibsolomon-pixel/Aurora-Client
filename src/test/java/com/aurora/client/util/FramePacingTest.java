@@ -119,6 +119,7 @@ class FramePacingTest {
         assertTrue(post.contains("FramePacing.INSTANCE.postSwap"));
         assertEquals(1, post.split("ci.cancel\\(\\)", -1).length - 1);
         assertTrue(post.indexOf("if (!wait.cancelNative()) return;") < post.indexOf("ci.cancel()"));
-        assertTrue(post.contains("require = 1"), "A missing limiter interception must fail visibly");
+        // Not optional, so InjectionCheck reports a missed interception (ADR 0004).
+        assertFalse(post.contains("require = 0"), "A missing limiter interception must fail visibly");
     }
 }

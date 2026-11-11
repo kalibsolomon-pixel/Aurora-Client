@@ -1,6 +1,7 @@
 package com.aurora.client.util;
 
 import com.mojang.blaze3d.pipeline.BlendFunction;
+import com.mojang.blaze3d.pipeline.ColorTargetState;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.platform.DestFactor;
 import com.mojang.blaze3d.platform.SourceFactor;
@@ -47,11 +48,12 @@ public final class GlintRenderTypes {
                 .withVertexShader(vanilla.getVertexShader())
                 .withFragmentShader(Identifier.fromNamespaceAndPath("aurora", "core/masked_glint"))
                 .withVertexFormat(vanilla.getVertexFormat(), vanilla.getVertexFormatMode())
-                .withDepthTestFunction(vanilla.getDepthTestFunction())
-                .withDepthWrite(vanilla.isWriteDepth()).withCull(vanilla.isCull())
-                .withColorWrite(vanilla.isWriteColor(), vanilla.isWriteAlpha())
-                .withBlend(new BlendFunction(SourceFactor.SRC_ALPHA, DestFactor.ONE_MINUS_SRC_ALPHA,
-                        SourceFactor.ZERO, DestFactor.ONE));
+                // Vanilla glint's depth test, depth write, cull and write mask; Aurora's own blend.
+                .withDepthStencilState(java.util.Optional.ofNullable(vanilla.getDepthStencilState()))
+                .withCull(vanilla.isCull())
+                .withColorTargetState(new ColorTargetState(java.util.Optional.of(new BlendFunction(
+                        SourceFactor.SRC_ALPHA, DestFactor.ONE_MINUS_SRC_ALPHA, SourceFactor.ZERO, DestFactor.ONE)),
+                        vanilla.getColorTargetState().writeMask()));
         for (String sampler : vanilla.getSamplers()) builder.withSampler(sampler);
         for (var uniform : vanilla.getUniforms()) builder.withUniform(uniform.name(), uniform.type());
         return builder.build();

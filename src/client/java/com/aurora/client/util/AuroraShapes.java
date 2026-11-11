@@ -1,6 +1,6 @@
 package com.aurora.client.util;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.util.Mth;
 
 /**
@@ -9,7 +9,7 @@ import net.minecraft.util.Mth;
  * <p>All filled panels and outlines render as <em>chamfered rectangles</em>
  * — clean axis-aligned rectangles with 45° diagonal cuts at each corner.
  * No rounded-corner texture, no GPU sampling, just stacked
- * {@link GuiGraphics#fill} / {@link GuiGraphics#fillGradient} calls. This
+ * {@link GuiGraphicsExtractor#fill} / {@link GuiGraphicsExtractor#fillGradient} calls. This
  * is the simplest possible geometry that still reads as "deliberately
  * styled" rather than a raw rectangle, and produces pixel-perfect crisp
  * edges at every UI scale.
@@ -27,7 +27,7 @@ import net.minecraft.util.Mth;
  *
  * <p>For gradients, the per-row color is computed by linear interpolation
  * between the top stop and the bottom stop. The body is drawn as one
- * single {@link GuiGraphics#fillGradient} call (cheap and smooth on the
+ * single {@link GuiGraphicsExtractor#fillGradient} call (cheap and smooth on the
  * GPU), and the chamfer rows pick discrete lerped colors per row — the
  * eye can't perceive the discretization across 4–10 rows of chamfer.
  *
@@ -43,11 +43,11 @@ public final class AuroraShapes {
     //  Solid filled chamfered rect
     // ============================================================
 
-    public static void panel(GuiGraphics ctx, int x, int y, int w, int h, int tint) {
+    public static void panel(GuiGraphicsExtractor ctx, int x, int y, int w, int h, int tint) {
         panel(ctx, x, y, w, h, tint, AuroraTheme.RADIUS);
     }
 
-    public static void panel(GuiGraphics ctx, int x, int y, int w, int h, int tint, int radius) {
+    public static void panel(GuiGraphicsExtractor ctx, int x, int y, int w, int h, int tint, int radius) {
         if (w <= 0 || h <= 0) return;
         chamferedFill(ctx, x, y, w, h, clampChamfer(radius, w, h), tint);
     }
@@ -56,12 +56,12 @@ public final class AuroraShapes {
     //  Two-color vertical gradient chamfered rect
     // ============================================================
 
-    public static void panelGradient(GuiGraphics ctx, int x, int y, int w, int h,
+    public static void panelGradient(GuiGraphicsExtractor ctx, int x, int y, int w, int h,
                                      int topColor, int botColor) {
         panelGradient(ctx, x, y, w, h, topColor, botColor, AuroraTheme.RADIUS);
     }
 
-    public static void panelGradient(GuiGraphics ctx, int x, int y, int w, int h,
+    public static void panelGradient(GuiGraphicsExtractor ctx, int x, int y, int w, int h,
                                      int topColor, int botColor, int radius) {
         if (w <= 0 || h <= 0) return;
         chamferedGradientFill(ctx, x, y, w, h, clampChamfer(radius, w, h), topColor, botColor);
@@ -69,14 +69,14 @@ public final class AuroraShapes {
 
     /** @deprecated old name; forwards to {@link #panelGradient}. */
     @Deprecated
-    public static void gemPanel(GuiGraphics ctx, int x, int y, int w, int h,
+    public static void gemPanel(GuiGraphicsExtractor ctx, int x, int y, int w, int h,
                                 int topTint, int botTint) {
         panelGradient(ctx, x, y, w, h, topTint, botTint, AuroraTheme.RADIUS);
     }
 
     /** @deprecated old name; forwards to {@link #panelGradient}. */
     @Deprecated
-    public static void gemPanel(GuiGraphics ctx, int x, int y, int w, int h,
+    public static void gemPanel(GuiGraphicsExtractor ctx, int x, int y, int w, int h,
                                 int topTint, int botTint, int radius) {
         panelGradient(ctx, x, y, w, h, topTint, botTint, radius);
     }
@@ -85,11 +85,11 @@ public final class AuroraShapes {
     //  1-px chamfered outline
     // ============================================================
 
-    public static void outline(GuiGraphics ctx, int x, int y, int w, int h, int color) {
+    public static void outline(GuiGraphicsExtractor ctx, int x, int y, int w, int h, int color) {
         outline(ctx, x, y, w, h, color, AuroraTheme.RADIUS);
     }
 
-    public static void outline(GuiGraphics ctx, int x, int y, int w, int h, int color, int radius) {
+    public static void outline(GuiGraphicsExtractor ctx, int x, int y, int w, int h, int color, int radius) {
         if (w <= 0 || h <= 0) return;
         chamferedOutline(ctx, x, y, w, h, clampChamfer(radius, w, h), color);
     }
@@ -110,11 +110,11 @@ public final class AuroraShapes {
      * emit one {@code ctx.fill}: span = {@code [x + edge, x + w - edge]}
      * where {@code edge = cornerLeftEdge(c, row)}. Net cost: 1–2 fills.
      */
-    public static void topHighlight(GuiGraphics ctx, int x, int y, int w, int h, int color) {
+    public static void topHighlight(GuiGraphicsExtractor ctx, int x, int y, int w, int h, int color) {
         topHighlight(ctx, x, y, w, h, color, AuroraTheme.RADIUS);
     }
 
-    public static void topHighlight(GuiGraphics ctx, int x, int y, int w, int h, int color, int radius) {
+    public static void topHighlight(GuiGraphicsExtractor ctx, int x, int y, int w, int h, int color, int radius) {
         if (w <= 0 || h <= 0) return;
         int c = clampChamfer(radius, w, h);
         int rows = Math.min(HIGHLIGHT_THICKNESS, h);
@@ -131,7 +131,7 @@ public final class AuroraShapes {
         }
     }
 
-    public static void panelWithBorder(GuiGraphics ctx, int x, int y, int w, int h,
+    public static void panelWithBorder(GuiGraphicsExtractor ctx, int x, int y, int w, int h,
                                        int fillTint, int borderTint) {
         panel(ctx, x, y, w, h, fillTint);
         outline(ctx, x, y, w, h, borderTint);
@@ -152,17 +152,17 @@ public final class AuroraShapes {
      * <p>Call this <em>before</em> drawing the panel itself, at the same
      * {@code (x, y, w, h)}.
      */
-    public static void dropShadow(GuiGraphics ctx, int x, int y, int w, int h, int radius) {
+    public static void dropShadow(GuiGraphicsExtractor ctx, int x, int y, int w, int h, int radius) {
         dropShadow(ctx, x, y, w, h, radius, 1f);
     }
 
     /**
      * Alpha-scaled drop shadow — the same ramp as
-     * {@link #dropShadow(GuiGraphics, int, int, int, int, int)} with every
+     * {@link #dropShadow(GuiGraphicsExtractor, int, int, int, int, int)} with every
      * layer premultiplied by {@code alphaScale} (0..1), for elements that
      * fade in and out.
      */
-    public static void dropShadow(GuiGraphics ctx, int x, int y, int w, int h,
+    public static void dropShadow(GuiGraphicsExtractor ctx, int x, int y, int w, int h,
                                   int radius, float alphaScale) {
         if (w <= 0 || h <= 0 || alphaScale <= 0f) return;
         int c = clampChamfer(radius, w, h);
@@ -181,7 +181,7 @@ public final class AuroraShapes {
     }
 
     /** Default drop shadow at {@link AuroraTheme#RADIUS}. */
-    public static void dropShadow(GuiGraphics ctx, int x, int y, int w, int h) {
+    public static void dropShadow(GuiGraphicsExtractor ctx, int x, int y, int w, int h) {
         dropShadow(ctx, x, y, w, h, AuroraTheme.RADIUS);
     }
 
@@ -200,7 +200,7 @@ public final class AuroraShapes {
      * — its asymmetric offset reads as "lit from above" in the same
      * material language as iOS UI.
      */
-    public static void edgeShadow(GuiGraphics ctx, int x, int y, int w, int h, int radius) {
+    public static void edgeShadow(GuiGraphicsExtractor ctx, int x, int y, int w, int h, int radius) {
         if (w <= 0 || h <= 0) return;
         // Four expanding belts. Chamfer grows with each layer so the
         // outer rings keep tracing the same silhouette.
@@ -232,7 +232,7 @@ public final class AuroraShapes {
      * unused — the strips run edge-to-edge and the corner chamfer of
      * the surrounding panel/outline does the corner masking visually.
      */
-    public static void innerShadow(GuiGraphics ctx, int x, int y, int w, int h, int radius) {
+    public static void innerShadow(GuiGraphicsExtractor ctx, int x, int y, int w, int h, int radius) {
         if (w <= 4 || h <= 4) return;
         int d = Math.min(INNER_SHADOW_DEPTH, Math.min(w, h) / 2);
         if (d <= 0) return;
@@ -267,7 +267,7 @@ public final class AuroraShapes {
     }
 
     /** Default inner shadow at {@link AuroraTheme#RADIUS}. */
-    public static void innerShadow(GuiGraphics ctx, int x, int y, int w, int h) {
+    public static void innerShadow(GuiGraphicsExtractor ctx, int x, int y, int w, int h) {
         innerShadow(ctx, x, y, w, h, AuroraTheme.RADIUS);
     }
 
@@ -291,13 +291,13 @@ public final class AuroraShapes {
      * (chamfer = radius / 2) which read as visibly faceted on slider
      * thumbs and toggle knobs at 1440p / GUI scale 3.
      */
-    public static void knob(GuiGraphics ctx, int cx, int cy, int radius, int tint) {
+    public static void knob(GuiGraphicsExtractor ctx, int cx, int cy, int radius, int tint) {
         if (radius <= 0) return;
         int diameter = radius * 2;
         chamferedFill(ctx, cx - radius, cy - radius, diameter, diameter, radius, tint);
     }
 
-    public static void knob(GuiGraphics ctx, int cx, int cy, int tint) {
+    public static void knob(GuiGraphicsExtractor ctx, int cx, int cy, int tint) {
         knob(ctx, cx, cy, AuroraTheme.KNOB_RADIUS, tint);
     }
 
@@ -319,7 +319,7 @@ public final class AuroraShapes {
      * so the animation reads as continuous motion rather than a slow
      * stepwise drift.
      */
-    public static void auroraBackdrop(GuiGraphics ctx, int x1, int y1, int x2, int y2, double timeT) {
+    public static void auroraBackdrop(GuiGraphicsExtractor ctx, int x1, int y1, int x2, int y2, double timeT) {
         int w = x2 - x1;
         int h = y2 - y1;
         if (w <= 0 || h <= 0) return;
@@ -346,7 +346,7 @@ public final class AuroraShapes {
      * @param alpha 0–255 highlight alpha; 80–120 reads as a glint, 160+
      *              starts looking like a hard rim.
      */
-    public static void topSheen(GuiGraphics ctx, int x, int y, int w, int h, int radius, int alpha) {
+    public static void topSheen(GuiGraphicsExtractor ctx, int x, int y, int w, int h, int radius, int alpha) {
         if (w <= 0 || h <= 0 || alpha <= 0) return;
         int c = clampChamfer(radius, w, h);
         int sheen = (Math.min(255, alpha) << 24) | 0x00FFFFFF;
@@ -382,7 +382,7 @@ public final class AuroraShapes {
      *                     sheen, fading the highlight into the body).
      * @param shadowAlpha  0–255 alpha for the 1-px bottom-edge shadow.
      */
-    public static void materialShade(GuiGraphics ctx, int x, int y, int w, int h, int radius,
+    public static void materialShade(GuiGraphicsExtractor ctx, int x, int y, int w, int h, int radius,
                                      int topAlpha, int glossAlpha, int shadowAlpha) {
         if (w <= 0 || h <= 0) return;
         int c = clampChamfer(radius, w, h);
@@ -553,7 +553,7 @@ public final class AuroraShapes {
      * arc row + one body fill — the minimum possible call count for
      * an integer-pixel scanline of a quarter-circle.
      */
-    private static void drawRowAA(GuiGraphics ctx, int x, int yRow, int w, int c, int rowInCorner, int color) {
+    private static void drawRowAA(GuiGraphicsExtractor ctx, int x, int yRow, int w, int c, int rowInCorner, int color) {
         double dy = c - rowInCorner - 0.5;
         double inside = (double) c * c - dy * dy;
         if (inside <= 0.0) return;
@@ -584,7 +584,7 @@ public final class AuroraShapes {
         return (newA << 24) | (argb & 0x00FFFFFF);
     }
 
-    private static void chamferedFill(GuiGraphics ctx, int x, int y, int w, int h, int c, int color) {
+    private static void chamferedFill(GuiGraphicsExtractor ctx, int x, int y, int w, int h, int c, int color) {
         if (w <= 0 || h <= 0) return;
         if (c <= 0) {
             ctx.fill(x, y, x + w, y + h, color);
@@ -610,7 +610,7 @@ public final class AuroraShapes {
      * color (the gradient between adjacent arc rows is imperceptible
      * across the typical 4–10 row arc).
      */
-    private static void chamferedGradientFill(GuiGraphics ctx, int x, int y, int w, int h, int c,
+    private static void chamferedGradientFill(GuiGraphicsExtractor ctx, int x, int y, int w, int h, int c,
                                               int topColor, int botColor) {
         if (w <= 0 || h <= 0) return;
         if (c <= 0) {
@@ -642,7 +642,7 @@ public final class AuroraShapes {
      * perimeter. 4 straight strips along the sides + one fill per arc
      * row × 4 quadrants for the corners.
      */
-    private static void chamferedOutline(GuiGraphics ctx, int x, int y, int w, int h, int c, int color) {
+    private static void chamferedOutline(GuiGraphicsExtractor ctx, int x, int y, int w, int h, int c, int color) {
         if (w <= 0 || h <= 0) return;
         final int T = OUTLINE_THICKNESS;
         if (c <= 0) {
@@ -729,7 +729,7 @@ public final class AuroraShapes {
      * matching that makes small rounded controls (search bars, chips)
      * look crisp at any GUI scale.
      */
-    private static void aaCornerBand(GuiGraphics ctx, double leftAbs, int rowY, double rightAbs, int color) {
+    private static void aaCornerBand(GuiGraphicsExtractor ctx, double leftAbs, int rowY, double rightAbs, int color) {
         int leftInt  = (int) Math.floor(leftAbs);
         float leftFrac  = (float) (leftAbs - leftInt);
         int rightInt = (int) Math.floor(rightAbs);

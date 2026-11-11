@@ -20,7 +20,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(MouseHandler.class)
 public abstract class MouseClickTrackerMixin {
 
-    @Inject(method = "onButton", at = @At("HEAD"), require = 1)
+    @Inject(method = "onButton", at = @At("HEAD"))
     private void aurora$trackClick(long window, MouseButtonInfo info, int action, CallbackInfo ci) {
         if (action != GLFW.GLFW_PRESS) return;
         int button = info.button();

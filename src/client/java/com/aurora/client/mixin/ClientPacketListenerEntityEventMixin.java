@@ -25,7 +25,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(ClientPacketListener.class)
 public abstract class ClientPacketListenerEntityEventMixin {
 
-    @Inject(method = "handleEntityEvent", at = @At("HEAD"), require = 1)
+    @Inject(method = "handleEntityEvent", at = @At("HEAD"))
     private void aurora$watchTotemPop(ClientboundEntityEventPacket packet, CallbackInfo ci) {
         if (packet.getEventId() != TotemPopFeature.TOTEM_ACTIVATION_STATUS) return;
 

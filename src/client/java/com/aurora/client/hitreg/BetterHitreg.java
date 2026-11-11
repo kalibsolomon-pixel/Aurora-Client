@@ -7,8 +7,8 @@ import com.aurora.client.screen.FeatureMetadata;
 import com.aurora.client.screen.FeatureRegistry;
 import com.aurora.client.util.AuroraKey;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
-import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
 import net.minecraft.client.Minecraft;
 
 import static com.aurora.client.hitreg.Hitreg.*;
@@ -31,9 +31,9 @@ import static com.aurora.client.hitreg.Hitreg.*;
  *   <li>{@link Render#updateColors()} primes the overlay color cache.</li>
  *   <li>{@code START_CLIENT_TICK} → {@link Hitreg#tick()} (the fight-state
  *       machine).</li>
- *   <li>{@code WorldRenderEvents.END_MAIN} → {@link Render#render} (target
+ *   <li>{@code LevelRenderEvents.END_MAIN} → {@link Render#render} (target
  *       hitbox/cross/reach rings/floor grid).</li>
- *   <li>A {@link HudRenderCallback} drawing the practice scoreboard
+ *   <li>A HUD element ({@link HudElementRegistry}) drawing the practice scoreboard
  *       ({@code "Score: L - R"}) while either side is non-zero.</li>
  *   <li>{@code END_CLIENT_TICK} keybind dispatch: open settings, swap main
  *       hand, and the four scoreboard keys. The bindings themselves live on
@@ -85,15 +85,15 @@ public final class BetterHitreg {
 
         ClientTickEvents.START_CLIENT_TICK.register(mc -> tick());
 
-        WorldRenderEvents.END_MAIN.register(context -> {
+        LevelRenderEvents.END_MAIN.register(context -> {
             Render.render(context.gameRenderer().getMainCamera());
         });
 
-        HudRenderCallback.EVENT.register((context, tickCounter) -> {
+        HudElementRegistry.addLast(com.aurora.client.AuroraClient.id("hitreg_score"), (context, tickCounter) -> {
             if (!AuroraConfig.get().hitregEnabled) return;
             if (client.level == null || client.font == null || (leftScore == 0 && rightScore == 0)) return;
             String scoreText = "Score: " + leftScore + " - " + rightScore;
-            context.drawString(client.font, scoreText, 10, 10, 0xFFFFFFFF);
+            context.text(client.font, scoreText, 10, 10, 0xFFFFFFFF);
         });
 
         ClientTickEvents.END_CLIENT_TICK.register(mc -> dispatchKeys(mc));

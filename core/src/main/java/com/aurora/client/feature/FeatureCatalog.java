@@ -289,6 +289,7 @@ public final class FeatureCatalog {
         mixin("ShieldSpecialRendererMixin", "the shield status color", "pack_tweaks").gates("shieldStatusEnabled");
         mixin("MixinFont", "Aurora's fonts", "text_fonts");
         mixin("ScreenshotMixin", "blurred glass (it cannot be paused safely during screenshots)");
+        mixin("GuiRendererGlassMixin", "blurred glass (26.1 captures must run after the world is drawn)");
         mixin("AbstractButtonMixin", "Aurora styling on vanilla buttons", "custom_title");
         mixin("EditBoxMixin", "Aurora styling on text fields", "custom_title");
         mixin("ServerListDragReorderMixin", "drag-to-reorder in the server list", "miscellaneous").gates("serverListDragReorder");

@@ -3,7 +3,7 @@ package com.aurora.client.mixin;
 import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.util.FramePacer;
 import com.aurora.client.util.FramePacing;
-import com.mojang.blaze3d.systems.RenderSystem;
+import net.minecraft.client.FramerateLimiter;
 import org.lwjgl.glfw.GLFW;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -11,10 +11,11 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /** Replaces a native post-swap wait only when Aurora enforces its effective restriction. */
-@Mixin(value = RenderSystem.class, remap = false, priority = 10000)
+// 26.1 moved the post-swap limiter from RenderSystem into FramerateLimiter (same static signature).
+@Mixin(value = FramerateLimiter.class, priority = 10000)
 public abstract class RenderSystemMixin {
 
-    @Inject(method = "limitDisplayFPS(I)V", at = @At("HEAD"), cancellable = true, require = 1)
+    @Inject(method = "limitDisplayFPS(I)V", at = @At("HEAD"), cancellable = true)
     private static void aurora$preciseLimit(int fps, CallbackInfo ci) {
         AuroraConfig cfg = AuroraConfig.get();
         net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();

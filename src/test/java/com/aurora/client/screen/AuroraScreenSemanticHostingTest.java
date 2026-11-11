@@ -44,7 +44,7 @@ class AuroraScreenSemanticHostingTest {
     void hostMaterializesOnlyComponentOwnedContractsDuringInit() {
         String src = read(SCREEN);
         int init = src.indexOf("protected void init()");
-        int render = src.indexOf("public void render(", init);
+        int render = src.indexOf("public void extractRenderState(", init);
         String initBody = src.substring(init, render);
         assertTrue(initBody.contains("List.copyOf(setting.interactionControls())"));
         assertTrue(initBody.contains("semanticHost.register(control)"));
@@ -60,7 +60,7 @@ class AuroraScreenSemanticHostingTest {
     void registrationIsNotInTheFramePathAndResizeRebuilds() {
         String src = read(SCREEN);
         int init = src.indexOf("protected void init()");
-        int render = src.indexOf("public void render(", init);
+        int render = src.indexOf("public void extractRenderState(", init);
         String initBody = src.substring(init, render);
         String renderAndAfter = src.substring(render);
         assertTrue(initBody.contains("semanticHost.beginRebuild()"));

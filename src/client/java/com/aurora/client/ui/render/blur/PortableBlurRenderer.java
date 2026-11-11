@@ -3,7 +3,7 @@ package com.aurora.client.ui.render.blur;
 import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.pipeline.RenderTarget;
-import com.mojang.blaze3d.platform.DepthTestFunction;
+import com.mojang.blaze3d.pipeline.ColorTargetState;
 import com.mojang.blaze3d.shaders.UniformType;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
@@ -13,7 +13,7 @@ import com.mojang.blaze3d.textures.TextureFormat;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.texture.AbstractTexture;
 import net.minecraft.resources.Identifier;
@@ -23,6 +23,7 @@ import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.OptionalInt;
 
 /**
@@ -41,6 +42,17 @@ final class PortableBlurRenderer {
     private static final RenderPipeline PATTERN = pipeline("glass_pattern");
     private static final List<Output> live = new ArrayList<>();
     private static final List<AutoCloseable> retired = new ArrayList<>();
+    /** Passes requested during this frame's GUI extraction (26.1), run by {@link #runPending}. */
+    private static final List<Runnable> PENDING = new ArrayList<>();
+
+    /** Runs the queued passes; called with the OpenGL captures, after the world is drawn. */
+    static void runPending() {
+        try {
+            for (Runnable passes : PENDING) passes.run();
+        } finally {
+            PENDING.clear();
+        }
+    }
     private static long sequence;
     private static GpuBuffer triangle;
 
@@ -51,8 +63,10 @@ final class PortableBlurRenderer {
                 .withFragmentShader(Identifier.fromNamespaceAndPath("aurora", "core/" + name))
                 .withVertexFormat(DefaultVertexFormat.POSITION, VertexFormat.Mode.TRIANGLES)
                 .withSampler("InputTexture").withUniform("GlassParams", UniformType.UNIFORM_BUFFER)
-                .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST).withDepthWrite(false)
-                .withCull(false).withoutBlend().build();
+                // No depth state means no depth test or write (as vanilla's GUI pipelines); no blend.
+                .withDepthStencilState(Optional.empty())
+                .withColorTargetState(new ColorTargetState(Optional.empty(), ColorTargetState.WRITE_ALL))
+                .withCull(false).build();
     }
 
     static final class Output {
@@ -84,7 +98,7 @@ final class PortableBlurRenderer {
         }
     }
 
-    static boolean render(GuiGraphics graphics, Output output, RenderTarget main,
+    static boolean render(GuiGraphicsExtractor graphics, Output output, RenderTarget main,
                           int x, int y, int rx, int ry, int rw, int rh,
                           int width, int height, int scale, float radius, float corner,
                           BlurPanelRenderer.Lighting lighting, boolean unified,
@@ -105,21 +119,25 @@ final class PortableBlurRenderer {
         Target c = target(output, 3, quarterW, quarterH);
         Target result = target(output, 4, width, height);
 
+        // 26.1 extracts the whole GUI before rendering it: the targets are sized
+        // and the blit recorded now, but the passes run from runPending, once
+        // the world is in the main target (see BlurPanelRenderer.runPendingCaptures).
+        // Each pass keeps its own copy of the parameters.
         float[] params = new float[PARAM_BYTES / 4];
         // Vulkan attachments and GUI samplers both use top-down texture UVs.
         // Never carry the GL framebuffer's bottom-left convention across devices.
         rect(params, rx / (float) main.width, ry / (float) main.height,
                 (rx + rw) / (float) main.width, (ry + rh) / (float) main.height);
-        pass(output, 0, COPY, capture != null ? capture.textureView : main.getColorTextureView(), half, params);
+        float[] copyIn = params.clone();
         rect(params, 0, 0, 1, 1);
-        pass(output, 1, COPY, half.getTextureView(), a, params);
+        float[] copyDown = params.clone();
         params[4] = 1f / quarterW;
         params[5] = 0;
         params[6] = Math.max(.65f, radius * .25f / 2f);
-        pass(output, 2, BLUR, a.getTextureView(), b, params);
+        float[] blurX = params.clone();
         params[4] = 0;
         params[5] = 1f / quarterH;
-        pass(output, 3, BLUR, b.getTextureView(), c, params);
+        float[] blurY = params.clone();
 
         rect(params, (x - rx) / (float) rw, (y - ry) / (float) rh,
                 (x + width - rx) / (float) rw, (y + height - ry) / (float) rh);
@@ -135,7 +153,14 @@ final class PortableBlurRenderer {
         params[17] = unified ? .92f : 1;
         params[20] = BlurPanelRenderer.LIGHT_DIR_X;
         params[21] = BlurPanelRenderer.LIGHT_DIR_Y;
-        pass(output, 4, COMPOSITE, c.getTextureView(), result, params);
+        float[] composite = params.clone();
+        PENDING.add(() -> {
+            pass(output, 0, COPY, capture != null ? capture.textureView : main.getColorTextureView(), half, copyIn);
+            pass(output, 1, COPY, half.getTextureView(), a, copyDown);
+            pass(output, 2, BLUR, a.getTextureView(), b, blurX);
+            pass(output, 3, BLUR, b.getTextureView(), c, blurY);
+            pass(output, 4, COMPOSITE, c.getTextureView(), result, composite);
+        });
         graphics.blit(RenderPipelines.GUI_TEXTURED, result.id,
                 Math.round(x / (float) scale), Math.round(y / (float) scale), 0f, 0f,
                 Math.round(width / (float) scale), Math.round(height / (float) scale),
@@ -210,6 +235,7 @@ final class PortableBlurRenderer {
     }
 
     static void beginFrame() {
+        PENDING.clear(); // a frame extracted but never rendered
         for (AutoCloseable resource : retired) close(resource);
         retired.clear();
     }

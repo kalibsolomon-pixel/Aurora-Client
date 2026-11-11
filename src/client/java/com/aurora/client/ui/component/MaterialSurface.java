@@ -5,7 +5,7 @@ import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.util.AuroraAnim;
 import com.aurora.client.util.AuroraShapes;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.Minecraft;
 import com.aurora.client.ui.util.UiLayerCache;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
@@ -57,7 +57,7 @@ public final class MaterialSurface {
     }
 
     /** Cached parent face, drawn once above the screen dim even when capture declines. */
-    public static void parent(GuiGraphics g, float x, float y, float w, float h, float radius) {
+    public static void parent(GuiGraphicsExtractor g, float x, float y, float w, float h, float radius) {
         cached(g,x,y,w,h,radius,ThemeManager.color(ThemeToken.WINDOW_FILL),
                 color(ThemeToken.BORDER),120,true);
     }
@@ -65,7 +65,7 @@ public final class MaterialSurface {
     public static int selectedFill() { return ThemeManager.color(ThemeToken.SELECTION_SOFT); }
 
     /** Same role geometry and backing for success/decline. Child roles never sample. */
-    public static void selection(GuiGraphics g, float x, float y, float w, float h,
+    public static void selection(GuiGraphicsExtractor g, float x, float y, float w, float h,
                                  float radius, boolean selected, float hover) {
         selection(g,x,y,w,h,radius,selected,hover,false);
     }
@@ -74,7 +74,7 @@ public final class MaterialSurface {
      * {@code flatRest}: an unselected peer has no resting face and only gains the neutral
      * face while hovered (sidebar items inside an already-material window, §11.11).
      */
-    public static void selection(GuiGraphics g, float x, float y, float w, float h,
+    public static void selection(GuiGraphicsExtractor g, float x, float y, float w, float h,
                                  float radius, boolean selected, float hover, boolean flatRest) {
         if(flatRest && !selected) {
             if(hover<=0) return;
@@ -102,7 +102,7 @@ public final class MaterialSurface {
      * action button share it so a settings column never mixes three treatments. Opaque
      * raised tone (legible at any window opacity), no outline; hover lifts the tone.
      */
-    public static void field(GuiGraphics g, float x, float y, float w, float h,
+    public static void field(GuiGraphicsExtractor g, float x, float y, float w, float h,
                              float radius, float hover, boolean disabled) {
         int face = disabled ? ThemeManager.color(ThemeToken.MATERIAL_PANEL) : AuroraAnim.lerpArgb(
                 ThemeManager.color(ThemeToken.MATERIAL_RAISED), ThemeManager.color(ThemeToken.MATERIAL_HOVER), hover);
@@ -142,12 +142,12 @@ public final class MaterialSurface {
 
     /** Rasterize elevation/fill/edge once per size and role, then one blit.
      * Theme reload reuploads in place; no texture is destroyed mid-frame. */
-    public static void cached(GuiGraphics g,float x,float y,float w,float h,float radius,
+    public static void cached(GuiGraphicsExtractor g,float x,float y,float w,float h,float radius,
                               int fill,int border,int kind,boolean shadow) {
         cached(g,x,y,w,h,radius,fill,border,kind,shadow,1);
     }
 
-    private static void cached(GuiGraphics g,float x,float y,float w,float h,float radius,
+    private static void cached(GuiGraphicsExtractor g,float x,float y,float w,float h,float radius,
                                int fill,int border,int kind,boolean shadow,float opacity) {
         var mc=Minecraft.getInstance();
         int scale=Math.max(1,(int)mc.getWindow().getGuiScale());
@@ -177,7 +177,7 @@ public final class MaterialSurface {
                 (Math.round(opacity*255)<<24)|0xffffff);
     }
 
-    public static void embeddedControl(GuiGraphics g, float x, float y, float w, float h,
+    public static void embeddedControl(GuiGraphicsExtractor g, float x, float y, float w, float h,
                                        float radius, boolean stained) {
         int fill = stained
                 ? ThemeManager.stainedTint()
@@ -191,13 +191,13 @@ public final class MaterialSurface {
      * on every translucent window. {@link #floating} stays the raised tone for tooltips and
      * popups, which host no controls of their own.
      */
-    public static void floatingPanel(GuiGraphics g, int x, int y, int w, int h, int radius) {
+    public static void floatingPanel(GuiGraphicsExtractor g, int x, int y, int w, int h, int radius) {
         if (!unified()) { floating(g, x, y, w, h, radius, 1); return; }
         cached(g,x,y,w,h,radius,ThemeManager.color(ThemeToken.MATERIAL_PANEL),
                 color(ThemeToken.BORDER_HOVER),5,true,1);
     }
 
-    public static void floating(GuiGraphics g, int x, int y, int w, int h,
+    public static void floating(GuiGraphicsExtractor g, int x, int y, int w, int h,
                                 int radius, float fade) {
         float t = Math.max(0f, Math.min(1f, fade));
         if (unified()) {

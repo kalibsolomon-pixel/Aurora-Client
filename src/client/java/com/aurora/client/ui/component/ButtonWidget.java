@@ -2,7 +2,7 @@ package com.aurora.client.ui.component;
 
 import com.aurora.client.ui.interaction.SemanticAction;
 import com.aurora.client.ui.interaction.SemanticSound;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.narration.NarratedElementType;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
@@ -157,7 +157,7 @@ public class ButtonWidget extends AbstractButton {
      * pre-dim discipline calls this from its glass pass; the later
      * {@link #renderContents} then paints content only.
      */
-    public void renderGlassPass(GuiGraphics g) {
+    public void renderGlassPass(GuiGraphicsExtractor g) {
         if (!this.visible) return;
         painter.disabled(!this.active);
         painter.layout(getX(), getY(), getWidth(), getHeight());
@@ -165,7 +165,7 @@ public class ButtonWidget extends AbstractButton {
     }
 
     @Override
-    protected void renderContents(GuiGraphics g, int mouseX, int mouseY, float delta) {
+    protected void extractContents(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
         painter.disabled(!this.active);
         // Provisional Phase A focus treatment — the same 1 px accent hairline
         // the semantic controls draw, synced from vanilla's own focus so

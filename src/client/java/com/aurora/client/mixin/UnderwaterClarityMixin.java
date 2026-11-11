@@ -22,7 +22,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(WaterFogEnvironment.class)
 public abstract class UnderwaterClarityMixin {
 
-    @Inject(method = "setupFog", at = @At("TAIL"), require = 1)
+    @Inject(method = "setupFog", at = @At("TAIL"))
     private void aurora$multiplyWaterFog(FogData data, Camera camera,
                                          ClientLevel world, float viewDistance,
                                          DeltaTracker tickCounter, CallbackInfo ci) {

@@ -10,7 +10,7 @@ import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.util.AuroraAnim;
 import com.aurora.client.util.HoverAnim;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 /**
  * One compact button-like ICON action (Phase C-4): a Material Symbols glyph
@@ -133,7 +133,7 @@ public final class IconAction {
      * sync, the glyph (animated rest→hover color; muted while disabled), and
      * the focus hairline. The surface underneath stays the host's.
      */
-    public void paint(GuiGraphics g, Font font, int x, int y, int w, int h,
+    public void paint(GuiGraphicsExtractor g, Font font, int x, int y, int w, int h,
                       int mouseX, int mouseY) {
         syncChannels(x, y, w, h, mouseX, mouseY);
         paintGlyph(g, font, x, y, w, h);
@@ -145,7 +145,7 @@ public final class IconAction {
      * their own surface between the sync and the glyph (syncing twice would
      * double-step the animator).
      */
-    public void paintGlyph(GuiGraphics g, Font font, int x, int y, int w, int h) {
+    public void paintGlyph(GuiGraphicsExtractor g, Font font, int x, int y, int w, int h) {
         int color = !action.enabled()
                 ? ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED)
                 : AuroraAnim.lerpArgb(restColor.getAsInt(), hoverColor.getAsInt(), hoverT());
@@ -170,7 +170,7 @@ public final class IconAction {
     }
 
     /** The Button-family 1 px accent hairline (0x99) — an independent focus channel. */
-    public void paintHairline(GuiGraphics g, int x, int y, int w, int h) {
+    public void paintHairline(GuiGraphicsExtractor g, int x, int y, int w, int h) {
         if (control == null || !control.isFocused()) return;
         float radius = Math.min(Math.min(w, h) / 2f,
                 ThemeManager.current().roundness().radiusSmall());

@@ -5,7 +5,7 @@ import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.util.CachedValue;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
 
@@ -159,7 +159,7 @@ public class ArmorModule extends HudModule {
     @Override protected int backgroundColor() { return AuroraConfig.get().armorHudBgColor; }
 
     @Override
-    protected void renderContent(GuiGraphics ctx, Minecraft client, int x, int y) {
+    protected void renderContent(GuiGraphicsExtractor ctx, Minecraft client, int x, int y) {
         AuroraConfig cfg = AuroraConfig.get();
         if (!cfg.armorHudEnabled) return;
         if (client.player == null) return;
@@ -193,14 +193,14 @@ public class ArmorModule extends HudModule {
                 int cellX = x + i * (cellW + COL_GAP);
                 int iconX = cellX + (cellW - ICON) / 2;
                 int iconY = y + textSpace;
-                ctx.renderItem(s, iconX, iconY);
+                ctx.item(s, iconX, iconY);
 
                 String Component = formatDurability(s, fmt);
                 if (!Component.isEmpty()) {
                     int tw = tr.width(Component);
                     int tx = cellX + (cellW - tw) / 2;
                     int ty = y;
-                    ctx.drawString(tr, Component, tx, ty, color, false);
+                    ctx.text(tr, Component, tx, ty, color, false);
                 }
 
                 if (drawBars && s.getMaxDamage() > 0) {
@@ -215,12 +215,12 @@ public class ArmorModule extends HudModule {
             if (s == null || s.isEmpty()) continue;
             int rowY = y + i * ROW_H;
             int iconY = rowY + (ROW_H - ICON) / 2;
-            ctx.renderItem(s, x, iconY);
+            ctx.item(s, x, iconY);
 
             String Component = formatDurability(s, fmt);
             if (!Component.isEmpty()) {
                 int ty = rowY + (ROW_H - tr.lineHeight) / 2;
-                ctx.drawString(tr, Component, x + ICON + TEXT_GAP, ty, color, false);
+                ctx.text(tr, Component, x + ICON + TEXT_GAP, ty, color, false);
             }
 
             if (drawBars && s.getMaxDamage() > 0) {
@@ -238,7 +238,7 @@ public class ArmorModule extends HudModule {
      * the vanilla durability bar sits at the bottom of the slot, and the
      * configured durability text/percentage is drawn OUTSIDE the slot.
      */
-    private static void renderContentVanilla(GuiGraphics ctx, Minecraft client, int x, int y) {
+    private static void renderContentVanilla(GuiGraphicsExtractor ctx, Minecraft client, int x, int y) {
         Font tr = client.font;
         AuroraConfig cfg = AuroraConfig.get();
         AuroraConfig.ArmorDurabilityFormat fmt = cfg.armorDurabilityFormat;
@@ -283,7 +283,7 @@ public class ArmorModule extends HudModule {
             // Center the 16×16 item icon inside the scaled slot, clear of the border.
             int iconX = slotX + (SLOT - ICON) / 2;
             int iconY = slotY + (SLOT - ICON) / 2;
-            ctx.renderItem(s, iconX, iconY);
+            ctx.item(s, iconX, iconY);
 
             // Vanilla durability bar inside the slot at the same icon-relative
             // offset the DEFAULT style uses (icon.x + 2, icon.y + 13).
@@ -299,11 +299,11 @@ public class ArmorModule extends HudModule {
                     int cellX = x + i * (cellW + VANILLA_GAP);
                     int tx = cellX + (cellW - tw) / 2;
                     int ty = y;
-                    ctx.drawString(tr, text, tx, ty, textColor, false);
+                    ctx.text(tr, text, tx, ty, textColor, false);
                 } else {
                     int tx = slotX + SLOT + TEXT_GAP;
                     int ty = slotY + (SLOT - tr.lineHeight) / 2;
-                    ctx.drawString(tr, text, tx, ty, textColor, false);
+                    ctx.text(tr, text, tx, ty, textColor, false);
                 }
             }
         }
@@ -314,7 +314,7 @@ public class ArmorModule extends HudModule {
      * vanilla uses for hotbar item bars: green→yellow→red gradient based
      * on remaining damage fraction.
      */
-    private static void drawDurabilityBar(GuiGraphics ctx, ItemStack s, int x, int y) {
+    private static void drawDurabilityBar(GuiGraphicsExtractor ctx, ItemStack s, int x, int y) {
         int max = s.getMaxDamage();
         int dmg = s.getDamageValue();
         if (max <= 0) return;

@@ -4,7 +4,7 @@ import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.util.SmoothScroll;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 /** Shared material and pixel-stable geometry for Aurora scrollbar thumbs. */
 public final class ScrollbarChrome {
@@ -35,7 +35,7 @@ public final class ScrollbarChrome {
     }
 
     /** Paint the canonical 3 px mechanical capsule. */
-    public static void draw(GuiGraphics g, int x, Thumb thumb, boolean emphasized,
+    public static void draw(GuiGraphicsExtractor g, int x, Thumb thumb, boolean emphasized,
                             ThemeToken foreground) {
         int alpha = emphasized ? 0x55 : 0x30;
         int color = ThemeManager.withAlpha(ThemeManager.color(foreground), alpha);

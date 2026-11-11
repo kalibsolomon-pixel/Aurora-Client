@@ -2,7 +2,7 @@ package com.aurora.client.hud.module;
 
 import com.aurora.client.AuroraClient;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -36,7 +36,7 @@ public class HudModuleManager {
      */
     public Collection<HudModule> all() { return Collections.unmodifiableCollection(modules.values()); }
 
-    public void renderAll(GuiGraphics ctx) {
+    public void renderAll(GuiGraphicsExtractor ctx) {
         Minecraft client = Minecraft.getInstance();
         if (client == null) return;
 

@@ -3,7 +3,7 @@ package com.aurora.client.mixin;
 import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.ui.component.Button;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
 import net.minecraft.client.gui.screens.worldselection.SelectWorldScreen;
@@ -60,8 +60,8 @@ public abstract class AbstractButtonMixin {
         return ((Object) this).getClass() == net.minecraft.client.gui.components.Button.Plain.class;
     }
 
-    @Inject(method = "renderWidget", at = @At("HEAD"), cancellable = true)
-    private void aurora$renderCustomWidget(GuiGraphics ctx, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+    @Inject(method = "extractWidgetRenderState", at = @At("HEAD"), cancellable = true)
+    private void aurora$renderCustomWidget(GuiGraphicsExtractor ctx, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         if (aurora$shouldApplyStyle()) {
             AbstractButton self = (AbstractButton) (Object) this;
             // Pointer-only hover target, gated by vanilla's authoritative

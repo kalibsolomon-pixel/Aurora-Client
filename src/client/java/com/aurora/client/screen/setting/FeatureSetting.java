@@ -6,7 +6,7 @@ import com.aurora.client.ui.component.MaterialSurface;
 import com.aurora.client.util.HoverAnim;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.network.chat.Component;
 
@@ -93,13 +93,13 @@ public abstract class FeatureSetting {
             control.setBounds(x + hit.x(), y + hit.y(), hit.width(), hit.height());
         }
     }
-    protected final void renderCompactLabel(GuiGraphics ctx, int x, int y, int mouseX, int mouseY, int color) {
+    protected final void renderCompactLabel(GuiGraphicsExtractor ctx, int x, int y, int mouseX, int mouseY, int color) {
         Font font = Minecraft.getInstance().font;
         var box = compactRow.label();
         int textY = y + box.y() + (box.height() - (compactRow.lines().size() * (font.lineHeight + 1) + valueLineHeight(font))) / 2;
         for (String line : compactRow.lines()) {
             int textX = x + box.x();
-            ctx.drawString(font, line, textX, textY, color, false);
+            ctx.text(font, line, textX, textY, color, false);
             trackLabelHover(tooltipKey(), this::currentDescription, textX, textY, font.width(line), font.lineHeight,
                     mouseX, mouseY, isDisabled());
             textY += font.lineHeight + 1;
@@ -251,11 +251,11 @@ public abstract class FeatureSetting {
     public int fixedHeaderHeight() { return 0; }
     public final void pinHeader(boolean pinned) { headerPinned = pinned; }
     public final boolean isHeaderPinned() { return headerPinned; }
-    public void renderFixedHeader(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {}
-    public void renderFixedHeaderGlass(GuiGraphics ctx, int x, int y, int width) {}
+    public void renderFixedHeader(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {}
+    public void renderFixedHeaderGlass(GuiGraphicsExtractor ctx, int x, int y, int width) {}
     public java.util.List<com.aurora.client.ui.interaction.SemanticActionControl> fixedHeaderControls() { return java.util.List.of(); }
 
-    public abstract void render(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY);
+    public abstract void render(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY);
 
     /**
      * Cacheable static geometry layer. Rendered into the owning screen's
@@ -265,7 +265,7 @@ public abstract class FeatureSetting {
      * settings that haven't declared a cacheable shape layer render
      * entirely in {@link #renderOverlay} instead.
      */
-    public void renderShapes(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
+    public void renderShapes(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {
     }
 
     /**
@@ -273,7 +273,7 @@ public abstract class FeatureSetting {
      * feedback, animated values. Defaults to the full {@link #render}, so
      * settings without a shape split keep their exact current behavior.
      */
-    public void renderOverlay(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
+    public void renderOverlay(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {
         render(ctx, x, y, width, mouseX, mouseY);
     }
 
@@ -299,7 +299,7 @@ public abstract class FeatureSetting {
      * no pass ran this frame (the exact legacy look, pixel for pixel).
      * Default no-op.
      */
-    public void renderGlassPass(GuiGraphics ctx, int x, int y, int width) {
+    public void renderGlassPass(GuiGraphicsExtractor ctx, int x, int y, int width) {
     }
 
     /** Optional screen-lifecycle adapter for custom-painted semantic controls. */
@@ -436,7 +436,7 @@ public abstract class FeatureSetting {
         return 0;
     }
 
-    protected void renderDescription(GuiGraphics ctx, int x, int y, int width) {
+    protected void renderDescription(GuiGraphicsExtractor ctx, int x, int y, int width) {
         // no-op — see class note above.
     }
 
@@ -480,22 +480,22 @@ public abstract class FeatureSetting {
      * the label's dim treatment. Subclasses call this after their label
      * block and fold {@link #valueLineHeight} into their row height.
      */
-    protected void drawValueLine(GuiGraphics ctx, int x, int y, boolean disabled) {
+    protected void drawValueLine(GuiGraphicsExtractor ctx, int x, int y, boolean disabled) {
         if (valueLine == null || disabled) return;
         String v = valueLine.get();
         if (v != null && !v.isEmpty()) {
-            ctx.drawString(Minecraft.getInstance().font, v, x, y,
+            ctx.text(Minecraft.getInstance().font, v, x, y,
                     com.aurora.client.util.AuroraTheme.TEXT_SECONDARY, false);
         }
     }
 
-    protected void drawValueLineCentered(GuiGraphics ctx, int x, int y, int width, boolean disabled) {
+    protected void drawValueLineCentered(GuiGraphicsExtractor ctx, int x, int y, int width, boolean disabled) {
         if (valueLine == null || disabled) return;
         String value = valueLine.get();
         if (value == null || value.isEmpty()) return;
         Font font = Minecraft.getInstance().font;
         String fitted = com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(font, value, width, 0);
-        ctx.drawString(font, fitted, x + (width - font.width(fitted)) / 2, y,
+        ctx.text(font, fitted, x + (width - font.width(fitted)) / 2, y,
                 MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
     }
 
@@ -587,12 +587,12 @@ public abstract class FeatureSetting {
      * label itself for {@link #HOVER_DWELL_MS} fades the description in,
      * moving the cursor away fades it back out.
      */
-    protected void renderLabelWithTooltip(GuiGraphics ctx, String text, int x, int y,
+    protected void renderLabelWithTooltip(GuiGraphicsExtractor ctx, String text, int x, int y,
                                           int color, int mouseX, int mouseY) {
         renderLabelWithTooltip(ctx, text, x, y, color, mouseX, mouseY, false);
     }
 
-    protected void renderLabelWithTooltip(GuiGraphics ctx, String text, int x, int y,
+    protected void renderLabelWithTooltip(GuiGraphicsExtractor ctx, String text, int x, int y,
                                           int color, int mouseX, int mouseY, boolean disabled) {
         Font tr = Minecraft.getInstance().font;
         if (tr == null) return;
@@ -600,7 +600,7 @@ public abstract class FeatureSetting {
             color=MaterialSurface.color(ThemeToken.ON_BACKGROUND);
         int finalColor = disabled ? (MaterialSurface.unified() ? MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED)
                 : com.aurora.client.util.AuroraTheme.TEXT_DIM) : color;
-        ctx.drawString(tr, text, x, y, finalColor, false);
+        ctx.text(tr, text, x, y, finalColor, false);
         trackLabelHover(tooltipKey(), this::currentDescription, x, y,
                 tr.width(text), tr.lineHeight, mouseX, mouseY, disabled);
     }
@@ -613,7 +613,7 @@ public abstract class FeatureSetting {
     private com.aurora.client.config.AuroraConfig.TextRendererMode wrappedRendererMode;
 
     /** Two measured lines within the label column; cache layout until text/width/font changes. */
-    protected void renderWrappedLabel(GuiGraphics ctx, String text, int x, int y, int width,
+    protected void renderWrappedLabel(GuiGraphicsExtractor ctx, String text, int x, int y, int width,
                                       int color, int mouseX, int mouseY, boolean disabled) {
         Font font = Minecraft.getInstance().font;
         if (font == null || width <= 0) return;
@@ -630,7 +630,7 @@ public abstract class FeatureSetting {
         int top = y - (count - 1) * (font.lineHeight + 2) / 2;
         int finalColor = disabled ? MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED) : color;
         for (int i = 0; i < count; i++)
-            ctx.drawString(font, wrappedLabel.get(i), x, top + i * (font.lineHeight + 2), finalColor, false);
+            ctx.text(font, wrappedLabel.get(i), x, top + i * (font.lineHeight + 2), finalColor, false);
         trackLabelHover(tooltipKey(), this::currentDescription, x, top, width,
                 count * (font.lineHeight + 2), mouseX, mouseY, disabled);
     }
@@ -643,7 +643,7 @@ public abstract class FeatureSetting {
      * by the fade value, and the box's corner chamfer conforms to the
      * Theme module's roundness option.
      */
-    public static void drawPendingTooltip(GuiGraphics ctx, int screenW, int screenH) {
+    public static void drawPendingTooltip(GuiGraphicsExtractor ctx, int screenW, int screenH) {
         float fade = TOOLTIP_FADE.update(tooltipClaimed);
         tooltipClaimed = false;
         if (tooltipContent == null) return;
@@ -673,7 +673,7 @@ public abstract class FeatureSetting {
         int textColor = fadeColor(MaterialSurface.unified() ? MaterialSurface.color(ThemeToken.ON_BACKGROUND) : ThemeManager.color(ThemeToken.ON_OVERLAY), fade);
         int ty = by + 4;
         for (var l : lines) {
-            ctx.drawString(tr, l, bx + 6, ty, textColor, false);
+            ctx.text(tr, l, bx + 6, ty, textColor, false);
             ty += tr.lineHeight + 1;
         }
     }

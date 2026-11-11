@@ -16,7 +16,7 @@ import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.util.SmoothScroll;
 import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.ui.util.UiLayerCache;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
@@ -283,7 +283,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
     }
 
     @Override
-    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float delta) {
+    public void extractBackground(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
         // With a live world behind the screen, skip vanilla's background
         // sandwich (full-screen blur + dark gradient) — the glass panels
         // must sample the LIVE world, not an already-darkened,
@@ -293,11 +293,11 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         // conditional on the same validity check the renderer uses.
         if(MaterialSurface.unified() && GlassSurface.renderMenuPanorama(this,g,delta)) return;
         if (liveWorldBackdrop()) return;
-        super.renderBackground(g, mouseX, mouseY, delta);
+        super.extractBackground(g, mouseX, mouseY, delta);
     }
 
     @Override
-    public void render(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
+    public void extractRenderState(GuiGraphicsExtractor ctx, int mouseX, int mouseY, float delta) {
         com.aurora.client.screen.setting.SectionHeaderSetting.markLeading(meta.settings);
         measureRows();
         fixedHeaderSetting = null;
@@ -502,7 +502,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
             // Rows fade into the window tint at both clip edges while more content lies beyond.
             int fadeSurface = MaterialSurface.color(ThemeToken.WINDOW_FILL);
             if (totalRowsH == 0)
-                ctx.drawString(this.font, "This feature has no additional settings.", listX + 12, bodyTop() + 2,
+                ctx.text(this.font, "This feature has no additional settings.", listX + 12, bodyTop() + 2,
                         MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED), false);
             com.aurora.client.util.ScrollFade.drawTop(ctx, listX + 8, LIST_W - 16, bodyTop(),
                     com.aurora.client.util.ScrollFade.FADE_PX, scroll.current(), fadeSurface);
@@ -512,7 +512,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         if (compact()) {
             int titleX = com.aurora.client.ui.util.UiDensity.detailTitleX(compactFrame);
             String breadcrumb = com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(this.font, meta.displayName, Math.max(0, resetBtn.getX() - titleX - 4), 0);
-            ctx.drawString(this.font, breadcrumb, titleX, (meta.headerLine() == null || meta.headerLine().isEmpty() ? compactFrame.y() + (com.aurora.client.ui.util.UiDensity.HEADER - this.font.lineHeight) / 2 + 2 : compactFrame.y() + 3), MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
+            ctx.text(this.font, breadcrumb, titleX, (meta.headerLine() == null || meta.headerLine().isEmpty() ? compactFrame.y() + (com.aurora.client.ui.util.UiDensity.HEADER - this.font.lineHeight) / 2 + 2 : compactFrame.y() + 3), MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
             if (maxScroll > 0) {
                 var thumb = com.aurora.client.ui.component.ScrollbarChrome.thumb(scroll, bodyTop(), bodyBottom() - bodyTop(), maxScroll, 24, this.minecraft.getWindow().getGuiScale());
                 com.aurora.client.ui.component.ScrollbarChrome.draw(ctx, listX + LIST_W - 4, thumb, scroll.isDragging(), ThemeToken.ON_BACKGROUND);
@@ -539,7 +539,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         }
 
         // Children: Done button.
-        super.render(ctx, mouseX, mouseY, delta);
+        super.extractRenderState(ctx, mouseX, mouseY, delta);
 
         // Design language §1 — screen title + attached subtitle. One title
         // per detail screen: the feature's name, full-strength
@@ -559,7 +559,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
             int titleX = com.aurora.client.ui.util.UiDensity.detailTitleX(compactFrame);
             // Feature identity is already established by the navigation card.
             if (meta.headerLine() != null && !meta.headerLine().isEmpty()) {
-                ctx.drawString(this.font, AuroraFontRenderer.ellipsize(this.font, meta.headerLine(), Math.max(0, resetBtn.getX() - titleX - 4), 0), titleX,
+                ctx.text(this.font, AuroraFontRenderer.ellipsize(this.font, meta.headerLine(), Math.max(0, resetBtn.getX() - titleX - 4), 0), titleX,
                         compactFrame.y() + 3 + this.font.lineHeight + 1,
                         ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_OVERLAY),0xAA), false);
             }
@@ -578,7 +578,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
      * on top would read as a double border). The glow rings stay — they
      * read as a drop shadow, not an outline.
      */
-    private void drawWindowChromeShapes(GuiGraphics ctx, int listX, int windowY, int windowH,
+    private void drawWindowChromeShapes(GuiGraphicsExtractor ctx, int listX, int windowY, int windowH,
                                         boolean glassActive) {
         windowPanel.renderShapes(ctx, listX, windowY, LIST_W, windowH, glassActive);
     }

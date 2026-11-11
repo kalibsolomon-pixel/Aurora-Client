@@ -36,8 +36,7 @@ public abstract class HeldItemRendererMixin {
             method = "renderArmWithItem",
             at = @At(value = "INVOKE",
                     target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;swingArm(FLcom/mojang/blaze3d/vertex/PoseStack;ILnet/minecraft/world/entity/HumanoidArm;)V"),
-            index = 0,
-            require = 1
+            index = 0
     )
     private float aurora$curveSwingArg(float t) {
         return AnimationCurves.applySwing(t);

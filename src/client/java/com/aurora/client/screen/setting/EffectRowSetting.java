@@ -7,7 +7,7 @@ import com.aurora.client.util.AuroraShapes;
 import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.resources.Identifier;
 
@@ -48,7 +48,7 @@ public class EffectRowSetting extends FeatureSetting {
     @Override public int height() { return ROW_H; }
 
     @Override
-    public void render(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
+    public void render(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {
         Font tr = Minecraft.getInstance().font;
         if (tr == null) return;
 
@@ -72,7 +72,7 @@ public class EffectRowSetting extends FeatureSetting {
         // vertically centered — no §4 subtitle: the row's presence in the
         // list IS its state (exclusion clause).
         int textY = y + (ROW_H - tr.lineHeight) / 2;
-        ctx.drawString(tr, label, x + 20 + ICON_SIZE + 4, textY, AuroraTheme.IOS_LABEL, false);
+        ctx.text(tr, label, x + 20 + ICON_SIZE + 4, textY, AuroraTheme.IOS_LABEL, false);
         // The trailing remove control is the container's icon action (C-4):
         // it paints itself into this row's 16×16 zone from the container's
         // render loop, right after the row body.

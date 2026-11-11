@@ -1,7 +1,7 @@
 package com.aurora.client.hud.preview;
 
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
 import net.minecraft.world.item.ItemStack;
 
@@ -14,7 +14,7 @@ import java.util.List;
  *
  * <p>Layout matches vanilla inventory slots (18 × 18 each) with a thin
  * frame around the grid for visual separation from the surrounding
- * tooltip text. The frame is drawn with {@link GuiGraphics#fill} so it
+ * tooltip text. The frame is drawn with {@link GuiGraphicsExtractor#fill} so it
  * works under the same rendering pipeline as vanilla tooltips and
  * doesn't need a sprite resource.
  */
@@ -42,7 +42,7 @@ public final class AuroraContainerTooltipComponent implements ClientTooltipCompo
     }
 
     @Override
-    public void renderImage(Font font, int x, int y, int w, int h, GuiGraphics g) {
+    public void extractImage(Font font, int x, int y, int w, int h, GuiGraphicsExtractor g) {
         int gridW = data.columns * SLOT + PAD * 2;
         int gridH = data.rows * SLOT + PAD * 2;
 
@@ -60,12 +60,12 @@ public final class AuroraContainerTooltipComponent implements ClientTooltipCompo
             int sy = y + PAD + row * SLOT + 1;
             ItemStack stack = i < stacks.size() ? stacks.get(i) : ItemStack.EMPTY;
             if (stack == null || stack.isEmpty()) continue;
-            g.renderItem(stack, sx, sy, i);
+            g.item(stack, sx, sy, i);
             // Always draw durability bar / cooldown overlays. The "Show
             // Stack Counts" toggle gates only the count text — passing an
             // empty override to renderItemDecorations suppresses the count
             // while leaving the bar/cooldown intact.
-            g.renderItemDecorations(font, stack, sx, sy,
+            g.itemDecorations(font, stack, sx, sy,
                     data.showCounts ? null : "");
         }
     }

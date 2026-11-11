@@ -30,7 +30,7 @@ import com.aurora.client.util.HoverAnim;
 import com.aurora.client.util.ScrollFade;
 import com.aurora.client.util.SmoothScroll;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -154,7 +154,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
     }
 
     /** Runs {@code body} with the frame translation undone (screen-space coordinates). */
-    private <T> T screenSpace(GuiGraphics g, java.util.function.Supplier<T> body) {
+    private <T> T screenSpace(GuiGraphicsExtractor g, java.util.function.Supplier<T> body) {
         g.pose().pushMatrix();
         g.pose().translate(-ox, -oy);
         try { return body.get(); } finally { g.pose().popMatrix(); }
@@ -534,7 +534,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
     private UiLayerCache cardTpl;
 
     /** The at-rest card shape raster (body + outline + thumb inset + frame), lazily captured, version-keyed. */
-    private UiLayerCache ensureCardTemplate(GuiGraphics g) {
+    private UiLayerCache ensureCardTemplate(GuiGraphicsExtractor g) {
         long version = cardTemplateVersion();
         if (cardTpl == null) cardTpl = new UiLayerCache();
         if (!cardTpl.isCurrent(version)) {
@@ -732,13 +732,13 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
     // ------------------------------------------------------------------
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float delta) {
+    public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
         g.pose().pushMatrix();
         g.pose().translate(ox, oy);
         try { renderFramed(g, mouseX - ox, mouseY - oy, delta); } finally { g.pose().popMatrix(); }
     }
 
-    private void renderFramed(GuiGraphics g, int mouseX, int mouseY, float delta) {
+    private void renderFramed(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
         // Frame-rate-independent scroll easing (the shared SmoothScroll —
         // same tau = 80 ms glide). Advance toward the target every rendered
         // frame using the real elapsed wall-clock dt, so wheel scrolls glide
@@ -812,7 +812,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         int count = results.size();
         if (count > 0) {
             String countText = count + " pack" + (count == 1 ? "" : "s");
-            g.drawString(this.font, Component.literal(countText),
+            g.text(this.font, Component.literal(countText),
                     gridLeft(), TOP_BAR_H - 3, AuroraTheme.TEXT_SECONDARY, false);
         }
 
@@ -879,7 +879,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         // Scrollbar thumb — only when content overflows.
         renderScrollbar(g, mouseX, mouseY, gridLeft, cols, listBottom);
 
-        super.render(g, mouseX, mouseY, delta);
+        super.extractRenderState(g, mouseX, mouseY, delta);
 
         // Toast
         toast.render(g, this.font, this.width, this.height, AuroraTheme.RADIUS_SMALL);
@@ -925,7 +925,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
      * card buttons paint under their tracked scissors so their deferred rims
      * re-apply the clips after the dim.
      */
-    private void paintGlassPass(GuiGraphics g, int mouseX, int mouseY) {
+    private void paintGlassPass(GuiGraphicsExtractor g, int mouseX, int mouseY) {
         int panelH = this.height - TOP_BAR_H - 16;
         int panelY = TOP_BAR_H;
         int panelW = SIDEBAR_W - SIDEBAR_PAD * 2;
@@ -959,7 +959,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
      * tabs stay flat by design (small transient rows inside an already-glass
      * container).
      */
-    private void paintActiveTabPass(GuiGraphics g, int mouseX, int mouseY,
+    private void paintActiveTabPass(GuiGraphicsExtractor g, int mouseX, int mouseY,
                                     int panelX, int panelY, int panelW, int panelH) {
         activeTabGlass = false;
         int clipTop = panelY + 26;
@@ -1005,7 +1005,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
      * flipping the phase mid-frame cannot hand the content render an
      * undriven (post-dim-painting) button instance.
      */
-    private void paintCardButtonsPass(GuiGraphics g) {
+    private void paintCardButtonsPass(GuiGraphicsExtractor g) {
         int gridLeft = gridLeft();
         int cols = columns();
         int listBottom = this.height - LIST_BOTTOM_PAD;
@@ -1037,7 +1037,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         GlassSurface.disableScissor(g);
     }
 
-    private void renderSidebar(GuiGraphics g, int mouseX, int mouseY) {
+    private void renderSidebar(GuiGraphicsExtractor g, int mouseX, int mouseY) {
         int panelH = this.height - TOP_BAR_H - 16;
         int panelY = TOP_BAR_H;
         int panelW = SIDEBAR_W - SIDEBAR_PAD * 2;
@@ -1059,7 +1059,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
 
         // Sidebar title. "Browse", not "Categories": the first section inside the
         // list is itself headed "Categories", and the duplicate read as a glitch.
-        g.drawString(this.font, Component.literal("Browse"),
+        g.text(this.font, Component.literal("Browse"),
                 panelX + 10, panelY + 10, AuroraTheme.TEXT_SECONDARY, false);
 
         // Clip tabs to the sidebar body so they can scroll cleanly.
@@ -1079,7 +1079,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
                 // Section header label (e.g. "Categories" / "Features").
                 // Skip drawing if scrolled out of view.
                 if (tabY + HEADER_H > clipTop && tabY < clipBot) {
-                    g.drawString(this.font, Component.literal(tab.displayName),
+                    g.text(this.font, Component.literal(tab.displayName),
                             tabX + 6, tabY + (HEADER_H - this.font.lineHeight) / 2 + 1,
                             AuroraTheme.TEXT_DIM, false);
                 }
@@ -1168,7 +1168,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
             if (this.font.width(label) > maxLabelW) {
                 label = truncateToWidth(label, maxLabelW);
             }
-            g.drawString(this.font, label, tabX + 6,
+            g.text(this.font, label, tabX + 6,
                     tabY + (TAB_H - this.font.lineHeight) / 2 + 1, textCol, false);
 
             tabY += TAB_H + TAB_GAP;
@@ -1201,7 +1201,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         }
     }
 
-    private void renderCard(GuiGraphics g, ModrinthProject p, int x, int y, int mouseX, int mouseY) {
+    private void renderCard(GuiGraphicsExtractor g, ModrinthProject p, int x, int y, int mouseX, int mouseY) {
         boolean cardHover = Widget.inBounds(mouseX, mouseY, x, y, cardW(), CARD_H);
         float t = materialHover("card:" + p.projectId,cardHover);
 
@@ -1261,13 +1261,13 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         // Text
         int textX = tx + THUMB_SIZE + THUMB_PAD;
         int textW = cardW() - (textX - x) - THUMB_PAD;
-        g.drawString(this.font, fitText("t:" + p.projectId, p.title, textW),
+        g.text(this.font, fitText("t:" + p.projectId, p.title, textW),
                 textX, y + 8, AuroraTheme.TEXT_PRIMARY, false);
-        g.drawString(this.font, "by " + fitText("a:" + p.projectId, p.author, textW),
+        g.text(this.font, "by " + fitText("a:" + p.projectId, p.author, textW),
                 textX, y + 8 + this.font.lineHeight + 1, AuroraTheme.TEXT_SECONDARY, false);
-        g.drawString(this.font, formatCount(p.downloads) + " downloads",
+        g.text(this.font, formatCount(p.downloads) + " downloads",
                 textX, y + 8 + (this.font.lineHeight + 1) * 2, AuroraTheme.TEXT_DIM, false);
-        g.drawString(this.font, fitText("d:" + p.projectId, p.description, textW),
+        g.text(this.font, fitText("d:" + p.projectId, p.description, textW),
                 textX, y + 8 + (this.font.lineHeight + 1) * 3, AuroraTheme.TEXT_SECONDARY, false);
 
         // Install button — the shared glass Button painter (the same
@@ -1386,7 +1386,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         return control;
     }
 
-    private void renderDetailModal(GuiGraphics g, int mouseX, int mouseY) {
+    private void renderDetailModal(GuiGraphicsExtractor g, int mouseX, int mouseY) {
         float openT = AuroraAnim.easeOutCubic(detailOpenT);
 
         // Dim backdrop fades in with the modal.
@@ -1447,7 +1447,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
      * in lockstep. Their semantic controls' bounds and availability are
      * stamped here too (the modal is the only place they are interactive).
      */
-    private void driveModalButtonsGlassPass(GuiGraphics g, ModrinthProject p,
+    private void driveModalButtonsGlassPass(GuiGraphicsExtractor g, ModrinthProject p,
                                             int mx, int my, int mw, int mh) {
         int pad = 18;
         CardState st = cardStates.computeIfAbsent(p.projectId, k -> new CardState());
@@ -1497,7 +1497,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         return detailCloseControl;
     }
 
-    private void renderDetailContent(GuiGraphics g, ModrinthProject p, int mx, int my, int mw, int mh, int mouseX, int mouseY) {
+    private void renderDetailContent(GuiGraphicsExtractor g, ModrinthProject p, int mx, int my, int mw, int mh, int mouseX, int mouseY) {
         int pad = 18;
         int thumbSize = 88;
 
@@ -1526,10 +1526,10 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         // the modal re-renders every frame while open, and the raw
         // truncateToWidth loop is exactly the per-frame font.width() cost
         // the cache exists to avoid.
-        g.drawString(this.font, fitText("dt:" + p.projectId, p.title, textW), textX, my + pad + 2, AuroraTheme.TEXT_PRIMARY, false);
-        g.drawString(this.font, "by " + fitText("da:" + p.projectId, p.author, textW),
+        g.text(this.font, fitText("dt:" + p.projectId, p.title, textW), textX, my + pad + 2, AuroraTheme.TEXT_PRIMARY, false);
+        g.text(this.font, "by " + fitText("da:" + p.projectId, p.author, textW),
                 textX, my + pad + 4 + this.font.lineHeight, AuroraTheme.TEXT_SECONDARY, false);
-        g.drawString(this.font, formatCount(p.downloads) + " downloads  ·  "
+        g.text(this.font, formatCount(p.downloads) + " downloads  ·  "
                         + formatCount(p.followers) + " followers",
                 textX, my + pad + 6 + this.font.lineHeight * 2, AuroraTheme.TEXT_DIM, false);
 
@@ -1583,7 +1583,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
     }
 
     /** Small animated circular spinner, used by the loading + install-in-progress states. */
-    private void renderSpinner(GuiGraphics g, int cx, int cy, float angleDeg) {
+    private void renderSpinner(GuiGraphicsExtractor g, int cx, int cy, float angleDeg) {
         float r = 6f;
         int segments = 8;
         for (int i = 0; i < segments; i++) {
@@ -1610,7 +1610,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
     }
 
     @Override
-    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float delta) {
+    public void extractBackground(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
         // With a live world behind the screen, skip vanilla's background
         // sandwich (full-screen blur + dark gradient) — the glass panels
         // must sample the LIVE world, not an already-darkened,
@@ -1862,7 +1862,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         return Math.max(0, contentH - visibleH);
     }
 
-    private void renderScrollbar(GuiGraphics g, int mouseX, int mouseY, int gridLeft, int cols, int listBottom) {
+    private void renderScrollbar(GuiGraphicsExtractor g, int mouseX, int mouseY, int gridLeft, int cols, int listBottom) {
         double ms = maxScroll();
         if (ms <= 0) return;
 

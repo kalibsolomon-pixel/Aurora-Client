@@ -3,7 +3,7 @@ package com.aurora.client.ui.util;
 import com.aurora.client.config.AuroraConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 
@@ -145,15 +145,15 @@ public class AuroraFontRenderer {
     /**
      * Static wrapper to draw strings. Automatically applies our dynamically configured native custom fonts.
      */
-    public static float drawString(GuiGraphics graphics, Font font, String text, float x, float y, int color, boolean dropShadow) {
+    public static float drawString(GuiGraphicsExtractor graphics, Font font, String text, float x, float y, int color, boolean dropShadow) {
         net.minecraft.network.chat.Style style = getActiveStyle();
         
         if (style != null) {
             Component comp = Component.literal(text).withStyle(style);
-            graphics.drawString(font, comp.getVisualOrderText(), Math.round(x), Math.round(y), color, dropShadow);
+            graphics.text(font, comp.getVisualOrderText(), Math.round(x), Math.round(y), color, dropShadow);
             return x + font.width(comp);
         } else {
-            graphics.drawString(font, text, Math.round(x), Math.round(y), color, dropShadow);
+            graphics.text(font, text, Math.round(x), Math.round(y), color, dropShadow);
             return x + font.width(text);
         }
     }
@@ -161,15 +161,15 @@ public class AuroraFontRenderer {
     /**
      * Static wrapper to draw FormattedCharSequence. Automatically applies our dynamically configured native custom fonts.
      */
-    public static float drawString(GuiGraphics graphics, Font font, FormattedCharSequence text, float x, float y, int color, boolean dropShadow) {
+    public static float drawString(GuiGraphicsExtractor graphics, Font font, FormattedCharSequence text, float x, float y, int color, boolean dropShadow) {
         net.minecraft.network.chat.Style style = getActiveStyle();
 
         if (style != null) {
             FormattedCharSequence styled = withCustomFont(text, style);
-            graphics.drawString(font, styled, Math.round(x), Math.round(y), color, dropShadow);
+            graphics.text(font, styled, Math.round(x), Math.round(y), color, dropShadow);
             return x + font.width(styled);
         } else {
-            graphics.drawString(font, text, Math.round(x), Math.round(y), color, dropShadow);
+            graphics.text(font, text, Math.round(x), Math.round(y), color, dropShadow);
             return x + font.width(text);
         }
     }
@@ -240,23 +240,23 @@ public class AuroraFontRenderer {
     //  Centered text — always non-shadowed
     //
     //  Aurora's custom UI never draws text shadows (mod-wide style rule).
-    //  GuiGraphics.drawCenteredString has no non-shadow overload (it always
+    //  GuiGraphicsExtractor.drawCenteredString has no non-shadow overload (it always
     //  routes through the dropShadow=true path), so centered text goes
     //  through these helpers, which center manually and pass false.
     // ============================================================
 
     /** Centered, non-shadowed string. {@code cx} is the center x. */
-    public static void drawCentered(GuiGraphics graphics, Font font, String text, int cx, int y, int color) {
-        graphics.drawString(font, text, cx - font.width(text) / 2, y, color, false);
+    public static void drawCentered(GuiGraphicsExtractor graphics, Font font, String text, int cx, int y, int color) {
+        graphics.text(font, text, cx - font.width(text) / 2, y, color, false);
     }
 
     /** Centered, non-shadowed styled sequence. {@code cx} is the center x. */
-    public static void drawCentered(GuiGraphics graphics, Font font, FormattedCharSequence text, int cx, int y, int color) {
-        graphics.drawString(font, text, cx - font.width(text) / 2, y, color, false);
+    public static void drawCentered(GuiGraphicsExtractor graphics, Font font, FormattedCharSequence text, int cx, int y, int color) {
+        graphics.text(font, text, cx - font.width(text) / 2, y, color, false);
     }
 
     /** Centered, non-shadowed component. {@code cx} is the center x. */
-    public static void drawCentered(GuiGraphics graphics, Font font, Component text, int cx, int y, int color) {
+    public static void drawCentered(GuiGraphicsExtractor graphics, Font font, Component text, int cx, int y, int color) {
         drawCentered(graphics, font, text.getVisualOrderText(), cx, y, color);
     }
 
@@ -284,7 +284,7 @@ public class AuroraFontRenderer {
     }
 
     // Keep compatibility wrappers
-    public float draw(GuiGraphics graphics, String text, float x, float y, int color, boolean dropShadow) {
+    public float draw(GuiGraphicsExtractor graphics, String text, float x, float y, int color, boolean dropShadow) {
         return drawString(graphics, Minecraft.getInstance().font, text, x, y, color, dropShadow);
     }
 

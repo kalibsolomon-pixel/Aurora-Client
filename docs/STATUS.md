@@ -25,14 +25,14 @@ Standing rule: **no new features until the port to the newest Minecraft release 
 | 1 | Fail-soft mixins, one feature catalog, `breaks` list, copy-diagnostics report | Built, PR #2 |
 | 2 | Fair-play classification, default-off switches | Built, PR #3 |
 | 3 | Core Gradle module for the Minecraft-free packages, measure and set the overhead budget, third-party notices, repo cleanup | Built: core module (PR #4), overhead budget (PR #6), notices (PR #7), cleanup (PR #8) |
-| 4 | Port 26.1, then 26.2, then 26.3; release 26.3; freeze 1.21.11 | Not started |
+| 4 | Port 26.1, then 26.2, then 26.3; release 26.3; freeze 1.21.11 | 26.1 checkpoint built (PR #10); 26.2 next |
 | 5 | Extract the ports; move mixins, the glass renderer and Fabric API calls into the version adapter | Not started |
 | 6 | Shader-drawn shapes behind `RenderUtil` | Not started |
 | 7 | Later, in order: Apollo restriction support, friends and status, NeoForge if asked, small vanilla optimizations | Not started |
 
 ## Current status
 
-Nine pull requests are open and stacked. **None is merged: merging is blocked for the assistant, so the owner has to merge them, in this order.**
+Ten pull requests are open and stacked. **None is merged: merging is blocked for the assistant, so the owner has to merge them, in this order.**
 
 | PR | Branch | Contents | CI |
 |---|---|---|---|
@@ -45,6 +45,7 @@ Nine pull requests are open and stacked. **None is merged: merging is blocked fo
 | [#7](https://github.com/kalibsolomon-pixel/Aurora-Client/pull/7) | `feat/third-party-notices` | Roadmap step 3, third-party notices (stacked on #6) | See the PR |
 | [#8](https://github.com/kalibsolomon-pixel/Aurora-Client/pull/8) | `chore/repo-cleanup` | Roadmap step 3, repo cleanup (stacked on #7) | See the PR |
 | [#9](https://github.com/kalibsolomon-pixel/Aurora-Client/pull/9) | `chore/pre-port-checks` | Step 1's on-screen check and the tested mod matrix (stacked on #8) | See the PR |
+| [#10](https://github.com/kalibsolomon-pixel/Aurora-Client/pull/10) | `port/26.1` | Roadmap step 4: the 26.1 checkpoint (stacked on #9) | Passing |
 
 This file was committed with PR #3 and is updated in PR #4.
 
@@ -119,6 +120,12 @@ Answered 2026-11-11: yes to all three.
 - **On screen.** The detail-screen header shows "Not working in this session: zooming the view" for a broken feature, and the Copy Diagnostics run puts the full report on the clipboard (checked through a temporary in-game probe, not by hand). The grid card shows nothing: its note only reaches screen-reader narration, because cards have no hover tooltip.
 - **Mod matrix, 1.21.11.** Three boots: Sodium, Lithium, ImmediatelyFast, EntityCulling and Mod Menu; Sodium and Iris; VulkanMod. All pass: every mixin applied, every feature working, no Aurora warnings, normal close. [MOD_MATRIX.md](MOD_MATRIX.md); tooling in `tools/matrix/`.
 
+### Step 4, the 26.1 checkpoint, in PR #10
+
+- Builds against Minecraft 26.1.2 with the unobfuscated Loom, Java 25. All 652 tests pass, all 73 mixins apply, the overhead budget passes, and the 26.1 mod matrix passes.
+- Found and fixed on the way: a fail-soft hole (a stale injection point crashed the game at launch instead of turning a feature off); two optional mixins that failed silently; and glass that captured the previous frame, because 26.1 extracts the GUI before rendering it (title cards black, in-world windows dark). Glass now matches 1.21.11.
+- Details and what is still unchecked by eye: `docs/port/26.1.md`.
+
 ## Open decisions for the owner
 
 1. **Should a broken feature show on its grid card?** Today only its detail screen says so. A small marker or a second line on the card would make it visible from the grid; cards are deliberately minimal, so this is a design call.
@@ -131,11 +138,11 @@ Answered 2026-11-11: yes to all three.
 
 ## Next steps
 
-1. Merge PR #1 to #9, in order.
+1. Merge PR #1 to #10, in order.
 2. Answer the open decision above.
 3. Step 3 is built:
    - ~~Move the Minecraft-free packages into a core Gradle module.~~ Done in PR #4. `module/` stayed in the client: `Module` reads the settings registry.
    - ~~Measure Aurora's per-frame cost and set the overhead budget as a number.~~ Done in PR #6.
    - ~~Add a third-party notices file.~~ Done in PR #7.
    - ~~Replace the history in `AGENTS.md` and move the root-level reports under `docs/`.~~ Done in PR #8.
-4. Step 4, the port: 26.1 first, on `port/26.1`, then 26.2 and 26.3. Rerun the mod matrix for each.
+4. Step 4, the port: 26.1 is built (PR #10); 26.2 next, then 26.3 (SDL replaces GLFW: keybind migration). Rerun the mod matrix for each.

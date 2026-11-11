@@ -5,7 +5,7 @@ import com.aurora.client.util.CachedValue;
 import com.aurora.client.util.HudBackgrounds;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.effect.MobEffect;
@@ -169,7 +169,7 @@ public class PotionModule extends HudModule {
     }
 
     @Override
-    protected void renderContent(GuiGraphics ctx, Minecraft client, int x, int y) {
+    protected void renderContent(GuiGraphicsExtractor ctx, Minecraft client, int x, int y) {
         AuroraConfig cfg = AuroraConfig.get();
         if (!cfg.potionHudEnabled) return;
         if (client.player == null) return;
@@ -197,7 +197,7 @@ public class PotionModule extends HudModule {
             int textX = x + iconWidth() + ICON_GAP;
             int line1Y = rowY + (rowHeight() - (tr.lineHeight * 2 + 1)) / 2;
             int line2Y = line1Y + tr.lineHeight + 1;
-            ctx.drawString(tr, nameWithLevel(e), textX, line1Y, textColor(0xFFFFFFFF), false);
+            ctx.text(tr, nameWithLevel(e), textX, line1Y, textColor(0xFFFFFFFF), false);
             drawTimer(ctx, tr, e, textX, line2Y);
 
             row++;
@@ -220,17 +220,17 @@ public class PotionModule extends HudModule {
         return override == null ? fallback : override;
     }
 
-    private static void drawTimer(GuiGraphics ctx, Font tr, MobEffectInstance e,
+    private static void drawTimer(GuiGraphicsExtractor ctx, Font tr, MobEffectInstance e,
                                   int x, int y) {
         String mins = minutesString(e);
         String secs = secondsString(e);
         int cx = x;
         if (mins != null) {
             // Green minutes — the HUD's shared "plentiful time" status color.
-            ctx.drawString(tr, mins, cx, y, textColor(com.aurora.client.theme.HudStatus.ON), false);
+            ctx.text(tr, mins, cx, y, textColor(com.aurora.client.theme.HudStatus.ON), false);
             cx += tr.width(mins);
         }
-        ctx.drawString(tr, secs, cx, y, textColor(0xFFFFFFFF), false);     // seconds / infinity — white
+        ctx.text(tr, secs, cx, y, textColor(0xFFFFFFFF), false);     // seconds / infinity — white
     }
 
     /**
@@ -240,7 +240,7 @@ public class PotionModule extends HudModule {
      * tinted square only if the effect somehow has no registry key
      * (e.g. a custom effect that never registered a texture).
      */
-    private static void drawEffectIcon(GuiGraphics ctx, MobEffectInstance e, int x, int y) {
+    private static void drawEffectIcon(GuiGraphicsExtractor ctx, MobEffectInstance e, int x, int y) {
         Holder<MobEffect> holder = e.getEffect();
         Identifier loc = holder.unwrapKey().map(k -> k.identifier()).orElse(null);
         if (loc != null) {

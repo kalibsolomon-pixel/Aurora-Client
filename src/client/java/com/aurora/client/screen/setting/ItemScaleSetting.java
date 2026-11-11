@@ -13,7 +13,7 @@ import com.aurora.client.util.AuroraShapes;
 import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
@@ -34,7 +34,7 @@ import java.util.*;
  * <p>Icon rendering: each item tab renders its real item icon through
  * {@link ItemSpriteRenderer} — the crisp flat-sprite path (resolved GUI
  * sprite blitted pixel-aligned from the block atlas), falling back to the
- * 3D {@link GuiGraphics#renderItem} for tinted/multi-layer models. The
+ * 3D {@link GuiGraphicsExtractor#renderItem} for tinted/multi-layer models. The
  * expand/collapse chevrons use the Material Symbols glyphs already in the
  * font subset (the {@code EnumSetting} dropdown convention), not ASCII
  * stand-ins.
@@ -330,7 +330,7 @@ public class ItemScaleSetting extends FeatureSetting {
      * would otherwise drive the field's surface at a one-frame-stale rect.
      */
     @Override
-    public void renderGlassPass(GuiGraphics ctx, int x, int y, int width) {
+    public void renderGlassPass(GuiGraphicsExtractor ctx, int x, int y, int width) {
         if (!isHeaderPinned()) renderFixedHeaderGlass(ctx, x, y, width);
     }
 
@@ -341,7 +341,7 @@ public class ItemScaleSetting extends FeatureSetting {
         return pinnedControls;
     }
 
-    @Override public void renderFixedHeaderGlass(GuiGraphics ctx, int x, int y, int width) {
+    @Override public void renderFixedHeaderGlass(GuiGraphicsExtractor ctx, int x, int y, int width) {
         if (!GlassSurface.passOpen()) return; // legacy frame order — render paints in place
         glassPassFrame = GlassSurface.frame();
         int searchW = width - 56;
@@ -356,7 +356,7 @@ public class ItemScaleSetting extends FeatureSetting {
     }
 
     @Override
-    public void render(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
+    public void render(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {
         Font tr = Minecraft.getInstance().font;
         AuroraConfig cfg = AuroraConfig.get();
 
@@ -368,7 +368,7 @@ public class ItemScaleSetting extends FeatureSetting {
         if (foundItem != null) {
             String name = foundItem.getName(foundItem.getDefaultInstance()).getString();
             ItemSpriteRenderer.renderIcon(ctx, foundItem.getDefaultInstance(), x + 12, currentY - 2);
-            ctx.drawString(tr, "Add: " + name, x + 12 + ICON_SIZE + 4, currentY,
+            ctx.text(tr, "Add: " + name, x + 12 + ICON_SIZE + 4, currentY,
                     ThemeManager.color(ThemeToken.SEMANTIC_SUCCESS), false);
             currentY += 12;
         }
@@ -405,7 +405,7 @@ public class ItemScaleSetting extends FeatureSetting {
             // (label + gap + subtitle) centered in the row, mirroring
             // FeatureSetting.drawValueLine's beneath-label placement.
             int textTop = rowY + (ITEM_ROW_H - 20) / 2;
-            ctx.drawString(tr, labelStr, textPadX, textTop, AuroraTheme.IOS_LABEL, false);
+            ctx.text(tr, labelStr, textPadX, textTop, AuroraTheme.IOS_LABEL, false);
 
             // §4 live-value subtitle: collapsed rows hide all seven
             // configured values behind the expand chevron, so the headline
@@ -419,7 +419,7 @@ public class ItemScaleSetting extends FeatureSetting {
             if (!expanded) {
                 AuroraConfig.ItemScaleData d = cfg.itemScales.get(idStr);
                 if (d != null) {
-                    ctx.drawString(tr, String.format(java.util.Locale.ROOT, "Scale %.2f\u00d7", d.scale),
+                    ctx.text(tr, String.format(java.util.Locale.ROOT, "Scale %.2f\u00d7", d.scale),
                             textPadX, textTop + tr.lineHeight + 2, AuroraTheme.TEXT_SECONDARY, false);
                 }
             }
@@ -558,7 +558,7 @@ public class ItemScaleSetting extends FeatureSetting {
         return sliders;
     }
 
-    @Override public void renderFixedHeader(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
+    @Override public void renderFixedHeader(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {
         Font tr = Minecraft.getInstance().font;
         // 1. Search bar — the themed background, centered text, and
         // outline are all drawn by EditBoxMixin (which fully replaces
@@ -569,7 +569,7 @@ public class ItemScaleSetting extends FeatureSetting {
         searchField.setY(y + 6);
         searchField.setWidth(searchW);
         searchFrame = com.aurora.client.ui.component.GlassSurface.frame();
-        searchField.render(ctx, mouseX, mouseY, 0f);
+        searchField.extractRenderState(ctx, mouseX, mouseY, 0f);
 
         // Draw "+" add button — raised glass (flat pill on decline). If the
         // screen ran this row's glass pass this frame the surface is already

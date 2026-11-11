@@ -2,7 +2,7 @@ package com.aurora.client.hud;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 /**
  * Renders the active {@link AlertManager.Alert} popup: centered on screen,
@@ -13,7 +13,7 @@ import net.minecraft.client.gui.GuiGraphics;
  */
 public final class AlertRenderer {
 
-    public void render(GuiGraphics ctx) {
+    public void render(GuiGraphicsExtractor ctx) {
         AlertManager.Alert alert = AlertManager.getActive();
         if (alert == null) return;
 
@@ -60,7 +60,7 @@ public final class AlertRenderer {
                 ctx.blitSprite(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED,
                         alert.iconSprite, contentX + (iconSize - 18) / 2,
                         iconY + (iconSize - 18) / 2, 18, 18);
-            } else ctx.renderItem(alert.iconStack,
+            } else ctx.item(alert.iconStack,
                     contentX + (iconSize - 16) / 2,
                     iconY + (iconSize - 16) / 2);
             contentX += iconSize + gap;
@@ -68,12 +68,12 @@ public final class AlertRenderer {
 
         // Title
         int titleY = y + padding + (subH > 0 ? 0 : (boxH - titleH - padding * 2) / 2);
-        ctx.drawString(tr, alert.title, contentX, titleY, textColor, false);
+        ctx.text(tr, alert.title, contentX, titleY, textColor, false);
 
         // Subtitle
         if (subW > 0) {
             int subColor = (Math.round(0xAA * alpha) << 24) | 0x00FFFFFF;
-            ctx.drawString(tr, alert.subtitle, contentX, titleY + tr.lineHeight + 2, subColor, false);
+            ctx.text(tr, alert.subtitle, contentX, titleY + tr.lineHeight + 2, subColor, false);
         }
     }
 

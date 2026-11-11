@@ -4,7 +4,7 @@ import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.hud.HudAnchor;
 import com.aurora.client.util.HudBackgrounds;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 /**
  * Base class for a draggable, positionable HUD overlay.
@@ -25,7 +25,7 @@ import net.minecraft.client.gui.GuiGraphics;
  *       module. Persisted via the module-layout map.</li>
  * </ul>
  *
- * <p>Subclasses implement {@link #renderContent(GuiGraphics, Minecraft, int, int)}
+ * <p>Subclasses implement {@link #renderContent(GuiGraphicsExtractor, Minecraft, int, int)}
  * where (x,y) is the computed top-left of the module's UNSCALED AABB. The
  * matrix scale set up in {@link #render} multiplies that AABB up to its
  * effective on-screen size.
@@ -123,7 +123,7 @@ public abstract class HudModule {
     public final int getScaledWidth()  { return Math.round(getWidth()  * scale); }
     public final int getScaledHeight() { return Math.round(getHeight() * scale); }
 
-    protected abstract void renderContent(GuiGraphics ctx, Minecraft client, int x, int y);
+    protected abstract void renderContent(GuiGraphicsExtractor ctx, Minecraft client, int x, int y);
 
     public boolean isConfigEnabled() { return true; }
 
@@ -148,7 +148,7 @@ public abstract class HudModule {
      * intended edge), pushes a matrix scale, and delegates to
      * {@link #renderContent}.
      */
-    public void render(GuiGraphics ctx, Minecraft client, int screenW, int screenH) {
+    public void render(GuiGraphicsExtractor ctx, Minecraft client, int screenW, int screenH) {
         if (!enabled) return;
         if (!isConfigEnabled()) return;
 

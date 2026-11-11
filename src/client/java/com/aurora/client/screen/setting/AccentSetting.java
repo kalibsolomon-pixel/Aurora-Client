@@ -3,7 +3,7 @@ package com.aurora.client.screen.setting;
 import java.util.function.IntConsumer;
 import java.util.function.IntSupplier;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 /**
  * A theme colour row: the shared {@link ColorSetting} picker with ONE
@@ -57,7 +57,7 @@ public class AccentSetting extends ColorSetting {
 
     /** A deferred live apply flushes once the window elapses. */
     @Override
-    public void render(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
+    public void render(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {
         if (hasPending && System.currentTimeMillis() - lastApplyMs >= LIVE_RELOAD_MIN_MS) flushPending();
         super.render(ctx, x, y, width, mouseX, mouseY);
     }

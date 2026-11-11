@@ -8,7 +8,7 @@ import com.aurora.client.ui.util.CubicBezier;
 import com.aurora.client.ui.util.TimedTransition;
 import com.aurora.client.util.AuroraAnim;
 import com.aurora.client.util.HoverAnim;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
@@ -95,7 +95,7 @@ public class ToggleSwitch extends Widget {
     private boolean pilotPrimed;
 
     /** Pack switch recipe: solid readable accent, white thumb, fixed capsule, no pulse. */
-    private void renderUnified(GuiGraphics g,float x,float y,float w,float h,int mx,int my) {
+    private void renderUnified(GuiGraphicsExtractor g,float x,float y,float w,float h,int mx,int my) {
         long now=System.nanoTime(); boolean on=getter.getAsBoolean();
         if(!pilotPrimed) { pilotSlide.update(on ? 1 : 0,now);pilotHover.update(0,now);pilotPrimed=true; }
         float t=(float)pilotSlide.update(on ? 1 : 0,now);
@@ -165,12 +165,12 @@ public class ToggleSwitch extends Widget {
     }
 
     @Override
-    public void renderShapes(GuiGraphics g, float x, float y, float w, float h) {
+    public void renderShapes(GuiGraphicsExtractor g, float x, float y, float w, float h) {
         // Fully live — everything renders in renderOverlay every frame.
     }
 
     @Override
-    public void renderOverlay(GuiGraphics g, float x, float y, float w, float h, int mouseX, int mouseY) {
+    public void renderOverlay(GuiGraphicsExtractor g, float x, float y, float w, float h, int mouseX, int mouseY) {
         if(MaterialSurface.unified()) { renderUnified(g,x,y,w,h,mouseX,mouseY);return; }
         boolean on = getter.getAsBoolean();
         float t = advance(on); // advances once per frame; wall-clock real-dt
@@ -210,7 +210,7 @@ public class ToggleSwitch extends Widget {
      * wash {@code hoverT} applied. Disabled replaces the interactive colors:
      * OFF rests on the inset surface, ON keeps an accent residue over it.
      */
-    private void drawTrack(GuiGraphics g, float x, float y, float w, float h, float t, float hoverT) {
+    private void drawTrack(GuiGraphicsExtractor g, float x, float y, float w, float h, float t, float hoverT) {
         int base;
         if (disabled) {
             base = AuroraAnim.lerpArgb(

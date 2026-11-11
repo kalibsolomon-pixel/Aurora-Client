@@ -12,7 +12,7 @@ import com.aurora.client.util.AuroraTheme;
 import com.aurora.client.util.HoverAnim;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 
 import java.util.HashMap;
@@ -144,7 +144,7 @@ public class SectionHeaderSetting extends FeatureSetting {
     @Override public SemanticActionControl interactionControl() { return interactionControl; }
 
     @Override
-    public void render(GuiGraphics ctx, int x, int y, int width, int mouseX, int mouseY) {
+    public void render(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {
         Font tr = Minecraft.getInstance().font;
         int top = y + gapAbove();
         int h = baseHeight() - gapAbove();
@@ -160,7 +160,7 @@ public class SectionHeaderSetting extends FeatureSetting {
         int color = AuroraAnim.lerpArgb(AuroraTheme.sectionCaption(),
                 MaterialSurface.color(ThemeToken.ON_BACKGROUND), emphasis * .6f);
         int textY = top + (h - tr.lineHeight) / 2 + 1;
-        ctx.drawString(tr, label, x + LABEL_PAD, textY, color, false);
+        ctx.text(tr, label, x + LABEL_PAD, textY, color, false);
         // Trailing chevron (native-resolution icon): down = collapsed, up = expanded.
         com.aurora.client.ui.util.MaterialIconRenderer.drawIcon(ctx, tr,
                 com.aurora.client.screen.FeatureIcons.get(collapsed ? "_dropdown_expand_more" : "_dropdown_expand_less"),

@@ -25,7 +25,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(EntityHitboxDebugRenderer.class)
 public abstract class EntityRenderDispatcherMixin {
 
-    @Inject(method = "emitGizmos", at = @At("HEAD"), cancellable = true, require = 1)
+    @Inject(method = "emitGizmos", at = @At("HEAD"), cancellable = true)
     private void aurora$suppressVanillaHitboxes(double camX, double camY, double camZ,
                                                 DebugValueAccess access,
                                                 Frustum frustum, float partialTick,

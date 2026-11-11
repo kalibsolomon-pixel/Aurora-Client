@@ -3,7 +3,7 @@ package com.aurora.client.ui.component;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.util.RenderUtil;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 /**
  * Themed rounded panel / container — a window or card surface rendered
@@ -36,7 +36,7 @@ public class RoundedPanel extends Widget {
     }
 
     @Override
-    public void renderShapes(GuiGraphics g, float x, float y, float w, float h) {
+    public void renderShapes(GuiGraphicsExtractor g, float x, float y, float w, float h) {
         renderShapes(g, x, y, w, h, false);
     }
 
@@ -47,7 +47,7 @@ public class RoundedPanel extends Widget {
      * would read as a double border. The optional glow rings are still
      * drawn (they read as a drop shadow around the panel, not an outline).
      */
-    public void renderShapes(GuiGraphics g, float x, float y, float w, float h, boolean glassActive) {
+    public void renderShapes(GuiGraphicsExtractor g, float x, float y, float w, float h, boolean glassActive) {
         float radius = ThemeManager.current().roundness().radius();
 
         if (glow && !MaterialSurface.unified()) {
