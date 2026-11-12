@@ -26,6 +26,8 @@ public final class ParityProbe implements ClientModInitializer {
     private long reloadStarted;
     /** Degrees the camera turns every tick ("spin"); 0 = still. */
     private float spinPerTick;
+    /** Particles added around the player every tick ("particles N"); half of them underground. */
+    private int particlesPerTick;
     /** The running "fps" sample: label, end time and the once-a-second readings so far. */
     private String fpsLabel;
     private long fpsUntil, fpsNextReading;
@@ -52,6 +54,16 @@ public final class ParityProbe implements ClientModInitializer {
                 if (spinPerTick != 0 && client.player != null) {
                     client.player.setYRot(client.player.getYRot() + spinPerTick);
                     client.player.yRotO = client.player.getYRot() - spinPerTick;
+                }
+                if (particlesPerTick > 0 && client.level != null && client.player != null) {
+                    var random = client.level.getRandom();
+                    for (int i = 0; i < particlesPerTick; i++) {
+                        double x = client.player.getX() + (random.nextDouble() - .5) * 48;
+                        double z = client.player.getZ() + (random.nextDouble() - .5) * 48;
+                        // Half above the player, half 16-40 blocks below it, inside the terrain.
+                        double y = client.player.getY() + (i % 2 == 0 ? random.nextDouble() * 8 : -16 - random.nextDouble() * 24);
+                        client.level.addParticle(net.minecraft.core.particles.ParticleTypes.FLAME, x, y, z, 0, 0.01, 0);
+                    }
                 }
                 if (reloadStarted != 0 && NativeUi.overlay(client) == null) {
                     System.out.println("[parity-probe] reload overlay cleared after "
@@ -318,6 +330,17 @@ public final class ParityProbe implements ClientModInitializer {
                 config.worldMapEnabled = true;
             }
             case "spin" -> spinPerTick = Float.parseFloat(args[1]);
+            case "particles" -> particlesPerTick = Integer.parseInt(args[1]);
+            case "teleport" -> {
+                // "teleport <blocks>": moves the player along x on the server, to load fresh chunks.
+                var server = client.getSingleplayerServer();
+                var id = client.player.getUUID();
+                double dx = Double.parseDouble(args[1]);
+                server.execute(() -> {
+                    var player = server.getPlayerList().getPlayer(id);
+                    player.teleportTo(player.getX() + dx, player.getY() + 40, player.getZ());
+                });
+            }
             case "cfg" -> AuroraConfig.class.getField(args[1]).setBoolean(config, Boolean.parseBoolean(args[2]));
             case "screen" -> System.out.println("[parity-probe] screen " + NativeUi.screen(client));
             case "world-map" -> {

@@ -97,8 +97,9 @@ optimizations and records two that were measured and dropped; [evidence](reports
 PR 3 (`feat/perf-atlas`) frees uploaded sprite mipmaps and drops animated sprite ordering;
 [evidence](reports/2026-11-12-perf-atlas.md). PR 4 (`feat/perf-maps`) caps the minimap's motion
 repaints at 60 Hz and drops two map ideas that had nothing to save; [evidence](reports/2026-11-12-perf-maps.md).
-Later stacked PRs cover world rendering with Sodium patches, and measured Vulkan and occlusion
-prototypes.
+PR 5 (`feat/perf-world-render`)
+records the world-render measurements: the section copy cache and particle culling were dropped,
+and the GPU-side items wait for GPU-bound tester evidence; [evidence](reports/2026-11-12-perf-world-render.md).
 
 ## Next work
 
