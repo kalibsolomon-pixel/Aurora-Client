@@ -94,5 +94,10 @@ class TitleScreenContractTest {
         assertTrue(SCREEN.contains("atmosphere.draw(ctx, this.width, this.height);"));
         assertTrue(SCREEN.contains("atmosphere.dispose();"), "its textures go when the screen does");
         assertFalse(SCREEN.contains("renderMenuPanorama"), "no panorama and no glass behind the menu");
+        // Profiled 2026-11-12: the account name was re-fitted every frame.
+        String fit = "AuroraFontRenderer.ellipsize(font, value";
+        assertTrue(SCREEN.contains(fit) && SCREEN.indexOf(fit) == SCREEN.lastIndexOf(fit),
+                "the account names are fitted through FittedText only");
+        assertTrue(SCREEN.contains("cardName.fit(font, getMessage().getString()"));
     }
 }
