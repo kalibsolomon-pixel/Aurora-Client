@@ -24,6 +24,8 @@ public final class ParityProbe implements ClientModInitializer {
     private Path root;
     /** System.nanoTime() of the last "reload" command while its overlay is up; 0 otherwise. */
     private long reloadStarted;
+    /** Degrees the camera turns every tick ("spin"); 0 = still. */
+    private float spinPerTick;
     /** The running "fps" sample: label, end time and the once-a-second readings so far. */
     private String fpsLabel;
     private long fpsUntil, fpsNextReading;
@@ -46,6 +48,10 @@ public final class ParityProbe implements ClientModInitializer {
                         button.onPress(new KeyEvent(InputConstants.KEY_RETURN, 0, 0));
                         break;
                     }
+                }
+                if (spinPerTick != 0 && client.player != null) {
+                    client.player.setYRot(client.player.getYRot() + spinPerTick);
+                    client.player.yRotO = client.player.getYRot() - spinPerTick;
                 }
                 if (reloadStarted != 0 && NativeUi.overlay(client) == null) {
                     System.out.println("[parity-probe] reload overlay cleared after "
@@ -303,6 +309,20 @@ public final class ParityProbe implements ClientModInitializer {
                     }
                 }
                 System.out.println("[parity-probe] sprite-mips " + sprites + " sprites hold " + bytes / 1024 + " KiB above level 0");
+            }
+            case "minimap" -> {
+                // "minimap <on|off>": the minimap HUD, rotating with the player so turning repaints it.
+                config.minimapEnabled = args[1].equals("on");
+                config.minimapRotateWithPlayer = true;
+                // The world map engine captures terrain only while enabled; both maps ship off.
+                config.worldMapEnabled = true;
+            }
+            case "spin" -> spinPerTick = Float.parseFloat(args[1]);
+            case "cfg" -> AuroraConfig.class.getField(args[1]).setBoolean(config, Boolean.parseBoolean(args[2]));
+            case "screen" -> System.out.println("[parity-probe] screen " + NativeUi.screen(client));
+            case "world-map" -> {
+                config.worldMapEnabled = true;
+                NativeUi.setScreen(client, new com.aurora.client.worldmap.screen.WorldMapScreen());
             }
             case "reload" -> {
                 reloadStarted = System.nanoTime();

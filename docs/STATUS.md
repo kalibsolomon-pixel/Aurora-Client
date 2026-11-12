@@ -95,8 +95,10 @@ PR 1 (`feat/perf-foundation`) adds the stand-down mechanism and four loading opt
 [evidence](reports/2026-11-12-perf-loading.md). PR 2 (`feat/perf-cpu`) adds four per-frame CPU
 optimizations and records two that were measured and dropped; [evidence](reports/2026-11-12-perf-cpu.md).
 PR 3 (`feat/perf-atlas`) frees uploaded sprite mipmaps and drops animated sprite ordering;
-[evidence](reports/2026-11-12-perf-atlas.md). Later stacked PRs cover Aurora's maps, world
-rendering with Sodium patches, and measured Vulkan and occlusion prototypes.
+[evidence](reports/2026-11-12-perf-atlas.md). PR 4 (`feat/perf-maps`) caps the minimap's motion
+repaints at 60 Hz and drops two map ideas that had nothing to save; [evidence](reports/2026-11-12-perf-maps.md).
+Later stacked PRs cover world rendering with Sodium patches, and measured Vulkan and occlusion
+prototypes.
 
 ## Next work
 

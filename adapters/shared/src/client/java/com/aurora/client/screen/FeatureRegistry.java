@@ -1536,15 +1536,19 @@ addWithSettings("hitbox",
         FeatureSetting debugEntryCache = new BooleanSetting("Debug Entry Cache",
                 () -> cfg.perfDebugEntryCache, v -> cfg.perfDebugEntryCache = v)
                 .description("Updates the lines of the F3 debug screen 20 times a second, as often as the game itself changes, instead of on every frame. Raises the frame rate while F3 is open; values such as your coordinates update in steps of a game tick.");
+        FeatureSetting minimapRefreshCap = new BooleanSetting("Minimap Refresh Cap",
+                () -> cfg.perfMinimapRefreshCap, v -> cfg.perfMinimapRefreshCap = v)
+                .description("While you move or turn, the minimap redraws its terrain at most 60 times a second instead of on every frame, which saves time at high frame rates. Markers stay lined up with the terrain. On screens faster than 60 Hz the terrain scrolls in small steps.");
         addWithSettings("performance",
                 "Loading, caching and drawing optimizations. Most are always on; the switches here are the ones you might notice.",
-                () -> cfg.perfHideReloadOverlay || cfg.perfHideTitleFade || cfg.perfDebugEntryCache,
+                () -> cfg.perfHideReloadOverlay || cfg.perfHideTitleFade || cfg.perfDebugEntryCache || cfg.perfMinimapRefreshCap,
                 v -> {
                     cfg.perfHideReloadOverlay = v;
                     cfg.perfHideTitleFade = v;
                     cfg.perfDebugEntryCache = v;
+                    cfg.perfMinimapRefreshCap = v;
                 },
-                List.of(hideReloadOverlay, hideTitleFade, debugEntryCache),
+                List.of(hideReloadOverlay, hideTitleFade, debugEntryCache, minimapRefreshCap),
                 List.of("perf"));
 
         // ============ SETTINGS TAB PAGES ============
@@ -1579,7 +1583,8 @@ addWithSettings("hitbox",
                 .description("How many typos a search word can have and still find a match. Exact only finds exact matches; short words always need to be exact.");
         SETTINGS_PAGES.add(new SettingsPage("Performance", List.of(
                 group("loading", "Loading", hideReloadOverlay, hideTitleFade),
-                group("debug_screen", "Debug Screen", debugEntryCache))));
+                group("debug_screen", "Debug Screen", debugEntryCache),
+                group("maps", "Maps", minimapRefreshCap))));
         SETTINGS_PAGES.add(new SettingsPage("General", List.of(
                 group("search", "Search", searchInstant, searchTolerance),
                 settingsEntry("custom_title"),

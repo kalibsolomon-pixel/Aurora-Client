@@ -20,6 +20,7 @@
   "perfMergeTextDecorations": true,
   "perfGuiItemBaking": true,
   "perfFreeSpriteMipmaps": true,
+  "perfMinimapRefreshCap": true,
   "themeEnabled": true,
   "theme": {
     "mode": "DARK",
