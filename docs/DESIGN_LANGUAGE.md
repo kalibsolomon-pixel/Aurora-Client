@@ -237,7 +237,7 @@ a full capsule at the factory radius or above and flattens in proportion below i
 that is not theme chrome: colour wheels, represented game shapes and map markers.
 
 In-game HUD shapes keep fixed corners by default (panel backgrounds 2 px, keystroke keycaps
-3 px, the square minimap frame 6 px). Each HUD feature's detail screen has a **Theme Corner
+3 px, the square minimap frame 0 px). Each HUD feature's detail screen has a **Theme Corner
 Radius** switch, off by default, that hands its shapes the theme's compact radius (Corner
 Radius × 3/5) instead (owner ruling 2026-11-12).
 

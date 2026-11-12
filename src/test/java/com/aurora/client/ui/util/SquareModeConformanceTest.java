@@ -188,6 +188,8 @@ class SquareModeConformanceTest {
         String minimap = read(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/hud/module/MinimapModule.java");
         assertTrue(minimap.contains("HudBackgrounds.radius(cfg.minimapThemeCorners, FIXED_FRAME_RADIUS)"),
                 "the square minimap frame reads its switch");
+        assertTrue(minimap.contains("private static final float FIXED_FRAME_RADIUS = 0f;"),
+                "the square minimap frame is square by default");
         String module = read(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/hud/module/HudModule.java");
         assertTrue(module.contains("protected boolean themeCorners() { return false; }"), "fixed by default");
         assertEquals(2, countOf(module, "bgAlpha, themeCorners());"), "both render paths pass the switch");
