@@ -8,7 +8,7 @@ This guide is short on purpose. The full engineering history it replaced, includ
 
 - Decisions are ADRs in [docs/adr/](docs/adr/). Read the relevant one before proposing multi-version builds, an own UI renderer, vanilla rendering optimizations, telemetry or changes to feature defaults.
 - The order of work is [docs/ROADMAP.md](docs/ROADMAP.md); where it stands is [docs/STATUS.md](docs/STATUS.md).
-- The 26.3 port shipped as 3.3.0. Steps 5 and 5.5 are complete; all supported adapters build from one tree. Step 6, shader-drawn shapes, is implemented on `feat/shader-drawn-shapes` and awaits review.
+- The 26.3 port shipped as 3.3.0. Steps 5 and 5.5 are complete; all supported adapters build from one tree. Step 6, shader-drawn shapes, is merged (PR #21) and not yet released; step 7 is deferred.
 
 ## Build, test, run
 
@@ -19,7 +19,7 @@ This guide is short on purpose. The full engineering history it replaced, includ
 - On the owner's workstation, keep test instances on the second, portrait monitor.
 - Useful launch options (pass with `JAVA_TOOL_OPTIONS`): `-Daurora.diagnostics.log=true` writes the diagnostics report to the log after joining a world, `-Daurora.diagnostics.runs=N` repeats it, `-Daurora.mixin.disable=A,B` switches mixins off.
 - Checkout is LF on every platform (`.gitattributes`); source-contract tests match multi-line snippets with `\n`.
-- Scripts regenerate checked-in files: `tools/gen_fair_play_doc.py` (FAIR_PLAY.md), `tools/gen_third_party_notices.py` (the notices and the font license). Tests fail when a generated file is stale. The icon font is the full Material Symbols Rounded set (a static instance, ligatures dropped) with its `.codepoints` name list; `core/.../screen/IconCatalog` reads the names.
+- Scripts regenerate checked-in files: `tools/gen_fair_play_doc.py` (FAIR_PLAY.md), `tools/gen_third_party_notices.py` (the notices and the font license), `tools/build_fonts.py` (the text fonts at every weight and their provider JSONs; downloads into `build/`, run with `python -I`). Tests fail when a generated file is stale. The icon font is the full Material Symbols Rounded set (a static instance, ligatures dropped) with its `.codepoints` name list; `core/.../screen/IconCatalog` reads the names.
 
 ## Layout
 

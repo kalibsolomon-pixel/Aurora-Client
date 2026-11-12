@@ -93,6 +93,12 @@ public class SegmentedSetting<E extends Enum<E>> extends FeatureSetting {
         return this;
     }
 
+    /** Draws the segment labels as written, never re-cased (the Text section's Case row). */
+    public SegmentedSetting<E> verbatimLabels() {
+        control.verbatimLabels(true);
+        return this;
+    }
+
     /** Whether segments render as glass; glass is the mod-wide default look. */
     private boolean glass = true;
 

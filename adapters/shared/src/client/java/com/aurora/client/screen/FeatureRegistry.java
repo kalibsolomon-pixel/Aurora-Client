@@ -1133,7 +1133,7 @@ addWithSettings("hitbox",
                 List.of("fixHeldItemSeams", "heldItemInflation"));
 
         add("custom_title",
-                "Replaces Minecraft's default main menu with Aurora's themed title screen — a diffuse panel and themed buttons over the vanilla panorama — and themes the buttons and search field on the world-select and multiplayer screens. Purely cosmetic; turn it off to restore the vanilla menu. Takes effect the next time you return to the main menu.",
+                "Replaces Minecraft's default main menu with Aurora's title screen — your logo, buttons, player model and account over a softly animated gradient — and themes the buttons and search field on the world-select and multiplayer screens. Purely cosmetic; turn it off to restore the vanilla menu. Takes effect the next time you return to the main menu.",
                 () -> cfg.customTitleScreen, v -> cfg.customTitleScreen = v);
 
         addWithSettings("resourcepack_browser",
@@ -1154,20 +1154,40 @@ addWithSettings("hitbox",
 
         // ============ SETTINGS TAB ============
 
+        // Text (2026-11-12, after OneConfig's text editor): font, real
+        // weights, modifiers and case apply wherever the Text Renderer does;
+        // the shadow is the in-world HUD's (Aurora's menus never shadow text).
         addWithSettings("text_fonts",
-                "Choose the font Aurora uses across its own screens and, optionally, across all of Minecraft's vanilla UI. Pick a rendering scope and a Google Font — the choice applies live.",
+                "Choose the font, weight and style of Aurora's text and, optionally, all of Minecraft's. Changes apply live.",
                 () -> true,
                 v -> {},
                 List.of(
                         new EnumSetting<>("Text Renderer", AuroraConfig.TextRendererMode.class,
-                                () -> cfg.textRendererMode, v -> cfg.textRendererMode = v)
+                                () -> cfg.textRendererMode, v -> { cfg.textRendererMode = v; persistThemeChange(); })
                                 .labels(AuroraConfig.TextRendererMode::getLabel)
-                                .description("Which text uses the custom font: Off (vanilla everywhere), Aurora UI Only, or All Text (Aurora + every vanilla string)."),
-                        new EnumSetting<>("Client Font", AuroraConfig.FontType.class,
-                                () -> cfg.activeFont, v -> cfg.activeFont = v)
+                                .description("Which text uses these options: Off (Minecraft's own text everywhere), Aurora UI Only, or All Text (Aurora and every vanilla string)."),
+                        new EnumSetting<>("Font", AuroraConfig.FontType.choices(),
+                                () -> cfg.activeFont == AuroraConfig.FontType.INTER_ITALIC ? AuroraConfig.FontType.INTER : cfg.activeFont,
+                                v -> { cfg.activeFont = v; persistThemeChange(); })
                                 .labels(AuroraConfig.FontType::getLabel)
-                                .description("The Google Font applied to text. SansSerif restores Minecraft's default font.")
-                )).noSettingsToggle(true); // owner ruling 2026-10-30: the Text Renderer dropdown owns the scope; no master toggle
+                                .description("The font family. SansSerif is Minecraft's own font, which the options below do not change."),
+                        new EnumSetting<>("Weight", AuroraConfig.TextWeight.class,
+                                () -> cfg.textWeight, v -> { cfg.textWeight = v; persistThemeChange(); })
+                                .labels(AuroraConfig.TextWeight::getLabel)
+                                .description("How heavy the letters are. Every weight is a real font file, not a smeared bold; Quicksand has one weight."),
+                        new ToggleGroupSetting("Modifiers", List.of(
+                                new ToggleGroupSetting.Toggle("Italic", () -> cfg.textItalic, v -> { cfg.textItalic = v; persistThemeChange(); }),
+                                new ToggleGroupSetting.Toggle("Underline", () -> cfg.textUnderline, v -> { cfg.textUnderline = v; persistThemeChange(); })))
+                                .description("Italic uses the family's own italic where it has one (Oswald and Quicksand slant instead)."),
+                        new SegmentedSetting<>("Case", AuroraConfig.TextCase.class,
+                                () -> cfg.textCase, v -> { cfg.textCase = v; persistThemeChange(); }, AuroraConfig.TextCase::getLabel)
+                                .verbatimLabels()
+                                .description("Show text as written (Aa), in capitals (AA) or in lower case (aa)."),
+                        new SegmentedSetting<>("HUD Text Shadow", AuroraConfig.TextShadow.class,
+                                () -> cfg.textHudShadow, v -> { cfg.textHudShadow = v; persistThemeChange(); }, AuroraConfig.TextShadow::getLabel)
+                                .description("A shadow behind in-game HUD text: Minecraft's drop shadow (Normal) or a full outline (Full). Menus never shadow text."),
+                        new TextPreviewSetting()
+                ), List.of("text", "activeFont")).noSettingsToggle(true); // owner ruling 2026-10-30: the Text Renderer dropdown owns the scope; no master toggle
 
         addWithSettings("theme",
                 "Customize Aurora's accent and background colors, and the opacity, blur and corner radius of its surfaces.",
@@ -1527,7 +1547,15 @@ addWithSettings("hitbox",
                 group("smooth_camera", "Smooth Camera", smoothCameraEnabled, smoothCameraStrength),
                 group("decoupled_input", "Decoupled Input", decoupledInputEnabled),
                 group("aurora_keys", "Aurora Keys", hudEditorKey))));
+        FeatureSetting searchInstant = new BooleanSetting("Instant Search",
+                () -> cfg.searchInstant, v -> { cfg.searchInstant = v; AuroraConfig.save(); })
+                .description("Focuses the search bar when the Aurora menu opens or you return to the Mods tab, so you can type straight away.");
+        FeatureSetting searchTolerance = new SegmentedSetting<>("Search Typo Tolerance", SearchTolerance.class,
+                () -> SearchTolerance.of(cfg.searchTypoTolerance), v -> { cfg.searchTypoTolerance = v.ordinal(); AuroraConfig.save(); },
+                SearchTolerance::label)
+                .description("How many typos a search word can have and still find a match. Exact only finds exact matches; short words always need to be exact.");
         SETTINGS_PAGES.add(new SettingsPage("General", List.of(
+                group("search", "Search", searchInstant, searchTolerance),
                 settingsEntry("custom_title"),
                 group("server_list", "Drag-to-Reorder Servers", serverListDragEnabled),
                 group("support", "Support", copyDiagnostics))));
@@ -1535,6 +1563,21 @@ addWithSettings("hitbox",
     }
 
 
+
+    /** Search Typo Tolerance's segments; the ordinal is the stored value (0–3). */
+    private enum SearchTolerance {
+        EXACT("Exact"), ONE("1"), TWO("2"), THREE("3");
+
+        private final String label;
+
+        SearchTolerance(String label) { this.label = label; }
+
+        String label() { return label; }
+
+        static SearchTolerance of(int value) {
+            return values()[Math.max(0, Math.min(values().length - 1, value))];
+        }
+    }
 
     /**
      * The per-module "Theme Corner Radius" switch (owner ruling 2026-11-12):

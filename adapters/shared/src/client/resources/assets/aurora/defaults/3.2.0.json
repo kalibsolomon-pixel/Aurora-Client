@@ -4,6 +4,13 @@
   "moduleGridView": true,
   "textRendererMode": "ALL_TEXT",
   "activeFont": "FIRA_SANS",
+  "textWeight": "MEDIUM",
+  "textItalic": false,
+  "textUnderline": false,
+  "textCase": "NORMAL",
+  "textHudShadow": "OFF",
+  "searchInstant": true,
+  "searchTypoTolerance": 2,
   "themeEnabled": true,
   "theme": {
     "mode": "DARK",

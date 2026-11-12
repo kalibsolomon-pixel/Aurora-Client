@@ -173,6 +173,7 @@ public final class GlassSurface {
     public static void beginFrame() {
         MaterialSurface.beginFrame();
         com.aurora.client.ui.util.MaterialIconRenderer.beginFrame();
+        com.aurora.client.ui.util.AuroraFontQuality.beginFrame();
         if (!pendingRims.isEmpty()) {
             report("glass pass opened (beginGlassPass) but overlayDim never painted — "
                     + pendingRims.size() + " deferred rim finish(es) were painted nowhere");

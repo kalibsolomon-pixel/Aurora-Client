@@ -5,6 +5,7 @@ import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.render.blur.BlurPanelRenderer;
 import com.aurora.client.ui.util.AuroraFontRenderer;
+import com.aurora.client.ui.util.MaterialIconRenderer;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.ui.util.CubicBezier;
 import com.aurora.client.ui.util.TimedTransition;
@@ -162,9 +163,29 @@ public class Button extends Widget {
         if(focused && !disabled) RenderUtil.drawRoundedOutlineAA(g,x-2,y-2,w+4,h+4,MaterialSurface.outsetRadius(r,2),1,
                 MaterialSurface.color(ThemeToken.ACCENT));
         Font font=Minecraft.getInstance().font;
-        if(font!=null) AuroraFontRenderer.drawCentered(g,font,
-                AuroraFontRenderer.ellipsize(font,label.getString(),Math.max(0,(int)w-20),0),Math.round(x+w/2),
-                Math.round(py+(h-font.lineHeight)/2)+1,text);
+        if(font==null) return;
+        int textY=Math.round(py+(h-font.lineHeight)/2)+1;
+        if(icon.isEmpty()) {
+            AuroraFontRenderer.drawCentered(g,font,
+                    AuroraFontRenderer.ellipsize(font,label.getString(),Math.max(0,(int)w-20),0),Math.round(x+w/2),textY,text);
+            return;
+        }
+        // Icon and label centre as one group; the label gives way first, the icon never moves off its row.
+        String fitted=AuroraFontRenderer.ellipsize(font,label.getString(),Math.max(0,(int)w-20-ICON_EM-ICON_GAP),0);
+        int labelW=font.width(fitted); // measured exactly as drawCentered measures
+        float groupX=x+(w-(ICON_EM+(fitted.isEmpty() ? 0 : ICON_GAP+labelW)))/2f;
+        MaterialIconRenderer.drawIcon(g,font,icon,groupX+ICON_EM/2f,py+h/2f,ICON_EM,text);
+        if(!fitted.isEmpty()) g.text(font,fitted,Math.round(groupX+ICON_EM+ICON_GAP),textY,text,false);
+    }
+
+    /** Leading icon glyph (Material Symbols), drawn with the label as one centred group; empty for none. */
+    private String icon = "";
+    static final int ICON_EM = 12, ICON_GAP = 6;
+
+    /** Gives the button a leading icon — a glyph from {@code IconCatalog.glyph(name)}. */
+    public Button icon(String glyph) {
+        this.icon = glyph == null ? "" : glyph;
+        return this;
     }
 
     /**

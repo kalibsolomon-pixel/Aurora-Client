@@ -82,7 +82,23 @@ starting the game never rewrites vanilla bindings. The global
 `profilesOwnControls` switch decides whether switching applies key bindings at
 all. Profile icons come from the bundled Material Symbols font: `IconCatalog`
 (core) names every glyph and `MaterialIconRenderer` keeps an LRU of rasters
-whose evictions are freed at the next frame start. Every timed callback contributes to
+whose evictions are freed at the next frame start.
+
+Every search field matches through the core `search/SearchMatcher` (normalized
+words, prefix and substring hits, bounded Damerau-Levenshtein typos within the
+owner's tolerance); `search/SearchIndex` ranks weighted fields (a feature's
+name, its settings' names, its description) and memoizes per query. Text
+options resolve in `AuroraFontRenderer`: family, weight and italic pick the
+provider (`<family>_<weight>[_italic][_ui]`, built by `tools/build_fonts.py`),
+underline and italic flags ride on the style, and the letter case is mapped per
+codepoint in the same helpers the font mixin uses for drawing and measuring, so
+measured width always equals drawn width. HUD text draws through
+`hud/HudTextPainter` for the shadow option. Aurora's TrueType providers are
+rasterized at the screen's pixel size (oversample = GUI scale,
+`TrueTypeProviderDefinitionMixin`), because Minecraft samples font atlases
+with nearest filtering; `AuroraFontQuality` re-loads only those providers and
+swaps them into their font sets at the next frame boundary when the GUI scale
+changes. Every timed callback contributes to
 the unchanged [overhead budget](OVERHEAD_BUDGET.md).
 
 ## Working on the code

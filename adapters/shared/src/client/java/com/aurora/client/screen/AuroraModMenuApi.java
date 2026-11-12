@@ -4,27 +4,42 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.gui.screens.Screen;
 
 /**
- * Mod Menu integration is disabled for the 1.21.11 port: as of port date the
- * only published modmenu artifact is a beta we have not adopted. This class
- * stays as a thin reflective shim so the title screen's "Mods" button still
- * works if/when a compatible modmenu lands in the runtime classpath.
+ * A thin reflective shim for Mod Menu: Aurora does not depend on it, and the
+ * title screen's Mods button opens its list when it is installed. Without it
+ * the button is disabled and says so (owner 2026-11-12: "Mods should open up
+ * ModMenu"; Aurora has its own button).
  */
 public final class AuroraModMenuApi {
 
+    private static final String MODS_SCREEN = "com.terraformersmc.modmenu.gui.ModsScreen";
+
     private AuroraModMenuApi() {}
 
-    /**
-     * Called by {@link AuroraTitleScreen}'s "Mods" button.
-     */
-    public static Screen openOrFallback(Screen parent) {
-        if (FabricLoader.getInstance().isModLoaded("modmenu")) {
-            try {
-                Class<?> modsScreen = Class.forName("com.terraformersmc.modmenu.gui.ModsScreen");
-                return (Screen) modsScreen.getConstructor(Screen.class).newInstance(parent);
-            } catch (ReflectiveOperationException e) {
-                // Fall through to Aurora settings screen.
-            }
+    /** Whether Mod Menu is installed and its list screen can be found. */
+    public static boolean available() {
+        if (!FabricLoader.getInstance().isModLoaded("modmenu")) return false;
+        try {
+            Class.forName(MODS_SCREEN, false, AuroraModMenuApi.class.getClassLoader());
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
         }
-        return AuroraScreen.create();
+    }
+
+    /** Mod Menu's list over {@code parent}, or null when it is not installed or cannot be built. */
+    public static Screen open(Screen parent) {
+        if (!FabricLoader.getInstance().isModLoaded("modmenu")) return null;
+        try {
+            Class<?> modsScreen = Class.forName(MODS_SCREEN);
+            return (Screen) modsScreen.getConstructor(Screen.class).newInstance(parent);
+        } catch (ReflectiveOperationException | LinkageError e) {
+            return null;
+        }
+    }
+
+    /** Mod Menu's list, or Aurora's own screen when Mod Menu is absent (tools/gui's audit). */
+    public static Screen openOrFallback(Screen parent) {
+        Screen mods = open(parent);
+        return mods != null ? mods : AuroraScreen.create();
     }
 }

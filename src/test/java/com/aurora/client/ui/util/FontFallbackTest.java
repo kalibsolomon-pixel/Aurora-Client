@@ -35,6 +35,8 @@ class FontFallbackTest {
                 checked++;
             }
         }
-        assertEquals(18, checked, "all nine selectable text fonts and their compact UI variants");
+        // 8 families x 4 weights, italics for the 6 that have them, each with
+        // its compact UI variant (2026-11-12): (8*4 + 6*4) * 2.
+        assertEquals(113, checked, "every family, weight and italic, their compact UI variants, and the title wordmark");
     }
 }

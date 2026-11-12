@@ -55,7 +55,9 @@ public final class ProfileFieldSet {
             // "Separate controls" decides whether profiles carry bindings, so it
             // must not itself change with the profile (2026-11-12).
             "profilesOwnControls",
-            "vanillaKeyModifiers"
+            "vanillaKeyModifiers",
+            "searchInstant",
+            "searchTypoTolerance"
     );
 
     private ProfileFieldSet() {}

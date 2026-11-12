@@ -172,39 +172,115 @@ public class AuroraConfig {
         }
     }
 
+    /**
+     * The bundled font families. Each ships Regular, Medium, SemiBold and
+     * Bold files ({@code <stem>-<weight>.ttf}) and, where the family has one,
+     * matching italics, built by {@code tools/build_fonts.py}.
+     */
     public enum FontType {
-        INTER("Inter Medium", "inter-frozen-medium.ttf"),
-        INTER_ITALIC("Inter Italic", "inter-frozen-medium-italic.ttf"),
-        JETBRAINS_MONO("JetBrains Mono", "jetbrains-mono-medium.ttf"),
+        INTER("Inter", "inter"),
+        /** Retired 2026-11-12: Inter with Italic on ({@link TextStyleMigrator}); kept so old files parse. */
+        INTER_ITALIC("Inter Italic", "inter"),
+        JETBRAINS_MONO("JetBrains Mono", "jetbrains-mono"),
         // NOTE: Avoid thin/light fonts — at 11px they render too faint to read.
         // Removed: Source Han Sans CN (too thin), Montserrat (too thin), Raleway (too thin).
-        ROBOTO("Roboto", "roboto-variable.ttf"),
-        POPPINS("Poppins", "poppins-medium.ttf"),
-        OSWALD("Oswald", "oswald-variable.ttf"),
-        NUNITO("Nunito", "nunito-variable.ttf"),
-        QUICKSAND("Quicksand", "quicksand-variable.ttf"),
-        FIRA_SANS("Fira Sans", "fira-sans-medium.ttf"),
+        ROBOTO("Roboto", "roboto"),
+        POPPINS("Poppins", "poppins"),
+        OSWALD("Oswald", "oswald"),
+        NUNITO("Nunito", "nunito"),
+        QUICKSAND("Quicksand", "quicksand"),
+        FIRA_SANS("Fira Sans", "fira-sans"),
         SANSSERIF("SansSerif", null);
 
         private final String label;
-        private final String fileName;
+        private final String fileStem;
 
-        FontType(String label, String fileName) {
+        FontType(String label, String fileStem) {
             this.label = label;
-            this.fileName = fileName;
+            this.fileStem = fileStem;
         }
 
         public String getLabel() {
             return label;
         }
 
-        public String getFileName() {
-            return fileName;
+        /** The bundled files' name stem ({@code roboto} → {@code roboto-semibold.ttf}); null for the vanilla font. */
+        public String fileStem() {
+            return fileStem;
+        }
+
+        /** The families the Font picker offers: everything except the retired Inter Italic. */
+        public static FontType[] choices() {
+            return java.util.Arrays.stream(values()).filter(f -> f != INTER_ITALIC).toArray(FontType[]::new);
         }
     }
 
     public TextRendererMode textRendererMode = TextRendererMode.AURORA_ONLY;
     public FontType activeFont = FontType.INTER;
+
+    // ---- Text options (Settings → Appearance → Text, 2026-11-12) ----
+    // They apply wherever the text renderer applies; with it Off, vanilla
+    // text is untouched. Every family ships real Regular/Medium/SemiBold/Bold
+    // files, so Weight never uses Minecraft's offset-redraw bold.
+
+    /** Font weight; each weight is its own bundled file. Medium is the pre-2026-11-12 look. */
+    public enum TextWeight {
+        REGULAR("Regular", "regular"),
+        MEDIUM("Medium", "medium"),
+        SEMIBOLD("SemiBold", "semibold"),
+        BOLD("Bold", "bold");
+
+        private final String label;
+        private final String suffix;
+
+        TextWeight(String label, String suffix) {
+            this.label = label;
+            this.suffix = suffix;
+        }
+
+        public String getLabel() { return label; }
+
+        /** The provider-id suffix, e.g. {@code roboto_semibold}. */
+        public String suffix() { return suffix; }
+    }
+
+    /** Letter case applied to drawn (and measured) text. */
+    public enum TextCase {
+        NORMAL("Aa"),
+        UPPER("AA"),
+        LOWER("aa");
+
+        private final String label;
+
+        TextCase(String label) { this.label = label; }
+
+        public String getLabel() { return label; }
+    }
+
+    /** HUD text shadow: none, Minecraft's drop shadow, or a full outline. Aurora's menus never shadow text. */
+    public enum TextShadow {
+        OFF("Off"),
+        NORMAL("Normal"),
+        FULL("Full");
+
+        private final String label;
+
+        TextShadow(String label) { this.label = label; }
+
+        public String getLabel() { return label; }
+    }
+
+    public TextWeight textWeight = TextWeight.MEDIUM;
+    public boolean textItalic = false;
+    public boolean textUnderline = false;
+    public TextCase textCase = TextCase.NORMAL;
+    public TextShadow textHudShadow = TextShadow.OFF;
+
+    // ---- Search (Settings → General → Search, 2026-11-12) ----
+    /** Focus the search field when the Aurora menu opens or its page changes. */
+    public boolean searchInstant = true;
+    /** Typos a search word may carry and still match (0 = exact only, at most 3). */
+    public int searchTypoTolerance = 2;
     public int guiFpsLimit = 60;
 
     /** Discrete GUI FPS-limit options (value 1000 = unlimited). */
@@ -1239,6 +1315,7 @@ public class AuroraConfig {
                 json = ThemeMigrator.migrateConfigJson(json, LOGGER);
                 json = PlayerHealthMigrator.migrateConfigJson(json, LOGGER);
                 json = KeybindMigrator.migrateConfigJson(json, LOGGER);
+                json = TextStyleMigrator.migrateConfigJson(json, LOGGER);
                 AuroraConfig loaded = GSON.fromJson(json, AuroraConfig.class);
                 if (loaded == null) throw new com.google.gson.JsonParseException("Config is null");
                 if (loaded != null) {

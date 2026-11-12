@@ -21,15 +21,26 @@ def block(body):
 
 
 FONTS = [
-    ("Fira Sans Medium", "fira-sans-medium.ttf", "Digitized data copyright 2012-2016, The Mozilla Foundation and Telefonica S.A."),
-    ("Inter Medium and Medium Italic", "inter-frozen-medium.ttf, inter-frozen-medium-italic.ttf", "Copyright 2016 The Inter Project Authors"),
-    ("JetBrains Mono Medium", "jetbrains-mono-medium.ttf", "Copyright 2020 The JetBrains Mono Project Authors (https://github.com/JetBrains/JetBrainsMono)"),
-    ("Nunito", "nunito-variable.ttf", "Copyright 2014 The Nunito Project Authors (https://github.com/googlefonts/nunito)"),
-    ("Oswald", "oswald-variable.ttf", "Copyright 2016 The Oswald Project Authors (https://github.com/googlefonts/OswaldFont)"),
-    ("Poppins Medium", "poppins-medium.ttf", "Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins)"),
+    ("Fira Sans", "fira-sans-*.ttf", "Digitized data copyright 2012-2016, The Mozilla Foundation and Telefonica S.A."),
+    ("Inter", "inter-*.ttf", "Copyright 2016 The Inter Project Authors (https://github.com/rsms/inter)"),
+    ("JetBrains Mono", "jetbrains-mono-*.ttf", "Copyright 2020 The JetBrains Mono Project Authors (https://github.com/JetBrains/JetBrainsMono)"),
+    ("Nunito", "nunito-*.ttf", "Copyright 2014 The Nunito Project Authors (https://github.com/googlefonts/nunito)"),
+    ("Oswald", "oswald-*.ttf", "Copyright 2016 The Oswald Project Authors (https://github.com/googlefonts/OswaldFont)"),
+    ("Poppins", "poppins-*.ttf", "Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins)"),
     ("Quicksand", "quicksand-variable.ttf", "Copyright 2019 The Quicksand Project Authors (https://github.com/andrew-paglinawan/QuicksandFamily.git), with Reserved Font Name \"Quicksand\""),
-    ("Roboto", "roboto-variable.ttf", "Copyright 2011 The Roboto Project Authors (https://github.com/googlefonts/roboto-classic)"),
+    ("Roboto", "roboto-*.ttf", "Copyright 2011 The Roboto Project Authors (https://github.com/googlefonts/roboto-classic)"),
 ]
+
+def expand(pattern):
+    """A family's file pattern as the comma-separated list of files it matches today."""
+    return ", ".join(sorted(p.name for p in client_path("resources/assets/aurora/font").glob(pattern)))
+
+
+FONT_NOTE = ("Except Quicksand, each family is shipped at four weights (Regular, Medium, SemiBold, Bold) "
+             "and, where the family has one, in italic: static instances built from the Google Fonts "
+             "files with fontTools, limited to Latin, Greek and Cyrillic, without layout or hinting "
+             "tables (`tools/build_fonts.py`). Quicksand's license reserves its name, so it ships as "
+             "Google's unmodified file.")
 
 TWELVEMONKEYS = ["imageio-core", "imageio-metadata", "imageio-webp", "common-lang", "common-io", "common-image"]
 
@@ -86,13 +97,13 @@ out.append(block(text("appleskin-Unlicense.txt")))
 out.append("""
 ## Bundled fonts
 
-Text fonts in `assets/aurora/font/`, each licensed under the SIL Open Font License, Version 1.1. The copyright lines are read from the font files themselves.
+Text fonts in `assets/aurora/font/`, each licensed under the SIL Open Font License, Version 1.1. The copyright lines are read from the font files themselves. """ + FONT_NOTE + """
 
 | Font | File | Copyright |
 |---|---|---|
 """)
 for name, files, copyright in FONTS:
-    out.append(f"| {name} | `{files}` | {copyright} |\n")
+    out.append(f"| {name} | `{expand(files)}` | {copyright} |\n")
 out.append("""
 `material_symbols_rounded.ttf` is Material Symbols Rounded from Google's material-design-icons (https://github.com/google/material-design-icons), Copyright 2026 Google LLC, licensed under the Apache License, Version 2.0 (text below). Aurora ships every icon as a static instance at the default axes (FILL 0, GRAD 0, opsz 24, wght 400), without its ligature tables. `assets/aurora/icons/material_symbols.codepoints`, the icon name list from the same repository and under the same license, names them for Aurora's icon browser.
 
@@ -119,9 +130,9 @@ out.append(block(text("Apache-2.0.txt")))
 
 # The OFL asks for the license to travel with the fonts, so the font folder keeps its own copy.
 fonts = ["The fonts in this folder, except material_symbols_rounded.ttf, are licensed",
-         "under the SIL Open Font License, Version 1.1, reproduced below.", ""]
+         "under the SIL Open Font License, Version 1.1, reproduced below.", "", FONT_NOTE, ""]
 for name, files, copyright in FONTS:
-    fonts.append(f"{name} ({files}): {copyright}")
+    fonts.append(f"{name} ({expand(files)}): {copyright}")
 fonts += ["",
           "material_symbols_rounded.ttf is Material Symbols Rounded (a static instance),",
           "Copyright 2026 Google LLC, licensed under the Apache License, Version 2.0.",

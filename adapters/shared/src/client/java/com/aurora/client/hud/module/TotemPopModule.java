@@ -88,7 +88,7 @@ public class TotemPopModule extends HudModule {
         int lh = tr.lineHeight + 1;
         List<String> lines = linesCache.get();
         for (int i = 0; i < lines.size(); i++) {
-            ctx.text(tr, lines.get(i), x, y + i * lh, color, false);
+            com.aurora.client.hud.HudTextPainter.draw(ctx,tr, lines.get(i), x, y + i * lh, color);
         }
     }
 

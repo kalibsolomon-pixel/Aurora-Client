@@ -1161,6 +1161,7 @@ divider. Grid cards are square 80×80, retain 6px gaps, and center icon/name wit
 no chevron or reserved chevron space. Detail opening remains right-click.
 The title menu displays the official white mark centered above the text-only
 cards, with a preferred 48px mark and 12px gap; the combined group is centered.
+*Superseded 2026-11-12 by the OneClient-style title screen below.*
 
 Pack Tweaks is the compact detail reference. Compatible ordinary detail rows
 share the original left-aligned 12px label inset and measured right controls;
@@ -1241,6 +1242,16 @@ recipe, 18px section band between groups). These rules are now normative:
   blur tinted each control by whatever sat behind it (sky-blue chips, brown buttons) and
   multiplied GPU work. Exceptions: the title screen's independent cards (owner ruling)
   and the window-less HUD editor.
+- **Title screen (owner redesign, 2026-11-12, after OneClient's).** One centred
+  column: the 56px mark, an "AURORA" wordmark (its own `aurora:wordmark` provider,
+  never re-cased), three full 200×24 outlined cards with leading icons, then two half
+  cards. A right column holds the player model and the account card, centred in the
+  space right of the buttons; below ~560 GUI px wide it becomes a chip in the top bar.
+  The top-right icon row is Aurora, Fullscreen and Quit. Geometry is
+  `MenuComposition`. The backdrop is `MenuAtmosphere`: a cached theme gradient plus
+  slow, faint light motes and haze bands — an owner-approved exception to the
+  no-ambient-effects default; it freezes when Screen Effects is 0. No panorama and no
+  glass on this screen.
 - **Repeated rows rest quietly.** Manager rows separate by spacing and tone (no per-row
   border inside a bordered window). Destructive actions rest like their neutral siblings
   with a red label and commit to solid red on hover/press. A grid has no repeated primary

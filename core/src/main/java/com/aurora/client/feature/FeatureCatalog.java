@@ -315,6 +315,10 @@ public final class FeatureCatalog {
         mixin("PlayerItemInHandLayerMixin", "the shield status color in third person", "pack_tweaks").gates("shieldStatusEnabled");
         mixin("ShieldSpecialRendererMixin", "the shield status color", "pack_tweaks").gates("shieldStatusEnabled");
         mixin("MixinFont", "Aurora's fonts", "text_fonts");
+        mixin("TrueTypeProviderDefinitionMixin", "crisp Aurora fonts at every GUI scale", "text_fonts");
+        mixin("FontManagerAccessor", "crisp Aurora fonts at every GUI scale", "text_fonts");
+        mixin("FontSetAccessor", "crisp Aurora fonts at every GUI scale", "text_fonts");
+        mixin("MinecraftFontManagerAccessor", "crisp Aurora fonts at every GUI scale", "text_fonts");
         mixin("ScreenshotMixin", "blurred glass (it cannot be paused safely during screenshots)");
         mixin("GuiRendererGlassMixin", "blurred glass (26.1 captures must run after the world is drawn)");
         mixin("AbstractButtonMixin", "Aurora styling on vanilla buttons", "custom_title");

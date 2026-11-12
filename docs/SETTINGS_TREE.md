@@ -14,7 +14,7 @@ A map of everything a player can see, turn on or change in Aurora, as of 2026-11
 
 ## 1. Ways to open Aurora
 
-- **Title screen → "Aurora Settings" button**: Aurora's own title screen has Singleplayer, Multiplayer, Aurora Settings, Options, Quit. `{entry:title}`
+- **Title screen → Aurora icon**: Aurora's own title screen has Singleplayer, Multiplayer and Minecraft Realms, then Settings (Minecraft's options) and Mods (Mod Menu; disabled when it isn't installed) side by side. The icons at the top right open Aurora, toggle fullscreen and quit; the player model and account card sit on the right (a chip in the top bar on narrow windows). `{entry:title}`
 - **Vanilla title screen → "Aurora Settings" button**: when Custom Title is off, the button is added to the vanilla menu instead. `{entry:vanillaTitle}`
 - **In game → HUD Editor (Right Shift) → "Aurora Settings" button**: there is no direct in-game key for the main screen; this is the path. `{entry:hudEditor}`
 - **Better Hitreg "Open Settings Key"**: unbound by default; opens the Aurora screen from in game. `{hitregSettingsKey}`
@@ -91,7 +91,7 @@ Other things drawn on the HUD that are not movable modules:
 - **Mods** tab: the feature cards. `{ui:tabMods}`
 - **Settings** tab: global settings on four pages, chosen from sub-tabs across the top (see 4.3). `{ui:tabSettings}`
 - **Profiles** button: opens the profile manager (an action, not a tab). `{ui:profiles}`
-- **Search modules…** field (Mods tab): filters cards by name. `{ui:search}`
+- **Search features and settings…** field (Mods tab): finds features by name, by the settings inside them and by description, and Settings-tab entries too, best match first, within the Search Typo Tolerance. A result found through a setting names it on a second line; clicking that line (or right-clicking the card) opens the feature scrolled to the setting, outlined for a moment. A Settings entry opens on its page. Typing on the Settings tab starts a search. Escape clears the query first, then closes the menu. `{ui:search}`
 - **List / Grid** layout buttons (Mods tab) · default Grid. `{moduleGridView}`
 - **On a card**: left-click or Enter turns the feature on/off; right-click opens its detail screen. `{ui:card}`
 - **On a detail screen**: the feature's on/off toggle, its settings, **Reset** (restores this feature's defaults) and **Done**. `{ui:detail}`
@@ -527,9 +527,14 @@ The tab shows one page at a time, chosen from the sub-tabs in the row above the 
     - **Background Opacity**: slider 0–100% · 33% · the tint's density only. `{theme.backgroundOpacity}`
     - **Blur Radius**: slider Off–32 px (GUI pixels) · 9 px · how blurred the backdrop behind glass is. `{theme.blurRadius}`
     - **Corner Radius**: slider 0–20 px · 10 px · every shape: windows, buttons, fields, toggles, sliders, scrollbars. Replaced Corner Style (Round = 10, Slightly Round = 6, Square = 0). `{theme.cornerRadius}`
-- *Text & Fonts* · no toggle `{card:text_fonts}`
+- *Text & Fonts* · no toggle `{card:text_fonts}` · font, weight, modifiers and case apply wherever the Text Renderer does
   - **Text Renderer**: dropdown Off / Aurora UI Only / All Text · All Text. `{textRendererMode}`
-  - **Client Font**: dropdown Inter Medium / Inter Italic / JetBrains Mono / Roboto / Poppins / Oswald / Nunito / Quicksand / Fira Sans / SansSerif · Fira Sans. `{activeFont}`
+  - **Font**: dropdown Inter / JetBrains Mono / Roboto / Poppins / Oswald / Nunito / Quicksand / Fira Sans / SansSerif · Fira Sans. Inter Italic is now Inter with Italic on (migrated). `{activeFont}`
+  - **Weight**: dropdown Regular / Medium / SemiBold / Bold · Medium · real font files; Quicksand has one weight. `{textWeight}`
+  - **Modifiers**: toggles Italic · off, Underline · off · italic is the family's own where it has one (Oswald and Quicksand slant). `{textItalic}` `{textUnderline}`
+  - **Case**: segmented Aa / AA / aa · Aa. `{textCase}`
+  - **HUD Text Shadow**: segmented Off / Normal / Full · Off · in-world HUD only (Normal = Minecraft's drop shadow, Full = outline); menus never shadow text. `{textHudShadow}`
+  - **Preview**: one sample line in the current options, with the HUD shadow.
 
 #### Sub-tab: Display `{subtab:display}`
 
@@ -560,6 +565,9 @@ The tab shows one page at a time, chosen from the sub-tabs in the row above the 
 
 #### Sub-tab: General `{subtab:general}`
 
+- *Search*
+  - **Instant Search**: toggle · on · focuses the search bar when the menu opens or you return to the Mods tab. Global, not per profile. `{searchInstant}`
+  - **Search Typo Tolerance**: segmented Exact / 1 / 2 / 3 · 2 · typos a search word may have; words of 3 letters or fewer always match exactly, 4–6 letters allow at most 1. Applies to every search field. Global. `{searchTypoTolerance}`
 - *Custom Title* · header toggle on · Aurora's title screen and themed vanilla menus; applies the next time you return to the main menu. `{card:custom_title}`
 - *Drag-to-Reorder Servers*
   - **Enabled**: toggle · on · reorder the Multiplayer list by dragging. `{serverListDragReorder}`

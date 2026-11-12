@@ -30,7 +30,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -124,6 +123,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
     private ButtonWidget folderBtn;
     /** Search memo: the filtered list is rebuilt only when the query or the profile list changes. */
     private String memoQuery;
+    private int memoTolerance = -1;
     private List<String> memoSource;
     private List<String> memoRows;
     /** The hotkey chip under the pointer this frame (its tooltip draws in the tail), or null. */
@@ -256,19 +256,22 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
     @Override protected int editorFieldYOffset() { return NAME_Y - 4; }
 
     private String query() {
-        return searchField == null ? "" : searchField.getValue().trim().toLowerCase(Locale.ROOT);
+        return searchField == null ? "" : com.aurora.client.search.SearchMatcher.normalize(searchField.getValue());
     }
 
     @Override protected List<String> currentRows() {
         List<String> all = ProfileManager.getInstance().listProfileNames();
         String query = query();
         if (query.isEmpty()) return all;
-        if (!query.equals(memoQuery) || !all.equals(memoSource)) {
+        int tolerance = com.aurora.client.search.SearchMatcher.configuredTolerance();
+        if (!query.equals(memoQuery) || tolerance != memoTolerance || !all.equals(memoSource)) {
+            var matcher = com.aurora.client.search.SearchMatcher.query(query, tolerance);
             List<String> rows = new ArrayList<>();
             for (String name : all) {
-                if (name.toLowerCase(Locale.ROOT).contains(query)) rows.add(name);
+                if (com.aurora.client.search.SearchMatcher.matches(matcher, name)) rows.add(name);
             }
             memoQuery = query;
+            memoTolerance = tolerance;
             memoSource = all;
             memoRows = rows;
         }

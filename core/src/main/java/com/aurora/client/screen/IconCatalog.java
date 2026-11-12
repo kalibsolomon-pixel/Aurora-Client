@@ -9,7 +9,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -37,6 +36,8 @@ public final class IconCatalog {
     private static List<Icon> icons;
     private static Map<String, Icon> byName;
     private static String lastQuery;
+    private static int lastTolerance = -1;
+    private static com.aurora.client.search.SearchIndex<Icon> index;
     private static List<Icon> lastResult = List.of();
 
     /** Every icon, in the list's (alphabetical) order. Empty if the list is missing. */
@@ -54,33 +55,35 @@ public final class IconCatalog {
     }
 
     /**
-     * Icons whose name contains every word of {@code query} (case-insensitive;
-     * underscores and spaces are equivalent). A blank query returns every
-     * icon. The last query's result is reused.
+     * Icons matching {@code query} through the shared
+     * {@link com.aurora.client.search.SearchMatcher} (every word must match,
+     * within the configured typo tolerance; underscores read as spaces),
+     * best match first. A blank query returns every icon in list order. The
+     * last query's result is reused.
      */
     public static synchronized List<Icon> search(String query) {
-        String clean = query == null ? "" : query.trim().toLowerCase(Locale.ROOT).replace('_', ' ');
-        if (clean.equals(lastQuery)) return lastResult;
-        List<Icon> source = all();
-        List<Icon> out;
-        if (clean.isEmpty()) {
-            out = source;
-        } else {
-            String[] words = clean.split("\\s+");
-            out = new ArrayList<>();
-            for (Icon icon : source) {
-                String label = icon.label();
-                boolean all = true;
-                for (String w : words) {
-                    if (!label.contains(w)) { all = false; break; }
-                }
-                if (all) out.add(icon);
-            }
-            out = Collections.unmodifiableList(out);
-        }
-        lastQuery = clean;
+        return search(query, com.aurora.client.search.SearchMatcher.configuredTolerance());
+    }
+
+    /** {@link #search(String)} with an explicit typo tolerance. */
+    public static synchronized List<Icon> search(String query, int tolerance) {
+        var q = com.aurora.client.search.SearchMatcher.query(query, tolerance);
+        if (q.text().equals(lastQuery) && q.tolerance() == lastTolerance) return lastResult;
+        List<Icon> out = q.isEmpty() ? all() : index().search(query, tolerance).stream()
+                .map(com.aurora.client.search.SearchIndex.Hit::value).toList();
+        lastQuery = q.text();
+        lastTolerance = q.tolerance();
         lastResult = out;
         return out;
+    }
+
+    private static com.aurora.client.search.SearchIndex<Icon> index() {
+        if (index == null) {
+            var builder = com.aurora.client.search.SearchIndex.<Icon>builder();
+            for (Icon icon : all()) builder.entry(icon).field(icon.name(), 1, null);
+            index = builder.build();
+        }
+        return index;
     }
 
     private static void load() {

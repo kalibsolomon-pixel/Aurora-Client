@@ -17,7 +17,8 @@ waypointShow deathWaypoint crosshair hitbox particle containerPreview itemPhysic
 keystrokes minimap worldMapShow resourcepackBrowser
 """.split())
 EXACT = set("""
-keybindVersion customTitleScreen moduleGridView textRendererMode activeFont themeEnabled theme
+keybindVersion customTitleScreen moduleGridView textRendererMode activeFont textWeight textItalic
+textUnderline textCase textHudShadow searchInstant searchTypoTolerance themeEnabled theme
 showFps showCoords showTime hudColor pingHudEnabled nametagPingEnabled nametagTotemPopsEnabled
 hudEditorKey waypointDropKey waypointManagerKey waypointMaxVisible
 waypointWorldMarkerLimit waypointMaxDistance waypointsEnabled worldMapEnabled

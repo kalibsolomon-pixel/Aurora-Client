@@ -182,14 +182,14 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
         if (rowsRevision == feat.revision() && java.util.Objects.equals(scope, rowsScope)
                 && (sort != 1 || second == rowsSecond)) return filtered;
         rowsRevision = feat.revision(); rowsScope = scope; rowsSecond = second;
-        String needle = query.toLowerCase(java.util.Locale.ROOT);
+        var needle = com.aurora.client.search.SearchMatcher.query(query,
+                com.aurora.client.search.SearchMatcher.configuredTolerance());
         String dim = mc.level == null ? "" : mc.level.dimension().identifier().toString();
         var rows = new java.util.ArrayList<Waypoint>();
         for (Waypoint w : feat.currentWorldWaypoints()) {
             if (w == null || (currentDimensionOnly && !dim.equals(w.dimension))) continue;
             if (!group.isEmpty() && !group.equals(w.group)) continue;
-            if (!needle.isEmpty() && !(w.name + " " + w.group + " " + w.dimension + " " + w.description)
-                    .toLowerCase(java.util.Locale.ROOT).contains(needle)) continue;
+            if (!com.aurora.client.search.SearchMatcher.matches(needle, w.name, w.group, w.dimension, w.description)) continue;
             rows.add(w);
         }
         java.util.Comparator<Waypoint> comparator = switch (sort) {
