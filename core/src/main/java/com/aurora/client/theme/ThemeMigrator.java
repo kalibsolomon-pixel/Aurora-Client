@@ -146,7 +146,52 @@ public final class ThemeMigrator {
 
         dirty |= sanitizeIntMember(theme, "accent", log);
         dirty |= sanitizeIntMember(theme, "background", log);
+        dirty |= sanitizeIntMember(theme, "cornerRadius", log);
+        dirty |= sanitizeIntMember(theme, "blurRadius", log);
+        dirty |= migrateCornerStyle(theme, log);
+        dirty |= seedBlurRadius(theme, log);
         return dirty;
+    }
+
+    /**
+     * The retired Corner Style choice ({@code roundness}: ROUND,
+     * SLIGHTLY_ROUND or SQUARE) becomes the pixel radius it rendered with,
+     * unless a {@code cornerRadius} is already present. The old member is
+     * removed either way.
+     */
+    private static boolean migrateCornerStyle(JsonObject theme, Logger log) {
+        JsonElement legacy = theme.remove("roundness");
+        if (legacy == null) return false;
+        if (!theme.has("cornerRadius")) {
+            String name = legacy.isJsonPrimitive() ? legacy.getAsString() : null;
+            int radius = ThemeRoundness.legacyRadius(name);
+            theme.addProperty("cornerRadius", radius);
+            log.info("Theme config: Corner Style {} migrated to a {} px corner radius", name, radius);
+        }
+        return true;
+    }
+
+    /**
+     * Themes saved before the Blur Radius slider blurred glass at 28 GUI
+     * pixels scaled by Background Opacity. Seed the new member with that effective
+     * radius so the look does not change on upgrade; from then on opacity
+     * only sets the tint's alpha.
+     */
+    private static boolean seedBlurRadius(JsonObject theme, Logger log) {
+        if (theme.has("blurRadius")) return false;
+        double opacity = ThemeDefinition.DEFAULT_BACKGROUND_OPACITY;
+        JsonElement stored = theme.get("backgroundOpacity");
+        if (stored != null && stored.isJsonPrimitive()) {
+            try {
+                opacity = stored.getAsDouble();
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        int radius = ThemeDefinition.normalizedBlurRadius((int) Math.round(
+                ThemeDefinition.DEFAULT_BLUR_RADIUS * ThemeDefinition.normalizedOpacity(opacity)));
+        theme.addProperty("blurRadius", radius);
+        log.info("Theme config: blur radius seeded at {} px from Background Opacity", radius);
+        return true;
     }
 
     private static boolean isKnownModeName(String name) {

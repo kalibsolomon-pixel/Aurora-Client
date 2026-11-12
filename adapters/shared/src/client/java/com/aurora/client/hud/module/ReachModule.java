@@ -36,6 +36,7 @@ public class ReachModule extends HudModule {
 
     @Override protected AuroraConfig.HudBackground backgroundMode() { return AuroraConfig.get().reachBgMode; }
     @Override protected int backgroundColor() { return AuroraConfig.get().reachBgColor; }
+    @Override protected boolean themeCorners() { return AuroraConfig.get().reachDisplayThemeCorners; }
 
     @Override
     public int getWidth() {

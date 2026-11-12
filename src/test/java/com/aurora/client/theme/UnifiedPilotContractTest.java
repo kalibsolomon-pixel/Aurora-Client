@@ -18,7 +18,7 @@ class UnifiedPilotContractTest {
         var gson=new Gson();
         var original=ThemeDefinition.defaults();
         original.accent=0xff080914;
-        original.roundness=ThemeRoundness.SQUARE;original.mode=ThemeMode.LIGHT;
+        original.cornerRadius=0;original.blurRadius=11;original.mode=ThemeMode.LIGHT;
         original.backgroundOpacity=.37;
         String json=gson.toJson(original);
         original.mode=ThemeMode.DARK;
@@ -39,7 +39,8 @@ class UnifiedPilotContractTest {
         assertEquals(original.accent,loaded.accent);
         assertFalse(migrated.getAsJsonObject("theme").has("glassStyle"));
         assertFalse(migrated.get("zoomEnabled").getAsBoolean());
-        assertEquals(original.roundness,loaded.roundness);
+        assertEquals(original.cornerRadius,loaded.cornerRadius);
+        assertEquals(original.blurRadius,loaded.blurRadius);
         assertEquals(original.mode,loaded.mode);
         assertEquals(.37,loaded.backgroundOpacity);
         assertEquals(expected,gson.toJson(loaded),"resolution must never rewrite saved preferences");
@@ -69,10 +70,11 @@ class UnifiedPilotContractTest {
     }
 
     @Test void outsideFocusKeepsTheSquareCornerContract() {
-        for(ThemeRoundness style:ThemeRoundness.values()) {
+        for(int r=ThemeRoundness.MIN_RADIUS;r<=ThemeRoundness.MAX_RADIUS;r++) {
+            ThemeRoundness style=ThemeRoundness.of(r);
             float radius=style.radiusSmall();
             float actual=com.aurora.client.ui.component.MaterialSurface.outsetRadius(radius,2);
-            assertEquals(style==ThemeRoundness.SQUARE ? 0 : radius+2,actual);
+            assertEquals(radius==0 ? 0 : radius+2,actual);
         }
     }
 

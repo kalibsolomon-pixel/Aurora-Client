@@ -1,76 +1,103 @@
 package com.aurora.client.theme;
 
 /**
- * The corner-roundness family a theme renders with — modeled on COSMIC's
- * Appearance "Corner roundness" setting (Round / Slightly round / Square).
+ * The corner radius a theme renders with: one pixel value chosen on the
+ * Corner Radius slider (2026-11-12; it replaced the Round / Slightly Round /
+ * Square choice). Every radius in the UI derives from it.
  *
- * <p>Stage 3's first <b>non-color token</b>: rather than a one-off config
- * value, the concrete radii live in the theme definition and are resolved
- * and projected exactly like the colors (see
- * {@link ResolvedTheme#project()} → {@code AuroraTheme.RADIUS*}). The
- * {@link #ROUND} mapping equals the historical compile-time constants
- * (10/14/6), so existing users see no change on upgrade.
+ * <p>A non-color token: {@link ResolvedTheme#project()} publishes the three
+ * sizes onto {@code AuroraTheme.RADIUS*}. {@link #DEFAULT_RADIUS} reproduces
+ * the historical constants (10/14/6), so the factory look is unchanged.
  *
- * <p>Unknown or missing persisted values must never crash:
- * {@link #fromName} coerces them to {@link #ROUND}.
+ * <ul>
+ *   <li>{@link #radius()} — panels and buttons (the slider value);</li>
+ *   <li>{@link #radiusLarge()} — major sheets, {@code radius × 7/5};</li>
+ *   <li>{@link #radiusSmall()} — compact controls, {@code radius × 3/5};</li>
+ *   <li>{@link #capsule(float)} — shapes whose fully round form is a pill
+ *       or circle (switch tracks and thumbs, slider tracks and knobs,
+ *       scrollbar thumbs): a full capsule at the default radius or above,
+ *       flattening in proportion below it, square at 0.</li>
+ * </ul>
+ *
+ * <p>Instances are interned, so reading the theme's value allocates nothing.
  */
-public enum ThemeRoundness {
-    /** Fully rounded — the historical Aurora look. */
-    ROUND("Round"),
-    /** Reduced radii — a tighter, more utilitarian look. */
-    SLIGHTLY_ROUND("Slightly Round"),
-    /** Sharp corners — radius 0 everywhere. */
-    SQUARE("Square");
+public final class ThemeRoundness {
 
-    private final String displayName;
+    public static final int MIN_RADIUS = 0;
+    public static final int MAX_RADIUS = 20;
+    /** Factory radius: the historical "Round" family. */
+    public static final int DEFAULT_RADIUS = 10;
 
-    ThemeRoundness(String displayName) {
-        this.displayName = displayName;
+    private static final ThemeRoundness[] VALUES = new ThemeRoundness[MAX_RADIUS + 1];
+    static {
+        for (int r = MIN_RADIUS; r <= MAX_RADIUS; r++) VALUES[r] = new ThemeRoundness(r);
     }
 
-    /** Human-friendly option label for the segmented control. */
-    public String displayName() {
-        return displayName;
+    /** The radii the retired Corner Style choices stood for (migration and tests). */
+    public static final ThemeRoundness ROUND = of(DEFAULT_RADIUS);
+    public static final ThemeRoundness SLIGHTLY_ROUND = of(6);
+    public static final ThemeRoundness SQUARE = of(0);
+
+    private final int radius;
+
+    private ThemeRoundness(int radius) {
+        this.radius = radius;
     }
 
-    /** Standard chamfer for panels/buttons (historical {@code RADIUS}). */
-    public int radius() {
-        return switch (this) {
-            case ROUND -> 10;
-            case SLIGHTLY_ROUND -> 6;
-            case SQUARE -> 0;
-        };
+    /** The interned value for {@code radius}, clamped to {@link #MIN_RADIUS}..{@link #MAX_RADIUS}. */
+    public static ThemeRoundness of(int radius) {
+        return VALUES[clamp(radius)];
     }
 
-    /** Larger chamfer for major sheets/modals (historical {@code RADIUS_LARGE}). */
-    public int radiusLarge() {
-        return switch (this) {
-            case ROUND -> 14;
-            case SLIGHTLY_ROUND -> 8;
-            case SQUARE -> 0;
-        };
-    }
-
-    /** Tight chamfer for compact controls (historical {@code RADIUS_SMALL}). */
-    public int radiusSmall() {
-        return switch (this) {
-            case ROUND -> 6;
-            case SLIGHTLY_ROUND -> 3;
-            case SQUARE -> 0;
-        };
+    /** Clamp a persisted or requested radius into the supported range. */
+    public static int clamp(int radius) {
+        return Math.max(MIN_RADIUS, Math.min(MAX_RADIUS, radius));
     }
 
     /**
-     * Parse a persisted roundness name, falling back to {@link #ROUND} for
-     * null, blank, or unrecognized values (same contract as
-     * {@link ThemeMode#fromName}).
+     * The radius a retired Corner Style name stood for — {@code ROUND} 10,
+     * {@code SLIGHTLY_ROUND} 6, {@code SQUARE} 0 — or the default for a
+     * null or unknown name. Total; never throws.
      */
-    public static ThemeRoundness fromName(String name) {
+    public static int legacyRadius(String name) {
         if (name != null) {
-            for (ThemeRoundness r : values()) {
-                if (r.name().equalsIgnoreCase(name)) return r;
-            }
+            if (name.equalsIgnoreCase("SQUARE")) return SQUARE.radius;
+            if (name.equalsIgnoreCase("SLIGHTLY_ROUND")) return SLIGHTLY_ROUND.radius;
         }
-        return ROUND;
+        return DEFAULT_RADIUS;
+    }
+
+    /** Standard radius for panels and buttons (historical {@code RADIUS}). */
+    public int radius() {
+        return radius;
+    }
+
+    /** Larger radius for major sheets and modals (historical {@code RADIUS_LARGE}). */
+    public int radiusLarge() {
+        return radius * 7 / 5;
+    }
+
+    /** Tighter radius for compact controls (historical {@code RADIUS_SMALL}). */
+    public int radiusSmall() {
+        return radius * 3 / 5;
+    }
+
+    /**
+     * Corner radius for a shape whose fully round form is a capsule of the
+     * given thickness (its shorter side): {@code thickness / 2} at
+     * {@link #DEFAULT_RADIUS} or above, scaled down in proportion below it.
+     */
+    public float capsule(float thickness) {
+        return thickness / 2f * Math.min(1f, radius / (float) DEFAULT_RADIUS);
+    }
+
+    /** True at radius 0: every corner is square. */
+    public boolean square() {
+        return radius == 0;
+    }
+
+    @Override
+    public String toString() {
+        return radius + " px";
     }
 }

@@ -133,6 +133,9 @@ public abstract class HudModule {
 
     protected int backgroundColor() { return 0x80000000; }
 
+    /** Whether this module's shapes take the theme's Corner Radius (its *ThemeCorners switch). Fixed by default. */
+    protected boolean themeCorners() { return false; }
+
     /**
      * Per-frame alpha multiplier in [0, 1] applied to the module's
      * background only. Defaults to fully opaque. Subclasses override to
@@ -160,7 +163,7 @@ public abstract class HudModule {
 
         if (Math.abs(scale - 1.0f) < 0.001f) {
             // Fast path â€” no matrix push if scale is effectively 1.
-            HudBackgrounds.draw(ctx, x, y, getWidth(), getHeight(), backgroundMode(), backgroundColor(), bgAlpha);
+            HudBackgrounds.draw(ctx, x, y, getWidth(), getHeight(), backgroundMode(), backgroundColor(), bgAlpha, themeCorners());
             renderContent(ctx, client, x, y);
             return;
         }
@@ -170,7 +173,7 @@ public abstract class HudModule {
         ctx.pose().pushMatrix();
         ctx.pose().translate(x, y);
         ctx.pose().scale(scale, scale);
-        HudBackgrounds.draw(ctx, 0, 0, getWidth(), getHeight(), backgroundMode(), backgroundColor(), bgAlpha);
+        HudBackgrounds.draw(ctx, 0, 0, getWidth(), getHeight(), backgroundMode(), backgroundColor(), bgAlpha, themeCorners());
         renderContent(ctx, client, 0, 0);
         ctx.pose().popMatrix();
     }

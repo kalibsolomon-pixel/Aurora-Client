@@ -341,7 +341,9 @@ public final class FeatureRegistry {
                         new EnumSetting<>("HUD Background", AuroraConfig.HudBackground.class,
                                 () -> cfg.sprintHudBgMode, v -> cfg.sprintHudBgMode = v),
                         new ColorSetting("HUD Background Color (when SOLID)",
-                                () -> cfg.sprintHudBgColor, v -> cfg.sprintHudBgColor = v)
+                                () -> cfg.sprintHudBgColor, v -> cfg.sprintHudBgColor = v),
+                        hudThemeCorners(() -> cfg.toggleSprintSneakThemeCorners, v -> cfg.toggleSprintSneakThemeCorners = v)
+                                .disabled(() -> cfg.sprintHudBgMode != AuroraConfig.HudBackground.SOLID)
                 ));
 
         // ---- Alerts (combined: armor durability + effect expiry) ----
@@ -552,6 +554,8 @@ addWithSettings("hitbox",
                         new ColorSetting("Background Color (when SOLID)",
                                 () -> cfg.infoBgColor, v -> cfg.infoBgColor = v)
                                 .description("The fill color and opacity used when Background is set to SOLID. Ignored for other background modes."),
+                        hudThemeCorners(() -> cfg.infoModuleThemeCorners, v -> cfg.infoModuleThemeCorners = v)
+                                .disabled(() -> cfg.infoBgMode != AuroraConfig.HudBackground.SOLID),
                         // Loose dropdown categories (owner ruling 2026-10-30): the
                         // flat toggle list became four collapsible groups.
                         new SectionHeaderSetting("Performance"),
@@ -604,7 +608,9 @@ addWithSettings("hitbox",
                         new EnumSetting<>("Background", AuroraConfig.HudBackground.class,
                                 () -> cfg.cpsBgMode, v -> cfg.cpsBgMode = v),
                         new ColorSetting("Background Color (when SOLID)",
-                                () -> cfg.cpsBgColor, v -> cfg.cpsBgColor = v)
+                                () -> cfg.cpsBgColor, v -> cfg.cpsBgColor = v),
+                        hudThemeCorners(() -> cfg.cpsThemeCorners, v -> cfg.cpsThemeCorners = v)
+                                .disabled(() -> cfg.cpsBgMode != AuroraConfig.HudBackground.SOLID)
                 ));
 
         addWithSettings("armor_hud",
@@ -631,7 +637,9 @@ addWithSettings("hitbox",
                                     case VANILLA -> "Each armor piece sits inside Minecraft's resource-pack offhand slot with vanilla spacing; durability text appears beside it.";
                                 }),
                         new ColorSetting("Background Color (when SOLID)",
-                                () -> cfg.armorHudBgColor, v -> cfg.armorHudBgColor = v)
+                                () -> cfg.armorHudBgColor, v -> cfg.armorHudBgColor = v),
+                        hudThemeCorners(() -> cfg.armorHudThemeCorners, v -> cfg.armorHudThemeCorners = v)
+                                .disabled(() -> cfg.armorHudBgMode != AuroraConfig.HudBackground.SOLID)
                 ));
 
         addWithSettings("reach_display",
@@ -643,7 +651,9 @@ addWithSettings("hitbox",
                         new EnumSetting<>("Background", AuroraConfig.HudBackground.class,
                                 () -> cfg.reachBgMode, v -> cfg.reachBgMode = v),
                         new ColorSetting("Background Color (when SOLID)",
-                                () -> cfg.reachBgColor, v -> cfg.reachBgColor = v)
+                                () -> cfg.reachBgColor, v -> cfg.reachBgColor = v),
+                        hudThemeCorners(() -> cfg.reachDisplayThemeCorners, v -> cfg.reachDisplayThemeCorners = v)
+                                .disabled(() -> cfg.reachBgMode != AuroraConfig.HudBackground.SOLID)
                 ));
 
         addWithSettings("potion_hud",
@@ -655,7 +665,9 @@ addWithSettings("hitbox",
                         new EnumSetting<>("Background", AuroraConfig.HudBackground.class,
                                 () -> cfg.potionBgMode, v -> cfg.potionBgMode = v),
                         new ColorSetting("Background Color (when SOLID)",
-                                () -> cfg.potionBgColor, v -> cfg.potionBgColor = v)
+                                () -> cfg.potionBgColor, v -> cfg.potionBgColor = v),
+                        hudThemeCorners(() -> cfg.potionHudThemeCorners, v -> cfg.potionHudThemeCorners = v)
+                                .disabled(() -> cfg.potionBgMode != AuroraConfig.HudBackground.SOLID)
                 ));
 
         addWithSettings("ping",
@@ -704,6 +716,8 @@ addWithSettings("hitbox",
                                 () -> cfg.totemPopBgMode, v -> cfg.totemPopBgMode = v),
                         new ColorSetting("Background Color (when SOLID)",
                                 () -> cfg.totemPopBgColor, v -> cfg.totemPopBgColor = v),
+                        hudThemeCorners(() -> cfg.totemPopThemeCorners, v -> cfg.totemPopThemeCorners = v)
+                                .disabled(() -> cfg.totemPopBgMode != AuroraConfig.HudBackground.SOLID),
                         // §7.3: destructive actions go last, never interleaved with
                         // adjustable settings. Deliberately NO new section here,
                         // unlike Stats/Hitreg: this screen is a single flat 8-row
@@ -973,6 +987,9 @@ addWithSettings("hitbox",
                         new BooleanSetting("Circular",
                                 () -> cfg.minimapCircular, v -> cfg.minimapCircular = v)
                                 .description("Renders the minimap as a round disc instead of a square. Corners outside the inscribed circle are masked with the border color."),
+                        hudThemeCorners(() -> cfg.minimapThemeCorners, v -> cfg.minimapThemeCorners = v)
+                                .description("Round the square frame's corners with the theme's Corner Radius (Settings → Appearance → Surfaces) instead of its fixed corners. Has no effect while Circular is on.")
+                                .disabled(() -> cfg.minimapCircular),
                         new BooleanSetting("Rotate with Player",
                                 () -> cfg.minimapRotateWithPlayer, v -> cfg.minimapRotateWithPlayer = v)
                                 .description("When on, the map rotates so your facing direction is always up. When off, north is always up and the player arrow rotates to show your heading."),
@@ -1153,7 +1170,7 @@ addWithSettings("hitbox",
                 )).noSettingsToggle(true); // owner ruling 2026-10-30: the Text Renderer dropdown owns the scope; no master toggle
 
         addWithSettings("theme",
-                "Customize Aurora's accent color, corner style, and the density of its diffuse card backgrounds.",
+                "Customize Aurora's accent and background colors, and the opacity, blur and corner radius of its surfaces.",
                 () -> cfg.themeEnabled, v -> cfg.themeEnabled = v,
                 List.of(
                         new AccentSetting("Accent Color",
@@ -1172,16 +1189,10 @@ addWithSettings("hitbox",
                                     persistThemeChange();
                                 })
                                 .description("The color tint of every Aurora window. Very light colors are deepened so text stays readable. Translucency stays on Background Opacity."),
-                        new SegmentedSetting<>("Corner Style", ThemeRoundness.class,
-                                () -> cfg.themeOrDefault().roundness != null ? cfg.themeOrDefault().roundness : ThemeRoundness.ROUND,
-                                v -> {
-                                    cfg.themeOrDefault().roundness = v;
-                                    com.aurora.client.theme.ThemeManager.reload();
-                                    persistThemeChange();
-                                },
-                                ThemeRoundness::displayName)
-                                .glassSegments(true) // glass pilot: Theme screen only
-                                .description("How round Aurora's panels and buttons are: Round (the classic look), Slightly Round, or Square. Applies everywhere corners are drawn — including this screen."),
+                        // The three surface sliders sit together under one
+                        // caption (owner ruling 2026-11-12). Corner Radius
+                        // replaced the Round / Slightly Round / Square choice.
+                        new SectionHeaderSetting("Surfaces"),
                         new ThemeOpacitySetting("Background Opacity",
                                 () -> cfg.themeOrDefault().backgroundOpacity,
                                 v -> {
@@ -1189,7 +1200,28 @@ addWithSettings("hitbox",
                                     com.aurora.client.theme.ThemeManager.reload();
                                     persistThemeChange();
                                 })
-                                .description("How dense Aurora's card backgrounds are. Lower values make the backdrop clearer. Drag previews the change live; release saves it.")
+                                .description("How dense the tint of Aurora's windows and cards is. Lower values let more of the blurred backdrop through; Blur Radius sets how blurred it is. Drag previews the change live; release saves it."),
+                        new ThemeSliderSetting("Blur Radius",
+                                () -> cfg.themeOrDefault().blurRadius,
+                                v -> {
+                                    cfg.themeOrDefault().blurRadius = (int) Math.round(v);
+                                    com.aurora.client.theme.ThemeManager.reload();
+                                    persistThemeChange();
+                                },
+                                com.aurora.client.theme.ThemeDefinition.MIN_BLUR_RADIUS,
+                                com.aurora.client.theme.ThemeDefinition.MAX_BLUR_RADIUS, 1, true)
+                                .valueFormatter(v -> v.intValue() <= 0 ? "Off" : v.intValue() + " px")
+                                .description("How strongly the backdrop behind Aurora's glass windows and controls is blurred, in GUI pixels. Off shows the tint alone. Drag previews the change live; release saves it."),
+                        new ThemeSliderSetting("Corner Radius",
+                                () -> cfg.themeOrDefault().cornerRadius,
+                                v -> {
+                                    cfg.themeOrDefault().cornerRadius = (int) Math.round(v);
+                                    com.aurora.client.theme.ThemeManager.reload();
+                                    persistThemeChange();
+                                },
+                                ThemeRoundness.MIN_RADIUS, ThemeRoundness.MAX_RADIUS, 1, true)
+                                .valueFormatter(v -> v.intValue() + " px")
+                                .description("How round every Aurora shape is: windows, buttons, fields, toggles, sliders and scrollbars. 0 is square and 10 is the classic look. Drag previews the change live; release saves it.")
                 ));
 
         FeatureSetting uiFpsLimit = new EnumSetting<>("UI FPS Limit", AuroraConfig.GuiFps.class,
@@ -1357,7 +1389,9 @@ addWithSettings("hitbox",
                         new EnumSetting<>("Background", AuroraConfig.HudBackground.class,
                                 () -> cfg.keystrokesBgMode, v -> cfg.keystrokesBgMode = v),
                         new ColorSetting("Background Color (when SOLID)",
-                                () -> cfg.keystrokesBgColor, v -> cfg.keystrokesBgColor = v)
+                                () -> cfg.keystrokesBgColor, v -> cfg.keystrokesBgColor = v),
+                        hudThemeCorners(() -> cfg.keystrokesThemeCorners, v -> cfg.keystrokesThemeCorners = v)
+                                .description("Round the keycaps and the backing panel with the theme's Corner Radius (Settings → Appearance → Surfaces) instead of their fixed corners.")
                 ));
 
         // ---- Display Settings ----
@@ -1501,6 +1535,17 @@ addWithSettings("hitbox",
     }
 
 
+
+    /**
+     * The per-module "Theme Corner Radius" switch (owner ruling 2026-11-12):
+     * HUD shapes keep their fixed corners unless the player hands them the
+     * theme's Corner Radius here. Callers add a disabled rule where the
+     * switch has nothing to round.
+     */
+    private static BooleanSetting hudThemeCorners(BooleanSupplier getter, Consumer<Boolean> setter) {
+        return new BooleanSetting("Theme Corner Radius", getter, setter)
+                .description("Round this HUD's background with the theme's Corner Radius (Settings → Appearance → Surfaces) instead of its fixed corners. Only the Solid background has corners to round.");
+    }
 
     /** Boolean row bound to one Better Hitreg {@code Toggle} (raw stored value, not the master-gated read). */
     private static BooleanSetting hitregToggle(com.aurora.client.hitreg.settings.Toggle toggle, String label) {

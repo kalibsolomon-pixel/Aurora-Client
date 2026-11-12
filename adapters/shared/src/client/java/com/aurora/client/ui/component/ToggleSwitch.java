@@ -95,7 +95,7 @@ public class ToggleSwitch extends Widget {
     private final TimedTransition pilotHover=new TimedTransition(120,CubicBezier.EASE);
     private boolean pilotPrimed;
 
-    /** Pack switch recipe: solid readable accent, white thumb, fixed capsule, no pulse. */
+    /** Pack switch recipe: solid readable accent, white thumb, theme-radius capsule, no pulse. */
     private void renderUnified(GuiGraphicsExtractor g,float x,float y,float w,float h,int mx,int my) {
         long now=System.nanoTime(); boolean on=getter.getAsBoolean();
         if(!pilotPrimed) { pilotSlide.update(on ? 1 : 0,now);pilotHover.update(0,now);pilotPrimed=true; }
@@ -107,11 +107,15 @@ public class ToggleSwitch extends Widget {
         // Client adaptation: subtle hover wash distinguishes pointer state without a pulse.
         fill=AuroraAnim.lerpArgb(fill,MaterialSurface.color(ThemeToken.ON_BACKGROUND),.08f*hover);
         if(disabled) fill=AuroraAnim.lerpArgb(inactive,active,.35f*t);
-        RenderUtil.drawRoundedRectAA(g,x,y,w,h,h/2,fill);
-        RenderUtil.drawRoundedOutlineAA(g,x,y,w,h,h/2,1,MaterialSurface.color(ThemeToken.BORDER_HOVER));
+        // Track and thumb follow the theme's Corner Radius: full capsules at
+        // the default radius, square at 0 (owner ruling 2026-11-12).
+        var corners=com.aurora.client.theme.ThemeManager.current().roundness();
+        float r=corners.capsule(h);
+        RenderUtil.drawRoundedRectAA(g,x,y,w,h,r,fill);
+        RenderUtil.drawRoundedOutlineAA(g,x,y,w,h,r,1,MaterialSurface.color(ThemeToken.BORDER_HOVER));
         float d=h-5, tx=x+2.5f+(w-h)*t;
-        RenderUtil.drawCircleAA(g,tx,y+2.5f,d,d,disabled ? MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED) : 0xffffffff);
-        if(focusedVisual && !disabled) RenderUtil.drawRoundedOutlineAA(g,x-2,y-2,w+4,h+4,h/2+2,1,active);
+        RenderUtil.drawRoundedRectAA(g,tx,y+2.5f,d,d,corners.capsule(d),disabled ? MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED) : 0xffffffff);
+        if(focusedVisual && !disabled) RenderUtil.drawRoundedOutlineAA(g,x-2,y-2,w+4,h+4,MaterialSurface.outsetRadius(r,2),1,active);
     }
 
     /** §8.3 symmetric hover — 140 ms enter, 140 ms exit, continuous reversal. */
@@ -193,15 +197,16 @@ public class ToggleSwitch extends Widget {
         int thumbCol = disabled
                 ? ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED)
                 : 0xFFFFFFFF;
-        RenderUtil.drawCircleAA(g, knobX, knobY, thumbD, thumbD, thumbCol);
+        RenderUtil.drawRoundedRectAA(g, knobX, knobY, thumbD, thumbD,
+                com.aurora.client.theme.ThemeManager.current().roundness().capsule(thumbD), thumbCol);
 
         // Provisional focus treatment: geometry-following accent hairline
         // OUTSIDE the capsule — visible without hover, distinct from the ON
         // fill, both modes. Drawn last, additive, over both OFF and ON.
         if (focusedVisual) {
-            float radius = h / 2f;
+            float radius = com.aurora.client.theme.ThemeManager.current().roundness().capsule(h);
             RenderUtil.drawRoundedOutlineAA(g, x - 1.5f, y - 1.5f, w + 3f, h + 3f,
-                    radius + 1.5f, 1.0f,
+                    MaterialSurface.outsetRadius(radius, 1.5f), 1.0f,
                     ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
         }
     }
@@ -228,13 +233,11 @@ public class ToggleSwitch extends Widget {
         int washTarget = ThemeManager.color(ThemeToken.ON_BACKGROUND);
         int pill = AuroraAnim.lerpArgb(base, washTarget, HOVER_WASH * hoverT);
 
-        // The switch is ALWAYS a full capsule, deliberately decoupled from the
-        // theme's Corner Style token — matching the project convention that
-        // knobs/thumbs stay circular in every roundness mode (see
-        // ResolvedTheme.project()'s note on KNOB_RADIUS). Reading
-        // roundness().radiusSmall() here previously made the track collapse
-        // to a rectangle at Corner Style = Square.
-        float radius = h / 2f;
+        // The track follows the theme's Corner Radius through the capsule
+        // rule: a full capsule at the default radius, flattening in
+        // proportion below it, square at 0 (owner ruling 2026-11-12, which
+        // retired the earlier always-a-capsule convention).
+        float radius = com.aurora.client.theme.ThemeManager.current().roundness().capsule(h);
 
         RenderUtil.drawRoundedRectAA(g, x, y, w, h, radius, pill);
         // Hairline separator token for the pill edge (mode-aware, replaces the

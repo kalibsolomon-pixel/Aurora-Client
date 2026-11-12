@@ -1616,10 +1616,8 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         double maxScroll = computeMaxScroll();
         if (maxScroll <= 0) return;
         ScrollbarChrome.Thumb thumb = thumb(maxScroll);
-        // The thumb's capsule radius is MECHANICAL — direct-manipulation
-        // chrome in the toggle-track/slider-track family, Square-mode-exempt
-        // by ruling (C-7; same at ManagerListScreen and the pack browser's
-        // two tracks). Width/drag physics untouched.
+        // The thumb is a capsule in the toggle-track/slider-track family; its
+        // corners follow the theme's Corner Radius like theirs (ScrollbarChrome).
         ScrollbarChrome.draw(g, (int) mainX() + contentWidth() + 4, thumb,
                 scrolls[selectedCategory].isDragging(), ThemeToken.ON_BACKGROUND);
     }

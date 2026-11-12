@@ -1197,7 +1197,8 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
                     && mouseY >= thumbY && mouseY <= thumbY + thumbH;
             int col = (sHover || sidebarScroll.isDragging()) ? AuroraAnim.scaleAlpha(AuroraTheme.TEXT_PRIMARY, 0.55f)
                     : AuroraAnim.scaleAlpha(AuroraTheme.TEXT_PRIMARY, 0.30f);
-            RenderUtil.drawRoundedRectAA(g, trackX, thumbY, 3, (int) thumbH, 2, col);
+            RenderUtil.drawRoundedRectAA(g, trackX, thumbY, 3, (int) thumbH,
+                    ThemeManager.current().roundness().capsule(3f), col);
         }
     }
 
@@ -1882,7 +1883,8 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         int thumbCol = (hover || gridScroll.isDragging())
                 ? AuroraAnim.scaleAlpha(AuroraTheme.TEXT_PRIMARY, 0.55f)
                 : AuroraAnim.scaleAlpha(AuroraTheme.TEXT_PRIMARY, 0.30f);
-        RenderUtil.drawRoundedRectAA(g, trackX, thumbY, trackW, (int) thumbH, 2, thumbCol);
+        RenderUtil.drawRoundedRectAA(g, trackX, thumbY, trackW, (int) thumbH,
+                ThemeManager.current().roundness().capsule(trackW), thumbCol);
     }
 
     @Override

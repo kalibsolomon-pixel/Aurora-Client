@@ -158,6 +158,7 @@ public class ArmorModule extends HudModule {
         return AuroraConfig.get().armorHudBgMode;
     }
     @Override protected int backgroundColor() { return AuroraConfig.get().armorHudBgColor; }
+    @Override protected boolean themeCorners() { return AuroraConfig.get().armorHudThemeCorners; }
 
     @Override
     protected void renderContent(GuiGraphicsExtractor ctx, Minecraft client, int x, int y) {

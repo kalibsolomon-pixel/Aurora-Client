@@ -305,10 +305,8 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
         // ColorSetting swatch: its clipping follows theme roundness when
         // rectangular (C-7 — was a literal 4 that ignored Square mode; the
         // ColorSwatch min(h/2, radiusSmall) pattern). The pad/hue/alpha
-        // strips stay data-driven — their rounded corners belong to the
-        // gradient surfaces being edited (DESIGN_LANGUAGE §16's
-        // color-picking data-surface exception) and are Square-mode-exempt
-        // by ruling.
+        // strips follow the same small radius (owner ruling 2026-11-12: the
+        // Corner Radius slider applies to every shape).
         RenderUtil.drawRoundedOutlineAA(ctx, previewX, previewY, previewW, previewH,
                 Math.min(previewH / 2f, ThemeManager.current().roundness().radiusSmall()), 1.0f, 0xFFFFFFFF);
 
@@ -344,17 +342,14 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
         int dev = padSize * scale;
         padCache.writeArgb((px, py) -> ColorEntryHelper.hslaToArgb(hue,
                 (px + 0.5f) / dev, 1f - (py + 0.5f) / dev, 1f));
-        // Rounded data-surface corners to match the frame's radius 6
+        // Rounded data-surface corners at the theme's small radius
         // (ColorSwatch's clipRounded discipline — same silhouette as the
         // outline drawn on top below).
-        padCache.clipRounded(0, 0, dev, dev, 6 * scale);
+        int radius = stripRadius();
+        padCache.clipRounded(0, 0, dev, dev, radius * scale);
         // Content-frame white around the pad — structural neutral (see class
-        // javadoc). DATA-DRIVEN exemption (C-7 ruling): the pad/hue/alpha
-        // gradient surfaces are color-picking data (DESIGN_LANGUAGE §16);
-        // their corner geometry belongs to the data surface, not to
-        // rectangular chrome, so Square mode deliberately does not square
-        // these frames (unlike the preview sample above).
-        RenderUtil.drawRoundedOutlineAA(ctx, ox, oy, padSize, padSize, 6, 1.0f, 0xFFFFFFFF);
+        // javadoc).
+        RenderUtil.drawRoundedOutlineAA(ctx, ox, oy, padSize, padSize, radius, 1.0f, 0xFFFFFFFF);
     }
 
     /** Hue strip at local coordinates — one exact hue per device pixel row. */
@@ -362,10 +357,10 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
         int scale = guiScale();
         int devW = hueW * scale, devH = hueH * scale;
         hueCache.writeArgb((px, py) -> ColorEntryHelper.hslaToArgb((py + 0.5f) / devH, 1f, 0.5f, 1f));
-        hueCache.clipRounded(0, 0, devW, devH, 6 * scale);
-        // Content-frame white around the hue strip — structural neutral;
-        // data-driven exemption as above (C-7).
-        RenderUtil.drawRoundedOutlineAA(ctx, ox, oy, hueW, hueH, 6, 1.0f, 0xFFFFFFFF);
+        int radius = stripRadius();
+        hueCache.clipRounded(0, 0, devW, devH, radius * scale);
+        // Content-frame white around the hue strip — structural neutral.
+        RenderUtil.drawRoundedOutlineAA(ctx, ox, oy, hueW, hueH, radius, 1.0f, 0xFFFFFFFF);
     }
 
     /** Alpha strip (checkerboard + gradient) at local coordinates — the
@@ -377,10 +372,15 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
             int bg = ((px / cell) + (py / cell)) % 2 == 0 ? 0xFF555555 : 0xFFAAAAAA;
             return compositeOver(ColorEntryHelper.hslaToArgb(hue, sat, lit, 1f - (py + 0.5f) / devH), bg);
         });
-        alphaCache.clipRounded(0, 0, devW, devH, 6 * scale);
-        // Content-frame white around the alpha strip — structural neutral;
-        // data-driven exemption as above (C-7).
-        RenderUtil.drawRoundedOutlineAA(ctx, ox, oy, alphaW, alphaH, 6, 1.0f, 0xFFFFFFFF);
+        int radius = stripRadius();
+        alphaCache.clipRounded(0, 0, devW, devH, radius * scale);
+        // Content-frame white around the alpha strip — structural neutral.
+        RenderUtil.drawRoundedOutlineAA(ctx, ox, oy, alphaW, alphaH, radius, 1.0f, 0xFFFFFFFF);
+    }
+
+    /** Corner radius of the pad and strips: the theme's small radius (6 at the default). */
+    private static int stripRadius() {
+        return ThemeManager.current().roundness().radiusSmall();
     }
 
     /** Source-over composite of {@code src} (ARGB) over opaque {@code bg} —

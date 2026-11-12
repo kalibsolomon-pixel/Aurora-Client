@@ -66,6 +66,7 @@ public class ToggleSprintSneakModule extends HudModule {
 
     @Override protected AuroraConfig.HudBackground backgroundMode() { return AuroraConfig.get().sprintHudBgMode; }
     @Override protected int backgroundColor() { return AuroraConfig.get().sprintHudBgColor; }
+    @Override protected boolean themeCorners() { return AuroraConfig.get().toggleSprintSneakThemeCorners; }
 
     /**
      * In BRACKETED_TEXT mode, hide the background panel when neither

@@ -34,11 +34,12 @@ public final class ScrollbarChrome {
                 scroll.ratio(maxScroll), guiScale);
     }
 
-    /** Paint the canonical 3 px mechanical capsule. */
+    /** Paint the canonical 3 px capsule; its corners follow the theme's Corner Radius. */
     public static void draw(GuiGraphicsExtractor g, int x, Thumb thumb, boolean emphasized,
                             ThemeToken foreground) {
         int alpha = emphasized ? 0x55 : 0x30;
         int color = ThemeManager.withAlpha(ThemeManager.color(foreground), alpha);
-        RenderUtil.drawRoundedRectAA(g, x, (float) thumb.y(), 3, (float) thumb.height(), 2, color);
+        RenderUtil.drawRoundedRectAA(g, x, (float) thumb.y(), 3, (float) thumb.height(),
+                ThemeManager.current().roundness().capsule(3f), color);
     }
 }

@@ -89,6 +89,7 @@ public class PotionModule extends HudModule {
         return vanillaSlots() ? AuroraConfig.HudBackground.NONE : AuroraConfig.get().potionBgMode;
     }
     @Override protected int backgroundColor() { return AuroraConfig.get().potionBgColor; }
+    @Override protected boolean themeCorners() { return AuroraConfig.get().potionHudThemeCorners; }
 
     @Override
     public boolean isConfigEnabled() {

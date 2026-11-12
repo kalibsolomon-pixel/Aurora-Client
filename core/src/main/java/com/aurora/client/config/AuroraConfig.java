@@ -644,27 +644,41 @@ public class AuroraConfig {
     public boolean lavaHideOverlay = false;   // true = cancel orange overlay entirely
 
     // Per-module background settings
+    //
+    // The *ThemeCorners switches (2026-11-12): HUD shapes keep their fixed
+    // corners unless the module's switch hands them the theme's Corner
+    // Radius (HudBackgrounds.radius). Off in a fresh install and for
+    // existing configs alike, so nothing changes until a player opts in.
+    // Each name starts with its feature's reset prefix.
     /** Default plain HUD backdrop; legacy AURORA modes migrate to SOLID. */
     public HudBackground infoBgMode = HudBackground.SOLID;
     public int infoBgColor = 0x80000000;
+    public boolean infoModuleThemeCorners = false;
 
     public HudBackground keystrokesBgMode = HudBackground.NONE;
     public int keystrokesBgColor = 0xFF14141C;
+    /** Also rounds the keycaps, not only the panel. */
+    public boolean keystrokesThemeCorners = false;
 
     public HudBackground cpsBgMode = HudBackground.NONE;
     public int cpsBgColor = 0x80000000;
+    public boolean cpsThemeCorners = false;
 
     public HudBackground armorHudBgMode = HudBackground.NONE;
     public int armorHudBgColor = 0x80000000;
+    public boolean armorHudThemeCorners = false;
 
     public HudBackground reachBgMode = HudBackground.NONE;
     public int reachBgColor = 0x80000000;
+    public boolean reachDisplayThemeCorners = false;
 
     public HudBackground sprintHudBgMode = HudBackground.NONE;
     public int sprintHudBgColor = 0x80000000;
+    public boolean toggleSprintSneakThemeCorners = false;
 
     public HudBackground potionBgMode = HudBackground.NONE;
     public int potionBgColor = 0x80000000;
+    public boolean potionHudThemeCorners = false;
 
     // ---- Totem pop counter ----
     public boolean totemPopEnabled  = false;
@@ -676,6 +690,7 @@ public class AuroraConfig {
     public boolean totemResetOnDeath = true;
     public HudBackground totemPopBgMode = HudBackground.NONE;
     public int totemPopBgColor = 0x80000000;
+    public boolean totemPopThemeCorners = false;
     /** Append "[N]" to other players' nametags showing their totem pop count. */
     public boolean nametagTotemPopsEnabled = false; // off in a fresh install (ADR 0007)
 
@@ -1153,6 +1168,8 @@ public class AuroraConfig {
     public int minimapBorderColor = 0;
     /** Minimap coordinate text color (ARGB). */
     public int minimapCoordColor = 0xFFFFFFFF;
+    /** Square frame takes the theme's Corner Radius instead of its fixed corners. */
+    public boolean minimapThemeCorners = false;
 
     // ---- World Map ----
     /**

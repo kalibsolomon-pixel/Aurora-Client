@@ -164,6 +164,7 @@ Press once to sprint or sneak instead of holding.
 - **HUD Display Mode**: dropdown Both / Individual / Bracketed Text · Both. `{toggleSprintSneakDisplayMode}`
 - **HUD Background**: dropdown None / Solid / Vanilla · None. `{sprintHudBgMode}`
 - **HUD Background Color (when SOLID)**: color · black, 50%. `{sprintHudBgColor}`
+- **Theme Corner Radius**: toggle · off · round this HUD's corners with the theme's Corner Radius instead of its fixed corners. `{toggleSprintSneakThemeCorners}`
 
 #### Alerts · off · combined `{card:alerts}`
 Warnings for expiring effects and low durability.
@@ -299,6 +300,7 @@ Corner readout of FPS, coordinates and more.
 - **Text Color**: color · orange. `{infoModuleTextColor}`
 - **Background**: dropdown None / Solid / Vanilla · None. `{infoBgMode}`
 - **Background Color (when SOLID)**: color · black, 50%. `{infoBgColor}`
+- **Theme Corner Radius**: toggle · off · round this HUD's corners with the theme's Corner Radius instead of its fixed corners. `{infoModuleThemeCorners}`
 - *Performance*
   - **Show FPS**: toggle · on. `{showFps}`
   - **Show Frame Time**: toggle · off. `{infoShowFrameTime}`
@@ -325,6 +327,7 @@ Clicks-per-second counter.
 - **Text Color**: color · HUD default. `{cpsTextColor}`
 - **Background**: dropdown · None. `{cpsBgMode}`
 - **Background Color (when SOLID)**: color · black, 50%. `{cpsBgColor}`
+- **Theme Corner Radius**: toggle · off · round this HUD's corners with the theme's Corner Radius instead of its fixed corners. `{cpsThemeCorners}`
 
 #### Armor HUD · on `{card:armor_hud}`
 Your armor and its durability.
@@ -334,18 +337,21 @@ Your armor and its durability.
 - **Horizontal Layout**: toggle · on. `{armorHorizontal}`
 - **Background**: dropdown · Vanilla (slot frames). `{armorHudBgMode}`
 - **Background Color (when SOLID)**: color · black, 50%. `{armorHudBgColor}`
+- **Theme Corner Radius**: toggle · off · round this HUD's corners with the theme's Corner Radius instead of its fixed corners. `{armorHudThemeCorners}`
 
 #### Reach Display · off `{card:reach_display}`
 Distance of your last hit.
 - **Text Color**: color · HUD default. `{reachDisplayTextColor}`
 - **Background**: dropdown · None. `{reachBgMode}`
 - **Background Color (when SOLID)**: color · black, 50%. `{reachBgColor}`
+- **Theme Corner Radius**: toggle · off · round this HUD's corners with the theme's Corner Radius instead of its fixed corners. `{reachDisplayThemeCorners}`
 
 #### Potion HUD · on `{card:potion_hud}`
 Active effects with timers (replaces vanilla's effect icons).
 - **Text Color**: color · white. `{potionHudTextColor}`
 - **Background**: dropdown · Vanilla. `{potionBgMode}`
 - **Background Color (when SOLID)**: color · black, 50%. `{potionBgColor}`
+- **Theme Corner Radius**: toggle · off · round this HUD's corners with the theme's Corner Radius instead of its fixed corners. `{potionHudThemeCorners}`
 
 #### Ping · off · combined `{card:ping}`
 Latency as numbers.
@@ -364,6 +370,7 @@ Counts totem pops.
 - **Show in Player Nametags**: toggle · off. `{nametagTotemPopsEnabled}`
 - **Background**: dropdown · None. `{totemPopBgMode}`
 - **Background Color (when SOLID)**: color · black, 50%. `{totemPopBgColor}`
+- **Theme Corner Radius**: toggle · off · round this HUD's corners with the theme's Corner Radius instead of its fixed corners. `{totemPopThemeCorners}`
 - **Reset Now**: button · clears all counts. `{action:totemResetNow}`
 
 #### Waypoints · off `{card:waypoints}`
@@ -447,6 +454,7 @@ Shows your key and mouse presses.
 - **Scale**: slider · about 1.29 (same as resizing in the HUD Editor). `{hud:keystrokes.scale}`
 - **Background**: dropdown · Solid. `{keystrokesBgMode}`
 - **Background Color (when SOLID)**: color · near-black. `{keystrokesBgColor}`
+- **Theme Corner Radius**: toggle · off · round this HUD's corners with the theme's Corner Radius instead of its fixed corners. `{keystrokesThemeCorners}`
 
 #### Minimap · off `{card:minimap}`
 Top-down map in a HUD corner.
@@ -454,6 +462,7 @@ Top-down map in a HUD corner.
 - *Shape & Size*
   - **Size (px)**: slider 64–256 · 128. `{minimapSize}`
   - **Circular**: toggle · off. `{minimapCircular}`
+  - **Theme Corner Radius**: toggle · off · round this HUD's corners with the theme's Corner Radius instead of its fixed corners. `{minimapThemeCorners}`
   - **Rotate with Player**: toggle · off. `{minimapRotateWithPlayer}`
 - *Terrain*
   - **Show Terrain**: toggle · on. `{minimapShowTerrain}`
@@ -513,8 +522,10 @@ The tab shows one page at a time, chosen from the sub-tabs in the row above the 
 - *Theme* · header toggle on (off = fixed factory palette instead of your colors) `{card:theme}`
   - **Accent Color**: swatch grid + picker · green (#43A047). `{theme.accent}`
   - **Background Color**: swatch grid + picker · deep purple (#22163A). `{theme.background}`
-  - **Corner Style**: segmented Round / Slightly Round / Square · Round. `{theme.roundness}`
-  - **Background Opacity**: slider · 33%. `{theme.backgroundOpacity}`
+  - *Surfaces* (the three sliders grouped under one caption)
+    - **Background Opacity**: slider 0–100% · 33% · the tint's density only. `{theme.backgroundOpacity}`
+    - **Blur Radius**: slider Off–32 px (GUI pixels) · 9 px · how blurred the backdrop behind glass is. `{theme.blurRadius}`
+    - **Corner Radius**: slider 0–20 px · 10 px · every shape: windows, buttons, fields, toggles, sliders, scrollbars. Replaced Corner Style (Round = 10, Slightly Round = 6, Square = 0). `{theme.cornerRadius}`
 - *Text & Fonts* · no toggle `{card:text_fonts}`
   - **Text Renderer**: dropdown Off / Aurora UI Only / All Text · All Text. `{textRendererMode}`
   - **Client Font**: dropdown Inter Medium / Inter Italic / JetBrains Mono / Roboto / Poppins / Oswald / Nunito / Quicksand / Fira Sans / SansSerif · Fira Sans. `{activeFont}`
