@@ -21,10 +21,13 @@ class IconCatalogTest {
     @Test void searchMatchesEveryWordAndIsMemoized() {
         var swords = IconCatalog.search("swords");
         assertTrue(swords.stream().anyMatch(i -> i.name().equals("swords")));
-        var esports = IconCatalog.search("sports esports");
+        var esports = IconCatalog.search("sports esports", 0);
         assertTrue(esports.stream().anyMatch(i -> i.name().equals("sports_esports")));
-        assertTrue(esports.stream().allMatch(i -> i.label().contains("sports") && i.label().contains("esports")));
-        assertSame(esports, IconCatalog.search("  Sports_Esports "), "the same query is answered from the memo");
+        assertTrue(esports.stream().allMatch(i -> i.label().contains("sports") && i.label().contains("esports")),
+                "with no typo tolerance every word must appear");
+        assertSame(esports, IconCatalog.search("  Sports_Esports ", 0), "the same query is answered from the memo");
+        assertEquals("sports_esports", IconCatalog.search("sports esprots", 1).get(0).name(),
+                "a swapped pair of letters is one typo, and the closest match ranks first");
         assertEquals(IconCatalog.all().size(), IconCatalog.search("").size());
         assertTrue(IconCatalog.search("zzzz_nothing").isEmpty());
     }
@@ -53,7 +56,7 @@ class IconCatalogTest {
     @Test void profileCardsReconcileAgainstASetAndSearchIsMemoized() {
         String src = SourceTree.read("screen/ProfileManagerScreen.java");
         assertTrue(src.contains("Set<String> live = new HashSet<>(all);"));
-        assertTrue(src.contains("if (!query.equals(memoQuery) || !all.equals(memoSource))"),
+        assertTrue(src.contains("if (!query.equals(memoQuery) || tolerance != memoTolerance || !all.equals(memoSource))"),
                 "the filtered list rebuilds only when the query or the profiles change");
         assertTrue(src.contains("com.aurora.client.adapter.NativeUi.openPath("), "Open folder goes through the version adapter");
     }

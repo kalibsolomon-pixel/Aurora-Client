@@ -118,13 +118,15 @@ class SegmentedSettingPilotTest {
 
     @Test
     void productionInventoryHasNoSegmentedRows() throws Exception {
-        // Corner Style, the last production segmented row, became the Corner
-        // Radius slider (2026-11-12). The component stays, covered by this
-        // class through its ThemeMode fixture.
+        // Corner Style became the Corner Radius slider (2026-11-12); the
+        // Text section's Case and HUD Text Shadow and Search's Typo Tolerance
+        // are the production rows since (2026-11-12, after the owner's
+        // OneConfig references). This class still covers the component
+        // through its ThemeMode fixture.
         String registry = java.nio.file.Files.readString(SourceTree.resolve(
                 SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/FeatureRegistry.java"));
-        assertEquals(0, registry.split("new SegmentedSetting\\<>\\(", -1).length - 1,
-                "no production construction");
+        assertEquals(3, registry.split("new SegmentedSetting\\<>\\(", -1).length - 1,
+                "Case, HUD Text Shadow and Search Typo Tolerance");
         assertFalse(registry.contains("ThemeMode.class"));
         assertFalse(registry.contains("ThemeRoundness.class"));
         assertFalse(registry.contains("GlassStyle.class"));
@@ -256,7 +258,8 @@ class SegmentedSettingPilotTest {
     @Test
     void soundOwnershipIsTheConditionalBehaviorPlay() {
         String source = src(SRC);
-        assertTrue(source.contains("if (index == clampedSelected()) return; // silent consumed no-op"));
+        assertTrue(source.contains("if (toggledOn == null && index == clampedSelected()) return; // silent consumed no-op"),
+                "a pick-one track's reselect is silent; a toggle segment always flips");
         assertTrue(source.contains("MinecraftSemanticFeedback.INSTANCE.play(SemanticSound.ACTIVATION);"));
         assertEquals(1, source.split("MinecraftSemanticFeedback\\.INSTANCE\\.play", -1).length - 1,
                 "exactly one play site — inside the behavior, only on genuine change");

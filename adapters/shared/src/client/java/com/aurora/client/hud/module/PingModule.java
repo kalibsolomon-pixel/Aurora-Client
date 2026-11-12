@@ -71,7 +71,7 @@ public class PingModule extends HudModule {
                 ? com.aurora.client.theme.HudText.color(AuroraConfig.get().hudColor)
                 : pingColor(ms);
         if (AuroraConfig.get().pingHudTextColor != null) color = AuroraConfig.get().pingHudTextColor;
-        ctx.text(tr, buildText(), x, y, color, false);
+        com.aurora.client.hud.HudTextPainter.draw(ctx,tr, buildText(), x, y, color);
     }
 
     /**

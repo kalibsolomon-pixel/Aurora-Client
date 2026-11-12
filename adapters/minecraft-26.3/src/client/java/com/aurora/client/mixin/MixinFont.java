@@ -23,7 +23,7 @@ public abstract class MixinFont {
         Style style = AuroraFontRenderer.getActiveStyle();
         if (style != null && text != null) {
             // Plain strings never carry their own font — always safe to apply.
-            Component comp = Component.literal(text).withStyle(style);
+            Component comp = AuroraFontRenderer.styledLiteral(text, style);
             Font self = (Font) (Object) this;
             cir.setReturnValue(self.prepareText(comp.getVisualOrderText(), x, y, color, dropShadow, false, light));
         }
@@ -87,7 +87,7 @@ public abstract class MixinFont {
         Font self = (Font) (Object) this;
         MEASURING.get()[0]++;
         try {
-            cir.setReturnValue(self.width(Component.literal(text).withStyle(style)));
+            cir.setReturnValue(self.width(AuroraFontRenderer.styledLiteral(text, style)));
         } finally {
             MEASURING.get()[0]--;
         }
@@ -109,7 +109,7 @@ public abstract class MixinFont {
         Font self = (Font) (Object) this;
         MEASURING.get()[0]++;
         try {
-            cir.setReturnValue(self.width(Component.literal(plain).withStyle(style)));
+            cir.setReturnValue(self.width(AuroraFontRenderer.styledLiteral(plain, style)));
         } finally {
             MEASURING.get()[0]--;
         }
@@ -133,7 +133,7 @@ public abstract class MixinFont {
             Font self = (Font) (Object) this;
             MEASURING.get()[0]++;
             try {
-                cir.setReturnValue(self.width(c.copy().withStyle(style)));
+                cir.setReturnValue(self.width(AuroraFontRenderer.styledCopy(c, style)));
             } finally {
                 MEASURING.get()[0]--;
             }
@@ -177,7 +177,7 @@ public abstract class MixinFont {
             for (int i = 0; i < text.length(); ) {
                 int cp = text.codePointAt(i);
                 String ch = new String(Character.toChars(cp));
-                int charW = self.width(Component.literal(ch).withStyle(style));
+                int charW = self.width(AuroraFontRenderer.styledLiteral(ch, style));
                 if (width + charW > maxWidth) break;
                 sb.append(ch);
                 width += charW;
@@ -191,7 +191,7 @@ public abstract class MixinFont {
             for (int i = text.length(); i > 0; ) {
                 int cp = text.codePointBefore(i);
                 String ch = new String(Character.toChars(cp));
-                int charW = self.width(Component.literal(ch).withStyle(style));
+                int charW = self.width(AuroraFontRenderer.styledLiteral(ch, style));
                 if (width + charW > maxWidth) break;
                 sb.insert(0, ch);
                 width += charW;

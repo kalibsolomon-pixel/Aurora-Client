@@ -58,9 +58,17 @@ public class SegmentedControl extends Widget {
     private final String[] options;
     private final IntSupplier selectedIndex;
     private final IntConsumer onSelect;
+    /**
+     * Toggle mode (2026-11-12, the Text section's Italic/Underline row): each
+     * segment is its own on/off switch, so any number can be selected and a
+     * click always flips the clicked one. Null for the usual pick-one track.
+     */
+    private final java.util.function.IntPredicate toggledOn;
 
     private boolean disabled = false;
     private float trackH = 20f;
+    /** Labels drawn as written, exempt from the Text section's Case option (see {@link AuroraFontRenderer#verbatim}). */
+    private boolean verbatimLabels = false;
 
     /** Canonical hover animators — pointer-only, one per segment, long-lived (C-5). */
     private final HoverAnim[] segmentHovers;
@@ -90,15 +98,31 @@ public class SegmentedControl extends Widget {
     private boolean glassEnabled = false;
 
     public SegmentedControl(String[] options, IntSupplier selectedIndex, IntConsumer onSelect) {
+        this(options, selectedIndex, onSelect, null);
+    }
+
+    /** A row of independent toggles: {@code on} reads segment {@code i}, {@code toggle} flips it. */
+    public static SegmentedControl toggles(String[] options, java.util.function.IntPredicate on, IntConsumer toggle) {
+        return new SegmentedControl(options, () -> -1, toggle, on);
+    }
+
+    private SegmentedControl(String[] options, IntSupplier selectedIndex, IntConsumer onSelect,
+                             java.util.function.IntPredicate toggledOn) {
         this.options = options;
         this.selectedIndex = selectedIndex;
         this.onSelect = onSelect;
+        this.toggledOn = toggledOn;
         this.segmentHovers = new HoverAnim[options.length];
         this.pilotHovers=new TimedTransition[options.length];
         for (int i = 0; i < options.length; i++) {
             this.segmentHovers[i] = HoverAnim.symmetric(HOVER_MS);
             this.pilotHovers[i]=new TimedTransition(120,CubicBezier.EASE,0);
         }
+    }
+
+    public SegmentedControl verbatimLabels(boolean v) {
+        this.verbatimLabels = v;
+        return this;
     }
 
     public SegmentedControl trackHeight(float h) {
@@ -147,12 +171,11 @@ public class SegmentedControl extends Widget {
         passDrewSegments = false;
         if (MaterialSurface.unified() || !glassEnabled) return;
         float radius = Math.min(trackH / 2f, ThemeManager.current().roundness().radiusSmall());
-        int selected = Math.max(0, Math.min(options.length - 1, selectedIndex.getAsInt()));
         passDrewSegments = true;
         for (int i = 0; i < options.length; i++) {
             int sx = segStart(i, x, w);
             int sw = segWidth(i, x, w);
-            if (!GlassSurface.control(g, sx, y, sw, trackH, radius, i == selected)) {
+            if (!GlassSurface.control(g, sx, y, sw, trackH, radius, isSelected(i))) {
                 passDrewSegments = false;
                 break;
             }
@@ -165,7 +188,6 @@ public class SegmentedControl extends Widget {
         if (tr == null) return;
 
         float radius = Math.min(trackH / 2f, ThemeManager.current().roundness().radiusSmall());
-        int selected = Math.max(0, Math.min(options.length - 1, selectedIndex.getAsInt()));
 
         // Glass pilot path: every segment is a live raised-glass panel with
         // the tint carrying the selection state. Hover feedback stays in the
@@ -185,7 +207,7 @@ public class SegmentedControl extends Widget {
                 for (int i = 0; i < options.length; i++) {
                     int sx = segStart(i, x, w);
                     int sw = segWidth(i, x, w);
-                    boolean isSelected = i == selected;
+                    boolean isSelected = isSelected(i);
                     if (!GlassSurface.control(g, sx, y, sw, trackH, radius, isSelected)) {
                         glassOk = false;
                         break;
@@ -203,7 +225,7 @@ public class SegmentedControl extends Widget {
         for (int i = 0; i < options.length; i++) {
             int sx = segStart(i, x, w);
             int sw = segWidth(i, x, w);
-            boolean isSelected = i == selected;
+            boolean isSelected = isSelected(i);
 
             // Canonical hover (C-5): POINTER-only, symmetric 140 ms, never
             // gated on selection — the selected segment stays hoverable (the
@@ -253,8 +275,13 @@ public class SegmentedControl extends Widget {
                             MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY),
                             MaterialSurface.color(ThemeToken.ON_BACKGROUND), hoverT);
 
-            AuroraFontRenderer.drawCentered(g, tr, AuroraFontRenderer.ellipsize(tr,options[i],Math.max(0,(int)sw-6),0), Math.round(sx + sw / 2f),
-                    Math.round(y + (trackH - tr.lineHeight) / 2f), color);
+            if (verbatimLabels) {
+                AuroraFontRenderer.drawCentered(g, tr, AuroraFontRenderer.verbatim(options[i]), Math.round(sx + sw / 2f),
+                        Math.round(y + (trackH - tr.lineHeight) / 2f), color);
+            } else {
+                AuroraFontRenderer.drawCentered(g, tr, AuroraFontRenderer.ellipsize(tr,options[i],Math.max(0,(int)sw-6),0), Math.round(sx + sw / 2f),
+                        Math.round(y + (trackH - tr.lineHeight) / 2f), color);
+            }
         }
     }
 
@@ -272,7 +299,7 @@ public class SegmentedControl extends Widget {
                 // direct silent path — the EnumSetting precedent.
                 if (segmentControls != null && segmentControls[i].isAvailable()) {
                     segmentControls[i].activateFromPointer(mx, my, button);
-                } else if (i != selectedIndex.getAsInt()) {
+                } else if (toggledOn != null || i != selectedIndex.getAsInt()) {
                     onSelect.accept(i);
                 }
                 return true;
@@ -305,11 +332,15 @@ public class SegmentedControl extends Widget {
         final int index = i;
         control = new SemanticActionControl(new SemanticAction(
                 Component.literal(options[i]),
-                () -> Component.literal("Sets " + settingLabel + " to " + options[index] + "."),
-                () -> Component.literal(isSelected(index) ? "Selected" : "Not selected"),
+                () -> Component.literal(toggledOn != null
+                        ? "Turns " + options[index] + " on or off."
+                        : "Sets " + settingLabel + " to " + options[index] + "."),
+                () -> Component.literal(toggledOn != null
+                        ? (isSelected(index) ? "On" : "Off")
+                        : (isSelected(index) ? "Selected" : "Not selected")),
                 () -> !disabled,
                 () -> {
-                    if (index == clampedSelected()) return; // silent consumed no-op
+                    if (toggledOn == null && index == clampedSelected()) return; // silent consumed no-op
                     MinecraftSemanticFeedback.INSTANCE.play(SemanticSound.ACTIVATION);
                     onSelect.accept(index);
                 },
@@ -327,7 +358,7 @@ public class SegmentedControl extends Widget {
     }
 
     private boolean isSelected(int i) {
-        return i == clampedSelected();
+        return toggledOn != null ? toggledOn.test(i) : i == clampedSelected();
     }
 
     private static int alpha(ThemeToken t, float a) {

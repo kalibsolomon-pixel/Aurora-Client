@@ -174,6 +174,46 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         this.meta = meta;
     }
 
+    /**
+     * Search reveal (2026-11-12): a setting a search result matched. On the
+     * first frame its section opens and the list scrolls it into view; it
+     * then wears a fading accent outline for {@link #REVEAL_MS}.
+     */
+    private FeatureSetting pendingReveal;
+    private FeatureSetting revealed;
+    private long revealStartMs;
+    private static final long REVEAL_MS = 1600L;
+
+    /** Scrolls {@code setting} into view and briefly outlines it (see {@link #pendingReveal}). Returns this screen. */
+    public FeatureDetailScreen reveal(FeatureSetting setting) {
+        if (setting != null && meta.settings.contains(setting)) pendingReveal = setting;
+        return this;
+    }
+
+    /** Opens the section the reveal target sits in, if it is collapsed. */
+    private void expandRevealSection() {
+        com.aurora.client.screen.setting.SectionHeaderSetting section = null;
+        for (FeatureSetting setting : meta.settings) {
+            if (setting == pendingReveal) break;
+            if (setting instanceof com.aurora.client.screen.setting.SectionHeaderSetting header) section = header;
+        }
+        if (section != null && !section.expanded()) section.toggle();
+    }
+
+    /** The reveal outline: accent, fading out over its last half. */
+    private void paintReveal(GuiGraphicsExtractor ctx, int x, int y, int w, int h) {
+        long age = System.currentTimeMillis() - revealStartMs;
+        if (age >= REVEAL_MS) {
+            revealed = null;
+            return;
+        }
+        float fade = Math.min(1f, 2f * (1f - age / (float) REVEAL_MS));
+        int accent = MaterialSurface.color(ThemeToken.ACCENT);
+        com.aurora.client.ui.util.RenderUtil.drawRoundedOutlineAA(ctx, x, y, w, h,
+                ThemeManager.current().roundness().radiusSmall(), 1f,
+                ThemeManager.withAlpha(accent, Math.round((accent >>> 24) * fade)));
+    }
+
     /** Features with a dedicated destination skip the generic settings wrapper. */
     public static Screen destination(Screen parent, FeatureMetadata meta) {
         return "resourcepack_browser".equals(meta.id)
@@ -299,6 +339,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor ctx, int mouseX, int mouseY, float delta) {
+        if (pendingReveal != null) expandRevealSection();
         com.aurora.client.screen.setting.SectionHeaderSetting.markLeading(meta.settings);
         measureRows();
         fixedHeaderSetting = null;
@@ -316,6 +357,18 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         for (FeatureSetting setting : meta.settings) if (setting.isVisible()) totalRowsH += bodyHeight(setting) + ROW_GAP;
         if (totalRowsH > 0) totalRowsH -= ROW_GAP;
         double maxScroll = Math.max(0, totalRowsH - (bodyBottom() - bodyTop()));
+        if (pendingReveal != null) {
+            int offset = 0;
+            for (FeatureSetting setting : meta.settings) {
+                if (setting == pendingReveal) break;
+                if (setting.isVisible()) offset += bodyHeight(setting) + ROW_GAP;
+            }
+            // A third of the way down the body, so the rows above give context.
+            scroll.set(Math.max(0, Math.min(maxScroll, offset - (bodyBottom() - bodyTop()) / 3.0)));
+            revealed = pendingReveal;
+            revealStartMs = System.currentTimeMillis();
+            pendingReveal = null;
+        }
 
         scroll.advance(maxScroll);
 
@@ -491,6 +544,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
             int h = bodyHeight(s);
             if (y + h > bodyTop() && y < bodyBottom()) {
                 s.renderOverlay(ctx, listX, settingY(s, y), LIST_W, mouseX, mouseY);
+                if (s == revealed) paintReveal(ctx, listX + 8, y, LIST_W - 16, h);
             }
             y += h + ROW_GAP;
         }

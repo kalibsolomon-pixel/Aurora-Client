@@ -56,8 +56,7 @@ public abstract class FeatureSetting {
                 || this instanceof SectionHeaderSetting)) return;
         Font font = Minecraft.getInstance().font;
         long key = ThemeManager.generation() * 65537L
-                + com.aurora.client.config.AuroraConfig.get().activeFont.ordinal() * 31L
-                + com.aurora.client.config.AuroraConfig.get().textRendererMode.ordinal();
+                + com.aurora.client.ui.util.AuroraFontRenderer.styleKey() * 31L;
         if (compactRow != null && compactWidth == width && compactFontKey == key) return;
         var kind = this instanceof BooleanSetting ? com.aurora.client.ui.util.SettingRowLayout.Kind.BOOLEAN
                 : this instanceof SliderSetting ? com.aurora.client.ui.util.SettingRowLayout.Kind.SLIDER
@@ -619,8 +618,7 @@ public abstract class FeatureSetting {
     private int wrappedWidth = -1;
     private long wrappedGeneration = -1;
     private List<String> wrappedLabel = java.util.List.of();
-    private com.aurora.client.config.AuroraConfig.FontType wrappedFont;
-    private com.aurora.client.config.AuroraConfig.TextRendererMode wrappedRendererMode;
+    private int wrappedStyleKey = -1;
 
     /** Two measured lines within the label column; cache layout until text/width/font changes. */
     protected void renderWrappedLabel(GuiGraphicsExtractor ctx, String text, int x, int y, int width,
@@ -628,12 +626,10 @@ public abstract class FeatureSetting {
         Font font = Minecraft.getInstance().font;
         if (font == null || width <= 0) return;
         long generation = ThemeManager.generation();
-        var activeFont = com.aurora.client.config.AuroraConfig.get().activeFont;
-        var rendererMode = com.aurora.client.config.AuroraConfig.get().textRendererMode;
-        if (!text.equals(wrappedText) || width != wrappedWidth || generation != wrappedGeneration || activeFont != wrappedFont || rendererMode != wrappedRendererMode) {
+        int styleKey = com.aurora.client.ui.util.AuroraFontRenderer.styleKey();
+        if (!text.equals(wrappedText) || width != wrappedWidth || generation != wrappedGeneration || styleKey != wrappedStyleKey) {
             wrappedText = text; wrappedWidth = width; wrappedGeneration = generation;
-            wrappedFont = activeFont;
-            wrappedRendererMode = rendererMode;
+            wrappedStyleKey = styleKey;
             wrappedLabel = com.aurora.client.ui.util.WordWrap.lines(text, width, 2, font::width);
         }
         int count = Math.min(2, wrappedLabel.size());

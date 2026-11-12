@@ -464,6 +464,7 @@ public class ProfileManager {
             ThemeMigrator.migrateProfileFields(p.fields, LOGGER);
             PlayerHealthMigrator.migrateProfileFields(p.fields, LOGGER);
             com.aurora.client.config.KeybindMigrator.migrateProfileFields(p.fields, LOGGER);
+            com.aurora.client.config.TextStyleMigrator.migrateProfileFields(p.fields, LOGGER);
         }
         // 1. Reset all profile-scoped fields to factory defaults so any
         //    setting absent from the profile (e.g. a newly-added setting)

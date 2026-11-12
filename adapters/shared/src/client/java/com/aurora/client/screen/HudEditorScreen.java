@@ -110,8 +110,7 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
 
     private java.util.List<String> guideLines = java.util.List.of();
     private int guideWidth = -1;
-    private AuroraConfig.FontType guideFont;
-    private AuroraConfig.TextRendererMode guideRendererMode;
+    private int guideStyle = -1;
 
     @Override
     protected void init() {
@@ -220,9 +219,8 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
         // Hidden while a drag is in progress so it never covers the target.
         if (dragMode != DragMode.NONE) return;
         int hintWidth = Math.max(1, Math.min(this.width - 32, 420));
-        if (hintWidth != guideWidth || AuroraConfig.get().activeFont != guideFont || AuroraConfig.get().textRendererMode != guideRendererMode) {
-            guideWidth = hintWidth; guideFont = AuroraConfig.get().activeFont;
-            guideRendererMode = AuroraConfig.get().textRendererMode;
+        if (hintWidth != guideWidth || com.aurora.client.ui.util.AuroraFontRenderer.styleKey() != guideStyle) {
+            guideWidth = hintWidth; guideStyle = com.aurora.client.ui.util.AuroraFontRenderer.styleKey();
             // Two balanced phrase groups; each wraps on its own only when narrow,
             // so no instruction is ever split across lines mid-phrase.
             java.util.List<String> lines = new java.util.ArrayList<>();

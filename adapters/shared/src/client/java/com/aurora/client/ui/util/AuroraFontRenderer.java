@@ -16,8 +16,8 @@ public class AuroraFontRenderer {
     }
 
     private static net.minecraft.network.chat.Style cachedStyle = null;
-    private static AuroraConfig.FontType cachedFontType = null;
-    private static boolean cachedCompact = false;
+    /** Everything the cached style depends on, packed (see {@link #styleKey}); -1 = nothing cached. */
+    private static int cachedKey = -1;
 
     /**
      * Aurora's windowed screens (main, feature detail, managers, editors, pickers) draw text
@@ -85,32 +85,116 @@ public class AuroraFontRenderer {
             return null;
         }
         boolean compact = compactUi();
-        if (active == cachedFontType && compact == cachedCompact && cachedStyle != null) {
+        int key = styleKey(cfg, compact);
+        if (key == cachedKey && cachedStyle != null) {
             return cachedStyle;
         }
-        String path = null;
-        switch (active) {
-            case INTER -> path = "inter";
-            case INTER_ITALIC -> path = "inter_italic";
-            case JETBRAINS_MONO -> path = "jetbrains_mono";
-            case ROBOTO -> path = "roboto";
-            case POPPINS -> path = "poppins";
-            case OSWALD -> path = "oswald";
-            case NUNITO -> path = "nunito";
-            case QUICKSAND -> path = "quicksand";
-            case FIRA_SANS -> path = "fira_sans";
-        }
-        if (path != null) {
-            if (compact) path += "_ui";
-            net.minecraft.network.chat.FontDescription fontDesc = new net.minecraft.network.chat.FontDescription.Resource(
-                    net.minecraft.resources.Identifier.fromNamespaceAndPath("aurora", path)
-            );
-            cachedStyle = net.minecraft.network.chat.Style.EMPTY.withFont(fontDesc);
-            cachedFontType = active;
-            cachedCompact = compact;
-            return cachedStyle;
-        }
-        return null;
+        String family = familyPath(active);
+        if (family == null) return null;
+        AuroraConfig.TextWeight weight = cfg.textWeight == null ? AuroraConfig.TextWeight.MEDIUM : cfg.textWeight;
+        boolean italic = cfg.textItalic || active == AuroraConfig.FontType.INTER_ITALIC;
+        boolean realItalic = italic && hasItalicFile(active);
+        // Provider ids follow tools/build_fonts.py: <family>_<weight>[_italic][_ui].
+        String path = family + "_" + weight.suffix() + (realItalic ? "_italic" : "") + (compact ? "_ui" : "");
+        net.minecraft.network.chat.Style style = net.minecraft.network.chat.Style.EMPTY.withFont(
+                new net.minecraft.network.chat.FontDescription.Resource(
+                        net.minecraft.resources.Identifier.fromNamespaceAndPath("aurora", path)));
+        // Families without an italic file slant through Minecraft's own italic.
+        if (italic && !realItalic) style = style.withItalic(true);
+        if (cfg.textUnderline) style = style.withUnderlined(true);
+        cachedStyle = style;
+        cachedKey = key;
+        return cachedStyle;
+    }
+
+    /**
+     * Everything the resolved text style depends on, packed into one int:
+     * font, weight, italic, underline, case, renderer mode and the compact
+     * variant. Label caches fold it into their version keys so a change to
+     * any text option re-measures them.
+     */
+    public static int styleKey() {
+        return styleKey(AuroraConfig.get(), compactUi());
+    }
+
+    private static int styleKey(AuroraConfig cfg, boolean compact) {
+        int key = cfg.activeFont == null ? 0 : cfg.activeFont.ordinal() + 1;
+        key = key * 8 + (cfg.textWeight == null ? 1 : cfg.textWeight.ordinal());
+        key = key * 4 + (cfg.textCase == null ? 0 : cfg.textCase.ordinal());
+        key = key * 4 + (cfg.textRendererMode == null ? 0 : cfg.textRendererMode.ordinal());
+        key = key * 2 + (cfg.textItalic ? 1 : 0);
+        key = key * 2 + (cfg.textUnderline ? 1 : 0);
+        return key * 2 + (compact ? 1 : 0);
+    }
+
+    /** The provider-id stem of a bundled family, or null for the vanilla font. */
+    public static String familyPath(AuroraConfig.FontType font) {
+        if (font == null) return null;
+        return switch (font) {
+            case INTER, INTER_ITALIC -> "inter";
+            case JETBRAINS_MONO -> "jetbrains_mono";
+            case ROBOTO -> "roboto";
+            case POPPINS -> "poppins";
+            case OSWALD -> "oswald";
+            case NUNITO -> "nunito";
+            case QUICKSAND -> "quicksand";
+            case FIRA_SANS -> "fira_sans";
+            case SANSSERIF -> null;
+        };
+    }
+
+    /** Whether a family ships real italic files (the others slant through Minecraft's italic). */
+    public static boolean hasItalicFile(AuroraConfig.FontType font) {
+        return font != AuroraConfig.FontType.OSWALD && font != AuroraConfig.FontType.QUICKSAND;
+    }
+
+    /** The configured letter case applied to one codepoint. */
+    private static int mapCase(int codePoint, AuroraConfig.TextCase textCase) {
+        return switch (textCase) {
+            case UPPER -> Character.toUpperCase(codePoint);
+            case LOWER -> Character.toLowerCase(codePoint);
+            default -> codePoint;
+        };
+    }
+
+    private static AuroraConfig.TextCase activeCase() {
+        AuroraConfig.TextCase c = AuroraConfig.get().textCase;
+        return c == null ? AuroraConfig.TextCase.NORMAL : c;
+    }
+
+    /**
+     * {@code text} in the configured letter case, codepoint by codepoint —
+     * the same mapping {@link #withCustomFont} applies to sequences, so a
+     * string measured here and the sequence drawn from it agree.
+     */
+    public static String applyCase(String text) {
+        AuroraConfig.TextCase textCase = activeCase();
+        if (textCase == AuroraConfig.TextCase.NORMAL || text == null || text.isEmpty()) return text;
+        StringBuilder sb = new StringBuilder(text.length());
+        text.codePoints().forEach(cp -> sb.appendCodePoint(mapCase(cp, textCase)));
+        return sb.toString();
+    }
+
+    /**
+     * {@code text} in the active font and modifiers but never re-cased: the
+     * font is already set, so the font mixin leaves it alone. For labels whose
+     * letter case is their meaning (the Case row's Aa / AA / aa).
+     */
+    public static FormattedCharSequence verbatim(String text) {
+        net.minecraft.network.chat.Style style = getActiveStyle();
+        return style == null ? Component.literal(text).getVisualOrderText()
+                : Component.literal(text).withStyle(style).getVisualOrderText();
+    }
+
+    /** A plain string as a component in the active style and case — the one form drawing and measuring share. */
+    public static net.minecraft.network.chat.MutableComponent styledLiteral(String text, net.minecraft.network.chat.Style style) {
+        return Component.literal(applyCase(text)).withStyle(style);
+    }
+
+    /** A component restyled with the active style and case (its own styling kept where the case allows). */
+    public static net.minecraft.network.chat.MutableComponent styledCopy(Component component, net.minecraft.network.chat.Style style) {
+        if (activeCase() == AuroraConfig.TextCase.NORMAL) return component.copy().withStyle(style);
+        return Component.literal(applyCase(component.getString())).withStyle(component.getStyle()).withStyle(style);
     }
 
     /**
@@ -149,7 +233,7 @@ public class AuroraFontRenderer {
         net.minecraft.network.chat.Style style = getActiveStyle();
         
         if (style != null) {
-            Component comp = Component.literal(text).withStyle(style);
+            Component comp = styledLiteral(text, style);
             graphics.text(font, comp.getVisualOrderText(), Math.round(x), Math.round(y), color, dropShadow);
             return x + font.width(comp);
         } else {
@@ -215,7 +299,7 @@ public class AuroraFontRenderer {
      * never hit that branch; it is defense-in-depth for direct callers.
      */
     public static FormattedCharSequence withCustomFont(FormattedCharSequence sequence, net.minecraft.network.chat.Style style) {
-        net.minecraft.network.chat.FontDescription font = style.getFont();
+        AuroraConfig.TextCase textCase = activeCase();
         return visitor -> sequence.accept(new net.minecraft.util.FormattedCharSink() {
             // Consecutive characters of one segment share the same Style
             // instance, so a single-slot identity cache keeps the swap at one
@@ -227,11 +311,15 @@ public class AuroraFontRenderer {
             public boolean accept(int index, net.minecraft.network.chat.Style charStyle, int codePoint) {
                 if (charStyle != lastSource) {
                     lastSource = charStyle;
+                    // The active style sets only the font and the Text
+                    // options' flags (italic, underline); applyTo keeps the
+                    // character's own colour and other attributes.
                     lastSwapped = charStyle.getFont() == DEFAULT_FONT
-                            ? charStyle.withFont(font)
+                            ? style.applyTo(charStyle)
                             : charStyle;
                 }
-                return visitor.accept(index, lastSwapped, codePoint);
+                return visitor.accept(index, lastSwapped,
+                        lastSwapped == charStyle ? codePoint : mapCase(codePoint, textCase));
             }
         });
     }

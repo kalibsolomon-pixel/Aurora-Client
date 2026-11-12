@@ -56,8 +56,7 @@ public class BooleanSetting extends FeatureSetting {
 
     private int cachedLabelArea = -1;
     private List<String> cachedLines;
-    private com.aurora.client.config.AuroraConfig.FontType cachedFont;
-    private com.aurora.client.config.AuroraConfig.TextRendererMode cachedRendererMode;
+    private int cachedStyleKey = -1;
     private int cachedBaseHeight;
 
     /** Shared themed switch — owns the pill/thumb drawing + slide animation. */
@@ -90,11 +89,9 @@ public class BooleanSetting extends FeatureSetting {
 
     private void ensureLayout(Font tr) {
         int labelArea = Math.max(40, lastWidth - LABEL_PAD - RIGHT_RESERVE);
-        var activeFont = com.aurora.client.config.AuroraConfig.get().activeFont;
-        var rendererMode = com.aurora.client.config.AuroraConfig.get().textRendererMode;
-        if (labelArea == cachedLabelArea && cachedLines != null && activeFont == cachedFont && rendererMode == cachedRendererMode) return;
-        cachedFont = activeFont;
-        cachedRendererMode = rendererMode;
+        int styleKey = com.aurora.client.ui.util.AuroraFontRenderer.styleKey();
+        if (labelArea == cachedLabelArea && cachedLines != null && styleKey == cachedStyleKey) return;
+        cachedStyleKey = styleKey;
         cachedLines = com.aurora.client.ui.util.WordWrap.lines(label, labelArea, 2, tr::width);
         int blockH = cachedLines.size() * (tr.lineHeight + 1) + valueLineHeight(tr);
         cachedBaseHeight = cachedLines.isEmpty()

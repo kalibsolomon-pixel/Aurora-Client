@@ -137,7 +137,7 @@ public class ToggleIndividualModule extends HudModule {
         ensureLabelWidth(tr);
 
         boolean on = isOn();
-        ctx.text(tr, labelComponent, x, y, textColor(0xFFFFFFFF), false);
-        ctx.text(tr, on ? "ON" : "OFF", x + cachedLabelW, y, textColor(on ? COLOR_ON : COLOR_OFF), false);
+        com.aurora.client.hud.HudTextPainter.draw(ctx,tr, labelComponent, x, y, textColor(0xFFFFFFFF));
+        com.aurora.client.hud.HudTextPainter.draw(ctx,tr, on ? "ON" : "OFF", x + cachedLabelW, y, textColor(on ? COLOR_ON : COLOR_OFF));
     }
 }
