@@ -94,7 +94,7 @@ Text fonts in `assets/aurora/font/`, each licensed under the SIL Open Font Licen
 for name, files, copyright in FONTS:
     out.append(f"| {name} | `{files}` | {copyright} |\n")
 out.append("""
-`material_symbols_rounded.ttf` is a subset of Material Symbols Rounded from Google's material-design-icons (https://github.com/google/material-design-icons), Copyright 2026 Google LLC, licensed under the Apache License, Version 2.0 (text below). Aurora keeps only the glyphs it uses.
+`material_symbols_rounded.ttf` is Material Symbols Rounded from Google's material-design-icons (https://github.com/google/material-design-icons), Copyright 2026 Google LLC, licensed under the Apache License, Version 2.0 (text below). Aurora ships every icon as a static instance at the default axes (FILL 0, GRAD 0, opsz 24, wght 400), without its ligature tables. `assets/aurora/icons/material_symbols.codepoints`, the icon name list from the same repository and under the same license, names them for Aurora's icon browser.
 
 ### SIL Open Font License 1.1
 
@@ -123,7 +123,7 @@ fonts = ["The fonts in this folder, except material_symbols_rounded.ttf, are lic
 for name, files, copyright in FONTS:
     fonts.append(f"{name} ({files}): {copyright}")
 fonts += ["",
-          "material_symbols_rounded.ttf is a subset of Material Symbols Rounded,",
+          "material_symbols_rounded.ttf is Material Symbols Rounded (a static instance),",
           "Copyright 2026 Google LLC, licensed under the Apache License, Version 2.0.",
           "Its text is in THIRD_PARTY_NOTICES.md at the root of the Aurora jar.",
           "", text("OFL-1.1.txt"), ""]

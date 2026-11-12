@@ -125,7 +125,7 @@ Text fonts in `assets/aurora/font/`, each licensed under the SIL Open Font Licen
 | Quicksand | `quicksand-variable.ttf` | Copyright 2019 The Quicksand Project Authors (https://github.com/andrew-paglinawan/QuicksandFamily.git), with Reserved Font Name "Quicksand" |
 | Roboto | `roboto-variable.ttf` | Copyright 2011 The Roboto Project Authors (https://github.com/googlefonts/roboto-classic) |
 
-`material_symbols_rounded.ttf` is a subset of Material Symbols Rounded from Google's material-design-icons (https://github.com/google/material-design-icons), Copyright 2026 Google LLC, licensed under the Apache License, Version 2.0 (text below). Aurora keeps only the glyphs it uses.
+`material_symbols_rounded.ttf` is Material Symbols Rounded from Google's material-design-icons (https://github.com/google/material-design-icons), Copyright 2026 Google LLC, licensed under the Apache License, Version 2.0 (text below). Aurora ships every icon as a static instance at the default axes (FILL 0, GRAD 0, opsz 24, wght 400), without its ligature tables. `assets/aurora/icons/material_symbols.codepoints`, the icon name list from the same repository and under the same license, names them for Aurora's icon browser.
 
 ### SIL Open Font License 1.1
 

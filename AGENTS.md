@@ -19,7 +19,7 @@ This guide is short on purpose. The full engineering history it replaced, includ
 - On the owner's workstation, keep test instances on the second, portrait monitor.
 - Useful launch options (pass with `JAVA_TOOL_OPTIONS`): `-Daurora.diagnostics.log=true` writes the diagnostics report to the log after joining a world, `-Daurora.diagnostics.runs=N` repeats it, `-Daurora.mixin.disable=A,B` switches mixins off.
 - Checkout is LF on every platform (`.gitattributes`); source-contract tests match multi-line snippets with `\n`.
-- Scripts regenerate checked-in files: `tools/gen_fair_play_doc.py` (FAIR_PLAY.md), `tools/gen_third_party_notices.py` (the notices and the font license), `subset_script.py` at the root (the icon font subset). Tests fail when a generated file is stale.
+- Scripts regenerate checked-in files: `tools/gen_fair_play_doc.py` (FAIR_PLAY.md), `tools/gen_third_party_notices.py` (the notices and the font license). Tests fail when a generated file is stale. The icon font is the full Material Symbols Rounded set (a static instance, ligatures dropped) with its `.codepoints` name list; `core/.../screen/IconCatalog` reads the names.
 
 ## Layout
 

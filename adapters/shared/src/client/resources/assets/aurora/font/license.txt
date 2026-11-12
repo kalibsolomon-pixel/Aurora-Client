@@ -10,7 +10,7 @@ Poppins Medium (poppins-medium.ttf): Copyright 2020 The Poppins Project Authors 
 Quicksand (quicksand-variable.ttf): Copyright 2019 The Quicksand Project Authors (https://github.com/andrew-paglinawan/QuicksandFamily.git), with Reserved Font Name "Quicksand"
 Roboto (roboto-variable.ttf): Copyright 2011 The Roboto Project Authors (https://github.com/googlefonts/roboto-classic)
 
-material_symbols_rounded.ttf is a subset of Material Symbols Rounded,
+material_symbols_rounded.ttf is Material Symbols Rounded (a static instance),
 Copyright 2026 Google LLC, licensed under the Apache License, Version 2.0.
 Its text is in THIRD_PARTY_NOTICES.md at the root of the Aurora jar.
 
