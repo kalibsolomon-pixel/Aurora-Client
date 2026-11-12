@@ -391,6 +391,8 @@ public final class FeatureCatalog {
                 .gates("perfGuiItemBaking").yieldsTo("immediatelyfast");
         mixin("GuiItemAtlasBakingMixin", "redrawing animated GUI items only when they change", "performance")
                 .gates("perfGuiItemBaking").yieldsTo("immediatelyfast");
+        mixin("SpriteContentsMipsAccessor", "freeing uploaded sprite mipmaps", "performance").gates("perfFreeSpriteMipmaps");
+        mixin("TextureAtlasFreeMipsMixin", "freeing uploaded sprite mipmaps", "performance").gates("perfFreeSpriteMipmaps");
         for (String hitreg : List.of("ArmorMixin", "AttackMixin", "ChunkMixin", "DamageMixin", "EntityAccessor",
                 "GlowMixin", "NetworkMixin", "ParticleMixin", "PlayerMixin", "RenderMixin", "ServerMixin",
                 "SoundMixin", "SourceMixin")) {

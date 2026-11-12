@@ -19,6 +19,7 @@
   "perfDebugEntryCache": true,
   "perfMergeTextDecorations": true,
   "perfGuiItemBaking": true,
+  "perfFreeSpriteMipmaps": true,
   "themeEnabled": true,
   "theme": {
     "mode": "DARK",

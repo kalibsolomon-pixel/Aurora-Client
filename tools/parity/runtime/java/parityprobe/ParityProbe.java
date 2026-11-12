@@ -30,7 +30,7 @@ public final class ParityProbe implements ClientModInitializer {
     private final java.util.List<Integer> fpsReadings = new java.util.ArrayList<>();
     /** The running "count" window: label, start, end and frames seen. */
     private String countLabel;
-    private long countStart, countUntil, countFrames;
+    private long countStart, countUntil, countFrames, countSteps;
     @Override public void onInitializeClient() {
         root = Path.of(System.getProperty("aurora.parity.probe"));
         if (!Files.isRegularFile(root.resolve("DISPOSABLE.txt"))) throw new IllegalStateException("Disposable fixture required");
@@ -65,9 +65,10 @@ public final class ParityProbe implements ClientModInitializer {
                     long now = System.nanoTime();
                     if (now >= countUntil) {
                         double seconds = (now - countStart) / 1e9;
-                        System.out.println(String.format(java.util.Locale.ROOT, "[parity-probe] count %s: %.1f listener updates/s, %.1f text effects/s, %.1f fps",
+                        System.out.println(String.format(java.util.Locale.ROOT, "[parity-probe] count %s: %.1f listener updates/s, %.1f text effects/s, %.1f atlas draws/s, %.1f animation steps/s, %.1f fps",
                                 countLabel, Counters.LISTENER_UPDATES.get() / seconds, Counters.TEXT_EFFECTS.get() / seconds,
-                                (double) client.getFps()));
+                                Counters.ATLAS_DRAWS.get() / seconds,
+                                (com.aurora.client.util.SpriteAnimationClock.ticks() - countSteps) / seconds, (double) client.getFps()));
                         countLabel = null;
                     }
                 }
@@ -275,12 +276,33 @@ public final class ParityProbe implements ClientModInitializer {
                 // "count <seconds> <label>": work counters over a window.
                 Counters.LISTENER_UPDATES.set(0);
                 Counters.TEXT_EFFECTS.set(0);
+                Counters.ATLAS_DRAWS.set(0);
+                countSteps = com.aurora.client.util.SpriteAnimationClock.ticks();
                 countStart = System.nanoTime();
                 countUntil = countStart + Long.parseLong(args[1]) * 1_000_000_000L;
                 countLabel = args[2];
             }
             case "underline" -> {
                 config.textUnderline = Boolean.parseBoolean(args[1]);
+            }
+            case "sprite-mips" -> {
+                // CPU bytes held in sprite mip levels above 0, over every loaded atlas.
+                long bytes = 0, sprites = 0;
+                var byPath = net.minecraft.client.renderer.texture.TextureManager.class.getDeclaredField("byPath");
+                byPath.setAccessible(true);
+                var mipsField = net.minecraft.client.renderer.texture.SpriteContents.class.getDeclaredField("byMipLevel");
+                mipsField.setAccessible(true);
+                var spritesField = net.minecraft.client.renderer.texture.TextureAtlas.class.getDeclaredField("sprites");
+                spritesField.setAccessible(true);
+                for (Object texture : ((java.util.Map<?, ?>) byPath.get(client.getTextureManager())).values()) {
+                    if (!(texture instanceof net.minecraft.client.renderer.texture.TextureAtlas atlas)) continue;
+                    for (var sprite : (java.util.List<net.minecraft.client.renderer.texture.TextureAtlasSprite>) spritesField.get(atlas)) {
+                        var levels = (com.mojang.blaze3d.platform.NativeImage[]) mipsField.get(sprite.contents());
+                        sprites++;
+                        for (int i = 1; i < levels.length; i++) bytes += (long) levels[i].getWidth() * levels[i].getHeight() * 4;
+                    }
+                }
+                System.out.println("[parity-probe] sprite-mips " + sprites + " sprites hold " + bytes / 1024 + " KiB above level 0");
             }
             case "reload" -> {
                 reloadStarted = System.nanoTime();

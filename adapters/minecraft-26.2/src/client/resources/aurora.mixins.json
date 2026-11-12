@@ -82,6 +82,8 @@
     "ItemStackRenderStateAnimationMixin",
     "CuboidItemModelAnimationMixin",
     "GuiItemAtlasBakingMixin",
+    "SpriteContentsMipsAccessor",
+    "TextureAtlasFreeMipsMixin",
     "hitreg.ArmorMixin",
     "hitreg.AttackMixin",
     "hitreg.ChunkMixin",
