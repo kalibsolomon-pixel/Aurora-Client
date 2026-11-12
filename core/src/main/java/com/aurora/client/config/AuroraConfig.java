@@ -461,6 +461,8 @@ public class AuroraConfig {
     public boolean perfGuiItemBaking = true;
     /** Sprites drop their CPU copies of mip levels above 0 once the atlas is uploaded. */
     public boolean perfFreeSpriteMipmaps = true;
+    /** A moving camera repaints the minimap's terrain at most 60 times a second. */
+    public boolean perfMinimapRefreshCap = true;
 
     // ---- Late-Stage Responsive Features ----
     public boolean adaptiveRenderSleeping = false;

@@ -38,6 +38,8 @@ public final class MinimapModule extends HudModule {
     /** Square-frame corner radius when the frame does not follow the theme: square (owner ruling 2026-11-12). */
     private static final float FIXED_FRAME_RADIUS = 0f;
     private static final String[] CARDINALS = {"N", "E", "S", "W"};
+    /** Shortest interval between repaints caused only by camera motion (60 Hz). */
+    private static final long MOTION_REPAINT_NANOS = 1_000_000_000L / 60;
     private UiLayerCache terrain = new UiLayerCache();
     private final java.util.ArrayList<UiLayerCache> retiredTerrains = new java.util.ArrayList<>();
     private long terrainFrame = -1;
@@ -137,7 +139,16 @@ public final class MinimapModule extends HudModule {
         // Repaint once the pose moved a fifth of a device pixel (centre or rim).
         boolean motion = (Math.abs(px - previousX) + Math.abs(pz - previousZ)) / blocksPerTexel * density > .2
                 || (cfg.minimapRotateWithPlayer && Math.abs(Math.toRadians(yaw - previousYaw)) * size * .5 * density > .2);
-        if (textureSize < 0 || changed || gridUpdated || motion) {
+        // Minimap Refresh Cap (ADR 0009): motion alone repaints at most 60 times a
+        // second. The frames between keep the last painted pose for everything
+        // drawn over the terrain, so markers stay where the terrain shows them.
+        boolean motionDue = motion && (!cfg.perfMinimapRefreshCap || now - lastPaint >= MOTION_REPAINT_NANOS);
+        if (!(textureSize < 0 || changed || gridUpdated || motionDue) && motion) {
+            px = previousX; pz = previousZ; yaw = previousYaw;
+            rotation = MapTransform.rotation(yaw, cfg.minimapRotateWithPlayer);
+            cos = Math.cos(rotation); sin = Math.sin(rotation);
+        }
+        if (textureSize < 0 || changed || gridUpdated || motionDue) {
             ensureTexture(size, physicalSize);
             // Device pixel (X, Y) -> logical offset s = (X + .5) / density - size / 2 ->
             // world offset R(rotation) * s * blocksPerTexel -> grid cell (world / cell - origin).
