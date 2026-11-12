@@ -2,6 +2,7 @@ package com.aurora.client.config.profile;
 
 import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.config.ConfigDirectory;
+import com.aurora.client.util.KeyCombo;
 import com.google.gson.Gson;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.io.TempDir;
@@ -61,6 +62,29 @@ class ProfileMetadataAndControlsTest {
         assertEquals(30, manager.hotkey(name));
         assertTrue(manager.switchTo("default"));
         assertEquals("swords", manager.icon(name), "switching away keeps it too");
+    }
+
+    @Test void combosAreTheirOwnBindingsAndSurviveSaves() throws Exception {
+        // Owner request 2026-11-12: Ctrl / Shift / Alt + a key, one int (KeyCombo).
+        var manager = ProfileManager.getInstance();
+        String plain = unique("plain"), combo = unique("combo");
+        int ctrlShiftP = KeyCombo.of(19, KeyCombo.CTRL | KeyCombo.SHIFT);
+        assertTrue(manager.create(plain));
+        assertTrue(manager.create(combo));
+        assertTrue(manager.setHotkey(plain, 19));
+        assertTrue(manager.setHotkey(combo, ctrlShiftP));
+        assertEquals(19, manager.hotkey(plain), "P and Ctrl + Shift + P sit on different profiles");
+        assertEquals(ctrlShiftP, manager.hotkey(combo));
+        assertTrue(manager.switchTo(combo));
+        manager.saveCurrentBlocking();
+        Profile disk = GSON.fromJson(Files.readString(temporary.resolve("profiles/" + combo + ".json")), Profile.class);
+        assertEquals(ctrlShiftP, disk.hotkey, "a settings save keeps the combo");
+        assertTrue(manager.setHotkey(plain, ctrlShiftP));
+        assertEquals(-1, manager.hotkey(combo), "the same combo moves, as a plain key does");
+        assertTrue(manager.switchTo("default"));
+        Profile old = GSON.fromJson("{\"name\":\"old\",\"hotkey\":30}", Profile.class);
+        assertEquals(30, KeyCombo.key(old.hotkey));
+        assertEquals(0, KeyCombo.modifiers(old.hotkey), "files from before combos read as plain keys");
     }
 
     @Test void oneKeyBelongsToOneProfileAndDuplicatesStartWithout() {

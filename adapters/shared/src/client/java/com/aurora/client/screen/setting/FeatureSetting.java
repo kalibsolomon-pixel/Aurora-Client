@@ -368,6 +368,16 @@ public abstract class FeatureSetting {
         return onKeyPress(_kev.key(), _kev.modifiers());
     }
 
+    /** A key came up while this setting owns the capture slot (a combo's modifier released alone). Default: no-op. */
+    public boolean onKeyRelease(int keyCode) {
+        return false;
+    }
+
+    /** Hosts forward {@code keyReleased} here: it reaches the one capture owner, if any. */
+    public static boolean routeKeyRelease(net.minecraft.client.input.KeyEvent _kev) {
+        return captureOwner != null && captureOwner.onKeyRelease(_kev.key());
+    }
+
     public boolean onCharTyped(net.minecraft.client.input.CharacterEvent _ev) {
         return false;
     }

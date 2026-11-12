@@ -199,13 +199,13 @@ public class ProfileManager {
         return p == null || p.icon == null ? "" : p.icon;
     }
 
-    /** The profile's hotkey (stored keyboard code), or -1. */
+    /** The profile's hotkey (a {@code KeyCombo} binding), or -1. */
     public int hotkey(String name) {
         Integer key = hotkeys().get(name);
         return key == null ? -1 : key;
     }
 
-    /** Every profile with a hotkey: name → stored keyboard code. Cached; read every tick by the hotkey poller. */
+    /** Every profile with a hotkey: name → binding. Cached; read every tick by the hotkey poller. */
     public Map<String, Integer> hotkeys() {
         Map<String, Integer> cache = cachedHotkeys;
         if (cache != null) return cache;
@@ -229,17 +229,19 @@ public class ProfileManager {
     }
 
     /**
-     * Sets the profile's hotkey; -1 clears it. A key belongs to one profile
-     * at a time, so any other profile holding it loses it.
+     * Sets the profile's hotkey (a {@code KeyCombo} binding); -1 clears it. A
+     * binding — key and modifiers — belongs to one profile at a time, so any
+     * other profile holding the same one loses it; Ctrl + P and P can sit on
+     * different profiles.
      *
      * @return false if the profile is missing.
      */
-    public boolean setHotkey(String name, int key) {
+    public boolean setHotkey(String name, int binding) {
         Profile p = readProfileFile(name);
         if (p == null) return false;
-        if (key >= 0) {
+        if (binding >= 0) {
             for (Map.Entry<String, Integer> e : hotkeys().entrySet()) {
-                if (e.getValue() == key && !e.getKey().equals(name)) {
+                if (e.getValue() == binding && !e.getKey().equals(name)) {
                     Profile other = readProfileFile(e.getKey());
                     if (other != null) {
                         other.hotkey = -1;
@@ -248,7 +250,7 @@ public class ProfileManager {
                 }
             }
         }
-        p.hotkey = key < 0 ? -1 : key;
+        p.hotkey = binding < 0 ? -1 : binding;
         writeProfileFile(p);
         cachedHotkeys = null;
         return true;

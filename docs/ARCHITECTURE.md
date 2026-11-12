@@ -43,6 +43,17 @@ identifiers on every line; the existing per-config/per-profile migrator upgrades
 older GLFW data. Older hosts translate back only for native polling and vanilla
 controls. UI input comparisons use that host's `InputConstants`.
 
+A binding may carry Ctrl, Shift and Alt (`core/util/KeyCombo`): the key in the
+low 16 bits and the modifiers in bits 16–18 of the same int, so plain keys saved
+before combos need no migration. One resolver decides every press — Aurora's
+polled keys (`AuroraKey`), Minecraft's dispatch (`KeyMappingComboMixin` filters
+`KeyMapping.click`/`set` to the winners) and profile hotkeys: the most specific
+binding on a key whose modifiers are all held wins, against a registry of every
+live binding rebuilt each tick. Minecraft's mappings keep their plain key in
+options.txt; their modifiers ride on the mapping (`KeyComboHolder`) and persist in
+`AuroraConfig.vanillaKeyModifiers`; profiles' controls strings append `|<mods>`.
+With no combos anywhere the mixins return before changing anything.
+
 `RenderUtil` owns native transforms and fill accounting. It sends physical-pixel
 rectangles to core's `ShapeRasterizer` through `DrawSurface`. Both live GUI and
 static-layer-cache destinations use the same coverage math. Live rounded

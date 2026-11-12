@@ -43,8 +43,9 @@ public class Profile {
     public String icon = "";
 
     /**
-     * Key that switches to this profile in game: a stored keyboard code in
-     * Aurora's key encoding, or -1 for none. Metadata, kept on the profile
+     * Key that switches to this profile in game: a binding in Aurora's key
+     * encoding ({@code KeyCombo}: a stored keyboard code, optionally with
+     * Ctrl / Shift / Alt), or -1 for none. Metadata, kept on the profile
      * rather than in config so it works from whichever profile is active.
      */
     public int hotkey = -1;

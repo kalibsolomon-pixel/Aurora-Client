@@ -96,6 +96,8 @@ public class KeybindSetting extends FeatureSetting {
     private int lastBtnX, lastBtnY;
     private int lastWidth = 240;
     private boolean listening = false;
+    /** Ctrl / Shift / Alt held while listening: the next key completes a combo ({@code KeyCombo}). */
+    private final com.aurora.client.util.KeyCombo.Capture capture = new com.aurora.client.util.KeyCombo.Capture();
     private final HoverAnim hoverAnim = HoverAnim.symmetric(140L);
     private final com.aurora.client.ui.util.TimedTransition materialHover = new com.aurora.client.ui.util.TimedTransition(
             120,com.aurora.client.ui.util.CubicBezier.EASE,0);
@@ -216,7 +218,7 @@ public class KeybindSetting extends FeatureSetting {
                     ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
         }
 
-        String labelText = listening ? "> press key <" : currentKeyName();
+        String labelText = listening ? com.aurora.client.util.KeyCombo.captureLabel(capture.pending(), "> press key <") : currentKeyName();
         // Trim long names so they fit in the pill (keep at least 3 chars + ellipsis).
         labelText = AuroraFontRenderer.ellipsize(tr, labelText, BTN_W - 8, 3);
         int labelW = tr.width(labelText);
@@ -284,14 +286,28 @@ public class KeybindSetting extends FeatureSetting {
         }
 
         // ESC / BACKSPACE clears the binding. Match vanilla controls UX.
-        if (keyCode == InputConstants.KEY_ESCAPE || keyCode == InputConstants.KEY_BACKSPACE) {
-            setter.accept(AuroraKey.UNBOUND);
-        } else {
-            setter.accept(com.aurora.client.adapter.NativeKeyboard.toStored(keyCode));
-        }
+        // Ctrl / Shift / Alt alone waits for a second key (a combo).
+        boolean clear = keyCode == InputConstants.KEY_ESCAPE || keyCode == InputConstants.KEY_BACKSPACE;
+        Integer done = capture.press(clear ? AuroraKey.UNBOUND
+                : com.aurora.client.adapter.NativeKeyboard.toStored(keyCode), clear);
+        if (done != null) commit(done);
+        return true;
+    }
+
+    @Override
+    public boolean onKeyRelease(int keyCode) {
+        if (!listening) return false;
+        if (reconcileDisabledState()) return true;
+        // A modifier released before a second key binds the modifier itself.
+        Integer done = capture.release(com.aurora.client.adapter.NativeKeyboard.toStored(keyCode));
+        if (done != null) commit(done);
+        return true;
+    }
+
+    private void commit(int binding) {
+        setter.accept(binding);
         saveAction.run();
         finishListening();
-        return true;
     }
 
     /** Canonical semantic adapter: focus/Enter/Space/narration + enabled gate. */
@@ -347,6 +363,7 @@ public class KeybindSetting extends FeatureSetting {
     @Override
     protected void onCancelCapture() {
         listening = false;
+        capture.reset();
         releaseFocus();
     }
 
@@ -370,13 +387,15 @@ public class KeybindSetting extends FeatureSetting {
         return cachedKeyName;
     }
 
-    /** Friendly name for a SDL scancode. Falls back to the raw int. */
-    public static String keyName(int scancode) {
-        if (scancode == AuroraKey.UNBOUND) return "Unbound";
+    /** Friendly name for a binding: "Ctrl + P" for a combo ({@code KeyCombo}). Falls back to the raw int. */
+    public static String keyName(int binding) {
+        if (binding == AuroraKey.UNBOUND) return "Unbound";
+        int key = com.aurora.client.util.KeyCombo.key(binding);
+        String prefix = com.aurora.client.util.KeyCombo.prefix(com.aurora.client.util.KeyCombo.modifiers(binding));
         try {
-            return com.aurora.client.adapter.NativeKeyboard.key(scancode).getDisplayName().getString();
+            return prefix + com.aurora.client.adapter.NativeKeyboard.key(key).getDisplayName().getString();
         } catch (Exception e) {
-            return "Key " + scancode;
+            return prefix + "Key " + key;
         }
     }
 

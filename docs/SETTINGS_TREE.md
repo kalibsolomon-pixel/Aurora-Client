@@ -586,7 +586,7 @@ A profile is a full snapshot of almost every setting: feature on/offs, all value
 - **New profile**: the first card; opens an inline name field, Enter or Create to create, Esc to cancel. `{profile:create}`
 - **Profile cards**: icon, name and hotkey; the active card has the thin selected edge. Click a card to switch to it. `{profile:switch}`
   - **Rename**: inline, on the name. `{profile:rename}`
-  - **Hotkey chip**: click, then press the key that switches to this profile in game; Esc or Backspace clears it. One key belongs to one profile. `{profile:hotkey}`
+  - **Hotkey chip**: click, then press the key that switches to this profile in game; Esc or Backspace clears it. Hold Ctrl, Shift or Alt first and the chip waits for a second key ("Ctrl + P"); releasing the modifier alone binds just that key. A combo fires only with exactly its modifiers held, so P and Ctrl + P can switch to different profiles. One binding belongs to one profile. `{profile:hotkey}`
   - **Settings glyph**: opens Profile options. `{profile:options}`
 - *Profile options* `{ui:profileOptions}`
   - **Change icon**: opens the icon browser, every Material Symbols icon with search. `{profile:icon}`
@@ -600,6 +600,8 @@ A profile is a full snapshot of almost every setting: feature on/offs, all value
 ## 5. Keybinds at a glance
 
 All are also listed in vanilla Options → Controls under Aurora. Defaults are for a fresh install.
+
+**Combos (2026-11-12).** Every keybind — Aurora's, Minecraft's own in Options → Controls, and profile hotkeys — can be a single key or a combo of Ctrl, Shift and/or Alt with a key. While a binding waits for a key, holding a modifier shows "Ctrl + …" and waits for the second key; releasing the modifier alone binds just that key; Esc still clears. The most specific binding wins: a plain key keeps working while an unrelated modifier is held (zoom on C while sprinting with Ctrl), and gives way only to a combo on the same key whose modifiers are all held (C vs Ctrl + C). options.txt keeps Minecraft's plain key; Aurora saves the modifiers (`vanillaKeyModifiers`), so removing Aurora leaves working plain bindings. Fn cannot be used: the keyboard handles it and the game never sees it.
 
 | Key | Default | Where set |
 |---|---|---|

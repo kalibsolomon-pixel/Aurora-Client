@@ -331,6 +331,8 @@ public final class FeatureCatalog {
         mixin("ItemStackRenderStateAccessor", "flat item icons in Aurora screens");
         mixin("ItemLayerQuadsAccessor", "flat item icons in Aurora screens");
         mixin("ScreenPanoramaAccessor", "blurred glass over the menu panorama");
+        mixin("KeyMappingComboMixin", "Ctrl, Shift and Alt combos on key bindings");
+        mixin("KeyBindsScreenComboMixin", "Ctrl, Shift and Alt combos in the Controls screen");
         for (String hitreg : List.of("ArmorMixin", "AttackMixin", "ChunkMixin", "DamageMixin", "EntityAccessor",
                 "GlowMixin", "NetworkMixin", "ParticleMixin", "PlayerMixin", "RenderMixin", "ServerMixin",
                 "SoundMixin", "SourceMixin")) {

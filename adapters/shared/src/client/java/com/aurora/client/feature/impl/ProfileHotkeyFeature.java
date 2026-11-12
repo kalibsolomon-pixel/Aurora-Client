@@ -13,7 +13,10 @@ import java.util.Map;
 
 /**
  * Per-profile hotkeys (2026-11-12): a key bound on a profile's card switches
- * to that profile in game and confirms it with a silent popup. Only with no
+ * to that profile in game and confirms it with a silent popup. A binding may
+ * carry Ctrl, Shift and Alt ({@code KeyCombo}); like every keybind the most
+ * specific match wins, so Ctrl + P and P can switch to different profiles.
+ * Only with no
  * screen open and a player in a world — the same gate as every Aurora hotkey.
  * It changes local settings only and sends nothing anywhere, so it is not a
  * catalog feature and has no fair-play entry.
@@ -21,7 +24,7 @@ import java.util.Map;
 public class ProfileHotkeyFeature implements Feature {
     public static final String ID = "profile_hotkeys";
 
-    /** One edge detector per stored key, kept across ticks; keys are few. */
+    /** One edge detector per binding (P and Ctrl + P are different bindings), kept across ticks; bindings are few. */
     private final Map<Integer, AuroraKey.EdgeDetector> edges = new HashMap<>();
 
     @Override public String id() { return ID; }
@@ -33,9 +36,9 @@ public class ProfileHotkeyFeature implements Feature {
         if (hotkeys.isEmpty()) return;
         boolean ready = com.aurora.client.adapter.NativeUi.screen(client) == null && client.player != null;
         for (Map.Entry<String, Integer> e : hotkeys.entrySet()) {
-            int key = e.getValue();
+            int binding = e.getValue();
             // Always sampled, so a key held through a menu does not fire on close.
-            boolean pressed = edges.computeIfAbsent(key, k -> new AuroraKey.EdgeDetector()).justPressed(key);
+            boolean pressed = edges.computeIfAbsent(binding, k -> new AuroraKey.EdgeDetector()).justPressed(binding);
             if (!pressed || !ready) continue;
             String name = e.getKey();
             if (name.equals(ProfileManager.getInstance().currentProfile())) continue;

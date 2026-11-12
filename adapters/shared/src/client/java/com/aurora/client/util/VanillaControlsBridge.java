@@ -24,7 +24,8 @@ public final class VanillaControlsBridge implements ControlsBridge {
         if (mc == null || mc.options == null) return out;
         for (KeyMapping mapping : mc.options.keyMappings) {
             if (mapping.getCategory() == AuroraKeybinds.CATEGORY) continue; // in the profile's config fields
-            out.put(mapping.getName(), mapping.saveString());
+            // "key.keyboard.p|1" for Ctrl + P; plain keys keep vanilla's own string.
+            out.put(mapping.getName(), KeyCombo.controlsString(mapping.saveString(), VanillaKeyCombos.modifiers(mapping)));
         }
         return out;
     }
@@ -36,8 +37,11 @@ public final class VanillaControlsBridge implements ControlsBridge {
         boolean changed = false;
         for (KeyMapping mapping : mc.options.keyMappings) {
             if (mapping.getCategory() == AuroraKeybinds.CATEGORY) continue;
-            String saved = controls.get(mapping.getName());
-            if (saved == null || saved.equals(mapping.saveString())) continue;
+            String value = controls.get(mapping.getName());
+            if (value == null) continue;
+            String saved = KeyCombo.controlsKey(value);
+            int modifiers = KeyCombo.controlsModifiers(value);
+            if (saved.equals(mapping.saveString()) && modifiers == VanillaKeyCombos.modifiers(mapping)) continue;
             InputConstants.Key key;
             try {
                 key = InputConstants.getKey(saved);
@@ -45,11 +49,13 @@ public final class VanillaControlsBridge implements ControlsBridge {
                 continue; // a key this version does not know: leave the binding as it is
             }
             mapping.setKey(key);
+            VanillaKeyCombos.setModifiers(mapping, modifiers);
             changed = true;
         }
         if (changed) {
             KeyMapping.resetMapping();
             mc.options.save();
+            VanillaKeyCombos.store();
         }
     }
 }

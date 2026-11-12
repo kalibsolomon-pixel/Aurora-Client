@@ -84,6 +84,8 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
 
     /** The profile whose hotkey chip is waiting for a key, or null. */
     private String capturingHotkey;
+    /** Modifiers held so far while capturing: Ctrl, Shift or Alt alone waits for a second key. */
+    private final com.aurora.client.util.KeyCombo.Capture capture = new com.aurora.client.util.KeyCombo.Capture();
 
     /**
      * Per-card semantic controls (Phase A rollout), keyed by profile NAME,
@@ -309,7 +311,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         // lifecycle rule).
         membershipChanged |= reconcileSemanticControls(optionsControls, live);
         membershipChanged |= reconcileSemanticControls(hotkeyControls, live);
-        if (capturingHotkey != null && !live.contains(capturingHotkey)) capturingHotkey = null;
+        if (capturingHotkey != null && !live.contains(capturingHotkey)) stopCapture();
         if (membershipChanged) nameFitCache.clear();
     }
 
@@ -447,9 +449,9 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         boolean chipHot = pointerIn(mouseX, mouseY, chipX, chipY, chipW, BTN_H);
         MaterialSurface.selection(ctx, chipX, chipY, chipW, BTN_H, radius, capturing || hotkey.isFocused(),
                 chipHot ? 1f : 0f);
-        int key = manager.hotkey(name);
-        String label = capturing ? "Press a key…" : key < 0 ? "None" : keyName(key);
-        int textCol = ThemeManager.color(capturing || key >= 0 ? ThemeToken.ON_BACKGROUND : ThemeToken.ON_BACKGROUND_MUTED);
+        int binding = manager.hotkey(name);
+        String label = capturing ? captureLabel(capture.pending()) : binding >= 0 ? keyName(binding) : "None";
+        int textCol = ThemeManager.color(capturing || binding >= 0 ? ThemeToken.ON_BACKGROUND : ThemeToken.ON_BACKGROUND_MUTED);
         String fitted = AuroraFontRenderer.ellipsize(this.font, label, chipW - 20, 0);
         int contentW = 12 + this.font.width(fitted);
         int cx = chipX + (chipW - contentW) / 2;
@@ -462,8 +464,31 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         }
     }
 
-    private String keyName(int key) {
-        return keyNames.computeIfAbsent(key, KeybindSetting::keyName);
+    private String keyName(int binding) {
+        return keyNames.computeIfAbsent(binding, ProfileManagerScreen::hotkeyName);
+    }
+
+    /** "Ctrl + P": the modifiers, then the key's display name; "None" when unbound. */
+    static String hotkeyName(int binding) {
+        return binding >= 0 ? KeybindSetting.keyName(binding) : "None";
+    }
+
+    /** The chip while capturing: "Press a key…", or "Ctrl + …" once a modifier is held. */
+    static String captureLabel(int pendingModifiers) {
+        return com.aurora.client.util.KeyCombo.captureLabel(pendingModifiers, "Press a key…");
+    }
+
+    private void stopCapture() {
+        capturingHotkey = null;
+        capture.reset();
+    }
+
+    /** Applies a finished capture (-1 clears) and says so. */
+    private void commitCapture(String name, int binding) {
+        stopCapture();
+        if (ProfileManager.getInstance().setHotkey(name, binding)) {
+            flash(binding >= 0 ? keyName(binding) + " switches to " + name : "Cleared the hotkey for " + name);
+        }
     }
 
     /** A profile's icon glyph: its Material Symbols name, or the person glyph when unset or unknown. */
@@ -496,13 +521,14 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
                     Component.literal("Hotkey for " + k),
                     () -> Component.literal("Sets the key that switches to this profile in game."),
                     () -> {
-                        int key = ProfileManager.getInstance().hotkey(k);
-                        return Component.literal(key < 0 ? "None" : keyName(key));
+                        return Component.literal(hotkeyName(ProfileManager.getInstance().hotkey(k)));
                     },
                     () -> true,
                     () -> {
                         commitEditors();
-                        capturingHotkey = k.equals(capturingHotkey) ? null : k;
+                        boolean again = k.equals(capturingHotkey);
+                        stopCapture();
+                        if (!again) capturingHotkey = k;
                     }),
                     MinecraftSemanticFeedback.INSTANCE,
                     null,
@@ -514,7 +540,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
 
     private void openOptions(String name) {
         commitEditors();
-        capturingHotkey = null;
+        stopCapture();
         if (this.minecraft != null) {
             com.aurora.client.adapter.NativeUi.setScreen(this.minecraft, new ProfileOptionsScreen(this, name));
         }
@@ -598,13 +624,16 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         }
 
         // A plus in a circle (a capsule, so it follows Corner Radius) over
-        // the label, or over the open name field.
+        // the label, or over the open name field. At rest the card has no
+        // bottom line, so circle and label centre in it as one group (owner
+        // 2026-11-12); while editing they keep the profile cards' lines.
         int ink = ThemeManager.color(hot || creatingNew ? ThemeToken.ON_BACKGROUND : ThemeToken.ON_BACKGROUND_SECONDARY);
-        com.aurora.client.ui.util.RenderUtil.drawRoundedOutlineAA(ctx, x + w / 2f - 11, y + ICON_Y - 11, 22, 22,
+        int lift = creatingNew ? 0 : createCardCentreOffset(this.font.lineHeight);
+        com.aurora.client.ui.util.RenderUtil.drawRoundedOutlineAA(ctx, x + w / 2f - 11, y + lift + ICON_Y - 11, 22, 22,
                 ThemeManager.current().roundness().capsule(22f), 1.2f, ink);
-        MaterialIconRenderer.drawIcon(ctx, this.font, ADD_GLYPH, x + w / 2f, y + ICON_Y, 16f, ink);
+        MaterialIconRenderer.drawIcon(ctx, this.font, ADD_GLYPH, x + w / 2f, y + lift + ICON_Y, 16f, ink);
         if (!creatingNew) {
-            AuroraFontRenderer.drawCentered(ctx, this.font, fitName("New profile"), x + w / 2, y + NAME_Y, ink);
+            AuroraFontRenderer.drawCentered(ctx, this.font, fitName("New profile"), x + w / 2, y + lift + NAME_Y, ink);
             return;
         }
 
@@ -613,6 +642,16 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         syncCreateControl(x, y, mouseX, mouseY);
         Button cb = createBtn();
         cb.render(ctx, x + INSET, y + LOWER_BTN_Y, btnW(), BTN_H, mouseX, mouseY);
+    }
+
+    /**
+     * How far the resting "New profile" group (the 22px circle at
+     * {@link #ICON_Y} and the label at {@link #NAME_Y}) moves down to sit in
+     * the card's vertical centre.
+     */
+    static int createCardCentreOffset(int lineHeight) {
+        int top = ICON_Y - 11, bottom = NAME_Y + lineHeight;
+        return (CARD_H - (bottom - top)) / 2 - top;
     }
 
     /**
@@ -640,7 +679,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         // Waiting for a hotkey: the next press cancels the capture and is
         // consumed (the Keybind setting's rule).
         if (capturingHotkey != null) {
-            capturingHotkey = null;
+            stopCapture();
             return true;
         }
         if (searchField != null && _ev.button() == InputConstants.MOUSE_BUTTON_LEFT) {
@@ -738,15 +777,13 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
     @Override
     public boolean keyPressed(net.minecraft.client.input.KeyEvent _kev) {
         int key = _kev.key();
-        // Hotkey capture owns the next key: Esc or Backspace clears it.
+        // Hotkey capture owns the keyboard: Esc or Backspace clears it; Ctrl,
+        // Shift or Alt held waits for a second key (owner request 2026-11-12).
         if (capturingHotkey != null) {
-            String name = capturingHotkey;
-            capturingHotkey = null;
             boolean clear = key == InputConstants.KEY_ESCAPE || key == InputConstants.KEY_BACKSPACE;
-            int stored = clear ? AuroraKey.UNBOUND : com.aurora.client.adapter.NativeKeyboard.toStored(key);
-            if (ProfileManager.getInstance().setHotkey(name, stored)) {
-                flash(clear ? "Cleared the hotkey for " + name : keyName(stored) + " switches to " + name);
-            }
+            Integer done = capture.press(clear ? AuroraKey.UNBOUND
+                    : com.aurora.client.adapter.NativeKeyboard.toStored(key), clear);
+            if (done != null) commitCapture(capturingHotkey, done);
             return true;
         }
         // C-8: the create editor follows the base rename contract — a field
@@ -775,6 +812,17 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         }
         // The base handles the rename field's ENTER/ESCAPE/forwarding.
         return super.keyPressed(_kev);
+    }
+
+    @Override
+    public boolean keyReleased(net.minecraft.client.input.KeyEvent _kev) {
+        // A modifier released before a second key binds the modifier itself.
+        if (capturingHotkey != null) {
+            Integer done = capture.release(com.aurora.client.adapter.NativeKeyboard.toStored(_kev.key()));
+            if (done != null) commitCapture(capturingHotkey, done);
+            return true;
+        }
+        return super.keyReleased(_kev);
     }
 
     @Override
@@ -883,7 +931,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         // pointer passes an empty rect, which resets the dwell.
         boolean capturing = hoveredChip != null && hoveredChip.equals(capturingHotkey);
         FeatureSetting.hoverTooltip("profile-hotkey", () -> capturing
-                        ? "Press the key that switches to this profile in game. Esc or Backspace clears it."
+                        ? "Press the key that switches to this profile in game. Hold Ctrl, Shift or Alt first for a combination. Esc or Backspace clears it."
                         : "Click to set the key that switches to this profile in game.",
                 hoveredChip == null ? -1000 : hoveredChipX, hoveredChipY, btnW(), BTN_H, mouseX, mouseY);
 
