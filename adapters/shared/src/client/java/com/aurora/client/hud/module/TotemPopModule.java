@@ -34,6 +34,7 @@ public class TotemPopModule extends HudModule {
     @Override public boolean isConfigEnabled() { return AuroraConfig.get().totemPopEnabled; }
     @Override protected AuroraConfig.HudBackground backgroundMode() { return AuroraConfig.get().totemPopBgMode; }
     @Override protected int backgroundColor() { return AuroraConfig.get().totemPopBgColor; }
+    @Override protected boolean themeCorners() { return AuroraConfig.get().totemPopThemeCorners; }
 
     private List<String> computeLines() {
         AuroraConfig cfg = AuroraConfig.get();

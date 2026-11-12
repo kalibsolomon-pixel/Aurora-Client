@@ -159,22 +159,59 @@ class SquareModeConformanceTest {
     // Explicit exemptions: Keystrokes keycaps, HudBackgrounds panels.
     // ------------------------------------------------------------------
 
+    // Owner ruling 2026-11-12: in-game HUD shapes keep fixed corners by
+    // default; each HUD feature's detail screen has a switch that hands its
+    // shapes the theme's Corner Radius.
+
+    /** Every HUD module with corners, and the switch that owns them. */
+    private static final java.util.Map<String, String> HUD_SWITCHES = java.util.Map.of(
+            "hud/module/InfoModule.java", "infoModuleThemeCorners",
+            "hud/module/CpsModule.java", "cpsThemeCorners",
+            "hud/module/ArmorModule.java", "armorHudThemeCorners",
+            "hud/module/ReachModule.java", "reachDisplayThemeCorners",
+            "hud/module/PotionModule.java", "potionHudThemeCorners",
+            "hud/module/TotemPopModule.java", "totemPopThemeCorners",
+            "hud/module/ToggleSprintSneakModule.java", "toggleSprintSneakThemeCorners",
+            "hud/module/ToggleIndividualModule.java", "toggleSprintSneakThemeCorners",
+            "hud/module/KeystrokesModule.java", "keystrokesThemeCorners");
+
     @Test
-    void keystrokesKeycapRadiusIsAnExplicitRepresentationalExemption() {
-        String src = read(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/hud/module/KeystrokesModule.java");
-        assertTrue(src.contains("private static final int KEY_RADIUS = 3;"),
-                "the keycap radius stays the representational constant");
-        assertTrue(src.contains("Square-mode-exempt"),
-                "the exemption stays documented at the constant");
+    void hudShapesKeepFixedCornersUntilTheirSwitchIsOn() {
+        String hud = read(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/util/HudBackgrounds.java");
+        assertTrue(hud.contains("public static final int FIXED_RADIUS = 2;"), "the fixed panel corner");
+        assertTrue(hud.contains("return themeCorners ? com.aurora.client.theme.ThemeManager.current().roundness().radiusSmall() : fixed;"),
+                "the switch selects the theme's compact radius, otherwise the fixed one");
+        String keys = read(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/hud/module/KeystrokesModule.java");
+        assertTrue(keys.contains("private static final int KEY_RADIUS = 3;"), "the fixed keycap corner");
+        assertTrue(keys.contains("r = keyRadius() * f;"), "keycaps read the switch");
+        assertTrue(keys.contains("Float.floatToIntBits(keyRadius())"), "a radius change re-rasters the keycap templates");
+        String minimap = read(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/hud/module/MinimapModule.java");
+        assertTrue(minimap.contains("HudBackgrounds.radius(cfg.minimapThemeCorners, FIXED_FRAME_RADIUS)"),
+                "the square minimap frame reads its switch");
+        String module = read(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/hud/module/HudModule.java");
+        assertTrue(module.contains("protected boolean themeCorners() { return false; }"), "fixed by default");
+        assertEquals(2, countOf(module, "bgAlpha, themeCorners());"), "both render paths pass the switch");
+        HUD_SWITCHES.forEach((file, field) -> assertTrue(
+                read(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/" + file).contains("AuroraConfig.get()." + field),
+                file + " must read " + field));
     }
 
     @Test
-    void hudBackgroundPanelsKeepTheirSanctionedBoxyDeviation() {
-        String src = read(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/util/HudBackgrounds.java");
-        assertTrue(src.contains("private static final int RADIUS = 2;"),
-                "the HUD panel radius stays the sanctioned constant");
-        assertTrue(src.contains("Square-mode-exempt"),
-                "the sanction stays documented at the constant");
+    void hudCornerSwitchesShipOffAndEachHasADetailRow() throws Exception {
+        var defaults = new com.aurora.client.config.AuroraConfig();
+        java.util.Set<String> fields = new java.util.TreeSet<>(HUD_SWITCHES.values());
+        fields.add("minimapThemeCorners");
+        for (String field : fields) {
+            assertFalse(com.aurora.client.config.AuroraConfig.class.getField(field).getBoolean(defaults),
+                    field + " is off by initializer");
+        }
+        String overlay = read(SourceTree.ADAPTER + "/src/client/resources/assets/aurora/defaults/3.2.0.json");
+        assertFalse(overlay.contains("ThemeCorners"), "the release defaults do not switch any on");
+        String registry = read(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/FeatureRegistry.java");
+        for (String field : fields) {
+            assertTrue(registry.contains("hudThemeCorners(() -> cfg." + field + ", v -> cfg." + field + " = v)"),
+                    field + " has its detail-screen switch");
+        }
     }
 
     // ------------------------------------------------------------------

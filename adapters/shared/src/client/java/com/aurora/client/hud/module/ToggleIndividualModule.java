@@ -95,6 +95,7 @@ public class ToggleIndividualModule extends HudModule {
 
     @Override protected AuroraConfig.HudBackground backgroundMode() { return AuroraConfig.get().sprintHudBgMode; }
     @Override protected int backgroundColor() { return AuroraConfig.get().sprintHudBgColor; }
+    @Override protected boolean themeCorners() { return AuroraConfig.get().toggleSprintSneakThemeCorners; }
 
     private int computeWidth() {
         Minecraft client = Minecraft.getInstance();

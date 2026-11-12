@@ -234,8 +234,12 @@ Capsule shapes follow it too (owner ruling 2026-11-12): toggle tracks and thumbs
 tracks and knobs, scrollbar thumbs and the colour picker's pad and strips. A capsule shape is
 a full capsule at the factory radius or above and flattens in proportion below it, square at 0
 (`ThemeRoundness.capsule`). The remaining exceptions are represented data and game geometry
-that is not theme chrome: colour wheels, represented game shapes, map markers, and in-game HUD
-geometry (keystroke keycaps, HUD backgrounds).
+that is not theme chrome: colour wheels, represented game shapes and map markers.
+
+In-game HUD shapes keep fixed corners by default (panel backgrounds 2 px, keystroke keycaps
+3 px, the square minimap frame 6 px). Each HUD feature's detail screen has a **Theme Corner
+Radius** switch, off by default, that hands its shapes the theme's compact radius (Corner
+Radius × 3/5) instead (owner ruling 2026-11-12).
 
 ### 5.2 Compact spacing vocabulary
 
