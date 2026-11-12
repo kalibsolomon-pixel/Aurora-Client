@@ -73,6 +73,23 @@ class TextOptionsTest {
                 "the picker no longer offers Inter Italic");
     }
 
+    @Test void auroraFontsRasterizeAtTheScreensPixelSize() throws Exception {
+        String mixin = SourceTree.read("mixin/TrueTypeProviderDefinitionMixin.java");
+        assertTrue(mixin.contains("\"aurora\".equals(self.location().getNamespace()) ? AuroraFontQuality.oversample() : oversample"),
+                "only Aurora's providers change, and they take the GUI scale");
+        String quality = SourceTree.read("ui/util/AuroraFontQuality.java");
+        assertTrue(quality.contains("if (changed) set.reload(next, options);"), "a scale change swaps providers in place");
+        assertTrue(quality.contains("swap.getKey().close();"), "replaced providers are closed");
+        assertTrue(SourceTree.read("ui/component/GlassSurface.java").contains("com.aurora.client.ui.util.AuroraFontQuality.beginFrame();"),
+                "the swap runs at the frame boundary (glass rule 10)");
+        for (String v : new String[]{"26.1", "26.2", "26.3"}) {
+            String json = Files.readString(Path.of("adapters/minecraft-" + v + "/src/client/resources/aurora.mixins.json"));
+            for (String m : new String[]{"TrueTypeProviderDefinitionMixin", "FontManagerAccessor", "FontSetAccessor", "MinecraftFontManagerAccessor"}) {
+                assertTrue(json.contains("\"" + m + "\""), v + " lists " + m);
+            }
+        }
+    }
+
     @Test void hudTextGoesThroughThePainter() throws Exception {
         for (Path root : new Path[]{SourceTree.SHARED, SourceTree.CLIENT}) {
             try (var files = Files.walk(root.resolve("com/aurora/client/hud"))) {

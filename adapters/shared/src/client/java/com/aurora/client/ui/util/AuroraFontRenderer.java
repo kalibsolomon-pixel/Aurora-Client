@@ -124,6 +124,7 @@ public class AuroraFontRenderer {
         key = key * 4 + (cfg.textRendererMode == null ? 0 : cfg.textRendererMode.ordinal());
         key = key * 2 + (cfg.textItalic ? 1 : 0);
         key = key * 2 + (cfg.textUnderline ? 1 : 0);
+        key = key * 16 + AuroraFontQuality.rasterScale(); // a re-raster changes advances
         return key * 2 + (compact ? 1 : 0);
     }
 

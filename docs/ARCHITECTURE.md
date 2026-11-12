@@ -82,7 +82,12 @@ provider (`<family>_<weight>[_italic][_ui]`, built by `tools/build_fonts.py`),
 underline and italic flags ride on the style, and the letter case is mapped per
 codepoint in the same helpers the font mixin uses for drawing and measuring, so
 measured width always equals drawn width. HUD text draws through
-`hud/HudTextPainter` for the shadow option. Every timed callback contributes to
+`hud/HudTextPainter` for the shadow option. Aurora's TrueType providers are
+rasterized at the screen's pixel size (oversample = GUI scale,
+`TrueTypeProviderDefinitionMixin`), because Minecraft samples font atlases
+with nearest filtering; `AuroraFontQuality` re-loads only those providers and
+swaps them into their font sets at the next frame boundary when the GUI scale
+changes. Every timed callback contributes to
 the unchanged [overhead budget](OVERHEAD_BUDGET.md).
 
 ## Working on the code
