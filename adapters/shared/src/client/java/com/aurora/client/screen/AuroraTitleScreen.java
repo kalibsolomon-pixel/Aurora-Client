@@ -53,15 +53,17 @@ import java.util.function.Supplier;
  *
  * <p>Geometry is {@link MenuComposition}'s. Nothing here talks to the network:
  * the skin comes through Minecraft's own skin lookup for the signed-in
- * profile. Switching accounts belongs to Aurora Launcher, which owns them;
- * the account card only shows the current one.
+ * profile. The account card is In-Game Account Switcher's entry point when
+ * IAS is installed ({@link AuroraAccountSwitcherApi}); IAS does the signing in
+ * and Aurora never sees an account. Without IAS the card only shows the
+ * current account.
  */
 public class AuroraTitleScreen extends Screen implements ThemedScreen {
     private static final Style WORDMARK = Style.EMPTY.withFont(
             new FontDescription.Resource(Identifier.fromNamespaceAndPath("aurora", "wordmark")));
     private static final String WORDMARK_TEXT = "AURORA";
     private static final int WORDMARK_TRACKING = 3;
-    private static final Component LAUNCHER_NOTE = Component.literal("Add and switch accounts in Aurora Launcher.");
+    private static final Component SWITCHER_NOTE = Component.translatable("aurora.title.account_switcher_missing");
     private static final Component COPYRIGHT = Component.translatable("title.credits");
     private static final int DROPDOWN_MIN_WIDTH = 170, DROPDOWN_ROW = 22, DROPDOWN_PAD = 6;
 
@@ -70,6 +72,8 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
     private Supplier<PlayerSkin> skin;
     private AccountCard account;
     private boolean accountOpen;
+    /** In-Game Account Switcher is installed: the card opens its account list instead of the dropdown. */
+    private boolean switcher;
     // Text fitted once per layout and text style (overflow rule; no per-frame measuring).
     private FormattedCharSequence[] wordmarkGlyphs;
     private int[] wordmarkAdvances;
@@ -138,7 +142,9 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
             addRenderableWidget(figure);
         }
         var card = composition.account();
+        switcher = AuroraAccountSwitcherApi.available();
         account = card.width() > 0 ? addRenderableWidget(new AccountCard(card, composition.compact())) : null;
+        if (account != null && switcher) account.setTooltip(Tooltip.create(Component.translatable("aurora.title.switch_account")));
 
         Font font = this.font;
         int lineY = this.height - MenuComposition.MARGIN - font.lineHeight + 1;
@@ -183,7 +189,7 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
         String version = "Aurora " + ModInfo.version() + "  ·  Minecraft " + SharedConstants.getCurrentVersion().name();
         versionText = AuroraFontRenderer.ellipsize(this.font, version, half, 0);
         copyrightText = AuroraFontRenderer.ellipsize(this.font, COPYRIGHT.getString(), half, 0);
-        noteLines = this.font.split(LAUNCHER_NOTE, dropdownWidth() - 2 * DROPDOWN_PAD - 4);
+        noteLines = this.font.split(SWITCHER_NOTE, dropdownWidth() - 2 * DROPDOWN_PAD - 4);
     }
 
     @Override
@@ -299,7 +305,7 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
         return false;
     }
 
-    /** The signed-in account: face, name and a chevron; opens the dropdown. */
+    /** The signed-in account: face, name and a chevron. Opens IAS's account list, or the read-only dropdown without IAS. */
     private final class AccountCard extends AbstractButton {
         private final boolean chip;
 
@@ -310,7 +316,9 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
 
         @Override
         public void onPress(InputWithModifiers input) {
-            accountOpen = !accountOpen;
+            Screen accounts = switcher ? AuroraAccountSwitcherApi.open(AuroraTitleScreen.this) : null;
+            if (accounts != null) NativeUi.setScreen(minecraft, accounts); // back here re-inits: new name and skin
+            else accountOpen = !accountOpen;
         }
 
         @Override
@@ -332,7 +340,7 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
             int text = ThemeManager.color(ThemeToken.MATERIAL_TEXT);
             String name = AuroraFontRenderer.ellipsize(font, getMessage().getString(), chevronX - 8 - nameX, 0);
             g.text(font, name, nameX, getY() + (getHeight() - font.lineHeight) / 2 + 1, text, false);
-            MaterialIconRenderer.drawIcon(g, font, com.aurora.client.screen.IconCatalog.glyph(accountOpen ? "expand_less" : "expand_more"),
+            MaterialIconRenderer.drawIcon(g, font, com.aurora.client.screen.IconCatalog.glyph(switcher ? "switch_account" : accountOpen ? "expand_less" : "expand_more"),
                     chevronX, getY() + getHeight() / 2f, 12f,
                     AuroraAnim.lerpArgb(ThemeManager.color(ThemeToken.MATERIAL_TEXT_SECONDARY), text, hot ? 1 : 0));
         }

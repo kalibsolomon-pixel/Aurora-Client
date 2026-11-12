@@ -59,7 +59,21 @@ class TitleScreenContractTest {
         for (String banned : new String[]{"ServerStatusPinger", "ServerList", "HttpClient", "URLConnection", "getAccessToken", "Session"}) {
             assertFalse(SCREEN.contains(banned), banned);
         }
-        assertTrue(SCREEN.contains("Add and switch accounts in Aurora Launcher."));
+        assertTrue(SCREEN.contains("aurora.title.account_switcher_missing"));
+    }
+
+    @Test void accountCardIsInGameAccountSwitchersEntryPoint() {
+        // Owner 2026-11-12: IAS-style switching, with IAS itself unchanged.
+        String api = SourceTree.read("screen/AuroraAccountSwitcherApi.java");
+        assertTrue(api.contains("isModLoaded(\"ias\")"));
+        assertTrue(api.contains("\"ru.vidtu.ias.screen.AccountScreen\""));
+        assertTrue(api.contains("getConstructor(Screen.class).newInstance(parent)"));
+        assertFalse(api.contains("import ru.vidtu"), "no compile-time dependency on IAS");
+        assertTrue(SCREEN.contains("Screen accounts = switcher ? AuroraAccountSwitcherApi.open(AuroraTitleScreen.this) : null;"));
+        assertTrue(SCREEN.contains("else accountOpen = !accountOpen;"), "without IAS the card keeps its read-only dropdown");
+        for (String banned : new String[]{"IASStorage", "LoginData", "MSAuth", "getAccessToken"}) {
+            assertFalse(SCREEN.contains(banned) || api.contains(banned), banned + ": IAS keeps its accounts to itself");
+        }
     }
 
     @Test void wordmarkHasItsOwnFontAndIsNeverReCased() throws Exception {
