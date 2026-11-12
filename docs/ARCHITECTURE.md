@@ -64,7 +64,14 @@ session without overwriting saved values. Mixins remain fail-soft and accessors
 are guarded. See [FAIR_PLAY](FAIR_PLAY.md) and [ADR 0004](adr/0004-fail-soft-mixins-and-single-feature-registry.md).
 
 Persistence uses ordered atomic writes. Profiles reset absent scoped fields to
-defaults and run migrations independently. Every timed callback contributes to
+defaults and run migrations independently. A profile also stores its icon, hotkey
+and the game's own key bindings; the core reads and applies those through the
+`ControlsBridge` the adapter installs after boot (`VanillaControlsBridge`), so
+starting the game never rewrites vanilla bindings. The global
+`profilesOwnControls` switch decides whether switching applies key bindings at
+all. Profile icons come from the bundled Material Symbols font: `IconCatalog`
+(core) names every glyph and `MaterialIconRenderer` keeps an LRU of rasters
+whose evictions are freed at the next frame start. Every timed callback contributes to
 the unchanged [overhead budget](OVERHEAD_BUDGET.md).
 
 ## Working on the code

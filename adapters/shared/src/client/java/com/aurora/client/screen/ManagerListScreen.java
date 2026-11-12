@@ -1,6 +1,5 @@
 package com.aurora.client.screen;
 
-import com.mojang.blaze3d.platform.InputConstants;
 import com.aurora.client.ui.component.MaterialSurface;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
@@ -25,6 +24,7 @@ import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
+import com.mojang.blaze3d.platform.InputConstants;
 
 import java.util.HashMap;
 import java.util.List;
@@ -331,6 +331,14 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
     /** The toolbar's left action button, constructed but not registered (the base registers it). */
     protected abstract ButtonWidget createToolbarActionBtn();
 
+    /**
+     * Glass pass for any header controls a screen adds beyond the action
+     * button and Done (the Profiles search and toolbar, 2026-11-12). Runs
+     * every frame before the dim, outside the list clip; position the
+     * controls here so they follow a content-fitted window's top.
+     */
+    protected void paintHeaderGlassPass(GuiGraphicsExtractor ctx) {}
+
     // ------------------------------------------------------------------
     //  Render
     // ------------------------------------------------------------------
@@ -411,6 +419,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         GlassSurface.disableScissor(ctx);
         if (toolbarActionBtn != null) toolbarActionBtn.renderGlassPass(ctx);
         if (doneBtn != null) doneBtn.renderGlassPass(ctx);
+        paintHeaderGlassPass(ctx);
         // The inline editor paints UNDER THE SAME CLIP as its row (C-8): an
         // editor whose row is half-scrolled out of the band must not paint
         // outside it, and a fully-scrolled-out editor paints nothing (the
@@ -831,7 +840,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
 
     @Override
     public boolean mouseDragged(MouseButtonEvent _ev, double dx, double dy) {
-        if (scroll.isDragging() && _ev.button() == 0) {
+        if (scroll.isDragging() && _ev.button() == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) {
             // Direct manipulation: the position pins to the cursor while
             // dragging and eases again on release.
             scroll.dragThumb(_ev.y(), listClipTop(), listClipBottom() - listClipTop(),

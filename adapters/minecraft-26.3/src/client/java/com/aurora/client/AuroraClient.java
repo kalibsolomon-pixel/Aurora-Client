@@ -59,6 +59,9 @@ public class AuroraClient implements ClientModInitializer {
         com.aurora.client.config.EffectExpiryMigrator.runOnce();
 
         registerAuroraKeybinds();
+        // Profiles carry the game's own bindings too ("Separate controls"). Installed
+        // after the boot-time profile load, so starting the game never rewrites them.
+        ProfileManager.getInstance().setControlsBridge(new com.aurora.client.util.VanillaControlsBridge());
 
         // Better Hitreg (Jass's BetterHitreg, integrated): sets Hitreg.client
         // first, then registers its tick / world-render / HUD / keybind hooks.

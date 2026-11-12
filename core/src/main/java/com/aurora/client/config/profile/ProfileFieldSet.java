@@ -51,7 +51,10 @@ public final class ProfileFieldSet {
             "fightStatsTotalFights",
             "fightStatsPlaytimeSeconds",
             "migratedHitregProperties",
-            "migratedEffectExpiryExclusions"
+            "migratedEffectExpiryExclusions",
+            // "Separate controls" decides whether profiles carry bindings, so it
+            // must not itself change with the profile (2026-11-12).
+            "profilesOwnControls"
     );
 
     private ProfileFieldSet() {}

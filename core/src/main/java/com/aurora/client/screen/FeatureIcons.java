@@ -31,7 +31,7 @@ public final class FeatureIcons {
         ICONS.put("hitbox",                "\uE3C2"); // crop_free (box outline)
         ICONS.put("hit_color",             "\uE3B8"); // colorize (dropper)
         ICONS.put("glint_color",           "\uE65F"); // auto_awesome (sparkles — the enchant shimmer)
-        ICONS.put("better_hitreg",         "\uF889"); // swords — crossed blades, melee PvP; subsetting requires the real full_material.ttf (see subset_script.py)
+        ICONS.put("better_hitreg",         "\uF889"); // swords — crossed blades, melee PvP
         ICONS.put("info_module",           "\uE88E"); // info
         ICONS.put("cps",                   "\uE323"); // mouse
         ICONS.put("armor_hud",             "\uF014"); // gpp_maybe (shield / alert)
@@ -44,7 +44,7 @@ public final class FeatureIcons {
         ICONS.put("item_physics",          "\uE574"); // category (shapes physics)
         ICONS.put("particles",             "\uE819"); // sunny_snowing (particles)
         ICONS.put("item_scale",            "\uE85B"); // aspect_ratio
-        ICONS.put("held_item_seams",       "\uE421"); // texture — the texture-bleed artifact this fixes; subsetting requires the real full_material.ttf (see subset_script.py)
+        ICONS.put("held_item_seams",       "\uE421"); // texture — the texture-bleed artifact this fixes
         ICONS.put("animations",            "\uE038"); // animation
         ICONS.put("keystrokes",            "\uE312"); // keyboard
         ICONS.put("minimap",               "\uE2C5"); // file_map
@@ -56,19 +56,18 @@ public final class FeatureIcons {
         // keyboard, drag_handle, verified_user, accessibility_new); they
         // were removed with the tiles. flash_on/keyboard remain in use by
         // other ids above.
-        ICONS.put("miscellaneous",         "\uEB8B"); // question_mark — the "no dedicated screen yet" grab-bag; subsetting requires the real full_material.ttf (see subset_script.py)
+        ICONS.put("miscellaneous",         "\uEB8B"); // question_mark — the "no dedicated screen yet" grab-bag
 
         // ============ SETTINGS TAB ============
         ICONS.put("custom_title",          "\uE264"); // title
 
-        // Dropdown chevrons (EnumSetting) — referenced by codepoint here so
-        // subset_script.py includes them in the material-symbols font subset.
+        // Dropdown chevrons (EnumSetting). The bundled font carries every
+        // Material Symbols Rounded icon (2026-11-12), so any codepoint works.
         ICONS.put("_dropdown_expand_more", "\uE5CF"); // expand_more (chevron down)
         ICONS.put("_dropdown_expand_less", "\uE5CE"); // expand_less (chevron up)
 
         // Compact icon actions (Phase C-4) — the IconAction primitive's
-        // glyph vocabulary, referenced by codepoint here so the subsetter
-        // carries them. The GLYPH IS PRESENTATION ONLY; accessible meaning
+        // glyph vocabulary. The GLYPH IS PRESENTATION ONLY; accessible meaning
         // lives on each SemanticAction's textual label.
         ICONS.put("_action_add",   "\uE147"); // add (plus)
         ICONS.put("_action_close", "\uE5CD"); // close (x)

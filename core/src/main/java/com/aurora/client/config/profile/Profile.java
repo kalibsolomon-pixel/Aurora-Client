@@ -35,6 +35,28 @@ public class Profile {
      */
     public Map<String, JsonElement> fields = new LinkedHashMap<>();
 
+    /**
+     * Material Symbols name of the profile's card icon ({@code IconCatalog});
+     * empty means the default. Profile metadata, not a config field, so it
+     * survives every save of the profile's settings (2026-11-12).
+     */
+    public String icon = "";
+
+    /**
+     * Key that switches to this profile in game: a stored keyboard code in
+     * Aurora's key encoding, or -1 for none. Metadata, kept on the profile
+     * rather than in config so it works from whichever profile is active.
+     */
+    public int hotkey = -1;
+
+    /**
+     * The game's own (vanilla) key bindings captured with this profile:
+     * binding name to saved key string ({@link ControlsBridge}). Null for
+     * profiles saved before controls were captured; those leave the live
+     * vanilla bindings as they are.
+     */
+    public Map<String, String> controls;
+
     public Profile() {}
 
     public Profile(String name) {

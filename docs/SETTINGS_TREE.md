@@ -569,13 +569,22 @@ The tab shows one page at a time, chosen from the sub-tabs in the row above the 
 
 ### 4.4 Profiles `{ui:profiles}`
 
-A profile is a full snapshot of almost every setting: feature on/offs, all values, keybinds, theme, HUD positions, particle and item-scale lists, waypoints. Not in profiles: which profile is active, and playtime totals.
+A profile is a full snapshot of almost every setting: feature on/offs, all values, keybinds, theme, HUD positions, particle and item-scale lists, waypoints. It also keeps its own icon, hotkey and, since 2026-11-12, the game's (vanilla) key bindings. Not in profiles: which profile is active, Separate controls, and playtime totals.
 
-- **Profile list**: the active one has an "Active" badge; click another to switch to it ("Click to switch"). `{profile:switch}`
-- **New Profile**: inline name field, Enter to create, Esc to cancel. `{profile:create}`
-- **Rename**: inline, on the name. `{profile:rename}`
-- **Duplicate**: per profile, copies all its settings. `{profile:duplicate}`
-- **Delete**: per profile; the active profile and `default` cannot be deleted. `{profile:delete}`
+- *Header*
+  - **Search**: filters the cards by name. `{profile:search}`
+  - **Separate controls**: chip, on by default. On: each profile keeps its own key bindings, Aurora's and Minecraft's, and switching applies them. Off: bindings stay the same whichever profile is active. `{profilesOwnControls}`
+  - **Open folder**: opens the profiles folder in the file manager. `{profile:openFolder}`
+- **New profile**: the first card; opens an inline name field, Enter or Create to create, Esc to cancel. `{profile:create}`
+- **Profile cards**: icon, name and hotkey; the active card has the thin selected edge. Click a card to switch to it. `{profile:switch}`
+  - **Rename**: inline, on the name. `{profile:rename}`
+  - **Hotkey chip**: click, then press the key that switches to this profile in game; Esc or Backspace clears it. One key belongs to one profile. `{profile:hotkey}`
+  - **Settings glyph**: opens Profile options. `{profile:options}`
+- *Profile options* `{ui:profileOptions}`
+  - **Change icon**: opens the icon browser, every Material Symbols icon with search. `{profile:icon}`
+  - **Name**, **Hotkey**: as on the card.
+  - **Duplicate**: copies all its settings; the copy has no hotkey. `{profile:duplicate}`
+  - **Delete**: press twice; hidden for the active profile and `default`. `{profile:delete}`
 - **Done**: back. `{profile:done}`
 
 ---

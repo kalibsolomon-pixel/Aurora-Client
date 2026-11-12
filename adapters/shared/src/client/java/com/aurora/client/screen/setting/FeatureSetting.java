@@ -582,6 +582,16 @@ public abstract class FeatureSetting {
     }
 
     /**
+     * The description tooltip for a region outside a settings list (cards and
+     * grids on other screens), on the same dwell and painter. The screen
+     * calls {@link #drawPendingTooltip} last in its frame.
+     */
+    public static void hoverTooltip(String key, Supplier<String> text, int x, int y, int w, int h,
+                                    int mouseX, int mouseY) {
+        trackLabelHover(key, text, x, y + 1, w, h - 2, mouseX, mouseY, false);
+    }
+
+    /**
      * Draws {@code text} at {@code (x, y)} in {@code color} and binds the
      * text bounds to this setting's description tooltip: dwelling on the
      * label itself for {@link #HOVER_DWELL_MS} fades the description in,

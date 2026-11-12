@@ -22,8 +22,6 @@ import org.slf4j.Logger;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -84,8 +82,14 @@ public final class MaterialIconRenderer {
     /** Guards face + raster cache; draw calls are render-thread, but sync keeps vanilla's LIBRARY_LOCK discipline. */
     private static final Object LOCK = new Object();
 
-    /** Max cached rasters before a full clear (45+ icons × a few sizes each in practice). */
-    private static final int MAX_RASTERS = 128;
+    /**
+     * Raster cache size. Least-recently-drawn rasters are evicted past it
+     * (the icon browser draws dozens of distinct glyphs; a full clear used
+     * to thrash every UI icon with them).
+     */
+    private static final int MAX_RASTERS = 512;
+    /** New glyphs a budgeted caller may rasterize per frame ({@link #drawIconBudgeted}). */
+    private static final int FRAME_BUDGET = 12;
     /** Upper bound for a raster's em size in device pixels (48 GUI × scale 4 = 192; headroom for odd setups). */
     private static final int MAX_EM_PX = 512;
 
@@ -93,7 +97,16 @@ public final class MaterialIconRenderer {
     /** Backing bytes for {@link #face}; FreeType reads them lazily, so this reference must outlive the face. */
     private static ByteBuffer fontBytes;
     private static boolean initFailed;
-    private static final Map<Long, Raster> RASTERS = new HashMap<>();
+    /** Access-ordered: iteration starts at the least recently drawn raster. */
+    private static final java.util.LinkedHashMap<Long, Raster> RASTERS = new java.util.LinkedHashMap<>(64, 0.75f, true);
+    /**
+     * Evicted rasters awaiting release. GUI blits are deferred, so a texture
+     * drawn earlier this frame may still be pending: textures are only
+     * destroyed at the next frame start (glass rule 10).
+     */
+    private static final java.util.ArrayList<Raster> PENDING_RELEASE = new java.util.ArrayList<>();
+    private static int rasterizedThisFrame;
+    private static long lastFrameNs;
     private static int cachedGuiScale = -1;
 
     /** One rasterized icon: a registered {@link DynamicTexture} of the glyph's ink at device-pixel density. */
@@ -112,36 +125,80 @@ public final class MaterialIconRenderer {
      * unavailable, so call sites need no fallback logic of their own.
      */
     public static void drawIcon(GuiGraphicsExtractor g, Font font, String icon, float cx, float cy, float emGui, int argb) {
-        if (icon == null || icon.isEmpty()) return;
+        draw(g, font, icon, cx, cy, emGui, argb, false);
+    }
+
+    /**
+     * {@link #drawIcon}, but rasterizing at most {@value #FRAME_BUDGET} new
+     * glyphs per frame across all budgeted callers. Returns false, drawing
+     * nothing, when the glyph is not cached yet and this frame's budget is
+     * spent — the caller shows a placeholder and the grid fills in over a
+     * few frames instead of hitching on one.
+     */
+    public static boolean drawIconBudgeted(GuiGraphicsExtractor g, Font font, String icon, float cx, float cy,
+                                           float emGui, int argb) {
+        return draw(g, font, icon, cx, cy, emGui, argb, true);
+    }
+
+    /**
+     * Frame boundary, from {@code GlassSurface.beginFrame()}: releases the
+     * rasters evicted during the previous frame and resets the budget.
+     */
+    public static void beginFrame() {
+        synchronized (LOCK) {
+            releasePendingLocked();
+            rasterizedThisFrame = 0;
+            lastFrameNs = System.nanoTime();
+        }
+    }
+
+    private static boolean draw(GuiGraphicsExtractor g, Font font, String icon, float cx, float cy, float emGui,
+                                int argb, boolean budgeted) {
+        if (icon == null || icon.isEmpty()) return false;
         Minecraft mc = Minecraft.getInstance();
-        if (mc == null || mc.getWindow() == null) return;
+        if (mc == null || mc.getWindow() == null) return false;
         int guiScale = mc.getWindow().getGuiScale();
-        if (guiScale <= 0) return;
+        if (guiScale <= 0) return false;
         int emPx = Math.max(1, Math.min(MAX_EM_PX, Math.round(emGui * guiScale)));
 
         Raster r;
         synchronized (LOCK) {
+            // Without the frame hook (its mixin failed), fall back to a
+            // clock: a frame cannot be older than this, and a long queue is
+            // drained here rather than growing without bound.
+            if (System.nanoTime() - lastFrameNs > 250_000_000L) {
+                rasterizedThisFrame = 0;
+                lastFrameNs = System.nanoTime();
+                if (PENDING_RELEASE.size() > MAX_RASTERS) releasePendingLocked();
+            }
             if (cachedGuiScale != guiScale) {
-                releaseAllLocked();
+                PENDING_RELEASE.addAll(RASTERS.values());
+                RASTERS.clear();
                 cachedGuiScale = guiScale;
             }
             long key = key(icon.codePointAt(0), emPx);
             r = RASTERS.get(key);
             if (r == null) {
+                if (budgeted && rasterizedThisFrame >= FRAME_BUDGET) return false;
                 if (initFailed) {
                     drawVanillaScaled(g, font, icon, cx, cy, emGui, argb);
-                    return;
+                    return true;
                 }
                 if (!ensureFaceLocked()) {
                     drawVanillaScaled(g, font, icon, cx, cy, emGui, argb);
-                    return;
+                    return true;
                 }
                 r = rasterizeLocked(icon.codePointAt(0), emPx);
+                rasterizedThisFrame++;
                 if (r == null) {
                     drawVanillaScaled(g, font, icon, cx, cy, emGui, argb);
-                    return;
+                    return true;
                 }
-                if (RASTERS.size() >= MAX_RASTERS) releaseAllLocked();
+                if (RASTERS.size() >= MAX_RASTERS) {
+                    var eldest = RASTERS.entrySet().iterator();
+                    PENDING_RELEASE.add(eldest.next().getValue());
+                    eldest.remove();
+                }
                 RASTERS.put(key, r);
             }
         }
@@ -153,6 +210,7 @@ public final class MaterialIconRenderer {
         g.blit(RenderPipelines.GUI_TEXTURED, r.id(), x, y, 0f, 0f,
                 guiW, guiH,
                 r.width(), r.height(), r.width(), r.height(), argb);
+        return true;
     }
 
     // ========================================================================
@@ -251,17 +309,19 @@ public final class MaterialIconRenderer {
         }
     }
 
-    private static void releaseAllLocked() {
+    /** Destroys the queued rasters. Only at a frame boundary: their blits have been submitted. */
+    private static void releasePendingLocked() {
+        if (PENDING_RELEASE.isEmpty()) return;
         Minecraft mc = Minecraft.getInstance();
         if (mc != null && mc.getTextureManager() != null) {
-            for (Raster r : RASTERS.values()) {
+            for (Raster r : PENDING_RELEASE) {
                 try {
                     mc.getTextureManager().release(r.id());
                 } catch (Throwable ignored) {
                 }
             }
         }
-        RASTERS.clear();
+        PENDING_RELEASE.clear();
     }
 
     // ========================================================================
