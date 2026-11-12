@@ -75,8 +75,8 @@ class AuroraScreenNavigationTest {
         // Title — page groups and Text & Fonts have none).
         assertTrue(src.contains("if (metadata.hasDetail()) {\n                headerNavControls.put(metadata.id, headerNavControl(metadata));\n            }"));
         assertTrue(src.contains("if (!metadata.noSettingsToggle) {\n                headerToggleControls.put(metadata.id, headerToggleControl(metadata));\n            }"));
-        assertEquals(5, com.aurora.client.feature.FeatureCatalog.featuresOn(com.aurora.client.feature.FeatureCatalog.Tab.SETTINGS).size(),
-                "five Settings-tab features (custom_title, text_fonts, theme, interface, miscellaneous)");
+        assertEquals(6, com.aurora.client.feature.FeatureCatalog.featuresOn(com.aurora.client.feature.FeatureCatalog.Tab.SETTINGS).size(),
+                "six Settings-tab features (custom_title, text_fonts, theme, interface, miscellaneous, performance)");
         // The tab draws pages, not one entry per feature.
         assertTrue(registry.contains("SETTINGS_PAGES.add(new SettingsPage(\"Appearance\""));
         // custom_title is registered without settings (grouping chrome, no

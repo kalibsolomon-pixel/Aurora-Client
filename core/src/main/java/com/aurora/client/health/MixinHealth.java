@@ -48,6 +48,7 @@ public final class MixinHealth {
 
     private static final Map<String, Failure> FAILURES = new ConcurrentHashMap<>();
     private static final Set<String> APPLIED = ConcurrentHashMap.newKeySet();
+    private static final Map<String, String> STOOD_DOWN = new ConcurrentHashMap<>();
     private static final Set<String> TARGETS = ConcurrentHashMap.newKeySet();
     private static final AtomicLong GENERATION = new AtomicLong();
     private static volatile boolean audited;
@@ -60,6 +61,16 @@ public final class MixinHealth {
 
     /** True once Mixin reported this mixin applied to a target without error. */
     public static boolean applied(String mixin) { return APPLIED.contains(mixin); }
+
+    /**
+     * True when this mixin was deliberately not applied because another mod
+     * owns its area, or the mod it patches is absent (ADR 0009). Not a failure:
+     * its feature has nothing to do in this session.
+     */
+    public static boolean stoodDown(String mixin) { return STOOD_DOWN.containsKey(mixin); }
+
+    /** Mixin name to why it stood down, sorted by mixin name. */
+    public static Map<String, String> standDowns() { return new java.util.TreeMap<>(STOOD_DOWN); }
 
     /** True after {@link MixinAudit} has resolved every mixin one way or the other. */
     public static boolean audited() { return audited; }
@@ -91,6 +102,10 @@ public final class MixinHealth {
         }
     }
 
+    static void noteStoodDown(String mixin, String reason) {
+        if (STOOD_DOWN.put(mixin, reason) == null) GENERATION.incrementAndGet();
+    }
+
     static void noteFailure(String mixin, String target, Cause cause, String detail) {
         Failure next = new Failure(mixin, target, cause, detail == null ? "" : detail);
         Failure prev = FAILURES.put(mixin, next);
@@ -103,6 +118,7 @@ public final class MixinHealth {
     static void resetForTests() {
         FAILURES.clear();
         APPLIED.clear();
+        STOOD_DOWN.clear();
         TARGETS.clear();
         audited = false;
         GENERATION.incrementAndGet();

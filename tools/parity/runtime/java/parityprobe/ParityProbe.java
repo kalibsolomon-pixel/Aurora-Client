@@ -22,6 +22,8 @@ import java.nio.file.Path;
 /** API-driven visual/input acceptance in a marked disposable fixture only. */
 public final class ParityProbe implements ClientModInitializer {
     private Path root;
+    /** System.nanoTime() of the last "reload" command while its overlay is up; 0 otherwise. */
+    private long reloadStarted;
     @Override public void onInitializeClient() {
         root = Path.of(System.getProperty("aurora.parity.probe"));
         if (!Files.isRegularFile(root.resolve("DISPOSABLE.txt"))) throw new IllegalStateException("Disposable fixture required");
@@ -37,6 +39,11 @@ public final class ParityProbe implements ClientModInitializer {
                         button.onPress(new KeyEvent(InputConstants.KEY_RETURN, 0, 0));
                         break;
                     }
+                }
+                if (reloadStarted != 0 && NativeUi.overlay(client) == null) {
+                    System.out.println("[parity-probe] reload overlay cleared after "
+                            + (System.nanoTime() - reloadStarted) / 1_000_000 + " ms");
+                    reloadStarted = 0;
                 }
                 var command = root.resolve("command.txt");
                 if (!Files.exists(command)) return;
@@ -150,6 +157,41 @@ public final class ParityProbe implements ClientModInitializer {
                 config.keystrokesExtraKeys = new java.util.ArrayList<>(java.util.List.of(stored));
             }
             case "menu" -> client.disconnect(new AuroraTitleScreen(), false);
+            case "settings-page" -> {
+                // Opens the Settings tab on the named page, as a search result does.
+                var screen = AuroraScreen.create();
+                NativeUi.setScreen(client, screen);
+                int page = -1;
+                var pages = FeatureRegistry.settingsPages();
+                for (int i = 0; i < pages.size(); i++) if (pages.get(i).label().equals(text.substring(14))) page = i;
+                if (page < 0) throw new IllegalArgumentException(text);
+                var category = AuroraScreen.class.getDeclaredMethod("selectCategory", int.class);
+                var select = AuroraScreen.class.getDeclaredMethod("selectSettingsPage", int.class);
+                category.setAccessible(true);
+                select.setAccessible(true);
+                category.invoke(screen, 1);
+                select.invoke(screen, page);
+            }
+            case "perf-loading" -> {
+                // ADR 0009 loading switches, checked on the live classes.
+                var tracker = new net.minecraft.client.multiplayer.LevelLoadTracker(500L);
+                var delay = net.minecraft.client.multiplayer.LevelLoadTracker.class.getDeclaredField("closeDelayMs");
+                delay.setAccessible(true);
+                long closeDelay = delay.getLong(tracker);
+                if ((closeDelay == 0L) != config.perfSkipLevelLoadDelay) throw new AssertionError("closeDelayMs=" + closeDelay);
+                var title = new net.minecraft.client.gui.screens.TitleScreen(true);
+                var fading = net.minecraft.client.gui.screens.TitleScreen.class.getDeclaredField("fading");
+                fading.setAccessible(true);
+                boolean fades = fading.getBoolean(title);
+                if (fades == config.perfHideTitleFade) throw new AssertionError("fading=" + fades);
+                if (!(client instanceof com.aurora.client.mixin.MinecraftProfileAccessor a) || !a.aurora$profileFuture().isDone())
+                    throw new AssertionError("profile accessor missing or profile still pending");
+                System.out.println("[parity-probe] perf-loading closeDelayMs=" + closeDelay + " titleFading=" + fades);
+            }
+            case "reload" -> {
+                reloadStarted = System.nanoTime();
+                client.reloadResourcePacks();
+            }
             default -> throw new IllegalArgumentException(text);
         }
         System.out.println("[parity-probe] " + text);

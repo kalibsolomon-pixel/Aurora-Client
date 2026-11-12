@@ -49,8 +49,17 @@ public final class AuroraMixinPlugin implements IMixinConfigPlugin {
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
         String name = MixinHealth.shortName(mixinClassName);
-        if (!disabled.contains(name)) return true;
-        MixinHealth.noteFailure(name, targetClassName, MixinHealth.Cause.DISABLED_BY_OPTION, "");
+        if (disabled.contains(name)) {
+            MixinHealth.noteFailure(name, targetClassName, MixinHealth.Cause.DISABLED_BY_OPTION, "");
+            return false;
+        }
+        // ADR 0009: an optimization yields to a mod that owns its area, and a
+        // patch into another mod applies only when that mod is installed.
+        var binding = com.aurora.client.feature.FeatureCatalog.mixin(name);
+        String reason = binding == null ? null
+                : binding.standDownReason(net.fabricmc.loader.api.FabricLoader.getInstance()::isModLoaded);
+        if (reason == null) return true;
+        MixinHealth.noteStoodDown(name, reason);
         return false;
     }
 

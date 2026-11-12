@@ -1524,6 +1524,25 @@ addWithSettings("hitbox",
                         "lowLatencyRender", "disableVSync", "adaptiveRenderSleeping",
                         "inputSamplingDecoupled", "serverListDragReorder"));
 
+        // Client optimizations Aurora owns (ADR 0009). Only the switches
+        // with a visible trade-off have rows; the rest are config-only
+        // perf* gates that ship on.
+        FeatureSetting hideReloadOverlay = new BooleanSetting("Hide Reload Overlay",
+                () -> cfg.perfHideReloadOverlay, v -> cfg.perfHideReloadOverlay = v)
+                .description("When resources reload after startup (F3+T, changing resource packs or the language), the current screen stays visible instead of fading to the Mojang loading screen, and the game continues as soon as the reload finishes. The first load at startup still shows its progress bar.");
+        FeatureSetting hideTitleFade = new BooleanSetting("Hide Title Fade",
+                () -> cfg.perfHideTitleFade, v -> cfg.perfHideTitleFade = v)
+                .description("The vanilla title screen shows its buttons and logo at once instead of fading them in over two seconds. Aurora's own title screen has no fade, so this only matters with Custom Title off.");
+        addWithSettings("performance",
+                "Loading, caching and drawing optimizations. Most are always on; the switches here are the ones you might notice.",
+                () -> cfg.perfHideReloadOverlay || cfg.perfHideTitleFade,
+                v -> {
+                    cfg.perfHideReloadOverlay = v;
+                    cfg.perfHideTitleFade = v;
+                },
+                List.of(hideReloadOverlay, hideTitleFade),
+                List.of("perf"));
+
         // ============ SETTINGS TAB PAGES ============
         // The Settings tab shows one page at a time, chosen from the row of
         // sub-tabs at its top. A page is a list of entries; each entry is a
@@ -1554,6 +1573,8 @@ addWithSettings("hitbox",
                 () -> SearchTolerance.of(cfg.searchTypoTolerance), v -> { cfg.searchTypoTolerance = v.ordinal(); AuroraConfig.save(); },
                 SearchTolerance::label)
                 .description("How many typos a search word can have and still find a match. Exact only finds exact matches; short words always need to be exact.");
+        SETTINGS_PAGES.add(new SettingsPage("Performance", List.of(
+                group("loading", "Loading", hideReloadOverlay, hideTitleFade))));
         SETTINGS_PAGES.add(new SettingsPage("General", List.of(
                 group("search", "Search", searchInstant, searchTolerance),
                 settingsEntry("custom_title"),

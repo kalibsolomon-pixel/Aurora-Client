@@ -74,6 +74,13 @@ read current config fields; health enforcement holds broken features off for the
 session without overwriting saved values. Mixins remain fail-soft and accessors
 are guarded. See [FAIR_PLAY](FAIR_PLAY.md) and [ADR 0004](adr/0004-fail-soft-mixins-and-single-feature-registry.md).
 
+A binding can also depend on other mods (ADR 0009). `yieldsTo` names mods that
+own the same area, and `requires` names the mod a patch targets. `AuroraMixinPlugin`
+does not apply the mixin when a yielded-to mod is loaded or the required mod is
+missing, and records it in `MixinHealth.standDowns()`. A stood-down mixin is not a
+failure: its gates are not held off, its feature reports no issue, and the startup
+log and diagnostics report say "applied or stood down" and list the reasons.
+
 Persistence uses ordered atomic writes. Profiles reset absent scoped fields to
 defaults and run migrations independently. A profile also stores its icon, hotkey
 and the game's own key bindings; the core reads and applies those through the

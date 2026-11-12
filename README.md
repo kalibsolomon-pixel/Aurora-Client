@@ -1,6 +1,6 @@
 # Aurora Client
 
-Aurora Client is a client-side Fabric mod with 38 quality-of-life, PvP and
+Aurora Client is a client-side Fabric mod with 39 quality-of-life, PvP and
 performance features, a themed GUI and optional glass. It works in any
 Fabric-compatible launcher and has no telemetry or paid cosmetics. See the
 [feature and fair-play catalog](docs/FAIR_PLAY.md).

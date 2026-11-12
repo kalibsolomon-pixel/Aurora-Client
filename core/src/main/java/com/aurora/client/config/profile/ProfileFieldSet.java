@@ -60,6 +60,9 @@ public final class ProfileFieldSet {
             "searchTypoTolerance"
     );
 
+    /** Prefix of the performance fields (ADR 0009), all kept out of profiles. */
+    public static final String PERFORMANCE_PREFIX = "perf";
+
     private ProfileFieldSet() {}
 
     /**
@@ -67,6 +70,7 @@ public final class ProfileFieldSet {
      *         captured into / restored from a profile.
      */
     public static boolean isProfileScoped(String fieldName) {
-        return !EXCLUDED.contains(fieldName);
+        // Performance switches (ADR 0009) describe the machine, not a loadout.
+        return !EXCLUDED.contains(fieldName) && !fieldName.startsWith(PERFORMANCE_PREFIX);
     }
 }

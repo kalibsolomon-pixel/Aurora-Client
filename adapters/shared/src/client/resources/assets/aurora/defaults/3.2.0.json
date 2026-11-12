@@ -11,6 +11,10 @@
   "textHudShadow": "OFF",
   "searchInstant": true,
   "searchTypoTolerance": 2,
+  "perfHideReloadOverlay": true,
+  "perfHideTitleFade": true,
+  "perfSkipLevelLoadDelay": true,
+  "perfNoProfileWait": true,
   "themeEnabled": true,
   "theme": {
     "mode": "DARK",

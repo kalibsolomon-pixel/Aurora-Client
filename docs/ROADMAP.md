@@ -12,7 +12,8 @@ and current evidence is summarized in [STATUS](STATUS.md).
 | 5 | Extract ports and make the version adapter own all mixins, glass and Fabric calls | Complete and released on 26.3, PR #13; acceptance evidence recorded |
 | 5.5 | One-source parity restructure: 26.1 and 26.2 adapters under the PR #13 layout, per-line release builds (ADR 0008) | Complete; [acceptance](port/step-5.5.md) |
 | 6 | Shader-drawn shapes behind RenderUtil, measured against current caches | Merged, PR #21; [evidence](reports/2026-11-11-step-6-baseline.md) |
-| 7 | Apollo restrictions, friends/status, NeoForge if requested, limited vanilla optimizations | Deferred in that order |
+| 7 | Apollo restrictions, friends/status, NeoForge if requested | Deferred in that order |
+| 8 | Client optimizations Aurora owns: loading, CPU, textures, maps, world render and Sodium patches, then measured Vulkan and occlusion prototypes ([ADR 0009](adr/0009-client-optimizations-aurora-owns.md)) | In progress; stacked PRs from `feat/perf-foundation` |
 
 The owner explicitly authorized step 5 before publication. The newest port
 shipped as 3.3.0, satisfying the feature-freeze condition. Work continues in
@@ -39,8 +40,8 @@ and [immutable-release procedure](RELEASE_PROCESS.md) for every line it ships.
 
 Apollo support only honors server restrictions and requires licensing/detection
 research first. Social is friends and online status without chat or telemetry;
-it remains optional. NeoForge requires demand. Vanilla optimizations must meet
-the three rules in ADR 0005. No competing renderer is planned.
+it remains optional. NeoForge requires demand. Client optimizations follow ADR 0009 (step 8). No
+competing renderer is planned.
 
 Better Hitreg's author-permission provenance and HitColor's missing repository
 LICENSE remain upstream follow-ups. The current notices reproduce the licenses

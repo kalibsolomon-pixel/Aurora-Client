@@ -135,7 +135,10 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
         addRenderableWidget(IconButton.glyph(quit.x(), quit.y(), quit.width(), Component.translatable("menu.quit"),
                 () -> com.aurora.client.screen.IconCatalog.glyph("power_settings_new"), () -> this.minecraft.stop()));
 
-        skin = this.minecraft.getSkinManager().createLookup(this.minecraft.getGameProfile(), false);
+        // Without blocking on the session server (ADR 0009): until the profile
+        // arrives the model shows the session's default skin, then rebuilds.
+        skin = this.minecraft.getSkinManager().createLookup(com.aurora.client.util.ProfileWait.gameProfile(this.minecraft,
+                () -> { if (NativeUi.screen(this.minecraft) == this) rebuildWidgets(); }), false);
         var model = composition.model();
         if (model.width() > 0) {
             PlayerSkinWidget figure = new PlayerSkinWidget(model.width(), model.height(), this.minecraft.getEntityModels(), skin);

@@ -435,6 +435,21 @@ public class AuroraConfig {
     public boolean lowLatencyRender = true;
     public boolean disableVSync = false;
 
+    // ---- Performance (ADR 0009) ----
+    // Client optimizations Aurora owns. Every field is a mixin gate named
+    // perf*, so resetByPrefix("perf") resets the section and profiles leave
+    // them alone (ProfileFieldSet). Only the ones with a visible trade-off
+    // have a row on the Settings tab's Performance page; the rest are
+    // config-only switches for diagnosis.
+    /** Resource reloads after startup keep the current screen instead of the Mojang overlay. */
+    public boolean perfHideReloadOverlay = true;
+    /** The vanilla title screen's widgets appear at once instead of fading in. */
+    public boolean perfHideTitleFade = true;
+    /** The level loading screen closes when the level is ready, without vanilla's extra half second. */
+    public boolean perfSkipLevelLoadDelay = true;
+    /** Startup screens are built without waiting for the session server's profile. */
+    public boolean perfNoProfileWait = true;
+
     // ---- Late-Stage Responsive Features ----
     public boolean adaptiveRenderSleeping = false;
     public boolean fixHeldItemSeams = true;
