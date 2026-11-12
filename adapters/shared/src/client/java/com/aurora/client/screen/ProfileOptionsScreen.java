@@ -1,7 +1,7 @@
 package com.aurora.client.screen;
 
+import com.aurora.client.config.profile.ProfileHotkey;
 import com.aurora.client.config.profile.ProfileManager;
-import com.aurora.client.screen.setting.KeybindSetting;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.component.Button;
@@ -49,6 +49,7 @@ public class ProfileOptionsScreen extends Screen implements ThemedScreen {
     private ButtonWidget hotkeyBtn;
     private ButtonWidget deleteBtn;
     private boolean listening;
+    private final ProfileHotkey.Capture capture = new ProfileHotkey.Capture();
     private boolean deleteArmed;
 
     public ProfileOptionsScreen(Screen parent, String name) {
@@ -80,9 +81,10 @@ public class ProfileOptionsScreen extends Screen implements ThemedScreen {
 
         hotkeyBtn = this.addRenderableWidget(ButtonWidget.semantic(fieldX, hotkeyRowY, fieldW, ROW_H,
                 Component.literal(hotkeyLabel()),
-                "Sets the key that switches to this profile in game. Esc or Backspace clears it.",
+                "Sets the key that switches to this profile in game. Hold Ctrl, Shift or Alt first for a combination. Esc or Backspace clears it.",
                 () -> {
                     listening = !listening;
+                    capture.reset();
                     hotkeyBtn.setMessage(Component.literal(hotkeyLabel()));
                 }).glassBackground(true));
 
@@ -108,9 +110,8 @@ public class ProfileOptionsScreen extends Screen implements ThemedScreen {
     }
 
     private String hotkeyLabel() {
-        if (listening) return "Press a key…";
-        int key = ProfileManager.getInstance().hotkey(name);
-        return key < 0 ? "None" : KeybindSetting.keyName(key);
+        if (listening) return ProfileManagerScreen.captureLabel(capture.pending());
+        return ProfileManagerScreen.hotkeyName(ProfileManager.getInstance().binding(name));
     }
 
     private void openIconPicker() {
@@ -182,11 +183,9 @@ public class ProfileOptionsScreen extends Screen implements ThemedScreen {
     public boolean keyPressed(KeyEvent event) {
         int key = event.key();
         if (listening) {
-            listening = false;
             boolean clear = key == InputConstants.KEY_ESCAPE || key == InputConstants.KEY_BACKSPACE;
-            ProfileManager.getInstance().setHotkey(name,
-                    clear ? AuroraKey.UNBOUND : com.aurora.client.adapter.NativeKeyboard.toStored(key));
-            hotkeyBtn.setMessage(Component.literal(hotkeyLabel()));
+            finishCapture(capture.press(clear ? AuroraKey.UNBOUND
+                    : com.aurora.client.adapter.NativeKeyboard.toStored(key), clear));
             return true;
         }
         if (nameField != null && nameField.isFocused()
@@ -199,11 +198,31 @@ public class ProfileOptionsScreen extends Screen implements ThemedScreen {
     }
 
     @Override
+    public boolean keyReleased(KeyEvent event) {
+        // A modifier released before a second key binds the modifier itself.
+        if (listening) {
+            finishCapture(capture.release(com.aurora.client.adapter.NativeKeyboard.toStored(event.key())));
+            return true;
+        }
+        return super.keyReleased(event);
+    }
+
+    /** Applies a finished capture, or refreshes the "Ctrl + …" label while it waits (null). */
+    private void finishCapture(ProfileHotkey done) {
+        if (done != null) {
+            listening = false;
+            ProfileManager.getInstance().setHotkey(name, done);
+        }
+        hotkeyBtn.setMessage(Component.literal(hotkeyLabel()));
+    }
+
+    @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         // Waiting for a key: a click cancels instead (the Keybind setting's rule),
         // unless it lands on the hotkey button, whose own press toggles it off.
         if (listening && !hotkeyBtn.isMouseOver(event.x(), event.y())) {
             listening = false;
+            capture.reset();
             hotkeyBtn.setMessage(Component.literal(hotkeyLabel()));
             return true;
         }

@@ -578,7 +578,7 @@ A profile is a full snapshot of almost every setting: feature on/offs, all value
 - **New profile**: the first card; opens an inline name field, Enter or Create to create, Esc to cancel. `{profile:create}`
 - **Profile cards**: icon, name and hotkey; the active card has the thin selected edge. Click a card to switch to it. `{profile:switch}`
   - **Rename**: inline, on the name. `{profile:rename}`
-  - **Hotkey chip**: click, then press the key that switches to this profile in game; Esc or Backspace clears it. One key belongs to one profile. `{profile:hotkey}`
+  - **Hotkey chip**: click, then press the key that switches to this profile in game; Esc or Backspace clears it. Hold Ctrl, Shift or Alt first and the chip waits for a second key ("Ctrl + P"); releasing the modifier alone binds just that key. A combo fires only with exactly its modifiers held, so P and Ctrl + P can switch to different profiles. One binding belongs to one profile. `{profile:hotkey}`
   - **Settings glyph**: opens Profile options. `{profile:options}`
 - *Profile options* `{ui:profileOptions}`
   - **Change icon**: opens the icon browser, every Material Symbols icon with search. `{profile:icon}`

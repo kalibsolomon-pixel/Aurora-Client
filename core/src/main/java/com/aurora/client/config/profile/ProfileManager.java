@@ -81,7 +81,7 @@ public class ProfileManager {
     private List<String> cachedNames = null;
 
     /** Cached name → hotkey for profiles that have one; invalidated with {@link #cachedNames}. */
-    private Map<String, Integer> cachedHotkeys = null;
+    private Map<String, ProfileHotkey> cachedHotkeys = null;
 
     /** Vanilla key bindings bridge, installed by the adapter; null in tests and before init. */
     private volatile ControlsBridge controlsBridge;
@@ -199,20 +199,25 @@ public class ProfileManager {
         return p == null || p.icon == null ? "" : p.icon;
     }
 
-    /** The profile's hotkey (stored keyboard code), or -1. */
+    /** The profile's hotkey key (stored keyboard code), or -1. */
     public int hotkey(String name) {
-        Integer key = hotkeys().get(name);
-        return key == null ? -1 : key;
+        return binding(name).key();
     }
 
-    /** Every profile with a hotkey: name → stored keyboard code. Cached; read every tick by the hotkey poller. */
-    public Map<String, Integer> hotkeys() {
-        Map<String, Integer> cache = cachedHotkeys;
+    /** The profile's hotkey with its modifiers, or {@link ProfileHotkey#NONE}. */
+    public ProfileHotkey binding(String name) {
+        ProfileHotkey key = hotkeys().get(name);
+        return key == null ? ProfileHotkey.NONE : key;
+    }
+
+    /** Every profile with a hotkey: name → binding. Cached; read every tick by the hotkey poller. */
+    public Map<String, ProfileHotkey> hotkeys() {
+        Map<String, ProfileHotkey> cache = cachedHotkeys;
         if (cache != null) return cache;
-        Map<String, Integer> out = new LinkedHashMap<>();
+        Map<String, ProfileHotkey> out = new LinkedHashMap<>();
         for (String n : listProfileNames()) {
             Profile p = readProfileFile(n);
-            if (p != null && p.hotkey >= 0) out.put(n, p.hotkey);
+            if (p != null && p.hotkey >= 0) out.put(n, new ProfileHotkey(p.hotkey, p.hotkeyModifiers));
         }
         cache = Collections.unmodifiableMap(out);
         cachedHotkeys = cache;
@@ -228,27 +233,36 @@ public class ProfileManager {
         return true;
     }
 
+    /** {@link #setHotkey(String, ProfileHotkey)} for a plain key; -1 clears it. */
+    public boolean setHotkey(String name, int key) {
+        return setHotkey(name, new ProfileHotkey(key, 0));
+    }
+
     /**
-     * Sets the profile's hotkey; -1 clears it. A key belongs to one profile
-     * at a time, so any other profile holding it loses it.
+     * Sets the profile's hotkey; {@link ProfileHotkey#NONE} clears it. A
+     * binding (key and modifiers) belongs to one profile at a time, so any
+     * other profile holding the same one loses it; Ctrl + P and P can sit on
+     * different profiles.
      *
      * @return false if the profile is missing.
      */
-    public boolean setHotkey(String name, int key) {
+    public boolean setHotkey(String name, ProfileHotkey binding) {
         Profile p = readProfileFile(name);
         if (p == null) return false;
-        if (key >= 0) {
-            for (Map.Entry<String, Integer> e : hotkeys().entrySet()) {
-                if (e.getValue() == key && !e.getKey().equals(name)) {
+        if (binding.bound()) {
+            for (Map.Entry<String, ProfileHotkey> e : hotkeys().entrySet()) {
+                if (e.getValue().equals(binding) && !e.getKey().equals(name)) {
                     Profile other = readProfileFile(e.getKey());
                     if (other != null) {
                         other.hotkey = -1;
+                        other.hotkeyModifiers = 0;
                         writeProfileFile(other);
                     }
                 }
             }
         }
-        p.hotkey = key < 0 ? -1 : key;
+        p.hotkey = binding.key();
+        p.hotkeyModifiers = binding.modifiers();
         writeProfileFile(p);
         cachedHotkeys = null;
         return true;
@@ -328,6 +342,7 @@ public class ProfileManager {
         src.name = newName;
         src.createdAtMs = System.currentTimeMillis();
         src.hotkey = -1; // one key, one profile
+        src.hotkeyModifiers = 0;
         writeProfileFile(src);
         invalidateCache();
         return true;
@@ -380,6 +395,7 @@ public class ProfileManager {
         if (existing != null) {
             fresh.icon = existing.icon == null ? "" : existing.icon;
             fresh.hotkey = existing.hotkey;
+            fresh.hotkeyModifiers = existing.hotkeyModifiers;
         }
     }
 
