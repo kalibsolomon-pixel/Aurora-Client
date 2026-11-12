@@ -24,16 +24,36 @@ public final class AuroraKey {
     private AuroraKey() {}
 
     /**
-     * Live held-state for an SDL scancode, suppressed while any
-     * native screen is open so Aurora
-     * keybinds don't fire while the user is typing in chat, navigating
-     * menus, or interacting with the Aurora settings UI itself.
+     * Live held-state for a binding ({@link KeyCombo}: a key, optionally with
+     * Ctrl / Shift / Alt), suppressed while any native screen is open so
+     * Aurora keybinds don't fire while the user is typing in chat, navigating
+     * menus, or interacting with the Aurora settings UI itself. A combo needs
+     * its modifiers held, and a plain key gives way only to a combo on the
+     * same key that matches what is held (most specific wins).
      * {@code false} for {@link #UNBOUND}.
      */
-    public static boolean isDown(int scancodeKey) {
-        if (scancodeKey == UNBOUND) return false;
+    public static boolean isDown(int binding) {
+        if (binding == UNBOUND) return false;
         if (suppressed()) return false;
-        return isDownRaw(scancodeKey);
+        return isDownRaw(binding);
+    }
+
+    /**
+     * Physical state of one key, with no combo rules — for display keys such
+     * as Keystrokes' extra keys, which show the key itself, not a binding.
+     */
+    public static boolean isKeyDown(int scancode) {
+        if (scancode == UNBOUND || suppressed()) return false;
+        return input.isDown(KeyCombo.key(scancode));
+    }
+
+    /** The modifiers physically held now ({@link KeyCombo#CTRL} and so on), screens aside. */
+    public static int heldModifiers() {
+        int held = 0;
+        for (int key : KeyCombo.MODIFIER_KEYS) {
+            if (input.isDown(key)) held |= KeyCombo.modifierOf(key);
+        }
+        return held;
     }
 
     /**
@@ -42,9 +62,10 @@ public final class AuroraKey {
      * key state across screen transitions and avoid spurious edge fires
      * when a screen closes with the key still held.
      */
-    private static boolean isDownRaw(int scancodeKey) {
-        if (scancodeKey == UNBOUND) return false;
-        return input.isDown(scancodeKey);
+    private static boolean isDownRaw(int binding) {
+        if (binding == UNBOUND) return false;
+        if (!input.isDown(KeyCombo.key(binding))) return false;
+        return KeyCombo.resolves(binding, heldModifiers());
     }
 
     /** True when any GUI/screen is open — Aurora keybinds suppress here. */
@@ -63,7 +84,7 @@ public final class AuroraKey {
     public static final class EdgeDetector {
         private boolean wasDown = false;
 
-        /** Polls and returns true exactly once per press, in-game only. */
+        /** Polls a binding and returns true exactly once per press, in-game only. */
         public boolean justPressed(int scancodeKey) {
             boolean rawDown = isDownRaw(scancodeKey);
             boolean edge = rawDown && !wasDown && !suppressed();

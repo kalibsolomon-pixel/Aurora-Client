@@ -65,6 +65,8 @@
     "ItemStackRenderStateAccessor",
     "ItemLayerQuadsAccessor",
     "ScreenPanoramaAccessor",
+    "KeyMappingComboMixin",
+    "KeyBindsScreenComboMixin",
     "hitreg.ArmorMixin",
     "hitreg.AttackMixin",
     "hitreg.ChunkMixin",

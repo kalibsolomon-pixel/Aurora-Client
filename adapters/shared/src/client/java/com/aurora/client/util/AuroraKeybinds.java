@@ -42,6 +42,12 @@ import java.util.function.IntSupplier;
  * register every Aurora binding under {@link #CATEGORY}, with the
  * "Aurora Client" display string supplied by
  * {@code assets/aurora/lang/en_us.json}.
+ *
+ * <h2>Combos</h2>
+ * A config value is a {@link KeyCombo} binding (key plus Ctrl / Shift /
+ * Alt). The {@link KeyMapping} holds the plain key and the modifiers ride on
+ * it through {@link KeyComboHolder}, so both sides compare whole bindings and
+ * a combo set in either UI syncs like a plain key.
  */
 public final class AuroraKeybinds {
 
@@ -71,6 +77,8 @@ public final class AuroraKeybinds {
     }
 
     private static final List<Entry> ENTRIES = new ArrayList<>();
+    /** Minecraft's own mappings get their saved modifiers once, after options.txt has loaded. */
+    private static boolean vanillaModifiersLoaded;
 
     /** Toggle-style mapping actions consume queued presses so taps between client
      * ticks are retained. Call even while a screen is open to discard stale input. */
@@ -124,6 +132,10 @@ public final class AuroraKeybinds {
      * branch-only.
      */
     public static void tick() {
+        if (!vanillaModifiersLoaded) {
+            vanillaModifiersLoaded = true;
+            VanillaKeyCombos.load();
+        }
         boolean anyMappingChange = false;
         boolean pushedFromConfig = false;
         for (Entry e : ENTRIES) {
@@ -162,30 +174,27 @@ public final class AuroraKeybinds {
             var mc = net.minecraft.client.Minecraft.getInstance();
             if (mc != null && mc.options != null) mc.options.save();
         }
+        // Every live binding, so a plain key can tell when a combo on it outranks it.
+        VanillaKeyCombos.rebuildRegistry(com.aurora.client.config.profile.ProfileManager.getInstance().hotkeys());
     }
 
     /**
-     * Returns the SDL key code currently bound to {@code mapping},
-     * or {@link AuroraKey#UNBOUND} if it's unbound.
+     * Returns the binding currently on {@code mapping} — its SDL key code
+     * with the mapping's modifiers ({@link KeyCombo}) — or
+     * {@link AuroraKey#UNBOUND} if it's unbound. Mouse buttons have no
+     * representation in Aurora today and also read as unbound.
      */
     private static int currentScancode(KeyMapping mapping) {
-        InputConstants.Key key = KeyMappingHelper.getBoundKeyOf(mapping);
-        if (key == null || key.equals(InputConstants.UNKNOWN)) return AuroraKey.UNBOUND;
-        if (key.getType() != com.aurora.client.adapter.NativeKeyboard.type()) {
-            // Mouse buttons or scancodes — Aurora has no representation
-            // for those today, treat as unbound for sync purposes so we
-            // don't clobber the config with -1 incorrectly. Returning
-            // lastSeen would also work but this is simplest.
-            return AuroraKey.UNBOUND;
-        }
-        return com.aurora.client.adapter.NativeKeyboard.toStored(key.getValue());
+        return VanillaKeyCombos.binding(mapping);
     }
 
-    /** Pushes a SDL int into the underlying {@link KeyMapping}. */
-    private static void applyToMapping(KeyMapping mapping, int scancode) {
+    /** Pushes a binding into the underlying {@link KeyMapping}: the plain key, then the modifiers. */
+    private static void applyToMapping(KeyMapping mapping, int binding) {
+        int scancode = KeyCombo.key(binding);
         InputConstants.Key key = (scancode == AuroraKey.UNBOUND)
                 ? InputConstants.UNKNOWN
                 : com.aurora.client.adapter.NativeKeyboard.key(scancode);
         mapping.setKey(key);
+        VanillaKeyCombos.setModifiers(mapping, KeyCombo.modifiers(binding));
     }
 }

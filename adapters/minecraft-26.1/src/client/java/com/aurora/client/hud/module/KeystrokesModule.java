@@ -294,7 +294,7 @@ public class KeystrokesModule extends HudModule {
                 int i = r * EXTRA_COLS + c;
                 if (i >= extraCount) break;
                 Integer boxed = extra.get(i);
-                advance(SLOT_EXTRA0 + i, boxed != null && AuroraKey.isDown(boxed), now);
+                advance(SLOT_EXTRA0 + i, boxed != null && AuroraKey.isKeyDown(boxed), now); // the physical key, not a binding
                 drawKey(ctx, font, x + c * (CELL + GAP), cy, CELL, CELL,
                         SLOT_EXTRA0 + i, accent, labelColor);
             }
@@ -509,7 +509,7 @@ public class KeystrokesModule extends HudModule {
                 int i = slot - SLOT_EXTRA0;
                 if (i < 0 || i >= extraCount || extra == null) yield false;
                 Integer boxed = extra.get(i);
-                yield boxed != null && AuroraKey.isDown(boxed);
+                yield boxed != null && AuroraKey.isKeyDown(boxed);
             }
         };
     }

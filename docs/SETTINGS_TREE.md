@@ -593,6 +593,8 @@ A profile is a full snapshot of almost every setting: feature on/offs, all value
 
 All are also listed in vanilla Options → Controls under Aurora. Defaults are for a fresh install.
 
+**Combos (2026-11-12).** Every keybind — Aurora's, Minecraft's own in Options → Controls, and profile hotkeys — can be a single key or a combo of Ctrl, Shift and/or Alt with a key. While a binding waits for a key, holding a modifier shows "Ctrl + …" and waits for the second key; releasing the modifier alone binds just that key; Esc still clears. The most specific binding wins: a plain key keeps working while an unrelated modifier is held (zoom on C while sprinting with Ctrl), and gives way only to a combo on the same key whose modifiers are all held (C vs Ctrl + C). options.txt keeps Minecraft's plain key; Aurora saves the modifiers (`vanillaKeyModifiers`), so removing Aurora leaves working plain bindings. Fn cannot be used: the keyboard handles it and the game never sees it.
+
 | Key | Default | Where set |
 |---|---|---|
 | Zoom (hold) `{zoomKey}` | C | Zoom |

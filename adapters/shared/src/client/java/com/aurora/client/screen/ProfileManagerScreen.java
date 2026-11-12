@@ -1,7 +1,6 @@
 package com.aurora.client.screen;
 import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.ui.component.MaterialSurface;
-import com.aurora.client.config.profile.ProfileHotkey;
 import com.aurora.client.config.profile.ProfileManager;
 import com.aurora.client.screen.setting.FeatureSetting;
 import com.aurora.client.screen.setting.KeybindSetting;
@@ -87,7 +86,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
     /** The profile whose hotkey chip is waiting for a key, or null. */
     private String capturingHotkey;
     /** Modifiers held so far while capturing: Ctrl, Shift or Alt alone waits for a second key. */
-    private final ProfileHotkey.Capture capture = new ProfileHotkey.Capture();
+    private final com.aurora.client.util.KeyCombo.Capture capture = new com.aurora.client.util.KeyCombo.Capture();
 
     /**
      * Per-card semantic controls (Phase A rollout), keyed by profile NAME,
@@ -447,9 +446,9 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         boolean chipHot = pointerIn(mouseX, mouseY, chipX, chipY, chipW, BTN_H);
         MaterialSurface.selection(ctx, chipX, chipY, chipW, BTN_H, radius, capturing || hotkey.isFocused(),
                 chipHot ? 1f : 0f);
-        ProfileHotkey binding = manager.binding(name);
-        String label = capturing ? captureLabel(capture.pending()) : binding.bound() ? keyName(binding) : "None";
-        int textCol = ThemeManager.color(capturing || binding.bound() ? ThemeToken.ON_BACKGROUND : ThemeToken.ON_BACKGROUND_MUTED);
+        int binding = manager.hotkey(name);
+        String label = capturing ? captureLabel(capture.pending()) : binding >= 0 ? keyName(binding) : "None";
+        int textCol = ThemeManager.color(capturing || binding >= 0 ? ThemeToken.ON_BACKGROUND : ThemeToken.ON_BACKGROUND_MUTED);
         String fitted = AuroraFontRenderer.ellipsize(this.font, label, chipW - 20, 0);
         int contentW = 12 + this.font.width(fitted);
         int cx = chipX + (chipW - contentW) / 2;
@@ -462,18 +461,18 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         }
     }
 
-    private String keyName(ProfileHotkey binding) {
-        return keyNames.computeIfAbsent(binding.key() | binding.modifiers() << 16, k -> hotkeyName(binding));
+    private String keyName(int binding) {
+        return keyNames.computeIfAbsent(binding, ProfileManagerScreen::hotkeyName);
     }
 
-    /** "Ctrl + P": the modifiers, then the key's display name. */
-    static String hotkeyName(ProfileHotkey binding) {
-        return binding.bound() ? ProfileHotkey.modifierPrefix(binding.modifiers()) + KeybindSetting.keyName(binding.key()) : "None";
+    /** "Ctrl + P": the modifiers, then the key's display name; "None" when unbound. */
+    static String hotkeyName(int binding) {
+        return binding >= 0 ? KeybindSetting.keyName(binding) : "None";
     }
 
     /** The chip while capturing: "Press a key…", or "Ctrl + …" once a modifier is held. */
     static String captureLabel(int pendingModifiers) {
-        return pendingModifiers == 0 ? "Press a key…" : ProfileHotkey.modifierPrefix(pendingModifiers) + "…";
+        return com.aurora.client.util.KeyCombo.captureLabel(pendingModifiers, "Press a key…");
     }
 
     private void stopCapture() {
@@ -481,11 +480,11 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         capture.reset();
     }
 
-    /** Applies a finished capture ({@link ProfileHotkey#NONE} clears) and says so. */
-    private void commitCapture(String name, ProfileHotkey binding) {
+    /** Applies a finished capture (-1 clears) and says so. */
+    private void commitCapture(String name, int binding) {
         stopCapture();
         if (ProfileManager.getInstance().setHotkey(name, binding)) {
-            flash(binding.bound() ? keyName(binding) + " switches to " + name : "Cleared the hotkey for " + name);
+            flash(binding >= 0 ? keyName(binding) + " switches to " + name : "Cleared the hotkey for " + name);
         }
     }
 
@@ -519,7 +518,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
                     Component.literal("Hotkey for " + k),
                     () -> Component.literal("Sets the key that switches to this profile in game."),
                     () -> {
-                        return Component.literal(hotkeyName(ProfileManager.getInstance().binding(k)));
+                        return Component.literal(hotkeyName(ProfileManager.getInstance().hotkey(k)));
                     },
                     () -> true,
                     () -> {
@@ -779,7 +778,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         // Shift or Alt held waits for a second key (owner request 2026-11-12).
         if (capturingHotkey != null) {
             boolean clear = key == InputConstants.KEY_ESCAPE || key == InputConstants.KEY_BACKSPACE;
-            ProfileHotkey done = capture.press(clear ? AuroraKey.UNBOUND
+            Integer done = capture.press(clear ? AuroraKey.UNBOUND
                     : com.aurora.client.adapter.NativeKeyboard.toStored(key), clear);
             if (done != null) commitCapture(capturingHotkey, done);
             return true;
@@ -816,7 +815,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
     public boolean keyReleased(net.minecraft.client.input.KeyEvent _kev) {
         // A modifier released before a second key binds the modifier itself.
         if (capturingHotkey != null) {
-            ProfileHotkey done = capture.release(com.aurora.client.adapter.NativeKeyboard.toStored(_kev.key()));
+            Integer done = capture.release(com.aurora.client.adapter.NativeKeyboard.toStored(_kev.key()));
             if (done != null) commitCapture(capturingHotkey, done);
             return true;
         }

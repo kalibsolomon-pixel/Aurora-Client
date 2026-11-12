@@ -1,6 +1,5 @@
 package com.aurora.client.screen;
 
-import com.aurora.client.config.profile.ProfileHotkey;
 import com.aurora.client.config.profile.ProfileManager;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
@@ -49,7 +48,7 @@ public class ProfileOptionsScreen extends Screen implements ThemedScreen {
     private ButtonWidget hotkeyBtn;
     private ButtonWidget deleteBtn;
     private boolean listening;
-    private final ProfileHotkey.Capture capture = new ProfileHotkey.Capture();
+    private final com.aurora.client.util.KeyCombo.Capture capture = new com.aurora.client.util.KeyCombo.Capture();
     private boolean deleteArmed;
 
     public ProfileOptionsScreen(Screen parent, String name) {
@@ -111,7 +110,7 @@ public class ProfileOptionsScreen extends Screen implements ThemedScreen {
 
     private String hotkeyLabel() {
         if (listening) return ProfileManagerScreen.captureLabel(capture.pending());
-        return ProfileManagerScreen.hotkeyName(ProfileManager.getInstance().binding(name));
+        return ProfileManagerScreen.hotkeyName(ProfileManager.getInstance().hotkey(name));
     }
 
     private void openIconPicker() {
@@ -208,7 +207,7 @@ public class ProfileOptionsScreen extends Screen implements ThemedScreen {
     }
 
     /** Applies a finished capture, or refreshes the "Ctrl + …" label while it waits (null). */
-    private void finishCapture(ProfileHotkey done) {
+    private void finishCapture(Integer done) {
         if (done != null) {
             listening = false;
             ProfileManager.getInstance().setHotkey(name, done);

@@ -43,7 +43,7 @@ Package names span core, ports, shared adapter and selected native adapter, so s
 - A new field that changes behaviour for existing installs needs a migrator (pattern: `ThemeMigrator`, `PlayerHealthMigrator`), run on `aurora.json` and on every profile applied. Profiles snapshot every profile-scoped field and reset absent ones to defaults.
 - Per-feature reset is `AuroraConfig.resetByPrefix`; field names must share the feature's camelCase prefix or list their prefixes explicitly.
 - Saves go through `AtomicJsonWriter` (async, atomic, ordered). Never block the tick thread on disk.
-- Keyboard bindings store SDL scancode identifiers on every line. `NativeKeyboard`/`NativePorts` translate on GLFW hosts. `KeybindMigrator` converts legacy GLFW values independently for config and imported profiles; keep its profile-scoped format marker. The core stores literals and never imports SDL.
+- Keyboard bindings store SDL scancode identifiers on every line, with Ctrl/Shift/Alt in bits 16–18 of the same int (`KeyCombo`); decode with `KeyCombo.key`/`modifiers` before any native key lookup. `NativeKeyboard`/`NativePorts` translate on GLFW hosts. `KeybindMigrator` converts legacy GLFW values independently for config and imported profiles; keep its profile-scoped format marker. The core stores literals and never imports SDL.
 - Binding an Aurora key by editing `aurora.json` alone does not stick: the vanilla binding in `options.txt` must change too.
 - `feature/FeatureCatalog` is the one list of features and of the mixins each needs. Adding a feature: a catalog entry, a `FeatureRegistry` entry and a mixin binding for each new mixin. `FeatureCatalogTest` checks they agree.
 

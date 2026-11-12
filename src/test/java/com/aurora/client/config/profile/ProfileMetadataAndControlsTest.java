@@ -2,6 +2,7 @@ package com.aurora.client.config.profile;
 
 import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.config.ConfigDirectory;
+import com.aurora.client.util.KeyCombo;
 import com.google.gson.Gson;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.io.TempDir;
@@ -64,58 +65,26 @@ class ProfileMetadataAndControlsTest {
     }
 
     @Test void combosAreTheirOwnBindingsAndSurviveSaves() throws Exception {
-        // Owner request 2026-11-12: Ctrl / Shift / Alt + a key.
+        // Owner request 2026-11-12: Ctrl / Shift / Alt + a key, one int (KeyCombo).
         var manager = ProfileManager.getInstance();
         String plain = unique("plain"), combo = unique("combo");
+        int ctrlShiftP = KeyCombo.of(19, KeyCombo.CTRL | KeyCombo.SHIFT);
         assertTrue(manager.create(plain));
         assertTrue(manager.create(combo));
-        assertTrue(manager.setHotkey(plain, new ProfileHotkey(19, 0)));
-        assertTrue(manager.setHotkey(combo, new ProfileHotkey(19, ProfileHotkey.CTRL | ProfileHotkey.SHIFT)));
-        assertEquals(new ProfileHotkey(19, 0), manager.binding(plain), "P and Ctrl + Shift + P sit on different profiles");
-        assertEquals(new ProfileHotkey(19, ProfileHotkey.CTRL | ProfileHotkey.SHIFT), manager.binding(combo));
+        assertTrue(manager.setHotkey(plain, 19));
+        assertTrue(manager.setHotkey(combo, ctrlShiftP));
+        assertEquals(19, manager.hotkey(plain), "P and Ctrl + Shift + P sit on different profiles");
+        assertEquals(ctrlShiftP, manager.hotkey(combo));
         assertTrue(manager.switchTo(combo));
         manager.saveCurrentBlocking();
         Profile disk = GSON.fromJson(Files.readString(temporary.resolve("profiles/" + combo + ".json")), Profile.class);
-        assertEquals(19, disk.hotkey);
-        assertEquals(ProfileHotkey.CTRL | ProfileHotkey.SHIFT, disk.hotkeyModifiers, "a settings save keeps the modifiers");
-        assertTrue(manager.setHotkey(plain, new ProfileHotkey(19, ProfileHotkey.CTRL | ProfileHotkey.SHIFT)));
-        assertEquals(ProfileHotkey.NONE, manager.binding(combo), "the same combo moves, as a plain key does");
+        assertEquals(ctrlShiftP, disk.hotkey, "a settings save keeps the combo");
+        assertTrue(manager.setHotkey(plain, ctrlShiftP));
+        assertEquals(-1, manager.hotkey(combo), "the same combo moves, as a plain key does");
         assertTrue(manager.switchTo("default"));
         Profile old = GSON.fromJson("{\"name\":\"old\",\"hotkey\":30}", Profile.class);
-        assertEquals(0, old.hotkeyModifiers, "files from before combos read as plain keys");
-    }
-
-    @Test void captureWaitsAfterAModifierAndMatchingIsExact() {
-        var capture = new ProfileHotkey.Capture();
-        int lctrl = KeybindMigratorBridge.glfwToStored(341), lshift = KeybindMigratorBridge.glfwToStored(340);
-        assertEquals(ProfileHotkey.CTRL, ProfileHotkey.modifierOf(lctrl), "GLFW hosts store Left Ctrl as the SDL modifier");
-        assertEquals(ProfileHotkey.SHIFT, ProfileHotkey.modifierOf(lshift));
-        assertEquals(ProfileHotkey.ALT, ProfileHotkey.modifierOf(KeybindMigratorBridge.glfwToStored(346)), "Right Alt too");
-        assertNull(capture.press(lctrl, false), "Ctrl alone waits for another key");
-        assertEquals(ProfileHotkey.CTRL, capture.pending());
-        assertNull(capture.press(lshift, false));
-        assertEquals(new ProfileHotkey(19, ProfileHotkey.CTRL | ProfileHotkey.SHIFT), capture.press(19, false));
-        assertEquals(0, capture.pending(), "a finished capture starts over");
-        assertNull(capture.press(lshift, false));
-        assertEquals(new ProfileHotkey(lshift, 0), capture.release(lshift), "Shift released alone binds Shift");
-        assertNull(capture.press(lctrl, false));
-        assertEquals(ProfileHotkey.NONE, capture.press(-1, true), "Esc or Backspace still clears");
-        assertNull(capture.release(19), "releasing an ordinary key changes nothing");
-
-        var combo = new ProfileHotkey(19, ProfileHotkey.CTRL);
-        assertTrue(combo.matches(ProfileHotkey.CTRL));
-        assertFalse(combo.matches(0), "P alone does not fire Ctrl + P");
-        assertFalse(combo.matches(ProfileHotkey.CTRL | ProfileHotkey.SHIFT), "nor does Ctrl + Shift + P");
-        assertFalse(new ProfileHotkey(19, 0).matches(ProfileHotkey.CTRL), "and P does not fire on Ctrl + P");
-        assertTrue(new ProfileHotkey(lshift, 0).matches(ProfileHotkey.SHIFT), "a bound modifier ignores its own bit");
-        assertEquals("Ctrl + Shift + ", ProfileHotkey.modifierPrefix(ProfileHotkey.SHIFT | ProfileHotkey.CTRL));
-        assertFalse(new ProfileHotkey(-1, ProfileHotkey.ALT).bound());
-        assertEquals(0, new ProfileHotkey(-1, ProfileHotkey.ALT).modifiers(), "an unbound key carries no modifiers");
-    }
-
-    /** The 26.1 / 26.2 adapters store {@code KeybindMigrator.fromGlfw(key)}. */
-    private static final class KeybindMigratorBridge {
-        static int glfwToStored(int glfw) { return com.aurora.client.config.KeybindMigrator.fromGlfw(glfw); }
+        assertEquals(30, KeyCombo.key(old.hotkey));
+        assertEquals(0, KeyCombo.modifiers(old.hotkey), "files from before combos read as plain keys");
     }
 
     @Test void oneKeyBelongsToOneProfileAndDuplicatesStartWithout() {
@@ -130,7 +99,7 @@ class ProfileMetadataAndControlsTest {
         String copy = unique("copy");
         assertTrue(manager.duplicate(b, copy));
         assertEquals(-1, manager.hotkey(copy), "a duplicate does not share the key");
-        assertEquals(new ProfileHotkey(44, 0), manager.hotkeys().get(b));
+        assertEquals(44, manager.hotkeys().get(b));
         assertTrue(manager.setHotkey(b, -1));
         assertFalse(manager.hotkeys().containsKey(b));
     }

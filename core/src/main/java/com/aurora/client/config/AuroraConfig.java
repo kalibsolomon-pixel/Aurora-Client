@@ -141,6 +141,16 @@ public class AuroraConfig {
      */
     public boolean profilesOwnControls = true;
 
+    /**
+     * Ctrl / Shift / Alt on Minecraft's own key bindings ({@code KeyCombo}
+     * bits, by binding name; owner request 2026-11-12). options.txt keeps the
+     * plain key, so removing Aurora leaves working plain bindings. Aurora's
+     * own keys keep their modifiers in their int fields instead. Global:
+     * profiles carry the game's bindings in their controls map
+     * ({@code ProfileFieldSet.EXCLUDED}).
+     */
+    public Map<String, Integer> vanillaKeyModifiers = new HashMap<>();
+
     // ---- General ----
     public boolean customTitleScreen = true;
     /** Global viewing preference, retained across screens, restarts and profile switches. */

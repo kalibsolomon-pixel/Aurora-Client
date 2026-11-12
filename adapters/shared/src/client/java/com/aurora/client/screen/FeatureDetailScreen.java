@@ -729,6 +729,13 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
     }
 
     @Override
+    public boolean keyReleased(net.minecraft.client.input.KeyEvent _kev) {
+        // A keybind combo's modifier released alone binds that key (KeyCombo).
+        if (FeatureSetting.routeKeyRelease(_kev)) return true;
+        return super.keyReleased(_kev);
+    }
+
+    @Override
     public boolean keyPressed(net.minecraft.client.input.KeyEvent _kev) {
         FeatureSetting focused = FeatureSetting.getFocused();
         if (focused != null && focused.onKeyPress(_kev)) return true;
