@@ -54,8 +54,12 @@ class TitleScreenContractTest {
     }
 
     @Test void accountCardOnlyShowsTheSignedInAccountAndNeverTheNetwork() {
-        assertTrue(SCREEN.contains("this.minecraft.getSkinManager().createLookup(this.minecraft.getGameProfile(), false)"),
+        assertTrue(SCREEN.contains("this.minecraft.getSkinManager().createLookup(com.aurora.client.util.ProfileWait.gameProfile(this.minecraft,"),
                 "the skin comes through Minecraft's own lookup");
+        // ADR 0009: the profile is the fetched one or the signed-in session's, never another account's.
+        String wait = com.aurora.client.SourceTree.read("util/ProfileWait.java");
+        assertTrue(wait.contains("return mc.getGameProfile();"));
+        assertTrue(wait.contains("return new GameProfile(mc.getUser().getProfileId(), mc.getUser().getName());"));
         for (String banned : new String[]{"ServerStatusPinger", "ServerList", "HttpClient", "URLConnection", "getAccessToken", "Session"}) {
             assertFalse(SCREEN.contains(banned), banned);
         }

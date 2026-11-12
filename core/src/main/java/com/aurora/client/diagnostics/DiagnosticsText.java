@@ -52,12 +52,15 @@ public final class DiagnosticsText {
     private static void appendHealth(StringBuilder out) {
         int total = FeatureCatalog.mixins().size();
         List<MixinHealth.Failure> failures = MixinHealth.failures();
+        var standDowns = MixinHealth.standDowns();
         if (failures.isEmpty()) {
             out.append(MixinHealth.audited()
-                    ? "\nAll " + total + " Aurora mixins applied.\n"
+                    ? "\n" + com.aurora.client.health.MixinAudit.summary(total, standDowns.size()) + "\n"
                     : "\nNo Aurora mixin has failed so far (startup check not finished).\n");
+            appendStandDowns(out, standDowns);
             return;
         }
+        appendStandDowns(out, standDowns);
         List<String> features = FeatureHealth.affectedFeatures();
         out.append("\nFeatures not fully working (").append(features.size()).append(")\n");
         for (String id : features) {
@@ -74,6 +77,12 @@ public final class DiagnosticsText {
             if (!f.detail().isEmpty()) out.append(" - ").append(f.detail());
             out.append('\n');
         }
+    }
+
+    private static void appendStandDowns(StringBuilder out, java.util.Map<String, String> standDowns) {
+        if (standDowns.isEmpty()) return;
+        out.append("\nMixins standing down (").append(standDowns.size()).append(")\n");
+        for (var e : standDowns.entrySet()) out.append("- ").append(e.getKey()).append(": ").append(e.getValue()).append('\n');
     }
 
     private static void appendBenchmark(StringBuilder out, Environment env, FrameBenchmark.Stats stats) {

@@ -76,8 +76,23 @@ public final class FeatureCatalog {
      * @param gates    boolean {@code AuroraConfig} fields that are forced off
      *                 for the session when the mixin is not working, so the
      *                 rest of the feature does not run half-attached
+     * @param yieldsTo mod ids that own the same area: when one is loaded the
+     *                 mixin is not applied and stands down (ADR 0009)
+     * @param requires mod id the mixin patches into; without it the mixin is
+     *                 not applied and stands down; empty for vanilla targets
      */
-    public record MixinBinding(String mixin, String provides, List<String> features, List<String> gates) {}
+    public record MixinBinding(String mixin, String provides, List<String> features, List<String> gates,
+                               List<String> yieldsTo, String requires) {
+        /**
+         * Why this mixin should not be applied, or null when it should.
+         * {@code loaded} answers whether a mod id is installed.
+         */
+        public String standDownReason(java.util.function.Predicate<String> loaded) {
+            if (!requires.isEmpty() && !loaded.test(requires)) return "only patches " + requires + ", which is not installed";
+            for (String mod : yieldsTo) if (loaded.test(mod)) return "handled by " + mod;
+            return null;
+        }
+    }
 
     private static final Map<String, Feature> FEATURES = new LinkedHashMap<>();
     private static final Map<String, MixinBinding> MIXINS = new LinkedHashMap<>();
@@ -150,16 +165,34 @@ public final class FeatureCatalog {
         FEATURES.put(id, new Feature(f.id(), f.name(), f.summary(), f.tab(), fairPlay, note, List.of(offByDefault)));
     }
 
-    /** Starts a binding; chain {@link Binding#gates} when the mixin has config gates. */
+    /**
+     * Starts a binding; chain {@link Binding#gates} when the mixin has config
+     * gates, and {@link Binding#yieldsTo} or {@link Binding#requires} when
+     * whether it applies depends on another mod (ADR 0009).
+     */
     private static Binding mixin(String name, String provides, String... features) {
-        Binding b = new Binding(name, provides, List.of(features));
-        MIXINS.put(name, new MixinBinding(name, provides, b.features, List.of()));
+        Binding b = new Binding(name);
+        MIXINS.put(name, new MixinBinding(name, provides, List.of(features), List.of(), List.of(), ""));
         return b;
     }
 
-    private record Binding(String name, String provides, List<String> features) {
-        void gates(String... gates) {
-            MIXINS.put(name, new MixinBinding(name, provides, features, List.of(gates)));
+    private record Binding(String name) {
+        Binding gates(String... gates) {
+            MixinBinding m = MIXINS.get(name);
+            MIXINS.put(name, new MixinBinding(name, m.provides(), m.features(), List.of(gates), m.yieldsTo(), m.requires()));
+            return this;
+        }
+
+        Binding yieldsTo(String... mods) {
+            MixinBinding m = MIXINS.get(name);
+            MIXINS.put(name, new MixinBinding(name, m.provides(), m.features(), m.gates(), List.of(mods), m.requires()));
+            return this;
+        }
+
+        Binding requires(String mod) {
+            MixinBinding m = MIXINS.get(name);
+            MIXINS.put(name, new MixinBinding(name, m.provides(), m.features(), m.gates(), m.yieldsTo(), mod));
+            return this;
         }
     }
 
@@ -209,6 +242,10 @@ public final class FeatureCatalog {
         // (FeatureRegistry.settingsPages, 2026-11-12). It stays one feature
         // for fair play, mixin health and its reset prefixes.
         setting("miscellaneous", "Display Settings");
+        // Client optimizations Aurora owns (ADR 0009). Most have no row of
+        // their own; the Settings tab's Performance page shows the few with
+        // a visible trade-off.
+        setting("performance", "Performance");
 
         // ---- Fair play (ADR 0007). docs/FAIR_PLAY.md repeats these lines. ----
         classify("zoom", FairPlay.VANILLA_INFORMATION, "Narrows the field of view while a key is held, as the vanilla spyglass does.");
@@ -252,6 +289,7 @@ public final class FeatureCatalog {
         classify("text_fonts", FairPlay.COSMETIC, "Changes the font.");
         classify("theme", FairPlay.COSMETIC, "Changes the colors of Aurora's own screens.");
         classify("interface", FairPlay.COSMETIC, "Limits the frame rate of Aurora's own screens.");
+        classify("performance", FairPlay.LOCAL_TIMING, "Caches, skips or reschedules work your own client does to load, draw and play sound. A new singleplayer world's loading screen closes half a second sooner; what is sent to a multiplayer server, and when, is unchanged.");
 
         // ---- Mixins, in aurora.mixins.json order ----
         mixin("WindowMixin", "nothing (kept empty for compatibility)");
@@ -333,6 +371,12 @@ public final class FeatureCatalog {
         mixin("ScreenPanoramaAccessor", "blurred glass over the menu panorama");
         mixin("KeyMappingComboMixin", "Ctrl, Shift and Alt combos on key bindings");
         mixin("KeyBindsScreenComboMixin", "Ctrl, Shift and Alt combos in the Controls screen");
+        // ---- Performance (ADR 0009) ----
+        mixin("LoadingOverlayMixin", "hiding the resource reload overlay", "performance").gates("perfHideReloadOverlay");
+        mixin("TitleScreenFadeMixin", "skipping the title screen fade", "performance").gates("perfHideTitleFade");
+        mixin("LevelLoadTrackerMixin", "skipping the level loading delay", "performance").gates("perfSkipLevelLoadDelay");
+        mixin("MinecraftProfileAccessor", "startup without waiting for the profile", "performance").gates("perfNoProfileWait");
+        mixin("InitialScreensProfileMixin", "startup without waiting for the profile", "performance").gates("perfNoProfileWait");
         for (String hitreg : List.of("ArmorMixin", "AttackMixin", "ChunkMixin", "DamageMixin", "EntityAccessor",
                 "GlowMixin", "NetworkMixin", "ParticleMixin", "PlayerMixin", "RenderMixin", "ServerMixin",
                 "SoundMixin", "SourceMixin")) {

@@ -37,15 +37,17 @@ public final class MixinAudit {
         }
         for (FeatureCatalog.MixinBinding binding : FeatureCatalog.mixins()) {
             String name = binding.mixin();
-            if (MixinHealth.applied(name) || MixinHealth.failed(name)) continue;
+            if (MixinHealth.applied(name) || MixinHealth.failed(name) || MixinHealth.stoodDown(name)) continue;
             MixinHealth.noteFailure(name, null, MixinHealth.Cause.NOT_APPLIED,
                     "its target class did not load or does not exist on this version");
         }
         MixinHealth.markAudited();
 
         var failures = MixinHealth.failures();
+        var standDowns = MixinHealth.standDowns();
+        for (var e : standDowns.entrySet()) LOGGER.info("  {} stood down: {}", e.getKey(), e.getValue());
         if (failures.isEmpty()) {
-            LOGGER.info("All {} Aurora mixins applied.", FeatureCatalog.mixins().size());
+            LOGGER.info(summary(FeatureCatalog.mixins().size(), standDowns.size()));
             return;
         }
         LOGGER.warn("{} of {} Aurora mixins are not working; the game continues without them:",
@@ -56,5 +58,16 @@ public final class MixinAudit {
         for (String feature : FeatureHealth.affectedFeatures()) {
             LOGGER.warn("  {}: {}", feature, FeatureHealth.noteFor(feature));
         }
+    }
+
+    /**
+     * The healthy-startup line in the log and the diagnostics report. Tools
+     * (parity acceptance, matrix summaries) match its "All N Aurora mixins
+     * applied" prefix.
+     */
+    public static String summary(int total, int stoodDown) {
+        return stoodDown == 0
+                ? "All " + total + " Aurora mixins applied."
+                : "All " + total + " Aurora mixins applied or stood down (" + stoodDown + " stood down).";
     }
 }

@@ -1,6 +1,6 @@
 # Aurora Client: contributor and agent guide
 
-Aurora (`com.aurora.client`, mod id `aurora`) is a client-side Fabric mod for Minecraft 26.1.2, 26.2 and 26.3: 38 quality-of-life, PvP and performance features (listed in `docs/FAIR_PLAY.md`) inside a themed GUI with a glass material. MIT licensed; code, fonts and libraries from other projects are listed in `THIRD_PARTY_NOTICES.md`.
+Aurora (`com.aurora.client`, mod id `aurora`) is a client-side Fabric mod for Minecraft 26.1.2, 26.2 and 26.3: 39 quality-of-life, PvP and performance features (listed in `docs/FAIR_PLAY.md`) inside a themed GUI with a glass material. MIT licensed; code, fonts and libraries from other projects are listed in `THIRD_PARTY_NOTICES.md`.
 
 This guide is short on purpose. The full engineering history it replaced, including every investigation and the reasoning behind each rule below, is in [docs/history/AGENTS-2026-11-11.md](docs/history/AGENTS-2026-11-11.md). Older code comments and reports that cite "AGENTS.md §N" mean a section of that file.
 
@@ -59,10 +59,11 @@ Package names span core, ports, shared adapter and selected native adapter, so s
 - No custom packets, plugin channels, tick-rate changes or new outbound sends. `FeatureCatalogTest` scans for them.
 - Better Hitreg's timing core (`hitreg/`, `mixin/hitreg/`) is Jass's code kept verbatim. Read `hitreg/BetterHitreg.java` before touching it.
 
-### Performance (ADR 0005)
+### Performance (ADR 0005, ADR 0009)
 
 - Register every HUD, world-render and tick callback through `diagnostics/Timed` so its time counts toward the overhead budget.
 - The budget: Aurora CPU per frame at most 0.25 ms mean and 0.40 ms p95, no glass and at most 100 UI fills per frame, in a world with factory defaults. `tools/overhead_check.py` is a release step. See [docs/OVERHEAD_BUDGET.md](docs/OVERHEAD_BUDGET.md).
+- Client optimizations (ADR 0009) belong to the `performance` feature, are gated by a `perf*` field (a machine setting: kept out of profiles and out of `defaults/3.2.0.json`, so its initializer is the default) and ship only with a measured gain. A vanilla optimization names the mods that own its area with `.yieldsTo(...)` in `FeatureCatalog`; a patch into another mod uses `.requires(...)`. `AuroraMixinPlugin` then skips it and diagnostics list it as stood down, not failed.
 - Before calling a UI or feature change complete, check whether it could scale badly: per-frame allocations, widget-cache reconciliation, anything O(n²) on a list that can grow. Reconcile against a `Set`, fetch lists once per frame, memoize text fitting.
 - Count shape-fill volume, not only complexity: 1.21.11 records each `GuiGraphics.fill` against everything recorded before it, so tens of thousands of fills per frame cost frame rate. Static per-row shapes belong in a template raster (`UiLayerCache.blitAt`). Measure with `RenderUtil.fillsSubmitted()`.
 

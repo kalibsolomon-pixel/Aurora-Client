@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: partially superseded by ADR 0009 (scope paragraph and rule 2); the overhead budget stands
 date: 2026-11-10
 ---
 

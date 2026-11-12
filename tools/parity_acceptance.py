@@ -105,7 +105,7 @@ def record(root, logs):
         expected_backend = 'VULKAN' if backend == 'VULKANMOD' else backend
         if not reported or expected_backend not in reported[1].strip().upper():
             raise ValueError(f'Wrong actual renderer: {mc}/{backend}/{name}')
-        healthy = f'All {count} Aurora mixins applied.' in text and 'Features not fully working' not in text
+        healthy = re.search(rf'All {count} Aurora mixins applied(?:\.| or stood down)', text) is not None and 'Features not fully working' not in text
         clean = not re.search(r'^\[[^\n]+\] \[[^\n]+/(?:ERROR|WARN)\] \((?:Aurora|aurora[^)]*)\)', text, re.M)
         rows.append(dict(minecraft=mc, backend=backend, set=name, exitCode=result['exitCode'],
                          healthy=healthy, clean=clean, mixins=count, logSha256=hashlib.sha256(log.read_bytes()).hexdigest(),

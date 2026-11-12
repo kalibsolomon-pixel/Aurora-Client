@@ -16,7 +16,7 @@ the adapter. Root Gradle commands and the native UI pipeline are preserved.
 
 Step 5.5 adds the 26.1 and 26.2 adapters to this tree, with 188 shared
 Minecraft-facing implementations and common assets. Version-specific rendering,
-mixins and input stay in native adapters. One shared registry owns all 38
+mixins and input stay in native adapters. One shared registry owns all 39
 features. `python tools/parity.py` builds/tests all three lines; each output is
 isolated under `build/minecraft-<version>/libs/`.
 
@@ -85,6 +85,16 @@ features are included in this restructure. Apollo licensing/detection needs
 verification before implementation. Better Hitreg author-permission provenance
 and HitColor's missing repository LICENSE remain documented follow-ups; existing
 notices follow the published upstream licenses and are not new permission claims.
+
+## Step 8: client optimizations (in progress)
+
+[ADR 0009](adr/0009-client-optimizations-aurora-owns.md) supersedes ADR 0005's scope rule: measured
+optimizations ship on by default under the `performance` feature, stand down for mods that
+own their area, and only the ones with a visible trade-off get a row on Settings → Performance.
+PR 1 (`feat/perf-foundation`) adds the stand-down mechanism and four loading optimizations;
+[evidence](reports/2026-11-12-perf-loading.md). Later stacked PRs cover per-frame CPU work,
+textures, Aurora's maps, world rendering with Sodium patches, and measured Vulkan and
+occlusion prototypes.
 
 ## Next work
 
