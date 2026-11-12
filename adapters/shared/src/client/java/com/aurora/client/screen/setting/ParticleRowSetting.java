@@ -1,94 +1,75 @@
 package com.aurora.client.screen.setting;
 
-import com.mojang.blaze3d.platform.InputConstants;
 import com.aurora.client.config.AuroraConfig;
+import com.aurora.client.screen.FeatureDetailScreen;
+import com.aurora.client.screen.FeatureMetadata;
+import com.aurora.client.theme.ThemeManager;
+import com.aurora.client.theme.ThemeToken;
+import com.aurora.client.ui.component.MaterialSurface;
+import com.aurora.client.ui.component.ToggleSwitch;
+import com.aurora.client.ui.interaction.MinecraftSemanticFeedback;
+import com.aurora.client.ui.interaction.SemanticAction;
 import com.aurora.client.ui.interaction.SemanticActionControl;
-import com.aurora.client.util.AuroraTheme;
+import com.aurora.client.ui.util.AuroraFontRenderer;
+import com.aurora.client.ui.util.MaterialIconRenderer;
+import com.aurora.client.ui.util.RenderUtil;
+import com.aurora.client.ui.util.UiDensity;
+import com.aurora.client.util.HoverAnim;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.network.chat.Component;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * Collapsible row for the per-particle controls list.
+ * One particle in the Particles list, drawn as a card (owner redesign
+ * 2026-11-12): the particle's name over a one-line summary of what is
+ * changed, an On/Off label with the visibility switch, and a chevron. The
+ * switch shows or hides the particle in place; anywhere else on the card
+ * opens the particle's own detail screen with its Visible, Scale and Color
+ * Overlay rows and a Reset that clears only this particle.
  *
- * <p>Header (always visible, {@value #HEADER_H} px tall): particle display
- * name on the left, "On 100%" / "Off" state summary on the right, plus a
- * Material disclosure chevron indicating expand/collapse state. Click
- * anywhere on the header to toggle.
- *
- * <p>Phase C-4 rollout: the disclosure is a stateful disclosure icon
- * action — the whole header is the action's pointer target (exactly the
- * zone that always toggled), the chevron is the Material
- * {@code expand_more}/{@code expand_less} pair flipping with the state
- * (the ASCII "v"/">" stand-ins are gone), hover animates the glyph, and
- * Tab/Enter/Space toggle through the same semantic action exactly once.
- * Narration carries the row label ("Toggle <particle>") plus the
- * Expanded/Collapsed state; the glyph is presentation only.
- *
- * <p>Body (only when expanded): an embedded {@link BooleanSetting} for
- * visibility, an embedded {@link SliderSetting} (0–1.5,
- * percent-formatted) for scale, and an embedded {@link ColorSetting}
- * for the ARGB color overlay tint. Mouse / drag / release events are
- * forwarded to the embedded settings at translated row offsets. Scroll
- * and key events route through the global {@link FeatureSetting#getFocused()}
- * mechanism so the screen sends them directly to the focused embedded
- * slider — no forwarding needed here.
+ * <p>Two semantic controls per card, in visual order: the card's navigation
+ * action (Enter/Space open the detail screen) and the switch (Enter/Space
+ * toggle it). Each owns its own pointer zone; the switch zone wins.
  */
 public class ParticleRowSetting extends FeatureSetting {
-    private static final int HEADER_H = 30;
-    /** Right-edge slot the disclosure glyph occupies (incl. breathing room). */
-    private static final int CHEV_SLOT = 16;
-    /** Material Symbols chevrons — the EnumSetting/ItemScale disclosure pair. */
-    private static final String CHEV_UP = "\uE5CE";    // expand_less
-    private static final String CHEV_DOWN = "\uE5CF";  // expand_more
+    /** Card height and the inset that aligns cards with the search field above them. */
+    private static final int CARD_H = 34, INSET = 12;
+    /** Right-edge slot for the chevron, and the gap before the switch. */
+    private static final int CHEV_SLOT = 18, GAP = 6;
+    /** Material expand_more, rotated a quarter turn to point right. */
+    private static final String CHEVRON = com.aurora.client.screen.FeatureIcons.get("_dropdown_expand_more");
+    private static final long HOVER_MS = 140L;
 
     private final String particleId;
     /** Package-private so {@link ParticleConfigSetting} can match against
      *  the raw registry id (e.g. {@code "minecraft:flame"}) in addition to
      *  the humanized display label. */
     String particleId() { return particleId; }
-    private final BooleanSetting toggleRow;
+
+    private final BooleanSetting visibleRow;
     private final SliderSetting scaleRow;
     private final ColorSetting colorRow;
-    private boolean expanded = false;
+    private final ToggleSwitch toggle;
+    private final SemanticActionControl openControl, toggleControl;
+    private final HoverAnim hover = HoverAnim.symmetric(HOVER_MS);
+    private FeatureMetadata detail;
 
-    /**
-     * The stateful disclosure action — one long-lived instance per row
-     * (rows are fixed-set and long-lived); the glyph supplier flips with
-     * {@link #expanded} while the instance — and with it the semantic
-     * control and keyboard focus — survives the toggle.
-     */
-    private final com.aurora.client.ui.component.IconAction disclosure;
-
-    private void toggleDisclosure() {
-        expanded = !expanded;
-        FeatureSetting.clearFocus();
-    }
+    /** Memoized summary line, rebuilt only when the particle's settings or the available width change. */
+    private long summaryKey = Long.MIN_VALUE;
+    private String summary = "";
+    private String fittedTitle = "", fittedSummary = "";
+    private int fittedWidth = -1;
+    private long fittedFont = Long.MIN_VALUE;
 
     public ParticleRowSetting(String particleId, String displayName) {
         super(displayName);
         this.particleId = particleId;
-        this.disclosure = new com.aurora.client.ui.component.IconAction(
-                () -> expanded ? CHEV_UP : CHEV_DOWN,
-                com.aurora.client.ui.interaction.SemanticAction.button(
-                        net.minecraft.network.chat.Component.literal("Toggle " + displayName),
-                        () -> net.minecraft.network.chat.Component.literal(
-                                "Shows or hides the visibility, scale, and color controls for the "
-                                        + displayName + " particle."),
-                        () -> net.minecraft.network.chat.Component.literal(
-                                expanded ? "Expanded" : "Collapsed"),
-                        () -> true,
-                        this::toggleDisclosure),
-                () -> AuroraTheme.IOS_SECONDARY_LABEL,
-                () -> AuroraTheme.IOS_LABEL);
-        this.toggleRow = new BooleanSetting("Visible",
-                () -> {
-                    Boolean v = AuroraConfig.get().particleVisibility.get(particleId);
-                    return v == null || v;
-                },
-                v -> {
-                    AuroraConfig.get().particleVisibility.put(particleId, v);
-                });
+        this.visibleRow = new BooleanSetting("Visible", this::visible, this::setVisible);
+        visibleRow.description("Shows or hides the " + displayName + " particle.");
         this.scaleRow = SliderSetting.of("Scale",
                 () -> {
                     Float s = AuroraConfig.get().particleScale.get(particleId);
@@ -96,6 +77,7 @@ public class ParticleRowSetting extends FeatureSetting {
                 },
                 v -> AuroraConfig.get().particleScale.put(particleId, (float) v),
                 0.0, 1.5).percent();
+        scaleRow.description("The " + displayName + " particle's size. 100% is vanilla.");
         ColorSetting color = new ColorSetting("Color Overlay",
                 () -> {
                     Integer c = AuroraConfig.get().particleColor.get(particleId);
@@ -113,124 +95,175 @@ public class ParticleRowSetting extends FeatureSetting {
                 });
         color.description("Tints this particle with the chosen color. The alpha channel controls tint strength — lower alpha gives a subtle wash, full alpha recolors it completely. Set alpha to 0 to clear the tint and use vanilla colors.");
         this.colorRow = color;
+
+        this.toggle = new ToggleSwitch(this::visible, this::setVisible);
+        this.openControl = new SemanticActionControl(SemanticAction.button(
+                Component.literal(displayName),
+                () -> Component.literal("Opens the " + displayName + " particle's settings."),
+                () -> Component.literal(summaryText()),
+                () -> true,
+                this::openDetail),
+                MinecraftSemanticFeedback.INSTANCE,
+                null, // no press animation — the screen transition is the feedback
+                SemanticActionControl.PointerRouting.MANUAL);
+        this.toggleControl = new SemanticActionControl(SemanticAction.button(
+                Component.literal(displayName + " visible"),
+                () -> Component.literal("Shows or hides the " + displayName + " particle."),
+                () -> Component.literal(visible() ? "On" : "Off"),
+                () -> true,
+                () -> {
+                    toggle.toggle();
+                    AuroraConfig.save();
+                }),
+                MinecraftSemanticFeedback.INSTANCE,
+                null,
+                SemanticActionControl.PointerRouting.MANUAL);
+    }
+
+    private boolean visible() {
+        Boolean v = AuroraConfig.get().particleVisibility.get(particleId);
+        return v == null || v;
+    }
+
+    private void setVisible(boolean v) {
+        AuroraConfig.get().particleVisibility.put(particleId, v);
+    }
+
+    /** The particle's own detail screen: Visible, Scale and Color Overlay, reset as one. */
+    private FeatureMetadata detail() {
+        if (detail == null) {
+            List<FeatureSetting> rows = new ArrayList<>(List.of(visibleRow, scaleRow, colorRow));
+            detail = new FeatureMetadata("particle." + particleId, label,
+                    "Visibility, size and tint of the " + label + " particle.",
+                    () -> true, v -> {}, rows)
+                    .subtitle("Particles")
+                    .resetWith(() -> {
+                        AuroraConfig cfg = AuroraConfig.get();
+                        cfg.particleVisibility.remove(particleId);
+                        cfg.particleScale.remove(particleId);
+                        cfg.particleColor.remove(particleId);
+                    });
+        }
+        return detail;
+    }
+
+    private void openDetail() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc == null) return;
+        FeatureSetting.clearFocus();
+        com.aurora.client.adapter.NativeUi.setScreen(mc,
+                new FeatureDetailScreen(com.aurora.client.adapter.NativeUi.screen(mc), detail()));
+    }
+
+    /** "Hidden", or what differs from vanilla ("Size 75% · Tinted"), or "Vanilla look". */
+    private String summaryText() {
+        AuroraConfig cfg = AuroraConfig.get();
+        boolean on = visible();
+        Float s = cfg.particleScale.get(particleId);
+        int pct = Math.round((s == null ? 1f : s) * 100f);
+        Integer c = cfg.particleColor.get(particleId);
+        int tint = c == null ? 0 : c;
+        long key = (on ? 1L : 0L) | ((long) (pct & 0xFFF) << 1) | ((long) tint << 13);
+        if (key != summaryKey) {
+            summaryKey = key;
+            if (!on) summary = "Hidden";
+            else if (pct == 100 && tint == 0) summary = "Vanilla look";
+            else if (tint == 0) summary = "Size " + pct + "%";
+            else if (pct == 100) summary = "Tinted";
+            else summary = "Size " + pct + "% · Tinted";
+            fittedWidth = -1;
+        }
+        return summary;
+    }
+
+    @Override public int baseHeight() { return CARD_H; }
+    @Override public int height() { return CARD_H; }
+
+    @Override
+    public List<SemanticActionControl> interactionControls() {
+        return List.of(openControl, toggleControl);
     }
 
     @Override
-    public int baseHeight() {
-        if (!expanded) return HEADER_H;
-        // Sum the embedded rows so the container grows when the color
-        // picker expands. Each sub-row reports its own live height.
-        return HEADER_H + toggleRow.height() + scaleRow.height() + colorRow.height();
-    }
-
-    /** No description on these rows — height equals base height. */
-    @Override
-    public int height() { return baseHeight(); }
-
-    /** The disclosure's semantic control (the row's one action). */
-    @Override
-    public SemanticActionControl interactionControl() {
-        return disclosure.interactionControl();
+    public void onInteractionAvailabilityChanged(boolean available) {
+        if (!available) toggle.focusedVisual(false);
     }
 
     @Override
     public void render(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {
         Font tr = Minecraft.getInstance().font;
-        int textY = y + (HEADER_H - tr.lineHeight) / 2;
+        float cx = x + INSET, cw = width - 2f * INSET, right = cx + cw;
+        float radius = ThemeManager.current().roundness().radiusSmall();
 
-        // Display name on the left.
-        ctx.text(tr, label, x + 12, textY, AuroraTheme.IOS_LABEL, false);
+        // Right cluster, right to left: chevron, switch, On/Off label.
+        float tw = UiDensity.TOGGLE_W, th = UiDensity.TOGGLE_H;
+        float tx = right - CHEV_SLOT - tw, ty = y + (CARD_H - th) / 2f;
+        String state = visible() ? "On" : "Off";
+        int stateX = Math.round(tx - GAP - tr.width(state));
+        int zoneX = stateX - 4, zoneR = Math.round(tx + tw + 4);
 
-        // State summary on the right, before the disclosure slot.
-        Boolean v = AuroraConfig.get().particleVisibility.get(particleId);
-        boolean on = v == null || v;
-        Float s = AuroraConfig.get().particleScale.get(particleId);
-        float scale = s == null ? 1.0f : s;
-        String summary = on ? Math.round(scale * 100f) + "%" : "Off";
-        int sumW = tr.width(summary);
-        int rightEdge = x + width - 12;
-        ctx.text(tr, summary, rightEdge - CHEV_SLOT - sumW, textY,
-                on ? AuroraTheme.IOS_SECONDARY_LABEL : AuroraTheme.IOS_TERTIARY_LABEL, false);
-
-        // Color swatch indicator between summary and disclosure, so the
-        // header hints at the configured tint even while collapsed.
-        Integer c = AuroraConfig.get().particleColor.get(particleId);
-        if (c != null && c != 0) {
-            int swatchX = rightEdge - CHEV_SLOT - sumW - 8 - 10;
-            int swatchY = textY + (tr.lineHeight - 8) / 2;
-            ctx.fill(swatchX, swatchY, swatchX + 10, swatchY + 8, c);
+        boolean overCard = mouseX >= cx && mouseX < right && mouseY >= y && mouseY < y + CARD_H;
+        float hoverT = hover.update(overCard);
+        MaterialSurface.selection(ctx, cx, y, cw, CARD_H, radius, false, hoverT);
+        // Disjoint zones: the open action owns the card left of the switch
+        // zone (the chevron still opens through mouseClicked), so a click on
+        // the switch never hands focus to the card.
+        openControl.setBounds((int) cx, y, Math.max(1, zoneX - (int) cx), CARD_H);
+        openControl.updatePointer(mouseX, mouseY);
+        toggleControl.setBounds(zoneX, y, zoneR - zoneX, CARD_H);
+        toggleControl.updatePointer(mouseX, mouseY);
+        if (openControl.isFocused()) {
+            RenderUtil.drawRoundedOutlineAA(ctx, cx, y, cw, CARD_H, radius, 1.0f,
+                    ThemeManager.withAlpha(MaterialSurface.color(ThemeToken.ACCENT), 0x99));
         }
 
-        // Disclosure action (C-4 rollout): the header is the pointer target;
-        // the Material chevron paints in the right-edge slot, hover-animated.
-        disclosure.syncChannels(x, y, width, HEADER_H, mouseX, mouseY);
-        disclosure.paintGlyph(ctx, tr, rightEdge - CHEV_SLOT, y + (HEADER_H - CHEV_SLOT) / 2,
-                CHEV_SLOT, CHEV_SLOT);
-
-        if (expanded) {
-            int subY = y + HEADER_H;
-            toggleRow.render(ctx, x, subY, width, mouseX, mouseY);
-            subY += toggleRow.height();
-            scaleRow.render(ctx, x, subY, width, mouseX, mouseY);
-            subY += scaleRow.height();
-            colorRow.render(ctx, x, subY, width, mouseX, mouseY);
+        // Title over summary, each fitted once per width/font/state change.
+        int textX = Math.round(cx) + 10, textW = Math.max(1, zoneX - 8 - textX);
+        String line = summaryText();
+        long font = ThemeManager.generation();
+        if (fittedWidth != textW || fittedFont != font) {
+            fittedWidth = textW;
+            fittedFont = font;
+            fittedTitle = AuroraFontRenderer.ellipsize(tr, label, textW, 1);
+            fittedSummary = AuroraFontRenderer.ellipsize(tr, line, textW, 1);
         }
+        ctx.text(tr, fittedTitle, textX, y + 7, MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
+        ctx.text(tr, fittedSummary, textX, y + 19, MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED), false);
+
+        ctx.text(tr, state, stateX, Math.round(y + (CARD_H - tr.lineHeight) / 2f + 1),
+                MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
+        toggle.layout(tx, ty, tw, th);
+        toggle.renderShapes(ctx, tx, ty, tw, th);
+        toggle.renderOverlay(ctx, tx, ty, tw, th, mouseX, mouseY);
+        toggle.focusedVisual(toggleControl.isFocused());
+
+        // Chevron: expand_more turned a quarter counter-clockwise to point right.
+        int chev = com.aurora.client.util.AuroraAnim.lerpArgb(
+                MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED),
+                MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), hoverT);
+        float chevX = right - CHEV_SLOT / 2f, chevY = y + CARD_H / 2f;
+        ctx.pose().pushMatrix();
+        ctx.pose().translate(chevX, chevY);
+        ctx.pose().rotate((float) (-Math.PI / 2));
+        MaterialIconRenderer.drawIcon(ctx, tr, CHEVRON, 0, 0, 12, chev);
+        ctx.pose().popMatrix();
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button, int rowX, int rowY, int rowWidth) {
-        // Header zone — toggle expand/collapse on left-click, through the
-        // disclosure action (exactly-once + the one click) when hosted; the
-        // shared toggle path beside it covers the pre-first-ask window.
-        if (mouseY < rowY + HEADER_H) {
-            if (button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT
-                    && mouseX >= rowX && mouseX < rowX + rowWidth
-                    && mouseY >= rowY) {
-                if (disclosure.clicked(mouseX, mouseY, button)) {
-                    return true;
-                }
-                toggleDisclosure();
-                return true;
+        if (button != com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) return false;
+        float cx = rowX + INSET, right = rowX + rowWidth - INSET;
+        if (mouseX < cx || mouseX >= right || mouseY < rowY || mouseY >= rowY + CARD_H) return false;
+        // The switch zone (its label through the switch) toggles; the rest of the card opens.
+        if (toggleControl.getWidth() > 0 && mouseX >= toggleControl.getX()
+                && mouseX < toggleControl.getX() + toggleControl.getWidth()) {
+            if (!toggleControl.activateFromPointer(mouseX, mouseY, button)) {
+                toggle.toggle();
+                AuroraConfig.save();
             }
-            return false;
-        }
-        if (!expanded) return false;
-
-        int subY = rowY + HEADER_H;
-        int toggleH = toggleRow.height();
-        if (mouseY < subY + toggleH) {
-            return toggleRow.mouseClicked(mouseX, mouseY, button, rowX, subY, rowWidth);
-        }
-        subY += toggleH;
-        int scaleH = scaleRow.height();
-        if (mouseY < subY + scaleH) {
-            return scaleRow.mouseClicked(mouseX, mouseY, button, rowX, subY, rowWidth);
-        }
-        subY += scaleH;
-        return colorRow.mouseClicked(mouseX, mouseY, button, rowX, subY, rowWidth);
-    }
-
-    @Override
-    public boolean mouseDragged(double mouseX, double mouseY, int button,
-                                double deltaX, double deltaY,
-                                int rowX, int rowY, int rowWidth) {
-        if (!expanded) return false;
-        // Forward to both drag-capable children unconditionally — each uses
-        // its own `dragging` flag (set on mouse-down) to decide whether to
-        // handle the event, so no Y-bounds check is needed. The owning
-        // screen passes rowY=0 for nested containers, making absolute
-        // bounds checks unreliable here.
-        if (scaleRow.mouseDragged(mouseX, mouseY, button, deltaX, deltaY, rowX, rowY + HEADER_H, rowWidth)) {
             return true;
         }
-        return colorRow.mouseDragged(mouseX, mouseY, button, deltaX, deltaY, rowX, rowY + HEADER_H, rowWidth);
-    }
-
-    @Override
-    public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        if (!expanded) return false;
-        if (toggleRow.mouseReleased(mouseX, mouseY, button)) return true;
-        if (scaleRow.mouseReleased(mouseX, mouseY, button)) return true;
-        return colorRow.mouseReleased(mouseX, mouseY, button);
+        if (!openControl.activateFromPointer(mouseX, mouseY, button)) openDetail();
+        return true;
     }
 }

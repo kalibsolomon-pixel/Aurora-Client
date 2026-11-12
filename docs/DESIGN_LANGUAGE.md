@@ -646,7 +646,11 @@ The following sections establish v3 expectations without inventing unresolved pi
 
 - **Purpose:** directly switch one persistent Boolean state.
 - **Material:** opaque token control by current convention; on state uses accent/selected
-  semantics. Track and thumb follow the Corner Radius through the capsule rule.
+  semantics. Track and thumb follow the Corner Radius through the capsule rule. The on track
+  wears the subtle automatic accent gradient (`AccentGradient`: a few degrees of hue either side
+  of the accent, lighter on the left), drawn as one shader quad; disabled stays flat. The ON
+  state has no outline (owner ruling 2026-11-12): the off track's hairline edge fades out as the
+  switch turns on, and keyboard focus is carried by the thumb growing slightly, not by a ring.
 - **States:** off/on must be unambiguous; hover, accepted press, focus, and disabled must each
   be defined. Disabled must not look like interactive rest.
 - **Input/accessibility:** clicking its associated row may toggle only when that enlarged hit
@@ -659,7 +663,8 @@ The following sections establish v3 expectations without inventing unresolved pi
 
 - **Purpose:** choose a value from a continuous or stepped range.
 - **Material:** opaque track and knob; accent fill communicates the chosen portion. Track and
-  knob follow the Corner Radius through the capsule rule.
+  knob follow the Corner Radius through the capsule rule. The accent fill wears the same subtle
+  gradient as the switch track.
 - **States:** rest, hover, dragging, focus, and disabled. Dragging remains visibly active when
   the pointer leaves the original knob bounds.
 - **Input/accessibility:** pointer drag; keyboard increments when focused; accessible label,

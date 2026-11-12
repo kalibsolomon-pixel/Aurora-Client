@@ -281,23 +281,28 @@ class IconActionRolloutTest {
                 "exactly one save, on the single removal path");
     }
 
-    // ---- Source pins: Particle disclosures ----
+    // ---- Source pins: Particle cards (owner redesign 2026-11-12) ----
 
     @Test
-    void particleDisclosuresUseTheMaterialGlyphPath() {
+    void particleCardsPairASwitchWithANavigationAction() {
         String s = src(PARTICLE_ROW);
-        assertFalse(s.contains("\"v\" : \">\""), "the ASCII disclosure is gone");
-        assertTrue(s.contains("() -> expanded ? CHEV_UP : CHEV_DOWN"),
-                "collapsed → collapsed glyph, expanded → expanded glyph");
-        assertTrue(s.contains("expanded ? \"Expanded\" : \"Collapsed\""),
-                "narration state agrees with the glyph");
-        assertTrue(s.contains("disclosure.syncChannels(x, y, width, HEADER_H, mouseX, mouseY)"),
-                "the header is the action's pointer target (the zone that always toggled)");
-        assertTrue(s.contains("disclosure.clicked(mouseX, mouseY, button)"));
-        assertEquals(1, count(s, "expanded = !expanded;"),
-                "the ONE toggle path — no legacy pointer mutation beside the action");
-        assertTrue(s.contains("public SemanticActionControl interactionControl()"),
-                "the row exposes its control to the host");
+        // The expand-in-place disclosure is gone: the card opens the
+        // particle's own detail screen and carries its visibility switch.
+        assertFalse(s.contains("expanded = !expanded;"), "no in-place disclosure");
+        assertTrue(s.contains("return List.of(openControl, toggleControl);"),
+                "two controls in visual order: open, then the switch");
+        assertTrue(s.contains("new FeatureDetailScreen(com.aurora.client.adapter.NativeUi.screen(mc), detail())"),
+                "the card opens the particle's own detail screen");
+        assertTrue(s.contains(".resetWith(() -> {"), "Reset clears only this particle");
+        assertTrue(s.contains("() -> Component.literal(visible() ? \"On\" : \"Off\")"),
+                "the switch narrates On/Off");
+        // The switch zone wins; everything else on the card opens.
+        int zone = s.indexOf("toggleControl.activateFromPointer(mouseX, mouseY, button)");
+        int open = s.indexOf("openControl.activateFromPointer(mouseX, mouseY, button)");
+        assertTrue(zone >= 0 && open > zone, "the switch zone is tested before the open action");
+        // The summary line is memoized, not rebuilt every frame.
+        assertTrue(s.contains("if (key != summaryKey) {"));
+        assertTrue(s.contains("if (fittedWidth != textW || fittedFont != font) {"));
     }
 
     @Test

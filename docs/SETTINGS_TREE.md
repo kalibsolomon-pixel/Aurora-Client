@@ -407,7 +407,8 @@ Dropped items lie flat and tumble.
 
 #### Particles · on `{card:particles}`
 Per-particle controls, with a search bar.
-- **Particle list**: one row per vanilla particle type, each with Visible toggle, Scale 0–150% and Color tint. Defaults: Enchanted Hit hidden and 22%; Crit 75%. `{particleVisibility}` `{particleScale}` `{particleColor}`
+- **Particle list**: one card per vanilla particle type: name, a summary line (Vanilla look / Size 75% / Tinted / Hidden), an On/Off switch for visibility and a chevron. Defaults: Enchanted Hit hidden and 22%; Crit 75%. `{particleVisibility}`
+  - *Card → particle screen*: **Visible** toggle, **Scale** 0–150%, **Color Overlay**; Reset clears only that particle. `{particleScale}` `{particleColor}`
 
 #### Item Scale · off `{card:item_scale}`
 Size, rotation and position of held items.

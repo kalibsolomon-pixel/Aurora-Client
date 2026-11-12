@@ -160,7 +160,11 @@ public class Slider extends Widget {
         t = Math.max(0f, Math.min(1f, t));
         float filledW = w * t;
         if (filledW > 0) {
-            RenderUtil.drawRoundedRectAA(g, x, ty, filledW, TRACK_H, trackRadius(), fill());
+            // The accent fill wears the subtle AccentGradient; disabled stays flat.
+            int fill = fill();
+            RenderUtil.drawRoundedRectGradientAA(g, x, ty, filledW, TRACK_H, trackRadius(),
+                    disabled ? fill : com.aurora.client.theme.AccentGradient.start(fill),
+                    disabled ? fill : com.aurora.client.theme.AccentGradient.end(fill), true);
         }
 
         // Knob — center stays exactly at the value coordinate; the canonical

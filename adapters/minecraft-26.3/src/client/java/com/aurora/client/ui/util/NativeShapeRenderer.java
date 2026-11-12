@@ -50,6 +50,23 @@ public final class NativeShapeRenderer {
 
     public static boolean draw(GuiGraphicsExtractor g, float scale, float x, float y, float w, float h,
                                float radius, float thickness, int color, boolean squircle) {
+        return draw(g, scale, x, y, w, h, radius, thickness, color, color, false, squircle);
+    }
+
+    /**
+     * A filled rounded rect whose color runs linearly from {@code from} to
+     * {@code to} — left to right when {@code horizontal}, else top to
+     * bottom. Still one quad: the stops ride the vertex colors and the GPU
+     * interpolates them across the shape.
+     */
+    public static boolean drawGradient(GuiGraphicsExtractor g, float scale, float x, float y, float w, float h,
+                                       float radius, int from, int to, boolean horizontal) {
+        return draw(g, scale, x, y, w, h, radius, 0, from, to, horizontal, false);
+    }
+
+    private static boolean draw(GuiGraphicsExtractor g, float scale, float x, float y, float w, float h,
+                                float radius, float thickness, int color, int color2, boolean horizontal,
+                                boolean squircle) {
         if (!ENABLED || w <= 0 || h <= 0 || radius <= 0 || scale <= 0) return false;
         if (!Float.isFinite(x) || !Float.isFinite(y) || !Float.isFinite(w) || !Float.isFinite(h)
                 || !Float.isFinite(radius) || !Float.isFinite(thickness)) return false;
@@ -72,26 +89,30 @@ public final class NativeShapeRenderer {
         if (scissor != null) bounds = bounds.intersection(scissor);
         if (bounds != null) {
             g.guiRenderState.addGuiElement(new Shape(pose, x, y, w, h, pad,
-                    pw, ph, iw, ih, ir, it, color, scissor, bounds));
+                    pw, ph, iw, ih, ir, it, color, color2, horizontal, scissor, bounds));
             QUADS.incrementAndGet();
         }
         return true;
     }
 
     private record Shape(Matrix3x2f pose, float x, float y, float w, float h, float pad,
-                         float pw, float ph, int iw, int ih, int ir, int it, int color,
-                         ScreenRectangle scissorArea, ScreenRectangle bounds) implements GuiElementRenderState {
+                         float pw, float ph, int iw, int ih, int ir, int it, int color, int color2,
+                         boolean horizontal, ScreenRectangle scissorArea, ScreenRectangle bounds)
+            implements GuiElementRenderState {
         @Override public RenderPipeline pipeline() { return PipelineHolder.PIPELINE; }
         @Override public TextureSetup textureSetup() { return TextureSetup.noTexture(); }
         @Override public void buildVertices(VertexConsumer out) {
             float physicalPad = pad * (pw / w);
-            vertex(out, x - pad, y - pad, -physicalPad, -physicalPad);
-            vertex(out, x - pad, y + h + pad, -physicalPad, ph + physicalPad);
-            vertex(out, x + w + pad, y + h + pad, pw + physicalPad, ph + physicalPad);
-            vertex(out, x + w + pad, y - pad, pw + physicalPad, -physicalPad);
+            // Gradient stops: left/right edges when horizontal, else top/bottom.
+            int topLeft = color, bottomLeft = horizontal ? color : color2;
+            int bottomRight = color2, topRight = horizontal ? color2 : color;
+            vertex(out, x - pad, y - pad, -physicalPad, -physicalPad, topLeft);
+            vertex(out, x - pad, y + h + pad, -physicalPad, ph + physicalPad, bottomLeft);
+            vertex(out, x + w + pad, y + h + pad, pw + physicalPad, ph + physicalPad, bottomRight);
+            vertex(out, x + w + pad, y - pad, pw + physicalPad, -physicalPad, topRight);
         }
-        private void vertex(VertexConsumer out, float vx, float vy, float u, float v) {
-            out.addVertexWith2DPose(pose, vx, vy).setColor(color).setUv(u, v)
+        private void vertex(VertexConsumer out, float vx, float vy, float u, float v, int argb) {
+            out.addVertexWith2DPose(pose, vx, vy).setColor(argb).setUv(u, v)
                     .setUv1(iw, ih).setUv2(ir, it).setNormal(0, 0, 1);
         }
     }
