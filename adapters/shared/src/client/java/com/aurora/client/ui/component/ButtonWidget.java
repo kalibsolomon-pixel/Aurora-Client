@@ -132,6 +132,12 @@ public class ButtonWidget extends AbstractButton {
         return this;
     }
 
+    /** Leading icon — forwarded to the painter (see {@link Button#icon}). */
+    public ButtonWidget icon(String glyph) {
+        painter.icon(glyph);
+        return this;
+    }
+
     @Override
     public void onPress(InputWithModifiers input) {
         if(MaterialSurface.unified()) painter.triggerPressAnimation();

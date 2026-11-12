@@ -37,6 +37,6 @@ class FontFallbackTest {
         }
         // 8 families x 4 weights, italics for the 6 that have them, each with
         // its compact UI variant (2026-11-12): (8*4 + 6*4) * 2.
-        assertEquals(112, checked, "every family, weight and italic, and their compact UI variants");
+        assertEquals(113, checked, "every family, weight and italic, their compact UI variants, and the title wordmark");
     }
 }

@@ -14,7 +14,7 @@ A map of everything a player can see, turn on or change in Aurora, as of 2026-11
 
 ## 1. Ways to open Aurora
 
-- **Title screen → "Aurora Settings" button**: Aurora's own title screen has Singleplayer, Multiplayer, Aurora Settings, Options, Quit. `{entry:title}`
+- **Title screen → Aurora icon**: Aurora's own title screen has Singleplayer, Multiplayer and Minecraft Realms, then Settings (Minecraft's options) and Mods (Mod Menu; disabled when it isn't installed) side by side. The icons at the top right open Aurora, toggle fullscreen and quit; the player model and account card sit on the right (a chip in the top bar on narrow windows). `{entry:title}`
 - **Vanilla title screen → "Aurora Settings" button**: when Custom Title is off, the button is added to the vanilla menu instead. `{entry:vanillaTitle}`
 - **In game → HUD Editor (Right Shift) → "Aurora Settings" button**: there is no direct in-game key for the main screen; this is the path. `{entry:hudEditor}`
 - **Better Hitreg "Open Settings Key"**: unbound by default; opens the Aurora screen from in game. `{hitregSettingsKey}`

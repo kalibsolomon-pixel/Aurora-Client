@@ -21,52 +21,91 @@ class OwnerMenuGeometryTest {
         assertTrue(detail.contains("parentGlassOnly() { return true; }"));
     }
 
-    @Test void originalLogoLeadsNarrowerCardsAndAShorterCompleteComposition() {
+    @Test void markAndWordmarkLeadTheCentredColumn() {
+        // OneClient-style redesign (owner 2026-11-12): mark, wordmark, three full cards, two half cards.
         var menu = MenuComposition.layout(854,480);
-        assertEquals(48, menu.logo().width());
+        assertEquals(56, menu.logo().width());
         assertEquals(menu.logo().width(), menu.logo().height());
-        assertEquals(48, MenuComposition.LOGO_SIZE);
-        assertEquals(186, menu.bounds().height());
-        assertTrue(menu.bounds().height() < 5 * 30 + 4 * 6 + 48 + 12);
-        assertEquals(126, menu.stack().height());
-        assertTrue(menu.stack().height() < 5 * 30 + 4 * 6);
-        assertEquals(12, menu.stack().y() - menu.logo().y() - menu.logo().height());
-        assertEquals(140, menu.stack().width()); // owner 2026-10-19: narrower again (was 180)
+        assertEquals(MenuComposition.LOGO_GAP, menu.wordmark().y() - menu.logo().y() - menu.logo().height());
+        assertEquals(MenuComposition.WORDMARK_HEIGHT, menu.wordmark().height());
+        assertEquals(MenuComposition.BRAND_GAP, menu.stack().y() - menu.wordmark().y() - menu.wordmark().height());
+        assertEquals(200, menu.stack().width());
+        assertEquals(4 * 24 + 3 * 6, menu.stack().height());
+        assertEquals(menu.stack().height() + 56 + 6 + 20 + 14, menu.bounds().height());
+        assertFalse(menu.compact(), "a 854-wide window has room for the right column");
     }
 
-    @Test void allFivePaintAndHitBoundsAreIdenticalAndDisjoint() {
+    @Test void cardsAndHalfCardsPaintAndHitTheSameDisjointBounds() {
         var menu = MenuComposition.layout(640,360);
-        for (int i=0; i<MenuComposition.CARD_COUNT; i++) {
+        for (int i=0; i<MenuComposition.FULL_CARDS; i++) {
             var card = menu.card(i);
-            assertEquals(140,card.width()); assertEquals(22,card.height());
-            assertTrue(card.height() < 30);
+            assertEquals(200,card.width()); assertEquals(24,card.height());
             assertTrue(card.contains(card.x(),card.y()));
             assertFalse(card.contains(card.x(),card.y()+card.height()));
-            if (i > 0) {
-                var prev = menu.card(i-1);
-                assertEquals(26,card.y()-prev.y());
-                assertEquals(4,card.y()-prev.y()-prev.height());
-                assertFalse(prev.contains(card.x(),card.y()));
-                assertFalse(card.contains(prev.x(),prev.y()+prev.height()-1));
-            }
+            if (i > 0) assertEquals(6, card.y() - menu.card(i-1).y() - menu.card(i-1).height());
         }
+        var settings = menu.card(3); var mods = menu.card(4);
+        assertEquals(settings.y(), mods.y(), "Settings and Mods share a row");
+        assertEquals(settings.width(), mods.width());
+        assertEquals(MenuComposition.CARD_GAP, mods.x() - settings.x() - settings.width());
+        assertEquals(menu.stack().x(), settings.x());
+        assertEquals(menu.stack().x() + menu.stack().width(), mods.x() + mods.width());
+        assertEquals(6, settings.y() - menu.card(2).y() - menu.card(2).height());
         assertThrows(IndexOutOfBoundsException.class,()->menu.card(5));
+        assertThrows(IndexOutOfBoundsException.class,()->menu.icon(3));
     }
 
     @Test void supportedConstrainedViewportsKeepTheCompleteCompositionCenteredAndInside() {
-        for (int width : new int[]{240,320,639,640,854,1280})
+        for (int width : new int[]{240,320,550,559,560,639,640,854,1280})
             for (int height : new int[]{160,180,240,300,360,480,720}) {
                 var menu = MenuComposition.layout(width,height);
-                assertTrue(menu.bounds().y() >= MenuComposition.MARGIN);
-                assertTrue(menu.bounds().y()+menu.bounds().height() <= height-MenuComposition.MARGIN);
-                assertTrue(menu.stack().x() >= MenuComposition.MARGIN);
-                assertTrue(menu.stack().x()+menu.stack().width() <= width-MenuComposition.MARGIN);
-                assertTrue(Math.abs(2*menu.logo().x()+menu.logo().width()-width)<=1);
-                assertTrue(Math.abs(2*menu.stack().x()+menu.stack().width()-width)<=1);
-                assertTrue(Math.abs(2*menu.bounds().y()+menu.bounds().height()-height)<=1);
-                assertTrue(menu.logo().width() <= 48);
-                assertTrue(menu.logo().y()+menu.logo().height() < menu.card(0).y());
+                String at = width + "x" + height;
+                assertTrue(menu.bounds().y() >= MenuComposition.MARGIN, at);
+                assertTrue(menu.bounds().y()+menu.bounds().height() <= height-MenuComposition.MARGIN, at);
+                assertTrue(menu.stack().x() >= MenuComposition.MARGIN, at);
+                assertTrue(menu.stack().x()+menu.stack().width() <= width-MenuComposition.MARGIN, at);
+                assertTrue(Math.abs(2*menu.logo().x()+menu.logo().width()-width)<=1, at);
+                assertTrue(Math.abs(2*menu.stack().x()+menu.stack().width()-width)<=1, at);
+                assertTrue(Math.abs(2*menu.bounds().y()+menu.bounds().height()-height)<=1, at);
+                assertTrue(menu.logo().width() <= 56, at);
+                if (menu.logo().width() > 0) assertTrue(menu.logo().y()+menu.logo().height() < menu.card(0).y(), at);
+                if (menu.wordmark().height() > 0) assertTrue(menu.wordmark().y()+menu.wordmark().height() < menu.card(0).y(), at);
+                var icons = menu.icons();
+                assertEquals(width - MenuComposition.MARGIN, icons.x() + icons.width(), at);
+                if (height - 2 * MenuComposition.TOP_BAND >= MenuComposition.STACK_HEIGHT)
+                    assertTrue(menu.bounds().y() >= icons.y() + icons.height(), at + ": the column clears the icon row");
+                if (!menu.compact()) {
+                    var model = menu.model(); var account = menu.account();
+                    assertTrue(model.x() >= menu.stack().x() + menu.stack().width() + MenuComposition.COLUMN_GAP, at);
+                    assertTrue(account.x() + account.width() <= width - MenuComposition.MARGIN, at);
+                    assertEquals(model.y() + model.height() + MenuComposition.SIDE_GAP, account.y(), at);
+                    assertTrue(model.y() >= icons.y() + icons.height(), at);
+                    assertTrue(account.y() + account.height() <= height - MenuComposition.MARGIN, at);
+                } else {
+                    assertEquals(0, menu.model().width(), at + ": no model when compact");
+                    var chip = menu.account();
+                    if (chip.width() > 0) {
+                        assertEquals(icons.y(), chip.y(), at);
+                        assertTrue(chip.x() + chip.width() <= icons.x(), at);
+                        assertTrue(chip.x() >= MenuComposition.MARGIN, at);
+                    }
+                }
             }
+        assertTrue(MenuComposition.layout(550, 480).compact(), "about 560 wide and narrower the right column becomes the top-bar chip");
+        assertFalse(MenuComposition.layout(560, 480).compact());
+        assertFalse(MenuComposition.layout(640, 360).compact());
+    }
+
+    @Test void rightColumnStaysNearTheButtonsOnWideWindows() {
+        // Owner 2026-11-12: on a wide monitor the model sat stranded at the window edge.
+        for (int[] v : new int[][]{{859,486},{1289,729},{1920,540}}) {
+            var menu = MenuComposition.layout(v[0], v[1]);
+            assertFalse(menu.compact());
+            int columnRight = menu.stack().x() + menu.stack().width();
+            int before = menu.account().x() - columnRight;
+            int after = v[0] - MenuComposition.MARGIN - menu.account().x() - menu.account().width();
+            assertTrue(Math.abs(before - after) <= 1, v[0] + ": centred in the space right of the column");
+        }
     }
 
     @Test void guiScalesThreeAndFourRetainNativeAssetResolutionAndIntegerEdges() throws Exception {
@@ -74,9 +113,9 @@ class OwnerMenuGeometryTest {
         assertEquals(256,asset.getWidth()); assertEquals(asset.getWidth(),asset.getHeight());
         for (int scale : new int[]{3,4}) {
             var menu = MenuComposition.layout((2560+scale-1)/scale,(1412+scale-1)/scale);
-            assertEquals(48,menu.logo().width());
+            assertEquals(56,menu.logo().width());
             assertTrue(menu.logo().width()*scale <= asset.getWidth());
-            for (int i=0;i<5;i++) assertEquals(22*scale,menu.card(i).height()*scale);
+            for (int i=0;i<5;i++) assertEquals(24*scale,menu.card(i).height()*scale);
         }
     }
 

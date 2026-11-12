@@ -5,6 +5,8 @@
   "aurora.button.singleplayer": "Singleplayer",
   "aurora.button.multiplayer": "Multiplayer",
   "aurora.button.options": "Options",
+  "aurora.button.settings": "Settings",
+  "aurora.title.modmenu_missing": "Mod Menu isn't installed.",
   "aurora.button.mods": "Mods",
   "aurora.button.quit": "Quit",
   "aurora.config.title": "Aurora Options",
