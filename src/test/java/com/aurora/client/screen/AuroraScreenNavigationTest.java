@@ -62,18 +62,23 @@ class AuroraScreenNavigationTest {
         // C-5: the layout pair joined the hosted chrome.
         assertTrue(src.contains("layoutControls[0] = layoutControl(0);"));
         assertTrue(src.contains("layoutControls[1] = layoutControl(1);"));
-        // Module cards: one control per ModuleManager module (34 tiles).
+        // Module cards: one control per ModuleManager module (33 tiles).
+        // The Settings sub-tabs: one navigation control per page.
+        assertTrue(src.contains("for (int i = 0; i < pageControls.length; i++) pageControls[i] = pageControl(i);"));
         assertTrue(src.contains("for (Module m : ModuleManager.getInstance().getModules()) {\n            tileControls.put(m.id, tileControl(m));"));
         // ModuleManager derives its cards from FeatureCatalog (ADR 0004).
         assertTrue(modules.contains("FeatureCatalog.featuresOn(FeatureCatalog.Tab.MODULES)"));
-        assertEquals(34, com.aurora.client.feature.FeatureCatalog.featuresOn(com.aurora.client.feature.FeatureCatalog.Tab.MODULES).size(),
+        assertEquals(33, com.aurora.client.feature.FeatureCatalog.featuresOn(com.aurora.client.feature.FeatureCatalog.Tab.MODULES).size(),
                 "the grid's tile inventory (FeatureCatalog)");
         // Settings headers: navigation only for entries with a detail screen;
-        // header toggles for all four entries.
+        // header toggles only for entries that have a switch (Theme, Custom
+        // Title — page groups and Text & Fonts have none).
         assertTrue(src.contains("if (metadata.hasDetail()) {\n                headerNavControls.put(metadata.id, headerNavControl(metadata));\n            }"));
-        assertTrue(src.contains("headerToggleControls.put(metadata.id, headerToggleControl(metadata));"));
-        assertEquals(4, com.aurora.client.feature.FeatureCatalog.featuresOn(com.aurora.client.feature.FeatureCatalog.Tab.SETTINGS).size(),
-                "four Settings-tab entries (custom_title, text_fonts, theme, interface)");
+        assertTrue(src.contains("if (!metadata.noSettingsToggle) {\n                headerToggleControls.put(metadata.id, headerToggleControl(metadata));\n            }"));
+        assertEquals(5, com.aurora.client.feature.FeatureCatalog.featuresOn(com.aurora.client.feature.FeatureCatalog.Tab.SETTINGS).size(),
+                "five Settings-tab features (custom_title, text_fonts, theme, interface, miscellaneous)");
+        // The tab draws pages, not one entry per feature.
+        assertTrue(registry.contains("SETTINGS_PAGES.add(new SettingsPage(\"Appearance\""));
         // custom_title is registered without settings (grouping chrome, no
         // navigation zone) — the 4-arg add() leaves its settings empty.
         assertTrue(registry.contains(" add(\"custom_title\""));
@@ -387,8 +392,8 @@ class AuroraScreenNavigationTest {
         // Chips, Profiles, cards, header nav, and the layout pair draw the
         // shared 1px accent hairline (0x99) from the control's vanilla focus
         // only.
-        assertEquals(5, count(src, "ThemeManager.withAlpha(MaterialSurface.color(ThemeToken.ACCENT), 0x99)"),
-                "chips/profiles/tiles/header-nav/layout-pair hairline sites");
+        assertEquals(6, count(src, "ThemeManager.withAlpha(MaterialSurface.color(ThemeToken.ACCENT), 0x99)"),
+                "chips/profiles/tiles/header-nav/layout-pair/settings-sub-tab hairline sites");
         for (String site : new String[]{
                 "if (control != null && control.isFocused() && !sel) {",
                 "if (profilesControl != null && profilesControl.isFocused())",
@@ -430,8 +435,8 @@ class AuroraScreenNavigationTest {
         // Navigation/selection uses the transition as feedback; the card's
         // state change is the feedback; only the toggle keeps a mechanical
         // press (the component's own thumb pulse, fired by t.toggle()).
-        assertEquals(5, count(src, "// no press animation"),
-                "tabs, profiles, layout pair, cards, header nav: no press animation by decision");
+        assertEquals(6, count(src, "// no press animation"),
+                "tabs, profiles, layout pair, settings sub-tabs, cards, header nav: no press animation by decision");
         assertFalse(src.contains("0.96"), "no Button-family press scale was copied onto chrome");
     }
 
@@ -448,7 +453,7 @@ class AuroraScreenNavigationTest {
         int chrome = click.indexOf("activateFromPointer(mouseX, mouseY, button)");
         assertTrue(cancel >= 0 && drop > cancel && sup > drop && chrome > sup,
                 "capture-cancel-first ordering preserved");
-        assertEquals(7, count(click, "this.setFocused("),
-                "tabs x2 are a loop, profiles, layout pair x2, tile, toggle, nav — seven focus sites (loops counted once)");
+        assertEquals(8, count(click, "this.setFocused("),
+                "tabs x2 are a loop, profiles, settings sub-tabs (a loop), layout pair x2, tile, toggle, nav — eight focus sites (loops counted once)");
     }
 }

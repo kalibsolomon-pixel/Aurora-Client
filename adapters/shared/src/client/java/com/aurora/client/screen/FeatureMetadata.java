@@ -63,6 +63,19 @@ public final class FeatureMetadata {
         return this;
     }
 
+    /**
+     * When true, the entry exists only as a group on a Settings-tab page
+     * ({@code FeatureRegistry.settingsPages}): it is not a catalog feature
+     * and has no detail screen, so its header never navigates.
+     */
+    public boolean pageGroup;
+
+    /** Fluent setter for {@link #pageGroup}. */
+    public FeatureMetadata pageGroup(boolean v) {
+        this.pageGroup = v;
+        return this;
+    }
+
     public FeatureMetadata(String id, String displayName, String description,
                            BooleanSupplier getEnabled, Consumer<Boolean> setEnabled) {
         this(id, displayName, description, getEnabled, setEnabled, new ArrayList<>(), Collections.emptyList());
@@ -119,7 +132,7 @@ public final class FeatureMetadata {
         String broken = com.aurora.client.health.FeatureHealth.headlineFor(id);
         return broken != null ? broken : subtitle;
     }
-    public boolean hasDetail() { return !settings.isEmpty() && !List.of("text_fonts", "theme", "interface").contains(id); }
+    public boolean hasDetail() { return !pageGroup && !settings.isEmpty() && !List.of("text_fonts", "theme", "interface").contains(id); }
 
     /**
      * Reset this feature's config fields to their factory defaults.

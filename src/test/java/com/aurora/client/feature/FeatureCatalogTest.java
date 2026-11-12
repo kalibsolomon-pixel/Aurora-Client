@@ -219,7 +219,8 @@ class FeatureCatalogTest {
             if (f.tab() == FeatureCatalog.Tab.MODULES) assertFalse(f.summary().isBlank(), f.id() + " needs card text");
             else assertTrue(f.summary().isEmpty(), f.id() + " has no card");
         }
-        assertEquals(34, FeatureCatalog.featuresOn(FeatureCatalog.Tab.MODULES).size());
-        assertEquals(4, FeatureCatalog.featuresOn(FeatureCatalog.Tab.SETTINGS).size());
+        // Display Settings left the grid for the Settings tab's pages (2026-11-12).
+        assertEquals(33, FeatureCatalog.featuresOn(FeatureCatalog.Tab.MODULES).size());
+        assertEquals(5, FeatureCatalog.featuresOn(FeatureCatalog.Tab.SETTINGS).size());
     }
 }

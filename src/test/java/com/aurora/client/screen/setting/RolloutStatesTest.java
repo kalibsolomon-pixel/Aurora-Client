@@ -195,7 +195,7 @@ class RolloutStatesTest {
     }
 
     @Test
-    void productionKeybindInventoryHoldsAtSixteenRows() {
+    void productionKeybindInventoryHoldsAtSeventeenRows() {
         // Source-level inventory pin: the docs record "all 17 production
         // KeybindSetting rows construct in FeatureRegistry" (16 mirror an
         // Aurora KeyMapping, Stats Reset is Aurora-UI-only; the vanilla
@@ -207,7 +207,9 @@ class RolloutStatesTest {
             String src = new String(java.nio.file.Files.readAllBytes(SourceTree.resolve(
                     SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/FeatureRegistry.java")));
             int count = src.split("new KeybindSetting", -1).length - 1;
-            assertEquals(16, count,
+            // 17 since 2026-11-12: the HUD Editor key gained a row on the
+            // Settings tab's Controls page (it was vanilla-Controls-only).
+            assertEquals(17, count,
                     "production KeybindSetting construction sites (inventory drift guard)");
         } catch (java.io.IOException e) {
             fail("FeatureRegistry.java not readable from the test working dir: " + e.getMessage());

@@ -280,13 +280,15 @@ class ConformanceManifestTest {
 
     /**
      * The current AuroraScreen semantic inventory, re-derived from live
-     * source: 49 screen-owned chrome controls (2 sidebar tabs + Profiles +
-     * 2 layout peers + every ModuleManager tile + 3 detail-capable Settings
-     * headers + 4 header toggles) plus 20 component-owned hosted controls
-     * (3 enum triggers + 10 Accent peers + one peer per segmented value,
-     * sized from the live enums). Tile count comes from ModuleManager's
-     * source, not the historical number. The seven registration sites are
-     * the init-time hosted-settings loop plus the six identity-stable
+     * source: screen-owned chrome controls (2 sidebar tabs + Profiles +
+     * 2 layout peers + one sub-tab per Settings page + every ModuleManager
+     * tile + no detail-capable Settings headers + the 2 header toggles,
+     * Theme and Custom Title) plus component-owned hosted controls on the
+     * Settings pages (4 enum triggers + 10 Accent peers + one peer per
+     * segmented value + 8 Display Settings toggles + the HUD Editor key +
+     * Copy Diagnostics). Tile count comes from ModuleManager's source, not
+     * the historical number. The eight registration sites are the
+     * init-time hosted-settings loop plus the seven identity-stable
      * factories — none in the frame path.
      */
     @Test
@@ -294,17 +296,21 @@ class ConformanceManifestTest {
         // The grid's cards are derived from FeatureCatalog (ADR 0004).
         int modules = com.aurora.client.feature.FeatureCatalog.featuresOn(com.aurora.client.feature.FeatureCatalog.Tab.MODULES).size();
         int segmentedPeers = com.aurora.client.theme.ThemeRoundness.values().length;
-        int hosted = 3 + 10 + segmentedPeers;               // enums + accent + segmented peers
-        int screenOwned = 2 + 1 + 2 + modules + 0 + 4;      // tabs, profiles, layout, tiles, nav, toggles
-        assertEquals(34, modules, "FeatureCatalog module tile count");
+        // enums (Text Renderer, Client Font, UI FPS Limit, Frame Pacer
+        // Strategy) + accent + segmented peers + Display Settings toggles +
+        // HUD Editor key + Copy Diagnostics
+        int hosted = 4 + 10 + segmentedPeers + 8 + 1 + 1;
+        int pages = 4;                                      // Appearance, Display, Controls, General
+        int screenOwned = 2 + 1 + 2 + pages + modules + 0 + 2; // tabs, profiles, layout, sub-tabs, tiles, nav, toggles
+        assertEquals(33, modules, "FeatureCatalog module tile count");
         assertEquals(3, segmentedPeers, "Corner Style is the only segmented row");
-        assertEquals(16, hosted, "component-owned hosted controls");
-        assertEquals(43, screenOwned, "screen-owned chrome controls");
-        assertEquals(59, hosted + screenOwned, "AuroraScreen total semantic controls");
+        assertEquals(27, hosted, "component-owned hosted controls");
+        assertEquals(44, screenOwned, "screen-owned chrome controls");
+        assertEquals(71, hosted + screenOwned, "AuroraScreen total semantic controls");
 
         String src = read(SRC + "screen/AuroraScreen.java");
-        assertEquals(7, countOccurrences(src, "semanticHost.register("),
-                "the hosted loop + six identity-stable factory registration sites");
+        assertEquals(8, countOccurrences(src, "semanticHost.register("),
+                "the hosted loop + seven identity-stable factory registration sites");
         // Registration is init/factory-only: every register site must sit
         // after a private control factory (or the init loop), never inside a
         // render walk — the frame path checks availability, never membership.
