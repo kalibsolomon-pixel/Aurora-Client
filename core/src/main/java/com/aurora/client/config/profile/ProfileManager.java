@@ -80,6 +80,17 @@ public class ProfileManager {
     /** Cached profile-name list; invalidated on any mutating op or load. */
     private List<String> cachedNames = null;
 
+    /** Cached name → hotkey for profiles that have one; invalidated with {@link #cachedNames}. */
+    private Map<String, Integer> cachedHotkeys = null;
+
+    /** Vanilla key bindings bridge, installed by the adapter; null in tests and before init. */
+    private volatile ControlsBridge controlsBridge;
+
+    /** Installs the adapter's vanilla controls bridge ({@link ControlsBridge}). */
+    public void setControlsBridge(ControlsBridge bridge) {
+        this.controlsBridge = bridge;
+    }
+
     /**
      * Listeners invoked on the calling thread after a profile is applied to
      * the live config (at load and on every {@link #switchTo}). Use these to
@@ -177,6 +188,72 @@ public class ProfileManager {
         return currentProfileName;
     }
 
+    /** The folder profiles are stored in (for "Open folder"). */
+    public Path profilesDirectory() {
+        return profilesDir();
+    }
+
+    /** The profile's icon name ({@code IconCatalog}), or {@code ""} for the default. */
+    public String icon(String name) {
+        Profile p = readProfileFile(name);
+        return p == null || p.icon == null ? "" : p.icon;
+    }
+
+    /** The profile's hotkey (stored keyboard code), or -1. */
+    public int hotkey(String name) {
+        Integer key = hotkeys().get(name);
+        return key == null ? -1 : key;
+    }
+
+    /** Every profile with a hotkey: name → stored keyboard code. Cached; read every tick by the hotkey poller. */
+    public Map<String, Integer> hotkeys() {
+        Map<String, Integer> cache = cachedHotkeys;
+        if (cache != null) return cache;
+        Map<String, Integer> out = new LinkedHashMap<>();
+        for (String n : listProfileNames()) {
+            Profile p = readProfileFile(n);
+            if (p != null && p.hotkey >= 0) out.put(n, p.hotkey);
+        }
+        cache = Collections.unmodifiableMap(out);
+        cachedHotkeys = cache;
+        return cache;
+    }
+
+    /** Sets the profile's card icon. @return false if the profile is missing. */
+    public boolean setIcon(String name, String icon) {
+        Profile p = readProfileFile(name);
+        if (p == null) return false;
+        p.icon = icon == null ? "" : icon;
+        writeProfileFile(p);
+        return true;
+    }
+
+    /**
+     * Sets the profile's hotkey; -1 clears it. A key belongs to one profile
+     * at a time, so any other profile holding it loses it.
+     *
+     * @return false if the profile is missing.
+     */
+    public boolean setHotkey(String name, int key) {
+        Profile p = readProfileFile(name);
+        if (p == null) return false;
+        if (key >= 0) {
+            for (Map.Entry<String, Integer> e : hotkeys().entrySet()) {
+                if (e.getValue() == key && !e.getKey().equals(name)) {
+                    Profile other = readProfileFile(e.getKey());
+                    if (other != null) {
+                        other.hotkey = -1;
+                        writeProfileFile(other);
+                    }
+                }
+            }
+        }
+        p.hotkey = key < 0 ? -1 : key;
+        writeProfileFile(p);
+        cachedHotkeys = null;
+        return true;
+    }
+
     // ------------------------------------------------------------------
     //  CRUD
     // ------------------------------------------------------------------
@@ -250,6 +327,7 @@ public class ProfileManager {
         if (src == null) return false;
         src.name = newName;
         src.createdAtMs = System.currentTimeMillis();
+        src.hotkey = -1; // one key, one profile
         writeProfileFile(src);
         invalidateCache();
         return true;
@@ -291,10 +369,18 @@ public class ProfileManager {
     public void saveCurrent() {
         Profile p = captureCurrent();
         p.name = currentProfileName;
-        // Preserve the stored createdAtMs if the file already exists.
-        Profile existing = readProfileFile(currentProfileName);
-        p.createdAtMs = (existing != null) ? existing.createdAtMs : System.currentTimeMillis();
+        // Preserve the stored createdAtMs and metadata if the file already exists.
+        keepMetadata(p, readProfileFile(currentProfileName));
         writeProfileFile(p);
+    }
+
+    /** Carries the file's own metadata (created time, icon, hotkey) into a fresh capture. */
+    private static void keepMetadata(Profile fresh, Profile existing) {
+        fresh.createdAtMs = existing != null ? existing.createdAtMs : System.currentTimeMillis();
+        if (existing != null) {
+            fresh.icon = existing.icon == null ? "" : existing.icon;
+            fresh.hotkey = existing.hotkey;
+        }
     }
 
     /**
@@ -306,8 +392,7 @@ public class ProfileManager {
     public void saveCurrentBlocking() {
         Profile p = captureCurrent();
         p.name = currentProfileName;
-        Profile existing = readProfileFile(currentProfileName);
-        p.createdAtMs = (existing != null) ? existing.createdAtMs : System.currentTimeMillis();
+        keepMetadata(p, readProfileFile(currentProfileName));
         writeProfileFile(p);
         // Through the SAME ordered writer as the async path, then a bounded
         // wait: the old inline write raced a queued async write for the same
@@ -339,7 +424,30 @@ public class ProfileManager {
                         "ProfileManager: skipped field '{}' during capture", f.getName(), t);
             }
         }
+        // Vanilla bindings are captured whatever "Separate controls" says, so
+        // turning it on later finds every profile holding its own keys.
+        ControlsBridge bridge = controlsBridge;
+        if (bridge != null) {
+            try {
+                p.controls = new LinkedHashMap<>(bridge.capture());
+            } catch (Throwable t) {
+                LOGGER.warn("ProfileManager: could not capture vanilla controls", t);
+            }
+        }
         return p;
+    }
+
+    /**
+     * Whether profiles own key bindings ("Separate controls"). When false, a
+     * switch leaves Aurora's and the game's bindings exactly as they are.
+     */
+    private static boolean controlsOwned() {
+        return AuroraConfig.get().profilesOwnControls;
+    }
+
+    /** Aurora's key-binding fields: applied from a profile only while profiles own controls. */
+    private static boolean isControlField(String name) {
+        return com.aurora.client.config.KeybindMigrator.KEY_FIELDS.contains(name);
     }
 
     /**
@@ -363,7 +471,9 @@ public class ProfileManager {
         //    not aliased — a profile saved before the field existed would
         //    otherwise hand the live config the DEFAULTS snapshot's Set/Map
         //    object and every later edit would mutate the factory default.
+        boolean owned = controlsOwned();
         for (Field f : profileFields()) {
+            if (!owned && isControlField(f.getName())) continue; // bindings stay global
             try {
                 Object def = f.get(DEFAULTS);
                 if (def instanceof java.util.Map<?,?> m) def = new java.util.HashMap<>(m);
@@ -380,6 +490,7 @@ public class ProfileManager {
         Set<String> liveNames = profileFieldNames();
         for (Map.Entry<String, JsonElement> e : p.fields.entrySet()) {
             String fieldName = e.getKey();
+            if (!owned && isControlField(fieldName)) continue;
             if (!liveNames.contains(fieldName) || !ProfileFieldSet.isProfileScoped(fieldName)) {
                 LOGGER.warn(
                         "ProfileManager: profile '{}' references field '{}' which no longer exists; skipped",
@@ -414,6 +525,17 @@ public class ProfileManager {
         // the new values straight away.
         for (Field f : profileFields()) com.aurora.client.health.FeatureHealth.forget(f.getName());
         com.aurora.client.health.FeatureHealth.enforce(live);
+
+        // The game's own bindings follow the profile too, when profiles own
+        // controls and this profile captured them.
+        ControlsBridge bridge = controlsBridge;
+        if (owned && bridge != null && p.controls != null && !p.controls.isEmpty()) {
+            try {
+                bridge.apply(p.controls);
+            } catch (Throwable t) {
+                LOGGER.warn("ProfileManager: could not apply vanilla controls for '{}'", p.name, t);
+            }
+        }
     }
 
     private void applyProfileByName(String name) {
@@ -548,7 +670,7 @@ public class ProfileManager {
         return names;
     }
 
-    private void invalidateCache() { cachedNames = null; }
+    private void invalidateCache() { cachedNames = null; cachedHotkeys = null; }
 
     private boolean nameExists(String name) {
         return listProfileNames().contains(name);

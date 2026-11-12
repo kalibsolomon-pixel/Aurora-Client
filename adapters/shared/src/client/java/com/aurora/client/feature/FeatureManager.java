@@ -22,6 +22,7 @@ public class FeatureManager {
         register(new ClickTrackerFeature());
         register(new ReachTrackerFeature());
         register(new HudEditorFeature());
+        register(new ProfileHotkeyFeature());
         register(new FreeLookFeature());
         register(new ToggleSprintFeature());
         register(new BlockOverlayFeature());

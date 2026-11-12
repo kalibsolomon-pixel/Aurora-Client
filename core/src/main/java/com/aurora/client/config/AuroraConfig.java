@@ -131,6 +131,16 @@ public class AuroraConfig {
      */
     public String activeProfile = "default";
 
+    /**
+     * "Separate controls" on the Profiles screen (2026-11-12): when true,
+     * each profile carries its own key bindings — Aurora's and the game's
+     * own Controls — and a switch applies them; when false, bindings stay
+     * as they are whichever profile is active. Global, never per profile
+     * ({@code ProfileFieldSet.EXCLUDED}). True keeps the behaviour profiles
+     * always had for Aurora's keys.
+     */
+    public boolean profilesOwnControls = true;
+
     // ---- General ----
     public boolean customTitleScreen = true;
     /** Global viewing preference, retained across screens, restarts and profile switches. */

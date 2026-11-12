@@ -93,8 +93,23 @@ public final class AlertManager {
                                           ItemStack iconStack, int color,
                                           Priority priority, long durationMs,
                                           net.minecraft.resources.Identifier iconSprite) {
-        Alert a = new Alert(title, subtitle, iconStack, color, priority,
-                System.currentTimeMillis(), durationMs, iconSprite);
+        enqueue(new Alert(title, subtitle, iconStack, color, priority,
+                System.currentTimeMillis(), durationMs, iconSprite));
+        playAlertSound();
+    }
+
+    /**
+     * A silent informational popup — a confirmation rather than a warning
+     * (a profile hotkey switch, say), so the alert sound does not play.
+     */
+    public static synchronized void notify(String title, String subtitle, int color, long durationMs) {
+        enqueue(new Alert(title, subtitle, ItemStack.EMPTY, color, Priority.INFO,
+                System.currentTimeMillis(), durationMs, null));
+    }
+
+    private static void enqueue(Alert a) {
+        Priority priority = a.priority;
+        String title = a.title;
 
         if (active == null || active.isExpired() || priority.level > active.priority.level) {
             active = a;
@@ -111,8 +126,6 @@ public final class AlertManager {
                 if (!dup) queue.addLast(a);
             }
         }
-
-        playAlertSound();
     }
 
     /**
