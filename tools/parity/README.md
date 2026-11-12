@@ -23,6 +23,11 @@ Use native desktop screenshots to inspect the resulting screen.
 | Command | Action |
 |---|---|
 | `world` | Wait for a loaded world, then close the current screen |
+| `waypoints40` | Seed 40 rows in an empty disposable waypoint scope and open their manager |
+| `waypoints-screen` | Open the waypoint manager without changing its rows |
+| `shape-benchmark` | Measure 120 warm-up and 600 sampled manager extraction frames; write `shape-benchmark.json` |
+| `shape-cases` | Open fixed shape, scissor and transform cases for visual comparison |
+| `assert-inactivity afk` | Assert that the fixture's prior inactivity option was restored |
 | `settings` | Open Aurora settings |
 | `resize 854 480` | Set the native window size |
 | `layout grid` / `layout list` | Open the selected feature layout |
@@ -44,3 +49,28 @@ on OpenGL and native Vulkan (VulkanMod on 26.1.2). Run `capture`, then `bindings
 on a later tick; restart the same fixture and run `persisted` and `bindings`.
 This verifies native handlers and persistence; it does not synthesize OS keys
 or replace a physical-input/accessibility audit.
+
+The shape benchmark measures elapsed time inside the manager's extraction method
+and `RenderUtil` fill and experimental shader quad submissions. It also measures
+the interval between successive extractions, including frame pacing and waits.
+Extraction time can include waits; it is not a CPU-only timer. Neither measure
+isolates GPU time, and cold cache creation is outside the samples. Compare runs with the same
+window, GUI scale, theme, backend, world and mod set; record these independently.
+While sampling, the probe temporarily switches the inactivity FPS option to
+`MINIMIZED` to prevent Minecraft's AFK cap from changing the comparison. It
+restores the prior option on completion, cancellation or screen change.
+The `waypoints40` command requires an empty waypoint scope and a second marker,
+`SHAPE-BENCHMARK-DISPOSABLE.txt`, in the actual game directory. Create a fresh
+disposable configuration for each new seed; the command refuses existing rows.
+Pass `-Daurora.shapes.cpu=true` to the game JVM to compare the CPU path with
+the default live shader path. Caches retain CPU capture coverage.
+
+To check compile-failure fallback, run `python tools/parity/shape_failure_pack.py
+26.3 <game-dir>` against a marked disposable game directory, enable the
+generated `file/AuroraShapeFailure` resource pack, and pass
+`-Daurora.shapes.expectFallback=true` to the game JVM. Remove any old
+`shape-cases-rendered.txt` from the probe command directory, send `shape-cases`
+and wait for the new marker. The probe asserts that the wide shape used CPU
+fills instead of a shader quad. Check the log for the single Aurora fallback
+warning; the deliberately invalid shader produces expected compiler errors.
+The fallback lasts until the client restarts.

@@ -1,0 +1,7 @@
+{
+  "required": true,
+  "package": "parityprobe.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "client": ["ManagerListTiming"],
+  "injectors": {"defaultRequire": 1}
+}

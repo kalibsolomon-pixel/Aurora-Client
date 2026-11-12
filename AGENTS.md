@@ -8,7 +8,7 @@ This guide is short on purpose. The full engineering history it replaced, includ
 
 - Decisions are ADRs in [docs/adr/](docs/adr/). Read the relevant one before proposing multi-version builds, an own UI renderer, vanilla rendering optimizations, telemetry or changes to feature defaults.
 - The order of work is [docs/ROADMAP.md](docs/ROADMAP.md); where it stands is [docs/STATUS.md](docs/STATUS.md).
-- The 26.3 port shipped as 3.3.0. Steps 5 and 5.5 are complete; all supported adapters build from one tree. Shader-drawn shapes are next, step 6.
+- The 26.3 port shipped as 3.3.0. Steps 5 and 5.5 are complete; all supported adapters build from one tree. Step 6, shader-drawn shapes, is implemented on `feat/shader-drawn-shapes` and awaits review.
 
 ## Build, test, run
 

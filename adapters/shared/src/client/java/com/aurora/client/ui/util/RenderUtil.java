@@ -12,10 +12,10 @@ public class RenderUtil {
     /**
      * A destination for rasterized integer-pixel rectangles. The mod's
      * high-res AA engine rasterizes per <b>physical device pixel</b>; this
-     * interface lets the exact same row/coverage math write either into a
-     * live {@link GuiGraphicsExtractor} (screen path) or into an off-screen cache
-     * buffer ({@code UiLayerCache}) â€” one rasterizer, two destinations, no
-     * quality difference.
+     * interface lets the same row/coverage math write either into a live
+     * {@link GuiGraphicsExtractor} or an off-screen {@code UiLayerCache}.
+     * The shader uses different edge coverage for live shapes; capture
+     * continues to use this rasterizer.
      */
     public interface RectSink extends com.aurora.client.port.DrawSurface {}
 
@@ -123,6 +123,7 @@ public class RenderUtil {
 
     public static void drawRoundedRectAA(GuiGraphicsExtractor graphics, float x, float y, float width, float height, float radius, int color) {
         float scale = Minecraft.getInstance().getWindow().getGuiScale();
+        if (CAPTURE_SINK.get() == null && NativeShapeRenderer.draw(graphics, scale, x, y, width, height, radius, 0, color, false)) return;
         graphics.pose().pushMatrix();
         graphics.pose().scale(1 / scale, 1 / scale);
         try {
@@ -134,6 +135,10 @@ public class RenderUtil {
 
     public static void drawCircleAA(GuiGraphicsExtractor graphics, float x, float y, float width, float height, int color) {
         float scale = Minecraft.getInstance().getWindow().getGuiScale();
+        float diameter = Math.min(width, height);
+        if (CAPTURE_SINK.get() == null && NativeShapeRenderer.draw(graphics, scale,
+                x + (width - diameter) / 2, y + (height - diameter) / 2,
+                diameter, diameter, diameter / 2, 0, color, false)) return;
         graphics.pose().pushMatrix();
         graphics.pose().scale(1 / scale, 1 / scale);
         try {
@@ -145,6 +150,7 @@ public class RenderUtil {
 
     public static void drawRoundedOutlineAA(GuiGraphicsExtractor graphics, float x, float y, float width, float height, float radius, float thickness, int color) {
         float scale = Minecraft.getInstance().getWindow().getGuiScale();
+        if (thickness > 0 && CAPTURE_SINK.get() == null && NativeShapeRenderer.draw(graphics, scale, x, y, width, height, radius, thickness, color, false)) return;
         graphics.pose().pushMatrix();
         graphics.pose().scale(1 / scale, 1 / scale);
         try {
@@ -156,6 +162,7 @@ public class RenderUtil {
 
     public static void drawSquircle(GuiGraphicsExtractor graphics, float x, float y, float width, float height, float radius, int color) {
         float scale = Minecraft.getInstance().getWindow().getGuiScale();
+        if (CAPTURE_SINK.get() == null && NativeShapeRenderer.draw(graphics, scale, x, y, width, height, radius, 0, color, true)) return;
         graphics.pose().pushMatrix();
         graphics.pose().scale(1 / scale, 1 / scale);
         try {
@@ -167,6 +174,7 @@ public class RenderUtil {
 
     public static void drawSquircleOutline(GuiGraphicsExtractor graphics, float x, float y, float width, float height, float radius, float thickness, int color) {
         float scale = Minecraft.getInstance().getWindow().getGuiScale();
+        if (thickness > 0 && CAPTURE_SINK.get() == null && NativeShapeRenderer.draw(graphics, scale, x, y, width, height, radius, thickness, color, true)) return;
         graphics.pose().pushMatrix();
         graphics.pose().scale(1 / scale, 1 / scale);
         try {

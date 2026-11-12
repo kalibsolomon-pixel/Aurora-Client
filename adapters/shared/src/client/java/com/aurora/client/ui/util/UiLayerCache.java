@@ -23,10 +23,9 @@ import org.lwjgl.system.MemoryUtil;
  * uploaded as a {@link DynamicTexture} and drawn each frame as a single
  * textured blit. Only genuinely-dirty frames re-rasterize.
  *
- * <p><b>Identical quality:</b> the capture sink runs the same physical-pixel
- * row/coverage math and the same source-over compositing the live path uses,
- * and the final blit is 1:1 at native resolution — no resampling, no
- * quality loss.
+ * <p>The capture sink runs the physical-pixel row/coverage math and source-over
+ * compositing used by the CPU live path; the final blit is 1:1 at native
+ * resolution. Live shader shapes use different edge coverage.
  *
  * <p><b>Lifecycle:</b> one instance per screen; {@link #dispose()} on close.
  * {@link #ensureSize} re-allocates on window/GUI-scale resize.

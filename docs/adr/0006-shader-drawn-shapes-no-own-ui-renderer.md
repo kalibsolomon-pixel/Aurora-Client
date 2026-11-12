@@ -19,4 +19,7 @@ The blur and glint code already register custom pipelines and shaders this way, 
 - The change goes in behind `RenderUtil`, so no screen code changes.
 - It waits until after the port. The pipeline API is what changes between Minecraft versions, so building it on 1.21.11 would mean building it twice.
 - Existing caches stay until a measurement shows a given cache is no longer needed. The reference case is the Waypoints screen with 40 rows.
-- The gain has not been measured yet.
+- Preliminary waypoint measurements and their limits are in the
+  [step 6 report](../reports/2026-11-11-step-6-baseline.md).
+- If the shader cannot compile, live shapes use the CPU rasterizer for the
+  rest of the session. `-Daurora.shapes.cpu=true` selects that path for diagnosis.

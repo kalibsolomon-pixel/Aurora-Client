@@ -76,7 +76,10 @@ are retained in `docs/history/`.
 
 ## Remaining direction
 
-Step 6 (shader-drawn shapes) and step 7 (Apollo restrictions, then friends/status,
+Step 6 (shader-drawn shapes) is implemented on `feat/shader-drawn-shapes`, awaiting
+review: live rounded shapes draw through a native GUI pipeline by default, with a
+CPU fallback. Evidence and its limits are in the [step 6 report](reports/2026-11-11-step-6-baseline.md).
+Caches are retained until measurement supports removing one. Step 7 (Apollo restrictions, then friends/status,
 possible NeoForge and limited optimizations) remain future work. No new gameplay
 features are included in this restructure. Apollo licensing/detection needs
 verification before implementation. Better Hitreg author-permission provenance
@@ -85,7 +88,7 @@ notices follow the published upstream licenses and are not new permission claims
 
 ## Next work
 
-Step 5.5 (ADR 0008) is complete; step 6 (shader-drawn shapes) is next.
+Step 5.5 (ADR 0008) is complete; step 6 (shader-drawn shapes) awaits review.
 The earlier 26.3 OpenGL overhead failure was resolved before 3.3.0 publication;
 the failed historical measurements remain documented. Broader release validation
 should add a packaged-client launcher boot, multiplayer and another GPU or

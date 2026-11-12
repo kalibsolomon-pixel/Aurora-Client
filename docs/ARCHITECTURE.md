@@ -45,9 +45,13 @@ controls. UI input comparisons use that host's `InputConstants`.
 
 `RenderUtil` owns native transforms and fill accounting. It sends physical-pixel
 rectangles to core's `ShapeRasterizer` through `DrawSurface`. Both live GUI and
-static-layer-cache destinations use the same coverage math. Text layout measures
-through `TextMetrics` using the active native font. Shader-drawn shapes remain
-roadmap step 6.
+static-layer-cache destinations use the same coverage math. Live rounded
+rectangles, outlines, squircles and circles instead go to each adapter's
+`NativeShapeRenderer`, which draws one quad through an `aurora:pipeline/ui_shape`
+GUI pipeline (ADR 0006). Layer captures, triangles and out-of-range cases stay on
+the CPU path, as does the whole session if the shader fails to compile;
+`-Daurora.shapes.cpu=true` forces it. Text layout measures through `TextMetrics`
+using the active native font.
 
 ## Feature and failure contracts
 
