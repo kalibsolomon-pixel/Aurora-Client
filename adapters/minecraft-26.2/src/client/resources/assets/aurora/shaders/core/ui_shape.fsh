@@ -12,7 +12,7 @@ float shapeDistance(vec2 p, vec2 size, float radius, bool squircle) {
     return norm + min(max(q.x, q.y), 0.0) - radius;
 }
 void main() {
-    vec2 size = vec2(shapeParams.xy) / 16.0;
+    vec2 size = vec2(shapeParams.xy) / 8.0;
     float radius = float(abs(shapeParams.z)) / 16.0;
     float thickness = float(shapeParams.w) / 16.0;
     bool squircle = shapeParams.z < 0;

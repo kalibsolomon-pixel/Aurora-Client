@@ -27,6 +27,7 @@ Use native desktop screenshots to inspect the resulting screen.
 | `waypoints-screen` | Open the waypoint manager without changing its rows |
 | `shape-benchmark` | Measure 120 warm-up and 600 sampled manager extraction frames; write `shape-benchmark.json` |
 | `shape-cases` | Open fixed shape, scissor and transform cases for visual comparison |
+| `assert-inactivity afk` | Assert that the fixture's prior inactivity option was restored |
 | `settings` | Open Aurora settings |
 | `resize 854 480` | Set the native window size |
 | `layout grid` / `layout list` | Open the selected feature layout |
@@ -55,6 +56,9 @@ the interval between successive extractions, including frame pacing and waits.
 Extraction time can include waits; it is not a CPU-only timer. Neither measure
 isolates GPU time, and cold cache creation is outside the samples. Compare runs with the same
 window, GUI scale, theme, backend, world and mod set; record these independently.
+While sampling, the probe temporarily switches the inactivity FPS option to
+`MINIMIZED` to prevent Minecraft's AFK cap from changing the comparison. It
+restores the prior option on completion, cancellation or screen change.
 The `waypoints40` command requires an empty waypoint scope and a second marker,
 `SHAPE-BENCHMARK-DISPOSABLE.txt`, in the actual game directory. Create a fresh
 disposable configuration for each new seed; the command refuses existing rows.

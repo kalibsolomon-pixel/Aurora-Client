@@ -8,6 +8,7 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.InactivityFpsLimit;
 
 /** Measures elapsed time in GUI extraction, not deferred rendering or total GPU time. */
 public final class ShapeBenchmark {
@@ -17,14 +18,32 @@ public final class ShapeBenchmark {
     private static Path result;
     private static int frames;
     private static long start, previousStart, firstFills, firstQuads;
+    private static InactivityFpsLimit previousInactivityLimit;
 
     private ShapeBenchmark() {}
 
     public static void arm(Path output) {
+        cancel();
+        var inactivityLimit = Minecraft.getInstance().options.inactivityFpsLimit();
+        previousInactivityLimit = inactivityLimit.get();
+        inactivityLimit.set(InactivityFpsLimit.MINIMIZED);
         result = output;
         frames = 0;
         start = 0;
         previousStart = 0;
+    }
+
+    /** Restore the fixture's option when a run completes, is replaced or is cancelled. */
+    public static void cancel() {
+        result = null;
+        if (previousInactivityLimit != null) {
+            Minecraft.getInstance().options.inactivityFpsLimit().set(previousInactivityLimit);
+            previousInactivityLimit = null;
+        }
+    }
+
+    public static void cancelUnlessManager(boolean managerOpen) {
+        if (!managerOpen && result != null) cancel();
     }
 
     public static void begin() {
@@ -54,6 +73,8 @@ public final class ShapeBenchmark {
         var window = Minecraft.getInstance().getWindow();
         var data = new LinkedHashMap<String, Object>();
         data.put("scope", "Elapsed time in WaypointManagerScreen.extractRenderState; excludes deferred GUI rendering and total GPU time");
+        data.put("frameIntervalScope", "Elapsed time between successive manager extractions, including rendering, waits and frame pacing");
+        data.put("inactivityFpsLimit", "MINIMIZED during measurement; previous option restored afterward");
         data.put("waypoints", 40);
         data.put("warmupFrames", WARMUP);
         data.put("sampleFrames", SAMPLES);
@@ -71,7 +92,7 @@ public final class ShapeBenchmark {
         } catch (Exception failure) {
             throw new RuntimeException("Could not write shape benchmark", failure);
         } finally {
-            result = null;
+            cancel();
         }
     }
 }

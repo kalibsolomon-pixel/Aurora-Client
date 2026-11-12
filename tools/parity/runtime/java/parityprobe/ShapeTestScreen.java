@@ -1,6 +1,8 @@
 package parityprobe;
 
 import com.aurora.client.ui.util.RenderUtil;
+import com.aurora.client.ui.util.NativeShapeRenderer;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -30,5 +32,18 @@ final class ShapeTestScreen extends Screen {
         g.pose().rotate(.25f);
         RenderUtil.drawRoundedRectAA(g, 0, 0, 70, 20, 8, 0xFF70C090);
         g.pose().popMatrix();
+        g.pose().pushMatrix();
+        g.pose().translate(240, 210);
+        g.pose().scale(.25f, .25f);
+        RenderUtil.drawRoundedRectAA(g, 0, 0, 280, 80, 32, 0xFF70C090);
+        g.pose().popMatrix();
+        // A wide shape must still submit one quad when clipped to the viewport.
+        long before = NativeShapeRenderer.quadsSubmitted();
+        g.enableScissor(320, 210, 400, 230);
+        RenderUtil.drawRoundedRectAA(g, 320, 210,
+                2600f / Minecraft.getInstance().getWindow().getGuiScale(), 20, 8, 0xFF70C090);
+        g.disableScissor();
+        if (Boolean.getBoolean("aurora.shapes.shader") && NativeShapeRenderer.quadsSubmitted() != before + 1)
+            throw new AssertionError("A 2600-pixel shape did not use one shader quad");
     }
 }

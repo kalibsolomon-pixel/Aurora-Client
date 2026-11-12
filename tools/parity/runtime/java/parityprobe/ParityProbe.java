@@ -28,6 +28,7 @@ public final class ParityProbe implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             try {
                 var screen = NativeUi.screen(client);
+                ShapeBenchmark.cancelUnlessManager(screen instanceof WaypointManagerScreen);
                 // Copied port fixtures may ask for acknowledgement before quick-play.
                 if (screen != null && (screen.getClass().getSimpleName().equals("BackupConfirmScreen")
                         || screen.getTitle().getString().equals("Upgrading World Completed"))) {
@@ -87,7 +88,11 @@ public final class ParityProbe implements ClientModInitializer {
                 NativeUi.setScreen(client, new WaypointManagerScreen(null));
             }
             case "shape-cases" -> NativeUi.setScreen(client, new ShapeTestScreen());
-            case "stop" -> client.stop();
+            case "assert-inactivity" -> {
+                if (!client.options.inactivityFpsLimit().get().getSerializedName().equals(args[1]))
+                    throw new AssertionError("Inactivity FPS option was not restored");
+            }
+            case "stop" -> { ShapeBenchmark.cancel(); client.stop(); }
             case "resize" -> client.getWindow().setWindowed(Integer.parseInt(args[1]), Integer.parseInt(args[2]));
             case "layout" -> {
                 config.moduleGridView = args[1].equals("grid");

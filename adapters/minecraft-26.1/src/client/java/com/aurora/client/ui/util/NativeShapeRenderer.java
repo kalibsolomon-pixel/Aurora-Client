@@ -34,14 +34,15 @@ public final class NativeShapeRenderer {
         float pw = w * scale, ph = h * scale;
         float pr = Math.min(radius * scale, Math.min(pw, ph) / 2f);
         float pt = thickness > 0 ? Math.max(1f, thickness * scale) : 0f;
-        // Signed-short attributes carry physical values at 1/16-pixel precision.
-        // Shapes outside this range use the established CPU path.
-        if (pw > 2047f || ph > 2047f || pr > 2047f || pt > 2047f || pr < 1f / 16f
+        // Signed-short attributes carry size at 1/8 pixel and radius/stroke at
+        // 1/16 pixel; out-of-range cases retain the CPU rasterizer.
+        if (pw > 4095f || ph > 4095f || pr > 2047f || pt > 2047f || pr < 1f / 16f
                 || (thickness > 0 && pt * 2 >= Math.min(pw, ph))) return false;
-        int iw = Math.round(pw * 16), ih = Math.round(ph * 16);
+        int iw = Math.round(pw * 8), ih = Math.round(ph * 8);
         int ir = Math.round(pr * 16) * (squircle ? -1 : 1), it = Math.round(pt * 16);
-        float pad = 1f / scale;
         Matrix3x2f pose = new Matrix3x2f(g.pose());
+        float pad = ShapeShaderGeometry.padding(scale, pose.m00(), pose.m01(), pose.m10(), pose.m11());
+        if (pad <= 0) return false;
         ScreenRectangle scissor = g.scissorStack.peek();
         int bx = (int) Math.floor(x - pad), by = (int) Math.floor(y - pad);
         int br = (int) Math.ceil(x + w + pad), bb = (int) Math.ceil(y + h + pad);
@@ -61,10 +62,11 @@ public final class NativeShapeRenderer {
         @Override public RenderPipeline pipeline() { return PipelineHolder.PIPELINE; }
         @Override public TextureSetup textureSetup() { return TextureSetup.noTexture(); }
         @Override public void buildVertices(VertexConsumer out) {
-            vertex(out, x - pad, y - pad, -1, -1);
-            vertex(out, x - pad, y + h + pad, -1, ph + 1);
-            vertex(out, x + w + pad, y + h + pad, pw + 1, ph + 1);
-            vertex(out, x + w + pad, y - pad, pw + 1, -1);
+            float physicalPad = pad * (pw / w);
+            vertex(out, x - pad, y - pad, -physicalPad, -physicalPad);
+            vertex(out, x - pad, y + h + pad, -physicalPad, ph + physicalPad);
+            vertex(out, x + w + pad, y + h + pad, pw + physicalPad, ph + physicalPad);
+            vertex(out, x + w + pad, y - pad, pw + physicalPad, -physicalPad);
         }
         private void vertex(VertexConsumer out, float vx, float vy, float u, float v) {
             out.addVertexWith2DPose(pose, vx, vy).setColor(color).setUv(u, v)
