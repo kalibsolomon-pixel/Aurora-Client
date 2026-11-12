@@ -81,6 +81,7 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
     private List<FormattedCharSequence> noteLines = List.of();
     private String versionText = "", copyrightText = "";
     private int fittedKey = Integer.MIN_VALUE;
+    private final FittedText cardName = new FittedText(), dropdownName = new FittedText();
 
     public AuroraTitleScreen() {
         super(Component.translatable("aurora.title"));
@@ -248,7 +249,7 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
         PlayerFaceExtractor.extractRenderState(ctx, skin.get(), r.x() + DROPDOWN_PAD + 2, rowY + (DROPDOWN_ROW - face) / 2, face);
         int nameX = r.x() + DROPDOWN_PAD + 2 + face + 6;
         int checkX = r.x() + r.width() - DROPDOWN_PAD - 8;
-        String name = AuroraFontRenderer.ellipsize(this.font, this.minecraft.getUser().getName(), checkX - 8 - nameX, 0);
+        String name = dropdownName.fit(this.font, this.minecraft.getUser().getName(), checkX - 8 - nameX);
         ctx.text(this.font, name, nameX, rowY + (DROPDOWN_ROW - this.font.lineHeight) / 2 + 1,
                 ThemeManager.color(ThemeToken.MATERIAL_TEXT), false);
         MaterialIconRenderer.drawIcon(ctx, this.font, com.aurora.client.screen.IconCatalog.glyph("check"),
@@ -305,6 +306,24 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
         return false;
     }
 
+    /** One string ellipsized to a width, re-fitted only when the text, width or text style changes (no per-frame measuring). */
+    private static final class FittedText {
+        private String text;
+        private int width = -1, styleKey;
+        private String fitted = "";
+
+        String fit(Font font, String value, int maxWidth) {
+            int key = AuroraFontRenderer.styleKey();
+            if (!value.equals(text) || maxWidth != width || key != styleKey) {
+                text = value;
+                width = maxWidth;
+                styleKey = key;
+                fitted = AuroraFontRenderer.ellipsize(font, value, maxWidth, 0);
+            }
+            return fitted;
+        }
+    }
+
     /** The signed-in account: face, name and a chevron. Opens IAS's account list, or the read-only dropdown without IAS. */
     private final class AccountCard extends AbstractButton {
         private final boolean chip;
@@ -338,7 +357,7 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
             int chevronX = getX() + getWidth() - pad - 6;
             int nameX = getX() + pad + face + 6;
             int text = ThemeManager.color(ThemeToken.MATERIAL_TEXT);
-            String name = AuroraFontRenderer.ellipsize(font, getMessage().getString(), chevronX - 8 - nameX, 0);
+            String name = cardName.fit(font, getMessage().getString(), chevronX - 8 - nameX);
             g.text(font, name, nameX, getY() + (getHeight() - font.lineHeight) / 2 + 1, text, false);
             MaterialIconRenderer.drawIcon(g, font, com.aurora.client.screen.IconCatalog.glyph(switcher ? "switch_account" : accountOpen ? "expand_less" : "expand_more"),
                     chevronX, getY() + getHeight() / 2f, 12f,
