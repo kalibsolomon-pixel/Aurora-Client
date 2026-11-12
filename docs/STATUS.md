@@ -94,8 +94,9 @@ own their area, and only the ones with a visible trade-off get a row on Settings
 PR 1 (`feat/perf-foundation`) adds the stand-down mechanism and four loading optimizations;
 [evidence](reports/2026-11-12-perf-loading.md). PR 2 (`feat/perf-cpu`) adds four per-frame CPU
 optimizations and records two that were measured and dropped; [evidence](reports/2026-11-12-perf-cpu.md).
-Later stacked PRs cover textures, Aurora's maps, world rendering with Sodium patches, and measured Vulkan and
-occlusion prototypes.
+PR 3 (`feat/perf-atlas`) frees uploaded sprite mipmaps and drops animated sprite ordering;
+[evidence](reports/2026-11-12-perf-atlas.md). Later stacked PRs cover Aurora's maps, world
+rendering with Sodium patches, and measured Vulkan and occlusion prototypes.
 
 ## Next work
 

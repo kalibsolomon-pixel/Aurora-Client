@@ -459,6 +459,8 @@ public class AuroraConfig {
     public boolean perfMergeTextDecorations = true;
     /** GUI items animated only by their sprites are redrawn when the sprites advance, not every frame. */
     public boolean perfGuiItemBaking = true;
+    /** Sprites drop their CPU copies of mip levels above 0 once the atlas is uploaded. */
+    public boolean perfFreeSpriteMipmaps = true;
 
     // ---- Late-Stage Responsive Features ----
     public boolean adaptiveRenderSleeping = false;
