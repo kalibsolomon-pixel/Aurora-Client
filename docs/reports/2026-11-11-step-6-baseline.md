@@ -3,7 +3,8 @@
 The step 6 reference case is the waypoint manager with 40 rows. A disposable
 26.3 dev client on the development workstation was measured using the opt-in
 probe in `tools/parity` at commit `0ca3c51`, before shader changes. This is one
-diagnostic run, not a release or cross-device performance result.
+diagnostic run, not a release or cross-device performance result. Results for
+the final candidate, with the shader enabled by default, are at the end.
 
 - Backend and device: OpenGL, AMD Radeon RX 9070 XT, no additional mod set.
 - Window: 854 x 480 framebuffer, GUI scale 2. Factory configuration: Dark,
@@ -96,9 +97,41 @@ Screenshots remain under `build/step6-shader-test/`, `build/step6-261-opengl/`,
 wide cases were inspected on 26.3 OpenGL after the latest geometry change;
 the other backend captures preceded it.
 
-The shader remains disabled by default. Triangle rasterization, cases outside
-its parameter range and layer captures still use the CPU path. Runtime testing
-of further shader-mod combinations, real-screen and appearance cases,
-frame-level/GPU measurements and the release overhead gate
-remain outstanding. Retain caches until individual removal is supported by
+## Final candidate: shader by default
+
+After the shader became the default and the compile-failure fallback was added,
+the final working tree was checked again on the development workstation:
+
+- `python tools/parity.py` tested and built 26.1.2, 26.2 and 26.3.
+- The probe's shape cases rendered without the CPU override on 26.1.2 OpenGL
+  and VulkanMod, 26.2 OpenGL and native Vulkan, and 26.3 OpenGL and native
+  Vulkan. Each row asserted that the clipped 2,600-pixel shape submitted one
+  shader quad; screenshots of each row are under `build/step6-default-shapes/`.
+- With the deliberately invalid shader pack from
+  `tools/parity/shape_failure_pack.py`, all six rows fell back to CPU fills,
+  logged one Aurora warning and kept running (`build/step6-final-fallback/`).
+- `tools/overhead_check.py` passed on all six rows with factory defaults in a
+  world and no override: after two warm-up runs, the four judged runs measured
+  0.112 to 0.154 ms CPU mean and 0.146 to 0.223 ms p95, with zero fills and
+  glass captures (`build/step6-default-overhead/`).
+- A paired 40-waypoint run on 26.3 OpenGL with fresh clean fixtures, with the
+  CPU path forced by `-Daurora.shapes.cpu=true` in one boot:
+
+| Path | Extraction mean / p95 | Frame interval mean / p95 | Fill / quad submissions per frame |
+|---|---|---|---|
+| CPU (override) | 18.470 / 25.431 ms | 23.657 / 36.492 ms | 6,766 / 0 |
+| Shader (default) | 0.203 / 0.364 ms | 16.663 / 19.751 ms | 0 / 33 |
+
+The 60 FPS GUI cap applied to both; the shader path's frame interval sits at
+that cap, so the frame-rate gain beyond it is not measured. The same limits as
+the earlier pairs apply.
+
+The live shader path is now enabled by default. Triangle rasterization, cases
+outside its parameter range and layer captures still use the CPU path. A shader
+compile failure selects CPU rendering for the rest of the session; the CPU path
+can also be forced with `-Daurora.shapes.cpu=true`. Not covered:
+further shader-mod combinations beyond the Iris/Complementary run above,
+GPU-time measurement, other GPUs, and a second inspection of every real screen
+after the final geometry change (the earlier real-screen inspections used the
+same shader code behind the opt-in flag). Retain caches until individual removal is supported by
 measurement.

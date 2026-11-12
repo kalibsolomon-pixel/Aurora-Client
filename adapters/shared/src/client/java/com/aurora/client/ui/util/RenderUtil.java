@@ -14,7 +14,7 @@ public class RenderUtil {
      * high-res AA engine rasterizes per <b>physical device pixel</b>; this
      * interface lets the same row/coverage math write either into a live
      * {@link GuiGraphicsExtractor} or an off-screen {@code UiLayerCache}.
-     * The opt-in shader uses different edge coverage for live shapes; capture
+     * The shader uses different edge coverage for live shapes; capture
      * continues to use this rasterizer.
      */
     public interface RectSink extends com.aurora.client.port.DrawSurface {}

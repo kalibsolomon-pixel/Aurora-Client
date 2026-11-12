@@ -62,5 +62,15 @@ restores the prior option on completion, cancellation or screen change.
 The `waypoints40` command requires an empty waypoint scope and a second marker,
 `SHAPE-BENCHMARK-DISPOSABLE.txt`, in the actual game directory. Create a fresh
 disposable configuration for each new seed; the command refuses existing rows.
-Pass `-Daurora.shapes.shader=true` to the game JVM to compare the experimental
-live shader path with the default CPU path. Caches retain CPU capture coverage.
+Pass `-Daurora.shapes.cpu=true` to the game JVM to compare the CPU path with
+the default live shader path. Caches retain CPU capture coverage.
+
+To check compile-failure fallback, run `python tools/parity/shape_failure_pack.py
+26.3 <game-dir>` against a marked disposable game directory, enable the
+generated `file/AuroraShapeFailure` resource pack, and pass
+`-Daurora.shapes.expectFallback=true` to the game JVM. Remove any old
+`shape-cases-rendered.txt` from the probe command directory, send `shape-cases`
+and wait for the new marker. The probe asserts that the wide shape used CPU
+fills instead of a shader quad. Check the log for the single Aurora fallback
+warning; the deliberately invalid shader produces expected compiler errors.
+The fallback lasts until the client restarts.

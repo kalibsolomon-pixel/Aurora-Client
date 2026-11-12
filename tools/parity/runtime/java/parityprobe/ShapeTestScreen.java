@@ -9,6 +9,7 @@ import net.minecraft.network.chat.Component;
 
 /** Fixed visual cases for manual CPU/shader comparison in a disposable client. */
 final class ShapeTestScreen extends Screen {
+    private boolean recorded;
     ShapeTestScreen() { super(Component.literal("Shape comparison")); }
 
     @Override public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
@@ -39,11 +40,25 @@ final class ShapeTestScreen extends Screen {
         g.pose().popMatrix();
         // A wide shape must still submit one quad when clipped to the viewport.
         long before = NativeShapeRenderer.quadsSubmitted();
+        long fillsBefore = RenderUtil.fillsSubmitted();
         g.enableScissor(320, 210, 400, 230);
         RenderUtil.drawRoundedRectAA(g, 320, 210,
                 2600f / Minecraft.getInstance().getWindow().getGuiScale(), 20, 8, 0xFF70C090);
         g.disableScissor();
-        if (Boolean.getBoolean("aurora.shapes.shader") && NativeShapeRenderer.quadsSubmitted() != before + 1)
+        if (Boolean.getBoolean("aurora.shapes.expectFallback")) {
+            if (NativeShapeRenderer.quadsSubmitted() != before || RenderUtil.fillsSubmitted() <= fillsBefore)
+                throw new AssertionError("Broken shader did not fall back to CPU fills");
+        } else if (!Boolean.getBoolean("aurora.shapes.cpu") && NativeShapeRenderer.quadsSubmitted() != before + 1) {
             throw new AssertionError("A 2600-pixel shape did not use one shader quad");
+        }
+        if (!recorded) {
+            try {
+                java.nio.file.Files.writeString(java.nio.file.Path.of(System.getProperty("aurora.parity.probe"))
+                        .resolve("shape-cases-rendered.txt"), "OK\n");
+                recorded = true;
+            } catch (java.io.IOException failure) {
+                throw new RuntimeException("Could not record shape fixture rendering", failure);
+            }
+        }
     }
 }

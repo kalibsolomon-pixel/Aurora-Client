@@ -1,6 +1,7 @@
 package com.aurora.client.ui.util;
 
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -16,7 +17,7 @@ public final class NativeShapeRenderer {
     private NativeShapeRenderer() {}
     private static final java.util.concurrent.atomic.AtomicLong QUADS = new java.util.concurrent.atomic.AtomicLong();
     public static long quadsSubmitted() { return QUADS.get(); }
-    private static final boolean ENABLED = Boolean.getBoolean("aurora.shapes.shader");
+    private static final boolean ENABLED = !Boolean.getBoolean("aurora.shapes.cpu");
     private static final class PipelineHolder {
         static final RenderPipeline PIPELINE = RenderPipeline.builder(RenderPipelines.GUI_SNIPPET)
             .withLocation(Identifier.fromNamespaceAndPath("aurora", "pipeline/ui_shape"))
@@ -24,6 +25,27 @@ public final class NativeShapeRenderer {
             .withFragmentShader(Identifier.fromNamespaceAndPath("aurora", "core/ui_shape"))
             .withVertexFormat(DefaultVertexFormat.ENTITY, com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS)
             .build();
+    }
+
+    private static boolean shaderUnavailable;
+    private static boolean pipelineAvailable() {
+        // A failed compile can be retried on every lookup by the backend.
+        // Disable it for this session to avoid repeated compilation and logs.
+        if (shaderUnavailable) return false;
+        boolean available;
+        try {
+            var compiled = RenderSystem.getDevice().precompilePipeline(PipelineHolder.PIPELINE);
+            available = compiled != null && compiled.isValid();
+        } catch (RuntimeException | LinkageError failure) {
+            shaderUnavailable = true;
+            com.aurora.client.AuroraClient.LOGGER.warn("UI shape shader failed; using CPU rasterization for this session", failure);
+            return false;
+        }
+        if (!available) {
+            shaderUnavailable = true;
+            com.aurora.client.AuroraClient.LOGGER.warn("UI shape shader unavailable; using CPU rasterization for this session");
+        }
+        return available;
     }
 
     public static boolean draw(GuiGraphicsExtractor g, float scale, float x, float y, float w, float h,
@@ -42,7 +64,7 @@ public final class NativeShapeRenderer {
         int ir = Math.round(pr * 16) * (squircle ? -1 : 1), it = Math.round(pt * 16);
         Matrix3x2f pose = new Matrix3x2f(g.pose());
         float pad = ShapeShaderGeometry.padding(scale, pose.m00(), pose.m01(), pose.m10(), pose.m11());
-        if (pad <= 0) return false;
+        if (pad <= 0 || !pipelineAvailable()) return false;
         ScreenRectangle scissor = g.scissorStack.peek();
         int bx = (int) Math.floor(x - pad), by = (int) Math.floor(y - pad);
         int br = (int) Math.ceil(x + w + pad), bb = (int) Math.ceil(y + h + pad);

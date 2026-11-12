@@ -25,7 +25,7 @@ import org.lwjgl.system.MemoryUtil;
  *
  * <p>The capture sink runs the physical-pixel row/coverage math and source-over
  * compositing used by the CPU live path; the final blit is 1:1 at native
- * resolution. The opt-in experimental shader uses different edge coverage.
+ * resolution. Live shader shapes use different edge coverage.
  *
  * <p><b>Lifecycle:</b> one instance per screen; {@link #dispose()} on close.
  * {@link #ensureSize} re-allocates on window/GUI-scale resize.
