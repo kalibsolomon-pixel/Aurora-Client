@@ -158,6 +158,21 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     private static final int SETTINGS_ROW_GAP = com.aurora.client.ui.util.UiDensity.ROW_GAP;
 
     private int selectedCategory = 0; // 0: Mods, 1: Settings
+    /**
+     * The Settings tab's page, chosen from the sub-tabs across its top
+     * ({@link FeatureRegistry#settingsPages()}, 2026-11-12). The sub-tabs sit
+     * in the toolbar row the Modules tab fills with its layout pair and
+     * search field, so the content viewport is identical on both tabs.
+     */
+    private int selectedPage = 0;
+    private final List<FeatureRegistry.SettingsPage> pages = FeatureRegistry.settingsPages();
+    /** Every entry on every page, in page order: init, invalidation and teardown walk all of them. */
+    private final List<FeatureMetadata> allPageEntries = pages.stream()
+            .flatMap(page -> page.entries().stream()).toList();
+    /** Sub-tab height and the gap between sub-tabs (the toolbar row's metrics). */
+    private static final float PAGE_TAB_H = com.aurora.client.ui.util.UiDensity.TOOL, PAGE_TAB_GAP = 4;
+    /** Horizontal label padding inside a sub-tab, per side. */
+    private static final int PAGE_TAB_PAD = 8;
     private boolean gridLayout = AuroraConfig.get().moduleGridView; // false: list, true: grid
     private final Map<String, List<String>> moduleLabelLines = new java.util.HashMap<>();
     private long moduleLabelVersion = Long.MIN_VALUE;
@@ -173,8 +188,16 @@ public class AuroraScreen extends Screen implements ThemedScreen {
      */
     private final SmoothScroll[] scrolls = {
             new SmoothScroll(AuroraScreen::scrollTauMs).boundedMotion().setSnapEpsilon(0.1),
-            new SmoothScroll(AuroraScreen::scrollTauMs).boundedMotion().setSnapEpsilon(0.1),
+            null, // the selected Settings page's scroll (pageScrolls), set below
     };
+    /** One scroll per Settings page; {@code scrolls[1]} is the selected page's, so each page keeps its position. */
+    private final SmoothScroll[] pageScrolls = new SmoothScroll[pages.size()];
+    {
+        for (int i = 0; i < pageScrolls.length; i++) {
+            pageScrolls[i] = new SmoothScroll(AuroraScreen::scrollTauMs).boundedMotion().setSnapEpsilon(0.1);
+        }
+        scrolls[1] = pageScrolls[selectedPage];
+    }
     private FeatureSetting activeDragSetting = null;
 
     /**
@@ -227,6 +250,29 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     private final SemanticActionControl[] layoutControls = new SemanticActionControl[2];
     /** C-5: the pair roves Left/Right as one horizontal ring. */
     private final SemanticControlGroup layoutGroup = SemanticControlGroup.horizontal();
+    /**
+     * The Settings tab's sub-tabs: navigation peers under the same contract
+     * as the sidebar tabs (persistent selection through the stained tint,
+     * pointer-only canonical hover, the Button-family focus hairline, one
+     * activation click on a real change, silent no-op on the selected page).
+     */
+    private final SemanticActionControl[] pageControls = new SemanticActionControl[pages.size()];
+    /** The sub-tabs rove Left/Right as one horizontal ring. */
+    private final SemanticControlGroup pageGroup = SemanticControlGroup.horizontal();
+    private final HoverAnim[] pageHovers = new HoverAnim[pages.size()];
+    /** Unified-material hover keys, built once (no per-frame string concatenation). */
+    private final String[] pagePilotIds = new String[pages.size()];
+    {
+        for (int i = 0; i < pageHovers.length; i++) {
+            pageHovers[i] = HoverAnim.symmetric(HOVER_MS);
+            pagePilotIds[i] = "page" + i;
+        }
+    }
+    private final boolean[] pageGlass = new boolean[pages.size()];
+    /** Sub-tab geometry and fitted labels, rebuilt only when the width or the font changes. */
+    private final float[] pageTabX = new float[pages.size()], pageTabW = new float[pages.size()];
+    private final String[] pageTabLabel = new String[pages.size()];
+    private long pageTabVersion = Long.MIN_VALUE;
     /** Canonical hover animators for the pair — pointer-only (C-5). */
     private final HoverAnim[] layoutHovers = {
             HoverAnim.symmetric(HOVER_MS),
@@ -236,7 +282,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     private final Map<String, SemanticActionControl> tileControls = new HashMap<>();
     /** Settings-header navigation, keyed by entry id — only entries with a detail screen. */
     private final Map<String, SemanticActionControl> headerNavControls = new HashMap<>();
-    /** The four header toggles, keyed by entry id. */
+    /** The header toggles (entries that have a switch: Theme, Custom Title), keyed by entry id. */
     private final Map<String, SemanticActionControl> headerToggleControls = new HashMap<>();
     /** Canonical hover animators — pointer-only targets, keyed by stable identity (never list position). */
     private final HoverAnim[] tabHovers = {
@@ -296,10 +342,11 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         cardGeometry = new float[ModuleManager.getInstance().getModules().size()][4];
         super.init();
         semanticHost.beginRebuild();
-        for (SmoothScroll s : scrolls) s.resetClock();
+        scrolls[0].resetClock();
+        for (SmoothScroll s : pageScrolls) s.resetClock();
         sectionToggles.clear();
 
-        for (FeatureMetadata m : FeatureRegistry.settings()) {
+        for (FeatureMetadata m : allPageEntries) {
             if (!m.noSettingsToggle) {
                 sectionToggles.put(m.id, new ToggleSwitch(m::isEnabled, m::setEnabled));
             }
@@ -331,26 +378,33 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         profilesControl = profilesActionControl();
         layoutControls[0] = layoutControl(0);
         layoutControls[1] = layoutControl(1);
+        // The Settings sub-tabs share the toolbar row with the layout pair;
+        // only one set is ever available (each tab's walk marks its own).
+        for (int i = 0; i < pageControls.length; i++) pageControls[i] = pageControl(i);
         for (Module m : ModuleManager.getInstance().getModules()) {
             tileControls.put(m.id, tileControl(m));
 
         }
 
-        // HOSTABLE_NOW only: ask every inline component for the semantic
-        // controls it already owns. This deterministically yields the two
-        // Text & Fonts enums, Accent's ten visual-order peers, the three
-        // segmented rows' seven peers, then the Interface enum (20 controls
-        // total — C-5 added the segmented groups to C-2's thirteen).
+        // HOSTABLE_NOW only: ask every inline component on every Settings
+        // page for the semantic controls it already owns, in page order
+        // (Accent's peers, the Corner Style segments and the Text & Fonts
+        // enums on Appearance; the Display Settings toggles, enums, HUD
+        // Editor key and Copy Diagnostics on the other pages). Controls on
+        // pages not shown stay unavailable through the availability sweep.
         // Segmented peers materialize per SEGMENT, one control each.
         hostedSettingControls.clear();
-        for (FeatureMetadata metadata : FeatureRegistry.settings()) {
+        for (FeatureMetadata metadata : allPageEntries) {
             // Header chrome precedes the entry's rows in traversal order
             // (visual top-to-bottom): the navigation control for entries
-            // with a detail screen, then the header toggle.
+            // with a detail screen, then the header toggle for entries
+            // that have one.
             if (metadata.hasDetail()) {
                 headerNavControls.put(metadata.id, headerNavControl(metadata));
             }
-            headerToggleControls.put(metadata.id, headerToggleControl(metadata));
+            if (!metadata.noSettingsToggle) {
+                headerToggleControls.put(metadata.id, headerToggleControl(metadata));
+            }
             for (FeatureSetting setting : metadata.settings) {
                 List<SemanticActionControl> controls = List.copyOf(setting.interactionControls());
                 hostedSettingControls.put(setting, controls);
@@ -461,6 +515,37 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     }
 
     /**
+     * One Settings sub-tab — the sidebar tabs' navigation contract, one
+     * level down: selected stays focusable and narrates {@code Selected},
+     * reactivating the selected page is a silent consumed no-op, and a real
+     * change plays the one activation click.
+     */
+    private SemanticActionControl pageControl(int i) {
+        SemanticActionControl control = pageControls[i];
+        if (control != null) return control;
+        String name = pages.get(i).label();
+        control = new SemanticActionControl(new SemanticAction(
+                Component.literal(name),
+                () -> Component.literal("Shows the " + name + " settings."),
+                () -> Component.literal(selectedPage == i ? "Selected" : "Not selected"),
+                () -> true,
+                () -> {
+                    if (selectedPage == i) return; // reactivating the selected page: silent consumed no-op
+                    MinecraftSemanticFeedback.INSTANCE
+                            .play(SemanticSound.ACTIVATION);
+                    selectSettingsPage(i);
+                },
+                SemanticSound.NONE, true, true),
+                MinecraftSemanticFeedback.INSTANCE,
+                null, // no press animation — the selection transition is the feedback
+                SemanticActionControl.PointerRouting.MANUAL);
+        pageControls[i] = control;
+        pageGroup.attach(control); // roving ring; idempotent across re-inits
+        semanticHost.register(control);
+        return control;
+    }
+
+    /**
      * One module card — a COMPOUND CARD, not a plain button. The primary
      * action (left click / Enter / Space) toggles the module with exactly
      * one activation click; the module's enabled state is the persistent
@@ -554,8 +639,9 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         if (selectedCategory == i) return;
         if (i == 0) {
             // Leaving the Settings tab — notify its rows now (capture
-            // families' teardown hook; uniform plumbing, none hosted here).
-            for (FeatureMetadata metadata : FeatureRegistry.settings()) {
+            // families' teardown hook: the HUD Editor key row stops
+            // listening).
+            for (FeatureMetadata metadata : allPageEntries) {
                 for (FeatureSetting setting : metadata.settings) {
                     setting.onInteractionAvailabilityChanged(false);
                 }
@@ -564,6 +650,71 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         selectedCategory = i;
         semanticHost.deactivateAll();
         focusedSettingVisible = false;
+    }
+
+    /**
+     * The one page-selection path (pointer, Enter, Space converge here
+     * through the sub-tab action). The page being left notifies its rows,
+     * every hosted control is invalidated until the new page's walk
+     * re-marks it, and the new page resumes its own scroll position.
+     */
+    private void selectSettingsPage(int i) {
+        if (selectedPage == i) return;
+        for (FeatureMetadata metadata : pageEntries()) {
+            for (FeatureSetting setting : metadata.settings) {
+                setting.onInteractionAvailabilityChanged(false);
+            }
+        }
+        FeatureSetting.clearFocus();
+        selectedPage = i;
+        pageScrolls[i].touchClock(); // a fresh dt, not the time spent on other pages
+        scrolls[1] = pageScrolls[i];
+        semanticHost.deactivateAll();
+        focusedSettingVisible = false;
+    }
+
+    /** The entries on the selected Settings page, in order — the one list every Settings walk reads. */
+    private List<FeatureMetadata> pageEntries() {
+        return pages.get(selectedPage).entries();
+    }
+
+    /**
+     * Lays the sub-tabs out left to right in the toolbar row, each as wide
+     * as its label plus padding. When they cannot all fit, the padding
+     * halves; when they still cannot, they share the row equally and a
+     * label that does not fit ends in an ellipsis. Labels stay centred
+     * throughout. Memoized per row width and font; {@link #pageTabX} holds
+     * offsets from {@link #toolbarX()}, so moving the window needs no
+     * re-layout.
+     */
+    private void layoutPageTabs() {
+        int row = (int) (2 * TOOL_STEP) + searchWidth(); // the Modules toolbar's exact extent
+        AuroraConfig cfg = AuroraConfig.get();
+        long version = ThemeManager.generation() * 65537L + row * 31L
+                + (cfg.activeFont == null ? 0 : cfg.activeFont.ordinal())
+                + (cfg.textRendererMode == null ? 0 : cfg.textRendererMode.ordinal() * 256L);
+        if (version == pageTabVersion) return;
+        pageTabVersion = version;
+        int n = pages.size();
+        float gaps = PAGE_TAB_GAP * (n - 1);
+        float labels = 0;
+        for (int i = 0; i < n; i++) labels += this.font.width(pages.get(i).label());
+        // Full padding, then half padding, before any label is shortened.
+        int pad = labels + gaps + n * 2 * PAGE_TAB_PAD <= row ? PAGE_TAB_PAD
+                : labels + gaps + n * PAGE_TAB_PAD <= row ? PAGE_TAB_PAD / 2 : -1;
+        boolean fits = pad >= 0;
+        float equal = Math.max(1, (row - gaps) / n);
+        float x = 0;
+        for (int i = 0; i < n; i++) {
+            String label = pages.get(i).label();
+            float w = fits ? this.font.width(label) + 2 * pad : equal;
+            pageTabX[i] = x;
+            pageTabW[i] = w;
+            // Squeezed tabs keep half the padding on each side for the label.
+            pageTabLabel[i] = fits ? label
+                    : com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(this.font, label, Math.max(1, (int) w - PAGE_TAB_PAD), 1);
+            x += w + PAGE_TAB_GAP;
+        }
     }
 
     private float boxX() { return (float) Math.floor((this.width - BOX_W) / 2.0f); }
@@ -639,10 +790,14 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         return (Math.round(a * 255f) << 24) | (MaterialSurface.color(t) & 0x00FFFFFF);
     }
 
-    /** Settings-tab rows use the same compact measurement as the detail screens (cached per width). */
+    /**
+     * Settings-tab rows use the same compact measurement as the detail
+     * screens (cached per width); the sub-tab row is laid out alongside.
+     */
     private void measureSettingsRows() {
+        layoutPageTabs();
         int w = Math.max(1, contentWidth() - 8);
-        for (FeatureMetadata m : FeatureRegistry.settings())
+        for (FeatureMetadata m : pageEntries())
             for (FeatureSetting s : m.settings) s.measureCompact(w);
     }
 
@@ -858,9 +1013,14 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             GlassSurface.disableScissor(g);
         } else {
             float mx = mainX(), my = mainY();
+            // Sub-tabs: raised peers in the toolbar row, like the sidebar
+            // chips (neutral, the selected one stained by its painter).
+            for (int i = 0; i < pageControls.length; i++) {
+                pageGlass[i] = GlassSurface.card(g, toolbarX() + pageTabX[i], my, pageTabW[i], PAGE_TAB_H, ctrlRadius);
+            }
             GlassSurface.enableScissor(g, vp.x, vp.y, vp.xEnd(), vp.yEnd());
             float y = viewTop() - (float) scrolls[1].current();
-            for (FeatureMetadata m : FeatureRegistry.settings()) {
+            for (FeatureMetadata m : pageEntries()) {
                 // Settings groups share the enclosing window; only their controls own surfaces.
                 y += SETTINGS_HEADER_H; // header row — plain text + an opaque toggle, no glass
                 if (m.settingsDetailOnly) {
@@ -1127,9 +1287,47 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         searchField.visible = false;
         ClipBand vp = contentViewport();
 
+        // Sub-tabs (toolbar row, never scrolled): the sidebar tabs' channels
+        // one level down — selection is the stained face, hover is
+        // pointer-only, focus is the hairline on an unselected peer.
+        for (int i = 0; i < pageControls.length; i++) {
+            float tx = toolbarX() + pageTabX[i], tw = pageTabW[i];
+            boolean sel = selectedPage == i;
+            boolean hover = Widget.inBounds(mouseX, mouseY, tx, my, tw, PAGE_TAB_H);
+            float hoverT = MaterialSurface.unified() ? pilotHover(pagePilotIds[i], hover) : pageHovers[i].update(hover);
+            SemanticActionControl control = pageControls[i];
+            if (control != null) {
+                control.setBounds((int) tx, (int) my, (int) tw, (int) PAGE_TAB_H);
+                control.setAvailable(true); // toolbar chrome — interactive whenever the Settings tab is shown
+                control.updatePointer(mouseX, mouseY);
+            }
+            if (MaterialSurface.unified()) MaterialSurface.selection(g, tx, my, tw, PAGE_TAB_H, ctrlRadius, sel, hoverT, true);
+            else if (!pageGlass[i]) {
+                if (sel) {
+                    RenderUtil.drawRoundedRectAA(g, tx, my, tw, PAGE_TAB_H, ctrlRadius,
+                            alpha(ThemeToken.ACCENT, 0x26 / 255f));
+                } else if (hoverT > 0f) {
+                    RenderUtil.drawRoundedRectAA(g, tx, my, tw, PAGE_TAB_H, ctrlRadius,
+                            AuroraAnim.lerpArgb(0x00000000,
+                                    ThemeManager.surfaceColor(ThemeToken.SURFACE_VARIANT), hoverT));
+                }
+            }
+            int txt = pageGlass[i] && sel ? MaterialSurface.color(ThemeToken.ON_ACCENT)
+                    : sel ? MaterialSurface.color(ThemeToken.ON_BACKGROUND)
+                    : AuroraAnim.lerpArgb(
+                            MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED),
+                            MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), hoverT);
+            com.aurora.client.ui.util.AuroraFontRenderer.drawCentered(g, tr, pageTabLabel[i],
+                    (int) (tx + tw / 2f), (int) (my + (PAGE_TAB_H - tr.lineHeight) / 2 + 1), txt);
+            if (control != null && control.isFocused() && !sel) {
+                RenderUtil.drawRoundedOutlineAA(g, tx, my, tw, PAGE_TAB_H, ctrlRadius, 1.0f,
+                        ThemeManager.withAlpha(MaterialSurface.color(ThemeToken.ACCENT), 0x99));
+            }
+        }
+
         g.enableScissor(vp.x, vp.y, vp.xEnd(), vp.yEnd());
         float y = viewTop() - (float) scrolls[1].current();
-        for (FeatureMetadata m : FeatureRegistry.settings()) {
+        for (FeatureMetadata m : pageEntries()) {
             // Section headings and spacing provide grouping, without nested frames.
             int headerH = SETTINGS_HEADER_H;
             if (vp.intersects(mx + 4, y, contentWidth() - 4, headerH)) {
@@ -1223,9 +1421,8 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                     // when it holds the focused setting, keyboard routing)
                     // is available exactly while it shares a pixel with the
                     // viewport. onInteractionAvailabilityChanged is the
-                    // FeatureDetailScreen hook — capture families cancel on
-                    // false; this tab hosts none today, so it is uniform
-                    // plumbing, not a behavior change.
+                    // FeatureDetailScreen hook — capture families (the HUD
+                    // Editor key row on the Controls page) cancel on false.
                     s.onInteractionAvailabilityChanged(
                             controls.isEmpty() ? visible : anyControlAvailable);
                     if (s == FeatureSetting.getFocused()) {
@@ -1241,7 +1438,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         // (the FeatureDetailScreen discipline; before this, the Settings tab's
         // two text_fonts dropdowns expanded invisibly — clicks "did nothing"
         // and blind clicks could silently rewrite the config).
-        for (FeatureMetadata m : FeatureRegistry.settings()) {
+        for (FeatureMetadata m : pageEntries()) {
             for (FeatureSetting s : m.settings) {
                 if (s instanceof com.aurora.client.screen.setting.EnumSetting<?> row
                         && s.isVisible() && row.popupOpen()) {
@@ -1379,7 +1576,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             return Math.max(0, com.aurora.client.ui.util.UiDensity.extent(mods.size(), com.aurora.client.ui.util.UiDensity.LIST_HEIGHT, com.aurora.client.ui.util.UiDensity.LIST_GAP) - contentViewport().height);
         }
         double h = 0;
-        for (FeatureMetadata m : FeatureRegistry.settings()) {
+        for (FeatureMetadata m : pageEntries()) {
             h += SETTINGS_HEADER_H;
             if (m.settingsDetailOnly) h += SETTINGS_HINT_H;
             else for (FeatureSetting s : m.settings) h += s.height() + SETTINGS_ROW_GAP;
@@ -1465,6 +1662,20 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             return true;
         }
 
+        // Settings sub-tabs (toolbar row, outside the content viewport):
+        // routed through their controls like the sidebar tabs, and
+        // consumed either way (the selected page is the silent no-op).
+        if (selectedCategory == 1) {
+            for (int i = 0; i < pageControls.length; i++) {
+                if (Widget.inBounds(mouseX, mouseY, toolbarX() + pageTabX[i], my, pageTabW[i], PAGE_TAB_H)) {
+                    if (pageControls[i] != null && pageControls[i].activateFromPointer(mouseX, mouseY, button)) {
+                        this.setFocused(pageControls[i]);
+                    }
+                    return true;
+                }
+            }
+        }
+
         // C-1: the content viewport is the input truth for both tabs' walk-up
         // targets. A pointer outside the band is never on a pixel the
         // content scissor paints, so no scrolled row, header, or tile may
@@ -1534,7 +1745,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             // nothing" report, 2026-10-30).
             if (button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) {
                 float py = viewTop() - (float) scrolls[1].current();
-                for (FeatureMetadata m : FeatureRegistry.settings()) {
+                for (FeatureMetadata m : pageEntries()) {
                     py += SETTINGS_HEADER_H;
                     if (m.settingsDetailOnly) {
                         py += SETTINGS_HINT_H;
@@ -1552,7 +1763,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 }
             }
             float y = viewTop() - (float) scrolls[1].current();
-            for (FeatureMetadata m : FeatureRegistry.settings()) {
+            for (FeatureMetadata m : pageEntries()) {
                 // The toggle zone is deliberately ~10px wider than the
                 // painted 28px switch (a forgiving hit target that tiles
                 // the header row's right edge against the navigation zone
@@ -1688,7 +1899,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             searchField.setFocused(true);
             return searchField.charTyped(_ev);
         }
-        if (selectedCategory == 1) for (FeatureMetadata m : FeatureRegistry.settings())
+        if (selectedCategory == 1) for (FeatureMetadata m : pageEntries())
             for (FeatureSetting s : m.settings) if (s.resumeSearch(_ev)) {
                 this.setFocused(null);
                 return true;
@@ -1700,7 +1911,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     private void invalidateSettingsSemantics() {
         semanticHost.deactivateAll();
         focusedSettingVisible = false;
-        for (FeatureMetadata metadata : FeatureRegistry.settings()) {
+        for (FeatureMetadata metadata : allPageEntries) {
             for (FeatureSetting setting : metadata.settings) {
                 setting.onInteractionAvailabilityChanged(false);
             }

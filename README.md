@@ -47,7 +47,7 @@ shader mod; Vulkan shader mods need their own compatibility evidence. See the
 
 Information-advantage features ship off. Existing settings are migrated. Respect
 server rules. Broken Aurora mixins disable affected features for the session and
-report through Display Settings → Support → **Copy Diagnostics**; nothing is
+report through Settings → General → Support → **Copy Diagnostics**; nothing is
 uploaded automatically.
 
 ## Manual production releases

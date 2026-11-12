@@ -20,20 +20,28 @@ import java.util.function.Consumer;
 /**
  * Registry of feature metadata. Features are split into two tabs:
  * <ul>
- *   <li><b>Modules</b> â€” Aurora's gameplay/visual features (the grid),
- *       plus the combined "Display Settings" entry that groups the smaller
- *       settings (camera, frame pacer, latency, input, servers)
- *       behind one detail screen - an explicit
- *       "for now" grouping (moved here from Settings 2026-09-10)</li>
+ *   <li><b>Modules</b> - Aurora's gameplay/visual features (the grid)</li>
  *   <li><b>Settings</b> - global client settings: title screen, fonts,
- *       theme (moved here from Modules 2026-09-09), and the UI fps limit</li>
+ *       theme, the UI fps limit and Display Settings (camera, frame pacer,
+ *       latency, input, servers). The tab draws them as
+ *       {@link #settingsPages() pages} behind sub-tabs (2026-11-12)
+ *       rather than one entry per feature.</li>
  * </ul>
  */
 public final class FeatureRegistry {
 
     private static final List<FeatureMetadata> MODULES = new ArrayList<>();
     private static final List<FeatureMetadata> SETTINGS = new ArrayList<>();
+    private static final List<SettingsPage> SETTINGS_PAGES = new ArrayList<>();
     private static boolean initialized = false;
+
+    /**
+     * One page of the Settings tab, chosen from the sub-tabs at its top: a
+     * label and the entries it shows, in order. An entry is a Settings-tab
+     * catalog feature or a {@link FeatureMetadata#pageGroup} of rows that
+     * another feature owns.
+     */
+    public record SettingsPage(String label, List<FeatureMetadata> entries) {}
 
     private FeatureRegistry() {}
 
@@ -42,9 +50,32 @@ public final class FeatureRegistry {
         return MODULES;
     }
 
+    /** The Settings-tab catalog features, in catalog order. The tab itself draws {@link #settingsPages()}. */
     public static List<FeatureMetadata> settings() {
         if (!initialized) init();
         return SETTINGS;
+    }
+
+    /** The Settings tab's pages, in sub-tab order. */
+    public static List<SettingsPage> settingsPages() {
+        if (!initialized) init();
+        return SETTINGS_PAGES;
+    }
+
+    /** A registered Settings-tab feature, by id. */
+    private static FeatureMetadata settingsEntry(String id) {
+        return SETTINGS.stream().filter(meta -> meta.id.equals(id)).findFirst().orElseThrow();
+    }
+
+    /**
+     * A page entry that groups rows owned by other features under one
+     * header. It has no switch of its own and no detail screen; its id is
+     * namespaced so it can never collide with a catalog feature id.
+     */
+    private static FeatureMetadata group(String id, String name, FeatureSetting... rows) {
+        return new FeatureMetadata("settings_page." + id, name, "", () -> true, v -> {}, List.of(rows))
+                .noSettingsToggle(true)
+                .pageGroup(true);
     }
 
     private static ButtonSetting mappingAction(String label, String description,
@@ -1161,16 +1192,15 @@ addWithSettings("hitbox",
                                 .description("How dense Aurora's card backgrounds are. Lower values make the backdrop clearer. Drag previews the change live; release saves it.")
                 ));
 
+        FeatureSetting uiFpsLimit = new EnumSetting<>("UI FPS Limit", AuroraConfig.GuiFps.class,
+                () -> AuroraConfig.GuiFps.fromValue(cfg.guiFpsLimit), v -> cfg.guiFpsLimit = v.value)
+                .labels(AuroraConfig.GuiFps::label)
+                .description("The framerate Aurora screens run at. 'Unlimited' removes the cap so the GUI matches your main FPS.");
         addWithSettings("interface",
                 "Caps the framerate while an Aurora screen is open, independent of Minecraft's main FPS cap. A lower limit keeps the UI smooth while freeing GPU time for the world behind it.",
                 () -> cfg.guiFpsLimit != 1000,
                 v -> cfg.guiFpsLimit = v ? 60 : 1000,
-                List.of(
-                        new EnumSetting<>("UI FPS Limit", AuroraConfig.GuiFps.class,
-                                () -> AuroraConfig.GuiFps.fromValue(cfg.guiFpsLimit), v -> cfg.guiFpsLimit = v.value)
-                                .labels(AuroraConfig.GuiFps::label)
-                                .description("The framerate Aurora screens run at. 'Unlimited' removes the cap so the GUI matches your main FPS.")
-                ));
+                List.of(uiFpsLimit));
 
         addWithSettings("animations",
                 "Animation & movement polish: swing & view-bob curves, classic 1.8-style damage camera tilt, configurable idle held-item sway with multiple movement curves, and frame-rate-independent entity movement smoothing that rounds off per-tick knockback kinks and absorbs multiplayer server throttle jitter.",
@@ -1330,29 +1360,77 @@ addWithSettings("hitbox",
                                 () -> cfg.keystrokesBgColor, v -> cfg.keystrokesBgColor = v)
                 ));
 
-        // ---- Miscellaneous ----
-        // Consolidates the former standalone Settings-tab tiles that sat
-        // below "Interface" (Smooth Camera, Frame Pacer, Low Latency,
-        // Tick Sync, Decoupled Input, Drag-to-Reorder Servers — Tick Sync
-        // removed entirely 2026-09-13, Compliance Mode and Accessibility
-        // likewise 2026-09-12) into one entry - an explicit "for now"
-        // grouping, not a permanent taxonomy decision. Every original
-        // setting row is preserved verbatim under its own SectionHeader,
-        // and each section's "Enabled" row carries the exact getter/setter
-        // that tile's header toggle used (config fields and behavior are
-        // unchanged). Moved to the Modules grid 2026-09-10 (was a Settings-tab
-        // entry); the Settings-tab-only settingsDetailOnly header+hint
-        // presentation does not travel with the move - on the grid the
-        // card's right-click opens the same detail screen, like every
-        // other tile. Master toggle follows the Pack
-        // Tweaks/Alerts pattern: ON if ANY sub-feature is on, and the
-        // setter flips all sub-flags together. Reset is one unified reset
-        // whose prefix list is exactly the union of the original tiles'
-        // config fields - none of these had a reachable reset before
-        // (Settings-tab entries had no detail screen), so this is new
-        // capability, consistent with the other combined features.
+        // ---- Display Settings ----
+        // One catalog feature (fair play, mixin health, one reset) whose
+        // rows have no screen of their own: the Settings tab's pages show
+        // them in groups (settingsPages below, 2026-11-12). The rows are
+        // built once and shared, so the detail screen (still reachable by
+        // id, e.g. from the GUI audit) and the pages edit the same values.
+        // History: the former standalone Settings-tab tiles were merged
+        // into this entry on 2026-09-10 and shown as a Modules-grid card
+        // until the pages replaced it.
+        FeatureSetting smoothCameraEnabled = new BooleanSetting("Enabled",
+                () -> cfg.smoothCamera,
+                v -> cfg.smoothCamera = v)
+                .description("Adds inertia to your mouse look so the camera eases into and out of movement instead of stopping instantly. Gives panning a weighty, cinematic feel — great for recording or relaxed play. Note: it adds aim latency, so competitive players usually leave it off.");
+        FeatureSetting smoothCameraStrength = SliderSetting.of("Strength",
+                () -> cfg.smoothCameraStrength, v -> cfg.smoothCameraStrength = v, 0.05, 1.0)
+                .description("How much smoothing is applied. Low values add a barely-there glide that still feels responsive; high values produce heavy, floaty camera drift with noticeable lag between your mouse and the view. Start around 0.2-0.3 if you want subtle smoothing.");
+        FeatureSetting framePacerEnabled = new BooleanSetting("Enabled",
+                () -> cfg.smoothFramePacer,
+                v -> cfg.smoothFramePacer = v)
+                .description("A high-precision replacement for Minecraft's built-in FPS cap. Vanilla's limiter spaces frames unevenly, which you feel as micro-stutter even at high FPS. The Frame Pacer holds each frame to a near-exact interval, so motion looks visibly smoother at the same average framerate. Set your FPS cap in vanilla Video Settings; this controls *how* that cap is enforced.");
+        FeatureSetting framePacingStrategy = new EnumSetting<>("Strategy",
+                AuroraConfig.PacingStrategy.class,
+                () -> cfg.framePacingStrategy,
+                v -> cfg.framePacingStrategy = v)
+                .valueDescriptions(s -> switch (s) {
+                    case VANILLA -> "Disabled — uses Minecraft's default frame pacing. Notice the jitter at high FPS caps above ~64.";
+                    case PARK -> "Default. Sleeps for most of the wait, spinning only the final half-millisecond. Measured the most stable frame times of any strategy at 60 fps while using the least CPU - cool and quiet with nothing given up.";
+                    case HYBRID -> "Sleeps until the configured Park Threshold, then spins to the deadline. Low CPU uses the shorter Spin Threshold instead. Kept for existing manual configurations.";
+                    case SPIN -> "Pure busy-loop. Maximum precision (sub-microsecond) but wastes a CPU core. Useful for benchmarking only.";
+                });
+        FeatureSetting framePacerLowCpu = new BooleanSetting("Low CPU (Hybrid only)",
+                () -> cfg.framePacerLowCpuMode,
+                v -> cfg.framePacerLowCpuMode = v)
+                .description("Hybrid only: parks until the configured Spin Threshold, shortening its planned spin window. Park and Spin are unchanged. Timing precision and actual CPU effects depend on the system.")
+                .disabled(() -> cfg.framePacingStrategy != AuroraConfig.PacingStrategy.HYBRID);
+        FeatureSetting framePacerSpinThreshold = SliderSetting.ofInt("Spin Threshold (µs)",
+                () -> cfg.framePacerSpinThresholdMicros,
+                v -> cfg.framePacerSpinThresholdMicros = v, 100, 2000)
+                .description("Planned spin tail in microseconds for Park, and for Hybrid with Low CPU enabled. Manual values are preserved; actual timing and CPU use depend on the system. Spin ignores this threshold.");
+        FeatureSetting framePacerParkThreshold = SliderSetting.ofInt("Park Threshold (µs)",
+                () -> cfg.framePacerParkThresholdMicros,
+                v -> cfg.framePacerParkThresholdMicros = v, 1000, 8000)
+                .description("Planned spin window in microseconds for Hybrid with Low CPU off. A higher value reserves more active spinning. Park and Spin ignore this threshold.");
+        FeatureSetting globalFrameCap = SliderSetting.ofInt("Global Frame Cap",
+                () -> cfg.frameCapFps, v -> cfg.frameCapFps = v, 0, 2000)
+                .editableValue()
+                .valueFormatter(v -> v.intValue() <= 0 ? "Off" : Integer.toString(v.intValue()))
+                .description("Caps the game's framerate everywhere — world, menus, and Aurora's screens alike — at up to 2000 FPS. 0 (Off) removes the cap. Unlike Minecraft's own FPS limit, this works even when that option is set to Unlimited, and it stacks cleanly with it: whichever is lower wins. The wait happens at the very start of each frame, so latency stays low. Click the value to type an exact number; drag or use the arrows for rough adjustment.");
+        FeatureSetting lowLatencyEnabled = new BooleanSetting("Enabled",
+                () -> cfg.lowLatencyRender,
+                v -> cfg.lowLatencyRender = v)
+                .description("Master switch for the latency settings in this section: the VSync-off enforcement and the Reflex-style render sleep below. With this off, neither has any effect, even with their own toggles on.");
+        FeatureSetting disableVSync = new BooleanSetting("Disable VSync (causes tearing without VRR)",
+                () -> cfg.disableVSync, v -> cfg.disableVSync = v)
+                .description("Turns off vertical sync, removing the frame-buffering delay it adds for the lowest possible input lag. The trade-off is screen tearing (a horizontal seam during fast motion) unless your monitor has a variable refresh rate like G-Sync or FreeSync. Leave on if you see tearing.");
+        FeatureSetting adaptiveRenderSleeping = new BooleanSetting("Adaptive Render Sleeping (Reflex-style)",
+                () -> cfg.adaptiveRenderSleeping, v -> cfg.adaptiveRenderSleeping = v)
+                .description("Moves the frame-rate limiter's wait from the end of the frame to the very start of the next one, so the CPU sleeps just before your input is applied and the frame is built — keeping the GPU render queue short. Requires this section's Enabled toggle plus the Frame Pacer above being on with a non-Vanilla strategy.");
+        FeatureSetting decoupledInputEnabled = new BooleanSetting("Enabled",
+                () -> cfg.inputSamplingDecoupled,
+                v -> cfg.inputSamplingDecoupled = v)
+                .description("Feeds your mouse movement into the game at the very top of each rendered frame — ahead of the game-tick logic, instead of at vanilla's own per-frame application point just before the world renders. On frames that run a game tick, your aim is already in place before tick decisions are made instead of landing just after. Applies the raw batch, so vanilla's cinematic-camera smoothing is bypassed while this is on.");
+        FeatureSetting serverListDragEnabled = new BooleanSetting("Enabled",
+                () -> cfg.serverListDragReorder,
+                v -> cfg.serverListDragReorder = v)
+                .description("Lets you reorder servers in the Multiplayer server list by click-and-drag instead of vanilla's up/down arrow buttons. Click and hold a server, drag it to a new position, and release — the new order is saved instantly. Normal clicks still select and join servers as usual.");
+        FeatureSetting copyDiagnostics = ButtonSetting.semantic("Copy Diagnostics", "Copy",
+                com.aurora.client.diagnostics.DiagnosticsReport::runAndCopy)
+                .description("Closes this menu, measures frame times for 5 seconds, then copies a text report to your clipboard: your mod list, any Aurora feature that could not start and why, the renderer, recent Aurora errors and the frame-time result. Nothing is sent anywhere; paste it where you are asking for help. It contains no account, world or server names.");
         addWithSettings("miscellaneous",
-                "Display and responsiveness controls: smooth camera, frame pacing, a global frame cap, latency, input handling, and server-list dragging. Each keeps its own enable toggle and settings under its section; open the feature to configure them.",
+                "Display and responsiveness controls: smooth camera, frame pacing, a global frame cap, latency, input handling, and server-list dragging. Each keeps its own enable toggle and settings under its section.",
                         () -> cfg.smoothCamera || cfg.smoothFramePacer || cfg.lowLatencyRender
                         || cfg.inputSamplingDecoupled
                         || cfg.serverListDragReorder || cfg.frameCapFps > 0,
@@ -1369,78 +1447,20 @@ addWithSettings("hitbox",
                 },
                 List.of(
                         new SectionHeaderSetting("Smooth Camera"),
-                        new BooleanSetting("Enabled",
-                                () -> cfg.smoothCamera,
-                                v -> cfg.smoothCamera = v)
-                                .description("Adds inertia to your mouse look so the camera eases into and out of movement instead of stopping instantly. Gives panning a weighty, cinematic feel — great for recording or relaxed play. Note: it adds aim latency, so competitive players usually leave it off."),
-                        SliderSetting.of("Strength",
-                                () -> cfg.smoothCameraStrength, v -> cfg.smoothCameraStrength = v, 0.05, 1.0)
-                                .description("How much smoothing is applied. Low values add a barely-there glide that still feels responsive; high values produce heavy, floaty camera drift with noticeable lag between your mouse and the view. Start around 0.2-0.3 if you want subtle smoothing."),
-
+                        smoothCameraEnabled, smoothCameraStrength,
                         new SectionHeaderSetting("Frame Pacer"),
-                        new BooleanSetting("Enabled",
-                                () -> cfg.smoothFramePacer,
-                                v -> cfg.smoothFramePacer = v)
-                                .description("A high-precision replacement for Minecraft's built-in FPS cap. Vanilla's limiter spaces frames unevenly, which you feel as micro-stutter even at high FPS. The Frame Pacer holds each frame to a near-exact interval, so motion looks visibly smoother at the same average framerate. Set your FPS cap in vanilla Video Settings; this controls *how* that cap is enforced."),
-                        new EnumSetting<>("Strategy",
-                                AuroraConfig.PacingStrategy.class,
-                                () -> cfg.framePacingStrategy,
-                                v -> cfg.framePacingStrategy = v)
-                                .valueDescriptions(s -> switch (s) {
-                                    case VANILLA -> "Disabled â€” uses Minecraft's default frame pacing. Notice the jitter at high FPS caps above ~64.";
-                                    case PARK -> "Default. Sleeps for most of the wait, spinning only the final half-millisecond. Measured the most stable frame times of any strategy at 60 fps while using the least CPU - cool and quiet with nothing given up.";
-                                    case HYBRID -> "Sleeps until the configured Park Threshold, then spins to the deadline. Low CPU uses the shorter Spin Threshold instead. Kept for existing manual configurations.";
-                                    case SPIN -> "Pure busy-loop. Maximum precision (sub-microsecond) but wastes a CPU core. Useful for benchmarking only.";
-                                }),
-                        new BooleanSetting("Low CPU (Hybrid only)",
-                                () -> cfg.framePacerLowCpuMode,
-                                v -> cfg.framePacerLowCpuMode = v)
-                                .description("Hybrid only: parks until the configured Spin Threshold, shortening its planned spin window. Park and Spin are unchanged. Timing precision and actual CPU effects depend on the system.")
-                                .disabled(() -> cfg.framePacingStrategy != AuroraConfig.PacingStrategy.HYBRID),
-                        SliderSetting.ofInt("Spin Threshold (Âµs)",
-                                () -> cfg.framePacerSpinThresholdMicros,
-                                v -> cfg.framePacerSpinThresholdMicros = v, 100, 2000)
-                                .description("Planned spin tail in microseconds for Park, and for Hybrid with Low CPU enabled. Manual values are preserved; actual timing and CPU use depend on the system. Spin ignores this threshold."),
-                        SliderSetting.ofInt("Park Threshold (Âµs)",
-                                () -> cfg.framePacerParkThresholdMicros,
-                                v -> cfg.framePacerParkThresholdMicros = v, 1000, 8000)
-                                .description("Planned spin window in microseconds for Hybrid with Low CPU off. A higher value reserves more active spinning. Park and Spin ignore this threshold."),
-
+                        framePacerEnabled, framePacingStrategy, framePacerLowCpu,
+                        framePacerSpinThreshold, framePacerParkThreshold,
                         new SectionHeaderSetting("Frame Cap"),
-                        SliderSetting.ofInt("Global Frame Cap",
-                                () -> cfg.frameCapFps, v -> cfg.frameCapFps = v, 0, 2000)
-                                .editableValue()
-                                .valueFormatter(v -> v.intValue() <= 0 ? "Off" : Integer.toString(v.intValue()))
-                                .description("Caps the game's framerate everywhere — world, menus, and Aurora's screens alike — at up to 2000 FPS. 0 (Off) removes the cap. Unlike Minecraft's own FPS limit, this works even when that option is set to Unlimited, and it stacks cleanly with it: whichever is lower wins. The wait happens at the very start of each frame, so latency stays low. Click the value to type an exact number; drag or use the arrows for rough adjustment."),
-
+                        globalFrameCap,
                         new SectionHeaderSetting("Low Latency"),
-                        new BooleanSetting("Enabled",
-                                () -> cfg.lowLatencyRender,
-                                v -> cfg.lowLatencyRender = v)
-                                .description("Master switch for the latency settings in this section: the VSync-off enforcement and the Reflex-style render sleep below. With this off, neither has any effect, even with their own toggles on."),
-                        new BooleanSetting("Disable VSync (causes tearing without VRR)",
-                                () -> cfg.disableVSync, v -> cfg.disableVSync = v)
-                                .description("Turns off vertical sync, removing the frame-buffering delay it adds for the lowest possible input lag. The trade-off is screen tearing (a horizontal seam during fast motion) unless your monitor has a variable refresh rate like G-Sync or FreeSync. Leave on if you see tearing."),
-                        new BooleanSetting("Adaptive Render Sleeping (Reflex-style)",
-                                () -> cfg.adaptiveRenderSleeping, v -> cfg.adaptiveRenderSleeping = v)
-                                .description("Moves the frame-rate limiter's wait from the end of the frame to the very start of the next one, so the CPU sleeps just before your input is applied and the frame is built — keeping the GPU render queue short. Requires this section's Enabled toggle plus the Frame Pacer above being on with a non-Vanilla strategy."),
-
+                        lowLatencyEnabled, disableVSync, adaptiveRenderSleeping,
                         new SectionHeaderSetting("Decoupled Input"),
-                        new BooleanSetting("Enabled",
-                                () -> cfg.inputSamplingDecoupled,
-                                v -> cfg.inputSamplingDecoupled = v)
-                                .description("Feeds your mouse movement into the game at the very top of each rendered frame — ahead of the game-tick logic, instead of at vanilla's own per-frame application point just before the world renders. On frames that run a game tick, your aim is already in place before tick decisions are made instead of landing just after. Applies the raw batch, so vanilla's cinematic-camera smoothing is bypassed while this is on."),
-
+                        decoupledInputEnabled,
                         new SectionHeaderSetting("Drag-to-Reorder Servers"),
-                        new BooleanSetting("Enabled",
-                                () -> cfg.serverListDragReorder,
-                                v -> cfg.serverListDragReorder = v)
-                                .description("Lets you reorder servers in the Multiplayer server list by click-and-drag instead of vanilla's up/down arrow buttons. Click and hold a server, drag it to a new position, and release — the new order is saved instantly. Normal clicks still select and join servers as usual."),
-
+                        serverListDragEnabled,
                         new SectionHeaderSetting("Support"),
-                        ButtonSetting.semantic("Copy Diagnostics", "Copy",
-                                com.aurora.client.diagnostics.DiagnosticsReport::runAndCopy)
-                                .description("Closes this menu, measures frame times for 5 seconds, then copies a text report to your clipboard: your mod list, any Aurora feature that could not start and why, the renderer, recent Aurora errors and the frame-time result. Nothing is sent anywhere; paste it where you are asking for help. It contains no account, world or server names.")
+                        copyDiagnostics
                 ),
                 // Union of the original tiles' config fields (see the
                 // resetByPrefix comment on pack_tweaks for prefix rules).
@@ -1449,6 +1469,34 @@ addWithSettings("hitbox",
                         "smoothFramePacer", "framePacer", "framePacing", "frameCap",
                         "lowLatencyRender", "disableVSync", "adaptiveRenderSleeping",
                         "inputSamplingDecoupled", "serverListDragReorder"));
+
+        // ============ SETTINGS TAB PAGES ============
+        // The Settings tab shows one page at a time, chosen from the row of
+        // sub-tabs at its top. A page is a list of entries; each entry is a
+        // header (with the feature's own switch for Theme and Custom Title)
+        // over its rows. Theme, Text & Fonts and Custom Title are their
+        // catalog features; every other entry is a group of rows owned by
+        // Interface or Display Settings, so their config fields, defaults,
+        // fair-play notes and resets do not change.
+        FeatureSetting hudEditorKey = new KeybindSetting("HUD Editor Key",
+                () -> cfg.hudEditorKey, v -> cfg.hudEditorKey = v)
+                .description("Opens the HUD editor in game, where you move and resize HUD modules; its Aurora Settings button leads here. Also listed in Minecraft's Controls. Press ESC or Backspace while rebinding to clear it.");
+        SETTINGS_PAGES.add(new SettingsPage("Appearance", List.of(
+                settingsEntry("theme"),
+                settingsEntry("text_fonts"))));
+        SETTINGS_PAGES.add(new SettingsPage("Display", List.of(
+                group("frame_rate", "Frame Rate", globalFrameCap, uiFpsLimit),
+                group("frame_pacer", "Frame Pacer", framePacerEnabled, framePacingStrategy,
+                        framePacerLowCpu, framePacerSpinThreshold, framePacerParkThreshold),
+                group("low_latency", "Low Latency", lowLatencyEnabled, disableVSync, adaptiveRenderSleeping))));
+        SETTINGS_PAGES.add(new SettingsPage("Controls", List.of(
+                group("smooth_camera", "Smooth Camera", smoothCameraEnabled, smoothCameraStrength),
+                group("decoupled_input", "Decoupled Input", decoupledInputEnabled),
+                group("aurora_keys", "Aurora Keys", hudEditorKey))));
+        SETTINGS_PAGES.add(new SettingsPage("General", List.of(
+                settingsEntry("custom_title"),
+                group("server_list", "Drag-to-Reorder Servers", serverListDragEnabled),
+                group("support", "Support", copyDiagnostics))));
 
     }
 

@@ -198,13 +198,17 @@ public final class FeatureCatalog {
         module("minimap", "Minimap", "A top-down map of the world around you, shown as a HUD overlay. Renders terrain, waypoints, and nearby entities as colored dots.");
         module("world_map", "World Map", "A full-screen, pannable world map of your explored terrain.");
         module("resourcepack_browser", "Resourcepack Browser", "Browse and install community resource packs directly from Modrinth. Search, preview, and one-click install straight into your resourcepacks folder.");
-        module("miscellaneous", "Display Settings", "Display and responsiveness controls — smooth camera, frame pacing, latency, input handling, server-list dragging.");
 
         // ---- Settings tab, in display order ----
         setting("custom_title", "Custom Title");
         setting("text_fonts", "Text & Fonts");
         setting("theme", "Theme");
         setting("interface", "Interface");
+        // Display Settings has no entry of its own: its sections are spread
+        // over the Settings tab's Display, Controls and General pages
+        // (FeatureRegistry.settingsPages, 2026-11-12). It stays one feature
+        // for fair play, mixin health and its reset prefixes.
+        setting("miscellaneous", "Display Settings");
 
         // ---- Fair play (ADR 0007). docs/FAIR_PLAY.md repeats these lines. ----
         classify("zoom", FairPlay.VANILLA_INFORMATION, "Narrows the field of view while a key is held, as the vanilla spyglass does.");
