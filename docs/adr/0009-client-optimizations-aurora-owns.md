@@ -15,7 +15,7 @@ An optimization may ship when all of these hold:
 3. **Invisible.** It changes neither packet timing nor anything gameplay-visible. A visible trade-off (a hidden overlay, F3 lines updating less often, more memory) gets a switch on the Settings tab's Performance page. Everything else is a config-only gate.
 4. **Gated.** Every mixin still has a boolean `perf*` gate (ADR 0004), so fail-soft and `-Daurora.mixin.disable` keep working.
 
-The new defaults apply to existing installs on purpose, so no migrator is added. The `perf*` fields are machine settings and are kept out of profiles.
+The new defaults apply to existing installs on purpose, so no migrator is added. The `perf*` fields are machine settings: they are kept out of profiles and out of the portable release defaults (`defaults/3.2.0.json`), so their initializers are their defaults.
 
 ## Considered options
 
