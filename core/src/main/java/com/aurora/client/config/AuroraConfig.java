@@ -436,11 +436,13 @@ public class AuroraConfig {
     public boolean disableVSync = false;
 
     // ---- Performance (ADR 0009) ----
-    // Client optimizations Aurora owns. Every field is a mixin gate named
-    // perf*, so resetByPrefix("perf") resets the section and profiles leave
-    // them alone (ProfileFieldSet). Only the ones with a visible trade-off
-    // have a row on the Settings tab's Performance page; the rest are
-    // config-only switches for diagnosis.
+    // Client optimizations Aurora owns. Every field is named perf*, so
+    // resetByPrefix("perf") resets the section. They are machine settings:
+    // profiles leave them alone (ProfileFieldSet) and the portable release
+    // defaults (assets/aurora/defaults) do not carry them, so the initializer
+    // here is the default. Only the ones with a visible trade-off have a row
+    // on the Settings tab's Performance page; the rest are config-only
+    // switches for diagnosis.
     /** Resource reloads after startup keep the current screen instead of the Mojang overlay. */
     public boolean perfHideReloadOverlay = true;
     /** The vanilla title screen's widgets appear at once instead of fading in. */
