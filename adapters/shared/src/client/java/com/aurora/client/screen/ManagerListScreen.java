@@ -331,6 +331,14 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
     /** The toolbar's left action button, constructed but not registered (the base registers it). */
     protected abstract ButtonWidget createToolbarActionBtn();
 
+    /**
+     * Glass pass for any header controls a screen adds beyond the action
+     * button and Done (the Profiles search and toolbar, 2026-11-12). Runs
+     * every frame before the dim, outside the list clip; position the
+     * controls here so they follow a content-fitted window's top.
+     */
+    protected void paintHeaderGlassPass(GuiGraphicsExtractor ctx) {}
+
     // ------------------------------------------------------------------
     //  Render
     // ------------------------------------------------------------------
@@ -411,6 +419,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         GlassSurface.disableScissor(ctx);
         if (toolbarActionBtn != null) toolbarActionBtn.renderGlassPass(ctx);
         if (doneBtn != null) doneBtn.renderGlassPass(ctx);
+        paintHeaderGlassPass(ctx);
         // The inline editor paints UNDER THE SAME CLIP as its row (C-8): an
         // editor whose row is half-scrolled out of the band must not paint
         // outside it, and a fully-scrolled-out editor paints nothing (the

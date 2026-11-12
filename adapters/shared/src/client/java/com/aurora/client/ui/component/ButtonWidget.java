@@ -92,6 +92,13 @@ public class ButtonWidget extends AbstractButton {
         return widget;
     }
 
+    /** A new label reaches the painter too (the Profiles header shortens its labels on narrow windows). */
+    @Override
+    public void setMessage(Component message) {
+        super.setMessage(message);
+        if (painter != null) painter.label(message);
+    }
+
     public ButtonWidget destructive(boolean d) {
         painter.destructive(d);
         return this;

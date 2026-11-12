@@ -1,6 +1,9 @@
 package com.aurora.client.screen;
+import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.ui.component.MaterialSurface;
 import com.aurora.client.config.profile.ProfileManager;
+import com.aurora.client.screen.setting.FeatureSetting;
+import com.aurora.client.screen.setting.KeybindSetting;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.component.Button;
@@ -13,7 +16,9 @@ import com.aurora.client.ui.interaction.SemanticActionControl;
 import com.aurora.client.ui.interaction.SemanticSound;
 import com.aurora.client.ui.render.blur.BlurPanelRenderer;
 import com.aurora.client.ui.util.AuroraFontRenderer;
-import com.aurora.client.ui.util.RenderUtil;
+import com.aurora.client.ui.util.MaterialIconRenderer;
+import com.aurora.client.ui.util.UiDensity;
+import com.aurora.client.util.AuroraKey;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
@@ -21,72 +26,74 @@ import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
 /**
- * Lists configuration profiles and exposes create / rename / duplicate /
- * delete plus one-click switch to the active profile.
+ * Lists configuration profiles as a card grid: a "New profile" card first,
+ * then one card per profile with its icon, name and hotkey.
  *
  * <p>Backed by {@link ProfileManager}, on the shared
  * {@link ManagerListScreen} foundation (audit R3): the frame order, scroll +
  * scrollbar, toast, inline rename lifecycle and toolbar row come from the
- * base; this class owns the row content and actions — the accent Active
- * badge, the Duplicate/Delete buttons (the canonical {@link Button}; Delete
- * in its destructive variant) — plus this screen's extra inline editor: the
- * "New Profile" create row pinned above the list.
+ * base. This class owns the header (search, Separate controls, Open folder),
+ * the card content and actions, and the inline create editor that opens in
+ * the "New profile" card.
  *
- * <p>The active profile is visually marked and cannot be deleted (the
- * manager enforces this; the row simply hides its delete button). The
- * {@code default} profile is likewise non-deletable.
+ * <p>Profiles refresh (owner request 2026-11-12, after a launcher-style
+ * reference): a card click switches to that profile and the active card
+ * wears the thin selected edge; the hotkey chip captures the key that
+ * switches to it in game; the settings glyph opens {@link ProfileOptionsScreen}
+ * (icon, rename, hotkey, Duplicate, Delete). The {@code default} profile and
+ * the active profile cannot be deleted (the manager enforces this).
  */
 public class ProfileManagerScreen extends ManagerListScreen<String> {
 
     // ---- Card grid (owner request 2026-10-19: tiles, like the launcher's instances) ----
     //
-    // Each profile is one card: name on top, the Active pill (or a hover
-    // hint) under it, Duplicate and Delete stacked at the bottom so every
-    // card in a row keeps its actions on the same lines. Columns follow the
-    // available width (at least one); the active card wears the accent
-    // selection outline the enabled feature cards use.
-    private static final int CARD_H = 70;
-    private static final int CARD_MIN_W = 112;
+    // Each card: the settings glyph in the top-right corner, a large icon,
+    // the name under it, and the hotkey chip on the bottom line, so every
+    // card in a row keeps its parts on the same lines. Columns follow the
+    // available width (at least one).
+    private static final int CARD_H = 84;
+    private static final int CARD_MIN_W = 104;
     private static final int CARD_GAP = 8;
-    private static final int LIST_MAX_W = 444;
     private static final int INSET = 6;
     private static final int BTN_H = 14;
-    private static final int NAME_Y = 6;
-    private static final int PILL_Y = 17;
-    private static final int PILL_H = 12;
-    /** Upper action line (Duplicate / Create) and lower line (Delete), from the card top. */
-    private static final int UPPER_BTN_Y = CARD_H - INSET - BTN_H - 4 - BTN_H;
+    private static final int ICON_Y = 24;
+    private static final float ICON_EM = 24f;
+    private static final int NAME_Y = 44;
+    /** The settings glyph's hit square, inset from the card's top-right corner. */
+    private static final int GEAR = 16;
+    /** The bottom action line: the hotkey chip, or the create card's Create button. */
     private static final int LOWER_BTN_Y = CARD_H - INSET - BTN_H;
+    private static final String GEAR_GLYPH = IconCatalog.glyph("settings");
+    private static final String KEYBOARD_GLYPH = IconCatalog.glyph("keyboard");
+    private static final String ADD_GLYPH = IconCatalog.glyph("add");
 
     /**
-     * Pending create: when the user clicks "New", we show an empty editor
-     * at the top of the list rather than mid-list.
+     * Pending create: "New profile" turns its card into an editor in place
+     * rather than adding a card mid-grid.
      */
     private boolean creatingNew = false;
     private EditBox createField;
 
-    // Shared themed row buttons, keyed by profile NAME — unique and stable,
-    // so a rename simply produces a fresh entry instead of a stale capture.
-    private final Map<String, Button> dupBtns = new HashMap<>();
-    private final Map<String, Button> delBtns = new HashMap<>();
+    /** The profile whose hotkey chip is waiting for a key, or null. */
+    private String capturingHotkey;
+
     /**
-     * The semantic controls behind the Duplicate/Delete row buttons (Phase A
-     * full rollout), keyed in lockstep with their buttons — created together
-     * on the row's first paint, dropped together in {@link #reconcileRowCaches}
-     * (removal unregisters the control, clearing focus if it held it). The
-     * shared Button remains the sole pixel and press-animation owner; the
-     * control owns the activation convergence, narration, and the semantic
-     * click. Delete's accessible name carries the target profile name.
+     * Per-card semantic controls (Phase A rollout), keyed by profile NAME,
+     * created on the card's first paint and dropped in
+     * {@link #reconcileRowCaches} (removal unregisters the control, clearing
+     * focus if it held it): the settings glyph and the hotkey chip.
      */
-    private final Map<String, SemanticActionControl> dupControls = new HashMap<>();
-    private final Map<String, SemanticActionControl> delControls = new HashMap<>();
+    private final Map<String, SemanticActionControl> optionsControls = new HashMap<>();
+    private final Map<String, SemanticActionControl> hotkeyControls = new HashMap<>();
     /** The create-row's confirm button (recreated per create session). */
     private Button createBtn;
 
@@ -106,8 +113,22 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
 
     private boolean createRowGlassDrawn = false;
 
-    /** Per-card hover ease (canonical 140 ms), keyed and reconciled like the buttons. */
+    /** Per-card hover ease (canonical 140 ms), keyed and reconciled like the controls. */
     private final Map<String, com.aurora.client.util.HoverAnim> cardHover = new HashMap<>();
+
+    // ---- Header (search, Separate controls, Open folder) ----
+    private EditBox searchField;
+    private ButtonWidget controlsChip;
+    private ButtonWidget folderBtn;
+    /** Search memo: the filtered list is rebuilt only when the query or the profile list changes. */
+    private String memoQuery;
+    private List<String> memoSource;
+    private List<String> memoRows;
+    /** The hotkey chip under the pointer this frame (its tooltip draws in the tail), or null. */
+    private String hoveredChip;
+    private int hoveredChipX, hoveredChipY;
+    /** Hotkey chip label memo, by stored key. */
+    private final Map<Integer, String> keyNames = new HashMap<>();
 
     /** Card action width — shared by the glass and content passes so they never disagree. */
     private int btnW() { return cellWidth() - INSET * 2; }
@@ -140,6 +161,86 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
     }
 
     // ------------------------------------------------------------------
+    //  Header
+    // ------------------------------------------------------------------
+
+    @Override
+    protected void init() {
+        super.init();
+        String query = searchField != null ? searchField.getValue() : "";
+        boolean searchFocused = searchField != null && searchField.isFocused();
+        searchField = new EditBox(this.font, 0, 0, 80, UiDensity.HEADER_BUTTON_H, Component.literal("Search profiles"));
+        searchField.setMaxLength(48);
+        searchField.setHint(Component.literal("Search…"));
+        searchField.setValue(query);
+        searchField.setFocused(searchFocused);
+        this.addRenderableWidget(searchField);
+
+        controlsChip = this.addRenderableWidget(ButtonWidget.semantic(0, 0, 10, UiDensity.HEADER_BUTTON_H,
+                Component.literal("Separate controls"),
+                "When on, each profile keeps its own Aurora and Minecraft key bindings and switching applies them.",
+                this::toggleSeparateControls).glassBackground(true));
+        folderBtn = this.addRenderableWidget(ButtonWidget.semantic(0, 0, 10, UiDensity.HEADER_BUTTON_H,
+                Component.literal("Open folder"),
+                "Opens the folder the profile files are saved in.",
+                () -> com.aurora.client.adapter.NativeUi.openPath(ProfileManager.getInstance().profilesDirectory()))
+                .glassBackground(true));
+        layoutHeader();
+    }
+
+    /**
+     * Header row, left to right: search (takes what is left, at least
+     * {@code SEARCH_MIN}), Separate controls, Open folder, then the base's
+     * Done on the right. Narrow windows get the short labels; the long ones
+     * never truncate mid-word.
+     */
+    private void layoutHeader() {
+        if (searchField == null) return;
+        // pad: Button keeps 20 px around its label (it ellipsizes past w - 20), plus 2 of air.
+        final int gap = 6, searchMin = 56, pad = 22;
+        int left = windowX() + 8;
+        int right = windowX() + windowWidth() - 8 - UiDensity.HEADER_BUTTON_W - gap;
+        String chipLabel = "Separate controls", folderLabel = "Open folder";
+        int chipW = this.font.width(chipLabel) + pad, folderW = this.font.width(folderLabel) + pad;
+        if (right - left - chipW - folderW - 2 * gap < searchMin) {
+            chipLabel = "Controls";
+            folderLabel = "Folder";
+            chipW = this.font.width(chipLabel) + pad;
+            folderW = this.font.width(folderLabel) + pad;
+        }
+        int y = toolbarY();
+        folderBtn.setMessage(Component.literal(folderLabel));
+        folderBtn.setX(right - folderW);
+        folderBtn.setY(y);
+        folderBtn.setWidth(folderW);
+        controlsChip.setMessage(Component.literal(chipLabel));
+        controlsChip.setX(right - folderW - gap - chipW);
+        controlsChip.setY(y);
+        controlsChip.setWidth(chipW);
+        searchField.setX(left);
+        searchField.setY(y);
+        searchField.setWidth(Math.max(searchMin, right - folderW - chipW - 2 * gap - left));
+    }
+
+    private void toggleSeparateControls() {
+        AuroraConfig config = AuroraConfig.get();
+        config.profilesOwnControls = !config.profilesOwnControls;
+        AuroraConfig.save();
+        flash(config.profilesOwnControls ? "Profiles keep their own controls" : "Controls are shared by every profile");
+    }
+
+    @Override
+    protected void paintHeaderGlassPass(GuiGraphicsExtractor ctx) {
+        layoutHeader();
+        // On is the selected state, so it alone is stained (glass rule 3).
+        boolean on = AuroraConfig.get().profilesOwnControls;
+        controlsChip.glassStyle(on ? Button.GlassStyle.STAINED : Button.GlassStyle.NEUTRAL).primary(on);
+        controlsChip.renderGlassPass(ctx);
+        folderBtn.renderGlassPass(ctx);
+        if (searchField instanceof GlassEditBox glassField) glassField.aurora$renderGlassPass(ctx);
+    }
+
+    // ------------------------------------------------------------------
     //  Foundation hooks
     // ------------------------------------------------------------------
 
@@ -152,83 +253,98 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
     @Override protected int editorFieldX(int cellX) { return cellX + INSET; }
     @Override protected int editorFieldYOffset() { return NAME_Y - 4; }
 
+    private String query() {
+        return searchField == null ? "" : searchField.getValue().trim().toLowerCase(Locale.ROOT);
+    }
+
     @Override protected List<String> currentRows() {
-        return ProfileManager.getInstance().listProfileNames();
+        List<String> all = ProfileManager.getInstance().listProfileNames();
+        String query = query();
+        if (query.isEmpty()) return all;
+        if (!query.equals(memoQuery) || !all.equals(memoSource)) {
+            List<String> rows = new ArrayList<>();
+            for (String name : all) {
+                if (name.toLowerCase(Locale.ROOT).contains(query)) rows.add(name);
+            }
+            memoQuery = query;
+            memoSource = all;
+            memoRows = rows;
+        }
+        return memoRows;
     }
 
     @Override protected Component emptyMessage() {
-        return Component.literal("No profiles. Press \"New Profile\" to create one.");
+        // With no search the "New profile" card is the empty state.
+        return query().isEmpty() ? Component.empty() : Component.literal("No profiles match \"" + searchField.getValue().trim() + "\"");
     }
 
-    /** Profile count from the last frame's single list fetch (−1 before the first frame). */
-    private int knownProfiles = -1;
-
+    /** The "New profile" card; hidden while a search filters the grid, unless it is being edited. */
     @Override protected int leadingRowCount() {
-        return creatingNew && createField != null ? 1 : 0;
+        return creatingNew || query().isEmpty() ? 1 : 0;
     }
 
     @Override protected ButtonWidget createToolbarActionBtn() {
-        // "New Profile" — a plain action, so neutral raised glass.
-        return ButtonWidget.semantic(16, 16, 120, 22,
-                Component.literal("New Profile"),
-                "Opens the new-profile editor.",
-                this::beginCreate).glassBackground(true);
+        return null; // the header's left side is the search field (see init)
     }
 
     @Override
     protected void reconcileRowCaches(List<String> profiles) {
-        // Row-widget cache hygiene: drop buttons for profiles that no longer
+        // Row-widget cache hygiene: drop controls for profiles that no longer
         // exist. Reconciled against a SET: retainAll(List) costs O(rows²) per
         // map (a List.contains scan per key) and ran every frame — with a
         // large profile list that alone dominated the frame (~5 ms at 2000
         // rows). (fixed in 0a0caaa; the rule is now standing — AGENTS.md §10)
-        knownProfiles = profiles.size();
-        Set<String> live = new HashSet<>(profiles);
-        boolean membershipChanged = dupBtns.keySet().retainAll(live);
-        membershipChanged |= delBtns.keySet().retainAll(live);
-        cardHover.keySet().retainAll(live);
-        // The row buttons' semantic controls drop with their buttons —
-        // removeWidget takes the control out of the vanilla child/narratable
-        // lists and clears screen focus if the removed control held it, so a
-        // deleted profile can never leave a stale focusable region behind
-        // (the Waypoint-Copy lifecycle rule, applied to both row actions).
-        reconcileSemanticControls(dupControls, live);
-        reconcileSemanticControls(delControls, live);
+        // The reconcile covers every profile, not only the filtered ones, so
+        // a search does not drop and rebuild the hidden cards' controls.
+        List<String> all = ProfileManager.getInstance().listProfileNames();
+        Set<String> live = new HashSet<>(all);
+        boolean membershipChanged = cardHover.keySet().retainAll(live);
+        // The card controls drop with their profile — removeWidget takes the
+        // control out of the vanilla child/narratable lists and clears screen
+        // focus if the removed control held it, so a deleted profile can
+        // never leave a stale focusable region behind (the Waypoint-Copy
+        // lifecycle rule).
+        membershipChanged |= reconcileSemanticControls(optionsControls, live);
+        membershipChanged |= reconcileSemanticControls(hotkeyControls, live);
+        if (capturingHotkey != null && !live.contains(capturingHotkey)) capturingHotkey = null;
         if (membershipChanged) nameFitCache.clear();
     }
 
-    /** Unregisters and drops the row controls whose profile is no longer live. */
-    private void reconcileSemanticControls(Map<String, SemanticActionControl> controls,
-                                           Set<String> live) {
+    /** Unregisters and drops the card controls whose profile is no longer live. */
+    private boolean reconcileSemanticControls(Map<String, SemanticActionControl> controls,
+                                              Set<String> live) {
+        boolean removed = false;
         for (var it = controls.entrySet().iterator(); it.hasNext(); ) {
             var entry = it.next();
             if (!live.contains(entry.getKey())) {
                 unregisterSemanticControl(entry.getValue());
                 it.remove();
+                removed = true;
             }
         }
+        return removed;
     }
 
     @Override
     protected void onBeginRowGlassPass() {
         createRowGlassDrawn = false;
+        hoveredChip = null;
     }
 
     // ------------------------------------------------------------------
-    //  Row passes
+    //  Card passes
     // ------------------------------------------------------------------
 
     @Override
     protected void paintLeadingRowGlassPass(GuiGraphicsExtractor ctx, int x, int y, int w, int leadIndex) {
-        // Same template treatment as normal rows (the create row shares the
-        // row geometry; its Create button sits at Duplicate's offset).
-        // Availability follows the same clip-band rule as the row loop so a
-        // create row scrolled out of the clip can neither be keyed nor
-        // clicked while invisible.
+        // Same template treatment as the profile cards. Availability follows
+        // the same clip-band rule as the row loop so a create card scrolled
+        // out of the clip can neither be keyed nor clicked while invisible.
         createControl.setAvailable(creatingNew && y + CARD_H > listClipTop() && y < listClipBottom());
         paintTemplatedRowSurface(ctx, x, y,
                 () -> createRowGlassDrawn = renderRowSurface(ctx, x, y, w),
                 () -> {
+                    if (!creatingNew) return;
                     Button cb = createBtn();
                     int bx = x + INSET, by = y + LOWER_BTN_Y;
                     cb.layout(bx, by, btnW(), BTN_H);
@@ -249,26 +365,13 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
 
     @Override
     protected void paintRowGlassPass(GuiGraphicsExtractor ctx, int x, int y, int w, String name) {
-        // Static shapes (rings + row tint) come from the shared row template
-        // (see ManagerListScreen); the row panel renders live below, and the
-        // Duplicate button supplies its own surface. Delete is destructive
-        // (flat) and paints in the content pass via the same shared Button.
+        // Static shapes (rings + card tint) come from the shared row template
+        // (see ManagerListScreen); the card panel renders live below. The
+        // card's chip and glyph are opaque content, painted after the dim.
         paintTemplatedRowSurface(ctx, x, y,
                 () -> rowGlassDrawn.put(name, renderRowSurface(ctx, x, y, w)),
-                () -> {
-                    Button db = dupBtn(name);
-                    db.layout(x + INSET, y + UPPER_BTN_Y, btnW(), BTN_H);
-                    syncDupControl(name, x + INSET, y + UPPER_BTN_Y, y);
-                    db.renderGlassPass(ctx, x + INSET, y + UPPER_BTN_Y, btnW(), BTN_H);
-                },
+                () -> {},
                 () -> rowGlassDrawn.getOrDefault(name, false));
-    }
-
-    /** Per-frame Duplicate-control sync: bounds follow the card's live geometry, availability the clip band. Lazily creates the pair (the glass pass runs before the content pass on a card's first frame). */
-    private void syncDupControl(String name, int btnX, int btnY, int rowY) {
-        SemanticActionControl control = dupControl(name);
-        control.setBounds(btnX, btnY, btnW(), BTN_H);
-        control.setAvailable(rowY + CARD_H > listClipTop() && rowY < listClipBottom());
     }
 
     @Override
@@ -277,20 +380,28 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         renderRow(ctx, x, y, w, name, index, ProfileManager.getInstance().currentProfile(), mouseX, mouseY);
     }
 
+    private boolean inBand(int y) {
+        return y + CARD_H > listClipTop() && y < listClipBottom();
+    }
+
+    private boolean pointerIn(int mouseX, int mouseY, int x, int y, int w, int h) {
+        return mouseX >= x && mouseX < x + w && mouseY >= y && mouseY < y + h
+                && mouseY >= listClipTop() && mouseY < listClipBottom();
+    }
+
     private void renderRow(GuiGraphicsExtractor ctx, int x, int y, int w,
                             String name, int index, String active,
                             int mouseX, int mouseY) {
+        ProfileManager manager = ProfileManager.getInstance();
         boolean isActive = name.equals(active);
-        boolean isDefault = "default".equals(name);
         float radius = ThemeManager.current().roundness().radiusSmall();
-        boolean pointerIn = mouseX >= x && mouseX < x + w && mouseY >= y && mouseY < y + CARD_H
-                && mouseY >= listClipTop() && mouseY < listClipBottom();
+        boolean pointerIn = pointerIn(mouseX, mouseY, x, y, w, CARD_H);
         float hover = cardHover.computeIfAbsent(name, k -> com.aurora.client.util.HoverAnim.symmetric(140L))
                 .update(pointerIn && !isActive);
 
         // The card surface was painted in the glass pass, under the dim — see
-        // paintRowGlassPass. Here: the selection role (accent outline + soft
-        // stain on the active card, a hover lift on the others), or the flat
+        // paintRowGlassPass. Here: the selection role (the thin selected edge
+        // on the active card, a hover lift on the others), or the flat
         // fallback for a card whose glass declined.
         if (MaterialSurface.unified()) {
             MaterialSurface.selection(ctx, x, y, w, CARD_H, radius, isActive, hover);
@@ -299,118 +410,111 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
             else paintFlatRow(ctx, x, y, w);
         }
 
+        // Settings glyph — opens the profile's options.
+        int gearX = x + w - GEAR - 2, gearY = y + 2;
+        SemanticActionControl options = optionsControl(name);
+        options.setBounds(gearX, gearY, GEAR, GEAR);
+        options.setAvailable(inBand(y));
+        options.updatePointer(mouseX, mouseY);
+        boolean gearHot = pointerIn(mouseX, mouseY, gearX, gearY, GEAR, GEAR) || options.isFocused();
+        MaterialIconRenderer.drawIcon(ctx, this.font, GEAR_GLYPH, gearX + GEAR / 2f, gearY + GEAR / 2f, 10f,
+                ThemeManager.color(gearHot ? ThemeToken.ON_BACKGROUND : ThemeToken.ON_BACKGROUND_MUTED));
+        if (options.isFocused()) {
+            com.aurora.client.ui.util.RenderUtil.drawRoundedOutlineAA(ctx, gearX, gearY, GEAR, GEAR, radius, 1f,
+                    ThemeManager.color(ThemeToken.ACCENT));
+        }
+
+        // The profile's icon.
+        MaterialIconRenderer.drawIcon(ctx, this.font, profileGlyph(manager.icon(name)), x + w / 2f, y + ICON_Y, ICON_EM,
+                ThemeManager.color(isActive ? ThemeToken.ACCENT : ThemeToken.ON_BACKGROUND));
+
         // Name (or the inline editor over it).
         if (index != editingIndex) {
             AuroraFontRenderer.drawCentered(ctx, this.font, fitName(name), x + w / 2, y + NAME_Y,
                     ThemeManager.color(ThemeToken.ON_BACKGROUND));
         }
 
-        // Active pill — the selection-soft chip under the name. Other cards
-        // fade in what a click does, only while hovered.
-        if (isActive) {
-            int pillW = this.font.width("Active") + 14;
-            RenderUtil.drawRoundedRectAA(ctx, x + (w - pillW) / 2f, y + PILL_Y, pillW, PILL_H, radius,
-                    ThemeManager.withAlpha(ThemeManager.color(ThemeToken.SELECTION_SOFT), 0x55));
-            AuroraFontRenderer.drawCentered(ctx, this.font, Component.literal("Active"),
-                    x + w / 2, y + PILL_Y + (PILL_H - this.font.lineHeight) / 2 + 1,
-                    ThemeManager.color(ThemeToken.ON_BACKGROUND));
-        } else if (hover > 0.01f) {
-            int muted = ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED);
-            AuroraFontRenderer.drawCentered(ctx, this.font, Component.literal("Click to switch"),
-                    x + w / 2, y + PILL_Y + (PILL_H - this.font.lineHeight) / 2 + 1,
-                    ThemeManager.withAlpha(muted, Math.round((muted >>> 24) * hover)));
-        }
-
-        // Duplicate — surface already painted in the glass pass; this draws
-        // the label (or the flat fallback where glass declined). The semantic
-        // control re-syncs here (same rect the glass pass computed): pointer
-        // hover for narration and the provisional focus ring on the Button.
-        Button dupBtn = dupBtn(name);
-        dupBtn.layout(x + INSET, y + UPPER_BTN_Y, btnW(), BTN_H);
-        syncDupControl(name, x + INSET, y + UPPER_BTN_Y, y);
-        SemanticActionControl dupControl = dupControls.get(name);
-        if (dupControl != null) {
-            dupControl.updatePointer(mouseX, mouseY);
-            dupBtn.focused(dupControl.isFocused());
-        }
-        dupBtn.render(ctx, x + INSET, y + UPPER_BTN_Y, btnW(), BTN_H, mouseX, mouseY);
-
-        // Delete — shared Button, destructive variant (never glass); hidden
-        // for the default + active profiles (non-deletable). Semantic control
-        // keyed in lockstep; the accessible name carries the target profile.
-        if (!isDefault && !isActive) {
-            Button dBtn = delBtn(name);
-            dBtn.layout(x + INSET, y + LOWER_BTN_Y, btnW(), BTN_H);
-            SemanticActionControl delControl = delControls.get(name);
-            if (delControl != null) {
-                delControl.setBounds(x + INSET, y + LOWER_BTN_Y, btnW(), BTN_H);
-                delControl.setAvailable(y + CARD_H > listClipTop() && y < listClipBottom());
-                delControl.updatePointer(mouseX, mouseY);
-                dBtn.focused(delControl.isFocused());
-            }
-            dBtn.render(ctx, x + INSET, y + LOWER_BTN_Y, btnW(), BTN_H, mouseX, mouseY);
+        // Hotkey chip: a keyboard glyph and the key, accent edge while waiting for a key.
+        int chipX = x + INSET, chipY = y + LOWER_BTN_Y, chipW = btnW();
+        SemanticActionControl hotkey = hotkeyControl(name);
+        hotkey.setBounds(chipX, chipY, chipW, BTN_H);
+        hotkey.setAvailable(inBand(y));
+        hotkey.updatePointer(mouseX, mouseY);
+        boolean capturing = name.equals(capturingHotkey);
+        boolean chipHot = pointerIn(mouseX, mouseY, chipX, chipY, chipW, BTN_H);
+        MaterialSurface.selection(ctx, chipX, chipY, chipW, BTN_H, radius, capturing || hotkey.isFocused(),
+                chipHot ? 1f : 0f);
+        int key = manager.hotkey(name);
+        String label = capturing ? "Press a key…" : key < 0 ? "None" : keyName(key);
+        int textCol = ThemeManager.color(capturing || key >= 0 ? ThemeToken.ON_BACKGROUND : ThemeToken.ON_BACKGROUND_MUTED);
+        String fitted = AuroraFontRenderer.ellipsize(this.font, label, chipW - 20, 0);
+        int contentW = 12 + this.font.width(fitted);
+        int cx = chipX + (chipW - contentW) / 2;
+        MaterialIconRenderer.drawIcon(ctx, this.font, KEYBOARD_GLYPH, cx + 4.5f, chipY + BTN_H / 2f, 9f, textCol);
+        ctx.text(this.font, fitted, cx + 12, chipY + (BTN_H - this.font.lineHeight) / 2 + 1, textCol, false);
+        if (chipHot) {
+            hoveredChip = name;
+            hoveredChipX = chipX;
+            hoveredChipY = chipY;
         }
     }
 
-    /** Duplicate — the shared themed Button in neutral raised glass, with its Phase A semantic control. */
-    private Button dupBtn(String name) {
-        return dupBtns.computeIfAbsent(name, k -> {
-            Button b = new Button("Duplicate", () -> {}).glassBackground(true)
-                    .priority(BlurPanelRenderer.Priority.DETAIL);
-            // The action owns the real behavior exactly once; the Button keeps
-            // the pixels, hover, press animation (via triggerPressAnimation),
-            // and per-frame bounds. Always enabled — deletion of a duplicate
-            // is always possible; visibility gating comes from the control's
-            // per-frame availability instead.
+    private String keyName(int key) {
+        return keyNames.computeIfAbsent(key, KeybindSetting::keyName);
+    }
+
+    /** A profile's icon glyph: its Material Symbols name, or the person glyph when unset or unknown. */
+    static String profileGlyph(String icon) {
+        String glyph = IconCatalog.glyph(icon);
+        return glyph.isEmpty() ? IconCatalog.glyph("person") : glyph;
+    }
+
+    /** The settings glyph's semantic control (Phase A): opens the profile's options. */
+    private SemanticActionControl optionsControl(String name) {
+        return optionsControls.computeIfAbsent(name, k -> {
             SemanticActionControl control = new SemanticActionControl(SemanticAction.button(
-                    Component.literal("Duplicate " + k),
-                    () -> Component.literal("Creates a copy of this profile, including all of its settings."),
+                    Component.literal("Options for " + k),
+                    () -> Component.literal("Change this profile's icon, name or hotkey, duplicate it or delete it."),
                     () -> Component.empty(),
                     () -> true,
-                    () -> {
-                        commitEditors();
-                        String dupName = uniqueName(k + " Copy");
-                        if (ProfileManager.getInstance().duplicate(k, dupName)) {
-                            flash("Duplicated → " + dupName);
-                        }
-                    }),
+                    () -> openOptions(k)),
                     MinecraftSemanticFeedback.INSTANCE,
-                    b::triggerPressAnimation,
+                    null,
                     SemanticActionControl.PointerRouting.MANUAL);
-            dupControls.put(k, control);
             registerSemanticControl(control);
-            return b;
+            return control;
         });
     }
 
-    /** The semantic control behind a Duplicate button (creating the button pair on demand). */
-    private SemanticActionControl dupControl(String name) {
-        dupBtn(name);
-        return dupControls.get(name);
-    }
-
-    /** Delete — shared Button, destructive variant, with its Phase A semantic control. */
-    private Button delBtn(String name) {
-        return delBtns.computeIfAbsent(name, k -> {
-            Button b = new Button("Delete", () -> {}).destructive(true);
+    /** The hotkey chip's semantic control (Phase A): starts or cancels capture. */
+    private SemanticActionControl hotkeyControl(String name) {
+        return hotkeyControls.computeIfAbsent(name, k -> {
             SemanticActionControl control = new SemanticActionControl(SemanticAction.button(
-                    Component.literal("Delete " + k),
-                    () -> Component.literal("Deletes this profile. Its file is removed; the active profile cannot be deleted."),
-                    () -> Component.empty(),
+                    Component.literal("Hotkey for " + k),
+                    () -> Component.literal("Sets the key that switches to this profile in game."),
+                    () -> {
+                        int key = ProfileManager.getInstance().hotkey(k);
+                        return Component.literal(key < 0 ? "None" : keyName(key));
+                    },
                     () -> true,
                     () -> {
                         commitEditors();
-                        if (ProfileManager.getInstance().delete(k)) {
-                            flash("Deleted " + k);
-                        }
+                        capturingHotkey = k.equals(capturingHotkey) ? null : k;
                     }),
                     MinecraftSemanticFeedback.INSTANCE,
-                    b::triggerPressAnimation,
+                    null,
                     SemanticActionControl.PointerRouting.MANUAL);
-            delControls.put(k, control);
             registerSemanticControl(control);
-            return b;
+            return control;
         });
+    }
+
+    private void openOptions(String name) {
+        commitEditors();
+        capturingHotkey = null;
+        if (this.minecraft != null) {
+            com.aurora.client.adapter.NativeUi.setScreen(this.minecraft, new ProfileOptionsScreen(this, name));
+        }
     }
 
     /** The create-row's confirm button — neutral raised glass like every other action button here. */
@@ -480,19 +584,28 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
 
     private void renderCreateRow(GuiGraphicsExtractor ctx, int x, int y, int w,
                                   int mouseX, int mouseY) {
-        // The create editor is a neutral card identical to the other rows
-        // (the hint text and the Create button signal the open editor; no
-        // accent on the container surface in either path). Its surface was
-        // painted in the glass pass; only the flat fallback is drawn here.
+        // A neutral card like the others; its surface was painted in the
+        // glass pass, so only the flat fallback and the hover lift draw here.
+        float radius = ThemeManager.current().roundness().radiusSmall();
+        boolean hot = !creatingNew && pointerIn(mouseX, mouseY, x, y, w, CARD_H);
         if (MaterialSurface.unified()) {
-            MaterialSurface.selection(ctx, x, y, w, CARD_H, ThemeManager.current().roundness().radiusSmall(), false, 0);
+            MaterialSurface.selection(ctx, x, y, w, CARD_H, radius, false, hot ? 1f : 0f);
         } else if (!createRowGlassDrawn) {
             paintFlatRow(ctx, x, y, w);
         }
-        AuroraFontRenderer.drawCentered(ctx, this.font, Component.literal("Enter to create · Esc to cancel"),
-                x + w / 2, y + PILL_Y + 8, ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED));
 
-        // "Create" confirm button on the card's bottom action line — surface
+        // A plus in a circle (a capsule, so it follows Corner Radius) over
+        // the label, or over the open name field.
+        int ink = ThemeManager.color(hot || creatingNew ? ThemeToken.ON_BACKGROUND : ThemeToken.ON_BACKGROUND_SECONDARY);
+        com.aurora.client.ui.util.RenderUtil.drawRoundedOutlineAA(ctx, x + w / 2f - 11, y + ICON_Y - 11, 22, 22,
+                ThemeManager.current().roundness().capsule(22f), 1.2f, ink);
+        MaterialIconRenderer.drawIcon(ctx, this.font, ADD_GLYPH, x + w / 2f, y + ICON_Y, 16f, ink);
+        if (!creatingNew) {
+            AuroraFontRenderer.drawCentered(ctx, this.font, fitName("New profile"), x + w / 2, y + NAME_Y, ink);
+            return;
+        }
+
+        // "Create" confirm button on the card's bottom line — surface
         // painted in the glass pass; this draws the label.
         syncCreateControl(x, y, mouseX, mouseY);
         Button cb = createBtn();
@@ -500,14 +613,12 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
     }
 
     /**
-     * Glass pass for one row surface: the soft glow (the row's drop shadow,
-     * so part of the surface) plus one DEPRESSED glass panel. Rows are this
-     * screen's containers, so they take the window treatment (depressed
-     * lighting, WINDOW_FILL tint) rather than the raised control treatment;
-     * selection is never carried here at all — the accent Active badge in
-     * {@link #renderRow} marks it (a whole-row stain read as an
-     * accent-tinted container, flagged twice). Returns whether the glass
-     * drew (false = the content pass draws the flat row).
+     * Glass pass for one card surface: the soft glow (the card's drop
+     * shadow, so part of the surface) plus one DEPRESSED glass panel. Cards
+     * are this screen's containers, so they take the window treatment
+     * (depressed lighting, WINDOW_FILL tint) rather than the raised control
+     * treatment; selection is never carried here. Returns whether the glass
+     * drew (false = the content pass draws the flat card).
      */
     private boolean renderRowSurface(GuiGraphicsExtractor ctx, int x, int y, int w) {
         if (MaterialSurface.unified()) return GlassSurface.card(ctx,x,y,w,CARD_H,
@@ -522,6 +633,26 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
     // ------------------------------------------------------------------
 
     @Override
+    public boolean mouseClicked(MouseButtonEvent _ev, boolean _doubleClicked) {
+        // Waiting for a hotkey: the next press cancels the capture and is
+        // consumed (the Keybind setting's rule).
+        if (capturingHotkey != null) {
+            capturingHotkey = null;
+            return true;
+        }
+        if (searchField != null && _ev.button() == InputConstants.MOUSE_BUTTON_LEFT) {
+            boolean inSearch = searchField.isMouseOver(_ev.x(), _ev.y());
+            searchField.setFocused(inSearch);
+            if (inSearch) {
+                commitEditors();
+                searchField.mouseClicked(_ev, _doubleClicked);
+                return true;
+            }
+        }
+        return super.mouseClicked(_ev, _doubleClicked);
+    }
+
+    @Override
     protected boolean editorClickFirst(MouseButtonEvent _ev, boolean _doubleClicked) {
         if (createField != null && createField.mouseClicked(_ev, _doubleClicked)) return true;
         if (nameField != null && nameField.mouseClicked(_ev, _doubleClicked)) return true;
@@ -530,7 +661,20 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
 
     @Override
     protected boolean rowAreaClickFirst(double mouseX, double mouseY) {
-        // "Create" confirm button in the create row — routed through its
+        // The "New profile" card, at its LIVE geometry (leading row 0 at the
+        // current scroll) and only inside the clip band.
+        if (leadingRowCount() == 0) return false;
+        int listX = (this.width - listWidth()) / 2;
+        int cardX = cellX(listX, 0), cardY = cellY(0);
+        if (!creatingNew) {
+            if (mouseX >= cardX && mouseX < cardX + cellWidth() && mouseY >= Math.max(cardY, listClipTop())
+                    && mouseY < Math.min(cardY + CARD_H, listClipBottom())) {
+                beginCreate();
+                return true;
+            }
+            return false;
+        }
+        // "Create" confirm button in the create card — routed through its
         // semantic control. C-8: the hit test uses the create row's LIVE
         // geometry (leading row 0 at the current scroll), never the
         // control's possibly-stale bounds — the render walk only re-syncs
@@ -538,14 +682,10 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         // own clip-band gate, so a create row scrolled out of the band can
         // neither create nor fall through onto anything. Clicks within the
         // button's rect are CONSUMED even when the gate rejects them (empty
-        // name, scrolled-away row): the create row sits directly above
-        // profile row 0 in the same geometry column, and an unconsumed
-        // click would fall through onto that row's Duplicate button. A
-        // rejected click is inert — no animation, no sound, no create, no
-        // fall-through.
-        if (!creatingNew) return false;
-        int listX = (this.width - listWidth()) / 2;
-        int btnX = cellX(listX, 0) + INSET;
+        // name, scrolled-away row): an unconsumed click would fall through
+        // onto whatever lies under it. A rejected click is inert — no
+        // animation, no sound, no create, no fall-through.
+        int btnX = cardX + INSET;
         int btnY = cellY(0) + LOWER_BTN_Y;
         boolean inButton = mouseX >= btnX && mouseX < btnX + btnW()
                 && mouseY >= btnY && mouseY < btnY + BTN_H;
@@ -558,21 +698,15 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
 
     @Override
     protected boolean rowClicked(double mouseX, double mouseY, int listX, String name, int index) {
-        // Shared row buttons see the click first — Duplicate routes through
-        // its semantic control (enabled gate + exactly-once activation +
-        // sound + focus participation), Delete likewise. A rejected click
-        // (missed bounds) falls through to the next handler, as before.
-        SemanticActionControl dupControl = dupControls.get(name);
-        if (dupControl != null && dupControl.activateFromPointer(mouseX, mouseY, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT)) {
-            this.setFocused(dupControl);
-            return true;
+        // The card's controls see the click first, through their semantic
+        // controls (enabled gate + exactly-once activation + sound + focus).
+        SemanticActionControl options = optionsControls.get(name);
+        if (options != null && options.activateFromPointer(mouseX, mouseY, InputConstants.MOUSE_BUTTON_LEFT)) {
+            return true; // the options screen opened; nothing here to focus
         }
-        SemanticActionControl delControl = delControls.get(name);
-        if (delControl != null && delControl.activateFromPointer(mouseX, mouseY, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT)) {
-            // NO re-focus: the action just deleted this profile's row and the
-            // control is unregistered by the next reconcile — refocusing
-            // would point keyboard focus at a control about to leave the
-            // screen (the stale-focus-after-removal rule).
+        SemanticActionControl hotkey = hotkeyControls.get(name);
+        if (hotkey != null && hotkey.activateFromPointer(mouseX, mouseY, InputConstants.MOUSE_BUTTON_LEFT)) {
+            this.setFocused(hotkey);
             return true;
         }
 
@@ -585,9 +719,9 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
             return true;
         }
 
-        // Click on the row body (not on a control) → switch if not active.
+        // Click on the card body (not on a control) → switch if not active.
         // (The base's band + X-extent test is what gives the body click its
-        // horizontal bound — it previously had no horizontal check at all.)
+        // horizontal bound.)
         if (!name.equals(ProfileManager.getInstance().currentProfile())) {
             commitEditors();
             if (ProfileManager.getInstance().switchTo(name)) {
@@ -601,6 +735,17 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
     @Override
     public boolean keyPressed(net.minecraft.client.input.KeyEvent _kev) {
         int key = _kev.key();
+        // Hotkey capture owns the next key: Esc or Backspace clears it.
+        if (capturingHotkey != null) {
+            String name = capturingHotkey;
+            capturingHotkey = null;
+            boolean clear = key == InputConstants.KEY_ESCAPE || key == InputConstants.KEY_BACKSPACE;
+            int stored = clear ? AuroraKey.UNBOUND : com.aurora.client.adapter.NativeKeyboard.toStored(key);
+            if (ProfileManager.getInstance().setHotkey(name, stored)) {
+                flash(clear ? "Cleared the hotkey for " + name : keyName(stored) + " switches to " + name);
+            }
+            return true;
+        }
         // C-8: the create editor follows the base rename contract — a field
         // scrolled out of the clip band is SUSPENDED (no keys routed), not
         // cancelled; scrolling back restores typing with focus and value.
@@ -615,6 +760,16 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
             }
             if (createField.keyPressed(_kev)) return true;
         }
+        if (searchField != null && searchField.isFocused()) {
+            if (key == InputConstants.KEY_ESCAPE && !searchField.getValue().isEmpty()) {
+                searchField.setValue("");
+                return true;
+            }
+            if (key != InputConstants.KEY_ESCAPE && searchField.keyPressed(_kev)) {
+                scroll.set(0);
+                return true;
+            }
+        }
         // The base handles the rename field's ENTER/ESCAPE/forwarding.
         return super.keyPressed(_kev);
     }
@@ -623,6 +778,10 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
     public boolean charTyped(net.minecraft.client.input.CharacterEvent _ev) {
         if (createField != null && createField.isFocused() && editFieldVisible(currentRows())
                 && createField.charTyped(_ev)) return true;
+        if (searchField != null && searchField.isFocused() && searchField.charTyped(_ev)) {
+            scroll.set(0);
+            return true;
+        }
         return super.charTyped(_ev);
     }
 
@@ -633,9 +792,10 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
     private void beginCreate() {
         commitEditors();
         creatingNew = true;
+        if (searchField != null) searchField.setFocused(false);
         createField = new EditBox(this.font, 0, 0, nameColumnWidth(), 16, Component.literal("Name"));
         createField.setMaxLength(48);
-        createField.setHint(Component.literal("New profile name…")); // the field's own placeholder, above its fill
+        createField.setHint(Component.literal("Name…")); // the field's own placeholder, above its fill
         createField.setFocused(true);
         scroll.set(0);
     }
@@ -675,6 +835,11 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         if (editingIndex >= 0) commitEdit();
     }
 
+    /** Toast from the options screen once it returns here (same package). */
+    void notice(String text) {
+        flash(text);
+    }
+
     // ------------------------------------------------------------------
     //  Frame tails (screen-owned order)
     // ------------------------------------------------------------------
@@ -703,23 +868,25 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
             renderEditorClipped(ctx, editor, listX, mouseX, mouseY, delta);
         }
 
+        if (controlsChip != null) {
+            FeatureSetting.hoverTooltip("profiles-separate-controls", () -> AuroraConfig.get().profilesOwnControls
+                            ? "On: each profile keeps its own key bindings, Aurora's and Minecraft's, and switching applies them."
+                            : "Off: key bindings stay the same whichever profile is active.",
+                    controlsChip.getX(), controlsChip.getY(), controlsChip.getWidth(), controlsChip.getHeight(),
+                    mouseX, mouseY);
+        }
+
+        // One tooltip key for every chip: a frame with no chip under the
+        // pointer passes an empty rect, which resets the dwell.
+        boolean capturing = hoveredChip != null && hoveredChip.equals(capturingHotkey);
+        FeatureSetting.hoverTooltip("profile-hotkey", () -> capturing
+                        ? "Press the key that switches to this profile in game. Esc or Backspace clears it."
+                        : "Click to set the key that switches to this profile in game.",
+                hoveredChip == null ? -1000 : hoveredChipX, hoveredChipY, btnW(), BTN_H, mouseX, mouseY);
+
         // Toast (above the editor here — this screen's historical order;
         // the Waypoint screen draws it the other way around).
         renderToast(ctx);
-    }
-
-    // ------------------------------------------------------------------
-    //  Helpers
-    // ------------------------------------------------------------------
-
-    /** Produce a non-colliding name derived from {@code base}. */
-    private String uniqueName(String base) {
-        List<String> existing = ProfileManager.getInstance().listProfileNames();
-        if (!existing.contains(base)) return base;
-        for (int n = 2; n < 1000; n++) {
-            String candidate = base + " " + n;
-            if (!existing.contains(candidate)) return candidate;
-        }
-        return base + " " + System.currentTimeMillis();
+        FeatureSetting.drawPendingTooltip(ctx, this.width, this.height);
     }
 }

@@ -41,4 +41,20 @@ class IconCatalogTest {
                 .contains("com.aurora.client.ui.util.MaterialIconRenderer.beginFrame();"));
         assertTrue(src.contains("if (budgeted && rasterizedThisFrame >= FRAME_BUDGET) return false;"));
     }
+
+    @Test void theBrowserDrawsOnlyVisibleRowsUnderTheBudget() {
+        String src = SourceTree.read("screen/IconPickerScreen.java");
+        assertTrue(src.contains("for (int row = Math.max(0, firstRow); row <= lastRow; row++)"),
+                "only the rows inside the viewport draw");
+        assertTrue(src.contains("MaterialIconRenderer.drawIconBudgeted("), "new glyphs rasterize under the frame budget");
+        assertTrue(src.contains("IconCatalog.search("), "search goes through the memoized catalog");
+    }
+
+    @Test void profileCardsReconcileAgainstASetAndSearchIsMemoized() {
+        String src = SourceTree.read("screen/ProfileManagerScreen.java");
+        assertTrue(src.contains("Set<String> live = new HashSet<>(all);"));
+        assertTrue(src.contains("if (!query.equals(memoQuery) || !all.equals(memoSource))"),
+                "the filtered list rebuilds only when the query or the profiles change");
+        assertTrue(src.contains("com.aurora.client.adapter.NativeUi.openPath("), "Open folder goes through the version adapter");
+    }
 }
