@@ -1533,14 +1533,18 @@ addWithSettings("hitbox",
         FeatureSetting hideTitleFade = new BooleanSetting("Hide Title Fade",
                 () -> cfg.perfHideTitleFade, v -> cfg.perfHideTitleFade = v)
                 .description("The vanilla title screen shows its buttons and logo at once instead of fading them in over two seconds. Aurora's own title screen has no fade, so this only matters with Custom Title off.");
+        FeatureSetting debugEntryCache = new BooleanSetting("Debug Entry Cache",
+                () -> cfg.perfDebugEntryCache, v -> cfg.perfDebugEntryCache = v)
+                .description("Updates the lines of the F3 debug screen 20 times a second, as often as the game itself changes, instead of on every frame. Raises the frame rate while F3 is open; values such as your coordinates update in steps of a game tick.");
         addWithSettings("performance",
                 "Loading, caching and drawing optimizations. Most are always on; the switches here are the ones you might notice.",
-                () -> cfg.perfHideReloadOverlay || cfg.perfHideTitleFade,
+                () -> cfg.perfHideReloadOverlay || cfg.perfHideTitleFade || cfg.perfDebugEntryCache,
                 v -> {
                     cfg.perfHideReloadOverlay = v;
                     cfg.perfHideTitleFade = v;
+                    cfg.perfDebugEntryCache = v;
                 },
-                List.of(hideReloadOverlay, hideTitleFade),
+                List.of(hideReloadOverlay, hideTitleFade, debugEntryCache),
                 List.of("perf"));
 
         // ============ SETTINGS TAB PAGES ============
@@ -1574,7 +1578,8 @@ addWithSettings("hitbox",
                 SearchTolerance::label)
                 .description("How many typos a search word can have and still find a match. Exact only finds exact matches; short words always need to be exact.");
         SETTINGS_PAGES.add(new SettingsPage("Performance", List.of(
-                group("loading", "Loading", hideReloadOverlay, hideTitleFade))));
+                group("loading", "Loading", hideReloadOverlay, hideTitleFade),
+                group("debug_screen", "Debug Screen", debugEntryCache))));
         SETTINGS_PAGES.add(new SettingsPage("General", List.of(
                 group("search", "Search", searchInstant, searchTolerance),
                 settingsEntry("custom_title"),

@@ -92,8 +92,9 @@ notices follow the published upstream licenses and are not new permission claims
 optimizations ship on by default under the `performance` feature, stand down for mods that
 own their area, and only the ones with a visible trade-off get a row on Settings → Performance.
 PR 1 (`feat/perf-foundation`) adds the stand-down mechanism and four loading optimizations;
-[evidence](reports/2026-11-12-perf-loading.md). Later stacked PRs cover per-frame CPU work,
-textures, Aurora's maps, world rendering with Sodium patches, and measured Vulkan and
+[evidence](reports/2026-11-12-perf-loading.md). PR 2 (`feat/perf-cpu`) adds four per-frame CPU
+optimizations and records two that were measured and dropped; [evidence](reports/2026-11-12-perf-cpu.md).
+Later stacked PRs cover textures, Aurora's maps, world rendering with Sodium patches, and measured Vulkan and
 occlusion prototypes.
 
 ## Next work

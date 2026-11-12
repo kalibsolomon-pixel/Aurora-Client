@@ -13,6 +13,11 @@ public final class HealthTestAccess {
         MixinHealth.noteFailure(mixin, "some.Target", MixinHealth.Cause.APPLY_FAILED, "injection point not found");
     }
 
+    /** Record that this mixin stood down for another mod (ADR 0009). */
+    public static void standDown(String mixin, String reason) {
+        MixinHealth.noteStoodDown(mixin, reason);
+    }
+
     /**
      * Forget every recorded failure, then give {@code config} back any switch
      * that was being held off.

@@ -119,6 +119,15 @@ class DiagnosticsTextTest {
         assertTrue(report.contains("Recent Aurora warnings and errors (1)\n- 12:00:00 ERROR Aurora: something\n"));
     }
 
+    @Test void aStoodDownMixinIsListedButIsNoFailure() {
+        HealthTestAccess.standDown("GuiItemAtlasBakingMixin", "handled by immediatelyfast");
+        String report = DiagnosticsText.format(ENV, List.of(), null, List.of());
+
+        assertFalse(report.contains("Features not fully working"), report);
+        assertFalse(report.contains("Mixins not working"), report);
+        assertTrue(report.contains("Mixins standing down (1)\n- GuiItemAtlasBakingMixin: handled by immediatelyfast\n"), report);
+    }
+
     @Test void theOperatingSystemUserIsRemoved() {
         String scrubbed = DiagnosticsText.scrub(
                 "failed to read C:\\Users\\alexandra\\cfg and C:/Users/alexandra/x by alexandra",
