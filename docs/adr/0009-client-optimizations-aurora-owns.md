@@ -27,4 +27,4 @@ The new defaults apply to existing installs on purpose, so no migrator is added.
 
 - One Settings-tab feature, `performance`, owns every `perf*` mixin, so mixin health and FAIR_PLAY.md report them in one place.
 - Native Vulkan exists only on 26.2 and 26.3. Vulkan-only optimizations do not apply on 26.1. ADR 0008 parity means the same optimization on every line where its backend exists.
-- The riskiest items (occlusion culling, sky in the main render pass, early swapchain acquire, background vertex copy) start as measured prototypes and ship only on a benchmark gain.
+- The riskiest items (occlusion culling, sky in the main render pass, early swapchain acquire, background vertex copy) start as measured prototypes and ship only on a benchmark gain. On 2026-11-12 the owner deferred them, with the other GPU-side items, until testers on GPU-bound hardware can supply evidence; the development machine is CPU-bound.
