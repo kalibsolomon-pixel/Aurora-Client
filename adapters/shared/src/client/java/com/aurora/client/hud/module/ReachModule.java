@@ -77,7 +77,7 @@ public class ReachModule extends HudModule {
         if (alpha <= 1) return;
 
         int color = (alpha << 24) | (baseColor & 0x00FFFFFF);
-        ctx.text(tr, textCache.get(), x, y, color, false);
+        com.aurora.client.hud.HudTextPainter.draw(ctx,tr, textCache.get(), x, y, color);
     }
 
     /**

@@ -172,21 +172,21 @@ public class ToggleSprintSneakModule extends HudModule {
 
         int drawX = x;
         if (sprint) {
-            ctx.text(tr, BRACKET_SPRINT, drawX, y, textColor(COLOR_ON), false);
+            com.aurora.client.hud.HudTextPainter.draw(ctx,tr, BRACKET_SPRINT, drawX, y, textColor(COLOR_ON));
             drawX += tr.width(BRACKET_SPRINT);
         }
         if (sprint && sneak) {
-            ctx.text(tr, SEPARATOR, drawX, y, textColor(0xFFFFFFFF), false);
+            com.aurora.client.hud.HudTextPainter.draw(ctx,tr, SEPARATOR, drawX, y, textColor(0xFFFFFFFF));
             drawX += tr.width(SEPARATOR);
         }
         if (sneak) {
-            ctx.text(tr, BRACKET_SNEAK, drawX, y, textColor(COLOR_ON), false);
+            com.aurora.client.hud.HudTextPainter.draw(ctx,tr, BRACKET_SNEAK, drawX, y, textColor(COLOR_ON));
         }
     }
 
     private static void drawRow(GuiGraphicsExtractor ctx, Font tr, int x, int y,
                                 Component label, int labelWidth, boolean on) {
-        ctx.text(tr, label, x, y, textColor(0xFFFFFFFF), false);
-        ctx.text(tr, on ? TEXT_ON : TEXT_OFF, x + labelWidth, y, textColor(on ? COLOR_ON : COLOR_OFF), false);
+        com.aurora.client.hud.HudTextPainter.draw(ctx,tr, label, x, y, textColor(0xFFFFFFFF));
+        com.aurora.client.hud.HudTextPainter.draw(ctx,tr, on ? TEXT_ON : TEXT_OFF, x + labelWidth, y, textColor(on ? COLOR_ON : COLOR_OFF));
     }
 }

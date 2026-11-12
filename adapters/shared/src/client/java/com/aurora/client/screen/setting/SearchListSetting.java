@@ -107,17 +107,18 @@ public abstract class SearchListSetting<T extends FeatureSetting> extends Featur
         rowControlsDirty = true;
     }
 
-    /** True if this row matches the cleaned (lowercased, trimmed) query. */
-    protected abstract boolean matches(T row, String clean);
+    /** True if this row matches the query (the shared {@link com.aurora.client.search.SearchMatcher}; empty matches all). */
+    protected abstract boolean matches(T row, com.aurora.client.search.SearchMatcher.Query query);
 
     private void recomputeFiltered() {
-        String q = searchField.getValue();
-        String clean = q == null ? "" : q.trim().toLowerCase();
-        if (clean.equals(lastQuery)) return;
-        lastQuery = clean;
+        var query = com.aurora.client.search.SearchMatcher.query(searchField.getValue(),
+                com.aurora.client.search.SearchMatcher.configuredTolerance());
+        String key = query.tolerance() + "|" + query.text();
+        if (key.equals(lastQuery)) return;
+        lastQuery = key;
         filtered.clear();
         for (T row : allRows) {
-            if (matches(row, clean)) filtered.add(row);
+            if (matches(row, query)) filtered.add(row);
         }
         rowControlsDirty = true;
     }

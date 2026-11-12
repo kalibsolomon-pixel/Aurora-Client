@@ -1,14 +1,16 @@
 The fonts in this folder, except material_symbols_rounded.ttf, are licensed
 under the SIL Open Font License, Version 1.1, reproduced below.
 
-Fira Sans Medium (fira-sans-medium.ttf): Digitized data copyright 2012-2016, The Mozilla Foundation and Telefonica S.A.
-Inter Medium and Medium Italic (inter-frozen-medium.ttf, inter-frozen-medium-italic.ttf): Copyright 2016 The Inter Project Authors
-JetBrains Mono Medium (jetbrains-mono-medium.ttf): Copyright 2020 The JetBrains Mono Project Authors (https://github.com/JetBrains/JetBrainsMono)
-Nunito (nunito-variable.ttf): Copyright 2014 The Nunito Project Authors (https://github.com/googlefonts/nunito)
-Oswald (oswald-variable.ttf): Copyright 2016 The Oswald Project Authors (https://github.com/googlefonts/OswaldFont)
-Poppins Medium (poppins-medium.ttf): Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins)
+Except Quicksand, each family is shipped at four weights (Regular, Medium, SemiBold, Bold) and, where the family has one, in italic: static instances built from the Google Fonts files with fontTools, limited to Latin, Greek and Cyrillic, without layout or hinting tables (`tools/build_fonts.py`). Quicksand's license reserves its name, so it ships as Google's unmodified file.
+
+Fira Sans (fira-sans-bold-italic.ttf, fira-sans-bold.ttf, fira-sans-medium-italic.ttf, fira-sans-medium.ttf, fira-sans-regular-italic.ttf, fira-sans-regular.ttf, fira-sans-semibold-italic.ttf, fira-sans-semibold.ttf): Digitized data copyright 2012-2016, The Mozilla Foundation and Telefonica S.A.
+Inter (inter-bold-italic.ttf, inter-bold.ttf, inter-medium-italic.ttf, inter-medium.ttf, inter-regular-italic.ttf, inter-regular.ttf, inter-semibold-italic.ttf, inter-semibold.ttf): Copyright 2016 The Inter Project Authors (https://github.com/rsms/inter)
+JetBrains Mono (jetbrains-mono-bold-italic.ttf, jetbrains-mono-bold.ttf, jetbrains-mono-medium-italic.ttf, jetbrains-mono-medium.ttf, jetbrains-mono-regular-italic.ttf, jetbrains-mono-regular.ttf, jetbrains-mono-semibold-italic.ttf, jetbrains-mono-semibold.ttf): Copyright 2020 The JetBrains Mono Project Authors (https://github.com/JetBrains/JetBrainsMono)
+Nunito (nunito-bold-italic.ttf, nunito-bold.ttf, nunito-medium-italic.ttf, nunito-medium.ttf, nunito-regular-italic.ttf, nunito-regular.ttf, nunito-semibold-italic.ttf, nunito-semibold.ttf): Copyright 2014 The Nunito Project Authors (https://github.com/googlefonts/nunito)
+Oswald (oswald-bold.ttf, oswald-medium.ttf, oswald-regular.ttf, oswald-semibold.ttf): Copyright 2016 The Oswald Project Authors (https://github.com/googlefonts/OswaldFont)
+Poppins (poppins-bold-italic.ttf, poppins-bold.ttf, poppins-medium-italic.ttf, poppins-medium.ttf, poppins-regular-italic.ttf, poppins-regular.ttf, poppins-semibold-italic.ttf, poppins-semibold.ttf): Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins)
 Quicksand (quicksand-variable.ttf): Copyright 2019 The Quicksand Project Authors (https://github.com/andrew-paglinawan/QuicksandFamily.git), with Reserved Font Name "Quicksand"
-Roboto (roboto-variable.ttf): Copyright 2011 The Roboto Project Authors (https://github.com/googlefonts/roboto-classic)
+Roboto (roboto-bold-italic.ttf, roboto-bold.ttf, roboto-medium-italic.ttf, roboto-medium.ttf, roboto-regular-italic.ttf, roboto-regular.ttf, roboto-semibold-italic.ttf, roboto-semibold.ttf): Copyright 2011 The Roboto Project Authors (https://github.com/googlefonts/roboto-classic)
 
 material_symbols_rounded.ttf is Material Symbols Rounded (a static instance),
 Copyright 2026 Google LLC, licensed under the Apache License, Version 2.0.

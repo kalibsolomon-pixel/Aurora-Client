@@ -157,6 +157,14 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
         this.values = enumClass.getEnumConstants();
     }
 
+    /** A dropdown over a subset of an enum's values, in the given order (e.g. without a retired constant). */
+    public EnumSetting(String label, E[] options, Supplier<E> getter, Consumer<E> setter) {
+        super(label);
+        this.getter = getter;
+        this.setter = setter;
+        this.values = options.clone();
+    }
+
     @Override public EnumSetting<E> description(String desc) { super.description(desc); return this; }
     @Override public EnumSetting<E> description(Supplier<String> desc) { super.description(desc); return this; }
 

@@ -106,8 +106,8 @@ class RolloutStatesTest {
             String src = new String(java.nio.file.Files.readAllBytes(SourceTree.resolve(
                     SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/FeatureRegistry.java")));
             int count = src.split("new EnumSetting<>", -1).length - 1;
-            assertEquals(24, count,
-                    "production EnumSetting construction sites (inventory drift guard; 25→24 with Swing Style's removal, 2026-10-30)");
+            assertEquals(25, count,
+                    "production EnumSetting construction sites (inventory drift guard; 25→24 with Swing Style's removal, 2026-10-30; 24→25 with Text's Weight, 2026-11-12)");
         } catch (java.io.IOException e) {
             fail("FeatureRegistry.java not readable from the test working dir: " + e.getMessage());
         }

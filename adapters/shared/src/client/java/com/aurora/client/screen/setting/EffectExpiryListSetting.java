@@ -218,6 +218,23 @@ public class EffectExpiryListSetting extends FeatureSetting {
                 return id;
             }
         }
+        // Typo-tolerant fallback: the best fuzzy match over the id path and name.
+        var fuzzy = com.aurora.client.search.SearchMatcher.query(clean,
+                com.aurora.client.search.SearchMatcher.configuredTolerance());
+        Identifier best = null;
+        int bestScore = -1;
+        for (MobEffect eff : BuiltInRegistries.MOB_EFFECT) {
+            Identifier id = BuiltInRegistries.MOB_EFFECT.getKey(eff);
+            if (id == null) continue;
+            int score = Math.max(
+                    com.aurora.client.search.SearchMatcher.score(fuzzy, com.aurora.client.search.SearchMatcher.target(id.getPath())),
+                    com.aurora.client.search.SearchMatcher.score(fuzzy, com.aurora.client.search.SearchMatcher.target(displayNameFor(eff, id))));
+            if (score > bestScore) {
+                bestScore = score;
+                best = id;
+            }
+        }
+        if (best != null) return best;
         return null;
     }
 

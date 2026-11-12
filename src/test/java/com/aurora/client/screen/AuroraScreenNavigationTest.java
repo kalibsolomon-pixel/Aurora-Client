@@ -257,7 +257,10 @@ class AuroraScreenNavigationTest {
         assertFalse(src.contains("on || hover"));
         // Selection/enabled read through their own channels…
         assertTrue(src.contains("boolean sel = selectedCategory == i;"));
-        assertTrue(src.contains("boolean on = m.isEnabled();"));
+        // A tile's on state is its module's enabled state; a Settings
+        // search result (2026-11-12) never reads as on.
+        assertTrue(src.contains("boolean on = tileOn(m);"));
+        assertTrue(src.contains("return !isSettingsResult(m) && m.isEnabled();"));
         // …and the animators are driven from pointer-only targets.
         assertTrue(src.contains("tabHovers[i].update(hover);"));
         assertTrue(src.contains("profilesHover.update(pHover);"));
@@ -356,8 +359,8 @@ class AuroraScreenNavigationTest {
         assertTrue(tabFactory.contains("SemanticSound.NONE, true, true)"));
         // Profiles/cards/headers/toggles: SemanticAction.button — exactly
         // one ACTIVATION per accepted activation, played by the adapter.
-        assertEquals(4, count(src, "SemanticAction.button("),
-                "profiles, tiles, header nav, header toggles construct via button()");
+        assertEquals(5, count(src, "SemanticAction.button("),
+                "profiles, tiles, Settings search results, header nav, header toggles construct via button()");
         // The host never plays sounds; hover/focus/rejection are silent.
         String hostSrc = read(SourceTree.resolve(
                 SourceTree.ADAPTER + "/src/client/java/com/aurora/client/ui/interaction/SemanticControlHost.java"));

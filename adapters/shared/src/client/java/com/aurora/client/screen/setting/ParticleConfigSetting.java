@@ -29,14 +29,13 @@ public class ParticleConfigSetting extends SearchListSetting<ParticleRowSetting>
         super("Particle Search", rows, "Search particles... (e.g. flame)");
     }
 
-    /** True if the humanized label or registry id contains the query token. */
+    /**
+     * The humanized label or the raw registry id (so "dripping_water" or
+     * "minecraft:flame" still hit even though the label reads "Dripping
+     * Water"), through the shared matcher.
+     */
     @Override
-    protected boolean matches(ParticleRowSetting row, String clean) {
-        if (clean.isEmpty()) return true;
-        if (row.label.toLowerCase().contains(clean)) return true;
-        // Also match the raw registry id (e.g. "minecraft:flame") so a
-        // query like "dripping_water" still hits even though the label
-        // is humanized to "Dripping Water".
-        return row.particleId().toLowerCase().contains(clean);
+    protected boolean matches(ParticleRowSetting row, com.aurora.client.search.SearchMatcher.Query query) {
+        return com.aurora.client.search.SearchMatcher.matches(query, row.label, row.particleId());
     }
 }

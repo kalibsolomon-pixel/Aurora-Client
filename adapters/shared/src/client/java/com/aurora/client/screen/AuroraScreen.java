@@ -179,6 +179,29 @@ public class AuroraScreen extends Screen implements ThemedScreen {
 
     private EditBox searchField;
     private String searchQuery = "";
+    private static boolean devQueryApplied;
+
+    // ---- Search (2026-11-12) ----
+    // One index over the Mods features and the Settings-tab entries: a
+    // feature's name (weight 3), the names of the settings inside it (2) and
+    // its description (1), matched by the shared SearchMatcher with the
+    // owner's typo tolerance. Settings-tab entries appear as tiles too
+    // (synthetic Modules, never toggled from the grid); a tile found through
+    // a setting names that setting on a second line.
+    private com.aurora.client.search.SearchIndex<Module> searchIndex;
+    /** Settings-tab entries as result tiles, by id. */
+    private final Map<String, Module> settingsResults = new HashMap<>();
+    private List<com.aurora.client.search.SearchIndex.Hit<Module>> lastHits;
+    private List<Module> lastResults = List.of();
+    /** The setting a result matched through, by tile id (absent when its name or description matched). */
+    private final Map<String, String> resultVia = new HashMap<>();
+    /** A result tile's second line: the matched setting, or a Settings entry's page. */
+    private final Map<String, String> resultSubtitle = new HashMap<>();
+    private final Map<String, String> subtitleFit = new HashMap<>();
+    /** The Settings-tab row (a FeatureSetting) or entry header (a FeatureMetadata) a result opened, outlined while it fades. */
+    private Object settingsReveal;
+    private long settingsRevealStartMs;
+    private static final long REVEAL_MS = 1600L;
 
     /**
      * One scroll per tab — τ from the fps-keyed table below, snap 0.1,
@@ -355,13 +378,24 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         }
 
         searchField = new EditBox(this.font, 0, 0, 202, (int) TOOL, Component.literal("Search..."));
-        searchField.setHint(Component.literal("Search modules..."));
+        searchField.setHint(Component.literal("Search features and settings..."));
         searchField.setBordered(false);
         searchField.setTextColor(0xFFFFFFFF);
+        searchField.setMaxLength(64);
+        if (!devQueryApplied) {
+            // Dev-only verification seam: posted keystrokes never reach the
+            // game, so a test boot pre-fills the query once per session.
+            devQueryApplied = true;
+            String dev = System.getProperty("aurora.dev.searchQuery");
+            if (dev != null) searchQuery = dev;
+        }
+        // A re-init (window resize) keeps the query the results are filtered by.
+        searchField.setValue(searchQuery);
         searchField.setResponder(s -> this.searchQuery = s);
         // Explicit traversal position: the vanilla search field is first.
         // It is visible/focusable on Modules and hidden on Settings.
         this.addWidget(searchField);
+        if (selectedCategory == 0) focusSearchIfInstant();
 
         // C-2b screen-owned chrome: the two navigation tabs, the Profiles
         // action, the layout pair (C-5 — the last deferred peer-selection
@@ -556,7 +590,17 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     private SemanticActionControl tileControl(Module m) {
         SemanticActionControl control = tileControls.get(m.id);
         if (control != null) return control;
-        control = new SemanticActionControl(SemanticAction.button(
+        control = isSettingsResult(m)
+                ? new SemanticActionControl(SemanticAction.button(
+                        Component.literal(m.name),
+                        () -> Component.literal("Opens it on the Settings tab."),
+                        () -> Component.empty(),
+                        () -> true,
+                        () -> openSettingsResult(m)),
+                        MinecraftSemanticFeedback.INSTANCE,
+                        null,
+                        SemanticActionControl.PointerRouting.MANUAL)
+                : new SemanticActionControl(SemanticAction.button(
                 Component.literal(m.name),
                 () -> Component.literal(m.hoverText()),
                 () -> Component.literal(m.isEnabled() ? "Enabled" : "Disabled"),
@@ -650,6 +694,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         selectedCategory = i;
         semanticHost.deactivateAll();
         focusedSettingVisible = false;
+        if (i == 0) focusSearchIfInstant();
     }
 
     /**
@@ -691,8 +736,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         int row = (int) (2 * TOOL_STEP) + searchWidth(); // the Modules toolbar's exact extent
         AuroraConfig cfg = AuroraConfig.get();
         long version = ThemeManager.generation() * 65537L + row * 31L
-                + (cfg.activeFont == null ? 0 : cfg.activeFont.ordinal())
-                + (cfg.textRendererMode == null ? 0 : cfg.textRendererMode.ordinal() * 256L);
+                + com.aurora.client.ui.util.AuroraFontRenderer.styleKey() * 7L;
         if (version == pageTabVersion) return;
         pageTabVersion = version;
         int n = pages.size();
@@ -1001,7 +1045,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 if (MaterialSurface.unified()) {
                     highlightedTileGlass[i]=GlassSurface.card(g,b[0],b[1],b[2],b[3],ctrlRadius);continue;
                 }
-                if (mods.get(i).isEnabled()) {
+                if (tileOn(mods.get(i))) {
                     highlightedTileGlass[i] = GlassSurface.control(g,
                             b[0], b[1], b[2], b[3], ctrlRadius, true,
                             BlurPanelRenderer.Priority.ROW);
@@ -1207,6 +1251,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                     && mouseX >= cx && mouseX <= cx + cw && mouseY >= cy && mouseY <= cy + ch;
             float hoverT = MaterialSurface.unified() ? pilotHover(m.id,hover) : tileHover(m.id).update(hover);
             SemanticActionControl control = tileControls.get(m.id);
+            if (control == null && isSettingsResult(m)) control = tileControl(m);
             if (control != null) {
                 // The walk only reaches tiles that intersect the viewport,
                 // so this re-mark IS the ClipBand truth (C-2 partial
@@ -1215,7 +1260,8 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 control.setAvailable(true);
                 control.updatePointer(mouseX, mouseY);
             }
-            boolean on = m.isEnabled();
+            boolean on = tileOn(m);
+            String subtitle = resultSubtitle.get(m.id);
 
             // Neutral tiles inherit the enclosing window. Enabled tiles are
             // isolated stained glass; if glass declines, preserve the old
@@ -1248,22 +1294,34 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 drawTileIcon(g, tr, m, cx + cw / 2f, cy + 30, 28f, on, highlightedGlass);
                 int labelWidth = Math.max(0, (int) cw - 6);
                 long labelVersion = ThemeManager.generation() * 65537L + labelWidth * 31L
-                        + (AuroraConfig.get().activeFont == null ? 0 : AuroraConfig.get().activeFont.ordinal())
-                        + (AuroraConfig.get().textRendererMode == null ? 0 : AuroraConfig.get().textRendererMode.ordinal() * 256L);
+                        + com.aurora.client.ui.util.AuroraFontRenderer.styleKey() * 7L;
                 if (labelVersion != moduleLabelVersion) { moduleLabelLines.clear(); moduleLabelVersion = labelVersion; }
-                var lines = moduleLabelLines.computeIfAbsent(m.name,
-                        name -> com.aurora.client.ui.util.WordWrap.lines(name, labelWidth, 2, tr::width));
+                // A result with a second line gives its name one line.
+                int nameLinesMax = subtitle == null ? 2 : 1;
+                var lines = moduleLabelLines.computeIfAbsent(nameLinesMax + "|" + m.name,
+                        key -> com.aurora.client.ui.util.WordWrap.lines(m.name, labelWidth, nameLinesMax, tr::width));
                 RenderUtil.drawCenteredLines(tr, g, lines, cx + 3, cy + ch - 27, labelWidth,
                         MaterialSurface.color(ThemeToken.ON_BACKGROUND));
+                if (subtitle != null) {
+                    drawSubtitle(g, tr, m, subtitle, labelWidth, cx + 3 + labelWidth / 2f, subtitleY(m, cy, ch, cw),
+                            mouseX, mouseY, cx, cw, cy + ch);
+                }
             } else {
                 drawTileIcon(g, tr, m, cx + 20, cy + ch / 2f, 16f, on, highlightedGlass);
                 int nameWidth = Math.max(1, (int) cw - 48);
                 long labelVersion = ThemeManager.generation() * 65537L + nameWidth * 31L
-                        + AuroraConfig.get().activeFont.ordinal() + AuroraConfig.get().textRendererMode.ordinal() * 256L;
+                        + com.aurora.client.ui.util.AuroraFontRenderer.styleKey() * 7L;
                 if (labelVersion != moduleLabelVersion) { moduleLabelLines.clear(); moduleLabelVersion = labelVersion; }
-                var nameLines = moduleLabelLines.computeIfAbsent(m.name, name -> com.aurora.client.ui.util.WordWrap.lines(name, nameWidth, 2, tr::width));
-                RenderUtil.drawCenteredLines(tr, g, nameLines, cx + 32, cy + (ch - nameLines.size() * 10) / 2, nameWidth,
+                int nameLinesMax = subtitle == null ? 2 : 1;
+                var nameLines = moduleLabelLines.computeIfAbsent(nameLinesMax + "|" + m.name,
+                        key -> com.aurora.client.ui.util.WordWrap.lines(m.name, nameWidth, nameLinesMax, tr::width));
+                int textLines = nameLines.size() + (subtitle == null ? 0 : 1);
+                RenderUtil.drawCenteredLines(tr, g, nameLines, cx + 32, cy + (ch - textLines * 10) / 2, nameWidth,
                         MaterialSurface.color(ThemeToken.ON_BACKGROUND));
+                if (subtitle != null) {
+                    drawSubtitle(g, tr, m, subtitle, nameWidth, cx + 32 + nameWidth / 2f, subtitleY(m, cy, ch, cw),
+                            mouseX, mouseY, cx, cw, cy + ch);
+                }
             }
         }
         if (mods.isEmpty()) {
@@ -1272,7 +1330,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             ClipBand well = contentViewport();
             int cx = well.x + well.width / 2, cy = well.y + well.height / 2 - tr.lineHeight;
             String headline = com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(tr,
-                    "No modules match “" + searchQuery.trim() + "”", well.width - 16, 1);
+                    "Nothing matches “" + searchQuery.trim() + "”", well.width - 16, 1);
             com.aurora.client.ui.util.AuroraFontRenderer.drawCentered(g, tr, headline, cx, cy,
                     MaterialSurface.color(ThemeToken.ON_BACKGROUND));
             com.aurora.client.ui.util.AuroraFontRenderer.drawCentered(g, tr, "Try a shorter or different search", cx,
@@ -1386,6 +1444,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                     }
                 }
             }
+            if (settingsReveal == m) paintReveal(g, mx + 4, y, contentWidth() - 8, headerH, ctrlRadius);
             y += headerH;
             if (m.settingsDetailOnly) {
                 // Detail-only entry: one muted hint line in place of the
@@ -1403,6 +1462,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                     boolean visible = vp.intersects(mx + 4, y, (contentWidth() - 8), rh);
                     if (visible) {
                         s.render(g, (int) (mx + 4), (int) y, (contentWidth() - 8), mouseX, mouseY);
+                        if (settingsReveal == s) paintReveal(g, mx + 4, y, contentWidth() - 8, rh, ctrlRadius);
                     }
                     boolean anyControlAvailable = false;
                     List<SemanticActionControl> controls = hostedSettingControls.getOrDefault(s, List.of());
@@ -1516,15 +1576,187 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         }
     }
 
+    /**
+     * A result tile's second line, centred under its name and fitted with a
+     * bounded ellipsis (memoized per text and width). On a module found
+     * through a setting it is a link to that setting: it turns accent while
+     * the pointer is in the tile's lower band (the click walk's
+     * {@link #inSubtitleBand} rect).
+     */
+    private void drawSubtitle(GuiGraphicsExtractor g, Font tr, Module m, String subtitle, int width, float centerX,
+                              float y, int mouseX, int mouseY, float cx, float cw, float bottom) {
+        String fitted = subtitleFit.computeIfAbsent(width + "|" + subtitle,
+                key -> com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(tr, subtitle, width, 1));
+        boolean link = !isSettingsResult(m) && resultVia.containsKey(m.id)
+                && inSubtitleBand(mouseX, mouseY, cx, cw, y, bottom);
+        int color = link ? MaterialSurface.color(ThemeToken.ACCENT) : MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED);
+        com.aurora.client.ui.util.AuroraFontRenderer.drawCentered(g, tr, fitted, Math.round(centerX), Math.round(y), color);
+    }
+
+    /** The lower band of a tile from its subtitle line down — where a click opens the matched setting. */
+    private static boolean inSubtitleBand(double mouseX, double mouseY, float cx, float cw, float subtitleY, float bottom) {
+        return mouseX >= cx && mouseX <= cx + cw && mouseY >= subtitleY - 2 && mouseY <= bottom;
+    }
+
+    /** The y of a result tile's subtitle line, shared by paint and the click walk. */
+    private float subtitleY(Module m, float cy, float ch, float cw) {
+        if (gridLayout) return cy + ch - 16;
+        int nameLinesMax = 1;
+        int nameWidth = Math.max(1, (int) cw - 48);
+        var nameLines = moduleLabelLines.computeIfAbsent(nameLinesMax + "|" + m.name,
+                key -> com.aurora.client.ui.util.WordWrap.lines(m.name, nameWidth, nameLinesMax, this.font::width));
+        return cy + (ch - (nameLines.size() + 1) * 10) / 2 + 10;
+    }
+
+    /**
+     * The tiles the Modules tab shows: every module with no query, else the
+     * ranked search results across both tabs. Memoized: the index answers a
+     * repeated query from its own memo and the tile list is rebuilt only
+     * when the hits change, so the per-frame callers cost nothing.
+     */
     private List<Module> filteredModules() {
-        List<Module> out = new ArrayList<>();
-        String q = searchQuery == null ? "" : searchQuery.toLowerCase();
-        for (Module m : ModuleManager.getInstance().getModules()) {
-            if (q.isEmpty() || m.name.toLowerCase().contains(q) || m.description.toLowerCase().contains(q)) {
-                out.add(m);
-            }
+        String q = searchQuery == null ? "" : searchQuery;
+        if (com.aurora.client.search.SearchMatcher.normalize(q).isEmpty()) {
+            return ModuleManager.getInstance().getModules();
         }
-        return out;
+        var hits = searchIndex().search(q, com.aurora.client.search.SearchMatcher.configuredTolerance());
+        if (hits != lastHits) {
+            lastHits = hits;
+            List<Module> results = new ArrayList<>(hits.size());
+            resultVia.clear();
+            resultSubtitle.clear();
+            for (var hit : hits) {
+                Module m = hit.value();
+                results.add(m);
+                if (hit.via() != null) resultVia.put(m.id, hit.via());
+                String subtitle = hit.via();
+                // A Settings entry names its page unless a setting matched
+                // (the tile's click goes to that page either way).
+                if (isSettingsResult(m) && subtitle == null) {
+                    int page = pageIndexOf(m.id);
+                    subtitle = page < 0 ? "Settings" : "Settings \u203A " + pages.get(page).label();
+                }
+                if (subtitle != null) resultSubtitle.put(m.id, subtitle);
+            }
+            lastResults = results;
+        }
+        return lastResults;
+    }
+
+    private com.aurora.client.search.SearchIndex<Module> searchIndex() {
+        if (searchIndex == null) {
+            var builder = com.aurora.client.search.SearchIndex.<Module>builder();
+            for (Module m : ModuleManager.getInstance().getModules()) addSearchEntry(builder, m, findMeta(m.id));
+            for (FeatureMetadata fm : allPageEntries) {
+                Module m = settingsResults.computeIfAbsent(fm.id,
+                        id -> new Module(fm.id, fm.displayName, fm.description == null ? "" : fm.description));
+                addSearchEntry(builder, m, fm);
+            }
+            searchIndex = builder.build();
+        }
+        return searchIndex;
+    }
+
+    private static void addSearchEntry(com.aurora.client.search.SearchIndex.Builder<Module> builder,
+                                       Module m, FeatureMetadata fm) {
+        var entry = builder.entry(m).field(m.name, 3, null).field(m.description, 1, null);
+        if (fm == null) return;
+        for (FeatureSetting setting : fm.settings) {
+            String label = setting.label;
+            if (label != null && !label.isBlank()) entry.field(label, 2, label);
+        }
+    }
+
+    /** Whether {@code m} is a Settings-tab entry shown as a result tile (it navigates; it never toggles). */
+    private boolean isSettingsResult(Module m) {
+        return settingsResults.get(m.id) == m;
+    }
+
+    /** A tile's stained "on" state: a module's enabled state; never for a Settings result. */
+    private boolean tileOn(Module m) {
+        return !isSettingsResult(m) && m.isEnabled();
+    }
+
+    private int pageIndexOf(String id) {
+        for (int i = 0; i < pages.size(); i++) {
+            for (FeatureMetadata fm : pages.get(i).entries()) if (fm.id.equals(id)) return i;
+        }
+        return -1;
+    }
+
+    /** The first setting in {@code fm} labelled {@code label}, or null. */
+    private static FeatureSetting settingNamed(FeatureMetadata fm, String label) {
+        if (fm == null || label == null) return null;
+        for (FeatureSetting setting : fm.settings) if (label.equals(setting.label)) return setting;
+        return null;
+    }
+
+    /** Opens a module's detail screen, scrolled to and outlining the setting its result matched. */
+    private void openDetail(Module m) {
+        FeatureMetadata fm = findMeta(m.id);
+        if (fm == null || !fm.hasDetail() || this.minecraft == null) return;
+        Screen screen = FeatureDetailScreen.destination(this, fm);
+        if (screen instanceof FeatureDetailScreen detail) detail.reveal(settingNamed(fm, resultVia.get(m.id)));
+        com.aurora.client.adapter.NativeUi.setScreen(this.minecraft, screen);
+    }
+
+    /**
+     * Opens a Settings-tab result: its page, scrolled so the matched row (or
+     * the entry's header) sits a third of the way down, outlined while it
+     * fades. A detail-only entry opens its detail screen instead.
+     */
+    private void openSettingsResult(Module m) {
+        FeatureMetadata fm = findMeta(m.id);
+        int page = pageIndexOf(m.id);
+        if (fm == null || page < 0) return;
+        if (fm.settingsDetailOnly) {
+            openDetail(m);
+            return;
+        }
+        FeatureSetting target = settingNamed(fm, resultVia.get(m.id));
+        selectCategory(1);
+        selectSettingsPage(page);
+        float offset = 0;
+        for (FeatureMetadata entry : pageEntries()) {
+            if (entry == fm) {
+                if (target != null) {
+                    offset += SETTINGS_HEADER_H;
+                    for (FeatureSetting setting : entry.settings) {
+                        if (setting == target) break;
+                        offset += setting.height() + SETTINGS_ROW_GAP;
+                    }
+                }
+                break;
+            }
+            offset += SETTINGS_HEADER_H;
+            if (entry.settingsDetailOnly) offset += SETTINGS_HINT_H;
+            else for (FeatureSetting setting : entry.settings) offset += setting.height() + SETTINGS_ROW_GAP;
+            offset += SETTINGS_ENTRY_GAP;
+        }
+        double max = computeMaxScroll();
+        scrolls[1].set(Math.max(0, Math.min(max, offset - contentViewport().height / 3.0)));
+        settingsReveal = target != null ? target : fm;
+        settingsRevealStartMs = System.currentTimeMillis();
+    }
+
+    /** The search reveal outline: accent, fading over its last half. */
+    private void paintReveal(GuiGraphicsExtractor g, float x, float y, float w, float h, float radius) {
+        long age = System.currentTimeMillis() - settingsRevealStartMs;
+        if (age >= REVEAL_MS) {
+            settingsReveal = null;
+            return;
+        }
+        float fade = Math.min(1f, 2f * (1f - age / (float) REVEAL_MS));
+        int accent = MaterialSurface.color(ThemeToken.ACCENT);
+        RenderUtil.drawRoundedOutlineAA(g, x, y, w, h, radius, 1f,
+                ThemeManager.withAlpha(accent, Math.round((accent >>> 24) * fade)));
+    }
+
+    /** Instant Search (Settings, General page): the field takes focus on open and on returning to the Modules tab. */
+    private void focusSearchIfInstant() {
+        if (searchField == null || !AuroraConfig.get().searchInstant) return;
+        this.setFocused(searchField);
+        searchField.setFocused(true);
     }
 
     private static String fit(Font tr, String text, int maxW) {
@@ -1706,17 +1938,25 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 if (b == null) continue;
                 if (vp.contains(mouseX, mouseY)
                         && mouseX >= b[0] && mouseX <= b[0] + b[2] && mouseY >= b[1] && mouseY <= b[1] + b[3]) {
-                    if (button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_RIGHT) {
+                    boolean settingLink = button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT
+                            && !isSettingsResult(m) && resultVia.containsKey(m.id)
+                            && inSubtitleBand(mouseX, mouseY, b[0], b[2], subtitleY(m, b[1], b[3], b[2]), b[1] + b[3]);
+                    if (button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_RIGHT || settingLink) {
                         // Secondary (pointer-specific) card action: open the
                         // detail screen. One activation click at the site —
                         // parity with the Settings header that opens the same
                         // destination, so sound policy does not depend on the
                         // route (design language §1.1).
+                        // A search result's matched-setting line is a link
+                        // to that setting: the same destination as the
+                        // right click, revealing the row.
                         FeatureMetadata fm = findMeta(m.id);
-                        if (fm != null && fm.hasDetail() && this.minecraft != null) {
+                        boolean opens = isSettingsResult(m) || (fm != null && fm.hasDetail() && this.minecraft != null);
+                        if (opens) {
                             MinecraftSemanticFeedback.INSTANCE
                                     .play(SemanticSound.ACTIVATION);
-                            com.aurora.client.adapter.NativeUi.setScreen(this.minecraft, FeatureDetailScreen.destination(this, fm));
+                            if (isSettingsResult(m)) openSettingsResult(m);
+                            else openDetail(m);
                         }
                         return true;
                     }
@@ -1871,9 +2111,13 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         // field and is consumed — vanilla EditBox ignores Escape, so the
         // fall-through used to close the whole screen on the first press.
         // The second press (no active field) reaches the screen.
-        if (searchField != null && searchField.isFocused()
+        // Search (2026-11-12): Escape clears a non-empty query first; with
+        // the query empty it falls through and closes the screen (Instant
+        // Search keeps the field focused, so an unfocus-only step would cost
+        // every close an extra press).
+        if (selectedCategory == 0 && searchField != null && !searchQuery.isEmpty()
                 && _kev.key() == com.mojang.blaze3d.platform.InputConstants.KEY_ESCAPE) {
-            searchField.setFocused(false);
+            searchField.setValue("");
             return true;
         }
         FeatureSetting focused = FeatureSetting.getFocused();
@@ -1902,6 +2146,15 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 this.setFocused(null);
                 return true;
             }
+        // Search covers both tabs: typing on the Settings tab with nothing
+        // there to take it starts a search, whose results show on Modules.
+        if (selectedCategory == 1 && searchField != null && this.getFocused() == null
+                && !Character.isWhitespace(_ev.codepoint())) {
+            selectCategory(0);
+            this.setFocused(searchField);
+            searchField.setFocused(true);
+            return searchField.charTyped(_ev);
+        }
         return super.charTyped(_ev);
     }
 

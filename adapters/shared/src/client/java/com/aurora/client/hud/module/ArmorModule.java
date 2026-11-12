@@ -202,7 +202,7 @@ public class ArmorModule extends HudModule {
                     int tw = tr.width(Component);
                     int tx = cellX + (cellW - tw) / 2;
                     int ty = y;
-                    ctx.text(tr, textCache.text(i, Component), tx, ty, color, false);
+                    com.aurora.client.hud.HudTextPainter.draw(ctx,tr, textCache.text(i, Component), tx, ty, color);
                 }
 
                 if (drawBars && s.getMaxDamage() > 0) {
@@ -222,7 +222,7 @@ public class ArmorModule extends HudModule {
             String Component = formatDurability(s, fmt);
             if (!Component.isEmpty()) {
                 int ty = rowY + (ROW_H - tr.lineHeight) / 2;
-                ctx.text(tr, textCache.text(i, Component), x + ICON + TEXT_GAP, ty, color, false);
+                com.aurora.client.hud.HudTextPainter.draw(ctx,tr, textCache.text(i, Component), x + ICON + TEXT_GAP, ty, color);
             }
 
             if (drawBars && s.getMaxDamage() > 0) {
@@ -301,11 +301,11 @@ public class ArmorModule extends HudModule {
                     int cellX = x + i * (cellW + VANILLA_GAP);
                     int tx = cellX + (cellW - tw) / 2;
                     int ty = y;
-                    ctx.text(tr, textCache.text(i, text), tx, ty, textColor, false);
+                    com.aurora.client.hud.HudTextPainter.draw(ctx,tr, textCache.text(i, text), tx, ty, textColor);
                 } else {
                     int tx = slotX + SLOT + TEXT_GAP;
                     int ty = slotY + (SLOT - tr.lineHeight) / 2;
-                    ctx.text(tr, textCache.text(i, text), tx, ty, textColor, false);
+                    com.aurora.client.hud.HudTextPainter.draw(ctx,tr, textCache.text(i, text), tx, ty, textColor);
                 }
             }
         }

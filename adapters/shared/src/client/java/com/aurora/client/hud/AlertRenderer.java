@@ -68,12 +68,12 @@ public final class AlertRenderer {
 
         // Title
         int titleY = y + padding + (subH > 0 ? 0 : (boxH - titleH - padding * 2) / 2);
-        ctx.text(tr, alert.title, contentX, titleY, textColor, false);
+        com.aurora.client.hud.HudTextPainter.draw(ctx,tr, alert.title, contentX, titleY, textColor);
 
         // Subtitle
         if (subW > 0) {
             int subColor = (Math.round(0xAA * alpha) << 24) | 0x00FFFFFF;
-            ctx.text(tr, alert.subtitle, contentX, titleY + tr.lineHeight + 2, subColor, false);
+            com.aurora.client.hud.HudTextPainter.draw(ctx,tr, alert.subtitle, contentX, titleY + tr.lineHeight + 2, subColor);
         }
     }
 

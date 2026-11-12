@@ -42,7 +42,6 @@ class PhaseC8EdgeGeometryTest {
                 SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/setting/ItemScaleSetting.java",
                 SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/setting/EffectExpiryListSetting.java",
                 SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/setting/PixelCanvasSetting.java",
-                SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/AuroraScreen.java",
         };
         for (String f : fields) {
             String s = source(f);
@@ -51,6 +50,12 @@ class PhaseC8EdgeGeometryTest {
             assertTrue(s.contains("setFocused(false)"),
                     SourceTree.resolve(f).getFileName() + " must UNFOCUS the field (not close the screen)");
         }
+        // AuroraScreen's search (2026-11-12, owner-approved): Instant Search
+        // keeps the field focused, so Escape clears a non-empty query first
+        // and otherwise closes the screen; an unfocus-only step would make
+        // every close cost two presses.
+        String aurora = source(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/AuroraScreen.java");
+        assertTrue(aurora.contains("if (selectedCategory == 0 && searchField != null && !searchQuery.isEmpty()\n                && _kev.key() == com.mojang.blaze3d.platform.InputConstants.KEY_ESCAPE) {\n            searchField.setValue(\"\");"));
         // The capture families' Escape semantics (clear-binding / cancel
         // capture) are their own and must not be swept into this rule.
         String keybind = source(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/setting/KeybindSetting.java");

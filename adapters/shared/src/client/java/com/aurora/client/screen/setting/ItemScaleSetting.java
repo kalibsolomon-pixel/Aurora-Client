@@ -293,6 +293,25 @@ public class ItemScaleSetting extends FeatureSetting {
             }
         }
 
+        // Typo-tolerant fallback: the best fuzzy match over the id path and name.
+        var fuzzy = com.aurora.client.search.SearchMatcher.query(clean,
+                com.aurora.client.search.SearchMatcher.configuredTolerance());
+        Item best = null;
+        int bestScore = -1;
+        for (Item item : BuiltInRegistries.ITEM) {
+            Identifier id = BuiltInRegistries.ITEM.getKey(item);
+            if (id == null) continue;
+            int score = Math.max(
+                    com.aurora.client.search.SearchMatcher.score(fuzzy, com.aurora.client.search.SearchMatcher.target(id.getPath())),
+                    com.aurora.client.search.SearchMatcher.score(fuzzy, com.aurora.client.search.SearchMatcher.target(
+                            item.getName(item.getDefaultInstance()).getString())));
+            if (score > bestScore) {
+                bestScore = score;
+                best = item;
+            }
+        }
+        if (best != null) return best;
+
         return null;
     }
 

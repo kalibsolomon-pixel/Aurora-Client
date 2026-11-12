@@ -198,7 +198,7 @@ public class PotionModule extends HudModule {
             int textX = x + iconWidth() + ICON_GAP;
             int line1Y = rowY + (rowHeight() - (tr.lineHeight * 2 + 1)) / 2;
             int line2Y = line1Y + tr.lineHeight + 1;
-            ctx.text(tr, nameWithLevel(e), textX, line1Y, textColor(0xFFFFFFFF), false);
+            com.aurora.client.hud.HudTextPainter.draw(ctx,tr, nameWithLevel(e), textX, line1Y, textColor(0xFFFFFFFF));
             drawTimer(ctx, tr, e, textX, line2Y);
 
             row++;
@@ -228,10 +228,10 @@ public class PotionModule extends HudModule {
         int cx = x;
         if (mins != null) {
             // Green minutes — the HUD's shared "plentiful time" status color.
-            ctx.text(tr, mins, cx, y, textColor(com.aurora.client.theme.HudStatus.ON), false);
+            com.aurora.client.hud.HudTextPainter.draw(ctx,tr, mins, cx, y, textColor(com.aurora.client.theme.HudStatus.ON));
             cx += tr.width(mins);
         }
-        ctx.text(tr, secs, cx, y, textColor(0xFFFFFFFF), false);     // seconds / infinity — white
+        com.aurora.client.hud.HudTextPainter.draw(ctx,tr, secs, cx, y, textColor(0xFFFFFFFF));     // seconds / infinity — white
     }
 
     /**
