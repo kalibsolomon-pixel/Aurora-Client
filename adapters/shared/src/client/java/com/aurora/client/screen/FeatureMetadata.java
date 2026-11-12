@@ -70,6 +70,19 @@ public final class FeatureMetadata {
      */
     public boolean pageGroup;
 
+    /**
+     * Optional reset for entries whose values are not whole config fields —
+     * one particle's entries in the shared particle maps, say. When set,
+     * {@link #reset()} runs it instead of resetting by prefix.
+     */
+    public Runnable resetAction;
+
+    /** Fluent setter for {@link #resetAction}. */
+    public FeatureMetadata resetWith(Runnable action) {
+        this.resetAction = action;
+        return this;
+    }
+
     /** Fluent setter for {@link #pageGroup}. */
     public FeatureMetadata pageGroup(boolean v) {
         this.pageGroup = v;
@@ -140,6 +153,10 @@ public final class FeatureMetadata {
      * one prefix derived from {@link #id} via snake_case → camelCase.
      */
     public void reset() {
+        if (resetAction != null) {
+            resetAction.run();
+            return;
+        }
         if (resetPrefixes != null && !resetPrefixes.isEmpty()) {
             AuroraConfig.resetByPrefixes(resetPrefixes);
         } else {

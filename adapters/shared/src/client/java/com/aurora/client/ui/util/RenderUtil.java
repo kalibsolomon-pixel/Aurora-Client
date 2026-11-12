@@ -133,6 +133,25 @@ public class RenderUtil {
         }
     }
 
+    /**
+     * A rounded rect filled with a linear two-stop gradient ({@code from} →
+     * {@code to}, left to right when {@code horizontal}, else top to
+     * bottom), drawn as one shader quad. Where the shader cannot run (a
+     * template capture, the CPU fallback) it fills with the midpoint color,
+     * so the shape and its overall tone are always right. A square corner
+     * is passed as a sub-pixel radius, which the shader accepts and nobody
+     * can see.
+     */
+    public static void drawRoundedRectGradientAA(GuiGraphicsExtractor graphics, float x, float y, float width,
+                                                 float height, float radius, int from, int to, boolean horizontal) {
+        float scale = Minecraft.getInstance().getWindow().getGuiScale();
+        if (from == to) { drawRoundedRectAA(graphics, x, y, width, height, radius, from); return; }
+        float shaderRadius = Math.max(radius, 0.125f / Math.max(1f, scale));
+        if (CAPTURE_SINK.get() == null && NativeShapeRenderer.drawGradient(graphics, scale, x, y, width, height,
+                shaderRadius, from, to, horizontal)) return;
+        drawRoundedRectAA(graphics, x, y, width, height, radius, com.aurora.client.util.AuroraAnim.lerpArgb(from, to, 0.5f));
+    }
+
     public static void drawCircleAA(GuiGraphicsExtractor graphics, float x, float y, float width, float height, int color) {
         float scale = Minecraft.getInstance().getWindow().getGuiScale();
         float diameter = Math.min(width, height);

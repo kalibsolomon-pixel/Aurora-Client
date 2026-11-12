@@ -20,9 +20,10 @@ import java.util.function.IntSupplier;
  * <p>Consolidates the swatch rendering previously duplicated across
  * {@code ColorSetting} (checkerboard + chamfered ring + halo) and
  * {@code AccentSetting} (preset grid + selection ring). All curves render
- * through the high-res AA engine; the base ring uses the {@code BORDER}
- * token, the hover halo uses {@code ON_BACKGROUND} (mode-aware), and the
- * selection ring uses {@code ACCENT}.
+ * through the high-res AA engine; the base edge is a one-screen-pixel black
+ * hairline (until 2026-11-12 the {@code BORDER} token), the hover halo uses
+ * {@code ON_BACKGROUND} (mode-aware), and the selection ring uses
+ * {@code ACCENT}.
  *
  * <p><b>Phase B pilot (2026-09-16) — opt-in canonical state mode</b>
  * ({@link #canonicalStates()}; the production hosts are the 29
@@ -189,10 +190,10 @@ public class ColorSwatch extends Widget {
             // changes with state. Base ring first: BORDER at rest/hover,
             // the established disabled-chrome idiom when disabled.
             if (!rest) {
-                RenderUtil.drawRoundedOutlineAA(g, x, y, w, h, radius, 1.0f,
+                RenderUtil.drawRoundedOutlineAA(g, x, y, w, h, radius, edgeWidth(),
                         disabled
                                 ? ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_BACKGROUND), 0x33)
-                                : ThemeManager.color(ThemeToken.BORDER));
+                                : EDGE);
             }
             if (selected) {
                 RenderUtil.drawRoundedOutlineAA(g, x - 2, y - 2, w + 4, h + 4, radius + 2, 1.5f,
@@ -220,8 +221,7 @@ public class ColorSwatch extends Widget {
                     ThemeManager.color(ThemeToken.ACCENT));
         } else {
             if (!rest) {
-                RenderUtil.drawRoundedOutlineAA(g, x, y, w, h, radius, 1.0f,
-                        ThemeManager.color(ThemeToken.BORDER));
+                RenderUtil.drawRoundedOutlineAA(g, x, y, w, h, radius, edgeWidth(), EDGE);
             }
             if (hT > 0f) {
                 int haloA = Math.round(90 * hT);
@@ -247,6 +247,18 @@ public class ColorSwatch extends Widget {
         }
     }
 
+    /**
+     * The sample's resting edge (owner ruling 2026-11-12): thin and black —
+     * one screen pixel at 60% black, instead of the 1 GUI px theme border
+     * ring. It separates light samples from a light backdrop and vanishes on
+     * the dark window. Selection, hover and focus keep their own rings.
+     */
+    private static final int EDGE = 0x99000000;
+
+    private static float edgeWidth() {
+        return 1f / Math.max(1, (int) Minecraft.getInstance().getWindow().getGuiScale());
+    }
+
     private static void blitSwatchTemplate(GuiGraphicsExtractor g, float x, float y, float w, float h,
                                            int color, float radius, boolean checkerboard) {
         int scale = Math.max(1, (int) Minecraft.getInstance().getWindow().getGuiScale());
@@ -269,13 +281,12 @@ public class ColorSwatch extends Widget {
             try {
                 // The live at-rest stack — keep in lockstep with the else
                 // branch above (checkerboard clipped to the same geometry,
-                // opaque color fill, BORDER ring).
+                // opaque color fill, thin black edge).
                 if (checkerboard) {
                     drawCheckerboard(g, 1, 1, w, h, radius);
                 }
                 RenderUtil.drawRoundedRectAA(g, 1, 1, w, h, radius, color | 0xFF000000);
-                RenderUtil.drawRoundedOutlineAA(g, 1, 1, w, h, radius, 1.0f,
-                        ThemeManager.color(ThemeToken.BORDER));
+                RenderUtil.drawRoundedOutlineAA(g, 1, 1, w, h, radius, edgeWidth(), EDGE);
             } finally {
                 RenderUtil.endCapture(prev);
             }

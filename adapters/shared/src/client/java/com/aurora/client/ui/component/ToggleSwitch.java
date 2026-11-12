@@ -38,12 +38,10 @@ import java.util.function.Consumer;
  *       responding, not a whole-control scale, and never a second toggle
  *       event. A disabled toggle is never toggled, so it never pulses.</li>
  *   <li><b>focused</b> — an opt-in visual (hosts with a keyboard path set
- *       {@link #focusedVisual}): a 1 px accent hairline capsule 1.5 px
- *       OUTSIDE the track — visible without hover, distinct from the ON
- *       fill (outside vs. inside the pill), correct in both modes. The
- *       provisional-treatment family (same token/alpha as the button
- *       hairline); the final Aurora focus visual is still a Phase B
- *       decision.</li>
+ *       {@link #focusedVisual}): the thumb grows by {@code FOCUS_GROW}
+ *       around its center. No ring: the owner ruled (2026-11-12) that the
+ *       switch wears its gradient alone, with no outline on the ON state;
+ *       the OFF track keeps a hairline edge that fades out as it turns on.</li>
  *   <li><b>disabled</b> — clearly inert while still communicating the
  *       stored value: OFF rests on {@code SURFACE_INSET}, ON keeps a 35%
  *       accent residue over it, the thumb goes {@code ON_BACKGROUND_MUTED}.
@@ -103,19 +101,30 @@ public class ToggleSwitch extends Widget {
         float hover=(float)pilotHover.update(!disabled && !previewMode && inBounds(mx,my,x,y,w,h) ? 1 : 0,now);
         int inactive=MaterialSurface.color(ThemeToken.SURFACE_INSET);
         int active=MaterialSurface.color(ThemeToken.ACCENT);
-        int fill=AuroraAnim.lerpArgb(inactive,active,t);
+        // The ON fill is the accent's subtle left-to-right gradient
+        // (AccentGradient); both stops fade in from the OFF tone together.
+        int wash=MaterialSurface.color(ThemeToken.ON_BACKGROUND);
+        int from=AuroraAnim.lerpArgb(inactive,com.aurora.client.theme.AccentGradient.start(active),t);
+        int to=AuroraAnim.lerpArgb(inactive,com.aurora.client.theme.AccentGradient.end(active),t);
         // Client adaptation: subtle hover wash distinguishes pointer state without a pulse.
-        fill=AuroraAnim.lerpArgb(fill,MaterialSurface.color(ThemeToken.ON_BACKGROUND),.08f*hover);
-        if(disabled) fill=AuroraAnim.lerpArgb(inactive,active,.35f*t);
+        from=AuroraAnim.lerpArgb(from,wash,.08f*hover);
+        to=AuroraAnim.lerpArgb(to,wash,.08f*hover);
+        if(disabled) { from=AuroraAnim.lerpArgb(inactive,active,.35f*t); to=from; }
         // Track and thumb follow the theme's Corner Radius: full capsules at
         // the default radius, square at 0 (owner ruling 2026-11-12).
         var corners=com.aurora.client.theme.ThemeManager.current().roundness();
         float r=corners.capsule(h);
-        RenderUtil.drawRoundedRectAA(g,x,y,w,h,r,fill);
-        RenderUtil.drawRoundedOutlineAA(g,x,y,w,h,r,1,MaterialSurface.color(ThemeToken.BORDER_HOVER));
-        float d=h-5, tx=x+2.5f+(w-h)*t;
-        RenderUtil.drawRoundedRectAA(g,tx,y+2.5f,d,d,corners.capsule(d),disabled ? MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED) : 0xffffffff);
-        if(focusedVisual && !disabled) RenderUtil.drawRoundedOutlineAA(g,x-2,y-2,w+4,h+4,MaterialSurface.outsetRadius(r,2),1,active);
+        RenderUtil.drawRoundedRectGradientAA(g,x,y,w,h,r,from,to,true);
+        // No outlines on the ON state (owner ruling 2026-11-12): the edge
+        // fades out as the switch turns on so the gradient stands alone; the
+        // OFF track keeps it so it does not sink into the card.
+        int edge=MaterialSurface.color(ThemeToken.BORDER_HOVER);
+        if(t<1f) RenderUtil.drawRoundedOutlineAA(g,x,y,w,h,r,1,ThemeManager.withAlpha(edge,Math.round((edge>>>24)*(1f-t))));
+        // Keyboard focus is carried by scale (design rule 9), not a ring: the
+        // thumb grows by FOCUS_GROW around its own center.
+        float grow=focusedVisual && !disabled ? FOCUS_GROW : 0f;
+        float d=h-5+grow, tx=x+2.5f+(w-h)*t-grow/2f;
+        RenderUtil.drawRoundedRectAA(g,tx,y+2.5f-grow/2f,d,d,corners.capsule(d),disabled ? MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED) : 0xffffffff);
     }
 
     /** §8.3 symmetric hover — 140 ms enter, 140 ms exit, continuous reversal. */
@@ -124,6 +133,8 @@ public class ToggleSwitch extends Widget {
     private long pressStartMs = -1L;
     /** Opt-in focus paint (hosts with a keyboard path); never set => zero new pixels. */
     private boolean focusedVisual = false;
+    /** How much the thumb grows (GUI px) while the switch holds keyboard focus. */
+    private static final float FOCUS_GROW = 2f;
 
     public ToggleSwitch(BooleanSupplier getter, Consumer<Boolean> setter) {
         this.getter = getter;
@@ -189,10 +200,12 @@ public class ToggleSwitch extends Widget {
         // Thumb: position rides the slide, diameter rides the press pulse,
         // color carries the disabled treatment.
         float pulse = pressCompression(System.currentTimeMillis() - pressStartMs);
-        float thumbD = (h - 5f) * (1f - pulse);   // 2.5 px inset per side (10 px on a 15 px track)
+        // Keyboard focus is carried by scale, not a ring (owner ruling 2026-11-12).
+        float grow = focusedVisual && !disabled ? FOCUS_GROW : 0f;
+        float thumbD = (h - 5f) * (1f - pulse) + grow;   // 2.5 px inset per side (10 px on a 15 px track)
         float minX = x + 2.5f;
         float maxX = x + w - (h - 5f) - 2.5f;
-        float knobX = minX + (maxX - minX) * t;
+        float knobX = minX + (maxX - minX) * t - grow / 2f;
         float knobY = y + (h - thumbD) / 2f;
         int thumbCol = disabled
                 ? ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED)
@@ -200,15 +213,7 @@ public class ToggleSwitch extends Widget {
         RenderUtil.drawRoundedRectAA(g, knobX, knobY, thumbD, thumbD,
                 com.aurora.client.theme.ThemeManager.current().roundness().capsule(thumbD), thumbCol);
 
-        // Provisional focus treatment: geometry-following accent hairline
-        // OUTSIDE the capsule — visible without hover, distinct from the ON
-        // fill, both modes. Drawn last, additive, over both OFF and ON.
-        if (focusedVisual) {
-            float radius = com.aurora.client.theme.ThemeManager.current().roundness().capsule(h);
-            RenderUtil.drawRoundedOutlineAA(g, x - 1.5f, y - 1.5f, w + 3f, h + 3f,
-                    MaterialSurface.outsetRadius(radius, 1.5f), 1.0f,
-                    ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
-        }
+
     }
 
     /**
@@ -217,21 +222,25 @@ public class ToggleSwitch extends Widget {
      * OFF rests on the inset surface, ON keeps an accent residue over it.
      */
     private void drawTrack(GuiGraphicsExtractor g, float x, float y, float w, float h, float t, float hoverT) {
-        int base;
+        int base, baseTo;
         if (disabled) {
             base = AuroraAnim.lerpArgb(
                     ThemeManager.color(ThemeToken.SURFACE_INSET),
                     ThemeManager.color(ThemeToken.ACCENT), DISABLED_ON_RESIDUE * t);
+            baseTo = base;
         } else {
+            // ON is the accent's subtle left-to-right gradient (AccentGradient).
             int activeCol = ThemeManager.color(ThemeToken.ACCENT);
             int inactiveCol = ThemeManager.color(ThemeToken.SURFACE_VARIANT);
-            base = AuroraAnim.lerpArgb(inactiveCol, activeCol, t);
+            base = AuroraAnim.lerpArgb(inactiveCol, com.aurora.client.theme.AccentGradient.start(activeCol), t);
+            baseTo = AuroraAnim.lerpArgb(inactiveCol, com.aurora.client.theme.AccentGradient.end(activeCol), t);
         }
         // One restrained hover channel: toward the mode's primary foreground
         // (lifts the track in dark mode, deepens it in light) — reads as
         // "under the pointer" without competing with the ON/OFF state.
         int washTarget = ThemeManager.color(ThemeToken.ON_BACKGROUND);
         int pill = AuroraAnim.lerpArgb(base, washTarget, HOVER_WASH * hoverT);
+        int pillTo = AuroraAnim.lerpArgb(baseTo, washTarget, HOVER_WASH * hoverT);
 
         // The track follows the theme's Corner Radius through the capsule
         // rule: a full capsule at the default radius, flattening in
@@ -239,10 +248,12 @@ public class ToggleSwitch extends Widget {
         // retired the earlier always-a-capsule convention).
         float radius = com.aurora.client.theme.ThemeManager.current().roundness().capsule(h);
 
-        RenderUtil.drawRoundedRectAA(g, x, y, w, h, radius, pill);
-        // Hairline separator token for the pill edge (mode-aware, replaces the
-        // old hardcoded translucent white which vanished in light mode).
-        RenderUtil.drawRoundedOutlineAA(g, x, y, w, h, radius, 1.0f, ThemeManager.color(ThemeToken.BORDER));
+        RenderUtil.drawRoundedRectGradientAA(g, x, y, w, h, radius, pill, pillTo, true);
+        // Hairline edge on the OFF track only: it fades out as the switch turns
+        // on, so the ON gradient stands alone (owner ruling 2026-11-12).
+        int edge = ThemeManager.color(ThemeToken.BORDER);
+        if (t < 1f) RenderUtil.drawRoundedOutlineAA(g, x, y, w, h, radius, 1.0f,
+                ThemeManager.withAlpha(edge, Math.round((edge >>> 24) * (1f - t))));
     }
 
     @Override

@@ -123,9 +123,11 @@ public final class SemanticFamilyManifest {
             new Family("toggle", Hover.CANONICAL_140, Press.THUMB_PULSE,
                     Sound.SEMANTIC_ACTION, Keyboard.ENTER_SPACE, true, true, true, true,
                     List.of(SRC + "ui/component/ToggleSwitch.java",
-                            SRC + "screen/setting/BooleanSetting.java"),
+                            SRC + "screen/setting/BooleanSetting.java",
+                            SRC + "screen/setting/ParticleRowSetting.java"),
                     "On/off state persistent and independent of hover; whole-row adapter; "
-                            + "narration carries On/Off."),
+                            + "narration carries On/Off. Particle cards (2026-11-12) pair their "
+                            + "switch with a navigation action that opens the particle's screen."),
             new Family("slider", Hover.CANONICAL_140, Press.DRAG_GRIP,
                     Sound.NONE_BY_CONTRACT, Keyboard.ARROW_STEPS, true, true, true, true,
                     List.of(SRC + "ui/component/Slider.java",
@@ -180,7 +182,6 @@ public final class SemanticFamilyManifest {
                             SRC + "screen/setting/ItemScaleSetting.java",
                             SRC + "screen/setting/EffectRowSetting.java",
                             SRC + "screen/setting/EffectExpiryListSetting.java",
-                            SRC + "screen/setting/ParticleRowSetting.java",
                             SRC + "screen/setting/SearchListSetting.java",
                             SRC + "screen/HudEditorScreen.java"),
                     "Glyph is presentation only — the accessible label is textual; disclosure "
