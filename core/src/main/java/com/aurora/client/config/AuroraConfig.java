@@ -449,6 +449,14 @@ public class AuroraConfig {
     public boolean perfSkipLevelLoadDelay = true;
     /** Startup screens are built without waiting for the session server's profile. */
     public boolean perfNoProfileWait = true;
+    /** A sound listener update identical to the last one sent is not queued again. */
+    public boolean perfSoundListenerThrottle = true;
+    /** F3 entries are asked for their lines once per game tick and replayed between. */
+    public boolean perfDebugEntryCache = true;
+    /** Consecutive underline and strikethrough segments are drawn as one quad. */
+    public boolean perfMergeTextDecorations = true;
+    /** GUI items animated only by their sprites are redrawn when the sprites advance, not every frame. */
+    public boolean perfGuiItemBaking = true;
 
     // ---- Late-Stage Responsive Features ----
     public boolean adaptiveRenderSleeping = false;

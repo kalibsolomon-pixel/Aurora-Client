@@ -24,6 +24,13 @@ public final class ParityProbe implements ClientModInitializer {
     private Path root;
     /** System.nanoTime() of the last "reload" command while its overlay is up; 0 otherwise. */
     private long reloadStarted;
+    /** The running "fps" sample: label, end time and the once-a-second readings so far. */
+    private String fpsLabel;
+    private long fpsUntil, fpsNextReading;
+    private final java.util.List<Integer> fpsReadings = new java.util.ArrayList<>();
+    /** The running "count" window: label, start, end and frames seen. */
+    private String countLabel;
+    private long countStart, countUntil, countFrames;
     @Override public void onInitializeClient() {
         root = Path.of(System.getProperty("aurora.parity.probe"));
         if (!Files.isRegularFile(root.resolve("DISPOSABLE.txt"))) throw new IllegalStateException("Disposable fixture required");
@@ -44,6 +51,25 @@ public final class ParityProbe implements ClientModInitializer {
                     System.out.println("[parity-probe] reload overlay cleared after "
                             + (System.nanoTime() - reloadStarted) / 1_000_000 + " ms");
                     reloadStarted = 0;
+                }
+                if (fpsLabel != null && System.nanoTime() >= fpsNextReading) {
+                    // Minecraft.getFps() is refreshed once a second; read it once a second after the first.
+                    fpsReadings.add(client.getFps());
+                    fpsNextReading += 1_000_000_000L;
+                    if (fpsNextReading > fpsUntil) {
+                        System.out.println("[parity-probe] fps " + fpsLabel + " " + fpsReadings);
+                        fpsLabel = null;
+                    }
+                }
+                if (countLabel != null) {
+                    long now = System.nanoTime();
+                    if (now >= countUntil) {
+                        double seconds = (now - countStart) / 1e9;
+                        System.out.println(String.format(java.util.Locale.ROOT, "[parity-probe] count %s: %.1f listener updates/s, %.1f text effects/s, %.1f fps",
+                                countLabel, Counters.LISTENER_UPDATES.get() / seconds, Counters.TEXT_EFFECTS.get() / seconds,
+                                (double) client.getFps()));
+                        countLabel = null;
+                    }
                 }
                 var command = root.resolve("command.txt");
                 if (!Files.exists(command)) return;
@@ -187,6 +213,74 @@ public final class ParityProbe implements ClientModInitializer {
                 if (!(client instanceof com.aurora.client.mixin.MinecraftProfileAccessor a) || !a.aurora$profileFuture().isDone())
                     throw new AssertionError("profile accessor missing or profile still pending");
                 System.out.println("[parity-probe] perf-loading closeDelayMs=" + closeDelay + " titleFading=" + fades);
+            }
+            case "unlocked" -> {
+                client.options.framerateLimit().set(260);
+                client.options.enableVsync().set(false);
+            }
+            case "f3" -> client.debugEntries.setOverlayVisible(Boolean.parseBoolean(args[1]));
+            case "fps" -> {
+                // "fps <seconds> <label>": skips the first second, then reads once a second.
+                fpsReadings.clear();
+                fpsNextReading = System.nanoTime() + 2_000_000_000L;
+                fpsUntil = fpsNextReading + Long.parseLong(args[1]) * 1_000_000_000L;
+                fpsLabel = args[2];
+            }
+            case "animated-inventory" -> {
+                // Items whose models use animated sprites, in every inventory slot.
+                var items = java.util.List.of(net.minecraft.world.item.Items.MAGMA_BLOCK, net.minecraft.world.item.Items.SEA_LANTERN,
+                        net.minecraft.world.item.Items.PRISMARINE, net.minecraft.world.item.Items.COMMAND_BLOCK,
+                        net.minecraft.world.item.Items.CHAIN_COMMAND_BLOCK, net.minecraft.world.item.Items.REPEATING_COMMAND_BLOCK,
+                        net.minecraft.world.item.Items.STONECUTTER, net.minecraft.world.item.Items.SCULK,
+                        net.minecraft.world.item.Items.SCULK_CATALYST, net.minecraft.world.item.Items.SCULK_SENSOR,
+                        net.minecraft.world.item.Items.LANTERN, net.minecraft.world.item.Items.SOUL_LANTERN);
+                var server = client.getSingleplayerServer();
+                var id = client.player.getUUID();
+                server.execute(() -> {
+                    var player = server.getPlayerList().getPlayer(id);
+                    // Survival shows all 36 slots; creative opens on a tab of static blocks.
+                    player.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
+                    for (int i = 0; i < 36; i++) player.getInventory().setItem(i, new net.minecraft.world.item.ItemStack(items.get(i % items.size())));
+                });
+                Thread.sleep(1000);
+                NativeUi.setScreen(client, new net.minecraft.client.gui.screens.inventory.InventoryScreen(client.player));
+            }
+            case "stress" -> {
+                // "stress <chests> <mobs>": a storage room of closed chests above the
+                // player and resting mobs around them, for measuring per-tick costs.
+                int chests = Integer.parseInt(args[1]);
+                int mobs = Integer.parseInt(args[2]);
+                var server = client.getSingleplayerServer();
+                var id = client.player.getUUID();
+                server.execute(() -> {
+                    var player = server.getPlayerList().getPlayer(id);
+                    var level = player.level();
+                    var base = player.blockPosition().above(4);
+                    for (int i = 0; i < chests; i++) {
+                        var pos = base.offset((i % 32) - 16, i / 1024, ((i / 32) % 32) - 16);
+                        level.setBlock(pos, net.minecraft.world.level.block.Blocks.CHEST.defaultBlockState(), 2);
+                    }
+                    // Looked up by id: the type constants moved to EntityTypes in 26.3.
+                    var pigType = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE
+                            .getOptional(net.minecraft.resources.Identifier.withDefaultNamespace("pig")).orElseThrow();
+                    for (int i = 0; i < mobs; i++) {
+                        var pig = (net.minecraft.world.entity.Mob) pigType.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+                        pig.setNoAi(true);
+                        pig.setPos(player.getX() + (i % 20) - 10, player.getY(), player.getZ() + (i / 20) - 10);
+                        level.addFreshEntity(pig);
+                    }
+                });
+            }
+            case "count" -> {
+                // "count <seconds> <label>": work counters over a window.
+                Counters.LISTENER_UPDATES.set(0);
+                Counters.TEXT_EFFECTS.set(0);
+                countStart = System.nanoTime();
+                countUntil = countStart + Long.parseLong(args[1]) * 1_000_000_000L;
+                countLabel = args[2];
+            }
+            case "underline" -> {
+                config.textUnderline = Boolean.parseBoolean(args[1]);
             }
             case "reload" -> {
                 reloadStarted = System.nanoTime();

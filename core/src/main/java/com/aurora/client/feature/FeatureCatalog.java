@@ -377,6 +377,13 @@ public final class FeatureCatalog {
         mixin("LevelLoadTrackerMixin", "skipping the level loading delay", "performance").gates("perfSkipLevelLoadDelay");
         mixin("MinecraftProfileAccessor", "startup without waiting for the profile", "performance").gates("perfNoProfileWait");
         mixin("InitialScreensProfileMixin", "startup without waiting for the profile", "performance").gates("perfNoProfileWait");
+        mixin("SoundEngineListenerMixin", "skipping unchanged sound listener updates", "performance").gates("perfSoundListenerThrottle");
+        mixin("DebugScreenEntryCacheMixin", "the F3 entry cache", "performance").gates("perfDebugEntryCache");
+        mixin("FontDecorationMergeMixin", "merged underline and strikethrough quads", "performance").gates("perfMergeTextDecorations");
+        mixin("TextureManagerAnimationMixin", "redrawing animated GUI items only when they change", "performance").gates("perfGuiItemBaking");
+        mixin("ItemStackRenderStateAnimationMixin", "redrawing animated GUI items only when they change", "performance").gates("perfGuiItemBaking");
+        mixin("CuboidItemModelAnimationMixin", "redrawing animated GUI items only when they change", "performance").gates("perfGuiItemBaking");
+        mixin("GuiItemAtlasBakingMixin", "redrawing animated GUI items only when they change", "performance").gates("perfGuiItemBaking");
         for (String hitreg : List.of("ArmorMixin", "AttackMixin", "ChunkMixin", "DamageMixin", "EntityAccessor",
                 "GlowMixin", "NetworkMixin", "ParticleMixin", "PlayerMixin", "RenderMixin", "ServerMixin",
                 "SoundMixin", "SourceMixin")) {
