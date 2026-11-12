@@ -428,6 +428,16 @@ public final class GlassSurface {
     }
 
     /**
+     * The theme's Blur Radius (GUI pixels) in screen pixels — what every
+     * glass surface blurs with. The renderer caps it and declines below its
+     * effective minimum, so Blur Radius 0 paints the flat tint.
+     */
+    private static float themeBlurPx() {
+        return ThemeManager.current().blurRadius()
+                * (float) Math.max(1, (int) Minecraft.getInstance().getWindow().getGuiScale());
+    }
+
+    /**
      * ABOVE-DIM control surface — the deliberate exception to the layering
      * rule, for floating elements that must read ABOVE an already-dimmed
      * screen: {@code EnumSetting}'s expanded option popup (and, when that
@@ -448,7 +458,7 @@ public final class GlassSurface {
         }
         if (!liveWorldBackdrop() && !BlurPanelRenderer.menuBackdropValid()) return false;
         if (!BlurPanelRenderer.renderPanel(g, x, y, w, h, radius,
-                BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX, BlurPanelRenderer.Lighting.raised())) {
+                themeBlurPx(), BlurPanelRenderer.Lighting.raised())) {
             return false;
         }
         RenderUtil.drawRoundedRectAA(g, x, y, w, h, radius, ThemeManager.color(ThemeToken.WINDOW_FILL));
@@ -475,7 +485,7 @@ public final class GlassSurface {
         }
         if (!liveWorldBackdrop() && !BlurPanelRenderer.menuBackdropValid()) return false;
         if (!BlurPanelRenderer.renderPanel(g, x, y, w, h, radius,
-                BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX, BlurPanelRenderer.Lighting.depressed(),
+                themeBlurPx(), BlurPanelRenderer.Lighting.depressed(),
                 BlurPanelRenderer.Priority.WINDOW)) {
             return false;
         }
@@ -584,9 +594,9 @@ public final class GlassSurface {
         // WINDOW is the parent owner; embedded controls never sample this backdrop.
         boolean drew = unified
                 ? BlurPanelRenderer.renderUnifiedPanel(g,x,y,w,h,radius,
-                    28f*Math.max(1,(int)Minecraft.getInstance().getWindow().getGuiScale()),UNIFIED_LIGHTING,priority)
+                    themeBlurPx(),UNIFIED_LIGHTING,priority)
                 : BlurPanelRenderer.renderPanel(g,x,y,w,h,radius,
-                    BlurPanelRenderer.DEFAULT_BLUR_RADIUS_PX,lighting,priority);
+                    themeBlurPx(),lighting,priority);
         if (!drew) {
             return false;
         }

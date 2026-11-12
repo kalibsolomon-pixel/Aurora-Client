@@ -36,8 +36,9 @@ class AuroraScreenSemanticHostingTest {
         String settings = settingsRegistryBlock();
         assertEquals(3, count(settings, "new EnumSetting<>("), "hostable enum triggers");
         assertEquals(2, count(settings, "new AccentSetting("), "two theme colour rows (Accent, Background) — single-picker swatches since the 2026-10-30 ruling");
-        assertEquals(1, count(settings, "new SegmentedSetting<>("), "Corner Style only");
+        assertEquals(0, count(settings, "new SegmentedSetting<>("), "Corner Style became the Corner Radius slider");
         assertEquals(1, count(settings, "new ThemeOpacitySetting("), "deferred continuous control");
+        assertEquals(2, count(settings, "new ThemeSliderSetting("), "Blur Radius and Corner Radius");
         assertEquals(0, count(settings, "new ThemePreviewSetting("), "preview retired");
     }
 

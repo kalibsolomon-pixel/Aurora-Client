@@ -117,20 +117,24 @@ public final class MaterialSurface {
     // Primitive packed geometry key: no record/boxing/lambda allocation per control per frame.
     private static final Long2ObjectOpenHashMap<UiLayerCache> TEMPLATES = new Long2ObjectOpenHashMap<>();
     private static net.minecraft.client.gui.screens.Screen templateOwner;
-    private static int templateWidth, templateHeight, templateScale;
+    private static int templateWidth, templateHeight, templateScale, templateRadius;
 
     /** Release stale screen/resize geometry before this frame records any GUI draws.
-     * Also covers Aurora-styled vanilla screens, which have no custom removed hook. */
+     * Also covers Aurora-styled vanilla screens, which have no custom removed hook.
+     * Templates are keyed by radius, so a Corner Radius change (dragging the
+     * slider steps through many values) releases them here too, between frames. */
     public static void beginFrame() {
         Minecraft mc=Minecraft.getInstance();
         if(mc==null) return;
         var window=mc.getWindow();
         int width=window.getGuiScaledWidth(),height=window.getGuiScaledHeight();
         int scale=Math.max(1,(int)window.getGuiScale());
-        if(templateOwner!=com.aurora.client.adapter.NativeUi.screen(mc) || templateWidth!=width || templateHeight!=height || templateScale!=scale) {
+        int radius=ThemeManager.current().roundness().radius();
+        if(templateOwner!=com.aurora.client.adapter.NativeUi.screen(mc) || templateWidth!=width || templateHeight!=height
+                || templateScale!=scale || templateRadius!=radius) {
             disposeTemplates();
             templateOwner=com.aurora.client.adapter.NativeUi.screen(mc);
-            templateWidth=width;templateHeight=height;templateScale=scale;
+            templateWidth=width;templateHeight=height;templateScale=scale;templateRadius=radius;
         }
     }
 

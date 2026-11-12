@@ -90,11 +90,8 @@ import java.util.concurrent.atomic.AtomicLong;
  * (a solid pastel rim is the only rim that can survive an opaque fill).
  * Both halves are lighting-term
  * derivations, NOT second opacity applications — no alpha in this pipeline
- * is multiplied by them. The FROST RADIUS is the third such derivation
- * ({@link #frostRadiusPx}): the blur a panel is rendered with scales with
- * the same value, so the slider's bottom is clear glass and full frost
- * arrives with the fill — again a material property, never an alpha.
- * Never add others.
+ * is multiplied by them. Never add others. The blur radius is its own
+ * theme value (Blur Radius, 2026-11-12); it no longer follows the opacity.
  *
  * <h2>Intermediate precision</h2>
  * Every intermediate target (capture, both blur-chain textures, the
@@ -148,33 +145,11 @@ import java.util.concurrent.atomic.AtomicLong;
 public final class BlurPanelRenderer {
 
     /**
-     * Factory default blur radius, in device (screen) pixels — the FULL-FROST
-     * radius, reached at 100% Background Opacity. The radius a panel actually
-     * blurs with follows the opacity: see {@link #frostRadiusPx}.
+     * Blur radius, in device (screen) pixels, for harnesses that do not read
+     * the theme. Panels use the theme's Blur Radius ({@code GlassSurface}).
      */
     public static final float DEFAULT_BLUR_RADIUS_PX = 24f;
 
-    /**
-     * The blur radius a panel is rendered with, derived LINEARLY from
-     * Background Opacity: {@code requested × opacity} (owner ruling
-     * 2026-10-30 — the slider is the source of truth).
-     *
-     * <p>At 0% the frost is 0 px: the window is CLEAR, its un-frosted
-     * backdrop reading straight through (the former 1/6 floor — and before
-     * that the constant 24 px — kept even the minimum reading as a frosted
-     * slab). At 100% the fill is fully opaque and covers the blur, so the
-     * window reads as solid color. In between, frost and fill alpha rise
-     * together on the one value.
-     *
-     * <p>This is a lighting-term-class derivation from the single opacity
-     * value — the same category as {@code uRimBlend} and the rim finish's
-     * alpha — NOT an opacity application point: no alpha anywhere in this
-     * pipeline is multiplied by it (AGENTS.md §6, convention 1).
-     */
-    public static float frostRadiusPx(float requestedRadiusPx) {
-        double opacity = Math.max(0d, Math.min(1d, ThemeManager.current().backgroundOpacity()));
-        return requestedRadiusPx * (float) opacity;
-    }
 
     // ==================================================================================
     // Lighting impression — one fixed virtual light (gradient + outline only)
@@ -990,20 +965,13 @@ public final class BlurPanelRenderer {
             return false;
         }
         if (guiW < 4f || guiH < 4f) { lastOutcome = "panel too small"; return false; }
-        // The requested radius is the full-frost radius; the frost actually
-        // applied follows Background Opacity (see frostRadiusPx). The
-        // below-minimum decline still keys off the REQUESTED radius so the
-        // harness's "before" case (a deliberately tiny radius) and the
-        // opacity curve's own floor never interact.
-        float requested = Math.min(64f, Math.max(0f, blurRadiusPx));
-        if (requested < MIN_EFFECTIVE_RADIUS_PX) { lastOutcome = "radius below minimum"; return false; }
-        float radius = frostRadiusPx(requested);
-        // Opacity floor (owner ruling 2026-10-30): when the frost the slider
-        // asks for is below the effective minimum the panel declines — the
-        // caller's flat fill carries the (near-)zero alpha directly, so the
-        // window is genuinely CLEAR at the bottom of the slider instead of
-        // paying for a blur that must not be visible anyway.
-        if (radius < MIN_EFFECTIVE_RADIUS_PX) { lastOutcome = "frost below minimum (clear)"; return false; }
+        // The requested radius is the theme's Blur Radius, independent of
+        // Background Opacity since 2026-11-12 (before that the frost scaled
+        // with the opacity). Below the effective minimum the panel declines
+        // and the caller's flat fill carries the tint: Blur Radius 0 is
+        // glass with no blur.
+        float radius = Math.min(64f, Math.max(0f, blurRadiusPx));
+        if (radius < MIN_EFFECTIVE_RADIUS_PX) { lastOutcome = "radius below minimum"; return false; }
         if (RenderBackend.isOpenGl() && !ensureReady()) { lastOutcome = "init failed (see log)"; return false; }
 
         long perfStart = GlassStats.ENABLED ? System.nanoTime() : 0L;

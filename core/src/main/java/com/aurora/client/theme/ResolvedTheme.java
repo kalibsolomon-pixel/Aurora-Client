@@ -69,8 +69,11 @@ public final class ResolvedTheme {
     /** Source window tint (opaque RGB). */
     public int background() { return source.background; }
 
-    /** Corner-roundness family this theme renders with (never null — normalized). */
-    public ThemeRoundness roundness() { return source.roundness; }
+    /** Corner radius this theme renders with (interned; never null). */
+    public ThemeRoundness roundness() { return ThemeRoundness.of(source.cornerRadius); }
+
+    /** Glass blur radius in GUI pixels (always normalized). */
+    public int blurRadius() { return source.blurRadius; }
 
     /** Panel/window background alpha, 0..1 (always normalized). */
     public double backgroundOpacity() { return source.backgroundOpacity; }
@@ -163,12 +166,13 @@ public final class ResolvedTheme {
         AuroraTheme.OVERLAY_DIM             = color(ThemeToken.OVERLAY_DIM);
         AuroraTheme.ON_OVERLAY              = color(ThemeToken.ON_OVERLAY);
 
-        // Sizes (Stage 3): corner radii project from the roundness token the
-        // same way the colors above project from the color tokens — this is
-        // the only writer of these statics. KNOB_RADIUS is deliberately not
-        // projected: knobs/thumbs stay circular in every roundness mode.
-        AuroraTheme.RADIUS                  = source.roundness.radius();
-        AuroraTheme.RADIUS_LARGE            = source.roundness.radiusLarge();
-        AuroraTheme.RADIUS_SMALL            = source.roundness.radiusSmall();
+        // Sizes (Stage 3): corner radii project from the corner-radius token
+        // the same way the colors above project from the color tokens — this
+        // is the only writer of these statics. Capsule shapes (knobs, thumbs,
+        // switch and slider tracks) read ThemeRoundness.capsule() instead.
+        ThemeRoundness corners = roundness();
+        AuroraTheme.RADIUS                  = corners.radius();
+        AuroraTheme.RADIUS_LARGE            = corners.radiusLarge();
+        AuroraTheme.RADIUS_SMALL            = corners.radiusSmall();
     }
 }

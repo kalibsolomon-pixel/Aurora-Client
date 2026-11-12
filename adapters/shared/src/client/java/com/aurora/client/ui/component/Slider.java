@@ -13,7 +13,9 @@ import java.util.function.DoubleConsumer;
 import java.util.function.DoubleSupplier;
 
 /**
- * Themed slider — flat capsule track, accent fill, circular knob.
+ * Themed slider — flat capsule track, accent fill, round knob; track and
+ * knob follow the theme's Corner Radius ({@code ThemeRoundness#capsule}),
+ * square at 0.
  *
  * <p>Consolidates the near-identical int/double/opacity sliders into one
  * control. The track renders in the cacheable shape layer (it depends only
@@ -141,7 +143,7 @@ public class Slider extends Widget {
     @Override
     public void renderShapes(GuiGraphicsExtractor g, float x, float y, float w, float h) {
         float ty = y + h - 12f;
-        RenderUtil.drawRoundedRectAA(g, x, ty, w, TRACK_H, TRACK_H / 2f, trackBase());
+        RenderUtil.drawRoundedRectAA(g, x, ty, w, TRACK_H, trackRadius(), trackBase());
     }
 
     @Override
@@ -158,7 +160,7 @@ public class Slider extends Widget {
         t = Math.max(0f, Math.min(1f, t));
         float filledW = w * t;
         if (filledW > 0) {
-            RenderUtil.drawRoundedRectAA(g, x, ty, filledW, TRACK_H, TRACK_H / 2f, fill());
+            RenderUtil.drawRoundedRectAA(g, x, ty, filledW, TRACK_H, trackRadius(), fill());
         }
 
         // Knob — center stays exactly at the value coordinate; the canonical
@@ -171,7 +173,7 @@ public class Slider extends Widget {
             int onBg = MaterialSurface.color(ThemeToken.ON_BACKGROUND) & 0x00FFFFFF;
             int a = Math.round(48 * hT);
             RenderUtil.drawRoundedOutlineAA(g, x - 3f, ty - 3f, w + 6f, TRACK_H + 6f,
-                    TRACK_H / 2f + 3f, 1.0f, (a << 24) | onBg);
+                    MaterialSurface.outsetRadius(trackRadius(), 3f), 1.0f, (a << 24) | onBg);
         }
 
         // Canonical focus treatment: accent capsule hairline 3 px outside the
@@ -180,10 +182,16 @@ public class Slider extends Widget {
         // (which stays inside the track at the value).
         if (canonical && focusedVisual) {
             RenderUtil.drawRoundedOutlineAA(g, x - 3f, ty - 3f, w + 6f, TRACK_H + 6f,
-                    TRACK_H / 2f + 3f, 1.0f,
+                    MaterialSurface.outsetRadius(trackRadius(), 3f), 1.0f,
                     ThemeManager.withAlpha(MaterialSurface.color(ThemeToken.ACCENT), 0x99));
         }
-        RenderUtil.drawRoundedRectAA(g, knobX - knobR, knobY - knobR, knobR * 2f, knobR * 2f, knobR, knob());
+        RenderUtil.drawRoundedRectAA(g, knobX - knobR, knobY - knobR, knobR * 2f, knobR * 2f,
+                ThemeManager.current().roundness().capsule(knobR * 2f), knob());
+    }
+
+    /** Track corner radius: the theme's capsule rule for the track's thickness. */
+    private static float trackRadius() {
+        return ThemeManager.current().roundness().capsule(TRACK_H);
     }
 
     private int trackBase() {

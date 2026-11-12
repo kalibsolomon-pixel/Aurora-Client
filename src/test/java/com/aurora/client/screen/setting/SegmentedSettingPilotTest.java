@@ -117,19 +117,17 @@ class SegmentedSettingPilotTest {
     // ---- Topology ----
 
     @Test
-    void productionInventoryHasOnlyCornerRowWithThreePeers() throws Exception {
+    void productionInventoryHasNoSegmentedRows() throws Exception {
+        // Corner Style, the last production segmented row, became the Corner
+        // Radius slider (2026-11-12). The component stays, covered by this
+        // class through its ThemeMode fixture.
         String registry = java.nio.file.Files.readString(SourceTree.resolve(
                 SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/FeatureRegistry.java"));
-        assertEquals(1, registry.split("new SegmentedSetting\\<>\\(", -1).length - 1,
-                "exactly one construction");
+        assertEquals(0, registry.split("new SegmentedSetting\\<>\\(", -1).length - 1,
+                "no production construction");
         assertFalse(registry.contains("ThemeMode.class"));
-        assertTrue(registry.contains("ThemeRoundness.class"));
+        assertFalse(registry.contains("ThemeRoundness.class"));
         assertFalse(registry.contains("GlassStyle.class"));
-
-        AtomicReference<ThemeRoundness> r = new AtomicReference<>(ThemeRoundness.ROUND);
-        SegmentedSetting<ThemeRoundness> corner = new SegmentedSetting<>("Corner Style",
-                ThemeRoundness.class, r::get, r::set);
-        assertEquals(3, corner.interactionControls().size(), "Corner Style: three production peers");
     }
 
     @Test

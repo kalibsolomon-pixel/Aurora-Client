@@ -18,12 +18,12 @@ import net.minecraft.resources.Identifier;
 public final class BlurPanelRenderer {
 
 
+    /**
+     * Blur radius, in device (screen) pixels, for harnesses that do not read
+     * the theme. Panels use the theme's Blur Radius ({@code GlassSurface}).
+     */
     public static final float DEFAULT_BLUR_RADIUS_PX = 24f;
 
-    public static float frostRadiusPx(float requestedRadiusPx) {
-        double opacity = Math.max(0d, Math.min(1d, ThemeManager.current().backgroundOpacity()));
-        return requestedRadiusPx * (float) opacity;
-    }
 
     public static final float LIGHT_DIR_X = 0.24253563f;
     public static final float LIGHT_DIR_Y = -0.9701425f;
@@ -494,20 +494,13 @@ public final class BlurPanelRenderer {
             return false;
         }
         if (guiW < 4f || guiH < 4f) { lastOutcome = "panel too small"; return false; }
-        // The requested radius is the full-frost radius; the frost actually
-        // applied follows Background Opacity (see frostRadiusPx). The
-        // below-minimum decline still keys off the REQUESTED radius so the
-        // harness's "before" case (a deliberately tiny radius) and the
-        // opacity curve's own floor never interact.
-        float requested = Math.min(64f, Math.max(0f, blurRadiusPx));
-        if (requested < MIN_EFFECTIVE_RADIUS_PX) { lastOutcome = "radius below minimum"; return false; }
-        float radius = frostRadiusPx(requested);
-        // Opacity floor (owner ruling 2026-10-30): when the frost the slider
-        // asks for is below the effective minimum the panel declines — the
-        // caller's flat fill carries the (near-)zero alpha directly, so the
-        // window is genuinely CLEAR at the bottom of the slider instead of
-        // paying for a blur that must not be visible anyway.
-        if (radius < MIN_EFFECTIVE_RADIUS_PX) { lastOutcome = "frost below minimum (clear)"; return false; }
+        // The requested radius is the theme's Blur Radius, independent of
+        // Background Opacity since 2026-11-12 (before that the frost scaled
+        // with the opacity). Below the effective minimum the panel declines
+        // and the caller's flat fill carries the tint: Blur Radius 0 is
+        // glass with no blur.
+        float radius = Math.min(64f, Math.max(0f, blurRadiusPx));
+        if (radius < MIN_EFFECTIVE_RADIUS_PX) { lastOutcome = "radius below minimum"; return false; }
 
         long perfStart = GlassStats.ENABLED ? System.nanoTime() : 0L;
         try {

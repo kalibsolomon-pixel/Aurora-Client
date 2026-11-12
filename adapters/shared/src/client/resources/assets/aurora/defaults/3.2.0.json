@@ -7,7 +7,8 @@
   "themeEnabled": true,
   "theme": {
     "mode": "DARK",
-    "roundness": "ROUND",
+    "cornerRadius": 10,
+    "blurRadius": 9,
     "backgroundOpacity": 0.33,
     "accent": -12345273,
     "background": -14543302

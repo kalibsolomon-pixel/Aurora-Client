@@ -99,7 +99,9 @@ public final class ParityProbe implements ClientModInitializer {
                 NativeUi.setScreen(client, AuroraScreen.create());
             }
             case "theme" -> {
-                config.themeOrDefault().roundness = ThemeRoundness.valueOf(args[1]);
+                // A pixel radius, or a retired Corner Style name (ROUND, SLIGHTLY_ROUND, SQUARE).
+                config.themeOrDefault().cornerRadius = args[1].chars().allMatch(Character::isDigit)
+                        ? ThemeRoundness.clamp(Integer.parseInt(args[1])) : ThemeRoundness.legacyRadius(args[1]);
                 config.themeOrDefault().backgroundOpacity = Double.parseDouble(args[2]);
                 ThemeManager.reload();
             }

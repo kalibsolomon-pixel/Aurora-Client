@@ -186,17 +186,15 @@ class ConformanceManifestTest {
 
     /**
      * Argument-aware inventory of literal radii in the rounded-AA /
-     * squircle / glass-panel family. Every one of the (currently fifteen)
-     * literal sites is classified; a NEW literal site fails this test until
-     * it is either tokenized or added here with a ruling. The non-AA
-     * exemption families (HudBackgrounds' sanctioned radius 2, the
-     * Keystrokes keycap's representational radius 3, the toggle/slider
-     * mechanical shapes) are pinned by {@code SquareModeConformanceTest}.
+     * squircle / glass-panel family. Every literal site is classified; a
+     * NEW literal site fails this test until it is either tokenized or added
+     * here with a ruling. The non-AA exemption families (HudBackgrounds'
+     * sanctioned radius 2, the Keystrokes keycap's representational radius
+     * 3) are pinned by {@code SquareModeConformanceTest}. The scrollbar
+     * thumbs and ColorPicker frames left this inventory on 2026-11-12, when
+     * the Corner Radius slider was ruled to apply to every shape.
      *
-     * <p>Classifications: the four scrollbar-thumb capsules are MECHANICAL
-     * direct-manipulation chrome (C-7 ruling, documented at the sites); the
-     * three ColorPicker frames are DATA-DRIVEN color-picking surfaces
-     * (§16 exception domain); the layout pair's six icon strokes are
+     * <p>Classifications: the layout pair's icon strokes are
      * REPRESENTATIONAL icon content (C-5 preserved the vector icons
      * verbatim); the sidebar's 0.5-radius stroke is degenerate
      * hairline geometry (the 6×1 list-icon line — no
@@ -205,14 +203,6 @@ class ConformanceManifestTest {
     @Test
     void radiusLiteralsAreExactlyTheClassifiedInventory() throws IOException {
         List<Site> classified = new ArrayList<>(List.of(
-                // MECHANICAL scrollbar-thumb capsules (Square-exempt, C-7).
-                new Site(SRC + "ui/component/ScrollbarChrome.java", "2"),
-                new Site(SRC + "screen/ResourcePackBrowserScreen.java", "2"),
-                new Site(SRC + "screen/ResourcePackBrowserScreen.java", "2"),
-                // DATA-DRIVEN picker frames (§16).
-                new Site(SRC + "screen/ColorPickerScreen.java", "6"),
-                new Site(SRC + "screen/ColorPickerScreen.java", "6"),
-                new Site(SRC + "screen/ColorPickerScreen.java", "6"),
                 // REPRESENTATIONAL layout icons (C-5 ruling).
                 new Site(SRC + "screen/AuroraScreen.java", "1"),
                 new Site(SRC + "screen/AuroraScreen.java", "1"),
@@ -241,7 +231,7 @@ class ConformanceManifestTest {
         }
         assertEquals(new HashSet<>(classified), new HashSet<>(seen),
                 "unclassified or missing literal radius sites");
-        assertEquals(12, seen.size(), "inventory drift — sites: " + seen);
+        assertEquals(6, seen.size(), "inventory drift — sites: " + seen);
         assertEquals(classified.size(), seen.size(), "multiplicity drift");
     }
 
@@ -284,9 +274,9 @@ class ConformanceManifestTest {
      * 2 layout peers + one sub-tab per Settings page + every ModuleManager
      * tile + no detail-capable Settings headers + the 2 header toggles,
      * Theme and Custom Title) plus component-owned hosted controls on the
-     * Settings pages (4 enum triggers + 10 Accent peers + one peer per
-     * segmented value + 8 Display Settings toggles + the HUD Editor key +
-     * Copy Diagnostics). Tile count comes from ModuleManager's source, not
+     * Settings pages (4 enum triggers + 10 Accent peers + the Surfaces
+     * caption + 8 Display Settings toggles + the HUD Editor key + Copy
+     * Diagnostics; the theme sliders host none, like every slider row). Tile count comes from ModuleManager's source, not
      * the historical number. The eight registration sites are the
      * init-time hosted-settings loop plus the seven identity-stable
      * factories — none in the frame path.
@@ -295,18 +285,16 @@ class ConformanceManifestTest {
     void auroraScreenSemanticInventoryMatchesLiveSource() throws IOException {
         // The grid's cards are derived from FeatureCatalog (ADR 0004).
         int modules = com.aurora.client.feature.FeatureCatalog.featuresOn(com.aurora.client.feature.FeatureCatalog.Tab.MODULES).size();
-        int segmentedPeers = com.aurora.client.theme.ThemeRoundness.values().length;
         // enums (Text Renderer, Client Font, UI FPS Limit, Frame Pacer
-        // Strategy) + accent + segmented peers + Display Settings toggles +
-        // HUD Editor key + Copy Diagnostics
-        int hosted = 4 + 10 + segmentedPeers + 8 + 1 + 1;
+        // Strategy) + accent + the Surfaces caption + Display Settings
+        // toggles + HUD Editor key + Copy Diagnostics
+        int hosted = 4 + 10 + 1 + 8 + 1 + 1;
         int pages = 4;                                      // Appearance, Display, Controls, General
         int screenOwned = 2 + 1 + 2 + pages + modules + 0 + 2; // tabs, profiles, layout, sub-tabs, tiles, nav, toggles
         assertEquals(33, modules, "FeatureCatalog module tile count");
-        assertEquals(3, segmentedPeers, "Corner Style is the only segmented row");
-        assertEquals(27, hosted, "component-owned hosted controls");
+        assertEquals(25, hosted, "component-owned hosted controls");
         assertEquals(44, screenOwned, "screen-owned chrome controls");
-        assertEquals(71, hosted + screenOwned, "AuroraScreen total semantic controls");
+        assertEquals(69, hosted + screenOwned, "AuroraScreen total semantic controls");
 
         String src = read(SRC + "screen/AuroraScreen.java");
         assertEquals(8, countOccurrences(src, "semanticHost.register("),

@@ -83,7 +83,7 @@ public class BlurTestScreen extends Screen {
     private static final float STRESS_W = 56f, STRESS_H = 14f;
 
     // Theme state captured on open so [C]/[N]/[O][P] mutations can be restored.
-    private ThemeRoundness originalRoundness;
+    private int originalCornerRadius;
     private ThemeMode originalMode;
     private double originalOpacity;
 
@@ -123,18 +123,26 @@ public class BlurTestScreen extends Screen {
         super(Component.literal("Blur Panel Test"));
     }
 
+    /** A {@code corner} argument: a pixel radius, or a retired Corner Style name. */
+    private static int cornerArg(String v) {
+        try {
+            return ThemeRoundness.clamp(Integer.parseInt(v.trim()));
+        } catch (NumberFormatException e) {
+            return ThemeRoundness.legacyRadius(v);
+        }
+    }
+
     @Override
     protected void init() {
         AuroraConfig cfg = AuroraConfig.get();
-        ThemeRoundness r = cfg.themeOrDefault().roundness;
         ThemeMode m = cfg.themeOrDefault().mode;
-        originalRoundness = r != null ? r : ThemeRoundness.ROUND;
+        originalCornerRadius = cfg.themeOrDefault().cornerRadius;
         originalMode = m != null ? m : ThemeMode.DARK;
         originalOpacity = ThemeDefinition.normalizedOpacity(cfg.themeOrDefault().backgroundOpacity);
         com.aurora.client.AuroraClient.LOGGER.info(
                 "[BlurTest] opened (lighting={} depressed={} backdrop={} radius={} corner={} theme={} opacity={})",
                 lightingOn, depressedMode, mode, (int) blurRadius,
-                originalRoundness.displayName(), originalMode,
+                originalCornerRadius + " px", originalMode,
                 String.format(java.util.Locale.ROOT, "%.2f", originalOpacity));
     }
 
@@ -201,7 +209,7 @@ public class BlurTestScreen extends Screen {
                     try { gradStrength = Math.max(0f, Math.min(1f, Float.parseFloat(v))); } catch (NumberFormatException ignored) {}
                 }
                 case "corner" -> {
-                    try { cfg.themeOrDefault().roundness = ThemeRoundness.valueOf(v); themeChanged = true; } catch (IllegalArgumentException ignored) {}
+                    try { cfg.themeOrDefault().cornerRadius = cornerArg(v); themeChanged = true; } catch (IllegalArgumentException ignored) {}
                 }
                 case "theme" -> {
                     try { cfg.themeOrDefault().mode = ThemeMode.valueOf(v); themeChanged = true; } catch (IllegalArgumentException ignored) {}
@@ -295,7 +303,7 @@ public class BlurTestScreen extends Screen {
                            : "Panel: FALLBACK - " + BlurPanelRenderer.lastOutcome();
         g.text(this.font, status, tx, ty, body, false);
         g.text(this.font, "Backdrop: " + mode.label
-                        + " | Corner: " + ThemeManager.current().roundness().displayName()
+                        + " | Corner: " + ThemeManager.current().roundness()
                         + " | Theme: " + ThemeManager.current().mode()
                         + " | Op: " + Math.round(ThemeManager.current().backgroundOpacity() * 100) + "%",
                 tx, ty + 12, dim, false);
@@ -350,12 +358,13 @@ public class BlurTestScreen extends Screen {
         }
         if (keyCode == com.mojang.blaze3d.platform.InputConstants.KEY_C) {
             // Cycle corner style IN MEMORY (restored on close, never saved).
-            ThemeRoundness[] vals = ThemeRoundness.values();
-            ThemeRoundness cur = AuroraConfig.get().themeOrDefault().roundness;
-            ThemeRoundness next = vals[((cur != null ? cur : ThemeRoundness.ROUND).ordinal() + 1) % vals.length];
-            AuroraConfig.get().themeOrDefault().roundness = next;
+            // Steps through the radii the retired Corner Style choices stood for.
+            int cur = AuroraConfig.get().themeOrDefault().cornerRadius;
+            int next = cur > ThemeRoundness.SLIGHTLY_ROUND.radius() ? ThemeRoundness.SLIGHTLY_ROUND.radius()
+                    : cur > 0 ? 0 : ThemeRoundness.DEFAULT_RADIUS;
+            AuroraConfig.get().themeOrDefault().cornerRadius = next;
             ThemeManager.reload();
-            com.aurora.client.AuroraClient.LOGGER.info("[BlurTest] C: corner={}", next.displayName());
+            com.aurora.client.AuroraClient.LOGGER.info("[BlurTest] C: corner={} px", next);
             return true;
         }
         if (keyCode == com.mojang.blaze3d.platform.InputConstants.KEY_N) {
@@ -486,8 +495,10 @@ public class BlurTestScreen extends Screen {
         // exactly what it was before the harness opened.
         AuroraConfig cfg = AuroraConfig.get();
         boolean changed = false;
-        ThemeRoundness r = cfg.themeOrDefault().roundness;
-        if (r != originalRoundness) { cfg.themeOrDefault().roundness = originalRoundness; changed = true; }
+        if (cfg.themeOrDefault().cornerRadius != originalCornerRadius) {
+            cfg.themeOrDefault().cornerRadius = originalCornerRadius;
+            changed = true;
+        }
         ThemeMode m = cfg.themeOrDefault().mode;
         if (m != originalMode) { cfg.themeOrDefault().mode = originalMode; changed = true; }
         double o = ThemeDefinition.normalizedOpacity(cfg.themeOrDefault().backgroundOpacity);

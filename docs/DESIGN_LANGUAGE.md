@@ -225,14 +225,17 @@ Theme roundness governs rectangular UI chrome, including:
 - dropdowns, popups, and modals;
 - previews when their boundary is chrome rather than represented data.
 
-Square mode means square UI chrome. A screen-local radius must not survive only because that
-screen predates resolved roundness.
+Roundness is one pixel value, the Corner Radius slider (0–20, factory 10; it replaced the
+Round / Slightly Round / Square choice on 2026-11-12). Panels and buttons use it directly,
+major sheets ×7/5, compact controls ×3/5. Radius 0 means square UI chrome. A screen-local
+radius must not survive only because that screen predates resolved roundness.
 
-Explicit exceptions are mechanical, circular, or data-driven geometry: toggle thumbs,
-slider knobs, color wheels, circular handles, represented game shapes, map markers, and
-similar controls whose function inherently requires the shape. A capsule track may remain a
-capsule where the control's mechanics require it. The exception belongs to the semantic
-part, not its surrounding rectangular chrome.
+Capsule shapes follow it too (owner ruling 2026-11-12): toggle tracks and thumbs, slider
+tracks and knobs, scrollbar thumbs and the colour picker's pad and strips. A capsule shape is
+a full capsule at the factory radius or above and flattens in proportion below it, square at 0
+(`ThemeRoundness.capsule`). The remaining exceptions are represented data and game geometry
+that is not theme chrome: colour wheels, represented game shapes, map markers, and in-game HUD
+geometry (keystroke keycaps, HUD backgrounds).
 
 ### 5.2 Compact spacing vocabulary
 
@@ -339,9 +342,10 @@ Frosted runs the capture/blur path. Transparent, presented to users as **Wirefra
 blur work and uses each consumer's complete flat/translucent fallback. Wireframe is not a
 refractive clear-glass mode.
 
-**Current implementation note:** the default frost request is 24 device pixels and resolves
-as `requested × max(1/6, sqrt(backgroundOpacity))`. This makes the low end clearer while full
-frost arrives toward the upper part of the opacity range. Stained tint currently keeps a
+**Current implementation note:** the blur radius is its own theme value, the Blur Radius
+slider (0–32 GUI pixels, factory 9; 0 is no blur). Since 2026-11-12 it no longer follows
+Background Opacity, which only sets the tint's alpha; themes saved earlier were seeded with the
+blur they rendered (28 GUI pixels × opacity). Stained tint currently keeps a
 centrally defined alpha floor so selected/primary controls remain identifiable at low window
 opacity. These are central material behaviors, not parameters for screens to copy or tune.
 
@@ -638,7 +642,7 @@ The following sections establish v3 expectations without inventing unresolved pi
 
 - **Purpose:** directly switch one persistent Boolean state.
 - **Material:** opaque token control by current convention; on state uses accent/selected
-  semantics. Thumb remains circular in all roundness modes.
+  semantics. Track and thumb follow the Corner Radius through the capsule rule.
 - **States:** off/on must be unambiguous; hover, accepted press, focus, and disabled must each
   be defined. Disabled must not look like interactive rest.
 - **Input/accessibility:** clicking its associated row may toggle only when that enlarged hit
@@ -650,8 +654,8 @@ The following sections establish v3 expectations without inventing unresolved pi
 ### 11.5 Slider
 
 - **Purpose:** choose a value from a continuous or stepped range.
-- **Material:** opaque track and knob; accent fill communicates the chosen portion. Knob is a
-  mechanical circular exception to Square mode.
+- **Material:** opaque track and knob; accent fill communicates the chosen portion. Track and
+  knob follow the Corner Radius through the capsule rule.
 - **States:** rest, hover, dragging, focus, and disabled. Dragging remains visibly active when
   the pointer leaves the original knob bounds.
 - **Input/accessibility:** pointer drag; keyboard increments when focused; accessible label,
@@ -969,7 +973,7 @@ Sliders: rest / hover / dragging / focus / disabled
 Cards: rest / hover / pressed / selected / focus
 Text: primary / secondary / muted / faint / accent
 Glass: container / secondary / control / stained / above-dim
-Theme: dark / light; round / slightly round / square;
+Theme: dark / light; corner radius 0 / 6 / 10 / 20;
        high / low opacity; representative difficult accents
 ```
 

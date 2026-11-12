@@ -150,12 +150,12 @@ public final class ThemeManager {
                 || (0xFF000000 | def.background) != last.background();
         ThemeMode mode = ThemeMode.DARK; // normalize legacy LIGHT before the dirty check
         boolean modeChanged = mode != last.mode();
-        ThemeRoundness roundness = def.roundness != null ? def.roundness : ThemeRoundness.ROUND;
-        boolean roundnessChanged = roundness != last.roundness();
+        boolean roundnessChanged = ThemeRoundness.of(def.cornerRadius) != last.roundness();
+        boolean blurChanged = ThemeDefinition.normalizedBlurRadius(def.blurRadius) != last.blurRadius();
         double opacity = ThemeDefinition.normalizedOpacity(def.backgroundOpacity);
         boolean opacityChanged = Double.compare(opacity, last.backgroundOpacity()) != 0;
         if (enabledChanged || accentChanged || modeChanged
-                || roundnessChanged || opacityChanged) {
+                || roundnessChanged || blurChanged || opacityChanged) {
             reload();
         }
     }

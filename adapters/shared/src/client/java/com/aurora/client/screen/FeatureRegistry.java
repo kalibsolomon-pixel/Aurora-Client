@@ -1153,7 +1153,7 @@ addWithSettings("hitbox",
                 )).noSettingsToggle(true); // owner ruling 2026-10-30: the Text Renderer dropdown owns the scope; no master toggle
 
         addWithSettings("theme",
-                "Customize Aurora's accent color, corner style, and the density of its diffuse card backgrounds.",
+                "Customize Aurora's accent and background colors, and the opacity, blur and corner radius of its surfaces.",
                 () -> cfg.themeEnabled, v -> cfg.themeEnabled = v,
                 List.of(
                         new AccentSetting("Accent Color",
@@ -1172,16 +1172,10 @@ addWithSettings("hitbox",
                                     persistThemeChange();
                                 })
                                 .description("The color tint of every Aurora window. Very light colors are deepened so text stays readable. Translucency stays on Background Opacity."),
-                        new SegmentedSetting<>("Corner Style", ThemeRoundness.class,
-                                () -> cfg.themeOrDefault().roundness != null ? cfg.themeOrDefault().roundness : ThemeRoundness.ROUND,
-                                v -> {
-                                    cfg.themeOrDefault().roundness = v;
-                                    com.aurora.client.theme.ThemeManager.reload();
-                                    persistThemeChange();
-                                },
-                                ThemeRoundness::displayName)
-                                .glassSegments(true) // glass pilot: Theme screen only
-                                .description("How round Aurora's panels and buttons are: Round (the classic look), Slightly Round, or Square. Applies everywhere corners are drawn — including this screen."),
+                        // The three surface sliders sit together under one
+                        // caption (owner ruling 2026-11-12). Corner Radius
+                        // replaced the Round / Slightly Round / Square choice.
+                        new SectionHeaderSetting("Surfaces"),
                         new ThemeOpacitySetting("Background Opacity",
                                 () -> cfg.themeOrDefault().backgroundOpacity,
                                 v -> {
@@ -1189,7 +1183,28 @@ addWithSettings("hitbox",
                                     com.aurora.client.theme.ThemeManager.reload();
                                     persistThemeChange();
                                 })
-                                .description("How dense Aurora's card backgrounds are. Lower values make the backdrop clearer. Drag previews the change live; release saves it.")
+                                .description("How dense the tint of Aurora's windows and cards is. Lower values let more of the blurred backdrop through; Blur Radius sets how blurred it is. Drag previews the change live; release saves it."),
+                        new ThemeSliderSetting("Blur Radius",
+                                () -> cfg.themeOrDefault().blurRadius,
+                                v -> {
+                                    cfg.themeOrDefault().blurRadius = (int) Math.round(v);
+                                    com.aurora.client.theme.ThemeManager.reload();
+                                    persistThemeChange();
+                                },
+                                com.aurora.client.theme.ThemeDefinition.MIN_BLUR_RADIUS,
+                                com.aurora.client.theme.ThemeDefinition.MAX_BLUR_RADIUS, 1, true)
+                                .valueFormatter(v -> v.intValue() <= 0 ? "Off" : v.intValue() + " px")
+                                .description("How strongly the backdrop behind Aurora's glass windows and controls is blurred, in GUI pixels. Off shows the tint alone. Drag previews the change live; release saves it."),
+                        new ThemeSliderSetting("Corner Radius",
+                                () -> cfg.themeOrDefault().cornerRadius,
+                                v -> {
+                                    cfg.themeOrDefault().cornerRadius = (int) Math.round(v);
+                                    com.aurora.client.theme.ThemeManager.reload();
+                                    persistThemeChange();
+                                },
+                                ThemeRoundness.MIN_RADIUS, ThemeRoundness.MAX_RADIUS, 1, true)
+                                .valueFormatter(v -> v.intValue() + " px")
+                                .description("How round every Aurora shape is: windows, buttons, fields, toggles, sliders and scrollbars. 0 is square and 10 is the classic look. Drag previews the change live; release saves it.")
                 ));
 
         FeatureSetting uiFpsLimit = new EnumSetting<>("UI FPS Limit", AuroraConfig.GuiFps.class,

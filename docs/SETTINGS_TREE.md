@@ -513,8 +513,10 @@ The tab shows one page at a time, chosen from the sub-tabs in the row above the 
 - *Theme* · header toggle on (off = fixed factory palette instead of your colors) `{card:theme}`
   - **Accent Color**: swatch grid + picker · green (#43A047). `{theme.accent}`
   - **Background Color**: swatch grid + picker · deep purple (#22163A). `{theme.background}`
-  - **Corner Style**: segmented Round / Slightly Round / Square · Round. `{theme.roundness}`
-  - **Background Opacity**: slider · 33%. `{theme.backgroundOpacity}`
+  - *Surfaces* (the three sliders grouped under one caption)
+    - **Background Opacity**: slider 0–100% · 33% · the tint's density only. `{theme.backgroundOpacity}`
+    - **Blur Radius**: slider Off–32 px (GUI pixels) · 9 px · how blurred the backdrop behind glass is. `{theme.blurRadius}`
+    - **Corner Radius**: slider 0–20 px · 10 px · every shape: windows, buttons, fields, toggles, sliders, scrollbars. Replaced Corner Style (Round = 10, Slightly Round = 6, Square = 0). `{theme.cornerRadius}`
 - *Text & Fonts* · no toggle `{card:text_fonts}`
   - **Text Renderer**: dropdown Off / Aurora UI Only / All Text · All Text. `{textRendererMode}`
   - **Client Font**: dropdown Inter Medium / Inter Italic / JetBrains Mono / Roboto / Poppins / Oswald / Nunito / Quicksand / Fira Sans / SansSerif · Fira Sans. `{activeFont}`
