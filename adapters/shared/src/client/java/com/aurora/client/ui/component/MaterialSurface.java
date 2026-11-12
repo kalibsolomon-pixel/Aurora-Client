@@ -93,8 +93,19 @@ public final class MaterialSurface {
         RenderUtil.drawRoundedRectAA(g,x,y,w,h,radius,neutral);
         if (selected) {
             RenderUtil.drawRoundedRectAA(g,x,y,w,h,radius,selectedFill());
-            RenderUtil.drawRoundedOutlineAA(g,x,y,w,h,radius,1,ThemeManager.color(ThemeToken.ACCENT_MARKER));
+            RenderUtil.drawRoundedOutlineAA(g,x,y,w,h,radius,selectedEdge(),ThemeManager.color(ThemeToken.ACCENT_MARKER));
         }
+    }
+
+    /**
+     * Stroke of the selected peer's accent edge, in GUI px: about half the
+     * 1 GUI px border weight, never under one screen pixel (owner ruling
+     * 2026-11-12: selected outlines read thinner). 2 screen px at GUI
+     * scale 3 and 4, 1 at scale 2.
+     */
+    static float selectedEdge() {
+        int scale=Math.max(1,(int)Minecraft.getInstance().getWindow().getGuiScale());
+        return Math.max(1,Math.round(scale*.5f))/(float)scale;
     }
 
     /**
@@ -173,7 +184,9 @@ public final class MaterialSurface {
                 if(kind==2 || kind==102) {
                     RenderUtil.drawRoundedRectAA(g,pad,pad,w,h,radius,selectedFill());
                 }
-                if(border!=0) RenderUtil.drawRoundedOutlineAA(g,pad,pad,w,h,radius,1,border);
+                // Selected peers (kind 2) take the thinner selection edge; other borders stay 1 GUI px.
+                if(border!=0) RenderUtil.drawRoundedOutlineAA(g,pad,pad,w,h,radius,
+                        kind==2 || kind==102 ? selectedEdge() : 1,border);
             } finally { RenderUtil.endCapture(previous); }
             cache.commit(version);
         }
