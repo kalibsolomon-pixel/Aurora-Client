@@ -103,6 +103,13 @@ and the GPU-side items wait for GPU-bound tester evidence; [evidence](reports/20
 
 ## Next work
 
+Rendering/HUD follow-up is in progress on `feat/render-hud-quality`:
+the odd-radius motion blur alias is reproduced and fixed across the three
+OpenGL adapters and native 26.3 Vulkan; unused font preparation is deferred
+with measured reload gains, while the selected family stays eager. RRLS owns
+its reload overlay. [Investigation and evidence](reports/2026-11-12-render-hud-quality.md)
+track the remaining HUD work, FPS comparison and acceptance checks.
+
 Step 5.5 (ADR 0008) is complete; step 6 (shader-drawn shapes) is merged, PR #21.
 The earlier 26.3 OpenGL overhead failure was resolved before 3.3.0 publication;
 the failed historical measurements remain documented. Broader release validation
