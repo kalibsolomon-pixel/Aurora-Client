@@ -15,6 +15,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.input.KeyEvent;
+import net.minecraft.network.chat.Component;
 import com.mojang.blaze3d.platform.InputConstants;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -31,6 +32,7 @@ public final class ParityProbe implements ClientModInitializer {
     /** The running "fps" sample: label, end time and the once-a-second readings so far. */
     private String fpsLabel;
     private long fpsUntil, fpsNextReading;
+    private net.minecraft.client.InactivityFpsLimit fpsPreviousInactivity;
     private final java.util.List<Integer> fpsReadings = new java.util.ArrayList<>();
     /** The running "count" window: label, start, end and frames seen. */
     private String countLabel;
@@ -77,6 +79,7 @@ public final class ParityProbe implements ClientModInitializer {
                     if (fpsNextReading > fpsUntil) {
                         System.out.println("[parity-probe] fps " + fpsLabel + " " + fpsReadings);
                         fpsLabel = null;
+                        restoreFpsOptions(client);
                     }
                 }
                 if (countLabel != null) {
@@ -110,6 +113,9 @@ public final class ParityProbe implements ClientModInitializer {
         var config = AuroraConfig.get();
         switch (args[0]) {
             case "settings" -> NativeUi.setScreen(client, AuroraScreen.create());
+            case "stable-settings" -> NativeUi.setScreen(client, new AuroraScreen() {
+                @Override public boolean isPauseScreen() { return true; }
+            });
             case "world" -> NativeUi.setScreen(client, null);
             case "waypoints40" -> {
                 if (client.level == null) throw new IllegalStateException("A world must be loaded");
@@ -140,12 +146,55 @@ public final class ParityProbe implements ClientModInitializer {
                 NativeUi.setScreen(client, new WaypointManagerScreen(null));
             }
             case "shape-cases" -> NativeUi.setScreen(client, new ShapeTestScreen());
+            case "blur" -> NativeUi.setScreen(client, new com.aurora.client.ui.render.blur.BlurTestScreen());
+            case "blur-radius" -> {
+                config.themeOrDefault().blurRadius = Integer.parseInt(args[1]);
+                ThemeManager.reload();
+            }
+            case "hud-editor" -> NativeUi.setScreen(client, new HudEditorScreen());
+            case "profiles" -> NativeUi.setScreen(client, new ProfileManagerScreen(AuroraScreen.create()));
+            case "profile-create" -> {
+                var screen = (ProfileManagerScreen) NativeUi.screen(client);
+                var begin = ProfileManagerScreen.class.getDeclaredMethod("beginCreate");
+                begin.setAccessible(true);
+                begin.invoke(screen);
+            }
+            case "profile-name" -> {
+                var field = ProfileManagerScreen.class.getDeclaredField("createField");
+                field.setAccessible(true);
+                ((EditBox) field.get(NativeUi.screen(client))).setValue(text.substring(13));
+            }
+            case "hover" -> {
+                float scale = client.getWindow().getGuiScale();
+                var mouse = client.mouseHandler;
+                var x = mouse.getClass().getDeclaredField("xpos");
+                var y = mouse.getClass().getDeclaredField("ypos");
+                x.setAccessible(true); y.setAccessible(true);
+                x.setDouble(mouse, Double.parseDouble(args[1]) * scale);
+                y.setDouble(mouse, Double.parseDouble(args[2]) * scale);
+            }
+            case "click" -> {
+                var event = new net.minecraft.client.input.MouseButtonEvent(
+                        Double.parseDouble(args[1]), Double.parseDouble(args[2]),
+                        new net.minecraft.client.input.MouseButtonInfo(InputConstants.MOUSE_BUTTON_LEFT, 0));
+                NativeUi.screen(client).mouseClicked(event, false);
+                NativeUi.screen(client).mouseReleased(event);
+            }
             case "assert-inactivity" -> {
                 if (!client.options.inactivityFpsLimit().get().getSerializedName().equals(args[1]))
                     throw new AssertionError("Inactivity FPS option was not restored");
             }
-            case "stop" -> { ShapeBenchmark.cancel(); client.stop(); }
+            case "stop" -> { ShapeBenchmark.cancel(); restoreFpsOptions(client); client.stop(); }
             case "resize" -> client.getWindow().setWindowed(Integer.parseInt(args[1]), Integer.parseInt(args[2]));
+            case "gui-scale" -> {
+                client.options.guiScale().set(Integer.parseInt(args[1]));
+                // This native entry point was renamed in 26.3.
+                java.lang.reflect.Method resize;
+                try { resize = Minecraft.class.getMethod("resizeGui"); }
+                catch (NoSuchMethodException olderLine) { resize = Minecraft.class.getMethod("resizeDisplay"); }
+                resize.invoke(client);
+            }
+            case "pause" -> NativeUi.setScreen(client, new net.minecraft.client.gui.screens.PauseScreen(true));
             case "layout" -> {
                 config.moduleGridView = args[1].equals("grid");
                 NativeUi.setScreen(client, AuroraScreen.create());
@@ -160,6 +209,63 @@ public final class ParityProbe implements ClientModInitializer {
             case "font" -> {
                 config.activeFont = AuroraConfig.FontType.valueOf(args[1]);
                 config.textRendererMode = AuroraConfig.TextRendererMode.valueOf(args[2]);
+            }
+            case "font-state" -> {
+                var access = (com.aurora.client.mixin.MinecraftFontManagerAccessor) client;
+                var fonts = (com.aurora.client.mixin.FontManagerAccessor) access.aurora$fontManager();
+                long pending = fonts.aurora$fontSets().values().stream()
+                        .filter(font -> font instanceof com.aurora.client.ui.util.DeferredFontSet deferred
+                                && deferred.aurora$pending()).count();
+                System.out.println("[parity-probe] fonts pending=" + pending);
+            }
+            case "font-check" -> {
+                var access = (com.aurora.client.mixin.MinecraftFontManagerAccessor) client;
+                var fonts = (com.aurora.client.mixin.FontManagerAccessor) access.aurora$fontManager();
+                var ids = new java.util.TreeSet<>(fonts.aurora$fontSets().keySet());
+                long checksum = 1;
+                int count = 0;
+                for (var id : ids) if (id.getNamespace().equals("aurora")) {
+                    var style = net.minecraft.network.chat.Style.EMPTY.withFont(
+                            new net.minecraft.network.chat.FontDescription.Resource(id));
+                    for (String sample : java.util.List.of("Aurora 0123456789", "\u00c9\u03a9\u0416\u4e16\u754c", "\u00a7k")) {
+                        checksum = checksum * 31 + client.font.width(Component.literal(sample).withStyle(style));
+                        checksum = checksum * 31 + client.font.width(Component.literal(sample).withStyle(style.withBold(true).withItalic(true)));
+                    }
+                    var font = fonts.aurora$fontSets().get(id);
+                    if (font instanceof com.aurora.client.ui.util.DeferredFontSet deferred && deferred.aurora$pending())
+                        throw new AssertionError("Font was not initialized by text lookup: " + id);
+                    count++;
+                }
+                System.out.println("[parity-probe] font-check faces=" + count + " widthChecksum=" + checksum);
+            }
+            case "font-first-use" -> {
+                var style = net.minecraft.network.chat.Style.EMPTY.withFont(
+                        new net.minecraft.network.chat.FontDescription.Resource(
+                                net.minecraft.resources.Identifier.parse(args[1])));
+                long start = System.nanoTime();
+                int width = client.font.width(Component.literal("Aurora 0123456789 \u00c9\u03a9\u0416\u4e16\u754c").withStyle(style));
+                System.out.println("[parity-probe] font-first-use " + args[1] + " width=" + width
+                        + " us=" + (System.nanoTime() - start) / 1000);
+            }
+            case "font-specimen" -> NativeUi.setScreen(client, new FontSpecimenScreen());
+            case "benchmark" -> {
+                var output = root.resolve(args[1] + ".json");
+                if (Files.exists(output)) throw new IllegalStateException("Benchmark result already exists");
+                var previous = client.options.inactivityFpsLimit().get();
+                client.options.inactivityFpsLimit().set(net.minecraft.client.InactivityFpsLimit.MINIMIZED);
+                boolean started = com.aurora.client.diagnostics.FrameBenchmark.start(2, 8,
+                        com.aurora.client.ui.util.RenderUtil::fillsSubmitted,
+                        com.aurora.client.ui.render.blur.BlurPanelRenderer::capturesSubmitted, stats -> {
+                            client.options.inactivityFpsLimit().set(previous);
+                            try { Files.writeString(output, new com.google.gson.GsonBuilder().setPrettyPrinting().create().toJson(stats) + "\n"); }
+                            catch (java.io.IOException failure) { throw new RuntimeException(failure); }
+                            System.out.println("[parity-probe] benchmark " + args[1] + "\n"
+                                    + com.aurora.client.diagnostics.DiagnosticsReport.build(stats));
+                        });
+                if (!started) {
+                    client.options.inactivityFpsLimit().set(previous);
+                    throw new IllegalStateException("Benchmark already running");
+                }
             }
             case "detail" -> {
                 var feature = FeatureRegistry.all().stream().filter(f -> f.id.equals(args[1])).findFirst().orElseThrow();
@@ -240,6 +346,9 @@ public final class ParityProbe implements ClientModInitializer {
             case "f3" -> client.debugEntries.setOverlayVisible(Boolean.parseBoolean(args[1]));
             case "fps" -> {
                 // "fps <seconds> <label>": skips the first second, then reads once a second.
+                restoreFpsOptions(client);
+                fpsPreviousInactivity = client.options.inactivityFpsLimit().get();
+                client.options.inactivityFpsLimit().set(net.minecraft.client.InactivityFpsLimit.MINIMIZED);
                 fpsReadings.clear();
                 fpsNextReading = System.nanoTime() + 2_000_000_000L;
                 fpsUntil = fpsNextReading + Long.parseLong(args[1]) * 1_000_000_000L;
@@ -342,7 +451,21 @@ public final class ParityProbe implements ClientModInitializer {
                 });
             }
             case "cfg" -> AuroraConfig.class.getField(args[1]).setBoolean(config, Boolean.parseBoolean(args[2]));
-            case "screen" -> System.out.println("[parity-probe] screen " + NativeUi.screen(client));
+            case "factory" -> {
+                var defaults = new AuroraConfig();
+                for (var field : AuroraConfig.class.getFields()) {
+                    int flags = field.getModifiers();
+                    if (!java.lang.reflect.Modifier.isStatic(flags) && !java.lang.reflect.Modifier.isFinal(flags))
+                        field.set(config, field.get(defaults));
+                }
+                ThemeManager.reload();
+            }
+            case "screen" -> {
+                var screen = NativeUi.screen(client);
+                System.out.println("[parity-probe] screen " + screen + (screen == null ? "" :
+                        " gui=" + screen.width + "x" + screen.height
+                        + " scale=" + client.getWindow().getGuiScale() + " focused=" + screen.getFocused()));
+            }
             case "world-map" -> {
                 config.worldMapEnabled = true;
                 NativeUi.setScreen(client, new com.aurora.client.worldmap.screen.WorldMapScreen());
@@ -354,5 +477,11 @@ public final class ParityProbe implements ClientModInitializer {
             default -> throw new IllegalArgumentException(text);
         }
         System.out.println("[parity-probe] " + text);
+    }
+
+    private void restoreFpsOptions(Minecraft client) {
+        if (fpsPreviousInactivity == null) return;
+        client.options.inactivityFpsLimit().set(fpsPreviousInactivity);
+        fpsPreviousInactivity = null;
     }
 }

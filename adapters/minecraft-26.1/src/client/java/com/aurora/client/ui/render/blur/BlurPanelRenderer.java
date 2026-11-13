@@ -333,6 +333,7 @@ public final class BlurPanelRenderer {
     /** One-shot diagnostic guard for the live-world capture path. */
     private static boolean loggedWorldProbe = false;
     private static int blurProgram;
+    private static int downsampleProgram;
     private static int compositeProgram;
     private static int emptyVao;
     private static final int[] blurFbo = new int[2];
@@ -418,6 +419,7 @@ public final class BlurPanelRenderer {
 
     // ---- uniform locations ----
     private static int uBlurInput, uBlurDir, uBlurTexel, uBlurScale, uBlurSigma;
+    private static int uDownInput, uDownRect, uDownOffset, uDownTexel;
     private static int uCompInput, uCompUvRect, uCompHalfSize, uCompRadius, uBackdropFilter;
     private static int uLight, uEdgeWidth, uEdgeStrength, uGradStrength, uDepressed, uRimBlend;
 
@@ -1234,9 +1236,10 @@ public final class BlurPanelRenderer {
         // filter, while the single 4x blit on the dev machine's Mesa
         // driver degenerated all the way to a ~1-texel point sample —
         // bit-identical output under a 1.05 px shift, popping when the
-        // sampled texel finally jumped). The rounding in hw/hh makes
-        // ratios 2±ε, so the average is near-uniform — vastly better than
-        // a 25%-area point sample either way.
+        // sampled texel finally jumped). Rounded sizes are not exact 2:1:
+        // even a tiny ratio error can sweep the bilinear phase through an
+        // entire texel and alias moving detail. Those passes use the
+        // explicit two-texel footprint in runDownsamplePass instead.
         private void capture() {
             int readFbo, srcW, srcH;
             if (capture != null) {
@@ -1286,10 +1289,17 @@ public final class BlurPanelRenderer {
             ensureHalfTarget(hw, hh);
             GL30.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, readFbo);
             GL30.glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, halfFbo);
-            GL30.glBlitFramebuffer(
+            int sourceWidth = sX1 - sX0, sourceHeight = sY1 - sY0;
+            if (sourceWidth == hw * 2 && sourceHeight == hh * 2) GL30.glBlitFramebuffer(
                     sX0, srcH - sY1, sX1, srcH - sY0,
                     0, 0, hw, hh,
                     GL11.GL_COLOR_BUFFER_BIT, GL11.GL_LINEAR);
+            else {
+                int input = GL30.glGetFramebufferAttachmentParameteri(GL30.GL_READ_FRAMEBUFFER,
+                        GL30.GL_COLOR_ATTACHMENT0, GL30.GL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME);
+                runDownsamplePass(halfFbo, input, srcW, srcH, sX0, srcH - sY1,
+                        sourceWidth, sourceHeight, hw, hh);
+            }
             int err = GL11.glGetError();
             if (err != GL11.GL_NO_ERROR) {
                 throw new IllegalStateException("half-res capture blit failed (GL error 0x"
@@ -1298,10 +1308,11 @@ public final class BlurPanelRenderer {
             // Step 2: half -> chain resolution (another 2x box).
             GL30.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, halfFbo);
             GL30.glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, blurFbo[0]);
-            GL30.glBlitFramebuffer(
+            if (hw == cw * 2 && hh == ch * 2) GL30.glBlitFramebuffer(
                     0, 0, hw, hh,
                     0, 0, cw, ch,
                     GL11.GL_COLOR_BUFFER_BIT, GL11.GL_LINEAR);
+            else runDownsamplePass(blurFbo[0], halfTex, halfW, halfH, 0, 0, hw, hh, cw, ch);
             err = GL11.glGetError();
             if (err != GL11.GL_NO_ERROR) {
                 throw new IllegalStateException("quarter-res capture blit failed (GL error 0x"
@@ -1515,6 +1526,7 @@ public final class BlurPanelRenderer {
         if (compositeFbo != 0) { GL30.glDeleteFramebuffers(compositeFbo); compositeFbo = 0; }
         if (compositeTex != 0) { GlStateManager._deleteTexture(compositeTex); compositeTex = 0; }
         if (blurProgram != 0) { GL20.glDeleteProgram(blurProgram); blurProgram = 0; }
+        if (downsampleProgram != 0) { GL20.glDeleteProgram(downsampleProgram); downsampleProgram = 0; }
         if (compositeProgram != 0) { GL20.glDeleteProgram(compositeProgram); compositeProgram = 0; }
         if (emptyVao != 0) { GL30.glDeleteVertexArrays(emptyVao); emptyVao = 0; }
         initialized = false;
@@ -1530,6 +1542,11 @@ public final class BlurPanelRenderer {
         initialized = true;
         try {
             blurProgram = createProgram(FULLSCREEN_VS, BLUR_FS);
+            downsampleProgram = createProgram(FULLSCREEN_VS, DOWNSAMPLE_FS);
+            uDownInput = GL20.glGetUniformLocation(downsampleProgram, "uInput");
+            uDownRect = GL20.glGetUniformLocation(downsampleProgram, "uRect");
+            uDownOffset = GL20.glGetUniformLocation(downsampleProgram, "uOffset");
+            uDownTexel = GL20.glGetUniformLocation(downsampleProgram, "uTexel");
             compositeProgram = createProgram(FULLSCREEN_VS, COMPOSITE_FS);
             uBlurInput = GL20.glGetUniformLocation(blurProgram, "uInput");
             uBlurDir = GL20.glGetUniformLocation(blurProgram, "uDir");
@@ -1553,6 +1570,7 @@ public final class BlurPanelRenderer {
         } catch (Throwable t) {
             AuroraClient.LOGGER.error("[BlurPanel] shader compile failed - blur panels disabled.", t);
             blurProgram = 0;
+            downsampleProgram = 0;
             compositeProgram = 0;
             return false;
         }
@@ -1664,6 +1682,26 @@ public final class BlurPanelRenderer {
                 GL11.GL_TEXTURE_2D, compositeTex, 0);
         outW = w;
         outH = h;
+    }
+
+    /** Fractional 2:1 ratios need a phase-independent two-texel footprint. */
+    private static void runDownsamplePass(int targetFbo, int inputTex, int textureW, int textureH,
+            int x, int y, int sourceW, int sourceH, int targetW, int targetH) {
+        GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, targetFbo);
+        GL11.glViewport(0, 0, targetW, targetH);
+        prepareFullscreenDraw();
+        GL20.glUseProgram(downsampleProgram);
+        GlStateManager._activeTexture(GL13.GL_TEXTURE0);
+        GlStateManager._bindTexture(inputTex);
+        GL20.glUniform1i(uDownInput, 0);
+        GL20.glUniform4f(uDownRect, x / (float) textureW, y / (float) textureH,
+                (x + sourceW) / (float) textureW, (y + sourceH) / (float) textureH);
+        GL20.glUniform2f(uDownTexel, .5f / textureW, .5f / textureH);
+        GL20.glUniform2f(uDownOffset,
+                com.aurora.client.ui.util.BoxDownsample.halfTexel(sourceW, targetW, textureW),
+                com.aurora.client.ui.util.BoxDownsample.halfTexel(sourceH, targetH, textureH));
+        GL30.glBindVertexArray(emptyVao);
+        GL11.glDrawArrays(GL11.GL_TRIANGLES, 0, 3);
     }
 
     private static void runBlurPass(int targetFbo, int inputTex, int w, int h,
@@ -1970,6 +2008,35 @@ public final class BlurPanelRenderer {
      * the whole texture — the largest panel's capture squished into the
      * small element (the UV bug this contract exists to prevent).
      */
+    private static final String DOWNSAMPLE_FS = """
+            #version 150
+            in vec2 vUv;
+            out vec4 fragColor;
+            uniform sampler2D uInput;
+            uniform vec4 uRect;
+            uniform vec2 uOffset;
+            uniform vec2 uTexel;
+            vec3 sampleAt(vec2 uv) {
+                return texture(uInput, clamp(uv, uRect.xy + uTexel, uRect.zw - uTexel)).rgb;
+            }
+            void main() {
+                vec2 uv = mix(uRect.xy, uRect.zw, vUv);
+                vec3 color;
+                if (uOffset.y == 0.0) {
+                    vec2 d = vec2(uOffset.x, 0.0);
+                    color = (sampleAt(uv - d) + sampleAt(uv + d)) * 0.5;
+                } else if (uOffset.x == 0.0) {
+                    vec2 d = vec2(0.0, uOffset.y);
+                    color = (sampleAt(uv - d) + sampleAt(uv + d)) * 0.5;
+                } else {
+                    color = (sampleAt(uv - uOffset) + sampleAt(uv + uOffset)
+                            + sampleAt(uv + vec2(uOffset.x, -uOffset.y))
+                            + sampleAt(uv + vec2(-uOffset.x, uOffset.y))) * 0.25;
+                }
+                fragColor = vec4(color, 1.0);
+            }
+            """;
+
     private static final String BLUR_FS = """
             #version 150
             in vec2 vUv;

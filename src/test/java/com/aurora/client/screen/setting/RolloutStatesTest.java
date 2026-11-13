@@ -106,8 +106,8 @@ class RolloutStatesTest {
             String src = new String(java.nio.file.Files.readAllBytes(SourceTree.resolve(
                     SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/FeatureRegistry.java")));
             int count = src.split("new EnumSetting<>", -1).length - 1;
-            assertEquals(25, count,
-                    "production EnumSetting construction sites (inventory drift guard; 25→24 with Swing Style's removal, 2026-10-30; 24→25 with Text's Weight, 2026-11-12)");
+            assertEquals(29, count,
+                    "production EnumSetting construction sites (inventory drift guard; 25→24 with Swing Style's removal, 2026-10-30; 24→25 with Text's Weight, 2026-11-12; 25→27 with the Alerts' two module-background dropdowns, 2026-11-12; 27→29 with Hit Color's Flash Style and the Scoreboard HUD's Background, 2026-11-12)");
         } catch (java.io.IOException e) {
             fail("FeatureRegistry.java not readable from the test working dir: " + e.getMessage());
         }
@@ -143,8 +143,8 @@ class RolloutStatesTest {
             String src = new String(java.nio.file.Files.readAllBytes(SourceTree.resolve(
                     SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/FeatureRegistry.java")));
             int count = src.split("new ColorSetting", -1).length - 1;
-            assertEquals(33, count,
-                    "production ColorSetting construction sites (inventory drift guard)");
+            assertEquals(38, count,
+                    "production ColorSetting construction sites (inventory drift guard; 33→37 with the Alerts' two module color pairs, 2026-11-12; 37→38 with the Scoreboard HUD's Background Color, 2026-11-12)");
         } catch (java.io.IOException e) {
             fail("FeatureRegistry.java not readable from the test working dir: " + e.getMessage());
         }

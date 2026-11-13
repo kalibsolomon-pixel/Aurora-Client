@@ -20,6 +20,47 @@ public final class HudBackgrounds {
      */
     public static final int FIXED_RADIUS = 2;
     private static final Identifier OFFHAND = Identifier.withDefaultNamespace("hud/hotbar_offhand_left");
+    /** The vanilla hotbar texture: 182×22, slot cells on a 20 px pitch starting at x=1. */
+    private static final Identifier HOTBAR = Identifier.withDefaultNamespace("hud/hotbar");
+    private static final int HOTBAR_SPRITE_W = 182;
+    private static final int HOTBAR_SPRITE_H = 22;
+    public static final int CELL_PITCH = 20;
+
+    /**
+     * One continuous vanilla hotbar strip of {@code cells} slots, drawn
+     * 22 px tall at (x, y) and uniformly scaled horizontally by
+     * {@code scaleX} (1.0 = native 20 px cells). One blit of the strip's
+     * sub-region of the hotbar sprite and its right end cap — the armor HUD's VANILLA backing,
+     * replacing the per-piece offhand-slot boxes.
+     */
+    public static void hotbarStrip(GuiGraphicsExtractor ctx, int x, int y, int cells, float scaleX, float alpha) {
+        if (cells <= 0 || alpha <= 0.001f) return;
+        int srcW = cells * CELL_PITCH + 2;
+        ctx.pose().pushMatrix();
+        ctx.pose().translate(x, y);
+        ctx.pose().scale(scaleX, 1.0f);
+        // Uku's Armor HUD HOTBAR style retains the original right edge instead
+        // of ending the crop inside a slot. See THIRD_PARTY_NOTICES.md.
+        int color = scaleAlpha(0xFFFFFFFF, alpha);
+        ctx.blitSprite(RenderPipelines.GUI_TEXTURED, HOTBAR, HOTBAR_SPRITE_W, HOTBAR_SPRITE_H,
+                0, 0, 0, 0, srcW - 3, HOTBAR_SPRITE_H, color);
+        ctx.blitSprite(RenderPipelines.GUI_TEXTURED, HOTBAR, HOTBAR_SPRITE_W, HOTBAR_SPRITE_H,
+                HOTBAR_SPRITE_W - 3, 0, srcW - 3, 0, 3, HOTBAR_SPRITE_H, color);
+        ctx.pose().popMatrix();
+    }
+
+    /**
+     * The same capped strip turned clockwise, with its long axis vertical.
+     */
+    public static void hotbarVerticalStrip(GuiGraphicsExtractor ctx, int x, int y, int cells, float alpha) {
+        if (cells <= 0 || alpha <= 0.001f) return;
+        ctx.pose().pushMatrix();
+        ctx.pose().translate(x, y);
+        ctx.pose().rotate((float) (Math.PI / 2));
+        ctx.pose().translate(0, -HOTBAR_SPRITE_H);
+        hotbarStrip(ctx, 0, 0, cells, 1f, alpha);
+        ctx.pose().popMatrix();
+    }
 
     /**
      * Corner radius for a HUD shape: {@code fixed} by default, or the

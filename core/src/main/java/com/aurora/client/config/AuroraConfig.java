@@ -463,11 +463,23 @@ public class AuroraConfig {
     public boolean perfFreeSpriteMipmaps = true;
     /** A moving camera repaints the minimap's terrain at most 60 times a second. */
     public boolean perfMinimapRefreshCap = true;
+    /** Prepare unused Aurora font faces on first text lookup instead of every reload. */
+    public boolean perfDeferAuroraFonts = true;
 
     // ---- Late-Stage Responsive Features ----
     public boolean adaptiveRenderSleeping = false;
     public boolean fixHeldItemSeams = true;
     public double heldItemInflation = 1.001; // 1.0 = no fix, 1.005 = strong fix
+    /** How the hurt overlay is drawn on rows 0-7 of the overlay texture. */
+    public HitColorMode hitColorMode = HitColorMode.FLAT;
+    /**
+     * Whether the health-gradient flash may reflect the hurt entity's actual
+     * health. An information advantage (ADR 0007), so it ships off and the
+     * gradient otherwise falls back to the flat color.
+     */
+    public boolean hitColorHealthGradient = false;
+    /** Pulse oscillation in cycles per second. Requires the pulse mode. */
+    public double hitColorPulseRate = 1.0;
     public boolean hitColorEnabled = false;
     public int hitColor = 0x66FF0000; // ARGB: ~40% red, similar to vanilla flash
     public boolean hitColorTintArmor = true; // also tint armor when an entity is hurt
@@ -572,6 +584,10 @@ public class AuroraConfig {
     public boolean armorShowDurabilityBars = false;
     /** Lay the four armor pieces horizontally (helmet → boots, left → right). */
     public boolean armorHorizontal = false;
+    /** Also render the main hand in the Armor HUD (only while it holds something). */
+    public boolean armorHudShowMainHand = false;
+    /** Also render the off hand in the Armor HUD (only while it holds something). */
+    public boolean armorHudShowOffHand = false;
 
     public enum ArmorAlertSoundChoice {
         // Saved selections of the removed arrow sound fall back to Pling.
@@ -614,6 +630,26 @@ public class AuroraConfig {
     public boolean migratedEffectExpiryExclusions = false;
     /** When true, also alert on held-tool low durability (not just armor). */
     public boolean toolDurabilityAlertEnabled = true;
+
+    // ---- Alert HUD modules ----
+    // The shared popup card no longer shows these two sources: each renders
+    // as its own movable, resizable HUD module with the standard per-module
+    // background / text / layout / scale / profile / reset rules (HudModule).
+    // The alert sound stays shared (armorAlertSound + armorAlertSoundChoice).
+    /** Armor/tool durability alert rows render as a HUD module (module id armor_alert). */
+    public boolean armorAlertHudEnabled = true;
+    public HudBackground armorAlertBgMode = HudBackground.NONE;
+    public int armorAlertBgColor = 0x80000000;
+    /** Null follows the shared hudColor; any non-zero ARGB overrides it. */
+    public Integer armorAlertTextColor = null;
+    public boolean armorAlertThemeCorners = false;
+    /** Effect-expiry alert rows render as a HUD module (module id potion_alert). */
+    public boolean effectExpiryHudEnabled = true;
+    public HudBackground effectExpiryBgMode = HudBackground.NONE;
+    public int effectExpiryBgColor = 0x80000000;
+    /** Null follows the shared hudColor; any non-zero ARGB overrides it. */
+    public Integer effectExpiryTextColor = null;
+    public boolean effectExpiryThemeCorners = false;
 
     // ---- Batch 2 features ----
     /** Off in a fresh install: an information advantage (ADR 0007). */
@@ -660,6 +696,30 @@ public class AuroraConfig {
     public boolean potionHudEnabled = true;
 
     public enum HudBackground { NONE, @com.google.gson.annotations.SerializedName(value = "SOLID", alternate = {"AURORA"}) SOLID, VANILLA }
+
+    /** Rendering style for the Hit Color hurt flash. VANILLA keeps the vanilla red flash. */
+    public enum HitColorMode {
+        /** No flash at all (the overlay texture's red rows are blanked). */
+        VANILLA,
+        /** Constant tint from the Hit Color picker. */
+        FLAT,
+        /** Time-based alpha pulse, synchronized for all hurt entities. */
+        PULSE,
+        /** Per-entity tint driven by the entity's health. */
+        HEALTH_GRADIENT,
+        /** Deterministic rainbow hue cycle over time. */
+        RAINBOW;
+
+        public String toString() {
+            return switch (this) {
+                case VANILLA -> "Vanilla flash";
+                case FLAT -> "Flat tint";
+                case PULSE -> "Pulse";
+                case HEALTH_GRADIENT -> "Health gradient";
+                case RAINBOW -> "Rainbow";
+            };
+        }
+    }
 
     // ---- Totem tweaks ----
     public boolean totemTweaksEnabled = false;
@@ -1106,6 +1166,20 @@ public class AuroraConfig {
     /** Minimap pixel size (edge length — the map is square). */
     public int minimapSize = 128;
 
+    // ---- Scoreboard HUD ----
+    /**
+     * Master toggle for the Scoreboard HUD module: the vanilla sidebar is
+     * replaced by a customizable one. Off keeps vanilla rendering untouched
+     * for existing installs, so no migrator is needed.
+     */
+    public boolean scoreboardEnabled = false;
+    /** Background style of the scoreboard module. */
+    public HudBackground scoreboardBackground = HudBackground.VANILLA;
+    /** Flat panel color used when the background is SOLID. */
+    public int scoreboardBgColor = -14543302; // 0xFF212121, the theme panel default
+    /** Extra content scale on top of the universal layout scale, 0.5..3. */
+    public double scoreboardScale = 1.0;
+
     // ---- Better Hitreg (BetterHitreg by Jass, integrated) ----
     /**
      * Master enable for the whole Better Hitreg feature card. Distinct from
@@ -1362,6 +1436,9 @@ public class AuroraConfig {
                     // deleted 2026-09-13) and a corrupt entry: Gson parses an
                     // unknown enum name to null.
                     if (loaded.framePacingStrategy == null) loaded.framePacingStrategy = PacingStrategy.PARK;
+                    // VANILLA backgrounds are offered only where a vanilla
+                    // texture backs the module; fold everything else to SOLID.
+                    HudBackgroundPolicy.normalize(loaded);
                     INSTANCE = loaded;
                 }
             } else {

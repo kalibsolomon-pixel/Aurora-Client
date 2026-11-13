@@ -61,7 +61,8 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
      */
     private static final int TITLE_Y = 16;
     /** Body starts below the header band. */
-    private static final int BODY_TOP = com.aurora.client.ui.util.UiDensity.HEADER + 4;
+    private static final int BODY_TOP = com.aurora.client.ui.util.UiDensity.HEADER
+            + com.aurora.client.ui.util.UiDensity.INSET;
     private static final boolean UNIFORM_FRAME = true;
 
     private final Screen parent;

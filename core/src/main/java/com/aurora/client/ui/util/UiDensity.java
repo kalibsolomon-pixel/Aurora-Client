@@ -31,7 +31,7 @@ public final class UiDensity {
     // ---- Content ----
     /** Feature cards keep their original size (owner ruling, 2026-10-30). */
     public static final int CARD_WIDTH = 80, CARD_HEIGHT = CARD_WIDTH, GRID_GAP = 6;
-    public static final int LIST_HEIGHT = 32, LIST_GAP = 4, ROW_GAP = 2;
+    public static final int LIST_HEIGHT = 32, LIST_GAP = 4, ROW_GAP = 4;
     public static final int SIMPLE_ROW = 18, STACKED_ROW = 28, INLINE_SLIDER = 20;
     public static final int MIN_TRACK = 96, MARK = 28;
     /** Trailing field controls (dropdown, keybind, action button) and their widths. */

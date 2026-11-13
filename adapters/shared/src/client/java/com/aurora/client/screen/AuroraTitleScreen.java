@@ -74,6 +74,8 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
     private boolean accountOpen;
     /** In-Game Account Switcher is installed: the card opens its account list instead of the dropdown. */
     private boolean switcher;
+    /** Reload-screen mods can open the menu before the initial model bake. */
+    private boolean waitingForResources;
     // Text fitted once per layout and text style (overflow rule; no per-frame measuring).
     private FormattedCharSequence[] wordmarkGlyphs;
     private int[] wordmarkAdvances;
@@ -89,6 +91,7 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
 
     @Override
     protected void init() {
+        waitingForResources = !this.minecraft.isGameLoadFinished();
         composition = MenuComposition.layout(this.width, this.height);
         accountOpen = false;
         fittedKey = Integer.MIN_VALUE;
@@ -140,7 +143,7 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
         skin = this.minecraft.getSkinManager().createLookup(com.aurora.client.util.ProfileWait.gameProfile(this.minecraft,
                 () -> { if (NativeUi.screen(this.minecraft) == this) rebuildWidgets(); }), false);
         var model = composition.model();
-        if (model.width() > 0) {
+        if (model.width() > 0 && !waitingForResources) {
             PlayerSkinWidget figure = new PlayerSkinWidget(model.width(), model.height(), this.minecraft.getEntityModels(), skin);
             figure.setPosition(model.x(), model.y());
             addRenderableWidget(figure);
@@ -157,6 +160,12 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
         addRenderableWidget(new TextLink(this.width - MenuComposition.MARGIN - copyrightWidth, lineY - 1,
                 copyrightWidth, font.lineHeight + 2, COPYRIGHT,
                 () -> NativeUi.setScreen(this.minecraft, new CreditsAndAttributionScreen(this))));
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        if (waitingForResources && this.minecraft.isGameLoadFinished()) rebuildWidgets();
     }
 
     private ButtonWidget addCard(int index, Component label, String icon, String description, Runnable onPress) {

@@ -36,6 +36,16 @@ public final class FeatureRegistry {
     private static boolean initialized = false;
 
     /**
+     * Background options for modules with no vanilla texture behind them.
+     * VANILLA is offered only where a vanilla resource actually backs the
+     * module (Armor HUD's hotbar strip, Potion HUD's status-effect slots);
+     * the config loader folds a persisted VANILLA elsewhere onto SOLID
+     * ({@code HudBackgroundPolicy}).
+     */
+    private static final AuroraConfig.HudBackground[] FLAT_BACKGROUNDS = {
+            AuroraConfig.HudBackground.NONE, AuroraConfig.HudBackground.SOLID };
+
+    /**
      * One page of the Settings tab, chosen from the sub-tabs at its top: a
      * label and the entries it shows, in order. An entry is a Settings-tab
      * catalog feature or a {@link FeatureMetadata#pageGroup} of rows that
@@ -338,7 +348,7 @@ public final class FeatureRegistry {
                                     case BRACKETED_TEXT -> "Compact single line that only lists currently active toggles inside brackets, e.g. [Sprint] / [Sneak] / [Sprint] [Sneak]. Renders nothing while neither is active.";
                                 })
                                 .description("Controls how the toggle status appears on the HUD."),
-                        new EnumSetting<>("HUD Background", AuroraConfig.HudBackground.class,
+                        new EnumSetting<>("HUD Background", FLAT_BACKGROUNDS,
                                 () -> cfg.sprintHudBgMode, v -> cfg.sprintHudBgMode = v),
                         new ColorSetting("HUD Background Color (when SOLID)",
                                 () -> cfg.sprintHudBgColor, v -> cfg.sprintHudBgColor = v),
@@ -347,10 +357,13 @@ public final class FeatureRegistry {
                 ));
 
         // ---- Alerts (combined: armor durability + effect expiry) ----
-        // Single module consolidating all on-screen popup warnings. Master
-        // toggle is ON if ANY sub-alert is on; the setter flips all together.
+        // Single feature consolidating the two alert sources. Each renders
+        // as its own movable, resizable HUD module (armor_alert /
+        // potion_alert in the HUD editor); the shared popup card no longer
+        // carries them. Master toggle is ON if ANY sub-alert is on; the
+        // setter flips all together.
         addWithSettings("alerts",
-                "Icon and text warnings for low armor durability and potion effects about to expire. Get warned before gear breaks or a buff runs out mid-fight. All alerts share the same sound system.",
+                "Icon and text warnings for low armor durability and potion effects about to expire, as two draggable HUD modules. Get warned before gear breaks or a buff runs out mid-fight. All alerts share the same sound system.",
                 () -> cfg.armorAlertEnabled || cfg.toolDurabilityAlertEnabled
                         || cfg.effectExpiryAlertEnabled,
                 v -> {
@@ -363,7 +376,7 @@ public final class FeatureRegistry {
                         new BooleanSetting("Effect Expiry Alert",
                                 () -> cfg.effectExpiryAlertEnabled,
                                 v -> cfg.effectExpiryAlertEnabled = v)
-                                .description("Fires a popup when an active potion effect is about to run out, so you can re-apply it before it's gone. Master switch for everything in this section: with it off, no effect ever alerts, regardless of the per-effect list below."),
+                                .description("Warns when an active potion effect is about to run out, so you can re-apply it before it's gone. Master switch for everything in this section: with it off, no effect ever alerts, regardless of the per-effect list below."),
                         SliderSetting.ofInt("Expiry Threshold (seconds)",
                                 () -> cfg.effectExpiryThresholdSeconds,
                                 v -> cfg.effectExpiryThresholdSeconds = v, 1, 60)
@@ -376,7 +389,7 @@ public final class FeatureRegistry {
                         new BooleanSetting("Armor Durability Alert",
                                 () -> cfg.armorAlertEnabled,
                                 v -> cfg.armorAlertEnabled = v)
-                                .description("Pops a warning when a piece of equipped armor is about to break, so you can swap or repair it before it's destroyed."),
+                                .description("Warns when a piece of equipped armor is about to break, so you can swap or repair it before it's destroyed. The warning stays on screen (in the alert module below) while the item is in your possession; repairing or replacing it re-arms the alert."),
                         new BooleanSetting("Also Alert Held Tools",
                                 () -> cfg.toolDurabilityAlertEnabled,
                                 v -> cfg.toolDurabilityAlertEnabled = v)
@@ -386,10 +399,40 @@ public final class FeatureRegistry {
                                 v -> cfg.armorAlertThresholdPct = v, 1, 100)
                                 .description("Durability percentage at which the warning fires. Higher values warn you earlier (more lead time to react); lower values only alert at the last moment. Around 10-15% gives a good balance."),
 
+                        new SectionHeaderSetting("Alert HUD Modules"),
+                        new BooleanSetting("Armor Alert Module",
+                                () -> cfg.armorAlertHudEnabled,
+                                v -> cfg.armorAlertHudEnabled = v)
+                                .description("Shows the low-durability warnings as a HUD module (\"Armor Alert\" in the HUD editor): one row per latched item with its icon, slot and remaining percent. Drag, resize and hide it there; this toggle plus Armor Durability Alert gate it."),
+                        new EnumSetting<>("Armor Module Background",
+                                new AuroraConfig.HudBackground[] {
+                                        AuroraConfig.HudBackground.NONE, AuroraConfig.HudBackground.SOLID },
+                                () -> cfg.armorAlertBgMode, v -> cfg.armorAlertBgMode = v),
+                        new ColorSetting("Armor Module Background Color (when SOLID)",
+                                () -> cfg.armorAlertBgColor, v -> cfg.armorAlertBgColor = v),
+                        new ColorSetting("Armor Module Text Color", () -> cfg.armorAlertTextColor == null ? com.aurora.client.theme.HudText.color(cfg.hudColor) : cfg.armorAlertTextColor, v -> cfg.armorAlertTextColor = v)
+                                .description("Text color for the armor alert module only. Reset restores its default color."),
+                        hudThemeCorners(() -> cfg.armorAlertThemeCorners, v -> cfg.armorAlertThemeCorners = v)
+                                .disabled(() -> cfg.armorAlertBgMode != AuroraConfig.HudBackground.SOLID),
+                        new BooleanSetting("Effect Alert Module",
+                                () -> cfg.effectExpiryHudEnabled,
+                                v -> cfg.effectExpiryHudEnabled = v)
+                                .description("Shows the effect-expiry warnings as a HUD module (\"Potion Alert\" in the HUD editor): one row per latched effect with its sprite, name and live seconds left. Drag, resize and hide it there; this toggle plus Effect Expiry Alert gate it."),
+                        new EnumSetting<>("Effect Module Background",
+                                new AuroraConfig.HudBackground[] {
+                                        AuroraConfig.HudBackground.NONE, AuroraConfig.HudBackground.SOLID },
+                                () -> cfg.effectExpiryBgMode, v -> cfg.effectExpiryBgMode = v),
+                        new ColorSetting("Effect Module Background Color (when SOLID)",
+                                () -> cfg.effectExpiryBgColor, v -> cfg.effectExpiryBgColor = v),
+                        new ColorSetting("Effect Module Text Color", () -> cfg.effectExpiryTextColor == null ? com.aurora.client.theme.HudText.color(cfg.hudColor) : cfg.effectExpiryTextColor, v -> cfg.effectExpiryTextColor = v)
+                                .description("Text color for the effect alert module only. Reset restores its default color."),
+                        hudThemeCorners(() -> cfg.effectExpiryThemeCorners, v -> cfg.effectExpiryThemeCorners = v)
+                                .disabled(() -> cfg.effectExpiryBgMode != AuroraConfig.HudBackground.SOLID),
+
                         new SectionHeaderSetting("Sound"),
                         new BooleanSetting("Play Sound",
                                 () -> cfg.armorAlertSound, v -> cfg.armorAlertSound = v)
-                                .description("Also play an audio cue with the popup, so you notice the warning even when your eyes are elsewhere."),
+                                .description("Also play an audio cue when a warning fires, so you notice it even when your eyes are elsewhere."),
                         new EnumSetting<>("Sound Choice",
                                 AuroraConfig.ArmorAlertSoundChoice.class,
                                 () -> cfg.armorAlertSoundChoice,
@@ -510,6 +553,18 @@ addWithSettings("hitbox",
                 List.of(
                         new ColorSetting("Flash Color", () -> cfg.hitColor, v -> cfg.hitColor = v)
                                 .description("The color (and opacity) of the damage flash. Pick something that pops against the mobs you fight most — e.g. bright white or cyan reads more clearly than the default dim red."),
+                        new EnumSetting<>("Flash Style", AuroraConfig.HitColorMode.class,
+                                () -> cfg.hitColorMode, v -> cfg.hitColorMode = v)
+                                .description("How the flash is drawn. Vanilla flash keeps the game's own red; Flat tint holds the Flash Color constant; Pulse fades it in and out in sync for every entity; Health gradient follows the hurt entity's health; Rainbow cycles through hues."),
+                        new BooleanSetting("Gradient Shows Health",
+                                () -> cfg.hitColorHealthGradient,
+                                v -> cfg.hitColorHealthGradient = v)
+                                .description("Lets the Health gradient style reflect the hurt entity's actual health, red at low health through green at full. This tells you how much more damage to deal, which vanilla does not reveal. Ships off; with it off the gradient uses the Flash Color only.")
+                                .disabled(() -> cfg.hitColorMode != AuroraConfig.HitColorMode.HEALTH_GRADIENT),
+                        SliderSetting.of("Pulse Rate", () -> cfg.hitColorPulseRate,
+                                v -> cfg.hitColorPulseRate = v, 0.5, 4.0)
+                                .description("How fast the Pulse style fades in and out, in cycles per second.")
+                                .disabled(() -> cfg.hitColorMode != AuroraConfig.HitColorMode.PULSE),
                         new BooleanSetting("Tint Armor",
                                 () -> cfg.hitColorTintArmor,
                                 v -> cfg.hitColorTintArmor = v)
@@ -548,9 +603,9 @@ addWithSettings("hitbox",
                 List.of(
                         new ColorSetting("Text Color", () -> cfg.infoModuleTextColor == null ? com.aurora.client.theme.HudText.color(cfg.hudColor) : cfg.infoModuleTextColor, v -> cfg.infoModuleTextColor = v)
                                 .description("Text color for this HUD only. Reset restores its default color."),
-                        new EnumSetting<>("Background", AuroraConfig.HudBackground.class,
+                        new EnumSetting<>("Background", FLAT_BACKGROUNDS,
                                 () -> cfg.infoBgMode, v -> cfg.infoBgMode = v)
-                                .description("Backdrop drawn behind the HUD text. NONE is transparent; SOLID fills a panel with the color below (best for readability over bright scenery); VANILLA uses Minecraft's slot texture."),
+                                .description("Backdrop drawn behind the HUD text. NONE is transparent; SOLID fills a panel with the color below (best for readability over bright scenery)."),
                         new ColorSetting("Background Color (when SOLID)",
                                 () -> cfg.infoBgColor, v -> cfg.infoBgColor = v)
                                 .description("The fill color and opacity used when Background is set to SOLID. Ignored for other background modes."),
@@ -605,7 +660,7 @@ addWithSettings("hitbox",
                 List.of(
                         new ColorSetting("Text Color", () -> cfg.cpsTextColor == null ? com.aurora.client.theme.HudText.color(cfg.hudColor) : cfg.cpsTextColor, v -> cfg.cpsTextColor = v)
                                 .description("Text color for this HUD only. Reset restores its default color."),
-                        new EnumSetting<>("Background", AuroraConfig.HudBackground.class,
+                        new EnumSetting<>("Background", FLAT_BACKGROUNDS,
                                 () -> cfg.cpsBgMode, v -> cfg.cpsBgMode = v),
                         new ColorSetting("Background Color (when SOLID)",
                                 () -> cfg.cpsBgColor, v -> cfg.cpsBgColor = v),
@@ -614,7 +669,7 @@ addWithSettings("hitbox",
                 ));
 
         addWithSettings("armor_hud",
-                "Displays your four equipped armor pieces and their remaining durability on the HUD. Lets you watch your protection at a glance without opening the inventory, so you know when to repair or swap before something breaks mid-fight.",
+                "Displays your equipped armor pieces — and optionally your main and off hands — with their remaining durability on the HUD. Empty slots are never drawn. Lets you watch your protection at a glance without opening the inventory, so you know when to repair or swap before something breaks mid-fight.",
                 () -> cfg.armorHudEnabled, v -> cfg.armorHudEnabled = v,
                 List.of(
                         new ColorSetting("Text Color", () -> cfg.armorHudTextColor == null ? com.aurora.client.theme.HudText.color(cfg.hudColor) : cfg.armorHudTextColor, v -> cfg.armorHudTextColor = v)
@@ -629,12 +684,20 @@ addWithSettings("hitbox",
                         new BooleanSetting("Horizontal Layout",
                                 () -> cfg.armorHorizontal,
                                 v -> cfg.armorHorizontal = v),
+                        new BooleanSetting("Show Main Hand",
+                                () -> cfg.armorHudShowMainHand,
+                                v -> cfg.armorHudShowMainHand = v)
+                                .description("Adds your main hand to the strip whenever it holds something, after the armor pieces."),
+                        new BooleanSetting("Show Off Hand",
+                                () -> cfg.armorHudShowOffHand,
+                                v -> cfg.armorHudShowOffHand = v)
+                                .description("Adds your off hand to the strip whenever it holds something, after the armor pieces."),
                         new EnumSetting<>("Background", AuroraConfig.HudBackground.class,
                                 () -> cfg.armorHudBgMode, v -> cfg.armorHudBgMode = v)
                                 .valueDescriptions(bg -> switch (bg) {
                                     case NONE -> "No background behind the armor icons.";
                                     case SOLID -> "Fills a panel behind the armor icons with the color below.";
-                                    case VANILLA -> "Each armor piece sits inside Minecraft's resource-pack offhand slot with vanilla spacing; durability text appears beside it.";
+                                    case VANILLA -> "The pieces sit on one continuous Minecraft hotbar-strip graphic, exactly where vanilla draws hotbar items; durability text appears beside it.";
                                 }),
                         new ColorSetting("Background Color (when SOLID)",
                                 () -> cfg.armorHudBgColor, v -> cfg.armorHudBgColor = v),
@@ -648,7 +711,7 @@ addWithSettings("hitbox",
                 List.of(
                         new ColorSetting("Text Color", () -> cfg.reachDisplayTextColor == null ? com.aurora.client.theme.HudText.color(cfg.hudColor) : cfg.reachDisplayTextColor, v -> cfg.reachDisplayTextColor = v)
                                 .description("Text color for this HUD only. Reset restores its default color."),
-                        new EnumSetting<>("Background", AuroraConfig.HudBackground.class,
+                        new EnumSetting<>("Background", FLAT_BACKGROUNDS,
                                 () -> cfg.reachBgMode, v -> cfg.reachBgMode = v),
                         new ColorSetting("Background Color (when SOLID)",
                                 () -> cfg.reachBgColor, v -> cfg.reachBgColor = v),
@@ -712,7 +775,7 @@ addWithSettings("hitbox",
                         new BooleanSetting("Show in Player Nametags",
                                 () -> cfg.nametagTotemPopsEnabled, v -> cfg.nametagTotemPopsEnabled = v)
                                 .description("Appends each player's pop count under their nametag."),
-                        new EnumSetting<>("Background", AuroraConfig.HudBackground.class,
+                        new EnumSetting<>("Background", FLAT_BACKGROUNDS,
                                 () -> cfg.totemPopBgMode, v -> cfg.totemPopBgMode = v),
                         new ColorSetting("Background Color (when SOLID)",
                                 () -> cfg.totemPopBgColor, v -> cfg.totemPopBgColor = v),
@@ -1047,6 +1110,29 @@ addWithSettings("hitbox",
                                 .description("Color of the X/Y/Z readout shown below the minimap when Show Coordinates is on.")
                 ),
                 List.of("minimap"));
+
+        addWithSettings("scoreboard",
+                "Replaces the vanilla scoreboard sidebar with a HUD module you can move, resize and restyle. Shows the same rows, scores and ordering as vanilla. Off in a fresh install, so existing installs keep vanilla's sidebar.",
+                () -> cfg.scoreboardEnabled, v -> cfg.scoreboardEnabled = v,
+                List.of(
+                        new EnumSetting<>("Background", AuroraConfig.HudBackground.class,
+                                () -> cfg.scoreboardBackground, v -> cfg.scoreboardBackground = v)
+                                .description("Backdrop of the scoreboard. VANILLA reproduces the game's own translucent stripes; SOLID fills a panel with the color below; NONE is transparent."),
+                        new ColorSetting("Background Color (when SOLID)",
+                                () -> cfg.scoreboardBgColor, v -> cfg.scoreboardBgColor = v)
+                                .description("The fill color and opacity used when Background is set to SOLID. Ignored for other background modes."),
+                        SliderSetting.of("Scale", () -> cfg.scoreboardScale,
+                                v -> cfg.scoreboardScale = v, 0.5, 3.0)
+                                .description("Extra size on top of the universal HUD scale, which the HUD editor controls. The scoreboard's width and height follow its live rows, so this only enlarges everything uniformly."),
+                        new SectionHeaderSetting("Layout"),
+                        // The universal HUD editor (drag, resize, lock, hide) owns
+                        // the position; point at it rather than duplicating it.
+                        ButtonSetting.semantic("Open HUD Editor", () -> {
+                            var mc = net.minecraft.client.Minecraft.getInstance();
+                            com.aurora.client.adapter.NativeUi.setScreen(mc, new com.aurora.client.screen.HudEditorScreen());
+                        }).description("Drag, resize, lock or hide the scoreboard like any other HUD module. Reset restores its default placement.")
+                ),
+                List.of("scoreboard"));
 
         addWithSettings("container_preview",
                 "Hover over a shulker box (or your ender chest) in any inventory to see its full contents in a grid tooltip — no need to place and open it. Massively speeds up sorting storage and finding the right shulker at a glance.",
@@ -1406,7 +1492,7 @@ addWithSettings("hitbox",
                                 com.aurora.client.hud.module.HudModule.MIN_SCALE,
                                 com.aurora.client.hud.module.HudModule.MAX_SCALE)
                                 .description("Uniform size multiplier for the whole cluster. You can also drag the module's corner in the HUD editor (Right Shift) to resize."),
-                        new EnumSetting<>("Background", AuroraConfig.HudBackground.class,
+                        new EnumSetting<>("Background", FLAT_BACKGROUNDS,
                                 () -> cfg.keystrokesBgMode, v -> cfg.keystrokesBgMode = v),
                         new ColorSetting("Background Color (when SOLID)",
                                 () -> cfg.keystrokesBgColor, v -> cfg.keystrokesBgColor = v),

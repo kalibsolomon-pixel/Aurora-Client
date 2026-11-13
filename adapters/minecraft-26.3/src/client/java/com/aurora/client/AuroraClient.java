@@ -108,10 +108,17 @@ public class AuroraClient implements ClientModInitializer {
         moduleManager.register(new ToggleIndividualModule(ToggleIndividualModule.Kind.SPRINT));
         moduleManager.register(new ToggleIndividualModule(ToggleIndividualModule.Kind.SNEAK));
         moduleManager.register(new PotionModule());
+        moduleManager.register(new ArmorAlertHudModule());
+        moduleManager.register(new EffectExpiryHudModule());
         moduleManager.register(new PingModule());
         moduleManager.register(new com.aurora.client.hud.module.TotemPopModule());
         moduleManager.register(new KeystrokesModule());
         moduleManager.register(new MinimapModule());
+        // Scoreboard HUD: replaces vanilla's sidebar via ScoreboardSidebarMixin.
+        moduleManager.register(new com.aurora.client.hud.module.ScoreboardModule());
+        // 26.2+ flag F1 on Hud.isHidden(); 26.1 uses Options.hideGui instead.
+        com.aurora.client.hud.module.ScoreboardModule.vanillaHudHidden =
+                () -> net.minecraft.client.Minecraft.getInstance().gui.hud.isHidden();
 
         HitboxRenderer hitboxRenderer = new HitboxRenderer();
         LevelRenderEvents.END_MAIN.register(Timed.endMain(hitboxRenderer::render));
@@ -148,6 +155,10 @@ public class AuroraClient implements ClientModInitializer {
         // which is what makes the texture reload safe (GlintColor.tick).
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(Timed.endTick(
                 client -> com.aurora.client.util.GlintColor.tick()));
+
+        // Movement cadence for entity smoothing: per tick, independent of the hitbox renderer.
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(Timed.endTick(
+                com.aurora.client.feature.impl.ThrottleDetector::tick));
 
         // Two-way sync between Aurora config and the vanilla KeyMapping
         // entries we registered above. END_CLIENT_TICK runs every tick
