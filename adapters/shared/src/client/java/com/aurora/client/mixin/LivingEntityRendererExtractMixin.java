@@ -82,14 +82,14 @@ public abstract class LivingEntityRendererExtractMixin {
         AuroraConfig cfg = AuroraConfig.get();
         if (!cfg.smoothAnimationsEnabled || !cfg.entityMovementSmoothingEnabled) return;
 
-        // Never smooth the local player — its position is driven by client
-        // input every tick, so easing it would add input lag vs the camera.
+        // Never smooth the local player or a spectated camera entity — the
+        // camera follows them, so easing them would lag the view.
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player != null && entity.getUUID().equals(mc.player.getUUID())) return;
+        if (entity == mc.player || entity == mc.getCameraEntity()) return;
 
-        // Skip passengers and ridden vehicles — their position is derived
-        // from the vehicle/owner and smoothing them causes visible detachment.
-        if (entity.isPassenger() || entity.getVehicle() != null) return;
+        // Skip passengers and ridden vehicles — a rider's position is derived
+        // from its vehicle, so easing either one alone detaches the pair.
+        if (entity.isPassenger() || entity.isVehicle()) return;
 
         // tau (the time constant) scales with both user strength and the
         // auto-detected server bundling factor. Larger tau = slower, smoother

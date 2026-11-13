@@ -2,113 +2,153 @@ package com.aurora.client.alerts;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Behavior of the item-fingerprint durability latch: firing exactly once
- * per item state, silence across moves, re-arm on repair/replacement,
- * bounding and reset.
+ * Behavior of the item-following durability latch: one warning per item,
+ * silence through further wear and moves, re-arm only once the item (or a
+ * replacement) is held above the threshold, bounding and reset.
  */
 class DurabilityLatchTest {
+
+    private static final String HELMET = "minecraft:diamond_helmet";
+    private static final DurabilityLatch.Kind HELMET_KIND = new DurabilityLatch.Kind(HELMET, 363);
 
     private static DurabilityLatch.Fingerprint fp(String id, int max, int dmg) {
         return new DurabilityLatch.Fingerprint(id, max, dmg);
     }
 
-    @Test
-    void firesExactlyOncePerFingerprint() {
-        DurabilityLatch latch = new DurabilityLatch();
-        var f = fp("minecraft:diamond_helmet", 363, 300);
-        assertTrue(latch.observe(f, 10));
-        assertFalse(latch.observe(f, 11));
-        assertFalse(latch.observe(f, 12));
-        assertTrue(latch.isLatched(f));
+    private static DurabilityLatch.Observation worn(int damage) {
+        return new DurabilityLatch.Observation(fp(HELMET, 363, damage), true, "Helmet");
+    }
+
+    private static DurabilityLatch.Observation stored(int damage) {
+        return new DurabilityLatch.Observation(fp(HELMET, 363, damage), false, null);
+    }
+
+    private static int fires(DurabilityLatch latch, long tick, DurabilityLatch.Observation... low) {
+        return latch.update(List.of(low), Set.of(), tick).size();
     }
 
     @Test
-    void movingBetweenSlotsNeverRefires() {
+    void firesOnceThroughFurtherWear() {
         DurabilityLatch latch = new DurabilityLatch();
-        // Unequip (armor slot, observed) then re-equip later: same item
-        // state, so the same fingerprint — no second fire even though the
-        // slot went empty in between (and refresh-only in the gap).
-        var f = fp("minecraft:diamond_chestplate", 528, 480);
-        assertTrue(latch.observe(f, 10));
-        latch.refresh(f, 20);   // in inventory, hands off
-        latch.refresh(f, 40);
-        assertFalse(latch.observe(f, 50));
+        assertEquals(1, fires(latch, 1, worn(340)));
+        for (int t = 2, damage = 341; damage < 363; t++, damage++) {
+            assertEquals(0, fires(latch, t, worn(damage)), "wear to damage " + damage);
+        }
+        assertEquals(1, latch.size());
     }
 
     @Test
-    void repairChangesFingerprintAndRearms() {
+    void unequipAndReequipNeverRefires() {
         DurabilityLatch latch = new DurabilityLatch();
-        var broken = fp("minecraft:iron_pickaxe", 250, 240);
-        var repaired = fp("minecraft:iron_pickaxe", 250, 10);
-        assertNotEquals(broken, repaired);
-        assertTrue(latch.observe(broken, 10));
-        // The repaired state is an unknown key: it latches only when it
-        // itself drops below the threshold again.
-        latch.refresh(repaired, 20);
-        assertFalse(latch.isLatched(repaired));
-        assertTrue(latch.observe(repaired, 30));
+        assertEquals(1, fires(latch, 1, worn(340)));
+        assertEquals(0, fires(latch, 2, stored(340)));
+        assertEquals(0, fires(latch, 3));               // briefly on the cursor
+        assertEquals(0, fires(latch, 4, worn(340)));
+        assertEquals(0, fires(latch, 5, worn(342)));
     }
 
     @Test
-    void differentDamageLevelsLatchIndependently() {
+    void partialMendingBelowTheThresholdDoesNotRearm() {
         DurabilityLatch latch = new DurabilityLatch();
-        var a = fp("minecraft:diamond_sword", 1561, 1400);
-        var b = fp("minecraft:diamond_sword", 1561, 1500);
-        assertTrue(latch.observe(a, 10));
-        assertTrue(latch.observe(b, 10));
+        assertEquals(1, fires(latch, 1, worn(345)));
+        assertEquals(0, fires(latch, 2, worn(338)));
+        assertEquals(0, fires(latch, 3, worn(343)));
+    }
+
+    @Test
+    void mendingAboveTheThresholdRearms() {
+        DurabilityLatch latch = new DurabilityLatch();
+        assertEquals(1, fires(latch, 1, worn(345)));
+        latch.update(List.of(), Set.of(HELMET_KIND), 2);  // mended: held, but no longer low
+        assertEquals(0, latch.size());
+        assertEquals(1, fires(latch, 3, worn(345)));
+    }
+
+    @Test
+    void replacementAboveTheThresholdRearms() {
+        DurabilityLatch latch = new DurabilityLatch();
+        assertEquals(1, fires(latch, 1, worn(345)));
+        // The low helmet goes into a chest and a fresh one is worn.
+        latch.update(List.of(), Set.of(HELMET_KIND), 2);
+        assertEquals(1, fires(latch, 300, worn(340)));
+    }
+
+    @Test
+    void healthyCopyDoesNotReleaseALowItemStillHeld() {
+        DurabilityLatch latch = new DurabilityLatch();
+        assertEquals(1, fires(latch, 1, worn(345)));
+        latch.update(List.of(stored(345)), Set.of(HELMET_KIND), 2);
+        assertEquals(0, fires(latch, 3, worn(345)));
+    }
+
+    @Test
+    void inventoryAloneNeverArms() {
+        DurabilityLatch latch = new DurabilityLatch();
+        assertEquals(0, fires(latch, 1, stored(350)));
+        assertEquals(0, latch.size());
+        assertEquals(1, fires(latch, 2, worn(350)));
+    }
+
+    @Test
+    void aSecondLowCopyWarnsSeparately() {
+        DurabilityLatch latch = new DurabilityLatch();
+        assertEquals(1, fires(latch, 1, worn(345)));
+        // Swap: the latched helmet goes to the inventory, another low one is worn.
+        assertEquals(1, fires(latch, 2, stored(345), worn(320)));
         assertEquals(2, latch.size());
+        assertEquals(0, fires(latch, 3, worn(345), stored(321)));
     }
 
     @Test
-    void pruneDropsUnseenEntriesOnlyAfterMaxAge() {
+    void differentKindsLatchIndependently() {
         DurabilityLatch latch = new DurabilityLatch();
-        var f = fp("minecraft:bow", 384, 350);
-        assertTrue(latch.observe(f, 0));
-        latch.prune(100, DurabilityLatch.PRUNE_AFTER_TICKS);
-        assertTrue(latch.isLatched(f));
-        latch.prune(201, DurabilityLatch.PRUNE_AFTER_TICKS);
-        assertFalse(latch.isLatched(f));
-        // Re-observation after the item comes back fires again.
-        assertTrue(latch.observe(f, 210));
+        var sword = new DurabilityLatch.Observation(fp("minecraft:diamond_sword", 1561, 1500), true, "Main Hand");
+        assertEquals(2, fires(latch, 1, worn(345), sword));
+        latch.update(List.of(sword), Set.of(HELMET_KIND), 2);
+        assertEquals(1, latch.size());
     }
 
     @Test
-    void refreshKeepsALatchedItemAlivePastPruneWindow() {
+    void unmatchedEntriesPruneAfterMaxAge() {
         DurabilityLatch latch = new DurabilityLatch();
-        var f = fp("minecraft:elytra", 432, 420);
-        assertTrue(latch.observe(f, 0));
-        for (long t = 20; t <= 400; t += 20) latch.refresh(f, t);
-        latch.prune(400, DurabilityLatch.PRUNE_AFTER_TICKS);
-        assertTrue(latch.isLatched(f));
+        assertEquals(1, fires(latch, 0, worn(345)));
+        fires(latch, DurabilityLatch.PRUNE_AFTER_TICKS);
+        assertEquals(1, latch.size());
+        assertFalse(latch.entries().iterator().next().present());
+        fires(latch, DurabilityLatch.PRUNE_AFTER_TICKS + 1);
+        assertEquals(0, latch.size());
+        assertEquals(1, fires(latch, 210, worn(345)));
     }
 
     @Test
     void capEvictsLeastRecentlySeen() {
         DurabilityLatch latch = new DurabilityLatch();
-        var first = fp("minecraft:iron_helmet", 165, 100);
-        assertTrue(latch.observe(first, 0));
-        for (int i = 0; i < DurabilityLatch.MAX_TRACKED + 5; i++) {
-            latch.observe(fp("minecraft:stone_sword", 131, 90 - i), 10 + i);
+        assertEquals(1, fires(latch, 0, worn(345)));
+        List<DurabilityLatch.Observation> swords = new ArrayList<>();
+        for (int i = 0; i < DurabilityLatch.MAX_TRACKED; i++) {
+            swords.add(new DurabilityLatch.Observation(fp("minecraft:stone_sword", 131, 100 + i % 31), true, null));
         }
-        assertFalse(latch.isLatched(first));
+        latch.update(swords, Set.of(), 10);
         assertEquals(DurabilityLatch.MAX_TRACKED, latch.size());
+        assertTrue(latch.entries().stream().noneMatch(e -> e.fingerprint().itemId().equals(HELMET)));
     }
 
     @Test
     void resetForgetsEverything() {
         DurabilityLatch latch = new DurabilityLatch();
-        var f = fp("minecraft:diamond_helmet", 363, 350);
-        latch.observe(f, 5);
+        fires(latch, 5, worn(350));
         latch.reset();
         assertEquals(0, latch.size());
-        assertFalse(latch.isLatched(f));
-        assertTrue(latch.observe(f, 6));
+        assertEquals(1, fires(latch, 6, worn(350)));
     }
 
     @Test

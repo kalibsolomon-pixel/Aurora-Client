@@ -9,12 +9,20 @@ package com.aurora.client.util;
  * write the same color to all eight rows (time-driven ones refresh the rows
  * per frame), HEALTH_GRADIENT buckets the entity's health fraction across
  * the rows.
+ *
+ * <p>The time-driven modes run on a fixed palette: a cycle is quantized to
+ * {@link #PULSE_STEPS} or {@link #RAINBOW_STEPS} phases, and
+ * {@link #animationStep} names the current one. The overlay texture is
+ * re-uploaded only when the step changes, at most about 64 times a second,
+ * instead of whenever the millisecond clock moves.
  */
 public final class HitColorModes {
     /** Full hue cycle length of the rainbow mode. */
     public static final long RAINBOW_PERIOD_MS = 4000;
     /** Bounds for the pulse rate setting in cycles per second. */
     public static final double PULSE_RATE_MIN = 0.5, PULSE_RATE_MAX = 4.0;
+    /** Palette sizes of the time-driven modes: phases per cycle. */
+    public static final int PULSE_STEPS = 16, RAINBOW_STEPS = 256;
 
     private HitColorModes() {}
 
@@ -27,9 +35,7 @@ public final class HitColorModes {
      * pulses in sync.
      */
     public static int pulse(int color, long nowMillis, double cyclesPerSecond) {
-        double rate = clamp(cyclesPerSecond, PULSE_RATE_MIN, PULSE_RATE_MAX);
-        long period = Math.max(1, Math.round(1000.0 / rate));
-        double phase = ((nowMillis % period) + period) % period / (double) period;
+        double phase = pulseStep(nowMillis, cyclesPerSecond) / (double) PULSE_STEPS;
         float shape = (float) (0.5 - 0.5 * Math.cos(phase * 2.0 * Math.PI)); // 0..1..0
         int alpha = (color >>> 24) & 0xFF;
         float floor = 0.25f;
@@ -39,10 +45,29 @@ public final class HitColorModes {
 
     /** Hue cycles over {@link #RAINBOW_PERIOD_MS}; alpha stays the configured one. */
     public static int rainbow(long nowMillis, int color) {
-        float hue = (float) (((nowMillis % RAINBOW_PERIOD_MS) + RAINBOW_PERIOD_MS)
-                % RAINBOW_PERIOD_MS / (double) RAINBOW_PERIOD_MS);
+        float hue = rainbowStep(nowMillis) / (float) RAINBOW_STEPS;
         int rgb = hsvToRgb(hue, 1.0f, 1.0f);
         return ((color >>> 24) & 0xFF) << 24 | rgb;
+    }
+
+    /** Pulse palette index, 0..{@link #PULSE_STEPS}-1, of the cycle at {@code nowMillis}. */
+    public static int pulseStep(long nowMillis, double cyclesPerSecond) {
+        double rate = clamp(cyclesPerSecond, PULSE_RATE_MIN, PULSE_RATE_MAX);
+        long period = Math.max(1, Math.round(1000.0 / rate));
+        return (int) (Math.floorMod(nowMillis, period) * PULSE_STEPS / period);
+    }
+
+    /** Rainbow palette index, 0..{@link #RAINBOW_STEPS}-1, of the hue cycle at {@code nowMillis}. */
+    public static int rainbowStep(long nowMillis) {
+        return (int) (Math.floorMod(nowMillis, RAINBOW_PERIOD_MS) * RAINBOW_STEPS / RAINBOW_PERIOD_MS);
+    }
+
+    /**
+     * The palette step of a time-driven mode ({@code pulse} or rainbow) at
+     * {@code nowMillis}: the rows only need rewriting when it changes.
+     */
+    public static int animationStep(boolean pulse, long nowMillis, double cyclesPerSecond) {
+        return pulse ? pulseStep(nowMillis, cyclesPerSecond) : rainbowStep(nowMillis);
     }
 
     /**

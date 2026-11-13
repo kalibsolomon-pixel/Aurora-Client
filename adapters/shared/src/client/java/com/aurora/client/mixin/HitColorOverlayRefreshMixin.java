@@ -19,9 +19,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  * <ol>
  *   <li><b>Per-frame row refresh</b> — the tick-level overlay reload runs at
  *       20 Hz, so the time-driven modes (PULSE, RAINBOW) would visibly step.
- *       This fires once per rendered living entity each frame, which is
- *       always before the first overlay sample of the frame; the listener
- *       itself no-ops for the other modes.</li>
+ *       This fires for each hurt living entity a frame extracts, before any
+ *       of them is drawn; with nobody hurt it does nothing. The listener
+ *       no-ops for the other modes and uploads only when the mode's palette
+ *       step changes, so a crowded fight costs one upload per step, not one
+ *       per entity.</li>
  *
  *   <li><b>Gradient row selection</b> — vanilla returns
  *       {@code pack(u(white), v(hasRedOverlay))}, i.e. the hurt flash always
@@ -44,7 +46,7 @@ public abstract class HitColorOverlayRefreshMixin {
     private static void aurora$refreshTimeDrivenRows(LivingEntityRenderState state,
                                                      float whiteOverlayProgress,
                                                      CallbackInfoReturnable<Integer> cir) {
-        OverlayReloadListener.callFrameRefresh(Util.getMillis());
+        if (state.hasRedOverlay) OverlayReloadListener.callFrameRefresh(Util.getMillis());
     }
 
     @ModifyArg(method = "getOverlayCoords",

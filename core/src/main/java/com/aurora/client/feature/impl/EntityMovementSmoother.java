@@ -74,6 +74,9 @@ public final class EntityMovementSmoother {
         states.clear();
     }
 
+    /** Longer than this without a render and the state is stale: snap instead of easing (0.25 s). */
+    static final long STALE_NANOS = 250_000_000L;
+
     /**
      * Eases the cached position toward the target ({@code tx,ty,tz}) using a
      * frame-rate-independent exponential approach:
@@ -107,14 +110,29 @@ public final class EntityMovementSmoother {
      */
     public static boolean smooth(State s, double tx, double ty, double tz,
                                  double tau, double snapThreshold) {
+        return smooth(s, tx, ty, tz, tau, snapThreshold, System.nanoTime());
+    }
+
+    /**
+     * {@link #smooth(State, double, double, double, double, double)} at an
+     * explicit clock. An entity that was not rendered for longer than
+     * {@link #STALE_NANOS} (culled, behind the camera, out of view) snaps to
+     * its target: easing from where it was last seen would slide it into view.
+     */
+    public static boolean smooth(State s, double tx, double ty, double tz,
+                                 double tau, double snapThreshold, long now) {
+        if (s.initialized && s.lastFrameNanos != 0L && now - s.lastFrameNanos > STALE_NANOS) {
+            s.x = tx; s.y = ty; s.z = tz;
+            s.lastFrameNanos = now;
+            return false;
+        }
         if (!s.initialized) {
             s.x = tx; s.y = ty; s.z = tz;
             s.initialized = true;
-            s.lastFrameNanos = System.nanoTime();
+            s.lastFrameNanos = now;
             return false;
         }
 
-        long now = System.nanoTime();
         double dtSec;
         if (s.lastFrameNanos == 0L) {
             dtSec = 0.05; // one-tick fallback

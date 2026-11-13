@@ -164,18 +164,18 @@ class SquareModeConformanceTest {
     // shapes the theme's Corner Radius.
 
     /** Every HUD module with corners, and the switch that owns them. */
-    private static final java.util.Map<String, String> HUD_SWITCHES = java.util.Map.of(
-            "hud/module/InfoModule.java", "infoModuleThemeCorners",
-            "hud/module/CpsModule.java", "cpsThemeCorners",
-            "hud/module/ArmorModule.java", "armorHudThemeCorners",
-            "hud/module/ReachModule.java", "reachDisplayThemeCorners",
-            "hud/module/PotionModule.java", "potionHudThemeCorners",
-            "hud/module/TotemPopModule.java", "totemPopThemeCorners",
-            "hud/module/ToggleSprintSneakModule.java", "toggleSprintSneakThemeCorners",
-            "hud/module/ToggleIndividualModule.java", "toggleSprintSneakThemeCorners",
-            "hud/module/KeystrokesModule.java", "keystrokesThemeCorners",
-            "hud/module/ArmorAlertHudModule.java", "armorAlertThemeCorners",
-            "hud/module/EffectExpiryHudModule.java", "effectExpiryThemeCorners");
+    private static final java.util.Map<String, String> HUD_SWITCHES = java.util.Map.ofEntries(
+            java.util.Map.entry("hud/module/InfoModule.java", "infoModuleThemeCorners"),
+            java.util.Map.entry("hud/module/CpsModule.java", "cpsThemeCorners"),
+            java.util.Map.entry("hud/module/ArmorModule.java", "armorHudThemeCorners"),
+            java.util.Map.entry("hud/module/ReachModule.java", "reachDisplayThemeCorners"),
+            java.util.Map.entry("hud/module/PotionModule.java", "potionHudThemeCorners"),
+            java.util.Map.entry("hud/module/TotemPopModule.java", "totemPopThemeCorners"),
+            java.util.Map.entry("hud/module/ToggleSprintSneakModule.java", "toggleSprintSneakThemeCorners"),
+            java.util.Map.entry("hud/module/ToggleIndividualModule.java", "toggleSprintSneakThemeCorners"),
+            java.util.Map.entry("hud/module/KeystrokesModule.java", "keystrokesThemeCorners"),
+            java.util.Map.entry("hud/module/ArmorAlertHudModule.java", "armorAlertThemeCorners"),
+            java.util.Map.entry("hud/module/EffectExpiryHudModule.java", "effectExpiryThemeCorners"));
 
     @Test
     void hudShapesKeepFixedCornersUntilTheirSwitchIsOn() {

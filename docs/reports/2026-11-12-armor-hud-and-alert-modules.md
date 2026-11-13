@@ -27,11 +27,12 @@ The shared popup card (`AlertRenderer`'s timed card) no longer carries the two a
 
 ### Durability alerts latch on the item, not the slot
 
-`ArmorAlertFeature`'s scan was a boolean per `EquipmentSlot`: unequip → re-equip re-fired, two identical items shared one flag, an item moved to a chest kept alerting. The alert now keys on an item **fingerprint** — (registry id, max damage, damage) — in a pure core class, `alerts/DurabilityLatch`:
+`ArmorAlertFeature`'s scan was a boolean per `EquipmentSlot`: unequip → re-equip re-fired, two identical items shared one flag, an item moved to a chest kept alerting. An item stack has no identity of its own, so the pure core class `alerts/DurabilityLatch` *follows* each latched item from tick to tick: every entry is matched to the low stack of the same kind (registry id + max damage) whose damage is closest to the entry's last known damage. Wear moves damage by a few points a tick, so the nearest stack is the same item.
 
-- **Moving never re-fires.** The same item state is the same key wherever it sits; the inventory scan only *refreshes* (keeps alive), so an unequipped item cannot arm a new alert, and an already-latched one stays on screen while it is in your possession. Its warning row follows the item to the hand slots or inventory without a second fire.
-- **Repair or replace re-arms naturally.** A repaired/replacement item is a different fingerprint; when it again drops below the threshold it is an unknown key and latches fresh. No un-latch bookkeeping.
-- **Bounding.** Entries unseen for 200 ticks prune (dropped, stored), the map caps at 64 with least-recently-seen eviction, and world join/respawn resets the latch (`ClientPlayNetworkHandlerWorldJoinMixin`), alongside `AlertHudState.clearAll()` and the effect-alert inclusion latch reset.
+- **One warning per item.** Further wear, moving the item to the inventory or another slot, and re-equipping it all keep the match, so none of them fires again. (The first draft keyed on exact damage, so every point of wear was a "new" item and re-fired; `firesOnceThroughFurtherWear` covers that.)
+- **Re-arms only above the threshold.** When the player holds that kind of item above the threshold (mended, or replaced by a better copy) and the entry found no low stack this tick, the entry is released; the item, or its replacement, warns again the next time it drops below. Partial mending that stays below the threshold does not re-arm.
+- **Only equipped items arm.** Equipment slots whose alert source is on may latch; the main inventory keeps existing entries alive but never fires.
+- **Bounding.** Entries unmatched for 200 ticks prune (dropped, stored), the list caps at 64 with least-recently-seen eviction, and world join/respawn resets the latch (`ClientPlayNetworkHandlerWorldJoinMixin`), alongside `AlertHudState.clearAll()` and the effect-alert inclusion latch reset.
 - `AlertManager.fire(...)` is gone: the popup card's fire path had no remaining callers. The informational `notify` path (hotkey hints) and the shared `playAlertSound()` stay.
 
 ## Config fields added
@@ -40,7 +41,7 @@ The shared popup card (`AlertRenderer`'s timed card) no longer carries the two a
 
 ## Verification
 
-- `DurabilityLatchTest` (9 cases) and `HudBackgroundPolicyTest` (5 cases) in the core test set; pure, no Minecraft types.
+- `DurabilityLatchTest` (13 cases) and `HudBackgroundPolicyTest` (5 cases) in the core test set; pure, no Minecraft types.
 - `FeatureCatalogTest` parity holds: the new modules register under the existing `alerts` card id, so no catalog entry was added.
 - Compile/test matrix run on 26.3 first, then `tools/parity.py` across all lines (evidence to be attached before release).
 - No dev-client boot was made in this session: rendering behavior of the hotbar strip (horizontal stretch and vertical cell stack, both layouts, all three background modes) needs a boot check on 26.3 OpenGL and one native backend before release, per the glass/rendering rules. The blitSprite overload used is the same one the pre-existing `HudBackgrounds` helpers call on all three lines, so the call shape is proven even where the new sprite path is not.

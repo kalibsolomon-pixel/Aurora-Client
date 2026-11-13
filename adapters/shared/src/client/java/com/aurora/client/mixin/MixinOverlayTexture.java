@@ -161,7 +161,7 @@ public abstract class MixinOverlayTexture implements OverlayReloadListener {
 
     /**
      * Cheap change detector: folds every config input the rows depend on,
-     * plus the clock for the time-driven modes. Allocation-free.
+     * plus the palette step for the time-driven modes. Allocation-free.
      */
     @Unique
     private static int aurora$signature(AuroraConfig cfg, long now) {
@@ -172,7 +172,8 @@ public abstract class MixinOverlayTexture implements OverlayReloadListener {
                     Math.min(Math.max(cfg.hitColorPulseRate, HitColorModes.PULSE_RATE_MIN), HitColorModes.PULSE_RATE_MAX) * 100.0);
         }
         if (cfg.hitColorMode == AuroraConfig.HitColorMode.PULSE || cfg.hitColorMode == AuroraConfig.HitColorMode.RAINBOW) {
-            s = 31 * s + (int) (now ^ (now >>> 32));
+            s = 31 * s + HitColorModes.animationStep(
+                    cfg.hitColorMode == AuroraConfig.HitColorMode.PULSE, now, cfg.hitColorPulseRate);
         }
         return s;
     }

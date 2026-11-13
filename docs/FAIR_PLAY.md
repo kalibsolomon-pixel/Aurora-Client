@@ -55,7 +55,7 @@ Changing a default does not change an existing install: a player who already had
 | Crosshair | Cosmetic | Replaces the crosshair's shape and color. |
 | Hitbox | Vanilla equivalent | Draws entity hitboxes, as vanilla's F3+B does, with custom colors. |
 | Better Hitreg | Local timing | Plays your hit's sound, hurt animation and particles on your screen at once instead of waiting for the server's copy. It does not change what the game sends for movement or combat, or when. Two optional keys, unbound by default, send something when pressed: Switch Hand changes the vanilla Main Hand option, and the practice scoreboard's Send key posts the score as a chat message. The feature is off in a fresh install, and so are its reach rings, extra hitboxes and hiding of other fights. |
-| Hit Color | Cosmetic | Recolors the flash on an entity that takes damage. |
+| Hit Color | Cosmetic | Recolors the flash on an entity that takes damage. A flash that follows the hurt entity's health is an information advantage and ships off. |
 | Glint Color | Cosmetic | Recolors the enchantment glint. |
 | Info HUD | Vanilla equivalent | Shows FPS, coordinates, time, biome and similar readouts that the F3 screen also has. |
 | CPS | Vanilla equivalent | Counts your own clicks. |
@@ -73,6 +73,7 @@ Changing a default does not change an existing install: a player who already had
 | Animations | Cosmetic | Changes swing, view-bob and damage-tilt animations and smooths how other entities move on your screen. |
 | Keystrokes | Vanilla equivalent | Shows your own key and mouse presses. |
 | Minimap | Vanilla equivalent | A map of terrain your client has loaded, with your waypoints and dots for nearby mobs. Dots for other players are an information advantage and ship off. |
+| Scoreboard HUD | Vanilla equivalent | Replaces the vanilla scoreboard sidebar with a movable, resizable module that shows the same rows and scores as vanilla. Off in a fresh install. |
 | World Map | Vanilla equivalent | A full-screen map of terrain you have already visited. |
 | Resourcepack Browser | Cosmetic | Downloads resource packs from Modrinth. |
 | Display Settings | Local timing | Frame pacing, a frame cap, vsync control and the point within a frame where mouse movement is applied. The rate and content of what is sent to the server are unchanged. |

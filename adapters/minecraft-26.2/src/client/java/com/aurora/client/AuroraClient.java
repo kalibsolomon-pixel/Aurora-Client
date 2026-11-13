@@ -156,6 +156,10 @@ public class AuroraClient implements ClientModInitializer {
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(Timed.endTick(
                 client -> com.aurora.client.util.GlintColor.tick()));
 
+        // Movement cadence for entity smoothing: per tick, independent of the hitbox renderer.
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(Timed.endTick(
+                com.aurora.client.feature.impl.ThrottleDetector::tick));
+
         // Two-way sync between Aurora config and the vanilla KeyMapping
         // entries we registered above. END_CLIENT_TICK runs every tick
         // regardless of world state, so rebinds made from the vanilla

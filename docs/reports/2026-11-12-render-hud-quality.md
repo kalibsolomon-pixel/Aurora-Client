@@ -169,6 +169,80 @@ The saved live options also enable VSync and the AFK inactivity limit; Aurora's
 GUI limit is 120 FPS. These are distinct caps from actual rendering cost and
 were controlled in the experiment, without changing the owner's settings.
 
+## Hit Color flash styles
+
+`hitColorMode` ("Flash Style") selects how the hurt overlay rows are written.
+Every style writes the 16x8 hurt strip of vanilla's overlay texture, so the
+body, armor and (optionally) trims flash together and no shader or extra draw
+call is added. Flat is the default, so existing installs look unchanged.
+
+| Style | What it writes | What you see | Extra cost / notes |
+|---|---|---|---|
+| Vanilla flash | Vanilla's own red pixels | The game's normal red flash; picker color ignored | None: the rows are restored once |
+| Flat tint (default) | The Flash Color, every row | One constant color for every hurt entity; picker alpha is the strength | One upload when the color changes |
+| Pulse | Flash Color with alpha on a cosine between 25% and the picker alpha | The flash breathes in and out; every hurt entity pulses in sync. Pulse Rate 0.5-4 cycles/s | 16 palette steps per cycle, so a few dozen uploads a second, and only while something is hurt |
+| Health gradient | Eight rows, red (0%) through yellow to green (100%), picker alpha | With **Gradient Shows Health** on, each hurt entity flashes its own health bucket; armor uses the same row. With it off, it behaves like Flat | Information advantage (ADR 0007): the switch ships off. Rows written once; row selection is a per-entity integer remap |
+| Rainbow | Hue cycling over 4 s, picker alpha | The flash color drifts around the color wheel; all hurt entities share the hue | 256 palette steps per cycle, about 64 uploads a second at most, only while something is hurt |
+
+The animated styles originally put the millisecond clock into the change
+signature and refreshed for every rendered living entity, so a crowded scene
+could re-upload the overlay several times per frame, hurt or not. They now run
+on fixed palettes (`HitColorModes.pulseStep`/`rainbowStep`): the overlay is
+re-uploaded only when the palette step changes, and only when an entity being
+extracted actually carries the hurt overlay. `HitColorModesTest` covers the
+palette sizes, the step boundaries and pulse's alpha range.
+
+## Scoreboard HUD
+
+`scoreboard` (off by default) replaces the vanilla sidebar with a HUD module:
+move, resize, lock and hide it in the HUD editor like any other module; scale,
+background (Vanilla stripes, Solid or None) and background color live on its
+feature card. The adapter mixin resolves the sidebar objective exactly as
+vanilla does and cancels vanilla's draw only when the feature is on; rows are
+rebuilt at most once per tick into preallocated arrays, keeping vanilla's sort
+order, number formats, team prefix/suffix and 15-row cap.
+
+The scoreboard keeps a **Vanilla** background, the reproduction of vanilla's
+own two translucent stripes. That is outside the "Vanilla only for Armor HUD
+and Potion HUD" rule, which was applied to the existing modules; the owner
+should confirm whether the scoreboard should follow it too.
+
+## Entity interpolation and server ping
+
+Entity movement smoothing adapts its time constant to servers that bundle
+movement updates, using `MovementCadence`. Its only sampler was called from
+the hitbox renderer, which returns early unless hitboxes are on, so the
+adaptation silently required hitboxes and froze at its last value otherwise.
+Changes:
+
+- `ThrottleDetector.tick` now samples on the client tick (through `Timed`),
+  gated by `smoothAnimationsEnabled && entityMovementSmoothingEnabled`, and
+  nothing in the hitbox renderers calls it. Per-tick is also the right rate:
+  cadence is measured in game ticks, and per-frame easing made convergence
+  frame-rate dependent. The per-frame `WorldScope` string check became a
+  level identity compare.
+- The cadence map evicts the least recently observed entity instead of the
+  first one ever seen.
+- Smoothing skips vehicles with riders (the documented intent; only riders
+  were skipped, so a boat or horse could drift from its rider) and the
+  spectated camera entity, besides the local player.
+- An entity unrendered for more than 0.25 s snaps to its position instead of
+  sliding in from where it was last seen. `EntityMovementSmootherTest` covers
+  easing, the stale snap and teleport snaps.
+- `smoothAnimationsEnabled` is now listed among the extract mixin's gates.
+
+Known remaining: Aurora's hitboxes use vanilla interpolation, so with both
+smoothing and hitboxes on, the hitbox follows the unsmoothed position while
+the body is eased. That is a product decision (smoothed hitboxes were removed
+earlier for desyncing in the other direction) and is unchanged here.
+
+Server ping and connection: Aurora does nothing on the connect or ping path.
+It only reads the latency vanilla already measured (server list bars, Ping
+HUD with a 200 ms cache, nametag latency). There is no DNS lookup on the render
+thread and no extra ping. ADR 0007 rules out custom packets or extra sends, so
+there is nothing for Aurora to make faster there; routing is the network's and
+the server's.
+
 ## Verification still in progress
 
 The three supported build/test suites pass with the rendering and font changes.
@@ -188,5 +262,6 @@ The fixtures used the portrait monitor and an open world with no screen:
 These are targeted checks of the rendering/loading candidate, not the full
 fourteen-row release matrix or evidence for features that remain pending.
 The optional acceptance tooling also compiles on all three supported lines.
-Independent review and delegated HUD/Hit Color changes remain outstanding.
+The HUD, alert, Hit Color and interpolation changes pass the three supported
+build/test suites; their dev-client boot checks are recorded below.
 No release or owner configuration was changed.

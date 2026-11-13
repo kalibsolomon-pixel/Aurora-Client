@@ -334,7 +334,7 @@ public final class FeatureCatalog {
         mixin("PlayerEntityRendererMixin", "ping and totem pops under nametags", "ping", "totem_pop")
                 .gates("nametagPingEnabled", "nametagTotemPopsEnabled");
         mixin("LivingEntityRendererExtractMixin", "entity movement smoothing, entity health labels and hit-color health capture", "animations", "player_health", "hit_color")
-                .gates("entityMovementSmoothingEnabled", "playerHealthIndicators", "hitColorHealthGradient");
+                .gates("smoothAnimationsEnabled", "entityMovementSmoothingEnabled", "playerHealthIndicators", "hitColorHealthGradient");
         mixin("LavaClarityMixin", "lava clarity", "pack_tweaks").gates("lavaClarityEnabled");
         mixin("LavaOverlayMixin", "hiding the lava overlay", "pack_tweaks").gates("lavaHideOverlay");
         mixin("ClientPlayerAttackMixin", "limiting entity health to entities you attacked", "player_health")

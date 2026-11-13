@@ -4,10 +4,11 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.UUID;
 
-/** Bounded movement-gap policy; the adapter supplies only eligible moving entities. */
+/** Bounded movement-gap policy; the adapter supplies only eligible moving entities, once per client tick. */
 public final class MovementCadence {
     private static final int WINDOW = 32, MIN_SAMPLES = 6, MAX_ENTITIES = 256;
-    private final LinkedHashMap<UUID, Position> positions = new LinkedHashMap<>();
+    // Access order: eviction drops the entity observed least recently, not the first one ever seen.
+    private final LinkedHashMap<UUID, Position> positions = new LinkedHashMap<>(16, 0.75f, true);
     private final int[] gaps = new int[WINDOW], scratch = new int[WINDOW];
     private int count, next;
     private boolean dirty;
@@ -34,8 +35,8 @@ public final class MovementCadence {
         previous.x = x; previous.y = y; previous.z = z;
     }
 
-    /** Preserve the existing per-render-frame easing, even when the window did not change. */
-    public void finishFrame() {
+    /** Eases the factor toward the window median once per client tick, even when the window did not change. */
+    public void finishTick() {
         if (dirty && count >= MIN_SAMPLES) {
             System.arraycopy(gaps, 0, scratch, 0, count);
             Arrays.sort(scratch, 0, count);

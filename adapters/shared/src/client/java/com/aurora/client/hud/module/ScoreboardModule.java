@@ -148,7 +148,7 @@ public final class ScoreboardModule extends HudModule {
         AuroraConfig cfg = AuroraConfig.get();
         float s = contentScale();
 
-        boolean editor = mc.screen instanceof com.aurora.client.screen.HudEditorScreen;
+        boolean editor = com.aurora.client.adapter.NativeUi.screen(mc) instanceof com.aurora.client.screen.HudEditorScreen;
         boolean vanillaBackground = cfg.scoreboardBackground == AuroraConfig.HudBackground.VANILLA;
 
         if (editor && currentObjective == null && rows == 0) {
