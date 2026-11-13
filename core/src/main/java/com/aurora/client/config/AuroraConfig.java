@@ -470,6 +470,16 @@ public class AuroraConfig {
     public boolean adaptiveRenderSleeping = false;
     public boolean fixHeldItemSeams = true;
     public double heldItemInflation = 1.001; // 1.0 = no fix, 1.005 = strong fix
+    /** How the hurt overlay is drawn on rows 0-7 of the overlay texture. */
+    public HitColorMode hitColorMode = HitColorMode.FLAT;
+    /**
+     * Whether the health-gradient flash may reflect the hurt entity's actual
+     * health. An information advantage (ADR 0007), so it ships off and the
+     * gradient otherwise falls back to the flat color.
+     */
+    public boolean hitColorHealthGradient = false;
+    /** Pulse oscillation in cycles per second. Requires the pulse mode. */
+    public double hitColorPulseRate = 1.0;
     public boolean hitColorEnabled = false;
     public int hitColor = 0x66FF0000; // ARGB: ~40% red, similar to vanilla flash
     public boolean hitColorTintArmor = true; // also tint armor when an entity is hurt
@@ -662,6 +672,30 @@ public class AuroraConfig {
     public boolean potionHudEnabled = true;
 
     public enum HudBackground { NONE, @com.google.gson.annotations.SerializedName(value = "SOLID", alternate = {"AURORA"}) SOLID, VANILLA }
+
+    /** Rendering style for the Hit Color hurt flash. VANILLA keeps the vanilla red flash. */
+    public enum HitColorMode {
+        /** No flash at all (the overlay texture's red rows are blanked). */
+        VANILLA,
+        /** Constant tint from the Hit Color picker. */
+        FLAT,
+        /** Time-based alpha pulse, synchronized for all hurt entities. */
+        PULSE,
+        /** Per-entity tint driven by the entity's health. */
+        HEALTH_GRADIENT,
+        /** Deterministic rainbow hue cycle over time. */
+        RAINBOW;
+
+        public String toString() {
+            return switch (this) {
+                case VANILLA -> "Vanilla flash";
+                case FLAT -> "Flat tint";
+                case PULSE -> "Pulse";
+                case HEALTH_GRADIENT -> "Health gradient";
+                case RAINBOW -> "Rainbow";
+            };
+        }
+    }
 
     // ---- Totem tweaks ----
     public boolean totemTweaksEnabled = false;
@@ -1107,6 +1141,20 @@ public class AuroraConfig {
 
     /** Minimap pixel size (edge length — the map is square). */
     public int minimapSize = 128;
+
+    // ---- Scoreboard HUD ----
+    /**
+     * Master toggle for the Scoreboard HUD module: the vanilla sidebar is
+     * replaced by a customizable one. Off keeps vanilla rendering untouched
+     * for existing installs, so no migrator is needed.
+     */
+    public boolean scoreboardEnabled = false;
+    /** Background style of the scoreboard module. */
+    public HudBackground scoreboardBackground = HudBackground.VANILLA;
+    /** Flat panel color used when the background is SOLID. */
+    public int scoreboardBgColor = -14543302; // 0xFF212121, the theme panel default
+    /** Extra content scale on top of the universal layout scale, 0.5..3. */
+    public double scoreboardScale = 1.0;
 
     // ---- Better Hitreg (BetterHitreg by Jass, integrated) ----
     /**

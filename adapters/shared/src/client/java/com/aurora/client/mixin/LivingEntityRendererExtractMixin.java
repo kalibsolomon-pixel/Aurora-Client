@@ -24,7 +24,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  *       {@link PlayerHealthLabelMixin} can draw the numeric indicator on any
  *       living entity. The post-1.21.5 render path only receives a
  *       render-state snapshot (no entity reference), so we stash what we
- *       need here, keyed by render-state identity.</li>
+ *       need here, keyed by render-state identity. The Hit Color
+ *       health-gradient mode rides the same snapshots (its overlay row is
+ *       chosen from them), and while it is active every living entity is
+ *       captured — including players regardless of the label filter —
+ *       because the flash needs their health too.</li>
  *
  *   <li><b>Movement smoothing</b> — eases the entity's rendered position
  *       toward the tick-interpolated target every frame using a
@@ -49,9 +53,16 @@ public abstract class LivingEntityRendererExtractMixin {
                                        CallbackInfo ci) {
         if (entity == null || state == null) return;
         AuroraConfig cfg = AuroraConfig.get();
-        if (!cfg.playerHealthIndicators) return;
-        // No snapshot means no label (PlayerHealthLabelMixin).
-        if (entity instanceof Player && !cfg.playerHealthShowPlayers) return;
+        boolean healthLabels = cfg.playerHealthIndicators;
+        boolean hitGradient = cfg.hitColorEnabled
+                && cfg.hitColorMode == AuroraConfig.HitColorMode.HEALTH_GRADIENT
+                && cfg.hitColorHealthGradient;
+        if (!healthLabels && !hitGradient) return;
+        // No snapshot means no label / vanilla-color flash (PlayerHealthLabelMixin,
+        // HitColorOverlayRefreshMixin). Players are excluded for labels unless
+        // asked for; the gradient mode needs their health as well, so when it is
+        // active players are captured regardless.
+        if (entity instanceof Player && healthLabels && !hitGradient && !cfg.playerHealthShowPlayers) return;
         AuroraHealthSnapshots.put(state, new AuroraHealthSnapshots.Snapshot(
                 entity.getHealth(),
                 entity.getMaxHealth(),

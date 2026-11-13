@@ -510,6 +510,18 @@ addWithSettings("hitbox",
                 List.of(
                         new ColorSetting("Flash Color", () -> cfg.hitColor, v -> cfg.hitColor = v)
                                 .description("The color (and opacity) of the damage flash. Pick something that pops against the mobs you fight most — e.g. bright white or cyan reads more clearly than the default dim red."),
+                        new EnumSetting<>("Flash Style", AuroraConfig.HitColorMode.class,
+                                () -> cfg.hitColorMode, v -> cfg.hitColorMode = v)
+                                .description("How the flash is drawn. Vanilla flash keeps the game's own red; Flat tint holds the Flash Color constant; Pulse fades it in and out in sync for every entity; Health gradient follows the hurt entity's health; Rainbow cycles through hues."),
+                        new BooleanSetting("Gradient Shows Health",
+                                () -> cfg.hitColorHealthGradient,
+                                v -> cfg.hitColorHealthGradient = v)
+                                .description("Lets the Health gradient style reflect the hurt entity's actual health, red at low health through green at full. This tells you how much more damage to deal, which vanilla does not reveal. Ships off; with it off the gradient uses the Flash Color only.")
+                                .disabled(() -> cfg.hitColorMode != AuroraConfig.HitColorMode.HEALTH_GRADIENT),
+                        SliderSetting.of("Pulse Rate", () -> cfg.hitColorPulseRate,
+                                v -> cfg.hitColorPulseRate = v, 0.5, 4.0)
+                                .description("How fast the Pulse style fades in and out, in cycles per second.")
+                                .disabled(() -> cfg.hitColorMode != AuroraConfig.HitColorMode.PULSE),
                         new BooleanSetting("Tint Armor",
                                 () -> cfg.hitColorTintArmor,
                                 v -> cfg.hitColorTintArmor = v)
@@ -1047,6 +1059,29 @@ addWithSettings("hitbox",
                                 .description("Color of the X/Y/Z readout shown below the minimap when Show Coordinates is on.")
                 ),
                 List.of("minimap"));
+
+        addWithSettings("scoreboard",
+                "Replaces the vanilla scoreboard sidebar with a HUD module you can move, resize and restyle. Shows the same rows, scores and ordering as vanilla. Off in a fresh install, so existing installs keep vanilla's sidebar.",
+                () -> cfg.scoreboardEnabled, v -> cfg.scoreboardEnabled = v,
+                List.of(
+                        new EnumSetting<>("Background", AuroraConfig.HudBackground.class,
+                                () -> cfg.scoreboardBackground, v -> cfg.scoreboardBackground = v)
+                                .description("Backdrop of the scoreboard. VANILLA reproduces the game's own translucent stripes; SOLID fills a panel with the color below; NONE is transparent."),
+                        new ColorSetting("Background Color (when SOLID)",
+                                () -> cfg.scoreboardBgColor, v -> cfg.scoreboardBgColor = v)
+                                .description("The fill color and opacity used when Background is set to SOLID. Ignored for other background modes."),
+                        SliderSetting.of("Scale", () -> cfg.scoreboardScale,
+                                v -> cfg.scoreboardScale = v, 0.5, 3.0)
+                                .description("Extra size on top of the universal HUD scale, which the HUD editor controls. The scoreboard's width and height follow its live rows, so this only enlarges everything uniformly."),
+                        new SectionHeaderSetting("Layout"),
+                        // The universal HUD editor (drag, resize, lock, hide) owns
+                        // the position; point at it rather than duplicating it.
+                        ButtonSetting.semantic("Open HUD Editor", () -> {
+                            var mc = net.minecraft.client.Minecraft.getInstance();
+                            com.aurora.client.adapter.NativeUi.setScreen(mc, new com.aurora.client.screen.HudEditorScreen());
+                        }).description("Drag, resize, lock or hide the scoreboard like any other HUD module. Reset restores its default placement.")
+                ),
+                List.of("scoreboard"));
 
         addWithSettings("container_preview",
                 "Hover over a shulker box (or your ender chest) in any inventory to see its full contents in a grid tooltip — no need to place and open it. Massively speeds up sorting storage and finding the right shulker at a glance.",

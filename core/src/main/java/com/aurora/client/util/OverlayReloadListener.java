@@ -12,6 +12,14 @@ public interface OverlayReloadListener {
 
     void aurora$onOverlayReload();
 
+    /**
+     * Per-frame hook for time-driven hit color modes (pulse, rainbow): the
+     * tick-level reload runs at 20 Hz, so those modes would visibly step.
+     * Callers pass the current wall-clock in milliseconds; implementations
+     * must be cheap and must no-op when their mode is not time-driven.
+     */
+    default void aurora$onOverlayFrameRefresh(long nowMillis) {}
+
     static void register(OverlayReloadListener listener) {
         listeners.add(listener);
     }
@@ -19,6 +27,12 @@ public interface OverlayReloadListener {
     static void callEvent() {
         for (OverlayReloadListener listener : listeners) {
             listener.aurora$onOverlayReload();
+        }
+    }
+
+    static void callFrameRefresh(long nowMillis) {
+        for (OverlayReloadListener listener : listeners) {
+            listener.aurora$onOverlayFrameRefresh(nowMillis);
         }
     }
 }

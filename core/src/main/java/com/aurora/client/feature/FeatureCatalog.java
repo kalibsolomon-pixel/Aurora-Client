@@ -229,6 +229,7 @@ public final class FeatureCatalog {
         module("animations", "Animations", "Swing & view-bob curves, classic 1.8-style damage camera tilt, retro backwards-walking & sneak poses, idle held-item sway, and smooth entity rotation.");
         module("keystrokes", "Keystrokes", "Displays your WASD, mouse, jump, and sneak keys as a HUD overlay that lights up in real time as you press them.");
         module("minimap", "Minimap", "A top-down map of the world around you, shown as a HUD overlay. Renders terrain, waypoints, and nearby entities as colored dots.");
+        module("scoreboard", "Scoreboard HUD", "Replaces the vanilla scoreboard sidebar with a HUD module you can move, resize and restyle. Off in a fresh install, so existing installs keep vanilla's sidebar.");
         module("world_map", "World Map", "A full-screen, pannable world map of your explored terrain.");
         module("resourcepack_browser", "Resourcepack Browser", "Browse and install community resource packs directly from Modrinth. Search, preview, and one-click install straight into your resourcepacks folder.");
 
@@ -264,7 +265,7 @@ public final class FeatureCatalog {
         classify("crosshair", FairPlay.COSMETIC, "Replaces the crosshair's shape and color.");
         classify("hitbox", FairPlay.VANILLA_INFORMATION, "Draws entity hitboxes, as vanilla's F3+B does, with custom colors.");
         classify("better_hitreg", FairPlay.LOCAL_TIMING, "Plays your hit's sound, hurt animation and particles on your screen at once instead of waiting for the server's copy. It does not change what the game sends for movement or combat, or when. Two optional keys, unbound by default, send something when pressed: Switch Hand changes the vanilla Main Hand option, and the practice scoreboard's Send key posts the score as a chat message. The feature is off in a fresh install, and so are its reach rings, extra hitboxes and hiding of other fights.", "hitregEnabled", "hitregRenderHitbox", "hitregRenderServerHitbox", "hitregRenderYourReach", "hitregRenderTheirReach", "hitregRenderYourJump", "hitregRenderTheirJump", "hitregHideOtherFights");
-        classify("hit_color", FairPlay.COSMETIC, "Recolors the flash on an entity that takes damage.");
+        classify("hit_color", FairPlay.COSMETIC, "Recolors the flash on an entity that takes damage. A flash that follows the hurt entity's health is an information advantage and ships off.", "hitColorHealthGradient");
         classify("glint_color", FairPlay.COSMETIC, "Recolors the enchantment glint.");
         classify("info_module", FairPlay.VANILLA_INFORMATION, "Shows FPS, coordinates, time, biome and similar readouts that the F3 screen also has.");
         classify("cps", FairPlay.VANILLA_INFORMATION, "Counts your own clicks.");
@@ -282,6 +283,7 @@ public final class FeatureCatalog {
         classify("animations", FairPlay.COSMETIC, "Changes swing, view-bob and damage-tilt animations and smooths how other entities move on your screen.");
         classify("keystrokes", FairPlay.VANILLA_INFORMATION, "Shows your own key and mouse presses.");
         classify("minimap", FairPlay.VANILLA_INFORMATION, "A map of terrain your client has loaded, with your waypoints and dots for nearby mobs. Dots for other players are an information advantage and ship off.", "minimapShowPlayers");
+        classify("scoreboard", FairPlay.VANILLA_INFORMATION, "Replaces the vanilla scoreboard sidebar with a movable, resizable module that shows the same rows and scores as vanilla. Off in a fresh install.", "scoreboardEnabled");
         classify("world_map", FairPlay.VANILLA_INFORMATION, "A full-screen map of terrain you have already visited.");
         classify("resourcepack_browser", FairPlay.COSMETIC, "Downloads resource packs from Modrinth.");
         classify("miscellaneous", FairPlay.LOCAL_TIMING, "Frame pacing, a frame cap, vsync control and the point within a frame where mouse movement is applied. The rate and content of what is sent to the server are unchanged.");
@@ -295,6 +297,7 @@ public final class FeatureCatalog {
         mixin("WindowMixin", "nothing (kept empty for compatibility)");
         mixin("TitleScreenMixin", "the Aurora title screen", "custom_title").gates("customTitleScreen");
         mixin("InGameHudMixin", "hiding the vanilla crosshair under Aurora's", "crosshair").gates("crosshairEnabled");
+        mixin("ScoreboardSidebarMixin", "replacing the vanilla scoreboard sidebar", "scoreboard").gates("scoreboardEnabled");
         mixin("GameRendererMixin", "zooming the view", "zoom").gates("zoomEnabled");
         mixin("RenderTargetMixin", "nothing (kept empty for compatibility)");
         mixin("PlayerListHudMixin", "numeric ping in the tab list", "ping").gates("tabPingEnabled");
@@ -317,6 +320,7 @@ public final class FeatureCatalog {
         mixin("MixinOverlayTexture", "recoloring the hurt flash", "hit_color").gates("hitColorEnabled");
         mixin("EquipmentLayerRendererMixin", "tinting armor and trims with the hit color", "hit_color")
                 .gates("hitColorTintArmor", "hitColorTintArmorTrims");
+        mixin("HitColorOverlayRefreshMixin", "per-frame pulse and rainbow refresh and gradient row selection", "hit_color").gates("hitColorEnabled");
         mixin("ReloadableTextureMixin", "recoloring the enchantment glint", "glint_color").gates("glintColorEnabled");
         mixin("GlintRenderTypesMixin", "Alternative Glint", "glint_color").gates("glintColorAlternative");
         mixin("GlintBufferSourceMixin", "Alternative Glint", "glint_color").gates("glintColorAlternative");
@@ -329,8 +333,8 @@ public final class FeatureCatalog {
         mixin("HotbarItemBounceMixin", "the hotbar item bounce", "animations").gates("hotbarBounceEnabled");
         mixin("PlayerEntityRendererMixin", "ping and totem pops under nametags", "ping", "totem_pop")
                 .gates("nametagPingEnabled", "nametagTotemPopsEnabled");
-        mixin("LivingEntityRendererExtractMixin", "entity movement smoothing and entity health labels", "animations", "player_health")
-                .gates("entityMovementSmoothingEnabled", "playerHealthIndicators");
+        mixin("LivingEntityRendererExtractMixin", "entity movement smoothing, entity health labels and hit-color health capture", "animations", "player_health", "hit_color")
+                .gates("entityMovementSmoothingEnabled", "playerHealthIndicators", "hitColorHealthGradient");
         mixin("LavaClarityMixin", "lava clarity", "pack_tweaks").gates("lavaClarityEnabled");
         mixin("LavaOverlayMixin", "hiding the lava overlay", "pack_tweaks").gates("lavaHideOverlay");
         mixin("ClientPlayerAttackMixin", "limiting entity health to entities you attacked", "player_health")

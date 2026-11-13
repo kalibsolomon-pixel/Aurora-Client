@@ -63,6 +63,11 @@ public abstract class PlayerHealthLabelMixin {
         AuroraConfig cfg = AuroraConfig.get();
         if (!cfg.playerHealthIndicators) return;
 
+        // The player filter is enforced here, not only at snapshot capture:
+        // Hit Color's health-gradient mode shares the snapshot store with
+        // players captured, and those captures must not add labels.
+        if (!cfg.playerHealthShowPlayers && state instanceof AvatarRenderState) return;
+
         // Distance cap (vanilla nametag distance: 64 blocks -> 4096 squared).
         if (state.distanceToCameraSq > 4096.0) return;
         if (state.isInvisible || state.isInvisibleToPlayer) return;
