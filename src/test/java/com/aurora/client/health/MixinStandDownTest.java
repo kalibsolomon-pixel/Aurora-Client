@@ -47,6 +47,15 @@ class MixinStandDownTest {
         assertEquals("All 80 Aurora mixins applied.", MixinAudit.summary(80, 0));
     }
 
+    @Test void reloadOverlayHasOneOwnerWhenRemoveReloadingScreenIsInstalled() {
+        var overlay = FeatureCatalog.mixins().stream()
+                .filter(binding -> binding.mixin().equals("LoadingOverlayMixin"))
+                .findFirst().orElseThrow();
+        assertNull(overlay.standDownReason(Set.of()::contains));
+        assertEquals("handled by rrls", overlay.standDownReason(Set.of("rrls")::contains));
+        assertNull(overlay.standDownReason(Set.of("sodium")::contains));
+    }
+
     @Test void everyPerformanceGateIsAPerfFieldKeptOutOfProfiles() {
         for (FeatureCatalog.MixinBinding b : FeatureCatalog.mixins()) {
             if (!b.features().contains("performance")) continue;

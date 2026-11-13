@@ -372,7 +372,8 @@ public final class FeatureCatalog {
         mixin("KeyMappingComboMixin", "Ctrl, Shift and Alt combos on key bindings");
         mixin("KeyBindsScreenComboMixin", "Ctrl, Shift and Alt combos in the Controls screen");
         // ---- Performance (ADR 0009) ----
-        mixin("LoadingOverlayMixin", "hiding the resource reload overlay", "performance").gates("perfHideReloadOverlay");
+        mixin("LoadingOverlayMixin", "hiding the resource reload overlay", "performance")
+                .gates("perfHideReloadOverlay").yieldsTo("rrls");
         mixin("TitleScreenFadeMixin", "skipping the title screen fade", "performance").gates("perfHideTitleFade");
         mixin("LevelLoadTrackerMixin", "skipping the level loading delay", "performance").gates("perfSkipLevelLoadDelay");
         mixin("MinecraftProfileAccessor", "startup without waiting for the profile", "performance").gates("perfNoProfileWait");
