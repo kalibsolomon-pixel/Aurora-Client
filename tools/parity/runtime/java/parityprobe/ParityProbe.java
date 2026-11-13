@@ -152,6 +152,18 @@ public final class ParityProbe implements ClientModInitializer {
                 ThemeManager.reload();
             }
             case "hud-editor" -> NativeUi.setScreen(client, new HudEditorScreen());
+            case "profiles" -> NativeUi.setScreen(client, new ProfileManagerScreen(AuroraScreen.create()));
+            case "profile-create" -> {
+                var screen = (ProfileManagerScreen) NativeUi.screen(client);
+                var begin = ProfileManagerScreen.class.getDeclaredMethod("beginCreate");
+                begin.setAccessible(true);
+                begin.invoke(screen);
+            }
+            case "profile-name" -> {
+                var field = ProfileManagerScreen.class.getDeclaredField("createField");
+                field.setAccessible(true);
+                ((EditBox) field.get(NativeUi.screen(client))).setValue(text.substring(13));
+            }
             case "assert-inactivity" -> {
                 if (!client.options.inactivityFpsLimit().get().getSerializedName().equals(args[1]))
                     throw new AssertionError("Inactivity FPS option was not restored");
