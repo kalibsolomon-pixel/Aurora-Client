@@ -129,6 +129,7 @@ public class BlurTestScreen extends Screen {
     private static volatile float slidePxPerFrame = 0f;
     private static volatile float slideAccum = 0f;
     private static volatile float slideDetailAmp = 0f;
+    private static float patternScale = 0f;
 
     /** Live stripe-slide phase in device px (0 when not sliding). Harness read. */
     public static float slideAccum() { return slideAccum; }
@@ -257,6 +258,12 @@ public class BlurTestScreen extends Screen {
                 }
                 case "slideamp" -> {
                     try { slideDetailAmp = Math.max(0f, Math.min(0.12f, Float.parseFloat(v))); } catch (NumberFormatException ignored) { }
+                }
+                case "phase" -> {
+                    try { slideAccum = Float.parseFloat(v); } catch (NumberFormatException ignored) { }
+                }
+                case "patternscale" -> {
+                    try { patternScale = Math.max(0f, Float.parseFloat(v)); } catch (NumberFormatException ignored) { }
                 }
                 default -> { }
             }
@@ -504,6 +511,7 @@ public class BlurTestScreen extends Screen {
         slidePxPerFrame = 0f;
         slideAccum = 0f;
         slideDetailAmp = 0f;
+        patternScale = 0f;
         // Restore the theme values this screen may have cycled in memory —
         // [C]/[N] deliberately never persist, so the user's saved theme is
         // exactly what it was before the harness opened.
@@ -540,7 +548,7 @@ public class BlurTestScreen extends Screen {
         if (!com.aurora.client.ui.render.RenderBackend.isOpenGl()) {
             var main = com.aurora.client.adapter.NativeUi.mainTarget(Minecraft.getInstance());
             return portableBackdrop.render(main.width, main.height,
-                    (float) Minecraft.getInstance().getWindow().getGuiScale(),
+                patternScale > 0 ? patternScale : (float) Minecraft.getInstance().getWindow().getGuiScale(),
                     mode == Backdrop.STRIPES, slideAccum, slideDetailAmp);
         }
         try {
@@ -566,7 +574,7 @@ public class BlurTestScreen extends Screen {
                 GL20.glUniform1i(uBackdropMode, mode == Backdrop.SOLID ? 0 : 1);
                 GL20.glUniform2f(uBackdropSize, backdropW, backdropH);
                 GL20.glUniform1f(uBackdropScale,
-                        (float) Minecraft.getInstance().getWindow().getGuiScale());
+                        patternScale > 0 ? patternScale : (float) Minecraft.getInstance().getWindow().getGuiScale());
                 if (uBackdropSlide >= 0) GL20.glUniform1f(uBackdropSlide, slideAccum);
                 if (uBackdropDetailAmp >= 0) GL20.glUniform1f(uBackdropDetailAmp, slideDetailAmp);
                 GL30.glBindVertexArray(backdropVao);

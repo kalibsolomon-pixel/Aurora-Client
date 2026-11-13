@@ -115,6 +115,7 @@ public class BlurTestScreen extends Screen {
     private static volatile float slidePxPerFrame = 0f;
     private static volatile float slideAccum = 0f;
     private static volatile float slideDetailAmp = 0f;
+    private static float patternScale = 0f;
 
     /** Live stripe-slide phase in device px (0 when not sliding). Harness read. */
     public static float slideAccum() { return slideAccum; }
@@ -243,6 +244,12 @@ public class BlurTestScreen extends Screen {
                 }
                 case "slideamp" -> {
                     try { slideDetailAmp = Math.max(0f, Math.min(0.12f, Float.parseFloat(v))); } catch (NumberFormatException ignored) { }
+                }
+                case "phase" -> {
+                    try { slideAccum = Float.parseFloat(v); } catch (NumberFormatException ignored) { }
+                }
+                case "patternscale" -> {
+                    try { patternScale = Math.max(0f, Float.parseFloat(v)); } catch (NumberFormatException ignored) { }
                 }
                 default -> { }
             }
@@ -490,6 +497,7 @@ public class BlurTestScreen extends Screen {
         slidePxPerFrame = 0f;
         slideAccum = 0f;
         slideDetailAmp = 0f;
+        patternScale = 0f;
         // Restore the theme values this screen may have cycled in memory —
         // [C]/[N] deliberately never persist, so the user's saved theme is
         // exactly what it was before the harness opened.
@@ -519,7 +527,7 @@ public class BlurTestScreen extends Screen {
     private BlurPanelRenderer.CaptureSource renderSyntheticBackdrop() {
         var main = com.aurora.client.adapter.NativeUi.mainTarget(Minecraft.getInstance());
         return portableBackdrop.render(main.width, main.height,
-                (float) Minecraft.getInstance().getWindow().getGuiScale(),
+                patternScale > 0 ? patternScale : (float) Minecraft.getInstance().getWindow().getGuiScale(),
                 mode == Backdrop.STRIPES, slideAccum, slideDetailAmp);
     }
 
