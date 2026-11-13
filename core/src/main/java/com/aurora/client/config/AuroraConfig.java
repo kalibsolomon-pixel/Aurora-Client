@@ -584,6 +584,10 @@ public class AuroraConfig {
     public boolean armorShowDurabilityBars = false;
     /** Lay the four armor pieces horizontally (helmet → boots, left → right). */
     public boolean armorHorizontal = false;
+    /** Also render the main hand in the Armor HUD (only while it holds something). */
+    public boolean armorHudShowMainHand = false;
+    /** Also render the off hand in the Armor HUD (only while it holds something). */
+    public boolean armorHudShowOffHand = false;
 
     public enum ArmorAlertSoundChoice {
         // Saved selections of the removed arrow sound fall back to Pling.
@@ -626,6 +630,26 @@ public class AuroraConfig {
     public boolean migratedEffectExpiryExclusions = false;
     /** When true, also alert on held-tool low durability (not just armor). */
     public boolean toolDurabilityAlertEnabled = true;
+
+    // ---- Alert HUD modules ----
+    // The shared popup card no longer shows these two sources: each renders
+    // as its own movable, resizable HUD module with the standard per-module
+    // background / text / layout / scale / profile / reset rules (HudModule).
+    // The alert sound stays shared (armorAlertSound + armorAlertSoundChoice).
+    /** Armor/tool durability alert rows render as a HUD module (module id armor_alert). */
+    public boolean armorAlertHudEnabled = true;
+    public HudBackground armorAlertBgMode = HudBackground.NONE;
+    public int armorAlertBgColor = 0x80000000;
+    /** Null follows the shared hudColor; any non-zero ARGB overrides it. */
+    public Integer armorAlertTextColor = null;
+    public boolean armorAlertThemeCorners = false;
+    /** Effect-expiry alert rows render as a HUD module (module id potion_alert). */
+    public boolean effectExpiryHudEnabled = true;
+    public HudBackground effectExpiryBgMode = HudBackground.NONE;
+    public int effectExpiryBgColor = 0x80000000;
+    /** Null follows the shared hudColor; any non-zero ARGB overrides it. */
+    public Integer effectExpiryTextColor = null;
+    public boolean effectExpiryThemeCorners = false;
 
     // ---- Batch 2 features ----
     /** Off in a fresh install: an information advantage (ADR 0007). */
@@ -1412,6 +1436,9 @@ public class AuroraConfig {
                     // deleted 2026-09-13) and a corrupt entry: Gson parses an
                     // unknown enum name to null.
                     if (loaded.framePacingStrategy == null) loaded.framePacingStrategy = PacingStrategy.PARK;
+                    // VANILLA backgrounds are offered only where a vanilla
+                    // texture backs the module; fold everything else to SOLID.
+                    HudBackgroundPolicy.normalize(loaded);
                     INSTANCE = loaded;
                 }
             } else {

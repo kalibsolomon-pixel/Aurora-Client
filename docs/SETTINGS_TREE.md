@@ -162,12 +162,12 @@ Press once to sprint or sneak instead of holding.
 - **Toggle Sneak Key**: key · unbound. `{toggleSneakKey}`
 - **Show Status HUD**: toggle · on. `{toggleSprintSneakHudEnabled}`
 - **HUD Display Mode**: dropdown Both / Individual / Bracketed Text · Both. `{toggleSprintSneakDisplayMode}`
-- **HUD Background**: dropdown None / Solid / Vanilla · None. `{sprintHudBgMode}`
+- **HUD Background**: dropdown None / Solid · None. `{sprintHudBgMode}` *(VANILLA folded to Solid; see Armor HUD.)*
 - **HUD Background Color (when SOLID)**: color · black, 50%. `{sprintHudBgColor}`
 - **Theme Corner Radius**: toggle · off · round this HUD's corners with the theme's Corner Radius instead of its fixed corners. `{toggleSprintSneakThemeCorners}`
 
 #### Alerts · off · combined `{card:alerts}`
-Warnings for expiring effects and low durability.
+Warnings for expiring effects and low durability, shown as two HUD modules (Armor Alert, Potion Alert) instead of a shared popup.
 - *Effect Expiry*
   - **Effect Expiry Alert**: toggle · off · master for this section. `{effectExpiryAlertEnabled}`
   - **Expiry Threshold (seconds)**: slider 1–60 · 10. `{effectExpiryThresholdSeconds}`
@@ -177,6 +177,17 @@ Warnings for expiring effects and low durability.
   - **Armor Durability Alert**: toggle · off. `{armorAlertEnabled}`
   - **Also Alert Held Tools**: toggle · off. `{toolDurabilityAlertEnabled}`
   - **Threshold (%)**: slider 1–100 · 10%. `{armorAlertThresholdPct}`
+- *Alert HUD Modules*
+  - **Armor Alert Module**: toggle · off · the Armor Alert row in the HUD editor, one row per latched low-durability item. `{armorAlertHudEnabled}`
+  - **Armor Module Background**: dropdown None / Solid · None. `{armorAlertBgMode}`
+  - **Armor Module Background Color (when SOLID)**: color · black, 50%. `{armorAlertBgColor}`
+  - **Armor Module Text Color**: color · HUD default. `{armorAlertTextColor}`
+  - **Theme Corner Radius**: toggle · off · Solid only. `{armorAlertThemeCorners}`
+  - **Effect Alert Module**: toggle · off · the Potion Alert row in the HUD editor, one row per latched effect with its sprite, name and seconds left. `{effectExpiryHudEnabled}`
+  - **Effect Module Background**: dropdown None / Solid · None. `{effectExpiryBgMode}`
+  - **Effect Module Background Color (when SOLID)**: color · black, 50%. `{effectExpiryBgColor}`
+  - **Effect Module Text Color**: color · HUD default. `{effectExpiryTextColor}`
+  - **Theme Corner Radius**: toggle · off · Solid only. `{effectExpiryThemeCorners}`
 - *Sound*
   - **Play Sound**: toggle · on. `{armorAlertSound}`
   - **Sound Choice**: dropdown Pling / Experience Orb / Bell / Armor Equip / Anvil Land / Note Bass · Pling. `{armorAlertSoundChoice}`
@@ -298,7 +309,7 @@ Recolors the enchantment glint.
 #### Info HUD · off `{card:info_module}`
 Corner readout of FPS, coordinates and more.
 - **Text Color**: color · orange. `{infoModuleTextColor}`
-- **Background**: dropdown None / Solid / Vanilla · None. `{infoBgMode}`
+- **Background**: dropdown None / Solid · None. `{infoBgMode}` *(VANILLA folded to Solid; see Armor HUD.)*
 - **Background Color (when SOLID)**: color · black, 50%. `{infoBgColor}`
 - **Theme Corner Radius**: toggle · off · round this HUD's corners with the theme's Corner Radius instead of its fixed corners. `{infoModuleThemeCorners}`
 - *Performance*
@@ -330,12 +341,14 @@ Clicks-per-second counter.
 - **Theme Corner Radius**: toggle · off · round this HUD's corners with the theme's Corner Radius instead of its fixed corners. `{cpsThemeCorners}`
 
 #### Armor HUD · on `{card:armor_hud}`
-Your armor and its durability.
+Your armor — and optionally your hands — and its durability.
 - **Text Color**: color · white. `{armorHudTextColor}`
 - **Durability Format**: dropdown Remaining / Remaining of Max / Percentage / None · Remaining. `{armorDurabilityFormat}`
 - **Show Durability Bars**: toggle · off. `{armorShowDurabilityBars}`
 - **Horizontal Layout**: toggle · on. `{armorHorizontal}`
-- **Background**: dropdown · Vanilla (slot frames). `{armorHudBgMode}`
+- **Show Main Hand**: toggle · off · the main hand in the strip when it holds something. `{armorHudShowMainHand}`
+- **Show Off Hand**: toggle · off · the off hand in the strip when it holds something. `{armorHudShowOffHand}`
+- **Background**: dropdown None / Solid / Vanilla · Vanilla (one hotbar-strip graphic; VANILLA is offered only here and on Potion HUD). `{armorHudBgMode}`
 - **Background Color (when SOLID)**: color · black, 50%. `{armorHudBgColor}`
 - **Theme Corner Radius**: toggle · off · round this HUD's corners with the theme's Corner Radius instead of its fixed corners. `{armorHudThemeCorners}`
 
@@ -349,7 +362,7 @@ Distance of your last hit.
 #### Potion HUD · on `{card:potion_hud}`
 Active effects with timers (replaces vanilla's effect icons).
 - **Text Color**: color · white. `{potionHudTextColor}`
-- **Background**: dropdown · Vanilla. `{potionBgMode}`
+- **Background**: dropdown · Vanilla (vanilla status-effect slots; VANILLA is offered only here and on Armor HUD). `{potionBgMode}`
 - **Background Color (when SOLID)**: color · black, 50%. `{potionBgColor}`
 - **Theme Corner Radius**: toggle · off · round this HUD's corners with the theme's Corner Radius instead of its fixed corners. `{potionHudThemeCorners}`
 
@@ -643,7 +656,7 @@ Listed so you can decide whether any should get a control, or be removed.
 
 - **Key defaults disagree with their descriptions.** The Hitbox Toggle Key and Totem Reset Counter Key rows say "Defaults to unbound", but a fresh install binds them to B and K.
 - **"Reset to default" in vanilla Controls uses different keys** from a fresh install for FreeLook (V vs X), Toggle Sprint (J vs Left Ctrl), Toggle Sneak (K vs unbound) and World Map (M vs Y).
-- **The Alerts card text mentions low hunger**; there is no hunger alert.
+- ~~**The Alerts card text mentions low hunger**; there is no hunger alert.~~ *(Done: the card text no longer mentions hunger.)*
 - ~~**The HUD Editor key has no row in Aurora.**~~ *(Done: Settings → Controls → Aurora Keys.)*
 - **Some features have one card toggle covering several hidden switches** (Pack Tweaks, Alerts, Hitbox, Ping). Turning the card on switches every part on, including parts that ship off. *(Display Settings had this too; its combined switch is gone.)*
 - ~~**Display Settings is a "for now" grouping**: five unrelated sections plus Support.~~ *(Done: split across Display, Controls and General.)*

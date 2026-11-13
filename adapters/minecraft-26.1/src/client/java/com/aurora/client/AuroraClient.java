@@ -103,6 +103,8 @@ public class AuroraClient implements ClientModInitializer {
         moduleManager.register(new ToggleIndividualModule(ToggleIndividualModule.Kind.SPRINT));
         moduleManager.register(new ToggleIndividualModule(ToggleIndividualModule.Kind.SNEAK));
         moduleManager.register(new PotionModule());
+        moduleManager.register(new ArmorAlertHudModule());
+        moduleManager.register(new EffectExpiryHudModule());
         moduleManager.register(new PingModule());
         moduleManager.register(new com.aurora.client.hud.module.TotemPopModule());
         moduleManager.register(new KeystrokesModule());

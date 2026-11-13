@@ -173,7 +173,9 @@ class SquareModeConformanceTest {
             "hud/module/TotemPopModule.java", "totemPopThemeCorners",
             "hud/module/ToggleSprintSneakModule.java", "toggleSprintSneakThemeCorners",
             "hud/module/ToggleIndividualModule.java", "toggleSprintSneakThemeCorners",
-            "hud/module/KeystrokesModule.java", "keystrokesThemeCorners");
+            "hud/module/KeystrokesModule.java", "keystrokesThemeCorners",
+            "hud/module/ArmorAlertHudModule.java", "armorAlertThemeCorners",
+            "hud/module/EffectExpiryHudModule.java", "effectExpiryThemeCorners");
 
     @Test
     void hudShapesKeepFixedCornersUntilTheirSwitchIsOn() {

@@ -51,7 +51,7 @@ Changing a default does not change an existing install: a player who already had
 | Saturation Bar | Vanilla equivalent | Shows your own saturation on the food bar. |
 | Block Overlay | Cosmetic | Restyles the outline of the block you are looking at. |
 | Toggle Sprint/Sneak | Vanilla equivalent | Press-once sprint and sneak, as vanilla's accessibility options offer. |
-| Alerts | Vanilla equivalent | Warns about your own armor durability and your own expiring effects. |
+| Alerts | Vanilla equivalent | Warns about your own armor durability and your own expiring effects, as two HUD modules. |
 | Crosshair | Cosmetic | Replaces the crosshair's shape and color. |
 | Hitbox | Vanilla equivalent | Draws entity hitboxes, as vanilla's F3+B does, with custom colors. |
 | Better Hitreg | Local timing | Plays your hit's sound, hurt animation and particles on your screen at once instead of waiting for the server's copy. It does not change what the game sends for movement or combat, or when. Two optional keys, unbound by default, send something when pressed: Switch Hand changes the vanilla Main Hand option, and the practice scoreboard's Send key posts the score as a chat message. The feature is off in a fresh install, and so are its reach rings, extra hitboxes and hiding of other fights. |
@@ -59,7 +59,7 @@ Changing a default does not change an existing install: a player who already had
 | Glint Color | Cosmetic | Recolors the enchantment glint. |
 | Info HUD | Vanilla equivalent | Shows FPS, coordinates, time, biome and similar readouts that the F3 screen also has. |
 | CPS | Vanilla equivalent | Counts your own clicks. |
-| Armor HUD | Vanilla equivalent | Shows your own armor and its durability. |
+| Armor HUD | Vanilla equivalent | Shows your own armor, hands and their durability. |
 | Reach Display | Vanilla equivalent | Shows the distance of your own last hit. |
 | Potion HUD | Vanilla equivalent | Lists your own active effects, as the vanilla effect icons do. |
 | Ping | Vanilla equivalent | Shows latency as numbers: your own, and other players' as the tab list already reports it. |

@@ -539,6 +539,10 @@ public class ProfileManager {
                 LOGGER.warn("ProfileManager: could not apply vanilla controls for '{}'", p.name, t);
             }
         }
+
+        // Profiles saved before the VANILLA-background restriction can carry
+        // it for modules with no vanilla texture behind them; fold to SOLID.
+        com.aurora.client.config.HudBackgroundPolicy.normalize(live);
     }
 
     private void applyProfileByName(String name) {
