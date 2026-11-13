@@ -38,10 +38,26 @@ defect in the New profile control:
 | Scoreboard card | New icon at 1280 x 960 in grid and list; Vulkan, square / 19% |
 
 These are visual observations of the current branch, not evidence that the
-reported line defect has been fixed. Pointer-hover, keyboard-focus and
-mid-animation states were not exhaustively swept. No rendering workaround was
-introduced without a reproduction. The exact affected screen/backend remains
-useful follow-up information.
+reported line defect has been fixed. No rendering workaround was introduced
+without a reproduction.
+
+After the owner confirmed Vulkan, a further native Vulkan pass captured all
+21 supported corner-radius values (0 through 20) with Alerts OFF, Alerts ON and
+the resting New profile icon at each value. All 63 captures looked clean;
+`vulkan-radius-sweep.png` collects their enlarged crops. Actual pointer clicks
+also exercised the focused toggle thumb and opening the inline profile editor;
+hover and focused captures showed no line. Transition frames and keyboard
+traversal were not exhaustively verified. The owner then confirmed that the
+current previews look fine.
+
+A separate disposable compatibility boot with the installed Sodium 0.9.2,
+Iris 1.11.7 and ImmediatelyFast 1.17.1 failed before a screen could render:
+Iris's SamplerLimits initializer called OpenGL without an active OpenGL context
+under native Vulkan. This does not establish a cause for the toggle report.
+Removing Iris from the disposable fixture allowed the Sodium/ImmediatelyFast
+Vulkan boot; focused toggle and profile-editor captures were also clean
+(`vulkan-sodium-toggle.png`, `vulkan-sodium-profile.png`). The owner's mods and
+configuration were not changed.
 
 Native window captures are under `build/ui-control-check/`, including
 `alerts-before.png`, `alerts-square-before.png`, `toggle-radius1-on-before.png`,
@@ -52,7 +68,9 @@ so F2's temporary glass suppression did not affect them.
 
 The opt-in parity probe gained `profiles`, `profile-create` and
 `profile-name <name>` commands to repeat the inspection in a marked disposable
-fixture. This helper is excluded from production JARs.
+fixture, plus virtual `hover <x> <y>` and `click <x> <y>` input in GUI coordinates.
+Clicks use the selected adapter's native left-button constant. This helper is
+excluded from production JARs.
 
 ## Verification and limits
 

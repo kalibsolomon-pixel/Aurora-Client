@@ -164,6 +164,22 @@ public final class ParityProbe implements ClientModInitializer {
                 field.setAccessible(true);
                 ((EditBox) field.get(NativeUi.screen(client))).setValue(text.substring(13));
             }
+            case "hover" -> {
+                float scale = client.getWindow().getGuiScale();
+                var mouse = client.mouseHandler;
+                var x = mouse.getClass().getDeclaredField("xpos");
+                var y = mouse.getClass().getDeclaredField("ypos");
+                x.setAccessible(true); y.setAccessible(true);
+                x.setDouble(mouse, Double.parseDouble(args[1]) * scale);
+                y.setDouble(mouse, Double.parseDouble(args[2]) * scale);
+            }
+            case "click" -> {
+                var event = new net.minecraft.client.input.MouseButtonEvent(
+                        Double.parseDouble(args[1]), Double.parseDouble(args[2]),
+                        new net.minecraft.client.input.MouseButtonInfo(InputConstants.MOUSE_BUTTON_LEFT, 0));
+                NativeUi.screen(client).mouseClicked(event, false);
+                NativeUi.screen(client).mouseReleased(event);
+            }
             case "assert-inactivity" -> {
                 if (!client.options.inactivityFpsLimit().get().getSerializedName().equals(args[1]))
                     throw new AssertionError("Inactivity FPS option was not restored");
@@ -444,7 +460,12 @@ public final class ParityProbe implements ClientModInitializer {
                 }
                 ThemeManager.reload();
             }
-            case "screen" -> System.out.println("[parity-probe] screen " + NativeUi.screen(client));
+            case "screen" -> {
+                var screen = NativeUi.screen(client);
+                System.out.println("[parity-probe] screen " + screen + (screen == null ? "" :
+                        " gui=" + screen.width + "x" + screen.height
+                        + " scale=" + client.getWindow().getGuiScale() + " focused=" + screen.getFocused()));
+            }
             case "world-map" -> {
                 config.worldMapEnabled = true;
                 NativeUi.setScreen(client, new com.aurora.client.worldmap.screen.WorldMapScreen());
