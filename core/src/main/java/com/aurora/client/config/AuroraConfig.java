@@ -463,6 +463,8 @@ public class AuroraConfig {
     public boolean perfFreeSpriteMipmaps = true;
     /** A moving camera repaints the minimap's terrain at most 60 times a second. */
     public boolean perfMinimapRefreshCap = true;
+    /** Prepare unused Aurora font faces on first text lookup instead of every reload. */
+    public boolean perfDeferAuroraFonts = true;
 
     // ---- Late-Stage Responsive Features ----
     public boolean adaptiveRenderSleeping = false;

@@ -78,6 +78,8 @@
     "SoundEngineListenerMixin",
     "DebugScreenEntryCacheMixin",
     "FontDecorationMergeMixin",
+    "FontManagerDeferredMixin",
+    "FontSetDeferredMixin",
     "TextureManagerAnimationMixin",
     "ItemStackRenderStateAnimationMixin",
     "CuboidItemModelAnimationMixin",

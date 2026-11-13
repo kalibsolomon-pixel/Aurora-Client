@@ -381,6 +381,10 @@ public final class FeatureCatalog {
         mixin("SoundEngineListenerMixin", "skipping unchanged sound listener updates", "performance").gates("perfSoundListenerThrottle");
         mixin("DebugScreenEntryCacheMixin", "the F3 entry cache", "performance").gates("perfDebugEntryCache");
         mixin("FontDecorationMergeMixin", "merged underline and strikethrough quads", "performance").gates("perfMergeTextDecorations");
+        mixin("FontManagerDeferredMixin", "preparing unused Aurora fonts on first use", "performance")
+                .gates("perfDeferAuroraFonts").yieldsTo("modernfix");
+        mixin("FontSetDeferredMixin", "preparing unused Aurora fonts on first use", "performance")
+                .gates("perfDeferAuroraFonts").yieldsTo("modernfix");
         // ImmediatelyFast's batch_animated_item_updates moves animated items
         // into its own atlas subclass and redraws them in one batch; keeping
         // their slots there freezes them (26.3 set A, 2026-11-12).

@@ -56,6 +56,15 @@ class MixinStandDownTest {
         assertNull(overlay.standDownReason(Set.of("sodium")::contains));
     }
 
+    @Test void fontPreparationYieldsAsAPairToModernFix() {
+        for (String name : List.of("FontManagerDeferredMixin", "FontSetDeferredMixin")) {
+            var binding = FeatureCatalog.mixins().stream()
+                    .filter(candidate -> candidate.mixin().equals(name)).findFirst().orElseThrow();
+            assertNull(binding.standDownReason(Set.of()::contains));
+            assertEquals("handled by modernfix", binding.standDownReason(Set.of("modernfix")::contains));
+        }
+    }
+
     @Test void everyPerformanceGateIsAPerfFieldKeptOutOfProfiles() {
         for (FeatureCatalog.MixinBinding b : FeatureCatalog.mixins()) {
             if (!b.features().contains("performance")) continue;
