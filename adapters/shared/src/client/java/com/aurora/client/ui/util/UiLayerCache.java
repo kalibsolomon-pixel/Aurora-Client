@@ -101,6 +101,24 @@ public final class UiLayerCache implements RenderUtil.RectSink {
         return ((c & 0xFF) << 16) | (c & 0xFF00) | ((c >>> 16) & 0xFF) | (c & 0xFF000000);
     }
 
+    /** Subtle face lighting, applied once before upload. Coverage and opacity are unchanged. */
+    public void shadeVertical(int x, int y, int width, int height, int amount) {
+        if (image == null || height < 2 || amount <= 0) return;
+        IntBuffer pixels = MemoryUtil.memIntBuffer(image.getPointer(), w * h);
+        int left = Math.max(0, x), right = Math.min(w, x + width);
+        for (int py = Math.max(0, y); py < Math.min(h, y + height); py++) {
+            int delta = Math.round(amount * (1f - 2f * (py - y) / (height - 1)));
+            for (int px = left; px < right; px++) {
+                int index = py * w + px, color = pixels.get(index);
+                if ((color >>> 24) == 0) continue;
+                int red = Math.clamp((color & 255) + delta, 0, 255);
+                int green = Math.clamp(((color >>> 8) & 255) + delta, 0, 255);
+                int blue = Math.clamp(((color >>> 16) & 255) + delta, 0, 255);
+                pixels.put(index, (color & 0xff000000) | (blue << 16) | (green << 8) | red);
+            }
+        }
+    }
+
     /**
      * The cache discipline for one editing surface: if the buffer is not
      * current for {@code version}, size it to {@code wLogical × hLogical}

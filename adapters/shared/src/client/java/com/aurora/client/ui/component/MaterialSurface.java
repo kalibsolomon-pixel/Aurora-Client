@@ -179,7 +179,12 @@ public final class MaterialSurface {
             var previous=RenderUtil.beginCapture(cache.sink());
             try {
                 if(shadow) AuroraShapes.dropShadow(g,pad,pad+3,width,height,round,.25f);
-                if(fill!=0) RenderUtil.drawRoundedRectAA(g,pad,pad,w,h,radius,fill);
+                if(fill!=0) {
+                    RenderUtil.drawRoundedRectAA(g,pad,pad,w,h,radius,fill);
+                    // Quiet depth on stable panels/popups, cached with their face.
+                    // Controls keep one treatment throughout their hover transition.
+                    if(shadow) cache.shadeVertical(pad*scale,pad*scale,width*scale,height*scale,3);
+                }
 
                 if(kind==2 || kind==102) {
                     RenderUtil.drawRoundedRectAA(g,pad,pad,w,h,radius,selectedFill());
