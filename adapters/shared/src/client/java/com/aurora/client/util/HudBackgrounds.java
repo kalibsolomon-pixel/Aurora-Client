@@ -30,7 +30,7 @@ public final class HudBackgrounds {
      * One continuous vanilla hotbar strip of {@code cells} slots, drawn
      * 22 px tall at (x, y) and uniformly scaled horizontally by
      * {@code scaleX} (1.0 = native 20 px cells). One blit of the strip's
-     * sub-region of the hotbar sprite — the armor HUD's VANILLA backing,
+     * sub-region of the hotbar sprite and its right end cap — the armor HUD's VANILLA backing,
      * replacing the per-piece offhand-slot boxes.
      */
     public static void hotbarStrip(GuiGraphicsExtractor ctx, int x, int y, int cells, float scaleX, float alpha) {
@@ -39,23 +39,26 @@ public final class HudBackgrounds {
         ctx.pose().pushMatrix();
         ctx.pose().translate(x, y);
         ctx.pose().scale(scaleX, 1.0f);
+        // Uku's Armor HUD HOTBAR style retains the original right edge instead
+        // of ending the crop inside a slot. See THIRD_PARTY_NOTICES.md.
+        int color = scaleAlpha(0xFFFFFFFF, alpha);
         ctx.blitSprite(RenderPipelines.GUI_TEXTURED, HOTBAR, HOTBAR_SPRITE_W, HOTBAR_SPRITE_H,
-                0, 0, 0, 0, srcW, HOTBAR_SPRITE_H, scaleAlpha(0xFFFFFFFF, alpha));
+                0, 0, 0, 0, srcW - 3, HOTBAR_SPRITE_H, color);
+        ctx.blitSprite(RenderPipelines.GUI_TEXTURED, HOTBAR, HOTBAR_SPRITE_W, HOTBAR_SPRITE_H,
+                HOTBAR_SPRITE_W - 3, 0, srcW - 3, 0, 3, HOTBAR_SPRITE_H, color);
         ctx.pose().popMatrix();
     }
 
     /**
-     * One vanilla hotbar slot cell — a 20×22 source crop that carries both
-     * borders — drawn at (x, y) scaled to (w, h). Stacked with zero gap it
-     * reads as a vertical hotbar strip.
+     * The same capped strip turned clockwise, with its long axis vertical.
      */
-    public static void hotbarCell(GuiGraphicsExtractor ctx, int x, int y, int w, int h, float alpha) {
-        if (w <= 0 || h <= 0 || alpha <= 0.001f) return;
+    public static void hotbarVerticalStrip(GuiGraphicsExtractor ctx, int x, int y, int cells, float alpha) {
+        if (cells <= 0 || alpha <= 0.001f) return;
         ctx.pose().pushMatrix();
         ctx.pose().translate(x, y);
-        ctx.pose().scale(w / (float) CELL_PITCH, h / (float) HOTBAR_SPRITE_H);
-        ctx.blitSprite(RenderPipelines.GUI_TEXTURED, HOTBAR, HOTBAR_SPRITE_W, HOTBAR_SPRITE_H,
-                1, 0, 0, 0, CELL_PITCH, HOTBAR_SPRITE_H, scaleAlpha(0xFFFFFFFF, alpha));
+        ctx.pose().rotate((float) (Math.PI / 2));
+        ctx.pose().translate(0, -HOTBAR_SPRITE_H);
+        hotbarStrip(ctx, 0, 0, cells, 1f, alpha);
         ctx.pose().popMatrix();
     }
 

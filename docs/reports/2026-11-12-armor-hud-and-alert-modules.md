@@ -8,7 +8,9 @@ Worktree branch of the equipment-HUD + alerts rework. Three changes, all one sto
 
 `ArmorModule` no longer draws a fixed four-slot grid. Each tick it lists the equipped pieces (HEAD → FEET) and — behind two new switches, `armorHudShowMainHand` / `armorHudShowOffHand` (default off) — the main and off hands when they hold something. Empty slots are never drawn; the module collapses to nothing when nothing is worn or held, drawing no background at all.
 
-With `armorHudBgMode = VANILLA` the piece icons sit on **one continuous Minecraft hotbar-strip graphic** (`hud/hotbar`, 182×22), the uku-style single strip: horizontal layout stretches one strip so every cell gets the vanilla 20-px pitch (items land exactly where vanilla draws hotbar items, icons at +3/+3, durability text beside each cell); vertical layout stacks complete 20×22 cells, reading as a vertical strip. Horizontal stretch is uniform and bounded by the durability text width, so long labels grow the strip rather than overlap it.
+With `armorHudBgMode = VANILLA` the piece icons sit on **one continuous Minecraft hotbar-strip graphic** (`hud/hotbar`, 182×22). The body and right end cap follow [uku's Armor HUD](https://github.com/uku3lig/armor-hud), and vertical layout rotates the capped strip rather than stacking cropped cells. Horizontal stretch is uniform and bounded by the durability text width, so long labels grow the strip rather than overlap it. The upstream MIT license is included in the third-party notices.
+
+On 2026-11-13, a disposable 26.3 OpenGL client was inspected with both orientations, five occupied armor/hand slots and an empty armor slot. The horizontal and vertical outlines are continuous; the earlier default HUD placement overlapped the hotbar, so the fixture moved the HUD for inspection. Screenshots are retained locally under `build/armor-outline-check/`. The parity build and tests passed for 26.1.2, 26.2 and 26.3. Other render backends and resource packs were not visually checked for this follow-up.
 
 ### VANILLA background restricted to Armor HUD + Potion HUD
 

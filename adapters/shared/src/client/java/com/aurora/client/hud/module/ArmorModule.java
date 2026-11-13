@@ -122,7 +122,7 @@ public class ArmorModule extends HudModule {
                 return Math.round((n * HudBackgrounds.CELL_PITCH + 2) * s);
             }
             // Vertical strip: 20 px cells, text in a column to the right.
-            return STRIP_CELL_W + (hasText ? TEXT_GAP + maxText : 0);
+            return STRIP_CELL_W + 2 + (hasText ? TEXT_GAP + maxText : 0);
         }
         if (cfg.armorHorizontal) {
             // Each cell is sized to fit whichever is wider — the 16-px
@@ -162,8 +162,7 @@ public class ArmorModule extends HudModule {
                 boolean anyText = hasText && client.font != null && anyDurabilityText(client, fmt);
                 return (anyText ? lineH + TEXT_GAP : 0) + HudBackgrounds.CELL_PITCH + 2; // strip: 22 px tall
             }
-            // Vertical VANILLA: a column of touching 22 px hotbar slot cells.
-            return n * (HudBackgrounds.CELL_PITCH + 2);
+            return n * HudBackgrounds.CELL_PITCH + 2;
         }
 
         if (horizontal) {
@@ -275,8 +274,8 @@ public class ArmorModule extends HudModule {
     /**
      * VANILLA (hotbar-strip) render: the occupied slots sit on one
      * continuous vanilla hotbar-strip graphic — horizontally a single
-     * stretched sub-region of the hotbar sprite, vertically a column of
-     * touching hotbar slot cells. The 16×16 item icon is centered in its
+     * capped hotbar sprite, vertically the same strip rotated clockwise.
+     * The 16×16 item icon is centered in its
      * 20 px cell exactly where vanilla draws hotbar items (+3, +3), the
      * optional durability bar sits in the icon's footprint, and the
      * durability text is drawn outside the strip (above it when
@@ -333,14 +332,13 @@ public class ArmorModule extends HudModule {
             return;
         }
 
-        // Vertical: a column of touching hotbar slot cells (a 20×22 crop
-        // that carries both borders per row), text to the right.
+        // Rotate the same capped strip so the outer outline stays continuous.
+        HudBackgrounds.hotbarVerticalStrip(ctx, x, y, n, 1f);
         for (int i = 0; i < n; i++) {
             ItemStack stack = stacks.get(i);
-            int rowY = y + i * (HudBackgrounds.CELL_PITCH + 2);
-            HudBackgrounds.hotbarCell(ctx, x, rowY, HudBackgrounds.CELL_PITCH, HudBackgrounds.CELL_PITCH + 2, 1f);
+            int rowY = y + i * HudBackgrounds.CELL_PITCH;
 
-            int iconX = x + (HudBackgrounds.CELL_PITCH - ICON) / 2;
+            int iconX = x + 3;
             ctx.item(stack, iconX, rowY + 3);
 
             if (drawBars && stack.getMaxDamage() > 0) {
@@ -349,7 +347,7 @@ public class ArmorModule extends HudModule {
 
             String text = formatDurability(stack, fmt);
             if (hasText && !text.isEmpty()) {
-                int tx = x + HudBackgrounds.CELL_PITCH + TEXT_GAP;
+                int tx = x + HudBackgrounds.CELL_PITCH + 2 + TEXT_GAP;
                 int ty = rowY + (HudBackgrounds.CELL_PITCH + 2 - tr.lineHeight) / 2;
                 com.aurora.client.hud.HudTextPainter.draw(ctx,tr, textCache.text(i, text), tx, ty, textColor);
             }
