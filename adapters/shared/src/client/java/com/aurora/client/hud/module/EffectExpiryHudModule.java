@@ -43,8 +43,9 @@ public class EffectExpiryHudModule extends HudModule {
 
     public EffectExpiryHudModule() {
         super(ID);
-        this.anchor = com.aurora.client.hud.HudAnchor.MIDDLE_RIGHT;
-        this.offsetX = -4;
+        // Middle left: the right edge belongs to the scoreboard sidebar, vanilla or Aurora.
+        this.anchor = com.aurora.client.hud.HudAnchor.MIDDLE_LEFT;
+        this.offsetX = 4;
         this.offsetY = 40;
     }
 

@@ -757,16 +757,16 @@
       "locked": false
     },
     "armor_alert": {
-      "anchor": "MIDDLE_RIGHT",
-      "offsetX": -4,
+      "anchor": "MIDDLE_LEFT",
+      "offsetX": 4,
       "offsetY": -40,
       "enabled": true,
       "scale": 1.0,
       "locked": false
     },
     "potion_alert": {
-      "anchor": "MIDDLE_RIGHT",
-      "offsetX": -4,
+      "anchor": "MIDDLE_LEFT",
+      "offsetX": 4,
       "offsetY": 40,
       "enabled": true,
       "scale": 1.0,

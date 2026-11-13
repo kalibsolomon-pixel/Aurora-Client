@@ -23,6 +23,7 @@ The shared popup card (`AlertRenderer`'s timed card) no longer carries the two a
 
 - **Armor Alert** (`ArmorAlertHudModule`): one row per latched low-durability item — icon, "Helmet · 8% ×2" — fed per tick by `ArmorAlertFeature`. Rows stay up while the item remains in your possession (the scanner keeps seeing the fingerprint, wherever the item sits) and disappear when it leaves; the panel fades out after 300 ms, like the potion module. `AlertHudState` (new) carries the immutable per-tick row snapshots between the scanner and the modules.
 - **Effect Alert** (`EffectExpiryHudModule`): one row per latched effect — vanilla status sprite, localized name, live seconds left — fed by `StatusAlertFeature`, same fade contract.
+- Both default to the middle-left edge (offset 4, ±40). The first boot put them middle-right, where the vanilla sidebar and the Scoreboard HUD covered their rows.
 - Each module has its own Background (NONE/SOLID only, `armorAlertBgMode` / `effectExpiryBgMode`, default NONE), Background Color, Text Color and Theme Corner Radius, plus the module layout fields. All new fields are profile-scoped, ship in the release defaults with both alert modules off, and reset under the existing `armorAlert`/`effectExpiry` prefixes.
 
 ### Durability alerts latch on the item, not the slot

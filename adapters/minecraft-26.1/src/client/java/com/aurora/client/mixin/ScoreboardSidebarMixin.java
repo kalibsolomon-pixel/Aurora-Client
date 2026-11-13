@@ -71,6 +71,10 @@ public abstract class ScoreboardSidebarMixin {
         if (!cfg.scoreboardEnabled) return;
         ScoreboardModule module = aurora$module();
         if (module == null || !module.enabled) return;
+        // The HUD module layer stands down under F3 but vanilla keeps its
+        // sidebar there, so leave vanilla's draw alone while F3 is open.
+        net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+        if (mc.debugEntries != null && mc.debugEntries.isOverlayVisible()) return;
         ci.cancel();
     }
 

@@ -51,6 +51,7 @@ public final class ScoreboardModule extends HudModule {
     /** Objective resolved by the adapter mixin for the current frame. */
     private Objective currentObjective;
     private Objective renderedObjective;
+    private Object renderedLevel;
     private long renderStamp = Long.MIN_VALUE;
 
     /**
@@ -92,6 +93,12 @@ public final class ScoreboardModule extends HudModule {
     @Override public String featureRegistryId() { return ID; }
 
     @Override protected AuroraConfig.HudBackground backgroundMode() {
+        // The universal background paints before renderContent: with no live
+        // rows (and no editor sample) there is nothing to put it behind.
+        Minecraft mc = Minecraft.getInstance();
+        if (rows == 0 && !(com.aurora.client.adapter.NativeUi.screen(mc) instanceof com.aurora.client.screen.HudEditorScreen)) {
+            return AuroraConfig.HudBackground.NONE;
+        }
         AuroraConfig.HudBackground mode = AuroraConfig.get().scoreboardBackground;
         return mode == AuroraConfig.HudBackground.VANILLA ? AuroraConfig.HudBackground.NONE : mode;
     }
@@ -143,7 +150,12 @@ public final class ScoreboardModule extends HudModule {
     }
 
     @Override protected void renderContent(GuiGraphicsExtractor g, Minecraft mc, int x, int y) {
-        if (mc.level == null || mc.player == null) return;
+        if (mc.level == null || mc.player == null) {
+            // Leaving a world: drop the old world's rows so menus see an empty module.
+            currentObjective = null;
+            rows = 0;
+            return;
+        }
         if (vanillaHudHidden.getAsBoolean()) return; // F1 hides vanilla's sidebar too
         AuroraConfig cfg = AuroraConfig.get();
         float s = contentScale();
@@ -216,9 +228,10 @@ public final class ScoreboardModule extends HudModule {
      */
     private void aurora$rebuildIfNeeded(Minecraft mc) {
         long stamp = mc.level.getGameTime();
-        if (stamp == renderStamp && renderedObjective == currentObjective) return;
+        if (stamp == renderStamp && renderedObjective == currentObjective && renderedLevel == mc.level) return;
         renderStamp = stamp;
         renderedObjective = currentObjective;
+        renderedLevel = mc.level;
 
         if (currentObjective == null) { rows = 0; title = null; titleWidth = 0; nameColumnWidth = 0; return; }
 

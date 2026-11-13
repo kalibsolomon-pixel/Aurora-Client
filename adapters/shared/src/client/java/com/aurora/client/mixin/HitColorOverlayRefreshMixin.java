@@ -9,7 +9,6 @@ import net.minecraft.util.Util;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.ModifyArg;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
@@ -28,7 +27,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  *   <li><b>Gradient row selection</b> — vanilla returns
  *       {@code pack(u(white), v(hasRedOverlay))}, i.e. the hurt flash always
  *       samples row {@code RED_OVERLAY_V}. For the health-gradient mode the
- *       v coordinate is remapped to one of the eight gradient rows
+ *       returned v coordinate is remapped to one of the eight gradient rows
  *       (0 = 0% health .. 7 = 100%). The armor and trim tint hooks perform
  *       the same remap, so equipment flashes in step with the body.</li>
  * </ol>
@@ -49,13 +48,19 @@ public abstract class HitColorOverlayRefreshMixin {
         if (state.hasRedOverlay) OverlayReloadListener.callFrameRefresh(Util.getMillis());
     }
 
-    @ModifyArg(method = "getOverlayCoords",
-            at = @At(value = "INVOKE",
-                    target = "Lnet/minecraft/client/renderer/texture/OverlayTexture;pack(II)I"),
-            index = 1)
-    private static int aurora$gradientOverlayRow(int vanillaRow,
-                                                 LivingEntityRenderState state,
-                                                 float whiteOverlayProgress) {
-        return HitColorOverlayRows.hurtRow(state, vanillaRow);
+    /**
+     * Vanilla returns {@code OverlayTexture.pack(u, v)}, u in the low 16
+     * bits. A {@code @ModifyArg} on that {@code pack} call cannot see the
+     * render state (it may only capture the invoked method's arguments), so
+     * the row is swapped on the returned value instead, keeping vanilla's u.
+     */
+    @Inject(method = "getOverlayCoords", at = @At("RETURN"), cancellable = true)
+    private static void aurora$gradientOverlayRow(LivingEntityRenderState state,
+                                                  float whiteOverlayProgress,
+                                                  CallbackInfoReturnable<Integer> cir) {
+        int packed = cir.getReturnValueI();
+        int vanillaRow = packed >>> 16;
+        int row = HitColorOverlayRows.hurtRow(state, vanillaRow);
+        if (row != vanillaRow) cir.setReturnValue(OverlayTexture.pack(packed & 0xFFFF, row));
     }
 }

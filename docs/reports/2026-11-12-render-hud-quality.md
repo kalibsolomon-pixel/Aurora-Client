@@ -192,6 +192,13 @@ re-uploaded only when the palette step changes, and only when an entity being
 extracted actually carries the hurt overlay. `HitColorModesTest` covers the
 palette sizes, the step boundaries and pulse's alpha range.
 
+The first dev-client boot showed the refresh/gradient mixin failing to apply
+on 26.3: its gradient hook was a `@ModifyArg` on `OverlayTexture.pack` whose
+handler also captured the enclosing method's render state, which Mixin does
+not allow. Fail-soft (ADR 0004) kept the game running and switched the feature
+part off, so unit tests could not see it. The hook is now a `RETURN` inject
+that swaps the v coordinate of the returned packed value and keeps vanilla's u.
+
 ## Scoreboard HUD
 
 `scoreboard` (off by default) replaces the vanilla sidebar with a HUD module:
@@ -201,6 +208,14 @@ feature card. The adapter mixin resolves the sidebar objective exactly as
 vanilla does and cancels vanilla's draw only when the feature is on; rows are
 rebuilt at most once per tick into preallocated arrays, keeping vanilla's sort
 order, number formats, team prefix/suffix and 15-row cap.
+
+A review against the 26.x bytecode confirmed the sort, hidden-entry filter,
+number format, team formatting, stripe colors and 15-row cap match vanilla,
+and found two bugs, both fixed: with F3 open the module layer stands down but
+vanilla keeps its sidebar, so cancelling vanilla there left no scoreboard (the
+mixin now leaves vanilla alone under F3); and a Solid background drew an empty
+panel when there was no objective (the background now declines with no rows
+outside the HUD editor). Rows are also dropped when the level changes.
 
 The scoreboard keeps a **Vanilla** background, the reproduction of vanilla's
 own two translucent stripes. That is outside the "Vanilla only for Armor HUD
@@ -242,6 +257,33 @@ HUD with a 200 ms cache, nametag latency). There is no DNS lookup on the render
 thread and no extra ping. ADR 0007 rules out custom packets or extra sends, so
 there is nothing for Aurora to make faster there; routing is the network's and
 the server's.
+
+## HUD dev-client boots
+
+A disposable 26.3 fixture (`build/hud-boot/`, space-free world, a datapack
+that creates a six-row sidebar objective, low-durability helmet/boots/sword,
+empty leggings, a shield, a short Speed effect, and a high-health NoAI zombie
+damaged every 12 ticks) was booted seven times on the portrait monitor with
+no input, varying only `config/aurora.json`:
+
+| Boot | Backend | Settings | Result |
+|---|---|---|---|
+| A | OpenGL | Armor HUD + hands, Vanilla strip; scoreboard Vanilla | Sidebar replaced, same rows/order as vanilla (D). Five cells on one hotbar strip, empty leggings omitted. Alert rows present; Effect row expires on time |
+| B | OpenGL | Solid backgrounds, scoreboard 1.5x, armor vertical | Scaled solid sidebar; vertical solid armor column |
+| C | Vulkan | As A | Identical to A |
+| D | OpenGL | Scoreboard off | Vanilla sidebar renders unchanged |
+| E | OpenGL | Health gradient on, blue Flash Color | Zombie at ~40% flashes yellow, not blue or red |
+| F | OpenGL | Rainbow | Hue advances between hits (purple → red → orange → olive → green → teal → blue) |
+| G | Vulkan | Flat, blue | Blue flash |
+
+A-D exposed the failed Hit Color mixin (fixed above) and the alert modules
+sitting under the sidebar (moved middle-left). After both fixes E-G log
+`All 97 Aurora mixins applied.` The factory Armor HUD position (bottom right,
+241 px in) overlaps the hotbar when the scaled screen is narrow (1300 px
+window at GUI scale 3); that owner-tuned default is unchanged. Not verified:
+the alert sound plays once per item (no audio capture), and the Scoreboard
+F3/empty-panel fixes, which landed after these boots and are covered by
+build/test only.
 
 ## Verification still in progress
 
