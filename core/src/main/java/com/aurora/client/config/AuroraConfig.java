@@ -274,7 +274,7 @@ public class AuroraConfig {
     public boolean textItalic = false;
     public boolean textUnderline = false;
     public TextCase textCase = TextCase.NORMAL;
-    public TextShadow textHudShadow = TextShadow.OFF;
+    public TextShadow textHudShadow = TextShadow.NORMAL; // factory Normal since 2026-11-14 (owner decision)
 
     // ---- Search (Settings → General → Search, 2026-11-12) ----
     /** Focus the search field when the Aurora menu opens or its page changes. */

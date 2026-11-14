@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class CompactGeometryTest {
-    @Test void uniformWindowShowsAThreeByThreeCardGridAndSevenListRows() {
+    @Test void uniformWindowShowsAThreeByThreeCardGridAndNineListRows() {
         var frame = UiDensity.mainFrame(640, 360);
         var body = UiDensity.mainContent(frame);
         assertEquals(336, frame.width()); assertEquals(288, frame.height());
@@ -14,8 +14,8 @@ class CompactGeometryTest {
         // the owner's 3×3 target: three card rows fit, a fourth does not
         assertTrue(UiDensity.extent(3, UiDensity.CARD_HEIGHT, UiDensity.GRID_GAP) <= body.height());
         assertTrue(UiDensity.extent(4, UiDensity.CARD_HEIGHT, UiDensity.GRID_GAP) > body.height());
-        assertTrue(UiDensity.extent(7, UiDensity.LIST_HEIGHT, UiDensity.LIST_GAP) <= body.height());
-        assertTrue(UiDensity.extent(8, UiDensity.LIST_HEIGHT, UiDensity.LIST_GAP) > body.height());
+        assertTrue(UiDensity.extent(9, UiDensity.LIST_HEIGHT, UiDensity.LIST_GAP) <= body.height());
+        assertTrue(UiDensity.extent(10, UiDensity.LIST_HEIGHT, UiDensity.LIST_GAP) > body.height());
     }
     @Test void everyWindowedScreenSharesOneFrame() {
         for (int[] size : new int[][]{{640,360},{480,270},{960,540},{1280,720}}) {

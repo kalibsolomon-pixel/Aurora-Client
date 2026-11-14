@@ -118,11 +118,30 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
     private List<Waypoint> reconciledRows;
     private int reconciledStart = -1;
 
-    /** Search (18) + gap (6) + filter row (20) + gap (6) under the header band. */
-    @Override protected int listTop() { return windowTop() + HEADER_H + 38; }
+    /** Search (18) + gap (6) + filter row (20) + gap (6) under the header band, while shown. */
+    @Override protected int listTop() { return toolbarShown ? windowTop() + HEADER_H + 38 : super.listTop(); }
+
+    /**
+     * Search and filters exist only while this world has a waypoint (2026-11-14): with none
+     * there is nothing to search or filter, and the toolbar out-weighed the empty state's one
+     * action. {@link #tick} rebuilds when the first waypoint arrives or the last one goes.
+     */
+    private boolean toolbarShown;
+
+    private static boolean anyWaypoints() {
+        var feature = WaypointFeature.get();
+        return feature != null && !feature.currentWorldWaypoints().isEmpty();
+    }
+
+    @Override public void tick() {
+        super.tick();
+        if (toolbarShown != anyWaypoints()) rebuildWidgets();
+    }
 
     @Override protected void init() {
+        toolbarShown = anyWaypoints();
         super.init();
+        if (!toolbarShown) return;
         int left = (width - listWidth()) / 2;
         search = new EditBox(font, left, windowTop() + HEADER_H, listWidth(), 14, Component.literal("Search waypoints"));
         search.setHint(Component.literal("Search name, group, dimension or description"));
@@ -132,10 +151,6 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
         // Hide/Show group only exists while a group is chosen (council review 2026-11-14): a
         // permanently disabled chip read as a bug, so the other three share the row instead.
         int cells = group.isEmpty() ? 3 : 4;
-        // With no waypoints in this world there is nothing to sort or filter (2026-11-14): the
-        // chips rest disabled so the empty state's one action is Drop Waypoint.
-        var waypointFeature = WaypointFeature.get();
-        boolean anyWaypoints = waypointFeature != null && !waypointFeature.currentWorldWaypoints().isEmpty();
         int cell = (listWidth() - 6 * (cells - 1)) / cells;
         ButtonWidget sortChip = addRenderableWidget(ButtonWidget.semantic(left, windowTop() + HEADER_H + 18, cell, 16,
                 Component.literal(sortLabel()), "Cycles name, distance, creation and group sorting.",
@@ -157,7 +172,6 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
                     group = options.get((options.indexOf(group) + 1) % options.size());
                     invalidateRows(); rebuildWidgets();
                 }).icon(IconCatalog.glyph("folder")));
-        for (ButtonWidget chip : new ButtonWidget[]{sortChip, dimensionChip, groupChip}) chip.active = anyWaypoints;
         if (group.isEmpty()) return;
         boolean hidden = AuroraConfig.get().waypointHiddenGroups != null && AuroraConfig.get().waypointHiddenGroups.contains(group);
         addRenderableWidget(ButtonWidget.semantic(left + 3 * (cell + 6), windowTop() + HEADER_H + 18, cell, 16,

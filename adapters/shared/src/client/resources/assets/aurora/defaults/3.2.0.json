@@ -8,7 +8,7 @@
   "textItalic": false,
   "textUnderline": false,
   "textCase": "NORMAL",
-  "textHudShadow": "OFF",
+  "textHudShadow": "NORMAL",
   "searchInstant": true,
   "searchTypoTolerance": 2,
   "themeEnabled": true,

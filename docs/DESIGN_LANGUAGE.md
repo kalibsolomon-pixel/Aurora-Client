@@ -811,7 +811,8 @@ the accent-filled call to action under its hint.
 An empty list shows one centred group: an optional 24 px muted icon, a headline in the
 `HEADING` role, and one secondary line that names the next action (`ManagerListScreen`'s
 `emptyIcon`/`emptyMessage`/`emptyHint`). A filtered list with no matches keeps a single
-secondary line. A list setting inside a page (Keystrokes' Extra Keys) shows a muted "None"
+secondary line. A manager whose collection is empty (no waypoints in this world) shows no
+search or filter row at all; it appears with the first item. A list setting inside a page (Keystrokes' Extra Keys) shows a muted "None"
 in its label row's trailing value slot instead, above its Add control.
 
 ### 11.11 Tab/sidebar item
@@ -1394,8 +1395,8 @@ cards keep their original 80×80 size; the window must not be oversized for the 
   18 px (sliders 20, wrapped 28) with 2 px gaps; 14 px field controls (dropdown 84 wide,
   keybind/action 72); 24×12 toggles; 14×14 square color swatches (accent presets the same
   squares, its Custom slot a wider labeled pill); 4.5 px slider knob (5 before 2026-11-14); section band 8 px.
-  Feature cards stay 80×80 with 6 px gaps (3 columns, 3 rows visible); list cards stay
-  32 px with 4 px gaps.
+  Feature cards stay 80×80 with 6 px gaps (3 columns, 3 rows visible); list rows are 24 px
+  with 4 px gaps, nine visible (owner decision 2026-11-14; 32 px rows were half empty).
 - **Per-pixel color gradients.** Both color pickers (`ColorPickerScreen` and
   `ColorSetting`'s expanded inline editor) rasterize the saturation/lightness pad and the
   hue/alpha strips one sample per DEVICE pixel into small `UiLayerCache` buffers

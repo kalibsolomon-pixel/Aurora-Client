@@ -533,7 +533,7 @@ The tab shows one page at a time, chosen from the sub-tabs in the row above the 
   - **Weight**: dropdown Regular / Medium / SemiBold / Bold · Medium · real font files; Quicksand has one weight. `{textWeight}`
   - **Modifiers**: toggles Italic · off, Underline · off · italic is the family's own where it has one (Oswald and Quicksand slant). `{textItalic}` `{textUnderline}`
   - **Case**: segmented Aa / AA / aa · Aa. `{textCase}`
-  - **HUD Text Shadow**: segmented Off / Normal / Full · Off · in-world HUD only (Normal = Minecraft's drop shadow, Full = outline); menus never shadow text. `{textHudShadow}`
+  - **HUD Text Shadow**: segmented Off / Normal / Full · Normal (Off before 2026-11-14) · in-world HUD only (Normal = Minecraft's drop shadow, Full = outline); menus never shadow text. `{textHudShadow}`
   - **Preview**: one sample line in the current options, with the HUD shadow.
 
 #### Sub-tab: Display `{subtab:display}`
