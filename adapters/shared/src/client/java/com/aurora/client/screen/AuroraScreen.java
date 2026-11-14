@@ -1008,7 +1008,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             // surface. The glow rings above stay — they read as a drop
             // shadow, not an outline.
             RenderUtil.drawRoundedRectAA(g, bx, by, BOX_W, windowH(), radius, MaterialSurface.color(ThemeToken.WINDOW_FILL));
-            RenderUtil.drawRoundedOutlineAA(g, bx, by, BOX_W, windowH(), radius, 1.0f, MaterialSurface.unified() ? MaterialSurface.color(ThemeToken.BORDER)
+            RenderUtil.drawRoundedOutlineAA(g, bx, by, BOX_W, windowH(), radius, 1.0f, MaterialSurface.unified() ? MaterialSurface.color(ThemeToken.WINDOW_OUTLINE)
                     : alpha(ThemeToken.ON_BACKGROUND, 0x13 / 255f));
         }
 

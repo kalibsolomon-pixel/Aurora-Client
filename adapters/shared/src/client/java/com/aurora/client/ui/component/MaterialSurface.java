@@ -39,7 +39,10 @@ public final class MaterialSurface {
             case SURFACE, WINDOW_FILL -> ThemeToken.MATERIAL_PANEL;
             case SURFACE_VARIANT -> ThemeToken.MATERIAL_RAISED;
             case SURFACE_INSET -> ThemeToken.MATERIAL_SUNKEN;
-            case BORDER, WINDOW_OUTLINE -> ThemeToken.MATERIAL_BORDER;
+            case BORDER -> ThemeToken.MATERIAL_BORDER;
+            // A window's edge is one step stronger than an inner border (2026-11-14), so its
+            // silhouette survives a night scene at the factory 33% Background Opacity.
+            case WINDOW_OUTLINE -> ThemeToken.MATERIAL_BORDER_STRONG;
             case BORDER_HOVER -> ThemeToken.MATERIAL_BORDER_STRONG;
             case ON_BACKGROUND, ON_SURFACE -> ThemeToken.MATERIAL_TEXT;
             case ON_BACKGROUND_SECONDARY -> ThemeToken.MATERIAL_TEXT_SECONDARY;
@@ -59,7 +62,7 @@ public final class MaterialSurface {
     /** Cached parent face, drawn once above the screen dim even when capture declines. */
     public static void parent(GuiGraphicsExtractor g, float x, float y, float w, float h, float radius) {
         cached(g,x,y,w,h,radius,ThemeManager.color(ThemeToken.WINDOW_FILL),
-                color(ThemeToken.BORDER),120,true);
+                color(ThemeToken.WINDOW_OUTLINE),120,true);
     }
 
     public static int selectedFill() { return ThemeManager.color(ThemeToken.SELECTION_SOFT); }
