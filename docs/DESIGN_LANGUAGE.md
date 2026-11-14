@@ -773,12 +773,15 @@ header never shows two accent-filled actions.
   a flat card inside an existing material container is valid when another layer adds no
   hierarchy. Selected/on treatment uses stain or a compact accent indicator as appropriate.
 - **Feature on/off (2026-11-14):** a feature tile or list row being *enabled* is a state, not
-  a selection. Every feature tile keeps the neutral face and shows its state as a small switch
-  (the regular 24×12 switch, in the tile's top-right corner or trailing a list row): accent
-  track when on, the neutral OFF track when off, white thumb. The tile or row stays the control.
-  An enabled icon brightens to primary text; it does not take the accent (a per-module accent
-  override still applies). Selection treatment (wash + accent edge) stays reserved for the
-  selected tab, page or item. A bare status dot was tried first and read as a notification badge.
+  a selection. Every feature tile keeps the neutral face and states its state in a small status
+  pill (11 px tall, one width for both words; top-right of a tile, trailing a list row): **On**
+  is a faint accent fill (`ACCENT_MARKER` at 0x55) with primary text, **Off** a 1 px neutral
+  outline (`MATERIAL_BORDER_STRONG`) with muted text. The word carries the state without colour;
+  fill versus outline reads across a grid. An off feature also dims its icon and name. The tile
+  or row stays the control. Selection treatment (wash + accent edge) stays reserved for the
+  selected tab, page or item. History: a bare status dot read as a notification badge; a
+  miniature switch mimicked a control the tile does not have and was rated lowest by the owner
+  and every council model in a dedicated consult (`docs/reports/2026-11-14-ui-polish-overhaul.md`).
 - **List rows:** icon, then the name left-aligned on the icon's axis, then trailing state. A
   name is never centred in a row whose icon is pinned left.
 - **States:** actionable cards use the button-like contract. Hover, press, selection, focus,
@@ -1404,8 +1407,9 @@ rulings it supersedes.
   Settings page fits its content the same way (owner decision). Supersedes the compact pass's
   "one window" rule for those two cases; managers, editors and pickers keep the frame.
 - **Rest on a row boundary** (§13.0) and a shorter bottom fade with an alpha floor (§13.1).
-- **Feature state is a switch, not a selection** (§11.10): neutral tiles, a small state switch
-  on every tile and row, brightened icons. Supersedes the enabled-tile accent edge and wash.
+- **Feature state is a status pill, not a selection** (§11.10): neutral tiles, an On/Off pill
+  on every tile and row, dimmed icons and names when off. Supersedes the enabled-tile accent
+  edge and wash.
 - **One accent selection per screen** (§11.11): the sidebar keeps it; sub-tabs mark selection
   by text weight, the layout pair by the neutral field face.
 - **Controls** — filled OFF track shared by switches and slider tracks (§11.4); one stacked
