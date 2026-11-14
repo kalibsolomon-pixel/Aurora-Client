@@ -9,6 +9,8 @@ public record SettingRowLayout(int height, List<String> lines, UiDensity.Rect la
     public enum Kind { BOOLEAN, SLIDER, ENUM, KEYBIND, COLOR, BUTTON, ACTION, SECTION }
     /** Slider value readout column. */
     public static final int VALUE_W = 36;
+    /** A colour row's hex value column, wide enough for {@code #RRGGBBAA}. */
+    public static final int HEX_W = 50;
     /** Track inset for the knob's radius, so a knob at either end lands on the row's control edge,
      * the same right edge every toggle, field and swatch ends on (UI polish 2026-11-14; was 8). */
     public static final int KNOB_RESERVE = 5;
@@ -28,6 +30,8 @@ public record SettingRowLayout(int height, List<String> lines, UiDensity.Rect la
         int h = UiDensity.SIMPLE_ROW;
         UiDensity.Rect value = new UiDensity.Rect(0, 0, 0, 0);
         if (kind == Kind.SECTION) labelW = Math.max(1, width - 16);
+        // A colour row prints its value (#RRGGBB, or #RRGGBBAA) just before the swatch (2026-11-14).
+        if (kind == Kind.COLOR) labelW = Math.max(1, labelW - HEX_W - gap);
         if (kind == Kind.SLIDER) {
             labelW = Math.min(112, Math.max(1, width / 3));
             // Reserve the unchanged 7px knob and its AA edge inside the host clip.

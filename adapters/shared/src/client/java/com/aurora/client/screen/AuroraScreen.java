@@ -487,7 +487,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     private SemanticActionControl tabControl(int i) {
         SemanticActionControl control = tabControls[i];
         if (control != null) return control;
-        String name = i == 0 ? "Mods" : "Settings";
+        String name = i == 0 ? "Features" : "Settings";
         control = new SemanticActionControl(new SemanticAction(
                 Component.literal(name),
                 () -> Component.literal("Switches the main screen to the " + name + " tab."),
@@ -786,7 +786,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     private float boxY() { return (float) Math.floor((this.height - BOX_H) / 2.0f); }
 
     /**
-     * The painted window height. The Mods tab keeps the full frame (its 3×3 grid); a Settings
+     * The painted window height. The Features tab keeps the full frame (its 3×3 grid); a Settings
      * page fits its content below a fixed top edge, never taller than the frame (owner decision
      * 2026-11-14), so a short page no longer sits in a half-empty window.
      */
@@ -1163,7 +1163,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         g.text(tr, com.aurora.client.ui.util.AuroraFontRenderer.role("AURORA", com.aurora.client.ui.util.AuroraFontRenderer.Role.TITLE),
                 (int) bx + 12, (int) by + (com.aurora.client.ui.util.UiDensity.HEADER - tr.lineHeight) / 2 + 2, MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
 
-        String[] cats = {"Mods", "Settings"};
+        String[] cats = {"Features", "Settings"};
         for (int i = 0; i < 2; i++) {
             float catY = navY(i);
             float catX = navX(i);
@@ -1546,7 +1546,9 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 ToggleSwitch t = sectionToggles.get(m.id);
                 if (t != null) {
                     float tw = com.aurora.client.ui.util.UiDensity.TOGGLE_W, th = com.aurora.client.ui.util.UiDensity.TOGGLE_H;
-                    float tx = mx + contentWidth() - tw - 10;
+                    // Ends on the rows' control edge (2026-11-14: it stood 1.5 px proud of the
+                    // swatches and switches below it).
+                    float tx = mx + contentWidth() - tw - 11.5f;
                     t.layout(tx, y + (headerH - th) / 2, tw, th);
                     t.renderShapes(g, tx, y + (headerH - th) / 2, tw, th);
                     t.renderOverlay(g, tx, y + (headerH - th) / 2, tw, th, mouseX, mouseY);

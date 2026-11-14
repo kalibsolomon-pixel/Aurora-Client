@@ -57,7 +57,7 @@ These run without a setting of their own, or are part of how Aurora works rather
 
 ### 3.2 HUD modules
 
-Each one is drawn only when its feature (in the Mods tab) is on. Its settings live in that feature's detail screen.
+Each one is drawn only when its feature (in the Features tab) is on. Its settings live in that feature's detail screen.
 
 | HUD module | Default position | Turned on by | Settings in |
 |---|---|---|---|
@@ -88,15 +88,15 @@ Other things drawn on the HUD that are not movable modules:
 
 ### 4.1 Screen layout
 
-- **Mods** tab: the feature cards. `{ui:tabMods}`
+- **Features** tab (named Mods until 2026-11-14): the feature cards. `{ui:tabMods}`
 - **Settings** tab: global settings on four pages, chosen from sub-tabs across the top (see 4.3). `{ui:tabSettings}`
 - **Profiles** button: opens the profile manager (an action, not a tab). `{ui:profiles}`
-- **Search features and settings…** field (Mods tab): finds features by name, by the settings inside them and by description, and Settings-tab entries too, best match first, within the Search Typo Tolerance. A result found through a setting names it on a second line; clicking that line (or right-clicking the card) opens the feature scrolled to the setting, outlined for a moment. A Settings entry opens on its page. Typing on the Settings tab starts a search. Escape clears the query first, then closes the menu. `{ui:search}`
-- **List / Grid** layout buttons (Mods tab) · default Grid. `{moduleGridView}`
+- **Search features and settings…** field (Features tab): finds features by name, by the settings inside them and by description, and Settings-tab entries too, best match first, within the Search Typo Tolerance. A result found through a setting names it on a second line; clicking that line (or right-clicking the card) opens the feature scrolled to the setting, outlined for a moment. A Settings entry opens on its page. Typing on the Settings tab starts a search. Escape clears the query first, then closes the menu. `{ui:search}`
+- **List / Grid** layout buttons (Features tab) · default Grid. `{moduleGridView}`
 - **On a card**: left-click or Enter turns the feature on/off; right-click opens its detail screen. `{ui:card}`
 - **On a detail screen**: the feature's on/off toggle, its settings, **Reset** (restores this feature's defaults) and **Done**. `{ui:detail}`
 
-### 4.2 Mods tab: 33 cards, in grid order
+### 4.2 Features tab: 33 cards, in grid order
 
 The default shown after each card title is its card toggle in a fresh install. A card marked *combined* is on when any of its parts is on, and switching it flips every part together.
 
@@ -566,7 +566,7 @@ The tab shows one page at a time, chosen from the sub-tabs in the row above the 
 #### Sub-tab: General `{subtab:general}`
 
 - *Search*
-  - **Instant Search**: toggle · on · focuses the search bar when the menu opens or you return to the Mods tab. Global, not per profile. `{searchInstant}`
+  - **Instant Search**: toggle · on · focuses the search bar when the menu opens or you return to the Features tab. Global, not per profile. `{searchInstant}`
   - **Search Typo Tolerance**: segmented Exact / 1 / 2 / 3 · 2 · typos a search word may have; words of 3 letters or fewer always match exactly, 4–6 letters allow at most 1. Applies to every search field. Global. `{searchTypoTolerance}`
 - *Custom Title* · header toggle on · Aurora's title screen and themed vanilla menus; applies the next time you return to the main menu. `{card:custom_title}`
 - *Drag-to-Reorder Servers*

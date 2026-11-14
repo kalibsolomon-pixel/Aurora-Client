@@ -1586,7 +1586,7 @@ addWithSettings("hitbox",
                 group("aurora_keys", "Aurora Keys", hudEditorKey).pageSummary("Keys that open Aurora's own screens."))));
         FeatureSetting searchInstant = new BooleanSetting("Instant Search",
                 () -> cfg.searchInstant, v -> { cfg.searchInstant = v; AuroraConfig.save(); })
-                .description("Focuses the search bar when the Aurora menu opens or you return to the Mods tab, so you can type straight away.");
+                .description("Focuses the search bar when the Aurora menu opens or you return to the Features tab, so you can type straight away.");
         FeatureSetting searchTolerance = new SegmentedSetting<>("Search Typo Tolerance", SearchTolerance.class,
                 () -> SearchTolerance.of(cfg.searchTypoTolerance), v -> { cfg.searchTypoTolerance = v.ordinal(); AuroraConfig.save(); },
                 SearchTolerance::label)

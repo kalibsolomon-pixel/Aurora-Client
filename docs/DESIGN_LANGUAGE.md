@@ -758,6 +758,9 @@ the accent-filled call to action under its hint.
 - **Purpose:** display/select a color or open a color editor.
 - **Shape (2026-11-14):** a rounded square at every Corner Radius (radius at most a quarter of
   its height), so a sample never reads as a switch knob.
+- **Value (2026-11-14):** a colour setting row shows `#RRGGBB` (`#RRGGBBAA` when translucent)
+  in secondary text just before the swatch (`SettingRowLayout.HEX_W` reserved); a
+  swatch near the window tone (the factory graphite background) read as an empty box.
 - **Material:** represented color is data; surrounding selection/action chrome follows theme.
 - **Geometry:** swatch clipping follows theme roundness when rectangular; checkerboard is an
   implementation/data pattern.
@@ -1412,13 +1415,16 @@ rulings it supersedes.
   one size.
 - **Windows fit their content.** Feature detail windows fit their rows below a fixed top edge
   (min 120 px, never taller than the frame) and carry the feature's one-sentence summary under
-  the title (owner decision). The main window keeps the 336×288 frame on the Mods tab; a
+  the title (owner decision). The main window keeps the 336×288 frame on the Features tab; a
   Settings page fits its content the same way (owner decision). Supersedes the compact pass's
   "one window" rule for those two cases; managers, editors and pickers keep the frame.
 - **Rest on a row boundary** (§13.0) and a shorter bottom fade with an alpha floor (§13.1).
 - **Feature state is the icon colour, not a selection** (§11.10): neutral tiles and rows,
   an accent icon when on, a neutral grey icon when off. Supersedes the enabled-tile accent
-  edge and wash.
+  edge and wash. The owner confirmed icon colour as the only cue after five plateaued rounds,
+  and ruled out an Enabled switch on feature detail pages; the tile or row stays the toggle.
+- **The sidebar's first item is "Features"** (owner decision; was "Mods"), matching the search
+  field's "Search features and settings". The title screen's Mods card (Mod Menu) keeps its name.
 - **One accent selection per screen** (§11.11): the sidebar keeps it; sub-tabs mark selection
   by text weight, the layout pair by the neutral field face.
 - **Controls** — filled OFF track shared by switches and slider tracks (§11.4); one stacked
