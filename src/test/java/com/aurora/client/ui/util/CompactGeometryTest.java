@@ -39,19 +39,22 @@ class CompactGeometryTest {
             assertTrue(detail.x() >= 12 && detail.y() >= 12);
         }
     }
-    @Test void sliderAllocationsDoNotOverlapAndFallbackBeforeTrackGetsTooShort() {
-        // Every slider row is stacked (2026-11-14): label and value share the first line, the
-        // track spans the row beneath, ending on the control edge less the knob reserve.
+    @Test void sliderAllocationsDoNotOverlapAndTracksStayBounded() {
+        // Every slider row is inline with a bounded track (owner direction 2026-11-14): label,
+        // then the value right-aligned against the track, whose knob ends on the control edge.
         var row = SettingRowLayout.measure(SettingRowLayout.Kind.SLIDER, "Particle Size %", 344, 9, s -> s.length()*6);
-        assertFalse(row.inline()); assertEquals(UiDensity.STACKED_ROW, row.height());
-        assertEquals(344 - 2 * 8 - 2 * SettingRowLayout.KNOB_RESERVE, row.control().width());
+        assertTrue(row.inline()); assertEquals(UiDensity.INLINE_SLIDER, row.height());
+        assertEquals(SettingRowLayout.TRACK_W, row.control().width());
+        assertEquals(344 - 8 - SettingRowLayout.KNOB_RESERVE, row.control().x() + row.control().width());
         assertTrue(row.label().x()+row.label().width() < row.value().x());
-        assertEquals(344 - 8, row.value().x()+row.value().width());
-        var narrow = SettingRowLayout.measure(SettingRowLayout.Kind.SLIDER, "Particle Size %", 240, 9, s -> s.length()*6);
-        assertFalse(narrow.inline()); assertEquals(UiDensity.STACKED_ROW, narrow.height());
-        assertTrue(narrow.control().width() >= UiDensity.MIN_TRACK);
-        var longLabel = SettingRowLayout.measure(SettingRowLayout.Kind.SLIDER, "Underwater Fog Multiplier", 344, 9, s -> s.length()*6);
-        assertFalse(longLabel.inline());
+        assertTrue(row.value().x()+row.value().width() < row.control().x() - SettingRowLayout.KNOB_RESERVE);
+        var few = SettingRowLayout.measure(SettingRowLayout.Kind.SLIDER, "Gap", 344, 9, s -> s.length()*6,
+                SettingRowLayout.trackWidth(10));
+        assertEquals(SettingRowLayout.SHORT_TRACK_W, few.control().width());
+        assertEquals(SettingRowLayout.TRACK_W, SettingRowLayout.trackWidth(100));
+        var longLabel = SettingRowLayout.measure(SettingRowLayout.Kind.SLIDER, "Underwater Fog Multiplier", 240, 9, s -> s.length()*6);
+        for (String line : longLabel.lines()) assertTrue(line.length()*6 <= longLabel.label().width());
+        assertTrue(longLabel.label().x()+longLabel.label().width() < longLabel.value().x());
     }
     @Test void wholeWordsWrapWithoutEscapingTheMeasuredColumn() {
         var row = SettingRowLayout.measure(SettingRowLayout.Kind.BOOLEAN, "Hide Lava Orange Overlay", 180, 9, s -> s.length()*6);

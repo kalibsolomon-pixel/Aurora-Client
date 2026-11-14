@@ -65,7 +65,9 @@ public abstract class FeatureSetting {
                 : this instanceof ColorSetting ? com.aurora.client.ui.util.SettingRowLayout.Kind.COLOR
                 : this instanceof ButtonSetting bs ? bs.compactKind()
                 : com.aurora.client.ui.util.SettingRowLayout.Kind.SECTION;
-        compactRow = com.aurora.client.ui.util.SettingRowLayout.measure(kind, label, width, font.lineHeight, font::width);
+        int trackW = this instanceof SliderSetting ss ? com.aurora.client.ui.util.SettingRowLayout.trackWidth(ss.steps())
+                : com.aurora.client.ui.util.SettingRowLayout.TRACK_W;
+        compactRow = com.aurora.client.ui.util.SettingRowLayout.measure(kind, label, width, font.lineHeight, font::width, trackW);
         if (this instanceof BooleanSetting) compactRow = compactRow.withSubtitle(valueLineHeight(font), font.lineHeight);
         compactWidth = width;
         compactFontKey = key;

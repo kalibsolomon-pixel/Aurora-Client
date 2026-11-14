@@ -92,6 +92,9 @@ public class Slider extends Widget {
      * 140 ms hover, drag-grip knob, focus hairline). Must be called before
      * first render (construction time) — it swaps the hover animator.
      */
+    /** Number of positions past the first: {@code (max - min) / step}, rounded. */
+    public int steps() { return step <= 0 ? Integer.MAX_VALUE : (int) Math.round((max - min) / step); }
+
     public Slider canonicalStates() {
         this.canonical = true;
         this.hoverAnim = HoverAnim.symmetric(140L);

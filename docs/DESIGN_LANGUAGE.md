@@ -703,11 +703,14 @@ the accent-filled call to action under its hint.
 - **Material:** opaque track and knob; accent fill communicates the chosen portion. Track and
   knob follow the Corner Radius through the capsule rule. The fill is the flat accent, like the
   switch track (2026-11-14).
-- **Layout (2026-11-14):** one row everywhere: label and value on the first line (value
-  right-aligned to the control edge), the full-width track beneath. The track ends
+- **Layout (owner direction, 2026-11-14):** one inline row everywhere: the label on the left,
+  then the value right-aligned against a bounded track in the control column. The track is a
+  dropdown's width (`SettingRowLayout.TRACK_W`, 84 px), or half that (`SHORT_TRACK_W`) for a
+  slider with at most `SHORT_STEPS` (10) positions; it never spans the row. It ends
   `SettingRowLayout.KNOB_RESERVE` short of the control edge so a knob at either end lands on
-  the edge every toggle, field and swatch ends on. The former inline row is retired: it only
-  appeared on wide windows with short labels, so one page could mix both layouts.
+  the edge every toggle, field and swatch ends on. A long label wraps between words and the row
+  grows. History: a stacked row with a full-width track (earlier the same day) drew long lines
+  with little meaning, most of all for sliders with a handful of positions.
 - **States:** rest, hover, dragging, focus, and disabled. Dragging remains visibly active when
   the pointer leaves the original knob bounds. A disabled row mutes its label as well as its
   track and knob.
@@ -1427,8 +1430,8 @@ rulings it supersedes.
   field's "Search features and settings". The title screen's Mods card (Mod Menu) keeps its name.
 - **One accent selection per screen** (§11.11): the sidebar keeps it; sub-tabs mark selection
   by text weight, the layout pair by the neutral field face.
-- **Controls** — filled OFF track shared by switches and slider tracks (§11.4); one stacked
-  slider row with the unit in the value (§11.5); rounded-square swatches with a light hairline
+- **Controls** — filled OFF track shared by switches and slider tracks (§11.4); one inline
+  slider row with a bounded track and the unit in the value (§11.5); rounded-square swatches with a light hairline
   on dark samples (§11.9); ghost Reset beside an accent-filled Done, one primary per header
   (§11.2a);
   disabled rows mute their label.

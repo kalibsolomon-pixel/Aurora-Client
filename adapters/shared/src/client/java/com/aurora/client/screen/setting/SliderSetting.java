@@ -157,6 +157,9 @@ public class SliderSetting extends FeatureSetting {
         return this;
     }
 
+    /** The slider's positions past the first; picks its track length ({@code SettingRowLayout.trackWidth}). */
+    public int steps() { return slider.steps(); }
+
     @Override public int baseHeight() { return compactRow == null ? CONTROL_H : compactRow.height(); }
     @Override public int height() { return baseHeight() + descriptionHeight(lastWidth); }
 
@@ -229,8 +232,7 @@ public class SliderSetting extends FeatureSetting {
         boolean focused = (!disabled && FeatureSetting.getFocused() == this);
         int valueColor = disabled ? com.aurora.client.util.AuroraAnim.lerpArgb(MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED),
                 MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), .5f) : (focused ? MaterialSurface.color(ThemeToken.ACCENT) : MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY));
-        ctx.text(tr, cachedStr, compactRow == null ? x + width - cachedStrW - 14 : compactRow.inline() ? x + compactRow.value().x() + (compactRow.value().width() - cachedStrW) / 2
-                : x + compactRow.value().x() + compactRow.value().width() - cachedStrW, compactRow == null ? y + 6 : y + (compactRow.value().height() - tr.lineHeight) / 2, valueColor, false);
+        ctx.text(tr, cachedStr, compactRow == null ? x + width - cachedStrW - 14 : x + compactRow.value().x() + compactRow.value().width() - cachedStrW, compactRow == null ? y + 6 : y + (compactRow.value().height() - tr.lineHeight) / 2, valueColor, false);
     }
 
     /** Cacheable static track layer (depends only on the roundness token). */
