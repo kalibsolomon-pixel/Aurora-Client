@@ -522,7 +522,7 @@ The tab shows one page at a time, chosen from the sub-tabs in the row above the 
 
 - *Theme* · header toggle on (off = fixed factory palette instead of your colors) `{card:theme}`
   - **Accent Color**: swatch grid + picker · green (#43A047). `{theme.accent}`
-  - **Background Color**: swatch grid + picker · deep purple (#22163A). `{theme.background}`
+  - **Background Color**: swatch grid + picker · graphite (#16171D). `{theme.background}`
   - *Surfaces* (the three sliders grouped under one caption)
     - **Background Opacity**: slider 0–100% · 33% · the tint's density only. `{theme.backgroundOpacity}`
     - **Blur Radius**: slider Off–32 px (GUI pixels) · 9 px · how blurred the backdrop behind glass is. `{theme.blurRadius}`

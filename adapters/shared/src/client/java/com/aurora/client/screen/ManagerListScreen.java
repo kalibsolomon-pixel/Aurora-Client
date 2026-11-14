@@ -245,6 +245,14 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
     /** Message drawn in the list area when there are no rows. */
     protected abstract Component emptyMessage();
 
+    /** Optional Material Symbols glyph above the empty state; null for none. */
+    protected String emptyIcon() { return null; }
+
+    /** Optional secondary line under the empty-state headline (which then takes the heading role). */
+    protected Component emptyHint() { return null; }
+
+    private static final int EMPTY_ICON = 24;
+
     /** Rows painted above the list (the Profile screen's inline create row). */
     protected int leadingRowCount() { return 0; }
 
@@ -320,6 +328,13 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
                 Component.literal("Done"),
                 "Close this screen and return.",
                 this::onClose).glassBackground(true));
+        // A titled screen reads like a detail screen (UI polish 2026-11-14): its name leads the
+        // header and the action sits beside Done, sized to its label.
+        if (headerTitle() != null && toolbarActionBtn != null) {
+            int w = this.font.width(toolbarActionBtn.getMessage()) + 24;
+            toolbarActionBtn.setWidth(w);
+            toolbarActionBtn.setX(doneBtn.getX() - 4 - w);
+        }
 
         // Custom-painted semantic controls join vanilla's child/narratable
         // lifecycle without joining its render list (the settings' controls
@@ -327,6 +342,9 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         // cleared the lists; every registered control re-adds here.
         semanticHost.finishRebuild();
     }
+
+    /** The screen's name in the header's leading slot (title role); null keeps the action button there. */
+    protected String headerTitle() { return null; }
 
     /** The toolbar's left action button, constructed but not registered (the base registers it). */
     protected abstract ButtonWidget createToolbarActionBtn();
@@ -435,16 +453,43 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
 
 
         // ---- 3. Content ----
-        // Toolbar already identifies this screen; omit the duplicate heading.
+        if (headerTitle() != null) {
+            int titleRight = toolbarActionBtn != null ? toolbarActionBtn.getX() - 8 : doneBtn.getX() - 8;
+            ctx.text(this.font, com.aurora.client.ui.util.AuroraFontRenderer.role(
+                            com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(this.font, headerTitle(), titleRight - windowX() - 12, 0),
+                            com.aurora.client.ui.util.AuroraFontRenderer.Role.TITLE),
+                    windowX() + 12, windowTop() + (com.aurora.client.ui.util.UiDensity.HEADER - this.font.lineHeight) / 2 + 2,
+                    MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
+        }
 
         ctx.enableScissor(listX - 4, listClipTop(), listX + listWidth() + 4, listClipBottom());
         if (rows.isEmpty()) {
             // Empty state centered in the list well rather than pinned to its corner.
+            // Icon, headline and hint as one centred group (UI polish 2026-11-14); a screen
+            // without an icon or hint keeps the single secondary line.
+            String icon = emptyIcon();
+            Component hint = emptyHint();
+            int cx = listX + listWidth() / 2;
+            int groupH = (icon == null ? 0 : EMPTY_ICON + 8) + this.font.lineHeight + (hint == null ? 0 : 4 + this.font.lineHeight);
+            int y = (listClipTop() + listClipBottom()) / 2 - groupH / 2;
+            if (icon != null) {
+                com.aurora.client.ui.util.MaterialIconRenderer.drawIcon(ctx, this.font, icon, cx, y + EMPTY_ICON / 2f, EMPTY_ICON,
+                        ThemeManager.color(ThemeToken.MATERIAL_TEXT_MUTED));
+                y += EMPTY_ICON + 8;
+            }
             String empty = com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(this.font,
                     emptyMessage().getString(), listWidth() - 16, 0);
-            com.aurora.client.ui.util.AuroraFontRenderer.drawCentered(ctx, this.font, empty,
-                    listX + listWidth() / 2, (listClipTop() + listClipBottom()) / 2 - this.font.lineHeight / 2,
-                    ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY));
+            if (hint == null) {
+                com.aurora.client.ui.util.AuroraFontRenderer.drawCentered(ctx, this.font, empty, cx, y,
+                        ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY));
+            } else {
+                Component headline = com.aurora.client.ui.util.AuroraFontRenderer.role(empty, com.aurora.client.ui.util.AuroraFontRenderer.Role.HEADING);
+                com.aurora.client.ui.util.AuroraFontRenderer.drawCentered(ctx, this.font, headline, cx, y,
+                        MaterialSurface.color(ThemeToken.ON_BACKGROUND));
+                com.aurora.client.ui.util.AuroraFontRenderer.drawCentered(ctx, this.font,
+                        com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(this.font, hint.getString(), listWidth() - 16, 0),
+                        cx, y + this.font.lineHeight + 4, ThemeManager.color(ThemeToken.MATERIAL_TEXT_SECONDARY));
+            }
         }
 
         for (int l = 0; l < lead; l++) {

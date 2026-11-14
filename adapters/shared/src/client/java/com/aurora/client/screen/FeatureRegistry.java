@@ -1429,7 +1429,8 @@ addWithSettings("hitbox",
                 .description("Adds inertia to your mouse look so the camera eases into and out of movement instead of stopping instantly. Gives panning a weighty, cinematic feel — great for recording or relaxed play. Note: it adds aim latency, so competitive players usually leave it off.");
         FeatureSetting smoothCameraStrength = SliderSetting.of("Strength",
                 () -> cfg.smoothCameraStrength, v -> cfg.smoothCameraStrength = v, 0.05, 1.0)
-                .description("How much smoothing is applied. Low values add a barely-there glide that still feels responsive; high values produce heavy, floaty camera drift with noticeable lag between your mouse and the view. Start around 0.2-0.3 if you want subtle smoothing.");
+                .description("How much smoothing is applied. Low values add a barely-there glide that still feels responsive; high values produce heavy, floaty camera drift with noticeable lag between your mouse and the view. Start around 0.2-0.3 if you want subtle smoothing.")
+                .disabled(() -> !cfg.smoothCamera); // a dependent control follows its switch (2026-11-14)
         FeatureSetting framePacerEnabled = new BooleanSetting("Enabled",
                 () -> cfg.smoothFramePacer,
                 v -> cfg.smoothFramePacer = v)

@@ -199,8 +199,10 @@ public class Slider extends Widget {
     }
 
     private int trackBase() {
-        return disabled ? MaterialSurface.color(ThemeToken.SURFACE_INSET)
-                : MaterialSurface.color(ThemeToken.SURFACE_VARIANT);
+        // The unfilled track shares the OFF switch's neutral (UI polish 2026-11-14): the raised
+        // surface tone it used barely separated from the window.
+        return disabled ? ThemeManager.color(ThemeToken.MATERIAL_BORDER)
+                : ThemeManager.color(ThemeToken.MATERIAL_BORDER_STRONG);
     }
 
     private int fill() {

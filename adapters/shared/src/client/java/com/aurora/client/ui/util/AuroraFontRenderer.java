@@ -372,6 +372,46 @@ public class AuroraFontRenderer {
         return s + ell;
     }
 
+    /**
+     * Text roles above body text (design language §4.1). Hierarchy is carried by a heavier
+     * cut of the active family, never by pose scaling: {@code TITLE} also takes the regular
+     * 9 px raster where body text uses the compact 8 px one, {@code HEADING} keeps the body
+     * size. A sequence that names its own font is left alone by {@code MixinFont}, so the
+     * role survives the global font swap.
+     */
+    public enum Role { TITLE, HEADING }
+
+    private static final net.minecraft.network.chat.Style[] roleStyles = new net.minecraft.network.chat.Style[Role.values().length];
+    private static final int[] roleKeys = {-1, -1};
+
+    /** The style of {@code role} for the current frame; vanilla bold when no custom font applies. */
+    public static net.minecraft.network.chat.Style roleStyle(Role role) {
+        net.minecraft.network.chat.Style base = getActiveStyle();
+        if (base == null) return net.minecraft.network.chat.Style.EMPTY.withBold(true);
+        AuroraConfig cfg = AuroraConfig.get();
+        int key = styleKey(cfg, compactUi());
+        if (roleKeys[role.ordinal()] == key) return roleStyles[role.ordinal()];
+        AuroraConfig.TextWeight weight = cfg.textWeight == null ? AuroraConfig.TextWeight.MEDIUM : cfg.textWeight;
+        AuroraConfig.TextWeight heavier = switch (weight) {
+            case REGULAR, MEDIUM -> AuroraConfig.TextWeight.SEMIBOLD;
+            case SEMIBOLD, BOLD -> AuroraConfig.TextWeight.BOLD;
+        };
+        String family = familyPath(cfg.activeFont);
+        boolean italic = cfg.textItalic && hasItalicFile(cfg.activeFont);
+        boolean compact = compactUi() && role != Role.TITLE;
+        String path = family + "_" + heavier.suffix() + (italic ? "_italic" : "") + (compact ? "_ui" : "");
+        net.minecraft.network.chat.Style style = base.withFont(new net.minecraft.network.chat.FontDescription.Resource(
+                net.minecraft.resources.Identifier.fromNamespaceAndPath("aurora", path)));
+        roleStyles[role.ordinal()] = style;
+        roleKeys[role.ordinal()] = key;
+        return style;
+    }
+
+    /** {@code text} in the configured case and the style of {@code role}: draw and measure this one value. */
+    public static Component role(String text, Role role) {
+        return styledLiteral(text, roleStyle(role));
+    }
+
     // Keep compatibility wrappers
     public float draw(GuiGraphicsExtractor graphics, String text, float x, float y, int color, boolean dropShadow) {
         return drawString(graphics, Minecraft.getInstance().font, text, x, y, color, dropShadow);

@@ -193,7 +193,7 @@ public class ColorSwatch extends Widget {
                 RenderUtil.drawRoundedOutlineAA(g, x, y, w, h, radius, edgeWidth(),
                         disabled
                                 ? ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_BACKGROUND), 0x33)
-                                : EDGE);
+                                : edgeFor(color));
             }
             if (selected) {
                 RenderUtil.drawRoundedOutlineAA(g, x - 2, y - 2, w + 4, h + 4, radius + 2, 1.5f,
@@ -221,7 +221,7 @@ public class ColorSwatch extends Widget {
                     ThemeManager.color(ThemeToken.ACCENT));
         } else {
             if (!rest) {
-                RenderUtil.drawRoundedOutlineAA(g, x, y, w, h, radius, edgeWidth(), EDGE);
+                RenderUtil.drawRoundedOutlineAA(g, x, y, w, h, radius, edgeWidth(), edgeFor(color));
             }
             if (hT > 0f) {
                 int haloA = Math.round(90 * hT);
@@ -254,6 +254,13 @@ public class ColorSwatch extends Widget {
      * the dark window. Selection, hover and focus keep their own rings.
      */
     private static final int EDGE = 0x99000000;
+    /** The same hairline in light for dark samples (UI polish 2026-11-14): a graphite or
+     * deep-tinted sample on the dark window otherwise had no visible boundary at all. */
+    private static final int EDGE_ON_DARK = 0x40FFFFFF;
+
+    private static int edgeFor(int color) {
+        return com.aurora.client.theme.PaletteEngine.relativeLuminance(color) < 0.05 ? EDGE_ON_DARK : EDGE;
+    }
 
     private static float edgeWidth() {
         return 1f / Math.max(1, (int) Minecraft.getInstance().getWindow().getGuiScale());
@@ -286,7 +293,7 @@ public class ColorSwatch extends Widget {
                     drawCheckerboard(g, 1, 1, w, h, radius);
                 }
                 RenderUtil.drawRoundedRectAA(g, 1, 1, w, h, radius, color | 0xFF000000);
-                RenderUtil.drawRoundedOutlineAA(g, 1, 1, w, h, radius, edgeWidth(), EDGE);
+                RenderUtil.drawRoundedOutlineAA(g, 1, 1, w, h, radius, edgeWidth(), edgeFor(color));
             } finally {
                 RenderUtil.endCapture(prev);
             }

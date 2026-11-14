@@ -9,6 +9,9 @@ public record SettingRowLayout(int height, List<String> lines, UiDensity.Rect la
     public enum Kind { BOOLEAN, SLIDER, ENUM, KEYBIND, COLOR, BUTTON, ACTION, SECTION }
     /** Slider value readout column. */
     public static final int VALUE_W = 36;
+    /** Track inset for the knob's radius, so a knob at either end lands on the row's control edge,
+     * the same right edge every toggle, field and swatch ends on (UI polish 2026-11-14; was 8). */
+    public static final int KNOB_RESERVE = 5;
     public static SettingRowLayout measure(Kind kind, String text, int width, int lineHeight,
                                            TextMetrics measure) {
         int pad = 8, gap = 6;
@@ -41,8 +44,8 @@ public record SettingRowLayout(int height, List<String> lines, UiDensity.Rect la
         int labelH = kind == Kind.SLIDER && !inline ? h - 12 : h;
         UiDensity.Rect label = new UiDensity.Rect(pad + 4, 0, labelW, labelH);
         UiDensity.Rect control = kind == Kind.SLIDER
-                ? new UiDensity.Rect(inline ? width - pad - 8 - controlW : pad + 8, inline ? h / 2 - 2 : h - 9,
-                    inline ? controlW : Math.max(1, width - 2 * pad - 16), 4)
+                ? new UiDensity.Rect(inline ? width - pad - KNOB_RESERVE - controlW : pad + KNOB_RESERVE, inline ? h / 2 - 2 : h - 9,
+                    inline ? controlW : Math.max(1, width - 2 * pad - 2 * KNOB_RESERVE), 4)
                 : new UiDensity.Rect(Math.max(pad, width - pad - controlW), (h - controlH) / 2, controlW, controlH);
         return new SettingRowLayout(h, List.copyOf(lines), label, control, value, inline);
     }

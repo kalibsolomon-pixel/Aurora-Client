@@ -182,16 +182,19 @@ semantic tokens and must not write legacy statics outside `ResolvedTheme.project
 
 ## 4. Typography
 
-Aurora uses one practical UI text size. Version 3 does not introduce a type scale. Hierarchy
-comes from semantic color, position, casing, spacing, alignment, and grouping.
+Aurora uses one practical UI text size for body text. Hierarchy comes first from semantic
+color, position, spacing, alignment, and grouping, and from the two text roles in §4.1.
 
 Equivalent roles must not receive arbitrary local size, shadow, weight, or color treatment.
 Material Symbol sizing is iconography, not typography.
 
 | Role | Normative treatment |
 |---|---|
-| Screen title | Primary, normal Aurora UI size, uniquely placed in the title band. |
-| Attached subtitle/attribution | Secondary, same size, directly attached below the title. |
+| Screen title | Primary, `TITLE` role (§4.1), uniquely placed in the title band. |
+| Window identity | "AURORA", text only (owner ruling 2026-10-06), in the `TITLE` role at the top left of the main window. |
+| Feature description | Secondary, body size, at most two whole-word lines under a detail screen's title; the catalog's one-sentence summary. |
+| Attached subtitle/attribution | Muted (warning when it reports a broken mixin), body size, after the description. |
+| Settings group heading | Primary, `HEADING` role (§4.1). |
 | Section header | Muted, generally uppercase, more space above than below. |
 | Setting label | Primary, left-aligned to the section content column. |
 | Value/subtitle line | Secondary, beneath the label only when it exposes otherwise hidden state. |
@@ -201,6 +204,21 @@ Material Symbol sizing is iconography, not typography.
 | Card description | Secondary or muted according to importance; never the only operational instruction if muted. |
 | Tooltip | Readable supporting text; it supplements rather than replaces essential labels. |
 | Metadata/status | Secondary by default; semantic color may reinforce status but cannot be its only carrier where practical. |
+
+### 4.1 Text roles
+
+Two roles sit above body text (UI polish overhaul, 2026-11-14). Both are a heavier cut of the
+user's chosen family, never a pose-scaled glyph, and both come from
+`AuroraFontRenderer.role(text, Role)`:
+
+| Role | Cut | Use |
+|---|---|---|
+| `TITLE` | one weight step heavier (Regular/Medium → SemiBold, SemiBold/Bold → Bold), regular 9 px raster | screen titles, window identity |
+| `HEADING` | the same heavier weight at the body raster (compact 8 px in windows) | settings group headings, empty-state headlines |
+
+A role sequence names its own font, so `MixinFont`'s global swap leaves it alone; the role still
+follows the configured family, italic and case. With the vanilla font it falls back to Minecraft
+bold. No other sizes or weights are introduced locally.
 
 Text should be ellipsized where a compact control has a fixed width and wrapped where
 explanation is expected. Truncation must use rendered width rather than character count.
@@ -651,6 +669,9 @@ The following sections establish v3 expectations without inventing unresolved pi
   of the accent, lighter on the left), drawn as one shader quad; disabled stays flat. The ON
   state has no outline (owner ruling 2026-11-12): the off track's hairline edge fades out as the
   switch turns on, and keyboard focus is carried by the thumb growing slightly, not by a ring.
+  The OFF track is a filled neutral (`MATERIAL_BORDER_STRONG`) with no outline (2026-11-14): a
+  sunken track with a hairline vanished into dark windows. The slider's unfilled track uses the
+  same token, so "unset" reads the same on both controls.
 - **States:** off/on must be unambiguous; hover, accepted press, focus, and disabled must each
   be defined. Disabled must not look like interactive rest.
 - **Input/accessibility:** clicking its associated row may toggle only when that enlarged hit
@@ -728,11 +749,25 @@ The following sections establish v3 expectations without inventing unresolved pi
 - **Material:** role follows semantics. A raised tile is appropriate for an actionable item;
   a flat card inside an existing material container is valid when another layer adds no
   hierarchy. Selected/on treatment uses stain or a compact accent indicator as appropriate.
+- **Feature on/off (2026-11-14):** a feature tile or list row being *enabled* is a state, not
+  a selection. Every feature tile keeps the neutral face; an enabled one shows its icon in the
+  accent and a 5 px accent status dot (top right on a tile, trailing on a list row). Selection
+  treatment (wash + accent edge) stays reserved for the selected tab, page or item, so a grid of
+  enabled features never reads as many selected cards.
+- **List rows:** icon, then the name left-aligned on the icon's axis, then trailing state. A
+  name is never centred in a row whose icon is pinned left.
 - **States:** actionable cards use the button-like contract. Hover, press, selection, focus,
   and disabled are distinct from child-action states.
 - **Input/accessibility:** the card's principal action and each child action must have
   non-overlapping hit semantics and accessible names.
 - **Sound:** based on navigation, selection, or state change—not simply “card clicked.”
+
+### 11.10a Empty state
+
+An empty list shows one centred group: an optional 24 px muted icon, a headline in the
+`HEADING` role, and one secondary line that names the next action (`ManagerListScreen`'s
+`emptyIcon`/`emptyMessage`/`emptyHint`). A filtered list with no matches keeps a single
+secondary line.
 
 ### 11.11 Tab/sidebar item
 
@@ -872,9 +907,9 @@ Grid screens are an exemption from list-specific layout, not a separate design l
 
 ### 13.1 Top-edge fade
 
-Scrollable content fades into the surface at the top clip boundary. The bottom edge has no
-automatic counterpart because lists terminate into their own padding/footer; add another
-edge only if a real collision is demonstrated.
+Scrollable content fades into the surface at the top clip boundary, and at the bottom
+boundary while more content lies below (`ScrollFade.drawBottom`, engaged by the remaining
+scroll distance).
 
 The canonical implementation is `ScrollFade`:
 
@@ -892,8 +927,12 @@ The surface color is semantic and contextual:
 - `SURFACE` for a secondary container such as a sidebar;
 - a screen's actual custom dim strength when that is the surface already present.
 
-Do not invent a stronger fade color. The fade must dissolve into the backdrop already there
-and must not create a second Background Opacity application point.
+The fade's edge alpha has a floor, `ScrollFade.MIN_EDGE_ALPHA` (0xD8), above the surface's
+own alpha (UI polish overhaul, 2026-11-14). At the factory 33% Background Opacity a fade to
+the window tint verbatim was nearly invisible, and every council reviewer read rows cut at the
+viewport edge as a rendering bug. The floor only darkens a 16 px gradient at an edge that has
+content beyond it; it is not a cover, the scissor still clips, and the window's own tint keeps
+Background Opacity as its single application point.
 
 This rule applies to content that can cross a fixed viewport edge. A dropdown that moves only
 by whole rows and never partially crosses its edge does not need the fade, and world-map wheel

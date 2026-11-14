@@ -99,7 +99,9 @@ public class ToggleSwitch extends Widget {
         if(!pilotPrimed) { pilotSlide.update(on ? 1 : 0,now);pilotHover.update(0,now);pilotPrimed=true; }
         float t=(float)pilotSlide.update(on ? 1 : 0,now);
         float hover=(float)pilotHover.update(!disabled && !previewMode && inBounds(mx,my,x,y,w,h) ? 1 : 0,now);
-        int inactive=MaterialSurface.color(ThemeToken.SURFACE_INSET);
+        // OFF is a filled neutral track one step above the window's border family (UI polish
+        // 2026-11-14): a sunken track with a hairline vanished into dark windows.
+        int inactive=ThemeManager.color(ThemeToken.MATERIAL_BORDER_STRONG);
         int active=MaterialSurface.color(ThemeToken.ACCENT);
         // The ON fill is the accent's subtle left-to-right gradient
         // (AccentGradient); both stops fade in from the OFF tone together.
@@ -115,11 +117,8 @@ public class ToggleSwitch extends Widget {
         var corners=com.aurora.client.theme.ThemeManager.current().roundness();
         float r=corners.capsule(h);
         RenderUtil.drawRoundedRectGradientAA(g,x,y,w,h,r,from,to,true);
-        // No outlines on the ON state (owner ruling 2026-11-12): the edge
-        // fades out as the switch turns on so the gradient stands alone; the
-        // OFF track keeps it so it does not sink into the card.
-        int edge=MaterialSurface.color(ThemeToken.BORDER_HOVER);
-        if(t<1f) RenderUtil.drawRoundedOutlineAA(g,x,y,w,h,r,1,ThemeManager.withAlpha(edge,Math.round((edge>>>24)*(1f-t))));
+        // No outlines in either state (owner ruling 2026-11-12 for ON; the filled OFF track
+        // reads on its own since 2026-11-14).
         // Keyboard focus is carried by scale (design rule 9), not a ring: the
         // thumb grows by FOCUS_GROW around its own center.
         float grow=focusedVisual && !disabled ? FOCUS_GROW : 0f;

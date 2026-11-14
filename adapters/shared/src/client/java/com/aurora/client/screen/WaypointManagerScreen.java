@@ -205,10 +205,18 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
     }
 
     @Override protected Component emptyMessage() {
-        boolean filtering = !query.isEmpty() || !group.isEmpty() || currentDimensionOnly;
-        return Component.literal(filtering ? "No waypoints match the current search and filters."
-                : "No waypoints yet. Use Drop at Player Position or right-click the world map.");
+        return Component.literal(filtering() ? "No waypoints match the current search and filters." : "No waypoints yet");
     }
+
+    @Override protected String emptyIcon() { return filtering() ? null : FeatureIcons.get("waypoints"); }
+
+    @Override protected Component emptyHint() {
+        return filtering() ? null : Component.literal("Drop one at your position, or right-click the world map.");
+    }
+
+    private boolean filtering() { return !query.isEmpty() || !group.isEmpty() || currentDimensionOnly; }
+
+    @Override protected String headerTitle() { return "Waypoints"; }
 
     @Override protected ButtonWidget createToolbarActionBtn() {
         // Drop is the screen's single primary action → accent-STAINED glass
