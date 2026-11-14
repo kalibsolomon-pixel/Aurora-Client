@@ -56,6 +56,14 @@ Publication required all fourteen native matrix rows and the unchanged overhead
 gate, bound to runtime/build/pin inputs, then verified every JAR through handoff,
 draft and anonymous public redownload. [Artifact identities](releases/PUBLISHED_2026-11-11.md#340-parity-release).
 
+3.5.0 is the next parity release: step 6 shader-drawn shapes, the settings,
+profiles, search, text, title-screen and key-combo work, the ADR 0009 performance
+optimizations and the UI polish overhaul ([notes](releases/RELEASE_NOTES_3.5.0.md),
+[overhaul report](reports/2026-11-14-ui-polish-overhaul.md)). All fourteen matrix rows
+passed with six reports each and every judged run within budget
+([evidence](releases/evidence/3.5.0-parity.json)); it publishes through the protected
+workflow.
+
 ## Acceptance and contributor readiness
 
 See [step 5.5 evidence](port/step-5.5.md), [step 5 evidence](port/step-5.md)
