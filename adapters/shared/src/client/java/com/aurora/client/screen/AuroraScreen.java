@@ -1344,8 +1344,9 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             // accent-wash + bright-outline fallback instead of disappearing.
             boolean highlightedGlass = on && highlightedTileGlass(i) && !MaterialSurface.unified();
             // On is a feature state, not a selection (UI polish 2026-11-14): every tile keeps the
-            // neutral face and states On or Off in a small status pill, so the grid never reads as
-            // nine selected cards and the state never depends on colour alone.
+            // neutral face; an enabled feature carries an accent bar along its bottom edge, a
+            // disabled one has none and dims its icon and name. Symmetric about the card's axis
+            // (owner direction), and presence or absence reads without colour.
             if(MaterialSurface.unified()) {
                 MaterialSurface.selection(g,cx,cy,cw,ch,tileRadius,false,hoverT);
                 // Hover also draws the accent outline (2026-11-14): the face step alone was too
@@ -1355,11 +1356,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                     RenderUtil.drawRoundedOutlineAA(g, cx, cy, cw, ch, tileRadius, 1.0f,
                             ThemeManager.withAlpha(edge, Math.round((edge >>> 24) * hoverT)));
                 }
-                if (!isSettingsResult(m)) {
-                    float pillW = statePillWidth(tr);
-                    if (gridLayout) drawStatePill(g, tr, cx + cw - pillW - 5, cy + 5, pillW, on);
-                    else drawStatePill(g, tr, cx + cw - pillW - 10, cy + (ch - STATE_PILL_H) / 2f, pillW, on);
-                }
+                if (on) drawStateBar(g, cx, cy, cw, ch, tileRadius);
                 // Settings cue (owner decision 2026-11-14): a muted chevron fades in while the tile
                 // is hovered or focused; clicking it opens the feature's settings, as right-click does.
                 float cue = Math.max(hoverT, control != null && control.isFocused() ? 1f : 0f);
@@ -1412,7 +1409,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 }
             } else {
                 drawTileIcon(g, tr, m, cx + 20, cy + ch / 2f, 16f, on, highlightedGlass);
-                int nameWidth = Math.max(1, (int) cw - 80);
+                int nameWidth = Math.max(1, (int) cw - 64);
                 long labelVersion = ThemeManager.generation() * 65537L + nameWidth * 31L
                         + com.aurora.client.ui.util.AuroraFontRenderer.styleKey() * 7L;
                 if (labelVersion != moduleLabelVersion) { moduleLabelLines.clear(); moduleLabelVersion = labelVersion; }
@@ -1730,51 +1727,30 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         else g.text(tr, fitted, Math.round(centerX - width / 2f), Math.round(y), color, false);
     }
 
-    /** The settings-cue chevron's em size and its hit box: the tile's bottom-right corner, or just
-     * before a list row's status pill. Paint and click share this one rect. */
+    /** The settings-cue chevron's em size and its hit box: the tile's top-right corner, or a list
+     * row's trailing end, clear of the bottom state bar. Paint and click share this one rect. */
     private static final float CHEVRON = 10f;
     private float[] chevronRect(float cx, float cy, float cw, float ch) {
         float box = 14f;
-        if (gridLayout) return new float[]{cx + cw - box - 3, cy + ch - box - 3, box, box};
-        return new float[]{cx + cw - statePillWidth(this.font) - 10 - 4 - box, cy + (ch - box) / 2f, box, box};
+        if (gridLayout) return new float[]{cx + cw - box - 3, cy + 3, box, box};
+        return new float[]{cx + cw - box - 8, cy + (ch - box) / 2f, box, box};
     }
 
     /**
-     * A feature's on/off state on its tile or row (council consult, 2026-11-14): a small status
-     * pill that says "On" or "Off". On is a faint accent fill with primary text; Off is a neutral
-     * outline with muted text. The word carries the state for colour-blind players, and the fill
-     * versus outline reads across a grid at a glance. It replaced a miniature switch, which
-     * mimicked a control the tile does not have (the tile itself toggles) and that the owner and
-     * every council model rated lowest.
+     * An enabled feature's state bar (two council consults, 2026-11-14): an accent bar along the
+     * card's or row's bottom edge, inset past the corner radius, absent when the feature is off.
+     * It replaced a corner switch and then a corner On/Off pill; the owner asked for a symmetric
+     * mark, and the council rated this one highest of six symmetric candidates.
      */
-    private static void drawStatePill(GuiGraphicsExtractor g, Font tr, float x, float y, float w, boolean on) {
-        float r = ThemeManager.current().roundness().capsule(STATE_PILL_H);
-        if (on) {
-            RenderUtil.drawRoundedRectAA(g, x, y, w, STATE_PILL_H, r,
-                    ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT_MARKER), STATE_PILL_TINT));
-        } else {
-            RenderUtil.drawRoundedOutlineAA(g, x, y, w, STATE_PILL_H, r, 1.0f, ThemeManager.color(ThemeToken.MATERIAL_BORDER_STRONG));
-        }
-        com.aurora.client.ui.util.AuroraFontRenderer.drawCentered(g, tr, on ? "On" : "Off", Math.round(x + w / 2f),
-                Math.round(y + (STATE_PILL_H - tr.lineHeight) / 2f + 1),
-                on ? MaterialSurface.color(ThemeToken.ON_BACKGROUND) : MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED));
+    private void drawStateBar(GuiGraphicsExtractor g, float cx, float cy, float cw, float ch, float radius) {
+        float h = gridLayout ? STATE_BAR_H : STATE_BAR_H - 1f;
+        float inset = Math.max(radius, STATE_BAR_INSET);
+        RenderUtil.drawRoundedRectAA(g, cx + inset, cy + ch - h - STATE_BAR_LIFT, cw - 2 * inset, h, h / 2f,
+                MaterialSurface.color(ThemeToken.ACCENT));
     }
 
-    /** Status pill height, and the alpha of the On pill's accent fill. */
-    private static final float STATE_PILL_H = 11f;
-    private static final int STATE_PILL_TINT = 0x55;
-
-    /** One width for both words, so On and Off pills line up; memoized per text style. */
-    private float statePillWidth(Font tr) {
-        int key = com.aurora.client.ui.util.AuroraFontRenderer.styleKey();
-        if (key != statePillKey) {
-            statePillKey = key;
-            statePillW = Math.max(tr.width("On"), tr.width("Off")) + 10;
-        }
-        return statePillW;
-    }
-    private int statePillKey = Integer.MIN_VALUE;
-    private float statePillW;
+    /** State bar thickness on a card (a row's is one pixel thinner), its least end inset, and its lift off the edge. */
+    private static final float STATE_BAR_H = 3f, STATE_BAR_INSET = 6f, STATE_BAR_LIFT = 2f;
 
 
     /** The lower band of a tile from its subtitle line down — where a click opens the matched setting. */
@@ -1786,7 +1762,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     private float subtitleY(Module m, float cy, float ch, float cw) {
         if (gridLayout) return cy + ch - 16;
         int nameLinesMax = 1;
-        int nameWidth = Math.max(1, (int) cw - 80);
+        int nameWidth = Math.max(1, (int) cw - 64);
         var nameLines = moduleLabelLines.computeIfAbsent(nameLinesMax + "|" + m.name,
                 key -> com.aurora.client.ui.util.WordWrap.lines(m.name, nameWidth, nameLinesMax, this.font::width));
         return cy + (ch - (nameLines.size() + 1) * 10) / 2 + 10;
