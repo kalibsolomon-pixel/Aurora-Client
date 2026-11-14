@@ -111,6 +111,15 @@ public final class ParityProbe implements ClientModInitializer {
         switch (args[0]) {
             case "settings" -> NativeUi.setScreen(client, AuroraScreen.create());
             case "world" -> NativeUi.setScreen(client, null);
+            case "pointer" -> {
+                // Parks the GUI pointer (window pixels) without moving the OS cursor: GLFW drops
+                // synthetic moves at an unchanged position, so the parked value holds.
+                for (String name : new String[]{"xpos", "ypos"}) {
+                    var field = net.minecraft.client.MouseHandler.class.getDeclaredField(name);
+                    field.setAccessible(true);
+                    field.setDouble(client.mouseHandler, Double.parseDouble(args[name.equals("xpos") ? 1 : 2]));
+                }
+            }
             case "waypoints40" -> {
                 if (client.level == null) throw new IllegalStateException("A world must be loaded");
                 var feature = WaypointFeature.get();

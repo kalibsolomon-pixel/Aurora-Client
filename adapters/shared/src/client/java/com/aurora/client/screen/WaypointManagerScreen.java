@@ -129,7 +129,10 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
         search.setValue(query);
         search.setResponder(value -> { commitEditors(); query = value; invalidateRows(); });
         addRenderableWidget(search);
-        int cell = (listWidth() - 18) / 4;
+        // Hide/Show group only exists while a group is chosen (council review 2026-11-14): a
+        // permanently disabled chip read as a bug, so the other three share the row instead.
+        int cells = group.isEmpty() ? 3 : 4;
+        int cell = (listWidth() - 6 * (cells - 1)) / cells;
         addRenderableWidget(ButtonWidget.semantic(left, windowTop() + HEADER_H + 18, cell, 16,
                 Component.literal(sortLabel()), "Cycles name, distance, creation and group sorting.",
                 () -> { commitEditors(); sort = (sort + 1) % 4; invalidateRows(); rebuildWidgets(); }));
@@ -148,15 +151,15 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
                     group = options.get((options.indexOf(group) + 1) % options.size());
                     invalidateRows(); rebuildWidgets();
                 }));
+        if (group.isEmpty()) return;
         boolean hidden = AuroraConfig.get().waypointHiddenGroups != null && AuroraConfig.get().waypointHiddenGroups.contains(group);
-        ButtonWidget groupVisibility = addRenderableWidget(ButtonWidget.semantic(left + 3 * (cell + 6), windowTop() + HEADER_H + 18, cell, 16,
+        addRenderableWidget(ButtonWidget.semantic(left + 3 * (cell + 6), windowTop() + HEADER_H + 18, cell, 16,
                 Component.literal(hidden ? "Show group" : "Hide group"), "Shows or hides the selected group on every map.", () -> {
                     var cfg = AuroraConfig.get();
                     if (cfg.waypointHiddenGroups == null) cfg.waypointHiddenGroups = new java.util.HashSet<>();
                     if (!cfg.waypointHiddenGroups.remove(group)) cfg.waypointHiddenGroups.add(group);
                     AuroraConfig.save(); rebuildWidgets();
                 }));
-        groupVisibility.active = !group.isEmpty();
     }
 
     private String sortLabel() { return "Sort: " + new String[]{"Name", "Distance", "Newest", "Group"}[sort]; }

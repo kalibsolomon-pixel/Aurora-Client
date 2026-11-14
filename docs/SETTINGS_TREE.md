@@ -521,7 +521,7 @@ The tab shows one page at a time, chosen from the sub-tabs in the row above the 
 #### Sub-tab: Appearance `{subtab:appearance}`
 
 - *Theme* · header toggle on (off = fixed factory palette instead of your colors) `{card:theme}`
-  - **Accent Color**: swatch grid + picker · green (#43A047). `{theme.accent}`
+  - **Accent Color**: swatch grid + picker · indigo (#5C6BC0), the logo's family. `{theme.accent}`
   - **Background Color**: swatch grid + picker · graphite (#16171D). `{theme.background}`
   - *Surfaces* (the three sliders grouped under one caption)
     - **Background Opacity**: slider 0–100% · 33% · the tint's density only. `{theme.backgroundOpacity}`

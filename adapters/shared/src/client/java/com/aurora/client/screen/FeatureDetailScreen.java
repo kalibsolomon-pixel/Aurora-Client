@@ -128,6 +128,20 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         int top = recenter ? Math.max(maxFrame.y(), (this.height - Math.min(wanted, maxFrame.height())) / 2)
                 : compactFrame.y();
         int limit = Math.min(maxFrame.y() + maxFrame.height(), this.height - 12) - top;
+        int body = limit - bodyOffset() - fixedHeader - 10;
+        if (Math.max(total, popup) > body) {
+            // A scrolling body ends on a row boundary, so at rest no setting is cut through
+            // its middle (council review, 2026-11-14); the scrollbar and fade show the rest.
+            int acc = 0, fit = 0;
+            for (FeatureSetting setting : meta.settings) {
+                if (!setting.isVisible()) continue;
+                int h = bodyHeight(setting);
+                if (acc + h > body) break;
+                fit = acc + h;
+                acc = fit + ROW_GAP;
+            }
+            if (fit > 0 && fit >= popup) wanted = Math.max(MIN_FRAME_H, bodyOffset() + fixedHeader + fit + 10);
+        }
         compactFrame = new com.aurora.client.ui.util.UiDensity.Rect(maxFrame.x(), top, maxFrame.width(),
                 Math.max(1, Math.min(wanted, limit)));
         TOP_PAD = compactFrame.y() + bodyOffset();
@@ -299,7 +313,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
                 () -> {
                     meta.reset();
                     AuroraConfig.save();
-                }).glassBackground(true).theming(com.aurora.client.ui.component.Button.Theming.OUTLINED);
+                }).glassBackground(true).theming(com.aurora.client.ui.component.Button.Theming.GHOST); // secondary to Done (2026-11-14)
         this.addRenderableWidget(this.resetBtn);
 
         // Custom-painted semantic controls join vanilla's child/narratable

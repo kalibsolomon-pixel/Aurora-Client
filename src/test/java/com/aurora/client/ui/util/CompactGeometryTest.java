@@ -40,11 +40,13 @@ class CompactGeometryTest {
         }
     }
     @Test void sliderAllocationsDoNotOverlapAndFallbackBeforeTrackGetsTooShort() {
+        // Every slider row is stacked (2026-11-14): label and value share the first line, the
+        // track spans the row beneath, ending on the control edge less the knob reserve.
         var row = SettingRowLayout.measure(SettingRowLayout.Kind.SLIDER, "Particle Size %", 344, 9, s -> s.length()*6);
-        assertTrue(row.inline()); assertEquals(UiDensity.INLINE_SLIDER, row.height());
-        assertEquals(160, row.control().width());
+        assertFalse(row.inline()); assertEquals(UiDensity.STACKED_ROW, row.height());
+        assertEquals(344 - 2 * 8 - 2 * SettingRowLayout.KNOB_RESERVE, row.control().width());
         assertTrue(row.label().x()+row.label().width() < row.value().x());
-        assertTrue(row.value().x()+row.value().width() < row.control().x());
+        assertEquals(344 - 8, row.value().x()+row.value().width());
         var narrow = SettingRowLayout.measure(SettingRowLayout.Kind.SLIDER, "Particle Size %", 240, 9, s -> s.length()*6);
         assertFalse(narrow.inline()); assertEquals(UiDensity.STACKED_ROW, narrow.height());
         assertTrue(narrow.control().width() >= UiDensity.MIN_TRACK);

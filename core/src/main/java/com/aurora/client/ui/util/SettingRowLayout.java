@@ -32,7 +32,10 @@ public record SettingRowLayout(int height, List<String> lines, UiDensity.Rect la
             labelW = Math.min(112, Math.max(1, width / 3));
             // Reserve the unchanged 7px knob and its AA edge inside the host clip.
             controlW = width - 2 * pad - labelW - 2 * gap - VALUE_W - 8;
-            inline = controlW >= UiDensity.MIN_TRACK && measure.width(text) <= labelW - 4;
+            // One slider row everywhere (UI polish 2026-11-14): label and value on one line, the
+            // full-width track beneath. Inline rows survived only on wide windows with short
+            // labels, so one page mixed two layouts and pages disagreed with each other.
+            inline = false;
             h = inline ? UiDensity.INLINE_SLIDER : UiDensity.STACKED_ROW;
             if (!inline) labelW = Math.max(1, width - 2 * pad - gap - VALUE_W);
             value = new UiDensity.Rect(inline ? pad + labelW + gap : width - pad - VALUE_W,

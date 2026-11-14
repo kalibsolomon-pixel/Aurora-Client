@@ -1564,17 +1564,17 @@ addWithSettings("hitbox",
                 () -> cfg.hudEditorKey, v -> cfg.hudEditorKey = v)
                 .description("Opens the HUD editor in game, where you move and resize HUD modules; its Aurora Settings button leads here. Also listed in Minecraft's Controls. Press ESC or Backspace while rebinding to clear it.");
         SETTINGS_PAGES.add(new SettingsPage("Appearance", List.of(
-                settingsEntry("theme"),
-                settingsEntry("text_fonts"))));
+                settingsEntry("theme").pageSummary("The accent, window tint and glass of every Aurora screen."),
+                settingsEntry("text_fonts").pageSummary("The typeface and style of Aurora's text, and where it applies."))));
         SETTINGS_PAGES.add(new SettingsPage("Display", List.of(
-                group("frame_rate", "Frame Rate", globalFrameCap, uiFpsLimit),
+                group("frame_rate", "Frame Rate", globalFrameCap, uiFpsLimit).pageSummary("Framerate caps for the game and for Aurora's menus."),
                 group("frame_pacer", "Frame Pacer", framePacerEnabled, framePacingStrategy,
-                        framePacerLowCpu, framePacerSpinThreshold, framePacerParkThreshold),
-                group("low_latency", "Low Latency", lowLatencyEnabled, disableVSync, adaptiveRenderSleeping))));
+                        framePacerLowCpu, framePacerSpinThreshold, framePacerParkThreshold).pageSummary("Holds each frame to an even interval for smoother motion."),
+                group("low_latency", "Low Latency", lowLatencyEnabled, disableVSync, adaptiveRenderSleeping).pageSummary("Shortens the delay between your input and the screen."))));
         SETTINGS_PAGES.add(new SettingsPage("Controls", List.of(
-                group("smooth_camera", "Smooth Camera", smoothCameraEnabled, smoothCameraStrength),
-                group("decoupled_input", "Decoupled Input", decoupledInputEnabled),
-                group("aurora_keys", "Aurora Keys", hudEditorKey))));
+                group("smooth_camera", "Smooth Camera", smoothCameraEnabled, smoothCameraStrength).pageSummary("Eases mouse look into and out of movement."),
+                group("decoupled_input", "Decoupled Input", decoupledInputEnabled).pageSummary("Applies mouse movement at the very start of each frame."),
+                group("aurora_keys", "Aurora Keys", hudEditorKey).pageSummary("Keys that open Aurora's own screens."))));
         FeatureSetting searchInstant = new BooleanSetting("Instant Search",
                 () -> cfg.searchInstant, v -> { cfg.searchInstant = v; AuroraConfig.save(); })
                 .description("Focuses the search bar when the Aurora menu opens or you return to the Mods tab, so you can type straight away.");
@@ -1583,14 +1583,14 @@ addWithSettings("hitbox",
                 SearchTolerance::label)
                 .description("How many typos a search word can have and still find a match. Exact only finds exact matches; short words always need to be exact.");
         SETTINGS_PAGES.add(new SettingsPage("Performance", List.of(
-                group("loading", "Loading", hideReloadOverlay, hideTitleFade),
-                group("debug_screen", "Debug Screen", debugEntryCache),
-                group("maps", "Maps", minimapRefreshCap))));
+                group("loading", "Loading", hideReloadOverlay, hideTitleFade).pageSummary("Skips fades and overlays while the game loads."),
+                group("debug_screen", "Debug Screen", debugEntryCache).pageSummary("Makes the F3 screen cheaper to draw."),
+                group("maps", "Maps", minimapRefreshCap).pageSummary("Limits how often the minimap redraws its terrain."))));
         SETTINGS_PAGES.add(new SettingsPage("General", List.of(
-                group("search", "Search", searchInstant, searchTolerance),
-                settingsEntry("custom_title"),
-                group("server_list", "Drag-to-Reorder Servers", serverListDragEnabled),
-                group("support", "Support", copyDiagnostics))));
+                group("search", "Search", searchInstant, searchTolerance).pageSummary("How the search bar finds features and settings."),
+                settingsEntry("custom_title").pageSummary("Aurora's own title screen in place of the vanilla one."),
+                group("server_list", "Drag-to-Reorder Servers", serverListDragEnabled).pageSummary("Reorder servers in the Multiplayer list by dragging."),
+                group("support", "Support", copyDiagnostics).pageSummary("Collects a diagnostics report to attach to bug reports."))));
 
     }
 

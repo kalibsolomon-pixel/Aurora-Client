@@ -119,6 +119,11 @@ when it silently creates a second accent, text hierarchy, or status vocabulary.
 
 ### 3.2 Accent
 
+**Factory palette (owner decisions, 2026-11-14):** new installs start with the Indigo accent
+preset (#5C6BC0), the family of the ribbon logo, on the stock graphite Background Color
+(#16171D). Earlier factory values (green #43A047 on purple #22163A) read as two palettes next
+to the logo and tinted every neutral purple. Saved colours are never rewritten.
+
 Accent is Aurora's identity and emphasis color. It is appropriate for selection, an on
 state, a primary action, a compact indicator, and selected chrome. It is not a universal
 foreground color and should not color every interactive element.
@@ -195,6 +200,7 @@ Material Symbol sizing is iconography, not typography.
 | Feature description | Secondary, body size, at most two whole-word lines under a detail screen's title; the catalog's one-sentence summary. |
 | Attached subtitle/attribution | Muted (warning when it reports a broken mixin), body size, after the description. |
 | Settings group heading | Primary, `HEADING` role (§4.1). |
+| Settings group summary | Secondary, one line directly under the heading (`FeatureMetadata.pageSummary`), ellipsized to the column. It says what the group is for; row details stay in tooltips. |
 | Section header | Muted, generally uppercase, more space above than below. |
 | Setting label | Primary, left-aligned to the section content column. |
 | Value/subtitle line | Secondary, beneath the label only when it exposes otherwise hidden state. |
@@ -650,6 +656,13 @@ The following sections establish v3 expectations without inventing unresolved pi
 - **Motion:** current restrained compression/recovery is the baseline where glass/fallback
   compositing can support it.
 
+### 11.2a Secondary actions beside a stronger sibling
+
+`Button.Theming.GHOST` (2026-11-14) is text only at rest, in secondary text, and takes the
+neutral hover face on hover or press. It is for a secondary action that shares a header with a
+more important one: feature-detail Reset next to Done. Done stays neutral chrome (owner
+ruling 2026-10-19), so the hierarchy comes from Reset stepping back, not from a stained Done.
+
 ### 11.3 Icon action/button
 
 - **Purpose:** a compact discrete action represented primarily by an icon.
@@ -686,8 +699,14 @@ The following sections establish v3 expectations without inventing unresolved pi
 - **Material:** opaque track and knob; accent fill communicates the chosen portion. Track and
   knob follow the Corner Radius through the capsule rule. The accent fill wears the same subtle
   gradient as the switch track.
+- **Layout (2026-11-14):** one row everywhere: label and value on the first line (value
+  right-aligned to the control edge), the full-width track beneath. The track ends
+  `SettingRowLayout.KNOB_RESERVE` short of the control edge so a knob at either end lands on
+  the edge every toggle, field and swatch ends on. The former inline row is retired: it only
+  appeared on wide windows with short labels, so one page could mix both layouts.
 - **States:** rest, hover, dragging, focus, and disabled. Dragging remains visibly active when
-  the pointer leaves the original knob bounds.
+  the pointer leaves the original knob bounds. A disabled row mutes its label as well as its
+  track and knob.
 - **Input/accessibility:** pointer drag; keyboard increments when focused; accessible label,
   range, and current value. Click-to-edit numeric fields follow Text field rules.
 - **Sound:** no full click per value; optional restrained boundary/commit feedback may be
@@ -774,6 +793,10 @@ secondary line.
 - **Purpose:** select one peer context without implying a destructive action.
 - **Material:** selected item receives stained/accent emphasis. An inactive item may remain
   flat inside a material sidebar when depth would be redundant.
+- **One accent selection per screen (2026-11-14).** The sidebar owns the accent selection. A
+  second navigation level (the Settings sub-tabs) marks its selection by text alone: the
+  `HEADING` role in primary text, no face; the list/grid layout pair marks the active layout
+  with the opaque neutral field face and a primary icon.
 - **States:** hover, press, selected, focus, and disabled. Focus and selection must not be
   visually confused.
 - **Input/accessibility:** pointer and keyboard navigation with group position/state exposed.
@@ -904,6 +927,14 @@ Grid screens are an exemption from list-specific layout, not a separate design l
   clipping, and input rules.
 
 ## 13. Scrolling, clipping, and input bounds
+
+### 13.0 Rest on a row boundary
+
+A scrolling body ends on a row boundary at rest (2026-11-14), so no row is cut through its
+text before the user scrolls. A content-fitted detail window shortens to the last whole row
+that fits (`FeatureDetailScreen.fitFrame`); the main window's Settings viewport trims its band
+to the last whole row (`AuroraScreen.contentViewport`), and the scissor, hit tests, scroll
+extent and scrollbar all read that one band. Partial rows still appear while scrolling.
 
 ### 13.1 Top-edge fade
 
