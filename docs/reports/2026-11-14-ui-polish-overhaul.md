@@ -97,5 +97,8 @@ style for groups and sub-sections, labelled HUD durability numbers.
 - Every round booted the dev client at factory defaults (OpenGL, 1600×900, GUI scale 2) and
   covered the twelve screens listed above, in-world and on the title backdrop. Theme settings
   other than the factory defaults were not swept for these rounds.
-- Not yet run for this branch: `python tools/parity.py` across 26.1/26.2 and
-  `tools/overhead_check.py`.
+- `python tools/parity.py`: 26.1.2, 26.2 and 26.3 build and pass their tests (after a clean
+  26.2 build; a stale compiled test class from an older branch had broken test discovery).
+- `tools/overhead_check.py` on a 26.3 OpenGL boot at factory defaults (six diagnostics runs,
+  two warm-up): CPU per frame 0.133–0.149 ms mean, 0.178–0.226 ms p95, within budget in all
+  four judged runs.
