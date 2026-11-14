@@ -1946,9 +1946,9 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             color = accent != 0 ? accent : MaterialSurface.unified() ? MaterialSurface.color(ThemeToken.ON_BACKGROUND)
                     : MaterialSurface.color(ThemeToken.ACCENT);
         } else {
-            // Off: the muted tone at 70% in unified windows, so on and off tiles part at a glance.
+            // Off: the muted tone at 85% in unified windows, so on and off tiles part at a glance.
             int muted = MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED);
-            color = MaterialSurface.unified() ? ThemeManager.withAlpha(muted, Math.round((muted >>> 24) * 0.7f)) : muted;
+            color = MaterialSurface.unified() ? ThemeManager.withAlpha(muted, Math.round((muted >>> 24) * 0.85f)) : muted;
         }
         // Crisp native-resolution glyph (the shared font atlas is
         // point-sampled and degrades badly at these sizes); em size = the

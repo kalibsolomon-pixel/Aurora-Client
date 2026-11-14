@@ -160,11 +160,9 @@ public class Slider extends Widget {
         t = Math.max(0f, Math.min(1f, t));
         float filledW = w * t;
         if (filledW > 0) {
-            // The accent fill wears the subtle AccentGradient; disabled stays flat.
-            int fill = fill();
-            RenderUtil.drawRoundedRectGradientAA(g, x, ty, filledW, TRACK_H, trackRadius(),
-                    disabled ? fill : com.aurora.client.theme.AccentGradient.start(fill),
-                    disabled ? fill : com.aurora.client.theme.AccentGradient.end(fill), true);
+            // A flat accent fill (owner decision 2026-11-14): the former AccentGradient showed only
+            // its pale left end on short fills, so sliders read as different colours.
+            RenderUtil.drawRoundedRectAA(g, x, ty, filledW, TRACK_H, trackRadius(), fill());
         }
 
         // Knob — center stays exactly at the value coordinate; the canonical

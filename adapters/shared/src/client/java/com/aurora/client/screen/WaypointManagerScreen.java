@@ -132,16 +132,20 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
         // Hide/Show group only exists while a group is chosen (council review 2026-11-14): a
         // permanently disabled chip read as a bug, so the other three share the row instead.
         int cells = group.isEmpty() ? 3 : 4;
+        // With no waypoints in this world there is nothing to sort or filter (2026-11-14): the
+        // chips rest disabled so the empty state's one action is Drop Waypoint.
+        var waypointFeature = WaypointFeature.get();
+        boolean anyWaypoints = waypointFeature != null && !waypointFeature.currentWorldWaypoints().isEmpty();
         int cell = (listWidth() - 6 * (cells - 1)) / cells;
-        addRenderableWidget(ButtonWidget.semantic(left, windowTop() + HEADER_H + 18, cell, 16,
+        ButtonWidget sortChip = addRenderableWidget(ButtonWidget.semantic(left, windowTop() + HEADER_H + 18, cell, 16,
                 Component.literal(sortLabel()), "Cycles name, distance, creation and group sorting.",
                 () -> { commitEditors(); sort = (sort + 1) % 4; invalidateRows(); rebuildWidgets(); })
                 .icon(IconCatalog.glyph("sort"))); // filter chips lead with their kind (2026-11-14)
-        addRenderableWidget(ButtonWidget.semantic(left + cell + 6, windowTop() + HEADER_H + 18, cell, 16,
+        ButtonWidget dimensionChip = addRenderableWidget(ButtonWidget.semantic(left + cell + 6, windowTop() + HEADER_H + 18, cell, 16,
                 Component.literal(currentDimensionOnly ? "This dimension" : "All dimensions"), "Filters the current dimension.",
                 () -> { commitEditors(); currentDimensionOnly = !currentDimensionOnly; invalidateRows(); rebuildWidgets(); })
                 .icon(IconCatalog.glyph("public")));
-        addRenderableWidget(ButtonWidget.semantic(left + 2 * (cell + 6), windowTop() + HEADER_H + 18, cell, 16,
+        ButtonWidget groupChip = addRenderableWidget(ButtonWidget.semantic(left + 2 * (cell + 6), windowTop() + HEADER_H + 18, cell, 16,
                 Component.literal(font.plainSubstrByWidth(group.isEmpty() ? "All groups" : group, cell - 8)),
                 "Cycles waypoint groups. Edit a waypoint to assign its group.", () -> {
                     commitEditors();
@@ -153,6 +157,7 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
                     group = options.get((options.indexOf(group) + 1) % options.size());
                     invalidateRows(); rebuildWidgets();
                 }).icon(IconCatalog.glyph("folder")));
+        for (ButtonWidget chip : new ButtonWidget[]{sortChip, dimensionChip, groupChip}) chip.active = anyWaypoints;
         if (group.isEmpty()) return;
         boolean hidden = AuroraConfig.get().waypointHiddenGroups != null && AuroraConfig.get().waypointHiddenGroups.contains(group);
         addRenderableWidget(ButtonWidget.semantic(left + 3 * (cell + 6), windowTop() + HEADER_H + 18, cell, 16,

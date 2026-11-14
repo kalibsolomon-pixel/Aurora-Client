@@ -259,7 +259,7 @@ public class ColorSwatch extends Widget {
     private static final int EDGE = 0x99000000;
     /** The same hairline in light for dark samples (UI polish 2026-11-14): a graphite or
      * deep-tinted sample on the dark window otherwise had no visible boundary at all. */
-    private static final int EDGE_ON_DARK = 0x55FFFFFF;
+    private static final int EDGE_ON_DARK = 0x80FFFFFF;
 
     private static int edgeFor(int color) {
         // Dark windows: every sample takes the light hairline (council review 2026-11-14), so a

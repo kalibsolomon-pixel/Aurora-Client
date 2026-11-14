@@ -103,11 +103,11 @@ public class ToggleSwitch extends Widget {
         // 2026-11-14): a sunken track with a hairline vanished into dark windows.
         int inactive=ThemeManager.color(ThemeToken.MATERIAL_BORDER_STRONG);
         int active=MaterialSurface.color(ThemeToken.ACCENT);
-        // The ON fill is the accent's subtle left-to-right gradient
-        // (AccentGradient); both stops fade in from the OFF tone together.
+        // The ON fill is the flat accent (owner decision 2026-11-14, was the AccentGradient),
+        // faded in from the OFF tone.
         int wash=MaterialSurface.color(ThemeToken.ON_BACKGROUND);
-        int from=AuroraAnim.lerpArgb(inactive,com.aurora.client.theme.AccentGradient.start(active),t);
-        int to=AuroraAnim.lerpArgb(inactive,com.aurora.client.theme.AccentGradient.end(active),t);
+        int from=AuroraAnim.lerpArgb(inactive,active,t);
+        int to=from;
         // Client adaptation: subtle hover wash distinguishes pointer state without a pulse.
         from=AuroraAnim.lerpArgb(from,wash,.08f*hover);
         to=AuroraAnim.lerpArgb(to,wash,.08f*hover);
@@ -228,11 +228,11 @@ public class ToggleSwitch extends Widget {
                     ThemeManager.color(ThemeToken.ACCENT), DISABLED_ON_RESIDUE * t);
             baseTo = base;
         } else {
-            // ON is the accent's subtle left-to-right gradient (AccentGradient).
+            // ON is the flat accent (2026-11-14).
             int activeCol = ThemeManager.color(ThemeToken.ACCENT);
             int inactiveCol = ThemeManager.color(ThemeToken.SURFACE_VARIANT);
-            base = AuroraAnim.lerpArgb(inactiveCol, com.aurora.client.theme.AccentGradient.start(activeCol), t);
-            baseTo = AuroraAnim.lerpArgb(inactiveCol, com.aurora.client.theme.AccentGradient.end(activeCol), t);
+            base = AuroraAnim.lerpArgb(inactiveCol, activeCol, t);
+            baseTo = base;
         }
         // One restrained hover channel: toward the mode's primary foreground
         // (lifts the track in dark mode, deepens it in light) — reads as

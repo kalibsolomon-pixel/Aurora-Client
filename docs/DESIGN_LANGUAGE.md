@@ -681,7 +681,9 @@ header never shows two accent-filled actions.
 - **Material:** opaque token control by current convention; on state uses accent/selected
   semantics. Track and thumb follow the Corner Radius through the capsule rule. The on track
   wears the subtle automatic accent gradient (`AccentGradient`: a few degrees of hue either side
-  of the accent, lighter on the left), drawn as one shader quad; disabled stays flat. The ON
+  of the accent, lighter on the left) until 2026-11-14; it is now the flat accent (owner
+  decision: on short fills only the pale end showed, so switches and sliders read as different
+  colours). The ON
   state has no outline (owner ruling 2026-11-12): the off track's hairline edge fades out as the
   switch turns on, and keyboard focus is carried by the thumb growing slightly, not by a ring.
   The OFF track is a filled neutral (`MATERIAL_BORDER_STRONG`) with no outline (2026-11-14): a
@@ -699,8 +701,8 @@ header never shows two accent-filled actions.
 
 - **Purpose:** choose a value from a continuous or stepped range.
 - **Material:** opaque track and knob; accent fill communicates the chosen portion. Track and
-  knob follow the Corner Radius through the capsule rule. The accent fill wears the same subtle
-  gradient as the switch track.
+  knob follow the Corner Radius through the capsule rule. The fill is the flat accent, like the
+  switch track (2026-11-14).
 - **Layout (2026-11-14):** one row everywhere: label and value on the first line (value
   right-aligned to the control edge), the full-width track beneath. The track ends
   `SettingRowLayout.KNOB_RESERVE` short of the control edge so a knob at either end lands on
