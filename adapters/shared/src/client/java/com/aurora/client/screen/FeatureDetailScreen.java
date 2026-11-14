@@ -297,8 +297,9 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
                 DONE_W, DONE_H,
                 Component.literal("Done"),
                 "Close this screen and return.",
-                this::onClose).glassBackground(true).theming(com.aurora.client.ui.component.Button.Theming.OUTLINED);
-        // Closing is neutral chrome, matching Reset and the other screens' Done buttons.
+                this::onClose).glassStyle(com.aurora.client.ui.component.Button.GlassStyle.STAINED).primary(true);
+        // Done is the screen's primary action, accent-filled; Reset beside it is a quiet ghost
+        // (owner decision 2026-11-14, superseding the 2026-10-19 neutral-Done ruling).
         this.addRenderableWidget(this.doneBtn);
 
         // Reset-to-defaults button immediately to the left of Done. Persists
@@ -613,7 +614,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
             // its description sits beneath in secondary text, the health or credit line last.
             String breadcrumb = AuroraFontRenderer.ellipsize(this.font, meta.displayName, Math.max(0, resetBtn.getX() - titleX - 6), 0);
             ctx.text(this.font, AuroraFontRenderer.role(breadcrumb, AuroraFontRenderer.Role.TITLE), titleX,
-                    compactFrame.y() + (com.aurora.client.ui.util.UiDensity.HEADER - this.font.lineHeight) / 2 + 2,
+                    compactFrame.y() + (com.aurora.client.ui.util.UiDensity.HEADER - this.font.lineHeight) / 2 + 3, // 11 px raster sits 1 px high
                     MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
             int lineY = compactFrame.y() + com.aurora.client.ui.util.UiDensity.HEADER;
             for (String line : descriptionLines) {

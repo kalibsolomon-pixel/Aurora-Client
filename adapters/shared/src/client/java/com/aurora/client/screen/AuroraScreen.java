@@ -1161,7 +1161,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         // Window identity: AURORA text only (owner ruling 2026-10-06), in the title role so it
         // reads as the window's name rather than one more label (UI polish 2026-11-14).
         g.text(tr, com.aurora.client.ui.util.AuroraFontRenderer.role("AURORA", com.aurora.client.ui.util.AuroraFontRenderer.Role.TITLE),
-                (int) bx + 12, (int) by + (com.aurora.client.ui.util.UiDensity.HEADER - tr.lineHeight) / 2 + 1, MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
+                (int) bx + 12, (int) by + (com.aurora.client.ui.util.UiDensity.HEADER - tr.lineHeight) / 2 + 2, MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
 
         String[] cats = {"Mods", "Settings"};
         for (int i = 0; i < 2; i++) {
@@ -1335,6 +1335,9 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             }
             boolean on = tileOn(m);
             String subtitle = resultSubtitle.get(m.id);
+            // An off feature's name steps down to secondary text with its dimmer icon (2026-11-14).
+            int nameColor = on || isSettingsResult(m) || !MaterialSurface.unified()
+                    ? MaterialSurface.color(ThemeToken.ON_BACKGROUND) : MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY);
 
             // Neutral tiles inherit the enclosing window. Enabled tiles are
             // isolated stained glass; if glass declines, preserve the old
@@ -1345,6 +1348,13 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             // reads as nine selected cards and an off feature still says it can be switched on.
             if(MaterialSurface.unified()) {
                 MaterialSurface.selection(g,cx,cy,cw,ch,tileRadius,false,hoverT);
+                // Hover also draws the accent outline (2026-11-14): the face step alone was too
+                // faint to show which tile the pointer targets.
+                if (hoverT > 0f) {
+                    int edge = ThemeManager.color(ThemeToken.ACCENT_OUTLINE);
+                    RenderUtil.drawRoundedOutlineAA(g, cx, cy, cw, ch, tileRadius, 1.0f,
+                            ThemeManager.withAlpha(edge, Math.round((edge >>> 24) * hoverT)));
+                }
                 if (gridLayout) drawStateSwitch(g, cx + cw - com.aurora.client.ui.util.UiDensity.TOGGLE_W - 5, cy + 5,
                         com.aurora.client.ui.util.UiDensity.TOGGLE_W, com.aurora.client.ui.util.UiDensity.TOGGLE_H, on);
                 else drawStateSwitch(g, cx + cw - com.aurora.client.ui.util.UiDensity.TOGGLE_W - 10,
@@ -1395,8 +1405,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 int nameLinesMax = subtitle == null ? 2 : 1;
                 var lines = moduleLabelLines.computeIfAbsent(nameLinesMax + "|" + m.name,
                         key -> com.aurora.client.ui.util.WordWrap.lines(m.name, labelWidth, nameLinesMax, tr::width));
-                RenderUtil.drawCenteredLines(tr, g, lines, cx + 3, cy + ch - 27, labelWidth,
-                        MaterialSurface.color(ThemeToken.ON_BACKGROUND));
+                RenderUtil.drawCenteredLines(tr, g, lines, cx + 3, cy + ch - 27, labelWidth, nameColor);
                 if (subtitle != null) {
                     drawSubtitle(g, tr, m, subtitle, labelWidth, cx + 3 + labelWidth / 2f, subtitleY(m, cy, ch, cw),
                             mouseX, mouseY, cx, cw, cy + ch);
@@ -1414,7 +1423,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 // List rows read left to right: icon, name on the icon's axis, state at the end.
                 int lineY = Math.round(cy + (ch - textLines * 10) / 2f) + 1;
                 for (String line : nameLines) {
-                    g.text(tr, line, Math.round(cx + 38), lineY, MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
+                    g.text(tr, line, Math.round(cx + 38), lineY, nameColor, false);
                     lineY += 10;
                 }
                 if (subtitle != null) {
@@ -1937,7 +1946,9 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             color = accent != 0 ? accent : MaterialSurface.unified() ? MaterialSurface.color(ThemeToken.ON_BACKGROUND)
                     : MaterialSurface.color(ThemeToken.ACCENT);
         } else {
-            color = MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED);
+            // Off: the muted tone at 70% in unified windows, so on and off tiles part at a glance.
+            int muted = MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED);
+            color = MaterialSurface.unified() ? ThemeManager.withAlpha(muted, Math.round((muted >>> 24) * 0.7f)) : muted;
         }
         // Crisp native-resolution glyph (the shared font atlas is
         // point-sampled and degrades badly at these sizes); em size = the

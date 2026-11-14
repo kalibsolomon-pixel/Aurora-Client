@@ -219,7 +219,7 @@ user's chosen family, never a pose-scaled glyph, and both come from
 
 | Role | Cut | Use |
 |---|---|---|
-| `TITLE` | one weight step heavier (Regular/Medium → SemiBold, SemiBold/Bold → Bold), regular 9 px raster | screen titles, window identity |
+| `TITLE` | one weight step heavier (Regular/Medium → SemiBold, SemiBold/Bold → Bold), its own 11 px raster (`<font>_<weight>_title`, `tools/build_fonts.py`) | screen titles, window identity |
 | `HEADING` | the same heavier weight at the body raster (compact 8 px in windows) | settings group headings, empty-state headlines |
 
 A role sequence names its own font, so `MixinFont`'s global swap leaves it alone; the role still
@@ -660,8 +660,10 @@ The following sections establish v3 expectations without inventing unresolved pi
 
 `Button.Theming.GHOST` (2026-11-14) is text only at rest, in secondary text, and takes the
 neutral hover face on hover or press. It is for a secondary action that shares a header with a
-more important one: feature-detail Reset next to Done. Done stays neutral chrome (owner
-ruling 2026-10-19), so the hierarchy comes from Reset stepping back, not from a stained Done.
+more important one: feature-detail Reset next to Done. Done is the header's primary action,
+accent-filled (owner decision 2026-11-14, superseding the 2026-10-19 neutral-Done ruling); a
+manager whose header already has a primary action (Drop Waypoint) keeps an outlined Done, so a
+header never shows two accent-filled actions.
 
 ### 11.3 Icon action/button
 
@@ -1393,7 +1395,7 @@ written into the sections they belong to; this list records what changed and whi
 rulings it supersedes.
 
 - **Factory palette** (§3.2): Indigo accent on graphite for new installs (owner decision).
-- **Text roles** (§4.1): `TITLE` and `HEADING`, a heavier cut of the user's family. Supersedes
+- **Text roles** (§4.1): `TITLE` (11 px raster) and `HEADING`, a heavier cut of the user's family. Supersedes
   "Version 3 does not introduce a type scale" for those two roles only; body text keeps the
   one size.
 - **Windows fit their content.** Feature detail windows fit their rows below a fixed top edge
@@ -1408,7 +1410,8 @@ rulings it supersedes.
   by text weight, the layout pair by the neutral field face.
 - **Controls** — filled OFF track shared by switches and slider tracks (§11.4); one stacked
   slider row with the unit in the value (§11.5); rounded-square swatches with a light hairline
-  on dark samples (§11.9); ghost Reset beside Done, one outlined Done on every window (§11.2a);
+  on dark samples (§11.9); ghost Reset beside an accent-filled Done, one primary per header
+  (§11.2a);
   disabled rows mute their label.
 - **Settings pages** — group headings in `HEADING`, a one-line summary under each heading;
   collapsible captions in the heading weight, one step quieter.

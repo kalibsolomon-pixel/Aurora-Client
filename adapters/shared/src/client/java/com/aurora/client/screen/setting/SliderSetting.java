@@ -227,7 +227,8 @@ public class SliderSetting extends FeatureSetting {
         // Highlight the value in accent when this slider holds focus, so the
         // user can see at a glance which slider scroll/keys go to.
         boolean focused = (!disabled && FeatureSetting.getFocused() == this);
-        int valueColor = disabled ? MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED) : (focused ? MaterialSurface.color(ThemeToken.ACCENT) : MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY));
+        int valueColor = disabled ? com.aurora.client.util.AuroraAnim.lerpArgb(MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED),
+                MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), .5f) : (focused ? MaterialSurface.color(ThemeToken.ACCENT) : MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY));
         ctx.text(tr, cachedStr, compactRow == null ? x + width - cachedStrW - 14 : compactRow.inline() ? x + compactRow.value().x() + (compactRow.value().width() - cachedStrW) / 2
                 : x + compactRow.value().x() + compactRow.value().width() - cachedStrW, compactRow == null ? y + 6 : y + (compactRow.value().height() - tr.lineHeight) / 2, valueColor, false);
     }

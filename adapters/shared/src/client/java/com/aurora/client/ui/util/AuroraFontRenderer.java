@@ -374,9 +374,8 @@ public class AuroraFontRenderer {
 
     /**
      * Text roles above body text (design language §4.1). Hierarchy is carried by a heavier
-     * cut of the active family, never by pose scaling: {@code TITLE} also takes the regular
-     * 9 px raster where body text uses the compact 8 px one, {@code HEADING} keeps the body
-     * size. A sequence that names its own font is left alone by {@code MixinFont}, so the
+     * cut of the active family, never by pose scaling: {@code TITLE} also takes its own 11 px
+     * raster, {@code HEADING} keeps the body size. A sequence that names its own font is left alone by {@code MixinFont}, so the
      * role survives the global font swap.
      */
     public enum Role { TITLE, HEADING }
@@ -398,8 +397,9 @@ public class AuroraFontRenderer {
         };
         String family = familyPath(cfg.activeFont);
         boolean italic = cfg.textItalic && hasItalicFile(cfg.activeFont);
-        boolean compact = compactUi() && role != Role.TITLE;
-        String path = family + "_" + heavier.suffix() + (italic ? "_italic" : "") + (compact ? "_ui" : "");
+        // TITLE has its own 11 px raster (tools/build_fonts.py PROVIDER_SIZES); HEADING follows body.
+        String size = role == Role.TITLE ? "_title" : compactUi() ? "_ui" : "";
+        String path = family + "_" + heavier.suffix() + (italic ? "_italic" : "") + size;
         net.minecraft.network.chat.Style style = base.withFont(new net.minecraft.network.chat.FontDescription.Resource(
                 net.minecraft.resources.Identifier.fromNamespaceAndPath("aurora", path)));
         roleStyles[role.ordinal()] = style;
