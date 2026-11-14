@@ -124,11 +124,11 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         for (FeatureSetting setting : meta.settings)
             if (setting.isVisible() && setting instanceof com.aurora.client.screen.setting.EnumSetting<?> row)
                 popup = Math.max(popup, row.popupHeight() + 30);
-        int wanted = Math.max(MIN_FRAME_H, bodyOffset() + fixedHeader + Math.max(total, popup) + 10);
+        int wanted = Math.max(MIN_FRAME_H, bodyOffset() + fixedHeader + Math.max(total, popup) + BODY_BOTTOM + 2);
         int top = recenter ? Math.max(maxFrame.y(), (this.height - Math.min(wanted, maxFrame.height())) / 2)
                 : compactFrame.y();
         int limit = Math.min(maxFrame.y() + maxFrame.height(), this.height - 12) - top;
-        int body = limit - bodyOffset() - fixedHeader - 10;
+        int body = limit - bodyOffset() - fixedHeader - BODY_BOTTOM - 2;
         if (Math.max(total, popup) > body) {
             // A scrolling body ends on a row boundary, so at rest no setting is cut through
             // its middle (council review, 2026-11-14); the scrollbar and fade show the rest.
@@ -140,7 +140,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
                 fit = acc + h;
                 acc = fit + ROW_GAP;
             }
-            if (fit > 0 && fit >= popup) wanted = Math.max(MIN_FRAME_H, bodyOffset() + fixedHeader + fit + 10);
+            if (fit > 0 && fit >= popup) wanted = Math.max(MIN_FRAME_H, bodyOffset() + fixedHeader + fit + BODY_BOTTOM + 2);
         }
         compactFrame = new com.aurora.client.ui.util.UiDensity.Rect(maxFrame.x(), top, maxFrame.width(),
                 Math.max(1, Math.min(wanted, limit)));
@@ -160,7 +160,9 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
             }
         }
     }
-    private int bodyBottom() { return compact() ? compactFrame.y() + compactFrame.height() - 8 : Math.max(bodyTop() + 1, this.height - 30); }
+    private int bodyBottom() { return compact() ? compactFrame.y() + compactFrame.height() - BODY_BOTTOM : Math.max(bodyTop() + 1, this.height - 30); }
+    /** Inset below the last row, clear of the window's corner radius (12, was 8; 2026-11-14). */
+    private static final int BODY_BOTTOM = 12;
     private int bodyHeight(FeatureSetting setting) { return setting.height() - (setting == fixedHeaderSetting ? setting.fixedHeaderHeight() : 0); }
     private int settingY(FeatureSetting setting, int bodyY) { return bodyY - (setting == fixedHeaderSetting ? setting.fixedHeaderHeight() : 0); }
 

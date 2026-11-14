@@ -62,7 +62,7 @@ import java.util.function.DoubleSupplier;
 public class Slider extends Widget {
 
     private static final float TRACK_H = 4f;
-    private static final float KNOB_R = 5f;
+    private static final float KNOB_R = 4.5f; // 9 px knob (2026-11-14; was 10): it no longer hides the fill edge
     /** Canonical-mode drag grip: knob radius while an accepted drag is active. */
     private static final float KNOB_R_DRAG = KNOB_R + 1f;
 

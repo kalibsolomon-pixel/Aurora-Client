@@ -772,7 +772,7 @@ ruling 2026-10-19), so the hierarchy comes from Reset stepping back, not from a 
   hierarchy. Selected/on treatment uses stain or a compact accent indicator as appropriate.
 - **Feature on/off (2026-11-14):** a feature tile or list row being *enabled* is a state, not
   a selection. Every feature tile keeps the neutral face and shows its state as a small switch
-  (16×9 in the tile's top-right corner, the regular 24×12 switch trailing a list row): accent
+  (the regular 24×12 switch, in the tile's top-right corner or trailing a list row): accent
   track when on, the neutral OFF track when off, white thumb. The tile or row stays the control.
   An enabled icon brightens to primary text; it does not take the accent (a per-module accent
   override still applies). Selection treatment (wash + accent edge) stays reserved for the
@@ -1369,7 +1369,7 @@ cards keep their original 80×80 size; the window must not be oversized for the 
 - **Compact metrics** (`UiDensity`): 24 px header band with 16 px header buttons; setting rows
   18 px (sliders 20, wrapped 28) with 2 px gaps; 14 px field controls (dropdown 84 wide,
   keybind/action 72); 24×12 toggles; 14×14 square color swatches (accent presets the same
-  squares, its Custom slot a wider labeled pill); 5 px slider knob; section band 8 px.
+  squares, its Custom slot a wider labeled pill); 4.5 px slider knob (5 before 2026-11-14); section band 8 px.
   Feature cards stay 80×80 with 6 px gaps (3 columns, 3 rows visible); list cards stay
   32 px with 4 px gaps.
 - **Per-pixel color gradients.** Both color pickers (`ColorPickerScreen` and
@@ -1384,3 +1384,35 @@ cards keep their original 80×80 size; the window must not be oversized for the 
   open. A player's choice is remembered for the session per feature and caption. A caption
   directly under a collapsed caption drops its band so collapsed runs read as one list.
 - **Waypoint editor** shows Location and Details together (the "Show details" switch is gone).
+
+## UI polish overhaul — 2026-11-14
+
+A council of independent vision models rated screenshots of eleven screens after each round
+(evidence and ratings: `docs/reports/2026-11-14-ui-polish-overhaul.md`). The rules below are
+written into the sections they belong to; this list records what changed and which earlier
+rulings it supersedes.
+
+- **Factory palette** (§3.2): Indigo accent on graphite for new installs (owner decision).
+- **Text roles** (§4.1): `TITLE` and `HEADING`, a heavier cut of the user's family. Supersedes
+  "Version 3 does not introduce a type scale" for those two roles only; body text keeps the
+  one size.
+- **Windows fit their content.** Feature detail windows fit their rows below a fixed top edge
+  (min 120 px, never taller than the frame) and carry the feature's one-sentence summary under
+  the title (owner decision). The main window keeps the 336×288 frame on the Mods tab; a
+  Settings page fits its content the same way (owner decision). Supersedes the compact pass's
+  "one window" rule for those two cases; managers, editors and pickers keep the frame.
+- **Rest on a row boundary** (§13.0) and a shorter bottom fade with an alpha floor (§13.1).
+- **Feature state is a switch, not a selection** (§11.10): neutral tiles, a small state switch
+  on every tile and row, brightened icons. Supersedes the enabled-tile accent edge and wash.
+- **One accent selection per screen** (§11.11): the sidebar keeps it; sub-tabs mark selection
+  by text weight, the layout pair by the neutral field face.
+- **Controls** — filled OFF track shared by switches and slider tracks (§11.4); one stacked
+  slider row with the unit in the value (§11.5); rounded-square swatches with a light hairline
+  on dark samples (§11.9); ghost Reset beside Done, one outlined Done on every window (§11.2a);
+  disabled rows mute their label.
+- **Settings pages** — group headings in `HEADING`, a one-line summary under each heading;
+  collapsible captions in the heading weight, one step quieter.
+- **Managers** — titled header with the action beside Done; structured empty state (§11.10a);
+  the waypoint group chip only exists while a group is chosen.
+- **Names** — "Toggle Sprint/Sneak" is "Sprint & Sneak" (owner decision), so every grid label
+  fits one line.

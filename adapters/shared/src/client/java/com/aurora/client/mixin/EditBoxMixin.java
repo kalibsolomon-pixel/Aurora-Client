@@ -160,11 +160,9 @@ public abstract class EditBoxMixin implements GlassEditBox {
         if (value.isEmpty()) {
             // Placeholder hint text
             if (hint != null) {
-                // Halfway between muted and secondary (2026-11-14): quieter than typed text, but
-                // the muted tone alone was hard to read on the dark inset field.
-                ctx.text(font, hint, innerX, textY, com.aurora.client.util.AuroraAnim.lerpArgb(
-                        MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED),
-                        MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), .5f), false);
+                // Secondary text (2026-11-14): quieter than typed primary text, but the muted tone
+                // was hard to read on the dark inset field.
+                ctx.text(font, hint, innerX, textY, MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
             }
         } else {
             // Render the value text, scrolled by displayPos so long

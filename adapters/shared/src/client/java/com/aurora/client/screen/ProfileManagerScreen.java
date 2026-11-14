@@ -173,7 +173,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         boolean searchFocused = searchField != null && searchField.isFocused();
         searchField = new EditBox(this.font, 0, 0, 80, UiDensity.HEADER_BUTTON_H, Component.literal("Search profiles"));
         searchField.setMaxLength(48);
-        searchField.setHint(Component.literal("Search…"));
+        searchField.setHint(Component.literal("Search profiles"));
         searchField.setValue(query);
         searchField.setFocused(searchFocused);
         this.addRenderableWidget(searchField);

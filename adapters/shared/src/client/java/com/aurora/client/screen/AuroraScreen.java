@@ -190,6 +190,8 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             .flatMap(page -> page.entries().stream()).toList();
     /** Sub-tab height and the gap between sub-tabs (the toolbar row's metrics). */
     private static final float PAGE_TAB_H = com.aurora.client.ui.util.UiDensity.TOOL, PAGE_TAB_GAP = 4;
+    /** Thickness of the selected sub-tab's underline; its ends are always round, it is a mark, not chrome. */
+    private static final float TAB_RULE = 1.5f;
     /** Horizontal label padding inside a sub-tab, per side. */
     private static final int PAGE_TAB_PAD = 8;
     private boolean gridLayout = AuroraConfig.get().moduleGridView; // false: list, true: grid
@@ -397,7 +399,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         }
 
         searchField = new EditBox(this.font, 0, 0, 202, (int) TOOL, Component.literal("Search..."));
-        searchField.setHint(Component.literal("Search features and settings..."));
+        searchField.setHint(Component.literal("Search features and settings"));
         searchField.setBordered(false);
         searchField.setTextColor(0xFFFFFFFF);
         searchField.setMaxLength(64);
@@ -1343,7 +1345,8 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             // reads as nine selected cards and an off feature still says it can be switched on.
             if(MaterialSurface.unified()) {
                 MaterialSurface.selection(g,cx,cy,cw,ch,tileRadius,false,hoverT);
-                if (gridLayout) drawStateSwitch(g, cx + cw - STATE_W_GRID - 6, cy + 6, STATE_W_GRID, STATE_H_GRID, on);
+                if (gridLayout) drawStateSwitch(g, cx + cw - com.aurora.client.ui.util.UiDensity.TOGGLE_W - 5, cy + 5,
+                        com.aurora.client.ui.util.UiDensity.TOGGLE_W, com.aurora.client.ui.util.UiDensity.TOGGLE_H, on);
                 else drawStateSwitch(g, cx + cw - com.aurora.client.ui.util.UiDensity.TOGGLE_W - 10,
                         cy + (ch - com.aurora.client.ui.util.UiDensity.TOGGLE_H) / 2f,
                         com.aurora.client.ui.util.UiDensity.TOGGLE_W, com.aurora.client.ui.util.UiDensity.TOGGLE_H, on);
@@ -1464,9 +1467,16 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                     : AuroraAnim.lerpArgb(
                             MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY),
                             MaterialSurface.color(ThemeToken.ON_BACKGROUND), hoverT);
-            if (sel && MaterialSurface.unified()) com.aurora.client.ui.util.AuroraFontRenderer.drawCentered(g, tr,
-                    com.aurora.client.ui.util.AuroraFontRenderer.role(pageTabLabel[i], com.aurora.client.ui.util.AuroraFontRenderer.Role.HEADING),
-                    (int) (tx + tw / 2f), (int) (my + (PAGE_TAB_H - tr.lineHeight) / 2 + 1), txt);
+            if (sel && MaterialSurface.unified()) {
+                var heading = com.aurora.client.ui.util.AuroraFontRenderer.role(pageTabLabel[i], com.aurora.client.ui.util.AuroraFontRenderer.Role.HEADING);
+                com.aurora.client.ui.util.AuroraFontRenderer.drawCentered(g, tr, heading,
+                        (int) (tx + tw / 2f), (int) (my + (PAGE_TAB_H - tr.lineHeight) / 2 + 1), txt);
+                // A persistent neutral underline under the selected sub-tab's label (2026-11-14):
+                // weight alone read as bold text, not as a selection. Neutral, so the sidebar
+                // keeps the screen's one accent selection.
+                int lineW = tr.width(heading);
+                RenderUtil.drawRoundedRectAA(g, tx + (tw - lineW) / 2f, my + PAGE_TAB_H - TAB_RULE, lineW, TAB_RULE, TAB_RULE / 2f, txt);
+            }
             else com.aurora.client.ui.util.AuroraFontRenderer.drawCentered(g, tr, pageTabLabel[i],
                     (int) (tx + tw / 2f), (int) (my + (PAGE_TAB_H - tr.lineHeight) / 2 + 1), txt);
             if (control != null && control.isFocused() && !sel) {
@@ -1712,8 +1722,6 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         RenderUtil.drawRoundedRectAA(g, on ? x + w - 2f - d : x + 2f, y + 2f, d, d, corners.capsule(d), 0xFFFFFFFF);
     }
 
-    /** The grid tile's state switch, smaller than a row switch so it stays a corner sign. */
-    private static final float STATE_W_GRID = 16f, STATE_H_GRID = 9f;
 
     /** The lower band of a tile from its subtitle line down — where a click opens the matched setting. */
     private static boolean inSubtitleBand(double mouseX, double mouseY, float cx, float cw, float subtitleY, float bottom) {

@@ -158,7 +158,8 @@ public class SectionHeaderSetting extends FeatureSetting {
         // mode that outline degenerated to four straight rules reading as a
         // doubled divider around the section — owner ruling 2026-10-30).
         float emphasis = Math.max(t, interactionControl.isFocused() ? 1f : 0f);
-        int color = AuroraAnim.lerpArgb(AuroraTheme.sectionCaption(),
+        // Unified windows: the caption is secondary text, readable on the glass (2026-11-14).
+        int color = AuroraAnim.lerpArgb(MaterialSurface.unified() ? MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY) : AuroraTheme.sectionCaption(),
                 MaterialSurface.color(ThemeToken.ON_BACKGROUND), emphasis * .6f);
         int textY = top + (h - tr.lineHeight) / 2 + 1;
         // The heading role in the caption colour (2026-11-14): a sub-section reads as the same

@@ -135,10 +135,12 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
         int cell = (listWidth() - 6 * (cells - 1)) / cells;
         addRenderableWidget(ButtonWidget.semantic(left, windowTop() + HEADER_H + 18, cell, 16,
                 Component.literal(sortLabel()), "Cycles name, distance, creation and group sorting.",
-                () -> { commitEditors(); sort = (sort + 1) % 4; invalidateRows(); rebuildWidgets(); }));
+                () -> { commitEditors(); sort = (sort + 1) % 4; invalidateRows(); rebuildWidgets(); })
+                .icon(IconCatalog.glyph("sort"))); // filter chips lead with their kind (2026-11-14)
         addRenderableWidget(ButtonWidget.semantic(left + cell + 6, windowTop() + HEADER_H + 18, cell, 16,
                 Component.literal(currentDimensionOnly ? "This dimension" : "All dimensions"), "Filters the current dimension.",
-                () -> { commitEditors(); currentDimensionOnly = !currentDimensionOnly; invalidateRows(); rebuildWidgets(); }));
+                () -> { commitEditors(); currentDimensionOnly = !currentDimensionOnly; invalidateRows(); rebuildWidgets(); })
+                .icon(IconCatalog.glyph("public")));
         addRenderableWidget(ButtonWidget.semantic(left + 2 * (cell + 6), windowTop() + HEADER_H + 18, cell, 16,
                 Component.literal(font.plainSubstrByWidth(group.isEmpty() ? "All groups" : group, cell - 8)),
                 "Cycles waypoint groups. Edit a waypoint to assign its group.", () -> {
@@ -150,7 +152,7 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
                     var options = new java.util.ArrayList<>(groups);
                     group = options.get((options.indexOf(group) + 1) % options.size());
                     invalidateRows(); rebuildWidgets();
-                }));
+                }).icon(IconCatalog.glyph("folder")));
         if (group.isEmpty()) return;
         boolean hidden = AuroraConfig.get().waypointHiddenGroups != null && AuroraConfig.get().waypointHiddenGroups.contains(group);
         addRenderableWidget(ButtonWidget.semantic(left + 3 * (cell + 6), windowTop() + HEADER_H + 18, cell, 16,
