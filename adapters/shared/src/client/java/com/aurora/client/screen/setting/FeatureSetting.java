@@ -96,7 +96,9 @@ public abstract class FeatureSetting {
         Font font = Minecraft.getInstance().font;
         // A disabled row says so in its label too, not only in a dimmed control beside a
         // full-strength label (UI polish 2026-11-14).
-        if (isDisabled()) color = com.aurora.client.ui.component.MaterialSurface.color(com.aurora.client.theme.ThemeToken.ON_BACKGROUND_MUTED);
+        if (isDisabled()) color = com.aurora.client.util.AuroraAnim.lerpArgb(
+                com.aurora.client.ui.component.MaterialSurface.color(com.aurora.client.theme.ThemeToken.ON_BACKGROUND_MUTED),
+                com.aurora.client.ui.component.MaterialSurface.color(com.aurora.client.theme.ThemeToken.ON_BACKGROUND_SECONDARY), .5f);
         var box = compactRow.label();
         int textY = y + box.y() + (box.height() - (compactRow.lines().size() * (font.lineHeight + 1) + valueLineHeight(font))) / 2;
         for (String line : compactRow.lines()) {

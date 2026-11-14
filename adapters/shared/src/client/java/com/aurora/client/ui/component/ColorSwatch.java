@@ -259,9 +259,13 @@ public class ColorSwatch extends Widget {
     private static final int EDGE = 0x99000000;
     /** The same hairline in light for dark samples (UI polish 2026-11-14): a graphite or
      * deep-tinted sample on the dark window otherwise had no visible boundary at all. */
-    private static final int EDGE_ON_DARK = 0x40FFFFFF;
+    private static final int EDGE_ON_DARK = 0x55FFFFFF;
 
     private static int edgeFor(int color) {
+        // Dark windows: every sample takes the light hairline (council review 2026-11-14), so a
+        // white sample keeps a silhouette too; the black edge stays for light surfaces.
+        if (MaterialSurface.unified() && com.aurora.client.theme.ThemeManager.current().mode() != com.aurora.client.theme.ThemeMode.LIGHT)
+            return EDGE_ON_DARK;
         return com.aurora.client.theme.PaletteEngine.relativeLuminance(color) < 0.05 ? EDGE_ON_DARK : EDGE;
     }
 

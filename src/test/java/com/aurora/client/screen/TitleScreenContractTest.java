@@ -36,10 +36,11 @@ class TitleScreenContractTest {
         assertTrue(SCREEN.contains("new CreditsAndAttributionScreen(this)"), "the copyright line opens the credits, as vanilla's");
     }
 
-    @Test void modsOpensModMenuAndIsDisabledWithoutIt() {
+    @Test void modsOpensModMenuAndIsAbsentWithoutIt() {
         assertTrue(SCREEN.contains("AuroraModMenuApi.open(this)"));
-        assertTrue(SCREEN.contains("if (!AuroraModMenuApi.available()) {\n            mods.active = false;"));
-        assertTrue(SCREEN.contains("aurora.title.modmenu_missing"));
+        // Without Mod Menu there is no Mods card; Settings spans the pair (2026-11-14).
+        assertTrue(SCREEN.contains("if (AuroraModMenuApi.available()) {\n            addCard(4,"));
+        assertTrue(SCREEN.contains("settings.setWidth(pair.x() + pair.width() - settings.getX());"));
         assertFalse(SCREEN.contains("openOrFallback"), "Mods never falls back to Aurora; Aurora has its own button");
     }
 

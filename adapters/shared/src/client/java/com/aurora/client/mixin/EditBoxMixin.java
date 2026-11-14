@@ -154,6 +154,15 @@ public abstract class EditBoxMixin implements GlassEditBox {
         int textCol = MaterialSurface.color(ThemeToken.ON_BACKGROUND);
         int innerX = (int) x + 8;           // 8px left padding
         int innerRight = (int) (x + w) - 4; // 4px right padding
+        // Search fields carry a trailing magnifier (2026-11-14) so an empty field reads as search,
+        // not a bare input. Trailing, so the text origin and vanilla's click-to-caret mapping
+        // stay where they were; the text clip stops short of the glyph.
+        boolean search = MaterialSurface.unified() && hint != null && hint.getString().startsWith("Search");
+        if (search) {
+            com.aurora.client.ui.util.MaterialIconRenderer.drawIcon(ctx, font, com.aurora.client.screen.IconCatalog.glyph("search"),
+                    x + w - 10, y + h / 2f, 10, MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY));
+            innerRight -= 14;
+        }
         int textY = (int) (y + (h - font.lineHeight) / 2) + 1; // +1 nudges past baseline offset
 
         ctx.enableScissor(innerX, (int) y, innerRight, (int) (y + h));
@@ -162,7 +171,9 @@ public abstract class EditBoxMixin implements GlassEditBox {
             if (hint != null) {
                 // Secondary text (2026-11-14): quieter than typed primary text, but the muted tone
                 // was hard to read on the dark inset field.
-                ctx.text(font, hint, innerX, textY, MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
+                // Plain string: vanilla styles the hint component itself, and a per-character colour
+                // overrode this token, leaving the hint a dim fixed grey.
+                ctx.text(font, hint.getString(), innerX, textY, MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
             }
         } else {
             // Render the value text, scrolled by displayPos so long

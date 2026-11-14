@@ -1350,6 +1350,18 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 else drawStateSwitch(g, cx + cw - com.aurora.client.ui.util.UiDensity.TOGGLE_W - 10,
                         cy + (ch - com.aurora.client.ui.util.UiDensity.TOGGLE_H) / 2f,
                         com.aurora.client.ui.util.UiDensity.TOGGLE_W, com.aurora.client.ui.util.UiDensity.TOGGLE_H, on);
+                // Settings cue (owner decision 2026-11-14): a muted chevron fades in while the tile
+                // is hovered or focused; clicking it opens the feature's settings, as right-click does.
+                float cue = Math.max(hoverT, control != null && control.isFocused() ? 1f : 0f);
+                if (cue > 0f && !isSettingsResult(m)) {
+                    FeatureMetadata fm = findMeta(m.id);
+                    if (fm != null && fm.hasDetail()) {
+                        float[] r = chevronRect(cx, cy, cw, ch);
+                        int muted = MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY);
+                        MaterialIconRenderer.drawIcon(g, tr, com.aurora.client.screen.IconCatalog.glyph("chevron_right"),
+                                r[0] + r[2] / 2f, r[1] + r[3] / 2f, CHEVRON, ThemeManager.withAlpha(muted, Math.round((muted >>> 24) * cue)));
+                    }
+                }
             }
             else if (on && !highlightedGlass) {
                 RenderUtil.drawRoundedRectAA(g, cx, cy, cw, ch, tileRadius,
@@ -1707,6 +1719,15 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         int color = link ? MaterialSurface.color(ThemeToken.ACCENT) : MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED);
         if (gridLayout) com.aurora.client.ui.util.AuroraFontRenderer.drawCentered(g, tr, fitted, Math.round(centerX), Math.round(y), color);
         else g.text(tr, fitted, Math.round(centerX - width / 2f), Math.round(y), color, false);
+    }
+
+    /** The settings-cue chevron's em size and its hit box: the tile's bottom-right corner, or just
+     * before a list row's switch. Paint and click share this one rect. */
+    private static final float CHEVRON = 10f;
+    private float[] chevronRect(float cx, float cy, float cw, float ch) {
+        float box = 14f;
+        if (gridLayout) return new float[]{cx + cw - box - 3, cy + ch - box - 3, box, box};
+        return new float[]{cx + cw - com.aurora.client.ui.util.UiDensity.TOGGLE_W - 10 - 4 - box, cy + (ch - box) / 2f, box, box};
     }
 
     /**
@@ -2071,9 +2092,11 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 if (b == null) continue;
                 if (vp.contains(mouseX, mouseY)
                         && mouseX >= b[0] && mouseX <= b[0] + b[2] && mouseY >= b[1] && mouseY <= b[1] + b[3]) {
+                    float[] chevron = chevronRect(b[0], b[1], b[2], b[3]);
                     boolean settingLink = button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT
-                            && !isSettingsResult(m) && resultVia.containsKey(m.id)
-                            && inSubtitleBand(mouseX, mouseY, b[0], b[2], subtitleY(m, b[1], b[3], b[2]), b[1] + b[3]);
+                            && !isSettingsResult(m) && (resultVia.containsKey(m.id)
+                            && inSubtitleBand(mouseX, mouseY, b[0], b[2], subtitleY(m, b[1], b[3], b[2]), b[1] + b[3])
+                            || MaterialSurface.unified() && Widget.inBounds(mouseX, mouseY, chevron[0], chevron[1], chevron[2], chevron[3]));
                     if (button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_RIGHT || settingLink) {
                         // Secondary (pointer-specific) card action: open the
                         // detail screen. One activation click at the site —
