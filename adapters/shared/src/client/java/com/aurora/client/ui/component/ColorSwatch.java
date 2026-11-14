@@ -153,7 +153,10 @@ public class ColorSwatch extends Widget {
     public void renderOverlay(GuiGraphicsExtractor g, float x, float y, float w, float h, int mouseX, int mouseY) {
         x=Math.round(x); y=Math.round(y); w=Math.round(w); h=Math.round(h);
         int color = getter.getAsInt();
-        float radius = Math.min(h / 2f, ThemeManager.current().roundness().radiusSmall());
+        // A rounded square at every Corner Radius (owner ruling 2026-10-30: swatches are squares;
+        // 2026-11-14: at the factory radius a 14 px sample had become a disc that read as a
+        // switch knob).
+        float radius = Math.min(h / 4f, ThemeManager.current().roundness().radiusSmall());
 
         if (dataOnly) {
             // Display-only data sample: the neutral at-rest look, nothing

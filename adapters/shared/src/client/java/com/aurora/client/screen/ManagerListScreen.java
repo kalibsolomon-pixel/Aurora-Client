@@ -515,7 +515,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         int fadeSurface = MaterialSurface.color(ThemeToken.WINDOW_FILL);
         ScrollFade.drawTop(ctx, listX - 4, listWidth() + 8, listClipTop(), ScrollFade.FADE_PX,
                 scroll.current(), fadeSurface);
-        ScrollFade.drawBottom(ctx, listX - 4, listWidth() + 8, listClipBottom(), ScrollFade.FADE_PX,
+        ScrollFade.drawBottom(ctx, listX - 4, listWidth() + 8, listClipBottom(), ScrollFade.BOTTOM_FADE_PX,
                 maxScroll - scroll.current(), fadeSurface);
 
         // The list's scrollbar thumb — after the content scissor (it is

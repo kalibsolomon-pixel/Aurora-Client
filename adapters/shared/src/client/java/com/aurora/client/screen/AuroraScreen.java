@@ -1231,7 +1231,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         ClipBand vp = contentViewport();
         ScrollFade.drawTop(g, vp.x, vp.width, vp.y, ScrollFade.FADE_PX,
                 scrolls[selectedCategory].current(), MaterialSurface.color(ThemeToken.WINDOW_FILL));
-        ScrollFade.drawBottom(g, vp.x, vp.width, vp.y + vp.height, ScrollFade.FADE_PX,
+        ScrollFade.drawBottom(g, vp.x, vp.width, vp.y + vp.height, ScrollFade.BOTTOM_FADE_PX,
                 computeMaxScroll() - scrolls[selectedCategory].current(), MaterialSurface.color(ThemeToken.WINDOW_FILL));
 
         drawScrollbar(g);
@@ -1315,11 +1315,14 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             // accent-wash + bright-outline fallback instead of disappearing.
             boolean highlightedGlass = on && highlightedTileGlass(i) && !MaterialSurface.unified();
             // On is a feature state, not a selection (UI polish 2026-11-14): every tile keeps the
-            // neutral face and an enabled one carries the accent icon plus a status dot, so the
-            // grid never reads as nine selected cards.
+            // neutral face and shows its state as a small switch, on or off, so the grid never
+            // reads as nine selected cards and an off feature still says it can be switched on.
             if(MaterialSurface.unified()) {
                 MaterialSurface.selection(g,cx,cy,cw,ch,tileRadius,false,hoverT);
-                if (on) drawStatusDot(g, gridLayout ? cx + cw - 9 : cx + cw - 14, gridLayout ? cy + 9 : cy + ch / 2f);
+                if (gridLayout) drawStateSwitch(g, cx + cw - STATE_W_GRID - 6, cy + 6, STATE_W_GRID, STATE_H_GRID, on);
+                else drawStateSwitch(g, cx + cw - com.aurora.client.ui.util.UiDensity.TOGGLE_W - 10,
+                        cy + (ch - com.aurora.client.ui.util.UiDensity.TOGGLE_H) / 2f,
+                        com.aurora.client.ui.util.UiDensity.TOGGLE_W, com.aurora.client.ui.util.UiDensity.TOGGLE_H, on);
             }
             else if (on && !highlightedGlass) {
                 RenderUtil.drawRoundedRectAA(g, cx, cy, cw, ch, tileRadius,
@@ -1361,7 +1364,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 }
             } else {
                 drawTileIcon(g, tr, m, cx + 20, cy + ch / 2f, 16f, on, highlightedGlass);
-                int nameWidth = Math.max(1, (int) cw - 64);
+                int nameWidth = Math.max(1, (int) cw - 80);
                 long labelVersion = ThemeManager.generation() * 65537L + nameWidth * 31L
                         + com.aurora.client.ui.util.AuroraFontRenderer.styleKey() * 7L;
                 if (labelVersion != moduleLabelVersion) { moduleLabelLines.clear(); moduleLabelVersion = labelVersion; }
@@ -1672,14 +1675,21 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         else g.text(tr, fitted, Math.round(centerX - width / 2f), Math.round(y), color, false);
     }
 
-    /** An enabled feature's status mark: a small accent disc, the one state sign tiles and rows share. */
-    private static void drawStatusDot(GuiGraphicsExtractor g, float cx, float cy) {
-        RenderUtil.drawRoundedRectAA(g, cx - STATUS_DOT / 2f, cy - STATUS_DOT / 2f, STATUS_DOT, STATUS_DOT, STATUS_DOT / 2f,
-                MaterialSurface.color(ThemeToken.ACCENT));
+    /**
+     * A feature's on/off state on its tile or row: the switch's own look (accent track when on,
+     * the neutral OFF track when off, white thumb), drawn as a state sign. The tile or row is the
+     * control; clicking it toggles, as before.
+     */
+    private static void drawStateSwitch(GuiGraphicsExtractor g, float x, float y, float w, float h, boolean on) {
+        var corners = ThemeManager.current().roundness();
+        RenderUtil.drawRoundedRectAA(g, x, y, w, h, corners.capsule(h),
+                on ? MaterialSurface.color(ThemeToken.ACCENT) : ThemeManager.color(ThemeToken.MATERIAL_BORDER_STRONG));
+        float d = h - 4f;
+        RenderUtil.drawRoundedRectAA(g, on ? x + w - 2f - d : x + 2f, y + 2f, d, d, corners.capsule(d), 0xFFFFFFFF);
     }
 
-    /** Status dot diameter; a disc at every Corner Radius, since it is a state mark, not chrome. */
-    private static final float STATUS_DOT = 6f;
+    /** The grid tile's state switch, smaller than a row switch so it stays a corner sign. */
+    private static final float STATE_W_GRID = 16f, STATE_H_GRID = 9f;
 
     /** The lower band of a tile from its subtitle line down — where a click opens the matched setting. */
     private static boolean inSubtitleBand(double mouseX, double mouseY, float cx, float cw, float subtitleY, float bottom) {
@@ -1690,7 +1700,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     private float subtitleY(Module m, float cy, float ch, float cw) {
         if (gridLayout) return cy + ch - 16;
         int nameLinesMax = 1;
-        int nameWidth = Math.max(1, (int) cw - 64);
+        int nameWidth = Math.max(1, (int) cw - 80);
         var nameLines = moduleLabelLines.computeIfAbsent(nameLinesMax + "|" + m.name,
                 key -> com.aurora.client.ui.util.WordWrap.lines(m.name, nameWidth, nameLinesMax, this.font::width));
         return cy + (ch - (nameLines.size() + 1) * 10) / 2 + 10;
@@ -1868,8 +1878,11 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         if (on && stainedGlass) {
             color = MaterialSurface.color(ThemeToken.ON_ACCENT);
         } else if (on) {
+            // The state switch carries on/off; the icon only brightens (a per-module accent
+            // override still applies), so the accent is not spent on every enabled tile.
             int accent = ModuleAccentColors.get(m.id);
-            color = accent != 0 ? accent : MaterialSurface.color(ThemeToken.ACCENT);
+            color = accent != 0 ? accent : MaterialSurface.unified() ? MaterialSurface.color(ThemeToken.ON_BACKGROUND)
+                    : MaterialSurface.color(ThemeToken.ACCENT);
         } else {
             color = MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED);
         }

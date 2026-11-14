@@ -46,6 +46,12 @@ public final class ScrollFade {
     public static final int FADE_PX = 16;
 
     /**
+     * The bottom edge's shorter fade (2026-11-14). Scrolling bodies rest on a row boundary, so
+     * a full 16 px gradient only dimmed the last whole row and made it read as cut off.
+     */
+    public static final int BOTTOM_FADE_PX = 8;
+
+    /**
      * Least edge alpha of the fade (UI polish 2026-11-14). At the factory 33% Background
      * Opacity a fade to the window tint verbatim was nearly invisible, so rows read as cut
      * off by accident; the gradient now always reaches this density at the boundary.

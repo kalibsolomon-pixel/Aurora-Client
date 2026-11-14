@@ -161,7 +161,10 @@ public class SectionHeaderSetting extends FeatureSetting {
         int color = AuroraAnim.lerpArgb(AuroraTheme.sectionCaption(),
                 MaterialSurface.color(ThemeToken.ON_BACKGROUND), emphasis * .6f);
         int textY = top + (h - tr.lineHeight) / 2 + 1;
-        ctx.text(tr, label, x + LABEL_PAD, textY, color, false);
+        // The heading role in the caption colour (2026-11-14): a sub-section reads as the same
+        // family as the group headings above it, one step quieter.
+        ctx.text(tr, com.aurora.client.ui.util.AuroraFontRenderer.role(label, com.aurora.client.ui.util.AuroraFontRenderer.Role.HEADING),
+                x + LABEL_PAD, textY, color, false);
         // Trailing chevron (native-resolution icon): down = collapsed, up = expanded.
         com.aurora.client.ui.util.MaterialIconRenderer.drawIcon(ctx, tr,
                 com.aurora.client.screen.FeatureIcons.get(collapsed ? "_dropdown_expand_more" : "_dropdown_expand_less"),

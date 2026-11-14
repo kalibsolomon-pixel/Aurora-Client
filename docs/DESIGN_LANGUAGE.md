@@ -752,6 +752,8 @@ ruling 2026-10-19), so the hierarchy comes from Reset stepping back, not from a 
 ### 11.9 ColorSwatch
 
 - **Purpose:** display/select a color or open a color editor.
+- **Shape (2026-11-14):** a rounded square at every Corner Radius (radius at most a quarter of
+  its height), so a sample never reads as a switch knob.
 - **Material:** represented color is data; surrounding selection/action chrome follows theme.
 - **Geometry:** swatch clipping follows theme roundness when rectangular; checkerboard is an
   implementation/data pattern.
@@ -769,10 +771,12 @@ ruling 2026-10-19), so the hierarchy comes from Reset stepping back, not from a 
   a flat card inside an existing material container is valid when another layer adds no
   hierarchy. Selected/on treatment uses stain or a compact accent indicator as appropriate.
 - **Feature on/off (2026-11-14):** a feature tile or list row being *enabled* is a state, not
-  a selection. Every feature tile keeps the neutral face; an enabled one shows its icon in the
-  accent and a 5 px accent status dot (top right on a tile, trailing on a list row). Selection
-  treatment (wash + accent edge) stays reserved for the selected tab, page or item, so a grid of
-  enabled features never reads as many selected cards.
+  a selection. Every feature tile keeps the neutral face and shows its state as a small switch
+  (16×9 in the tile's top-right corner, the regular 24×12 switch trailing a list row): accent
+  track when on, the neutral OFF track when off, white thumb. The tile or row stays the control.
+  An enabled icon brightens to primary text; it does not take the accent (a per-module accent
+  override still applies). Selection treatment (wash + accent edge) stays reserved for the
+  selected tab, page or item. A bare status dot was tried first and read as a notification badge.
 - **List rows:** icon, then the name left-aligned on the icon's axis, then trailing state. A
   name is never centred in a row whose icon is pinned left.
 - **States:** actionable cards use the button-like contract. Hover, press, selection, focus,
@@ -948,7 +952,8 @@ The canonical implementation is `ScrollFade`:
 - Use a 16-GUI-pixel vertical gradient.
 - Begin with the actual surface color at that position, alpha included, and end transparent.
 - Scale engagement by `min(1, scrollPosition / 16)`. A resting list is pixel-untouched; the
-  fade is fully engaged after one fade height has scrolled past.
+  fade is fully engaged after one fade height has scrolled past. The bottom edge uses the
+  shorter `ScrollFade.BOTTOM_FADE_PX` (8) because bodies rest on a row boundary (§13.0).
 - Use raw scroll position, not overflow ratio.
 
 The surface color is semantic and contextual:

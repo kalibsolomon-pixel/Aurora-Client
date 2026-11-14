@@ -226,7 +226,7 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
         // (Done, from the base, is a plain action → neutral).
         return ButtonWidget.semantic(
                 16, 16, 160, 22,
-                Component.literal("Drop at Player Position"),
+                Component.literal("Drop Waypoint"),
                 "Drops a new waypoint at your current position.",
                 () -> {
                     WaypointFeature feat = WaypointFeature.get();
