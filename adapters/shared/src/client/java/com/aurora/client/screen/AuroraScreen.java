@@ -1344,9 +1344,8 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             // accent-wash + bright-outline fallback instead of disappearing.
             boolean highlightedGlass = on && highlightedTileGlass(i) && !MaterialSurface.unified();
             // On is a feature state, not a selection (UI polish 2026-11-14): every tile keeps the
-            // neutral face; an enabled feature carries an accent bar along its bottom edge, a
-            // disabled one has none and dims its icon and name. Symmetric about the card's axis
-            // (owner direction), and presence or absence reads without colour.
+            // neutral face, and the icon alone says on (accent) or off (secondary text). The owner
+            // retired the separate indicators (dot, switch, pill, bottom bar) for this.
             if(MaterialSurface.unified()) {
                 MaterialSurface.selection(g,cx,cy,cw,ch,tileRadius,false,hoverT);
                 // Hover also draws a light neutral outline (2026-11-14): the face step alone was too
@@ -1356,7 +1355,6 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                     RenderUtil.drawRoundedOutlineAA(g, cx, cy, cw, ch, tileRadius, 1.0f,
                             ThemeManager.withAlpha(edge, Math.round((edge >>> 24) * hoverT)));
                 }
-                if (on) drawStateBar(g, cx, cy, cw, ch, tileRadius);
                 // Settings cue (owner decision 2026-11-14): a muted chevron fades in while the tile
                 // is hovered or focused; clicking it opens the feature's settings, as right-click does.
                 float cue = Math.max(hoverT, control != null && control.isFocused() ? 1f : 0f);
@@ -1486,13 +1484,12 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                             MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY),
                             MaterialSurface.color(ThemeToken.ON_BACKGROUND), hoverT);
             if (sel && MaterialSurface.unified()) {
-                var heading = com.aurora.client.ui.util.AuroraFontRenderer.role(pageTabLabel[i], com.aurora.client.ui.util.AuroraFontRenderer.Role.HEADING);
-                com.aurora.client.ui.util.AuroraFontRenderer.drawCentered(g, tr, heading,
+                // The selected sub-tab keeps the body weight (a heavier label shifted every label
+                // as the selection moved) and takes primary text plus a persistent neutral
+                // underline (2026-11-14). Neutral, so the sidebar keeps the one accent selection.
+                com.aurora.client.ui.util.AuroraFontRenderer.drawCentered(g, tr, pageTabLabel[i],
                         (int) (tx + tw / 2f), (int) (my + (PAGE_TAB_H - tr.lineHeight) / 2 + 1), txt);
-                // A persistent neutral underline under the selected sub-tab's label (2026-11-14):
-                // weight alone read as bold text, not as a selection. Neutral, so the sidebar
-                // keeps the screen's one accent selection.
-                int lineW = tr.width(heading);
+                int lineW = tr.width(pageTabLabel[i]);
                 RenderUtil.drawRoundedRectAA(g, tx + (tw - lineW) / 2f, my + PAGE_TAB_H - TAB_RULE, lineW, TAB_RULE, TAB_RULE / 2f, txt);
             }
             else com.aurora.client.ui.util.AuroraFontRenderer.drawCentered(g, tr, pageTabLabel[i],
@@ -1728,7 +1725,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     }
 
     /** The settings-cue chevron's em size and its hit box: the tile's top-right corner, or a list
-     * row's trailing end, clear of the bottom state bar. Paint and click share this one rect. */
+     * row's trailing end. Paint and click share this one rect. */
     private static final float CHEVRON = 10f;
     private float[] chevronRect(float cx, float cy, float cw, float ch) {
         float box = 14f;
@@ -1736,23 +1733,6 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         return new float[]{cx + cw - box - 8, cy + (ch - box) / 2f, box, box};
     }
 
-    /**
-     * An enabled feature's state bar (two council consults, 2026-11-14): an accent bar along the
-     * card's or row's bottom edge, inset past the corner radius, absent when the feature is off.
-     * It replaced a corner switch and then a corner On/Off pill; the owner asked for a symmetric
-     * mark, and the council rated this one highest of six symmetric candidates.
-     */
-    private void drawStateBar(GuiGraphicsExtractor g, float cx, float cy, float cw, float ch, float radius) {
-        float h = gridLayout ? STATE_BAR_H : STATE_BAR_H - 1f;
-        float inset = Math.max(radius, STATE_BAR_INSET);
-        // A row's bar starts on the name's column, so it underlines the entry, not the whole row.
-        float left = gridLayout ? cx + inset : cx + 38;
-        RenderUtil.drawRoundedRectAA(g, left, cy + ch - h - STATE_BAR_LIFT, cx + cw - inset - left, h, h / 2f,
-                MaterialSurface.color(ThemeToken.ACCENT));
-    }
-
-    /** State bar thickness on a card (a row's is one pixel thinner), its least end inset, and its lift off the edge. */
-    private static final float STATE_BAR_H = 3f, STATE_BAR_INSET = 6f, STATE_BAR_LIFT = 2f;
 
 
     /** The lower band of a tile from its subtitle line down — where a click opens the matched setting. */
@@ -1942,8 +1922,8 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         if (on && stainedGlass) {
             color = MaterialSurface.color(ThemeToken.ON_ACCENT);
         } else if (on) {
-            // An enabled icon takes the accent, the second cue beside the bottom state bar
-            // (council review 2026-11-14); a per-module accent override still applies.
+            // An enabled icon takes the accent, the feature's one state cue (owner decision
+            // 2026-11-14); a per-module accent override still applies.
             int accent = ModuleAccentColors.get(m.id);
             color = accent != 0 ? accent : MaterialSurface.color(ThemeToken.ACCENT);
         } else {

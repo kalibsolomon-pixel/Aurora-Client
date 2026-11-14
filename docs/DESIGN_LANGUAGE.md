@@ -775,16 +775,16 @@ the accent-filled call to action under its hint.
   a flat card inside an existing material container is valid when another layer adds no
   hierarchy. Selected/on treatment uses stain or a compact accent indicator as appropriate.
 - **Feature on/off (2026-11-14):** a feature tile or list row being *enabled* is a state, not
-  a selection. Every feature tile keeps the neutral face. An enabled feature carries a 3 px
-  accent bar along the card's bottom edge (2 px on a list row, starting on the name's column),
-  inset past the corner radius and lifted 2 px off the edge; an enabled feature's icon also takes the accent; a disabled feature has no bar and its icon steps down to secondary text (its name stays primary: an off feature is available, not disabled). The mark
-  is symmetric about the card's axis (owner direction) and its presence or absence reads without
-  colour. The settings chevron appears top-right on a hovered or focused tile, at the trailing
-  end of a row. The tile or row stays the control. Selection treatment (wash + accent edge)
-  stays reserved for the selected tab, page or item.
+  a selection. Every feature tile and row keeps the neutral face; the icon alone carries the
+  state: the accent when on, secondary text when off (a per-module accent override still
+  applies). The name stays primary in both states (an off feature is available, not disabled).
+  The settings chevron appears top-right on a hovered or focused tile, at the trailing end of a
+  row. The tile or row stays the control. Selection treatment (wash + accent edge) stays
+  reserved for the selected tab, page or item.
   History, all 2026-11-14: a status dot read as a notification badge; a miniature switch
-  mimicked a control the tile does not have; a corner On/Off pill unbalanced the centred card.
-  Two council consults rated the candidates (`docs/reports/2026-11-14-ui-polish-overhaul.md`).
+  mimicked a control the tile does not have; a corner On/Off pill unbalanced the centred card;
+  a symmetric bottom accent bar read as a progress bar. The owner then retired separate
+  indicators in favour of the icon colour (`docs/reports/2026-11-14-ui-polish-overhaul.md`).
 - **List rows:** icon, then the name left-aligned on the icon's axis, then trailing state. A
   name is never centred in a row whose icon is pinned left.
 - **States:** actionable cards use the button-like contract. Hover, press, selection, focus,
@@ -807,7 +807,8 @@ secondary line.
   flat inside a material sidebar when depth would be redundant.
 - **One accent selection per screen (2026-11-14).** The sidebar owns the accent selection. A
   second navigation level (the Settings sub-tabs) marks its selection by text alone: the
-  `HEADING` role in primary text, no face; the list/grid layout pair marks the active layout
+  body weight in primary text with a persistent neutral underline, no face (a heavier label
+  shifted the tab labels as the selection moved); the list/grid layout pair marks the active layout
   with the opaque neutral field face and a primary icon.
 - **States:** hover, press, selected, focus, and disabled. Focus and selection must not be
   visually confused.
@@ -1410,9 +1411,9 @@ rulings it supersedes.
   Settings page fits its content the same way (owner decision). Supersedes the compact pass's
   "one window" rule for those two cases; managers, editors and pickers keep the frame.
 - **Rest on a row boundary** (§13.0) and a shorter bottom fade with an alpha floor (§13.1).
-- **Feature state is a bottom bar, not a selection** (§11.10): neutral tiles, an accent bar
-  along the bottom edge of every enabled tile and row, dimmed icons and names when off.
-  Supersedes the enabled-tile accent edge and wash.
+- **Feature state is the icon colour, not a selection** (§11.10): neutral tiles and rows,
+  an accent icon when on, a secondary-text icon when off. Supersedes the enabled-tile accent
+  edge and wash.
 - **One accent selection per screen** (§11.11): the sidebar keeps it; sub-tabs mark selection
   by text weight, the layout pair by the neutral field face.
 - **Controls** — filled OFF track shared by switches and slider tracks (§11.4); one stacked

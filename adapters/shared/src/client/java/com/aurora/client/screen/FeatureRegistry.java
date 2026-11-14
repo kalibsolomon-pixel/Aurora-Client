@@ -409,6 +409,7 @@ public final class FeatureRegistry {
                         // Three groups (UI polish 2026-11-14): the crosshair, the attack indicator
                         // and the in-reach indicator read as one uninterrupted column before.
                         new SectionHeaderSetting("Crosshair"),
+                        new CrosshairPreviewSetting(),
                         new EnumSetting<>("Style", AuroraConfig.CrosshairStyle.class,
                                 () -> cfg.crosshairStyle, v -> cfg.crosshairStyle = v)
                                 .description("The crosshair shape. Presets include classic cross, dot, and others; CUSTOM uses the pixel canvas you draw below. Size/Thickness/Gap apply to the presets."),

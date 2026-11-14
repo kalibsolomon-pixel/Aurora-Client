@@ -125,21 +125,29 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
             if (setting.isVisible() && setting instanceof com.aurora.client.screen.setting.EnumSetting<?> row)
                 popup = Math.max(popup, row.popupHeight() + 30);
         int wanted = Math.max(MIN_FRAME_H, bodyOffset() + fixedHeader + Math.max(total, popup) + BODY_BOTTOM + 2);
-        int top = recenter ? Math.max(maxFrame.y(), (this.height - Math.min(wanted, maxFrame.height())) / 2)
-                : compactFrame.y();
+        // Every detail window shares the main window's top edge (2026-11-14): centring each on
+        // its own content made the window jump between pages; only the bottom edge follows rows.
+        int top = maxFrame.y();
         int limit = Math.min(maxFrame.y() + maxFrame.height(), this.height - 12) - top;
         int body = limit - bodyOffset() - fixedHeader - BODY_BOTTOM - 2;
         if (Math.max(total, popup) > body) {
             // A scrolling body ends on a row boundary, so at rest no setting is cut through
             // its middle (council review, 2026-11-14); the scrollbar and fade show the rest.
-            int acc = 0, fit = 0;
+            // Never rest on a section caption whose rows are all below the fold: an orphaned
+            // caption at the bottom edge read as a cut-off section (council review 2026-11-14).
+            int acc = 0, fit = 0, beforeCaption = 0;
+            boolean lastIsCaption = false;
             for (FeatureSetting setting : meta.settings) {
                 if (!setting.isVisible()) continue;
                 int h = bodyHeight(setting);
                 if (acc + h > body) break;
+                boolean caption = setting instanceof com.aurora.client.screen.setting.SectionHeaderSetting;
+                if (caption) beforeCaption = fit;
                 fit = acc + h;
                 acc = fit + ROW_GAP;
+                lastIsCaption = caption;
             }
+            if (lastIsCaption && beforeCaption > 0) fit = beforeCaption;
             if (fit > 0 && fit >= popup) wanted = Math.max(MIN_FRAME_H, bodyOffset() + fixedHeader + fit + BODY_BOTTOM + 2);
         }
         compactFrame = new com.aurora.client.ui.util.UiDensity.Rect(maxFrame.x(), top, maxFrame.width(),
