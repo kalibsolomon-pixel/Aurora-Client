@@ -708,7 +708,9 @@ the accent-filled call to action under its hint.
 - **Layout (owner direction, 2026-11-14):** one inline row everywhere: the label on the left,
   then the value right-aligned against a bounded track in the control column. The track is a
   dropdown's width (`SettingRowLayout.TRACK_W`, 84 px), or half that (`SHORT_TRACK_W`) for a
-  slider with at most `SHORT_STEPS` (10) positions; it never spans the row. It ends
+  slider with at most `SHORT_STEPS` (10) positions; it never spans the row. A page uses one
+  length (`FeatureSetting.pageTrackWidth`, owner decision): the short track only when every
+  slider on it has few positions, so values and track starts share one column. It ends
   `SettingRowLayout.KNOB_RESERVE` short of the control edge so a knob at either end lands on
   the edge every toggle, field and swatch ends on. A long label wraps between words and the row
   grows. History: a stacked row with a full-width track (earlier the same day) drew long lines

@@ -156,7 +156,9 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         TOP_PAD = compactFrame.y() + bodyOffset();
     }
     private void measureRows() {
+        int track = FeatureSetting.pageTrackWidth(meta.settings);
         if (compact()) for (FeatureSetting setting : meta.settings) {
+            setting.pageTrack(track);
             if (setting.isVisible()) setting.measureCompact(LIST_W);
             else {
                 for (SemanticActionControl control : setting.interactionControls()) {

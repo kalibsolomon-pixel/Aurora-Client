@@ -49,6 +49,25 @@ public abstract class FeatureSetting {
     protected com.aurora.client.ui.util.SettingRowLayout compactRow;
     private int compactWidth = -1;
     private long compactFontKey = Long.MIN_VALUE;
+    /** The track length its page gave this slider row ({@link #pageTrackWidth}); 0 = its own. */
+    private int pageTrackW;
+
+    /**
+     * One slider track length per page (owner decision 2026-11-14): the short track only when
+     * every slider on the page has few positions, so values and track starts share one column.
+     */
+    public static int pageTrackWidth(Iterable<FeatureSetting> settings) {
+        int w = com.aurora.client.ui.util.SettingRowLayout.SHORT_TRACK_W;
+        for (FeatureSetting s : settings)
+            if (s instanceof SliderSetting ss) w = Math.max(w, com.aurora.client.ui.util.SettingRowLayout.trackWidth(ss.steps()));
+        return w;
+    }
+
+    /** Hosts set the page's track length before measuring; a change re-measures the row. */
+    public final void pageTrack(int width) {
+        if (width != pageTrackW) { pageTrackW = width; compactRow = null; }
+    }
+
     public final void measureCompact(int width) {
         measureCompactChildren(width);
         if (!(this instanceof BooleanSetting || this instanceof SliderSetting || this instanceof EnumSetting<?>
@@ -65,7 +84,8 @@ public abstract class FeatureSetting {
                 : this instanceof ColorSetting ? com.aurora.client.ui.util.SettingRowLayout.Kind.COLOR
                 : this instanceof ButtonSetting bs ? bs.compactKind()
                 : com.aurora.client.ui.util.SettingRowLayout.Kind.SECTION;
-        int trackW = this instanceof SliderSetting ss ? com.aurora.client.ui.util.SettingRowLayout.trackWidth(ss.steps())
+        int trackW = pageTrackW > 0 ? pageTrackW
+                : this instanceof SliderSetting ss ? com.aurora.client.ui.util.SettingRowLayout.trackWidth(ss.steps())
                 : com.aurora.client.ui.util.SettingRowLayout.TRACK_W;
         compactRow = com.aurora.client.ui.util.SettingRowLayout.measure(kind, label, width, font.lineHeight, font::width, trackW);
         if (this instanceof BooleanSetting) compactRow = compactRow.withSubtitle(valueLineHeight(font), font.lineHeight);

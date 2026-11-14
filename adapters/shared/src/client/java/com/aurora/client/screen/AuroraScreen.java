@@ -907,8 +907,12 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     private void measureSettingsRows() {
         layoutPageTabs();
         int w = Math.max(1, contentWidth() - 8);
+        // One slider track length across the page's groups (owner decision 2026-11-14). Runs
+        // every frame, so no list is built: a max over the groups, then the measure walk.
+        int track = 0;
+        for (FeatureMetadata m : pageEntries()) track = Math.max(track, FeatureSetting.pageTrackWidth(m.settings));
         for (FeatureMetadata m : pageEntries())
-            for (FeatureSetting s : m.settings) s.measureCompact(w);
+            for (FeatureSetting s : m.settings) { s.pageTrack(track); s.measureCompact(w); }
     }
 
     @Override
