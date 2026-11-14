@@ -229,6 +229,13 @@ public class KeyListSetting extends FeatureSetting {
                 disabled ? AuroraTheme.TEXT_DIM : AuroraTheme.TEXT_PRIMARY, mouseX, mouseY, disabled);
 
         List<Integer> items = safeList();
+        if (items.isEmpty() && MaterialSurface.unified()) {
+            // An empty list says so on its label row, in the trailing value slot (2026-11-14): a
+            // bare label above the Add pill read as an unfinished section.
+            String none = "None";
+            ctx.text(tr, none, x + width - 8 - tr.width(none), y + 4,
+                    MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
+        }
         int iy = y + ROW_H + 2;
         int err = ThemeManager.color(ThemeToken.SEMANTIC_ERROR);
         for (int i = 0; i < items.size(); i++) {

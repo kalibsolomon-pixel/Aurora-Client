@@ -166,10 +166,12 @@ public class SectionHeaderSetting extends FeatureSetting {
         // family as the group headings above it, one step quieter.
         ctx.text(tr, com.aurora.client.ui.util.AuroraFontRenderer.role(label, com.aurora.client.ui.util.AuroraFontRenderer.Role.HEADING),
                 x + LABEL_PAD, textY, color, false);
-        // Trailing chevron (native-resolution icon): down = collapsed, up = expanded.
+        // Trailing chevron (native-resolution icon): down = collapsed, up = expanded. Its visible
+        // stroke ends on the rows' control edge, 8 px in (2026-11-14: it sat 6 px short of the
+        // toggles and values below it).
         com.aurora.client.ui.util.MaterialIconRenderer.drawIcon(ctx, tr,
                 com.aurora.client.screen.FeatureIcons.get(collapsed ? "_dropdown_expand_more" : "_dropdown_expand_less"),
-                x + width - 14, top + h / 2f, 9, color);
+                x + width - 11, top + h / 2f, 9, color);
     }
 
     @Override

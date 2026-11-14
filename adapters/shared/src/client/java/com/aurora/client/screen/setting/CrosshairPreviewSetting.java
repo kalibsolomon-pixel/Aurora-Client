@@ -19,7 +19,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
  */
 public class CrosshairPreviewSetting extends FeatureSetting {
     private static final int ROW_H = 44, WELL = 38, GAP = 6, PAD = 8;
-    private static final float ZOOM = 3f;
+    private static final int MIN_ZOOM = 3, MAX_ZOOM = 6, TARGET_EXTENT = 24;
 
     public CrosshairPreviewSetting() {
         super("Preview");
@@ -57,15 +57,22 @@ public class CrosshairPreviewSetting extends FeatureSetting {
         RenderUtil.drawRoundedOutlineAA(ctx, x, y, WELL, WELL, r, 1.0f, ThemeManager.color(ThemeToken.MATERIAL_BORDER_STRONG));
         ctx.enableScissor(x + 1, y + 1, x + WELL - 1, y + WELL - 1);
         ctx.pose().pushMatrix();
-        // Drawn at three times its in-game size about the well's centre, so a 2 px dot is still a
-        // readable sample; shape, proportions and colour are the HUD's own.
+        // Drawn at a whole-number zoom about the well's centre: small shapes step up to fill about
+        // two thirds of the well (a 2 px dot at 3x still read as a speck, council review
+        // 2026-11-14), larger ones stay at 3x; shape, proportions and colour are the HUD's own.
+        float zoom = zoomFor(size, gap);
         ctx.pose().translate(x + WELL / 2f, y + WELL / 2f);
-        ctx.pose().scale(ZOOM, ZOOM);
+        ctx.pose().scale(zoom, zoom);
         ctx.pose().translate(-0.5f, -0.5f); // the HUD path's seam-straddling centre
         CrosshairRenderer.drawShape(ctx, style, 0, 0, Math.max(1, size), Math.max(1, thick),
                 Math.max(0, gap), color, pixels, w, h);
         ctx.pose().popMatrix();
         ctx.disableScissor();
+    }
+
+    static int zoomFor(int size, int gap) {
+        int extent = Math.max(1, size * 2 + Math.max(0, gap));
+        return Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, TARGET_EXTENT / extent));
     }
 
     @Override

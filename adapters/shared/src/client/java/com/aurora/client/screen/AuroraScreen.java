@@ -1348,13 +1348,13 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             // retired the separate indicators (dot, switch, pill, bottom bar) for this.
             if(MaterialSurface.unified()) {
                 MaterialSurface.selection(g,cx,cy,cw,ch,tileRadius,false,hoverT);
-                // Hover also draws a light neutral outline (2026-11-14): the face step alone was too
-                // faint, and an accent ring gave the accent a second meaning beside the state bar.
-                if (hoverT > 0f) {
-                    int edge = ThemeManager.withAlpha(MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), 0x99);
-                    RenderUtil.drawRoundedOutlineAA(g, cx, cy, cw, ch, tileRadius, 1.0f,
-                            ThemeManager.withAlpha(edge, Math.round((edge >>> 24) * hoverT)));
-                }
+                // A faint resting hairline, strengthened on hover (2026-11-14): the translucent
+                // face alone left a tile's edges unreadable, so a bottom row met the window edge
+                // as if cut off; the hover face step alone was too faint, and an accent ring gave
+                // the accent a second meaning beside the icon's state colour.
+                int edgeAlpha = Math.round(TILE_EDGE_REST + (TILE_EDGE_HOVER - TILE_EDGE_REST) * hoverT);
+                RenderUtil.drawRoundedOutlineAA(g, cx, cy, cw, ch, tileRadius, 1.0f,
+                        ThemeManager.withAlpha(MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), edgeAlpha));
                 // Settings cue (owner decision 2026-11-14): a muted chevron fades in while the tile
                 // is hovered or focused; clicking it opens the feature's settings, as right-click does.
                 float cue = Math.max(hoverT, control != null && control.isFocused() ? 1f : 0f);
@@ -1938,6 +1938,8 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         // unchanged.
         MaterialIconRenderer.drawIcon(g, tr, glyph, cx, cy, targetPx, color);
     }
+
+    private static final int TILE_EDGE_REST = 0x22, TILE_EDGE_HOVER = 0x99;
 
     /** {@code argb} with its hue removed at the same luminance: the cool secondary text tone read
      * as a faint accent beside indigo icons (2026-11-14), so off icons use its grey. */

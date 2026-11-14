@@ -778,6 +778,9 @@ the accent-filled call to action under its hint.
   a selection. Every feature tile and row keeps the neutral face; the icon alone carries the
   state: the accent when on, a neutral grey at secondary-text luminance when off (the cool
   secondary tone read as a faint accent; a per-module accent override still applies). The name stays primary in both states (an off feature is available, not disabled).
+  Every tile and row carries a faint neutral hairline (secondary text at alpha 0x22) that
+  strengthens to 0x99 on hover: the translucent face alone left its edges unreadable, so a
+  bottom row met the window edge as if cut off.
   The settings chevron appears top-right on a hovered or focused tile, at the trailing end of a
   row. The tile or row stays the control. Selection treatment (wash + accent edge) stays
   reserved for the selected tab, page or item.
@@ -798,7 +801,8 @@ the accent-filled call to action under its hint.
 An empty list shows one centred group: an optional 24 px muted icon, a headline in the
 `HEADING` role, and one secondary line that names the next action (`ManagerListScreen`'s
 `emptyIcon`/`emptyMessage`/`emptyHint`). A filtered list with no matches keeps a single
-secondary line.
+secondary line. A list setting inside a page (Keystrokes' Extra Keys) shows a muted "None"
+in its label row's trailing value slot instead, above its Add control.
 
 ### 11.11 Tab/sidebar item
 
@@ -1353,7 +1357,8 @@ recipe, 18px section band between groups). These rules are now normative:
   selection edge (selected tab, enabled tile, selected layout peer) draws its focus ring
   2 px outside that edge.
 - **Previews follow roundness.** The crosshair preview is a rounded inset tone, not a
-  square outlined box.
+  square outlined box. It draws at a whole-number zoom (3x to 6x) chosen so small shapes fill
+  about two thirds of the well; a 2 px dot at a fixed 3x read as a speck.
 
 Evidence, measurements and limits: `SPXCTRA_UI_SIMPLIFICATION_REPORT.md`.
 
