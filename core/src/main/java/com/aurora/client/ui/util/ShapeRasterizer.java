@@ -23,6 +23,20 @@ public final class ShapeRasterizer {
     }
 
     /**
+     * The bottom row of a rounded shape whose edge falls inside the row: the arc's width at the
+     * row's top, faded by how much of the row lies inside the shape.
+     */
+    private static void partialBottomRow(DrawSurface sink, float px, float pWidth, float bottom,
+                                         float yCenterBottom, float pRadius, float rowY, int color) {
+        float top = Math.round(rowY);
+        float cover = bottom - top;
+        float dyTop = Math.max(0f, top - yCenterBottom);
+        if (cover <= 0f || dyTop >= pRadius) return;
+        float dx = (float) Math.sqrt(pRadius * pRadius - dyTop * dyTop);
+        fillAARow(sink, px + pRadius - dx, rowY, px + pWidth - pRadius + dx, scaleAlphaChannel(color, cover));
+    }
+
+    /**
      * Emits a single 1-physical-pixel-tall horizontal span from
      * {@code leftEdge} to {@code rightEdge} (float coords, scaled space)
      * with sub-pixel antialiasing on the two boundary pixels. The
@@ -142,7 +156,11 @@ public final class ShapeRasterizer {
         for (int i = bottomStart; i < rows; i++) {
             float rowY = py + i;
             float dy = (rowY + 0.5f) - yCenterBottom;
-            float dx = (dy > 0 && dy < pRadius) ? (float) Math.sqrt(pRadius * pRadius - dy * dy) : pRadius;
+            if (dy >= pRadius) { // a last row only partly inside the shape (fractional heights)
+                partialBottomRow(sink, px, pWidth, py + pHeight, yCenterBottom, pRadius, rowY, color);
+                continue;
+            }
+            float dx = (dy > 0) ? (float) Math.sqrt(pRadius * pRadius - dy * dy) : pRadius;
             float leftX = px + pRadius - dx;
             float rightX = px + pWidth - pRadius + dx;
             fillAARow(sink, leftX, rowY, rightX, color);
@@ -222,7 +240,9 @@ public final class ShapeRasterizer {
         int topRows = (int) Math.ceil(pRadius);
         for (int i = 0; i < topRows; i++) {
             float rowY = py + i;
-            float dy = yCenterTop - (rowY + 0.5f);
+            // A row centred below the arc centre is body: side strips only. The corner-wide span it
+            // used to get showed as a short stray tick inside the outline (2026-11-14).
+            float dy = Math.max(0f, yCenterTop - (rowY + 0.5f));
             float dxOuter = (dy > 0 && dy < pRadius) ? (float) Math.sqrt(pRadius * pRadius - dy * dy) : pRadius;
             float dxInner = (dy >= 0 && dy < innerR) ? (float) Math.sqrt(innerR * innerR - dy * dy) : 0;
 
@@ -249,8 +269,16 @@ public final class ShapeRasterizer {
         int bottomStart = Math.max((int) Math.ceil(pRadius), (int) Math.floor(pHeight - pRadius));
         for (int i = bottomStart; i < rows; i++) {
             float rowY = py + i;
-            float dy = (rowY + 0.5f) - yCenterBottom;
-            float dxOuter = (dy > 0 && dy < pRadius) ? (float) Math.sqrt(pRadius * pRadius - dy * dy) : pRadius;
+            // Rows above the arc centre are body (side strips only, as above); a last row whose
+            // centre is past the bottom edge is only partly inside and follows the arc at its top.
+            // Both used to fall back to full spans: a tick inside the outline and a flat line under
+            // it, on the Keystrokes Space key at fractional HUD densities (2026-11-14).
+            float dy = Math.max(0f, (rowY + 0.5f) - yCenterBottom);
+            if (dy >= pRadius) {
+                partialBottomRow(sink, px, pWidth, py + pHeight, yCenterBottom, pRadius, rowY, color);
+                continue;
+            }
+            float dxOuter = (dy > 0) ? (float) Math.sqrt(pRadius * pRadius - dy * dy) : pRadius;
             float dxInner = (dy >= 0 && dy < innerR) ? (float) Math.sqrt(innerR * innerR - dy * dy) : 0;
 
             float leftXOuter = px + pRadius - dxOuter;
