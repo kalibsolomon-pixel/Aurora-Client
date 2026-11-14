@@ -138,6 +138,8 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
 
     /** Toolbar buttons — kept so the glass pass can paint their surfaces pre-dim. */
     private ButtonWidget toolbarActionBtn;
+    /** The empty state's own call to action (see {@link #createEmptyAction}); null for none. */
+    private ButtonWidget emptyActionBtn;
     private ButtonWidget doneBtn;
 
     // ---- Phase A semantic controls (custom-painted, vanilla-lifecycle) ----
@@ -328,6 +330,8 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
                 Component.literal("Done"),
                 "Close this screen and return.",
                 this::onClose).glassBackground(true).theming(com.aurora.client.ui.component.Button.Theming.OUTLINED));
+        emptyActionBtn = createEmptyAction();
+        if (emptyActionBtn != null) this.addRenderableWidget(emptyActionBtn);
         // Done is the primary action unless the header already has one (Drop Waypoint): one
         // accent-filled action per header (owner decision 2026-11-14).
         if (toolbarActionBtn == null) doneBtn.glassStyle(com.aurora.client.ui.component.Button.GlassStyle.STAINED).primary(true);
@@ -345,6 +349,20 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         // cleared the lists; every registered control re-adds here.
         semanticHost.finishRebuild();
     }
+
+    /**
+     * The empty state's call to action, placed under its hint while the list is empty (2026-11-14):
+     * the guidance and the action that follows it sit together, and the header's own action steps
+     * aside until there are rows. Null (the default) keeps the header action only.
+     */
+    protected ButtonWidget createEmptyAction() { return null; }
+
+    /** Whether the empty-state action shows this frame: an empty, unfiltered list (one with a hint). */
+    private boolean emptyActionShown(List<T> rows) {
+        return emptyActionBtn != null && rows.isEmpty() && emptyHint() != null;
+    }
+
+    private static final int EMPTY_ACTION_GAP = 10;
 
     /** The screen's name in the header's leading slot (title role); null keeps the action button there. */
     protected String headerTitle() { return null; }
@@ -410,6 +428,12 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         // and go; the header actions follow its top every frame.
         if (toolbarActionBtn != null) toolbarActionBtn.setY(toolbarY());
         if (doneBtn != null) doneBtn.setY(toolbarY());
+        boolean emptyAction = emptyActionShown(rows);
+        if (emptyActionBtn != null) { emptyActionBtn.visible = emptyAction; emptyActionBtn.active = emptyAction; }
+        if (toolbarActionBtn != null && emptyActionBtn != null) {
+            toolbarActionBtn.visible = !emptyAction;
+            toolbarActionBtn.active = !emptyAction;
+        }
         // Semantic availability is re-derived every frame from the row
         // geometry: everything starts unavailable and the row passes below
         // re-mark what the clip band actually shows, so a control whose row
@@ -473,8 +497,14 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
             String icon = emptyIcon();
             Component hint = emptyHint();
             int cx = listX + listWidth() / 2;
-            int groupH = (icon == null ? 0 : EMPTY_ICON + 8) + this.font.lineHeight + (hint == null ? 0 : 4 + this.font.lineHeight);
+            boolean action = emptyActionShown(rows);
+            int groupH = (icon == null ? 0 : EMPTY_ICON + 8) + this.font.lineHeight + (hint == null ? 0 : 4 + this.font.lineHeight)
+                    + (action ? EMPTY_ACTION_GAP + emptyActionBtn.getHeight() : 0);
             int y = (listClipTop() + listClipBottom()) / 2 - groupH / 2;
+            if (action) {
+                emptyActionBtn.setX(cx - emptyActionBtn.getWidth() / 2);
+                emptyActionBtn.setY(y + groupH - emptyActionBtn.getHeight());
+            }
             if (icon != null) {
                 com.aurora.client.ui.util.MaterialIconRenderer.drawIcon(ctx, this.font, icon, cx, y + EMPTY_ICON / 2f, EMPTY_ICON,
                         ThemeManager.color(ThemeToken.MATERIAL_TEXT_MUTED));

@@ -604,12 +604,6 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
                         MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED), false);
             com.aurora.client.util.ScrollFade.drawTop(ctx, listX + 8, LIST_W - 16, bodyTop(),
                     com.aurora.client.util.ScrollFade.FADE_PX, scroll.current(), fadeSurface);
-            // More below: a muted chevron centred in the bottom inset while rows remain past the
-            // fold (2026-11-14). The body rests on a whole row, so without it a long page read as
-            // finished at its last visible row.
-            if (maxScroll - scroll.current() > 1) com.aurora.client.ui.util.MaterialIconRenderer.drawIcon(ctx, this.font,
-                    com.aurora.client.screen.IconCatalog.glyph("expand_more"), listX + LIST_W / 2f, bodyBottom() + BODY_BOTTOM / 2f, 10,
-                    MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY));
             // At rest the body ends on a row boundary (fitFrame): fade only rows cut by scrolling.
             if (scroll.current() > 0) com.aurora.client.util.ScrollFade.drawBottom(ctx, listX + 8, LIST_W - 16, bodyBottom(),
                     com.aurora.client.util.ScrollFade.BOTTOM_FADE_PX, maxScroll - scroll.current(), fadeSurface);

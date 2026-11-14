@@ -228,6 +228,20 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
 
     @Override protected String headerTitle() { return "Waypoints"; }
 
+    @Override protected ButtonWidget createEmptyAction() {
+        ButtonWidget drop = ButtonWidget.semantic(0, 0, font.width("Drop Waypoint") + 48, 18, // label + icon + Button insets
+                Component.literal("Drop Waypoint"),
+                "Drops a new waypoint at your current position.",
+                () -> {
+                    WaypointFeature feat = WaypointFeature.get();
+                    if (feat == null) return;
+                    feat.dropAtPlayer("Waypoint", 0xFFFFAA00, false);
+                    rebuildNameField();
+                    rebuildWidgets();
+                }).glassStyle(Button.GlassStyle.STAINED).primary(true);
+        return drop.icon(IconCatalog.glyph("add_location_alt"));
+    }
+
     @Override protected ButtonWidget createToolbarActionBtn() {
         // Drop is the screen's single primary action → accent-STAINED glass
         // (Done, from the base, is a plain action → neutral).

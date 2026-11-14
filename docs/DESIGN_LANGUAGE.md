@@ -220,7 +220,7 @@ user's chosen family, never a pose-scaled glyph, and both come from
 | Role | Cut | Use |
 |---|---|---|
 | `TITLE` | one weight step heavier (Regular/Medium → SemiBold, SemiBold/Bold → Bold), its own 11 px raster (`<font>_<weight>_title`, `tools/build_fonts.py`) | screen titles, window identity |
-| `HEADING` | the same heavier weight at the body raster (compact 8 px in windows) | settings group headings, empty-state headlines |
+| `HEADING` | the same heavier weight at the regular 9 px raster, one step above compact 8 px body text | settings group headings, section captions, empty-state headlines |
 
 A role sequence names its own font, so `MixinFont`'s global swap leaves it alone; the role still
 follows the configured family, italic and case. With the vanilla font it falls back to Minecraft
@@ -777,7 +777,7 @@ header never shows two accent-filled actions.
 - **Feature on/off (2026-11-14):** a feature tile or list row being *enabled* is a state, not
   a selection. Every feature tile keeps the neutral face. An enabled feature carries a 3 px
   accent bar along the card's bottom edge (2 px on a list row, starting on the name's column),
-  inset past the corner radius and lifted 2 px off the edge; a disabled feature has no bar and its icon steps down to secondary text (its name stays primary: an off feature is available, not disabled). The mark
+  inset past the corner radius and lifted 2 px off the edge; an enabled feature's icon also takes the accent; a disabled feature has no bar and its icon steps down to secondary text (its name stays primary: an off feature is available, not disabled). The mark
   is symmetric about the card's axis (owner direction) and its presence or absence reads without
   colour. The settings chevron appears top-right on a hovered or focused tile, at the trailing
   end of a row. The tile or row stays the control. Selection treatment (wash + accent edge)

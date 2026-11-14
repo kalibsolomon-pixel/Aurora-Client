@@ -75,7 +75,7 @@
   "armorAlertThresholdPct": 10,
   "armorAlertSound": true,
   "armorAlertSoundChoice": "PLING",
-  "armorShowDurabilityBars": false,
+  "armorShowDurabilityBars": true,
   "armorHorizontal": true,
   "effectExpiryAlertEnabled": false,
   "effectExpiryThresholdSeconds": 10,

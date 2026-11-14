@@ -333,7 +333,7 @@ Clicks-per-second counter.
 Your armor and its durability.
 - **Text Color**: color · white. `{armorHudTextColor}`
 - **Durability Format**: dropdown Remaining / Remaining of Max / Percentage / None · Remaining. `{armorDurabilityFormat}`
-- **Show Durability Bars**: toggle · off. `{armorShowDurabilityBars}`
+- **Show Durability Bars**: toggle · on (since 2026-11-14). `{armorShowDurabilityBars}`
 - **Horizontal Layout**: toggle · on. `{armorHorizontal}`
 - **Background**: dropdown · Vanilla (slot frames). `{armorHudBgMode}`
 - **Background Color (when SOLID)**: color · black, 50%. `{armorHudBgColor}`

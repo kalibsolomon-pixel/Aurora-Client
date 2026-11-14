@@ -1942,11 +1942,10 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         if (on && stainedGlass) {
             color = MaterialSurface.color(ThemeToken.ON_ACCENT);
         } else if (on) {
-            // The state switch carries on/off; the icon only brightens (a per-module accent
-            // override still applies), so the accent is not spent on every enabled tile.
+            // An enabled icon takes the accent, the second cue beside the bottom state bar
+            // (council review 2026-11-14); a per-module accent override still applies.
             int accent = ModuleAccentColors.get(m.id);
-            color = accent != 0 ? accent : MaterialSurface.unified() ? MaterialSurface.color(ThemeToken.ON_BACKGROUND)
-                    : MaterialSurface.color(ThemeToken.ACCENT);
+            color = accent != 0 ? accent : MaterialSurface.color(ThemeToken.ACCENT);
         } else {
             // Off: secondary text in unified windows, a step below an on feature's primary icon,
             // so on and off part at a glance without the off one reading as unavailable.
