@@ -1335,9 +1335,9 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             }
             boolean on = tileOn(m);
             String subtitle = resultSubtitle.get(m.id);
-            // An off feature's name steps down to secondary text with its dimmer icon (2026-11-14).
-            int nameColor = on || isSettingsResult(m) || !MaterialSurface.unified()
-                    ? MaterialSurface.color(ThemeToken.ON_BACKGROUND) : MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY);
+            // Names stay primary in both states (2026-11-14): an off feature is available, not
+            // disabled; the state bar and the icon's tone carry on/off.
+            int nameColor = MaterialSurface.color(ThemeToken.ON_BACKGROUND);
 
             // Neutral tiles inherit the enclosing window. Enabled tiles are
             // isolated stained glass; if glass declines, preserve the old
@@ -1745,7 +1745,9 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     private void drawStateBar(GuiGraphicsExtractor g, float cx, float cy, float cw, float ch, float radius) {
         float h = gridLayout ? STATE_BAR_H : STATE_BAR_H - 1f;
         float inset = Math.max(radius, STATE_BAR_INSET);
-        RenderUtil.drawRoundedRectAA(g, cx + inset, cy + ch - h - STATE_BAR_LIFT, cw - 2 * inset, h, h / 2f,
+        // A row's bar starts on the name's column, so it underlines the entry, not the whole row.
+        float left = gridLayout ? cx + inset : cx + 38;
+        RenderUtil.drawRoundedRectAA(g, left, cy + ch - h - STATE_BAR_LIFT, cx + cw - inset - left, h, h / 2f,
                 MaterialSurface.color(ThemeToken.ACCENT));
     }
 
@@ -1946,9 +1948,10 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             color = accent != 0 ? accent : MaterialSurface.unified() ? MaterialSurface.color(ThemeToken.ON_BACKGROUND)
                     : MaterialSurface.color(ThemeToken.ACCENT);
         } else {
-            // Off: the muted tone at 85% in unified windows, so on and off tiles part at a glance.
-            int muted = MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED);
-            color = MaterialSurface.unified() ? ThemeManager.withAlpha(muted, Math.round((muted >>> 24) * 0.85f)) : muted;
+            // Off: secondary text in unified windows, a step below an on feature's primary icon,
+            // so on and off part at a glance without the off one reading as unavailable.
+            color = MaterialSurface.unified() ? MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY)
+                    : MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED);
         }
         // Crisp native-resolution glyph (the shared font atlas is
         // point-sampled and degrades badly at these sizes); em size = the

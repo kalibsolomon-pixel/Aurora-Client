@@ -776,8 +776,8 @@ header never shows two accent-filled actions.
   hierarchy. Selected/on treatment uses stain or a compact accent indicator as appropriate.
 - **Feature on/off (2026-11-14):** a feature tile or list row being *enabled* is a state, not
   a selection. Every feature tile keeps the neutral face. An enabled feature carries a 3 px
-  accent bar along the card's bottom edge (2 px on a list row), inset past the corner radius and
-  lifted 2 px off the edge; a disabled feature has no bar and dims its icon and name. The mark
+  accent bar along the card's bottom edge (2 px on a list row, starting on the name's column),
+  inset past the corner radius and lifted 2 px off the edge; a disabled feature has no bar and its icon steps down to secondary text (its name stays primary: an off feature is available, not disabled). The mark
   is symmetric about the card's axis (owner direction) and its presence or absence reads without
   colour. The settings chevron appears top-right on a hovered or focused tile, at the trailing
   end of a row. The tile or row stays the control. Selection treatment (wash + accent edge)

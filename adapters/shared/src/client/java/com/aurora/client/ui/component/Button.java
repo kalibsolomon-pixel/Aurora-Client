@@ -182,7 +182,8 @@ public class Button extends Widget {
         String fitted=AuroraFontRenderer.ellipsize(font,label.getString(),Math.max(0,(int)w-20-ICON_EM-ICON_GAP),0);
         int labelW=font.width(fitted); // measured exactly as drawCentered measures
         float groupX=x+(w-(ICON_EM+(fitted.isEmpty() ? 0 : ICON_GAP+labelW)))/2f;
-        MaterialIconRenderer.drawIcon(g,font,icon,groupX+ICON_EM/2f,py+h/2f,ICON_EM,text);
+        // One pixel down: the glyph's optical centre then meets the label's x-height (2026-11-14).
+        MaterialIconRenderer.drawIcon(g,font,icon,groupX+ICON_EM/2f,py+h/2f+1,ICON_EM,text);
         if(!fitted.isEmpty()) g.text(font,fitted,Math.round(groupX+ICON_EM+ICON_GAP),textY,text,false);
     }
 

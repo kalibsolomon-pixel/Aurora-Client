@@ -406,6 +406,9 @@ public final class FeatureRegistry {
                 "Replaces the vanilla crosshair with a fully customizable one — pick a preset shape or draw your own, set its size, thickness, gap and color, and add a separate indicator that appears when an attackable entity is in reach. A clearer, personalized crosshair makes aiming and reach timing easier.",
                 () -> cfg.crosshairEnabled, v -> cfg.crosshairEnabled = v,
                 List.of(
+                        // Three groups (UI polish 2026-11-14): the crosshair, the attack indicator
+                        // and the in-reach indicator read as one uninterrupted column before.
+                        new SectionHeaderSetting("Crosshair"),
                         new EnumSetting<>("Style", AuroraConfig.CrosshairStyle.class,
                                 () -> cfg.crosshairStyle, v -> cfg.crosshairStyle = v)
                                 .description("The crosshair shape. Presets include classic cross, dot, and others; CUSTOM uses the pixel canvas you draw below. Size/Thickness/Gap apply to the presets."),
@@ -425,6 +428,7 @@ public final class FeatureRegistry {
                                 .description("Left-click to paint, right-click to erase, drag to stroke. Enter any width × height up to "
                                         + PixelCanvasSetting.MAX_DIM + " and press Apply — growing the grid first measures the real render cost on your machine. Default restores the vanilla 15×15 crosshair shape.")
                                 .visibleWhen(() -> cfg.crosshairStyle == AuroraConfig.CrosshairStyle.CUSTOM),
+                        new SectionHeaderSetting("Attack Indicator"),
                         new BooleanSetting("Vanilla Attack Indicator",
                                 () -> cfg.crosshairAttackIndicatorEnabled, v -> cfg.crosshairAttackIndicatorEnabled = v)
                                 .description("Shows attack cooldown beneath the crosshair, plus a ready marker when aiming at a living target."),
@@ -432,6 +436,7 @@ public final class FeatureRegistry {
                                 v -> cfg.crosshairAttackIndicatorSize = v, 25, 300)
                                 .description("Scales the attack indicator independently. 100% is vanilla size. It stays in its vanilla position unless the crosshair overlaps it, then moves below the crosshair with vanilla spacing.")
                                 .disabled(() -> !cfg.crosshairAttackIndicatorEnabled),
+                        new SectionHeaderSetting("Reach Indicator"),
                         new BooleanSetting("Indicator (entity in reach)",
                                 () -> cfg.crosshairIndicatorEnabled, v -> cfg.crosshairIndicatorEnabled = v),
                         new EnumSetting<>("Indicator Style", AuroraConfig.CrosshairStyle.class,
