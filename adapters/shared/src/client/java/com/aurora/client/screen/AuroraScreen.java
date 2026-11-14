@@ -154,6 +154,25 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     private static final int SETTINGS_ENTRY_GAP = 10;
     /** Settings-tab entry header row (caption + master toggle). */
     private static final int SETTINGS_HEADER_H = 18;
+    /** The one-line group summary under a settings heading (UI polish 2026-11-14). */
+    private static final int SUMMARY_H = 12;
+
+    /** A settings group's heading row plus its summary line, the height every walk advances by. */
+    private int headerBlockH(FeatureMetadata m) {
+        return SETTINGS_HEADER_H + (m.pageSummary == null || m.pageSummary.isEmpty() ? 0 : SUMMARY_H);
+    }
+
+    /** The summary fitted to the content column, memoized per width and text style. */
+    private String pageSummaryLine(FeatureMetadata m, Font tr) {
+        if (m.pageSummary == null || m.pageSummary.isEmpty()) return null;
+        int width = contentWidth() - 12;
+        long version = width * 31L + com.aurora.client.ui.util.AuroraFontRenderer.styleKey();
+        if (version != summaryVersion) { summaryFit.clear(); summaryVersion = version; }
+        return summaryFit.computeIfAbsent(m.id, id -> com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(tr, m.pageSummary, width, 1));
+    }
+    private final java.util.Map<String, String> summaryFit = new java.util.HashMap<>();
+    private long summaryVersion = Long.MIN_VALUE;
+
     /** Gap between inline rows inside an entry. */
     private static final int SETTINGS_ROW_GAP = com.aurora.client.ui.util.UiDensity.ROW_GAP;
 
@@ -171,6 +190,8 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             .flatMap(page -> page.entries().stream()).toList();
     /** Sub-tab height and the gap between sub-tabs (the toolbar row's metrics). */
     private static final float PAGE_TAB_H = com.aurora.client.ui.util.UiDensity.TOOL, PAGE_TAB_GAP = 4;
+    /** Thickness of the selected sub-tab's underline; its ends are always round, it is a mark, not chrome. */
+    private static final float TAB_RULE = 1.5f;
     /** Horizontal label padding inside a sub-tab, per side. */
     private static final int PAGE_TAB_PAD = 8;
     private boolean gridLayout = AuroraConfig.get().moduleGridView; // false: list, true: grid
@@ -378,7 +399,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         }
 
         searchField = new EditBox(this.font, 0, 0, 202, (int) TOOL, Component.literal("Search..."));
-        searchField.setHint(Component.literal("Search features and settings..."));
+        searchField.setHint(Component.literal("Search features and settings"));
         searchField.setBordered(false);
         searchField.setTextColor(0xFFFFFFFF);
         searchField.setMaxLength(64);
@@ -466,7 +487,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     private SemanticActionControl tabControl(int i) {
         SemanticActionControl control = tabControls[i];
         if (control != null) return control;
-        String name = i == 0 ? "Mods" : "Settings";
+        String name = i == 0 ? "Features" : "Settings";
         control = new SemanticActionControl(new SemanticAction(
                 Component.literal(name),
                 () -> Component.literal("Switches the main screen to the " + name + " tab."),
@@ -763,13 +784,58 @@ public class AuroraScreen extends Screen implements ThemedScreen {
 
     private float boxX() { return (float) Math.floor((this.width - BOX_W) / 2.0f); }
     private float boxY() { return (float) Math.floor((this.height - BOX_H) / 2.0f); }
+
+    /**
+     * The painted window height. The Features tab keeps the full frame (its 3×3 grid); a Settings
+     * page fits its content below a fixed top edge, never taller than the frame (owner decision
+     * 2026-11-14), so a short page no longer sits in a half-empty window.
+     */
+    private float windowH() {
+        if (selectedCategory != 1 || measuredContent == null) return BOX_H;
+        double content = 0;
+        for (FeatureMetadata m : pageEntries()) {
+            content += headerBlockH(m);
+            if (m.settingsDetailOnly) content += SETTINGS_HINT_H;
+            else for (FeatureSetting s : m.settings) content += s.height() + SETTINGS_ROW_GAP;
+            content += SETTINGS_ENTRY_GAP;
+        }
+        content -= SETTINGS_ENTRY_GAP;
+        float fitted = (float) (measuredContent.y - boxY() + content + 10);
+        return Math.min(BOX_H, Math.max(MIN_SETTINGS_WINDOW_H, fitted));
+    }
+    private static final float MIN_SETTINGS_WINDOW_H = 160;
     private float mainX() { return boxX() + (narrowNavigation() ? 8 : com.aurora.client.ui.util.UiDensity.SIDEBAR + com.aurora.client.ui.util.UiDensity.INSET); }
     private float mainY() { return boxY() + (com.aurora.client.ui.util.UiDensity.HEADER - TOOL) / 2f; }
 
     /** Cached at init/resize; shared by paint, culling, input and scroll extent. */
     private ClipBand contentViewport() {
-        return measuredContent;
+        if (selectedCategory != 1 || measuredContent == null) return measuredContent;
+        // A scrolling settings page ends its viewport on a row boundary, so at rest no row is
+        // cut through its text (council review, 2026-11-14). Scissor, hit tests, scroll extent
+        // and the scrollbar all read this one band.
+        int avail = measuredContent.height, y = 0, fit = 0;
+        boolean overflow = false;
+        outer:
+        for (FeatureMetadata m : pageEntries()) {
+            y += headerBlockH(m);
+            if (m.settingsDetailOnly) {
+                y += SETTINGS_HINT_H;
+                if (y > avail) { overflow = true; break; }
+                fit = y;
+            } else for (FeatureSetting s : m.settings) {
+                if (y + s.height() > avail) { overflow = true; break outer; }
+                fit = y + s.height();
+                y = fit + SETTINGS_ROW_GAP;
+            }
+            y += SETTINGS_ENTRY_GAP;
+        }
+        if (!overflow || fit <= 0) return measuredContent;
+        if (trimmedContent == null || trimmedContent.height != fit || trimmedContent.y != measuredContent.y
+                || trimmedContent.x != measuredContent.x || trimmedContent.width != measuredContent.width)
+            trimmedContent = new ClipBand(measuredContent.x, measuredContent.y, measuredContent.width, fit);
+        return trimmedContent;
     }
+    private ClipBand trimmedContent;
 
     private boolean narrowNavigation() { return BOX_W < 320; }
     private float navX(int index) { return boxX() + 6 + (narrowNavigation() ? index * (TAB_W + 4) : 0); }
@@ -841,8 +907,12 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     private void measureSettingsRows() {
         layoutPageTabs();
         int w = Math.max(1, contentWidth() - 8);
+        // One slider track length across the page's groups (owner decision 2026-11-14). Runs
+        // every frame, so no list is built: a max over the groups, then the measure walk.
+        int track = 0;
+        for (FeatureMetadata m : pageEntries()) track = Math.max(track, FeatureSetting.pageTrackWidth(m.settings));
         for (FeatureMetadata m : pageEntries())
-            for (FeatureSetting s : m.settings) s.measureCompact(w);
+            for (FeatureSetting s : m.settings) { s.pageTrack(track); s.measureCompact(w); }
     }
 
     @Override
@@ -873,7 +943,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         // bit in the version hash, which forces the re-raster on the switch).
         GlassSurface.beginGlassPass();
         float radius = ThemeManager.current().roundness().radius();
-        boolean glassWindow = GlassSurface.container(g, boxX(), boxY(), BOX_W, BOX_H, radius);
+        boolean glassWindow = GlassSurface.container(g, boxX(), boxY(), BOX_W, windowH(), radius);
 
         com.mojang.blaze3d.pipeline.RenderTarget main = this.minecraft != null ? com.aurora.client.adapter.NativeUi.mainTarget(this.minecraft) : null;
         int fbW = (main != null && main.width > 0) ? main.width : this.width;
@@ -884,7 +954,8 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 ^ ((long) fbW * 7919L)
                 ^ ((long) fbH * 17L)
                 ^ ((long) guiScale * 65537L)
-                ^ (glassWindow ? 0x5BD1B2C1L : 0L); // glass state changes cached fill presence
+                ^ (glassWindow ? 0x5BD1B2C1L : 0L) // glass state changes cached fill presence
+                ^ ((long) Math.round(windowH()) << 40); // a fitted Settings page changes the frame
 
         if (!layerCache.isCurrent(version)) {
             layerCache.ensureSize(fbW, fbH);
@@ -932,7 +1003,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
 
         for (int i = 1; i <= 3; i++) {
             int a = Math.max(0, 35 - i * 10);
-            RenderUtil.drawRoundedOutlineAA(g, bx - i * 2, by - i * 2, BOX_W + i * 4, BOX_H + i * 4,
+            RenderUtil.drawRoundedOutlineAA(g, bx - i * 2, by - i * 2, BOX_W + i * 4, windowH() + i * 4,
                     radius + i * 2, 2.0f, (a << 24) | 0x000000);
         }
         if (!glassWindow || MaterialSurface.unified()) {
@@ -940,8 +1011,8 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             // stacking the old fill/outline on top would read as a double
             // surface. The glow rings above stay — they read as a drop
             // shadow, not an outline.
-            RenderUtil.drawRoundedRectAA(g, bx, by, BOX_W, BOX_H, radius, MaterialSurface.color(ThemeToken.WINDOW_FILL));
-            RenderUtil.drawRoundedOutlineAA(g, bx, by, BOX_W, BOX_H, radius, 1.0f, MaterialSurface.unified() ? MaterialSurface.color(ThemeToken.BORDER)
+            RenderUtil.drawRoundedRectAA(g, bx, by, BOX_W, windowH(), radius, MaterialSurface.color(ThemeToken.WINDOW_FILL));
+            RenderUtil.drawRoundedOutlineAA(g, bx, by, BOX_W, windowH(), radius, 1.0f, MaterialSurface.unified() ? MaterialSurface.color(ThemeToken.WINDOW_OUTLINE)
                     : alpha(ThemeToken.ON_BACKGROUND, 0x13 / 255f));
         }
 
@@ -1066,7 +1137,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             float y = viewTop() - (float) scrolls[1].current();
             for (FeatureMetadata m : pageEntries()) {
                 // Settings groups share the enclosing window; only their controls own surfaces.
-                y += SETTINGS_HEADER_H; // header row — plain text + an opaque toggle, no glass
+                y += headerBlockH(m); // header row — plain text + an opaque toggle, no glass
                 if (m.settingsDetailOnly) {
                     y += SETTINGS_HINT_H;
                 } else {
@@ -1091,9 +1162,12 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         // corners and the glass corners derive from one radius (C-7).
         float ctrlRadius = ThemeManager.current().roundness().radiusSmall();
 
-        g.text(tr, "AURORA", (int) bx + 12, (int) by + (com.aurora.client.ui.util.UiDensity.HEADER - tr.lineHeight) / 2 + 1, MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
+        // Window identity: AURORA text only (owner ruling 2026-10-06), in the title role so it
+        // reads as the window's name rather than one more label (UI polish 2026-11-14).
+        g.text(tr, com.aurora.client.ui.util.AuroraFontRenderer.role("AURORA", com.aurora.client.ui.util.AuroraFontRenderer.Role.TITLE),
+                (int) bx + 12, (int) by + (com.aurora.client.ui.util.UiDensity.HEADER - tr.lineHeight) / 2 + 2, MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
 
-        String[] cats = {"Mods", "Settings"};
+        String[] cats = {"Features", "Settings"};
         for (int i = 0; i < 2; i++) {
             float catY = navY(i);
             float catX = navX(i);
@@ -1128,8 +1202,8 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             int txt = chipGlass[i] && sel ? MaterialSurface.color(ThemeToken.ON_ACCENT)
                     : sel ? MaterialSurface.color(ThemeToken.ON_BACKGROUND)
                     : AuroraAnim.lerpArgb(
-                            MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED),
-                            MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), hoverT);
+                            MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY),
+                            MaterialSurface.color(ThemeToken.ON_BACKGROUND), hoverT);
             g.text(tr, cats[i], (int) (catX + 8), (int) (catY + (TAB_H - tr.lineHeight) / 2 + 1), txt, false);
             // Keyboard focus: the Button-family 1 px accent hairline — an
             // independent channel from both the selection tint and hover.
@@ -1162,8 +1236,8 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         }
         g.text(tr, "Profiles", (int) (profX + 8), (int) (profY + (TAB_H - tr.lineHeight) / 2 + 1),
                 AuroraAnim.lerpArgb(
-                        MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED),
-                        MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), profT), false);
+                        MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY),
+                        MaterialSurface.color(ThemeToken.ON_BACKGROUND), profT), false);
         if (profilesControl != null && profilesControl.isFocused()) {
             RenderUtil.drawRoundedOutlineAA(g, profX, profY, TAB_W, TAB_H, ctrlRadius, 1.0f,
                     ThemeManager.withAlpha(MaterialSurface.color(ThemeToken.ACCENT), 0x99));
@@ -1184,8 +1258,11 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         ClipBand vp = contentViewport();
         ScrollFade.drawTop(g, vp.x, vp.width, vp.y, ScrollFade.FADE_PX,
                 scrolls[selectedCategory].current(), MaterialSurface.color(ThemeToken.WINDOW_FILL));
-        ScrollFade.drawBottom(g, vp.x, vp.width, vp.y + vp.height, ScrollFade.FADE_PX,
-                computeMaxScroll() - scrolls[selectedCategory].current(), MaterialSurface.color(ThemeToken.WINDOW_FILL));
+        // At rest a Settings page ends on a row boundary (contentViewport); the bottom fade
+        // only marks rows cut by scrolling.
+        if (selectedCategory == 0 || scrolls[1].current() > 0)
+            ScrollFade.drawBottom(g, vp.x, vp.width, vp.y + vp.height, ScrollFade.BOTTOM_FADE_PX,
+                    computeMaxScroll() - scrolls[selectedCategory].current(), MaterialSurface.color(ThemeToken.WINDOW_FILL));
 
         drawScrollbar(g);
     }
@@ -1262,12 +1339,39 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             }
             boolean on = tileOn(m);
             String subtitle = resultSubtitle.get(m.id);
+            // Names stay primary in both states (2026-11-14): an off feature is available, not
+            // disabled; the state bar and the icon's tone carry on/off.
+            int nameColor = MaterialSurface.color(ThemeToken.ON_BACKGROUND);
 
             // Neutral tiles inherit the enclosing window. Enabled tiles are
             // isolated stained glass; if glass declines, preserve the old
             // accent-wash + bright-outline fallback instead of disappearing.
-            boolean highlightedGlass = on && highlightedTileGlass(i);
-            if(MaterialSurface.unified()) MaterialSurface.selection(g,cx,cy,cw,ch,tileRadius,on,hoverT);
+            boolean highlightedGlass = on && highlightedTileGlass(i) && !MaterialSurface.unified();
+            // On is a feature state, not a selection (UI polish 2026-11-14): every tile keeps the
+            // neutral face, and the icon alone says on (accent) or off (secondary text). The owner
+            // retired the separate indicators (dot, switch, pill, bottom bar) for this.
+            if(MaterialSurface.unified()) {
+                MaterialSurface.selection(g,cx,cy,cw,ch,tileRadius,false,hoverT);
+                // A faint resting hairline, strengthened on hover (2026-11-14): the translucent
+                // face alone left a tile's edges unreadable, so a bottom row met the window edge
+                // as if cut off; the hover face step alone was too faint, and an accent ring gave
+                // the accent a second meaning beside the icon's state colour.
+                int edgeAlpha = Math.round(TILE_EDGE_REST + (TILE_EDGE_HOVER - TILE_EDGE_REST) * hoverT);
+                RenderUtil.drawRoundedOutlineAA(g, cx, cy, cw, ch, tileRadius, 1.0f,
+                        ThemeManager.withAlpha(MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), edgeAlpha));
+                // Settings cue (owner decision 2026-11-14): a muted chevron fades in while the tile
+                // is hovered or focused; clicking it opens the feature's settings, as right-click does.
+                float cue = Math.max(hoverT, control != null && control.isFocused() ? 1f : 0f);
+                if (cue > 0f && !isSettingsResult(m)) {
+                    FeatureMetadata fm = findMeta(m.id);
+                    if (fm != null && fm.hasDetail()) {
+                        float[] r = chevronRect(cx, cy, cw, ch);
+                        int muted = MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY);
+                        MaterialIconRenderer.drawIcon(g, tr, com.aurora.client.screen.IconCatalog.glyph("chevron_right"),
+                                r[0] + r[2] / 2f, r[1] + r[3] / 2f, CHEVRON, ThemeManager.withAlpha(muted, Math.round((muted >>> 24) * cue)));
+                    }
+                }
+            }
             else if (on && !highlightedGlass) {
                 RenderUtil.drawRoundedRectAA(g, cx, cy, cw, ch, tileRadius,
                         ThemeManager.surfaceColor(ThemeToken.SURFACE));
@@ -1285,7 +1389,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             // already wears the accent edge; a second ring outside it doubled
             // the highlight, so a selected/enabled peer never takes one
             // (owner ruling 2026-10-30).
-            if (control != null && control.isFocused() && !(MaterialSurface.unified() && on)) {
+            if (control != null && control.isFocused()) {
                 RenderUtil.drawRoundedOutlineAA(g, cx, cy, cw, ch, tileRadius, 1.0f,
                         ThemeManager.withAlpha(MaterialSurface.color(ThemeToken.ACCENT), 0x99));
             }
@@ -1300,15 +1404,14 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 int nameLinesMax = subtitle == null ? 2 : 1;
                 var lines = moduleLabelLines.computeIfAbsent(nameLinesMax + "|" + m.name,
                         key -> com.aurora.client.ui.util.WordWrap.lines(m.name, labelWidth, nameLinesMax, tr::width));
-                RenderUtil.drawCenteredLines(tr, g, lines, cx + 3, cy + ch - 27, labelWidth,
-                        MaterialSurface.color(ThemeToken.ON_BACKGROUND));
+                RenderUtil.drawCenteredLines(tr, g, lines, cx + 3, cy + ch - 27, labelWidth, nameColor);
                 if (subtitle != null) {
                     drawSubtitle(g, tr, m, subtitle, labelWidth, cx + 3 + labelWidth / 2f, subtitleY(m, cy, ch, cw),
                             mouseX, mouseY, cx, cw, cy + ch);
                 }
             } else {
                 drawTileIcon(g, tr, m, cx + 20, cy + ch / 2f, 16f, on, highlightedGlass);
-                int nameWidth = Math.max(1, (int) cw - 48);
+                int nameWidth = Math.max(1, (int) cw - 64);
                 long labelVersion = ThemeManager.generation() * 65537L + nameWidth * 31L
                         + com.aurora.client.ui.util.AuroraFontRenderer.styleKey() * 7L;
                 if (labelVersion != moduleLabelVersion) { moduleLabelLines.clear(); moduleLabelVersion = labelVersion; }
@@ -1316,10 +1419,14 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 var nameLines = moduleLabelLines.computeIfAbsent(nameLinesMax + "|" + m.name,
                         key -> com.aurora.client.ui.util.WordWrap.lines(m.name, nameWidth, nameLinesMax, tr::width));
                 int textLines = nameLines.size() + (subtitle == null ? 0 : 1);
-                RenderUtil.drawCenteredLines(tr, g, nameLines, cx + 32, cy + (ch - textLines * 10) / 2, nameWidth,
-                        MaterialSurface.color(ThemeToken.ON_BACKGROUND));
+                // List rows read left to right: icon, name on the icon's axis, state at the end.
+                int lineY = Math.round(cy + (ch - textLines * 10) / 2f) + 1;
+                for (String line : nameLines) {
+                    g.text(tr, line, Math.round(cx + 38), lineY, nameColor, false);
+                    lineY += 10;
+                }
                 if (subtitle != null) {
-                    drawSubtitle(g, tr, m, subtitle, nameWidth, cx + 32 + nameWidth / 2f, subtitleY(m, cy, ch, cw),
+                    drawSubtitle(g, tr, m, subtitle, nameWidth, cx + 38 + nameWidth / 2f, subtitleY(m, cy, ch, cw),
                             mouseX, mouseY, cx, cw, cy + ch);
                 }
             }
@@ -1359,7 +1466,12 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 control.setAvailable(true); // toolbar chrome — interactive whenever the Settings tab is shown
                 control.updatePointer(mouseX, mouseY);
             }
-            if (MaterialSurface.unified()) MaterialSurface.selection(g, tx, my, tw, PAGE_TAB_H, ctrlRadius, sel, hoverT, true);
+            // One selection language per level (UI polish 2026-11-14): the sidebar's accent pill
+            // owns location, so a sub-tab marks selection by text alone (heading role, primary
+            // colour); hover keeps the flat wash.
+            if (MaterialSurface.unified()) {
+                if (!sel) MaterialSurface.selection(g, tx, my, tw, PAGE_TAB_H, ctrlRadius, false, hoverT, true);
+            }
             else if (!pageGlass[i]) {
                 if (sel) {
                     RenderUtil.drawRoundedRectAA(g, tx, my, tw, PAGE_TAB_H, ctrlRadius,
@@ -1373,9 +1485,18 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             int txt = pageGlass[i] && sel ? MaterialSurface.color(ThemeToken.ON_ACCENT)
                     : sel ? MaterialSurface.color(ThemeToken.ON_BACKGROUND)
                     : AuroraAnim.lerpArgb(
-                            MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED),
-                            MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), hoverT);
-            com.aurora.client.ui.util.AuroraFontRenderer.drawCentered(g, tr, pageTabLabel[i],
+                            MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY),
+                            MaterialSurface.color(ThemeToken.ON_BACKGROUND), hoverT);
+            if (sel && MaterialSurface.unified()) {
+                // The selected sub-tab keeps the body weight (a heavier label shifted every label
+                // as the selection moved) and takes primary text plus a persistent neutral
+                // underline (2026-11-14). Neutral, so the sidebar keeps the one accent selection.
+                com.aurora.client.ui.util.AuroraFontRenderer.drawCentered(g, tr, pageTabLabel[i],
+                        (int) (tx + tw / 2f), (int) (my + (PAGE_TAB_H - tr.lineHeight) / 2 + 1), txt);
+                int lineW = tr.width(pageTabLabel[i]);
+                RenderUtil.drawRoundedRectAA(g, tx + (tw - lineW) / 2f, my + PAGE_TAB_H - TAB_RULE, lineW, TAB_RULE, TAB_RULE / 2f, txt);
+            }
+            else com.aurora.client.ui.util.AuroraFontRenderer.drawCentered(g, tr, pageTabLabel[i],
                     (int) (tx + tw / 2f), (int) (my + (PAGE_TAB_H - tr.lineHeight) / 2 + 1), txt);
             if (control != null && control.isFocused() && !sel) {
                 RenderUtil.drawRoundedOutlineAA(g, tx, my, tw, PAGE_TAB_H, ctrlRadius, 1.0f,
@@ -1399,7 +1520,9 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 boolean navHover = m.hasDetail()
                         && Widget.inBounds(mouseX, mouseY, mx + 4, y, contentWidth() - 4 - 42, headerH);
                 float navT = m.hasDetail() ? (MaterialSurface.unified() ? pilotHover(pilotHeaderHovers,m.id,navHover) : headerHover(m.id).update(navHover)) : 0f;
-                g.text(tr, m.displayName, (int) (mx + 4), (int) (y + (SETTINGS_HEADER_H - tr.lineHeight) / 2 + 1), MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
+                // Group heading in the heading role, so a group reads apart from its own rows.
+                g.text(tr, com.aurora.client.ui.util.AuroraFontRenderer.role(m.displayName, com.aurora.client.ui.util.AuroraFontRenderer.Role.HEADING),
+                        (int) (mx + 4), (int) (y + (SETTINGS_HEADER_H - tr.lineHeight) / 2 + 1), MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
                 // Detail-screen affordance: a header click opens the entry's
                 // detail screen (the Settings tab's counterpart of the
                 // Modules tab's right-click-to-detail) — the chevron marks
@@ -1427,7 +1550,9 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 ToggleSwitch t = sectionToggles.get(m.id);
                 if (t != null) {
                     float tw = com.aurora.client.ui.util.UiDensity.TOGGLE_W, th = com.aurora.client.ui.util.UiDensity.TOGGLE_H;
-                    float tx = mx + contentWidth() - tw - 10;
+                    // Ends on the rows' control edge (2026-11-14: it stood 1.5 px proud of the
+                    // swatches and switches below it).
+                    float tx = mx + contentWidth() - tw - 11.5f;
                     t.layout(tx, y + (headerH - th) / 2, tw, th);
                     t.renderShapes(g, tx, y + (headerH - th) / 2, tw, th);
                     t.renderOverlay(g, tx, y + (headerH - th) / 2, tw, th, mouseX, mouseY);
@@ -1445,7 +1570,10 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 }
             }
             if (settingsReveal == m) paintReveal(g, mx + 4, y, contentWidth() - 8, headerH, ctrlRadius);
-            y += headerH;
+            String summary = pageSummaryLine(m, tr);
+            if (summary != null && vp.intersects(mx + 4, y + headerH, contentWidth() - 4, SUMMARY_H))
+                g.text(tr, summary, (int) (mx + 4), (int) (y + headerH - 1), MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
+            y += headerBlockH(m);
             if (m.settingsDetailOnly) {
                 // Detail-only entry: one muted hint line in place of the
                 // inline rows — the merged list lives behind the header
@@ -1529,7 +1657,12 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         // (painted pre-dim by paintGlassPass), accent-STAINED on the active
         // one. Content here: the canonical hover wash on glass (both peers),
         // the flat fills + borders on decline, then the icon.
-        if(MaterialSurface.unified()) MaterialSurface.selection(g,x,y,size,size,ctrlRadius,selected,hoverT);
+        // The active layout is the opaque neutral field face, like the selected sub-tab: the
+        // sidebar is the screen's one accent selection (UI polish 2026-11-14).
+        if(MaterialSurface.unified()) {
+            if (selected) MaterialSurface.field(g,x,y,size,size,ctrlRadius,0f,false);
+            else MaterialSurface.selection(g,x,y,size,size,ctrlRadius,false,hoverT,true);
+        }
         else if (btnGlass) {
             if (hoverT > 0f) {
                 RenderUtil.drawRoundedRectAA(g, x, y, size, size, ctrlRadius,
@@ -1551,14 +1684,17 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         // Keyboard focus: the Button-family hairline — independent of both
         // the enabled stain and the hover wash. A selected peer already wears
         // the accent edge; no second ring outside it (owner ruling 2026-10-30).
-        if (focused && !(MaterialSurface.unified() && selected)) {
+        if (focused) {
             RenderUtil.drawRoundedOutlineAA(g, x, y, size, size, ctrlRadius, 1.0f,
                     ThemeManager.withAlpha(MaterialSurface.color(ThemeToken.ACCENT), 0x99));
         }
         // Same contract as the tiles: on stained glass the icon takes the
         // contrast-derived ON_ACCENT; the flat fallback's ~15% accent wash is
         // dark enough that the accent glyph still reads there.
-        int iconCol = selected && btnGlass ? MaterialSurface.color(ThemeToken.ON_ACCENT)
+        int iconCol = MaterialSurface.unified() ? (selected ? MaterialSurface.color(ThemeToken.ON_BACKGROUND)
+                        : AuroraAnim.lerpArgb(MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED),
+                                MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), hoverT))
+                : selected && btnGlass ? MaterialSurface.color(ThemeToken.ON_ACCENT)
                 : selected ? MaterialSurface.color(ThemeToken.ACCENT)
                 : alpha(ThemeToken.ON_BACKGROUND, 0x53f);
         if (list) {
@@ -1590,8 +1726,20 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         boolean link = !isSettingsResult(m) && resultVia.containsKey(m.id)
                 && inSubtitleBand(mouseX, mouseY, cx, cw, y, bottom);
         int color = link ? MaterialSurface.color(ThemeToken.ACCENT) : MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED);
-        com.aurora.client.ui.util.AuroraFontRenderer.drawCentered(g, tr, fitted, Math.round(centerX), Math.round(y), color);
+        if (gridLayout) com.aurora.client.ui.util.AuroraFontRenderer.drawCentered(g, tr, fitted, Math.round(centerX), Math.round(y), color);
+        else g.text(tr, fitted, Math.round(centerX - width / 2f), Math.round(y), color, false);
     }
+
+    /** The settings-cue chevron's em size and its hit box: the tile's top-right corner, or a list
+     * row's trailing end. Paint and click share this one rect. */
+    private static final float CHEVRON = 10f;
+    private float[] chevronRect(float cx, float cy, float cw, float ch) {
+        float box = 14f;
+        if (gridLayout) return new float[]{cx + cw - box - 3, cy + 3, box, box};
+        return new float[]{cx + cw - box - 8, cy + (ch - box) / 2f, box, box};
+    }
+
+
 
     /** The lower band of a tile from its subtitle line down — where a click opens the matched setting. */
     private static boolean inSubtitleBand(double mouseX, double mouseY, float cx, float cw, float subtitleY, float bottom) {
@@ -1602,7 +1750,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     private float subtitleY(Module m, float cy, float ch, float cw) {
         if (gridLayout) return cy + ch - 16;
         int nameLinesMax = 1;
-        int nameWidth = Math.max(1, (int) cw - 48);
+        int nameWidth = Math.max(1, (int) cw - 64);
         var nameLines = moduleLabelLines.computeIfAbsent(nameLinesMax + "|" + m.name,
                 key -> com.aurora.client.ui.util.WordWrap.lines(m.name, nameWidth, nameLinesMax, this.font::width));
         return cy + (ch - (nameLines.size() + 1) * 10) / 2 + 10;
@@ -1720,7 +1868,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         for (FeatureMetadata entry : pageEntries()) {
             if (entry == fm) {
                 if (target != null) {
-                    offset += SETTINGS_HEADER_H;
+                    offset += headerBlockH(entry);
                     for (FeatureSetting setting : entry.settings) {
                         if (setting == target) break;
                         offset += setting.height() + SETTINGS_ROW_GAP;
@@ -1728,7 +1876,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 }
                 break;
             }
-            offset += SETTINGS_HEADER_H;
+            offset += headerBlockH(entry);
             if (entry.settingsDetailOnly) offset += SETTINGS_HINT_H;
             else for (FeatureSetting setting : entry.settings) offset += setting.height() + SETTINGS_ROW_GAP;
             offset += SETTINGS_ENTRY_GAP;
@@ -1780,16 +1928,31 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         if (on && stainedGlass) {
             color = MaterialSurface.color(ThemeToken.ON_ACCENT);
         } else if (on) {
+            // An enabled icon takes the accent, the feature's one state cue (owner decision
+            // 2026-11-14); a per-module accent override still applies.
             int accent = ModuleAccentColors.get(m.id);
             color = accent != 0 ? accent : MaterialSurface.color(ThemeToken.ACCENT);
         } else {
-            color = MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED);
+            // Off: secondary text in unified windows, a step below an on feature's primary icon,
+            // so on and off part at a glance without the off one reading as unavailable.
+            color = MaterialSurface.unified() ? neutral(MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY))
+                    : MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED);
         }
         // Crisp native-resolution glyph (the shared font atlas is
         // point-sampled and degrades badly at these sizes); em size = the
         // box the old glyph-scaling math targeted, so the footprint is
         // unchanged.
         MaterialIconRenderer.drawIcon(g, tr, glyph, cx, cy, targetPx, color);
+    }
+
+    private static final int TILE_EDGE_REST = 0x22, TILE_EDGE_HOVER = 0x99;
+
+    /** {@code argb} with its hue removed at the same luminance: the cool secondary text tone read
+     * as a faint accent beside indigo icons (2026-11-14), so off icons use its grey. */
+    private static int neutral(int argb) {
+        int r = argb >> 16 & 0xFF, g = argb >> 8 & 0xFF, b = argb & 0xFF;
+        int l = Math.round(0.2126f * r + 0.7152f * g + 0.0722f * b);
+        return (argb & 0xFF000000) | l << 16 | l << 8 | l;
     }
 
     private FeatureMetadata findMeta(String id) {
@@ -1809,7 +1972,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         }
         double h = 0;
         for (FeatureMetadata m : pageEntries()) {
-            h += SETTINGS_HEADER_H;
+            h += headerBlockH(m);
             if (m.settingsDetailOnly) h += SETTINGS_HINT_H;
             else for (FeatureSetting s : m.settings) h += s.height() + SETTINGS_ROW_GAP;
             h += SETTINGS_ENTRY_GAP;
@@ -1850,6 +2013,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         ScrollbarChrome.Thumb thumb = thumb(maxScroll);
         // The thumb is a capsule in the toggle-track/slider-track family; its
         // corners follow the theme's Corner Radius like theirs (ScrollbarChrome).
+        ScrollbarChrome.track(g, (int) mainX() + contentWidth() + 4, viewTop(), viewBot() - viewTop(), ThemeToken.ON_BACKGROUND);
         ScrollbarChrome.draw(g, (int) mainX() + contentWidth() + 4, thumb,
                 scrolls[selectedCategory].isDragging(), ThemeToken.ON_BACKGROUND);
     }
@@ -1938,9 +2102,11 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 if (b == null) continue;
                 if (vp.contains(mouseX, mouseY)
                         && mouseX >= b[0] && mouseX <= b[0] + b[2] && mouseY >= b[1] && mouseY <= b[1] + b[3]) {
+                    float[] chevron = chevronRect(b[0], b[1], b[2], b[3]);
                     boolean settingLink = button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT
-                            && !isSettingsResult(m) && resultVia.containsKey(m.id)
-                            && inSubtitleBand(mouseX, mouseY, b[0], b[2], subtitleY(m, b[1], b[3], b[2]), b[1] + b[3]);
+                            && !isSettingsResult(m) && (resultVia.containsKey(m.id)
+                            && inSubtitleBand(mouseX, mouseY, b[0], b[2], subtitleY(m, b[1], b[3], b[2]), b[1] + b[3])
+                            || MaterialSurface.unified() && Widget.inBounds(mouseX, mouseY, chevron[0], chevron[1], chevron[2], chevron[3]));
                     if (button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_RIGHT || settingLink) {
                         // Secondary (pointer-specific) card action: open the
                         // detail screen. One activation click at the site —
@@ -1984,7 +2150,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             if (button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) {
                 float py = viewTop() - (float) scrolls[1].current();
                 for (FeatureMetadata m : pageEntries()) {
-                    py += SETTINGS_HEADER_H;
+                    py += headerBlockH(m);
                     if (m.settingsDetailOnly) {
                         py += SETTINGS_HINT_H;
                     } else {
@@ -2029,7 +2195,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                     }
                     return true;
                 }
-                y += SETTINGS_HEADER_H;
+                y += headerBlockH(m);
                 if (m.settingsDetailOnly) {
                     y += SETTINGS_HINT_H;
                 } else {

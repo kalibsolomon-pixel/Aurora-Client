@@ -6,7 +6,6 @@
   "aurora.button.multiplayer": "Multiplayer",
   "aurora.button.options": "Options",
   "aurora.button.settings": "Settings",
-  "aurora.title.modmenu_missing": "Mod Menu isn't installed.",
   "aurora.title.switch_account": "Switch account (In-Game Account Switcher)",
   "aurora.title.account_switcher_missing": "Install In-Game Account Switcher to add and switch accounts here.",
   "aurora.button.mods": "Mods",
@@ -23,7 +22,7 @@
   "aurora.option.showCoords": "Show Coordinates",
   "aurora.option.showTime": "Show Time",
   "aurora.option.customTitleScreen": "Custom Title Screen",
-  "aurora.config.toggle_sprint_sneak.enabled": "Toggle Sprint/Sneak",
+  "aurora.config.toggle_sprint_sneak.enabled": "Sprint & Sneak",
   "aurora.config.toggle_sprint_sneak.hud": "Show HUD Module",
 
   "key.category.aurora.client": "Aurora Client",

@@ -79,9 +79,11 @@ public class Button extends Widget {
      *   <li>{@code BACKGROUND_ACCENT} — Background Color fill with a density
      *       floor (a low opacity never leaves a blank glass slab over the world)
      *       and the accent outline: the HUD editor's two actions.</li>
+     *   <li>{@code GHOST} — text only at rest, the hover face on hover/press: a secondary
+     *       action beside a stronger sibling (feature-detail Reset next to Done, 2026-11-14).</li>
      * </ul>
      */
-    public enum Theming { NONE, OUTLINED, BACKGROUND, BACKGROUND_ACCENT }
+    public enum Theming { NONE, OUTLINED, BACKGROUND, BACKGROUND_ACCENT, GHOST }
 
     private Theming theming = Theming.NONE;
     static final int THEMED_MIN_ALPHA = 150;
@@ -117,7 +119,7 @@ public class Button extends Widget {
         boolean pulse=System.currentTimeMillis()-pressDownStartMs < 120 && pressDownStartMs>=0;
         float press=(float)pilotPress.update(!disabled && (pointerHeld || pulse) ? 1 : 0,now);
         float r=ThemeManager.current().roundness().radiusSmall();
-        if(glassPassFrame != GlassSurface.frame() && !disabled) {
+        if(glassPassFrame != GlassSurface.frame() && !disabled && theming != Theming.GHOST) {
             GlassSurface.beginAboveDim();
             try { GlassSurface.card(g,x,y,w,h,r); } finally { GlassSurface.endAboveDim(); }
         }
@@ -150,13 +152,22 @@ public class Button extends Widget {
         fill=AuroraAnim.lerpArgb(AuroraAnim.lerpArgb(fill,over,hover),down,press);
         if(disabled) { fill=AuroraAnim.lerpArgb(fill,ThemeManager.color(ThemeToken.MATERIAL_PANEL),.65f);text=MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED); }
         int windowAlpha=ThemeManager.color(ThemeToken.WINDOW_FILL) >>> 24;
-        fill=ThemeManager.withAlpha(fill, asField ? 255 : primary ? Math.max(128,windowAlpha) : look==Theming.BACKGROUND_ACCENT ? Math.max(THEMED_MIN_ALPHA,windowAlpha) : windowAlpha);
+        // A primary action is the opaque accent action tone, like an ON switch track (2026-11-14):
+        // at half alpha over the dark window the owner's accent-filled Done read as a dim,
+        // disabled-looking lilac.
+        fill=ThemeManager.withAlpha(fill, asField ? 255 : primary ? 255 : look==Theming.BACKGROUND_ACCENT ? Math.max(THEMED_MIN_ALPHA,windowAlpha) : windowAlpha);
+        boolean ghost=look==Theming.GHOST;
+        if(ghost) {
+            edge=0;
+            fill=ThemeManager.withAlpha(ThemeManager.color(ThemeToken.MATERIAL_HOVER),disabled ? 0 : Math.round(255*Math.max(hover,press)));
+            if(!disabled) text=AuroraAnim.lerpArgb(ThemeManager.color(ThemeToken.MATERIAL_TEXT_SECONDARY),ThemeManager.color(ThemeToken.MATERIAL_TEXT),hover);
+        }
         float py=y; // Card, blur mask, focus and label share one stationary geometry.
-        int kind=(destructive ? 30 : primary ? 20 : asField ? 170 : 130+10*look.ordinal())+(disabled ? 4 : hover==1 ? 1 : 0);
+        int kind=(destructive ? 30 : primary ? 20 : asField ? 170 : ghost ? 190 : 130+10*look.ordinal())+(disabled ? 4 : hover==1 ? 1 : 0);
         if((hover==0 || hover==1) && press==0)
-            MaterialSurface.cached(g,x,py,w,h,r,fill,edge,kind,!asField);
+            MaterialSurface.cached(g,x,py,w,h,r,fill,edge,kind,!asField && !ghost);
         else {
-            if(!asField) MaterialSurface.cached(g,x,py,w,h,r,0,0,80,true);
+            if(!asField && !ghost) MaterialSurface.cached(g,x,py,w,h,r,0,0,80,true);
             RenderUtil.drawRoundedRectAA(g,x,py,w,h,r,fill);
             RenderUtil.drawRoundedOutlineAA(g,x,py,w,h,r,1,edge);
         }
@@ -174,7 +185,8 @@ public class Button extends Widget {
         String fitted=AuroraFontRenderer.ellipsize(font,label.getString(),Math.max(0,(int)w-20-ICON_EM-ICON_GAP),0);
         int labelW=font.width(fitted); // measured exactly as drawCentered measures
         float groupX=x+(w-(ICON_EM+(fitted.isEmpty() ? 0 : ICON_GAP+labelW)))/2f;
-        MaterialIconRenderer.drawIcon(g,font,icon,groupX+ICON_EM/2f,py+h/2f,ICON_EM,text);
+        // One pixel down: the glyph's optical centre then meets the label's x-height (2026-11-14).
+        MaterialIconRenderer.drawIcon(g,font,icon,groupX+ICON_EM/2f,py+h/2f+1,ICON_EM,text);
         if(!fitted.isEmpty()) g.text(font,fitted,Math.round(groupX+ICON_EM+ICON_GAP),textY,text,false);
     }
 

@@ -108,6 +108,9 @@ public class KeybindSetting extends FeatureSetting {
     private int cachedKey = Integer.MIN_VALUE;
     private String cachedKeyName = "Unbound";
 
+    /** Em size of the leading keyboard glyph. */
+    private static final int KEY_GLYPH = 10;
+
     public KeybindSetting(String label, IntSupplier getter, IntConsumer setter) {
         this(label, getter, setter, com.aurora.client.config.AuroraConfig::save);
     }
@@ -219,12 +222,21 @@ public class KeybindSetting extends FeatureSetting {
         }
 
         String labelText = listening ? com.aurora.client.util.KeyCombo.captureLabel(capture.pending(), "> press key <") : currentKeyName();
+        // A keyboard glyph leads the key name (UI polish 2026-11-14), so a binding reads as a
+        // key to capture and not as a dropdown or a label; the pair centres as one group and
+        // the glyph steps aside while listening.
+        boolean glyph = MaterialSurface.unified() && !listening;
+        int glyphW = glyph ? KEY_GLYPH + 4 : 0;
         // Trim long names so they fit in the pill (keep at least 3 chars + ellipsis).
-        labelText = AuroraFontRenderer.ellipsize(tr, labelText, BTN_W - 8, 3);
+        labelText = AuroraFontRenderer.ellipsize(tr, labelText, BTN_W - 8 - glyphW, 3);
         int labelW = tr.width(labelText);
         int textCol = listening ? MaterialSurface.color(ThemeToken.ON_BACKGROUND) : textColor;
+        int groupX = btnX + (BTN_W - labelW - glyphW) / 2;
+        if (glyph) com.aurora.client.ui.util.MaterialIconRenderer.drawIcon(ctx, tr,
+                com.aurora.client.screen.IconCatalog.glyph("keyboard"), groupX + KEY_GLYPH / 2f, btnY + BTN_H / 2f, KEY_GLYPH,
+                disabled ? MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED) : MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY));
         ctx.text(tr, labelText,
-                btnX + (BTN_W - labelW) / 2,
+                groupX + glyphW,
                 btnY + (BTN_H - tr.lineHeight) / 2 + 1,
                 textCol, false);
 

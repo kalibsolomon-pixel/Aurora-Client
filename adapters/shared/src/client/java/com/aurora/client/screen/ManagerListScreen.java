@@ -138,6 +138,8 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
 
     /** Toolbar buttons — kept so the glass pass can paint their surfaces pre-dim. */
     private ButtonWidget toolbarActionBtn;
+    /** The empty state's own call to action (see {@link #createEmptyAction}); null for none. */
+    private ButtonWidget emptyActionBtn;
     private ButtonWidget doneBtn;
 
     // ---- Phase A semantic controls (custom-painted, vanilla-lifecycle) ----
@@ -245,6 +247,14 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
     /** Message drawn in the list area when there are no rows. */
     protected abstract Component emptyMessage();
 
+    /** Optional Material Symbols glyph above the empty state; null for none. */
+    protected String emptyIcon() { return null; }
+
+    /** Optional secondary line under the empty-state headline (which then takes the heading role). */
+    protected Component emptyHint() { return null; }
+
+    private static final int EMPTY_ICON = 24;
+
     /** Rows painted above the list (the Profile screen's inline create row). */
     protected int leadingRowCount() { return 0; }
 
@@ -319,7 +329,19 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
                 windowX() + windowWidth() - 8 - com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_W, toolbarY(), com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_W, com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_H,
                 Component.literal("Done"),
                 "Close this screen and return.",
-                this::onClose).glassBackground(true));
+                this::onClose).glassBackground(true).theming(com.aurora.client.ui.component.Button.Theming.OUTLINED));
+        emptyActionBtn = createEmptyAction();
+        if (emptyActionBtn != null) this.addRenderableWidget(emptyActionBtn);
+        // Done is accent-filled on every window, the same as on detail screens (owner decision
+        // and council review 2026-11-14); a header action beside it is the outlined secondary.
+        doneBtn.glassStyle(com.aurora.client.ui.component.Button.GlassStyle.STAINED).primary(true);
+        // A titled screen reads like a detail screen (UI polish 2026-11-14): its name leads the
+        // header and the action sits beside Done, sized to its label.
+        if (headerTitle() != null && toolbarActionBtn != null) {
+            int w = this.font.width(toolbarActionBtn.getMessage()) + 24;
+            toolbarActionBtn.setWidth(w);
+            toolbarActionBtn.setX(doneBtn.getX() - 4 - w);
+        }
 
         // Custom-painted semantic controls join vanilla's child/narratable
         // lifecycle without joining its render list (the settings' controls
@@ -327,6 +349,23 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         // cleared the lists; every registered control re-adds here.
         semanticHost.finishRebuild();
     }
+
+    /**
+     * The empty state's call to action, placed under its hint while the list is empty (2026-11-14):
+     * the guidance and the action that follows it sit together, and the header's own action steps
+     * aside until there are rows. Null (the default) keeps the header action only.
+     */
+    protected ButtonWidget createEmptyAction() { return null; }
+
+    /** Whether the empty-state action shows this frame: an empty, unfiltered list (one with a hint). */
+    private boolean emptyActionShown(List<T> rows) {
+        return emptyActionBtn != null && rows.isEmpty() && emptyHint() != null;
+    }
+
+    private static final int EMPTY_ACTION_GAP = 10;
+
+    /** The screen's name in the header's leading slot (title role); null keeps the action button there. */
+    protected String headerTitle() { return null; }
 
     /** The toolbar's left action button, constructed but not registered (the base registers it). */
     protected abstract ButtonWidget createToolbarActionBtn();
@@ -389,6 +428,12 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         // and go; the header actions follow its top every frame.
         if (toolbarActionBtn != null) toolbarActionBtn.setY(toolbarY());
         if (doneBtn != null) doneBtn.setY(toolbarY());
+        boolean emptyAction = emptyActionShown(rows);
+        if (emptyActionBtn != null) { emptyActionBtn.visible = emptyAction; emptyActionBtn.active = emptyAction; }
+        if (toolbarActionBtn != null && emptyActionBtn != null) {
+            toolbarActionBtn.visible = !emptyAction;
+            toolbarActionBtn.active = !emptyAction;
+        }
         // Semantic availability is re-derived every frame from the row
         // geometry: everything starts unavailable and the row passes below
         // re-mark what the clip band actually shows, so a control whose row
@@ -435,16 +480,49 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
 
 
         // ---- 3. Content ----
-        // Toolbar already identifies this screen; omit the duplicate heading.
+        if (headerTitle() != null) {
+            int titleRight = toolbarActionBtn != null ? toolbarActionBtn.getX() - 8 : doneBtn.getX() - 8;
+            ctx.text(this.font, com.aurora.client.ui.util.AuroraFontRenderer.role(
+                            com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(this.font, headerTitle(), titleRight - windowX() - 12, 0),
+                            com.aurora.client.ui.util.AuroraFontRenderer.Role.TITLE),
+                    windowX() + 12, windowTop() + (com.aurora.client.ui.util.UiDensity.HEADER - this.font.lineHeight) / 2 + 3,
+                    MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
+        }
 
         ctx.enableScissor(listX - 4, listClipTop(), listX + listWidth() + 4, listClipBottom());
         if (rows.isEmpty()) {
             // Empty state centered in the list well rather than pinned to its corner.
+            // Icon, headline and hint as one centred group (UI polish 2026-11-14); a screen
+            // without an icon or hint keeps the single secondary line.
+            String icon = emptyIcon();
+            Component hint = emptyHint();
+            int cx = listX + listWidth() / 2;
+            boolean action = emptyActionShown(rows);
+            int groupH = (icon == null ? 0 : EMPTY_ICON + 8) + this.font.lineHeight + (hint == null ? 0 : 4 + this.font.lineHeight)
+                    + (action ? EMPTY_ACTION_GAP + emptyActionBtn.getHeight() : 0);
+            int y = (listClipTop() + listClipBottom()) / 2 - groupH / 2;
+            if (action) {
+                emptyActionBtn.setX(cx - emptyActionBtn.getWidth() / 2);
+                emptyActionBtn.setY(y + groupH - emptyActionBtn.getHeight());
+            }
+            if (icon != null) {
+                com.aurora.client.ui.util.MaterialIconRenderer.drawIcon(ctx, this.font, icon, cx, y + EMPTY_ICON / 2f, EMPTY_ICON,
+                        ThemeManager.color(ThemeToken.MATERIAL_TEXT_MUTED));
+                y += EMPTY_ICON + 8;
+            }
             String empty = com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(this.font,
                     emptyMessage().getString(), listWidth() - 16, 0);
-            com.aurora.client.ui.util.AuroraFontRenderer.drawCentered(ctx, this.font, empty,
-                    listX + listWidth() / 2, (listClipTop() + listClipBottom()) / 2 - this.font.lineHeight / 2,
-                    ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY));
+            if (hint == null) {
+                com.aurora.client.ui.util.AuroraFontRenderer.drawCentered(ctx, this.font, empty, cx, y,
+                        ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY));
+            } else {
+                Component headline = com.aurora.client.ui.util.AuroraFontRenderer.role(empty, com.aurora.client.ui.util.AuroraFontRenderer.Role.HEADING);
+                com.aurora.client.ui.util.AuroraFontRenderer.drawCentered(ctx, this.font, headline, cx, y,
+                        MaterialSurface.color(ThemeToken.ON_BACKGROUND));
+                com.aurora.client.ui.util.AuroraFontRenderer.drawCentered(ctx, this.font,
+                        com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(this.font, hint.getString(), listWidth() - 16, 0),
+                        cx, y + this.font.lineHeight + 4, ThemeManager.color(ThemeToken.MATERIAL_TEXT_SECONDARY));
+            }
         }
 
         for (int l = 0; l < lead; l++) {
@@ -470,7 +548,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         int fadeSurface = MaterialSurface.color(ThemeToken.WINDOW_FILL);
         ScrollFade.drawTop(ctx, listX - 4, listWidth() + 8, listClipTop(), ScrollFade.FADE_PX,
                 scroll.current(), fadeSurface);
-        ScrollFade.drawBottom(ctx, listX - 4, listWidth() + 8, listClipBottom(), ScrollFade.FADE_PX,
+        ScrollFade.drawBottom(ctx, listX - 4, listWidth() + 8, listClipBottom(), ScrollFade.BOTTOM_FADE_PX,
                 maxScroll - scroll.current(), fadeSurface);
 
         // The list's scrollbar thumb — after the content scissor (it is
@@ -748,6 +826,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         ScrollbarChrome.Thumb thumb = thumb(maxScroll, trackH);
         boolean hover = mouseX >= trackX - 2 && mouseX <= trackX + 5
                 && mouseY >= thumb.y() && mouseY <= thumb.y() + thumb.height();
+        ScrollbarChrome.track(ctx, trackX, trackTop, trackH, ThemeToken.ON_OVERLAY);
         ScrollbarChrome.draw(ctx, trackX, thumb, hover || scroll.isDragging(), ThemeToken.ON_OVERLAY);
     }
 

@@ -108,18 +108,21 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
             gated.active = online;
             gated.setTooltip(offline);
         }
-        addCard(3, Component.translatable("aurora.button.settings"), "settings",
+        ButtonWidget settings = addCard(3, Component.translatable("aurora.button.settings"), "settings",
                 "Open Minecraft's options.",
                 () -> NativeUi.setScreen(this.minecraft, NativeUi.optionsScreen(this.minecraft, this)));
-        ButtonWidget mods = addCard(4, Component.translatable("aurora.button.mods"), "extension",
-                "Open Mod Menu's list of installed mods.",
-                () -> {
-                    Screen list = AuroraModMenuApi.open(this);
-                    if (list != null) NativeUi.setScreen(this.minecraft, list);
-                });
-        if (!AuroraModMenuApi.available()) {
-            mods.active = false;
-            mods.setTooltip(Tooltip.create(Component.translatable("aurora.title.modmenu_missing")));
+        if (AuroraModMenuApi.available()) {
+            addCard(4, Component.translatable("aurora.button.mods"), "extension",
+                    "Open Mod Menu's list of installed mods.",
+                    () -> {
+                        Screen list = AuroraModMenuApi.open(this);
+                        if (list != null) NativeUi.setScreen(this.minecraft, list);
+                    });
+        } else {
+            // Without Mod Menu there is no Mods card at all (2026-11-14): a permanently disabled
+            // card read as broken. Settings spans the pair's row.
+            var pair = composition.card(4);
+            settings.setWidth(pair.x() + pair.width() - settings.getX());
         }
 
         var aurora = composition.icon(0);

@@ -36,6 +36,14 @@ public final class FeatureMetadata {
      */
     public String subtitle;
 
+    /** One-line summary under this entry's heading on a Settings page (2026-11-14); null for none. */
+    public String pageSummary;
+
+    public FeatureMetadata pageSummary(String summary) {
+        this.pageSummary = summary;
+        return this;
+    }
+
     /**
      * When true, the Settings tab renders this entry as a header + toggle
      * (plus a click-to-open affordance) instead of inlining its settings

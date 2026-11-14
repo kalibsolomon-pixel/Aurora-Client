@@ -206,7 +206,7 @@ public final class FeatureCatalog {
         module("free_look", "FreeLook", "Hold a key to swivel the camera around your character without changing the direction you're actually moving or facing.");
         module("saturation_bar", "Saturation Bar", "Overlays your hidden saturation level on top of the food bar.");
         module("block_overlay", "Block Overlay", "Replaces the thin vanilla block-selection box with a customizable outline and/or colored fill.");
-        module("toggle_sprint_sneak", "Toggle Sprint/Sneak", "Turns sprint and sneak into press-once toggles instead of hold-to-keep keys.");
+        module("toggle_sprint_sneak", "Sprint & Sneak", "Turns sprint and sneak into press-once toggles instead of hold-to-keep keys.");
         module("alerts", "Alerts", "On-screen popup warnings for low armor durability, low hunger, and potion effects about to expire. All alerts share the same popup and sound system.");
         module("crosshair", "Crosshair", "Replaces the vanilla crosshair with a fully customizable one.");
         module("hitbox", "Hitbox", "Draws entity hitboxes with your own color, line width, and optional eye-level and look-direction lines.");

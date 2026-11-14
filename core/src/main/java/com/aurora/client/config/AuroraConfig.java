@@ -274,7 +274,7 @@ public class AuroraConfig {
     public boolean textItalic = false;
     public boolean textUnderline = false;
     public TextCase textCase = TextCase.NORMAL;
-    public TextShadow textHudShadow = TextShadow.OFF;
+    public TextShadow textHudShadow = TextShadow.NORMAL; // factory Normal since 2026-11-14 (owner decision)
 
     // ---- Search (Settings → General → Search, 2026-11-12) ----
     /** Focus the search field when the Aurora menu opens or its page changes. */
@@ -569,7 +569,7 @@ public class AuroraConfig {
     public int armorAlertThresholdPct = 10;  // 1..100
     public boolean armorAlertSound = true;   // master enable for the alert sound
     public ArmorAlertSoundChoice armorAlertSoundChoice = ArmorAlertSoundChoice.PLING;
-    public boolean armorShowDurabilityBars = false;
+    public boolean armorShowDurabilityBars = true; // factory on since 2026-11-14 (owner decision)
     /** Lay the four armor pieces horizontally (helmet → boots, left → right). */
     public boolean armorHorizontal = false;
 

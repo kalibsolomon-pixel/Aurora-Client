@@ -83,7 +83,7 @@ public class IconPickerScreen extends Screen implements ThemedScreen {
         searchField = new EditBox(this.font, panelX + panelW - 12 - searchW,
                 panelY + (UiDensity.HEADER - bh) / 2 + 1, searchW, bh, Component.literal("Search icons"));
         searchField.setMaxLength(48);
-        searchField.setHint(Component.literal("Search icons…"));
+        searchField.setHint(Component.literal("Search icons"));
         searchField.setValue(query);
         searchField.setFocused(true);
         this.addRenderableWidget(searchField);
