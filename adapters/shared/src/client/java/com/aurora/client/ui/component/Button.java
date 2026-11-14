@@ -152,7 +152,10 @@ public class Button extends Widget {
         fill=AuroraAnim.lerpArgb(AuroraAnim.lerpArgb(fill,over,hover),down,press);
         if(disabled) { fill=AuroraAnim.lerpArgb(fill,ThemeManager.color(ThemeToken.MATERIAL_PANEL),.65f);text=MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED); }
         int windowAlpha=ThemeManager.color(ThemeToken.WINDOW_FILL) >>> 24;
-        fill=ThemeManager.withAlpha(fill, asField ? 255 : primary ? Math.max(128,windowAlpha) : look==Theming.BACKGROUND_ACCENT ? Math.max(THEMED_MIN_ALPHA,windowAlpha) : windowAlpha);
+        // A primary action is the opaque accent action tone, like an ON switch track (2026-11-14):
+        // at half alpha over the dark window the owner's accent-filled Done read as a dim,
+        // disabled-looking lilac.
+        fill=ThemeManager.withAlpha(fill, asField ? 255 : primary ? 255 : look==Theming.BACKGROUND_ACCENT ? Math.max(THEMED_MIN_ALPHA,windowAlpha) : windowAlpha);
         boolean ghost=look==Theming.GHOST;
         if(ghost) {
             edge=0;

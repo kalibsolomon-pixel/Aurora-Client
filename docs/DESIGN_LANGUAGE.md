@@ -661,7 +661,9 @@ The following sections establish v3 expectations without inventing unresolved pi
 `Button.Theming.GHOST` (2026-11-14) is text only at rest, in secondary text, and takes the
 neutral hover face on hover or press. It is for a secondary action that shares a header with a
 more important one: feature-detail Reset next to Done. Done is accent-filled on every window
-(owner decision 2026-11-14, superseding the 2026-10-19 neutral-Done ruling); a manager's own
+(owner decision 2026-11-14, superseding the 2026-10-19 neutral-Done ruling), and a primary
+button's `ACTION_STRONG` fill is opaque like an ON switch track: at the old half alpha over the
+dark window it read as a dim, disabled-looking lilac; a manager's own
 header action beside it (Drop Waypoint) is the outlined secondary, and an empty list carries
 the accent-filled call to action under its hint.
 
