@@ -408,7 +408,7 @@ public final class FeatureRegistry {
                 List.of(
                         // Three groups (UI polish 2026-11-14): the crosshair, the attack indicator
                         // and the in-reach indicator read as one uninterrupted column before.
-                        new SectionHeaderSetting("Crosshair"),
+                        new SectionHeaderSetting("Shape"),
                         new CrosshairPreviewSetting(),
                         new EnumSetting<>("Style", AuroraConfig.CrosshairStyle.class,
                                 () -> cfg.crosshairStyle, v -> cfg.crosshairStyle = v)

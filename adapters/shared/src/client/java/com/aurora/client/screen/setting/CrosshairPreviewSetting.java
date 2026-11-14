@@ -19,7 +19,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
  */
 public class CrosshairPreviewSetting extends FeatureSetting {
     private static final int ROW_H = 44, WELL = 38, GAP = 6, PAD = 8;
-    private static final float ZOOM = 2f;
+    private static final float ZOOM = 3f;
 
     public CrosshairPreviewSetting() {
         super("Preview");
@@ -57,7 +57,7 @@ public class CrosshairPreviewSetting extends FeatureSetting {
         RenderUtil.drawRoundedOutlineAA(ctx, x, y, WELL, WELL, r, 1.0f, ThemeManager.color(ThemeToken.MATERIAL_BORDER_STRONG));
         ctx.enableScissor(x + 1, y + 1, x + WELL - 1, y + WELL - 1);
         ctx.pose().pushMatrix();
-        // Drawn at twice its in-game size about the well's centre, so a 2 px dot is still a
+        // Drawn at three times its in-game size about the well's centre, so a 2 px dot is still a
         // readable sample; shape, proportions and colour are the HUD's own.
         ctx.pose().translate(x + WELL / 2f, y + WELL / 2f);
         ctx.pose().scale(ZOOM, ZOOM);

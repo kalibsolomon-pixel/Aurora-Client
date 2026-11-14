@@ -776,8 +776,8 @@ the accent-filled call to action under its hint.
   hierarchy. Selected/on treatment uses stain or a compact accent indicator as appropriate.
 - **Feature on/off (2026-11-14):** a feature tile or list row being *enabled* is a state, not
   a selection. Every feature tile and row keeps the neutral face; the icon alone carries the
-  state: the accent when on, secondary text when off (a per-module accent override still
-  applies). The name stays primary in both states (an off feature is available, not disabled).
+  state: the accent when on, a neutral grey at secondary-text luminance when off (the cool
+  secondary tone read as a faint accent; a per-module accent override still applies). The name stays primary in both states (an off feature is available, not disabled).
   The settings chevron appears top-right on a hovered or focused tile, at the trailing end of a
   row. The tile or row stays the control. Selection treatment (wash + accent edge) stays
   reserved for the selected tab, page or item.
@@ -1412,7 +1412,7 @@ rulings it supersedes.
   "one window" rule for those two cases; managers, editors and pickers keep the frame.
 - **Rest on a row boundary** (§13.0) and a shorter bottom fade with an alpha floor (§13.1).
 - **Feature state is the icon colour, not a selection** (§11.10): neutral tiles and rows,
-  an accent icon when on, a secondary-text icon when off. Supersedes the enabled-tile accent
+  an accent icon when on, a neutral grey icon when off. Supersedes the enabled-tile accent
   edge and wash.
 - **One accent selection per screen** (§11.11): the sidebar keeps it; sub-tabs mark selection
   by text weight, the layout pair by the neutral field face.

@@ -826,6 +826,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         ScrollbarChrome.Thumb thumb = thumb(maxScroll, trackH);
         boolean hover = mouseX >= trackX - 2 && mouseX <= trackX + 5
                 && mouseY >= thumb.y() && mouseY <= thumb.y() + thumb.height();
+        ScrollbarChrome.track(ctx, trackX, trackTop, trackH, ThemeToken.ON_OVERLAY);
         ScrollbarChrome.draw(ctx, trackX, thumb, hover || scroll.isDragging(), ThemeToken.ON_OVERLAY);
     }
 

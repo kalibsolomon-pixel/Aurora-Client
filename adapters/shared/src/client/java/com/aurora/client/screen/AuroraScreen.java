@@ -1929,7 +1929,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         } else {
             // Off: secondary text in unified windows, a step below an on feature's primary icon,
             // so on and off part at a glance without the off one reading as unavailable.
-            color = MaterialSurface.unified() ? MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY)
+            color = MaterialSurface.unified() ? neutral(MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY))
                     : MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED);
         }
         // Crisp native-resolution glyph (the shared font atlas is
@@ -1937,6 +1937,14 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         // box the old glyph-scaling math targeted, so the footprint is
         // unchanged.
         MaterialIconRenderer.drawIcon(g, tr, glyph, cx, cy, targetPx, color);
+    }
+
+    /** {@code argb} with its hue removed at the same luminance: the cool secondary text tone read
+     * as a faint accent beside indigo icons (2026-11-14), so off icons use its grey. */
+    private static int neutral(int argb) {
+        int r = argb >> 16 & 0xFF, g = argb >> 8 & 0xFF, b = argb & 0xFF;
+        int l = Math.round(0.2126f * r + 0.7152f * g + 0.0722f * b);
+        return (argb & 0xFF000000) | l << 16 | l << 8 | l;
     }
 
     private FeatureMetadata findMeta(String id) {
@@ -1997,6 +2005,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         ScrollbarChrome.Thumb thumb = thumb(maxScroll);
         // The thumb is a capsule in the toggle-track/slider-track family; its
         // corners follow the theme's Corner Radius like theirs (ScrollbarChrome).
+        ScrollbarChrome.track(g, (int) mainX() + contentWidth() + 4, viewTop(), viewBot() - viewTop(), ThemeToken.ON_BACKGROUND);
         ScrollbarChrome.draw(g, (int) mainX() + contentWidth() + 4, thumb,
                 scrolls[selectedCategory].isDragging(), ThemeToken.ON_BACKGROUND);
     }

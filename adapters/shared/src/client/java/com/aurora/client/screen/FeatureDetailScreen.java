@@ -634,6 +634,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
                             ? ThemeManager.color(ThemeToken.STATUS_WARNING) : MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED), false);
             if (maxScroll > 0) {
                 var thumb = com.aurora.client.ui.component.ScrollbarChrome.thumb(scroll, bodyTop(), bodyBottom() - bodyTop(), maxScroll, 24, this.minecraft.getWindow().getGuiScale());
+                com.aurora.client.ui.component.ScrollbarChrome.track(ctx, listX + LIST_W - 4, bodyTop(), bodyBottom() - bodyTop(), ThemeToken.ON_BACKGROUND);
                 com.aurora.client.ui.component.ScrollbarChrome.draw(ctx, listX + LIST_W - 4, thumb, scroll.isDragging(), ThemeToken.ON_BACKGROUND);
             }
         }

@@ -34,6 +34,15 @@ public final class ScrollbarChrome {
                 scroll.ratio(maxScroll), guiScale);
     }
 
+    /**
+     * The faint full-length track under a thumb (2026-11-14): a bare thumb read as a stray mark,
+     * the track says "this scrolls" and how far.
+     */
+    public static void track(GuiGraphicsExtractor g, int x, double trackY, double trackH, ThemeToken foreground) {
+        RenderUtil.drawRoundedRectAA(g, x, (float) trackY, 3, (float) trackH,
+                ThemeManager.current().roundness().capsule(3f), ThemeManager.withAlpha(ThemeManager.color(foreground), 0x1A));
+    }
+
     /** Paint the canonical 3 px capsule; its corners follow the theme's Corner Radius. */
     public static void draw(GuiGraphicsExtractor g, int x, Thumb thumb, boolean emphasized,
                             ThemeToken foreground) {
