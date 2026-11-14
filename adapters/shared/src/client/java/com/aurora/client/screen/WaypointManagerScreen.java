@@ -254,7 +254,7 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
                     if (feat == null) return;
                     feat.dropAtPlayer("Waypoint", 0xFFFFAA00, false);
                     rebuildNameField();
-                }).glassStyle(Button.GlassStyle.STAINED).primary(true);
+                }).glassBackground(true).theming(Button.Theming.OUTLINED).icon(IconCatalog.glyph("add_location_alt"));
     }
 
     @Override

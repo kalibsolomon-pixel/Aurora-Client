@@ -332,9 +332,9 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
                 this::onClose).glassBackground(true).theming(com.aurora.client.ui.component.Button.Theming.OUTLINED));
         emptyActionBtn = createEmptyAction();
         if (emptyActionBtn != null) this.addRenderableWidget(emptyActionBtn);
-        // Done is the primary action unless the header already has one (Drop Waypoint): one
-        // accent-filled action per header (owner decision 2026-11-14).
-        if (toolbarActionBtn == null) doneBtn.glassStyle(com.aurora.client.ui.component.Button.GlassStyle.STAINED).primary(true);
+        // Done is accent-filled on every window, the same as on detail screens (owner decision
+        // and council review 2026-11-14); a header action beside it is the outlined secondary.
+        doneBtn.glassStyle(com.aurora.client.ui.component.Button.GlassStyle.STAINED).primary(true);
         // A titled screen reads like a detail screen (UI polish 2026-11-14): its name leads the
         // header and the action sits beside Done, sized to its label.
         if (headerTitle() != null && toolbarActionBtn != null) {

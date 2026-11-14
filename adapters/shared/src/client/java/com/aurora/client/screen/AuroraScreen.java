@@ -1349,10 +1349,10 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             // (owner direction), and presence or absence reads without colour.
             if(MaterialSurface.unified()) {
                 MaterialSurface.selection(g,cx,cy,cw,ch,tileRadius,false,hoverT);
-                // Hover also draws the accent outline (2026-11-14): the face step alone was too
-                // faint to show which tile the pointer targets.
+                // Hover also draws a light neutral outline (2026-11-14): the face step alone was too
+                // faint, and an accent ring gave the accent a second meaning beside the state bar.
                 if (hoverT > 0f) {
-                    int edge = ThemeManager.color(ThemeToken.ACCENT_OUTLINE);
+                    int edge = ThemeManager.withAlpha(MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), 0x99);
                     RenderUtil.drawRoundedOutlineAA(g, cx, cy, cw, ch, tileRadius, 1.0f,
                             ThemeManager.withAlpha(edge, Math.round((edge >>> 24) * hoverT)));
                 }

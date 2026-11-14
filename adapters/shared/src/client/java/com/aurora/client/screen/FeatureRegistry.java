@@ -1355,8 +1355,8 @@ addWithSettings("hitbox",
                 "A themed keystroke overlay with matching key surfaces, fine borders and soft press highlights: movement keys, mouse buttons, a CPS counter and jump/sneak inputs shown as one cohesive panel that lights up with a smooth animated accent while pressed. Popular for PvP montages, streaming, and analyzing your inputs. Fully draggable and resizable in the HUD editor.",
                 () -> cfg.keystrokesEnabled, v -> cfg.keystrokesEnabled = v,
                 List.of(
-                        new ColorSetting("Text Color", () -> cfg.keystrokesTextColor == null ? com.aurora.client.theme.ThemeManager.color(com.aurora.client.theme.ThemeToken.ON_SURFACE) : cfg.keystrokesTextColor, v -> cfg.keystrokesTextColor = v)
-                                .description("Text color for this HUD only. Reset restores its default color."),
+                        // Two groups (UI polish 2026-11-14): which keys show, then how they look.
+                        new SectionHeaderSetting("Keys"),
                         new BooleanSetting("Show WASD Keys",
                                 () -> cfg.keystrokesShowMovement,
                                 v -> cfg.keystrokesShowMovement = v)
@@ -1386,6 +1386,9 @@ addWithSettings("hitbox",
                                 () -> cfg.keystrokesExtraKeys,
                                 v -> cfg.keystrokesExtraKeys = v)
                                 .description("Additional keys to track (Space, Shift, hotbar or ability keys). Click \"+ Add Key\", then press a key; ESC cancels. Keys auto-arrange in rows of three."),
+                        new SectionHeaderSetting("Style"),
+                        new ColorSetting("Text Color", () -> cfg.keystrokesTextColor == null ? com.aurora.client.theme.ThemeManager.color(com.aurora.client.theme.ThemeToken.ON_SURFACE) : cfg.keystrokesTextColor, v -> cfg.keystrokesTextColor = v)
+                                .description("Text color for this HUD only. Reset restores its default color."),
                         new ColorSetting("Accent Color",
                                 () -> cfg.keystrokesAccentColor,
                                 v -> cfg.keystrokesAccentColor = v)

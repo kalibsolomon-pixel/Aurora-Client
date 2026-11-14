@@ -199,8 +199,11 @@ public class Slider extends Widget {
     private int trackBase() {
         // The unfilled track shares the OFF switch's neutral (UI polish 2026-11-14): the raised
         // surface tone it used barely separated from the window.
+        // A touch lighter than the OFF switch track: a 4 px line needs more contrast than a 12 px
+        // pill to stay visible beside a knob at the minimum (2026-11-14).
         return disabled ? ThemeManager.color(ThemeToken.MATERIAL_BORDER)
-                : ThemeManager.color(ThemeToken.MATERIAL_BORDER_STRONG);
+                : com.aurora.client.util.AuroraAnim.lerpArgb(ThemeManager.color(ThemeToken.MATERIAL_BORDER_STRONG),
+                        ThemeManager.color(ThemeToken.MATERIAL_TEXT_MUTED), 0.2f);
     }
 
     private int fill() {
