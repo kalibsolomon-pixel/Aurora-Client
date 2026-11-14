@@ -23,7 +23,7 @@
   "aurora.option.showCoords": "Show Coordinates",
   "aurora.option.showTime": "Show Time",
   "aurora.option.customTitleScreen": "Custom Title Screen",
-  "aurora.config.toggle_sprint_sneak.enabled": "Toggle Sprint/Sneak",
+  "aurora.config.toggle_sprint_sneak.enabled": "Sprint & Sneak",
   "aurora.config.toggle_sprint_sneak.hud": "Show HUD Module",
 
   "key.category.aurora.client": "Aurora Client",

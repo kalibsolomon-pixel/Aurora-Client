@@ -601,7 +601,8 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
                         MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED), false);
             com.aurora.client.util.ScrollFade.drawTop(ctx, listX + 8, LIST_W - 16, bodyTop(),
                     com.aurora.client.util.ScrollFade.FADE_PX, scroll.current(), fadeSurface);
-            com.aurora.client.util.ScrollFade.drawBottom(ctx, listX + 8, LIST_W - 16, bodyBottom(),
+            // At rest the body ends on a row boundary (fitFrame): fade only rows cut by scrolling.
+            if (scroll.current() > 0) com.aurora.client.util.ScrollFade.drawBottom(ctx, listX + 8, LIST_W - 16, bodyBottom(),
                     com.aurora.client.util.ScrollFade.BOTTOM_FADE_PX, maxScroll - scroll.current(), fadeSurface);
         }
         if (compact()) {

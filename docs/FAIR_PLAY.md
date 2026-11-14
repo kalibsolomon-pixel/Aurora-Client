@@ -50,7 +50,7 @@ Changing a default does not change an existing install: a player who already had
 | FreeLook | Information advantage | Lets the camera look around without turning the character, a view vanilla does not allow. |
 | Saturation Bar | Vanilla equivalent | Shows your own saturation on the food bar. |
 | Block Overlay | Cosmetic | Restyles the outline of the block you are looking at. |
-| Toggle Sprint/Sneak | Vanilla equivalent | Press-once sprint and sneak, as vanilla's accessibility options offer. |
+| Sprint & Sneak | Vanilla equivalent | Press-once sprint and sneak, as vanilla's accessibility options offer. |
 | Alerts | Vanilla equivalent | Warns about your own armor durability and your own expiring effects. |
 | Crosshair | Cosmetic | Replaces the crosshair's shape and color. |
 | Hitbox | Vanilla equivalent | Draws entity hitboxes, as vanilla's F3+B does, with custom colors. |

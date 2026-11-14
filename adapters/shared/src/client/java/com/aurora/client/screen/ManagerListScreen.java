@@ -327,7 +327,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
                 windowX() + windowWidth() - 8 - com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_W, toolbarY(), com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_W, com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_H,
                 Component.literal("Done"),
                 "Close this screen and return.",
-                this::onClose).glassBackground(true));
+                this::onClose).glassBackground(true).theming(com.aurora.client.ui.component.Button.Theming.OUTLINED)); // one Done everywhere
         // A titled screen reads like a detail screen (UI polish 2026-11-14): its name leads the
         // header and the action sits beside Done, sized to its label.
         if (headerTitle() != null && toolbarActionBtn != null) {

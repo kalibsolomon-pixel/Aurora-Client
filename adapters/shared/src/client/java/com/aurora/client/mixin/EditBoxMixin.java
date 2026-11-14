@@ -160,8 +160,11 @@ public abstract class EditBoxMixin implements GlassEditBox {
         if (value.isEmpty()) {
             // Placeholder hint text
             if (hint != null) {
-                ctx.text(font, hint, innerX, textY,
-                        MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED), false);
+                // Halfway between muted and secondary (2026-11-14): quieter than typed text, but
+                // the muted tone alone was hard to read on the dark inset field.
+                ctx.text(font, hint, innerX, textY, com.aurora.client.util.AuroraAnim.lerpArgb(
+                        MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED),
+                        MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), .5f), false);
             }
         } else {
             // Render the value text, scrolled by displayPos so long
@@ -181,7 +184,9 @@ public abstract class EditBoxMixin implements GlassEditBox {
             // the scroll offset and the cursor.
             int safeDisp = Math.min(displayPos, value.length());
             int safeCursor = Math.max(safeDisp, Math.min(cursorPos, value.length()));
-            int caretX = innerX + font.width(value.substring(safeDisp, safeCursor));
+            // One pixel of air before the next glyph (2026-11-14): flush against it, the caret
+            // read as part of the placeholder's first letter.
+            int caretX = innerX + font.width(value.substring(safeDisp, safeCursor)) - 2;
             int caretY1 = textY - 1;
             int caretY2 = textY + font.lineHeight;
             // Clamp caret inside the box

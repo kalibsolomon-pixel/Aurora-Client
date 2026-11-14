@@ -68,9 +68,9 @@ Each one is drawn only when its feature (in the Mods tab) is on. Its settings li
 | Potion effects `{hud:potion}` | top right | Potion HUD card (on) | Mods → Potion HUD |
 | Ping `{hud:ping}` | top left (hidden in editor by default) | Ping card → Show Ping HUD (off) | Mods → Ping |
 | Totem pops `{hud:totem_pop}` | top left | Totem Pop Counter card (off) | Mods → Totem Pop Counter |
-| Toggle Sprint/Sneak status, combined `{hud:toggle_sprint_sneak}` | top left | Toggle Sprint/Sneak card (off) + Show Status HUD | Mods → Toggle Sprint/Sneak |
-| Toggle Sprint status, separate `{hud:toggle_sprint}` | top left | HUD Display Mode = Individual | Mods → Toggle Sprint/Sneak |
-| Toggle Sneak status, separate `{hud:toggle_sneak}` | top left | HUD Display Mode = Individual | Mods → Toggle Sprint/Sneak |
+| Toggle Sprint/Sneak status, combined `{hud:toggle_sprint_sneak}` | top left | Sprint & Sneak card (off) + Show Status HUD | Mods → Sprint & Sneak |
+| Toggle Sprint status, separate `{hud:toggle_sprint}` | top left | HUD Display Mode = Individual | Mods → Sprint & Sneak |
+| Toggle Sneak status, separate `{hud:toggle_sneak}` | top left | HUD Display Mode = Individual | Mods → Sprint & Sneak |
 | Keystrokes `{hud:keystrokes}` | top left | Keystrokes card (on) | Mods → Keystrokes |
 | Minimap `{hud:minimap}` | bottom right | Minimap card (off) | Mods → Minimap |
 
@@ -155,7 +155,7 @@ Restyles the outline of the block you are looking at.
 - **Color Mode**: dropdown Solid / Rainbow · Solid. `{blockOverlayMode}`
 - **Rainbow Speed**: slider 0.1–10 · 1. `{blockOverlayRainbowSpeed}`
 
-#### Toggle Sprint/Sneak · off `{card:toggle_sprint_sneak}`
+#### Sprint & Sneak · off `{card:toggle_sprint_sneak}`
 Press once to sprint or sneak instead of holding.
 - **Text Color**: color · white · HUD text. `{toggleSprintSneakTextColor}`
 - **Toggle Sprint Key**: key · Left Ctrl. `{toggleSprintKey}`
@@ -607,8 +607,8 @@ All are also listed in vanilla Options → Controls under Aurora. Defaults are f
 |---|---|---|
 | Zoom (hold) `{zoomKey}` | C | Zoom |
 | FreeLook (hold) `{freeLookKey}` | X | FreeLook |
-| Toggle Sprint `{toggleSprintKey}` | Left Ctrl | Toggle Sprint/Sneak |
-| Toggle Sneak `{toggleSneakKey}` | unbound | Toggle Sprint/Sneak |
+| Toggle Sprint `{toggleSprintKey}` | Left Ctrl | Sprint & Sneak |
+| Toggle Sneak `{toggleSneakKey}` | unbound | Sprint & Sneak |
 | HUD Editor `{hudEditorKey}` | Right Shift | Settings → Controls → Aurora Keys |
 | Hitbox toggle `{hitboxToggleKey}` | B | Hitbox |
 | Totem reset `{totemResetKey}` | K | Totem Pop Counter |

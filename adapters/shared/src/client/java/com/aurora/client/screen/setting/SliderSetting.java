@@ -90,7 +90,8 @@ public class SliderSetting extends FeatureSetting {
     }
 
     private SliderSetting(String label, Slider slider, boolean intMode) {
-        super(label);
+        super(unitless(label));
+        this.unit = unitOf(label);
         this.intMode = intMode;
         this.slider = slider;
         // Phase B rollout: every SETTING row runs the canonical state
@@ -101,7 +102,8 @@ public class SliderSetting extends FeatureSetting {
     }
 
     SliderSetting(String label, DoubleSupplier getter, DoubleConsumer setter, double min, double max, boolean intMode) {
-        super(label);
+        super(unitless(label));
+        this.unit = unitOf(label);
         this.intMode = intMode;
         this.slider = createSlider(getter, setter, min, max);
         // See the private constructor's note — factory-wide canonical.
@@ -251,9 +253,25 @@ public class SliderSetting extends FeatureSetting {
         return intMode ? (long) v : Math.round(v * 100.0);
     }
 
+    /**
+     * A unit written into a label ("Size %", "Threshold (%)", "Size (px)") moves to the value
+     * readout (UI polish 2026-11-14), so every slider states its unit in one place: "100%",
+     * "4 px", like the theme sliders.
+     */
+    private final String unit;
+    private static final String[][] LABEL_UNITS = {{" (%)", "%"}, {" %", "%"}, {" (px)", " px"}};
+    static String unitless(String label) {
+        for (String[] u : LABEL_UNITS) if (label.endsWith(u[0])) return label.substring(0, label.length() - u[0].length());
+        return label;
+    }
+    static String unitOf(String label) {
+        for (String[] u : LABEL_UNITS) if (label.endsWith(u[0])) return u[1];
+        return "";
+    }
+
     private String valueText(double v) {
         if (valueFormat != null) return valueFormat.apply(v);
-        if (intMode) return Integer.toString((int) v);
+        if (intMode) return (int) v + unit;
         return percent ? Math.round(v * 100.0) + "%" : String.format("%.2f", v);
     }
 
