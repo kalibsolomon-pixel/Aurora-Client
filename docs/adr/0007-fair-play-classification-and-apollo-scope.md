@@ -22,6 +22,8 @@ Better Hitreg stays in the client at its current default by owner decision. It i
 
 Corrected 2026-11-11 after reading the code. The first wording said it "sends no packets", which was not exact: two optional keys, unbound by default, send something when pressed. Switch Hand changes the vanilla Main Hand option, and the practice scoreboard's Send key posts the score as a chat message. Its current default is off: the release defaults ship `hitregEnabled` false.
 
+Updated 2026-11-15: both sending keys were removed with the rest of Better Hitreg except its custom client-side hitreg (the feedback delay), so the feature sends nothing of its own.
+
 ## Apollo
 
 Support for Lunar Client's Apollo server software is limited to honouring server restrictions (a server turning Aurora features off) and showing server-sent information. Aurora never presents itself as Lunar Client.

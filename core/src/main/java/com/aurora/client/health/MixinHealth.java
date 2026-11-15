@@ -15,7 +15,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * while the game's classes load, on whichever thread loads them, and read
  * from the client thread by {@link FeatureHealth}. Mixin names are relative
  * to the mixin package, exactly as {@code aurora.mixins.json} lists them
- * ({@code "GameRendererMixin"}, {@code "hitreg.ArmorMixin"}).
+ * ({@code "GameRendererMixin"}, {@code "hitreg.DamageMixin"}).
  *
  * <p>This class is loaded before Minecraft's own classes, so it must not
  * reference any of them, nor anything that does.

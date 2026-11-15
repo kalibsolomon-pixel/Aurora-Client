@@ -17,7 +17,6 @@ A map of everything a player can see, turn on or change in Aurora, as of 2026-11
 - **Title screen → Aurora icon**: Aurora's own title screen has Singleplayer, Multiplayer and Minecraft Realms, then Settings (Minecraft's options) and Mods (Mod Menu; disabled when it isn't installed) side by side. The icons at the top right open Aurora, toggle fullscreen and quit; the player model and account card sit on the right (a chip in the top bar on narrow windows). `{entry:title}`
 - **Vanilla title screen → "Aurora Settings" button**: when Custom Title is off, the button is added to the vanilla menu instead. `{entry:vanillaTitle}`
 - **In game → HUD Editor (Right Shift) → "Aurora Settings" button**: there is no direct in-game key for the main screen; this is the path. `{entry:hudEditor}`
-- **Better Hitreg "Open Settings Key"**: unbound by default; opens the Aurora screen from in game. `{hitregSettingsKey}`
 - **Mod Menu**: support exists but is dormant until a compatible Mod Menu release. `{entry:modmenu}`
 
 ---
@@ -32,7 +31,6 @@ These run without a setting of their own, or are part of how Aurora works rather
 - **Flat item icons in Aurora screens**: item icons in Aurora's own lists are drawn flat. `{always:flatItemIcons}`
 - **Numeric ping in the server list**: part of the Ping feature's hook; shows ping as a number in Multiplayer. `{always:serverListPing}`
 - **Automatic latency reduction**: GPU timing used to keep the render queue short; works alongside Settings → Display → Low Latency. `{always:reflex}`
-- **Server throttle detection**: notices servers that bundle movement packets and strengthens entity movement smoothing to match. Feeds Animations → Smooth Entity Movement. `{always:throttleDetector}`
 - **Per-world cache clearing**: forgets per-entity data (health seen, pops counted) when you change worlds. `{always:worldJoinReset}`
 - **Map refresh on block change**: keeps the minimap and world map current when blocks change. `{always:mapBlockRefresh}`
 - **Aurora Launcher activity report**: only when started by Aurora Launcher; tells the launcher which world or server you are in so it can show Discord status. The mod itself has no Discord code. `{always:launcherBridge}`
@@ -79,7 +77,6 @@ Other things drawn on the HUD that are not movable modules:
 - **Crosshair** (Mods → Crosshair). `{hud:crosshair}`
 - **Saturation on the food bar** (Mods → Saturation Bar). `{hud:saturation}`
 - **Alert popups** (Mods → Alerts). `{hud:alerts}`
-- **Practice scoreboard**, top left while a score is non-zero (Mods → Better Hitreg → Keybinds). `{hud:hitregScore}`
 - **Hotbar bounce** on pickup (Mods → Animations → Hotbar). `{hud:hotbarBounce}`
 
 ---
@@ -231,67 +228,12 @@ Draws entity hitboxes like F3+B, with your colors.
   - **Targeted Color**: color · dark red. `{hitboxTargetColor}`
 
 #### Better Hitreg · off `{card:better_hitreg}`
-Plays your hit feedback the instant you swing. Original project by Jass.
+Plays your hit feedback after a latency you choose. Original project by Jass.
 - *Hitreg*
   - **Custom Hitreg**: toggle · on · the original mod's master switch. `{hitregCustomHitreg}`
   - **Hitreg Delay (ms)**: slider 0–300 · 0. `{hitregDelayMs}`
   - **Safe Regs Only**: toggle · on · only when the hit very likely registers. `{hitregSafeRegsOnly}`
   - **Ignore Shield Holders**: toggle · off. `{hitregIgnoreShieldHolders}`
-- *Tracking* (each toggle shows a live figure under its label)
-  - **Alert Delays**: toggle · off · average server registration delay. `{hitregAlertDelays}`
-  - **Alert Ghosts**: toggle · off · share of hits that never registered. `{hitregAlertGhosts}`
-  - **Alert Misplaces**: toggle · off · share registered as a different hit type. `{hitregAlertInconsistencies}`
-- *Audio*
-  - **Mute Other Fights**: toggle · off. `{hitregSilenceOtherFights}`
-  - **1.8 Hit Sounds**: toggle · off. `{hitregLegacySounds}`
-  - **Mute Non-hit Sounds**: toggle · off. `{hitregSilenceNonHits}`
-  - **Mute Your Hits**: toggle · off. `{hitregSilenceSelf}`
-  - **Mute Their Hits**: toggle · off. `{hitregSilenceThem}`
-  - **Hit Muffling**: slider 0–100% · 0%. `{hitregMuffleAmount}`
-  - **Hit Sharpening**: slider 0–100% · 0%. `{hitregSharpenAmount}`
-  - **Metronome (ticks)**: slider 0–25 · off (below 10 = off). `{hitregMetronome}`
-- *Render*
-  - **Hide Other Fights**: toggle · off. `{hitregHideOtherFights}`
-  - **Hide Animations**: toggle · off. `{hitregHideAnimations}`
-  - **Hide Armor**: toggle · off. `{hitregHideArmor}`
-  - **Hide All Particles**: toggle · off. `{hitregHideAllParticles}`
-  - **Hide Other Particles**: toggle · off. `{hitregHideOtherParticles}`
-  - **Always Hit Particles**: toggle · off. `{hitregParticlesEveryHit}`
-  - **Show Target Hitbox**: toggle · off. `{hitregRenderHitbox}`
-  - **Show Target Cross**: toggle · off. `{hitregRenderCross}`
-  - **Show Server Hitbox**: toggle · off. `{hitregRenderServerHitbox}`
-  - **Show Your Hit Range**: toggle · off · 3-block ring. `{hitregRenderYourReach}`
-  - **Show Their Hit Range**: toggle · off. `{hitregRenderTheirReach}`
-  - **Show Your Jump Range**: toggle · off · 4-block ring. `{hitregRenderYourJump}`
-  - **Show Their Jump Range**: toggle · off. `{hitregRenderTheirJump}`
-  - **Perfect Hit Color**: toggle · off. `{hitregPerfectHitColor}`
-  - **Jump Reset Color**: toggle · off. `{hitregJumpResetColor}`
-- *Practice Arena*
-  - **Unrender World**: toggle · off · hides all terrain. `{hitregVoidWorld}`
-  - **Solid Floor**: toggle · off. `{hitregSolidFloor}`
-  - **Floor Grid Size (blocks)**: slider 0–32 · 0 (off). `{hitregFloorGridSize}`
-- *Colors* (19 color pickers)
-  - Target Hitbox (Out of Reach / In Reach) `{hitregColorHitboxFar}` `{hitregColorHitboxNear}`
-  - Target Cross (Out of Reach / In Reach) `{hitregColorCrossFar}` `{hitregColorCrossNear}`
-  - Cross with Hitbox (Out of Reach / In Reach) `{hitregColorCrossFarWithHitbox}` `{hitregColorCrossNearWithHitbox}`
-  - Server Hitbox `{hitregColorServerHitbox}`
-  - Your Hit Range (Out / In) `{hitregColorYourReachFar}` `{hitregColorYourReachNear}`
-  - Their Hit Range (Out / In) `{hitregColorTheirReachFar}` `{hitregColorTheirReachNear}`
-  - Your Jump Range (Out / In) `{hitregColorYourJumpFar}` `{hitregColorYourJumpNear}`
-  - Their Jump Range (Out / In) `{hitregColorTheirJumpFar}` `{hitregColorTheirJumpNear}`
-  - Perfect Hit Flash `{hitregColorPerfectHit}`
-  - Jump Reset Flash `{hitregColorJumpReset}`
-  - Floor Grid `{hitregColorGrid}`
-  - Solid Floor `{hitregColorFloor}`
-- *Keybinds* (all unbound)
-  - **Open Settings Key** `{hitregSettingsKey}`
-  - **Switch Hand Key**: swaps main hand (changes the vanilla Main Hand option). `{hitregSwitchHandKey}`
-  - **Score: Left +1** `{hitregScoreLeftKey}`
-  - **Score: Right +1** `{hitregScoreRightKey}`
-  - **Score: Send to Chat**: posts "L-R" in chat. `{hitregScoreSendKey}`
-  - **Score: Reset** `{hitregScoreResetKey}`
-- *Maintenance*
-  - **Reset Tracked Stats**: button · clears the last-100-hits sample. `{action:hitregResetStats}`
 
 #### Hit Color · on `{card:hit_color}`
 Recolors the damage flash.
@@ -449,9 +391,6 @@ Swing, view bob, damage tilt, idle sway, entity smoothing.
   - **Idle Sway Strength**: slider 0–10 · 1. `{idleSwayStrength}`
 - *Hotbar*
   - **Hotbar Bounce**: toggle · off. `{hotbarBounceEnabled}`
-- *Entity Movement*
-  - **Smooth Entity Movement**: toggle · on. `{entityMovementSmoothingEnabled}`
-  - **Smoothing Strength**: slider 0–100% · 30%. `{entityMovementSmoothingStrength}`
 
 #### Keystrokes · on `{card:keystrokes}`
 Shows your key and mouse presses.
@@ -629,7 +568,6 @@ All are also listed in vanilla Options → Controls under Aurora. Defaults are f
 | Waypoint manager `{waypointManagerKey}` | unbound | Waypoints |
 | World map `{worldMapKey}` | Y | World Map |
 | Minimap toggle `{minimapToggleKey}` | unbound | Minimap |
-| Better Hitreg × 6 | unbound | Better Hitreg → Keybinds |
 | Blur test `{blurTestKey}` | unbound | **only in vanilla Controls** (developer tool) |
 
 ---
@@ -645,10 +583,9 @@ Listed so you can decide whether any should get a control, or be removed.
 - **Minimap background mode** · Solid. `{minimapBgMode}`
 - **Minimap uses world map cache** · on. `{minimapUseWorldMapCache}`
 - **Waypoint block outline color override** · 0 (none). `{waypointBlockOutlineColorOverride}`
-- **Better Hitreg: Track Fights** · on (lifetime fight counters). `{hitregTrackFights}`
 - **Global HUD color** · 0 (theme). Fallback for each HUD's Text Color. `{hudColor}`
 - **Legacy animation curve** · Smoothstep. `{animationCurve}`
-- Internal bookkeeping, not settings: active profile, keybind format version, migration markers, playtime and fight-stat totals, per-world waypoint storage, the old effect-exclusion list.
+- Internal bookkeeping, not settings: active profile, keybind format version, migration markers, playtime totals, per-world waypoint storage, the old effect-exclusion list.
 
 ---
 

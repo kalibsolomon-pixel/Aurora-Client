@@ -43,7 +43,6 @@ public class ArmorModule extends HudModule {
     // 13x2 dark frame with a 12x1 colored fill on the top row).
     private static final int BAR_W = 13;
     private static final int BAR_H = 2;
-    private static final int BAR_FILL_W = 12;
     private static final int BAR_FRAME = 0xFF000000;
 
     /** Vanilla hotbar-strip geometry: 20 px cell pitch, 22 px strip height. */
@@ -364,7 +363,9 @@ public class ArmorModule extends HudModule {
         int dmg = s.getDamageValue();
         if (max <= 0) return;
         float frac = Math.max(0f, (max - dmg) / (float) max);
-        int filled = Math.round(frac * BAR_FILL_W);
+        // Vanilla's ItemStack.getBarWidth: round(13 - damage * 13 / max), so an item at a few
+        // percent still shows a 1 px sliver (12 * frac rounded to 0 at 4%; 2026-11-15).
+        int filled = Math.max(0, Math.min(BAR_W, Math.round(BAR_W - dmg * (float) BAR_W / max)));
 
         // Vanilla algorithm: hue lerps from 0 (red) to 1/3 (green) with
         // remaining fraction. HSBtoRGB then drops alpha/composes into ARGB.

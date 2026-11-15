@@ -210,7 +210,6 @@ class FramePacingPersistenceTest {
         assertTrue(first.waypointsByWorld.isEmpty());
         assertTrue(first.playtimePerWorld.isEmpty());
         assertEquals(0, first.playtimeTotalMs);
-        assertEquals(0, first.fightStatsTotalFights);
         assertNotSame(first.theme, second.theme);
         assertNotSame(first.crosshairCustomPixels, second.crosshairCustomPixels);
         first.moduleLayouts.get("minimap").offsetX = 999;

@@ -50,13 +50,13 @@ class KeybindMigratorTest {
 
     @Test void configAndImportedProfilesMigrateIndependentlyAndExactlyOnce() {
         String json = "{\"zoomKey\":67,\"freeLookKey\":86,\"hudEditorKey\":344,"
-                + "\"hitregScoreSendKey\":-1,\"keystrokesExtraKeys\":[65,290,333],\"other\":23}";
+                + "\"waypointDropKey\":-1,\"keystrokesExtraKeys\":[65,290,333],\"other\":23}";
         String first = KeybindMigrator.migrateConfigJson(json, LOG);
         JsonObject migrated = JsonParser.parseString(first).getAsJsonObject();
         assertEquals(com.aurora.client.TestKeyboard.stored(InputConstants.KEY_C), migrated.get("zoomKey").getAsInt());
         assertEquals(com.aurora.client.TestKeyboard.stored(InputConstants.KEY_V), migrated.get("freeLookKey").getAsInt());
         assertEquals(com.aurora.client.TestKeyboard.stored(InputConstants.KEY_RSHIFT), migrated.get("hudEditorKey").getAsInt());
-        assertEquals(-1, migrated.get("hitregScoreSendKey").getAsInt());
+        assertEquals(-1, migrated.get("waypointDropKey").getAsInt());
         assertEquals("[4,58,86]", migrated.get("keystrokesExtraKeys").toString());
         assertEquals(23, migrated.get("other").getAsInt());
         assertFalse(migrated.has("worldMapKey"), "Missing fields retain new defaults");

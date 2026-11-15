@@ -391,17 +391,6 @@ public class AuroraConfig {
     /** Movement curve shaping the idle sway oscillation. */
     public IdleSwayCurve idleSwayCurve = IdleSwayCurve.SINE_BREATH;
 
-    // ---- Entity Movement Smoothing ----
-    /**
-     * Eases other entities' rendered positions toward their tick-interpolated
-     * targets every frame, smoothing out per-tick "kinks" (especially during
-     * knockback arcs) and the freeze-then-leap cadence of throttled servers.
-     * Auto-scales with the detected server bundling factor.
-     */
-    public boolean entityMovementSmoothingEnabled = true;
-    /** 0.0 = barely-there, 1.0 = very smooth glide. */
-    public double entityMovementSmoothingStrength = 0.3;
-
     /**
      * Movement curves for idle held-item sway. Each shapes the oscillation
      * differently, from a gentle breath to dramatic figure-8 drifts.
@@ -449,10 +438,6 @@ public class AuroraConfig {
     // here is the default. Only the ones with a visible trade-off have a row
     // on the Settings tab's Performance page; the rest are config-only
     // switches for diagnosis.
-    /** Resource reloads after startup keep the current screen instead of the Mojang overlay. */
-    public boolean perfHideReloadOverlay = true;
-    /** The vanilla title screen's widgets appear at once instead of fading in. */
-    public boolean perfHideTitleFade = true;
     /** The level loading screen closes when the level is ready, without vanilla's extra half second. */
     public boolean perfSkipLevelLoadDelay = true;
     /** Startup screens are built without waiting for the session server's profile. */
@@ -1187,116 +1172,29 @@ public class AuroraConfig {
     public double scoreboardScale = 1.0;
 
     // ---- Better Hitreg (BetterHitreg by Jass, integrated) ----
+    // Only the custom client-side hitreg remains (owner direction
+    // 2026-11-15); the tracking, audio, render, practice-arena, color and
+    // keybind fields were removed. Old configs and profiles that still carry
+    // them load with a "field no longer exists" skip.
     /**
      * Master enable for the whole Better Hitreg feature card. Distinct from
      * the original mod's "custom hitreg" switch (which only gates the
-     * client-side hit feedback): when this is off every hitreg mixin,
-     * overlay, sound filter and keybind is dormant.
+     * client-side hit feedback): when this is off every hitreg mixin is
+     * dormant.
      */
     public boolean hitregEnabled = true;
-    /** Opens the Better Hitreg detail screen. -1 = unbound (the original bound H). */
-    public int hitregSettingsKey   = -1;
-    /** Swaps the main hand (5-tick cooldown). -1 = unbound. */
-    public int hitregSwitchHandKey = -1;
-    /** Practice scoreboard: +1 left. -1 = unbound (the original bound LEFT). */
-    public int hitregScoreLeftKey  = -1;
-    /** Practice scoreboard: +1 right. -1 = unbound (the original bound RIGHT). */
-    public int hitregScoreRightKey = -1;
-    /** Practice scoreboard: send "L-R" to chat. -1 = unbound (the original bound UP). */
-    public int hitregScoreSendKey  = -1;
-    /** Practice scoreboard: reset both scores. -1 = unbound (the original bound DOWN). */
-    public int hitregScoreResetKey = -1;
 
-    // Better Hitreg settings — one field per key of the original
-    // hitreg.properties (migrated once by HitregMigrator; the property key
-    // is noted on each field). All share the "hitreg" prefix so the card's
-    // Reset covers them as one group. Semantics preserved from upstream:
-    // hitregDelayMs 0 is NOT "off" (hitregCustomHitreg is the switch),
-    // hitregMetronome below 10 means off, muffle/sharpen are 0..1.
+    // One field per kept key of the original hitreg.properties (migrated
+    // once by HitregMigrator; the property key is noted on each field). All
+    // share the "hitreg" prefix so the card's Reset covers them as one
+    // group. hitregDelayMs 0 is NOT "off" (hitregCustomHitreg is the switch).
     /** {@code toggle} — the original "custom hitreg" master: replaces the server's hit feedback with the client's own. */
     public boolean hitregCustomHitreg = true;
     /** {@code hitreg} — ms the client waits before playing its own hit feedback (0 = next frame). */
     public int hitregDelayMs = 0;
-    /** {@code muffle_amount} — OpenAL low-pass strength on your hit sounds, 0..1. */
-    public double hitregMuffleAmount = 0.0;
-    /** {@code sharpen_amount} — OpenAL high-pass strength on your hit sounds, 0..1. */
-    public double hitregSharpenAmount = 0.0;
-    /** {@code metronome} — click every N ticks; values below 10 disable it. */
-    public int hitregMetronome = 0;
-    /** {@code floor_grid_size} — ground grid spacing in blocks (0 = off). */
-    public int hitregFloorGridSize = 0;
-
     /** {@code safeRegsOnly} */          public boolean hitregSafeRegsOnly = true;
     /** {@code ignoreShieldHolders} */   public boolean hitregIgnoreShieldHolders = false;
-    /** {@code alertDelays} — retained as a plain toggle; its tooltip shows the rolling average delay. */
-    public boolean hitregAlertDelays = false;
-    /** {@code alertGhosts} — retained as a plain toggle; its tooltip shows the rolling ghost ratio. */
-    public boolean hitregAlertGhosts = false;
-    /** {@code alertInconsistencies} — retained as a plain toggle; its tooltip shows the rolling misplace ratio. */
-    public boolean hitregAlertInconsistencies = false;
-    /**
-     * Repurposed from {@code alertFights} (which only gated the retired
-     * post-fight chat summary): whether a completed fight is recorded into
-     * the fight statistics at all. Defaults ON and is deliberately NOT
-     * migrated from the old key — upstream recorded every fight regardless
-     * of the alert toggle, and this keeps that behavior.
-     */
-    public boolean hitregTrackFights = true;
-    /** {@code legacySounds} */          public boolean hitregLegacySounds = false;
-    /** {@code hideAnimations} */        public boolean hitregHideAnimations = false;
-    /** {@code hideArmor} */             public boolean hitregHideArmor = false;
-    /** {@code hideAllParticles} */      public boolean hitregHideAllParticles = false;
-    /** {@code hideOtherParticles} */    public boolean hitregHideOtherParticles = false;
-    /** {@code particlesEveryHit} */     public boolean hitregParticlesEveryHit = false;
-    /** {@code silenceOtherFights} */    public boolean hitregSilenceOtherFights = false;
-    /** {@code silenceSelf} */           public boolean hitregSilenceSelf = false;
-    /** {@code silenceThem} */           public boolean hitregSilenceThem = false;
-    /** {@code silenceNonHits} */        public boolean hitregSilenceNonHits = false;
-    /** {@code hideOtherFights} */       public boolean hitregHideOtherFights = false;
-    /** {@code renderHitbox} */          public boolean hitregRenderHitbox = false;
-    /** {@code renderCross} */           public boolean hitregRenderCross = false;
-    /** {@code RenderServerHitbox} */    public boolean hitregRenderServerHitbox = false;
-    /** {@code RenderYourReach} */       public boolean hitregRenderYourReach = false;
-    /** {@code RenderTheirReach} */      public boolean hitregRenderTheirReach = false;
-    /** {@code RenderYourJump} */        public boolean hitregRenderYourJump = false;
-    /** {@code RenderTheirJump} */       public boolean hitregRenderTheirJump = false;
-    /** {@code PerfectHitColor} */       public boolean hitregPerfectHitColor = false;
-    /** {@code JumpResetColor} */        public boolean hitregJumpResetColor = false;
-    /** {@code VoidWorld} — clears every visible chunk section (practice-arena "void"); extremely invasive. */
-    public boolean hitregVoidWorld = false;
-    /** {@code SolidFloor} */            public boolean hitregSolidFloor = false;
 
-    // Overlay colors, ARGB (the original stored "<name>_color" as bare hex
-    // plus "<name>_opacity" 0..255; both fold into one int here).
-    public int hitregColorCrossFar            = 0xFFFFFFFF;
-    public int hitregColorCrossNear           = 0xFFFF0000;
-    public int hitregColorCrossFarWithHitbox  = 0xFF0000FF;
-    public int hitregColorCrossNearWithHitbox = 0xFF0000FF;
-    public int hitregColorHitboxFar           = 0xFFFFFFFF;
-    public int hitregColorHitboxNear          = 0xFFFF0000;
-    public int hitregColorServerHitbox        = 0x7D7F00FF; // opacity 125
-    public int hitregColorYourReachFar        = 0xFFFFFFFF;
-    public int hitregColorYourReachNear       = 0xFFFF0000;
-    public int hitregColorTheirReachFar       = 0xFFFFFFFF;
-    public int hitregColorTheirReachNear      = 0xFFFF0000;
-    public int hitregColorYourJumpFar         = 0xFF007FFF;
-    public int hitregColorYourJumpNear        = 0xFF007FFF;
-    public int hitregColorTheirJumpFar        = 0xFF007FFF;
-    public int hitregColorTheirJumpNear       = 0xFF007FFF;
-    public int hitregColorJumpReset           = 0xFFFFFF00;
-    public int hitregColorPerfectHit          = 0xFF00FF00;
-    public int hitregColorGrid                = 0xFFFFFFFF;
-    public int hitregColorFloor               = 0xFF000000;
-
-    // ---- Fight statistics (lifetime telemetry, from BetterHitreg) ----
-    // Deliberately outside the "hitreg" and "stats" reset prefixes and
-    // excluded from profile snapshots (ProfileFieldSet), like playtime:
-    // a per-machine lifetime record that neither a card Reset nor a
-    // profile switch may wipe.
-    /** {@code total_fights} — lifetime tracked fights (10 s–10 min with at least one landed hit). */
-    public int fightStatsTotalFights = 0;
-    /** {@code fight_playtime_(seconds)} — lifetime seconds spent in tracked fights. */
-    public long fightStatsPlaytimeSeconds = 0L;
     /**
      * Set once {@code HitregMigrator} has run (whether or not a
      * hitreg.properties file existed), so the one-way migration can never

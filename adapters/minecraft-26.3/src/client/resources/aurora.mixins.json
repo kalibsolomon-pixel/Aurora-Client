@@ -77,8 +77,6 @@
     "ScreenPanoramaAccessor",
     "KeyMappingComboMixin",
     "KeyBindsScreenComboMixin",
-    "LoadingOverlayMixin",
-    "TitleScreenFadeMixin",
     "LevelLoadTrackerMixin",
     "MinecraftProfileAccessor",
     "InitialScreensProfileMixin",
@@ -93,19 +91,12 @@
     "GuiItemAtlasBakingMixin",
     "SpriteContentsMipsAccessor",
     "TextureAtlasFreeMipsMixin",
-    "hitreg.ArmorMixin",
     "hitreg.AttackMixin",
-    "hitreg.ChunkMixin",
     "hitreg.DamageMixin",
     "hitreg.EntityAccessor",
-    "hitreg.GlowMixin",
     "hitreg.NetworkMixin",
-    "hitreg.ParticleMixin",
     "hitreg.PlayerMixin",
-    "hitreg.RenderMixin",
-    "hitreg.ServerMixin",
-    "hitreg.SoundMixin",
-    "hitreg.SourceMixin"
+    "hitreg.ServerMixin"
   ],
   "injectors": {
     "defaultRequire": 0

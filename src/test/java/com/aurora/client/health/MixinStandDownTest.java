@@ -37,23 +37,14 @@ class MixinStandDownTest {
     }
 
     @Test void aStoodDownMixinBlocksNoGateAndReportsNoIssue() {
-        MixinHealth.noteStoodDown("LoadingOverlayMixin", "handled by somemod");
-        assertTrue(MixinHealth.stoodDown("LoadingOverlayMixin"));
-        assertFalse(MixinHealth.failed("LoadingOverlayMixin"));
+        MixinHealth.noteStoodDown("FontManagerDeferredMixin", "handled by somemod");
+        assertTrue(MixinHealth.stoodDown("FontManagerDeferredMixin"));
+        assertFalse(MixinHealth.failed("FontManagerDeferredMixin"));
         assertFalse(FeatureHealth.anyIssues());
         assertTrue(FeatureHealth.blockedGates().isEmpty());
         assertEquals("All 80 Aurora mixins applied or stood down (1 stood down).",
                 MixinAudit.summary(80, MixinHealth.standDowns().size()));
         assertEquals("All 80 Aurora mixins applied.", MixinAudit.summary(80, 0));
-    }
-
-    @Test void reloadOverlayHasOneOwnerWhenRemoveReloadingScreenIsInstalled() {
-        var overlay = FeatureCatalog.mixins().stream()
-                .filter(binding -> binding.mixin().equals("LoadingOverlayMixin"))
-                .findFirst().orElseThrow();
-        assertNull(overlay.standDownReason(Set.of()::contains));
-        assertEquals("handled by rrls", overlay.standDownReason(Set.of("rrls")::contains));
-        assertNull(overlay.standDownReason(Set.of("sodium")::contains));
     }
 
     @Test void fontPreparationYieldsAsAPairToModernFix() {

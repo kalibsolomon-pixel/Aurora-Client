@@ -552,14 +552,9 @@ public final class ParityProbe implements ClientModInitializer {
                 delay.setAccessible(true);
                 long closeDelay = delay.getLong(tracker);
                 if ((closeDelay == 0L) != config.perfSkipLevelLoadDelay) throw new AssertionError("closeDelayMs=" + closeDelay);
-                var title = new net.minecraft.client.gui.screens.TitleScreen(true);
-                var fading = net.minecraft.client.gui.screens.TitleScreen.class.getDeclaredField("fading");
-                fading.setAccessible(true);
-                boolean fades = fading.getBoolean(title);
-                if (fades == config.perfHideTitleFade) throw new AssertionError("fading=" + fades);
                 if (!(client instanceof com.aurora.client.mixin.MinecraftProfileAccessor a) || !a.aurora$profileFuture().isDone())
                     throw new AssertionError("profile accessor missing or profile still pending");
-                System.out.println("[parity-probe] perf-loading closeDelayMs=" + closeDelay + " titleFading=" + fades);
+                System.out.println("[parity-probe] perf-loading closeDelayMs=" + closeDelay);
             }
             case "unlocked" -> {
                 client.options.framerateLimit().set(260);

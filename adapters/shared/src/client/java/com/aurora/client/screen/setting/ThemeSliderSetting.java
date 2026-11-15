@@ -108,8 +108,9 @@ public class ThemeSliderSetting extends SliderSetting {
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button, int rowX, int rowY, int rowWidth) {
         if (isDisabled() || button != com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) return false;
-        if (mouseY < rowY + CONTROL_H - 18 || mouseY > rowY + CONTROL_H - 2) return false;
-        if (mouseX < lastTrackX - 4 || mouseX > lastTrackX + lastTrackW + 4) return false;
+        // The drawn track, not the 36 px stacked row this once was: that band sat 10 px below the
+        // compact row's track, so the visible slider could only be grabbed from underneath.
+        if (!trackHit(mouseX, mouseY, rowX, rowY, rowWidth)) return false;
         dragging = true;
         pendingValue = getter.getAsDouble();
         applyFromMouse(mouseX);

@@ -184,10 +184,10 @@ class FeatureCatalogTest {
     /**
      * The document tells server owners that Aurora sends nothing of its own.
      * This scans every source file so that stays true: no custom packets or
-     * channels, no tick-rate changes, and exactly the two user-triggered
-     * vanilla sends the document names.
+     * channels, no tick-rate changes, and no chat or options sends (the two
+     * Better Hitreg keys that sent those were removed on 2026-11-15).
      */
-    @Test void nothingInTheModSendsToAServerExceptTheTwoDocumentedKeys() throws Exception {
+    @Test void nothingInTheModSendsToAServer() throws Exception {
         List<String> forbidden = List.of("Serverbound", "ClientPlayNetworking", "PayloadTypeRegistry",
                 "CustomPacketPayload", "tickRateManager", "sendCommand(", "sendUnsignedCommand(");
         List<String> chatSends = new ArrayList<>();
@@ -203,8 +203,8 @@ class FeatureCatalogTest {
                 if (source.contains("broadcastOptions(")) optionBroadcasts.add(name);
             }
         }
-        assertEquals(List.of("hitreg/BetterHitreg.java"), chatSends, "the practice scoreboard's Send key is the only chat send");
-        assertEquals(List.of("hitreg/BetterHitreg.java"), optionBroadcasts, "Switch Hand is the only options broadcast");
+        assertEquals(List.of(), chatSends, "nothing sends chat");
+        assertEquals(List.of(), optionBroadcasts, "nothing broadcasts options");
 
         // Better Hitreg watches your attack; it must never be able to cancel or change it.
         String attack = SourceTree.read("mixin/hitreg/AttackMixin.java");

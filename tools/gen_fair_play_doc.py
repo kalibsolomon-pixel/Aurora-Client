@@ -21,7 +21,7 @@ This page is for server owners and for players who want to know what Aurora Clie
 - It does not change the client's tick rate or the timing of anything sent to the server.
 - It collects and sends no telemetry.
 
-The whole mod has two places that send anything to a server. Both are in Better Hitreg, on keys that are unbound until the player binds them: Switch Hand changes the vanilla Main Hand option (the same packet as changing it in Options), and the practice scoreboard's Send key posts the score as an ordinary chat message.
+Nothing in the mod sends anything of its own to a server: no chat messages and no option changes.
 
 ## Classes
 
@@ -40,7 +40,7 @@ A new install has these off. A player has to turn each one on.
 - Full Bright, which raises brightness past the vanilla maximum
 - No Fog, which pushes distance fog back
 - Water and lava clarity (Pack Tweaks)
-- Better Hitreg, and inside it the reach rings, extra hitboxes and hiding of other fights
+- Better Hitreg
 
 Changing a default does not change an existing install: a player who already had one of these on keeps it on.
 

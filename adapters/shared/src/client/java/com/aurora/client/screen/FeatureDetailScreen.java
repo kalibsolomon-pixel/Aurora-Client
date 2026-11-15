@@ -62,13 +62,6 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
      * row label uses). Vertically it shares the Done/Reset row's band.
      */
     private static final int TITLE_Y = 16;
-    /**
-     * Content-fitted again (UI polish overhaul, 2026-11-14, owner decision): a sparse feature
-     * no longer sits in a mostly empty window. Width stays uniform and the top edge stays put.
-     */
-    private static final boolean UNIFORM_FRAME = false;
-    /** Smallest fitted frame, so a one-row feature still reads as a window. */
-    private static final int MIN_FRAME_H = 120;
     /** Title band plus the feature's description (§12.1), measured in {@link #layoutHeader}. */
     private int headerH = com.aurora.client.ui.util.UiDensity.HEADER;
     private List<String> descriptionLines = List.of();
@@ -100,21 +93,21 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
     private int bodyTop() { return TOP_PAD + (fixedHeaderSetting == null ? 0 : fixedHeaderSetting.fixedHeaderHeight()); }
     private boolean compact() { return true; }
     private com.aurora.client.ui.util.UiDensity.Rect compactFrame;
-    /** The largest frame the viewport allows; {@link #compactFrame} fits content inside it. */
+    /** The shared window frame ({@link com.aurora.client.ui.util.UiDensity#detailFrame}). */
     private com.aurora.client.ui.util.UiDensity.Rect maxFrame;
+    /** Body height at rest: the frame's whole body, or less so a scrolling body ends on a row boundary. */
+    private int restBody;
+    /** A scrolling body whose rest edge cuts through a tall row, so the bottom fade shows at rest too. */
+    private boolean restCut;
 
     /**
-     * Content-fitted frame (premium-design audit, 2026-10-19): a three-row
-     * screen no longer sits in a 300px window that is mostly empty well. The
-     * frame's TOP is chosen once per init (centering the content-fitted frame
-     * as opened) and never moves while the screen is open, so Done/Reset and
-     * the title stay put; only the bottom edge follows rows that appear or
-     * disappear, up to the viewport limit, beyond which the body scrolls.
+     * One window size (owner direction, 2026-11-15): every detail screen uses the shared frame
+     * however few or many rows it has, so the window never resizes between features or as
+     * sections expand and collapse. Supersedes the 2026-11-14 content-fitted frame.
      */
-    private void fitFrame(boolean recenter) {
-        // Uniform window (compact pass, 2026-10-30): every detail screen uses the shared
-        // frame, so the window never resizes as sections expand or collapse.
-        if (UNIFORM_FRAME) { compactFrame = maxFrame; TOP_PAD = compactFrame.y() + bodyOffset(); return; }
+    private void fitFrame() {
+        compactFrame = maxFrame;
+        TOP_PAD = compactFrame.y() + bodyOffset();
         int total = 0;
         for (FeatureSetting setting : meta.settings) if (setting.isVisible()) total += bodyHeight(setting) + ROW_GAP;
         if (total > 0) total -= ROW_GAP;
@@ -125,12 +118,10 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         for (FeatureSetting setting : meta.settings)
             if (setting.isVisible() && setting instanceof com.aurora.client.screen.setting.EnumSetting<?> row)
                 popup = Math.max(popup, row.popupHeight() + 30);
-        int wanted = Math.max(MIN_FRAME_H, bodyOffset() + fixedHeader + Math.max(total, popup) + BODY_BOTTOM + 2);
-        // Every detail window shares the main window's top edge (2026-11-14): centring each on
-        // its own content made the window jump between pages; only the bottom edge follows rows.
-        int top = maxFrame.y();
-        int limit = Math.min(maxFrame.y() + maxFrame.height(), this.height - 12) - top;
+        int limit = Math.min(compactFrame.y() + compactFrame.height(), this.height - 12) - compactFrame.y();
         int body = limit - bodyOffset() - fixedHeader - BODY_BOTTOM - 2;
+        restBody = body;
+        restCut = false;
         if (Math.max(total, popup) > body) {
             // A scrolling body ends on a row boundary, so at rest no setting is cut through
             // its middle (council review, 2026-11-14); the scrollbar and fade show the rest.
@@ -149,11 +140,13 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
                 lastIsCaption = caption;
             }
             if (lastIsCaption && beforeCaption > 0) fit = beforeCaption;
-            if (fit > 0 && fit >= popup) wanted = Math.max(MIN_FRAME_H, bodyOffset() + fixedHeader + fit + BODY_BOTTOM + 2);
+            // In the fixed frame a tall row (the custom crosshair canvas) left most of the window
+            // empty below the boundary (2026-11-15): trim only when the gap is under a stacked row,
+            // otherwise let the tall row run under the bottom fade.
+            if (fit > 0 && fit >= popup && body - fit <= com.aurora.client.ui.util.UiDensity.STACKED_ROW + ROW_GAP)
+                restBody = fit;
+            else restCut = true;
         }
-        compactFrame = new com.aurora.client.ui.util.UiDensity.Rect(maxFrame.x(), top, maxFrame.width(),
-                Math.max(1, Math.min(wanted, limit)));
-        TOP_PAD = compactFrame.y() + bodyOffset();
     }
     private void measureRows() {
         int track = FeatureSetting.pageTrackWidth(meta.settings);
@@ -171,7 +164,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
             }
         }
     }
-    private int bodyBottom() { return compact() ? compactFrame.y() + compactFrame.height() - BODY_BOTTOM : Math.max(bodyTop() + 1, this.height - 30); }
+    private int bodyBottom() { return compact() ? bodyTop() + restBody + 2 : Math.max(bodyTop() + 1, this.height - 30); }
     /** Inset below the last row, clear of the window's corner radius (12, was 8; 2026-11-14). */
     private static final int BODY_BOTTOM = 12;
     private int bodyHeight(FeatureSetting setting) { return setting.height() - (setting == fixedHeaderSetting ? setting.fixedHeaderHeight() : 0); }
@@ -283,7 +276,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
             LIST_W = compactFrame.width(); layoutHeader(); TOP_PAD = compactFrame.y() + bodyOffset();
             ROW_GAP = com.aurora.client.ui.util.UiDensity.ROW_GAP;
             measureRows();
-            fitFrame(true);
+            fitFrame();
             // Collapse categories by default only when the fully expanded list would scroll.
             if (com.aurora.client.screen.setting.SectionHeaderSetting.setDefaultExpanded(meta.settings, true)) {
                 com.aurora.client.screen.setting.SectionHeaderSetting.markLeading(meta.settings);
@@ -403,7 +396,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
             setting.pinHeader(pin);
             if (pin) fixedHeaderSetting = setting;
         }
-        if (compact()) fitFrame(false);
+        if (compact()) fitFrame();
         int listX = (this.width - LIST_W) / 2;
         FeatureSetting.setHostBand(new com.aurora.client.ui.util.ClipBand(
                 listX + 8, bodyTop(), LIST_W - 16, bodyBottom() - bodyTop()));
@@ -615,8 +608,9 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
                         MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED), false);
             com.aurora.client.util.ScrollFade.drawTop(ctx, listX + 8, LIST_W - 16, bodyTop(),
                     com.aurora.client.util.ScrollFade.FADE_PX, scroll.current(), fadeSurface);
-            // At rest the body ends on a row boundary (fitFrame): fade only rows cut by scrolling.
-            if (scroll.current() > 0) com.aurora.client.util.ScrollFade.drawBottom(ctx, listX + 8, LIST_W - 16, bodyBottom(),
+            // At rest the body usually ends on a row boundary (fitFrame): fade only rows cut by
+            // scrolling, or a tall row the rest edge runs through.
+            if (scroll.current() > 0 || restCut) com.aurora.client.util.ScrollFade.drawBottom(ctx, listX + 8, LIST_W - 16, bodyBottom(),
                     com.aurora.client.util.ScrollFade.BOTTOM_FADE_PX, maxScroll - scroll.current(), fadeSurface);
         }
         if (compact()) {

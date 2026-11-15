@@ -1,5 +1,10 @@
 # BetterHitreg Integration Catalog
 
+> **Historical record.** As of 2026-11-15 Aurora keeps only Better Hitreg's custom client-side
+> hitreg (Custom Hitreg, Hitreg Delay, Safe Regs Only, Ignore Shield Holders). The tracking,
+> audio, render overlays, practice arena, colors, practice scoreboard and keybinds described
+> below were removed; this catalog describes the integration as it was planned.
+
 Investigation-only catalog of the vendored `you.jass.betterhitreg` tree, produced 2026-09-08
 for the execution session that will fold it into Aurora (one entrypoint, one mixin config,
 one config file, Aurora feature card + detail screen replacing its UI; attribution kept).

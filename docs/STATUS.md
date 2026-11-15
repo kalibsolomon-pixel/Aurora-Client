@@ -1,6 +1,6 @@
 # Aurora Client status
 
-Updated 2026-11-14. See [ROADMAP](ROADMAP.md) for the order of work,
+Updated 2026-11-15. See [ROADMAP](ROADMAP.md) for the order of work,
 [architecture](ARCHITECTURE.md) for ownership, and [ADRs](adr/) for decisions.
 
 ## Structure and integration
@@ -117,11 +117,18 @@ and the GPU-side items wait for GPU-bound tester evidence; [evidence](reports/20
 
 ## Next work
 
+Pre-release polish on `fix/pre-release-polish` (stacked on `feat/render-hud-quality`,
+owner direction 2026-11-15): every Aurora window keeps the shared frame size; slider
+and other pointer hit areas match what is drawn; crosshair previews are centred;
+Hide Reload Overlay, Hide Title Fade and entity movement smoothing are removed; and
+Better Hitreg is trimmed to Custom Hitreg and its delay.
+
 Rendering/HUD follow-up is in progress on `feat/render-hud-quality`:
 the odd-radius motion blur alias is reproduced and fixed across the three
 OpenGL adapters and native 26.3 Vulkan; unused font preparation is deferred
-with measured reload gains, while the selected family stays eager. RRLS owns
-its reload overlay. [Investigation and evidence](reports/2026-11-12-render-hud-quality.md)
+with measured reload gains, while the selected family stays eager. The reload
+overlay and title fade switches were later removed (2026-11-15), so resource
+reloads behave as vanilla. [Investigation and evidence](reports/2026-11-12-render-hud-quality.md)
 track the remaining HUD work, FPS comparison and acceptance checks.
 
 Step 5.5 (ADR 0008) is complete; step 6 (shader-drawn shapes) is merged, PR #21.

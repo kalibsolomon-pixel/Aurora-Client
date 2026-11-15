@@ -159,18 +159,16 @@ class ConformanceManifestTest {
     }
 
     /**
-     * No Aurora UI chrome calls vanilla's sound path directly — the only
-     * project {@code UI_BUTTON_CLICK} is Better Hitreg's practice-arena
-     * behavior (upstream timing core, domain code, not UI chrome), and no
-     * Aurora class invokes {@code playDownSound} (mixin javadocs describe
+     * No Aurora class calls vanilla's UI click directly (Better Hitreg's
+     * metronome, the one former exception, was removed on 2026-11-15), and
+     * no Aurora class invokes {@code playDownSound} (mixin javadocs describe
      * VANILLA's funnel, they do not call it).
      */
     @Test
     void noAuroraUiChromePlaysVanillaSoundDirectly() throws IOException {
         for (String file : javaFiles()) {
             String src = read(file);
-            boolean hitreg = file.contains("/hitreg/");
-            assertTrue(hitreg || !src.contains("SoundEvents.UI_BUTTON_CLICK"),
+            assertFalse(src.contains("SoundEvents.UI_BUTTON_CLICK"),
                     file + " must not call the vanilla UI click directly");
             assertFalse(src.contains(".playDownSound("),
                     file + " must not call playDownSound (vanilla-internal funnel)");

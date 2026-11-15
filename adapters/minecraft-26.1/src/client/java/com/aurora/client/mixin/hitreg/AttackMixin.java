@@ -61,8 +61,6 @@ public abstract class AttackMixin {
 
         if (!hitEarly) {
             hitWasFarFromPrevious = lastAttackLocation.distanceToSqr(MultiVersion.getBasePosition(client.player)) >= 2500;
-            if (!fighting) fightStartedAt = System.currentTimeMillis();
-            fighting = true;
             hitByAnother = hit.wasHitByAnother;
             newTarget = hit.wasNewTarget;
             lastAttackWasBlocked = hit.wasBlocked;
@@ -72,11 +70,7 @@ public abstract class AttackMixin {
             sprintIsReset = false;
             alreadyAnimated = false;
             alreadyKnockedBack = false;
-            yourHits++;
             updateFightState();
-
-            //if they hit the opponent on the first tick available after not being in range
-            if (lastTickInRange == tick && lastTickOutOfRange == tick - 1) lastPerfectHit = System.currentTimeMillis();
         }
 
         hit.load();

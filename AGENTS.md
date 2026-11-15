@@ -57,7 +57,7 @@ Package names span core, ports, shared adapter and selected native adapter, so s
 
 - Every feature has a fair-play class in the catalog. Anything that shows something about other players, or a view vanilla does not allow, is an information advantage and ships off. Regenerate `docs/FAIR_PLAY.md`.
 - No custom packets, plugin channels, tick-rate changes or new outbound sends. `FeatureCatalogTest` scans for them.
-- Better Hitreg's timing core (`hitreg/`, `mixin/hitreg/`) is Jass's code kept verbatim. Read `hitreg/BetterHitreg.java` before touching it.
+- Better Hitreg's kept custom-hitreg timing core (`hitreg/`, `mixin/hitreg/`) is Jass's code, trimmed to the custom delay (2026-11-15). Read `hitreg/BetterHitreg.java` before touching it.
 
 ### Performance (ADR 0005, ADR 0009)
 

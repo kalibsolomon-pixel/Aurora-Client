@@ -621,6 +621,24 @@ public class ItemScaleSetting extends FeatureSetting {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button, int rowX, int rowY, int rowWidth) {
+        // The "+" button's own painted rect (24x20 at rowY+5), tested before the search field's
+        // band: inside that band (rowY+6..+24) the button lost its top and bottom pixel rows.
+        // Click on "+" button (C-4 rollout): routes through the semantic
+        // action (exactly-once + the one click); the disabled gate IS
+        // the can-add state, so a no-match or already-listed click falls
+        // through to the legacy fallback and stays unconsumed exactly
+        // as a no-match click always did.
+        int plusX = rowX + rowWidth - 36, plusY = rowY + 5;
+        if (mouseX >= plusX && mouseX < plusX + 24 && mouseY >= plusY && mouseY < plusY + 20) {
+            searchField.setFocused(false);
+            if (addAction.clicked(mouseX, mouseY, button)) {
+                return true;
+            }
+            if (!canAddFoundItem()) return false;
+            addFoundItem();
+            return true;
+        }
+
         // Forward click to search bar — the field's EXACT painted rect
         // ([rowY+6, rowY+24); the old [rowY+5, rowY+25) band was 2px taller
         // than the painted field — C-8, half-open at both edges).
@@ -634,20 +652,6 @@ public class ItemScaleSetting extends FeatureSetting {
                 searchField.setFocused(false);
             }
 
-            // Click on "+" button (C-4 rollout): routes through the semantic
-            // action (exactly-once + the one click); the disabled gate IS
-            // the can-add state, so a no-match or already-listed click falls
-            // through to the legacy fallback and stays unconsumed exactly
-            // as a no-match click always did.
-            int plusX = rowX + rowWidth - 36;
-            if (mouseX >= plusX && mouseX < plusX + 24) {
-                if (addAction.clicked(mouseX, mouseY, button)) {
-                    return true;
-                }
-                if (!canAddFoundItem()) return false;
-                addFoundItem();
-                return true;
-            }
             return true;
         }
 

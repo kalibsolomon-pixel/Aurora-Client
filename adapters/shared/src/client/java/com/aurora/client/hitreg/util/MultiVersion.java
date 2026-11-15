@@ -1,6 +1,5 @@
 package com.aurora.client.hitreg.util;
 
-import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.core.Holder;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.particles.SimpleParticleType;
@@ -34,11 +33,6 @@ public class MultiVersion {
         if (client.level == null || entity == null) return Vec3.ZERO;
 
         return entity.position();
-    }
-
-    public static String getSoundPath(SoundInstance sound) {
-        //version 1.21.11+
-        return sound.getIdentifier() == null ? null : sound.getIdentifier().getPath();
     }
 
     public static boolean isOnGround(Entity entity) {
