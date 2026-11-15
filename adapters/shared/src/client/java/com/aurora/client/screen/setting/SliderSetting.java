@@ -192,6 +192,16 @@ public class SliderSetting extends FeatureSetting {
         slider.layout(trackX, trackWidgetY(y), trackW, CONTROL_H);
     }
 
+    /**
+     * Whether a press lands on the track as it is drawn in this row: lays the track out for the
+     * row first, so hosts that own their interaction ({@link ThemeSliderSetting}) hit-test the
+     * same geometry the overlay paints, compact or not.
+     */
+    protected final boolean trackHit(double mouseX, double mouseY, int rowX, int rowY, int rowWidth) {
+        layoutTrack(rowX, rowY, rowWidth);
+        return slider.hits(mouseX, mouseY);
+    }
+
     /** Label + cached value readout (or the edit field while editing). Reads the value through the slider's getter. */
     protected void drawLabelRow(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {
         lastWidth = width;

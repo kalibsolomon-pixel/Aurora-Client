@@ -218,10 +218,15 @@ public class Slider extends Widget {
         return disabled ? MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED) : 0xFFFFFFFF;
     }
 
+    /** The pointer target: the track and knob, padded 6 px above and below and 4 px at the ends, as laid out last. */
+    public boolean hits(double mx, double my) {
+        return inBounds(mx, my, x - 4, trackY() - 6, w + 8, TRACK_H + 12);
+    }
+
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
         if (disabled || button != com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) return false;
-        if (!inBounds(mx, my, x - 4, trackY() - 6, w + 8, TRACK_H + 12)) return false;
+        if (!hits(mx, my)) return false;
         dragging = true;
         applyFromMouse(mx);
         return true;

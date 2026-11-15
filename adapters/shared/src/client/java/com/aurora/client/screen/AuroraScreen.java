@@ -785,25 +785,6 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     private float boxX() { return (float) Math.floor((this.width - BOX_W) / 2.0f); }
     private float boxY() { return (float) Math.floor((this.height - BOX_H) / 2.0f); }
 
-    /**
-     * The painted window height. The Features tab keeps the full frame (its 3×3 grid); a Settings
-     * page fits its content below a fixed top edge, never taller than the frame (owner decision
-     * 2026-11-14), so a short page no longer sits in a half-empty window.
-     */
-    private float windowH() {
-        if (selectedCategory != 1 || measuredContent == null) return BOX_H;
-        double content = 0;
-        for (FeatureMetadata m : pageEntries()) {
-            content += headerBlockH(m);
-            if (m.settingsDetailOnly) content += SETTINGS_HINT_H;
-            else for (FeatureSetting s : m.settings) content += s.height() + SETTINGS_ROW_GAP;
-            content += SETTINGS_ENTRY_GAP;
-        }
-        content -= SETTINGS_ENTRY_GAP;
-        float fitted = (float) (measuredContent.y - boxY() + content + 10);
-        return Math.min(BOX_H, Math.max(MIN_SETTINGS_WINDOW_H, fitted));
-    }
-    private static final float MIN_SETTINGS_WINDOW_H = 160;
     private float mainX() { return boxX() + (narrowNavigation() ? 8 : com.aurora.client.ui.util.UiDensity.SIDEBAR + com.aurora.client.ui.util.UiDensity.INSET); }
     private float mainY() { return boxY() + (com.aurora.client.ui.util.UiDensity.HEADER - TOOL) / 2f; }
 
@@ -943,7 +924,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         // bit in the version hash, which forces the re-raster on the switch).
         GlassSurface.beginGlassPass();
         float radius = ThemeManager.current().roundness().radius();
-        boolean glassWindow = GlassSurface.container(g, boxX(), boxY(), BOX_W, windowH(), radius);
+        boolean glassWindow = GlassSurface.container(g, boxX(), boxY(), BOX_W, BOX_H, radius);
 
         com.mojang.blaze3d.pipeline.RenderTarget main = this.minecraft != null ? com.aurora.client.adapter.NativeUi.mainTarget(this.minecraft) : null;
         int fbW = (main != null && main.width > 0) ? main.width : this.width;
@@ -954,8 +935,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 ^ ((long) fbW * 7919L)
                 ^ ((long) fbH * 17L)
                 ^ ((long) guiScale * 65537L)
-                ^ (glassWindow ? 0x5BD1B2C1L : 0L) // glass state changes cached fill presence
-                ^ ((long) Math.round(windowH()) << 40); // a fitted Settings page changes the frame
+                ^ (glassWindow ? 0x5BD1B2C1L : 0L); // glass state changes cached fill presence
 
         if (!layerCache.isCurrent(version)) {
             layerCache.ensureSize(fbW, fbH);
@@ -1003,7 +983,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
 
         for (int i = 1; i <= 3; i++) {
             int a = Math.max(0, 35 - i * 10);
-            RenderUtil.drawRoundedOutlineAA(g, bx - i * 2, by - i * 2, BOX_W + i * 4, windowH() + i * 4,
+            RenderUtil.drawRoundedOutlineAA(g, bx - i * 2, by - i * 2, BOX_W + i * 4, BOX_H + i * 4,
                     radius + i * 2, 2.0f, (a << 24) | 0x000000);
         }
         if (!glassWindow || MaterialSurface.unified()) {
@@ -1011,8 +991,8 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             // stacking the old fill/outline on top would read as a double
             // surface. The glow rings above stay — they read as a drop
             // shadow, not an outline.
-            RenderUtil.drawRoundedRectAA(g, bx, by, BOX_W, windowH(), radius, MaterialSurface.color(ThemeToken.WINDOW_FILL));
-            RenderUtil.drawRoundedOutlineAA(g, bx, by, BOX_W, windowH(), radius, 1.0f, MaterialSurface.unified() ? MaterialSurface.color(ThemeToken.WINDOW_OUTLINE)
+            RenderUtil.drawRoundedRectAA(g, bx, by, BOX_W, BOX_H, radius, MaterialSurface.color(ThemeToken.WINDOW_FILL));
+            RenderUtil.drawRoundedOutlineAA(g, bx, by, BOX_W, BOX_H, radius, 1.0f, MaterialSurface.unified() ? MaterialSurface.color(ThemeToken.WINDOW_OUTLINE)
                     : alpha(ThemeToken.ON_BACKGROUND, 0x13 / 255f));
         }
 
