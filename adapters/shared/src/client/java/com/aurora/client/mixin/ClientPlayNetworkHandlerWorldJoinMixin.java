@@ -77,5 +77,11 @@ public abstract class ClientPlayNetworkHandlerWorldJoinMixin {
         // Reset the frame-rate-independent easing clock so a stale timestamp
         // from the previous world doesn't poison the first frame's dtSec.
         HitboxRenderer.resetFrameTiming();
+        // Alert latches (durability fingerprints, effect-expiry flags) and
+        // their HUD rows belong to the world they were observed in.
+        com.aurora.client.hud.AlertHudState.clearAll();
+        com.aurora.client.feature.impl.ArmorAlertFeature.resetSession();
+        var statusAlerts = com.aurora.client.feature.impl.StatusAlertFeature.get();
+        if (statusAlerts != null) statusAlerts.resetSession();
     }
 }

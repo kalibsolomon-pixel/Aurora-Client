@@ -35,6 +35,7 @@ public final class FeatureIcons {
         ICONS.put("info_module",           "\uE88E"); // info
         ICONS.put("cps",                   "\uE323"); // mouse
         ICONS.put("armor_hud",             "\uF014"); // gpp_maybe (shield / alert)
+        ICONS.put("scoreboard",            "\uEBD0"); // scoreboard (Material Symbols Rounded)
         ICONS.put("reach_display",         "\uE41C"); // straighten (ruler)
         ICONS.put("potion_hud",            "\uE3F3"); // healing
         ICONS.put("ping",                  "\uEF06"); // android_cell_4_bar (signal)

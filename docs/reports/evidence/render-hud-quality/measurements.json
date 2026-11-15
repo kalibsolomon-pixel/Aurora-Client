@@ -1,0 +1,728 @@
+{
+  "hardware": "AMD Radeon RX 9070 XT",
+  "framebuffer": "1280x960",
+  "fontProtocol": "Same-session OFF ON ON OFF OFF ON; reload overlay clears; all 132 Aurora IDs checked",
+  "fonts": {
+    "motion-26.1": {
+      "rows": [
+        {
+          "enabled": false,
+          "reloadMs": 2610,
+          "pendingBeforeLookup": 0,
+          "activeUseMicros": 1250,
+          "firstUseMicros": 544,
+          "firstUseWidth": 111,
+          "faces": 132,
+          "widthChecksum": -2236547795940171338
+        },
+        {
+          "enabled": true,
+          "reloadMs": 909,
+          "pendingBeforeLookup": 113,
+          "activeUseMicros": 578,
+          "firstUseMicros": 18044,
+          "firstUseWidth": 111,
+          "faces": 132,
+          "widthChecksum": -2236547795940171338
+        },
+        {
+          "enabled": true,
+          "reloadMs": 949,
+          "pendingBeforeLookup": 113,
+          "activeUseMicros": 357,
+          "firstUseMicros": 17991,
+          "firstUseWidth": 111,
+          "faces": 132,
+          "widthChecksum": -2236547795940171338
+        },
+        {
+          "enabled": false,
+          "reloadMs": 2351,
+          "pendingBeforeLookup": 0,
+          "activeUseMicros": 261,
+          "firstUseMicros": 282,
+          "firstUseWidth": 111,
+          "faces": 132,
+          "widthChecksum": -2236547795940171338
+        },
+        {
+          "enabled": false,
+          "reloadMs": 2505,
+          "pendingBeforeLookup": 0,
+          "activeUseMicros": 323,
+          "firstUseMicros": 265,
+          "firstUseWidth": 111,
+          "faces": 132,
+          "widthChecksum": -2236547795940171338
+        },
+        {
+          "enabled": true,
+          "reloadMs": 951,
+          "pendingBeforeLookup": 113,
+          "activeUseMicros": 314,
+          "firstUseMicros": 19092,
+          "firstUseWidth": 111,
+          "faces": 132,
+          "widthChecksum": -2236547795940171338
+        }
+      ],
+      "offMedianMs": 2505,
+      "onMedianMs": 949
+    },
+    "motion-26.2": {
+      "rows": [
+        {
+          "enabled": false,
+          "reloadMs": 2547,
+          "pendingBeforeLookup": 0,
+          "activeUseMicros": 1007,
+          "firstUseMicros": 516,
+          "firstUseWidth": 111,
+          "faces": 132,
+          "widthChecksum": -2236547795940171338
+        },
+        {
+          "enabled": true,
+          "reloadMs": 795,
+          "pendingBeforeLookup": 113,
+          "activeUseMicros": 291,
+          "firstUseMicros": 14860,
+          "firstUseWidth": 111,
+          "faces": 132,
+          "widthChecksum": -2236547795940171338
+        },
+        {
+          "enabled": true,
+          "reloadMs": 800,
+          "pendingBeforeLookup": 113,
+          "activeUseMicros": 318,
+          "firstUseMicros": 18351,
+          "firstUseWidth": 111,
+          "faces": 132,
+          "widthChecksum": -2236547795940171338
+        },
+        {
+          "enabled": false,
+          "reloadMs": 2297,
+          "pendingBeforeLookup": 0,
+          "activeUseMicros": 256,
+          "firstUseMicros": 288,
+          "firstUseWidth": 111,
+          "faces": 132,
+          "widthChecksum": -2236547795940171338
+        },
+        {
+          "enabled": false,
+          "reloadMs": 2339,
+          "pendingBeforeLookup": 0,
+          "activeUseMicros": 244,
+          "firstUseMicros": 261,
+          "firstUseWidth": 111,
+          "faces": 132,
+          "widthChecksum": -2236547795940171338
+        },
+        {
+          "enabled": true,
+          "reloadMs": 702,
+          "pendingBeforeLookup": 113,
+          "activeUseMicros": 328,
+          "firstUseMicros": 16968,
+          "firstUseWidth": 111,
+          "faces": 132,
+          "widthChecksum": -2236547795940171338
+        }
+      ],
+      "offMedianMs": 2339,
+      "onMedianMs": 795
+    },
+    "font-26.3gl": {
+      "rows": [
+        {
+          "enabled": false,
+          "reloadMs": 2753,
+          "pendingBeforeLookup": 0,
+          "firstUseMicros": 1701,
+          "firstUseWidth": 111,
+          "faces": 132,
+          "widthChecksum": -6401298338082988836
+        },
+        {
+          "enabled": true,
+          "reloadMs": 1101,
+          "pendingBeforeLookup": 113,
+          "firstUseMicros": 18402,
+          "firstUseWidth": 111,
+          "faces": 132,
+          "widthChecksum": -6401298338082988836
+        },
+        {
+          "enabled": true,
+          "reloadMs": 1003,
+          "pendingBeforeLookup": 113,
+          "firstUseMicros": 14913,
+          "firstUseWidth": 111,
+          "faces": 132,
+          "widthChecksum": -6401298338082988836
+        },
+        {
+          "enabled": false,
+          "reloadMs": 2506,
+          "pendingBeforeLookup": 0,
+          "firstUseMicros": 322,
+          "firstUseWidth": 111,
+          "faces": 132,
+          "widthChecksum": -6401298338082988836
+        },
+        {
+          "enabled": false,
+          "reloadMs": 2353,
+          "pendingBeforeLookup": 0,
+          "firstUseMicros": 340,
+          "firstUseWidth": 111,
+          "faces": 132,
+          "widthChecksum": -6401298338082988836
+        },
+        {
+          "enabled": true,
+          "reloadMs": 856,
+          "pendingBeforeLookup": 113,
+          "firstUseMicros": 16343,
+          "firstUseWidth": 111,
+          "faces": 132,
+          "widthChecksum": -6401298338082988836
+        }
+      ],
+      "offMedianMs": 2506,
+      "onMedianMs": 1003
+    },
+    "motion-vulkan": {
+      "rows": [
+        {
+          "enabled": false,
+          "reloadMs": 2749,
+          "pendingBeforeLookup": 0,
+          "activeUseMicros": 1174,
+          "firstUseMicros": 455,
+          "firstUseWidth": 111,
+          "faces": 132,
+          "widthChecksum": -2236547795940171338
+        },
+        {
+          "enabled": true,
+          "reloadMs": 1062,
+          "pendingBeforeLookup": 113,
+          "activeUseMicros": 357,
+          "firstUseMicros": 17031,
+          "firstUseWidth": 111,
+          "faces": 132,
+          "widthChecksum": -2236547795940171338
+        },
+        {
+          "enabled": true,
+          "reloadMs": 848,
+          "pendingBeforeLookup": 113,
+          "activeUseMicros": 333,
+          "firstUseMicros": 17277,
+          "firstUseWidth": 111,
+          "faces": 132,
+          "widthChecksum": -2236547795940171338
+        },
+        {
+          "enabled": false,
+          "reloadMs": 2349,
+          "pendingBeforeLookup": 0,
+          "activeUseMicros": 260,
+          "firstUseMicros": 304,
+          "firstUseWidth": 111,
+          "faces": 132,
+          "widthChecksum": -2236547795940171338
+        },
+        {
+          "enabled": false,
+          "reloadMs": 2449,
+          "pendingBeforeLookup": 0,
+          "activeUseMicros": 342,
+          "firstUseMicros": 364,
+          "firstUseWidth": 111,
+          "faces": 132,
+          "widthChecksum": -2236547795940171338
+        },
+        {
+          "enabled": true,
+          "reloadMs": 950,
+          "pendingBeforeLookup": 113,
+          "activeUseMicros": 278,
+          "firstUseMicros": 19150,
+          "firstUseWidth": 111,
+          "faces": 132,
+          "widthChecksum": -2236547795940171338
+        }
+      ],
+      "offMedianMs": 2449,
+      "onMedianMs": 950
+    }
+  },
+  "motion": {
+    "motion-before/scale2-r8": {
+      "radius": 8,
+      "box": [
+        440,
+        500,
+        840,
+        610
+      ],
+      "phaseChanges": [
+        {
+          "mean": 0.08333333333333333,
+          "maximum": 1
+        },
+        {
+          "mean": 0.08333333333333333,
+          "maximum": 1
+        },
+        {
+          "mean": 0.08333333333333333,
+          "maximum": 1
+        },
+        {
+          "mean": 0.08333333333333333,
+          "maximum": 1
+        }
+      ],
+      "pass": true
+    },
+    "motion-before/scale2-r9": {
+      "radius": 9,
+      "box": [
+        440,
+        500,
+        840,
+        610
+      ],
+      "phaseChanges": [
+        {
+          "mean": 30.57409090909091,
+          "maximum": 55
+        },
+        {
+          "mean": 30.57409090909091,
+          "maximum": 55
+        },
+        {
+          "mean": 30.843424242424245,
+          "maximum": 55
+        },
+        {
+          "mean": 30.843424242424245,
+          "maximum": 55
+        }
+      ],
+      "pass": false
+    },
+    "motion-after/scale2-r9": {
+      "radius": 9,
+      "box": [
+        440,
+        500,
+        840,
+        610
+      ],
+      "phaseChanges": [
+        {
+          "mean": 0.08,
+          "maximum": 1
+        },
+        {
+          "mean": 0.08,
+          "maximum": 1
+        },
+        {
+          "mean": 0.08,
+          "maximum": 1
+        },
+        {
+          "mean": 0.08,
+          "maximum": 1
+        }
+      ],
+      "pass": true
+    },
+    "motion-after/primary-r9": {
+      "radius": 9,
+      "box": [
+        440,
+        500,
+        840,
+        610
+      ],
+      "phaseChanges": [
+        {
+          "mean": 0.08,
+          "maximum": 1
+        },
+        {
+          "mean": 0.08,
+          "maximum": 1
+        },
+        {
+          "mean": 0.08,
+          "maximum": 1
+        },
+        {
+          "mean": 0.08,
+          "maximum": 1
+        }
+      ],
+      "pass": true
+    },
+    "motion-26.1/scale2-r9": {
+      "radius": 9,
+      "box": [
+        440,
+        500,
+        840,
+        610
+      ],
+      "phaseChanges": [
+        {
+          "mean": 0.5866666666666667,
+          "maximum": 1
+        },
+        {
+          "mean": 0.5866666666666667,
+          "maximum": 1
+        },
+        {
+          "mean": 0.5866666666666667,
+          "maximum": 1
+        },
+        {
+          "mean": 0.5866666666666667,
+          "maximum": 1
+        }
+      ],
+      "pass": true
+    },
+    "motion-26.2/scale2-r9": {
+      "radius": 9,
+      "box": [
+        440,
+        500,
+        840,
+        610
+      ],
+      "phaseChanges": [
+        {
+          "mean": 0.08,
+          "maximum": 1
+        },
+        {
+          "mean": 0.08,
+          "maximum": 1
+        },
+        {
+          "mean": 0.08,
+          "maximum": 1
+        },
+        {
+          "mean": 0.08,
+          "maximum": 1
+        }
+      ],
+      "pass": true
+    },
+    "motion-vulkan/scale2-r9": {
+      "radius": 9,
+      "box": [
+        440,
+        500,
+        840,
+        610
+      ],
+      "phaseChanges": [
+        {
+          "mean": 0.08,
+          "maximum": 1
+        },
+        {
+          "mean": 0.08,
+          "maximum": 1
+        },
+        {
+          "mean": 0.08,
+          "maximum": 1
+        },
+        {
+          "mean": 0.08,
+          "maximum": 1
+        }
+      ],
+      "pass": true
+    }
+  },
+  "fps": {
+    "absent": {
+      "readings": [
+        2000,
+        2140,
+        2259,
+        2294,
+        2317,
+        2054,
+        2320,
+        2185,
+        2081,
+        2085,
+        2034,
+        2054,
+        2390,
+        2244,
+        2363,
+        2365,
+        2329,
+        2197,
+        2337,
+        2389
+      ],
+      "median": 2251.5
+    },
+    "installed": {
+      "readings": [
+        2024,
+        2119,
+        1911,
+        2042,
+        1939,
+        1843,
+        1740,
+        1895,
+        1889,
+        1674,
+        1496,
+        1594,
+        1608,
+        1750,
+        1367,
+        1661,
+        1868,
+        1848,
+        1760,
+        1827
+      ],
+      "median": 1835.0
+    },
+    "candidate": {
+      "readings": [
+        2083,
+        2103,
+        2034,
+        2085,
+        1963,
+        2140,
+        2206,
+        2151,
+        2199,
+        2120,
+        2184,
+        2068,
+        2169,
+        2148,
+        2118,
+        2130,
+        2187,
+        1958,
+        1965,
+        2172
+      ],
+      "median": 2125.0
+    }
+  },
+  "overhead": {
+    "opengl": {
+      "warmupRuns": 2,
+      "judgedRuns": 4,
+      "rows": [
+        {
+          "run": "1 of 6",
+          "meanMs": 0.103,
+          "medianMs": 0.094,
+          "p95Ms": 0.163,
+          "fillsPerFrame": 0.0,
+          "glassCapturesPerFrame": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "run": "2 of 6",
+          "meanMs": 0.096,
+          "medianMs": 0.088,
+          "p95Ms": 0.122,
+          "fillsPerFrame": 0.0,
+          "glassCapturesPerFrame": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "run": "3 of 6",
+          "meanMs": 0.097,
+          "medianMs": 0.089,
+          "p95Ms": 0.125,
+          "fillsPerFrame": 0.0,
+          "glassCapturesPerFrame": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "run": "4 of 6",
+          "meanMs": 0.085,
+          "medianMs": 0.079,
+          "p95Ms": 0.113,
+          "fillsPerFrame": 0.0,
+          "glassCapturesPerFrame": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "run": "5 of 6",
+          "meanMs": 0.08,
+          "medianMs": 0.076,
+          "p95Ms": 0.103,
+          "fillsPerFrame": 0.0,
+          "glassCapturesPerFrame": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "run": "6 of 6",
+          "meanMs": 0.08,
+          "medianMs": 0.075,
+          "p95Ms": 0.105,
+          "fillsPerFrame": 0.0,
+          "glassCapturesPerFrame": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        }
+      ],
+      "factoryDefaults": true,
+      "probeInstalled": false
+    },
+    "vulkan": {
+      "warmupRuns": 2,
+      "judgedRuns": 4,
+      "rows": [
+        {
+          "run": "1 of 6",
+          "meanMs": 0.121,
+          "medianMs": 0.108,
+          "p95Ms": 0.192,
+          "fillsPerFrame": 0.0,
+          "glassCapturesPerFrame": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "run": "2 of 6",
+          "meanMs": 0.109,
+          "medianMs": 0.103,
+          "p95Ms": 0.138,
+          "fillsPerFrame": 0.0,
+          "glassCapturesPerFrame": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "run": "3 of 6",
+          "meanMs": 0.101,
+          "medianMs": 0.095,
+          "p95Ms": 0.132,
+          "fillsPerFrame": 0.0,
+          "glassCapturesPerFrame": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "run": "4 of 6",
+          "meanMs": 0.098,
+          "medianMs": 0.094,
+          "p95Ms": 0.124,
+          "fillsPerFrame": 0.0,
+          "glassCapturesPerFrame": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "run": "5 of 6",
+          "meanMs": 0.107,
+          "medianMs": 0.101,
+          "p95Ms": 0.136,
+          "fillsPerFrame": 0.0,
+          "glassCapturesPerFrame": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "run": "6 of 6",
+          "meanMs": 0.104,
+          "medianMs": 0.098,
+          "p95Ms": 0.139,
+          "fillsPerFrame": 0.0,
+          "glassCapturesPerFrame": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        }
+      ],
+      "factoryDefaults": true,
+      "probeInstalled": false
+    },
+    "stack": {
+      "warmupRuns": 2,
+      "judgedRuns": 4,
+      "rows": [
+        {
+          "run": "1 of 6",
+          "meanMs": 0.124,
+          "medianMs": 0.099,
+          "p95Ms": 0.259,
+          "fillsPerFrame": 0.0,
+          "glassCapturesPerFrame": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "run": "2 of 6",
+          "meanMs": 0.105,
+          "medianMs": 0.097,
+          "p95Ms": 0.155,
+          "fillsPerFrame": 0.0,
+          "glassCapturesPerFrame": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "run": "3 of 6",
+          "meanMs": 0.09,
+          "medianMs": 0.084,
+          "p95Ms": 0.125,
+          "fillsPerFrame": 0.0,
+          "glassCapturesPerFrame": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "run": "4 of 6",
+          "meanMs": 0.086,
+          "medianMs": 0.078,
+          "p95Ms": 0.126,
+          "fillsPerFrame": 0.0,
+          "glassCapturesPerFrame": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "run": "5 of 6",
+          "meanMs": 0.079,
+          "medianMs": 0.075,
+          "p95Ms": 0.102,
+          "fillsPerFrame": 0.0,
+          "glassCapturesPerFrame": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "run": "6 of 6",
+          "meanMs": 0.082,
+          "medianMs": 0.077,
+          "p95Ms": 0.117,
+          "fillsPerFrame": 0.0,
+          "glassCapturesPerFrame": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        }
+      ],
+      "factoryDefaults": true,
+      "probeInstalled": false
+    }
+  }
+}

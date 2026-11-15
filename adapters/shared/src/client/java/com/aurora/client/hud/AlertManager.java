@@ -10,19 +10,19 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 
 /**
- * Unified alert queue for all notification-style features (low durability,
- * effect expiry, etc.).
+ * Popup queue for informational notifications (a profile hotkey switch,
+ * say), rendered by {@link AlertRenderer}.
  *
- * <p>Features call {@link #fire} when a threshold is crossed. The most
- * recent alert is stored as the "active" alert; the renderer
- * ({@link AlertRenderer}) fades it in/out over its duration. Alerts are
- * queued FIFO so a burst of different warnings (e.g. armor + effects
- * simultaneously) don't overwrite each other instantly — each gets its
- * full screen-time unless superseded by a higher-priority alert.
+ * <p>The warning alert sources no longer route through here: low
+ * durability and effect expiry render as their own movable, resizable HUD
+ * modules (module ids {@code armor_alert} and {@code potion_alert}, fed by
+ * {@link AlertHudState} from {@code ArmorAlertFeature} and
+ * {@code StatusAlertFeature}). What remains is {@link #notify} — a silent
+ * confirmation popup — plus the shared alert sound helpers.
  *
- * <p>Replaces the per-feature static fields that {@code ArmorAlertFeature}
- * previously held, generalising the same popup + fade pattern to any
- * feature that wants to surface a timed on-screen warning.
+ * <p>Alerts are queued FIFO so a burst of confirmations don't overwrite
+ * each other instantly — each gets its full screen-time unless superseded
+ * by a higher-priority alert.
  */
 public final class AlertManager {
 
@@ -75,30 +75,6 @@ public final class AlertManager {
     private AlertManager() {}
 
     /**
-     * Fire a new alert. If there is no active alert or the new one is
-     * higher-priority, it becomes active immediately. Otherwise it is
-     * queued and shown when the current one expires.
-     *
-     * <p>Also plays the configured alert sound (shared across all alert
-     * sources) if {@link AuroraConfig#armorAlertSound} is enabled.
-     */
-    public static synchronized void fire(String title, String subtitle,
-                                          ItemStack iconStack, int color,
-                                          Priority priority, long durationMs) {
-        fire(title, subtitle, iconStack, color, priority, durationMs, null);
-    }
-
-    /** Effect alerts use their vanilla status-effect sprite instead of an item. */
-    public static synchronized void fire(String title, String subtitle,
-                                          ItemStack iconStack, int color,
-                                          Priority priority, long durationMs,
-                                          net.minecraft.resources.Identifier iconSprite) {
-        enqueue(new Alert(title, subtitle, iconStack, color, priority,
-                System.currentTimeMillis(), durationMs, iconSprite));
-        playAlertSound();
-    }
-
-    /**
      * A silent informational popup — a confirmation rather than a warning
      * (a profile hotkey switch, say), so the alert sound does not play.
      */
@@ -129,13 +105,6 @@ public final class AlertManager {
     }
 
     /**
-     * Convenience for firing a warning with the standard 3-second duration.
-     */
-    public static void fire(String title, String subtitle, ItemStack iconStack, int color) {
-        fire(title, subtitle, iconStack, color, Priority.WARNING, 3_000L);
-    }
-
-    /**
      * Returns the active alert, or {@code null} if none is showing.
      * Promotes the next queued alert if the current one has expired.
      */
@@ -154,7 +123,13 @@ public final class AlertManager {
 
     // ===== Sound =====
 
-    private static void playAlertSound() {
+    /**
+     * Plays the configured alert sound when {@link AuroraConfig#armorAlertSound}
+     * is on. The alert features call this directly when a latch fires; the
+     * popup path is gone for those sources (they render as HUD modules via
+     * {@link AlertHudState}), but the shared sound choice stays.
+     */
+    public static void playAlertSound() {
         AuroraConfig cfg = AuroraConfig.get();
         if (!cfg.armorAlertSound) return;
         playPreview();

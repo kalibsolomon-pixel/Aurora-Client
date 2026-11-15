@@ -17,7 +17,7 @@ class ReleaseDefaultsTest(unittest.TestCase):
         for key in data:
             self.assertTrue(key in EXACT or key.startswith(PREFIXES), key)
         self.assertNotIn('stats', data['moduleLayouts'])
-        self.assertEqual(12, len(data['moduleLayouts']))
+        self.assertEqual(14, len(data['moduleLayouts']))  # + Armor and Potion Alert
         self.assertFalse(data['minimapEnabled'])
         self.assertFalse(data['infoEnabled'])
         # Inspect all nested strings, including registry-key maps, for personal/path data.

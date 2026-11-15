@@ -1,6 +1,6 @@
 # Aurora Client: contributor and agent guide
 
-Aurora (`com.aurora.client`, mod id `aurora`) is a client-side Fabric mod for Minecraft 26.1.2, 26.2 and 26.3: 39 quality-of-life, PvP and performance features (listed in `docs/FAIR_PLAY.md`) inside a themed GUI with a glass material. MIT licensed; code, fonts and libraries from other projects are listed in `THIRD_PARTY_NOTICES.md`.
+Aurora (`com.aurora.client`, mod id `aurora`) is a client-side Fabric mod for Minecraft 26.1.2, 26.2 and 26.3: 40 quality-of-life, PvP and performance features (listed in `docs/FAIR_PLAY.md`) inside a themed GUI with a glass material. MIT licensed; code, fonts and libraries from other projects are listed in `THIRD_PARTY_NOTICES.md`.
 
 This guide is short on purpose. The full engineering history it replaced, including every investigation and the reasoning behind each rule below, is in [docs/history/AGENTS-2026-11-11.md](docs/history/AGENTS-2026-11-11.md). Older code comments and reports that cite "AGENTS.md §N" mean a section of that file.
 

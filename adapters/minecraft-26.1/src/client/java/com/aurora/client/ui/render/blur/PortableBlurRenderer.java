@@ -128,8 +128,12 @@ final class PortableBlurRenderer {
         // Never carry the GL framebuffer's bottom-left convention across devices.
         rect(params, rx / (float) main.width, ry / (float) main.height,
                 (rx + rw) / (float) main.width, (ry + rh) / (float) main.height);
+        params[4] = com.aurora.client.ui.util.BoxDownsample.halfTexel(rw, halfW, main.width);
+        params[5] = com.aurora.client.ui.util.BoxDownsample.halfTexel(rh, halfH, main.height);
         float[] copyIn = params.clone();
         rect(params, 0, 0, 1, 1);
+        params[4] = com.aurora.client.ui.util.BoxDownsample.halfTexel(halfW, quarterW, halfW);
+        params[5] = com.aurora.client.ui.util.BoxDownsample.halfTexel(halfH, quarterH, halfH);
         float[] copyDown = params.clone();
         params[4] = 1f / quarterW;
         params[5] = 0;

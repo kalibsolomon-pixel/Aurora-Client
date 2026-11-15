@@ -1,0 +1,38 @@
+<!doctype html><meta charset="utf-8">
+<style>
+body{margin:0;color:var(--foreground);font:14px var(--font-sans)}
+figure{margin:0 0 24px}figcaption{font-weight:600;margin-bottom:12px}
+.row{display:grid;grid-template-columns:112px 1fr 76px;gap:12px;align-items:center;margin:8px 0}
+.track{height:22px;background:var(--secondary);border-radius:3px;overflow:hidden}
+.bar{height:100%;background:var(--chart-1)}.after{background:var(--chart-2)}
+.value{font:12px var(--font-mono);text-align:right}.pair{margin-bottom:14px}
+.pair .row{margin:4px 0}.note{color:var(--muted-foreground);font-size:12px;line-height:1.5;margin-top:8px}
+.legend{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:12px;margin-bottom:12px}.dot{display:inline-block;width:9px;height:9px;background:var(--chart-1);margin-right:6px}.dot.after{background:var(--chart-2)}
+img{max-width:100%;height:auto;border-radius:var(--radius)}
+@media(max-width:480px){.row{grid-template-columns:88px 1fr 65px;gap:8px}}
+</style>
+<figure>
+<figcaption>Resource reload median · lower is better</figcaption>
+<div class="legend"><span><i class="dot"></i>Eager</span><span><i class="dot after"></i>Selected family eager, unused families deferred</span></div>
+<div class="pair"><div class="row"><span>26.1.2 OpenGL</span><div class="track"><div class="bar" style="width:100%"></div></div><span class="value">2,505 ms</span></div><div class="row"><span></span><div class="track"><div class="bar after" style="width:37.9%"></div></div><span class="value">949 ms</span></div></div>
+<div class="pair"><div class="row"><span>26.2 OpenGL</span><div class="track"><div class="bar" style="width:93.4%"></div></div><span class="value">2,339 ms</span></div><div class="row"><span></span><div class="track"><div class="bar after" style="width:31.7%"></div></div><span class="value">795 ms</span></div></div>
+<div class="pair"><div class="row"><span>26.3 OpenGL</span><div class="track"><div class="bar" style="width:100%"></div></div><span class="value">2,506 ms</span></div><div class="row"><span></span><div class="track"><div class="bar after" style="width:40%"></div></div><span class="value">1,003 ms</span></div></div>
+<div class="pair"><div class="row"><span>26.3 Vulkan</span><div class="track"><div class="bar" style="width:97.7%"></div></div><span class="value">2,449 ms</span></div><div class="row"><span></span><div class="track"><div class="bar after" style="width:37.9%"></div></div><span class="value">950 ms</span></div></div>
+<p class="note">Three runs per state, alternating within each client session. All 132 font IDs retain matching measured widths. First use of an unused family still costs approximately 15–19 ms once. Deferral yields to ModernFix.</p>
+</figure>
+<figure><figcaption>Launcher mod set · observed median FPS</figcaption>
+<div class="row"><span>Aurora absent</span><div class="track"><div class="bar" style="width:90.1%"></div></div><span class="value">2,251.5</span></div>
+<div class="row"><span>Installed jar</span><div class="track"><div class="bar" style="width:73.4%"></div></div><span class="value">1,835</span></div>
+<div class="row"><span>Candidate</span><div class="track"><div class="bar after" style="width:85%"></div></div><span class="value">2,125</span></div>
+<p class="note">One short stationary spawn scene per row; RX 9070 XT, 1280×960 OpenGL, portrait monitor, identical other mods and live feature settings. Twenty seconds warm-up and twenty one-second FPS readings. VSync and inactivity caps controlled. The candidate includes the preceding optimization series; this is not a busy-server or GPU-bound benchmark.</p>
+</figure>
+<figure><figcaption>Factory-default Aurora CPU overhead · milliseconds</figcaption>
+<div class="legend"><span><i class="dot"></i>Highest judged mean</span><span><i class="dot after"></i>Highest judged p95</span></div>
+<div class="pair"><div class="row"><span>26.3 OpenGL</span><div class="track"><div class="bar" style="width:24.25%"></div></div><span class="value">0.097 ms</span></div><div class="row"><span></span><div class="track"><div class="bar after" style="width:31.25%"></div></div><span class="value">0.125 ms</span></div></div>
+<div class="pair"><div class="row"><span>26.3 Vulkan</span><div class="track"><div class="bar" style="width:26.75%"></div></div><span class="value">0.107 ms</span></div><div class="row"><span></span><div class="track"><div class="bar after" style="width:34.75%"></div></div><span class="value">0.139 ms</span></div></div>
+<div class="pair"><div class="row"><span>Launcher mods</span><div class="track"><div class="bar" style="width:22.5%"></div></div><span class="value">0.090 ms</span></div><div class="row"><span></span><div class="track"><div class="bar after" style="width:31.5%"></div></div><span class="value">0.126 ms</span></div></div>
+<p class="note">Common scale: 0–0.40 ms. The budget is 0.25 ms mean and 0.40 ms p95. Four judged runs after two warm-ups per fixture; zero UI fills and glass captures. No acceptance helper installed. This is targeted 26.3 evidence, not the full release matrix.</p>
+</figure>
+<figure><figcaption>Radius 9 · four-pixel detail translated through four phases</figcaption>
+<img src="odd-radius-motion.gif" alt="Before the fix, the panel brightness changes with the pattern phase; after the fix it stays visually constant.">
+<p class="note">The pattern’s correct average stays constant. The maximum change falls from 55 to 1 out of 255 intensity levels. Captures are from actual renderer output.</p></figure>

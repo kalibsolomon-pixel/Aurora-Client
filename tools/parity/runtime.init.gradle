@@ -13,4 +13,16 @@ gradle.projectsEvaluated {
         archiveFileName = 'parity-probe.jar'
         destinationDirectory = p.layout.buildDirectory.dir('acceptance-tooling')
     }
+    p.tasks.register('fpsObserverJar', Jar) {
+        dependsOn p.tasks.named('parityProbeClasses')
+        from(probe.output) { include 'parityprobe/FpsObserver.class' }
+        archiveFileName = 'fps-observer.jar'
+        destinationDirectory = p.layout.buildDirectory.dir('acceptance-tooling')
+        doFirst {
+            def metadata = p.layout.buildDirectory.file('acceptance-tooling/fps-observer/fabric.mod.json').get().asFile
+            metadata.parentFile.mkdirs()
+            metadata.text = '{"schemaVersion":1,"id":"fpsobserver","version":"1","environment":"client","entrypoints":{"client":["parityprobe.FpsObserver"]}}'
+        }
+        from(p.layout.buildDirectory.dir('acceptance-tooling/fps-observer'))
+    }
 }

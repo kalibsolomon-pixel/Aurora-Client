@@ -10,6 +10,7 @@ import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.Sheets;
+import com.aurora.client.util.HitColorOverlayRows;
 import com.aurora.client.util.HitColorTrimRenderTypes;
 import net.minecraft.resources.Identifier;
 import org.spongepowered.asm.mixin.Mixin;
@@ -75,7 +76,7 @@ public abstract class EquipmentLayerRendererMixin {
         if (!(cfg.hitColorEnabled && cfg.hitColorTintArmor)) return original;
         if (!(renderState instanceof LivingEntityRenderState living)) return original;
         return OverlayTexture.pack(OverlayTexture.u(0.0F),
-                                   OverlayTexture.v(living.hasRedOverlay));
+                                   HitColorOverlayRows.hurtRow(living, OverlayTexture.v(living.hasRedOverlay)));
     }
 
     /** Trims retain their atlas sprite UVs but need an overlay-aware shader. */
@@ -96,7 +97,7 @@ public abstract class EquipmentLayerRendererMixin {
         AuroraConfig cfg = AuroraConfig.get();
         if (!(cfg.hitColorEnabled && cfg.hitColorTintArmor && cfg.hitColorTintArmorTrims)) return original;
         if (!(renderState instanceof LivingEntityRenderState living)) return original;
-        return OverlayTexture.pack(OverlayTexture.u(0.0F), OverlayTexture.v(living.hasRedOverlay));
+        return OverlayTexture.pack(OverlayTexture.u(0.0F), HitColorOverlayRows.hurtRow(living, OverlayTexture.v(living.hasRedOverlay)));
     }
 
 }

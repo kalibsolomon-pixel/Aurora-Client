@@ -2,7 +2,6 @@ package com.aurora.client.hud;
 
 import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.feature.impl.HitboxPositionSmoother;
-import com.aurora.client.feature.impl.ThrottleDetector;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
@@ -39,9 +38,9 @@ import java.util.function.Predicate;
  * rendered at the raw interpolated target, so the two drifted apart — the
  * hitbox appeared to lag behind or lead ahead of the model, which read as
  * "hitboxes feel off". The vanilla interpolation path is correct because it
- * matches what the entity model uses. {@link ThrottleDetector} is kept
- * sampling (harmless) for potential future diagnostic use, but its output no
- * longer influences the rendered position.
+ * matches what the entity model uses. Movement cadence detection, which
+ * serves entity movement smoothing, samples on the client tick instead
+ * ({@code ThrottleDetector.tick}).
  *
  * <p><b>Camera-relative double precision.</b> Camera position is subtracted in
  * {@code double} precision before casting to {@code float} inside
@@ -97,10 +96,6 @@ public final class HitboxRenderer {
             // our interpolated AABB lines up with the camera and the entity model.
             float tickDelta = client.getDeltaTracker().getGameTimeDeltaPartialTick(false);
 
-            // ThrottleDetector is kept sampling (harmless, no-op side effects) for
-            // potential future diagnostic use. Its output no longer influences the
-            // rendered position — see class javadoc for why smoothing was removed.
-            ThrottleDetector.sample(client);
 
             Entity activeTarget = resolveTarget(client);
 
