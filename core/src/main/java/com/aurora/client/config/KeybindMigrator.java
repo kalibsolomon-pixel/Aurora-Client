@@ -10,6 +10,7 @@ public final class KeybindMigrator {
     public static final int VERSION = 1;
     private static final String MARKER = "keybindVersion";
     public static final Set<String> KEY_FIELDS = Set.of(
+            "pulsarKey",
             "zoomKey",
             "freeLookKey",
             "toggleSprintKey",

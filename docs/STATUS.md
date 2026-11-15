@@ -1,9 +1,15 @@
 # Aurora Client status
 
-Updated 2026-11-11. See [ROADMAP](ROADMAP.md) for the order of work,
+Updated 2026-11-14. See [ROADMAP](ROADMAP.md) for the order of work,
 [architecture](ARCHITECTURE.md) for ownership, and [ADRs](adr/) for decisions.
 
 ## Structure and integration
+
+Pulsar integration adds Phenomena's analytics and recording as Aurora's 40th
+feature, off by default. Its configuration and six-tab dashboard follow Aurora's
+profile, input and theme contracts. See [Pulsar](PULSAR.md) for workflows,
+source provenance and storage compatibility. Acceptance and council review are
+tracked in [the integration report](reports/2026-11-14-pulsar-integration.md).
 
 Roadmap steps 1–3 and the 26.1.2, 26.2 and 26.3 ports are merged through PRs
 #1–#12. The owner authorized autonomous GitHub integration and publication.

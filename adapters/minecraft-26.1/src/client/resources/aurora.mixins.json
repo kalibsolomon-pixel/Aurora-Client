@@ -5,6 +5,10 @@
   "plugin": "com.aurora.client.health.AuroraMixinPlugin",
   "compatibilityLevel": "JAVA_25",
   "client": [
+    "pulsar.MinecraftMixin",
+    "pulsar.GameModeMixin",
+    "pulsar.LivingEntityMixin",
+    "pulsar.PacketListenerMixin",
     "WindowMixin",
     "TitleScreenMixin",
     "InGameHudMixin",

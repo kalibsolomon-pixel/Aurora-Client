@@ -14,7 +14,7 @@ tabPing toggleSprint toggleSneak blockOverlay potion totem shield itemScale
 mainHand offHand playerHealth noFog fogDistance underwater lava
 cps reach sprintHud waypointDisplay waypointBeam waypointLabel waypointBlock
 waypointShow deathWaypoint crosshair hitbox particle containerPreview itemPhysics
-keystrokes minimap worldMapShow resourcepackBrowser
+keystrokes minimap worldMapShow resourcepackBrowser pulsar
 """.split())
 EXACT = set("""
 keybindVersion customTitleScreen moduleGridView textRendererMode activeFont textWeight textItalic

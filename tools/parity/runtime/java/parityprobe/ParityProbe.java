@@ -35,13 +35,17 @@ public final class ParityProbe implements ClientModInitializer {
     /** The running "count" window: label, start, end and frames seen. */
     private String countLabel;
     private long countStart, countUntil, countFrames, countSteps;
+    /** The running "pulsar-reach" approach: ticks left and the husk being sprinted at. */
+    private int reachTicks;
+    private net.minecraft.world.entity.LivingEntity reachTarget;
     @Override public void onInitializeClient() {
         root = Path.of(System.getProperty("aurora.parity.probe"));
         if (!Files.isRegularFile(root.resolve("DISPOSABLE.txt"))) throw new IllegalStateException("Disposable fixture required");
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             try {
                 var screen = NativeUi.screen(client);
-                ShapeBenchmark.cancelUnlessManager(screen instanceof WaypointManagerScreen);
+                ShapeBenchmark.cancelUnlessManager(screen instanceof WaypointManagerScreen
+                        || screen instanceof dev.phenomena.gui.screens.PhenomenaScreen);
                 // Copied port fixtures may ask for acknowledgement before quick-play.
                 if (screen != null && (screen.getClass().getSimpleName().equals("BackupConfirmScreen")
                         || screen.getTitle().getString().equals("Upgrading World Completed"))) {
@@ -65,6 +69,7 @@ public final class ParityProbe implements ClientModInitializer {
                         client.level.addParticle(net.minecraft.core.particles.ParticleTypes.FLAME, x, y, z, 0, 0.01, 0);
                     }
                 }
+                if (reachTicks > 0 && client.player != null) reachStep(client);
                 if (reloadStarted != 0 && NativeUi.overlay(client) == null) {
                     System.out.println("[parity-probe] reload overlay cleared after "
                             + (System.nanoTime() - reloadStarted) / 1_000_000 + " ms");
@@ -105,10 +110,217 @@ public final class ParityProbe implements ClientModInitializer {
         });
     }
 
+    /**
+     * Sprints at the husk while clicking the real attack key, so attacks go through Minecraft.tick's
+     * pick and startAttack with the player moving; restarts the approach from 4.6 blocks on contact.
+     */
+    private void reachStep(Minecraft client) {
+        var player = client.player;
+        if (--reachTicks == 0 || !reachTarget.isAlive()) {
+            reachTicks = 0;
+            ReachCheck.report();
+            return;
+        }
+        double dx = reachTarget.getX() - player.getX(), dz = reachTarget.getZ() - player.getZ();
+        double length = Math.hypot(dx, dz);
+        float yaw = (float) Math.toDegrees(Math.atan2(-dx, dz));
+        if (length < 1.6) {
+            player.snapTo(reachTarget.getX() - dx / length * 4.6, player.getY(), reachTarget.getZ() - dz / length * 4.6, yaw, 0);
+            return;
+        }
+        player.setYRot(yaw);
+        player.yRotO = yaw;
+        player.setXRot(0);
+        player.xRotO = 0;
+        player.setSprinting(true);
+        player.setDeltaMovement(dx / length * .28, player.getDeltaMovement().y, dz / length * .28);
+        net.minecraft.client.KeyMapping.click(InputConstants.getKey(client.options.keyAttack.saveString()));
+    }
+
     private void execute(Minecraft client, String text) throws Exception {
         String[] args = text.split(" ", 3);
         var config = AuroraConfig.get();
         switch (args[0]) {
+            case "pulsar" -> {
+                var state = dev.phenomena.gui.ui.UiState.SESSION;
+                if (args.length > 1) state.tab = dev.phenomena.gui.ui.UiState.Tab.valueOf(args[1]);
+                if (args.length > 2) {
+                    switch (state.tab) {
+                        case SETTINGS -> state.settings = dev.phenomena.gui.ui.UiState.SettingsSection.valueOf(args[2]);
+                        case OFFENSE -> state.offense = dev.phenomena.gui.ui.UiState.OffenseSection.valueOf(args[2]);
+                        case DEFENSE -> state.defense = dev.phenomena.gui.ui.UiState.DefenseSection.valueOf(args[2]);
+                        case FLOW -> state.flow = dev.phenomena.gui.ui.UiState.FlowSection.valueOf(args[2]);
+                        default -> {}
+                    }
+                }
+                dev.phenomena.PhenomenaClient.openDashboard(null);
+            }
+            case "pulsar-enable" -> config.pulsarEnabled = Boolean.parseBoolean(args[1]);
+            case "pulsar-load" -> {
+                for (var fight : java.util.List.copyOf(dev.phenomena.PhenomenaClient.history))
+                    dev.phenomena.gui.DataCache.requestTimeline(fight.id(), dev.phenomena.PhenomenaClient::historyChanged);
+            }
+            case "pulsar-detail" -> {
+                var fight = dev.phenomena.PhenomenaClient.history.get(args.length > 1 ? Integer.parseInt(args[1]) : 0);
+                dev.phenomena.gui.ui.UiState.SESSION.openFight(fight.id());
+                dev.phenomena.PhenomenaClient.openDashboard(null);
+            }
+            case "pulsar-focus" -> dev.phenomena.gui.ui.UiState.SESSION.focus = Integer.parseInt(args[1]);
+            case "pulsar-list" -> {
+                dev.phenomena.gui.ui.UiState.SESSION.closeDetail();
+                dev.phenomena.gui.ui.UiState.SESSION.tab = dev.phenomena.gui.ui.UiState.Tab.HISTORY;
+                dev.phenomena.PhenomenaClient.openDashboard(null);
+            }
+            case "pulsar-delete" -> {
+                // The real History delete confirmation: select a recorded fight, press Delete.
+                var history = dev.phenomena.PhenomenaClient.history;
+                var state = dev.phenomena.gui.ui.UiState.SESSION;
+                state.closeDetail();
+                state.tab = dev.phenomena.gui.ui.UiState.Tab.HISTORY;
+                state.selectedFight = history.get(Math.min(1, history.size() - 1)).id();
+                dev.phenomena.PhenomenaClient.openDashboard(null);
+                var delete = NativeUi.screen(client).children().stream()
+                        .filter(w -> w instanceof dev.phenomena.gui.components.KButton b
+                                && b.active && b.getMessage().getString().equals("Delete"))
+                        .map(w -> (dev.phenomena.gui.components.KButton) w)
+                        .findFirst().orElseThrow(() -> new IllegalStateException("No enabled Delete button"));
+                delete.onPress(new KeyEvent(InputConstants.KEY_RETURN, 0, 0));
+            }
+            case "pulsar-confirm" -> ((dev.phenomena.gui.screens.PhenomenaScreen) NativeUi.screen(client))
+                    .confirm("Delete recording?", "Delete this local recording? Exported reports are kept.", "Delete", () -> {});
+            case "pulsar-target" -> {
+                if (!Files.exists(root.resolve("DISPOSABLE.txt"))) throw new IllegalStateException("Disposable fixture required");
+                var server = client.getSingleplayerServer();
+                var player = client.player;
+                String command = "summon minecraft:husk " + (player.getX() + 1.8) + " " + player.getY() + " " + player.getZ()
+                        + " {NoAI:1b,PersistenceRequired:1b,Silent:1b}";
+                server.execute(() -> server.getCommands().performPrefixedCommand(server.createCommandSourceStack(), command));
+            }
+            case "pulsar-attack" -> {
+                NativeUi.setScreen(client, null);
+                var target = client.level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class,
+                        client.player.getBoundingBox().inflate(4), e -> e.getType().getDescription().getString().equals("Husk")).getFirst();
+                client.player.setYRot(-90);
+                client.player.setXRot(0);
+                client.gameMode.attack(client.player, target);
+                for (var method : client.player.getClass().getMethods()) {
+                    if (!method.getName().equals("swing")) continue;
+                    if (method.getParameterCount() == 1) {
+                        method.invoke(client.player, net.minecraft.world.InteractionHand.MAIN_HAND);
+                        break;
+                    }
+                    if (method.getParameterCount() == 3 && method.getParameterTypes()[1].isEnum()) {
+                        method.invoke(client.player, net.minecraft.world.InteractionHand.MAIN_HAND, method.getParameterTypes()[1].getEnumConstants()[0], true);
+                        break;
+                    }
+                }
+            }
+            case "pulsar-controls" -> {
+                var slider = new dev.phenomena.gui.components.KSlider("probe", 5, 0, 10, 1, v -> "" + v, v -> {});
+                slider.setX(10); slider.setWidth(155);
+                slider.onClick(new net.minecraft.client.input.MouseButtonEvent(94, 10, new net.minecraft.client.input.MouseButtonInfo(0, 0)), false);
+                if (slider.current() != 10) throw new AssertionError("Track endpoint does not map to maximum");
+                slider.setFocused(true);
+                slider.keyPressed(new KeyEvent(InputConstants.KEY_LEFT, 0, 0));
+                if (slider.current() != 9) throw new AssertionError("Arrow did not move exactly one step");
+            }
+            case "pulsar-measure" -> {
+                if (!com.aurora.client.diagnostics.FrameBenchmark.start(1, 5,
+                        () -> com.aurora.client.ui.util.RenderUtil.fillsSubmitted()
+                                + com.aurora.client.ui.util.NativeShapeRenderer.quadsSubmitted(),
+                        com.aurora.client.ui.render.blur.BlurPanelRenderer::capturesSubmitted,
+                        stats -> System.out.println("[parity-probe] pulsar-measure " + stats)))
+                    throw new IllegalStateException("Benchmark already running");
+            }
+            case "pulsar-extract-measure" -> {
+                if (!(NativeUi.screen(client) instanceof dev.phenomena.gui.screens.PhenomenaScreen))
+                    throw new IllegalStateException("Pulsar dashboard required");
+                ShapeBenchmark.armPulsar(root.resolve("pulsar-extraction.json"));
+            }
+            case "pulsar-scroll" -> ((dev.phenomena.gui.screens.PhenomenaScreen) NativeUi.screen(client))
+                    .setScroll(Integer.parseInt(args[1]));
+            case "pulsar-input" -> {
+                var dashboard = (dev.phenomena.gui.screens.PhenomenaScreen) NativeUi.screen(client);
+                int[] committed = {0};
+                dashboard.confirm("Probe", "Keyboard confirmation", "Delete", () -> committed[0]++);
+                dashboard.keyPressed(new KeyEvent(InputConstants.KEY_RETURN, 0, 0));
+                if (committed[0] != 0) throw new AssertionError("Confirmation did not default to Cancel");
+                dashboard.confirm("Probe", "Keyboard confirmation", "Delete", () -> committed[0]++);
+                dashboard.keyPressed(new KeyEvent(InputConstants.KEY_RIGHT, 0, 0));
+                dashboard.keyPressed(new KeyEvent(InputConstants.KEY_RETURN, 0, 0));
+                if (committed[0] != 1) throw new AssertionError("Confirmation keyboard action failed");
+                dashboard.confirm("Probe", "Keyboard confirmation", "Delete", () -> committed[0]++);
+                dashboard.keyPressed(new KeyEvent(InputConstants.KEY_ESCAPE, 0, 0));
+                if (committed[0] != 1) throw new AssertionError("Escape committed a destructive action");
+                double prior = client.options.screenEffectScale().get();
+                client.options.screenEffectScale().set(0.0);
+                if (!dev.phenomena.gui.theme.Theme.reducedMotion()) throw new AssertionError("Vanilla reduced motion ignored");
+                client.options.screenEffectScale().set(prior);
+            }
+            case "pulsar-readable" -> {
+                var dashboard = (dev.phenomena.gui.screens.PhenomenaScreen) NativeUi.screen(client);
+                var readable = dashboard.children().stream()
+                        .filter(child -> child instanceof dev.phenomena.gui.components.ReadableBlock)
+                        .map(child -> (dev.phenomena.gui.components.ReadableBlock) child)
+                        .filter(block -> block.narration().stream().anyMatch(line -> line.contains("Target deviation")))
+                        .findFirst().orElseThrow();
+                dashboard.setFocused(readable);
+                readable.setFocused(true);
+                client.setLastInputType(net.minecraft.client.InputType.KEYBOARD_ARROW);
+                for (int i = 0; i < readable.narration().size() && !readable.description().contains("Target deviation"); i++)
+                    dashboard.keyPressed(new KeyEvent(InputConstants.KEY_RIGHT, 0, 0));
+                if (!readable.description().contains("Mean absolute difference"))
+                    throw new AssertionError("Metric explanation unavailable through keyboard");
+                var spoken = new java.util.ArrayList<String>();
+                var output = (net.minecraft.client.gui.narration.NarrationElementOutput) java.lang.reflect.Proxy.newProxyInstance(
+                        getClass().getClassLoader(), new Class<?>[]{net.minecraft.client.gui.narration.NarrationElementOutput.class},
+                        (proxy, method, values) -> {
+                            if (method.getName().equals("nest")) return proxy;
+                            if (method.getName().equals("narrationTrigger")) return method.getReturnType().getEnumConstants()[0];
+                            if (method.getName().equals("add")) {
+                                for (Object value : values) {
+                                    if (value instanceof net.minecraft.client.gui.narration.NarrationThunk<?> thunk) thunk.getText(spoken::add);
+                                    else if (value instanceof net.minecraft.network.chat.Component component) spoken.add(component.getString());
+                                    else if (value instanceof String line) spoken.add(line);
+                                }
+                            }
+                            return null;
+                        });
+                readable.updateNarration(output);
+                if (spoken.stream().noneMatch(line -> line.contains("Target deviation") && line.contains("Mean absolute difference")))
+                    throw new AssertionError("Native narration omitted full metric explanation: " + spoken);
+                System.out.println("[parity-probe] narrated " + spoken);
+            }
+            case "pulsar-reach" -> {
+                if (!Files.exists(root.resolve("DISPOSABLE.txt"))) throw new IllegalStateException("Disposable fixture required");
+                NativeUi.setScreen(client, null);
+                var server = client.getSingleplayerServer();
+                boolean creative = args.length > 2 && args[2].equals("creative");
+                server.execute(() -> server.getCommands().performPrefixedCommand(server.createCommandSourceStack(),
+                        "gamemode " + (creative ? "creative" : "survival") + " @a"));
+                reachTarget = client.level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class,
+                        client.player.getBoundingBox().inflate(8), e -> e.getType().getDescription().getString().equals("Husk")).getFirst();
+                reachTicks = args.length > 1 ? Integer.parseInt(args[1]) : 400;
+                ReachCheck.start(creative);
+            }
+            case "pulsar-reach-stats" -> {
+                var fight = dev.phenomena.PhenomenaClient.history.getFirst();
+                if (fight.events() == null || fight.events().isEmpty())
+                    throw new IllegalStateException("Latest recording has no loaded events: " + fight.id());
+                System.out.println("[parity-probe] " + ReachCheck.stats(fight, args.length > 1 && args[1].equals("creative")));
+            }
+            case "pulsar-start" -> {
+                dev.phenomena.recording.RecordingCommands.start();
+                if (!dev.phenomena.PhenomenaClient.recording.manual()) throw new AssertionError("Manual session did not start");
+            }
+            case "pulsar-end" -> {
+                dev.phenomena.recording.RecordingCommands.end();
+                if (dev.phenomena.PhenomenaClient.recording.manual()) throw new AssertionError("Manual session did not end");
+            }
+            case "pulsar-disabled" -> {
+                if (dev.phenomena.PhenomenaClient.isInitialized()) throw new AssertionError("Disabled startup initialized storage");
+                if (Files.exists(client.gameDirectory.toPath().resolve("phenomena"))) throw new AssertionError("Disabled startup touched storage");
+            }
             case "settings" -> NativeUi.setScreen(client, AuroraScreen.create());
             case "world" -> NativeUi.setScreen(client, null);
             case "pointer" -> {
@@ -171,6 +383,7 @@ public final class ParityProbe implements ClientModInitializer {
                 config.textRendererMode = AuroraConfig.TextRendererMode.valueOf(args[2]);
             }
             case "detail" -> {
+                FeatureRegistry.modules();
                 var feature = FeatureRegistry.all().stream().filter(f -> f.id.equals(args[1])).findFirst().orElseThrow();
                 NativeUi.setScreen(client, FeatureDetailScreen.destination(AuroraScreen.create(), feature));
             }

@@ -232,6 +232,8 @@ public final class FeatureCatalog {
         module("world_map", "World Map", "A full-screen, pannable world map of your explored terrain.");
         module("resourcepack_browser", "Resourcepack Browser", "Browse and install community resource packs directly from Modrinth. Search, preview, and one-click install straight into your resourcepacks folder.");
 
+        module("pulsar", "Pulsar", "Review local combat recordings, compare them and export offline reports.");
+
         // ---- Settings tab, in display order ----
         setting("custom_title", "Custom Title");
         setting("text_fonts", "Text & Fonts");
@@ -248,6 +250,7 @@ public final class FeatureCatalog {
         setting("performance", "Performance");
 
         // ---- Fair play (ADR 0007). docs/FAIR_PLAY.md repeats these lines. ----
+        classify("pulsar", FairPlay.INFORMATION_ADVANTAGE, "Records locally observed combat, including opponents, and derives fight analytics and offline reports. It never changes attacks or sends packets.", "pulsarEnabled");
         classify("zoom", FairPlay.VANILLA_INFORMATION, "Narrows the field of view while a key is held, as the vanilla spyglass does.");
         // Full Bright and No Fog are visibility aids that ship ON. ADR 0007 keeps
         // their defaults by owner decision, so they are not in the advantage
@@ -319,6 +322,10 @@ public final class FeatureCatalog {
                 .gates("hitColorTintArmor", "hitColorTintArmorTrims");
         mixin("ReloadableTextureMixin", "recoloring the enchantment glint", "glint_color").gates("glintColorEnabled");
         mixin("GlintRenderTypesMixin", "Alternative Glint", "glint_color").gates("glintColorAlternative");
+        mixin("pulsar.MinecraftMixin", "Pulsar empty-swing observations", "pulsar").gates("pulsarEnabled");
+        mixin("pulsar.GameModeMixin", "Pulsar attack observations", "pulsar").gates("pulsarEnabled");
+        mixin("pulsar.LivingEntityMixin", "Pulsar jump observations", "pulsar").gates("pulsarEnabled");
+        mixin("pulsar.PacketListenerMixin", "Pulsar server evidence", "pulsar").gates("pulsarEnabled");
         mixin("GlintBufferSourceMixin", "Alternative Glint", "glint_color").gates("glintColorAlternative");
         mixin("RenderTypesGlintAccessor", "Alternative Glint", "glint_color").gates("glintColorAlternative");
         mixin("InGameHudPotionOverlayMixin", "hiding the vanilla effect icons behind the Potion HUD", "potion_hud");
