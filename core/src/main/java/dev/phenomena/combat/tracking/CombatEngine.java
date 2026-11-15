@@ -910,6 +910,12 @@ public final class CombatEngine {
       if (!AttackObservations.outgoing(e)) return;
       observation = attacks.observe(e, !configuredMatch || Objects.equals(e.target(), opponent));
       e = observation.event();
+      if (observation.upgraded()) {
+        var canonical = e;
+        var kept = new ArrayList<>(pending);
+        pending.clear();
+        for (var p : kept) pending.addLast(p.sequence() == canonical.sequence() ? canonical : p);
+      }
       if (!observation.newlyEligible()) return; // duplicates remain raw; no analytic side effects
     }
     if (configuredMatch
@@ -1032,8 +1038,11 @@ public final class CombatEngine {
   }
 
   private CombatEvent matchPending(String target, boolean allowShieldUpgrade) {
+    // An empty swing sends no attack packet, so server evidence can never confirm one; matching it
+    // would credit the next real hit with the swing's out-of-range miss distance.
     for (var p : pending)
       if (Objects.equals(p.target(), target)
+          && !AttackObservations.empty(p)
           && (!attacks.resolved(p.sequence())
               || allowShieldUpgrade
                   && "SHIELD_BLOCK".equals(stats.attackClassifications.get(p.sequence()))))

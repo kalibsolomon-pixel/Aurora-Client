@@ -1,5 +1,7 @@
 package dev.phenomena.combat.metrics;
 
+import com.aurora.client.pulsar.PulsarReach;
+
 import dev.phenomena.combat.events.CombatEvent.Attack;
 
 public final class Statistics {
@@ -103,12 +105,13 @@ public final class Statistics {
       hits++;
       uncertain--;
     }
-    if (a.reach() >= 0) {
-      reachSum += a.reach();
+    double reach = PulsarReach.comparable(a);
+    if (reach >= 0) {
+      reachSum += reach;
       reachCount++;
-      maxReach = Math.max(maxReach, a.reach());
-      reachDistribution[Math.min(7, (int) a.reach())]++;
-      recentReach[recentReachIndex++ % 16] = a.reach();
+      maxReach = Math.max(maxReach, reach);
+      reachDistribution[Math.min(7, (int) reach)]++;
+      recentReach[recentReachIndex++ % 16] = reach;
       recentReachCount = Math.min(16, recentReachCount + 1);
     }
     if (a.rayContact()) {

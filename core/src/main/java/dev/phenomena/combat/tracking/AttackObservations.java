@@ -20,7 +20,12 @@ public final class AttackObservations {
     UNRESOLVED
   }
 
-  public record Observation(CombatEvent event, boolean duplicate, boolean newlyEligible) {}
+  /**
+   * {@code upgraded}: a real attack replaced an empty-swing sample of an already eligible canonical
+   * input, whose pending confirmation must now carry the real attack's measurement.
+   */
+  public record Observation(
+      CombatEvent event, boolean duplicate, boolean newlyEligible, boolean upgraded) {}
 
   private final Statistics stats;
   private final Map<Long, Set<String>> targets = new LinkedHashMap<>();
@@ -77,12 +82,16 @@ public final class AttackObservations {
     boolean wasEligible =
         stats.attackClassifications.containsKey(id)
             && !Classification.EXCLUDED.name().equals(stats.attackClassifications.get(id));
-    if (!sampleEligible && validOpponent && eligible(e)) {
+    boolean upgraded = false;
+    if (validOpponent && eligible(e) && (!sampleEligible || empty(sample) && !empty(e))) {
+      // An empty swing sends no attack packet; the real attack in the same input is what the server
+      // judges, so its pick measurement (not the swing's miss distance) describes the attempt.
+      upgraded = sampleEligible && wasEligible;
       sample = e;
       sampleEligible = true;
     }
     stats.attackSamples.put(id, sample.sequence());
-    if (!stats.attackClassifications.containsKey(id) || !wasEligible) {
+    if (!stats.attackClassifications.containsKey(id) || !wasEligible || upgraded && !resolved(id)) {
       var ctx = sample.context();
       classify(
           id,
@@ -94,7 +103,8 @@ public final class AttackObservations {
                   ? Classification.UNCERTAIN_SHIELD
                   : Classification.UNRESOLVED);
     }
-    return new Observation(canonical(anchor, sample), duplicate, !wasEligible && sampleEligible);
+    return new Observation(
+        canonical(anchor, sample), duplicate, !wasEligible && sampleEligible, upgraded);
   }
 
   public boolean targets(long id, String target) {

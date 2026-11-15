@@ -1,6 +1,7 @@
 package dev.phenomena.combat.tracking;
 
 import com.aurora.client.config.AuroraConfig;
+import com.aurora.client.pulsar.PulsarReach;
 import dev.phenomena.PhenomenaClient;
 import dev.phenomena.combat.events.*;
 import dev.phenomena.combat.events.CombatEvent.*;
@@ -271,18 +272,21 @@ public final class ClientCapture {
     remember(target);
     if (PhenomenaClient.engine.acceptsTarget(
         target.getUUID().toString(), label(target.getUUID().toString()))) trackedTarget = target;
-    float partial = mc.getDeltaTracker().getGameTimeDeltaPartialTick(true);
-    var eye = player.getEyePosition(partial);
-    var view = player.getViewVector(partial);
-    var renderPos = target.getPosition(partial);
-    var pos = target.position();
-    var collision = target.getBoundingBox().move(renderPos.subtract(pos));
-    var b = collision.inflate(target.getPickRadius());
+    // Attacks run in Minecraft.tick right after pick(1.0F): measure what that pick measured, the
+    // current eye to the current target box, never frame-interpolated positions (PulsarReach).
+    var eye = player.getEyePosition(1);
+    var view = player.getViewVector(1);
+    var b = target.getBoundingBox().inflate(target.getPickRadius());
     var box = new Geometry.Box(b.minX, b.minY, b.minZ, b.maxX, b.maxY, b.maxZ);
     var origin = new Geometry.Vec(eye.x, eye.y, eye.z);
     var ray = new Geometry.Vec(view.x, view.y, view.z);
-    var contact =
-        Geometry.intersect(origin, ray, box, player.getAttackRangeWith(player.getMainHandItem()).effectiveMaxRange(player));
+    double range = player.getAttackRangeWith(player.getMainHandItem()).effectiveMaxRange(player);
+    var picked =
+        mc.hitResult instanceof EntityHitResult hit && hit.getEntity() == target
+            ? new Geometry.Vec(hit.getLocation().x, hit.getLocation().y, hit.getLocation().z)
+            : null;
+    var measured = PulsarReach.measure(origin, ray, box, range, picked);
+    var contact = measured.contact();
     var normalized = contact.map(box::normalize).orElse(new Geometry.Vec(-1, -1, -1));
     double cooldown = player.getAttackStrengthScale(.5f);
     boolean crit =
@@ -295,8 +299,8 @@ public final class ClientCapture {
             player.isMobilityRestricted(),
             player.isPassenger(),
             player.isSprinting());
-    double reach = contact.map(origin::distance).orElse(box.distance(origin));
-    var region = MeleeAim.region(origin, box, player.getAttackRangeWith(player.getMainHandItem()).effectiveMaxRange(player));
+    double reach = measured.distance();
+    var region = MeleeAim.region(origin, box, range);
     boolean visibleContact = contact.isPresent();
     if (visibleContact && mc.level != null) {
       var point = contact.get();
@@ -352,10 +356,9 @@ public final class ClientCapture {
                 box,
                 region,
                 MeleeAim.classify(normalized, region, box, visibleContact),
-                "MELEE_ATTEMPT")),
+                player.isCreative() ? PulsarReach.CREATIVE_MODE : "MELEE_ATTEMPT")),
         (empty ? "empty-swing; plausible recent opponent; " : "")
-            + "interpolated eye-to-client-target-box; partial="
-            + partial
+            + (picked != null ? "eye-to-attack-pick-contact" : "eye-to-client-target-box")
             + "; margin="
             + target.getPickRadius()
             + "; critical conditions observed",

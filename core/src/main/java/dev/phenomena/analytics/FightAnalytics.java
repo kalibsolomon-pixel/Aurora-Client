@@ -1,5 +1,7 @@
 package dev.phenomena.analytics;
 
+import com.aurora.client.pulsar.PulsarReach;
+
 import dev.phenomena.combat.events.CombatEvent;
 import dev.phenomena.combat.events.CombatEvent.Kind;
 import dev.phenomena.combat.fights.FightRecord;
@@ -343,7 +345,7 @@ public final class FightAnalytics {
               ev.attackSequence(),
               seconds(attackEvent.nanoTime(), base),
               evidenceTime,
-              a.reach(),
+              PulsarReach.comparable(a),
               a.rayContact(),
               h,
               a.rayContact() ? a.aimY() : -1,
@@ -363,7 +365,7 @@ public final class FightAnalytics {
                   : Double.NaN,
               tick));
       if (ev.readiness() != null) readiness[ev.readiness().ordinal()]++;
-      if (a.reach() >= 0) hitReachBins[reachBin(a.reach())]++;
+      if (PulsarReach.comparable(a) >= 0) hitReachBins[reachBin(PulsarReach.comparable(a))]++;
       cooldownBins[
           Math.min(COOLDOWN_BINS - 1, Math.max(0, (int) (a.cooldown() * COOLDOWN_BINS)))]++;
       if (a.rayContact()) {
@@ -451,11 +453,11 @@ public final class FightAnalytics {
                   t,
                   empty,
                   a != null,
-                  a == null ? -1 : a.reach(),
+                  a == null ? -1 : PulsarReach.comparable(a),
                   a != null && a.rayContact(),
                   a != null && a.rayContact() ? Geometry.faceHorizontal(a.aimX(), a.aimZ()) : -1,
                   a != null && a.rayContact() ? a.aimY() : -1));
-          if (a != null && a.reach() >= 0) missReachBins[reachBin(a.reach())]++;
+          if (a != null && PulsarReach.comparable(a) >= 0) missReachBins[reachBin(PulsarReach.comparable(a))]++;
         }
         case DAMAGE_IN -> {
           if (e.attributedTo(opponent)) attributedTimes.add(t);
@@ -944,7 +946,7 @@ public final class FightAnalytics {
       String grade = m == null || m.aimQuality() == null ? "UNAVAILABLE" : m.aimQuality().name();
       double dist = m == null ? Double.NaN : MeleeAim.distance(n, m.idealRegion(), m.box());
       String weapon = m == null ? "unknown" : m.item();
-      String band = reachBand(a.reach());
+      String band = reachBand(PulsarReach.comparable(a));
       samples.add(
           new AimSample(
               e.sequence(),
