@@ -7,7 +7,7 @@ import java.util.function.LongSupplier;
 
 /** Session-only, bounded completion delivery. World objects never own or reset this queue. */
 public final class ExportNotifications {
-  public static final String MESSAGE = "Fight saved; automatic HTML report ready";
+  public static final String MESSAGE = "Recording saved; HTML report ready";
   public static final int CAPACITY = 128;
   public static final long MAX_AGE_NANOS = 120_000_000_000L;
 

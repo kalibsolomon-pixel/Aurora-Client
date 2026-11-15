@@ -1,4 +1,6 @@
 {
+  "pulsarEnabled": false,
+  "pulsarKey": 14,
   "keybindVersion": 1,
   "customTitleScreen": true,
   "moduleGridView": true,

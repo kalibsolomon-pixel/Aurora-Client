@@ -68,7 +68,7 @@ class AuroraScreenNavigationTest {
         assertTrue(src.contains("for (Module m : ModuleManager.getInstance().getModules()) {\n            tileControls.put(m.id, tileControl(m));"));
         // ModuleManager derives its cards from FeatureCatalog (ADR 0004).
         assertTrue(modules.contains("FeatureCatalog.featuresOn(FeatureCatalog.Tab.MODULES)"));
-        assertEquals(33, com.aurora.client.feature.FeatureCatalog.featuresOn(com.aurora.client.feature.FeatureCatalog.Tab.MODULES).size(),
+        assertEquals(34, com.aurora.client.feature.FeatureCatalog.featuresOn(com.aurora.client.feature.FeatureCatalog.Tab.MODULES).size(),
                 "the grid's tile inventory (FeatureCatalog)");
         // Settings headers: navigation only for entries with a detail screen;
         // header toggles only for entries that have a switch (Theme, Custom

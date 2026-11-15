@@ -86,11 +86,11 @@ public final class UiState {
     }
   }
 
-  /** Fights included in the analysis tabs. */
+  /** Recordings (fights and manual sessions) included in the analysis tabs. */
   public enum Scope {
-    LAST_10("Last 10 fights", 10),
-    LAST_25("Last 25 fights", 25),
-    ALL("All fights", Integer.MAX_VALUE);
+    LAST_10("Last 10 recordings", 10),
+    LAST_25("Last 25 recordings", 25),
+    ALL("All recordings", Integer.MAX_VALUE);
 
     public final String label;
     public final int limit;

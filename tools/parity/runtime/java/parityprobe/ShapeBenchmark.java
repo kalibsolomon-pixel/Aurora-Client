@@ -19,6 +19,7 @@ public final class ShapeBenchmark {
     private static int frames;
     private static long start, previousStart, firstFills, firstQuads;
     private static InactivityFpsLimit previousInactivityLimit;
+    private static String screenScope = "WaypointManagerScreen";
 
     private ShapeBenchmark() {}
 
@@ -31,6 +32,12 @@ public final class ShapeBenchmark {
         frames = 0;
         start = 0;
         previousStart = 0;
+        screenScope = "WaypointManagerScreen";
+    }
+
+    public static void armPulsar(Path output) {
+        arm(output);
+        screenScope = "PhenomenaScreen";
     }
 
     /** Restore the fixture's option when a run completes, is replaced or is cancelled. */
@@ -72,10 +79,10 @@ public final class ShapeBenchmark {
         double mean = Arrays.stream(nanos).average().orElseThrow() / 1_000_000.0;
         var window = Minecraft.getInstance().getWindow();
         var data = new LinkedHashMap<String, Object>();
-        data.put("scope", "Elapsed time in WaypointManagerScreen.extractRenderState; excludes deferred GUI rendering and total GPU time");
+        data.put("scope", "Elapsed time in " + screenScope + ".extractRenderState; excludes deferred GUI rendering and total GPU time");
         data.put("frameIntervalScope", "Elapsed time between successive manager extractions, including rendering, waits and frame pacing");
         data.put("inactivityFpsLimit", "MINIMIZED during measurement; previous option restored afterward");
-        data.put("waypoints", 40);
+        if (screenScope.equals("WaypointManagerScreen")) data.put("waypoints", 40);
         data.put("warmupFrames", WARMUP);
         data.put("sampleFrames", SAMPLES);
         data.put("framebufferWidth", window.getWidth());
@@ -89,6 +96,7 @@ public final class ShapeBenchmark {
         data.put("shaderQuadsPerFrame", (double) quads / SAMPLES);
         try {
             Files.writeString(result, new GsonBuilder().setPrettyPrinting().create().toJson(data) + "\n");
+            System.out.println("[parity-probe] extraction benchmark complete: " + result);
         } catch (Exception failure) {
             throw new RuntimeException("Could not write shape benchmark", failure);
         } finally {

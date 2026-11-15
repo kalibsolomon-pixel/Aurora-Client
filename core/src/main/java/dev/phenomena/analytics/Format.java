@@ -62,6 +62,18 @@ public final class Format {
     return "Entity " + (uuid.length() > 8 ? uuid.substring(0, 8) : uuid);
   }
 
+  /**
+   * The list label for a recording: a manual session with no declared outcome reads "No result"
+   * rather than "Unknown", which would look like a missing value.
+   */
+  public static String result(dev.phenomena.combat.fights.FightRecord f) {
+    return f.manual()
+            && f.resolution().classification()
+                == dev.phenomena.combat.fights.Resolution.Classification.UNKNOWN
+        ? "No result"
+        : result(f.resolution());
+  }
+
   /** Short list label: the result with its evidence strength, e.g. "Win (confirmed)". */
   public static String result(dev.phenomena.combat.fights.Resolution r) {
     return switch (r.classification()) {

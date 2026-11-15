@@ -130,6 +130,13 @@ class InterfaceTest {
     assertEquals(500, Layout.reveal(0, 200, 600, 700));
     assertEquals(50, Layout.reveal(300, 200, 50, 70));
     assertEquals(300, Layout.reveal(300, 200, 350, 400));
+    // Dragging the thumb inverts its own travel, so grabbing it never jumps the content.
+    for (int scroll : new int[] {0, 150, 300, 600}) {
+      var thumb = Layout.thumb(track, 800, scroll);
+      assertEquals(scroll, Layout.scrollForThumb(track, 800, thumb.y()), 2);
+    }
+    assertEquals(0, Layout.scrollForThumb(track, 800, 0));
+    assertEquals(600, Layout.scrollForThumb(track, 800, 900));
   }
 
 

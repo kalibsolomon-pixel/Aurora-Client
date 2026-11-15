@@ -16,11 +16,11 @@ public final class MetricDefs {
               "Combat accuracy",
               "%",
               "Inferred",
-              "Correlated hits / (attempts minus confirmed shield blocks). Uncertain attempts stay"
+              "Confirmed hits / (attempts minus confirmed shield blocks). Uncertain attempts stay"
                   + " in the denominator."),
           new Def(
               "hits",
-              "Correlated hits",
+              "Confirmed hits",
               "",
               "Confirmed source",
               "Server melee damage events from the local player, matched to an attack."),
@@ -29,14 +29,14 @@ public final class MetricDefs {
               "Attack attempts",
               "",
               "Observed",
-              "Unique eligible combat attempts. Noncombat inputs and duplicates are excluded in"
-                  + " 0.1.6; historical measurements keep their original policy."),
+              "Unique eligible combat attempts. Noncombat inputs and duplicates are excluded;"
+                  + " older recordings keep their original policy."),
           new Def(
               "emptyMisses",
               "Eligible misses",
               "",
               "Observed",
-              "Aimed empty swings with opponent geometry and no confirmation within the correlation"
+              "Aimed empty swings with opponent geometry and no server confirmation in the confirmation"
                   + " window. Inferred misses, not proof of server rejection. Historical"
                   + " empty-swing counts retain their older policy."),
           new Def(
@@ -50,31 +50,31 @@ public final class MetricDefs {
               "Average reach",
               "m",
               "Observed",
-              "Client eye-to-hitbox distance on correlated hits. Not a server verdict."),
+              "Eye to attack-pick contact on confirmed survival hits. Not a server verdict."),
           new Def(
               "maxReach",
               "Maximum reach",
               "m",
               "Observed",
-              "Largest client-measured distance on a correlated hit."),
+              "Largest eye to attack-pick contact on a confirmed survival hit."),
           new Def(
               "criticalRate",
               "Critical-hit rate",
               "%",
               "Observed",
-              "Hits with critical conditions / correlated hits. Damage is not verified."),
+              "Hits with critical conditions / confirmed hits. Damage is not verified."),
           new Def(
               "sprintRate",
               "Sprint-hit rate",
               "%",
               "Observed",
-              "Hits made while sprinting / correlated hits. Knockback is not verified."),
+              "Hits made while sprinting / confirmed hits. Knockback is not verified."),
           new Def(
               "averageInterval",
               "Average hit interval",
               "s",
               "Observed",
-              "Mean attack-time gap between consecutive correlated hits."),
+              "Mean attack-time gap between consecutive confirmed hits."),
           new Def(
               "intervalDeviation",
               "Interval deviation",
@@ -106,7 +106,7 @@ public final class MetricDefs {
               "Legacy momentum",
               "",
               "Inferred",
-              "0.1.0-0.1.2 per-hit value: +0.20 per hit, -0.25 per attributed incoming hit, 3 s"
+              "Older recordings' per-hit value: +0.20 per hit, -0.25 per attributed incoming hit, 3 s"
                   + " decay. Superseded by encounter dominance."),
           new Def(
               "incoming",
@@ -120,8 +120,8 @@ public final class MetricDefs {
               "Unattributed damage",
               "",
               "Observed",
-              "Damage with no cause entity (fall, fire, environment) or from a third party. Never"
-                  + " counted as opponent retaliation."),
+              "Damage whose cause the server did not report (fall, fire, environment). Third-party"
+                  + " damage is shown separately. Neither counts as opponent retaliation."),
           new Def(
               "attacksIntoShield",
               "Attacks into a raised shield",
@@ -259,7 +259,7 @@ public final class MetricDefs {
               "",
               "Observed",
               "Incoming hits with a server velocity update for you within one tick."),
-          new Def("fights", "Recorded fights", "", "Observed", "Fights in local history."));
+          new Def("fights", "Recordings", "", "Observed", "Fights and manual sessions in local history."));
 
   private static final Map<String, Def> BY_KEY = new HashMap<>();
 

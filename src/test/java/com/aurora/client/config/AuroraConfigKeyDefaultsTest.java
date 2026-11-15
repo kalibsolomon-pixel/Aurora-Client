@@ -24,8 +24,9 @@ class AuroraConfigKeyDefaultsTest {
         assertInitializer(src, "toggleSneakKey", com.aurora.client.TestKeyboard.stored(InputConstants.KEY_K));
         assertInitializer(src, "hudEditorKey", com.aurora.client.TestKeyboard.stored(InputConstants.KEY_RSHIFT));
         assertInitializer(src, "worldMapKey", com.aurora.client.TestKeyboard.stored(InputConstants.KEY_M));
+        assertInitializer(src, "pulsarKey", com.aurora.client.TestKeyboard.stored(InputConstants.KEY_K));
         for (String field : KeybindMigrator.KEY_FIELDS) {
-            if (!java.util.Set.of("zoomKey", "freeLookKey", "toggleSprintKey", "toggleSneakKey", "hudEditorKey", "worldMapKey").contains(field))
+            if (!java.util.Set.of("zoomKey", "freeLookKey", "toggleSprintKey", "toggleSneakKey", "hudEditorKey", "worldMapKey", "pulsarKey").contains(field))
                 assertInitializer(src, field, -1);
         }
         try (var in = getClass().getResourceAsStream("/assets/aurora/defaults/3.2.0.json")) {

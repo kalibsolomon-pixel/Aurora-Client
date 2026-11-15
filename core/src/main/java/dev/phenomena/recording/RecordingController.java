@@ -121,13 +121,13 @@ public final class RecordingController {
     engine.manualExchanges = true;
     nextCheckpoint = now;
     tick(now, tick);
-    notice.accept("Manual recording started. Use /kwm end to save the recording and HTML report.");
+    notice.accept("Manual recording started. Use /pulsar end to save the recording and HTML report.");
     return true;
   }
 
   public boolean end(long now, long tick) {
     if (!manual()) {
-      notice.accept("No manual recording is active. Use /kwm start first.");
+      notice.accept("No manual recording is active. Use /pulsar start first.");
       return false;
     }
     terminate(now, tick, "Manual end", false);
@@ -266,7 +266,8 @@ public final class RecordingController {
         new MatchEvidence(server, local, null, Confidence.OBSERVED, List.of(), start),
         new Resolution(
             Resolution.Classification.of(outcome, false),
-            Resolution.Source.EXTERNAL,
+            // A manual session ends when the player ends it; interruptions stay external.
+            interrupted ? Resolution.Source.EXTERNAL : Resolution.Source.MANUAL,
             Confidence.OBSERVED,
             Resolution.Scope.ENGAGEMENT,
             now,

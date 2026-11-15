@@ -94,6 +94,16 @@ public final class FeatureRegistry {
         AuroraConfig cfg = AuroraConfig.get();
 
         // ============ MODULES TAB ============
+        addWithSettings("pulsar",
+                "Local combat analytics, recoverable recordings and offline reports. Capture observes vanilla play without changing attacks or network traffic.",
+                () -> cfg.pulsarEnabled, v -> cfg.pulsarEnabled = v,
+                List.of(mappingAction("Open Pulsar", "Review recordings, analytics and capture settings.", screen ->
+                                com.aurora.client.adapter.NativeUi.setScreen(net.minecraft.client.Minecraft.getInstance(), new dev.phenomena.gui.screens.PhenomenaScreen(screen))),
+                        new KeybindSetting("Dashboard key", () -> cfg.pulsarKey, v -> cfg.pulsarKey = v),
+                        new BooleanSetting("Automatic capture", () -> cfg.pulsarSettings.tracking, v -> cfg.pulsarSettings.tracking = v),
+                        new BooleanSetting("Record finished fights", () -> cfg.pulsarSettings.recording, v -> cfg.pulsarSettings.recording = v),
+                        new BooleanSetting("Anonymize reports", () -> cfg.pulsarSettings.anonymizeExports, v -> cfg.pulsarSettings.anonymizeExports = v)));
+
 
         addWithSettings("world_map",
                 "A full-screen, pannable world map of your explored terrain. Chunks you visit are captured in the background and stitched into persistent region tiles on disk, so the map survives restarts and grows as you explore.",

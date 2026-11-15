@@ -74,7 +74,8 @@ public record Resolution(
     EVENT_LIMIT("Event limit"),
     CLIENT("Client stopped or reset"),
     EXTERNAL("External finalization"),
-    LEGACY("Recorded before 0.1.3");
+    MANUAL("Ended by you"),
+    LEGACY("Older recording");
 
     public final String label;
 

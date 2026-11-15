@@ -89,6 +89,16 @@ public final class Layout {
     return new Rect(track.x(), y, track.w(), h);
   }
 
+  /** Inverse of {@link #thumb}: the scroll that puts the thumb's top edge at {@code thumbTop}. */
+  public static int scrollForThumb(Rect track, int content, int thumbTop) {
+    var thumb = thumb(track, content, 0);
+    if (thumb == null) return 0;
+    int travel = track.h() - thumb.h();
+    if (travel <= 0) return 0;
+    double t = Math.max(0, Math.min(1, (thumbTop - track.y()) / (double) travel));
+    return (int) Math.round(t * (content - track.h()));
+  }
+
   /** Scroll that brings [top, bottom) into a viewport of given height, changing as little as possible. */
   public static int reveal(int scroll, int viewport, int top, int bottom) {
     if (top < scroll) return top;

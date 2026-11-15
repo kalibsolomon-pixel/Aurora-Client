@@ -21,7 +21,7 @@ public final class Interpretation {
             + r.classification().label
             + " ("
             + r.source().label
-            + (r.derived() ? ", derived from a recording made before 0.1.3" : "")
+            + (r.derived() ? ", derived from an older recording" : "")
             + ").");
 
     var local = a.combos.streaks().stream().filter(s -> s.side() == Combos.Side.LOCAL).toList();
@@ -41,7 +41,13 @@ public final class Interpretation {
     else if (!a.hits.isEmpty()) out.add("No two of your confirmed hits landed consecutively.");
 
     String availability = a.opponentComboAvailability();
-    if (!"Observed".equals(availability))
+    if (f.manual())
+      // A manual session tracks no opponent; that, not unattributed damage, is the reason.
+      out.add(
+          a.hits.isEmpty() && a.misses.isEmpty()
+              ? "No combat was recorded in this manual session."
+              : "Manual sessions have no tracked opponent, so opponent combos are unavailable.");
+    else if (!"Observed".equals(availability))
       out.add(
           "Some incoming damage could not be attributed to the opponent, so opponent combos are "
               + availability.toLowerCase(Locale.ROOT)
@@ -60,6 +66,8 @@ public final class Interpretation {
               reach.eligible()));
 
     var d = a.dominance;
+    // An empty manual session has said so already; dominance adds nothing.
+    if (f.manual() && a.hits.isEmpty() && a.misses.isEmpty()) return out;
     switch (d.availability) {
       case INCOMPLETE ->
           out.add(

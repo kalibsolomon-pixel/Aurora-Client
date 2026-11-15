@@ -10,6 +10,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.file.Path;
+import java.nio.file.Files;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -145,6 +146,33 @@ class PulsarSettingsIntegrationTest {
         assertTrue(settings.chatSummary);
         assertFalse(settings.hudOverlay);
         assertNull(settings.display);
+    }
+
+    @Test void unsupportedProfileSchemaFallsBackWithoutChangingItsRecoverableInput() throws Exception {
+        Profile invalid = profile("{\"pulsarSettings\":{\"schemaVersion\":999},\"pulsarEnabled\":false}");
+        assertDoesNotThrow(() -> apply(invalid));
+        assertEquals(Config.SCHEMA, AuroraConfig.get().pulsarSettings.schemaVersion);
+        assertEquals(999, invalid.fields.get("pulsarSettings").getAsJsonObject().get("schemaVersion").getAsInt());
+        Config stable = new Config();
+        Config unsupported = new Config();
+        unsupported.schemaVersion = 999;
+        AuroraConfig.get().pulsarSettings = unsupported;
+        assertDoesNotThrow(() -> PulsarConfigBridge.reload(stable));
+        assertSame(stable, AuroraConfig.get().pulsarSettings);
+        assertEquals(Config.SCHEMA, stable.schemaVersion);
+    }
+
+    @Test void unsupportedDiskSchemaPreservesInputAndUnrelatedPreferences() throws Exception {
+        String input = "{\"pulsarSettings\":{\"schemaVersion\":999},\"pulsarEnabled\":false,\"zoomLevel\":7}";
+        Files.writeString(directory.resolve("aurora.json"), input);
+        AuroraConfig.load();
+        assertEquals(Config.SCHEMA, AuroraConfig.get().pulsarSettings.schemaVersion);
+        assertEquals(7, AuroraConfig.get().zoomLevel);
+        try (var files = Files.list(directory)) {
+            Path backup = files.filter(path -> path.getFileName().toString().startsWith("aurora.json.pulsar-invalid-"))
+                    .findFirst().orElseThrow();
+            assertEquals(input, Files.readString(backup));
+        }
     }
 
     private static Profile profile(String fields) {

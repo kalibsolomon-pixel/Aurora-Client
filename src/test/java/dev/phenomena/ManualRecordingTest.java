@@ -117,6 +117,26 @@ class ManualRecordingTest {
   }
 
   @Test
+  void manualSessionsNeverClaimUnattributedDamage() {
+    // A manual session tracks no opponent; the overview must say that, not invent damage evidence.
+    start();
+    var emptyFight = end(3);
+    assertEquals(Resolution.Source.MANUAL, emptyFight.resolution().source(), "the player ended it");
+    assertEquals("No result", dev.phenomena.analytics.Format.result(emptyFight), "not a missing value");
+    var empty = dev.phenomena.analytics.Interpretation.of(dev.phenomena.analytics.FightAnalytics.of(emptyFight));
+    assertTrue(empty.contains("No combat was recorded in this manual session."), empty.toString());
+    assertTrue(empty.stream().noneMatch(line -> line.contains("could not be attributed")), empty.toString());
+    assertTrue(empty.stream().noneMatch(line -> line.contains("dominance")), "nothing to add: " + empty);
+    start();
+    hit(1, "B");
+    var fought = dev.phenomena.analytics.Interpretation.of(dev.phenomena.analytics.FightAnalytics.of(end(4)));
+    assertTrue(
+        fought.contains("Manual sessions have no tracked opponent, so opponent combos are unavailable."),
+        fought.toString());
+    assertTrue(fought.stream().noneMatch(line -> line.contains("could not be attributed")), fought.toString());
+  }
+
+  @Test
   void idleManualSessionRemainsActive() {
     start();
     controller.tick(Sim.ns(36000), 720020);

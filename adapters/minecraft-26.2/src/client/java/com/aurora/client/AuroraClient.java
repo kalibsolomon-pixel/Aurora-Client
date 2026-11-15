@@ -54,9 +54,11 @@ public class AuroraClient implements ClientModInitializer {
         // One-time migration of the per-effect Effect-Expiry alert model:
         // the just-shipped exclusion set becomes an inclusion list
         // (registry minus exclusions), preserving exactly what alerted
-        // before. Runs here for the same reason as HitregMigrator above —
+        // before. Runs here for the same reason as HitregMigrator above â€”
         // after the profile apply, which would otherwise wipe the result.
         com.aurora.client.config.EffectExpiryMigrator.runOnce();
+
+        dev.phenomena.PhenomenaClient.initialize();
 
         registerAuroraKeybinds();
         // Profiles carry the game's own bindings too ("Separate controls"). Installed
@@ -120,7 +122,7 @@ public class AuroraClient implements ClientModInitializer {
         LevelRenderEvents.BEFORE_BLOCK_OUTLINE.register(Timed.beforeBlockOutline(blockOverlayRenderer::onBeforeBlockOutline));
         LevelRenderEvents.AFTER_TRANSLUCENT_FEATURES.register(Timed.afterFeatures(blockOverlayRenderer::render));
 
-        // Container preview — map Aurora's tooltip data to its renderer.
+        // Container preview â€” map Aurora's tooltip data to its renderer.
         net.fabricmc.fabric.api.client.rendering.v1.ClientTooltipComponentCallback.EVENT.register(data -> {
             if (data instanceof com.aurora.client.hud.preview.AuroraContainerTooltipData acd) {
                 return new com.aurora.client.hud.preview.AuroraContainerTooltipComponent(acd);
@@ -157,7 +159,7 @@ public class AuroraClient implements ClientModInitializer {
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(Timed.endTick(
                 client -> com.aurora.client.util.AuroraKeybinds.tick()));
 
-        // Isolated blur-panel test screen — verification harness for the
+        // Isolated blur-panel test screen â€” verification harness for the
         // blur+tint panel foundation. Opens only in-world with no other
         // screen open; never reachable from another Aurora screen.
         final com.aurora.client.util.AuroraKey.EdgeDetector blurTestEdge =
@@ -196,7 +198,7 @@ public class AuroraClient implements ClientModInitializer {
         hudRenderer = new HudRenderer();
         HudElementRegistry.addLast(id("hud_modules"), Timed.hud(hudRenderer::render));
 
-        // Unified alert popup renderer — serves all alert sources
+        // Unified alert popup renderer â€” serves all alert sources
         // (durability, hunger, effect expiry).
         com.aurora.client.hud.AlertRenderer alertRenderer = new com.aurora.client.hud.AlertRenderer();
         HudElementRegistry.addLast(id("alerts"), Timed.hud((ctx, tickCounter) -> {
@@ -217,7 +219,7 @@ public class AuroraClient implements ClientModInitializer {
             // Persist the active profile BEFORE the blocking config save so
             // the outgoing state lands on disk. Uses the blocking variant
             // because the async profile save runs on a daemon thread the JVM
-            // will not wait for on exit — same rationale as saveBlocking().
+            // will not wait for on exit â€” same rationale as saveBlocking().
             ProfileManager.getInstance().saveCurrentBlocking();
             AuroraConfig.saveBlocking();
         }, "Aurora-ConfigSave"));
@@ -268,12 +270,15 @@ public class AuroraClient implements ClientModInitializer {
      * details.
      *
      * <p>Defaults here mirror the field defaults in
-     * {@link AuroraConfig} — they are only used by vanilla's "reset to
+     * {@link AuroraConfig} â€” they are only used by vanilla's "reset to
      * default" affordance, not as initial bound values (those come from
      * the config getter at registration time).
      */
     private static void registerAuroraKeybinds() {
         AuroraConfig cfg = AuroraConfig.get();
+        com.aurora.client.util.AuroraKeybinds.register(
+                "key.aurora.pulsar", com.mojang.blaze3d.platform.InputConstants.KEY_K,
+                () -> cfg.pulsarKey, v -> cfg.pulsarKey = v);
         com.aurora.client.util.AuroraKeybinds.register(
                 "key.aurora.zoom",
                 com.mojang.blaze3d.platform.InputConstants.KEY_C,
@@ -322,7 +327,7 @@ public class AuroraClient implements ClientModInitializer {
                 "key.aurora.blur_test",
                 com.aurora.client.util.AuroraKey.UNBOUND,
                 () -> cfg.blurTestKey,         v -> cfg.blurTestKey = v);
-        // Better Hitreg — all six deliberately unbound by default. The
+        // Better Hitreg â€” all six deliberately unbound by default. The
         // original mod bound H (its menu) and all four arrow keys (the
         // practice scoreboard), which grabbed the arrows in every context;
         // the settings are reachable from the Mods grid, so H stays free.

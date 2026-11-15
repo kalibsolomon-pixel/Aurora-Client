@@ -48,6 +48,7 @@ public final class FeatureIcons {
         ICONS.put("animations",            "\uE038"); // animation
         ICONS.put("keystrokes",            "\uE312"); // keyboard
         ICONS.put("minimap",               "\uE2C5"); // file_map
+        ICONS.put("pulsar", "\uE26B"); // insights
         ICONS.put("world_map",             "\uF3CA"); // map_search
         ICONS.put("resourcepack_browser",  "\uE8B0"); // browse_gallery (grid of tiles)
         // Moved to the Modules grid 2026-09-10 (was a Settings-tab entry).

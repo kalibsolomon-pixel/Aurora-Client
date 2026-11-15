@@ -42,6 +42,7 @@ Changing a default does not change an existing install: a player who already had
 
 | Feature | Class | What it does |
 |---|---|---|
+| Pulsar | Information advantage | Records locally observed combat, including opponents, and derives fight analytics and offline reports. It never changes attacks or sends packets. |
 | Zoom | Vanilla equivalent | Narrows the field of view while a key is held, as the vanilla spyglass does. |
 | Full Bright | Vanilla equivalent | Extends the vanilla Brightness setting past its maximum, so unlit areas are visible. Off in a fresh install. |
 | No Fog | Vanilla equivalent | Pushes distance fog back, so terrain inside your render distance is visible sooner than in vanilla. Off in a fresh install. |

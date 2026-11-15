@@ -45,7 +45,7 @@ public final class PhenomenaClient {
   private static final AuroraKey.EdgeDetector OPEN_KEY = new AuroraKey.EdgeDetector();
   private static boolean registered, initialized, enabledLastTick, stopping;
   private static final int MAX_RECOVERED_SESSIONS = 128;
-  private static final long RECOVERY_BYTES = 64L * 1024 * 1024;
+  private static final long RECOVERY_BYTES = FightStore.MAX_RECORDING_BYTES;
 
   private PhenomenaClient() {}
 
@@ -93,8 +93,8 @@ public final class PhenomenaClient {
 
   /** Explicit dashboard access may load local history even while capture is disabled. */
   public static void ensureReady() {
-    if (initialized || stopping) return;
     PulsarConfigBridge.reload(config);
+    if (initialized || stopping) return;
     config.validate();
     var loader = FabricLoader.getInstance();
     // Keep standalone history in place. Never import or rewrite standalone configuration.
@@ -164,6 +164,7 @@ public final class PhenomenaClient {
 
   private static boolean synchronizeEnabled() {
     if (stopping) return false;
+    if (initialized) PulsarConfigBridge.reload(config);
     boolean enabled = AuroraConfig.get().pulsarEnabled;
     if (enabled) {
       PulsarConfigBridge.reload(config);
@@ -298,9 +299,9 @@ public final class PhenomenaClient {
           fight.resolution().classification().label
               + " / "
               + fight.statistics().hits
-              + " hits / "
+              + (fight.statistics().hits == 1 ? " hit / " : " hits / ")
               + fight.statistics().attempts
-              + " attacks");
+              + (fight.statistics().attempts == 1 ? " attack" : " attacks"));
   }
 
   public static ReportExporter.Options reportOptions() {
@@ -329,7 +330,43 @@ public final class PhenomenaClient {
   }
 
   public static void saveConfig() {
+    PulsarConfigBridge.reload(config);
     config.validate();
     PulsarConfigBridge.save(config);
+  }
+
+  /** Explicit, read-only import; Aurora keeps control of the theme, key and feature state. */
+  public static void importStandaloneSettings() {
+    ensureReady();
+    if (recording.manual() || engine.engaged()) {
+      notice("Finish the current recording before importing settings.");
+      return;
+    }
+    store.submit(() -> {
+      Path directory = FabricLoader.getInstance().getConfigDir();
+      Path source = directory.resolve("phenomena.json");
+      if (!Files.exists(source, LinkOption.NOFOLLOW_LINKS)) source = directory.resolve("kwamster.json");
+      try {
+        if (Files.isSymbolicLink(source) || !Files.isRegularFile(source, LinkOption.NOFOLLOW_LINKS))
+          throw new IOException("No standalone phenomena.json or kwamster.json found");
+        if (Files.size(source) > 1024 * 1024) throw new IOException("Standalone settings exceed 1 MiB");
+        Config imported = AtomicJson.GSON.fromJson(Files.readString(source), Config.class);
+        if (imported == null) throw new IOException("Standalone settings are empty");
+        imported.validate();
+        Minecraft.getInstance().execute(() -> {
+          if (recording.manual() || engine.engaged()) {
+            notice("Finish the current recording before importing settings.");
+            return;
+          }
+          AuroraConfig.get().pulsarSettings = imported;
+          PulsarConfigBridge.reload(config);
+          PulsarConfigBridge.save(config);
+          historyChanged();
+          notice("Standalone settings imported. The original file is unchanged.");
+        });
+      } catch (IOException | RuntimeException error) {
+        notice("Settings import failed: " + error.getMessage());
+      }
+    });
   }
 }
