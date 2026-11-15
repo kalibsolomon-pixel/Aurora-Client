@@ -5,13 +5,10 @@ import net.minecraft.world.item.Items;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.phys.Vec3;
 import com.aurora.client.hitreg.settings.Settings;
-import com.aurora.client.hitreg.settings.Toggle;
 import com.aurora.client.hitreg.util.HitTracker;
 import com.aurora.client.hitreg.util.MultiVersion;
 import com.aurora.client.hitreg.util.OnlyAnimate;
 import com.aurora.client.hitreg.util.Scheduler;
-
-import java.util.ArrayList;
 
 import static com.aurora.client.hitreg.Hitreg.*;
 import static com.aurora.client.hitreg.Hitreg.alreadyAnimated;
@@ -48,9 +45,6 @@ public class Hit {
     public boolean sprintWasReset;
 
     public boolean shouldAnimate;
-    public boolean shouldMakeSound;
-    public boolean shouldSoundBeLegacy;
-    public boolean shouldSpawnParticles;
     public boolean shouldKnockback;
     public boolean shouldCrit;
     public boolean shouldSweep;
@@ -61,8 +55,6 @@ public class Hit {
 
     public SoundEvent expectedSound;
     public HitType type;
-    public ArrayList<HitType> potentialServerTypes = new ArrayList<>();
-    public boolean wasServerRight;
     public boolean wasAnimated;
     public boolean wasNewTarget;
     public boolean wasHitByAnother;
@@ -72,12 +64,11 @@ public class Hit {
         timestamp = System.currentTimeMillis();
     }
 
+    //Aurora keeps only the custom hitreg (2026-11-15): the animation, sound and particle toggles
+    //upstream read here were removed, so each behaves as its default (off)
     public void updateSettings() {
-        shouldAnimate = !Toggle.HIDE_ANIMATIONS.toggled() && !tooEarlyForDamage;
-        shouldMakeSound = !Toggle.SILENCE_SELF.toggled();
-        shouldSoundBeLegacy = Toggle.LEGACY_SOUNDS.toggled();
-        shouldSpawnParticles = !Toggle.HIDE_ALL_PARTICLES.toggled();
-        shouldSpawnSharpnessParticles = !Toggle.HIDE_OTHER_PARTICLES.toggled() && (swordHadSharpness || Toggle.PARTICLES_EVERY_HIT.toggled());
+        shouldAnimate = !tooEarlyForDamage;
+        shouldSpawnSharpnessParticles = swordHadSharpness;
     }
 
     public void load() {
@@ -114,19 +105,10 @@ public class Hit {
 
         if (shouldAnimate) target.handleDamageEvent(new OnlyAnimate(target.damageSources().generic()));
 
-        if (shouldMakeSound) {
-            Vec3 location = getLerpedPosition(target);
+        Vec3 location = getLerpedPosition(target);
+        type.playSounds(location);
 
-            if (shouldSoundBeLegacy) {
-                if (!tooEarlyForDamage) HitType.HALF_PICK.playSounds(location);
-            } else {
-                type.playSounds(location);
-            }
-        }
-
-        if (shouldSpawnParticles) {
-            if (shouldCrit) playParticles("CRIT", target);
-            if (shouldSpawnSharpnessParticles) playParticles("ENCHANTED_HIT", target);
-        }
+        if (shouldCrit) playParticles("CRIT", target);
+        if (shouldSpawnSharpnessParticles) playParticles("ENCHANTED_HIT", target);
     }
 }

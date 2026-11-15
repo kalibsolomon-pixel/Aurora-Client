@@ -115,7 +115,7 @@ class FeatureHealthTest {
 
     @Test void anyBetterHitregMixinTurnsTheWholeFeatureOff() {
         FakeConfig cfg = new FakeConfig();
-        fail("hitreg.SoundMixin");
+        fail("hitreg.AttackMixin");
         FeatureHealth.enforce(cfg);
         assertFalse(cfg.hitregEnabled);
         assertNotNull(FeatureHealth.noteFor("better_hitreg"));
@@ -147,21 +147,21 @@ class FeatureHealthTest {
         assertEquals(1, MixinHealth.failures().size());
 
         ErrorAction nested = handler.onPrepareError(null, cause,
-                mixinNamed("com.aurora.client.mixin.hitreg.ArmorMixin"), ErrorAction.WARN);
+                mixinNamed("com.aurora.client.mixin.hitreg.DamageMixin"), ErrorAction.WARN);
         assertEquals(ErrorAction.WARN, nested);
-        assertTrue(MixinHealth.failed("hitreg.ArmorMixin"));
+        assertTrue(MixinHealth.failed("hitreg.DamageMixin"));
     }
 
     @Test void theDisableOptionSkipsAMixinAndRecordsIt() {
         String before = System.getProperty(AuroraMixinPlugin.DISABLE_PROPERTY);
-        System.setProperty(AuroraMixinPlugin.DISABLE_PROPERTY, "GameRendererMixin, hitreg.ArmorMixin");
+        System.setProperty(AuroraMixinPlugin.DISABLE_PROPERTY, "GameRendererMixin, hitreg.DamageMixin");
         try {
             AuroraMixinPlugin plugin = new AuroraMixinPlugin();
             // onLoad also registers the error handler with Mixin, which is not
             // bootstrapped in a unit test; the property parsing is what matters here.
             try { plugin.onLoad(AuroraMixinPlugin.MIXIN_PACKAGE); } catch (Throwable ignored) {}
             assertFalse(plugin.shouldApplyMixin("a.B", "com.aurora.client.mixin.GameRendererMixin"));
-            assertFalse(plugin.shouldApplyMixin("a.B", "com.aurora.client.mixin.hitreg.ArmorMixin"));
+            assertFalse(plugin.shouldApplyMixin("a.B", "com.aurora.client.mixin.hitreg.DamageMixin"));
             assertTrue(plugin.shouldApplyMixin("a.B", "com.aurora.client.mixin.MouseMixin"));
             assertEquals(MixinHealth.Cause.DISABLED_BY_OPTION, MixinHealth.failure("GameRendererMixin").cause());
             assertTrue(FeatureHealth.noteFor("zoom").contains(AuroraMixinPlugin.DISABLE_PROPERTY));

@@ -6,7 +6,6 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.phys.Vec3;
 import com.aurora.client.hitreg.HitType;
 import com.aurora.client.hitreg.Hitreg;
-import com.aurora.client.hitreg.settings.Toggle;
 
 import static com.aurora.client.hitreg.Hitreg.*;
 
@@ -43,7 +42,6 @@ public class Sound {
     public void register() {
         if ((modern || legacy) && couldBeFromYou()) {
             this.hitType = HitType.of(event);
-            if (hitType != null) HitTracker.add(this);
         }
     }
 
@@ -72,21 +70,20 @@ public class Sound {
         return Math.abs(time - timestamp);
     }
 
-    //15ms was the highest amount of jitter that I found didn't affect other fights
-    //use 50ms for most cases except silencing other fights in case the user has an unstable connection
+    //use 50ms in case the user has an unstable connection (upstream narrowed it to 15ms only while silencing other fights, which Aurora removed)
 
     public boolean wasFromYou() {
         //if you attacked over a second ago, it wasn't you assuming your hit didn't have 1,000ms delay
         if (timestamp - lastAttack > 1000) return false;
         long you = distanceFromTimestamp(lastAnimation);
         long them = distanceFromTimestamp(lastAttacked);
-        return you <= them && you <= (Toggle.SILENCE_OTHER_FIGHTS.toggled() ? 15 : 50);
+        return you <= them && you <= 50;
     }
 
     public boolean wasFromThem() {
         long you = distanceFromTimestamp(lastAnimation);
         long them = distanceFromTimestamp(lastAttacked);
-        return them <= you && them <= (Toggle.SILENCE_OTHER_FIGHTS.toggled() ? 15 : 50);
+        return them <= you && them <= 50;
     }
 
     public boolean couldBeFromYou() {

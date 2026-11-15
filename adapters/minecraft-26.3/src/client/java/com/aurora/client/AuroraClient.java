@@ -65,11 +65,10 @@ public class AuroraClient implements ClientModInitializer {
         // after the boot-time profile load, so starting the game never rewrites them.
         ProfileManager.getInstance().setControlsBridge(new com.aurora.client.util.VanillaControlsBridge());
 
-        // Better Hitreg (Jass's BetterHitreg, integrated): sets Hitreg.client
-        // first, then registers its tick / world-render / HUD / keybind hooks.
-        // Needs the config + active profile loaded (its settings layer reads
-        // AuroraConfig) and the keybinds above registered (dispatch reads
-        // the same config ints).
+        // Better Hitreg (Jass's BetterHitreg, integrated; only the custom
+        // client-side hitreg remains): sets Hitreg.client first, then
+        // registers its tick hook. Needs the config + active profile loaded
+        // (its settings layer reads AuroraConfig).
         com.aurora.client.hitreg.BetterHitreg.initialize();
 
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
@@ -334,34 +333,6 @@ public class AuroraClient implements ClientModInitializer {
                 "key.aurora.blur_test",
                 com.aurora.client.util.AuroraKey.UNBOUND,
                 () -> cfg.blurTestKey,         v -> cfg.blurTestKey = v);
-        // Better Hitreg â€” all six deliberately unbound by default. The
-        // original mod bound H (its menu) and all four arrow keys (the
-        // practice scoreboard), which grabbed the arrows in every context;
-        // the settings are reachable from the Mods grid, so H stays free.
-        com.aurora.client.util.AuroraKeybinds.register(
-                "key.aurora.hitreg_settings",
-                com.aurora.client.util.AuroraKey.UNBOUND,
-                () -> cfg.hitregSettingsKey,   v -> cfg.hitregSettingsKey = v);
-        com.aurora.client.util.AuroraKeybinds.register(
-                "key.aurora.hitreg_switch_hand",
-                com.aurora.client.util.AuroraKey.UNBOUND,
-                () -> cfg.hitregSwitchHandKey, v -> cfg.hitregSwitchHandKey = v);
-        com.aurora.client.util.AuroraKeybinds.register(
-                "key.aurora.hitreg_score_left",
-                com.aurora.client.util.AuroraKey.UNBOUND,
-                () -> cfg.hitregScoreLeftKey,  v -> cfg.hitregScoreLeftKey = v);
-        com.aurora.client.util.AuroraKeybinds.register(
-                "key.aurora.hitreg_score_right",
-                com.aurora.client.util.AuroraKey.UNBOUND,
-                () -> cfg.hitregScoreRightKey, v -> cfg.hitregScoreRightKey = v);
-        com.aurora.client.util.AuroraKeybinds.register(
-                "key.aurora.hitreg_score_send",
-                com.aurora.client.util.AuroraKey.UNBOUND,
-                () -> cfg.hitregScoreSendKey,  v -> cfg.hitregScoreSendKey = v);
-        com.aurora.client.util.AuroraKeybinds.register(
-                "key.aurora.hitreg_score_reset",
-                com.aurora.client.util.AuroraKey.UNBOUND,
-                () -> cfg.hitregScoreResetKey, v -> cfg.hitregScoreResetKey = v);
     }
 }
 

@@ -815,11 +815,10 @@ addWithSettings("hitbox",
                 ));
 
         // ---- Better Hitreg (BetterHitreg by Jass, integrated with permission) ----
-        // Every setting of the original mod has a row here — including the
-        // five that were only reachable through /hitreg or the properties
-        // file (Unrender World, Solid Floor, grid size, all overlay colors),
-        // since no command fallback remains. Reset covers the "hitreg"
-        // prefix explicitly (the id-derived "betterHitreg" would match none).
+        // Only the custom client-side hitreg remains (owner direction
+        // 2026-11-15): tracking, audio, render overlays, the practice arena,
+        // colors and keybinds were removed. Reset covers the "hitreg" prefix
+        // explicitly (the id-derived "betterHitreg" would match none).
         {
             List<FeatureSetting> hitregRows = new ArrayList<>();
             hitregRows.add(new SectionHeaderSetting("Hitreg"));
@@ -833,155 +832,8 @@ addWithSettings("hitbox",
             hitregRows.add(hitregToggle(com.aurora.client.hitreg.settings.Toggle.IGNORE_SHIELD_HOLDERS, "Ignore Shield Holders")
                     .description("Never use custom hitreg against players holding a shield, raised or not — shield desync is the most common cause of a confidently-played hit that the server then rejects."));
 
-            hitregRows.add(new SectionHeaderSetting("Tracking"));
-            // §4 live-value subtitles: these three toggles no longer alert
-            // (chat output was retired at integration) — their whole
-            // remaining purpose is the live figure, so it surfaces under
-            // the label instead of behind the 1.5 s description tooltip.
-            hitregRows.add(hitregToggle(com.aurora.client.hitreg.settings.Toggle.ALERT_DELAYS, "Alert Delays")
-                    .description(() -> "Average server registration delay over the last 100 tracked hits: "
-                            + com.aurora.client.hitreg.Hitreg.last100Regs.getAverageDelay() + " ms. "
-                            + "Measured from your swing to the server's damage packet for that target; hits over 500 ms are not counted. Chat alerts were retired — this toggle is kept for the live figure.")
-                    .valueLine(() -> {
-                        var q = com.aurora.client.hitreg.Hitreg.last100Regs;
-                        return q.delaySampleSize() == 0 ? "no hits tracked yet" : q.getAverageDelay() + " ms average";
-                    }));
-            hitregRows.add(hitregToggle(com.aurora.client.hitreg.settings.Toggle.ALERT_GHOSTS, "Alert Ghosts")
-                    .description(() -> "Ghosted share of the last 100 tracked hits: "
-                            + com.aurora.client.hitreg.Hitreg.last100Regs.getGhostRatio() + "%. "
-                            + "A ghost is a hit the server never animated within 500 ms. New-target, blocked, invisible-target and contested hits are excluded from the sample. Chat alerts were retired — this toggle is kept for the live figure.")
-                    .valueLine(() -> {
-                        var q = com.aurora.client.hitreg.Hitreg.last100Regs;
-                        return q.ghostSampleSize() == 0 ? "no hits tracked yet" : q.getGhostRatio() + "% ghosted";
-                    }));
-            hitregRows.add(hitregToggle(com.aurora.client.hitreg.settings.Toggle.ALERT_INCONSISTENCIES, "Alert Misplaces")
-                    .description(() -> "Misplaced share of the last 100 tracked knockback/critical hits: "
-                            + com.aurora.client.hitreg.Hitreg.last100Regs.getInconsistencyRatio() + "%. "
-                            + "A misplace is a hit the server registered as a different type than the one you landed (judged from the sound it sent back). Chat alerts were retired — this toggle is kept for the live figure.")
-                    .valueLine(() -> {
-                        var q = com.aurora.client.hitreg.Hitreg.last100Regs;
-                        return q.inconsistencySampleSize() == 0 ? "no hits tracked yet" : q.getInconsistencyRatio() + "% misplaced";
-                    }));
-            // §3 footer: the only group on this screen whose purpose the
-            // header + labels genuinely don't convey (the "Alert" toggles
-            // no longer alert anything — chat output was retired; the
-            // figures are the point now).
-            hitregRows.add(new SectionFooterSetting("The alert toggles surface live figures from your rolling hit sample under their labels."));
-
-            hitregRows.add(new SectionHeaderSetting("Audio"));
-            hitregRows.add(hitregToggle(com.aurora.client.hitreg.settings.Toggle.SILENCE_OTHER_FIGHTS, "Mute Other Fights")
-                    .description("Silence hit sounds (and hide hurt animations) that belong to other players' fights, so only your own exchange is audible. Also tightens the window used to attribute a sound to you or your target from 50 ms to 15 ms."));
-            hitregRows.add(hitregToggle(com.aurora.client.hitreg.settings.Toggle.LEGACY_SOUNDS, "1.8 Hit Sounds")
-                    .description("Replace the modern attack sounds (sweep, crit, knockback, strong, weak) with the single classic hurt sound, both for your own feedback and for what the server sends."));
-            hitregRows.add(hitregToggle(com.aurora.client.hitreg.settings.Toggle.SILENCE_NON_HITS, "Mute Non-hit Sounds")
-                    .description("Mute every player-sourced sound that is not an attack or hurt sound — footsteps, item use, armor equips — so hit sounds stand out."));
-            hitregRows.add(hitregToggle(com.aurora.client.hitreg.settings.Toggle.SILENCE_SELF, "Mute Your Hits")
-                    .description("Play no sound for the hits you land (client-side feedback and the server's confirmation alike)."));
-            hitregRows.add(hitregToggle(com.aurora.client.hitreg.settings.Toggle.SILENCE_THEM, "Mute Their Hits")
-                    .description("Play no sound when your target hits you — including your own hurt sound."));
-            hitregRows.add(SliderSetting.of("Hit Muffling",
-                    () -> cfg.hitregMuffleAmount, v -> cfg.hitregMuffleAmount = v, 0.0, 1.0).percent()
-                    .description("Low-pass filter strength applied to your hit sounds through OpenAL EFX — higher values sound duller and further away. 0% leaves them untouched."));
-            hitregRows.add(SliderSetting.of("Hit Sharpening",
-                    () -> cfg.hitregSharpenAmount, v -> cfg.hitregSharpenAmount = v, 0.0, 1.0).percent()
-                    .description("High-pass filter strength applied to your hit sounds — higher values sound thinner and crisper. 0% leaves them untouched."));
-            hitregRows.add(SliderSetting.ofInt("Metronome (ticks)",
-                    () -> cfg.hitregMetronome, v -> cfg.hitregMetronome = (v < 10 ? 0 : v), 0, 25)
-                    .description("Play a click every N game ticks (20 ticks = 1 second) as a rhythm reference for combos. Values below 10 switch it off, matching the original mod."));
-
-            hitregRows.add(new SectionHeaderSetting("Render"));
-            hitregRows.add(hitregToggle(com.aurora.client.hitreg.settings.Toggle.HIDE_OTHER_FIGHTS, "Hide Other Fights")
-                    .description("While you are in a fight, hide other players (and their text displays) that are more than 5 blocks from both you and your target, and drop particles beyond that range."));
-            hitregRows.add(hitregToggle(com.aurora.client.hitreg.settings.Toggle.HIDE_ANIMATIONS, "Hide Animations")
-                    .description("Suppress every hurt animation — the red flash and the flinch — including the ones your own hits would play."));
-            hitregRows.add(hitregToggle(com.aurora.client.hitreg.settings.Toggle.HIDE_ARMOR, "Hide Armor")
-                    .description("Do not render worn armor on any entity, so hitboxes and body movement stay readable."));
-            hitregRows.add(hitregToggle(com.aurora.client.hitreg.settings.Toggle.HIDE_ALL_PARTICLES, "Hide All Particles")
-                    .description("Spawn no hit particles at all — crit, sweep and enchanted-hit — from either side. Fireworks are exempt."));
-            hitregRows.add(hitregToggle(com.aurora.client.hitreg.settings.Toggle.HIDE_OTHER_PARTICLES, "Hide Other Particles")
-                    .description("Keep only crit and sweep particles; everything else, including sharpness sparkles, is dropped."));
-            hitregRows.add(hitregToggle(com.aurora.client.hitreg.settings.Toggle.PARTICLES_EVERY_HIT, "Always Hit Particles")
-                    .description("Force the enchanted-hit sparkle on every registered hit, even without Sharpness, as a clear visual confirmation."));
-            hitregRows.add(hitregToggle(com.aurora.client.hitreg.settings.Toggle.RENDER_HITBOX, "Show Target Hitbox")
-                    .description("Draw your current target's client-side (interpolated) hitbox. Turns red while the target is within your 3-block reach."));
-            hitregRows.add(hitregToggle(com.aurora.client.hitreg.settings.Toggle.RENDER_CROSS, "Show Target Cross")
-                    .description("Draw a small cross at the closest point on the target's hitbox to your eyes — the spot your reach is measured to."));
-            hitregRows.add(hitregToggle(com.aurora.client.hitreg.settings.Toggle.RENDER_SERVER_HITBOX, "Show Server Hitbox")
-                    .description("Draw the target's hitbox at its un-interpolated (last received) position — where the server currently thinks they are."));
-            hitregRows.add(hitregToggle(com.aurora.client.hitreg.settings.Toggle.RENDER_YOUR_REACH, "Show Your Hit Range")
-                    .description("Draw a 3-block ring on the ground around you; it changes color while the target is in reach."));
-            hitregRows.add(hitregToggle(com.aurora.client.hitreg.settings.Toggle.RENDER_THEIR_REACH, "Show Their Hit Range")
-                    .description("Draw the same 3-block ring around your target."));
-            hitregRows.add(hitregToggle(com.aurora.client.hitreg.settings.Toggle.RENDER_YOUR_JUMP, "Show Your Jump Range")
-                    .description("Draw a 4-block ring around you — roughly the distance a jump closes before your next hit."));
-            hitregRows.add(hitregToggle(com.aurora.client.hitreg.settings.Toggle.RENDER_THEIR_JUMP, "Show Their Jump Range")
-                    .description("Draw the same 4-block ring around your target."));
-            hitregRows.add(hitregToggle(com.aurora.client.hitreg.settings.Toggle.PERFECT_HIT_COLOR, "Perfect Hit Color")
-                    .description("Flash the target (glow, or the hitbox color if one is shown) for half a second after a perfect hit — one landed on the first tick the target came into reach."));
-            hitregRows.add(hitregToggle(com.aurora.client.hitreg.settings.Toggle.JUMP_RESET_COLOR, "Jump Reset Color")
-                    .description("Flash the target for half a second when you land a jump reset — jumping within a tick of being hit."));
-
-            hitregRows.add(new SectionHeaderSetting("Practice Arena"));
-            hitregRows.add(hitregToggle(com.aurora.client.hitreg.settings.Toggle.VOID_WORLD, "Unrender World")
-                    .description("Stop rendering every chunk so only entities remain — a blank practice arena. Extremely invasive: the world is still there, you just cannot see it. Pair with Solid Floor or a grid. Was only reachable via /hitreg VoidWorld before."));
-            hitregRows.add(hitregToggle(com.aurora.client.hitreg.settings.Toggle.SOLID_FLOOR, "Solid Floor")
-                    .description("Draw a large flat plane at your ground level (color below) — gives Unrender World a floor to stand on."));
-            hitregRows.add(SliderSetting.ofInt("Floor Grid Size (blocks)",
-                    () -> cfg.hitregFloorGridSize, v -> cfg.hitregFloorGridSize = v, 0, 32)
-                    .description("Spacing of a ground grid drawn around you (fades out at 16 blocks). 0 turns it off."));
-
-            hitregRows.add(new SectionHeaderSetting("Colors"));
-            hitregRows.add(hitregColor(com.aurora.client.hitreg.settings.Color.HITBOX_FAR, "Target Hitbox (Out of Reach)"));
-            hitregRows.add(hitregColor(com.aurora.client.hitreg.settings.Color.HITBOX_NEAR, "Target Hitbox (In Reach)"));
-            hitregRows.add(hitregColor(com.aurora.client.hitreg.settings.Color.CROSS_FAR, "Target Cross (Out of Reach)"));
-            hitregRows.add(hitregColor(com.aurora.client.hitreg.settings.Color.CROSS_NEAR, "Target Cross (In Reach)"));
-            hitregRows.add(hitregColor(com.aurora.client.hitreg.settings.Color.CROSS_FAR_WITH_HITBOX, "Cross with Hitbox (Out of Reach)"));
-            hitregRows.add(hitregColor(com.aurora.client.hitreg.settings.Color.CROSS_NEAR_WITH_HITBOX, "Cross with Hitbox (In Reach)"));
-            hitregRows.add(hitregColor(com.aurora.client.hitreg.settings.Color.SERVER_HITBOX, "Server Hitbox"));
-            hitregRows.add(hitregColor(com.aurora.client.hitreg.settings.Color.YOUR_REACH_FAR, "Your Hit Range (Out of Reach)"));
-            hitregRows.add(hitregColor(com.aurora.client.hitreg.settings.Color.YOUR_REACH_NEAR, "Your Hit Range (In Reach)"));
-            hitregRows.add(hitregColor(com.aurora.client.hitreg.settings.Color.THEIR_REACH_FAR, "Their Hit Range (Out of Reach)"));
-            hitregRows.add(hitregColor(com.aurora.client.hitreg.settings.Color.THEIR_REACH_NEAR, "Their Hit Range (In Reach)"));
-            hitregRows.add(hitregColor(com.aurora.client.hitreg.settings.Color.YOUR_JUMP_FAR, "Your Jump Range (Out of Range)"));
-            hitregRows.add(hitregColor(com.aurora.client.hitreg.settings.Color.YOUR_JUMP_NEAR, "Your Jump Range (In Range)"));
-            hitregRows.add(hitregColor(com.aurora.client.hitreg.settings.Color.THEIR_JUMP_FAR, "Their Jump Range (Out of Range)"));
-            hitregRows.add(hitregColor(com.aurora.client.hitreg.settings.Color.THEIR_JUMP_NEAR, "Their Jump Range (In Range)"));
-            hitregRows.add(hitregColor(com.aurora.client.hitreg.settings.Color.PERFECT_HIT, "Perfect Hit Flash"));
-            hitregRows.add(hitregColor(com.aurora.client.hitreg.settings.Color.JUMP_RESET, "Jump Reset Flash"));
-            hitregRows.add(hitregColor(com.aurora.client.hitreg.settings.Color.GRID, "Floor Grid"));
-            hitregRows.add(hitregColor(com.aurora.client.hitreg.settings.Color.FLOOR, "Solid Floor"));
-
-            hitregRows.add(new SectionHeaderSetting("Keybinds"));
-            hitregRows.add(new KeybindSetting("Open Settings Key",
-                    () -> cfg.hitregSettingsKey, v -> cfg.hitregSettingsKey = v)
-                    .description("Opens this screen from in-game. The original mod bound H; it defaults to unbound here since the Mods grid already reaches it. Press ESC or Backspace while rebinding to clear it."));
-            hitregRows.add(new KeybindSetting("Switch Hand Key",
-                    () -> cfg.hitregSwitchHandKey, v -> cfg.hitregSwitchHandKey = v)
-                    .description("Swaps your main hand between left and right (with a short cooldown). Defaults to unbound."));
-            hitregRows.add(new KeybindSetting("Score: Left +1",
-                    () -> cfg.hitregScoreLeftKey, v -> cfg.hitregScoreLeftKey = v)
-                    .description("Practice scoreboard: adds one to the left score. The score shows top-left of the HUD while either side is non-zero. Defaults to unbound (the original used the arrow keys)."));
-            hitregRows.add(new KeybindSetting("Score: Right +1",
-                    () -> cfg.hitregScoreRightKey, v -> cfg.hitregScoreRightKey = v)
-                    .description("Practice scoreboard: adds one to the right score. Defaults to unbound."));
-            hitregRows.add(new KeybindSetting("Score: Send to Chat",
-                    () -> cfg.hitregScoreSendKey, v -> cfg.hitregScoreSendKey = v)
-                    .description("Sends the current score as \"L-R\" to chat (only when a score is non-zero). Defaults to unbound."));
-            hitregRows.add(new KeybindSetting("Score: Reset",
-                    () -> cfg.hitregScoreResetKey, v -> cfg.hitregScoreResetKey = v)
-                    .description("Resets both scores to zero. Defaults to unbound."));
-
-            // §7.3: destructive actions go last, isolated in their own
-            // section — never interleaved with adjustable settings. The
-            // reset used to sit between Alert Misplaces and Track Fight
-            // Statistics inside Tracking.
-            hitregRows.add(new SectionHeaderSetting("Maintenance"));
-            hitregRows.add(ButtonSetting.semantic("Reset Tracked Stats", "Reset",
-                    () -> com.aurora.client.hitreg.Hitreg.last100Regs = new com.aurora.client.hitreg.util.RegQueue(100))
-                    .description("Clears the rolling last-100-hits sample behind the delay/ghost/misplace figures in Tracking. Does not change the practice scoreboard or lifetime fight counters."));
-
             addWithSettings(com.aurora.client.hitreg.BetterHitreg.FEATURE_ID,
-                    "Client-side hit registration feedback for PvP, from BetterHitreg by Jass: your hit sound, the target's hurt animation and particles play the instant you swing instead of after the server's round trip, while the server's late copy is suppressed. Also tracks ghosted and misplaced hits, adds reach/jump rings, target and server hitboxes, sound muffling, and a practice arena.",
+                    "Client-side hit registration feedback for PvP, from BetterHitreg by Jass: your hit sound, the target's hurt animation and particles play after a latency you choose instead of after the server's round trip, while the server's late copy is suppressed.",
                     () -> cfg.hitregEnabled, v -> cfg.hitregEnabled = v,
                     hitregRows,
                     List.of("hitreg"));
@@ -1711,11 +1563,6 @@ addWithSettings("hitbox",
     /** Boolean row bound to one Better Hitreg {@code Toggle} (raw stored value, not the master-gated read). */
     private static BooleanSetting hitregToggle(com.aurora.client.hitreg.settings.Toggle toggle, String label) {
         return new BooleanSetting(label, toggle::get, toggle::set);
-    }
-
-    /** ARGB color row bound to one Better Hitreg {@code Color}. */
-    private static ColorSetting hitregColor(com.aurora.client.hitreg.settings.Color color, String label) {
-        return new ColorSetting(label, color::argb, color::set);
     }
 
     /**

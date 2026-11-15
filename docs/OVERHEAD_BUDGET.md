@@ -22,7 +22,7 @@ The budget is about 1.5 times the baseline. At 120 fps, 0.25 ms is 3% of a frame
 Not counted:
 
 - **Mixin hooks inside vanilla methods.** A timer per hook would cost more than most hooks do.
-- **Better Hitreg.** Its classes are kept verbatim, and it ships off.
+- **Better Hitreg.** Its classes are Jass's timing core, trimmed to the custom hitreg on 2026-11-15, and it ships off.
 
 A profiler run on 2026-11-11 measured how much this leaves out. JFR sampled the render thread every 1 ms in a 47-second boot with factory defaults. Leaving out startup code, the timers covered about 79% of Aurora's per-frame work, so the true cost is about 0.19 ms per frame. The work the timers count:
 

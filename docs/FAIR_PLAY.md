@@ -8,7 +8,7 @@ This page is for server owners and for players who want to know what Aurora Clie
 - It does not change the client's tick rate or the timing of anything sent to the server.
 - It collects and sends no telemetry.
 
-The whole mod has two places that send anything to a server. Both are in Better Hitreg, on keys that are unbound until the player binds them: Switch Hand changes the vanilla Main Hand option (the same packet as changing it in Options), and the practice scoreboard's Send key posts the score as an ordinary chat message.
+Nothing in the mod sends anything of its own to a server: no chat messages and no option changes.
 
 ## Classes
 
@@ -30,7 +30,7 @@ A new install has these off. A player has to turn each one on.
 - Full Bright, which raises brightness past the vanilla maximum
 - No Fog, which pushes distance fog back
 - Water and lava clarity (Pack Tweaks)
-- Better Hitreg, and inside it the reach rings, extra hitboxes and hiding of other fights
+- Better Hitreg
 
 Changing a default does not change an existing install: a player who already had one of these on keeps it on.
 
@@ -55,7 +55,7 @@ Changing a default does not change an existing install: a player who already had
 | Alerts | Vanilla equivalent | Warns about your own armor durability and your own expiring effects, as two HUD modules. |
 | Crosshair | Cosmetic | Replaces the crosshair's shape and color. |
 | Hitbox | Vanilla equivalent | Draws entity hitboxes, as vanilla's F3+B does, with custom colors. |
-| Better Hitreg | Local timing | Plays your hit's sound, hurt animation and particles on your screen at once instead of waiting for the server's copy. It does not change what the game sends for movement or combat, or when. Two optional keys, unbound by default, send something when pressed: Switch Hand changes the vanilla Main Hand option, and the practice scoreboard's Send key posts the score as a chat message. The feature is off in a fresh install, and so are its reach rings, extra hitboxes and hiding of other fights. |
+| Better Hitreg | Local timing | Plays your hit's sound, hurt animation and particles on your screen after a delay you choose instead of waiting for the server's copy. It does not change what the game sends for movement or combat, or when, and it sends nothing of its own. The feature is off in a fresh install. |
 | Hit Color | Cosmetic | Recolors the flash on an entity that takes damage. A flash that follows the hurt entity's health is an information advantage and ships off. |
 | Glint Color | Cosmetic | Recolors the enchantment glint. |
 | Info HUD | Vanilla equivalent | Shows FPS, coordinates, time, biome and similar readouts that the F3 screen also has. |

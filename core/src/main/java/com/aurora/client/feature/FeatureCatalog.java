@@ -210,7 +210,7 @@ public final class FeatureCatalog {
         module("alerts", "Alerts", "Icon and text warnings for low armor durability and potion effects about to expire, shown as two draggable HUD modules — Armor Alert and Potion Alert — instead of a shared popup. All alerts share the same sound system.");
         module("crosshair", "Crosshair", "Replaces the vanilla crosshair with a fully customizable one.");
         module("hitbox", "Hitbox", "Draws entity hitboxes with your own color, line width, and optional eye-level and look-direction lines.");
-        module("better_hitreg", "Better Hitreg", "Client-side hit registration feedback for PvP — plays your hit sound and hurt animation the instant you swing instead of waiting for the server, tracks ghosted and misplaced hits, and adds reach rings, target hitboxes and a practice arena. Original project by Jass.");
+        module("better_hitreg", "Better Hitreg", "Client-side hit registration feedback for PvP — plays your hit sound and hurt animation after a latency you choose instead of waiting for the server. Original project by Jass.");
         module("hit_color", "Hit Color", "Recolors the red flash that overlays an entity when it takes damage.");
         module("glint_color", "Glint Color", "Recolors the animated shimmer that enchanted items and armor give off.");
         module("info_module", "Info HUD", "A configurable corner readout of useful at-a-glance info — FPS, coordinates, time of day, facing, biome, dimension, light level, playtime and more.");
@@ -267,7 +267,7 @@ public final class FeatureCatalog {
         classify("alerts", FairPlay.VANILLA_INFORMATION, "Warns about your own armor durability and your own expiring effects, as two HUD modules.");
         classify("crosshair", FairPlay.COSMETIC, "Replaces the crosshair's shape and color.");
         classify("hitbox", FairPlay.VANILLA_INFORMATION, "Draws entity hitboxes, as vanilla's F3+B does, with custom colors.");
-        classify("better_hitreg", FairPlay.LOCAL_TIMING, "Plays your hit's sound, hurt animation and particles on your screen at once instead of waiting for the server's copy. It does not change what the game sends for movement or combat, or when. Two optional keys, unbound by default, send something when pressed: Switch Hand changes the vanilla Main Hand option, and the practice scoreboard's Send key posts the score as a chat message. The feature is off in a fresh install, and so are its reach rings, extra hitboxes and hiding of other fights.", "hitregEnabled", "hitregRenderHitbox", "hitregRenderServerHitbox", "hitregRenderYourReach", "hitregRenderTheirReach", "hitregRenderYourJump", "hitregRenderTheirJump", "hitregHideOtherFights");
+        classify("better_hitreg", FairPlay.LOCAL_TIMING, "Plays your hit's sound, hurt animation and particles on your screen after a delay you choose instead of waiting for the server's copy. It does not change what the game sends for movement or combat, or when, and it sends nothing of its own. The feature is off in a fresh install.", "hitregEnabled");
         classify("hit_color", FairPlay.COSMETIC, "Recolors the flash on an entity that takes damage. A flash that follows the hurt entity's health is an information advantage and ships off.", "hitColorHealthGradient");
         classify("glint_color", FairPlay.COSMETIC, "Recolors the enchantment glint.");
         classify("info_module", FairPlay.VANILLA_INFORMATION, "Shows FPS, coordinates, time, biome and similar readouts that the F3 screen also has.");
@@ -406,9 +406,8 @@ public final class FeatureCatalog {
                 .gates("perfGuiItemBaking").yieldsTo("immediatelyfast");
         mixin("SpriteContentsMipsAccessor", "freeing uploaded sprite mipmaps", "performance").gates("perfFreeSpriteMipmaps");
         mixin("TextureAtlasFreeMipsMixin", "freeing uploaded sprite mipmaps", "performance").gates("perfFreeSpriteMipmaps");
-        for (String hitreg : List.of("ArmorMixin", "AttackMixin", "ChunkMixin", "DamageMixin", "EntityAccessor",
-                "GlowMixin", "NetworkMixin", "ParticleMixin", "PlayerMixin", "RenderMixin", "ServerMixin",
-                "SoundMixin", "SourceMixin")) {
+        for (String hitreg : List.of("AttackMixin", "DamageMixin", "EntityAccessor", "NetworkMixin",
+                "PlayerMixin", "ServerMixin")) {
             // Better Hitreg's timing core only works whole: one missing piece
             // (the server-copy cancel without the local replay, say) is worse
             // than none, so any failure turns the entire feature off.

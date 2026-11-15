@@ -78,7 +78,7 @@ Pulsar incorporates [Phenomena](https://github.com/kalibsolomon-pixel/Phenomena)
 
 ### Better Hitreg
 
-BetterHitreg by Jass (https://modrinth.com/mod/betterhitreg, source https://github.com/jasspir/BetterHitreg), integrated into Aurora with the author's explicit permission. Its timing core is kept verbatim and every moved class credits it. The upstream project is licensed under the Apache License, Version 2.0; its LICENSE file is the stock text with no copyright line filled in, and it has no NOTICE file. Aurora's changes: the separate entrypoint, commands, chat alerts and menu were removed, and its settings moved into Aurora's config and settings screens. The license text is in "Apache License 2.0" below.
+BetterHitreg by Jass (https://modrinth.com/mod/betterhitreg, source https://github.com/jasspir/BetterHitreg), integrated into Aurora with the author's explicit permission. Its custom-hitreg timing core is kept and every moved class credits it. The upstream project is licensed under the Apache License, Version 2.0; its LICENSE file is the stock text with no copyright line filled in, and it has no NOTICE file. Aurora's changes: the separate entrypoint, commands, chat alerts and menu were removed, and its settings moved into Aurora's config and settings screens. On 2026-11-15 everything except the custom client-side hitreg (its feedback delay) was removed: hit tracking, the audio options, render overlays, the practice arena, colors, the practice scoreboard and its keybinds. The license text is in "Apache License 2.0" below.
 
 ### Freelook++
 

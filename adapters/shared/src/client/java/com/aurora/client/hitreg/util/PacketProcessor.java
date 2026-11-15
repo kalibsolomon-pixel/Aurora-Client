@@ -6,24 +6,24 @@ import net.minecraft.network.protocol.game.ClientboundDamageEventPacket;
 import net.minecraft.network.protocol.game.ClientboundSoundPacket;
 import com.aurora.client.hitreg.HitType;
 import com.aurora.client.hitreg.Hitreg;
-import com.aurora.client.hitreg.settings.Toggle;
 
 import java.util.*;
 
 import static com.aurora.client.hitreg.Hitreg.alreadyAnimated;
 import static com.aurora.client.hitreg.Hitreg.client;
-import static com.aurora.client.hitreg.Hitreg.last100Regs;
 import static com.aurora.client.hitreg.Hitreg.lastAnimation;
-import static com.aurora.client.hitreg.Hitreg.lastAttack;
 import static com.aurora.client.hitreg.Hitreg.lastAttacked;
 import static com.aurora.client.hitreg.Hitreg.lastTarget;
-import static com.aurora.client.hitreg.Hitreg.target;
 import static com.aurora.client.hitreg.util.MultiVersion.*;
 
 /**
  * From BetterHitreg by Jass (modrinth.com/mod/betterhitreg), integrated into
  * Aurora with the author's permission. Logic is upstream's, moved verbatim —
  * see {@link com.aurora.client.hitreg.BetterHitreg} for the integration notes.
+ * Aurora keeps only the custom hitreg (2026-11-15): the silence, legacy-sound
+ * and particle toggles upstream read here were removed, so each behaves as
+ * its default (off), and the delay and swing/hit counters went with the
+ * tracking.
  */
 public class PacketProcessor {
     public static long dealtDamageTimestamp;
@@ -43,13 +43,9 @@ public class PacketProcessor {
                 //if processing never ran on the network thread, we need to update the timestamp here
                 if (System.currentTimeMillis() - dealtDamageTimestamp > 50) dealtDamageTimestamp = System.currentTimeMillis() - 2;
 
-                boolean withinFight = Hitreg.withinFight;
                 HitTracker.add(new Animation(dealtDamageTimestamp));
                 lastAnimation = dealtDamageTimestamp;
                 alreadyAnimated = true;
-                long delay = dealtDamageTimestamp - lastAttack;
-                if (delay <= 500) last100Regs.addDelay((int) delay);
-                if (!Hitreg.lastHitHandled && withinFight && Toggle.PARTICLES_EVERY_HIT.toggled()) playParticles("ENCHANTED_HIT", target);
                 processDelayedSounds(true);
             }
 
@@ -58,8 +54,6 @@ public class PacketProcessor {
                 if (System.currentTimeMillis() - tookDamageTimestamp > 50) tookDamageTimestamp = System.currentTimeMillis() - 2;
 
                 lastAttacked = tookDamageTimestamp;
-                //fall/environment damage shouldn't count as their hit
-                if (packet.sourceCauseId() == lastTarget) Hitreg.theirHits++;
                 processDelayedSounds(false);
             }
         }
@@ -71,9 +65,6 @@ public class PacketProcessor {
         if (lastTarget != getAction(packet)) return true;
         boolean withinFight = Hitreg.withinFight;
 
-        //swing hand
-        if (packet.getAction() == 0 || packet.getAction() == 3) Hitreg.theirSwings++;
-
         //crit particle
         if (packet.getAction() == 4) {
             if (Hitreg.lastHitHandled && withinFight) return false;
@@ -81,7 +72,7 @@ public class PacketProcessor {
 
         //enchanted particle
         else if (packet.getAction() == 5) {
-            if ((Toggle.PARTICLES_EVERY_HIT.toggled() || Hitreg.lastHitHandled) && withinFight) return false;
+            if (Hitreg.lastHitHandled && withinFight) return false;
         }
 
         return true;
@@ -93,7 +84,7 @@ public class PacketProcessor {
 
         if (sound.modern || sound.legacy) {
             boolean result = processSound(sound);
-            if (!Hitreg.lastHitHandled && !Hitreg.lastSwingHandled && !Toggle.SILENCE_SELF.toggled() && !Toggle.SILENCE_THEM.toggled() && !Toggle.SILENCE_OTHER_FIGHTS.toggled()) {
+            if (!Hitreg.lastHitHandled && !Hitreg.lastSwingHandled) {
                 sound.skip = true;
                 return true;
             }
@@ -110,10 +101,7 @@ public class PacketProcessor {
         Sound sound;
         while ((sound = delayedSounds.poll()) != null) {
             if (sound.skip) continue;
-            boolean shouldPlay;
-            if (!sound.wasRecent()) shouldPlay = !Toggle.SILENCE_OTHER_FIGHTS.toggled();
-            else if (fromYou) shouldPlay = !Toggle.SILENCE_SELF.toggled() && !Hitreg.lastHitHandled;
-            else shouldPlay = !Toggle.SILENCE_THEM.toggled();
+            boolean shouldPlay = !sound.wasRecent() || !fromYou || !Hitreg.lastHitHandled;
             if (shouldPlay) sound.play();
         }
     }
@@ -121,8 +109,8 @@ public class PacketProcessor {
     private static boolean processSound(Sound sound) {
         boolean soundWithinFight = sound.withinFight();
 
-        //if the sound happened far away, then block it if were silencing other fights and skip it if were not
-        if (!soundWithinFight) return !Toggle.SILENCE_OTHER_FIGHTS.toggled();
+        //if the sound happened far away, leave it alone
+        if (!soundWithinFight) return true;
 
         //Disabling a raised shield is not a sprint/knockback hit. The server can still send the
         //knockback attack sound for it, so suppress just that sound while leaving shield sounds
@@ -145,17 +133,10 @@ public class PacketProcessor {
                 delayedSounds.add(sound);
                 return false;
             }
-
-            //if it wasn't from either of you and were silencing other fights, silence it
-            if (Toggle.SILENCE_OTHER_FIGHTS.toggled()) return false;
         }
 
-        //block the sound based on whether you hit them or they hit you
-        if (fromYou && (Hitreg.lastHitHandled || Toggle.SILENCE_SELF.toggled())) return false;
-        if (fromThem && Toggle.SILENCE_THEM.toggled()) return false;
-
-        //block all modern attack sounds if legacy sounds are enabled
-        if (!sound.legacy && Toggle.LEGACY_SOUNDS.toggled() && !sound.sound.contains("hurt")) return false;
+        //block your own hit's sound when the custom hitreg already played it
+        if (fromYou && Hitreg.lastHitHandled) return false;
 
         return true;
     }

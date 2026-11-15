@@ -21,12 +21,6 @@ public final class KeybindMigrator {
             "waypointDropKey",
             "waypointManagerKey",
             "minimapToggleKey",
-            "hitregSettingsKey",
-            "hitregSwitchHandKey",
-            "hitregScoreLeftKey",
-            "hitregScoreRightKey",
-            "hitregScoreSendKey",
-            "hitregScoreResetKey",
             "blurTestKey",
             "worldMapKey");
 
