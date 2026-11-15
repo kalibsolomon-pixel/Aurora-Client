@@ -250,7 +250,7 @@ public class ItemScaleSetting extends FeatureSetting {
         super("Item Scale Configurator");
         Font font = Minecraft.getInstance().font;
         this.searchField = new EditBox(font, 0, 0, 150, 18, Component.literal("Search Items..."));
-        this.searchField.setHint(Component.literal("Search items... (e.g. sword)"));
+        this.searchField.setHint(Component.literal("Search items, e.g. sword"));
         // Disable the vanilla border — we draw our own hi-res AA rounded
         // outline on top (see render()) so the vanilla hairline border
         // doesn't double-stroke behind it.

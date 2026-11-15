@@ -119,6 +119,11 @@ when it silently creates a second accent, text hierarchy, or status vocabulary.
 
 ### 3.2 Accent
 
+**Factory palette (owner decisions, 2026-11-14):** new installs start with the Indigo accent
+preset (#5C6BC0), the family of the ribbon logo, on the stock graphite Background Color
+(#16171D). Earlier factory values (green #43A047 on purple #22163A) read as two palettes next
+to the logo and tinted every neutral purple. Saved colours are never rewritten.
+
 Accent is Aurora's identity and emphasis color. It is appropriate for selection, an on
 state, a primary action, a compact indicator, and selected chrome. It is not a universal
 foreground color and should not color every interactive element.
@@ -182,16 +187,20 @@ semantic tokens and must not write legacy statics outside `ResolvedTheme.project
 
 ## 4. Typography
 
-Aurora uses one practical UI text size. Version 3 does not introduce a type scale. Hierarchy
-comes from semantic color, position, casing, spacing, alignment, and grouping.
+Aurora uses one practical UI text size for body text. Hierarchy comes first from semantic
+color, position, spacing, alignment, and grouping, and from the two text roles in §4.1.
 
 Equivalent roles must not receive arbitrary local size, shadow, weight, or color treatment.
 Material Symbol sizing is iconography, not typography.
 
 | Role | Normative treatment |
 |---|---|
-| Screen title | Primary, normal Aurora UI size, uniquely placed in the title band. |
-| Attached subtitle/attribution | Secondary, same size, directly attached below the title. |
+| Screen title | Primary, `TITLE` role (§4.1), uniquely placed in the title band. |
+| Window identity | "AURORA", text only (owner ruling 2026-10-06), in the `TITLE` role at the top left of the main window. |
+| Feature description | Secondary, body size, at most two whole-word lines under a detail screen's title; the catalog's one-sentence summary. |
+| Attached subtitle/attribution | Muted (warning when it reports a broken mixin), body size, after the description. |
+| Settings group heading | Primary, `HEADING` role (§4.1). |
+| Settings group summary | Secondary, one line directly under the heading (`FeatureMetadata.pageSummary`), ellipsized to the column. It says what the group is for; row details stay in tooltips. |
 | Section header | Muted, generally uppercase, more space above than below. |
 | Setting label | Primary, left-aligned to the section content column. |
 | Value/subtitle line | Secondary, beneath the label only when it exposes otherwise hidden state. |
@@ -201,6 +210,21 @@ Material Symbol sizing is iconography, not typography.
 | Card description | Secondary or muted according to importance; never the only operational instruction if muted. |
 | Tooltip | Readable supporting text; it supplements rather than replaces essential labels. |
 | Metadata/status | Secondary by default; semantic color may reinforce status but cannot be its only carrier where practical. |
+
+### 4.1 Text roles
+
+Two roles sit above body text (UI polish overhaul, 2026-11-14). Both are a heavier cut of the
+user's chosen family, never a pose-scaled glyph, and both come from
+`AuroraFontRenderer.role(text, Role)`:
+
+| Role | Cut | Use |
+|---|---|---|
+| `TITLE` | one weight step heavier (Regular/Medium → SemiBold, SemiBold/Bold → Bold), its own 11 px raster (`<font>_<weight>_title`, `tools/build_fonts.py`) | screen titles, window identity |
+| `HEADING` | the same heavier weight at the regular 9 px raster, one step above compact 8 px body text | settings group headings, section captions, empty-state headlines |
+
+A role sequence names its own font, so `MixinFont`'s global swap leaves it alone; the role still
+follows the configured family, italic and case. With the vanilla font it falls back to Minecraft
+bold. No other sizes or weights are introduced locally.
 
 Text should be ellipsized where a compact control has a fixed width and wrapped where
 explanation is expected. Truncation must use rendered width rather than character count.
@@ -632,6 +656,17 @@ The following sections establish v3 expectations without inventing unresolved pi
 - **Motion:** current restrained compression/recovery is the baseline where glass/fallback
   compositing can support it.
 
+### 11.2a Secondary actions beside a stronger sibling
+
+`Button.Theming.GHOST` (2026-11-14) is text only at rest, in secondary text, and takes the
+neutral hover face on hover or press. It is for a secondary action that shares a header with a
+more important one: feature-detail Reset next to Done. Done is accent-filled on every window
+(owner decision 2026-11-14, superseding the 2026-10-19 neutral-Done ruling), and a primary
+button's `ACTION_STRONG` fill is opaque like an ON switch track: at the old half alpha over the
+dark window it read as a dim, disabled-looking lilac; a manager's own
+header action beside it (Drop Waypoint) is the outlined secondary, and an empty list carries
+the accent-filled call to action under its hint.
+
 ### 11.3 Icon action/button
 
 - **Purpose:** a compact discrete action represented primarily by an icon.
@@ -648,9 +683,14 @@ The following sections establish v3 expectations without inventing unresolved pi
 - **Material:** opaque token control by current convention; on state uses accent/selected
   semantics. Track and thumb follow the Corner Radius through the capsule rule. The on track
   wears the subtle automatic accent gradient (`AccentGradient`: a few degrees of hue either side
-  of the accent, lighter on the left), drawn as one shader quad; disabled stays flat. The ON
+  of the accent, lighter on the left) until 2026-11-14; it is now the flat accent (owner
+  decision: on short fills only the pale end showed, so switches and sliders read as different
+  colours). The ON
   state has no outline (owner ruling 2026-11-12): the off track's hairline edge fades out as the
   switch turns on, and keyboard focus is carried by the thumb growing slightly, not by a ring.
+  The OFF track is a filled neutral (`MATERIAL_BORDER_STRONG`) with no outline (2026-11-14): a
+  sunken track with a hairline vanished into dark windows. The slider's unfilled track uses the
+  same token, so "unset" reads the same on both controls.
 - **States:** off/on must be unambiguous; hover, accepted press, focus, and disabled must each
   be defined. Disabled must not look like interactive rest.
 - **Input/accessibility:** clicking its associated row may toggle only when that enlarged hit
@@ -663,10 +703,21 @@ The following sections establish v3 expectations without inventing unresolved pi
 
 - **Purpose:** choose a value from a continuous or stepped range.
 - **Material:** opaque track and knob; accent fill communicates the chosen portion. Track and
-  knob follow the Corner Radius through the capsule rule. The accent fill wears the same subtle
-  gradient as the switch track.
+  knob follow the Corner Radius through the capsule rule. The fill is the flat accent, like the
+  switch track (2026-11-14).
+- **Layout (owner direction, 2026-11-14):** one inline row everywhere: the label on the left,
+  then the value right-aligned against a bounded track in the control column. The track is a
+  dropdown's width (`SettingRowLayout.TRACK_W`, 84 px), or half that (`SHORT_TRACK_W`) for a
+  slider with at most `SHORT_STEPS` (10) positions; it never spans the row. A page uses one
+  length (`FeatureSetting.pageTrackWidth`, owner decision): the short track only when every
+  slider on it has few positions, so values and track starts share one column. It ends
+  `SettingRowLayout.KNOB_RESERVE` short of the control edge so a knob at either end lands on
+  the edge every toggle, field and swatch ends on. A long label wraps between words and the row
+  grows. History: a stacked row with a full-width track (earlier the same day) drew long lines
+  with little meaning, most of all for sliders with a handful of positions.
 - **States:** rest, hover, dragging, focus, and disabled. Dragging remains visibly active when
-  the pointer leaves the original knob bounds.
+  the pointer leaves the original knob bounds. A disabled row mutes its label as well as its
+  track and knob.
 - **Input/accessibility:** pointer drag; keyboard increments when focused; accessible label,
   range, and current value. Click-to-edit numeric fields follow Text field rules.
 - **Sound:** no full click per value; optional restrained boundary/commit feedback may be
@@ -712,6 +763,11 @@ The following sections establish v3 expectations without inventing unresolved pi
 ### 11.9 ColorSwatch
 
 - **Purpose:** display/select a color or open a color editor.
+- **Shape (2026-11-14):** a rounded square at every Corner Radius (radius at most a quarter of
+  its height), so a sample never reads as a switch knob.
+- **Value (2026-11-14):** a colour setting row shows `#RRGGBB` (`#RRGGBBAA` when translucent)
+  in secondary text just before the swatch (`SettingRowLayout.HEX_W` reserved); a
+  swatch near the window tone (the factory graphite background) read as an empty box.
 - **Material:** represented color is data; surrounding selection/action chrome follows theme.
 - **Geometry:** swatch clipping follows theme roundness when rectangular; checkerboard is an
   implementation/data pattern.
@@ -728,17 +784,47 @@ The following sections establish v3 expectations without inventing unresolved pi
 - **Material:** role follows semantics. A raised tile is appropriate for an actionable item;
   a flat card inside an existing material container is valid when another layer adds no
   hierarchy. Selected/on treatment uses stain or a compact accent indicator as appropriate.
+- **Feature on/off (2026-11-14):** a feature tile or list row being *enabled* is a state, not
+  a selection. Every feature tile and row keeps the neutral face; the icon alone carries the
+  state: the accent when on, a neutral grey at secondary-text luminance when off (the cool
+  secondary tone read as a faint accent; a per-module accent override still applies). The name stays primary in both states (an off feature is available, not disabled).
+  Every tile and row carries a faint neutral hairline (secondary text at alpha 0x22) that
+  strengthens to 0x99 on hover: the translucent face alone left its edges unreadable, so a
+  bottom row met the window edge as if cut off.
+  The settings chevron appears top-right on a hovered or focused tile, at the trailing end of a
+  row. The tile or row stays the control. Selection treatment (wash + accent edge) stays
+  reserved for the selected tab, page or item.
+  History, all 2026-11-14: a status dot read as a notification badge; a miniature switch
+  mimicked a control the tile does not have; a corner On/Off pill unbalanced the centred card;
+  a symmetric bottom accent bar read as a progress bar. The owner then retired separate
+  indicators in favour of the icon colour (`docs/reports/2026-11-14-ui-polish-overhaul.md`).
+- **List rows:** icon, then the name left-aligned on the icon's axis, then trailing state. A
+  name is never centred in a row whose icon is pinned left.
 - **States:** actionable cards use the button-like contract. Hover, press, selection, focus,
   and disabled are distinct from child-action states.
 - **Input/accessibility:** the card's principal action and each child action must have
   non-overlapping hit semantics and accessible names.
 - **Sound:** based on navigation, selection, or state change—not simply “card clicked.”
 
+### 11.10a Empty state
+
+An empty list shows one centred group: an optional 24 px muted icon, a headline in the
+`HEADING` role, and one secondary line that names the next action (`ManagerListScreen`'s
+`emptyIcon`/`emptyMessage`/`emptyHint`). A filtered list with no matches keeps a single
+secondary line. A manager whose collection is empty (no waypoints in this world) shows no
+search or filter row at all; it appears with the first item. A list setting inside a page (Keystrokes' Extra Keys) shows a muted "None"
+in its label row's trailing value slot instead, above its Add control.
+
 ### 11.11 Tab/sidebar item
 
 - **Purpose:** select one peer context without implying a destructive action.
 - **Material:** selected item receives stained/accent emphasis. An inactive item may remain
   flat inside a material sidebar when depth would be redundant.
+- **One accent selection per screen (2026-11-14).** The sidebar owns the accent selection. A
+  second navigation level (the Settings sub-tabs) marks its selection by text alone: the
+  body weight in primary text with a persistent neutral underline, no face (a heavier label
+  shifted the tab labels as the selection moved); the list/grid layout pair marks the active layout
+  with the opaque neutral field face and a primary icon.
 - **States:** hover, press, selected, focus, and disabled. Focus and selection must not be
   visually confused.
 - **Input/accessibility:** pointer and keyboard navigation with group position/state exposed.
@@ -870,11 +956,19 @@ Grid screens are an exemption from list-specific layout, not a separate design l
 
 ## 13. Scrolling, clipping, and input bounds
 
+### 13.0 Rest on a row boundary
+
+A scrolling body ends on a row boundary at rest (2026-11-14), so no row is cut through its
+text before the user scrolls. A content-fitted detail window shortens to the last whole row
+that fits (`FeatureDetailScreen.fitFrame`); the main window's Settings viewport trims its band
+to the last whole row (`AuroraScreen.contentViewport`), and the scissor, hit tests, scroll
+extent and scrollbar all read that one band. Partial rows still appear while scrolling.
+
 ### 13.1 Top-edge fade
 
-Scrollable content fades into the surface at the top clip boundary. The bottom edge has no
-automatic counterpart because lists terminate into their own padding/footer; add another
-edge only if a real collision is demonstrated.
+Scrollable content fades into the surface at the top clip boundary, and at the bottom
+boundary while more content lies below (`ScrollFade.drawBottom`, engaged by the remaining
+scroll distance).
 
 The canonical implementation is `ScrollFade`:
 
@@ -882,7 +976,8 @@ The canonical implementation is `ScrollFade`:
 - Use a 16-GUI-pixel vertical gradient.
 - Begin with the actual surface color at that position, alpha included, and end transparent.
 - Scale engagement by `min(1, scrollPosition / 16)`. A resting list is pixel-untouched; the
-  fade is fully engaged after one fade height has scrolled past.
+  fade is fully engaged after one fade height has scrolled past. The bottom edge uses the
+  shorter `ScrollFade.BOTTOM_FADE_PX` (8) because bodies rest on a row boundary (§13.0).
 - Use raw scroll position, not overflow ratio.
 
 The surface color is semantic and contextual:
@@ -892,8 +987,12 @@ The surface color is semantic and contextual:
 - `SURFACE` for a secondary container such as a sidebar;
 - a screen's actual custom dim strength when that is the surface already present.
 
-Do not invent a stronger fade color. The fade must dissolve into the backdrop already there
-and must not create a second Background Opacity application point.
+The fade's edge alpha has a floor, `ScrollFade.MIN_EDGE_ALPHA` (0xD8), above the surface's
+own alpha (UI polish overhaul, 2026-11-14). At the factory 33% Background Opacity a fade to
+the window tint verbatim was nearly invisible, and every council reviewer read rows cut at the
+viewport edge as a rendering bug. The floor only darkens a 16 px gradient at an edge that has
+content beyond it; it is not a cover, the scissor still clips, and the window's own tint keeps
+Background Opacity as its single application point.
 
 This rule applies to content that can cross a fixed viewport edge. A dropdown that moves only
 by whole rows and never partially crosses its edge does not need the fade, and world-map wheel
@@ -1269,7 +1368,8 @@ recipe, 18px section band between groups). These rules are now normative:
   selection edge (selected tab, enabled tile, selected layout peer) draws its focus ring
   2 px outside that edge.
 - **Previews follow roundness.** The crosshair preview is a rounded inset tone, not a
-  square outlined box.
+  square outlined box. It draws at a whole-number zoom (3x to 6x) chosen so small shapes fill
+  about two thirds of the well; a 2 px dot at a fixed 3x read as a speck.
 
 Evidence, measurements and limits: `SPXCTRA_UI_SIMPLIFICATION_REPORT.md`.
 
@@ -1294,9 +1394,9 @@ cards keep their original 80×80 size; the window must not be oversized for the 
 - **Compact metrics** (`UiDensity`): 24 px header band with 16 px header buttons; setting rows
   18 px (sliders 20, wrapped 28) with 2 px gaps; 14 px field controls (dropdown 84 wide,
   keybind/action 72); 24×12 toggles; 14×14 square color swatches (accent presets the same
-  squares, its Custom slot a wider labeled pill); 5 px slider knob; section band 8 px.
-  Feature cards stay 80×80 with 6 px gaps (3 columns, 3 rows visible); list cards stay
-  32 px with 4 px gaps.
+  squares, its Custom slot a wider labeled pill); 4.5 px slider knob (5 before 2026-11-14); section band 8 px.
+  Feature cards stay 80×80 with 6 px gaps (3 columns, 3 rows visible); list rows are 24 px
+  with 4 px gaps, nine visible (owner decision 2026-11-14; 32 px rows were half empty).
 - **Per-pixel color gradients.** Both color pickers (`ColorPickerScreen` and
   `ColorSetting`'s expanded inline editor) rasterize the saturation/lightness pad and the
   hue/alpha strips one sample per DEVICE pixel into small `UiLayerCache` buffers
@@ -1309,3 +1409,40 @@ cards keep their original 80×80 size; the window must not be oversized for the 
   open. A player's choice is remembered for the session per feature and caption. A caption
   directly under a collapsed caption drops its band so collapsed runs read as one list.
 - **Waypoint editor** shows Location and Details together (the "Show details" switch is gone).
+
+## UI polish overhaul — 2026-11-14
+
+A council of independent vision models rated screenshots of eleven screens after each round
+(evidence and ratings: `docs/reports/2026-11-14-ui-polish-overhaul.md`). The rules below are
+written into the sections they belong to; this list records what changed and which earlier
+rulings it supersedes.
+
+- **Factory palette** (§3.2): Indigo accent on graphite for new installs (owner decision).
+- **Text roles** (§4.1): `TITLE` (11 px raster) and `HEADING`, a heavier cut of the user's family. Supersedes
+  "Version 3 does not introduce a type scale" for those two roles only; body text keeps the
+  one size.
+- **Windows fit their content.** Feature detail windows fit their rows below a fixed top edge
+  (min 120 px, never taller than the frame) and carry the feature's one-sentence summary under
+  the title (owner decision). The main window keeps the 336×288 frame on the Features tab; a
+  Settings page fits its content the same way (owner decision). Supersedes the compact pass's
+  "one window" rule for those two cases; managers, editors and pickers keep the frame.
+- **Rest on a row boundary** (§13.0) and a shorter bottom fade with an alpha floor (§13.1).
+- **Feature state is the icon colour, not a selection** (§11.10): neutral tiles and rows,
+  an accent icon when on, a neutral grey icon when off. Supersedes the enabled-tile accent
+  edge and wash. The owner confirmed icon colour as the only cue after five plateaued rounds,
+  and ruled out an Enabled switch on feature detail pages; the tile or row stays the toggle.
+- **The sidebar's first item is "Features"** (owner decision; was "Mods"), matching the search
+  field's "Search features and settings". The title screen's Mods card (Mod Menu) keeps its name.
+- **One accent selection per screen** (§11.11): the sidebar keeps it; sub-tabs mark selection
+  by text weight, the layout pair by the neutral field face.
+- **Controls** — filled OFF track shared by switches and slider tracks (§11.4); one inline
+  slider row with a bounded track and the unit in the value (§11.5); rounded-square swatches with a light hairline
+  on dark samples (§11.9); ghost Reset beside an accent-filled Done, one primary per header
+  (§11.2a);
+  disabled rows mute their label.
+- **Settings pages** — group headings in `HEADING`, a one-line summary under each heading;
+  collapsible captions in the heading weight, one step quieter.
+- **Managers** — titled header with the action beside Done; structured empty state (§11.10a);
+  the waypoint group chip only exists while a group is chosen.
+- **Names** — "Toggle Sprint/Sneak" is "Sprint & Sneak" (owner decision), so every grid label
+  fits one line.

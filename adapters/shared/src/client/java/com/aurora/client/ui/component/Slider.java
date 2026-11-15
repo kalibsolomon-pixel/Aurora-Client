@@ -62,7 +62,7 @@ import java.util.function.DoubleSupplier;
 public class Slider extends Widget {
 
     private static final float TRACK_H = 4f;
-    private static final float KNOB_R = 5f;
+    private static final float KNOB_R = 4.5f; // 9 px knob (2026-11-14; was 10): it no longer hides the fill edge
     /** Canonical-mode drag grip: knob radius while an accepted drag is active. */
     private static final float KNOB_R_DRAG = KNOB_R + 1f;
 
@@ -92,6 +92,9 @@ public class Slider extends Widget {
      * 140 ms hover, drag-grip knob, focus hairline). Must be called before
      * first render (construction time) — it swaps the hover animator.
      */
+    /** Number of positions past the first: {@code (max - min) / step}, rounded. */
+    public int steps() { return step <= 0 ? Integer.MAX_VALUE : (int) Math.round((max - min) / step); }
+
     public Slider canonicalStates() {
         this.canonical = true;
         this.hoverAnim = HoverAnim.symmetric(140L);
@@ -160,11 +163,9 @@ public class Slider extends Widget {
         t = Math.max(0f, Math.min(1f, t));
         float filledW = w * t;
         if (filledW > 0) {
-            // The accent fill wears the subtle AccentGradient; disabled stays flat.
-            int fill = fill();
-            RenderUtil.drawRoundedRectGradientAA(g, x, ty, filledW, TRACK_H, trackRadius(),
-                    disabled ? fill : com.aurora.client.theme.AccentGradient.start(fill),
-                    disabled ? fill : com.aurora.client.theme.AccentGradient.end(fill), true);
+            // A flat accent fill (owner decision 2026-11-14): the former AccentGradient showed only
+            // its pale left end on short fills, so sliders read as different colours.
+            RenderUtil.drawRoundedRectAA(g, x, ty, filledW, TRACK_H, trackRadius(), fill());
         }
 
         // Knob — center stays exactly at the value coordinate; the canonical
@@ -199,8 +200,13 @@ public class Slider extends Widget {
     }
 
     private int trackBase() {
-        return disabled ? MaterialSurface.color(ThemeToken.SURFACE_INSET)
-                : MaterialSurface.color(ThemeToken.SURFACE_VARIANT);
+        // The unfilled track shares the OFF switch's neutral (UI polish 2026-11-14): the raised
+        // surface tone it used barely separated from the window.
+        // A touch lighter than the OFF switch track: a 4 px line needs more contrast than a 12 px
+        // pill to stay visible beside a knob at the minimum (2026-11-14).
+        return disabled ? ThemeManager.color(ThemeToken.MATERIAL_BORDER)
+                : com.aurora.client.util.AuroraAnim.lerpArgb(ThemeManager.color(ThemeToken.MATERIAL_BORDER_STRONG),
+                        ThemeManager.color(ThemeToken.MATERIAL_TEXT_MUTED), 0.2f);
     }
 
     private int fill() {

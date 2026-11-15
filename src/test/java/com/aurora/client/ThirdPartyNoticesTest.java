@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class ThirdPartyNoticesTest {
     private static final Path NOTICES = SourceTree.resolve("THIRD_PARTY_NOTICES.md");
     private static final Path FONTS = SourceTree.resolve(SourceTree.ADAPTER + "/src/client/resources/assets/aurora/font");
-    private static final List<String> PROJECTS = List.of("BetterHitreg", "Freelook++", "HitColor", "AppleSkin");
+    private static final List<String> PROJECTS = List.of("BetterHitreg", "Freelook++", "HitColor", "AppleSkin", "Phenomena");
 
     private static String read(Path p) throws Exception {
         return Files.readString(p).replace("\r\n", "\n");
@@ -68,7 +68,7 @@ class ThirdPartyNoticesTest {
         String notices = read(NOTICES);
         for (String project : PROJECTS) assertTrue(notices.contains(project), project);
         // A credit may wrap onto the next comment line and sit in a <b> tag.
-        Pattern credit = Pattern.compile("(?i)(adapted from|ported from|borrowed from|port of)[\\s*]+(?:<b>)?(\\S+)");
+        Pattern credit = Pattern.compile("(?i)\\b(adapted from|ported from|borrowed from|port of)[\\s*]+(?:<b>)?(\\S+)");
         try (Stream<Path> files = SourceTree.javaFiles()) {
             for (Path file : (Iterable<Path>) files::iterator) {
                 Matcher m = credit.matcher(read(file));

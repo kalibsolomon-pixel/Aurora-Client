@@ -519,6 +519,10 @@ public class ProfileManager {
         // The reset step above assigns DEFAULTS.theme by reference; give the
         // live config its own instance so profile edits can never leak into
         // the factory snapshot (or vice versa).
+        live.pulsarSettings = live.pulsarSettings != null
+                ? GSON.fromJson(GSON.toJson(live.pulsarSettings), dev.phenomena.config.Config.class)
+                : new dev.phenomena.config.Config();
+        live.pulsarSettings = com.aurora.client.pulsar.PulsarConfigBridge.validatedOrDefault(live.pulsarSettings);
         live.theme = live.theme != null
                 ? ThemeDefinition.copyOf(live.theme)
                 : ThemeDefinition.defaults();

@@ -42,6 +42,7 @@ Changing a default does not change an existing install: a player who already had
 
 | Feature | Class | What it does |
 |---|---|---|
+| Pulsar | Information advantage | Records locally observed combat, including opponents, and derives fight analytics and offline reports. It never changes attacks or sends packets. |
 | Zoom | Vanilla equivalent | Narrows the field of view while a key is held, as the vanilla spyglass does. |
 | Full Bright | Vanilla equivalent | Extends the vanilla Brightness setting past its maximum, so unlit areas are visible. Off in a fresh install. |
 | No Fog | Vanilla equivalent | Pushes distance fog back, so terrain inside your render distance is visible sooner than in vanilla. Off in a fresh install. |
@@ -50,7 +51,7 @@ Changing a default does not change an existing install: a player who already had
 | FreeLook | Information advantage | Lets the camera look around without turning the character, a view vanilla does not allow. |
 | Saturation Bar | Vanilla equivalent | Shows your own saturation on the food bar. |
 | Block Overlay | Cosmetic | Restyles the outline of the block you are looking at. |
-| Toggle Sprint/Sneak | Vanilla equivalent | Press-once sprint and sneak, as vanilla's accessibility options offer. |
+| Sprint & Sneak | Vanilla equivalent | Press-once sprint and sneak, as vanilla's accessibility options offer. |
 | Alerts | Vanilla equivalent | Warns about your own armor durability and your own expiring effects, as two HUD modules. |
 | Crosshair | Cosmetic | Replaces the crosshair's shape and color. |
 | Hitbox | Vanilla equivalent | Draws entity hitboxes, as vanilla's F3+B does, with custom colors. |

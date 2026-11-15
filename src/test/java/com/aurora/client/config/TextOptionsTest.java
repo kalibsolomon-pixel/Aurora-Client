@@ -66,7 +66,8 @@ class TextOptionsTest {
         assertFalse(fresh.textItalic);
         assertFalse(fresh.textUnderline);
         assertEquals(AuroraConfig.TextCase.NORMAL, fresh.textCase);
-        assertEquals(AuroraConfig.TextShadow.OFF, fresh.textHudShadow);
+        // HUD text gained the Normal drop shadow as its factory default (owner decision 2026-11-14).
+        assertEquals(AuroraConfig.TextShadow.NORMAL, fresh.textHudShadow);
         assertTrue(fresh.searchInstant);
         assertEquals(2, fresh.searchTypoTolerance);
         assertFalse(java.util.Arrays.asList(AuroraConfig.FontType.choices()).contains(AuroraConfig.FontType.INTER_ITALIC),

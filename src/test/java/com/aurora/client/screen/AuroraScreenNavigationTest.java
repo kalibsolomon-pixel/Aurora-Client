@@ -62,13 +62,13 @@ class AuroraScreenNavigationTest {
         // C-5: the layout pair joined the hosted chrome.
         assertTrue(src.contains("layoutControls[0] = layoutControl(0);"));
         assertTrue(src.contains("layoutControls[1] = layoutControl(1);"));
-        // Module cards: one control per ModuleManager module (34 tiles).
+        // Module cards: one control per ModuleManager module (35 tiles).
         // The Settings sub-tabs: one navigation control per page.
         assertTrue(src.contains("for (int i = 0; i < pageControls.length; i++) pageControls[i] = pageControl(i);"));
         assertTrue(src.contains("for (Module m : ModuleManager.getInstance().getModules()) {\n            tileControls.put(m.id, tileControl(m));"));
         // ModuleManager derives its cards from FeatureCatalog (ADR 0004).
         assertTrue(modules.contains("FeatureCatalog.featuresOn(FeatureCatalog.Tab.MODULES)"));
-        assertEquals(34, com.aurora.client.feature.FeatureCatalog.featuresOn(com.aurora.client.feature.FeatureCatalog.Tab.MODULES).size(),
+        assertEquals(35, com.aurora.client.feature.FeatureCatalog.featuresOn(com.aurora.client.feature.FeatureCatalog.Tab.MODULES).size(),
                 "the grid's tile inventory (FeatureCatalog)");
         // Settings headers: navigation only for entries with a detail screen;
         // header toggles only for entries that have a switch (Theme, Custom
@@ -109,10 +109,10 @@ class AuroraScreenNavigationTest {
         assertTrue(factory.contains("play(SemanticSound.ACTIVATION);"));
         assertTrue(factory.contains("SemanticSound.NONE, true, true)"));
         // The painter keeps its 20×20 vector icons (visual preservation) and
-        // gains the independent focus channel — suppressed on the selected
-        // peer (owner ruling 2026-10-30: selection is the treatment).
+        // gains the independent focus channel. The selected peer no longer wears an accent
+        // edge (UI polish 2026-11-14), so focus draws on both peers.
         String painter = bodyOf(src, "private void drawLayoutButton(");
-        assertTrue(painter.contains("if (focused && !(MaterialSurface.unified() && selected)) {"));
+        assertTrue(painter.contains("if (focused) {"));
         assertTrue(painter.contains("0x99"));
         assertFalse(painter.contains("mouseX"),
                 "hover no longer reads the pointer directly — it consumes the canonical hoverT");
@@ -400,7 +400,7 @@ class AuroraScreenNavigationTest {
         for (String site : new String[]{
                 "if (control != null && control.isFocused() && !sel) {",
                 "if (profilesControl != null && profilesControl.isFocused())",
-                "if (control != null && control.isFocused() && !(MaterialSurface.unified() && on)) {\n                RenderUtil.drawRoundedOutlineAA(g, cx, cy, cw, ch, tileRadius",
+                "if (control != null && control.isFocused()) {\n                RenderUtil.drawRoundedOutlineAA(g, cx, cy, cw, ch, tileRadius",
                 "if (nav.isFocused())"}) {
             assertTrue(src.contains(site), "focus site missing: " + site);
         }

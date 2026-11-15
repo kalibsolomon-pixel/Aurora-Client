@@ -90,7 +90,8 @@ public class SliderSetting extends FeatureSetting {
     }
 
     private SliderSetting(String label, Slider slider, boolean intMode) {
-        super(label);
+        super(unitless(label));
+        this.unit = unitOf(label);
         this.intMode = intMode;
         this.slider = slider;
         // Phase B rollout: every SETTING row runs the canonical state
@@ -101,7 +102,8 @@ public class SliderSetting extends FeatureSetting {
     }
 
     SliderSetting(String label, DoubleSupplier getter, DoubleConsumer setter, double min, double max, boolean intMode) {
-        super(label);
+        super(unitless(label));
+        this.unit = unitOf(label);
         this.intMode = intMode;
         this.slider = createSlider(getter, setter, min, max);
         // See the private constructor's note — factory-wide canonical.
@@ -154,6 +156,9 @@ public class SliderSetting extends FeatureSetting {
         slider.canonicalStates();
         return this;
     }
+
+    /** The slider's positions past the first; picks its track length ({@code SettingRowLayout.trackWidth}). */
+    public int steps() { return slider.steps(); }
 
     @Override public int baseHeight() { return compactRow == null ? CONTROL_H : compactRow.height(); }
     @Override public int height() { return baseHeight() + descriptionHeight(lastWidth); }
@@ -225,8 +230,9 @@ public class SliderSetting extends FeatureSetting {
         // Highlight the value in accent when this slider holds focus, so the
         // user can see at a glance which slider scroll/keys go to.
         boolean focused = (!disabled && FeatureSetting.getFocused() == this);
-        int valueColor = disabled ? MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED) : (focused ? MaterialSurface.color(ThemeToken.ACCENT) : MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY));
-        ctx.text(tr, cachedStr, compactRow == null ? x + width - cachedStrW - 14 : x + compactRow.value().x() + (compactRow.value().width() - cachedStrW) / 2, compactRow == null ? y + 6 : y + (compactRow.value().height() - tr.lineHeight) / 2, valueColor, false);
+        int valueColor = disabled ? com.aurora.client.util.AuroraAnim.lerpArgb(MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED),
+                MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), .5f) : (focused ? MaterialSurface.color(ThemeToken.ACCENT) : MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY));
+        ctx.text(tr, cachedStr, compactRow == null ? x + width - cachedStrW - 14 : x + compactRow.value().x() + compactRow.value().width() - cachedStrW, compactRow == null ? y + 6 : y + (compactRow.value().height() - tr.lineHeight) / 2, valueColor, false);
     }
 
     /** Cacheable static track layer (depends only on the roundness token). */
@@ -250,9 +256,25 @@ public class SliderSetting extends FeatureSetting {
         return intMode ? (long) v : Math.round(v * 100.0);
     }
 
+    /**
+     * A unit written into a label ("Size %", "Threshold (%)", "Size (px)") moves to the value
+     * readout (UI polish 2026-11-14), so every slider states its unit in one place: "100%",
+     * "4 px", like the theme sliders.
+     */
+    private final String unit;
+    private static final String[][] LABEL_UNITS = {{" (%)", "%"}, {" %", "%"}, {" (px)", " px"}};
+    static String unitless(String label) {
+        for (String[] u : LABEL_UNITS) if (label.endsWith(u[0])) return label.substring(0, label.length() - u[0].length());
+        return label;
+    }
+    static String unitOf(String label) {
+        for (String[] u : LABEL_UNITS) if (label.endsWith(u[0])) return u[1];
+        return "";
+    }
+
     private String valueText(double v) {
         if (valueFormat != null) return valueFormat.apply(v);
-        if (intMode) return Integer.toString((int) v);
+        if (intMode) return (int) v + unit;
         return percent ? Math.round(v * 100.0) + "%" : String.format("%.2f", v);
     }
 

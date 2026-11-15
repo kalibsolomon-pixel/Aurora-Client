@@ -15,7 +15,7 @@ Quicksand ships Google's file unmodified (its default weight) and all four of
 its weight providers point at it.
 
 Writes <stem>-<weight>[-italic].ttf and the provider JSONs
-<family>_<weight>[_italic][_ui].json into the font folder, and deletes the
+<family>_<weight>[_italic][_ui|_title].json into the font folder, and deletes the
 pre-2026-11-12 single-weight files.
 
 Usage (downloads are untrusted input; keep them in their own folder):
@@ -55,8 +55,9 @@ RANGES = [(0x0020, 0x024F), (0x0250, 0x02FF), (0x0300, 0x036F), (0x0370, 0x03FF)
           (0x2100, 0x218F), (0x2190, 0x21FF), (0x2200, 0x22FF), (0x2300, 0x23FF), (0x2500, 0x25FF),
           (0x2C60, 0x2C7F), (0xA720, 0xA7FF), (0xFB00, 0xFB06)]
 
-# Minecraft provider sizes: in-world/regular text, and the compact windowed-screen variant.
-PROVIDER_SIZES = {"": 9.0, "_ui": 8.0}
+# Minecraft provider sizes: in-world/regular text, the compact windowed-screen variant, and the
+# title role (AuroraFontRenderer.Role.TITLE, 2026-11-14).
+PROVIDER_SIZES = {"": 9.0, "_ui": 8.0, "_title": 11.0}
 OVERSAMPLE = 8.0
 
 # Shipped as the unmodified upstream file (Reserved Font Name; see the docstring).

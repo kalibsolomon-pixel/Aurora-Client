@@ -28,6 +28,11 @@ public class AuroraConfig {
     /** Field initializers supply schema fallbacks; the reviewed portable resource supplies release defaults. */
     public AuroraConfig() { ReleaseDefaults.apply(this); }
 
+    /** Pulsar is optional; recording data stays outside profiles in phenomena/. */
+    public boolean pulsarEnabled = false;
+    public int pulsarKey = 14; // SDL physical K
+    public dev.phenomena.config.Config pulsarSettings = new dev.phenomena.config.Config();
+
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final Logger LOGGER = LoggerFactory.getLogger("Aurora");
 
@@ -101,7 +106,8 @@ public class AuroraConfig {
                 // - hand the live config its own copy (ThemeDefinition, and
                 // the mutable collections for the same reason: a shared
                 // Set/Map would let later edits mutate the factory default).
-                if (def instanceof ThemeDefinition td) def = ThemeDefinition.copyOf(td);
+                if (def instanceof dev.phenomena.config.Config pc) def = GSON.fromJson(GSON.toJson(pc), dev.phenomena.config.Config.class);
+                else if (def instanceof ThemeDefinition td) def = ThemeDefinition.copyOf(td);
                 else if (def instanceof Map<?,?> m) def = new HashMap<>(m);
                 else if (def instanceof Set<?> s) def = new HashSet<>(s);
                 else if (def instanceof List<?> l) def = new ArrayList<>(l);
@@ -274,7 +280,7 @@ public class AuroraConfig {
     public boolean textItalic = false;
     public boolean textUnderline = false;
     public TextCase textCase = TextCase.NORMAL;
-    public TextShadow textHudShadow = TextShadow.OFF;
+    public TextShadow textHudShadow = TextShadow.NORMAL; // factory Normal since 2026-11-14 (owner decision)
 
     // ---- Search (Settings → General → Search, 2026-11-12) ----
     /** Focus the search field when the Aurora menu opens or its page changes. */
@@ -581,7 +587,7 @@ public class AuroraConfig {
     public int armorAlertThresholdPct = 10;  // 1..100
     public boolean armorAlertSound = true;   // master enable for the alert sound
     public ArmorAlertSoundChoice armorAlertSoundChoice = ArmorAlertSoundChoice.PLING;
-    public boolean armorShowDurabilityBars = false;
+    public boolean armorShowDurabilityBars = true; // factory on since 2026-11-14 (owner decision)
     /** Lay the four armor pieces horizontally (helmet → boots, left → right). */
     public boolean armorHorizontal = false;
     /** Also render the main hand in the Armor HUD (only while it holds something). */
@@ -1422,6 +1428,21 @@ public class AuroraConfig {
                 AuroraConfig loaded = GSON.fromJson(json, AuroraConfig.class);
                 if (loaded == null) throw new com.google.gson.JsonParseException("Config is null");
                 if (loaded != null) {
+                    try {
+                        if (loaded.pulsarSettings == null) loaded.pulsarSettings = new dev.phenomena.config.Config();
+                        loaded.pulsarSettings.validate();
+                    } catch (RuntimeException invalidPulsar) {
+                        // Preserve the complete input before any autosave replaces the bad member.
+                        // Other Aurora preferences remain usable.
+                        try {
+                            Files.copy(configPath(), configPath().resolveSibling("aurora.json.pulsar-invalid-" + java.util.UUID.randomUUID() + ".bak"));
+                        } catch (IOException backupFailure) {
+                            configWritesBlocked = true;
+                            LOGGER.error("Pulsar settings backup failed; config writes disabled to preserve input", backupFailure);
+                        }
+                        LOGGER.warn("Invalid Pulsar settings; using Pulsar defaults", invalidPulsar);
+                        loaded.pulsarSettings = new dev.phenomena.config.Config();
+                    }
                     loadedFromExistingFile = true;
                     if (loaded.moduleLayouts == null) loaded.moduleLayouts = new HashMap<>();
                     if (loaded.particleVisibility == null) loaded.particleVisibility = new HashMap<>();

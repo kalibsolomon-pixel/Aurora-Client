@@ -41,12 +41,12 @@ class AccentGradientTest {
         assertEquals(b, AccentGradient.start(0xFFEB0029));
     }
 
-    @Test void switchesAndSliderFillsWearIt() {
+    @Test void switchesAndSliderFillsAreFlat() {
+        // Owner decision 2026-11-14: switch tracks and slider fills are the flat accent.
         String toggle = SourceTree.read("ui/component/ToggleSwitch.java");
-        assertEquals(2, toggle.split("drawRoundedRectGradientAA\\(", -1).length - 1, "both switch painters");
-        assertTrue(toggle.contains("AccentGradient.start(active)") && toggle.contains("AccentGradient.end(active)"));
+        assertFalse(toggle.contains("AccentGradient."), "switches no longer wear the gradient");
         String slider = SourceTree.read("ui/component/Slider.java");
-        assertTrue(slider.contains("RenderUtil.drawRoundedRectGradientAA(g, x, ty, filledW, TRACK_H, trackRadius(),"));
+        assertTrue(slider.contains("RenderUtil.drawRoundedRectAA(g, x, ty, filledW, TRACK_H, trackRadius(), fill());"));
         String render = SourceTree.read("ui/util/RenderUtil.java");
         assertTrue(render.contains("NativeShapeRenderer.drawGradient("), "one shader quad");
         assertTrue(render.contains("AuroraAnim.lerpArgb(from, to, 0.5f)"), "flat midpoint where the shader cannot run");

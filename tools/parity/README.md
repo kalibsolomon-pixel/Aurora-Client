@@ -51,6 +51,10 @@ exchange atomically and refuses an unmarked fixture or a pending command.
 | `bindings` | Assert config/vanilla sync and the native C reset default |
 | `persisted` | Assert the F7 capture survived restart |
 | `keycaps` | Assert the native extra-key label is F7 and show it in the HUD |
+| `pulsar-target` | Summon a still husk 1.8 blocks east of the player |
+| `pulsar-reach 400 [creative]` | Switch to survival (or creative), then for N ticks sprint at the husk clicking the real attack key; logs `[parity-probe] pulsar-reach PASS/FAIL` comparing recorded reach with the vanilla pick (Reach Display) and the old interpolated formula |
+| `pulsar-delete` | Select the second-newest recording in History and press its Delete button (opens the real confirmation; Escape cancels) |
+| `pulsar-reach-stats [creative]` | After `pulsar-end`, assert the newest recording's hit reach statistics never exceed 3.0 (creative: hold no reach samples) |
 | `menu` | Disconnect to Aurora's title screen |
 | `stop` | Shut down normally |
 

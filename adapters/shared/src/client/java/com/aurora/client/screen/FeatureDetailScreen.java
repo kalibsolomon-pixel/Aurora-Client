@@ -17,6 +17,7 @@ import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.util.SmoothScroll;
 import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.ui.util.UiLayerCache;
+import java.util.List;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -46,6 +47,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
 
 
     private int LIST_W = 320;
+    private static final int SCROLLBAR_INSET = 6;
     private int TOP_PAD = 60;
     private int ROW_GAP = 6;
 
@@ -60,10 +62,34 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
      * row label uses). Vertically it shares the Done/Reset row's band.
      */
     private static final int TITLE_Y = 16;
-    /** Body starts below the header band. */
-    private static final int BODY_TOP = com.aurora.client.ui.util.UiDensity.HEADER
-            + com.aurora.client.ui.util.UiDensity.INSET;
-    private static final boolean UNIFORM_FRAME = true;
+    /**
+     * Content-fitted again (UI polish overhaul, 2026-11-14, owner decision): a sparse feature
+     * no longer sits in a mostly empty window. Width stays uniform and the top edge stays put.
+     */
+    private static final boolean UNIFORM_FRAME = false;
+    /** Smallest fitted frame, so a one-row feature still reads as a window. */
+    private static final int MIN_FRAME_H = 120;
+    /** Title band plus the feature's description (§12.1), measured in {@link #layoutHeader}. */
+    private int headerH = com.aurora.client.ui.util.UiDensity.HEADER;
+    private List<String> descriptionLines = List.of();
+    private String headerLine;
+    private int bodyOffset() { return headerH + 4; }
+
+    /** Wraps the description (at most two lines, whole words) and the health/credit line. */
+    private void layoutHeader() {
+        int width = LIST_W - 24;
+        // The catalog's one-sentence summary where there is one: the long registry description
+        // is written for tooltips and would push the first setting down by a paragraph.
+        var catalog = com.aurora.client.feature.FeatureCatalog.feature(meta.id);
+        String text = catalog != null && !catalog.summary().isBlank() ? catalog.summary() : meta.description;
+        descriptionLines = this.font == null ? List.of()
+                : com.aurora.client.ui.util.WordWrap.lines(text, width, 2, this.font::width);
+        headerLine = meta.headerLine() == null || meta.headerLine().isEmpty() || this.font == null ? null
+                : AuroraFontRenderer.ellipsize(this.font, meta.headerLine(), width, 0);
+        int lines = descriptionLines.size() + (headerLine == null ? 0 : 1);
+        headerH = com.aurora.client.ui.util.UiDensity.HEADER + (lines == 0 ? 0 : lines * DESCRIPTION_PITCH + 6);
+    }
+    private static final int DESCRIPTION_PITCH = 10;
 
     private final Screen parent;
     private final FeatureMetadata meta;
@@ -88,7 +114,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
     private void fitFrame(boolean recenter) {
         // Uniform window (compact pass, 2026-10-30): every detail screen uses the shared
         // frame, so the window never resizes as sections expand or collapse.
-        if (UNIFORM_FRAME) { compactFrame = maxFrame; TOP_PAD = compactFrame.y() + BODY_TOP; return; }
+        if (UNIFORM_FRAME) { compactFrame = maxFrame; TOP_PAD = compactFrame.y() + bodyOffset(); return; }
         int total = 0;
         for (FeatureSetting setting : meta.settings) if (setting.isVisible()) total += bodyHeight(setting) + ROW_GAP;
         if (total > 0) total -= ROW_GAP;
@@ -99,16 +125,40 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         for (FeatureSetting setting : meta.settings)
             if (setting.isVisible() && setting instanceof com.aurora.client.screen.setting.EnumSetting<?> row)
                 popup = Math.max(popup, row.popupHeight() + 30);
-        int wanted = Math.max(total == 0 ? 64 : 80, 36 + fixedHeader + Math.max(total, popup) + 8);
-        int top = recenter ? Math.max(maxFrame.y(), (this.height - Math.min(wanted, maxFrame.height())) / 2)
-                : compactFrame.y();
+        int wanted = Math.max(MIN_FRAME_H, bodyOffset() + fixedHeader + Math.max(total, popup) + BODY_BOTTOM + 2);
+        // Every detail window shares the main window's top edge (2026-11-14): centring each on
+        // its own content made the window jump between pages; only the bottom edge follows rows.
+        int top = maxFrame.y();
         int limit = Math.min(maxFrame.y() + maxFrame.height(), this.height - 12) - top;
+        int body = limit - bodyOffset() - fixedHeader - BODY_BOTTOM - 2;
+        if (Math.max(total, popup) > body) {
+            // A scrolling body ends on a row boundary, so at rest no setting is cut through
+            // its middle (council review, 2026-11-14); the scrollbar and fade show the rest.
+            // Never rest on a section caption whose rows are all below the fold: an orphaned
+            // caption at the bottom edge read as a cut-off section (council review 2026-11-14).
+            int acc = 0, fit = 0, beforeCaption = 0;
+            boolean lastIsCaption = false;
+            for (FeatureSetting setting : meta.settings) {
+                if (!setting.isVisible()) continue;
+                int h = bodyHeight(setting);
+                if (acc + h > body) break;
+                boolean caption = setting instanceof com.aurora.client.screen.setting.SectionHeaderSetting;
+                if (caption) beforeCaption = fit;
+                fit = acc + h;
+                acc = fit + ROW_GAP;
+                lastIsCaption = caption;
+            }
+            if (lastIsCaption && beforeCaption > 0) fit = beforeCaption;
+            if (fit > 0 && fit >= popup) wanted = Math.max(MIN_FRAME_H, bodyOffset() + fixedHeader + fit + BODY_BOTTOM + 2);
+        }
         compactFrame = new com.aurora.client.ui.util.UiDensity.Rect(maxFrame.x(), top, maxFrame.width(),
                 Math.max(1, Math.min(wanted, limit)));
-        TOP_PAD = compactFrame.y() + 36;
+        TOP_PAD = compactFrame.y() + bodyOffset();
     }
     private void measureRows() {
+        int track = FeatureSetting.pageTrackWidth(meta.settings);
         if (compact()) for (FeatureSetting setting : meta.settings) {
+            setting.pageTrack(track);
             if (setting.isVisible()) setting.measureCompact(LIST_W);
             else {
                 for (SemanticActionControl control : setting.interactionControls()) {
@@ -121,7 +171,9 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
             }
         }
     }
-    private int bodyBottom() { return compact() ? compactFrame.y() + compactFrame.height() - 8 : Math.max(bodyTop() + 1, this.height - 30); }
+    private int bodyBottom() { return compact() ? compactFrame.y() + compactFrame.height() - BODY_BOTTOM : Math.max(bodyTop() + 1, this.height - 30); }
+    /** Inset below the last row, clear of the window's corner radius (12, was 8; 2026-11-14). */
+    private static final int BODY_BOTTOM = 12;
     private int bodyHeight(FeatureSetting setting) { return setting.height() - (setting == fixedHeaderSetting ? setting.fixedHeaderHeight() : 0); }
     private int settingY(FeatureSetting setting, int bodyY) { return bodyY - (setting == fixedHeaderSetting ? setting.fixedHeaderHeight() : 0); }
 
@@ -228,7 +280,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         if (compact()) {
             maxFrame = com.aurora.client.ui.util.UiDensity.detailFrame(this.width, this.height);
             compactFrame = maxFrame;
-            LIST_W = compactFrame.width(); TOP_PAD = compactFrame.y() + BODY_TOP;
+            LIST_W = compactFrame.width(); layoutHeader(); TOP_PAD = compactFrame.y() + bodyOffset();
             ROW_GAP = com.aurora.client.ui.util.UiDensity.ROW_GAP;
             measureRows();
             fitFrame(true);
@@ -256,8 +308,9 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
                 DONE_W, DONE_H,
                 Component.literal("Done"),
                 "Close this screen and return.",
-                this::onClose).glassBackground(true).theming(com.aurora.client.ui.component.Button.Theming.OUTLINED);
-        // Closing is neutral chrome, matching Reset and the other screens' Done buttons.
+                this::onClose).glassStyle(com.aurora.client.ui.component.Button.GlassStyle.STAINED).primary(true);
+        // Done is the screen's primary action, accent-filled; Reset beside it is a quiet ghost
+        // (owner decision 2026-11-14, superseding the 2026-10-19 neutral-Done ruling).
         this.addRenderableWidget(this.doneBtn);
 
         // Reset-to-defaults button immediately to the left of Done. Persists
@@ -274,7 +327,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
                 () -> {
                     meta.reset();
                     AuroraConfig.save();
-                }).glassBackground(true).theming(com.aurora.client.ui.component.Button.Theming.OUTLINED);
+                }).glassBackground(true).theming(com.aurora.client.ui.component.Button.Theming.GHOST); // secondary to Done (2026-11-14)
         this.addRenderableWidget(this.resetBtn);
 
         // Custom-painted semantic controls join vanilla's child/narratable
@@ -562,16 +615,32 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
                         MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED), false);
             com.aurora.client.util.ScrollFade.drawTop(ctx, listX + 8, LIST_W - 16, bodyTop(),
                     com.aurora.client.util.ScrollFade.FADE_PX, scroll.current(), fadeSurface);
-            com.aurora.client.util.ScrollFade.drawBottom(ctx, listX + 8, LIST_W - 16, bodyBottom(),
-                    com.aurora.client.util.ScrollFade.FADE_PX, maxScroll - scroll.current(), fadeSurface);
+            // At rest the body ends on a row boundary (fitFrame): fade only rows cut by scrolling.
+            if (scroll.current() > 0) com.aurora.client.util.ScrollFade.drawBottom(ctx, listX + 8, LIST_W - 16, bodyBottom(),
+                    com.aurora.client.util.ScrollFade.BOTTOM_FADE_PX, maxScroll - scroll.current(), fadeSurface);
         }
         if (compact()) {
             int titleX = com.aurora.client.ui.util.UiDensity.detailTitleX(compactFrame);
-            String breadcrumb = com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(this.font, meta.displayName, Math.max(0, resetBtn.getX() - titleX - 4), 0);
-            ctx.text(this.font, breadcrumb, titleX, (meta.headerLine() == null || meta.headerLine().isEmpty() ? compactFrame.y() + (com.aurora.client.ui.util.UiDensity.HEADER - this.font.lineHeight) / 2 + 2 : compactFrame.y() + 3), MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
+            // Title role (§4.1): the feature name in the heavier cut, centred on the Reset/Done row;
+            // its description sits beneath in secondary text, the health or credit line last.
+            String breadcrumb = AuroraFontRenderer.ellipsize(this.font, meta.displayName, Math.max(0, resetBtn.getX() - titleX - 6), 0);
+            ctx.text(this.font, AuroraFontRenderer.role(breadcrumb, AuroraFontRenderer.Role.TITLE), titleX,
+                    compactFrame.y() + (com.aurora.client.ui.util.UiDensity.HEADER - this.font.lineHeight) / 2 + 3, // 11 px raster sits 1 px high
+                    MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
+            int lineY = compactFrame.y() + com.aurora.client.ui.util.UiDensity.HEADER;
+            for (String line : descriptionLines) {
+                ctx.text(this.font, line, titleX, lineY, MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
+                lineY += DESCRIPTION_PITCH;
+            }
+            if (headerLine != null) ctx.text(this.font, headerLine, titleX, lineY,
+                    com.aurora.client.health.FeatureHealth.headlineFor(meta.id) != null
+                            ? ThemeManager.color(ThemeToken.STATUS_WARNING) : MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED), false);
             if (maxScroll > 0) {
                 var thumb = com.aurora.client.ui.component.ScrollbarChrome.thumb(scroll, bodyTop(), bodyBottom() - bodyTop(), maxScroll, 24, this.minecraft.getWindow().getGuiScale());
-                com.aurora.client.ui.component.ScrollbarChrome.draw(ctx, listX + LIST_W - 4, thumb, scroll.isDragging(), ThemeToken.ON_BACKGROUND);
+                // Centred in the 8 px band between the control edge and the window border
+                // (2026-11-14): at LIST_W - 4 the bar touched the border.
+                com.aurora.client.ui.component.ScrollbarChrome.track(ctx, listX + LIST_W - SCROLLBAR_INSET, bodyTop(), bodyBottom() - bodyTop(), ThemeToken.ON_BACKGROUND);
+                com.aurora.client.ui.component.ScrollbarChrome.draw(ctx, listX + LIST_W - SCROLLBAR_INSET, thumb, scroll.isDragging(), ThemeToken.ON_BACKGROUND);
             }
         }
 
@@ -611,15 +680,6 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         // Done row. "Smaller" collapses to the app's single 9px type size;
         // Aurora has no large/bold text idiom and inventing one (pose-
         // scaled glyphs) would violate the no-new-visual-style constraint.
-        if (this.font != null) {
-            int titleX = com.aurora.client.ui.util.UiDensity.detailTitleX(compactFrame);
-            // Feature identity is already established by the navigation card.
-            if (meta.headerLine() != null && !meta.headerLine().isEmpty()) {
-                ctx.text(this.font, AuroraFontRenderer.ellipsize(this.font, meta.headerLine(), Math.max(0, resetBtn.getX() - titleX - 4), 0), titleX,
-                        compactFrame.y() + 3 + this.font.lineHeight + 1,
-                        ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_OVERLAY),0xAA), false);
-            }
-        }
 
         // Label-hover description tooltip floats above the rows.
         FeatureSetting.drawPendingTooltip(ctx, this.width, this.height);

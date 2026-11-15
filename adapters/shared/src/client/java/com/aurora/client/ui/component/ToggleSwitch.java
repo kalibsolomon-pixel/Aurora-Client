@@ -99,13 +99,15 @@ public class ToggleSwitch extends Widget {
         if(!pilotPrimed) { pilotSlide.update(on ? 1 : 0,now);pilotHover.update(0,now);pilotPrimed=true; }
         float t=(float)pilotSlide.update(on ? 1 : 0,now);
         float hover=(float)pilotHover.update(!disabled && !previewMode && inBounds(mx,my,x,y,w,h) ? 1 : 0,now);
-        int inactive=MaterialSurface.color(ThemeToken.SURFACE_INSET);
+        // OFF is a filled neutral track one step above the window's border family (UI polish
+        // 2026-11-14): a sunken track with a hairline vanished into dark windows.
+        int inactive=ThemeManager.color(ThemeToken.MATERIAL_BORDER_STRONG);
         int active=MaterialSurface.color(ThemeToken.ACCENT);
-        // The ON fill is the accent's subtle left-to-right gradient
-        // (AccentGradient); both stops fade in from the OFF tone together.
+        // The ON fill is the flat accent (owner decision 2026-11-14, was the AccentGradient),
+        // faded in from the OFF tone.
         int wash=MaterialSurface.color(ThemeToken.ON_BACKGROUND);
-        int from=AuroraAnim.lerpArgb(inactive,com.aurora.client.theme.AccentGradient.start(active),t);
-        int to=AuroraAnim.lerpArgb(inactive,com.aurora.client.theme.AccentGradient.end(active),t);
+        int from=AuroraAnim.lerpArgb(inactive,active,t);
+        int to=from;
         // Client adaptation: subtle hover wash distinguishes pointer state without a pulse.
         from=AuroraAnim.lerpArgb(from,wash,.08f*hover);
         to=AuroraAnim.lerpArgb(to,wash,.08f*hover);
@@ -115,11 +117,8 @@ public class ToggleSwitch extends Widget {
         var corners=com.aurora.client.theme.ThemeManager.current().roundness();
         float r=corners.capsule(h);
         RenderUtil.drawRoundedRectGradientAA(g,x,y,w,h,r,from,to,true);
-        // No outlines on the ON state (owner ruling 2026-11-12): the edge
-        // fades out as the switch turns on so the gradient stands alone; the
-        // OFF track keeps it so it does not sink into the card.
-        int edge=MaterialSurface.color(ThemeToken.BORDER_HOVER);
-        if(t<1f) RenderUtil.drawRoundedOutlineAA(g,x,y,w,h,r,1,ThemeManager.withAlpha(edge,Math.round((edge>>>24)*(1f-t))));
+        // No outlines in either state (owner ruling 2026-11-12 for ON; the filled OFF track
+        // reads on its own since 2026-11-14).
         // Keyboard focus is carried by scale (design rule 9), not a ring: the
         // thumb grows by FOCUS_GROW around its own center.
         float grow=focusedVisual && !disabled ? FOCUS_GROW : 0f;
@@ -229,11 +228,11 @@ public class ToggleSwitch extends Widget {
                     ThemeManager.color(ThemeToken.ACCENT), DISABLED_ON_RESIDUE * t);
             baseTo = base;
         } else {
-            // ON is the accent's subtle left-to-right gradient (AccentGradient).
+            // ON is the flat accent (2026-11-14).
             int activeCol = ThemeManager.color(ThemeToken.ACCENT);
             int inactiveCol = ThemeManager.color(ThemeToken.SURFACE_VARIANT);
-            base = AuroraAnim.lerpArgb(inactiveCol, com.aurora.client.theme.AccentGradient.start(activeCol), t);
-            baseTo = AuroraAnim.lerpArgb(inactiveCol, com.aurora.client.theme.AccentGradient.end(activeCol), t);
+            base = AuroraAnim.lerpArgb(inactiveCol, activeCol, t);
+            baseTo = base;
         }
         // One restrained hover channel: toward the mode's primary foreground
         // (lifts the track in dark mode, deepens it in light) — reads as

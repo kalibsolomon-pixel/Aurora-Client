@@ -45,6 +45,23 @@ public final class ScrollFade {
     /** The rule's fade distance in GUI pixels (DESIGN_LANGUAGE §8). */
     public static final int FADE_PX = 16;
 
+    /**
+     * The bottom edge's shorter fade (2026-11-14). Scrolling bodies rest on a row boundary, so
+     * a full 16 px gradient only dimmed the last whole row and made it read as cut off.
+     */
+    public static final int BOTTOM_FADE_PX = 8;
+
+    /**
+     * Least edge alpha of the fade (UI polish 2026-11-14). At the factory 33% Background
+     * Opacity a fade to the window tint verbatim was nearly invisible, so rows read as cut
+     * off by accident; the gradient now always reaches this density at the boundary.
+     */
+    static final int MIN_EDGE_ALPHA = 0xD8;
+
+    private static int edgeAlpha(int surfaceArgb) {
+        return Math.max((surfaceArgb >>> 24) & 0xFF, MIN_EDGE_ALPHA);
+    }
+
     private ScrollFade() {}
 
     /**
@@ -68,8 +85,7 @@ public final class ScrollFade {
         double k = engagement(scrollPos, fadeH);
         if (k <= 0.0 || fadeH <= 0 || w <= 0) return;
         int rgb = surfaceArgb & 0x00FFFFFF;
-        int surfaceA = (surfaceArgb >>> 24) & 0xFF;
-        int topA = (int) (surfaceA * k);
+        int topA = (int) (edgeAlpha(surfaceArgb) * k);
         if (topA <= 0) return;
         g.fillGradient(x, boundaryY, x + w, boundaryY + fadeH,
                 (topA << 24) | rgb, rgb);
@@ -87,7 +103,7 @@ public final class ScrollFade {
         double k = engagement(remaining, fadeH);
         if (k <= 0.0 || fadeH <= 0 || w <= 0) return;
         int rgb = surfaceArgb & 0x00FFFFFF;
-        int bottomA = (int) (((surfaceArgb >>> 24) & 0xFF) * k);
+        int bottomA = (int) (edgeAlpha(surfaceArgb) * k);
         if (bottomA <= 0) return;
         g.fillGradient(x, boundaryY - fadeH, x + w, boundaryY, rgb, (bottomA << 24) | rgb);
     }

@@ -1,4 +1,6 @@
 {
+  "pulsarEnabled": false,
+  "pulsarKey": 14,
   "keybindVersion": 1,
   "customTitleScreen": true,
   "moduleGridView": true,
@@ -8,7 +10,7 @@
   "textItalic": false,
   "textUnderline": false,
   "textCase": "NORMAL",
-  "textHudShadow": "OFF",
+  "textHudShadow": "NORMAL",
   "searchInstant": true,
   "searchTypoTolerance": 2,
   "themeEnabled": true,
@@ -17,8 +19,8 @@
     "cornerRadius": 10,
     "blurRadius": 9,
     "backgroundOpacity": 0.33,
-    "accent": -12345273,
-    "background": -14543302
+    "accent": -10720320,
+    "background": -15329507
   },
   "zoomEnabled": true,
   "zoomLevel": 4.0,
@@ -82,7 +84,7 @@
   "armorAlertBgMode": "NONE",
   "armorAlertBgColor": -2147483648,
   "armorAlertTextColor": null,
-  "armorShowDurabilityBars": false,
+  "armorShowDurabilityBars": true,
   "armorHorizontal": true,
   "armorHudShowMainHand": false,
   "armorHudShowOffHand": false,

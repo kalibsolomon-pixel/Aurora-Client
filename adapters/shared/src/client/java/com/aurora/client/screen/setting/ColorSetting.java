@@ -87,6 +87,15 @@ public class ColorSetting extends FeatureSetting {
     /** Phase B: focus/keyboard/narration adapter (lazy — see {@link #interactionControl()}). */
     private SemanticActionControl interactionControl;
 
+    private static final int HEX_GAP = 8;
+
+    /** {@code #RRGGBB}, or {@code #RRGGBBAA} when the colour is translucent. */
+    static String hexOf(int argb) {
+        String hex = String.format("#%06X", argb & 0xFFFFFF);
+        int alpha = argb >>> 24;
+        return alpha == 0xFF ? hex : hex + String.format("%02X", alpha);
+    }
+
     public ColorSetting(String label, IntSupplier getter, Consumer<Integer> setter) {
         super(label);
         this.getter = getter;
@@ -118,11 +127,21 @@ public class ColorSetting extends FeatureSetting {
             hueSurface.dispose();
             alphaSurface.dispose();
         }
+        // The value as text beside the swatch (2026-11-14): a swatch close to the window tone (the
+        // factory graphite background) read as an empty box. Same slot as a slider's value.
+        String hex = com.aurora.client.ui.component.MaterialSurface.unified() ? hexOf(getter.getAsInt()) : null;
+        int hexW = hex == null ? 0 : tr.width(hex) + HEX_GAP; // the compact layout reserves HEX_W itself
         if (compactRow != null) renderCompactLabel(ctx, x, y, mouseX, mouseY, AuroraTheme.TEXT_PRIMARY);
-        else renderWrappedLabel(ctx, label, x + 12, y + (ROW_H_COLLAPSED - tr.lineHeight) / 2, Math.max(0,width-(swatchW+38)), AuroraTheme.TEXT_PRIMARY, mouseX, mouseY, disabled);
+        else renderWrappedLabel(ctx, label, x + 12, y + (ROW_H_COLLAPSED - tr.lineHeight) / 2, Math.max(0,width-(swatchW+38+hexW)), AuroraTheme.TEXT_PRIMARY, mouseX, mouseY, disabled);
 
         swatchX = controlX(x, width, swatchW);
         swatchY = controlY(y, ROW_H_COLLAPSED, swatchH);
+        if (hex != null) {
+            int secondary = com.aurora.client.ui.component.MaterialSurface.color(com.aurora.client.theme.ThemeToken.ON_BACKGROUND_SECONDARY);
+            int textY = compactRow != null ? swatchY + (swatchH - tr.lineHeight) / 2 + 1 : y + (ROW_H_COLLAPSED - tr.lineHeight) / 2;
+            ctx.text(tr, hex, swatchX - HEX_GAP - tr.width(hex), textY,
+                    disabled ? AuroraTheme.TEXT_DIM : secondary, false);
+        }
         swatch.disabled(disabled);
         swatch.layout(swatchX, swatchY, swatchW, swatchH);
         // Mirror the semantic control's geometry, pointer, and vanilla focus

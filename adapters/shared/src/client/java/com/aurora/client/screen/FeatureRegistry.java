@@ -104,6 +104,16 @@ public final class FeatureRegistry {
         AuroraConfig cfg = AuroraConfig.get();
 
         // ============ MODULES TAB ============
+        addWithSettings("pulsar",
+                "Local combat analytics, recoverable recordings and offline reports. Capture observes vanilla play without changing attacks or network traffic.",
+                () -> cfg.pulsarEnabled, v -> cfg.pulsarEnabled = v,
+                List.of(mappingAction("Open Pulsar", "Review recordings, analytics and capture settings.", screen ->
+                                com.aurora.client.adapter.NativeUi.setScreen(net.minecraft.client.Minecraft.getInstance(), new dev.phenomena.gui.screens.PhenomenaScreen(screen))),
+                        new KeybindSetting("Dashboard key", () -> cfg.pulsarKey, v -> cfg.pulsarKey = v),
+                        new BooleanSetting("Automatic capture", () -> cfg.pulsarSettings.tracking, v -> cfg.pulsarSettings.tracking = v),
+                        new BooleanSetting("Record finished fights", () -> cfg.pulsarSettings.recording, v -> cfg.pulsarSettings.recording = v),
+                        new BooleanSetting("Anonymize reports", () -> cfg.pulsarSettings.anonymizeExports, v -> cfg.pulsarSettings.anonymizeExports = v)));
+
 
         addWithSettings("world_map",
                 "A full-screen, pannable world map of your explored terrain. Chunks you visit are captured in the background and stitched into persistent region tiles on disk, so the map survives restarts and grows as you explore.",
@@ -449,6 +459,10 @@ public final class FeatureRegistry {
                 "Replaces the vanilla crosshair with a fully customizable one — pick a preset shape or draw your own, set its size, thickness, gap and color, and add a separate indicator that appears when an attackable entity is in reach. A clearer, personalized crosshair makes aiming and reach timing easier.",
                 () -> cfg.crosshairEnabled, v -> cfg.crosshairEnabled = v,
                 List.of(
+                        // Three groups (UI polish 2026-11-14): the crosshair, the attack indicator
+                        // and the in-reach indicator read as one uninterrupted column before.
+                        new SectionHeaderSetting("Shape"),
+                        new CrosshairPreviewSetting(),
                         new EnumSetting<>("Style", AuroraConfig.CrosshairStyle.class,
                                 () -> cfg.crosshairStyle, v -> cfg.crosshairStyle = v)
                                 .description("The crosshair shape. Presets include classic cross, dot, and others; CUSTOM uses the pixel canvas you draw below. Size/Thickness/Gap apply to the presets."),
@@ -468,6 +482,7 @@ public final class FeatureRegistry {
                                 .description("Left-click to paint, right-click to erase, drag to stroke. Enter any width × height up to "
                                         + PixelCanvasSetting.MAX_DIM + " and press Apply — growing the grid first measures the real render cost on your machine. Default restores the vanilla 15×15 crosshair shape.")
                                 .visibleWhen(() -> cfg.crosshairStyle == AuroraConfig.CrosshairStyle.CUSTOM),
+                        new SectionHeaderSetting("Attack Indicator"),
                         new BooleanSetting("Vanilla Attack Indicator",
                                 () -> cfg.crosshairAttackIndicatorEnabled, v -> cfg.crosshairAttackIndicatorEnabled = v)
                                 .description("Shows attack cooldown beneath the crosshair, plus a ready marker when aiming at a living target."),
@@ -475,6 +490,7 @@ public final class FeatureRegistry {
                                 v -> cfg.crosshairAttackIndicatorSize = v, 25, 300)
                                 .description("Scales the attack indicator independently. 100% is vanilla size. It stays in its vanilla position unless the crosshair overlaps it, then moves below the crosshair with vanilla spacing.")
                                 .disabled(() -> !cfg.crosshairAttackIndicatorEnabled),
+                        new SectionHeaderSetting("Reach Indicator"),
                         new BooleanSetting("Indicator (entity in reach)",
                                 () -> cfg.crosshairIndicatorEnabled, v -> cfg.crosshairIndicatorEnabled = v),
                         new EnumSetting<>("Indicator Style", AuroraConfig.CrosshairStyle.class,
@@ -1436,8 +1452,8 @@ addWithSettings("hitbox",
                 "A themed keystroke overlay with matching key surfaces, fine borders and soft press highlights: movement keys, mouse buttons, a CPS counter and jump/sneak inputs shown as one cohesive panel that lights up with a smooth animated accent while pressed. Popular for PvP montages, streaming, and analyzing your inputs. Fully draggable and resizable in the HUD editor.",
                 () -> cfg.keystrokesEnabled, v -> cfg.keystrokesEnabled = v,
                 List.of(
-                        new ColorSetting("Text Color", () -> cfg.keystrokesTextColor == null ? com.aurora.client.theme.ThemeManager.color(com.aurora.client.theme.ThemeToken.ON_SURFACE) : cfg.keystrokesTextColor, v -> cfg.keystrokesTextColor = v)
-                                .description("Text color for this HUD only. Reset restores its default color."),
+                        // Two groups (UI polish 2026-11-14): which keys show, then how they look.
+                        new SectionHeaderSetting("Keys"),
                         new BooleanSetting("Show WASD Keys",
                                 () -> cfg.keystrokesShowMovement,
                                 v -> cfg.keystrokesShowMovement = v)
@@ -1467,6 +1483,9 @@ addWithSettings("hitbox",
                                 () -> cfg.keystrokesExtraKeys,
                                 v -> cfg.keystrokesExtraKeys = v)
                                 .description("Additional keys to track (Space, Shift, hotbar or ability keys). Click \"+ Add Key\", then press a key; ESC cancels. Keys auto-arrange in rows of three."),
+                        new SectionHeaderSetting("Style"),
+                        new ColorSetting("Text Color", () -> cfg.keystrokesTextColor == null ? com.aurora.client.theme.ThemeManager.color(com.aurora.client.theme.ThemeToken.ON_SURFACE) : cfg.keystrokesTextColor, v -> cfg.keystrokesTextColor = v)
+                                .description("Text color for this HUD only. Reset restores its default color."),
                         new ColorSetting("Accent Color",
                                 () -> cfg.keystrokesAccentColor,
                                 v -> cfg.keystrokesAccentColor = v)
@@ -1515,7 +1534,8 @@ addWithSettings("hitbox",
                 .description("Adds inertia to your mouse look so the camera eases into and out of movement instead of stopping instantly. Gives panning a weighty, cinematic feel — great for recording or relaxed play. Note: it adds aim latency, so competitive players usually leave it off.");
         FeatureSetting smoothCameraStrength = SliderSetting.of("Strength",
                 () -> cfg.smoothCameraStrength, v -> cfg.smoothCameraStrength = v, 0.05, 1.0)
-                .description("How much smoothing is applied. Low values add a barely-there glide that still feels responsive; high values produce heavy, floaty camera drift with noticeable lag between your mouse and the view. Start around 0.2-0.3 if you want subtle smoothing.");
+                .description("How much smoothing is applied. Low values add a barely-there glide that still feels responsive; high values produce heavy, floaty camera drift with noticeable lag between your mouse and the view. Start around 0.2-0.3 if you want subtle smoothing.")
+                .disabled(() -> !cfg.smoothCamera); // a dependent control follows its switch (2026-11-14)
         FeatureSetting framePacerEnabled = new BooleanSetting("Enabled",
                 () -> cfg.smoothFramePacer,
                 v -> cfg.smoothFramePacer = v)
@@ -1649,33 +1669,33 @@ addWithSettings("hitbox",
                 () -> cfg.hudEditorKey, v -> cfg.hudEditorKey = v)
                 .description("Opens the HUD editor in game, where you move and resize HUD modules; its Aurora Settings button leads here. Also listed in Minecraft's Controls. Press ESC or Backspace while rebinding to clear it.");
         SETTINGS_PAGES.add(new SettingsPage("Appearance", List.of(
-                settingsEntry("theme"),
-                settingsEntry("text_fonts"))));
+                settingsEntry("theme").pageSummary("The accent, window tint and glass of every Aurora screen."),
+                settingsEntry("text_fonts").pageSummary("The typeface and style of Aurora's text, and where it applies."))));
         SETTINGS_PAGES.add(new SettingsPage("Display", List.of(
-                group("frame_rate", "Frame Rate", globalFrameCap, uiFpsLimit),
+                group("frame_rate", "Frame Rate", globalFrameCap, uiFpsLimit).pageSummary("Framerate caps for the game and for Aurora's menus."),
                 group("frame_pacer", "Frame Pacer", framePacerEnabled, framePacingStrategy,
-                        framePacerLowCpu, framePacerSpinThreshold, framePacerParkThreshold),
-                group("low_latency", "Low Latency", lowLatencyEnabled, disableVSync, adaptiveRenderSleeping))));
+                        framePacerLowCpu, framePacerSpinThreshold, framePacerParkThreshold).pageSummary("Holds each frame to an even interval for smoother motion."),
+                group("low_latency", "Low Latency", lowLatencyEnabled, disableVSync, adaptiveRenderSleeping).pageSummary("Shortens the delay between your input and the screen."))));
         SETTINGS_PAGES.add(new SettingsPage("Controls", List.of(
-                group("smooth_camera", "Smooth Camera", smoothCameraEnabled, smoothCameraStrength),
-                group("decoupled_input", "Decoupled Input", decoupledInputEnabled),
-                group("aurora_keys", "Aurora Keys", hudEditorKey))));
+                group("smooth_camera", "Smooth Camera", smoothCameraEnabled, smoothCameraStrength).pageSummary("Eases mouse look into and out of movement."),
+                group("decoupled_input", "Decoupled Input", decoupledInputEnabled).pageSummary("Applies mouse movement at the very start of each frame."),
+                group("aurora_keys", "Aurora Keys", hudEditorKey).pageSummary("Keys that open Aurora's own screens."))));
         FeatureSetting searchInstant = new BooleanSetting("Instant Search",
                 () -> cfg.searchInstant, v -> { cfg.searchInstant = v; AuroraConfig.save(); })
-                .description("Focuses the search bar when the Aurora menu opens or you return to the Mods tab, so you can type straight away.");
+                .description("Focuses the search bar when the Aurora menu opens or you return to the Features tab, so you can type straight away.");
         FeatureSetting searchTolerance = new SegmentedSetting<>("Search Typo Tolerance", SearchTolerance.class,
                 () -> SearchTolerance.of(cfg.searchTypoTolerance), v -> { cfg.searchTypoTolerance = v.ordinal(); AuroraConfig.save(); },
                 SearchTolerance::label)
                 .description("How many typos a search word can have and still find a match. Exact only finds exact matches; short words always need to be exact.");
         SETTINGS_PAGES.add(new SettingsPage("Performance", List.of(
-                group("loading", "Loading", hideReloadOverlay, hideTitleFade),
-                group("debug_screen", "Debug Screen", debugEntryCache),
-                group("maps", "Maps", minimapRefreshCap))));
+                group("loading", "Loading", hideReloadOverlay, hideTitleFade).pageSummary("Skips fades and overlays while the game loads."),
+                group("debug_screen", "Debug Screen", debugEntryCache).pageSummary("Makes the F3 screen cheaper to draw."),
+                group("maps", "Maps", minimapRefreshCap).pageSummary("Limits how often the minimap redraws its terrain."))));
         SETTINGS_PAGES.add(new SettingsPage("General", List.of(
-                group("search", "Search", searchInstant, searchTolerance),
-                settingsEntry("custom_title"),
-                group("server_list", "Drag-to-Reorder Servers", serverListDragEnabled),
-                group("support", "Support", copyDiagnostics))));
+                group("search", "Search", searchInstant, searchTolerance).pageSummary("How the search bar finds features and settings."),
+                settingsEntry("custom_title").pageSummary("Aurora's own title screen in place of the vanilla one."),
+                group("server_list", "Drag-to-Reorder Servers", serverListDragEnabled).pageSummary("Reorder servers in the Multiplayer list by dragging."),
+                group("support", "Support", copyDiagnostics).pageSummary("Collects a diagnostics report to attach to bug reports."))));
 
     }
 

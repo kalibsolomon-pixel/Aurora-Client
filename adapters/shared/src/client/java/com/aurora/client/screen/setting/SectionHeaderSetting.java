@@ -158,14 +158,20 @@ public class SectionHeaderSetting extends FeatureSetting {
         // mode that outline degenerated to four straight rules reading as a
         // doubled divider around the section — owner ruling 2026-10-30).
         float emphasis = Math.max(t, interactionControl.isFocused() ? 1f : 0f);
-        int color = AuroraAnim.lerpArgb(AuroraTheme.sectionCaption(),
+        // Unified windows: the caption is secondary text, readable on the glass (2026-11-14).
+        int color = AuroraAnim.lerpArgb(MaterialSurface.unified() ? MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY) : AuroraTheme.sectionCaption(),
                 MaterialSurface.color(ThemeToken.ON_BACKGROUND), emphasis * .6f);
         int textY = top + (h - tr.lineHeight) / 2 + 1;
-        ctx.text(tr, label, x + LABEL_PAD, textY, color, false);
-        // Trailing chevron (native-resolution icon): down = collapsed, up = expanded.
+        // The heading role in the caption colour (2026-11-14): a sub-section reads as the same
+        // family as the group headings above it, one step quieter.
+        ctx.text(tr, com.aurora.client.ui.util.AuroraFontRenderer.role(label, com.aurora.client.ui.util.AuroraFontRenderer.Role.HEADING),
+                x + LABEL_PAD, textY, color, false);
+        // Trailing chevron (native-resolution icon): down = collapsed, up = expanded. Its visible
+        // stroke ends on the rows' control edge, 8 px in (2026-11-14: it sat 6 px short of the
+        // toggles and values below it).
         com.aurora.client.ui.util.MaterialIconRenderer.drawIcon(ctx, tr,
                 com.aurora.client.screen.FeatureIcons.get(collapsed ? "_dropdown_expand_more" : "_dropdown_expand_less"),
-                x + width - 14, top + h / 2f, 9, color);
+                x + width - 11, top + h / 2f, 9, color);
     }
 
     @Override

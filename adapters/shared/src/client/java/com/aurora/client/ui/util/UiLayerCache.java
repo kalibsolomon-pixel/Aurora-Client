@@ -33,6 +33,15 @@ import org.lwjgl.system.MemoryUtil;
 public final class UiLayerCache implements RenderUtil.RectSink {
 
     private static final AtomicLong SEQ = new AtomicLong();
+    private static final java.util.List<UiLayerCache> RETIRED = new java.util.ArrayList<>();
+
+    /** Keep deferred GUI blits alive until the next extraction frame starts. */
+    public void retire() { RETIRED.add(this); }
+
+    public static void beginFrame() {
+        for (var cache : RETIRED) cache.dispose();
+        RETIRED.clear();
+    }
 
     private NativeImage image;
     private DynamicTexture tex;

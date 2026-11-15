@@ -153,7 +153,10 @@ public class ColorSwatch extends Widget {
     public void renderOverlay(GuiGraphicsExtractor g, float x, float y, float w, float h, int mouseX, int mouseY) {
         x=Math.round(x); y=Math.round(y); w=Math.round(w); h=Math.round(h);
         int color = getter.getAsInt();
-        float radius = Math.min(h / 2f, ThemeManager.current().roundness().radiusSmall());
+        // A rounded square at every Corner Radius (owner ruling 2026-10-30: swatches are squares;
+        // 2026-11-14: at the factory radius a 14 px sample had become a disc that read as a
+        // switch knob).
+        float radius = Math.min(h / 4f, ThemeManager.current().roundness().radiusSmall());
 
         if (dataOnly) {
             // Display-only data sample: the neutral at-rest look, nothing
@@ -193,7 +196,7 @@ public class ColorSwatch extends Widget {
                 RenderUtil.drawRoundedOutlineAA(g, x, y, w, h, radius, edgeWidth(),
                         disabled
                                 ? ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_BACKGROUND), 0x33)
-                                : EDGE);
+                                : edgeFor(color));
             }
             if (selected) {
                 RenderUtil.drawRoundedOutlineAA(g, x - 2, y - 2, w + 4, h + 4, radius + 2, 1.5f,
@@ -221,7 +224,7 @@ public class ColorSwatch extends Widget {
                     ThemeManager.color(ThemeToken.ACCENT));
         } else {
             if (!rest) {
-                RenderUtil.drawRoundedOutlineAA(g, x, y, w, h, radius, edgeWidth(), EDGE);
+                RenderUtil.drawRoundedOutlineAA(g, x, y, w, h, radius, edgeWidth(), edgeFor(color));
             }
             if (hT > 0f) {
                 int haloA = Math.round(90 * hT);
@@ -254,6 +257,17 @@ public class ColorSwatch extends Widget {
      * the dark window. Selection, hover and focus keep their own rings.
      */
     private static final int EDGE = 0x99000000;
+    /** The same hairline in light for dark samples (UI polish 2026-11-14): a graphite or
+     * deep-tinted sample on the dark window otherwise had no visible boundary at all. */
+    private static final int EDGE_ON_DARK = 0x80FFFFFF;
+
+    private static int edgeFor(int color) {
+        // Dark windows: every sample takes the light hairline (council review 2026-11-14), so a
+        // white sample keeps a silhouette too; the black edge stays for light surfaces.
+        if (MaterialSurface.unified() && com.aurora.client.theme.ThemeManager.current().mode() != com.aurora.client.theme.ThemeMode.LIGHT)
+            return EDGE_ON_DARK;
+        return com.aurora.client.theme.PaletteEngine.relativeLuminance(color) < 0.05 ? EDGE_ON_DARK : EDGE;
+    }
 
     private static float edgeWidth() {
         return 1f / Math.max(1, (int) Minecraft.getInstance().getWindow().getGuiScale());
@@ -286,7 +300,7 @@ public class ColorSwatch extends Widget {
                     drawCheckerboard(g, 1, 1, w, h, radius);
                 }
                 RenderUtil.drawRoundedRectAA(g, 1, 1, w, h, radius, color | 0xFF000000);
-                RenderUtil.drawRoundedOutlineAA(g, 1, 1, w, h, radius, edgeWidth(), EDGE);
+                RenderUtil.drawRoundedOutlineAA(g, 1, 1, w, h, radius, edgeWidth(), edgeFor(color));
             } finally {
                 RenderUtil.endCapture(prev);
             }

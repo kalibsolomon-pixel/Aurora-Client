@@ -209,7 +209,7 @@ class RolloutStatesTest {
             int count = src.split("new KeybindSetting", -1).length - 1;
             // 17 since 2026-11-12: the HUD Editor key gained a row on the
             // Settings tab's Controls page (it was vanilla-Controls-only).
-            assertEquals(17, count,
+            assertEquals(18, count,
                     "production KeybindSetting construction sites (inventory drift guard)");
         } catch (java.io.IOException e) {
             fail("FeatureRegistry.java not readable from the test working dir: " + e.getMessage());

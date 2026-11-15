@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class CompactGeometryTest {
-    @Test void uniformWindowShowsAThreeByThreeCardGridAndSevenListRows() {
+    @Test void uniformWindowShowsAThreeByThreeCardGridAndNineListRows() {
         var frame = UiDensity.mainFrame(640, 360);
         var body = UiDensity.mainContent(frame);
         assertEquals(336, frame.width()); assertEquals(288, frame.height());
@@ -14,8 +14,8 @@ class CompactGeometryTest {
         // the owner's 3×3 target: three card rows fit, a fourth does not
         assertTrue(UiDensity.extent(3, UiDensity.CARD_HEIGHT, UiDensity.GRID_GAP) <= body.height());
         assertTrue(UiDensity.extent(4, UiDensity.CARD_HEIGHT, UiDensity.GRID_GAP) > body.height());
-        assertTrue(UiDensity.extent(7, UiDensity.LIST_HEIGHT, UiDensity.LIST_GAP) <= body.height());
-        assertTrue(UiDensity.extent(8, UiDensity.LIST_HEIGHT, UiDensity.LIST_GAP) > body.height());
+        assertTrue(UiDensity.extent(9, UiDensity.LIST_HEIGHT, UiDensity.LIST_GAP) <= body.height());
+        assertTrue(UiDensity.extent(10, UiDensity.LIST_HEIGHT, UiDensity.LIST_GAP) > body.height());
     }
     @Test void everyWindowedScreenSharesOneFrame() {
         for (int[] size : new int[][]{{640,360},{480,270},{960,540},{1280,720}}) {
@@ -39,17 +39,22 @@ class CompactGeometryTest {
             assertTrue(detail.x() >= 12 && detail.y() >= 12);
         }
     }
-    @Test void sliderAllocationsDoNotOverlapAndFallbackBeforeTrackGetsTooShort() {
+    @Test void sliderAllocationsDoNotOverlapAndTracksStayBounded() {
+        // Every slider row is inline with a bounded track (owner direction 2026-11-14): label,
+        // then the value right-aligned against the track, whose knob ends on the control edge.
         var row = SettingRowLayout.measure(SettingRowLayout.Kind.SLIDER, "Particle Size %", 344, 9, s -> s.length()*6);
         assertTrue(row.inline()); assertEquals(UiDensity.INLINE_SLIDER, row.height());
-        assertEquals(160, row.control().width());
+        assertEquals(SettingRowLayout.TRACK_W, row.control().width());
+        assertEquals(344 - 8 - SettingRowLayout.KNOB_RESERVE, row.control().x() + row.control().width());
         assertTrue(row.label().x()+row.label().width() < row.value().x());
-        assertTrue(row.value().x()+row.value().width() < row.control().x());
-        var narrow = SettingRowLayout.measure(SettingRowLayout.Kind.SLIDER, "Particle Size %", 240, 9, s -> s.length()*6);
-        assertFalse(narrow.inline()); assertEquals(UiDensity.STACKED_ROW, narrow.height());
-        assertTrue(narrow.control().width() >= UiDensity.MIN_TRACK);
-        var longLabel = SettingRowLayout.measure(SettingRowLayout.Kind.SLIDER, "Underwater Fog Multiplier", 344, 9, s -> s.length()*6);
-        assertFalse(longLabel.inline());
+        assertTrue(row.value().x()+row.value().width() < row.control().x() - SettingRowLayout.KNOB_RESERVE);
+        var few = SettingRowLayout.measure(SettingRowLayout.Kind.SLIDER, "Gap", 344, 9, s -> s.length()*6,
+                SettingRowLayout.trackWidth(10));
+        assertEquals(SettingRowLayout.SHORT_TRACK_W, few.control().width());
+        assertEquals(SettingRowLayout.TRACK_W, SettingRowLayout.trackWidth(100));
+        var longLabel = SettingRowLayout.measure(SettingRowLayout.Kind.SLIDER, "Underwater Fog Multiplier", 240, 9, s -> s.length()*6);
+        for (String line : longLabel.lines()) assertTrue(line.length()*6 <= longLabel.label().width());
+        assertTrue(longLabel.label().x()+longLabel.label().width() < longLabel.value().x());
     }
     @Test void wholeWordsWrapWithoutEscapingTheMeasuredColumn() {
         var row = SettingRowLayout.measure(SettingRowLayout.Kind.BOOLEAN, "Hide Lava Orange Overlay", 180, 9, s -> s.length()*6);

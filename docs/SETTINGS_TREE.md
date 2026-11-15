@@ -57,7 +57,7 @@ These run without a setting of their own, or are part of how Aurora works rather
 
 ### 3.2 HUD modules
 
-Each one is drawn only when its feature (in the Mods tab) is on. Its settings live in that feature's detail screen.
+Each one is drawn only when its feature (in the Features tab) is on. Its settings live in that feature's detail screen.
 
 | HUD module | Default position | Turned on by | Settings in |
 |---|---|---|---|
@@ -68,9 +68,9 @@ Each one is drawn only when its feature (in the Mods tab) is on. Its settings li
 | Potion effects `{hud:potion}` | top right | Potion HUD card (on) | Mods → Potion HUD |
 | Ping `{hud:ping}` | top left (hidden in editor by default) | Ping card → Show Ping HUD (off) | Mods → Ping |
 | Totem pops `{hud:totem_pop}` | top left | Totem Pop Counter card (off) | Mods → Totem Pop Counter |
-| Toggle Sprint/Sneak status, combined `{hud:toggle_sprint_sneak}` | top left | Toggle Sprint/Sneak card (off) + Show Status HUD | Mods → Toggle Sprint/Sneak |
-| Toggle Sprint status, separate `{hud:toggle_sprint}` | top left | HUD Display Mode = Individual | Mods → Toggle Sprint/Sneak |
-| Toggle Sneak status, separate `{hud:toggle_sneak}` | top left | HUD Display Mode = Individual | Mods → Toggle Sprint/Sneak |
+| Toggle Sprint/Sneak status, combined `{hud:toggle_sprint_sneak}` | top left | Sprint & Sneak card (off) + Show Status HUD | Mods → Sprint & Sneak |
+| Toggle Sprint status, separate `{hud:toggle_sprint}` | top left | HUD Display Mode = Individual | Mods → Sprint & Sneak |
+| Toggle Sneak status, separate `{hud:toggle_sneak}` | top left | HUD Display Mode = Individual | Mods → Sprint & Sneak |
 | Keystrokes `{hud:keystrokes}` | top left | Keystrokes card (on) | Mods → Keystrokes |
 | Minimap `{hud:minimap}` | bottom right | Minimap card (off) | Mods → Minimap |
 
@@ -88,15 +88,15 @@ Other things drawn on the HUD that are not movable modules:
 
 ### 4.1 Screen layout
 
-- **Mods** tab: the feature cards. `{ui:tabMods}`
+- **Features** tab (named Mods until 2026-11-14): the feature cards. `{ui:tabMods}`
 - **Settings** tab: global settings on four pages, chosen from sub-tabs across the top (see 4.3). `{ui:tabSettings}`
 - **Profiles** button: opens the profile manager (an action, not a tab). `{ui:profiles}`
-- **Search features and settings…** field (Mods tab): finds features by name, by the settings inside them and by description, and Settings-tab entries too, best match first, within the Search Typo Tolerance. A result found through a setting names it on a second line; clicking that line (or right-clicking the card) opens the feature scrolled to the setting, outlined for a moment. A Settings entry opens on its page. Typing on the Settings tab starts a search. Escape clears the query first, then closes the menu. `{ui:search}`
-- **List / Grid** layout buttons (Mods tab) · default Grid. `{moduleGridView}`
+- **Search features and settings…** field (Features tab): finds features by name, by the settings inside them and by description, and Settings-tab entries too, best match first, within the Search Typo Tolerance. A result found through a setting names it on a second line; clicking that line (or right-clicking the card) opens the feature scrolled to the setting, outlined for a moment. A Settings entry opens on its page. Typing on the Settings tab starts a search. Escape clears the query first, then closes the menu. `{ui:search}`
+- **List / Grid** layout buttons (Features tab) · default Grid. `{moduleGridView}`
 - **On a card**: left-click or Enter turns the feature on/off; right-click opens its detail screen. `{ui:card}`
 - **On a detail screen**: the feature's on/off toggle, its settings, **Reset** (restores this feature's defaults) and **Done**. `{ui:detail}`
 
-### 4.2 Mods tab: 33 cards, in grid order
+### 4.2 Features tab: 33 cards, in grid order
 
 The default shown after each card title is its card toggle in a fresh install. A card marked *combined* is on when any of its parts is on, and switching it flips every part together.
 
@@ -155,7 +155,7 @@ Restyles the outline of the block you are looking at.
 - **Color Mode**: dropdown Solid / Rainbow · Solid. `{blockOverlayMode}`
 - **Rainbow Speed**: slider 0.1–10 · 1. `{blockOverlayRainbowSpeed}`
 
-#### Toggle Sprint/Sneak · off `{card:toggle_sprint_sneak}`
+#### Sprint & Sneak · off `{card:toggle_sprint_sneak}`
 Press once to sprint or sneak instead of holding.
 - **Text Color**: color · white · HUD text. `{toggleSprintSneakTextColor}`
 - **Toggle Sprint Key**: key · Left Ctrl. `{toggleSprintKey}`
@@ -344,7 +344,7 @@ Clicks-per-second counter.
 Your armor — and optionally your hands — and its durability.
 - **Text Color**: color · white. `{armorHudTextColor}`
 - **Durability Format**: dropdown Remaining / Remaining of Max / Percentage / None · Remaining. `{armorDurabilityFormat}`
-- **Show Durability Bars**: toggle · off. `{armorShowDurabilityBars}`
+- **Show Durability Bars**: toggle · on (since 2026-11-14). `{armorShowDurabilityBars}`
 - **Horizontal Layout**: toggle · on. `{armorHorizontal}`
 - **Show Main Hand**: toggle · off · the main hand in the strip when it holds something. `{armorHudShowMainHand}`
 - **Show Off Hand**: toggle · off · the off hand in the strip when it holds something. `{armorHudShowOffHand}`
@@ -534,8 +534,8 @@ The tab shows one page at a time, chosen from the sub-tabs in the row above the 
 #### Sub-tab: Appearance `{subtab:appearance}`
 
 - *Theme* · header toggle on (off = fixed factory palette instead of your colors) `{card:theme}`
-  - **Accent Color**: swatch grid + picker · green (#43A047). `{theme.accent}`
-  - **Background Color**: swatch grid + picker · deep purple (#22163A). `{theme.background}`
+  - **Accent Color**: swatch grid + picker · indigo (#5C6BC0), the logo's family. `{theme.accent}`
+  - **Background Color**: swatch grid + picker · graphite (#16171D). `{theme.background}`
   - *Surfaces* (the three sliders grouped under one caption)
     - **Background Opacity**: slider 0–100% · 33% · the tint's density only. `{theme.backgroundOpacity}`
     - **Blur Radius**: slider Off–32 px (GUI pixels) · 9 px · how blurred the backdrop behind glass is. `{theme.blurRadius}`
@@ -546,7 +546,7 @@ The tab shows one page at a time, chosen from the sub-tabs in the row above the 
   - **Weight**: dropdown Regular / Medium / SemiBold / Bold · Medium · real font files; Quicksand has one weight. `{textWeight}`
   - **Modifiers**: toggles Italic · off, Underline · off · italic is the family's own where it has one (Oswald and Quicksand slant). `{textItalic}` `{textUnderline}`
   - **Case**: segmented Aa / AA / aa · Aa. `{textCase}`
-  - **HUD Text Shadow**: segmented Off / Normal / Full · Off · in-world HUD only (Normal = Minecraft's drop shadow, Full = outline); menus never shadow text. `{textHudShadow}`
+  - **HUD Text Shadow**: segmented Off / Normal / Full · Normal (Off before 2026-11-14) · in-world HUD only (Normal = Minecraft's drop shadow, Full = outline); menus never shadow text. `{textHudShadow}`
   - **Preview**: one sample line in the current options, with the HUD shadow.
 
 #### Sub-tab: Display `{subtab:display}`
@@ -579,7 +579,7 @@ The tab shows one page at a time, chosen from the sub-tabs in the row above the 
 #### Sub-tab: General `{subtab:general}`
 
 - *Search*
-  - **Instant Search**: toggle · on · focuses the search bar when the menu opens or you return to the Mods tab. Global, not per profile. `{searchInstant}`
+  - **Instant Search**: toggle · on · focuses the search bar when the menu opens or you return to the Features tab. Global, not per profile. `{searchInstant}`
   - **Search Typo Tolerance**: segmented Exact / 1 / 2 / 3 · 2 · typos a search word may have; words of 3 letters or fewer always match exactly, 4–6 letters allow at most 1. Applies to every search field. Global. `{searchTypoTolerance}`
 - *Custom Title* · header toggle on · Aurora's title screen and themed vanilla menus; applies the next time you return to the main menu. `{card:custom_title}`
 - *Drag-to-Reorder Servers*
@@ -620,8 +620,8 @@ All are also listed in vanilla Options → Controls under Aurora. Defaults are f
 |---|---|---|
 | Zoom (hold) `{zoomKey}` | C | Zoom |
 | FreeLook (hold) `{freeLookKey}` | X | FreeLook |
-| Toggle Sprint `{toggleSprintKey}` | Left Ctrl | Toggle Sprint/Sneak |
-| Toggle Sneak `{toggleSneakKey}` | unbound | Toggle Sprint/Sneak |
+| Toggle Sprint `{toggleSprintKey}` | Left Ctrl | Sprint & Sneak |
+| Toggle Sneak `{toggleSneakKey}` | unbound | Sprint & Sneak |
 | HUD Editor `{hudEditorKey}` | Right Shift | Settings → Controls → Aurora Keys |
 | Hitbox toggle `{hitboxToggleKey}` | B | Hitbox |
 | Totem reset `{totemResetKey}` | K | Totem Pop Counter |

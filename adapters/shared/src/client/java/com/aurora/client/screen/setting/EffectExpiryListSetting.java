@@ -184,7 +184,7 @@ public class EffectExpiryListSetting extends FeatureSetting {
         super("Per-Effect Alert List");
         Font font = Minecraft.getInstance().font;
         this.searchField = new EditBox(font, 0, 0, 150, 18, Component.literal("Search Effects..."));
-        this.searchField.setHint(Component.literal("Search effects... (e.g. strength)"));
+        this.searchField.setHint(Component.literal("Search effects, e.g. strength"));
         // Disable the vanilla border — EditBoxMixin draws the themed AA
         // outline (same reason as every other search field).
         this.searchField.setBordered(false);
