@@ -77,8 +77,6 @@
     "ScreenPanoramaAccessor",
     "KeyMappingComboMixin",
     "KeyBindsScreenComboMixin",
-    "LoadingOverlayMixin",
-    "TitleScreenFadeMixin",
     "LevelLoadTrackerMixin",
     "MinecraftProfileAccessor",
     "InitialScreensProfileMixin",

@@ -39,9 +39,7 @@ import java.util.function.Predicate;
  * rendered at the raw interpolated target, so the two drifted apart — the
  * hitbox appeared to lag behind or lead ahead of the model, which read as
  * "hitboxes feel off". The vanilla interpolation path is correct because it
- * matches what the entity model uses. Movement cadence detection, which
- * serves entity movement smoothing, samples on the client tick instead
- * ({@code ThrottleDetector.tick}).
+ * matches what the entity model uses.
  *
  * <p><b>Camera-relative double precision.</b> Camera position is subtracted in
  * {@code double} precision before casting to {@code float} inside

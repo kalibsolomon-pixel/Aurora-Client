@@ -226,7 +226,7 @@ public final class FeatureCatalog {
         module("particles", "Particles", "Per-particle control over every vanilla particle type — hide ones you find distracting and resize the rest.");
         module("item_scale", "Item Scale", "Customize the scale, rotation, and screen translation of individual item models.");
         module("held_item_seams", "Held Item Seam Fix", "Hides the hairline seams that can appear between the faces of your first-person held items at certain camera angles.");
-        module("animations", "Animations", "Swing & view-bob curves, classic 1.8-style damage camera tilt, retro backwards-walking & sneak poses, idle held-item sway, and smooth entity rotation.");
+        module("animations", "Animations", "Swing & view-bob curves, classic 1.8-style damage camera tilt, retro backwards-walking & sneak poses, and idle held-item sway.");
         module("keystrokes", "Keystrokes", "Displays your WASD, mouse, jump, and sneak keys as a HUD overlay that lights up in real time as you press them.");
         module("minimap", "Minimap", "A top-down map of the world around you, shown as a HUD overlay. Renders terrain, waypoints, and nearby entities as colored dots.");
         module("scoreboard", "Scoreboard HUD", "Replaces the vanilla scoreboard sidebar with a HUD module you can move, resize and restyle. Off in a fresh install, so existing installs keep vanilla's sidebar.");
@@ -283,7 +283,7 @@ public final class FeatureCatalog {
         classify("particles", FairPlay.COSMETIC, "Hides, resizes or recolors particle types on your screen.");
         classify("item_scale", FairPlay.COSMETIC, "Changes the size and position of the item in your hand.");
         classify("held_item_seams", FairPlay.COSMETIC, "Hides texture seams on the item in your hand.");
-        classify("animations", FairPlay.COSMETIC, "Changes swing, view-bob and damage-tilt animations and smooths how other entities move on your screen.");
+        classify("animations", FairPlay.COSMETIC, "Changes swing, view-bob and damage-tilt animations.");
         classify("keystrokes", FairPlay.VANILLA_INFORMATION, "Shows your own key and mouse presses.");
         classify("minimap", FairPlay.VANILLA_INFORMATION, "A map of terrain your client has loaded, with your waypoints and dots for nearby mobs. Dots for other players are an information advantage and ship off.", "minimapShowPlayers");
         classify("scoreboard", FairPlay.VANILLA_INFORMATION, "Replaces the vanilla scoreboard sidebar with a movable, resizable module that shows the same rows and scores as vanilla. Off in a fresh install.", "scoreboardEnabled");
@@ -340,8 +340,8 @@ public final class FeatureCatalog {
         mixin("HotbarItemBounceMixin", "the hotbar item bounce", "animations").gates("hotbarBounceEnabled");
         mixin("PlayerEntityRendererMixin", "ping and totem pops under nametags", "ping", "totem_pop")
                 .gates("nametagPingEnabled", "nametagTotemPopsEnabled");
-        mixin("LivingEntityRendererExtractMixin", "entity movement smoothing, entity health labels and hit-color health capture", "animations", "player_health", "hit_color")
-                .gates("smoothAnimationsEnabled", "entityMovementSmoothingEnabled", "playerHealthIndicators", "hitColorHealthGradient");
+        mixin("LivingEntityRendererExtractMixin", "entity health labels and hit-color health capture", "player_health", "hit_color")
+                .gates("playerHealthIndicators", "hitColorHealthGradient");
         mixin("LavaClarityMixin", "lava clarity", "pack_tweaks").gates("lavaClarityEnabled");
         mixin("LavaOverlayMixin", "hiding the lava overlay", "pack_tweaks").gates("lavaHideOverlay");
         mixin("ClientPlayerAttackMixin", "limiting entity health to entities you attacked", "player_health")
@@ -383,9 +383,6 @@ public final class FeatureCatalog {
         mixin("KeyMappingComboMixin", "Ctrl, Shift and Alt combos on key bindings");
         mixin("KeyBindsScreenComboMixin", "Ctrl, Shift and Alt combos in the Controls screen");
         // ---- Performance (ADR 0009) ----
-        mixin("LoadingOverlayMixin", "hiding the resource reload overlay", "performance")
-                .gates("perfHideReloadOverlay").yieldsTo("rrls");
-        mixin("TitleScreenFadeMixin", "skipping the title screen fade", "performance").gates("perfHideTitleFade");
         mixin("LevelLoadTrackerMixin", "skipping the level loading delay", "performance").gates("perfSkipLevelLoadDelay");
         mixin("MinecraftProfileAccessor", "startup without waiting for the profile", "performance").gates("perfNoProfileWait");
         mixin("InitialScreensProfileMixin", "startup without waiting for the profile", "performance").gates("perfNoProfileWait");

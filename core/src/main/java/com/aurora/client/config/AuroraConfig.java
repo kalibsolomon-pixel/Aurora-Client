@@ -391,17 +391,6 @@ public class AuroraConfig {
     /** Movement curve shaping the idle sway oscillation. */
     public IdleSwayCurve idleSwayCurve = IdleSwayCurve.SINE_BREATH;
 
-    // ---- Entity Movement Smoothing ----
-    /**
-     * Eases other entities' rendered positions toward their tick-interpolated
-     * targets every frame, smoothing out per-tick "kinks" (especially during
-     * knockback arcs) and the freeze-then-leap cadence of throttled servers.
-     * Auto-scales with the detected server bundling factor.
-     */
-    public boolean entityMovementSmoothingEnabled = true;
-    /** 0.0 = barely-there, 1.0 = very smooth glide. */
-    public double entityMovementSmoothingStrength = 0.3;
-
     /**
      * Movement curves for idle held-item sway. Each shapes the oscillation
      * differently, from a gentle breath to dramatic figure-8 drifts.
@@ -449,10 +438,6 @@ public class AuroraConfig {
     // here is the default. Only the ones with a visible trade-off have a row
     // on the Settings tab's Performance page; the rest are config-only
     // switches for diagnosis.
-    /** Resource reloads after startup keep the current screen instead of the Mojang overlay. */
-    public boolean perfHideReloadOverlay = true;
-    /** The vanilla title screen's widgets appear at once instead of fading in. */
-    public boolean perfHideTitleFade = true;
     /** The level loading screen closes when the level is ready, without vanilla's extra half second. */
     public boolean perfSkipLevelLoadDelay = true;
     /** Startup screens are built without waiting for the session server's profile. */

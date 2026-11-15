@@ -1357,7 +1357,7 @@ addWithSettings("hitbox",
                 List.of(uiFpsLimit));
 
         addWithSettings("animations",
-                "Animation & movement polish: swing & view-bob curves, classic 1.8-style damage camera tilt, configurable idle held-item sway with multiple movement curves, and frame-rate-independent entity movement smoothing that rounds off per-tick knockback kinks and absorbs multiplayer server throttle jitter.",
+                "Animation & movement polish: swing & view-bob curves, classic 1.8-style damage camera tilt, and configurable idle held-item sway with multiple movement curves.",
                 () -> cfg.smoothAnimationsEnabled, v -> cfg.smoothAnimationsEnabled = v,
                 List.of(
                         new SectionHeaderSetting("Swing"),
@@ -1430,21 +1430,11 @@ addWithSettings("hitbox",
 
                         new SectionHeaderSetting("Hotbar"),
                         new BooleanSetting("Hotbar Bounce", () -> cfg.hotbarBounceEnabled, v -> cfg.hotbarBounceEnabled = v)
-                                .description("Pulses the hotbar slot when a pickup adds an item or grows its stack. Requires Animations to be enabled."),
-                        new SectionHeaderSetting("Entity Movement"),
-                        new BooleanSetting("Smooth Entity Movement",
-                                () -> cfg.entityMovementSmoothingEnabled,
-                                v -> cfg.entityMovementSmoothingEnabled = v)
-                                .description("Eases other entities' rendered positions toward their tick-interpolated targets every frame. This smooths out the per-tick \"kinks\" that make knockback arcs look disjointed (velocity changes abruptly between ticks), and absorbs the freeze-then-leap jitter of multiplayer servers that bundle or throttle movement packets. Strength auto-scales with the detected server throttle. Your own player is never smoothed."),
-                        SliderSetting.of("Smoothing Strength",
-                                () -> cfg.entityMovementSmoothingStrength,
-                                v -> cfg.entityMovementSmoothingStrength = v, 0.0, 1.0).percent()
-                                .description("How aggressively entity positions are eased. 0% is a barely-there rounding of per-tick kinks (great for singleplayer); 100% is a very smooth glide that masks heavy server-side throttling. On throttled PvP servers the effective smoothing is automatically increased beyond this setting.")
+                                .description("Pulses the hotbar slot when a pickup adds an item or grows its stack. Requires Animations to be enabled.")
                 ),
                 java.util.List.of(
                         "smoothAnimations", "swingStyle",
                         "viewBobAmplitude", "idleSway",
-                        "entityMovementSmoothing",
                         "damageTilt", "hotbarBounce"));
 
         // ---- Keystrokes Display ----
@@ -1633,12 +1623,6 @@ addWithSettings("hitbox",
         // Client optimizations Aurora owns (ADR 0009). Only the switches
         // with a visible trade-off have rows; the rest are config-only
         // perf* gates that ship on.
-        FeatureSetting hideReloadOverlay = new BooleanSetting("Hide Reload Overlay",
-                () -> cfg.perfHideReloadOverlay, v -> cfg.perfHideReloadOverlay = v)
-                .description("When resources reload after startup (F3+T, changing resource packs or the language), the current screen stays visible instead of fading to the Mojang loading screen, and the game continues as soon as the reload finishes. The first load at startup still shows its progress bar.");
-        FeatureSetting hideTitleFade = new BooleanSetting("Hide Title Fade",
-                () -> cfg.perfHideTitleFade, v -> cfg.perfHideTitleFade = v)
-                .description("The vanilla title screen shows its buttons and logo at once instead of fading them in over two seconds. Aurora's own title screen has no fade, so this only matters with Custom Title off.");
         FeatureSetting debugEntryCache = new BooleanSetting("Debug Entry Cache",
                 () -> cfg.perfDebugEntryCache, v -> cfg.perfDebugEntryCache = v)
                 .description("Updates the lines of the F3 debug screen 20 times a second, as often as the game itself changes, instead of on every frame. Raises the frame rate while F3 is open; values such as your coordinates update in steps of a game tick.");
@@ -1647,14 +1631,12 @@ addWithSettings("hitbox",
                 .description("While you move or turn, the minimap redraws its terrain at most 60 times a second instead of on every frame, which saves time at high frame rates. Markers stay lined up with the terrain. On screens faster than 60 Hz the terrain scrolls in small steps.");
         addWithSettings("performance",
                 "Loading, caching and drawing optimizations. Most are always on; the switches here are the ones you might notice.",
-                () -> cfg.perfHideReloadOverlay || cfg.perfHideTitleFade || cfg.perfDebugEntryCache || cfg.perfMinimapRefreshCap,
+                () -> cfg.perfDebugEntryCache || cfg.perfMinimapRefreshCap,
                 v -> {
-                    cfg.perfHideReloadOverlay = v;
-                    cfg.perfHideTitleFade = v;
                     cfg.perfDebugEntryCache = v;
                     cfg.perfMinimapRefreshCap = v;
                 },
-                List.of(hideReloadOverlay, hideTitleFade, debugEntryCache, minimapRefreshCap),
+                List.of(debugEntryCache, minimapRefreshCap),
                 List.of("perf"));
 
         // ============ SETTINGS TAB PAGES ============
@@ -1688,7 +1670,6 @@ addWithSettings("hitbox",
                 SearchTolerance::label)
                 .description("How many typos a search word can have and still find a match. Exact only finds exact matches; short words always need to be exact.");
         SETTINGS_PAGES.add(new SettingsPage("Performance", List.of(
-                group("loading", "Loading", hideReloadOverlay, hideTitleFade).pageSummary("Skips fades and overlays while the game loads."),
                 group("debug_screen", "Debug Screen", debugEntryCache).pageSummary("Makes the F3 screen cheaper to draw."),
                 group("maps", "Maps", minimapRefreshCap).pageSummary("Limits how often the minimap redraws its terrain."))));
         SETTINGS_PAGES.add(new SettingsPage("General", List.of(
