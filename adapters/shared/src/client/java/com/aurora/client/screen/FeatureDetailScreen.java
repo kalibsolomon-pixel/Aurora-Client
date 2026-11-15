@@ -97,6 +97,8 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
     private com.aurora.client.ui.util.UiDensity.Rect maxFrame;
     /** Body height at rest: the frame's whole body, or less so a scrolling body ends on a row boundary. */
     private int restBody;
+    /** A scrolling body whose rest edge cuts through a tall row, so the bottom fade shows at rest too. */
+    private boolean restCut;
 
     /**
      * One window size (owner direction, 2026-11-15): every detail screen uses the shared frame
@@ -119,6 +121,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         int limit = Math.min(compactFrame.y() + compactFrame.height(), this.height - 12) - compactFrame.y();
         int body = limit - bodyOffset() - fixedHeader - BODY_BOTTOM - 2;
         restBody = body;
+        restCut = false;
         if (Math.max(total, popup) > body) {
             // A scrolling body ends on a row boundary, so at rest no setting is cut through
             // its middle (council review, 2026-11-14); the scrollbar and fade show the rest.
@@ -137,7 +140,12 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
                 lastIsCaption = caption;
             }
             if (lastIsCaption && beforeCaption > 0) fit = beforeCaption;
-            if (fit > 0 && fit >= popup) restBody = fit;
+            // In the fixed frame a tall row (the custom crosshair canvas) left most of the window
+            // empty below the boundary (2026-11-15): trim only when the gap is under a stacked row,
+            // otherwise let the tall row run under the bottom fade.
+            if (fit > 0 && fit >= popup && body - fit <= com.aurora.client.ui.util.UiDensity.STACKED_ROW + ROW_GAP)
+                restBody = fit;
+            else restCut = true;
         }
     }
     private void measureRows() {
@@ -600,8 +608,9 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
                         MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED), false);
             com.aurora.client.util.ScrollFade.drawTop(ctx, listX + 8, LIST_W - 16, bodyTop(),
                     com.aurora.client.util.ScrollFade.FADE_PX, scroll.current(), fadeSurface);
-            // At rest the body ends on a row boundary (fitFrame): fade only rows cut by scrolling.
-            if (scroll.current() > 0) com.aurora.client.util.ScrollFade.drawBottom(ctx, listX + 8, LIST_W - 16, bodyBottom(),
+            // At rest the body usually ends on a row boundary (fitFrame): fade only rows cut by
+            // scrolling, or a tall row the rest edge runs through.
+            if (scroll.current() > 0 || restCut) com.aurora.client.util.ScrollFade.drawBottom(ctx, listX + 8, LIST_W - 16, bodyBottom(),
                     com.aurora.client.util.ScrollFade.BOTTOM_FADE_PX, maxScroll - scroll.current(), fadeSurface);
         }
         if (compact()) {
