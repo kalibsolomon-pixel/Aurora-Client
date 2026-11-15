@@ -109,8 +109,10 @@ public abstract class Popup {
     @Override
     public boolean click(double x, double y) {
       if (!rect.contains(x, y)) return false;
-      int i = offset + (int) ((y - rect.y() - 1) / ROW);
-      if (i >= 0 && i < options.size()) {
+      // Only the rows on screen: the list's last pixel row would otherwise pick the hidden next option.
+      int row = (int) ((y - rect.y() - 1) / ROW);
+      int i = offset + row;
+      if (row >= 0 && row < visible && i < options.size()) {
         pick.accept(i);
         return false;
       }

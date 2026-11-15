@@ -31,7 +31,6 @@ These run without a setting of their own, or are part of how Aurora works rather
 - **Flat item icons in Aurora screens**: item icons in Aurora's own lists are drawn flat. `{always:flatItemIcons}`
 - **Numeric ping in the server list**: part of the Ping feature's hook; shows ping as a number in Multiplayer. `{always:serverListPing}`
 - **Automatic latency reduction**: GPU timing used to keep the render queue short; works alongside Settings → Display → Low Latency. `{always:reflex}`
-- **Server throttle detection**: notices servers that bundle movement packets and strengthens entity movement smoothing to match. Feeds Animations → Smooth Entity Movement. `{always:throttleDetector}`
 - **Per-world cache clearing**: forgets per-entity data (health seen, pops counted) when you change worlds. `{always:worldJoinReset}`
 - **Map refresh on block change**: keeps the minimap and world map current when blocks change. `{always:mapBlockRefresh}`
 - **Aurora Launcher activity report**: only when started by Aurora Launcher; tells the launcher which world or server you are in so it can show Discord status. The mod itself has no Discord code. `{always:launcherBridge}`
@@ -392,9 +391,6 @@ Swing, view bob, damage tilt, idle sway, entity smoothing.
   - **Idle Sway Strength**: slider 0–10 · 1. `{idleSwayStrength}`
 - *Hotbar*
   - **Hotbar Bounce**: toggle · off. `{hotbarBounceEnabled}`
-- *Entity Movement*
-  - **Smooth Entity Movement**: toggle · on. `{entityMovementSmoothingEnabled}`
-  - **Smoothing Strength**: slider 0–100% · 30%. `{entityMovementSmoothingStrength}`
 
 #### Keystrokes · on `{card:keystrokes}`
 Shows your key and mouse presses.

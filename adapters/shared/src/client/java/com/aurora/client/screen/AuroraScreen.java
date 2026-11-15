@@ -804,6 +804,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 if (y > avail) { overflow = true; break; }
                 fit = y;
             } else for (FeatureSetting s : m.settings) {
+                if (!s.isVisible()) continue;
                 if (y + s.height() > avail) { overflow = true; break outer; }
                 fit = y + s.height();
                 y = fit + SETTINGS_ROW_GAP;
@@ -1122,6 +1123,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                     y += SETTINGS_HINT_H;
                 } else {
                     for (FeatureSetting s : m.settings) {
+                        if (!s.isVisible()) continue;
                         int rh = s.height();
                         if (vp.intersects(mx + 4, y, (contentWidth() - 8), rh)) {
                             s.renderGlassPass(g, (int) (mx + 4), (int) y, (contentWidth() - 8));
@@ -1565,7 +1567,18 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 }
                 y += SETTINGS_HINT_H;
             } else {
+                com.aurora.client.screen.setting.SectionHeaderSetting.markLeading(m.settings);
                 for (FeatureSetting s : m.settings) {
+                    if (!s.isVisible()) {
+                        // Collapsed under its section caption (or hidden by its own condition):
+                        // it takes no space, and none of its controls stay reachable, the same
+                        // walk every other Settings-tab pass makes (pointer audit 2026-11-15).
+                        for (SemanticActionControl control : hostedSettingControls.getOrDefault(s, List.of()))
+                            semanticHost.setAvailable(control, false);
+                        s.onInteractionAvailabilityChanged(false);
+                        if (s == FeatureSetting.getFocused()) focusedSettingVisible = false;
+                        continue;
+                    }
                     int rh = s.height();
                     boolean visible = vp.intersects(mx + 4, y, (contentWidth() - 8), rh);
                     if (visible) {
@@ -1851,14 +1864,14 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                     offset += headerBlockH(entry);
                     for (FeatureSetting setting : entry.settings) {
                         if (setting == target) break;
-                        offset += setting.height() + SETTINGS_ROW_GAP;
+                        if (setting.isVisible()) offset += setting.height() + SETTINGS_ROW_GAP;
                     }
                 }
                 break;
             }
             offset += headerBlockH(entry);
             if (entry.settingsDetailOnly) offset += SETTINGS_HINT_H;
-            else for (FeatureSetting setting : entry.settings) offset += setting.height() + SETTINGS_ROW_GAP;
+            else for (FeatureSetting setting : entry.settings) if (setting.isVisible()) offset += setting.height() + SETTINGS_ROW_GAP;
             offset += SETTINGS_ENTRY_GAP;
         }
         double max = computeMaxScroll();
@@ -1954,7 +1967,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         for (FeatureMetadata m : pageEntries()) {
             h += headerBlockH(m);
             if (m.settingsDetailOnly) h += SETTINGS_HINT_H;
-            else for (FeatureSetting s : m.settings) h += s.height() + SETTINGS_ROW_GAP;
+            else for (FeatureSetting s : m.settings) if (s.isVisible()) h += s.height() + SETTINGS_ROW_GAP;
             h += SETTINGS_ENTRY_GAP;
         }
         return Math.max(0, h - contentViewport().height);
@@ -2168,7 +2181,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 // mirror renderSettingsLive.
                 if (button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT && m.hasDetail() && this.minecraft != null
                         && mouseX >= mx + 4 && mouseX <= mx + contentWidth() - 42
-                        && mouseY >= y && mouseY <= y + 22 + (m.settingsDetailOnly ? SETTINGS_HINT_H : 0)) {
+                        && mouseY >= y && mouseY < y + SETTINGS_HEADER_H + (m.settingsDetailOnly ? SETTINGS_HINT_H : 0)) {
                     SemanticActionControl nav = headerNavControls.get(m.id);
                     if (nav != null && nav.activateFromPointer(mouseX, mouseY, button)) {
                         this.setFocused(nav);
@@ -2180,6 +2193,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                     y += SETTINGS_HINT_H;
                 } else {
                     for (FeatureSetting s : m.settings) {
+                        if (!s.isVisible()) continue;
                         int rh = s.height();
                         // Same visibility as the render walk: a row that
                         // shares no pixel with the viewport is not

@@ -959,8 +959,8 @@ Grid screens are an exemption from list-specific layout, not a separate design l
 ### 13.0 Rest on a row boundary
 
 A scrolling body ends on a row boundary at rest (2026-11-14), so no row is cut through its
-text before the user scrolls. A content-fitted detail window shortens to the last whole row
-that fits (`FeatureDetailScreen.fitFrame`); the main window's Settings viewport trims its band
+text before the user scrolls. A detail window's body band ends on the last whole row that
+fits inside the fixed frame (`FeatureDetailScreen.fitFrame`); the main window's Settings viewport trims its band
 to the last whole row (`AuroraScreen.contentViewport`), and the scissor, hit tests, scroll
 extent and scrollbar all read that one band. Partial rows still appear while scrolling.
 
@@ -1421,11 +1421,10 @@ rulings it supersedes.
 - **Text roles** (§4.1): `TITLE` (11 px raster) and `HEADING`, a heavier cut of the user's family. Supersedes
   "Version 3 does not introduce a type scale" for those two roles only; body text keeps the
   one size.
-- **Windows fit their content.** Feature detail windows fit their rows below a fixed top edge
-  (min 120 px, never taller than the frame) and carry the feature's one-sentence summary under
-  the title (owner decision). The main window keeps the 336×288 frame on the Features tab; a
-  Settings page fits its content the same way (owner decision). Supersedes the compact pass's
-  "one window" rule for those two cases; managers, editors and pickers keep the frame.
+- **One window size** (owner direction 2026-11-15): every Aurora window, the main window on
+  either tab and every feature detail window, keeps the shared frame however little or much it
+  holds; content scrolls inside it. Supersedes the 2026-11-14 content-fitted detail windows and
+  Settings pages. Detail windows still carry the feature's one-sentence summary under the title.
 - **Rest on a row boundary** (§13.0) and a shorter bottom fade with an alpha floor (§13.1).
 - **Feature state is the icon colour, not a selection** (§11.10): neutral tiles and rows,
   an accent icon when on, a neutral grey icon when off. Supersedes the enabled-tile accent
