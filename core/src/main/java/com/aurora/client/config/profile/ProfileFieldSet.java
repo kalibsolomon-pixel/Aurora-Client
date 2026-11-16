@@ -55,6 +55,34 @@ public final class ProfileFieldSet {
             "searchTypoTolerance"
     );
 
+    /**
+     * Fields Aurora has removed (3.5.1, 2026-11-15: entity movement smoothing and the
+     * Better Hitreg parts other than its custom delay). Profiles saved before still carry
+     * them; restore skips them quietly, because nothing is wrong with such a profile. Any
+     * other unknown field still logs a warning. The reload overlay and title fade switches
+     * were perf* fields, which profiles never held.
+     */
+    public static final Set<String> RETIRED = Set.of(
+            "entityMovementSmoothingEnabled", "entityMovementSmoothingStrength",
+            "fightStatsPlaytimeSeconds", "fightStatsTotalFights", "hitregAlertDelays",
+            "hitregAlertGhosts", "hitregAlertInconsistencies", "hitregColorCrossFar",
+            "hitregColorCrossFarWithHitbox", "hitregColorCrossNear",
+            "hitregColorCrossNearWithHitbox", "hitregColorFloor", "hitregColorGrid",
+            "hitregColorHitboxFar", "hitregColorHitboxNear", "hitregColorJumpReset",
+            "hitregColorPerfectHit", "hitregColorServerHitbox", "hitregColorTheirJumpFar",
+            "hitregColorTheirJumpNear", "hitregColorTheirReachFar", "hitregColorTheirReachNear",
+            "hitregColorYourJumpFar", "hitregColorYourJumpNear", "hitregColorYourReachFar",
+            "hitregColorYourReachNear", "hitregFloorGridSize", "hitregMetronome",
+            "hitregMuffleAmount", "hitregScoreLeftKey", "hitregScoreResetKey",
+            "hitregScoreRightKey", "hitregScoreSendKey", "hitregSettingsKey",
+            "hitregSharpenAmount", "hitregSwitchHandKey", "hitregTrackFights", "hitregVoidWorld"
+    );
+
+    /** @return {@code true} for a field a later Aurora removed ({@link #RETIRED}). */
+    public static boolean isRetired(String fieldName) {
+        return RETIRED.contains(fieldName);
+    }
+
     /** Prefix of the performance fields (ADR 0009), all kept out of profiles. */
     public static final String PERFORMANCE_PREFIX = "perf";
 

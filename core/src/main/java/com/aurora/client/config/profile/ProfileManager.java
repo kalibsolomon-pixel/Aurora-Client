@@ -494,6 +494,7 @@ public class ProfileManager {
         for (Map.Entry<String, JsonElement> e : p.fields.entrySet()) {
             String fieldName = e.getKey();
             if (!owned && isControlField(fieldName)) continue;
+            if (ProfileFieldSet.isRetired(fieldName)) continue; // removed on purpose, not a damaged profile
             if (!liveNames.contains(fieldName) || !ProfileFieldSet.isProfileScoped(fieldName)) {
                 LOGGER.warn(
                         "ProfileManager: profile '{}' references field '{}' which no longer exists; skipped",
