@@ -70,6 +70,16 @@ passed with six reports each and every judged run within budget
 ([evidence](releases/evidence/3.5.0-parity.json)); it publishes through the protected
 workflow.
 
+3.5.1 follows it: Pulsar analytics (PR #39), the Scoreboard HUD, Armor HUD strip,
+alert HUD modules and Hit Color styles (PR #36), and the owner's pre-release polish
+(PR #40: one window size, accurate hit areas, centred crosshair previews, the reload
+overlay/title fade switches and entity smoothing removed, Better Hitreg trimmed to its
+custom delay) ([notes](releases/RELEASE_NOTES_3.5.1.md)). All fourteen matrix rows
+passed with six reports each; judged runs 0.129-0.150 ms mean and at most 0.234 ms p95,
+zero fills and glass ([evidence](releases/evidence/3.5.1-parity.json)). A first matrix
+attempt found that profiles saved before 3.5.1 logged a warning per removed field; restore
+now skips those retired fields quietly.
+
 ## Acceptance and contributor readiness
 
 See [step 5.5 evidence](port/step-5.5.md), [step 5 evidence](port/step-5.md)
@@ -117,13 +127,7 @@ and the GPU-side items wait for GPU-bound tester evidence; [evidence](reports/20
 
 ## Next work
 
-Pre-release polish on `fix/pre-release-polish` (stacked on `feat/render-hud-quality`,
-owner direction 2026-11-15): every Aurora window keeps the shared frame size; slider
-and other pointer hit areas match what is drawn; crosshair previews are centred;
-Hide Reload Overlay, Hide Title Fade and entity movement smoothing are removed; and
-Better Hitreg is trimmed to Custom Hitreg and its delay.
-
-Rendering/HUD follow-up is in progress on `feat/render-hud-quality`:
+The rendering/HUD follow-up from `feat/render-hud-quality` is merged (PR #36):
 the odd-radius motion blur alias is reproduced and fixed across the three
 OpenGL adapters and native 26.3 Vulkan; unused font preparation is deferred
 with measured reload gains, while the selected family stays eager. The reload
