@@ -40,6 +40,10 @@ class ProfileMetadataAndControlsTest {
     @AfterAll static void detach() {
         ProfileManager.getInstance().setControlsBridge(null);
         AuroraConfig.get().profilesOwnControls = true;
+        // Drain the async profile and config writers before JUnit deletes the temp directory:
+        // a write still landing in profiles/ made the cleanup fail now and then (2026-11-15).
+        ProfileManager.getInstance().saveCurrentBlocking();
+        assertTrue(AuroraConfig.flushPending(5000), "config writes drained");
     }
 
     private static String unique(String prefix) {
