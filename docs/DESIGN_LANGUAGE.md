@@ -265,7 +265,8 @@ keystroke keys 3 px, Cherry-profile keycaps 2 px, the square minimap frame 0 px)
 feature's detail screen has a **Theme Corner Radius** switch, off by default, that hands its
 shapes the theme's compact radius (Corner Radius × 3/5) instead (owner ruling 2026-11-12).
 Keystrokes' existing **Theme Corner Radius** row is shown for **3D Keycap**: it gives the
-sculpted caps the full Corner Radius instead, including exact square facets at radius 0, while
+sculpted caps the theme's control radius (`radiusSmall`) instead, including exact square facets
+at radius 0 (the window radius turned 20 px keys into circles), while
 continuing to control the panel and the other key styles' compact corners.
 
 ### 5.2 Compact spacing vocabulary

@@ -408,7 +408,7 @@ Shows your key and mouse presses.
 - **Scale**: slider · about 1.29 (same as resizing in the HUD Editor). `{hud:keystrokes.scale}`
 - **Background**: dropdown · Solid. `{keystrokesBgMode}`
 - **Background Color (when SOLID)**: color · near-black. `{keystrokesBgColor}`
-- **Theme Corner Radius**: toggle · off · shown for 3D Keycap; uses the full theme radius instead of the 2 px Cherry radius, and continues to control the backing panel and other styles' compact corners. `{keystrokesThemeCorners}`
+- **Theme Corner Radius**: toggle · off · shown for 3D Keycap; uses the theme's control corner radius instead of the 2 px Cherry radius, and continues to control the backing panel and other styles' compact corners. `{keystrokesThemeCorners}`
 
 #### Minimap · off `{card:minimap}`
 Top-down map in a HUD corner.
