@@ -236,7 +236,7 @@ public class RenderUtil {
         for (int i = 0; i < lines.size(); i++) {
             String line = lines.get(i);
             graphics.text(font, line, Math.round(x + (width - font.width(line)) / 2),
-                    Math.round(y + i * (font.lineHeight + 2)), color, false);
+                    Math.round(y + i * AuroraFontRenderer.linePitch(font)), color, false);
         }
     }
 }

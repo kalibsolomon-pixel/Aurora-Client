@@ -9,6 +9,58 @@ import net.minecraft.util.FormattedCharSequence;
 
 public class AuroraFontRenderer {
 
+    private record MetricKey(Font font, net.minecraft.network.chat.Style style) {}
+    private static final java.util.Map<MetricKey, TextAlignment.Ink> INK = new java.util.HashMap<>();
+    private static net.minecraft.locale.Language metricLanguage;
+    private static Font lastMetricFont;
+    private static net.minecraft.network.chat.Style lastMetricStyle;
+    private static TextAlignment.Ink lastInk;
+
+    /**
+     * Measure H/x from the active baked glyphs once per style/resource generation. This uses
+     * the actual provider's bearings and raster bounds, so 8px body, 9px regular/heading,
+     * 11px title, vanilla fallback and resource-pack fonts all use their own metrics.
+     * Effects (underline/shadow) and descenders deliberately do not move the optical axis.
+     */
+    public static TextAlignment.Ink ink(Font font, net.minecraft.network.chat.Style style) {
+        var language = net.minecraft.locale.Language.getInstance();
+        if (metricLanguage != language) { INK.clear(); metricLanguage = language; lastInk = null; }
+        if (lastInk != null && lastMetricFont == font && lastMetricStyle == style) return lastInk;
+        var key = new MetricKey(font, style);
+        var measured = INK.get(key);
+        if (measured == null) {
+            float[] bounds = {Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY};
+            var sample = Component.literal("Hx").withStyle(style == null
+                    ? net.minecraft.network.chat.Style.EMPTY : style.withUnderlined(false));
+            font.prepareText(sample.getVisualOrderText(), 0, 0, 0xffffffff, false, false, 0)
+                    .visit(new Font.GlyphVisitor() {
+                        @Override public void acceptGlyph(net.minecraft.client.gui.font.TextRenderable.Styled glyph) {
+                            bounds[0] = Math.min(bounds[0], glyph.top());
+                            bounds[1] = Math.max(bounds[1], glyph.bottom());
+                        }
+                    });
+            // Missing/empty providers use vanilla's measured seven-pixel cap box.
+            measured = bounds[1] > bounds[0] ? new TextAlignment.Ink(bounds[0], bounds[1]) : new TextAlignment.Ink(0, 7);
+            INK.put(key, measured);
+        }
+        lastMetricFont = font; lastMetricStyle = style; lastInk = measured;
+        return measured;
+    }
+
+    /** Minecraft draw origin which centres the active font's visible cap/x-height ink. */
+    public static int textY(Font font, float y, float height) {
+        return TextAlignment.textY(y, height, ink(font, getActiveStyle()));
+    }
+
+    public static int roleTextY(Font font, float y, float height, Role role) {
+        return TextAlignment.textY(y, height, ink(font, roleStyle(role)));
+    }
+
+    public static int linePitch(Font font) { return font.lineHeight + TextAlignment.DESCRIPTOR_GAP; }
+    public static int blockY(Font font, float y, float height, int lines) {
+        return TextAlignment.blockY(y, height, lines, ink(font, getActiveStyle()), linePitch(font));
+    }
+
     private static AuroraFontRenderer instance = new AuroraFontRenderer();
 
     public static AuroraFontRenderer getInstance() {
@@ -336,12 +388,12 @@ public class AuroraFontRenderer {
 
     /** Centered, non-shadowed string. {@code cx} is the center x. */
     public static void drawCentered(GuiGraphicsExtractor graphics, Font font, String text, int cx, int y, int color) {
-        graphics.text(font, text, cx - font.width(text) / 2, y, color, false);
+        graphics.text(font, text, TextAlignment.centeredX(cx, 0, font.width(text)), y, color, false);
     }
 
     /** Centered, non-shadowed styled sequence. {@code cx} is the center x. */
     public static void drawCentered(GuiGraphicsExtractor graphics, Font font, FormattedCharSequence text, int cx, int y, int color) {
-        graphics.text(font, text, cx - font.width(text) / 2, y, color, false);
+        graphics.text(font, text, TextAlignment.centeredX(cx, 0, font.width(text)), y, color, false);
     }
 
     /** Centered, non-shadowed component. {@code cx} is the center x. */
@@ -417,6 +469,14 @@ public class AuroraFontRenderer {
     /** {@code text} in the configured case and the style of {@code role}: draw and measure this one value. */
     public static Component role(String text, Role role) {
         return styledLiteral(text, roleStyle(role));
+    }
+
+    private static final TextFit.Memo ROLE_FIT = new TextFit.Memo(128);
+
+    /** Fit role text using the same font, weight and case which will actually be drawn. */
+    public static String ellipsizeRole(Font font, String text, int width, Role role) {
+        return ROLE_FIT.fit(text, width, 0, styleKey() * 2 + role.ordinal(),
+                value -> font.width(role(value, role)));
     }
 
     // Keep compatibility wrappers

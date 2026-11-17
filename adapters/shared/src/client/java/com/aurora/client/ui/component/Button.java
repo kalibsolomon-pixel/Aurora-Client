@@ -177,19 +177,19 @@ public class Button extends Widget {
                 MaterialSurface.color(ThemeToken.ACCENT));
         Font font=Minecraft.getInstance().font;
         if(font==null) return;
-        int textY=Math.round(py+(h-font.lineHeight)/2)+1;
+        int textY=AuroraFontRenderer.textY(font, py, h);
         if(icon.isEmpty()) {
             AuroraFontRenderer.drawCentered(g,font,
                     AuroraFontRenderer.ellipsize(font,label.getString(),Math.max(0,(int)w-20),0),Math.round(x+w/2),textY,text);
             return;
         }
-        // Icon and label centre as one group; the label gives way first, the icon never moves off its row.
-        String fitted=AuroraFontRenderer.ellipsize(font,label.getString(),Math.max(0,(int)w-20-ICON_EM-ICON_GAP),0);
+        // Reserve matching side slots: the action glyph never shifts the label off the face centre.
+        String fitted=AuroraFontRenderer.ellipsize(font,label.getString(),Math.max(0,(int)w-10-2*(ICON_EM+ICON_GAP)),0);
         int labelW=font.width(fitted); // measured exactly as drawCentered measures
-        float groupX=x+(w-(ICON_EM+(fitted.isEmpty() ? 0 : ICON_GAP+labelW)))/2f;
-        // One pixel down: the glyph's optical centre then meets the label's x-height (2026-11-14).
-        MaterialIconRenderer.drawIcon(g,font,icon,groupX+ICON_EM/2f,py+h/2f+1,ICON_EM,text);
-        if(!fitted.isEmpty()) g.text(font,fitted,Math.round(groupX+ICON_EM+ICON_GAP),textY,text,false);
+        float groupX=x+com.aurora.client.ui.util.TextAlignment.FACE_PAD;
+        // The native glyph and text share the face's optical centre.
+        MaterialIconRenderer.drawIcon(g,font,icon,groupX+ICON_EM/2f,com.aurora.client.ui.util.TextAlignment.iconCenter(py,h),ICON_EM,text);
+        if(!fitted.isEmpty()) AuroraFontRenderer.drawCentered(g,font,fitted,Math.round(x+w/2),textY,text);
     }
 
     /** Leading icon glyph (Material Symbols), drawn with the label as one centred group; empty for none. */
@@ -511,7 +511,7 @@ public class Button extends Widget {
         }
 
         int textX = Math.round(x + w / 2f);
-        int textY = Math.round(y + (h - tr.lineHeight) / 2f) + 1;
+        int textY = AuroraFontRenderer.textY(tr, y, h);
         AuroraFontRenderer.drawCentered(g, tr, label, textX, textY, text);
 
         g.pose().popMatrix();
@@ -620,7 +620,7 @@ public class Button extends Widget {
         }
 
         AuroraFontRenderer.drawCentered(g, tr, label, Math.round(x + w / 2f),
-                Math.round(y + (h - tr.lineHeight) / 2f) + 1, text);
+                AuroraFontRenderer.textY(tr, y, h), text);
 
         g.pose().popMatrix();
     }

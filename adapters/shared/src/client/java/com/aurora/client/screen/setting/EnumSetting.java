@@ -1,5 +1,6 @@
 package com.aurora.client.screen.setting;
 
+import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.component.GlassSurface;
@@ -280,7 +281,7 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
         Font tr = Minecraft.getInstance().font;
         boolean disabled = isDisabled();
         if (compactRow != null) renderCompactLabel(ctx, x, y, mouseX, mouseY, AuroraTheme.TEXT_PRIMARY);
-        else renderWrappedLabel(ctx, label, x + 12, y + (CONTROL_H - tr.lineHeight) / 2, Math.max(0,width-(BTN_W+38)), AuroraTheme.TEXT_PRIMARY, mouseX, mouseY, disabled);
+        else renderWrappedLabel(ctx, label, x + 12, AuroraFontRenderer.textY(tr, y, CONTROL_H), Math.max(0,width-(BTN_W+38)), AuroraTheme.TEXT_PRIMARY, mouseX, mouseY, disabled);
 
         // Cache arrow glyphs first (their width reserves space for the label).
         if (cachedUpArrow == null) {
@@ -294,8 +295,9 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
 
         E current = getter.get();
         String raw = current == null ? "—" : displayName(current);
-        int arrowReserve = (expanded ? cachedUpArrowWidth : cachedDownArrowWidth) + 8;
-        String name = fit(tr, raw, BTN_W - arrowReserve - (MaterialSurface.unified() ? 6 : 0));
+        int arrowReserve = 16; // fixed trailing slot: selection cannot move the label
+        int textAreaW = BTN_W - arrowReserve;
+        String name = fit(tr, raw, com.aurora.client.ui.util.TextAlignment.faceTextWidth(BTN_W, arrowReserve));
         // Value equality, not reference equality — fit() builds a fresh
         // trimmed string every frame, so != never hit and the width was
         // re-measured per frame.
@@ -369,9 +371,9 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
                     ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
         }
 
-        // Unified values start 6 px inside the face; the arrow's slot remains reserved.
-        int textX = MaterialSurface.unified() ? btnX + 6 : btnX + (BTN_W - arrowReserve - cachedNameW) / 2;
-        int textY = btnY + (BTN_H - tr.lineHeight) / 2 + 1;
+        // Fit first, then centre the drawn value within the face area left of the chevron.
+        int textX = com.aurora.client.ui.util.TextAlignment.centeredX(btnX, textAreaW, cachedNameW);
+        int textY = AuroraFontRenderer.textY(tr, btnY, BTN_H);
         ctx.text(tr, name, textX, textY, textColor, false);
 
         // Draw the Material Symbols arrow icon on the right. Rendered at the
@@ -380,9 +382,6 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
         // atlas is point-sampled and washes chevron strokes out at GUI
         // scales where 11 GUI units ≠ a texel multiple). Slot metrics are
         // unchanged, so layout and hit area are identical.
-        int arrowW = expanded ? cachedUpArrowWidth : cachedDownArrowWidth;
-        int arrowX = btnX + BTN_W - arrowW - 4; // 4px margin from right edge
-        int arrowY = btnY + (BTN_H - tr.lineHeight) / 2 + 1; // centered vertically exactly with text
         // Expanded treatment: the existing chevron indicator (it already
         // flips direction) takes the accent color for the whole time the
         // popup is open — persistent, independent of hover, readable on
@@ -390,8 +389,8 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
         // row reads.
         int arrowColor = expanded ? AuroraTheme.TEXT_ACCENT : textColor;
         MaterialIconRenderer.drawIcon(ctx, tr, expanded ? "\uE5CE" : "\uE5CF",
-                arrowX + arrowW / 2f, arrowY + tr.lineHeight / 2f,
-                MaterialIconRenderer.NATURAL_EM_GUI, arrowColor);
+                btnX + textAreaW + arrowReserve / 2f, com.aurora.client.ui.util.TextAlignment.iconCenter(btnY, BTN_H),
+                9, arrowColor);
 
         lastPopupBorder = borderTint;
         if (compactRow == null) renderFloatingOverlay(ctx, mouseX, mouseY);
@@ -457,7 +456,7 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
                     }
 
                     int optTextX = btnX + (BTN_W - tr.width(optName)) / 2;
-                    int optTextY = optY + (OPT_H - tr.lineHeight) / 2 + 1;
+                    int optTextY = AuroraFontRenderer.textY(tr, optY, OPT_H);
                     int optColor = optHover ? AuroraTheme.TEXT_PRIMARY : AuroraTheme.TEXT_SECONDARY;
 
                     if (val == current) {

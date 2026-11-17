@@ -128,6 +128,12 @@ public final class MaterialIconRenderer {
         draw(g, font, icon, cx, cy, emGui, argb, false);
     }
 
+    /** Native glyph ink centred on the same box axis as AuroraFontRenderer.textY. */
+    public static void drawInBox(GuiGraphicsExtractor g, Font font, String icon,
+                                 float x, float y, float width, float height, float emGui, int argb) {
+        drawIcon(g, font, icon, x + width / 2, TextAlignment.iconCenter(y, height), emGui, argb);
+    }
+
     /**
      * {@link #drawIcon}, but rasterizing at most {@value #FRAME_BUDGET} new
      * glyphs per frame across all budgeted callers. Returns false, drawing

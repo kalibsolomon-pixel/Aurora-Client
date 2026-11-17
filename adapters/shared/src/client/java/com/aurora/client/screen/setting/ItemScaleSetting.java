@@ -7,6 +7,7 @@ import com.aurora.client.ui.component.Widget;
 import com.aurora.client.util.AuroraAnim;
 import com.aurora.client.ui.util.ItemSpriteRenderer;
 
+import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.util.AuroraShapes;
 import com.aurora.client.util.AuroraTheme;
@@ -422,7 +423,7 @@ public class ItemScaleSetting extends FeatureSetting {
             // §4 subtitle block: the label sits at the top of a 20px block
             // (label + gap + subtitle) centered in the row, mirroring
             // FeatureSetting.drawValueLine's beneath-label placement.
-            int textTop = rowY + (ITEM_ROW_H - 20) / 2;
+            int textTop = AuroraFontRenderer.blockY(tr, rowY, ITEM_ROW_H, expanded ? 1 : 2);
             ctx.text(tr, labelStr, textPadX, textTop, AuroraTheme.IOS_LABEL, false);
 
             // §4 live-value subtitle: collapsed rows hide all seven
@@ -438,7 +439,7 @@ public class ItemScaleSetting extends FeatureSetting {
                 AuroraConfig.ItemScaleData d = cfg.itemScales.get(idStr);
                 if (d != null) {
                     ctx.text(tr, String.format(java.util.Locale.ROOT, "Scale %.2f\u00d7", d.scale),
-                            textPadX, textTop + tr.lineHeight + 2, AuroraTheme.TEXT_SECONDARY, false);
+                            textPadX, textTop + AuroraFontRenderer.linePitch(tr), AuroraTheme.TEXT_SECONDARY, false);
                 }
             }
 

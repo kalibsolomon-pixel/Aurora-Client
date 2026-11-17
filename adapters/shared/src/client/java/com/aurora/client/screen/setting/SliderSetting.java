@@ -1,5 +1,6 @@
 package com.aurora.client.screen.setting;
 
+import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.ui.component.MaterialSurface;
 import com.aurora.client.theme.ThemeToken;
@@ -227,7 +228,7 @@ public class SliderSetting extends FeatureSetting {
         double value = slider.value();
 
         if (compactRow != null) renderCompactLabel(ctx, x, y, mouseX, mouseY, MaterialSurface.color(ThemeToken.ON_BACKGROUND));
-        else renderWrappedLabel(ctx, label, x + 12, y + 6, Math.max(0,width-38-tr.width(valueText(value))), MaterialSurface.color(ThemeToken.ON_BACKGROUND), mouseX, mouseY, disabled);
+        else renderWrappedLabel(ctx, label, x + 12, AuroraFontRenderer.textY(tr, y, 20), Math.max(0,width-38-tr.width(valueText(value))), MaterialSurface.color(ThemeToken.ON_BACKGROUND), mouseX, mouseY, disabled);
 
         // A click elsewhere on the screen clears row focus before the clicked
         // row re-claims it — focus loss without a click on THIS row is the
@@ -259,7 +260,7 @@ public class SliderSetting extends FeatureSetting {
         boolean focused = (!disabled && FeatureSetting.getFocused() == this);
         int valueColor = disabled ? com.aurora.client.util.AuroraAnim.lerpArgb(MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED),
                 MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), .5f) : (focused ? MaterialSurface.color(ThemeToken.ACCENT) : MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY));
-        ctx.text(tr, cachedStr, compactRow == null ? x + width - cachedStrW - 14 : x + compactRow.value().x() + compactRow.value().width() - cachedStrW, compactRow == null ? y + 6 : y + (compactRow.value().height() - tr.lineHeight) / 2, valueColor, false);
+        ctx.text(tr, cachedStr, compactRow == null ? x + width - cachedStrW - 14 : x + compactRow.value().x() + compactRow.value().width() - cachedStrW, AuroraFontRenderer.textY(tr, y, compactRow == null ? 20 : compactRow.value().height()), valueColor, false);
     }
 
     /** Cacheable static track layer (depends only on the roundness token). */

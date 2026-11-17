@@ -47,6 +47,7 @@ public final class ParityProbe implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             try {
                 var screen = NativeUi.screen(client);
+                if (screen == null) UiBounds.cancel();
                 UiCacheBenchmark.cancelIfDifferent(screen);
                 ShapeBenchmark.cancelUnlessManager(screen instanceof WaypointManagerScreen
                         || screen instanceof dev.phenomena.gui.screens.PhenomenaScreen);
@@ -337,6 +338,11 @@ public final class ParityProbe implements ClientModInitializer {
                 if (Files.exists(client.gameDirectory.toPath().resolve("phenomena"))) throw new AssertionError("Disabled startup touched storage");
             }
             case "settings" -> NativeUi.setScreen(client, AuroraScreen.create());
+            case "ui-bounds" -> {
+                if (args.length != 2 || !args[1].matches("[a-zA-Z0-9_-]+"))
+                    throw new IllegalArgumentException("A safe, unique result label is required");
+                UiBounds.arm(root.resolve(args[1] + ".json"), NativeUi.screen(client));
+            }
             case "ui-benchmark", "ui-open-benchmark", "ui-cache-state" -> {
                 if (args.length < 2 || !args[1].matches("[a-zA-Z0-9_-]+"))
                     throw new IllegalArgumentException("A safe, unique result label is required");

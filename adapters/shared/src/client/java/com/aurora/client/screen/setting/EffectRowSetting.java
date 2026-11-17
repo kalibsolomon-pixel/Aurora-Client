@@ -1,5 +1,6 @@
 package com.aurora.client.screen.setting;
 
+import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.component.Widget;
@@ -71,7 +72,7 @@ public class EffectRowSetting extends FeatureSetting {
         // Display name, indented past the icon (ItemScale row geometry),
         // vertically centered — no §4 subtitle: the row's presence in the
         // list IS its state (exclusion clause).
-        int textY = y + (ROW_H - tr.lineHeight) / 2;
+        int textY = AuroraFontRenderer.textY(tr, y, ROW_H);
         ctx.text(tr, label, x + 20 + ICON_SIZE + 4, textY, AuroraTheme.IOS_LABEL, false);
         // The trailing remove control is the container's icon action (C-4):
         // it paints itself into this row's 16×16 zone from the container's

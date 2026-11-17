@@ -296,20 +296,20 @@ public class SegmentedControl extends Widget {
                 renderFittedLabel(g,tr,i,sx,y,sw,isSelected,color);
             } else if (verbatimLabels) {
                 AuroraFontRenderer.drawCentered(g, tr, AuroraFontRenderer.verbatim(options[i]), Math.round(sx + sw / 2f),
-                        Math.round(y + (trackH - tr.lineHeight) / 2f), color);
+                        AuroraFontRenderer.textY(tr, y, trackH), color);
             } else {
-                AuroraFontRenderer.drawCentered(g, tr, AuroraFontRenderer.ellipsize(tr,options[i],Math.max(0,(int)sw-6),0), Math.round(sx + sw / 2f),
-                        Math.round(y + (trackH - tr.lineHeight) / 2f), color);
+                AuroraFontRenderer.drawCentered(g, tr, AuroraFontRenderer.ellipsize(tr,options[i],Math.max(0,sw-2*com.aurora.client.ui.util.TextAlignment.FACE_PAD),0), Math.round(sx + sw / 2f),
+                        AuroraFontRenderer.textY(tr, y, trackH), color);
             }
         }
     }
 
-    /** Fit once per font/style and real segment width; centre check + label as one group. */
+    /** Fit once per font/style and real segment width; centre the label independently of its check slot. */
     private void renderFittedLabel(GuiGraphicsExtractor g,Font font,int i,int sx,float y,int sw,boolean selected,int color) {
         long style=ThemeManager.generation()*65537L+AuroraFontRenderer.styleKey()*2L+(verbatimLabels ? 1 : 0);
         if(fittedStyle!=style) { Arrays.fill(fittedBudgets,-1);fittedStyle=style; }
         int reserve=toggledOn!=null ? CHECK_EM+CHECK_GAP : 0;
-        int budget=Math.max(0,sw-6-reserve);
+        int budget=Math.max(0,sw-2*com.aurora.client.ui.util.TextAlignment.FACE_PAD-2*reserve);
         if(fittedBudgets[i]!=budget) {
             String source=verbatimLabels ? options[i] : AuroraFontRenderer.applyCase(options[i]);
             String label=com.aurora.client.ui.util.TextFit.ellipsize(source,budget,0,
@@ -319,12 +319,12 @@ public class SegmentedControl extends Widget {
             fittedBudgets[i]=budget;
         }
         boolean checked=toggledOn!=null && selected;
-        int labelW=fittedWidths[i], groupW=labelW+(checked ? reserve : 0);
-        float groupX=sx+(sw-groupW)/2f;
+        int labelW=fittedWidths[i];
         if(checked) com.aurora.client.ui.util.MaterialIconRenderer.drawIcon(g,font,CHECK,
-                groupX+CHECK_EM/2f,y+trackH/2f,CHECK_EM,color);
-        AuroraFontRenderer.drawCentered(g,font,fittedLabels[i],Math.round(groupX+(checked ? reserve : 0)+labelW/2f),
-                Math.round(y+(trackH-font.lineHeight)/2f),color);
+                sx+com.aurora.client.ui.util.TextAlignment.FACE_PAD+CHECK_EM/2f,
+                com.aurora.client.ui.util.TextAlignment.iconCenter(y,trackH),CHECK_EM,color);
+        AuroraFontRenderer.drawCentered(g,font,fittedLabels[i],Math.round(sx+sw/2f),
+                AuroraFontRenderer.textY(font, y, trackH),color);
     }
 
     @Override

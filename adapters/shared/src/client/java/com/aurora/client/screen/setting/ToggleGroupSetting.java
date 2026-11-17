@@ -1,5 +1,6 @@
 package com.aurora.client.screen.setting;
 
+import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.ui.component.SegmentedControl;
 import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.Minecraft;
@@ -84,7 +85,7 @@ public class ToggleGroupSetting extends FeatureSetting {
         Font tr = Minecraft.getInstance().font;
         boolean disabled = isDisabled();
         renderLabelWithTooltip(ctx, com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(tr, label, Math.max(0, width - 24), 0),
-                x + TRACK_PAD_X, y + 6, AuroraTheme.IOS_LABEL, mouseX, mouseY, disabled);
+                x + TRACK_PAD_X, AuroraFontRenderer.textY(tr, y, 16), AuroraTheme.IOS_LABEL, mouseX, mouseY, disabled);
         lastTrackW = width - TRACK_PAD_X * 2;
         control.disabled(disabled);
         control.layout(x + TRACK_PAD_X, y + 16, lastTrackW, TRACK_H);

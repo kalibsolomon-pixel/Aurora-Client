@@ -1,5 +1,6 @@
 package com.aurora.client.screen.setting;
 
+import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.aurora.client.ui.component.Button;
 import com.aurora.client.ui.interaction.MinecraftSemanticFeedback;
@@ -157,7 +158,7 @@ public class ButtonSetting extends FeatureSetting {
 
         // Left side of the row is the label; the button sits on the right.
         if (compactRow != null) renderCompactLabel(ctx, x, y, mouseX, mouseY, AuroraTheme.TEXT_PRIMARY);
-        else renderWrappedLabel(ctx, label, x + 12, y + (CONTROL_H - tr.lineHeight) / 2, Math.max(0,width-(btnW()+38)), AuroraTheme.TEXT_PRIMARY, mouseX, mouseY, isDisabled());
+        else renderWrappedLabel(ctx, label, x + 12, AuroraFontRenderer.textY(tr, y, CONTROL_H), Math.max(0,width-(btnW()+38)), AuroraTheme.TEXT_PRIMARY, mouseX, mouseY, isDisabled());
 
         int w = btnW();
         int btnX = controlX(x, width, w);

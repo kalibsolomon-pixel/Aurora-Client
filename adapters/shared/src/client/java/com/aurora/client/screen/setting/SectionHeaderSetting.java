@@ -1,5 +1,6 @@
 package com.aurora.client.screen.setting;
 
+import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
@@ -161,10 +162,10 @@ public class SectionHeaderSetting extends FeatureSetting {
         // Unified windows: the caption is secondary text, readable on the glass (2026-11-14).
         int color = AuroraAnim.lerpArgb(MaterialSurface.unified() ? MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY) : AuroraTheme.sectionCaption(),
                 MaterialSurface.color(ThemeToken.ON_BACKGROUND), emphasis * .6f);
-        int textY = top + (h - tr.lineHeight) / 2 + 1;
+        int textY = AuroraFontRenderer.roleTextY(tr, top, h, AuroraFontRenderer.Role.HEADING);
         // The heading role in the caption colour (2026-11-14): a sub-section reads as the same
         // family as the group headings above it, one step quieter.
-        ctx.text(tr, com.aurora.client.ui.util.AuroraFontRenderer.role(label, com.aurora.client.ui.util.AuroraFontRenderer.Role.HEADING),
+        ctx.text(tr, com.aurora.client.ui.util.AuroraFontRenderer.role(AuroraFontRenderer.ellipsizeRole(tr, label, Math.max(0, width - LABEL_PAD - 24), AuroraFontRenderer.Role.HEADING), com.aurora.client.ui.util.AuroraFontRenderer.Role.HEADING),
                 x + LABEL_PAD, textY, color, false);
         // Trailing chevron (native-resolution icon): down = collapsed, up = expanded. Its visible
         // stroke ends on the rows' control edge, 8 px in (2026-11-14: it sat 6 px short of the

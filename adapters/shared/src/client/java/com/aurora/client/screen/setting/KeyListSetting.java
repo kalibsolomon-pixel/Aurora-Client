@@ -225,7 +225,7 @@ public class KeyListSetting extends FeatureSetting {
         if (tr == null) return;
         boolean disabled = reconcileDisabledState();
 
-        renderLabelWithTooltip(ctx, com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(tr,label,Math.max(0,width-(24)),0), x + 12, y + 4,
+        renderLabelWithTooltip(ctx, com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(tr,label,Math.max(0,width-(24)),0), x + 12, AuroraFontRenderer.textY(tr, y, 16),
                 disabled ? AuroraTheme.TEXT_DIM : AuroraTheme.TEXT_PRIMARY, mouseX, mouseY, disabled);
 
         List<Integer> items = safeList();
@@ -233,7 +233,7 @@ public class KeyListSetting extends FeatureSetting {
             // An empty list says so on its label row, in the trailing value slot (2026-11-14): a
             // bare label above the Add pill read as an unfinished section.
             String none = "None";
-            ctx.text(tr, none, x + width - 8 - tr.width(none), y + 4,
+            ctx.text(tr, none, x + width - 8 - tr.width(none), AuroraFontRenderer.textY(tr, y, 16),
                     MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
         }
         int iy = y + ROW_H + 2;
@@ -255,7 +255,7 @@ public class KeyListSetting extends FeatureSetting {
             ctx.fill(btnX, btnY, btnX + BTN_SIZE, btnY + BTN_SIZE,
                     ThemeManager.withAlpha(err, btnHover ? 0x66 : 0x33));
             AuroraFontRenderer.drawCentered(ctx, tr, "\u2212", btnX + BTN_SIZE / 2,
-                    btnY + (BTN_SIZE - tr.lineHeight) / 2, 0xFFFFFFFF);
+                    AuroraFontRenderer.textY(tr, btnY, BTN_SIZE), 0xFFFFFFFF);
             Integer boxed = items.get(i);
             if (boxed != null && !disabled) {
                 com.aurora.client.ui.component.IconAction chip = chipRemoveAction(boxed);
@@ -266,7 +266,7 @@ public class KeyListSetting extends FeatureSetting {
             String display = boxed == null ? "?" : cachedName(boxed);
             int maxW = width - BTN_SIZE - 44;
             display = AuroraFontRenderer.ellipsize(tr, display, maxW, 3);
-            ctx.text(tr, display, x + 16, iy + (ROW_H - tr.lineHeight) / 2,
+            ctx.text(tr, display, x + 16, AuroraFontRenderer.textY(tr, iy, ROW_H),
                     disabled ? AuroraTheme.TEXT_DIM : AuroraTheme.TEXT_SECONDARY, false);
             iy += ROW_H + 2;
         }
@@ -325,7 +325,7 @@ public class KeyListSetting extends FeatureSetting {
         int addTextW = tr.width(addText);
         int textCol = listening ? MaterialSurface.color(ThemeToken.ON_BACKGROUND) : textColor;
         ctx.text(tr, addText, addX + (addW - addTextW) / 2,
-                addY + (ADD_H - tr.lineHeight) / 2 + 1, textCol, false);
+                AuroraFontRenderer.textY(tr, addY, ADD_H), textCol, false);
     }
 
     @Override

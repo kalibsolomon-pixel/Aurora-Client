@@ -14,10 +14,12 @@ abstract class UiScreenTiming {
     @Inject(method = "extractRenderState", at = @At("HEAD"))
     private void begin(GuiGraphicsExtractor graphics, int x, int y, float delta, CallbackInfo ci) {
         UiCacheBenchmark.begin(this);
+        parityprobe.UiBounds.begin(this);
     }
 
     @Inject(method = "extractRenderState", at = @At("RETURN"))
     private void end(GuiGraphicsExtractor graphics, int x, int y, float delta, CallbackInfo ci) {
         UiCacheBenchmark.end(this);
+        parityprobe.UiBounds.end(this);
     }
 }
