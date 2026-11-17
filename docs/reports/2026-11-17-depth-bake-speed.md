@@ -38,7 +38,8 @@ colour/direct-buffer implementation measured 1.846 ms; reusing straight rim samp
 then reduced the lighting phase from 1.073 ms to approximately 0.500 ms. These are
 offline microbenchmarks, not a claim about screen reopening or frame rate.
 
-`MaterialTemplates` keeps a primitive LRU across screen removal and resize.
+`MaterialTemplates` keeps a primitive LRU across screen removal and resize while a
+screen is open; returning to gameplay releases it (parent follow-up, 2026-11-17).
 Identity includes exact fractional geometry, recipe/state, shadow policy, colour
 endpoints and the theme/scale version. Full identity checks turn hash collisions
 into safe misses. A colour change creates another raster rather than modifying

@@ -1588,7 +1588,8 @@ border. Templates survive screen changes and resizes in a primitive LRU capped a
 and 16 MiB of RGBA image backing (at most another 16 MiB of texture pixel backing; driver
 overhead is not measured). Identity includes exact fractional geometry and colours; hash
 collisions are checked against the full identity and treated as misses. Theme generation,
-GUI scale and roundness changes invalidate the pool. Evictions and oversized, unretained
+GUI scale and roundness changes invalidate the pool, and returning to gameplay (no screen
+open) releases it: no HUD draws these faces, so nothing is retained while playing. Evictions and oversized, unretained
 rasters wait until the next extraction boundary to be freed, so transient backing for the
 current frame is additional to the retention cap. Reusing a template never mutates its pixels.
 No new callbacks,
