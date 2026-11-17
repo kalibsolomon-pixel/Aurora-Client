@@ -34,9 +34,9 @@ public final class WordWrap {
     private static String fit(String text, int maxWidth, TextMetrics measure) {
         if (measure.width(text) <= maxWidth) return text;
         if (measure.width("…") > maxWidth) return "";
-        int end = text.length();
-        while (end > 0 && measure.width(text.substring(0, end) + "…") > maxWidth)
-            end = text.offsetByCodePoints(end, -1);
+        // Cluster-boundary truncation (TextFit); trailing whitespace between
+        // the cut and the ellipsis still folds away.
+        int end = TextFit.ellipsizedEnd(text, maxWidth, 0, measure::width);
         return text.substring(0, end).stripTrailing() + "…";
     }
 }
