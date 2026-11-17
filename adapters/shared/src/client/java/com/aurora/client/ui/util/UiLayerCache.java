@@ -126,21 +126,43 @@ public final class UiLayerCache implements RenderUtil.RectSink {
         return ((c & 0xFF) << 16) | (c & 0xFF00) | ((c >>> 16) & 0xFF) | (c & 0xFF000000);
     }
 
-    /** Subtle face lighting, applied once before upload. Coverage and opacity are unchanged. */
-    public void shadeVertical(int x, int y, int width, int height, int amount) {
-        if (image == null || height < 2 || amount <= 0) return;
-        IntBuffer pixels = MemoryUtil.memIntBuffer(image.getPointer(), w * h);
-        int left = Math.max(0, x), right = Math.min(w, x + width);
+    /** Light only captured face pixels; coordinates and deltas are device pixels / HSL points. */
+    public void lightVertical(int x, int y, int width, int height, float top, float bottom) {
+        if (image == null || height <= 0) return;
         for (int py = Math.max(0, y); py < Math.min(h, y + height); py++) {
-            int delta = Math.round(amount * (1f - 2f * (py - y) / (height - 1)));
-            for (int px = left; px < right; px++) {
-                int index = py * w + px, color = pixels.get(index);
+            float delta = com.aurora.client.theme.MaterialLighting.verticalDelta(py - y, height, top, bottom);
+            for (int px = Math.max(0, x); px < Math.min(w, x + width); px++)
+                image.setPixel(px, py, com.aurora.client.theme.MaterialLighting.lightness(image.getPixel(px, py), delta));
+        }
+    }
+
+    /** One device-pixel line along the captured top/bottom silhouette, including rounded corners.
+     * Source-atop preserves the exact AA coverage; call before adding a shadow. */
+    public void edgeLine(int x, int y, int width, int height, boolean top, int overlay) {
+        if (image == null || overlay == 0) return;
+        int first = Math.max(0, y), last = Math.min(h, y + height) - 1;
+        for (int px = Math.max(0, x); px < Math.min(w, x + width); px++) {
+            for (int py = top ? first : last; py >= first && py <= last; py += top ? 1 : -1) {
+                int color = image.getPixel(px, py);
                 if ((color >>> 24) == 0) continue;
-                int red = Math.clamp((color & 255) + delta, 0, 255);
-                int green = Math.clamp(((color >>> 8) & 255) + delta, 0, 255);
-                int blue = Math.clamp(((color >>> 16) & 255) + delta, 0, 255);
-                pixels.put(index, (color & 0xff000000) | (blue << 16) | (green << 8) | red);
+                image.setPixel(px, py, com.aurora.client.theme.MaterialLighting.edge(color, overlay));
+                break;
             }
+        }
+    }
+
+    /** Baked black shadow behind the lit face. Radius/offset/softness are device pixels.
+     * Rounded SDF coverage keeps SQUARE square; no GUI fills or temporary image allocation. */
+    public void softShadow(float x, float y, float width, float height, float radius,
+                           float offset, float softness, float alpha) {
+        if (image == null) return;
+        float r = Math.min(radius, Math.min(width, height) / 2);
+        for (int py = 0; py < h; py++) for (int px = 0; px < w; px++) {
+            double qx = Math.abs(px + .5 - x - width / 2) - (width / 2 - r);
+            double qy = Math.abs(py + .5 - y - offset - height / 2) - (height / 2 - r);
+            double distance = Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - r;
+            float coverage = (float) Math.max(0, Math.min(1, .5 - distance / Math.max(1, softness)));
+            image.setPixel(px, py, com.aurora.client.theme.MaterialLighting.shadowBehind(image.getPixel(px, py), alpha * coverage));
         }
     }
 
