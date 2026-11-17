@@ -149,10 +149,17 @@ released when the player returns to gameplay. Tracked image backing at the end o
 steady runs was 6.0 MiB (grid) and 8.5 MiB (Text & Fonts). This is a UI-open measurement,
 not release overhead acceptance (`tools/overhead_check.py`).
 
+Owner tuning after this acceptance (same day): the rim lighting was made slightly more
+pronounced, the bevel slope was corrected to match the prototype the owner approved (the
+earlier `/band` divisor rendered it about four times weaker), and sharp corners became
+planar gem facets. Re-measured on that build: reopening the main screen and Text & Fonts
+from gameplay took 15.2–15.9 ms on the first frame (three samples each), unchanged.
+
 Visuals: [before, live](evidence/ui-depth/before-live.png),
 [after, live](evidence/ui-depth/after-live.png),
 [before, factory](evidence/ui-depth/before-factory.png),
-[after, factory](evidence/ui-depth/after-factory.png). In greyscale, ON and OFF tiles
+[after, factory](evidence/ui-depth/after-factory.png),
+[after, factory with SQUARE corners](evidence/ui-depth/after-factory-square.png). In greyscale, ON and OFF tiles
 separate clearly in both themes, and a hovered OFF tile stays visibly OFF. Not covered:
 Vulkan, the 26.1.2 and 26.2 clients, GUI scales other than 3, and long-label overflow
 beyond these screens.
