@@ -364,6 +364,12 @@ public final class FeatureCatalog {
         mixin("PlayerItemInHandLayerMixin", "the shield status color in third person", "pack_tweaks").gates("shieldStatusEnabled");
         mixin("ShieldSpecialRendererMixin", "the shield status color", "pack_tweaks").gates("shieldStatusEnabled");
         mixin("MixinFont", "Aurora's fonts", "text_fonts");
+        // Gateless on purpose (ADR 0004's "harmless alone" arm): it only
+        // maintains the window-scope counter, read while textRendererMode is
+        // AURORA_ONLY (an enum, so it cannot be a boolean gate); when the mixin
+        // is not working AURORA_ONLY falls back to the open-screen check and
+        // this binding makes FeatureHealth report that on Text & Fonts.
+        mixin("ScreenTextScopeMixin", "scoping the custom font to Aurora windows", "text_fonts");
         mixin("TrueTypeProviderDefinitionMixin", "crisp Aurora fonts at every GUI scale", "text_fonts");
         mixin("FontManagerAccessor", "crisp Aurora fonts at every GUI scale", "text_fonts");
         mixin("FontSetAccessor", "crisp Aurora fonts at every GUI scale", "text_fonts");

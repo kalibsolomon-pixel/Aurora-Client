@@ -193,6 +193,15 @@ color, position, spacing, alignment, and grouping, and from the two text roles i
 Equivalent roles must not receive arbitrary local size, shadow, weight, or color treatment.
 Material Symbol sizing is iconography, not typography.
 
+Where the configured font applies is the Text Renderer setting (owner ruling 2026-11-17):
+"Aurora UI Only" styles text drawn by an Aurora window's own render — the module window,
+detail screens, pickers, dropdown overlays, tooltips and Pulsar's dashboard — and nothing
+else in the frame: not the vanilla hotbar, chat or scoreboard behind an open window, not
+vanilla screens that carry Aurora accents, and not the in-world HUD, whose editor previews
+must look the way they will in game. "All Text" styles everything, HUD and vanilla included.
+Measurement always follows drawing: `MixinFont` re-routes width through the same scope, and
+`AuroraFontRenderer.styleKey()` folds the applicability into every memo key.
+
 | Role | Normative treatment |
 |---|---|
 | Screen title | Primary, `TITLE` role (§4.1), uniquely placed in the title band. |

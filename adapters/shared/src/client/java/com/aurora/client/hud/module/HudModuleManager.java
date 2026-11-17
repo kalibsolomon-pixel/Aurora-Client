@@ -52,12 +52,23 @@ public class HudModuleManager {
         int sw = ctx.guiWidth();
         int sh = ctx.guiHeight();
 
-        for (HudModule m : modules.values()) {
-            try {
-                m.render(ctx, client, sw, sh);
-            } catch (Exception e) {
-                AuroraClient.LOGGER.error("HUD module {} crashed", m.id(), e);
+        // HUD modules draw as the in-world HUD wherever renderAll runs: the
+        // HUD layer and the HUD editor's previews, which must look the way
+        // they will in game — unstyled in AURORA_ONLY, regular size (owner
+        // ruling 2026-11-17). Save/restore so an outer HUD pass
+        // (HudRenderer) keeps the flag for its own remaining draws.
+        boolean wasDrawingHud = com.aurora.client.ui.util.AuroraFontRenderer.isDrawingHud();
+        com.aurora.client.ui.util.AuroraFontRenderer.setDrawingHud(true);
+        try {
+            for (HudModule m : modules.values()) {
+                try {
+                    m.render(ctx, client, sw, sh);
+                } catch (Exception e) {
+                    AuroraClient.LOGGER.error("HUD module {} crashed", m.id(), e);
+                }
             }
+        } finally {
+            com.aurora.client.ui.util.AuroraFontRenderer.setDrawingHud(wasDrawingHud);
         }
     }
 }

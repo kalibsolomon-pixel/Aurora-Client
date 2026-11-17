@@ -140,11 +140,11 @@ public class AuroraClient implements ClientModInitializer {
         LevelRenderEvents.END_MAIN.register(Timed.endMain(waypointRenderer::renderWorld));
         // HUD layers draw after vanilla's, in this registration order (as HudRenderCallback did).
         HudElementRegistry.addLast(id("waypoint_labels"), Timed.hud((ctx, tickCounter) -> {
-            com.aurora.client.ui.util.AuroraFontRenderer.setRenderingAuroraUI(true);
+            com.aurora.client.ui.util.AuroraFontRenderer.setDrawingHud(true);
             try {
                 waypointRenderer.renderHud(ctx, tickCounter);
             } finally {
-                com.aurora.client.ui.util.AuroraFontRenderer.setRenderingAuroraUI(false);
+                com.aurora.client.ui.util.AuroraFontRenderer.setDrawingHud(false);
             }
         }));
 
@@ -208,11 +208,11 @@ public class AuroraClient implements ClientModInitializer {
         // (durability, hunger, effect expiry).
         com.aurora.client.hud.AlertRenderer alertRenderer = new com.aurora.client.hud.AlertRenderer();
         HudElementRegistry.addLast(id("alerts"), Timed.hud((ctx, tickCounter) -> {
-            com.aurora.client.ui.util.AuroraFontRenderer.setRenderingAuroraUI(true);
+            com.aurora.client.ui.util.AuroraFontRenderer.setDrawingHud(true);
             try {
                 alertRenderer.render(ctx);
             } finally {
-                com.aurora.client.ui.util.AuroraFontRenderer.setRenderingAuroraUI(false);
+                com.aurora.client.ui.util.AuroraFontRenderer.setDrawingHud(false);
             }
         }));
 

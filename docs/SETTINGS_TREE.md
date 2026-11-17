@@ -483,7 +483,7 @@ Simple config-backed setting rows here and on module detail pages show a small r
     - **Blur Radius**: slider Off–32 px (GUI pixels) · 9 px · how blurred the backdrop behind glass is. `{theme.blurRadius}`
     - **Corner Radius**: slider 0–20 px · 10 px · every shape: windows, buttons, fields, toggles, sliders, scrollbars. Replaced Corner Style (Round = 10, Slightly Round = 6, Square = 0). `{theme.cornerRadius}`
 - *Text & Fonts* · no toggle `{card:text_fonts}` · font, weight, modifiers and case apply wherever the Text Renderer does
-  - **Text Renderer**: dropdown Off / Aurora UI Only / All Text · All Text. `{textRendererMode}`
+  - **Text Renderer**: dropdown Off / Aurora UI Only / All Text · All Text · Aurora UI Only styles text on Aurora's own windows (Pulsar's dashboard included), never the in-game HUD or vanilla screens; All Text adds the HUD and every vanilla string. `{textRendererMode}`
   - **Font**: dropdown Inter / JetBrains Mono / Roboto / Poppins / Oswald / Nunito / Quicksand / Fira Sans / SansSerif · Fira Sans. Inter Italic is now Inter with Italic on (migrated). `{activeFont}`
   - **Weight**: dropdown Regular / Medium / SemiBold / Bold · Medium · real font files; Quicksand has one weight. `{textWeight}`
   - **Modifiers**: toggles Italic · off, Underline · off · italic is the family's own where it has one (Oswald and Quicksand slant). `{textItalic}` `{textUnderline}`

@@ -61,6 +61,7 @@
     "PlayerItemInHandLayerMixin",
     "ShieldSpecialRendererMixin",
     "MixinFont",
+    "ScreenTextScopeMixin",
     "TrueTypeProviderDefinitionMixin",
     "FontManagerAccessor",
     "FontSetAccessor",

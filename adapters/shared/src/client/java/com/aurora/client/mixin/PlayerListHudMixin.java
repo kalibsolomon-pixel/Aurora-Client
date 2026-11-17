@@ -49,13 +49,14 @@ public abstract class PlayerListHudMixin {
         // Right-align the number within the icon slot so it sits where the
         // icon's right edge was. (x + width) is the right edge of the slot.
         int drawX = x + width - textW;
-        // Flag this as an Aurora-owned render so the configured custom font
-        // applies to our ping number in AURORA_ONLY mode.
-        com.aurora.client.ui.util.AuroraFontRenderer.setRenderingAuroraUI(true);
+        // Mark this as a HUD draw: in AURORA_ONLY the tab-list ping number
+        // stays vanilla like the rest of the in-game HUD; All Text still
+        // styles it (owner ruling 2026-11-17).
+        com.aurora.client.ui.util.AuroraFontRenderer.setDrawingHud(true);
         try {
             ctx.text(client.font, Component, drawX, y, color, false);
         } finally {
-            com.aurora.client.ui.util.AuroraFontRenderer.setRenderingAuroraUI(false);
+            com.aurora.client.ui.util.AuroraFontRenderer.setDrawingHud(false);
         }
 
         ci.cancel();
