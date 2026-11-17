@@ -575,8 +575,10 @@ fire on one click. Its confirmation contract:
 - Any other click — another control, empty space — disarms.
 
 Small reversible edits (removing one key from a list, toggling a switch) and session-only
-resets are not destructive and stay single-press. §12.7's placement rule (destructive actions
-last) still applies.
+resets are not destructive and stay single-press. A waypoint list row's Delete also stays
+single-press (owner decision 2026-11-17): it acts on one row in place, and its 48 px slot in
+the shared row grid has no room for a confirm label. §12.7's placement rule (destructive
+actions last) still applies.
 
 ## 9. Motion
 
