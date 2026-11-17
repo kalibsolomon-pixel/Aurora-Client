@@ -266,6 +266,8 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         return searchField == null ? "" : com.aurora.client.search.SearchMatcher.normalize(searchField.getValue());
     }
 
+    @Override protected String rowLayoutId(String name) { return "profile/" + name; }
+
     @Override protected List<String> currentRows() {
         List<String> all = ProfileManager.getInstance().listProfileNames();
         String query = query();
@@ -619,7 +621,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
      * at least one pixel in the clip band this frame — the C-8 render-truth
      * gate the paint passes and keyboard routing consult.
      */
-    private boolean editFieldVisible(List<String> profiles) {
+    private boolean editFieldVisible() {
         if (creatingNew && createField != null) {
             int fieldY = cellY(0) + editorFieldYOffset();
             return fieldY + 16 > listClipTop() && fieldY < listClipBottom();
@@ -805,7 +807,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         // C-8: the create editor follows the base rename contract — a field
         // scrolled out of the clip band is SUSPENDED (no keys routed), not
         // cancelled; scrolling back restores typing with focus and value.
-        if (createField != null && createField.isFocused() && editFieldVisible(currentRows())) {
+        if (createField != null && createField.isFocused() && editFieldVisible()) {
             if (key == InputConstants.KEY_RETURN || key == InputConstants.KEY_NUMPADENTER) {
                 commitCreate();
                 return true;
@@ -843,7 +845,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
 
     @Override
     public boolean charTyped(net.minecraft.client.input.CharacterEvent _ev) {
-        if (createField != null && createField.isFocused() && editFieldVisible(currentRows())
+        if (createField != null && createField.isFocused() && editFieldVisible()
                 && createField.charTyped(_ev)) return true;
         if (searchField != null && searchField.isFocused() && searchField.charTyped(_ev)) {
             scroll.set(0);
@@ -942,7 +944,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         // band), then paint only when a pixel is visible. The base scissors
         // this call to the list clip (C-8).
         EditBox field = layoutEditField(rows, listX);
-        if (field == null || !editFieldVisible(rows)) return;
+        if (field == null || !editFieldVisible()) return;
         if (field instanceof GlassEditBox glassField) glassField.aurora$renderGlassPass(ctx);
     }
 
@@ -955,7 +957,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         // nothing (bounds still refreshed above via the glass-pass layout).
         // Their surface was painted in the glass pass; this is content only.
         EditBox editor = layoutEditField(rows, listX);
-        if (editor != null && editFieldVisible(rows)) {
+        if (editor != null && editFieldVisible()) {
             renderEditorClipped(ctx, editor, listX, mouseX, mouseY, delta);
             // The refusal message under whichever inline editor is open —
             // the create field or the rename field (design language §11.12).

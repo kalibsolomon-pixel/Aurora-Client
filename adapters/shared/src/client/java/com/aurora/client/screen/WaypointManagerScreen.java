@@ -197,6 +197,8 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
         return listX + ROW_INSET + SWATCH_W + CONTROL_GAP + 16;
     }
 
+    @Override protected String rowLayoutId(Waypoint row) { return "waypoint/" + row.id; }
+
     @Override protected List<Waypoint> currentRows() {
         WaypointFeature feat = WaypointFeature.get();
         if (feat == null) return java.util.Collections.emptyList();

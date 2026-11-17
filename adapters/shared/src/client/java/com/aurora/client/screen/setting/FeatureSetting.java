@@ -66,14 +66,18 @@ public abstract class FeatureSetting {
         if (width != pageTrackW) { pageTrackW = width; compactRow = null; }
     }
 
+    public static long compactMeasurementKey() {
+        return ThemeManager.generation() * 65537L
+                + com.aurora.client.ui.util.AuroraFontRenderer.styleKey() * 31L;
+    }
+
     public final void measureCompact(int width) {
         measureCompactChildren(width);
         if (!(this instanceof BooleanSetting || this instanceof SliderSetting || this instanceof EnumSetting<?>
                 || this instanceof KeybindSetting || this instanceof ColorSetting || this instanceof ButtonSetting
                 || this instanceof SectionHeaderSetting)) return;
         Font font = Minecraft.getInstance().font;
-        long key = ThemeManager.generation() * 65537L
-                + com.aurora.client.ui.util.AuroraFontRenderer.styleKey() * 31L;
+        long key = compactMeasurementKey();
         if (compactRow != null && compactWidth == width && compactFontKey == key) return;
         var kind = this instanceof BooleanSetting ? com.aurora.client.ui.util.SettingRowLayout.Kind.BOOLEAN
                 : this instanceof SliderSetting ? com.aurora.client.ui.util.SettingRowLayout.Kind.SLIDER

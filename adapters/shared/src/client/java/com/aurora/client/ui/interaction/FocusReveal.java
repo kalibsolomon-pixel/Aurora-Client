@@ -1,7 +1,7 @@
 package com.aurora.client.ui.interaction;
 
 import com.aurora.client.config.AuroraConfig;
-import com.aurora.client.ui.util.OverlayLayout;
+import com.aurora.client.ui.layout.ScreenLayout;
 import com.aurora.client.util.SmoothScroll;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.gui.components.events.GuiEventListener;
@@ -20,13 +20,12 @@ public final class FocusReveal {
     }
 
     public static void afterNavigation(GuiEventListener before, GuiEventListener after,
-                                       SmoothScroll scroll, double max, int top, int bottom) {
+                                       SmoothScroll scroll, ScreenLayout layout, double paintedScroll) {
         if (before != after && after instanceof SemanticActionControl control && control.isScrollFocusTarget()) {
-            double current = scroll.current();
-            double target = OverlayLayout.scrollToReveal(scroll.target(), max,
-                    control.getY() + current, control.getBottom() + current, top, bottom, MARGIN);
+            double target = layout.reveal(control.getY() + paintedScroll,
+                    control.getBottom() + paintedScroll, scroll.target(), MARGIN);
             if (AuroraConfig.get().reducedMotion) scroll.set(target);
-            else if (target != scroll.target()) scroll.retarget(target, max);
+            else if (target != scroll.target()) scroll.retarget(target, layout.maxScroll());
         }
     }
 }

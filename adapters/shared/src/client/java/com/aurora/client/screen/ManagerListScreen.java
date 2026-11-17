@@ -4,6 +4,7 @@ import com.aurora.client.ui.component.MaterialSurface;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.component.ButtonWidget;
+import com.aurora.client.ui.layout.ScreenLayout;
 import com.aurora.client.ui.util.ClipBand;
 import com.aurora.client.ui.component.GlassSurface;
 import com.aurora.client.ui.component.ScrollbarChrome;
@@ -104,7 +105,7 @@ import java.util.function.BooleanSupplier;
  * of callbacks. A screen template (vanilla's own
  * {@code AbstractContainerScreen} shape) is the honest fit for that.
  */
-public abstract class ManagerListScreen<T> extends Screen implements ThemedScreen {
+public abstract class ManagerListScreen<T> extends Screen implements ThemedScreen, LayoutScreen {
     /** The window owns the one backdrop capture; child buttons/rows use cached faces
      *  (a per-button blur tinted each control by whatever sat behind it). */
     @Override public boolean parentGlassOnly() { return true; }
@@ -278,18 +279,54 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         int cols = Math.max(1, columns());
         return (listWidth() - columnGap() * (cols - 1)) / cols;
     }
-    /** Left edge of slot {@code slot} (leading rows count as slots). */
-    protected final int cellX(int listX, int slot) {
-        return listX + (slot % Math.max(1, columns())) * (cellWidth() + columnGap());
+    private static final String LEADING_ROW = "leading/0";
+    private final ScreenLayout rowsLayout = new ScreenLayout();
+    private List<T> laidOutRows = List.of();
+    private int layoutLead = -1, layoutTop, layoutCols, layoutCellWidth, layoutRowHeight, layoutRowGap, layoutColumnGap;
+    private double layoutGuiScale;
+    private long layoutFontKey;
+
+    protected abstract String rowLayoutId(T row);
+
+    @Override public ScreenLayout contentLayout() { return rowsLayout; }
+    @Override public double layoutScroll() { return (int) scroll.current(); }
+
+    protected final int cellX(int listX, int slot) { return (int) rowsLayout.at(slot).x(); }
+    protected final int cellY(int slot) { return (int) rowsLayout.at(slot).y(layoutScroll()); }
+
+    private void refreshLayout(List<T> rows, int listX) {
+        int lead = leadingRowCount(), cols = Math.max(1, columns());
+        int height = rowHeight(), rowGap = rowGap(), colGap = columnGap();
+        int top = listTop(), clipTop = listClipTop(), clipBottom = listClipBottom(), width = listWidth();
+        int cellWidth = (width - colGap * (cols - 1)) / cols;
+        double scale = this.minecraft.getWindow().getGuiScale();
+        long fontKey = com.aurora.client.screen.setting.FeatureSetting.compactMeasurementKey();
+        ClipBand band = rowsLayout.viewport();
+        if (laidOutRows == rows && layoutLead == lead && layoutTop == top && layoutCols == cols
+                && layoutCellWidth == cellWidth && layoutRowHeight == height && layoutRowGap == rowGap
+                && layoutColumnGap == colGap && layoutGuiScale == scale && layoutFontKey == fontKey
+                && band != null && band.x == listX && band.y == clipTop && band.width == width && band.yEnd() == clipBottom) return;
+        laidOutRows = rows;
+        layoutLead = lead;
+        layoutTop = top;
+        layoutCols = cols;
+        layoutCellWidth = cellWidth;
+        layoutRowHeight = height;
+        layoutRowGap = rowGap;
+        layoutColumnGap = colGap;
+        layoutGuiScale = scale;
+        layoutFontKey = fontKey;
+        band = new ClipBand(listX, clipTop, width, clipBottom - clipTop);
+        rowsLayout.begin(band);
+        if (lead > 0) rowsLayout.cell(LEADING_ROW, LEADING_ROW, 0, cols, listX, top, cellWidth, height, colGap, rowGap);
+        for (int index = 0; index < rows.size(); index++) {
+            T row = rows.get(index);
+            rowsLayout.cell(row, rowLayoutId(row), lead + index, cols, listX, top, cellWidth, height, colGap, rowGap);
+        }
+        rowsLayout.finish(band, (rowsLayout.size() + cols - 1) / cols * (height + rowGap), clipBottom - top);
+        rowsLayout.forgetInactive();
     }
-    /** Top edge of slot {@code slot} at the current scroll position. */
-    protected final int cellY(int slot) {
-        return listTop() - (int) scroll.current() + (slot / Math.max(1, columns())) * rowStep();
-    }
-    private int gridRows(int slots) {
-        int cols = Math.max(1, columns());
-        return (slots + cols - 1) / cols;
-    }
+
     /** Inline rename editor's top offset inside its cell (vertically centered by default). */
     protected int editorFieldYOffset() { return (rowHeight() - 16) / 2; }
 
@@ -313,7 +350,6 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
     protected int listTop() { return windowTop() + HEADER_H + 2; }
     protected int listBottomPad() { return this.height - (windowBottom() - 8); }
 
-    private int rowStep() { return rowHeight() + rowGap(); }
 
     // ------------------------------------------------------------------
     //  Toolbar
@@ -423,7 +459,8 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         // One list fetch per frame drives everything below — the easing
         // bound, the row passes and the scrollbar (list sources may return a
         // fresh copy per call, so hoisting matters on large lists).
-        double maxScroll = maxScrollOf(rows);
+        refreshLayout(rows, listX);
+        double maxScroll = rowsLayout.maxScroll();
         // Easing step before either pass, so the glass pass and the content
         // pass below both read the same this-frame position.
         scroll.advance(maxScroll);
@@ -465,11 +502,11 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         }
         for (int l = 0; l < lead; l++) {
             int gy = cellY(l);
-            if (rowPaintVisible(band, gy)) paintLeadingRowGlassPass(ctx, cellX(listX, l), gy, cw, l);
+            if (rowsLayout.visible(rowsLayout.at(l), layoutScroll())) paintLeadingRowGlassPass(ctx, cellX(listX, l), gy, cw, l);
         }
         for (int i = 0; i < rows.size(); i++) {
             int gy = cellY(lead + i);
-            if (rowPaintVisible(band, gy)) paintRowGlassPass(ctx, cellX(listX, lead + i), gy, cw, rows.get(i));
+            if (rowsLayout.visible(rowsLayout.at(lead + i), layoutScroll())) paintRowGlassPass(ctx, cellX(listX, lead + i), gy, cw, rows.get(i));
         }
         GlassSurface.disableScissor(ctx);
         if (toolbarActionBtn != null) toolbarActionBtn.renderGlassPass(ctx);
@@ -537,11 +574,11 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
 
         for (int l = 0; l < lead; l++) {
             int y = cellY(l);
-            if (rowPaintVisible(band, y)) paintLeadingRow(ctx, cellX(listX, l), y, cw, l, mouseX, mouseY);
+            if (rowsLayout.visible(rowsLayout.at(l), layoutScroll())) paintLeadingRow(ctx, cellX(listX, l), y, cw, l, mouseX, mouseY);
         }
         for (int i = 0; i < rows.size(); i++) {
             int y = cellY(lead + i);
-            if (rowPaintVisible(band, y)) paintRow(ctx, cellX(listX, lead + i), y, cw, rows.get(i), i, mouseX, mouseY);
+            if (rowsLayout.visible(rowsLayout.at(lead + i), layoutScroll())) paintRow(ctx, cellX(listX, lead + i), y, cw, rows.get(i), i, mouseX, mouseY);
         }
 
         ctx.disableScissor();
@@ -618,13 +655,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
      * intersection (the frozen C-1 semantics).
      */
     protected ClipBand listBand(int listX) {
-        return new ClipBand(listX, listClipTop(), listWidth(), listClipBottom() - listClipTop());
-    }
-
-    /** The row loops' visibility test: a row paints iff it shares at least
-     *  one pixel with the clip band (the band's half-open intersect). */
-    private boolean rowPaintVisible(ClipBand band, int rowY) {
-        return band.intersects(band.x, rowY, band.width, rowHeight());
+        return rowsLayout.viewport();
     }
 
     /**
@@ -817,8 +848,8 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
 
     /** {@link #maxScroll()} against an already-fetched list (the per-frame path). */
     protected double maxScrollOf(List<T> rows) {
-        int total = gridRows(rows.size() + leadingRowCount()) * rowStep();
-        return Math.max(0, total - (this.height - listTop() - listBottomPad()));
+        refreshLayout(rows, (this.width - listWidth()) / 2);
+        return rowsLayout.maxScroll();
     }
 
     private ScrollbarChrome.Thumb thumb(double maxScroll, int trackH) {
@@ -863,6 +894,9 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         // vanilla focus first, so focus never lingers somewhere the pointer
         // just left. The row walk below re-focuses the control it lands on.
         semanticHost.dropFocus();
+        int listX = (this.width - listWidth()) / 2;
+        List<T> rows = currentRows();
+        refreshLayout(rows, listX);
 
         // Editors first — but only for clicks inside the list's clip band
         // (C-8): an inline editor whose row is scrolled partly/fully out of
@@ -875,30 +909,16 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         // Screen-specific pre-row controls (the Profile create button).
         if (rowAreaClickFirst(mouseX, mouseY)) return true;
 
-        int listX = (this.width - listWidth()) / 2;
-        ClipBand band = listBand(listX);
-        List<T> rows = currentRows();
-        int lead = leadingRowCount(), cw = cellWidth();
-        for (int i = 0; i < rows.size(); i++) {
-            T row = rows.get(i);
-            int rowTop = cellY(lead + i);
-            int rowBot = rowTop + rowHeight();
-            int cellLeft = cellX(listX, lead + i);
-
-            // Hit-testing agrees with the render scissor: only the VISIBLE
-            // part of the row is clickable (rows scrolled above the clip —
-            // or below it — are not), and only within the row's horizontal
-            // extent (its cell in a grid). The same band truth the render cull uses (C-8).
-            if (band.contains(mouseX, mouseY) && mouseX >= cellLeft && mouseX < cellLeft + cw
-                    && mouseY >= Math.max(rowTop, band.y) && mouseY < Math.min(rowBot, band.yEnd())) {
-                if (rowClicked(mouseX, mouseY, cellLeft, row, i)) return true;
-            }
+        var hit = rowsLayout.hitTest(mouseX, mouseY, layoutScroll());
+        if (hit != null && hit.order() >= layoutLead) {
+            int index = hit.order() - layoutLead;
+            if (rowClicked(mouseX, mouseY, (int) hit.x(), rows.get(index), index)) return true;
         }
 
         // Scrollbar thumb grab — checked before the fallthrough commit so
         // grabbing the scroll never cancels an open editor (wheel scrolling
         // doesn't either; the thumb is a list control, not an outside click).
-        double maxScroll = maxScroll();
+        double maxScroll = rowsLayout.maxScroll();
         if (maxScroll > 0) {
             int trackTop = listClipTop();
             int trackH = listClipBottom() - trackTop;
@@ -988,7 +1008,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         boolean handled = super.keyPressed(_kev);
         if (com.aurora.client.ui.interaction.FocusReveal.navigation(_kev) && before != getFocused()) {
             com.aurora.client.ui.interaction.FocusReveal.afterNavigation(before, getFocused(), scroll,
-                    maxScrollOf(currentRows()), listClipTop(), listClipBottom());
+                    rowsLayout, layoutScroll());
         }
         return handled;
     }
@@ -1104,8 +1124,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
      */
     protected boolean renameEditorVisible() {
         if (nameField == null || editingIndex < 0) return false;
-        List<T> rows = currentRows();
-        if (editingIndex >= rows.size()) return false;
+        if (editingIndex >= laidOutRows.size()) return false;
         int fieldY = cellY(leadingRowCount() + editingIndex) + editorFieldYOffset();
         return fieldY + 16 > listClipTop() && fieldY < listClipBottom();
     }
