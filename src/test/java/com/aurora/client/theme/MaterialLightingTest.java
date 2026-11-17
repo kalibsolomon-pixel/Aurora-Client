@@ -4,6 +4,99 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class MaterialLightingTest {
+    @Test void roundedSdfAndBandRespectDeviceScaleAndSquareGeometry() {
+        assertEquals(-5, MaterialLighting.distance(5,5,10,10,0));
+        assertEquals(0, MaterialLighting.distance(0,0,10,10,0));
+        assertTrue(MaterialLighting.distance(0,0,10,10,4)>0);
+        assertEquals(-5, MaterialLighting.distance(5,5,10,10,5)); // circle
+        for(int scale=1;scale<=4;scale++) {
+            assertEquals(scale, MaterialLighting.bevelWidth(0,scale,MaterialLighting.Profile.RAISED));
+            assertEquals(3*scale, MaterialLighting.bevelWidth(10*scale,scale,MaterialLighting.Profile.RAISED));
+            assertEquals(5.5*scale, MaterialLighting.bevelWidth(10*scale,scale,MaterialLighting.Profile.DOME));
+        }
+        assertEquals(0,MaterialLighting.pillowHeight(0));
+        assertEquals(Math.sqrt(.75),MaterialLighting.pillowHeight(.5));
+        assertEquals(1,MaterialLighting.pillowHeight(1));
+    }
+
+    private static double rim(double x,double y,double radius,MaterialLighting.Profile profile) {
+        return MaterialLighting.curvatureDelta(x,y,80,80,radius,1,profile);
+    }
+
+    @Test void oneUpperLeftLightCurvesAroundCornersAndLeavesPlateauExact() {
+        assertTrue(rim(4,4,10,MaterialLighting.Profile.RAISED)>rim(76,76,10,MaterialLighting.Profile.RAISED));
+        assertTrue(rim(40,.5,10,MaterialLighting.Profile.RAISED)>0);
+        assertTrue(rim(40,79.5,10,MaterialLighting.Profile.RAISED)<0);
+        assertEquals(0,rim(40,40,10,MaterialLighting.Profile.RAISED));
+        assertEquals(MaterialLighting.lightness(0x813987ae,7),
+                MaterialLighting.face(0x813987ae,39,39,80,80,10,1,7,7,MaterialLighting.Profile.RAISED));
+        assertTrue(rim(40,.5,10,MaterialLighting.Profile.INSET)<0);
+        assertTrue(rim(40,79.5,10,MaterialLighting.Profile.INSET)>0);
+    }
+
+    @Test void squareCornerSwitchesFacetAtDiagonalWhileRoundedCornerIsContinuous() {
+        double squareA=rim(.5,.5001,0,MaterialLighting.Profile.RAISED);
+        double squareB=rim(.5001,.5,0,MaterialLighting.Profile.RAISED);
+        assertTrue(Math.abs(squareA-squareB)>1);
+        assertEquals(rim(4,4.0001,10,MaterialLighting.Profile.RAISED),
+                rim(4.0001,4,10,MaterialLighting.Profile.RAISED),.01);
+    }
+
+    @Test void domeHighlightsUpperLeftAndPressedFaceFlattensWithoutSpecular() {
+        assertTrue(rim(15,15,40,MaterialLighting.Profile.DOME)>rim(65,65,40,MaterialLighting.Profile.DOME));
+        assertEquals(0,rim(40,40,40,MaterialLighting.Profile.DOME));
+        assertTrue(rim(40,2,10,MaterialLighting.Profile.PRESSED)<rim(40,2,10,MaterialLighting.Profile.RAISED));
+        for(var profile:MaterialLighting.Profile.values()) {
+            int pixel=MaterialLighting.face(0x813987ae,0,0,80,80,0,3,5,-3,profile);
+            assertEquals(129,pixel>>>24);
+            assertTrue(Double.isFinite(rim(0,0,0,profile)));
+        }
+    }
+
+    @Test void moduleElevationExceedsEightGreyscalePointsInBothOwnerThemes() {
+        var live=ThemeDefinition.defaults();live.background=-14674651; // owner's #201525, read-only run/config
+        int liveBase=ThemeResolver.resolve(live,true).color(ThemeToken.MATERIAL_RAISED);
+        int factoryBase=ThemeResolver.factoryPalette().color(ThemeToken.MATERIAL_RAISED);
+        for(int base:new int[]{liveBase,factoryBase}) {
+            for(int radius:new int[]{0,10}) {
+                double on=meanGrey(base,11,3,radius,MaterialLighting.Profile.RAISED);
+                double off=meanGrey(base,-5,-5,radius,MaterialLighting.Profile.FLAT);
+                double offHover=meanGrey(base,-3,-3,radius,MaterialLighting.Profile.FLAT);
+                double onHover=meanGrey(base,13,5,radius,MaterialLighting.Profile.RAISED);
+                assertTrue(on-off>=8,"rest ON/OFF");
+                assertTrue(on-offHover>=8,"rest ON vs hovered OFF");
+                assertTrue(onHover-offHover>=8,"hover ON/OFF");
+                assertTrue(offHover-off>0 && offHover-off<on-off,"hover stays weaker than elevation");
+                System.out.printf("Depth greyscale base=%08x radius=%d rest=%.3f rest-v-hover=%.3f hover=%.3f%n",
+                        base,radius,on-off,on-offHover,onHover-offHover);
+            }
+        }
+    }
+
+    private static double meanGrey(int base,float top,float bottom,int radius,MaterialLighting.Profile profile) {
+        double sum=0;int count=0;
+        for(int y=0;y<240;y++) for(int x=0;x<240;x++) {
+            if(MaterialLighting.distance(x+.5,y+.5,240,240,radius*3)>0) continue;
+            int c=MaterialLighting.face(base,x,y,240,240,radius*3,3,top,bottom,profile);
+            sum+=.299*(c>>>16&255)+.587*(c>>>8&255)+.114*(c&255);count++;
+        }
+        return sum/count;
+    }
+
+    @Test void measureEightyPixelTileBakeAtScaleThree() {
+        int[] pixels=new int[240*240];long[] samples=new long[9];
+        for(int run=-5;run<samples.length;run++) {
+            long start=System.nanoTime();
+            for(int y=0;y<240;y++) for(int x=0;x<240;x++)
+                pixels[y*240+x]=MaterialLighting.distance(x+.5,y+.5,240,240,30)<=0
+                        ? MaterialLighting.face(0xff1d1f27,x,y,240,240,30,3,11,3,MaterialLighting.Profile.RAISED) : 0;
+            if(run>=0) samples[run]=System.nanoTime()-start;
+        }
+        java.util.Arrays.sort(samples);
+        assertNotEquals(0,pixels[120*240+120]);
+        System.out.printf("Depth pure bake 80x80 scale=3 median=%.3f ms (9 samples, 5 warmups)%n",samples[4]/1e6);
+    }
+
     @Test void absoluteLightnessPointsOnNeutralAndSaturatedFaces() {
         assertEquals(0xff8d8d8d, MaterialLighting.lightness(0xff808080, 5));
         assertEquals(0xffff1a1a, MaterialLighting.lightness(0xffff0000, 5));
