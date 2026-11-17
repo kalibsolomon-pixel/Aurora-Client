@@ -331,6 +331,15 @@ public final class GlassSurface {
         return container(g, x, y, w, h, radius, BlurPanelRenderer.Priority.WINDOW);
     }
 
+    /** Complete single-window pass for a host with no additional glass draws. */
+    public static void window(GuiGraphicsExtractor g, float x, float y, float w, float h, float radius,
+                              float contentInset, int viewportWidth, int viewportHeight) {
+        beginGlassPass();
+        container(g, x, y, w, h, radius);
+        overlayDim(g, viewportWidth, viewportHeight);
+        MaterialSurface.parent(g, x, y, w, h, radius, contentInset);
+    }
+
     /**
      * {@link #container(GuiGraphicsExtractor, float, float, float, float, float)}
      * with an explicit degradation priority — for container-styled ROWS
@@ -459,7 +468,9 @@ public final class GlassSurface {
      */
     public static boolean aboveDimControl(GuiGraphicsExtractor g, float x, float y, float w, float h, float radius) {
         if (MaterialSurface.unified()) {
-            MaterialSurface.floating(g,Math.round(x),Math.round(y),Math.round(w),Math.round(h),Math.round(radius),1);
+            if (MaterialSurface.windowBevelEnabled())
+                MaterialSurface.overlayFace(g, Math.round(x), Math.round(y), Math.round(w), Math.round(h), radius, 4, 1);
+            else MaterialSurface.floating(g,Math.round(x),Math.round(y),Math.round(w),Math.round(h),Math.round(radius),1);
             return true;
         }
         if (!liveWorldBackdrop() && !BlurPanelRenderer.menuBackdropValid()) return false;

@@ -797,7 +797,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         screenSpace(g, () -> { GlassSurface.overlayDim(g, fullW, fullH,
                 ThemeManager.withAlpha(ThemeManager.color(ThemeToken.OVERLAY_DIM), 0x55)); return null; });
 
-        MaterialSurface.parent(g,0,0,this.width,this.height,AuroraTheme.RADIUS_LARGE);
+        MaterialSurface.parent(g,0,0,this.width,this.height,AuroraTheme.RADIUS_LARGE,3);
 
         // ---- 3. Content ----
         // ---- Sidebar ----
@@ -1047,7 +1047,9 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         // the dim (see render()); when it engaged, the flat fill + outline
         // are suppressed here (the glass rim replaces the outline — no
         // double outline).
-        if (MaterialSurface.unified()) {
+        if (MaterialSurface.windowBevelEnabled()) {
+            MaterialSurface.parent(g,panelX,panelY,panelW,panelH,AuroraTheme.RADIUS_LARGE,2);
+        } else if (MaterialSurface.unified()) {
             MaterialSurface.cached(g,panelX,panelY,panelW,panelH,AuroraTheme.RADIUS_LARGE,
                     ThemeManager.color(ThemeToken.MATERIAL_PANEL),ThemeManager.color(ThemeToken.BORDER),111,false);
         } else if (!sidebarGlass) {

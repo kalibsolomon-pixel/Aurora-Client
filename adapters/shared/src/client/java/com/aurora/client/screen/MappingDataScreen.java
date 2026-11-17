@@ -45,7 +45,12 @@ public final class MappingDataScreen extends Screen implements ThemedScreen {
                 Component.literal("Done"), "Return to map settings.", this::onClose));
     }
     @Override public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float delta) {
-        MaterialSurface.floatingPanel(g, x, y, w, h, Math.round(ThemeManager.current().roundness().radius()));
+        int radius = ThemeManager.current().roundness().radius();
+        if (MaterialSurface.windowBevelEnabled()) {
+            com.aurora.client.ui.component.GlassSurface.window(g, x, y, w, h, radius, 6, width, height);
+        } else {
+            MaterialSurface.floatingPanel(g, x, y, w, h, radius);
+        }
         // Title shares the dialog's left content edge (no centered, shadowed heading).
         g.text(font, title, x + 12, y + (com.aurora.client.ui.util.UiDensity.HEADER - font.lineHeight) / 2 + 1, ThemeManager.color(ThemeToken.ON_SURFACE), false);
         String text = "Older folders used world display names. Only import if this is the original world. "

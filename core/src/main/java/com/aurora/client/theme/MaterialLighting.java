@@ -67,12 +67,18 @@ public final class MaterialLighting {
     public static double curvatureDelta(double x, double y, double width, double height,
                                         double radius, int scale, Profile profile) {
         if (profile == Profile.FLAT) return 0;
-        double r = Math.clamp(radius, 0, Math.min(width, height) * .5);
+        double clampedRadius = Math.clamp(radius, 0, Math.min(width, height) * .5);
+        double band = bevelWidth(clampedRadius, scale, profile, Math.min(width, height));
+        return curvatureDelta(x, y, width, height, clampedRadius, scale, profile, band, 1, 1, SPEC_POWER);
+    }
+
+    static double curvatureDelta(double x, double y, double width, double height, double r, int scale,
+                                 Profile profile, double band, double rim, double spec, double power) {
         double dx = x - width * .5, dy = y - height * .5;
         double qx = Math.abs(dx) - (width * .5 - r), qy = Math.abs(dy) - (height * .5 - r);
         double ox = Math.max(qx, 0), oy = Math.max(qy, 0), len = Math.hypot(ox, oy);
         double d = len + Math.min(Math.max(qx, qy), 0) - r;
-        double b = bevelWidth(r, scale, profile, Math.min(width, height)), t = Math.clamp(-d / b, 0, 1);
+        double t = Math.clamp(-d / band, 0, 1);
         if (t >= 1) return 0; // plateau: exactly the original ramp, with no specular term
         double gx, gy;
         if (len > 0) { gx = Math.copySign(ox / len, dx); gy = Math.copySign(oy / len, dy); }
@@ -89,8 +95,8 @@ public final class MaterialLighting {
         double dot = nx * LIGHT_X + ny * LIGHT_Y + nz * LIGHT_Z;
         double diffuse = dot - LIGHT_Z;
         double reflectedZ = 2 * dot * nz - LIGHT_Z;
-        double specular = profile.specular ? Math.pow(Math.max(0, reflectedZ), SPEC_POWER) : 0;
-        return RIM_GAIN * diffuse + SPEC_GAIN * specular;
+        double specular = profile.specular ? Math.pow(Math.max(0, reflectedZ), power) : 0;
+        return RIM_GAIN * rim * diffuse + SPEC_GAIN * spec * specular;
     }
 
     /** Baked face lightness; alpha/AA, hue and saturation pass through unchanged. */

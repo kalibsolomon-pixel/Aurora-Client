@@ -206,6 +206,18 @@ public final class UiLayerCache implements RenderUtil.RectSink {
         }
     }
 
+    public void windowRing(com.aurora.client.theme.WindowBevel.Raster raster, int pad, int logicalW, int logicalH) {
+        IntBuffer pixels = MemoryUtil.memIntBuffer(image.getPointer(), w * h);
+        double stepX = (double) logicalW / w, stepY = (double) logicalH / h;
+        for (int row = 0; row < h; row++) {
+            double sampleY = (row + .5) * stepY - pad;
+            for (int column = 0; column < w; column++) {
+                int pixel = raster.pixel((column + .5) * stepX - pad, sampleY);
+                pixels.put(row * w + column, argbToAbgr(pixel));
+            }
+        }
+    }
+
     /**
      * The cache discipline for one editing surface: if the buffer is not
      * current for {@code version}, size it to {@code wLogical × hLogical}

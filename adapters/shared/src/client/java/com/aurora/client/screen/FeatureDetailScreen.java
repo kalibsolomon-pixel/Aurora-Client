@@ -489,11 +489,9 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         // suppression, tiny/clipped panel, failure), the unified material's
         // cached face stays the same. Legacy chrome includes that fallback.
         GlassSurface.beginGlassPass();
-        boolean glassWindow = false;
-        {
-            float radius = ThemeManager.current().roundness().radius();
-            glassWindow = GlassSurface.container(ctx, listX, windowY, LIST_W, windowH, radius);
-        }
+        float frameRadius = ThemeManager.current().roundness().radius();
+        boolean glassWindow = GlassSurface.container(ctx, listX, windowY, LIST_W, windowH, frameRadius);
+        boolean windowBevel = MaterialSurface.windowBevelEnabled();
 
         // ---- Static-layer caches: window chrome + rows' cacheable shapes ----
         // TWO caches, not one: the rows' shape layer is blitted under the
@@ -508,7 +506,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         int chromeW = LIST_W + 18, chromeH = windowH + 18;
         int rowX = listX + 8, rowY = bodyTop();
         int rowW = LIST_W - 16, rowH = Math.max(1, bodyBottom() - rowY);
-        chromeCache.ensureRegion(chromeX * guiScale, chromeY * guiScale,
+        if (!windowBevel) chromeCache.ensureRegion(chromeX * guiScale, chromeY * guiScale,
                 chromeW * guiScale, chromeH * guiScale);
         rowCache.ensureRegion(rowX * guiScale, rowY * guiScale, rowW * guiScale, rowH * guiScale);
         int fingerprint = 0;
@@ -519,7 +517,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         long rowVersion = baseVersion ^ ((long) fingerprint * 100_000_009L)
                 ^ ((long) totalRowsH * 31L) ^ ((long) (int) scroll.current() * 104729L) ^ bodyTop();
 
-        if (!chromeCache.isCurrent(chromeVersion)) {
+        if (!windowBevel && !chromeCache.isCurrent(chromeVersion)) {
             chromeCache.clear();
             RenderUtil.RectSink prev = RenderUtil.beginCapture(chromeCache.sink());
             try {
@@ -625,7 +623,9 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         GlassSurface.overlayDim(ctx, this.width, this.height);
 
         // Stationary frame chrome sits above dim and outside the body scissor.
-        chromeCache.blitAt(ctx, chromeX, chromeY, chromeW, chromeH);
+        if (windowBevel) MaterialSurface.parent(ctx, listX, windowY, LIST_W, windowH, frameRadius,
+                Math.min(3, MaterialSurface.windowCornerClearance(frameRadius, 6, 5)));
+        else chromeCache.blitAt(ctx, chromeX, chromeY, chromeW, chromeH);
 
         // Only the body scrolls; the frame and search header have fixed geometry.
         ctx.enableScissor(listX + 8, bodyTop(), listX + LIST_W - 8, bodyBottom());

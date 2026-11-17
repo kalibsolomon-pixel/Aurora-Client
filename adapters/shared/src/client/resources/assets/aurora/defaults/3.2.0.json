@@ -19,6 +19,7 @@
     "mode": "DARK",
     "cornerRadius": 10,
     "blurRadius": 9,
+    "windowBevel": "STANDARD",
     "backgroundOpacity": 0.33,
     "accent": -10720320,
     "background": -15329507

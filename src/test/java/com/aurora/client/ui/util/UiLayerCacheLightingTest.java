@@ -1,6 +1,7 @@
 package com.aurora.client.ui.util;
 
 import com.aurora.client.theme.MaterialLighting;
+import com.aurora.client.theme.WindowBevel;
 import com.mojang.blaze3d.platform.NativeImage;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
@@ -123,6 +124,32 @@ class UiLayerCacheLightingTest {
                     samples[0][10]/1e6,samples[1][10]/1e6);
             System.out.printf("Depth phases median ms: lighting %.3f -> %.3f; shadow %.3f -> %.3f%n",
                     lighting[0][10]/1e6,lighting[1][10]/1e6,shadows[0][10]/1e6,shadows[1][10]/1e6);
+        } finally { cache.dispose(); }
+    }
+
+    @Test void measureWindowRingBakeWithoutTextureUploadOrGuiFills() throws Exception {
+        int scale = 3, pad = WindowBevel.SHADOW_PAD;
+        int logicalW = 336 + 2 * pad, logicalH = 288 + 2 * pad;
+        var level = WindowBevel.Level.STANDARD;
+        var finish = WindowBevel.finish(0x5416171d, 0xff626570, 9, level);
+        var cache = cache(logicalW * scale, logicalH * scale);
+        long fills = RenderUtil.fillsSubmitted();
+        try {
+            for (int radius : new int[]{10, 0}) {
+                long[] samples = new long[21];
+                for (int run = -15; run < samples.length; run++) {
+                    long start = System.nanoTime();
+                    var raster = new WindowBevel.Raster(336, 288, radius, 4, 1d / scale, finish, level);
+                    cache.windowRing(raster, pad, logicalW, logicalH);
+                    if (run >= 0) samples[run] = System.nanoTime() - start;
+                }
+                java.util.Arrays.sort(samples);
+                assertEquals(0, pixels(cache).getPixel(logicalW * scale / 2, logicalH * scale / 2));
+                assertTrue((pixels(cache).getPixel(logicalW * scale / 2, (pad + 1) * scale) >>> 24) > 200);
+                assertEquals(fills, RenderUtil.fillsSubmitted());
+                System.out.printf("Window ring CPU bake 336x288 scale=3 radius=%d median=%.3f ms p95=%.3f ms%n",
+                        radius, samples[10] / 1e6, samples[19] / 1e6);
+            }
         } finally { cache.dispose(); }
     }
 

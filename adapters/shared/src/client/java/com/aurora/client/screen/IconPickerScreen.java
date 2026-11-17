@@ -142,7 +142,7 @@ public class IconPickerScreen extends Screen implements ThemedScreen {
         GlassSurface.beginGlassPass();
         GlassSurface.container(ctx, panelX, panelY, panelW, panelH, radius);
         GlassSurface.overlayDim(ctx, this.width, this.height);
-        MaterialSurface.parent(ctx, panelX, panelY, panelW, panelH, radius);
+        MaterialSurface.parent(ctx, panelX, panelY, panelW, panelH, radius, 3);
 
         String query = searchField.getValue();
         if (!query.equals(lastQuery)) {

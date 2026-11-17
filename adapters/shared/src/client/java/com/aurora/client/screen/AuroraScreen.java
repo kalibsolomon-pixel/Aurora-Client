@@ -920,19 +920,20 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         GlassSurface.beginGlassPass();
         float radius = ThemeManager.current().roundness().radius();
         boolean glassWindow = GlassSurface.container(g, boxX(), boxY(), BOX_W, BOX_H, radius);
+        boolean windowBevel = MaterialSurface.windowBevelEnabled();
 
         int guiScale = Math.max(1, (int) this.minecraft.getWindow().getGuiScale());
         // The three glow rings extend six pixels; leave two more for AA.
         int cacheX = (int) boxX() - 8, cacheY = (int) boxY() - 8;
         int cacheW = (int) BOX_W + 16, cacheH = (int) BOX_H + 16;
-        layerCache.ensureRegion(cacheX * guiScale, cacheY * guiScale,
+        if (!windowBevel) layerCache.ensureRegion(cacheX * guiScale, cacheY * guiScale,
                 cacheW * guiScale, cacheH * guiScale);
 
         long version = ThemeManager.generation() * 1_000_003L
                 ^ ((long) guiScale * 65537L)
                 ^ (glassWindow && !MaterialSurface.unified() ? 0x5BD1B2C1L : 0L);
 
-        if (!layerCache.isCurrent(version)) {
+        if (!windowBevel && !layerCache.isCurrent(version)) {
             layerCache.clear();
             RenderUtil.RectSink prev = RenderUtil.beginCapture(layerCache.sink());
             try {
@@ -957,7 +958,9 @@ public class AuroraScreen extends Screen implements ThemedScreen {
 
         // Cached chrome — one textured blit (a content layer above the dim,
         // exactly where it always sat).
-        layerCache.blitAt(g, cacheX, cacheY, cacheW, cacheH);
+        if (windowBevel) MaterialSurface.parent(g, boxX(), boxY(), BOX_W, BOX_H, radius,
+                MaterialSurface.windowCornerClearance(radius, 12, mainY() - boxY()));
+        else layerCache.blitAt(g, cacheX, cacheY, cacheW, cacheH);
 
         renderLive(g, mods, mouseX, mouseY, delta);
 

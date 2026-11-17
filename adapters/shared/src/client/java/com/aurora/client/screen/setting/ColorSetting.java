@@ -219,7 +219,7 @@ public class ColorSetting extends FeatureSetting {
         editorPivot = upward ? editorY + editorHeight : editorY;
         boolean posed = com.aurora.client.ui.component.OverlayPose.push(ctx, swatchX + swatchW, editorPivot, editorProgress);
         com.aurora.client.ui.component.MaterialSurface.overlayFace(ctx, editorX, editorY, editorWidth, editorHeight,
-                com.aurora.client.theme.ThemeManager.current().roundness().radiusSmall(), editorProgress);
+                com.aurora.client.theme.ThemeManager.current().roundness().radiusSmall(), PANEL_PAD, editorProgress);
         padX = editorX + PANEL_PAD;
         padY = editorY + PANEL_PAD;
         hueX = padX + padSize + STRIP_GAP;

@@ -317,7 +317,7 @@ public class ProfileOptionsScreen extends Screen implements ThemedScreen {
         GlassSurface.beginGlassPass();
         GlassSurface.container(ctx, panelX, panelY, panelW, panelH, radius);
         GlassSurface.overlayDim(ctx, this.width, this.height);
-        MaterialSurface.parent(ctx, panelX, panelY, panelW, panelH, radius);
+        MaterialSurface.parent(ctx, panelX, panelY, panelW, panelH, radius, 5);
 
         int onBackground = MaterialSurface.color(ThemeToken.ON_BACKGROUND);
         int secondary = ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY);
