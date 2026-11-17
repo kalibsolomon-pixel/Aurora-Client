@@ -164,6 +164,34 @@ separate clearly in both themes, and a hovered OFF tile stays visibly OFF. Not c
 Vulkan, the 26.1.2 and 26.2 clients, GUI scales other than 3, and long-label overflow
 beyond these screens.
 
+## Text and glyph alignment (2026-11-17)
+
+Owner request: text, dropdown chevrons and descriptor text aligned and centred with the new
+look. Implemented (started by GPT-6.1 Sol, finished by the parent after Sol's quota ran out):
+
+- One vertical rule: `AuroraFontRenderer.textY` centres the active font's measured
+  cap/x-height ink (the baked glyphs' top/bottom bounds per style), replacing
+  `(h - lineHeight) / 2` plus ad-hoc nudges. Icons centre on the same axis.
+- One horizontal rule: centred labels centre their visible ink (glyph left/right bounds,
+  `inkMid`, cached per style and resource generation), and the sub-GUI-pixel remainder is
+  applied through the pose snapped to the device grid. Labels round once, from their
+  fractional cell centre.
+- Dropdown values are centred again (the depth pass had left-aligned them, against the
+  "centred stays centred" rule), in the face area left of the 16 px chevron slot.
+- The bevel band is capped at 22% of a face's shorter side (domes exempt), so a 14 px field
+  keeps a flat plateau for its text; field height stays 14 px.
+- `ui-bounds <label>` probe command records every face rect and the text/icon draws inside it.
+
+Measured in the 26.3 client (GUI scale 3) on Text & Fonts, Zoom, Crosshair and Animations, in
+the live theme (Inter, SQUARE), factory ROUND and factory SQUARE: the probe's face rects were
+compared with each draw's visible ink in the screenshot (bright text pixels; sparse descender
+rows ignored). Horizontal offset of centred labels and glyphs: mean 0.27, max 0.83 GUI px
+over 71 draws, where the max is a segment whose analyser cell geometry assumed equal thirds
+(actual cells are 102 px with 3 px gaps; against the real cell it is 0.33). Vertical offset:
+mean 0.15, max 0.50 GUI px over 98 draws. Lowercase-only labels ("aa") sit 0.83 px lower by
+design: they share the baseline of their capitalised neighbours. Evidence:
+[live](evidence/ui-depth/align-live.png), [factory](evidence/ui-depth/align-factory.png).
+
 ## Hygiene and retained work
 
 Workspace-hygiene skill read at task start and before handoff. Task-owned scratch
