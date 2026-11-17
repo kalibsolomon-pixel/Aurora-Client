@@ -570,6 +570,26 @@ public final class ParityProbe implements ClientModInitializer {
                 }
             }
             case "escape" -> NativeUi.screen(client).keyPressed(new KeyEvent(InputConstants.KEY_ESCAPE, 0, 0));
+            // `config <field> <json>` sets one AuroraConfig field in memory (disposable fixtures only).
+            case "config" -> {
+                String[] kv = text.substring(7).split(" ", 2);
+                var field = AuroraConfig.class.getField(kv[0]);
+                field.set(config, new com.google.gson.Gson().fromJson(kv[1], field.getGenericType()));
+                System.out.println("[parity-probe] config " + kv[0] + "=" + field.get(config));
+            }
+            // `hold <forward|left|back|right|jump|attack|use> <on|off>` holds a vanilla key mapping down.
+            case "hold" -> {
+                String[] kv = text.substring(5).split(" ");
+                var options = client.options;
+                var mapping = switch (kv[0]) {
+                    case "forward" -> options.keyUp; case "left" -> options.keyLeft;
+                    case "back" -> options.keyDown; case "right" -> options.keyRight;
+                    case "jump" -> options.keyJump; case "attack" -> options.keyAttack;
+                    case "use" -> options.keyUse;
+                    default -> throw new IllegalArgumentException("Unknown key " + kv[0]);
+                };
+                mapping.setDown(kv[1].equals("on"));
+            }
             // Text-field editing through the screen's own handlers (the mixin's hooks included):
             // `type <text>` sends each code point as a character, `key <name> [ctrl] [shift]` one key.
             case "type" -> text.substring(5).codePoints().forEach(cp ->

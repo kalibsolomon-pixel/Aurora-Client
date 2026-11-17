@@ -54,6 +54,8 @@ exchange atomically and refuses an unmarked fixture or a pending command.
 | `detail animations` | Open a feature's native detail screen by ID |
 | `search <text>` | Focus and fill the native search field |
 | `escape` | Send Escape through the active screen's key handler |
+| `config field json` | Set one `AuroraConfig` field in memory from a JSON value (e.g. `config keystrokesKeyStyle "KEYCAP"`) |
+| `hold forward on` | Hold a vanilla key mapping down (`forward left back right jump attack use`, `on`/`off`) |
 | `type <text>` | Send each code point through the active screen's character handler |
 | `key z ctrl shift` | Send one key (`z y a left right home end backspace enter`, optional `ctrl`/`shift`) through the screen's key handler |
 | `field-state` | Log the focused text field's value, caret and selected text |
