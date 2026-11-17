@@ -136,7 +136,9 @@ public final class MaterialSurface {
                                    float on,float hover,boolean disabled) {
         if(disabled || on<1) inset(g,x,y,w,h,radius,disabled);
         if(disabled) return;
-        if(on>0) depth(g,x,y,w,h,radius,color(ThemeToken.ACCENT),0,280,Light.FLAT,on);
+        // ON is the same recessed well filled with the accent (2026-11-17): a flat accent over
+        // a dished OFF track read as two different materials.
+        if(on>0) depth(g,x,y,w,h,radius,color(ThemeToken.ACCENT),0,280,Light.INSET,on);
         if(hover>0) depth(g,x,y,w,h,radius,color(ThemeToken.ON_BACKGROUND),0,281,Light.FLAT,SWITCH_HOVER_ALPHA*hover);
     }
 

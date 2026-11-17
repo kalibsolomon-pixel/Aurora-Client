@@ -1545,6 +1545,10 @@ negative gradient of inward distance `-d`; this sign makes the upper-left rim ca
 upper-left light. The draft spec's minus sign with an *outward* SDF gradient would invert
 that lighting; this sign clarification preserves the required highlight direction.
 
+**Switches (2026-11-17).** The ON track is the same recessed well as OFF, filled with the accent
+(`Light.INSET`), so the two states differ only in colour; the knob rests on whole pixels with a
+2 px margin (`h - 4` knob), exactly centred on the track.
+
 **Text and glyph centring (2026-11-17).** Text on faces and rows is placed with
 `AuroraFontRenderer.textY`, which centres the active font's measured cap/x-height ink (from the
 baked glyphs of that style, cached per style and resource generation; descenders, underline and
