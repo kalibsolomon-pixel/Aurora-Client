@@ -5,9 +5,10 @@ with the option to use the UI corner radius for 3d shaded keys, and flat color/t
 
 ## What changed
 
-- `keystrokesKeyStyle`: **Translucent** (default; runs the unchanged legacy renderer, so existing
-  installs look the same and need no migrator), **Flat** (opaque key colour, no shell or rim) and
-  **3D Keycap** (Cherry profile).
+- `keystrokesKeyStyle`: **Flat** (default) and **3D Keycap**. Owner correction (same day): the
+  first version kept the legacy Translucent shell-and-rim style; it is removed. Flat is the
+  Lunar-style key: the legend on a flat coloured face, no outline, shell or travel, the face
+  swapping to the accent while pressed. Saved `TRANSLUCENT` values load as Flat.
 - 3D Keycap geometry and lighting live in core `KeycapProfile`: back wall 8%, front wall 18%, side
   walls 12%, a 2 GUI px Cherry radius, a shallow concave dish on the top surface, planar wall
   facets lit by the UI's upper-left light, 1 GUI px press travel and a contact shadow that
@@ -19,17 +20,31 @@ with the option to use the UI corner radius for 3d shaded keys, and flat color/t
   from the screen templates that are released during gameplay; each key is then one blit.
 - Parity probe: `config <field> <json>` and `hold <key> on|off` drive these checks.
 
+## Legend centring (owner correction)
+
+Both styles place legends through one routine: the visible ink (glyph left/right bounds and the
+active font's cap/x-height) is centred on the label area (Flat: the face; Keycap: the top
+surface) with the origin snapped to the device grid. Each row shares one size from its widest
+legend (3 px side clearance on Flat, 1.5 px on a keycap top), rounded to whole device pixels per
+font pixel when that costs at most 15%.
+
+Measured at GUI scale 3 against the module's layout (A key anchored, then CELL 22 / GAP 3):
+W/A/S/D and LMB/MMB/RMB legends are within 0.33 GUI px of their area centre horizontally and
+0.17 vertically, in Flat and 3D Keycap, SQUARE and ROUND. Row sizes are uniform (movement
+6.7 px cap height; mouse 4.3 px Flat, 4.0 px Keycap). "Space" reads about 1 px low in this
+measurement only because its descender is counted.
+
 ## In-client acceptance (parent)
 
 Minecraft 26.3, OpenGL, GUI scale 3, disposable copy of the owner's config and world. Captured
-Translucent and 3D Keycap, keys up and held (W, left mouse), the spacebar and mouse row, Theme
+Flat and 3D Keycap, keys up and held (W, left mouse), the spacebar and mouse row, Theme
 Corner Radius on with SQUARE and ROUND: [sheet](evidence/keystrokes/key-styles.png).
 
 Eight-second in-world samples with no screen open (`benchmark`), owner's full HUD config:
 
 | Style | Aurora CPU mean | Aurora CPU p95 | Fills per frame |
 |---|---:|---:|---:|
-| Translucent | 0.2017 ms | 0.444 ms | 0 |
+| Translucent (since retired) | 0.2017 ms | 0.444 ms | 0 |
 | 3D Keycap | 0.2017 ms | 0.517 ms | 0 |
 
 The keycap style adds no measurable mean cost. Both p95 values exceed the 0.40 ms release budget
