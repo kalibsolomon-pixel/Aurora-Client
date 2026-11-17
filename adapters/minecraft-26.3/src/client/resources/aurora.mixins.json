@@ -60,6 +60,8 @@
     "ShieldSpecialRendererMixin",
     "MixinFont",
     "TrueTypeProviderDefinitionMixin",
+    "SdfFontManagerMixin",
+    "SdfGlyphRenderStateMixin",
     "FontManagerAccessor",
     "FontSetAccessor",
     "MinecraftFontManagerAccessor",

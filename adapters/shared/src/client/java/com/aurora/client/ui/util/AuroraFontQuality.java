@@ -37,6 +37,11 @@ import java.util.WeakHashMap;
  * place, at the next frame boundary — no resource reload.
  */
 public final class AuroraFontQuality {
+    /** A version-owned provider that can rebuild itself with the current GUI scale. */
+    public interface Reloadable {
+        GlyphProvider reload(Minecraft mc);
+    }
+
     private AuroraFontQuality() {}
 
     /** Aurora's live TrueType providers and the definitions they came from (weak: a resource reload drops them). */
@@ -60,6 +65,11 @@ public final class AuroraFontQuality {
 
     public static void register(GlyphProvider provider, TrueTypeGlyphProviderDefinition definition) {
         PROVIDERS.put(provider, definition);
+    }
+
+    /** Removes a raster delegate owned by a version-specific wrapper. */
+    public static void unregister(GlyphProvider provider) {
+        PROVIDERS.remove(provider);
     }
 
     /** The scale the fonts are rasterized for (for tests and diagnostics). */
@@ -97,8 +107,12 @@ public final class AuroraFontQuality {
             boolean changed = false;
             for (GlyphProvider.Conditional entry : current) {
                 TrueTypeGlyphProviderDefinition definition = snapshot.get(entry.provider());
-                GlyphProvider fresh = definition == null ? null
-                        : replaced.computeIfAbsent(entry.provider(), old -> load(definition, mc));
+                GlyphProvider fresh = null;
+                if (entry.provider() instanceof Reloadable reloadable) {
+                    fresh = replaced.computeIfAbsent(entry.provider(), old -> reloadable.reload(mc));
+                } else if (definition != null) {
+                    fresh = replaced.computeIfAbsent(entry.provider(), old -> load(definition, mc));
+                }
                 if (fresh == null) {
                     next.add(entry);
                 } else {

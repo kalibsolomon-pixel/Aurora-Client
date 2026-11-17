@@ -44,6 +44,7 @@ exchange atomically and refuses an unmarked fixture or a pending command.
 | `font-state` / `font-check` | Count deferred sets / compare metrics across all Aurora font IDs |
 | `font-first-use aurora:inter_medium_ui` | Time one actual font-width lookup |
 | `font-specimen` | Render fallback, bold/italic, decorations and obfuscation samples |
+| `sdf-compare [scale]` | 26.3 OpenGL: two explicit-ID columns, raster Inter Medium vs SDF; scales 0.5, 0.75, 1, 1.25, 1.5, 2, 3 (default 1), including an 8px-base window label and `HudTextPainter` FULL outline |
 | `hud-editor` | Open the universal HUD editor |
 | `factory` | Replace the disposable client's in-memory settings with field initializers (does not overlay the shipped defaults JSON) |
 | `benchmark label` | Export an exploratory eight-second frame sample; not release overhead evidence |

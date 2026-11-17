@@ -202,7 +202,8 @@ public class AuroraFontRenderer {
             return null;
         }
         boolean compact = compactUi();
-        int key = styleKey(cfg, compact);
+        boolean sdf = useSdf(cfg);
+        int key = styleKey(cfg, compact, sdf);
         if (key == cachedKey && cachedStyle != null) {
             return cachedStyle;
         }
@@ -213,6 +214,7 @@ public class AuroraFontRenderer {
         boolean realItalic = italic && hasItalicFile(active);
         // Provider ids follow tools/build_fonts.py: <family>_<weight>[_italic][_ui].
         String path = family + "_" + weight.suffix() + (realItalic ? "_italic" : "") + (compact ? "_ui" : "");
+        if (sdf) path += "_sdf";
         net.minecraft.network.chat.Style style = net.minecraft.network.chat.Style.EMPTY.withFont(
                 new net.minecraft.network.chat.FontDescription.Resource(
                         net.minecraft.resources.Identifier.fromNamespaceAndPath("aurora", path)));
@@ -235,6 +237,18 @@ public class AuroraFontRenderer {
     }
 
     private static int styleKey(AuroraConfig cfg, boolean compact) {
+        return styleKey(cfg, compact, useSdf(cfg));
+    }
+
+    /** The phase-0 spike covers only upright Inter Medium; everything else resolves normally. */
+    private static boolean useSdf(AuroraConfig cfg) {
+        return com.aurora.client.adapter.NativeSdfText.enabled()
+                && cfg.activeFont == AuroraConfig.FontType.INTER
+                && !cfg.textItalic
+                && (cfg.textWeight == null || cfg.textWeight == AuroraConfig.TextWeight.MEDIUM);
+    }
+
+    private static int styleKey(AuroraConfig cfg, boolean compact, boolean sdf) {
         int key = cfg.activeFont == null ? 0 : cfg.activeFont.ordinal() + 1;
         key = key * 8 + (cfg.textWeight == null ? 1 : cfg.textWeight.ordinal());
         key = key * 4 + (cfg.textCase == null ? 0 : cfg.textCase.ordinal());
@@ -242,7 +256,8 @@ public class AuroraFontRenderer {
         key = key * 2 + (cfg.textItalic ? 1 : 0);
         key = key * 2 + (cfg.textUnderline ? 1 : 0);
         key = key * 16 + AuroraFontQuality.rasterScale(); // a re-raster changes advances
-        return key * 2 + (compact ? 1 : 0);
+        key = key * 2 + (compact ? 1 : 0);
+        return key * 2 + (sdf ? 1 : 0);
     }
 
     /** The provider-id stem of a bundled family, or null for the vanilla font. */
