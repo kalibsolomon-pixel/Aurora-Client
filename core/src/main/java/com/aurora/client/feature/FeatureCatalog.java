@@ -365,6 +365,9 @@ public final class FeatureCatalog {
         mixin("ShieldSpecialRendererMixin", "the shield status color", "pack_tweaks").gates("shieldStatusEnabled");
         mixin("MixinFont", "Aurora's fonts", "text_fonts");
         mixin("TrueTypeProviderDefinitionMixin", "crisp Aurora fonts at every GUI scale", "text_fonts");
+        // SDF text spike (26.3 only; inert unless -Daurora.text.sdf=true, raster fallback on failure).
+        mixin("SdfFontManagerMixin", "experimental SDF text", "text_fonts");
+        mixin("SdfGlyphRenderStateMixin", "experimental SDF text", "text_fonts");
         mixin("FontManagerAccessor", "crisp Aurora fonts at every GUI scale", "text_fonts");
         mixin("FontSetAccessor", "crisp Aurora fonts at every GUI scale", "text_fonts");
         mixin("MinecraftFontManagerAccessor", "crisp Aurora fonts at every GUI scale", "text_fonts");
