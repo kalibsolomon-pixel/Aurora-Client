@@ -6,6 +6,7 @@ import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.component.GlassEditBox;
 import com.aurora.client.ui.component.GlassSurface;
 import com.aurora.client.ui.component.MaterialSurface;
+import com.aurora.client.ui.text.EditHistory;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.Minecraft;
@@ -14,6 +15,8 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
 import net.minecraft.client.gui.screens.worldselection.SelectWorldScreen;
+import net.minecraft.client.input.CharacterEvent;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.Component;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -21,6 +24,7 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
  * Fully replaces the vanilla {@link EditBox} rendering on every screen
@@ -35,11 +39,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * account for our taller themed background; rendering the text ourselves
  * lets us vertically center it precisely against the theme box.
  *
- * <p>Only {@code displayPos} (the horizontal scroll offset of the visible
- * text) and {@code cursorPos} (the caret index) are shadowed — both are
- * confirmed by the LiquidBounce reference mixin; {@code displayPos} is
- * needed to correctly clip/scroll long queries, {@code cursorPos} to place
- * the caret where the user's cursor actually is (mid-string included).
+ * <p>{@code displayPos} (the horizontal scroll offset of the visible text)
+ * and {@code cursorPos} (the caret index) support the renderer;
+ * {@code highlightPos} preserves selection direction in editing history.
+ * The input hooks reuse the same screen/config takeover as the renderer.
  * The blinking caret uses {@link System#currentTimeMillis()} instead of
  * shadowing the vanilla {@code frame} counter, avoiding a fragile
  * private-field dependency.
@@ -62,6 +65,8 @@ public abstract class EditBoxMixin implements GlassEditBox {
     @Shadow private int displayPos;
     /** Caret index within the value string. */
     @Shadow private int cursorPos;
+    /** The other end of the selection; equal to cursorPos when collapsed. */
+    @Shadow private int highlightPos;
     /** Placeholder hint text shown when the field is empty. */
     @Shadow private Component hint;
 
@@ -88,6 +93,116 @@ public abstract class EditBoxMixin implements GlassEditBox {
         return com.aurora.client.adapter.NativeUi.screen(mc) instanceof JoinMultiplayerScreen
                 || com.aurora.client.adapter.NativeUi.screen(mc) instanceof SelectWorldScreen
                 || com.aurora.client.adapter.NativeUi.screen(mc) instanceof com.aurora.client.ui.component.ThemedScreen;
+    }
+
+    // Allocated only on input, never from the render path. KTextField inherits these hooks.
+    @Unique private EditHistory aurora$history;
+    @Unique private EditHistory.State aurora$beforeEdit;
+    @Unique private EditHistory.Kind aurora$editKind;
+    @Unique private boolean aurora$restoring;
+
+    @Unique
+    private EditHistory.State aurora$textState() {
+        return new EditHistory.State(((EditBox) (Object) this).getValue(), cursorPos, highlightPos);
+    }
+
+    @Unique
+    private boolean aurora$canEdit() {
+        EditBox self = (EditBox) (Object) this;
+        return aurora$themedScreen(Minecraft.getInstance()) && self.isVisible() && self.canConsumeInput();
+    }
+
+    @Unique
+    private void aurora$beginEdit(EditHistory.Kind kind) {
+        if (aurora$history == null) aurora$history = new EditHistory();
+        aurora$beforeEdit = aurora$textState();
+        aurora$editKind = kind;
+    }
+
+    @Unique
+    private void aurora$finishEdit() {
+        if (aurora$beforeEdit == null) return;
+        aurora$history.record(aurora$beforeEdit, aurora$textState(), aurora$editKind,
+                System.nanoTime() / 1_000_000L);
+        aurora$beforeEdit = null;
+    }
+
+    @Inject(method = "keyPressed", at = @At("HEAD"), cancellable = true)
+    private void aurora$historyKey(KeyEvent event, CallbackInfoReturnable<Boolean> cir) {
+        if (!aurora$canEdit()) {
+            if (aurora$history != null) aurora$history.clear();
+            aurora$beforeEdit = null;
+            return;
+        }
+        boolean undo = com.aurora.client.adapter.NativeKeyboard.isUndoKey(event);
+        boolean redo = com.aurora.client.adapter.NativeKeyboard.isRedoKey(event) && !event.hasShiftDown();
+        if (event.hasControlDownWithQuirk() && !event.hasAltDown() && (undo || redo)) {
+            if (aurora$history != null) {
+                aurora$restore(redo || event.hasShiftDown() ? aurora$history.redo() : aurora$history.undo());
+            }
+            // Consume even empty history: the screen must not treat this as a command.
+            cir.setReturnValue(true);
+            return;
+        }
+        // A key transaction captures deletion, cut and paste as individual steps. Vanilla still
+        // owns the operation, including platform modifiers, filtering and max-length handling.
+        if (event.isPaste() || event.isCut()
+                || event.key() == com.mojang.blaze3d.platform.InputConstants.KEY_BACKSPACE
+                || event.key() == com.mojang.blaze3d.platform.InputConstants.KEY_DELETE) {
+            aurora$beginEdit(EditHistory.Kind.ATOMIC);
+        } else if (event.isCopy() && aurora$history != null) {
+            aurora$history.breakRun();
+        }
+    }
+
+    @Inject(method = "keyPressed", at = @At("RETURN"))
+    private void aurora$historyKeyDone(KeyEvent event, CallbackInfoReturnable<Boolean> cir) {
+        aurora$finishEdit();
+    }
+
+    @Inject(method = "charTyped", at = @At("HEAD"))
+    private void aurora$historyCharacter(CharacterEvent event, CallbackInfoReturnable<Boolean> cir) {
+        if (aurora$canEdit()) aurora$beginEdit(EditHistory.Kind.TYPING);
+    }
+
+    @Inject(method = "charTyped", at = @At("RETURN"))
+    private void aurora$historyCharacterDone(CharacterEvent event, CallbackInfoReturnable<Boolean> cir) {
+        aurora$finishEdit();
+    }
+
+    @Unique
+    private void aurora$restore(EditHistory.State state) {
+        if (state == null) return;
+        EditBox self = (EditBox) (Object) this;
+        aurora$restoring = true;
+        try {
+            self.setValue(state.text()); // Keep responders (search, colour, etc.) in sync.
+            if (self.getValue().equals(state.text())) {
+                self.moveCursorTo(state.cursor(), false);
+                self.setHighlightPos(state.anchor());
+            } else {
+                // A changed validator or max length rejected the old state; discard stale history.
+                aurora$history.clear();
+            }
+        } finally {
+            aurora$restoring = false;
+        }
+    }
+
+    @Inject(method = "setValue", at = @At("HEAD"))
+    private void aurora$programmaticValue(String value, CallbackInfo ci) {
+        // Responder normalization during an input transaction belongs to that same edit.
+        if (aurora$history != null && aurora$beforeEdit == null && !aurora$restoring) aurora$history.clear();
+    }
+
+    @Inject(method = {"setCursorPosition", "setHighlightPos"}, at = @At("HEAD"))
+    private void aurora$historyCaret(int position, CallbackInfo ci) {
+        if (aurora$history != null && aurora$beforeEdit == null) aurora$history.breakRun();
+    }
+
+    @Inject(method = "setFocused", at = @At("HEAD"))
+    private void aurora$historyFocus(boolean focused, CallbackInfo ci) {
+        if (aurora$history != null && focused != ((EditBox) (Object) this).isFocused()) aurora$history.breakRun();
     }
 
     /**

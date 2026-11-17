@@ -843,6 +843,17 @@ in its label row's trailing value slot instead, above its Add control.
   a subtle accent focus treatment communicate editing without changing material tint.
 - **Input/accessibility:** preserve selection, cursor position, standard editing keys,
   narration, label/purpose, and value. Numeric commit/revert behavior must be explicit.
+- **Editing history:** Aurora-owned `EditBox` fields, including Pulsar's `KTextField`
+  subclass, support Ctrl+Z undo and Ctrl+Shift+Z / Ctrl+Y redo (the platform's editing
+  modifier on macOS). This follows the themed-field takeover and `customTitleScreen` gate.
+  Each field retains at most 100 edits. Consecutive typed word characters coalesce until
+  whitespace/punctuation, a caret/selection/focus change, deletion, clipboard action, or
+  a one-second pause. Deletions, selection replacements and pastes are separate steps.
+  Undo restores text, caret and selection and updates the existing value responder.
+  Programmatic `setValue` starts fresh history; responder sanitization during user input
+  belongs to that input's edit. Vanilla continues to own word movement/deletion, selection,
+  Home/End and clipboard handling; word movement uses spaces and ordinary movement uses
+  code points, without adding grapheme-aware navigation.
 - **Sound:** ordinary typing remains Minecraft/system behavior; commit/rejection may follow
   semantic sound policy without per-character custom sounds.
 
