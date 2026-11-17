@@ -459,6 +459,10 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         ClipBand band = listBand(listX);
         GlassSurface.enableScissor(ctx, listX - 4, listClipTop(), listX + listWidth() + 4, listClipBottom());
         int lead = leadingRowCount(), cw = cellWidth();
+        for (int index = 0; index < rows.size(); index++) {
+            int slot = lead + index;
+            prepareRowFocus(rows.get(index), cellX(listX, slot), cellY(slot), cw);
+        }
         for (int l = 0; l < lead; l++) {
             int gy = cellY(l);
             if (rowPaintVisible(band, gy)) paintLeadingRowGlassPass(ctx, cellX(listX, l), gy, cw, l);
@@ -564,6 +568,8 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         super.extractRenderState(ctx, mouseX, mouseY, delta);
 
         paintTail(ctx, mouseX, mouseY, delta, rows, listX);
+        semanticHost.finishAvailabilitySweep();
+        com.aurora.client.ui.component.TooltipPresenter.draw(ctx, windowX(), windowTop(), windowWidth(), windowHeight());
 
         logFramePerf(rows.size());
     }
@@ -639,6 +645,13 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
 
     /** Called at the top of each frame's glass pass, right after {@code rowGlassDrawn} clears. */
     protected void onBeginRowGlassPass() {}
+
+    protected void prepareRowFocus(T row, int x, int y, int width) {}
+
+    protected final void locateRowFocus(SemanticActionControl control, int x, int y, int width, int height) {
+        control.setBounds(x, y, width, height);
+        control.setScrollFocusTarget(true);
+    }
 
     /** Reconcile per-row widget caches against the live row set (both screens reconcile against a SET — see class javadoc). */
     protected abstract void reconcileRowCaches(List<T> rows);
@@ -971,7 +984,13 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
             }
             if (nameField.keyPressed(_kev)) return true;
         }
-        return super.keyPressed(_kev);
+        var before = getFocused();
+        boolean handled = super.keyPressed(_kev);
+        if (com.aurora.client.ui.interaction.FocusReveal.navigation(_kev) && before != getFocused()) {
+            com.aurora.client.ui.interaction.FocusReveal.afterNavigation(before, getFocused(), scroll,
+                    maxScrollOf(currentRows()), listClipTop(), listClipBottom());
+        }
+        return handled;
     }
 
     @Override

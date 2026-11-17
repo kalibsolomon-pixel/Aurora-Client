@@ -219,10 +219,9 @@ public class IconPickerScreen extends Screen implements ThemedScreen {
 
         super.extractRenderState(ctx, mouseX, mouseY, delta);
 
-        String tip = hovered;
-        FeatureSetting.hoverTooltip("icon-picker", () -> tip, hovered == null ? -1000 : hoverX, hoverY, CELL, CELL,
+        FeatureSetting.hoverTooltip(hovered, hovered, hovered == null ? -1000 : hoverX, hoverY, CELL, CELL,
                 mouseX, mouseY);
-        FeatureSetting.drawPendingTooltip(ctx, this.width, this.height);
+        FeatureSetting.drawPendingTooltip(ctx, panelX, panelY, panelW, panelH);
     }
 
     /** The header title with the result count, rebuilt only when the count or width changes. */

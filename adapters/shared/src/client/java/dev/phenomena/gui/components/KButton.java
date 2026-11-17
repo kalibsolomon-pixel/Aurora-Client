@@ -7,7 +7,6 @@ import dev.phenomena.gui.theme.Theme;
 import java.util.function.*;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 
@@ -29,7 +28,7 @@ public class KButton extends ButtonWidget {
   public KButton(String label, Runnable action) { this(label, Style.NORMAL, () -> label, action); }
   public KButton(String label, Style style, Runnable action) { this(label, style, () -> label, action); }
   public KButton selected(BooleanSupplier supplier) { selected = supplier; return this; }
-  public KButton tooltip(String text) { setTooltip(Tooltip.create(Component.literal(text))); return this; }
+  public KButton tooltip(String text) { tooltip(Component.literal(text)); return this; }
   public KButton enabled(boolean enabled) { active = enabled; return this; }
   public KButton content() { content = true; return this; }
   public boolean isContent() { return content; }
@@ -43,6 +42,7 @@ public class KButton extends ButtonWidget {
     return (!content || Viewport.contains(x, y)) && super.isMouseOver(x, y);
   }
   @Override protected void extractContents(GuiGraphicsExtractor g, int mx, int my, float delta) {
+    if (!content || Viewport.contains(mx, my)) offerTooltip(mx, my);
     String text = label.get();
     if (!text.equals(shown)) { shown = text; setMessage(Component.literal(text)); }
     if (style != Style.TAB && style != Style.CHIP && style != Style.SUBTLE) {

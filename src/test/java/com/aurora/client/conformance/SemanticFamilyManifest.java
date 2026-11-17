@@ -158,7 +158,7 @@ public final class SemanticFamilyManifest {
                             + "immediate-hover scanning painter but carry full semantic accessibility."),
             new Family("tooltip", Hover.NOT_ANIMATED, Press.N_A,
                     Sound.NONE_BY_CONTRACT, Keyboard.N_A, false, true, false, false,
-                    List.of(SRC + "screen/setting/FeatureSetting.java"),
+                    List.of(SRC + "ui/component/TooltipPresenter.java"),
                     "The ONE production tooltip: 1500 ms dwell + the deliberate supplemental "
                             + "symmetric 200 ms fade (not the 140 ms control-hover duration)."),
             new Family("navigation-tabs", Hover.CANONICAL_140, Press.NONE_BY_DESIGN,

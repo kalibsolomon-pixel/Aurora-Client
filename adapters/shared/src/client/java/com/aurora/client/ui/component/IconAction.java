@@ -194,6 +194,7 @@ public final class IconAction {
      */
     public void syncChannels(int x, int y, int w, int h, double mouseX, double mouseY) {
         boolean target = action.enabled() && Widget.inBounds(mouseX, mouseY, x, y, w, h);
+        if (target) TooltipPresenter.offer(this, action.accessibleName().getString(), x, y, w, h);
         hover.update(target);
         if (MaterialSurface.unified()) materialHoverT=materialHover.update(target ? 1 : 0,System.nanoTime());
         if (control != null) {

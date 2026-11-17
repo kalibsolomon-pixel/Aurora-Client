@@ -25,7 +25,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.components.PlayerFaceExtractor;
 import net.minecraft.client.gui.components.PlayerSkinWidget;
-import net.minecraft.client.gui.components.Tooltip;
+import com.aurora.client.ui.component.TooltipPresenter;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.screens.CreditsAndAttributionScreen;
 import net.minecraft.client.gui.screens.Screen;
@@ -94,9 +94,10 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
         waitingForResources = !this.minecraft.isGameLoadFinished();
         composition = MenuComposition.layout(this.width, this.height);
         accountOpen = false;
+        accountMotion.reset();
         fittedKey = Integer.MIN_VALUE;
         boolean online = this.minecraft.allowsMultiplayer();
-        Tooltip offline = online ? null : Tooltip.create(Component.translatable("title.multiplayer.disabled"));
+        Component offline = online ? null : Component.translatable("title.multiplayer.disabled");
 
         addCard(0, Component.translatable("aurora.button.singleplayer"), "person",
                 "Browse and play singleplayer worlds.",
@@ -109,7 +110,7 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
                 () -> NativeUi.setScreen(this.minecraft, new RealmsMainScreen(this)));
         for (ButtonWidget gated : new ButtonWidget[]{multiplayer, realms}) {
             gated.active = online;
-            gated.setTooltip(offline);
+            gated.tooltip(offline);
         }
         ButtonWidget settings = addCard(3, Component.translatable("aurora.button.settings"), "settings",
                 "Open Minecraft's options.",
@@ -154,7 +155,6 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
         var card = composition.account();
         switcher = AuroraAccountSwitcherApi.available();
         account = card.width() > 0 ? addRenderableWidget(new AccountCard(card, composition.compact())) : null;
-        if (account != null && switcher) account.setTooltip(Tooltip.create(Component.translatable("aurora.title.switch_account")));
 
         Font font = this.font;
         int lineY = this.height - MenuComposition.MARGIN - font.lineHeight + 1;
@@ -233,10 +233,13 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
 
         super.extractRenderState(ctx, mouseX, mouseY, delta);
 
-        if (accountOpen && account != null) {
+        float accountProgress = accountMotion.progress(System.nanoTime(), com.aurora.client.config.AuroraConfig.get().reducedMotion);
+        if (accountProgress > 0 && account != null) {
             ctx.nextStratum(); // above the cards and their labels
-            drawDropdown(ctx);
+            if (accountOpen) TooltipPresenter.suppressFrame();
+            drawDropdown(ctx, accountProgress);
         }
+        TooltipPresenter.draw(ctx, 0, 0, this.width, this.height);
     }
 
     private int dropdownWidth() {
@@ -255,36 +258,46 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
         return new UiDensity.Rect(x, Math.max(MenuComposition.MARGIN, y), w, h);
     }
 
-    private void drawDropdown(GuiGraphicsExtractor ctx) {
+    private final com.aurora.client.ui.util.OverlayMotion accountMotion = new com.aurora.client.ui.util.OverlayMotion();
+
+    private void showAccount(boolean open) {
+        accountOpen = open;
+        accountMotion.setOpen(open, System.nanoTime());
+    }
+
+    private void drawDropdown(GuiGraphicsExtractor ctx, float progress) {
         var r = dropdown();
+        int pivot = r.y() < account.getY() ? r.y() + r.height() : r.y();
+        boolean posed = com.aurora.client.ui.component.OverlayPose.push(ctx, r.x() + r.width(), pivot, progress);
         int radius = Math.round(ThemeManager.current().roundness().radiusSmall());
-        MaterialSurface.floatingPanel(ctx, r.x(), r.y(), r.width(), r.height(), radius);
+        MaterialSurface.overlayFace(ctx, r.x(), r.y(), r.width(), r.height(), radius, progress);
         int rowY = r.y() + DROPDOWN_PAD;
         int face = 12;
-        PlayerFaceExtractor.extractRenderState(ctx, skin.get(), r.x() + DROPDOWN_PAD + 2, rowY + (DROPDOWN_ROW - face) / 2, face);
+        if (!posed) PlayerFaceExtractor.extractRenderState(ctx, skin.get(), r.x() + DROPDOWN_PAD + 2, rowY + (DROPDOWN_ROW - face) / 2, face);
         int nameX = r.x() + DROPDOWN_PAD + 2 + face + 6;
         int checkX = r.x() + r.width() - DROPDOWN_PAD - 8;
         String name = dropdownName.fit(this.font, this.minecraft.getUser().getName(), checkX - 8 - nameX);
-        ctx.text(this.font, name, nameX, rowY + (DROPDOWN_ROW - this.font.lineHeight) / 2 + 1,
-                ThemeManager.color(ThemeToken.MATERIAL_TEXT), false);
+        if (progress >= .015f) ctx.text(this.font, name, nameX, rowY + (DROPDOWN_ROW - this.font.lineHeight) / 2 + 1,
+                AuroraAnim.scaleAlpha(ThemeManager.color(ThemeToken.MATERIAL_TEXT), progress), false);
         MaterialIconRenderer.drawIcon(ctx, this.font, com.aurora.client.screen.IconCatalog.glyph("check"),
-                checkX, rowY + DROPDOWN_ROW / 2f, 11f, ThemeManager.color(ThemeToken.ACCENT));
+                checkX, rowY + DROPDOWN_ROW / 2f, 11f, AuroraAnim.scaleAlpha(ThemeManager.color(ThemeToken.ACCENT), progress));
         int dividerY = rowY + DROPDOWN_ROW + 2;
         ctx.fill(r.x() + DROPDOWN_PAD, dividerY, r.x() + r.width() - DROPDOWN_PAD, dividerY + 1,
-                MaterialSurface.color(ThemeToken.BORDER));
+                AuroraAnim.scaleAlpha(MaterialSurface.color(ThemeToken.BORDER), progress));
         int lineY = dividerY + 4;
-        int muted = ThemeManager.color(ThemeToken.MATERIAL_TEXT_MUTED);
+        int muted = AuroraAnim.scaleAlpha(ThemeManager.color(ThemeToken.MATERIAL_TEXT_MUTED), progress);
         for (FormattedCharSequence line : noteLines) {
-            ctx.text(this.font, line, r.x() + DROPDOWN_PAD + 2, lineY, muted, false);
+            if (progress >= .015f) ctx.text(this.font, line, r.x() + DROPDOWN_PAD + 2, lineY, muted, false);
             lineY += this.font.lineHeight + 2;
         }
+        if (posed) ctx.pose().popMatrix();
     }
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         if (accountOpen) {
             // The open dropdown takes the click: inside it does nothing, outside it closes.
-            if (!dropdown().contains(event.x(), event.y())) accountOpen = false;
+            if (!dropdown().contains(event.x(), event.y())) showAccount(false);
             return true;
         }
         return super.mouseClicked(event, doubleClick);
@@ -293,7 +306,7 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
     @Override
     public boolean keyPressed(KeyEvent event) {
         if (accountOpen && event.key() == InputConstants.KEY_ESCAPE) {
-            accountOpen = false;
+            showAccount(false);
             return true;
         }
         return super.keyPressed(event);
@@ -340,6 +353,7 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
 
     /** The signed-in account: face, name and a chevron. Opens IAS's account list, or the read-only dropdown without IAS. */
     private final class AccountCard extends AbstractButton {
+        private final Component switchTooltip = Component.translatable("aurora.title.switch_account");
         private final boolean chip;
 
         AccountCard(UiDensity.Rect r, boolean chip) {
@@ -351,11 +365,12 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
         public void onPress(InputWithModifiers input) {
             Screen accounts = switcher ? AuroraAccountSwitcherApi.open(AuroraTitleScreen.this) : null;
             if (accounts != null) NativeUi.setScreen(minecraft, accounts); // back here re-inits: new name and skin
-            else accountOpen = !accountOpen;
+            else showAccount(!accountOpen);
         }
 
         @Override
         protected void extractContents(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
+            if (switcher && isHovered()) TooltipPresenter.offer(this, switchTooltip.getString(), getX(), getY(), getWidth(), getHeight());
             float x = getX(), y = getY(), w = getWidth(), h = getHeight();
             float r = ThemeManager.current().roundness().radiusSmall();
             boolean hot = isHovered() || accountOpen;

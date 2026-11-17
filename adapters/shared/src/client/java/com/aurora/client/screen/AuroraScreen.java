@@ -967,7 +967,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         semanticHost.finishAvailabilitySweep();
 
         super.extractRenderState(g, mouseX, mouseY, delta);
-        FeatureSetting.drawPendingTooltip(g, this.width, this.height);
+        FeatureSetting.drawPendingTooltip(g, (int) boxX(), (int) boxY(), (int) BOX_W, (int) BOX_H);
     }
 
     /** Static chrome + settled toggle tracks, rasterized once into the cache. */
@@ -1477,6 +1477,16 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         for (FeatureMetadata m : pageEntries()) {
             // Section headings and spacing provide grouping, without nested frames.
             int headerH = SETTINGS_HEADER_H;
+            var headerNav = headerNavControls.get(m.id);
+            var headerToggle = headerToggleControls.get(m.id);
+            if (headerNav != null) {
+                headerNav.setBounds((int) (mx + 4), (int) y, contentWidth() - 46, headerH);
+                headerNav.setScrollFocusTarget(true);
+            }
+            if (headerToggle != null) {
+                headerToggle.setBounds((int) (mx + contentWidth() - 40), (int) y, 40, headerH);
+                headerToggle.setScrollFocusTarget(true);
+            }
             if (vp.intersects(mx + 4, y, contentWidth() - 4, headerH)) {
                 // Header navigation (C-2b): the entries WITH a detail
                 // screen navigate (same family as the sidebar tabs' action
@@ -1574,6 +1584,8 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                     boolean anyControlAvailable = false;
                     List<SemanticActionControl> controls = hostedSettingControls.getOrDefault(s, List.of());
                     for (SemanticActionControl control : controls) {
+                        control.setScrollFocusTarget(s.controlVisible(control));
+                        if (!visible) control.setBounds((int) mx + 4, (int) y, contentWidth() - 8, rh);
                         // Partial-visibility policy: any non-empty
                         // intersection of the ACTIONABLE control rect with
                         // C-1's authoritative viewport is available. Edge
@@ -1608,9 +1620,10 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         for (FeatureMetadata m : pageEntries()) {
             for (FeatureSetting s : m.settings) {
                 if (s instanceof com.aurora.client.screen.setting.EnumSetting<?> row
-                        && s.isVisible() && row.popupOpen()) {
+                        && s.isVisible() && row.popupVisible()) {
                     row.renderFloatingOverlay(g, mouseX, mouseY);
                 }
+                if (s instanceof com.aurora.client.screen.setting.ColorSetting row && s.isVisible()) row.renderFloatingEditor(g);
             }
         }
         g.disableScissor();
@@ -1706,6 +1719,11 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         int color = link ? MaterialSurface.color(ThemeToken.ACCENT) : MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED);
         if (gridLayout) com.aurora.client.ui.util.AuroraFontRenderer.drawCentered(g, tr, fitted, Math.round(centerX), Math.round(y), color);
         else g.text(tr, fitted, Math.round(centerX - width / 2f), Math.round(y), color, false);
+        if (!fitted.equals(subtitle) && contentViewport().contains(mouseX, mouseY)) {
+            int textWidth = tr.width(fitted);
+            int textX = Math.round(centerX - (gridLayout ? textWidth : width) / 2f);
+            FeatureSetting.hoverTooltip(m, subtitle, textX, Math.round(y), textWidth, tr.lineHeight, mouseX, mouseY);
+        }
     }
 
     /** The settings-cue chevron's em size and its hit box: the tile's top-right corner, or a list
@@ -2005,6 +2023,28 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         // cancellation owns the click, otherwise pointer interaction drops
         // stale setting/semantic focus before the clicked target reclaims it.
         if (FeatureSetting.cancelActiveCapture()) return true;
+        FeatureSetting owner = FeatureSetting.getFocused();
+        if (owner instanceof com.aurora.client.screen.setting.EnumSetting<?>
+                || owner instanceof com.aurora.client.screen.setting.ColorSetting) {
+            if (selectedCategory == 1 && contentViewport().contains(mouseX, mouseY)
+                    && button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) {
+                float popupY = viewTop() - (float) scrolls[1].current();
+                for (FeatureMetadata entry : pageEntries()) {
+                    popupY += headerBlockH(entry);
+                    if (entry.settingsDetailOnly) popupY += SETTINGS_HINT_H;
+                    else for (FeatureSetting setting : entry.settings) {
+                        if (!setting.isVisible()) continue;
+                        if (setting == owner && owner.mouseClicked(mouseX, mouseY, button, (int) (mx + 4), (int) popupY, contentWidth() - 8)) {
+                            if (owner instanceof com.aurora.client.screen.setting.ColorSetting) activeDragSetting = owner;
+                            return true;
+                        }
+                        popupY += setting.height() + SETTINGS_ROW_GAP;
+                    }
+                    popupY += SETTINGS_ENTRY_GAP;
+                }
+            }
+            if (owner.dismissPopup()) return true;
+        }
         FeatureSetting.clearFocus();
         semanticHost.dropFocus();
         if (super.mouseClicked(_ev, _dbl)) return true;
@@ -2115,34 +2155,6 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 }
             }
         } else if (vp.contains(mouseX, mouseY)) {
-            // An open EnumSetting popup owns the pointer FIRST (the
-            // FeatureDetailScreen discipline): its option list floats over
-            // the rows, and clicks inside it select/collapse rather than
-            // hitting whatever row renders underneath. The walk MUST mirror
-            // renderSettingsLive's y accounting exactly (header band, hint,
-            // rows, entry gap) — the popup's INPUT rect derives from the
-            // same rowY; a missing header offset made every option click
-            // land in the outside-collapse branch (the "dropdowns do
-            // nothing" report, 2026-10-30).
-            if (button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) {
-                float py = viewTop() - (float) scrolls[1].current();
-                for (FeatureMetadata m : pageEntries()) {
-                    py += headerBlockH(m);
-                    if (m.settingsDetailOnly) {
-                        py += SETTINGS_HINT_H;
-                    } else {
-                        for (FeatureSetting s : m.settings) {
-                            if (!s.isVisible()) continue;
-                            if (s instanceof com.aurora.client.screen.setting.EnumSetting<?> row && row.popupOpen()
-                                    && row.mouseClicked(mouseX, mouseY, button, (int) (mx + 4), (int) py, contentWidth() - 8)) {
-                                return true;
-                            }
-                            py += s.height() + SETTINGS_ROW_GAP;
-                        }
-                    }
-                    py += SETTINGS_ENTRY_GAP;
-                }
-            }
             float y = viewTop() - (float) scrolls[1].current();
             for (FeatureMetadata m : pageEntries()) {
                 // The toggle zone is deliberately ~10px wider than the
@@ -2281,8 +2293,14 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         // grouped control holds focus (sidebar tabs, the hosted Accent peers),
         // the group's arrows move focus silently and are consumed. Selection
         // never follows — Enter/Space/click stay the only selection paths.
-        if (SemanticControlGroup.rove(this.getFocused(), _kev, this::setFocused)) return true;
-        return super.keyPressed(_kev);
+        var before = this.getFocused();
+        boolean handled = SemanticControlGroup.rove(before, _kev, this::setFocused) || super.keyPressed(_kev);
+        if (selectedCategory == 1 && com.aurora.client.ui.interaction.FocusReveal.navigation(_kev)) {
+            var band = contentViewport();
+            com.aurora.client.ui.interaction.FocusReveal.afterNavigation(before, getFocused(), scrolls[1],
+                    computeMaxScroll(), band.y, band.yEnd());
+        }
+        return handled;
     }
 
     @Override

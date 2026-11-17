@@ -82,7 +82,7 @@ public final class MaterialSurface {
         PRIMARY(6,-4,Profile.RAISED), PRIMARY_LIGHT(3,-4,Profile.RAISED),
         MODULE_ON(11,3,Profile.RAISED), MODULE_OFF(-5,-5,Profile.FLAT),
         MODULE_ON_HOVER(13,5,Profile.RAISED), MODULE_OFF_HOVER(-3,-3,Profile.FLAT),
-        KNOB(0,0,Profile.DOME,1,.23f),
+        KNOB(0,0,Profile.DOME,1,.23f), OVERLAY(5,-3,Profile.RAISED,2,.28f),
         MODULE_SHADOW(0,0,Profile.FLAT,2,.26f), CONTROL_SHADOW(0,0,Profile.FLAT,1,.18f);
         final float top, bottom, elevation, shadowAlpha;
         final Profile profile;
@@ -328,6 +328,10 @@ public final class MaterialSurface {
         if (!unified()) { floating(g, x, y, w, h, radius, 1); return; }
         cached(g,x,y,w,h,radius,ThemeManager.color(ThemeToken.MATERIAL_PANEL),
                 color(ThemeToken.BORDER_HOVER),5,true,1);
+    }
+
+    public static void overlayFace(GuiGraphicsExtractor g, int x, int y, int w, int h, float radius, float opacity) {
+        cached(g,x,y,w,h,radius,color(ThemeToken.SURFACE_VARIANT) | 0xff000000,0,6,false,opacity,Light.OVERLAY);
     }
 
     public static void floating(GuiGraphicsExtractor g, int x, int y, int w, int h,

@@ -147,7 +147,6 @@ public final class FlowCharts {
         int bx = sx(b, px, pw);
         Pixel.fillLogical(g, bx, top, bx + 1, bottom + laneH, Theme.GRID());
       }
-      String hover = null;
       for (int i = 0; i < spans.size(); i++) {
         var s = spans.get(i);
         int x0 = sx(s.start(), px, pw) - 2, x1 = Math.max(x0 + 5, sx(s.end(), px, pw) + 3);
@@ -158,7 +157,8 @@ public final class FlowCharts {
         String n = "x" + s.length();
         int tx = Math.min(px + pw - f.width(n), Math.max(px, (x0 + x1 - f.width(n)) / 2));
         g.text(f, n, tx, s.local() ? ly - 1 : ly + laneH - 7, Theme.TEXT(), false);
-        if (hover(mx, my, x0, ly, x1 - x0, laneH)) hover = s.label();
+        if (hover(mx, my, x0, ly, x1 - x0, laneH)) tooltip(s, s.label(), Math.min(tx, x0), ly - 1,
+            Math.max(tx + f.width(n), x1) - Math.min(tx, x0), laneH + 2);
       }
       for (var m : marks) {
         int cx = sx(m.time(), px, pw);
@@ -167,7 +167,7 @@ public final class FlowCharts {
         if (m.traded()) Pixel.outline(g, cx - 2, ly + laneH / 2 - 2, 5, 5, 2, 1, color);
         else Pixel.fillLogical(g, cx - 1, ly + 6, cx + 1, ly + laneH - 6, color);
         if (Math.abs(mx - cx) <= 2 && my >= ly && my < ly + laneH && Viewport.contains(mx, my))
-          hover = m.label();
+          tooltip(m, m.label(), cx - 2, ly, 5, laneH);
       }
       if (marks.isEmpty())
         emptyState(g, px, top, pw, laneH * 2 + 6, "No confirmed hits in this recording");
@@ -183,7 +183,6 @@ public final class FlowCharts {
       if (opponentNote != null)
         g.text(
             f, KButton.fit(f, opponentNote, pw), px, bottom + laneH + 26, Theme.WARN(), false);
-      if (hover != null) tooltip(g, hover, mx, my);
     }
 
     private int sx(double t, int px, int pw) {
@@ -370,13 +369,12 @@ public final class FlowCharts {
         int cx = sx(t, px, pw);
         Pixel.fillLogical(g, cx, py, cx + 1, py + ph, Theme.alpha(Theme.TEXT(), 0x50));
         tooltip(
-            g,
-            secs(t)
+            this, k,
+            secs(Math.min(duration, k * step))
                 + ": "
                 + (Double.isFinite(values[k]) ? Format.number(values[k], 2) + ", " : "")
                 + stateName(states[k]),
-            mx,
-            my);
+            cx, py, 1, ph);
       }
     }
 
@@ -446,7 +444,6 @@ public final class FlowCharts {
       Pixel.fillLogical(g, px, py + ph, px + pw, py + ph + 1, Theme.BORDER());
       g.text(f, top, px - 4 - f.width(top), py - 3, Theme.DIM(), false);
       g.text(f, "0", px - 4 - f.width("0"), py + ph - 4, Theme.DIM(), false);
-      String hover = null;
       for (int i = 0; i < n; i++) {
         int bx = px + (int) Math.round(i * slot), bw = Math.max(1, (int) Math.round(slot) - 1);
         int bh = max == 0 ? 0 : (int) Math.round((ph - 2) * bins[i] / (double) max);
@@ -454,7 +451,7 @@ public final class FlowCharts {
         boolean in = Math.abs(mid - target) <= tolerance + 1e-9;
         if (bins[i] > 0) Pixel.fillLogical(g, bx, py + ph - bh, bx + bw, py + ph, in ? GOOD : LOCAL);
         if (hover(mx, my, bx, py, bw + 1, ph + 1))
-          hover = range(i, n) + ": " + bins[i] + (in ? " (in target window)" : "");
+          tooltip(this, i, range(i, n) + ": " + bins[i] + (in ? " (in target window)" : ""), bx, py, bw + 1, ph + 1);
       }
       int tx = px + (int) Math.round(xOf(target) * slot);
       Pixel.fillLogical(g, tx, py, tx + 1, py + ph, Theme.TEXT());
@@ -475,7 +472,6 @@ public final class FlowCharts {
           new int[] {GOOD, LOCAL, Theme.TEXT()},
           null);
       if (total == 0) emptyState(g, px, py, pw, ph, "No eligible confirmed hits (ray contact)");
-      if (hover != null) tooltip(g, hover, mx, my);
     }
 
     /** Slot coordinate (in bins) of a reach value. */
@@ -539,14 +535,13 @@ public final class FlowCharts {
       g.text(f, top, px - 4 - f.width(top), py, Theme.DIM(), false);
       g.text(f, "0", px - 4 - f.width("0"), zero - 4, Theme.DIM(), false);
       g.text(f, bottom, px - 4 - f.width(bottom), py + ph - 8, Theme.DIM(), false);
-      String hover = null;
       int n = Math.max(1, points.size());
       for (int i = 0; i < points.size(); i++) {
         var p = points.get(i);
         int cx = px + 3 + (int) Math.round((pw - 7) * (n == 1 ? .5 : i / (double) (n - 1)));
         if (p.reset() || !Double.isFinite(p.delta())) {
           Pixel.fillLogical(g, cx, py + ph - 6, cx + 1, py + ph, Theme.MUTED());
-          if (Math.abs(mx - cx) <= 1 && hover(mx, my, px, py, pw, ph)) hover = p.label();
+          if (Math.abs(mx - cx) <= 1 && hover(mx, my, px, py, pw, ph)) tooltip(p, p.label(), cx, py + ph - 6, 1, 6);
           continue;
         }
         double v = Math.max(-range, Math.min(range, p.delta()));
@@ -561,7 +556,7 @@ public final class FlowCharts {
           default -> Pixel.outline(g, cx - 2, cy - 2, 5, 5, 2, 1, color);
         }
         if (Math.abs(mx - cx) <= 2 && Math.abs(my - cy) <= 3 && Viewport.contains(mx, my))
-          hover = p.label();
+          tooltip(p, p.label(), cx - 2, cy - 3, 5, 7);
       }
       String axis = "attempt order; y = interval minus expected cooldown (ticks)";
       g.text(f, KButton.fit(f, axis, pw), px, py + ph + 3, Theme.DIM(), false);
@@ -575,7 +570,6 @@ public final class FlowCharts {
           new boolean[] {false, false, false, false, true, false});
       if (points.isEmpty())
         emptyState(g, px, py, pw, ph, "No attack timing samples for this filter");
-      if (hover != null) tooltip(g, hover, mx, my);
     }
   }
 
@@ -621,7 +615,6 @@ public final class FlowCharts {
       int c0 = px + (int) Math.round(RANGE * slot);
       Pixel.outline(g, c0, py, Math.max(2, (int) Math.round(slot)), ph, 2, 1, GOOD);
       Pixel.fillLogical(g, px, py + ph, px + pw, py + ph + 1, Theme.BORDER());
-      String hover = null;
       int dot = Math.max(2, Math.min(5, (int) (slot / 2)));
       for (int i = 0; i < counts.length; i++) {
         int cx = px + (int) Math.round((i + .5) * slot);
@@ -634,7 +627,7 @@ public final class FlowCharts {
         }
         if (hover(mx, my, px + (int) Math.round(i * slot), py, (int) Math.ceil(slot), ph + 1)) {
           int offset = i - RANGE;
-          hover =
+          String hover =
               (offset == -RANGE ? "<= " : offset == RANGE ? ">= " : "")
                   + (offset > 0 ? "+" : "")
                   + offset
@@ -643,6 +636,7 @@ public final class FlowCharts {
                   + (offset == 0
                       ? " (same tick: ideal-timing candidate)"
                       : Math.abs(offset) <= window ? " (attempt candidate)" : " (outside window)");
+          tooltip(this, i, hover, px + (int) Math.round(i * slot), py, (int) Math.ceil(slot), ph + 1);
         }
       }
       for (int o : new int[] {-RANGE, -window, 0, window, RANGE}) {
@@ -653,7 +647,6 @@ public final class FlowCharts {
       String unit = "jump tick minus incoming-hit tick (early is negative)";
       g.text(f, KButton.fit(f, unit, pw), px, py + ph + 14, Theme.DIM(), false);
       if (max == 0) emptyState(g, px, py, pw, ph, "No actual jumps near attributed incoming hits");
-      if (hover != null) tooltip(g, hover, mx, my);
     }
   }
 }

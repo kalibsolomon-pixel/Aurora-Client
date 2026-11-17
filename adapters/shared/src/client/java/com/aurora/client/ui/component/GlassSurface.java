@@ -173,6 +173,7 @@ public final class GlassSurface {
     public static void beginFrame() {
         MaterialSurface.beginFrame();
         com.aurora.client.ui.util.UiLayerCache.beginFrame();
+        TooltipPresenter.beginFrame(com.aurora.client.adapter.NativeUi.screen(Minecraft.getInstance()));
         com.aurora.client.ui.util.MaterialIconRenderer.beginFrame();
         com.aurora.client.ui.util.AuroraFontQuality.beginFrame();
         // Closes a window text scope an exception left open last frame.

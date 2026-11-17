@@ -4,16 +4,13 @@ import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.component.MaterialSurface;
-import com.aurora.client.util.HoverAnim;
+import com.aurora.client.ui.component.TooltipPresenter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.network.chat.Component;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Supplier;
 
 /**
@@ -130,14 +127,21 @@ public abstract class FeatureSetting {
             return;
         }
         int textY = AuroraFontRenderer.blockY(font, y + box.y(), box.height(), compactRow.lines().size() + (valueLineHeight(font) > 0 ? 1 : 0));
+        int textTop = textY;
+        int textX = x + box.x();
+        boolean labelHovered = false;
         for (String line : compactRow.lines()) {
-            int textX = x + box.x();
             ctx.text(font, line, textX, textY, color, false);
-            trackLabelHover(tooltipKey(), this::currentDescription, textX, textY, font.width(line), font.lineHeight,
-                    mouseX, mouseY, isDisabled());
+            if (!labelHovered && !isDisabled() && hoveredLabelPixel(textX, textY, font, line, mouseX, mouseY)) labelHovered = true;
             textY += AuroraFontRenderer.linePitch(font);
         }
+        if (labelHovered) TooltipPresenter.offer(tooltipKey(), currentDescription(), textX, textTop - 1,
+                box.width(), textY - textTop + 2);
         drawValueLine(ctx, x + box.x(), textY, isDisabled());
+    }
+
+    private static boolean hoveredLabelPixel(int x, int y, Font font, String text, int mouseX, int mouseY) {
+        return hostBand().contains(mouseX, mouseY) && TooltipPresenter.hit(x, y - 1, font.width(text), font.lineHeight + 2, mouseX, mouseY);
     }
 
 
@@ -555,6 +559,9 @@ public abstract class FeatureSetting {
 
     /** Claim scroll/key focus for this setting. */
     protected void requestFocus() {
+        if (activeFocused != this && (activeFocused instanceof EnumSetting<?> || activeFocused instanceof ColorSetting)) {
+            activeFocused.onDetailScreenClose();
+        }
         activeFocused = this;
     }
 
@@ -576,6 +583,8 @@ public abstract class FeatureSetting {
     public static void clearFocus() {
         activeFocused = null;
     }
+
+    public boolean dismissPopup() { return false; }
 
     // ===== Description rendering =====
     //
@@ -651,109 +660,23 @@ public abstract class FeatureSetting {
         ctx.text(font, fitted, x + (width - font.width(fitted)) / 2, y,
                 MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
     }
+    protected Object tooltipKey() { return this; }
 
-    // ===== Label-hover description tooltip =====
-    //
-    // There is no separate help badge anymore: the setting's label text
-    // itself is the hover target. Dwelling on the text for
-    // {@link #HOVER_DWELL_MS} fades the description tooltip in; moving
-    // the cursor away fades it back out. The tooltip box's corner
-    // chamfer follows the theme's roundness token, like every other
-    // panel.
-
-    /** Continuous hover over a label before its tooltip fades in. */
-    private static final long HOVER_DWELL_MS = 1500L;
-    /** Fade-in / fade-out duration of the description tooltip. */
-    private static final long TOOLTIP_FADE_MS = 200L;
-    /** Max rendered width of the tooltip text before it wraps. */
-    private static final int TOOLTIP_MAX_W = 220;
-
-    /** Per-label dwell-start timestamps, keyed by a caller-supplied id. */
-    private static final Map<String, Long> HOVER_DWELL = new HashMap<>();
-
-    /** Shared 0→1 fade for the tooltip; advanced exactly once per frame
-     *  in {@link #drawPendingTooltip}. Symmetric (§8.3 vocabulary at the
-     *  tooltip's own 200 ms — supplemental-info motion, not the 140 ms
-     *  control-hover duration): the fade-in animates from rest once the
-     *  dwell completes; it does not snap in. */
-    private static final HoverAnim TOOLTIP_FADE = HoverAnim.symmetric(TOOLTIP_FADE_MS);
-
-    /**
-     * Tooltip state for the current frame. Label renderers set
-     * {@code tooltipClaimed} when a dwell completes under the cursor;
-     * {@link #drawPendingTooltip} consumes the claim and resets it, so
-     * owning screens need no begin-frame hook. Content and anchor stay
-     * frozen (and keep drawing, fading) once the cursor leaves so the
-     * box drifts away instead of snapping.
-     */
-    private static boolean tooltipClaimed = false;
-    private static String tooltipContent = null;
-    private static int tooltipX = 0;
-    private static int tooltipY = 0;
-
-    /** One prepared layout, released with the fully faded tooltip. */
-    private record PreparedTooltip(String content, Font font, net.minecraft.locale.Language language,
-                                   long generation, int styleKey,
-                                   List<FormattedCharSequence> lines, int textW) {}
-    private static PreparedTooltip tooltipLayout = null;
-
-    /** Stable per-instance key for {@link #HOVER_DWELL}. */
-    protected String tooltipKey() {
-        return "s" + Integer.toHexString(System.identityHashCode(this));
-    }
-
-    /**
-     * Hit-tests one label-text region for the description tooltip dwell.
-     * Every label renderer calls this each frame; dwell timing and claim
-     * bookkeeping are centralized here so callers stay one-liners.
-     * Leaving the region (or losing the description) resets the dwell.
-     * The description arrives as a supplier and is only evaluated once the
-     * label is actually hovered — dynamic descriptions (live stats,
-     * per-value enum text) must not be built every frame for every row.
-     */
-    protected static void trackLabelHover(String key, Supplier<String> desc, int x, int y,
-                                          int textW, int lineH,
-                                          int mouseX, int mouseY, boolean disabled) {
-        boolean hovered = !disabled
-                && mouseX >= x && mouseX < x + Math.max(1, textW)
-                && mouseY >= y - 1 && mouseY < y + lineH + 1;
-        if (!hovered) {
-            HOVER_DWELL.remove(key);
-            return;
-        }
-        String text = desc.get();
-        if (text == null || text.isEmpty()) {
-            HOVER_DWELL.remove(key);
-            return;
-        }
-        long now = System.currentTimeMillis();
-        // Warm hand-off (premium-design audit, 2026-10-19): while a description
-        // tooltip is still on screen (visible or fading out), the next label's
-        // tooltip opens immediately; only the FIRST tooltip pays the dwell.
-        boolean warm = tooltipContent != null && !text.equals(tooltipContent);
-        long start = HOVER_DWELL.computeIfAbsent(key, k -> warm ? now - HOVER_DWELL_MS : now);
-        if (now - start >= HOVER_DWELL_MS) {
-            tooltipClaimed = true;
-            tooltipContent = text;
-            tooltipX = mouseX;
-            tooltipY = mouseY;
+    protected static void trackLabelHover(Object key, Supplier<String> desc, int x, int y,
+                                          int textW, int lineH, int mouseX, int mouseY, boolean disabled) {
+        if (!disabled && (hostBand == null || hostBand.contains(mouseX, mouseY))
+                && TooltipPresenter.hit(x, y - 1, textW, lineH + 2, mouseX, mouseY)) {
+            TooltipPresenter.offer(key, desc.get(), x, y - 1, textW, lineH + 2);
         }
     }
 
-    /**
-     * The description tooltip for a region outside a settings list (cards and
-     * grids on other screens), on the same dwell and painter. The screen
-     * calls {@link #drawPendingTooltip} last in its frame.
-     */
-    public static void hoverTooltip(String key, Supplier<String> text, int x, int y, int w, int h,
-                                    int mouseX, int mouseY) {
-        trackLabelHover(key, text, x, y + 1, w, h - 2, mouseX, mouseY, false);
+    public static void hoverTooltip(Object key, String text, int x, int y, int w, int h, int mouseX, int mouseY) {
+        if (TooltipPresenter.hit(x, y, w, h, mouseX, mouseY)) TooltipPresenter.offer(key, text, x, y, w, h);
     }
-
     /**
      * Draws {@code text} at {@code (x, y)} in {@code color} and binds the
      * text bounds to this setting's description tooltip: dwelling on the
-     * label itself for {@link #HOVER_DWELL_MS} fades the description in,
+     * label itself for {@link TooltipPresenter#DWELL_MS} fades the description in,
      * moving the cursor away fades it back out.
      */
     protected void renderLabelWithTooltip(GuiGraphicsExtractor ctx, String text, int x, int y,
@@ -806,73 +729,7 @@ public abstract class FeatureSetting {
                 count * (AuroraFontRenderer.linePitch(font)), mouseX, mouseY, disabled);
     }
 
-    /** Reuse wrapping and measurement while content and font metrics are unchanged. */
-    private static PreparedTooltip prepareTooltipLines(Font tr) {
-        long generation = ThemeManager.generation();
-        int styleKey = com.aurora.client.ui.util.AuroraFontRenderer.styleKey();
-        // Vanilla replaces Language on every successful resource reload, even
-        // when the selected locale and literal text stay the same. Like
-        // Component's visual-order cache, keep its identity to invalidate
-        // wrapped sequences after font-pack or bidi resource changes too.
-        var language = net.minecraft.locale.Language.getInstance();
-        PreparedTooltip cur = tooltipLayout;
-        if (cur == null || !tooltipContent.equals(cur.content()) || tr != cur.font()
-                || language != cur.language() || generation != cur.generation() || styleKey != cur.styleKey()) {
-            List<FormattedCharSequence> lines =
-                    tr.split(Component.literal(tooltipContent), TOOLTIP_MAX_W);
-            int textW = 0;
-            for (var l : lines) textW = Math.max(textW, tr.width(l));
-            cur = new PreparedTooltip(tooltipContent, tr, language, generation, styleKey, lines, textW);
-            tooltipLayout = cur;
-        }
-        return cur;
-    }
-
-    /**
-     * Advances the tooltip fade and draws it, clamped inside the screen.
-     * Owning screens call this once, after all rows and overlays; the
-     * call also consumes the per-frame claim so the next frame starts
-     * fresh. Every layer — shadow, box, outline, text — is alpha-scaled
-     * by the fade value, and the box's corner chamfer conforms to the
-     * Theme module's roundness option.
-     */
-    public static void drawPendingTooltip(GuiGraphicsExtractor ctx, int screenW, int screenH) {
-        float fade = TOOLTIP_FADE.update(tooltipClaimed);
-        tooltipClaimed = false;
-        if (tooltipContent == null) return;
-        if (fade <= 0.001f) {
-            tooltipContent = null; // fully faded out — drop the content and its prepared layout
-            tooltipLayout = null;
-            return;
-        }
-        Font tr = Minecraft.getInstance().font;
-        if (tr == null) return;
-        PreparedTooltip layout = prepareTooltipLines(tr);
-        List<FormattedCharSequence> lines = layout.lines();
-        int textW = layout.textW();
-        int boxW = textW + 12;
-        int boxH = lines.size() * AuroraFontRenderer.linePitch(tr) + 8;
-        int bx = tooltipX + 12;
-        int by = tooltipY + 12;
-        if (bx + boxW > screenW - 4) bx = screenW - 4 - boxW;
-        if (by + boxH > screenH - 4) by = screenH - 4 - boxH;
-        if (bx < 4) bx = 4;
-        if (by < 4) by = 4;
-        // Corner chamfer conforms to the Theme module's roundness option.
-        int radius = ThemeManager.current().roundness().radius();
-        MaterialSurface.floating(ctx, bx, by, boxW, boxH, radius, fade);
-        // ON_OVERLAY is the tooltip-text role every other tooltip in the
-        // codebase reads (Profile/Waypoint rows, the pack-browser toast).
-        int textColor = fadeColor(MaterialSurface.unified() ? MaterialSurface.color(ThemeToken.ON_BACKGROUND) : ThemeManager.color(ThemeToken.ON_OVERLAY), fade);
-        int ty = AuroraFontRenderer.blockY(tr, by, boxH, lines.size());
-        for (var l : lines) {
-            ctx.text(tr, l, bx + 6, ty, textColor, false);
-            ty += AuroraFontRenderer.linePitch(tr);
-        }
-    }
-
-    /** Scales the alpha byte of {@code argb} by {@code t} (0..1). */
-    private static int fadeColor(int argb, float t) {
-        return com.aurora.client.util.AuroraAnim.scaleAlpha(argb, t);
+    public static void drawPendingTooltip(GuiGraphicsExtractor ctx, int left, int top, int width, int height) {
+        TooltipPresenter.draw(ctx, left, top, width, height);
     }
 }

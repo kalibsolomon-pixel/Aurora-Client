@@ -436,6 +436,12 @@ low-emphasis edge and shadow, respects theme roundness, and does not inherit the
 opacity merely because it originated inside that window. This is a material-depth decision,
 not adaptive contrast behavior.
 
+`TooltipPresenter` shares the raised opaque overlay raster with dropdowns and the colour
+editor. It caps text at 220 GUI px before padding (6 px horizontal, 4 px vertical), wraps
+between words, and fits the result inside the window and screen with an 8 px margin. It
+prefers below-right, then flips or clamps without painting the face over the source.
+Vanilla item tooltips are unchanged.
+
 ### 7.4 Integration invariants
 
 The following are both design and renderer-safety rules:
@@ -602,7 +608,7 @@ Aurora uses a small semantic vocabulary:
 | Micro interaction | Hover and compact state response | 120–150 ms; canonical hover is 140 ms. |
 | Press | Immediate accepted-input response | Approximately 90 ms where compression fits. |
 | Recovery/state settling | Return from press or settle a discrete state | Approximately 150–200 ms, restrained overshoot only where physical. |
-| Structural transition | Popup/modal or context-preserving structural change | Longer than micro motion, but brief and non-blocking. |
+| Structural transition | Anchored dropdown or colour editor | 120 ms open, 90 ms close; ease-out, opacity and 96–100% scale. |
 | Continuous manipulation | Slider drag, scrolling, toggle interpolation | Direct manipulation or smooth convergence, not staged decoration. |
 
 Preferred easing principles:
@@ -616,13 +622,15 @@ Preferred easing principles:
 Use existing `AuroraAnim` capabilities where they fit. The design language does not require a
 new animation framework.
 
-Aurora has no mandatory universal screen transition. Future transitions should preserve
-spatial/contextual continuity, avoid delaying interaction, use the shared vocabulary, and
-avoid gratuitous full-screen motion. Modal transitions may be more explicit because they
-communicate depth.
+Window entry and exit stay immediate. A window-wide pose or fade would need to preserve
+stationary input, clip geometry and glass sampling across the capture and above-dim passes.
+Only floating overlays animate their local pose; settled text draws without a transform.
 
-Architecture should allow larger structural animation to be reduced or disabled later. Sound
-and animation must not be the sole confirmation of an operation.
+Tooltips retain a 1500 ms initial dwell and 200 ms fade, with immediate hand-off while a
+tooltip is still visible or fading. General → Interface → Reduced Motion (off by default)
+keeps the dwell but removes the fade, snaps overlays to their endpoints and jumps to the
+keyboard reveal target. Pulsar also honours its own motion preference. Sound and animation
+must not be the sole confirmation of an operation.
 
 ## 10. Sound
 
@@ -787,6 +795,8 @@ the accent-filled call to action under its hint.
   padding; the chevron centres on the same optical axis as the value. Expanded options retain their existing alignment.
 - **States:** field hover/press/focus/disabled; expanded state; option hover/focus/selected/
   disabled where applicable.
+- **Placement:** attached to the field, below when it fits and above near the bottom;
+  use the same resolved bounds for rendering and pointer input.
 - **Input/accessibility:** pointer open/select/outside-dismiss; keyboard open, navigate,
   choose, and dismiss; narration identifies current value and expanded state.
 - **Sound:** activation for open/close and selection for a changed value, avoiding duplicate
@@ -816,6 +826,8 @@ the accent-filled call to action under its hint.
 - **Material:** represented color is data; surrounding selection/action chrome follows theme.
 - **Geometry:** swatch clipping follows theme roundness when rectangular; checkerboard is an
   implementation/data pattern.
+- **Editor:** an opaque floating panel attached to the swatch; it does not reflow the list.
+  It flips upward near the bottom and reduces the editing pad on short or narrow viewports.
 - **States:** hover, press, selection, focus, and disabled, without changing the represented
   color itself.
 - **Input/accessibility:** accessible label includes a useful color value/name when possible;
@@ -1108,8 +1120,10 @@ reapplies the clip.
 
 Rendered visibility and interactive availability must agree:
 
-- A visually hidden or clipped item is not clickable, focusable, draggable, or scroll-
-  addressable outside the effective viewport.
+- A visually hidden or clipped item is not clickable or draggable outside the effective
+  viewport. A present (not conditionally hidden) hosted control can receive traversal
+  focus while clipped, but cannot activate until visible. Its list scrolls just far enough
+  to reveal it, with an 8 px margin where the extent allows it.
 - Manual hit testing uses the same dynamic row geometry and effective clip/fade boundary as
   rendering.
 - Modal dim/above-dim ordering also applies to input: covered background controls cannot
@@ -1489,7 +1503,7 @@ cards keep their original 80×80 size; the window must not be oversized for the 
   Feature cards stay 80×80 with 6 px gaps (3 columns, 3 rows visible); list rows are 24 px
   with 4 px gaps, nine visible (owner decision 2026-11-14; 32 px rows were half empty).
 - **Per-pixel color gradients.** Both color pickers (`ColorPickerScreen` and
-  `ColorSetting`'s expanded inline editor) rasterize the saturation/lightness pad and the
+  `ColorSetting`'s floating editor) rasterize the saturation/lightness pad and the
   hue/alpha strips one sample per DEVICE pixel into small `UiLayerCache` buffers
   (`writeArgb`), blitted per frame and re-rasterized only for the value they display —
   the former GUI-cell grids (40×40 / 32×32) banded visibly at every GUI scale. Preview
@@ -1654,7 +1668,7 @@ current frame is additional to the retention cap. Reusing a template never mutat
 No new callbacks,
 dependencies or frameworks are introduced. No new per-frame lighting math or static GUI
 fills; the control shadow adds a cached blit. Text, icons, headings, sidebar, scrollbars,
-focus rings, tooltips, represented swatch/crosshair/checkerboard data and the title screen /
+focus rings, represented swatch/crosshair/checkerboard data and the title screen /
 HUD editor retain their existing treatment; search fields moved to the inset recipe with the
 2026-11-17 owner report (superseding this pass's earlier "search glass" exclusion).
 

@@ -12,6 +12,7 @@
   "textCase": "NORMAL",
   "textHudShadow": "NORMAL",
   "searchInstant": true,
+  "reducedMotion": false,
   "searchTypoTolerance": 2,
   "themeEnabled": true,
   "theme": {
