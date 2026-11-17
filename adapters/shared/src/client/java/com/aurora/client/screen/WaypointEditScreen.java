@@ -9,6 +9,7 @@ import com.aurora.client.ui.component.Button;
 import com.aurora.client.ui.component.ButtonWidget;
 import com.aurora.client.ui.component.MaterialSurface;
 import com.aurora.client.ui.component.ThemedScreen;
+import com.aurora.client.util.HexText;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
@@ -29,6 +30,8 @@ public final class WaypointEditScreen extends Screen implements ThemedScreen {
     private final EditBox[] fields = new EditBox[7];
     private final String[] labels = {"Name", "X / Y / Z", "Dimension", "Group", "Description", "Color (ARGB)", ""};
     private String error = "";
+    /** Whether {@link #error} names a field problem (cleared live) rather than a save-time condition. */
+    private boolean errorFromFields;
     private int left, top, panelWidth;
     private ButtonWidget visible, marker;
 
@@ -61,10 +64,17 @@ public final class WaypointEditScreen extends Screen implements ThemedScreen {
             fields[i] = new EditBox(font, left + 12 + LABEL_W, fieldY(i), panelWidth - 24 - LABEL_W, FIELD_H, Component.literal(labels[i]));
             fields[i].setMaxLength(i == 4 ? 256 : 128);
             fields[i].setValue(values[i] == null ? "" : values[i]);
-            if (i == 5) fields[i].setResponder(value -> {
-                String hex = value.replace("#", "");
-                if (hex.matches("[0-9a-fA-F]{8}")) draft.color = (int) Long.parseLong(hex, 16);
-            });
+            if (i == 1 || i == 2) {
+                // The checked fields re-validate live, so a field error leaves
+                // the moment the form becomes valid again (§11.12).
+                fields[i].setResponder(value -> clearFieldError());
+            } else if (i == 5) {
+                fields[i].setResponder(value -> {
+                    Integer argb = HexText.parseArgb(value);
+                    if (argb != null) draft.color = argb;
+                    clearFieldError();
+                });
+            }
             addRenderableWidget(fields[i]);
         }
         int bh = com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_H;
@@ -105,34 +115,65 @@ public final class WaypointEditScreen extends Screen implements ThemedScreen {
         return "Marker: " + name.charAt(0) + name.substring(1).toLowerCase(java.util.Locale.ROOT);
     }
 
+    /**
+     * Names the first invalid field (reading order), or null when the form is
+     * valid — the heading's error states are specific, not a checklist
+     * (design language §11.12). Pure check: nothing is mutated.
+     */
+    private String fieldError() {
+        String[] coordinates = fields[1].getValue().trim().split("[ ,]+");
+        int x, y, z;
+        try {
+            if (coordinates.length != 3) throw new IllegalArgumentException();
+            x = Integer.parseInt(coordinates[0]);
+            y = Integer.parseInt(coordinates[1]);
+            z = Integer.parseInt(coordinates[2]);
+        } catch (RuntimeException invalid) {
+            return "X / Y / Z: use three numbers";
+        }
+        if (Math.abs((long) x) > 30_000_000 || Math.abs((long) z) > 30_000_000 || y < -2048 || y > 2048)
+            return "X / Y / Z: out of range";
+        if (!fields[2].getValue().trim().matches("[a-z0-9_.-]+:[a-z0-9_./-]+"))
+            return "Dimension: like minecraft:overworld";
+        if (HexText.parseArgb(fields[5].getValue()) == null)
+            return "Color: 8 hex digits, like 6633CCFF";
+        return null;
+    }
+
+    /** Live clear: a field error leaves as soon as the form validates again. */
+    private void clearFieldError() {
+        if (errorFromFields && fieldError() == null) {
+            error = "";
+            errorFromFields = false;
+        }
+    }
+
     private boolean remember() {
         if (fields[0] == null) return true;
+        String problem = fieldError();
+        if (problem != null) {
+            error = problem;
+            errorFromFields = true;
+            return false;
+        }
         draft.name = fields[0].getValue().trim();
         draft.dimension = fields[2].getValue().trim();
         draft.group = fields[3].getValue().trim();
         draft.description = fields[4].getValue().trim();
-        try {
-            String[] coordinates = fields[1].getValue().trim().split("[ ,]+");
-            if (coordinates.length != 3) throw new IllegalArgumentException();
-            int x = Integer.parseInt(coordinates[0]), y = Integer.parseInt(coordinates[1]), z = Integer.parseInt(coordinates[2]);
-            if (Math.abs((long) x) > 30_000_000 || Math.abs((long) z) > 30_000_000 || y < -2048 || y > 2048)
-                throw new IllegalArgumentException();
-            if (!draft.dimension.matches("[a-z0-9_.-]+:[a-z0-9_./-]+")) throw new IllegalArgumentException();
-            String color = fields[5].getValue().replace("#", "");
-            if (!color.matches("[0-9a-fA-F]{8}")) throw new IllegalArgumentException();
-            draft.color = (int) Long.parseLong(color, 16);
-            draft.x = x; draft.y = y; draft.z = z;
-            return true;
-        } catch (RuntimeException invalid) {
-            error = "Check coordinates, dimension and 8-digit color.";
-            return false;
-        }
+        String[] coordinates = fields[1].getValue().trim().split("[ ,]+");
+        draft.x = Integer.parseInt(coordinates[0]);
+        draft.y = Integer.parseInt(coordinates[1]);
+        draft.z = Integer.parseInt(coordinates[2]);
+        draft.color = HexText.parseArgb(fields[5].getValue());
+        return true;
     }
 
     private void save() {
         if (!remember()) return;
         if (!java.util.Objects.equals(scope, WaypointFeature.scopeKey()) || scope == null) {
-            error = "World changed; reopen the editor in that world."; return;
+            error = "World changed; reopen the editor in that world.";
+            errorFromFields = false;
+            return;
         }
         if (draft.name.isBlank()) draft.name = "Waypoint";
         WaypointFeature feature = WaypointFeature.get();

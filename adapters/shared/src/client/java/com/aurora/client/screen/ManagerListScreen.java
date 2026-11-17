@@ -56,7 +56,9 @@ import java.util.function.BooleanSupplier;
  *       on both screens by construction now.</li>
  *   <li>The inline rename editor ({@code EditBox}) lifecycle: open on row
  *       click, ENTER/KP_ENTER commit, ESCAPE cancel, click-outside commit —
- *       with the <b>apply</b> step left to {@link #applyRename}.</li>
+ *       with the <b>apply</b> step left to {@link #applyRename}, and a name
+ *       {@link #renameProblem} refuses keeping the editor open with the
+ *       message under the field (design language §11.12).</li>
  *   <li>Ellipsis truncation of row names, memoized per raw name (the
  *       per-character {@code font.width()} loop must not run every row,
  *       every frame).</li>
@@ -121,6 +123,10 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
     /** Inline rename editor state. {@code -1} = not editing. */
     protected int editingIndex = -1;
     protected EditBox nameField;
+    /** The row the editor was opened on (validation input for {@link #renameProblem}); null when unset. */
+    protected T editingRow;
+    /** Refusal message under the open editor's field (null = the typed name is acceptable); design language §11.12. */
+    protected String editorError;
 
     // Which rows' glass drew this frame (glass pass), so the flat row body
     // is drawn for exactly the rows whose glass declined.
@@ -984,30 +990,56 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
     protected void startEditing(int index, String currentValue) {
         commitEditors();
         editingIndex = index;
+        List<T> rows = currentRows();
+        editingRow = index < rows.size() ? rows.get(index) : null;
+        editorError = null;
         nameField = new EditBox(this.font, 0, 0, nameColumnWidth(), 16, Component.literal("Name"));
         nameField.setMaxLength(48);
         nameField.setValue(currentValue);
         nameField.setFocused(true);
         nameField.moveCursorToEnd(false);
+        // Live recompute (design language §11.12): the message appears while
+        // the typed name is refusable and clears the moment it is acceptable.
+        nameField.setResponder(value -> {
+            if (editingRow == null) return;
+            String v = value.trim();
+            editorError = v.isEmpty() ? null : renameProblem(editingRow, v);
+        });
     }
 
     /** Applies the edited value (non-empty, trimmed) to the row it was opened on. */
     protected abstract void applyRename(T row, String newValue);
 
+    /**
+     * Refusal rule for the inline rename, on the same row/value pair
+     * {@link #applyRename} would receive: return the short message shown under
+     * the field, or {@code null} to accept. Default: every non-empty name is
+     * acceptable (the Waypoint list has no name constraints).
+     */
+    protected String renameProblem(T row, String candidate) { return null; }
+
     /** Commits/cancels every open editor on this screen (the Profile screen has two). */
     protected abstract void commitEditors();
 
     /**
-     * Commits the rename editor: resolves the edited row in the live list,
-     * closes the editor, and hands the trimmed value to
-     * {@link #applyRename} when non-empty. Empty values cancel.
+     * Commits the rename editor: resolves the edited row in the live list and
+     * hands the trimmed value to {@link #applyRename} when non-empty. Empty
+     * values cancel. A name {@link #renameProblem} refuses keeps the editor
+     * open — the user's text and focus stay, with the message under the field
+     * (design language §11.12); nothing invalid is ever applied.
      */
     protected void commitEdit() {
         if (editingIndex < 0 || nameField == null) return;
         List<T> rows = currentRows();
         if (editingIndex >= rows.size()) { cancelEdit(); return; }
         T row = rows.get(editingIndex);
+        editingRow = row;
         String v = nameField.getValue().trim();
+        String problem = v.isEmpty() ? null : renameProblem(row, v);
+        if (problem != null) {
+            editorError = problem;
+            return;
+        }
         cancelEdit();
         if (!v.isEmpty()) applyRename(row, v);
     }
@@ -1015,6 +1047,8 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
     /** Closes the rename editor without applying. */
     protected void cancelEdit() {
         editingIndex = -1;
+        editingRow = null;
+        editorError = null;
         nameField = null;
     }
 
@@ -1070,6 +1104,20 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         if (field == null) return;
         ctx.enableScissor(listX - 4, listClipTop(), listX + listWidth() + 4, listClipBottom());
         field.extractRenderState(ctx, mouseX, mouseY, delta);
+        ctx.disableScissor();
+    }
+
+    /**
+     * Draws a validation message under an inline editor field, under the same
+     * list clip the editor renders in (C-8: a partly scrolled-out message
+     * paints only its visible pixels, a hidden one nothing). Call from the
+     * screen tail after the field itself.
+     */
+    protected void renderFieldMessage(GuiGraphicsExtractor ctx, EditBox field, String message, int listX) {
+        if (field == null || message == null) return;
+        ctx.enableScissor(listX - 4, listClipTop(), listX + listWidth() + 4, listClipBottom());
+        com.aurora.client.ui.util.FieldMessage.draw(ctx, this.font, message,
+                field.getX(), field.getY() + field.getHeight(), nameColumnWidth());
         ctx.disableScissor();
     }
 

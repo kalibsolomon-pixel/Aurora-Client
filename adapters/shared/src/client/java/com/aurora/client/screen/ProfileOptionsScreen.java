@@ -1,6 +1,7 @@
 package com.aurora.client.screen;
 
 import com.aurora.client.config.profile.ProfileManager;
+import com.aurora.client.config.profile.ProfileNameValidator;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.component.Button;
@@ -9,6 +10,7 @@ import com.aurora.client.ui.component.GlassSurface;
 import com.aurora.client.ui.component.MaterialSurface;
 import com.aurora.client.ui.component.ThemedScreen;
 import com.aurora.client.ui.util.AuroraFontRenderer;
+import com.aurora.client.ui.util.FieldMessage;
 import com.aurora.client.ui.util.MaterialIconRenderer;
 import com.aurora.client.ui.util.UiDensity;
 import com.aurora.client.util.AuroraKey;
@@ -41,6 +43,8 @@ public class ProfileOptionsScreen extends Screen implements ThemedScreen {
 
     private final Screen parent;
     private String name;
+    /** Refusal message under the Name field (null = the field is valid); design language §11.12. */
+    private String nameError;
 
     private int panelX, panelY, panelW, panelH;
     private int colX, colW, iconRowY, nameRowY, hotkeyRowY;
@@ -85,6 +89,11 @@ public class ProfileOptionsScreen extends Screen implements ThemedScreen {
         nameField = new EditBox(this.font, fieldX, nameRowY, fieldW, ROW_H, Component.literal("Name"));
         nameField.setMaxLength(48);
         nameField.setValue(name);
+        // Live recompute (design language §11.12): the message appears the
+        // moment the typed name becomes refusable and clears when it is valid
+        // again — the same field-to-message contract the hex fields follow.
+        nameField.setResponder(value -> nameError = ProfileNameValidator.problem(
+                value.trim(), ProfileManager.getInstance().listProfileNames(), name));
         this.addRenderableWidget(nameField);
 
         hotkeyBtn = this.addRenderableWidget(ButtonWidget.semantic(fieldX, hotkeyRowY, fieldW, ROW_H,
@@ -114,7 +123,7 @@ public class ProfileOptionsScreen extends Screen implements ThemedScreen {
 
         int bh = UiDensity.HEADER_BUTTON_H, bw = UiDensity.HEADER_BUTTON_W;
         this.addRenderableWidget(ButtonWidget.semantic(panelX + panelW - 12 - bw, panelY + panelH - 8 - bh, bw, bh,
-                Component.literal("Done"), "Saves the name and returns.", this::onClose)
+                Component.literal("Done"), "Saves the name and returns.", this::done)
                 .glassStyle(Button.GlassStyle.STAINED).primary(true));
     }
 
@@ -161,19 +170,30 @@ public class ProfileOptionsScreen extends Screen implements ThemedScreen {
         deleteBtn.setMessage(Component.literal(armed ? "Confirm delete" : "Delete"));
     }
 
-    /** Applies an edited name; an empty or taken name keeps the old one. */
-    private void commitRename() {
-        if (nameField == null) return;
+    /**
+     * Applies an edited name. A refused name never silently reverts: the
+     * message under the field says why, the user's text stays for editing and
+     * {@code false} comes back so Done keeps the screen open (design language
+     * §11.12). Validation is {@link ProfileNameValidator} — the manager's own
+     * rules, not a copy.
+     */
+    private boolean commitRename() {
+        if (nameField == null) return true;
         String value = nameField.getValue().trim();
-        if (value.isEmpty() || value.equals(name)) {
+        if (value.equals(name)) {
             nameField.setValue(name);
-            return;
+            nameError = null;
+            return true;
         }
-        if (ProfileManager.getInstance().rename(name, value)) {
+        String problem = ProfileNameValidator.problem(value,
+                ProfileManager.getInstance().listProfileNames(), name);
+        if (problem == null && ProfileManager.getInstance().rename(name, value)) {
             name = value;
-        } else {
-            nameField.setValue(name);
+            nameError = null;
+            return true;
         }
+        nameError = problem != null ? problem : "Could not rename";
+        return false;
     }
 
     private static String uniqueName(String base) {
@@ -192,10 +212,29 @@ public class ProfileOptionsScreen extends Screen implements ThemedScreen {
         com.aurora.client.adapter.NativeUi.setScreen(this.minecraft, parent);
     }
 
+    /**
+     * Done: apply and return. A refused name keeps the screen open with the
+     * user's text and the message under the field (design language §11.12) —
+     * fix it or Escape to discard.
+     */
+    private void done() {
+        String before = name;
+        if (!commitRename()) return;
+        close(before.equals(name) ? null : "Renamed → " + name);
+    }
+
+    /**
+     * Escape/close: a valid name is applied as before; a refused one reverts
+     * to the old name (an invalid value is never committed) and the screen
+     * still closes — Escape keeps its unwinding meaning.
+     */
     @Override
     public void onClose() {
         String before = name;
-        commitRename();
+        if (!commitRename()) {
+            nameField.setValue(name);
+            nameError = null;
+        }
         close(before.equals(name) ? null : "Renamed → " + name);
     }
 
@@ -210,8 +249,9 @@ public class ProfileOptionsScreen extends Screen implements ThemedScreen {
         }
         if (nameField != null && nameField.isFocused()
                 && (key == InputConstants.KEY_RETURN || key == InputConstants.KEY_NUMPADENTER)) {
-            commitRename();
-            nameField.setFocused(false);
+            // A refused name keeps focus, the typed text and the message; a
+            // valid one commits and releases the field.
+            if (commitRename()) nameField.setFocused(false);
             return true;
         }
         // Escape unwinds one layer at a time (design language §8.7): an armed
@@ -299,6 +339,12 @@ public class ProfileOptionsScreen extends Screen implements ThemedScreen {
         ctx.text(this.font, "Hotkey", colX, hotkeyRowY + labelDy, secondary, false);
 
         super.extractRenderState(ctx, mouseX, mouseY, delta);
+
+        // The refusal message sits in the gap under the Name field (the 10 px
+        // band between the rows), fitted to the field's own column.
+        if (nameError != null) {
+            FieldMessage.draw(ctx, this.font, nameError, colX + LABEL_W, nameRowY + ROW_H, colW - LABEL_W);
+        }
     }
 
     @Override

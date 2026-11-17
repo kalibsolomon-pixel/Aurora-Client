@@ -599,7 +599,7 @@ public class ProfileManager {
     // ------------------------------------------------------------------
 
     private Path pathFor(String name) {
-        return profilesDir().resolve(sanitizeName(name) + ".json");
+        return profilesDir().resolve(ProfileNameValidator.sanitize(name) + ".json");
     }
 
     private Profile readProfileFile(String name) {
@@ -688,16 +688,13 @@ public class ProfileManager {
         return listProfileNames().contains(name);
     }
 
+    /**
+     * Syntax gate, delegated to {@link ProfileNameValidator} so the CRUD rules
+     * and the screens' refusal messages share one definition. Membership is
+     * checked separately by {@link #nameExists}.
+     */
     private static boolean isValidName(String name) {
-        return name != null && !name.isEmpty()
-                && !name.trim().isEmpty()
-                && name.length() <= 64
-                && !sanitizeName(name).isEmpty();
-    }
-
-    /** Replace filesystem-illegal characters with underscore. */
-    private static String sanitizeName(String name) {
-        return name.trim().replaceAll("[<>:\"/\\\\|?*\u0000-\u001f]", "_");
+        return ProfileNameValidator.problem(name, java.util.List.of(), name) == null;
     }
 
     private static String stripJsonExt(String fn) {

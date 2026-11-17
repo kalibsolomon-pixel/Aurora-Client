@@ -8,8 +8,10 @@ import com.aurora.client.ui.component.Button;
 import com.aurora.client.ui.component.ButtonWidget;
 import com.aurora.client.ui.component.ThemedScreen;
 import com.aurora.client.util.ColorEntryHelper;
+import com.aurora.client.util.HexText;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.ui.util.AuroraFontRenderer;
+import com.aurora.client.ui.util.FieldMessage;
 import com.aurora.client.ui.util.UiLayerCache;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -58,6 +60,8 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
     private DragTarget dragging = DragTarget.NONE;
     private EditBox hexField;
     private boolean syncingHex;
+    /** Live refusal message under the hex field (null = the text parses); design language §11.12. */
+    private String hexError;
 
     /**
      * C-8 short-window geometry: the picker is SUPPORTABLE down to a
@@ -190,6 +194,9 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
                 Component.literal("Apply"),
                 "Applies the selected color and returns.",
                 () -> {
+                    // A refused hex keeps the screen open on the message; the
+                    // field's own text is the user's to fix or Escape.
+                    if (hexError != null) return;
                     onApply.accept(currentArgb());
                     com.aurora.client.adapter.NativeUi.setScreen(this.minecraft, parent);
                 }).glassStyle(Button.GlassStyle.STAINED).primary(true));
@@ -203,17 +210,23 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
         return String.format("#%08X", argb);
     }
 
+    /**
+     * Live hex validation (design language §11.12): a parseable value (optional
+     * {@code #}, then exactly 6 or 8 hex digits — the accepted set is unchanged)
+     * drives the surfaces and clears the message; anything else is refused with
+     * the message under the field instead of being silently ignored. Apply is
+     * gated on the same state, so nothing invalid is committed.
+     */
     private void onHexChanged(String s) {
         if (syncingHex) return;
-        String v = s.trim();
-        if (v.startsWith("#")) v = v.substring(1);
-        if (v.length() != 8 && v.length() != 6) return;
-        try {
-            long parsed = Long.parseLong(v, 16);
-            int argb = (int) (v.length() == 6 ? (0xFF000000L | parsed) : parsed);
-            float[] hsla = ColorEntryHelper.argbToHsla(argb);
-            hue = hsla[0]; sat = hsla[1]; lit = hsla[2]; alpha = hsla[3];
-        } catch (NumberFormatException ignored) {}
+        Integer argb = HexText.parseArgbOrRgb(s);
+        if (argb == null) {
+            hexError = "Use 6 hex digits, like 3A7BFF";
+            return;
+        }
+        hexError = null;
+        float[] hsla = ColorEntryHelper.argbToHsla(argb);
+        hue = hsla[0]; sat = hsla[1]; lit = hsla[2]; alpha = hsla[3];
     }
 
     private void syncHexFromState() {
@@ -221,6 +234,9 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
         syncingHex = true;
         try {
             hexField.setValue(formatHex(currentArgb()));
+            // The field now holds the canonical (valid) text — a refusal from
+            // the text the user just replaced must not linger to block Apply.
+            hexError = null;
         } finally {
             syncingHex = false;
         }
@@ -319,6 +335,19 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
         // (No bespoke hex-field outline: the hex EditBox is themed end-to-end by
         // the mod-wide EditBoxMixin — fill, border, text and caret — through
         // this screen's ThemedScreen marker. One implementation, no overlay.)
+
+        // The refusal message under the hex field, word-wrapped in the field's
+        // own column (from the field to the panel inset); the line count
+        // yields to whatever vertical room the pinned action row leaves.
+        if (hexField != null && hexError != null) {
+            int msgX = hexField.getX();
+            int msgW = Math.max(hexField.getWidth(), panelX + panelW - 12 - msgX);
+            int msgY = hexField.getY() + hexField.getHeight() + 3;
+            int btnTop = panelY + panelH - 8 - com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_H;
+            int room = btnTop - msgY;
+            int lines = room >= 2 * tr.lineHeight ? 2 : room >= tr.lineHeight ? 1 : 0;
+            if (lines > 0) FieldMessage.drawWrapped(ctx, tr, hexError, msgX, msgY, msgW, lines);
+        }
     }
 
     /** Version helper: stable key contribution for a float. */
