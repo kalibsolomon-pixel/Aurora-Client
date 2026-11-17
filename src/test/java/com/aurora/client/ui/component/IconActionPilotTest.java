@@ -187,8 +187,14 @@ class IconActionPilotTest {
         assertTrue(s.contains("Component.literal(\"Disable \" + m.displayName())"),
                 "the accessible label names the domain action, not the glyph");
         // The phantom X-KEY hint was C-8's item: resolved by REWORDING to
-        // the real affordance (the badge click) — still no keyPressed.
-        assertEquals(0, count(s, "keyPressed"));
+        // the real affordance (the badge click). The one deliberate handler
+        // since (2026-11-16) is the §8.7 Escape-disarm of the armed Reset
+        // Positions confirmation — the screen still routes no other keys
+        // (the two occurrences are that handler's signature and its super
+        // delegate).
+        assertEquals(2, count(s, "keyPressed"));
+        assertTrue(s.contains("KEY_ESCAPE && resetConfirm.isArmed()"),
+                "the handler's only consumption is disarming an armed confirmation");
         assertTrue(s.contains("X badge: disable"),
                 "C-8 resolution: the hint now describes the badge click truthfully");
         // The badge keeps its status-overlay geometry: the hairline is square.

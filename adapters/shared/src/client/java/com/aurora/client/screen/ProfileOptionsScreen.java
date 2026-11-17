@@ -26,7 +26,8 @@ import net.minecraft.network.chat.Component;
  * the settings glyph on a profile card; a centered dialog on the shared
  * window frame, like {@link ColorPickerScreen}.
  *
- * <p>Delete is destructive and asks once more before it acts; it is hidden
+ * <p>Delete is destructive and asks once more before it acts (press again
+ * within 3 s, design language §8.7); it is hidden
  * for the {@code default} profile and the active profile, which the manager
  * refuses to delete.
  */
@@ -49,7 +50,15 @@ public class ProfileOptionsScreen extends Screen implements ThemedScreen {
     private ButtonWidget deleteBtn;
     private boolean listening;
     private final com.aurora.client.util.KeyCombo.Capture capture = new com.aurora.client.util.KeyCombo.Capture();
-    private boolean deleteArmed;
+    /**
+     * Delete's press-again confirmation (design language §8.7): press 1 arms
+     * (label "Confirm delete"), press 2 within 3 s deletes, and the timeout,
+     * Escape or any other click disarms. Replaces the former ad-hoc
+     * {@code deleteArmed} flag, which never disarmed on its own.
+     */
+    private final com.aurora.client.ui.interaction.ArmedAction deleteConfirm = new com.aurora.client.ui.interaction.ArmedAction();
+    /** The label state {@link #syncDeleteButton} last applied (change detection only). */
+    private boolean deleteBtnArmed;
 
     public ProfileOptionsScreen(Screen parent, String name) {
         super(Component.literal("Profile options"));
@@ -97,9 +106,10 @@ public class ProfileOptionsScreen extends Screen implements ThemedScreen {
         deleteBtn = null;
         if (deletable) {
             deleteBtn = this.addRenderableWidget(ButtonWidget.semantic(colX + colW - half, actionsY, half, ROW_H,
-                    Component.literal(deleteArmed ? "Confirm delete" : "Delete"),
+                    Component.literal(deleteConfirm.isArmed() ? "Confirm delete" : "Delete"),
                     "Deletes this profile and its file. Press again to confirm.",
                     this::delete).destructive(true));
+            deleteBtnArmed = deleteConfirm.isArmed();
         }
 
         int bh = UiDensity.HEADER_BUTTON_H, bw = UiDensity.HEADER_BUTTON_W;
@@ -130,14 +140,25 @@ public class ProfileOptionsScreen extends Screen implements ThemedScreen {
     }
 
     private void delete() {
-        if (!deleteArmed) {
-            deleteArmed = true;
-            if (deleteBtn != null) deleteBtn.setMessage(Component.literal("Confirm delete"));
-            return;
+        if (deleteConfirm.press()) {
+            if (ProfileManager.getInstance().delete(name)) {
+                close("Deleted " + name);
+            }
         }
-        if (ProfileManager.getInstance().delete(name)) {
-            close("Deleted " + name);
-        }
+        syncDeleteButton();
+    }
+
+    /**
+     * Re-labels Delete from the confirmation state — called on press, on the
+     * disarming clicks below, and once per frame, so the 3 s timeout restores
+     * "Delete" with no timer (the state the old flag never left on its own).
+     */
+    private void syncDeleteButton() {
+        if (deleteBtn == null) return;
+        boolean armed = deleteConfirm.isArmed();
+        if (armed == deleteBtnArmed) return;
+        deleteBtnArmed = armed;
+        deleteBtn.setMessage(Component.literal(armed ? "Confirm delete" : "Delete"));
     }
 
     /** Applies an edited name; an empty or taken name keeps the old one. */
@@ -193,6 +214,14 @@ public class ProfileOptionsScreen extends Screen implements ThemedScreen {
             nameField.setFocused(false);
             return true;
         }
+        // Escape unwinds one layer at a time (design language §8.7): an armed
+        // Delete disarms and consumes the press; the next Escape closes. The
+        // hotkey capture above keeps priority — its Escape clears the binding.
+        if (deleteConfirm.isArmed() && key == InputConstants.KEY_ESCAPE) {
+            deleteConfirm.disarm();
+            syncDeleteButton();
+            return true;
+        }
         return super.keyPressed(event);
     }
 
@@ -225,9 +254,9 @@ public class ProfileOptionsScreen extends Screen implements ThemedScreen {
             hotkeyBtn.setMessage(Component.literal(hotkeyLabel()));
             return true;
         }
-        if (deleteArmed && (deleteBtn == null || !deleteBtn.isMouseOver(event.x(), event.y()))) {
-            deleteArmed = false;
-            if (deleteBtn != null) deleteBtn.setMessage(Component.literal("Delete"));
+        if (deleteConfirm.isArmed() && (deleteBtn == null || !deleteBtn.isMouseOver(event.x(), event.y()))) {
+            deleteConfirm.disarm();
+            syncDeleteButton();
         }
         if (nameField != null && !nameField.isMouseOver(event.x(), event.y()) && nameField.isFocused()) {
             commitRename();
@@ -243,6 +272,7 @@ public class ProfileOptionsScreen extends Screen implements ThemedScreen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor ctx, int mouseX, int mouseY, float delta) {
+        syncDeleteButton(); // the confirm timeout restores the label with no timer
         float radius = ThemeManager.current().roundness().radiusLarge();
         GlassSurface.beginGlassPass();
         GlassSurface.container(ctx, panelX, panelY, panelW, panelH, radius);

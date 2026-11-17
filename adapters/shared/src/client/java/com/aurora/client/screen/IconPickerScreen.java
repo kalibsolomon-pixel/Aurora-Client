@@ -273,10 +273,27 @@ public class IconPickerScreen extends Screen implements ThemedScreen {
     public boolean keyPressed(KeyEvent event) {
         int key = event.key();
         if ((key == InputConstants.KEY_RETURN || key == InputConstants.KEY_NUMPADENTER) && !selected.isEmpty()) {
-            apply();
-            return true;
+            // Enter accepts the selection only while it is VISIBLE in the
+            // current results: typing a query can filter the selected icon
+            // out of the grid, and applying that stale selection would pick
+            // an icon the user cannot see among the results shown (the
+            // footer names it, but the grid is the choice surface). When it
+            // is filtered out, Enter falls through — the search field keeps
+            // the key and nothing is applied.
+            if (selectionVisibleInResults()) {
+                apply();
+                return true;
+            }
         }
         return super.keyPressed(event);
+    }
+
+    /** Whether the current selection is one of the current search results. */
+    private boolean selectionVisibleInResults() {
+        for (IconCatalog.Icon icon : results()) {
+            if (icon.name().equals(selected)) return true;
+        }
+        return false;
     }
 
     @Override
