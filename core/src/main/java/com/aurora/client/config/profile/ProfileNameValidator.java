@@ -18,7 +18,8 @@ import java.util.Collection;
  * is "taken" both when an existing profile bears the exact name and when it
  * would sanitize onto another profile's file — and when a rename would
  * sanitize onto the profile's own file (the write-then-delete of a rename to
- * the same path would otherwise destroy the file).
+ * the same path would otherwise destroy the file). File names compare
+ * without case, as case-insensitive file systems do.
  */
 public final class ProfileNameValidator {
     private ProfileNameValidator() {}
@@ -29,6 +30,7 @@ public final class ProfileNameValidator {
     static final String NAME_EMPTY = "Name can't be empty";
     static final String NAME_TAKEN = "Name already used";
     static final String NAME_TOO_LONG = "Name is too long";
+    static final String NAME_CASE_ONLY = "Change more than letter case";
 
     /**
      * @param candidate     the typed name, untrimmed (trailing spaces are not identity).
@@ -44,13 +46,17 @@ public final class ProfileNameValidator {
         String file = sanitize(trimmed);
         if (file.isEmpty()) return NAME_EMPTY;
         if (trimmed.length() > MAX_NAME_LENGTH) return NAME_TOO_LONG;
-        if (currentName != null && !trimmed.equals(currentName)
-                && file.equals(sanitize(currentName.trim()))) {
-            return NAME_TAKEN;
+        // File names compare without case: Windows and macOS file systems ignore it, so
+        // "PvP.json" is "pvp.json" there and the rename's write-then-delete (or a create)
+        // would overwrite or delete that file (2026-11-17).
+        if (currentName != null && !trimmed.equals(currentName)) {
+            String own = sanitize(currentName.trim());
+            if (file.equals(own)) return NAME_TAKEN;
+            if (file.equalsIgnoreCase(own)) return NAME_CASE_ONLY;
         }
         for (String other : existingNames) {
             if (other == null || other.equals(currentName)) continue;
-            if (other.equals(trimmed) || sanitize(other.trim()).equals(file)) return NAME_TAKEN;
+            if (other.equals(trimmed) || sanitize(other.trim()).equalsIgnoreCase(file)) return NAME_TAKEN;
         }
         return null;
     }

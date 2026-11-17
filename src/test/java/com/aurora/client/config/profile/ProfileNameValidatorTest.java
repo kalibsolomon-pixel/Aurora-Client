@@ -65,4 +65,14 @@ class ProfileNameValidatorTest {
         assertEquals("a_b_c", ProfileNameValidator.sanitize("a<b>c"));
         assertEquals("normal", ProfileNameValidator.sanitize("normal"));
     }
+
+    @Test
+    void fileNamesCollideWithoutCaseAsOnWindowsAndMacOs() {
+        // "Default.json" is "default.json" on a case-insensitive file system.
+        assertEquals("Name already used", ProfileNameValidator.problem("Default", List.of("default"), null));
+        assertEquals("Name already used", ProfileNameValidator.problem("PVP", List.of("default", "pvp"), "default"));
+        // A case-only rename would write and then delete the same file.
+        assertEquals("Change more than letter case", ProfileNameValidator.problem("PvP", List.of("pvp"), "pvp"));
+        assertNull(ProfileNameValidator.problem("pvp", List.of("pvp"), "pvp"));
+    }
 }

@@ -267,7 +267,7 @@ public class ProfileManager {
      *         exists or is invalid.
      */
     public boolean create(String name) {
-        if (!isValidName(name) || nameExists(name)) return false;
+        if (ProfileNameValidator.problem(name, listProfileNames(), null) != null) return false;
         Profile p = captureCurrent();
         p.name = name;
         p.createdAtMs = System.currentTimeMillis();
@@ -285,7 +285,7 @@ public class ProfileManager {
      */
     public boolean rename(String oldName, String newName) {
         if (!isValidName(newName) || oldName.equals(newName)) return false;
-        if (!nameExists(oldName) || nameExists(newName)) return false;
+        if (!nameExists(oldName) || ProfileNameValidator.problem(newName, listProfileNames(), oldName) != null) return false;
         Profile p = readProfileFile(oldName);
         if (p == null) return false;
         p.name = newName;
@@ -324,7 +324,7 @@ public class ProfileManager {
      *         the target name is taken/invalid.
      */
     public boolean duplicate(String sourceName, String newName) {
-        if (!isValidName(newName) || nameExists(newName)) return false;
+        if (ProfileNameValidator.problem(newName, listProfileNames(), null) != null) return false;
         Profile src = readProfileFile(sourceName);
         if (src == null) return false;
         src.name = newName;
