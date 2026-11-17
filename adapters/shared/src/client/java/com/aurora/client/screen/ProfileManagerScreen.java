@@ -60,7 +60,9 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
     // the name under it, and the hotkey chip on the bottom line, so every
     // card in a row keeps its parts on the same lines. Columns follow the
     // available width (at least one).
-    private static final int CARD_H = 84;
+    // 88 (was 84, 2026-11-17): room for a refusal message between the name field and the
+    // bottom action line (design language §11.12).
+    private static final int CARD_H = 88;
     private static final int CARD_MIN_W = 104;
     private static final int CARD_GAP = 8;
     private static final int INSET = 6;
