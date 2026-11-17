@@ -73,14 +73,16 @@ public final class UnifiedPalette {
     static final double MAX_PANEL_LIGHTNESS = .28;
     /** Primary text against a tinted panel (before window translucency). */
     static final double MIN_TEXT_CONTRAST = 7;
+    /** Reversible owner-review tuning (2026-11-17), only for custom-background raised faces. */
+    static final double RAISED_SATURATION_FACTOR = .35, MAX_RAISED_SATURATION = .10;
 
     /**
      * Re-tints the neutral material family toward {@code background}: the
      * panel (the window fill) takes the chosen hue, saturation and lightness
      * (lightness capped at {@link #MAX_PANEL_LIGHTNESS}), and every other
-     * neutral keeps its lightness step from the stock panel, so raised,
-     * pressed, sunken and border roles stay distinguishable on any tint. The
-     * stock graphite is an exact no-op.
+     * neutral keeps its lightness step from the stock panel. The raised/hover/pressed
+     * family caps saturation without changing those steps or alpha. Other roles
+     * retain the full tint, and stock graphite is an exact no-op.
      */
     public static void tintNeutrals(int[] c, int background) {
         int panel = c[ThemeToken.MATERIAL_PANEL.ordinal()];
@@ -95,7 +97,10 @@ public final class UnifiedPalette {
         for (ThemeToken token : TINTED_NEUTRALS) {
             int i = token.ordinal();
             double lightness = clamp(toHsl(c[i])[2] - stock + target, .02, .90);
-            c[i] = (c[i] & 0xFF000000) | (rgb(tint[0], tint[1], lightness) & 0xFFFFFF);
+            boolean raised = token == ThemeToken.MATERIAL_RAISED || token == ThemeToken.MATERIAL_HOVER
+                    || token == ThemeToken.MATERIAL_PRESSED;
+            double saturation = raised ? Math.min(tint[1] * RAISED_SATURATION_FACTOR, MAX_RAISED_SATURATION) : tint[1];
+            c[i] = (c[i] & 0xFF000000) | (rgb(tint[0], saturation, lightness) & 0xFFFFFF);
         }
     }
 

@@ -67,4 +67,45 @@ class BackgroundColorTest {
         def.background = 0x00123456;
         assertEquals(0xFF123456, ThemeDefinition.copyOf(def).background);
     }
+
+    private static double saturation(int c) {
+        double max=Math.max(c>>16&255,Math.max(c>>8&255,c&255))/255d;
+        double min=Math.min(c>>16&255,Math.min(c>>8&255,c&255))/255d;
+        return max==min ? 0 : (max-min)/(1-Math.abs(max+min-1));
+    }
+
+    @Test void customRaisedFamilyCapsSaturationButPreservesLightnessAndAlpha() {
+        for(int background:new int[]{0xff201525,0xff302d30,0xff252525,0xff390c17,0xff0d3439}) {
+            int[] c=PaletteEngine.derive(ThemeDefinition.DEFAULT_ACCENT,ThemeMode.DARK);
+            UnifiedPalette.populate(c,ThemeDefinition.DEFAULT_ACCENT,ThemeMode.DARK);
+            for(var role:new ThemeToken[]{ThemeToken.MATERIAL_RAISED,ThemeToken.MATERIAL_HOVER,ThemeToken.MATERIAL_PRESSED})
+                c[role.ordinal()]=c[role.ordinal()]&0xffffff|0x81000000;
+            int[] before=c.clone();
+            double stockPanel=lightness(c[ThemeToken.MATERIAL_PANEL.ordinal()]);
+            UnifiedPalette.tintNeutrals(c,background);
+            for(var role:ThemeToken.values()) {
+                int value=c[role.ordinal()];
+                assertEquals(before[role.ordinal()]>>>24,value>>>24,role.name());
+                boolean raised=role==ThemeToken.MATERIAL_RAISED || role==ThemeToken.MATERIAL_HOVER || role==ThemeToken.MATERIAL_PRESSED;
+                if(raised) {
+                    double cap=Math.min(saturation(background)*.35,.10);
+                    assertEquals(cap,saturation(value),.025,"only RGB quantization may change the requested saturation");
+                    assertEquals(lightness(before[role.ordinal()])-stockPanel+lightness(background),lightness(value),1/255d);
+                } else if(role!=ThemeToken.MATERIAL_CANVAS && role!=ThemeToken.MATERIAL_PANEL && role!=ThemeToken.MATERIAL_SUNKEN
+                        && role!=ThemeToken.MATERIAL_BORDER && role!=ThemeToken.MATERIAL_BORDER_STRONG)
+                    assertEquals(before[role.ordinal()],value,"all other roles, including WINDOW_FILL, stay untouched");
+            }
+            assertEquals(background&0xffffff,c[ThemeToken.MATERIAL_PANEL.ordinal()]&0xffffff);
+            assertEquals(saturation(background),saturation(c[ThemeToken.MATERIAL_SUNKEN.ordinal()]),.035);
+        }
+    }
+
+    @Test void ownerBackgroundAndWindowDensityRemainStoredExactly() {
+        var def=ThemeDefinition.defaults();def.background=0xff201525;def.backgroundOpacity=.19;
+        var theme=ThemeResolver.resolve(def,true);
+        assertEquals(0xff201525,def.background);
+        assertEquals(.19,def.backgroundOpacity);
+        assertEquals(0x30201525,theme.color(ThemeToken.WINDOW_FILL));
+        assertEquals(0xff272229,theme.color(ThemeToken.MATERIAL_RAISED));
+    }
 }
