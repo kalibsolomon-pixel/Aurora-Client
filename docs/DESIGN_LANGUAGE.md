@@ -841,6 +841,8 @@ in its label row's trailing value slot instead, above its Add control.
   color picker's hue/saturation area remains data even though its hex field uses glass.
 - **States:** rest, focus/editing, invalid/rejected where applicable, and disabled. Caret and
   a subtle accent focus treatment communicate editing without changing material tint.
+  A focused field paints its selection behind the text with the shared selected fill
+  (`SELECTION_SOFT`), clipped to the visible window.
 - **Input/accessibility:** preserve selection, cursor position, standard editing keys,
   narration, label/purpose, and value. Numeric commit/revert behavior must be explicit.
 - **Editing history:** Aurora-owned `EditBox` fields, including Pulsar's `KTextField`
