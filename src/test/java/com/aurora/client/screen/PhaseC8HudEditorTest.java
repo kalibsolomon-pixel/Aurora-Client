@@ -35,12 +35,19 @@ class PhaseC8HudEditorTest {
                 "the hint must describe the badge click (the truthful fix)");
         assertFalse(src.contains("|  X: disable"),
                 "the phantom X-KEY claim must not return");
-        // No hidden X-key binding was introduced: the screen routes no key
-        // events of its own (Escape stays vanilla screen close).
+        // No hidden X-key binding was introduced: the screen's only key
+        // handler is the deliberate Escape-disarm of the armed Reset
+        // Positions confirmation (design language §8.7, 2026-11-16) — it
+        // consumes nothing else and delegates to super.
         assertFalse(src.contains("GLFW_KEY_X"),
                 "no X key binding may exist");
-        assertFalse(src.contains("public boolean keyPressed"),
-                "the screen must not grow a key handler to satisfy the old hint text");
+        int kp = src.indexOf("public boolean keyPressed");
+        assertTrue(kp >= 0, "the Escape-disarm handler exists");
+        String handler = src.substring(kp, src.indexOf('}', src.indexOf("return super.keyPressed(_kev);", kp)) + 1);
+        assertTrue(handler.contains("KEY_ESCAPE") && handler.contains("resetConfirm.disarm()"),
+                "the one key handler only disarms an armed confirmation on Escape");
+        assertTrue(handler.indexOf("KEY_ESCAPE") < handler.indexOf("return super.keyPressed(_kev);"),
+                "every other key still reaches vanilla (the super delegate is the handler's last statement)");
     }
 
     @Test

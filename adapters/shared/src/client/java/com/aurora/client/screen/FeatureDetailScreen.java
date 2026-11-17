@@ -186,6 +186,19 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
     private ButtonWidget doneBtn;
     private ButtonWidget resetBtn;
 
+    /**
+     * Press-again confirmation for Reset (design language §8.7): the first
+     * press arms (label "Confirm reset", the shared destructive styling), a
+     * second press within the window resets, and the timeout, Escape or any
+     * other click disarms. {@link #syncResetButton} polls the state each
+     * frame so the timeout restores the label with no timer.
+     */
+    private final com.aurora.client.ui.interaction.ArmedAction resetConfirm = new com.aurora.client.ui.interaction.ArmedAction();
+    /** The label/styling state {@link #syncResetButton} last applied (change detection only). */
+    private boolean resetBtnArmed;
+    /** Transient bottom-center confirmation after a completed reset (the manager screens' Toast). */
+    private final com.aurora.client.ui.component.Toast resetToast = new com.aurora.client.ui.component.Toast();
+
     // Transient frame-timing instrumentation (debug level only).
     private long lastPerfLogMs = 0L;
     private long lastPerfFills = 0L;
@@ -309,18 +322,28 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         // Reset-to-defaults button immediately to the left of Done. Persists
         // immediately so the change is visible to other open screens. Phase A:
         // vanilla-backed semantic like Done (destructive — the semantic layer
-        // only names it; colors/labels/behavior are untouched).
-        int resetW = 70;
+        // only names it; colors/labels/behavior are untouched). Destructive
+        // confirmation (design language §8.7): press again within 3 s to
+        // fire; Escape or any other click disarms. The button is sized from
+        // the WIDER of its two labels so "Confirm reset" never ellipsizes or
+        // shifts Done ("Confirm reset" measures ~50 px at the compact 8 px
+        // raster against the 28 px label room of a 48 px HEADER_BUTTON_W).
+        int resetW = Math.max(70, this.font.width("Confirm reset") + 22);
         int resetX = this.width - DONE_W - DONE_RIGHT_MARGIN - resetW - 6;
         this.resetBtn = ButtonWidget.semantic(
                 resetX, DONE_TOP_MARGIN,
                 resetW, DONE_H,
-                Component.literal("Reset"),
-                "Resets this feature's settings to their defaults and saves.",
+                Component.literal(resetConfirm.isArmed() ? "Confirm reset" : "Reset"),
+                "Resets this feature's settings to their defaults and saves. Press again to confirm.",
                 () -> {
-                    meta.reset();
-                    AuroraConfig.save();
+                    if (resetConfirm.press()) {
+                        meta.reset();
+                        AuroraConfig.save();
+                        resetToast.flash("Reset " + meta.displayName, 1500L);
+                    }
+                    syncResetButton();
                 }).glassBackground(true).theming(com.aurora.client.ui.component.Button.Theming.GHOST); // secondary to Done (2026-11-14)
+        this.resetBtn.destructive(resetConfirm.isArmed());
         this.addRenderableWidget(this.resetBtn);
 
         // Custom-painted semantic controls join vanilla's child/narratable
@@ -330,9 +353,13 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
             int bw = com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_W, bh = com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_H;
             doneBtn.setWidth(bw); doneBtn.setHeight(bh);
             doneBtn.setX(compactFrame.x() + LIST_W - bw - 6); doneBtn.setY(compactFrame.y() + (com.aurora.client.ui.util.UiDensity.HEADER - bh) / 2 + 1);
-            resetBtn.setWidth(bw); resetBtn.setHeight(bh);
-            resetBtn.setX(doneBtn.getX() - bw - 4); resetBtn.setY(doneBtn.getY());
+            // Reset keeps Done's height and position anchor but its OWN width — the wider
+            // of its two labels (see init); Done's right-aligned slot never moves.
+            int resetBw = Math.max(bw, this.font.width("Confirm reset") + 22);
+            resetBtn.setWidth(resetBw); resetBtn.setHeight(bh);
+            resetBtn.setX(doneBtn.getX() - resetBw - 4); resetBtn.setY(doneBtn.getY());
         }
+        resetBtnArmed = resetConfirm.isArmed();
         registeredSettingControls.clear();
         for (FeatureSetting setting : meta.settings) {
             var controls = setting.interactionControls();
@@ -370,6 +397,22 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         return this.minecraft != null && this.minecraft.level != null;
     }
 
+    /**
+     * Re-labels and re-styles Reset from the confirmation state — called on
+     * press and once per frame, so the 3 s timeout restores "Reset" with no
+     * timer. Armed state is carried by the LABEL and the shared destructive
+     * styling (the resting ghost becomes the destructive field face with its
+     * red label); never by a new tint (§6 convention 9).
+     */
+    private void syncResetButton() {
+        if (resetBtn == null) return;
+        boolean armed = resetConfirm.isArmed();
+        if (armed == resetBtnArmed) return;
+        resetBtnArmed = armed;
+        resetBtn.setMessage(Component.literal(armed ? "Confirm reset" : "Reset"));
+        resetBtn.destructive(armed);
+    }
+
     @Override
     public void extractBackground(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
         // With a live world behind the screen, skip vanilla's background
@@ -386,6 +429,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor ctx, int mouseX, int mouseY, float delta) {
+        syncResetButton(); // the confirm timeout restores the label with no timer
         if (pendingReveal != null) expandRevealSection();
         com.aurora.client.screen.setting.SectionHeaderSetting.markLeading(meta.settings);
         measureRows();
@@ -678,6 +722,10 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         // Label-hover description tooltip floats above the rows.
         FeatureSetting.drawPendingTooltip(ctx, this.width, this.height);
 
+        // Post-reset confirmation (the manager screens' toast): 1.5 s, bottom-center.
+        resetToast.render(ctx, this.font, this.width, this.height,
+                ThemeManager.current().roundness().radiusSmall());
+
         logFramePerf();
     }
 
@@ -721,6 +769,13 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         if (com.aurora.client.screen.setting.FeatureSetting.cancelActiveCapture()) return true;
         FeatureSetting.clearFocus();
         if (this.getFocused() instanceof SemanticActionControl) this.setFocused(null);
+        // An armed Reset disarms on any click that is not its own (design
+        // language §8.7) — before dispatch, so the button's own press below
+        // is the only click that can arm or fire it.
+        if (resetConfirm.isArmed() && !resetBtn.isMouseOver(mouseX, mouseY)) {
+            resetConfirm.disarm();
+            syncResetButton();
+        }
         if (super.mouseClicked(_ev, _doubleClicked)) return true;
         
         measureRows();
@@ -852,6 +907,15 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         // grouped hosted control (today: AccentSetting's peer grid on the
         // Theme screen) owns its group's arrows, moving focus silently.
         if (SemanticControlGroup.rove(this.getFocused(), _kev, this::setFocused)) return true;
+        // Escape unwinds one layer at a time: an armed Reset disarms and
+        // CONSUMES the press (design language §8.7); the next Escape closes
+        // the screen as before. A focused setting above (popup, capture)
+        // already consumed its own Escape in onKeyPress.
+        if (_kev.key() == InputConstants.KEY_ESCAPE && resetConfirm.isArmed()) {
+            resetConfirm.disarm();
+            syncResetButton();
+            return true;
+        }
         return super.keyPressed(_kev);
     }
 

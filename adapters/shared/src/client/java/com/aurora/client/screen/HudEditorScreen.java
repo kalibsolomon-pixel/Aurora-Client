@@ -35,7 +35,9 @@ import net.minecraft.network.chat.Component;
  *   <li><b>Click the X icon</b> — disable the module (same as toggling its
  *       feature off in the modules grid).</li>
  *   <li><b>ESC</b> — save layout and exit.</li>
- *   <li><b>Reset Positions</b> — clears saved layouts.</li>
+ *   <li><b>Reset Positions</b> — clears saved layouts. Destructive: press
+ *       again within 3 s to confirm; ESC or any other click disarms (design
+ *       language §8.7).</li>
  * </ul>
  *
  * <p>On the shared framework: buttons are the canonical themed
@@ -108,6 +110,14 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
         super(Component.literal("Aurora HUD Editor"));
     }
 
+    /** Press-again confirmation for Reset Positions (design language §8.7). */
+    private final com.aurora.client.ui.interaction.ArmedAction resetConfirm = new com.aurora.client.ui.interaction.ArmedAction();
+    /** The label/styling state {@link #syncResetButton} last applied (change detection only). */
+    private boolean resetBtnArmed;
+    private ButtonWidget resetBtn;
+    /** Transient bottom-center confirmation after a completed reset (the manager screens' Toast). */
+    private final com.aurora.client.ui.component.Toast resetToast = new com.aurora.client.ui.component.Toast();
+
     private java.util.List<String> guideLines = java.util.List.of();
     private int guideWidth = -1;
     private int guideStyle = -1;
@@ -133,13 +143,20 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
                 }).glassBackground(true).theming(com.aurora.client.ui.component.Button.Theming.BACKGROUND_ACCENT));
 
         // Label width + the painter's 20 px ellipsis reserve + 2 px breathing room.
-        int resetW = Math.min(w, this.font.width("Reset Positions") + 22);
+        // Sized from the WIDER of the two labels so "Confirm reset" (the armed
+        // state, design language §8.7) never ellipsizes ("Reset Positions"
+        // measures wider at both rasters, but the max is explicit).
+        int resetW = Math.min(w, Math.max(this.font.width("Reset Positions"),
+                this.font.width("Confirm reset")) + 22);
         int resetH = 16;
-        this.addRenderableWidget(ButtonWidget.semantic(
+        resetBtn = ButtonWidget.semantic(
                 this.width - resetW - 8, 8, resetW, resetH,
-                Component.literal("Reset Positions"),
-                "Moves every HUD module back to its default anchor, offset and scale.",
-                this::resetLayouts).glassBackground(true).theming(com.aurora.client.ui.component.Button.Theming.BACKGROUND_ACCENT));
+                Component.literal(resetConfirm.isArmed() ? "Confirm reset" : "Reset Positions"),
+                "Moves every HUD module back to its default anchor, offset and scale. Press again to confirm.",
+                this::resetPressed).glassBackground(true).theming(com.aurora.client.ui.component.Button.Theming.BACKGROUND_ACCENT);
+        resetBtn.destructive(resetConfirm.isArmed());
+        resetBtnArmed = resetConfirm.isArmed();
+        this.addRenderableWidget(resetBtn);
 
         // Phase C-4 pilot C: one icon action per HUD module's X badge —
         // the canonical contract (Tab/Enter/Space, focus hairline, canonical
@@ -177,6 +194,30 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
                         () -> 0xFFFFFFFF));
     }
 
+    /** Reset Positions' press path: arm, or fire on the confirm press (design language §8.7). */
+    private void resetPressed() {
+        if (resetConfirm.press()) {
+            resetLayouts();
+            resetToast.flash("Reset HUD positions", 1500L);
+        }
+        syncResetButton();
+    }
+
+    /**
+     * Re-labels and re-styles Reset Positions from the confirmation state —
+     * called on press and once per frame, so the 3 s timeout restores the
+     * label with no timer. Armed state is carried by the LABEL and the shared
+     * destructive styling; never by a new tint (§6 convention 9).
+     */
+    private void syncResetButton() {
+        if (resetBtn == null) return;
+        boolean armed = resetConfirm.isArmed();
+        if (armed == resetBtnArmed) return;
+        resetBtnArmed = armed;
+        resetBtn.setMessage(Component.literal(armed ? "Confirm reset" : "Reset Positions"));
+        resetBtn.destructive(armed);
+    }
+
     private void resetLayouts() {
         AuroraConfig.get().moduleLayouts.clear();
         HudModuleManager mgr = AuroraClient.modules();
@@ -199,6 +240,7 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor ctx, int mouseX, int mouseY, float delta) {
+        syncResetButton(); // the confirm timeout restores the label with no timer
         // Themed overlay dim, alpha-scaled to this screen's original 0x60
         // strength (full-strength OVERLAY_DIM is 0x99).
         // Keep the editing canvas visible; the shared controls own their opaque faces.
@@ -213,6 +255,10 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
         }
 
         super.extractRenderState(ctx, mouseX, mouseY, delta);
+
+        // Post-reset confirmation (the manager screens' toast): 1.5 s, bottom-center.
+        resetToast.render(ctx, this.font, this.width, this.height,
+                ThemeManager.current().roundness().radiusSmall());
 
         // Instructions: one compact floating pill above the hotbar instead of a
         // full-width line across the top that collided with corner modules.
@@ -434,6 +480,13 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
     @Override
     public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent _ev, boolean _doubleClicked) {
         double mouseX = _ev.x(); double mouseY = _ev.y(); int button = _ev.button();
+        // An armed Reset Positions disarms on any click that is not its own
+        // (design language §8.7) — before dispatch, so the button's own press
+        // below is the only click that can arm or fire it.
+        if (resetConfirm.isArmed() && !resetBtn.isMouseOver(mouseX, mouseY)) {
+            resetConfirm.disarm();
+            syncResetButton();
+        }
         if (super.mouseClicked(_ev, _doubleClicked)) return true;
 
         HudModuleManager mgr = AuroraClient.modules();
@@ -636,6 +689,22 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
                 return;
             }
         }
+    }
+
+    /**
+     * Escape unwinds one layer at a time (design language §8.7): while Reset
+     * Positions is armed, the first Escape disarms and CONSUMES the press;
+     * the next Escape closes the editor (saves the layout) as before. The
+     * only key handler this screen owns — no X-key or similar exists.
+     */
+    @Override
+    public boolean keyPressed(net.minecraft.client.input.KeyEvent _kev) {
+        if (_kev.key() == InputConstants.KEY_ESCAPE && resetConfirm.isArmed()) {
+            resetConfirm.disarm();
+            syncResetButton();
+            return true;
+        }
+        return super.keyPressed(_kev);
     }
 
     @Override

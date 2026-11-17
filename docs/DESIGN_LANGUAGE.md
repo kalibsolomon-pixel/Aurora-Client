@@ -555,6 +555,29 @@ Disabled is behavioral and visual:
 The exact material/alpha treatment is unresolved. It must be piloted instead of copied from a
 single current component.
 
+### 8.7 Destructive actions
+
+Destructive actions confirm with press-again (3 s), Escape disarms.
+
+A control whose effect destroys user data or resets configuration beyond a single editable
+value — deleting a profile, resetting a feature to defaults, clearing HUD layouts — must not
+fire on one click. Its confirmation contract:
+
+- **Press 1 arms.** The label changes to the imperative consequence ("Confirm delete",
+  "Confirm reset"); the shared destructive styling applies. The button does not change size,
+  and the state is carried by the label and that existing destructive styling — never by a new
+  tint (see the tint rule in §6 and the glass rules).
+- **Press 2 within 3 s fires.** The window is a `core` `ArmedAction` (injectable clock), so the
+  timeout is testable and the armed state lapses lazily when polled each frame.
+- **Escape disarms and consumes that press**, one layer at a time: a focused field or open
+  popup consumes its own Escape first, an armed action disarms on the next, and only a further
+  Escape closes the screen.
+- Any other click — another control, empty space — disarms.
+
+Small reversible edits (removing one key from a list, toggling a switch) and session-only
+resets are not destructive and stay single-press. §12.7's placement rule (destructive actions
+last) still applies.
+
 ## 9. Motion
 
 Aurora uses a small semantic vocabulary:
