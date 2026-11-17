@@ -5,6 +5,7 @@ import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.component.GlassEditBox;
 import com.aurora.client.ui.component.GlassSurface;
+import com.aurora.client.ui.component.MaterialSurface;
 import com.aurora.client.util.AuroraAnim;
 import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.Minecraft;
@@ -377,10 +378,11 @@ public class EffectExpiryListSetting extends FeatureSetting {
         searchFrame = com.aurora.client.ui.component.GlassSurface.frame();
         searchField.extractRenderState(ctx, mouseX, mouseY, 0f);
 
-        // "+" add button — raised glass (flat pill on decline); ItemScale's
-        // in-place/stamped split verbatim. C-4 pilot B: the canonical hover
-        // (one animator) drives the pill surface AND the glyph — the whole
-        // action eases, surface no longer snaps ahead of the glyph.
+        // "+" add button — the raised control recipe on unified screens
+        // (owner report 2026-11-17), raised glass (flat pill on decline)
+        // elsewhere; ItemScale's in-place/stamped split verbatim. C-4 pilot
+        // B: the canonical hover (one animator) drives the material face
+        // AND the glyph — the whole action eases.
         int plusX = x + width - 36;
         int plusY = y + 5;
         addAction.syncChannels(plusX, plusY, 24, 20, mouseX, mouseY);
@@ -395,7 +397,9 @@ public class EffectExpiryListSetting extends FeatureSetting {
         } else {
             plusGlass = GlassSurface.control(ctx, plusX, plusY, 24, 20, plusR);
         }
-        if (!plusGlass) {
+        if (MaterialSurface.unified()) {
+            addAction.paintFace(ctx, plusX, plusY, 24, 20, plusR);
+        } else if (!plusGlass) {
             com.aurora.client.ui.util.RenderUtil.drawRoundedRectAA(ctx, plusX, plusY, 24, 20, plusR, plusBg);
             com.aurora.client.ui.util.RenderUtil.drawRoundedOutlineAA(ctx, plusX, plusY, 24, 20, plusR, 1, plusBorder);
         }
@@ -414,6 +418,7 @@ public class EffectExpiryListSetting extends FeatureSetting {
         int plusX = rowX + rowWidth - 36, plusY = rowY + 5;
         if (mouseX >= plusX && mouseX < plusX + 24 && mouseY >= plusY && mouseY < plusY + 20) {
             searchField.setFocused(false);
+            addAction.pressPulse();
             if (addAction.clicked(mouseX, mouseY, button)) {
                 return true;
             }
