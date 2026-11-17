@@ -295,7 +295,18 @@ public abstract class EditBoxMixin implements GlassEditBox {
             // queries stay visible as the user types.
             int safeDisp = Math.min(displayPos, value.length());
             String visible = value.substring(safeDisp);
-            ctx.text(font, visible, innerX - safeDisp, textY, textCol, false);
+            // Selection behind the text, measured over the same visible window as the caret.
+            // Shift-selection, Ctrl+A and double-click selected invisibly before (2026-11-16).
+            int selStart = Math.max(safeDisp, Math.min(Math.min(cursorPos, highlightPos), value.length()));
+            int selEnd = Math.max(safeDisp, Math.min(Math.max(cursorPos, highlightPos), value.length()));
+            if (focused && selEnd > selStart) {
+                int selX1 = innerX + font.width(value.substring(safeDisp, selStart));
+                int selX2 = Math.min(innerRight, innerX + font.width(value.substring(safeDisp, selEnd)));
+                ctx.fill(selX1, textY - 1, selX2, textY + font.lineHeight, MaterialSurface.selectedFill());
+            }
+            // From innerX, the origin the caret and selection measure from; this subtracted the
+            // scroll index as pixels, so scrolled text drifted left of its caret.
+            ctx.text(font, visible, innerX, textY, textCol, false);
         }
         ctx.disableScissor();
 
