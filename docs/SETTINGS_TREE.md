@@ -463,6 +463,8 @@ No longer a card. Its sections are on the Settings tab (4.3): Frame Pacer, Frame
 
 The tab shows one page at a time, chosen from the sub-tabs in the row above the content (where the Modules tab has its layout buttons and search). Each page keeps its own scroll position. On a page, each entry is a header followed by its rows; only Theme and Custom Title have a switch in the header.
 
+Simple config-backed setting rows here and on module detail pages show a small reset icon after their label only when the value differs from its factory default. Hover or keyboard narration names the setting and its displayed default. Click, Enter or Space restores that one value immediately and saves; it needs no confirmation. Value/control columns stay fixed and long modified labels ellipsize. Whole-feature Reset still requires a second press. Actions, previews, lists, per-item editors and the Keystrokes HUD layout Scale row have no individual reset. Keybind labels also show their descriptions on hover.
+
 ```
  Settings
  ┌────────────┬─────────┬──────────┬─────────┐

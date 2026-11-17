@@ -122,6 +122,12 @@ public abstract class FeatureSetting {
                 com.aurora.client.ui.component.MaterialSurface.color(com.aurora.client.theme.ThemeToken.ON_BACKGROUND_MUTED),
                 com.aurora.client.ui.component.MaterialSurface.color(com.aurora.client.theme.ThemeToken.ON_BACKGROUND_SECONDARY), .5f);
         var box = compactRow.label();
+        if (isModified()) {
+            renderResetLabel(ctx, label, x + box.x(), y + box.y(), box.width(),
+                    box.height() - valueLineHeight(font), color, mouseX, mouseY, isDisabled());
+            drawValueLine(ctx, x + box.x(), y + box.y() + box.height() - valueLineHeight(font) + 2, isDisabled());
+            return;
+        }
         int textY = y + box.y() + (box.height() - (compactRow.lines().size() * (font.lineHeight + 1) + valueLineHeight(font))) / 2;
         for (String line : compactRow.lines()) {
             int textX = x + box.x();
@@ -133,6 +139,109 @@ public abstract class FeatureSetting {
         drawValueLine(ctx, x + box.x(), textY + 2, isDisabled());
     }
 
+
+    private java.util.function.BooleanSupplier differsFromDefault;
+    private Runnable resetValue;
+    private Supplier<String> resetDisplay;
+    private com.aurora.client.ui.component.IconAction resetAction;
+    private String resetTooltip;
+    private Supplier<String> resetTooltipSupplier;
+    private List<com.aurora.client.ui.interaction.SemanticActionControl> resetControls;
+    private String resetFitText;
+    private int resetFitWidth = -1, resetFitStyle = -1;
+    private long resetFitGeneration = -1;
+    private String resetFitted;
+    private com.aurora.client.ui.util.SettingRowLayout.Reset resetLayout;
+    private int resetH, resetFittedWidth;
+    private final Supplier<String> rowDescription = this::currentDescription;
+
+    protected final void installReset(java.util.function.BooleanSupplier differs, Runnable apply, Supplier<String> display) {
+        differsFromDefault = differs;
+        resetValue = apply;
+        resetDisplay = display;
+    }
+
+    public final boolean hasResetDefault() { return differsFromDefault != null; }
+    public final boolean isModified() { return hasResetDefault() && differsFromDefault.getAsBoolean(); }
+
+    /** Hidden resets leave traversal and narration together, without rebuilding the host's children. */
+    public final boolean controlVisible(com.aurora.client.ui.interaction.SemanticActionControl control) {
+        return resetAction == null || control != resetAction.interactionControl() || isModified();
+    }
+
+    /** Explicit audit marker for a simple-looking row that edits non-config domain data. */
+    public FeatureSetting noReset(String reason) {
+        if (reason == null || reason.isBlank()) throw new IllegalArgumentException("Reset exemption needs a reason");
+        return this;
+    }
+
+    /** Formatter options are fluent too, so materialize the text after construction, on host registration. */
+    private void ensureResetAction() {
+        if (resetAction != null || !hasResetDefault()) return;
+        resetTooltip = "Reset " + label + " to default (" + resetDisplay.get() + ")";
+        resetTooltipSupplier = () -> resetTooltip;
+        resetAction = new com.aurora.client.ui.component.IconAction("\uf053",
+                com.aurora.client.ui.interaction.SemanticAction.button(Component.literal(resetTooltip),
+                        null, null, () -> !isDisabled() && isModified(), () -> {
+                            resetValue.run();
+                            com.aurora.client.config.AuroraConfig.save();
+                        }),
+                () -> MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY),
+                () -> MaterialSurface.color(ThemeToken.ON_BACKGROUND)).visualEm(12);
+    }
+
+    /** The host uses this union so compound row families retain their original peer sets. */
+    public final List<com.aurora.client.ui.interaction.SemanticActionControl> controlsWithReset() {
+        var original = interactionControls();
+        if (!hasResetDefault()) return original;
+        ensureResetAction();
+        boolean same = resetControls != null && resetControls.size() == original.size() + 1;
+        if (same) for (int i = 0; i < original.size(); i++)
+            if (resetControls.get(i) != original.get(i)) { same = false; break; }
+        if (!same) {
+            var all = new java.util.ArrayList<>(original);
+            all.add(resetAction.interactionControl());
+            resetControls = List.copyOf(all);
+        }
+        return resetControls;
+    }
+
+    protected final boolean resetMouseClicked(double mouseX, double mouseY, int button) {
+        return isModified() && resetAction != null && resetAction.clicked(mouseX, mouseY, button);
+    }
+
+    /** A reset's selection key precedes stale slider/editor focus; active key capture still owns input. */
+    public final boolean resetKeyPressed(Object focused, net.minecraft.client.input.KeyEvent event) {
+        return !hasActiveCapture() && event.isSelection() && resetAction != null
+                && focused == resetAction.interactionControl() && resetAction.interactionControl().keyPressed(event);
+    }
+
+    /** One cached fit/layout per row, shared by normal and compact label painters. */
+    private void renderResetLabel(GuiGraphicsExtractor ctx, String text, int x, int y, int width, int height,
+                                  int color, int mouseX, int mouseY, boolean disabled) {
+        ensureResetAction();
+        Font font = Minecraft.getInstance().font;
+        int style = com.aurora.client.ui.util.AuroraFontRenderer.styleKey();
+        long generation = ThemeManager.generation();
+        if (!text.equals(resetFitText) || width != resetFitWidth || style != resetFitStyle || generation != resetFitGeneration) {
+            resetFitText = text; resetFitWidth = width; resetFitStyle = style; resetFitGeneration = generation;
+            resetFitted = com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(font, text,
+                    Math.max(0, width - com.aurora.client.ui.util.SettingRowLayout.RESET_W
+                            - com.aurora.client.ui.util.SettingRowLayout.RESET_GAP), 0);
+            resetFittedWidth = font.width(resetFitted);
+            resetLayout = null;
+        }
+        if (resetLayout == null || resetH != height) {
+            resetH = height;
+            resetLayout = com.aurora.client.ui.util.SettingRowLayout.reset(0, 0, width, height, resetFittedWidth);
+        }
+        int ty = y + (height - font.lineHeight) / 2;
+        ctx.text(font, resetFitted, x, ty, color, false);
+        trackLabelHover(tooltipKey(), rowDescription, x, ty, resetFittedWidth, font.lineHeight, mouseX, mouseY, disabled);
+        var hit = resetLayout.action();
+        resetAction.paint(ctx, font, x + hit.x(), y + hit.y(), hit.width(), hit.height(), mouseX, mouseY);
+        trackLabelHover(resetTooltip, resetTooltipSupplier, x + hit.x(), y + hit.y(), hit.width(), hit.height(), mouseX, mouseY, disabled);
+    }
 
     private String staticDescription;
     private Supplier<String> dynamicDescription;
@@ -341,9 +450,16 @@ public abstract class FeatureSetting {
      * availability-sweeps, and refocuses the whole list. Lazy single
      * controls keep flowing through the default without change.
      */
+    private com.aurora.client.ui.interaction.SemanticActionControl cachedSingleControl;
+    private List<com.aurora.client.ui.interaction.SemanticActionControl> singleControls = List.of();
+
     public java.util.List<com.aurora.client.ui.interaction.SemanticActionControl> interactionControls() {
         com.aurora.client.ui.interaction.SemanticActionControl c = interactionControl();
-        return c == null ? java.util.List.of() : java.util.List.of(c);
+        if (c != cachedSingleControl) {
+            cachedSingleControl = c;
+            singleControls = c == null ? List.of() : List.of(c);
+        }
+        return singleControls;
     }
 
     /**
@@ -662,6 +778,11 @@ public abstract class FeatureSetting {
                                       int color, int mouseX, int mouseY, boolean disabled) {
         Font font = Minecraft.getInstance().font;
         if (font == null || width <= 0) return;
+        if (isModified()) {
+            renderResetLabel(ctx, text, x, y - 2, width, font.lineHeight + 4,
+                    disabled ? MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED) : color, mouseX, mouseY, disabled);
+            return;
+        }
         long generation = ThemeManager.generation();
         int styleKey = com.aurora.client.ui.util.AuroraFontRenderer.styleKey();
         if (!text.equals(wrappedText) || width != wrappedWidth || generation != wrappedGeneration || styleKey != wrappedStyleKey) {

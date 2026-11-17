@@ -80,6 +80,14 @@ public class ThemeSliderSetting extends SliderSetting {
     @Override public ThemeSliderSetting description(String desc) { super.description(desc); return this; }
     @Override public ThemeSliderSetting description(java.util.function.Supplier<String> desc) { super.description(desc); return this; }
 
+    @Override protected double resetValue() { return getter.getAsDouble(); }
+    @Override protected void applyResetValue(double value) {
+        dragging = false;
+        pendingValue = value;
+        throttle.flush(() -> {});
+        setter.accept(value);
+    }
+
     /** Historical track inset of the theme rows — 2 px tighter than the generic rows; kept for pixel parity. */
     @Override protected int trackInset() { return 26; }
 
@@ -107,6 +115,7 @@ public class ThemeSliderSetting extends SliderSetting {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button, int rowX, int rowY, int rowWidth) {
+        if (resetMouseClicked(mouseX, mouseY, button)) return true;
         if (isDisabled() || button != com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) return false;
         // The drawn track, not the 36 px stacked row this once was: that band sat 10 px below the
         // compact row's track, so the visible slider could only be grabbed from underneath.

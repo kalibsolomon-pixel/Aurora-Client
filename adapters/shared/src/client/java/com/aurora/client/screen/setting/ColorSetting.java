@@ -113,6 +113,30 @@ public class ColorSetting extends FeatureSetting {
      * translucency is owned elsewhere (the theme colours; window opacity has
      * its own slider).
      */
+    public ColorSetting resetDefault(IntSupplier supplier) {
+        int value = supplier.getAsInt();
+        installReset(() -> getter.getAsInt() != value, () -> {
+            dragging = DragTarget.NONE;
+            expanded = false;
+            applyResetColor(value);
+        }, () -> hexOf(value));
+        return this;
+    }
+
+    /** Nullable overrides must restore inheritance, rather than pinning today's resolved colour. */
+    public ColorSetting resetDefault(java.util.function.Supplier<Integer> stored,
+                                     java.util.function.Supplier<Integer> supplier, IntSupplier display) {
+        Integer value = supplier.get();
+        int shown = display.getAsInt();
+        installReset(() -> !java.util.Objects.equals(stored.get(), value),
+                () -> { dragging = DragTarget.NONE; expanded = false; setter.accept(value); }, () -> hexOf(shown));
+        return this;
+    }
+
+    protected void applyResetColor(int value) {
+        applyValue(value);
+    }
+
     public ColorSetting opaqueOnly() { opaque = true; return this; }
 
     @Override public int baseHeight() { return compactRow == null ? (expanded ? ROW_H_EXPANDED : ROW_H_COLLAPSED) : compactRow.height() + (expanded ? EXPANDED_BODY : 0); }
@@ -201,6 +225,7 @@ public class ColorSetting extends FeatureSetting {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button, int rowX, int rowY, int rowWidth) {
+        if (resetMouseClicked(mouseX, mouseY, button)) return true;
         syncCompactControl(rowX, rowY);
         if (isDisabled()) return false;
         if (button != com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) return false;

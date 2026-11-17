@@ -932,6 +932,20 @@ information should not be tooltip-only.
 
 ### 12.5 Setting rows and value lines
 
+- Simple config-backed rows expose an individual factory reset only while modified. A small
+  Material Symbols `restart_alt` icon follows the label inside its existing column; value and
+  control columns never move. There is no empty icon slot at the default. Modified labels use
+  cached, active-font ellipsis to make room for the 18 px target and 4 px gap, in compact and
+  normal text. Row height remains stable. Compound/list/item editors and HUD layout scale do
+  not acquire this action.
+- Reset is an `IconAction` with the C-4 colour-only hover, focus hairline, Tab traversal,
+  Enter/Space activation and one semantic click. Its tooltip and accessible name are both
+  `Reset <label> to default (<displayed default>)`. Hidden resets leave narration and focus
+  traversal. Disabled rows cannot reset. Reset immediately applies the cached effective
+  release default through the row's existing setter/responder, then saves asynchronously.
+  Nullable colour overrides return to inheritance. A single value is easy to change again,
+  so this action is single-press; whole-feature Reset retains §8.7's press-again confirmation.
+- Keybind labels show the same description tooltip as other setting labels at both densities.
 - Labels are primary and left-aligned.
 - A value/subtitle line is secondary and appears only when current state is not visible at a
   glance from the control, including state hidden behind a nested screen or a computed/live

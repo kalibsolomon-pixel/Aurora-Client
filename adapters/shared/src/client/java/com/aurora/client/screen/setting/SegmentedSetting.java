@@ -27,7 +27,7 @@ import java.util.function.Supplier;
  */
 public class SegmentedSetting<E extends Enum<E>> extends FeatureSetting {
 
-    private static final int CONTROL_H = 40;
+    private static final int CONTROL_H = 44;
     private static final int TRACK_H = 20;
     /** Track indent — label above, full-width control below (slider row layout). */
     private static final int TRACK_PAD_X = 12;
@@ -79,6 +79,12 @@ public class SegmentedSetting<E extends Enum<E>> extends FeatureSetting {
         return Character.toUpperCase(n.charAt(0)) + n.substring(1);
     }
 
+    public SegmentedSetting<E> resetDefault(Supplier<E> supplier) {
+        E value = supplier.get();
+        installReset(() -> getter.get() != value, () -> setter.accept(value), () -> labelFn.apply(value));
+        return this;
+    }
+
     @Override public SegmentedSetting<E> description(String desc) { super.description(desc); return this; }
     @Override public SegmentedSetting<E> description(Supplier<String> desc) { super.description(desc); return this; }
 
@@ -127,8 +133,8 @@ public class SegmentedSetting<E extends Enum<E>> extends FeatureSetting {
     public void renderGlassPass(GuiGraphicsExtractor ctx, int x, int y, int width) {
         if (!com.aurora.client.ui.component.GlassSurface.passOpen()) return; // legacy frame order
         control.glassEnabled(glass);
-        control.layout(x + TRACK_PAD_X, y + 16, width - TRACK_PAD_X * 2, TRACK_H);
-        control.renderGlassPass(ctx, x + TRACK_PAD_X, y + 16, width - TRACK_PAD_X * 2, TRACK_H);
+        control.layout(x + TRACK_PAD_X, y + 22, width - TRACK_PAD_X * 2, TRACK_H);
+        control.renderGlassPass(ctx, x + TRACK_PAD_X, y + 22, width - TRACK_PAD_X * 2, TRACK_H);
     }
 
     @Override
@@ -142,7 +148,7 @@ public class SegmentedSetting<E extends Enum<E>> extends FeatureSetting {
         lastWidth = width;
         lastTrackX = x + TRACK_PAD_X;
         lastTrackW = width - TRACK_PAD_X * 2;
-        lastTrackY = y + 16;
+        lastTrackY = y + 22;
         control.glassEnabled(glass);
         control.layout(lastTrackX, lastTrackY, lastTrackW, TRACK_H);
         control.renderShapes(ctx, lastTrackX, lastTrackY, lastTrackW, TRACK_H);
@@ -153,11 +159,11 @@ public class SegmentedSetting<E extends Enum<E>> extends FeatureSetting {
         lastWidth = width;
         Font tr = Minecraft.getInstance().font;
         boolean disabled = isDisabled();
-        renderLabelWithTooltip(ctx, com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(tr,label,Math.max(0,width-(24)),0), x + TRACK_PAD_X, y + 6, AuroraTheme.IOS_LABEL, mouseX, mouseY, disabled);
+        renderWrappedLabel(ctx, label, x + TRACK_PAD_X, y + 5, Math.max(0, width - 24), AuroraTheme.IOS_LABEL, mouseX, mouseY, disabled);
 
         lastTrackX = x + TRACK_PAD_X;
         lastTrackW = width - TRACK_PAD_X * 2;
-        lastTrackY = y + 16;
+        lastTrackY = y + 22;
         control.disabled(disabled);
         control.layout(lastTrackX, lastTrackY, lastTrackW, TRACK_H);
         control.renderOverlay(ctx, lastTrackX, lastTrackY, lastTrackW, TRACK_H, mouseX, mouseY);
@@ -165,6 +171,7 @@ public class SegmentedSetting<E extends Enum<E>> extends FeatureSetting {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button, int rowX, int rowY, int rowWidth) {
+        if (resetMouseClicked(mouseX, mouseY, button)) return true;
         if (isDisabled() || button != com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) return false;
         if (lastTrackW <= 0) return false; // not laid out yet
         return control.mouseClicked(mouseX, mouseY, button);

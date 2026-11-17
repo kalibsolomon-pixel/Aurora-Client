@@ -213,7 +213,7 @@ class SquareModeConformanceTest {
         assertFalse(overlay.contains("ThemeCorners"), "the release defaults do not switch any on");
         String registry = read(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/FeatureRegistry.java");
         for (String field : fields) {
-            assertTrue(registry.contains("hudThemeCorners(() -> cfg." + field + ", v -> cfg." + field + " = v)"),
+            assertTrue(registry.contains("hudThemeCorners(() -> cfg." + field + ", v -> cfg." + field + " = v, () -> defaults." + field + ")"),
                     field + " has its detail-screen switch");
         }
     }

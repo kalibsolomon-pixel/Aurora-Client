@@ -72,6 +72,23 @@ public class BooleanSetting extends FeatureSetting {
         this.toggle = new ToggleSwitch(getter, setter);
     }
 
+    public BooleanSetting resetDefault(Supplier<Boolean> supplier) {
+        return resetDefault(null, supplier);
+    }
+
+    /** Gate metadata preserves the player's stored preference during a failed-mixin session. */
+    public BooleanSetting resetDefault(String configField, Supplier<Boolean> supplier) {
+        boolean value = supplier.get();
+        installReset(() -> (configField == null ? getter.getAsBoolean()
+                : (Boolean) com.aurora.client.health.FeatureHealth.persistedValue(configField, getter.getAsBoolean())) != value,
+                () -> {
+                    if (configField != null) com.aurora.client.health.FeatureHealth.forget(configField);
+                    setter.accept(value);
+                    if (configField != null) com.aurora.client.health.FeatureHealth.enforce(com.aurora.client.config.AuroraConfig.get());
+                }, () -> value ? "On" : "Off");
+        return this;
+    }
+
     @Override public BooleanSetting description(String desc) { super.description(desc); return this; }
     @Override public BooleanSetting description(Supplier<String> desc) { super.description(desc); return this; }
 
@@ -176,7 +193,11 @@ public class BooleanSetting extends FeatureSetting {
 
         int controlH = baseHeight();
         if (compactRow != null) renderCompactLabel(ctx, x, y, mouseX, mouseY, MaterialSurface.color(ThemeToken.ON_BACKGROUND));
-        else {
+        else if (isModified()) {
+            renderWrappedLabel(ctx, label, x + LABEL_PAD, y + (controlH - tr.lineHeight) / 2,
+                    cachedLabelArea, MaterialSurface.color(ThemeToken.ON_BACKGROUND), mouseX, mouseY, isDisabled());
+            drawValueLine(ctx, x + LABEL_PAD, y + controlH - valueLineHeight(tr) + 2, isDisabled());
+        } else {
             int textBlockH = cachedLines.size() * (tr.lineHeight + 1) + valueLineHeight(tr);
             int textY = y + (controlH - textBlockH) / 2;
             String key = tooltipKey();
@@ -230,6 +251,7 @@ public class BooleanSetting extends FeatureSetting {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button, int rowX, int rowY, int rowWidth) {
+        if (resetMouseClicked(mouseX, mouseY, button)) return true;
         syncCompactControl(rowX, rowY);
         if (isDisabled()) return false;
         if (button != com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) return false;

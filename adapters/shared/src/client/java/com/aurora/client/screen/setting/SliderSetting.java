@@ -53,6 +53,7 @@ public class SliderSetting extends FeatureSetting {
 
     /** Shared themed slider — owns the track/fill/knob drawing + drag/key interaction. */
     protected final Slider slider;
+    private final DoubleConsumer resetSetter;
 
     /** Track geometry from the last layout — hit-testing for subclasses with custom interaction. */
     protected int lastTrackX, lastTrackW;
@@ -80,8 +81,9 @@ public class SliderSetting extends FeatureSetting {
      * sites state their range type.
      */
     public static SliderSetting ofInt(String label, IntSupplier getter, IntConsumer setter, int min, int max) {
-        Slider slider = new Slider(getter::getAsInt, v -> setter.accept((int) Math.round(v)), min, max, 1);
-        return new SliderSetting(label, slider, true);
+        DoubleConsumer write = v -> setter.accept((int) Math.round(v));
+        Slider slider = new Slider(getter::getAsInt, write, min, max, 1);
+        return new SliderSetting(label, slider, true, write);
     }
 
     /** Double-range slider row (two-decimal readout; see {@link #percent()}). */
@@ -89,11 +91,12 @@ public class SliderSetting extends FeatureSetting {
         return new SliderSetting(label, getter, setter, min, max, false);
     }
 
-    private SliderSetting(String label, Slider slider, boolean intMode) {
+    private SliderSetting(String label, Slider slider, boolean intMode, DoubleConsumer setter) {
         super(unitless(label));
         this.unit = unitOf(label);
         this.intMode = intMode;
         this.slider = slider;
+        this.resetSetter = setter;
         // Phase B rollout: every SETTING row runs the canonical state
         // channels (symmetric 140 ms hover, drag grip, focus hairline).
         // The mock sliders in ThemePreviewSetting construct Slider directly
@@ -106,6 +109,7 @@ public class SliderSetting extends FeatureSetting {
         this.unit = unitOf(label);
         this.intMode = intMode;
         this.slider = createSlider(getter, setter, min, max);
+        this.resetSetter = setter;
         // See the private constructor's note — factory-wide canonical.
         this.slider.canonicalStates();
     }
@@ -120,6 +124,19 @@ public class SliderSetting extends FeatureSetting {
     protected Slider createSlider(DoubleSupplier getter, DoubleConsumer setter, double min, double max) {
         return new Slider(getter, setter, min, max, STEP);
     }
+    public SliderSetting resetDefault(DoubleSupplier supplier) {
+        double value = supplier.getAsDouble();
+        installReset(() -> Double.compare(resetValue(), value) != 0, () -> applyResetValue(value), () -> valueText(value));
+        return this;
+    }
+
+    protected double resetValue() { return slider.value(); }
+    protected void applyResetValue(double value) {
+        editingValue = false;
+        slider.mouseReleased(0, 0, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT);
+        resetSetter.accept(value); // release defaults may be finer than the interactive step
+    }
+
     @Override public SliderSetting description(String desc) { super.description(desc); return this; }
     @Override public SliderSetting description(Supplier<String> desc) { super.description(desc); return this; }
 
@@ -395,6 +412,7 @@ public class SliderSetting extends FeatureSetting {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button, int rowX, int rowY, int rowWidth) {
+        if (resetMouseClicked(mouseX, mouseY, button)) return true;
         if (isDisabled()) return false;
         layoutTrack(rowX, rowY, rowWidth);
         if (compactRow != null && editable && !editingValue && button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT && compactRow.value().contains(mouseX - rowX, mouseY - rowY)) { openValueEdit(); return true; }
