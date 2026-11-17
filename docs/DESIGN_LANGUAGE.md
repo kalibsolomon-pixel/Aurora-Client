@@ -1552,7 +1552,9 @@ shadow excluded) on the box, instead of `(h - lineHeight) / 2` plus ad-hoc nudge
 (chevrons, checks, keyboard glyphs) centre on the same axis, so a label and its glyph share one
 centre line. Horizontal centring centres the fitted text's visible ink (the glyph quads'
 left/right bounds, `AuroraFontRenderer.inkMid`, cached per style) rather than its advance
-width, so side bearings never shift a centred label; faces keep `TextAlignment.FACE_PAD` (5 px)
+width, so side bearings never shift a centred label; the sub-GUI-pixel remainder is applied
+through the pose snapped to the device-pixel grid, so centred text is accurate to half a device
+pixel and stays crisp; faces keep `TextAlignment.FACE_PAD` (5 px)
 equal padding, clear of the widest bevel. Descriptor lines use one pitch,
 `lineHeight + 2`, and the same gap below the label they describe.
 

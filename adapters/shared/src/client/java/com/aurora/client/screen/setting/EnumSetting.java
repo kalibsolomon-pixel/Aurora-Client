@@ -372,9 +372,9 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
         }
 
         // Fit first, then centre the drawn value within the face area left of the chevron.
-        int textX = AuroraFontRenderer.inkCenteredX(tr, name, btnX + textAreaW / 2f);
+
         int textY = AuroraFontRenderer.textY(tr, btnY, BTN_H);
-        ctx.text(tr, name, textX, textY, textColor, false);
+        AuroraFontRenderer.drawCentered(ctx, tr, name, btnX + textAreaW / 2f, textY, textColor);
 
         // Draw the Material Symbols arrow icon on the right. Rendered at the
         // font's natural em size, but through MaterialIconRenderer so the

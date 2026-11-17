@@ -85,6 +85,25 @@ public class AuroraFontRenderer {
         return mid;
     }
 
+    /**
+     * Draws {@code text} (String or FormattedCharSequence) with its visible ink centred on
+     * {@code centerX}. Text origins are whole GUI pixels; the remaining fraction is applied
+     * through the pose, snapped to the device-pixel grid, so glyphs stay on whole device pixels
+     * (crisp) while centring error drops from half a GUI pixel to half a device pixel.
+     */
+    private static void drawInkCentered(GuiGraphicsExtractor graphics, Font font, Object text,
+                                        float centerX, int y, int color) {
+        float x = centerX - inkMid(font, text);
+        int ix = (int) Math.floor(x);
+        int scale = Math.max(1, (int) Minecraft.getInstance().getWindow().getGuiScale());
+        float fraction = Math.round((x - ix) * scale) / (float) scale;
+        if (fraction >= 1f) { ix++; fraction = 0; }
+        if (fraction != 0) { graphics.pose().pushMatrix(); graphics.pose().translate(fraction, 0); }
+        if (text instanceof FormattedCharSequence sequence) graphics.text(font, sequence, ix, y, color, false);
+        else graphics.text(font, String.valueOf(text), ix, y, color, false);
+        if (fraction != 0) graphics.pose().popMatrix();
+    }
+
     /** Draw x that centres {@code text}'s visible ink on {@code centerX}. */
     public static int inkCenteredX(Font font, Object text, float centerX) {
         return Math.round(centerX - inkMid(font, text));
@@ -431,12 +450,12 @@ public class AuroraFontRenderer {
 
     /** Centered, non-shadowed string. {@code cx} is the center x. */
     public static void drawCentered(GuiGraphicsExtractor graphics, Font font, String text, int cx, int y, int color) {
-        graphics.text(font, text, inkCenteredX(font, text, cx), y, color, false);
+        drawInkCentered(graphics, font, text, cx, y, color);
     }
 
     /** Centered string on a fractional centre: rounds once, after ink centring. */
     public static void drawCentered(GuiGraphicsExtractor graphics, Font font, String text, float cx, int y, int color) {
-        graphics.text(font, text, inkCenteredX(font, text, cx), y, color, false);
+        drawInkCentered(graphics, font, text, cx, y, color);
     }
 
     /** Centered component on a fractional centre (its visual-order text is cached by the component). */
@@ -446,12 +465,12 @@ public class AuroraFontRenderer {
 
     /** Centered sequence on a fractional centre: rounds once, after ink centring. */
     public static void drawCentered(GuiGraphicsExtractor graphics, Font font, FormattedCharSequence text, float cx, int y, int color) {
-        graphics.text(font, text, inkCenteredX(font, text, cx), y, color, false);
+        drawInkCentered(graphics, font, text, cx, y, color);
     }
 
     /** Centered, non-shadowed styled sequence. {@code cx} is the center x. */
     public static void drawCentered(GuiGraphicsExtractor graphics, Font font, FormattedCharSequence text, int cx, int y, int color) {
-        graphics.text(font, text, inkCenteredX(font, text, cx), y, color, false);
+        drawInkCentered(graphics, font, text, cx, y, color);
     }
 
     /** Centered, non-shadowed component. {@code cx} is the center x. */
