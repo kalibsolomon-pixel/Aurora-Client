@@ -481,10 +481,8 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         // recessed); its tint is the ordinary WINDOW_FILL fill, whose alpha
         // already carries the theme's Background Opacity — still exactly one
         // application point. When the renderer declines (no world, screenshot
-        // suppression, tiny/clipped panel, failure) glassWindow is false and
-        // the cached layer below carries the old opaque fill+outline instead
-        // (see the glass bit in the version hash, which forces the re-raster
-        // on the switch).
+        // suppression, tiny/clipped panel, failure), the unified material's
+        // cached face stays the same. Legacy chrome includes that fallback.
         GlassSurface.beginGlassPass();
         boolean glassWindow = false;
         {
@@ -497,30 +495,26 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         // TOP_FADE_Y scissor (see below) while the window chrome blits
         // unscissored (the window panel itself is allowed to slide up under
         // the title band — only ROW content must stop at the boundary).
-        // Version covers every input that can change cached pixels: theme
-        // (generation stamp bumps on every reload — accent/mode/roundness/
-        // opacity/blur/enabled, drag throttles, profile switches), scroll,
-        // content height (expanded editors), framebuffer size, and GUI scale.
-        // The row layer adds the settings' shape fingerprints.
-        com.mojang.blaze3d.pipeline.RenderTarget main =
-                this.minecraft != null ? com.aurora.client.adapter.NativeUi.mainTarget(this.minecraft) : null;
-        int fbW = (main != null && main.width > 0) ? main.width : this.width;
-        int fbH = (main != null && main.height > 0) ? main.height : this.height;
+        // Bounds invalidate moved/resized captures. Chrome needs the theme
+        // and raster scale; rows additionally depend on scroll and shapes.
+        // Glass availability never changes the unified cached face or rows.
         int guiScale = Math.max(1, (int) this.minecraft.getWindow().getGuiScale());
+        int chromeX = listX - 9, chromeY = windowY - 9;
+        int chromeW = LIST_W + 18, chromeH = windowH + 18;
+        int rowX = listX + 8, rowY = bodyTop();
+        int rowW = LIST_W - 16, rowH = Math.max(1, bodyBottom() - rowY);
+        chromeCache.ensureRegion(chromeX * guiScale, chromeY * guiScale,
+                chromeW * guiScale, chromeH * guiScale);
+        rowCache.ensureRegion(rowX * guiScale, rowY * guiScale, rowW * guiScale, rowH * guiScale);
         int fingerprint = 0;
         for (FeatureSetting s : meta.settings) if (s.isVisible()) fingerprint = fingerprint * 31 + s.shapeFingerprint();
-        long chromeVersion = ThemeManager.generation() * 1_000_003L
-                ^ ((long) totalRowsH * 31L)
-                ^ ((long) fbW * 7919L)
-                ^ ((long) fbH * 17L)
-                ^ ((long) guiScale * 65537L)
-                ^ ((long) windowH * 2_147_483_647L)
-                ^ (glassWindow ? 0x5BD1B2C1L : 0L); // glass state changes cached fill presence
-        long rowVersion = chromeVersion ^ ((long) fingerprint * 100_000_009L)
-                ^ ((long) (int) scroll.current() * 104729L) ^ bodyTop();
+        long baseVersion = ThemeManager.generation() * 1_000_003L ^ ((long) guiScale * 65537L);
+        long chromeVersion = baseVersion
+                ^ (glassWindow && !MaterialSurface.unified() ? 0x5BD1B2C1L : 0L);
+        long rowVersion = baseVersion ^ ((long) fingerprint * 100_000_009L)
+                ^ ((long) totalRowsH * 31L) ^ ((long) (int) scroll.current() * 104729L) ^ bodyTop();
 
         if (!chromeCache.isCurrent(chromeVersion)) {
-            chromeCache.ensureSize(fbW, fbH);
             chromeCache.clear();
             RenderUtil.RectSink prev = RenderUtil.beginCapture(chromeCache.sink());
             try {
@@ -531,7 +525,6 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
             chromeCache.commit(chromeVersion);
         }
         if (!rowCache.isCurrent(rowVersion)) {
-            rowCache.ensureSize(fbW, fbH);
             rowCache.clear();
             RenderUtil.RectSink prev = RenderUtil.beginCapture(rowCache.sink());
             try {
@@ -620,13 +613,13 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         GlassSurface.overlayDim(ctx, this.width, this.height);
 
         // Stationary frame chrome sits above dim and outside the body scissor.
-        chromeCache.blit(ctx, this.width, this.height);
+        chromeCache.blitAt(ctx, chromeX, chromeY, chromeW, chromeH);
 
         // Only the body scrolls; the frame and search header have fixed geometry.
         ctx.enableScissor(listX + 8, bodyTop(), listX + LIST_W - 8, bodyBottom());
 
         // Rows' cached shape layer — the second blit, under the boundary.
-        rowCache.blit(ctx, this.width, this.height);
+        rowCache.blitAt(ctx, rowX, rowY, rowW, rowH);
 
         // Live overlay: text, hover feedback, animated values.
         int y = bodyTop() - (int) scroll.current();
@@ -967,8 +960,8 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
             s.onDetailScreenClose();
             s.clearCompactMeasurement();
         }
-        chromeCache.dispose();
-        rowCache.dispose();
+        chromeCache.retire();
+        rowCache.retire();
     }
 
     @Override

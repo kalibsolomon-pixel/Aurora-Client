@@ -27,8 +27,9 @@ import org.lwjgl.system.MemoryUtil;
  * compositing used by the CPU live path; the final blit is 1:1 at native
  * resolution. Live shader shapes use different edge coverage.
  *
- * <p><b>Lifecycle:</b> one instance per screen; {@link #dispose()} on close.
- * {@link #ensureSize} re-allocates on window/GUI-scale resize.
+ * <p><b>Lifecycle:</b> screens queue {@link #retire()} on close so deferred
+ * blits finish before disposal. Region bounds track position and raster size;
+ * {@link #ensureSize} is the local-coordinate form used by row templates.
  */
 public final class UiLayerCache implements RenderUtil.RectSink {
 
@@ -48,6 +49,7 @@ public final class UiLayerCache implements RenderUtil.RectSink {
     private Identifier texId;
     private int w = -1;
     private int h = -1;
+    private int captureX, captureY;
     private long version = Long.MIN_VALUE;
     private int[] scaledRow;
     private int[] maskRuns;
@@ -65,16 +67,30 @@ public final class UiLayerCache implements RenderUtil.RectSink {
         return this;
     }
 
-    /** (Re)allocate the backing image/texture when the framebuffer size changes. */
+    /** Allocate a template whose draw coordinates are local to the image. */
     public void ensureSize(int w, int h) {
-        if (this.w == w && this.h == h && image != null) return;
-        releaseTexture();
-        if (image != null) {
-            image.close();
+        ensureRegion(0, 0, w, h);
+    }
+
+    /**
+     * Capture only this rectangle in physical pixels. Draw calls keep their
+     * original screen coordinates; the sink translates and clips them into
+     * the image. Call before isCurrent so moving or resizing invalidates the
+     * old pixels. The final blit must use the corresponding logical bounds.
+     */
+    public void ensureRegion(int x, int y, int w, int h) {
+        if (w <= 0 || h <= 0) throw new IllegalArgumentException("Positive capture dimensions required");
+        if (captureX != x || captureY != y) version = Long.MIN_VALUE;
+        captureX = x;
+        captureY = y;
+        if (this.w != w || this.h != h || image == null) {
+            releaseTexture();
+            if (image != null) image.close();
+            image = new NativeImage(NativeImage.Format.RGBA, w, h, false);
+            this.w = w;
+            this.h = h;
+            version = Long.MIN_VALUE;
         }
-        image = new NativeImage(NativeImage.Format.RGBA, w, h, false); // zero-init = transparent
-        this.w = w;
-        this.h = h;
     }
 
     /** Clear the buffer to transparent — call before a capture pass. */
@@ -301,10 +317,10 @@ public final class UiLayerCache implements RenderUtil.RectSink {
     @Override
     public void rect(int x1, int y1, int x2, int y2, int argb) {
         if (image == null) return;
-        int x0 = Math.max(0, x1);
-        int y0 = Math.max(0, y1);
-        int x3 = Math.min(w, x2);
-        int y3 = Math.min(h, y2);
+        int x0 = Math.max(0, x1 - captureX);
+        int y0 = Math.max(0, y1 - captureY);
+        int x3 = Math.min(w, x2 - captureX);
+        int y3 = Math.min(h, y2 - captureY);
         if (x3 <= x0 || y3 <= y0) return;
 
         int srcA = (argb >>> 24) & 0xFF;
@@ -348,6 +364,7 @@ public final class UiLayerCache implements RenderUtil.RectSink {
         }
         w = -1;
         h = -1;
+        captureX = captureY = 0;
         version = Long.MIN_VALUE;
         scaledRow = null; maskRuns = null;
     }

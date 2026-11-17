@@ -914,26 +914,24 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         // the theme's Background Opacity — still exactly one application
         // point. The dim veils the panel and its surroundings equally. When
         // the renderer declines (menu context with no world, screenshot
-        // suppression, failure) glassWindow is false and the cached chrome
-        // below carries the old opaque fill + outline instead (see the glass
-        // bit in the version hash, which forces the re-raster on the switch).
+        // suppression, failure), the unified material keeps the same cached
+        // face. Only the legacy material depends on glass availability.
         GlassSurface.beginGlassPass();
         float radius = ThemeManager.current().roundness().radius();
         boolean glassWindow = GlassSurface.container(g, boxX(), boxY(), BOX_W, BOX_H, radius);
 
-        com.mojang.blaze3d.pipeline.RenderTarget main = this.minecraft != null ? com.aurora.client.adapter.NativeUi.mainTarget(this.minecraft) : null;
-        int fbW = (main != null && main.width > 0) ? main.width : this.width;
-        int fbH = (main != null && main.height > 0) ? main.height : this.height;
         int guiScale = Math.max(1, (int) this.minecraft.getWindow().getGuiScale());
+        // The three glow rings extend six pixels; leave two more for AA.
+        int cacheX = (int) boxX() - 8, cacheY = (int) boxY() - 8;
+        int cacheW = (int) BOX_W + 16, cacheH = (int) BOX_H + 16;
+        layerCache.ensureRegion(cacheX * guiScale, cacheY * guiScale,
+                cacheW * guiScale, cacheH * guiScale);
 
         long version = ThemeManager.generation() * 1_000_003L
-                ^ ((long) fbW * 7919L)
-                ^ ((long) fbH * 17L)
                 ^ ((long) guiScale * 65537L)
-                ^ (glassWindow ? 0x5BD1B2C1L : 0L); // glass state changes cached fill presence
+                ^ (glassWindow && !MaterialSurface.unified() ? 0x5BD1B2C1L : 0L);
 
         if (!layerCache.isCurrent(version)) {
-            layerCache.ensureSize(fbW, fbH);
             layerCache.clear();
             RenderUtil.RectSink prev = RenderUtil.beginCapture(layerCache.sink());
             try {
@@ -958,7 +956,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
 
         // Cached chrome — one textured blit (a content layer above the dim,
         // exactly where it always sat).
-        layerCache.blit(g, this.width, this.height);
+        layerCache.blitAt(g, cacheX, cacheY, cacheW, cacheH);
 
         renderLive(g, mods, mouseX, mouseY, delta);
 
@@ -2335,6 +2333,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     @Override
     public void removed() {
         if(unifiedTheme()) MaterialSurface.disposeTemplates();
+        layerCache.retire(); // deferred GUI draws may still reference its texture
         invalidateSettingsSemantics();
         FeatureSetting.clearHostBand(); // C-8 — drop the published host band
         super.removed();
