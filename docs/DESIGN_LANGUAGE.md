@@ -1559,6 +1559,10 @@ negative gradient of inward distance `-d`; this sign makes the upper-left rim ca
 upper-left light. The draft spec's minus sign with an *outward* SDF gradient would invert
 that lighting; this sign clarification preserves the required highlight direction.
 
+**Disabled controls (2026-11-17).** A disabled control keeps the raised form in the
+`MATERIAL_PANEL` tone with no shadow and a muted label, so it still reads as a control; a flat
+panel-tone face disappeared into the window.
+
 **Switches (2026-11-17).** The ON track is the same recessed well as OFF, filled with the accent
 (`Light.INSET`), so the two states differ only in colour; the knob rests on whole pixels with a
 2 px margin (`h - 4` knob), exactly centred on the track.

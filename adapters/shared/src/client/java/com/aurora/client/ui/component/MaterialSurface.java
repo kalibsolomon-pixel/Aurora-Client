@@ -113,8 +113,10 @@ public final class MaterialSurface {
         int edge=selected && !disabled ? ThemeManager.color(ThemeToken.ACCENT_MARKER) : 0;
         int state=kind+(selected ? 8 : 0);
         // A settled state needs one face blit; stacking both endpoints would double AA coverage.
+        // Disabled keeps its raised form in the panel tone, without the shadow (2026-11-17): a flat
+        // panel-tone face vanished into the window, so an unavailable "+" read as a bare glyph.
         if(disabled || hover<1 && press<1)
-            depth(g,x,y,w,h,radius,base,edge,state,disabled ? Light.FLAT : primary ? actionLight : Light.RAISED,1);
+            depth(g,x,y,w,h,radius,base,edge,state,primary && !disabled ? actionLight : Light.RAISED,1);
         if(disabled) return;
         if(hover>0 && press<1) depth(g,x,y,w,h,radius,over,edge,state+1,primary ? actionLight : Light.HOVER,Math.min(1,hover));
         if(press>0) depth(g,x,y,w,h,radius,down,edge,state+2,Light.PRESSED,Math.min(1,press));
