@@ -3,6 +3,8 @@ package com.aurora.client.hud.module;
 import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.feature.impl.ClickTrackerFeature;
 import com.aurora.client.hud.HudAnchor;
+import com.aurora.client.hud.KeycapRenderer;
+import com.aurora.client.theme.KeycapProfile;
 import com.aurora.client.util.AuroraKey;
 import com.aurora.client.util.CachedValue;
 import com.aurora.client.theme.ThemeManager;
@@ -18,9 +20,8 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import java.util.List;
 
 /**
- * Keystrokes overlay — a single cohesive panel of rounded keycaps. Each cap
- * sits {@link #DEPTH} px proud of a darker base (the visible bottom edge) and
- * travels down onto it while pressed, picking up a soft accent tint and edge.
+ * Keystrokes overlay — flat, translucent, or sculpted Cherry-profile keycaps in one
+ * cohesive panel. Every style travels while pressed and picks up the configured accent.
  *
  * <p>Layout, top to bottom (every row optional):
  * <pre>
@@ -95,6 +96,7 @@ public class KeystrokesModule extends HudModule {
     private final boolean[] pressTarget = new boolean[SLOTS];
     private final long[] pressStart = new long[SLOTS], pressLeg = new long[SLOTS];
     private int visibleMask;
+    private final KeycapRenderer keycaps = new KeycapRenderer();
 
     // ---- Label cache (bind names change only when keys are rebound) ----
     private static final long LABEL_REFRESH_MS = 2000L;
@@ -155,6 +157,11 @@ public class KeystrokesModule extends HudModule {
     /** Keycap radius: fixed, or the theme's compact radius when the switch is on. */
     private float keyRadius() {
         return com.aurora.client.util.HudBackgrounds.radius(themeCorners(), KEY_RADIUS);
+    }
+
+    /** KEYCAP alone uses the full UI radius; the existing switch also remains the panel's switch. */
+    private float keycapRadius() {
+        return themeCorners() ? ThemeManager.current().roundness().radius() : KeycapProfile.DEFAULT_RADIUS;
     }
 
     /**
@@ -262,11 +269,18 @@ public class KeystrokesModule extends HudModule {
 
         // ---- CPS readout (event-based rolling 1-second counters) ----
         if (cfg.keystrokesShowCps && !cfg.keystrokesShowMouse) {
-            blitTemplate(ctx, TPL_PLATE, x, cy, WIDTH, CPS_H, accent, 1f);
             String text = cpsText.get();
-            int tw = font.width(text);
-            com.aurora.client.hud.HudTextPainter.draw(ctx,font, textCache.text(SLOTS, text), x + (WIDTH - tw) / 2,
-                    cy + (CPS_H - font.lineHeight) / 2, labelColor);
+            if (cfg.keystrokesKeyStyle == AuroraConfig.KeystrokesKeyStyle.KEYCAP) {
+                keycaps.draw(ctx, x, cy, WIDTH, CPS_H, keycapRadius(), 0, idleBackground(), accent);
+                drawKeycapText(ctx, font, textCache.text(SLOTS, text), font.width(text),
+                        x + KeycapProfile.topX(WIDTH), cy + KeycapProfile.topY(CPS_H, 0),
+                        KeycapProfile.topWidth(WIDTH), KeycapProfile.topHeight(CPS_H), 1, labelColor);
+            } else {
+                blitTemplate(ctx, TPL_PLATE, x, cy, WIDTH, CPS_H, accent, 1f);
+                int tw = font.width(text);
+                com.aurora.client.hud.HudTextPainter.draw(ctx,font, textCache.text(SLOTS, text), x + (WIDTH - tw) / 2,
+                        cy + (CPS_H - font.lineHeight) / 2, labelColor);
+            }
             cy += CPS_H + GAP;
         }
 
@@ -386,18 +400,67 @@ public class KeystrokesModule extends HudModule {
     private void drawKey(GuiGraphicsExtractor ctx, Font font, int x, int y, int w, int h,
                          int slot, int accent, int labelColor) {
         float t = press[slot];
+        if (AuroraConfig.get().keystrokesKeyStyle == AuroraConfig.KeystrokesKeyStyle.KEYCAP) {
+            keycaps.draw(ctx, x, y, w, h, keycapRadius(), t, idleBackground(), accent);
+            drawKeycapLabel(ctx, font, x, y, w, h, slot, t, labelColor);
+            return;
+        }
+        boolean flat = AuroraConfig.get().keystrokesKeyStyle == AuroraConfig.KeystrokesKeyStyle.FLAT;
         int capH = h - DEPTH;
         float density = com.aurora.client.worldmap.MapMarkers.density(ctx);
         // Whole device pixels only, so edges and text stay crisp mid-press.
         float offset = Math.round(t * DEPTH * density) / density;
-        blitTemplate(ctx, TPL_SHELL, x, y, w, h, accent, 1f);
+        if (!flat) blitTemplate(ctx, TPL_SHELL, x, y, w, h, accent, 1f);
         blitTemplate(ctx, TPL_CAP, x, y + offset, w, capH, accent, 1f);
         blitTemplate(ctx, TPL_CAP_PRESSED, x, y + offset, w, capH, accent, t);
-        blitTemplate(ctx, TPL_RIM, x, y, w, h, accent, 1f);
-        blitTemplate(ctx, TPL_RIM_PRESSED, x, y, w, h, accent, t);
+        if (!flat) {
+            blitTemplate(ctx, TPL_RIM, x, y, w, h, accent, 1f);
+            blitTemplate(ctx, TPL_RIM_PRESSED, x, y, w, h, accent, t);
+        }
         ctx.pose().pushMatrix();
         ctx.pose().translate(0f, offset);
         drawKeyLabel(ctx, font, x, y, w, capH, slot, labelColor);
+        ctx.pose().popMatrix();
+    }
+
+    /** Centre legends and mouse CPS on the dished top, interpolating the one-pixel key travel. */
+    private void drawKeycapLabel(GuiGraphicsExtractor ctx, Font font, int x, int y, int w, int h,
+                                 int slot, float press, int labelColor) {
+        float topX = x + KeycapProfile.topX(w), topY = y + KeycapProfile.topY(h, press);
+        float topW = KeycapProfile.topWidth(w), topH = KeycapProfile.topHeight(h);
+        boolean mouseWithCps = h > CELL && slot >= SLOT_LMB && slot <= SLOT_RMB;
+        String label = labels[slot];
+        if (label != null && !label.isEmpty() && labelWidths[slot] > 0) {
+            drawKeycapText(ctx, font, textCache.text(slot, label), labelWidths[slot], topX, topY,
+                    topW, mouseWithCps ? Math.max(1, topH - 10) : topH, 1, labelColor);
+        }
+        if (mouseWithCps && slot != SLOT_MMB) {
+            String count = mouseCps.get()[slot == SLOT_LMB ? 0 : 1];
+            drawKeycapText(ctx, font, textCache.text(SLOTS + 1 + (slot == SLOT_LMB ? 0 : 1), count),
+                    font.width(count), topX, topY + Math.max(0, topH - 10), topW,
+                    Math.min(10, topH), .75f, labelColor);
+        }
+    }
+
+    /** Visible-ink centring, active-font vertical metrics and bounded uniform fitting. */
+    private static void drawKeycapText(GuiGraphicsExtractor ctx, Font font,
+                                       net.minecraft.network.chat.Component text, int advance,
+                                       float x, float y, float w, float h, float maxScale, int color) {
+        if (advance <= 0 || w <= 4 || h <= 0) return;
+        float scale = Math.min(maxScale, (w - 4f) / advance);
+        float centerX = x + w * .5f;
+        if (scale == 1f) {
+            com.aurora.client.hud.HudTextPainter.draw(ctx, font, text,
+                    com.aurora.client.ui.util.AuroraFontRenderer.inkCenteredX(font, text, centerX),
+                    com.aurora.client.ui.util.AuroraFontRenderer.textY(font, y, h), color);
+            return;
+        }
+        ctx.pose().pushMatrix();
+        ctx.pose().translate(centerX, y);
+        ctx.pose().scale(scale, scale);
+        com.aurora.client.hud.HudTextPainter.draw(ctx, font, text,
+                Math.round(-com.aurora.client.ui.util.AuroraFontRenderer.inkMid(font, text)),
+                com.aurora.client.ui.util.AuroraFontRenderer.textY(font, 0, h / scale), color);
         ctx.pose().popMatrix();
     }
 

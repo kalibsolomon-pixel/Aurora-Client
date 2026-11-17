@@ -1328,6 +1328,14 @@ addWithSettings("hitbox",
                                 v -> cfg.keystrokesExtraKeys = v)
                                 .description("Additional keys to track (Space, Shift, hotbar or ability keys). Click \"+ Add Key\", then press a key; ESC cancels. Keys auto-arrange in rows of three."),
                         new SectionHeaderSetting("Style"),
+                        new EnumSetting<>("Key Style", AuroraConfig.KeystrokesKeyStyle.class,
+                                () -> cfg.keystrokesKeyStyle, v -> cfg.keystrokesKeyStyle = v).resetDefault(() -> defaults.keystrokesKeyStyle)
+                                .labels(AuroraConfig.KeystrokesKeyStyle::getLabel)
+                                .valueDescriptions(style -> switch (style) {
+                                    case FLAT -> "One opaque, unlit face per key, with the existing compact corners and press motion.";
+                                    case TRANSLUCENT -> "The existing layered shell, key face, fine rim and press motion.";
+                                    case KEYCAP -> "Sculpted Cherry-profile caps with sloped walls, a concave top and a soft contact shadow.";
+                                }),
                         new ColorSetting("Text Color", () -> cfg.keystrokesTextColor == null ? com.aurora.client.theme.ThemeManager.color(com.aurora.client.theme.ThemeToken.ON_SURFACE) : cfg.keystrokesTextColor, v -> cfg.keystrokesTextColor = v).resetDefault(() -> cfg.keystrokesTextColor, () -> defaults.keystrokesTextColor, () -> defaults.keystrokesTextColor == null ? defaultTheme.color(com.aurora.client.theme.ThemeToken.ON_SURFACE) : defaults.keystrokesTextColor)
                                 .description("Text color for this HUD only. Reset restores its default color."),
                         new ColorSetting("Accent Color",
@@ -1361,7 +1369,8 @@ addWithSettings("hitbox",
                         new ColorSetting("Background Color (when SOLID)",
                                 () -> cfg.keystrokesBgColor, v -> cfg.keystrokesBgColor = v).resetDefault(() -> defaults.keystrokesBgColor),
                         hudThemeCorners(() -> cfg.keystrokesThemeCorners, v -> cfg.keystrokesThemeCorners = v, () -> defaults.keystrokesThemeCorners)
-                                .description("Round the keycaps and the backing panel with the theme's Corner Radius (Settings → Appearance → Surfaces) instead of their fixed corners.")
+                                .description("Use the theme's Corner Radius for 3D keycaps instead of the 2 px Cherry radius. This existing switch also controls the backing panel and the other key styles' corners.")
+                                .visibleWhen(() -> cfg.keystrokesKeyStyle == AuroraConfig.KeystrokesKeyStyle.KEYCAP)
                 ));
 
         // ---- Display Settings ----

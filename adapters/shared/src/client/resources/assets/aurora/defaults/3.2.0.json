@@ -822,6 +822,7 @@
   "itemPhysicsTumbleStrength": 1.0,
   "serverListDragReorder": true,
   "keystrokesEnabled": true,
+  "keystrokesKeyStyle": "TRANSLUCENT",
   "keystrokesShowMovement": true,
   "keystrokesShowMouse": true,
   "keystrokesShowMiddleMouse": false,

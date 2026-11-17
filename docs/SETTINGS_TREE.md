@@ -394,6 +394,7 @@ Swing, view bob, damage tilt, idle sway, entity smoothing.
 
 #### Keystrokes · on `{card:keystrokes}`
 Shows your key and mouse presses.
+- **Key Style**: dropdown · Translucent (the unchanged legacy renderer); Flat and 3D Keycap are opt-in. `{keystrokesKeyStyle}`
 - **Text Color**: color · theme text color. `{keystrokesTextColor}`
 - **Show WASD Keys**: toggle · on. `{keystrokesShowMovement}`
 - **Show Mouse Buttons**: toggle · on. `{keystrokesShowMouse}`
@@ -407,7 +408,7 @@ Shows your key and mouse presses.
 - **Scale**: slider · about 1.29 (same as resizing in the HUD Editor). `{hud:keystrokes.scale}`
 - **Background**: dropdown · Solid. `{keystrokesBgMode}`
 - **Background Color (when SOLID)**: color · near-black. `{keystrokesBgColor}`
-- **Theme Corner Radius**: toggle · off · round this HUD's corners with the theme's Corner Radius instead of its fixed corners. `{keystrokesThemeCorners}`
+- **Theme Corner Radius**: toggle · off · shown for 3D Keycap; uses the full theme radius instead of the 2 px Cherry radius, and continues to control the backing panel and other styles' compact corners. `{keystrokesThemeCorners}`
 
 #### Minimap · off `{card:minimap}`
 Top-down map in a HUD corner.
