@@ -125,6 +125,38 @@ long labels in grid/list, interactive rest/hover/focus/press/disabled states, pl
 fills and mean/p95 CPU probes. No runtime visual/accessibility or performance pass is claimed.
 The saturation cap is explicitly reversible for owner review.
 
+## In-client acceptance (parent, 2026-11-17)
+
+Minecraft 26.3, OpenGL, Windows 11, Radeon RX 9070 XT, 1162x1353 window at GUI scale 3, a
+disposable copy of the owner's config and world. The live theme is the owner's (Inter, SQUARE,
+cyan, 19% opacity); factory is the probe's `factory` plus `theme ROUND 0.33`. All 92 mixins
+applied. Each sample is 120 warm-up frames then 600 steady frames (`tools/parity` probe).
+
+| Measure (live theme) | master `29ea9aa` | depth pass final |
+|---|---:|---:|
+| Feature grid, steady extraction mean / p95 | 0.107 / 0.131 ms | 0.071 / 0.090 ms |
+| Feature grid, GUI fills per frame | 51.6 | 8.4 |
+| Text & Fonts, steady mean / p95 | 0.090 / 0.112 ms | 0.078 / 0.100 ms |
+| Main screen, first open in session (one sample) | 69.6 ms | 92.2 ms |
+| Text & Fonts, first open in session (one sample) | 18.0 ms | 21.7 ms |
+| Main screen, reopen from gameplay | 12.6 ms (one sample) | 14.9–17.0 ms (four samples) |
+| Text & Fonts, reopen from gameplay | 13.8 ms (one sample) | 15.5–15.9 ms (four samples) |
+
+First-open figures are single samples that include first-use work (JIT, fonts, icons);
+they are not isolated cache measurements. Before the bake speed-up the same reopens took
+19.3 and 21.0 ms. Material templates now persist while moving between screens and are
+released when the player returns to gameplay. Tracked image backing at the end of the
+steady runs was 6.0 MiB (grid) and 8.5 MiB (Text & Fonts). This is a UI-open measurement,
+not release overhead acceptance (`tools/overhead_check.py`).
+
+Visuals: [before, live](evidence/ui-depth/before-live.png),
+[after, live](evidence/ui-depth/after-live.png),
+[before, factory](evidence/ui-depth/before-factory.png),
+[after, factory](evidence/ui-depth/after-factory.png). In greyscale, ON and OFF tiles
+separate clearly in both themes, and a hovered OFF tile stays visibly OFF. Not covered:
+Vulkan, the 26.1.2 and 26.2 clients, GUI scales other than 3, and long-label overflow
+beyond these screens.
+
 ## Hygiene and retained work
 
 Workspace-hygiene skill read at task start and before handoff. Task-owned scratch
