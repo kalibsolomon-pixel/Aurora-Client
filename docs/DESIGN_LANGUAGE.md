@@ -868,6 +868,17 @@ in its label row's trailing value slot instead, above its Add control.
   a subtle accent focus treatment communicate editing without changing material tint.
   A focused field paints its selection behind the text in `ACCENT` at 40% alpha, clipped to
   the visible window (`SELECTION_SOFT` was too faint on the factory field).
+- **Invalid/rejected:** a rejected value never leaves silently. A short, specific message
+  renders under the field it refuses, in the normal text size and `STATUS_ERROR` — "Name
+  already used", "Name can't be empty", "Use 6 hex digits, like 3A7BFF". It appears live
+  while typing where the format is knowable (hex, names) and clears the moment the input
+  becomes valid again; an invalid Enter/Done keeps the field open with the user's text, and
+  Escape keeps its screen's meaning while never committing an invalid value. A screen whose
+  validation is save-time (the waypoint editor) names the first invalid field in the same
+  voice instead. The message is measured with the active font in the field's real column:
+  wrap between whole words, bounded ellipsis only when a single word cannot fit. Preventing
+  invalid characters up front (the dashboard's filtered hex fields) is the complementary
+  idiom — then there is nothing to reject, and no message is needed.
 - **Input/accessibility:** preserve selection, cursor position, standard editing keys,
   narration, label/purpose, and value. Numeric commit/revert behavior must be explicit.
 - **Editing history:** Aurora-owned `EditBox` fields, including Pulsar's `KTextField`

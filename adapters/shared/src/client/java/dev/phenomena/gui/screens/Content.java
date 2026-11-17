@@ -152,13 +152,15 @@ public final class Content {
     y = top + height + 2;
   }
 
-  /** Hex field plus preset swatches, kept in sync. */
+  /** Hex field plus preset swatches, kept in sync. The filter prevents invalid input (§11.12's
+   *  prevention idiom); the shared parse applies the value at 6 digits. */
   public void color(String label, String help, IntSupplier get, IntConsumer set) {
     var field = new KTextField(label, String.format(Locale.ROOT, "%06X", get.getAsInt() & 0xFFFFFF), 6);
     field.setFilter(s -> s.matches("[0-9a-fA-F]{0,6}"));
     field.setResponder(
         v -> {
-          if (v.length() == 6) set.accept(0xFF000000 | Integer.parseInt(v, 16));
+          Integer rgb = com.aurora.client.util.HexText.parseRgb(v);
+          if (rgb != null) set.accept(rgb);
         });
     var swatches =
         new ColorSwatches(

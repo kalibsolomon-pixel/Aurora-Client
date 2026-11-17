@@ -2,6 +2,7 @@ package com.aurora.client.screen;
 import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.ui.component.MaterialSurface;
 import com.aurora.client.config.profile.ProfileManager;
+import com.aurora.client.config.profile.ProfileNameValidator;
 import com.aurora.client.screen.setting.FeatureSetting;
 import com.aurora.client.screen.setting.KeybindSetting;
 import com.aurora.client.theme.ThemeManager;
@@ -59,7 +60,9 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
     // the name under it, and the hotkey chip on the bottom line, so every
     // card in a row keeps its parts on the same lines. Columns follow the
     // available width (at least one).
-    private static final int CARD_H = 84;
+    // 88 (was 84, 2026-11-17): room for a refusal message between the name field and the
+    // bottom action line (design language §11.12).
+    private static final int CARD_H = 88;
     private static final int CARD_MIN_W = 104;
     private static final int CARD_GAP = 8;
     private static final int INSET = 6;
@@ -81,6 +84,8 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
      */
     private boolean creatingNew = false;
     private EditBox createField;
+    /** Refusal message under the create field (null = the typed name is acceptable); design language §11.12. */
+    private String createError;
 
     /** The profile whose hotkey chip is waiting for a key, or null. */
     private String capturingHotkey;
@@ -101,7 +106,8 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
     /**
      * The Create confirm's Phase A semantic control (rollout): long-lived
      * (one per screen), with a DYNAMIC enabled gate — enabled exactly while
-     * the create field holds a non-empty name. Keyboard routing stays
+     * the create field holds an acceptable (non-empty, unrefused) name.
+     * Keyboard routing stays
      * deliberately with the field's Enter (focusable/keyboard-eligible off
      * on the control): making the button a selection target while its own
      * field is being typed into would let a Space keypress commit the form
@@ -157,9 +163,10 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         registerSemanticControl(this.createControl);
     }
 
-    /** The create gate: enabled exactly while a non-empty name is entered. */
+    /** The create gate: enabled exactly while the entered name is non-empty and acceptable. */
     private boolean createEnabled() {
-        return creatingNew && createField != null && !createField.getValue().trim().isEmpty();
+        return creatingNew && createField != null && createError == null
+                && !createField.getValue().trim().isEmpty();
     }
 
     // ------------------------------------------------------------------
@@ -847,26 +854,48 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         createField = new EditBox(this.font, 0, 0, nameColumnWidth(), 16, Component.literal("Name"));
         createField.setMaxLength(48);
         createField.setHint(Component.literal("Name…")); // the field's own placeholder, above its fill
+        // Live recompute (design language §11.12): the message appears while
+        // the typed name is refusable ("Name already used"), clears when it is
+        // acceptable, and the Create gate follows the same state.
+        createField.setResponder(value -> {
+            String v = value.trim();
+            createError = v.isEmpty() ? null
+                    : ProfileNameValidator.problem(v, ProfileManager.getInstance().listProfileNames(), null);
+        });
         createField.setFocused(true);
         scroll.set(0);
     }
 
+    /**
+     * Applies the create editor. A refused name never cancels it: the field
+     * stays open with the user's text and the message under it (design
+     * language §11.12). Empty still cancels — the editor's cancel idiom.
+     */
     private void commitCreate() {
         if (createField == null) return;
         String v = createField.getValue().trim();
-        cancelCreate();
-        if (v.isEmpty()) return;
-        if (ProfileManager.getInstance().create(v)) {
-            flash("Created " + v);
-        } else {
-            flash("Could not create (name taken?)");
+        if (v.isEmpty()) { cancelCreate(); return; }
+        String problem = ProfileNameValidator.problem(v, ProfileManager.getInstance().listProfileNames(), null);
+        if (problem != null) {
+            createError = problem;
+            return;
         }
+        cancelCreate();
+        if (ProfileManager.getInstance().create(v)) flash("Created " + v);
+        else flash("Could not create " + v);
     }
 
     private void cancelCreate() {
         creatingNew = false;
         createField = null;
+        createError = null;
         createBtn = null;
+    }
+
+    /** Inline renames validate in the base ({@link ManagerListScreen#renameProblem}). */
+    @Override
+    protected String renameProblem(String oldName, String candidate) {
+        return ProfileNameValidator.problem(candidate, ProfileManager.getInstance().listProfileNames(), oldName);
     }
 
     @Override
@@ -876,7 +905,9 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         if (ProfileManager.getInstance().rename(oldName, newValue)) {
             flash("Renamed → " + newValue);
         } else {
-            flash("Could not rename (name taken?)");
+            // Unreachable through the field's own validation (renameProblem);
+            // kept for an I/O refusal, which the field could not predict.
+            flash("Could not rename to " + newValue);
         }
     }
 
@@ -917,6 +948,9 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         EditBox editor = layoutEditField(rows, listX);
         if (editor != null && editFieldVisible(rows)) {
             renderEditorClipped(ctx, editor, listX, mouseX, mouseY, delta);
+            // The refusal message under whichever inline editor is open —
+            // the create field or the rename field (design language §11.12).
+            renderFieldMessage(ctx, editor, creatingNew ? createError : editorError, listX);
         }
 
         if (controlsChip != null) {
