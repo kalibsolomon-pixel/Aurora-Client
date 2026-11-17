@@ -82,6 +82,12 @@ public class AuroraConfig {
      */
     private static final AuroraConfig DEFAULTS = new AuroraConfig();
 
+    /** Independent, deep copy of the effective release defaults, including machine initializers.
+     * Call at row construction, never from a render/getter loop. */
+    public static AuroraConfig defaults() {
+        return GSON.fromJson(GSON.toJsonTree(DEFAULTS), AuroraConfig.class);
+    }
+
     /**
      * Reset every {@code public}, non-static, non-final field on the live
      * config whose name starts with {@code camelCasePrefix} back to its

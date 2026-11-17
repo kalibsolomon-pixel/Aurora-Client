@@ -350,26 +350,32 @@ public class AuroraFontRenderer {
     }
 
     /**
+     * The shared ellipsis-fit memo: (text, maxW, minLen, {@link #styleKey()})
+     * -> fitted, access-order, capped at 1024 entries. Render-thread only,
+     * like every fitted-text cache. Sized above one busy frame's distinct
+     * labels (buttons, grid summaries, map markers share it): an LRU smaller
+     * than the working set misses on every lookup. {@link com.aurora.client.ui.util.TextFit}
+     * owns the fitting itself.
+     */
+    private static final com.aurora.client.ui.util.TextFit.Memo ELLIPSIS_FIT =
+            new com.aurora.client.ui.util.TextFit.Memo(1024);
+
+    /**
      * Ellipsis-truncates {@code s} to {@code maxW} pixels: drops trailing
-     * characters (never below {@code minLen}) until {@code s + "…"} fits,
-     * then appends the ellipsis. Returns {@code s} unchanged if it already
-     * fits. The canonical form of the trim loop the manager screens, the
-     * pack browser and the keybind pill previously each carried; callers
-     * with per-frame text wrap their own memo cache around it (the loop's
-     * {@code font.width()} per removed character is the expensive part).
+     * text (never below {@code minLen} chars) until {@code s + "…"} fits,
+     * then appends the ellipsis. Truncation lands only on extended grapheme
+     * cluster boundaries — combining marks, ZWJ emoji sequences, flag pairs
+     * and variation selectors are never split — found by binary search over
+     * the boundaries (core {@link com.aurora.client.ui.util.TextFit}). The
+     * shared memo above makes repeated per-frame calls with the same text,
+     * width and text style free; callers no longer need their own cache.
+     * The canonical form of the trim loop the manager screens, the pack
+     * browser and the keybind pill previously each carried.
      * Not to be confused with the {@code plainSubstrByWidth + "..."}
      * three-dot idiom some rows use — that spelling stays theirs.
      */
     public static String ellipsize(Font font, String s, int maxW, int minLen) {
-        if (maxW <= 0) return "";
-        if (font.width(s) <= maxW) return s;
-        String ell = "…";
-        if (font.width(ell) > maxW) return font.plainSubstrByWidth(s,maxW);
-        while (s.length() > minLen && font.width(s + ell) > maxW) {
-            s = s.substring(0, s.offsetByCodePoints(s.length(), -1));
-        }
-        if (font.width(s + ell) > maxW) return font.plainSubstrByWidth(s,maxW-font.width(ell)) + ell;
-        return s + ell;
+        return ELLIPSIS_FIT.fit(s, maxW, minLen, styleKey(), font::width);
     }
 
     /**

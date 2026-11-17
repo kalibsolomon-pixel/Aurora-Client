@@ -575,8 +575,10 @@ fire on one click. Its confirmation contract:
 - Any other click — another control, empty space — disarms.
 
 Small reversible edits (removing one key from a list, toggling a switch) and session-only
-resets are not destructive and stay single-press. §12.7's placement rule (destructive actions
-last) still applies.
+resets are not destructive and stay single-press. A waypoint list row's Delete also stays
+single-press (owner decision 2026-11-17): it acts on one row in place, and its 48 px slot in
+the shared row grid has no room for a confirm label. §12.7's placement rule (destructive
+actions last) still applies.
 
 ## 9. Motion
 
@@ -864,6 +866,8 @@ in its label row's trailing value slot instead, above its Add control.
   color picker's hue/saturation area remains data even though its hex field uses glass.
 - **States:** rest, focus/editing, invalid/rejected where applicable, and disabled. Caret and
   a subtle accent focus treatment communicate editing without changing material tint.
+  A focused field paints its selection behind the text in `ACCENT` at 40% alpha, clipped to
+  the visible window (`SELECTION_SOFT` was too faint on the factory field).
 - **Invalid/rejected:** a rejected value never leaves silently. A short, specific message
   renders under the field it refuses, in the normal text size and `STATUS_ERROR` — "Name
   already used", "Name can't be empty", "Use 6 hex digits, like 3A7BFF". It appears live
@@ -877,6 +881,17 @@ in its label row's trailing value slot instead, above its Add control.
   idiom — then there is nothing to reject, and no message is needed.
 - **Input/accessibility:** preserve selection, cursor position, standard editing keys,
   narration, label/purpose, and value. Numeric commit/revert behavior must be explicit.
+- **Editing history:** Aurora-owned `EditBox` fields, including Pulsar's `KTextField`
+  subclass, support Ctrl+Z undo and Ctrl+Shift+Z / Ctrl+Y redo (the platform's editing
+  modifier on macOS). This follows the themed-field takeover and `customTitleScreen` gate.
+  Each field retains at most 100 edits. Consecutive typed word characters coalesce until
+  whitespace/punctuation, a caret/selection/focus change, deletion, clipboard action, or
+  a one-second pause. Deletions, selection replacements and pastes are separate steps.
+  Undo restores text, caret and selection and updates the existing value responder.
+  Programmatic `setValue` starts fresh history; responder sanitization during user input
+  belongs to that input's edit. Vanilla continues to own word movement/deletion, selection,
+  Home/End and clipboard handling; word movement uses spaces and ordinary movement uses
+  code points, without adding grapheme-aware navigation.
 - **Sound:** ordinary typing remains Minecraft/system behavior; commit/rejection may follow
   semantic sound policy without per-character custom sounds.
 
@@ -928,6 +943,20 @@ information should not be tooltip-only.
 
 ### 12.5 Setting rows and value lines
 
+- Simple config-backed rows expose an individual factory reset only while modified. A small
+  Material Symbols `restart_alt` icon follows the label inside its existing column; value and
+  control columns never move. There is no empty icon slot at the default. Modified labels use
+  cached, active-font ellipsis to make room for the 18 px target and 4 px gap, in compact and
+  normal text. Row height remains stable. Compound/list/item editors and HUD layout scale do
+  not acquire this action.
+- Reset is an `IconAction` with the C-4 colour-only hover, focus hairline, Tab traversal,
+  Enter/Space activation and one semantic click. Its tooltip and accessible name are both
+  `Reset <label> to default (<displayed default>)`. Hidden resets leave narration and focus
+  traversal. Disabled rows cannot reset. Reset immediately applies the cached effective
+  release default through the row's existing setter/responder, then saves asynchronously.
+  Nullable colour overrides return to inheritance. A single value is easy to change again,
+  so this action is single-press; whole-feature Reset retains §8.7's press-again confirmation.
+- Keybind labels show the same description tooltip as other setting labels at both densities.
 - Labels are primary and left-aligned.
 - A value/subtitle line is secondary and appears only when current state is not visible at a
   glance from the control, including state hidden behind a nested screen or a computed/live

@@ -154,7 +154,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
             setting.pageTrack(track);
             if (setting.isVisible()) setting.measureCompact(LIST_W);
             else {
-                for (SemanticActionControl control : setting.interactionControls()) {
+                for (SemanticActionControl control : setting.controlsWithReset()) {
                     control.setAvailable(false);
                     if (this.getFocused() == control) this.setFocused(null);
                 }
@@ -362,7 +362,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         resetBtnArmed = resetConfirm.isArmed();
         registeredSettingControls.clear();
         for (FeatureSetting setting : meta.settings) {
-            var controls = setting.interactionControls();
+            var controls = setting.controlsWithReset();
             registeredSettingControls.put(setting, controls);
             for (SemanticActionControl control : controls) {
                 control.setFocused(false);
@@ -573,7 +573,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         for (FeatureSetting s : meta.settings) {
             if (!s.isVisible()) continue;
             int gh = bodyHeight(s);
-            var controls = s.interactionControls();
+            var controls = s.controlsWithReset();
             if (!controls.isEmpty()) {
                 // C-4 dynamic-set diff: mutation-time list changes (rows
                 // added/removed) register/unregister here — zero allocation
@@ -696,7 +696,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
                 boolean header = setting == fixedHeaderSetting && setting.fixedHeaderControls().contains(control)
                         && control.getY() >= TOP_PAD && control.getBottom() <= bodyTop();
                 boolean visible = bodyBand.intersects(control.getX(), control.getY(), control.getWidth(), control.getHeight());
-                control.setAvailable(control.isAvailable() && (header || visible));
+                control.setAvailable(control.isAvailable() && (header || visible) && setting.controlVisible(control));
                 if (!control.isAvailable() && this.getFocused() == control) this.setFocused(null);
             }
         }
@@ -813,7 +813,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
                 // click when the setting exposes several (ItemScale's rows,
                 // Accent's peers — AuroraScreen's rule); single-control
                 // settings keep the first-control focus the C-2 pilot set.
-                var controls = s.interactionControls();
+                var controls = s.controlsWithReset();
                 if (!controls.isEmpty()) {
                     SemanticActionControl hit = null;
                     for (SemanticActionControl c : controls) {
@@ -901,6 +901,8 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
 
     @Override
     public boolean keyPressed(net.minecraft.client.input.KeyEvent _kev) {
+        for (FeatureSetting setting : meta.settings)
+            if (setting.resetKeyPressed(this.getFocused(), _kev)) return true;
         FeatureSetting focused = FeatureSetting.getFocused();
         if (focused != null && focused.onKeyPress(_kev)) return true;
         // C-3 roving interceptor — before super (the invokespecial seam): a

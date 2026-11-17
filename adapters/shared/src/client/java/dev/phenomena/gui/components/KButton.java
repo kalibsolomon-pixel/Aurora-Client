@@ -68,14 +68,8 @@ public class KButton extends ButtonWidget {
   public static int onAccent(int ignored) {
     return com.aurora.client.theme.ThemeManager.color(com.aurora.client.theme.ThemeToken.ON_ACTION);
   }
-  private record FitKey(String text, int width, int style) {}
-  private static final java.util.Map<FitKey, String> FIT = new java.util.LinkedHashMap<>(256, .75f, true) {
-    @Override protected boolean removeEldestEntry(java.util.Map.Entry<FitKey, String> entry) { return size() > 512; }
-  };
+  /** Ellipsized to {@code width}; the shared ellipsize memo (text, width, styleKey) does the caching. */
   public static String fit(net.minecraft.client.gui.Font font, String text, int width) {
-    if (width <= 0) return "";
-    if (font.width(text) <= width) return text;
-    FitKey key = new FitKey(text, width, AuroraFontRenderer.styleKey());
-    return FIT.computeIfAbsent(key, ignored -> AuroraFontRenderer.ellipsize(font, text, width, 0));
+    return AuroraFontRenderer.ellipsize(font, text, width, 0);
   }
 }

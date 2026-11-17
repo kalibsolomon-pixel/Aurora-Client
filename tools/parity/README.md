@@ -47,6 +47,9 @@ exchange atomically and refuses an unmarked fixture or a pending command.
 | `detail animations` | Open a feature's native detail screen by ID |
 | `search <text>` | Focus and fill the native search field |
 | `escape` | Send Escape through the active screen's key handler |
+| `type <text>` | Send each code point through the active screen's character handler |
+| `key z ctrl shift` | Send one key (`z y a left right home end backspace enter`, optional `ctrl`/`shift`) through the screen's key handler |
+| `field-state` | Log the focused text field's value, caret and selected text |
 | `capture` | Capture F7 through a real KeybindSetting and save |
 | `bindings` | Assert config/vanilla sync and the native C reset default |
 | `persisted` | Assert the F7 capture survived restart |

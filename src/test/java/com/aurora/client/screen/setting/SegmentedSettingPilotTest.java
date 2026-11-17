@@ -298,8 +298,8 @@ class SegmentedSettingPilotTest {
         String detail = java.nio.file.Files.readString(SourceTree.resolve(
                 SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/FeatureDetailScreen.java"));
         for (String host : new String[]{aurora, detail}) {
-            assertTrue(host.contains("List.copyOf(setting.interactionControls())")
-                            || host.contains("setting.interactionControls()"),
+            assertTrue(host.contains("List.copyOf(setting.controlsWithReset())")
+                            || host.contains("setting.controlsWithReset()"),
                     "both hosts materialize the component-owned set generically");
             assertFalse(host.contains("instanceof SegmentedSetting"));
         }

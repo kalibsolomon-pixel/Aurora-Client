@@ -162,16 +162,11 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         return SETTINGS_HEADER_H + (m.pageSummary == null || m.pageSummary.isEmpty() ? 0 : SUMMARY_H);
     }
 
-    /** The summary fitted to the content column, memoized per width and text style. */
+    /** The summary fitted to the content column (the shared ellipsize memo caches it). */
     private String pageSummaryLine(FeatureMetadata m, Font tr) {
         if (m.pageSummary == null || m.pageSummary.isEmpty()) return null;
-        int width = contentWidth() - 12;
-        long version = width * 31L + com.aurora.client.ui.util.AuroraFontRenderer.styleKey();
-        if (version != summaryVersion) { summaryFit.clear(); summaryVersion = version; }
-        return summaryFit.computeIfAbsent(m.id, id -> com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(tr, m.pageSummary, width, 1));
+        return com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(tr, m.pageSummary, contentWidth() - 12, 1);
     }
-    private final java.util.Map<String, String> summaryFit = new java.util.HashMap<>();
-    private long summaryVersion = Long.MIN_VALUE;
 
     /** Gap between inline rows inside an entry. */
     private static final int SETTINGS_ROW_GAP = com.aurora.client.ui.util.UiDensity.ROW_GAP;
@@ -218,7 +213,6 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     private final Map<String, String> resultVia = new HashMap<>();
     /** A result tile's second line: the matched setting, or a Settings entry's page. */
     private final Map<String, String> resultSubtitle = new HashMap<>();
-    private final Map<String, String> subtitleFit = new HashMap<>();
     /** The Settings-tab row (a FeatureSetting) or entry header (a FeatureMetadata) a result opened, outlined while it fades. */
     private Object settingsReveal;
     private long settingsRevealStartMs;
@@ -461,7 +455,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 headerToggleControls.put(metadata.id, headerToggleControl(metadata));
             }
             for (FeatureSetting setting : metadata.settings) {
-                List<SemanticActionControl> controls = List.copyOf(setting.interactionControls());
+                List<SemanticActionControl> controls = List.copyOf(setting.controlsWithReset());
                 hostedSettingControls.put(setting, controls);
                 for (SemanticActionControl control : controls) {
                     semanticHost.register(control);
@@ -1592,7 +1586,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                         // intersection of the ACTIONABLE control rect with
                         // C-1's authoritative viewport is available. Edge
                         // contact alone is not (ClipBand is half-open).
-                        boolean available = visible && vp.intersects(
+                        boolean available = visible && s.controlVisible(control) && vp.intersects(
                                 control.getX(), control.getY(),
                                 control.getWidth(), control.getHeight());
                         semanticHost.setAvailable(control, available);
@@ -1707,15 +1701,14 @@ public class AuroraScreen extends Screen implements ThemedScreen {
 
     /**
      * A result tile's second line, centred under its name and fitted with a
-     * bounded ellipsis (memoized per text and width). On a module found
+     * bounded ellipsis (the shared ellipsize memo caches it). On a module found
      * through a setting it is a link to that setting: it turns accent while
      * the pointer is in the tile's lower band (the click walk's
      * {@link #inSubtitleBand} rect).
      */
     private void drawSubtitle(GuiGraphicsExtractor g, Font tr, Module m, String subtitle, int width, float centerX,
                               float y, int mouseX, int mouseY, float cx, float cw, float bottom) {
-        String fitted = subtitleFit.computeIfAbsent(width + "|" + subtitle,
-                key -> com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(tr, subtitle, width, 1));
+        String fitted = com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(tr, subtitle, width, 1);
         boolean link = !isSettingsResult(m) && resultVia.containsKey(m.id)
                 && inSubtitleBand(mouseX, mouseY, cx, cw, y, bottom);
         int color = link ? MaterialSurface.color(ThemeToken.ACCENT) : MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED);
@@ -2273,6 +2266,9 @@ public class AuroraScreen extends Screen implements ThemedScreen {
 
     @Override
     public boolean keyPressed(net.minecraft.client.input.KeyEvent _kev) {
+        for (FeatureMetadata metadata : allPageEntries)
+            for (FeatureSetting setting : metadata.settings)
+                if (setting.resetKeyPressed(this.getFocused(), _kev)) return true;
         // C-8 Escape rule for the Modules search field (the pack browser's
         // canonical text-field contract): Escape while typing UNFOCUSES the
         // field and is consumed — vanilla EditBox ignores Escape, so the

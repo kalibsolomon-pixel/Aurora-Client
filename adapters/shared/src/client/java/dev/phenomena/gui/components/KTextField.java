@@ -12,6 +12,8 @@ import net.minecraft.network.chat.Component;
  * Vanilla text field restricted to the viewport and drawn with the dashboard's flat style. The
  * widget rectangle is the text line; the drawn frame (and the click area) extends {@link #PAD}
  * pixels around it.
+ * Standard editing shortcuts and Aurora's gated undo/redo are inherited from EditBox;
+ * PhenomenaScreen is a ThemedScreen, so no second history or key handler is needed here.
  */
 public final class KTextField extends EditBox {
   public static final int PAD = 0;
