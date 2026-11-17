@@ -11,6 +11,8 @@ profile, input and theme contracts. See [Pulsar](PULSAR.md) for workflows,
 source provenance and storage compatibility. Acceptance and council review are
 tracked in [the integration report](reports/2026-11-14-pulsar-integration.md).
 
+Aurora and Pulsar text fields share bounded undo/redo history; see [text-field behavior](DESIGN_LANGUAGE.md#1112-text-field). Dev-client acceptance remains pending.
+
 Roadmap steps 1–3 and the 26.1.2, 26.2 and 26.3 ports are merged through PRs
 #1–#12. The owner authorized autonomous GitHub integration and publication.
 

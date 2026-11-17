@@ -140,6 +140,16 @@ public final class ParityProbe implements ClientModInitializer {
         net.minecraft.client.KeyMapping.click(InputConstants.getKey(client.options.keyAttack.saveString()));
     }
 
+    /** The native modifier bit for `ctrl`/`shift`: GLFW bits on 26.1/26.2, SDL pairs on 26.3. */
+    private static int modifierBit(String name) {
+        for (int bit : new int[]{1, 2, 3, 64, 128, 192}) {
+            var event = new KeyEvent(0, 0, bit);
+            if (name.equals("ctrl") && event.hasControlDownWithQuirk() && !event.hasShiftDown()) return bit;
+            if (name.equals("shift") && event.hasShiftDown() && !event.hasControlDown()) return bit;
+        }
+        throw new IllegalArgumentException("Unknown modifier " + name);
+    }
+
     private void execute(Minecraft client, String text) throws Exception {
         String[] args = text.split(" ", 3);
         var config = AuroraConfig.get();
@@ -499,6 +509,35 @@ public final class ParityProbe implements ClientModInitializer {
                 }
             }
             case "escape" -> NativeUi.screen(client).keyPressed(new KeyEvent(InputConstants.KEY_ESCAPE, 0, 0));
+            // Text-field editing through the screen's own handlers (the mixin's hooks included):
+            // `type <text>` sends each code point as a character, `key <name> [ctrl] [shift]` one key.
+            case "type" -> text.substring(5).codePoints().forEach(cp ->
+                    NativeUi.screen(client).charTyped(new net.minecraft.client.input.CharacterEvent(cp)));
+            case "key" -> {
+                String[] parts = text.substring(4).split(" ");
+                int mods = 0;
+                for (int i = 1; i < parts.length; i++) mods |= modifierBit(parts[i]);
+                // Native key and SDL keycode: 26.3 EditBox switches on the keycode (shortcutKey),
+                // 26.1/26.2 on the GLFW key (where the second slot is an ignored scancode).
+                var key = switch (parts[0]) {
+                    case "z" -> new int[]{InputConstants.KEY_Z, 'z'};
+                    case "y" -> new int[]{InputConstants.KEY_Y, 'y'};
+                    case "a" -> new int[]{InputConstants.KEY_A, 'a'};
+                    case "left" -> new int[]{InputConstants.KEY_LEFT, 0x40000050};
+                    case "right" -> new int[]{InputConstants.KEY_RIGHT, 0x4000004F};
+                    case "home" -> new int[]{InputConstants.KEY_HOME, 0x4000004A};
+                    case "end" -> new int[]{InputConstants.KEY_END, 0x4000004D};
+                    case "backspace" -> new int[]{InputConstants.KEY_BACKSPACE, 8};
+                    case "enter" -> new int[]{InputConstants.KEY_RETURN, 13};
+                    default -> throw new IllegalArgumentException("Unknown key " + parts[0]);
+                };
+                NativeUi.screen(client).keyPressed(new KeyEvent(key[0], key[1], mods));
+            }
+            case "field-state" -> {
+                if (!(NativeUi.screen(client).getFocused() instanceof EditBox box)) throw new AssertionError("No focused text field");
+                System.out.println("[parity-probe] field value=\"" + box.getValue() + "\" cursor=" + box.getCursorPosition()
+                        + " selected=\"" + box.getHighlighted() + "\"");
+            }
             case "capture" -> {
                 var row = new KeybindSetting("Zoom", () -> config.zoomKey, key -> config.zoomKey = key);
                 row.interactionControl().action().activate(SemanticFeedback.NONE, null);
