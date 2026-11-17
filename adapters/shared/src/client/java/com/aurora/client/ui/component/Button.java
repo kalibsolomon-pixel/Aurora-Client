@@ -180,7 +180,7 @@ public class Button extends Widget {
         int textY=AuroraFontRenderer.textY(font, py, h);
         if(icon.isEmpty()) {
             AuroraFontRenderer.drawCentered(g,font,
-                    AuroraFontRenderer.ellipsize(font,label.getString(),Math.max(0,(int)w-20),0),Math.round(x+w/2),textY,text);
+                    AuroraFontRenderer.ellipsize(font,label.getString(),Math.max(0,(int)w-20),0),(x+w/2f),textY,text);
             return;
         }
         // Reserve matching side slots: the action glyph never shifts the label off the face centre.
@@ -189,7 +189,7 @@ public class Button extends Widget {
         float groupX=x+com.aurora.client.ui.util.TextAlignment.FACE_PAD;
         // The native glyph and text share the face's optical centre.
         MaterialIconRenderer.drawIcon(g,font,icon,groupX+ICON_EM/2f,com.aurora.client.ui.util.TextAlignment.iconCenter(py,h),ICON_EM,text);
-        if(!fitted.isEmpty()) AuroraFontRenderer.drawCentered(g,font,fitted,Math.round(x+w/2),textY,text);
+        if(!fitted.isEmpty()) AuroraFontRenderer.drawCentered(g,font,fitted,(x+w/2f),textY,text);
     }
 
     /** Leading icon glyph (Material Symbols), drawn with the label as one centred group; empty for none. */
@@ -619,7 +619,7 @@ public class Button extends Widget {
                     ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
         }
 
-        AuroraFontRenderer.drawCentered(g, tr, label, Math.round(x + w / 2f),
+        AuroraFontRenderer.drawCentered(g, tr, label, (x + w / 2f),
                 AuroraFontRenderer.textY(tr, y, h), text);
 
         g.pose().popMatrix();

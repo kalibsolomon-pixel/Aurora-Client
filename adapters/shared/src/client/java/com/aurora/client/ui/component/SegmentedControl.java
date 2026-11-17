@@ -295,10 +295,10 @@ public class SegmentedControl extends Widget {
             if(MaterialSurface.unified()) {
                 renderFittedLabel(g,tr,i,sx,y,sw,isSelected,color);
             } else if (verbatimLabels) {
-                AuroraFontRenderer.drawCentered(g, tr, AuroraFontRenderer.verbatim(options[i]), Math.round(sx + sw / 2f),
+                AuroraFontRenderer.drawCentered(g, tr, AuroraFontRenderer.verbatim(options[i]), (sx + sw / 2f),
                         AuroraFontRenderer.textY(tr, y, trackH), color);
             } else {
-                AuroraFontRenderer.drawCentered(g, tr, AuroraFontRenderer.ellipsize(tr,options[i],Math.max(0,sw-2*com.aurora.client.ui.util.TextAlignment.FACE_PAD),0), Math.round(sx + sw / 2f),
+                AuroraFontRenderer.drawCentered(g, tr, AuroraFontRenderer.ellipsize(tr,options[i],Math.max(0,sw-2*com.aurora.client.ui.util.TextAlignment.FACE_PAD),0), (sx + sw / 2f),
                         AuroraFontRenderer.textY(tr, y, trackH), color);
             }
         }
@@ -323,7 +323,7 @@ public class SegmentedControl extends Widget {
         if(checked) com.aurora.client.ui.util.MaterialIconRenderer.drawIcon(g,font,CHECK,
                 sx+com.aurora.client.ui.util.TextAlignment.FACE_PAD+CHECK_EM/2f,
                 com.aurora.client.ui.util.TextAlignment.iconCenter(y,trackH),CHECK_EM,color);
-        AuroraFontRenderer.drawCentered(g,font,fittedLabels[i],Math.round(sx+sw/2f),
+        AuroraFontRenderer.drawCentered(g,font,fittedLabels[i],(sx+sw/2f),
                 AuroraFontRenderer.textY(font, y, trackH),color);
     }
 

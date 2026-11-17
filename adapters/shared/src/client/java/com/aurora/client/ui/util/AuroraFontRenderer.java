@@ -434,6 +434,21 @@ public class AuroraFontRenderer {
         graphics.text(font, text, inkCenteredX(font, text, cx), y, color, false);
     }
 
+    /** Centered string on a fractional centre: rounds once, after ink centring. */
+    public static void drawCentered(GuiGraphicsExtractor graphics, Font font, String text, float cx, int y, int color) {
+        graphics.text(font, text, inkCenteredX(font, text, cx), y, color, false);
+    }
+
+    /** Centered component on a fractional centre (its visual-order text is cached by the component). */
+    public static void drawCentered(GuiGraphicsExtractor graphics, Font font, Component text, float cx, int y, int color) {
+        drawCentered(graphics, font, text.getVisualOrderText(), cx, y, color);
+    }
+
+    /** Centered sequence on a fractional centre: rounds once, after ink centring. */
+    public static void drawCentered(GuiGraphicsExtractor graphics, Font font, FormattedCharSequence text, float cx, int y, int color) {
+        graphics.text(font, text, inkCenteredX(font, text, cx), y, color, false);
+    }
+
     /** Centered, non-shadowed styled sequence. {@code cx} is the center x. */
     public static void drawCentered(GuiGraphicsExtractor graphics, Font font, FormattedCharSequence text, int cx, int y, int color) {
         graphics.text(font, text, inkCenteredX(font, text, cx), y, color, false);
