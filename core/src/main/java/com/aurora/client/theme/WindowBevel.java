@@ -5,8 +5,8 @@ public final class WindowBevel {
     private WindowBevel() {}
 
     public enum Level {
-        OFF(Off, 0, 0, 0), SUBTLE(Subtle, .73, .72, 1.5),
-        STANDARD(Standard, 1, 1, 2.5), DEEP(Deep, 1.25, 1.24, 3.5);
+        OFF("Off", 0, 0, 0), SUBTLE("Subtle", .73, .72, 1.5),
+        STANDARD("Standard", 1, 1, 2.5), DEEP("Deep", 1.25, 1.24, 3.5);
 
         private final String label;
         private final double width, gain, elevation;
