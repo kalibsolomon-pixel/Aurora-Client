@@ -1,5 +1,6 @@
 package com.aurora.client.screen.setting;
 
+import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -51,7 +52,7 @@ public class SectionFooterSetting extends FeatureSetting {
         Font tr = Minecraft.getInstance().font;
         if (tr == null) return PAD_ABOVE + PAD_BELOW + 9;
         ensureLines(tr, lastWidth);
-        return PAD_ABOVE + PAD_BELOW + cachedLines.size() * (tr.lineHeight + 1);
+        return PAD_ABOVE + PAD_BELOW + cachedLines.size() * (AuroraFontRenderer.linePitch(tr));
     }
 
     @Override
@@ -66,7 +67,7 @@ public class SectionFooterSetting extends FeatureSetting {
         int ty = y + PAD_ABOVE;
         for (FormattedCharSequence line : cachedLines) {
             ctx.text(tr, line, x + LABEL_PAD, ty, AuroraTheme.TEXT_DIM, false);
-            ty += tr.lineHeight + 1;
+            ty += AuroraFontRenderer.linePitch(tr);
         }
     }
 

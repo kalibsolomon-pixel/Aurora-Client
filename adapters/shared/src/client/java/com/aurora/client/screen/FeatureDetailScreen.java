@@ -80,9 +80,9 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         headerLine = meta.headerLine() == null || meta.headerLine().isEmpty() || this.font == null ? null
                 : AuroraFontRenderer.ellipsize(this.font, meta.headerLine(), width, 0);
         int lines = descriptionLines.size() + (headerLine == null ? 0 : 1);
-        headerH = com.aurora.client.ui.util.UiDensity.HEADER + (lines == 0 ? 0 : lines * DESCRIPTION_PITCH + 6);
+        headerH = com.aurora.client.ui.util.UiDensity.HEADER + (lines == 0 ? 0 : lines * descriptionPitch() + com.aurora.client.ui.util.TextAlignment.DESCRIPTOR_GAP);
     }
-    private static final int DESCRIPTION_PITCH = 10;
+    private int descriptionPitch() { return AuroraFontRenderer.linePitch(this.font); }
 
     private final Screen parent;
     private final FeatureMetadata meta;
@@ -654,14 +654,15 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
             int titleX = com.aurora.client.ui.util.UiDensity.detailTitleX(compactFrame);
             // Title role (§4.1): the feature name in the heavier cut, centred on the Reset/Done row;
             // its description sits beneath in secondary text, the health or credit line last.
-            String breadcrumb = AuroraFontRenderer.ellipsize(this.font, meta.displayName, Math.max(0, resetBtn.getX() - titleX - 6), 0);
+            String breadcrumb = AuroraFontRenderer.ellipsizeRole(this.font, meta.displayName, Math.max(0, resetBtn.getX() - titleX - 6), AuroraFontRenderer.Role.TITLE);
             ctx.text(this.font, AuroraFontRenderer.role(breadcrumb, AuroraFontRenderer.Role.TITLE), titleX,
-                    compactFrame.y() + (com.aurora.client.ui.util.UiDensity.HEADER - this.font.lineHeight) / 2 + 3, // 11 px raster sits 1 px high
+                    AuroraFontRenderer.roleTextY(this.font, compactFrame.y(), com.aurora.client.ui.util.UiDensity.HEADER, AuroraFontRenderer.Role.TITLE),
                     MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
-            int lineY = compactFrame.y() + com.aurora.client.ui.util.UiDensity.HEADER;
+            int lineY = AuroraFontRenderer.textY(this.font, compactFrame.y() + com.aurora.client.ui.util.UiDensity.HEADER
+                    + com.aurora.client.ui.util.TextAlignment.DESCRIPTOR_GAP, this.font.lineHeight);
             for (String line : descriptionLines) {
                 ctx.text(this.font, line, titleX, lineY, MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
-                lineY += DESCRIPTION_PITCH;
+                lineY += descriptionPitch();
             }
             if (headerLine != null) ctx.text(this.font, headerLine, titleX, lineY,
                     com.aurora.client.health.FeatureHealth.headlineFor(meta.id) != null
@@ -940,7 +941,6 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
      */
     @Override
     public void removed() {
-        if(unifiedTheme()) MaterialSurface.disposeTemplates();
         closeTransientState();
         super.removed();
     }

@@ -14,6 +14,15 @@ class MaterialSurfaceContractTest {
     private static final Path SOURCE = SourceTree.resolve(
             SourceTree.ADAPTER + "/src/client/java/com/aurora/client/ui/component/MaterialSurface.java");
 
+    @Test void retentionInvalidatesOnThemeScaleAndRadiusWithoutScreenOwnership() throws Exception {
+        String source=Files.readString(SOURCE);
+        assertTrue(source.contains("templateGeneration!=generation"));
+        assertTrue(source.contains("templateScale!=scale"));
+        assertTrue(source.contains("templateRadius!=radius"));
+        assertFalse(source.contains("templateOwner"));
+        assertFalse(source.contains("cache.dispose()"),"all template disposal must be deferred");
+    }
+
     @Test
     void parentWindowHostsSuppressStandaloneChildCaptures() throws Exception {
         String glass = Files.readString(SourceTree.resolve(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/ui/component/GlassSurface.java"));

@@ -220,8 +220,8 @@ public class ThemePreviewSetting extends FeatureSetting {
         int tx = px + 12;
         int ty = py + 10;
         ctx.text(tr, "Primary text", tx, ty, MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
-        ctx.text(tr, "Secondary text", tx, ty + 12, MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
-        ctx.text(tr, "Muted text", tx, ty + 24, MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED), false);
+        ctx.text(tr, "Secondary text", tx, ty + com.aurora.client.ui.util.AuroraFontRenderer.linePitch(tr), MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
+        ctx.text(tr, "Muted text", tx, ty + 2 * com.aurora.client.ui.util.AuroraFontRenderer.linePitch(tr), MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED), false);
     }
 
     @Override

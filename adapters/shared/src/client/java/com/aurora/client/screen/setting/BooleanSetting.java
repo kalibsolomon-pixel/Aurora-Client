@@ -1,5 +1,6 @@
 package com.aurora.client.screen.setting;
 
+import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.aurora.client.ui.component.ToggleSwitch;
 import com.aurora.client.ui.interaction.MinecraftSemanticFeedback;
@@ -110,7 +111,7 @@ public class BooleanSetting extends FeatureSetting {
         if (labelArea == cachedLabelArea && cachedLines != null && styleKey == cachedStyleKey) return;
         cachedStyleKey = styleKey;
         cachedLines = com.aurora.client.ui.util.WordWrap.lines(label, labelArea, 2, tr::width);
-        int blockH = cachedLines.size() * (tr.lineHeight + 1) + valueLineHeight(tr);
+        int blockH = cachedLines.size() * (AuroraFontRenderer.linePitch(tr)) + valueLineHeight(tr);
         cachedBaseHeight = cachedLines.isEmpty()
                 ? MIN_ROW_H
                 : Math.max(MIN_ROW_H, blockH + 12);
@@ -194,12 +195,12 @@ public class BooleanSetting extends FeatureSetting {
         int controlH = baseHeight();
         if (compactRow != null) renderCompactLabel(ctx, x, y, mouseX, mouseY, MaterialSurface.color(ThemeToken.ON_BACKGROUND));
         else if (isModified()) {
-            renderWrappedLabel(ctx, label, x + LABEL_PAD, y + (controlH - tr.lineHeight) / 2,
+            renderWrappedLabel(ctx, label, x + LABEL_PAD, AuroraFontRenderer.textY(tr, y, controlH),
                     cachedLabelArea, MaterialSurface.color(ThemeToken.ON_BACKGROUND), mouseX, mouseY, isDisabled());
             drawValueLine(ctx, x + LABEL_PAD, y + controlH - valueLineHeight(tr) + 2, isDisabled());
         } else {
-            int textBlockH = cachedLines.size() * (tr.lineHeight + 1) + valueLineHeight(tr);
-            int textY = y + (controlH - textBlockH) / 2;
+            int textBlockH = cachedLines.size() * (AuroraFontRenderer.linePitch(tr)) + valueLineHeight(tr);
+            int textY = AuroraFontRenderer.blockY(tr, y, controlH, cachedLines.size() + (valueLineHeight(tr) > 0 ? 1 : 0));
             String key = tooltipKey();
             boolean disabled = isDisabled();
             for (int li = 0; li < cachedLines.size(); li++) {
@@ -211,11 +212,11 @@ public class BooleanSetting extends FeatureSetting {
                 // The description supplier is only evaluated while hovered.
                 trackLabelHover(key, this::currentDescription, lineX, textY,
                         tr.width(line), tr.lineHeight, mouseX, mouseY, disabled);
-                textY += tr.lineHeight + 1;
+                textY += AuroraFontRenderer.linePitch(tr);
             }
             // §4 live-value subtitle (base mechanism): one small secondary
             // line under the label block.
-            drawValueLine(ctx, x + LABEL_PAD, textY + 2, disabled);
+            drawValueLine(ctx, x + LABEL_PAD, textY, disabled);
 
         }
         float switchX = controlX(x, width, com.aurora.client.ui.util.UiDensity.TOGGLE_W);

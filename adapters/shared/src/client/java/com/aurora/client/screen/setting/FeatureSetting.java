@@ -1,5 +1,6 @@
 package com.aurora.client.screen.setting;
 
+import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.component.MaterialSurface;
@@ -125,18 +126,18 @@ public abstract class FeatureSetting {
         if (isModified()) {
             renderResetLabel(ctx, label, x + box.x(), y + box.y(), box.width(),
                     box.height() - valueLineHeight(font), color, mouseX, mouseY, isDisabled());
-            drawValueLine(ctx, x + box.x(), y + box.y() + box.height() - valueLineHeight(font) + 2, isDisabled());
+            drawValueLine(ctx, x + box.x(), AuroraFontRenderer.blockY(font, y + box.y(), box.height(), 2) + AuroraFontRenderer.linePitch(font), isDisabled());
             return;
         }
-        int textY = y + box.y() + (box.height() - (compactRow.lines().size() * (font.lineHeight + 1) + valueLineHeight(font))) / 2;
+        int textY = AuroraFontRenderer.blockY(font, y + box.y(), box.height(), compactRow.lines().size() + (valueLineHeight(font) > 0 ? 1 : 0));
         for (String line : compactRow.lines()) {
             int textX = x + box.x();
             ctx.text(font, line, textX, textY, color, false);
             trackLabelHover(tooltipKey(), this::currentDescription, textX, textY, font.width(line), font.lineHeight,
                     mouseX, mouseY, isDisabled());
-            textY += font.lineHeight + 1;
+            textY += AuroraFontRenderer.linePitch(font);
         }
-        drawValueLine(ctx, x + box.x(), textY + 2, isDisabled());
+        drawValueLine(ctx, x + box.x(), textY, isDisabled());
     }
 
 
@@ -235,7 +236,7 @@ public abstract class FeatureSetting {
             resetH = height;
             resetLayout = com.aurora.client.ui.util.SettingRowLayout.reset(0, 0, width, height, resetFittedWidth);
         }
-        int ty = y + (height - font.lineHeight) / 2;
+        int ty = AuroraFontRenderer.textY(font, y, height);
         ctx.text(font, resetFitted, x, ty, color, false);
         trackLabelHover(tooltipKey(), rowDescription, x, ty, resetFittedWidth, font.lineHeight, mouseX, mouseY, disabled);
         var hit = resetLayout.action();
@@ -623,7 +624,7 @@ public abstract class FeatureSetting {
 
     /** Height the §4 subtitle contributes inside the row (0 when absent). */
     protected int valueLineHeight(net.minecraft.client.gui.Font tr) {
-        return valueLine != null ? tr.lineHeight + 3 : 0;
+        return valueLine != null ? AuroraFontRenderer.linePitch(tr) : 0;
     }
 
     /**
@@ -797,12 +798,12 @@ public abstract class FeatureSetting {
             wrappedLabel = com.aurora.client.ui.util.WordWrap.lines(text, width, 2, font::width);
         }
         int count = Math.min(2, wrappedLabel.size());
-        int top = y - (count - 1) * (font.lineHeight + 2) / 2;
+        int top = y - (count - 1) * (AuroraFontRenderer.linePitch(font)) / 2;
         int finalColor = disabled ? MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED) : color;
         for (int i = 0; i < count; i++)
-            ctx.text(font, wrappedLabel.get(i), x, top + i * (font.lineHeight + 2), finalColor, false);
+            ctx.text(font, wrappedLabel.get(i), x, top + i * (AuroraFontRenderer.linePitch(font)), finalColor, false);
         trackLabelHover(tooltipKey(), this::currentDescription, x, top, width,
-                count * (font.lineHeight + 2), mouseX, mouseY, disabled);
+                count * (AuroraFontRenderer.linePitch(font)), mouseX, mouseY, disabled);
     }
 
     /** Reuse wrapping and measurement while content and font metrics are unchanged. */
@@ -850,7 +851,7 @@ public abstract class FeatureSetting {
         List<FormattedCharSequence> lines = layout.lines();
         int textW = layout.textW();
         int boxW = textW + 12;
-        int boxH = lines.size() * (tr.lineHeight + 1) + 7;
+        int boxH = lines.size() * AuroraFontRenderer.linePitch(tr) + 8;
         int bx = tooltipX + 12;
         int by = tooltipY + 12;
         if (bx + boxW > screenW - 4) bx = screenW - 4 - boxW;
@@ -863,10 +864,10 @@ public abstract class FeatureSetting {
         // ON_OVERLAY is the tooltip-text role every other tooltip in the
         // codebase reads (Profile/Waypoint rows, the pack-browser toast).
         int textColor = fadeColor(MaterialSurface.unified() ? MaterialSurface.color(ThemeToken.ON_BACKGROUND) : ThemeManager.color(ThemeToken.ON_OVERLAY), fade);
-        int ty = by + 4;
+        int ty = AuroraFontRenderer.blockY(tr, by, boxH, lines.size());
         for (var l : lines) {
             ctx.text(tr, l, bx + 6, ty, textColor, false);
-            ty += tr.lineHeight + 1;
+            ty += AuroraFontRenderer.linePitch(tr);
         }
     }
 

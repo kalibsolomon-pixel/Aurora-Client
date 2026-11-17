@@ -52,7 +52,7 @@ class UnifiedPilotContractTest {
         assertTrue(read("screen/FeatureDetailScreen.java").contains("unifiedTheme() { return true; }"));
         assertFalse(read("ui/component/MaterialSurface.java").contains("renderPanel("));
         for(String host:new String[]{"screen/AuroraScreen.java","screen/FeatureDetailScreen.java"})
-            assertTrue(read(host).contains("if(unifiedTheme()) MaterialSurface.disposeTemplates();"));
+            assertFalse(read(host).contains("MaterialSurface.disposeTemplates();"), "screen removal retains bounded shared templates");
     }
 
     @Test void embeddedChildrenDeclineBeforeCaptureAndFloatingBackingIsIndependent() throws Exception {

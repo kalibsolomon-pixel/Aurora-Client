@@ -56,6 +56,11 @@ public class SegmentedControl extends Widget {
     private static final long HOVER_MS = 140L;
 
     private final String[] options;
+    private final net.minecraft.util.FormattedCharSequence[] fittedLabels;
+    private final int[] fittedWidths, fittedBudgets;
+    private long fittedStyle = Long.MIN_VALUE;
+    private static final int CHECK_EM = 10, CHECK_GAP = 4;
+    private static final String CHECK = com.aurora.client.screen.IconCatalog.glyph("check");
     private final IntSupplier selectedIndex;
     private final IntConsumer onSelect;
     /**
@@ -109,6 +114,10 @@ public class SegmentedControl extends Widget {
     private SegmentedControl(String[] options, IntSupplier selectedIndex, IntConsumer onSelect,
                              java.util.function.IntPredicate toggledOn) {
         this.options = options;
+        this.fittedLabels = new net.minecraft.util.FormattedCharSequence[options.length];
+        this.fittedWidths = new int[options.length];
+        this.fittedBudgets = new int[options.length];
+        Arrays.fill(fittedBudgets,-1);
         this.selectedIndex = selectedIndex;
         this.onSelect = onSelect;
         this.toggledOn = toggledOn;
@@ -222,6 +231,10 @@ public class SegmentedControl extends Widget {
             }
         }
 
+        // Pick-one segments share one inset well. Independent toggles remain separate raised chips.
+        if(MaterialSurface.unified() && toggledOn==null)
+            MaterialSurface.inset(g,x,y,w,trackH,radius,disabled);
+
         for (int i = 0; i < options.length; i++) {
             int sx = segStart(i, x, w);
             int sw = segWidth(i, x, w);
@@ -248,8 +261,12 @@ public class SegmentedControl extends Widget {
                 control.updatePointer(mouseX, mouseY);
             }
 
-            if(MaterialSurface.unified()) MaterialSurface.selection(g,sx,y,sw,trackH,radius,isSelected,disabled ? 0 : hoverT);
-            else if (!glassOk && isSelected) {
+            if(MaterialSurface.unified()) {
+                if(toggledOn!=null) MaterialSurface.control(g,sx,y,sw,trackH,radius,isSelected,disabled,false,hoverT,0);
+                else if(isSelected) MaterialSurface.control(g,sx+1,y+1,sw-2,trackH-2,
+                        Math.max(0,radius-1),true,disabled,false,hoverT,0);
+                else if(!disabled) MaterialSurface.peerHover(g,sx+1,y+1,sw-2,trackH-2,Math.max(0,radius-1),hoverT);
+            } else if (!glassOk && isSelected) {
                 RenderUtil.drawRoundedRectAA(g, sx, y, sw, trackH, radius,
                         MaterialSurface.color(ThemeToken.ACCENT));
             }
@@ -275,14 +292,39 @@ public class SegmentedControl extends Widget {
                             MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY),
                             MaterialSurface.color(ThemeToken.ON_BACKGROUND), hoverT);
 
-            if (verbatimLabels) {
-                AuroraFontRenderer.drawCentered(g, tr, AuroraFontRenderer.verbatim(options[i]), Math.round(sx + sw / 2f),
-                        Math.round(y + (trackH - tr.lineHeight) / 2f), color);
+            if(MaterialSurface.unified()) {
+                renderFittedLabel(g,tr,i,sx,y,sw,isSelected,color);
+            } else if (verbatimLabels) {
+                AuroraFontRenderer.drawCentered(g, tr, AuroraFontRenderer.verbatim(options[i]), (sx + sw / 2f),
+                        AuroraFontRenderer.textY(tr, y, trackH), color);
             } else {
-                AuroraFontRenderer.drawCentered(g, tr, AuroraFontRenderer.ellipsize(tr,options[i],Math.max(0,(int)sw-6),0), Math.round(sx + sw / 2f),
-                        Math.round(y + (trackH - tr.lineHeight) / 2f), color);
+                AuroraFontRenderer.drawCentered(g, tr, AuroraFontRenderer.ellipsize(tr,options[i],Math.max(0,sw-2*com.aurora.client.ui.util.TextAlignment.FACE_PAD),0), (sx + sw / 2f),
+                        AuroraFontRenderer.textY(tr, y, trackH), color);
             }
         }
+    }
+
+    /** Fit once per font/style and real segment width; centre the label independently of its check slot. */
+    private void renderFittedLabel(GuiGraphicsExtractor g,Font font,int i,int sx,float y,int sw,boolean selected,int color) {
+        long style=ThemeManager.generation()*65537L+AuroraFontRenderer.styleKey()*2L+(verbatimLabels ? 1 : 0);
+        if(fittedStyle!=style) { Arrays.fill(fittedBudgets,-1);fittedStyle=style; }
+        int reserve=toggledOn!=null ? CHECK_EM+CHECK_GAP : 0;
+        int budget=Math.max(0,sw-2*com.aurora.client.ui.util.TextAlignment.FACE_PAD-2*reserve);
+        if(fittedBudgets[i]!=budget) {
+            String source=verbatimLabels ? options[i] : AuroraFontRenderer.applyCase(options[i]);
+            String label=com.aurora.client.ui.util.TextFit.ellipsize(source,budget,0,
+                    text -> font.width(AuroraFontRenderer.verbatim(text)));
+            fittedLabels[i]=AuroraFontRenderer.verbatim(label);
+            fittedWidths[i]=font.width(fittedLabels[i]);
+            fittedBudgets[i]=budget;
+        }
+        boolean checked=toggledOn!=null && selected;
+        int labelW=fittedWidths[i];
+        if(checked) com.aurora.client.ui.util.MaterialIconRenderer.drawIcon(g,font,CHECK,
+                sx+com.aurora.client.ui.util.TextAlignment.FACE_PAD+CHECK_EM/2f,
+                com.aurora.client.ui.util.TextAlignment.iconCenter(y,trackH),CHECK_EM,color);
+        AuroraFontRenderer.drawCentered(g,font,fittedLabels[i],(sx+sw/2f),
+                AuroraFontRenderer.textY(font, y, trackH),color);
     }
 
     @Override

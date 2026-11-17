@@ -74,6 +74,8 @@ class SquareModeConformanceTest {
                 "neutral tile material uses the resolved control radius");
         assertTrue(src.contains("b[0], b[1], b[2], b[3], ctrlRadius, true,"),
                 "highlighted tile glass uses the resolved control radius");
+        assertTrue(src.contains("MaterialSurface.module(g,cx,cy,cw,ch,tileRadius,on,hoverT)"),
+                "opaque depth templates share the resolved radius in the unified path");
         // Content overlays — the same derivations, not independent literals.
         assertTrue(src.contains("size, size, ctrlRadius"), "flat layout fills use the same radius");
         assertTrue(src.contains("cw, ch, tileRadius"), "flat tile fills use the same radius");

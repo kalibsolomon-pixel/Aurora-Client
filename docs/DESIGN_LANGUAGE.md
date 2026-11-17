@@ -670,8 +670,9 @@ The following sections establish v3 expectations without inventing unresolved pi
 ### 11.2 Button
 
 - **Purpose:** execute a discrete action.
-- **Material:** raised neutral control; stained for the single primary/selected action;
-  semantic destructive treatment for destructive action.
+- **Material (2026-11-17):** opaque raised neutral control with the depth recipe below;
+  primary uses the `ACTION_STRONG` recipe, pressed reverses the light. Ghost and owner-themed
+  actions retain their specified treatment; destructive text/hover colours remain semantic.
 - **Geometry:** theme-controlled rectangular chrome and a compact, usable hit target.
 - **States:** symmetric hover; immediate physical press; persistent focus independent of
   hover; readable, non-interactive disabled state.
@@ -695,7 +696,11 @@ the accent-filled call to action under its hint.
 ### 11.3 Icon action/button
 
 - **Purpose:** a compact discrete action represented primarily by an icon.
-- **Material:** same semantic choices as Button; it is not exempt because it lacks text.
+- **Material (2026-11-17):** on unified screens an icon action's face is the raised control
+  recipe — rest/hover through the cached-state blend, the pressed recipe while pressed, muted
+  flat when disabled — with its glyph centred through the shared box-centring helper so it
+  shares the text axis. Bare glyph actions on a host surface stay the host's. The title
+  screen's top bar keeps its existing treatment (depth-pass exclusion).
 - **Geometry:** consistent hit target with optically centered shared icon.
 - **States/services:** full button-like contract.
 - **Accessibility:** always has a non-glyph accessible label; tooltip when the visible icon is
@@ -705,17 +710,11 @@ the accent-filled call to action under its hint.
 ### 11.4 ToggleSwitch
 
 - **Purpose:** directly switch one persistent Boolean state.
-- **Material:** opaque token control by current convention; on state uses accent/selected
-  semantics. Track and thumb follow the Corner Radius through the capsule rule. The on track
-  wears the subtle automatic accent gradient (`AccentGradient`: a few degrees of hue either side
-  of the accent, lighter on the left) until 2026-11-14; it is now the flat accent (owner
-  decision: on short fills only the pale end showed, so switches and sliders read as different
-  colours). The ON
-  state has no outline (owner ruling 2026-11-12): the off track's hairline edge fades out as the
-  switch turns on, and keyboard focus is carried by the thumb growing slightly, not by a ring.
-  The OFF track is a filled neutral (`MATERIAL_BORDER_STRONG`) with no outline (2026-11-14): a
-  sunken track with a hairline vanished into dark windows. The slider's unfilled track uses the
-  same token, so "unset" reads the same on both controls.
+- **Material (2026-11-17):** opaque inset `MATERIAL_SUNKEN` OFF track. ON keeps the existing
+  flat accent fill and interpolation; no accent outline. The same-size white thumb gets a
+  curvature-lit dome and a down-right shadow (1 GUI px elevation, 2 GUI px softness, 18% black). Track/thumb follow the
+  Corner Radius capsule rule, including exactly square geometry at zero. Focus still grows
+  the thumb; the non-interactive represented preview retains its existing appearance.
 - **States:** off/on must be unambiguous; hover, accepted press, focus, and disabled must each
   be defined. Disabled must not look like interactive rest.
 - **Input/accessibility:** clicking its associated row may toggle only when that enlarged hit
@@ -727,9 +726,10 @@ the accent-filled call to action under its hint.
 ### 11.5 Slider
 
 - **Purpose:** choose a value from a continuous or stepped range.
-- **Material:** opaque track and knob; accent fill communicates the chosen portion. Track and
-  knob follow the Corner Radius through the capsule rule. The fill is the flat accent, like the
-  switch track (2026-11-14).
+- **Material (2026-11-17):** opaque dished `MATERIAL_SUNKEN` track (+3 → +7 HSL points) and same-size domed knob
+  with a down-right shadow (1 GUI px elevation, 2 GUI px softness, 18% black). Accent fill behaviour is unchanged (flat accent since
+  2026-11-14); the depth pass adds no AccentGradient changes. Track and knob follow Corner
+  Radius. Value text never scales; numeric entry uses the inset field recipe.
 - **Layout (owner direction, 2026-11-14):** one inline row everywhere: the label on the left,
   then the value right-aligned against a bounded track in the control column. The track is a
   dropdown's width (`SettingRowLayout.TRACK_W`, 84 px), or half that (`SHORT_TRACK_W`) for a
@@ -752,8 +752,12 @@ the accent-filled call to action under its hint.
 ### 11.6 SegmentedControl
 
 - **Purpose:** choose one item from a small mutually exclusive set.
-- **Material:** containing/control treatment centrally derived; selected segment uses stained
-  semantics, unselected segments remain neutral.
+- **Material (2026-11-17):** one opaque dished well (+1 → +5 HSL points) behind the pick-one group. Unselected
+  segments are text only (faint neutral hover lift); the selected cell is raised, with a 1 px
+  inner margin, `SELECTION_SOFT` wash and existing thin accent edge. Independent toggle groups
+  (Italic / Underline) instead use separate raised chips with gaps and no divider or shared
+  well. ON chips add the same selected treatment and a leading `check` glyph. Labels, or the
+  check-plus-label group, stay centred and fit the active font and actual segment width.
 - **States:** each segment defines hover, press, selected, focus, and disabled. Selection must
   remain distinguishable without hover.
 - **Input/accessibility:** arrow or equivalent keyboard navigation should be supported by the
@@ -764,8 +768,10 @@ the accent-filled call to action under its hint.
 ### 11.7 Enum/dropdown
 
 - **Purpose:** select one value from a longer or context-dependent set.
-- **Material:** raised control field; expanded popup is an explicit above-dim control/surface
-  when the screen uses a dim layer.
+- **Material (2026-11-17):** opaque curvature-lit raised `MaterialSurface.field` recipe (+5 → -3, 14% shadow); expanded popup is
+  an explicit above-dim surface. Closed value text is centred in the face area left of the
+  16 px chevron slot (centred stays centred, 2026-11-17), fitted to that area less equal side
+  padding; the chevron centres on the same optical axis as the value. Expanded options retain their existing alignment.
 - **States:** field hover/press/focus/disabled; expanded state; option hover/focus/selected/
   disabled where applicable.
 - **Input/accessibility:** pointer open/select/outside-dismiss; keyboard open, navigate,
@@ -776,7 +782,8 @@ the accent-filled call to action under its hint.
 ### 11.8 Keybind control
 
 - **Purpose:** display and capture a keyboard/mouse binding.
-- **Material:** raised control; listening/capture mode may use stained active treatment.
+- **Material (2026-11-17):** opaque raised `MaterialSurface.field` recipe; content stays
+  centred. Listening/capture retains its selected wash and thin accent edge.
 - **States:** rest, hover, pressed, listening, focus, and disabled. Listening is not merely
   hover and must remain obvious.
 - **Input/accessibility:** keyboard-operable entry into capture, a documented cancellation
@@ -808,23 +815,24 @@ the accent-filled call to action under its hint.
   select, toggle, or contain child actions.
 - **Material:** role follows semantics. A raised tile is appropriate for an actionable item;
   a flat card inside an existing material container is valid when another layer adds no
-  hierarchy. Selected/on treatment uses stain or a compact accent indicator as appropriate.
-- **Feature on/off (2026-11-14):** a feature tile or list row being *enabled* is a state, not
-  a selection. Every feature tile and row keeps the neutral face; the icon alone carries the
-  state: the accent when on, a neutral grey at secondary-text luminance when off (the cool
-  secondary tone read as a faint accent; a per-module accent override still applies). The name stays primary in both states (an off feature is available, not disabled).
-  Every tile and row carries a faint neutral hairline (secondary text at alpha 0x22) that
-  strengthens to 0x99 on hover: the translucent face alone left its edges unreadable, so a
-  bottom row met the window edge as if cut off.
-  The settings chevron appears top-right on a hovered or focused tile, at the trailing end of a
-  row. The tile or row stays the control. Selection treatment (wash + accent edge) stays
-  reserved for the selected tab, page or item.
-  History, all 2026-11-14: a status dot read as a notification badge; a miniature switch
-  mimicked a control the tile does not have; a corner On/Off pill unbalanced the centred card;
-  a symmetric bottom accent bar read as a progress bar. The owner then retired separate
-  indicators in favour of the icon colour (`docs/reports/2026-11-14-ui-polish-overhaul.md`).
+  hierarchy. Selected peer items use the shared selection treatment; feature state follows
+  the explicit elevation rule below.
+- **Feature on/off (owner ruling, 2026-11-17):** elevation is the primary state cue, including
+  in greyscale. ON is an opaque lit raised face with a shallow black soft shadow; OFF is an
+  opaque flat `MATERIAL_RAISED` face at -3 HSL lightness points. The icon remains accent on /
+  secondary grey off, and names stay primary in both states. Hover lifts either face by +2
+  lightness points only; there is no resting/hover perimeter outline, accent wash/edge or
+  separate indicator (dot, switch, pill, bar, badge or state text). The settings chevron stays
+  hover/focus-only: top-right on tiles, trailing on rows. Layout, wrapping and hit behaviour
+  are unchanged. This supersedes the 2026-11-14 icon-only state cue and tile hairlines.
 - **List rows:** icon, then the name left-aligned on the icon's axis, then trailing state. A
   name is never centred in a row whose icon is pinned left.
+- **Editor/list cards (owner report, 2026-11-17):** per-item editor cards (Item Scale's rows,
+  the per-effect alert rows) and browser result cards are raised opaque cards — the raised
+  control recipe, hover through the cached-state blend — with no resting outline: the bevel
+  defines the edge. Their trailing glyph actions centre on the card face through the shared
+  helper and the text block stays left-aligned. Non-unified screens keep the translucent band
+  and hover outline.
 - **States:** actionable cards use the button-like contract. Hover, press, selection, focus,
   and disabled are distinct from child-action states.
 - **Input/accessibility:** the card's principal action and each child action must have
@@ -857,6 +865,13 @@ in its label row's trailing value slot instead, above its Add control.
 - **Motion:** canonical symmetric hover; selection transition remains short and reversible.
 
 ### 11.12 Text field
+
+Every text-entry field — search, rename, hex, numeric and ordinary entry — is an opaque
+inset well on unified screens (search joined the recipe by the owner report, 2026-11-17: the
+search bars had stayed flat translucent glass while every other field was depressed). The
+inset bevel defines the edge, so no resting outline draws; focus remains the caret (plus the
+selection fill below). Search fields keep their trailing magnifier, text window and hooks.
+Non-unified screens keep the raised-glass / flat-fill contract.
 
 - **Purpose:** enter or edit search, rename, hex, numeric, or ordinary text.
 - **Material:** glass is the canonical Aurora input chrome for normal text-entry fields, not
@@ -1508,3 +1523,138 @@ rulings it supersedes.
   the waypoint group chip only exists while a group is chosen.
 - **Names** — "Toggle Sprint/Sneak" is "Sprint & Sneak" (owner decision), so every grid label
   fits one line.
+
+
+## Depth pass — 2026-11-17
+
+The owner explicitly approves purposeful vertical gradients and shallow bevel depth to make
+state and hierarchy clearer. This supersedes the 2026-10-30 “one face for neutral controls:
+no outline, no shadow” / flat-child restrictions where they conflict, the 2026-11-14 icon-only
+feature state and tile hairlines, and the former filled OFF tracks. The title screen, HUD
+editor, ghost Reset / Done positions, sidebar selection, 336×288 window, 80×80 tiles, gaps,
+columns and row heights are untouched. Done keeps its primary role, with the primary depth
+recipe. Settings chevrons remain hover/focus-only (2026-11-14 owner ruling).
+
+Round 2 replaces the first pass's vertical-only bevel lines with a curvature-aware height
+field. One light is shared by every lit face: **L = normalize(-0.35, -0.75, 0.55)** in
+screen coordinates (y down). Each covered device pixel samples its face's rounded-box SDF
+`d` (negative inside). Circular knobs use the circle case of that same SDF. SQUARE keeps an
+exact box silhouette and switches facets at the 45-degree medial diagonal.
+
+The rounded bevel band is `clamp(round(radiusDevice * .8), round(1.5 * scale), 4 * scale)`
+(owner, 2026-11-17: keep the rim-and-ramp style, slightly more pronounced). **Gem facets**
+(owner, 2026-11-17): as the corner radius approaches 0 the bevel becomes a 2.25 GUI px planar
+chamfer whose four sides are flat 45-degree facets, each lit at its own angle (top brightest,
+then left, right, bottom), with crisp creases on the corner diagonals. `facetBlend =
+clamp(radius / (2 * scale), 0, 1)` blends band width and slope from the facet (0) to the
+pillowed roll-off (1), so dragging Corner Radius never jumps. The pillow's slope is its own
+`h'(t)` (the bevel is as tall as it is wide), capped at 3 at the silhouette. The band never exceeds 22% of the face's shorter side
+(domes exempt), so small controls keep a flat plateau for their text: a 14 px field gets about
+3 px of bevel. With `t = clamp(-d / band, 0, 1)`, height is
+`sqrt(1 - (1-t)^2)`, negated for inset faces. Pressed scales height to .4 and disables
+specular. Domes use a `.55 * radiusDevice` band (plateau radius .45 of the radius), while
+SQUARE knobs use the gem chamfer. The physical outward normal is
+`normalize(gradient(d) * slope * k, 1)` with `slope = lerp(1, min(3, h'(t)), facetBlend)` and **k = 1**. Equivalently it is the
+negative gradient of inward distance `-d`; this sign makes the upper-left rim catch the
+upper-left light. The draft spec's minus sign with an *outward* SDF gradient would invert
+that lighting; this sign clarification preserves the required highlight direction.
+
+**Disabled controls (2026-11-17).** A disabled control keeps the raised form in the
+`MATERIAL_PANEL` tone with no shadow and a muted label, so it still reads as a control; a flat
+panel-tone face disappeared into the window.
+
+**Switches (2026-11-17).** The ON track is the same recessed well as OFF, filled with the accent
+(`Light.INSET`), so the two states differ only in colour; the knob rests on whole pixels with a
+2 px margin (`h - 4` knob), exactly centred on the track.
+
+**Text and glyph centring (2026-11-17).** Text on faces and rows is placed with
+`AuroraFontRenderer.textY`, which centres the active font's measured cap/x-height ink (from the
+baked glyphs of that style, cached per style and resource generation; descenders, underline and
+shadow excluded) on the box, instead of `(h - lineHeight) / 2` plus ad-hoc nudges. Icons
+(chevrons, checks, keyboard glyphs) centre on the same axis, so a label and its glyph share one
+centre line. Horizontal centring centres the fitted text's visible ink (the glyph quads'
+left/right bounds, `AuroraFontRenderer.inkMid`, cached per style) rather than its advance
+width, so side bearings never shift a centred label; the sub-GUI-pixel remainder is applied
+through the pose snapped to the device-pixel grid, so centred text is accurate to half a device
+pixel and stays crisp; faces keep `TextAlignment.FACE_PAD` (5 px)
+equal padding, clear of the widest bevel. Descriptor lines use one pitch,
+`lineHeight + 2`, and the same gap below the label they describe.
+
+Final HSL lightness delta is `faceRamp(y) + 20 * (dot(n,L) - L.z) + 10 * spec`, with
+`spec = pow(max(0, reflect(-L,n).z), 24)` only on raised rims. Inset/pressed have no specular;
+the plateau has neither rim nor specular delta. Hue, saturation and alpha are preserved
+through lighting; original captured AA coverage is unchanged. **No separate top/bottom
+edge lines remain in any depth role.** All lighting is baked before upload, never through
+the gradient shader's flat capture fallback. Cached state endpoints blend with texture alpha.
+
+| Role | Face top → bottom (HSL points) | Height / rim | Shadow: elevation / softness / black alpha |
+|---|---|---|---|
+| Raised control | `MATERIAL_RAISED` +5 → -3 | raised + specular | 1 / 2 GUI px / 14% |
+| Raised hover | `MATERIAL_HOVER` +5 → -3 | raised + specular | same |
+| Pressed | `MATERIAL_PRESSED` -3 → +2 | raised height ×.4, no specular | none at full press; fades out during press |
+| Inset: segmented / numeric / preview well, OFF switch track | `MATERIAL_SUNKEN` +1 → +5 | inset, no specular | none |
+| Slider track | `MATERIAL_SUNKEN` +3 → +7 | inset, no specular | none |
+| Primary: Done / primary action | `ACTION_STRONG` +6 → -4; top capped at +3 if `ON_ACTION` luminance >.5 | raised + specular | 1 / 2 GUI px / 14% |
+| Feature tile / list row ON | opaque `MATERIAL_RAISED` +11 → +3 | raised + specular | 2 / 4 GUI px / 20% |
+| Feature tile / list row OFF | opaque `MATERIAL_RAISED` -5 flat | flat | none |
+| ON hover | +13 → +5 | raised + specular | same as ON |
+| OFF hover | -3 flat | flat | none |
+| Disabled | flat `MATERIAL_PANEL` (muted thumb colour retained) | flat | none |
+| Selected segment / peer / ON chip | raised + `SELECTION_SOFT` wash + existing thin accent edge | raised + specular | same as raised |
+| Slider / switch knob | existing face colour, no face ramp | shallow dome + specular | 1 / 2 GUI px / 18% |
+
+Shadow offsets follow `elevationDevice * normalize(.35, .75)`; softness is twice elevation.
+The round-2 distances are **GUI pixel elevations converted to device pixels at bake time**,
+superseding the first pass's fixed device-pixel shadows. Inset, OFF and disabled faces cast
+none. Hover's tile face ramp is exactly +2, weaker than the ON/OFF separation; pure math tests
+require at least 8 mean greyscale points for rest ON/rest OFF and rest ON/hover OFF in both
+owner themes. Geometry and icon colour remain the only two tile state cues.
+
+Tiles and module rows have opaque faces. The window remains glass; Background Opacity is
+still only the `WINDOW_FILL` alpha. Its body has no gradient. The `WINDOW_OUTLINE` draw uses
+**55% of that outline token's alpha**, a fixed constant independent of window opacity.
+Controls, toggles, sliders and fields — search included (owner report, 2026-11-17, extending
+this pass's coverage) — remain opaque. Preview **wells** may use
+inset lighting; the represented data painted inside them is unchanged. Per-item editor cards
+and browser result cards are raised opaque cards (§11.10).
+
+For a custom Background Color, only `MATERIAL_RAISED`, `MATERIAL_HOVER` and
+`MATERIAL_PRESSED` cap HSL saturation at `min(backgroundSaturation * .35, .10)`, preserving
+each lightness and alpha. Window/background tint and opacity, other tokens and stock graphite
+are untouched. This is a **reversible owner-review tuning item** in `UnifiedPalette`, not a
+persisted setting change or another opacity factor.
+
+`MaterialLighting` in core owns SDF, height, normal, light and colour math.
+`UiLayerCache.lightFace` loops captured device pixels; `softShadow` composites behind them.
+Legacy RGB `shadeVertical` remains only for pre-existing owner-themed cards/popups. Module
+and control shadows are separate cached rasters behind state endpoints, avoiding doubled
+shadow opacity during blending. Knobs bake the shadow with their face. Template keys include
+recipe/state, geometry and radius; version stamps include theme generation, scale, fill and
+border. Templates survive screen changes and resizes in a primitive LRU capped at 256 entries
+and 16 MiB of RGBA image backing (at most another 16 MiB of texture pixel backing; driver
+overhead is not measured). Identity includes exact fractional geometry and colours; hash
+collisions are checked against the full identity and treated as misses. Theme generation,
+GUI scale and roundness changes invalidate the pool, and returning to gameplay (no screen
+open) releases it: no HUD draws these faces, so nothing is retained while playing. Evictions and oversized, unretained
+rasters wait until the next extraction boundary to be freed, so transient backing for the
+current frame is additional to the retention cap. Reusing a template never mutates its pixels.
+No new callbacks,
+dependencies or frameworks are introduced. No new per-frame lighting math or static GUI
+fills; the control shadow adds a cached blit. Text, icons, headings, sidebar, scrollbars,
+focus rings, tooltips, represented swatch/crosshair/checkerboard data and the title screen /
+HUD editor retain their existing treatment; search fields moved to the inset recipe with the
+2026-11-17 owner report (superseding this pass's earlier "search glass" exclusion).
+
+The bake uses direct ABGR buffer access. A conservative plateau cross skips SDF/normal/
+specular work; the remaining band and corner pixels evaluate the original equations once.
+Straight rim samples are reused per row/column. Face ramps and uniform-source HSL conversions
+are reused per row. Shadow SDF work is bounded
+to its offset/softness rectangle, skips opaque pixels, and reuses separable axis terms. A cheap
+outer scan preserves the old pass's normalization of hidden RGB in fully transparent pixels.
+Frozen old-path differential tests require bit identity, including AA and shadow compositing.
+
+Implementation verification is offline: colour and NativeImage raster tests, source contracts,
+Python tooling tests and the three-line parity build. The parent owns the required live/factory
+ROUND/SQUARE screenshots, overflow review at small/large viewports, greyscale ON/OFF review,
+and `RenderUtil.fillsSubmitted()` / CPU probes. Runtime fills and CPU cost are unmeasured until
+those probes run; a headless test only verifies the raster passes submit zero GUI fills.

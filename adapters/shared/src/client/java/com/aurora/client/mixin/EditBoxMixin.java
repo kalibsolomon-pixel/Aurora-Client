@@ -47,16 +47,16 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  * shadowing the vanilla {@code frame} counter, avoiding a fragile
  * private-field dependency.
  *
- * <p><b>Glass rollout:</b> on a screen with a live world behind it, the
- * field renders as RAISED glass (search fields are interactive controls
- * floating above the depressed window) with the neutral
- * {@code WINDOW_FILL} tint — whose alpha IS the Background Opacity
- * slider, the single opacity application point. Focus reads through the
- * caret + a subtle focus-ring outline only; the tint stays constant.
- * On decline (menu context, screenshot suppression, glass disabled) the
- * flat themed fill + outline below returns unchanged. This is the ONE
- * canonical search-bar implementation — Particles, Item Scale,
- * ResourcePacks and the Modules grid all render through it.
+ * <p><b>Depth pass (2026-11-17):</b> on a unified screen EVERY field —
+ * search included (owner report 2026-11-17: search bars were still flat
+ * translucent glass while every other field was depressed) — renders as
+ * the opaque inset well ({@code MaterialSurface.inset}); the bevel
+ * defines the edge, so no resting outline draws. The trailing magnifier,
+ * the text window, caret, selection and the Aurora text-window hooks are
+ * unchanged. On a non-unified screen the field keeps its RAISED glass
+ * look (or the flat themed fill + outline on decline) exactly as before.
+ * This is the ONE canonical search-bar implementation — Particles, Item
+ * Scale, ResourcePacks and the Modules grid all render through it.
  */
 @Mixin(EditBox.class)
 public abstract class EditBoxMixin implements GlassEditBox {
@@ -244,14 +244,20 @@ public abstract class EditBoxMixin implements GlassEditBox {
     }
 
     /**
-     * Pre-dim surface: the field is a RAISED glass control with the neutral
-     * {@code WINDOW_FILL} tint (see {@link GlassEditBox}). Painted at the
-     * field's current bounds — the screen positions it before calling.
+     * Pre-dim surface: on non-unified screens the field is a RAISED glass
+     * control with the neutral {@code WINDOW_FILL} tint (see
+     * {@link GlassEditBox}). Unified screens never take glass — the inset
+     * material face paints in the content pass — so this declines there.
+     * Painted at the field's current bounds — the screen positions it
+     * before calling.
      */
     @Override
     public void aurora$renderGlassPass(GuiGraphicsExtractor ctx) {
         EditBox self = (EditBox) (Object) this;
         aurora$glassPassFrame = GlassSurface.frame();
+        // GlassSurface.control declines on unified screens for every field;
+        // search fields take the same inset recipe as all other fields
+        // (owner report 2026-11-17).
         aurora$glassPassDrew = self.visible && aurora$themedScreen(Minecraft.getInstance())
                 && GlassSurface.control(ctx, self.getX(), self.getY(), self.getWidth(), self.getHeight(),
                         ThemeManager.current().roundness().radiusSmall());
@@ -272,15 +278,12 @@ public abstract class EditBoxMixin implements GlassEditBox {
         String value = self.getValue();
 
         // --- 1. Background (fully replaces vanilla box) ---
-        // Raised glass + neutral WINDOW_FILL tint (the shared GlassSurface
-        // material). The glass rim replaces the outline (no double outline).
-        // The focus cue is the caret plus a subtle focus-ring outline drawn
-        // on top — focus never changes the tint (the same contract as every
-        // glass control). If the screen ran this field's glass pass this
-        // frame, the surface already sits UNDER the overlay dim and only its
-        // result matters here; otherwise it is painted in place now. With no
-        // live world the renderer declines and the flat themed fill +
-        // outline below draws instead, exactly as before glass.
+        // Unified screens: EVERY field — search included (owner report
+        // 2026-11-17) — is the opaque inset well; the bevel defines the
+        // edge, so no resting outline draws over it and the focus cue
+        // stays the caret alone. Non-unified screens keep the raised glass
+        // contract (or the flat themed fill + outline on decline) exactly
+        // as before glass.
         int fillCol = ThemeManager.surfaceColor(focused ? ThemeToken.SURFACE_VARIANT : ThemeToken.SURFACE);
         int borderCol = focused ? AuroraTheme.BORDER_ON_HOVER : AuroraTheme.BORDER_OFF;
 
@@ -289,10 +292,13 @@ public abstract class EditBoxMixin implements GlassEditBox {
             borderCol=MaterialSurface.color(ThemeToken.BORDER_HOVER);
         }
         float radius = ThemeManager.current().roundness().radiusSmall();
-        boolean glassOk = aurora$glassPassFrame == GlassSurface.frame()
+        boolean opaqueInset = MaterialSurface.unified();
+        boolean glassOk = !opaqueInset && (aurora$glassPassFrame == GlassSurface.frame()
                 ? aurora$glassPassDrew
-                : GlassSurface.control(ctx, x, y, w, h, radius);
-        if (glassOk) {
+                : GlassSurface.control(ctx, x, y, w, h, radius));
+        if(opaqueInset) {
+            MaterialSurface.inset(ctx,x,y,w,h,radius,!self.isActive());
+        } else if (glassOk) {
             // Focus ring on glass — a translucent hairline that brightens
             // the rim without stacking a second surface.
             if (focused && !MaterialSurface.unified()) {
@@ -365,7 +371,9 @@ public abstract class EditBoxMixin implements GlassEditBox {
         }
 
         // --- 4. Flat-path outline on top (after text) ---
-        if (!glassOk) {
+        // The inset bevel defines the unified field's edge; the outline is
+        // the legacy flat fallback's chrome only.
+        if (!glassOk && !opaqueInset) {
             RenderUtil.drawRoundedOutlineAA(ctx, x, y, w, h, radius, 1.0f, borderCol);
         }
 

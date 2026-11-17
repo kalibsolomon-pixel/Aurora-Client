@@ -160,7 +160,7 @@ public class KeybindSetting extends FeatureSetting {
         boolean disabled = reconcileDisabledState();
 
         if (compactRow != null) renderCompactLabel(ctx, x, y, mouseX, mouseY, AuroraTheme.TEXT_PRIMARY);
-        else renderWrappedLabel(ctx, label, x + 12, y + (CONTROL_H - tr.lineHeight) / 2,
+        else renderWrappedLabel(ctx, label, x + 12, AuroraFontRenderer.textY(tr, y, CONTROL_H),
                 Math.max(0, width - BTN_W - 38), AuroraTheme.TEXT_PRIMARY, mouseX, mouseY, disabled);
 
         int btnX = controlX(x, width, BTN_W);
@@ -233,16 +233,16 @@ public class KeybindSetting extends FeatureSetting {
         boolean glyph = MaterialSurface.unified() && !listening;
         int glyphW = glyph ? KEY_GLYPH + 4 : 0;
         // Trim long names so they fit in the pill (keep at least 3 chars + ellipsis).
-        labelText = AuroraFontRenderer.ellipsize(tr, labelText, BTN_W - 8 - glyphW, 3);
+        labelText = AuroraFontRenderer.ellipsize(tr, labelText, BTN_W - 2 * com.aurora.client.ui.util.TextAlignment.FACE_PAD - glyphW, 0);
         int labelW = tr.width(labelText);
         int textCol = listening ? MaterialSurface.color(ThemeToken.ON_BACKGROUND) : textColor;
         int groupX = btnX + (BTN_W - labelW - glyphW) / 2;
         if (glyph) com.aurora.client.ui.util.MaterialIconRenderer.drawIcon(ctx, tr,
-                com.aurora.client.screen.IconCatalog.glyph("keyboard"), groupX + KEY_GLYPH / 2f, btnY + BTN_H / 2f, KEY_GLYPH,
+                com.aurora.client.screen.IconCatalog.glyph("keyboard"), groupX + KEY_GLYPH / 2f, com.aurora.client.ui.util.TextAlignment.iconCenter(btnY, BTN_H), KEY_GLYPH,
                 disabled ? MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED) : MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY));
         ctx.text(tr, labelText,
                 groupX + glyphW,
-                btnY + (BTN_H - tr.lineHeight) / 2 + 1,
+                AuroraFontRenderer.textY(tr, btnY, BTN_H),
                 textCol, false);
 
         renderDescription(ctx, x, y + CONTROL_H, width);

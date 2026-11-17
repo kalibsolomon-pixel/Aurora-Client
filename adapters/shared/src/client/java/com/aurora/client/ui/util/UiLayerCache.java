@@ -126,7 +126,7 @@ public final class UiLayerCache implements RenderUtil.RectSink {
         return ((c & 0xFF) << 16) | (c & 0xFF00) | ((c >>> 16) & 0xFF) | (c & 0xFF000000);
     }
 
-    /** Subtle face lighting, applied once before upload. Coverage and opacity are unchanged. */
+    /** Compatibility shading for existing themed cards/popups only; depth recipes use HSL lightVertical. */
     public void shadeVertical(int x, int y, int width, int height, int amount) {
         if (image == null || height < 2 || amount <= 0) return;
         IntBuffer pixels = MemoryUtil.memIntBuffer(image.getPointer(), w * h);
@@ -140,6 +140,68 @@ public final class UiLayerCache implements RenderUtil.RectSink {
                 int green = Math.clamp(((color >>> 8) & 255) + delta, 0, 255);
                 int blue = Math.clamp(((color >>> 16) & 255) + delta, 0, 255);
                 pixels.put(index, (color & 0xff000000) | (blue << 16) | (green << 8) | red);
+            }
+        }
+    }
+
+    /** Light only captured face pixels; coordinates and deltas are device pixels / HSL points. */
+    public void lightVertical(int x, int y, int width, int height, float top, float bottom) {
+        if (image == null || height <= 0 || top == 0 && bottom == 0) return;
+        IntBuffer pixels = MemoryUtil.memIntBuffer(image.getPointer(), w * h);
+        var bake = new com.aurora.client.theme.MaterialLighting.FaceBake(width,height,0,1,top,bottom,
+                com.aurora.client.theme.MaterialLighting.Profile.FLAT);
+        for (int py = Math.max(0, y); py < Math.min(h, y + height); py++) {
+            for (int px = Math.max(0, x); px < Math.min(w, x + width); px++) {
+                int index=py*w+px, argb=argbToAbgr(pixels.get(index));
+                pixels.put(index,argbToAbgr(bake.shade(argb,px-x,py-y)));
+            }
+        }
+    }
+
+    /** Per-pixel SDF height-field lighting, baked before selection ink/shadows. Coverage is immutable.
+     * Geometry is the face's own device-space rectangle, including fractional knob sizes. */
+    public void lightFace(int x, int y, float width, float height, float radius, int scale,
+                          float top, float bottom, com.aurora.client.theme.MaterialLighting.Profile profile) {
+        if (image == null || width <= 0 || height <= 0) return;
+        IntBuffer pixels = MemoryUtil.memIntBuffer(image.getPointer(), w * h);
+        var bake = new com.aurora.client.theme.MaterialLighting.FaceBake(width,height,radius,scale,top,bottom,profile);
+        for (int py = Math.max(0, y); py < Math.min(h, y + (int)Math.ceil(height)); py++)
+            for (int px = Math.max(0, x); px < Math.min(w, x + (int)Math.ceil(width)); px++) {
+                int index=py*w+px, argb=argbToAbgr(pixels.get(index));
+                pixels.put(index,argbToAbgr(bake.shade(argb,px-x,py-y)));
+            }
+    }
+
+    /** Baked black shadow behind the lit face. Radius/offset/softness are device pixels.
+     * Rounded SDF coverage keeps SQUARE square; no GUI fills or temporary image allocation. */
+    public void softShadow(float x, float y, float width, float height, float radius,
+                           float elevation, float softness, float alpha) {
+        if (image == null) return;
+        double offsetX = elevation * com.aurora.client.theme.MaterialLighting.SHADOW_X;
+        double offsetY = elevation * com.aurora.client.theme.MaterialLighting.SHADOW_Y;
+        double soft=Math.max(1,softness), r=Math.clamp(radius,0,Math.min(width,height)*.5);
+        int left=Math.max(0,(int)Math.floor(x+offsetX-soft*.5));
+        int right=Math.min(w,(int)Math.ceil(x+offsetX+width+soft*.5));
+        int top=Math.max(0,(int)Math.floor(y+offsetY-soft*.5));
+        int bottom=Math.min(h,(int)Math.ceil(y+offsetY+height+soft*.5));
+        // X terms are separable; compute once, preserving the old expression order.
+        double[] qx=new double[Math.max(0,right-left)];
+        for(int px=left;px<right;px++) qx[px-left]=Math.abs(px+.5-x-offsetX-width*.5)-(width*.5-r);
+        IntBuffer pixels = MemoryUtil.memIntBuffer(image.getPointer(), w * h);
+        for (int py = 0; py < h; py++) {
+            double qy=Math.abs(py+.5-y-offsetY-height*.5)-(height*.5-r);
+            for (int px = 0; px < w; px++) {
+                int index=py*w+px, raw=pixels.get(index);
+                if((raw>>>24)==255) continue; // Black behind an opaque pixel cannot affect it.
+                if(px<left || px>=right || py<top || py>=bottom) {
+                    // The legacy whole-image pass also canonicalized hidden RGB to transparent black.
+                    if((raw>>>24)==0 && raw!=0) pixels.put(index,0);
+                    continue;
+                }
+                double q=qx[px-left];
+                double distance=Math.hypot(Math.max(q,0),Math.max(qy,0))+Math.min(Math.max(q,qy),0)-r;
+                float coverage = (float) Math.max(0, Math.min(1, .5 - distance / soft));
+                pixels.put(index,argbToAbgr(com.aurora.client.theme.MaterialLighting.shadowBehind(argbToAbgr(raw), alpha * coverage)));
             }
         }
     }

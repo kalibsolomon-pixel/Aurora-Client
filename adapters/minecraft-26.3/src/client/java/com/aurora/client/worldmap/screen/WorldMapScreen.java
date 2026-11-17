@@ -338,7 +338,7 @@ public final class WorldMapScreen extends Screen implements ThemedScreen {
         if (dimensionButton != null) dimensionButton.setMessage(Component.literal(dimensionLabel(dimensionButton.getWidth())));
     }
     @Override public boolean isPauseScreen() { return false; }
-    @Override public void removed() { dragging = false; MaterialSurface.disposeTemplates(); }
+    @Override public void removed() { dragging = false; }
     @Override public void onClose() {
         WorldMapClient engine = WorldMapClient.get();
         if (engine != null) engine.restoreLiveDimension();

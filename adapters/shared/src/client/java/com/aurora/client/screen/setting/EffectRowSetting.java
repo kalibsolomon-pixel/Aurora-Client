@@ -1,5 +1,6 @@
 package com.aurora.client.screen.setting;
 
+import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.component.Widget;
@@ -14,7 +15,8 @@ import net.minecraft.resources.Identifier;
 /**
  * One added-effect row in the Alerts → Per-Effect Alerts curated list —
  * the {@link ItemScaleSetting} per-item row adapted to effects: 38px
- * panel (ON_BACKGROUND wash, hover outline), the effect's vanilla 16×16
+ * card (raised opaque control recipe on unified screens, translucent
+ * band + hover outline on legacy), the effect's vanilla 16×16
  * {@code mob_effect/} sprite, and its display name — presence in the list
  * already means "alerts", so unlike the item rows there is nothing to
  * expand and no chevron.
@@ -52,15 +54,24 @@ public class EffectRowSetting extends FeatureSetting {
         Font tr = Minecraft.getInstance().font;
         if (tr == null) return;
 
-        // Header panel — the ItemScale row band; the hover outline matches
-        // its footprint so there is no hover-without-click strip.
+        // Header panel — the ItemScale row band. Unified (owner report
+        // 2026-11-17): a raised OPAQUE card (the raised control recipe,
+        // hover through the cached-state blend) with no resting outline —
+        // the bevel defines the edge. Legacy screens keep the translucent
+        // band + hover outline, its footprint matching the hit zone so
+        // there is no hover-without-click strip.
         boolean rowHover = Widget.inBounds(mouseX, mouseY, x + 10, y, width - 20, ROW_H);
-        AuroraShapes.panel(ctx, x + 10, y, width - 20, ROW_H,
-                ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_BACKGROUND), 0x1A),
-                AuroraTheme.RADIUS_SMALL);
-        if (rowHover) {
-            AuroraShapes.outline(ctx, x + 10, y, width - 20, ROW_H,
-                    AuroraTheme.BORDER_OFF, AuroraTheme.RADIUS_SMALL);
+        if (com.aurora.client.ui.component.MaterialSurface.unified()) {
+            com.aurora.client.ui.component.MaterialSurface.control(ctx, x + 10, y, width - 20, ROW_H,
+                    AuroraTheme.RADIUS_SMALL, false, false, false, rowHover ? 1f : 0f, 0);
+        } else {
+            AuroraShapes.panel(ctx, x + 10, y, width - 20, ROW_H,
+                    ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_BACKGROUND), 0x1A),
+                    AuroraTheme.RADIUS_SMALL);
+            if (rowHover) {
+                AuroraShapes.outline(ctx, x + 10, y, width - 20, ROW_H,
+                        AuroraTheme.BORDER_OFF, AuroraTheme.RADIUS_SMALL);
+            }
         }
 
         // Effect sprite — the same status-effect icon the vanilla
@@ -71,7 +82,7 @@ public class EffectRowSetting extends FeatureSetting {
         // Display name, indented past the icon (ItemScale row geometry),
         // vertically centered — no §4 subtitle: the row's presence in the
         // list IS its state (exclusion clause).
-        int textY = y + (ROW_H - tr.lineHeight) / 2;
+        int textY = AuroraFontRenderer.textY(tr, y, ROW_H);
         ctx.text(tr, label, x + 20 + ICON_SIZE + 4, textY, AuroraTheme.IOS_LABEL, false);
         // The trailing remove control is the container's icon action (C-4):
         // it paints itself into this row's 16×16 zone from the container's

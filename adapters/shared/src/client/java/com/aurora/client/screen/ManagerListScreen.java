@@ -789,7 +789,6 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
     @Override
     public void removed() {
         super.removed();
-        MaterialSurface.disposeTemplates();
         if (rowTplTinted != null) { rowTplTinted.dispose(); rowTplTinted = null; }
         if (rowTplBare != null) { rowTplBare.dispose(); rowTplBare = null; }
     }

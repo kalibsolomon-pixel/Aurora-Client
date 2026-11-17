@@ -9,6 +9,123 @@ import net.minecraft.util.FormattedCharSequence;
 
 public class AuroraFontRenderer {
 
+    private record MetricKey(Font font, net.minecraft.network.chat.Style style) {}
+    private static final java.util.Map<MetricKey, TextAlignment.Ink> INK = new java.util.HashMap<>();
+    private static net.minecraft.locale.Language metricLanguage;
+    private static Font lastMetricFont;
+    private static net.minecraft.network.chat.Style lastMetricStyle;
+    private static TextAlignment.Ink lastInk;
+
+    /**
+     * Measure H/x from the active baked glyphs once per style/resource generation. This uses
+     * the actual provider's bearings and raster bounds, so 8px body, 9px regular/heading,
+     * 11px title, vanilla fallback and resource-pack fonts all use their own metrics.
+     * Effects (underline/shadow) and descenders deliberately do not move the optical axis.
+     */
+    public static TextAlignment.Ink ink(Font font, net.minecraft.network.chat.Style style) {
+        var language = net.minecraft.locale.Language.getInstance();
+        if (metricLanguage != language) { INK.clear(); metricLanguage = language; lastInk = null; }
+        if (lastInk != null && lastMetricFont == font && lastMetricStyle == style) return lastInk;
+        var key = new MetricKey(font, style);
+        var measured = INK.get(key);
+        if (measured == null) {
+            float[] bounds = {Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY};
+            var sample = Component.literal("Hx").withStyle(style == null
+                    ? net.minecraft.network.chat.Style.EMPTY : style.withUnderlined(false));
+            font.prepareText(sample.getVisualOrderText(), 0, 0, 0xffffffff, false, false, 0)
+                    .visit(new Font.GlyphVisitor() {
+                        @Override public void acceptGlyph(net.minecraft.client.gui.font.TextRenderable.Styled glyph) {
+                            bounds[0] = Math.min(bounds[0], glyph.top());
+                            bounds[1] = Math.max(bounds[1], glyph.bottom());
+                        }
+                    });
+            // Missing/empty providers use vanilla's measured seven-pixel cap box.
+            measured = bounds[1] > bounds[0] ? new TextAlignment.Ink(bounds[0], bounds[1]) : new TextAlignment.Ink(0, 7);
+            INK.put(key, measured);
+        }
+        lastMetricFont = font; lastMetricStyle = style; lastInk = measured;
+        return measured;
+    }
+
+    /** Ink midpoints per active style, keyed by String (equals) or a cached sequence (identity). */
+    private static final java.util.Map<net.minecraft.network.chat.Style, java.util.HashMap<Object, Float>> INK_MID = new java.util.HashMap<>();
+    private static final java.util.HashMap<Object, Float> INK_MID_VANILLA = new java.util.HashMap<>();
+    private static Font inkMidFont;
+    private static net.minecraft.locale.Language inkMidLanguage;
+
+    /**
+     * Horizontal midpoint of the visible ink of {@code text} (a String, Component or FormattedCharSequence)
+     * relative to its draw origin, under the active style: the actual glyph quads' left/right
+     * bounds, so side bearings (a leading "I", a trailing "c") no longer shift centred labels
+     * the way advance-width centring did. Cached per style and resource generation; the cached
+     * path allocates nothing.
+     */
+    public static float inkMid(Font font, Object text) {
+        var language = net.minecraft.locale.Language.getInstance();
+        if (inkMidFont != font || inkMidLanguage != language) {
+            INK_MID.clear(); INK_MID_VANILLA.clear(); inkMidFont = font; inkMidLanguage = language;
+        }
+        var style = getActiveStyle();
+        var cache = style == null ? INK_MID_VANILLA : INK_MID.computeIfAbsent(style, k -> new java.util.HashMap<>());
+        Float cached = cache.get(text);
+        if (cached != null) return cached;
+        if (cache.size() > 1024) cache.clear();
+        // Components measure their (cached) visual-order text: String.valueOf(component) is a
+        // debug dump, which centred keystroke legends far off the key (2026-11-17).
+        FormattedCharSequence sequence = text instanceof FormattedCharSequence seq ? seq
+                : text instanceof Component component ? component.getVisualOrderText()
+                : FormattedCharSequence.forward(String.valueOf(text), net.minecraft.network.chat.Style.EMPTY);
+        if (style != null) sequence = withCustomFont(sequence, style.withUnderlined(false));
+        float[] span = {Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY};
+        font.prepareText(sequence, 0, 0, 0xffffffff, false, false, 0).visit(new Font.GlyphVisitor() {
+            @Override public void acceptGlyph(net.minecraft.client.gui.font.TextRenderable.Styled glyph) {
+                span[0] = Math.min(span[0], glyph.left());
+                span[1] = Math.max(span[1], glyph.right());
+            }
+        });
+        float mid = span[1] > span[0] ? (span[0] + span[1]) / 2 : font.width(sequence) / 2f;
+        cache.put(text, mid);
+        return mid;
+    }
+
+    /**
+     * Draws {@code text} (String or FormattedCharSequence) with its visible ink centred on
+     * {@code centerX}. Text origins are whole GUI pixels; the remaining fraction is applied
+     * through the pose, snapped to the device-pixel grid, so glyphs stay on whole device pixels
+     * (crisp) while centring error drops from half a GUI pixel to half a device pixel.
+     */
+    private static void drawInkCentered(GuiGraphicsExtractor graphics, Font font, Object text,
+                                        float centerX, int y, int color) {
+        float x = centerX - inkMid(font, text);
+        int ix = (int) Math.floor(x);
+        int scale = Math.max(1, (int) Minecraft.getInstance().getWindow().getGuiScale());
+        float fraction = Math.round((x - ix) * scale) / (float) scale;
+        if (fraction >= 1f) { ix++; fraction = 0; }
+        if (fraction != 0) { graphics.pose().pushMatrix(); graphics.pose().translate(fraction, 0); }
+        if (text instanceof FormattedCharSequence sequence) graphics.text(font, sequence, ix, y, color, false);
+        else graphics.text(font, String.valueOf(text), ix, y, color, false);
+        if (fraction != 0) graphics.pose().popMatrix();
+    }
+
+    /** Draw x that centres {@code text}'s visible ink on {@code centerX}. */
+    public static int inkCenteredX(Font font, Object text, float centerX) {
+        return Math.round(centerX - inkMid(font, text));
+    }
+
+    /** Minecraft draw origin which centres the active font's visible cap/x-height ink. */
+    public static int textY(Font font, float y, float height) {
+        return TextAlignment.textY(y, height, ink(font, getActiveStyle()));
+    }
+
+    public static int roleTextY(Font font, float y, float height, Role role) {
+        return TextAlignment.textY(y, height, ink(font, roleStyle(role)));
+    }
+
+    public static int linePitch(Font font) { return font.lineHeight + TextAlignment.DESCRIPTOR_GAP; }
+    public static int blockY(Font font, float y, float height, int lines) {
+        return TextAlignment.blockY(y, height, lines, ink(font, getActiveStyle()), linePitch(font));
+    }
+
     private static AuroraFontRenderer instance = new AuroraFontRenderer();
 
     public static AuroraFontRenderer getInstance() {
@@ -336,12 +453,27 @@ public class AuroraFontRenderer {
 
     /** Centered, non-shadowed string. {@code cx} is the center x. */
     public static void drawCentered(GuiGraphicsExtractor graphics, Font font, String text, int cx, int y, int color) {
-        graphics.text(font, text, cx - font.width(text) / 2, y, color, false);
+        drawInkCentered(graphics, font, text, cx, y, color);
+    }
+
+    /** Centered string on a fractional centre: rounds once, after ink centring. */
+    public static void drawCentered(GuiGraphicsExtractor graphics, Font font, String text, float cx, int y, int color) {
+        drawInkCentered(graphics, font, text, cx, y, color);
+    }
+
+    /** Centered component on a fractional centre (its visual-order text is cached by the component). */
+    public static void drawCentered(GuiGraphicsExtractor graphics, Font font, Component text, float cx, int y, int color) {
+        drawCentered(graphics, font, text.getVisualOrderText(), cx, y, color);
+    }
+
+    /** Centered sequence on a fractional centre: rounds once, after ink centring. */
+    public static void drawCentered(GuiGraphicsExtractor graphics, Font font, FormattedCharSequence text, float cx, int y, int color) {
+        drawInkCentered(graphics, font, text, cx, y, color);
     }
 
     /** Centered, non-shadowed styled sequence. {@code cx} is the center x. */
     public static void drawCentered(GuiGraphicsExtractor graphics, Font font, FormattedCharSequence text, int cx, int y, int color) {
-        graphics.text(font, text, cx - font.width(text) / 2, y, color, false);
+        drawInkCentered(graphics, font, text, cx, y, color);
     }
 
     /** Centered, non-shadowed component. {@code cx} is the center x. */
@@ -417,6 +549,14 @@ public class AuroraFontRenderer {
     /** {@code text} in the configured case and the style of {@code role}: draw and measure this one value. */
     public static Component role(String text, Role role) {
         return styledLiteral(text, roleStyle(role));
+    }
+
+    private static final TextFit.Memo ROLE_FIT = new TextFit.Memo(128);
+
+    /** Fit role text using the same font, weight and case which will actually be drawn. */
+    public static String ellipsizeRole(Font font, String text, int width, Role role) {
+        return ROLE_FIT.fit(text, width, 0, styleKey() * 2 + role.ordinal(),
+                value -> font.width(role(value, role)));
     }
 
     // Keep compatibility wrappers

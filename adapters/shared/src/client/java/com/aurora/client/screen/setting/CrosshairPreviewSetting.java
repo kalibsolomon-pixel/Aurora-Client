@@ -1,5 +1,6 @@
 package com.aurora.client.screen.setting;
 
+import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.hud.CrosshairRenderer;
 import com.aurora.client.theme.ThemeManager;
@@ -37,7 +38,7 @@ public class CrosshairPreviewSetting extends FeatureSetting {
         Font font = Minecraft.getInstance().font;
         if (font == null) return;
         AuroraConfig cfg = AuroraConfig.get();
-        ctx.text(font, label, x + PAD + 4, y + (ROW_H - font.lineHeight) / 2 + 1, MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
+        ctx.text(font, label, x + PAD + 4, AuroraFontRenderer.textY(font, y, ROW_H), MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
         int wellY = y + (ROW_H - WELL) / 2;
         int right = x + width - PAD;
         if (cfg.crosshairIndicatorEnabled) {
@@ -53,8 +54,11 @@ public class CrosshairPreviewSetting extends FeatureSetting {
     private static void drawWell(GuiGraphicsExtractor ctx, int x, int y, AuroraConfig.CrosshairStyle style, int size,
                                  int thick, int gap, int color, boolean[] pixels, int w, int h) {
         float r = ThemeManager.current().roundness().radiusSmall();
-        RenderUtil.drawRoundedRectAA(ctx, x, y, WELL, WELL, r, ThemeManager.color(ThemeToken.MATERIAL_SUNKEN));
-        RenderUtil.drawRoundedOutlineAA(ctx, x, y, WELL, WELL, r, 1.0f, ThemeManager.color(ThemeToken.MATERIAL_BORDER_STRONG));
+        if(MaterialSurface.unified()) MaterialSurface.inset(ctx,x,y,WELL,WELL,r,false);
+        else {
+            RenderUtil.drawRoundedRectAA(ctx, x, y, WELL, WELL, r, ThemeManager.color(ThemeToken.MATERIAL_SUNKEN));
+            RenderUtil.drawRoundedOutlineAA(ctx, x, y, WELL, WELL, r, 1.0f, ThemeManager.color(ThemeToken.MATERIAL_BORDER_STRONG));
+        }
         ctx.enableScissor(x + 1, y + 1, x + WELL - 1, y + WELL - 1);
         ctx.pose().pushMatrix();
         // Drawn at a whole-number zoom about the well's centre: small shapes step up to fill about

@@ -1,5 +1,6 @@
 package com.aurora.client.screen.setting;
 
+import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.ui.component.ColorSwatch;
 import com.aurora.client.ui.component.Widget;
 import com.aurora.client.ui.interaction.MinecraftSemanticFeedback;
@@ -156,13 +157,13 @@ public class ColorSetting extends FeatureSetting {
         String hex = com.aurora.client.ui.component.MaterialSurface.unified() ? hexOf(getter.getAsInt()) : null;
         int hexW = hex == null ? 0 : tr.width(hex) + HEX_GAP; // the compact layout reserves HEX_W itself
         if (compactRow != null) renderCompactLabel(ctx, x, y, mouseX, mouseY, AuroraTheme.TEXT_PRIMARY);
-        else renderWrappedLabel(ctx, label, x + 12, y + (ROW_H_COLLAPSED - tr.lineHeight) / 2, Math.max(0,width-(swatchW+38+hexW)), AuroraTheme.TEXT_PRIMARY, mouseX, mouseY, disabled);
+        else renderWrappedLabel(ctx, label, x + 12, AuroraFontRenderer.textY(tr, y, ROW_H_COLLAPSED), Math.max(0,width-(swatchW+38+hexW)), AuroraTheme.TEXT_PRIMARY, mouseX, mouseY, disabled);
 
         swatchX = controlX(x, width, swatchW);
         swatchY = controlY(y, ROW_H_COLLAPSED, swatchH);
         if (hex != null) {
             int secondary = com.aurora.client.ui.component.MaterialSurface.color(com.aurora.client.theme.ThemeToken.ON_BACKGROUND_SECONDARY);
-            int textY = compactRow != null ? swatchY + (swatchH - tr.lineHeight) / 2 + 1 : y + (ROW_H_COLLAPSED - tr.lineHeight) / 2;
+            int textY = compactRow != null ? AuroraFontRenderer.textY(tr, swatchY, swatchH) : AuroraFontRenderer.textY(tr, y, ROW_H_COLLAPSED);
             ctx.text(tr, hex, swatchX - HEX_GAP - tr.width(hex), textY,
                     disabled ? AuroraTheme.TEXT_DIM : secondary, false);
         }

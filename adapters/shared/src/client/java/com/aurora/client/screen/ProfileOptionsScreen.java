@@ -350,6 +350,5 @@ public class ProfileOptionsScreen extends Screen implements ThemedScreen {
     @Override
     public void removed() {
         super.removed();
-        MaterialSurface.disposeTemplates();
     }
 }

@@ -126,15 +126,12 @@ public class Button extends Widget {
         int fill=ThemeManager.color(primary ? ThemeToken.ACTION_STRONG : ThemeToken.MATERIAL_RAISED);
         int over=ThemeManager.color(primary ? ThemeToken.ACTION_HOVER : ThemeToken.MATERIAL_HOVER);
         int down=ThemeManager.color(primary ? ThemeToken.ACTION_PRESSED : ThemeToken.MATERIAL_PRESSED);
-        // Neutral action cards stay edgeless (owner ruling, UNIFIED_THEME_PILOT.md).
+        // Owner-themed actions retain their original treatment; plain controls use baked depth.
         int edge=primary ? MaterialSurface.color(ThemeToken.BORDER_HOVER) : 0;
         int text=ThemeManager.color(primary ? ThemeToken.ON_ACTION : ThemeToken.MATERIAL_TEXT);
         Theming look=primary || destructive ? Theming.NONE : theming;
         if(look==Theming.BACKGROUND || look==Theming.BACKGROUND_ACCENT) fill=ThemeManager.color(ThemeToken.MATERIAL_PANEL);
-        // Every plain neutral/destructive action wears the field face of MaterialSurface#field:
-        // opaque raised tone, no edge, no shadow — legible at any window opacity and identical
-        // to the dropdowns/keybinds beside it (Spxctra 2026-10-30). Without a per-button blur a
-        // window-opacity face vanished into its window.
+        // Plain actions share the opaque raised field recipe (owner depth pass 2026-11-17).
         boolean asField=!primary && look==Theming.NONE;
         if(look!=Theming.NONE) edge=look==Theming.BACKGROUND_ACCENT ? ThemeManager.color(ThemeToken.ACCENT_MARKER)
                 : MaterialSurface.color(ThemeToken.BORDER_HOVER); // the window edge family, one step lighter so it reads on a card
@@ -149,6 +146,7 @@ public class Button extends Widget {
             over=error;down=error;
             text=AuroraAnim.lerpArgb(AuroraAnim.lerpArgb(error,0xffffffff,.55f),0xff101116,Math.max(hover,press));
         }
+        int restFill=fill;
         fill=AuroraAnim.lerpArgb(AuroraAnim.lerpArgb(fill,over,hover),down,press);
         if(disabled) { fill=AuroraAnim.lerpArgb(fill,ThemeManager.color(ThemeToken.MATERIAL_PANEL),.65f);text=MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED); }
         int windowAlpha=ThemeManager.color(ThemeToken.WINDOW_FILL) >>> 24;
@@ -164,7 +162,11 @@ public class Button extends Widget {
         }
         float py=y; // Card, blur mask, focus and label share one stationary geometry.
         int kind=(destructive ? 30 : primary ? 20 : asField ? 170 : ghost ? 190 : 130+10*look.ordinal())+(disabled ? 4 : hover==1 ? 1 : 0);
-        if((hover==0 || hover==1) && press==0)
+        if(asField || primary) {
+            MaterialSurface.controlColors(g,x,py,w,h,r,
+                    disabled ? ThemeManager.color(ThemeToken.MATERIAL_PANEL) : restFill,over,down,
+                    false,disabled,primary,hover,press,destructive ? 300 : primary ? 320 : 340);
+        } else if((hover==0 || hover==1) && press==0)
             MaterialSurface.cached(g,x,py,w,h,r,fill,edge,kind,!asField && !ghost);
         else {
             if(!asField && !ghost) MaterialSurface.cached(g,x,py,w,h,r,0,0,80,true);
@@ -175,19 +177,19 @@ public class Button extends Widget {
                 MaterialSurface.color(ThemeToken.ACCENT));
         Font font=Minecraft.getInstance().font;
         if(font==null) return;
-        int textY=Math.round(py+(h-font.lineHeight)/2)+1;
+        int textY=AuroraFontRenderer.textY(font, py, h);
         if(icon.isEmpty()) {
             AuroraFontRenderer.drawCentered(g,font,
-                    AuroraFontRenderer.ellipsize(font,label.getString(),Math.max(0,(int)w-20),0),Math.round(x+w/2),textY,text);
+                    AuroraFontRenderer.ellipsize(font,label.getString(),Math.max(0,(int)w-20),0),(x+w/2f),textY,text);
             return;
         }
-        // Icon and label centre as one group; the label gives way first, the icon never moves off its row.
-        String fitted=AuroraFontRenderer.ellipsize(font,label.getString(),Math.max(0,(int)w-20-ICON_EM-ICON_GAP),0);
+        // Reserve matching side slots: the action glyph never shifts the label off the face centre.
+        String fitted=AuroraFontRenderer.ellipsize(font,label.getString(),Math.max(0,(int)w-10-2*(ICON_EM+ICON_GAP)),0);
         int labelW=font.width(fitted); // measured exactly as drawCentered measures
-        float groupX=x+(w-(ICON_EM+(fitted.isEmpty() ? 0 : ICON_GAP+labelW)))/2f;
-        // One pixel down: the glyph's optical centre then meets the label's x-height (2026-11-14).
-        MaterialIconRenderer.drawIcon(g,font,icon,groupX+ICON_EM/2f,py+h/2f+1,ICON_EM,text);
-        if(!fitted.isEmpty()) g.text(font,fitted,Math.round(groupX+ICON_EM+ICON_GAP),textY,text,false);
+        float groupX=x+com.aurora.client.ui.util.TextAlignment.FACE_PAD;
+        // The native glyph and text share the face's optical centre.
+        MaterialIconRenderer.drawIcon(g,font,icon,groupX+ICON_EM/2f,com.aurora.client.ui.util.TextAlignment.iconCenter(py,h),ICON_EM,text);
+        if(!fitted.isEmpty()) AuroraFontRenderer.drawCentered(g,font,fitted,(x+w/2f),textY,text);
     }
 
     /** Leading icon glyph (Material Symbols), drawn with the label as one centred group; empty for none. */
@@ -509,7 +511,7 @@ public class Button extends Widget {
         }
 
         int textX = Math.round(x + w / 2f);
-        int textY = Math.round(y + (h - tr.lineHeight) / 2f) + 1;
+        int textY = AuroraFontRenderer.textY(tr, y, h);
         AuroraFontRenderer.drawCentered(g, tr, label, textX, textY, text);
 
         g.pose().popMatrix();
@@ -617,8 +619,8 @@ public class Button extends Widget {
                     ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
         }
 
-        AuroraFontRenderer.drawCentered(g, tr, label, Math.round(x + w / 2f),
-                Math.round(y + (h - tr.lineHeight) / 2f) + 1, text);
+        AuroraFontRenderer.drawCentered(g, tr, label, (x + w / 2f),
+                AuroraFontRenderer.textY(tr, y, h), text);
 
         g.pose().popMatrix();
     }

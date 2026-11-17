@@ -7,6 +7,7 @@ import com.aurora.client.ui.component.Widget;
 import com.aurora.client.util.AuroraAnim;
 import com.aurora.client.ui.util.ItemSpriteRenderer;
 
+import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.util.AuroraShapes;
 import com.aurora.client.util.AuroraTheme;
@@ -26,9 +27,12 @@ import java.util.*;
  * Smart search and custom item scaling configuration UI row.
  * Extends FeatureSetting to act as a single setting container inside FeatureDetailScreen.
  *
- * <p>Glass rollout: the "+" add button renders as RAISED glass with the
- * neutral {@code WINDOW_FILL} tint (flat pill on decline), matching the
- * keybind pills and every other interactive control.
+ * <p>Depth pass (2026-11-17): the "+" add button renders as the raised
+ * control recipe on unified screens (pressed recipe while pressed,
+ * glyph centred through the shared box-centring helper), and each
+ * per-item editor card is a raised opaque card — hover through the
+ * cached-state blend, no resting outline. Non-unified screens keep the
+ * flat pill and translucent band + hover outline.
  *
  * <p>Icon rendering: each item tab renders its real item icon through
  * {@link ItemSpriteRenderer} — the crisp flat-sprite path (resolved GUI
@@ -401,12 +405,22 @@ public class ItemScaleSetting extends FeatureSetting {
 
             // Header Background Panel — the hover band matches so there is
             // no hover-without-click strip at the row's bottom edge.
+            // Unified (owner report 2026-11-17): a raised OPAQUE card (the
+            // raised control recipe, hover through the cached-state blend);
+            // the bevel defines the edge, so the old resting/hover outline
+            // is gone. Legacy screens keep the translucent band + hover
+            // outline exactly as before.
             boolean rowHover = Widget.inBounds(mouseX, mouseY, x + 10, rowY, width - 20, ITEM_ROW_H);
-            AuroraShapes.panel(ctx, x + 10, rowY, width - 20, ITEM_ROW_H,
-                    ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_BACKGROUND), 0x1A),
-                    AuroraTheme.RADIUS_SMALL);
-            if (rowHover) {
-                AuroraShapes.outline(ctx, x + 10, rowY, width - 20, ITEM_ROW_H, AuroraTheme.BORDER_OFF, AuroraTheme.RADIUS_SMALL);
+            if (com.aurora.client.ui.component.MaterialSurface.unified()) {
+                com.aurora.client.ui.component.MaterialSurface.control(ctx, x + 10, rowY, width - 20, ITEM_ROW_H,
+                        AuroraTheme.RADIUS_SMALL, false, false, false, rowHover ? 1f : 0f, 0);
+            } else {
+                AuroraShapes.panel(ctx, x + 10, rowY, width - 20, ITEM_ROW_H,
+                        ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_BACKGROUND), 0x1A),
+                        AuroraTheme.RADIUS_SMALL);
+                if (rowHover) {
+                    AuroraShapes.outline(ctx, x + 10, rowY, width - 20, ITEM_ROW_H, AuroraTheme.BORDER_OFF, AuroraTheme.RADIUS_SMALL);
+                }
             }
 
             // Real item icon (crisp flat-sprite path, 3D fallback), then
@@ -422,7 +436,7 @@ public class ItemScaleSetting extends FeatureSetting {
             // §4 subtitle block: the label sits at the top of a 20px block
             // (label + gap + subtitle) centered in the row, mirroring
             // FeatureSetting.drawValueLine's beneath-label placement.
-            int textTop = rowY + (ITEM_ROW_H - 20) / 2;
+            int textTop = AuroraFontRenderer.blockY(tr, rowY, ITEM_ROW_H, expanded ? 1 : 2);
             ctx.text(tr, labelStr, textPadX, textTop, AuroraTheme.IOS_LABEL, false);
 
             // §4 live-value subtitle: collapsed rows hide all seven
@@ -438,7 +452,7 @@ public class ItemScaleSetting extends FeatureSetting {
                 AuroraConfig.ItemScaleData d = cfg.itemScales.get(idStr);
                 if (d != null) {
                     ctx.text(tr, String.format(java.util.Locale.ROOT, "Scale %.2f\u00d7", d.scale),
-                            textPadX, textTop + tr.lineHeight + 2, AuroraTheme.TEXT_SECONDARY, false);
+                            textPadX, textTop + AuroraFontRenderer.linePitch(tr), AuroraTheme.TEXT_SECONDARY, false);
                 }
             }
 
@@ -589,13 +603,16 @@ public class ItemScaleSetting extends FeatureSetting {
         searchFrame = com.aurora.client.ui.component.GlassSurface.frame();
         searchField.extractRenderState(ctx, mouseX, mouseY, 0f);
 
-        // Draw "+" add button — raised glass (flat pill on decline). If the
-        // screen ran this row's glass pass this frame the surface is already
-        // on screen UNDER the dim and only its result matters here;
-        // otherwise (legacy frame order) it is painted in place now through
-        // the shared GlassSurface helper (identical calls). C-4 rollout: the
-        // canonical hover (one animator) drives the flat fallback AND the
-        // glyph — the whole action eases (was an immediate boolean).
+        // Draw "+" add button — the raised control recipe on unified
+        // screens (owner report 2026-11-17: the icon action's face was
+        // flat translucent glass), raised glass (flat pill on decline)
+        // elsewhere. If the screen ran this row's glass pass this frame
+        // the surface is already on screen UNDER the dim and only its
+        // result matters here; otherwise (legacy frame order) it is
+        // painted in place now through the shared GlassSurface helper
+        // (identical calls). C-4 rollout: the canonical hover (one
+        // animator) drives the material face AND the glyph — the whole
+        // action eases (was an immediate boolean).
         int plusX = x + width - 36;
         int plusY = y + 5;
         addAction.syncChannels(plusX, plusY, 24, 20, mouseX, mouseY);
@@ -611,7 +628,9 @@ public class ItemScaleSetting extends FeatureSetting {
         } else {
             plusGlass = GlassSurface.control(ctx, plusX, plusY, 24, 20, plusR);
         }
-        if (!plusGlass) {
+        if (com.aurora.client.ui.component.MaterialSurface.unified()) {
+            addAction.paintFace(ctx, plusX, plusY, 24, 20, plusR);
+        } else if (!plusGlass) {
             com.aurora.client.ui.util.RenderUtil.drawRoundedRectAA(ctx, plusX, plusY, 24, 20, plusR, plusBg);
             com.aurora.client.ui.util.RenderUtil.drawRoundedOutlineAA(ctx, plusX, plusY, 24, 20, plusR, 1, plusBorder);
         }
@@ -631,6 +650,7 @@ public class ItemScaleSetting extends FeatureSetting {
         int plusX = rowX + rowWidth - 36, plusY = rowY + 5;
         if (mouseX >= plusX && mouseX < plusX + 24 && mouseY >= plusY && mouseY < plusY + 20) {
             searchField.setFocused(false);
+            addAction.pressPulse();
             if (addAction.clicked(mouseX, mouseY, button)) {
                 return true;
             }

@@ -7,13 +7,13 @@ import com.aurora.client.util.AuroraAnim;
 import com.aurora.client.util.AuroraShapes;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.Minecraft;
-import com.aurora.client.ui.util.UiLayerCache;
-import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+import com.aurora.client.theme.MaterialLighting.Profile;
+import com.aurora.client.theme.UnifiedPalette;
 
 /** Shared cached material for parent faces, embedded controls and opaque floating layers.
  * The parent alone captures the backdrop before dim; its neutral face/boundary
  * is painted after dim. Selection is a soft wash and one accent edge, primary is a readable
- * strong action. No child allocates another blur output or owns a glossy rim.
+ * strong action. No child allocates another blur output. Control lighting is baked into opaque templates.
  */
 public final class MaterialSurface {
 
@@ -62,7 +62,108 @@ public final class MaterialSurface {
     /** Cached parent face, drawn once above the screen dim even when capture declines. */
     public static void parent(GuiGraphicsExtractor g, float x, float y, float w, float h, float radius) {
         cached(g,x,y,w,h,radius,ThemeManager.color(ThemeToken.WINDOW_FILL),
-                color(ThemeToken.WINDOW_OUTLINE),120,true);
+                windowOutline(),120,true);
+    }
+
+    /** Fixed outline attenuation; independent of Background Opacity. */
+    public static final float WINDOW_OUTLINE_ALPHA = .55f;
+    public static int windowOutline() {
+        int token = color(ThemeToken.WINDOW_OUTLINE);
+        return ThemeManager.withAlpha(token, Math.round((token >>> 24) * WINDOW_OUTLINE_ALPHA));
+    }
+
+    /** Depth tuning, owner ruling 2026-11-17: HSL points, cached curvature and directional shadows. */
+    private static final float PEER_HOVER_ALPHA = .16f, SWITCH_HOVER_ALPHA = .08f;
+
+    private enum Light {
+        FLAT(0,0,Profile.FLAT), RAISED(5,-3,Profile.RAISED),
+        HOVER(5,-3,Profile.RAISED), PRESSED(-3,2,Profile.PRESSED),
+        INSET(1,5,Profile.INSET), TRACK(3,7,Profile.INSET),
+        PRIMARY(6,-4,Profile.RAISED), PRIMARY_LIGHT(3,-4,Profile.RAISED),
+        MODULE_ON(11,3,Profile.RAISED), MODULE_OFF(-5,-5,Profile.FLAT),
+        MODULE_ON_HOVER(13,5,Profile.RAISED), MODULE_OFF_HOVER(-3,-3,Profile.FLAT),
+        KNOB(0,0,Profile.DOME,1,.23f),
+        MODULE_SHADOW(0,0,Profile.FLAT,2,.26f), CONTROL_SHADOW(0,0,Profile.FLAT,1,.18f);
+        final float top, bottom, elevation, shadowAlpha;
+        final Profile profile;
+        Light(float top,float bottom,Profile profile) { this(top,bottom,profile,0,0); }
+        Light(float top,float bottom,Profile profile,float elevation,float shadowAlpha) {
+            this.top=top;this.bottom=bottom;this.profile=profile;
+            this.elevation=elevation;this.shadowAlpha=shadowAlpha;
+        }
+    }
+
+    /** Stable endpoint templates; transitions blend textures rather than issuing live face fills. */
+    public static void control(GuiGraphicsExtractor g,float x,float y,float w,float h,float radius,
+                               boolean selected,boolean disabled,boolean primary,float hover,float press) {
+        int base=ThemeManager.color(disabled ? ThemeToken.MATERIAL_PANEL : primary ? ThemeToken.ACTION_STRONG : ThemeToken.MATERIAL_RAISED);
+        int over=ThemeManager.color(primary ? ThemeToken.ACTION_HOVER : ThemeToken.MATERIAL_HOVER);
+        int down=ThemeManager.color(primary ? ThemeToken.ACTION_PRESSED : ThemeToken.MATERIAL_PRESSED);
+        controlColors(g,x,y,w,h,radius,base,over,down,selected,disabled,primary,hover,press,200);
+    }
+
+    /** Colour endpoints also support the existing destructive button behaviour. */
+    public static void controlColors(GuiGraphicsExtractor g,float x,float y,float w,float h,float radius,
+                                     int base,int over,int down,boolean selected,boolean disabled,boolean primary,
+                                     float hover,float press,int kind) {
+        if(!disabled && press<1) cached(g,x,y,w,h,radius,0,0,80,false,1-press,Light.CONTROL_SHADOW);
+        // contrast against black = (luminance + .05)/.05; >11 means ON_ACTION luminance >.5.
+        Light actionLight=UnifiedPalette.contrast(ThemeManager.color(ThemeToken.ON_ACTION),0xff000000)>11
+                ? Light.PRIMARY_LIGHT : Light.PRIMARY;
+        int edge=selected && !disabled ? ThemeManager.color(ThemeToken.ACCENT_MARKER) : 0;
+        int state=kind+(selected ? 8 : 0);
+        // A settled state needs one face blit; stacking both endpoints would double AA coverage.
+        // Disabled keeps its raised form in the panel tone, without the shadow (2026-11-17): a flat
+        // panel-tone face vanished into the window, so an unavailable "+" read as a bare glyph.
+        if(disabled || hover<1 && press<1)
+            depth(g,x,y,w,h,radius,base,edge,state,primary && !disabled ? actionLight : Light.RAISED,1);
+        if(disabled) return;
+        if(hover>0 && press<1) depth(g,x,y,w,h,radius,over,edge,state+1,primary ? actionLight : Light.HOVER,Math.min(1,hover));
+        if(press>0) depth(g,x,y,w,h,radius,down,edge,state+2,Light.PRESSED,Math.min(1,press));
+    }
+
+    public static void inset(GuiGraphicsExtractor g,float x,float y,float w,float h,float radius,boolean disabled) {
+        depth(g,x,y,w,h,radius,ThemeManager.color(disabled ? ThemeToken.MATERIAL_PANEL : ThemeToken.MATERIAL_SUNKEN),
+                0,240,disabled ? Light.FLAT : Light.INSET,1);
+    }
+
+    /** Slider wells use the brighter +3 -> +7 recipe; accent fill remains the caller's. */
+    public static void sliderTrack(GuiGraphicsExtractor g,float x,float y,float w,float h,float radius,boolean disabled) {
+        depth(g,x,y,w,h,radius,ThemeManager.color(disabled ? ThemeToken.MATERIAL_PANEL : ThemeToken.MATERIAL_SUNKEN),
+                0,241,disabled ? Light.FLAT : Light.TRACK,1);
+    }
+
+    /** OFF inset and the existing flat accent ON fill, with cached hover wash endpoints. */
+    public static void switchTrack(GuiGraphicsExtractor g,float x,float y,float w,float h,float radius,
+                                   float on,float hover,boolean disabled) {
+        if(disabled || on<1) inset(g,x,y,w,h,radius,disabled);
+        if(disabled) return;
+        // ON is the same recessed well filled with the accent (2026-11-17): a flat accent over
+        // a dished OFF track read as two different materials.
+        if(on>0) depth(g,x,y,w,h,radius,color(ThemeToken.ACCENT),0,280,Light.INSET,on);
+        if(hover>0) depth(g,x,y,w,h,radius,color(ThemeToken.ON_BACKGROUND),0,281,Light.FLAT,SWITCH_HOVER_ALPHA*hover);
+    }
+
+    /** Same-size dome: circular SDF at capsule radius, machined square at radius zero. */
+    public static void knob(GuiGraphicsExtractor g,float x,float y,float size,float radius,int fill,boolean disabled) {
+        depth(g,x,y,size,size,radius,fill,0,250,disabled ? Light.FLAT : Light.KNOB,1);
+    }
+
+    public static void module(GuiGraphicsExtractor g,float x,float y,float w,float h,float radius,boolean on,float hover) {
+        if(on) cached(g,x,y,w,h,radius,0,0,262,false,1,Light.MODULE_SHADOW);
+        int face=ThemeManager.withAlpha(ThemeManager.color(ThemeToken.MATERIAL_RAISED),255);
+        if(hover<1) depth(g,x,y,w,h,radius,face,0,260,on ? Light.MODULE_ON : Light.MODULE_OFF,1);
+        if(hover>0) depth(g,x,y,w,h,radius,face,0,261,on ? Light.MODULE_ON_HOVER : Light.MODULE_OFF_HOVER,Math.min(1,hover));
+    }
+
+    /** Text-only peer hover, independent of the sidebar's unchanged treatment. */
+    public static void peerHover(GuiGraphicsExtractor g,float x,float y,float w,float h,float radius,float hover) {
+        if(hover>0) depth(g,x,y,w,h,radius,ThemeManager.color(ThemeToken.MATERIAL_HOVER),0,270,Light.FLAT,PEER_HOVER_ALPHA*Math.min(1,hover));
+    }
+
+    private static void depth(GuiGraphicsExtractor g,float x,float y,float w,float h,float radius,
+                              int fill,int edge,int kind,Light light,float opacity) {
+        cached(g,x,y,w,h,radius,ThemeManager.withAlpha(fill,255),edge,kind,false,opacity,light);
     }
 
     public static int selectedFill() { return ThemeManager.color(ThemeToken.SELECTION_SOFT); }
@@ -79,6 +180,10 @@ public final class MaterialSurface {
      */
     public static void selection(GuiGraphicsExtractor g, float x, float y, float w, float h,
                                  float radius, boolean selected, float hover, boolean flatRest) {
+        if(!flatRest) {
+            control(g,x,y,w,h,radius,selected,false,false,hover,0);
+            return;
+        }
         if(flatRest && !selected) {
             if(hover<=0) return;
             int face = ThemeManager.withAlpha(ThemeManager.color(ThemeToken.MATERIAL_HOVER),
@@ -118,48 +223,42 @@ public final class MaterialSurface {
      */
     public static void field(GuiGraphicsExtractor g, float x, float y, float w, float h,
                              float radius, float hover, boolean disabled) {
-        int face = disabled ? ThemeManager.color(ThemeToken.MATERIAL_PANEL) : AuroraAnim.lerpArgb(
-                ThemeManager.color(ThemeToken.MATERIAL_RAISED), ThemeManager.color(ThemeToken.MATERIAL_HOVER), hover);
-        if (disabled || hover == 0 || hover == 1)
-            cached(g,x,y,w,h,radius,face,0,FIELD_KIND+(disabled ? 2 : hover==1 ? 1 : 0),false);
-        else RenderUtil.drawRoundedRectAA(g,x,y,w,h,radius,face);
+        control(g,x,y,w,h,radius,false,disabled,false,hover,0);
     }
 
-    /** Cache kind family reserved for {@link #field}. */
-    static final int FIELD_KIND = 112;
+    private static final MaterialTemplates TEMPLATES = new MaterialTemplates();
+    private static int templateScale, templateRadius;
+    private static long templateGeneration=Long.MIN_VALUE;
 
-    // Primitive packed geometry key: no record/boxing/lambda allocation per control per frame.
-    private static final Long2ObjectOpenHashMap<UiLayerCache> TEMPLATES = new Long2ObjectOpenHashMap<>();
-    private static net.minecraft.client.gui.screens.Screen templateOwner;
-    private static int templateWidth, templateHeight, templateScale, templateRadius;
-
-    /** Release stale screen/resize geometry before this frame records any GUI draws.
-     * Also covers Aurora-styled vanilla screens, which have no custom removed hook.
-     * Templates are keyed by radius, so a Corner Radius change (dragging the
-     * slider steps through many values) releases them here too, between frames. */
+    /** Keep geometry across screens/resizes; the LRU bounds it. Theme, scale and
+     * roundness changes invalidate every template at an extraction boundary, and
+     * returning to gameplay releases them: no HUD draws these faces, so nothing is
+     * held while playing (2026-11-17). */
     public static void beginFrame() {
         Minecraft mc=Minecraft.getInstance();
         if(mc==null) return;
+        if(com.aurora.client.adapter.NativeUi.screen(mc)==null) {
+            if(TEMPLATES.size()>0) disposeTemplates();
+            return;
+        }
         var window=mc.getWindow();
-        int width=window.getGuiScaledWidth(),height=window.getGuiScaledHeight();
         int scale=Math.max(1,(int)window.getGuiScale());
         int radius=ThemeManager.current().roundness().radius();
-        if(templateOwner!=com.aurora.client.adapter.NativeUi.screen(mc) || templateWidth!=width || templateHeight!=height
-                || templateScale!=scale || templateRadius!=radius) {
+        long generation=ThemeManager.generation();
+        if(templateScale!=scale || templateRadius!=radius || templateGeneration!=generation) {
             disposeTemplates();
-            templateOwner=com.aurora.client.adapter.NativeUi.screen(mc);
-            templateWidth=width;templateHeight=height;templateScale=scale;templateRadius=radius;
+            templateScale=scale;templateRadius=radius;templateGeneration=generation;
         }
     }
 
-    /** Called at each production screen's removal boundary, between frames. */
+    /** Explicit invalidation only. Screen removal retains reusable templates.
+     * Disposal is queued, including if invalidation is requested during extraction. */
     public static void disposeTemplates() {
-        for(UiLayerCache cache:TEMPLATES.values()) cache.dispose();
         TEMPLATES.clear();
     }
 
     /** Rasterize elevation/fill/edge once per size and role, then one blit.
-     * Theme reload reuploads in place; no texture is destroyed mid-frame. */
+     * Changed identities get new rasters; no texture is mutated/destroyed mid-frame. */
     public static void cached(GuiGraphicsExtractor g,float x,float y,float w,float h,float radius,
                               int fill,int border,int kind,boolean shadow) {
         cached(g,x,y,w,h,radius,fill,border,kind,shadow,1);
@@ -167,16 +266,20 @@ public final class MaterialSurface {
 
     private static void cached(GuiGraphicsExtractor g,float x,float y,float w,float h,float radius,
                                int fill,int border,int kind,boolean shadow,float opacity) {
+        cached(g,x,y,w,h,radius,fill,border,kind,shadow,opacity,Light.FLAT);
+    }
+
+    private static void cached(GuiGraphicsExtractor g,float x,float y,float w,float h,float radius,
+                               int fill,int border,int kind,boolean shadow,float opacity,Light light) {
         var mc=Minecraft.getInstance();
         int scale=Math.max(1,(int)mc.getWindow().getGuiScale());
         // No accent halos (Spxctra simplification, 2026-10-30): selection is the wash and
         // one accent edge; a primary action is its strong fill. Glow added no information.
-        int pad=shadow ? 10 : 2;
+        int pad=shadow ? 10 : light.elevation>0 ? (light==Light.MODULE_SHADOW ? 5 : 3) : 2;
         int width=Math.round(w), height=Math.round(h), round=Math.round(radius);
-        long key=((long)width<<48) | ((long)height<<32) | ((long)round<<16) | ((long)kind<<1) | (shadow ? 1 : 0);
-        var cache=TEMPLATES.get(key);
-        if(cache==null) { cache=new UiLayerCache(); TEMPLATES.put(key,cache); }
-        long version=ThemeManager.generation()*65537L+scale;
+        kind += light.ordinal()*1024;
+        long version=((ThemeManager.generation()*65537L+scale)*31+fill)*31+border;
+        var cache=TEMPLATES.get(version,(width+pad*2)*scale,(height+pad*2)*scale,w,h,radius,kind,shadow,fill,border);
         if(!cache.isCurrent(version)) {
             cache.ensureSize((width+pad*2)*scale,(height+pad*2)*scale); cache.clear();
             var previous=RenderUtil.beginCapture(cache.sink());
@@ -184,17 +287,22 @@ public final class MaterialSurface {
                 if(shadow) AuroraShapes.dropShadow(g,pad,pad+3,width,height,round,.25f);
                 if(fill!=0) {
                     RenderUtil.drawRoundedRectAA(g,pad,pad,w,h,radius,fill);
-                    // Quiet depth on stable panels/popups, cached with their face.
-                    // Controls keep one treatment throughout their hover transition.
-                    if(shadow) cache.shadeVertical(pad*scale,pad*scale,width*scale,height*scale,3);
+                    // Preserve pre-pass owner-themed cards and tooltips; window bodies stay flat.
+                    if(shadow && kind!=120 && light==Light.FLAT)
+                        cache.shadeVertical(pad*scale,pad*scale,width*scale,height*scale,3);
+                    cache.lightFace(pad*scale,pad*scale,w*scale,h*scale,radius*scale,scale,
+                            light.top,light.bottom,light.profile);
                 }
 
-                if(kind==2 || kind==102) {
+                if(kind==2 || kind==102 || border!=0 && light!=Light.FLAT) {
                     RenderUtil.drawRoundedRectAA(g,pad,pad,w,h,radius,selectedFill());
                 }
                 // Selected peers (kind 2) take the thinner selection edge; other borders stay 1 GUI px.
                 if(border!=0) RenderUtil.drawRoundedOutlineAA(g,pad,pad,w,h,radius,
-                        kind==2 || kind==102 ? selectedEdge() : 1,border);
+                        kind==2 || kind==102 || light!=Light.FLAT ? selectedEdge() : 1,border);
+                if(light.elevation>0)
+                    cache.softShadow(pad*scale,pad*scale,w*scale,h*scale,radius*scale,
+                            light.elevation*scale,2*light.elevation*scale,light.shadowAlpha);
             } finally { RenderUtil.endCapture(previous); }
             cache.commit(version);
         }

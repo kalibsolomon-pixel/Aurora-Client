@@ -227,10 +227,11 @@ public class ParticleRowSetting extends FeatureSetting {
             fittedTitle = AuroraFontRenderer.ellipsize(tr, label, textW, 1);
             fittedSummary = AuroraFontRenderer.ellipsize(tr, line, textW, 1);
         }
-        ctx.text(tr, fittedTitle, textX, y + 7, MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
-        ctx.text(tr, fittedSummary, textX, y + 19, MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED), false);
+        int labelY = AuroraFontRenderer.blockY(tr, y, CARD_H, 2);
+        ctx.text(tr, fittedTitle, textX, labelY, MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
+        ctx.text(tr, fittedSummary, textX, labelY + AuroraFontRenderer.linePitch(tr), MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED), false);
 
-        ctx.text(tr, state, stateX, Math.round(y + (CARD_H - tr.lineHeight) / 2f + 1),
+        ctx.text(tr, state, stateX, AuroraFontRenderer.textY(tr, y, CARD_H),
                 MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
         toggle.layout(tx, ty, tw, th);
         toggle.renderShapes(ctx, tx, ty, tw, th);

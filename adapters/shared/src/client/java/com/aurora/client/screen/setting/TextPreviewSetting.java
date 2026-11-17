@@ -1,5 +1,6 @@
 package com.aurora.client.screen.setting;
 
+import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.component.MaterialSurface;
 import net.minecraft.client.Minecraft;
@@ -42,7 +43,7 @@ public class TextPreviewSetting extends FeatureSetting {
             fittedStyle = style;
             fitted = com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(font, SAMPLE, available, 1);
         }
-        com.aurora.client.hud.HudTextPainter.draw(ctx, font, fitted, x + PAD_X, y + (ROW_H - font.lineHeight) / 2 + 1,
+        com.aurora.client.hud.HudTextPainter.draw(ctx, font, fitted, x + PAD_X, AuroraFontRenderer.textY(font, y, ROW_H),
                 MaterialSurface.color(ThemeToken.ON_BACKGROUND));
     }
 
