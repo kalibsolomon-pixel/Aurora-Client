@@ -372,7 +372,7 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
         }
 
         // Fit first, then centre the drawn value within the face area left of the chevron.
-        int textX = com.aurora.client.ui.util.TextAlignment.centeredX(btnX, textAreaW, cachedNameW);
+        int textX = AuroraFontRenderer.inkCenteredX(tr, name, btnX + textAreaW / 2f);
         int textY = AuroraFontRenderer.textY(tr, btnY, BTN_H);
         ctx.text(tr, name, textX, textY, textColor, false);
 

@@ -47,6 +47,49 @@ public class AuroraFontRenderer {
         return measured;
     }
 
+    /** Ink midpoints per active style, keyed by String (equals) or a cached sequence (identity). */
+    private static final java.util.Map<net.minecraft.network.chat.Style, java.util.HashMap<Object, Float>> INK_MID = new java.util.HashMap<>();
+    private static final java.util.HashMap<Object, Float> INK_MID_VANILLA = new java.util.HashMap<>();
+    private static Font inkMidFont;
+    private static net.minecraft.locale.Language inkMidLanguage;
+
+    /**
+     * Horizontal midpoint of the visible ink of {@code text} (a String or FormattedCharSequence)
+     * relative to its draw origin, under the active style: the actual glyph quads' left/right
+     * bounds, so side bearings (a leading "I", a trailing "c") no longer shift centred labels
+     * the way advance-width centring did. Cached per style and resource generation; the cached
+     * path allocates nothing.
+     */
+    public static float inkMid(Font font, Object text) {
+        var language = net.minecraft.locale.Language.getInstance();
+        if (inkMidFont != font || inkMidLanguage != language) {
+            INK_MID.clear(); INK_MID_VANILLA.clear(); inkMidFont = font; inkMidLanguage = language;
+        }
+        var style = getActiveStyle();
+        var cache = style == null ? INK_MID_VANILLA : INK_MID.computeIfAbsent(style, k -> new java.util.HashMap<>());
+        Float cached = cache.get(text);
+        if (cached != null) return cached;
+        if (cache.size() > 1024) cache.clear();
+        FormattedCharSequence sequence = text instanceof FormattedCharSequence seq ? seq
+                : FormattedCharSequence.forward(String.valueOf(text), net.minecraft.network.chat.Style.EMPTY);
+        if (style != null) sequence = withCustomFont(sequence, style.withUnderlined(false));
+        float[] span = {Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY};
+        font.prepareText(sequence, 0, 0, 0xffffffff, false, false, 0).visit(new Font.GlyphVisitor() {
+            @Override public void acceptGlyph(net.minecraft.client.gui.font.TextRenderable.Styled glyph) {
+                span[0] = Math.min(span[0], glyph.left());
+                span[1] = Math.max(span[1], glyph.right());
+            }
+        });
+        float mid = span[1] > span[0] ? (span[0] + span[1]) / 2 : font.width(sequence) / 2f;
+        cache.put(text, mid);
+        return mid;
+    }
+
+    /** Draw x that centres {@code text}'s visible ink on {@code centerX}. */
+    public static int inkCenteredX(Font font, Object text, float centerX) {
+        return Math.round(centerX - inkMid(font, text));
+    }
+
     /** Minecraft draw origin which centres the active font's visible cap/x-height ink. */
     public static int textY(Font font, float y, float height) {
         return TextAlignment.textY(y, height, ink(font, getActiveStyle()));
@@ -388,12 +431,12 @@ public class AuroraFontRenderer {
 
     /** Centered, non-shadowed string. {@code cx} is the center x. */
     public static void drawCentered(GuiGraphicsExtractor graphics, Font font, String text, int cx, int y, int color) {
-        graphics.text(font, text, TextAlignment.centeredX(cx, 0, font.width(text)), y, color, false);
+        graphics.text(font, text, inkCenteredX(font, text, cx), y, color, false);
     }
 
     /** Centered, non-shadowed styled sequence. {@code cx} is the center x. */
     public static void drawCentered(GuiGraphicsExtractor graphics, Font font, FormattedCharSequence text, int cx, int y, int color) {
-        graphics.text(font, text, TextAlignment.centeredX(cx, 0, font.width(text)), y, color, false);
+        graphics.text(font, text, inkCenteredX(font, text, cx), y, color, false);
     }
 
     /** Centered, non-shadowed component. {@code cx} is the center x. */

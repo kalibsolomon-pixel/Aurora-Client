@@ -74,7 +74,7 @@ class DepthPassContractTest {
         assertTrue(slider.contains("MaterialSurface.sliderTrack(g,x,ty,w,TRACK_H,trackRadius(),disabled)"));
         assertTrue(read("ui/component/ToggleSwitch.java").contains("MaterialSurface.switchTrack(g,x,y,w,h,r,t,hover,disabled)"));
         // Centred stays centred (owner rule): the value centres left of the chevron slot.
-        assertTrue(read("screen/setting/EnumSetting.java").contains("TextAlignment.centeredX(btnX, textAreaW, cachedNameW)"));
+        assertTrue(read("screen/setting/EnumSetting.java").contains("AuroraFontRenderer.inkCenteredX(tr, name, btnX + textAreaW / 2f)"));
     }
     @Test void councilRecipesKeepInsetDomePressedAndPrimaryPoliciesDistinct() throws Exception {
         String material=read("ui/component/MaterialSurface.java");

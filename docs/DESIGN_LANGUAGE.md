@@ -1550,8 +1550,10 @@ that lighting; this sign clarification preserves the required highlight directio
 baked glyphs of that style, cached per style and resource generation; descenders, underline and
 shadow excluded) on the box, instead of `(h - lineHeight) / 2` plus ad-hoc nudges. Icons
 (chevrons, checks, keyboard glyphs) centre on the same axis, so a label and its glyph share one
-centre line. Horizontal centring uses the drawn (fitted) width, with `TextAlignment.FACE_PAD`
-(5 px) equal padding inside a face, clear of the widest bevel. Descriptor lines use one pitch,
+centre line. Horizontal centring centres the fitted text's visible ink (the glyph quads'
+left/right bounds, `AuroraFontRenderer.inkMid`, cached per style) rather than its advance
+width, so side bearings never shift a centred label; faces keep `TextAlignment.FACE_PAD` (5 px)
+equal padding, clear of the widest bevel. Descriptor lines use one pitch,
 `lineHeight + 2`, and the same gap below the label they describe.
 
 Final HSL lightness delta is `faceRamp(y) + 20 * (dot(n,L) - L.z) + 10 * spec`, with
