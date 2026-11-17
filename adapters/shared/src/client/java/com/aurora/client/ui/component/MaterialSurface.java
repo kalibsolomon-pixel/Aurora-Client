@@ -7,10 +7,8 @@ import com.aurora.client.util.AuroraAnim;
 import com.aurora.client.util.AuroraShapes;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.Minecraft;
-import com.aurora.client.ui.util.UiLayerCache;
 import com.aurora.client.theme.MaterialLighting.Profile;
 import com.aurora.client.theme.UnifiedPalette;
-import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 /** Shared cached material for parent faces, embedded controls and opaque floating layers.
  * The parent alone captures the backdrop before dim; its neutral face/boundary
@@ -224,38 +222,33 @@ public final class MaterialSurface {
         control(g,x,y,w,h,radius,false,disabled,false,hover,0);
     }
 
-    // Primitive packed geometry key: no record/boxing/lambda allocation per control per frame.
-    private static final Long2ObjectOpenHashMap<UiLayerCache> TEMPLATES = new Long2ObjectOpenHashMap<>();
-    private static net.minecraft.client.gui.screens.Screen templateOwner;
-    private static int templateWidth, templateHeight, templateScale, templateRadius;
+    private static final MaterialTemplates TEMPLATES = new MaterialTemplates();
+    private static int templateScale, templateRadius;
+    private static long templateGeneration=Long.MIN_VALUE;
 
-    /** Release stale screen/resize geometry before this frame records any GUI draws.
-     * Also covers Aurora-styled vanilla screens, which have no custom removed hook.
-     * Templates are keyed by radius, so a Corner Radius change (dragging the
-     * slider steps through many values) releases them here too, between frames. */
+    /** Keep geometry across screens/resizes; the LRU bounds it. Theme, scale and
+     * roundness changes invalidate every template at an extraction boundary. */
     public static void beginFrame() {
         Minecraft mc=Minecraft.getInstance();
         if(mc==null) return;
         var window=mc.getWindow();
-        int width=window.getGuiScaledWidth(),height=window.getGuiScaledHeight();
         int scale=Math.max(1,(int)window.getGuiScale());
         int radius=ThemeManager.current().roundness().radius();
-        if(templateOwner!=com.aurora.client.adapter.NativeUi.screen(mc) || templateWidth!=width || templateHeight!=height
-                || templateScale!=scale || templateRadius!=radius) {
+        long generation=ThemeManager.generation();
+        if(templateScale!=scale || templateRadius!=radius || templateGeneration!=generation) {
             disposeTemplates();
-            templateOwner=com.aurora.client.adapter.NativeUi.screen(mc);
-            templateWidth=width;templateHeight=height;templateScale=scale;templateRadius=radius;
+            templateScale=scale;templateRadius=radius;templateGeneration=generation;
         }
     }
 
-    /** Called at each production screen's removal boundary, between frames. */
+    /** Explicit invalidation only. Screen removal retains reusable templates.
+     * Disposal is queued, including if invalidation is requested during extraction. */
     public static void disposeTemplates() {
-        for(UiLayerCache cache:TEMPLATES.values()) cache.dispose();
         TEMPLATES.clear();
     }
 
     /** Rasterize elevation/fill/edge once per size and role, then one blit.
-     * Theme reload reuploads in place; no texture is destroyed mid-frame. */
+     * Changed identities get new rasters; no texture is mutated/destroyed mid-frame. */
     public static void cached(GuiGraphicsExtractor g,float x,float y,float w,float h,float radius,
                               int fill,int border,int kind,boolean shadow) {
         cached(g,x,y,w,h,radius,fill,border,kind,shadow,1);
@@ -275,10 +268,8 @@ public final class MaterialSurface {
         int pad=shadow ? 10 : light.elevation>0 ? (light==Light.MODULE_SHADOW ? 5 : 3) : 2;
         int width=Math.round(w), height=Math.round(h), round=Math.round(radius);
         kind += light.ordinal()*1024;
-        long key=((long)width<<48) | ((long)height<<32) | ((long)round<<16) | ((long)kind<<1) | (shadow ? 1 : 0);
-        var cache=TEMPLATES.get(key);
-        if(cache==null) { cache=new UiLayerCache(); TEMPLATES.put(key,cache); }
         long version=((ThemeManager.generation()*65537L+scale)*31+fill)*31+border;
+        var cache=TEMPLATES.get(version,(width+pad*2)*scale,(height+pad*2)*scale,w,h,radius,kind,shadow,fill,border);
         if(!cache.isCurrent(version)) {
             cache.ensureSize((width+pad*2)*scale,(height+pad*2)*scale); cache.clear();
             var previous=RenderUtil.beginCapture(cache.sink());

@@ -442,7 +442,6 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
     @Override
     public void removed() {
         super.removed();
-        MaterialSurface.disposeTemplates();
         padCache.dispose();
         hueCache.dispose();
         alphaCache.dispose();

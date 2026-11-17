@@ -171,8 +171,8 @@ public final class GlassSurface {
      * flushed) is reported here.
      */
     public static void beginFrame() {
-        com.aurora.client.ui.util.UiLayerCache.beginFrame();
         MaterialSurface.beginFrame();
+        com.aurora.client.ui.util.UiLayerCache.beginFrame();
         com.aurora.client.ui.util.MaterialIconRenderer.beginFrame();
         com.aurora.client.ui.util.AuroraFontQuality.beginFrame();
         if (!pendingRims.isEmpty()) {

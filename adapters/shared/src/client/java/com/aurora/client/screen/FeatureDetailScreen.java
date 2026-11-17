@@ -940,7 +940,6 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
      */
     @Override
     public void removed() {
-        if(unifiedTheme()) MaterialSurface.disposeTemplates();
         closeTransientState();
         super.removed();
     }

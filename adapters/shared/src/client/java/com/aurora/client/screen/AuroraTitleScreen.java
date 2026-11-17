@@ -303,7 +303,6 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
     public void removed() {
         super.removed();
         atmosphere.dispose();
-        MaterialSurface.disposeTemplates();
     }
 
     @Override

@@ -292,7 +292,6 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
     @Override
     public void removed() {
         super.removed();
-        MaterialSurface.disposeTemplates();
     }
 
     /** Apply the active drag (move or resize) using current MouseHandler position. */

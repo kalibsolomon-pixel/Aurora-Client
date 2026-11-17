@@ -2323,7 +2323,6 @@ public class AuroraScreen extends Screen implements ThemedScreen {
 
     @Override
     public void removed() {
-        if(unifiedTheme()) MaterialSurface.disposeTemplates();
         layerCache.retire(); // deferred GUI draws may still reference its texture
         invalidateSettingsSemantics();
         FeatureSetting.clearHostBand(); // C-8 — drop the published host band

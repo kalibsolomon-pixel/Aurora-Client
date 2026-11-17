@@ -81,6 +81,80 @@ public final class MaterialLighting {
         return height <= 1 ? (top + bottom) * .5f : top + (bottom - top) * row / (height - 1f);
     }
 
+    /** One bake's row/colour state. No per-pixel objects; the conservative plateau
+     * cross excludes rounded corners, so only the band/corners need an SDF sample.
+     * Keep arithmetic order identical to face/lightness, including float delta addition. */
+    public static final class FaceBake {
+        private final float width, height, radius, top, bottom;
+        private final int scale;
+        private final Profile profile;
+        private final double r, band, straightInset;
+        private int row = Integer.MIN_VALUE, rgb = -1, plateauRgb = -1, plateauColor;
+        private int lastRgb=-1,lastColor;
+        private float lastDelta=Float.NaN,rowRim;
+        private final float[] sideRims;
+        private boolean straightSides;
+        private double left, right, red, green, blue, light, chroma;
+        private float ramp;
+
+        public FaceBake(float width, float height, float radius, int scale,
+                        float top, float bottom, Profile profile) {
+            this.width=width; this.height=height; this.radius=radius; this.scale=scale;
+            this.top=top; this.bottom=bottom; this.profile=profile;
+            r=Math.clamp(radius, 0, Math.min(width, height)*.5);
+            band=bevelWidth(r,scale,profile);
+            straightInset=Math.max(r,band);
+            // At most one scratch array per bake, allocated before entering the pixel loop.
+            if(profile!=Profile.FLAT && height>=2*straightInset) {
+                sideRims=new float[(int)Math.ceil(width)];
+                for(int x=0;x<sideRims.length;x++) sideRims[x]=(float)curvatureDelta(x+.5,height*.5,
+                        width,height,radius,scale,profile);
+            } else sideRims=null;
+        }
+
+        public int shade(int argb, int column, int y) {
+            if ((argb >>> 24)==0) return argb;
+            if (row!=y) {
+                row=y; ramp=verticalDelta(y,height,top,bottom); plateauRgb=-1;
+                double cy=y+.5;
+                // In these two rectangles the rounded-box SDF reduces to an edge distance.
+                left=cy>=band && cy<=height-band
+                        ? (cy>=r && cy<=height-r ? band : straightInset) : width;
+                right=width-left;
+                straightSides=cy>=straightInset && cy<=height-straightInset;
+                if(profile!=Profile.FLAT && !straightSides && (cy<band || cy>height-band)
+                        && straightInset<=width*.5)
+                    rowRim=(float)curvatureDelta(width*.5,cy,width,height,radius,scale,profile);
+                else rowRim=0;
+            }
+            boolean plateau=profile==Profile.FLAT || column+.5>=left && column+.5<=right;
+            int source=argb & 0xffffff;
+            if (plateau && source==plateauRgb) return (argb & 0xff000000) | plateauColor;
+            float rim=0;
+            if(!plateau) {
+                if(column+.5>=straightInset && column+.5<=width-straightInset) rim=rowRim;
+                else if(straightSides) rim=sideRims[column];
+                else rim=(float)curvatureDelta(column+.5,y+.5,width,height,radius,scale,profile);
+            }
+            float delta=ramp+rim;
+            if (delta==0) return argb;
+            if(source==lastRgb && delta==lastDelta) return (argb & 0xff000000) | lastColor;
+            if (source!=rgb) {
+                rgb=source;
+                red=(source>>>16 & 255)/255d; green=(source>>>8 & 255)/255d; blue=(source & 255)/255d;
+                double max=Math.max(red,Math.max(green,blue)), min=Math.min(red,Math.min(green,blue));
+                light=(max+min)*.5; chroma=max-min;
+            }
+            double next=Math.max(0,Math.min(1,light+delta/100d));
+            double ratio=chroma==0 ? 0 : (1-Math.abs(2*next-1))/(1-Math.abs(2*light-1));
+            int color=channel(next+(red-light)*ratio)<<16 | channel(next+(green-light)*ratio)<<8
+                    | channel(next+(blue-light)*ratio);
+            if (plateau) { plateauRgb=source; plateauColor=color; }
+            lastRgb=source;lastDelta=delta;lastColor=color;
+            return (argb & 0xff000000) | color;
+        }
+    }
+
     /** Preserve hue, HSL saturation and alpha; only lightness changes, with endpoint clamping. */
     public static int lightness(int argb, float points) {
         if ((argb >>> 24) == 0 || points == 0) return argb;

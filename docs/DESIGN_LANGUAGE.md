@@ -1584,11 +1584,26 @@ Legacy RGB `shadeVertical` remains only for pre-existing owner-themed cards/popu
 and control shadows are separate cached rasters behind state endpoints, avoiding doubled
 shadow opacity during blending. Knobs bake the shadow with their face. Template keys include
 recipe/state, geometry and radius; version stamps include theme generation, scale, fill and
-border. Existing screen/resize/radius invalidation bounds cache lifetime. No new callbacks,
+border. Templates survive screen changes and resizes in a primitive LRU capped at 256 entries
+and 16 MiB of RGBA image backing (at most another 16 MiB of texture pixel backing; driver
+overhead is not measured). Identity includes exact fractional geometry and colours; hash
+collisions are checked against the full identity and treated as misses. Theme generation,
+GUI scale and roundness changes invalidate the pool. Evictions and oversized, unretained
+rasters wait until the next extraction boundary to be freed, so transient backing for the
+current frame is additional to the retention cap. Reusing a template never mutates its pixels.
+No new callbacks,
 dependencies or frameworks are introduced. No new per-frame lighting math or static GUI
 fills; the control shadow adds a cached blit. Text, icons, headings, sidebar, scrollbars,
 focus rings, tooltips, search glass and represented swatch/crosshair/checkerboard data retain
 their existing treatment.
+
+The bake uses direct ABGR buffer access. A conservative plateau cross skips SDF/normal/
+specular work; the remaining band and corner pixels evaluate the original equations once.
+Straight rim samples are reused per row/column. Face ramps and uniform-source HSL conversions
+are reused per row. Shadow SDF work is bounded
+to its offset/softness rectangle, skips opaque pixels, and reuses separable axis terms. A cheap
+outer scan preserves the old pass's normalization of hidden RGB in fully transparent pixels.
+Frozen old-path differential tests require bit identity, including AA and shadow compositing.
 
 Implementation verification is offline: colour and NativeImage raster tests, source contracts,
 Python tooling tests and the three-line parity build. The parent owns the required live/factory

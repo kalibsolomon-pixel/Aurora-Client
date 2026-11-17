@@ -2122,7 +2122,6 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
     @Override
     public void removed() {
         super.removed();
-        MaterialSurface.disposeTemplates();
         if (cardTpl != null) { cardTpl.dispose(); cardTpl = null; }
     }
 
