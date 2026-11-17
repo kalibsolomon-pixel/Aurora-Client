@@ -839,7 +839,7 @@ public class AuroraConfig {
 
     public HudBackground keystrokesBgMode = HudBackground.NONE;
     public int keystrokesBgColor = 0xFF14141C;
-    /** Also rounds the keycaps, not only the panel. */
+    /** Also rounds keys: KEYCAP uses the full UI radius; other styles keep their compact radius. */
     public boolean keystrokesThemeCorners = false;
 
     public HudBackground cpsBgMode = HudBackground.NONE;
@@ -1126,6 +1126,17 @@ public class AuroraConfig {
     // ---- Keystrokes HUD Module ----
     /** Master toggle for the keystrokes overlay. */
     public boolean keystrokesEnabled = false;
+    public enum KeystrokesKeyStyle {
+        // FLAT is the Lunar-style key: legend on a flat coloured face (owner, 2026-11-17). The
+        // retired TRANSLUCENT shell-and-rim style loads as FLAT.
+        @com.google.gson.annotations.SerializedName(value = "FLAT", alternate = {"TRANSLUCENT"}) FLAT("Flat"),
+        KEYCAP("3D Keycap");
+        private final String label;
+        KeystrokesKeyStyle(String label) { this.label = label; }
+        public String getLabel() { return label; }
+    }
+    /** FLAT by default; saved TRANSLUCENT values load as FLAT (owner retired that style, 2026-11-17). */
+    public KeystrokesKeyStyle keystrokesKeyStyle = KeystrokesKeyStyle.FLAT;
     /** Show the W/A/S/D movement block (follows your movement keybinds). */
     public boolean keystrokesShowMovement = true;
     /** Show the left/right mouse buttons. */

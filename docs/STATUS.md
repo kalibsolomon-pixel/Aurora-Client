@@ -10,6 +10,7 @@ unified chrome through screenshot suppression, retires screen textures after
 deferred draws, and reuses one prepared setting-tooltip layout. The optional
 native probe now measures open-screen extraction and cache payload separately
 from gameplay overhead. [Implementation and measured limits](reports/2026-11-17-ui-cache-refinement.md).
+Keystrokes has two key styles: Flat (default, Lunar-style legend on a flat coloured face) and cached Cherry-profile 3D keycaps; legends are row-sized and centred on their visible ink.
 
 Pulsar integration adds Phenomena's analytics and recording as Aurora's 40th
 feature, off by default. Its configuration and six-tab dashboard follow Aurora's

@@ -260,10 +260,14 @@ a full capsule at the factory radius or above and flattens in proportion below i
 (`ThemeRoundness.capsule`). The remaining exceptions are represented data and game geometry
 that is not theme chrome: colour wheels, represented game shapes and map markers.
 
-In-game HUD shapes keep fixed corners by default (panel backgrounds 2 px, keystroke keycaps
-3 px, the square minimap frame 0 px). Each HUD feature's detail screen has a **Theme Corner
-Radius** switch, off by default, that hands its shapes the theme's compact radius (Corner
-Radius × 3/5) instead (owner ruling 2026-11-12).
+In-game HUD shapes keep fixed corners by default (panel backgrounds 2 px, flat/translucent
+keystroke keys 3 px, Cherry-profile keycaps 2 px, the square minimap frame 0 px). Each HUD
+feature's detail screen has a **Theme Corner Radius** switch, off by default, that hands its
+shapes the theme's compact radius (Corner Radius × 3/5) instead (owner ruling 2026-11-12).
+Keystrokes' existing **Theme Corner Radius** row is shown for **3D Keycap**: it gives the
+sculpted caps the theme's control radius (`radiusSmall`) instead, including exact square facets
+at radius 0 (the window radius turned 20 px keys into circles), while
+continuing to control the panel and the other key styles' compact corners.
 
 ### 5.2 Compact spacing vocabulary
 
@@ -1658,3 +1662,29 @@ Python tooling tests and the three-line parity build. The parent owns the requir
 ROUND/SQUARE screenshots, overflow review at small/large viewports, greyscale ON/OFF review,
 and `RenderUtil.fillsSubmitted()` / CPU probes. Runtime fills and CPU cost are unmeasured until
 those probes run; a headless test only verifies the raster passes submit zero GUI fills.
+
+### Keystrokes key styles
+
+**Flat** (default; owner, 2026-11-17: "the key text on a flat coloured background, no outline,
+3D design or anything", the way Lunar Client does it) is one face per key in the key colour with
+its legend; pressing swaps the face to the accent. No shell, rim, outline or travel. The former
+Translucent shell-and-rim style is retired; saved `TRANSLUCENT` values load as Flat.
+**3D Keycap** is the opt-in represented-keyboard material: an outer rounded skirt,
+8% back / 18% front / 12% side planar walls, and a shallow concave cylindrical top dish. The
+single upper-left material light shades every facet; radius 0 keeps crisp gem-like corner facets.
+Pressing sinks the top by 1 GUI px, shortens the front wall by the same amount, tightens the
+contact shadow and blends in the existing 30% pressed accent.
+
+**Legends (both styles).** One routine places every legend: the text's visible ink (glyph
+left/right bounds and the active font's cap/x-height) is centred on the label area (the whole
+face for Flat, the top surface for 3D Keycap, the upper part of a mouse key above its CPS
+line), with the origin snapped to the device grid. Each row shares one size, taken from its
+widest legend (3 px side clearance on a flat face, 1.5 px on a keycap's top) and rounded down to
+whole device pixels per font pixel when that costs at most 15%, so W/A/S/D, the mouse
+buttons, Shift/Ctrl and the extra keys never differ in size within a row; nothing is scaled up.
+
+`KeycapProfile` owns pure core geometry/lighting; `KeycapRenderer` owns a HUD-lifetime primitive
+LRU of 48 entries and 4 MiB of retained RGBA pixels, keyed by exact geometry, colour, pressed
+state, radius, device density and theme generation. A settled cap is one blit and a transition
+two endpoint blits. Evicted or oversized rasters retire at the next extraction boundary. No new
+callback or `Timed` registration is needed: drawing remains inside the module's measured render.

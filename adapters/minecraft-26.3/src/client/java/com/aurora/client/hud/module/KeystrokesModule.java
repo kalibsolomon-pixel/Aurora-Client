@@ -3,6 +3,8 @@ package com.aurora.client.hud.module;
 import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.feature.impl.ClickTrackerFeature;
 import com.aurora.client.hud.HudAnchor;
+import com.aurora.client.hud.KeycapRenderer;
+import com.aurora.client.theme.KeycapProfile;
 import com.aurora.client.util.AuroraKey;
 import com.aurora.client.util.CachedValue;
 import com.aurora.client.theme.ThemeManager;
@@ -18,9 +20,8 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import java.util.List;
 
 /**
- * Keystrokes overlay — a single cohesive panel of rounded keycaps. Each cap
- * sits {@link #DEPTH} px proud of a darker base (the visible bottom edge) and
- * travels down onto it while pressed, picking up a soft accent tint and edge.
+ * Keystrokes overlay — flat (Lunar-style) or sculpted Cherry-profile keycaps in one
+ * cohesive panel. Every style travels while pressed and picks up the configured accent.
  *
  * <p>Layout, top to bottom (every row optional):
  * <pre>
@@ -83,9 +84,6 @@ public class KeystrokesModule extends HudModule {
                 com.aurora.client.theme.ThemeToken.SURFACE),0xEE);
     }
 
-    /** Keycap travel: height of the visible bottom edge, consumed while pressed. */
-    static final int DEPTH = 2;
-
     // ---- Press motion (premium-design press/recovery vocabulary) ----
     /** Press lands fast so the cap tracks the finger; release settles a little slower. */
     static final long PRESS_NS = 70_000_000L, RELEASE_NS = 140_000_000L;
@@ -95,7 +93,8 @@ public class KeystrokesModule extends HudModule {
     private final boolean[] pressTarget = new boolean[SLOTS];
     private final long[] pressStart = new long[SLOTS], pressLeg = new long[SLOTS];
     private int visibleMask;
-    
+    private final KeycapRenderer keycaps = new KeycapRenderer();
+
     // ---- Label cache (bind names change only when keys are rebound) ----
     private static final long LABEL_REFRESH_MS = 2000L;
     private final String[] labels = new String[SLOTS];
@@ -155,6 +154,12 @@ public class KeystrokesModule extends HudModule {
     /** Keycap radius: fixed, or the theme's compact radius when the switch is on. */
     private float keyRadius() {
         return com.aurora.client.util.HudBackgrounds.radius(themeCorners(), KEY_RADIUS);
+    }
+
+    /** KEYCAP uses the UI's control corner radius (radiusSmall: a key is a control, not a window,
+     * so ROUND gives rounded caps rather than circles); the switch also stays the panel's. */
+    private float keycapRadius() {
+        return themeCorners() ? ThemeManager.current().roundness().radiusSmall() : KeycapProfile.DEFAULT_RADIUS;
     }
 
     /**
@@ -262,11 +267,18 @@ public class KeystrokesModule extends HudModule {
 
         // ---- CPS readout (event-based rolling 1-second counters) ----
         if (cfg.keystrokesShowCps && !cfg.keystrokesShowMouse) {
-            blitTemplate(ctx, TPL_PLATE, x, cy, WIDTH, CPS_H, accent, 1f);
             String text = cpsText.get();
-            int tw = font.width(text);
-            com.aurora.client.hud.HudTextPainter.draw(ctx,font, textCache.text(SLOTS, text), x + (WIDTH - tw) / 2,
-                    cy + (CPS_H - font.lineHeight) / 2, labelColor);
+            var cpsComponent = textCache.text(SLOTS, text);
+            if (cfg.keystrokesKeyStyle == AuroraConfig.KeystrokesKeyStyle.KEYCAP) {
+                keycaps.draw(ctx, x, cy, WIDTH, CPS_H, keycapRadius(), 0, idleBackground(), accent);
+                drawLegend(ctx, font, cpsComponent, x + KeycapProfile.topX(WIDTH), cy + KeycapProfile.topY(CPS_H, 0),
+                        KeycapProfile.topWidth(WIDTH), KeycapProfile.topHeight(CPS_H),
+                        quantize(ctx, fitScale(KeycapProfile.topWidth(WIDTH), font.width(text))), labelColor);
+            } else {
+                blitTemplate(ctx, TPL_PLATE, x, cy, WIDTH, CPS_H, accent, 1f);
+                drawLegend(ctx, font, cpsComponent, x, cy, WIDTH, CPS_H,
+                        quantize(ctx, fitScale(WIDTH, font.width(text))), labelColor);
+            }
             cy += CPS_H + GAP;
         }
 
@@ -318,8 +330,7 @@ public class KeystrokesModule extends HudModule {
     // cap is opaque so the shell never shows through it as a band, and only the
     // silhouette is stroked, so no cap edge curves inward over the lip as a
     // stray line. No top hairline.
-    private static final int TPL_SHELL = 0, TPL_CAP = 1, TPL_CAP_PRESSED = 2, TPL_PLATE = 3,
-            TPL_RIM = 4, TPL_RIM_PRESSED = 5;
+    private static final int TPL_CAP = 1, TPL_CAP_PRESSED = 2, TPL_PLATE = 3;
     /** AA margin around a template (logical px). */
     private static final int TPL_PAD = 1;
     private final it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap<com.aurora.client.ui.util.UiLayerCache> templates =
@@ -347,14 +358,10 @@ public class KeystrokesModule extends HudModule {
                 float x = TPL_PAD * f, y = TPL_PAD * f, cw = w * f, chh = h * f, r = keyRadius() * f;
                 int cap = idle | 0xFF000000;
                 switch (kind) {
-                    case TPL_SHELL -> com.aurora.client.ui.util.RenderUtil.drawRoundedRectAA(ctx, x, y, cw, chh, r,
-                            blend(cap, 0xFF000000, 0.45f));
                     case TPL_CAP -> com.aurora.client.ui.util.RenderUtil.drawRoundedRectAA(ctx, x, y, cw, chh, r, cap);
+                    // FLAT pressed: the accent face itself (a Lunar-style colour swap).
                     case TPL_CAP_PRESSED -> com.aurora.client.ui.util.RenderUtil.drawRoundedRectAA(ctx, x, y, cw, chh, r,
-                            blend(cap, accent | 0xFF000000, 0.30f));
-                    case TPL_RIM -> com.aurora.client.ui.util.RenderUtil.drawRoundedOutlineAA(ctx, x, y, cw, chh, r, f, outline);
-                    case TPL_RIM_PRESSED -> com.aurora.client.ui.util.RenderUtil.drawRoundedOutlineAA(ctx, x, y, cw, chh, r, f,
-                            blend(outline, accent, 0.85f));
+                            blend(cap, accent | 0xFF000000, 0.85f));
                     default -> com.aurora.client.ui.util.RenderUtil.drawRoundedRectAA(ctx, x, y, cw, chh, r, idle);
                 }
             } finally {
@@ -378,62 +385,102 @@ public class KeystrokesModule extends HudModule {
     }
 
     /**
-     * Draws one keycap. The opaque cap ({@code h - DEPTH} tall) sits at the top
-     * of a darker shell whose lower {@link #DEPTH} px read as the key's bottom
-     * edge; pressing slides the cap (and its label) down onto it by a
-     * device-snapped offset while the accent-tinted cap and rim fade in.
+     * Draws one key. FLAT (owner, 2026-11-17: "the key text on a flat coloured background, no
+     * outline, 3D design or anything", as Lunar Client does it) is one face whose colour swaps
+     * to the accent while pressed; KEYCAP is the sculpted Cherry cap. Both place their legend
+     * through {@link #drawLegend}.
      */
     private void drawKey(GuiGraphicsExtractor ctx, Font font, int x, int y, int w, int h,
                          int slot, int accent, int labelColor) {
         float t = press[slot];
-        int capH = h - DEPTH;
+        boolean keycap = AuroraConfig.get().keystrokesKeyStyle == AuroraConfig.KeystrokesKeyStyle.KEYCAP;
+        float ax, ay, aw, ah;
+        if (keycap) {
+            keycaps.draw(ctx, x, y, w, h, keycapRadius(), t, idleBackground(), accent);
+            ax = x + KeycapProfile.topX(w); ay = y + KeycapProfile.topY(h, t);
+            aw = KeycapProfile.topWidth(w); ah = KeycapProfile.topHeight(h);
+        } else {
+            blitTemplate(ctx, TPL_CAP, x, y, w, h, accent, 1f);
+            blitTemplate(ctx, TPL_CAP_PRESSED, x, y, w, h, accent, t);
+            ax = x; ay = y; aw = w; ah = h;
+        }
+        boolean mouseWithCps = slot >= SLOT_LMB && slot <= SLOT_RMB && h > CELL;
+        float labelH = mouseWithCps ? Math.max(1, ah - CPS_LINE) : ah;
+        String label = labels[slot];
+        if (label != null && !label.isEmpty() && labelWidths[slot] > 0)
+            drawLegend(ctx, font, textCache.text(slot, label), ax, ay, aw, labelH,
+                    legendScale(ctx, slot, aw), labelColor);
+        if (mouseWithCps && slot != SLOT_MMB) {
+            String count = mouseCps.get()[slot == SLOT_LMB ? 0 : 1];
+            var text = textCache.text(SLOTS + 1 + (slot == SLOT_LMB ? 0 : 1), count);
+            drawLegend(ctx, font, text, ax, ay + labelH, aw, Math.min(CPS_LINE, ah),
+                    quantize(ctx, Math.min(CPS_SCALE, fitScale(aw, font.width(count)))), labelColor);
+        }
+    }
+
+    /** Height of the CPS line under a mouse legend, GUI px. */
+    private static final int CPS_LINE = 10;
+    /** CPS counts read smaller than legends. */
+    private static final float CPS_SCALE = .75f;
+    /** Equal clearance on both sides of a legend, GUI px: a flat face, and a keycap's narrower top. */
+    private static final float LEGEND_PAD = 3f, KEYCAP_LEGEND_PAD = 1.5f;
+
+    private static float fitScale(float areaW, int advance) {
+        float pad = AuroraConfig.get().keystrokesKeyStyle == AuroraConfig.KeystrokesKeyStyle.KEYCAP
+                ? KEYCAP_LEGEND_PAD : LEGEND_PAD;
+        return advance <= 0 ? 1f : Math.min(1f, (areaW - 2 * pad) / advance);
+    }
+
+    /**
+     * Rounds down to whole device pixels per font pixel (crisp glyph sizes) when that costs at
+     * most 15% of the fitting size; otherwise the exact fit, so a small keycap top never drops a
+     * legend to a third of its size.
+     */
+    private static float quantize(GuiGraphicsExtractor ctx, float scale) {
         float density = com.aurora.client.worldmap.MapMarkers.density(ctx);
-        // Whole device pixels only, so edges and text stay crisp mid-press.
-        float offset = Math.round(t * DEPTH * density) / density;
-        blitTemplate(ctx, TPL_SHELL, x, y, w, h, accent, 1f);
-        blitTemplate(ctx, TPL_CAP, x, y + offset, w, capH, accent, 1f);
-        blitTemplate(ctx, TPL_CAP_PRESSED, x, y + offset, w, capH, accent, t);
-        blitTemplate(ctx, TPL_RIM, x, y, w, h, accent, 1f);
-        blitTemplate(ctx, TPL_RIM_PRESSED, x, y, w, h, accent, t);
+        float snapped = (float) Math.floor(scale * density + 1e-4f) / density;
+        return snapped >= scale * .85f ? snapped : scale;
+    }
+
+    /**
+     * One size per row: every legend in the row (W/A/S/D, the mouse buttons, Shift/Ctrl, the
+     * extra keys) takes the scale its widest member needs, so neighbours never differ in size.
+     */
+    private float legendScale(GuiGraphicsExtractor ctx, int slot, float areaW) {
+        int from, to;
+        if (slot <= SLOT_D) { from = SLOT_W; to = SLOT_D; }
+        else if (slot <= SLOT_RMB) { from = SLOT_LMB; to = SLOT_RMB; }
+        else if (slot == SLOT_SPACE) { from = to = SLOT_SPACE; }
+        else if (slot <= SLOT_SPRINT) { from = SLOT_SNEAK; to = SLOT_SPRINT; }
+        else { from = SLOT_EXTRA0; to = SLOTS - 1; }
+        int widest = 0;
+        for (int s = from; s <= to; s++)
+            if ((visibleMask & (1 << s)) != 0 || s == slot) widest = Math.max(widest, labelWidths[s]);
+        return quantize(ctx, fitScale(areaW, widest));
+    }
+
+    /**
+     * Centres {@code text}'s visible ink (the active font's measured cap/x-height and glyph
+     * bounds) on the area at {@code scale}, with the origin snapped to the device grid so
+     * legends sit exactly centred and stay crisp.
+     */
+    private static void drawLegend(GuiGraphicsExtractor ctx, Font font, net.minecraft.network.chat.Component text,
+                                   float x, float y, float w, float h, float scale, int color) {
+        if (w <= 0 || h <= 0) return;
+        var ink = com.aurora.client.ui.util.AuroraFontRenderer.ink(font,
+                com.aurora.client.ui.util.AuroraFontRenderer.getActiveStyle());
+        float density = com.aurora.client.worldmap.MapMarkers.density(ctx);
+        float tx = x + w / 2f - scale * com.aurora.client.ui.util.AuroraFontRenderer.inkMid(font, text);
+        float ty = y + h / 2f - scale * ink.center();
+        tx = Math.round(tx * density) / density;
+        ty = Math.round(ty * density) / density;
         ctx.pose().pushMatrix();
-        ctx.pose().translate(0f, offset);
-        drawKeyLabel(ctx, font, x, y, w, capH, slot, labelColor);
+        ctx.pose().translate(tx, ty);
+        if (scale != 1f) ctx.pose().scale(scale, scale);
+        com.aurora.client.hud.HudTextPainter.draw(ctx, font, text, 0, 0, color);
         ctx.pose().popMatrix();
     }
 
-    private void drawKeyLabel(GuiGraphicsExtractor ctx, Font font, int x, int y, int w, int h,
-                              int slot, int labelColor) {
-        boolean mouseWithCps = h > CELL - DEPTH && slot >= SLOT_LMB && slot <= SLOT_RMB;
-        int labelY = mouseWithCps ? y + 4 : y + (h - font.lineHeight) / 2 + 1;
-        if (mouseWithCps && slot != SLOT_MMB) {
-            String count = mouseCps.get()[slot == SLOT_LMB ? 0 : 1];
-            float scale = Math.min(0.75f, (w - 6f) / font.width(count));
-            ctx.pose().pushMatrix();
-            ctx.pose().translate(x + (w - font.width(count) * scale) / 2f, y + h - 10);
-            ctx.pose().scale(scale, scale);
-            com.aurora.client.hud.HudTextPainter.draw(ctx,font, textCache.text(SLOTS + 1 + (slot == SLOT_LMB ? 0 : 1), count), 0, 0, labelColor);
-            ctx.pose().popMatrix();
-        }
-
-        String label = labels[slot];
-        if (label == null || label.isEmpty()) return;
-        int lw = labelWidths[slot];
-        if (lw <= 0) return;
-        if (lw <= w - 4) {
-            com.aurora.client.hud.HudTextPainter.draw(ctx,font, textCache.text(slot, label), x + (w - lw) / 2,
-                    labelY, labelColor);
-        } else {
-            // Long bind names shrink to fit instead of overflowing the cell.
-            float s = (w - 4f) / lw;
-            int tx = x + Math.max(2, Math.round((w - lw * s) / 2f));
-            int ty = labelY;
-            ctx.pose().pushMatrix();
-            ctx.pose().translate(tx, ty);
-            ctx.pose().scale(s, s);
-            com.aurora.client.hud.HudTextPainter.draw(ctx,font, textCache.text(slot, label), 0, 0, labelColor);
-            ctx.pose().popMatrix();
-        }
-    }
 
     /**
      * Interruptible ease-out toward the pressed/released state. A new target
