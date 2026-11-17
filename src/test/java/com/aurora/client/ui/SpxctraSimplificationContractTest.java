@@ -41,7 +41,9 @@ class SpxctraSimplificationContractTest {
         String material = read("ui/component/MaterialSurface.java");
         int field = material.indexOf("public static void field(");
         String body = material.substring(field, material.indexOf("}\n", field));
-        assertTrue(body.contains(",0,FIELD_KIND"), "field controls have no outline");
+        // Owner depth pass 2026-11-17 supersedes the flat-field snippet: one raised recipe,
+        // still no full perimeter outline on neutral controls.
+        assertTrue(body.contains("control(g,x,y,w,h,radius,false,disabled,false,hover,0)"));
     }
 
     @Test

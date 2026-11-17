@@ -105,7 +105,7 @@ public final class MaterialSurface {
                                      int base,int over,int down,boolean selected,boolean disabled,boolean primary,
                                      float hover,float press,int kind) {
         if(primary && !disabled && press<1) cached(g,x,y,w,h,radius,0,0,80,true,1-press);
-        int edge=selected ? ThemeManager.color(ThemeToken.ACCENT_MARKER) : 0;
+        int edge=selected && !disabled ? ThemeManager.color(ThemeToken.ACCENT_MARKER) : 0;
         int state=kind+(selected ? 8 : 0);
         // A settled state needs one face blit; stacking both endpoints would double AA coverage.
         if(disabled || hover<1 && press<1)

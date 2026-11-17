@@ -670,8 +670,9 @@ The following sections establish v3 expectations without inventing unresolved pi
 ### 11.2 Button
 
 - **Purpose:** execute a discrete action.
-- **Material:** raised neutral control; stained for the single primary/selected action;
-  semantic destructive treatment for destructive action.
+- **Material (2026-11-17):** opaque raised neutral control with the depth recipe below;
+  primary uses the `ACTION_STRONG` recipe, pressed reverses the light. Ghost and owner-themed
+  actions retain their specified treatment; destructive text/hover colours remain semantic.
 - **Geometry:** theme-controlled rectangular chrome and a compact, usable hit target.
 - **States:** symmetric hover; immediate physical press; persistent focus independent of
   hover; readable, non-interactive disabled state.
@@ -705,17 +706,11 @@ the accent-filled call to action under its hint.
 ### 11.4 ToggleSwitch
 
 - **Purpose:** directly switch one persistent Boolean state.
-- **Material:** opaque token control by current convention; on state uses accent/selected
-  semantics. Track and thumb follow the Corner Radius through the capsule rule. The on track
-  wears the subtle automatic accent gradient (`AccentGradient`: a few degrees of hue either side
-  of the accent, lighter on the left) until 2026-11-14; it is now the flat accent (owner
-  decision: on short fills only the pale end showed, so switches and sliders read as different
-  colours). The ON
-  state has no outline (owner ruling 2026-11-12): the off track's hairline edge fades out as the
-  switch turns on, and keyboard focus is carried by the thumb growing slightly, not by a ring.
-  The OFF track is a filled neutral (`MATERIAL_BORDER_STRONG`) with no outline (2026-11-14): a
-  sunken track with a hairline vanished into dark windows. The slider's unfilled track uses the
-  same token, so "unset" reads the same on both controls.
+- **Material (2026-11-17):** opaque inset `MATERIAL_SUNKEN` OFF track. ON keeps the existing
+  flat accent fill and interpolation; no accent outline. The same-size white thumb gets a
+  top-light/bottom-shade bevel and a one-device-pixel soft shadow. Track/thumb follow the
+  Corner Radius capsule rule, including exactly square geometry at zero. Focus still grows
+  the thumb; the non-interactive represented preview retains its existing appearance.
 - **States:** off/on must be unambiguous; hover, accepted press, focus, and disabled must each
   be defined. Disabled must not look like interactive rest.
 - **Input/accessibility:** clicking its associated row may toggle only when that enlarged hit
@@ -727,9 +722,10 @@ the accent-filled call to action under its hint.
 ### 11.5 Slider
 
 - **Purpose:** choose a value from a continuous or stepped range.
-- **Material:** opaque track and knob; accent fill communicates the chosen portion. Track and
-  knob follow the Corner Radius through the capsule rule. The fill is the flat accent, like the
-  switch track (2026-11-14).
+- **Material (2026-11-17):** opaque inset `MATERIAL_SUNKEN` track and same-size bevelled knob
+  with a one-device-pixel soft shadow. Accent fill behaviour is unchanged (flat accent since
+  2026-11-14); the depth pass adds no AccentGradient changes. Track and knob follow Corner
+  Radius. Value text never scales; numeric entry uses the inset field recipe.
 - **Layout (owner direction, 2026-11-14):** one inline row everywhere: the label on the left,
   then the value right-aligned against a bounded track in the control column. The track is a
   dropdown's width (`SettingRowLayout.TRACK_W`, 84 px), or half that (`SHORT_TRACK_W`) for a
@@ -752,8 +748,12 @@ the accent-filled call to action under its hint.
 ### 11.6 SegmentedControl
 
 - **Purpose:** choose one item from a small mutually exclusive set.
-- **Material:** containing/control treatment centrally derived; selected segment uses stained
-  semantics, unselected segments remain neutral.
+- **Material (2026-11-17):** one opaque inset well behind the pick-one group. Unselected
+  segments are text only (faint neutral hover lift); the selected cell is raised, with a 1 px
+  inner margin, `SELECTION_SOFT` wash and existing thin accent edge. Independent toggle groups
+  (Italic / Underline) instead use separate raised chips with gaps and no divider or shared
+  well. ON chips add the same selected treatment and a leading `check` glyph. Labels, or the
+  check-plus-label group, stay centred and fit the active font and actual segment width.
 - **States:** each segment defines hover, press, selected, focus, and disabled. Selection must
   remain distinguishable without hover.
 - **Input/accessibility:** arrow or equivalent keyboard navigation should be supported by the
@@ -764,8 +764,9 @@ the accent-filled call to action under its hint.
 ### 11.7 Enum/dropdown
 
 - **Purpose:** select one value from a longer or context-dependent set.
-- **Material:** raised control field; expanded popup is an explicit above-dim control/surface
-  when the screen uses a dim layer.
+- **Material (2026-11-17):** opaque raised `MaterialSurface.field` recipe; expanded popup is
+  an explicit above-dim surface. Closed value text is left-aligned with 6 px padding, fitted
+  before the right chevron slot. Expanded options retain their existing alignment.
 - **States:** field hover/press/focus/disabled; expanded state; option hover/focus/selected/
   disabled where applicable.
 - **Input/accessibility:** pointer open/select/outside-dismiss; keyboard open, navigate,
@@ -776,7 +777,8 @@ the accent-filled call to action under its hint.
 ### 11.8 Keybind control
 
 - **Purpose:** display and capture a keyboard/mouse binding.
-- **Material:** raised control; listening/capture mode may use stained active treatment.
+- **Material (2026-11-17):** opaque raised `MaterialSurface.field` recipe; content stays
+  centred. Listening/capture retains its selected wash and thin accent edge.
 - **States:** rest, hover, pressed, listening, focus, and disabled. Listening is not merely
   hover and must remain obvious.
 - **Input/accessibility:** keyboard-operable entry into capture, a documented cancellation
@@ -808,21 +810,16 @@ the accent-filled call to action under its hint.
   select, toggle, or contain child actions.
 - **Material:** role follows semantics. A raised tile is appropriate for an actionable item;
   a flat card inside an existing material container is valid when another layer adds no
-  hierarchy. Selected/on treatment uses stain or a compact accent indicator as appropriate.
-- **Feature on/off (2026-11-14):** a feature tile or list row being *enabled* is a state, not
-  a selection. Every feature tile and row keeps the neutral face; the icon alone carries the
-  state: the accent when on, a neutral grey at secondary-text luminance when off (the cool
-  secondary tone read as a faint accent; a per-module accent override still applies). The name stays primary in both states (an off feature is available, not disabled).
-  Every tile and row carries a faint neutral hairline (secondary text at alpha 0x22) that
-  strengthens to 0x99 on hover: the translucent face alone left its edges unreadable, so a
-  bottom row met the window edge as if cut off.
-  The settings chevron appears top-right on a hovered or focused tile, at the trailing end of a
-  row. The tile or row stays the control. Selection treatment (wash + accent edge) stays
-  reserved for the selected tab, page or item.
-  History, all 2026-11-14: a status dot read as a notification badge; a miniature switch
-  mimicked a control the tile does not have; a corner On/Off pill unbalanced the centred card;
-  a symmetric bottom accent bar read as a progress bar. The owner then retired separate
-  indicators in favour of the icon colour (`docs/reports/2026-11-14-ui-polish-overhaul.md`).
+  hierarchy. Selected peer items use the shared selection treatment; feature state follows
+  the explicit elevation rule below.
+- **Feature on/off (owner ruling, 2026-11-17):** elevation is the primary state cue, including
+  in greyscale. ON is an opaque lit raised face with a shallow black soft shadow; OFF is an
+  opaque flat `MATERIAL_RAISED` face at -3 HSL lightness points. The icon remains accent on /
+  secondary grey off, and names stay primary in both states. Hover lifts either face by +2
+  lightness points only; there is no resting/hover perimeter outline, accent wash/edge or
+  separate indicator (dot, switch, pill, bar, badge or state text). The settings chevron stays
+  hover/focus-only: top-right on tiles, trailing on rows. Layout, wrapping and hit behaviour
+  are unchanged. This supersedes the 2026-11-14 icon-only state cue and tile hairlines.
 - **List rows:** icon, then the name left-aligned on the icon's axis, then trailing state. A
   name is never centred in a row whose icon is pinned left.
 - **States:** actionable cards use the button-like contract. Hover, press, selection, focus,
@@ -857,6 +854,9 @@ in its label row's trailing value slot instead, above its Add control.
 - **Motion:** canonical symmetric hover; selection transition remains short and reversible.
 
 ### 11.12 Text field
+
+Non-search fields, including numeric entry, are opaque inset wells in the unified path
+(2026-11-17). The search field keeps its existing glass and focus/caret treatment.
 
 - **Purpose:** enter or edit search, rename, hex, numeric, or ordinary text.
 - **Material:** glass is the canonical Aurora input chrome for normal text-entry fields, not
@@ -1508,3 +1508,58 @@ rulings it supersedes.
   the waypoint group chip only exists while a group is chosen.
 - **Names** — "Toggle Sprint/Sneak" is "Sprint & Sneak" (owner decision), so every grid label
   fits one line.
+
+
+## Depth pass — 2026-11-17
+
+The owner explicitly approves purposeful vertical gradients and shallow bevel depth to make
+state and hierarchy clearer. This supersedes the 2026-10-30 “one face for neutral controls:
+no outline, no shadow” / flat-child restrictions where they conflict, the 2026-11-14 icon-only
+feature state and tile hairlines, and the former filled OFF tracks. The title screen, HUD
+editor, ghost Reset / Done positions, sidebar selection, 336×288 window, 80×80 tiles, gaps,
+columns and row heights are untouched. Done keeps its primary role, with the primary depth
+recipe. Settings chevrons remain hover/focus-only (2026-11-14 owner ruling).
+
+One light comes from above. Face ramps change **absolute HSL lightness points**, preserving
+the token's hue, saturation and alpha; black/white edge ink composites source-atop inside the
+existing shape coverage. Bevel lines are one device pixel and follow rounded silhouettes;
+SQUARE faces remain exactly square. Faces, lines and shadows are captured in `UiLayerCache`
+rasters, never the native gradient shader's flat capture fallback. Hover/pressed endpoints
+are cached separately and blended with texture alpha. New gradients never touch text/icons,
+section headings, sidebar items, scrollbars, focus rings, tooltips, search glass or represented
+data (swatches, crosshair pixels and checkerboard).
+
+| Role | Face top → bottom (HSL points) | Top line | Bottom line | Shadow |
+|---|---|---|---|---|
+| Raised control | `MATERIAL_RAISED` +5 → -3 | white 10% | black 22% | none |
+| Raised hover | `MATERIAL_HOVER` +5 → -3 | white 12% | black 22% | none |
+| Pressed | `MATERIAL_PRESSED` -3 → +2 | black 20% inner | none | none |
+| Inset: track / well / numeric field | `MATERIAL_SUNKEN` -3 → +2 | black 24% inner | white 6% | none |
+| Primary: Done / primary action | `ACTION_STRONG` +6 → -4 | white 16% | black 22% | existing shadow retained |
+| Feature tile / list row ON | opaque `MATERIAL_RAISED` +5 → -3 | white 10% | black 22% | 0/+1 device px, 2 device px soft, black 14% |
+| Feature tile / list row OFF | opaque `MATERIAL_RAISED` -3 flat | none | none | none |
+| Tile / row hover, either state | same face recipe +2 | unchanged | unchanged | unchanged |
+| Disabled | flat `MATERIAL_PANEL` | none | none | none |
+| Selected segment / peer / ON chip | raised recipe + `SELECTION_SOFT` wash + existing thin accent edge | raised | raised | none |
+| Slider / switch knob | existing face colour, no face ramp | white 10% | black 22% | 0/+1 device px, 1 device px soft, black 14% |
+
+Tiles and module rows have opaque faces. The window remains glass; Background Opacity is
+still only the `WINDOW_FILL` alpha. Its body has no gradient. The `WINDOW_OUTLINE` draw uses
+**55% of that outline token's alpha**, a fixed constant independent of window opacity.
+Controls, toggles, sliders and non-search fields remain opaque. Preview **wells** may use
+inset lighting; the represented data painted inside them is unchanged.
+
+`MaterialLighting` in core owns the pure colour/lightness math. `UiLayerCache.lightVertical`,
+`edgeLine` and `softShadow` apply it to captured device pixels before upload; legacy RGB
+`shadeVertical` remains only to preserve pre-existing owner-themed cards/popups. ON module
+shadows are a separate cached raster behind both hover endpoints, avoiding doubled shadow
+opacity while blending. Knob lighting uses the same cache with a soft shadow. Template keys
+include recipe/state, geometry and radius; version stamps include theme generation, scale,
+fill and border. Existing screen/resize/radius invalidation bounds cache lifetime. No new
+callbacks, dependencies or frameworks are introduced.
+
+Implementation verification is offline: colour and NativeImage raster tests, source contracts,
+Python tooling tests and the three-line parity build. The parent owns the required live/factory
+ROUND/SQUARE screenshots, overflow review at small/large viewports, greyscale ON/OFF review,
+and `RenderUtil.fillsSubmitted()` / CPU probes. Runtime fills and CPU cost are unmeasured until
+those probes run; a headless test only verifies the raster passes submit zero GUI fills.
