@@ -116,14 +116,17 @@ public class ToggleSwitch extends Widget {
         // the default radius, square at 0 (owner ruling 2026-11-12).
         var corners=com.aurora.client.theme.ThemeManager.current().roundness();
         float r=corners.capsule(h);
-        RenderUtil.drawRoundedRectGradientAA(g,x,y,w,h,r,from,to,true);
+        if(previewMode) RenderUtil.drawRoundedRectGradientAA(g,x,y,w,h,r,from,to,true);
+        else MaterialSurface.switchTrack(g,x,y,w,h,r,t,hover,disabled);
         // No outlines in either state (owner ruling 2026-11-12 for ON; the filled OFF track
         // reads on its own since 2026-11-14).
         // Keyboard focus is carried by scale (design rule 9), not a ring: the
         // thumb grows by FOCUS_GROW around its own center.
         float grow=focusedVisual && !disabled ? FOCUS_GROW : 0f;
         float d=h-5+grow, tx=x+2.5f+(w-h)*t-grow/2f;
-        RenderUtil.drawRoundedRectAA(g,tx,y+2.5f-grow/2f,d,d,corners.capsule(d),disabled ? MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED) : 0xffffffff);
+        int thumb=disabled ? MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED) : 0xffffffff;
+        if(previewMode) RenderUtil.drawRoundedRectAA(g,tx,y+2.5f-grow/2f,d,d,corners.capsule(d),thumb);
+        else MaterialSurface.knob(g,tx,y+2.5f-grow/2f,d,corners.capsule(d),thumb,disabled);
     }
 
     /** §8.3 symmetric hover — 140 ms enter, 140 ms exit, continuous reversal. */

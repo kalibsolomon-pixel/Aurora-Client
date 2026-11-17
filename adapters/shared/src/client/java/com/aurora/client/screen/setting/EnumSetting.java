@@ -243,8 +243,7 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
 
     /** Truncate long values with an ellipsis (matches the mod's plainSubstrByWidth convention). */
     private static String fit(Font tr, String text, int maxW) {
-        if (tr.width(text) <= maxW) return text;
-        return tr.plainSubstrByWidth(text, maxW - tr.width("...")) + "...";
+        return com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(tr,text,Math.max(0,maxW),0);
     }
 
     @Override public int baseHeight() {
@@ -296,7 +295,7 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
         E current = getter.get();
         String raw = current == null ? "—" : displayName(current);
         int arrowReserve = (expanded ? cachedUpArrowWidth : cachedDownArrowWidth) + 8;
-        String name = fit(tr, raw, BTN_W - arrowReserve);
+        String name = fit(tr, raw, BTN_W - arrowReserve - (MaterialSurface.unified() ? 6 : 0));
         // Value equality, not reference equality — fit() builds a fresh
         // trimmed string every frame, so != never hit and the width was
         // re-measured per frame.
@@ -370,8 +369,8 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
                     ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
         }
 
-        // Draw the option name centered within the space left of the arrow.
-        int textX = btnX + (BTN_W - arrowReserve - cachedNameW) / 2;
+        // Unified values start 6 px inside the face; the arrow's slot remains reserved.
+        int textX = MaterialSurface.unified() ? btnX + 6 : btnX + (BTN_W - arrowReserve - cachedNameW) / 2;
         int textY = btnY + (BTN_H - tr.lineHeight) / 2 + 1;
         ctx.text(tr, name, textX, textY, textColor, false);
 

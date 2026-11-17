@@ -60,7 +60,7 @@ public class RoundedPanel extends Widget {
 
         if (!glassActive || MaterialSurface.unified()) {
             RenderUtil.drawRoundedRectAA(g, x, y, w, h, radius, MaterialSurface.color(fillToken));
-            RenderUtil.drawRoundedOutlineAA(g, x, y, w, h, radius, 1.0f, MaterialSurface.color(ThemeToken.WINDOW_OUTLINE));
+            RenderUtil.drawRoundedOutlineAA(g, x, y, w, h, radius, 1.0f, MaterialSurface.unified() ? MaterialSurface.windowOutline() : MaterialSurface.color(ThemeToken.WINDOW_OUTLINE));
         }
     }
 }

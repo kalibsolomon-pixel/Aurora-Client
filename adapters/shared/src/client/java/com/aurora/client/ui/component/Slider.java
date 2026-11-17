@@ -145,6 +145,7 @@ public class Slider extends Widget {
 
     @Override
     public void renderShapes(GuiGraphicsExtractor g, float x, float y, float w, float h) {
+        if (MaterialSurface.unified()) return; // cached inset is blitted in overlay, outside parent capture
         float ty = y + h - 12f;
         RenderUtil.drawRoundedRectAA(g, x, ty, w, TRACK_H, trackRadius(), trackBase());
     }
@@ -152,6 +153,7 @@ public class Slider extends Widget {
     @Override
     public void renderOverlay(GuiGraphicsExtractor g, float x, float y, float w, float h, int mouseX, int mouseY) {
         float ty = y + h - 12f;
+        if (MaterialSurface.unified()) MaterialSurface.inset(g,x,ty,w,TRACK_H,trackRadius(),disabled);
         // Dragging keeps the hover channel alive outside the bounds — the
         // pointer owning an active manipulation must not lose feedback
         // because it crossed a geometry edge (pre-existing, deliberate).
@@ -190,7 +192,9 @@ public class Slider extends Widget {
                     MaterialSurface.outsetRadius(trackRadius(), 3f), 1.0f,
                     ThemeManager.withAlpha(MaterialSurface.color(ThemeToken.ACCENT), 0x99));
         }
-        RenderUtil.drawRoundedRectAA(g, knobX - knobR, knobY - knobR, knobR * 2f, knobR * 2f,
+        if (MaterialSurface.unified()) MaterialSurface.knob(g,knobX-knobR,knobY-knobR,knobR*2,
+                ThemeManager.current().roundness().capsule(knobR*2),knob(),disabled);
+        else RenderUtil.drawRoundedRectAA(g, knobX - knobR, knobY - knobR, knobR * 2f, knobR * 2f,
                 ThemeManager.current().roundness().capsule(knobR * 2f), knob());
     }
 

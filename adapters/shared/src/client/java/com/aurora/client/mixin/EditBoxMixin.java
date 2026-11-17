@@ -252,7 +252,8 @@ public abstract class EditBoxMixin implements GlassEditBox {
     public void aurora$renderGlassPass(GuiGraphicsExtractor ctx) {
         EditBox self = (EditBox) (Object) this;
         aurora$glassPassFrame = GlassSurface.frame();
-        aurora$glassPassDrew = self.visible && aurora$themedScreen(Minecraft.getInstance())
+        aurora$glassPassDrew = !(MaterialSurface.unified() && !aurora$search())
+                && self.visible && aurora$themedScreen(Minecraft.getInstance())
                 && GlassSurface.control(ctx, self.getX(), self.getY(), self.getWidth(), self.getHeight(),
                         ThemeManager.current().roundness().radiusSmall());
     }
@@ -289,10 +290,13 @@ public abstract class EditBoxMixin implements GlassEditBox {
             borderCol=MaterialSurface.color(ThemeToken.BORDER_HOVER);
         }
         float radius = ThemeManager.current().roundness().radiusSmall();
-        boolean glassOk = aurora$glassPassFrame == GlassSurface.frame()
+        boolean opaqueInset = MaterialSurface.unified() && !aurora$search();
+        boolean glassOk = !opaqueInset && (aurora$glassPassFrame == GlassSurface.frame()
                 ? aurora$glassPassDrew
-                : GlassSurface.control(ctx, x, y, w, h, radius);
-        if (glassOk) {
+                : GlassSurface.control(ctx, x, y, w, h, radius));
+        if(opaqueInset) {
+            MaterialSurface.inset(ctx,x,y,w,h,radius,!self.isActive());
+        } else if (glassOk) {
             // Focus ring on glass — a translucent hairline that brightens
             // the rim without stacking a second surface.
             if (focused && !MaterialSurface.unified()) {

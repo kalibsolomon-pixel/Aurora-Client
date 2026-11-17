@@ -73,6 +73,10 @@ public final class MaterialSurface {
     }
 
     /** Depth pass, owner ruling 2026-11-17. HSL points; edge ink is source-atop. */
+    private static final float DEPTH_SHADOW_OFFSET = 1f, MODULE_SHADOW_SOFTNESS = 2f,
+            KNOB_SHADOW_SOFTNESS = 1f, DEPTH_SHADOW_ALPHA = .14f;
+    private static final float PEER_HOVER_ALPHA = .16f, SWITCH_HOVER_ALPHA = .08f;
+
     private enum Light {
         FLAT(0,0,0,0), RAISED(5,-3,0x1affffff,0x38000000),
         HOVER(5,-3,0x1fffffff,0x38000000), PRESSED(-3,2,0x33000000,0),
@@ -100,18 +104,29 @@ public final class MaterialSurface {
     public static void controlColors(GuiGraphicsExtractor g,float x,float y,float w,float h,float radius,
                                      int base,int over,int down,boolean selected,boolean disabled,boolean primary,
                                      float hover,float press,int kind) {
-        if(primary) cached(g,x,y,w,h,radius,0,0,80,true);
+        if(primary && !disabled && press<1) cached(g,x,y,w,h,radius,0,0,80,true,1-press);
         int edge=selected ? ThemeManager.color(ThemeToken.ACCENT_MARKER) : 0;
         int state=kind+(selected ? 8 : 0);
-        depth(g,x,y,w,h,radius,base,edge,state,disabled ? Light.FLAT : primary ? Light.PRIMARY : Light.RAISED,1);
+        // A settled state needs one face blit; stacking both endpoints would double AA coverage.
+        if(disabled || hover<1 && press<1)
+            depth(g,x,y,w,h,radius,base,edge,state,disabled ? Light.FLAT : primary ? Light.PRIMARY : Light.RAISED,1);
         if(disabled) return;
-        if(hover>0) depth(g,x,y,w,h,radius,over,edge,state+1,primary ? Light.PRIMARY : Light.HOVER,Math.min(1,hover));
+        if(hover>0 && press<1) depth(g,x,y,w,h,radius,over,edge,state+1,primary ? Light.PRIMARY : Light.HOVER,Math.min(1,hover));
         if(press>0) depth(g,x,y,w,h,radius,down,edge,state+2,Light.PRESSED,Math.min(1,press));
     }
 
     public static void inset(GuiGraphicsExtractor g,float x,float y,float w,float h,float radius,boolean disabled) {
         depth(g,x,y,w,h,radius,ThemeManager.color(disabled ? ThemeToken.MATERIAL_PANEL : ThemeToken.MATERIAL_SUNKEN),
                 0,240,disabled ? Light.FLAT : Light.INSET,1);
+    }
+
+    /** OFF inset and the existing flat accent ON fill, with cached hover wash endpoints. */
+    public static void switchTrack(GuiGraphicsExtractor g,float x,float y,float w,float h,float radius,
+                                   float on,float hover,boolean disabled) {
+        if(disabled || on<1) inset(g,x,y,w,h,radius,disabled);
+        if(disabled) return;
+        if(on>0) depth(g,x,y,w,h,radius,color(ThemeToken.ACCENT),0,280,Light.FLAT,on);
+        if(hover>0) depth(g,x,y,w,h,radius,color(ThemeToken.ON_BACKGROUND),0,281,Light.FLAT,SWITCH_HOVER_ALPHA*hover);
     }
 
     public static void knob(GuiGraphicsExtractor g,float x,float y,float size,float radius,int fill,boolean disabled) {
@@ -121,13 +136,13 @@ public final class MaterialSurface {
     public static void module(GuiGraphicsExtractor g,float x,float y,float w,float h,float radius,boolean on,float hover) {
         if(on) cached(g,x,y,w,h,radius,0,0,262,false,1,Light.MODULE_SHADOW);
         int face=ThemeManager.withAlpha(ThemeManager.color(ThemeToken.MATERIAL_RAISED),255);
-        depth(g,x,y,w,h,radius,face,0,260,on ? Light.MODULE_ON : Light.MODULE_OFF,1);
+        if(hover<1) depth(g,x,y,w,h,radius,face,0,260,on ? Light.MODULE_ON : Light.MODULE_OFF,1);
         if(hover>0) depth(g,x,y,w,h,radius,face,0,261,on ? Light.MODULE_ON_HOVER : Light.MODULE_OFF_HOVER,Math.min(1,hover));
     }
 
     /** Text-only peer hover, independent of the sidebar's unchanged treatment. */
     public static void peerHover(GuiGraphicsExtractor g,float x,float y,float w,float h,float radius,float hover) {
-        if(hover>0) depth(g,x,y,w,h,radius,ThemeManager.color(ThemeToken.MATERIAL_HOVER),0,270,Light.FLAT,.16f*Math.min(1,hover));
+        if(hover>0) depth(g,x,y,w,h,radius,ThemeManager.color(ThemeToken.MATERIAL_HOVER),0,270,Light.FLAT,PEER_HOVER_ALPHA*Math.min(1,hover));
     }
 
     private static void depth(GuiGraphicsExtractor g,float x,float y,float w,float h,float radius,
@@ -195,9 +210,6 @@ public final class MaterialSurface {
         control(g,x,y,w,h,radius,false,disabled,false,hover,0);
     }
 
-    /** Cache kind family reserved for {@link #field}. */
-    static final int FIELD_KIND = 112;
-
     // Primitive packed geometry key: no record/boxing/lambda allocation per control per frame.
     private static final Long2ObjectOpenHashMap<UiLayerCache> TEMPLATES = new Long2ObjectOpenHashMap<>();
     private static net.minecraft.client.gui.screens.Screen templateOwner;
@@ -260,6 +272,9 @@ public final class MaterialSurface {
                 if(shadow) AuroraShapes.dropShadow(g,pad,pad+3,width,height,round,.25f);
                 if(fill!=0) {
                     RenderUtil.drawRoundedRectAA(g,pad,pad,w,h,radius,fill);
+                    // Preserve pre-pass owner-themed cards and tooltips; window bodies stay flat.
+                    if(shadow && kind!=120 && light==Light.FLAT)
+                        cache.shadeVertical(pad*scale,pad*scale,width*scale,height*scale,3);
                     cache.lightVertical(pad*scale,pad*scale,width*scale,height*scale,light.top,light.bottom);
                     cache.edgeLine(pad*scale,pad*scale,width*scale,height*scale,true,light.topInk);
                     cache.edgeLine(pad*scale,pad*scale,width*scale,height*scale,false,light.bottomInk);
@@ -273,7 +288,7 @@ public final class MaterialSurface {
                         kind==2 || kind==102 || light!=Light.FLAT ? selectedEdge() : 1,border);
                 if(light==Light.MODULE_SHADOW || light==Light.KNOB)
                     cache.softShadow(pad*scale,pad*scale,width*scale,height*scale,radius*scale,
-                            1,light==Light.KNOB ? 1 : 2,.14f);
+                            DEPTH_SHADOW_OFFSET,light==Light.KNOB ? KNOB_SHADOW_SOFTNESS : MODULE_SHADOW_SOFTNESS,DEPTH_SHADOW_ALPHA);
             } finally { RenderUtil.endCapture(previous); }
             cache.commit(version);
         }

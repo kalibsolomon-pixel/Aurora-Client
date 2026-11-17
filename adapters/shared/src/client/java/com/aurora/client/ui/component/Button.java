@@ -126,15 +126,12 @@ public class Button extends Widget {
         int fill=ThemeManager.color(primary ? ThemeToken.ACTION_STRONG : ThemeToken.MATERIAL_RAISED);
         int over=ThemeManager.color(primary ? ThemeToken.ACTION_HOVER : ThemeToken.MATERIAL_HOVER);
         int down=ThemeManager.color(primary ? ThemeToken.ACTION_PRESSED : ThemeToken.MATERIAL_PRESSED);
-        // Neutral action cards stay edgeless (owner ruling, UNIFIED_THEME_PILOT.md).
+        // Owner-themed actions retain their original treatment; plain controls use baked depth.
         int edge=primary ? MaterialSurface.color(ThemeToken.BORDER_HOVER) : 0;
         int text=ThemeManager.color(primary ? ThemeToken.ON_ACTION : ThemeToken.MATERIAL_TEXT);
         Theming look=primary || destructive ? Theming.NONE : theming;
         if(look==Theming.BACKGROUND || look==Theming.BACKGROUND_ACCENT) fill=ThemeManager.color(ThemeToken.MATERIAL_PANEL);
-        // Every plain neutral/destructive action wears the field face of MaterialSurface#field:
-        // opaque raised tone, no edge, no shadow — legible at any window opacity and identical
-        // to the dropdowns/keybinds beside it (Spxctra 2026-10-30). Without a per-button blur a
-        // window-opacity face vanished into its window.
+        // Plain actions share the opaque raised field recipe (owner depth pass 2026-11-17).
         boolean asField=!primary && look==Theming.NONE;
         if(look!=Theming.NONE) edge=look==Theming.BACKGROUND_ACCENT ? ThemeManager.color(ThemeToken.ACCENT_MARKER)
                 : MaterialSurface.color(ThemeToken.BORDER_HOVER); // the window edge family, one step lighter so it reads on a card
@@ -149,6 +146,7 @@ public class Button extends Widget {
             over=error;down=error;
             text=AuroraAnim.lerpArgb(AuroraAnim.lerpArgb(error,0xffffffff,.55f),0xff101116,Math.max(hover,press));
         }
+        int restFill=fill;
         fill=AuroraAnim.lerpArgb(AuroraAnim.lerpArgb(fill,over,hover),down,press);
         if(disabled) { fill=AuroraAnim.lerpArgb(fill,ThemeManager.color(ThemeToken.MATERIAL_PANEL),.65f);text=MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED); }
         int windowAlpha=ThemeManager.color(ThemeToken.WINDOW_FILL) >>> 24;
@@ -164,7 +162,11 @@ public class Button extends Widget {
         }
         float py=y; // Card, blur mask, focus and label share one stationary geometry.
         int kind=(destructive ? 30 : primary ? 20 : asField ? 170 : ghost ? 190 : 130+10*look.ordinal())+(disabled ? 4 : hover==1 ? 1 : 0);
-        if((hover==0 || hover==1) && press==0)
+        if(asField || primary) {
+            MaterialSurface.controlColors(g,x,py,w,h,r,
+                    disabled ? ThemeManager.color(ThemeToken.MATERIAL_PANEL) : restFill,over,down,
+                    false,disabled,primary,hover,press,destructive ? 300 : primary ? 320 : 340);
+        } else if((hover==0 || hover==1) && press==0)
             MaterialSurface.cached(g,x,py,w,h,r,fill,edge,kind,!asField && !ghost);
         else {
             if(!asField && !ghost) MaterialSurface.cached(g,x,py,w,h,r,0,0,80,true);

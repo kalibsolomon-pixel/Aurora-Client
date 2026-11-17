@@ -53,8 +53,11 @@ public class CrosshairPreviewSetting extends FeatureSetting {
     private static void drawWell(GuiGraphicsExtractor ctx, int x, int y, AuroraConfig.CrosshairStyle style, int size,
                                  int thick, int gap, int color, boolean[] pixels, int w, int h) {
         float r = ThemeManager.current().roundness().radiusSmall();
-        RenderUtil.drawRoundedRectAA(ctx, x, y, WELL, WELL, r, ThemeManager.color(ThemeToken.MATERIAL_SUNKEN));
-        RenderUtil.drawRoundedOutlineAA(ctx, x, y, WELL, WELL, r, 1.0f, ThemeManager.color(ThemeToken.MATERIAL_BORDER_STRONG));
+        if(MaterialSurface.unified()) MaterialSurface.inset(ctx,x,y,WELL,WELL,r,false);
+        else {
+            RenderUtil.drawRoundedRectAA(ctx, x, y, WELL, WELL, r, ThemeManager.color(ThemeToken.MATERIAL_SUNKEN));
+            RenderUtil.drawRoundedOutlineAA(ctx, x, y, WELL, WELL, r, 1.0f, ThemeManager.color(ThemeToken.MATERIAL_BORDER_STRONG));
+        }
         ctx.enableScissor(x + 1, y + 1, x + WELL - 1, y + WELL - 1);
         ctx.pose().pushMatrix();
         // Drawn at a whole-number zoom about the well's centre: small shapes step up to fill about
