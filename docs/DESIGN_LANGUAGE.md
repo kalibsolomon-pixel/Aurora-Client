@@ -696,7 +696,11 @@ the accent-filled call to action under its hint.
 ### 11.3 Icon action/button
 
 - **Purpose:** a compact discrete action represented primarily by an icon.
-- **Material:** same semantic choices as Button; it is not exempt because it lacks text.
+- **Material (2026-11-17):** on unified screens an icon action's face is the raised control
+  recipe — rest/hover through the cached-state blend, the pressed recipe while pressed, muted
+  flat when disabled — with its glyph centred through the shared box-centring helper so it
+  shares the text axis. Bare glyph actions on a host surface stay the host's. The title
+  screen's top bar keeps its existing treatment (depth-pass exclusion).
 - **Geometry:** consistent hit target with optically centered shared icon.
 - **States/services:** full button-like contract.
 - **Accessibility:** always has a non-glyph accessible label; tooltip when the visible icon is
@@ -823,6 +827,12 @@ the accent-filled call to action under its hint.
   are unchanged. This supersedes the 2026-11-14 icon-only state cue and tile hairlines.
 - **List rows:** icon, then the name left-aligned on the icon's axis, then trailing state. A
   name is never centred in a row whose icon is pinned left.
+- **Editor/list cards (owner report, 2026-11-17):** per-item editor cards (Item Scale's rows,
+  the per-effect alert rows) and browser result cards are raised opaque cards — the raised
+  control recipe, hover through the cached-state blend — with no resting outline: the bevel
+  defines the edge. Their trailing glyph actions centre on the card face through the shared
+  helper and the text block stays left-aligned. Non-unified screens keep the translucent band
+  and hover outline.
 - **States:** actionable cards use the button-like contract. Hover, press, selection, focus,
   and disabled are distinct from child-action states.
 - **Input/accessibility:** the card's principal action and each child action must have
@@ -856,8 +866,12 @@ in its label row's trailing value slot instead, above its Add control.
 
 ### 11.12 Text field
 
-Non-search fields, including numeric entry, are opaque inset wells in the unified path
-(2026-11-17). The search field keeps its existing glass and focus/caret treatment.
+Every text-entry field — search, rename, hex, numeric and ordinary entry — is an opaque
+inset well on unified screens (search joined the recipe by the owner report, 2026-11-17: the
+search bars had stayed flat translucent glass while every other field was depressed). The
+inset bevel defines the edge, so no resting outline draws; focus remains the caret (plus the
+selection fill below). Search fields keep their trailing magnifier, text window and hooks.
+Non-unified screens keep the raised-glass / flat-fill contract.
 
 - **Purpose:** enter or edit search, rename, hex, numeric, or ordinary text.
 - **Material:** glass is the canonical Aurora input chrome for normal text-entry fields, not
@@ -1595,8 +1609,10 @@ owner themes. Geometry and icon colour remain the only two tile state cues.
 Tiles and module rows have opaque faces. The window remains glass; Background Opacity is
 still only the `WINDOW_FILL` alpha. Its body has no gradient. The `WINDOW_OUTLINE` draw uses
 **55% of that outline token's alpha**, a fixed constant independent of window opacity.
-Controls, toggles, sliders and non-search fields remain opaque. Preview **wells** may use
-inset lighting; the represented data painted inside them is unchanged.
+Controls, toggles, sliders and fields — search included (owner report, 2026-11-17, extending
+this pass's coverage) — remain opaque. Preview **wells** may use
+inset lighting; the represented data painted inside them is unchanged. Per-item editor cards
+and browser result cards are raised opaque cards (§11.10).
 
 For a custom Background Color, only `MATERIAL_RAISED`, `MATERIAL_HOVER` and
 `MATERIAL_PRESSED` cap HSL saturation at `min(backgroundSaturation * .35, .10)`, preserving
@@ -1621,8 +1637,9 @@ current frame is additional to the retention cap. Reusing a template never mutat
 No new callbacks,
 dependencies or frameworks are introduced. No new per-frame lighting math or static GUI
 fills; the control shadow adds a cached blit. Text, icons, headings, sidebar, scrollbars,
-focus rings, tooltips, search glass and represented swatch/crosshair/checkerboard data retain
-their existing treatment.
+focus rings, tooltips, represented swatch/crosshair/checkerboard data and the title screen /
+HUD editor retain their existing treatment; search fields moved to the inset recipe with the
+2026-11-17 owner report (superseding this pass's earlier "search glass" exclusion).
 
 The bake uses direct ABGR buffer access. A conservative plateau cross skips SDF/normal/
 specular work; the remaining band and corner pixels evaluate the original equations once.

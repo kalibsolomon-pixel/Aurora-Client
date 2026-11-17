@@ -67,15 +67,53 @@ class DepthPassContractTest {
 
     @Test void fieldsAndKnobsPreserveSearchAndDataBoundaries() throws Exception {
         String edit=read("mixin/EditBoxMixin.java"), slider=read("ui/component/Slider.java");
-        assertTrue(edit.contains("boolean opaqueInset = MaterialSurface.unified() && !aurora$search()"));
+        // Owner report 2026-11-17: search fields join the inset recipe — the
+        // exclusion is gone; the magnifier, text window, caret and selection stay.
+        assertTrue(edit.contains("boolean opaqueInset = MaterialSurface.unified();"));
+        assertFalse(edit.contains("!aurora$search()"));
         assertTrue(edit.contains("boolean glassOk = !opaqueInset"));
         assertTrue(edit.contains("MaterialSurface.inset(ctx,x,y,w,h,radius,!self.isActive())"));
+        // The inset bevel defines the edge; the resting outline is legacy-flat only.
+        assertTrue(edit.contains("if (!glassOk && !opaqueInset)"));
+        assertTrue(edit.contains("IconCatalog.glyph(\"search\")"));
         assertTrue(slider.contains("MaterialSurface.knob(g,knobX-knobR,knobY-knobR,knobR*2"));
         assertTrue(slider.contains("MaterialSurface.sliderTrack(g,x,ty,w,TRACK_H,trackRadius(),disabled)"));
         assertTrue(read("ui/component/ToggleSwitch.java").contains("MaterialSurface.switchTrack(g,x,y,w,h,r,t,hover,disabled)"));
         // Centred stays centred (owner rule): the value centres left of the chevron slot.
         assertTrue(read("screen/setting/EnumSetting.java").contains("AuroraFontRenderer.drawCentered(ctx, tr, name, btnX + textAreaW / 2f, textY, textColor)"));
     }
+
+    /** Owner report 2026-11-17: icon actions and list/editor cards join the depth recipes. */
+    @Test void iconActionsAndEditorCardsUseRaisedRecipes() throws Exception {
+        String iconAction=read("ui/component/IconAction.java"),
+                itemScale=read("screen/setting/ItemScaleSetting.java"),
+                effectRow=read("screen/setting/EffectRowSetting.java"),
+                effectList=read("screen/setting/EffectExpiryListSetting.java");
+        // The icon action's face is the raised control recipe; the press pulse drives the pressed recipe.
+        assertTrue(iconAction.contains("MaterialSurface.control(g, x, y, w, h, radius, false, !action.enabled(), false,"));
+        assertTrue(iconAction.contains("hoverT(), materialPressT)"));
+        // The glyph centres through the shared box-centring helper.
+        assertTrue(iconAction.contains("MaterialIconRenderer.drawInBox(g, font, glyph.get(), x, y, w, h, em, color)"));
+        // Item Scale's "+" and per-item cards; EffectExpiry's "+"; per-effect rows.
+        assertTrue(itemScale.contains("addAction.paintFace(ctx, plusX, plusY, 24, 20, plusR)"));
+        assertTrue(itemScale.contains("MaterialSurface.control(ctx, x + 10, rowY, width - 20, ITEM_ROW_H,"));
+        assertTrue(effectList.contains("addAction.paintFace(ctx, plusX, plusY, 24, 20, plusR)"));
+        assertTrue(effectRow.contains("MaterialSurface.control(ctx, x + 10, y, width - 20, ROW_H,"));
+        // The press feedback is armed on activation.
+        assertTrue(itemScale.contains("addAction.pressPulse()"));
+        assertTrue(effectList.contains("addAction.pressPulse()"));
+        // Legacy (non-unified) looks are retained verbatim beside the recipes.
+        assertTrue(effectRow.contains("AuroraShapes.panel(ctx, x + 10, y, width - 20, ROW_H,"));
+    }
+
+    /** Owner report 2026-11-17: the pack browser's result cards are raised opaque cards. */
+    @Test void packBrowserResultCardsAreRaisedOpaqueCards() throws Exception {
+        String packs=read("screen/ResourcePackBrowserScreen.java");
+        assertTrue(packs.contains("MaterialSurface.control(g, x, y, cardW(), CARD_H, AuroraTheme.RADIUS, false, false, false, t, 0)"));
+        // The legacy flat/template path survives for non-unified screens.
+        assertTrue(packs.contains("ensureCardTemplate(g).blitAt(g, x, y, cardW(), CARD_H)"));
+    }
+
     @Test void councilRecipesKeepInsetDomePressedAndPrimaryPoliciesDistinct() throws Exception {
         String material=read("ui/component/MaterialSurface.java");
         assertTrue(material.contains("INSET(1,5,Profile.INSET), TRACK(3,7,Profile.INSET)"));

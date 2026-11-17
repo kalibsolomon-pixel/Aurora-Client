@@ -1211,20 +1211,28 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         // renderPanel the captured blur was 100% occluded — pure wasted
         // capture→blur→readback per card, and a full grid of glass cards +
         // install buttons could exceed the 24-panel output pool (glass/flat
-        // flicker). The flat look is the exact fill + hover outline this
-        // screen always drew on renderer decline, so nothing changes
-        // visually. Glass on this screen lives on the sidebar, detail modal,
+        // flicker). Glass on this screen lives on the sidebar, detail modal,
         // active category tab and the shared-painter buttons.
+        //
+        // Depth pass (owner report 2026-11-17): on unified screens the card
+        // is the raised opaque control recipe — list cards are raised cards;
+        // the 2026-09-08 flat ruling concerned per-card BLUR CAPTURES, which
+        // the baked material templates never issue (rest = cached shadow +
+        // face blits, no per-frame fills). The old resting outline is gone:
+        // the bevel defines the edge. The thumbnail inset + frame below is
+        // represented-data chrome and keeps its own treatment.
         //
         // P2 (same audit): at rest (hover t == 0) every card's static shape
         // layer — body fill + outline, thumbnail inset + frame — is IDENTICAL,
-        // so it comes from a one-shot template raster blitted per card (one
-        // O(1) submission each) instead of ~350 AA strip fills per card per
-        // frame; a full grid of those is what made GuiRenderState's per-fill
-        // intersection search the screen's dominant cost. A hovered card
-        // (t > 0, animating or settled) paints the live shapes for those
-        // frames — one card's worth, bounded.
-        if (t == 0f) {
+        // so the non-unified path comes from a one-shot template raster
+        // blitted per card (one O(1) submission each) instead of ~350 AA
+        // strip fills per card per frame; a full grid of those is what made
+        // GuiRenderState's per-fill intersection search the screen's dominant
+        // cost. A hovered card (t > 0, animating or settled) paints the live
+        // shapes for those frames — one card's worth, bounded.
+        if (MaterialSurface.unified()) {
+            MaterialSurface.control(g, x, y, cardW(), CARD_H, AuroraTheme.RADIUS, false, false, false, t, 0);
+        } else if (t == 0f) {
             ensureCardTemplate(g).blitAt(g, x, y, cardW(), CARD_H);
         } else {
             int fill = AuroraAnim.lerpArgb(AuroraTheme.IOS_SECONDARY_BG, AuroraTheme.IOS_TERTIARY_BG, t);
