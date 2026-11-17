@@ -1,0 +1,1019 @@
+{
+  "baselineSource": "39a71cf4110ea1e1e22f611df0090facae81cff1",
+  "candidateBranch": "ui/bounded-layer-caches",
+  "candidateSource": "production changes in this report commit; no production edits after runtime checks",
+  "runtime": "Windows 11, Java 25.0.4.1, Minecraft 26.3, AMD Radeon RX 9070 XT",
+  "settings": "ROUND/33%, Fira Sans Medium All Text except candidate-capped-main SQUARE/19%, Roboto Aurora Only; field initializer fixture, not effective factory config",
+  "results": {
+    "baseline-main-repeat": {
+      "scope": "Elapsed screen extraction; excludes deferred GUI rendering and GPU time; may include thread stalls",
+      "intervalScope": "Time between extraction starts, including rendering, wheel input, world work and pacing",
+      "cacheScope": "Observed UiLayerCache images and commit payloads, including shared material templates; not measured VRAM",
+      "screen": "com.aurora.client.screen.AuroraScreen",
+      "freshScreen": true,
+      "scrolling": false,
+      "revision": "39a71cf-baseline",
+      "backend": "OPENGL",
+      "minecraft": "26.3",
+      "java": "25.0.4.1",
+      "framebufferWidth": 1280,
+      "framebufferHeight": 960,
+      "guiScale": 2,
+      "worldLoaded": true,
+      "backgroundOpacity": 0.33,
+      "cornerRadius": 10,
+      "guiFpsLimit": 60,
+      "warmupFrames": 120,
+      "sampleFrames": 600,
+      "firstExtractionMs": 7.095,
+      "warmup": {
+        "meanMs": 0.128125,
+        "maxMs": 7.095,
+        "p99Ms": 0.2502,
+        "p95Ms": 0.1739
+      },
+      "steadyExtraction": {
+        "meanMs": 0.04687316666666667,
+        "maxMs": 0.4702,
+        "p99Ms": 0.0774,
+        "p95Ms": 0.0574
+      },
+      "steadyFrameIntervals": {
+        "meanMs": 0.6701453333333334,
+        "maxMs": 6.8931,
+        "p99Ms": 1.5756,
+        "p95Ms": 0.8532
+      },
+      "cacheAtArm": {
+        "commitElapsedNanos": 1250500,
+        "trackedImages": 17,
+        "commits": 26,
+        "uploadPayloadBytes": 5467488,
+        "trackedBackingBytes": 5338720,
+        "allocations": 17
+      },
+      "cacheAtEnd": {
+        "commitElapsedNanos": 1976000,
+        "trackedImages": 18,
+        "commits": 31,
+        "uploadPayloadBytes": 10636000,
+        "trackedBackingBytes": 10253920,
+        "allocations": 22
+      },
+      "cacheDuringRun": {
+        "allocations": 5,
+        "commits": 5,
+        "uploadPayloadBytes": 5168512,
+        "commitElapsedNanos": 725500
+      },
+      "fillsDuringRun": 0,
+      "shaderQuadsDuringRun": 16721
+    },
+    "candidate-main-repeat": {
+      "scope": "Elapsed screen extraction; excludes deferred GUI rendering and GPU time; may include thread stalls",
+      "intervalScope": "Time between extraction starts, including rendering, wheel input, world work and pacing",
+      "cacheScope": "Observed UiLayerCache images and commit payloads, including shared material templates; not measured VRAM",
+      "screen": "com.aurora.client.screen.AuroraScreen",
+      "freshScreen": true,
+      "scrolling": false,
+      "revision": "candidate",
+      "backend": "OPENGL",
+      "minecraft": "26.3",
+      "java": "25.0.4.1",
+      "framebufferWidth": 1280,
+      "framebufferHeight": 960,
+      "guiScale": 2,
+      "worldLoaded": true,
+      "backgroundOpacity": 0.33,
+      "cornerRadius": 10,
+      "guiFpsLimit": 60,
+      "nativeFpsOption": 260,
+      "effectiveNativeFpsLimit": 260,
+      "warmupFrames": 120,
+      "sampleFrames": 600,
+      "firstExtractionMs": 5.846,
+      "warmup": {
+        "p99Ms": 0.2139,
+        "p95Ms": 0.1265,
+        "meanMs": 0.12112666666666667,
+        "maxMs": 5.846
+      },
+      "steadyExtraction": {
+        "p99Ms": 0.1018,
+        "p95Ms": 0.0679,
+        "meanMs": 0.054612,
+        "maxMs": 0.4537
+      },
+      "steadyFrameIntervals": {
+        "p99Ms": 1.4121,
+        "p95Ms": 0.8172,
+        "meanMs": 0.6250335,
+        "maxMs": 1.6997
+      },
+      "cacheAtArm": {
+        "uploadPayloadBytes": 2535168,
+        "trackedBackingBytes": 2250304,
+        "allocations": 17,
+        "commitElapsedNanos": 1228100,
+        "trackedImages": 17,
+        "commits": 29
+      },
+      "cacheAtEnd": {
+        "uploadPayloadBytes": 4500608,
+        "trackedBackingBytes": 2250304,
+        "allocations": 22,
+        "commitElapsedNanos": 1521800,
+        "trackedImages": 17,
+        "commits": 34
+      },
+      "cacheDuringRun": {
+        "allocations": 5,
+        "commits": 5,
+        "uploadPayloadBytes": 1965440,
+        "commitElapsedNanos": 293700
+      },
+      "fillsDuringRun": 0,
+      "shaderQuadsDuringRun": 16711
+    },
+    "baseline-detail": {
+      "scope": "Elapsed screen extraction; excludes deferred GUI rendering and GPU time; may include thread stalls",
+      "intervalScope": "Time between extraction starts, including rendering, wheel input, world work and pacing",
+      "cacheScope": "Observed UiLayerCache images and commit payloads, including shared material templates; not measured VRAM",
+      "screen": "com.aurora.client.screen.FeatureDetailScreen",
+      "freshScreen": true,
+      "scrolling": false,
+      "revision": "39a71cf-baseline",
+      "backend": "OPENGL",
+      "minecraft": "26.3",
+      "java": "25.0.4.1",
+      "framebufferWidth": 1280,
+      "framebufferHeight": 960,
+      "guiScale": 2,
+      "worldLoaded": true,
+      "backgroundOpacity": 0.33,
+      "cornerRadius": 10,
+      "guiFpsLimit": 60,
+      "warmupFrames": 120,
+      "sampleFrames": 600,
+      "firstExtractionMs": 44.8721,
+      "warmup": {
+        "meanMs": 0.5365266666666666,
+        "maxMs": 44.8721,
+        "p99Ms": 0.8277,
+        "p95Ms": 0.4045
+      },
+      "steadyExtraction": {
+        "meanMs": 0.057036,
+        "maxMs": 0.4566,
+        "p99Ms": 0.1372,
+        "p95Ms": 0.0989
+      },
+      "steadyFrameIntervals": {
+        "meanMs": 0.6565856666666666,
+        "maxMs": 1.666,
+        "p99Ms": 1.4539,
+        "p95Ms": 0.8309
+      },
+      "cacheAtArm": {
+        "commitElapsedNanos": 2527600,
+        "trackedImages": 17,
+        "commits": 33,
+        "uploadPayloadBytes": 20466400,
+        "trackedBackingBytes": 5338720,
+        "allocations": 22
+      },
+      "cacheAtEnd": {
+        "commitElapsedNanos": 3616000,
+        "trackedImages": 17,
+        "commits": 38,
+        "uploadPayloadBytes": 30385952,
+        "trackedBackingBytes": 10089760,
+        "allocations": 27
+      },
+      "cacheDuringRun": {
+        "allocations": 5,
+        "commits": 5,
+        "uploadPayloadBytes": 9919552,
+        "commitElapsedNanos": 1088400
+      },
+      "fillsDuringRun": 0,
+      "shaderQuadsDuringRun": 0
+    },
+    "candidate-detail": {
+      "scope": "Elapsed screen extraction; excludes deferred GUI rendering and GPU time; may include thread stalls",
+      "intervalScope": "Time between extraction starts, including rendering, wheel input, world work and pacing",
+      "cacheScope": "Observed UiLayerCache images and commit payloads, including shared material templates; not measured VRAM",
+      "screen": "com.aurora.client.screen.FeatureDetailScreen",
+      "freshScreen": true,
+      "scrolling": false,
+      "revision": "candidate",
+      "backend": "OPENGL",
+      "minecraft": "26.3",
+      "java": "25.0.4.1",
+      "framebufferWidth": 1280,
+      "framebufferHeight": 960,
+      "guiScale": 2,
+      "worldLoaded": true,
+      "backgroundOpacity": 0.33,
+      "cornerRadius": 10,
+      "guiFpsLimit": 60,
+      "nativeFpsOption": 260,
+      "effectiveNativeFpsLimit": 260,
+      "warmupFrames": 120,
+      "sampleFrames": 600,
+      "firstExtractionMs": 13.7603,
+      "warmup": {
+        "p99Ms": 0.4903,
+        "p95Ms": 0.2411,
+        "meanMs": 0.24789333333333335,
+        "maxMs": 13.7603
+      },
+      "steadyExtraction": {
+        "p99Ms": 0.1253,
+        "p95Ms": 0.0971,
+        "meanMs": 0.06027233333333334,
+        "maxMs": 0.1577
+      },
+      "steadyFrameIntervals": {
+        "p99Ms": 1.5331,
+        "p95Ms": 0.8665,
+        "meanMs": 0.6440828333333334,
+        "maxMs": 3.88
+      },
+      "cacheAtArm": {
+        "uploadPayloadBytes": 4500608,
+        "trackedBackingBytes": 2250304,
+        "allocations": 22,
+        "commitElapsedNanos": 1521800,
+        "trackedImages": 17,
+        "commits": 34
+      },
+      "cacheAtEnd": {
+        "uploadPayloadBytes": 7459584,
+        "trackedBackingBytes": 3243840,
+        "allocations": 27,
+        "commitElapsedNanos": 2059900,
+        "trackedImages": 17,
+        "commits": 39
+      },
+      "cacheDuringRun": {
+        "allocations": 5,
+        "commits": 5,
+        "uploadPayloadBytes": 2958976,
+        "commitElapsedNanos": 538100
+      },
+      "fillsDuringRun": 0,
+      "shaderQuadsDuringRun": 0
+    },
+    "baseline-before-suppress": {
+      "commitElapsedNanos": 1976000,
+      "trackedImages": 17,
+      "commits": 31,
+      "uploadPayloadBytes": 10636000,
+      "trackedBackingBytes": 5338720,
+      "allocations": 22
+    },
+    "baseline-after-suppress": {
+      "commitElapsedNanos": 2527600,
+      "trackedImages": 17,
+      "commits": 33,
+      "uploadPayloadBytes": 20466400,
+      "trackedBackingBytes": 5338720,
+      "allocations": 22
+    },
+    "candidate-before-suppress": {
+      "uploadPayloadBytes": 4500608,
+      "trackedBackingBytes": 2250304,
+      "allocations": 22,
+      "commitElapsedNanos": 1521800,
+      "trackedImages": 17,
+      "commits": 34
+    },
+    "candidate-after-suppress": {
+      "uploadPayloadBytes": 4500608,
+      "trackedBackingBytes": 2250304,
+      "allocations": 22,
+      "commitElapsedNanos": 1521800,
+      "trackedImages": 17,
+      "commits": 34
+    },
+    "baseline-small-fonts": {
+      "scope": "Elapsed screen extraction; excludes deferred GUI rendering and GPU time; may include thread stalls",
+      "intervalScope": "Time between extraction starts, including rendering, wheel input, world work and pacing",
+      "cacheScope": "Observed UiLayerCache images and commit payloads, including shared material templates; not measured VRAM",
+      "screen": "com.aurora.client.screen.FeatureDetailScreen",
+      "freshScreen": true,
+      "scrolling": false,
+      "revision": "39a71cf-baseline",
+      "backend": "OPENGL",
+      "minecraft": "26.3",
+      "java": "25.0.4.1",
+      "framebufferWidth": 854,
+      "framebufferHeight": 480,
+      "guiScale": 2,
+      "worldLoaded": true,
+      "backgroundOpacity": 0.33,
+      "cornerRadius": 10,
+      "guiFpsLimit": 60,
+      "warmupFrames": 120,
+      "sampleFrames": 600,
+      "firstExtractionMs": 5.1689,
+      "warmup": {
+        "meanMs": 0.11324166666666667,
+        "maxMs": 5.1689,
+        "p99Ms": 0.2548,
+        "p95Ms": 0.1166
+      },
+      "steadyExtraction": {
+        "meanMs": 0.04917716666666667,
+        "maxMs": 0.1637,
+        "p99Ms": 0.0981,
+        "p95Ms": 0.0575
+      },
+      "steadyFrameIntervals": {
+        "meanMs": 0.6726023333333334,
+        "maxMs": 1.6669,
+        "p99Ms": 1.509,
+        "p95Ms": 0.8389
+      },
+      "cacheAtArm": {
+        "commitElapsedNanos": 7102100,
+        "trackedImages": 20,
+        "commits": 58,
+        "uploadPayloadBytes": 53854688,
+        "trackedBackingBytes": 3681952,
+        "allocations": 47
+      },
+      "cacheAtEnd": {
+        "commitElapsedNanos": 7444500,
+        "trackedImages": 20,
+        "commits": 66,
+        "uploadPayloadBytes": 57366432,
+        "trackedBackingBytes": 3681952,
+        "allocations": 55
+      },
+      "cacheDuringRun": {
+        "allocations": 8,
+        "commits": 8,
+        "uploadPayloadBytes": 3511744,
+        "commitElapsedNanos": 342400
+      },
+      "fillsDuringRun": 0,
+      "shaderQuadsDuringRun": 1440
+    },
+    "candidate-small-fonts": {
+      "scope": "Elapsed screen extraction; excludes deferred GUI rendering and GPU time; may include thread stalls",
+      "intervalScope": "Time between extraction starts, including rendering, wheel input, world work and pacing",
+      "cacheScope": "Observed UiLayerCache images and commit payloads, including shared material templates; not measured VRAM",
+      "screen": "com.aurora.client.screen.FeatureDetailScreen",
+      "freshScreen": true,
+      "scrolling": false,
+      "revision": "candidate",
+      "backend": "OPENGL",
+      "minecraft": "26.3",
+      "java": "25.0.4.1",
+      "framebufferWidth": 854,
+      "framebufferHeight": 480,
+      "guiScale": 2,
+      "worldLoaded": true,
+      "backgroundOpacity": 0.33,
+      "cornerRadius": 10,
+      "guiFpsLimit": 60,
+      "nativeFpsOption": 260,
+      "effectiveNativeFpsLimit": 260,
+      "warmupFrames": 120,
+      "sampleFrames": 600,
+      "firstExtractionMs": 5.8878,
+      "warmup": {
+        "p99Ms": 0.4814,
+        "p95Ms": 0.2286,
+        "meanMs": 0.16745083333333335,
+        "maxMs": 5.8878
+      },
+      "steadyExtraction": {
+        "p99Ms": 0.2159,
+        "p95Ms": 0.0931,
+        "meanMs": 0.06897816666666667,
+        "maxMs": 2.7186
+      },
+      "steadyFrameIntervals": {
+        "p99Ms": 1.5325,
+        "p95Ms": 0.8973,
+        "meanMs": 0.7014751666666666,
+        "maxMs": 3.666
+      },
+      "cacheAtArm": {
+        "uploadPayloadBytes": 9642112,
+        "trackedBackingBytes": 2467392,
+        "allocations": 32,
+        "commitElapsedNanos": 2496800,
+        "trackedImages": 17,
+        "commits": 44
+      },
+      "cacheAtEnd": {
+        "uploadPayloadBytes": 11957632,
+        "trackedBackingBytes": 2600384,
+        "allocations": 40,
+        "commitElapsedNanos": 2928000,
+        "trackedImages": 20,
+        "commits": 52
+      },
+      "cacheDuringRun": {
+        "allocations": 8,
+        "commits": 8,
+        "uploadPayloadBytes": 2315520,
+        "commitElapsedNanos": 431200
+      },
+      "fillsDuringRun": 0,
+      "shaderQuadsDuringRun": 1440
+    },
+    "baseline-small-fonts-scroll": {
+      "scope": "Elapsed screen extraction; excludes deferred GUI rendering and GPU time; may include thread stalls",
+      "intervalScope": "Time between extraction starts, including rendering, wheel input, world work and pacing",
+      "cacheScope": "Observed UiLayerCache images and commit payloads, including shared material templates; not measured VRAM",
+      "screen": "com.aurora.client.screen.FeatureDetailScreen",
+      "freshScreen": false,
+      "scrolling": true,
+      "revision": "39a71cf-baseline",
+      "backend": "OPENGL",
+      "minecraft": "26.3",
+      "java": "25.0.4.1",
+      "framebufferWidth": 854,
+      "framebufferHeight": 480,
+      "guiScale": 2,
+      "worldLoaded": true,
+      "backgroundOpacity": 0.33,
+      "cornerRadius": 10,
+      "guiFpsLimit": 60,
+      "warmupFrames": 120,
+      "sampleFrames": 600,
+      "firstExtractionMs": 0.4873,
+      "warmup": {
+        "meanMs": 0.1374825,
+        "maxMs": 0.4873,
+        "p99Ms": 0.4612,
+        "p95Ms": 0.3547
+      },
+      "steadyExtraction": {
+        "meanMs": 0.11476933333333333,
+        "maxMs": 0.3767,
+        "p99Ms": 0.248,
+        "p95Ms": 0.2077
+      },
+      "steadyFrameIntervals": {
+        "meanMs": 0.7293275,
+        "maxMs": 3.0323,
+        "p99Ms": 1.5689,
+        "p95Ms": 0.8799
+      },
+      "cacheAtArm": {
+        "commitElapsedNanos": 7444500,
+        "trackedImages": 20,
+        "commits": 66,
+        "uploadPayloadBytes": 57366432,
+        "trackedBackingBytes": 3681952,
+        "allocations": 55
+      },
+      "cacheAtEnd": {
+        "commitElapsedNanos": 23709400,
+        "trackedImages": 20,
+        "commits": 392,
+        "uploadPayloadBytes": 591902112,
+        "trackedBackingBytes": 3681952,
+        "allocations": 55
+      },
+      "cacheDuringRun": {
+        "allocations": 0,
+        "commits": 326,
+        "uploadPayloadBytes": 534535680,
+        "commitElapsedNanos": 16264900
+      },
+      "fillsDuringRun": 0,
+      "shaderQuadsDuringRun": 1665
+    },
+    "candidate-small-fonts-scroll": {
+      "scope": "Elapsed screen extraction; excludes deferred GUI rendering and GPU time; may include thread stalls",
+      "intervalScope": "Time between extraction starts, including rendering, wheel input, world work and pacing",
+      "cacheScope": "Observed UiLayerCache images and commit payloads, including shared material templates; not measured VRAM",
+      "screen": "com.aurora.client.screen.FeatureDetailScreen",
+      "freshScreen": false,
+      "scrolling": true,
+      "revision": "candidate",
+      "backend": "OPENGL",
+      "minecraft": "26.3",
+      "java": "25.0.4.1",
+      "framebufferWidth": 854,
+      "framebufferHeight": 480,
+      "guiScale": 2,
+      "worldLoaded": true,
+      "backgroundOpacity": 0.33,
+      "cornerRadius": 10,
+      "guiFpsLimit": 60,
+      "nativeFpsOption": 260,
+      "effectiveNativeFpsLimit": 260,
+      "warmupFrames": 120,
+      "sampleFrames": 600,
+      "firstExtractionMs": 0.4444,
+      "warmup": {
+        "p99Ms": 0.4444,
+        "p95Ms": 0.283,
+        "meanMs": 0.11076833333333333,
+        "maxMs": 0.6881
+      },
+      "steadyExtraction": {
+        "p99Ms": 0.2561,
+        "p95Ms": 0.1718,
+        "meanMs": 0.10656883333333333,
+        "maxMs": 0.3066
+      },
+      "steadyFrameIntervals": {
+        "p99Ms": 1.5953,
+        "p95Ms": 0.819,
+        "meanMs": 0.7055271666666666,
+        "maxMs": 1.9118
+      },
+      "cacheAtArm": {
+        "uploadPayloadBytes": 11957632,
+        "trackedBackingBytes": 2600384,
+        "allocations": 40,
+        "commitElapsedNanos": 2928000,
+        "trackedImages": 20,
+        "commits": 52
+      },
+      "cacheAtEnd": {
+        "uploadPayloadBytes": 264291712,
+        "trackedBackingBytes": 2600384,
+        "allocations": 40,
+        "commitElapsedNanos": 18326700,
+        "trackedImages": 20,
+        "commits": 385
+      },
+      "cacheDuringRun": {
+        "allocations": 0,
+        "commits": 333,
+        "uploadPayloadBytes": 252334080,
+        "commitElapsedNanos": 15398700
+      },
+      "fillsDuringRun": 0,
+      "shaderQuadsDuringRun": 1657
+    },
+    "baseline-large-main": {
+      "scope": "Elapsed screen extraction; excludes deferred GUI rendering and GPU time; may include thread stalls",
+      "intervalScope": "Time between extraction starts, including rendering, wheel input, world work and pacing",
+      "cacheScope": "Observed UiLayerCache images and commit payloads, including shared material templates; not measured VRAM",
+      "screen": "com.aurora.client.screen.AuroraScreen",
+      "freshScreen": true,
+      "scrolling": false,
+      "revision": "39a71cf-baseline",
+      "backend": "OPENGL",
+      "minecraft": "26.3",
+      "java": "25.0.4.1",
+      "framebufferWidth": 1280,
+      "framebufferHeight": 1600,
+      "guiScale": 3,
+      "worldLoaded": true,
+      "backgroundOpacity": 0.33,
+      "cornerRadius": 10,
+      "guiFpsLimit": 60,
+      "warmupFrames": 120,
+      "sampleFrames": 600,
+      "firstExtractionMs": 17.2185,
+      "warmup": {
+        "meanMs": 0.20906583333333334,
+        "maxMs": 17.2185,
+        "p99Ms": 0.1851,
+        "p95Ms": 0.1129
+      },
+      "steadyExtraction": {
+        "meanMs": 0.059395,
+        "maxMs": 9.102,
+        "p99Ms": 0.0713,
+        "p95Ms": 0.0531
+      },
+      "steadyFrameIntervals": {
+        "meanMs": 0.6437413333333334,
+        "maxMs": 9.9632,
+        "p99Ms": 1.5535,
+        "p95Ms": 0.8631
+      },
+      "cacheAtArm": {
+        "commitElapsedNanos": 28709700,
+        "trackedImages": 20,
+        "commits": 423,
+        "uploadPayloadBytes": 629128776,
+        "trackedBackingBytes": 17289832,
+        "allocations": 82
+      },
+      "cacheAtEnd": {
+        "commitElapsedNanos": 30534500,
+        "trackedImages": 16,
+        "commits": 427,
+        "uploadPayloadBytes": 637636712,
+        "trackedBackingBytes": 8890904,
+        "allocations": 86
+      },
+      "cacheDuringRun": {
+        "allocations": 4,
+        "commits": 4,
+        "uploadPayloadBytes": 8507936,
+        "commitElapsedNanos": 1824800
+      },
+      "fillsDuringRun": 0,
+      "shaderQuadsDuringRun": 16560
+    },
+    "candidate-large-main": {
+      "scope": "Elapsed screen extraction; excludes deferred GUI rendering and GPU time; may include thread stalls",
+      "intervalScope": "Time between extraction starts, including rendering, wheel input, world work and pacing",
+      "cacheScope": "Observed UiLayerCache images and commit payloads, including shared material templates; not measured VRAM",
+      "screen": "com.aurora.client.screen.AuroraScreen",
+      "freshScreen": true,
+      "scrolling": false,
+      "revision": "candidate",
+      "backend": "OPENGL",
+      "minecraft": "26.3",
+      "java": "25.0.4.1",
+      "framebufferWidth": 1280,
+      "framebufferHeight": 1600,
+      "guiScale": 3,
+      "worldLoaded": true,
+      "backgroundOpacity": 0.33,
+      "cornerRadius": 10,
+      "guiFpsLimit": 60,
+      "nativeFpsOption": 260,
+      "effectiveNativeFpsLimit": 260,
+      "warmupFrames": 120,
+      "sampleFrames": 600,
+      "firstExtractionMs": 15.5002,
+      "warmup": {
+        "p99Ms": 0.3557,
+        "p95Ms": 0.0898,
+        "meanMs": 0.19072,
+        "maxMs": 15.5002
+      },
+      "steadyExtraction": {
+        "p99Ms": 0.0842,
+        "p95Ms": 0.0632,
+        "meanMs": 0.0519315,
+        "maxMs": 0.8182
+      },
+      "steadyFrameIntervals": {
+        "p99Ms": 1.4554,
+        "p95Ms": 0.9053,
+        "meanMs": 0.6576665,
+        "maxMs": 2.2693
+      },
+      "cacheAtArm": {
+        "uploadPayloadBytes": 276571060,
+        "trackedBackingBytes": 7620532,
+        "allocations": 69,
+        "commitElapsedNanos": 19841000,
+        "trackedImages": 20,
+        "commits": 416
+      },
+      "cacheAtEnd": {
+        "uploadPayloadBytes": 280993300,
+        "trackedBackingBytes": 5062804,
+        "allocations": 74,
+        "commitElapsedNanos": 20407000,
+        "trackedImages": 17,
+        "commits": 421
+      },
+      "cacheDuringRun": {
+        "allocations": 5,
+        "commits": 5,
+        "uploadPayloadBytes": 4422240,
+        "commitElapsedNanos": 566000
+      },
+      "fillsDuringRun": 0,
+      "shaderQuadsDuringRun": 16717
+    },
+    "baseline-large-fonts": {
+      "scope": "Elapsed screen extraction; excludes deferred GUI rendering and GPU time; may include thread stalls",
+      "intervalScope": "Time between extraction starts, including rendering, wheel input, world work and pacing",
+      "cacheScope": "Observed UiLayerCache images and commit payloads, including shared material templates; not measured VRAM",
+      "screen": "com.aurora.client.screen.FeatureDetailScreen",
+      "freshScreen": true,
+      "scrolling": false,
+      "revision": "39a71cf-baseline",
+      "backend": "OPENGL",
+      "minecraft": "26.3",
+      "java": "25.0.4.1",
+      "framebufferWidth": 1280,
+      "framebufferHeight": 1600,
+      "guiScale": 3,
+      "worldLoaded": true,
+      "backgroundOpacity": 0.33,
+      "cornerRadius": 10,
+      "guiFpsLimit": 60,
+      "warmupFrames": 120,
+      "sampleFrames": 600,
+      "firstExtractionMs": 17.526,
+      "warmup": {
+        "meanMs": 0.19526583333333333,
+        "maxMs": 17.526,
+        "p99Ms": 0.1067,
+        "p95Ms": 0.0594
+      },
+      "steadyExtraction": {
+        "meanMs": 0.046676333333333334,
+        "maxMs": 0.2609,
+        "p99Ms": 0.0956,
+        "p95Ms": 0.0565
+      },
+      "steadyFrameIntervals": {
+        "meanMs": 0.6810998333333333,
+        "maxMs": 7.3839,
+        "p99Ms": 1.6038,
+        "p95Ms": 0.9638
+      },
+      "cacheAtArm": {
+        "commitElapsedNanos": 30534500,
+        "trackedImages": 16,
+        "commits": 427,
+        "uploadPayloadBytes": 637636712,
+        "trackedBackingBytes": 8890904,
+        "allocations": 86
+      },
+      "cacheAtEnd": {
+        "commitElapsedNanos": 34181600,
+        "trackedImages": 21,
+        "commits": 435,
+        "uploadPayloadBytes": 654543576,
+        "trackedBackingBytes": 25481832,
+        "allocations": 94
+      },
+      "cacheDuringRun": {
+        "allocations": 8,
+        "commits": 8,
+        "uploadPayloadBytes": 16906864,
+        "commitElapsedNanos": 3647100
+      },
+      "fillsDuringRun": 0,
+      "shaderQuadsDuringRun": 0
+    },
+    "candidate-large-fonts": {
+      "scope": "Elapsed screen extraction; excludes deferred GUI rendering and GPU time; may include thread stalls",
+      "intervalScope": "Time between extraction starts, including rendering, wheel input, world work and pacing",
+      "cacheScope": "Observed UiLayerCache images and commit payloads, including shared material templates; not measured VRAM",
+      "screen": "com.aurora.client.screen.FeatureDetailScreen",
+      "freshScreen": true,
+      "scrolling": false,
+      "revision": "candidate",
+      "backend": "OPENGL",
+      "minecraft": "26.3",
+      "java": "25.0.4.1",
+      "framebufferWidth": 1280,
+      "framebufferHeight": 1600,
+      "guiScale": 3,
+      "worldLoaded": true,
+      "backgroundOpacity": 0.33,
+      "cornerRadius": 10,
+      "guiFpsLimit": 60,
+      "nativeFpsOption": 260,
+      "effectiveNativeFpsLimit": 260,
+      "warmupFrames": 120,
+      "sampleFrames": 600,
+      "firstExtractionMs": 13.3291,
+      "warmup": {
+        "p99Ms": 0.125,
+        "p95Ms": 0.0801,
+        "meanMs": 0.16918583333333334,
+        "maxMs": 13.3291
+      },
+      "steadyExtraction": {
+        "p99Ms": 0.0828,
+        "p95Ms": 0.059,
+        "meanMs": 0.049572,
+        "maxMs": 0.1881
+      },
+      "steadyFrameIntervals": {
+        "p99Ms": 1.4826,
+        "p95Ms": 0.8616,
+        "meanMs": 0.6288771666666666,
+        "maxMs": 5.9846
+      },
+      "cacheAtArm": {
+        "uploadPayloadBytes": 280993300,
+        "trackedBackingBytes": 5062804,
+        "allocations": 74,
+        "commitElapsedNanos": 20407000,
+        "trackedImages": 17,
+        "commits": 421
+      },
+      "cacheAtEnd": {
+        "uploadPayloadBytes": 287973268,
+        "trackedBackingBytes": 7620532,
+        "allocations": 82,
+        "commitElapsedNanos": 21098900,
+        "trackedImages": 20,
+        "commits": 429
+      },
+      "cacheDuringRun": {
+        "allocations": 8,
+        "commits": 8,
+        "uploadPayloadBytes": 6979968,
+        "commitElapsedNanos": 691900
+      },
+      "fillsDuringRun": 0,
+      "shaderQuadsDuringRun": 0
+    },
+    "candidate-capped-main": {
+      "scope": "Elapsed screen extraction; excludes deferred GUI rendering and GPU time; may include thread stalls",
+      "intervalScope": "Time between extraction starts, including rendering, wheel input, world work and pacing",
+      "cacheScope": "Observed UiLayerCache images and commit payloads, including shared material templates; not measured VRAM",
+      "screen": "com.aurora.client.screen.AuroraScreen",
+      "freshScreen": true,
+      "scrolling": false,
+      "revision": "candidate",
+      "backend": "OPENGL",
+      "minecraft": "26.3",
+      "java": "25.0.4.1",
+      "framebufferWidth": 1280,
+      "framebufferHeight": 960,
+      "guiScale": 2,
+      "worldLoaded": true,
+      "backgroundOpacity": 0.19,
+      "cornerRadius": 0,
+      "guiFpsLimit": 60,
+      "nativeFpsOption": 120,
+      "effectiveNativeFpsLimit": 120,
+      "warmupFrames": 120,
+      "sampleFrames": 600,
+      "firstExtractionMs": 8.2893,
+      "warmup": {
+        "p99Ms": 0.493,
+        "p95Ms": 0.1091,
+        "meanMs": 0.1593675,
+        "maxMs": 8.2893
+      },
+      "steadyExtraction": {
+        "p99Ms": 0.153,
+        "p95Ms": 0.1044,
+        "meanMs": 0.0819665,
+        "maxMs": 0.2747
+      },
+      "steadyFrameIntervals": {
+        "p99Ms": 17.724,
+        "p95Ms": 17.5998,
+        "meanMs": 16.666728,
+        "maxMs": 17.9044
+      },
+      "cacheAtArm": {
+        "uploadPayloadBytes": 309928660,
+        "trackedBackingBytes": 3387040,
+        "allocations": 130,
+        "commitElapsedNanos": 23337600,
+        "trackedImages": 18,
+        "commits": 493
+      },
+      "cacheAtEnd": {
+        "uploadPayloadBytes": 311899476,
+        "trackedBackingBytes": 2255680,
+        "allocations": 135,
+        "commitElapsedNanos": 23655000,
+        "trackedImages": 17,
+        "commits": 498
+      },
+      "cacheDuringRun": {
+        "allocations": 5,
+        "commits": 5,
+        "uploadPayloadBytes": 1970816,
+        "commitElapsedNanos": 317400
+      },
+      "fillsDuringRun": 30968,
+      "shaderQuadsDuringRun": 7200
+    },
+    "vulkan-main": {
+      "scope": "Elapsed screen extraction; excludes deferred GUI rendering and GPU time; may include thread stalls",
+      "intervalScope": "Time between extraction starts, including rendering, wheel input, world work and pacing",
+      "cacheScope": "Observed UiLayerCache images and commit payloads, including shared material templates; not measured VRAM",
+      "screen": "com.aurora.client.screen.AuroraScreen",
+      "freshScreen": true,
+      "scrolling": false,
+      "revision": "candidate",
+      "backend": "VULKAN",
+      "minecraft": "26.3",
+      "java": "25.0.4.1",
+      "framebufferWidth": 1280,
+      "framebufferHeight": 960,
+      "guiScale": 2,
+      "worldLoaded": true,
+      "backgroundOpacity": 0.33,
+      "cornerRadius": 10,
+      "guiFpsLimit": 60,
+      "nativeFpsOption": 260,
+      "effectiveNativeFpsLimit": 260,
+      "warmupFrames": 120,
+      "sampleFrames": 600,
+      "firstExtractionMs": 49.8027,
+      "warmup": {
+        "meanMs": 0.6593383333333334,
+        "p95Ms": 0.4967,
+        "p99Ms": 0.7919,
+        "maxMs": 49.8027
+      },
+      "steadyExtraction": {
+        "meanMs": 0.0976915,
+        "p95Ms": 0.1694,
+        "p99Ms": 0.268,
+        "maxMs": 0.3563
+      },
+      "steadyFrameIntervals": {
+        "meanMs": 1.1616731666666666,
+        "p95Ms": 1.5768,
+        "p99Ms": 2.2625,
+        "maxMs": 4.835
+      },
+      "cacheAtArm": {
+        "allocations": 12,
+        "trackedBackingBytes": 284864,
+        "uploadPayloadBytes": 569728,
+        "commits": 24,
+        "trackedImages": 12,
+        "commitElapsedNanos": 1558300
+      },
+      "cacheAtEnd": {
+        "allocations": 17,
+        "trackedBackingBytes": 2250304,
+        "uploadPayloadBytes": 2535168,
+        "commits": 29,
+        "trackedImages": 17,
+        "commitElapsedNanos": 2475500
+      },
+      "cacheDuringRun": {
+        "allocations": 5,
+        "commits": 5,
+        "uploadPayloadBytes": 1965440,
+        "commitElapsedNanos": 917200
+      },
+      "fillsDuringRun": 0,
+      "shaderQuadsDuringRun": 16616
+    },
+    "vulkan-small-fonts-scroll": {
+      "scope": "Elapsed screen extraction; excludes deferred GUI rendering and GPU time; may include thread stalls",
+      "intervalScope": "Time between extraction starts, including rendering, wheel input, world work and pacing",
+      "cacheScope": "Observed UiLayerCache images and commit payloads, including shared material templates; not measured VRAM",
+      "screen": "com.aurora.client.screen.FeatureDetailScreen",
+      "freshScreen": false,
+      "scrolling": true,
+      "revision": "candidate",
+      "backend": "VULKAN",
+      "minecraft": "26.3",
+      "java": "25.0.4.1",
+      "framebufferWidth": 854,
+      "framebufferHeight": 480,
+      "guiScale": 2,
+      "worldLoaded": true,
+      "backgroundOpacity": 0.33,
+      "cornerRadius": 10,
+      "guiFpsLimit": 60,
+      "nativeFpsOption": 260,
+      "effectiveNativeFpsLimit": 260,
+      "warmupFrames": 120,
+      "sampleFrames": 600,
+      "firstExtractionMs": 0.7682,
+      "warmup": {
+        "meanMs": 0.25023,
+        "p95Ms": 0.6131,
+        "p99Ms": 0.7682,
+        "maxMs": 0.7839
+      },
+      "steadyExtraction": {
+        "meanMs": 0.146071,
+        "p95Ms": 0.287,
+        "p99Ms": 0.3615,
+        "maxMs": 0.5391
+      },
+      "steadyFrameIntervals": {
+        "meanMs": 1.3942945,
+        "p95Ms": 1.7671,
+        "p99Ms": 2.4034,
+        "maxMs": 2.8473
+      },
+      "cacheAtArm": {
+        "allocations": 42,
+        "trackedBackingBytes": 2600384,
+        "uploadPayloadBytes": 12777216,
+        "commits": 80,
+        "trackedImages": 20,
+        "commitElapsedNanos": 6069800
+      },
+      "cacheAtEnd": {
+        "allocations": 43,
+        "trackedBackingBytes": 2641472,
+        "uploadPayloadBytes": 221960064,
+        "commits": 357,
+        "trackedImages": 21,
+        "commitElapsedNanos": 32818500
+      },
+      "cacheDuringRun": {
+        "allocations": 1,
+        "commits": 277,
+        "uploadPayloadBytes": 209182848,
+        "commitElapsedNanos": 26748700
+      },
+      "fillsDuringRun": 0,
+      "shaderQuadsDuringRun": 1610
+    }
+  }
+}

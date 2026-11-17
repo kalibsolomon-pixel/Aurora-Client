@@ -27,6 +27,7 @@ public final class ParityProbe implements ClientModInitializer {
     private long reloadStarted;
     /** Degrees the camera turns every tick ("spin"); 0 = still. */
     private float spinPerTick;
+    private Object rememberedTooltip;
     /** Particles added around the player every tick ("particles N"); half of them underground. */
     private int particlesPerTick;
     /** The running "fps" sample: label, end time and the once-a-second readings so far. */
@@ -46,6 +47,7 @@ public final class ParityProbe implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             try {
                 var screen = NativeUi.screen(client);
+                UiCacheBenchmark.cancelIfDifferent(screen);
                 ShapeBenchmark.cancelUnlessManager(screen instanceof WaypointManagerScreen
                         || screen instanceof dev.phenomena.gui.screens.PhenomenaScreen);
                 // Copied port fixtures may ask for acknowledgement before quick-play.
@@ -335,6 +337,59 @@ public final class ParityProbe implements ClientModInitializer {
                 if (Files.exists(client.gameDirectory.toPath().resolve("phenomena"))) throw new AssertionError("Disabled startup touched storage");
             }
             case "settings" -> NativeUi.setScreen(client, AuroraScreen.create());
+            case "ui-benchmark", "ui-open-benchmark", "ui-cache-state" -> {
+                if (args.length < 2 || !args[1].matches("[a-zA-Z0-9_-]+"))
+                    throw new IllegalArgumentException("A safe, unique result label is required");
+                Path output = root.resolve(args[1] + ".json");
+                if (args[0].equals("ui-cache-state")) {
+                    UiCacheBenchmark.write(output, UiCacheBenchmark.cacheState());
+                    break;
+                }
+                var target = NativeUi.screen(client);
+                boolean fresh = args[0].equals("ui-open-benchmark");
+                if (fresh) {
+                    if (args.length < 3 || args[2].equals("modules")) target = AuroraScreen.create();
+                    else {
+                        FeatureRegistry.modules();
+                        var feature = FeatureRegistry.all().stream().filter(f -> f.id.equals(args[2])).findFirst().orElseThrow();
+                        target = FeatureDetailScreen.destination(null, feature);
+                    }
+                }
+                if (!(target instanceof AuroraScreen || target instanceof FeatureDetailScreen))
+                    throw new IllegalStateException("UI benchmark requires a main or feature detail screen");
+                UiCacheBenchmark.arm(output, target, !fresh && args.length > 2 && args[2].equals("scroll"), fresh);
+                if (fresh) NativeUi.setScreen(client, target);
+            }
+            case "ui-suppress" -> com.aurora.client.ui.render.blur.BlurPanelRenderer.noteScreenshotGrab();
+            case "ui-tooltip" -> {
+                var field = com.aurora.client.screen.setting.FeatureSetting.class.getDeclaredField("tooltipLayout");
+                field.setAccessible(true);
+                Object layout = field.get(null);
+                switch (args[1]) {
+                    case "remember" -> {
+                        if (layout == null) throw new AssertionError("Hover a described label until its tooltip is visible");
+                        rememberedTooltip = layout;
+                    }
+                    case "unchanged" -> {
+                        if (rememberedTooltip == null || layout != rememberedTooltip)
+                            throw new AssertionError("Unchanged tooltip did not reuse its layout");
+                    }
+                    case "changed" -> {
+                        if (layout == null || rememberedTooltip == null || layout == rememberedTooltip)
+                            throw new AssertionError("Tooltip layout did not invalidate");
+                        rememberedTooltip = layout;
+                    }
+                    case "absent" -> {
+                        if (layout != null) throw new AssertionError("Faded tooltip retained its layout");
+                        rememberedTooltip = null;
+                    }
+                    default -> throw new IllegalArgumentException(text);
+                }
+            }
+            case "fps-cap" -> {
+                client.options.framerateLimit().set(Integer.parseInt(args[1]));
+                client.options.enableVsync().set(false);
+            }
             case "stable-settings" -> NativeUi.setScreen(client, new AuroraScreen() {
                 @Override public boolean isPauseScreen() { return true; }
             });
@@ -415,7 +470,7 @@ public final class ParityProbe implements ClientModInitializer {
                 if (!client.options.inactivityFpsLimit().get().getSerializedName().equals(args[1]))
                     throw new AssertionError("Inactivity FPS option was not restored");
             }
-            case "stop" -> { ShapeBenchmark.cancel(); restoreFpsOptions(client); client.stop(); }
+            case "stop" -> { UiCacheBenchmark.cancel(); ShapeBenchmark.cancel(); restoreFpsOptions(client); client.stop(); }
             case "resize" -> client.getWindow().setWindowed(Integer.parseInt(args[1]), Integer.parseInt(args[2]));
             case "gui-scale" -> {
                 client.options.guiScale().set(Integer.parseInt(args[1]));

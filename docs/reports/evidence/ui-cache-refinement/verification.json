@@ -1,0 +1,57 @@
+{
+  "builds": {
+    "26.1.2": {
+      "tests": 1194,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1
+    },
+    "26.2": {
+      "tests": 1194,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1
+    },
+    "26.3": {
+      "tests": 1196,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1
+    }
+  },
+  "commands": [
+    "python tools/parity.py",
+    "gradlew parityProbeJar -Paurora.minecraft=<26.1.2|26.2|26.3> -I tools/parity/runtime.init.gradle"
+  ],
+  "runtimeLogExcerpts": {
+    "baselineOpenGL": [
+      "[03:41:54] [Render thread/INFO] (Minecraft) Using graphics backend OpenGL, using drivers: 3.3.0 Core Profile Context 26.10.1.261008",
+      "[03:41:55] [Render thread/INFO] (aurora/health) All 92 Aurora mixins applied.",
+      "BUILD SUCCESSFUL in 4m 57s"
+    ],
+    "candidateOpenGL": [
+      "[03:49:03] [Render thread/INFO] (Minecraft) Using graphics backend OpenGL, using drivers: 3.3.0 Core Profile Context 26.10.1.261008",
+      "[03:49:04] [Render thread/INFO] (aurora/health) All 92 Aurora mixins applied.",
+      "[03:53:11] [Render thread/INFO] (Minecraft) [STDOUT]: [parity-probe] ui-tooltip remember",
+      "[03:53:11] [Render thread/INFO] (Minecraft) [STDOUT]: [parity-probe] ui-tooltip unchanged",
+      "[03:53:19] [Render thread/INFO] (Minecraft) [STDOUT]: [parity-probe] ui-tooltip changed",
+      "[03:53:22] [Render thread/INFO] (Minecraft) [STDOUT]: [parity-probe] reload overlay cleared after 3178 ms",
+      "[03:53:23] [Render thread/INFO] (Minecraft) [STDOUT]: [parity-probe] ui-tooltip absent",
+      "[03:53:43] [Render thread/INFO] (Minecraft) [STDOUT]: [parity-probe] ui-tooltip remember",
+      "[03:53:46] [Render thread/INFO] (Minecraft) [STDOUT]: [parity-probe] reload overlay cleared after 3086 ms",
+      "[03:53:51] [Render thread/INFO] (Minecraft) [STDOUT]: [parity-probe] ui-tooltip changed",
+      "[03:53:51] [Render thread/INFO] (Minecraft) [STDOUT]: [parity-probe] ui-tooltip unchanged",
+      "BUILD SUCCESSFUL in 5m 26s"
+    ],
+    "candidateVulkan": [
+      "[03:54:43] [Render thread/INFO] (Minecraft) Using graphics backend Vulkan, using drivers: 1.4.359 AMD proprietary driver 26.10.1 (LLPC)",
+      "[03:54:44] [Render thread/INFO] (aurora/health) All 92 Aurora mixins applied.",
+      "BUILD SUCCESSFUL in 1m 4s"
+    ]
+  },
+  "limits": [
+    "26.3 booted on OpenGL and native Vulkan; older versions compiled/tested",
+    "Initial reload assertion raced first screen redraw, repeated after completed reload and re-hover passed; see report",
+    "No release overhead gate or full fourteen-row release matrix in this task"
+  ]
+}

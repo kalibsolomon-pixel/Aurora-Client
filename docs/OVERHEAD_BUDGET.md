@@ -67,6 +67,18 @@ Every run had no fills and no glass captures. The owner's config stays under the
 - This machine cannot stand in for low-end hardware. Testers' reports show the same figures, and those decide how the defaults are set for weak machines (ADR 0005), not this release check.
 - Only singleplayer was measured. On a busy server, more entities mean more work for the hitbox and entity-health paths.
 
+## Optional open-screen measurements
+
+The gameplay gate does not measure open Aurora screens. The disposable
+[native probe](../tools/parity/README.md#screencache-measurements) separately
+records first/warm/steady main and detail extraction times, frame intervals,
+layer-cache allocations, upload payload and estimated CPU image backing bytes.
+These elapsed timers can include waits and exclude deferred GUI rendering and
+GPU time. They do not replace `Timed`/`AuroraCost`, establish a new release
+budget, or prove GPU/FPS gains. See the
+[bounded-cache audit](reports/2026-11-17-ui-cache-refinement.md) for paired
+payload measurements and their limits.
+
 ## Minecraft 26.3 validation
 
 The step 5 candidate passes the unchanged gate on native OpenGL and Vulkan,

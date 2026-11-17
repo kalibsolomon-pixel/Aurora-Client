@@ -690,6 +690,12 @@ public abstract class FeatureSetting {
     private static int tooltipX = 0;
     private static int tooltipY = 0;
 
+    /** One prepared layout, released with the fully faded tooltip. */
+    private record PreparedTooltip(String content, Font font, net.minecraft.locale.Language language,
+                                   long generation, int styleKey,
+                                   List<FormattedCharSequence> lines, int textW) {}
+    private static PreparedTooltip tooltipLayout = null;
+
     /** Stable per-instance key for {@link #HOVER_DWELL}. */
     protected String tooltipKey() {
         return "s" + Integer.toHexString(System.identityHashCode(this));
@@ -799,6 +805,28 @@ public abstract class FeatureSetting {
                 count * (font.lineHeight + 2), mouseX, mouseY, disabled);
     }
 
+    /** Reuse wrapping and measurement while content and font metrics are unchanged. */
+    private static PreparedTooltip prepareTooltipLines(Font tr) {
+        long generation = ThemeManager.generation();
+        int styleKey = com.aurora.client.ui.util.AuroraFontRenderer.styleKey();
+        // Vanilla replaces Language on every successful resource reload, even
+        // when the selected locale and literal text stay the same. Like
+        // Component's visual-order cache, keep its identity to invalidate
+        // wrapped sequences after font-pack or bidi resource changes too.
+        var language = net.minecraft.locale.Language.getInstance();
+        PreparedTooltip cur = tooltipLayout;
+        if (cur == null || !tooltipContent.equals(cur.content()) || tr != cur.font()
+                || language != cur.language() || generation != cur.generation() || styleKey != cur.styleKey()) {
+            List<FormattedCharSequence> lines =
+                    tr.split(Component.literal(tooltipContent), TOOLTIP_MAX_W);
+            int textW = 0;
+            for (var l : lines) textW = Math.max(textW, tr.width(l));
+            cur = new PreparedTooltip(tooltipContent, tr, language, generation, styleKey, lines, textW);
+            tooltipLayout = cur;
+        }
+        return cur;
+    }
+
     /**
      * Advances the tooltip fade and draws it, clamped inside the screen.
      * Owning screens call this once, after all rows and overlays; the
@@ -812,15 +840,15 @@ public abstract class FeatureSetting {
         tooltipClaimed = false;
         if (tooltipContent == null) return;
         if (fade <= 0.001f) {
-            tooltipContent = null; // fully faded out — drop the content
+            tooltipContent = null; // fully faded out — drop the content and its prepared layout
+            tooltipLayout = null;
             return;
         }
         Font tr = Minecraft.getInstance().font;
         if (tr == null) return;
-        List<FormattedCharSequence> lines =
-                tr.split(Component.literal(tooltipContent), TOOLTIP_MAX_W);
-        int textW = 0;
-        for (var l : lines) textW = Math.max(textW, tr.width(l));
+        PreparedTooltip layout = prepareTooltipLines(tr);
+        List<FormattedCharSequence> lines = layout.lines();
+        int textW = layout.textW();
         int boxW = textW + 12;
         int boxH = lines.size() * (tr.lineHeight + 1) + 7;
         int bx = tooltipX + 12;

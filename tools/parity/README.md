@@ -29,6 +29,12 @@ exchange atomically and refuses an unmarked fixture or a pending command.
 | `waypoints-screen` | Open the waypoint manager without changing its rows |
 | `shape-benchmark` | Measure 120 warm-up and 600 sampled manager extraction frames; write `shape-benchmark.json` |
 | `shape-cases` | Open fixed shape, scissor and transform cases for visual comparison |
+| `ui-open-benchmark label modules` / `ui-open-benchmark label text_fonts` | Arm before opening a fresh main/detail screen; write `label.json` after 120 warm-up and 600 sampled extraction frames |
+| `ui-benchmark label [scroll]` | Sample the current main/detail screen; optional alternating wheel input every four frames |
+| `ui-cache-state label` | Snapshot observed layer-cache allocation/commit totals and tracked CPU image bytes |
+| `ui-suppress` | Trigger the same 400 ms glass suppression as F2, without writing a screenshot |
+| `ui-tooltip remember` / `unchanged` / `changed` / `absent` | Assert prepared-tooltip reuse, invalidation or release after hovering a described label |
+| `fps-cap 120` | Set the disposable client's native FPS option and disable VSync |
 | `assert-inactivity afk` | Assert that the fixture's prior inactivity option was restored |
 | `settings` | Open Aurora settings |
 | `stable-settings` | Open the same screen with the singleplayer world paused |
@@ -38,7 +44,7 @@ exchange atomically and refuses an unmarked fixture or a pending command.
 | `font-first-use aurora:inter_medium_ui` | Time one actual font-width lookup |
 | `font-specimen` | Render fallback, bold/italic, decorations and obfuscation samples |
 | `hud-editor` | Open the universal HUD editor |
-| `factory` | Replace the disposable client's in-memory settings with effective factory defaults |
+| `factory` | Replace the disposable client's in-memory settings with field initializers (does not overlay the shipped defaults JSON) |
 | `benchmark label` | Export an exploratory eight-second frame sample; not release overhead evidence |
 | `resize 854 480` | Set the native window size |
 | `layout grid` / `layout list` | Open the selected feature layout |
@@ -83,6 +89,43 @@ on OpenGL and native Vulkan (VulkanMod on 26.1.2). Run `capture`, then `bindings
 on a later tick; restart the same fixture and run `persisted` and `bindings`.
 This verifies native handlers and persistence; it does not synthesize OS keys
 or replace a physical-input/accessibility audit.
+
+## Screen/cache measurements
+
+The UI benchmark separates first extraction, warm-up and steady extraction,
+and reports frame intervals separately. It observes `UiLayerCache` allocation
+boundaries and commits through optional probe-only mixins; production Aurora
+has no measurement callbacks. Upload payload is image width × height × 4,
+including shared material templates. It is not GPU traffic measured by a
+driver. Tracked backing bytes cover currently observed CPU images, not VRAM,
+Java heap, every font cache or a process-wide memory total. Weak owner keys
+avoid retaining closed screens. Totals accumulate for the probe session;
+`cacheDuringRun` subtracts the counters captured at arm time.
+
+Elapsed extraction includes scheduling stalls and excludes deferred GUI draws
+and GPU work. The first extraction includes other first-use work such as fonts
+and icons. Use repeated runs with matching framebuffer, scale, theme, world,
+font and backend; do not infer an FPS gain from a smaller upload. A scrolling
+sample must actually overflow: `text_fonts` at 854×480, GUI scale 2, does.
+Wheel direction alternates every 120 frames, so time-based smoothing may
+produce different commit counts. Compare payload per rebuild as well as totals.
+
+Labels must be unique and contain only letters, digits, underscores or hyphens;
+existing JSON files are never overwritten. Command acknowledgement means the
+sample was armed; wait for its JSON or the completion log before changing
+screens. The inactivity policy is temporarily `MINIMIZED` and restored on
+completion, cancellation, screen replacement or `stop`. Other sampling modes
+should be run sequentially. Record `-Daurora.ui.revision=<source>` and
+`-Daurora.ui.backend=OPENGL` (or `VULKAN`) on the game JVM. These are provenance
+labels; verify the selected backend in the actual launch log.
+
+Native Unlimited currently takes precedence over Aurora's GUI FPS cap. The
+report records the native option and tracker limit; Aurora's own frame pacing
+can reduce the rate further. Inspect frame intervals, rather than assuming the
+configured GUI cap applied. `fps-cap` changes only the disposable fixture's
+options. This opt-in screen benchmark supplements the separate gameplay
+[overhead gate](../../docs/OVERHEAD_BUDGET.md); never install the probe in a
+release-overhead run.
 
 The shape benchmark measures elapsed time inside the manager's extraction method
 and `RenderUtil` fill and experimental shader quad submissions. It also measures

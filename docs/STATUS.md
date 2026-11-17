@@ -1,9 +1,15 @@
 # Aurora Client status
 
-Updated 2026-11-15. See [ROADMAP](ROADMAP.md) for the order of work,
+Updated 2026-11-17. See [ROADMAP](ROADMAP.md) for the order of work,
 [architecture](ARCHITECTURE.md) for ownership, and [ADRs](adr/) for decisions.
 
 ## Structure and integration
+
+UI cache refinement crops static captures to their panel/body bounds, keeps
+unified chrome through screenshot suppression, retires screen textures after
+deferred draws, and reuses one prepared setting-tooltip layout. The optional
+native probe now measures open-screen extraction and cache payload separately
+from gameplay overhead. [Implementation and measured limits](reports/2026-11-17-ui-cache-refinement.md).
 
 Pulsar integration adds Phenomena's analytics and recording as Aurora's 40th
 feature, off by default. Its configuration and six-tab dashboard follow Aurora's
