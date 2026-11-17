@@ -159,9 +159,10 @@ public class KeystrokesModule extends HudModule {
         return com.aurora.client.util.HudBackgrounds.radius(themeCorners(), KEY_RADIUS);
     }
 
-    /** KEYCAP alone uses the full UI radius; the existing switch also remains the panel's switch. */
+    /** KEYCAP uses the UI's control corner radius (radiusSmall: a key is a control, not a window,
+     * so ROUND gives rounded caps rather than circles); the switch also stays the panel's. */
     private float keycapRadius() {
-        return themeCorners() ? ThemeManager.current().roundness().radius() : KeycapProfile.DEFAULT_RADIUS;
+        return themeCorners() ? ThemeManager.current().roundness().radiusSmall() : KeycapProfile.DEFAULT_RADIUS;
     }
 
     /**
