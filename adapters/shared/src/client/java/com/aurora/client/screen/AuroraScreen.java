@@ -461,7 +461,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 headerToggleControls.put(metadata.id, headerToggleControl(metadata));
             }
             for (FeatureSetting setting : metadata.settings) {
-                List<SemanticActionControl> controls = List.copyOf(setting.interactionControls());
+                List<SemanticActionControl> controls = List.copyOf(setting.controlsWithReset());
                 hostedSettingControls.put(setting, controls);
                 for (SemanticActionControl control : controls) {
                     semanticHost.register(control);
@@ -1592,7 +1592,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                         // intersection of the ACTIONABLE control rect with
                         // C-1's authoritative viewport is available. Edge
                         // contact alone is not (ClipBand is half-open).
-                        boolean available = visible && vp.intersects(
+                        boolean available = visible && s.controlVisible(control) && vp.intersects(
                                 control.getX(), control.getY(),
                                 control.getWidth(), control.getHeight());
                         semanticHost.setAvailable(control, available);
@@ -2273,6 +2273,9 @@ public class AuroraScreen extends Screen implements ThemedScreen {
 
     @Override
     public boolean keyPressed(net.minecraft.client.input.KeyEvent _kev) {
+        for (FeatureMetadata metadata : allPageEntries)
+            for (FeatureSetting setting : metadata.settings)
+                if (setting.resetKeyPressed(this.getFocused(), _kev)) return true;
         // C-8 Escape rule for the Modules search field (the pack browser's
         // canonical text-field contract): Escape while typing UNFOCUSES the
         // field and is consumed — vanilla EditBox ignores Escape, so the

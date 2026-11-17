@@ -165,6 +165,12 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
         this.values = options.clone();
     }
 
+    public EnumSetting<E> resetDefault(Supplier<E> supplier) {
+        E value = supplier.get();
+        installReset(() -> getter.get() != value, () -> setter.accept(value), () -> displayName(value));
+        return this;
+    }
+
     @Override public EnumSetting<E> description(String desc) { super.description(desc); return this; }
     @Override public EnumSetting<E> description(Supplier<String> desc) { super.description(desc); return this; }
 
@@ -479,6 +485,7 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button, int rowX, int rowY, int rowWidth) {
+        if (resetMouseClicked(mouseX, mouseY, button)) return true;
         syncCompactControl(rowX, rowY);
         if (isDisabled()) return false;
         if (button != com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) return false;

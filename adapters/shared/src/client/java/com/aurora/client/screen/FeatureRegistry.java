@@ -102,6 +102,8 @@ public final class FeatureRegistry {
     private static void init() {
         initialized = true;
         AuroraConfig cfg = AuroraConfig.get();
+        AuroraConfig defaults = AuroraConfig.defaults();
+        var defaultTheme = com.aurora.client.theme.ThemeResolver.resolve(defaults.themeOrDefault(), defaults.themeEnabled);
 
         // ============ MODULES TAB ============
         addWithSettings("pulsar",
@@ -109,10 +111,10 @@ public final class FeatureRegistry {
                 () -> cfg.pulsarEnabled, v -> cfg.pulsarEnabled = v,
                 List.of(mappingAction("Open Pulsar", "Review recordings, analytics and capture settings.", screen ->
                                 com.aurora.client.adapter.NativeUi.setScreen(net.minecraft.client.Minecraft.getInstance(), new dev.phenomena.gui.screens.PhenomenaScreen(screen))),
-                        new KeybindSetting("Dashboard key", () -> cfg.pulsarKey, v -> cfg.pulsarKey = v),
-                        new BooleanSetting("Automatic capture", () -> cfg.pulsarSettings.tracking, v -> cfg.pulsarSettings.tracking = v),
-                        new BooleanSetting("Record finished fights", () -> cfg.pulsarSettings.recording, v -> cfg.pulsarSettings.recording = v),
-                        new BooleanSetting("Anonymize reports", () -> cfg.pulsarSettings.anonymizeExports, v -> cfg.pulsarSettings.anonymizeExports = v)));
+                        new KeybindSetting("Dashboard key", () -> cfg.pulsarKey, v -> cfg.pulsarKey = v).resetDefault(() -> defaults.pulsarKey),
+                        new BooleanSetting("Automatic capture", () -> cfg.pulsarSettings.tracking, v -> cfg.pulsarSettings.tracking = v).resetDefault(() -> defaults.pulsarSettings.tracking),
+                        new BooleanSetting("Record finished fights", () -> cfg.pulsarSettings.recording, v -> cfg.pulsarSettings.recording = v).resetDefault(() -> defaults.pulsarSettings.recording),
+                        new BooleanSetting("Anonymize reports", () -> cfg.pulsarSettings.anonymizeExports, v -> cfg.pulsarSettings.anonymizeExports = v).resetDefault(() -> defaults.pulsarSettings.anonymizeExports)));
 
 
         addWithSettings("world_map",
@@ -124,16 +126,16 @@ public final class FeatureRegistry {
                                 com.aurora.client.adapter.NativeUi.setScreen(net.minecraft.client.Minecraft.getInstance(), new com.aurora.client.worldmap.screen.WorldMapScreen()))
                                 .disabled(() -> net.minecraft.client.Minecraft.getInstance().level == null || !cfg.worldMapEnabled),
                         new BooleanSetting("Waypoint Names", () -> cfg.worldMapShowWaypointNames,
-                                v -> cfg.worldMapShowWaypointNames = v),
+                                v -> cfg.worldMapShowWaypointNames = v).resetDefault("worldMapShowWaypointNames", () -> defaults.worldMapShowWaypointNames),
                         new SectionHeaderSetting("Capture & Caching"),
                         new KeybindSetting("Open Key",
-                                () -> cfg.worldMapKey, v -> cfg.worldMapKey = v)
+                                () -> cfg.worldMapKey, v -> cfg.worldMapKey = v).resetDefault(() -> defaults.worldMapKey)
                                 .description("The key that opens the fullscreen world map. Drag to pan, scroll to zoom, and use the dimension button to browse other dimensions' saved terrain. Press ESC or Backspace while rebinding to clear it."),
                         SliderSetting.ofInt("Capture Budget",
-                                () -> cfg.worldMapCaptureBudget, v -> cfg.worldMapCaptureBudget = v, 1, 8)
+                                () -> cfg.worldMapCaptureBudget, v -> cfg.worldMapCaptureBudget = v, 1, 8).resetDefault(() -> defaults.worldMapCaptureBudget)
                                 .description("Maximum changed or newly observed chunks captured per tick. Both maps share this work; default 2. World access stays on the client thread."),
                         SliderSetting.ofInt("Region Cache",
-                                () -> cfg.worldMapCacheRegions, v -> cfg.worldMapCacheRegions = v, 8, 192)
+                                () -> cfg.worldMapCacheRegions, v -> cfg.worldMapCacheRegions = v, 8, 192).resetDefault(() -> defaults.worldMapCacheRegions)
                                 .description("Full-detail tiles per active dimension, approximately 1 MiB CPU plus up to 1 MiB GPU each. Applied when a context opens. Far zoom uses bounded 64x64 overview tiles."),
                         new SectionHeaderSetting("Related Settings & Data"),
                         mappingAction("Minimap Settings", "Shape, zoom, position and overlays.", screen ->
@@ -149,13 +151,13 @@ public final class FeatureRegistry {
                 () -> cfg.zoomEnabled, v -> cfg.zoomEnabled = v,
                 List.of(
                         new KeybindSetting("Hold Key",
-                                () -> cfg.zoomKey, v -> cfg.zoomKey = v)
+                                () -> cfg.zoomKey, v -> cfg.zoomKey = v).resetDefault(() -> defaults.zoomKey)
                                 .description("The key you hold to activate zoom. Release to return to normal view instantly. Press ESC or Backspace while rebinding to clear it."),
                         SliderSetting.of("Zoom Level",
-                                () -> cfg.zoomLevel, v -> cfg.zoomLevel = v, 1.5, 50.0)
+                                () -> cfg.zoomLevel, v -> cfg.zoomLevel = v, 1.5, 50.0).resetDefault(() -> defaults.zoomLevel)
                                 .description("How far the zoom magnifies. Higher values pull distant objects much closer but make the view more sensitive to mouse movement and harder to hold steady. 4-8x suits general spotting; 20x+ is for scouting far terrain."),
                         SliderSetting.of("Smoothness",
-                                () -> cfg.zoomSmoothness, v -> cfg.zoomSmoothness = v, 0.01, 2.0)
+                                () -> cfg.zoomSmoothness, v -> cfg.zoomSmoothness = v, 0.01, 2.0).resetDefault(() -> defaults.zoomSmoothness)
                                 .description("How gradually the zoom eases in and out when you press/release the key. Low values snap instantly; higher values give a smooth cinematic glide. Purely a feel preference — no effect on performance.")
                 ));
 
@@ -165,7 +167,7 @@ public final class FeatureRegistry {
                 List.of(
                         SliderSetting.ofInt("Brightness %",
                                 () -> cfg.fullBrightGamma,
-                                v -> cfg.fullBrightGamma = v, 100, 1500)
+                                v -> cfg.fullBrightGamma = v, 100, 1500).resetDefault(() -> defaults.fullBrightGamma)
                                 .description("How aggressively darkness is lifted. 100% is vanilla 'Bright'; higher values flatten shadows further until even unlit caves are clearly readable. Very high values wash out the world's contrast — most players prefer 500-1000%.")
                 ));
 
@@ -175,7 +177,7 @@ public final class FeatureRegistry {
                 List.of(
                         SliderSetting.of("Distance Multiplier",
                                 () -> cfg.fogDistanceMultiplier,
-                                v -> cfg.fogDistanceMultiplier = v, 1.0, 100.0)
+                                v -> cfg.fogDistanceMultiplier = v, 1.0, 100.0).resetDefault(() -> defaults.fogDistanceMultiplier)
                                 .description("Multiplies how far the fog starts. 1x is vanilla; higher values progressively clear the haze for a longer view distance. The visible range is still capped by your Render Distance, so increases beyond that point only reduce fog density, not draw distance.")
                 ));
 
@@ -202,18 +204,18 @@ public final class FeatureRegistry {
                         new SectionHeaderSetting("Particles / Presentation"),
                         SliderSetting.ofInt("Particle Size %",
                                 () -> cfg.totemParticleScale,
-                                v -> cfg.totemParticleScale = v, 25, 100)
+                                v -> cfg.totemParticleScale = v, 25, 100).resetDefault(() -> defaults.totemParticleScale)
                                 .description("Shrinks the burst of totem particles that erupts when you pop a Totem of Undying. Lower values clear the screen faster so you can see the fight again sooner after a pop — a common competitive preference. 100% is vanilla size."),
 
                         new SectionHeaderSetting("Shield"),
                         new BooleanSetting("Custom Model",
                                 () -> cfg.shieldTweaksEnabled,
-                                v -> cfg.shieldTweaksEnabled = v)
+                                v -> cfg.shieldTweaksEnabled = v).resetDefault("shieldTweaksEnabled", () -> defaults.shieldTweaksEnabled)
                                 .description("Repositions your held shield in first person so it blocks less of your view while still protecting you — making it easier to track an opponent while blocking. Turn off to keep the vanilla shield position."),
                         new EnumSetting<>("Style",
                                 AuroraConfig.ShieldStyle.class,
                                 () -> cfg.shieldStyle,
-                                v -> cfg.shieldStyle = v)
+                                v -> cfg.shieldStyle = v).resetDefault(() -> defaults.shieldStyle)
                                 .glassButton(true) // glass pilot: pack_tweaks detail screen
                                 .valueDescriptions(style -> switch (style) {
                                     case VANILLA -> "Default first-person position — no transform applied.";
@@ -224,29 +226,29 @@ public final class FeatureRegistry {
 
                         new BooleanSetting("Shield Status",
                                 () -> cfg.shieldStatusEnabled,
-                                v -> cfg.shieldStatusEnabled = v)
+                                v -> cfg.shieldStatusEnabled = v).resetDefault("shieldStatusEnabled", () -> defaults.shieldStatusEnabled)
                                 .description("Tints rendered shields by status. Your shield shows the Available color at all times, except during the brief cooldown after an axe disables it — then it turns Disabled. Other players' and mobs' cooldowns aren't synced, so theirs always show Available."),
                         new ColorSetting("Available Color",
                                 () -> cfg.shieldStatusAvailableColor,
-                                v -> cfg.shieldStatusAvailableColor = v)
+                                v -> cfg.shieldStatusAvailableColor = v).resetDefault(() -> defaults.shieldStatusAvailableColor)
                                 .description("A solid color overlay applied to your shield whenever it is usable — including while actively blocking — and to all other entities' shields. The picker's alpha is the overlay's opacity: maximum covers the shield entirely, minimum turns the overlay off."),
                         new ColorSetting("Disabled Color",
                                 () -> cfg.shieldStatusDisabledColor,
-                                v -> cfg.shieldStatusDisabledColor = v)
+                                v -> cfg.shieldStatusDisabledColor = v).resetDefault(() -> defaults.shieldStatusDisabledColor)
                                 .description("A solid color overlay applied to your shield only during the cooldown that follows an axe disabling it (the 'rendered unusable' window). The picker's alpha is the overlay's opacity: maximum covers the shield entirely, minimum turns the overlay off."),
 
                         new SectionHeaderSetting("Environment / Clarity"),
                         SliderSetting.of("Underwater Fog Multiplier",
                                 () -> cfg.underwaterFogMultiplier,
-                                v -> cfg.underwaterFogMultiplier = v, 1.0, 50.0)
+                                v -> cfg.underwaterFogMultiplier = v, 1.0, 50.0).resetDefault(() -> defaults.underwaterFogMultiplier)
                                 .description("Free in lakes/rivers. May cost FPS in deep ocean — tune down to 4-8x there."),
                         SliderSetting.of("Lava Fog Multiplier",
                                 () -> cfg.lavaFogMultiplier,
-                                v -> cfg.lavaFogMultiplier = v, 1.0, 50.0)
+                                v -> cfg.lavaFogMultiplier = v, 1.0, 50.0).resetDefault(() -> defaults.lavaFogMultiplier)
                                 .description("Pushes back the thick orange fog when your head is submerged in lava, letting you see further through it. Invaluable for spotting ancient debris or an exit while swimming lava in the Nether. Higher = clearer."),
                         new BooleanSetting("Hide 1st Person Fire",
                                 () -> cfg.lavaHideOverlay,
-                                v -> cfg.lavaHideOverlay = v)
+                                v -> cfg.lavaHideOverlay = v).resetDefault("lavaHideOverlay", () -> defaults.lavaHideOverlay)
                                 .description("Hides the orange tint when submerged. Also hides the on-fire screen tint.")
                 ),
                 // Prefixes match camelCase config field names via
@@ -267,7 +269,7 @@ public final class FeatureRegistry {
                         new EnumSetting<>("Display Mode",
                                 AuroraConfig.HealthDisplayMode.class,
                                 () -> cfg.playerHealthDisplayMode,
-                                v -> cfg.playerHealthDisplayMode = v)
+                                v -> cfg.playerHealthDisplayMode = v).resetDefault(() -> defaults.playerHealthDisplayMode)
                                 .valueDescriptions(m -> switch (m) {
                                     case NUMBER -> "A single heart symbol followed by the exact HP value (e.g. \"❤ 16\"). Best for precise math.";
                                     case HEARTS -> "A row of individual heart icons that mimic the vanilla health bar: each heart represents 2 HP. A full heart is bright red (gold for absorption), a half heart is dark red, and empty hearts are not shown. Extra hearts beyond the entity's normal maximum are gold.";
@@ -275,11 +277,11 @@ public final class FeatureRegistry {
                                 .description("Choose how health is drawn above each entity. Number is precise; Hearts is a quick visual read like your own health bar."),
                         new BooleanSetting("Only Attacked",
                                 () -> cfg.playerHealthOnlyAttacked,
-                                v -> cfg.playerHealthOnlyAttacked = v)
+                                v -> cfg.playerHealthOnlyAttacked = v).resetDefault("playerHealthOnlyAttacked", () -> defaults.playerHealthOnlyAttacked)
                                 .description("Only show the health number above entities you've actually hit this session, instead of every entity in view. Keeps the screen uncluttered in crowded areas while still tracking your current targets."),
                         new BooleanSetting("Show Players",
                                 () -> cfg.playerHealthShowPlayers,
-                                v -> cfg.playerHealthShowPlayers = v)
+                                v -> cfg.playerHealthShowPlayers = v).resetDefault("playerHealthShowPlayers", () -> defaults.playerHealthShowPlayers)
                                 .description("Also show other players' health, not only mobs'. Off by default: vanilla does not show other players' health, and some servers do not allow it.")
                 ));
 
@@ -288,12 +290,12 @@ public final class FeatureRegistry {
                 () -> cfg.freeLookEnabled, v -> cfg.freeLookEnabled = v,
                 List.of(
                         new KeybindSetting("Hold Key",
-                                () -> cfg.freeLookKey, v -> cfg.freeLookKey = v)
+                                () -> cfg.freeLookKey, v -> cfg.freeLookKey = v).resetDefault(() -> defaults.freeLookKey)
                                 .description("Hold this key to detach the camera so you can look around freely; release to restore your original view. Press ESC or Backspace while rebinding to clear it."),
                         SliderSetting.of("Camera Sensitivity",
                                 () -> cfg.freeLookSensitivity,
                                 v -> cfg.freeLookSensitivity = v,
-                                0.1, 3.0)
+                                0.1, 3.0).resetDefault(() -> defaults.freeLookSensitivity)
                                 .description("Multiplier on top of vanilla MouseHandler sensitivity. 1.0 = native feel.")
                 ));
 
@@ -307,29 +309,29 @@ public final class FeatureRegistry {
                 List.of(
                         new BooleanSetting("Show Outline",
                                 () -> cfg.blockOverlayOutlineEnabled,
-                                v -> cfg.blockOverlayOutlineEnabled = v)
+                                v -> cfg.blockOverlayOutlineEnabled = v).resetDefault("blockOverlayOutlineEnabled", () -> defaults.blockOverlayOutlineEnabled)
                                 .description("Draws a colored wireframe around the targeted block's edges. This is the clearest, lowest-clutter way to highlight your target without obscuring its texture."),
                         new ColorSetting("Outline Color",
                                 () -> cfg.blockOverlayOutlineColor,
-                                v -> cfg.blockOverlayOutlineColor = v),
+                                v -> cfg.blockOverlayOutlineColor = v).resetDefault(() -> defaults.blockOverlayOutlineColor),
                         SliderSetting.of("Outline Width",
                                 () -> cfg.blockOverlayLineWidth,
-                                v -> cfg.blockOverlayLineWidth = v, 1.0, 6.0)
+                                v -> cfg.blockOverlayLineWidth = v, 1.0, 6.0).resetDefault(() -> defaults.blockOverlayLineWidth)
                                 .description("Thickness of the outline in screen pixels. Uses a GPU-side line expansion shader, so lines render cleanly at any width on all GPUs."),
                         new BooleanSetting("Show Fill",
                                 () -> cfg.blockOverlayFillEnabled,
-                                v -> cfg.blockOverlayFillEnabled = v)
+                                v -> cfg.blockOverlayFillEnabled = v).resetDefault("blockOverlayFillEnabled", () -> defaults.blockOverlayFillEnabled)
                                 .description("Tints the whole targeted block with a translucent color. More eye-catching than the outline alone, but it partially hides the block's texture. Combine with the outline or use on its own."),
                         new ColorSetting("Fill Color",
                                 () -> cfg.blockOverlayFillColor,
-                                v -> cfg.blockOverlayFillColor = v),
+                                v -> cfg.blockOverlayFillColor = v).resetDefault(() -> defaults.blockOverlayFillColor),
                         new EnumSetting<>("Color Mode", AuroraConfig.BlockOverlayMode.class,
-                                () -> cfg.blockOverlayMode, v -> cfg.blockOverlayMode = v)
+                                () -> cfg.blockOverlayMode, v -> cfg.blockOverlayMode = v).resetDefault(() -> defaults.blockOverlayMode)
                                 .glassButton(true) // glass pilot: block_overlay detail screen
                                 .description("STATIC uses the fixed colors you picked above; RAINBOW cycles the hue automatically over time for a lively animated highlight. Rainbow ignores the manual color pickers."),
                         SliderSetting.of("Rainbow Speed",
                                 () -> (double) cfg.blockOverlayRainbowSpeed,
-                                v -> cfg.blockOverlayRainbowSpeed = (float) v, 0.1, 10.0)
+                                v -> cfg.blockOverlayRainbowSpeed = (float) v, 0.1, 10.0).resetDefault(() -> (double) defaults.blockOverlayRainbowSpeed)
                                 .description("How fast the hue cycles when Color Mode is RAINBOW. Low values drift slowly through the spectrum; high values strobe quickly. Has no effect in STATIC mode.")
                 ));
 
@@ -337,21 +339,21 @@ public final class FeatureRegistry {
                 "Turns sprint and sneak into press-once toggles instead of hold-to-keep keys. Tap to start sprinting or sneaking and it stays active until you tap again — saving your fingers on long journeys and letting you hold a sneak edge without keeping a key pressed. An optional HUD shows which toggles are active.",
                 () -> cfg.toggleSprintSneakEnabled, v -> cfg.toggleSprintSneakEnabled = v,
                 List.of(
-                        new ColorSetting("Text Color", () -> cfg.toggleSprintSneakTextColor == null ? 0xFFFFFFFF : cfg.toggleSprintSneakTextColor, v -> cfg.toggleSprintSneakTextColor = v)
+                        new ColorSetting("Text Color", () -> cfg.toggleSprintSneakTextColor == null ? 0xFFFFFFFF : cfg.toggleSprintSneakTextColor, v -> cfg.toggleSprintSneakTextColor = v).resetDefault(() -> cfg.toggleSprintSneakTextColor, () -> defaults.toggleSprintSneakTextColor, () -> defaults.toggleSprintSneakTextColor == null ? 0xFFFFFFFF : defaults.toggleSprintSneakTextColor)
                                 .description("Text color for this HUD only. Reset restores its default color."),
                         new KeybindSetting("Toggle Sprint Key",
-                                () -> cfg.toggleSprintKey, v -> cfg.toggleSprintKey = v)
+                                () -> cfg.toggleSprintKey, v -> cfg.toggleSprintKey = v).resetDefault(() -> defaults.toggleSprintKey)
                                 .description("Press once to start sprinting, again to stop."),
                         new KeybindSetting("Toggle Sneak Key",
-                                () -> cfg.toggleSneakKey, v -> cfg.toggleSneakKey = v)
+                                () -> cfg.toggleSneakKey, v -> cfg.toggleSneakKey = v).resetDefault(() -> defaults.toggleSneakKey)
                                 .description("Press once to start sneaking, again to stop."),
                         new BooleanSetting("Show Status HUD",
                                 () -> cfg.toggleSprintSneakHudEnabled,
-                                v -> cfg.toggleSprintSneakHudEnabled = v),
+                                v -> cfg.toggleSprintSneakHudEnabled = v).resetDefault("toggleSprintSneakHudEnabled", () -> defaults.toggleSprintSneakHudEnabled),
                         new EnumSetting<>("HUD Display Mode",
                                 AuroraConfig.ToggleSprintDisplayMode.class,
                                 () -> cfg.toggleSprintSneakDisplayMode,
-                                v -> cfg.toggleSprintSneakDisplayMode = v)
+                                v -> cfg.toggleSprintSneakDisplayMode = v).resetDefault(() -> defaults.toggleSprintSneakDisplayMode)
                                 .valueDescriptions(m -> switch (m) {
                                     case BOTH -> "Classic two-row layout showing both \"Sprint: ON/OFF\" and \"Sneak: ON/OFF\" together in one module.";
                                     case INDIVIDUAL -> "Splits into two independent HUD modules (one for sprint, one for sneak) that you can drag, resize and show/hide separately in the HUD editor.";
@@ -359,10 +361,10 @@ public final class FeatureRegistry {
                                 })
                                 .description("Controls how the toggle status appears on the HUD."),
                         new EnumSetting<>("HUD Background", FLAT_BACKGROUNDS,
-                                () -> cfg.sprintHudBgMode, v -> cfg.sprintHudBgMode = v),
+                                () -> cfg.sprintHudBgMode, v -> cfg.sprintHudBgMode = v).resetDefault(() -> defaults.sprintHudBgMode),
                         new ColorSetting("HUD Background Color (when SOLID)",
-                                () -> cfg.sprintHudBgColor, v -> cfg.sprintHudBgColor = v),
-                        hudThemeCorners(() -> cfg.toggleSprintSneakThemeCorners, v -> cfg.toggleSprintSneakThemeCorners = v)
+                                () -> cfg.sprintHudBgColor, v -> cfg.sprintHudBgColor = v).resetDefault(() -> defaults.sprintHudBgColor),
+                        hudThemeCorners(() -> cfg.toggleSprintSneakThemeCorners, v -> cfg.toggleSprintSneakThemeCorners = v, () -> defaults.toggleSprintSneakThemeCorners)
                                 .disabled(() -> cfg.sprintHudBgMode != AuroraConfig.HudBackground.SOLID)
                 ));
 
@@ -385,11 +387,11 @@ public final class FeatureRegistry {
                         new SectionHeaderSetting("Effect Expiry"),
                         new BooleanSetting("Effect Expiry Alert",
                                 () -> cfg.effectExpiryAlertEnabled,
-                                v -> cfg.effectExpiryAlertEnabled = v)
+                                v -> cfg.effectExpiryAlertEnabled = v).resetDefault("effectExpiryAlertEnabled", () -> defaults.effectExpiryAlertEnabled)
                                 .description("Warns when an active potion effect is about to run out, so you can re-apply it before it's gone. Master switch for everything in this section: with it off, no effect ever alerts, regardless of the per-effect list below."),
                         SliderSetting.ofInt("Expiry Threshold (seconds)",
                                 () -> cfg.effectExpiryThresholdSeconds,
-                                v -> cfg.effectExpiryThresholdSeconds = v, 1, 60)
+                                v -> cfg.effectExpiryThresholdSeconds = v, 1, 60).resetDefault(() -> defaults.effectExpiryThresholdSeconds)
                                 .description("How many seconds before an effect expires the alert should fire. 10 seconds gives you time to re-buff; lower values alert closer to the wire."),
 
                         new SectionHeaderSetting("Per-Effect Alerts"),
@@ -398,55 +400,55 @@ public final class FeatureRegistry {
                         new SectionHeaderSetting("Armor & Tools"),
                         new BooleanSetting("Armor Durability Alert",
                                 () -> cfg.armorAlertEnabled,
-                                v -> cfg.armorAlertEnabled = v)
+                                v -> cfg.armorAlertEnabled = v).resetDefault("armorAlertEnabled", () -> defaults.armorAlertEnabled)
                                 .description("Warns when a piece of equipped armor is about to break, so you can swap or repair it before it's destroyed. The warning stays on screen (in the alert module below) while the item is in your possession; repairing or replacing it re-arms the alert."),
                         new BooleanSetting("Also Alert Held Tools",
                                 () -> cfg.toolDurabilityAlertEnabled,
-                                v -> cfg.toolDurabilityAlertEnabled = v)
+                                v -> cfg.toolDurabilityAlertEnabled = v).resetDefault("toolDurabilityAlertEnabled", () -> defaults.toolDurabilityAlertEnabled)
                                 .description("When on, low-durability warnings also fire for the item in your main and off hands (sword, pickaxe, etc.), not just armor."),
                         SliderSetting.ofInt("Threshold (%)",
                                 () -> cfg.armorAlertThresholdPct,
-                                v -> cfg.armorAlertThresholdPct = v, 1, 100)
+                                v -> cfg.armorAlertThresholdPct = v, 1, 100).resetDefault(() -> defaults.armorAlertThresholdPct)
                                 .description("Durability percentage at which the warning fires. Higher values warn you earlier (more lead time to react); lower values only alert at the last moment. Around 10-15% gives a good balance."),
 
                         new SectionHeaderSetting("Alert HUD Modules"),
                         new BooleanSetting("Armor Alert Module",
                                 () -> cfg.armorAlertHudEnabled,
-                                v -> cfg.armorAlertHudEnabled = v)
+                                v -> cfg.armorAlertHudEnabled = v).resetDefault("armorAlertHudEnabled", () -> defaults.armorAlertHudEnabled)
                                 .description("Shows the low-durability warnings as a HUD module (\"Armor Alert\" in the HUD editor): one row per latched item with its icon, slot and remaining percent. Drag, resize and hide it there; this toggle plus Armor Durability Alert gate it."),
                         new EnumSetting<>("Armor Module Background",
                                 new AuroraConfig.HudBackground[] {
                                         AuroraConfig.HudBackground.NONE, AuroraConfig.HudBackground.SOLID },
-                                () -> cfg.armorAlertBgMode, v -> cfg.armorAlertBgMode = v),
+                                () -> cfg.armorAlertBgMode, v -> cfg.armorAlertBgMode = v).resetDefault(() -> defaults.armorAlertBgMode),
                         new ColorSetting("Armor Module Background Color (when SOLID)",
-                                () -> cfg.armorAlertBgColor, v -> cfg.armorAlertBgColor = v),
-                        new ColorSetting("Armor Module Text Color", () -> cfg.armorAlertTextColor == null ? com.aurora.client.theme.HudText.color(cfg.hudColor) : cfg.armorAlertTextColor, v -> cfg.armorAlertTextColor = v)
+                                () -> cfg.armorAlertBgColor, v -> cfg.armorAlertBgColor = v).resetDefault(() -> defaults.armorAlertBgColor),
+                        new ColorSetting("Armor Module Text Color", () -> cfg.armorAlertTextColor == null ? com.aurora.client.theme.HudText.color(cfg.hudColor) : cfg.armorAlertTextColor, v -> cfg.armorAlertTextColor = v).resetDefault(() -> cfg.armorAlertTextColor, () -> defaults.armorAlertTextColor, () -> defaults.armorAlertTextColor == null ? (defaults.hudColor == 0 ? defaultTheme.color(com.aurora.client.theme.ThemeToken.ACCENT) : defaults.hudColor) : defaults.armorAlertTextColor)
                                 .description("Text color for the armor alert module only. Reset restores its default color."),
-                        hudThemeCorners(() -> cfg.armorAlertThemeCorners, v -> cfg.armorAlertThemeCorners = v)
+                        hudThemeCorners(() -> cfg.armorAlertThemeCorners, v -> cfg.armorAlertThemeCorners = v, () -> defaults.armorAlertThemeCorners)
                                 .disabled(() -> cfg.armorAlertBgMode != AuroraConfig.HudBackground.SOLID),
                         new BooleanSetting("Effect Alert Module",
                                 () -> cfg.effectExpiryHudEnabled,
-                                v -> cfg.effectExpiryHudEnabled = v)
+                                v -> cfg.effectExpiryHudEnabled = v).resetDefault("effectExpiryHudEnabled", () -> defaults.effectExpiryHudEnabled)
                                 .description("Shows the effect-expiry warnings as a HUD module (\"Potion Alert\" in the HUD editor): one row per latched effect with its sprite, name and live seconds left. Drag, resize and hide it there; this toggle plus Effect Expiry Alert gate it."),
                         new EnumSetting<>("Effect Module Background",
                                 new AuroraConfig.HudBackground[] {
                                         AuroraConfig.HudBackground.NONE, AuroraConfig.HudBackground.SOLID },
-                                () -> cfg.effectExpiryBgMode, v -> cfg.effectExpiryBgMode = v),
+                                () -> cfg.effectExpiryBgMode, v -> cfg.effectExpiryBgMode = v).resetDefault(() -> defaults.effectExpiryBgMode),
                         new ColorSetting("Effect Module Background Color (when SOLID)",
-                                () -> cfg.effectExpiryBgColor, v -> cfg.effectExpiryBgColor = v),
-                        new ColorSetting("Effect Module Text Color", () -> cfg.effectExpiryTextColor == null ? com.aurora.client.theme.HudText.color(cfg.hudColor) : cfg.effectExpiryTextColor, v -> cfg.effectExpiryTextColor = v)
+                                () -> cfg.effectExpiryBgColor, v -> cfg.effectExpiryBgColor = v).resetDefault(() -> defaults.effectExpiryBgColor),
+                        new ColorSetting("Effect Module Text Color", () -> cfg.effectExpiryTextColor == null ? com.aurora.client.theme.HudText.color(cfg.hudColor) : cfg.effectExpiryTextColor, v -> cfg.effectExpiryTextColor = v).resetDefault(() -> cfg.effectExpiryTextColor, () -> defaults.effectExpiryTextColor, () -> defaults.effectExpiryTextColor == null ? (defaults.hudColor == 0 ? defaultTheme.color(com.aurora.client.theme.ThemeToken.ACCENT) : defaults.hudColor) : defaults.effectExpiryTextColor)
                                 .description("Text color for the effect alert module only. Reset restores its default color."),
-                        hudThemeCorners(() -> cfg.effectExpiryThemeCorners, v -> cfg.effectExpiryThemeCorners = v)
+                        hudThemeCorners(() -> cfg.effectExpiryThemeCorners, v -> cfg.effectExpiryThemeCorners = v, () -> defaults.effectExpiryThemeCorners)
                                 .disabled(() -> cfg.effectExpiryBgMode != AuroraConfig.HudBackground.SOLID),
 
                         new SectionHeaderSetting("Sound"),
                         new BooleanSetting("Play Sound",
-                                () -> cfg.armorAlertSound, v -> cfg.armorAlertSound = v)
+                                () -> cfg.armorAlertSound, v -> cfg.armorAlertSound = v).resetDefault("armorAlertSound", () -> defaults.armorAlertSound)
                                 .description("Also play an audio cue when a warning fires, so you notice it even when your eyes are elsewhere."),
                         new EnumSetting<>("Sound Choice",
                                 AuroraConfig.ArmorAlertSoundChoice.class,
                                 () -> cfg.armorAlertSoundChoice,
-                                v -> cfg.armorAlertSoundChoice = v)
+                                v -> cfg.armorAlertSoundChoice = v).resetDefault(() -> defaults.armorAlertSoundChoice)
                                 .description("Which sound effect plays for the alert. Pick one distinct enough to recognize instantly mid-game. Use Test Sound below to preview."),
                         ButtonSetting.semantic("Test Sound", "Preview",
                                 () -> "Current sound: " + cfg.armorAlertSoundChoice,
@@ -464,17 +466,17 @@ public final class FeatureRegistry {
                         new SectionHeaderSetting("Shape"),
                         new CrosshairPreviewSetting(),
                         new EnumSetting<>("Style", AuroraConfig.CrosshairStyle.class,
-                                () -> cfg.crosshairStyle, v -> cfg.crosshairStyle = v)
+                                () -> cfg.crosshairStyle, v -> cfg.crosshairStyle = v).resetDefault(() -> defaults.crosshairStyle)
                                 .description("The crosshair shape. Presets include classic cross, dot, and others; CUSTOM uses the pixel canvas you draw below. Size/Thickness/Gap apply to the presets."),
-                        SliderSetting.ofInt("Size", () -> cfg.crosshairSize, v -> cfg.crosshairSize = v, 1, 20)
+                        SliderSetting.ofInt("Size", () -> cfg.crosshairSize, v -> cfg.crosshairSize = v, 1, 20).resetDefault(() -> defaults.crosshairSize)
                                 .description("Overall scale, length, or radius of the crosshair."),
-                        SliderSetting.ofInt("Thickness", () -> cfg.crosshairThickness, v -> cfg.crosshairThickness = v, 1, 6)
+                        SliderSetting.ofInt("Thickness", () -> cfg.crosshairThickness, v -> cfg.crosshairThickness = v, 1, 6).resetDefault(() -> defaults.crosshairThickness)
                                 .description("Stroke width of preset shapes. Custom canvases use their painted pixels.")
                                 .visibleWhen(() -> cfg.crosshairStyle != AuroraConfig.CrosshairStyle.CUSTOM),
-                        SliderSetting.ofInt("Gap", () -> cfg.crosshairGap, v -> cfg.crosshairGap = v, 0, 10)
+                        SliderSetting.ofInt("Gap", () -> cfg.crosshairGap, v -> cfg.crosshairGap = v, 0, 10).resetDefault(() -> defaults.crosshairGap)
                                 .description("Center opening for dots and crosses; breaks the sides of circles and squares.")
                                 .visibleWhen(() -> cfg.crosshairStyle != AuroraConfig.CrosshairStyle.CUSTOM),
-                        new ColorSetting("Color", () -> cfg.crosshairColor, v -> cfg.crosshairColor = v),
+                        new ColorSetting("Color", () -> cfg.crosshairColor, v -> cfg.crosshairColor = v).resetDefault(() -> defaults.crosshairColor),
                         new PixelCanvasSetting("Custom Canvas",
                                 () -> cfg.crosshairCustomPixels, v -> cfg.crosshairCustomPixels = v,
                                 () -> cfg.crosshairCustomWidth, v -> cfg.crosshairCustomWidth = v,
@@ -484,29 +486,29 @@ public final class FeatureRegistry {
                                 .visibleWhen(() -> cfg.crosshairStyle == AuroraConfig.CrosshairStyle.CUSTOM),
                         new SectionHeaderSetting("Attack Indicator"),
                         new BooleanSetting("Vanilla Attack Indicator",
-                                () -> cfg.crosshairAttackIndicatorEnabled, v -> cfg.crosshairAttackIndicatorEnabled = v)
+                                () -> cfg.crosshairAttackIndicatorEnabled, v -> cfg.crosshairAttackIndicatorEnabled = v).resetDefault("crosshairAttackIndicatorEnabled", () -> defaults.crosshairAttackIndicatorEnabled)
                                 .description("Shows attack cooldown beneath the crosshair, plus a ready marker when aiming at a living target."),
                         SliderSetting.ofInt("Attack Indicator Size %", () -> cfg.crosshairAttackIndicatorSize,
-                                v -> cfg.crosshairAttackIndicatorSize = v, 25, 300)
+                                v -> cfg.crosshairAttackIndicatorSize = v, 25, 300).resetDefault(() -> defaults.crosshairAttackIndicatorSize)
                                 .description("Scales the attack indicator independently. 100% is vanilla size. It stays in its vanilla position unless the crosshair overlaps it, then moves below the crosshair with vanilla spacing.")
                                 .disabled(() -> !cfg.crosshairAttackIndicatorEnabled),
                         new SectionHeaderSetting("Reach Indicator"),
                         new BooleanSetting("Indicator (entity in reach)",
-                                () -> cfg.crosshairIndicatorEnabled, v -> cfg.crosshairIndicatorEnabled = v),
+                                () -> cfg.crosshairIndicatorEnabled, v -> cfg.crosshairIndicatorEnabled = v).resetDefault("crosshairIndicatorEnabled", () -> defaults.crosshairIndicatorEnabled),
                         new EnumSetting<>("Indicator Style", AuroraConfig.CrosshairStyle.class,
-                                () -> cfg.crosshairIndicatorStyle, v -> cfg.crosshairIndicatorStyle = v)
+                                () -> cfg.crosshairIndicatorStyle, v -> cfg.crosshairIndicatorStyle = v).resetDefault(() -> defaults.crosshairIndicatorStyle)
                                 .disabled(() -> !cfg.crosshairIndicatorEnabled),
                         SliderSetting.ofInt("Indicator Size",
-                                () -> cfg.crosshairIndicatorSize, v -> cfg.crosshairIndicatorSize = v, 1, 20)
+                                () -> cfg.crosshairIndicatorSize, v -> cfg.crosshairIndicatorSize = v, 1, 20).resetDefault(() -> defaults.crosshairIndicatorSize)
                                 .disabled(() -> !cfg.crosshairIndicatorEnabled),
                         SliderSetting.ofInt("Indicator Thickness",
-                                () -> cfg.crosshairIndicatorThickness, v -> cfg.crosshairIndicatorThickness = v, 1, 6)
+                                () -> cfg.crosshairIndicatorThickness, v -> cfg.crosshairIndicatorThickness = v, 1, 6).resetDefault(() -> defaults.crosshairIndicatorThickness)
                                 .disabled(() -> !cfg.crosshairIndicatorEnabled).visibleWhen(() -> cfg.crosshairIndicatorStyle != AuroraConfig.CrosshairStyle.CUSTOM),
                         SliderSetting.ofInt("Indicator Gap",
-                                () -> cfg.crosshairIndicatorGap, v -> cfg.crosshairIndicatorGap = v, 0, 10)
+                                () -> cfg.crosshairIndicatorGap, v -> cfg.crosshairIndicatorGap = v, 0, 10).resetDefault(() -> defaults.crosshairIndicatorGap)
                                 .disabled(() -> !cfg.crosshairIndicatorEnabled).visibleWhen(() -> cfg.crosshairIndicatorStyle != AuroraConfig.CrosshairStyle.CUSTOM),
                         new ColorSetting("Indicator Color",
-                                () -> cfg.crosshairIndicatorColor, v -> cfg.crosshairIndicatorColor = v)
+                                () -> cfg.crosshairIndicatorColor, v -> cfg.crosshairIndicatorColor = v).resetDefault(() -> defaults.crosshairIndicatorColor)
                                 .disabled(() -> !cfg.crosshairIndicatorEnabled),
                         new PixelCanvasSetting("Indicator Custom Canvas",
                                 () -> cfg.crosshairIndicatorCustomPixels, v -> cfg.crosshairIndicatorCustomPixels = v,
@@ -522,44 +524,44 @@ addWithSettings("hitbox",
                 List.of(
                         new SectionHeaderSetting("General"),
                         new KeybindSetting("Toggle Key",
-                                () -> cfg.hitboxToggleKey, v -> cfg.hitboxToggleKey = v)
+                                () -> cfg.hitboxToggleKey, v -> cfg.hitboxToggleKey = v).resetDefault(() -> defaults.hitboxToggleKey)
                                 .description("Optional. Toggles both self and target hitbox halves on/off. Defaults to unbound."),
                         new BooleanSetting("Show Eye-Level Line",
-                                () -> cfg.hitboxEyeLine, v -> cfg.hitboxEyeLine = v)
+                                () -> cfg.hitboxEyeLine, v -> cfg.hitboxEyeLine = v).resetDefault("hitboxEyeLine", () -> defaults.hitboxEyeLine)
                                 .description("Draws a box at eye height inside the hitbox, matching vanilla F3+B."),
                         new BooleanSetting("Show Look Direction",
-                                () -> cfg.hitboxLookDirection, v -> cfg.hitboxLookDirection = v)
+                                () -> cfg.hitboxLookDirection, v -> cfg.hitboxLookDirection = v).resetDefault("hitboxLookDirection", () -> defaults.hitboxLookDirection)
                                 .description("Draws a line from the entity's eye showing which way it's facing."),
                         SliderSetting.of("Look Length",
-                                () -> cfg.hitboxLookLength, v -> cfg.hitboxLookLength = v, 0.1, 20.0)
+                                () -> cfg.hitboxLookLength, v -> cfg.hitboxLookLength = v, 0.1, 20.0).resetDefault(() -> defaults.hitboxLookLength)
                                 .description("Length of the look-direction line, in blocks."),
 
                         new SectionHeaderSetting("Appearance"),
                         SliderSetting.of("Line Width",
                                 () -> cfg.hitboxLineWidth,
-                                v -> cfg.hitboxLineWidth = v, 0.1, 6.0)
+                                v -> cfg.hitboxLineWidth = v, 0.1, 6.0).resetDefault(() -> defaults.hitboxLineWidth)
                                 .description("Thickness of the hitbox outline in screen pixels. Uses a GPU-side line expansion shader, so lines render cleanly at any width on all GPUs."),
                         new ColorSetting("Hitbox Color",
-                                () -> cfg.hitboxColor, v -> cfg.hitboxColor = v),
+                                () -> cfg.hitboxColor, v -> cfg.hitboxColor = v).resetDefault(() -> defaults.hitboxColor),
 
                         new SectionHeaderSetting("Projectiles"),
                         new BooleanSetting("Separate Projectile Color",
-                                () -> cfg.hitboxProjectileColorEnabled, v -> cfg.hitboxProjectileColorEnabled = v)
+                                () -> cfg.hitboxProjectileColorEnabled, v -> cfg.hitboxProjectileColorEnabled = v).resetDefault("hitboxProjectileColorEnabled", () -> defaults.hitboxProjectileColorEnabled)
                                 .description("Toggle a separate color specifically for projectile hitboxes (arrows, fireballs, etc.)."),
                         new ColorSetting("Projectile Color",
-                                () -> cfg.hitboxProjectileColor, v -> cfg.hitboxProjectileColor = v),
+                                () -> cfg.hitboxProjectileColor, v -> cfg.hitboxProjectileColor = v).resetDefault(() -> defaults.hitboxProjectileColor),
                         SliderSetting.of("Projectile Line Width",
                                 () -> cfg.hitboxProjectileLineWidth,
-                                v -> cfg.hitboxProjectileLineWidth = v, 0.1, 6.0),
+                                v -> cfg.hitboxProjectileLineWidth = v, 0.1, 6.0).resetDefault(() -> defaults.hitboxProjectileLineWidth),
 
                         new SectionHeaderSetting("Targeted Entity"),
                         new BooleanSetting("Targeted Eye-Level Line",
-                                () -> cfg.hitboxTargetEyeLine, v -> cfg.hitboxTargetEyeLine = v)
+                                () -> cfg.hitboxTargetEyeLine, v -> cfg.hitboxTargetEyeLine = v).resetDefault("hitboxTargetEyeLine", () -> defaults.hitboxTargetEyeLine)
                                 .description("Uses the targeted-entity color/width for the entity you're currently aiming at."),
                         new BooleanSetting("Targeted Look Direction",
-                                () -> cfg.hitboxTargetLookDirection, v -> cfg.hitboxTargetLookDirection = v),
+                                () -> cfg.hitboxTargetLookDirection, v -> cfg.hitboxTargetLookDirection = v).resetDefault("hitboxTargetLookDirection", () -> defaults.hitboxTargetLookDirection),
                         new ColorSetting("Targeted Color",
-                                () -> cfg.hitboxTargetColor, v -> cfg.hitboxTargetColor = v)
+                                () -> cfg.hitboxTargetColor, v -> cfg.hitboxTargetColor = v).resetDefault(() -> defaults.hitboxTargetColor)
                                 .description("Color used for the entity you're currently aiming at, to make it stand out.")
                 ));
 
@@ -567,27 +569,27 @@ addWithSettings("hitbox",
                 "Recolors the red flash that overlays an entity when it takes damage. A brighter or more saturated flash makes it much easier to confirm your hits landed during a fast fight — useful feedback in PvP and mob grinding.",
                 () -> cfg.hitColorEnabled, v -> cfg.hitColorEnabled = v,
                 List.of(
-                        new ColorSetting("Flash Color", () -> cfg.hitColor, v -> cfg.hitColor = v)
+                        new ColorSetting("Flash Color", () -> cfg.hitColor, v -> cfg.hitColor = v).resetDefault(() -> defaults.hitColor)
                                 .description("The color (and opacity) of the damage flash. Pick something that pops against the mobs you fight most — e.g. bright white or cyan reads more clearly than the default dim red."),
                         new EnumSetting<>("Flash Style", AuroraConfig.HitColorMode.class,
-                                () -> cfg.hitColorMode, v -> cfg.hitColorMode = v)
+                                () -> cfg.hitColorMode, v -> cfg.hitColorMode = v).resetDefault(() -> defaults.hitColorMode)
                                 .description("How the flash is drawn. Vanilla flash keeps the game's own red; Flat tint holds the Flash Color constant; Pulse fades it in and out in sync for every entity; Health gradient follows the hurt entity's health; Rainbow cycles through hues."),
                         new BooleanSetting("Gradient Shows Health",
                                 () -> cfg.hitColorHealthGradient,
-                                v -> cfg.hitColorHealthGradient = v)
+                                v -> cfg.hitColorHealthGradient = v).resetDefault("hitColorHealthGradient", () -> defaults.hitColorHealthGradient)
                                 .description("Lets the Health gradient style reflect the hurt entity's actual health, red at low health through green at full. This tells you how much more damage to deal, which vanilla does not reveal. Ships off; with it off the gradient uses the Flash Color only.")
                                 .disabled(() -> cfg.hitColorMode != AuroraConfig.HitColorMode.HEALTH_GRADIENT),
                         SliderSetting.of("Pulse Rate", () -> cfg.hitColorPulseRate,
-                                v -> cfg.hitColorPulseRate = v, 0.5, 4.0)
+                                v -> cfg.hitColorPulseRate = v, 0.5, 4.0).resetDefault(() -> defaults.hitColorPulseRate)
                                 .description("How fast the Pulse style fades in and out, in cycles per second.")
                                 .disabled(() -> cfg.hitColorMode != AuroraConfig.HitColorMode.PULSE),
                         new BooleanSetting("Tint Armor",
                                 () -> cfg.hitColorTintArmor,
-                                v -> cfg.hitColorTintArmor = v)
+                                v -> cfg.hitColorTintArmor = v).resetDefault("hitColorTintArmor", () -> defaults.hitColorTintArmor)
                                 .description("Also tints worn armor with the flash color when an entity is hurt."),
                         new BooleanSetting("Tint Armor Trims",
                                 () -> cfg.hitColorTintArmorTrims,
-                                v -> cfg.hitColorTintArmorTrims = v)
+                                v -> cfg.hitColorTintArmorTrims = v).resetDefault("hitColorTintArmorTrims", () -> defaults.hitColorTintArmorTrims)
                                 .description("Also applies the damage flash to armor trim patterns. Requires Tint Armor.")
                                 .disabled(() -> !cfg.hitColorTintArmor)
                 ));
@@ -596,18 +598,18 @@ addWithSettings("hitbox",
                 "Recolors the enchantment glint on items and armor. Alternative Glint also supports dark colors as moving shadows, with intensity independent of color brightness.",
                 () -> cfg.glintColorEnabled, v -> cfg.glintColorEnabled = v,
                 List.of(
-                        new ColorSetting("Glint Color", () -> cfg.glintColor, v -> cfg.glintColor = v)
+                        new ColorSetting("Glint Color", () -> cfg.glintColor, v -> cfg.glintColor = v).resetDefault(() -> defaults.glintColor)
                                 .description("The enchantment glint color. Opacity controls strength. Enable Alternative Glint to make dark colors visible as moving shadows."),
                         new BooleanSetting("Alternative Glint",
                                 () -> cfg.glintColorAlternative,
-                                v -> cfg.glintColorAlternative = v)
+                                v -> cfg.glintColorAlternative = v).resetDefault("glintColorAlternative", () -> defaults.glintColorAlternative)
                                 .description("Uses the enchantment texture as a moving pattern mask, so dark colors can cast shadows and light colors can create highlights at the same intensity. Black becomes a visible shadow glint. Turn off to use the original additive shimmer."),
                         SliderSetting.ofInt("Intensity (%)", () -> cfg.glintColorIntensity,
-                                v -> cfg.glintColorIntensity = v, 0, 100)
+                                v -> cfg.glintColorIntensity = v, 0, 100).resetDefault(() -> defaults.glintColorIntensity)
                                 .description("Strength of the glint, multiplied by the selected color's opacity and Minecraft's glint strength. Alternative Glint makes this equally effective for dark and light colors."),
                         new BooleanSetting("Tint Armor",
                                 () -> cfg.glintColorTintArmor,
-                                v -> cfg.glintColorTintArmor = v)
+                                v -> cfg.glintColorTintArmor = v).resetDefault("glintColorTintArmor", () -> defaults.glintColorTintArmor)
                                 .description("Also recolor the glint on worn armor pieces. When off, only held and inventory items are recolored and armor keeps the vanilla purple shimmer.")
                 ));
 
@@ -617,56 +619,56 @@ addWithSettings("hitbox",
                 "A configurable corner readout of useful at-a-glance info — FPS, coordinates, time of day, facing, biome, dimension, light level, playtime and more. Toggle exactly the rows you want so you get the data you care about without opening the F3 debug screen.",
                 () -> cfg.infoEnabled, v -> cfg.infoEnabled = v,
                 List.of(
-                        new ColorSetting("Text Color", () -> cfg.infoModuleTextColor == null ? com.aurora.client.theme.HudText.color(cfg.hudColor) : cfg.infoModuleTextColor, v -> cfg.infoModuleTextColor = v)
+                        new ColorSetting("Text Color", () -> cfg.infoModuleTextColor == null ? com.aurora.client.theme.HudText.color(cfg.hudColor) : cfg.infoModuleTextColor, v -> cfg.infoModuleTextColor = v).resetDefault(() -> cfg.infoModuleTextColor, () -> defaults.infoModuleTextColor, () -> defaults.infoModuleTextColor == null ? (defaults.hudColor == 0 ? defaultTheme.color(com.aurora.client.theme.ThemeToken.ACCENT) : defaults.hudColor) : defaults.infoModuleTextColor)
                                 .description("Text color for this HUD only. Reset restores its default color."),
                         new EnumSetting<>("Background", FLAT_BACKGROUNDS,
-                                () -> cfg.infoBgMode, v -> cfg.infoBgMode = v)
+                                () -> cfg.infoBgMode, v -> cfg.infoBgMode = v).resetDefault(() -> defaults.infoBgMode)
                                 .description("Backdrop drawn behind the HUD text. NONE is transparent; SOLID fills a panel with the color below (best for readability over bright scenery)."),
                         new ColorSetting("Background Color (when SOLID)",
-                                () -> cfg.infoBgColor, v -> cfg.infoBgColor = v)
+                                () -> cfg.infoBgColor, v -> cfg.infoBgColor = v).resetDefault(() -> defaults.infoBgColor)
                                 .description("The fill color and opacity used when Background is set to SOLID. Ignored for other background modes."),
-                        hudThemeCorners(() -> cfg.infoModuleThemeCorners, v -> cfg.infoModuleThemeCorners = v)
+                        hudThemeCorners(() -> cfg.infoModuleThemeCorners, v -> cfg.infoModuleThemeCorners = v, () -> defaults.infoModuleThemeCorners)
                                 .disabled(() -> cfg.infoBgMode != AuroraConfig.HudBackground.SOLID),
                         // Loose dropdown categories (owner ruling 2026-10-30): the
                         // flat toggle list became four collapsible groups.
                         new SectionHeaderSetting("Performance"),
-                        new BooleanSetting("Show FPS", () -> cfg.showFps, v -> cfg.showFps = v),
+                        new BooleanSetting("Show FPS", () -> cfg.showFps, v -> cfg.showFps = v).resetDefault("showFps", () -> defaults.showFps),
                         new BooleanSetting("Show Frame Time",
-                                () -> cfg.infoShowFrameTime, v -> cfg.infoShowFrameTime = v)
+                                () -> cfg.infoShowFrameTime, v -> cfg.infoShowFrameTime = v).resetDefault("infoShowFrameTime", () -> defaults.infoShowFrameTime)
                                 .description("Average milliseconds per frame, derived from the FPS counter. Lower is smoother; watch for spikes that indicate stutter even when average FPS looks fine."),
                         new BooleanSetting("Show Memory",
-                                () -> cfg.infoShowMemory, v -> cfg.infoShowMemory = v)
+                                () -> cfg.infoShowMemory, v -> cfg.infoShowMemory = v).resetDefault("infoShowMemory", () -> defaults.infoShowMemory)
                                 .description("JVM heap usage as a percentage and used/max in MB. A steadily climbing figure that never drops can hint at a memory leak; frequent jumps to 100% cause GC lag spikes."),
                         new BooleanSetting("Show Ping",
-                                () -> cfg.infoShowPing, v -> cfg.infoShowPing = v)
+                                () -> cfg.infoShowPing, v -> cfg.infoShowPing = v).resetDefault("infoShowPing", () -> defaults.infoShowPing)
                                 .description("Round-trip latency to the current server in milliseconds. Only shown in multiplayer; updates each server tick."),
                         new BooleanSetting("Show CPS",
-                                () -> cfg.infoShowCps, v -> cfg.infoShowCps = v)
+                                () -> cfg.infoShowCps, v -> cfg.infoShowCps = v).resetDefault("infoShowCps", () -> defaults.infoShowCps)
                                 .description("Left/right mouse clicks per second over the last second — handy for monitoring click speed without a separate CPS overlay."),
                         new SectionHeaderSetting("Position"),
-                        new BooleanSetting("Show Coords", () -> cfg.showCoords, v -> cfg.showCoords = v),
+                        new BooleanSetting("Show Coords", () -> cfg.showCoords, v -> cfg.showCoords = v).resetDefault("showCoords", () -> defaults.showCoords),
                         new BooleanSetting("Show Facing",
-                                () -> cfg.infoShowFacing, v -> cfg.infoShowFacing = v),
+                                () -> cfg.infoShowFacing, v -> cfg.infoShowFacing = v).resetDefault("infoShowFacing", () -> defaults.infoShowFacing),
                         new BooleanSetting("Show In-chunk Position",
-                                () -> cfg.infoShowChunkLocal, v -> cfg.infoShowChunkLocal = v),
+                                () -> cfg.infoShowChunkLocal, v -> cfg.infoShowChunkLocal = v).resetDefault("infoShowChunkLocal", () -> defaults.infoShowChunkLocal),
                         new BooleanSetting("Show Chunk Coords",
-                                () -> cfg.infoShowChunkCoords, v -> cfg.infoShowChunkCoords = v),
+                                () -> cfg.infoShowChunkCoords, v -> cfg.infoShowChunkCoords = v).resetDefault("infoShowChunkCoords", () -> defaults.infoShowChunkCoords),
                         new BooleanSetting("Show Y vs Sea Level",
-                                () -> cfg.infoShowYRelSea, v -> cfg.infoShowYRelSea = v),
+                                () -> cfg.infoShowYRelSea, v -> cfg.infoShowYRelSea = v).resetDefault("infoShowYRelSea", () -> defaults.infoShowYRelSea),
                         new SectionHeaderSetting("World"),
-                        new BooleanSetting("Show Time", () -> cfg.showTime, v -> cfg.showTime = v),
+                        new BooleanSetting("Show Time", () -> cfg.showTime, v -> cfg.showTime = v).resetDefault("showTime", () -> defaults.showTime),
                         new BooleanSetting("Show Biome",
-                                () -> cfg.infoShowBiome, v -> cfg.infoShowBiome = v),
+                                () -> cfg.infoShowBiome, v -> cfg.infoShowBiome = v).resetDefault("infoShowBiome", () -> defaults.infoShowBiome),
                         new BooleanSetting("Show Dimension",
-                                () -> cfg.infoShowDimension, v -> cfg.infoShowDimension = v),
+                                () -> cfg.infoShowDimension, v -> cfg.infoShowDimension = v).resetDefault("infoShowDimension", () -> defaults.infoShowDimension),
                         new BooleanSetting("Show Light Level",
-                                () -> cfg.infoShowLightAtFeet, v -> cfg.infoShowLightAtFeet = v),
+                                () -> cfg.infoShowLightAtFeet, v -> cfg.infoShowLightAtFeet = v).resetDefault("infoShowLightAtFeet", () -> defaults.infoShowLightAtFeet),
                         new SectionHeaderSetting("Playtime"),
                         new BooleanSetting("Show Playtime",
-                                () -> cfg.infoShowPlaytime, v -> cfg.infoShowPlaytime = v)
+                                () -> cfg.infoShowPlaytime, v -> cfg.infoShowPlaytime = v).resetDefault("infoShowPlaytime", () -> defaults.infoShowPlaytime)
                                 .description("Tracks real wall-clock time spent in any world. Pauses when the game is paused or no world is loaded."),
                         new BooleanSetting("Playtime per-World",
-                                () -> cfg.infoPlaytimePerWorld, v -> cfg.infoPlaytimePerWorld = v)
+                                () -> cfg.infoPlaytimePerWorld, v -> cfg.infoPlaytimePerWorld = v).resetDefault("infoPlaytimePerWorld", () -> defaults.infoPlaytimePerWorld)
                                 .description("On = show time spent in the current world / server only. Off = show the global lifetime total.")
                 ));
 
@@ -674,13 +676,13 @@ addWithSettings("hitbox",
                 "Shows your current clicks-per-second as a HUD counter. Handy for practicing a consistent attack rhythm in PvP, verifying a clicking technique, or just satisfying curiosity about your click speed.",
                 () -> cfg.cpsEnabled, v -> cfg.cpsEnabled = v,
                 List.of(
-                        new ColorSetting("Text Color", () -> cfg.cpsTextColor == null ? com.aurora.client.theme.HudText.color(cfg.hudColor) : cfg.cpsTextColor, v -> cfg.cpsTextColor = v)
+                        new ColorSetting("Text Color", () -> cfg.cpsTextColor == null ? com.aurora.client.theme.HudText.color(cfg.hudColor) : cfg.cpsTextColor, v -> cfg.cpsTextColor = v).resetDefault(() -> cfg.cpsTextColor, () -> defaults.cpsTextColor, () -> defaults.cpsTextColor == null ? (defaults.hudColor == 0 ? defaultTheme.color(com.aurora.client.theme.ThemeToken.ACCENT) : defaults.hudColor) : defaults.cpsTextColor)
                                 .description("Text color for this HUD only. Reset restores its default color."),
                         new EnumSetting<>("Background", FLAT_BACKGROUNDS,
-                                () -> cfg.cpsBgMode, v -> cfg.cpsBgMode = v),
+                                () -> cfg.cpsBgMode, v -> cfg.cpsBgMode = v).resetDefault(() -> defaults.cpsBgMode),
                         new ColorSetting("Background Color (when SOLID)",
-                                () -> cfg.cpsBgColor, v -> cfg.cpsBgColor = v),
-                        hudThemeCorners(() -> cfg.cpsThemeCorners, v -> cfg.cpsThemeCorners = v)
+                                () -> cfg.cpsBgColor, v -> cfg.cpsBgColor = v).resetDefault(() -> defaults.cpsBgColor),
+                        hudThemeCorners(() -> cfg.cpsThemeCorners, v -> cfg.cpsThemeCorners = v, () -> defaults.cpsThemeCorners)
                                 .disabled(() -> cfg.cpsBgMode != AuroraConfig.HudBackground.SOLID)
                 ));
 
@@ -688,36 +690,36 @@ addWithSettings("hitbox",
                 "Displays your equipped armor pieces — and optionally your main and off hands — with their remaining durability on the HUD. Empty slots are never drawn. Lets you watch your protection at a glance without opening the inventory, so you know when to repair or swap before something breaks mid-fight.",
                 () -> cfg.armorHudEnabled, v -> cfg.armorHudEnabled = v,
                 List.of(
-                        new ColorSetting("Text Color", () -> cfg.armorHudTextColor == null ? com.aurora.client.theme.HudText.color(cfg.hudColor) : cfg.armorHudTextColor, v -> cfg.armorHudTextColor = v)
+                        new ColorSetting("Text Color", () -> cfg.armorHudTextColor == null ? com.aurora.client.theme.HudText.color(cfg.hudColor) : cfg.armorHudTextColor, v -> cfg.armorHudTextColor = v).resetDefault(() -> cfg.armorHudTextColor, () -> defaults.armorHudTextColor, () -> defaults.armorHudTextColor == null ? (defaults.hudColor == 0 ? defaultTheme.color(com.aurora.client.theme.ThemeToken.ACCENT) : defaults.hudColor) : defaults.armorHudTextColor)
                                 .description("Text color for this HUD only. Reset restores its default color."),
                         new EnumSetting<>("Durability Format",
                                 AuroraConfig.ArmorDurabilityFormat.class,
                                 () -> cfg.armorDurabilityFormat,
-                                v -> cfg.armorDurabilityFormat = v),
+                                v -> cfg.armorDurabilityFormat = v).resetDefault(() -> defaults.armorDurabilityFormat),
                         new BooleanSetting("Show Durability Bars",
                                 () -> cfg.armorShowDurabilityBars,
-                                v -> cfg.armorShowDurabilityBars = v),
+                                v -> cfg.armorShowDurabilityBars = v).resetDefault("armorShowDurabilityBars", () -> defaults.armorShowDurabilityBars),
                         new BooleanSetting("Horizontal Layout",
                                 () -> cfg.armorHorizontal,
-                                v -> cfg.armorHorizontal = v),
+                                v -> cfg.armorHorizontal = v).resetDefault("armorHorizontal", () -> defaults.armorHorizontal),
                         new BooleanSetting("Show Main Hand",
                                 () -> cfg.armorHudShowMainHand,
-                                v -> cfg.armorHudShowMainHand = v)
+                                v -> cfg.armorHudShowMainHand = v).resetDefault("armorHudShowMainHand", () -> defaults.armorHudShowMainHand)
                                 .description("Adds your main hand to the strip whenever it holds something, after the armor pieces."),
                         new BooleanSetting("Show Off Hand",
                                 () -> cfg.armorHudShowOffHand,
-                                v -> cfg.armorHudShowOffHand = v)
+                                v -> cfg.armorHudShowOffHand = v).resetDefault("armorHudShowOffHand", () -> defaults.armorHudShowOffHand)
                                 .description("Adds your off hand to the strip whenever it holds something, after the armor pieces."),
                         new EnumSetting<>("Background", AuroraConfig.HudBackground.class,
-                                () -> cfg.armorHudBgMode, v -> cfg.armorHudBgMode = v)
+                                () -> cfg.armorHudBgMode, v -> cfg.armorHudBgMode = v).resetDefault(() -> defaults.armorHudBgMode)
                                 .valueDescriptions(bg -> switch (bg) {
                                     case NONE -> "No background behind the armor icons.";
                                     case SOLID -> "Fills a panel behind the armor icons with the color below.";
                                     case VANILLA -> "The pieces sit on one continuous Minecraft hotbar-strip graphic, exactly where vanilla draws hotbar items; durability text appears beside it.";
                                 }),
                         new ColorSetting("Background Color (when SOLID)",
-                                () -> cfg.armorHudBgColor, v -> cfg.armorHudBgColor = v),
-                        hudThemeCorners(() -> cfg.armorHudThemeCorners, v -> cfg.armorHudThemeCorners = v)
+                                () -> cfg.armorHudBgColor, v -> cfg.armorHudBgColor = v).resetDefault(() -> defaults.armorHudBgColor),
+                        hudThemeCorners(() -> cfg.armorHudThemeCorners, v -> cfg.armorHudThemeCorners = v, () -> defaults.armorHudThemeCorners)
                                 .disabled(() -> cfg.armorHudBgMode != AuroraConfig.HudBackground.SOLID)
                 ));
 
@@ -725,13 +727,13 @@ addWithSettings("hitbox",
                 "Shows the exact distance to the last entity you attacked. A practical tool for understanding your effective reach in PvP and for spotting suspiciously long reaches from others. Updates each time you land a hit.",
                 () -> cfg.reachEnabled, v -> cfg.reachEnabled = v,
                 List.of(
-                        new ColorSetting("Text Color", () -> cfg.reachDisplayTextColor == null ? com.aurora.client.theme.HudText.color(cfg.hudColor) : cfg.reachDisplayTextColor, v -> cfg.reachDisplayTextColor = v)
+                        new ColorSetting("Text Color", () -> cfg.reachDisplayTextColor == null ? com.aurora.client.theme.HudText.color(cfg.hudColor) : cfg.reachDisplayTextColor, v -> cfg.reachDisplayTextColor = v).resetDefault(() -> cfg.reachDisplayTextColor, () -> defaults.reachDisplayTextColor, () -> defaults.reachDisplayTextColor == null ? (defaults.hudColor == 0 ? defaultTheme.color(com.aurora.client.theme.ThemeToken.ACCENT) : defaults.hudColor) : defaults.reachDisplayTextColor)
                                 .description("Text color for this HUD only. Reset restores its default color."),
                         new EnumSetting<>("Background", FLAT_BACKGROUNDS,
-                                () -> cfg.reachBgMode, v -> cfg.reachBgMode = v),
+                                () -> cfg.reachBgMode, v -> cfg.reachBgMode = v).resetDefault(() -> defaults.reachBgMode),
                         new ColorSetting("Background Color (when SOLID)",
-                                () -> cfg.reachBgColor, v -> cfg.reachBgColor = v),
-                        hudThemeCorners(() -> cfg.reachDisplayThemeCorners, v -> cfg.reachDisplayThemeCorners = v)
+                                () -> cfg.reachBgColor, v -> cfg.reachBgColor = v).resetDefault(() -> defaults.reachBgColor),
+                        hudThemeCorners(() -> cfg.reachDisplayThemeCorners, v -> cfg.reachDisplayThemeCorners = v, () -> defaults.reachDisplayThemeCorners)
                                 .disabled(() -> cfg.reachBgMode != AuroraConfig.HudBackground.SOLID)
                 ));
 
@@ -739,13 +741,13 @@ addWithSettings("hitbox",
                 "A cleaner replacement for the default status-effect icons, listing your active potion effects with a readable countdown timer. Makes it easy to track when buffs like Strength or Fire Resistance are about to expire so you can re-apply them in time.",
                 () -> cfg.potionHudEnabled, v -> cfg.potionHudEnabled = v,
                 List.of(
-                        new ColorSetting("Text Color", () -> cfg.potionHudTextColor == null ? 0xFFFFFFFF : cfg.potionHudTextColor, v -> cfg.potionHudTextColor = v)
+                        new ColorSetting("Text Color", () -> cfg.potionHudTextColor == null ? 0xFFFFFFFF : cfg.potionHudTextColor, v -> cfg.potionHudTextColor = v).resetDefault(() -> cfg.potionHudTextColor, () -> defaults.potionHudTextColor, () -> defaults.potionHudTextColor == null ? 0xFFFFFFFF : defaults.potionHudTextColor)
                                 .description("Text color for this HUD only. Reset restores its default color."),
                         new EnumSetting<>("Background", AuroraConfig.HudBackground.class,
-                                () -> cfg.potionBgMode, v -> cfg.potionBgMode = v),
+                                () -> cfg.potionBgMode, v -> cfg.potionBgMode = v).resetDefault(() -> defaults.potionBgMode),
                         new ColorSetting("Background Color (when SOLID)",
-                                () -> cfg.potionBgColor, v -> cfg.potionBgColor = v),
-                        hudThemeCorners(() -> cfg.potionHudThemeCorners, v -> cfg.potionHudThemeCorners = v)
+                                () -> cfg.potionBgColor, v -> cfg.potionBgColor = v).resetDefault(() -> defaults.potionBgColor),
+                        hudThemeCorners(() -> cfg.potionHudThemeCorners, v -> cfg.potionHudThemeCorners = v, () -> defaults.potionHudThemeCorners)
                                 .disabled(() -> cfg.potionBgMode != AuroraConfig.HudBackground.SOLID)
                 ));
 
@@ -754,19 +756,19 @@ addWithSettings("hitbox",
                 () -> cfg.pingHudEnabled || cfg.tabPingEnabled,
                 v -> { cfg.pingHudEnabled = v; cfg.tabPingEnabled = v; },
                 List.of(
-                        new ColorSetting("Text Color", () -> cfg.pingHudTextColor == null ? com.aurora.client.theme.HudText.color(cfg.hudColor) : cfg.pingHudTextColor, v -> cfg.pingHudTextColor = v)
+                        new ColorSetting("Text Color", () -> cfg.pingHudTextColor == null ? com.aurora.client.theme.HudText.color(cfg.hudColor) : cfg.pingHudTextColor, v -> cfg.pingHudTextColor = v).resetDefault(() -> cfg.pingHudTextColor, () -> defaults.pingHudTextColor, () -> defaults.pingHudTextColor == null ? (defaults.hudColor == 0 ? defaultTheme.color(com.aurora.client.theme.ThemeToken.ACCENT) : defaults.hudColor) : defaults.pingHudTextColor)
                                 .description("Text color for this HUD only. Reset restores its default color."),
                         new BooleanSetting("Show Ping HUD",
                                 () -> cfg.pingHudEnabled,
-                                v -> cfg.pingHudEnabled = v)
+                                v -> cfg.pingHudEnabled = v).resetDefault("pingHudEnabled", () -> defaults.pingHudEnabled)
                                 .description("Shows your ping as a corner HUD module."),
                         new BooleanSetting("Show in Tab List",
                                 () -> cfg.tabPingEnabled,
-                                v -> cfg.tabPingEnabled = v)
+                                v -> cfg.tabPingEnabled = v).resetDefault("tabPingEnabled", () -> defaults.tabPingEnabled)
                                 .description("Replaces the bar icon with a numeric ping value in the tab list."),
                         new BooleanSetting("Show in Player Nametags",
                                 () -> cfg.nametagPingEnabled,
-                                v -> cfg.nametagPingEnabled = v)
+                                v -> cfg.nametagPingEnabled = v).resetDefault("nametagPingEnabled", () -> defaults.nametagPingEnabled)
                                 .description("Adds a colored ping value below each player's name.")
                 ),
                 List.of("pingHud", "tabPing", "nametagPing"));
@@ -775,27 +777,27 @@ addWithSettings("hitbox",
                 "Counts how many Totems of Undying you've popped, and optionally tracks nearby players' pops too. In crystal PvP and similar fights, knowing how many totems an opponent has burned through tells you how close they are to being finishable.",
                 () -> cfg.totemPopEnabled, v -> cfg.totemPopEnabled = v,
                 List.of(
-                        new ColorSetting("Text Color", () -> cfg.totemPopTextColor == null ? com.aurora.client.theme.HudText.color(cfg.hudColor) : cfg.totemPopTextColor, v -> cfg.totemPopTextColor = v)
+                        new ColorSetting("Text Color", () -> cfg.totemPopTextColor == null ? com.aurora.client.theme.HudText.color(cfg.hudColor) : cfg.totemPopTextColor, v -> cfg.totemPopTextColor = v).resetDefault(() -> cfg.totemPopTextColor, () -> defaults.totemPopTextColor, () -> defaults.totemPopTextColor == null ? (defaults.hudColor == 0 ? defaultTheme.color(com.aurora.client.theme.ThemeToken.ACCENT) : defaults.hudColor) : defaults.totemPopTextColor)
                                 .description("Text color for this HUD only. Reset restores its default color."),
                         new KeybindSetting("Reset Counter Key",
-                                () -> cfg.totemResetKey, v -> cfg.totemResetKey = v)
+                                () -> cfg.totemResetKey, v -> cfg.totemResetKey = v).resetDefault(() -> defaults.totemResetKey)
                                 .description("Press to clear self pops and all tracked players. Defaults to unbound."),
                         new BooleanSetting("Show Other Players",
-                                () -> cfg.totemShowOthers, v -> cfg.totemShowOthers = v)
+                                () -> cfg.totemShowOthers, v -> cfg.totemShowOthers = v).resetDefault("totemShowOthers", () -> defaults.totemShowOthers)
                                 .description("Adds extra HUD lines for nearby players' pop counts."),
                         SliderSetting.ofInt("Top N Others",
-                                () -> cfg.totemTopOthers, v -> cfg.totemTopOthers = v, 1, 10),
+                                () -> cfg.totemTopOthers, v -> cfg.totemTopOthers = v, 1, 10).resetDefault(() -> defaults.totemTopOthers),
                         new BooleanSetting("Reset On Death",
-                                () -> cfg.totemResetOnDeath, v -> cfg.totemResetOnDeath = v)
+                                () -> cfg.totemResetOnDeath, v -> cfg.totemResetOnDeath = v).resetDefault("totemResetOnDeath", () -> defaults.totemResetOnDeath)
                                 .description("Resets your own counter to 0 every time you die."),
                         new BooleanSetting("Show in Player Nametags",
-                                () -> cfg.nametagTotemPopsEnabled, v -> cfg.nametagTotemPopsEnabled = v)
+                                () -> cfg.nametagTotemPopsEnabled, v -> cfg.nametagTotemPopsEnabled = v).resetDefault("nametagTotemPopsEnabled", () -> defaults.nametagTotemPopsEnabled)
                                 .description("Appends each player's pop count under their nametag."),
                         new EnumSetting<>("Background", FLAT_BACKGROUNDS,
-                                () -> cfg.totemPopBgMode, v -> cfg.totemPopBgMode = v),
+                                () -> cfg.totemPopBgMode, v -> cfg.totemPopBgMode = v).resetDefault(() -> defaults.totemPopBgMode),
                         new ColorSetting("Background Color (when SOLID)",
-                                () -> cfg.totemPopBgColor, v -> cfg.totemPopBgColor = v),
-                        hudThemeCorners(() -> cfg.totemPopThemeCorners, v -> cfg.totemPopThemeCorners = v)
+                                () -> cfg.totemPopBgColor, v -> cfg.totemPopBgColor = v).resetDefault(() -> defaults.totemPopBgColor),
+                        hudThemeCorners(() -> cfg.totemPopThemeCorners, v -> cfg.totemPopThemeCorners = v, () -> defaults.totemPopThemeCorners)
                                 .disabled(() -> cfg.totemPopBgMode != AuroraConfig.HudBackground.SOLID),
                         // §7.3: destructive actions go last, never interleaved with
                         // adjustable settings. Deliberately NO new section here,
@@ -822,14 +824,14 @@ addWithSettings("hitbox",
         {
             List<FeatureSetting> hitregRows = new ArrayList<>();
             hitregRows.add(new SectionHeaderSetting("Hitreg"));
-            hitregRows.add(hitregToggle(com.aurora.client.hitreg.settings.Toggle.TOGGLE, "Custom Hitreg")
+            hitregRows.add(hitregToggle(com.aurora.client.hitreg.settings.Toggle.TOGGLE, "Custom Hitreg", () -> defaults.hitregCustomHitreg)
                     .description("Plays your own hit feedback — the attack sound, the target's hurt animation and crit/sharpness particles — the moment you swing, instead of waiting for the server to confirm the hit. The server's own feedback for that hit is suppressed so you never hear it twice. This is the original mod's master switch; the card toggle above it turns the whole feature off."));
             hitregRows.add(SliderSetting.ofInt("Hitreg Delay (ms)",
-                    () -> cfg.hitregDelayMs, v -> cfg.hitregDelayMs = v, 0, 300)
+                    () -> cfg.hitregDelayMs, v -> cfg.hitregDelayMs = v, 0, 300).resetDefault(() -> defaults.hitregDelayMs)
                     .description("How long to wait after your swing before playing the client-side feedback. 0 plays it on the very next frame; raise it to approximate a server's typical registration delay. This is a delay, not a switch — Custom Hitreg controls whether it plays at all."));
-            hitregRows.add(hitregToggle(com.aurora.client.hitreg.settings.Toggle.SAFE_REGS_ONLY, "Safe Regs Only")
+            hitregRows.add(hitregToggle(com.aurora.client.hitreg.settings.Toggle.SAFE_REGS_ONLY, "Safe Regs Only", () -> defaults.hitregSafeRegsOnly)
                     .description("Only replace the server's feedback when the hit is very likely to register: skips your first hit on a target, hits right after a ghost, hits while someone else is also hitting them, and hits far from where you last swung."));
-            hitregRows.add(hitregToggle(com.aurora.client.hitreg.settings.Toggle.IGNORE_SHIELD_HOLDERS, "Ignore Shield Holders")
+            hitregRows.add(hitregToggle(com.aurora.client.hitreg.settings.Toggle.IGNORE_SHIELD_HOLDERS, "Ignore Shield Holders", () -> defaults.hitregIgnoreShieldHolders)
                     .description("Never use custom hitreg against players holding a shield, raised or not — shield desync is the most common cause of a confidently-played hit that the server then rejects."));
 
             addWithSettings(com.aurora.client.hitreg.BetterHitreg.FEATURE_ID,
@@ -861,46 +863,46 @@ addWithSettings("hitbox",
                                 })
                                 .description("Adds a waypoint at the player's current block position."),
                         new KeybindSetting("Drop Key",
-                                () -> cfg.waypointDropKey, v -> cfg.waypointDropKey = v)
+                                () -> cfg.waypointDropKey, v -> cfg.waypointDropKey = v).resetDefault(() -> defaults.waypointDropKey)
                                 .description("Press to drop a waypoint at your current position. Defaults to unbound."),
                         new KeybindSetting("Open Manager Key",
-                                () -> cfg.waypointManagerKey, v -> cfg.waypointManagerKey = v)
+                                () -> cfg.waypointManagerKey, v -> cfg.waypointManagerKey = v).resetDefault(() -> defaults.waypointManagerKey)
                                 .description("Press to open the Waypoint Manager screen. Defaults to unbound."),
                         new EnumSetting<>("Display Style", AuroraConfig.WaypointDisplay.class,
-                                () -> cfg.waypointDisplay, v -> cfg.waypointDisplay = v)
+                                () -> cfg.waypointDisplay, v -> cfg.waypointDisplay = v).resetDefault(() -> defaults.waypointDisplay)
                                 .description("BEAM = beacon column. BLOCK = highlight the exact block(s). BOTH = both."),
                         SliderSetting.of("Beam Width",
-                                () -> cfg.waypointBeamWidth, v -> cfg.waypointBeamWidth = v, 0.1, 1.0),
+                                () -> cfg.waypointBeamWidth, v -> cfg.waypointBeamWidth = v, 0.1, 1.0).resetDefault(() -> defaults.waypointBeamWidth),
                         SliderSetting.ofInt("Block Highlight Radius",
-                                () -> cfg.waypointBlockRadius, v -> cfg.waypointBlockRadius = v, 0, 4)
+                                () -> cfg.waypointBlockRadius, v -> cfg.waypointBlockRadius = v, 0, 4).resetDefault(() -> defaults.waypointBlockRadius)
                                 .description("Widens the floor slab on the horizontal plane only — the highlight is always one block tall. 0 = single block, 1 = 3×3 slab, etc. Only used when display style includes BLOCK."),
                         new BooleanSetting("Show Label",
-                                () -> cfg.waypointShowLabel, v -> cfg.waypointShowLabel = v)
+                                () -> cfg.waypointShowLabel, v -> cfg.waypointShowLabel = v).resetDefault("waypointShowLabel", () -> defaults.waypointShowLabel)
                                 .description("Billboarded name + distance above the beam."),
                         SliderSetting.of("Label Scale",
-                                () -> cfg.waypointLabelScale, v -> cfg.waypointLabelScale = v, 0.5, 2.5),
+                                () -> cfg.waypointLabelScale, v -> cfg.waypointLabelScale = v, 0.5, 2.5).resetDefault(() -> defaults.waypointLabelScale),
                         new BooleanSetting("Death Waypoint",
-                                () -> cfg.deathWaypointEnabled, v -> cfg.deathWaypointEnabled = v)
+                                () -> cfg.deathWaypointEnabled, v -> cfg.deathWaypointEnabled = v).resetDefault("deathWaypointEnabled", () -> defaults.deathWaypointEnabled)
                                 .description("Automatically drops a waypoint where you died."),
                         new BooleanSetting("Replace Previous Death Waypoint",
                                 () -> cfg.deathWaypointReplacesPrevious,
-                                v -> cfg.deathWaypointReplacesPrevious = v)
+                                v -> cfg.deathWaypointReplacesPrevious = v).resetDefault("deathWaypointReplacesPrevious", () -> defaults.deathWaypointReplacesPrevious)
                                 .description("When on, only the most recent death waypoint is kept."),
                         SliderSetting.ofInt("Max Death Waypoints",
-                                () -> cfg.deathWaypointMaxCount, v -> cfg.deathWaypointMaxCount = v, 1, 20)
+                                () -> cfg.deathWaypointMaxCount, v -> cfg.deathWaypointMaxCount = v, 1, 20).resetDefault(() -> defaults.deathWaypointMaxCount)
                                 .description("How many death waypoints to keep when Replace Previous is off; the oldest is pruned automatically. Death waypoints live in the Waypoints feature's list and also appear on the World Map as X markers."),
                         new SectionHeaderSetting("Visibility & Limits"),
                         SliderSetting.ofInt("Visible Marker Limit", () -> cfg.waypointMaxVisible,
-                                v -> cfg.waypointMaxVisible = v, 8, 128)
+                                v -> cfg.waypointMaxVisible = v, 8, 128).resetDefault(() -> defaults.waypointMaxVisible)
                                 .description("Nearest-first marker budget shared by map views and in-world rendering. Navigation selection has priority."),
                         SliderSetting.ofInt("World Beam Limit", () -> cfg.waypointWorldMarkerLimit,
-                                v -> cfg.waypointWorldMarkerLimit = v, 1, 64)
+                                v -> cfg.waypointWorldMarkerLimit = v, 1, 64).resetDefault(() -> defaults.waypointWorldMarkerLimit)
                                 .description("Limits in-world beam/block geometry. Labels avoid overlap and navigation selection is drawn first."),
                         SliderSetting.ofInt("In-World Range", () -> cfg.waypointMaxDistance,
-                                v -> cfg.waypointMaxDistance = v, 64, 30000)
+                                v -> cfg.waypointMaxDistance = v, 64, 30000).resetDefault(() -> defaults.waypointMaxDistance)
                                 .description("Maximum horizontal distance for minimap and in-world markers. The world map follows its viewport."),
                         new ColorSetting("Death Waypoint Color",
-                                () -> cfg.deathWaypointColor, v -> cfg.deathWaypointColor = v)
+                                () -> cfg.deathWaypointColor, v -> cfg.deathWaypointColor = v).resetDefault(() -> defaults.deathWaypointColor)
                 ));
 
         addWithSettings("minimap",
@@ -908,73 +910,73 @@ addWithSettings("hitbox",
                 () -> cfg.minimapEnabled, v -> cfg.minimapEnabled = v,
                 List.of(
                         new KeybindSetting("Toggle Key",
-                                () -> cfg.minimapToggleKey, v -> cfg.minimapToggleKey = v)
+                                () -> cfg.minimapToggleKey, v -> cfg.minimapToggleKey = v).resetDefault(() -> defaults.minimapToggleKey)
                                 .description("Press to show or hide the minimap HUD overlay, independently of the fullscreen World Map. Defaults to unbound."),
 
                         new SectionHeaderSetting("Shape & Size"),
                         SliderSetting.ofInt("Size (px)",
-                                () -> cfg.minimapSize, v -> cfg.minimapSize = v, 64, 256)
+                                () -> cfg.minimapSize, v -> cfg.minimapSize = v, 64, 256).resetDefault(() -> defaults.minimapSize)
                                 .description("Edge length of the minimap in pixels. Larger shows more detail but takes more screen space. 128 is a good default for most resolutions."),
                         new BooleanSetting("Circular",
-                                () -> cfg.minimapCircular, v -> cfg.minimapCircular = v)
+                                () -> cfg.minimapCircular, v -> cfg.minimapCircular = v).resetDefault("minimapCircular", () -> defaults.minimapCircular)
                                 .description("Renders the minimap as a round disc instead of a square. Corners outside the inscribed circle are masked with the border color."),
-                        hudThemeCorners(() -> cfg.minimapThemeCorners, v -> cfg.minimapThemeCorners = v)
+                        hudThemeCorners(() -> cfg.minimapThemeCorners, v -> cfg.minimapThemeCorners = v, () -> defaults.minimapThemeCorners)
                                 .description("Round the square frame's corners with the theme's Corner Radius (Settings → Appearance → Surfaces) instead of its fixed corners. Has no effect while Circular is on.")
                                 .disabled(() -> cfg.minimapCircular),
                         new BooleanSetting("Rotate with Player",
-                                () -> cfg.minimapRotateWithPlayer, v -> cfg.minimapRotateWithPlayer = v)
+                                () -> cfg.minimapRotateWithPlayer, v -> cfg.minimapRotateWithPlayer = v).resetDefault("minimapRotateWithPlayer", () -> defaults.minimapRotateWithPlayer)
                                 .description("When on, the map rotates so your facing direction is always up. When off, north is always up and the player arrow rotates to show your heading."),
 
                         new SectionHeaderSetting("Terrain"),
                         new BooleanSetting("Show Terrain",
-                                () -> cfg.minimapShowTerrain, v -> cfg.minimapShowTerrain = v)
+                                () -> cfg.minimapShowTerrain, v -> cfg.minimapShowTerrain = v).resetDefault("minimapShowTerrain", () -> defaults.minimapShowTerrain)
                                 .description("Draws block colors sampled from loaded chunks. Turn off for a blank map with just the overlays."),
                         SliderSetting.of("Terrain Alpha",
-                                () -> cfg.minimapTerrainAlpha, v -> cfg.minimapTerrainAlpha = v, 0.0, 1.0)
+                                () -> cfg.minimapTerrainAlpha, v -> cfg.minimapTerrainAlpha = v, 0.0, 1.0).resetDefault(() -> defaults.minimapTerrainAlpha)
                                 .description("Opacity of the terrain layer. Lower values make the terrain translucent so the background shows through."),
                         new SectionFooterSetting("Both maps share captured terrain and persistent exploration. Capture continues while either map needs it."),
 
                         new SectionHeaderSetting("Overlays"),
                         new BooleanSetting("Show Waypoints",
-                                () -> cfg.minimapShowWaypoints, v -> cfg.minimapShowWaypoints = v)
+                                () -> cfg.minimapShowWaypoints, v -> cfg.minimapShowWaypoints = v).resetDefault("minimapShowWaypoints", () -> defaults.minimapShowWaypoints)
                                 .description("Draws your active waypoints as colored diamonds on the map. Uses the same waypoints as the Waypoints feature — drop one and it appears here."),
                         new BooleanSetting("Waypoint Distance",
-                                () -> cfg.minimapShowWaypointDistance, v -> cfg.minimapShowWaypointDistance = v)
+                                () -> cfg.minimapShowWaypointDistance, v -> cfg.minimapShowWaypointDistance = v).resetDefault("minimapShowWaypointDistance", () -> defaults.minimapShowWaypointDistance)
                                 .description("Shows the block distance beside waypoints that sit outside the minimap's view, pinned to the rim (a simple direction + distance indicator). At most four labels are drawn."),
                         new BooleanSetting("Show Entities",
-                                () -> cfg.minimapShowEntities, v -> cfg.minimapShowEntities = v)
+                                () -> cfg.minimapShowEntities, v -> cfg.minimapShowEntities = v).resetDefault("minimapShowEntities", () -> defaults.minimapShowEntities)
                                 .description("Draws nearby living entities as dots on the map. Configure which entity types appear below."),
                         new BooleanSetting("Show Hostile Mobs",
-                                () -> cfg.minimapShowHostiles, v -> cfg.minimapShowHostiles = v)
+                                () -> cfg.minimapShowHostiles, v -> cfg.minimapShowHostiles = v).resetDefault("minimapShowHostiles", () -> defaults.minimapShowHostiles)
                                 .description("Draws zombies, skeletons, and other monsters as red dots. Useful for PvP awareness and avoiding threats."),
                         new BooleanSetting("Show Passive Mobs",
-                                () -> cfg.minimapShowPassives, v -> cfg.minimapShowPassives = v)
+                                () -> cfg.minimapShowPassives, v -> cfg.minimapShowPassives = v).resetDefault("minimapShowPassives", () -> defaults.minimapShowPassives)
                                 .description("Draws animals and other peaceful mobs as green dots."),
                         new BooleanSetting("Show Players",
-                                () -> cfg.minimapShowPlayers, v -> cfg.minimapShowPlayers = v)
+                                () -> cfg.minimapShowPlayers, v -> cfg.minimapShowPlayers = v).resetDefault("minimapShowPlayers", () -> defaults.minimapShowPlayers)
                                 .description("Draws other players as white dots on the map."),
                         new BooleanSetting("Show Self Arrow",
-                                () -> cfg.minimapShowSelfArrow, v -> cfg.minimapShowSelfArrow = v)
+                                () -> cfg.minimapShowSelfArrow, v -> cfg.minimapShowSelfArrow = v).resetDefault("minimapShowSelfArrow", () -> defaults.minimapShowSelfArrow)
                                 .description("Draws an arrow at the center showing which direction you're facing."),
                         new BooleanSetting("Show Compass",
-                                () -> cfg.minimapShowCompass, v -> cfg.minimapShowCompass = v)
+                                () -> cfg.minimapShowCompass, v -> cfg.minimapShowCompass = v).resetDefault("minimapShowCompass", () -> defaults.minimapShowCompass)
                                 .description("Draws N/E/S/W letters around the edge of the minimap."),
                         new BooleanSetting("Show Coordinates",
-                                () -> cfg.minimapShowCoords, v -> cfg.minimapShowCoords = v)
+                                () -> cfg.minimapShowCoords, v -> cfg.minimapShowCoords = v).resetDefault("minimapShowCoords", () -> defaults.minimapShowCoords)
                                 .description("Shows your current X/Y/Z below the minimap."),
-                        new BooleanSetting("Show Biome", () -> cfg.minimapShowBiome, v -> cfg.minimapShowBiome = v),
+                        new BooleanSetting("Show Biome", () -> cfg.minimapShowBiome, v -> cfg.minimapShowBiome = v).resetDefault("minimapShowBiome", () -> defaults.minimapShowBiome),
 
                         new SectionHeaderSetting("Zoom"),
                         SliderSetting.ofInt("Zoom (blocks across)",
-                                () -> cfg.minimapZoom, v -> cfg.minimapZoom = v, 16, 256)
+                                () -> cfg.minimapZoom, v -> cfg.minimapZoom = v, 16, 256).resetDefault(() -> defaults.minimapZoom)
                                 .description("How many blocks fit across the minimap's diameter. Lower = more zoomed in (more detail per pixel); higher = wider view of the surrounding area."),
 
                         new SectionHeaderSetting("Appearance"),
                         new ColorSetting("Border Color",
-                                () -> cfg.minimapBorderColor, v -> cfg.minimapBorderColor = v)
+                                () -> cfg.minimapBorderColor, v -> cfg.minimapBorderColor = v).resetDefault(() -> defaults.minimapBorderColor)
                                 .description("Color of the frame ring around the minimap and the compass letters. Default (0) follows the theme accent; pick a color to override."),
                         new ColorSetting("Coordinate Text Color",
-                                () -> cfg.minimapCoordColor, v -> cfg.minimapCoordColor = v)
+                                () -> cfg.minimapCoordColor, v -> cfg.minimapCoordColor = v).resetDefault(() -> defaults.minimapCoordColor)
                                 .description("Color of the X/Y/Z readout shown below the minimap when Show Coordinates is on.")
                 ),
                 List.of("minimap"));
@@ -984,13 +986,13 @@ addWithSettings("hitbox",
                 () -> cfg.scoreboardEnabled, v -> cfg.scoreboardEnabled = v,
                 List.of(
                         new EnumSetting<>("Background", AuroraConfig.HudBackground.class,
-                                () -> cfg.scoreboardBackground, v -> cfg.scoreboardBackground = v)
+                                () -> cfg.scoreboardBackground, v -> cfg.scoreboardBackground = v).resetDefault(() -> defaults.scoreboardBackground)
                                 .description("Backdrop of the scoreboard. VANILLA reproduces the game's own translucent stripes; SOLID fills a panel with the color below; NONE is transparent."),
                         new ColorSetting("Background Color (when SOLID)",
-                                () -> cfg.scoreboardBgColor, v -> cfg.scoreboardBgColor = v)
+                                () -> cfg.scoreboardBgColor, v -> cfg.scoreboardBgColor = v).resetDefault(() -> defaults.scoreboardBgColor)
                                 .description("The fill color and opacity used when Background is set to SOLID. Ignored for other background modes."),
                         SliderSetting.of("Scale", () -> cfg.scoreboardScale,
-                                v -> cfg.scoreboardScale = v, 0.5, 3.0)
+                                v -> cfg.scoreboardScale = v, 0.5, 3.0).resetDefault(() -> defaults.scoreboardScale)
                                 .description("Extra size on top of the universal HUD scale, which the HUD editor controls. The scoreboard's width and height follow its live rows, so this only enlarges everything uniformly."),
                         new SectionHeaderSetting("Layout"),
                         // The universal HUD editor (drag, resize, lock, hide) owns
@@ -1008,14 +1010,14 @@ addWithSettings("hitbox",
                 List.of(
                         new BooleanSetting("Shulker Boxes",
                                 () -> cfg.containerPreviewShulker,
-                                v -> cfg.containerPreviewShulker = v),
+                                v -> cfg.containerPreviewShulker = v).resetDefault("containerPreviewShulker", () -> defaults.containerPreviewShulker),
                         new BooleanSetting("Ender Chest",
                                 () -> cfg.containerPreviewEnderChest,
-                                v -> cfg.containerPreviewEnderChest = v)
+                                v -> cfg.containerPreviewEnderChest = v).resetDefault("containerPreviewEnderChest", () -> defaults.containerPreviewEnderChest)
                                 .description("Shows your ender chest contents. Only accurate after you've opened it at least once this session."),
                         new BooleanSetting("Show Stack Counts",
                                 () -> cfg.containerPreviewShowCounts,
-                                v -> cfg.containerPreviewShowCounts = v)
+                                v -> cfg.containerPreviewShowCounts = v).resetDefault("containerPreviewShowCounts", () -> defaults.containerPreviewShowCounts)
                 ));
 
         addWithSettings("item_physics",
@@ -1024,11 +1026,11 @@ addWithSettings("hitbox",
                 List.of(
                         new BooleanSetting("Lie Flat on Ground",
                                 () -> cfg.itemPhysicsFlatOnGround,
-                                v -> cfg.itemPhysicsFlatOnGround = v)
+                                v -> cfg.itemPhysicsFlatOnGround = v).resetDefault("itemPhysicsFlatOnGround", () -> defaults.itemPhysicsFlatOnGround)
                                 .description("When the item touches the ground, kill the bob and lay the sprite face-up."),
                         SliderSetting.of("Air Tumble Strength",
                                 () -> cfg.itemPhysicsTumbleStrength,
-                                v -> cfg.itemPhysicsTumbleStrength = v, 0.0, 2.0)
+                                v -> cfg.itemPhysicsTumbleStrength = v, 0.0, 2.0).resetDefault(() -> defaults.itemPhysicsTumbleStrength)
                                 .description("Adds an X-axis flip scaled by motion while the item is airborne. 0 disables.")
                 ));
 
@@ -1061,11 +1063,11 @@ addWithSettings("hitbox",
                 List.of(
                         SliderSetting.of("Main-Hand Default Scale",
                                 () -> (double) cfg.mainHandDefaultScale,
-                                v -> cfg.mainHandDefaultScale = (float) v, 0.5, 1.5).percent()
+                                v -> cfg.mainHandDefaultScale = (float) v, 0.5, 1.5).resetDefault(() -> (double) defaults.mainHandDefaultScale).percent()
                                 .description("Fallback scale for any item held in the main hand that doesn't have a specific scale override below."),
                         SliderSetting.of("Off-Hand Default Scale",
                                 () -> (double) cfg.offHandDefaultScale,
-                                v -> cfg.offHandDefaultScale = (float) v, 0.5, 1.5).percent()
+                                v -> cfg.offHandDefaultScale = (float) v, 0.5, 1.5).resetDefault(() -> (double) defaults.offHandDefaultScale).percent()
                                 .description("Fallback scale for any item held in the off hand that doesn't have a specific scale override below."),
                         new ItemScaleSetting()
                 ),
@@ -1080,7 +1082,7 @@ addWithSettings("hitbox",
                 List.of(
                         SliderSetting.ofInt("Fix Strength",
                                 () -> (int) Math.round((cfg.heldItemInflation - 1.0) * 1000.0),
-                                v -> cfg.heldItemInflation = 1.0 + v / 1000.0, 0, 50)
+                                v -> cfg.heldItemInflation = 1.0 + v / 1000.0, 0, 50).resetDefault(() -> (int) Math.round((defaults.heldItemInflation - 1.0) * 1000.0))
                                 .description("How far the held-item model is scaled up, in thousandths of its size (1 = 0.1%). 0 applies no scaling at all; 1 (the default) is a sub-pixel nudge that hides the seams while staying invisible; 5 and up hide them aggressively but items start to read as very slightly larger; 50 is the maximum the renderer will apply.")
                 ),
                 // Field names share no common camelCase prefix, so reset them explicitly.
@@ -1117,16 +1119,16 @@ addWithSettings("hitbox",
                 v -> {},
                 List.of(
                         new EnumSetting<>("Text Renderer", AuroraConfig.TextRendererMode.class,
-                                () -> cfg.textRendererMode, v -> { cfg.textRendererMode = v; persistThemeChange(); })
+                                () -> cfg.textRendererMode, v -> { cfg.textRendererMode = v; persistThemeChange(); }).resetDefault(() -> defaults.textRendererMode)
                                 .labels(AuroraConfig.TextRendererMode::getLabel)
                                 .description("Which text uses these options: Off (Minecraft's own text everywhere), Aurora UI Only, or All Text (Aurora and every vanilla string)."),
                         new EnumSetting<>("Font", AuroraConfig.FontType.choices(),
                                 () -> cfg.activeFont == AuroraConfig.FontType.INTER_ITALIC ? AuroraConfig.FontType.INTER : cfg.activeFont,
-                                v -> { cfg.activeFont = v; persistThemeChange(); })
+                                v -> { cfg.activeFont = v; persistThemeChange(); }).resetDefault(() -> defaults.activeFont == AuroraConfig.FontType.INTER_ITALIC ? AuroraConfig.FontType.INTER : defaults.activeFont)
                                 .labels(AuroraConfig.FontType::getLabel)
                                 .description("The font family. SansSerif is Minecraft's own font, which the options below do not change."),
                         new EnumSetting<>("Weight", AuroraConfig.TextWeight.class,
-                                () -> cfg.textWeight, v -> { cfg.textWeight = v; persistThemeChange(); })
+                                () -> cfg.textWeight, v -> { cfg.textWeight = v; persistThemeChange(); }).resetDefault(() -> defaults.textWeight)
                                 .labels(AuroraConfig.TextWeight::getLabel)
                                 .description("How heavy the letters are. Every weight is a real font file, not a smeared bold; Quicksand has one weight."),
                         new ToggleGroupSetting("Modifiers", List.of(
@@ -1134,11 +1136,11 @@ addWithSettings("hitbox",
                                 new ToggleGroupSetting.Toggle("Underline", () -> cfg.textUnderline, v -> { cfg.textUnderline = v; persistThemeChange(); })))
                                 .description("Italic uses the family's own italic where it has one (Oswald and Quicksand slant instead)."),
                         new SegmentedSetting<>("Case", AuroraConfig.TextCase.class,
-                                () -> cfg.textCase, v -> { cfg.textCase = v; persistThemeChange(); }, AuroraConfig.TextCase::getLabel)
+                                () -> cfg.textCase, v -> { cfg.textCase = v; persistThemeChange(); }, AuroraConfig.TextCase::getLabel).resetDefault(() -> defaults.textCase)
                                 .verbatimLabels()
                                 .description("Show text as written (Aa), in capitals (AA) or in lower case (aa)."),
                         new SegmentedSetting<>("HUD Text Shadow", AuroraConfig.TextShadow.class,
-                                () -> cfg.textHudShadow, v -> { cfg.textHudShadow = v; persistThemeChange(); }, AuroraConfig.TextShadow::getLabel)
+                                () -> cfg.textHudShadow, v -> { cfg.textHudShadow = v; persistThemeChange(); }, AuroraConfig.TextShadow::getLabel).resetDefault(() -> defaults.textHudShadow)
                                 .description("A shadow behind in-game HUD text: Minecraft's drop shadow (Normal) or a full outline (Full). Menus never shadow text."),
                         new TextPreviewSetting()
                 ), List.of("text", "activeFont")).noSettingsToggle(true); // owner ruling 2026-10-30: the Text Renderer dropdown owns the scope; no master toggle
@@ -1153,7 +1155,7 @@ addWithSettings("hitbox",
                                     cfg.themeOrDefault().accent = v;
                                     com.aurora.client.theme.ThemeManager.reload();
                                     persistThemeChange();
-                                })
+                                }).resetDefault(() -> defaults.themeOrDefault().accent)
                                 .description("The color used for primary actions, selections, highlights and HUD accents. Click the swatch to open the color picker."),
                         new AccentSetting("Background Color",
                                 () -> cfg.themeOrDefault().background,
@@ -1161,7 +1163,7 @@ addWithSettings("hitbox",
                                     cfg.themeOrDefault().background = v;
                                     com.aurora.client.theme.ThemeManager.reload();
                                     persistThemeChange();
-                                })
+                                }).resetDefault(() -> defaults.themeOrDefault().background)
                                 .description("The color tint of every Aurora window. Very light colors are deepened so text stays readable. Translucency stays on Background Opacity."),
                         // The three surface sliders sit together under one
                         // caption (owner ruling 2026-11-12). Corner Radius
@@ -1173,7 +1175,7 @@ addWithSettings("hitbox",
                                     cfg.themeOrDefault().backgroundOpacity = v;
                                     com.aurora.client.theme.ThemeManager.reload();
                                     persistThemeChange();
-                                })
+                                }).resetDefault(() -> defaults.themeOrDefault().backgroundOpacity)
                                 .description("How dense the tint of Aurora's windows and cards is. Lower values let more of the blurred backdrop through; Blur Radius sets how blurred it is. Drag previews the change live; release saves it."),
                         new ThemeSliderSetting("Blur Radius",
                                 () -> cfg.themeOrDefault().blurRadius,
@@ -1183,7 +1185,7 @@ addWithSettings("hitbox",
                                     persistThemeChange();
                                 },
                                 com.aurora.client.theme.ThemeDefinition.MIN_BLUR_RADIUS,
-                                com.aurora.client.theme.ThemeDefinition.MAX_BLUR_RADIUS, 1, true)
+                                com.aurora.client.theme.ThemeDefinition.MAX_BLUR_RADIUS, 1, true).resetDefault(() -> defaults.themeOrDefault().blurRadius)
                                 .valueFormatter(v -> v.intValue() <= 0 ? "Off" : v.intValue() + " px")
                                 .description("How strongly the backdrop behind Aurora's glass windows and controls is blurred, in GUI pixels. Off shows the tint alone. Drag previews the change live; release saves it."),
                         new ThemeSliderSetting("Corner Radius",
@@ -1193,13 +1195,13 @@ addWithSettings("hitbox",
                                     com.aurora.client.theme.ThemeManager.reload();
                                     persistThemeChange();
                                 },
-                                ThemeRoundness.MIN_RADIUS, ThemeRoundness.MAX_RADIUS, 1, true)
+                                ThemeRoundness.MIN_RADIUS, ThemeRoundness.MAX_RADIUS, 1, true).resetDefault(() -> defaults.themeOrDefault().cornerRadius)
                                 .valueFormatter(v -> v.intValue() + " px")
                                 .description("How round every Aurora shape is: windows, buttons, fields, toggles, sliders and scrollbars. 0 is square and 10 is the classic look. Drag previews the change live; release saves it.")
                 ));
 
         FeatureSetting uiFpsLimit = new EnumSetting<>("UI FPS Limit", AuroraConfig.GuiFps.class,
-                () -> AuroraConfig.GuiFps.fromValue(cfg.guiFpsLimit), v -> cfg.guiFpsLimit = v.value)
+                () -> AuroraConfig.GuiFps.fromValue(cfg.guiFpsLimit), v -> cfg.guiFpsLimit = v.value).resetDefault(() -> AuroraConfig.GuiFps.fromValue(defaults.guiFpsLimit))
                 .labels(AuroraConfig.GuiFps::label)
                 .description("The framerate Aurora screens run at. 'Unlimited' removes the cap so the GUI matches your main FPS.");
         addWithSettings("interface",
@@ -1216,7 +1218,7 @@ addWithSettings("hitbox",
                         new EnumSetting<>("Swing Curve",
                                 AuroraConfig.AnimationCurve.class,
                                 () -> cfg.swingAnimationCurve,
-                                v -> cfg.swingAnimationCurve = v)
+                                v -> cfg.swingAnimationCurve = v).resetDefault(() -> defaults.swingAnimationCurve)
                                 .valueDescriptions(c -> switch (c) {
                                     case LINEAR -> "Vanilla — no easing. Constant arm velocity. Feels limp.";
                                     case SINE -> "Gentlest easing. Even acceleration in and out. Smooth but not punchy.";
@@ -1234,7 +1236,7 @@ addWithSettings("hitbox",
                         new EnumSetting<>("View Bob Curve",
                                 AuroraConfig.AnimationCurve.class,
                                 () -> cfg.viewBobCurve,
-                                v -> cfg.viewBobCurve = v)
+                                v -> cfg.viewBobCurve = v).resetDefault(() -> defaults.viewBobCurve)
                                 .valueDescriptions(c -> switch (c) {
                                     case LINEAR -> "Vanilla — uniform footstep cadence.";
                                     case SINE -> "Gentle wave shaping. Smooth, low-key.";
@@ -1246,26 +1248,26 @@ addWithSettings("hitbox",
                                 }),
                         SliderSetting.of("View Bob Amplitude",
                                 () -> cfg.viewBobAmplitude,
-                                v -> cfg.viewBobAmplitude = v, 0.0, 2.0).percent()
+                                v -> cfg.viewBobAmplitude = v, 0.0, 2.0).resetDefault(() -> defaults.viewBobAmplitude).percent()
                                 .description("Scales the camera head-bob strength. 100% is vanilla, 0% cancels the bob, 200% doubles it. Requires vanilla View Bobbing to be on."),
 
                         new SectionHeaderSetting("Damage Tilt"),
                         new BooleanSetting("Enable Damage Tilt",
-                                () -> cfg.damageTiltEnabled, v -> cfg.damageTiltEnabled = v)
+                                () -> cfg.damageTiltEnabled, v -> cfg.damageTiltEnabled = v).resetDefault("damageTiltEnabled", () -> defaults.damageTiltEnabled)
                                 .description("Enable classic 1.7/1.8-style damage camera roll. The roll direction follows where the hit came from."),
                         SliderSetting.of("Damage Tilt Strength",
                                 () -> cfg.damageTiltStrength,
-                                v -> cfg.damageTiltStrength = v, 0.0, 1.0).percent()
+                                v -> cfg.damageTiltStrength = v, 0.0, 1.0).resetDefault(() -> defaults.damageTiltStrength).percent()
                                 .description("How far the camera rolls on each hit. 100% matches the pronounced 1.8 tilt."),
 
                         new SectionHeaderSetting("Idle Sway"),
                         new BooleanSetting("Idle Sway",
-                                () -> cfg.idleSwayEnabled, v -> cfg.idleSwayEnabled = v)
+                                () -> cfg.idleSwayEnabled, v -> cfg.idleSwayEnabled = v).resetDefault("idleSwayEnabled", () -> defaults.idleSwayEnabled)
                                 .description("Adds a breathing/float to your held items while standing still. Pauses during swings so it never fights the attack animation. Supports very high intensities for dramatic drift."),
                         new EnumSetting<>("Idle Sway Curve",
                                 AuroraConfig.IdleSwayCurve.class,
                                 () -> cfg.idleSwayCurve,
-                                v -> cfg.idleSwayCurve = v)
+                                v -> cfg.idleSwayCurve = v).resetDefault(() -> defaults.idleSwayCurve)
                                 .valueDescriptions(c -> switch (c) {
                                     case SINE_BREATH -> "Single pure sine — a gentle, even breathing motion.";
                                     case LISSAJOUS -> "Lissajous (1:2) — a smooth figure-8 / infinity path.";
@@ -1277,11 +1279,11 @@ addWithSettings("hitbox",
                                 .description("Movement curve shaping the idle sway oscillation. Some curves look far more dramatic at high intensity than others."),
                         SliderSetting.of("Idle Sway Strength",
                                 () -> cfg.idleSwayStrength,
-                                v -> cfg.idleSwayStrength = v, 0.0, 10.0)
+                                v -> cfg.idleSwayStrength = v, 0.0, 10.0).resetDefault(() -> defaults.idleSwayStrength)
                                 .description("How pronounced the idle sway is. 1.0 is a gentle breath; 5.0+ is dramatic drift. Some curves (Circular, Lissajous) shine at high values."),
 
                         new SectionHeaderSetting("Hotbar"),
-                        new BooleanSetting("Hotbar Bounce", () -> cfg.hotbarBounceEnabled, v -> cfg.hotbarBounceEnabled = v)
+                        new BooleanSetting("Hotbar Bounce", () -> cfg.hotbarBounceEnabled, v -> cfg.hotbarBounceEnabled = v).resetDefault("hotbarBounceEnabled", () -> defaults.hotbarBounceEnabled)
                                 .description("Pulses the hotbar slot when a pickup adds an item or grows its stack. Requires Animations to be enabled.")
                 ),
                 java.util.List.of(
@@ -1298,43 +1300,43 @@ addWithSettings("hitbox",
                         new SectionHeaderSetting("Keys"),
                         new BooleanSetting("Show WASD Keys",
                                 () -> cfg.keystrokesShowMovement,
-                                v -> cfg.keystrokesShowMovement = v)
+                                v -> cfg.keystrokesShowMovement = v).resetDefault("keystrokesShowMovement", () -> defaults.keystrokesShowMovement)
                                 .description("The W/A/S/D block, following your movement keybinds."),
                         new BooleanSetting("Show Mouse Buttons",
                                 () -> cfg.keystrokesShowMouse,
-                                v -> cfg.keystrokesShowMouse = v)
+                                v -> cfg.keystrokesShowMouse = v).resetDefault("keystrokesShowMouse", () -> defaults.keystrokesShowMouse)
                                 .description("Left and right mouse buttons below the movement keys."),
                         new BooleanSetting("Show Middle Mouse",
                                 () -> cfg.keystrokesShowMiddleMouse,
-                                v -> cfg.keystrokesShowMiddleMouse = v)
+                                v -> cfg.keystrokesShowMiddleMouse = v).resetDefault("keystrokesShowMiddleMouse", () -> defaults.keystrokesShowMiddleMouse)
                                 .description("Also show the middle (pick-block) mouse button.")
                                 .disabled(() -> !cfg.keystrokesShowMouse),
                         new BooleanSetting("Show CPS Counter",
                                 () -> cfg.keystrokesShowCps,
-                                v -> cfg.keystrokesShowCps = v)
+                                v -> cfg.keystrokesShowCps = v).resetDefault("keystrokesShowCps", () -> defaults.keystrokesShowCps)
                                 .description("Rolling clicks-per-second readout under the mouse buttons (left / right, 1-second window)."),
                         new BooleanSetting("Show Spacebar",
                                 () -> cfg.keystrokesShowSpacebar,
-                                v -> cfg.keystrokesShowSpacebar = v)
+                                v -> cfg.keystrokesShowSpacebar = v).resetDefault("keystrokesShowSpacebar", () -> defaults.keystrokesShowSpacebar)
                                 .description("A wide bar for the jump input."),
                         new BooleanSetting("Show Sneak/Sprint",
                                 () -> cfg.keystrokesShowExtra,
-                                v -> cfg.keystrokesShowExtra = v)
+                                v -> cfg.keystrokesShowExtra = v).resetDefault("keystrokesShowExtra", () -> defaults.keystrokesShowExtra)
                                 .description("Sneak and sprint keys in a split row, following your keybinds."),
                         new KeyListSetting("Extra Keys",
                                 () -> cfg.keystrokesExtraKeys,
                                 v -> cfg.keystrokesExtraKeys = v)
                                 .description("Additional keys to track (Space, Shift, hotbar or ability keys). Click \"+ Add Key\", then press a key; ESC cancels. Keys auto-arrange in rows of three."),
                         new SectionHeaderSetting("Style"),
-                        new ColorSetting("Text Color", () -> cfg.keystrokesTextColor == null ? com.aurora.client.theme.ThemeManager.color(com.aurora.client.theme.ThemeToken.ON_SURFACE) : cfg.keystrokesTextColor, v -> cfg.keystrokesTextColor = v)
+                        new ColorSetting("Text Color", () -> cfg.keystrokesTextColor == null ? com.aurora.client.theme.ThemeManager.color(com.aurora.client.theme.ThemeToken.ON_SURFACE) : cfg.keystrokesTextColor, v -> cfg.keystrokesTextColor = v).resetDefault(() -> cfg.keystrokesTextColor, () -> defaults.keystrokesTextColor, () -> defaults.keystrokesTextColor == null ? defaultTheme.color(com.aurora.client.theme.ThemeToken.ON_SURFACE) : defaults.keystrokesTextColor)
                                 .description("Text color for this HUD only. Reset restores its default color."),
                         new ColorSetting("Accent Color",
                                 () -> cfg.keystrokesAccentColor,
-                                v -> cfg.keystrokesAccentColor = v)
+                                v -> cfg.keystrokesAccentColor = v).resetDefault(() -> defaults.keystrokesAccentColor)
                                 .description("The color a key turns while pressed. Defaults to following your theme accent; pick an explicit color to override it. Reset via \"Reset to defaults\"."),
                         SliderSetting.of("Panel Opacity",
                                 () -> cfg.keystrokesBgOpacity,
-                                v -> cfg.keystrokesBgOpacity = v, 0.0, 1.0).percent()
+                                v -> cfg.keystrokesBgOpacity = v, 0.0, 1.0).resetDefault(() -> defaults.keystrokesBgOpacity).percent()
                                 .description("Opacity of the backing panel only — key labels stay fully legible even at 0%."),
                         SliderSetting.of("Scale",
                                 () -> {
@@ -1352,12 +1354,13 @@ addWithSettings("hitbox",
                                 },
                                 com.aurora.client.hud.module.HudModule.MIN_SCALE,
                                 com.aurora.client.hud.module.HudModule.MAX_SCALE)
+                                .noReset("HUD layout scale belongs to the HUD editor, not a plain config field")
                                 .description("Uniform size multiplier for the whole cluster. You can also drag the module's corner in the HUD editor (Right Shift) to resize."),
                         new EnumSetting<>("Background", FLAT_BACKGROUNDS,
-                                () -> cfg.keystrokesBgMode, v -> cfg.keystrokesBgMode = v),
+                                () -> cfg.keystrokesBgMode, v -> cfg.keystrokesBgMode = v).resetDefault(() -> defaults.keystrokesBgMode),
                         new ColorSetting("Background Color (when SOLID)",
-                                () -> cfg.keystrokesBgColor, v -> cfg.keystrokesBgColor = v),
-                        hudThemeCorners(() -> cfg.keystrokesThemeCorners, v -> cfg.keystrokesThemeCorners = v)
+                                () -> cfg.keystrokesBgColor, v -> cfg.keystrokesBgColor = v).resetDefault(() -> defaults.keystrokesBgColor),
+                        hudThemeCorners(() -> cfg.keystrokesThemeCorners, v -> cfg.keystrokesThemeCorners = v, () -> defaults.keystrokesThemeCorners)
                                 .description("Round the keycaps and the backing panel with the theme's Corner Radius (Settings → Appearance → Surfaces) instead of their fixed corners.")
                 ));
 
@@ -1372,20 +1375,20 @@ addWithSettings("hitbox",
         // until the pages replaced it.
         FeatureSetting smoothCameraEnabled = new BooleanSetting("Enabled",
                 () -> cfg.smoothCamera,
-                v -> cfg.smoothCamera = v)
+                v -> cfg.smoothCamera = v).resetDefault("smoothCamera", () -> defaults.smoothCamera)
                 .description("Adds inertia to your mouse look so the camera eases into and out of movement instead of stopping instantly. Gives panning a weighty, cinematic feel — great for recording or relaxed play. Note: it adds aim latency, so competitive players usually leave it off.");
         FeatureSetting smoothCameraStrength = SliderSetting.of("Strength",
-                () -> cfg.smoothCameraStrength, v -> cfg.smoothCameraStrength = v, 0.05, 1.0)
+                () -> cfg.smoothCameraStrength, v -> cfg.smoothCameraStrength = v, 0.05, 1.0).resetDefault(() -> defaults.smoothCameraStrength)
                 .description("How much smoothing is applied. Low values add a barely-there glide that still feels responsive; high values produce heavy, floaty camera drift with noticeable lag between your mouse and the view. Start around 0.2-0.3 if you want subtle smoothing.")
                 .disabled(() -> !cfg.smoothCamera); // a dependent control follows its switch (2026-11-14)
         FeatureSetting framePacerEnabled = new BooleanSetting("Enabled",
                 () -> cfg.smoothFramePacer,
-                v -> cfg.smoothFramePacer = v)
+                v -> cfg.smoothFramePacer = v).resetDefault("smoothFramePacer", () -> defaults.smoothFramePacer)
                 .description("A high-precision replacement for Minecraft's built-in FPS cap. Vanilla's limiter spaces frames unevenly, which you feel as micro-stutter even at high FPS. The Frame Pacer holds each frame to a near-exact interval, so motion looks visibly smoother at the same average framerate. Set your FPS cap in vanilla Video Settings; this controls *how* that cap is enforced.");
         FeatureSetting framePacingStrategy = new EnumSetting<>("Strategy",
                 AuroraConfig.PacingStrategy.class,
                 () -> cfg.framePacingStrategy,
-                v -> cfg.framePacingStrategy = v)
+                v -> cfg.framePacingStrategy = v).resetDefault(() -> defaults.framePacingStrategy)
                 .valueDescriptions(s -> switch (s) {
                     case VANILLA -> "Disabled — uses Minecraft's default frame pacing. Notice the jitter at high FPS caps above ~64.";
                     case PARK -> "Default. Sleeps for most of the wait, spinning only the final half-millisecond. Measured the most stable frame times of any strategy at 60 fps while using the least CPU - cool and quiet with nothing given up.";
@@ -1394,39 +1397,39 @@ addWithSettings("hitbox",
                 });
         FeatureSetting framePacerLowCpu = new BooleanSetting("Low CPU (Hybrid only)",
                 () -> cfg.framePacerLowCpuMode,
-                v -> cfg.framePacerLowCpuMode = v)
+                v -> cfg.framePacerLowCpuMode = v).resetDefault("framePacerLowCpuMode", () -> defaults.framePacerLowCpuMode)
                 .description("Hybrid only: parks until the configured Spin Threshold, shortening its planned spin window. Park and Spin are unchanged. Timing precision and actual CPU effects depend on the system.")
                 .disabled(() -> cfg.framePacingStrategy != AuroraConfig.PacingStrategy.HYBRID);
         FeatureSetting framePacerSpinThreshold = SliderSetting.ofInt("Spin Threshold (µs)",
                 () -> cfg.framePacerSpinThresholdMicros,
-                v -> cfg.framePacerSpinThresholdMicros = v, 100, 2000)
+                v -> cfg.framePacerSpinThresholdMicros = v, 100, 2000).resetDefault(() -> defaults.framePacerSpinThresholdMicros)
                 .description("Planned spin tail in microseconds for Park, and for Hybrid with Low CPU enabled. Manual values are preserved; actual timing and CPU use depend on the system. Spin ignores this threshold.");
         FeatureSetting framePacerParkThreshold = SliderSetting.ofInt("Park Threshold (µs)",
                 () -> cfg.framePacerParkThresholdMicros,
-                v -> cfg.framePacerParkThresholdMicros = v, 1000, 8000)
+                v -> cfg.framePacerParkThresholdMicros = v, 1000, 8000).resetDefault(() -> defaults.framePacerParkThresholdMicros)
                 .description("Planned spin window in microseconds for Hybrid with Low CPU off. A higher value reserves more active spinning. Park and Spin ignore this threshold.");
         FeatureSetting globalFrameCap = SliderSetting.ofInt("Global Frame Cap",
-                () -> cfg.frameCapFps, v -> cfg.frameCapFps = v, 0, 2000)
+                () -> cfg.frameCapFps, v -> cfg.frameCapFps = v, 0, 2000).resetDefault(() -> defaults.frameCapFps)
                 .editableValue()
                 .valueFormatter(v -> v.intValue() <= 0 ? "Off" : Integer.toString(v.intValue()))
                 .description("Caps the game's framerate everywhere — world, menus, and Aurora's screens alike — at up to 2000 FPS. 0 (Off) removes the cap. Unlike Minecraft's own FPS limit, this works even when that option is set to Unlimited, and it stacks cleanly with it: whichever is lower wins. The wait happens at the very start of each frame, so latency stays low. Click the value to type an exact number; drag or use the arrows for rough adjustment.");
         FeatureSetting lowLatencyEnabled = new BooleanSetting("Enabled",
                 () -> cfg.lowLatencyRender,
-                v -> cfg.lowLatencyRender = v)
+                v -> cfg.lowLatencyRender = v).resetDefault("lowLatencyRender", () -> defaults.lowLatencyRender)
                 .description("Master switch for the latency settings in this section: the VSync-off enforcement and the Reflex-style render sleep below. With this off, neither has any effect, even with their own toggles on.");
         FeatureSetting disableVSync = new BooleanSetting("Disable VSync (causes tearing without VRR)",
-                () -> cfg.disableVSync, v -> cfg.disableVSync = v)
+                () -> cfg.disableVSync, v -> cfg.disableVSync = v).resetDefault("disableVSync", () -> defaults.disableVSync)
                 .description("Turns off vertical sync, removing the frame-buffering delay it adds for the lowest possible input lag. The trade-off is screen tearing (a horizontal seam during fast motion) unless your monitor has a variable refresh rate like G-Sync or FreeSync. Leave on if you see tearing.");
         FeatureSetting adaptiveRenderSleeping = new BooleanSetting("Adaptive Render Sleeping (Reflex-style)",
-                () -> cfg.adaptiveRenderSleeping, v -> cfg.adaptiveRenderSleeping = v)
+                () -> cfg.adaptiveRenderSleeping, v -> cfg.adaptiveRenderSleeping = v).resetDefault("adaptiveRenderSleeping", () -> defaults.adaptiveRenderSleeping)
                 .description("Moves the frame-rate limiter's wait from the end of the frame to the very start of the next one, so the CPU sleeps just before your input is applied and the frame is built — keeping the GPU render queue short. Requires this section's Enabled toggle plus the Frame Pacer above being on with a non-Vanilla strategy.");
         FeatureSetting decoupledInputEnabled = new BooleanSetting("Enabled",
                 () -> cfg.inputSamplingDecoupled,
-                v -> cfg.inputSamplingDecoupled = v)
+                v -> cfg.inputSamplingDecoupled = v).resetDefault("inputSamplingDecoupled", () -> defaults.inputSamplingDecoupled)
                 .description("Feeds your mouse movement into the game at the very top of each rendered frame — ahead of the game-tick logic, instead of at vanilla's own per-frame application point just before the world renders. On frames that run a game tick, your aim is already in place before tick decisions are made instead of landing just after. Applies the raw batch, so vanilla's cinematic-camera smoothing is bypassed while this is on.");
         FeatureSetting serverListDragEnabled = new BooleanSetting("Enabled",
                 () -> cfg.serverListDragReorder,
-                v -> cfg.serverListDragReorder = v)
+                v -> cfg.serverListDragReorder = v).resetDefault("serverListDragReorder", () -> defaults.serverListDragReorder)
                 .description("Lets you reorder servers in the Multiplayer server list by click-and-drag instead of vanilla's up/down arrow buttons. Click and hold a server, drag it to a new position, and release — the new order is saved instantly. Normal clicks still select and join servers as usual.");
         FeatureSetting copyDiagnostics = ButtonSetting.semantic("Copy Diagnostics", "Copy",
                 com.aurora.client.diagnostics.DiagnosticsReport::runAndCopy)
@@ -1476,10 +1479,10 @@ addWithSettings("hitbox",
         // with a visible trade-off have rows; the rest are config-only
         // perf* gates that ship on.
         FeatureSetting debugEntryCache = new BooleanSetting("Debug Entry Cache",
-                () -> cfg.perfDebugEntryCache, v -> cfg.perfDebugEntryCache = v)
+                () -> cfg.perfDebugEntryCache, v -> cfg.perfDebugEntryCache = v).resetDefault("perfDebugEntryCache", () -> defaults.perfDebugEntryCache)
                 .description("Updates the lines of the F3 debug screen 20 times a second, as often as the game itself changes, instead of on every frame. Raises the frame rate while F3 is open; values such as your coordinates update in steps of a game tick.");
         FeatureSetting minimapRefreshCap = new BooleanSetting("Minimap Refresh Cap",
-                () -> cfg.perfMinimapRefreshCap, v -> cfg.perfMinimapRefreshCap = v)
+                () -> cfg.perfMinimapRefreshCap, v -> cfg.perfMinimapRefreshCap = v).resetDefault("perfMinimapRefreshCap", () -> defaults.perfMinimapRefreshCap)
                 .description("While you move or turn, the minimap redraws its terrain at most 60 times a second instead of on every frame, which saves time at high frame rates. Markers stay lined up with the terrain. On screens faster than 60 Hz the terrain scrolls in small steps.");
         addWithSettings("performance",
                 "Loading, caching and drawing optimizations. Most are always on; the switches here are the ones you might notice.",
@@ -1500,7 +1503,7 @@ addWithSettings("hitbox",
         // Interface or Display Settings, so their config fields, defaults,
         // fair-play notes and resets do not change.
         FeatureSetting hudEditorKey = new KeybindSetting("HUD Editor Key",
-                () -> cfg.hudEditorKey, v -> cfg.hudEditorKey = v)
+                () -> cfg.hudEditorKey, v -> cfg.hudEditorKey = v).resetDefault(() -> defaults.hudEditorKey)
                 .description("Opens the HUD editor in game, where you move and resize HUD modules; its Aurora Settings button leads here. Also listed in Minecraft's Controls. Press ESC or Backspace while rebinding to clear it.");
         SETTINGS_PAGES.add(new SettingsPage("Appearance", List.of(
                 settingsEntry("theme").pageSummary("The accent, window tint and glass of every Aurora screen."),
@@ -1515,11 +1518,11 @@ addWithSettings("hitbox",
                 group("decoupled_input", "Decoupled Input", decoupledInputEnabled).pageSummary("Applies mouse movement at the very start of each frame."),
                 group("aurora_keys", "Aurora Keys", hudEditorKey).pageSummary("Keys that open Aurora's own screens."))));
         FeatureSetting searchInstant = new BooleanSetting("Instant Search",
-                () -> cfg.searchInstant, v -> { cfg.searchInstant = v; AuroraConfig.save(); })
+                () -> cfg.searchInstant, v -> { cfg.searchInstant = v; AuroraConfig.save(); }).resetDefault("searchInstant", () -> defaults.searchInstant)
                 .description("Focuses the search bar when the Aurora menu opens or you return to the Features tab, so you can type straight away.");
         FeatureSetting searchTolerance = new SegmentedSetting<>("Search Typo Tolerance", SearchTolerance.class,
                 () -> SearchTolerance.of(cfg.searchTypoTolerance), v -> { cfg.searchTypoTolerance = v.ordinal(); AuroraConfig.save(); },
-                SearchTolerance::label)
+                SearchTolerance::label).resetDefault(() -> SearchTolerance.of(defaults.searchTypoTolerance))
                 .description("How many typos a search word can have and still find a match. Exact only finds exact matches; short words always need to be exact.");
         SETTINGS_PAGES.add(new SettingsPage("Performance", List.of(
                 group("debug_screen", "Debug Screen", debugEntryCache).pageSummary("Makes the F3 screen cheaper to draw."),
@@ -1555,14 +1558,14 @@ addWithSettings("hitbox",
      * theme's Corner Radius here. Callers add a disabled rule where the
      * switch has nothing to round.
      */
-    private static BooleanSetting hudThemeCorners(BooleanSupplier getter, Consumer<Boolean> setter) {
-        return new BooleanSetting("Theme Corner Radius", getter, setter)
+    private static BooleanSetting hudThemeCorners(BooleanSupplier getter, Consumer<Boolean> setter, BooleanSupplier defaultValue) {
+        return new BooleanSetting("Theme Corner Radius", getter, setter).resetDefault(defaultValue::getAsBoolean)
                 .description("Round this HUD's background with the theme's Corner Radius (Settings → Appearance → Surfaces) instead of its fixed corners. Only the Solid background has corners to round.");
     }
 
     /** Boolean row bound to one Better Hitreg {@code Toggle} (raw stored value, not the master-gated read). */
-    private static BooleanSetting hitregToggle(com.aurora.client.hitreg.settings.Toggle toggle, String label) {
-        return new BooleanSetting(label, toggle::get, toggle::set);
+    private static BooleanSetting hitregToggle(com.aurora.client.hitreg.settings.Toggle toggle, String label, BooleanSupplier defaultValue) {
+        return new BooleanSetting(label, toggle::get, toggle::set).resetDefault(defaultValue::getAsBoolean);
     }
 
     /**

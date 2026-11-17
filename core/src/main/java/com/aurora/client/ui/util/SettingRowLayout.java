@@ -77,6 +77,19 @@ public record SettingRowLayout(int height, List<String> lines, UiDensity.Rect la
                 new UiDensity.Rect(control.x(), (h - control.height()) / 2, control.width(), control.height()), value, inline);
     }
 
+    public static final int RESET_W = 18, RESET_GAP = 4;
+
+    public record Reset(UiDensity.Rect label, UiDensity.Rect action) {}
+
+    /** Fit the label first; the icon follows its fitted text, within the original label column.
+     * Value and control columns never move, and an unmodified row uses its whole label column. */
+    public static Reset reset(int x, int y, int labelWidth, int height, int fittedTextWidth) {
+        int available = Math.max(0, labelWidth - RESET_W - RESET_GAP);
+        int textWidth = Math.max(0, Math.min(available, fittedTextWidth));
+        return new Reset(new UiDensity.Rect(x, y, available, height),
+                new UiDensity.Rect(x + textWidth + RESET_GAP, y + (height - RESET_W) / 2, RESET_W, RESET_W));
+    }
+
     /** A row-high (≥18px) pointer target around the control visual. */
     public UiDensity.Rect controlHit() {
         int h = Math.max(UiDensity.SIMPLE_ROW, control.height());

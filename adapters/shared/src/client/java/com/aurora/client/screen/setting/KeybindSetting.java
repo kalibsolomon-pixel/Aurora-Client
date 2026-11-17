@@ -123,6 +123,12 @@ public class KeybindSetting extends FeatureSetting {
         this.saveAction = saveAction;
     }
 
+    public KeybindSetting resetDefault(IntSupplier supplier) {
+        int value = supplier.getAsInt();
+        installReset(() -> getter.getAsInt() != value, () -> { releaseCaptureOwnership(); setter.accept(value); }, () -> keyName(value));
+        return this;
+    }
+
     @Override public KeybindSetting description(String desc) { super.description(desc); return this; }
     @Override public KeybindSetting description(Supplier<String> desc) { super.description(desc); return this; }
 
@@ -153,10 +159,9 @@ public class KeybindSetting extends FeatureSetting {
         if (tr == null) return;
         boolean disabled = reconcileDisabledState();
 
-        // Keybind rows intentionally skip the label-hover description tooltip.
         if (compactRow != null) renderCompactLabel(ctx, x, y, mouseX, mouseY, AuroraTheme.TEXT_PRIMARY);
-        else ctx.text(tr, com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(tr,label,Math.max(0,width-BTN_W-38),0), x + 12, y + (CONTROL_H - tr.lineHeight) / 2,
-                disabled ? AuroraTheme.TEXT_DIM : AuroraTheme.TEXT_PRIMARY, false);
+        else renderWrappedLabel(ctx, label, x + 12, y + (CONTROL_H - tr.lineHeight) / 2,
+                Math.max(0, width - BTN_W - 38), AuroraTheme.TEXT_PRIMARY, mouseX, mouseY, disabled);
 
         int btnX = controlX(x, width, BTN_W);
         int btnY = controlY(y, CONTROL_H, BTN_H);
@@ -245,6 +250,7 @@ public class KeybindSetting extends FeatureSetting {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button, int rowX, int rowY, int rowWidth) {
+        if (resetMouseClicked(mouseX, mouseY, button)) return true;
         syncCompactControl(rowX, rowY);
         if (reconcileDisabledState()) return false;
         if (button != com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) return false;

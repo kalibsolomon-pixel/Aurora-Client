@@ -50,7 +50,7 @@ class AuroraScreenSemanticHostingTest {
         int init = src.indexOf("protected void init()");
         int render = src.indexOf("public void extractRenderState(", init);
         String initBody = src.substring(init, render);
-        assertTrue(initBody.contains("List.copyOf(setting.interactionControls())"));
+        assertTrue(initBody.contains("List.copyOf(setting.controlsWithReset())"));
         assertTrue(initBody.contains("semanticHost.register(control)"));
         assertFalse(src.contains("instanceof EnumSetting"));
         assertFalse(src.contains("instanceof AccentSetting"));
@@ -76,7 +76,7 @@ class AuroraScreenSemanticHostingTest {
     @Test
     void availabilityUsesTheC1ClipBandAndActionableControlRect() {
         String src = read(SCREEN);
-        assertTrue(src.contains("boolean available = visible && vp.intersects(\n"
+        assertTrue(src.contains("boolean available = visible && s.controlVisible(control) && vp.intersects(\n"
                 + "                                control.getX(), control.getY(),\n"
                 + "                                control.getWidth(), control.getHeight());"));
         assertTrue(src.contains("semanticHost.beginAvailabilitySweep()"));

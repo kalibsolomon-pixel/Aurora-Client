@@ -36,6 +36,11 @@ public class AccentSetting extends ColorSetting {
         opaqueOnly();
     }
 
+    @Override protected void applyResetColor(int value) {
+        hasPending = false;
+        target.accept(value);
+    }
+
     private static void noop(int v) {}
 
     /** The picker's commit seam: coalesced live apply, latest value wins. */
