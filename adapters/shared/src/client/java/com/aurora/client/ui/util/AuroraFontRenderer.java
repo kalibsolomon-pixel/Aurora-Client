@@ -144,36 +144,115 @@ public class AuroraFontRenderer {
      * style, so layout and paint always agree.
      */
     public static boolean compactUi() {
-        if (isRenderingAuroraUI) return false;
+        if (drawingHud) return false;
         Minecraft mc = Minecraft.getInstance();
         return mc != null && com.aurora.client.adapter.NativeUi.screen(mc) instanceof com.aurora.client.ui.component.ThemedScreen themed
                 && themed.compactText();
     }
-    private static volatile boolean isRenderingAuroraUI = false;
 
-    public static void setRenderingAuroraUI(boolean rendering) {
-        isRenderingAuroraUI = rendering;
+    // ============================================================
+    //  Text scope (owner ruling 2026-11-17)
+    //
+    //  AURORA_ONLY styles only text drawn by an Aurora window's own
+    //  render. Two signals decide it (truth table in core TextScope):
+    //  the window scope ScreenTextScopeMixin opens around an Aurora
+    //  window's screen extraction, and the HUD flag every HUD pass
+    //  raises — which excludes text even inside a window scope, so
+    //  the HUD editor's module previews look the way they will in
+    //  game. ALL_TEXT and OFF never read either signal.
+    // ============================================================
+
+    /** MixinHealth name of the mixin that opens the window scope. */
+    static final String SCREEN_SCOPE_MIXIN = "ScreenTextScopeMixin";
+
+    /** True while an Aurora HUD pass is drawing (HUD modules and their editor previews, alerts, waypoint labels, tab ping). */
+    private static volatile boolean drawingHud = false;
+
+    /** Marks a pass that draws the in-world HUD. Window text is never drawn under this flag. */
+    public static void setDrawingHud(boolean drawing) {
+        drawingHud = drawing;
     }
 
-    public static boolean isRenderingAuroraUI() {
-        return isRenderingAuroraUI;
+    public static boolean isDrawingHud() {
+        return drawingHud;
     }
 
     /**
-     * Resolve the active font {@link net.minecraft.network.chat.Style} for the
-     * current frame, or {@code null} when no custom font should be applied.
+     * Depth of Aurora-window renders on the render thread: {@code > 0} while
+     * {@code ScreenTextScopeMixin} is inside an Aurora window's
+     * {@code extractRenderStateWithTooltipAndSubtitles}. Render thread only;
+     * reset at the frame boundary.
+     */
+    private static int windowScopeDepth;
+
+    /**
+     * Whether {@code screen} is an Aurora window: a screen Aurora implements,
+     * or any {@code ThemedScreen} — which includes Pulsar's dashboard
+     * ({@code PhenomenaScreen}). Vanilla screens that carry Aurora accents
+     * (search bars, the server-list latency label) are deliberately not
+     * windows: their text stays vanilla in AURORA_ONLY.
+     */
+    static boolean isAuroraWindow(net.minecraft.client.gui.screens.Screen screen) {
+        if (screen instanceof com.aurora.client.ui.component.ThemedScreen) return true;
+        // Screens Aurora implements without the marker (and any future
+        // sub-package) still count; matching the package root keeps this
+        // robust as new screens are added anywhere in the mod.
+        return screen.getClass().getName().startsWith("com.aurora.client.");
+    }
+
+    /**
+     * Opens the window scope when {@code screen} is an Aurora window. Called
+     * by {@code ScreenTextScopeMixin}; returns whether the scope opened, so
+     * the caller only exits what it entered.
+     */
+    public static boolean enterWindowScope(net.minecraft.client.gui.screens.Screen screen) {
+        if (!isAuroraWindow(screen)) return false;
+        windowScopeDepth++;
+        return true;
+    }
+
+    /** Closes one window scope level. Guarded: an unbalanced exit cannot go negative. */
+    public static void exitWindowScope() {
+        if (windowScopeDepth > 0) windowScopeDepth--;
+    }
+
+    /**
+     * Frame boundary, from {@code GlassSurface.beginFrame()}. An exception
+     * thrown inside a window render skips the RETURN that would close the
+     * scope; resetting here bounds that leak to frames that actually render
+     * a window (the HUD flag already protects HUD text in the meantime).
+     */
+    public static void beginTextFrame() {
+        windowScopeDepth = 0;
+    }
+
+    /**
+     * Resolve the active font {@link net.minecraft.network.chat.Style} for
+     * the text being drawn right now, or {@code null} when no custom font
+     * should apply.
      *
      * <p>Gated by {@link AuroraConfig.TextRendererMode}:
      * <ul>
      *   <li>{@code OFF} — never apply a custom font (vanilla rendering everywhere).</li>
-     *   <li>{@code AURORA_ONLY} — apply the custom font only on surfaces owned by
-     *       Aurora Client (every Aurora screen — module window, feature detail
-     *       screens, color pickers, waypoint manager, HUD editor, title screen,
-     *       dropdown overlays — plus the in-world HUD). See {@link #isAuroraSurface()}.</li>
-     *   <li>{@code ALL_TEXT} — apply the custom font to <b>every</b> piece of text
-     *       rendered in the game, vanilla or Aurora, because {@code MixinFont}
-     *       intercepts all {@code Font.drawInBatch} overloads globally.</li>
+     *   <li>{@code AURORA_ONLY} — apply the custom font only to text drawn
+     *       by an Aurora window's own render (module window, feature detail
+     *       screens, color pickers, waypoint manager, dropdown overlays and
+     *       tooltips, plus Pulsar's dashboard). Not the vanilla hotbar,
+     *       chat or scoreboard behind an open window, not vanilla screens
+     *       that carry Aurora accents, and not the in-world HUD — including
+     *       the HUD editor's previews (owner ruling 2026-11-17). See
+     *       {@link TextScope} and {@link #isAuroraSurface()}.</li>
+     *   <li>{@code ALL_TEXT} — apply the custom font to <b>every</b> piece
+     *       of text rendered in the game, vanilla or Aurora, HUD included,
+     *       because {@code MixinFont} intercepts all {@code Font.drawInBatch}
+     *       overloads globally.</li>
      * </ul>
+     *
+     * <p>The answer can change several times within one frame (HUD, then a
+     * window, then HUD previews inside the editor); measurement follows it
+     * because {@code MixinFont} re-routes {@code width} through this same
+     * method, and {@link #styleKey()} folds the applicability into every
+     * memo key.
      */
     public static net.minecraft.network.chat.Style getActiveStyle() {
         if (com.aurora.client.health.MixinHealth.failed("MixinFont")) return null;
@@ -186,7 +265,7 @@ public class AuroraFontRenderer {
                 return null;
             }
             case AURORA_ONLY -> {
-                // Only on surfaces owned by Aurora Client.
+                // Only text drawn by an Aurora window's own render.
                 if (!isAuroraSurface()) {
                     return null;
                 }
@@ -228,12 +307,15 @@ public class AuroraFontRenderer {
 
     /**
      * Everything the resolved text style depends on, packed into one int:
-     * font, weight, italic, underline, case, renderer mode and the compact
-     * variant. Label caches fold it into their version keys so a change to
-     * any text option re-measures them.
+     * font, weight, italic, underline, case, renderer mode, the compact
+     * variant and — since the scope can change within a frame (HUD and a
+     * window share it) — whether a custom font applies to the text being
+     * measured at all. Label caches fold it into their version keys so a
+     * change to any text option re-measures them, and so a styled window
+     * measurement is never served to an unstyled HUD draw or vice versa.
      */
     public static int styleKey() {
-        return styleKey(AuroraConfig.get(), compactUi());
+        return styleKey(AuroraConfig.get(), compactUi()) * 2 + (getActiveStyle() != null ? 1 : 0);
     }
 
     private static int styleKey(AuroraConfig cfg, boolean compact) {
@@ -331,32 +413,20 @@ public class AuroraFontRenderer {
     }
 
     /**
-     * Determine whether the current frame is being drawn on a surface owned by
-     * Aurora Client. Used by {@link #getActiveStyle()} so {@code AURORA_ONLY}
-     * mode applies the configured font across the entire Aurora UI.
-     *
-     * <p>A surface counts as Aurora-owned when either:
-     * <ul>
-     *   <li>The {@link #isRenderingAuroraUI} flag is set — used by the HUD
-     *       renderers (info, armor, waypoint, alerts, etc.) which don't open
-     *       a screen.</li>
-     *   <li>The currently open screen belongs to Aurora Client, detected by
-     *       its class living anywhere under the {@code com.aurora.client.}
-     *       package. This catches <em>every</em> Aurora screen regardless of
-     *       sub-package: the module window, feature detail screens, color
-     *       pickers, waypoint manager, HUD editor, custom title screen, and
-     *       any dropdown overlays they render.</li>
-     * </ul>
+     * Whether AURORA_ONLY styles the text being drawn right now. Pure
+     * decision in {@link TextScope}; this wires the game's two signals to
+     * it: the HUD flag and the window scope, with the open-screen check as
+     * the fail-soft fallback when {@code ScreenTextScopeMixin} is not
+     * working (ADR 0004) — coarser, but the setting still does something
+     * and FeatureHealth reports the degradation on Text &amp; Fonts.
      */
     private static boolean isAuroraSurface() {
-        if (isRenderingAuroraUI) return true;
         Minecraft mc = Minecraft.getInstance();
-        if (mc == null || com.aurora.client.adapter.NativeUi.screen(mc) == null) return false;
-        // Any screen implemented by Aurora Client lives somewhere under
-        // com.aurora.client. (screens, ui, hud, etc.). Matching the package
-        // root instead of a single sub-package keeps this robust as new
-        // screens/components are added anywhere in the mod.
-        return com.aurora.client.adapter.NativeUi.screen(mc).getClass().getName().startsWith("com.aurora.client.");
+        net.minecraft.client.gui.screens.Screen open = mc == null ? null
+                : com.aurora.client.adapter.NativeUi.screen(mc);
+        return TextScope.auroraOnly(drawingHud, windowScopeDepth > 0,
+                com.aurora.client.health.MixinHealth.failed(SCREEN_SCOPE_MIXIN),
+                open != null && isAuroraWindow(open));
     }
 
     /**

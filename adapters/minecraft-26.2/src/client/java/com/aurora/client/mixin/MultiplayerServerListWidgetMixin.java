@@ -82,13 +82,15 @@ public abstract class MultiplayerServerListWidgetMixin {
         // any "9999/9999"-style player count.
         int textX = x + entryWidth + 6;
         int textY = y + 1;
-        // Flag this as an Aurora-owned render so the configured custom font
-        // applies to our latency label in AURORA_ONLY mode.
-        com.aurora.client.ui.util.AuroraFontRenderer.setRenderingAuroraUI(true);
+        // Mark this Aurora accent on a vanilla screen as non-window text: in
+        // AURORA_ONLY the latency label stays vanilla like the search bars
+        // on the same screens; All Text still styles it (owner ruling
+        // 2026-11-17).
+        com.aurora.client.ui.util.AuroraFontRenderer.setDrawingHud(true);
         try {
             ctx.text(client.font, label, textX, textY, color, false);
         } finally {
-            com.aurora.client.ui.util.AuroraFontRenderer.setRenderingAuroraUI(false);
+            com.aurora.client.ui.util.AuroraFontRenderer.setDrawingHud(false);
         }
     }
 }
