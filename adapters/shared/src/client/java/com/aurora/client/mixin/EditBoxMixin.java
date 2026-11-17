@@ -95,6 +95,44 @@ public abstract class EditBoxMixin implements GlassEditBox {
                 || com.aurora.client.adapter.NativeUi.screen(mc) instanceof com.aurora.client.ui.component.ThemedScreen;
     }
 
+    /** Vanilla's drawn-text origin, rewritten below so clicks map to Aurora's text position. */
+    @Shadow private int textX;
+
+    /** Aurora's text inset from the field's left edge (vanilla's bordered inset is 4). */
+    @Unique private static final int TEXT_LEFT = 8;
+
+    /**
+     * Search fields carry a trailing magnifier (2026-11-14) so an empty field reads as search,
+     * not a bare input; the text window stops short of the glyph.
+     */
+    @Unique
+    private boolean aurora$search() {
+        return MaterialSurface.unified() && hint != null && hint.getString().startsWith("Search");
+    }
+
+    /** Right edge of Aurora's text window, relative to the field's left edge. */
+    @Unique
+    private int aurora$textRight() {
+        return ((EditBox) (Object) this).getWidth() - 4 - (aurora$search() ? 14 : 0);
+    }
+
+    /**
+     * Vanilla scrolls ({@code scrollTo}) and maps clicks to characters through its own text
+     * window: origin {@code x + 4}, width {@code getInnerWidth()}. Aurora draws from
+     * {@code x + 8} and stops before the search glyph, so on Aurora fields both follow
+     * Aurora's window; otherwise a long value scrolled its last characters under the clip
+     * and clicks landed half a glyph off (2026-11-16).
+     */
+    @Inject(method = "getInnerWidth", at = @At("RETURN"), cancellable = true)
+    private void aurora$innerWidth(CallbackInfoReturnable<Integer> cir) {
+        if (aurora$themedScreen(Minecraft.getInstance())) cir.setReturnValue(Math.max(1, aurora$textRight() - TEXT_LEFT));
+    }
+
+    @Inject(method = "updateTextPosition", at = @At("TAIL"))
+    private void aurora$textOrigin(CallbackInfo ci) {
+        if (aurora$themedScreen(Minecraft.getInstance())) textX = ((EditBox) (Object) this).getX() + TEXT_LEFT;
+    }
+
     // Allocated only on input, never from the render path. KTextField inherits these hooks.
     @Unique private EditHistory aurora$history;
     @Unique private EditHistory.State aurora$beforeEdit;
@@ -267,16 +305,11 @@ public abstract class EditBoxMixin implements GlassEditBox {
 
         // --- 2. Text / hint rendering, vertically centered ---
         int textCol = MaterialSurface.color(ThemeToken.ON_BACKGROUND);
-        int innerX = (int) x + 8;           // 8px left padding
-        int innerRight = (int) (x + w) - 4; // 4px right padding
-        // Search fields carry a trailing magnifier (2026-11-14) so an empty field reads as search,
-        // not a bare input. Trailing, so the text origin and vanilla's click-to-caret mapping
-        // stay where they were; the text clip stops short of the glyph.
-        boolean search = MaterialSurface.unified() && hint != null && hint.getString().startsWith("Search");
-        if (search) {
+        int innerX = (int) x + TEXT_LEFT;
+        int innerRight = (int) x + aurora$textRight();
+        if (aurora$search()) {
             com.aurora.client.ui.util.MaterialIconRenderer.drawIcon(ctx, font, com.aurora.client.screen.IconCatalog.glyph("search"),
                     x + w - 10, y + h / 2f, 10, MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY));
-            innerRight -= 14;
         }
         int textY = (int) (y + (h - font.lineHeight) / 2) + 1; // +1 nudges past baseline offset
 
