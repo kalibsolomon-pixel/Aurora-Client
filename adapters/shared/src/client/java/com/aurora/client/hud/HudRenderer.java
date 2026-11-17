@@ -14,13 +14,13 @@ public class HudRenderer {
     private final CrosshairRenderer crosshair = new CrosshairRenderer();
 
     public void render(GuiGraphicsExtractor ctx, DeltaTracker tickCounter) {
-        com.aurora.client.ui.util.AuroraFontRenderer.setRenderingAuroraUI(true);
+        com.aurora.client.ui.util.AuroraFontRenderer.setDrawingHud(true);
         try {
             HudModuleManager mgr = AuroraClient.modules();
             if (mgr != null) mgr.renderAll(ctx);
             crosshair.render(ctx);
         } finally {
-            com.aurora.client.ui.util.AuroraFontRenderer.setRenderingAuroraUI(false);
+            com.aurora.client.ui.util.AuroraFontRenderer.setDrawingHud(false);
         }
     }
 }

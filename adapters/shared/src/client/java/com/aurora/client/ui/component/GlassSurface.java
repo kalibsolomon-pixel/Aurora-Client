@@ -175,6 +175,8 @@ public final class GlassSurface {
         com.aurora.client.ui.util.UiLayerCache.beginFrame();
         com.aurora.client.ui.util.MaterialIconRenderer.beginFrame();
         com.aurora.client.ui.util.AuroraFontQuality.beginFrame();
+        // Closes a window text scope an exception left open last frame.
+        com.aurora.client.ui.util.AuroraFontRenderer.beginTextFrame();
         if (!pendingRims.isEmpty()) {
             report("glass pass opened (beginGlassPass) but overlayDim never painted — "
                     + pendingRims.size() + " deferred rim finish(es) were painted nowhere");

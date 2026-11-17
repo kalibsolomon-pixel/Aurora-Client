@@ -1121,7 +1121,7 @@ addWithSettings("hitbox",
                         new EnumSetting<>("Text Renderer", AuroraConfig.TextRendererMode.class,
                                 () -> cfg.textRendererMode, v -> { cfg.textRendererMode = v; persistThemeChange(); }).resetDefault(() -> defaults.textRendererMode)
                                 .labels(AuroraConfig.TextRendererMode::getLabel)
-                                .description("Which text uses these options: Off (Minecraft's own text everywhere), Aurora UI Only, or All Text (Aurora and every vanilla string)."),
+                                .description("Which text uses these options: Off (Minecraft's own text everywhere), Aurora UI Only (text on Aurora's own windows, Pulsar's dashboard included — not the in-game HUD or vanilla screens), or All Text (Aurora windows, the in-game HUD and every vanilla string)."),
                         new EnumSetting<>("Font", AuroraConfig.FontType.choices(),
                                 () -> cfg.activeFont == AuroraConfig.FontType.INTER_ITALIC ? AuroraConfig.FontType.INTER : cfg.activeFont,
                                 v -> { cfg.activeFont = v; persistThemeChange(); }).resetDefault(() -> defaults.activeFont == AuroraConfig.FontType.INTER_ITALIC ? AuroraConfig.FontType.INTER : defaults.activeFont)
