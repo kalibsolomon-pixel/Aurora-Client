@@ -1679,7 +1679,8 @@ contact shadow and blends in the existing 30% pressed accent.
 left/right bounds and the active font's cap/x-height) is centred on the label area (the whole
 face for Flat, the top surface for 3D Keycap, the upper part of a mouse key above its CPS
 line), with the origin snapped to the device grid. Each row shares one size, taken from its
-widest legend and rounded down to whole device pixels per font pixel, so W/A/S/D, the mouse
+widest legend (3 px side clearance on a flat face, 1.5 px on a keycap's top) and rounded down to
+whole device pixels per font pixel when that costs at most 15%, so W/A/S/D, the mouse
 buttons, Shift/Ctrl and the extra keys never differ in size within a row; nothing is scaled up.
 
 `KeycapProfile` owns pure core geometry/lighting; `KeycapRenderer` owns a HUD-lifetime primitive

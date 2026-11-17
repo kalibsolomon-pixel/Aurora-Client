@@ -422,18 +422,24 @@ public class KeystrokesModule extends HudModule {
     private static final int CPS_LINE = 10;
     /** CPS counts read smaller than legends. */
     private static final float CPS_SCALE = .75f;
-    /** Equal clearance on both sides of a legend, GUI px. */
-    private static final float LEGEND_PAD = 3f;
+    /** Equal clearance on both sides of a legend, GUI px: a flat face, and a keycap's narrower top. */
+    private static final float LEGEND_PAD = 3f, KEYCAP_LEGEND_PAD = 1.5f;
 
     private static float fitScale(float areaW, int advance) {
-        return advance <= 0 ? 1f : Math.min(1f, (areaW - 2 * LEGEND_PAD) / advance);
+        float pad = AuroraConfig.get().keystrokesKeyStyle == AuroraConfig.KeystrokesKeyStyle.KEYCAP
+                ? KEYCAP_LEGEND_PAD : LEGEND_PAD;
+        return advance <= 0 ? 1f : Math.min(1f, (areaW - 2 * pad) / advance);
     }
 
-    /** Down to a multiple of one device pixel per font pixel, so glyphs keep whole-pixel sizes. */
+    /**
+     * Rounds down to whole device pixels per font pixel (crisp glyph sizes) when that costs at
+     * most 15% of the fitting size; otherwise the exact fit, so a small keycap top never drops a
+     * legend to a third of its size.
+     */
     private static float quantize(GuiGraphicsExtractor ctx, float scale) {
         float density = com.aurora.client.worldmap.MapMarkers.density(ctx);
-        float steps = (float) Math.floor(scale * density + 1e-4f);
-        return Math.max(1f, steps) / density;
+        float snapped = (float) Math.floor(scale * density + 1e-4f) / density;
+        return snapped >= scale * .85f ? snapped : scale;
     }
 
     /**
