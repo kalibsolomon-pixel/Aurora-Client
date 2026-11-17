@@ -335,7 +335,9 @@ public abstract class EditBoxMixin implements GlassEditBox {
             if (focused && selEnd > selStart) {
                 int selX1 = innerX + font.width(value.substring(safeDisp, selStart));
                 int selX2 = Math.min(innerRight, innerX + font.width(value.substring(safeDisp, selEnd)));
-                ctx.fill(selX1, textY - 1, selX2, textY + font.lineHeight, MaterialSurface.selectedFill());
+                // The accent at 40%: the soft row-selection fill vanished on the factory near-black field.
+                ctx.fill(selX1, textY - 1, selX2, textY + font.lineHeight,
+                        ThemeManager.withAlpha(MaterialSurface.color(ThemeToken.ACCENT), 0x66));
             }
             // From innerX, the origin the caret and selection measure from; this subtracted the
             // scroll index as pixels, so scrolled text drifted left of its caret.
