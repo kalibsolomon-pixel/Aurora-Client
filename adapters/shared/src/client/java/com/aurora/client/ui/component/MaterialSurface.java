@@ -82,8 +82,8 @@ public final class MaterialSurface {
         PRIMARY(6,-4,Profile.RAISED), PRIMARY_LIGHT(3,-4,Profile.RAISED),
         MODULE_ON(11,3,Profile.RAISED), MODULE_OFF(-5,-5,Profile.FLAT),
         MODULE_ON_HOVER(13,5,Profile.RAISED), MODULE_OFF_HOVER(-3,-3,Profile.FLAT),
-        KNOB(0,0,Profile.DOME,1,.18f),
-        MODULE_SHADOW(0,0,Profile.FLAT,2,.20f), CONTROL_SHADOW(0,0,Profile.FLAT,1,.14f);
+        KNOB(0,0,Profile.DOME,1,.23f),
+        MODULE_SHADOW(0,0,Profile.FLAT,2,.26f), CONTROL_SHADOW(0,0,Profile.FLAT,1,.18f);
         final float top, bottom, elevation, shadowAlpha;
         final Profile profile;
         Light(float top,float bottom,Profile profile) { this(top,bottom,profile,0,0); }

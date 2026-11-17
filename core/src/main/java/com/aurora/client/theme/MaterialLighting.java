@@ -4,7 +4,9 @@ package com.aurora.client.theme;
 public final class MaterialLighting {
     private MaterialLighting() {}
 
-    public static final double SLOPE_GAIN = 1.0, RIM_GAIN = 14, SPEC_GAIN = 8;
+    // Owner tuning 2026-11-17: keep the rim-and-ramp style, slightly more pronounced (rim 14 -> 20,
+    // specular 8 -> 10, bevel band widened so SQUARE corners show their facets).
+    public static final double SLOPE_GAIN = 1.0, RIM_GAIN = 20, SPEC_GAIN = 10;
     public static final int SPEC_POWER = 24;
     public static final double LIGHT_LENGTH = Math.sqrt(.35 * .35 + .75 * .75 + .55 * .55);
     public static final double LIGHT_X = -.35 / LIGHT_LENGTH, LIGHT_Y = -.75 / LIGHT_LENGTH,
@@ -29,9 +31,9 @@ public final class MaterialLighting {
     }
 
     public static double bevelWidth(double radius, int scale, Profile profile) {
-        if (radius < scale) return scale; // SQUARE: a tight machined chamfer, never a rounded corner.
+        if (radius < scale) return Math.round(1.5 * scale); // SQUARE: a machined chamfer whose corner facets read, never a rounded corner.
         if (profile == Profile.DOME) return radius * .55; // plateau radius = .45 * radius
-        return Math.clamp(Math.round(radius * .6), scale, 3 * scale);
+        return Math.clamp(Math.round(radius * .8), Math.round(1.5 * scale), 4 * scale);
     }
 
     public static double pillowHeight(double t) {

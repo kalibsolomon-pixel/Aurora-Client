@@ -10,8 +10,8 @@ class MaterialLightingTest {
         assertTrue(MaterialLighting.distance(0,0,10,10,4)>0);
         assertEquals(-5, MaterialLighting.distance(5,5,10,10,5)); // circle
         for(int scale=1;scale<=4;scale++) {
-            assertEquals(scale, MaterialLighting.bevelWidth(0,scale,MaterialLighting.Profile.RAISED));
-            assertEquals(3*scale, MaterialLighting.bevelWidth(10*scale,scale,MaterialLighting.Profile.RAISED));
+            assertEquals(Math.round(1.5*scale), MaterialLighting.bevelWidth(0,scale,MaterialLighting.Profile.RAISED));
+            assertEquals(4*scale, MaterialLighting.bevelWidth(10*scale,scale,MaterialLighting.Profile.RAISED));
             assertEquals(5.5*scale, MaterialLighting.bevelWidth(10*scale,scale,MaterialLighting.Profile.DOME));
         }
         assertEquals(0,MaterialLighting.pillowHeight(0));

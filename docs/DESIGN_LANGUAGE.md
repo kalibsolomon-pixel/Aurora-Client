@@ -1526,8 +1526,10 @@ screen coordinates (y down). Each covered device pixel samples its face's rounde
 `d` (negative inside). Circular knobs use the circle case of that same SDF. SQUARE keeps an
 exact box silhouette and switches facets at the 45-degree medial diagonal.
 
-The bevel band is `clamp(round(radiusDevice * .6), scale, 3 * scale)`; radius below one GUI
-pixel uses a `scale`-wide machined chamfer. With `t = clamp(-d / band, 0, 1)`, height is
+The bevel band is `clamp(round(radiusDevice * .8), round(1.5 * scale), 4 * scale)`; radius below
+one GUI pixel uses a `round(1.5 * scale)`-wide machined chamfer, wide enough that SQUARE corners
+show their diagonal facets (owner, 2026-11-17: keep the rim-and-ramp style, slightly more
+pronounced). With `t = clamp(-d / band, 0, 1)`, height is
 `sqrt(1 - (1-t)^2)`, negated for inset faces. Pressed scales height to .4 and disables
 specular. Domes use a `.55 * radiusDevice` band (plateau radius .45 of the radius), while
 SQUARE knobs keep the tight chamfer. The physical outward normal is
@@ -1536,7 +1538,7 @@ negative gradient of inward distance `-d`; this sign makes the upper-left rim ca
 upper-left light. The draft spec's minus sign with an *outward* SDF gradient would invert
 that lighting; this sign clarification preserves the required highlight direction.
 
-Final HSL lightness delta is `faceRamp(y) + 14 * (dot(n,L) - L.z) + 8 * spec`, with
+Final HSL lightness delta is `faceRamp(y) + 20 * (dot(n,L) - L.z) + 10 * spec`, with
 `spec = pow(max(0, reflect(-L,n).z), 24)` only on raised rims. Inset/pressed have no specular;
 the plateau has neither rim nor specular delta. Hue, saturation and alpha are preserved
 through lighting; original captured AA coverage is unchanged. **No separate top/bottom

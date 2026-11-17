@@ -33,7 +33,7 @@ title screen and HUD editor retain their existing treatment. There are no asset 
 
 | Location | Adopted values |
 |---|---|
-| `MaterialLighting.java:7` | Slope gain 1, diffuse rim gain 14 HSL points, specular gain 8; exponent 24 at `8`. |
+| `MaterialLighting.java:7` | Slope gain 1, diffuse rim gain 20 HSL points, specular gain 10 (owner tuning; first pass 14/8); exponent 24. Shadow alphas: module .26, control .18, knob .23 (first pass .20/.14/.18). |
 | `MaterialLighting.java:9` | Light `normalize(-.35,-.75,.55)`; shadow direction `normalize(.35,.75)` at `13`. |
 | `MaterialLighting.java:16` | Raised/dome height 1, inset -1, pressed .4, flat 0; inset/pressed/flat disable specular. |
 | `MaterialLighting.java:31` | Band `clamp(round(radiusDevice*.6),scale,3*scale)`; radius below one GUI px uses `scale`; dome band `.55*radius`. |

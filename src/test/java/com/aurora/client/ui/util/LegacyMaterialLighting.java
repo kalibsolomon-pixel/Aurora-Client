@@ -4,7 +4,10 @@ package com.aurora.client.ui.util;
 public final class LegacyMaterialLighting {
     private LegacyMaterialLighting() {}
 
-    public static final double SLOPE_GAIN = 1.0, RIM_GAIN = 14, SPEC_GAIN = 8;
+    // Tuning comes from production: this reference pins the algorithm, not the constants.
+    public static final double SLOPE_GAIN = com.aurora.client.theme.MaterialLighting.SLOPE_GAIN,
+            RIM_GAIN = com.aurora.client.theme.MaterialLighting.RIM_GAIN,
+            SPEC_GAIN = com.aurora.client.theme.MaterialLighting.SPEC_GAIN;
     public static final int SPEC_POWER = 24;
     public static final double LIGHT_LENGTH = Math.sqrt(.35 * .35 + .75 * .75 + .55 * .55);
     public static final double LIGHT_X = -.35 / LIGHT_LENGTH, LIGHT_Y = -.75 / LIGHT_LENGTH,
@@ -29,9 +32,9 @@ public final class LegacyMaterialLighting {
     }
 
     public static double bevelWidth(double radius, int scale, Profile profile) {
-        if (radius < scale) return scale; // SQUARE: a tight machined chamfer, never a rounded corner.
+        if (radius < scale) return Math.round(1.5 * scale);
         if (profile == Profile.DOME) return radius * .55; // plateau radius = .45 * radius
-        return Math.clamp(Math.round(radius * .6), scale, 3 * scale);
+        return Math.clamp(Math.round(radius * .8), Math.round(1.5 * scale), 4 * scale);
     }
 
     public static double pillowHeight(double t) {
