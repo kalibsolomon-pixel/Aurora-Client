@@ -123,10 +123,12 @@ public class ToggleSwitch extends Widget {
         // Keyboard focus is carried by scale (design rule 9), not a ring: the
         // thumb grows by FOCUS_GROW around its own center.
         float grow=focusedVisual && !disabled ? FOCUS_GROW : 0f;
-        float d=h-5+grow, tx=x+2.5f+(w-h)*t-grow/2f;
+        // Whole-pixel geometry (2026-11-17): a 2 px margin and an h-4 knob keep the resting knob
+        // exactly centred; the former 2.5 px margin was snapped half a pixel off by the cached face.
+        float d=h-2*KNOB_MARGIN+grow, tx=x+KNOB_MARGIN+(w-h)*t-grow/2f, ty=y+KNOB_MARGIN-grow/2f;
         int thumb=disabled ? MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED) : 0xffffffff;
-        if(previewMode) RenderUtil.drawRoundedRectAA(g,tx,y+2.5f-grow/2f,d,d,corners.capsule(d),thumb);
-        else MaterialSurface.knob(g,tx,y+2.5f-grow/2f,d,corners.capsule(d),thumb,disabled); // shared dome, same size
+        if(previewMode) RenderUtil.drawRoundedRectAA(g,tx,ty,d,d,corners.capsule(d),thumb);
+        else MaterialSurface.knob(g,tx,ty,d,corners.capsule(d),thumb,disabled); // shared dome
     }
 
     /** §8.3 symmetric hover — 140 ms enter, 140 ms exit, continuous reversal. */
@@ -137,6 +139,8 @@ public class ToggleSwitch extends Widget {
     private boolean focusedVisual = false;
     /** How much the thumb grows (GUI px) while the switch holds keyboard focus. */
     private static final float FOCUS_GROW = 2f;
+    /** Gap between the track edge and the resting knob, in whole GUI px. */
+    private static final int KNOB_MARGIN = 2;
 
     public ToggleSwitch(BooleanSupplier getter, Consumer<Boolean> setter) {
         this.getter = getter;

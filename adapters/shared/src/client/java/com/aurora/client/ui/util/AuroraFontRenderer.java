@@ -54,7 +54,7 @@ public class AuroraFontRenderer {
     private static net.minecraft.locale.Language inkMidLanguage;
 
     /**
-     * Horizontal midpoint of the visible ink of {@code text} (a String or FormattedCharSequence)
+     * Horizontal midpoint of the visible ink of {@code text} (a String, Component or FormattedCharSequence)
      * relative to its draw origin, under the active style: the actual glyph quads' left/right
      * bounds, so side bearings (a leading "I", a trailing "c") no longer shift centred labels
      * the way advance-width centring did. Cached per style and resource generation; the cached
@@ -70,7 +70,10 @@ public class AuroraFontRenderer {
         Float cached = cache.get(text);
         if (cached != null) return cached;
         if (cache.size() > 1024) cache.clear();
+        // Components measure their (cached) visual-order text: String.valueOf(component) is a
+        // debug dump, which centred keystroke legends far off the key (2026-11-17).
         FormattedCharSequence sequence = text instanceof FormattedCharSequence seq ? seq
+                : text instanceof Component component ? component.getVisualOrderText()
                 : FormattedCharSequence.forward(String.valueOf(text), net.minecraft.network.chat.Style.EMPTY);
         if (style != null) sequence = withCustomFont(sequence, style.withUnderlined(false));
         float[] span = {Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY};

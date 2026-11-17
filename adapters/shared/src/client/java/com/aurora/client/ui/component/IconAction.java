@@ -75,6 +75,11 @@ public final class IconAction {
     private float materialHoverT;
     private SemanticActionControl control;
     private float visualEm = MaterialIconRenderer.NATURAL_EM_GUI;
+    /** Pressed-recipe pulse (owner report 2026-11-17): armed on activation, eased like Button's. */
+    private final com.aurora.client.ui.util.TimedTransition materialPress = new com.aurora.client.ui.util.TimedTransition(
+            120,com.aurora.client.ui.util.CubicBezier.EASE,0);
+    private boolean pressPulse;
+    private float materialPressT;
 
     /** Host-local icon size; interaction and focus geometry stay owned by the hit box. */
     public IconAction visualEm(float size) {
@@ -129,6 +134,32 @@ public final class IconAction {
     }
 
     /**
+     * Arms the pressed-recipe pulse for {@link #paintFace} — one call per
+     * accepted activation. The semantic control itself adds no press
+     * animation (the action's effect is the feedback); this channel exists
+     * so a host that paints the raised face can still show the press.
+     */
+    public void pressPulse() {
+        pressPulse = true;
+    }
+
+    /**
+     * The action's control FACE (owner report 2026-11-17): the raised
+     * control recipe — rest/hover through the cached-state blend, the
+     * pressed recipe while a {@link #pressPulse} arming eases back, muted
+     * flat when disabled. Unified screens only; elsewhere the host keeps
+     * its own glass/flat surface and this paints nothing. Static faces are
+     * cached templates (no per-frame fills).
+     */
+    public void paintFace(GuiGraphicsExtractor g, int x, int y, int w, int h, float radius) {
+        if (!MaterialSurface.unified()) return;
+        materialPressT = materialPress.update(pressPulse ? 1 : 0, System.nanoTime());
+        pressPulse = false;
+        MaterialSurface.control(g, x, y, w, h, radius, false, !action.enabled(), false,
+                hoverT(), materialPressT);
+    }
+
+    /**
      * Full canonical paint at the box: hover animation, control bounds/pointer
      * sync, the glyph (animated rest→hover color; muted while disabled), and
      * the focus hairline. The surface underneath stays the host's.
@@ -143,14 +174,16 @@ public final class IconAction {
      * Glyph + hairline WITHOUT the channel sync — for callers that already
      * called {@link #syncChannels} and read {@link #hoverT()} to interleave
      * their own surface between the sync and the glyph (syncing twice would
-     * double-step the animator).
+     * double-step the animator). The glyph centres through
+     * {@link MaterialIconRenderer#drawInBox} — the shared text-axis rule —
+     * so it sits on the face's optical centre like every other control glyph.
      */
     public void paintGlyph(GuiGraphicsExtractor g, Font font, int x, int y, int w, int h) {
         int color = !action.enabled()
                 ? ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED)
                 : AuroraAnim.lerpArgb(restColor.getAsInt(), hoverColor.getAsInt(), hoverT());
-        MaterialIconRenderer.drawIcon(g, font, glyph.get(), x + w / 2f, y + h / 2f,
-                visualEm == MaterialIconRenderer.NATURAL_EM_GUI ? emFor(w, h) : Math.min(visualEm, Math.min(w, h) - 2), color);
+        float em = visualEm == MaterialIconRenderer.NATURAL_EM_GUI ? emFor(w, h) : Math.min(visualEm, Math.min(w, h) - 2);
+        MaterialIconRenderer.drawInBox(g, font, glyph.get(), x, y, w, h, em, color);
         paintHairline(g, x, y, w, h);
     }
 

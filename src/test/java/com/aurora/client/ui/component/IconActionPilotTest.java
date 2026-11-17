@@ -131,7 +131,9 @@ class IconActionPilotTest {
         String s = src(SRC);
         assertTrue(s.contains("HoverAnim.symmetric(HOVER_MS)"), "canonical symmetric 140 ms");
         assertTrue(s.contains("public static final long HOVER_MS = 140L;"));
-        assertTrue(s.contains("MaterialIconRenderer.drawIcon"), "approved icon infrastructure");
+        // Depth pass 2026-11-17: the glyph centres through drawInBox (the shared
+        // text-axis helper) instead of the raw drawIcon call this once pinned.
+        assertTrue(s.contains("MaterialIconRenderer.drawInBox"), "approved icon infrastructure");
         assertTrue(s.contains("SemanticActionControl"), "semantic control backbone");
         assertTrue(s.contains("withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99)"),
                 "Button-family focus hairline");

@@ -192,6 +192,46 @@ mean 0.15, max 0.50 GUI px over 98 draws. Lowercase-only labels ("aa") sit 0.83 
 design: they share the baseline of their capitalised neighbours. Evidence:
 [live](evidence/ui-depth/align-live.png), [factory](evidence/ui-depth/align-factory.png).
 
+## Depth-recipe coverage audit and conversion (2026-11-17, owner report)
+
+Owner report: "Some UI fixtures and search bars are not raised/depressed like they should
+be." Branch `ui/depth-coverage` (on `ui/depth-bake-speed`). Every shared-UI surface was
+checked against the `MaterialSurface` recipes; converted surfaces and surfaces left flat,
+with reasons:
+
+| Surface | Location | Before | After / left as-is |
+|---|---|---|---|
+| Search fields (main screen, Item Scale, Effects, Particles, pack browser) | `mixin/EditBoxMixin.java:293` | flat translucent glass (`!aurora$search()` excluded them from the inset recipe) | **inset recipe** like every field; magnifier, text window, caret, selection, hooks unchanged; resting outline removed (bevel defines the edge); legacy glass/flat paths retained |
+| "+" add icon actions | `screen/setting/ItemScaleSetting.java` (fixed header), `EffectExpiryListSetting.java` (fixed header) | flat translucent pill + border | **raised control recipe** via `IconAction.paintFace` (new): cached hover blend, pressed recipe on a press pulse, muted when disabled; glyph through `MaterialIconRenderer.drawInBox` |
+| Per-item editor cards | `ItemScaleSetting.java` (row loop) | translucent `ON_BACKGROUND 0x1A` band + hover outline | **raised opaque card** (`MaterialSurface.control`, hover via cached blend, no resting outline); chevron/remove glyphs centred; text block left-aligned |
+| Per-effect rows | `screen/setting/EffectRowSetting.java:58` | translucent band + hover outline | **raised opaque card**, as above |
+| Pack browser result cards | `adapters/minecraft-26.{1,2,3}/.../ResourcePackBrowserScreen.java` (`renderCard`) | flat tint + outline from a one-shot template | **raised opaque card** on unified screens; the 2026-09-08 "deliberately flat" ruling concerned per-card blur captures, which baked templates never issue (rest = cached shadow + face blits, no per-frame fills); thumbnail inset/frame (represented data) unchanged; legacy template path retained |
+| `IconButton` (component) | `ui/component/IconButton.java:60` | translucent fill + border | **left as-is**: its only consumer is the title-screen top bar, which both this pass's rulings and the task exclude; the flagged "+" buttons are IconAction hosts (converted above) |
+| KeyList row bands / "−" chips | `screen/setting/KeyListSetting.java:243,255` | translucent band, chip fill | **left as-is**: square zebra-style list row bands, not cards; the chip painter is kept verbatim by the recorded C-4 ruling (its Add pill already uses `MaterialSurface.field`/`selection`) |
+| `Toast` | `ui/component/Toast.java:46` | `OVERLAY_DIM` pill | **left as-is**: transient notification, the tooltip family (excluded) |
+| `ColorSwatch` sample/edge | `ui/component/ColorSwatch.java` | sample fill + thin black resting edge | **left as-is**: represented data + the 2026-11-12 owner-ruled edge; selection/hover/focus rings are channels |
+| Colour picker pads / preview | `ColorSetting.java`, `ColorPickerScreen.java` | HSL pad, hue/alpha strips, preview | **left as-is**: represented data (the gradient is the value); the hex field is an EditBox and gets the inset automatically |
+| Crosshair preview wells | `CrosshairPreviewSetting.java:57` | — | already `MaterialSurface.inset` on unified (covered) |
+| `ThemePreviewSetting` card | `ThemePreviewSetting.java:202` | flat window-family panel | **left as-is**: the preview card represents the window itself (excluded); its mock toggle/slider/buttons use the real recipes |
+| Particle rows | `ParticleRowSetting.java:207` | — | already `MaterialSurface.selection` (covered) |
+| Manager/profile/waypoint cards & rows | `ManagerListScreen`, `ProfileManagerScreen`, `WaypointManagerScreen` | — | already recipe-based (`selection`, `card`, `container`/`control` rows) (covered) |
+| `IconPickerScreen`, `ProfileOptionsScreen` | cells/wells | — | already `selection`/`container` (covered) |
+| `WaypointEditScreen` | dialog | — | already `floatingPanel` (covered) |
+| `RoundedPanel` (window), `ScrollbarChrome`, sidebar nav, Reset/Done, tooltips | — | — | excluded by the task / depth-pass rulings |
+
+Performance: all converted faces come from the cached material templates (static faces add no
+GUI fills; a resting card/button is shadow + face blits). `RenderUtil.fillsSubmitted()` was
+**not measured** — no game boot in this change; the parent's screenshot/fill probes own that.
+Overflow review: no text metrics, wrapping, alignment, sizes or layout changed; only surface
+chrome. Tests: `DepthPassContractTest` pins the converted surfaces (search inset, icon-action
+face/press pulse/centring, editor + browser cards) and `IconActionPilotTest`'s icon-infrastructure
+pin now names `drawInBox` (the shared centring helper) instead of the raw `drawIcon` call.
+
+Verification: `python tools/parity.py` green on all three lines — 26.1.2: 1237 tests
+(1 pre-existing opt-in skip), 26.2: 1237 (1), 26.3: 1239 (1), 0 failures/errors each;
+`python -m unittest discover -s tools`: 43 tests, OK. No game boot (the parent owns
+screenshots and fills/CPU probes).
+
 ## Hygiene and retained work
 
 Workspace-hygiene skill read at task start and before handoff. Task-owned scratch
