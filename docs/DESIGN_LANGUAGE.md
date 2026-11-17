@@ -1526,14 +1526,18 @@ screen coordinates (y down). Each covered device pixel samples its face's rounde
 `d` (negative inside). Circular knobs use the circle case of that same SDF. SQUARE keeps an
 exact box silhouette and switches facets at the 45-degree medial diagonal.
 
-The bevel band is `clamp(round(radiusDevice * .8), round(1.5 * scale), 4 * scale)`; radius below
-one GUI pixel uses a `round(1.5 * scale)`-wide machined chamfer, wide enough that SQUARE corners
-show their diagonal facets (owner, 2026-11-17: keep the rim-and-ramp style, slightly more
-pronounced). With `t = clamp(-d / band, 0, 1)`, height is
+The rounded bevel band is `clamp(round(radiusDevice * .8), round(1.5 * scale), 4 * scale)`
+(owner, 2026-11-17: keep the rim-and-ramp style, slightly more pronounced). **Gem facets**
+(owner, 2026-11-17): as the corner radius approaches 0 the bevel becomes a 2.25 GUI px planar
+chamfer whose four sides are flat 45-degree facets, each lit at its own angle (top brightest,
+then left, right, bottom), with crisp creases on the corner diagonals. `facetBlend =
+clamp(radius / (2 * scale), 0, 1)` blends band width and slope from the facet (0) to the
+pillowed roll-off (1), so dragging Corner Radius never jumps. The pillow's slope is its own
+`h'(t)` (the bevel is as tall as it is wide), capped at 3 at the silhouette. With `t = clamp(-d / band, 0, 1)`, height is
 `sqrt(1 - (1-t)^2)`, negated for inset faces. Pressed scales height to .4 and disables
 specular. Domes use a `.55 * radiusDevice` band (plateau radius .45 of the radius), while
 SQUARE knobs keep the tight chamfer. The physical outward normal is
-`normalize(gradient(d) * h'(t) / band * k, 1)`, with **k = 1**. Equivalently it is the
+`normalize(gradient(d) * slope * k, 1)` with `slope = lerp(1, min(3, h'(t)), facetBlend)` and **k = 1**. Equivalently it is the
 negative gradient of inward distance `-d`; this sign makes the upper-left rim catch the
 upper-left light. The draft spec's minus sign with an *outward* SDF gradient would invert
 that lighting; this sign clarification preserves the required highlight direction.

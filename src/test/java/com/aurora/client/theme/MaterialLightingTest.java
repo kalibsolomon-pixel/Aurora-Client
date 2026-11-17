@@ -10,7 +10,7 @@ class MaterialLightingTest {
         assertTrue(MaterialLighting.distance(0,0,10,10,4)>0);
         assertEquals(-5, MaterialLighting.distance(5,5,10,10,5)); // circle
         for(int scale=1;scale<=4;scale++) {
-            assertEquals(Math.round(1.5*scale), MaterialLighting.bevelWidth(0,scale,MaterialLighting.Profile.RAISED));
+            assertEquals(2.25*scale, MaterialLighting.bevelWidth(0,scale,MaterialLighting.Profile.RAISED), 1e-9);
             assertEquals(4*scale, MaterialLighting.bevelWidth(10*scale,scale,MaterialLighting.Profile.RAISED));
             assertEquals(5.5*scale, MaterialLighting.bevelWidth(10*scale,scale,MaterialLighting.Profile.DOME));
         }
@@ -151,5 +151,23 @@ class MaterialLightingTest {
         double l = (max+min)/2, s = d == 0 ? 0 : d/(1-Math.abs(2*l-1));
         double h = d == 0 ? 0 : max==r ? ((g-b)/d+6)%6 : max==g ? (b-r)/d+2 : (r-g)/d+4;
         return new double[]{h/6,s,l};
+    }
+
+    @Test void sharpCornersShadeAsPlanarGemFacets() {
+        int scale = 3; double w = 60, h = 60, band = MaterialLighting.bevelWidth(0, scale, MaterialLighting.Profile.RAISED);
+        java.util.function.BiFunction<Double, Double, Double> at = (x, y) ->
+                MaterialLighting.curvatureDelta(x, y, w, h, 0, scale, MaterialLighting.Profile.RAISED);
+        double depth = band * .5;
+        double top = at.apply(w * .5, depth), bottom = at.apply(w * .5, h - depth);
+        double left = at.apply(depth, h * .5), right = at.apply(w - depth, h * .5);
+        // Planar: one shade across each facet, at any depth inside the band.
+        assertEquals(top, at.apply(w * .3, band * .2), 1e-9);
+        assertEquals(top, at.apply(w * .7, band * .8), 1e-9);
+        // Each facet faces the upper-left light at its own angle.
+        assertTrue(top > left && left > right && right > bottom, top + " " + left + " " + right + " " + bottom);
+        assertTrue(top - bottom > 15, "facets must read: " + (top - bottom));
+        // From a 2 GUI px radius the profile is the pillowed roll-off again.
+        assertEquals(1, MaterialLighting.facetBlend(2 * scale, scale), 1e-9);
+        assertEquals(0, MaterialLighting.facetBlend(0, scale), 1e-9);
     }
 }

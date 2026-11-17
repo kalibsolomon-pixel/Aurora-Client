@@ -9,6 +9,8 @@ public final class LegacyMaterialLighting {
             RIM_GAIN = com.aurora.client.theme.MaterialLighting.RIM_GAIN,
             SPEC_GAIN = com.aurora.client.theme.MaterialLighting.SPEC_GAIN;
     public static final int SPEC_POWER = 24;
+    /** Planar facet slope (45 degrees) and the pillow slope cap at the silhouette. */
+    public static final double FACET_SLOPE = 1.0, MAX_SLOPE = 3.0;
     public static final double LIGHT_LENGTH = Math.sqrt(.35 * .35 + .75 * .75 + .55 * .55);
     public static final double LIGHT_X = -.35 / LIGHT_LENGTH, LIGHT_Y = -.75 / LIGHT_LENGTH,
             LIGHT_Z = .55 / LIGHT_LENGTH;
@@ -32,9 +34,16 @@ public final class LegacyMaterialLighting {
     }
 
     public static double bevelWidth(double radius, int scale, Profile profile) {
-        if (radius < scale) return Math.round(1.5 * scale);
-        if (profile == Profile.DOME) return radius * .55; // plateau radius = .45 * radius
-        return Math.clamp(Math.round(radius * .8), Math.round(1.5 * scale), 4 * scale);
+        if (profile == Profile.DOME && radius >= scale) return radius * .55; // plateau radius = .45 * radius
+        double rounded = Math.clamp(Math.round(radius * .8), Math.round(1.5 * scale), 4 * scale);
+        // Gem facets (owner, 2026-11-17): a 2.25 GUI px planar chamfer at radius 0 that
+        // blends into the rounded band as the radius reaches 2 GUI px.
+        return 2.25 * scale + (rounded - 2.25 * scale) * facetBlend(radius, scale);
+    }
+
+    /** 0 at a sharp corner (planar gem facets), 1 from a 2 GUI px radius (pillowed roll-off). */
+    public static double facetBlend(double radius, int scale) {
+        return Math.clamp(radius / (2.0 * scale), 0, 1);
     }
 
     public static double pillowHeight(double t) {
@@ -61,7 +70,12 @@ public final class LegacyMaterialLighting {
         if (len > 0) { gx = Math.copySign(ox / len, dx); gy = Math.copySign(oy / len, dy); }
         else if (qx > qy) { gx = Math.signum(dx); gy = 0; }
         else { gx = 0; gy = Math.signum(dy); } // square medial diagonal switches facets
-        double slope = (1 - t) / Math.max(1e-6, pillowHeight(t)) / b * SLOPE_GAIN * profile.height;
+        // The bevel is as tall as it is wide (matching the approved prototype): the pillow's own
+        // slope, capped where it would spike at the silhouette, blended with a 45-degree planar
+        // facet as the corner sharpens.
+        double pillow = Math.min(MAX_SLOPE, (1 - t) / Math.max(1e-6, pillowHeight(t)));
+        double k = facetBlend(r, scale);
+        double slope = (FACET_SLOPE + (pillow - FACET_SLOPE) * k) * SLOPE_GAIN * profile.height;
         double invLength = 1 / Math.sqrt(slope * slope + 1);
         double nx = gx * slope * invLength, ny = gy * slope * invLength, nz = invLength;
         double dot = nx * LIGHT_X + ny * LIGHT_Y + nz * LIGHT_Z;
