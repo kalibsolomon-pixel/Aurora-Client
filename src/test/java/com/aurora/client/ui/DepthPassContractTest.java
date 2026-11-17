@@ -21,10 +21,10 @@ class DepthPassContractTest {
         assertTrue(module.contains("withAlpha(ThemeManager.color(ThemeToken.MATERIAL_RAISED),255)"));
         assertFalse(module.contains("ACCENT"));
         assertFalse(module.contains("selection("));
-        assertTrue(material.contains("MODULE_ON(5,-3,0x1affffff,0x38000000)"));
-        assertTrue(material.contains("MODULE_OFF(-3,-3,0,0)"));
-        assertTrue(material.contains("MODULE_ON_HOVER(7,-1,0x1affffff,0x38000000)"));
-        assertTrue(material.contains("MODULE_OFF_HOVER(-1,-1,0,0)"));
+        assertTrue(material.contains("MODULE_ON(11,3,Profile.RAISED)"));
+        assertTrue(material.contains("MODULE_OFF(-5,-5,Profile.FLAT)"));
+        assertTrue(material.contains("MODULE_ON_HOVER(13,5,Profile.RAISED)"));
+        assertTrue(material.contains("MODULE_OFF_HOVER(-3,-3,Profile.FLAT)"));
     }
 
     @Test void outlineAttenuationIsIndependentOfWindowOpacity() throws Exception {
@@ -52,8 +52,8 @@ class DepthPassContractTest {
         String material=read("ui/component/MaterialSurface.java");
         assertTrue(material.contains("kind += light.ordinal()*1024"));
         assertTrue(material.contains("+scale)*31+fill)*31+border"));
-        assertTrue(material.contains("cache.lightVertical("));
-        assertTrue(material.contains("cache.edgeLine("));
+        assertTrue(material.contains("cache.lightFace("));
+        assertFalse(material.contains("cache.edgeLine("),"SDF curvature replaces separate bevel lines");
         assertTrue(material.contains("cache.softShadow("));
         String states=material.substring(material.indexOf("public static void controlColors("),material.indexOf("public static void inset("));
         assertFalse(states.contains("drawRoundedRect"));
@@ -71,8 +71,24 @@ class DepthPassContractTest {
         assertTrue(edit.contains("boolean glassOk = !opaqueInset"));
         assertTrue(edit.contains("MaterialSurface.inset(ctx,x,y,w,h,radius,!self.isActive())"));
         assertTrue(slider.contains("MaterialSurface.knob(g,knobX-knobR,knobY-knobR,knobR*2"));
-        assertTrue(slider.contains("MaterialSurface.inset(g,x,ty,w,TRACK_H,trackRadius(),disabled)"));
+        assertTrue(slider.contains("MaterialSurface.sliderTrack(g,x,ty,w,TRACK_H,trackRadius(),disabled)"));
         assertTrue(read("ui/component/ToggleSwitch.java").contains("MaterialSurface.switchTrack(g,x,y,w,h,r,t,hover,disabled)"));
         assertTrue(read("screen/setting/EnumSetting.java").contains("MaterialSurface.unified() ? btnX + 6"));
     }
+    @Test void councilRecipesKeepInsetDomePressedAndPrimaryPoliciesDistinct() throws Exception {
+        String material=read("ui/component/MaterialSurface.java");
+        assertTrue(material.contains("INSET(1,5,Profile.INSET), TRACK(3,7,Profile.INSET)"));
+        assertTrue(material.contains("RAISED(5,-3,Profile.RAISED)"));
+        assertTrue(material.contains("HOVER(5,-3,Profile.RAISED), PRESSED(-3,2,Profile.PRESSED)"));
+        assertTrue(material.contains("PRIMARY(6,-4,Profile.RAISED), PRIMARY_LIGHT(3,-4,Profile.RAISED)"));
+        assertTrue(material.contains("UnifiedPalette.contrast(ThemeManager.color(ThemeToken.ON_ACTION),0xff000000)>11"));
+        assertTrue(material.contains("KNOB(0,0,Profile.DOME,1,.18f)"));
+        assertTrue(material.contains("MODULE_SHADOW(0,0,Profile.FLAT,2,.20f)"));
+        assertTrue(material.contains("CONTROL_SHADOW(0,0,Profile.FLAT,1,.14f)"));
+        assertTrue(material.contains("light.elevation*scale,2*light.elevation*scale,light.shadowAlpha"));
+        assertTrue(material.contains("disabled ? Light.FLAT : Light.KNOB"));
+        assertTrue(material.contains("if(!disabled && press<1)"),"disabled/fully pressed faces cast no shadow");
+        assertFalse(read("ui/util/UiLayerCache.java").contains("void edgeLine("),"no role retains edge ink");
+    }
+
 }

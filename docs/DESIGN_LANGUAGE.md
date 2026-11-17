@@ -708,7 +708,7 @@ the accent-filled call to action under its hint.
 - **Purpose:** directly switch one persistent Boolean state.
 - **Material (2026-11-17):** opaque inset `MATERIAL_SUNKEN` OFF track. ON keeps the existing
   flat accent fill and interpolation; no accent outline. The same-size white thumb gets a
-  top-light/bottom-shade bevel and a one-device-pixel soft shadow. Track/thumb follow the
+  curvature-lit dome and a down-right shadow (1 GUI px elevation, 2 GUI px softness, 18% black). Track/thumb follow the
   Corner Radius capsule rule, including exactly square geometry at zero. Focus still grows
   the thumb; the non-interactive represented preview retains its existing appearance.
 - **States:** off/on must be unambiguous; hover, accepted press, focus, and disabled must each
@@ -722,8 +722,8 @@ the accent-filled call to action under its hint.
 ### 11.5 Slider
 
 - **Purpose:** choose a value from a continuous or stepped range.
-- **Material (2026-11-17):** opaque inset `MATERIAL_SUNKEN` track and same-size bevelled knob
-  with a one-device-pixel soft shadow. Accent fill behaviour is unchanged (flat accent since
+- **Material (2026-11-17):** opaque dished `MATERIAL_SUNKEN` track (+3 → +7 HSL points) and same-size domed knob
+  with a down-right shadow (1 GUI px elevation, 2 GUI px softness, 18% black). Accent fill behaviour is unchanged (flat accent since
   2026-11-14); the depth pass adds no AccentGradient changes. Track and knob follow Corner
   Radius. Value text never scales; numeric entry uses the inset field recipe.
 - **Layout (owner direction, 2026-11-14):** one inline row everywhere: the label on the left,
@@ -748,7 +748,7 @@ the accent-filled call to action under its hint.
 ### 11.6 SegmentedControl
 
 - **Purpose:** choose one item from a small mutually exclusive set.
-- **Material (2026-11-17):** one opaque inset well behind the pick-one group. Unselected
+- **Material (2026-11-17):** one opaque dished well (+1 → +5 HSL points) behind the pick-one group. Unselected
   segments are text only (faint neutral hover lift); the selected cell is raised, with a 1 px
   inner margin, `SELECTION_SOFT` wash and existing thin accent edge. Independent toggle groups
   (Italic / Underline) instead use separate raised chips with gaps and no divider or shared
@@ -764,7 +764,7 @@ the accent-filled call to action under its hint.
 ### 11.7 Enum/dropdown
 
 - **Purpose:** select one value from a longer or context-dependent set.
-- **Material (2026-11-17):** opaque raised `MaterialSurface.field` recipe; expanded popup is
+- **Material (2026-11-17):** opaque curvature-lit raised `MaterialSurface.field` recipe (+5 → -3, 14% shadow); expanded popup is
   an explicit above-dim surface. Closed value text is left-aligned with 6 px padding, fitted
   before the right chevron slot. Expanded options retain their existing alignment.
 - **States:** field hover/press/focus/disabled; expanded state; option hover/focus/selected/
@@ -1520,28 +1520,51 @@ editor, ghost Reset / Done positions, sidebar selection, 336×288 window, 80×80
 columns and row heights are untouched. Done keeps its primary role, with the primary depth
 recipe. Settings chevrons remain hover/focus-only (2026-11-14 owner ruling).
 
-One light comes from above. Face ramps change **absolute HSL lightness points**, preserving
-the token's hue, saturation and alpha; black/white edge ink composites source-atop inside the
-existing shape coverage. Bevel lines are one device pixel and follow rounded silhouettes;
-SQUARE faces remain exactly square. Faces, lines and shadows are captured in `UiLayerCache`
-rasters, never the native gradient shader's flat capture fallback. Hover/pressed endpoints
-are cached separately and blended with texture alpha. New gradients never touch text/icons,
-section headings, sidebar items, scrollbars, focus rings, tooltips, search glass or represented
-data (swatches, crosshair pixels and checkerboard).
+Round 2 replaces the first pass's vertical-only bevel lines with a curvature-aware height
+field. One light is shared by every lit face: **L = normalize(-0.35, -0.75, 0.55)** in
+screen coordinates (y down). Each covered device pixel samples its face's rounded-box SDF
+`d` (negative inside). Circular knobs use the circle case of that same SDF. SQUARE keeps an
+exact box silhouette and switches facets at the 45-degree medial diagonal.
 
-| Role | Face top → bottom (HSL points) | Top line | Bottom line | Shadow |
-|---|---|---|---|---|
-| Raised control | `MATERIAL_RAISED` +5 → -3 | white 10% | black 22% | none |
-| Raised hover | `MATERIAL_HOVER` +5 → -3 | white 12% | black 22% | none |
-| Pressed | `MATERIAL_PRESSED` -3 → +2 | black 20% inner | none | none |
-| Inset: track / well / numeric field | `MATERIAL_SUNKEN` -3 → +2 | black 24% inner | white 6% | none |
-| Primary: Done / primary action | `ACTION_STRONG` +6 → -4 | white 16% | black 22% | existing shadow retained |
-| Feature tile / list row ON | opaque `MATERIAL_RAISED` +5 → -3 | white 10% | black 22% | 0/+1 device px, 2 device px soft, black 14% |
-| Feature tile / list row OFF | opaque `MATERIAL_RAISED` -3 flat | none | none | none |
-| Tile / row hover, either state | same face recipe +2 | unchanged | unchanged | unchanged |
-| Disabled | flat `MATERIAL_PANEL` | none | none | none |
-| Selected segment / peer / ON chip | raised recipe + `SELECTION_SOFT` wash + existing thin accent edge | raised | raised | none |
-| Slider / switch knob | existing face colour, no face ramp | white 10% | black 22% | 0/+1 device px, 1 device px soft, black 14% |
+The bevel band is `clamp(round(radiusDevice * .6), scale, 3 * scale)`; radius below one GUI
+pixel uses a `scale`-wide machined chamfer. With `t = clamp(-d / band, 0, 1)`, height is
+`sqrt(1 - (1-t)^2)`, negated for inset faces. Pressed scales height to .4 and disables
+specular. Domes use a `.55 * radiusDevice` band (plateau radius .45 of the radius), while
+SQUARE knobs keep the tight chamfer. The physical outward normal is
+`normalize(gradient(d) * h'(t) / band * k, 1)`, with **k = 1**. Equivalently it is the
+negative gradient of inward distance `-d`; this sign makes the upper-left rim catch the
+upper-left light. The draft spec's minus sign with an *outward* SDF gradient would invert
+that lighting; this sign clarification preserves the required highlight direction.
+
+Final HSL lightness delta is `faceRamp(y) + 14 * (dot(n,L) - L.z) + 8 * spec`, with
+`spec = pow(max(0, reflect(-L,n).z), 24)` only on raised rims. Inset/pressed have no specular;
+the plateau has neither rim nor specular delta. Hue, saturation and alpha are preserved
+through lighting; original captured AA coverage is unchanged. **No separate top/bottom
+edge lines remain in any depth role.** All lighting is baked before upload, never through
+the gradient shader's flat capture fallback. Cached state endpoints blend with texture alpha.
+
+| Role | Face top → bottom (HSL points) | Height / rim | Shadow: elevation / softness / black alpha |
+|---|---|---|---|
+| Raised control | `MATERIAL_RAISED` +5 → -3 | raised + specular | 1 / 2 GUI px / 14% |
+| Raised hover | `MATERIAL_HOVER` +5 → -3 | raised + specular | same |
+| Pressed | `MATERIAL_PRESSED` -3 → +2 | raised height ×.4, no specular | none at full press; fades out during press |
+| Inset: segmented / numeric / preview well, OFF switch track | `MATERIAL_SUNKEN` +1 → +5 | inset, no specular | none |
+| Slider track | `MATERIAL_SUNKEN` +3 → +7 | inset, no specular | none |
+| Primary: Done / primary action | `ACTION_STRONG` +6 → -4; top capped at +3 if `ON_ACTION` luminance >.5 | raised + specular | 1 / 2 GUI px / 14% |
+| Feature tile / list row ON | opaque `MATERIAL_RAISED` +11 → +3 | raised + specular | 2 / 4 GUI px / 20% |
+| Feature tile / list row OFF | opaque `MATERIAL_RAISED` -5 flat | flat | none |
+| ON hover | +13 → +5 | raised + specular | same as ON |
+| OFF hover | -3 flat | flat | none |
+| Disabled | flat `MATERIAL_PANEL` (muted thumb colour retained) | flat | none |
+| Selected segment / peer / ON chip | raised + `SELECTION_SOFT` wash + existing thin accent edge | raised + specular | same as raised |
+| Slider / switch knob | existing face colour, no face ramp | shallow dome + specular | 1 / 2 GUI px / 18% |
+
+Shadow offsets follow `elevationDevice * normalize(.35, .75)`; softness is twice elevation.
+The round-2 distances are **GUI pixel elevations converted to device pixels at bake time**,
+superseding the first pass's fixed device-pixel shadows. Inset, OFF and disabled faces cast
+none. Hover's tile face ramp is exactly +2, weaker than the ON/OFF separation; pure math tests
+require at least 8 mean greyscale points for rest ON/rest OFF and rest ON/hover OFF in both
+owner themes. Geometry and icon colour remain the only two tile state cues.
 
 Tiles and module rows have opaque faces. The window remains glass; Background Opacity is
 still only the `WINDOW_FILL` alpha. Its body has no gradient. The `WINDOW_OUTLINE` draw uses
@@ -1549,14 +1572,23 @@ still only the `WINDOW_FILL` alpha. Its body has no gradient. The `WINDOW_OUTLIN
 Controls, toggles, sliders and non-search fields remain opaque. Preview **wells** may use
 inset lighting; the represented data painted inside them is unchanged.
 
-`MaterialLighting` in core owns the pure colour/lightness math. `UiLayerCache.lightVertical`,
-`edgeLine` and `softShadow` apply it to captured device pixels before upload; legacy RGB
-`shadeVertical` remains only to preserve pre-existing owner-themed cards/popups. ON module
-shadows are a separate cached raster behind both hover endpoints, avoiding doubled shadow
-opacity while blending. Knob lighting uses the same cache with a soft shadow. Template keys
-include recipe/state, geometry and radius; version stamps include theme generation, scale,
-fill and border. Existing screen/resize/radius invalidation bounds cache lifetime. No new
-callbacks, dependencies or frameworks are introduced.
+For a custom Background Color, only `MATERIAL_RAISED`, `MATERIAL_HOVER` and
+`MATERIAL_PRESSED` cap HSL saturation at `min(backgroundSaturation * .35, .10)`, preserving
+each lightness and alpha. Window/background tint and opacity, other tokens and stock graphite
+are untouched. This is a **reversible owner-review tuning item** in `UnifiedPalette`, not a
+persisted setting change or another opacity factor.
+
+`MaterialLighting` in core owns SDF, height, normal, light and colour math.
+`UiLayerCache.lightFace` loops captured device pixels; `softShadow` composites behind them.
+Legacy RGB `shadeVertical` remains only for pre-existing owner-themed cards/popups. Module
+and control shadows are separate cached rasters behind state endpoints, avoiding doubled
+shadow opacity during blending. Knobs bake the shadow with their face. Template keys include
+recipe/state, geometry and radius; version stamps include theme generation, scale, fill and
+border. Existing screen/resize/radius invalidation bounds cache lifetime. No new callbacks,
+dependencies or frameworks are introduced. No new per-frame lighting math or static GUI
+fills; the control shadow adds a cached blit. Text, icons, headings, sidebar, scrollbars,
+focus rings, tooltips, search glass and represented swatch/crosshair/checkerboard data retain
+their existing treatment.
 
 Implementation verification is offline: colour and NativeImage raster tests, source contracts,
 Python tooling tests and the three-line parity build. The parent owns the required live/factory
