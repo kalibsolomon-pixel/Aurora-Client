@@ -93,7 +93,7 @@ public class ToggleSwitch extends Widget {
     private final TimedTransition pilotHover=new TimedTransition(120,CubicBezier.EASE);
     private boolean pilotPrimed;
 
-    /** Pack switch recipe: solid readable accent, white thumb, theme-radius capsule, no pulse. */
+    /** Pack switch recipe: solid accent, cached domed thumb, theme-radius capsule, no pulse. */
     private void renderUnified(GuiGraphicsExtractor g,float x,float y,float w,float h,int mx,int my) {
         long now=System.nanoTime(); boolean on=getter.getAsBoolean();
         if(!pilotPrimed) { pilotSlide.update(on ? 1 : 0,now);pilotHover.update(0,now);pilotPrimed=true; }
@@ -126,7 +126,7 @@ public class ToggleSwitch extends Widget {
         float d=h-5+grow, tx=x+2.5f+(w-h)*t-grow/2f;
         int thumb=disabled ? MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED) : 0xffffffff;
         if(previewMode) RenderUtil.drawRoundedRectAA(g,tx,y+2.5f-grow/2f,d,d,corners.capsule(d),thumb);
-        else MaterialSurface.knob(g,tx,y+2.5f-grow/2f,d,corners.capsule(d),thumb,disabled);
+        else MaterialSurface.knob(g,tx,y+2.5f-grow/2f,d,corners.capsule(d),thumb,disabled); // shared dome, same size
     }
 
     /** §8.3 symmetric hover — 140 ms enter, 140 ms exit, continuous reversal. */

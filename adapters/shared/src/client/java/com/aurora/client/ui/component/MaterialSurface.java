@@ -84,7 +84,7 @@ public final class MaterialSurface {
         PRIMARY(6,-4,Profile.RAISED), PRIMARY_LIGHT(3,-4,Profile.RAISED),
         MODULE_ON(11,3,Profile.RAISED), MODULE_OFF(-5,-5,Profile.FLAT),
         MODULE_ON_HOVER(13,5,Profile.RAISED), MODULE_OFF_HOVER(-3,-3,Profile.FLAT),
-        KNOB(0,0,Profile.FLAT,1,.14f),
+        KNOB(0,0,Profile.DOME,1,.18f),
         MODULE_SHADOW(0,0,Profile.FLAT,2,.20f), CONTROL_SHADOW(0,0,Profile.FLAT,1,.14f);
         final float top, bottom, elevation, shadowAlpha;
         final Profile profile;
@@ -142,6 +142,7 @@ public final class MaterialSurface {
         if(hover>0) depth(g,x,y,w,h,radius,color(ThemeToken.ON_BACKGROUND),0,281,Light.FLAT,SWITCH_HOVER_ALPHA*hover);
     }
 
+    /** Same-size dome: circular SDF at capsule radius, machined square at radius zero. */
     public static void knob(GuiGraphicsExtractor g,float x,float y,float size,float radius,int fill,boolean disabled) {
         depth(g,x,y,size,size,radius,fill,0,250,disabled ? Light.FLAT : Light.KNOB,1);
     }
