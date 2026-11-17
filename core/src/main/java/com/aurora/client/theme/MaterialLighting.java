@@ -40,6 +40,15 @@ public final class MaterialLighting {
         return 2.25 * scale + (rounded - 2.25 * scale) * facetBlend(radius, scale);
     }
 
+    /** Largest share of a face's shorter side the bevel band may take, so small controls keep a
+     * flat plateau for their text (a 14 px field gets ~3 px, not 4). Domes are exempt. */
+    public static final double MAX_BAND_SHARE = .22;
+
+    public static double bevelWidth(double radius, int scale, Profile profile, double shorterSide) {
+        double band = bevelWidth(radius, scale, profile);
+        return profile == Profile.DOME ? band : Math.min(band, shorterSide * MAX_BAND_SHARE);
+    }
+
     /** 0 at a sharp corner (planar gem facets), 1 from a 2 GUI px radius (pillowed roll-off). */
     public static double facetBlend(double radius, int scale) {
         return Math.clamp(radius / (2.0 * scale), 0, 1);
@@ -63,7 +72,7 @@ public final class MaterialLighting {
         double qx = Math.abs(dx) - (width * .5 - r), qy = Math.abs(dy) - (height * .5 - r);
         double ox = Math.max(qx, 0), oy = Math.max(qy, 0), len = Math.hypot(ox, oy);
         double d = len + Math.min(Math.max(qx, qy), 0) - r;
-        double b = bevelWidth(r, scale, profile), t = Math.clamp(-d / b, 0, 1);
+        double b = bevelWidth(r, scale, profile, Math.min(width, height)), t = Math.clamp(-d / b, 0, 1);
         if (t >= 1) return 0; // plateau: exactly the original ramp, with no specular term
         double gx, gy;
         if (len > 0) { gx = Math.copySign(ox / len, dx); gy = Math.copySign(oy / len, dy); }
@@ -118,7 +127,7 @@ public final class MaterialLighting {
             this.width=width; this.height=height; this.radius=radius; this.scale=scale;
             this.top=top; this.bottom=bottom; this.profile=profile;
             r=Math.clamp(radius, 0, Math.min(width, height)*.5);
-            band=bevelWidth(r,scale,profile);
+            band=bevelWidth(r,scale,profile,Math.min(width,height));
             straightInset=Math.max(r,band);
             // At most one scratch array per bake, allocated before entering the pixel loop.
             if(profile!=Profile.FLAT && height>=2*straightInset) {

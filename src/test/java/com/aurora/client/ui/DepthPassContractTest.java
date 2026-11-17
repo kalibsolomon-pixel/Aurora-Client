@@ -73,7 +73,8 @@ class DepthPassContractTest {
         assertTrue(slider.contains("MaterialSurface.knob(g,knobX-knobR,knobY-knobR,knobR*2"));
         assertTrue(slider.contains("MaterialSurface.sliderTrack(g,x,ty,w,TRACK_H,trackRadius(),disabled)"));
         assertTrue(read("ui/component/ToggleSwitch.java").contains("MaterialSurface.switchTrack(g,x,y,w,h,r,t,hover,disabled)"));
-        assertTrue(read("screen/setting/EnumSetting.java").contains("MaterialSurface.unified() ? btnX + 6"));
+        // Centred stays centred (owner rule): the value centres left of the chevron slot.
+        assertTrue(read("screen/setting/EnumSetting.java").contains("TextAlignment.centeredX(btnX, textAreaW, cachedNameW)"));
     }
     @Test void councilRecipesKeepInsetDomePressedAndPrimaryPoliciesDistinct() throws Exception {
         String material=read("ui/component/MaterialSurface.java");

@@ -170,4 +170,17 @@ class MaterialLightingTest {
         assertEquals(1, MaterialLighting.facetBlend(2 * scale, scale), 1e-9);
         assertEquals(0, MaterialLighting.facetBlend(0, scale), 1e-9);
     }
+
+    @Test void smallControlsKeepAFlatPlateauForTheirText() {
+        int scale = 3; double field = 14 * scale, radius = 6 * scale;
+        double band = MaterialLighting.bevelWidth(radius, scale, MaterialLighting.Profile.RAISED, field);
+        assertEquals(field * MaterialLighting.MAX_BAND_SHARE, band, 1e-9);
+        // Cap-height ink (7 GUI px) fits on the plateau between the two bands.
+        assertTrue(field - 2 * band >= 7 * scale, "plateau " + (field - 2 * band) / scale + " GUI px");
+        // Large faces and domes are unaffected.
+        assertEquals(MaterialLighting.bevelWidth(radius, scale, MaterialLighting.Profile.RAISED),
+                MaterialLighting.bevelWidth(radius, scale, MaterialLighting.Profile.RAISED, 80 * scale), 1e-9);
+        assertEquals(MaterialLighting.bevelWidth(9 * scale, scale, MaterialLighting.Profile.DOME),
+                MaterialLighting.bevelWidth(9 * scale, scale, MaterialLighting.Profile.DOME, 18 * scale), 1e-9);
+    }
 }

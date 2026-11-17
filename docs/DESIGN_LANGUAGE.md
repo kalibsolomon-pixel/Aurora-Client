@@ -765,8 +765,9 @@ the accent-filled call to action under its hint.
 
 - **Purpose:** select one value from a longer or context-dependent set.
 - **Material (2026-11-17):** opaque curvature-lit raised `MaterialSurface.field` recipe (+5 → -3, 14% shadow); expanded popup is
-  an explicit above-dim surface. Closed value text is left-aligned with 6 px padding, fitted
-  before the right chevron slot. Expanded options retain their existing alignment.
+  an explicit above-dim surface. Closed value text is centred in the face area left of the
+  16 px chevron slot (centred stays centred, 2026-11-17), fitted to that area less equal side
+  padding; the chevron centres on the same optical axis as the value. Expanded options retain their existing alignment.
 - **States:** field hover/press/focus/disabled; expanded state; option hover/focus/selected/
   disabled where applicable.
 - **Input/accessibility:** pointer open/select/outside-dismiss; keyboard open, navigate,
@@ -1533,14 +1534,25 @@ chamfer whose four sides are flat 45-degree facets, each lit at its own angle (t
 then left, right, bottom), with crisp creases on the corner diagonals. `facetBlend =
 clamp(radius / (2 * scale), 0, 1)` blends band width and slope from the facet (0) to the
 pillowed roll-off (1), so dragging Corner Radius never jumps. The pillow's slope is its own
-`h'(t)` (the bevel is as tall as it is wide), capped at 3 at the silhouette. With `t = clamp(-d / band, 0, 1)`, height is
+`h'(t)` (the bevel is as tall as it is wide), capped at 3 at the silhouette. The band never exceeds 22% of the face's shorter side
+(domes exempt), so small controls keep a flat plateau for their text: a 14 px field gets about
+3 px of bevel. With `t = clamp(-d / band, 0, 1)`, height is
 `sqrt(1 - (1-t)^2)`, negated for inset faces. Pressed scales height to .4 and disables
 specular. Domes use a `.55 * radiusDevice` band (plateau radius .45 of the radius), while
-SQUARE knobs keep the tight chamfer. The physical outward normal is
+SQUARE knobs use the gem chamfer. The physical outward normal is
 `normalize(gradient(d) * slope * k, 1)` with `slope = lerp(1, min(3, h'(t)), facetBlend)` and **k = 1**. Equivalently it is the
 negative gradient of inward distance `-d`; this sign makes the upper-left rim catch the
 upper-left light. The draft spec's minus sign with an *outward* SDF gradient would invert
 that lighting; this sign clarification preserves the required highlight direction.
+
+**Text and glyph centring (2026-11-17).** Text on faces and rows is placed with
+`AuroraFontRenderer.textY`, which centres the active font's measured cap/x-height ink (from the
+baked glyphs of that style, cached per style and resource generation; descenders, underline and
+shadow excluded) on the box, instead of `(h - lineHeight) / 2` plus ad-hoc nudges. Icons
+(chevrons, checks, keyboard glyphs) centre on the same axis, so a label and its glyph share one
+centre line. Horizontal centring uses the drawn (fitted) width, with `TextAlignment.FACE_PAD`
+(5 px) equal padding inside a face, clear of the widest bevel. Descriptor lines use one pitch,
+`lineHeight + 2`, and the same gap below the label they describe.
 
 Final HSL lightness delta is `faceRamp(y) + 20 * (dot(n,L) - L.z) + 10 * spec`, with
 `spec = pow(max(0, reflect(-L,n).z), 24)` only on raised rims. Inset/pressed have no specular;
