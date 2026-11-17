@@ -154,31 +154,27 @@ public final class UiLayerCache implements RenderUtil.RectSink {
         }
     }
 
-    /** One device-pixel line along the captured top/bottom silhouette, including rounded corners.
-     * Source-atop preserves the exact AA coverage; call before adding a shadow. */
-    public void edgeLine(int x, int y, int width, int height, boolean top, int overlay) {
-        if (image == null || overlay == 0) return;
-        int first = Math.max(0, y), last = Math.min(h, y + height) - 1;
-        for (int px = Math.max(0, x); px < Math.min(w, x + width); px++) {
-            for (int py = top ? first : last; py >= first && py <= last; py += top ? 1 : -1) {
-                int color = image.getPixel(px, py);
-                if ((color >>> 24) == 0) continue;
-                image.setPixel(px, py, com.aurora.client.theme.MaterialLighting.edge(color, overlay));
-                break;
-            }
-        }
+    /** Per-pixel SDF height-field lighting, baked before selection ink/shadows. Coverage is immutable.
+     * Geometry is the face's own device-space rectangle, including fractional knob sizes. */
+    public void lightFace(int x, int y, float width, float height, float radius, int scale,
+                          float top, float bottom, com.aurora.client.theme.MaterialLighting.Profile profile) {
+        if (image == null || width <= 0 || height <= 0) return;
+        for (int py = Math.max(0, y); py < Math.min(h, y + (int)Math.ceil(height)); py++)
+            for (int px = Math.max(0, x); px < Math.min(w, x + (int)Math.ceil(width)); px++)
+                image.setPixel(px, py, com.aurora.client.theme.MaterialLighting.face(image.getPixel(px, py),
+                        px - x, py - y, width, height, radius, scale, top, bottom, profile));
     }
 
     /** Baked black shadow behind the lit face. Radius/offset/softness are device pixels.
      * Rounded SDF coverage keeps SQUARE square; no GUI fills or temporary image allocation. */
     public void softShadow(float x, float y, float width, float height, float radius,
-                           float offset, float softness, float alpha) {
+                           float elevation, float softness, float alpha) {
         if (image == null) return;
-        float r = Math.min(radius, Math.min(width, height) / 2);
+        double offsetX = elevation * com.aurora.client.theme.MaterialLighting.SHADOW_X;
+        double offsetY = elevation * com.aurora.client.theme.MaterialLighting.SHADOW_Y;
         for (int py = 0; py < h; py++) for (int px = 0; px < w; px++) {
-            double qx = Math.abs(px + .5 - x - width / 2) - (width / 2 - r);
-            double qy = Math.abs(py + .5 - y - offset - height / 2) - (height / 2 - r);
-            double distance = Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - r;
+            double distance = com.aurora.client.theme.MaterialLighting.distance(
+                    px + .5 - x - offsetX, py + .5 - y - offsetY, width, height, radius);
             float coverage = (float) Math.max(0, Math.min(1, .5 - distance / Math.max(1, softness)));
             image.setPixel(px, py, com.aurora.client.theme.MaterialLighting.shadowBehind(image.getPixel(px, py), alpha * coverage));
         }

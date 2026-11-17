@@ -69,7 +69,7 @@ public final class MaterialLighting {
     }
 
     /** Baked face lightness; alpha/AA, hue and saturation pass through unchanged. */
-    public static int face(int argb, int column, int row, int width, int height, float radius,
+    public static int face(int argb, int column, int row, float width, float height, float radius,
                            int scale, float top, float bottom, Profile profile) {
         if ((argb >>> 24) == 0) return argb;
         float delta = verticalDelta(row, height, top, bottom)
@@ -77,7 +77,7 @@ public final class MaterialLighting {
         return lightness(argb, delta);
     }
 
-    public static float verticalDelta(int row, int height, float top, float bottom) {
+    public static float verticalDelta(int row, float height, float top, float bottom) {
         return height <= 1 ? (top + bottom) * .5f : top + (bottom - top) * row / (height - 1f);
     }
 
@@ -94,16 +94,6 @@ public final class MaterialLighting {
         double ratio = chroma == 0 ? 0 : (1 - Math.abs(2 * next - 1)) / (1 - Math.abs(2 * light - 1));
         return (argb & 0xff000000) | channel(next + (r - light) * ratio) << 16
                 | channel(next + (g - light) * ratio) << 8 | channel(next + (b - light) * ratio);
-    }
-
-    /** Source-atop overlay: edge ink changes RGB inside coverage, never enlarges the silhouette. */
-    public static int edge(int argb, int overlay) {
-        if ((argb >>> 24) == 0) return argb;
-        double a = (overlay >>> 24) / 255d;
-        int r = (int) Math.round(((argb >>> 16) & 255) * (1 - a) + ((overlay >>> 16) & 255) * a);
-        int g = (int) Math.round(((argb >>> 8) & 255) * (1 - a) + ((overlay >>> 8) & 255) * a);
-        int b = (int) Math.round((argb & 255) * (1 - a) + (overlay & 255) * a);
-        return (argb & 0xff000000) | r << 16 | g << 8 | b;
     }
 
     /** A black shadow behind a straight-alpha pixel, preserving its already-lit colour. */

@@ -107,7 +107,6 @@ class MaterialLightingTest {
         for (int alpha : new int[]{0, 1, 19, 84, 128, 254, 255}) {
             int c = alpha << 24 | 0x3987ae;
             assertEquals(alpha, MaterialLighting.lightness(c, 5) >>> 24);
-            assertEquals(alpha, MaterialLighting.edge(c, 0x38ffffff) >>> 24);
         }
         assertEquals(0x00123456, MaterialLighting.lightness(0x00123456, 50));
     }
@@ -135,12 +134,6 @@ class MaterialLightingTest {
         assertEquals(1, MaterialLighting.verticalDelta(1, 3, 5, -3));
         assertEquals(1, MaterialLighting.verticalDelta(0, 1, 5, -3));
         assertEquals(-3, MaterialLighting.verticalDelta(17, 20, -3, -3));
-    }
-
-    @Test void edgeOverlayUsesCoverageWithoutGrowingIt() {
-        assertEquals(0x00808080, MaterialLighting.edge(0x00808080, 0xffffffff));
-        assertEquals(0x818d8d8d, MaterialLighting.edge(0x81808080, 0x1affffff));
-        assertEquals(0xff646464, MaterialLighting.edge(0xff808080, 0x38000000));
     }
 
     @Test void shadowIsBehindFaceAndBlackOutsideIt() {

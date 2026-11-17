@@ -8,6 +8,8 @@ import com.aurora.client.util.AuroraShapes;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.Minecraft;
 import com.aurora.client.ui.util.UiLayerCache;
+import com.aurora.client.theme.MaterialLighting.Profile;
+import com.aurora.client.theme.UnifiedPalette;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 /** Shared cached material for parent faces, embedded controls and opaque floating layers.
@@ -72,22 +74,24 @@ public final class MaterialSurface {
         return ThemeManager.withAlpha(token, Math.round((token >>> 24) * WINDOW_OUTLINE_ALPHA));
     }
 
-    /** Depth pass, owner ruling 2026-11-17. HSL points; edge ink is source-atop. */
-    private static final float DEPTH_SHADOW_OFFSET = 1f, MODULE_SHADOW_SOFTNESS = 2f,
-            KNOB_SHADOW_SOFTNESS = 1f, DEPTH_SHADOW_ALPHA = .14f;
+    /** Depth tuning, owner ruling 2026-11-17: HSL points, cached curvature and directional shadows. */
     private static final float PEER_HOVER_ALPHA = .16f, SWITCH_HOVER_ALPHA = .08f;
 
     private enum Light {
-        FLAT(0,0,0,0), RAISED(5,-3,0x1affffff,0x38000000),
-        HOVER(5,-3,0x1fffffff,0x38000000), PRESSED(-3,2,0x33000000,0),
-        INSET(-3,2,0x3d000000,0x0fffffff), PRIMARY(6,-4,0x29ffffff,0x38000000),
-        MODULE_ON(5,-3,0x1affffff,0x38000000), MODULE_OFF(-3,-3,0,0),
-        MODULE_ON_HOVER(7,-1,0x1affffff,0x38000000), MODULE_OFF_HOVER(-1,-1,0,0),
-        KNOB(0,0,0x1affffff,0x38000000), MODULE_SHADOW(0,0,0,0);
-        final float top, bottom;
-        final int topInk, bottomInk;
-        Light(float top,float bottom,int topInk,int bottomInk) {
-            this.top=top;this.bottom=bottom;this.topInk=topInk;this.bottomInk=bottomInk;
+        FLAT(0,0,Profile.FLAT), RAISED(5,-3,Profile.RAISED),
+        HOVER(5,-3,Profile.RAISED), PRESSED(-3,2,Profile.PRESSED),
+        INSET(1,5,Profile.INSET), TRACK(3,7,Profile.INSET),
+        PRIMARY(6,-4,Profile.RAISED), PRIMARY_LIGHT(3,-4,Profile.RAISED),
+        MODULE_ON(11,3,Profile.RAISED), MODULE_OFF(-5,-5,Profile.FLAT),
+        MODULE_ON_HOVER(13,5,Profile.RAISED), MODULE_OFF_HOVER(-3,-3,Profile.FLAT),
+        KNOB(0,0,Profile.FLAT,1,.14f),
+        MODULE_SHADOW(0,0,Profile.FLAT,2,.20f), CONTROL_SHADOW(0,0,Profile.FLAT,1,.14f);
+        final float top, bottom, elevation, shadowAlpha;
+        final Profile profile;
+        Light(float top,float bottom,Profile profile) { this(top,bottom,profile,0,0); }
+        Light(float top,float bottom,Profile profile,float elevation,float shadowAlpha) {
+            this.top=top;this.bottom=bottom;this.profile=profile;
+            this.elevation=elevation;this.shadowAlpha=shadowAlpha;
         }
     }
 
@@ -104,20 +108,29 @@ public final class MaterialSurface {
     public static void controlColors(GuiGraphicsExtractor g,float x,float y,float w,float h,float radius,
                                      int base,int over,int down,boolean selected,boolean disabled,boolean primary,
                                      float hover,float press,int kind) {
-        if(primary && !disabled && press<1) cached(g,x,y,w,h,radius,0,0,80,true,1-press);
+        if(!disabled && press<1) cached(g,x,y,w,h,radius,0,0,80,false,1-press,Light.CONTROL_SHADOW);
+        // contrast against black = (luminance + .05)/.05; >11 means ON_ACTION luminance >.5.
+        Light actionLight=UnifiedPalette.contrast(ThemeManager.color(ThemeToken.ON_ACTION),0xff000000)>11
+                ? Light.PRIMARY_LIGHT : Light.PRIMARY;
         int edge=selected && !disabled ? ThemeManager.color(ThemeToken.ACCENT_MARKER) : 0;
         int state=kind+(selected ? 8 : 0);
         // A settled state needs one face blit; stacking both endpoints would double AA coverage.
         if(disabled || hover<1 && press<1)
-            depth(g,x,y,w,h,radius,base,edge,state,disabled ? Light.FLAT : primary ? Light.PRIMARY : Light.RAISED,1);
+            depth(g,x,y,w,h,radius,base,edge,state,disabled ? Light.FLAT : primary ? actionLight : Light.RAISED,1);
         if(disabled) return;
-        if(hover>0 && press<1) depth(g,x,y,w,h,radius,over,edge,state+1,primary ? Light.PRIMARY : Light.HOVER,Math.min(1,hover));
+        if(hover>0 && press<1) depth(g,x,y,w,h,radius,over,edge,state+1,primary ? actionLight : Light.HOVER,Math.min(1,hover));
         if(press>0) depth(g,x,y,w,h,radius,down,edge,state+2,Light.PRESSED,Math.min(1,press));
     }
 
     public static void inset(GuiGraphicsExtractor g,float x,float y,float w,float h,float radius,boolean disabled) {
         depth(g,x,y,w,h,radius,ThemeManager.color(disabled ? ThemeToken.MATERIAL_PANEL : ThemeToken.MATERIAL_SUNKEN),
                 0,240,disabled ? Light.FLAT : Light.INSET,1);
+    }
+
+    /** Slider wells use the brighter +3 -> +7 recipe; accent fill remains the caller's. */
+    public static void sliderTrack(GuiGraphicsExtractor g,float x,float y,float w,float h,float radius,boolean disabled) {
+        depth(g,x,y,w,h,radius,ThemeManager.color(disabled ? ThemeToken.MATERIAL_PANEL : ThemeToken.MATERIAL_SUNKEN),
+                0,241,disabled ? Light.FLAT : Light.TRACK,1);
     }
 
     /** OFF inset and the existing flat accent ON fill, with cached hover wash endpoints. */
@@ -258,7 +271,7 @@ public final class MaterialSurface {
         int scale=Math.max(1,(int)mc.getWindow().getGuiScale());
         // No accent halos (Spxctra simplification, 2026-10-30): selection is the wash and
         // one accent edge; a primary action is its strong fill. Glow added no information.
-        int pad=shadow ? 10 : 2;
+        int pad=shadow ? 10 : light.elevation>0 ? (light==Light.MODULE_SHADOW ? 5 : 3) : 2;
         int width=Math.round(w), height=Math.round(h), round=Math.round(radius);
         kind += light.ordinal()*1024;
         long key=((long)width<<48) | ((long)height<<32) | ((long)round<<16) | ((long)kind<<1) | (shadow ? 1 : 0);
@@ -275,9 +288,8 @@ public final class MaterialSurface {
                     // Preserve pre-pass owner-themed cards and tooltips; window bodies stay flat.
                     if(shadow && kind!=120 && light==Light.FLAT)
                         cache.shadeVertical(pad*scale,pad*scale,width*scale,height*scale,3);
-                    cache.lightVertical(pad*scale,pad*scale,width*scale,height*scale,light.top,light.bottom);
-                    cache.edgeLine(pad*scale,pad*scale,width*scale,height*scale,true,light.topInk);
-                    cache.edgeLine(pad*scale,pad*scale,width*scale,height*scale,false,light.bottomInk);
+                    cache.lightFace(pad*scale,pad*scale,w*scale,h*scale,radius*scale,scale,
+                            light.top,light.bottom,light.profile);
                 }
 
                 if(kind==2 || kind==102 || border!=0 && light!=Light.FLAT) {
@@ -286,9 +298,9 @@ public final class MaterialSurface {
                 // Selected peers (kind 2) take the thinner selection edge; other borders stay 1 GUI px.
                 if(border!=0) RenderUtil.drawRoundedOutlineAA(g,pad,pad,w,h,radius,
                         kind==2 || kind==102 || light!=Light.FLAT ? selectedEdge() : 1,border);
-                if(light==Light.MODULE_SHADOW || light==Light.KNOB)
-                    cache.softShadow(pad*scale,pad*scale,width*scale,height*scale,radius*scale,
-                            DEPTH_SHADOW_OFFSET,light==Light.KNOB ? KNOB_SHADOW_SOFTNESS : MODULE_SHADOW_SOFTNESS,DEPTH_SHADOW_ALPHA);
+                if(light.elevation>0)
+                    cache.softShadow(pad*scale,pad*scale,w*scale,h*scale,radius*scale,
+                            light.elevation*scale,2*light.elevation*scale,light.shadowAlpha);
             } finally { RenderUtil.endCapture(previous); }
             cache.commit(version);
         }
