@@ -136,13 +136,3 @@ No implementation questions remain. Runtime/mixin acceptance and the noted exist
 selection/validation inconsistencies remain with the parent. The branch/worktree
 and normal per-line build outputs are retained for review and reuse; the parent
 owns their eventual lifecycle after integration.
-
-Cleanup of task-owned scratch/test logs was rejected by automatic approval review
-with `blocked by policy`; no deletion was performed. Parent cleanup ownership:
-`build/text-field-undo/` (decompilation scratch and command logs), plus these exact
-directories beneath `C:/Users/kalib/AppData/Local/Temp/`:
-`aurora-client-tests-11586832318479180498`,
-`aurora-client-tests-14306084976843223499`,
-`aurora-client-tests-789084862047187984`,
-`aurora-client-tests-14897662374303071052`, and
-`aurora-client-tests-10830487943802042203`.
