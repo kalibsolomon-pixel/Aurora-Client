@@ -394,7 +394,7 @@ Swing, view bob, damage tilt, idle sway, entity smoothing.
 
 #### Keystrokes · on `{card:keystrokes}`
 Shows your key and mouse presses.
-- **Key Style**: dropdown · Translucent (the unchanged legacy renderer); Flat and 3D Keycap are opt-in. `{keystrokesKeyStyle}`
+- **Key Style**: dropdown · Flat (default: the legend on a flat coloured face, no outline or depth, the colour swaps to the accent while pressed) or 3D Keycap (sculpted Cherry profile). Saved Translucent values load as Flat. `{keystrokesKeyStyle}`
 - **Text Color**: color · theme text color. `{keystrokesTextColor}`
 - **Show WASD Keys**: toggle · on. `{keystrokesShowMovement}`
 - **Show Mouse Buttons**: toggle · on. `{keystrokesShowMouse}`

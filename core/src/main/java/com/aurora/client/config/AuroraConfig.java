@@ -1127,13 +1127,16 @@ public class AuroraConfig {
     /** Master toggle for the keystrokes overlay. */
     public boolean keystrokesEnabled = false;
     public enum KeystrokesKeyStyle {
-        FLAT("Flat"), TRANSLUCENT("Translucent"), KEYCAP("3D Keycap");
+        // FLAT is the Lunar-style key: legend on a flat coloured face (owner, 2026-11-17). The
+        // retired TRANSLUCENT shell-and-rim style loads as FLAT.
+        @com.google.gson.annotations.SerializedName(value = "FLAT", alternate = {"TRANSLUCENT"}) FLAT("Flat"),
+        KEYCAP("3D Keycap");
         private final String label;
         KeystrokesKeyStyle(String label) { this.label = label; }
         public String getLabel() { return label; }
     }
-    /** TRANSLUCENT is the unchanged legacy renderer, so existing installs keep their exact look. */
-    public KeystrokesKeyStyle keystrokesKeyStyle = KeystrokesKeyStyle.TRANSLUCENT;
+    /** FLAT by default; saved TRANSLUCENT values load as FLAT (owner retired that style, 2026-11-17). */
+    public KeystrokesKeyStyle keystrokesKeyStyle = KeystrokesKeyStyle.FLAT;
     /** Show the W/A/S/D movement block (follows your movement keybinds). */
     public boolean keystrokesShowMovement = true;
     /** Show the left/right mouse buttons. */

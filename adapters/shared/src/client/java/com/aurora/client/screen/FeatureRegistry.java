@@ -1332,8 +1332,7 @@ addWithSettings("hitbox",
                                 () -> cfg.keystrokesKeyStyle, v -> cfg.keystrokesKeyStyle = v).resetDefault(() -> defaults.keystrokesKeyStyle)
                                 .labels(AuroraConfig.KeystrokesKeyStyle::getLabel)
                                 .valueDescriptions(style -> switch (style) {
-                                    case FLAT -> "One opaque, unlit face per key, with the existing compact corners and press motion.";
-                                    case TRANSLUCENT -> "The existing layered shell, key face, fine rim and press motion.";
+                                    case FLAT -> "Each key's text on a flat coloured background, with no outline or depth; a pressed key turns the accent color.";
                                     case KEYCAP -> "Sculpted Cherry-profile caps with sloped walls, a concave top and a soft contact shadow.";
                                 }),
                         new ColorSetting("Text Color", () -> cfg.keystrokesTextColor == null ? com.aurora.client.theme.ThemeManager.color(com.aurora.client.theme.ThemeToken.ON_SURFACE) : cfg.keystrokesTextColor, v -> cfg.keystrokesTextColor = v).resetDefault(() -> cfg.keystrokesTextColor, () -> defaults.keystrokesTextColor, () -> defaults.keystrokesTextColor == null ? defaultTheme.color(com.aurora.client.theme.ThemeToken.ON_SURFACE) : defaults.keystrokesTextColor)

@@ -1665,15 +1665,22 @@ those probes run; a headless test only verifies the raster passes submit zero GU
 
 ### Keystrokes key styles
 
-**Translucent** is the default and executes the unchanged legacy shell/face/rim path, so existing
-installs render exactly as before. **Flat** is the opaque, unlit alternative: one face per key,
-without the legacy shell or rim, preserving the existing compact corners and press motion.
+**Flat** (default; owner, 2026-11-17: "the key text on a flat coloured background, no outline,
+3D design or anything", the way Lunar Client does it) is one face per key in the key colour with
+its legend; pressing swaps the face to the accent. No shell, rim, outline or travel. The former
+Translucent shell-and-rim style is retired; saved `TRANSLUCENT` values load as Flat.
 **3D Keycap** is the opt-in represented-keyboard material: an outer rounded skirt,
 8% back / 18% front / 12% side planar walls, and a shallow concave cylindrical top dish. The
 single upper-left material light shades every facet; radius 0 keeps crisp gem-like corner facets.
 Pressing sinks the top by 1 GUI px, shortens the front wall by the same amount, tightens the
-contact shadow and blends in the existing 30% pressed accent. Legends and CPS use visible-ink
-centring and active-font ink metrics on the top surface, never on the skirt.
+contact shadow and blends in the existing 30% pressed accent.
+
+**Legends (both styles).** One routine places every legend: the text's visible ink (glyph
+left/right bounds and the active font's cap/x-height) is centred on the label area (the whole
+face for Flat, the top surface for 3D Keycap, the upper part of a mouse key above its CPS
+line), with the origin snapped to the device grid. Each row shares one size, taken from its
+widest legend and rounded down to whole device pixels per font pixel, so W/A/S/D, the mouse
+buttons, Shift/Ctrl and the extra keys never differ in size within a row; nothing is scaled up.
 
 `KeycapProfile` owns pure core geometry/lighting; `KeycapRenderer` owns a HUD-lifetime primitive
 LRU of 48 entries and 4 MiB of retained RGBA pixels, keyed by exact geometry, colour, pressed
