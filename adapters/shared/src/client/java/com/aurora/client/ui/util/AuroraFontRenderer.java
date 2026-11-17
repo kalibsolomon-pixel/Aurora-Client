@@ -351,12 +351,14 @@ public class AuroraFontRenderer {
 
     /**
      * The shared ellipsis-fit memo: (text, maxW, minLen, {@link #styleKey()})
-     * -> fitted, access-order, capped at 256 entries. Render-thread only,
-     * like every fitted-text cache. {@link com.aurora.client.ui.util.TextFit}
+     * -> fitted, access-order, capped at 1024 entries. Render-thread only,
+     * like every fitted-text cache. Sized above one busy frame's distinct
+     * labels (buttons, grid summaries, map markers share it): an LRU smaller
+     * than the working set misses on every lookup. {@link com.aurora.client.ui.util.TextFit}
      * owns the fitting itself.
      */
     private static final com.aurora.client.ui.util.TextFit.Memo ELLIPSIS_FIT =
-            new com.aurora.client.ui.util.TextFit.Memo(256);
+            new com.aurora.client.ui.util.TextFit.Memo(1024);
 
     /**
      * Ellipsis-truncates {@code s} to {@code maxW} pixels: drops trailing
