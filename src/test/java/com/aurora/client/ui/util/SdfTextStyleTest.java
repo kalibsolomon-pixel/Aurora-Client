@@ -1,6 +1,7 @@
 package com.aurora.client.ui.util;
 
 import com.aurora.client.config.AuroraConfig;
+import com.aurora.client.health.HealthTestAccess;
 import net.minecraft.network.chat.FontDescription;
 import net.minecraft.resources.Identifier;
 import org.junit.jupiter.api.AfterEach;
@@ -14,8 +15,7 @@ class SdfTextStyleTest {
     private AuroraConfig.FontType font;
     private AuroraConfig.TextWeight weight;
     private AuroraConfig.TextRendererMode mode;
-    private boolean italic, underline, rendering;
-    private String property;
+    private boolean italic, underline, sdf;
 
     @BeforeEach void setUp() {
         config = AuroraConfig.get();
@@ -24,11 +24,9 @@ class SdfTextStyleTest {
         mode = config.textRendererMode;
         italic = config.textItalic;
         underline = config.textUnderline;
-        rendering = AuroraFontRenderer.isRenderingAuroraUI();
-        property = System.getProperty("aurora.text.sdf");
-        System.clearProperty("aurora.text.sdf");
-        AuroraFontRenderer.setRenderingAuroraUI(true);
-        config.textRendererMode = AuroraConfig.TextRendererMode.AURORA_ONLY;
+        sdf = config.textSdf;
+        config.textSdf = false;
+        config.textRendererMode = AuroraConfig.TextRendererMode.ALL_TEXT;
         config.textUnderline = false;
     }
 
@@ -38,12 +36,10 @@ class SdfTextStyleTest {
         config.textRendererMode = mode;
         config.textItalic = italic;
         config.textUnderline = underline;
-        AuroraFontRenderer.setRenderingAuroraUI(rendering);
-        if (property == null) System.clearProperty("aurora.text.sdf");
-        else System.setProperty("aurora.text.sdf", property);
+        config.textSdf = sdf;
     }
 
-    @Test void flagOffResolvesExactlyTheExistingRasterIds() {
+    @Test void toggleChangesOnlyTheRasterIdSuffix() {
         assertRaster(AuroraConfig.FontType.INTER, AuroraConfig.TextWeight.MEDIUM, false,
                 "inter_medium");
         assertRaster(AuroraConfig.FontType.ROBOTO, AuroraConfig.TextWeight.SEMIBOLD, false,
@@ -54,12 +50,45 @@ class SdfTextStyleTest {
                 "jetbrains_mono_bold");
     }
 
+    @Test void offAndWindowOnlyOutsideAWindowDoNotSubstitute() {
+        config.textSdf = true;
+        config.activeFont = AuroraConfig.FontType.INTER;
+        config.textRendererMode = AuroraConfig.TextRendererMode.OFF;
+        assertEquals(null, AuroraFontRenderer.getActiveStyle());
+        config.textRendererMode = AuroraConfig.TextRendererMode.AURORA_ONLY;
+        assertEquals(null, AuroraFontRenderer.getActiveStyle());
+    }
+
+    @Test void failedOrYieldedSdfHookPreservesTheRasterStyle() {
+        config.textSdf = true;
+        config.activeFont = AuroraConfig.FontType.INTER;
+        config.textWeight = AuroraConfig.TextWeight.MEDIUM;
+        config.textItalic = false;
+        var raster = new FontDescription.Resource(Identifier.fromNamespaceAndPath("aurora", "inter_medium"));
+        try {
+            HealthTestAccess.fail("SdfGlyphRenderStateMixin");
+            assertEquals(raster, AuroraFontRenderer.getActiveStyle().getFont());
+        } finally {
+            HealthTestAccess.reset(null);
+        }
+        try {
+            HealthTestAccess.standDown("SdfFontManagerMixin", "handled by modernui");
+            assertEquals(raster, AuroraFontRenderer.getActiveStyle().getFont());
+        } finally {
+            HealthTestAccess.reset(null);
+        }
+    }
+
     private void assertRaster(AuroraConfig.FontType family, AuroraConfig.TextWeight textWeight,
                               boolean textItalic, String expected) {
         config.activeFont = family;
         config.textWeight = textWeight;
         config.textItalic = textItalic;
+        config.textSdf = false;
         assertEquals(new FontDescription.Resource(Identifier.fromNamespaceAndPath("aurora", expected)),
+                AuroraFontRenderer.getActiveStyle().getFont());
+        config.textSdf = true;
+        assertEquals(new FontDescription.Resource(Identifier.fromNamespaceAndPath("aurora", expected + "_sdf")),
                 AuroraFontRenderer.getActiveStyle().getFont());
     }
 }

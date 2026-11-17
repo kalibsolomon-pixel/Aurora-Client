@@ -61,6 +61,8 @@ import java.util.function.Supplier;
 public class AuroraTitleScreen extends Screen implements ThemedScreen {
     private static final Style WORDMARK = Style.EMPTY.withFont(
             new FontDescription.Resource(Identifier.fromNamespaceAndPath("aurora", "wordmark")));
+    private static final Style WORDMARK_SDF = Style.EMPTY.withFont(
+            new FontDescription.Resource(Identifier.fromNamespaceAndPath("aurora", "wordmark_sdf")));
     private static final String WORDMARK_TEXT = "AURORA";
     private static final int WORDMARK_TRACKING = 3;
     private static final Component SWITCHER_NOTE = Component.translatable("aurora.title.account_switcher_missing");
@@ -195,9 +197,12 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
         wordmarkGlyphs = new FormattedCharSequence[WORDMARK_TEXT.length()];
         wordmarkAdvances = new int[WORDMARK_TEXT.length()];
         wordmarkWidth = 0;
+        Style wordmarkStyle = AuroraFontRenderer.getActiveStyle() != null
+                && com.aurora.client.ui.text.SdfTextSupport.resolveSdfStyle(com.aurora.client.config.AuroraConfig.get())
+                ? WORDMARK_SDF : WORDMARK;
         for (int i = 0; i < WORDMARK_TEXT.length(); i++) {
             // An explicit font: the text options never re-case or re-face the wordmark.
-            wordmarkGlyphs[i] = Component.literal(WORDMARK_TEXT.substring(i, i + 1)).withStyle(WORDMARK).getVisualOrderText();
+            wordmarkGlyphs[i] = Component.literal(WORDMARK_TEXT.substring(i, i + 1)).withStyle(wordmarkStyle).getVisualOrderText();
             wordmarkAdvances[i] = this.font.width(wordmarkGlyphs[i]);
             wordmarkWidth += wordmarkAdvances[i] + (i > 0 ? WORDMARK_TRACKING : 0);
         }

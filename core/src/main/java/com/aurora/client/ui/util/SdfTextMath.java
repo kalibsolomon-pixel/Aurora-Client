@@ -2,14 +2,14 @@ package com.aurora.client.ui.util;
 
 /** Minecraft-free SDF text math shared by generation, shaders and tests. */
 public final class SdfTextMath {
-    /** Strike multiplier relative to Aurora's raster provider at the current GUI scale. */
-    public static final float STRIKE_MULTIPLIER = 4.0f;
+    public static final int STRIKE_SIZE = 64;
     /** FreeType's SDF spread, in strike pixels; also its documented default. */
     public static final int SPREAD = 8;
     /** Extra far-outside texels around FreeType's own spread, on every side. */
     public static final int PADDING = 1;
     /** FreeType maps the exact edge to byte 128: 128 * (distance / spread + 1). */
     public static final int EDGE_BYTE = 128;
+    public static final float EDGE_BIAS = 0.30f;
     private static final float MIN_GRADIENT = 0.0001f;
 
     private SdfTextMath() {}
@@ -23,7 +23,7 @@ public final class SdfTextMath {
     /** Screen-space coverage for a signed distance and its derivative width. */
     public static float coverage(float distance, float derivativeWidth) {
         float width = Math.max(Math.abs(derivativeWidth), MIN_GRADIENT);
-        return Math.max(0.0f, Math.min(1.0f, 0.5f + distance / width));
+        return Math.max(0.0f, Math.min(1.0f, 0.5f + (distance - EDGE_BIAS) / width));
     }
 
     /** A dimension after adding transparent padding on both sides. */
@@ -31,13 +31,12 @@ public final class SdfTextMath {
         return bitmapSize + 2 * padding;
     }
 
-    /** Left bearing after padding extends the quad to the left. Advances remain untouched. */
-    public static float paddedLeftBearing(int bitmapLeft, int padding, float oversample) {
-        return (bitmapLeft - padding) / oversample;
+    public static float quadStart(float rasterEdge, int padding, float logicalPerTexel) {
+        return rasterEdge - padding * logicalPerTexel;
     }
 
-    /** Top bearing is measured upward, so padding above the bitmap increases it. */
-    public static float paddedTopBearing(int bitmapTop, int padding, float oversample) {
-        return (bitmapTop + padding) / oversample;
+    public static float insetUv(int edge, boolean upper, int pageSize) {
+        float center = (edge + (upper ? -0.5f : 0.5f)) / pageSize;
+        return Math.clamp(center, 0f, 1f);
     }
 }

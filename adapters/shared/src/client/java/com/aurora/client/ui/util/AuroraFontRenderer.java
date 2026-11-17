@@ -322,12 +322,8 @@ public class AuroraFontRenderer {
         return styleKey(cfg, compact, useSdf(cfg));
     }
 
-    /** The phase-0 spike covers only upright Inter Medium; everything else resolves normally. */
     private static boolean useSdf(AuroraConfig cfg) {
-        return com.aurora.client.adapter.NativeSdfText.enabled()
-                && cfg.activeFont == AuroraConfig.FontType.INTER
-                && !cfg.textItalic
-                && (cfg.textWeight == null || cfg.textWeight == AuroraConfig.TextWeight.MEDIUM);
+        return com.aurora.client.ui.text.SdfTextSupport.resolveSdfStyle(cfg);
     }
 
     private static int styleKey(AuroraConfig cfg, boolean compact, boolean sdf) {
@@ -619,11 +615,13 @@ public class AuroraFontRenderer {
             case SEMIBOLD, BOLD -> AuroraConfig.TextWeight.BOLD;
         };
         String family = familyPath(cfg.activeFont);
-        boolean italic = cfg.textItalic && hasItalicFile(cfg.activeFont);
+        boolean italic = (cfg.textItalic || cfg.activeFont == AuroraConfig.FontType.INTER_ITALIC)
+                && hasItalicFile(cfg.activeFont);
         // TITLE has its own 11 px raster (tools/build_fonts.py PROVIDER_SIZES); HEADING takes the
         // regular 9 px raster, one step above compact 8 px body text (2026-11-14).
         String size = role == Role.TITLE ? "_title" : "";
-        String path = family + "_" + heavier.suffix() + (italic ? "_italic" : "") + size;
+        String path = family + "_" + heavier.suffix() + (italic ? "_italic" : "") + size
+                + (useSdf(cfg) ? "_sdf" : "");
         net.minecraft.network.chat.Style style = base.withFont(new net.minecraft.network.chat.FontDescription.Resource(
                 net.minecraft.resources.Identifier.fromNamespaceAndPath("aurora", path)));
         roleStyles[role.ordinal()] = style;

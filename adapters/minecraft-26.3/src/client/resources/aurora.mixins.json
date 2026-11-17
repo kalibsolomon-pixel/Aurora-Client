@@ -62,6 +62,7 @@
     "ScreenTextScopeMixin",
     "TrueTypeProviderDefinitionMixin",
     "SdfFontManagerMixin",
+    "SdfGuiTextMixin",
     "SdfGlyphRenderStateMixin",
     "FontManagerAccessor",
     "FontSetAccessor",

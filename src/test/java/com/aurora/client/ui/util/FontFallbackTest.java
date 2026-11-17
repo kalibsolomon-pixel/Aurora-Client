@@ -39,6 +39,6 @@ class FontFallbackTest {
         // its compact UI variant (2026-11-12) and its 11 px title-role variant
         // (2026-11-14): (8*4 + 6*4) * 3, plus the title wordmark.
         // + 2: the experimental Inter Medium SDF definitions (regular and compact UI).
-        assertEquals(171, checked, "every family, weight and italic, their compact UI and title variants, the title wordmark and the SDF spike fonts");
+        assertEquals(169, checked, "every family, weight and italic, their compact UI and title variants, and the title wordmark");
     }
 }
