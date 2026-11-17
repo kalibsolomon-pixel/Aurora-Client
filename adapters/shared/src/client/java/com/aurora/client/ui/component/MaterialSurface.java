@@ -227,10 +227,16 @@ public final class MaterialSurface {
     private static long templateGeneration=Long.MIN_VALUE;
 
     /** Keep geometry across screens/resizes; the LRU bounds it. Theme, scale and
-     * roundness changes invalidate every template at an extraction boundary. */
+     * roundness changes invalidate every template at an extraction boundary, and
+     * returning to gameplay releases them: no HUD draws these faces, so nothing is
+     * held while playing (2026-11-17). */
     public static void beginFrame() {
         Minecraft mc=Minecraft.getInstance();
         if(mc==null) return;
+        if(com.aurora.client.adapter.NativeUi.screen(mc)==null) {
+            if(TEMPLATES.size()>0) disposeTemplates();
+            return;
+        }
         var window=mc.getWindow();
         int scale=Math.max(1,(int)window.getGuiScale());
         int radius=ThemeManager.current().roundness().radius();
