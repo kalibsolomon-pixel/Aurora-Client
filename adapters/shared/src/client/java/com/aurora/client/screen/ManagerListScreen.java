@@ -276,8 +276,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
     protected int columns() { return 1; }
     protected int columnGap() { return rowGap(); }
     protected final int cellWidth() {
-        int cols = Math.max(1, columns());
-        return (listWidth() - columnGap() * (cols - 1)) / cols;
+        return layoutCellWidth;
     }
     private static final String LEADING_ROW = "leading/0";
     private final ScreenLayout rowsLayout = new ScreenLayout();
@@ -302,7 +301,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         double scale = this.minecraft.getWindow().getGuiScale();
         long fontKey = com.aurora.client.screen.setting.FeatureSetting.compactMeasurementKey();
         ClipBand band = rowsLayout.viewport();
-        if (laidOutRows == rows && layoutLead == lead && layoutTop == top && layoutCols == cols
+        if (sameRows(rows) && layoutLead == lead && layoutTop == top && layoutCols == cols
                 && layoutCellWidth == cellWidth && layoutRowHeight == height && layoutRowGap == rowGap
                 && layoutColumnGap == colGap && layoutGuiScale == scale && layoutFontKey == fontKey
                 && band != null && band.x == listX && band.y == clipTop && band.width == width && band.yEnd() == clipBottom) return;
@@ -325,6 +324,16 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         }
         rowsLayout.finish(band, (rowsLayout.size() + cols - 1) / cols * (height + rowGap), clipBottom - top);
         rowsLayout.forgetInactive();
+    }
+
+    private boolean sameRows(List<T> rows) {
+        if (laidOutRows == rows) return true;
+        if (laidOutRows.size() != rows.size()) return false;
+        for (int index = 0; index < rows.size(); index++) {
+            if (!java.util.Objects.equals(laidOutRows.get(index), rows.get(index))) return false;
+        }
+        laidOutRows = rows;
+        return true;
     }
 
     /** Inline rename editor's top offset inside its cell (vertically centered by default). */
@@ -493,9 +502,9 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
 
         rowGlassDrawn.clear();
         onBeginRowGlassPass();
-        ClipBand band = listBand(listX);
-        GlassSurface.enableScissor(ctx, listX - 4, listClipTop(), listX + listWidth() + 4, listClipBottom());
-        int lead = leadingRowCount(), cw = cellWidth();
+        ClipBand band = rowsLayout.viewport();
+        GlassSurface.enableScissor(ctx, band.x - 4, band.y, band.xEnd() + 4, band.yEnd());
+        int lead = layoutLead, cw = cellWidth();
         for (int index = 0; index < rows.size(); index++) {
             int slot = lead + index;
             prepareRowFocus(rows.get(index), cellX(listX, slot), cellY(slot), cw);
@@ -536,7 +545,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
                     MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
         }
 
-        ctx.enableScissor(listX - 4, listClipTop(), listX + listWidth() + 4, listClipBottom());
+        ctx.enableScissor(band.x - 4, band.y, band.xEnd() + 4, band.yEnd());
         if (rows.isEmpty()) {
             // Empty state centered in the list well rather than pinned to its corner.
             // Icon, headline and hint as one centred group (UI polish 2026-11-14); a screen
@@ -654,10 +663,6 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
      * band is half-open {@code [y, yEnd)} — edge contact is not
      * intersection (the frozen C-1 semantics).
      */
-    protected ClipBand listBand(int listX) {
-        return rowsLayout.viewport();
-    }
-
     /**
      * Glass pass for one row surface. The subclass paints the row's glass
      * panel (its chosen §6 role), records whether glass drew in

@@ -66,13 +66,13 @@ class SquareModeConformanceTest {
                 "chip glass uses the resolved control radius");
         assertTrue(src.contains("profGlass = GlassSurface.card(g, profX, profY, TAB_W, TAB_H, ctrlRadius)"),
                 "Profiles glass uses the resolved control radius");
-        assertTrue(src.contains("layoutGlass[0] = GlassSurface.card(g, toolbarX(), my, TOOL, TOOL, ctrlRadius"),
+        assertTrue(src.contains("layoutGlass[index] = GlassSurface.card(g, box.x(), box.top(), box.width(), box.height(), ctrlRadius"),
                 "layout-button glass uses the resolved control radius");
         // Tiles intentionally split by state: neutral is embedded; enabled
         // is isolated stained glass. Both consume the same resolved radius.
-        assertTrue(src.contains("MaterialSurface.embeddedControl(g, b[0], b[1], b[2], b[3], ctrlRadius"),
+        assertTrue(src.contains("MaterialSurface.embeddedControl(g, bounds.x(), bounds.y(layoutScroll()), bounds.width(), bounds.height(), ctrlRadius"),
                 "neutral tile material uses the resolved control radius");
-        assertTrue(src.contains("b[0], b[1], b[2], b[3], ctrlRadius, true,"),
+        assertTrue(src.contains("bounds.x(), bounds.y(layoutScroll()), bounds.width(), bounds.height(), ctrlRadius, true,"),
                 "highlighted tile glass uses the resolved control radius");
         assertTrue(src.contains("MaterialSurface.module(g,cx,cy,cw,ch,tileRadius,on,hoverT)"),
                 "opaque depth templates share the resolved radius in the unified path");

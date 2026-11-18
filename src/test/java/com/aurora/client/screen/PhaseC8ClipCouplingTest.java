@@ -46,12 +46,12 @@ class PhaseC8ClipCouplingTest {
     @Test
     void managerDerivesOneBandTruthAndCullsThroughIt() {
         String src = source(MANAGER);
-        assertTrue(src.contains("protected ClipBand listBand(int listX)"),
-                "the manager base must expose the one viewport truth");
-        assertTrue(src.contains("rowPaintVisible(ClipBand band, int rowY)"),
-                "the render cull must take the band (the pre-C-8 literal cull is gone)");
-        assertTrue(src.contains("ClipBand band = listBand(listX);"),
-                "the frame path must fetch the band once and hand it to the walks");
+        assertTrue(src.contains("ClipBand band = rowsLayout.viewport();"),
+                "the manager obtains the clip from the arranged viewport");
+        assertTrue(src.contains("rowsLayout.visible(rowsLayout.at(lead + i), layoutScroll())"),
+                "the render cull uses the arranged box and viewport");
+        assertTrue(src.contains("rowsLayout.hitTest(mouseX, mouseY, layoutScroll())"),
+                "the row hit test uses the same arranged geometry");
     }
 
     @Test

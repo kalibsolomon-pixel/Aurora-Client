@@ -414,7 +414,7 @@ class AuroraScreenNavigationTest {
         // otherwise) — hidden tiles are not focusable, actionable, narrated,
         // or hoverable.
         String modules = bodyOf(src, "private void renderModulesLive(");
-        int cull = modules.indexOf("if (b == null) continue;");
+        int cull = modules.indexOf("if (bounds == null) continue;");
         // C-5 added the layout pair's availability mark ABOVE the tile walk
         // (Modules-tab chrome) — the tile re-mark is the one that must follow
         // the viewport cull.

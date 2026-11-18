@@ -9,6 +9,7 @@ import java.util.Map;
 
 public final class ScreenLayout {
     public static final class Box {
+        private Object key;
         private final String id;
         private int order = -1;
         private float x, top, width, height;
@@ -16,12 +17,18 @@ public final class ScreenLayout {
         private Box(String id) { this.id = id; }
 
         public String id() { return id; }
+        public Object key() { return key; }
         public float x() { return x; }
         public float top() { return top; }
         public float y(double scroll) { return (float) (top - scroll); }
         public float width() { return width; }
         public float height() { return height; }
         public int order() { return order; }
+
+        public boolean contains(double px, double py, double scroll) {
+            float y = y(scroll);
+            return px >= x && px < x + width && py >= y && py < y + height;
+        }
     }
 
     private final Map<Object, Box> boxes = new HashMap<>();
@@ -30,6 +37,7 @@ public final class ScreenLayout {
     private final ArrayList<Box> focusOrder = new ArrayList<>();
     private ClipBand viewport;
     private int extent, scrollHeight;
+    private long nextId;
 
     public void begin(ClipBand viewport) {
         for (int index = 0; index < arranged.size(); index++) arranged.get(index).order = -1;
@@ -43,8 +51,15 @@ public final class ScreenLayout {
     public Box place(Object key, String id, float x, float top, float width, float height, boolean focusable) {
         Box box = boxes.get(key);
         if (box == null) {
-            box = new Box(id == null ? "row/" + boxes.size() : id);
-            if (ids.putIfAbsent(box.id, box) != null) throw new IllegalArgumentException("Duplicate layout ID: " + box.id);
+            box = id == null ? null : ids.get(id);
+            if (box == null) {
+                box = new Box(id == null ? "row/" + nextId++ : id);
+                if (ids.putIfAbsent(box.id, box) != null) throw new IllegalArgumentException("Duplicate layout ID: " + box.id);
+            } else {
+                if (box.order >= 0) throw new IllegalArgumentException("Duplicate layout ID: " + id);
+                boxes.remove(box.key);
+            }
+            box.key = key;
             boxes.put(key, box);
         }
         if (box.order >= 0) throw new IllegalArgumentException("Duplicate layout key: " + key);
@@ -96,15 +111,18 @@ public final class ScreenLayout {
     private static Box active(Box box) { return box != null && box.order >= 0 ? box : null; }
 
     public boolean visible(Box box, double scroll) {
-        return viewport.intersects(box.x, box.y(scroll), box.width, box.height);
+        return box.order >= 0 && viewport.intersects(box.x, box.y(scroll), box.width, box.height);
+    }
+
+    public boolean contains(Box box, double x, double y, double scroll) {
+        return box.order >= 0 && viewport.contains(x, y) && box.contains(x, y, scroll);
     }
 
     public Box hitTest(double x, double y, double scroll) {
         if (!viewport.contains(x, y)) return null;
         for (int index = arranged.size() - 1; index >= 0; index--) {
             Box box = arranged.get(index);
-            float top = box.y(scroll);
-            if (x >= box.x && x < box.x + box.width && y >= top && y < top + box.height) return box;
+            if (box.contains(x, y, scroll)) return box;
         }
         return null;
     }

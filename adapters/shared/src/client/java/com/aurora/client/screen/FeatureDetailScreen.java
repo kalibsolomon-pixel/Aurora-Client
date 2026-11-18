@@ -91,6 +91,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen, LayoutS
     /** τ = 60 ms, snap 0.25, wheel step 30, no thumb — the screen's exact pre-R2 feel. */
     private final SmoothScroll scroll = new SmoothScroll(60.0).boundedMotion();
     private final ScreenLayout rowsLayout = new ScreenLayout();
+    private final ScreenLayout fixedLayout = new ScreenLayout();
     private int[] rowHeights;
     private long layoutFontKey = Long.MIN_VALUE;
     private int layoutWidth = -1, layoutTop, layoutHeight, layoutPopup;
@@ -102,6 +103,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen, LayoutS
             java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
 
     @Override public ScreenLayout contentLayout() { return rowsLayout; }
+    @Override public ScreenLayout fixedLayout() { return fixedLayout; }
     @Override public double layoutScroll() { return (int) scroll.current(); }
     private FeatureSetting activeDragSetting = null;
     private FeatureSetting fixedHeaderSetting;
@@ -182,13 +184,18 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen, LayoutS
             int rowHeight = rowHeights[index];
             if (rowHeight < 0) continue;
             FeatureSetting setting = settings.get(index);
-            rowsLayout.place(setting, Integer.toString(index), listX + 8, top + extent,
+            rowsLayout.place(setting, meta.id + "/" + index, listX + 8, top + extent,
                     LIST_W - 16, rowHeight, true);
             extent += rowHeight + ROW_GAP;
         }
         extent = Math.max(0, extent - ROW_GAP);
         if (compact()) fitBody(extent, popup);
         rowsLayout.finish(new ClipBand(listX + 8, top, LIST_W - 16, bodyBottom() - top), extent);
+        var fixedBand = new ClipBand(listX + 8, TOP_PAD, LIST_W - 16, top - TOP_PAD);
+        fixedLayout.begin(fixedBand);
+        if (pinned != null) fixedLayout.place(pinned, meta.id + "/pinned", fixedBand.x, fixedBand.y,
+                fixedBand.width, fixedBand.height, true);
+        fixedLayout.finish(fixedBand, 0);
         FeatureSetting.setHostBand(rowsLayout.viewport());
     }
 
@@ -590,7 +597,8 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen, LayoutS
         // element when declined. EnumSetting's expanded popup is the one
         // deliberate above-the-dim surface (§9): it keeps painting in the
         // content pass through GlassSurface.aboveDimControl.
-        if (fixedHeaderSetting != null) fixedHeaderSetting.renderFixedHeaderGlass(ctx, listX, TOP_PAD, LIST_W);
+        if (fixedHeaderSetting != null)
+            fixedHeaderSetting.renderFixedHeaderGlass(ctx, listX, (int) fixedLayout.at(0).top(), LIST_W);
         GlassSurface.enableScissor(ctx, listX + 8, bodyTop(), listX + LIST_W - 8, bodyBottom());
         for (FeatureSetting s : meta.settings) {
             var box = rowsLayout.bounds(s);
@@ -722,7 +730,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen, LayoutS
         }
 
         if (fixedHeaderSetting != null)
-            fixedHeaderSetting.renderFixedHeader(ctx, listX, TOP_PAD, LIST_W, mouseX, mouseY);
+            fixedHeaderSetting.renderFixedHeader(ctx, listX, (int) fixedLayout.at(0).top(), LIST_W, mouseX, mouseY);
 
         // Reconcile nested controls against their final painted bounds. Hidden rows
         // cannot retain keyboard availability; the pinned Add control owns its header.
@@ -839,32 +847,25 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen, LayoutS
                 return true;
             }
         }
-        if (fixedHeaderSetting != null && mouseY >= TOP_PAD && mouseY < bodyTop()
-                && fixedHeaderSetting.mouseClicked(mouseX, mouseY, button, listX, TOP_PAD, LIST_W)) return true;
-        if (!FeatureSetting.hostBand().contains(mouseX, mouseY)) return false;
-        for (FeatureSetting s : meta.settings) {
-            var box = rowsLayout.bounds(s);
-            if (box != null && rowsLayout.visible(box, layoutScroll())
-                    && s.mouseClicked(mouseX, mouseY, button, listX, settingY(s, (int) box.y(layoutScroll())), LIST_W)) {
-                activeDragSetting = s;
-                // Mirror focus onto the exact control under the accepted
-                // click when the setting exposes several (ItemScale's rows,
-                // Accent's peers — AuroraScreen's rule); single-control
-                // settings keep the first-control focus the C-2 pilot set.
-                var controls = s.controlsWithReset();
-                if (!controls.isEmpty()) {
-                    SemanticActionControl hit = null;
-                    for (SemanticActionControl c : controls) {
-                        if (c.isAvailable() && mouseX >= c.getX() && mouseX < c.getRight()
-                                && mouseY >= c.getY() && mouseY < c.getBottom()) {
-                            hit = c;
-                            break;
-                        }
+        var fixed = fixedLayout.hitTest(mouseX, mouseY, 0);
+        if (fixed != null && fixedHeaderSetting.mouseClicked(mouseX, mouseY, button, listX, (int) fixed.top(), LIST_W)) return true;
+        var box = rowsLayout.hitTest(mouseX, mouseY, layoutScroll());
+        if (box != null && box.key() instanceof FeatureSetting s
+                && s.mouseClicked(mouseX, mouseY, button, listX, settingY(s, (int) box.y(layoutScroll())), LIST_W)) {
+            activeDragSetting = s;
+            var controls = s.controlsWithReset();
+            if (!controls.isEmpty()) {
+                SemanticActionControl hit = null;
+                for (SemanticActionControl c : controls) {
+                    if (c.isAvailable() && mouseX >= c.getX() && mouseX < c.getRight()
+                            && mouseY >= c.getY() && mouseY < c.getBottom()) {
+                        hit = c;
+                        break;
                     }
-                    this.setFocused(hit != null ? hit : controls.get(0));
                 }
-                return true;
+                this.setFocused(hit != null ? hit : controls.get(0));
             }
+            return true;
         }
         return false;
     }
