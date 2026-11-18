@@ -371,6 +371,13 @@ public final class FeatureCatalog {
         // this binding makes FeatureHealth report that on Text & Fonts.
         mixin("ScreenTextScopeMixin", "scoping the custom font to Aurora windows", "text_fonts");
         mixin("TrueTypeProviderDefinitionMixin", "crisp Aurora fonts at every GUI scale", "text_fonts");
+        // SDF text spike (26.3 only; inert unless -Daurora.text.sdf=true, raster fallback on failure).
+        mixin("SdfFontManagerMixin", "smooth scaling for custom text", "text_fonts")
+                .gates("textSdf").yieldsTo("modernui", "caxton");
+        mixin("SdfGlyphRenderStateMixin", "smooth scaling for custom text", "text_fonts")
+                .gates("textSdf").yieldsTo("modernui", "caxton");
+        mixin("SdfGuiTextMixin", "smooth scaling for custom text", "text_fonts")
+                .gates("textSdf").yieldsTo("modernui", "caxton");
         mixin("FontManagerAccessor", "crisp Aurora fonts at every GUI scale", "text_fonts");
         mixin("FontSetAccessor", "crisp Aurora fonts at every GUI scale", "text_fonts");
         mixin("MinecraftFontManagerAccessor", "crisp Aurora fonts at every GUI scale", "text_fonts");

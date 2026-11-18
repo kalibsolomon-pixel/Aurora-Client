@@ -5,6 +5,7 @@
   "customTitleScreen": true,
   "moduleGridView": true,
   "textRendererMode": "ALL_TEXT",
+  "textSdf": false,
   "activeFont": "FIRA_SANS",
   "textWeight": "MEDIUM",
   "textItalic": false,

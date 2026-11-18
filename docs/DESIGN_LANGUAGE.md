@@ -202,6 +202,12 @@ must look the way they will in game. "All Text" styles everything, HUD and vanil
 Measurement always follows drawing: `MixinFont` re-routes width through the same scope, and
 `AuroraFontRenderer.styleKey()` folds the applicability into every memo key.
 
+**Smooth Scaling (SDF)** is off by default. It changes how Aurora's custom glyphs are
+drawn in the GUI, not where the custom font applies or how it is measured. The 8 px body,
+9 px body, 11 px title and 20 px wordmark keep their raster metrics. Compare both at
+native pose scale before judging stroke weight; the main gain is at larger pose scales.
+World-space text and non-bundled fallback glyphs retain the bitmap path.
+
 | Role | Normative treatment |
 |---|---|
 | Screen title | Primary, `TITLE` role (§4.1), uniquely placed in the title band. |

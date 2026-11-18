@@ -549,6 +549,8 @@ public final class ParityProbe implements ClientModInitializer {
                         + " us=" + (System.nanoTime() - start) / 1000);
             }
             case "font-specimen" -> NativeUi.setScreen(client, new FontSpecimenScreen());
+            case "sdf-compare" -> NativeUi.setScreen(client,
+                    new SdfCompareScreen(args.length > 1 ? args[1] : "1"));
             case "benchmark" -> {
                 var output = root.resolve(args[1] + ".json");
                 if (Files.exists(output)) throw new IllegalStateException("Benchmark result already exists");

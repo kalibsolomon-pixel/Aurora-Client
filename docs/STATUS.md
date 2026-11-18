@@ -12,6 +12,9 @@ native probe now measures open-screen extraction and cache payload separately
 from gameplay overhead. [Implementation and measured limits](reports/2026-11-17-ui-cache-refinement.md).
 Keystrokes has two key styles: Flat (default, Lunar-style legend on a flat coloured face) and cached Cherry-profile 3D keycaps; legends are row-sized and centred on their visible ink.
 
+Smooth Scaling (SDF) is opt-in on all three lines. It preserves raster layout and still needs
+[native visual acceptance](reports/2026-11-17-sdf-spike.md#phase-1-acceptance) before a default change.
+
 Pulsar integration adds Phenomena's analytics and recording as Aurora's 40th
 feature, off by default. Its configuration and six-tab dashboard follow Aurora's
 profile, input and theme contracts. See [Pulsar](PULSAR.md) for workflows,
