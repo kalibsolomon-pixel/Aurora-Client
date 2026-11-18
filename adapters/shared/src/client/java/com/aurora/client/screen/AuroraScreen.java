@@ -1916,12 +1916,15 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
             // 2026-11-14); a per-module accent override still applies.
             int accent = ModuleAccentColors.get(m.id);
             color = accent != 0 ? accent : MaterialSurface.color(ThemeToken.ACCENT);
+            // On the lit raised face the glyph is a quarter of the way to white, so the on icon
+            // reads as illuminated beside the off grey rather than darker (council 2026-11-18).
+            if (MaterialSurface.unified()) color = com.aurora.client.util.AuroraAnim.lerpArgb(color, color | 0x00ffffff, .25f);
         } else {
-            // Off: midway between secondary and muted text in unified windows, clearly below the
-            // label's white so on and off part at a glance, without reading as unavailable.
+            // Off: three quarters of the way from secondary to muted text in unified windows, well
+            // below the label's white so on and off part at a glance, without reading as unavailable.
             color = MaterialSurface.unified() ? neutral(com.aurora.client.util.AuroraAnim.lerpArgb(
                     MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY),
-                    MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED), .5f))
+                    MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED), .75f))
                     : MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED);
         }
         // Crisp native-resolution glyph (the shared font atlas is

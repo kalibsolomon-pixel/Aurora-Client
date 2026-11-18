@@ -38,6 +38,8 @@ public class ArmorModule extends HudModule {
     private static final int TEXT_GAP = 3;
     /** Horizontal layout: gap between adjacent cells. */
     private static final int COL_GAP = 4;
+    /** Translucent backing behind each durability readout above the hotbar strip. */
+    private static final int READOUT_PLATE = 0x66000000;
 
     // Durability-bar geometry (matches vanilla hotbar item bar conventions:
     // 13x2 dark frame with a 12x1 colored fill on the top row).
@@ -326,6 +328,9 @@ public class ArmorModule extends HudModule {
                     int tw = tr.width(text);
                     int tx = x + Math.round(centerX) - tw / 2;
                     int ty = y;
+                    // A faint plate under each readout, like the strip below it: the numbers float
+                    // over the world and washed out on snow and sky (council 2026-11-18).
+                    ctx.fill(tx - 2, ty - 1, tx + tw + 1, ty + tr.lineHeight, READOUT_PLATE);
                     com.aurora.client.hud.HudTextPainter.draw(ctx,tr, textCache.text(i, text), tx, ty, textColor);
                 }
             }

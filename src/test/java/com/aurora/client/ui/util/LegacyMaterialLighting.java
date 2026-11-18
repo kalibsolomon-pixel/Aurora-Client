@@ -93,7 +93,7 @@ public final class LegacyMaterialLighting {
         double specular = profile.specular ? Math.pow(Math.max(0, reflectedZ), SPEC_POWER) : 0;
         // The shadow-side gain (2026-11-18) is an equation change, not an optimization, so the
         // reference follows it.
-        double shade = com.aurora.client.theme.MaterialLighting.SHADE_GAIN;
+        double shade = 1 + (com.aurora.client.theme.MaterialLighting.SHADE_GAIN - 1) * k;
         return RIM_GAIN * (diffuse < 0 ? diffuse * shade : diffuse) + SPEC_GAIN * specular;
     }
 

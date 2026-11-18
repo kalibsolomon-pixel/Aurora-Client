@@ -76,7 +76,7 @@ class DepthPassContractTest {
         assertTrue(edit.contains("if (!glassOk && !opaqueInset)"));
         assertTrue(edit.contains("IconCatalog.glyph(\"search\")"));
         assertTrue(slider.contains("MaterialSurface.knob(g,knobX-knobR,knobY-knobR,knobR*2"));
-        assertTrue(slider.contains("MaterialSurface.sliderTrack(g,x,ty,w,TRACK_H,trackRadius(),disabled)"));
+        assertTrue(slider.contains("MaterialSurface.sliderTrack(g,wx,ty,ww,TRACK_H,trackRadius(),disabled)"));
         assertTrue(read("ui/component/ToggleSwitch.java").contains("MaterialSurface.switchTrack(g,x,y,w,h,r,t,hover,disabled)"));
         // Centred stays centred (owner rule): the value centres left of the chevron slot.
         assertTrue(read("screen/setting/EnumSetting.java").contains("AuroraFontRenderer.drawCentered(ctx, tr, name, btnX + textAreaW / 2f, textY, textColor)"));

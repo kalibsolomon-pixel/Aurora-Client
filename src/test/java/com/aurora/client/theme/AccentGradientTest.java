@@ -46,7 +46,7 @@ class AccentGradientTest {
         String toggle = SourceTree.read("ui/component/ToggleSwitch.java");
         assertFalse(toggle.contains("AccentGradient."), "switches no longer wear the gradient");
         String slider = SourceTree.read("ui/component/Slider.java");
-        assertTrue(slider.contains("RenderUtil.drawRoundedRectAA(g, x, ty, filledW, TRACK_H, trackRadius(), fill());"));
+        assertTrue(slider.contains("RenderUtil.drawRoundedRectAA(g, wx, ty, filledW + WELL_EXT, TRACK_H, trackRadius(), fill());"));
         String render = SourceTree.read("ui/util/RenderUtil.java");
         assertTrue(render.contains("NativeShapeRenderer.drawGradient("), "one shader quad");
         assertTrue(render.contains("AuroraAnim.lerpArgb(from, to, 0.5f)"), "flat midpoint where the shader cannot run");

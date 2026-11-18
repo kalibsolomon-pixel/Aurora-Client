@@ -422,11 +422,12 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen, LayoutS
             doneBtn.setWidth(bw); doneBtn.setHeight(bh);
             doneBtn.setX(compactFrame.x() + LIST_W - bw - com.aurora.client.ui.util.UiDensity.FRAME_EDGE);
             doneBtn.setY(compactFrame.y() + Math.round(com.aurora.client.ui.util.UiDensity.headerY(bh)));
-            // Reset keeps Done's height and position anchor but its OWN width — the wider
-            // of its two labels (see init); Done's right-aligned slot never moves.
-            int resetBw = Math.max(bw, this.font.width("Confirm reset") + 22);
-            resetBtn.setWidth(resetBw); resetBtn.setHeight(bh);
-            resetBtn.setX(doneBtn.getX() - resetBw - 4); resetBtn.setY(doneBtn.getY());
+            // Reset keeps Done's height and right-edge anchor but sizes to its current label, so the
+            // ghost word sits beside Done (council 2026-11-18: a box sized for "Confirm reset" left
+            // "Reset" floating 30 px away). Arming grows it leftwards; Done never moves.
+            resetBtn.setHeight(bh);
+            resetBtn.setY(doneBtn.getY());
+            placeReset();
         }
         resetBtnArmed = resetConfirm.isArmed();
         registeredSettingControls.clear();
@@ -480,6 +481,14 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen, LayoutS
         resetBtnArmed = armed;
         resetBtn.setMessage(Component.literal(armed ? "Confirm reset" : "Reset"));
         resetBtn.destructive(armed);
+        if (compact()) placeReset();
+    }
+
+    /** Reset's width follows its label; its right edge stays 4 px left of Done. */
+    private void placeReset() {
+        int resetBw = this.font.width(resetBtn.getMessage()) + 22; // the painter ellipsizes past w - 20
+        resetBtn.setWidth(resetBw);
+        resetBtn.setX(doneBtn.getX() - resetBw - 4);
     }
 
     @Override

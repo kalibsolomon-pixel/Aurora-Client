@@ -1178,6 +1178,11 @@ addWithSettings("hitbox",
                 "Customize Aurora's accent and background colors, and the opacity, blur and corner radius of its surfaces.",
                 () -> cfg.themeEnabled, v -> cfg.themeEnabled = v,
                 List.of(
+                        // An Enabled row, as every other Settings group has, instead of a switch on
+                        // the group heading (council 2026-11-18: one control language per page).
+                        new BooleanSetting("Enabled", () -> cfg.themeEnabled,
+                                v -> { cfg.themeEnabled = v; persistThemeChange(); }).resetDefault("themeEnabled", () -> defaults.themeEnabled)
+                                .description("Applies your colors below to every Aurora screen. Off uses the factory palette."),
                         new AccentSetting("Accent Color",
                                 () -> cfg.themeOrDefault().accent,
                                 v -> {
@@ -1227,7 +1232,7 @@ addWithSettings("hitbox",
                                 ThemeRoundness.MIN_RADIUS, ThemeRoundness.MAX_RADIUS, 1, true).resetDefault(() -> defaults.themeOrDefault().cornerRadius)
                                 .valueFormatter(v -> v.intValue() + " px")
                                 .description("How round every Aurora shape is: windows, buttons, fields, toggles, sliders and scrollbars. 0 is square and 10 is the classic look. Drag previews the change live; release saves it.")
-                ));
+                )).noSettingsToggle(true);
 
         FeatureSetting uiFpsLimit = new EnumSetting<>("UI FPS Limit", AuroraConfig.GuiFps.class,
                 () -> AuroraConfig.GuiFps.fromValue(cfg.guiFpsLimit), v -> cfg.guiFpsLimit = v.value).resetDefault(() -> AuroraConfig.GuiFps.fromValue(defaults.guiFpsLimit))

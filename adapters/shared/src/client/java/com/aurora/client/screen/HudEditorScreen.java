@@ -131,7 +131,7 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
         int h = 20;
 
         // Owner corrections (2026-10-19): Aurora Settings sits over the
-        // crosshair and Reset Positions is a compact corner action. Both are the
+        // crosshair and Reset Positions is a compact corner action (bottom right). Both are the
         // raised, bevelled control face every Aurora window uses (owner, 2026-11-18).
         this.addRenderableWidget(ButtonWidget.semantic(
                 (this.width - w) / 2, (this.height - h) / 2, w, h,
@@ -152,8 +152,10 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
         int resetW = Math.min(w, Math.max(this.font.width("Reset Positions"),
                 this.font.width("Confirm reset")) + 22);
         int resetH = 16;
+        // Bottom-right corner (2026-11-18 council pass): the top-right corner is the default
+        // Potion Effects anchor, whose editor frame ran through the button.
         resetBtn = ButtonWidget.semantic(
-                this.width - resetW - 8, 8, resetW, resetH,
+                this.width - resetW - 8, this.height - resetH - 8, resetW, resetH,
                 Component.literal(resetConfirm.isArmed() ? "Confirm reset" : "Reset Positions"),
                 "Moves every HUD module back to its default anchor, offset and scale. Press again to confirm.",
                 this::resetPressed).glassBackground(true);
