@@ -18,6 +18,9 @@ public record SettingRowLayout(int height, List<String> lines, UiDensity.Rect la
      * slider with at most {@link #SHORT_STEPS} positions. A track never spans the row. */
     public static final int TRACK_W = UiDensity.ENUM_W, SHORT_TRACK_W = UiDensity.ENUM_W / 2, SHORT_STEPS = 10;
 
+    /** A slider label column, before its text inset, that still holds the reset action and some text. */
+    static final int MIN_SLIDER_LABEL = 32;
+
     /** {@link #TRACK_W}, or {@link #SHORT_TRACK_W} for a slider with few positions. */
     public static int trackWidth(int steps) { return steps > 0 && steps <= SHORT_STEPS ? SHORT_TRACK_W : TRACK_W; }
 
@@ -55,6 +58,14 @@ public record SettingRowLayout(int height, List<String> lines, UiDensity.Rect la
             h = UiDensity.INLINE_SLIDER;
             int valueX = width - pad - KNOB_RESERVE - controlW - KNOB_RESERVE - gap - VALUE_W;
             labelW = Math.max(1, valueX - gap - pad);
+            // A narrow row (the frame room of 2026-11-18) shortens the track, never below the short
+            // track, before the label loses the room its reset action needs.
+            int shrink = Math.min(MIN_SLIDER_LABEL - labelW, controlW - SHORT_TRACK_W);
+            if (shrink > 0) {
+                controlW -= shrink;
+                valueX += shrink;
+                labelW += shrink;
+            }
             value = new UiDensity.Rect(valueX, 0, VALUE_W, h);
         }
         labelW = Math.max(1, labelW - 4); // previous design's 12px text inset

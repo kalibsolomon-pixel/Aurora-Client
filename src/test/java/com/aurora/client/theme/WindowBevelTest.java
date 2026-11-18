@@ -72,8 +72,8 @@ class WindowBevelTest {
             assertEquals(viewport == 300, frame.width() < 320);
             for (int radius : new int[]{0, ThemeRoundness.DEFAULT_RADIUS}) {
                 for (var level : WindowBevel.Level.values()) {
-                    float inset = (UiDensity.HEADER - UiDensity.TOOL) / 2f;
-                    assertContentClear(frame.width(), frame.height(), radius, level, 12, inset);
+                    // Main window content keeps the shared frame room (2026-11-18).
+                    assertContentClear(frame.width(), frame.height(), radius, level, UiDensity.FRAME_EDGE, UiDensity.FRAME_EDGE);
                     assertContentClear(84, 48, ThemeRoundness.of(radius).radiusSmall(), level, 2, 2);
                 }
             }

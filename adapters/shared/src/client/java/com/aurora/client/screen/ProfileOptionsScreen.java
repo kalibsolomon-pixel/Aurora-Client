@@ -122,7 +122,7 @@ public class ProfileOptionsScreen extends Screen implements ThemedScreen {
         }
 
         int bh = UiDensity.HEADER_BUTTON_H, bw = UiDensity.HEADER_BUTTON_W;
-        this.addRenderableWidget(ButtonWidget.semantic(panelX + panelW - 12 - bw, panelY + panelH - 8 - bh, bw, bh,
+        this.addRenderableWidget(ButtonWidget.semantic(panelX + panelW - UiDensity.FRAME_EDGE - bw, panelY + panelH - UiDensity.FRAME_EDGE - bh, bw, bh,
                 Component.literal("Done"), "Saves the name and returns.", this::done)
                 .glassStyle(Button.GlassStyle.STAINED).primary(true));
     }
@@ -317,12 +317,12 @@ public class ProfileOptionsScreen extends Screen implements ThemedScreen {
         GlassSurface.beginGlassPass();
         GlassSurface.container(ctx, panelX, panelY, panelW, panelH, radius);
         GlassSurface.overlayDim(ctx, this.width, this.height);
-        MaterialSurface.parent(ctx, panelX, panelY, panelW, panelH, radius, 5);
+        MaterialSurface.parent(ctx, panelX, panelY, panelW, panelH, radius, MaterialSurface.frameInset(radius));
 
         int onBackground = MaterialSurface.color(ThemeToken.ON_BACKGROUND);
         int secondary = ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY);
         ctx.text(this.font, AuroraFontRenderer.ellipsize(this.font, name, panelW - 24, 0),
-                panelX + 12, panelY + (UiDensity.HEADER - this.font.lineHeight) / 2 + 1, onBackground, false);
+                panelX + 12, panelY + UiDensity.headerTop(this.font.lineHeight) + 1, onBackground, false);
 
         // The icon in a well, its name under the Change icon button.
         float small = ThemeManager.current().roundness().radiusSmall();

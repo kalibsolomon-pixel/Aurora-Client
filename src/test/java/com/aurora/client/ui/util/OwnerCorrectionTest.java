@@ -49,7 +49,7 @@ class OwnerCorrectionTest {
     @Test void sharedDetailsUseMeasuredLeftLabelsAndNestedItemSlidersUseActualHeights() throws Exception {
         String host = source("screen/FeatureDetailScreen.java");
         assertTrue(host.contains("private boolean compact() { return true; }"));
-        assertTrue(host.contains("setting.measureCompact(LIST_W)"));
+        assertTrue(host.contains("setting.measureCompact(settingW())")); // the row column inside the frame room
         assertTrue(host.contains("this.font, meta.displayName,"));
         String row = source("screen/setting/FeatureSetting.java");
         assertTrue(row.contains("int textX = x + box.x()"));

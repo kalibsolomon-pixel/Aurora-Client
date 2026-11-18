@@ -117,6 +117,13 @@ public final class WindowBevel {
         return bandWidth(shorterSide, radius, contentInset - pixelSize / Math.sqrt(2), level);
     }
 
+    /** Band cap for a window that keeps its content {@code UiDensity.FRAME_EDGE} inside every
+     * edge: the frame room less the content gap, narrowed where a large radius bends the corner. */
+    public static float frameInset(float radius) {
+        int edge = com.aurora.client.ui.util.UiDensity.FRAME_EDGE;
+        return Math.max(0, cornerClearance(radius, edge, edge) - com.aurora.client.ui.util.UiDensity.FRAME_GAP);
+    }
+
     /** SDF clearance to a content corner at known offsets from the two exterior edges. */
     public static float cornerClearance(float radius, float horizontal, float vertical) {
         double qx = radius - horizontal, qy = radius - vertical;

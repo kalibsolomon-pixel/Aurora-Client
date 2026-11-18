@@ -70,7 +70,7 @@ public class IconPickerScreen extends Screen implements ThemedScreen {
         var frame = UiDensity.window(this.width, this.height);
         panelX = frame.x(); panelY = frame.y(); panelW = frame.width(); panelH = frame.height();
         int bh = UiDensity.HEADER_BUTTON_H;
-        footerY = panelY + panelH - 8 - bh;
+        footerY = panelY + panelH - UiDensity.FRAME_EDGE - bh;
         gridY = panelY + UiDensity.HEADER + 6;
         gridH = Math.max(STEP, footerY - 8 - gridY);
         int usable = panelW - 24 - 8; // 8 for the scrollbar lane
@@ -80,8 +80,8 @@ public class IconPickerScreen extends Screen implements ThemedScreen {
 
         String query = searchField != null ? searchField.getValue() : "";
         int searchW = Math.min(160, Math.max(80, panelW / 3));
-        searchField = new EditBox(this.font, panelX + panelW - 12 - searchW,
-                panelY + (UiDensity.HEADER - bh) / 2 + 1, searchW, bh, Component.literal("Search icons"));
+        searchField = new EditBox(this.font, panelX + panelW - UiDensity.FRAME_EDGE - searchW,
+                panelY + UiDensity.headerTop(bh), searchW, bh, Component.literal("Search icons"));
         searchField.setMaxLength(48);
         searchField.setHint(Component.literal("Search icons"));
         searchField.setValue(query);
@@ -90,7 +90,7 @@ public class IconPickerScreen extends Screen implements ThemedScreen {
         this.setFocused(searchField);
 
         int btnW = 64;
-        int applyX = panelX + panelW - 12 - btnW;
+        int applyX = panelX + panelW - UiDensity.FRAME_EDGE - btnW;
         this.addRenderableWidget(ButtonWidget.semantic(applyX - 6 - btnW, footerY, btnW, bh,
                 Component.literal("Cancel"), "Discards the choice and returns.",
                 () -> com.aurora.client.adapter.NativeUi.setScreen(this.minecraft, parent)).glassBackground(true));
@@ -142,7 +142,7 @@ public class IconPickerScreen extends Screen implements ThemedScreen {
         GlassSurface.beginGlassPass();
         GlassSurface.container(ctx, panelX, panelY, panelW, panelH, radius);
         GlassSurface.overlayDim(ctx, this.width, this.height);
-        MaterialSurface.parent(ctx, panelX, panelY, panelW, panelH, radius, 3);
+        MaterialSurface.parent(ctx, panelX, panelY, panelW, panelH, radius, MaterialSurface.frameInset(radius));
 
         String query = searchField.getValue();
         if (!query.equals(lastQuery)) {
@@ -155,7 +155,7 @@ public class IconPickerScreen extends Screen implements ThemedScreen {
 
         int onBackground = MaterialSurface.color(ThemeToken.ON_BACKGROUND);
         int muted = ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED);
-        ctx.text(this.font, title(icons.size()), panelX + 12, panelY + (UiDensity.HEADER - this.font.lineHeight) / 2 + 1,
+        ctx.text(this.font, title(icons.size()), panelX + 12, panelY + UiDensity.headerTop(this.font.lineHeight) + 1,
                 onBackground, false);
 
         // The grid: only the rows the viewport shows.

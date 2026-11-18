@@ -352,9 +352,15 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
     protected int windowBottom() { return windowTop() + windowHeight(); }
     protected int windowX() { return frame().x(); }
     protected int windowWidth() { return frame().width(); }
-    protected int toolbarY() { return windowTop() + (com.aurora.client.ui.util.UiDensity.HEADER - com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_H) / 2 + 1; }
+    protected int toolbarY() { return windowTop() + Math.round(com.aurora.client.ui.util.UiDensity.headerY(com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_H)); }
     protected int listTop() { return windowTop() + HEADER_H + 2; }
-    protected int listBottomPad() { return this.height - (windowBottom() - 8); }
+    protected int listBottomPad() { return this.height - (windowBottom() - com.aurora.client.ui.util.UiDensity.FRAME_EDGE); }
+    /** Rows start {@value #CLIP_PAD} px inside the frame room, so their clip (rings, shadows) stays out of the band. */
+    protected static final int CLIP_PAD = 2;
+    protected static final int LIST_LEFT = com.aurora.client.ui.util.UiDensity.FRAME_EDGE + CLIP_PAD;
+    protected final int listX() { return windowX() + LIST_LEFT; }
+    /** The row column: from {@link #LIST_LEFT} to the scrollbar's column, which ends at the frame room. */
+    protected int frameListWidth() { return windowWidth() - LIST_LEFT - com.aurora.client.ui.util.UiDensity.scrollRightInset(); }
 
 
     // ------------------------------------------------------------------
@@ -369,12 +375,12 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         toolbarActionBtn = createToolbarActionBtn();
         if (toolbarActionBtn != null) this.addRenderableWidget(toolbarActionBtn);
         if (toolbarActionBtn != null) {
-            toolbarActionBtn.setX(windowX() + 8);
+            toolbarActionBtn.setX(listX());
             toolbarActionBtn.setY(toolbarY());
             toolbarActionBtn.setHeight(com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_H);
         }
         doneBtn = this.addRenderableWidget(ButtonWidget.semantic(
-                windowX() + windowWidth() - 8 - com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_W, toolbarY(), com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_W, com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_H,
+                windowX() + windowWidth() - com.aurora.client.ui.util.UiDensity.FRAME_EDGE - com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_W, toolbarY(), com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_W, com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_H,
                 Component.literal("Done"),
                 "Close this screen and return.",
                 this::onClose).glassBackground(true).theming(com.aurora.client.ui.component.Button.Theming.OUTLINED));
@@ -460,7 +466,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
      */
     @Override
     public void extractRenderState(GuiGraphicsExtractor ctx, int mouseX, int mouseY, float delta) {
-        int listX = (this.width - listWidth()) / 2;
+        int listX = listX();
         List<T> rows = currentRows();
         // One list fetch per frame drives everything below — the easing
         // bound, the row passes and the scrollbar (list sources may return a
@@ -522,13 +528,13 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         // editor whose row is half-scrolled out of the band must not paint
         // outside it, and a fully-scrolled-out editor paints nothing (the
         // subclass hooks gate on the field's band visibility themselves).
-        GlassSurface.enableScissor(ctx, listX - 4, listClipTop(), listX + listWidth() + 4, listClipBottom());
+        GlassSurface.enableScissor(ctx, listX - CLIP_PAD, listClipTop(), listX + listWidth() + CLIP_PAD, listClipBottom());
         paintEditorGlassPass(ctx, rows, listX);
         GlassSurface.disableScissor(ctx);
 
         // ---- 2. Dim — end of the glass pass (token-driven; dark in both modes by design) ----
         GlassSurface.overlayDim(ctx, this.width, this.height);
-        MaterialSurface.parent(ctx, windowX(), windowTop(), windowWidth(), windowHeight(), frameRadius, 3);
+        MaterialSurface.parent(ctx, windowX(), windowTop(), windowWidth(), windowHeight(), frameRadius, MaterialSurface.frameInset(frameRadius));
 
 
 
@@ -538,7 +544,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
             ctx.text(this.font, com.aurora.client.ui.util.AuroraFontRenderer.role(
                             com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(this.font, headerTitle(), titleRight - windowX() - 12, 0),
                             com.aurora.client.ui.util.AuroraFontRenderer.Role.TITLE),
-                    windowX() + 12, windowTop() + (com.aurora.client.ui.util.UiDensity.HEADER - this.font.lineHeight) / 2 + 3,
+                    windowX() + com.aurora.client.ui.util.UiDensity.TITLE_X, toolbarY() + (com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_H - this.font.lineHeight) / 2 + 2,
                     MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
         }
 
@@ -599,9 +605,9 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         // own over-the-dim layer, never glass.
         // Rows now sit inside the window, so they fade into its tint (not the dim).
         int fadeSurface = MaterialSurface.color(ThemeToken.WINDOW_FILL);
-        ScrollFade.drawTop(ctx, listX - 4, listWidth() + 8, listClipTop(), ScrollFade.FADE_PX,
+        ScrollFade.drawTop(ctx, listX - CLIP_PAD, listWidth() + 2 * CLIP_PAD, listClipTop(), ScrollFade.FADE_PX,
                 scroll.current(), fadeSurface);
-        ScrollFade.drawBottom(ctx, listX - 4, listWidth() + 8, listClipBottom(), ScrollFade.BOTTOM_FADE_PX,
+        ScrollFade.drawBottom(ctx, listX - CLIP_PAD, listWidth() + 2 * CLIP_PAD, listClipBottom(), ScrollFade.BOTTOM_FADE_PX,
                 maxScroll - scroll.current(), fadeSurface);
 
         // The list's scrollbar thumb — after the content scissor (it is
@@ -838,7 +844,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
 
     /** {@link #maxScroll()} against an already-fetched list (the per-frame path). */
     protected double maxScrollOf(List<T> rows) {
-        refreshLayout(rows, (this.width - listWidth()) / 2);
+        refreshLayout(rows, listX());
         return rowsLayout.maxScroll();
     }
 
@@ -861,7 +867,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         if (maxScroll <= 0) return;
         int trackTop = listClipTop();
         int trackH = listClipBottom() - trackTop;
-        int trackX = listX + listWidth() + 6;
+        int trackX = listX + listWidth() + com.aurora.client.ui.util.UiDensity.SCROLLBAR_GAP;
         ScrollbarChrome.Thumb thumb = thumb(maxScroll, trackH);
         boolean hover = mouseX >= trackX - 2 && mouseX <= trackX + 5
                 && mouseY >= thumb.y() && mouseY <= thumb.y() + thumb.height();
@@ -884,7 +890,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         // vanilla focus first, so focus never lingers somewhere the pointer
         // just left. The row walk below re-focuses the control it lands on.
         semanticHost.dropFocus();
-        int listX = (this.width - listWidth()) / 2;
+        int listX = listX();
         List<T> rows = currentRows();
         refreshLayout(rows, listX);
 
@@ -912,7 +918,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         if (maxScroll > 0) {
             int trackTop = listClipTop();
             int trackH = listClipBottom() - trackTop;
-            int trackX = listX + listWidth() + 6;
+            int trackX = listX + listWidth() + com.aurora.client.ui.util.UiDensity.SCROLLBAR_GAP;
             ScrollbarChrome.Thumb thumb = thumb(maxScroll, trackH);
             if (mouseX >= trackX - 3 && mouseX <= trackX + 6
                     && mouseY >= thumb.y() - 4 && mouseY <= thumb.y() + thumb.height() + 4) {
@@ -1137,7 +1143,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
     protected void renderEditorClipped(GuiGraphicsExtractor ctx, EditBox field, int listX,
                                        int mouseX, int mouseY, float delta) {
         if (field == null) return;
-        ctx.enableScissor(listX - 4, listClipTop(), listX + listWidth() + 4, listClipBottom());
+        ctx.enableScissor(listX - CLIP_PAD, listClipTop(), listX + listWidth() + CLIP_PAD, listClipBottom());
         field.extractRenderState(ctx, mouseX, mouseY, delta);
         ctx.disableScissor();
     }
@@ -1150,7 +1156,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
      */
     protected void renderFieldMessage(GuiGraphicsExtractor ctx, EditBox field, String message, int listX) {
         if (field == null || message == null) return;
-        ctx.enableScissor(listX - 4, listClipTop(), listX + listWidth() + 4, listClipBottom());
+        ctx.enableScissor(listX - CLIP_PAD, listClipTop(), listX + listWidth() + CLIP_PAD, listClipBottom());
         com.aurora.client.ui.util.FieldMessage.draw(ctx, this.font, message,
                 field.getX(), field.getY() + field.getHeight(), nameColumnWidth());
         ctx.disableScissor();
