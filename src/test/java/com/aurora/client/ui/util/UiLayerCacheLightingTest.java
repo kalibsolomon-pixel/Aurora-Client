@@ -154,6 +154,30 @@ class UiLayerCacheLightingTest {
         } finally { cache.dispose(); }
     }
 
+    @Test void windowFaceSpansMatchScalarRasterIncludingCornersAndShadow() throws Exception {
+        int pad = WindowBevel.SHADOW_PAD;
+        for (int width : new int[]{9, 101}) for (int height : new int[]{7, 44}) {
+            int logicalW = width + 2 * pad, logicalH = height + 2 * pad;
+            var cache = cache(logicalW * 3, logicalH * 3);
+            try {
+                var image = pixels(cache);
+                for (int radius : new int[]{0, 3, 10}) for (var level : WindowBevel.Level.values()) {
+                    int fill = 0x5416171d;
+                    double band = WindowBevel.rasterBandWidth(Math.min(width, height), radius, 5, 1d / 3, level);
+                    var finish = WindowBevel.finish(fill, 0xff626570, 9, level);
+                    var raster = new WindowBevel.Raster(width, height, radius, band, 1d / 3, finish, level);
+                    cache.windowFace(raster, fill, pad, logicalW, logicalH);
+                    for (int row = 0; row < image.getHeight(); row++) for (int col = 0; col < image.getWidth(); col++) {
+                        int expected = raster.pixel((col + .5) * (1d / 3) - pad, (row + .5) * (1d / 3) - pad, fill);
+                        int actual = image.getPixel(col, row);
+                        if (expected != actual) fail("span mismatch at " + col + "," + row + " for " + width + "x" + height
+                                + " radius " + radius + " " + level + ": " + Integer.toHexString(expected) + " vs " + Integer.toHexString(actual));
+                    }
+                }
+            } finally { cache.dispose(); }
+        }
+    }
+
     // Frozen 4b2b00d raster loops and lighting equations: never call the optimized math here.
     private static void legacyFace(NativeImage image,int x,int y,float width,float height,float radius,
                                    int scale,float top,float bottom,LegacyMaterialLighting.Profile profile) {

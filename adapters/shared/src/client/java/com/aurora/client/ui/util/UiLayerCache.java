@@ -210,12 +210,21 @@ public final class UiLayerCache implements RenderUtil.RectSink {
         IntBuffer pixels = MemoryUtil.memIntBuffer(image.getPointer(), w * h);
         double stepX = (double) logicalW / w, stepY = (double) logicalH / h;
         if (scaledRow == null || scaledRow.length < w) scaledRow = new int[w];
-        java.util.Arrays.fill(scaledRow, 0, w, argbToAbgr(fill));
+        int middleColor = 0;
+        boolean rowInitialized = false;
         for (int row = 0; row < h; row++) {
             double sampleY = (row + .5) * stepY - pad;
-            int leftEnd = Math.min((w + 1) / 2, (int) Math.ceil((raster.plateauInset(sampleY) + pad) / stepX));
+            int leftEnd = Math.min((w + 1) / 2, (int) Math.ceil((raster.flatRowInset(sampleY) + pad) / stepX));
             int rightStart = Math.max(leftEnd, w - leftEnd);
             int start = row * w;
+            if (leftEnd < rightStart) {
+                int color = argbToAbgr(raster.pixel(logicalW * .5 - pad, sampleY, fill));
+                if (!rowInitialized || middleColor != color) {
+                    java.util.Arrays.fill(scaledRow, 0, w, color);
+                    middleColor = color;
+                    rowInitialized = true;
+                }
+            }
             pixels.put(start + leftEnd, scaledRow, leftEnd, rightStart - leftEnd);
             for (int column = 0; column < leftEnd; column++)
                 pixels.put(start + column, argbToAbgr(raster.pixel((column + .5) * stepX - pad, sampleY, fill)));

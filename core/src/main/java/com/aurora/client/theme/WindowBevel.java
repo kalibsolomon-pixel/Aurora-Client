@@ -87,9 +87,12 @@ public final class WindowBevel {
             shadowAlpha = .21 + .035 * level.elevation;
         }
 
-        public double plateauInset(double y) {
+        public double flatRowInset(double y) {
             double edge = Math.max(band, aa * .5);
-            if (y < edge || y > height - edge) return width * .5;
+            if (y < edge || y > height - edge) {
+                double depth = Math.max(y < edge ? y : height - y, 0);
+                return Math.max(radius + offsetX, depth + Math.max(offsetX, offsetY));
+            }
             return y >= inset && y <= height - inset ? edge : inset;
         }
 
@@ -109,11 +112,13 @@ public final class WindowBevel {
                     double alpha = (color >>> 24) / 255d * ink;
                     face = rimOverFill(color, alpha, fill);
                 }
-                face = (int) Math.round((face >>> 24) * inside) << 24 | (face & 0xffffff);
+                int alpha = (int) Math.round((face >>> 24) * inside);
+                face = alpha == 0 ? 0 : alpha << 24 | (face & 0xffffff);
             }
             if (inside == 1 || band <= 0) return face;
             double shadowDistance = MaterialLighting.distance(x - offsetX, y - offsetY, width, height, radius);
-            float shadow = (float) (shadowAlpha * (1 - inside) * Math.clamp(.5 - shadowDistance / softness, 0, 1));
+            float shadow = (float) (shadowAlpha * Math.clamp(distance / aa, 0, 1)
+                    * Math.clamp(.5 - shadowDistance / softness, 0, 1));
             return MaterialLighting.shadowBehind(face, shadow);
         }
 

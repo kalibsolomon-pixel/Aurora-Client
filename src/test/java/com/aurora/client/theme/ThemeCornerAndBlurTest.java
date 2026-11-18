@@ -85,7 +85,7 @@ class ThemeCornerAndBlurTest {
         assertFalse(theme.has("roundness"));
         assertEquals(15, theme.get("cornerRadius").getAsInt());
         assertEquals(3, theme.get("blurRadius").getAsInt());
-        String current = "{\"theme\":{\"cornerRadius\":4,\"blurRadius\":12,\"backgroundOpacity\":0.5}}";
+        String current = "{\"theme\":{\"cornerRadius\":4,\"blurRadius\":12,\"backgroundOpacity\":0.5,\"windowBevel\":\"SUBTLE\"}}";
         assertEquals(current, ThemeMigrator.migrateConfigJson(current, LOG), "a current theme is left untouched");
     }
 

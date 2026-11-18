@@ -1204,8 +1204,8 @@ addWithSettings("hitbox",
                                     cfg.themeOrDefault().windowBevel = v;
                                     com.aurora.client.theme.ThemeManager.reload();
                                     persistThemeChange();
-                                }).labels(com.aurora.client.theme.WindowBevel.Level::label)
-                                .resetDefault(() -> defaults.themeOrDefault().windowBevel)
+                                }).resetDefault(() -> defaults.themeOrDefault().windowBevel)
+                                .labels(com.aurora.client.theme.WindowBevel.Level::label)
                                 .description("Set the depth of window frames. Off restores their flat trim. The bevel takes its finish from Background Color, Background Opacity and Blur Radius without changing the glass inside.")
                 ));
 
