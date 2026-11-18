@@ -13,6 +13,8 @@ import org.spongepowered.asm.mixin.gen.Invoker;
  */
 @Mixin(LivingEntity.class)
 public interface EntityAccessor {
+    // Not named getHurtSound: a public interface method with the target's own name is resolved
+    // to a subclass's protected override (Enderman), and the JVM throws IllegalAccessError.
     @Invoker("getHurtSound")
-    SoundEvent getHurtSound(DamageSource source);
+    SoundEvent invokeGetHurtSound(DamageSource source);
 }
