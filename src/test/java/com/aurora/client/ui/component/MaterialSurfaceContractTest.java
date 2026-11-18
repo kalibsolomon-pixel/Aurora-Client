@@ -23,6 +23,34 @@ class MaterialSurfaceContractTest {
         assertFalse(source.contains("cache.dispose()"),"all template disposal must be deferred");
     }
 
+    @Test void windowTemplatesRetireWhenReturningToGameplay() {
+        String glass = SourceTree.read("ui/component/GlassSurface.java");
+        int frameBegin = glass.indexOf("public static void beginFrame()");
+        int retire = glass.indexOf("MaterialSurface.beginFrame();", frameBegin);
+        int drain = glass.indexOf("UiLayerCache.beginFrame();", frameBegin);
+        assertTrue(frameBegin >= 0 && retire > frameBegin && drain > retire);
+        String material = SourceTree.read("ui/component/MaterialSurface.java");
+        assertTrue(material.contains("NativeUi.screen(mc)==null) {\n            if(TEMPLATES.size()>0) disposeTemplates();"));
+        assertTrue(material.contains("TEMPLATES.clear();"));
+        assertTrue(material.contains("cache.windowFace(raster, fill, pad, logicalW, logicalH);"));
+    }
+
+    @Test void bevelReplacesTheFlatOutlineAndNeverCapturesTheBackdrop() {
+        String material = SourceTree.read("ui/component/MaterialSurface.java");
+        int parent = material.indexOf("public static void parent(");
+        int finish = material.indexOf("windowFinish(g, x, y, w, h, radius, contentInset, 1, true);", parent);
+        int outline = material.indexOf("windowOutline(),120,true);", parent);
+        assertTrue(parent >= 0 && finish > parent && outline > finish);
+        assertTrue(material.substring(finish, outline).contains("return;"));
+        assertFalse(material.contains("backgroundOpacity()"));
+        for (String host : new String[]{"AuroraScreen", "FeatureDetailScreen", "ManagerListScreen", "IconPickerScreen",
+                "ProfileOptionsScreen", "ColorPickerScreen", "ResourcePackBrowserScreen"}) {
+            String code = SourceTree.read("screen/" + host + ".java");
+            int dim = code.indexOf("GlassSurface.overlayDim(", code.indexOf("GlassSurface.beginGlassPass()"));
+            assertTrue(dim >= 0 && code.indexOf("MaterialSurface.parent(", dim) > dim, host);
+        }
+    }
+
     @Test
     void parentWindowHostsSuppressStandaloneChildCaptures() throws Exception {
         String glass = Files.readString(SourceTree.resolve(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/ui/component/GlassSurface.java"));

@@ -468,9 +468,7 @@ public final class GlassSurface {
      */
     public static boolean aboveDimControl(GuiGraphicsExtractor g, float x, float y, float w, float h, float radius) {
         if (MaterialSurface.unified()) {
-            if (MaterialSurface.windowBevelEnabled())
-                MaterialSurface.overlayFace(g, Math.round(x), Math.round(y), Math.round(w), Math.round(h), radius, 4, 1);
-            else MaterialSurface.floating(g,Math.round(x),Math.round(y),Math.round(w),Math.round(h),Math.round(radius),1);
+            MaterialSurface.floating(g,Math.round(x),Math.round(y),Math.round(w),Math.round(h),Math.round(radius),1);
             return true;
         }
         if (!liveWorldBackdrop() && !BlurPanelRenderer.menuBackdropValid()) return false;

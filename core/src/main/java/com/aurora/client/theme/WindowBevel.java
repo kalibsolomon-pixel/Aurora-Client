@@ -57,6 +57,10 @@ public final class WindowBevel {
                 Math.min(8, Math.min(target, contentInset) * level.width))));
     }
 
+    public static double rasterBandWidth(double shorterSide, double radius, double contentInset, double pixelSize, Level level) {
+        return bandWidth(shorterSide, radius, contentInset - pixelSize / Math.sqrt(2), level);
+    }
+
     /** SDF clearance to a content corner at known offsets from the two exterior edges. */
     public static float cornerClearance(float radius, float horizontal, float vertical) {
         double qx = radius - horizontal, qy = radius - vertical;
@@ -64,7 +68,7 @@ public final class WindowBevel {
         return (float) Math.max(0, -distance);
     }
 
-    /** Evaluates only the band and exterior shadow; the uncovered interior always returns zero. */
+    /** Composites the frame over one base tint; the plateau returns that tint unchanged. */
     public static final class Raster {
         private final double width, height, radius, band, aa, inset, offsetX, offsetY, softness, shadowAlpha;
         private final Finish finish;
@@ -76,32 +80,50 @@ public final class WindowBevel {
             this.band = band;
             this.aa = pixelSize;
             this.finish = finish;
-            inset = Math.max(this.radius, band);
+            inset = Math.max(this.radius, Math.max(band, aa * .5));
             offsetX = level.elevation * MaterialLighting.SHADOW_X;
             offsetY = level.elevation * MaterialLighting.SHADOW_Y;
             softness = level.elevation * 2;
             shadowAlpha = .21 + .035 * level.elevation;
         }
 
-        public int pixel(double x, double y) {
-            if (band <= 0 || y >= inset && y <= height - inset && x >= band && x <= width - band
-                    || x >= inset && x <= width - inset && y >= band && y <= height - band) return 0;
+        public double plateauInset(double y) {
+            double edge = Math.max(band, aa * .5);
+            if (y < edge || y > height - edge) return width * .5;
+            return y >= inset && y <= height - inset ? edge : inset;
+        }
+
+        public int pixel(double x, double y, int fill) {
             double distance = MaterialLighting.distance(x, y, width, height, radius);
-            if (distance <= -band) return 0;
+            if (distance <= -Math.max(band, aa * .5)) return fill;
             double inside = Math.clamp(.5 - distance / aa, 0, 1);
-            int shaded = 0;
+            int face = 0;
             if (inside > 0) {
-                double ramp = finish.ramp * (1 - 2 * Math.clamp(y / height, 0, 1));
-                double ink = Math.clamp((distance + band) / Math.min(.9, band * .55), 0, 1);
-                double rim = MaterialLighting.curvatureDelta(x, y, width, height, radius, 1, MaterialLighting.Profile.RAISED,
-                        band, finish.rimGain, finish.specGain, finish.specPower);
-                int alpha = (int) Math.round((finish.color >>> 24) * inside * ink);
-                shaded = alpha == 0 ? 0 : alpha << 24 | MaterialLighting.lightness(finish.color, (float) (ramp + rim)) & 0xffffff;
+                face = fill;
+                if (band > 0) {
+                    double ramp = finish.ramp * (1 - 2 * Math.clamp(y / height, 0, 1));
+                    double ink = Math.clamp((distance + band) / Math.min(.9, band * .55), 0, 1);
+                    double rim = MaterialLighting.curvatureDelta(x, y, width, height, radius, 1, MaterialLighting.Profile.RAISED,
+                            band, finish.rimGain, finish.specGain, finish.specPower);
+                    int color = MaterialLighting.lightness(finish.color, (float) (ramp + rim));
+                    double alpha = (color >>> 24) / 255d * ink;
+                    face = rimOverFill(color, alpha, fill);
+                }
+                face = (int) Math.round((face >>> 24) * inside) << 24 | (face & 0xffffff);
             }
-            if (inside == 1) return shaded;
+            if (inside == 1 || band <= 0) return face;
             double shadowDistance = MaterialLighting.distance(x - offsetX, y - offsetY, width, height, radius);
             float shadow = (float) (shadowAlpha * (1 - inside) * Math.clamp(.5 - shadowDistance / softness, 0, 1));
-            return MaterialLighting.shadowBehind(shaded, shadow);
+            return MaterialLighting.shadowBehind(face, shadow);
+        }
+
+        private static int rimOverFill(int rim, double alpha, int fill) {
+            double base = (fill >>> 24) / 255d * (1 - alpha);
+            double combined = alpha + base;
+            if (combined == 0) return 0;
+            double rimWeight = alpha / combined;
+            return (int) Math.round(combined * 255) << 24 | mix(rim, fill, rimWeight, 16) << 16
+                    | mix(rim, fill, rimWeight, 8) << 8 | mix(rim, fill, rimWeight, 0);
         }
     }
 }

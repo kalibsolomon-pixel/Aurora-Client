@@ -127,11 +127,12 @@ class UiLayerCacheLightingTest {
         } finally { cache.dispose(); }
     }
 
-    @Test void measureWindowRingBakeWithoutTextureUploadOrGuiFills() throws Exception {
+    @Test void measureWindowFaceBakeWithoutTextureUploadOrGuiFills() throws Exception {
         int scale = 3, pad = WindowBevel.SHADOW_PAD;
         int logicalW = 336 + 2 * pad, logicalH = 288 + 2 * pad;
         var level = WindowBevel.Level.STANDARD;
-        var finish = WindowBevel.finish(0x5416171d, 0xff626570, 9, level);
+        int fill = 0x5416171d;
+        var finish = WindowBevel.finish(fill, 0xff626570, 9, level);
         var cache = cache(logicalW * scale, logicalH * scale);
         long fills = RenderUtil.fillsSubmitted();
         try {
@@ -140,14 +141,14 @@ class UiLayerCacheLightingTest {
                 for (int run = -15; run < samples.length; run++) {
                     long start = System.nanoTime();
                     var raster = new WindowBevel.Raster(336, 288, radius, 4, 1d / scale, finish, level);
-                    cache.windowRing(raster, pad, logicalW, logicalH);
+                    cache.windowFace(raster, fill, pad, logicalW, logicalH);
                     if (run >= 0) samples[run] = System.nanoTime() - start;
                 }
                 java.util.Arrays.sort(samples);
-                assertEquals(0, pixels(cache).getPixel(logicalW * scale / 2, logicalH * scale / 2));
+                assertEquals(fill, pixels(cache).getPixel(logicalW * scale / 2, logicalH * scale / 2));
                 assertTrue((pixels(cache).getPixel(logicalW * scale / 2, (pad + 1) * scale) >>> 24) > 200);
                 assertEquals(fills, RenderUtil.fillsSubmitted());
-                System.out.printf("Window ring CPU bake 336x288 scale=3 radius=%d median=%.3f ms p95=%.3f ms%n",
+                System.out.printf("Window face CPU bake 336x288 scale=3 radius=%d median=%.3f ms p95=%.3f ms%n",
                         radius, samples[10] / 1e6, samples[19] / 1e6);
             }
         } finally { cache.dispose(); }

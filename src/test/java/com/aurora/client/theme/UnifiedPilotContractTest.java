@@ -92,8 +92,15 @@ class UnifiedPilotContractTest {
             var original=ThemeDefinition.defaults(); original.mode=mode;
             for(double opacity:new double[]{0,.37,1}) {
                 original.backgroundOpacity=opacity;
-                var resolved=ThemeResolver.resolve(original,true);
-                assertEquals(Math.round((float)opacity*255f),resolved.color(ThemeToken.WINDOW_FILL)>>>24);
+                for (var level : WindowBevel.Level.values()) {
+                    original.windowBevel = level;
+                    var resolved=ThemeResolver.resolve(original,true);
+                    int fill = resolved.color(ThemeToken.WINDOW_FILL);
+                    assertEquals(Math.round((float)opacity*255f),fill>>>24);
+                    var finish = WindowBevel.finish(fill, resolved.color(ThemeToken.MATERIAL_BORDER_STRONG), 9, level);
+                    var raster = new WindowBevel.Raster(336, 288, 10, 4, 1, finish, level);
+                    assertEquals(fill, raster.pixel(168, 144, fill));
+                }
                 assertEquals(opacity,original.backgroundOpacity);
             }
         }
@@ -101,10 +108,12 @@ class UnifiedPilotContractTest {
 
     @Test void rendererRetainsSafetyGuardsAfterStyleRemoval() throws Exception {
         String renderer=read("ui/render/blur/BlurPanelRenderer.java");
+        assertTrue(renderer.contains("SCREENSHOT_SUPPRESS_MS = 400"));
         assertFalse(renderer.contains("GlassStyle.TRANSPARENT"));
         int body=renderer.indexOf("private static boolean renderPanelInternal(");
         for(String guard:new String[]{"permanentlyDisabled","suppressGlassUntilMs","menuBackdropValid()"})
             assertTrue(renderer.indexOf(guard,body)>body,guard);
+        assertTrue(renderer.indexOf("< suppressGlassUntilMs", body) < renderer.indexOf("return PortableBlurRenderer.render", body));
         assertTrue(read("ui/component/GlassSurface.java").contains("new BlurPanelRenderer.Lighting(true,0,0)"));
         assertTrue(read("ui/render/blur/PortableBlurRenderer.java").contains("params[16] = unified ? 1.35f : 1;")
                 && read("ui/render/blur/PortableBlurRenderer.java").contains("params[17] = unified ? .92f : 1;"),

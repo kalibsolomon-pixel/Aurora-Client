@@ -959,7 +959,8 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         // Cached chrome — one textured blit (a content layer above the dim,
         // exactly where it always sat).
         if (windowBevel) MaterialSurface.parent(g, boxX(), boxY(), BOX_W, BOX_H, radius,
-                MaterialSurface.windowCornerClearance(radius, 12, mainY() - boxY()));
+                Math.min(mainY() - boxY(), MaterialSurface.windowCornerClearance(radius, 12,
+                        AuroraFontRenderer.textY(font, boxY(), com.aurora.client.ui.util.UiDensity.HEADER) - boxY())));
         else layerCache.blitAt(g, cacheX, cacheY, cacheW, cacheH);
 
         renderLive(g, mods, mouseX, mouseY, delta);

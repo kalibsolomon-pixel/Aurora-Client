@@ -441,7 +441,8 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
                 mouseY = (int) Math.floor(com.aurora.client.ui.util.OverlayMotion.unscale(mouseY, pivot, progress));
             }
             float popR = Math.min(dropdownH / 2f, ThemeManager.current().roundness().radiusSmall());
-            MaterialSurface.overlayFace(ctx, btnX, dropdownY, BTN_W, dropdownH, popR, 2, progress);
+            MaterialSurface.overlayFace(ctx, btnX, dropdownY, BTN_W, dropdownH, popR,
+                    MaterialSurface.windowCornerClearance(popR, 2, 2), progress);
             for (int vIdx = 0; vIdx < visibleCount; vIdx++) {
                 int actualIdx = scrollOffset + vIdx;
                 if (actualIdx >= 0 && actualIdx < values.length) {

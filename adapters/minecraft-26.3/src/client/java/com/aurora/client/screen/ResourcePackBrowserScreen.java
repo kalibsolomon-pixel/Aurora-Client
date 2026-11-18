@@ -933,7 +933,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         // Sidebar — DEPRESSED container, SURFACE-token tint (whose alpha
         // carries the Background Opacity via surfaceColor — the single
         // application point). Flat panel returns in renderSidebar on decline.
-        sidebarGlass = screenSpace(g, () -> GlassSurface.container(g, panelX + ox, panelY + oy, panelW, panelH,
+        sidebarGlass = !MaterialSurface.windowBevelEnabled() && screenSpace(g, () -> GlassSurface.container(g, panelX + ox, panelY + oy, panelW, panelH,
                 AuroraTheme.RADIUS_LARGE, ThemeToken.SURFACE));
         paintActiveTabPass(g, mouseX, mouseY, panelX, panelY, panelW, panelH);
         paintCardButtonsPass(g);
@@ -1048,7 +1048,8 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         // are suppressed here (the glass rim replaces the outline — no
         // double outline).
         if (MaterialSurface.windowBevelEnabled()) {
-            MaterialSurface.parent(g,panelX,panelY,panelW,panelH,AuroraTheme.RADIUS_LARGE,2);
+            MaterialSurface.embeddedFrame(g, panelX, panelY, panelW, panelH, AuroraTheme.RADIUS_LARGE,
+                    MaterialSurface.windowCornerClearance(AuroraTheme.RADIUS_LARGE, 6, 6));
         } else if (MaterialSurface.unified()) {
             MaterialSurface.cached(g,panelX,panelY,panelW,panelH,AuroraTheme.RADIUS_LARGE,
                     ThemeManager.color(ThemeToken.MATERIAL_PANEL),ThemeManager.color(ThemeToken.BORDER),111,false);
@@ -1424,9 +1425,11 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         // captures the already-dimmed screen as its backdrop, exactly as it
         // did before this screen migrated. On decline the flat fill + outline
         // return.
-        boolean modalGlass = screenSpace(g, () -> GlassSurface.aboveDimContainer(g, modalX + ox, modalY + oy, modalW, modalH,
-                AuroraTheme.RADIUS_LARGE, ThemeToken.SURFACE));
-        if (!modalGlass) {
+        if (MaterialSurface.windowBevelEnabled()) {
+            MaterialSurface.parent(g, modalX, modalY, modalW, modalH, AuroraTheme.RADIUS_LARGE,
+                    MaterialSurface.windowCornerClearance(AuroraTheme.RADIUS_LARGE, 18, 10));
+        } else if (!screenSpace(g, () -> GlassSurface.aboveDimContainer(g, modalX + ox, modalY + oy, modalW, modalH,
+                AuroraTheme.RADIUS_LARGE, ThemeToken.SURFACE))) {
             RenderUtil.drawRoundedRectAA(g, modalX, modalY, modalW, modalH,
                     AuroraTheme.RADIUS_LARGE, ThemeManager.surfaceColor(ThemeToken.SURFACE));
             RenderUtil.drawRoundedOutlineAA(g, modalX, modalY, modalW, modalH,

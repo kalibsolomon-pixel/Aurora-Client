@@ -89,6 +89,8 @@ zero fills and glass ([evidence](releases/evidence/3.5.1-parity.json)). A first 
 attempt found that profiles saved before 3.5.1 logged a warning per removed field; restore
 now skips those retired fields quietly.
 
+Window frames now use a cached, content-clipped bevel (Standard by default); in-client glass, gem and metal captures are pending owner verification.
+
 ## Acceptance and contributor readiness
 
 See [step 5.5 evidence](port/step-5.5.md), [step 5 evidence](port/step-5.md)

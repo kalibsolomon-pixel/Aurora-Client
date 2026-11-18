@@ -221,7 +221,7 @@ public final class WorldMapScreen extends Screen implements ThemedScreen {
             String tooltip = hovered.name + " · " + hovered.x + ", " + hovered.y + ", " + hovered.z;
             int tw = Math.min(width - 16, font.width(tooltip) + 16);
             int tx = Math.max(4, Math.min(mx + 8, width - tw - 4));
-            MaterialSurface.floating(g, tx, my + 10, tw, 22, 4, 1);
+            MaterialSurface.floatingTooltip(g, tx, my + 10, tw, 22, 4, 6, 7);
             g.text(font, AuroraFontRenderer.ellipsize(font, tooltip, tw - 12, 1), tx + 6, my + 17,
                     ThemeManager.color(ThemeToken.ON_SURFACE), false);
         }

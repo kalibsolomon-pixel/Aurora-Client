@@ -206,15 +206,21 @@ public final class UiLayerCache implements RenderUtil.RectSink {
         }
     }
 
-    public void windowRing(com.aurora.client.theme.WindowBevel.Raster raster, int pad, int logicalW, int logicalH) {
+    public void windowFace(com.aurora.client.theme.WindowBevel.Raster raster, int fill, int pad, int logicalW, int logicalH) {
         IntBuffer pixels = MemoryUtil.memIntBuffer(image.getPointer(), w * h);
         double stepX = (double) logicalW / w, stepY = (double) logicalH / h;
+        if (scaledRow == null || scaledRow.length < w) scaledRow = new int[w];
+        java.util.Arrays.fill(scaledRow, 0, w, argbToAbgr(fill));
         for (int row = 0; row < h; row++) {
             double sampleY = (row + .5) * stepY - pad;
-            for (int column = 0; column < w; column++) {
-                int pixel = raster.pixel((column + .5) * stepX - pad, sampleY);
-                pixels.put(row * w + column, argbToAbgr(pixel));
-            }
+            int leftEnd = Math.min((w + 1) / 2, (int) Math.ceil((raster.plateauInset(sampleY) + pad) / stepX));
+            int rightStart = Math.max(leftEnd, w - leftEnd);
+            int start = row * w;
+            pixels.put(start + leftEnd, scaledRow, leftEnd, rightStart - leftEnd);
+            for (int column = 0; column < leftEnd; column++)
+                pixels.put(start + column, argbToAbgr(raster.pixel((column + .5) * stepX - pad, sampleY, fill)));
+            for (int column = rightStart; column < w; column++)
+                pixels.put(start + column, argbToAbgr(raster.pixel((column + .5) * stepX - pad, sampleY, fill)));
         }
     }
 

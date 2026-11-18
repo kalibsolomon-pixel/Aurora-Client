@@ -428,16 +428,26 @@ inherit their containing material. Active feature cards use an accent outline,
 wash and halo, without left indicator bars. Search fields retain their neutral
 edge while editing. Scrollable content is clipped inside the stationary frame;
 search/add headers stay fixed above that body. Overflow text stays centered and
-wraps only at whole-word boundaries. Floating tooltip/popup/modal faces remain
-opaque cached material with restrained elevation. See `UNIFIED_THEME_PILOT.md`.
+wraps only at whole-word boundaries. See `UNIFIED_THEME_PILOT.md`.
 
-Floating tooltip material is stable token-backed chrome rather than live glass. It uses one
-low-emphasis edge and shadow, respects theme roundness, and does not inherit the window's
-opacity merely because it originated inside that window. This is a material-depth decision,
-not adaptive contrast behavior.
+**Window Bevel** sets the frame depth: Off (legacy flat trim), Subtle, Standard (default),
+or Deep. The shared upper-left light rounds the outer frame into a pillow on round themes
+and makes planar facets as Corner Radius approaches zero. The directional baked shadow
+falls down and right. Only the frame band is shaded: it narrows to leave existing text,
+controls and scroll clips alone. The bevel replaces the old window outline rather than
+stacking over it.
 
-`TooltipPresenter` shares the raised opaque overlay raster with dropdowns and the colour
-editor. It caps text at 220 GUI px before padding (6 px horizontal, 4 px vertical), wraps
+The finish is continuous, not a preset selector. Dark low-density fills with higher blur
+give a clear glass edge; saturated fills around 50% give a coloured gem highlight; dense
+neutral fills with low blur give a tighter metallic glint and stronger lightness ramp.
+The renderer reads the resolved window RGB, `WINDOW_FILL` alpha and Blur Radius to derive
+the rim, not to change the interior. In a main window, the unmodified tint sits over the
+same pre-dim backdrop capture. Floating tooltips, dropdowns, the colour editor and modals
+use the translucent tint over their existing host, with no new post-dim capture. Off
+restores their legacy faces, including the opaque backing where applicable.
+
+`TooltipPresenter` shares the overlay raster with dropdowns and the colour editor. It caps
+text at 220 GUI px before padding (6 px horizontal, 4 px vertical), wraps
 between words, and fits the result inside the window and screen with an 8 px margin. It
 prefers below-right, then flips or clamps without painting the face over the source.
 Vanilla item tooltips are unchanged.
