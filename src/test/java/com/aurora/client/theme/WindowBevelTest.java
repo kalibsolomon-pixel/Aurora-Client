@@ -23,8 +23,9 @@ class WindowBevelTest {
         assertTrue(metal.specPower() > gem.specPower());
         assertTrue(metal.ramp() > gem.ramp());
         assertTrue((gem.color() & 255) - (gem.color() >>> 8 & 255) > 30);
-        assertEquals(0xeb, glass.color() >>> 24);
-        assertEquals(glass.color() >>> 24, metal.color() >>> 24);
+        // The rim follows its window's own fill (owner, 2026-11-17): clear glass, solid metal.
+        assertTrue((glass.color() >>> 24) < (metal.color() >>> 24));
+        assertTrue((metal.color() >>> 24) <= 0xeb);
         assertTrue(resolvedFinish(0xff777777, .85, 32).specPower() < metal.specPower());
     }
 
@@ -41,7 +42,10 @@ class WindowBevelTest {
         var previous = WindowBevel.finish(0x008322a2, OUTLINE, 9, STANDARD);
         for (int alpha = 1; alpha <= 255; alpha++) {
             var finish = WindowBevel.finish(alpha << 24 | 0x8322a2, OUTLINE, 9, STANDARD);
-            assertEquals(0xeb, finish.color() >>> 24);
+            // Derived from WINDOW_FILL itself (not a second opacity control): never below the fill,
+            // capped at the former solid 92%, continuous across the range.
+            int expected = (int) Math.round(255 * Math.min(.92, alpha / 255d + (1 - alpha / 255d) * .10));
+            assertEquals(expected, finish.color() >>> 24);
             assertTrue(Math.abs(finish.specGain() - previous.specGain()) < .015);
             assertTrue(Math.abs(finish.specPower() - previous.specPower()) < .1);
             for (int shift : new int[]{0, 8, 16})

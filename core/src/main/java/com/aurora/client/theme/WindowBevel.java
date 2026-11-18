@@ -5,20 +5,73 @@ public final class WindowBevel {
     private WindowBevel() {}
 
     public enum Level {
-        OFF("Off", 0, 0, 0), SUBTLE("Subtle", .73, .72, 1.5),
-        STANDARD("Standard", 1, 1, 2.5), DEEP("Deep", 1.25, 1.24, 3.5);
+        OFF("Off", 0, 0, 0, 0), SUBTLE("Subtle", .73, .72, 1.5, .7),
+        STANDARD("Standard", 1, 1, 2.5, 1.2), DEEP("Deep", 1.25, 1.24, 3.5, 1.7);
 
         private final String label;
-        private final double width, gain, elevation;
+        private final double width, gain, elevation, bend;
 
-        Level(String label, double width, double gain, double elevation) {
+        Level(String label, double width, double gain, double elevation, double bend) {
             this.label = label;
             this.width = width;
             this.gain = gain;
             this.elevation = elevation;
+            this.bend = bend;
         }
 
         public String label() { return label; }
+        /** Largest backdrop displacement inside the band, GUI px (owner, 2026-11-17: bend light). */
+        public double bend() { return bend; }
+    }
+
+    /**
+     * How much the band refracts at a Background Opacity (owner, 2026-11-17: "distortion and
+     * bending light while the opacity is below 100%"): full at or below 35%, fading smoothly to
+     * none at 100%, where the solid lit bevel carries the edge alone.
+     */
+    public static double refractionWeight(double opacity) {
+        double t = Math.clamp((1 - opacity) / .65, 0, 1);
+        return t * t * (3 - 2 * t);
+    }
+
+    /**
+     * Inward backdrop displacement at {@code depth} into a band of {@code band}, in the same units
+     * as {@code maxBend}: strongest at the outer edge where a lens edge is steepest, falling to zero
+     * at the plateau. Inward only, so a window samples nothing outside its own rect (glass rule 7).
+     */
+    public static double bendAt(double depth, double band, double maxBend) {
+        if (band <= 0 || maxBend <= 0) return 0;
+        double t = Math.clamp(depth / band, 0, 1);
+        return maxBend * (1 - t) * (1 - t);
+    }
+
+    // Each window's frame band, recorded where the frame is drawn and read by the next glass pass,
+    // so the refraction band and the lit band coincide. Render thread only; windows are static.
+    private static final int BAND_SLOTS = 16;
+    private static final float[] BAND_RECTS = new float[BAND_SLOTS * 5];
+    private static int bandNext;
+
+    public static void rememberBand(float x, float y, float w, float h, float band) {
+        for (int i = 0; i < BAND_SLOTS; i++) {
+            int o = i * 5;
+            if (BAND_RECTS[o] == x && BAND_RECTS[o + 1] == y && BAND_RECTS[o + 2] == w && BAND_RECTS[o + 3] == h) {
+                BAND_RECTS[o + 4] = band;
+                return;
+            }
+        }
+        int o = bandNext * 5;
+        BAND_RECTS[o] = x; BAND_RECTS[o + 1] = y; BAND_RECTS[o + 2] = w; BAND_RECTS[o + 3] = h; BAND_RECTS[o + 4] = band;
+        bandNext = (bandNext + 1) % BAND_SLOTS;
+    }
+
+    /** The band last drawn for a window at this GUI rect (within half a pixel), or -1. */
+    public static float rememberedBand(float x, float y, float w, float h) {
+        for (int i = 0; i < BAND_SLOTS; i++) {
+            int o = i * 5;
+            if (BAND_RECTS[o + 2] > 0 && Math.abs(BAND_RECTS[o] - x) < .5f && Math.abs(BAND_RECTS[o + 1] - y) < .5f
+                    && Math.abs(BAND_RECTS[o + 2] - w) < .5f && Math.abs(BAND_RECTS[o + 3] - h) < .5f) return BAND_RECTS[o + 4];
+        }
+        return -1;
     }
 
     public static final int SHADOW_PAD = 7;
@@ -42,7 +95,10 @@ public final class WindowBevel {
         double tint = Math.clamp(.28 + .46 * gem + .12 * density - .12 * glass, .16, .82);
         int rgb = mix(windowFill, outline, tint, 16) << 16 | mix(windowFill, outline, tint, 8) << 8
                 | mix(windowFill, outline, tint, 0);
-        int color = MaterialLighting.lightness(0xeb000000 | rgb, (float) (6 + 8 * metal + 3 * glass - 5 * light));
+        // The rim is no more opaque than the glass it frames (owner, 2026-11-17): its alpha follows the
+        // window's own fill, rising to the solid bevel only as the window becomes opaque.
+        int alpha = (int) Math.round(255 * Math.min(.92, density + (1 - density) * .10));
+        int color = MaterialLighting.lightness(alpha << 24 | rgb, (float) (6 + 8 * metal + 3 * glass - 5 * light));
         return new Finish(color, level.gain * (.9 + .24 * metal), level.gain * (.70 + .75 * gem + 1.05 * metal + .18 * glass),
                 18 + 22 * metal + 7 * gem, level.gain * (2 + 8 * metal + 2 * gem));
     }
@@ -114,6 +170,14 @@ public final class WindowBevel {
                     int color = MaterialLighting.lightness(finish.color, (float) (ramp + rim));
                     double alpha = (color >>> 24) / 255d * ink;
                     face = rimOverFill(color, alpha, fill);
+                    // A translucent rim cannot show its lighting through colour alone: the glint and
+                    // the far-side shade ride over it as light, in proportion to its transparency.
+                    double clear = 1 - (color >>> 24) / 255d;
+                    double lift = ramp + rim;
+                    if (clear > 0 && lift != 0) {
+                        double a = ink * clear * (lift > 0 ? Math.min(.55, lift / 45) : Math.min(.4, -lift / 55));
+                        face = lightOver(face, lift > 0 ? 0xffffff : 0, a);
+                    }
                 }
                 int alpha = (int) Math.round((face >>> 24) * inside);
                 face = alpha == 0 ? 0 : alpha << 24 | (face & 0xffffff);
@@ -123,6 +187,15 @@ public final class WindowBevel {
             float shadow = (float) (shadowAlpha * Math.clamp(distance / aa, 0, 1)
                     * Math.clamp(.5 - shadowDistance / softness, 0, 1));
             return MaterialLighting.shadowBehind(face, shadow);
+        }
+
+        private static int lightOver(int dst, int rgb, double a) {
+            if (a <= 0) return dst;
+            double base = (dst >>> 24) / 255d * (1 - a);
+            double combined = a + base;
+            double w = a / combined;
+            return (int) Math.round(combined * 255) << 24 | mix(rgb, dst, w, 16) << 16
+                    | mix(rgb, dst, w, 8) << 8 | mix(rgb, dst, w, 0);
         }
 
         private static int rimOverFill(int rim, double alpha, int fill) {

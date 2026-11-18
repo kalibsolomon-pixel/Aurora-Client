@@ -146,7 +146,9 @@ class UiLayerCacheLightingTest {
                 }
                 java.util.Arrays.sort(samples);
                 assertEquals(fill, pixels(cache).getPixel(logicalW * scale / 2, logicalH * scale / 2));
-                assertTrue((pixels(cache).getPixel(logicalW * scale / 2, (pad + 1) * scale) >>> 24) > 200);
+                // The translucent rim stays near the fill's own alpha (0x54) rather than an opaque ring.
+                int rimAlpha = pixels(cache).getPixel(logicalW * scale / 2, (pad + 1) * scale) >>> 24;
+                assertTrue(rimAlpha >= 0x54 && rimAlpha < 0xb0, "rim alpha " + rimAlpha);
                 assertEquals(fills, RenderUtil.fillsSubmitted());
                 System.out.printf("Window face CPU bake 336x288 scale=3 radius=%d median=%.3f ms p95=%.3f ms%n",
                         radius, samples[10] / 1e6, samples[19] / 1e6);

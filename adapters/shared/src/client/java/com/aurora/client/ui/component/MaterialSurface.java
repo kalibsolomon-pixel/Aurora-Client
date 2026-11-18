@@ -99,6 +99,8 @@ public final class MaterialSurface {
         int width = Math.max(1, (int) (logicalW * scale)), height = Math.max(1, (int) (logicalH * scale));
         double pixelSize = Math.max((double) logicalW / width, (double) logicalH / height);
         float band = (float) WindowBevel.rasterBandWidth(Math.min(w, h), radius, contentInset, pixelSize, theme.windowBevel());
+        // The next glass pass bends the backdrop across exactly this band (windows with their own capture).
+        if (tintBody) WindowBevel.rememberBand(x, y, w, h, band);
         long version = (ThemeManager.generation() * 65537L + guiScale) * 31 + theme.windowBevel().ordinal();
         int recipe = Float.floatToIntBits(band) | Integer.MIN_VALUE;
         var cache = TEMPLATES.get(version, width, height, w, h, radius, recipe, true, fill, outline);
