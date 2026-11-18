@@ -197,27 +197,33 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         layoutHeader();
     }
 
+    /** The second header row, under the title and Done: search, Separate controls, Open folder. */
+    private static final int TOOLS_ROW = UiDensity.HEADER_BUTTON_H + 6;
+    @Override protected String headerTitle() { return "Profiles"; }
+    @Override protected int listTop() { return super.listTop() + TOOLS_ROW; }
+
     /**
-     * Header row, left to right: search (takes what is left, at least
-     * {@code SEARCH_MIN}), Separate controls, Open folder, then the base's
-     * Done on the right. Narrow windows get the short labels; the long ones
+     * Tools row under the titled header, left to right: search (takes what is
+     * left, at least {@code SEARCH_MIN}), Separate controls, Open folder; the
+     * title and the base's Done share the row above. Narrow windows get the short labels; the long ones
      * never truncate mid-word.
      */
     private void layoutHeader() {
         if (searchField == null) return;
-        // pad: Button keeps 20 px around its label (it ellipsizes past w - 20), plus 2 of air.
-        final int gap = 6, searchMin = 56, pad = 22;
+        // pad: Button keeps 20 px around its label (it ellipsizes past w - 20), plus 2 of air;
+        // the controls chip also reserves its switch glyph's slot on both sides (Button.icon).
+        final int gap = 6, searchMin = 56, pad = 22, iconPad = 2 * (Button.ICON_EM + Button.ICON_GAP) - 10;
         int left = listX();
-        int right = windowX() + windowWidth() - UiDensity.FRAME_EDGE - UiDensity.HEADER_BUTTON_W - gap;
+        int right = windowX() + windowWidth() - UiDensity.scrollRightInset();
         String chipLabel = "Separate controls", folderLabel = "Open folder";
-        int chipW = this.font.width(chipLabel) + pad, folderW = this.font.width(folderLabel) + pad;
+        int chipW = this.font.width(chipLabel) + pad + iconPad, folderW = this.font.width(folderLabel) + pad;
         if (right - left - chipW - folderW - 2 * gap < searchMin) {
             chipLabel = "Controls";
             folderLabel = "Folder";
-            chipW = this.font.width(chipLabel) + pad;
+            chipW = this.font.width(chipLabel) + pad + iconPad;
             folderW = this.font.width(folderLabel) + pad;
         }
-        int y = toolbarY();
+        int y = toolbarY() + TOOLS_ROW;
         folderBtn.setMessage(Component.literal(folderLabel));
         folderBtn.setX(right - folderW);
         folderBtn.setY(y);
@@ -241,9 +247,11 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
     @Override
     protected void paintHeaderGlassPass(GuiGraphicsExtractor ctx) {
         layoutHeader();
-        // On is the selected state, so it alone is stained (glass rule 3).
+        // A setting, not an action: a neutral button whose leading switch glyph carries the state,
+        // so Done stays the header's one accent fill (one primary per header, §11.2a).
         boolean on = AuroraConfig.get().profilesOwnControls;
-        controlsChip.glassStyle(on ? Button.GlassStyle.STAINED : Button.GlassStyle.NEUTRAL).primary(on);
+        controlsChip.glassStyle(Button.GlassStyle.NEUTRAL).primary(false)
+                .icon(com.aurora.client.screen.IconCatalog.glyph(on ? "toggle_on" : "toggle_off"));
         controlsChip.renderGlassPass(ctx);
         folderBtn.renderGlassPass(ctx);
         if (searchField instanceof GlassEditBox glassField) glassField.aurora$renderGlassPass(ctx);

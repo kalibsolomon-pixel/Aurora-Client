@@ -117,7 +117,7 @@ public class ArmorModule extends HudModule {
             if (cfg.armorHorizontal) {
                 // One continuous strip; cells widen (stretch uniformly) only
                 // when a durability text needs more than its 20 px cell.
-                float s = hasText ? Math.max(1f, (maxText + 2) / (float) HudBackgrounds.CELL_PITCH) : 1f;
+                float s = hasText ? Math.max(1f, (maxText + 6) / (float) HudBackgrounds.CELL_PITCH) : 1f;
                 return Math.round((n * HudBackgrounds.CELL_PITCH + 2) * s);
             }
             // Vertical strip: 20 px cells, text in a column to the right.
@@ -302,7 +302,8 @@ public class ArmorModule extends HudModule {
             if (hasText) {
                 for (ItemStack s : stacks) maxText = Math.max(maxText, tr.width(formatDurability(s, fmt)));
             }
-            float s = hasText && maxText > 0 ? Math.max(1f, (maxText + 2) / (float) HudBackgrounds.CELL_PITCH) : 1f;
+            // 6 px of air between neighbouring readouts (was 2, where "528 495" ran together).
+            float s = hasText && maxText > 0 ? Math.max(1f, (maxText + 6) / (float) HudBackgrounds.CELL_PITCH) : 1f;
             int textSpace = (hasText && maxText > 0) ? tr.lineHeight + TEXT_GAP : 0;
             int stripY = y + textSpace;
 

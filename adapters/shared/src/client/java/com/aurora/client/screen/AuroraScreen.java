@@ -1732,8 +1732,8 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
 
     /** The settings-cue chevron's em size and its hit box: the tile's top-right corner, or a list
      * row's trailing end. Paint and click share this one rect. */
-    private static final float CHEVRON = 10f;
-    private static final float CHEVRON_BOX = 14f;
+    private static final float CHEVRON = 13f;
+    private static final float CHEVRON_BOX = 18f;
     private float chevronX(float x, float width) { return x + width - CHEVRON_BOX - (gridLayout ? 3 : 8); }
     private float chevronY(float y, float height) { return gridLayout ? y + 3 : y + (height - CHEVRON_BOX) / 2f; }
 
@@ -1917,9 +1917,11 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
             int accent = ModuleAccentColors.get(m.id);
             color = accent != 0 ? accent : MaterialSurface.color(ThemeToken.ACCENT);
         } else {
-            // Off: secondary text in unified windows, a step below an on feature's primary icon,
-            // so on and off part at a glance without the off one reading as unavailable.
-            color = MaterialSurface.unified() ? neutral(MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY))
+            // Off: midway between secondary and muted text in unified windows, clearly below the
+            // label's white so on and off part at a glance, without reading as unavailable.
+            color = MaterialSurface.unified() ? neutral(com.aurora.client.util.AuroraAnim.lerpArgb(
+                    MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY),
+                    MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED), .5f))
                     : MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED);
         }
         // Crisp native-resolution glyph (the shared font atlas is

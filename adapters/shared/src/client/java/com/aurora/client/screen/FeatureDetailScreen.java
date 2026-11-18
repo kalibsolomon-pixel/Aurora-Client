@@ -210,6 +210,8 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen, LayoutS
         restBody = body;
         restCut = false;
         if (Math.max(extent, popup) <= body) return;
+        // An expanded caption needs its first row beside it, so it is held back from the rest
+        // edge; the band it leaves is allowed for when choosing between resting and cutting.
         int fit = 0, beforeCaption = 0;
         boolean lastIsCaption = false;
         for (int index = 0; index < meta.settings.size(); index++) {
@@ -218,12 +220,18 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen, LayoutS
             if (box == null) continue;
             int bottom = (int) (box.top() + box.height()) - top;
             if (bottom > body) break;
-            lastIsCaption = setting instanceof com.aurora.client.screen.setting.SectionHeaderSetting;
+            // A collapsed caption is a complete row (its section reads as closed), not an orphan.
+            lastIsCaption = setting instanceof com.aurora.client.screen.setting.SectionHeaderSetting caption
+                    && caption.expanded();
             if (lastIsCaption) beforeCaption = fit;
             fit = bottom;
         }
-        if (lastIsCaption && beforeCaption > 0) fit = beforeCaption;
-        if (fit > 0 && fit >= popup && body - fit <= com.aurora.client.ui.util.UiDensity.STACKED_ROW + ROW_GAP)
+        int slack = com.aurora.client.ui.util.UiDensity.STACKED_ROW + ROW_GAP;
+        if (lastIsCaption && beforeCaption > 0) {
+            fit = beforeCaption;
+            slack += com.aurora.client.ui.util.UiDensity.SECTION_GAP + com.aurora.client.ui.util.UiDensity.SECTION_ROW;
+        }
+        if (fit > 0 && fit >= popup && body - fit <= slack)
             restBody = fit;
         else restCut = true;
     }

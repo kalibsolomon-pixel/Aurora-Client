@@ -194,7 +194,7 @@ public class Button extends Widget {
 
     /** Leading icon glyph (Material Symbols), drawn with the label as one centred group; empty for none. */
     private String icon = "";
-    static final int ICON_EM = 12, ICON_GAP = 6;
+    public static final int ICON_EM = 12, ICON_GAP = 6;
 
     /** Gives the button a leading icon — a glyph from {@code IconCatalog.glyph(name)}. */
     public Button icon(String glyph) {

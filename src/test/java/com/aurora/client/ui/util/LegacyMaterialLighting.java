@@ -91,7 +91,10 @@ public final class LegacyMaterialLighting {
         double diffuse = dot - LIGHT_Z;
         double reflectedZ = 2 * dot * nz - LIGHT_Z;
         double specular = profile.specular ? Math.pow(Math.max(0, reflectedZ), SPEC_POWER) : 0;
-        return RIM_GAIN * diffuse + SPEC_GAIN * specular;
+        // The shadow-side gain (2026-11-18) is an equation change, not an optimization, so the
+        // reference follows it.
+        double shade = com.aurora.client.theme.MaterialLighting.SHADE_GAIN;
+        return RIM_GAIN * (diffuse < 0 ? diffuse * shade : diffuse) + SPEC_GAIN * specular;
     }
 
     /** Baked face lightness; alpha/AA, hue and saturation pass through unchanged. */

@@ -295,7 +295,8 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
         float radius = Math.min(ThemeManager.current().roundness().radiusSmall(), Math.min(pillW, pillH) * .5f);
         MaterialSurface.overlayFace(ctx, pillX, pillY, pillW, pillH, radius,
                 MaterialSurface.windowCornerClearance(radius, 8, 5), visibility);
-        int text = MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY);
+        // Primary text: the pill floats over bright terrain, where secondary grey washed out.
+        int text = MaterialSurface.color(ThemeToken.ON_BACKGROUND);
         int textAlpha = Math.round((text >>> 24) * visibility);
         // Below ~4 the font treats alpha as opaque; skip the text instead.
         if (textAlpha >= 8) com.aurora.client.ui.util.RenderUtil.drawCenteredLines(this.font, ctx, guideLines,
