@@ -31,6 +31,8 @@ Loader and Fabric API. Java 25 is required.
 - **Key combos:** any Aurora, Minecraft or profile hotkey can be Ctrl, Shift or
   Alt plus a key.
 - **Profiles:** icons, hotkeys, and options to rename, duplicate or delete.
+- **Smooth Lines (SDF)** for Hitboxes and Block Overlay (off by default): a
+  distance-field line shader with anti-aliased edges and round corners.
 
 ## Performance
 

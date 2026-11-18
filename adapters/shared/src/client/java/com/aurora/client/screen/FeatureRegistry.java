@@ -334,6 +334,10 @@ public final class FeatureRegistry {
                                 () -> cfg.blockOverlayLineWidth,
                                 v -> cfg.blockOverlayLineWidth = v, 1.0, 6.0).resetDefault(() -> defaults.blockOverlayLineWidth)
                                 .description("Thickness of the outline in screen pixels. Uses a GPU-side line expansion shader, so lines render cleanly at any width on all GPUs."),
+                        new BooleanSetting("Smooth Lines (SDF)",
+                                () -> cfg.blockOverlaySdfLines,
+                                v -> cfg.blockOverlaySdfLines = v).resetDefault("blockOverlaySdfLines", () -> defaults.blockOverlaySdfLines)
+                                .description("Draws the outline with a distance-field shader: soft, anti-aliased edges and rounded corners where edges meet, instead of hard pixel steps. Falls back to standard lines if the shader can't load."),
                         new BooleanSetting("Show Fill",
                                 () -> cfg.blockOverlayFillEnabled,
                                 v -> cfg.blockOverlayFillEnabled = v).resetDefault("blockOverlayFillEnabled", () -> defaults.blockOverlayFillEnabled)
@@ -560,6 +564,9 @@ addWithSettings("hitbox",
                                 () -> cfg.hitboxLineWidth,
                                 v -> cfg.hitboxLineWidth = v, 0.1, 6.0).resetDefault(() -> defaults.hitboxLineWidth)
                                 .description("Thickness of the hitbox outline in screen pixels. Uses a GPU-side line expansion shader, so lines render cleanly at any width on all GPUs."),
+                        new BooleanSetting("Smooth Lines (SDF)",
+                                () -> cfg.hitboxSdfLines, v -> cfg.hitboxSdfLines = v).resetDefault("hitboxSdfLines", () -> defaults.hitboxSdfLines)
+                                .description("Draws hitbox lines with a distance-field shader: soft, anti-aliased edges and rounded corners where edges meet, instead of hard pixel steps. Falls back to standard lines if the shader can't load."),
                         new ColorSetting("Hitbox Color",
                                 () -> cfg.hitboxColor, v -> cfg.hitboxColor = v).resetDefault(() -> defaults.hitboxColor),
 

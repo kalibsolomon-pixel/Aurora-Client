@@ -400,6 +400,51 @@ public final class ParityProbe implements ClientModInitializer {
                 @Override public boolean isPauseScreen() { return true; }
             });
             case "world" -> NativeUi.setScreen(client, null);
+            // `create-world`: open vanilla's fresh Create World screen (then `press Create New World`).
+            case "create-world" -> {
+                var type = net.minecraft.client.gui.screens.worldselection.CreateWorldScreen.class;
+                var open = java.util.Arrays.stream(type.getMethods())
+                        .filter(m -> m.getName().equals("openFresh") && m.getParameterCount() == 2).findFirst().orElseThrow();
+                Object closer = open.getParameterTypes()[1] == Runnable.class ? (Runnable) () -> {} : null;
+                open.invoke(null, client, closer);
+            }
+            // `press <label>`: press the open screen's button with exactly that label.
+            case "press" -> {
+                String label = text.substring(6);
+                var button = NativeUi.screen(client).children().stream()
+                        .filter(c -> c instanceof Button b && b.getMessage().getString().equals(label))
+                        .map(Button.class::cast).findFirst().orElseThrow(() -> new IllegalStateException("No button " + label));
+                button.onPress(new KeyEvent(InputConstants.KEY_RETURN, 0, 0));
+            }
+            // `server <command>`: run a server command in the disposable world (e.g. `time set noon`).
+            case "server" -> {
+                if (!Files.exists(root.resolve("DISPOSABLE.txt"))) throw new IllegalStateException("Disposable fixture required");
+                var server = client.getSingleplayerServer();
+                String command = text.substring(7);
+                server.execute(() -> server.getCommands().performPrefixedCommand(server.createCommandSourceStack(), command));
+            }
+            // `expect-config <field> <json>`: fail unless the live AuroraConfig field equals the value.
+            case "expect-config" -> {
+                String[] kv = text.substring(14).split(" ", 2);
+                var field = AuroraConfig.class.getField(kv[0]);
+                Object want = new com.google.gson.Gson().fromJson(kv[1], field.getGenericType());
+                if (!java.util.Objects.equals(want, field.get(config)))
+                    throw new AssertionError(kv[0] + "=" + field.get(config) + ", expected " + want);
+            }
+            // `expect-screen <SimpleName|none>`: fail unless the open screen's class has that simple name.
+            case "expect-screen" -> {
+                var screen = NativeUi.screen(client);
+                String name = screen == null ? "none" : screen.getClass().getSimpleName();
+                if (!name.equals(args[1])) throw new AssertionError("screen " + name + ", expected " + args[1]);
+            }
+            // `look <yaw> <pitch>`: point the local player's view (degrees, vanilla convention).
+            case "look" -> {
+                NativeUi.setScreen(client, null);
+                client.player.setYRot(Float.parseFloat(args[1]));
+                client.player.setXRot(Float.parseFloat(args[2]));
+                client.player.yRotO = client.player.getYRot();
+                client.player.xRotO = client.player.getXRot();
+            }
             case "pointer" -> {
                 // Parks the GUI pointer (window pixels) without moving the OS cursor: GLFW drops
                 // synthetic moves at an unchanged position, so the parked value holds.
@@ -507,10 +552,11 @@ public final class ParityProbe implements ClientModInitializer {
             }
             // `fullscreen on|off`: borderless fullscreen on the monitor the window is on.
             case "fullscreen" -> {
+                // Reflective: these Window methods exist on 26.3 only, and the probe builds per line.
                 var window = client.getWindow();
-                window.setExclusiveFullscreen(false);
-                window.setFullscreen(args[1].equals("on"));
-                window.updateFullscreenIfChanged();
+                window.getClass().getMethod("setExclusiveFullscreen", boolean.class).invoke(window, false);
+                window.getClass().getMethod("setFullscreen", boolean.class).invoke(window, args[1].equals("on"));
+                window.getClass().getMethod("updateFullscreenIfChanged").invoke(window);
             }
             // Window geometry and where the GUI believes the pointer is, for pointer-mapping checks.
             case "window-state" -> {

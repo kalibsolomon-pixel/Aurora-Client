@@ -14,6 +14,10 @@ Keystrokes has two key styles: Flat (default, Lunar-style legend on a flat colou
 
 Smooth Scaling (SDF) is opt-in on all three lines. It preserves raster layout and still needs
 [native visual acceptance](reports/2026-11-17-sdf-spike.md#phase-1-acceptance) before a default change.
+Hitboxes and Block Overlay have an opt-in Smooth Lines (SDF) option: vanilla's translucent line
+pipeline with Aurora's distance-field shader (anti-aliased edge, round caps), falling back to
+vanilla lines for the session if it cannot compile. Checked in-world on 26.1.2, 26.2 and 26.3
+(OpenGL; 26.3 also native Vulkan) at widths 0.5, 2 and 5.
 
 Pulsar integration adds Phenomena's analytics and recording as Aurora's 40th
 feature, off by default. Its configuration and six-tab dashboard follow Aurora's

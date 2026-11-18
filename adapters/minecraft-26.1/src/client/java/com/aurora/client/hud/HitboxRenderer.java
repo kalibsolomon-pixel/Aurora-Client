@@ -90,7 +90,8 @@ public final class HitboxRenderer {
         // Use the proper lines() render type with per-vertex line width.
         // The see-through wireframe option is gone (owner ruling 2026-10-30);
         // the wireframe keeps the see-through (translucent) default.
-        VertexConsumer buf = WorldLineRenderer.getLineBuffer(consumers);
+        boolean sdf = cfg.hitboxSdfLines && WorldLineRenderer.sdfAvailable();
+        VertexConsumer buf = WorldLineRenderer.getLineBuffer(consumers, sdf);
 
         // Match vanilla LevelRenderer: use the game-time partial tick (false) so
         // our interpolated AABB lines up with the camera and the entity model.
@@ -139,7 +140,7 @@ public final class HitboxRenderer {
             boolean drawLookLine = isTarget ? cfg.hitboxTargetLookDirection : cfg.hitboxLookDirection;
 
             drawEntity(buf, model, camPos, entity, tickDelta, color,
-                    drawEyeLine, drawLookLine, cfg.hitboxLookLength, widthPx);
+                    drawEyeLine, drawLookLine, cfg.hitboxLookLength, widthPx, sdf);
         }
 
         matrices.popPose();
@@ -179,7 +180,7 @@ public final class HitboxRenderer {
     private static void drawEntity(VertexConsumer buf, Matrix4f model, Vec3 camPos,
                                    Entity e, float tickDelta,
                                    int color, boolean eyeLine, boolean lookLine, double lookLen,
-                                   float widthPx) {
+                                   float widthPx, boolean sdf) {
         // Tick-interpolated position — EXACTLY what vanilla entity rendering uses.
         // This keeps the hitbox perfectly overlaid on the entity model. We do NOT
         // apply any additional smoothing (which would desync the hitbox from the
@@ -202,14 +203,14 @@ public final class HitboxRenderer {
 
         // All edges use the same clean line technique — no more cuboid bars.
         // Camera position passed separately for double-precision subtraction.
-        WorldLineRenderer.drawBoxOutline(buf, model, camPos, box, r, g, b, a, widthPx);
+        WorldLineRenderer.drawBoxOutline(buf, model, camPos, box, r, g, b, a, widthPx, sdf);
 
         if (eyeLine) {
             double eyeY = iy + e.getEyeHeight();
-            WorldLineRenderer.drawLine(buf, model, camPos, box.minX, eyeY, box.minZ, box.maxX, eyeY, box.minZ, r, g, b, a, widthPx);
-            WorldLineRenderer.drawLine(buf, model, camPos, box.maxX, eyeY, box.minZ, box.maxX, eyeY, box.maxZ, r, g, b, a, widthPx);
-            WorldLineRenderer.drawLine(buf, model, camPos, box.maxX, eyeY, box.maxZ, box.minX, eyeY, box.maxZ, r, g, b, a, widthPx);
-            WorldLineRenderer.drawLine(buf, model, camPos, box.minX, eyeY, box.maxZ, box.minX, eyeY, box.minZ, r, g, b, a, widthPx);
+            WorldLineRenderer.drawLine(buf, model, camPos, box.minX, eyeY, box.minZ, box.maxX, eyeY, box.minZ, r, g, b, a, widthPx, sdf);
+            WorldLineRenderer.drawLine(buf, model, camPos, box.maxX, eyeY, box.minZ, box.maxX, eyeY, box.maxZ, r, g, b, a, widthPx, sdf);
+            WorldLineRenderer.drawLine(buf, model, camPos, box.maxX, eyeY, box.maxZ, box.minX, eyeY, box.maxZ, r, g, b, a, widthPx, sdf);
+            WorldLineRenderer.drawLine(buf, model, camPos, box.minX, eyeY, box.maxZ, box.minX, eyeY, box.minZ, r, g, b, a, widthPx, sdf);
         }
 
         if (lookLine) {
@@ -224,7 +225,7 @@ public final class HitboxRenderer {
             double endX = eyeStartX + look.x * lookLen;
             double endY = eyeStartY + look.y * lookLen;
             double endZ = eyeStartZ + look.z * lookLen;
-            WorldLineRenderer.drawLine(buf, model, camPos, eyeStartX, eyeStartY, eyeStartZ, endX, endY, endZ, r, g, b, a, widthPx);
+            WorldLineRenderer.drawLine(buf, model, camPos, eyeStartX, eyeStartY, eyeStartZ, endX, endY, endZ, r, g, b, a, widthPx, sdf);
         }
     }
 }
