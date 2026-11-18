@@ -44,6 +44,7 @@ exchange atomically and refuses an unmarked fixture or a pending command.
 | `font-state` / `font-check` | Count deferred sets / compare metrics across all Aurora font IDs |
 | `font-first-use aurora:inter_medium_ui` | Time one actual font-width lookup |
 | `font-specimen` | Render fallback, bold/italic, decorations and obfuscation samples |
+| `sdf-compare [scale]` | Explicit-ID columns, Inter Medium bitmap vs SDF, with width deltas at 8/9/11 px and `HudTextPainter` FULL. Scales 0.5, 0.75, 1, 1.25, 1.5, 2, 3 (default 1). Enables SDF temporarily without saving; wait for glyphs to warm, and widen the viewport or lower GUI scale to fit all rows. |
 | `hud-editor` | Open the universal HUD editor |
 | `factory` | Replace the disposable client's in-memory settings with field initializers (does not overlay the shipped defaults JSON) |
 | `benchmark label` | Export an exploratory eight-second frame sample; not release overhead evidence |
@@ -54,6 +55,7 @@ exchange atomically and refuses an unmarked fixture or a pending command.
 | `detail animations` | Open a feature's native detail screen by ID |
 | `search <text>` | Focus and fill the native search field |
 | `escape` | Send Escape through the active screen's key handler |
+| `theme-set field json` | Set one theme field in memory and reload the theme (e.g. `theme-set backgroundOpacity 0.5`) |
 | `config field json` | Set one `AuroraConfig` field in memory from a JSON value (e.g. `config keystrokesKeyStyle "KEYCAP"`) |
 | `hold forward on` | Hold a vanilla key mapping down (`forward left back right jump attack use`, `on`/`off`) |
 | `type <text>` | Send each code point through the active screen's character handler |

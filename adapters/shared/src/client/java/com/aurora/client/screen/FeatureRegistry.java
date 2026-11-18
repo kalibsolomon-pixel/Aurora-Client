@@ -1131,6 +1131,9 @@ addWithSettings("hitbox",
                                 () -> cfg.textWeight, v -> { cfg.textWeight = v; persistThemeChange(); }).resetDefault(() -> defaults.textWeight)
                                 .labels(AuroraConfig.TextWeight::getLabel)
                                 .description("How heavy the letters are. Every weight is a real font file, not a smeared bold; Quicksand has one weight."),
+                        new BooleanSetting("Smooth Scaling (SDF)", () -> cfg.textSdf,
+                                v -> { cfg.textSdf = v; persistThemeChange(); }).resetDefault(() -> defaults.textSdf)
+                                .description("Renders the custom font with distance-field glyphs so scaled text stays sharp."),
                         new ToggleGroupSetting("Modifiers", List.of(
                                 new ToggleGroupSetting.Toggle("Italic", () -> cfg.textItalic, v -> { cfg.textItalic = v; persistThemeChange(); }),
                                 new ToggleGroupSetting.Toggle("Underline", () -> cfg.textUnderline, v -> { cfg.textUnderline = v; persistThemeChange(); })))
@@ -1165,7 +1168,7 @@ addWithSettings("hitbox",
                                     persistThemeChange();
                                 }).resetDefault(() -> defaults.themeOrDefault().background)
                                 .description("The color tint of every Aurora window. Very light colors are deepened so text stays readable. Translucency stays on Background Opacity."),
-                        // The three surface sliders sit together under one
+                        // The surface settings sit together under one
                         // caption (owner ruling 2026-11-12). Corner Radius
                         // replaced the Round / Slightly Round / Square choice.
                         new SectionHeaderSetting("Surfaces"),
@@ -1197,7 +1200,16 @@ addWithSettings("hitbox",
                                 },
                                 ThemeRoundness.MIN_RADIUS, ThemeRoundness.MAX_RADIUS, 1, true).resetDefault(() -> defaults.themeOrDefault().cornerRadius)
                                 .valueFormatter(v -> v.intValue() + " px")
-                                .description("How round every Aurora shape is: windows, buttons, fields, toggles, sliders and scrollbars. 0 is square and 10 is the classic look. Drag previews the change live; release saves it.")
+                                .description("How round every Aurora shape is: windows, buttons, fields, toggles, sliders and scrollbars. 0 is square and 10 is the classic look. Drag previews the change live; release saves it."),
+                        new EnumSetting<>("Window Bevel", com.aurora.client.theme.WindowBevel.Level.class,
+                                () -> cfg.themeOrDefault().windowBevel,
+                                v -> {
+                                    cfg.themeOrDefault().windowBevel = v;
+                                    com.aurora.client.theme.ThemeManager.reload();
+                                    persistThemeChange();
+                                }).resetDefault(() -> defaults.themeOrDefault().windowBevel)
+                                .labels(com.aurora.client.theme.WindowBevel.Level::label)
+                                .description("Set the depth of window frames. Off restores their flat trim. The bevel takes its finish from Background Color, Background Opacity and Blur Radius without changing the glass inside.")
                 ));
 
         FeatureSetting uiFpsLimit = new EnumSetting<>("UI FPS Limit", AuroraConfig.GuiFps.class,

@@ -421,7 +421,7 @@ public final class BlurPanelRenderer {
     private static int uBlurInput, uBlurDir, uBlurTexel, uBlurScale, uBlurSigma;
     private static int uDownInput, uDownRect, uDownOffset, uDownTexel;
     private static int uCompInput, uCompUvRect, uCompHalfSize, uCompRadius, uBackdropFilter;
-    private static int uLight, uEdgeWidth, uEdgeStrength, uGradStrength, uDepressed, uRimBlend;
+    private static int uLight, uEdgeWidth, uEdgeStrength, uGradStrength, uDepressed, uRimBlend, uRefract;
 
     private static String lastOutcome = "not run";
 
@@ -1060,6 +1060,8 @@ public final class BlurPanelRenderer {
         final CaptureSource capture;
         /** Launcher Borealis diffusion only for the opted-in pilot parent. */
         final boolean unified;
+        /** Refractive edge for this panel (device px): largest bend and frame band; zero = none. */
+        float refractBend, refractBand;
         /** Pooled output texture for this call — one per concurrent panel per frame. */
         PanelOutput out;
         /** Game's draw target at entry — snapshotted BEFORE any of our GL binds. */
@@ -1089,7 +1091,11 @@ public final class BlurPanelRenderer {
             // blits and a shared texture would show the LAST upload in
             // every pending blit.
             out = nextOutput(priority);
+            refraction(guiX, guiY, guiW, guiH, scale);
+            refractBend = refractBendOut;
+            refractBand = refractBandOut;
             if (!RenderBackend.isOpenGl()) {
+                PortableBlurRenderer.refraction(refractBend, refractBand);
                 return PortableBlurRenderer.render(g, out.portable, main, x0, y0, regX, regY,
                         regW, regH, panW, panH, scale, radius, cornerRadiusGui, lighting, unified, capture);
             }
@@ -1446,6 +1452,7 @@ public final class BlurPanelRenderer {
             // alpha in this pipeline is multiplied by them.
             GL20.glUniform1f(uRimBlend,
                     (float) ThemeManager.current().backgroundOpacity());
+            GL20.glUniform2f(uRefract, refractBend, refractBand);
             GL30.glBindVertexArray(emptyVao);
             GL11.glDrawArrays(GL11.GL_TRIANGLES, 0, 3);
         }
@@ -1564,6 +1571,7 @@ public final class BlurPanelRenderer {
             uGradStrength = GL20.glGetUniformLocation(compositeProgram, "uGradStrength");
             uDepressed = GL20.glGetUniformLocation(compositeProgram, "uDepressed");
             uRimBlend = GL20.glGetUniformLocation(compositeProgram, "uRimBlend");
+            uRefract = GL20.glGetUniformLocation(compositeProgram, "uRefract");
             emptyVao = GL30.glGenVertexArrays();
             AuroraClient.LOGGER.info("[BlurPanel] programs ready (blur={}, composite={}).", blurProgram, compositeProgram);
             return true;
@@ -2096,15 +2104,26 @@ public final class BlurPanelRenderer {
             uniform float uGradStrength; // 0 disables the face gradient term
             uniform float uDepressed;    // 0 = raised, 1 = depressed (both terms inverted)
             uniform float uRimBlend;     // 0 = full glass rim .. 1 = rim retired into the panel base (Background Opacity)
+            uniform vec2 uRefract;       // largest bend, frame band (device px); 0 = no refraction
             void main() {
-                vec2 uv = mix(uUvRect.xy, uUvRect.zw, vUv);
+                vec2 p = (vUv - 0.5) * 2.0 * uHalfSize;       // device px from center
+                vec2 q = abs(p) - (uHalfSize - uRadius);
+                float d = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - uRadius;
+                // Refractive edge: sample the backdrop inward along the rounded-rect normal inside the
+                // frame band, strongest at the outer edge; clamped to this panel's own sub-rect.
+                vec2 local = vUv;
+                if (uRefract.x > 0.0 && uRefract.y > 0.0 && d > -uRefract.y) {
+                    vec2 n = (q.x > 0.0 && q.y > 0.0) ? normalize(q) : (q.x > q.y ? vec2(1.0, 0.0) : vec2(0.0, 1.0));
+                    n *= sign(p);
+                    float tb = clamp(-d / uRefract.y, 0.0, 1.0);
+                    float bend = uRefract.x * (1.0 - tb) * (1.0 - tb);
+                    local = clamp((p - n * bend) / (2.0 * uHalfSize) + 0.5, 0.0, 1.0);
+                }
+                vec2 uv = mix(uUvRect.xy, uUvRect.zw, local);
                 vec3 blurred = texture(uInput, uv).rgb;
                 float luma = dot(blurred, vec3(0.213, 0.715, 0.072));
                 blurred = clamp(mix(vec3(luma), blurred, uBackdropFilter.x), 0.0, 1.0);
                 blurred *= uBackdropFilter.y;
-                vec2 p = (vUv - 0.5) * 2.0 * uHalfSize;       // device px from center
-                vec2 q = abs(p) - (uHalfSize - uRadius);
-                float d = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - uRadius;
                 float coverage = clamp(0.5 - d, 0.0, 1.0);    // ~1px AA edge
 
                 vec3 lit = blurred;
@@ -2256,8 +2275,19 @@ public final class BlurPanelRenderer {
         }
     }
 
+    // ---- Refractive window edge (owner, 2026-11-17) ----
+    private static float refractBendOut, refractBandOut;
 
-
-
-
+    /** Sets {@link #refractBendOut}/{@link #refractBandOut} (device px) for a panel at this GUI rect. */
+    private static void refraction(float guiX, float guiY, float guiW, float guiH, int scale) {
+        var theme = ThemeManager.current();
+        var level = theme.windowBevel();
+        float band = com.aurora.client.theme.WindowBevel.rememberedBand(guiX, guiY, guiW, guiH);
+        if (level == com.aurora.client.theme.WindowBevel.Level.OFF || band <= 0) {
+            refractBendOut = 0; refractBandOut = 0;
+            return;
+        }
+        refractBendOut = (float) (level.bend() * com.aurora.client.theme.WindowBevel.refractionWeight(theme.backgroundOpacity()) * scale);
+        refractBandOut = band * scale;
+    }
 }

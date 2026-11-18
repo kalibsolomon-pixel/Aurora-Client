@@ -62,6 +62,10 @@ public final class AuroraFontQuality {
         PROVIDERS.put(provider, definition);
     }
 
+    public static TrueTypeGlyphProviderDefinition definition(GlyphProvider provider) {
+        return PROVIDERS.get(provider);
+    }
+
     /** The scale the fonts are rasterized for (for tests and diagnostics). */
     public static int rasterScale() {
         return rasterScale;
@@ -97,8 +101,10 @@ public final class AuroraFontQuality {
             boolean changed = false;
             for (GlyphProvider.Conditional entry : current) {
                 TrueTypeGlyphProviderDefinition definition = snapshot.get(entry.provider());
-                GlyphProvider fresh = definition == null ? null
-                        : replaced.computeIfAbsent(entry.provider(), old -> load(definition, mc));
+                GlyphProvider fresh = null;
+                if (definition != null) {
+                    fresh = replaced.computeIfAbsent(entry.provider(), old -> load(definition, mc));
+                }
                 if (fresh == null) {
                     next.add(entry);
                 } else {
@@ -115,6 +121,9 @@ public final class AuroraFontQuality {
             owned.add(swap.getValue());
             PROVIDERS.remove(swap.getKey());
             swap.getKey().close();
+        }
+        if (manager instanceof com.aurora.client.ui.text.SdfFontSets.Lifecycle sdf) {
+            sdf.aurora$refreshSdf(options);
         }
         com.aurora.client.AuroraClient.LOGGER.info("[Fonts] Re-rasterized {} Aurora font provider(s) for GUI scale {}",
                 replaced.size(), rasterScale);

@@ -178,6 +178,7 @@ public final class GlassSurface {
         com.aurora.client.ui.util.AuroraFontQuality.beginFrame();
         // Closes a window text scope an exception left open last frame.
         com.aurora.client.ui.util.AuroraFontRenderer.beginTextFrame();
+        com.aurora.client.ui.text.SdfTextSupport.beginFrame();
         if (!pendingRims.isEmpty()) {
             report("glass pass opened (beginGlassPass) but overlayDim never painted — "
                     + pendingRims.size() + " deferred rim finish(es) were painted nowhere");
@@ -329,6 +330,15 @@ public final class GlassSurface {
 
     public static boolean container(GuiGraphicsExtractor g, float x, float y, float w, float h, float radius) {
         return container(g, x, y, w, h, radius, BlurPanelRenderer.Priority.WINDOW);
+    }
+
+    /** Complete single-window pass for a host with no additional glass draws. */
+    public static void window(GuiGraphicsExtractor g, float x, float y, float w, float h, float radius,
+                              float contentInset, int viewportWidth, int viewportHeight) {
+        beginGlassPass();
+        container(g, x, y, w, h, radius);
+        overlayDim(g, viewportWidth, viewportHeight);
+        MaterialSurface.parent(g, x, y, w, h, radius, contentInset);
     }
 
     /**

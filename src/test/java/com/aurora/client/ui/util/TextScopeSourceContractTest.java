@@ -92,4 +92,12 @@ class TextScopeSourceContractTest {
                     adapter + " must keep its latency label out of window scoping");
         }
     }
+
+    @Test void windowSetupAndResizeMeasureInsideTheScope() throws Exception {
+        String mixin = java.nio.file.Files.readString(java.nio.file.Path.of(
+                "adapters/shared/src/client/java/com/aurora/client/mixin/ScreenTextScopeMixin.java"));
+        // Text measured in init/resize must use the same style as the window's drawing.
+        org.junit.jupiter.api.Assertions.assertTrue(mixin.contains("method = {\"init(II)V\", \"resize(II)V\"}, at = @At(\"HEAD\")"));
+        org.junit.jupiter.api.Assertions.assertTrue(mixin.contains("method = {\"init(II)V\", \"resize(II)V\"}, at = @At(\"RETURN\")"));
+    }
 }

@@ -528,7 +528,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
 
         // ---- 2. Dim — end of the glass pass (token-driven; dark in both modes by design) ----
         GlassSurface.overlayDim(ctx, this.width, this.height);
-        MaterialSurface.parent(ctx, windowX(), windowTop(), windowWidth(), windowHeight(), frameRadius);
+        MaterialSurface.parent(ctx, windowX(), windowTop(), windowWidth(), windowHeight(), frameRadius, 3);
 
 
 

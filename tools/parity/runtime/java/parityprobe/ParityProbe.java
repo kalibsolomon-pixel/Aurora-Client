@@ -498,6 +498,15 @@ public final class ParityProbe implements ClientModInitializer {
                 config.themeOrDefault().backgroundOpacity = Double.parseDouble(args[2]);
                 ThemeManager.reload();
             }
+            // `theme-set <field> <json>` sets one ThemeDefinition field and reloads the theme.
+            case "theme-set" -> {
+                String[] kv = text.substring(10).split(" ", 2);
+                var theme = config.themeOrDefault();
+                var field = theme.getClass().getField(kv[0]);
+                field.set(theme, new com.google.gson.Gson().fromJson(kv[1], field.getGenericType()));
+                ThemeManager.reload();
+                System.out.println("[parity-probe] theme " + kv[0] + "=" + field.get(theme));
+            }
             case "font" -> {
                 config.activeFont = AuroraConfig.FontType.valueOf(args[1]);
                 config.textRendererMode = AuroraConfig.TextRendererMode.valueOf(args[2]);
@@ -540,6 +549,8 @@ public final class ParityProbe implements ClientModInitializer {
                         + " us=" + (System.nanoTime() - start) / 1000);
             }
             case "font-specimen" -> NativeUi.setScreen(client, new FontSpecimenScreen());
+            case "sdf-compare" -> NativeUi.setScreen(client,
+                    new SdfCompareScreen(args.length > 1 ? args[1] : "1"));
             case "benchmark" -> {
                 var output = root.resolve(args[1] + ".json");
                 if (Files.exists(output)) throw new IllegalStateException("Benchmark result already exists");

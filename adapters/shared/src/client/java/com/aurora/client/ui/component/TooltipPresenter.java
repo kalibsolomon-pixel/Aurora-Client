@@ -154,7 +154,9 @@ public final class TooltipPresenter {
         if (position == OverlayLayout.NO_POSITION) return;
         int x = OverlayLayout.x(position), y = OverlayLayout.y(position);
         graphics.nextStratum();
-        MaterialSurface.overlayFace(graphics, x, y, boxWidth, boxHeight, ThemeManager.current().roundness().radius(), alpha);
+        float radius = Math.min(ThemeManager.current().roundness().radius(), Math.min(boxWidth, boxHeight) * .5f);
+        MaterialSurface.overlayFace(graphics, x, y, boxWidth, boxHeight, radius,
+                MaterialSurface.windowCornerClearance(radius, PAD_X, PAD_Y), alpha);
         int color = AuroraAnim.scaleAlpha(MaterialSurface.color(ThemeToken.ON_BACKGROUND), alpha);
         int textY = AuroraFontRenderer.blockY(font, y, boxHeight, layout.lines().size());
         for (int index = 0; index < layout.lines().size(); index++) {

@@ -261,7 +261,7 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
         com.aurora.client.ui.component.GlassSurface.beginGlassPass();
         if (pickerSupportable) com.aurora.client.ui.component.GlassSurface.container(ctx,panelX,panelY,panelW,panelH,radius);
         com.aurora.client.ui.component.GlassSurface.overlayDim(ctx,this.width,this.height);
-        if (pickerSupportable) MaterialSurface.parent(ctx,panelX,panelY,panelW,panelH,radius);
+        if (pickerSupportable) MaterialSurface.parent(ctx,panelX,panelY,panelW,panelH,radius,4);
 
         super.extractRenderState(ctx, mouseX, mouseY, delta);
         Font tr = this.font;

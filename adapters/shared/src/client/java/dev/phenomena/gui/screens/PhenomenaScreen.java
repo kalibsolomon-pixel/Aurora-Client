@@ -512,7 +512,10 @@ public final class PhenomenaScreen extends Screen implements com.aurora.client.u
     com.aurora.client.ui.component.GlassSurface.beginGlassPass();
     boolean captured = com.aurora.client.ui.component.GlassSurface.container(g, frame.x(), frame.y(), frame.w(), frame.h(), Theme.radius());
     com.aurora.client.ui.component.GlassSurface.overlayDim(g, width, height);
-    window.renderShapes(g, frame.x(), frame.y(), frame.w(), frame.h(), captured);
+    if (com.aurora.client.ui.component.MaterialSurface.windowBevelEnabled())
+      com.aurora.client.ui.component.MaterialSurface.parent(g, frame.x(), frame.y(), frame.w(), frame.h(), Theme.radius(),
+          com.aurora.client.ui.component.MaterialSurface.windowCornerClearance(Theme.radius(), 6, 4));
+    else window.renderShapes(g, frame.x(), frame.y(), frame.w(), frame.h(), captured);
     g.text(font, com.aurora.client.ui.util.AuroraFontRenderer.role("Pulsar", com.aurora.client.ui.util.AuroraFontRenderer.Role.TITLE),
         frame.x() + 12, frame.y() + 7, Theme.TEXT(), false);
     int toolsLeft = frame.right();

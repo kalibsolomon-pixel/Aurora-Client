@@ -9,6 +9,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.Minecraft;
 import com.aurora.client.theme.MaterialLighting.Profile;
 import com.aurora.client.theme.UnifiedPalette;
+import com.aurora.client.theme.WindowBevel;
 
 /** Shared cached material for parent faces, embedded controls and opaque floating layers.
  * The parent alone captures the backdrop before dim; its neutral face/boundary
@@ -59,10 +60,59 @@ public final class MaterialSurface {
         return radius==0 ? 0 : radius+outset;
     }
 
-    /** Cached parent face, drawn once above the screen dim even when capture declines. */
-    public static void parent(GuiGraphicsExtractor g, float x, float y, float w, float h, float radius) {
+    public static boolean windowBevelEnabled() {
+        return ThemeManager.current().windowBevel() != WindowBevel.Level.OFF;
+    }
+
+    public static float windowCornerClearance(float radius, float horizontal, float vertical) {
+        return WindowBevel.cornerClearance(radius, horizontal, vertical);
+    }
+
+    /** Parent finish, after the dim and before content, including when glass capture declined. */
+    public static void parent(GuiGraphicsExtractor g, float x, float y, float w, float h, float radius, float contentInset) {
+        if (windowBevelEnabled()) {
+            windowFinish(g, x, y, w, h, radius, contentInset, 1, true);
+            return;
+        }
         cached(g,x,y,w,h,radius,ThemeManager.color(ThemeToken.WINDOW_FILL),
                 windowOutline(),120,true);
+    }
+
+    private static final int WINDOW_PIXEL_BUDGET = 1024 * 1024;
+
+    public static void embeddedFrame(GuiGraphicsExtractor g, float x, float y, float w, float h, float radius,
+                                     float contentInset) {
+        windowFinish(g, x, y, w, h, radius, contentInset, 1, false);
+    }
+
+    private static void windowFinish(GuiGraphicsExtractor g, float x, float y, float w, float h, float radius,
+                                     float contentInset, float visibility, boolean tintBody) {
+        if (w <= 0 || h <= 0 || visibility <= 0) return;
+        var theme = ThemeManager.current();
+        int windowFill = theme.color(ThemeToken.WINDOW_FILL);
+        int fill = tintBody ? windowFill : 0;
+        int guiScale = Math.max(1, (int) Minecraft.getInstance().getWindow().getGuiScale());
+        int outline = theme.color(ThemeToken.MATERIAL_BORDER_STRONG);
+        int pad = WindowBevel.SHADOW_PAD;
+        int logicalW = Math.round(w) + 2 * pad, logicalH = Math.round(h) + 2 * pad;
+        double scale = Math.min(guiScale, Math.sqrt((double) WINDOW_PIXEL_BUDGET / ((double) logicalW * logicalH)));
+        int width = Math.max(1, (int) (logicalW * scale)), height = Math.max(1, (int) (logicalH * scale));
+        double pixelSize = Math.max((double) logicalW / width, (double) logicalH / height);
+        float band = (float) WindowBevel.rasterBandWidth(Math.min(w, h), radius, contentInset, pixelSize, theme.windowBevel());
+        // The next glass pass bends the backdrop across exactly this band (windows with their own capture).
+        if (tintBody) WindowBevel.rememberBand(x, y, w, h, band);
+        long version = (ThemeManager.generation() * 65537L + guiScale) * 31 + theme.windowBevel().ordinal();
+        int recipe = Float.floatToIntBits(band) | Integer.MIN_VALUE;
+        var cache = TEMPLATES.get(version, width, height, w, h, radius, recipe, true, fill, outline);
+        if (!cache.isCurrent(version)) {
+            cache.ensureSize(width, height);
+            var finish = WindowBevel.finish(windowFill, outline, theme.blurRadius(), theme.windowBevel());
+            var raster = new WindowBevel.Raster(w, h, radius, band, pixelSize, finish, theme.windowBevel());
+            cache.windowFace(raster, fill, pad, logicalW, logicalH);
+            cache.commit(version);
+        }
+        cache.blitAt(g, Math.round(x) - pad, Math.round(y) - pad, logicalW, logicalH,
+                (Math.round(visibility * 255) << 24) | 0xffffff);
     }
 
     /** Fixed outline attenuation; independent of Background Opacity. */
@@ -290,8 +340,9 @@ public final class MaterialSurface {
                     // Preserve pre-pass owner-themed cards and tooltips; window bodies stay flat.
                     if(shadow && kind!=120 && light==Light.FLAT)
                         cache.shadeVertical(pad*scale,pad*scale,width*scale,height*scale,3);
-                    cache.lightFace(pad*scale,pad*scale,w*scale,h*scale,radius*scale,scale,
-                            light.top,light.bottom,light.profile);
+                    if (light != Light.FLAT)
+                        cache.lightFace(pad*scale,pad*scale,w*scale,h*scale,radius*scale,scale,
+                                light.top,light.bottom,light.profile);
                 }
 
                 if(kind==2 || kind==102 || border!=0 && light!=Light.FLAT) {
@@ -330,8 +381,20 @@ public final class MaterialSurface {
                 color(ThemeToken.BORDER_HOVER),5,true,1);
     }
 
-    public static void overlayFace(GuiGraphicsExtractor g, int x, int y, int w, int h, float radius, float opacity) {
-        cached(g,x,y,w,h,radius,color(ThemeToken.SURFACE_VARIANT) | 0xff000000,0,6,false,opacity,Light.OVERLAY);
+    public static void overlayFace(GuiGraphicsExtractor g, int x, int y, int w, int h, float radius,
+                                   float contentInset, float visibility) {
+        if (windowBevelEnabled()) windowFinish(g, x, y, w, h, radius, contentInset, visibility, true);
+        else cached(g,x,y,w,h,radius,color(ThemeToken.SURFACE_VARIANT) | 0xff000000,0,6,false,visibility,Light.OVERLAY);
+    }
+
+    public static void floatingTooltip(GuiGraphicsExtractor g, int x, int y, int w, int h, int legacyRadius,
+                                       float textInsetX, float textInsetY) {
+        if (windowBevelEnabled()) {
+            float radius = Math.min(ThemeManager.current().roundness().radiusSmall(), Math.min(w, h) * .5f);
+            windowFinish(g, x, y, w, h, radius, windowCornerClearance(radius, textInsetX, textInsetY), 1, true);
+        } else {
+            floating(g, x, y, w, h, legacyRadius, 1);
+        }
     }
 
     public static void floating(GuiGraphicsExtractor g, int x, int y, int w, int h,

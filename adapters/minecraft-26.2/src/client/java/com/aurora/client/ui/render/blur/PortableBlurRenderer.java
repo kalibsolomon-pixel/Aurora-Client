@@ -98,6 +98,14 @@ final class PortableBlurRenderer {
         }
     }
 
+    private static float nextBend, nextBand;
+
+    /** The next {@link #render} call's refractive edge (device px); consumed by that call. */
+    static void refraction(float bend, float band) {
+        nextBend = bend;
+        nextBand = band;
+    }
+
     static boolean render(GuiGraphicsExtractor graphics, Output output, RenderTarget main,
                           int x, int y, int rx, int ry, int rw, int rh,
                           int width, int height, int scale, float radius, float corner,
@@ -155,6 +163,10 @@ final class PortableBlurRenderer {
         params[15] = (float) com.aurora.client.theme.ThemeManager.current().backgroundOpacity();
         params[16] = unified ? 1.35f : 1;
         params[17] = unified ? .92f : 1;
+        // Refractive edge (Filter.zw): largest bend and frame band in device px, set per panel.
+        params[18] = nextBend;
+        params[19] = nextBand;
+        nextBend = 0; nextBand = 0;
         params[20] = BlurPanelRenderer.LIGHT_DIR_X;
         params[21] = BlurPanelRenderer.LIGHT_DIR_Y;
         float[] composite = params.clone();

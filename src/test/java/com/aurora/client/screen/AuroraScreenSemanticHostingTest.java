@@ -34,7 +34,7 @@ class AuroraScreenSemanticHostingTest {
     @Test
     void exactInlineInventoryIsReconfirmed() {
         String settings = settingsRegistryBlock();
-        assertEquals(4, count(settings, "new EnumSetting<>("), "hostable enum triggers (Text gained Weight, 2026-11-12)");
+        assertEquals(5, count(settings, "new EnumSetting<>("), "hostable enum triggers, including Window Bevel");
         assertEquals(2, count(settings, "new AccentSetting("), "two theme colour rows (Accent, Background) — single-picker swatches since the 2026-10-30 ruling");
         assertEquals(2, count(settings, "new SegmentedSetting<>("),
                 "Text's Case and HUD Text Shadow (2026-11-12; Corner Style became the Corner Radius slider)");
