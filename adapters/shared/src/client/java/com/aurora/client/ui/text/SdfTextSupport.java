@@ -5,6 +5,8 @@ import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.health.MixinHealth;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.FontDescription;
+import net.minecraft.network.chat.Style;
 import net.minecraft.resources.Identifier;
 
 public final class SdfTextSupport {
@@ -51,9 +53,18 @@ public final class SdfTextSupport {
     }
 
     public static Identifier rasterId(Identifier id) {
+        return isSdfFont(id) ? id.withPath(id.getPath().substring(0, id.getPath().length() - 4)) : null;
+    }
+
+    /** Whether the resolved style names an Aurora distance-field font alias. */
+    public static boolean isSdfStyle(Style style) {
+        return style != null && style.getFont() instanceof FontDescription.Resource resource
+                && isSdfFont(resource.id());
+    }
+
+    private static boolean isSdfFont(Identifier id) {
         String path = id.getPath();
-        if (!"aurora".equals(id.getNamespace()) || path.length() <= 4 || !path.endsWith("_sdf")) return null;
-        return id.withPath(path.substring(0, path.length() - 4));
+        return "aurora".equals(id.getNamespace()) && path.length() > 4 && path.endsWith("_sdf");
     }
 
     public static void fail(String stage, Throwable failure) {

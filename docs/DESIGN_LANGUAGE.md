@@ -206,6 +206,9 @@ Measurement always follows drawing: `MixinFont` re-routes width through the same
 drawn in the GUI, not where the custom font applies or how it is measured. The 8 px body,
 9 px body, 11 px title and 20 px wordmark keep their raster metrics. Compare both at
 native pose scale before judging stroke weight; the main gain is at larger pose scales.
+In All Text mode, scaled HUD labels use the same distance-field glyphs in the world and
+in HUD editor previews. Keystrokes legends keep their fitted size and follow the key face
+at fractional positions with SDF. Bitmap legends still snap to device pixels.
 World-space text and non-bundled fallback glyphs retain the bitmap path.
 
 | Role | Normative treatment |

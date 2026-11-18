@@ -2,6 +2,7 @@ package com.aurora.client.ui.util;
 
 import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.health.HealthTestAccess;
+import com.aurora.client.ui.text.SdfTextSupport;
 import net.minecraft.network.chat.FontDescription;
 import net.minecraft.resources.Identifier;
 import org.junit.jupiter.api.AfterEach;
@@ -9,6 +10,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SdfTextStyleTest {
     private AuroraConfig config;
@@ -68,6 +71,7 @@ class SdfTextStyleTest {
         try {
             HealthTestAccess.fail("SdfGlyphRenderStateMixin");
             assertEquals(raster, AuroraFontRenderer.getActiveStyle().getFont());
+            assertFalse(SdfTextSupport.isSdfStyle(AuroraFontRenderer.getActiveStyle()));
         } finally {
             HealthTestAccess.reset(null);
         }
@@ -76,6 +80,24 @@ class SdfTextStyleTest {
             assertEquals(raster, AuroraFontRenderer.getActiveStyle().getFont());
         } finally {
             HealthTestAccess.reset(null);
+        }
+    }
+
+    @Test void hudUsesSdfWhenTheActiveFontAndScopeAllowIt() {
+        config.activeFont = AuroraConfig.FontType.INTER;
+        boolean wasDrawingHud = AuroraFontRenderer.isDrawingHud();
+        AuroraFontRenderer.setDrawingHud(true);
+        try {
+            assertFalse(SdfTextSupport.isSdfStyle(AuroraFontRenderer.getActiveStyle()));
+            config.textSdf = true;
+            assertTrue(SdfTextSupport.isSdfStyle(AuroraFontRenderer.getActiveStyle()));
+            config.activeFont = AuroraConfig.FontType.SANSSERIF;
+            assertFalse(SdfTextSupport.isSdfStyle(AuroraFontRenderer.getActiveStyle()));
+            config.activeFont = AuroraConfig.FontType.INTER;
+            config.textRendererMode = AuroraConfig.TextRendererMode.AURORA_ONLY;
+            assertFalse(SdfTextSupport.isSdfStyle(AuroraFontRenderer.getActiveStyle()));
+        } finally {
+            AuroraFontRenderer.setDrawingHud(wasDrawingHud);
         }
     }
 
