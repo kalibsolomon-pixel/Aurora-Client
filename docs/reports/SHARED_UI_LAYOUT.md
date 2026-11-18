@@ -16,19 +16,29 @@ tests, focus order, reveal, and identity through removal/reinsertion and
 object replacement. These are synthetic geometry and source-contract tests,
 not a pixel comparison with the native client.
 
+`python tools/parity.py` passed: 1,259 tests on 26.1.2, 1,259 on 26.2,
+and 1,261 on 26.3, with one skip on each line. The optional probe JAR built
+for every line. `python -m unittest discover -s tools` passed all 43 tests.
+
 The Java 25 micro-benchmark (warmed core arrangement, changing row visibility)
 measured the following on the development workstation:
 
 | Rows | Mean (µs) | p95 (µs) |
 |---:|---:|---:|
-| 40 | 0.54 | 0.80 |
-| 200 | 1.42 | 1.50 |
-| 1,000 | 9.61 | 10.80 |
+| 40 | 0.43 | 0.60 |
+| 200 | 1.28 | 1.40 |
+| 1,000 | 7.43 | 8.10 |
 
-Run `LayoutBenchmark` from the test classpath to reproduce. The benchmark
-does not measure native font measurement, widget updates or per-frame CPU.
-The core reuses boxes and arrays when inputs are unchanged; host checks for
-dynamic visibility and existing widget synchronization still run on paint.
+To reproduce on Windows after building 26.2:
+
+```powershell
+java -cp 'build/minecraft-26.2/classes/java/test;core/build/classes/java/main;ports/build/classes/java/main' com.aurora.client.ui.layout.LayoutBenchmark
+```
+
+The benchmark does not measure native font measurement, widget updates or
+per-frame CPU. The core reuses boxes and arrays when inputs are unchanged;
+host checks for dynamic visibility and existing widget synchronization still
+run on paint.
 
 ## Native acceptance (parent)
 
