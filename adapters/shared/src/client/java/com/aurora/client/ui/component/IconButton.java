@@ -21,9 +21,9 @@ import java.util.function.Supplier;
 /**
  * A square, icon-only action (the title screen's top bar). Vanilla keeps
  * pointer, keyboard, focus, click sound and narration; the name doubles as
- * the tooltip. The face is the outlined card of {@link Button.Theming#OUTLINED}
- * at a smaller size; hover and focus are carried by the icon colour and the
- * focus ring, never by the tint (glass rule 9).
+ * the tooltip. The face is the raised, bevelled control of
+ * {@link MaterialSurface#control} (owner, 2026-11-18); hover blends its cached
+ * state templates and lifts the icon colour, focus is the ring.
  */
 public class IconButton extends AbstractButton {
     private static final float ICON_EM = 12f;
@@ -60,10 +60,7 @@ public class IconButton extends AbstractButton {
         float t = (float) hover.update(this.active && isHovered() ? 1 : 0, System.nanoTime());
         float x = getX(), y = getY(), w = getWidth(), h = getHeight();
         float r = ThemeManager.current().roundness().radiusSmall();
-        int windowAlpha = ThemeManager.color(ThemeToken.WINDOW_FILL) >>> 24;
-        int fill = AuroraAnim.lerpArgb(ThemeManager.color(ThemeToken.MATERIAL_RAISED), ThemeManager.color(ThemeToken.MATERIAL_HOVER), t);
-        RenderUtil.drawRoundedRectAA(g, x, y, w, h, r, ThemeManager.withAlpha(fill, windowAlpha));
-        RenderUtil.drawRoundedOutlineAA(g, x, y, w, h, r, 1, MaterialSurface.color(ThemeToken.BORDER_HOVER));
+        MaterialSurface.control(g, x, y, w, h, r, false, !this.active, false, t, 0f);
         // The ring is for keyboard focus; a mouse click focuses too, and must not leave a ring behind.
         if (isFocused() && this.active && Minecraft.getInstance().getLastInputType().isKeyboard()) RenderUtil.drawRoundedOutlineAA(g, x - 2, y - 2, w + 4, h + 4,
                 MaterialSurface.outsetRadius(r, 2), 1, MaterialSurface.color(ThemeToken.ACCENT));

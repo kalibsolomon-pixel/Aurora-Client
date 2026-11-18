@@ -120,6 +120,9 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
 
     private java.util.List<String> guideLines = java.util.List.of();
     private int guideWidth = -1;
+    /** The instruction pill's visibility: fades out while the cursor is over it. */
+    private final com.aurora.client.ui.util.TimedTransition guideFade =
+            new com.aurora.client.ui.util.TimedTransition(120, com.aurora.client.ui.util.CubicBezier.EASE, 1);
     private int guideStyle = -1;
 
     @Override
@@ -128,8 +131,8 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
         int h = 20;
 
         // Owner corrections (2026-10-19): Aurora Settings sits over the
-        // crosshair, Reset Positions is a compact corner action, and both follow
-        // the Theme — Background Color fill with the accent outline.
+        // crosshair and Reset Positions is a compact corner action. Both are the
+        // raised, bevelled control face every Aurora window uses (owner, 2026-11-18).
         this.addRenderableWidget(ButtonWidget.semantic(
                 (this.width - w) / 2, (this.height - h) / 2, w, h,
                 Component.literal("Aurora Settings"),
@@ -140,7 +143,7 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
                     if (this.minecraft != null) {
                         com.aurora.client.adapter.NativeUi.setScreen(this.minecraft, AuroraScreen.create());
                     }
-                }).glassBackground(true).theming(com.aurora.client.ui.component.Button.Theming.BACKGROUND_ACCENT));
+                }).glassBackground(true));
 
         // Label width + the painter's 20 px ellipsis reserve + 2 px breathing room.
         // Sized from the WIDER of the two labels so "Confirm reset" (the armed
@@ -153,7 +156,7 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
                 this.width - resetW - 8, 8, resetW, resetH,
                 Component.literal(resetConfirm.isArmed() ? "Confirm reset" : "Reset Positions"),
                 "Moves every HUD module back to its default anchor, offset and scale. Press again to confirm.",
-                this::resetPressed).glassBackground(true).theming(com.aurora.client.ui.component.Button.Theming.BACKGROUND_ACCENT);
+                this::resetPressed).glassBackground(true);
         resetBtn.destructive(resetConfirm.isArmed());
         resetBtnArmed = resetConfirm.isArmed();
         this.addRenderableWidget(resetBtn);
@@ -283,10 +286,20 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
         int pillW = Math.min(hintWidth, textW + 16);
         int pillX = (this.width - pillW) / 2;
         int pillY = this.height - 22 - 12 - pillH; // clear of the vanilla hotbar
-        MaterialSurface.floating(ctx, pillX, pillY, pillW, pillH,
-                Math.round(ThemeManager.current().roundness().radiusSmall()), 1f);
-        com.aurora.client.ui.util.RenderUtil.drawCenteredLines(this.font, ctx, guideLines, (this.width - hintWidth) / 2,
-                pillY + 5, hintWidth, MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY));
+        // Fades out quickly while the cursor is over it, so modules can be placed and
+        // configured in the space it covers (owner, 2026-11-18).
+        boolean over = mouseX >= pillX && mouseX < pillX + pillW && mouseY >= pillY && mouseY < pillY + pillH;
+        float visibility = guideFade.update(over ? 0 : 1, System.nanoTime());
+        if (visibility <= 0.01f) return;
+        // A container: the window frame bevel over the window tint, like tooltips.
+        float radius = Math.min(ThemeManager.current().roundness().radiusSmall(), Math.min(pillW, pillH) * .5f);
+        MaterialSurface.overlayFace(ctx, pillX, pillY, pillW, pillH, radius,
+                MaterialSurface.windowCornerClearance(radius, 8, 5), visibility);
+        int text = MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY);
+        int textAlpha = Math.round((text >>> 24) * visibility);
+        // Below ~4 the font treats alpha as opaque; skip the text instead.
+        if (textAlpha >= 8) com.aurora.client.ui.util.RenderUtil.drawCenteredLines(this.font, ctx, guideLines,
+                (this.width - hintWidth) / 2, pillY + 5, hintWidth, ThemeManager.withAlpha(text, textAlpha));
     }
 
     @Override

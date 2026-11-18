@@ -177,8 +177,9 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
         // Vanilla-backed semantic button: vanilla keeps pointer, keyboard, focus and the click sound.
         var bounds = composition.card(index);
         ButtonWidget btn = ButtonWidget.semantic(bounds.x(), bounds.y(), bounds.width(), bounds.height(), label, description, onPress);
-        // The reference's outlined cards: no glass on a gradient (no world, no panorama: glass rule 5).
-        btn.theming(Button.Theming.OUTLINED).icon(com.aurora.client.screen.IconCatalog.glyph(icon));
+        // Raised, bevelled control faces like every Aurora window's buttons (owner, 2026-11-18). No
+        // glass on a gradient (no world, no panorama: glass rule 5), so the opaque face draws alone.
+        btn.icon(com.aurora.client.screen.IconCatalog.glyph(icon));
         this.addRenderableWidget(btn);
         return btn;
     }
@@ -358,6 +359,8 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
 
     /** The signed-in account: face, name and a chevron. Opens IAS's account list, or the read-only dropdown without IAS. */
     private final class AccountCard extends AbstractButton {
+        private final com.aurora.client.ui.util.TimedTransition hover =
+                new com.aurora.client.ui.util.TimedTransition(120, com.aurora.client.ui.util.CubicBezier.EASE);
         private final Component switchTooltip = Component.translatable("aurora.title.switch_account");
         private final boolean chip;
 
@@ -379,10 +382,9 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
             float x = getX(), y = getY(), w = getWidth(), h = getHeight();
             float r = ThemeManager.current().roundness().radiusSmall();
             boolean hot = isHovered() || accountOpen;
-            int windowAlpha = ThemeManager.color(ThemeToken.WINDOW_FILL) >>> 24;
-            int fill = ThemeManager.color(hot ? ThemeToken.MATERIAL_HOVER : ThemeToken.MATERIAL_RAISED);
-            RenderUtil.drawRoundedRectAA(g, x, y, w, h, r, ThemeManager.withAlpha(fill, windowAlpha));
-            RenderUtil.drawRoundedOutlineAA(g, x, y, w, h, r, 1, MaterialSurface.color(ThemeToken.BORDER_HOVER));
+            // The raised, bevelled control face; hover blends cached state templates.
+            float hoverT = hover.update(hot ? 1 : 0, System.nanoTime());
+            MaterialSurface.control(g, x, y, w, h, r, false, false, false, hoverT, 0f);
             if (isFocused() && minecraft.getLastInputType().isKeyboard()) RenderUtil.drawRoundedOutlineAA(g, x - 2, y - 2, w + 4, h + 4,
                     MaterialSurface.outsetRadius(r, 2), 1, MaterialSurface.color(ThemeToken.ACCENT));
             int face = chip ? 12 : 16;
