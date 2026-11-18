@@ -1,6 +1,7 @@
 package com.aurora.client.mixin;
 
 import com.aurora.client.config.AuroraConfig;
+import com.aurora.client.hud.EntityHeartBar;
 import com.aurora.client.util.AttackedPlayerTracker;
 import com.aurora.client.util.AuroraHealthSnapshots;
 import net.minecraft.client.Minecraft;
@@ -11,7 +12,6 @@ import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.TextColor;
 import net.minecraft.util.Mth;
@@ -22,7 +22,8 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * Draws a player's current HP above their head.
+ * Draws an entity's current HP above its head: a number, or vanilla's
+ * heart bar ({@link EntityHeartBar}) in Hearts mode.
  *
  * <p>Hooks {@code LivingEntityRenderer.render(state, matrices, vertices, light)}
  * at RETURN ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â fires for every player render every frame, regardless of
@@ -52,7 +53,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(LivingEntityRenderer.class)
 public abstract class PlayerHealthLabelMixin {
 
-    @Inject(method = "submit(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/CameraRenderState;)V",
+    @Inject(method = "submit(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/level/CameraRenderState;)V",
             at = @At("TAIL"),
             require = 0)
     private void aurora$drawHealth(LivingEntityRenderState state,
@@ -94,18 +95,6 @@ public abstract class PlayerHealthLabelMixin {
         float ratio = Mth.clamp(hp / max, 0.0f, 2.0f);
         int color = healthColor(ratio);
 
-        Component label;
-        if (cfg.playerHealthDisplayMode == AuroraConfig.HealthDisplayMode.HEARTS) {
-            label = buildHeartsLabel(snap.health, snap.maxHealth, snap.absorption);
-        } else {
-            // Heart in red, number in white.
-            label = Component.literal("\u2764 ")
-                    .withStyle(Style.EMPTY.withColor(TextColor.fromRgb(0xFF5555)))
-                    .copy()
-                    .append(Component.literal(formatHp(hp))
-                            .withStyle(Style.EMPTY.withColor(TextColor.fromRgb(0xFFFFFF))));
-        }
-
         // Position above the head. Use the entity's nameTagAttachment when
         // available (already includes vanilla's headroom); fall back to a
         // bounding-box-derived offset for entities that don't have one.
@@ -115,6 +104,19 @@ public abstract class PlayerHealthLabelMixin {
                 ? state.nameTagAttachment
                 : new Vec3(0.0, state.boundingBoxHeight + 0.5, 0.0);
         Vec3 offset = state.nameTag != null ? base.add(0.0, 0.30, 0.0) : base;
+
+        // Hearts: vanilla's heart sprites and animation, billboarded like a nametag.
+        if (cfg.playerHealthDisplayMode == AuroraConfig.HealthDisplayMode.HEARTS) {
+            EntityHeartBar.submit(matrices, collector, camera, offset, !state.isDiscrete, snap);
+            return;
+        }
+
+        // Heart in red, number in white.
+        Component label = Component.literal("\u2764 ")
+                .withStyle(Style.EMPTY.withColor(TextColor.fromRgb(0xFF5555)))
+                .copy()
+                .append(Component.literal(formatHp(hp))
+                        .withStyle(Style.EMPTY.withColor(TextColor.fromRgb(0xFFFFFF))));
 
         // submitNameTag handles billboarding + distance fading like vanilla
         // nametag rendering. Calling shape mirrors EntityRenderer.submitNameTag.
@@ -154,107 +156,5 @@ public abstract class PlayerHealthLabelMixin {
             return Integer.toString(Math.round(hp));
         }
         return String.format("%.1f", hp);
-    }
-
-    /**
-     * Builds a Component that renders health as a row of heart-shaped
-     * icons, mimicking the vanilla HUD health bar. Each heart represents
-     * 2 HP (one "row" of hearts in vanilla terms).
-     *
-     * <p>The visual encoding mirrors vanilla so the bar is instantly
-     * readable to anyone who plays the game. Each heart is a single
-     * {@code ❤} glyph (U+2764) whose color communicates its state:
-     * <ul>
-     *   <li><b>Full</b> — bright red ({@code 0xFF5555}), or gold
-     *       ({@code 0xFFAA00}) for absorption hearts.</li>
-     *   <li><b>Half</b> — a pronounced dark red ({@code 0xFFCC3333}).
-     *       This is deliberately saturated so it stays clearly visible
-     *       at small sizes / distance.</li>
-     *   <li><b>Empty</b> — not drawn at all. Only hearts that carry at
-     *       least some HP are rendered, so the row reads purely as how
-     *       much health the entity has left rather than also showing
-     *       empty containers.</li>
- * </ul>
-     *
-     * <p>Vanilla caps the visible bar at 10 hearts (20 HP) per row and
-     * wraps to a second row for higher max-health/absorption totals. For
-     * an above-head indicator that quickly becomes unreadable, so we cap
-     * the row at {@code MAX_HEARTS} (10) hearts and, when the entity has
-     * more than that, append the remaining HP as a short "+N" suffix.
-     * This keeps the most common case (mobs & players near 20 HP) an
-     * exact 1:1 match with the HUD while still degrading gracefully for
-     * tanky bosses (Wither, Warden, etc.) without flooding the screen.
-     */
-    private static Component buildHeartsLabel(float health, float maxHealth, float absorption) {
-        // Vanilla heart math: each heart = 2 HP. We round so half-hearts
-        // land on a 0.5 boundary (1 HP = half heart).
-        float totalHealth = health + absorption;
-        float maxNormal = Math.max(2.0f, maxHealth);
-        int normalHearts = Math.round(maxNormal / 2.0f);
-        // Absorption hearts sit beyond the normal max.
-        int absorptionHearts = Math.max(0, Math.round(absorption / 2.0f));
-
-        // Cap how many hearts we actually render. Beyond MAX_HEARTS the
-        // row gets too wide to read above a head, so we summarize the
-        // overflow as a "+N" number instead.
-        int MAX_HEARTS = 10;
-        int heartsToRender = Math.min(MAX_HEARTS, normalHearts + absorptionHearts);
-
-        // How much HP each rendered heart represents. If the entity has
-        // more max health than we can show, we scale each icon so the bar
-        // still spans 0..full proportionally (e.g. a 60-HP Wither shows
-        // 10 hearts where each icon = 6 HP).
-        float hpPerRenderedHeart;
-        if (normalHearts + absorptionHearts <= MAX_HEARTS) {
-            hpPerRenderedHeart = 2.0f;
-        } else {
-            hpPerRenderedHeart = (maxNormal + absorption) / heartsToRender;
-        }
-
-        // Palette — matches vanilla heart colors. The half-heart tones are
-        // deliberately saturated so a half heart reads as "damaged red"
-        // and stays clearly visible at small sizes / distance. Empty hearts
-        // are not drawn (skipped in the loop below), so they have no color.
-        final int RED_FULL = 0xFFFF5555;   // normal full
-        final int RED_HALF = 0xFFCC3333;   // normal half — pronounced dark red
-        final int GOLD_FULL = 0xFFFFAA00;  // absorption full
-        final int GOLD_HALF = 0xFFCC7A00;  // absorption half
-
-        MutableComponent hearts = Component.empty();
-        float remaining = totalHealth;
-        for (int i = 0; i < heartsToRender; i++) {
-            float fill = remaining;            // HP available for this heart
-            // Absorption hearts (gold) only get distinct coloring when
-            // we're not in "scaled down" mode — otherwise the gold tint
-            // loses its "beyond max health" meaning.
-            boolean isAbsorption =
-                    i >= normalHearts && (normalHearts + absorptionHearts) <= MAX_HEARTS;
-
-            // Don't render empty hearts at all — only show hearts that carry
-            // at least half their HP. The row then reads purely as "health
-            // remaining" rather than also marking empty containers.
-            if (fill < hpPerRenderedHeart / 2.0f) {
-                remaining -= hpPerRenderedHeart;
-                continue;
-            }
-
-            int heartColor = (isAbsorption)
-                    ? (fill >= hpPerRenderedHeart ? GOLD_FULL : GOLD_HALF)
-                    : (fill >= hpPerRenderedHeart ? RED_FULL : RED_HALF);
-            hearts.append(Component.literal("\u2764")
-                    .withStyle(Style.EMPTY.withColor(TextColor.fromRgb(heartColor))));
-            remaining -= hpPerRenderedHeart;
-        }
-
-        // If the entity has more total HP than we could display, append a
-        // compact "+N" so the player still gets a sense of remaining bulk.
-        float displayedHp = heartsToRender * hpPerRenderedHeart;
-        float overflow = totalHealth - displayedHp;
-        if (overflow > 0.5f) {
-            hearts.append(Component.literal("+" + formatHp(overflow))
-                    .withStyle(Style.EMPTY.withColor(TextColor.fromRgb(0xFFAAAAAA))));
-        }
-
-        return hearts;
     }
 }

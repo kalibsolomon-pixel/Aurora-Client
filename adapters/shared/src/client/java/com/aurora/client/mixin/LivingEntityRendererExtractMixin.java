@@ -49,7 +49,9 @@ public abstract class LivingEntityRendererExtractMixin {
                 entity.getHealth(),
                 entity.getMaxHealth(),
                 entity.getAbsorptionAmount(),
-                entity.getUUID()
+                entity.getUUID(),
+                entity.hurtTime > 0,
+                entity.isFullyFrozen()
         ));
     }
 }

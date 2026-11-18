@@ -65,6 +65,7 @@ Each one is drawn only when its feature (in the Features tab) is on. Its setting
 | Reach `{hud:reach}` | top left | Reach Display card (off) | Mods → Reach Display |
 | Potion effects `{hud:potion}` | top right | Potion HUD card (on) | Mods → Potion HUD |
 | Ping `{hud:ping}` | top left (hidden in editor by default) | Ping card → Show Ping HUD (off) | Mods → Ping |
+| Your health `{hud:health}` | bottom centre, above the armor row | Health Indicators → Show on HUD (off) | Mods → Health Indicators |
 | Totem pops `{hud:totem_pop}` | top left | Totem Pop Counter card (off) | Mods → Totem Pop Counter |
 | Toggle Sprint/Sneak status, combined `{hud:toggle_sprint_sneak}` | top left | Sprint & Sneak card (off) + Show Status HUD | Mods → Sprint & Sneak |
 | Toggle Sprint status, separate `{hud:toggle_sprint}` | top left | HUD Display Mode = Individual | Mods → Sprint & Sneak |
@@ -128,11 +129,15 @@ Small visual tweaks: totem particles, shield, fluid clarity.
   - **Hide 1st Person Fire**: toggle · on · hides the lava and on-fire screen tint. `{lavaHideOverlay}`
 - >> Hidden parts of the card switch with no row of their own: totem tweaks on/off `{totemTweaksEnabled}`, underwater clarity on/off `{underwaterClarityEnabled}`, lava clarity on/off `{lavaClarityEnabled}`.
 
-#### Entity Health · off `{card:player_health}`
-Health shown above mobs (and optionally players).
-- **Display Mode**: dropdown Number / Hearts · Number. `{playerHealthDisplayMode}`
-- **Only Attacked**: toggle · off · only entities you have hit. `{playerHealthOnlyAttacked}`
-- **Show Players**: toggle · off · include other players. `{playerHealthShowPlayers}`
+#### Health Indicators · off · combined `{card:player_health}`
+Health shown above mobs (and optionally players), and your own on the HUD; each part has its own switch. Named Entity Health until 2026-11-18.
+- *Above Entities*
+  - **Show Above Entities**: toggle · off. `{playerHealthIndicators}`
+  - **Display Mode**: dropdown Number / Hearts · Number · Hearts is vanilla's heart bar: its sprites, containers, absorption, damage blink and low-health jiggle. `{playerHealthDisplayMode}`
+  - **Only Attacked**: toggle · off · only entities you have hit. `{playerHealthOnlyAttacked}`
+  - **Show Players**: toggle · off · include other players. `{playerHealthShowPlayers}`
+- *Your Health*
+  - **Show on HUD**: toggle · off · your health to two decimals (20.00), a draggable HUD module; works without the labels above entities. `{playerHealthHudEnabled}`
 
 #### FreeLook · off `{card:free_look}`
 Look around without turning your character.
@@ -197,6 +202,7 @@ Replaces the crosshair.
 - **Thickness**: slider 1–6 · 1 · hidden for Custom. `{crosshairThickness}`
 - **Gap**: slider 0–10 · 0 · hidden for Custom. `{crosshairGap}`
 - **Color**: color · white. `{crosshairColor}`
+- **Vanilla Blending**: toggle · off · inverts what is behind the crosshair, like vanilla's. `{crosshairVanillaBlend}`
 - **Custom Canvas**: pixel editor, shown only for Custom · vanilla 15×15 cross. `{crosshairCustomPixels}`
 - **Vanilla Attack Indicator**: toggle · on · attack cooldown under the crosshair. `{crosshairAttackIndicatorEnabled}`
 - **Attack Indicator Size %**: slider 25–300 · 100%. `{crosshairAttackIndicatorSize}`
@@ -380,7 +386,6 @@ Swing, view bob, damage tilt, idle sway, entity smoothing.
 - *Swing*
   - **Swing Curve**: dropdown Linear / Sine / Smoothstep / Quartic / Quintic / Cubic Out / Quartic Out · Linear. `{swingAnimationCurve}`
 - *View Bob*
-  - **View Bob Curve**: dropdown (same curves) · Smoothstep. `{viewBobCurve}`
   - **View Bob Amplitude**: slider 0–200% · 100%. `{viewBobAmplitude}`
 - *Damage Tilt*
   - **Enable Damage Tilt**: toggle · off · 1.8-style camera roll. `{damageTiltEnabled}`
@@ -599,6 +604,6 @@ Listed so you can decide whether any should get a control, or be removed.
 - **"Reset to default" in vanilla Controls uses different keys** from a fresh install for FreeLook (V vs X), Toggle Sprint (J vs Left Ctrl), Toggle Sneak (K vs unbound) and World Map (M vs Y).
 - ~~**The Alerts card text mentions low hunger**; there is no hunger alert.~~ *(Done: the card text no longer mentions hunger.)*
 - ~~**The HUD Editor key has no row in Aurora.**~~ *(Done: Settings → Controls → Aurora Keys.)*
-- **Some features have one card toggle covering several hidden switches** (Pack Tweaks, Alerts, Hitbox, Ping). Turning the card on switches every part on, including parts that ship off. *(Display Settings had this too; its combined switch is gone.)*
+- **Some features have one card toggle covering several hidden switches** (Pack Tweaks, Alerts, Hitbox, Ping, Health Indicators). Turning the card on switches every part on, including parts that ship off. *(Display Settings had this too; its combined switch is gone.)*
 - ~~**Display Settings is a "for now" grouping**: five unrelated sections plus Support.~~ *(Done: split across Display, Controls and General.)*
 - **Keystrokes Scale** is the only HUD size that has a slider; every other HUD is sized only by dragging in the HUD Editor.

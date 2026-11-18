@@ -10,7 +10,7 @@ import java.util.Map;
 
 /**
  * Carries Entity Health's old behaviour into the {@code playerHealthShowPlayers}
- * switch (2026-11-11, ADR 0007).
+ * switch (2026-11-11, ADR 0007). The feature is named Health Indicators since 2026-11-18.
  *
  * <p>Before the switch existed, turning Entity Health on showed players and mobs
  * together. A config or profile saved before then has no
@@ -35,7 +35,7 @@ public final class PlayerHealthMigrator {
             JsonElement migrated = migrated(obj.has(SHOW_PLAYERS), obj.get(ENABLED));
             if (migrated == null) return json;
             obj.add(SHOW_PLAYERS, migrated);
-            log.info("Entity Health: config predates the players switch; set it to {}", migrated);
+            log.info("Health Indicators: config predates the players switch; set it to {}", migrated);
             return obj.toString();
         } catch (Throwable t) {
             return json; // the caller's own parse reports a corrupt file
@@ -49,9 +49,9 @@ public final class PlayerHealthMigrator {
             JsonElement migrated = migrated(fields.containsKey(SHOW_PLAYERS), fields.get(ENABLED));
             if (migrated == null) return;
             fields.put(SHOW_PLAYERS, migrated);
-            log.info("Entity Health: profile predates the players switch; set it to {}", migrated);
+            log.info("Health Indicators: profile predates the players switch; set it to {}", migrated);
         } catch (Throwable t) {
-            log.warn("Entity Health: profile migration skipped", t);
+            log.warn("Health Indicators: profile migration skipped", t);
         }
     }
 
