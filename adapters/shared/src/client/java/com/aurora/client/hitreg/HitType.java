@@ -87,7 +87,9 @@ public enum HitType {
     }
     
     public static SoundEvent getHurtSound() {
-        if (Hitreg.target == null) return SoundEvents.PLAYER_HURT;
-        return ((EntityAccessor) Hitreg.target).getHurtSound(Hitreg.target.damageSources().generic());
+        // The accessor may be absent if its mixin did not apply (ADR 0004).
+        if (!(Hitreg.target instanceof EntityAccessor accessor)) return SoundEvents.PLAYER_HURT;
+        SoundEvent sound = accessor.invokeGetHurtSound(Hitreg.target.damageSources().generic());
+        return sound != null ? sound : SoundEvents.PLAYER_HURT;
     }
 }
