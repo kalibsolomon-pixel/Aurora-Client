@@ -4,6 +4,7 @@ import com.aurora.client.ui.component.MaterialSurface;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.component.ButtonWidget;
+import com.aurora.client.ui.layout.ScreenLayout;
 import com.aurora.client.ui.util.ClipBand;
 import com.aurora.client.ui.component.GlassSurface;
 import com.aurora.client.ui.component.ScrollbarChrome;
@@ -104,7 +105,7 @@ import java.util.function.BooleanSupplier;
  * of callbacks. A screen template (vanilla's own
  * {@code AbstractContainerScreen} shape) is the honest fit for that.
  */
-public abstract class ManagerListScreen<T> extends Screen implements ThemedScreen {
+public abstract class ManagerListScreen<T> extends Screen implements ThemedScreen, LayoutScreen {
     /** The window owns the one backdrop capture; child buttons/rows use cached faces
      *  (a per-button blur tinted each control by whatever sat behind it). */
     @Override public boolean parentGlassOnly() { return true; }
@@ -120,11 +121,8 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
      */
     protected final SmoothScroll scroll = new SmoothScroll(60.0).boundedMotion();
 
-    /** Inline rename editor state. {@code -1} = not editing. */
-    protected int editingIndex = -1;
     protected EditBox nameField;
-    /** The row the editor was opened on (validation input for {@link #renameProblem}); null when unset. */
-    protected T editingRow;
+    private String editingRowId;
     /** Refusal message under the open editor's field (null = the typed name is acceptable); design language §11.12. */
     protected String editorError;
 
@@ -275,21 +273,66 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
     protected int columns() { return 1; }
     protected int columnGap() { return rowGap(); }
     protected final int cellWidth() {
-        int cols = Math.max(1, columns());
-        return (listWidth() - columnGap() * (cols - 1)) / cols;
+        return layoutCellWidth;
     }
-    /** Left edge of slot {@code slot} (leading rows count as slots). */
-    protected final int cellX(int listX, int slot) {
-        return listX + (slot % Math.max(1, columns())) * (cellWidth() + columnGap());
+    protected static final String LEADING_ROW = "leading/0";
+    private final ScreenLayout rowsLayout = new ScreenLayout();
+    private List<T> laidOutRows = List.of();
+    private int layoutLead = -1, layoutTop, layoutCols, layoutCellWidth, layoutRowHeight, layoutRowGap, layoutColumnGap;
+    private double layoutGuiScale;
+    private long layoutFontKey;
+
+    protected abstract String rowLayoutId(T row);
+
+    @Override public ScreenLayout contentLayout() { return rowsLayout; }
+    @Override public double layoutScroll() { return (int) scroll.current(); }
+
+    protected final int cellX(int listX, int slot) { return (int) rowsLayout.at(slot).x(); }
+    protected final int cellY(int slot) { return (int) rowsLayout.at(slot).y(layoutScroll()); }
+
+    private void refreshLayout(List<T> rows, int listX) {
+        int lead = leadingRowCount(), cols = Math.max(1, columns());
+        int height = rowHeight(), rowGap = rowGap(), colGap = columnGap();
+        int top = listTop(), clipTop = listClipTop(), clipBottom = listClipBottom(), width = listWidth();
+        int cellWidth = (width - colGap * (cols - 1)) / cols;
+        double scale = this.minecraft.getWindow().getGuiScale();
+        long fontKey = com.aurora.client.screen.setting.FeatureSetting.compactMeasurementKey();
+        ClipBand band = rowsLayout.viewport();
+        if (sameRows(rows) && layoutLead == lead && layoutTop == top && layoutCols == cols
+                && layoutCellWidth == cellWidth && layoutRowHeight == height && layoutRowGap == rowGap
+                && layoutColumnGap == colGap && layoutGuiScale == scale && layoutFontKey == fontKey
+                && band != null && band.x == listX && band.y == clipTop && band.width == width && band.yEnd() == clipBottom) return;
+        laidOutRows = rows;
+        layoutLead = lead;
+        layoutTop = top;
+        layoutCols = cols;
+        layoutCellWidth = cellWidth;
+        layoutRowHeight = height;
+        layoutRowGap = rowGap;
+        layoutColumnGap = colGap;
+        layoutGuiScale = scale;
+        layoutFontKey = fontKey;
+        band = new ClipBand(listX, clipTop, width, clipBottom - clipTop);
+        rowsLayout.begin(band);
+        if (lead > 0) rowsLayout.cell(LEADING_ROW, LEADING_ROW, 0, cols, listX, top, cellWidth, height, colGap, rowGap);
+        for (int index = 0; index < rows.size(); index++) {
+            T row = rows.get(index);
+            rowsLayout.cell(row, rowLayoutId(row), lead + index, cols, listX, top, cellWidth, height, colGap, rowGap);
+        }
+        rowsLayout.finish(band, (rowsLayout.size() + cols - 1) / cols * (height + rowGap), clipBottom - top);
+        rowsLayout.forgetInactive();
     }
-    /** Top edge of slot {@code slot} at the current scroll position. */
-    protected final int cellY(int slot) {
-        return listTop() - (int) scroll.current() + (slot / Math.max(1, columns())) * rowStep();
+
+    private boolean sameRows(List<T> rows) {
+        if (laidOutRows == rows) return true;
+        if (laidOutRows.size() != rows.size()) return false;
+        for (int index = 0; index < rows.size(); index++) {
+            if (!java.util.Objects.equals(laidOutRows.get(index), rows.get(index))) return false;
+        }
+        laidOutRows = rows;
+        return true;
     }
-    private int gridRows(int slots) {
-        int cols = Math.max(1, columns());
-        return (slots + cols - 1) / cols;
-    }
+
     /** Inline rename editor's top offset inside its cell (vertically centered by default). */
     protected int editorFieldYOffset() { return (rowHeight() - 16) / 2; }
 
@@ -313,7 +356,6 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
     protected int listTop() { return windowTop() + HEADER_H + 2; }
     protected int listBottomPad() { return this.height - (windowBottom() - 8); }
 
-    private int rowStep() { return rowHeight() + rowGap(); }
 
     // ------------------------------------------------------------------
     //  Toolbar
@@ -423,7 +465,8 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         // One list fetch per frame drives everything below — the easing
         // bound, the row passes and the scrollbar (list sources may return a
         // fresh copy per call, so hoisting matters on large lists).
-        double maxScroll = maxScrollOf(rows);
+        refreshLayout(rows, listX);
+        double maxScroll = rowsLayout.maxScroll();
         // Easing step before either pass, so the glass pass and the content
         // pass below both read the same this-frame position.
         scroll.advance(maxScroll);
@@ -456,20 +499,20 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
 
         rowGlassDrawn.clear();
         onBeginRowGlassPass();
-        ClipBand band = listBand(listX);
-        GlassSurface.enableScissor(ctx, listX - 4, listClipTop(), listX + listWidth() + 4, listClipBottom());
-        int lead = leadingRowCount(), cw = cellWidth();
+        ClipBand band = rowsLayout.viewport();
+        GlassSurface.enableScissor(ctx, band.x - 4, band.y, band.xEnd() + 4, band.yEnd());
+        int lead = layoutLead, cw = cellWidth();
         for (int index = 0; index < rows.size(); index++) {
             int slot = lead + index;
             prepareRowFocus(rows.get(index), cellX(listX, slot), cellY(slot), cw);
         }
         for (int l = 0; l < lead; l++) {
             int gy = cellY(l);
-            if (rowPaintVisible(band, gy)) paintLeadingRowGlassPass(ctx, cellX(listX, l), gy, cw, l);
+            if (rowsLayout.visible(rowsLayout.at(l), layoutScroll())) paintLeadingRowGlassPass(ctx, cellX(listX, l), gy, cw, l);
         }
         for (int i = 0; i < rows.size(); i++) {
             int gy = cellY(lead + i);
-            if (rowPaintVisible(band, gy)) paintRowGlassPass(ctx, cellX(listX, lead + i), gy, cw, rows.get(i));
+            if (rowsLayout.visible(rowsLayout.at(lead + i), layoutScroll())) paintRowGlassPass(ctx, cellX(listX, lead + i), gy, cw, rows.get(i));
         }
         GlassSurface.disableScissor(ctx);
         if (toolbarActionBtn != null) toolbarActionBtn.renderGlassPass(ctx);
@@ -499,7 +542,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
                     MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
         }
 
-        ctx.enableScissor(listX - 4, listClipTop(), listX + listWidth() + 4, listClipBottom());
+        ctx.enableScissor(band.x - 4, band.y, band.xEnd() + 4, band.yEnd());
         if (rows.isEmpty()) {
             // Empty state centered in the list well rather than pinned to its corner.
             // Icon, headline and hint as one centred group (UI polish 2026-11-14); a screen
@@ -537,11 +580,11 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
 
         for (int l = 0; l < lead; l++) {
             int y = cellY(l);
-            if (rowPaintVisible(band, y)) paintLeadingRow(ctx, cellX(listX, l), y, cw, l, mouseX, mouseY);
+            if (rowsLayout.visible(rowsLayout.at(l), layoutScroll())) paintLeadingRow(ctx, cellX(listX, l), y, cw, l, mouseX, mouseY);
         }
         for (int i = 0; i < rows.size(); i++) {
             int y = cellY(lead + i);
-            if (rowPaintVisible(band, y)) paintRow(ctx, cellX(listX, lead + i), y, cw, rows.get(i), i, mouseX, mouseY);
+            if (rowsLayout.visible(rowsLayout.at(lead + i), layoutScroll())) paintRow(ctx, cellX(listX, lead + i), y, cw, rows.get(i), i, mouseX, mouseY);
         }
 
         ctx.disableScissor();
@@ -604,28 +647,6 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
      */
     protected int listClipTop() { return listTop() - 2; }
     protected int listClipBottom() { return listTop() + (this.height - listTop() - listBottomPad()); }
-
-    /**
-     * C-8 (the C-1 ClipBand rollout to this host): the list viewport's ONE
-     * bounds truth — the content region the row scissor paints, minus the
-     * decorative ±4px shadow bleed (rows are interactive exactly on their
-     * own horizontal extent, which is what the click walk always tested).
-     * Everything that decides whether list content is visible or
-     * interactive derives from it: the render cull, the row click walk,
-     * the inline editors' visibility/paint scissor/keyboard routing, and
-     * the clip-band availability the row passes re-mark every frame. The
-     * band is half-open {@code [y, yEnd)} — edge contact is not
-     * intersection (the frozen C-1 semantics).
-     */
-    protected ClipBand listBand(int listX) {
-        return new ClipBand(listX, listClipTop(), listWidth(), listClipBottom() - listClipTop());
-    }
-
-    /** The row loops' visibility test: a row paints iff it shares at least
-     *  one pixel with the clip band (the band's half-open intersect). */
-    private boolean rowPaintVisible(ClipBand band, int rowY) {
-        return band.intersects(band.x, rowY, band.width, rowHeight());
-    }
 
     /**
      * Glass pass for one row surface. The subclass paints the row's glass
@@ -817,8 +838,8 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
 
     /** {@link #maxScroll()} against an already-fetched list (the per-frame path). */
     protected double maxScrollOf(List<T> rows) {
-        int total = gridRows(rows.size() + leadingRowCount()) * rowStep();
-        return Math.max(0, total - (this.height - listTop() - listBottomPad()));
+        refreshLayout(rows, (this.width - listWidth()) / 2);
+        return rowsLayout.maxScroll();
     }
 
     private ScrollbarChrome.Thumb thumb(double maxScroll, int trackH) {
@@ -863,42 +884,31 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         // vanilla focus first, so focus never lingers somewhere the pointer
         // just left. The row walk below re-focuses the control it lands on.
         semanticHost.dropFocus();
+        int listX = (this.width - listWidth()) / 2;
+        List<T> rows = currentRows();
+        refreshLayout(rows, listX);
 
         // Editors first — but only for clicks inside the list's clip band
         // (C-8): an inline editor whose row is scrolled partly/fully out of
         // the band keeps fresh bounds (see layoutRenameField) yet its
         // clipped-away pixels are not actionable; a click outside the band
         // must reach the rows/toolbar, never a hidden editor.
-        if (mouseY >= listClipTop() && mouseY < listClipBottom()
+        if (rowsLayout.viewport().contains(mouseX, mouseY)
                 && editorClickFirst(_ev, _doubleClicked)) return true;
 
         // Screen-specific pre-row controls (the Profile create button).
         if (rowAreaClickFirst(mouseX, mouseY)) return true;
 
-        int listX = (this.width - listWidth()) / 2;
-        ClipBand band = listBand(listX);
-        List<T> rows = currentRows();
-        int lead = leadingRowCount(), cw = cellWidth();
-        for (int i = 0; i < rows.size(); i++) {
-            T row = rows.get(i);
-            int rowTop = cellY(lead + i);
-            int rowBot = rowTop + rowHeight();
-            int cellLeft = cellX(listX, lead + i);
-
-            // Hit-testing agrees with the render scissor: only the VISIBLE
-            // part of the row is clickable (rows scrolled above the clip —
-            // or below it — are not), and only within the row's horizontal
-            // extent (its cell in a grid). The same band truth the render cull uses (C-8).
-            if (band.contains(mouseX, mouseY) && mouseX >= cellLeft && mouseX < cellLeft + cw
-                    && mouseY >= Math.max(rowTop, band.y) && mouseY < Math.min(rowBot, band.yEnd())) {
-                if (rowClicked(mouseX, mouseY, cellLeft, row, i)) return true;
-            }
+        var hit = rowsLayout.hitTest(mouseX, mouseY, layoutScroll());
+        if (hit != null && hit.order() >= layoutLead) {
+            int index = hit.order() - layoutLead;
+            if (rowClicked(mouseX, mouseY, hit, rows.get(index))) return true;
         }
 
         // Scrollbar thumb grab — checked before the fallthrough commit so
         // grabbing the scroll never cancels an open editor (wheel scrolling
         // doesn't either; the thumb is a list control, not an outside click).
-        double maxScroll = maxScroll();
+        double maxScroll = rowsLayout.maxScroll();
         if (maxScroll > 0) {
             int trackTop = listClipTop();
             int trackH = listClipBottom() - trackTop;
@@ -927,13 +937,11 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
     protected boolean rowAreaClickFirst(double mouseX, double mouseY) { return false; }
 
     /**
-     * A click inside a visible row's band and horizontal extent ({@code listX}
-     * is the row's own left edge — its cell in a grid): row buttons
+     * A click inside a visible row's band and horizontal extent: row buttons
      * first, then the name area (inline edit), then any row-body action.
-     * Returns whether the click was consumed; an unconsumed click falls
-     * through to the next row and eventually the outside-click commit.
+     * An unconsumed click falls through to the outside-click commit.
      */
-    protected abstract boolean rowClicked(double mouseX, double mouseY, int listX, T row, int index);
+    protected abstract boolean rowClicked(double mouseX, double mouseY, ScreenLayout.Box box, T row);
 
     @Override
     public boolean mouseDragged(MouseButtonEvent _ev, double dx, double dy) {
@@ -988,7 +996,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         boolean handled = super.keyPressed(_kev);
         if (com.aurora.client.ui.interaction.FocusReveal.navigation(_kev) && before != getFocused()) {
             com.aurora.client.ui.interaction.FocusReveal.afterNavigation(before, getFocused(), scroll,
-                    maxScrollOf(currentRows()), listClipTop(), listClipBottom());
+                    rowsLayout, layoutScroll());
         }
         return handled;
     }
@@ -1004,12 +1012,11 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
     //  Inline rename editor lifecycle
     // ------------------------------------------------------------------
 
-    /** Opens the inline rename editor over row {@code index}, committing anything open first. */
-    protected void startEditing(int index, String currentValue) {
+    /** Opens the inline rename editor over the clicked row, committing anything open first. */
+    protected void startEditing(T row, String currentValue) {
+        String rowId = rowLayoutId(row);
         commitEditors();
-        editingIndex = index;
-        List<T> rows = currentRows();
-        editingRow = index < rows.size() ? rows.get(index) : null;
+        editingRowId = rowId;
         editorError = null;
         nameField = new EditBox(this.font, 0, 0, nameColumnWidth(), 16, Component.literal("Name"));
         nameField.setMaxLength(48);
@@ -1019,10 +1026,22 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         // Live recompute (design language §11.12): the message appears while
         // the typed name is refusable and clears the moment it is acceptable.
         nameField.setResponder(value -> {
-            if (editingRow == null) return;
+            T edited = editedRow();
+            if (edited == null) return;
             String v = value.trim();
-            editorError = v.isEmpty() ? null : renameProblem(editingRow, v);
+            editorError = v.isEmpty() ? null : renameProblem(edited, v);
         });
+    }
+
+    protected final boolean editing(T row) {
+        if (editingRowId == null) return false;
+        var box = rowsLayout.byId(editingRowId);
+        return box != null && row.equals(box.key());
+    }
+
+    private T editedRow() {
+        var box = rowsLayout.byId(editingRowId);
+        return box == null ? null : laidOutRows.get(box.order() - layoutLead);
     }
 
     /** Applies the edited value (non-empty, trimmed) to the row it was opened on. */
@@ -1047,11 +1066,10 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
      * (design language §11.12); nothing invalid is ever applied.
      */
     protected void commitEdit() {
-        if (editingIndex < 0 || nameField == null) return;
-        List<T> rows = currentRows();
-        if (editingIndex >= rows.size()) { cancelEdit(); return; }
-        T row = rows.get(editingIndex);
-        editingRow = row;
+        if (nameField == null) return;
+        maxScroll();
+        T row = editedRow();
+        if (row == null) { cancelEdit(); return; }
         String v = nameField.getValue().trim();
         String problem = v.isEmpty() ? null : renameProblem(row, v);
         if (problem != null) {
@@ -1064,8 +1082,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
 
     /** Closes the rename editor without applying. */
     protected void cancelEdit() {
-        editingIndex = -1;
-        editingRow = null;
+        editingRowId = null;
         editorError = null;
         nameField = null;
     }
@@ -1086,12 +1103,13 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
      * {@link #renameEditorVisible()} and the base scissors the editor's
      * passes to the band, so the field only ever paints visible pixels.
      */
-    protected EditBox layoutRenameField(List<T> rows, int listX) {
-        if (nameField == null || editingIndex < 0 || editingIndex >= rows.size()) return null;
-        int slot = leadingRowCount() + editingIndex;
-        int rowY = cellY(slot);
-        nameField.setX(editorFieldX(cellX(listX, slot)));
+    protected EditBox layoutRenameField() {
+        var box = rowsLayout.byId(editingRowId);
+        if (nameField == null || box == null) return null;
+        int rowY = (int) box.y(layoutScroll());
+        nameField.setX(editorFieldX((int) box.x()));
         nameField.setY(rowY + editorFieldYOffset());
+        if (nameField.getWidth() != nameColumnWidth()) nameField.setWidth(nameColumnWidth());
         return nameField;
     }
 
@@ -1103,11 +1121,10 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
      * consult it between frames.
      */
     protected boolean renameEditorVisible() {
-        if (nameField == null || editingIndex < 0) return false;
-        List<T> rows = currentRows();
-        if (editingIndex >= rows.size()) return false;
-        int fieldY = cellY(leadingRowCount() + editingIndex) + editorFieldYOffset();
-        return fieldY + 16 > listClipTop() && fieldY < listClipBottom();
+        var box = rowsLayout.byId(editingRowId);
+        if (nameField == null || box == null) return false;
+        int fieldY = (int) box.y(layoutScroll()) + editorFieldYOffset();
+        return rowsLayout.viewport().intersects(editorFieldX((int) box.x()), fieldY, nameColumnWidth(), 16);
     }
 
     /**

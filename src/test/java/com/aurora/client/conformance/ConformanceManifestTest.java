@@ -249,6 +249,7 @@ class ConformanceManifestTest {
     void clipBandConsumersAreTheCompleteCoupledSet() throws IOException {
         Set<String> expected = Set.of(
                 CORE + "ui/util/ClipBand.java",
+                CORE + "ui/layout/ScreenLayout.java",
                 SRC + "screen/AuroraScreen.java",
                 SRC + "screen/ManagerListScreen.java",
                 SRC + "screen/ResourcePackBrowserScreen.java",

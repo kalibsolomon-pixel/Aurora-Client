@@ -46,12 +46,12 @@ class PhaseC8ClipCouplingTest {
     @Test
     void managerDerivesOneBandTruthAndCullsThroughIt() {
         String src = source(MANAGER);
-        assertTrue(src.contains("protected ClipBand listBand(int listX)"),
-                "the manager base must expose the one viewport truth");
-        assertTrue(src.contains("rowPaintVisible(ClipBand band, int rowY)"),
-                "the render cull must take the band (the pre-C-8 literal cull is gone)");
-        assertTrue(src.contains("ClipBand band = listBand(listX);"),
-                "the frame path must fetch the band once and hand it to the walks");
+        assertTrue(src.contains("ClipBand band = rowsLayout.viewport();"),
+                "the manager obtains the clip from the arranged viewport");
+        assertTrue(src.contains("rowsLayout.visible(rowsLayout.at(lead + i), layoutScroll())"),
+                "the render cull uses the arranged box and viewport");
+        assertTrue(src.contains("rowsLayout.hitTest(mouseX, mouseY, layoutScroll())"),
+                "the row hit test uses the same arranged geometry");
     }
 
     @Test
@@ -87,7 +87,7 @@ class PhaseC8ClipCouplingTest {
         String src = source(MANAGER);
         assertTrue(src.contains("renameEditorVisible())"),
                 "keyPressed/charTyped must suspend a scrolled-out editor (renameEditorVisible gate)");
-        assertTrue(src.contains("mouseY >= listClipTop() && mouseY < listClipBottom()\n                && editorClickFirst("),
+        assertTrue(src.contains("rowsLayout.viewport().contains(mouseX, mouseY)\n                && editorClickFirst("),
                 "editorClickFirst must only see clicks inside the clip band");
         assertTrue(src.contains("renderEditorClipped"),
                 "the base must provide the clipped editor painter");
@@ -131,7 +131,7 @@ class PhaseC8ClipCouplingTest {
         String src = source(PROFILE);
         String body = methodBody(src, "protected boolean rowAreaClickFirst");
         assertNotNull(body);
-        assertTrue(body.contains("cellY(0)") /* card grid: cellY derives from listTop() - scroll each call */,
+        assertTrue(body.contains("contentLayout().byId(LEADING_ROW)") && body.contains("box.y(layoutScroll())"),
                 "the create-row hit test must use the LIVE leading-row geometry, not control bounds");
         assertTrue(body.contains("createControl.isAvailable()"),
                 "activation must be availability-aware (clip-band gate), not bounds-only");
@@ -139,6 +139,15 @@ class PhaseC8ClipCouplingTest {
                 "an in-rect click stays consumed even when rejected (no fall-through onto row 0)");
         assertFalse(body.contains("control.getX()"),
                 "the stale-able control bounds must not drive the hit test");
+    }
+
+    @Test
+    void managerRenameResolvesTheSameLayoutIdForPaintAndCommit() {
+        String src = source(MANAGER);
+        assertTrue(methodBody(src, "protected void startEditing").contains("rowLayoutId(row)"));
+        assertTrue(methodBody(src, "protected EditBox layoutRenameField").contains("rowsLayout.byId(editingRowId)"));
+        assertTrue(methodBody(src, "protected void commitEdit()").contains("T row = editedRow()"));
+        assertTrue(methodBody(src, "private T editedRow()").contains("rowsLayout.byId(editingRowId)"));
     }
 
     // ---- Pack grid: the click walk is the render walk, band-clamped ----

@@ -64,6 +64,33 @@ the CPU path, as does the whole session if the shader fails to compile;
 `-Daurora.shapes.cpu=true` forces it. Text layout measures through `TextMetrics`
 using the active native font.
 
+## Screen layout
+
+The shared adapter retains a core `ScreenLayout` for each migrated scroll band
+and, where needed, a second one for stationary chrome. Hosts measure with the
+active font and supply row heights, grid constraints, and a clip band. The
+model retains boxes by logical ID, indexes the current paint and row focus
+order, and answers clipped visibility, hit testing, scroll range and reveal.
+Scrolling is a translation at query time, not a layout invalidation. Resizes,
+changes in measurement, and changes to visible row order rebuild arrangement.
+Native widgets, narration, and rendering still run through Minecraft (ADR 0006).
+
+| Bounds | Owner and consumers |
+|---|---|
+| Overview cards in list/grid view | `AuroraScreen` arranges the search result order into cells; glass, content, hover, click and semantic card bounds read those cells. |
+| Category, Profiles, list/grid, search and Settings page chrome | `AuroraScreen` arranges a fixed band, including the active font's fitted page labels. The EditBox and semantic controls receive its boxes. |
+| Settings headers and inline rows | `AuroraScreen` arranges measured rows and the row-aligned viewport. Paint, click, scroll and reveal read it; header actions derive their subrects from the header row. |
+| Feature detail rows and pinned Item Scale header | `FeatureDetailScreen` arranges visible measured rows and fits the clip to the window; it arranges the pinned header separately. The settings use these origins in both paint passes and pointer dispatch. |
+| Profiles and Waypoints | `ManagerListScreen` arranges leading cells and row cells; subclasses anchor action, name and editor bounds to the cells. The scissor keeps its decorative horizontal bleed outside the interactive band. |
+| Focus, tooltips and floating popups inside a row | The adapter's setting/component still owns its local subrects and overlay placement. `FocusReveal` uses the layout's scroll range and viewport with the semantic control's fitted subrect. Tooltips use the component's translated anchor. |
+| `ui-bounds` probe | Reads arranged content and fixed boxes from `LayoutScreen`; native face/ink observations remain in the same schema, with a layout ID when matched to a box. |
+
+Manager rename editors resolve their row by layout ID, so reordering cannot
+move an open editor to another profile or waypoint.
+
+Pulsar, title screen, resource pack browser, HUD editor and unrelated standalone
+screens keep their existing geometry paths.
+
 ## Feature and failure contracts
 
 `FeatureCatalog` is the single feature/mixin/fair-play inventory. Each adapter's

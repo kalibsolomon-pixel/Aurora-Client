@@ -1,6 +1,7 @@
 package parityprobe;
 
-import com.aurora.client.screen.AuroraScreen;
+import com.aurora.client.screen.LayoutScreen;
+import com.aurora.client.ui.layout.ScreenLayout;
 import com.aurora.client.screen.FeatureDetailScreen;
 import com.aurora.client.ui.util.AuroraFontRenderer;
 import net.minecraft.client.Minecraft;
@@ -17,7 +18,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/** One actual extraction frame, observed only by probe mixins. No production measurement hooks. */
+/** One extraction frame: arranged bounds from the host, native ink from probe mixins. */
 public final class UiBounds {
     private static Path output;
     private static Screen expected;
@@ -34,8 +35,8 @@ public final class UiBounds {
     private UiBounds() {}
 
     public static void arm(Path destination, Screen screen) {
-        if (!(screen instanceof AuroraScreen || screen instanceof FeatureDetailScreen))
-            throw new IllegalStateException("Current main/detail screen required");
+        if (!(screen instanceof LayoutScreen))
+            throw new IllegalStateException("Current main/detail/manager screen required");
         if (output != null || Files.exists(destination)) throw new IllegalStateException("Result pending/already exists");
         output = destination; expected = screen;
     }
@@ -168,10 +169,37 @@ public final class UiBounds {
             report.put("schemaVersion",1);report.put("screen",screen.getClass().getName());
             report.put("guiWidth",expected.width);report.put("guiHeight",expected.height);
             report.put("guiScale",Minecraft.getInstance().getWindow().getGuiScale());
+            LayoutScreen host = (LayoutScreen) screen;
+            ScreenLayout layout = host.contentLayout();
+            ScreenLayout fixed = host.fixedLayout();
+            double scroll = host.layoutScroll();
+            var layoutBoxes = new ArrayList<Map<String,Object>>();
+            appendLayout(layoutBoxes, fixed, 0);
+            appendLayout(layoutBoxes, layout, scroll);
+            for (var control : controls) {
+                Rect face = (Rect) control.get("face");
+                float centerX = face.x + face.w / 2, centerY = face.y + face.h / 2;
+                var box = fixed == null ? null : fixed.hitTest(centerX, centerY, 0);
+                if (box == null) box = layout.hitTest(centerX, centerY, scroll);
+                if (box != null) control.put("layoutId", box.id());
+            }
             report.put("controls",controls);
+            report.put("layout",layoutBoxes);
             UiCacheBenchmark.write(output,report);
             System.out.println("[parity-probe] ui-bounds complete: "+output);
         } catch(Exception failure) { throw new RuntimeException("ui-bounds failed",failure); }
         finally { cancel(); }
+    }
+
+    private static void appendLayout(List<Map<String,Object>> target, ScreenLayout layout, double scroll) {
+        if (layout == null) return;
+        for (int index = 0; index < layout.size(); index++) {
+            var box = layout.at(index);
+            var entry = new LinkedHashMap<String,Object>();
+            entry.put("layoutId", box.id());
+            entry.put("face", new Rect(box.x(), box.y(scroll), box.width(), box.height()));
+            entry.put("visible", layout.visible(box, scroll));
+            target.add(entry);
+        }
     }
 }

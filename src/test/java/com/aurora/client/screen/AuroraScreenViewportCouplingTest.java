@@ -62,14 +62,11 @@ class AuroraScreenViewportCouplingTest {
     @Test
     void tileCullHoverAndClickUseTheViewport() {
         String src = screenSource();
-        assertTrue(src.contains("cardBounds(int i, List<Module> mods, ClipBand vp)"),
-                "the tile geometry walk carries the viewport (one cull answer)");
-        assertTrue(src.contains("if (!vp.intersects(cx, cy, cw, ch)) return null;"),
-                "the cull is the viewport intersection");
-        assertTrue(src.contains("boolean hover = vp.contains(mouseX, mouseY)"),
+        assertTrue(src.contains("modulesLayout.visible(box, layoutScroll()) ? box : null"),
+                "render culls against the arranged box and viewport");
+        assertTrue(src.contains("modulesLayout.contains(bounds, mouseX, mouseY, layoutScroll())"),
                 "tile hover must require the pointer on a visible pixel");
-        assertTrue(src.contains("if (vp.contains(mouseX, mouseY)\n"
-                        + "                        && mouseX >= b[0]"),
+        assertTrue(src.contains("modulesLayout.hitTest(mouseX, mouseY, layoutScroll())"),
                 "tile click must require the pointer on a visible pixel");
     }
 
@@ -78,9 +75,8 @@ class AuroraScreenViewportCouplingTest {
         String src = screenSource();
         assertTrue(src.contains("} else if (vp.contains(mouseX, mouseY)) {"),
                 "the whole Settings-tab walk must be inside the viewport gate");
-        assertTrue(src.contains("if (vp.intersects(mx + 4, y, (contentWidth() - 8), rh)\n"
-                        + "                                && s.mouseClicked("),
-                "rows skipped by the render walk must be skipped by the click walk");
+        assertTrue(src.contains("settingsLayout.hitTest(mouseX, mouseY, layoutScroll())"),
+                "setting row clicks start at the arranged, clipped hit box");
     }
 
     @Test
@@ -121,6 +117,7 @@ class AuroraScreenViewportCouplingTest {
         // up here and must be justified in this test.
         List<String> expected = List.of(
                 "screen/AuroraScreen.java",
+                "screen/FeatureDetailScreen.java",
                 "screen/ManagerListScreen.java",
                 "screen/ResourcePackBrowserScreen.java");
         try (Stream<Path> files = SourceTree.javaFiles()) {

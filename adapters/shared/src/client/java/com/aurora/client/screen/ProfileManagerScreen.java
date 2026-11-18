@@ -266,6 +266,8 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         return searchField == null ? "" : com.aurora.client.search.SearchMatcher.normalize(searchField.getValue());
     }
 
+    @Override protected String rowLayoutId(String name) { return "profile/" + name; }
+
     @Override protected List<String> currentRows() {
         List<String> all = ProfileManager.getInstance().listProfileNames();
         String query = query();
@@ -450,7 +452,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
                 ThemeManager.color(isActive ? ThemeToken.ACCENT : ThemeToken.ON_BACKGROUND));
 
         // Name (or the inline editor over it).
-        if (index != editingIndex) {
+        if (!editing(name)) {
             AuroraFontRenderer.drawCentered(ctx, this.font, fitName(name), x + w / 2, y + NAME_Y,
                     ThemeManager.color(ThemeToken.ON_BACKGROUND));
         }
@@ -605,13 +607,16 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
      * keep stale hit bounds from its last visible frame. Paint and input
      * gate on {@link #editFieldVisible} plus the base's band gates.
      */
-    private EditBox layoutEditField(List<String> profiles, int listX) {
+    private EditBox layoutEditField() {
         if (creatingNew && createField != null) {
-            createField.setX(editorFieldX(cellX(listX, 0)));
-            createField.setY(cellY(0) + editorFieldYOffset());
+            var box = contentLayout().byId(LEADING_ROW);
+            if (box == null) return null;
+            createField.setX(editorFieldX((int) box.x()));
+            createField.setY((int) box.y(layoutScroll()) + editorFieldYOffset());
+            if (createField.getWidth() != nameColumnWidth()) createField.setWidth(nameColumnWidth());
             return createField;
         }
-        return layoutRenameField(profiles, listX);
+        return layoutRenameField();
     }
 
     /**
@@ -619,10 +624,11 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
      * at least one pixel in the clip band this frame — the C-8 render-truth
      * gate the paint passes and keyboard routing consult.
      */
-    private boolean editFieldVisible(List<String> profiles) {
+    private boolean editFieldVisible() {
         if (creatingNew && createField != null) {
-            int fieldY = cellY(0) + editorFieldYOffset();
-            return fieldY + 16 > listClipTop() && fieldY < listClipBottom();
+            var box = contentLayout().byId(LEADING_ROW);
+            return box != null && contentLayout().viewport().intersects(editorFieldX((int) box.x()),
+                    (int) box.y(layoutScroll()) + editorFieldYOffset(), nameColumnWidth(), 16);
         }
         return renameEditorVisible();
     }
@@ -712,21 +718,19 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
 
     @Override
     protected boolean editorClickFirst(MouseButtonEvent _ev, boolean _doubleClicked) {
-        if (createField != null && createField.mouseClicked(_ev, _doubleClicked)) return true;
-        if (nameField != null && nameField.mouseClicked(_ev, _doubleClicked)) return true;
-        return false;
+        EditBox field = layoutEditField();
+        return field != null && field.mouseClicked(_ev, _doubleClicked);
     }
 
     @Override
     protected boolean rowAreaClickFirst(double mouseX, double mouseY) {
         // The "New profile" card, at its LIVE geometry (leading row 0 at the
         // current scroll) and only inside the clip band.
-        if (leadingRowCount() == 0) return false;
-        int listX = (this.width - listWidth()) / 2;
-        int cardX = cellX(listX, 0), cardY = cellY(0);
+        var box = contentLayout().byId(LEADING_ROW);
+        if (box == null) return false;
+        int cardX = (int) box.x(), cardY = (int) box.y(layoutScroll());
         if (!creatingNew) {
-            if (mouseX >= cardX && mouseX < cardX + cellWidth() && mouseY >= Math.max(cardY, listClipTop())
-                    && mouseY < Math.min(cardY + CARD_H, listClipBottom())) {
+            if (contentLayout().contains(box, mouseX, mouseY, layoutScroll())) {
                 beginCreate();
                 return true;
             }
@@ -744,7 +748,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         // onto whatever lies under it. A rejected click is inert — no
         // animation, no sound, no create, no fall-through.
         int btnX = cardX + INSET;
-        int btnY = cellY(0) + LOWER_BTN_Y;
+        int btnY = cardY + LOWER_BTN_Y;
         boolean inButton = mouseX >= btnX && mouseX < btnX + btnW()
                 && mouseY >= btnY && mouseY < btnY + BTN_H;
         if (!inButton) return false;
@@ -755,7 +759,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
     }
 
     @Override
-    protected boolean rowClicked(double mouseX, double mouseY, int listX, String name, int index) {
+    protected boolean rowClicked(double mouseX, double mouseY, com.aurora.client.ui.layout.ScreenLayout.Box box, String name) {
         // The card's controls see the click first, through their semantic
         // controls (enabled gate + exactly-once activation + sound + focus).
         SemanticActionControl options = optionsControls.get(name);
@@ -769,11 +773,11 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         }
 
         // The name line renames; everywhere else on the card switches.
-        int nameLeft = editorFieldX(listX);
-        int nameTop = cellY(leadingRowCount() + index) + editorFieldYOffset();
+        int nameLeft = editorFieldX((int) box.x());
+        int nameTop = (int) box.y(layoutScroll()) + editorFieldYOffset();
         if (mouseX >= nameLeft && mouseX < nameLeft + nameColumnWidth()
                 && mouseY >= nameTop && mouseY < nameTop + 16) {
-            startEditing(index, name);
+            startEditing(name, name);
             return true;
         }
 
@@ -805,7 +809,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         // C-8: the create editor follows the base rename contract — a field
         // scrolled out of the clip band is SUSPENDED (no keys routed), not
         // cancelled; scrolling back restores typing with focus and value.
-        if (createField != null && createField.isFocused() && editFieldVisible(currentRows())) {
+        if (createField != null && createField.isFocused() && editFieldVisible()) {
             if (key == InputConstants.KEY_RETURN || key == InputConstants.KEY_NUMPADENTER) {
                 commitCreate();
                 return true;
@@ -843,7 +847,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
 
     @Override
     public boolean charTyped(net.minecraft.client.input.CharacterEvent _ev) {
-        if (createField != null && createField.isFocused() && editFieldVisible(currentRows())
+        if (createField != null && createField.isFocused() && editFieldVisible()
                 && createField.charTyped(_ev)) return true;
         if (searchField != null && searchField.isFocused() && searchField.charTyped(_ev)) {
             scroll.set(0);
@@ -859,6 +863,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
     private void beginCreate() {
         commitEditors();
         creatingNew = true;
+        maxScroll();
         if (searchField != null) searchField.setFocused(false);
         createField = new EditBox(this.font, 0, 0, nameColumnWidth(), 16, Component.literal("Name"));
         createField.setMaxLength(48);
@@ -923,7 +928,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
     @Override
     protected void commitEditors() {
         if (creatingNew) commitCreate();
-        if (editingIndex >= 0) commitEdit();
+        commitEdit();
     }
 
     /** Toast from the options screen once it returns here (same package). */
@@ -941,8 +946,8 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         // never keep a stale rect its last visible frame could leave in the
         // band), then paint only when a pixel is visible. The base scissors
         // this call to the list clip (C-8).
-        EditBox field = layoutEditField(rows, listX);
-        if (field == null || !editFieldVisible(rows)) return;
+        EditBox field = layoutEditField();
+        if (field == null || !editFieldVisible()) return;
         if (field instanceof GlassEditBox glassField) glassField.aurora$renderGlassPass(ctx);
     }
 
@@ -954,8 +959,8 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         // visible editor paints only its visible pixels, a fully hidden one
         // nothing (bounds still refreshed above via the glass-pass layout).
         // Their surface was painted in the glass pass; this is content only.
-        EditBox editor = layoutEditField(rows, listX);
-        if (editor != null && editFieldVisible(rows)) {
+        EditBox editor = layoutEditField();
+        if (editor != null && editFieldVisible()) {
             renderEditorClipped(ctx, editor, listX, mouseX, mouseY, delta);
             // The refusal message under whichever inline editor is open —
             // the create field or the rename field (design language §11.12).

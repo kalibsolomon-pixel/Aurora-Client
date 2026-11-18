@@ -15,6 +15,8 @@ import com.aurora.client.ui.interaction.SemanticActionControl;
 import com.aurora.client.ui.interaction.SemanticControlGroup;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.util.SmoothScroll;
+import com.aurora.client.ui.layout.ScreenLayout;
+import com.aurora.client.ui.util.ClipBand;
 import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.ui.util.UiLayerCache;
 import java.util.List;
@@ -41,7 +43,7 @@ import net.minecraft.network.chat.Component;
  * {@code EnumSetting}'s expanded popup is an above-the-dim surface and
  * paints in the content pass through {@code GlassSurface.aboveDimControl}.
  */
-public class FeatureDetailScreen extends Screen implements ThemedScreen {
+public class FeatureDetailScreen extends Screen implements ThemedScreen, LayoutScreen {
     @Override public boolean unifiedTheme() { return true; }
     @Override public boolean parentGlassOnly() { return true; }
 
@@ -88,7 +90,21 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
     private final FeatureMetadata meta;
     /** τ = 60 ms, snap 0.25, wheel step 30, no thumb — the screen's exact pre-R2 feel. */
     private final SmoothScroll scroll = new SmoothScroll(60.0).boundedMotion();
-    private double focusScrollMax;
+    private final ScreenLayout rowsLayout = new ScreenLayout();
+    private final ScreenLayout fixedLayout = new ScreenLayout();
+    private int[] rowHeights;
+    private long layoutFontKey = Long.MIN_VALUE;
+    private int layoutWidth = -1, layoutTop, layoutHeight, layoutPopup;
+    private double layoutScale;
+    private FeatureSetting layoutPinned;
+    private final java.util.Set<SemanticActionControl> previousControls =
+            java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+    private final java.util.Set<SemanticActionControl> currentControls =
+            java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+
+    @Override public ScreenLayout contentLayout() { return rowsLayout; }
+    @Override public ScreenLayout fixedLayout() { return fixedLayout; }
+    @Override public double layoutScroll() { return (int) scroll.current(); }
     private FeatureSetting activeDragSetting = null;
     private FeatureSetting fixedHeaderSetting;
     private int bodyTop() { return TOP_PAD + (fixedHeaderSetting == null ? 0 : fixedHeaderSetting.fixedHeaderHeight()); }
@@ -101,63 +117,39 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
     /** A scrolling body whose rest edge cuts through a tall row, so the bottom fade shows at rest too. */
     private boolean restCut;
 
-    /**
-     * One window size (owner direction, 2026-11-15): every detail screen uses the shared frame
-     * however few or many rows it has, so the window never resizes between features or as
-     * sections expand and collapse. Supersedes the 2026-11-14 content-fitted frame.
-     */
-    private void fitFrame() {
-        compactFrame = maxFrame;
-        TOP_PAD = compactFrame.y() + bodyOffset();
-        int total = 0;
-        for (FeatureSetting setting : meta.settings) if (setting.isVisible()) total += bodyHeight(setting) + ROW_GAP;
-        if (total > 0) total -= ROW_GAP;
-        int fixedHeader = fixedHeaderSetting == null ? 0 : fixedHeaderSetting.fixedHeaderHeight();
-        // The body must also be tall enough for any dropdown's popup, which is
-        // painted inside the body clip and would otherwise be cut off.
+    private void refreshLayout() {
+        long fontKey = FeatureSetting.compactMeasurementKey();
+        if (compact() && layoutFontKey != fontKey) {
+            layoutHeader();
+            TOP_PAD = compactFrame.y() + bodyOffset();
+        }
+        var settings = meta.settings;
+        com.aurora.client.screen.setting.SectionHeaderSetting.markLeading(settings);
+        boolean changed = rowHeights == null || rowHeights.length != settings.size();
+        if (changed) {
+            rowHeights = new int[settings.size()];
+            java.util.Arrays.fill(rowHeights, -1);
+        }
+        int track = compact() ? FeatureSetting.pageTrackWidth(settings) : 0;
+        FeatureSetting pinned = null;
         int popup = 0;
-        for (FeatureSetting setting : meta.settings) {
-            if (setting.isVisible() && setting instanceof com.aurora.client.screen.setting.EnumSetting<?> row)
-                popup = Math.max(popup, row.popupHeight() + 30);
-            if (setting.isVisible() && setting instanceof com.aurora.client.screen.setting.ColorSetting)
-                popup = Math.max(popup, com.aurora.client.screen.setting.ColorSetting.editorHeight());
-        }
-        int limit = Math.min(compactFrame.y() + compactFrame.height(), this.height - 12) - compactFrame.y();
-        int body = limit - bodyOffset() - fixedHeader - BODY_BOTTOM - 2;
-        restBody = body;
-        restCut = false;
-        if (Math.max(total, popup) > body) {
-            // A scrolling body ends on a row boundary, so at rest no setting is cut through
-            // its middle (council review, 2026-11-14); the scrollbar and fade show the rest.
-            // Never rest on a section caption whose rows are all below the fold: an orphaned
-            // caption at the bottom edge read as a cut-off section (council review 2026-11-14).
-            int acc = 0, fit = 0, beforeCaption = 0;
-            boolean lastIsCaption = false;
-            for (FeatureSetting setting : meta.settings) {
-                if (!setting.isVisible()) continue;
-                int h = bodyHeight(setting);
-                if (acc + h > body) break;
-                boolean caption = setting instanceof com.aurora.client.screen.setting.SectionHeaderSetting;
-                if (caption) beforeCaption = fit;
-                fit = acc + h;
-                acc = fit + ROW_GAP;
-                lastIsCaption = caption;
-            }
-            if (lastIsCaption && beforeCaption > 0) fit = beforeCaption;
-            // In the fixed frame a tall row (the custom crosshair canvas) left most of the window
-            // empty below the boundary (2026-11-15): trim only when the gap is under a stacked row,
-            // otherwise let the tall row run under the bottom fade.
-            if (fit > 0 && fit >= popup && body - fit <= com.aurora.client.ui.util.UiDensity.STACKED_ROW + ROW_GAP)
-                restBody = fit;
-            else restCut = true;
-        }
-    }
-    private void measureRows() {
-        int track = FeatureSetting.pageTrackWidth(meta.settings);
-        if (compact()) for (FeatureSetting setting : meta.settings) {
-            setting.pageTrack(track);
-            if (setting.isVisible()) setting.measureCompact(LIST_W);
-            else {
+        for (int index = 0; index < settings.size(); index++) {
+            FeatureSetting setting = settings.get(index);
+            int measured = -1;
+            if (setting.isVisible()) {
+                if (compact()) {
+                    setting.pageTrack(track);
+                    setting.measureCompact(LIST_W);
+                }
+                boolean pin = pinned == null && setting.fixedHeaderHeight() > 0;
+                setting.pinHeader(pin);
+                if (pin) pinned = setting;
+                measured = setting.height() - (pin ? setting.fixedHeaderHeight() : 0);
+                if (setting instanceof com.aurora.client.screen.setting.EnumSetting<?> row)
+                    popup = Math.max(popup, row.popupHeight() + 30);
+                if (setting instanceof com.aurora.client.screen.setting.ColorSetting)
+                    popup = Math.max(popup, com.aurora.client.screen.setting.ColorSetting.editorHeight());
+            } else if (rowHeights[index] >= 0) {
                 for (SemanticActionControl control : setting.controlsWithReset()) {
                     control.setAvailable(false);
                     if (this.getFocused() == control) this.setFocused(null);
@@ -166,12 +158,72 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
                 if (FeatureSetting.getFocused() == setting) FeatureSetting.clearFocus();
                 if (activeDragSetting == setting) activeDragSetting = null;
             }
+            changed |= measured != rowHeights[index];
+            rowHeights[index] = measured;
         }
+        fixedHeaderSetting = pinned;
+        double scale = this.minecraft.getWindow().getGuiScale();
+        int listX = (this.width - LIST_W) / 2;
+        int top = bodyTop();
+        if (!changed && layoutFontKey == fontKey && layoutWidth == LIST_W && layoutTop == top
+                && layoutHeight == this.height && layoutScale == scale && layoutPinned == pinned
+                && layoutPopup == popup && rowsLayout.viewport().x == listX + 8) {
+            FeatureSetting.setHostBand(rowsLayout.viewport());
+            return;
+        }
+        layoutFontKey = fontKey;
+        layoutWidth = LIST_W;
+        layoutTop = top;
+        layoutHeight = this.height;
+        layoutScale = scale;
+        layoutPinned = pinned;
+        layoutPopup = popup;
+        int nextTop = top;
+        rowsLayout.begin(null);
+        for (int index = 0; index < settings.size(); index++) {
+            int rowHeight = rowHeights[index];
+            if (rowHeight < 0) continue;
+            FeatureSetting setting = settings.get(index);
+            nextTop = rowsLayout.stack(setting, meta.id + "/" + index, listX + 8, nextTop,
+                    LIST_W - 16, rowHeight, ROW_GAP, true);
+        }
+        int extent = Math.max(0, nextTop - top - ROW_GAP);
+        if (compact()) fitBody(extent, popup);
+        rowsLayout.finish(new ClipBand(listX + 8, top, LIST_W - 16, bodyBottom() - top), extent);
+        var fixedBand = new ClipBand(listX + 8, TOP_PAD, LIST_W - 16, top - TOP_PAD);
+        fixedLayout.begin(fixedBand);
+        if (pinned != null) fixedLayout.place(pinned, meta.id + "/pinned", fixedBand.x, fixedBand.y,
+                fixedBand.width, fixedBand.height, true);
+        fixedLayout.finish(fixedBand, 0);
+        FeatureSetting.setHostBand(rowsLayout.viewport());
+    }
+
+    private void fitBody(int extent, int popup) {
+        int top = bodyTop();
+        int body = Math.min(compactFrame.y() + compactFrame.height(), this.height - 12) - top - BODY_BOTTOM - 2;
+        restBody = body;
+        restCut = false;
+        if (Math.max(extent, popup) <= body) return;
+        int fit = 0, beforeCaption = 0;
+        boolean lastIsCaption = false;
+        for (int index = 0; index < meta.settings.size(); index++) {
+            FeatureSetting setting = meta.settings.get(index);
+            ScreenLayout.Box box = rowsLayout.bounds(setting);
+            if (box == null) continue;
+            int bottom = (int) (box.top() + box.height()) - top;
+            if (bottom > body) break;
+            lastIsCaption = setting instanceof com.aurora.client.screen.setting.SectionHeaderSetting;
+            if (lastIsCaption) beforeCaption = fit;
+            fit = bottom;
+        }
+        if (lastIsCaption && beforeCaption > 0) fit = beforeCaption;
+        if (fit > 0 && fit >= popup && body - fit <= com.aurora.client.ui.util.UiDensity.STACKED_ROW + ROW_GAP)
+            restBody = fit;
+        else restCut = true;
     }
     private int bodyBottom() { return compact() ? bodyTop() + restBody + 2 : Math.max(bodyTop() + 1, this.height - 30); }
     /** Inset below the last row, clear of the window's corner radius (12, was 8; 2026-11-14). */
     private static final int BODY_BOTTOM = 12;
-    private int bodyHeight(FeatureSetting setting) { return setting.height() - (setting == fixedHeaderSetting ? setting.fixedHeaderHeight() : 0); }
     private int settingY(FeatureSetting setting, int bodyY) { return bodyY - (setting == fixedHeaderSetting ? setting.fixedHeaderHeight() : 0); }
 
 
@@ -292,18 +344,18 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
             compactFrame = maxFrame;
             LIST_W = compactFrame.width(); layoutHeader(); TOP_PAD = compactFrame.y() + bodyOffset();
             ROW_GAP = com.aurora.client.ui.util.UiDensity.ROW_GAP;
-            measureRows();
-            fitFrame();
+            layoutFontKey = Long.MIN_VALUE;
+            refreshLayout();
             // Collapse categories by default only when the fully expanded list would scroll.
             if (com.aurora.client.screen.setting.SectionHeaderSetting.setDefaultExpanded(meta.settings, true)) {
                 com.aurora.client.screen.setting.SectionHeaderSetting.markLeading(meta.settings);
-                measureRows();
+                refreshLayout();
                 int total = 0;
                 for (FeatureSetting setting : meta.settings) if (setting.isVisible()) total += setting.height() + ROW_GAP;
                 if (total > bodyBottom() - TOP_PAD) {
                     com.aurora.client.screen.setting.SectionHeaderSetting.setDefaultExpanded(meta.settings, false);
                     com.aurora.client.screen.setting.SectionHeaderSetting.markLeading(meta.settings);
-                    measureRows();
+                    refreshLayout();
                 }
             }
         }
@@ -435,30 +487,13 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
     public void extractRenderState(GuiGraphicsExtractor ctx, int mouseX, int mouseY, float delta) {
         syncResetButton(); // the confirm timeout restores the label with no timer
         if (pendingReveal != null) expandRevealSection();
-        com.aurora.client.screen.setting.SectionHeaderSetting.markLeading(meta.settings);
-        measureRows();
-        fixedHeaderSetting = null;
-        for (FeatureSetting setting : meta.settings) {
-            if (!setting.isVisible()) continue;
-            boolean pin = fixedHeaderSetting == null && setting.fixedHeaderHeight() > 0;
-            setting.pinHeader(pin);
-            if (pin) fixedHeaderSetting = setting;
-        }
-        if (compact()) fitFrame();
-        int listX = (this.width - LIST_W) / 2;
-        FeatureSetting.setHostBand(new com.aurora.client.ui.util.ClipBand(
-                listX + 8, bodyTop(), LIST_W - 16, bodyBottom() - bodyTop()));
-        int totalRowsH = 0;
-        for (FeatureSetting setting : meta.settings) if (setting.isVisible()) totalRowsH += bodyHeight(setting) + ROW_GAP;
-        if (totalRowsH > 0) totalRowsH -= ROW_GAP;
-        double maxScroll = Math.max(0, totalRowsH - (bodyBottom() - bodyTop()));
-        focusScrollMax = maxScroll;
+        refreshLayout();
+        int listX = rowsLayout.viewport().x - 8;
+        int totalRowsH = rowsLayout.extent();
+        double maxScroll = rowsLayout.maxScroll();
         if (pendingReveal != null) {
-            int offset = 0;
-            for (FeatureSetting setting : meta.settings) {
-                if (setting == pendingReveal) break;
-                if (setting.isVisible()) offset += bodyHeight(setting) + ROW_GAP;
-            }
+            var target = rowsLayout.bounds(pendingReveal);
+            float offset = target == null ? 0 : target.top() - bodyTop();
             // A third of the way down the body, so the rows above give context.
             scroll.set(Math.max(0, Math.min(maxScroll, offset - (bodyBottom() - bodyTop()) / 3.0)));
             revealed = pendingReveal;
@@ -531,14 +566,10 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
             rowCache.clear();
             RenderUtil.RectSink prev = RenderUtil.beginCapture(rowCache.sink());
             try {
-                int yy = bodyTop() - (int) scroll.current();
                 for (FeatureSetting s : meta.settings) {
-                    if (!s.isVisible()) continue;
-                    int h = bodyHeight(s);
-                    if (yy + h > bodyTop() && yy < bodyBottom()) {
-                        s.renderShapes(ctx, listX, settingY(s, yy), LIST_W, 0, 0);
-                    }
-                    yy += h + ROW_GAP;
+                    var box = rowsLayout.bounds(s);
+                    if (box != null && rowsLayout.visible(box, layoutScroll()))
+                        s.renderShapes(ctx, listX, settingY(s, (int) box.y(layoutScroll())), LIST_W, 0, 0);
                 }
             } finally {
                 RenderUtil.endCapture(prev);
@@ -563,16 +594,19 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         // element when declined. EnumSetting's expanded popup is the one
         // deliberate above-the-dim surface (§9): it keeps painting in the
         // content pass through GlassSurface.aboveDimControl.
-        if (fixedHeaderSetting != null) fixedHeaderSetting.renderFixedHeaderGlass(ctx, listX, TOP_PAD, LIST_W);
+        if (fixedHeaderSetting != null)
+            fixedHeaderSetting.renderFixedHeaderGlass(ctx, listX, (int) fixedLayout.at(0).top(), LIST_W);
         GlassSurface.enableScissor(ctx, listX + 8, bodyTop(), listX + LIST_W - 8, bodyBottom());
-        int gy = bodyTop() - (int) scroll.current();
         for (FeatureSetting s : meta.settings) {
-            if (!s.isVisible()) {
+            var box = rowsLayout.bounds(s);
+            if (box == null) {
                 var hidden = registeredSettingControls.get(s);
                 if (hidden != null) for (var control : hidden) control.setScrollFocusTarget(false);
                 continue;
             }
-            int gh = bodyHeight(s);
+            int gy = (int) box.y(layoutScroll());
+            int gh = (int) box.height();
+            boolean rowVisible = rowsLayout.visible(box, layoutScroll());
             var controls = s.controlsWithReset();
             if (!controls.isEmpty()) {
                 // C-4 dynamic-set diff: mutation-time list changes (rows
@@ -580,22 +614,26 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
                 // on the unchanged path (identity compare against the
                 // setting's own cached list).
                 var prev = registeredSettingControls.put(s, controls);
-                if (prev != null && prev != controls && !sameControlList(prev, controls)) {
+                if (prev != controls) {
+                    previousControls.clear();
+                    currentControls.clear();
+                    if (prev != null) previousControls.addAll(prev);
+                    currentControls.addAll(controls);
                     for (SemanticActionControl c : controls) {
-                        if (!containsControl(prev, c)) {
+                        if (!previousControls.contains(c)) {
                             c.setFocused(false);
                             c.setAvailable(false);
                             this.addWidget(c);
                         }
                     }
-                    for (SemanticActionControl c : prev) {
-                        if (!containsControl(controls, c)) {
+                    if (prev != null) for (SemanticActionControl c : prev) {
+                        if (!currentControls.contains(c)) {
                             if (this.getFocused() == c) this.setFocused(null);
                             this.removeWidget(c);
                         }
                     }
                 }
-                boolean available = s == fixedHeaderSetting || gy + gh > bodyTop() && gy < bodyBottom();
+                boolean available = s == fixedHeaderSetting || rowVisible;
                 for (SemanticActionControl control : controls) {
                     control.setAvailable(available);
                     boolean pinned = s == fixedHeaderSetting && s.fixedHeaderControls().contains(control);
@@ -604,10 +642,9 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
                 }
                 s.onInteractionAvailabilityChanged(available);
             }
-            if (gy + gh > bodyTop() && gy < bodyBottom()) {
+            if (rowVisible) {
                 s.renderGlassPass(ctx, listX, settingY(s, gy), LIST_W);
             }
-            gy += gh + ROW_GAP;
         }
 
         GlassSurface.disableScissor(ctx);
@@ -634,15 +671,15 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         rowCache.blitAt(ctx, rowX, rowY, rowW, rowH);
 
         // Live overlay: text, hover feedback, animated values.
-        int y = bodyTop() - (int) scroll.current();
         for (FeatureSetting s : meta.settings) {
-            if (!s.isVisible()) continue;
-            int h = bodyHeight(s);
-            if (y + h > bodyTop() && y < bodyBottom()) {
+            var box = rowsLayout.bounds(s);
+            if (box == null) continue;
+            int y = (int) box.y(layoutScroll());
+            int h = (int) box.height();
+            if (rowsLayout.visible(box, layoutScroll())) {
                 s.renderOverlay(ctx, listX, settingY(s, y), LIST_W, mouseX, mouseY);
                 if (s == revealed) paintReveal(ctx, listX + 8, y, LIST_W - 16, h);
             }
-            y += h + ROW_GAP;
         }
 
         if (compact()) for (FeatureSetting setting : meta.settings) {
@@ -692,7 +729,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         }
 
         if (fixedHeaderSetting != null)
-            fixedHeaderSetting.renderFixedHeader(ctx, listX, TOP_PAD, LIST_W, mouseX, mouseY);
+            fixedHeaderSetting.renderFixedHeader(ctx, listX, (int) fixedLayout.at(0).top(), LIST_W, mouseX, mouseY);
 
         // Reconcile nested controls against their final painted bounds. Hidden rows
         // cannot retain keyboard availability; the pinned Add control owns its header.
@@ -776,20 +813,17 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         // vanilla children or a different row can act, so one click can
         // never both cancel capture and activate an unrelated control.
         if (com.aurora.client.screen.setting.FeatureSetting.cancelActiveCapture()) return true;
-        measureRows();
-        int listX = (this.width - LIST_W) / 2;
+        refreshLayout();
+        int listX = rowsLayout.viewport().x - 8;
         FeatureSetting owner = FeatureSetting.getFocused();
         if (owner instanceof com.aurora.client.screen.setting.EnumSetting<?>
                 || owner instanceof com.aurora.client.screen.setting.ColorSetting) {
             if (FeatureSetting.hostBand().contains(mouseX, mouseY) && button == InputConstants.MOUSE_BUTTON_LEFT) {
-                int popupY = bodyTop() - (int) scroll.current();
-                for (FeatureSetting setting : meta.settings) {
-                    if (!setting.isVisible()) continue;
-                    if (setting == owner && owner.mouseClicked(mouseX, mouseY, button, listX, settingY(owner, popupY), LIST_W)) {
-                        if (owner instanceof com.aurora.client.screen.setting.ColorSetting) activeDragSetting = owner;
-                        return true;
-                    }
-                    popupY += bodyHeight(setting) + ROW_GAP;
+                var box = rowsLayout.bounds(owner);
+                if (box != null && owner.mouseClicked(mouseX, mouseY, button, listX,
+                        settingY(owner, (int) box.y(layoutScroll())), LIST_W)) {
+                    if (owner instanceof com.aurora.client.screen.setting.ColorSetting) activeDragSetting = owner;
+                    return true;
                 }
             }
             if (owner.dismissPopup()) return true;
@@ -806,44 +840,31 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         if (super.mouseClicked(_ev, _doubleClicked)) return true;
         
         if (compact() && mouseX >= listX + LIST_W - 8 && mouseX < listX + LIST_W + 2 && mouseY >= bodyTop() && mouseY < bodyBottom()) {
-            int extent = -ROW_GAP;
-            for (FeatureSetting setting : meta.settings) if (setting.isVisible()) extent += bodyHeight(setting) + ROW_GAP;
-            double max = Math.max(0, extent - (bodyBottom() - bodyTop()));
+            double max = rowsLayout.maxScroll();
             if (button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT && max > 0) {
                 scroll.beginThumbDrag(Math.max(0, Math.min(scroll.thumbHeight(bodyBottom() - bodyTop(), max, 24), mouseY - scroll.thumbY(bodyTop(), bodyBottom() - bodyTop(), max, 24))));
                 return true;
             }
         }
-        if (fixedHeaderSetting != null && mouseY >= TOP_PAD && mouseY < bodyTop()
-                && fixedHeaderSetting.mouseClicked(mouseX, mouseY, button, listX, TOP_PAD, LIST_W)) return true;
-        if (!FeatureSetting.hostBand().contains(mouseX, mouseY)) return false;
-        int y = bodyTop() - (int) scroll.current();
-        for (FeatureSetting s : meta.settings) {
-            if (!s.isVisible()) continue;
-            int h = bodyHeight(s);
-            // Pointer dispatch and paint share the fixed body band.
-            if (y + h > bodyTop() && y < bodyBottom()
-                    && s.mouseClicked(mouseX, mouseY, button, listX, settingY(s, y), LIST_W)) {
-                activeDragSetting = s;
-                // Mirror focus onto the exact control under the accepted
-                // click when the setting exposes several (ItemScale's rows,
-                // Accent's peers — AuroraScreen's rule); single-control
-                // settings keep the first-control focus the C-2 pilot set.
-                var controls = s.controlsWithReset();
-                if (!controls.isEmpty()) {
-                    SemanticActionControl hit = null;
-                    for (SemanticActionControl c : controls) {
-                        if (c.isAvailable() && mouseX >= c.getX() && mouseX < c.getRight()
-                                && mouseY >= c.getY() && mouseY < c.getBottom()) {
-                            hit = c;
-                            break;
-                        }
+        var fixed = fixedLayout.hitTest(mouseX, mouseY, 0);
+        if (fixed != null && fixedHeaderSetting.mouseClicked(mouseX, mouseY, button, listX, (int) fixed.top(), LIST_W)) return true;
+        var box = rowsLayout.hitTest(mouseX, mouseY, layoutScroll());
+        if (box != null && box.key() instanceof FeatureSetting s
+                && s.mouseClicked(mouseX, mouseY, button, listX, settingY(s, (int) box.y(layoutScroll())), LIST_W)) {
+            activeDragSetting = s;
+            var controls = s.controlsWithReset();
+            if (!controls.isEmpty()) {
+                SemanticActionControl hit = null;
+                for (SemanticActionControl c : controls) {
+                    if (c.isAvailable() && mouseX >= c.getX() && mouseX < c.getRight()
+                            && mouseY >= c.getY() && mouseY < c.getBottom()) {
+                        hit = c;
+                        break;
                     }
-                    this.setFocused(hit != null ? hit : controls.get(0));
                 }
-                return true;
+                this.setFocused(hit != null ? hit : controls.get(0));
             }
-            y += h + ROW_GAP;
+            return true;
         }
         return false;
     }
@@ -852,9 +873,8 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
     public boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent _ev, double dx, double dy) {
         double mouseX = _ev.x(); double mouseY = _ev.y(); int button = _ev.button();
         if (compact() && scroll.isDragging()) {
-            int extent = -ROW_GAP;
-            for (FeatureSetting setting : meta.settings) if (setting.isVisible()) extent += bodyHeight(setting) + ROW_GAP;
-            scroll.dragThumb(mouseY, bodyTop(), bodyBottom() - bodyTop(), Math.max(0, extent - (bodyBottom() - bodyTop())), 24, false);
+            refreshLayout();
+            scroll.dragThumb(mouseY, bodyTop(), rowsLayout.viewport().height, rowsLayout.maxScroll(), 24, false);
             return true;
         }
         if (activeDragSetting != null
@@ -880,32 +900,9 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         FeatureSetting focused = FeatureSetting.getFocused();
         if (focused != null && focused.onScroll(vertical)) return true;
 
-        // Input-time bound deliberately computed as before (no trailing-gap
-        // subtraction) — the render-time advance() re-clamps each frame.
-        int totalH = 0;
-        for (FeatureSetting s : meta.settings) if (s.isVisible()) totalH += bodyHeight(s) + ROW_GAP;
-        if (totalH > 0) totalH -= ROW_GAP;
-        double maxScroll = Math.max(0, totalH - (bodyBottom() - bodyTop()));
-
-        scroll.wheel(vertical, 30, maxScroll);
+        refreshLayout();
+        scroll.wheel(vertical, 30, rowsLayout.maxScroll());
         return true;
-    }
-
-    private boolean sameControlList(java.util.List<SemanticActionControl> a,
-                                    java.util.List<SemanticActionControl> b) {
-        if (a.size() != b.size()) return false;
-        for (int i = 0; i < a.size(); i++) {
-            if (a.get(i) != b.get(i)) return false;
-        }
-        return true;
-    }
-
-    private boolean containsControl(java.util.List<SemanticActionControl> list,
-                                    SemanticActionControl wanted) {
-        for (SemanticActionControl c : list) {
-            if (c == wanted) return true;
-        }
-        return false;
     }
 
     @Override
@@ -945,7 +942,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
 
     private void revealKeyboardFocus(net.minecraft.client.gui.components.events.GuiEventListener before) {
         com.aurora.client.ui.interaction.FocusReveal.afterNavigation(before, getFocused(), scroll,
-                focusScrollMax, bodyTop(), bodyBottom());
+                rowsLayout, layoutScroll());
     }
 
     @Override

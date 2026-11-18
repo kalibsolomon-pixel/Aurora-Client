@@ -22,7 +22,9 @@ import com.aurora.client.ui.interaction.SemanticActionControl;
 import com.aurora.client.ui.interaction.SemanticControlGroup;
 import com.aurora.client.ui.interaction.SemanticControlHost;
 import com.aurora.client.ui.interaction.SemanticSound;
+import com.aurora.client.ui.layout.ScreenLayout;
 import com.aurora.client.ui.util.ClipBand;
+import com.aurora.client.ui.util.UiDensity;
 import com.aurora.client.ui.util.MaterialIconRenderer;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.ui.util.TimedTransition;
@@ -113,7 +115,7 @@ import java.util.Map;
  * (canonical 140 ms hover, focus hairline, one-click selection with a
  * silent no-op on the active layout, Left/Right ring).
  */
-public class AuroraScreen extends Screen implements ThemedScreen {
+public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
     @Override public boolean unifiedTheme() { return true; }
     @Override public boolean parentGlassOnly() { return true; }
 
@@ -121,7 +123,23 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     /** §8.3 canonical hover duration — sidebar chrome, cards, headers alike (C-2b). */
     private static final long HOVER_MS = 140L;
 
-    private float[][] cardGeometry;
+    private final ScreenLayout modulesLayout = new ScreenLayout();
+    private final ScreenLayout settingsLayout = new ScreenLayout();
+    private final ScreenLayout chromeLayout = new ScreenLayout();
+    private List<Module> laidOutModules;
+    private List<FeatureMetadata> laidOutPage;
+    private ClipBand laidOutModulesBand, laidOutSettingsBand;
+    private boolean laidOutGrid;
+    private double modulesScale, settingsScale;
+    private long settingsFontKey;
+    private int[] settingHeights = new int[0];
+    private final java.util.Map<FeatureSetting, Integer> hiddenSettingOffsets = new java.util.IdentityHashMap<>();
+
+    @Override public ScreenLayout contentLayout() { return selectedCategory == 0 ? modulesLayout : settingsLayout; }
+    @Override public ScreenLayout fixedLayout() { return chromeLayout; }
+    @Override public double layoutScroll() {
+        return selectedCategory == 0 ? scrolls[0].current() : (float) scrolls[1].current();
+    }
     private ClipBand measuredContent;
     private float BOX_W = com.aurora.client.ui.util.UiDensity.MAIN_WIDTH;
     private float BOX_H = com.aurora.client.ui.util.UiDensity.MAIN_HEIGHT;
@@ -309,9 +327,10 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     }
     private final boolean[] pageGlass = new boolean[pages.size()];
     /** Sub-tab geometry and fitted labels, rebuilt only when the width or the font changes. */
-    private final float[] pageTabX = new float[pages.size()], pageTabW = new float[pages.size()];
     private final String[] pageTabLabel = new String[pages.size()];
     private long pageTabVersion = Long.MIN_VALUE;
+    private ClipBand chromeFrame;
+    private int chromeCategory = -1;
     /** Canonical hover animators for the pair — pointer-only (C-5). */
     private final HoverAnim[] layoutHovers = {
             HoverAnim.symmetric(HOVER_MS),
@@ -378,7 +397,6 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         var body = com.aurora.client.ui.util.UiDensity.mainContent(frame);
         measuredContent = new ClipBand(body.x(), body.y(), body.width(), body.height());
         BOX_W = frame.width(); BOX_H = frame.height();
-        cardGeometry = new float[ModuleManager.getInstance().getModules().size()][4];
         super.init();
         semanticHost.beginRebuild();
         scrolls[0].resetClock();
@@ -744,17 +762,40 @@ public class AuroraScreen extends Screen implements ThemedScreen {
      * as its label plus padding. When they cannot all fit, the padding
      * halves; when they still cannot, they share the row equally and a
      * label that does not fit ends in an ellipsis. Labels stay centred
-     * throughout. Memoized per row width and font; {@link #pageTabX} holds
-     * offsets from {@link #toolbarX()}, so moving the window needs no
-     * re-layout.
+     * throughout. The toolbar retains the arranged boxes and fitted labels.
      */
-    private void layoutPageTabs() {
-        int row = (int) (2 * TOOL_STEP) + searchWidth(); // the Modules toolbar's exact extent
-        AuroraConfig cfg = AuroraConfig.get();
-        long version = ThemeManager.generation() * 65537L + row * 31L
-                + com.aurora.client.ui.util.AuroraFontRenderer.styleKey() * 7L;
-        if (version == pageTabVersion) return;
+    private void arrangeChrome() {
+        long version = FeatureSetting.compactMeasurementKey();
+        if (chromeFrame == measuredContent && chromeCategory == selectedCategory && version == pageTabVersion) return;
+        chromeFrame = measuredContent;
+        chromeCategory = selectedCategory;
         pageTabVersion = version;
+        var viewport = new ClipBand(0, 0, this.width, this.height);
+        chromeLayout.begin(viewport);
+        for (int index = 0; index < 3; index++) {
+            String id = index == 2 ? "toolbar/profiles" : "toolbar/category/" + index;
+            float left = boxX() + 6 + (narrowNavigation() ? index * (TAB_W + 4) : 0);
+            float top = boxY() + (narrowNavigation() ? UiDensity.HEADER + UiDensity.INSET : TAB_FIRST_Y + index * TAB_PITCH);
+            chromeLayout.place(id, id, left, top, TAB_W, TAB_H, true);
+        }
+        float left = boxX() + UiDensity.SIDEBAR + UiDensity.INSET;
+        float top = boxY() + (UiDensity.HEADER - TOOL) / 2f;
+        int searchWidth = Math.max(1, (int) BOX_W - UiDensity.SIDEBAR - UiDensity.INSET - (int) (2 * TOOL_STEP) - 12);
+        if (selectedCategory == 0) {
+            chromeLayout.place("toolbar/list", "toolbar/list", left, top, TOOL, TOOL, true);
+            chromeLayout.place("toolbar/grid", "toolbar/grid", left + TOOL_STEP, top, TOOL, TOOL, true);
+            var search = chromeLayout.place("toolbar/search", "toolbar/search", Math.round(left + 2 * TOOL_STEP), Math.round(top), searchWidth, TOOL, true);
+            searchField.setX((int) search.x());
+            searchField.setY((int) search.top());
+            searchField.setWidth((int) search.width());
+        } else {
+            arrangePageTabs(left, top, (int) (2 * TOOL_STEP) + searchWidth);
+        }
+        searchField.visible = selectedCategory == 0;
+        chromeLayout.finish(viewport, 0);
+    }
+
+    private void arrangePageTabs(float left, float top, int row) {
         int n = pages.size();
         float gaps = PAGE_TAB_GAP * (n - 1);
         float labels = 0;
@@ -768,8 +809,8 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         for (int i = 0; i < n; i++) {
             String label = pages.get(i).label();
             float w = fits ? this.font.width(label) + 2 * pad : equal;
-            pageTabX[i] = x;
-            pageTabW[i] = w;
+            String id = "toolbar/page/" + i;
+            chromeLayout.place(id, id, left + x, top, w, PAGE_TAB_H, true);
             // Squeezed tabs keep half the padding on each side for the label.
             pageTabLabel[i] = fits ? label
                     : com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(this.font, label, Math.max(1, (int) w - PAGE_TAB_PAD), 1);
@@ -781,44 +822,14 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     private float boxY() { return (float) Math.floor((this.height - BOX_H) / 2.0f); }
 
     private float mainX() { return boxX() + (narrowNavigation() ? 8 : com.aurora.client.ui.util.UiDensity.SIDEBAR + com.aurora.client.ui.util.UiDensity.INSET); }
-    private float mainY() { return boxY() + (com.aurora.client.ui.util.UiDensity.HEADER - TOOL) / 2f; }
-
-    /** Cached at init/resize; shared by paint, culling, input and scroll extent. */
     private ClipBand contentViewport() {
-        if (selectedCategory != 1 || measuredContent == null) return measuredContent;
-        // A scrolling settings page ends its viewport on a row boundary, so at rest no row is
-        // cut through its text (council review, 2026-11-14). Scissor, hit tests, scroll extent
-        // and the scrollbar all read this one band.
-        int avail = measuredContent.height, y = 0, fit = 0;
-        boolean overflow = false;
-        outer:
-        for (FeatureMetadata m : pageEntries()) {
-            y += headerBlockH(m);
-            if (m.settingsDetailOnly) {
-                y += SETTINGS_HINT_H;
-                if (y > avail) { overflow = true; break; }
-                fit = y;
-            } else for (FeatureSetting s : m.settings) {
-                if (!s.isVisible()) continue;
-                if (y + s.height() > avail) { overflow = true; break outer; }
-                fit = y + s.height();
-                y = fit + SETTINGS_ROW_GAP;
-            }
-            y += SETTINGS_ENTRY_GAP;
-        }
-        if (!overflow || fit <= 0) return measuredContent;
-        if (trimmedContent == null || trimmedContent.height != fit || trimmedContent.y != measuredContent.y
-                || trimmedContent.x != measuredContent.x || trimmedContent.width != measuredContent.width)
-            trimmedContent = new ClipBand(measuredContent.x, measuredContent.y, measuredContent.width, fit);
-        return trimmedContent;
+        return selectedCategory == 1 && laidOutSettingsBand == measuredContent
+                && laidOutPage == pageEntries() ? settingsLayout.viewport() : measuredContent;
     }
-    private ClipBand trimmedContent;
 
     private boolean narrowNavigation() { return BOX_W < 320; }
-    private float navX(int index) { return boxX() + 6 + (narrowNavigation() ? index * (TAB_W + 4) : 0); }
-    private float navY(int index) { return boxY() + (narrowNavigation() ? com.aurora.client.ui.util.UiDensity.HEADER + com.aurora.client.ui.util.UiDensity.INSET : TAB_FIRST_Y + index * TAB_PITCH); }
-    private float toolbarX() { return boxX() + com.aurora.client.ui.util.UiDensity.SIDEBAR + com.aurora.client.ui.util.UiDensity.INSET; }
-    private int searchWidth() { return Math.max(1, (int) BOX_W - (com.aurora.client.ui.util.UiDensity.SIDEBAR + com.aurora.client.ui.util.UiDensity.INSET) - (int) (2 * TOOL_STEP) - 12); }
+    private float navX(int index) { return chromeLayout.at(index).x(); }
+    private float navY(int index) { return chromeLayout.at(index).top(); }
     private int contentWidth() { return contentViewport().width; }
     private int gridColumns() { return com.aurora.client.ui.util.UiDensity.columns(contentWidth()); }
 
@@ -877,24 +888,107 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         return (Math.round(a * 255f) << 24) | (MaterialSurface.color(t) & 0x00FFFFFF);
     }
 
-    /**
-     * Settings-tab rows use the same compact measurement as the detail
-     * screens (cached per width); the sub-tab row is laid out alongside.
-     */
-    private void measureSettingsRows() {
-        layoutPageTabs();
-        int w = Math.max(1, contentWidth() - 8);
-        // One slider track length across the page's groups (owner decision 2026-11-14). Runs
-        // every frame, so no list is built: a max over the groups, then the measure walk.
-        int track = 0;
-        for (FeatureMetadata m : pageEntries()) track = Math.max(track, FeatureSetting.pageTrackWidth(m.settings));
-        for (FeatureMetadata m : pageEntries())
-            for (FeatureSetting s : m.settings) { s.pageTrack(track); s.measureCompact(w); }
+    private void refreshContentLayout() {
+        arrangeChrome();
+        if (selectedCategory == 0) arrangeModules(filteredModules());
+        else arrangeSettings();
+    }
+
+    private void arrangeModules(List<Module> modules) {
+        double scale = this.minecraft.getWindow().getGuiScale();
+        if (laidOutModules == modules && laidOutModulesBand == measuredContent && laidOutGrid == gridLayout
+                && modulesScale == scale) return;
+        laidOutModules = modules;
+        laidOutModulesBand = measuredContent;
+        laidOutGrid = gridLayout;
+        modulesScale = scale;
+        int columns = gridLayout ? gridColumns() : 1;
+        int width = gridLayout ? Math.min(UiDensity.CARD_WIDTH, measuredContent.width) : measuredContent.width;
+        int height = gridLayout ? UiDensity.CARD_HEIGHT : UiDensity.LIST_HEIGHT;
+        int gap = gridLayout ? UiDensity.GRID_GAP : UiDensity.LIST_GAP;
+        modulesLayout.begin(measuredContent);
+        for (int index = 0; index < modules.size(); index++) {
+            Module module = modules.get(index);
+            modulesLayout.cell(module, module.id, index, columns, mainX(), measuredContent.y, width, height, gap, gap);
+        }
+        modulesLayout.finish(measuredContent, UiDensity.extent((modules.size() + columns - 1) / columns, height, gap));
+    }
+
+    private void arrangeSettings() {
+        List<FeatureMetadata> entries = pageEntries();
+        double scale = this.minecraft.getWindow().getGuiScale();
+        long fontKey = FeatureSetting.compactMeasurementKey();
+        boolean changed = laidOutPage != entries || laidOutSettingsBand != measuredContent
+                || settingsFontKey != fontKey || settingsScale != scale;
+        int width = Math.max(1, measuredContent.width - 8);
+        int count = 0, track = 0;
+        for (int index = 0; index < entries.size(); index++) {
+            FeatureMetadata entry = entries.get(index);
+            if (entry.settingsDetailOnly) continue;
+            count += entry.settings.size();
+            track = Math.max(track, FeatureSetting.pageTrackWidth(entry.settings));
+        }
+        if (settingHeights.length < count) settingHeights = new int[count];
+        int row = 0;
+        for (int index = 0; index < entries.size(); index++) {
+            FeatureMetadata entry = entries.get(index);
+            if (entry.settingsDetailOnly) continue;
+            com.aurora.client.screen.setting.SectionHeaderSetting.markLeading(entry.settings);
+            for (int settingIndex = 0; settingIndex < entry.settings.size(); settingIndex++) {
+                FeatureSetting setting = entry.settings.get(settingIndex);
+                int height = -1;
+                if (setting.isVisible()) {
+                    setting.pageTrack(track);
+                    setting.measureCompact(width);
+                    height = setting.height();
+                }
+                changed |= settingHeights[row] != height;
+                settingHeights[row++] = height;
+            }
+        }
+        if (!changed) return;
+        laidOutPage = entries;
+        laidOutSettingsBand = measuredContent;
+        settingsFontKey = fontKey;
+        settingsScale = scale;
+        settingsLayout.begin(measuredContent);
+        hiddenSettingOffsets.clear();
+        int offset = 0, fit = 0;
+        boolean overflow = false;
+        row = 0;
+        for (int index = 0; index < entries.size(); index++) {
+            FeatureMetadata entry = entries.get(index);
+            int header = headerBlockH(entry);
+            settingsLayout.place(entry, entry.id, mainX() + 4, measuredContent.y + offset,
+                    measuredContent.width - 8, header + (entry.settingsDetailOnly ? SETTINGS_HINT_H : 0), true);
+            offset += header;
+            if (entry.settingsDetailOnly) {
+                offset += SETTINGS_HINT_H;
+                overflow |= offset > measuredContent.height;
+                if (!overflow) fit = offset;
+            } else for (int settingIndex = 0; settingIndex < entry.settings.size(); settingIndex++) {
+                FeatureSetting setting = entry.settings.get(settingIndex);
+                int height = settingHeights[row++];
+                if (height < 0) {
+                    hiddenSettingOffsets.put(setting, offset);
+                    continue;
+                }
+                int nextTop = settingsLayout.stack(setting, entry.id + "/" + settingIndex, mainX() + 4,
+                        measuredContent.y + offset, measuredContent.width - 8, height, SETTINGS_ROW_GAP, true);
+                overflow |= offset + height > measuredContent.height;
+                if (!overflow) fit = offset + height;
+                offset = nextTop - measuredContent.y;
+            }
+            offset += SETTINGS_ENTRY_GAP;
+        }
+        ClipBand viewport = overflow && fit > 0 ? new ClipBand(measuredContent.x, measuredContent.y, measuredContent.width, fit)
+                : measuredContent;
+        settingsLayout.finish(viewport, offset);
     }
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
-        measureSettingsRows();
+        refreshContentLayout();
         tickSmoothScroll();
         semanticHost.beginAvailabilitySweep();
         // Frame-start reset: focused-setting keyboard availability is
@@ -948,7 +1042,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         // painted during capture would rasterize into the cache). Tiles and
         // the Settings tab's inline rows paint under the tracked scissor so
         // their deferred rims keep the list clip.
-        List<Module> mods = filteredModules(); // one fetch drives pass + content (§10)
+        List<Module> mods = selectedCategory == 0 ? laidOutModules : List.of();
         paintGlassPass(g, mods);
 
         // ---- 2. Dim — closes the glass pass, veils every surface like it ----
@@ -959,7 +1053,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         // Cached chrome — one textured blit (a content layer above the dim,
         // exactly where it always sat).
         if (windowBevel) MaterialSurface.parent(g, boxX(), boxY(), BOX_W, BOX_H, radius,
-                Math.min(mainY() - boxY(), MaterialSurface.windowCornerClearance(radius, 12,
+                Math.min((UiDensity.HEADER - TOOL) / 2f, MaterialSurface.windowCornerClearance(radius, 12,
                         AuroraFontRenderer.textY(font, boxY(), com.aurora.client.ui.util.UiDensity.HEADER) - boxY())));
         else layerCache.blitAt(g, cacheX, cacheY, cacheW, cacheH);
 
@@ -1002,22 +1096,9 @@ public class AuroraScreen extends Screen implements ThemedScreen {
      * share this one answer — a culled tile is neither painted nor
      * clickable). Returns {@code [cx,cy,cw,ch]}.
      */
-    private float[] cardBounds(int i, List<Module> mods, ClipBand vp) {
-        float mx = mainX(), my = mainY();
-        float cx, cy, cw, ch;
-        if (gridLayout) {
-            cw = Math.min(com.aurora.client.ui.util.UiDensity.CARD_WIDTH, contentWidth()); ch = com.aurora.client.ui.util.UiDensity.CARD_HEIGHT;
-            cx = mx + (i % gridColumns()) * (cw + com.aurora.client.ui.util.UiDensity.GRID_GAP);
-            cy = (float) (viewTop() + (i / gridColumns()) * (ch + com.aurora.client.ui.util.UiDensity.GRID_GAP) - scrolls[0].current());
-        } else {
-            cw = contentWidth(); ch = com.aurora.client.ui.util.UiDensity.LIST_HEIGHT;
-            cx = mx;
-            cy = (float) (viewTop() + i * (ch + com.aurora.client.ui.util.UiDensity.LIST_GAP) - scrolls[0].current());
-        }
-        if (!vp.intersects(cx, cy, cw, ch)) return null;
-        float[] bounds = cardGeometry[i];
-        bounds[0] = cx; bounds[1] = cy; bounds[2] = cw; bounds[3] = ch;
-        return bounds;
+    private ScreenLayout.Box cardBounds(int index) {
+        var box = modulesLayout.at(index);
+        return modulesLayout.visible(box, layoutScroll()) ? box : null;
     }
 
     // Sidebar and view controls remain distinct raised objects: every peer
@@ -1069,16 +1150,10 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         profGlass = GlassSurface.card(g, profX, profY, TAB_W, TAB_H, ctrlRadius);
 
         if (selectedCategory == 0) {
-            float mx = mainX(), my = mainY();
-            layoutGlass[0] = GlassSurface.card(g, toolbarX(), my, TOOL, TOOL, ctrlRadius);
-            layoutGlass[1] = GlassSurface.card(g, toolbarX() + TOOL_STEP, my, TOOL, TOOL, ctrlRadius);
-            // Search field — positioned here (the pass runs before
-            // renderModulesLive positions it again) and driven through its
-            // own split (EditBoxMixin carries the frame-stamp scheme).
-            searchField.visible = true;
-            searchField.setX(Math.round(toolbarX() + 2 * TOOL_STEP));
-            searchField.setY(Math.round(my));
-            searchField.setWidth(searchWidth());
+            for (int index = 0; index < layoutGlass.length; index++) {
+                var box = chromeLayout.at(index + 3);
+                layoutGlass[index] = GlassSurface.card(g, box.x(), box.top(), box.width(), box.height(), ctrlRadius);
+            }
             if (searchField instanceof GlassEditBox glassField) glassField.aurora$renderGlassPass(g);
 
             GlassSurface.enableScissor(g, vp.x, vp.y, vp.xEnd(), vp.yEnd());
@@ -1086,8 +1161,8 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 highlightedTileGlass = new boolean[mods.size()];
             }
             for (int i = 0; i < mods.size(); i++) {
-                float[] b = cardBounds(i, mods, vp);
-                if (b == null) {
+                var bounds = cardBounds(i);
+                if (bounds == null) {
                     highlightedTileGlass[i] = false;
                     continue;
                 }
@@ -1097,39 +1172,29 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 }
                 if (tileOn(mods.get(i))) {
                     highlightedTileGlass[i] = GlassSurface.control(g,
-                            b[0], b[1], b[2], b[3], ctrlRadius, true,
+                            bounds.x(), bounds.y(layoutScroll()), bounds.width(), bounds.height(), ctrlRadius, true,
                             BlurPanelRenderer.Priority.ROW);
                 } else {
                     highlightedTileGlass[i] = false;
-                    MaterialSurface.embeddedControl(g, b[0], b[1], b[2], b[3], ctrlRadius, false);
+                    MaterialSurface.embeddedControl(g, bounds.x(), bounds.y(layoutScroll()), bounds.width(), bounds.height(), ctrlRadius, false);
                 }
             }
             GlassSurface.disableScissor(g);
         } else {
-            float mx = mainX(), my = mainY();
             // Sub-tabs: raised peers in the toolbar row, like the sidebar
             // chips (neutral, the selected one stained by its painter).
             for (int i = 0; i < pageControls.length; i++) {
-                pageGlass[i] = GlassSurface.card(g, toolbarX() + pageTabX[i], my, pageTabW[i], PAGE_TAB_H, ctrlRadius);
+                var box = chromeLayout.at(i + 3);
+                pageGlass[i] = GlassSurface.card(g, box.x(), box.top(), box.width(), box.height(), ctrlRadius);
             }
             GlassSurface.enableScissor(g, vp.x, vp.y, vp.xEnd(), vp.yEnd());
-            float y = viewTop() - (float) scrolls[1].current();
-            for (FeatureMetadata m : pageEntries()) {
-                // Settings groups share the enclosing window; only their controls own surfaces.
-                y += headerBlockH(m); // header row — plain text + an opaque toggle, no glass
-                if (m.settingsDetailOnly) {
-                    y += SETTINGS_HINT_H;
-                } else {
-                    for (FeatureSetting s : m.settings) {
-                        if (!s.isVisible()) continue;
-                        int rh = s.height();
-                        if (vp.intersects(mx + 4, y, (contentWidth() - 8), rh)) {
-                            s.renderGlassPass(g, (int) (mx + 4), (int) y, (contentWidth() - 8));
-                        }
-                        y += rh + SETTINGS_ROW_GAP;
-                    }
+            for (FeatureMetadata entry : pageEntries()) {
+                if (entry.settingsDetailOnly) continue;
+                for (FeatureSetting setting : entry.settings) {
+                    var box = settingsLayout.bounds(setting);
+                    if (box != null && settingsLayout.visible(box, layoutScroll()))
+                        setting.renderGlassPass(g, (int) box.x(), (int) box.y(layoutScroll()), (int) box.width());
                 }
-                y += SETTINGS_ENTRY_GAP;
             }
             GlassSurface.disableScissor(g);
         }
@@ -1248,19 +1313,18 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     }
 
     private void renderModulesLive(GuiGraphicsExtractor g, List<Module> mods, int mouseX, int mouseY, float delta) {
-        float mx = mainX(), my = mainY();
         Font tr = this.font;
         ClipBand vp = contentViewport();
 
-        float btnY = my, btnSize = TOOL;
         // The layout pair (C-5): canonical pointer-only hover per peer — never
         // gated on selection — plus bounds/pointer sync for the semantic
         // controls (Modules-tab chrome: always interactive while painted; the
         // Settings tab never re-marks them, so the frame-start sweep makes
         // them unavailable there).
         for (int i = 0; i < 2; i++) {
-            float lx = i == 0 ? toolbarX() : toolbarX() + TOOL_STEP;
-            boolean hover = Widget.inBounds(mouseX, mouseY, lx, btnY, btnSize, btnSize);
+            var box = chromeLayout.at(i + 3);
+            float lx = box.x(), btnY = box.top(), btnSize = box.width();
+            boolean hover = chromeLayout.contains(box, mouseX, mouseY, 0);
             float hoverT = MaterialSurface.unified() ? pilotHover(PILOT_LAYOUTS[i],hover) : layoutHovers[i].update(hover);
             SemanticActionControl control = layoutControls[i];
             if (control != null) {
@@ -1271,16 +1335,6 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             drawLayoutButton(g, lx, btnY, btnSize, (i == 1) == gridLayout, hoverT,
                     control != null && control.isFocused(), i == 0, layoutGlass[i]);
         }
-
-        // The search bar occupies exactly the original placeholder's bounds —
-        // top edge aligned with the list/grid buttons, 202x20. EditBoxMixin
-        // draws the themed translucent surface + border at these bounds, so
-        // no manual background is drawn here (that would double-composite).
-        float searchBarX = toolbarX() + 2 * TOOL_STEP;
-        searchField.visible = true;
-        searchField.setX(Math.round(searchBarX));
-        searchField.setY(Math.round(my));
-        searchField.setWidth(searchWidth());
 
         // Render the EditBox manually (addWidget registers it for input only,
         // not for rendering) so typed text + caret actually draw. Its glass
@@ -1295,17 +1349,16 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         float tileRadius = ThemeManager.current().roundness().radiusSmall();
         for (int i = 0; i < mods.size(); i++) {
             Module m = mods.get(i);
-            float[] b = cardBounds(i, mods, vp);
-            if (b == null) continue;
-            float cx = b[0], cy = b[1], cw = b[2], ch = b[3];
+            var bounds = cardBounds(i);
+            if (bounds == null) continue;
+            float cx = bounds.x(), cy = bounds.y(layoutScroll()), cw = bounds.width(), ch = bounds.height();
             // Hover reads the VISIBLE intersection: the pointer must be on
             // a pixel the scissor actually paints. A tile scrolled past the
             // band's edge no longer lights up from a pointer resting on its
             // hidden half (render truth == hover truth, C-1). The target is
             // the POINTER only (C-2b): the enabled state below is the
             // persistent channel and never pins the animator.
-            boolean hover = vp.contains(mouseX, mouseY)
-                    && mouseX >= cx && mouseX <= cx + cw && mouseY >= cy && mouseY <= cy + ch;
+            boolean hover = modulesLayout.contains(bounds, mouseX, mouseY, layoutScroll());
             float hoverT = MaterialSurface.unified() ? pilotHover(m.id,hover) : tileHover(m.id).update(hover);
             SemanticActionControl control = tileControls.get(m.id);
             if (control == null && isSettingsResult(m)) control = tileControl(m);
@@ -1336,10 +1389,10 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 if (cue > 0f && !isSettingsResult(m)) {
                     FeatureMetadata fm = findMeta(m.id);
                     if (fm != null && fm.hasDetail()) {
-                        float[] r = chevronRect(cx, cy, cw, ch);
                         int muted = MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY);
                         MaterialIconRenderer.drawIcon(g, tr, com.aurora.client.screen.IconCatalog.glyph("chevron_right"),
-                                r[0] + r[2] / 2f, r[1] + r[3] / 2f, CHEVRON, ThemeManager.withAlpha(muted, Math.round((muted >>> 24) * cue)));
+                                chevronX(cx, cw) + CHEVRON_BOX / 2f, chevronY(cy, ch) + CHEVRON_BOX / 2f,
+                                CHEVRON, ThemeManager.withAlpha(muted, Math.round((muted >>> 24) * cue)));
                     }
                 }
             }
@@ -1419,7 +1472,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     }
 
     private void renderSettingsLive(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta, float ctrlRadius) {
-        float mx = mainX(), my = mainY();
+        float mx = mainX();
         Font tr = this.font;
         searchField.visible = false;
         ClipBand vp = contentViewport();
@@ -1428,9 +1481,10 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         // one level down — selection is the stained face, hover is
         // pointer-only, focus is the hairline on an unselected peer.
         for (int i = 0; i < pageControls.length; i++) {
-            float tx = toolbarX() + pageTabX[i], tw = pageTabW[i];
+            var box = chromeLayout.at(i + 3);
+            float tx = box.x(), my = box.top(), tw = box.width();
             boolean sel = selectedPage == i;
-            boolean hover = Widget.inBounds(mouseX, mouseY, tx, my, tw, PAGE_TAB_H);
+            boolean hover = chromeLayout.contains(box, mouseX, mouseY, 0);
             float hoverT = MaterialSurface.unified() ? pilotHover(pagePilotIds[i], hover) : pageHovers[i].update(hover);
             SemanticActionControl control = pageControls[i];
             if (control != null) {
@@ -1477,8 +1531,8 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         }
 
         g.enableScissor(vp.x, vp.y, vp.xEnd(), vp.yEnd());
-        float y = viewTop() - (float) scrolls[1].current();
         for (FeatureMetadata m : pageEntries()) {
+            float y = settingsLayout.bounds(m).y(layoutScroll());
             // Section headings and spacing provide grouping, without nested frames.
             int headerH = SETTINGS_HEADER_H;
             var headerNav = headerNavControls.get(m.id);
@@ -1555,8 +1609,8 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             String summary = pageSummaryLine(m, tr);
             if (summary != null && vp.intersects(mx + 4, y + headerH, contentWidth() - 4, SUMMARY_H))
                 g.text(tr, summary, (int) (mx + 4), (int) (y + headerH - 1), MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
-            y += headerBlockH(m);
             if (m.settingsDetailOnly) {
+                y = settingsLayout.bounds(m).y(layoutScroll()) + headerBlockH(m);
                 // Detail-only entry: one muted hint line in place of the
                 // inline rows — the merged list lives behind the header
                 // click. The hint height must match the walks in
@@ -1565,11 +1619,10 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                     g.text(tr, "Click to configure", (int) (mx + 4), (int) (y + 1),
                             MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED), false);
                 }
-                y += SETTINGS_HINT_H;
             } else {
-                com.aurora.client.screen.setting.SectionHeaderSetting.markLeading(m.settings);
                 for (FeatureSetting s : m.settings) {
-                    if (!s.isVisible()) {
+                    var box = settingsLayout.bounds(s);
+                    if (box == null) {
                         // Collapsed under its section caption (or hidden by its own condition):
                         // it takes no space, and none of its controls stay reachable, the same
                         // walk every other Settings-tab pass makes (pointer audit 2026-11-15).
@@ -1579,11 +1632,12 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                         if (s == FeatureSetting.getFocused()) focusedSettingVisible = false;
                         continue;
                     }
-                    int rh = s.height();
-                    boolean visible = vp.intersects(mx + 4, y, (contentWidth() - 8), rh);
+                    y = box.y(layoutScroll());
+                    int rh = (int) box.height();
+                    boolean visible = settingsLayout.visible(box, layoutScroll());
                     if (visible) {
-                        s.render(g, (int) (mx + 4), (int) y, (contentWidth() - 8), mouseX, mouseY);
-                        if (settingsReveal == s) paintReveal(g, mx + 4, y, contentWidth() - 8, rh, ctrlRadius);
+                        s.render(g, (int) box.x(), (int) y, (int) box.width(), mouseX, mouseY);
+                        if (settingsReveal == s) paintReveal(g, box.x(), y, box.width(), rh, ctrlRadius);
                     }
                     boolean anyControlAvailable = false;
                     List<SemanticActionControl> controls = hostedSettingControls.getOrDefault(s, List.of());
@@ -1611,10 +1665,8 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                     if (s == FeatureSetting.getFocused()) {
                         focusedSettingVisible = visible;
                     }
-                    y += rh + SETTINGS_ROW_GAP;
                 }
             }
-            y += SETTINGS_ENTRY_GAP;
         }
         // Compact EnumSettings keep their 18px row while expanded — the open
         // popup is a FLOATING overlay the HOST must paint after the row walk
@@ -1733,11 +1785,9 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     /** The settings-cue chevron's em size and its hit box: the tile's top-right corner, or a list
      * row's trailing end. Paint and click share this one rect. */
     private static final float CHEVRON = 10f;
-    private float[] chevronRect(float cx, float cy, float cw, float ch) {
-        float box = 14f;
-        if (gridLayout) return new float[]{cx + cw - box - 3, cy + 3, box, box};
-        return new float[]{cx + cw - box - 8, cy + (ch - box) / 2f, box, box};
-    }
+    private static final float CHEVRON_BOX = 14f;
+    private float chevronX(float x, float width) { return x + width - CHEVRON_BOX - (gridLayout ? 3 : 8); }
+    private float chevronY(float y, float height) { return gridLayout ? y + 3 : y + (height - CHEVRON_BOX) / 2f; }
 
 
 
@@ -1864,23 +1914,9 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         FeatureSetting target = settingNamed(fm, resultVia.get(m.id));
         selectCategory(1);
         selectSettingsPage(page);
-        float offset = 0;
-        for (FeatureMetadata entry : pageEntries()) {
-            if (entry == fm) {
-                if (target != null) {
-                    offset += headerBlockH(entry);
-                    for (FeatureSetting setting : entry.settings) {
-                        if (setting == target) break;
-                        if (setting.isVisible()) offset += setting.height() + SETTINGS_ROW_GAP;
-                    }
-                }
-                break;
-            }
-            offset += headerBlockH(entry);
-            if (entry.settingsDetailOnly) offset += SETTINGS_HINT_H;
-            else for (FeatureSetting setting : entry.settings) if (setting.isVisible()) offset += setting.height() + SETTINGS_ROW_GAP;
-            offset += SETTINGS_ENTRY_GAP;
-        }
+        arrangeSettings();
+        var box = settingsLayout.bounds(target == null ? fm : target);
+        float offset = box == null ? hiddenSettingOffsets.getOrDefault(target, 0) : box.top() - measuredContent.y;
         double max = computeMaxScroll();
         scrolls[1].set(Math.max(0, Math.min(max, offset - contentViewport().height / 3.0)));
         settingsReveal = target != null ? target : fm;
@@ -1960,24 +1996,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         return null;
     }
 
-    private double computeMaxScroll() {
-        if (selectedCategory == 0) {
-            List<Module> mods = filteredModules();
-            if (gridLayout) {
-                int rows = (mods.size() + gridColumns() - 1) / gridColumns();
-                return Math.max(0, com.aurora.client.ui.util.UiDensity.extent(rows, com.aurora.client.ui.util.UiDensity.CARD_HEIGHT, com.aurora.client.ui.util.UiDensity.GRID_GAP) - contentViewport().height);
-            }
-            return Math.max(0, com.aurora.client.ui.util.UiDensity.extent(mods.size(), com.aurora.client.ui.util.UiDensity.LIST_HEIGHT, com.aurora.client.ui.util.UiDensity.LIST_GAP) - contentViewport().height);
-        }
-        double h = 0;
-        for (FeatureMetadata m : pageEntries()) {
-            h += headerBlockH(m);
-            if (m.settingsDetailOnly) h += SETTINGS_HINT_H;
-            else for (FeatureSetting s : m.settings) if (s.isVisible()) h += s.height() + SETTINGS_ROW_GAP;
-            h += SETTINGS_ENTRY_GAP;
-        }
-        return Math.max(0, h - contentViewport().height);
-    }
+    private double computeMaxScroll() { return contentLayout().maxScroll(); }
 
     private void tickSmoothScroll() {
         // Only the active tab's position moves (the other tab's glide stays
@@ -2019,9 +2038,10 @@ public class AuroraScreen extends Screen implements ThemedScreen {
 
     @Override
     public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent _ev, boolean _dbl) {
-        measureSettingsRows();
+        refreshContentLayout();
+        FeatureSetting.setHostBand(contentViewport());
         double mouseX = _ev.x(); double mouseY = _ev.y(); int button = _ev.button();
-        float bx = boxX(), by = boxY(), mx = mainX(), my = mainY();
+        float mx = mainX();
 
         // Match the accepted FeatureDetailScreen pointer contract: capture
         // cancellation owns the click, otherwise pointer interaction drops
@@ -2032,19 +2052,11 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                 || owner instanceof com.aurora.client.screen.setting.ColorSetting) {
             if (selectedCategory == 1 && contentViewport().contains(mouseX, mouseY)
                     && button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) {
-                float popupY = viewTop() - (float) scrolls[1].current();
-                for (FeatureMetadata entry : pageEntries()) {
-                    popupY += headerBlockH(entry);
-                    if (entry.settingsDetailOnly) popupY += SETTINGS_HINT_H;
-                    else for (FeatureSetting setting : entry.settings) {
-                        if (!setting.isVisible()) continue;
-                        if (setting == owner && owner.mouseClicked(mouseX, mouseY, button, (int) (mx + 4), (int) popupY, contentWidth() - 8)) {
-                            if (owner instanceof com.aurora.client.screen.setting.ColorSetting) activeDragSetting = owner;
-                            return true;
-                        }
-                        popupY += setting.height() + SETTINGS_ROW_GAP;
-                    }
-                    popupY += SETTINGS_ENTRY_GAP;
+                var box = settingsLayout.bounds(owner);
+                if (box != null && owner.mouseClicked(mouseX, mouseY, button, (int) box.x(),
+                        (int) box.y(layoutScroll()), (int) box.width())) {
+                    if (owner instanceof com.aurora.client.screen.setting.ColorSetting) activeDragSetting = owner;
+                    return true;
                 }
             }
             if (owner.dismissPopup()) return true;
@@ -2082,7 +2094,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         // consumed either way (the selected page is the silent no-op).
         if (selectedCategory == 1) {
             for (int i = 0; i < pageControls.length; i++) {
-                if (Widget.inBounds(mouseX, mouseY, toolbarX() + pageTabX[i], my, pageTabW[i], PAGE_TAB_H)) {
+                if (chromeLayout.contains(chromeLayout.at(i + 3), mouseX, mouseY, 0)) {
                     if (pageControls[i] != null && pageControls[i].activateFromPointer(mouseX, mouseY, button)) {
                         this.setFocused(pageControls[i]);
                     }
@@ -2104,30 +2116,23 @@ public class AuroraScreen extends Screen implements ThemedScreen {
             // the enabled gate, exactly-one activation click, and the silent
             // selected no-op all live in the action. Consumed either way (the
             // 4px gap between the zones stays inert, as before).
-            if (button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT && mouseX >= toolbarX() && mouseX <= toolbarX() + TOOL && mouseY >= my && mouseY <= my + TOOL) {
-                if (layoutControls[0] != null && layoutControls[0].activateFromPointer(mouseX, mouseY, button)) {
-                    this.setFocused(layoutControls[0]);
+            if (button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) {
+                for (int index = 0; index < layoutControls.length; index++) {
+                    if (!chromeLayout.contains(chromeLayout.at(index + 3), mouseX, mouseY, 0)) continue;
+                    var control = layoutControls[index];
+                    if (control != null && control.activateFromPointer(mouseX, mouseY, button)) this.setFocused(control);
+                    return true;
                 }
-                return true;
             }
-            if (button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT && mouseX >= toolbarX() + TOOL_STEP && mouseX <= toolbarX() + TOOL_STEP + TOOL && mouseY >= my && mouseY <= my + TOOL) {
-                if (layoutControls[1] != null && layoutControls[1].activateFromPointer(mouseX, mouseY, button)) {
-                    this.setFocused(layoutControls[1]);
-                }
-                return true;
-            }
-            List<Module> mods = filteredModules();
-            for (int i = 0; i < mods.size(); i++) {
-                Module m = mods.get(i);
-                float[] b = cardBounds(i, mods, vp);
-                if (b == null) continue;
-                if (vp.contains(mouseX, mouseY)
-                        && mouseX >= b[0] && mouseX <= b[0] + b[2] && mouseY >= b[1] && mouseY <= b[1] + b[3]) {
-                    float[] chevron = chevronRect(b[0], b[1], b[2], b[3]);
+            var bounds = modulesLayout.hitTest(mouseX, mouseY, layoutScroll());
+            if (bounds != null) {
+                    Module m = laidOutModules.get(bounds.order());
+                    float tileY = bounds.y(layoutScroll());
                     boolean settingLink = button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT
                             && !isSettingsResult(m) && (resultVia.containsKey(m.id)
-                            && inSubtitleBand(mouseX, mouseY, b[0], b[2], subtitleY(m, b[1], b[3], b[2]), b[1] + b[3])
-                            || MaterialSurface.unified() && Widget.inBounds(mouseX, mouseY, chevron[0], chevron[1], chevron[2], chevron[3]));
+                            && inSubtitleBand(mouseX, mouseY, bounds.x(), bounds.width(), subtitleY(m, bounds.y(layoutScroll()), bounds.height(), bounds.width()), bounds.y(layoutScroll()) + bounds.height())
+                            || MaterialSurface.unified() && Widget.inBounds(mouseX, mouseY,
+                            chevronX(bounds.x(), bounds.width()), chevronY(tileY, bounds.height()), CHEVRON_BOX, CHEVRON_BOX));
                     if (button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_RIGHT || settingLink) {
                         // Secondary (pointer-specific) card action: open the
                         // detail screen. One activation click at the site —
@@ -2156,11 +2161,10 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                         }
                         return true;
                     }
-                }
             }
         } else if (vp.contains(mouseX, mouseY)) {
-            float y = viewTop() - (float) scrolls[1].current();
             for (FeatureMetadata m : pageEntries()) {
+                float y = settingsLayout.bounds(m).y(layoutScroll());
                 // The toggle zone is deliberately ~10px wider than the
                 // painted 28px switch (a forgiving hit target that tiles
                 // the header row's right edge against the navigation zone
@@ -2188,30 +2192,13 @@ public class AuroraScreen extends Screen implements ThemedScreen {
                     }
                     return true;
                 }
-                y += headerBlockH(m);
-                if (m.settingsDetailOnly) {
-                    y += SETTINGS_HINT_H;
-                } else {
-                    for (FeatureSetting s : m.settings) {
-                        if (!s.isVisible()) continue;
-                        int rh = s.height();
-                        // Same visibility as the render walk: a row that
-                        // shares no pixel with the viewport is not
-                        // pointer-addressable (its EditBoxes and controls
-                        // cannot gain focus from off-screen clicks either).
-                        if (vp.intersects(mx + 4, y, (contentWidth() - 8), rh)
-                                && s.mouseClicked(mouseX, mouseY, button, (int) (mx + 4), (int) y, (contentWidth() - 8))) {
-                            activeDragSetting = s;
-                            // Manual pointer ownership stays with the
-                            // component. The host only mirrors focus onto
-                            // the exact peer/trigger under the accepted click.
-                            semanticHost.focusAt(mouseX, mouseY);
-                            return true;
-                        }
-                        y += rh + SETTINGS_ROW_GAP;
-                    }
-                }
-                y += SETTINGS_ENTRY_GAP;
+            }
+            var box = settingsLayout.hitTest(mouseX, mouseY, layoutScroll());
+            if (box != null && box.key() instanceof FeatureSetting setting
+                    && setting.mouseClicked(mouseX, mouseY, button, (int) box.x(), (int) box.y(layoutScroll()), (int) box.width())) {
+                activeDragSetting = setting;
+                semanticHost.focusAt(mouseX, mouseY);
+                return true;
             }
         }
 
@@ -2232,6 +2219,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         double mouseX = _ev.x(); double mouseY = _ev.y(); int button = _ev.button();
         SmoothScroll scroll = scrolls[selectedCategory];
         if (scroll.isDragging()) {
+            refreshContentLayout();
             // jumpCurrent = false: only the target moves, the rendered
             // position keeps easing toward it while dragging (the screen's
             // historical feel).
@@ -2260,6 +2248,7 @@ public class AuroraScreen extends Screen implements ThemedScreen {
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontal, double vertical) {
         FeatureSetting focused = FeatureSetting.getFocused();
         if (focused != null && focusedSettingVisible && focused.onScroll(vertical)) return true;
+        refreshContentLayout();
         scrolls[selectedCategory].wheel(vertical, 30, computeMaxScroll());
         return true;
     }
@@ -2300,9 +2289,8 @@ public class AuroraScreen extends Screen implements ThemedScreen {
         var before = this.getFocused();
         boolean handled = SemanticControlGroup.rove(before, _kev, this::setFocused) || super.keyPressed(_kev);
         if (selectedCategory == 1 && com.aurora.client.ui.interaction.FocusReveal.navigation(_kev)) {
-            var band = contentViewport();
             com.aurora.client.ui.interaction.FocusReveal.afterNavigation(before, getFocused(), scrolls[1],
-                    computeMaxScroll(), band.y, band.yEnd());
+                    settingsLayout, layoutScroll());
         }
         return handled;
     }

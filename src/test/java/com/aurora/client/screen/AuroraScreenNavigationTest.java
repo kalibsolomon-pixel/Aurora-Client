@@ -414,7 +414,7 @@ class AuroraScreenNavigationTest {
         // otherwise) — hidden tiles are not focusable, actionable, narrated,
         // or hoverable.
         String modules = bodyOf(src, "private void renderModulesLive(");
-        int cull = modules.indexOf("if (b == null) continue;");
+        int cull = modules.indexOf("if (bounds == null) continue;");
         // C-5 added the layout pair's availability mark ABOVE the tile walk
         // (Modules-tab chrome) — the tile re-mark is the one that must follow
         // the viewport cull.
@@ -456,7 +456,7 @@ class AuroraScreenNavigationTest {
         int chrome = click.indexOf("activateFromPointer(mouseX, mouseY, button)");
         assertTrue(cancel >= 0 && drop > cancel && sup > drop && chrome > sup,
                 "capture-cancel-first ordering preserved");
-        assertEquals(8, count(click, "this.setFocused("),
-                "tabs x2 are a loop, profiles, settings sub-tabs (a loop), layout pair x2, tile, toggle, nav — eight focus sites (loops counted once)");
+        assertEquals(7, count(click, "this.setFocused("),
+                "category, profiles, page, layout, tile, toggle and nav actions focus once each");
     }
 }

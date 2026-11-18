@@ -208,7 +208,8 @@ class IconActionPilotTest {
         String detail = java.nio.file.Files.readString(SourceTree.resolve(
                 SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/FeatureDetailScreen.java"));
         assertTrue(detail.contains("registeredSettingControls"));
-        assertTrue(detail.contains("sameControlList(prev, controls)"));
+        assertTrue(detail.contains("!previousControls.contains(c)"));
+        assertTrue(detail.contains("!currentControls.contains(c)"));
         assertTrue(detail.contains("this.removeWidget(c);"),
                 "removed rows unregister their stale control");
         assertTrue(detail.contains("if (this.getFocused() == c) this.setFocused(null);"),

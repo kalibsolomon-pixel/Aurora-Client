@@ -95,7 +95,7 @@ class AuroraScreenSemanticHostingTest {
         assertTrue(src.contains("semanticHost.focusAt(mouseX, mouseY);"));
         assertFalse(src.contains("selectedCategory = i;\n                return true;"),
                 "tab clicks must not bypass the semantic action");
-        assertEquals(1, count(src, "s.mouseClicked(mouseX, mouseY, button"),
+        assertEquals(1, count(src, "setting.mouseClicked(mouseX, mouseY, button"),
                 "the component remains the sole manual pointer activation route");
     }
 
