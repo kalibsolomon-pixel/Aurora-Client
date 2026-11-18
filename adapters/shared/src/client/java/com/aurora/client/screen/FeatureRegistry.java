@@ -263,26 +263,42 @@ public final class FeatureRegistry {
                         "lavaClarity", "lavaFog", "lavaHide"));
 
         addWithSettings("player_health",
-                "Shows how much health nearby mobs and players have left, either as a precise number or as a row of heart icons that mirror the vanilla HUD. Great for judging whether one more hit will finish a target — in PvP and against tanky mobs alike.",
-                () -> cfg.playerHealthIndicators, v -> cfg.playerHealthIndicators = v,
+                "Shows how much health nearby mobs and players have left, either as a precise number or as vanilla's own heart bar, and your own health to two decimals on the HUD. Each has its own switch. Great for judging whether one more hit will finish a target — in PvP and against tanky mobs alike.",
+                // Combined card: on while either part is on; the labels and the HUD readout
+                // switch independently below (owner request 2026-11-18).
+                () -> cfg.playerHealthIndicators || cfg.playerHealthHudEnabled,
+                v -> { cfg.playerHealthIndicators = v; cfg.playerHealthHudEnabled = v; },
                 List.of(
+                        new SectionHeaderSetting("Above Entities"),
+                        new BooleanSetting("Show Above Entities",
+                                () -> cfg.playerHealthIndicators,
+                                v -> cfg.playerHealthIndicators = v).resetDefault("playerHealthIndicators", () -> defaults.playerHealthIndicators)
+                                .description("Draws health above mobs (and players, if Show Players is on)."),
                         new EnumSetting<>("Display Mode",
                                 AuroraConfig.HealthDisplayMode.class,
                                 () -> cfg.playerHealthDisplayMode,
                                 v -> cfg.playerHealthDisplayMode = v).resetDefault(() -> defaults.playerHealthDisplayMode)
                                 .valueDescriptions(m -> switch (m) {
                                     case NUMBER -> "A single heart symbol followed by the exact HP value (e.g. \"❤ 16\"). Best for precise math.";
-                                    case HEARTS -> "A row of individual heart icons that mimic the vanilla health bar: each heart represents 2 HP. A full heart is bright red (gold for absorption), a half heart is dark red, and empty hearts are not shown. Extra hearts beyond the entity's normal maximum are gold.";
+                                    case HEARTS -> "The entity's health bar as you see your own: vanilla's heart sprites and containers, gold absorption hearts, blinking when it takes damage and shaking when it is nearly dead. Each heart is 2 HP; a boss's bar is scaled to fit one row.";
                                 })
-                                .description("Choose how health is drawn above each entity. Number is precise; Hearts is a quick visual read like your own health bar."),
+                                .description("Choose how health is drawn above each entity. Number is precise; Hearts is a quick visual read like your own health bar.")
+                                .disabled(() -> !cfg.playerHealthIndicators),
                         new BooleanSetting("Only Attacked",
                                 () -> cfg.playerHealthOnlyAttacked,
                                 v -> cfg.playerHealthOnlyAttacked = v).resetDefault("playerHealthOnlyAttacked", () -> defaults.playerHealthOnlyAttacked)
-                                .description("Only show the health number above entities you've actually hit this session, instead of every entity in view. Keeps the screen uncluttered in crowded areas while still tracking your current targets."),
+                                .description("Only show the health number above entities you've actually hit this session, instead of every entity in view. Keeps the screen uncluttered in crowded areas while still tracking your current targets.")
+                                .disabled(() -> !cfg.playerHealthIndicators),
                         new BooleanSetting("Show Players",
                                 () -> cfg.playerHealthShowPlayers,
                                 v -> cfg.playerHealthShowPlayers = v).resetDefault("playerHealthShowPlayers", () -> defaults.playerHealthShowPlayers)
                                 .description("Also show other players' health, not only mobs'. Off by default: vanilla does not show other players' health, and some servers do not allow it.")
+                                .disabled(() -> !cfg.playerHealthIndicators),
+                        new SectionHeaderSetting("Your Health"),
+                        new BooleanSetting("Show on HUD",
+                                () -> cfg.playerHealthHudEnabled,
+                                v -> cfg.playerHealthHudEnabled = v).resetDefault("playerHealthHudEnabled", () -> defaults.playerHealthHudEnabled)
+                                .description("Shows your own health as an exact number with two decimals (20.00 at full health), with absorption after it in gold. Works with or without the health above entities. Move it in the HUD editor.")
                 ));
 
         addWithSettings("free_look",
@@ -477,6 +493,9 @@ public final class FeatureRegistry {
                                 .description("Center opening for dots and crosses; breaks the sides of circles and squares.")
                                 .visibleWhen(() -> cfg.crosshairStyle != AuroraConfig.CrosshairStyle.CUSTOM),
                         new ColorSetting("Color", () -> cfg.crosshairColor, v -> cfg.crosshairColor = v).resetDefault(() -> defaults.crosshairColor),
+                        new BooleanSetting("Vanilla Blending",
+                                () -> cfg.crosshairVanillaBlend, v -> cfg.crosshairVanillaBlend = v).resetDefault("crosshairVanillaBlend", () -> defaults.crosshairVanillaBlend)
+                                .description("Blends the crosshair like vanilla's: it inverts the colors behind it, so it stays visible on light and dark backgrounds. Looks most like vanilla in white."),
                         new PixelCanvasSetting("Custom Canvas",
                                 () -> cfg.crosshairCustomPixels, v -> cfg.crosshairCustomPixels = v,
                                 () -> cfg.crosshairCustomWidth, v -> cfg.crosshairCustomWidth = v,
@@ -1214,7 +1233,7 @@ addWithSettings("hitbox",
                 List.of(uiFpsLimit));
 
         addWithSettings("animations",
-                "Animation & movement polish: swing & view-bob curves, classic 1.8-style damage camera tilt, and configurable idle held-item sway with multiple movement curves.",
+                "Animation & movement polish: swing curves, view-bob strength, classic 1.8-style damage camera tilt, and configurable idle held-item sway with multiple movement curves.",
                 () -> cfg.smoothAnimationsEnabled, v -> cfg.smoothAnimationsEnabled = v,
                 List.of(
                         new SectionHeaderSetting("Swing"),
@@ -1236,19 +1255,6 @@ addWithSettings("hitbox",
                         // applying (the mixin reads cfg.swingStyle unchanged).
 
                         new SectionHeaderSetting("View Bob"),
-                        new EnumSetting<>("View Bob Curve",
-                                AuroraConfig.AnimationCurve.class,
-                                () -> cfg.viewBobCurve,
-                                v -> cfg.viewBobCurve = v).resetDefault(() -> defaults.viewBobCurve)
-                                .valueDescriptions(c -> switch (c) {
-                                    case LINEAR -> "Vanilla — uniform footstep cadence.";
-                                    case SINE -> "Gentle wave shaping. Smooth, low-key.";
-                                    case SMOOTHSTEP -> "Cubic ease-in-out. Subtle weight on each step. Recommended.";
-                                    case QUARTIC -> "Quartic ease-in-out. Heavier step landing. Mild motion-sickness risk if View Bobbing is on.";
-                                    case QUINTIC, CUBIC_HERMITE -> "Quintic — heaviest. May cause motion sickness with View Bobbing on; prefer disabling vanilla bob if you use this.";
-                                    case CUBIC_OUT -> "Ease-out distorts the bob wave. Not recommended for view bob.";
-                                    case QUARTIC_OUT -> "Strong ease-out. Causes weird wave shape on bob — not recommended.";
-                                }),
                         SliderSetting.of("View Bob Amplitude",
                                 () -> cfg.viewBobAmplitude,
                                 v -> cfg.viewBobAmplitude = v, 0.0, 2.0).resetDefault(() -> defaults.viewBobAmplitude).percent()
