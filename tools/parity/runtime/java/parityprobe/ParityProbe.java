@@ -478,6 +478,57 @@ public final class ParityProbe implements ClientModInitializer {
             }
             case "stop" -> { UiCacheBenchmark.cancel(); ShapeBenchmark.cancel(); restoreFpsOptions(client); client.stop(); }
             case "resize" -> client.getWindow().setWindowed(Integer.parseInt(args[1]), Integer.parseInt(args[2]));
+            // `semantic <label>`: every semantic control's pointer rect on the current screen.
+            case "semantic" -> {
+                if (args.length != 2 || !args[1].matches("[a-zA-Z0-9_-]+"))
+                    throw new IllegalArgumentException("A safe, unique result label is required");
+                var screen = NativeUi.screen(client);
+                var rows = new java.util.ArrayList<java.util.Map<String, Object>>();
+                for (Class<?> type = screen.getClass(); type != null; type = type.getSuperclass()) {
+                    for (var field : type.getDeclaredFields()) {
+                        if (!com.aurora.client.ui.interaction.SemanticControlHost.class.isAssignableFrom(field.getType())) continue;
+                        field.setAccessible(true);
+                        var host = (com.aurora.client.ui.interaction.SemanticControlHost) field.get(screen);
+                        if (host == null) continue;
+                        for (var control : host.controls()) {
+                            var row = new java.util.LinkedHashMap<String, Object>();
+                            row.put("name", control.getMessage().getString());
+                            row.put("x", control.getX()); row.put("y", control.getY());
+                            row.put("w", control.getWidth()); row.put("h", control.getHeight());
+                            row.put("available", control.isAvailable());
+                            rows.add(row);
+                        }
+                    }
+                }
+                var report = new java.util.LinkedHashMap<String, Object>();
+                report.put("screen", screen.getClass().getName());
+                report.put("controls", rows);
+                UiCacheBenchmark.write(root.resolve(args[1] + ".json"), report);
+            }
+            // `fullscreen on|off`: borderless fullscreen on the monitor the window is on.
+            case "fullscreen" -> {
+                var window = client.getWindow();
+                window.setExclusiveFullscreen(false);
+                window.setFullscreen(args[1].equals("on"));
+                window.updateFullscreenIfChanged();
+            }
+            // Window geometry and where the GUI believes the pointer is, for pointer-mapping checks.
+            case "window-state" -> {
+                var window = client.getWindow();
+                var mouse = client.mouseHandler;
+                var xpos = mouse.getClass().getDeclaredField("xpos");
+                var ypos = mouse.getClass().getDeclaredField("ypos");
+                xpos.setAccessible(true); ypos.setAccessible(true);
+                double mx = xpos.getDouble(mouse), my = ypos.getDouble(mouse);
+                System.out.println("[parity-probe] window pos=" + window.getX() + "," + window.getY()
+                        + " screen=" + window.getScreenWidth() + "x" + window.getScreenHeight()
+                        + " framebuffer=" + window.getWidth() + "x" + window.getHeight()
+                        + " gui=" + window.getGuiScaledWidth() + "x" + window.getGuiScaledHeight()
+                        + " scale=" + window.getGuiScale()
+                        + " pointer=" + mx + "," + my
+                        + " guiPointer=" + (mx * window.getGuiScaledWidth() / window.getScreenWidth()) + ","
+                        + (my * window.getGuiScaledHeight() / window.getScreenHeight()));
+            }
             case "gui-scale" -> {
                 client.options.guiScale().set(Integer.parseInt(args[1]));
                 // This native entry point was renamed in 26.3.
