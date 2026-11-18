@@ -446,6 +446,18 @@ same pre-dim backdrop capture. Floating tooltips, dropdowns, the colour editor a
 use the translucent tint over their existing host, with no new post-dim capture. Off
 restores their legacy faces, including the opaque backing where applicable.
 
+Below full opacity the edge is refraction, not paint (owner, 2026-11-17). The rim is
+only as dense as the window: its alpha is the `WINDOW_FILL` alpha plus 10% of the clear
+remainder, capped at 92%, so clear glass gets a faint lit line and dense metal keeps a
+solid bevel. Where the rim is clear, its light and shade lighten or darken the backdrop
+instead of covering it. In a main window with its own capture, the glass pass also bends
+the backdrop across the same frame band: each edge pixel samples inward along the edge
+normal by `bend × (1 − depth/band)²`, so content stretches toward the rim like the edge
+of a thick pane. The largest bend is 1.5, 2.5 or 3.5 GUI px (Subtle, Standard, Deep),
+fades out between 35% and 100% Background Opacity, and is zero with the bevel Off. The
+band is the one the frame raster draws (`WindowBevel.rememberBand`), so the bend never
+reaches content. Heavy blur makes the bend subtle; lower Blur Radius shows it more.
+
 `TooltipPresenter` shares the overlay raster with dropdowns and the colour editor. It caps
 text at 220 GUI px before padding (6 px horizontal, 4 px vertical), wraps
 between words, and fits the result inside the window and screen with an 8 px margin. It
