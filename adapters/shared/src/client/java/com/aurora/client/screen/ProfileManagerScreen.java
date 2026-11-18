@@ -396,6 +396,12 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         return y + CARD_H > listClipTop() && y < listClipBottom();
     }
 
+    @Override
+    protected void prepareRowFocus(String name, int x, int y, int width) {
+        locateRowFocus(optionsControl(name), x + width - GEAR - 2, y + 2, GEAR, GEAR);
+        locateRowFocus(hotkeyControl(name), x + INSET, y + LOWER_BTN_Y, btnW(), BTN_H);
+    }
+
     private boolean pointerIn(int mouseX, int mouseY, int x, int y, int w, int h) {
         return mouseX >= x && mouseX < x + w && mouseY >= y && mouseY < y + h
                 && mouseY >= listClipTop() && mouseY < listClipBottom();
@@ -429,6 +435,9 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         options.setAvailable(inBand(y));
         options.updatePointer(mouseX, mouseY);
         boolean gearHot = pointerIn(mouseX, mouseY, gearX, gearY, GEAR, GEAR) || options.isFocused();
+        if (pointerIn(mouseX, mouseY, gearX, gearY, GEAR, GEAR)) {
+            com.aurora.client.ui.component.TooltipPresenter.offer(options, options.action().accessibleName().getString(), gearX, gearY, GEAR, GEAR);
+        }
         MaterialIconRenderer.drawIcon(ctx, this.font, GEAR_GLYPH, gearX + GEAR / 2f, gearY + GEAR / 2f, 10f,
                 ThemeManager.color(gearHot ? ThemeToken.ON_BACKGROUND : ThemeToken.ON_BACKGROUND_MUTED));
         if (options.isFocused()) {
@@ -954,7 +963,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         }
 
         if (controlsChip != null) {
-            FeatureSetting.hoverTooltip("profiles-separate-controls", () -> AuroraConfig.get().profilesOwnControls
+            FeatureSetting.hoverTooltip(controlsChip, AuroraConfig.get().profilesOwnControls
                             ? "On: each profile keeps its own key bindings, Aurora's and Minecraft's, and switching applies them."
                             : "Off: key bindings stay the same whichever profile is active.",
                     controlsChip.getX(), controlsChip.getY(), controlsChip.getWidth(), controlsChip.getHeight(),
@@ -964,7 +973,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         // One tooltip key for every chip: a frame with no chip under the
         // pointer passes an empty rect, which resets the dwell.
         boolean capturing = hoveredChip != null && hoveredChip.equals(capturingHotkey);
-        FeatureSetting.hoverTooltip("profile-hotkey", () -> capturing
+        FeatureSetting.hoverTooltip(hoveredChip, capturing
                         ? "Press the key that switches to this profile in game. Hold Ctrl, Shift or Alt first for a combination. Esc or Backspace clears it."
                         : "Click to set the key that switches to this profile in game.",
                 hoveredChip == null ? -1000 : hoveredChipX, hoveredChipY, btnW(), BTN_H, mouseX, mouseY);
@@ -972,6 +981,5 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         // Toast (above the editor here — this screen's historical order;
         // the Waypoint screen draws it the other way around).
         renderToast(ctx);
-        FeatureSetting.drawPendingTooltip(ctx, this.width, this.height);
     }
 }

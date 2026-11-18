@@ -44,15 +44,16 @@ public class ColorSetting extends FeatureSetting {
     private static final int STRIP_GAP  = 10;
     /** Square preview sample (owner ruling, 2026-10-30 — was totalW×22). */
     private static final int PREVIEW_S  = 22;
-    private static final int VPAD       = 14;
-
-    private static final int EXPANDED_BODY = PAD_SIZE + VPAD + PREVIEW_S + VPAD;
-    private static final int ROW_H_EXPANDED = ROW_H_COLLAPSED + EXPANDED_BODY;
+    private static final int PANEL_PAD = 8;
+    private static final int PANEL_HEIGHT = PAD_SIZE + PREVIEW_S + 3 * PANEL_PAD;
 
     private final IntSupplier getter;
     private final Consumer<Integer> setter;
 
     private boolean expanded = false;
+    private final com.aurora.client.ui.util.OverlayMotion editorMotion = new com.aurora.client.ui.util.OverlayMotion();
+    private int editorX, editorY, editorWidth, editorPivot, editorHeight, padSize = PAD_SIZE;
+    private float editorProgress;
     /** Opaque colours only (theme accent/background): no opacity strip, alpha pinned to 1. */
     private boolean opaque;
 
@@ -77,6 +78,7 @@ public class ColorSetting extends FeatureSetting {
     private final com.aurora.client.ui.util.UiLayerCache padSurface = new com.aurora.client.ui.util.UiLayerCache();
     private final com.aurora.client.ui.util.UiLayerCache hueSurface = new com.aurora.client.ui.util.UiLayerCache();
     private final com.aurora.client.ui.util.UiLayerCache alphaSurface = new com.aurora.client.ui.util.UiLayerCache();
+    private final com.aurora.client.ui.util.UiLayerCache previewSurface = new com.aurora.client.ui.util.UiLayerCache();
     /** Stable version contribution for a float. */
     private static long bits(float f) { return Float.floatToIntBits(f) & 0xFFFFFFFFL; }
     private static int guiScale() {
@@ -118,7 +120,7 @@ public class ColorSetting extends FeatureSetting {
         int value = supplier.getAsInt();
         installReset(() -> getter.getAsInt() != value, () -> {
             dragging = DragTarget.NONE;
-            expanded = false;
+            setExpanded(false);
             applyResetColor(value);
         }, () -> hexOf(value));
         return this;
@@ -130,7 +132,7 @@ public class ColorSetting extends FeatureSetting {
         Integer value = supplier.get();
         int shown = display.getAsInt();
         installReset(() -> !java.util.Objects.equals(stored.get(), value),
-                () -> { dragging = DragTarget.NONE; expanded = false; setter.accept(value); }, () -> hexOf(shown));
+                () -> { dragging = DragTarget.NONE; setExpanded(false); setter.accept(value); }, () -> hexOf(shown));
         return this;
     }
 
@@ -140,18 +142,13 @@ public class ColorSetting extends FeatureSetting {
 
     public ColorSetting opaqueOnly() { opaque = true; return this; }
 
-    @Override public int baseHeight() { return compactRow == null ? (expanded ? ROW_H_EXPANDED : ROW_H_COLLAPSED) : compactRow.height() + (expanded ? EXPANDED_BODY : 0); }
+    @Override public int baseHeight() { return compactRow == null ? ROW_H_COLLAPSED : compactRow.height(); }
     @Override public int height() { return baseHeight(); }
 
     @Override
     public void render(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {
         var tr = Minecraft.getInstance().font;
         boolean disabled = isDisabled();
-        if (!expanded) { // a collapsed row owns no editing-surface memory
-            padSurface.dispose();
-            hueSurface.dispose();
-            alphaSurface.dispose();
-        }
         // The value as text beside the swatch (2026-11-14): a swatch close to the window tone (the
         // factory graphite background) read as an empty box. Same slot as a slider's value.
         String hex = com.aurora.client.ui.component.MaterialSurface.unified() ? hexOf(getter.getAsInt()) : null;
@@ -182,47 +179,80 @@ public class ColorSetting extends FeatureSetting {
         // Hover halo around swatch â€â€  translucent white outer ring that brightens on hover.
         // Swatch ring â€â€  aurora cyan.
 
-        if (!expanded) return;
+        if (compactRow == null) renderFloatingEditor(ctx);
+    }
 
-        int totalW = PAD_SIZE + STRIP_GAP + STRIP_W + (opaque ? 0 : STRIP_GAP + STRIP_W);
-        int startX = x + (width - totalW) / 2;
-        int bodyTop = y + (compactRow == null ? ROW_H_COLLAPSED : compactRow.height()) + 8;
+    public static int editorHeight() { return PANEL_HEIGHT; }
 
-        padX = startX;
-        padY = bodyTop;
-        hueX = padX + PAD_SIZE + STRIP_GAP;
+    @Override
+    public boolean dismissPopup() {
+        if (!expanded) return false;
+        setExpanded(false);
+        return true;
+    }
+
+    public void renderFloatingEditor(GuiGraphicsExtractor ctx) {
+        if (!expanded && editorProgress == 0) return;
+        editorProgress = editorMotion.progress(System.nanoTime(), reducedMotion());
+        if (editorProgress <= 0) {
+            if (!expanded) disposeEditor();
+            return;
+        }
+
+        if (expanded) com.aurora.client.ui.component.TooltipPresenter.suppressFrame();
+        var band = hostBand();
+        int horizontalChrome = 2 * PANEL_PAD + (STRIP_GAP + STRIP_W) * (opaque ? 1 : 2);
+        int verticalChrome = PREVIEW_S + 3 * PANEL_PAD;
+        int below = swatchY + swatchH + 2, above = swatchY - 2;
+        int availableSide = Math.max(band.yEnd() - below, above - band.y);
+        int availableHeight = Math.min(band.height, Math.max(availableSide, 32 + verticalChrome));
+        padSize = Math.min(PAD_SIZE, Math.min(band.width - horizontalChrome, availableHeight - verticalChrome));
+        if (padSize < 8) {
+            onDetailScreenClose();
+            return;
+        }
+        editorWidth = padSize + horizontalChrome;
+        editorHeight = padSize + verticalChrome;
+        editorX = Math.max(band.x, Math.min(swatchX + swatchW - editorWidth, band.xEnd() - editorWidth));
+        editorY = com.aurora.client.ui.util.OverlayLayout.popupTop(below, above, editorHeight, band.y, band.yEnd());
+        boolean upward = editorY < swatchY;
+        editorPivot = upward ? editorY + editorHeight : editorY;
+        boolean posed = com.aurora.client.ui.component.OverlayPose.push(ctx, swatchX + swatchW, editorPivot, editorProgress);
+        com.aurora.client.ui.component.MaterialSurface.overlayFace(ctx, editorX, editorY, editorWidth, editorHeight,
+                com.aurora.client.theme.ThemeManager.current().roundness().radiusSmall(), editorProgress);
+        padX = editorX + PANEL_PAD;
+        padY = editorY + PANEL_PAD;
+        hueX = padX + padSize + STRIP_GAP;
         hueY = padY;
         alphaX = hueX + STRIP_W + STRIP_GAP;
         alphaY = padY;
         previewX = padX;
-        previewY = padY + PAD_SIZE + 8;
+        previewY = padY + padSize + 8;
         previewW = PREVIEW_S;
 
         drawSatLitPadCached(ctx);
-        ctx.enableScissor(padX,padY,padX+PAD_SIZE,padY+PAD_SIZE);
-        int cx = padX + Math.round(s * PAD_SIZE);
-        int cy = padY + Math.round((1f - l) * PAD_SIZE);
-        ctx.fill(cx - 1, padY, cx + 1, padY + PAD_SIZE, 0x80000000);
-        ctx.fill(padX, cy - 1, padX + PAD_SIZE, cy + 1, 0x80000000);
-        ctx.fill(cx - 3, cy - 3, cx + 3, cy + 3, 0xFFFFFFFF);
-        ctx.fill(cx - 2, cy - 2, cx + 2, cy + 2, ColorEntryHelper.hslaToArgb(h, s, l, 1f));
-        ctx.disableScissor();
+        int cx = Math.clamp(padX + Math.round(s * padSize), padX + 3, padX + padSize - 3);
+        int cy = Math.clamp(padY + Math.round((1f - l) * padSize), padY + 3, padY + padSize - 3);
+        ctx.fill(cx - 1, padY, cx + 1, padY + padSize, fade(0x80000000));
+        ctx.fill(padX, cy - 1, padX + padSize, cy + 1, fade(0x80000000));
+        ctx.fill(cx - 3, cy - 3, cx + 3, cy + 3, fade(0xFFFFFFFF));
+        ctx.fill(cx - 2, cy - 2, cx + 2, cy + 2, fade(ColorEntryHelper.hslaToArgb(h, s, l, 1f)));
 
         drawHueStrip(ctx);
-        int hueMark = hueY + Math.round(h * PAD_SIZE);
-        ctx.fill(hueX - 2, hueMark - 1, hueX + STRIP_W + 2, hueMark + 1, 0xFFFFFFFF);
+        int hueMark = hueY + Math.round(h * padSize);
+        ctx.fill(hueX - 2, hueMark - 1, hueX + STRIP_W + 2, hueMark + 1, fade(0xFFFFFFFF));
 
         if (!opaque) {
             drawAlphaStrip(ctx);
-            int alphaMark = alphaY + Math.round((1f - a) * PAD_SIZE);
-            ctx.fill(alphaX - 2, alphaMark - 1, alphaX + STRIP_W + 2, alphaMark + 1, 0xFFFFFFFF);
+            int alphaMark = alphaY + Math.round((1f - a) * padSize);
+            ctx.fill(alphaX - 2, alphaMark - 1, alphaX + STRIP_W + 2, alphaMark + 1, fade(0xFFFFFFFF));
         }
 
-        drawCheckerboard(ctx, previewX, previewY, previewW, PREVIEW_S);
-        ctx.fill(previewX, previewY, previewX + previewW, previewY + PREVIEW_S, ColorEntryHelper.hslaToArgb(h, s, l, a));
-        AuroraShapes.outline(ctx, previewX, previewY, previewW, PREVIEW_S,
-                AuroraTheme.ACCENT_BLUE, 0);
+        drawPreview(ctx);
+        if (posed) ctx.pose().popMatrix();
     }
+
+    private int fade(int color) { return com.aurora.client.util.AuroraAnim.scaleAlpha(color, editorProgress); }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button, int rowX, int rowY, int rowWidth) {
@@ -244,28 +274,35 @@ public class ColorSetting extends FeatureSetting {
             return true;
         }
         if (!expanded) return false;
+        if (editorProgress <= 0) return dismissPopup();
+        mouseX = com.aurora.client.ui.util.OverlayMotion.unscale(mouseX, swatchX + swatchW, editorProgress);
+        mouseY = com.aurora.client.ui.util.OverlayMotion.unscale(mouseY, editorPivot, editorProgress);
 
-        if (Widget.inBounds(mouseX, mouseY, padX, padY, PAD_SIZE, PAD_SIZE)) {
+        if (Widget.inBounds(mouseX, mouseY, padX, padY, padSize, padSize)) {
             dragging = DragTarget.PAD;
             updateFromPad(mouseX, mouseY);
             return true;
         }
-        if (Widget.inBounds(mouseX, mouseY, hueX, hueY, STRIP_W, PAD_SIZE)) {
+        if (Widget.inBounds(mouseX, mouseY, hueX, hueY, STRIP_W, padSize)) {
             dragging = DragTarget.HUE;
             updateFromHue(mouseY);
             return true;
         }
-        if (!opaque && Widget.inBounds(mouseX, mouseY, alphaX, alphaY, STRIP_W, PAD_SIZE)) {
+        if (!opaque && Widget.inBounds(mouseX, mouseY, alphaX, alphaY, STRIP_W, padSize)) {
             dragging = DragTarget.ALPHA;
             updateFromAlpha(mouseY);
             return true;
         }
-        return false;
+        if (Widget.inBounds(mouseX, mouseY, editorX, editorY, editorWidth, editorHeight)) return true;
+        setExpanded(false);
+        return true;
     }
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dx, double dy, int rowX, int rowY, int rowWidth) {
         if (button != com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT || dragging == DragTarget.NONE) return false;
+        mouseX = com.aurora.client.ui.util.OverlayMotion.unscale(mouseX, swatchX + swatchW, editorProgress);
+        mouseY = com.aurora.client.ui.util.OverlayMotion.unscale(mouseY, editorPivot, editorProgress);
         switch (dragging) {
             case PAD   -> updateFromPad(mouseX, mouseY);
             case HUE   -> updateFromHue(mouseY);
@@ -292,21 +329,32 @@ public class ColorSetting extends FeatureSetting {
     }
 
     /**
-     * Swatch activation: toggle the inline editor + (canonical) hold the
-     * focus registry while expanded so the keyboard adapter can receive
-     * Escape. The editor expanding under the swatch IS the press feedback —
-     * no separate press treatment is added (the row's height doubles; a
-     * scale/deform on top of that would only suggest the value changed).
+     * Swatch activation toggles the anchored editor and holds the focus
+     * registry so the keyboard adapter can dismiss it.
      */
     private void toggleExpanded() {
         if (!expanded) {
             seedFromCurrent();
-            expanded = true;
+            setExpanded(true);
             requestFocus();
         } else {
-            expanded = false;
+            setExpanded(false);
             releaseFocus();
         }
+    }
+
+    private void setExpanded(boolean open) {
+        expanded = open;
+        editorMotion.setOpen(open, System.nanoTime());
+        if (!open) {
+            dragging = DragTarget.NONE;
+            releaseFocus();
+            if (editorProgress == 0) disposeEditor();
+        }
+    }
+
+    private static boolean reducedMotion() {
+        return com.aurora.client.config.AuroraConfig.get().reducedMotion;
     }
 
     /**
@@ -348,11 +396,8 @@ public class ColorSetting extends FeatureSetting {
     @Override
     public boolean onKeyPress(int keyCode, int modifiers) {
         if (!expanded) return false;
-        if (keyCode == InputConstants.KEY_ESCAPE) {
-            expanded = false;
-            releaseFocus();
-            return true;
-        }
+        if (keyCode == InputConstants.KEY_ESCAPE) return dismissPopup();
+        if (keyCode == InputConstants.KEY_TAB) dismissPopup();
         return false;
     }
 
@@ -365,10 +410,22 @@ public class ColorSetting extends FeatureSetting {
     public void onDetailScreenClose() {
         expanded = false;
         dragging = DragTarget.NONE;
+        editorMotion.reset();
+        editorProgress = 0;
+        disposeEditor();
+        releaseFocus();
+    }
+
+    @Override
+    public void onInteractionAvailabilityChanged(boolean available) {
+        if (!available && (expanded || editorProgress != 0)) onDetailScreenClose();
+    }
+
+    private void disposeEditor() {
         padSurface.dispose();
         hueSurface.dispose();
         alphaSurface.dispose();
-        releaseFocus();
+        previewSurface.dispose();
     }
 
     private void commit() { applyValue(ColorEntryHelper.hslaToArgb(h, s, l, a)); }
@@ -378,18 +435,18 @@ public class ColorSetting extends FeatureSetting {
     void applyValue(int argb) { setter.accept(argb); }
 
     private void updateFromPad(double mouseX, double mouseY) {
-        s = clamp01((float) ((mouseX - padX) / PAD_SIZE));
-        l = clamp01(1f - (float) ((mouseY - padY) / PAD_SIZE));
+        s = clamp01((float) ((mouseX - padX) / padSize));
+        l = clamp01(1f - (float) ((mouseY - padY) / padSize));
         commit();
     }
 
     private void updateFromHue(double mouseY) {
-        h = clamp(((float) (mouseY - hueY)) / PAD_SIZE, 0f, 0.9999f);
+        h = clamp(((float) (mouseY - hueY)) / padSize, 0f, 0.9999f);
         commit();
     }
 
     private void updateFromAlpha(double mouseY) {
-        a = clamp01(1f - (float) ((mouseY - alphaY) / PAD_SIZE));
+        a = clamp01(1f - (float) ((mouseY - alphaY) / padSize));
         commit();
     }
 
@@ -406,50 +463,67 @@ public class ColorSetting extends FeatureSetting {
 
     private void drawSatLitPadCached(GuiGraphicsExtractor ctx) {
         int scale = guiScale();
+        long version = (scale * 31L + padSize) << 32 ^ bits(h);
+        if (padSurface.isCurrent(version)) {
+            padSurface.blitAt(ctx, padX, padY, padSize, padSize, fade(-1));
+            return;
+        }
         com.aurora.client.ui.util.UiLayerCache.drawSurface(ctx, padSurface,
-                scale * 31L ^ bits(h), padX, padY, PAD_SIZE, PAD_SIZE, () -> {
-                    int dev = PAD_SIZE * scale;
+                version, padX, padY, padSize, padSize, fade(-1), () -> {
+                    int dev = padSize * scale;
                     padSurface.writeArgb((px, py) -> ColorEntryHelper.hslaToArgb(h,
                             (px + 0.5f) / dev, 1f - (py + 0.5f) / dev, 1f));
-                    AuroraShapes.outline(ctx, 0, 0, PAD_SIZE, PAD_SIZE, AuroraTheme.ACCENT_BLUE, 0);
+                    AuroraShapes.outline(ctx, 0, 0, padSize, padSize, AuroraTheme.ACCENT_BLUE, 0);
                 });
     }
 
     private void drawHueStrip(GuiGraphicsExtractor ctx) {
         int scale = guiScale();
+        long version = scale * 31L + padSize;
+        if (hueSurface.isCurrent(version)) {
+            hueSurface.blitAt(ctx, hueX, hueY, STRIP_W, padSize, fade(-1));
+            return;
+        }
         com.aurora.client.ui.util.UiLayerCache.drawSurface(ctx, hueSurface,
-                scale * 31L, hueX, hueY, STRIP_W, PAD_SIZE, () -> {
-                    int devH = PAD_SIZE * scale;
+                version, hueX, hueY, STRIP_W, padSize, fade(-1), () -> {
+                    int devH = padSize * scale;
                     hueSurface.writeArgb((px, py) -> ColorEntryHelper.hslaToArgb((py + 0.5f) / devH, 1f, 0.5f, 1f));
-                    AuroraShapes.outline(ctx, 0, 0, STRIP_W, PAD_SIZE, AuroraTheme.ACCENT_BLUE, 0);
+                    AuroraShapes.outline(ctx, 0, 0, STRIP_W, padSize, AuroraTheme.ACCENT_BLUE, 0);
                 });
     }
 
     private void drawAlphaStrip(GuiGraphicsExtractor ctx) {
         int scale = guiScale();
+        long version = (scale * 31L + padSize) << 32 ^ bits(h) * 31L ^ bits(s) * 17L ^ bits(l);
+        if (alphaSurface.isCurrent(version)) {
+            alphaSurface.blitAt(ctx, alphaX, alphaY, STRIP_W, padSize, fade(-1));
+            return;
+        }
         com.aurora.client.ui.util.UiLayerCache.drawSurface(ctx, alphaSurface,
-                scale * 31L ^ bits(h) * 31L ^ bits(s) * 17L ^ bits(l), alphaX, alphaY, STRIP_W, PAD_SIZE, () -> {
-                    int devW = STRIP_W * scale, devH = PAD_SIZE * scale, cell = 4 * scale;
+                version, alphaX, alphaY, STRIP_W, padSize, fade(-1), () -> {
+                    int devW = STRIP_W * scale, devH = padSize * scale, cell = 4 * scale;
                     alphaSurface.writeArgb((px, py) -> {
                         int bg = ((px / cell) + (py / cell)) % 2 == 0 ? 0xFF555555 : 0xFFAAAAAA;
                         return compositeOver(ColorEntryHelper.hslaToArgb(h, s, l, 1f - (py + 0.5f) / devH), bg);
                     });
-                    AuroraShapes.outline(ctx, 0, 0, STRIP_W, PAD_SIZE, AuroraTheme.ACCENT_BLUE, 0);
+                    AuroraShapes.outline(ctx, 0, 0, STRIP_W, padSize, AuroraTheme.ACCENT_BLUE, 0);
                 });
     }
 
-    private static void drawCheckerboard(GuiGraphicsExtractor ctx, int x, int y, int w, int h) {
-        int cell = 4;
-        for (int dy = 0; dy < h; dy += cell) {
-            for (int dx = 0; dx < w; dx += cell) {
-                boolean dark = ((dx / cell) + (dy / cell)) % 2 == 0;
-                int col = dark ? 0xFF555555 : 0xFFAAAAAA;
-                ctx.fill(x + dx, y + dy,
-                        Math.min(x + dx + cell, x + w),
-                        Math.min(y + dy + cell, y + h),
-                        col);
-            }
+    private void drawPreview(GuiGraphicsExtractor ctx) {
+        int scale = guiScale();
+        long version = scale * 31L;
+        if (previewSurface.isCurrent(version)) {
+            previewSurface.blitAt(ctx, previewX, previewY, PREVIEW_S, PREVIEW_S, fade(-1));
+        } else {
+            com.aurora.client.ui.util.UiLayerCache.drawSurface(ctx, previewSurface, version,
+                    previewX, previewY, PREVIEW_S, PREVIEW_S, fade(-1), () -> {
+                        int cell = 4 * scale;
+                        previewSurface.writeArgb((px, py) -> ((px / cell) + (py / cell)) % 2 == 0 ? 0xFF555555 : 0xFFAAAAAA);
+                    });
         }
+        ctx.fill(previewX, previewY, previewX + previewW, previewY + PREVIEW_S, fade(ColorEntryHelper.hslaToArgb(h, s, l, a)));
+        AuroraShapes.outline(ctx, previewX, previewY, previewW, PREVIEW_S, fade(AuroraTheme.ACCENT_BLUE), 0);
     }
 
     private static float clamp01(float v) { return Math.max(0f, Math.min(1f, v)); }

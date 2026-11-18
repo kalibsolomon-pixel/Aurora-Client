@@ -18,7 +18,7 @@ keystrokes minimap worldMapShow resourcepackBrowser pulsar scoreboard
 """.split())
 EXACT = set("""
 keybindVersion customTitleScreen moduleGridView textRendererMode textSdf activeFont textWeight textItalic
-textUnderline textCase textHudShadow searchInstant searchTypoTolerance themeEnabled theme
+textUnderline textCase textHudShadow searchInstant searchTypoTolerance reducedMotion themeEnabled theme
 showFps showCoords showTime hudColor pingHudEnabled nametagPingEnabled nametagTotemPopsEnabled
 hudEditorKey waypointDropKey waypointManagerKey waypointMaxVisible
 waypointWorldMarkerLimit waypointMaxDistance waypointsEnabled worldMapEnabled

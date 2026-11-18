@@ -74,6 +74,12 @@ public final class SemanticActionControl extends AbstractWidget {
         return available;
     }
 
+    private boolean scrollFocusTarget;
+
+    public void setScrollFocusTarget(boolean target) { scrollFocusTarget = target; }
+    public boolean isScrollFocusTarget() { return scrollFocusTarget; }
+    public boolean canReceiveFocus() { return (available || scrollFocusTarget) && action.enabled() && action.focusable(); }
+
     public void updatePointer(double mouseX, double mouseY) {
         pointerHovered = available && contains(mouseX, mouseY);
     }
@@ -103,7 +109,7 @@ public final class SemanticActionControl extends AbstractWidget {
 
     @Override
     public ComponentPath nextFocusPath(FocusNavigationEvent event) {
-        if (!available || !action.enabled() || !action.focusable() || isFocused()) return null;
+        if (!canReceiveFocus() || isFocused()) return null;
         return ComponentPath.leaf(this);
     }
 

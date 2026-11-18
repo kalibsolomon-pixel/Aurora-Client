@@ -4,7 +4,9 @@ import net.minecraft.client.gui.components.events.GuiEventListener;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -25,6 +27,7 @@ public final class SemanticControlHost {
     private final Supplier<GuiEventListener> focused;
     private final Consumer<GuiEventListener> setFocused;
     private final List<SemanticActionControl> controls = new ArrayList<>();
+    private final Set<SemanticActionControl> registered = Collections.newSetFromMap(new IdentityHashMap<>());
     private boolean widgetsLive;
 
     public SemanticControlHost(Consumer<SemanticActionControl> addWidget,
@@ -39,7 +42,7 @@ public final class SemanticControlHost {
 
     /** Registers once by identity and preserves first-registration order. */
     public boolean register(SemanticActionControl control) {
-        if (control == null || containsIdentity(control)) return false;
+        if (control == null || !registered.add(control)) return false;
         controls.add(control);
         reset(control);
         if (widgetsLive) addWidget.accept(control);
@@ -51,6 +54,7 @@ public final class SemanticControlHost {
         int index = indexOfIdentity(control);
         if (index < 0) return false;
         controls.remove(index);
+        registered.remove(control);
         if (focused.get() == control) setFocused.accept(null);
         reset(control);
         if (widgetsLive) removeWidget.accept(control);
@@ -90,11 +94,15 @@ public final class SemanticControlHost {
         }
         for (SemanticActionControl control : controls) reset(control);
         controls.clear();
+        registered.clear();
     }
 
     /** Frame-start default: nothing is interactive until the host proves it visible. */
     public void beginAvailabilitySweep() {
-        for (SemanticActionControl control : controls) control.setAvailable(false);
+        for (SemanticActionControl control : controls) {
+            control.setAvailable(false);
+            control.setScrollFocusTarget(false);
+        }
     }
 
     /** Marks one registered control with the host's current bounds truth. */
@@ -110,7 +118,7 @@ public final class SemanticControlHost {
     public void finishAvailabilitySweep() {
         GuiEventListener current = focused.get();
         if (current instanceof SemanticActionControl control
-                && containsIdentity(control) && !control.isAvailable()) {
+                && containsIdentity(control) && !control.isAvailable() && !control.isScrollFocusTarget()) {
             setFocused.accept(null);
         }
     }
@@ -151,7 +159,7 @@ public final class SemanticControlHost {
     }
 
     private boolean containsIdentity(SemanticActionControl wanted) {
-        return indexOfIdentity(wanted) >= 0;
+        return registered.contains(wanted);
     }
 
     private int indexOfIdentity(SemanticActionControl wanted) {
@@ -164,6 +172,7 @@ public final class SemanticControlHost {
 
     private static void reset(SemanticActionControl control) {
         control.setAvailable(false);
+        control.setScrollFocusTarget(false);
         control.setFocused(false);
     }
 }

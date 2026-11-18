@@ -140,14 +140,15 @@ public final class Content {
     var lines = TextLayout.wrap(font, label, labelW);
     int height = Math.max(control instanceof KSlider ? 20 : 18, lines.size() * 10 + 4);
     int top = y;
+    String tip = help == null ? null : label + ". " + help;
     blockAt(0, labelW, height, (g, x, yy, w, h, mx, my) -> {
       for (int i = 0; i < lines.size(); i++)
         g.text(font, lines.get(i), x, yy + (height - (lines.size() - 1) * 10 - 8) / 2 + i * 10, control.active ? Theme.TEXT() : Theme.DIM(), false);
+      if (tip != null && Viewport.contains(mx, my) && (com.aurora.client.ui.component.TooltipPresenter.hit(x, yy, w, h, mx, my)
+          || com.aurora.client.ui.component.TooltipPresenter.hit(control.getX(), control.getY(), control.getWidth(), control.getHeight(), mx, my))) {
+        com.aurora.client.ui.component.TooltipPresenter.offer(control, tip, x, yy, width, h);
+      }
     });
-    if (help != null) {
-      control.setTooltip(net.minecraft.client.gui.components.Tooltip.create(net.minecraft.network.chat.Component.literal(label + ". " + help)));
-      control.setTooltipDelay(java.time.Duration.ofMillis(1500));
-    }
     add(control, width - controlW, top + (height - rowH) / 2, controlW, rowH);
     y = top + height + 2;
   }

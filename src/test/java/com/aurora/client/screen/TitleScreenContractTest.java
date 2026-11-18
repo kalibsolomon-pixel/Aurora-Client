@@ -75,7 +75,7 @@ class TitleScreenContractTest {
         assertTrue(api.contains("getConstructor(Screen.class).newInstance(parent)"));
         assertFalse(api.contains("import ru.vidtu"), "no compile-time dependency on IAS");
         assertTrue(SCREEN.contains("Screen accounts = switcher ? AuroraAccountSwitcherApi.open(AuroraTitleScreen.this) : null;"));
-        assertTrue(SCREEN.contains("else accountOpen = !accountOpen;"), "without IAS the card keeps its read-only dropdown");
+        assertTrue(SCREEN.contains("else showAccount(!accountOpen);"), "without IAS the card keeps its read-only dropdown");
         for (String banned : new String[]{"IASStorage", "LoginData", "MSAuth", "getAccessToken"}) {
             assertFalse(SCREEN.contains(banned) || api.contains(banned), banned + ": IAS keeps its accounts to itself");
         }

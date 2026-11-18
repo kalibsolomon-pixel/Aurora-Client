@@ -459,6 +459,20 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
         control.setBounds(btnX, rowY + 4, btnW, ROW_H - 8);
         control.setAvailable(rowY + ROW_H > listClipTop() && rowY < listClipBottom());
         control.updatePointer(mouseX, mouseY);
+        if (mouseY >= listClipTop() && mouseY < listClipBottom()) {
+            com.aurora.client.screen.setting.FeatureSetting.hoverTooltip(control, control.action().accessibleName().getString(),
+                    btnX, rowY + 4, btnW, ROW_H - 8, mouseX, mouseY);
+        }
+    }
+
+    @Override
+    protected void prepareRowFocus(Waypoint waypoint, int x, int y, int width) {
+        copyBtn(waypoint);
+        colorBtn(waypoint);
+        deleteBtn(waypoint);
+        locateRowFocus(copyControl(waypoint), x + copyDx(), y + 4, BTN_COPY_W, ROW_H - 8);
+        locateRowFocus(colorControl(waypoint), x + colorDx(), y + 4, BTN_COLOR_W, ROW_H - 8);
+        locateRowFocus(deleteControl(waypoint), x + delDx(), y + 4, BTN_DEL_W, ROW_H - 8);
     }
 
     /** Copy — the shared themed Button in neutral raised glass, with its Phase A semantic control. */

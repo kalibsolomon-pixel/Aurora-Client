@@ -128,7 +128,6 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
     private boolean passDrewButton = false;
 
     private int lastBtnX, lastBtnY;
-    private int lastPopupBorder;
     private int lastWidth = 240;
 
     private String cachedName;
@@ -140,6 +139,20 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
     private int cachedDownArrowWidth = -1;
 
     private boolean expanded = false;
+    private final com.aurora.client.ui.util.OverlayMotion popupMotion = new com.aurora.client.ui.util.OverlayMotion();
+
+    private void setExpanded(boolean open) {
+        expanded = open;
+        popupMotion.setOpen(open, System.nanoTime());
+    }
+
+    @Override
+    public boolean dismissPopup() {
+        if (!expanded) return false;
+        setExpanded(false);
+        releaseFocus();
+        return true;
+    }
     private int scrollOffset = 0; // scroll offset for listing max 5 elements
 
     /** §8.3 canonical hover — symmetric 140 ms, pointer-only target. */
@@ -209,7 +222,7 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
 
     /** Trigger activation: toggle the popup + keep the focus bookkeeping. */
     private void toggleExpanded() {
-        expanded = !expanded;
+        setExpanded(!expanded);
         if (expanded) {
             requestFocus();
         } else {
@@ -392,53 +405,43 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
                 btnX + textAreaW + arrowReserve / 2f, com.aurora.client.ui.util.TextAlignment.iconCenter(btnY, BTN_H),
                 9, arrowColor);
 
-        lastPopupBorder = borderTint;
         if (compactRow == null) renderFloatingOverlay(ctx, mouseX, mouseY);
 
         renderDescription(ctx, x, y + baseHeight(), width);
     }
 
 
-    public boolean popupOpen() { return expanded; }
+
+    public boolean popupVisible() {
+        return expanded || popupMotion.progress(System.nanoTime(), com.aurora.client.config.AuroraConfig.get().reducedMotion) > 0;
+    }
 
     /** Height of the expanded option list — hosts size their body so it always fits. */
     public int popupHeight() { return Math.min(5, values.length) * OPT_H + 4; }
+
+    private int visibleOptions() {
+        return Math.min(Math.min(5, values.length), Math.max(1, (hostBand().height - 4) / OPT_H));
+    }
     /** The compact host paints floating options after every normal row. */
     public void renderFloatingOverlay(GuiGraphicsExtractor ctx, int mouseX, int mouseY) {
         Font tr = Minecraft.getInstance().font;
         E current = getter.get();
         int btnX = lastBtnX, btnY = lastBtnY;
-        int borderTint = lastPopupBorder;
-        if (expanded) {
-            int visibleCount = Math.min(5, values.length);
+        float progress = popupMotion.progress(System.nanoTime(), com.aurora.client.config.AuroraConfig.get().reducedMotion);
+        if (progress > 0) {
+            if (expanded) com.aurora.client.ui.component.TooltipPresenter.suppressFrame();
+            int visibleCount = visibleOptions();
+            scrollOffset = Math.min(scrollOffset, values.length - visibleCount);
             int dropdownH = visibleCount * OPT_H + 4;
-            // C-8: placement resolves against the host band — the popup
-            // flips UP when opening down would clip its option rows at the
-            // band's bottom edge. One truth for paint and input
-            // (dropdownY); every consumer below derives from it.
             int dropdownY = dropdownY(btnY, dropdownH);
-
-            // Glass: the expanded option list is a floating panel above other
-            // content — RAISED glass with the neutral WINDOW_FILL tint (never
-            // stained: no individual list row is a selected/primary element;
-            // the current value reads through its accent text color, hover
-            // through the plain SURFACE_VARIANT wash — no per-row glass). The
-            // popup is an ABOVE-THE-DIM surface by design (§9's named case:
-            // it must float above the dimmed screen), so it paints here in
-            // the content pass through GlassSurface.aboveDimControl — the
-            // identical idiom, in place, exempt from the glass-pass ordering
-            // — on migrated and legacy screens alike. On decline the flat
-            // panel returns — the same fallback contract every glass
-            // integration uses.
-            float popR = Math.min(dropdownH / 2f, ThemeManager.current().roundness().radiusSmall());
-            boolean popGlass = glassButton && GlassSurface.aboveDimControl(ctx, btnX, dropdownY, BTN_W, dropdownH, popR);
-            if (MaterialSurface.unified() && !popGlass) {
-                MaterialSurface.floating(ctx,btnX,dropdownY,BTN_W,dropdownH,Math.round(popR),1);
-            } else if (!popGlass) {
-                RenderUtil.drawSquircle(ctx, btnX, dropdownY, BTN_W, dropdownH, AuroraTheme.RADIUS_SMALL, ThemeManager.surfaceColor(ThemeToken.SURFACE));
-                RenderUtil.drawSquircleOutline(ctx, btnX, dropdownY, BTN_W, dropdownH, AuroraTheme.RADIUS_SMALL, 1.0f, borderTint);
+            int pivot = dropdownY < btnY ? dropdownY + dropdownH : dropdownY;
+            boolean posed = com.aurora.client.ui.component.OverlayPose.push(ctx, btnX, pivot, progress);
+            if (posed) {
+                mouseX = (int) Math.floor(com.aurora.client.ui.util.OverlayMotion.unscale(mouseX, btnX, progress));
+                mouseY = (int) Math.floor(com.aurora.client.ui.util.OverlayMotion.unscale(mouseY, pivot, progress));
             }
-
+            float popR = Math.min(dropdownH / 2f, ThemeManager.current().roundness().radiusSmall());
+            MaterialSurface.overlayFace(ctx, btnX, dropdownY, BTN_W, dropdownH, popR, progress);
             for (int vIdx = 0; vIdx < visibleCount; vIdx++) {
                 int actualIdx = scrollOffset + vIdx;
                 if (actualIdx >= 0 && actualIdx < values.length) {
@@ -446,37 +449,36 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
                     String optName = fit(tr, displayName(val), BTN_W - 10);
                     int optY = dropdownY + 2 + vIdx * OPT_H;
 
-                    boolean optHover = Widget.inBounds(mouseX, mouseY, btnX, optY, BTN_W, OPT_H);
+                    boolean optHover = expanded && Widget.inBounds(mouseX, mouseY, btnX, optY, BTN_W, OPT_H);
 
-                    if (MaterialSurface.unified()) {
+                    if (MaterialSurface.unified() && !posed) {
                         MaterialSurface.selection(ctx,btnX+2,optY,BTN_W-4,OPT_H,
                                 ThemeManager.current().roundness().radiusSmall(),val==current,optHover ? 1 : 0);
-                    } else if (optHover) {
-                        ctx.fill(btnX + 2, optY, btnX + BTN_W - 2, optY + OPT_H, ThemeManager.surfaceColor(ThemeToken.SURFACE_VARIANT));
                     }
 
-                    int optTextX = btnX + (BTN_W - tr.width(optName)) / 2;
                     int optTextY = AuroraFontRenderer.textY(tr, optY, OPT_H);
                     int optColor = optHover ? AuroraTheme.TEXT_PRIMARY : AuroraTheme.TEXT_SECONDARY;
 
                     if (val == current) {
-                        optColor = MaterialSurface.unified() ? AuroraTheme.TEXT_PRIMARY : AuroraTheme.TEXT_ACCENT;
+                        optColor = MaterialSurface.unified() && !posed ? AuroraTheme.TEXT_PRIMARY : AuroraTheme.TEXT_ACCENT;
                     }
 
-                    ctx.text(tr, optName, optTextX, optTextY, optColor, false);
+                    if (progress >= .015f) AuroraFontRenderer.drawCentered(ctx, tr, optName, btnX + BTN_W / 2, optTextY,
+                            com.aurora.client.util.AuroraAnim.scaleAlpha(optColor, progress));
                 }
             }
 
             // Draw scrollbar if there are more than 5 options
-            if (values.length > 5) {
+            if (values.length > visibleCount) {
                 int scrollbarX = btnX + BTN_W - 4;
                 int scrollbarY = dropdownY + 2;
                 int scrollbarH = dropdownH - 4;
-                int thumbH = (int) (scrollbarH * (5.0 / values.length));
-                int thumbY = scrollbarY + (int) ((scrollbarH - thumbH) * ((double) scrollOffset / (values.length - 5)));
+                int thumbH = Math.max(1, (int) (scrollbarH * ((double) visibleCount / values.length)));
+                int thumbY = scrollbarY + (int) ((scrollbarH - thumbH) * ((double) scrollOffset / (values.length - visibleCount)));
                 ctx.fill(scrollbarX, thumbY, scrollbarX + 2, thumbY + thumbH,
-                        ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_BACKGROUND), 0x66));
+                        ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_BACKGROUND), Math.round(0x66 * progress)));
             }
+            if (posed) ctx.pose().popMatrix();
         }
 
     }
@@ -507,7 +509,7 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
         }
 
         if (expanded) {
-            int visibleCount = Math.min(5, values.length);
+            int visibleCount = visibleOptions();
             int dropdownH = visibleCount * OPT_H + 4;
             // C-8: placement resolves against the host band — the popup
             // flips UP when opening down would clip its option rows at the
@@ -515,7 +517,11 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
             // (dropdownY); every consumer below derives from it.
             int dropdownY = dropdownY(btnY, dropdownH);
 
-            boolean clickedDropdown = Widget.inBounds(mouseX, mouseY, btnX, dropdownY, BTN_W, dropdownH);
+            float progress = popupMotion.progress(System.nanoTime(), com.aurora.client.config.AuroraConfig.get().reducedMotion);
+            int pivot = dropdownY < btnY ? dropdownY + dropdownH : dropdownY;
+            mouseX = com.aurora.client.ui.util.OverlayMotion.unscale(mouseX, btnX, progress);
+            mouseY = com.aurora.client.ui.util.OverlayMotion.unscale(mouseY, pivot, progress);
+            boolean clickedDropdown = Widget.inBounds(mouseX, mouseY, btnX, dropdownY + 2, BTN_W, dropdownH - 4);
 
             if (clickedDropdown) {
                 int clickedIndex = (int) ((mouseY - (dropdownY + 2)) / OPT_H);
@@ -526,14 +532,14 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
                         com.aurora.client.config.AuroraConfig.save();
                     }
                 }
-                expanded = false;
+                setExpanded(false);
                 releaseFocus();
                 return true;
             } else {
                 // Outside click collapses the popup AND consumes the click —
                 // letting it fall through would act on whatever renders
                 // underneath the now-dismissed dropdown.
-                expanded = false;
+                setExpanded(false);
                 releaseFocus();
                 return true;
             }
@@ -550,6 +556,7 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
     @Override
     public void onDetailScreenClose() {
         expanded = false;
+        popupMotion.reset();
         scrollOffset = 0;
         releaseFocus();
     }
@@ -632,6 +639,7 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
     public void onInteractionAvailabilityChanged(boolean available) {
         if (!available && expanded) {
             expanded = false;
+            popupMotion.reset();
             scrollOffset = 0;
             releaseFocus();
         }
@@ -657,11 +665,8 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
     @Override
     public boolean onKeyPress(int keyCode, int modifiers) {
         if (!expanded) return false;
-        if (keyCode == InputConstants.KEY_ESCAPE) {
-            expanded = false;
-            releaseFocus();
-            return true;
-        }
+        if (keyCode == InputConstants.KEY_ESCAPE) return dismissPopup();
+        if (keyCode == InputConstants.KEY_TAB) dismissPopup();
         if (keyCode == InputConstants.KEY_DOWN) {
             return onScroll(-1);
         }
@@ -674,7 +679,7 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
     @Override
     public boolean onScroll(double vertical) {
         if (!expanded) return false;
-        int maxVisible = 5;
+        int maxVisible = visibleOptions();
         if (values.length <= maxVisible) return false;
 
         scrollOffset -= (int) Math.signum(vertical);

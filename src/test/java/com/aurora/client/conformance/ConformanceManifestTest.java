@@ -315,12 +315,36 @@ class ConformanceManifestTest {
 
     @Test
     void tooltipContractStaysFrozenAt1500DwellAnd200SymmetricFade() throws IOException {
-        String src = read(SRC + "screen/setting/FeatureSetting.java");
-        assertTrue(src.contains("HOVER_DWELL_MS = 1500"),
+        String src = read(SRC + "ui/component/TooltipPresenter.java");
+        assertTrue(src.contains("DWELL_MS = 1500"),
                 "the 1500 ms dwell is the frozen contract");
-        assertTrue(src.contains("HoverAnim.symmetric(TOOLTIP_FADE_MS")
-                        && src.contains("TOOLTIP_FADE_MS = 200"),
+        assertTrue(src.contains("HoverAnim.symmetric(FADE_MS")
+                        && src.contains("FADE_MS = 200"),
                 "the tooltip fade stays the deliberate symmetric 200 ms supplemental family");
+    }
+
+    @Test
+    void nonVanillaTooltipFamiliesUseTheSamePresenter() throws IOException {
+        assertTrue(read(SRC + "screen/setting/FeatureSetting.java").contains("TooltipPresenter.offer("));
+        assertTrue(read(SRC + "screen/setting/FeatureSetting.java").contains("TooltipPresenter.draw("));
+        assertTrue(read(SRC + "screen/AuroraScreen.java").contains("FeatureSetting.hoverTooltip("));
+        assertTrue(read(SRC + "ui/component/ButtonWidget.java").contains("TooltipPresenter.offer("));
+        assertTrue(read(SRC + "ui/component/IconAction.java").contains("TooltipPresenter.offer("));
+        String pulsar = SourceTree.SHARED + "/dev/phenomena/gui/";
+        assertTrue(read(pulsar + "components/Blocks.java").contains("TooltipPresenter.offer("));
+        assertTrue(read(pulsar + "screens/PhenomenaScreen.java").contains("TooltipPresenter.draw("));
+    }
+
+    @Test
+    void settingsPopupsHaveInputPriorityOverCoveredControls() throws IOException {
+        for (String screen : List.of("AuroraScreen", "FeatureDetailScreen")) {
+            String source = read(SRC + "screen/" + screen + ".java");
+            int mouse = source.indexOf("public boolean mouseClicked(");
+            int dismiss = source.indexOf("owner.dismissPopup()", mouse);
+            int clear = source.indexOf("FeatureSetting.clearFocus()", mouse);
+            int children = source.indexOf("super.mouseClicked(", mouse);
+            assertTrue(mouse >= 0 && dismiss > mouse && clear > dismiss && children > clear, screen);
+        }
     }
 
     // ------------------------------------------------------------------

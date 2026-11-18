@@ -54,6 +54,9 @@ public class ButtonWidget extends AbstractButton {
      * contract of every legacy construction site.
      */
     private SemanticAction semanticAction;
+    private Component tooltip;
+
+    public void tooltip(Component text) { tooltip = text; }
 
     public ButtonWidget(int x, int y, int w, int h, Component label, Runnable onPress) {
         this(x, y, w, h, label, onPress, false);
@@ -179,6 +182,7 @@ public class ButtonWidget extends AbstractButton {
 
     @Override
     protected void extractContents(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
+        offerTooltip(mouseX, mouseY);
         painter.disabled(!this.active);
         // Provisional Phase A focus treatment — the same 1 px accent hairline
         // the semantic controls draw, synced from vanilla's own focus so
@@ -188,9 +192,16 @@ public class ButtonWidget extends AbstractButton {
         painter.render(g, getX(), getY(), getWidth(), getHeight(), mouseX, mouseY);
     }
 
+    protected final void offerTooltip(int mouseX, int mouseY) {
+        if (tooltip != null && TooltipPresenter.hit(getX(), getY(), getWidth(), getHeight(), mouseX, mouseY)) {
+            TooltipPresenter.offer(this, tooltip.getString(), getX(), getY(), getWidth(), getHeight());
+        }
+    }
+
     @Override
     protected void updateWidgetNarration(NarrationElementOutput builder) {
         this.defaultButtonNarrationText(builder);
+        if (tooltip != null) builder.add(NarratedElementType.HINT, tooltip);
         if (semanticAction != null) {
             Component description = semanticAction.description();
             if (description != null && !description.getString().isBlank()) {

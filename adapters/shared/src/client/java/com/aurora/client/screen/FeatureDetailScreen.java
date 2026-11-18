@@ -88,6 +88,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
     private final FeatureMetadata meta;
     /** τ = 60 ms, snap 0.25, wheel step 30, no thumb — the screen's exact pre-R2 feel. */
     private final SmoothScroll scroll = new SmoothScroll(60.0).boundedMotion();
+    private double focusScrollMax;
     private FeatureSetting activeDragSetting = null;
     private FeatureSetting fixedHeaderSetting;
     private int bodyTop() { return TOP_PAD + (fixedHeaderSetting == null ? 0 : fixedHeaderSetting.fixedHeaderHeight()); }
@@ -115,9 +116,12 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         // The body must also be tall enough for any dropdown's popup, which is
         // painted inside the body clip and would otherwise be cut off.
         int popup = 0;
-        for (FeatureSetting setting : meta.settings)
+        for (FeatureSetting setting : meta.settings) {
             if (setting.isVisible() && setting instanceof com.aurora.client.screen.setting.EnumSetting<?> row)
                 popup = Math.max(popup, row.popupHeight() + 30);
+            if (setting.isVisible() && setting instanceof com.aurora.client.screen.setting.ColorSetting)
+                popup = Math.max(popup, com.aurora.client.screen.setting.ColorSetting.editorHeight());
+        }
         int limit = Math.min(compactFrame.y() + compactFrame.height(), this.height - 12) - compactFrame.y();
         int body = limit - bodyOffset() - fixedHeader - BODY_BOTTOM - 2;
         restBody = body;
@@ -448,6 +452,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         for (FeatureSetting setting : meta.settings) if (setting.isVisible()) totalRowsH += bodyHeight(setting) + ROW_GAP;
         if (totalRowsH > 0) totalRowsH -= ROW_GAP;
         double maxScroll = Math.max(0, totalRowsH - (bodyBottom() - bodyTop()));
+        focusScrollMax = maxScroll;
         if (pendingReveal != null) {
             int offset = 0;
             for (FeatureSetting setting : meta.settings) {
@@ -564,7 +569,11 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         GlassSurface.enableScissor(ctx, listX + 8, bodyTop(), listX + LIST_W - 8, bodyBottom());
         int gy = bodyTop() - (int) scroll.current();
         for (FeatureSetting s : meta.settings) {
-            if (!s.isVisible()) continue;
+            if (!s.isVisible()) {
+                var hidden = registeredSettingControls.get(s);
+                if (hidden != null) for (var control : hidden) control.setScrollFocusTarget(false);
+                continue;
+            }
             int gh = bodyHeight(s);
             var controls = s.controlsWithReset();
             if (!controls.isEmpty()) {
@@ -591,6 +600,9 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
                 boolean available = s == fixedHeaderSetting || gy + gh > bodyTop() && gy < bodyBottom();
                 for (SemanticActionControl control : controls) {
                     control.setAvailable(available);
+                    boolean pinned = s == fixedHeaderSetting && s.fixedHeaderControls().contains(control);
+                    control.setScrollFocusTarget(!pinned && s.controlVisible(control));
+                    if (!available) control.setBounds(listX + 8, gy, LIST_W - 16, gh);
                 }
                 s.onInteractionAvailabilityChanged(available);
             }
@@ -633,9 +645,12 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
             y += h + ROW_GAP;
         }
 
-        if (compact()) for (FeatureSetting setting : meta.settings)
-            if (setting instanceof com.aurora.client.screen.setting.EnumSetting<?> row && setting.isVisible() && row.popupOpen())
+        if (compact()) for (FeatureSetting setting : meta.settings) {
+            if (!setting.isVisible()) continue;
+            if (setting instanceof com.aurora.client.screen.setting.EnumSetting<?> row && row.popupVisible())
                 row.renderFloatingOverlay(ctx, mouseX, mouseY);
+            if (setting instanceof com.aurora.client.screen.setting.ColorSetting row) row.renderFloatingEditor(ctx);
+        }
         ctx.disableScissor();
         if (compact()) {
             // Rows fade into the window tint at both clip edges while more content lies beyond.
@@ -691,7 +706,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
                         && control.getY() >= TOP_PAD && control.getBottom() <= bodyTop();
                 boolean visible = bodyBand.intersects(control.getX(), control.getY(), control.getWidth(), control.getHeight());
                 control.setAvailable(control.isAvailable() && (header || visible) && setting.controlVisible(control));
-                if (!control.isAvailable() && this.getFocused() == control) this.setFocused(null);
+                if (!control.isAvailable() && !control.isScrollFocusTarget() && this.getFocused() == control) this.setFocused(null);
             }
         }
 
@@ -714,7 +729,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         // scaled glyphs) would violate the no-new-visual-style constraint.
 
         // Label-hover description tooltip floats above the rows.
-        FeatureSetting.drawPendingTooltip(ctx, this.width, this.height);
+        FeatureSetting.drawPendingTooltip(ctx, listX, windowY, LIST_W, windowH);
 
         // Post-reset confirmation (the manager screens' toast): 1.5 s, bottom-center.
         resetToast.render(ctx, this.font, this.width, this.height,
@@ -761,6 +776,24 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         // vanilla children or a different row can act, so one click can
         // never both cancel capture and activate an unrelated control.
         if (com.aurora.client.screen.setting.FeatureSetting.cancelActiveCapture()) return true;
+        measureRows();
+        int listX = (this.width - LIST_W) / 2;
+        FeatureSetting owner = FeatureSetting.getFocused();
+        if (owner instanceof com.aurora.client.screen.setting.EnumSetting<?>
+                || owner instanceof com.aurora.client.screen.setting.ColorSetting) {
+            if (FeatureSetting.hostBand().contains(mouseX, mouseY) && button == InputConstants.MOUSE_BUTTON_LEFT) {
+                int popupY = bodyTop() - (int) scroll.current();
+                for (FeatureSetting setting : meta.settings) {
+                    if (!setting.isVisible()) continue;
+                    if (setting == owner && owner.mouseClicked(mouseX, mouseY, button, listX, settingY(owner, popupY), LIST_W)) {
+                        if (owner instanceof com.aurora.client.screen.setting.ColorSetting) activeDragSetting = owner;
+                        return true;
+                    }
+                    popupY += bodyHeight(setting) + ROW_GAP;
+                }
+            }
+            if (owner.dismissPopup()) return true;
+        }
         FeatureSetting.clearFocus();
         if (this.getFocused() instanceof SemanticActionControl) this.setFocused(null);
         // An armed Reset disarms on any click that is not its own (design
@@ -772,8 +805,6 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         }
         if (super.mouseClicked(_ev, _doubleClicked)) return true;
         
-        measureRows();
-        int listX = (this.width - LIST_W) / 2;
         if (compact() && mouseX >= listX + LIST_W - 8 && mouseX < listX + LIST_W + 2 && mouseY >= bodyTop() && mouseY < bodyBottom()) {
             int extent = -ROW_GAP;
             for (FeatureSetting setting : meta.settings) if (setting.isVisible()) extent += bodyHeight(setting) + ROW_GAP;
@@ -781,15 +812,6 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
             if (button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT && max > 0) {
                 scroll.beginThumbDrag(Math.max(0, Math.min(scroll.thumbHeight(bodyBottom() - bodyTop(), max, 24), mouseY - scroll.thumbY(bodyTop(), bodyBottom() - bodyTop(), max, 24))));
                 return true;
-            }
-        }
-        if (compact() && FeatureSetting.hostBand().contains(mouseX, mouseY)) {
-            int popupY = bodyTop() - (int) scroll.current();
-            for (FeatureSetting setting : meta.settings) {
-                if (!setting.isVisible()) continue;
-                if (setting instanceof com.aurora.client.screen.setting.EnumSetting<?> row && setting.isVisible() && row.popupOpen())
-                    return row.mouseClicked(mouseX, mouseY, button, listX, popupY, LIST_W);
-                popupY += bodyHeight(setting) + ROW_GAP;
             }
         }
         if (fixedHeaderSetting != null && mouseY >= TOP_PAD && mouseY < bodyTop()
@@ -902,7 +924,11 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
         // C-3 roving interceptor — before super (the invokespecial seam): a
         // grouped hosted control (today: AccentSetting's peer grid on the
         // Theme screen) owns its group's arrows, moving focus silently.
-        if (SemanticControlGroup.rove(this.getFocused(), _kev, this::setFocused)) return true;
+        var before = this.getFocused();
+        if (SemanticControlGroup.rove(before, _kev, this::setFocused)) {
+            revealKeyboardFocus(before);
+            return true;
+        }
         // Escape unwinds one layer at a time: an armed Reset disarms and
         // CONSUMES the press (design language §8.7); the next Escape closes
         // the screen as before. A focused setting above (popup, capture)
@@ -912,7 +938,14 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen {
             syncResetButton();
             return true;
         }
-        return super.keyPressed(_kev);
+        boolean handled = super.keyPressed(_kev);
+        if (com.aurora.client.ui.interaction.FocusReveal.navigation(_kev)) revealKeyboardFocus(before);
+        return handled;
+    }
+
+    private void revealKeyboardFocus(net.minecraft.client.gui.components.events.GuiEventListener before) {
+        com.aurora.client.ui.interaction.FocusReveal.afterNavigation(before, getFocused(), scroll,
+                focusScrollMax, bodyTop(), bodyBottom());
     }
 
     @Override

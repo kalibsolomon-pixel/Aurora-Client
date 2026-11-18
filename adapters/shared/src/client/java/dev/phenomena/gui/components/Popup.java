@@ -1,5 +1,11 @@
 package dev.phenomena.gui.components;
 
+import com.aurora.client.config.AuroraConfig;
+import com.aurora.client.ui.component.MaterialSurface;
+import com.aurora.client.ui.component.OverlayPose;
+import com.aurora.client.ui.util.OverlayLayout;
+import com.aurora.client.ui.util.OverlayMotion;
+import com.aurora.client.util.AuroraAnim;
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.phenomena.gui.pixel.Pixel;
 import dev.phenomena.gui.theme.Theme;
@@ -41,45 +47,59 @@ public abstract class Popup {
     private final int current;
     private int highlighted, offset;
     private final int visible;
+    private final int pivot;
+    private final OverlayMotion motion = new OverlayMotion();
+    private float progress;
+    private boolean closing;
 
-    public Dropdown(Rect anchor, List<String> options, int current, IntConsumer pick, int screenW, int screenH) {
+    public Dropdown(Rect anchor, List<String> options, int current, IntConsumer pick, Rect frame) {
       this.options = options;
       this.pick = pick;
       this.current = current;
       var font = Minecraft.getInstance().font;
       int w = anchor.w();
       for (var o : options) w = Math.max(w, font.width(o) + 16);
-      w = Math.min(w, screenW - 8);
-      int maxRows = Math.max(3, (screenH - 16) / ROW);
-      int below = (screenH - anchor.bottom() - 6) / ROW, above = (anchor.y() - 6) / ROW;
-      boolean down = below >= Math.min(options.size(), 4) || below >= above;
-      visible = Math.min(options.size(), Math.min(maxRows, Math.max(3, down ? below : above)));
+      w = Math.min(w, frame.w() - 16);
+      int below = (frame.bottom() - anchor.bottom() - 11) / ROW, above = (anchor.y() - frame.y() - 11) / ROW;
+      visible = Math.min(options.size(), Math.max(1, Math.max(below, above)));
       int h = visible * ROW + 2;
-      int x = Math.max(4, Math.min(anchor.x(), screenW - w - 4));
-      int y = down ? anchor.bottom() + 1 : anchor.y() - h - 1;
-      y = Math.max(4, Math.min(y, screenH - h - 4));
+      int x = Math.max(frame.x() + 8, Math.min(anchor.x(), frame.right() - w - 8));
+      int y = OverlayLayout.popupTop(anchor.bottom() + 1, anchor.y() - 1, h, frame.y() + 8, frame.bottom() - 8);
       rect = new Rect(x, y, w, h);
+      pivot = y < anchor.y() ? y + h : y;
       highlighted = Math.max(0, current);
       offset = Math.max(0, Math.min(options.size() - visible, highlighted - visible / 2));
+      motion.setOpen(true, System.nanoTime());
     }
+
+    public void dismiss() {
+      closing = true;
+      motion.setOpen(false, System.nanoTime());
+    }
+
+    private float progress() { return motion.progress(System.nanoTime(), Theme.reducedMotion() || AuroraConfig.get().reducedMotion); }
+    public boolean finished() { return closing && progress() == 0; }
 
     @Override
     public void render(GuiGraphicsExtractor g, int mx, int my, int sw, int sh) {
+      progress = progress();
+      if (progress < .015f) return;
+      boolean posed = OverlayPose.push(g, rect.x(), pivot, progress);
+      mx = (int) Math.floor(OverlayMotion.unscale(mx, rect.x(), progress));
+      my = (int) Math.floor(OverlayMotion.unscale(my, pivot, progress));
       var font = Minecraft.getInstance().font;
       // Fully opaque elevated card with a soft offset shadow, so page content never bleeds
       // through and the menu reads as a layer above the page.
-      Pixel.rounded(g, rect.x() + 1.5f, rect.y() + 2, rect.w(), rect.h(), Theme.radius(), 0x66000000);
-      Pixel.rounded(g, rect.x(), rect.y(), rect.w(), rect.h(), Theme.radius(), Theme.SURFACE_2());
-      Pixel.outline(g, rect.x(), rect.y(), rect.w(), rect.h(), Theme.radius(), 1, Theme.BORDER());
+      MaterialSurface.overlayFace(g, rect.x(), rect.y(), rect.w(), rect.h(), Theme.radius(), progress);
       for (int i = 0; i < visible; i++) {
         int idx = offset + i;
         int ry = rect.y() + 1 + i * ROW;
-        boolean hover = mx >= rect.x() && mx < rect.right() && my >= ry && my < ry + ROW;
+        boolean hover = !closing && mx >= rect.x() && mx < rect.right() && my >= ry && my < ry + ROW;
         if (hover) highlighted = idx;
-        if (hover && idx != current)
+        if (!posed && (hover || idx == highlighted) && idx != current)
           Pixel.rounded(
               g, rect.x() + 2, ry + 1, rect.w() - 4, ROW - 2, Theme.radiusSmall(), Theme.SURFACE_HOVER());
-        if (idx == current) {
+        if (!posed && idx == current) {
           // The committed value: subtle accent wash plus one accent edge, like a selected tab.
           Pixel.rounded(
               g,
@@ -96,18 +116,21 @@ public abstract class Popup {
             KButton.fit(font, options.get(idx), rect.w() - 12),
             rect.x() + 8,
             ry + 3,
-            idx == highlighted ? Theme.TEXT() : idx == current ? Theme.TEXT() : Theme.MUTED(),
+            AuroraAnim.scaleAlpha(idx == highlighted || idx == current ? Theme.TEXT() : Theme.MUTED(), progress),
             false);
       }
       if (options.size() > visible) {
         int th = Math.max(6, rect.h() * visible / options.size());
         int ty = rect.y() + (rect.h() - th) * offset / Math.max(1, options.size() - visible);
-        Pixel.rounded(g, rect.right() - 3, ty, 2, th, 1, Theme.BORDER());
+        Pixel.rounded(g, rect.right() - 3, ty, 2, th, 1, AuroraAnim.scaleAlpha(Theme.BORDER(), progress));
       }
+      if (posed) g.pose().popMatrix();
     }
 
     @Override
     public boolean click(double x, double y) {
+      x = OverlayMotion.unscale(x, rect.x(), progress);
+      y = OverlayMotion.unscale(y, pivot, progress);
       if (!rect.contains(x, y)) return false;
       // Only the rows on screen: the list's last pixel row would otherwise pick the hidden next option.
       int row = (int) ((y - rect.y() - 1) / ROW);

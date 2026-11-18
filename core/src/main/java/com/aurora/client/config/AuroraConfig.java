@@ -292,6 +292,7 @@ public class AuroraConfig {
     // ---- Search (Settings → General → Search, 2026-11-12) ----
     /** Focus the search field when the Aurora menu opens or its page changes. */
     public boolean searchInstant = true;
+    public boolean reducedMotion = false;
     /** Typos a search word may carry and still match (0 = exact only, at most 3). */
     public int searchTypoTolerance = 2;
     public int guiFpsLimit = 60;

@@ -222,11 +222,15 @@ public final class SmoothScroll {
      * @return the new {@link #target()}
      */
     public double wheel(double vertical, double step, double maxScroll) {
+        return retarget(target - vertical * step, maxScroll);
+    }
+
+    public double retarget(double position, double maxScroll) {
         if (boundedMotion) {
             motionFrom = current;
             motionStartMs = lastTickMs;
         }
-        target -= vertical * step;
+        target = position;
         if (target < 0) target = 0;
         if (target > maxScroll) target = maxScroll;
         return target;

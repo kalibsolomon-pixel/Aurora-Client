@@ -135,9 +135,7 @@ public final class SemanticControlGroup {
         for (int k = 0; k < n; k++) {
             SemanticActionControl candidate = members.get(Math.floorMod(from + step + k * direction, n));
             if (candidate == current) continue;
-            if (candidate.isAvailable()
-                    && candidate.action().enabled()
-                    && candidate.action().focusable()) {
+            if (candidate.canReceiveFocus()) {
                 return candidate;
             }
         }
@@ -153,7 +151,7 @@ public final class SemanticControlGroup {
      */
     public static boolean rove(GuiEventListener focused, KeyEvent event,
                                Consumer<GuiEventListener> setFocused) {
-        if (!(focused instanceof SemanticActionControl current) || !current.isAvailable()) {
+        if (!(focused instanceof SemanticActionControl current) || !current.canReceiveFocus()) {
             return false;
         }
         SemanticControlGroup group = current.interactionGroup();

@@ -50,6 +50,8 @@ public class RenderUtil {
      */
     private static final ThreadLocal<RectSink> CAPTURE_SINK = new ThreadLocal<>();
 
+    public static boolean isCapturing() { return CAPTURE_SINK.get() != null; }
+
     /** Begin redirecting {@code RenderUtil} draws to {@code sink}; returns the prior sink to restore. */
     public static RectSink beginCapture(RectSink sink) {
         RectSink prev = CAPTURE_SINK.get();

@@ -1,6 +1,9 @@
 package dev.phenomena.gui.screens;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import com.aurora.client.config.AuroraConfig;
+import com.aurora.client.ui.util.OverlayLayout;
+import com.aurora.client.util.SmoothScroll;
 import dev.phenomena.PhenomenaClient;
 import dev.phenomena.gui.Notices;
 import dev.phenomena.gui.components.*;
@@ -66,7 +69,9 @@ public final class PhenomenaScreen extends Screen implements com.aurora.client.u
   private final List<KButton> tabButtons = new ArrayList<>();
   private Rect frame, viewport, panel;
   private int contentHeight, scroll, headerH, tabsY, titleY;
+  private final SmoothScroll focusScroll = new SmoothScroll(60).boundedMotion();
   private Popup popup;
+  private Popup.Dropdown closingDropdown;
   private boolean draggingBar;
   /** Pointer offset from the thumb's top edge while dragging, so the thumb never jumps. */
   private double barGrab;
@@ -96,6 +101,7 @@ public final class PhenomenaScreen extends Screen implements com.aurora.client.u
   @Override
   protected void init() {
     popup = null;
+    closingDropdown = null;
     for (var item : items) if (item.block() != null) item.block().close();
     items.clear();
     tabButtons.clear();
@@ -172,6 +178,7 @@ public final class PhenomenaScreen extends Screen implements com.aurora.client.u
       if (item.widget() != null) addWidget(item.widget());
     }
     scroll = state.clampScroll(contentHeight, viewport.h());
+    focusScroll.set(scroll);
     placeWidgets();
 
     var close =
@@ -220,6 +227,11 @@ public final class PhenomenaScreen extends Screen implements com.aurora.client.u
   }
 
   public void setScroll(int value) {
+    applyScroll(value);
+    focusScroll.set(scroll);
+  }
+
+  private void applyScroll(int value) {
     scroll = Math.max(0, Math.min(Math.max(0, contentHeight - viewport.h()), value));
     state.setScroll(scroll);
     placeWidgets();
@@ -227,8 +239,11 @@ public final class PhenomenaScreen extends Screen implements com.aurora.client.u
 
   /** Scrolls so an absolute screen-space band becomes visible. */
   public void reveal(int top, int bottom) {
-    int contentTop = top - viewport.y() + scroll, contentBottom = bottom - viewport.y() + scroll;
-    setScroll(Layout.reveal(scroll, viewport.h(), contentTop - 4, contentBottom + 4));
+    int max = Math.max(0, contentHeight - viewport.h());
+    double target = OverlayLayout.scrollToReveal(focusScroll.target(), max, top + scroll, bottom + scroll,
+        viewport.y(), viewport.bottom(), 8);
+    if (Theme.reducedMotion() || AuroraConfig.get().reducedMotion) setScroll((int) target);
+    else if (target != focusScroll.target()) focusScroll.retarget(target, max);
   }
 
   @Override
@@ -265,8 +280,7 @@ public final class PhenomenaScreen extends Screen implements com.aurora.client.u
                         pick.accept(i);
                         rebuild();
                       },
-                      width,
-                      height);
+                      frame);
             });
     self[0].setWidth(font.width(label.get() + " v") + 28);
     return self[0];
@@ -278,6 +292,14 @@ public final class PhenomenaScreen extends Screen implements com.aurora.client.u
 
   public boolean popupOpen() {
     return popup != null;
+  }
+
+  private void dismissPopup(Popup dismissed) {
+    if (popup == dismissed) popup = null;
+    if (dismissed instanceof Popup.Dropdown dropdown) {
+      dropdown.dismiss();
+      closingDropdown = dropdown;
+    }
   }
 
   /** Routes the next key press to the capture (key rebinding). */
@@ -304,7 +326,8 @@ public final class PhenomenaScreen extends Screen implements com.aurora.client.u
   @Override
   public boolean mouseClicked(MouseButtonEvent e, boolean doubleClick) {
     if (popup != null) {
-      if (!popup.click(e.x(), e.y())) popup = null;
+      Popup active = popup;
+      if (!active.click(e.x(), e.y())) dismissPopup(active);
       return true;
     }
     var bar = scrollTrack();
@@ -365,7 +388,8 @@ public final class PhenomenaScreen extends Screen implements com.aurora.client.u
   @Override
   public boolean keyPressed(KeyEvent e) {
     if (popup != null) {
-      if (!popup.key(e.key())) popup = null;
+      Popup active = popup;
+      if (!active.key(e.key())) dismissPopup(active);
       return true;
     }
     if (keyCapture != null) {
@@ -477,6 +501,13 @@ public final class PhenomenaScreen extends Screen implements com.aurora.client.u
 
   @Override
   public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float delta) {
+    if (focusScroll.current() != focusScroll.target()) {
+      if (Theme.reducedMotion() || AuroraConfig.get().reducedMotion) setScroll((int) focusScroll.target());
+      else {
+        int next = (int) Math.round(focusScroll.advance(Math.max(0, contentHeight - viewport.h())));
+        if (next != scroll) applyScroll(next);
+      }
+    }
     Viewport.set(viewport);
     com.aurora.client.ui.component.GlassSurface.beginGlassPass();
     boolean captured = com.aurora.client.ui.component.GlassSurface.container(g, frame.x(), frame.y(), frame.w(), frame.h(), Theme.radius());
@@ -535,7 +566,18 @@ public final class PhenomenaScreen extends Screen implements com.aurora.client.u
       g.text(font, KButton.fit(font, footer, frame.w() - 12), frame.x() + 6, frame.bottom() - 13,
           Notices.recent() && Notices.level == Notices.Level.ERROR ? Theme.ERROR() : Theme.MUTED(), false);
     }
-    if (popup != null) { g.nextStratum(); popup.render(g, mx, my, width, height); }
+    if (closingDropdown != null && closingDropdown.finished()) closingDropdown = null;
+    if (popup == null && closingDropdown != null) {
+      g.nextStratum();
+      closingDropdown.render(g, mx, my, width, height);
+    }
+    if (popup != null) {
+      g.nextStratum();
+      popup.render(g, mx, my, width, height);
+      com.aurora.client.ui.component.TooltipPresenter.suppressFrame();
+    }
+    com.aurora.client.ui.component.TooltipPresenter.draw(g, frame.x(), frame.y(), frame.w(), frame.h(),
+        Theme.reducedMotion() || com.aurora.client.config.AuroraConfig.get().reducedMotion);
   }
   private final com.aurora.client.ui.component.RoundedPanel window = new com.aurora.client.ui.component.RoundedPanel();
 

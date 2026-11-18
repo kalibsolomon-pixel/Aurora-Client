@@ -34,14 +34,12 @@ public final class Blocks {
     return mx >= x && mx < x + w && my >= y && my < y + h && Viewport.contains(mx, my);
   }
 
-  static void tooltip(GuiGraphicsExtractor g, String text, int mx, int my) {
-    tooltip(g, text, mx, my, 240);
+  static void tooltip(Object key, String text, int x, int y, int w, int h) {
+    com.aurora.client.ui.component.TooltipPresenter.offer(key, text, x, y, w, h);
   }
 
-  /** Tooltip wrapped at {@code maxWidth}; the vanilla positioner draws it at (mx + 12, my - 12). */
-  static void tooltip(GuiGraphicsExtractor g, String text, int mx, int my, int maxWidth) {
-    int width = Math.min(maxWidth, Math.max(40, Minecraft.getInstance().getWindow().getGuiScaledWidth() - 24));
-    g.setTooltipForNextFrame(font(), TextLayout.wrap(font(), text, width), mx, my);
+  static void tooltip(Object key, int part, String text, int x, int y, int w, int h) {
+    com.aurora.client.ui.component.TooltipPresenter.offer(key, part, text, x, y, w, h);
   }
 
   /** One-logical-pixel antialiased line at device resolution (chart segments). */
@@ -155,7 +153,7 @@ public final class Blocks {
       for (int i = 0; i < current.size(); i++) {
         String line = current.get(i), shown = KButton.fit(f, line, w);
         g.text(f, shown, x, y + i * ROW, Theme.MUTED(), false);
-        if (!shown.equals(line) && hover(mx, my, x, y + i * ROW, w, ROW)) tooltip(g, line, mx, my);
+        if (!shown.equals(line) && hover(mx, my, x, y + i * ROW, w, ROW)) tooltip(line, line, x, y + i * ROW, w, ROW);
       }
     }
   }
@@ -218,7 +216,7 @@ public final class Blocks {
         if (s.caption() != null)
           g.text(
               f, KButton.fit(f, s.caption(), cw - 10), cx + 5, cy + 4 + 2 * step, Theme.DIM(), false);
-        if (hov) tooltip(g, describe(s), mx, my);
+        if (hov) tooltip(this, i, describe(s), cx, cy, cw, ch);
       }
     }
   }
@@ -260,10 +258,9 @@ public final class Blocks {
         g.fill(cx, y, cx + Math.max(1, sw - 2), y + 10, colors[i]);
         if (hover(mx, my, cx, y, sw, 10))
           tooltip(
-              g,
+              this, i,
               names[i] + ": " + values[i] + " (" + Format.percent(100.0 * values[i] / total) + ")",
-              mx,
-              my);
+              cx, y, sw, 10);
         cx += sw;
       }
       int lx = x;
@@ -466,7 +463,7 @@ public final class Blocks {
                 : (xUnit == null || xUnit.isEmpty()
                     ? "#" + (hi + 1)
                     : Format.number(xv, 2) + " " + xUnit);
-        tooltip(g, hs.name() + " / " + where + ": " + value(hs.ys()[hi]), mx, my);
+        tooltip(hs, hi, hs.name() + " / " + where + ": " + value(hs.ys()[hi]), mx, my, 1, 1);
       }
     }
 
@@ -556,7 +553,7 @@ public final class Blocks {
                 g, bx, py + ph - bh, Math.max(1, bw - 1), Math.max(1, bh),
                 Math.min(2, (bw - 1) / 2f), color);
           if (hover(mx, my, bx, py, bw, ph + 1))
-            tooltip(g, labels[i] + " / " + (k == 0 ? nameA : nameB) + ": " + v, mx, my);
+            tooltip(this, 2 * i + k, labels[i] + " / " + (k == 0 ? nameA : nameB) + ": " + v, bx, py, bw, ph + 1);
         }
         if (i % labelEvery == 0) {
           String l = KButton.fit(f, labels[i], slot * labelEvery - 2);
@@ -636,7 +633,7 @@ public final class Blocks {
                   y1,
                   Theme.mix(Theme.SURFACE_2(), Theme.SEQ_HIGH, .2 + .8 * v / (double) maxCell));
             if (hover(mx, my, x0, y0, x1 - x0, y1 - y0))
-              tooltip(g, v + " hits in this cell", mx, my);
+              tooltip(this, y0 * 65536 + x0, v + " hits in this cell", x0, y0, x1 - x0, y1 - y0);
           }
       }
       int q1 = by + bh / 4, q3 = by + bh * 3 / 4;

@@ -12,7 +12,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractButton;
-import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.input.InputWithModifiers;
 import net.minecraft.network.chat.Component;
@@ -38,7 +37,6 @@ public class IconButton extends AbstractButton {
         this.glyph = glyph;
         this.brand = brand;
         this.onPress = onPress;
-        setTooltip(Tooltip.create(name));
     }
 
     /** A Material Symbols glyph; the supplier lets a toggle swap its icon (Fullscreen). */
@@ -58,6 +56,7 @@ public class IconButton extends AbstractButton {
 
     @Override
     protected void extractContents(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
+        if (isHovered()) TooltipPresenter.offer(this, getMessage().getString(), getX(), getY(), getWidth(), getHeight());
         float t = (float) hover.update(this.active && isHovered() ? 1 : 0, System.nanoTime());
         float x = getX(), y = getY(), w = getWidth(), h = getHeight();
         float r = ThemeManager.current().roundness().radiusSmall();

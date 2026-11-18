@@ -201,7 +201,7 @@ public class BooleanSetting extends FeatureSetting {
         } else {
             int textBlockH = cachedLines.size() * (AuroraFontRenderer.linePitch(tr)) + valueLineHeight(tr);
             int textY = AuroraFontRenderer.blockY(tr, y, controlH, cachedLines.size() + (valueLineHeight(tr) > 0 ? 1 : 0));
-            String key = tooltipKey();
+            Object key = tooltipKey();
             boolean disabled = isDisabled();
             for (int li = 0; li < cachedLines.size(); li++) {
                 var line = cachedLines.get(li);

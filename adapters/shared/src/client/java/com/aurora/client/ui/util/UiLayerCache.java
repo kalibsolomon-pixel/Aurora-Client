@@ -217,6 +217,11 @@ public final class UiLayerCache implements RenderUtil.RectSink {
      */
     public static void drawSurface(GuiGraphicsExtractor g, UiLayerCache cache, long version,
                                    int x, int y, int wLogical, int hLogical, Runnable raster) {
+        drawSurface(g, cache, version, x, y, wLogical, hLogical, -1, raster);
+    }
+
+    public static void drawSurface(GuiGraphicsExtractor g, UiLayerCache cache, long version,
+                                   int x, int y, int wLogical, int hLogical, int tint, Runnable raster) {
         if (!cache.isCurrent(version)) {
             int scale = Math.max(1, (int) Minecraft.getInstance().getWindow().getGuiScale());
             cache.ensureSize(wLogical * scale, hLogical * scale);
@@ -229,7 +234,7 @@ public final class UiLayerCache implements RenderUtil.RectSink {
             }
             cache.commit(version);
         }
-        cache.blitAt(g, x, y, wLogical, hLogical);
+        cache.blitAt(g, x, y, wLogical, hLogical, tint);
     }
 
     /** Upscale cached data, without resampling world columns or allocating per update.
