@@ -121,11 +121,8 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
      */
     protected final SmoothScroll scroll = new SmoothScroll(60.0).boundedMotion();
 
-    /** Inline rename editor state. {@code -1} = not editing. */
-    protected int editingIndex = -1;
     protected EditBox nameField;
-    /** The row the editor was opened on (validation input for {@link #renameProblem}); null when unset. */
-    protected T editingRow;
+    private String editingRowId;
     /** Refusal message under the open editor's field (null = the typed name is acceptable); design language §11.12. */
     protected String editorError;
 
@@ -278,7 +275,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
     protected final int cellWidth() {
         return layoutCellWidth;
     }
-    private static final String LEADING_ROW = "leading/0";
+    protected static final String LEADING_ROW = "leading/0";
     private final ScreenLayout rowsLayout = new ScreenLayout();
     private List<T> laidOutRows = List.of();
     private int layoutLead = -1, layoutTop, layoutCols, layoutCellWidth, layoutRowHeight, layoutRowGap, layoutColumnGap;
@@ -652,18 +649,6 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
     protected int listClipBottom() { return listTop() + (this.height - listTop() - listBottomPad()); }
 
     /**
-     * C-8 (the C-1 ClipBand rollout to this host): the list viewport's ONE
-     * bounds truth — the content region the row scissor paints, minus the
-     * decorative ±4px shadow bleed (rows are interactive exactly on their
-     * own horizontal extent, which is what the click walk always tested).
-     * Everything that decides whether list content is visible or
-     * interactive derives from it: the render cull, the row click walk,
-     * the inline editors' visibility/paint scissor/keyboard routing, and
-     * the clip-band availability the row passes re-mark every frame. The
-     * band is half-open {@code [y, yEnd)} — edge contact is not
-     * intersection (the frozen C-1 semantics).
-     */
-    /**
      * Glass pass for one row surface. The subclass paints the row's glass
      * panel (its chosen §6 role), records whether glass drew in
      * {@link #rowGlassDrawn}, and lays out + glass-passes any row buttons.
@@ -908,7 +893,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         // the band keeps fresh bounds (see layoutRenameField) yet its
         // clipped-away pixels are not actionable; a click outside the band
         // must reach the rows/toolbar, never a hidden editor.
-        if (mouseY >= listClipTop() && mouseY < listClipBottom()
+        if (rowsLayout.viewport().contains(mouseX, mouseY)
                 && editorClickFirst(_ev, _doubleClicked)) return true;
 
         // Screen-specific pre-row controls (the Profile create button).
@@ -917,7 +902,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         var hit = rowsLayout.hitTest(mouseX, mouseY, layoutScroll());
         if (hit != null && hit.order() >= layoutLead) {
             int index = hit.order() - layoutLead;
-            if (rowClicked(mouseX, mouseY, (int) hit.x(), rows.get(index), index)) return true;
+            if (rowClicked(mouseX, mouseY, hit, rows.get(index))) return true;
         }
 
         // Scrollbar thumb grab — checked before the fallthrough commit so
@@ -952,13 +937,11 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
     protected boolean rowAreaClickFirst(double mouseX, double mouseY) { return false; }
 
     /**
-     * A click inside a visible row's band and horizontal extent ({@code listX}
-     * is the row's own left edge — its cell in a grid): row buttons
+     * A click inside a visible row's band and horizontal extent: row buttons
      * first, then the name area (inline edit), then any row-body action.
-     * Returns whether the click was consumed; an unconsumed click falls
-     * through to the next row and eventually the outside-click commit.
+     * An unconsumed click falls through to the outside-click commit.
      */
-    protected abstract boolean rowClicked(double mouseX, double mouseY, int listX, T row, int index);
+    protected abstract boolean rowClicked(double mouseX, double mouseY, ScreenLayout.Box box, T row);
 
     @Override
     public boolean mouseDragged(MouseButtonEvent _ev, double dx, double dy) {
@@ -1029,12 +1012,11 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
     //  Inline rename editor lifecycle
     // ------------------------------------------------------------------
 
-    /** Opens the inline rename editor over row {@code index}, committing anything open first. */
-    protected void startEditing(int index, String currentValue) {
+    /** Opens the inline rename editor over the clicked row, committing anything open first. */
+    protected void startEditing(T row, String currentValue) {
+        String rowId = rowLayoutId(row);
         commitEditors();
-        editingIndex = index;
-        List<T> rows = currentRows();
-        editingRow = index < rows.size() ? rows.get(index) : null;
+        editingRowId = rowId;
         editorError = null;
         nameField = new EditBox(this.font, 0, 0, nameColumnWidth(), 16, Component.literal("Name"));
         nameField.setMaxLength(48);
@@ -1044,10 +1026,22 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         // Live recompute (design language §11.12): the message appears while
         // the typed name is refusable and clears the moment it is acceptable.
         nameField.setResponder(value -> {
-            if (editingRow == null) return;
+            T edited = editedRow();
+            if (edited == null) return;
             String v = value.trim();
-            editorError = v.isEmpty() ? null : renameProblem(editingRow, v);
+            editorError = v.isEmpty() ? null : renameProblem(edited, v);
         });
+    }
+
+    protected final boolean editing(T row) {
+        if (editingRowId == null) return false;
+        var box = rowsLayout.byId(editingRowId);
+        return box != null && row.equals(box.key());
+    }
+
+    private T editedRow() {
+        var box = rowsLayout.byId(editingRowId);
+        return box == null ? null : laidOutRows.get(box.order() - layoutLead);
     }
 
     /** Applies the edited value (non-empty, trimmed) to the row it was opened on. */
@@ -1072,11 +1066,10 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
      * (design language §11.12); nothing invalid is ever applied.
      */
     protected void commitEdit() {
-        if (editingIndex < 0 || nameField == null) return;
-        List<T> rows = currentRows();
-        if (editingIndex >= rows.size()) { cancelEdit(); return; }
-        T row = rows.get(editingIndex);
-        editingRow = row;
+        if (nameField == null) return;
+        maxScroll();
+        T row = editedRow();
+        if (row == null) { cancelEdit(); return; }
         String v = nameField.getValue().trim();
         String problem = v.isEmpty() ? null : renameProblem(row, v);
         if (problem != null) {
@@ -1089,8 +1082,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
 
     /** Closes the rename editor without applying. */
     protected void cancelEdit() {
-        editingIndex = -1;
-        editingRow = null;
+        editingRowId = null;
         editorError = null;
         nameField = null;
     }
@@ -1111,12 +1103,13 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
      * {@link #renameEditorVisible()} and the base scissors the editor's
      * passes to the band, so the field only ever paints visible pixels.
      */
-    protected EditBox layoutRenameField(List<T> rows, int listX) {
-        if (nameField == null || editingIndex < 0 || editingIndex >= rows.size()) return null;
-        int slot = leadingRowCount() + editingIndex;
-        int rowY = cellY(slot);
-        nameField.setX(editorFieldX(cellX(listX, slot)));
+    protected EditBox layoutRenameField() {
+        var box = rowsLayout.byId(editingRowId);
+        if (nameField == null || box == null) return null;
+        int rowY = (int) box.y(layoutScroll());
+        nameField.setX(editorFieldX((int) box.x()));
         nameField.setY(rowY + editorFieldYOffset());
+        if (nameField.getWidth() != nameColumnWidth()) nameField.setWidth(nameColumnWidth());
         return nameField;
     }
 
@@ -1128,10 +1121,10 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
      * consult it between frames.
      */
     protected boolean renameEditorVisible() {
-        if (nameField == null || editingIndex < 0) return false;
-        if (editingIndex >= laidOutRows.size()) return false;
-        int fieldY = cellY(leadingRowCount() + editingIndex) + editorFieldYOffset();
-        return fieldY + 16 > listClipTop() && fieldY < listClipBottom();
+        var box = rowsLayout.byId(editingRowId);
+        if (nameField == null || box == null) return false;
+        int fieldY = (int) box.y(layoutScroll()) + editorFieldYOffset();
+        return rowsLayout.viewport().intersects(editorFieldX((int) box.x()), fieldY, nameColumnWidth(), 16);
     }
 
     /**

@@ -252,7 +252,6 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
                     WaypointFeature feat = WaypointFeature.get();
                     if (feat == null) return;
                     feat.dropAtPlayer("Waypoint", 0xFFFFAA00, false);
-                    rebuildNameField();
                     rebuildWidgets();
                 }).glassStyle(Button.GlassStyle.STAINED).primary(true);
         return drop.icon(IconCatalog.glyph("add_location_alt"));
@@ -269,7 +268,6 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
                     WaypointFeature feat = WaypointFeature.get();
                     if (feat == null) return;
                     feat.dropAtPlayer("Waypoint", 0xFFFFAA00, false);
-                    rebuildNameField();
                 }).glassBackground(true).theming(Button.Theming.OUTLINED).icon(IconCatalog.glyph("add_location_alt"));
     }
 
@@ -403,7 +401,7 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
         // Name (or inline editor — when editing, the field is drawn from
         // the tail pass so the row body skips drawing the name text
         // for that index).
-        if (index != editingIndex) {
+        if (!editing(wp)) {
             String name = fitName(wp.name == null ? "" : wp.name);
             com.aurora.client.worldmap.MapMarkers.waypoint(ctx, cx + 6, y + 8, wp,
                     WaypointFeature.get() != null && wp.id.equals(WaypointFeature.get().navigationId()));
@@ -562,7 +560,7 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
                         commitEditors();
                         WaypointFeature feat = WaypointFeature.get();
                         if (feat != null) feat.remove(k);
-                        rebuildNameField();
+                        if (editing(wp)) cancelEdit();
                     }),
                     MinecraftSemanticFeedback.INSTANCE,
                     b::triggerPressAnimation,
@@ -592,11 +590,12 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
 
     @Override
     protected boolean editorClickFirst(MouseButtonEvent _ev, boolean _doubleClicked) {
-        return nameField != null && nameField.mouseClicked(_ev, _doubleClicked);
+        EditBox editor = layoutRenameField();
+        return editor != null && editor.mouseClicked(_ev, _doubleClicked);
     }
 
     @Override
-    protected boolean rowClicked(double mouseX, double mouseY, int listX, Waypoint wp, int index) {
+    protected boolean rowClicked(double mouseX, double mouseY, com.aurora.client.ui.layout.ScreenLayout.Box box, Waypoint wp) {
         // Shared row buttons see the click first — each routes through its
         // semantic control (enabled gate + exactly-once activation + sound +
         // focus participation). A rejected click (missed bounds) falls
@@ -622,9 +621,9 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
         }
 
         // Name area → enter inline edit mode for this row.
-        int nameLeft = editorFieldX(listX);
+        int nameLeft = editorFieldX((int) box.x());
         if (mouseX >= nameLeft && mouseX < nameLeft + nameWidth()) {
-            startEditing(index, wp.name == null ? "" : wp.name);
+            startEditing(wp, wp.name == null ? "" : wp.name);
             return true;
         }
         return false;
@@ -646,12 +645,6 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
         commitEdit();
     }
 
-    private void rebuildNameField() {
-        if (editingIndex >= currentRows().size()) {
-            cancelEdit();
-        }
-    }
-
     // ------------------------------------------------------------------
     //  Frame tails (screen-owned order)
     // ------------------------------------------------------------------
@@ -661,7 +654,7 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
         // Position ALWAYS (fresh bounds every frame — a hidden editor must
         // never keep a stale rect in the band), then paint only when a
         // pixel is visible. The base scissors this call to the list clip.
-        if (layoutRenameField(rows, listX) == null || !renameEditorVisible()) return;
+        if (layoutRenameField() == null || !renameEditorVisible()) return;
         if (nameField instanceof GlassEditBox glassField) glassField.aurora$renderGlassPass(ctx);
     }
 
@@ -680,7 +673,7 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
         // hidden one nothing (bounds still refreshed every frame by the
         // layout call in the glass pass above). Its surface was painted in
         // the glass pass; this draws content only.
-        EditBox editor = layoutRenameField(rows, listX);
+        EditBox editor = layoutRenameField();
         if (editor != null && renameEditorVisible()) {
             renderEditorClipped(ctx, editor, listX, mouseX, mouseY, delta);
         }

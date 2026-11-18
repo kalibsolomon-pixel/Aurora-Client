@@ -85,6 +85,9 @@ Native widgets, narration, and rendering still run through Minecraft (ADR 0006).
 | Focus, tooltips and floating popups inside a row | The adapter's setting/component still owns its local subrects and overlay placement. `FocusReveal` uses the layout's scroll range and viewport with the semantic control's fitted subrect. Tooltips use the component's translated anchor. |
 | `ui-bounds` probe | Reads arranged content and fixed boxes from `LayoutScreen`; native face/ink observations remain in the same schema, with a layout ID when matched to a box. |
 
+Manager rename editors resolve their row by layout ID, so reordering cannot
+move an open editor to another profile or waypoint.
+
 Pulsar, title screen, resource pack browser, HUD editor and unrelated standalone
 screens keep their existing geometry paths.
 
