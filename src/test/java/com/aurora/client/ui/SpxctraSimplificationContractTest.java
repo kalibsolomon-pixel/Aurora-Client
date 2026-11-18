@@ -77,8 +77,9 @@ class SpxctraSimplificationContractTest {
         int panel = material.indexOf("public static void floatingPanel(");
         assertTrue(panel >= 0 && material.substring(panel, panel + 400).contains("ThemeToken.MATERIAL_PANEL"));
         assertTrue(read("worldmap/screen/WorldMapScreen.java").contains("MaterialSurface.floatingPanel(g, BAR_PAD, BAR_PAD"));
-        assertTrue(read("screen/WaypointEditScreen.java").contains("MaterialSurface.floatingPanel(g, left, top"));
-        assertTrue(read("screen/MappingDataScreen.java").contains("MaterialSurface.floatingPanel(g, x, y"));
+        // The waypoint editor and mapping dialog are bevel windows since 2026-11-18 (GlassSurface.window).
+        assertTrue(read("screen/WaypointEditScreen.java").contains("GlassSurface.window(g, left, top"));
+        assertTrue(read("screen/MappingDataScreen.java").contains("GlassSurface.window(g, x, y"));
     }
 
     @Test

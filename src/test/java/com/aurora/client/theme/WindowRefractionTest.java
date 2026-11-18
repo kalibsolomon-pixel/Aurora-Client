@@ -27,10 +27,9 @@ class WindowRefractionTest {
         assertEquals(0, WindowBevel.bendAt(0, 0, 3), 1e-9);
     }
 
-    @Test void levelsScaleTheBendAndOffBendsNothing() {
-        assertEquals(0, WindowBevel.Level.OFF.bend(), 1e-9);
-        assertTrue(WindowBevel.Level.SUBTLE.bend() < WindowBevel.Level.STANDARD.bend());
-        assertTrue(WindowBevel.Level.STANDARD.bend() < WindowBevel.Level.DEEP.bend());
+    @Test void theOneStrengthBendsGently() {
+        // One strength since 2026-11-18: a gentle bend, below the former Subtle level's .7 px.
+        assertTrue(WindowBevel.BEND > 0 && WindowBevel.BEND < .7);
     }
 
     @Test void theRefractionBandMatchesTheDrawnFrameBand() {
@@ -44,11 +43,11 @@ class WindowRefractionTest {
 
     @Test void theRimIsNoMoreOpaqueThanAClearWindow() {
         int glass = 0x2e16171d; // ~18% graphite
-        int rimAlpha = WindowBevel.finish(glass, 0xff3a3d4a, 24, WindowBevel.Level.STANDARD).color() >>> 24;
+        int rimAlpha = WindowBevel.finish(glass, 0xff3a3d4a, 24).color() >>> 24;
         // density + 10% of the clear remainder: about 26%, far below the former 92% ring.
         assertTrue(rimAlpha < 80, "rim alpha " + rimAlpha);
         int metal = 0xd9777777; // 85% grey
-        int metalAlpha = WindowBevel.finish(metal, 0xff3a3d4a, 2, WindowBevel.Level.STANDARD).color() >>> 24;
+        int metalAlpha = WindowBevel.finish(metal, 0xff3a3d4a, 2).color() >>> 24;
         assertTrue(metalAlpha >= 0xd9, "an opaque window keeps a solid bevel: " + metalAlpha);
     }
 }

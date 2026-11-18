@@ -27,27 +27,27 @@ class WindowFrameRoomTest {
         assertTrue(WindowBevel.frameInset(20) > 0);
     }
 
-    @Test void theStandardBandIsNoLongerClampedByContent() {
-        // Before 2026-11-18 the main window passed 4 and details 3, so Standard drew 2.7-4 px.
+    @Test void theBandFitsTheFrameRoomWithoutCrowdingIt() {
+        // Before 2026-11-18 the main window passed 4 and details 3 as the cap. The frame room
+        // caps the band at FRAME_BAND; the one strength draws a share of it.
         double band = WindowBevel.bandWidth(UiDensity.WINDOW_HEIGHT, ThemeRoundness.DEFAULT_RADIUS,
-                WindowBevel.frameInset(ThemeRoundness.DEFAULT_RADIUS), WindowBevel.Level.STANDARD);
-        assertEquals(UiDensity.FRAME_BAND, band, 1e-9);
+                WindowBevel.frameInset(ThemeRoundness.DEFAULT_RADIUS));
+        assertTrue(band <= UiDensity.FRAME_BAND, "band " + band);
+        assertTrue(band >= UiDensity.FRAME_BAND * .5, "band " + band);
     }
 
-    @Test void contentAtTheFrameRoomStaysClearOfTheBandAtEveryLevelAndRadius() {
+    @Test void contentAtTheFrameRoomStaysClearOfTheBandAtEveryRadius() {
         var frame = UiDensity.window(640, 360);
         for (int radius : new int[]{0, ThemeRoundness.DEFAULT_RADIUS, 14, 20}) {
             double cap = WindowBevel.frameInset(radius);
-            for (var level : WindowBevel.Level.values()) {
-                var finish = WindowBevel.finish(0x5416171d, OUTLINE, 9, level);
-                for (double pixel : new double[]{1, 1d / 3, .5}) {
-                    double band = WindowBevel.rasterBandWidth(frame.height(), radius, cap, pixel, level);
-                    var raster = new WindowBevel.Raster(frame.width(), frame.height(), radius, band, pixel, finish, level);
-                    double e = UiDensity.FRAME_EDGE;
-                    for (double x : new double[]{e, frame.width() - e, frame.width() * .5})
-                        for (double y : new double[]{e, frame.height() - e, frame.height() * .5})
-                            assertEquals(0, raster.pixel(x, y, 0), "radius " + radius + " " + level + " at " + x + "," + y);
-                }
+            var finish = WindowBevel.finish(0x5416171d, OUTLINE, 9);
+            for (double pixel : new double[]{1, 1d / 3, .5}) {
+                double band = WindowBevel.rasterBandWidth(frame.height(), radius, cap, pixel);
+                var raster = new WindowBevel.Raster(frame.width(), frame.height(), radius, band, pixel, finish);
+                double e = UiDensity.FRAME_EDGE;
+                for (double x : new double[]{e, frame.width() - e, frame.width() * .5})
+                    for (double y : new double[]{e, frame.height() - e, frame.height() * .5})
+                        assertEquals(0, raster.pixel(x, y, 0), "radius " + radius + " at " + x + "," + y);
             }
         }
     }

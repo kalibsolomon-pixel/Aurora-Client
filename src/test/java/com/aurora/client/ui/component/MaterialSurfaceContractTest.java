@@ -35,13 +35,14 @@ class MaterialSurfaceContractTest {
         assertTrue(material.contains("cache.windowFace(raster, fill, pad, logicalW, logicalH);"));
     }
 
-    @Test void bevelReplacesTheFlatOutlineAndNeverCapturesTheBackdrop() {
+    @Test void bevelIsTheOnlyWindowFrameAndNeverCapturesTheBackdrop() {
         String material = SourceTree.read("ui/component/MaterialSurface.java");
         int parent = material.indexOf("public static void parent(");
         int finish = material.indexOf("windowFinish(g, x, y, w, h, radius, contentInset, 1, true);", parent);
-        int outline = material.indexOf("windowOutline(),120,true);", parent);
-        assertTrue(parent >= 0 && finish > parent && outline > finish);
-        assertTrue(material.substring(finish, outline).contains("return;"));
+        assertTrue(parent >= 0 && finish > parent);
+        // One frame since 2026-11-18: no level switch and no flat legacy outline behind it.
+        assertFalse(material.substring(parent, material.indexOf("\n    }", finish)).contains("windowOutline()"));
+        assertFalse(material.contains("windowBevelEnabled"));
         assertFalse(material.contains("backgroundOpacity()"));
         for (String host : new String[]{"AuroraScreen", "FeatureDetailScreen", "ManagerListScreen", "IconPickerScreen",
                 "ProfileOptionsScreen", "ColorPickerScreen", "ResourcePackBrowserScreen"}) {

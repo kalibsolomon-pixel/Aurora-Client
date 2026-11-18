@@ -92,7 +92,7 @@ zero fills and glass ([evidence](releases/evidence/3.5.1-parity.json)). A first 
 attempt found that profiles saved before 3.5.1 logged a warning per removed field; restore
 now skips those retired fields quietly.
 
-Window frames now use a cached, content-clipped bevel (Standard by default). Below full opacity the rim stays as clear as the window and the glass pass bends the backdrop across the frame band; glass, gem and metal were captured in the 26.3 client on OpenGL and Vulkan and await owner review. Since 2026-11-18 every window keeps a 10 px frame room, so the band draws at its full 6 px and content keeps a 4 px gap from it (DESIGN_LANGUAGE "Frame room").
+Window frames now use a cached, content-clipped bevel with one fixed strength, a little lighter than the former Subtle level (the Window Bevel setting and its levels were retired on 2026-11-18). Below full opacity the rim stays as clear as the window and the glass pass bends the backdrop across the frame band; glass, gem and metal were captured in the 26.3 client on OpenGL and Vulkan and await owner review. Since 2026-11-18 every window keeps a 10 px frame room, so the band is never squeezed by content (it may take up to 6 px) and content keeps a 4 px gap from it (DESIGN_LANGUAGE "Frame room").
 
 ## Acceptance and contributor readiness
 

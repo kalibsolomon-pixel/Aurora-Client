@@ -46,9 +46,6 @@ public class ThemeDefinition {
      */
     public int blurRadius = DEFAULT_BLUR_RADIUS;
 
-    public static final WindowBevel.Level DEFAULT_WINDOW_BEVEL = WindowBevel.Level.STANDARD;
-    public WindowBevel.Level windowBevel = DEFAULT_WINDOW_BEVEL;
-
     /**
      * Density (0..1) of the theme's panel/window background fill. Applied by
      * {@link ThemeResolver} to the {@code WINDOW_FILL} token's alpha channel
@@ -95,10 +92,6 @@ public class ThemeDefinition {
         return Math.max(MIN_BLUR_RADIUS, Math.min(MAX_BLUR_RADIUS, v));
     }
 
-    public static WindowBevel.Level normalizedWindowBevel(WindowBevel.Level level) {
-        return level == null ? DEFAULT_WINDOW_BEVEL : level;
-    }
-
     /**
      * Null-safe copy: a null input yields factory defaults, and every
      * fragile field is normalized (mode → {@link ThemeMode#DARK}, radii
@@ -113,7 +106,6 @@ public class ThemeDefinition {
             copy.background = 0xFF000000 | other.background;
             copy.cornerRadius = ThemeRoundness.clamp(other.cornerRadius);
             copy.blurRadius = normalizedBlurRadius(other.blurRadius);
-            copy.windowBevel = normalizedWindowBevel(other.windowBevel);
             copy.backgroundOpacity = normalizedOpacity(other.backgroundOpacity);
         }
         return copy;

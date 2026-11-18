@@ -511,12 +511,10 @@ public final class PhenomenaScreen extends Screen implements com.aurora.client.u
     }
     Viewport.set(viewport);
     com.aurora.client.ui.component.GlassSurface.beginGlassPass();
-    boolean captured = com.aurora.client.ui.component.GlassSurface.container(g, frame.x(), frame.y(), frame.w(), frame.h(), Theme.radius());
+    com.aurora.client.ui.component.GlassSurface.container(g, frame.x(), frame.y(), frame.w(), frame.h(), Theme.radius());
     com.aurora.client.ui.component.GlassSurface.overlayDim(g, width, height);
-    if (com.aurora.client.ui.component.MaterialSurface.windowBevelEnabled())
-      com.aurora.client.ui.component.MaterialSurface.parent(g, frame.x(), frame.y(), frame.w(), frame.h(), Theme.radius(),
-          com.aurora.client.ui.component.MaterialSurface.frameInset(Theme.radius()));
-    else window.renderShapes(g, frame.x(), frame.y(), frame.w(), frame.h(), captured);
+    com.aurora.client.ui.component.MaterialSurface.parent(g, frame.x(), frame.y(), frame.w(), frame.h(), Theme.radius(),
+        com.aurora.client.ui.component.MaterialSurface.frameInset(Theme.radius()));
     g.text(font, com.aurora.client.ui.util.AuroraFontRenderer.role("Pulsar", com.aurora.client.ui.util.AuroraFontRenderer.Role.TITLE),
         frame.x() + com.aurora.client.ui.util.UiDensity.TITLE_X, com.aurora.client.ui.util.AuroraFontRenderer.roleTextY(font, frame.y() + com.aurora.client.ui.util.UiDensity.FRAME_EDGE, com.aurora.client.ui.util.UiDensity.TOOL,
             com.aurora.client.ui.util.AuroraFontRenderer.Role.TITLE), Theme.TEXT(), false);
@@ -584,7 +582,6 @@ public final class PhenomenaScreen extends Screen implements com.aurora.client.u
     com.aurora.client.ui.component.TooltipPresenter.draw(g, frame.x(), frame.y(), frame.w(), frame.h(),
         Theme.reducedMotion() || com.aurora.client.config.AuroraConfig.get().reducedMotion);
   }
-  private final com.aurora.client.ui.component.RoundedPanel window = new com.aurora.client.ui.component.RoundedPanel();
 
   private String liveStatus() {
     var e = PhenomenaClient.engine;

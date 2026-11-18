@@ -60,10 +60,6 @@ public final class MaterialSurface {
         return radius==0 ? 0 : radius+outset;
     }
 
-    public static boolean windowBevelEnabled() {
-        return ThemeManager.current().windowBevel() != WindowBevel.Level.OFF;
-    }
-
     /** Band cap for a window whose content keeps the shared frame room ({@code UiDensity.FRAME_EDGE}). */
     public static float frameInset(float radius) {
         return WindowBevel.frameInset(radius);
@@ -75,12 +71,7 @@ public final class MaterialSurface {
 
     /** Parent finish, after the dim and before content, including when glass capture declined. */
     public static void parent(GuiGraphicsExtractor g, float x, float y, float w, float h, float radius, float contentInset) {
-        if (windowBevelEnabled()) {
-            windowFinish(g, x, y, w, h, radius, contentInset, 1, true);
-            return;
-        }
-        cached(g,x,y,w,h,radius,ThemeManager.color(ThemeToken.WINDOW_FILL),
-                windowOutline(),120,true);
+        windowFinish(g, x, y, w, h, radius, contentInset, 1, true);
     }
 
     private static final int WINDOW_PIXEL_BUDGET = 1024 * 1024;
@@ -103,16 +94,16 @@ public final class MaterialSurface {
         double scale = Math.min(guiScale, Math.sqrt((double) WINDOW_PIXEL_BUDGET / ((double) logicalW * logicalH)));
         int width = Math.max(1, (int) (logicalW * scale)), height = Math.max(1, (int) (logicalH * scale));
         double pixelSize = Math.max((double) logicalW / width, (double) logicalH / height);
-        float band = (float) WindowBevel.rasterBandWidth(Math.min(w, h), radius, contentInset, pixelSize, theme.windowBevel());
+        float band = (float) WindowBevel.rasterBandWidth(Math.min(w, h), radius, contentInset, pixelSize);
         // The next glass pass bends the backdrop across exactly this band (windows with their own capture).
         if (tintBody) WindowBevel.rememberBand(x, y, w, h, band);
-        long version = (ThemeManager.generation() * 65537L + guiScale) * 31 + theme.windowBevel().ordinal();
+        long version = ThemeManager.generation() * 65537L + guiScale;
         int recipe = Float.floatToIntBits(band) | Integer.MIN_VALUE;
         var cache = TEMPLATES.get(version, width, height, w, h, radius, recipe, true, fill, outline);
         if (!cache.isCurrent(version)) {
             cache.ensureSize(width, height);
-            var finish = WindowBevel.finish(windowFill, outline, theme.blurRadius(), theme.windowBevel());
-            var raster = new WindowBevel.Raster(w, h, radius, band, pixelSize, finish, theme.windowBevel());
+            var finish = WindowBevel.finish(windowFill, outline, theme.blurRadius());
+            var raster = new WindowBevel.Raster(w, h, radius, band, pixelSize, finish);
             cache.windowFace(raster, fill, pad, logicalW, logicalH);
             cache.commit(version);
         }
@@ -388,18 +379,13 @@ public final class MaterialSurface {
 
     public static void overlayFace(GuiGraphicsExtractor g, int x, int y, int w, int h, float radius,
                                    float contentInset, float visibility) {
-        if (windowBevelEnabled()) windowFinish(g, x, y, w, h, radius, contentInset, visibility, true);
-        else cached(g,x,y,w,h,radius,color(ThemeToken.SURFACE_VARIANT) | 0xff000000,0,6,false,visibility,Light.OVERLAY);
+        windowFinish(g, x, y, w, h, radius, contentInset, visibility, true);
     }
 
     public static void floatingTooltip(GuiGraphicsExtractor g, int x, int y, int w, int h, int legacyRadius,
                                        float textInsetX, float textInsetY) {
-        if (windowBevelEnabled()) {
-            float radius = Math.min(ThemeManager.current().roundness().radiusSmall(), Math.min(w, h) * .5f);
-            windowFinish(g, x, y, w, h, radius, windowCornerClearance(radius, textInsetX, textInsetY), 1, true);
-        } else {
-            floating(g, x, y, w, h, legacyRadius, 1);
-        }
+        float radius = Math.min(ThemeManager.current().roundness().radiusSmall(), Math.min(w, h) * .5f);
+        windowFinish(g, x, y, w, h, radius, windowCornerClearance(radius, textInsetX, textInsetY), 1, true);
     }
 
     public static void floating(GuiGraphicsExtractor g, int x, int y, int w, int h,

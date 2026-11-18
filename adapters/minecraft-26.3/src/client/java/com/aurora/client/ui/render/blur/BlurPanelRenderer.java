@@ -645,14 +645,13 @@ public final class BlurPanelRenderer {
 
     /** Sets {@link #refractBendOut}/{@link #refractBandOut} (device px) for a panel at this GUI rect. */
     private static void refraction(float guiX, float guiY, float guiW, float guiH, int scale) {
-        var theme = ThemeManager.current();
-        var level = theme.windowBevel();
         float band = com.aurora.client.theme.WindowBevel.rememberedBand(guiX, guiY, guiW, guiH);
-        if (level == com.aurora.client.theme.WindowBevel.Level.OFF || band <= 0) {
+        if (band <= 0) {
             refractBendOut = 0; refractBandOut = 0;
             return;
         }
-        refractBendOut = (float) (level.bend() * com.aurora.client.theme.WindowBevel.refractionWeight(theme.backgroundOpacity()) * scale);
+        double weight = com.aurora.client.theme.WindowBevel.refractionWeight(ThemeManager.current().backgroundOpacity());
+        refractBendOut = (float) (com.aurora.client.theme.WindowBevel.BEND * weight * scale);
         refractBandOut = band * scale;
     }
 }

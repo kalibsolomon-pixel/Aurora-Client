@@ -436,8 +436,13 @@ edge while editing. Scrollable content is clipped inside the stationary frame;
 search/add headers stay fixed above that body. Overflow text stays centered and
 wraps only at whole-word boundaries. See `UNIFIED_THEME_PILOT.md`.
 
-**Window Bevel** sets the frame depth: Off (legacy flat trim), Subtle, Standard (default),
-or Deep. The shared upper-left light rounds the outer frame into a pillow on round themes
+**Window bevel.** Every window frame has one bevel strength. There is no setting (owner,
+2026-11-18: "we don't need window bevel levels"). The former Subtle level read best, and the
+fixed strength is about 15% lighter still: band width 0.62 of the natural width, light gain
+0.61, elevation 1.3 and a 0.6 GUI px bend (`WindowBevel.WIDTH`, `GAIN`, `ELEVATION`, `BEND`).
+The retired Off, Standard and Deep levels and the flat legacy window trim are gone;
+`ThemeMigrator` drops the old `windowBevel` key from configs and profiles. The shared
+upper-left light rounds the outer frame into a pillow on round themes
 and makes planar facets as Corner Radius approaches zero. The directional baked shadow
 falls down and right. Only the frame band is shaded. The bevel replaces the old window
 outline rather than stacking over it.
@@ -445,7 +450,8 @@ outline rather than stacking over it.
 **Frame room** (owner, 2026-11-18). Windows pad their content for the band instead of
 thinning the band to fit the content. Every window keeps its boxes (controls, rows, fields,
 scroll clips and scrollbars) `UiDensity.FRAME_EDGE` = 10 GUI px inside its outer edge. The
-band takes up to `FRAME_BAND` = 6 px of that, and the remaining 4 px is the gap to content.
+band may take up to `FRAME_BAND` = 6 px of that (at the one strength it draws about 3.7 px on a
+round theme), and the remaining 4 px is the gap to content.
 Callers pass `MaterialSurface.frameInset(radius)` as the band cap. That cap narrows only
 where a large Corner Radius bends the corner toward the content. Header buttons and
 toolbars sit on one row from 10 to 26 px (`UiDensity.HEADER`), and the body starts 4 px
@@ -462,8 +468,7 @@ neutral fills with low blur give a tighter metallic glint and stronger lightness
 The renderer reads the resolved window RGB, `WINDOW_FILL` alpha and Blur Radius to derive
 the rim, not to change the interior. In a main window, the unmodified tint sits over the
 same pre-dim backdrop capture. Floating tooltips, dropdowns, the colour editor and modals
-use the translucent tint over their existing host, with no new post-dim capture. Off
-restores their legacy faces, including the opaque backing where applicable.
+use the translucent tint over their existing host, with no new post-dim capture.
 
 Below full opacity the edge is refraction, not paint (owner, 2026-11-17). The rim is
 only as dense as the window: its alpha is the `WINDOW_FILL` alpha plus 10% of the clear
@@ -472,8 +477,8 @@ solid bevel. Where the rim is clear, its light and shade lighten or darken the b
 instead of covering it. In a main window with its own capture, the glass pass also bends
 the backdrop across the same frame band: each edge pixel samples inward along the edge
 normal by `bend × (1 − depth/band)²`, so content stretches toward the rim like the edge
-of a thick pane. The largest bend is 1.5, 2.5 or 3.5 GUI px (Subtle, Standard, Deep),
-fades out between 35% and 100% Background Opacity, and is zero with the bevel Off. The
+of a thick pane. The largest bend is `WindowBevel.BEND` = 0.6 GUI px and fades out
+between 35% and 100% Background Opacity. The
 band is the one the frame raster draws (`WindowBevel.rememberBand`), so the bend never
 reaches content. Heavy blur makes the bend subtle; lower Blur Radius shows it more.
 

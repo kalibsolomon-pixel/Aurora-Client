@@ -29,7 +29,6 @@ import com.aurora.client.ui.util.MaterialIconRenderer;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.ui.util.TimedTransition;
 import com.aurora.client.ui.util.CubicBezier;
-import com.aurora.client.ui.util.UiLayerCache;
 import com.aurora.client.util.AuroraAnim;
 import com.aurora.client.util.HoverAnim;
 import com.aurora.client.util.ScrollFade;
@@ -385,7 +384,6 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
     private final Map<FeatureSetting, List<SemanticActionControl>> hostedSettingControls =
             new IdentityHashMap<>();
 
-    private final UiLayerCache layerCache = new UiLayerCache();
 
     public AuroraScreen() {
         super(Component.empty());
@@ -1010,39 +1008,13 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
         // the theme's Background Opacity — still exactly one application
         // point. The dim veils the panel and its surroundings equally. When
         // the renderer declines (menu context with no world, screenshot
-        // suppression, failure), the unified material keeps the same cached
-        // face. Only the legacy material depends on glass availability.
+        // suppression, failure), the bevel frame keeps the same cached face.
         GlassSurface.beginGlassPass();
         float radius = ThemeManager.current().roundness().radius();
-        boolean glassWindow = GlassSurface.container(g, boxX(), boxY(), BOX_W, BOX_H, radius);
-        boolean windowBevel = MaterialSurface.windowBevelEnabled();
+        GlassSurface.container(g, boxX(), boxY(), BOX_W, BOX_H, radius);
 
-        int guiScale = Math.max(1, (int) this.minecraft.getWindow().getGuiScale());
-        // The three glow rings extend six pixels; leave two more for AA.
-        int cacheX = (int) boxX() - 8, cacheY = (int) boxY() - 8;
-        int cacheW = (int) BOX_W + 16, cacheH = (int) BOX_H + 16;
-        if (!windowBevel) layerCache.ensureRegion(cacheX * guiScale, cacheY * guiScale,
-                cacheW * guiScale, cacheH * guiScale);
-
-        long version = ThemeManager.generation() * 1_000_003L
-                ^ ((long) guiScale * 65537L)
-                ^ (glassWindow && !MaterialSurface.unified() ? 0x5BD1B2C1L : 0L);
-
-        if (!windowBevel && !layerCache.isCurrent(version)) {
-            layerCache.clear();
-            RenderUtil.RectSink prev = RenderUtil.beginCapture(layerCache.sink());
-            try {
-                captureStatic(g, glassWindow);
-            } finally {
-                RenderUtil.endCapture(prev);
-            }
-            layerCache.commit(version);
-        }
-
-        // Chrome + tab materials — after the capture block above (a tint fill
-        // painted during capture would rasterize into the cache). Tiles and
-        // the Settings tab's inline rows paint under the tracked scissor so
-        // their deferred rims keep the list clip.
+        // Chrome + tab materials. Tiles and the Settings tab's inline rows
+        // paint under the tracked scissor so their deferred rims keep the list clip.
         List<Module> mods = selectedCategory == 0 ? laidOutModules : List.of();
         paintGlassPass(g, mods);
 
@@ -1051,10 +1023,8 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
         // on any glass body paint is reported as an ordering violation.
         GlassSurface.overlayDim(g, this.width, this.height);
 
-        // Cached chrome — one textured blit (a content layer above the dim,
-        // exactly where it always sat).
-        if (windowBevel) MaterialSurface.parent(g, boxX(), boxY(), BOX_W, BOX_H, radius, MaterialSurface.frameInset(radius));
-        else layerCache.blitAt(g, cacheX, cacheY, cacheW, cacheH);
+        // The window frame: one cached bevel blit, a content layer above the dim.
+        MaterialSurface.parent(g, boxX(), boxY(), BOX_W, BOX_H, radius, MaterialSurface.frameInset(radius));
 
         renderLive(g, mods, mouseX, mouseY, delta);
 
@@ -1067,27 +1037,6 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
         FeatureSetting.drawPendingTooltip(g, (int) boxX(), (int) boxY(), (int) BOX_W, (int) BOX_H);
     }
 
-    /** Static chrome + settled toggle tracks, rasterized once into the cache. */
-    private void captureStatic(GuiGraphicsExtractor g, boolean glassWindow) {
-        float bx = boxX(), by = boxY();
-        float radius = ThemeManager.current().roundness().radius();
-
-        for (int i = 1; i <= 3; i++) {
-            int a = Math.max(0, 35 - i * 10);
-            RenderUtil.drawRoundedOutlineAA(g, bx - i * 2, by - i * 2, BOX_W + i * 4, BOX_H + i * 4,
-                    radius + i * 2, 2.0f, (a << 24) | 0x000000);
-        }
-        if (!glassWindow || MaterialSurface.unified()) {
-            // Glass pilot: the live glass material supplies the fill + rim;
-            // stacking the old fill/outline on top would read as a double
-            // surface. The glow rings above stay — they read as a drop
-            // shadow, not an outline.
-            RenderUtil.drawRoundedRectAA(g, bx, by, BOX_W, BOX_H, radius, MaterialSurface.color(ThemeToken.WINDOW_FILL));
-            RenderUtil.drawRoundedOutlineAA(g, bx, by, BOX_W, BOX_H, radius, 1.0f, MaterialSurface.unified() ? MaterialSurface.windowOutline()
-                    : alpha(ThemeToken.ON_BACKGROUND, 0x13 / 255f));
-        }
-
-    }
 
     /**
      * Card/toggle geometry for module index {@code i}; null when the tile
@@ -2334,7 +2283,6 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
 
     @Override
     public void removed() {
-        layerCache.retire(); // deferred GUI draws may still reference its texture
         invalidateSettingsSemantics();
         FeatureSetting.clearHostBand(); // C-8 — drop the published host band
         super.removed();

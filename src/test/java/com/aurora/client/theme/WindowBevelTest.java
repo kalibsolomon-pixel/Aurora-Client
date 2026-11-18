@@ -1,6 +1,5 @@
 package com.aurora.client.theme;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonParser;
 import com.aurora.client.ui.util.UiDensity;
 import org.junit.jupiter.api.Test;
@@ -8,7 +7,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 
-import static com.aurora.client.theme.WindowBevel.Level.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 class WindowBevelTest {
@@ -35,13 +33,22 @@ class WindowBevelTest {
         definition.backgroundOpacity = opacity;
         definition.blurRadius = blur;
         var theme = ThemeResolver.resolve(definition, true);
-        return WindowBevel.finish(theme.color(ThemeToken.WINDOW_FILL), theme.color(ThemeToken.MATERIAL_BORDER_STRONG), blur, STANDARD);
+        return WindowBevel.finish(theme.color(ThemeToken.WINDOW_FILL), theme.color(ThemeToken.MATERIAL_BORDER_STRONG), blur);
+    }
+
+    @Test void oneStrengthSlightlyLighterThanTheFormerSubtleLevel() {
+        // Owner, 2026-11-18: no levels; Subtle (width .73, gain .72, elevation 1.5, bend .7) read
+        // best, and the single strength is a little lighter still.
+        assertTrue(WindowBevel.WIDTH < .73 && WindowBevel.WIDTH > .5);
+        assertTrue(WindowBevel.GAIN < .72 && WindowBevel.GAIN > .5);
+        assertTrue(WindowBevel.ELEVATION < 1.5 && WindowBevel.ELEVATION > 1);
+        assertTrue(WindowBevel.BEND < .7 && WindowBevel.BEND > 0);
     }
 
     @Test void finishVariesGraduallyAcrossTheOpacityRangeWithoutASecondAlpha() {
-        var previous = WindowBevel.finish(0x008322a2, OUTLINE, 9, STANDARD);
+        var previous = WindowBevel.finish(0x008322a2, OUTLINE, 9);
         for (int alpha = 1; alpha <= 255; alpha++) {
-            var finish = WindowBevel.finish(alpha << 24 | 0x8322a2, OUTLINE, 9, STANDARD);
+            var finish = WindowBevel.finish(alpha << 24 | 0x8322a2, OUTLINE, 9);
             // Derived from WINDOW_FILL itself (not a second opacity control): never below the fill,
             // capped at the former solid 92%, continuous across the range.
             int expected = (int) Math.round(255 * Math.min(.92, alpha / 255d + (1 - alpha / 255d) * .10));
@@ -55,39 +62,36 @@ class WindowBevelTest {
     }
 
     @Test void bandRespectsStraightAndCornerClearancesAndSmallSurfaces() {
-        assertEquals(4, WindowBevel.bandWidth(288, 10, WindowBevel.cornerClearance(10, 12, 4), STANDARD));
-        assertEquals(4, WindowBevel.bandWidth(288, 0, WindowBevel.cornerClearance(0, 12, 4), STANDARD));
+        // The band is the natural width (at most 8 px) scaled by the one strength, and never wider
+        // than the content clearance it is given.
+        assertEquals(8 * WindowBevel.WIDTH, WindowBevel.bandWidth(480, 10, 16), 1e-9);
+        assertEquals(4 * WindowBevel.WIDTH, WindowBevel.bandWidth(288, 10, WindowBevel.cornerClearance(10, 12, 4)), 1e-9);
+        assertEquals(4 * WindowBevel.WIDTH, WindowBevel.bandWidth(288, 0, WindowBevel.cornerClearance(0, 12, 4)), 1e-9);
         assertTrue(WindowBevel.cornerClearance(20, 12, 4) < 4);
-        assertTrue(WindowBevel.bandWidth(288, 10, 4, SUBTLE) < 4);
-        assertEquals(0, WindowBevel.bandWidth(288, 10, 4, OFF));
-        assertEquals(0, WindowBevel.bandWidth(288, 10, 0, DEEP));
-        assertEquals(8, WindowBevel.bandWidth(480, 10, 16, DEEP));
-        assertEquals(2.2, WindowBevel.bandWidth(10, 10, 6, DEEP), 1e-9);
-        assertTrue(WindowBevel.bandWidth(48, 10, 8, STANDARD) > WindowBevel.bandWidth(48, 0, 8, STANDARD));
+        assertEquals(0, WindowBevel.bandWidth(288, 10, 0));
+        assertTrue(WindowBevel.bandWidth(10, 10, 6) <= 10 * MaterialLighting.MAX_BAND_SHARE);
+        assertTrue(WindowBevel.bandWidth(48, 10, 8) > WindowBevel.bandWidth(48, 0, 8));
     }
 
-    @Test void mainAndDenseOverlayContentStayOutsideTheBandAtEveryLevel() {
+    @Test void mainAndDenseOverlayContentStayOutsideTheBand() {
         for (int viewport : new int[]{300, 500}) {
             var frame = UiDensity.window(viewport, viewport);
             assertEquals(viewport == 300, frame.width() < 320);
             for (int radius : new int[]{0, ThemeRoundness.DEFAULT_RADIUS}) {
-                for (var level : WindowBevel.Level.values()) {
-                    // Main window content keeps the shared frame room (2026-11-18).
-                    assertContentClear(frame.width(), frame.height(), radius, level, UiDensity.FRAME_EDGE, UiDensity.FRAME_EDGE);
-                    assertContentClear(84, 48, ThemeRoundness.of(radius).radiusSmall(), level, 2, 2);
-                }
+                // Main window content keeps the shared frame room (2026-11-18).
+                assertContentClear(frame.width(), frame.height(), radius, UiDensity.FRAME_EDGE, UiDensity.FRAME_EDGE);
+                assertContentClear(84, 48, ThemeRoundness.of(radius).radiusSmall(), 2, 2);
             }
         }
     }
 
-    private static void assertContentClear(int width, int height, float radius, WindowBevel.Level level,
-                                           float left, float top) {
+    private static void assertContentClear(int width, int height, float radius, float left, float top) {
         int fill = 0x5416171d;
-        var finish = WindowBevel.finish(fill, OUTLINE, 9, level);
+        var finish = WindowBevel.finish(fill, OUTLINE, 9);
         double clearance = WindowBevel.cornerClearance(radius, left, top);
         for (double pixelSize : new double[]{1, 1d / 3, 1.5}) {
-            double band = WindowBevel.rasterBandWidth(Math.min(width, height), radius, clearance, pixelSize, level);
-            var raster = new WindowBevel.Raster(width, height, radius, band, pixelSize, finish, level);
+            double band = WindowBevel.rasterBandWidth(Math.min(width, height), radius, clearance, pixelSize);
+            var raster = new WindowBevel.Raster(width, height, radius, band, pixelSize, finish);
             if (clearance < pixelSize / Math.sqrt(2)) assertEquals(0, band);
             for (double dx : new double[]{left, width - left, width * .5}) {
                 for (double dy : new double[]{top, height - top, height * .5}) {
@@ -103,9 +107,9 @@ class WindowBevelTest {
 
     @Test void plateauPreservesTheExactTintAndLightAndShadowAreDirectional() {
         int fill = 0x80808080;
-        var finish = WindowBevel.finish(fill, OUTLINE, 12, STANDARD);
+        var finish = WindowBevel.finish(fill, OUTLINE, 12);
         for (float radius : new float[]{0, 10}) {
-            var raster = new WindowBevel.Raster(50, 40, radius, 4, .25, finish, STANDARD);
+            var raster = new WindowBevel.Raster(50, 40, radius, 4, .25, finish);
             for (int row = 0; row < 40; row++) for (int column = 0; column < 50; column++) {
                 if (MaterialLighting.distance(column + .5, row + .5, 50, 40, radius) <= -4)
                     assertEquals(fill, raster.pixel(column + .5, row + .5, fill));
@@ -116,18 +120,16 @@ class WindowBevelTest {
         }
     }
 
-    @Test void legacyAndMalformedThemeValuesNormalizeInConfigAndProfiles() {
+    @Test void retiredBevelLevelsLeaveConfigsAndProfiles() {
         var log = LoggerFactory.getLogger(WindowBevelTest.class);
-        var gson = new Gson();
         for (String member : new String[]{"", ",\"windowBevel\":null", ",\"windowBevel\":{}", ",\"windowBevel\":\"DEEP\""}) {
             String theme = "{\"cornerRadius\":10,\"blurRadius\":9" + member + "}";
-            var expected = member.endsWith("DEEP\"") ? DEEP : STANDARD;
             var config = JsonParser.parseString(ThemeMigrator.migrateConfigJson("{\"theme\":" + theme + "}", log)).getAsJsonObject();
-            assertEquals(expected, gson.fromJson(config.get("theme"), ThemeDefinition.class).windowBevel);
+            assertFalse(config.getAsJsonObject("theme").has("windowBevel"), member);
+            assertEquals(10, config.getAsJsonObject("theme").get("cornerRadius").getAsInt());
             var fields = new HashMap<>(java.util.Map.of("theme", JsonParser.parseString(theme)));
             ThemeMigrator.migrateProfileFields(fields, log);
-            var resolved = ThemeResolver.resolve(gson.fromJson(fields.get("theme"), ThemeDefinition.class), true);
-            assertEquals(expected, resolved.windowBevel());
+            assertFalse(fields.get("theme").getAsJsonObject().has("windowBevel"), member);
         }
     }
 }
