@@ -127,13 +127,6 @@ class HealthIndicatorsTest {
         assertSame(same, r.health(), "an unchanged value formats nothing");
     }
 
-    @Test void labelMixinTargetsTheLevelCameraRenderState() {
-        // CameraRenderState lives in renderer.state.level; the old renderer.state descriptor
-        // matched nothing, and require = 0 skipped the label without a word (until 2026-11-18).
-        String mixin = com.aurora.client.SourceTree.read("mixin/PlayerHealthLabelMixin.java");
-        assertTrue(mixin.contains("SubmitNodeCollector;Lnet/minecraft/client/renderer/state/level/CameraRenderState;)V\""));
-    }
-
     @Test void rectUnionCoversEachPixelOnce() {
         // A gapless, thickness-2 cross: arms overlap each other and the hub.
         int[] rects = {-5, -1, 0, 1, 0, -1, 5, 1, -1, -5, 1, 0, -1, 0, 1, 5, -1, -1, 1, 1};

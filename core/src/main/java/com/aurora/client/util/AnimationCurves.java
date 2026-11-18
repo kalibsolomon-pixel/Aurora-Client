@@ -30,13 +30,6 @@ public final class AnimationCurves {
         return apply(cfg.swingAnimationCurve, t);
     }
 
-    /** Apply the configured view-bob curve. */
-    public static float applyBob(float t) {
-        AuroraConfig cfg = AuroraConfig.get();
-        if (!cfg.smoothAnimationsEnabled) return t;
-        return apply(cfg.viewBobCurve, t);
-    }
-
     private static float apply(AuroraConfig.AnimationCurve c, float t) {
         if (c == null) return t;
         if (t <= 0f) return 0f;

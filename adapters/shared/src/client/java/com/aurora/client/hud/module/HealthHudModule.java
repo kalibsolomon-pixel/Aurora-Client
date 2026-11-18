@@ -11,8 +11,8 @@ import net.minecraft.resources.Identifier;
 
 /**
  * Health Indicators' HUD readout: vanilla's heart sprite and your own health
- * to two decimals ("19.47"), with absorption after it in gold. Shown while the
- * feature and its HUD switch are both on.
+ * to two decimals ("19.47"), with absorption after it in gold. Its own switch,
+ * independent of the health drawn above entities.
  */
 public class HealthHudModule extends HudModule {
     public static final String ID = "health";
@@ -34,8 +34,7 @@ public class HealthHudModule extends HudModule {
 
     @Override
     public boolean isConfigEnabled() {
-        AuroraConfig cfg = AuroraConfig.get();
-        return cfg.playerHealthIndicators && cfg.playerHealthHudEnabled;
+        return AuroraConfig.get().playerHealthHudEnabled;
     }
 
     @Override public String displayName() { return "Health"; }

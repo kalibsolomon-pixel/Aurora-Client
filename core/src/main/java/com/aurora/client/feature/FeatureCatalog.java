@@ -226,7 +226,7 @@ public final class FeatureCatalog {
         module("particles", "Particles", "Per-particle control over every vanilla particle type — hide ones you find distracting and resize the rest.");
         module("item_scale", "Item Scale", "Customize the scale, rotation, and screen translation of individual item models.");
         module("held_item_seams", "Held Item Seam Fix", "Hides the hairline seams that can appear between the faces of your first-person held items at certain camera angles.");
-        module("animations", "Animations", "Swing & view-bob curves, classic 1.8-style damage camera tilt, retro backwards-walking & sneak poses, and idle held-item sway.");
+        module("animations", "Animations", "Swing curves, view-bob strength, classic 1.8-style damage camera tilt, retro backwards-walking & sneak poses, and idle held-item sway.");
         module("keystrokes", "Keystrokes", "Displays your WASD, mouse, jump, and sneak keys as a HUD overlay that lights up in real time as you press them.");
         module("minimap", "Minimap", "A top-down map of the world around you, shown as a HUD overlay. Renders terrain, waypoints, and nearby entities as colored dots.");
         module("scoreboard", "Scoreboard HUD", "Replaces the vanilla scoreboard sidebar with a HUD module you can move, resize and restyle. Off in a fresh install, so existing installs keep vanilla's sidebar.");
@@ -259,7 +259,7 @@ public final class FeatureCatalog {
         classify("full_bright", FairPlay.VANILLA_INFORMATION, "Extends the vanilla Brightness setting past its maximum, so unlit areas are visible. Off in a fresh install.", "fullBright");
         classify("no_fog", FairPlay.VANILLA_INFORMATION, "Pushes distance fog back, so terrain inside your render distance is visible sooner than in vanilla. Off in a fresh install.", "noFogEnabled");
         classify("pack_tweaks", FairPlay.COSMETIC, "Totem particle size, first-person shield position and a tint for your own shield's cooldown. Its water and lava clarity switches improve visibility inside fluids and ship off.", "underwaterClarityEnabled", "lavaClarityEnabled");
-        classify("player_health", FairPlay.INFORMATION_ADVANTAGE, "Shows the health of nearby mobs and players above them, and your own health to two decimals. Vanilla does not show other players' health. Players have their own switch, also off.", "playerHealthIndicators", "playerHealthShowPlayers");
+        classify("player_health", FairPlay.INFORMATION_ADVANTAGE, "Shows the health of nearby mobs and players above them, and your own health to two decimals. Vanilla does not show other players' health. Players have their own switch, also off.", "playerHealthIndicators", "playerHealthShowPlayers", "playerHealthHudEnabled");
         classify("free_look", FairPlay.INFORMATION_ADVANTAGE, "Lets the camera look around without turning the character, a view vanilla does not allow.", "freeLookEnabled");
         classify("saturation_bar", FairPlay.VANILLA_INFORMATION, "Shows your own saturation on the food bar.");
         classify("block_overlay", FairPlay.COSMETIC, "Restyles the outline of the block you are looking at.");
@@ -315,7 +315,7 @@ public final class FeatureCatalog {
                 .gates("hitboxEnabled", "hitboxTargetEnabled");
         mixin("RenderSystemMixin", "Aurora's frame limiter after each frame", "miscellaneous")
                 .gates("smoothFramePacer", "adaptiveRenderSleeping");
-        mixin("GameRendererBobMixin", "the view-bob curve", "animations");
+        mixin("GameRendererBobMixin", "the view-bob strength", "animations");
         mixin("HeldItemRendererMixin", "the swing animation curve", "animations");
         mixin("MouseAccessor", "decoupled mouse input", "miscellaneous").gates("inputSamplingDecoupled");
         mixin("MinecraftClientRenderMixin", "frame pacing, decoupled mouse input and blurred glass", "miscellaneous")

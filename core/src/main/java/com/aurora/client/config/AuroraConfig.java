@@ -379,7 +379,8 @@ public class AuroraConfig {
     public double smoothCameraStrength = 0.5; // 0.05 = very smooth, 1.0 = instant
     public boolean smoothAnimationsEnabled = false;
     public AnimationCurve swingAnimationCurve = AnimationCurve.QUARTIC_OUT;
-    public AnimationCurve viewBobCurve = AnimationCurve.SMOOTHSTEP;
+    // viewBobCurve was removed 2026-11-18: vanilla's bobView no longer takes a
+    // partial tick, so there is nothing to curve. Saved values are ignored.
 
     // ---- Expanded animation options ----
     /** First-person swing arc style. VANILLA = modern curved path; LEGACY_1_8 = steeper old-style arc. */
@@ -418,7 +419,7 @@ public class AuroraConfig {
         CIRCULAR
     }
 
-    /** @deprecated kept only so old configs don't error on load. Use swingAnimationCurve / viewBobCurve. */
+    /** @deprecated kept only so old configs don't error on load. Use swingAnimationCurve. */
     @Deprecated
     public AnimationCurve animationCurve = AnimationCurve.SMOOTHSTEP;
 
@@ -778,6 +779,7 @@ public class AuroraConfig {
     }
 
     // ---- Health Indicators (feature id player_health; named Entity Health until 2026-11-18) ----
+    /** Health above entities. The HUD readout has its own switch, {@link #playerHealthHudEnabled}. */
     public boolean playerHealthIndicators = false;
     public boolean playerHealthOnlyAttacked = false;
     /**
@@ -803,7 +805,8 @@ public class AuroraConfig {
 
     /**
      * Your own health as an exact number (two decimals, e.g. "19.47") in a
-     * draggable HUD module, shown while Health Indicators is on.
+     * draggable HUD module. Independent of {@link #playerHealthIndicators}
+     * (the labels above entities); the card is on while either is.
      */
     public boolean playerHealthHudEnabled = false;
 
