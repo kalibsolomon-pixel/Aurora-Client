@@ -9,7 +9,6 @@ import com.aurora.client.ui.component.MaterialSurface;
 import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.component.ButtonWidget;
 import com.aurora.client.ui.component.GlassSurface;
-import com.aurora.client.ui.component.RoundedPanel;
 import com.aurora.client.ui.component.ThemedScreen;
 import com.aurora.client.ui.interaction.SemanticActionControl;
 import com.aurora.client.ui.interaction.SemanticControlGroup;
@@ -235,11 +234,9 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen, LayoutS
 
 
     /** Independent caches: stationary chrome and scrolling body shapes. */
-    private final UiLayerCache chromeCache = new UiLayerCache();
     private final UiLayerCache rowCache = new UiLayerCache();
 
     /** Shared themed window panel (glow + fill + outline), drawn into the static cache. */
-    private final RoundedPanel windowPanel = new RoundedPanel(true);
 
     /**
      * The Done/Reset chrome buttons — kept as fields so the glass pass can
@@ -533,8 +530,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen, LayoutS
         // cached face stays the same. Legacy chrome includes that fallback.
         GlassSurface.beginGlassPass();
         float frameRadius = ThemeManager.current().roundness().radius();
-        boolean glassWindow = GlassSurface.container(ctx, listX, windowY, LIST_W, windowH, frameRadius);
-        boolean windowBevel = MaterialSurface.windowBevelEnabled();
+        GlassSurface.container(ctx, listX, windowY, LIST_W, windowH, frameRadius);
 
         // ---- Static-layer caches: window chrome + rows' cacheable shapes ----
         // TWO caches, not one: the rows' shape layer is blitted under the
@@ -545,31 +541,15 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen, LayoutS
         // and raster scale; rows additionally depend on scroll and shapes.
         // Glass availability never changes the unified cached face or rows.
         int guiScale = Math.max(1, (int) this.minecraft.getWindow().getGuiScale());
-        int chromeX = listX - 9, chromeY = windowY - 9;
-        int chromeW = LIST_W + 18, chromeH = windowH + 18;
         int rowX = listX + ROW_LEFT, rowY = bodyTop();
         int rowW = LIST_W - ROW_LEFT - ROW_RIGHT, rowH = Math.max(1, bodyBottom() - rowY);
-        if (!windowBevel) chromeCache.ensureRegion(chromeX * guiScale, chromeY * guiScale,
-                chromeW * guiScale, chromeH * guiScale);
         rowCache.ensureRegion(rowX * guiScale, rowY * guiScale, rowW * guiScale, rowH * guiScale);
         int fingerprint = 0;
         for (FeatureSetting s : meta.settings) if (s.isVisible()) fingerprint = fingerprint * 31 + s.shapeFingerprint();
         long baseVersion = ThemeManager.generation() * 1_000_003L ^ ((long) guiScale * 65537L);
-        long chromeVersion = baseVersion
-                ^ (glassWindow && !MaterialSurface.unified() ? 0x5BD1B2C1L : 0L);
         long rowVersion = baseVersion ^ ((long) fingerprint * 100_000_009L)
                 ^ ((long) totalRowsH * 31L) ^ ((long) (int) scroll.current() * 104729L) ^ bodyTop();
 
-        if (!windowBevel && !chromeCache.isCurrent(chromeVersion)) {
-            chromeCache.clear();
-            RenderUtil.RectSink prev = RenderUtil.beginCapture(chromeCache.sink());
-            try {
-                drawWindowChromeShapes(ctx, listX, windowY, windowH, glassWindow);
-            } finally {
-                RenderUtil.endCapture(prev);
-            }
-            chromeCache.commit(chromeVersion);
-        }
         if (!rowCache.isCurrent(rowVersion)) {
             rowCache.clear();
             RenderUtil.RectSink prev = RenderUtil.beginCapture(rowCache.sink());
@@ -668,9 +648,8 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen, LayoutS
         GlassSurface.overlayDim(ctx, this.width, this.height);
 
         // Stationary frame chrome sits above dim and outside the body scissor.
-        if (windowBevel) MaterialSurface.parent(ctx, listX, windowY, LIST_W, windowH, frameRadius,
+        MaterialSurface.parent(ctx, listX, windowY, LIST_W, windowH, frameRadius,
                 MaterialSurface.frameInset(frameRadius));
-        else chromeCache.blitAt(ctx, chromeX, chromeY, chromeW, chromeH);
 
         // Only the body scrolls; the frame and search header have fixed geometry.
         ctx.enableScissor(listX + ROW_LEFT, bodyTop(), listX + LIST_W - ROW_RIGHT, bodyBottom());
@@ -783,17 +762,6 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen, LayoutS
         logFramePerf();
     }
 
-    /**
-     * Window glow + fill + outline — the screen's static chrome, captured
-     * into the cache. On glass the fill + outline are omitted (the glass
-     * material supplies its own directional rim; stacking the old outline
-     * on top would read as a double border). The glow rings stay — they
-     * read as a drop shadow, not an outline.
-     */
-    private void drawWindowChromeShapes(GuiGraphicsExtractor ctx, int listX, int windowY, int windowH,
-                                        boolean glassActive) {
-        windowPanel.renderShapes(ctx, listX, windowY, LIST_W, windowH, glassActive);
-    }
 
     /** Debug-only per-frame cost log: fill submissions + frame time, every 2s. */
     private void logFramePerf() {
@@ -998,7 +966,6 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen, LayoutS
             s.onDetailScreenClose();
             s.clearCompactMeasurement();
         }
-        chromeCache.retire();
         rowCache.retire();
     }
 

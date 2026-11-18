@@ -1200,16 +1200,7 @@ addWithSettings("hitbox",
                                 },
                                 ThemeRoundness.MIN_RADIUS, ThemeRoundness.MAX_RADIUS, 1, true).resetDefault(() -> defaults.themeOrDefault().cornerRadius)
                                 .valueFormatter(v -> v.intValue() + " px")
-                                .description("How round every Aurora shape is: windows, buttons, fields, toggles, sliders and scrollbars. 0 is square and 10 is the classic look. Drag previews the change live; release saves it."),
-                        new EnumSetting<>("Window Bevel", com.aurora.client.theme.WindowBevel.Level.class,
-                                () -> cfg.themeOrDefault().windowBevel,
-                                v -> {
-                                    cfg.themeOrDefault().windowBevel = v;
-                                    com.aurora.client.theme.ThemeManager.reload();
-                                    persistThemeChange();
-                                }).resetDefault(() -> defaults.themeOrDefault().windowBevel)
-                                .labels(com.aurora.client.theme.WindowBevel.Level::label)
-                                .description("Set the depth of window frames. Off restores their flat trim. The bevel takes its finish from Background Color, Background Opacity and Blur Radius without changing the glass inside.")
+                                .description("How round every Aurora shape is: windows, buttons, fields, toggles, sliders and scrollbars. 0 is square and 10 is the classic look. Drag previews the change live; release saves it.")
                 ));
 
         FeatureSetting uiFpsLimit = new EnumSetting<>("UI FPS Limit", AuroraConfig.GuiFps.class,

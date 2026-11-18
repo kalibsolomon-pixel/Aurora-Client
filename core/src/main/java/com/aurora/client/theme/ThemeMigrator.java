@@ -150,19 +150,9 @@ public final class ThemeMigrator {
         dirty |= sanitizeIntMember(theme, "blurRadius", log);
         dirty |= migrateCornerStyle(theme, log);
         dirty |= seedBlurRadius(theme, log);
-        if (!validWindowBevel(theme.get("windowBevel"))) {
-            theme.addProperty("windowBevel", ThemeDefinition.DEFAULT_WINDOW_BEVEL.name());
-            dirty = true;
-        }
+        // Window Bevel levels were retired on 2026-11-18: the frame has one strength.
+        dirty |= theme.remove("windowBevel") != null;
         return dirty;
-    }
-
-    private static boolean validWindowBevel(JsonElement value) {
-        if (value == null || !value.isJsonPrimitive() || !value.getAsJsonPrimitive().isString()) return false;
-        for (WindowBevel.Level level : WindowBevel.Level.values()) {
-            if (level.name().equals(value.getAsString())) return true;
-        }
-        return false;
     }
 
     /**

@@ -92,15 +92,12 @@ class UnifiedPilotContractTest {
             var original=ThemeDefinition.defaults(); original.mode=mode;
             for(double opacity:new double[]{0,.37,1}) {
                 original.backgroundOpacity=opacity;
-                for (var level : WindowBevel.Level.values()) {
-                    original.windowBevel = level;
-                    var resolved=ThemeResolver.resolve(original,true);
-                    int fill = resolved.color(ThemeToken.WINDOW_FILL);
-                    assertEquals(Math.round((float)opacity*255f),fill>>>24);
-                    var finish = WindowBevel.finish(fill, resolved.color(ThemeToken.MATERIAL_BORDER_STRONG), 9, level);
-                    var raster = new WindowBevel.Raster(336, 288, 10, 4, 1, finish, level);
-                    assertEquals(fill, raster.pixel(168, 144, fill));
-                }
+                var resolved=ThemeResolver.resolve(original,true);
+                int fill = resolved.color(ThemeToken.WINDOW_FILL);
+                assertEquals(Math.round((float)opacity*255f),fill>>>24);
+                var finish = WindowBevel.finish(fill, resolved.color(ThemeToken.MATERIAL_BORDER_STRONG), 9);
+                var raster = new WindowBevel.Raster(336, 288, 10, 4, 1, finish);
+                assertEquals(fill, raster.pixel(168, 144, fill));
                 assertEquals(opacity,original.backgroundOpacity);
             }
         }

@@ -75,7 +75,6 @@ public final class ResolvedTheme {
     /** Glass blur radius in GUI pixels (always normalized). */
     public int blurRadius() { return source.blurRadius; }
 
-    public WindowBevel.Level windowBevel() { return source.windowBevel; }
 
     /** Panel/window background alpha, 0..1 (always normalized). */
     public double backgroundOpacity() { return source.backgroundOpacity; }

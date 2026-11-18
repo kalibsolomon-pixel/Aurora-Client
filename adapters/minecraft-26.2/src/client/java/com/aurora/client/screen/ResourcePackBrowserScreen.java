@@ -519,7 +519,6 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
      * contract) and consulted by {@link #renderSidebar} to suppress the flat
      * panel fill + outline.
      */
-    private boolean sidebarGlass = false;
 
     /**
      * The ACTIVE category tab's glass + hover-lerp state from the glass pass
@@ -932,11 +931,6 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         int panelY = TOP_BAR_H;
         int panelW = SIDEBAR_W - SIDEBAR_PAD * 2;
         int panelX = SIDEBAR_PAD;
-        // Sidebar — DEPRESSED container, SURFACE-token tint (whose alpha
-        // carries the Background Opacity via surfaceColor — the single
-        // application point). Flat panel returns in renderSidebar on decline.
-        sidebarGlass = !MaterialSurface.windowBevelEnabled() && screenSpace(g, () -> GlassSurface.container(g, panelX + ox, panelY + oy, panelW, panelH,
-                AuroraTheme.RADIUS_LARGE, ThemeToken.SURFACE));
         paintActiveTabPass(g, mouseX, mouseY, panelX, panelY, panelW, panelH);
         paintCardButtonsPass(g);
         if (searchField instanceof GlassEditBox glassField) glassField.aurora$renderGlassPass(g);
@@ -1045,22 +1039,9 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         int panelW = SIDEBAR_W - SIDEBAR_PAD * 2;
         int panelX = SIDEBAR_PAD;
 
-        // Sidebar panel — the live glass material was already rendered above
-        // the dim (see render()); when it engaged, the flat fill + outline
-        // are suppressed here (the glass rim replaces the outline — no
-        // double outline).
-        if (MaterialSurface.windowBevelEnabled()) {
-            MaterialSurface.embeddedFrame(g, panelX, panelY, panelW, panelH, AuroraTheme.RADIUS_LARGE,
-                    MaterialSurface.windowCornerClearance(AuroraTheme.RADIUS_LARGE, 6, 6));
-        } else if (MaterialSurface.unified()) {
-            MaterialSurface.cached(g,panelX,panelY,panelW,panelH,AuroraTheme.RADIUS_LARGE,
-                    ThemeManager.color(ThemeToken.MATERIAL_PANEL),ThemeManager.color(ThemeToken.BORDER),111,false);
-        } else if (!sidebarGlass) {
-            RenderUtil.drawRoundedRectAA(g, panelX, panelY, panelW, panelH, AuroraTheme.RADIUS_LARGE,
-                    ThemeManager.surfaceColor(ThemeToken.SURFACE));
-            RenderUtil.drawRoundedOutlineAA(g, panelX, panelY, panelW, panelH, AuroraTheme.RADIUS_LARGE,
-                    1.0f, AuroraTheme.WINDOW_OUTLINE);
-        }
+        // Sidebar panel: an embedded bevel frame inside the window.
+        MaterialSurface.embeddedFrame(g, panelX, panelY, panelW, panelH, AuroraTheme.RADIUS_LARGE,
+                MaterialSurface.windowCornerClearance(AuroraTheme.RADIUS_LARGE, 6, 6));
 
         // Sidebar title. "Browse", not "Categories": the first section inside the
         // list is itself headed "Categories", and the duplicate read as a glitch.
@@ -1427,16 +1408,8 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         // captures the already-dimmed screen as its backdrop, exactly as it
         // did before this screen migrated. On decline the flat fill + outline
         // return.
-        if (MaterialSurface.windowBevelEnabled()) {
-            MaterialSurface.parent(g, modalX, modalY, modalW, modalH, AuroraTheme.RADIUS_LARGE,
-                    MaterialSurface.windowCornerClearance(AuroraTheme.RADIUS_LARGE, 18, 10));
-        } else if (!screenSpace(g, () -> GlassSurface.aboveDimContainer(g, modalX + ox, modalY + oy, modalW, modalH,
-                AuroraTheme.RADIUS_LARGE, ThemeToken.SURFACE))) {
-            RenderUtil.drawRoundedRectAA(g, modalX, modalY, modalW, modalH,
-                    AuroraTheme.RADIUS_LARGE, ThemeManager.surfaceColor(ThemeToken.SURFACE));
-            RenderUtil.drawRoundedOutlineAA(g, modalX, modalY, modalW, modalH,
-                    AuroraTheme.RADIUS_LARGE, 1.0f, AuroraTheme.WINDOW_OUTLINE);
-        }
+        MaterialSurface.parent(g, modalX, modalY, modalW, modalH, AuroraTheme.RADIUS_LARGE,
+                MaterialSurface.windowCornerClearance(AuroraTheme.RADIUS_LARGE, 18, 10));
 
         if (detailProject != null) {
             // The modal's own buttons are component-driven surfaces that must

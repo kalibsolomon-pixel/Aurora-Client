@@ -88,7 +88,7 @@ public abstract class Popup {
       mx = (int) Math.floor(OverlayMotion.unscale(mx, rect.x(), progress));
       my = (int) Math.floor(OverlayMotion.unscale(my, pivot, progress));
       var font = Minecraft.getInstance().font;
-      float radius = MaterialSurface.windowBevelEnabled() ? Theme.radiusSmall() : Theme.radius();
+      float radius = Theme.radiusSmall();
       MaterialSurface.overlayFace(g, rect.x(), rect.y(), rect.w(), rect.h(), radius,
           Math.min(1, MaterialSurface.windowCornerClearance(radius, 2, 2)), progress);
       for (int i = 0; i < visible; i++) {

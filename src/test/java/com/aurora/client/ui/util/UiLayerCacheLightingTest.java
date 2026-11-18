@@ -130,9 +130,8 @@ class UiLayerCacheLightingTest {
     @Test void measureWindowFaceBakeWithoutTextureUploadOrGuiFills() throws Exception {
         int scale = 3, pad = WindowBevel.SHADOW_PAD;
         int logicalW = 336 + 2 * pad, logicalH = 288 + 2 * pad;
-        var level = WindowBevel.Level.STANDARD;
         int fill = 0x5416171d;
-        var finish = WindowBevel.finish(fill, 0xff626570, 9, level);
+        var finish = WindowBevel.finish(fill, 0xff626570, 9);
         var cache = cache(logicalW * scale, logicalH * scale);
         long fills = RenderUtil.fillsSubmitted();
         try {
@@ -140,7 +139,7 @@ class UiLayerCacheLightingTest {
                 long[] samples = new long[21];
                 for (int run = -15; run < samples.length; run++) {
                     long start = System.nanoTime();
-                    var raster = new WindowBevel.Raster(336, 288, radius, 4, 1d / scale, finish, level);
+                    var raster = new WindowBevel.Raster(336, 288, radius, 4, 1d / scale, finish);
                     cache.windowFace(raster, fill, pad, logicalW, logicalH);
                     if (run >= 0) samples[run] = System.nanoTime() - start;
                 }
@@ -163,17 +162,17 @@ class UiLayerCacheLightingTest {
             var cache = cache(logicalW * 3, logicalH * 3);
             try {
                 var image = pixels(cache);
-                for (int radius : new int[]{0, 3, 10}) for (var level : WindowBevel.Level.values()) {
+                for (int radius : new int[]{0, 3, 10}) {
                     int fill = 0x5416171d;
-                    double band = WindowBevel.rasterBandWidth(Math.min(width, height), radius, 5, 1d / 3, level);
-                    var finish = WindowBevel.finish(fill, 0xff626570, 9, level);
-                    var raster = new WindowBevel.Raster(width, height, radius, band, 1d / 3, finish, level);
+                    double band = WindowBevel.rasterBandWidth(Math.min(width, height), radius, 5, 1d / 3);
+                    var finish = WindowBevel.finish(fill, 0xff626570, 9);
+                    var raster = new WindowBevel.Raster(width, height, radius, band, 1d / 3, finish);
                     cache.windowFace(raster, fill, pad, logicalW, logicalH);
                     for (int row = 0; row < image.getHeight(); row++) for (int col = 0; col < image.getWidth(); col++) {
                         int expected = raster.pixel((col + .5) * (1d / 3) - pad, (row + .5) * (1d / 3) - pad, fill);
                         int actual = image.getPixel(col, row);
                         if (expected != actual) fail("span mismatch at " + col + "," + row + " for " + width + "x" + height
-                                + " radius " + radius + " " + level + ": " + Integer.toHexString(expected) + " vs " + Integer.toHexString(actual));
+                                + " radius " + radius + ": " + Integer.toHexString(expected) + " vs " + Integer.toHexString(actual));
                     }
                 }
             } finally { cache.dispose(); }

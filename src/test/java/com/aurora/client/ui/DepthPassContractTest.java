@@ -33,7 +33,6 @@ class DepthPassContractTest {
         assertTrue(material.contains("WINDOW_OUTLINE_ALPHA = .55f"));
         assertTrue(outline.contains("token >>> 24"));
         assertFalse(outline.contains("WINDOW_FILL"));
-        assertTrue(read("screen/AuroraScreen.java").contains("MaterialSurface.windowOutline()"));
         assertTrue(read("ui/component/RoundedPanel.java").contains("MaterialSurface.windowOutline()"));
     }
 

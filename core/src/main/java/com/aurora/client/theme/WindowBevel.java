@@ -4,25 +4,18 @@ package com.aurora.client.theme;
 public final class WindowBevel {
     private WindowBevel() {}
 
-    public enum Level {
-        OFF("Off", 0, 0, 0, 0), SUBTLE("Subtle", .73, .72, 1.5, .7),
-        STANDARD("Standard", 1, 1, 2.5, 1.2), DEEP("Deep", 1.25, 1.24, 3.5, 1.7);
-
-        private final String label;
-        private final double width, gain, elevation, bend;
-
-        Level(String label, double width, double gain, double elevation, double bend) {
-            this.label = label;
-            this.width = width;
-            this.gain = gain;
-            this.elevation = elevation;
-            this.bend = bend;
-        }
-
-        public String label() { return label; }
-        /** Largest backdrop displacement inside the band, GUI px (owner, 2026-11-17: bend light). */
-        public double bend() { return bend; }
-    }
+    /*
+     * One frame strength (owner, 2026-11-18: "we don't need window bevel levels"). The former
+     * Subtle level read best; this is about 15% lighter (Subtle was .73 / .72 / 1.5 / .7).
+     */
+    /** Band width as a share of the frame's natural width. */
+    static final double WIDTH = .62;
+    /** Rim light, specular and ramp strength. */
+    static final double GAIN = .61;
+    /** Height above the backdrop: shadow offset and softness. */
+    static final double ELEVATION = 1.3;
+    /** Largest backdrop displacement inside the band, GUI px (owner, 2026-11-17: bend light). */
+    public static final double BEND = .6;
 
     /**
      * How much the band refracts at a Background Opacity (owner, 2026-11-17: "distortion and
@@ -78,7 +71,7 @@ public final class WindowBevel {
 
     public record Finish(int color, double rimGain, double specGain, double specPower, double ramp) {}
 
-    public static Finish finish(int windowFill, int outline, int blurRadius, Level level) {
+    public static Finish finish(int windowFill, int outline, int blurRadius) {
         double red = (windowFill >>> 16 & 255) / 255d;
         double green = (windowFill >>> 8 & 255) / 255d;
         double blue = (windowFill & 255) / 255d;
@@ -99,22 +92,22 @@ public final class WindowBevel {
         // window's own fill, rising to the solid bevel only as the window becomes opaque.
         int alpha = (int) Math.round(255 * Math.min(.92, density + (1 - density) * .10));
         int color = MaterialLighting.lightness(alpha << 24 | rgb, (float) (6 + 8 * metal + 3 * glass - 5 * light));
-        return new Finish(color, level.gain * (.9 + .24 * metal), level.gain * (.70 + .75 * gem + 1.05 * metal + .18 * glass),
-                18 + 22 * metal + 7 * gem, level.gain * (2 + 8 * metal + 2 * gem));
+        return new Finish(color, GAIN * (.9 + .24 * metal), GAIN * (.70 + .75 * gem + 1.05 * metal + .18 * glass),
+                18 + 22 * metal + 7 * gem, GAIN * (2 + 8 * metal + 2 * gem));
     }
 
     private static int mix(int fill, int outline, double tint, int shift) {
         return (int) Math.round((fill >>> shift & 255) * tint + (outline >>> shift & 255) * (1 - tint));
     }
 
-    public static double bandWidth(double shorterSide, double radius, double contentInset, Level level) {
+    public static double bandWidth(double shorterSide, double radius, double contentInset) {
         double target = Math.clamp(3.8 + shorterSide / 76 + .08 * Math.clamp(radius, 0, 20), 0, 8);
         return Math.max(0, Math.min(contentInset, Math.min(shorterSide * MaterialLighting.MAX_BAND_SHARE,
-                Math.min(8, Math.min(target, contentInset) * level.width))));
+                Math.min(8, Math.min(target, contentInset) * WIDTH))));
     }
 
-    public static double rasterBandWidth(double shorterSide, double radius, double contentInset, double pixelSize, Level level) {
-        return bandWidth(shorterSide, radius, contentInset - pixelSize / Math.sqrt(2), level);
+    public static double rasterBandWidth(double shorterSide, double radius, double contentInset, double pixelSize) {
+        return bandWidth(shorterSide, radius, contentInset - pixelSize / Math.sqrt(2));
     }
 
     /** Band cap for a window that keeps its content {@code UiDensity.FRAME_EDGE} inside every
@@ -136,7 +129,7 @@ public final class WindowBevel {
         private final double width, height, radius, band, aa, inset, offsetX, offsetY, softness, shadowAlpha;
         private final Finish finish;
 
-        public Raster(double width, double height, double radius, double band, double pixelSize, Finish finish, Level level) {
+        public Raster(double width, double height, double radius, double band, double pixelSize, Finish finish) {
             this.width = width;
             this.height = height;
             this.radius = Math.clamp(radius, 0, Math.min(width, height) * .5);
@@ -144,10 +137,10 @@ public final class WindowBevel {
             this.aa = pixelSize;
             this.finish = finish;
             inset = Math.max(this.radius, Math.max(band, aa * .5));
-            offsetX = level.elevation * MaterialLighting.SHADOW_X;
-            offsetY = level.elevation * MaterialLighting.SHADOW_Y;
-            softness = level.elevation * 2;
-            shadowAlpha = .21 + .035 * level.elevation;
+            offsetX = ELEVATION * MaterialLighting.SHADOW_X;
+            offsetY = ELEVATION * MaterialLighting.SHADOW_Y;
+            softness = ELEVATION * 2;
+            shadowAlpha = .21 + .035 * ELEVATION;
         }
 
         /** Both straight-edge spans share one sample; keep corners and shifted shadow ends scalar. */
