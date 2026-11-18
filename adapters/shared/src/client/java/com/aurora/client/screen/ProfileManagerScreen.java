@@ -207,8 +207,8 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         if (searchField == null) return;
         // pad: Button keeps 20 px around its label (it ellipsizes past w - 20), plus 2 of air.
         final int gap = 6, searchMin = 56, pad = 22;
-        int left = windowX() + 8;
-        int right = windowX() + windowWidth() - 8 - UiDensity.HEADER_BUTTON_W - gap;
+        int left = listX();
+        int right = windowX() + windowWidth() - UiDensity.FRAME_EDGE - UiDensity.HEADER_BUTTON_W - gap;
         String chipLabel = "Separate controls", folderLabel = "Open folder";
         int chipW = this.font.width(chipLabel) + pad, folderW = this.font.width(folderLabel) + pad;
         if (right - left - chipW - folderW - 2 * gap < searchMin) {
@@ -253,7 +253,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
     //  Foundation hooks
     // ------------------------------------------------------------------
 
-    @Override protected int listWidth() { return Math.max(CARD_MIN_W, windowWidth() - 16); }
+    @Override protected int listWidth() { return Math.max(CARD_MIN_W, frameListWidth()); }
     @Override protected int columns() { return Math.max(1, (listWidth() + CARD_GAP) / (CARD_MIN_W + CARD_GAP)); }
     @Override protected int columnGap() { return CARD_GAP; }
     @Override protected int rowGap() { return CARD_GAP; }

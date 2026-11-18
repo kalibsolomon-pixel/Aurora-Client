@@ -142,7 +142,7 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
         toolbarShown = anyWaypoints();
         super.init();
         if (!toolbarShown) return;
-        int left = (width - listWidth()) / 2;
+        int left = listX();
         search = new EditBox(font, left, windowTop() + HEADER_H, listWidth(), 14, Component.literal("Search waypoints"));
         search.setHint(Component.literal("Search name, group, dimension or description"));
         search.setValue(query);
@@ -190,7 +190,7 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
     //  Foundation hooks
     // ------------------------------------------------------------------
 
-    @Override protected int listWidth() { return windowWidth() - 16; }
+    @Override protected int listWidth() { return frameListWidth(); }
     @Override protected int rowHeight() { return ROW_H; }
     @Override protected int nameColumnWidth() { return nameWidth() - 16; }
     @Override protected int editorFieldX(int listX) {

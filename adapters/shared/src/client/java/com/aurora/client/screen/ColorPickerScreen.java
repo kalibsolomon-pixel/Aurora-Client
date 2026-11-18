@@ -180,8 +180,8 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
         // Actions: right-aligned inside the panel, primary rightmost (desktop
         // convention); the unsupported fallback keeps them centered at the bottom.
         int btnW = 64, btnH = bh;
-        int btnY = pickerSupportable ? panelY + panelH - 8 - btnH : ch - 32;
-        int applyX = pickerSupportable ? panelX + panelW - 12 - btnW : cw / 2 + 4;
+        int btnY = pickerSupportable ? panelY + panelH - com.aurora.client.ui.util.UiDensity.FRAME_EDGE - btnH : ch - 32;
+        int applyX = pickerSupportable ? panelX + panelW - com.aurora.client.ui.util.UiDensity.FRAME_EDGE - btnW : cw / 2 + 4;
         int cancelX = pickerSupportable ? applyX - 6 - btnW : cw / 2 - 4 - btnW;
         this.addRenderableWidget(ButtonWidget.semantic(
                 cancelX, btnY, btnW, btnH,
@@ -261,7 +261,7 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
         com.aurora.client.ui.component.GlassSurface.beginGlassPass();
         if (pickerSupportable) com.aurora.client.ui.component.GlassSurface.container(ctx,panelX,panelY,panelW,panelH,radius);
         com.aurora.client.ui.component.GlassSurface.overlayDim(ctx,this.width,this.height);
-        if (pickerSupportable) MaterialSurface.parent(ctx,panelX,panelY,panelW,panelH,radius,4);
+        if (pickerSupportable) MaterialSurface.parent(ctx,panelX,panelY,panelW,panelH,radius,MaterialSurface.frameInset(radius));
 
         super.extractRenderState(ctx, mouseX, mouseY, delta);
         Font tr = this.font;
@@ -271,7 +271,7 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
                 : ThemeManager.withAlpha(onOverlay, 0x99);
 
         if (pickerSupportable) ctx.text(tr, AuroraFontRenderer.ellipsize(tr, this.title.getString(), panelW - 24, 0),
-                panelX + 12, panelY + (com.aurora.client.ui.util.UiDensity.HEADER - tr.lineHeight) / 2 + 1, MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
+                panelX + 12, panelY + com.aurora.client.ui.util.UiDensity.headerTop(tr.lineHeight) + 1, MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
         else AuroraFontRenderer.drawCentered(ctx, tr, this.title, this.width / 2, 20, onOverlay);
 
         // C-8 short-window graceful fail: below the supportable minimum the

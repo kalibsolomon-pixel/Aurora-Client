@@ -147,7 +147,7 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
     // Sidebar nav tabs: one pitch drives every tab's Y (24px tab + 4px gap),
     // so the three gaps cannot drift apart. TAB_H must stay in sync with the
     // painted chip height below.
-    private static final float TAB_FIRST_Y = com.aurora.client.ui.util.UiDensity.HEADER + com.aurora.client.ui.util.UiDensity.INSET;
+    private static final float TAB_FIRST_Y = com.aurora.client.ui.util.UiDensity.HEADER + com.aurora.client.ui.util.UiDensity.FRAME_GAP;
     private static final float TAB_PITCH = com.aurora.client.ui.util.UiDensity.TAB_PITCH;
     private static final float TAB_H = com.aurora.client.ui.util.UiDensity.TAB_H;
     private static final float TAB_W = com.aurora.client.ui.util.UiDensity.TAB_W;
@@ -774,13 +774,14 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
         chromeLayout.begin(viewport);
         for (int index = 0; index < 3; index++) {
             String id = index == 2 ? "toolbar/profiles" : "toolbar/category/" + index;
-            float left = boxX() + 6 + (narrowNavigation() ? index * (TAB_W + 4) : 0);
-            float top = boxY() + (narrowNavigation() ? UiDensity.HEADER + UiDensity.INSET : TAB_FIRST_Y + index * TAB_PITCH);
+            float left = boxX() + UiDensity.FRAME_EDGE + (narrowNavigation() ? index * (TAB_W + 4) : 0);
+            float top = boxY() + (narrowNavigation() ? TAB_FIRST_Y : TAB_FIRST_Y + index * TAB_PITCH);
             chromeLayout.place(id, id, left, top, TAB_W, TAB_H, true);
         }
         float left = boxX() + UiDensity.SIDEBAR + UiDensity.INSET;
-        float top = boxY() + (UiDensity.HEADER - TOOL) / 2f;
-        int searchWidth = Math.max(1, (int) BOX_W - UiDensity.SIDEBAR - UiDensity.INSET - (int) (2 * TOOL_STEP) - 12);
+        float top = boxY() + UiDensity.headerY(TOOL);
+        // The toolbar ends where the scrollbar does, at the frame room.
+        int searchWidth = Math.max(1, (int) BOX_W - UiDensity.SIDEBAR - UiDensity.INSET - (int) (2 * TOOL_STEP) - UiDensity.FRAME_EDGE);
         if (selectedCategory == 0) {
             chromeLayout.place("toolbar/list", "toolbar/list", left, top, TOOL, TOOL, true);
             chromeLayout.place("toolbar/grid", "toolbar/grid", left + TOOL_STEP, top, TOOL, TOOL, true);
@@ -821,7 +822,7 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
     private float boxX() { return (float) Math.floor((this.width - BOX_W) / 2.0f); }
     private float boxY() { return (float) Math.floor((this.height - BOX_H) / 2.0f); }
 
-    private float mainX() { return boxX() + (narrowNavigation() ? 8 : com.aurora.client.ui.util.UiDensity.SIDEBAR + com.aurora.client.ui.util.UiDensity.INSET); }
+    private float mainX() { return boxX() + (narrowNavigation() ? UiDensity.FRAME_EDGE : UiDensity.SIDEBAR + UiDensity.INSET); }
     private ClipBand contentViewport() {
         return selectedCategory == 1 && laidOutSettingsBand == measuredContent
                 && laidOutPage == pageEntries() ? settingsLayout.viewport() : measuredContent;
@@ -1052,9 +1053,7 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
 
         // Cached chrome — one textured blit (a content layer above the dim,
         // exactly where it always sat).
-        if (windowBevel) MaterialSurface.parent(g, boxX(), boxY(), BOX_W, BOX_H, radius,
-                Math.min((UiDensity.HEADER - TOOL) / 2f, MaterialSurface.windowCornerClearance(radius, 12,
-                        AuroraFontRenderer.textY(font, boxY(), com.aurora.client.ui.util.UiDensity.HEADER) - boxY())));
+        if (windowBevel) MaterialSurface.parent(g, boxX(), boxY(), BOX_W, BOX_H, radius, MaterialSurface.frameInset(radius));
         else layerCache.blitAt(g, cacheX, cacheY, cacheW, cacheH);
 
         renderLive(g, mods, mouseX, mouseY, delta);
@@ -1210,7 +1209,7 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
         // Window identity: AURORA text only (owner ruling 2026-10-06), in the title role so it
         // reads as the window's name rather than one more label (UI polish 2026-11-14).
         g.text(tr, com.aurora.client.ui.util.AuroraFontRenderer.role("AURORA", com.aurora.client.ui.util.AuroraFontRenderer.Role.TITLE),
-                (int) bx + 12, (int) AuroraFontRenderer.textY(tr, by, com.aurora.client.ui.util.UiDensity.HEADER), MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
+                (int) bx + UiDensity.TITLE_X, (int) AuroraFontRenderer.textY(tr, by + UiDensity.FRAME_EDGE, TOOL), MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
 
         String[] cats = {"Features", "Settings"};
         for (int i = 0; i < 2; i++) {
@@ -1233,7 +1232,7 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
             // Raised glass was painted pre-dim: neutral for the inactive tab,
             // accent-stained for the selected tab. Preserve the established
             // flat fallback if the glass renderer declines this frame.
-            if(MaterialSurface.unified()) MaterialSurface.selection(g,catX,catY,56,TAB_H,ctrlRadius,sel,hoverT,true);
+            if(MaterialSurface.unified()) MaterialSurface.selection(g,catX,catY,TAB_W,TAB_H,ctrlRadius,sel,hoverT,true);
             else if (!chipGlass[i]) {
                 if (sel) {
                     RenderUtil.drawRoundedRectAA(g, catX, catY, TAB_W, TAB_H, ctrlRadius,
@@ -1273,7 +1272,7 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
         }
         // Profiles is neutral raised glass; retain its hover fallback when
         // live glass is unavailable.
-        if(MaterialSurface.unified()) MaterialSurface.selection(g,profX,profY,56,TAB_H,ctrlRadius,false,profT,true);
+        if(MaterialSurface.unified()) MaterialSurface.selection(g,profX,profY,TAB_W,TAB_H,ctrlRadius,false,profT,true);
         else if (!profGlass && profT > 0f) {
             RenderUtil.drawRoundedRectAA(g, profX, profY, TAB_W, TAB_H, ctrlRadius,
                     AuroraAnim.lerpArgb(0x00000000,
@@ -2031,8 +2030,8 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
         ScrollbarChrome.Thumb thumb = thumb(maxScroll);
         // The thumb is a capsule in the toggle-track/slider-track family; its
         // corners follow the theme's Corner Radius like theirs (ScrollbarChrome).
-        ScrollbarChrome.track(g, (int) mainX() + contentWidth() + 4, viewTop(), viewBot() - viewTop(), ThemeToken.ON_BACKGROUND);
-        ScrollbarChrome.draw(g, (int) mainX() + contentWidth() + 4, thumb,
+        ScrollbarChrome.track(g, (int) mainX() + contentWidth() + UiDensity.SCROLLBAR_GAP, viewTop(), viewBot() - viewTop(), ThemeToken.ON_BACKGROUND);
+        ScrollbarChrome.draw(g, (int) mainX() + contentWidth() + UiDensity.SCROLLBAR_GAP, thumb,
                 scrolls[selectedCategory].isDragging(), ThemeToken.ON_BACKGROUND);
     }
 

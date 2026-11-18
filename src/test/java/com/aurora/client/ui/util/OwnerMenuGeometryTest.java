@@ -11,7 +11,7 @@ class OwnerMenuGeometryTest {
     @Test void detailIdentityReclaimsTheLogoBandAtTheOrdinaryContentInset() throws Exception {
         for (int[] viewport : new int[][]{{854,480},{640,360},{320,240},{240,180}}) {
             var frame = UiDensity.detailFrame(viewport[0], viewport[1]);
-            assertEquals(frame.x() + 12, UiDensity.detailTitleX(frame));
+            assertEquals(frame.x() + UiDensity.FRAME_EDGE + 4, UiDensity.detailTitleX(frame)); // title column = row labels (2026-11-18)
             assertTrue(UiDensity.detailTitleX(frame) < frame.x() + 40);
         }
         String detail = Files.readString(SourceTree.resolve(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/FeatureDetailScreen.java"));

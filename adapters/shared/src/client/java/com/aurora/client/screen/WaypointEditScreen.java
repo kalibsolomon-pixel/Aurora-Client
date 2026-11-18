@@ -100,10 +100,10 @@ public final class WaypointEditScreen extends Screen implements ThemedScreen {
                 }));
         navigate.active = !creating;
         // Actions anchored to the window's bottom edge; the primary action is rightmost.
-        int bw = 72, by = top + frameHeight - 8 - bh;
-        addRenderableWidget(ButtonWidget.semantic(left + panelWidth - 12 - bw - 4 - bw, by, bw, bh,
+        int bw = 72, by = top + frameHeight - com.aurora.client.ui.util.UiDensity.FRAME_EDGE - bh;
+        addRenderableWidget(ButtonWidget.semantic(left + panelWidth - com.aurora.client.ui.util.UiDensity.FRAME_EDGE - bw - 4 - bw, by, bw, bh,
                 Component.literal("Cancel"), "Discards this edit.", this::onClose));
-        addRenderableWidget(ButtonWidget.semantic(left + panelWidth - 12 - bw, by, bw, bh,
+        addRenderableWidget(ButtonWidget.semantic(left + panelWidth - com.aurora.client.ui.util.UiDensity.FRAME_EDGE - bw, by, bw, bh,
                 Component.literal("Save"), "Saves this waypoint in the current world.", this::save)
                 .glassStyle(Button.GlassStyle.STAINED).primary(true));
         setInitialFocus(fields[0]);
@@ -198,11 +198,11 @@ public final class WaypointEditScreen extends Screen implements ThemedScreen {
     @Override public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float delta) {
         int radius = ThemeManager.current().roundness().radius();
         if (MaterialSurface.windowBevelEnabled()) {
-            com.aurora.client.ui.component.GlassSurface.window(g, left, top, panelWidth, frameHeight, radius, 4, width, height);
+            com.aurora.client.ui.component.GlassSurface.window(g, left, top, panelWidth, frameHeight, radius, com.aurora.client.ui.component.MaterialSurface.frameInset(radius), width, height);
         } else {
             MaterialSurface.floatingPanel(g, left, top, panelWidth, frameHeight, radius);
         }
-        int headerMid = top + com.aurora.client.ui.util.UiDensity.HEADER / 2;
+        int headerMid = top + com.aurora.client.ui.util.UiDensity.FRAME_EDGE + com.aurora.client.ui.util.UiDensity.TOOL / 2;
         com.aurora.client.worldmap.MapMarkers.waypoint(g, left + 16, headerMid, draft, false);
         // A validation error replaces the heading in the semantic error color, so
         // it reads as feedback rather than as a renamed dialog.

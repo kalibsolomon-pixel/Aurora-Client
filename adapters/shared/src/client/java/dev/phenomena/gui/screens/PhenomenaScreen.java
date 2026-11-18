@@ -109,9 +109,9 @@ public final class PhenomenaScreen extends Screen implements com.aurora.client.u
     var bounds = com.aurora.client.ui.util.UiDensity.window(width, height);
     frame = new Rect(bounds.x(), bounds.y(), bounds.width(), bounds.height());
     headerH = com.aurora.client.ui.util.UiDensity.HEADER;
-    tabsY = frame.y() + headerH;
+    tabsY = frame.y() + headerH + com.aurora.client.ui.util.UiDensity.FRAME_GAP;
     int tabH = compact ? 16 : 18;
-    var tabRects = Layout.segments(frame.x() + 6, tabsY, frame.w() - 12, tabH, Tab.values().length, 2);
+    var tabRects = Layout.segments(frame.x() + com.aurora.client.ui.util.UiDensity.FRAME_EDGE, tabsY, frame.w() - 2 * com.aurora.client.ui.util.UiDensity.FRAME_EDGE, tabH, Tab.values().length, 2);
     for (var t : Tab.values()) {
       var r = tabRects.get(t.ordinal());
       var b =
@@ -126,7 +126,7 @@ public final class PhenomenaScreen extends Screen implements com.aurora.client.u
     var page = page();
 
     // Toolbar widgets right-aligned on the title row.
-    int tx = frame.right() - 6;
+    int tx = frame.right() - com.aurora.client.ui.util.UiDensity.FRAME_EDGE;
     int toolH = compact ? 13 : 14;
     var tools = page.toolbar(this);
     for (int i = tools.size() - 1; i >= 0; i--) {
@@ -144,7 +144,7 @@ public final class PhenomenaScreen extends Screen implements com.aurora.client.u
     if (!sections.isEmpty()) {
       var rects =
           Layout.wrap(
-              sections, s -> font.width(s), frame.x() + 6, y, frame.w() - 12, compact ? 13 : 14, 6, 3);
+              sections, s -> font.width(s), frame.x() + com.aurora.client.ui.util.UiDensity.FRAME_EDGE, y, frame.w() - 2 * com.aurora.client.ui.util.UiDensity.FRAME_EDGE, compact ? 13 : 14, 6, 3);
       for (int i = 0; i < sections.size(); i++) {
         int idx = i;
         var r = rects.get(i);
@@ -165,9 +165,10 @@ public final class PhenomenaScreen extends Screen implements com.aurora.client.u
       }
       y += Layout.rowsHeight(rects, y) + (compact ? 5 : 7);
     }
-    int footerH = compact ? 20 : 24;
+    // The status line keeps the frame room under it (one text line above FRAME_EDGE).
+    int footerH = (compact ? 15 : 19) + com.aurora.client.ui.util.UiDensity.FRAME_EDGE;
     panel = frame;
-    viewport = new Rect(frame.x() + 6, y, frame.w() - 16, Math.max(20, frame.bottom() - footerH - y - 4));
+    viewport = new Rect(frame.x() + com.aurora.client.ui.util.UiDensity.FRAME_EDGE, y, frame.w() - com.aurora.client.ui.util.UiDensity.FRAME_EDGE - com.aurora.client.ui.util.UiDensity.scrollRightInset(), Math.max(20, frame.bottom() - footerH - y - 4));
     Viewport.set(viewport);
 
     var content = new Content(this, viewport.w(), compact);
@@ -184,8 +185,8 @@ public final class PhenomenaScreen extends Screen implements com.aurora.client.u
     var close =
         new KButton("Done", KButton.Style.PRIMARY, this::onClose).tooltip("Escape or the menu key");
     close.size(48, 16);
-    close.setX(frame.right() - 54);
-    close.setY(frame.y() + 4);
+    close.setX(frame.right() - com.aurora.client.ui.util.UiDensity.FRAME_EDGE - 48);
+    close.setY(frame.y() + com.aurora.client.ui.util.UiDensity.headerTop(16));
     addRenderableWidget(close);
     builtVersion = PhenomenaClient.historyVersion;
   }
@@ -369,7 +370,7 @@ public final class PhenomenaScreen extends Screen implements com.aurora.client.u
 
   private Rect scrollTrack() {
     if (viewport == null || contentHeight <= viewport.h()) return null;
-    return new Rect(viewport.right() + 4, viewport.y(), 3, viewport.h());
+    return new Rect(viewport.right() + com.aurora.client.ui.util.UiDensity.SCROLLBAR_GAP, viewport.y(), com.aurora.client.ui.util.UiDensity.SCROLLBAR_W, viewport.h());
   }
 
   @Override
@@ -514,18 +515,19 @@ public final class PhenomenaScreen extends Screen implements com.aurora.client.u
     com.aurora.client.ui.component.GlassSurface.overlayDim(g, width, height);
     if (com.aurora.client.ui.component.MaterialSurface.windowBevelEnabled())
       com.aurora.client.ui.component.MaterialSurface.parent(g, frame.x(), frame.y(), frame.w(), frame.h(), Theme.radius(),
-          com.aurora.client.ui.component.MaterialSurface.windowCornerClearance(Theme.radius(), 6, 4));
+          com.aurora.client.ui.component.MaterialSurface.frameInset(Theme.radius()));
     else window.renderShapes(g, frame.x(), frame.y(), frame.w(), frame.h(), captured);
     g.text(font, com.aurora.client.ui.util.AuroraFontRenderer.role("Pulsar", com.aurora.client.ui.util.AuroraFontRenderer.Role.TITLE),
-        frame.x() + 12, frame.y() + 7, Theme.TEXT(), false);
+        frame.x() + com.aurora.client.ui.util.UiDensity.TITLE_X, com.aurora.client.ui.util.AuroraFontRenderer.roleTextY(font, frame.y() + com.aurora.client.ui.util.UiDensity.FRAME_EDGE, com.aurora.client.ui.util.UiDensity.TOOL,
+            com.aurora.client.ui.util.AuroraFontRenderer.Role.TITLE), Theme.TEXT(), false);
     int toolsLeft = frame.right();
     for (var child : children())
       if (child instanceof AbstractWidget widget && widget.getY() == titleY - 3)
         toolsLeft = Math.min(toolsLeft, widget.getX());
     Component title = com.aurora.client.ui.util.AuroraFontRenderer.role(page().title(), com.aurora.client.ui.util.AuroraFontRenderer.Role.HEADING);
-    g.text(font, title, frame.x() + 6, titleY, Theme.TEXT(), false);
+    g.text(font, title, frame.x() + com.aurora.client.ui.util.UiDensity.FRAME_EDGE, titleY, Theme.TEXT(), false);
     String context = page().context();
-    int contextX = frame.x() + 12 + font.width(title);
+    int contextX = frame.x() + com.aurora.client.ui.util.UiDensity.FRAME_EDGE + 6 + font.width(title);
     if (context != null && toolsLeft - contextX > 40)
       g.text(font, KButton.fit(font, context, toolsLeft - contextX - 6), contextX, titleY + 1, Theme.DIM(), false);
     super.extractRenderState(g, mx, my, delta);
@@ -554,19 +556,19 @@ public final class PhenomenaScreen extends Screen implements com.aurora.client.u
     }
     // Hairline at the top of the footer band: the status line is not clipped content.
     int rule = viewport.y() + viewport.h() + 2;
-    Pixel.fillLogical(g, frame.x() + 6, rule, frame.x() + frame.w() - 6, rule + 1, Theme.BORDER());
+    Pixel.fillLogical(g, frame.x() + com.aurora.client.ui.util.UiDensity.FRAME_EDGE, rule, frame.x() + frame.w() - com.aurora.client.ui.util.UiDensity.FRAME_EDGE, rule + 1, Theme.BORDER());
     if (keyCapture == null && getFocused() instanceof ReadableBlock readable && KButton.keyboardFocus(readable)) {
       // The keyboard readout has its own band: the footer, never over content.
-      var lines = TextLayout.lines(font, readable.description(), frame.w() - 12, 2);
-      int ly = lines.size() == 1 ? frame.bottom() - 13 : Math.min(rule + 3, frame.bottom() - 21);
+      var lines = TextLayout.lines(font, readable.description(), frame.w() - 2 * com.aurora.client.ui.util.UiDensity.FRAME_EDGE, 2);
+      int ly = lines.size() == 1 ? frame.bottom() - com.aurora.client.ui.util.UiDensity.FRAME_EDGE - 8 : Math.min(rule + 3, frame.bottom() - com.aurora.client.ui.util.UiDensity.FRAME_EDGE - 18);
       for (var line : lines) {
-        g.text(font, line, frame.x() + 6, ly, Theme.TEXT(), false);
+        g.text(font, line, frame.x() + com.aurora.client.ui.util.UiDensity.FRAME_EDGE, ly, Theme.TEXT(), false);
         ly += 10;
       }
     } else {
       String footer = keyCapture != null ? "Press a key. Escape cancels."
           : Notices.recent() ? Notices.text : liveStatus();
-      g.text(font, KButton.fit(font, footer, frame.w() - 12), frame.x() + 6, frame.bottom() - 13,
+      g.text(font, KButton.fit(font, footer, frame.w() - 2 * com.aurora.client.ui.util.UiDensity.FRAME_EDGE), frame.x() + com.aurora.client.ui.util.UiDensity.FRAME_EDGE, frame.bottom() - com.aurora.client.ui.util.UiDensity.FRAME_EDGE - 8,
           Notices.recent() && Notices.level == Notices.Level.ERROR ? Theme.ERROR() : Theme.MUTED(), false);
     }
     if (closingDropdown != null && closingDropdown.finished()) closingDropdown = null;

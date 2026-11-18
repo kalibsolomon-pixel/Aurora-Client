@@ -8,12 +8,13 @@ class CompactGeometryTest {
         var frame = UiDensity.mainFrame(640, 360);
         var body = UiDensity.mainContent(frame);
         assertEquals(336, frame.width()); assertEquals(288, frame.height());
-        assertEquals(254, body.width()); assertEquals(252, body.height());
+        // The frame room (2026-11-18) keeps 10 px on every edge for the bevel band and its gap.
+        assertEquals(252, body.width()); assertEquals(248, body.height());
         assertEquals(80, UiDensity.CARD_WIDTH); // feature cards keep their original size
         assertEquals(3, UiDensity.columns(body.width()));
-        // the owner's 3×3 target: three card rows fit, a fourth does not
-        assertTrue(UiDensity.extent(3, UiDensity.CARD_HEIGHT, UiDensity.GRID_GAP) <= body.height());
-        assertTrue(UiDensity.extent(4, UiDensity.CARD_HEIGHT, UiDensity.GRID_GAP) > body.height());
+        // the owner's "approximately 3×3" target: the third card row shows all but its last 4 px
+        assertTrue(UiDensity.extent(3, UiDensity.CARD_HEIGHT, UiDensity.GRID_GAP) - body.height() <= 4);
+        assertTrue(UiDensity.extent(2, UiDensity.CARD_HEIGHT, UiDensity.GRID_GAP) + UiDensity.GRID_GAP < body.height());
         assertTrue(UiDensity.extent(9, UiDensity.LIST_HEIGHT, UiDensity.LIST_GAP) <= body.height());
         assertTrue(UiDensity.extent(10, UiDensity.LIST_HEIGHT, UiDensity.LIST_GAP) > body.height());
     }
@@ -31,9 +32,9 @@ class CompactGeometryTest {
             assertTrue(frame.x() >= 8 && frame.y() >= 8);
             assertTrue(frame.x()+frame.width() <= size[0]-8);
             assertTrue(frame.y()+frame.height() <= size[1]-8);
-            assertTrue(body.x() >= frame.x() && body.y() >= frame.y());
-            assertTrue(body.x()+body.width() <= frame.x()+frame.width());
-            assertTrue(body.y()+body.height() <= frame.y()+frame.height());
+            assertTrue(body.x() >= frame.x() + UiDensity.FRAME_EDGE && body.y() >= frame.y() + UiDensity.FRAME_EDGE);
+            assertTrue(body.x()+body.width() + UiDensity.SCROLLBAR_GAP + UiDensity.SCROLLBAR_W <= frame.x()+frame.width() - UiDensity.FRAME_EDGE);
+            assertTrue(body.y()+body.height() <= frame.y()+frame.height() - UiDensity.FRAME_EDGE);
             var detail = UiDensity.detailFrame(size[0], size[1]);
             assertTrue(detail.width() <= UiDensity.WINDOW_WIDTH && detail.height() <= UiDensity.WINDOW_HEIGHT);
             assertTrue(detail.x() >= 12 && detail.y() >= 12);

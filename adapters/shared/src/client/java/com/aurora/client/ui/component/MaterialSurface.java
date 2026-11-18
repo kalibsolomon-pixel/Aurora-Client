@@ -64,6 +64,11 @@ public final class MaterialSurface {
         return ThemeManager.current().windowBevel() != WindowBevel.Level.OFF;
     }
 
+    /** Band cap for a window whose content keeps the shared frame room ({@code UiDensity.FRAME_EDGE}). */
+    public static float frameInset(float radius) {
+        return WindowBevel.frameInset(radius);
+    }
+
     public static float windowCornerClearance(float radius, float horizontal, float vertical) {
         return WindowBevel.cornerClearance(radius, horizontal, vertical);
     }

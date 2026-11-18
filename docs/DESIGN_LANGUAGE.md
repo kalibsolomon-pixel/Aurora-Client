@@ -439,9 +439,22 @@ wraps only at whole-word boundaries. See `UNIFIED_THEME_PILOT.md`.
 **Window Bevel** sets the frame depth: Off (legacy flat trim), Subtle, Standard (default),
 or Deep. The shared upper-left light rounds the outer frame into a pillow on round themes
 and makes planar facets as Corner Radius approaches zero. The directional baked shadow
-falls down and right. Only the frame band is shaded: it narrows to leave existing text,
-controls and scroll clips alone. The bevel replaces the old window outline rather than
-stacking over it.
+falls down and right. Only the frame band is shaded. The bevel replaces the old window
+outline rather than stacking over it.
+
+**Frame room** (owner, 2026-11-18). Windows pad their content for the band instead of
+thinning the band to fit the content. Every window keeps its boxes (controls, rows, fields,
+scroll clips and scrollbars) `UiDensity.FRAME_EDGE` = 10 GUI px inside its outer edge. The
+band takes up to `FRAME_BAND` = 6 px of that, and the remaining 4 px is the gap to content.
+Callers pass `MaterialSurface.frameInset(radius)` as the band cap. That cap narrows only
+where a large Corner Radius bends the corner toward the content. Header buttons and
+toolbars sit on one row from 10 to 26 px (`UiDensity.HEADER`), and the body starts 4 px
+below it. A scrolling column ends 16 px from the right edge: the 3 px scrollbar, its 3 px
+gap and the frame room. Free text in a window's own column (window titles) starts at
+`UiDensity.TITLE_X` = 14 px, where labels inside full-width rows start, so a title and the
+rows under it share one column. Small dialogs keep their 12 px control column. A modal
+padded wider than the frame room, such as the pack browser's detail modal, may cap its band
+at its own clearance. `WindowFrameRoomTest` checks these rules.
 
 The finish is continuous, not a preset selector. Dark low-density fills with higher blur
 give a clear glass edge; saturated fills around 50% give a coloured gem highlight; dense
@@ -1517,14 +1530,15 @@ cards keep their original 80×80 size; the window must not be oversized for the 
   the frame for the main screen, every feature detail screen, the Profile and Waypoint
   managers, the waypoint editor, color picker, mapping data and the resource-pack browser
   (which runs its layout inside the frame as a translated viewport). The content well
-  (254×252) shows exactly a 3×3 grid of the 80×80 cards — the owner's target; the first
-  draft of the pass was 420×272 with 4 columns. The title screen,
+  (252×248 since the 2026-11-18 frame room; 254×252 before) shows a 3×3 grid of the 80×80
+  cards, the third row all but its last 4 px — the owner's "approximately 3×3" target. The
+  first draft of the pass was 420×272 with 4 columns. The title screen,
   HUD editor and the full-screen world map are not windows and keep their layouts.
 - **Compact text.** Inside Aurora windows (`ThemedScreen.compactText`, default = windowed
   hosts) text uses `<font>_ui`, the same bundled face rasterized at 8 instead of 9 px —
   crisp, no pose scaling; measurement uses the same style. Vanilla-font users
   (SansSerif / renderer Off) keep vanilla text.
-- **Compact metrics** (`UiDensity`): 24 px header band with 16 px header buttons; setting rows
+- **Compact metrics** (`UiDensity`): 26 px header band (the 10 px frame room, then a 16 px row of header buttons); setting rows
   18 px (sliders 20, wrapped 28) with 2 px gaps; 14 px field controls (dropdown 84 wide,
   keybind/action 72); 24×12 toggles; 14×14 square color swatches (accent presets the same
   squares, its Custom slot a wider labeled pill); 4.5 px slider knob (5 before 2026-11-14); section band 8 px.

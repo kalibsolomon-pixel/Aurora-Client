@@ -118,18 +118,20 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
     @Override public boolean parentGlassOnly() { return true; }
 
     // ---- Layout constants ----
-    private static final int SIDEBAR_W      = 104;
-    private static final int SIDEBAR_PAD    = 6;
-    private static final int TOP_BAR_H      = 30;
+    // The frame room (com.aurora.client.ui.util.UiDensity.FRAME_EDGE) sits outside the sidebar, the
+    // top bar and the scrollbar, so the window bevel never crowds them.
+    private static final int SIDEBAR_PAD    = com.aurora.client.ui.util.UiDensity.FRAME_EDGE;
+    private static final int SIDEBAR_W      = 88 + 2 * SIDEBAR_PAD;
+    private static final int TOP_BAR_H      = com.aurora.client.ui.util.UiDensity.HEADER + 8;
     /** Card grid: one column that DERIVES from the frame (owner ruling
      *  2026-10-30 — the old fixed 260 px cards overflowed the 336-wide
      *  uniform window; everything below keys off {@link #cardW()}). */
     private static final int CARD_MIN_W     = 180;
     private static final int CARD_H         = 72;
     private static final int CARD_GAP       = 6;
-    /** Right gutter inside the frame: scrollbar track + inset from the
-     *  window's rounded border. */
-    private static final int RIGHT_PAD      = 14;
+    /** Right gutter inside the frame: the frame room, the 4 px scrollbar
+     *  track and its gap from the cards. */
+    private static final int RIGHT_PAD      = com.aurora.client.ui.util.UiDensity.FRAME_EDGE + 4 + com.aurora.client.ui.util.UiDensity.SCROLLBAR_GAP;
     private static final int LIST_TOP       = TOP_BAR_H + 10;
     private static final int LIST_BOTTOM_PAD = 16;
     private static final int THUMB_SIZE     = 48;
@@ -581,17 +583,17 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
     protected void init() {
         frameViewport();
         // Search bar — positioned to the right of the sidebar.
-        int fieldX = SIDEBAR_W + 16;
-        int fieldW = Math.max(40, this.width - fieldX - com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_W - 22);
+        int fieldX = SIDEBAR_W + 12;
+        int fieldW = Math.max(40, this.width - fieldX - com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_W - 6 - com.aurora.client.ui.util.UiDensity.FRAME_EDGE);
         searchField = new EditBox(Minecraft.getInstance().font,
-                fieldX, 7, fieldW, 16, Component.literal("Search resource packs"));
+                fieldX, com.aurora.client.ui.util.UiDensity.headerTop(16), fieldW, 16, Component.literal("Search resource packs"));
         searchField.setMaxLength(80);
         searchField.setHint(Component.literal("Search resource packs on Modrinth…"));
         searchField.setResponder(s -> { lastTypedMs = System.currentTimeMillis(); });
         this.addRenderableWidget(searchField);
 
         doneBtn = ButtonWidget.semantic(
-                this.width - com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_W - 12, 7, com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_W, com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_H,
+                this.width - com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_W - com.aurora.client.ui.util.UiDensity.FRAME_EDGE, com.aurora.client.ui.util.UiDensity.headerTop(com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_H), com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_W, com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_H,
                 Component.literal("Done"),
                 "Close this screen and return.",
                 this::onClose).glassBackground(true);
@@ -797,7 +799,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         screenSpace(g, () -> { GlassSurface.overlayDim(g, fullW, fullH,
                 ThemeManager.withAlpha(ThemeManager.color(ThemeToken.OVERLAY_DIM), 0x55)); return null; });
 
-        MaterialSurface.parent(g,0,0,this.width,this.height,AuroraTheme.RADIUS_LARGE,3);
+        MaterialSurface.parent(g,0,0,this.width,this.height,AuroraTheme.RADIUS_LARGE,MaterialSurface.frameInset(AuroraTheme.RADIUS_LARGE));
 
         // ---- 3. Content ----
         // ---- Sidebar ----
@@ -2038,13 +2040,13 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
      *  centered (the old centering went NEGATIVE with wide cards and pushed
      *  the grid outside the window on both sides). */
     private int gridLeft() {
-        return SIDEBAR_W + 16;
+        return SIDEBAR_W + 12;
     }
 
     /** Scrollbar track X — inside the window's right gutter (the old
      *  gridRight+8 put the track outside the 336-wide frame entirely). */
     private int scrollbarTrackX() {
-        return this.width - RIGHT_PAD + 5;
+        return this.width - RIGHT_PAD + com.aurora.client.ui.util.UiDensity.SCROLLBAR_GAP;
     }
 
     /** Card columns that fit the content column; one at the 336-wide frame. */

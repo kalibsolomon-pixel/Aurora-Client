@@ -41,18 +41,18 @@ public final class MappingDataScreen extends Screen implements ThemedScreen {
         waypoints.active = identity != null;
         // Done is dismissal, not a third peer of the two import actions: a compact
         // trailing button like every other Aurora dialog footer.
-        addRenderableWidget(ButtonWidget.semantic(x + w - 12 - 64, y + h - 8 - bh, 64, bh,
+        addRenderableWidget(ButtonWidget.semantic(x + w - com.aurora.client.ui.util.UiDensity.FRAME_EDGE - 64, y + h - com.aurora.client.ui.util.UiDensity.FRAME_EDGE - bh, 64, bh,
                 Component.literal("Done"), "Return to map settings.", this::onClose));
     }
     @Override public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float delta) {
         int radius = ThemeManager.current().roundness().radius();
         if (MaterialSurface.windowBevelEnabled()) {
-            com.aurora.client.ui.component.GlassSurface.window(g, x, y, w, h, radius, 6, width, height);
+            com.aurora.client.ui.component.GlassSurface.window(g, x, y, w, h, radius, com.aurora.client.ui.component.MaterialSurface.frameInset(radius), width, height);
         } else {
             MaterialSurface.floatingPanel(g, x, y, w, h, radius);
         }
         // Title shares the dialog's left content edge (no centered, shadowed heading).
-        g.text(font, title, x + 12, y + (com.aurora.client.ui.util.UiDensity.HEADER - font.lineHeight) / 2 + 1, ThemeManager.color(ThemeToken.ON_SURFACE), false);
+        g.text(font, title, x + 12, y + com.aurora.client.ui.util.UiDensity.headerTop(font.lineHeight) + 1, ThemeManager.color(ThemeToken.ON_SURFACE), false);
         String text = "Older folders used world display names. Only import if this is the original world. "
                 + "Copied data stays isolated here; original files remain untouched.";
         int lineY = y + com.aurora.client.ui.util.UiDensity.HEADER + 4;
@@ -62,7 +62,7 @@ public final class MappingDataScreen extends Screen implements ThemedScreen {
         var engine = WorldMapClient.get();
         String message = status.isEmpty() && engine != null ? engine.importStatus() : status;
         g.text(font, com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(font, message, w - 24 - 64 - 8, 1),
-                x + 12, y + h - 8 - (com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_H + font.lineHeight) / 2, ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
+                x + 12, y + h - com.aurora.client.ui.util.UiDensity.FRAME_EDGE - (com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_H + font.lineHeight) / 2, ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
         super.extractRenderState(g, mx, my, delta);
     }
     @Override public void onClose() { com.aurora.client.adapter.NativeUi.setScreen(minecraft, parent); }
