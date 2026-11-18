@@ -228,6 +228,7 @@ public class AuroraConfig {
     }
 
     public TextRendererMode textRendererMode = TextRendererMode.AURORA_ONLY;
+    public boolean textSdf = false;
     public FontType activeFont = FontType.INTER;
 
     // ---- Text options (Settings → Appearance → Text, 2026-11-12) ----

@@ -1131,6 +1131,9 @@ addWithSettings("hitbox",
                                 () -> cfg.textWeight, v -> { cfg.textWeight = v; persistThemeChange(); }).resetDefault(() -> defaults.textWeight)
                                 .labels(AuroraConfig.TextWeight::getLabel)
                                 .description("How heavy the letters are. Every weight is a real font file, not a smeared bold; Quicksand has one weight."),
+                        new BooleanSetting("Smooth Scaling (SDF)", () -> cfg.textSdf,
+                                v -> { cfg.textSdf = v; persistThemeChange(); }).resetDefault(() -> defaults.textSdf)
+                                .description("Renders the custom font with distance-field glyphs so scaled text stays sharp."),
                         new ToggleGroupSetting("Modifiers", List.of(
                                 new ToggleGroupSetting.Toggle("Italic", () -> cfg.textItalic, v -> { cfg.textItalic = v; persistThemeChange(); }),
                                 new ToggleGroupSetting.Toggle("Underline", () -> cfg.textUnderline, v -> { cfg.textUnderline = v; persistThemeChange(); })))

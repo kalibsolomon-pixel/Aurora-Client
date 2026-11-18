@@ -281,7 +281,8 @@ public class AuroraFontRenderer {
             return null;
         }
         boolean compact = compactUi();
-        int key = styleKey(cfg, compact);
+        boolean sdf = useSdf(cfg);
+        int key = styleKey(cfg, compact, sdf);
         if (key == cachedKey && cachedStyle != null) {
             return cachedStyle;
         }
@@ -292,6 +293,7 @@ public class AuroraFontRenderer {
         boolean realItalic = italic && hasItalicFile(active);
         // Provider ids follow tools/build_fonts.py: <family>_<weight>[_italic][_ui].
         String path = family + "_" + weight.suffix() + (realItalic ? "_italic" : "") + (compact ? "_ui" : "");
+        if (sdf) path += "_sdf";
         net.minecraft.network.chat.Style style = net.minecraft.network.chat.Style.EMPTY.withFont(
                 new net.minecraft.network.chat.FontDescription.Resource(
                         net.minecraft.resources.Identifier.fromNamespaceAndPath("aurora", path)));
@@ -317,6 +319,14 @@ public class AuroraFontRenderer {
     }
 
     private static int styleKey(AuroraConfig cfg, boolean compact) {
+        return styleKey(cfg, compact, useSdf(cfg));
+    }
+
+    private static boolean useSdf(AuroraConfig cfg) {
+        return com.aurora.client.ui.text.SdfTextSupport.resolveSdfStyle(cfg);
+    }
+
+    private static int styleKey(AuroraConfig cfg, boolean compact, boolean sdf) {
         int key = cfg.activeFont == null ? 0 : cfg.activeFont.ordinal() + 1;
         key = key * 8 + (cfg.textWeight == null ? 1 : cfg.textWeight.ordinal());
         key = key * 4 + (cfg.textCase == null ? 0 : cfg.textCase.ordinal());
@@ -324,7 +334,8 @@ public class AuroraFontRenderer {
         key = key * 2 + (cfg.textItalic ? 1 : 0);
         key = key * 2 + (cfg.textUnderline ? 1 : 0);
         key = key * 16 + AuroraFontQuality.rasterScale(); // a re-raster changes advances
-        return key * 2 + (compact ? 1 : 0);
+        key = key * 2 + (compact ? 1 : 0);
+        return key * 2 + (sdf ? 1 : 0);
     }
 
     /** The provider-id stem of a bundled family, or null for the vanilla font. */
@@ -604,11 +615,13 @@ public class AuroraFontRenderer {
             case SEMIBOLD, BOLD -> AuroraConfig.TextWeight.BOLD;
         };
         String family = familyPath(cfg.activeFont);
-        boolean italic = cfg.textItalic && hasItalicFile(cfg.activeFont);
+        boolean italic = (cfg.textItalic || cfg.activeFont == AuroraConfig.FontType.INTER_ITALIC)
+                && hasItalicFile(cfg.activeFont);
         // TITLE has its own 11 px raster (tools/build_fonts.py PROVIDER_SIZES); HEADING takes the
         // regular 9 px raster, one step above compact 8 px body text (2026-11-14).
         String size = role == Role.TITLE ? "_title" : "";
-        String path = family + "_" + heavier.suffix() + (italic ? "_italic" : "") + size;
+        String path = family + "_" + heavier.suffix() + (italic ? "_italic" : "") + size
+                + (useSdf(cfg) ? "_sdf" : "");
         net.minecraft.network.chat.Style style = base.withFont(new net.minecraft.network.chat.FontDescription.Resource(
                 net.minecraft.resources.Identifier.fromNamespaceAndPath("aurora", path)));
         roleStyles[role.ordinal()] = style;

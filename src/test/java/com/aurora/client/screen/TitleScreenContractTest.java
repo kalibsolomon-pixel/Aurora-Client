@@ -83,7 +83,10 @@ class TitleScreenContractTest {
 
     @Test void wordmarkHasItsOwnFontAndIsNeverReCased() throws Exception {
         assertTrue(SCREEN.contains("Identifier.fromNamespaceAndPath(\"aurora\", \"wordmark\")"));
-        assertTrue(SCREEN.contains(".withStyle(WORDMARK).getVisualOrderText()"), "an explicit font: the text options leave it alone");
+        assertTrue(SCREEN.contains("Identifier.fromNamespaceAndPath(\"aurora\", \"wordmark_sdf\")"));
+        assertTrue(SCREEN.contains("? WORDMARK_SDF : WORDMARK"), "SDF changes only how the wordmark rasterizes");
+        assertTrue(SCREEN.contains("Component.literal(WORDMARK_TEXT.substring(i, i + 1)).withStyle(wordmarkStyle).getVisualOrderText()"),
+                "the wordmark keeps its own case, tracking and font");
         assertTrue(Files.readString(Path.of("adapters/shared/src/client/resources/assets/aurora/font/wordmark.json"))
                 .contains("\"file\": \"aurora:poppins-bold.ttf\""));
     }
