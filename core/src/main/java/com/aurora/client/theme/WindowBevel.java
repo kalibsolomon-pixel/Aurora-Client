@@ -87,11 +87,14 @@ public final class WindowBevel {
             shadowAlpha = .21 + .035 * level.elevation;
         }
 
+        /** Both straight-edge spans share one sample; keep corners and shifted shadow ends scalar. */
         public double flatRowInset(double y) {
             double edge = Math.max(band, aa * .5);
             if (y < edge || y > height - edge) {
                 double depth = Math.max(y < edge ? y : height - y, 0);
-                return Math.max(radius + offsetX, depth + Math.max(offsetX, offsetY));
+                double shadowY = y - offsetY;
+                double shadowDepth = Math.min(shadowY, height - shadowY);
+                return Math.max(Math.max(radius, depth), Math.max(radius, shadowDepth) + offsetX);
             }
             return y >= inset && y <= height - inset ? edge : inset;
         }
