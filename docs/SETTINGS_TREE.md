@@ -65,6 +65,7 @@ Each one is drawn only when its feature (in the Features tab) is on. Its setting
 | Reach `{hud:reach}` | top left | Reach Display card (off) | Mods → Reach Display |
 | Potion effects `{hud:potion}` | top right | Potion HUD card (on) | Mods → Potion HUD |
 | Ping `{hud:ping}` | top left (hidden in editor by default) | Ping card → Show Ping HUD (off) | Mods → Ping |
+| Your health `{hud:health}` | bottom centre, above the armor row | Health Indicators card (off) + Your Health on HUD (off) | Mods → Health Indicators |
 | Totem pops `{hud:totem_pop}` | top left | Totem Pop Counter card (off) | Mods → Totem Pop Counter |
 | Toggle Sprint/Sneak status, combined `{hud:toggle_sprint_sneak}` | top left | Sprint & Sneak card (off) + Show Status HUD | Mods → Sprint & Sneak |
 | Toggle Sprint status, separate `{hud:toggle_sprint}` | top left | HUD Display Mode = Individual | Mods → Sprint & Sneak |
@@ -128,11 +129,12 @@ Small visual tweaks: totem particles, shield, fluid clarity.
   - **Hide 1st Person Fire**: toggle · on · hides the lava and on-fire screen tint. `{lavaHideOverlay}`
 - >> Hidden parts of the card switch with no row of their own: totem tweaks on/off `{totemTweaksEnabled}`, underwater clarity on/off `{underwaterClarityEnabled}`, lava clarity on/off `{lavaClarityEnabled}`.
 
-#### Entity Health · off `{card:player_health}`
-Health shown above mobs (and optionally players).
-- **Display Mode**: dropdown Number / Hearts · Number. `{playerHealthDisplayMode}`
+#### Health Indicators · off `{card:player_health}`
+Health shown above mobs (and optionally players), and your own on the HUD. Named Entity Health until 2026-11-18.
+- **Display Mode**: dropdown Number / Hearts · Number · Hearts is vanilla's heart bar: its sprites, containers, absorption, damage blink and low-health jiggle. `{playerHealthDisplayMode}`
 - **Only Attacked**: toggle · off · only entities you have hit. `{playerHealthOnlyAttacked}`
 - **Show Players**: toggle · off · include other players. `{playerHealthShowPlayers}`
+- **Your Health on HUD**: toggle · off · your health to two decimals (20.00), a draggable HUD module. `{playerHealthHudEnabled}`
 
 #### FreeLook · off `{card:free_look}`
 Look around without turning your character.
@@ -197,6 +199,7 @@ Replaces the crosshair.
 - **Thickness**: slider 1–6 · 1 · hidden for Custom. `{crosshairThickness}`
 - **Gap**: slider 0–10 · 0 · hidden for Custom. `{crosshairGap}`
 - **Color**: color · white. `{crosshairColor}`
+- **Vanilla Blending**: toggle · off · inverts what is behind the crosshair, like vanilla's. `{crosshairVanillaBlend}`
 - **Custom Canvas**: pixel editor, shown only for Custom · vanilla 15×15 cross. `{crosshairCustomPixels}`
 - **Vanilla Attack Indicator**: toggle · on · attack cooldown under the crosshair. `{crosshairAttackIndicatorEnabled}`
 - **Attack Indicator Size %**: slider 25–300 · 100%. `{crosshairAttackIndicatorSize}`

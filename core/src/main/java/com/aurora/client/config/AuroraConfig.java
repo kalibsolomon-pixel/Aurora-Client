@@ -777,7 +777,7 @@ public class AuroraConfig {
         public ItemScaleData() {}
     }
 
-    // ---- Player health indicators ----
+    // ---- Health Indicators (feature id player_health; named Entity Health until 2026-11-18) ----
     public boolean playerHealthIndicators = false;
     public boolean playerHealthOnlyAttacked = false;
     /**
@@ -794,13 +794,18 @@ public class AuroraConfig {
      * <ul>
      *   <li>{@code NUMBER} — a numeric value with a heart prefix
      *       (e.g. "❤ 16"), the classic behaviour.</li>
-     *   <li>{@code HEARTS} — a row of individual heart icons that
-     *       visually mimic the vanilla health bar (each heart = 2 HP,
-     *       red for full, dark red for half; empty hearts are not shown,
-     *       gold for absorption).</li>
+     *   <li>{@code HEARTS} — vanilla's own health bar: its heart sprites,
+     *       containers, absorption, blinking on damage and low-health
+     *       jiggle, as you would see it for yourself on the HUD.</li>
      * </ul>
      */
     public HealthDisplayMode playerHealthDisplayMode = HealthDisplayMode.NUMBER;
+
+    /**
+     * Your own health as an exact number (two decimals, e.g. "19.47") in a
+     * draggable HUD module, shown while Health Indicators is on.
+     */
+    public boolean playerHealthHudEnabled = false;
 
     public enum HealthDisplayMode {
         NUMBER("Number"),
@@ -1008,6 +1013,12 @@ public class AuroraConfig {
     public int     crosshairSize      = 5;
     public int     crosshairThickness = 1;
     public int     crosshairGap       = 2;
+    /**
+     * Blend the crosshair like vanilla's: it inverts what is behind it, so it
+     * stays visible on any background. The colour still applies (white is
+     * vanilla's look).
+     */
+    public boolean crosshairVanillaBlend = false;
     public boolean crosshairAttackIndicatorEnabled = false;
     public int crosshairAttackIndicatorSize = 100;
     public boolean crosshairIndicatorEnabled = false;

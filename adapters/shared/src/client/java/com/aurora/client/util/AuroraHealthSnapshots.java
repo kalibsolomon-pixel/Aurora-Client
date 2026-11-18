@@ -26,12 +26,18 @@ public final class AuroraHealthSnapshots {
         public final float maxHealth;
         public final float absorption;
         public final UUID uuid;
+        /** In its hurt animation: vanilla blinks a rise in health only then. */
+        public final boolean hurt;
+        /** Fully frozen in powder snow: vanilla draws frozen hearts. */
+        public final boolean frozen;
 
-        public Snapshot(float health, float maxHealth, float absorption, UUID uuid) {
+        public Snapshot(float health, float maxHealth, float absorption, UUID uuid, boolean hurt, boolean frozen) {
             this.health = health;
             this.maxHealth = maxHealth;
             this.absorption = absorption;
             this.uuid = uuid;
+            this.hurt = hurt;
+            this.frozen = frozen;
         }
     }
 

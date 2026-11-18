@@ -263,7 +263,7 @@ public final class FeatureRegistry {
                         "lavaClarity", "lavaFog", "lavaHide"));
 
         addWithSettings("player_health",
-                "Shows how much health nearby mobs and players have left, either as a precise number or as a row of heart icons that mirror the vanilla HUD. Great for judging whether one more hit will finish a target — in PvP and against tanky mobs alike.",
+                "Shows how much health nearby mobs and players have left, either as a precise number or as vanilla's own heart bar, and can show your own health to two decimals on the HUD. Great for judging whether one more hit will finish a target — in PvP and against tanky mobs alike.",
                 () -> cfg.playerHealthIndicators, v -> cfg.playerHealthIndicators = v,
                 List.of(
                         new EnumSetting<>("Display Mode",
@@ -272,7 +272,7 @@ public final class FeatureRegistry {
                                 v -> cfg.playerHealthDisplayMode = v).resetDefault(() -> defaults.playerHealthDisplayMode)
                                 .valueDescriptions(m -> switch (m) {
                                     case NUMBER -> "A single heart symbol followed by the exact HP value (e.g. \"❤ 16\"). Best for precise math.";
-                                    case HEARTS -> "A row of individual heart icons that mimic the vanilla health bar: each heart represents 2 HP. A full heart is bright red (gold for absorption), a half heart is dark red, and empty hearts are not shown. Extra hearts beyond the entity's normal maximum are gold.";
+                                    case HEARTS -> "The entity's health bar as you see your own: vanilla's heart sprites and containers, gold absorption hearts, blinking when it takes damage and shaking when it is nearly dead. Each heart is 2 HP; a boss's bar is scaled to fit one row.";
                                 })
                                 .description("Choose how health is drawn above each entity. Number is precise; Hearts is a quick visual read like your own health bar."),
                         new BooleanSetting("Only Attacked",
@@ -282,7 +282,11 @@ public final class FeatureRegistry {
                         new BooleanSetting("Show Players",
                                 () -> cfg.playerHealthShowPlayers,
                                 v -> cfg.playerHealthShowPlayers = v).resetDefault("playerHealthShowPlayers", () -> defaults.playerHealthShowPlayers)
-                                .description("Also show other players' health, not only mobs'. Off by default: vanilla does not show other players' health, and some servers do not allow it.")
+                                .description("Also show other players' health, not only mobs'. Off by default: vanilla does not show other players' health, and some servers do not allow it."),
+                        new BooleanSetting("Your Health on HUD",
+                                () -> cfg.playerHealthHudEnabled,
+                                v -> cfg.playerHealthHudEnabled = v).resetDefault("playerHealthHudEnabled", () -> defaults.playerHealthHudEnabled)
+                                .description("Shows your own health as an exact number with two decimals (20.00 at full health), with absorption after it in gold. Move it in the HUD editor.")
                 ));
 
         addWithSettings("free_look",
@@ -477,6 +481,9 @@ public final class FeatureRegistry {
                                 .description("Center opening for dots and crosses; breaks the sides of circles and squares.")
                                 .visibleWhen(() -> cfg.crosshairStyle != AuroraConfig.CrosshairStyle.CUSTOM),
                         new ColorSetting("Color", () -> cfg.crosshairColor, v -> cfg.crosshairColor = v).resetDefault(() -> defaults.crosshairColor),
+                        new BooleanSetting("Vanilla Blending",
+                                () -> cfg.crosshairVanillaBlend, v -> cfg.crosshairVanillaBlend = v).resetDefault("crosshairVanillaBlend", () -> defaults.crosshairVanillaBlend)
+                                .description("Blends the crosshair like vanilla's: it inverts the colors behind it, so it stays visible on light and dark backgrounds. Looks most like vanilla in white."),
                         new PixelCanvasSetting("Custom Canvas",
                                 () -> cfg.crosshairCustomPixels, v -> cfg.crosshairCustomPixels = v,
                                 () -> cfg.crosshairCustomWidth, v -> cfg.crosshairCustomWidth = v,

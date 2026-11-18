@@ -85,7 +85,8 @@ public final class CrosshairRenderer {
         drawShape(ctx, style, cx, cy, size, thick, gap, color,
                 useIndicator ? cfg.crosshairIndicatorCustomPixels : cfg.crosshairCustomPixels,
                 useIndicator ? cfg.crosshairIndicatorCustomWidth : cfg.crosshairCustomWidth,
-                useIndicator ? cfg.crosshairIndicatorCustomHeight : cfg.crosshairCustomHeight);
+                useIndicator ? cfg.crosshairIndicatorCustomHeight : cfg.crosshairCustomHeight,
+                cfg.crosshairVanillaBlend);
 
         ctx.pose().popMatrix();
         if (cfg.crosshairAttackIndicatorEnabled && client.player != null && !client.player.isSpectator()) {
@@ -136,11 +137,40 @@ public final class CrosshairRenderer {
     public static void drawShape(GuiGraphicsExtractor ctx, AuroraConfig.CrosshairStyle style,
                                  int cx, int cy, int size, int thick, int gap, int color,
                                  boolean[] customPixels, int customW, int customH) {
+        drawShape(ctx, style, cx, cy, size, thick, gap, color, customPixels, customW, customH, false);
+    }
+
+    /**
+     * As above; {@code invert} draws with vanilla's crosshair blending
+     * ({@code GUI_INVERT}), which inverts what is behind each pixel. Shapes
+     * then cover each pixel once, since a second cover would invert it back.
+     */
+    public static void drawShape(GuiGraphicsExtractor ctx, AuroraConfig.CrosshairStyle style,
+                                 int cx, int cy, int size, int thick, int gap, int color,
+                                 boolean[] customPixels, int customW, int customH, boolean invert) {
         switch (safe(style)) {
-            case DOT, CIRCLE, SQUARE -> drawRaster(ctx, safe(style), cx, cy, size, thick, gap, color);
-            case CROSS  -> drawCross(ctx, cx, cy, size, thick, gap, color);
-            case CUSTOM -> drawCustom(ctx, cx, cy, size, color, customPixels, customW, customH);
+            case DOT, CIRCLE, SQUARE -> drawRaster(ctx, safe(style), cx, cy, size, thick, gap, color, invert);
+            case CROSS  -> drawCross(ctx, cx, cy, size, thick, gap, color, invert);
+            case CUSTOM -> drawCustom(ctx, cx, cy, size, color, customPixels, customW, customH, invert);
         }
+    }
+
+    private static void fill(GuiGraphicsExtractor ctx, boolean invert, int x0, int y0, int x1, int y1, int color) {
+        if (invert) ctx.fill(RenderPipelines.GUI_INVERT, x0, y0, x1, y1, invertInk(color));
+        else ctx.fill(x0, y0, x1, y1, color);
+    }
+
+    /**
+     * The inverting blend reads colour, not alpha, so coverage and the colour's
+     * own alpha are folded into the RGB: white at full alpha inverts fully, a
+     * half-covered edge pixel half way.
+     */
+    static int invertInk(int argb) {
+        int a = argb >>> 24;
+        int r = ((argb >> 16 & 0xFF) * a + 127) / 255;
+        int g = ((argb >> 8 & 0xFF) * a + 127) / 255;
+        int b = ((argb & 0xFF) * a + 127) / 255;
+        return 0xFF000000 | (r << 16) | (g << 8) | b;
     }
 
     private static AuroraConfig.CrosshairStyle safe(AuroraConfig.CrosshairStyle s) {
@@ -183,7 +213,7 @@ public final class CrosshairRenderer {
             };
 
     private static void drawRaster(GuiGraphicsExtractor ctx, AuroraConfig.CrosshairStyle style,
-                                   int cx, int cy, int size, int thickness, int gap, int color) {
+                                   int cx, int cy, int size, int thickness, int gap, int color, boolean invert) {
         double scale = Minecraft.getInstance().getWindow().getGuiScale();
         var key = new RasterKey(style, size, thickness, gap, scale);
         var runs = RASTERS.computeIfAbsent(key,
@@ -194,35 +224,61 @@ public final class CrosshairRenderer {
         ctx.pose().scale((float) (1.0 / scale), (float) (1.0 / scale));
         for (var run : runs) {
             int alpha = ((color >>> 24) * run.alpha() + 127) / 255;
-            if (alpha > 0) ctx.fill(run.x(), run.y(), run.x() + run.width(), run.y() + 1,
+            if (alpha > 0) fill(ctx, invert, run.x(), run.y(), run.x() + run.width(), run.y() + 1,
                     (alpha << 24) | (color & 0x00ffffff));
         }
         ctx.pose().popMatrix();
     }
-    private static void drawCross(GuiGraphicsExtractor ctx, int cx, int cy, int size, int thick, int gap, int color) {
+    private static void drawCross(GuiGraphicsExtractor ctx, int cx, int cy, int size, int thick, int gap, int color,
+                                  boolean invert) {
+        int[] rects = invert ? crossUnion(size, thick, gap) : crossRects(size, thick, gap);
+        for (int i = 0; i < rects.length; i += 4) {
+            fill(ctx, invert, cx + rects[i], cy + rects[i + 1], cx + rects[i + 2], cy + rects[i + 3], color);
+        }
+    }
+
+    /** The cross's arms (and hub) relative to the centre pixel, as {@code x0, y0, x1, y1} quads. */
+    private static int[] crossRects(int size, int thick, int gap) {
         int halfT = thick / 2;
-        int innerLeft = cx - gap;
-        int innerRight = cx + gap + (thick % 2);
-        int innerTop = cy - gap;
-        int innerBottom = cy + gap + (thick % 2);
-        int armTop = cy - halfT;
+        int innerLeft = -gap;
+        int innerRight = gap + (thick % 2);
+        int innerTop = -gap;
+        int innerBottom = gap + (thick % 2);
+        int armTop = -halfT;
         int armBottom = armTop + thick;
-        int armLeft = cx - halfT;
+        int armLeft = -halfT;
         int armRight = armLeft + thick;
-
-        ctx.fill(innerLeft - size, armTop, innerLeft, armBottom, color);
-        ctx.fill(innerRight, armTop, innerRight + size, armBottom, color);
-        ctx.fill(armLeft, innerTop - size, armRight, innerTop, color);
-        ctx.fill(armLeft, innerBottom, armRight, innerBottom + size, color);
-
+        int[] arms = {
+                innerLeft - size, armTop, innerLeft, armBottom,
+                innerRight, armTop, innerRight + size, armBottom,
+                armLeft, innerTop - size, armRight, innerTop,
+                armLeft, innerBottom, armRight, innerBottom + size,
+        };
         // With no gap the arms should form a solid plus, but for odd
         // thicknesses the four arms straddle the center without covering the
         // central hub itself (e.g. thick=1, gap=0 leaves the middle pixel
         // empty). Fill the thick×thick hub to close that hole. A positive gap
         // is an intentional opening, so only do this when gap == 0.
-        if (gap == 0) {
-            ctx.fill(armLeft, armTop, armRight, armBottom, color);
+        if (gap != 0) return arms;
+        int[] withHub = java.util.Arrays.copyOf(arms, arms.length + 4);
+        withHub[16] = armLeft;
+        withHub[17] = armTop;
+        withHub[18] = armRight;
+        withHub[19] = armBottom;
+        return withHub;
+    }
+
+    private static int unionKey = -1;
+    private static int[] unionRects;
+
+    /** Thick or gapless arms overlap each other and the hub; the union covers each pixel once. */
+    private static int[] crossUnion(int size, int thick, int gap) {
+        int key = (size << 20) | (thick << 10) | gap;
+        if (key != unionKey) {
+            unionRects = RectUnion.of(crossRects(size, thick, gap));
+            unionKey = key;
         }
+        return unionRects;
     }
 
     /**
@@ -244,7 +300,7 @@ public final class CrosshairRenderer {
      * nothing rather than crashing.
      */
     private static void drawCustom(GuiGraphicsExtractor ctx, int cx, int cy, int size, int color,
-                                   boolean[] pixels, int cfgW, int cfgH) {
+                                   boolean[] pixels, int cfgW, int cfgH, boolean invert) {
         if (pixels == null || pixels.length == 0) return;
 
         com.aurora.client.util.GridDims dims =
@@ -276,7 +332,7 @@ public final class CrosshairRenderer {
                 int runStart = gx;
                 while (gx < gridW && pixels[rowBase + gx]) gx++;
                 // GPU matrix perfectly aligns integer vertices, preventing subpixel seams.
-                ctx.fill(runStart, gy, gx, gy + 1, color);
+                fill(ctx, invert, runStart, gy, gx, gy + 1, color);
             }
         }
 
