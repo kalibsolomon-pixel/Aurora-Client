@@ -29,6 +29,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * back to the coarser open-screen check, and FeatureHealth reports it on
  * Text &amp; Fonts through the catalog binding.
  *
+ * <p>Setup and resize ({@code init(int, int)}, {@code resize(int, int)}) run in the same scope
+ * (2026-11-17): screens measure and wrap text there, and measuring outside the scope used the
+ * vanilla font while drawing used Aurora's, so descriptions wrapped early and were cut off.
+ *
  * <p>Exception safety: RETURN is not reached when the extraction throws, so
  * {@code AuroraFontRenderer.beginTextFrame()} (called from
  * {@code GlassSurface.beginFrame()}) resets any scope left open at the frame
@@ -39,6 +43,22 @@ public abstract class ScreenTextScopeMixin {
 
     /** Whether this screen's current extraction opened the scope. The method is not re-entrant on one screen instance. */
     @Unique private boolean aurora$scoped;
+
+    /** Whether this screen's current init/resize opened the scope. */
+    @Unique private boolean aurora$setupScoped;
+
+    @Inject(method = {"init(II)V", "resize(II)V"}, at = @At("HEAD"), require = 0)
+    private void aurora$enterSetupScope(int width, int height, CallbackInfo ci) {
+        if (!aurora$setupScoped) aurora$setupScoped = AuroraFontRenderer.enterWindowScope((Screen) (Object) this);
+    }
+
+    @Inject(method = {"init(II)V", "resize(II)V"}, at = @At("RETURN"), require = 0)
+    private void aurora$exitSetupScope(int width, int height, CallbackInfo ci) {
+        if (aurora$setupScoped) {
+            aurora$setupScoped = false;
+            AuroraFontRenderer.exitWindowScope();
+        }
+    }
 
     @Inject(method = "extractRenderStateWithTooltipAndSubtitles(Lnet/minecraft/client/gui/GuiGraphicsExtractor;IIF)V",
             at = @At("HEAD"), require = 0)
