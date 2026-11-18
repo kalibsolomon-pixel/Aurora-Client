@@ -79,6 +79,11 @@ public final class ScreenLayout {
                 top + slot / columns * (height + rowGap), width, height, true);
     }
 
+    public int stack(Object key, String id, float left, int top, int width, int height, int gap, boolean focusable) {
+        place(key, id, left, top, width, height, focusable);
+        return top + height + gap;
+    }
+
     public void finish(ClipBand viewport, int extent) {
         finish(viewport, extent, viewport.height);
     }

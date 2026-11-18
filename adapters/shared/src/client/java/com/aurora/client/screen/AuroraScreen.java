@@ -973,11 +973,11 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
                     hiddenSettingOffsets.put(setting, offset);
                     continue;
                 }
-                settingsLayout.place(setting, entry.id + "/" + settingIndex, mainX() + 4,
-                        measuredContent.y + offset, measuredContent.width - 8, height, true);
+                int nextTop = settingsLayout.stack(setting, entry.id + "/" + settingIndex, mainX() + 4,
+                        measuredContent.y + offset, measuredContent.width - 8, height, SETTINGS_ROW_GAP, true);
                 overflow |= offset + height > measuredContent.height;
                 if (!overflow) fit = offset + height;
-                offset += height + SETTINGS_ROW_GAP;
+                offset = nextTop - measuredContent.y;
             }
             offset += SETTINGS_ENTRY_GAP;
         }
@@ -1605,8 +1605,8 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
             String summary = pageSummaryLine(m, tr);
             if (summary != null && vp.intersects(mx + 4, y + headerH, contentWidth() - 4, SUMMARY_H))
                 g.text(tr, summary, (int) (mx + 4), (int) (y + headerH - 1), MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
-            y += headerBlockH(m);
             if (m.settingsDetailOnly) {
+                y = settingsLayout.bounds(m).y(layoutScroll()) + headerBlockH(m);
                 // Detail-only entry: one muted hint line in place of the
                 // inline rows — the merged list lives behind the header
                 // click. The hint height must match the walks in

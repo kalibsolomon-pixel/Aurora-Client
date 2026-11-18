@@ -171,19 +171,16 @@ public final class UiBounds {
             report.put("guiScale",Minecraft.getInstance().getWindow().getGuiScale());
             LayoutScreen host = (LayoutScreen) screen;
             ScreenLayout layout = host.contentLayout();
+            ScreenLayout fixed = host.fixedLayout();
             double scroll = host.layoutScroll();
             var layoutBoxes = new ArrayList<Map<String,Object>>();
-            for (int index = 0; index < layout.size(); index++) {
-                var box = layout.at(index);
-                var entry = new LinkedHashMap<String,Object>();
-                entry.put("layoutId", box.id());
-                entry.put("face", new Rect(box.x(), box.y(scroll), box.width(), box.height()));
-                entry.put("visible", layout.visible(box, scroll));
-                layoutBoxes.add(entry);
-            }
+            appendLayout(layoutBoxes, fixed, 0);
+            appendLayout(layoutBoxes, layout, scroll);
             for (var control : controls) {
                 Rect face = (Rect) control.get("face");
-                var box = layout.hitTest(face.x + face.w / 2, face.y + face.h / 2, scroll);
+                float centerX = face.x + face.w / 2, centerY = face.y + face.h / 2;
+                var box = fixed == null ? null : fixed.hitTest(centerX, centerY, 0);
+                if (box == null) box = layout.hitTest(centerX, centerY, scroll);
                 if (box != null) control.put("layoutId", box.id());
             }
             report.put("controls",controls);
@@ -192,5 +189,17 @@ public final class UiBounds {
             System.out.println("[parity-probe] ui-bounds complete: "+output);
         } catch(Exception failure) { throw new RuntimeException("ui-bounds failed",failure); }
         finally { cancel(); }
+    }
+
+    private static void appendLayout(List<Map<String,Object>> target, ScreenLayout layout, double scroll) {
+        if (layout == null) return;
+        for (int index = 0; index < layout.size(); index++) {
+            var box = layout.at(index);
+            var entry = new LinkedHashMap<String,Object>();
+            entry.put("layoutId", box.id());
+            entry.put("face", new Rect(box.x(), box.y(scroll), box.width(), box.height()));
+            entry.put("visible", layout.visible(box, scroll));
+            target.add(entry);
+        }
     }
 }

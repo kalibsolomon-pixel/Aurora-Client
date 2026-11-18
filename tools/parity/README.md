@@ -31,7 +31,7 @@ exchange atomically and refuses an unmarked fixture or a pending command.
 | `shape-cases` | Open fixed shape, scissor and transform cases for visual comparison |
 | `ui-open-benchmark label modules` / `ui-open-benchmark label text_fonts` | Arm before opening a fresh main/detail screen; write `label.json` after 120 warm-up and 600 sampled extraction frames |
 | `ui-benchmark label [scroll]` | Sample the current main/detail screen; optional alternating wheel input every four frames |
-| `ui-bounds label` | For one frame of the current main/detail screen, write `label.json`: every visible face rect (GUI px, after pose transforms) with its kind, and the text and icon draws inside it (origin, width, height, clip). Compare against a screenshot to verify centring |
+| `ui-bounds label` | For one frame of the current main, feature detail, Profiles or Waypoints screen, write `label.json` with the native face/ink observations and arranged `layout` boxes (GUI px). A native control whose centre hits an arranged box also carries that box's `layoutId`. Compare face/ink with the baseline and use the IDs to match rows across scroll and filter changes. |
 | `ui-cache-state label` | Snapshot observed layer-cache allocation/commit totals and tracked CPU image bytes |
 | `ui-suppress` | Trigger the same 400 ms glass suppression as F2, without writing a screenshot |
 | `ui-tooltip remember` / `unchanged` / `changed` / `absent` | Assert prepared-tooltip reuse, invalidation or release after hovering a described label |

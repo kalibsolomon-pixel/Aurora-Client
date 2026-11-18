@@ -91,6 +91,65 @@ class ScreenLayoutTest {
     }
 
     @Test
+    void replacedObjectsResolveToTheSameLogicalBox() {
+        var band = new ClipBand(0, 0, 200, 40);
+        var layout = new ScreenLayout();
+        Object oldWaypoint = new Object(), waypoint = new Object();
+        layout.begin(band);
+        var original = layout.cell(oldWaypoint, "waypoint/uuid", 0, 1, 0, 0, 200, 34, 4, 4);
+        layout.begin(band);
+        assertFalse(layout.visible(original, 0));
+        assertSame(original, layout.cell(waypoint, "waypoint/uuid", 1, 1, 0, 0, 200, 34, 4, 4));
+        assertNull(layout.bounds(oldWaypoint));
+        assertSame(waypoint, layout.hitTest(10, 10, 38).key());
+        assertSame(original, layout.byId("waypoint/uuid"));
+        assertThrows(IllegalArgumentException.class,
+                () -> layout.cell(new Object(), "waypoint/uuid", 2, 1, 0, 0, 200, 34, 4, 4));
+    }
+
+    @Test
+    void detailStackMatchesLegacyWalkWhenSectionsCollapseAndHeaderStaysPinned() {
+        int[][] features = {{18, 22, 34, 22, 18, 26}, {24, 150, 18, 24}, {98}};
+        for (int[] viewport : new int[][]{{220, 180}, {854, 480}}) {
+            var frame = UiDensity.detailFrame(viewport[0], viewport[1]);
+            for (int feature = 0; feature < features.length; feature++) {
+                var layout = new ScreenLayout();
+                int fixed = feature == 2 ? 32 : 0;
+                int top = frame.y() + UiDensity.HEADER + 12 + fixed;
+                int width = frame.width() - 16, left = frame.x() + 8;
+                var band = new ClipBand(left, top, width, Math.max(1, frame.y() + frame.height() - top - 12));
+                for (boolean compact : new boolean[]{true, false}) for (boolean collapsed : new boolean[]{false, true, false}) {
+                    layout.begin(band);
+                    int nextTop = top, legacyExtent = -UiDensity.ROW_GAP;
+                    for (int index = 0; index < features[feature].length; index++) {
+                        boolean hidden = collapsed && index >= 2 && index < 4;
+                        int height = features[feature][index] + (compact ? 0 : 8) - (index == 0 ? fixed : 0);
+                        String id = "setting/" + index;
+                        if (hidden) {
+                            assertNull(layout.byId(id));
+                            continue;
+                        }
+                        nextTop = layout.stack(id, id, left, nextTop, width, height, UiDensity.ROW_GAP, true);
+                        for (double scroll : new double[]{0, 7.5, 38.625, 91.125}) {
+                            int legacyY = top - (int) scroll + legacyExtent + UiDensity.ROW_GAP;
+                            var box = layout.byId(id);
+                            assertBounds(box, (int) scroll, left, legacyY, width, height);
+                            assertEquals(band.intersects(left, legacyY, width, height), layout.visible(box, (int) scroll));
+                            int visibleTop = Math.max(legacyY, band.y);
+                            if (layout.visible(box, (int) scroll))
+                                assertSame(box, layout.hitTest(left, visibleTop, (int) scroll));
+                        }
+                        legacyExtent += height + UiDensity.ROW_GAP;
+                    }
+                    layout.finish(band, nextTop - top - UiDensity.ROW_GAP);
+                    assertEquals(legacyExtent, layout.extent());
+                    assertEquals(Math.max(0, legacyExtent - band.height), layout.maxScroll());
+                }
+            }
+        }
+    }
+
+    @Test
     void settingsRowsRetainOffsetsAcrossWidthFontAndScroll() {
         var kinds = SettingRowLayout.Kind.values();
         String[] names = {"Toggle with a long explanation", "Slider for a precise setting", "Dropdown with a long choice name",
@@ -101,14 +160,13 @@ class ScreenLayoutTest {
             var layout = new ScreenLayout();
             ClipBand band = new ClipBand(28, top, width - 16, 132);
             layout.begin(band);
-            int offset = 0;
+            int nextTop = top;
             for (int index = 0; index < kinds.length; index++) {
                 var measured = SettingRowLayout.measure(kinds[index], names[index], width, pitch,
                         text -> text.length() * (pitch - 3), SettingRowLayout.TRACK_W);
-                layout.place(index, null, band.x, top + offset, band.width, measured.height(), true);
-                offset += measured.height() + UiDensity.ROW_GAP;
+                nextTop = layout.stack(index, null, band.x, nextTop, band.width, measured.height(), UiDensity.ROW_GAP, true);
             }
-            layout.finish(band, offset - UiDensity.ROW_GAP);
+            layout.finish(band, nextTop - top - UiDensity.ROW_GAP);
             for (double scroll : new double[]{0, 0.25, 32.625, 119.875}) {
                 int oldDetailY = top - (int) scroll;
                 float oldInlineY = top - (float) scroll;

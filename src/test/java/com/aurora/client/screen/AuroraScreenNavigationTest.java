@@ -456,7 +456,7 @@ class AuroraScreenNavigationTest {
         int chrome = click.indexOf("activateFromPointer(mouseX, mouseY, button)");
         assertTrue(cancel >= 0 && drop > cancel && sup > drop && chrome > sup,
                 "capture-cancel-first ordering preserved");
-        assertEquals(8, count(click, "this.setFocused("),
-                "tabs x2 are a loop, profiles, settings sub-tabs (a loop), layout pair x2, tile, toggle, nav — eight focus sites (loops counted once)");
+        assertEquals(7, count(click, "this.setFocused("),
+                "category, profiles, page, layout, tile, toggle and nav actions focus once each");
     }
 }

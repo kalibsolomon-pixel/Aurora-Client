@@ -178,17 +178,16 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen, LayoutS
         layoutScale = scale;
         layoutPinned = pinned;
         layoutPopup = popup;
-        int extent = 0;
+        int nextTop = top;
         rowsLayout.begin(null);
         for (int index = 0; index < settings.size(); index++) {
             int rowHeight = rowHeights[index];
             if (rowHeight < 0) continue;
             FeatureSetting setting = settings.get(index);
-            rowsLayout.place(setting, meta.id + "/" + index, listX + 8, top + extent,
-                    LIST_W - 16, rowHeight, true);
-            extent += rowHeight + ROW_GAP;
+            nextTop = rowsLayout.stack(setting, meta.id + "/" + index, listX + 8, nextTop,
+                    LIST_W - 16, rowHeight, ROW_GAP, true);
         }
-        extent = Math.max(0, extent - ROW_GAP);
+        int extent = Math.max(0, nextTop - top - ROW_GAP);
         if (compact()) fitBody(extent, popup);
         rowsLayout.finish(new ClipBand(listX + 8, top, LIST_W - 16, bodyBottom() - top), extent);
         var fixedBand = new ClipBand(listX + 8, TOP_PAD, LIST_W - 16, top - TOP_PAD);
