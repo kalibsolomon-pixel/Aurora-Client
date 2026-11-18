@@ -539,6 +539,8 @@ public final class BlurPanelRenderer {
             int regH = regY1 - regY;
 
             PanelOutput out = nextOutput(priority);
+            refraction(guiX, guiY, guiW, guiH, scale);
+            PortableBlurRenderer.refraction(refractBendOut, refractBandOut);
             return PortableBlurRenderer.render(g, out.portable, main, x0, y0, regX, regY,
                     regW, regH, x1 - x0, y1 - y0, scale, radius, cornerRadiusGui, lighting, unified, captureSource);
         } catch (Declined d) {
@@ -636,5 +638,21 @@ public final class BlurPanelRenderer {
     public static void shutdown() {
         PortableBlurRenderer.shutdown();
         releaseRimMasks();
+    }
+
+    // ---- Refractive window edge (owner, 2026-11-17) ----
+    private static float refractBendOut, refractBandOut;
+
+    /** Sets {@link #refractBendOut}/{@link #refractBandOut} (device px) for a panel at this GUI rect. */
+    private static void refraction(float guiX, float guiY, float guiW, float guiH, int scale) {
+        var theme = ThemeManager.current();
+        var level = theme.windowBevel();
+        float band = com.aurora.client.theme.WindowBevel.rememberedBand(guiX, guiY, guiW, guiH);
+        if (level == com.aurora.client.theme.WindowBevel.Level.OFF || band <= 0) {
+            refractBendOut = 0; refractBandOut = 0;
+            return;
+        }
+        refractBendOut = (float) (level.bend() * com.aurora.client.theme.WindowBevel.refractionWeight(theme.backgroundOpacity()) * scale);
+        refractBandOut = band * scale;
     }
 }

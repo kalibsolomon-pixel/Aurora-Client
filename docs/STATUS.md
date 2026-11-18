@@ -92,6 +92,8 @@ zero fills and glass ([evidence](releases/evidence/3.5.1-parity.json)). A first 
 attempt found that profiles saved before 3.5.1 logged a warning per removed field; restore
 now skips those retired fields quietly.
 
+Window frames now use a cached, content-clipped bevel (Standard by default). Below full opacity the rim stays as clear as the window and the glass pass bends the backdrop across the frame band; glass, gem and metal were captured in the 26.3 client on OpenGL and Vulkan and await owner review.
+
 ## Acceptance and contributor readiness
 
 See [step 5.5 evidence](port/step-5.5.md), [step 5 evidence](port/step-5.md)

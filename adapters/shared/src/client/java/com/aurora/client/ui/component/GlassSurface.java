@@ -332,6 +332,15 @@ public final class GlassSurface {
         return container(g, x, y, w, h, radius, BlurPanelRenderer.Priority.WINDOW);
     }
 
+    /** Complete single-window pass for a host with no additional glass draws. */
+    public static void window(GuiGraphicsExtractor g, float x, float y, float w, float h, float radius,
+                              float contentInset, int viewportWidth, int viewportHeight) {
+        beginGlassPass();
+        container(g, x, y, w, h, radius);
+        overlayDim(g, viewportWidth, viewportHeight);
+        MaterialSurface.parent(g, x, y, w, h, radius, contentInset);
+    }
+
     /**
      * {@link #container(GuiGraphicsExtractor, float, float, float, float, float)}
      * with an explicit degradation priority — for container-styled ROWS

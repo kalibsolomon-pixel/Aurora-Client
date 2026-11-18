@@ -152,10 +152,11 @@ public final class ThemeManager {
         boolean modeChanged = mode != last.mode();
         boolean roundnessChanged = ThemeRoundness.of(def.cornerRadius) != last.roundness();
         boolean blurChanged = ThemeDefinition.normalizedBlurRadius(def.blurRadius) != last.blurRadius();
+        boolean bevelChanged = ThemeDefinition.normalizedWindowBevel(def.windowBevel) != last.windowBevel();
         double opacity = ThemeDefinition.normalizedOpacity(def.backgroundOpacity);
         boolean opacityChanged = Double.compare(opacity, last.backgroundOpacity()) != 0;
         if (enabledChanged || accentChanged || modeChanged
-                || roundnessChanged || blurChanged || opacityChanged) {
+                || roundnessChanged || blurChanged || opacityChanged || bevelChanged) {
             reload();
         }
     }

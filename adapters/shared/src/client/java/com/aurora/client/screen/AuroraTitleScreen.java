@@ -275,7 +275,7 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
         int pivot = r.y() < account.getY() ? r.y() + r.height() : r.y();
         boolean posed = com.aurora.client.ui.component.OverlayPose.push(ctx, r.x() + r.width(), pivot, progress);
         int radius = Math.round(ThemeManager.current().roundness().radiusSmall());
-        MaterialSurface.overlayFace(ctx, r.x(), r.y(), r.width(), r.height(), radius, progress);
+        MaterialSurface.overlayFace(ctx, r.x(), r.y(), r.width(), r.height(), radius, DROPDOWN_PAD, progress);
         int rowY = r.y() + DROPDOWN_PAD;
         int face = 12;
         if (!posed) PlayerFaceExtractor.extractRenderState(ctx, skin.get(), r.x() + DROPDOWN_PAD + 2, rowY + (DROPDOWN_ROW - face) / 2, face);

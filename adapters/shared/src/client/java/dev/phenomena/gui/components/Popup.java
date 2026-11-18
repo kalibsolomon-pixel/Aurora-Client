@@ -88,9 +88,9 @@ public abstract class Popup {
       mx = (int) Math.floor(OverlayMotion.unscale(mx, rect.x(), progress));
       my = (int) Math.floor(OverlayMotion.unscale(my, pivot, progress));
       var font = Minecraft.getInstance().font;
-      // Fully opaque elevated card with a soft offset shadow, so page content never bleeds
-      // through and the menu reads as a layer above the page.
-      MaterialSurface.overlayFace(g, rect.x(), rect.y(), rect.w(), rect.h(), Theme.radius(), progress);
+      float radius = MaterialSurface.windowBevelEnabled() ? Theme.radiusSmall() : Theme.radius();
+      MaterialSurface.overlayFace(g, rect.x(), rect.y(), rect.w(), rect.h(), radius,
+          Math.min(1, MaterialSurface.windowCornerClearance(radius, 2, 2)), progress);
       for (int i = 0; i < visible; i++) {
         int idx = offset + i;
         int ry = rect.y() + 1 + i * ROW;
