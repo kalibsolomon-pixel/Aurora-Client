@@ -127,6 +127,10 @@ public abstract class HudModule {
 
     public boolean isConfigEnabled() { return true; }
 
+    /** True while the module draws nothing (e.g. no active effects): the HUD editor then names it
+     * inside its frame, so the frame never reads as an empty selection. */
+    public boolean showsNothing() { return false; }
+
     protected AuroraConfig.HudBackground backgroundMode() {
         return AuroraConfig.HudBackground.NONE;
     }

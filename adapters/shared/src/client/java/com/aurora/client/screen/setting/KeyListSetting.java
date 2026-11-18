@@ -192,7 +192,23 @@ public class KeyListSetting extends FeatureSetting {
     @Override public KeyListSetting description(String desc) { super.description(desc); return this; }
 
     @Override public int baseHeight() {
+        if (inlineAdd()) return INLINE_ROW;
         return ROW_H + safeList().size() * (ROW_H + 2) + ADD_H + 8;
+    }
+
+    /** An empty list carries its Add pill in the label row's trailing slot (council 2026-11-18): a
+     * full-width bar under a bare label read as a banner and cost the page a row. */
+    private boolean inlineAdd() { return safeList().isEmpty() && MaterialSurface.unified(); }
+    /** The inline row keeps the page's simple-row pitch. */
+    private static final int INLINE_ROW = com.aurora.client.ui.util.UiDensity.SIMPLE_ROW;
+
+    /** The Add pill's x, y and width; render, the glass pass and clicks all read this one rect. */
+    private int[] addRect(int x, int y, int width) {
+        if (inlineAdd()) {
+            int w = com.aurora.client.ui.util.UiDensity.KEY_W;
+            return new int[]{x + width - 8 - w, y + (INLINE_ROW - ADD_H) / 2, w};
+        }
+        return new int[]{x + 14, y + ROW_H + 2 + safeList().size() * (ROW_H + 2) + 4, width - 28};
     }
 
     @Override public int height() { return baseHeight(); }
@@ -207,9 +223,8 @@ public class KeyListSetting extends FeatureSetting {
     public void renderGlassPass(GuiGraphicsExtractor ctx, int x, int y, int width) {
         if (!GlassSurface.passOpen()) return; // legacy frame order — render paints in place
         glassPassFrame = GlassSurface.frame();
-        int addX = x + 14;
-        int addW = width - 28;
-        int addY = y + ROW_H + 2 + safeList().size() * (ROW_H + 2) + 4;
+        int[] add = addRect(x, y, width);
+        int addX = add[0], addY = add[1], addW = add[2];
         float glassR = Math.min(ADD_H / 2f, ThemeManager.current().roundness().radiusSmall());
         passDrewPill = !isDisabled()
                 && GlassSurface.control(ctx, addX, addY, addW, ADD_H, glassR, listening);
@@ -225,17 +240,11 @@ public class KeyListSetting extends FeatureSetting {
         if (tr == null) return;
         boolean disabled = reconcileDisabledState();
 
-        renderLabelWithTooltip(ctx, com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(tr,label,Math.max(0,width-(24)),0), x + 12, AuroraFontRenderer.textY(tr, y, 16),
+        int labelBand = inlineAdd() ? INLINE_ROW : 16;
+        renderLabelWithTooltip(ctx, com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(tr,label,Math.max(0,width-(24)),0), x + 12, AuroraFontRenderer.textY(tr, y, labelBand),
                 disabled ? AuroraTheme.TEXT_DIM : AuroraTheme.TEXT_PRIMARY, mouseX, mouseY, disabled);
 
         List<Integer> items = safeList();
-        if (items.isEmpty() && MaterialSurface.unified()) {
-            // An empty list says so on its label row, in the trailing value slot (2026-11-14): a
-            // bare label above the Add pill read as an unfinished section.
-            String none = "None";
-            ctx.text(tr, none, x + width - 8 - tr.width(none), AuroraFontRenderer.textY(tr, y, 16),
-                    MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
-        }
         int iy = y + ROW_H + 2;
         int err = ThemeManager.color(ThemeToken.SEMANTIC_ERROR);
         for (int i = 0; i < items.size(); i++) {
@@ -272,9 +281,8 @@ public class KeyListSetting extends FeatureSetting {
         }
 
         // "Add Key" pill (or "> press key <" while listening).
-        int addX = x + 14;
-        int addW = width - 28;
-        int addY = iy + 4;
+        int[] add = addRect(x, y, width);
+        int addX = add[0], addY = add[1], addW = add[2];
         boolean addHover = Widget.inBounds(mouseX, mouseY, addX, addY, addW, ADD_H);
         float hT = hoverAnim.update(addHover && !disabled);
         if (MaterialSurface.unified()) hT = materialHover.update(addHover && !disabled ? 1 : 0,System.nanoTime());
@@ -356,9 +364,8 @@ public class KeyListSetting extends FeatureSetting {
             iy += ROW_H + 2;
         }
 
-        int addX = lastX + 14;
-        int addW = lastW - 28;
-        int addY = iy + 4;
+        int[] add = addRect(lastX, lastY, lastW);
+        int addX = add[0], addY = add[1], addW = add[2];
         if (Widget.inBounds(mouseX, mouseY, addX, addY, addW, ADD_H)) {
             // A semantic host owns entry (one activation sound). The direct
             // path exists for headless/manual hosts and stays silent.

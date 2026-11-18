@@ -211,8 +211,9 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
     private void layoutHeader() {
         if (searchField == null) return;
         // pad: Button keeps 20 px around its label (it ellipsizes past w - 20), plus 2 of air;
-        // the controls chip also reserves its switch glyph's slot on both sides (Button.icon).
-        final int gap = 6, searchMin = 56, pad = 22, iconPad = 2 * (Button.ICON_EM + Button.ICON_GAP) - 10;
+        // the controls chip also reserves the settings switch's slot on both sides, so its label
+        // stays centred.
+        final int gap = 6, searchMin = 56, pad = 22, iconPad = 2 * (UiDensity.TOGGLE_W + 6) - 10;
         int left = listX();
         int right = windowX() + windowWidth() - UiDensity.scrollRightInset();
         String chipLabel = "Separate controls", folderLabel = "Open folder";
@@ -244,14 +245,29 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         flash(config.profilesOwnControls ? "Profiles keep their own controls" : "Controls are shared by every profile");
     }
 
+    /** The settings switch inside Separate controls: the same control as every on/off row. */
+    private final com.aurora.client.ui.component.ToggleSwitch controlsSwitch =
+            new com.aurora.client.ui.component.ToggleSwitch(() -> AuroraConfig.get().profilesOwnControls, v -> {})
+                    .previewMode();
+
+    @Override
+    public void extractRenderState(GuiGraphicsExtractor ctx, int mouseX, int mouseY, float delta) {
+        super.extractRenderState(ctx, mouseX, mouseY, delta);
+        if (controlsChip == null || !controlsChip.visible) return;
+        float sx = controlsChip.getX() + controlsChip.getWidth() - 6 - UiDensity.TOGGLE_W;
+        float sy = controlsChip.getY() + (controlsChip.getHeight() - UiDensity.TOGGLE_H) / 2f;
+        controlsSwitch.renderShapes(ctx, sx, sy, UiDensity.TOGGLE_W, UiDensity.TOGGLE_H);
+        controlsSwitch.renderOverlay(ctx, sx, sy, UiDensity.TOGGLE_W, UiDensity.TOGGLE_H, mouseX, mouseY);
+    }
+
     @Override
     protected void paintHeaderGlassPass(GuiGraphicsExtractor ctx) {
         layoutHeader();
-        // A setting, not an action: a neutral button whose leading switch glyph carries the state,
+        // A setting, not an action: a neutral button carrying the settings switch (painted after the
+        // widgets, see extractRenderState),
         // so Done stays the header's one accent fill (one primary per header, §11.2a).
         boolean on = AuroraConfig.get().profilesOwnControls;
-        controlsChip.glassStyle(Button.GlassStyle.NEUTRAL).primary(false)
-                .icon(com.aurora.client.screen.IconCatalog.glyph(on ? "toggle_on" : "toggle_off"));
+        controlsChip.glassStyle(Button.GlassStyle.NEUTRAL).primary(false);
         controlsChip.renderGlassPass(ctx);
         folderBtn.renderGlassPass(ctx);
         if (searchField instanceof GlassEditBox glassField) glassField.aurora$renderGlassPass(ctx);

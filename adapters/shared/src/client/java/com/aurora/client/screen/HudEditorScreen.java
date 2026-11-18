@@ -287,7 +287,9 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
         for (String line : guideLines) textW = Math.max(textW, this.font.width(line));
         int pillW = Math.min(hintWidth, textW + 16);
         int pillX = (this.width - pillW) / 2;
-        int pillY = this.height - 22 - 12 - pillH; // clear of the vanilla hotbar
+        // Clear of the vanilla hotbar (22) and the armor readouts that sit above it (12), plus 8
+        // of air (council 2026-11-18: the pill covered the readouts).
+        int pillY = this.height - 22 - 12 - 8 - pillH;
         // Fades out quickly while the cursor is over it, so modules can be placed and
         // configured in the space it covers (owner, 2026-11-18).
         boolean over = mouseX >= pillX && mouseX < pillX + pillW && mouseY >= pillY && mouseY < pillY + pillH;
@@ -434,6 +436,15 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
             // Lock icon (top-left INSIDE the AABB) when locked — state, so always shown.
             if (m.locked) {
                 drawLockIcon(ctx, x + 2, y + 2);
+            }
+
+            // A module with nothing to show names itself in its frame (council 2026-11-18: an empty
+            // Potion Effects frame read as a stray selection rectangle).
+            if (m.showsNothing()) {
+                String name = m.displayName();
+                int nameW = this.font.width(name);
+                ctx.text(this.font, name, x + (w - nameW) / 2, y + (h - this.font.lineHeight) / 2 + 1,
+                        MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), true);
             }
 
             if (!emphasized) continue;
