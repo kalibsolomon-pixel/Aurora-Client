@@ -152,6 +152,7 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
     private static final float TAB_W = com.aurora.client.ui.util.UiDensity.TAB_W;
     /** Toolbar icon buttons (list/grid) and the step between them. */
     private static final float TOOL = com.aurora.client.ui.util.UiDensity.TOOL, TOOL_STEP = TOOL + 4;
+    private static final int SEARCH_GAP = 4;
 
     /**
      * Height of the muted "Click to configure" hint row drawn under a
@@ -779,16 +780,18 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
         float left = boxX() + UiDensity.SIDEBAR + UiDensity.INSET;
         float top = boxY() + UiDensity.headerY(TOOL);
         // The toolbar ends where the scrollbar does, at the frame room.
-        int searchWidth = Math.max(1, (int) BOX_W - UiDensity.SIDEBAR - UiDensity.INSET - (int) (2 * TOOL_STEP) - UiDensity.FRAME_EDGE);
+        // The search field keeps SEARCH_GAP of air past the view toggles (council 2026-11-18: its
+        // placeholder started flush against the grid button).
+        int searchWidth = Math.max(1, (int) BOX_W - UiDensity.SIDEBAR - UiDensity.INSET - (int) (2 * TOOL_STEP) - SEARCH_GAP - UiDensity.FRAME_EDGE);
         if (selectedCategory == 0) {
             chromeLayout.place("toolbar/list", "toolbar/list", left, top, TOOL, TOOL, true);
             chromeLayout.place("toolbar/grid", "toolbar/grid", left + TOOL_STEP, top, TOOL, TOOL, true);
-            var search = chromeLayout.place("toolbar/search", "toolbar/search", Math.round(left + 2 * TOOL_STEP), Math.round(top), searchWidth, TOOL, true);
+            var search = chromeLayout.place("toolbar/search", "toolbar/search", Math.round(left + 2 * TOOL_STEP + SEARCH_GAP), Math.round(top), searchWidth, TOOL, true);
             searchField.setX((int) search.x());
             searchField.setY((int) search.top());
             searchField.setWidth((int) search.width());
         } else {
-            arrangePageTabs(left, top, (int) (2 * TOOL_STEP) + searchWidth);
+            arrangePageTabs(left, top, (int) (2 * TOOL_STEP) + SEARCH_GAP + searchWidth);
         }
         searchField.visible = selectedCategory == 0;
         chromeLayout.finish(viewport, 0);
@@ -1158,7 +1161,7 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
         // Window identity: AURORA text only (owner ruling 2026-10-06), in the title role so it
         // reads as the window's name rather than one more label (UI polish 2026-11-14).
         g.text(tr, com.aurora.client.ui.util.AuroraFontRenderer.role("AURORA", com.aurora.client.ui.util.AuroraFontRenderer.Role.TITLE),
-                (int) bx + UiDensity.TITLE_X, (int) AuroraFontRenderer.textY(tr, by + UiDensity.FRAME_EDGE, TOOL), MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
+                (int) bx + UiDensity.TITLE_X, (int) AuroraFontRenderer.textY(tr, by + UiDensity.HEADER_TOP, TOOL), MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
 
         String[] cats = {"Features", "Settings"};
         for (int i = 0; i < 2; i++) {
@@ -1279,6 +1282,9 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
                 control.setBounds((int) lx, (int) btnY, (int) btnSize, (int) btnSize);
                 control.setAvailable(true);
                 control.updatePointer(mouseX, mouseY);
+                // Icon-only: name it on hover, as the title screen's icon buttons do.
+                if (hover) com.aurora.client.ui.component.TooltipPresenter.offer(control,
+                        i == 0 ? "List view" : "Grid view", (int) lx, (int) btnY, (int) btnSize, (int) btnSize);
             }
             drawLayoutButton(g, lx, btnY, btnSize, (i == 1) == gridLayout, hoverT,
                     control != null && control.isFocused(), i == 0, layoutGlass[i]);
@@ -1337,7 +1343,10 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
                 if (cue > 0f && !isSettingsResult(m)) {
                     FeatureMetadata fm = findMeta(m.id);
                     if (fm != null && fm.hasDetail()) {
-                        int muted = MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY);
+                        // Halfway from secondary to primary text: still quieter than the label, but
+                        // legible on a lit face (council 2026-11-18).
+                        int muted = com.aurora.client.util.AuroraAnim.lerpArgb(MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY),
+                                MaterialSurface.color(ThemeToken.ON_BACKGROUND), .5f);
                         MaterialIconRenderer.drawIcon(g, tr, com.aurora.client.screen.IconCatalog.glyph("chevron_right"),
                                 chevronX(cx, cw) + CHEVRON_BOX / 2f, chevronY(cy, ch) + CHEVRON_BOX / 2f,
                                 CHEVRON, ThemeManager.withAlpha(muted, Math.round((muted >>> 24) * cue)));
@@ -1732,8 +1741,8 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
 
     /** The settings-cue chevron's em size and its hit box: the tile's top-right corner, or a list
      * row's trailing end. Paint and click share this one rect. */
-    private static final float CHEVRON = 10f;
-    private static final float CHEVRON_BOX = 14f;
+    private static final float CHEVRON = 13f;
+    private static final float CHEVRON_BOX = 18f;
     private float chevronX(float x, float width) { return x + width - CHEVRON_BOX - (gridLayout ? 3 : 8); }
     private float chevronY(float y, float height) { return gridLayout ? y + 3 : y + (height - CHEVRON_BOX) / 2f; }
 
@@ -1916,10 +1925,15 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
             // 2026-11-14); a per-module accent override still applies.
             int accent = ModuleAccentColors.get(m.id);
             color = accent != 0 ? accent : MaterialSurface.color(ThemeToken.ACCENT);
+            // On the lit raised face the glyph is a quarter of the way to white, so the on icon
+            // reads as illuminated beside the off grey rather than darker (council 2026-11-18).
+            if (MaterialSurface.unified()) color = com.aurora.client.util.AuroraAnim.lerpArgb(color, color | 0x00ffffff, .25f);
         } else {
-            // Off: secondary text in unified windows, a step below an on feature's primary icon,
-            // so on and off part at a glance without the off one reading as unavailable.
-            color = MaterialSurface.unified() ? neutral(MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY))
+            // Off: three quarters of the way from secondary to muted text in unified windows, well
+            // below the label's white so on and off part at a glance, without reading as unavailable.
+            color = MaterialSurface.unified() ? neutral(com.aurora.client.util.AuroraAnim.lerpArgb(
+                    MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY),
+                    MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED), .75f))
                     : MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED);
         }
         // Crisp native-resolution glyph (the shared font atlas is

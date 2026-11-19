@@ -7,6 +7,9 @@ public final class MaterialLighting {
     // Owner tuning 2026-11-17: keep the rim-and-ramp style, slightly more pronounced (rim 14 -> 20,
     // specular 8 -> 10, bevel band widened so SQUARE corners show their facets).
     public static final double SLOPE_GAIN = 1.0, RIM_GAIN = 20, SPEC_GAIN = 10;
+    /** Share of the rim gain on rounded faces turned from the light (2026-11-18 council pass): the
+     * lower rim stays a soft ramp instead of a near-black base. Gem facets keep the full gain. */
+    public static final double SHADE_GAIN = .35;
     public static final int SPEC_POWER = 24;
     /** Planar facet slope (45 degrees) and the pillow slope cap at the silhouette. */
     public static final double FACET_SLOPE = 1.0, MAX_SLOPE = 3.0;
@@ -96,7 +99,9 @@ public final class MaterialLighting {
         double diffuse = dot - LIGHT_Z;
         double reflectedZ = 2 * dot * nz - LIGHT_Z;
         double specular = profile.specular ? Math.pow(Math.max(0, reflectedZ), power) : 0;
-        return RIM_GAIN * rim * diffuse + SPEC_GAIN * spec * specular;
+        // Rounded faces soften their shadow side; square gem facets (k = 0) keep full contrast.
+        double shade = 1 + (SHADE_GAIN - 1) * k;
+        return RIM_GAIN * rim * (diffuse < 0 ? diffuse * shade : diffuse) + SPEC_GAIN * spec * specular;
     }
 
     /** Baked face lightness; alpha/AA, hue and saturation pass through unchanged. */

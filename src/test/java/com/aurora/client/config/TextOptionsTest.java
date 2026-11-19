@@ -82,6 +82,12 @@ class TextOptionsTest {
         String quality = SourceTree.read("ui/util/AuroraFontQuality.java");
         assertTrue(quality.contains("if (changed) set.reload(next, options);"), "a scale change swaps providers in place");
         assertTrue(quality.contains("swap.getKey().close();"), "replaced providers are closed");
+        // Providers load in parallel; one shared scale missed those rasterized before the window
+        // had its GUI scale (blocky headings and titles, 2026-11-18). Each keeps its own.
+        assertTrue(quality.contains("SCALES.put(provider, scale != null ? scale : rasterScale);"),
+                "each provider records the scale it was rasterized at");
+        assertTrue(quality.contains("(scale == rasterScale && !anyStale(scale))"),
+                "a provider left at another scale is re-rasterized even when the last load matched");
         assertTrue(SourceTree.read("ui/component/GlassSurface.java").contains("com.aurora.client.ui.util.AuroraFontQuality.beginFrame();"),
                 "the swap runs at the frame boundary (glass rule 10)");
         for (String v : new String[]{"26.1", "26.2", "26.3"}) {

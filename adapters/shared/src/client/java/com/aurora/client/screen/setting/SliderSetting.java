@@ -259,7 +259,7 @@ public class SliderSetting extends FeatureSetting {
         // user can see at a glance which slider scroll/keys go to.
         boolean focused = (!disabled && FeatureSetting.getFocused() == this);
         int valueColor = disabled ? com.aurora.client.util.AuroraAnim.lerpArgb(MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED),
-                MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), .5f) : (focused ? MaterialSurface.color(ThemeToken.ACCENT) : MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY));
+                MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), .5f) : (focused ? MaterialSurface.color(ThemeToken.ACCENT) : MaterialSurface.color(ThemeToken.ON_BACKGROUND)); // a value is data: primary text (council 2026-11-18)
         ctx.text(tr, cachedStr, compactRow == null ? x + width - cachedStrW - 14 : x + compactRow.value().x() + compactRow.value().width() - cachedStrW, AuroraFontRenderer.textY(tr, y, compactRow == null ? 20 : compactRow.value().height()), valueColor, false);
     }
 

@@ -21,10 +21,10 @@ class DepthPassContractTest {
         assertTrue(module.contains("withAlpha(ThemeManager.color(ThemeToken.MATERIAL_RAISED),255)"));
         assertFalse(module.contains("ACCENT"));
         assertFalse(module.contains("selection("));
-        assertTrue(material.contains("MODULE_ON(11,3,Profile.RAISED)"));
+        assertTrue(material.contains("MODULE_ON(14,6,Profile.RAISED)"));
         assertTrue(material.contains("MODULE_OFF(-5,-5,Profile.FLAT)"));
-        assertTrue(material.contains("MODULE_ON_HOVER(13,5,Profile.RAISED)"));
-        assertTrue(material.contains("MODULE_OFF_HOVER(-3,-3,Profile.FLAT)"));
+        assertTrue(material.contains("MODULE_ON_HOVER(19,11,Profile.RAISED)"));
+        assertTrue(material.contains("MODULE_OFF_HOVER(0,0,Profile.FLAT)"));
     }
 
     @Test void outlineAttenuationIsIndependentOfWindowOpacity() throws Exception {
@@ -76,7 +76,7 @@ class DepthPassContractTest {
         assertTrue(edit.contains("if (!glassOk && !opaqueInset)"));
         assertTrue(edit.contains("IconCatalog.glyph(\"search\")"));
         assertTrue(slider.contains("MaterialSurface.knob(g,knobX-knobR,knobY-knobR,knobR*2"));
-        assertTrue(slider.contains("MaterialSurface.sliderTrack(g,x,ty,w,TRACK_H,trackRadius(),disabled)"));
+        assertTrue(slider.contains("MaterialSurface.sliderTrack(g,wx,ty,ww,TRACK_H,trackRadius(),disabled)"));
         assertTrue(read("ui/component/ToggleSwitch.java").contains("MaterialSurface.switchTrack(g,x,y,w,h,r,t,hover,disabled)"));
         // Centred stays centred (owner rule): the value centres left of the chevron slot.
         assertTrue(read("screen/setting/EnumSetting.java").contains("AuroraFontRenderer.drawCentered(ctx, tr, name, btnX + textAreaW / 2f, textY, textColor)"));
@@ -116,13 +116,13 @@ class DepthPassContractTest {
     @Test void councilRecipesKeepInsetDomePressedAndPrimaryPoliciesDistinct() throws Exception {
         String material=read("ui/component/MaterialSurface.java");
         assertTrue(material.contains("INSET(1,5,Profile.INSET), TRACK(3,7,Profile.INSET)"));
-        assertTrue(material.contains("RAISED(5,-3,Profile.RAISED)"));
-        assertTrue(material.contains("HOVER(5,-3,Profile.RAISED), PRESSED(-3,2,Profile.PRESSED)"));
+        assertTrue(material.contains("RAISED(6,0,Profile.RAISED)"));
+        assertTrue(material.contains("HOVER(8,2,Profile.RAISED), PRESSED(-3,2,Profile.PRESSED)"));
         assertTrue(material.contains("PRIMARY(6,-4,Profile.RAISED), PRIMARY_LIGHT(3,-4,Profile.RAISED)"));
         assertTrue(material.contains("UnifiedPalette.contrast(ThemeManager.color(ThemeToken.ON_ACTION),0xff000000)>11"));
         assertTrue(material.contains("KNOB(0,0,Profile.DOME,1,.23f)"));
-        assertTrue(material.contains("MODULE_SHADOW(0,0,Profile.FLAT,2,.26f)"));
-        assertTrue(material.contains("CONTROL_SHADOW(0,0,Profile.FLAT,1,.18f)"));
+        assertTrue(material.contains("MODULE_SHADOW(0,0,Profile.FLAT,2,.11f)"));
+        assertTrue(material.contains("CONTROL_SHADOW(0,0,Profile.FLAT,1,.08f)"));
         assertTrue(material.contains("light.elevation*scale,2*light.elevation*scale,light.shadowAlpha"));
         assertTrue(material.contains("disabled ? Light.FLAT : Light.KNOB"));
         assertTrue(material.contains("if(!disabled && press<1)"),"disabled/fully pressed faces cast no shadow");

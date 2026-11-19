@@ -160,3 +160,5 @@ should add a packaged-client launcher boot, multiplayer and another GPU or
 lower-end machine. Vulkan shader-mod support requires a separate pinned build
 and shader-pack checks. A broken-feature indicator on grid cards remains a
 small UI proposal, not part of the completed restructure.
+
+The SDF line option for hitboxes and block outlines (PR #61, off by default) and the council UI polish pass (PR #62) are on master for the next release. The council pass ended at a unanimous 8 overall from five vision reviewers after 15 rounds, with every round's click and hit-box checks passing ([report](reports/2026-11-18-ui-polish-council.md)).

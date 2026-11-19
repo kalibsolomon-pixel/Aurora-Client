@@ -139,7 +139,7 @@ Health shown above mobs (and optionally players), and your own on the HUD; each 
 - *Your Health*
   - **Show on HUD**: toggle · off · your health to two decimals (20.00), a draggable HUD module; works without the labels above entities. `{playerHealthHudEnabled}`
 
-#### FreeLook · off `{card:free_look}`
+#### Free Look · off `{card:free_look}`
 Look around without turning your character.
 - **Hold Key**: key · X. `{freeLookKey}`
 - **Camera Sensitivity**: slider 0.1–3 · 1.0. `{freeLookSensitivity}`
@@ -486,8 +486,8 @@ Simple config-backed setting rows here and on module detail pages show a small r
   - **Accent Color**: swatch grid + picker · indigo (#5C6BC0), the logo's family. `{theme.accent}`
   - **Background Color**: swatch grid + picker · graphite (#16171D). `{theme.background}`
   - *Surfaces* (the three sliders grouped under one caption)
-    - **Background Opacity**: slider 0–100% · 33% · the tint's density only. `{theme.backgroundOpacity}`
-    - **Blur Radius**: slider Off–32 px (GUI pixels) · 9 px · how blurred the backdrop behind glass is. `{theme.blurRadius}`
+    - **Background Opacity**: slider 0–100% · 42% (new installs; was 33%) · the tint's density only. `{theme.backgroundOpacity}`
+    - **Blur Radius**: slider Off–32 px (GUI pixels) · 12 px (new installs; was 9) · how blurred the backdrop behind glass is. `{theme.blurRadius}`
     - **Corner Radius**: slider 0–20 px · 10 px · every shape: windows, buttons, fields, toggles, sliders, scrollbars. Replaced Corner Style (Round = 10, Slightly Round = 6, Square = 0). `{theme.cornerRadius}`
 - *Text & Fonts* · no toggle `{card:text_fonts}` · font, weight, modifiers and case apply wherever the Text Renderer does
   - **Text Renderer**: dropdown Off / Aurora UI Only / All Text · All Text · Aurora UI Only styles text on Aurora's own windows (Pulsar's dashboard included), never the in-game HUD or vanilla screens; All Text adds the HUD and every vanilla string. `{textRendererMode}`
@@ -569,7 +569,7 @@ All are also listed in vanilla Options → Controls under Aurora. Defaults are f
 | Key | Default | Where set |
 |---|---|---|
 | Zoom (hold) `{zoomKey}` | C | Zoom |
-| FreeLook (hold) `{freeLookKey}` | X | FreeLook |
+| Free Look (hold) `{freeLookKey}` | X | Free Look |
 | Toggle Sprint `{toggleSprintKey}` | Left Ctrl | Sprint & Sneak |
 | Toggle Sneak `{toggleSneakKey}` | unbound | Sprint & Sneak |
 | HUD Editor `{hudEditorKey}` | Right Shift | Settings → Controls → Aurora Keys |
@@ -603,7 +603,7 @@ Listed so you can decide whether any should get a control, or be removed.
 ## 7. Things I noticed that you may want to decide on
 
 - **Key defaults disagree with their descriptions.** The Hitbox Toggle Key and Totem Reset Counter Key rows say "Defaults to unbound", but a fresh install binds them to B and K.
-- **"Reset to default" in vanilla Controls uses different keys** from a fresh install for FreeLook (V vs X), Toggle Sprint (J vs Left Ctrl), Toggle Sneak (K vs unbound) and World Map (M vs Y).
+- **"Reset to default" in vanilla Controls uses different keys** from a fresh install for Free Look (V vs X), Toggle Sprint (J vs Left Ctrl), Toggle Sneak (K vs unbound) and World Map (M vs Y).
 - ~~**The Alerts card text mentions low hunger**; there is no hunger alert.~~ *(Done: the card text no longer mentions hunger.)*
 - ~~**The HUD Editor key has no row in Aurora.**~~ *(Done: Settings → Controls → Aurora Keys.)*
 - **Some features have one card toggle covering several hidden switches** (Pack Tweaks, Alerts, Hitbox, Ping, Health Indicators). Turning the card on switches every part on, including parts that ship off. *(Display Settings had this too; its combined switch is gone.)*

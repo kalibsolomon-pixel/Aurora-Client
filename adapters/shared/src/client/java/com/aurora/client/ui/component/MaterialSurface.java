@@ -111,6 +111,14 @@ public final class MaterialSurface {
                 (Math.round(visibility * 255) << 24) | 0xffffff);
     }
 
+    /** A panel-tone fill under a floating container's text (the HUD editor guide), at {@code alpha}
+     * of opaque: keeps its contrast steady where the world behind the window tint changes. */
+    public static void panelBacking(GuiGraphicsExtractor g, float x, float y, float w, float h, float radius, float alpha) {
+        if (alpha <= 0f) return;
+        RenderUtil.drawRoundedRectAA(g, x, y, w, h, radius,
+                ThemeManager.withAlpha(color(ThemeToken.MATERIAL_PANEL), Math.round(255 * Math.min(1f, alpha))));
+    }
+
     /** Fixed outline attenuation; independent of Background Opacity. */
     public static final float WINDOW_OUTLINE_ALPHA = .55f;
     public static int windowOutline() {
@@ -122,14 +130,14 @@ public final class MaterialSurface {
     private static final float PEER_HOVER_ALPHA = .16f, SWITCH_HOVER_ALPHA = .08f;
 
     private enum Light {
-        FLAT(0,0,Profile.FLAT), RAISED(5,-3,Profile.RAISED),
-        HOVER(5,-3,Profile.RAISED), PRESSED(-3,2,Profile.PRESSED),
+        FLAT(0,0,Profile.FLAT), RAISED(6,0,Profile.RAISED),
+        HOVER(8,2,Profile.RAISED), PRESSED(-3,2,Profile.PRESSED),
         INSET(1,5,Profile.INSET), TRACK(3,7,Profile.INSET),
         PRIMARY(6,-4,Profile.RAISED), PRIMARY_LIGHT(3,-4,Profile.RAISED),
-        MODULE_ON(11,3,Profile.RAISED), MODULE_OFF(-5,-5,Profile.FLAT),
-        MODULE_ON_HOVER(13,5,Profile.RAISED), MODULE_OFF_HOVER(-3,-3,Profile.FLAT),
+        MODULE_ON(14,6,Profile.RAISED), MODULE_OFF(-5,-5,Profile.FLAT),
+        MODULE_ON_HOVER(19,11,Profile.RAISED), MODULE_OFF_HOVER(0,0,Profile.FLAT),
         KNOB(0,0,Profile.DOME,1,.23f), OVERLAY(5,-3,Profile.RAISED,2,.28f),
-        MODULE_SHADOW(0,0,Profile.FLAT,2,.26f), CONTROL_SHADOW(0,0,Profile.FLAT,1,.18f);
+        MODULE_SHADOW(0,0,Profile.FLAT,2,.11f), CONTROL_SHADOW(0,0,Profile.FLAT,1,.08f);
         final float top, bottom, elevation, shadowAlpha;
         final Profile profile;
         Light(float top,float bottom,Profile profile) { this(top,bottom,profile,0,0); }
@@ -184,6 +192,10 @@ public final class MaterialSurface {
                                    float on,float hover,boolean disabled) {
         if(disabled || on<1) inset(g,x,y,w,h,radius,disabled);
         if(disabled) return;
+        // The OFF well a step lighter than the glass it sits in, so its outline reads at GUI scale 2
+        // without a stroke (council 2026-11-18: near-black on near-black left only the knob).
+        if(on<1) RenderUtil.drawRoundedRectAA(g,x,y,w,h,radius,
+                ThemeManager.withAlpha(color(ThemeToken.ON_BACKGROUND),Math.round(0x16*(1-on))));
         // ON is the same recessed well filled with the accent (2026-11-17): a flat accent over
         // a dished OFF track read as two different materials.
         if(on>0) depth(g,x,y,w,h,radius,color(ThemeToken.ACCENT),0,280,Light.INSET,on);

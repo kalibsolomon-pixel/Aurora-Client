@@ -188,7 +188,10 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         controlsChip = this.addRenderableWidget(ButtonWidget.semantic(0, 0, 10, UiDensity.HEADER_BUTTON_H,
                 Component.literal("Separate controls"),
                 "When on, each profile keeps its own Aurora and Minecraft key bindings and switching applies them.",
-                this::toggleSeparateControls).glassBackground(true));
+                this::toggleSeparateControls).glassBackground(true)
+                // A settings row, not a push button: the label and the switch on the bare toolbar,
+                // the whole span one target with the hover face (council 2026-11-18).
+                .theming(Button.Theming.GHOST).trailingSlot(UiDensity.TOGGLE_W + 6));
         folderBtn = this.addRenderableWidget(ButtonWidget.semantic(0, 0, 10, UiDensity.HEADER_BUTTON_H,
                 Component.literal("Open folder"),
                 "Opens the folder the profile files are saved in.",
@@ -197,27 +200,33 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         layoutHeader();
     }
 
+    /** The second header row, under the title and Done: search, Separate controls, Open folder. */
+    private static final int TOOLS_ROW = UiDensity.HEADER_BUTTON_H + 6;
+    @Override protected String headerTitle() { return "Profiles"; }
+    @Override protected int listTop() { return super.listTop() + TOOLS_ROW; }
+
     /**
-     * Header row, left to right: search (takes what is left, at least
-     * {@code SEARCH_MIN}), Separate controls, Open folder, then the base's
-     * Done on the right. Narrow windows get the short labels; the long ones
+     * Tools row under the titled header, left to right: search (takes what is
+     * left, at least {@code SEARCH_MIN}), Separate controls, Open folder; the
+     * title and the base's Done share the row above. Narrow windows get the short labels; the long ones
      * never truncate mid-word.
      */
     private void layoutHeader() {
         if (searchField == null) return;
-        // pad: Button keeps 20 px around its label (it ellipsizes past w - 20), plus 2 of air.
-        final int gap = 6, searchMin = 56, pad = 22;
+        // pad: Button keeps 20 px around its label (it ellipsizes past w - 20), plus 2 of air;
+        // the controls chip also reserves the settings switch's trailing slot.
+        final int gap = 10, searchMin = 56, pad = 22, iconPad = UiDensity.TOGGLE_W + 6;
         int left = listX();
-        int right = windowX() + windowWidth() - UiDensity.FRAME_EDGE - UiDensity.HEADER_BUTTON_W - gap;
+        int right = windowX() + windowWidth() - UiDensity.scrollRightInset();
         String chipLabel = "Separate controls", folderLabel = "Open folder";
-        int chipW = this.font.width(chipLabel) + pad, folderW = this.font.width(folderLabel) + pad;
+        int chipW = this.font.width(chipLabel) + pad + iconPad, folderW = this.font.width(folderLabel) + pad;
         if (right - left - chipW - folderW - 2 * gap < searchMin) {
             chipLabel = "Controls";
             folderLabel = "Folder";
-            chipW = this.font.width(chipLabel) + pad;
+            chipW = this.font.width(chipLabel) + pad + iconPad;
             folderW = this.font.width(folderLabel) + pad;
         }
-        int y = toolbarY();
+        int y = toolbarY() + TOOLS_ROW;
         folderBtn.setMessage(Component.literal(folderLabel));
         folderBtn.setX(right - folderW);
         folderBtn.setY(y);
@@ -238,12 +247,36 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         flash(config.profilesOwnControls ? "Profiles keep their own controls" : "Controls are shared by every profile");
     }
 
+    /**
+     * The settings switch inside Separate controls: the same shaded control as every on/off row
+     * (not previewMode, whose flat mock read as a different component). The chip owns the click;
+     * the switch only paints.
+     */
+    private final com.aurora.client.ui.component.ToggleSwitch controlsSwitch =
+            new com.aurora.client.ui.component.ToggleSwitch(() -> AuroraConfig.get().profilesOwnControls, v -> {});
+
+    @Override
+    public void extractRenderState(GuiGraphicsExtractor ctx, int mouseX, int mouseY, float delta) {
+        super.extractRenderState(ctx, mouseX, mouseY, delta);
+        if (controlsChip == null || !controlsChip.visible) return;
+        float sx = controlsChip.getX() + controlsChip.getWidth() - 6 - UiDensity.TOGGLE_W;
+        float sy = controlsChip.getY() + (controlsChip.getHeight() - UiDensity.TOGGLE_H) / 2f;
+        // The whole chip is the switch's target, so hovering anywhere on it washes the switch.
+        boolean chipHover = controlsChip.isMouseOver(mouseX, mouseY);
+        int hx = chipHover ? Math.round(sx + UiDensity.TOGGLE_W / 2f) : Integer.MIN_VALUE / 2;
+        int hy = chipHover ? Math.round(sy + UiDensity.TOGGLE_H / 2f) : Integer.MIN_VALUE / 2;
+        controlsSwitch.renderShapes(ctx, sx, sy, UiDensity.TOGGLE_W, UiDensity.TOGGLE_H);
+        controlsSwitch.renderOverlay(ctx, sx, sy, UiDensity.TOGGLE_W, UiDensity.TOGGLE_H, hx, hy);
+    }
+
     @Override
     protected void paintHeaderGlassPass(GuiGraphicsExtractor ctx) {
         layoutHeader();
-        // On is the selected state, so it alone is stained (glass rule 3).
+        // A setting, not an action: a neutral button carrying the settings switch (painted after the
+        // widgets, see extractRenderState),
+        // so Done stays the header's one accent fill (one primary per header, §11.2a).
         boolean on = AuroraConfig.get().profilesOwnControls;
-        controlsChip.glassStyle(on ? Button.GlassStyle.STAINED : Button.GlassStyle.NEUTRAL).primary(on);
+        controlsChip.glassStyle(Button.GlassStyle.NEUTRAL).primary(false);
         controlsChip.renderGlassPass(ctx);
         folderBtn.renderGlassPass(ctx);
         if (searchField instanceof GlassEditBox glassField) glassField.aurora$renderGlassPass(ctx);
@@ -400,7 +433,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
 
     @Override
     protected void prepareRowFocus(String name, int x, int y, int width) {
-        locateRowFocus(optionsControl(name), x + width - GEAR - 2, y + 2, GEAR, GEAR);
+        locateRowFocus(optionsControl(name), x + width - GEAR - 3, y + 3, GEAR, GEAR);
         locateRowFocus(hotkeyControl(name), x + INSET, y + LOWER_BTN_Y, btnW(), BTN_H);
     }
 
@@ -431,7 +464,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         }
 
         // Settings glyph — opens the profile's options.
-        int gearX = x + w - GEAR - 2, gearY = y + 2;
+        int gearX = x + w - GEAR - 3, gearY = y + 3;
         SemanticActionControl options = optionsControl(name);
         options.setBounds(gearX, gearY, GEAR, GEAR);
         options.setAvailable(inBand(y));
@@ -440,8 +473,12 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         if (pointerIn(mouseX, mouseY, gearX, gearY, GEAR, GEAR)) {
             com.aurora.client.ui.component.TooltipPresenter.offer(options, options.action().accessibleName().getString(), gearX, gearY, GEAR, GEAR);
         }
-        MaterialIconRenderer.drawIcon(ctx, this.font, GEAR_GLYPH, gearX + GEAR / 2f, gearY + GEAR / 2f, 10f,
-                ThemeManager.color(gearHot ? ThemeToken.ON_BACKGROUND : ThemeToken.ON_BACKGROUND_MUTED));
+        // A hover face behind the gear and a 12 em glyph (was 10): it reads as the card's one
+        // settings control rather than a corner ornament (council 2026-11-18).
+        if (gearHot) com.aurora.client.ui.util.RenderUtil.drawRoundedRectAA(ctx, gearX, gearY, GEAR, GEAR, radius,
+                ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_BACKGROUND), 0x1F));
+        MaterialIconRenderer.drawIcon(ctx, this.font, GEAR_GLYPH, gearX + GEAR / 2f, gearY + GEAR / 2f, 12f,
+                ThemeManager.color(gearHot ? ThemeToken.ON_BACKGROUND : ThemeToken.ON_BACKGROUND_SECONDARY));
         if (options.isFocused()) {
             com.aurora.client.ui.util.RenderUtil.drawRoundedOutlineAA(ctx, gearX, gearY, GEAR, GEAR, radius, 1f,
                     ThemeManager.color(ThemeToken.ACCENT));
@@ -468,8 +505,9 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         MaterialSurface.selection(ctx, chipX, chipY, chipW, BTN_H, radius, capturing || hotkey.isFocused(),
                 chipHot ? 1f : 0f);
         int binding = manager.hotkey(name);
-        String label = capturing ? captureLabel(capture.pending()) : binding >= 0 ? keyName(binding) : "None";
-        int textCol = ThemeManager.color(capturing || binding >= 0 ? ThemeToken.ON_BACKGROUND : ThemeToken.ON_BACKGROUND_MUTED);
+        String label = capturing ? captureLabel(capture.pending()) : binding >= 0 ? keyName(binding) : "Set hotkey";
+        // An unbound hotkey is an invitation, not a disabled field: primary text, "Set hotkey".
+        int textCol = ThemeManager.color(ThemeToken.ON_BACKGROUND);
         String fitted = AuroraFontRenderer.ellipsize(this.font, label, chipW - 20, 0);
         int contentW = 12 + this.font.width(fitted);
         int cx = chipX + (chipW - contentW) / 2;

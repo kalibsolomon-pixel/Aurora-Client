@@ -19,8 +19,8 @@
   "theme": {
     "mode": "DARK",
     "cornerRadius": 10,
-    "blurRadius": 9,
-    "backgroundOpacity": 0.33,
+    "blurRadius": 12,
+    "backgroundOpacity": 0.42,
     "accent": -10720320,
     "background": -15329507
   },

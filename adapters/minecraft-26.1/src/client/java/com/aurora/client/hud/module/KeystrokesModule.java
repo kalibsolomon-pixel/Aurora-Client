@@ -5,6 +5,8 @@ import com.aurora.client.feature.impl.ClickTrackerFeature;
 import com.aurora.client.hud.HudAnchor;
 import com.aurora.client.hud.KeycapRenderer;
 import com.aurora.client.theme.KeycapProfile;
+import com.aurora.client.ui.text.SdfTextSupport;
+import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.util.AuroraKey;
 import com.aurora.client.util.CachedValue;
 import com.aurora.client.theme.ThemeManager;
@@ -16,6 +18,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.Options;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.network.chat.Component;
 
 import java.util.List;
 
@@ -101,6 +104,7 @@ public class KeystrokesModule extends HudModule {
     private final int[] labelWidths = new int[SLOTS];
     private final HudTextCache textCache = new HudTextCache(SLOTS + 3);
     private long labelStamp;
+    private int labelStyleKey;
 
     /** CPS text — integer values, so a 100 ms rebuild cap is imperceptible. */
     private final CachedValue<String> cpsText = new CachedValue<>(100L, this::buildCpsText);
@@ -273,11 +277,11 @@ public class KeystrokesModule extends HudModule {
                 keycaps.draw(ctx, x, cy, WIDTH, CPS_H, keycapRadius(), 0, idleBackground(), accent);
                 drawLegend(ctx, font, cpsComponent, x + KeycapProfile.topX(WIDTH), cy + KeycapProfile.topY(CPS_H, 0),
                         KeycapProfile.topWidth(WIDTH), KeycapProfile.topHeight(CPS_H),
-                        quantize(ctx, fitScale(KeycapProfile.topWidth(WIDTH), font.width(text))), labelColor);
+                        fitScale(KeycapProfile.topWidth(WIDTH), font.width(cpsComponent)), labelColor);
             } else {
                 blitTemplate(ctx, TPL_PLATE, x, cy, WIDTH, CPS_H, accent, 1f);
                 drawLegend(ctx, font, cpsComponent, x, cy, WIDTH, CPS_H,
-                        quantize(ctx, fitScale(WIDTH, font.width(text))), labelColor);
+                        fitScale(WIDTH, font.width(cpsComponent)), labelColor);
             }
             cy += CPS_H + GAP;
         }
@@ -409,12 +413,12 @@ public class KeystrokesModule extends HudModule {
         String label = labels[slot];
         if (label != null && !label.isEmpty() && labelWidths[slot] > 0)
             drawLegend(ctx, font, textCache.text(slot, label), ax, ay, aw, labelH,
-                    legendScale(ctx, slot, aw), labelColor);
+                    legendScale(slot, aw), labelColor);
         if (mouseWithCps && slot != SLOT_MMB) {
             String count = mouseCps.get()[slot == SLOT_LMB ? 0 : 1];
             var text = textCache.text(SLOTS + 1 + (slot == SLOT_LMB ? 0 : 1), count);
             drawLegend(ctx, font, text, ax, ay + labelH, aw, Math.min(CPS_LINE, ah),
-                    quantize(ctx, Math.min(CPS_SCALE, fitScale(aw, font.width(count)))), labelColor);
+                    Math.min(CPS_SCALE, fitScale(aw, font.width(text))), labelColor);
         }
     }
 
@@ -432,12 +436,10 @@ public class KeystrokesModule extends HudModule {
     }
 
     /**
-     * Rounds down to whole device pixels per font pixel (crisp glyph sizes) when that costs at
-     * most 15% of the fitting size; otherwise the exact fit, so a small keycap top never drops a
-     * legend to a third of its size.
+     * Rounds raster glyphs down to whole device pixels per font pixel when that costs at most
+     * 15% of the fitting size.
      */
-    private static float quantize(GuiGraphicsExtractor ctx, float scale) {
-        float density = com.aurora.client.worldmap.MapMarkers.density(ctx);
+    private static float quantize(float scale, float density) {
         float snapped = (float) Math.floor(scale * density + 1e-4f) / density;
         return snapped >= scale * .85f ? snapped : scale;
     }
@@ -446,7 +448,7 @@ public class KeystrokesModule extends HudModule {
      * One size per row: every legend in the row (W/A/S/D, the mouse buttons, Shift/Ctrl, the
      * extra keys) takes the scale its widest member needs, so neighbours never differ in size.
      */
-    private float legendScale(GuiGraphicsExtractor ctx, int slot, float areaW) {
+    private float legendScale(int slot, float areaW) {
         int from, to;
         if (slot <= SLOT_D) { from = SLOT_W; to = SLOT_D; }
         else if (slot <= SLOT_RMB) { from = SLOT_LMB; to = SLOT_RMB; }
@@ -456,24 +458,28 @@ public class KeystrokesModule extends HudModule {
         int widest = 0;
         for (int s = from; s <= to; s++)
             if ((visibleMask & (1 << s)) != 0 || s == slot) widest = Math.max(widest, labelWidths[s]);
-        return quantize(ctx, fitScale(areaW, widest));
+        return fitScale(areaW, widest);
     }
 
     /**
-     * Centres {@code text}'s visible ink (the active font's measured cap/x-height and glyph
-     * bounds) on the area at {@code scale}, with the origin snapped to the device grid so
-     * legends sit exactly centred and stay crisp.
+     * Centres the visible ink on the key face. Raster glyphs benefit from device-pixel
+     * snapping. Distance-field glyphs keep the exact fit and move with the face at fractional
+     * positions during a press.
      */
-    private static void drawLegend(GuiGraphicsExtractor ctx, Font font, net.minecraft.network.chat.Component text,
+    private static void drawLegend(GuiGraphicsExtractor ctx, Font font, Component text,
                                    float x, float y, float w, float h, float scale, int color) {
         if (w <= 0 || h <= 0) return;
-        var ink = com.aurora.client.ui.util.AuroraFontRenderer.ink(font,
-                com.aurora.client.ui.util.AuroraFontRenderer.getActiveStyle());
-        float density = com.aurora.client.worldmap.MapMarkers.density(ctx);
-        float tx = x + w / 2f - scale * com.aurora.client.ui.util.AuroraFontRenderer.inkMid(font, text);
+        var style = text.getStyle();
+        boolean sdf = SdfTextSupport.isSdfStyle(style);
+        float density = sdf ? 1f : com.aurora.client.worldmap.MapMarkers.density(ctx);
+        if (!sdf) scale = quantize(scale, density);
+        var ink = AuroraFontRenderer.ink(font, style.isEmpty() ? null : style);
+        float tx = x + w / 2f - scale * AuroraFontRenderer.inkMid(font, text);
         float ty = y + h / 2f - scale * ink.center();
-        tx = Math.round(tx * density) / density;
-        ty = Math.round(ty * density) / density;
+        if (!sdf) {
+            tx = Math.round(tx * density) / density;
+            ty = Math.round(ty * density) / density;
+        }
         ctx.pose().pushMatrix();
         ctx.pose().translate(tx, ty);
         if (scale != 1f) ctx.pose().scale(scale, scale);
@@ -586,8 +592,10 @@ public class KeystrokesModule extends HudModule {
     // ---- Label cache -------------------------------------------------
 
     private void ensureLabels(Font font, Options opts, AuroraConfig cfg, int extraCount) {
+        int styleKey = AuroraFontRenderer.styleKey();
         long now = System.currentTimeMillis();
-        if (labelStamp != 0L && now - labelStamp < LABEL_REFRESH_MS) return;
+        if (styleKey == labelStyleKey && labelStamp != 0L && now - labelStamp < LABEL_REFRESH_MS) return;
+        labelStyleKey = styleKey;
         labelStamp = now;
 
         putLabel(font, SLOT_W, bindLabel(opts.keyUp, "W"));
@@ -615,7 +623,7 @@ public class KeystrokesModule extends HudModule {
 
     private void putLabel(Font font, int slot, String text) {
         labels[slot] = text;
-        labelWidths[slot] = text.isEmpty() ? 0 : font.width(text);
+        labelWidths[slot] = text.isEmpty() ? 0 : font.width(textCache.text(slot, text));
     }
 
     /** Display name of a vanilla bind, trimmed to keep key cells compact. */

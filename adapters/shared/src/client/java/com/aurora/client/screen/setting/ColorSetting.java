@@ -159,7 +159,8 @@ public class ColorSetting extends FeatureSetting {
         swatchX = controlX(x, width, swatchW);
         swatchY = controlY(y, ROW_H_COLLAPSED, swatchH);
         if (hex != null) {
-            int secondary = com.aurora.client.ui.component.MaterialSurface.color(com.aurora.client.theme.ThemeToken.ON_BACKGROUND_SECONDARY);
+            // A value is data: primary text, like slider values (council 2026-11-18).
+            int secondary = com.aurora.client.ui.component.MaterialSurface.color(com.aurora.client.theme.ThemeToken.ON_BACKGROUND);
             int textY = compactRow != null ? AuroraFontRenderer.textY(tr, swatchY, swatchH) : AuroraFontRenderer.textY(tr, y, ROW_H_COLLAPSED);
             ctx.text(tr, hex, swatchX - HEX_GAP - tr.width(hex), textY,
                     disabled ? AuroraTheme.TEXT_DIM : secondary, false);

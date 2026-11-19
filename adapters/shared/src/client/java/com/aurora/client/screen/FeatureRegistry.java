@@ -557,7 +557,8 @@ addWithSettings("hitbox",
                                 .description("Draws a line from the entity's eye showing which way it's facing."),
                         SliderSetting.of("Look Length",
                                 () -> cfg.hitboxLookLength, v -> cfg.hitboxLookLength = v, 0.1, 20.0).resetDefault(() -> defaults.hitboxLookLength)
-                                .description("Length of the look-direction line, in blocks."),
+                                .description("Length of the look-direction line, in blocks.")
+                                .disabled(() -> !cfg.hitboxLookDirection && !cfg.hitboxTargetLookDirection),
 
                         new SectionHeaderSetting("Appearance"),
                         SliderSetting.of("Line Width",
@@ -1178,6 +1179,11 @@ addWithSettings("hitbox",
                 "Customize Aurora's accent and background colors, and the opacity, blur and corner radius of its surfaces.",
                 () -> cfg.themeEnabled, v -> cfg.themeEnabled = v,
                 List.of(
+                        // An Enabled row, as every other Settings group has, instead of a switch on
+                        // the group heading (council 2026-11-18: one control language per page).
+                        new BooleanSetting("Enabled", () -> cfg.themeEnabled,
+                                v -> { cfg.themeEnabled = v; persistThemeChange(); }).resetDefault("themeEnabled", () -> defaults.themeEnabled)
+                                .description("Applies your colors below to every Aurora screen. Off uses the factory palette."),
                         new AccentSetting("Accent Color",
                                 () -> cfg.themeOrDefault().accent,
                                 v -> {
@@ -1227,7 +1233,7 @@ addWithSettings("hitbox",
                                 ThemeRoundness.MIN_RADIUS, ThemeRoundness.MAX_RADIUS, 1, true).resetDefault(() -> defaults.themeOrDefault().cornerRadius)
                                 .valueFormatter(v -> v.intValue() + " px")
                                 .description("How round every Aurora shape is: windows, buttons, fields, toggles, sliders and scrollbars. 0 is square and 10 is the classic look. Drag previews the change live; release saves it.")
-                ));
+                )).noSettingsToggle(true);
 
         FeatureSetting uiFpsLimit = new EnumSetting<>("UI FPS Limit", AuroraConfig.GuiFps.class,
                 () -> AuroraConfig.GuiFps.fromValue(cfg.guiFpsLimit), v -> cfg.guiFpsLimit = v.value).resetDefault(() -> AuroraConfig.GuiFps.fromValue(defaults.guiFpsLimit))
@@ -1502,10 +1508,10 @@ addWithSettings("hitbox",
         // Client optimizations Aurora owns (ADR 0009). Only the switches
         // with a visible trade-off have rows; the rest are config-only
         // perf* gates that ship on.
-        FeatureSetting debugEntryCache = new BooleanSetting("Debug Entry Cache",
+        FeatureSetting debugEntryCache = new BooleanSetting("Update F3 at Tick Rate",
                 () -> cfg.perfDebugEntryCache, v -> cfg.perfDebugEntryCache = v).resetDefault("perfDebugEntryCache", () -> defaults.perfDebugEntryCache)
                 .description("Updates the lines of the F3 debug screen 20 times a second, as often as the game itself changes, instead of on every frame. Raises the frame rate while F3 is open; values such as your coordinates update in steps of a game tick.");
-        FeatureSetting minimapRefreshCap = new BooleanSetting("Minimap Refresh Cap",
+        FeatureSetting minimapRefreshCap = new BooleanSetting("Cap Minimap Redraws",
                 () -> cfg.perfMinimapRefreshCap, v -> cfg.perfMinimapRefreshCap = v).resetDefault("perfMinimapRefreshCap", () -> defaults.perfMinimapRefreshCap)
                 .description("While you move or turn, the minimap redraws its terrain at most 60 times a second instead of on every frame, which saves time at high frame rates. Markers stay lined up with the terrain. On screens faster than 60 Hz the terrain scrolls in small steps.");
         addWithSettings("performance",

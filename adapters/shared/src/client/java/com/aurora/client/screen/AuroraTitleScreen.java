@@ -235,7 +235,7 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
             }
         }
         ctx.text(this.font, versionText, MenuComposition.MARGIN, this.height - MenuComposition.MARGIN - this.font.lineHeight + 1,
-                ThemeManager.color(ThemeToken.MATERIAL_TEXT_MUTED), false);
+                ThemeManager.color(ThemeToken.MATERIAL_TEXT_SECONDARY), false); // secondary: muted fell below 4.5:1 on the backdrop
 
         super.extractRenderState(ctx, mouseX, mouseY, delta);
 
@@ -422,7 +422,7 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
 
         @Override
         protected void extractContents(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
-            int color = ThemeManager.color(isHoveredOrFocused() ? ThemeToken.MATERIAL_TEXT : ThemeToken.MATERIAL_TEXT_MUTED);
+            int color = ThemeManager.color(isHoveredOrFocused() ? ThemeToken.MATERIAL_TEXT : ThemeToken.MATERIAL_TEXT_SECONDARY);
             g.text(font, copyrightText, getX() + getWidth() - font.width(copyrightText), getY() + 1, color, false);
         }
 

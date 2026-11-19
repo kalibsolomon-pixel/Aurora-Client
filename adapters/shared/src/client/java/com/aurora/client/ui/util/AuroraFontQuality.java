@@ -44,6 +44,11 @@ public final class AuroraFontQuality {
             Collections.synchronizedMap(new WeakHashMap<>());
     /** The GUI scale Aurora's providers were last rasterized for; 0 before the first load. */
     private static volatile int rasterScale;
+    /** The scale each live provider was rasterized at. Providers load in parallel during a resource
+     * reload, some before the window has its GUI scale and some after, so one shared value missed
+     * the ones left at scale 1 (blocky section headings and titles, council 2026-11-18). */
+    private static final Map<GlyphProvider, Integer> SCALES = Collections.synchronizedMap(new WeakHashMap<>());
+    private static final ThreadLocal<Integer> LOADING_SCALE = new ThreadLocal<>();
 
     private static int guiScale() {
         Minecraft mc = Minecraft.getInstance();
@@ -55,11 +60,23 @@ public final class AuroraFontQuality {
     public static float oversample() {
         int scale = guiScale();
         rasterScale = scale;
+        LOADING_SCALE.set(scale);
         return scale;
     }
 
     public static void register(GlyphProvider provider, TrueTypeGlyphProviderDefinition definition) {
         PROVIDERS.put(provider, definition);
+        Integer scale = LOADING_SCALE.get();
+        LOADING_SCALE.remove();
+        SCALES.put(provider, scale != null ? scale : rasterScale);
+    }
+
+    /** Whether any live provider was rasterized for a scale other than {@code scale}. */
+    private static boolean anyStale(int scale) {
+        synchronized (SCALES) {
+            for (Integer at : SCALES.values()) if (at == null || at != scale) return true;
+        }
+        return false;
     }
 
     public static TrueTypeGlyphProviderDefinition definition(GlyphProvider provider) {
@@ -74,7 +91,7 @@ public final class AuroraFontQuality {
     /** Frame boundary (from {@code GlassSurface.beginFrame()}): re-rasterize when the GUI scale has changed. */
     public static void beginFrame() {
         int scale = guiScale();
-        if (rasterScale == 0 || scale == rasterScale || PROVIDERS.isEmpty()) return;
+        if (rasterScale == 0 || PROVIDERS.isEmpty() || (scale == rasterScale && !anyStale(scale))) return;
         if (MixinHealth.failed("TrueTypeProviderDefinitionMixin") || MixinHealth.failed("FontManagerAccessor")
                 || MixinHealth.failed("FontSetAccessor") || MixinHealth.failed("MinecraftFontManagerAccessor")) {
             rasterScale = scale; // cannot swap; stop retrying every frame
@@ -102,7 +119,8 @@ public final class AuroraFontQuality {
             for (GlyphProvider.Conditional entry : current) {
                 TrueTypeGlyphProviderDefinition definition = snapshot.get(entry.provider());
                 GlyphProvider fresh = null;
-                if (definition != null) {
+                Integer at = SCALES.get(entry.provider());
+                if (definition != null && (at == null || at != guiScale())) {
                     fresh = replaced.computeIfAbsent(entry.provider(), old -> load(definition, mc));
                 }
                 if (fresh == null) {
@@ -120,7 +138,14 @@ public final class AuroraFontQuality {
             owned.remove(swap.getKey());
             owned.add(swap.getValue());
             PROVIDERS.remove(swap.getKey());
+            SCALES.remove(swap.getKey());
             swap.getKey().close();
+        }
+        // Whatever could not be swapped (a failed load, or a provider no longer in any font set)
+        // counts as current, so a stale entry never makes every frame retry.
+        int now = guiScale();
+        synchronized (SCALES) {
+            SCALES.replaceAll((provider, at) -> now);
         }
         if (manager instanceof com.aurora.client.ui.text.SdfFontSets.Lifecycle sdf) {
             sdf.aurora$refreshSdf(options);

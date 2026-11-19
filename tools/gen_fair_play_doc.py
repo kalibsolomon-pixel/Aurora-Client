@@ -33,7 +33,7 @@ Nothing in the mod sends anything of its own to a server: no chat messages and n
 
 A new install has these off. A player has to turn each one on.
 
-- FreeLook
+- Free Look
 - Health Indicators, which shows the health of mobs and your own exact health; showing other players' health is a second switch, also off
 - Other players' totem pop counts, on the HUD and on nametags
 - Dots for other players on the minimap

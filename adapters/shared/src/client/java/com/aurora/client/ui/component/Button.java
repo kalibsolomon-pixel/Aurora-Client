@@ -158,7 +158,10 @@ public class Button extends Widget {
         if(ghost) {
             edge=0;
             fill=ThemeManager.withAlpha(ThemeManager.color(ThemeToken.MATERIAL_HOVER),disabled ? 0 : Math.round(255*Math.max(hover,press)));
-            if(!disabled) text=AuroraAnim.lerpArgb(ThemeManager.color(ThemeToken.MATERIAL_TEXT_SECONDARY),ThemeManager.color(ThemeToken.MATERIAL_TEXT),hover);
+            // A ghost carrying a trailing control is a settings row: its label is primary text, as
+            // row labels are; a plain ghost action rests in secondary.
+            if(!disabled) text=trailingSlot>0 ? ThemeManager.color(ThemeToken.MATERIAL_TEXT)
+                    : AuroraAnim.lerpArgb(ThemeManager.color(ThemeToken.MATERIAL_TEXT_SECONDARY),ThemeManager.color(ThemeToken.MATERIAL_TEXT),hover);
         }
         float py=y; // Card, blur mask, focus and label share one stationary geometry.
         int kind=(destructive ? 30 : primary ? 20 : asField ? 170 : ghost ? 190 : 130+10*look.ordinal())+(disabled ? 4 : hover==1 ? 1 : 0);
@@ -180,27 +183,38 @@ public class Button extends Widget {
         int textY=AuroraFontRenderer.textY(font, py, h);
         if(icon.isEmpty()) {
             AuroraFontRenderer.drawCentered(g,font,
-                    AuroraFontRenderer.ellipsize(font,label.getString(),Math.max(0,(int)w-20),0),(x+w/2f),textY,text);
+                    AuroraFontRenderer.ellipsize(font,label.getString(),Math.max(0,(int)w-20-trailingSlot),0),(x+(w-trailingSlot)/2f),textY,text);
             return;
         }
-        // Reserve matching side slots: the action glyph never shifts the label off the face centre.
+        // The glyph and label centre on the face as one group, ICON_GAP apart (council 2026-11-18:
+        // a glyph pinned to the left edge floated away from a centred label on wide buttons). The
+        // label keeps its ellipsis budget, so a long label never runs into the glyph.
         String fitted=AuroraFontRenderer.ellipsize(font,label.getString(),Math.max(0,(int)w-10-2*(ICON_EM+ICON_GAP)),0);
-        int labelW=font.width(fitted); // measured exactly as drawCentered measures
-        float groupX=x+com.aurora.client.ui.util.TextAlignment.FACE_PAD;
-        // The native glyph and text share the face's optical centre.
+        int labelW=fitted.isEmpty() ? 0 : font.width(fitted);
+        float groupW=ICON_EM+(labelW>0 ? ICON_GAP+labelW : 0);
+        float groupX=Math.round(x+(w-groupW)/2f);
         MaterialIconRenderer.drawIcon(g,font,icon,groupX+ICON_EM/2f,com.aurora.client.ui.util.TextAlignment.iconCenter(py,h),ICON_EM,text);
-        if(!fitted.isEmpty()) AuroraFontRenderer.drawCentered(g,font,fitted,(x+w/2f),textY,text);
+        if(labelW>0) AuroraFontRenderer.drawCentered(g,font,fitted,groupX+ICON_EM+ICON_GAP+labelW/2f,textY,text);
     }
 
     /** Leading icon glyph (Material Symbols), drawn with the label as one centred group; empty for none. */
     private String icon = "";
-    static final int ICON_EM = 12, ICON_GAP = 6;
+    public static final int ICON_EM = 12, ICON_GAP = 6;
 
     /** Gives the button a leading icon — a glyph from {@code IconCatalog.glyph(name)}. */
     public Button icon(String glyph) {
         this.icon = glyph == null ? "" : glyph;
         return this;
     }
+
+    /** Width kept clear at the trailing end for a control the owner paints there (a switch): the
+     * label centres in the rest of the face. */
+    private int trailingSlot;
+    public Button trailingSlot(int px) {
+        this.trailingSlot = Math.max(0, px);
+        return this;
+    }
+
 
     /**
      * Glass-pass bookkeeping: the frame in which {@link #renderGlassPass}

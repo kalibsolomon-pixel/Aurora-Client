@@ -62,6 +62,8 @@ import java.util.function.DoubleSupplier;
 public class Slider extends Widget {
 
     private static final float TRACK_H = 4f;
+    /** Visual well extension past each end of the knob's travel (matches SettingRowLayout.KNOB_RESERVE). */
+    private static final float WELL_EXT = com.aurora.client.ui.util.SettingRowLayout.KNOB_RESERVE;
     private static final float KNOB_R = 4.5f; // 9 px knob (2026-11-14; was 10): it no longer hides the fill edge
     /** Canonical-mode drag grip: knob radius while an accepted drag is active. */
     private static final float KNOB_R_DRAG = KNOB_R + 1f;
@@ -153,7 +155,11 @@ public class Slider extends Widget {
     @Override
     public void renderOverlay(GuiGraphicsExtractor g, float x, float y, float w, float h, int mouseX, int mouseY) {
         float ty = y + h - 12f;
-        if (MaterialSurface.unified()) MaterialSurface.sliderTrack(g,x,ty,w,TRACK_H,trackRadius(),disabled);
+        // The well runs a knob radius past each end of the knob's travel (the row's KNOB_RESERVE),
+        // so the track spans the control column like a dropdown and the knob never overhangs it.
+        // Travel, value mapping and hit testing still use [x, x + w].
+        float wx = x - WELL_EXT, ww = w + 2 * WELL_EXT;
+        if (MaterialSurface.unified()) MaterialSurface.sliderTrack(g,wx,ty,ww,TRACK_H,trackRadius(),disabled);
         // Dragging keeps the hover channel alive outside the bounds — the
         // pointer owning an active manipulation must not lose feedback
         // because it crossed a geometry edge (pre-existing, deliberate).
@@ -167,7 +173,7 @@ public class Slider extends Widget {
         if (filledW > 0) {
             // A flat accent fill (owner decision 2026-11-14): the former AccentGradient showed only
             // its pale left end on short fills, so sliders read as different colours.
-            RenderUtil.drawRoundedRectAA(g, x, ty, filledW, TRACK_H, trackRadius(), fill());
+            RenderUtil.drawRoundedRectAA(g, wx, ty, filledW + WELL_EXT, TRACK_H, trackRadius(), fill());
         }
 
         // Knob — center stays exactly at the value coordinate; the canonical
@@ -179,7 +185,7 @@ public class Slider extends Widget {
         if (hT > 0f) {
             int onBg = MaterialSurface.color(ThemeToken.ON_BACKGROUND) & 0x00FFFFFF;
             int a = Math.round(48 * hT);
-            RenderUtil.drawRoundedOutlineAA(g, x - 3f, ty - 3f, w + 6f, TRACK_H + 6f,
+            RenderUtil.drawRoundedOutlineAA(g, wx - 3f, ty - 3f, ww + 6f, TRACK_H + 6f,
                     MaterialSurface.outsetRadius(trackRadius(), 3f), 1.0f, (a << 24) | onBg);
         }
 
@@ -188,7 +194,7 @@ public class Slider extends Widget {
         // hue-distinct from the white hover halo and from the accent FILL
         // (which stays inside the track at the value).
         if (canonical && focusedVisual) {
-            RenderUtil.drawRoundedOutlineAA(g, x - 3f, ty - 3f, w + 6f, TRACK_H + 6f,
+            RenderUtil.drawRoundedOutlineAA(g, wx - 3f, ty - 3f, ww + 6f, TRACK_H + 6f,
                     MaterialSurface.outsetRadius(trackRadius(), 3f), 1.0f,
                     ThemeManager.withAlpha(MaterialSurface.color(ThemeToken.ACCENT), 0x99));
         }
@@ -215,12 +221,17 @@ public class Slider extends Widget {
     }
 
     private int fill() {
-        return disabled ? MaterialSurface.color(ThemeToken.BORDER)
-                : MaterialSurface.color(ThemeToken.ACCENT);
+        // Disabled keeps its value readable: the accent at 20% instead of a fill that vanished
+        // into the track (council 2026-11-18).
+        int accent = MaterialSurface.color(ThemeToken.ACCENT);
+        return disabled ? ThemeManager.withAlpha(accent, Math.round((accent >>> 24) * .2f)) : accent;
     }
 
     private int knob() {
-        return disabled ? MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED) : 0xFFFFFFFF;
+        // Disabled: halfway from muted text to the raised face, so the knob recedes with its row
+        // instead of reading as a live grip (council 2026-11-18).
+        return disabled ? com.aurora.client.util.AuroraAnim.lerpArgb(MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED),
+                MaterialSurface.color(ThemeToken.MATERIAL_RAISED), .5f) : 0xFFFFFFFF;
     }
 
     /** The pointer target: the track and knob, padded 6 px above and below and 4 px at the ends, as laid out last. */

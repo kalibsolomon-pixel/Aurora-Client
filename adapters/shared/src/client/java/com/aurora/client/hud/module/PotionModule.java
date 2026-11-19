@@ -157,6 +157,8 @@ public class PotionModule extends HudModule {
 
     @Override protected float backgroundAlpha() { return effectsFadeT(); }
 
+    @Override public boolean showsNothing() { return effectsFadeT() <= 0f; }
+
     @Override public int getWidth() {
         // Hold the last non-empty width while fading out so the panel
         // doesn't visibly shrink mid-fade. Once fully faded we revert

@@ -327,7 +327,10 @@ public abstract class EditBoxMixin implements GlassEditBox {
                 // was hard to read on the dark inset field.
                 // Plain string: vanilla styles the hint component itself, and a per-character colour
                 // overrode this token, leaving the hint a dim fixed grey.
-                ctx.text(font, hint.getString(), innerX, textY, MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
+                // Between secondary and muted, so an empty field never reads as holding a query.
+                ctx.text(font, hint.getString(), innerX, textY, com.aurora.client.util.AuroraAnim.lerpArgb(
+                        MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY),
+                        MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED), .5f), false);
             }
         } else {
             // Render the value text, scrolled by displayPos so long

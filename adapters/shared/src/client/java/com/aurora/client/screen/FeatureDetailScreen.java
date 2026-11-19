@@ -210,6 +210,8 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen, LayoutS
         restBody = body;
         restCut = false;
         if (Math.max(extent, popup) <= body) return;
+        // An expanded caption needs its first row beside it, so it is held back from the rest
+        // edge; the band it leaves is allowed for when choosing between resting and cutting.
         int fit = 0, beforeCaption = 0;
         boolean lastIsCaption = false;
         for (int index = 0; index < meta.settings.size(); index++) {
@@ -218,12 +220,18 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen, LayoutS
             if (box == null) continue;
             int bottom = (int) (box.top() + box.height()) - top;
             if (bottom > body) break;
-            lastIsCaption = setting instanceof com.aurora.client.screen.setting.SectionHeaderSetting;
+            // A collapsed caption is a complete row (its section reads as closed), not an orphan.
+            lastIsCaption = setting instanceof com.aurora.client.screen.setting.SectionHeaderSetting caption
+                    && caption.expanded();
             if (lastIsCaption) beforeCaption = fit;
             fit = bottom;
         }
-        if (lastIsCaption && beforeCaption > 0) fit = beforeCaption;
-        if (fit > 0 && fit >= popup && body - fit <= com.aurora.client.ui.util.UiDensity.STACKED_ROW + ROW_GAP)
+        int slack = com.aurora.client.ui.util.UiDensity.STACKED_ROW + ROW_GAP;
+        if (lastIsCaption && beforeCaption > 0) {
+            fit = beforeCaption;
+            slack += com.aurora.client.ui.util.UiDensity.SECTION_GAP + com.aurora.client.ui.util.UiDensity.SECTION_ROW;
+        }
+        if (fit > 0 && fit >= popup && body - fit <= slack)
             restBody = fit;
         else restCut = true;
     }
@@ -414,11 +422,12 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen, LayoutS
             doneBtn.setWidth(bw); doneBtn.setHeight(bh);
             doneBtn.setX(compactFrame.x() + LIST_W - bw - com.aurora.client.ui.util.UiDensity.FRAME_EDGE);
             doneBtn.setY(compactFrame.y() + Math.round(com.aurora.client.ui.util.UiDensity.headerY(bh)));
-            // Reset keeps Done's height and position anchor but its OWN width — the wider
-            // of its two labels (see init); Done's right-aligned slot never moves.
-            int resetBw = Math.max(bw, this.font.width("Confirm reset") + 22);
-            resetBtn.setWidth(resetBw); resetBtn.setHeight(bh);
-            resetBtn.setX(doneBtn.getX() - resetBw - 4); resetBtn.setY(doneBtn.getY());
+            // Reset keeps Done's height and right-edge anchor but sizes to its current label, so the
+            // ghost word sits beside Done (council 2026-11-18: a box sized for "Confirm reset" left
+            // "Reset" floating 30 px away). Arming grows it leftwards; Done never moves.
+            resetBtn.setHeight(bh);
+            resetBtn.setY(doneBtn.getY());
+            placeReset();
         }
         resetBtnArmed = resetConfirm.isArmed();
         registeredSettingControls.clear();
@@ -472,6 +481,14 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen, LayoutS
         resetBtnArmed = armed;
         resetBtn.setMessage(Component.literal(armed ? "Confirm reset" : "Reset"));
         resetBtn.destructive(armed);
+        if (compact()) placeReset();
+    }
+
+    /** Reset's width follows its label; its right edge stays 4 px left of Done. */
+    private void placeReset() {
+        int resetBw = this.font.width(resetBtn.getMessage()) + 22; // the painter ellipsizes past w - 20
+        resetBtn.setWidth(resetBw);
+        resetBtn.setX(doneBtn.getX() - resetBw - 4);
     }
 
     @Override
@@ -695,7 +712,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen, LayoutS
             // its description sits beneath in secondary text, the health or credit line last.
             String breadcrumb = AuroraFontRenderer.ellipsizeRole(this.font, meta.displayName, Math.max(0, resetBtn.getX() - titleX - 6), AuroraFontRenderer.Role.TITLE);
             ctx.text(this.font, AuroraFontRenderer.role(breadcrumb, AuroraFontRenderer.Role.TITLE), titleX,
-                    AuroraFontRenderer.roleTextY(this.font, compactFrame.y() + com.aurora.client.ui.util.UiDensity.FRAME_EDGE, com.aurora.client.ui.util.UiDensity.TOOL, AuroraFontRenderer.Role.TITLE),
+                    AuroraFontRenderer.roleTextY(this.font, compactFrame.y() + com.aurora.client.ui.util.UiDensity.HEADER_TOP, com.aurora.client.ui.util.UiDensity.TOOL, AuroraFontRenderer.Role.TITLE),
                     MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
             int lineY = AuroraFontRenderer.textY(this.font, compactFrame.y() + com.aurora.client.ui.util.UiDensity.HEADER
                     + com.aurora.client.ui.util.TextAlignment.DESCRIPTOR_GAP, this.font.lineHeight);

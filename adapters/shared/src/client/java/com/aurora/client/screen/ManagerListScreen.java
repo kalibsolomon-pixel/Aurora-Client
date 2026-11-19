@@ -257,7 +257,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
     /** Optional secondary line under the empty-state headline (which then takes the heading role). */
     protected Component emptyHint() { return null; }
 
-    private static final int EMPTY_ICON = 24;
+    private static final int EMPTY_ICON = 32; // was 24: the glyph anchors the headline under it
 
     /** Rows painted above the list (the Profile screen's inline create row). */
     protected int leadingRowCount() { return 0; }
@@ -566,7 +566,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
             }
             if (icon != null) {
                 com.aurora.client.ui.util.MaterialIconRenderer.drawIcon(ctx, this.font, icon, cx, y + EMPTY_ICON / 2f, EMPTY_ICON,
-                        ThemeManager.color(ThemeToken.MATERIAL_TEXT_MUTED));
+                        ThemeManager.color(ThemeToken.MATERIAL_TEXT_SECONDARY));
                 y += EMPTY_ICON + 8;
             }
             String empty = com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(this.font,

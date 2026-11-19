@@ -17,8 +17,9 @@ class WindowFrameRoomTest {
 
     @Test void theFrameRoomHoldsTheBandAndItsGap() {
         assertEquals(UiDensity.FRAME_EDGE, UiDensity.FRAME_BAND + UiDensity.FRAME_GAP);
-        assertEquals(UiDensity.FRAME_EDGE + UiDensity.TOOL, UiDensity.HEADER);
-        assertEquals(UiDensity.FRAME_EDGE, UiDensity.headerTop(UiDensity.HEADER_BUTTON_H));
+        assertEquals(UiDensity.TITLE_X, UiDensity.HEADER_TOP);
+        assertEquals(UiDensity.HEADER_TOP + UiDensity.TOOL, UiDensity.HEADER);
+        assertEquals(UiDensity.HEADER_TOP, UiDensity.headerTop(UiDensity.HEADER_BUTTON_H));
         assertEquals(UiDensity.FRAME_EDGE + UiDensity.SCROLLBAR_W + UiDensity.SCROLLBAR_GAP, UiDensity.scrollRightInset());
         // A round theme's band takes the whole cap; a very round one narrows where the corner bends.
         assertEquals(UiDensity.FRAME_BAND, WindowBevel.frameInset(0), 1e-6);

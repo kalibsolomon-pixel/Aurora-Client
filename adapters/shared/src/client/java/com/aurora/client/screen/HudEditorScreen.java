@@ -131,7 +131,7 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
         int h = 20;
 
         // Owner corrections (2026-10-19): Aurora Settings sits over the
-        // crosshair and Reset Positions is a compact corner action. Both are the
+        // crosshair and Reset Positions is a compact corner action (bottom right). Both are the
         // raised, bevelled control face every Aurora window uses (owner, 2026-11-18).
         this.addRenderableWidget(ButtonWidget.semantic(
                 (this.width - w) / 2, (this.height - h) / 2, w, h,
@@ -152,8 +152,10 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
         int resetW = Math.min(w, Math.max(this.font.width("Reset Positions"),
                 this.font.width("Confirm reset")) + 22);
         int resetH = 16;
+        // Bottom-right corner (2026-11-18 council pass): the top-right corner is the default
+        // Potion Effects anchor, whose editor frame ran through the button.
         resetBtn = ButtonWidget.semantic(
-                this.width - resetW - 8, 8, resetW, resetH,
+                this.width - resetW - 8, this.height - resetH - 8, resetW, resetH,
                 Component.literal(resetConfirm.isArmed() ? "Confirm reset" : "Reset Positions"),
                 "Moves every HUD module back to its default anchor, offset and scale. Press again to confirm.",
                 this::resetPressed).glassBackground(true);
@@ -273,9 +275,12 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
             // Two balanced phrase groups; each wraps on its own only when narrow,
             // so no instruction is ever split across lines mid-phrase.
             java.util.List<String> lines = new java.util.ArrayList<>();
+            // Three short pairs (council 2026-11-18): placing, then hiding, then the per-module
+            // actions, instead of two dense lines of six gestures.
             for (String group : new String[]{
-                    "Drag: move  ·  Corner: resize  ·  Right-click: hide",
-                    "Shift+right-click: lock  ·  Shift+click: settings  ·  X badge: disable"})
+                    "Drag: move  ·  Corner: resize",
+                    "Right-click: hide  ·  Shift+right-click: lock",
+                    "Shift+click: settings  ·  X badge: disable"})
                 lines.addAll(com.aurora.client.ui.util.WordWrap.lines(group, hintWidth - 16, 2, this.font::width));
             guideLines = lines;
         }
@@ -285,7 +290,9 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
         for (String line : guideLines) textW = Math.max(textW, this.font.width(line));
         int pillW = Math.min(hintWidth, textW + 16);
         int pillX = (this.width - pillW) / 2;
-        int pillY = this.height - 22 - 12 - pillH; // clear of the vanilla hotbar
+        // Clear of the vanilla hotbar (22) and the armor readouts that sit above it (12), plus 8
+        // of air (council 2026-11-18: the pill covered the readouts).
+        int pillY = this.height - 22 - 12 - 8 - pillH;
         // Fades out quickly while the cursor is over it, so modules can be placed and
         // configured in the space it covers (owner, 2026-11-18).
         boolean over = mouseX >= pillX && mouseX < pillX + pillW && mouseY >= pillY && mouseY < pillY + pillH;
@@ -295,7 +302,11 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
         float radius = Math.min(ThemeManager.current().roundness().radiusSmall(), Math.min(pillW, pillH) * .5f);
         MaterialSurface.overlayFace(ctx, pillX, pillY, pillW, pillH, radius,
                 MaterialSurface.windowCornerClearance(radius, 8, 5), visibility);
-        int text = MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY);
+        // A near-opaque panel under the text: the window tint alone let snow, shield and grass
+        // change the legend's contrast from one word to the next.
+        MaterialSurface.panelBacking(ctx, pillX, pillY, pillW, pillH, radius, .85f * visibility);
+        // Primary text: the pill floats over bright terrain, where secondary grey washed out.
+        int text = MaterialSurface.color(ThemeToken.ON_BACKGROUND);
         int textAlpha = Math.round((text >>> 24) * visibility);
         // Below ~4 the font treats alpha as opaque; skip the text instead.
         if (textAlpha >= 8) com.aurora.client.ui.util.RenderUtil.drawCenteredLines(this.font, ctx, guideLines,
@@ -396,15 +407,23 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
                     : m.locked ? outlineLocked()
                       : !m.enabled ? outlineDisabled()
                         : outlineEnabled();
+            // A dark keyline just outside the frame keeps it visible over white sky and snow.
+            outline(ctx, x - 2, y - 2, x + w + 2, y + h + 2, emphasized ? 0x80000000 : 0x40000000);
             outline(ctx, x - 1, y - 1, x + w + 1, y + h + 1,
                     ThemeManager.withAlpha(color, emphasized ? 0xFF : 0x66));
 
-            // Corner handles (only on the emphasized enabled, unlocked module).
-            if (emphasized && m.enabled && !m.locked) {
-                drawCornerHandle(ctx, x - 2, y - 2);                  // TL
-                drawCornerHandle(ctx, x + w - 2, y - 2);              // TR
-                drawCornerHandle(ctx, x - 2, y + h - 2);              // BL
-                drawCornerHandle(ctx, x + w - 2, y + h - 2);          // BR
+            // Corner handles on every enabled, unlocked module (council 2026-11-18: the legend
+            // says "Corner: resize", so the corners show where to grab before any hover).
+            if (m.enabled && !m.locked) {
+                // Clamped on-screen: a module docked to an edge keeps all four grips visible.
+                int left = Math.max(3, x - 3), right = Math.min(this.width - 8, x + w - 1);
+                int top = Math.max(3, y - 3), bottom = Math.min(this.height - 8, y + h - 1);
+                // Resting grips are half strength, so the hovered or selected module stays clear.
+                float grip = emphasized ? 1f : .5f;
+                drawCornerHandle(ctx, left, top, grip);               // TL
+                drawCornerHandle(ctx, right, top, grip);              // TR
+                drawCornerHandle(ctx, left, bottom, grip);            // BL
+                drawCornerHandle(ctx, right, bottom, grip);           // BR
             }
 
             // X icon (top-right INSIDE the AABB). Only on enabled modules — clicking
@@ -433,6 +452,17 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
                 drawLockIcon(ctx, x + 2, y + 2);
             }
 
+            // A module with nothing to show names itself in its frame (council 2026-11-18: an empty
+            // Potion Effects frame read as a stray selection rectangle).
+            if (m.showsNothing()) {
+                String name = m.displayName();
+                int nameW = this.font.width(name);
+                int nx = x + (w - nameW) / 2, ny = y + (h - this.font.lineHeight) / 2 + 1;
+                // On the same plate as the hover label, so it reads over bright sky and snow.
+                ctx.fill(nx - 4, ny - 3, nx + nameW + 4, ny + this.font.lineHeight + 2, labelBg());
+                ctx.text(this.font, name, nx, ny, MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
+            }
+
             if (!emphasized) continue;
             // Label below (above when there is no room), clamped on-screen.
             String suffix = (!m.enabled ? " (hidden)" : "")
@@ -451,10 +481,11 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
         }
     }
 
-    private static void drawCornerHandle(GuiGraphicsExtractor ctx, int cx, int cy) {
+    private static void drawCornerHandle(GuiGraphicsExtractor ctx, int cx, int cy, float strength) {
         // A dark 1px ring keeps the white handle legible over bright terrain/sky.
-        ctx.fill(cx - 1, cy - 1, cx + 5, cy + 5, 0xA0000000);
-        ctx.fill(cx, cy, cx + 4, cy + 4, CORNER_HANDLE);
+        // 5 px light centre in a 1 px dark ring (council 2026-11-18: 4 px read as a speck).
+        ctx.fill(cx - 1, cy - 1, cx + 6, cy + 6, ThemeManager.withAlpha(0xFF000000, Math.round(0xB0 * strength)));
+        ctx.fill(cx, cy, cx + 5, cy + 5, ThemeManager.withAlpha(CORNER_HANDLE, Math.round((CORNER_HANDLE >>> 24) * strength)));
     }
 
     private void drawXIcon(GuiGraphicsExtractor ctx, int x, int y, float hoverT) {

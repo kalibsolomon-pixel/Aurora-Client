@@ -141,6 +141,13 @@ public class ButtonWidget extends AbstractButton {
         return this;
     }
 
+    /** Trailing width kept clear for a painted control (see {@link Button#trailingSlot}). */
+    public ButtonWidget trailingSlot(int px) {
+        painter.trailingSlot(px);
+        return this;
+    }
+
+
     @Override
     public void onPress(InputWithModifiers input) {
         if(MaterialSurface.unified()) painter.triggerPressAnimation();
