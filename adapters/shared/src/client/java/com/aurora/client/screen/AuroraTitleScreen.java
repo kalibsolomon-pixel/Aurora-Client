@@ -101,7 +101,7 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
         boolean online = this.minecraft.allowsMultiplayer();
         Component offline = online ? null : Component.translatable("title.multiplayer.disabled");
 
-        addCard(0, Component.translatable("aurora.button.singleplayer"), "person",
+        ButtonWidget singleplayer = addCard(0, Component.translatable("aurora.button.singleplayer"), "person",
                 "Browse and play singleplayer worlds.",
                 () -> NativeUi.setScreen(this.minecraft, new SelectWorldScreen(this)));
         ButtonWidget multiplayer = addCard(1, Component.translatable("aurora.button.multiplayer"), "group",
@@ -130,6 +130,13 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
             var pair = composition.card(4);
             settings.setWidth(pair.x() + pair.width() - settings.getX());
         }
+        // The full-width cards share one icon column and label start (council 2026-11-18): icons
+        // line up down the menu and stay beside their labels. A Settings/Mods pair keeps its own.
+        java.util.List<ButtonWidget> column = new java.util.ArrayList<>(java.util.List.of(singleplayer, multiplayer, realms));
+        if (!AuroraModMenuApi.available()) column.add(settings);
+        int labelColumn = 0;
+        for (ButtonWidget card : column) labelColumn = Math.max(labelColumn, this.font.width(card.getMessage()));
+        for (ButtonWidget card : column) card.iconColumn(labelColumn);
 
         var aurora = composition.icon(0);
         addRenderableWidget(IconButton.brand(aurora.x(), aurora.y(), aurora.width(), Component.literal("Aurora"),
@@ -235,7 +242,7 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
             }
         }
         ctx.text(this.font, versionText, MenuComposition.MARGIN, this.height - MenuComposition.MARGIN - this.font.lineHeight + 1,
-                ThemeManager.color(ThemeToken.MATERIAL_TEXT_MUTED), false);
+                ThemeManager.color(ThemeToken.MATERIAL_TEXT_SECONDARY), false); // secondary: muted fell below 4.5:1 on the backdrop
 
         super.extractRenderState(ctx, mouseX, mouseY, delta);
 
@@ -422,7 +429,7 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
 
         @Override
         protected void extractContents(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
-            int color = ThemeManager.color(isHoveredOrFocused() ? ThemeToken.MATERIAL_TEXT : ThemeToken.MATERIAL_TEXT_MUTED);
+            int color = ThemeManager.color(isHoveredOrFocused() ? ThemeToken.MATERIAL_TEXT : ThemeToken.MATERIAL_TEXT_SECONDARY);
             g.text(font, copyrightText, getX() + getWidth() - font.width(copyrightText), getY() + 1, color, false);
         }
 

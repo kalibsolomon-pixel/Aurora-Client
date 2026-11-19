@@ -39,7 +39,7 @@ public class ArmorModule extends HudModule {
     /** Horizontal layout: gap between adjacent cells. */
     private static final int COL_GAP = 4;
     /** Translucent backing behind each durability readout above the hotbar strip. */
-    private static final int READOUT_PLATE = 0x66000000;
+    private static final int READOUT_PLATE = 0x8C000000;
 
     // Durability-bar geometry (matches vanilla hotbar item bar conventions:
     // 13x2 dark frame with a 12x1 colored fill on the top row).

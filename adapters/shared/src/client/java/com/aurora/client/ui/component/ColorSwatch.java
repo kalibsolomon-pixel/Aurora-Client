@@ -262,10 +262,11 @@ public class ColorSwatch extends Widget {
     private static final int EDGE_ON_DARK = 0x80FFFFFF;
 
     private static int edgeFor(int color) {
-        // Dark windows: every sample takes the light hairline (council review 2026-11-14), so a
-        // white sample keeps a silhouette too; the black edge stays for light surfaces.
+        // Dark windows: samples take the light hairline (council review 2026-11-14), except light
+        // ones, where a light hairline vanished into a white fill (council 2026-11-18): those keep
+        // the black edge, which reads against the white and the dark glass alike.
         if (MaterialSurface.unified() && com.aurora.client.theme.ThemeManager.current().mode() != com.aurora.client.theme.ThemeMode.LIGHT)
-            return EDGE_ON_DARK;
+            return com.aurora.client.theme.PaletteEngine.relativeLuminance(color) > 0.6 ? EDGE : EDGE_ON_DARK;
         return com.aurora.client.theme.PaletteEngine.relativeLuminance(color) < 0.05 ? EDGE_ON_DARK : EDGE;
     }
 

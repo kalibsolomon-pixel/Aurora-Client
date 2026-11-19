@@ -415,10 +415,12 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
                 // Clamped on-screen: a module docked to an edge keeps all four grips visible.
                 int left = Math.max(1, x - 2), right = Math.min(this.width - 5, x + w - 2);
                 int top = Math.max(1, y - 2), bottom = Math.min(this.height - 5, y + h - 2);
-                drawCornerHandle(ctx, left, top);                     // TL
-                drawCornerHandle(ctx, right, top);                    // TR
-                drawCornerHandle(ctx, left, bottom);                  // BL
-                drawCornerHandle(ctx, right, bottom);                 // BR
+                // Resting grips are half strength, so the hovered or selected module stays clear.
+                float grip = emphasized ? 1f : .5f;
+                drawCornerHandle(ctx, left, top, grip);               // TL
+                drawCornerHandle(ctx, right, top, grip);              // TR
+                drawCornerHandle(ctx, left, bottom, grip);            // BL
+                drawCornerHandle(ctx, right, bottom, grip);           // BR
             }
 
             // X icon (top-right INSIDE the AABB). Only on enabled modules — clicking
@@ -476,10 +478,10 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
         }
     }
 
-    private static void drawCornerHandle(GuiGraphicsExtractor ctx, int cx, int cy) {
+    private static void drawCornerHandle(GuiGraphicsExtractor ctx, int cx, int cy, float strength) {
         // A dark 1px ring keeps the white handle legible over bright terrain/sky.
-        ctx.fill(cx - 1, cy - 1, cx + 5, cy + 5, 0xA0000000);
-        ctx.fill(cx, cy, cx + 4, cy + 4, CORNER_HANDLE);
+        ctx.fill(cx - 1, cy - 1, cx + 5, cy + 5, ThemeManager.withAlpha(0xFF000000, Math.round(0xA0 * strength)));
+        ctx.fill(cx, cy, cx + 4, cy + 4, ThemeManager.withAlpha(CORNER_HANDLE, Math.round((CORNER_HANDLE >>> 24) * strength)));
     }
 
     private void drawXIcon(GuiGraphicsExtractor ctx, int x, int y, float hoverT) {

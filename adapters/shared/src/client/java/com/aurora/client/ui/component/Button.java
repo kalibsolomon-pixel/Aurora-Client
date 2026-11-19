@@ -188,10 +188,12 @@ public class Button extends Widget {
         // label keeps its ellipsis budget, so a long label never runs into the glyph.
         String fitted=AuroraFontRenderer.ellipsize(font,label.getString(),Math.max(0,(int)w-10-2*(ICON_EM+ICON_GAP)),0);
         int labelW=fitted.isEmpty() ? 0 : font.width(fitted);
-        float groupW=ICON_EM+(labelW>0 ? ICON_GAP+labelW : 0);
+        boolean column=iconColumn>0 && ICON_EM+ICON_GAP+iconColumn<=w-10;
+        float groupW=ICON_EM+(column ? ICON_GAP+iconColumn : labelW>0 ? ICON_GAP+labelW : 0);
         float groupX=Math.round(x+(w-groupW)/2f);
         MaterialIconRenderer.drawIcon(g,font,icon,groupX+ICON_EM/2f,com.aurora.client.ui.util.TextAlignment.iconCenter(py,h),ICON_EM,text);
-        if(labelW>0) AuroraFontRenderer.drawCentered(g,font,fitted,groupX+ICON_EM+ICON_GAP+labelW/2f,textY,text);
+        if(labelW>0 && column) g.text(font,fitted,Math.round(groupX+ICON_EM+ICON_GAP),textY,text,false);
+        else if(labelW>0) AuroraFontRenderer.drawCentered(g,font,fitted,groupX+ICON_EM+ICON_GAP+labelW/2f,textY,text);
     }
 
     /** Leading icon glyph (Material Symbols), drawn with the label as one centred group; empty for none. */
@@ -201,6 +203,14 @@ public class Button extends Widget {
     /** Gives the button a leading icon — a glyph from {@code IconCatalog.glyph(name)}. */
     public Button icon(String glyph) {
         this.icon = glyph == null ? "" : glyph;
+        return this;
+    }
+
+    /** Label column width shared by a stack of icon buttons (0 = none): each centres the same
+     * icon-plus-column group, so icons line up down the stack and labels start together. */
+    private int iconColumn;
+    public Button iconColumn(int labelColumnWidth) {
+        this.iconColumn = Math.max(0, labelColumnWidth);
         return this;
     }
 

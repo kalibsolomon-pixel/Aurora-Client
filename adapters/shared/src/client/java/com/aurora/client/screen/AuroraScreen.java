@@ -152,6 +152,7 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
     private static final float TAB_W = com.aurora.client.ui.util.UiDensity.TAB_W;
     /** Toolbar icon buttons (list/grid) and the step between them. */
     private static final float TOOL = com.aurora.client.ui.util.UiDensity.TOOL, TOOL_STEP = TOOL + 4;
+    private static final int SEARCH_GAP = 4;
 
     /**
      * Height of the muted "Click to configure" hint row drawn under a
@@ -779,16 +780,18 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
         float left = boxX() + UiDensity.SIDEBAR + UiDensity.INSET;
         float top = boxY() + UiDensity.headerY(TOOL);
         // The toolbar ends where the scrollbar does, at the frame room.
-        int searchWidth = Math.max(1, (int) BOX_W - UiDensity.SIDEBAR - UiDensity.INSET - (int) (2 * TOOL_STEP) - UiDensity.FRAME_EDGE);
+        // The search field keeps SEARCH_GAP of air past the view toggles (council 2026-11-18: its
+        // placeholder started flush against the grid button).
+        int searchWidth = Math.max(1, (int) BOX_W - UiDensity.SIDEBAR - UiDensity.INSET - (int) (2 * TOOL_STEP) - SEARCH_GAP - UiDensity.FRAME_EDGE);
         if (selectedCategory == 0) {
             chromeLayout.place("toolbar/list", "toolbar/list", left, top, TOOL, TOOL, true);
             chromeLayout.place("toolbar/grid", "toolbar/grid", left + TOOL_STEP, top, TOOL, TOOL, true);
-            var search = chromeLayout.place("toolbar/search", "toolbar/search", Math.round(left + 2 * TOOL_STEP), Math.round(top), searchWidth, TOOL, true);
+            var search = chromeLayout.place("toolbar/search", "toolbar/search", Math.round(left + 2 * TOOL_STEP + SEARCH_GAP), Math.round(top), searchWidth, TOOL, true);
             searchField.setX((int) search.x());
             searchField.setY((int) search.top());
             searchField.setWidth((int) search.width());
         } else {
-            arrangePageTabs(left, top, (int) (2 * TOOL_STEP) + searchWidth);
+            arrangePageTabs(left, top, (int) (2 * TOOL_STEP) + SEARCH_GAP + searchWidth);
         }
         searchField.visible = selectedCategory == 0;
         chromeLayout.finish(viewport, 0);

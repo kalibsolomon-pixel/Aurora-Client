@@ -141,6 +141,12 @@ public class ButtonWidget extends AbstractButton {
         return this;
     }
 
+    /** Shared label column for a stack of icon buttons (see {@link Button#iconColumn}). */
+    public ButtonWidget iconColumn(int labelColumnWidth) {
+        painter.iconColumn(labelColumnWidth);
+        return this;
+    }
+
     @Override
     public void onPress(InputWithModifiers input) {
         if(MaterialSurface.unified()) painter.triggerPressAnimation();
