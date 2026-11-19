@@ -9,7 +9,7 @@ public final class MaterialLighting {
     public static final double SLOPE_GAIN = 1.0, RIM_GAIN = 20, SPEC_GAIN = 10;
     /** Share of the rim gain on rounded faces turned from the light (2026-11-18 council pass): the
      * lower rim stays a soft ramp instead of a near-black base. Gem facets keep the full gain. */
-    public static final double SHADE_GAIN = .45;
+    public static final double SHADE_GAIN = .35;
     public static final int SPEC_POWER = 24;
     /** Planar facet slope (45 degrees) and the pillow slope cap at the silhouette. */
     public static final double FACET_SLOPE = 1.0, MAX_SLOPE = 3.0;

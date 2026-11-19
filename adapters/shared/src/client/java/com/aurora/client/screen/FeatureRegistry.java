@@ -557,7 +557,8 @@ addWithSettings("hitbox",
                                 .description("Draws a line from the entity's eye showing which way it's facing."),
                         SliderSetting.of("Look Length",
                                 () -> cfg.hitboxLookLength, v -> cfg.hitboxLookLength = v, 0.1, 20.0).resetDefault(() -> defaults.hitboxLookLength)
-                                .description("Length of the look-direction line, in blocks."),
+                                .description("Length of the look-direction line, in blocks.")
+                                .disabled(() -> !cfg.hitboxLookDirection && !cfg.hitboxTargetLookDirection),
 
                         new SectionHeaderSetting("Appearance"),
                         SliderSetting.of("Line Width",

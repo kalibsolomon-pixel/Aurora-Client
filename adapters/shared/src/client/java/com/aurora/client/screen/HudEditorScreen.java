@@ -443,8 +443,10 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
             if (m.showsNothing()) {
                 String name = m.displayName();
                 int nameW = this.font.width(name);
-                ctx.text(this.font, name, x + (w - nameW) / 2, y + (h - this.font.lineHeight) / 2 + 1,
-                        MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), true);
+                int nx = x + (w - nameW) / 2, ny = y + (h - this.font.lineHeight) / 2 + 1;
+                // On the same plate as the hover label, so it reads over bright sky and snow.
+                ctx.fill(nx - 4, ny - 3, nx + nameW + 4, ny + this.font.lineHeight + 2, labelBg());
+                ctx.text(this.font, name, nx, ny, MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
             }
 
             if (!emphasized) continue;

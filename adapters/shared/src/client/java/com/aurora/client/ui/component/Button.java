@@ -183,13 +183,15 @@ public class Button extends Widget {
                     AuroraFontRenderer.ellipsize(font,label.getString(),Math.max(0,(int)w-20),0),(x+w/2f),textY,text);
             return;
         }
-        // Reserve matching side slots: the action glyph never shifts the label off the face centre.
+        // The glyph and label centre on the face as one group, ICON_GAP apart (council 2026-11-18:
+        // a glyph pinned to the left edge floated away from a centred label on wide buttons). The
+        // label keeps its ellipsis budget, so a long label never runs into the glyph.
         String fitted=AuroraFontRenderer.ellipsize(font,label.getString(),Math.max(0,(int)w-10-2*(ICON_EM+ICON_GAP)),0);
-        int labelW=font.width(fitted); // measured exactly as drawCentered measures
-        float groupX=x+com.aurora.client.ui.util.TextAlignment.FACE_PAD;
-        // The native glyph and text share the face's optical centre.
+        int labelW=fitted.isEmpty() ? 0 : font.width(fitted);
+        float groupW=ICON_EM+(labelW>0 ? ICON_GAP+labelW : 0);
+        float groupX=Math.round(x+(w-groupW)/2f);
         MaterialIconRenderer.drawIcon(g,font,icon,groupX+ICON_EM/2f,com.aurora.client.ui.util.TextAlignment.iconCenter(py,h),ICON_EM,text);
-        if(!fitted.isEmpty()) AuroraFontRenderer.drawCentered(g,font,fitted,(x+w/2f),textY,text);
+        if(labelW>0) AuroraFontRenderer.drawCentered(g,font,fitted,groupX+ICON_EM+ICON_GAP+labelW/2f,textY,text);
     }
 
     /** Leading icon glyph (Material Symbols), drawn with the label as one centred group; empty for none. */

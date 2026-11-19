@@ -465,7 +465,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
             com.aurora.client.ui.component.TooltipPresenter.offer(options, options.action().accessibleName().getString(), gearX, gearY, GEAR, GEAR);
         }
         MaterialIconRenderer.drawIcon(ctx, this.font, GEAR_GLYPH, gearX + GEAR / 2f, gearY + GEAR / 2f, 10f,
-                ThemeManager.color(gearHot ? ThemeToken.ON_BACKGROUND : ThemeToken.ON_BACKGROUND_MUTED));
+                ThemeManager.color(gearHot ? ThemeToken.ON_BACKGROUND : ThemeToken.ON_BACKGROUND_SECONDARY));
         if (options.isFocused()) {
             com.aurora.client.ui.util.RenderUtil.drawRoundedOutlineAA(ctx, gearX, gearY, GEAR, GEAR, radius, 1f,
                     ThemeManager.color(ThemeToken.ACCENT));
@@ -492,8 +492,9 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         MaterialSurface.selection(ctx, chipX, chipY, chipW, BTN_H, radius, capturing || hotkey.isFocused(),
                 chipHot ? 1f : 0f);
         int binding = manager.hotkey(name);
-        String label = capturing ? captureLabel(capture.pending()) : binding >= 0 ? keyName(binding) : "No hotkey";
-        int textCol = ThemeManager.color(capturing || binding >= 0 ? ThemeToken.ON_BACKGROUND : ThemeToken.ON_BACKGROUND_MUTED);
+        String label = capturing ? captureLabel(capture.pending()) : binding >= 0 ? keyName(binding) : "Set hotkey";
+        // An unbound hotkey is an invitation, not a disabled field: primary text, "Set hotkey".
+        int textCol = ThemeManager.color(ThemeToken.ON_BACKGROUND);
         String fitted = AuroraFontRenderer.ellipsize(this.font, label, chipW - 20, 0);
         int contentW = 12 + this.font.width(fitted);
         int cx = chipX + (chipW - contentW) / 2;
