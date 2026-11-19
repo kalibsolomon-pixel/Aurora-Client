@@ -51,7 +51,12 @@ Loader and Fabric API. Java 25 is required.
 ## Fixes
 
 - Hitboxes are drawn only for entities in view, as vanilla culls entity
-  rendering, which keeps Aurora within its overhead budget with smooth lines.
+  rendering, and distant boxes skip their corner rounding, which keeps Aurora
+  within its overhead budget with smooth lines.
+- With VulkanMod, smooth lines and UI shapes no longer recompile their shader
+  every frame.
+- With ImmediatelyFast installed, Aurora's smooth text steps aside (as it does
+  for Modern UI and Caxton), so vanilla text is no longer garbled.
 - The server list's numeric ping no longer sits under the scrollbar.
 - Better Hitreg no longer crashes on mobs that override their hurt sound.
 - Window text measured during setup uses the same font as when it is drawn.

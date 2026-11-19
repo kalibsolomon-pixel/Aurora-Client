@@ -1,0 +1,762 @@
+{
+  "schemaVersion": 1,
+  "sourceInputsSha256": "88ee3bc0d02157559abcc9a1d59eaaf066406e782836e3c1e8393d0993839cb8",
+  "rows": [
+    {
+      "minecraft": "26.1.2",
+      "backend": "OPENGL",
+      "set": "baseline",
+      "exitCode": 0,
+      "healthy": true,
+      "clean": true,
+      "mixins": 100,
+      "logSha256": "304cde75b9a985607823437c40a122cf8ed0705d2a8caf9fe3138bee7d86c5bf",
+      "runs": [
+        {
+          "mean": 0.169,
+          "p95": 0.299,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.108,
+          "p95": 0.208,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.098,
+          "p95": 0.193,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.099,
+          "p95": 0.177,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.093,
+          "p95": 0.15,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.099,
+          "p95": 0.148,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        }
+      ]
+    },
+    {
+      "minecraft": "26.1.2",
+      "backend": "OPENGL",
+      "set": "A-performance-stack",
+      "exitCode": 0,
+      "healthy": true,
+      "clean": true,
+      "mixins": 100,
+      "logSha256": "0c6baec280ada65ad3acc694eac2152e709263091343bcd6ba309a038aacbc49",
+      "runs": [
+        {
+          "mean": 0.187,
+          "p95": 0.358,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.135,
+          "p95": 0.233,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.125,
+          "p95": 0.214,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.11,
+          "p95": 0.199,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.101,
+          "p95": 0.166,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.107,
+          "p95": 0.17,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        }
+      ]
+    },
+    {
+      "minecraft": "26.1.2",
+      "backend": "OPENGL",
+      "set": "B-sodium-iris",
+      "exitCode": 0,
+      "healthy": true,
+      "clean": true,
+      "mixins": 100,
+      "logSha256": "cc5514d3df395007889ebc0a43fdd576a772a5c5aea659954686f7d69052978f",
+      "runs": [
+        {
+          "mean": 0.186,
+          "p95": 0.328,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.115,
+          "p95": 0.233,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.103,
+          "p95": 0.186,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.107,
+          "p95": 0.19,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.1,
+          "p95": 0.159,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.09,
+          "p95": 0.149,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        }
+      ]
+    },
+    {
+      "minecraft": "26.1.2",
+      "backend": "VULKANMOD",
+      "set": "C-vulkanmod",
+      "exitCode": 0,
+      "healthy": true,
+      "clean": true,
+      "mixins": 100,
+      "logSha256": "43bfc42ac6b4ed897889c06fe220f108f8d621d3190c0296e910d6aa6e4c8922",
+      "runs": [
+        {
+          "mean": 0.174,
+          "p95": 0.308,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.102,
+          "p95": 0.195,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.102,
+          "p95": 0.181,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.096,
+          "p95": 0.161,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.09,
+          "p95": 0.144,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.085,
+          "p95": 0.14,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        }
+      ]
+    },
+    {
+      "minecraft": "26.2",
+      "backend": "OPENGL",
+      "set": "baseline",
+      "exitCode": 0,
+      "healthy": true,
+      "clean": true,
+      "mixins": 99,
+      "logSha256": "54821f6461937b095e1d06767ab61edc873eab9f02621b04299f1f6f3cf3253e",
+      "runs": [
+        {
+          "mean": 0.21,
+          "p95": 0.369,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.129,
+          "p95": 0.232,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.123,
+          "p95": 0.216,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.122,
+          "p95": 0.216,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.12,
+          "p95": 0.205,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.134,
+          "p95": 0.194,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        }
+      ]
+    },
+    {
+      "minecraft": "26.2",
+      "backend": "OPENGL",
+      "set": "A-performance-stack",
+      "exitCode": 0,
+      "healthy": true,
+      "clean": true,
+      "mixins": 99,
+      "logSha256": "2f4b2d9107970bf7b1a60f81abfab2d3a66aa719c55e086dee6ee06b7305ddc6",
+      "runs": [
+        {
+          "mean": 0.281,
+          "p95": 0.413,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "OVER: CPU mean 0.281 ms > 0.250 ms, CPU p95 0.413 ms > 0.400 ms"
+        },
+        {
+          "mean": 0.209,
+          "p95": 0.333,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.222,
+          "p95": 0.29,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.188,
+          "p95": 0.28,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.165,
+          "p95": 0.253,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.19,
+          "p95": 0.255,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        }
+      ]
+    },
+    {
+      "minecraft": "26.2",
+      "backend": "OPENGL",
+      "set": "B-sodium-iris",
+      "exitCode": 0,
+      "healthy": true,
+      "clean": true,
+      "mixins": 99,
+      "logSha256": "f1f022160045188d68cb398aa438c9a475004c538f1ab0454858bde78973891b",
+      "runs": [
+        {
+          "mean": 0.31,
+          "p95": 0.406,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "OVER: CPU mean 0.310 ms > 0.250 ms, CPU p95 0.406 ms > 0.400 ms"
+        },
+        {
+          "mean": 0.17,
+          "p95": 0.281,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.175,
+          "p95": 0.262,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.22,
+          "p95": 0.249,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.187,
+          "p95": 0.263,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.2,
+          "p95": 0.232,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        }
+      ]
+    },
+    {
+      "minecraft": "26.2",
+      "backend": "VULKAN",
+      "set": "baseline",
+      "exitCode": 0,
+      "healthy": true,
+      "clean": true,
+      "mixins": 99,
+      "logSha256": "b696d3d403d07ce03cdc82b545f33baea0dc8b59f68734efc63348ac9054a940",
+      "runs": [
+        {
+          "mean": 0.2,
+          "p95": 0.345,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.137,
+          "p95": 0.222,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.126,
+          "p95": 0.224,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.122,
+          "p95": 0.216,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.119,
+          "p95": 0.192,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.116,
+          "p95": 0.188,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        }
+      ]
+    },
+    {
+      "minecraft": "26.2",
+      "backend": "VULKAN",
+      "set": "A-performance-stack",
+      "exitCode": 0,
+      "healthy": true,
+      "clean": true,
+      "mixins": 99,
+      "logSha256": "63e7a6b9b52d69b434d0c46eb054dc47d7716b2c170378832515bab39c462a51",
+      "runs": [
+        {
+          "mean": 0.23,
+          "p95": 0.399,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.172,
+          "p95": 0.304,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.163,
+          "p95": 0.262,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.154,
+          "p95": 0.242,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.148,
+          "p95": 0.259,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.136,
+          "p95": 0.212,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        }
+      ]
+    },
+    {
+      "minecraft": "26.3",
+      "backend": "OPENGL",
+      "set": "baseline",
+      "exitCode": 0,
+      "healthy": true,
+      "clean": true,
+      "mixins": 100,
+      "logSha256": "5a216d0820f7bfff2056649401e73715bdb710264a8f4e01d8e3711d7bc07753",
+      "runs": [
+        {
+          "mean": 0.234,
+          "p95": 0.409,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "OVER: CPU p95 0.409 ms > 0.400 ms"
+        },
+        {
+          "mean": 0.14,
+          "p95": 0.219,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.126,
+          "p95": 0.195,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.12,
+          "p95": 0.176,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.115,
+          "p95": 0.151,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.108,
+          "p95": 0.147,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        }
+      ]
+    },
+    {
+      "minecraft": "26.3",
+      "backend": "OPENGL",
+      "set": "A-performance-stack",
+      "exitCode": 0,
+      "healthy": true,
+      "clean": true,
+      "mixins": 100,
+      "logSha256": "715c95d4fde0e7fd55b7591faf5d3e87482db03be9439e6d7955444a2d26dd75",
+      "runs": [
+        {
+          "mean": 0.364,
+          "p95": 0.674,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "OVER: CPU mean 0.364 ms > 0.250 ms, CPU p95 0.674 ms > 0.400 ms"
+        },
+        {
+          "mean": 0.14,
+          "p95": 0.224,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.121,
+          "p95": 0.184,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.117,
+          "p95": 0.173,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.113,
+          "p95": 0.153,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.116,
+          "p95": 0.166,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        }
+      ]
+    },
+    {
+      "minecraft": "26.3",
+      "backend": "OPENGL",
+      "set": "B-sodium-iris",
+      "exitCode": 0,
+      "healthy": true,
+      "clean": true,
+      "mixins": 100,
+      "logSha256": "a156b69c4c6f91f99f9bf43e36625876db488ca33a69b7776c8e127300c038f1",
+      "runs": [
+        {
+          "mean": 0.451,
+          "p95": 0.686,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "OVER: CPU mean 0.451 ms > 0.250 ms, CPU p95 0.686 ms > 0.400 ms"
+        },
+        {
+          "mean": 0.17,
+          "p95": 0.263,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.131,
+          "p95": 0.217,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.124,
+          "p95": 0.192,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.118,
+          "p95": 0.162,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.114,
+          "p95": 0.156,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        }
+      ]
+    },
+    {
+      "minecraft": "26.3",
+      "backend": "VULKAN",
+      "set": "baseline",
+      "exitCode": 0,
+      "healthy": true,
+      "clean": true,
+      "mixins": 100,
+      "logSha256": "211544d109ce66ff397128cde361005390cbbc226f242ea9e692da479d44e45d",
+      "runs": [
+        {
+          "mean": 0.256,
+          "p95": 0.426,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "OVER: CPU mean 0.256 ms > 0.250 ms, CPU p95 0.426 ms > 0.400 ms"
+        },
+        {
+          "mean": 0.158,
+          "p95": 0.224,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.138,
+          "p95": 0.203,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.126,
+          "p95": 0.18,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.126,
+          "p95": 0.174,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.123,
+          "p95": 0.172,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        }
+      ]
+    },
+    {
+      "minecraft": "26.3",
+      "backend": "VULKAN",
+      "set": "A-performance-stack",
+      "exitCode": 0,
+      "healthy": true,
+      "clean": true,
+      "mixins": 100,
+      "logSha256": "2aca809ab0ff6299e745479071475687a2ddf8980f6a29b38d9741f590af13bc",
+      "runs": [
+        {
+          "mean": 0.367,
+          "p95": 0.647,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "OVER: CPU mean 0.367 ms > 0.250 ms, CPU p95 0.647 ms > 0.400 ms"
+        },
+        {
+          "mean": 0.156,
+          "p95": 0.24,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.137,
+          "p95": 0.212,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.129,
+          "p95": 0.19,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.117,
+          "p95": 0.161,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        },
+        {
+          "mean": 0.122,
+          "p95": 0.174,
+          "fills": 0.0,
+          "glass": 0.0,
+          "verdict": "within (CPU mean 0.25 ms, p95 0.40 ms, no glass, 100 fills)"
+        }
+      ]
+    }
+  ]
+}
