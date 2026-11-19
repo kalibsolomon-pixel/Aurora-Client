@@ -298,7 +298,18 @@ public final class FeatureRegistry {
                         new BooleanSetting("Show on HUD",
                                 () -> cfg.playerHealthHudEnabled,
                                 v -> cfg.playerHealthHudEnabled = v).resetDefault("playerHealthHudEnabled", () -> defaults.playerHealthHudEnabled)
-                                .description("Shows your own health as an exact number with two decimals (20.00 at full health), with absorption after it in gold. Works with or without the health above entities. Move it in the HUD editor.")
+                                .description("Shows your own health as an exact number with two decimals (20.00 at full health), with absorption after it in gold. Works with or without the health above entities. Move it in the HUD editor."),
+                        new ColorSetting("Text Color", () -> cfg.playerHealthHudTextColor == null ? com.aurora.client.theme.HudText.color(cfg.hudColor) : cfg.playerHealthHudTextColor, v -> cfg.playerHealthHudTextColor = v).resetDefault(() -> cfg.playerHealthHudTextColor, () -> defaults.playerHealthHudTextColor, () -> defaults.playerHealthHudTextColor == null ? (defaults.hudColor == 0 ? defaultTheme.color(com.aurora.client.theme.ThemeToken.ACCENT) : defaults.hudColor) : defaults.playerHealthHudTextColor)
+                                .description("Text color for the health number. Absorption stays gold. Reset restores its default color.")
+                                .disabled(() -> !cfg.playerHealthHudEnabled),
+                        new EnumSetting<>("Background", FLAT_BACKGROUNDS,
+                                () -> cfg.playerHealthHudBgMode, v -> cfg.playerHealthHudBgMode = v).resetDefault(() -> defaults.playerHealthHudBgMode)
+                                .disabled(() -> !cfg.playerHealthHudEnabled),
+                        new ColorSetting("Background Color (when SOLID)",
+                                () -> cfg.playerHealthHudBgColor, v -> cfg.playerHealthHudBgColor = v).resetDefault(() -> defaults.playerHealthHudBgColor)
+                                .disabled(() -> !cfg.playerHealthHudEnabled || cfg.playerHealthHudBgMode != AuroraConfig.HudBackground.SOLID),
+                        hudThemeCorners(() -> cfg.playerHealthHudThemeCorners, v -> cfg.playerHealthHudThemeCorners = v, () -> defaults.playerHealthHudThemeCorners)
+                                .disabled(() -> !cfg.playerHealthHudEnabled || cfg.playerHealthHudBgMode != AuroraConfig.HudBackground.SOLID)
                 ));
 
         addWithSettings("free_look",
@@ -777,7 +788,14 @@ addWithSettings("hitbox",
                 v -> { cfg.pingHudEnabled = v; cfg.tabPingEnabled = v; },
                 List.of(
                         new ColorSetting("Text Color", () -> cfg.pingHudTextColor == null ? com.aurora.client.theme.HudText.color(cfg.hudColor) : cfg.pingHudTextColor, v -> cfg.pingHudTextColor = v).resetDefault(() -> cfg.pingHudTextColor, () -> defaults.pingHudTextColor, () -> defaults.pingHudTextColor == null ? (defaults.hudColor == 0 ? defaultTheme.color(com.aurora.client.theme.ThemeToken.ACCENT) : defaults.hudColor) : defaults.pingHudTextColor)
-                                .description("Text color for this HUD only. Reset restores its default color."),
+                                .description("Text color for the ping HUD. Until you pick one it follows your latency: green, yellow, then red. Reset restores that."),
+                        new EnumSetting<>("Background", FLAT_BACKGROUNDS,
+                                () -> cfg.pingHudBgMode, v -> cfg.pingHudBgMode = v).resetDefault(() -> defaults.pingHudBgMode),
+                        new ColorSetting("Background Color (when SOLID)",
+                                () -> cfg.pingHudBgColor, v -> cfg.pingHudBgColor = v).resetDefault(() -> defaults.pingHudBgColor)
+                                .disabled(() -> cfg.pingHudBgMode != AuroraConfig.HudBackground.SOLID),
+                        hudThemeCorners(() -> cfg.pingHudThemeCorners, v -> cfg.pingHudThemeCorners = v, () -> defaults.pingHudThemeCorners)
+                                .disabled(() -> cfg.pingHudBgMode != AuroraConfig.HudBackground.SOLID),
                         new BooleanSetting("Show Ping HUD",
                                 () -> cfg.pingHudEnabled,
                                 v -> cfg.pingHudEnabled = v).resetDefault("pingHudEnabled", () -> defaults.pingHudEnabled)
@@ -1011,6 +1029,8 @@ addWithSettings("hitbox",
                         new ColorSetting("Background Color (when SOLID)",
                                 () -> cfg.scoreboardBgColor, v -> cfg.scoreboardBgColor = v).resetDefault(() -> defaults.scoreboardBgColor)
                                 .description("The fill color and opacity used when Background is set to SOLID. Ignored for other background modes."),
+                        new ColorSetting("Text Color", () -> cfg.scoreboardTextColor == null ? 0xFFFFFFFF : cfg.scoreboardTextColor, v -> cfg.scoreboardTextColor = v).resetDefault(() -> cfg.scoreboardTextColor, () -> defaults.scoreboardTextColor, () -> defaults.scoreboardTextColor == null ? 0xFFFFFFFF : defaults.scoreboardTextColor)
+                                .description("Base color for the title and names. Score numbers keep vanilla's red, and text the server colors keeps its own color. Reset restores white."),
                         SliderSetting.of("Scale", () -> cfg.scoreboardScale,
                                 v -> cfg.scoreboardScale = v, 0.5, 3.0).resetDefault(() -> defaults.scoreboardScale)
                                 .description("Extra size on top of the universal HUD scale, which the HUD editor controls. The scoreboard's width and height follow its live rows, so this only enlarges everything uniformly."),

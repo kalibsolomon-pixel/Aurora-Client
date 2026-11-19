@@ -138,6 +138,10 @@ Health shown above mobs (and optionally players), and your own on the HUD; each 
   - **Show Players**: toggle · off · include other players. `{playerHealthShowPlayers}`
 - *Your Health*
   - **Show on HUD**: toggle · off · your health to two decimals (20.00), a draggable HUD module; works without the labels above entities. `{playerHealthHudEnabled}`
+  - **Text Color**: color · HUD default; absorption stays gold. `{playerHealthHudTextColor}`
+  - **Background**: dropdown None / Solid · None. `{playerHealthHudBgMode}`
+  - **Background Color (when SOLID)**: color · 50% black. `{playerHealthHudBgColor}`
+  - **Theme Corners**: toggle · off; Solid only. `{playerHealthHudThemeCorners}`
 
 #### Free Look · off `{card:free_look}`
 Look around without turning your character.
@@ -316,7 +320,10 @@ Active effects with timers (replaces vanilla's effect icons).
 
 #### Ping · off · combined `{card:ping}`
 Latency as numbers.
-- **Text Color**: color · HUD default. `{pingHudTextColor}`
+- **Text Color**: color · follows latency (green, yellow, red) until set. `{pingHudTextColor}`
+- **Background**: dropdown None / Solid · None. `{pingHudBgMode}`
+- **Background Color (when SOLID)**: color · 50% black. `{pingHudBgColor}`
+- **Theme Corners**: toggle · off; Solid only. `{pingHudThemeCorners}`
 - **Show Ping HUD**: toggle · off. `{pingHudEnabled}`
 - **Show in Tab List**: toggle · off. `{tabPingEnabled}`
 - **Show in Player Nametags**: toggle · off. `{nametagPingEnabled}`
