@@ -198,7 +198,7 @@ public final class WaypointEditScreen extends Screen implements ThemedScreen {
     @Override public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float delta) {
         int radius = ThemeManager.current().roundness().radius();
         com.aurora.client.ui.component.GlassSurface.window(g, left, top, panelWidth, frameHeight, radius, com.aurora.client.ui.component.MaterialSurface.frameInset(radius), width, height);
-        int headerMid = top + com.aurora.client.ui.util.UiDensity.FRAME_EDGE + com.aurora.client.ui.util.UiDensity.TOOL / 2;
+        int headerMid = top + com.aurora.client.ui.util.UiDensity.HEADER_TOP + com.aurora.client.ui.util.UiDensity.TOOL / 2;
         com.aurora.client.worldmap.MapMarkers.waypoint(g, left + 16, headerMid, draft, false);
         // A validation error replaces the heading in the semantic error color, so
         // it reads as feedback rather than as a renamed dialog.

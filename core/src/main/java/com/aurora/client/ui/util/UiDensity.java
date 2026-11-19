@@ -13,9 +13,10 @@ public final class UiDensity {
     private UiDensity() {}
 
     // ---- The one window frame ----
-    /** 336×288: the content well (252×248) shows a 3×3 grid of the 80×80 cards, the
-     * third row just under its last 4 px — the owner's "approximately 3×3" target (2026-10-30). */
-    public static final int WINDOW_WIDTH = 336, WINDOW_HEIGHT = 288, WINDOW_MARGIN = 12;
+    /** 336×292: the content well (252×248) shows a 3×3 grid of the 80×80 cards, the
+     * third row just under its last 4 px — the owner's "approximately 3×3" target (2026-10-30).
+     * The 4 px over 288 hold the header's {@link #HEADER_TOP} inset (owner, 2026-11-18). */
+    public static final int WINDOW_WIDTH = 336, WINDOW_HEIGHT = 292, WINDOW_MARGIN = 12;
     /** Legacy names for the frame; kept so existing callers read the uniform size. */
     public static final int MAIN_WIDTH = WINDOW_WIDTH, MAIN_HEIGHT = WINDOW_HEIGHT;
 
@@ -30,8 +31,12 @@ public final class UiDensity {
     // ---- Chrome ----
     /** Header buttons (Reset/Done/New/Done…) and toolbar icon buttons. */
     public static final int HEADER_BUTTON_H = 16, HEADER_BUTTON_W = 48, TOOL = 16;
-    /** Title/toolbar band at the top of every window: the frame room, then one toolbar row. */
-    public static final int HEADER = FRAME_EDGE + TOOL;
+    /** Top of the header row: the frame room plus a row's 4 px inset, the same inset as the title
+     * column and the row controls, so a header button clears the lit top band as far as the title
+     * does (owner, 2026-11-18: Done sat 4 px closer to the border than everything else). */
+    public static final int HEADER_TOP = FRAME_EDGE + 4;
+    /** Title/toolbar band at the top of every window: the header inset, then one toolbar row. */
+    public static final int HEADER = HEADER_TOP + TOOL;
     /** Sidebar navigation items. */
     public static final int TAB_W = 52, TAB_H = 18, TAB_PITCH = 20;
     public static final int SIDEBAR = FRAME_EDGE + TAB_W, INSET = 6;
@@ -61,7 +66,7 @@ public final class UiDensity {
     }
 
     /** The uniform window: {@value #WINDOW_WIDTH}×{@value #WINDOW_HEIGHT}, centered, shrunk to fit. */
-    // Window history: 420×272 (4-column grid) → 336×288 (3×3 grid, 2026-10-30).
+    // Window history: 420×272 (4-column grid) → 336×288 (3×3 grid, 2026-10-30) → 336×292 (header inset, 2026-11-18).
     public static Rect window(int width, int height) {
         int w = Math.min(WINDOW_WIDTH, Math.max(1, width - 2 * WINDOW_MARGIN));
         int h = Math.min(WINDOW_HEIGHT, Math.max(1, height - 2 * WINDOW_MARGIN));
@@ -75,9 +80,9 @@ public final class UiDensity {
     /** Feature identity starts at the same content inset as the ordinary row labels. */
     public static int detailTitleX(Rect frame) { return frame.x() + TITLE_X; }
     /** Top of an item of the given height centred on the header's toolbar row. */
-    public static float headerY(float itemHeight) { return FRAME_EDGE + (TOOL - itemHeight) / 2f; }
+    public static float headerY(float itemHeight) { return HEADER_TOP + (TOOL - itemHeight) / 2f; }
     /** Whole-pixel {@link #headerY}: header buttons, and text lines one pixel lower for their ink. */
-    public static int headerTop(int itemHeight) { return FRAME_EDGE + (TOOL - itemHeight) / 2; }
+    public static int headerTop(int itemHeight) { return HEADER_TOP + (TOOL - itemHeight) / 2; }
     /** Right inset of a scrolling column: the frame room plus the scrollbar and its gap. */
     public static int scrollRightInset() { return FRAME_EDGE + SCROLLBAR_W + SCROLLBAR_GAP; }
     public static Rect mainContent(Rect frame) {

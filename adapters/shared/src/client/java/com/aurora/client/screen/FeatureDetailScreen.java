@@ -712,7 +712,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen, LayoutS
             // its description sits beneath in secondary text, the health or credit line last.
             String breadcrumb = AuroraFontRenderer.ellipsizeRole(this.font, meta.displayName, Math.max(0, resetBtn.getX() - titleX - 6), AuroraFontRenderer.Role.TITLE);
             ctx.text(this.font, AuroraFontRenderer.role(breadcrumb, AuroraFontRenderer.Role.TITLE), titleX,
-                    AuroraFontRenderer.roleTextY(this.font, compactFrame.y() + com.aurora.client.ui.util.UiDensity.FRAME_EDGE, com.aurora.client.ui.util.UiDensity.TOOL, AuroraFontRenderer.Role.TITLE),
+                    AuroraFontRenderer.roleTextY(this.font, compactFrame.y() + com.aurora.client.ui.util.UiDensity.HEADER_TOP, com.aurora.client.ui.util.UiDensity.TOOL, AuroraFontRenderer.Role.TITLE),
                     MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
             int lineY = AuroraFontRenderer.textY(this.font, compactFrame.y() + com.aurora.client.ui.util.UiDensity.HEADER
                     + com.aurora.client.ui.util.TextAlignment.DESCRIPTOR_GAP, this.font.lineHeight);

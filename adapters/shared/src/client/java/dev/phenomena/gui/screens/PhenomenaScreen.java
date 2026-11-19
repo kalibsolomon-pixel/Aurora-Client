@@ -516,7 +516,7 @@ public final class PhenomenaScreen extends Screen implements com.aurora.client.u
     com.aurora.client.ui.component.MaterialSurface.parent(g, frame.x(), frame.y(), frame.w(), frame.h(), Theme.radius(),
         com.aurora.client.ui.component.MaterialSurface.frameInset(Theme.radius()));
     g.text(font, com.aurora.client.ui.util.AuroraFontRenderer.role("Pulsar", com.aurora.client.ui.util.AuroraFontRenderer.Role.TITLE),
-        frame.x() + com.aurora.client.ui.util.UiDensity.TITLE_X, com.aurora.client.ui.util.AuroraFontRenderer.roleTextY(font, frame.y() + com.aurora.client.ui.util.UiDensity.FRAME_EDGE, com.aurora.client.ui.util.UiDensity.TOOL,
+        frame.x() + com.aurora.client.ui.util.UiDensity.TITLE_X, com.aurora.client.ui.util.AuroraFontRenderer.roleTextY(font, frame.y() + com.aurora.client.ui.util.UiDensity.HEADER_TOP, com.aurora.client.ui.util.UiDensity.TOOL,
             com.aurora.client.ui.util.AuroraFontRenderer.Role.TITLE), Theme.TEXT(), false);
     int toolsLeft = frame.right();
     for (var child : children())

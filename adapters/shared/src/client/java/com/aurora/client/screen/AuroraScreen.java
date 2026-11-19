@@ -1161,7 +1161,7 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
         // Window identity: AURORA text only (owner ruling 2026-10-06), in the title role so it
         // reads as the window's name rather than one more label (UI polish 2026-11-14).
         g.text(tr, com.aurora.client.ui.util.AuroraFontRenderer.role("AURORA", com.aurora.client.ui.util.AuroraFontRenderer.Role.TITLE),
-                (int) bx + UiDensity.TITLE_X, (int) AuroraFontRenderer.textY(tr, by + UiDensity.FRAME_EDGE, TOOL), MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
+                (int) bx + UiDensity.TITLE_X, (int) AuroraFontRenderer.textY(tr, by + UiDensity.HEADER_TOP, TOOL), MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
 
         String[] cats = {"Features", "Settings"};
         for (int i = 0; i < 2; i++) {

@@ -457,8 +457,10 @@ band may take up to `FRAME_BAND` = 6 px of that (at the one strength it draws ab
 round theme), and the remaining 4 px is the gap to content.
 Callers pass `MaterialSurface.frameInset(radius)` as the band cap. That cap narrows only
 where a large Corner Radius bends the corner toward the content. Header buttons and
-toolbars sit on one row from 10 to 26 px (`UiDensity.HEADER`), and the body starts 4 px
-below it. A scrolling column ends 16 px from the right edge: the 3 px scrollbar, its 3 px
+toolbars sit on one row from 14 to 30 px (`UiDensity.HEADER_TOP` to `UiDensity.HEADER`), and
+the body starts 4 px below it. The header row takes the title column's 14 px inset rather than
+the bare frame room, because a filled Done 10 px under the lit top band read as tighter than
+everything else (owner, 2026-11-18); the window grew from 288 to 292 px tall to hold it. A scrolling column ends 16 px from the right edge: the 3 px scrollbar, its 3 px
 gap and the frame room. Free text in a window's own column (window titles) starts at
 `UiDensity.TITLE_X` = 14 px, where labels inside full-width rows start, so a title and the
 rows under it share one column. Small dialogs keep their 12 px control column. A modal
@@ -1534,7 +1536,7 @@ Owner request: every Aurora window the same size, smaller text/controls, tighter
 less scrolling, and expandable categories for long option lists. Owner follow-up: feature
 cards keep their original 80×80 size; the window must not be oversized for the smaller UI.
 
-- **One window.** `UiDensity.window` (336×288 GUI px after the same-day follow-up, shrunk to
+- **One window.** `UiDensity.window` (336×292 GUI px since the 2026-11-18 header inset, 336×288 before; shrunk to
   fit with a 12 px margin) is
   the frame for the main screen, every feature detail screen, the Profile and Waypoint
   managers, the waypoint editor, color picker, mapping data and the resource-pack browser
@@ -1547,7 +1549,7 @@ cards keep their original 80×80 size; the window must not be oversized for the 
   hosts) text uses `<font>_ui`, the same bundled face rasterized at 8 instead of 9 px —
   crisp, no pose scaling; measurement uses the same style. Vanilla-font users
   (SansSerif / renderer Off) keep vanilla text.
-- **Compact metrics** (`UiDensity`): 26 px header band (the 10 px frame room, then a 16 px row of header buttons); setting rows
+- **Compact metrics** (`UiDensity`): 30 px header band (the 10 px frame room, 4 px inset, then a 16 px row of header buttons); setting rows
   18 px (sliders 20, wrapped 28) with 2 px gaps; 14 px field controls (dropdown 84 wide,
   keybind/action 72); 24×12 toggles; 14×14 square color swatches (accent presets the same
   squares, its Custom slot a wider labeled pill); 4.5 px slider knob (5 before 2026-11-14); section band 8 px.
@@ -1609,7 +1611,7 @@ The owner explicitly approves purposeful vertical gradients and shallow bevel de
 state and hierarchy clearer. This supersedes the 2026-10-30 “one face for neutral controls:
 no outline, no shadow” / flat-child restrictions where they conflict, the 2026-11-14 icon-only
 feature state and tile hairlines, and the former filled OFF tracks. The title screen, HUD
-editor, ghost Reset / Done positions, sidebar selection, 336×288 window, 80×80 tiles, gaps,
+editor, ghost Reset / Done positions, sidebar selection, 336×292 window, 80×80 tiles, gaps,
 columns and row heights are untouched. Done keeps its primary role, with the primary depth
 recipe. Settings chevrons remain hover/focus-only (2026-11-14 owner ruling).
 

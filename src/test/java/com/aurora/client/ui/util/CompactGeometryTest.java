@@ -7,7 +7,7 @@ class CompactGeometryTest {
     @Test void uniformWindowShowsAThreeByThreeCardGridAndNineListRows() {
         var frame = UiDensity.mainFrame(640, 360);
         var body = UiDensity.mainContent(frame);
-        assertEquals(336, frame.width()); assertEquals(288, frame.height());
+        assertEquals(336, frame.width()); assertEquals(292, frame.height());
         // The frame room (2026-11-18) keeps 10 px on every edge for the bevel band and its gap.
         assertEquals(252, body.width()); assertEquals(248, body.height());
         assertEquals(80, UiDensity.CARD_WIDTH); // feature cards keep their original size

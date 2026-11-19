@@ -247,10 +247,13 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         flash(config.profilesOwnControls ? "Profiles keep their own controls" : "Controls are shared by every profile");
     }
 
-    /** The settings switch inside Separate controls: the same control as every on/off row. */
+    /**
+     * The settings switch inside Separate controls: the same shaded control as every on/off row
+     * (not previewMode, whose flat mock read as a different component). The chip owns the click;
+     * the switch only paints.
+     */
     private final com.aurora.client.ui.component.ToggleSwitch controlsSwitch =
-            new com.aurora.client.ui.component.ToggleSwitch(() -> AuroraConfig.get().profilesOwnControls, v -> {})
-                    .previewMode();
+            new com.aurora.client.ui.component.ToggleSwitch(() -> AuroraConfig.get().profilesOwnControls, v -> {});
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor ctx, int mouseX, int mouseY, float delta) {
@@ -258,8 +261,12 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         if (controlsChip == null || !controlsChip.visible) return;
         float sx = controlsChip.getX() + controlsChip.getWidth() - 6 - UiDensity.TOGGLE_W;
         float sy = controlsChip.getY() + (controlsChip.getHeight() - UiDensity.TOGGLE_H) / 2f;
+        // The whole chip is the switch's target, so hovering anywhere on it washes the switch.
+        boolean chipHover = controlsChip.isMouseOver(mouseX, mouseY);
+        int hx = chipHover ? Math.round(sx + UiDensity.TOGGLE_W / 2f) : Integer.MIN_VALUE / 2;
+        int hy = chipHover ? Math.round(sy + UiDensity.TOGGLE_H / 2f) : Integer.MIN_VALUE / 2;
         controlsSwitch.renderShapes(ctx, sx, sy, UiDensity.TOGGLE_W, UiDensity.TOGGLE_H);
-        controlsSwitch.renderOverlay(ctx, sx, sy, UiDensity.TOGGLE_W, UiDensity.TOGGLE_H, mouseX, mouseY);
+        controlsSwitch.renderOverlay(ctx, sx, sy, UiDensity.TOGGLE_W, UiDensity.TOGGLE_H, hx, hy);
     }
 
     @Override
