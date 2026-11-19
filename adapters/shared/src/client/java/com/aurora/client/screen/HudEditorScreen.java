@@ -275,9 +275,12 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
             // Two balanced phrase groups; each wraps on its own only when narrow,
             // so no instruction is ever split across lines mid-phrase.
             java.util.List<String> lines = new java.util.ArrayList<>();
+            // Three short pairs (council 2026-11-18): placing, then hiding, then the per-module
+            // actions, instead of two dense lines of six gestures.
             for (String group : new String[]{
-                    "Drag: move  ·  Corner: resize  ·  Right-click: hide",
-                    "Shift+right-click: lock  ·  Shift+click: settings  ·  X badge: disable"})
+                    "Drag: move  ·  Corner: resize",
+                    "Right-click: hide  ·  Shift+right-click: lock",
+                    "Shift+click: settings  ·  X badge: disable"})
                 lines.addAll(com.aurora.client.ui.util.WordWrap.lines(group, hintWidth - 16, 2, this.font::width));
             guideLines = lines;
         }
@@ -413,8 +416,8 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
             // says "Corner: resize", so the corners show where to grab before any hover).
             if (m.enabled && !m.locked) {
                 // Clamped on-screen: a module docked to an edge keeps all four grips visible.
-                int left = Math.max(3, x - 3), right = Math.min(this.width - 8, x + w - 2);
-                int top = Math.max(3, y - 3), bottom = Math.min(this.height - 8, y + h - 2);
+                int left = Math.max(3, x - 3), right = Math.min(this.width - 8, x + w - 1);
+                int top = Math.max(3, y - 3), bottom = Math.min(this.height - 8, y + h - 1);
                 // Resting grips are half strength, so the hovered or selected module stays clear.
                 float grip = emphasized ? 1f : .5f;
                 drawCornerHandle(ctx, left, top, grip);               // TL

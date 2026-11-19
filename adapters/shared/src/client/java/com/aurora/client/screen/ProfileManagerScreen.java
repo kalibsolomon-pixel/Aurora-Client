@@ -215,7 +215,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         if (searchField == null) return;
         // pad: Button keeps 20 px around its label (it ellipsizes past w - 20), plus 2 of air;
         // the controls chip also reserves the settings switch's trailing slot.
-        final int gap = 6, searchMin = 56, pad = 22, iconPad = UiDensity.TOGGLE_W + 6;
+        final int gap = 10, searchMin = 56, pad = 22, iconPad = UiDensity.TOGGLE_W + 6;
         int left = listX();
         int right = windowX() + windowWidth() - UiDensity.scrollRightInset();
         String chipLabel = "Separate controls", folderLabel = "Open folder";

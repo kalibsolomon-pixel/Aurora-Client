@@ -1282,6 +1282,9 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
                 control.setBounds((int) lx, (int) btnY, (int) btnSize, (int) btnSize);
                 control.setAvailable(true);
                 control.updatePointer(mouseX, mouseY);
+                // Icon-only: name it on hover, as the title screen's icon buttons do.
+                if (hover) com.aurora.client.ui.component.TooltipPresenter.offer(control,
+                        i == 0 ? "List view" : "Grid view", (int) lx, (int) btnY, (int) btnSize, (int) btnSize);
             }
             drawLayoutButton(g, lx, btnY, btnSize, (i == 1) == gridLayout, hoverT,
                     control != null && control.isFocused(), i == 0, layoutGlass[i]);
