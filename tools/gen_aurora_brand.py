@@ -1,4 +1,4 @@
-"""Generate Aurora's mark and app icon: a faceted, round-ended ribbon (2026-11-19).
+"""Generate Aurora's mark and app icon from the owner's ribbon (2026-11-19).
 
 Writes, under adapters/shared/src/client/resources/assets/aurora:
   branding/aurora.svg          the mark alone, on a viewport fitted to it
@@ -6,13 +6,13 @@ Writes, under adapters/shared/src/client/resources/assets/aurora:
   icon.png                     the 1024 px mod icon, rasterized from aurora-icon.svg
   textures/ui/aurora_mark.png  the title-screen mark (prepare_brand.py)
 
-The ribbon keeps the original logo's two edge curves (the rising crest, the
-trough and the lagging lower edge). Where the ribbon narrows toward each end it
-is cut off and closed with a round cap instead of a needle point, so the mark
-keeps a readable shape at 16-32 px. The shading is gem-like, after Nova
-Studio's icon: flat triangular facets cut between the edges and a ridge, the
-upper half in Aurora's teal band and the lower half in its violet band, the
-facets alternating between catching and losing the light.
+The shape and colors are the owner's 2026-11-02 ribbon: a teal upper band and a
+violet lower band with their original gradients, fold and edge light. Two things
+change (owner, 2026-11-19):
+  - the needle points are cut where the ribbon narrows to END_WIDTH and closed
+    with round caps, so small icons keep both ends instead of losing them;
+  - each band carries smooth bevel shading over its gradient: lit along its upper
+    side, shaded along its lower side, a polished-gem feel with no hard facets.
 
 Run from the repo root: python tools/gen_aurora_brand.py   (needs resvg-py and Pillow)
 """
@@ -22,29 +22,40 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1] / "adapters/shared/src/client/resources/assets/aurora"
 
-# ---- Shape: the original edges, as cubic Bezier segments (640x512 space) ----
-UPPER_EDGE = [((32, 452), (132, 235), (216, 123), (311, 115)),
-              ((311, 115), (406, 109), (452, 226), (497, 231)),
-              ((497, 231), (539, 236), (573, 167), (604, 72))]
-LOWER_EDGE = [((32, 452), (127, 377), (198, 300), (269, 302)),
-              ((269, 302), (330, 303), (358, 374), (420, 399)),
-              ((420, 399), (516, 438), (582, 288), (604, 72))]
-THICKEN = 1.16       # push the lower edge away from the upper one: a bolder ribbon at small sizes
-END_WIDTH = 46.0     # the ribbon is cut where it narrows to this, and capped round
-RIDGE = 0.5          # ridge position across the width, 0 = lower edge, 1 = upper edge
-FACETS = 8           # facet columns along the length
-SAMPLES = 400
+# ---- The original ribbon, as cubic Bezier segments (640x512 space), tip to tip ----
+TOP_EDGE = [((32, 452), (132, 235), (216, 123), (311, 115)),
+            ((311, 115), (406, 109), (452, 226), (497, 231)),
+            ((497, 231), (539, 236), (573, 167), (604, 72))]
+BOTTOM_EDGE = [((32, 452), (127, 377), (198, 300), (269, 302)),
+               ((269, 302), (330, 303), (358, 374), (420, 399)),
+               ((420, 399), (516, 438), (582, 288), (604, 72))]
+BAND_SPLIT = [((32, 452), (125, 326), (207, 202), (294, 200)),       # lower edge of the teal band
+              ((294, 200), (361, 199), (383, 283), (449, 311)),
+              ((449, 311), (524, 342), (574, 266), (604, 72))]
+FOLD = [((32, 452), (137, 345), (214, 247), (291, 255)),             # the dark fold inside the violet band
+        ((291, 255), (355, 262), (380, 332), (442, 364)),
+        ((442, 364), (508, 397), (560, 334), (604, 72))]
+GLOSS = [((32, 452), (129, 303), (214, 145), (311, 157)),            # the lower edge of the top-edge light
+         ((311, 157), (384, 165), (417, 251), (475, 262)),
+         ((475, 262), (517, 269), (553, 211), (604, 72))]
 
-UPPER = ["#22c4cf", "#27e3d2", "#65dce8", "#a3c1ff"]   # teal band, start -> end
-LOWER = ["#2d4ed1", "#4c56e0", "#5d5ce8", "#b17bfa"]   # violet band, start -> end
-LIGHT, DARK = (0xd8, 0xff, 0xff), (0x12, 0x30, 0x8a)
+END_WIDTH = 34.0     # the ribbon never gets thinner than this; its ends are capped round
+SOFTNESS = 3.0       # how gently the minimum width blends into the original taper
+BLEND = 2.5          # the original points return fully once the ribbon is END_WIDTH * (1 + BLEND) wide
+SAMPLES = 420
+
+DEFS = """<linearGradient id="upper" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#138aab"/><stop offset=".32" stop-color="#27e3d2"/><stop offset=".65" stop-color="#65dce8"/><stop offset="1" stop-color="#a3c1ff"/></linearGradient>
+<linearGradient id="lower" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#2d4ed1"/><stop offset=".48" stop-color="#5d5ce8"/><stop offset="1" stop-color="#b17bfa"/></linearGradient>
+<linearGradient id="edge" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#d8ffff" stop-opacity=".8"/><stop offset="1" stop-color="#a1d9ff" stop-opacity="0"/></linearGradient>
+<linearGradient id="lit" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#ffffff" stop-opacity=".9"/><stop offset="1" stop-color="#ffffff" stop-opacity="0"/></linearGradient>
+<linearGradient id="shade" x1="0" y1="1" x2="0" y2="0"><stop stop-color="#0b1660" stop-opacity=".9"/><stop offset="1" stop-color="#0b1660" stop-opacity="0"/></linearGradient>"""
 
 
-def bezier(segments, count):
+def bezier(segments, per=120):
     pts = []
-    for s, (p0, p1, p2, p3) in enumerate(segments):
-        for k in range(count):
-            t = k / count
+    for p0, p1, p2, p3 in segments:
+        for k in range(per):
+            t = k / per
             u = 1 - t
             pts.append(tuple(u ** 3 * p0[j] + 3 * u * u * t * p1[j] + 3 * u * t * t * p2[j] + t ** 3 * p3[j]
                              for j in range(2)))
@@ -52,8 +63,7 @@ def bezier(segments, count):
     return pts
 
 
-def resample(poly, count):
-    """count evenly spaced points by arc length."""
+def resample(poly, count=SAMPLES):
     d = [0.0]
     for a, b in zip(poly, poly[1:]):
         d.append(d[-1] + math.dist(a, b))
@@ -62,8 +72,7 @@ def resample(poly, count):
         target = d[-1] * i / (count - 1)
         while j < len(d) - 2 and d[j + 1] < target:
             j += 1
-        seg = (d[j + 1] - d[j]) or 1.0
-        u = (target - d[j]) / seg
+        u = (target - d[j]) / ((d[j + 1] - d[j]) or 1.0)
         a, b = poly[j], poly[j + 1]
         out.append((a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u))
     return out
@@ -73,105 +82,138 @@ def lerp(a, b, u):
     return (a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u)
 
 
-def mix(c1, c2, u):
-    return tuple(round(c1[i] + (c2[i] - c1[i]) * u) for i in range(3))
-
-
-def hexrgb(h):
-    return tuple(int(h[i:i + 2], 16) for i in (1, 3, 5))
-
-
-def ramp(stops, t):
-    stops = [hexrgb(s) for s in stops]
-    x = max(0.0, min(1.0, t)) * (len(stops) - 1)
-    i = min(int(x), len(stops) - 2)
-    return mix(stops[i], stops[i + 1], x - i)
-
-
-def css(c):
-    return "#%02x%02x%02x" % c
-
-
-def cap(a, b, outward):
-    """Half circle from a to b (the ribbon's two edges), bulging toward outward."""
+def cap(a, b, outward, steps=16):
+    """Half circle from a to b (bottom edge to top edge), bulging toward outward; excludes a and b."""
     c = lerp(a, b, 0.5)
     r = math.dist(a, b) / 2
     a0 = math.atan2(a[1] - c[1], a[0] - c[0])
-    # choose the sweep direction whose midpoint lies on the outward side
-    mid_ccw = (c[0] + r * math.cos(a0 + math.pi / 2), c[1] + r * math.sin(a0 + math.pi / 2))
-    sign = 1 if (mid_ccw[0] - c[0]) * outward[0] + (mid_ccw[1] - c[1]) * outward[1] > 0 else -1
-    return [(c[0] + r * math.cos(a0 + sign * math.pi * k / 14), c[1] + r * math.sin(a0 + sign * math.pi * k / 14))
-            for k in range(1, 14)]
+    probe = (math.cos(a0 + math.pi / 2), math.sin(a0 + math.pi / 2))
+    sign = 1 if probe[0] * outward[0] + probe[1] * outward[1] > 0 else -1
+    return [(c[0] + r * math.cos(a0 + sign * math.pi * k / steps), c[1] + r * math.sin(a0 + sign * math.pi * k / steps))
+            for k in range(1, steps)]
 
 
-def build():
-    top = resample(bezier(UPPER_EDGE, 120), SAMPLES)
-    bottom = resample(bezier(LOWER_EDGE, 120), SAMPLES)
-    bottom = [lerp(t, b, THICKEN) for t, b in zip(top, bottom)]
-    widths = [math.dist(t, b) for t, b in zip(top, bottom)]
-    first = next(i for i, w in enumerate(widths) if w >= END_WIDTH)
-    last = len(widths) - 1 - next(i for i, w in enumerate(reversed(widths)) if w >= END_WIDTH)
-    top, bottom = top[first:last + 1], bottom[first:last + 1]
-    n = len(top) - 1
-    ridge = [lerp(b, t, RIDGE) for t, b in zip(top, bottom)]
-
-    def direction(i, j):
-        a, b = ridge[i], ridge[j]
+def blunt(lines):
+    """Widen the ribbon where it is thinner than END_WIDTH, keeping its length and every
+    line's place across the width, so only the tips change. lines[0] is the top edge,
+    lines[1] the bottom edge; the rest sit between them."""
+    top, bottom = lines[0], lines[1]
+    count = len(top)
+    mid = [lerp(b, t, 0.5) for t, b in zip(top, bottom)]
+    normals = []
+    for i in range(count):
+        a, b = mid[max(i - 1, 0)], mid[min(i + 1, count - 1)]
         ln = math.dist(a, b) or 1.0
-        return ((b[0] - a[0]) / ln, (b[1] - a[1]) / ln)
-
-    start_cap = cap(bottom[0], top[0], direction(4, 0))     # bottom[0] -> top[0]
-    end_cap = cap(bottom[n], top[n], direction(n - 4, n))   # bottom[n] -> top[n]
-    silhouette = bottom + end_cap + list(reversed(top)) + list(reversed(start_cap))
-
-    # Facet columns by arc length along the ridge.
-    cols = [round(n * f / FACETS) for f in range(FACETS + 1)]
-    facets = []
-    for f in range(FACETS):
-        i0, i1 = cols[f], cols[f + 1]
-        im = (i0 + i1) // 2
-        t = (f + 0.5) / FACETS
-        up, low = ramp(UPPER, t), ramp(LOWER, t)
-        even = f % 2 == 0
-        # Two triangles per half, split corner to corner, for a cut-stone look.
-        upper_a = top[i0:im + 1] + [ridge[i0]]
-        upper_b = top[im:i1 + 1] + list(reversed(ridge[i0:i1 + 1]))
-        lower_a = ridge[i0:i1 + 1] + [bottom[im]]
-        lower_b = bottom[i0:im + 1] + [ridge[i0]]
-        lower_c = bottom[im:i1 + 1] + [ridge[i1]]
-        facets.append((upper_a, css(mix(up, LIGHT, 0.44 if even else 0.22))))
-        facets.append((upper_b, css(mix(up, LIGHT, 0.10 if even else 0.36))))
-        facets.append((lower_a, css(mix(low, DARK, 0.02 if even else 0.18))))
-        facets.append((lower_b, css(mix(low, DARK, 0.22 if even else 0.34))))
-        facets.append((lower_c, css(mix(low, DARK, 0.36 if even else 0.08))))
-    # The caps continue their neighbouring halves.
-    half = len(start_cap) // 2
-    facets.append(([ridge[0]] + start_cap[half:] + [top[0]], css(mix(ramp(UPPER, 0), LIGHT, 0.44))))
-    facets.append(([bottom[0]] + start_cap[:half + 1] + [ridge[0]], css(mix(ramp(LOWER, 0), DARK, 0.22))))
-    facets.append(([ridge[n]] + end_cap[half:] + [top[n]], css(mix(ramp(UPPER, 1), LIGHT, 0.36))))
-    facets.append(([bottom[n]] + end_cap[:half + 1] + [ridge[n]], css(mix(ramp(LOWER, 1), DARK, 0.08))))
-    return silhouette, facets
+        nx, ny = (b[1] - a[1]) / ln, -(b[0] - a[0]) / ln
+        # point the normal toward the top edge
+        probe = next((j for j in range(count) if math.dist(top[j], bottom[j]) > 2), i)
+        if (top[probe][0] - bottom[probe][0]) * nx + (top[probe][1] - bottom[probe][1]) * ny < 0:
+            nx, ny = -nx, -ny
+        normals.append((nx, ny))
+    # Each line's fraction across the width, carried to the tips from where it is defined.
+    fractions = []
+    for line in lines:
+        frac = [None] * count
+        for i in range(count):
+            w = math.dist(top[i], bottom[i])
+            if w > 6:
+                frac[i] = math.dist(line[i], bottom[i]) / w
+        last = next(f for f in frac if f is not None)
+        for i in range(count):
+            last = frac[i] = frac[i] if frac[i] is not None else last
+        for i in reversed(range(count)):
+            if math.dist(top[i], bottom[i]) > 6:
+                break
+        fractions.append(frac)
+    out = [[] for _ in lines]
+    for i in range(count):
+        w = math.dist(top[i], bottom[i])
+        wide = (w ** SOFTNESS + END_WIDTH ** SOFTNESS) ** (1 / SOFTNESS)
+        nx, ny = normals[i]
+        # Only the thin ends change: where the ribbon is already wide the original points stay.
+        g = max(0.0, min(1.0, (w - END_WIDTH) / (BLEND * END_WIDTH)))
+        g = g * g * (3 - 2 * g)
+        for k in range(len(lines)):
+            c = -wide / 2 + fractions[k][i] * wide
+            widened = (mid[i][0] + nx * c, mid[i][1] + ny * c)
+            out[k].append(lerp(widened, lines[k][i], g))
+    return out
 
 
 def path(points):
     return "M" + " L".join("%.1f %.1f" % p for p in points) + "Z"
 
 
+def build():
+    top, bottom = resample(bezier(TOP_EDGE)), resample(bezier(BOTTOM_EDGE))
+    split, fold, gloss = resample(bezier(BAND_SPLIT)), resample(bezier(FOLD)), resample(bezier(GLOSS))
+    top, bottom, split, fold, gloss = blunt([top, bottom, split, fold, gloss])
+    n = len(top) - 1
+    mid = [lerp(b, t, 0.5) for t, b in zip(top, bottom)]
+
+    def outward(i, j):
+        a, b = mid[i], mid[j]
+        ln = math.dist(a, b) or 1.0
+        return ((b[0] - a[0]) / ln, (b[1] - a[1]) / ln)
+
+    start = cap(bottom[0], top[0], outward(6, 0))
+    end = cap(bottom[n], top[n], outward(n - 6, n))
+    silhouette = bottom + end + list(reversed(top)) + list(reversed(start))
+
+    def cap_share(points, b, t, s):
+        """The part of a cap (bottom -> top) beside the top edge, for a band reaching s of the width down."""
+        share = max(0.0, min(1.0, math.dist(s, t) / (math.dist(b, t) or 1.0)))
+        keep = int(round(len(points) * share))
+        return points[len(points) - keep:] if keep else []
+
+    # The teal band: from the top edge down to the band split, its caps continuing the share it has at each cut.
+    upper_band = (list(top)
+                  + list(reversed(cap_share(end, bottom[n], top[n], split[n])))
+                  + list(reversed(split))
+                  + cap_share(start, bottom[0], top[0], split[0]))
+    fold_band = list(fold) + list(reversed(bottom))
+    gloss_band = list(top) + list(reversed(gloss))
+
+    def strip(edge_a, edge_b, f0, f1):
+        """The part of a band between fractions f0 and f1 of its width (0 = edge_a)."""
+        a = [lerp(x, y, f0) for x, y in zip(edge_a, edge_b)]
+        b = [lerp(x, y, f1) for x, y in zip(edge_a, edge_b)]
+        return a + list(reversed(b))
+
+    # Smooth bevel shading, no hard facets: each band is lit along its upper side and
+    # falls into shadow along its lower side, so the ribbon reads as a polished, cut surface.
+    upper_light = strip(top, split, 0.0, 0.55)
+    upper_shade = strip(split, top, 0.0, 0.45)
+    lower_light = strip(split, bottom, 0.0, 0.50)
+    lower_shade = strip(bottom, split, 0.0, 0.50)
+    return silhouette, upper_band, fold_band, gloss_band, upper_light, upper_shade, lower_light, lower_shade
+
+
+def mark_group(parts, uid=""):
+    silhouette, upper_band, fold_band, gloss_band, upper_light, upper_shade, lower_light, lower_shade = parts
+    s = path(silhouette)
+    return "\n".join([
+        '<defs>%s' % DEFS.replace('id="', 'id="%s' % uid),
+        '<clipPath id="%ssil"><path d="%s"/></clipPath>' % (uid, s),
+        '<clipPath id="%sband"><path d="%s"/></clipPath></defs>' % (uid, path(upper_band)),
+        '<g clip-path="url(#%ssil)">' % uid,
+        '<path d="%s" fill="url(#%slower)"/>' % (s, uid),
+        '<path d="%s" fill="#172c8e" opacity=".18"/>' % path(fold_band),
+        '<path d="%s" fill="url(#%slit)" opacity=".30"/>' % (path(lower_light), uid),
+        '<path d="%s" fill="url(#%sshade)" opacity=".34"/>' % (path(lower_shade), uid),
+        '<path d="%s" fill="url(#%supper)"/>' % (path(upper_band), uid),
+        '<g clip-path="url(#%sband)">' % uid,
+        '<path d="%s" fill="url(#%slit)" opacity=".34"/>' % (path(upper_light), uid),
+        '<path d="%s" fill="url(#%sshade)" opacity=".22"/>' % (path(upper_shade), uid),
+        "</g>",
+        '<path d="%s" fill="url(#%sedge)" opacity=".28"/>' % (path(gloss_band), uid),
+        "</g>",
+    ])
+
+
 def bounds(points):
     xs, ys = [p[0] for p in points], [p[1] for p in points]
     return min(xs), min(ys), max(xs), max(ys)
-
-
-def mark_group(silhouette, facets):
-    # Facets are clipped to the silhouette so the caps and edges stay one clean outline;
-    # each facet is stroked in its own colour so antialiasing leaves no seams between them.
-    out = ['<clipPath id="ribbon"><path d="%s"/></clipPath>' % path(silhouette),
-           '<g clip-path="url(#ribbon)">']
-    for pts, color in facets:
-        out.append('<path d="%s" fill="%s" stroke="%s" stroke-width="1.5" stroke-linejoin="round"/>'
-                   % (path(pts), color, color))
-    out.append("</g>")
-    return "\n".join(out)
 
 
 def tile_path():
@@ -185,13 +227,12 @@ def tile_path():
 
 
 def main():
-    silhouette, facets = build()
-    group = mark_group(silhouette, facets)
-    x0, y0, x1, y1 = bounds(silhouette)
+    parts = build()
+    x0, y0, x1, y1 = bounds(parts[0])
     pad = 8
     mark = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="%.1f %.1f %.1f %.1f" role="img" '
-            'aria-label="Aurora faceted teal and violet ribbon logo">\n%s\n</svg>\n'
-            % (x0 - pad, y0 - pad, x1 - x0 + 2 * pad, y1 - y0 + 2 * pad, group))
+            'aria-label="Aurora teal and violet ribbon logo">\n%s\n</svg>\n'
+            % (x0 - pad, y0 - pad, x1 - x0 + 2 * pad, y1 - y0 + 2 * pad, mark_group(parts)))
     (ROOT / "branding/aurora.svg").write_text(mark, encoding="utf-8", newline="\n")
 
     # App icon: the mark fills 78% of the tile's width, centred optically (a touch above centre).
@@ -202,7 +243,7 @@ def main():
             'aria-label="Aurora app icon">\n<defs><linearGradient id="surface" x1="0" y1="0" x2="0" y2="1">'
             '<stop stop-color="#25262e"/><stop offset="1" stop-color="#060609"/></linearGradient></defs>\n'
             '<path d="%s" fill="url(#surface)"/>\n<g transform="translate(%.1f %.1f) scale(%.4f)">\n%s\n</g>\n</svg>\n'
-            % (tile_path(), tx, ty, scale, group))
+            % (tile_path(), tx, ty, scale, mark_group(parts)))
     (ROOT / "branding/aurora-icon.svg").write_text(icon, encoding="utf-8", newline="\n")
 
     from PIL import Image

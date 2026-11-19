@@ -5,13 +5,15 @@ keep their shape, with gem-like shading similar to Nova Studio's icon.
 
 ## What changed
 
-- **Shape.** The ribbon keeps the original logo's two edge curves (the rising
-  crest, the trough and the lagging lower edge), thickened 16%. Instead of
-  tapering to needle points, it is cut where it narrows to 46 units and closed
-  with round caps, so 16-32 px icons keep a readable shape.
-- **Shading.** Flat triangular facets cut between the edges and a central ridge,
-  after Nova Studio's starburst: the upper half in Aurora's teal band, the lower
-  half in its violet band, alternating between catching and losing the light.
+The owner's ribbon is kept: its curves, its teal upper band and violet lower band
+with their gradients, the fold and the edge light. (A first, faceted redesign was
+rejected; it broke the bands into a checkerboard and lost the flowing shape.)
+
+- **Tips.** The ribbon never gets thinner than 34 units. The original points are
+  kept wherever the ribbon is wider than about 120 units; below that, the edges
+  ease apart to the minimum and close in round caps. Small icons keep both ends.
+- **Shading.** Smooth bevel gradients over each band, no facets: each band is lit
+  along its upper side and shaded along its lower side.
 - **Size.** The mark fills 78% of the app-icon tile's width (it filled about 60%),
   and `aurora.svg`'s viewport is now fitted to the mark.
 - **Source.** `tools/gen_aurora_brand.py` generates `branding/aurora.svg`,
@@ -22,7 +24,7 @@ keep their shape, with gem-like shading similar to Nova Studio's icon.
 
 | Before | After |
 | --- | --- |
-| ![Before: mark, icon, Nova Studio](before.png) | ![After: icon, title mark and 16/24/32/48/64 px icons](after.png) |
+| ![Before: mark, icon, Nova Studio](before.png) | ![After: icon; original and new mark; 16/24/32/48/64 px icons](after.png) |
 
 [Title screen, 26.3, 1600x900](title-after.png).
 
