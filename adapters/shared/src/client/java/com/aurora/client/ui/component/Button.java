@@ -180,7 +180,7 @@ public class Button extends Widget {
         int textY=AuroraFontRenderer.textY(font, py, h);
         if(icon.isEmpty()) {
             AuroraFontRenderer.drawCentered(g,font,
-                    AuroraFontRenderer.ellipsize(font,label.getString(),Math.max(0,(int)w-20),0),(x+w/2f),textY,text);
+                    AuroraFontRenderer.ellipsize(font,label.getString(),Math.max(0,(int)w-20-trailingSlot),0),(x+(w-trailingSlot)/2f),textY,text);
             return;
         }
         // The glyph and label centre on the face as one group, ICON_GAP apart (council 2026-11-18:
@@ -188,12 +188,10 @@ public class Button extends Widget {
         // label keeps its ellipsis budget, so a long label never runs into the glyph.
         String fitted=AuroraFontRenderer.ellipsize(font,label.getString(),Math.max(0,(int)w-10-2*(ICON_EM+ICON_GAP)),0);
         int labelW=fitted.isEmpty() ? 0 : font.width(fitted);
-        boolean column=iconColumn>0 && ICON_EM+ICON_GAP+iconColumn<=w-10;
-        float groupW=ICON_EM+(column ? ICON_GAP+iconColumn : labelW>0 ? ICON_GAP+labelW : 0);
+        float groupW=ICON_EM+(labelW>0 ? ICON_GAP+labelW : 0);
         float groupX=Math.round(x+(w-groupW)/2f);
         MaterialIconRenderer.drawIcon(g,font,icon,groupX+ICON_EM/2f,com.aurora.client.ui.util.TextAlignment.iconCenter(py,h),ICON_EM,text);
-        if(labelW>0 && column) g.text(font,fitted,Math.round(groupX+ICON_EM+ICON_GAP),textY,text,false);
-        else if(labelW>0) AuroraFontRenderer.drawCentered(g,font,fitted,groupX+ICON_EM+ICON_GAP+labelW/2f,textY,text);
+        if(labelW>0) AuroraFontRenderer.drawCentered(g,font,fitted,groupX+ICON_EM+ICON_GAP+labelW/2f,textY,text);
     }
 
     /** Leading icon glyph (Material Symbols), drawn with the label as one centred group; empty for none. */
@@ -206,13 +204,14 @@ public class Button extends Widget {
         return this;
     }
 
-    /** Label column width shared by a stack of icon buttons (0 = none): each centres the same
-     * icon-plus-column group, so icons line up down the stack and labels start together. */
-    private int iconColumn;
-    public Button iconColumn(int labelColumnWidth) {
-        this.iconColumn = Math.max(0, labelColumnWidth);
+    /** Width kept clear at the trailing end for a control the owner paints there (a switch): the
+     * label centres in the rest of the face. */
+    private int trailingSlot;
+    public Button trailingSlot(int px) {
+        this.trailingSlot = Math.max(0, px);
         return this;
     }
+
 
     /**
      * Glass-pass bookkeeping: the frame in which {@link #renderGlassPass}

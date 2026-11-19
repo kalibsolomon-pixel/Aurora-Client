@@ -894,8 +894,9 @@ the accent-filled call to action under its hint.
 - **Feature on/off (owner ruling, 2026-11-17):** elevation is the primary state cue, including
   in greyscale. ON is an opaque lit raised face with a shallow black soft shadow; OFF is an
   opaque flat `MATERIAL_RAISED` face at -3 HSL lightness points. The icon remains accent on /
-  secondary grey off, and names stay primary in both states. Hover lifts either face by +2
-  lightness points only; there is no resting/hover perimeter outline, accent wash/edge or
+  secondary grey off, and names stay primary in both states. Hover lifts either face by +5
+  lightness points (owner, 2026-11-18; was +2, which reviewers could not see at GUI scale 2)
+  and only that; there is no resting/hover perimeter outline, accent wash/edge or
   separate indicator (dot, switch, pill, bar, badge or state text). The settings chevron stays
   hover/focus-only: top-right on tiles, trailing on rows. Layout, wrapping and hit behaviour
   are unchanged. This supersedes the 2026-11-14 icon-only state cue and tile hairlines.
@@ -1140,7 +1141,7 @@ The surface color is semantic and contextual:
 - a screen's actual custom dim strength when that is the surface already present.
 
 The fade's edge alpha has a floor, `ScrollFade.MIN_EDGE_ALPHA` (0xD8), above the surface's
-own alpha (UI polish overhaul, 2026-11-14). At the factory 33% Background Opacity a fade to
+own alpha (UI polish overhaul, 2026-11-14). At the then-factory 33% Background Opacity a fade to
 the window tint verbatim was nearly invisible, and every council reviewer read rows cut at the
 viewport edge as a rendering bug. The floor only darkens a 16 px gradient at an edge that has
 content beyond it; it is not a cover, the scissor still clips, and the window's own tint keeps

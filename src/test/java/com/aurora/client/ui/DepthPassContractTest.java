@@ -23,8 +23,8 @@ class DepthPassContractTest {
         assertFalse(module.contains("selection("));
         assertTrue(material.contains("MODULE_ON(14,6,Profile.RAISED)"));
         assertTrue(material.contains("MODULE_OFF(-5,-5,Profile.FLAT)"));
-        assertTrue(material.contains("MODULE_ON_HOVER(16,8,Profile.RAISED)"));
-        assertTrue(material.contains("MODULE_OFF_HOVER(-3,-3,Profile.FLAT)"));
+        assertTrue(material.contains("MODULE_ON_HOVER(19,11,Profile.RAISED)"));
+        assertTrue(material.contains("MODULE_OFF_HOVER(0,0,Profile.FLAT)"));
     }
 
     @Test void outlineAttenuationIsIndependentOfWindowOpacity() throws Exception {

@@ -141,11 +141,12 @@ public class ButtonWidget extends AbstractButton {
         return this;
     }
 
-    /** Shared label column for a stack of icon buttons (see {@link Button#iconColumn}). */
-    public ButtonWidget iconColumn(int labelColumnWidth) {
-        painter.iconColumn(labelColumnWidth);
+    /** Trailing width kept clear for a painted control (see {@link Button#trailingSlot}). */
+    public ButtonWidget trailingSlot(int px) {
+        painter.trailingSlot(px);
         return this;
     }
+
 
     @Override
     public void onPress(InputWithModifiers input) {

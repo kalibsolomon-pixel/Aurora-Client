@@ -221,10 +221,10 @@ public class Slider extends Widget {
     }
 
     private int fill() {
-        // Disabled keeps its value readable: the accent at 40% instead of a fill that vanished
+        // Disabled keeps its value readable: the accent at 20% instead of a fill that vanished
         // into the track (council 2026-11-18).
         int accent = MaterialSurface.color(ThemeToken.ACCENT);
-        return disabled ? ThemeManager.withAlpha(accent, Math.round((accent >>> 24) * .4f)) : accent;
+        return disabled ? ThemeManager.withAlpha(accent, Math.round((accent >>> 24) * .2f)) : accent;
     }
 
     private int knob() {

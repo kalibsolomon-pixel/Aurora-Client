@@ -115,7 +115,7 @@ class ThemeCornerAndBlurTest {
                     .getAsJsonObject().getAsJsonObject("theme");
             assertFalse(theme.has("roundness"));
             assertEquals(ThemeRoundness.DEFAULT_RADIUS, theme.get("cornerRadius").getAsInt());
-            // The factory blur before the slider: 28 GUI px x 0.33 opacity = 9.24 -> 9.
+            // The factory blur before the slider: 28 GUI px x 0.42 opacity = 11.76 -> 12.
             assertEquals(Math.round(ThemeDefinition.DEFAULT_BLUR_RADIUS * theme.get("backgroundOpacity").getAsDouble()),
                     theme.get("blurRadius").getAsInt());
         }

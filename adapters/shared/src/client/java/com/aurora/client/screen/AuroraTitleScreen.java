@@ -101,7 +101,7 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
         boolean online = this.minecraft.allowsMultiplayer();
         Component offline = online ? null : Component.translatable("title.multiplayer.disabled");
 
-        ButtonWidget singleplayer = addCard(0, Component.translatable("aurora.button.singleplayer"), "person",
+        addCard(0, Component.translatable("aurora.button.singleplayer"), "person",
                 "Browse and play singleplayer worlds.",
                 () -> NativeUi.setScreen(this.minecraft, new SelectWorldScreen(this)));
         ButtonWidget multiplayer = addCard(1, Component.translatable("aurora.button.multiplayer"), "group",
@@ -130,13 +130,6 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
             var pair = composition.card(4);
             settings.setWidth(pair.x() + pair.width() - settings.getX());
         }
-        // The full-width cards share one icon column and label start (council 2026-11-18): icons
-        // line up down the menu and stay beside their labels. A Settings/Mods pair keeps its own.
-        java.util.List<ButtonWidget> column = new java.util.ArrayList<>(java.util.List.of(singleplayer, multiplayer, realms));
-        if (!AuroraModMenuApi.available()) column.add(settings);
-        int labelColumn = 0;
-        for (ButtonWidget card : column) labelColumn = Math.max(labelColumn, this.font.width(card.getMessage()));
-        for (ButtonWidget card : column) card.iconColumn(labelColumn);
 
         var aurora = composition.icon(0);
         addRenderableWidget(IconButton.brand(aurora.x(), aurora.y(), aurora.width(), Component.literal("Aurora"),

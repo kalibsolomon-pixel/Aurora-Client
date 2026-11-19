@@ -22,8 +22,8 @@ public class ThemeDefinition {
     /**
      * Initializer blur radius, in GUI pixels. Before the Blur Radius slider
      * glass blurred at 28 GUI pixels scaled by Background Opacity, so 28
-     * matches the initializer's full opacity; the release defaults pair 0.33
-     * opacity with 9.
+     * matches the initializer's full opacity; the release defaults pair 0.42
+     * opacity with 12 (0.33 with 9 before 2026-11-18).
      */
     public static final int DEFAULT_BLUR_RADIUS = 28;
 

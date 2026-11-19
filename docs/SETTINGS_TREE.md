@@ -486,8 +486,8 @@ Simple config-backed setting rows here and on module detail pages show a small r
   - **Accent Color**: swatch grid + picker · indigo (#5C6BC0), the logo's family. `{theme.accent}`
   - **Background Color**: swatch grid + picker · graphite (#16171D). `{theme.background}`
   - *Surfaces* (the three sliders grouped under one caption)
-    - **Background Opacity**: slider 0–100% · 33% · the tint's density only. `{theme.backgroundOpacity}`
-    - **Blur Radius**: slider Off–32 px (GUI pixels) · 9 px · how blurred the backdrop behind glass is. `{theme.blurRadius}`
+    - **Background Opacity**: slider 0–100% · 42% (new installs; was 33%) · the tint's density only. `{theme.backgroundOpacity}`
+    - **Blur Radius**: slider Off–32 px (GUI pixels) · 12 px (new installs; was 9) · how blurred the backdrop behind glass is. `{theme.blurRadius}`
     - **Corner Radius**: slider 0–20 px · 10 px · every shape: windows, buttons, fields, toggles, sliders, scrollbars. Replaced Corner Style (Round = 10, Slightly Round = 6, Square = 0). `{theme.cornerRadius}`
 - *Text & Fonts* · no toggle `{card:text_fonts}` · font, weight, modifiers and case apply wherever the Text Renderer does
   - **Text Renderer**: dropdown Off / Aurora UI Only / All Text · All Text · Aurora UI Only styles text on Aurora's own windows (Pulsar's dashboard included), never the in-game HUD or vanilla screens; All Text adds the HUD and every vanilla string. `{textRendererMode}`

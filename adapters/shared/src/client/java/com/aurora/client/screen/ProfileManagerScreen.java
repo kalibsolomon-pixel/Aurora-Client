@@ -188,7 +188,10 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         controlsChip = this.addRenderableWidget(ButtonWidget.semantic(0, 0, 10, UiDensity.HEADER_BUTTON_H,
                 Component.literal("Separate controls"),
                 "When on, each profile keeps its own Aurora and Minecraft key bindings and switching applies them.",
-                this::toggleSeparateControls).glassBackground(true));
+                this::toggleSeparateControls).glassBackground(true)
+                // A settings row, not a push button: the label and the switch on the bare toolbar,
+                // the whole span one target with the hover face (council 2026-11-18).
+                .theming(Button.Theming.GHOST).trailingSlot(UiDensity.TOGGLE_W + 6));
         folderBtn = this.addRenderableWidget(ButtonWidget.semantic(0, 0, 10, UiDensity.HEADER_BUTTON_H,
                 Component.literal("Open folder"),
                 "Opens the folder the profile files are saved in.",
@@ -211,9 +214,8 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
     private void layoutHeader() {
         if (searchField == null) return;
         // pad: Button keeps 20 px around its label (it ellipsizes past w - 20), plus 2 of air;
-        // the controls chip also reserves the settings switch's slot on both sides, so its label
-        // stays centred.
-        final int gap = 6, searchMin = 56, pad = 22, iconPad = 2 * (UiDensity.TOGGLE_W + 6) - 10;
+        // the controls chip also reserves the settings switch's trailing slot.
+        final int gap = 6, searchMin = 56, pad = 22, iconPad = UiDensity.TOGGLE_W + 6;
         int left = listX();
         int right = windowX() + windowWidth() - UiDensity.scrollRightInset();
         String chipLabel = "Separate controls", folderLabel = "Open folder";
