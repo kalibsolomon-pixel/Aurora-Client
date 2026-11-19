@@ -69,8 +69,10 @@ public abstract class AbstractButtonMixin {
             // shared Button's contract; an in-flight hover eases back to
             // rest on the enable→disable transition).
             // The whole visual — press-scale pose, token radius, colors,
-            // focus hairline, centered label — is the shared painter's.
-            if (aurora$painter == null) aurora$painter = new Button(self.getMessage(), () -> {}).theming(Button.Theming.BACKGROUND);
+            // focus hairline, centered label — is the shared painter's. Its
+            // default treatment is the opaque raised face with baked bevels,
+            // the same as the title cards (owner, 2026-11-18).
+            if (aurora$painter == null) aurora$painter = new Button(self.getMessage(), () -> {});
             aurora$painter.label(self.getMessage()).focused(self.isFocused()).disabled(!self.active);
             aurora$painter.renderOverlay(ctx,self.getX(),self.getY(),self.getWidth(),self.getHeight(),mouseX,mouseY);
             ci.cancel();
