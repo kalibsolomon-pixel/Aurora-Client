@@ -1116,7 +1116,7 @@ addWithSettings("hitbox",
                 List.of("fixHeldItemSeams", "heldItemInflation"));
 
         add("custom_title",
-                "Replaces Minecraft's default main menu with Aurora's title screen — your logo, buttons, player model and account over a softly animated gradient — and themes the buttons and search field on the world-select and multiplayer screens. Purely cosmetic; turn it off to restore the vanilla menu. Takes effect the next time you return to the main menu.",
+                "Replaces Minecraft's default main menu with Aurora's title screen — your logo, buttons, player model and account over a softly animated gradient — and themes the buttons and search field on the world-select and multiplayer screens, including In-Game Account Switcher's account button when that mod is installed. Purely cosmetic; turn it off to restore the vanilla look on all of them. The main menu changes the next time you return to it; the other screens change at once.",
                 () -> cfg.customTitleScreen, v -> cfg.customTitleScreen = v);
 
         addWithSettings("resourcepack_browser",

@@ -383,8 +383,8 @@ public final class FeatureCatalog {
         mixin("MinecraftFontManagerAccessor", "crisp Aurora fonts at every GUI scale", "text_fonts");
         mixin("ScreenshotMixin", "blurred glass (it cannot be paused safely during screenshots)");
         mixin("GuiRendererGlassMixin", "blurred glass (26.1 captures must run after the world is drawn)");
-        mixin("AbstractButtonMixin", "Aurora styling on vanilla buttons", "custom_title");
-        mixin("EditBoxMixin", "Aurora styling on text fields", "custom_title");
+        mixin("AbstractButtonMixin", "Aurora styling on vanilla buttons", "custom_title").gates("customTitleScreen");
+        mixin("EditBoxMixin", "Aurora styling on text fields", "custom_title").gates("customTitleScreen");
         mixin("ServerListDragReorderMixin", "drag-to-reorder in the server list", "miscellaneous").gates("serverListDragReorder");
         mixin("MultiplayerServerListWidgetMixin", "numeric ping in the server list", "ping");
         mixin("ClientLevelWorldMapMixin", "refreshing the maps when a block changes", "world_map", "minimap");
