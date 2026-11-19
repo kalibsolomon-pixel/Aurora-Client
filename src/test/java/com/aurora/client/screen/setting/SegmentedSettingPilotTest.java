@@ -125,7 +125,7 @@ class SegmentedSettingPilotTest {
         // through its ThemeMode fixture.
         String registry = java.nio.file.Files.readString(SourceTree.resolve(
                 SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/FeatureRegistry.java"));
-        assertEquals(7, registry.split("new SegmentedSetting\<>\(", -1).length - 1,
+        assertEquals(7, registry.split("new SegmentedSetting\\<>\\(", -1).length - 1,
                 "Case, HUD Text Shadow, Search Typo Tolerance, Animations' Eating & Drinking, Block Pose and Re-equip On, and the Potion HUD's Vanilla Layout");
         assertFalse(registry.contains("ThemeMode.class"));
         assertFalse(registry.contains("ThemeRoundness.class"));
