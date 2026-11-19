@@ -400,6 +400,36 @@ public class AuroraConfig {
     /** Movement curve shaping the idle sway oscillation. */
     public IdleSwayCurve idleSwayCurve = IdleSwayCurve.SINE_BREATH;
 
+    // ---- Animations, 2026-11-18 pass (OverflowAnimations research, items 1-4) ----
+    // Every option is display-only and its default is vanilla. The shared
+    // "anim" prefix is the Animations reset prefix for all of them.
+    /** Share of vanilla's view-lag hand sway kept when turning: 1 = vanilla, 0 = the hands follow the view rigidly. */
+    public double animHandSway = 1.0;
+    /** How the first-person eat/drink motion is drawn. */
+    public EatStyle animEatStyle = EatStyle.VANILLA;
+    /** How a non-shield item in a blocking use is held in first person. */
+    public BlockStyle animBlockStyle = BlockStyle.VANILLA;
+    /** Keep drawing a swing that is still running when a non-shield block starts (1.7 block-hit look). */
+    public boolean animBlockHitSwing = false;
+    /** Skip the hand dip vanilla plays after a successful item use. */
+    public boolean animNoUseDip = false;
+    /** Skip the main-hand dip that follows the attack cooldown. */
+    public boolean animNoCooldownDip = false;
+    /** When the main-hand item re-equips (dips and rises). */
+    public ReequipMode animReequip = ReequipMode.VANILLA;
+    /** Every drawn player turns its body toward the way it walks, backwards too (1.8). */
+    public boolean animRetroBackwardsWalk = false;
+    /** Your own avatar crouches with 1.8's taller pose. */
+    public boolean animClassicSneak = false;
+
+    public enum EatStyle { VANILLA, COMPACT }
+    public enum BlockStyle { VANILLA, CLASSIC }
+    public enum ReequipMode {
+        VANILLA,
+        /** Dip only on a hotbar slot change; same-slot count, durability and component updates show at once. */
+        SLOT_ONLY
+    }
+
     /**
      * Movement curves for idle held-item sway. Each shapes the oscillation
      * differently, from a gentle breath to dramatic figure-8 drifts.

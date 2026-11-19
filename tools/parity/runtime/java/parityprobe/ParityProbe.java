@@ -445,6 +445,17 @@ public final class ParityProbe implements ClientModInitializer {
                 client.player.yRotO = client.player.getYRot();
                 client.player.xRotO = client.player.getXRot();
             }
+            // `perspective first|back|front`: the camera type F5 cycles through.
+            case "perspective" -> client.options.setCameraType(switch (args[1]) {
+                case "back" -> net.minecraft.client.CameraType.THIRD_PERSON_BACK;
+                case "front" -> net.minecraft.client.CameraType.THIRD_PERSON_FRONT;
+                default -> net.minecraft.client.CameraType.FIRST_PERSON;
+            });
+            // `key-press attack|use`: one press of that key mapping, as a mouse click queues it.
+            case "key-press" -> net.minecraft.client.KeyMapping.click(InputConstants.getKey(
+                    (args[1].equals("use") ? client.options.keyUse : client.options.keyAttack).saveString()));
+            // `slot <0-8>`: select a hotbar slot, as a number key does.
+            case "slot" -> client.player.getInventory().setSelectedSlot(Integer.parseInt(args[1]));
             case "pointer" -> {
                 // Parks the GUI pointer (window pixels) without moving the OS cursor: GLFW drops
                 // synthetic moves at an unchanged position, so the parked value holds.
@@ -693,7 +704,7 @@ public final class ParityProbe implements ClientModInitializer {
                     case "forward" -> options.keyUp; case "left" -> options.keyLeft;
                     case "back" -> options.keyDown; case "right" -> options.keyRight;
                     case "jump" -> options.keyJump; case "attack" -> options.keyAttack;
-                    case "use" -> options.keyUse;
+                    case "use" -> options.keyUse; case "sneak" -> options.keyShift;
                     default -> throw new IllegalArgumentException("Unknown key " + kv[0]);
                 };
                 mapping.setDown(kv[1].equals("on"));
