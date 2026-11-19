@@ -65,7 +65,6 @@ class TextOptionsTest {
         assertEquals(AuroraConfig.TextWeight.MEDIUM, fresh.textWeight, "Medium is what every family shipped before");
         assertFalse(fresh.textItalic);
         assertFalse(fresh.textUnderline);
-        assertFalse(fresh.textSdf);
         assertEquals(AuroraConfig.TextCase.NORMAL, fresh.textCase);
         // HUD text gained the Normal drop shadow as its factory default (owner decision 2026-11-14).
         assertEquals(AuroraConfig.TextShadow.NORMAL, fresh.textHudShadow);

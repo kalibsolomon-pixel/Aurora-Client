@@ -38,7 +38,7 @@ public abstract class SdfFontManagerMixin implements SdfFontSets.Lifecycle {
         if (raster == null) return;
         try {
             Minecraft minecraft = Minecraft.getInstance();
-            if (SdfTextSupport.enabled(AuroraConfig.get()) && minecraft != null && RenderSystem.isOnRenderThread()
+            if (SdfTextSupport.enabled() && minecraft != null && RenderSystem.isOnRenderThread()
                     && !MixinHealth.failed("FontManagerAccessor") && !MixinHealth.failed("FontSetAccessor")) {
                 if (aurora$sdfSets == null) aurora$sdfSets = new SdfFontSets(minecraft.getResourceManager());
                 FontSet sdf = aurora$sdfSets.resolve(id, raster, textureManager, minecraft.options);

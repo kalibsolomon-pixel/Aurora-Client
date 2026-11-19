@@ -199,7 +199,7 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
         wordmarkAdvances = new int[WORDMARK_TEXT.length()];
         wordmarkWidth = 0;
         Style wordmarkStyle = AuroraFontRenderer.getActiveStyle() != null
-                && com.aurora.client.ui.text.SdfTextSupport.resolveSdfStyle(com.aurora.client.config.AuroraConfig.get())
+                && com.aurora.client.ui.text.SdfTextSupport.resolveSdfStyle()
                 ? WORDMARK_SDF : WORDMARK;
         for (int i = 0; i < WORDMARK_TEXT.length(); i++) {
             // An explicit font: the text options never re-case or re-face the wordmark.

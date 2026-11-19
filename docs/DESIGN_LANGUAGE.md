@@ -202,8 +202,9 @@ must look the way they will in game. "All Text" styles everything, HUD and vanil
 Measurement always follows drawing: `MixinFont` re-routes width through the same scope, and
 `AuroraFontRenderer.styleKey()` folds the applicability into every memo key.
 
-**Smooth Scaling (SDF)** is off by default. It changes how Aurora's custom glyphs are
-drawn in the GUI, not where the custom font applies or how it is measured. The 8 px body,
+**SDF text** is how Aurora's custom glyphs are drawn in the GUI (the only path since
+2026-11-19; bitmap text is the fallback when SDF cannot run). It does not change where the
+custom font applies or how it is measured. The 8 px body,
 9 px body, 11 px title and 20 px wordmark keep their raster metrics. Compare both at
 native pose scale before judging stroke weight; the main gain is at larger pose scales.
 In All Text mode, scaled HUD labels use the same distance-field glyphs in the world and

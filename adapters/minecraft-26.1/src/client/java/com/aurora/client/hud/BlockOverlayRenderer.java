@@ -96,7 +96,7 @@ public final class BlockOverlayRenderer {
 
                 // The see-through outline option is gone (owner ruling
                 // 2026-10-30); the outline keeps the see-through default.
-                boolean sdf = cfg.blockOverlaySdfLines && WorldLineRenderer.sdfAvailable();
+                boolean sdf = WorldLineRenderer.sdfAvailable();
                 VertexConsumer lineBuf = WorldLineRenderer.getLineBuffer(consumers, sdf);
 
                 double blockX = pos.getX();

@@ -33,17 +33,18 @@ class SdfWorldLinesSourceContractTest {
     }
 
     @Test
-    void featuresGateOnTheirOwnFieldAndShaderHealth() {
+    void sdfIsTheOnlyLinePathWhileTheShaderWorks() {
         assertTrue(SourceTree.read("hud/HitboxRenderer.java")
-                .contains("boolean sdf = cfg.hitboxSdfLines && WorldLineRenderer.sdfAvailable();"));
+                .contains("boolean sdf = WorldLineRenderer.sdfAvailable();"));
         assertTrue(SourceTree.read("hud/BlockOverlayRenderer.java")
-                .contains("boolean sdf = cfg.blockOverlaySdfLines && WorldLineRenderer.sdfAvailable();"));
+                .contains("boolean sdf = WorldLineRenderer.sdfAvailable();"));
     }
 
     @Test
-    void sdfLinesShipOff() {
-        AuroraConfig fresh = new AuroraConfig();
-        assertFalse(fresh.hitboxSdfLines);
-        assertFalse(fresh.blockOverlaySdfLines);
+    void noSdfSwitchesRemain() {
+        for (String removed : new String[]{"hitboxSdfLines", "blockOverlaySdfLines", "textSdf"}) {
+            assertFalse(java.util.Arrays.stream(AuroraConfig.class.getFields()).anyMatch(f -> f.getName().equals(removed)),
+                    removed + " was removed 2026-11-19: SDF rendering is the only path");
+        }
     }
 }

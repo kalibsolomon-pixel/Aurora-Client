@@ -152,7 +152,6 @@ Restyles the outline of the block you are looking at.
 - **Show Outline**: toggle · on. `{blockOverlayOutlineEnabled}`
 - **Outline Color**: color · black. `{blockOverlayOutlineColor}`
 - **Outline Width**: slider 1–6 · 2. `{blockOverlayLineWidth}`
-- **Smooth Lines (SDF)**: toggle · off · anti-aliased outline with round corners; vanilla lines if the shader cannot load. `{blockOverlaySdfLines}`
 - **Show Fill**: toggle · off. `{blockOverlayFillEnabled}`
 - **Fill Color**: color · white, 25% opacity. `{blockOverlayFillColor}`
 - **Color Mode**: dropdown Solid / Rainbow · Solid. `{blockOverlayMode}`
@@ -224,7 +223,6 @@ Draws entity hitboxes like F3+B, with your colors.
   - **Look Length**: slider 0.1–20 blocks · 0.1. `{hitboxLookLength}`
 - *Appearance*
   - **Line Width**: slider 0.1–6 · 2. `{hitboxLineWidth}`
-  - **Smooth Lines (SDF)**: toggle · off · anti-aliased lines with round corners; vanilla lines if the shader cannot load. `{hitboxSdfLines}`
   - **Hitbox Color**: color · yellow. `{hitboxColor}`
 - *Projectiles*
   - **Separate Projectile Color**: toggle · on. `{hitboxProjectileColorEnabled}`
@@ -496,7 +494,6 @@ Simple config-backed setting rows here and on module detail pages show a small r
     - **Corner Radius**: slider 0–20 px · 10 px · every shape: windows, buttons, fields, toggles, sliders, scrollbars. Replaced Corner Style (Round = 10, Slightly Round = 6, Square = 0). `{theme.cornerRadius}`
 - *Text & Fonts* · no toggle `{card:text_fonts}` · font, weight, modifiers and case apply wherever the Text Renderer does
   - **Text Renderer**: dropdown Off / Aurora UI Only / All Text · All Text · Aurora UI Only styles text on Aurora's own windows (Pulsar's dashboard included), never the in-game HUD or vanilla screens; All Text adds the HUD and every vanilla string. `{textRendererMode}`
-  - **Smooth Scaling (SDF)**: toggle · off · draws the custom font with distance-field glyphs so scaled GUI text stays sharp. Follows Text Renderer scope, retains raster metrics and yields to ModernUI or Caxton. `{textSdf}`
   - **Font**: dropdown Inter / JetBrains Mono / Roboto / Poppins / Oswald / Nunito / Quicksand / Fira Sans / SansSerif · Fira Sans. Inter Italic is now Inter with Italic on (migrated). `{activeFont}`
   - **Weight**: dropdown Regular / Medium / SemiBold / Bold · Medium · real font files; Quicksand has one weight. `{textWeight}`
   - **Modifiers**: toggles Italic · off, Underline · off · italic is the family's own where it has one (Oswald and Quicksand slant). `{textItalic}` `{textUnderline}`

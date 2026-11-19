@@ -1,13 +1,15 @@
 ---
 status: accepted
 date: 2026-11-17
+amended: 2026-11-19
 ---
 
-# SDF text is an opt-in glyph raster and pipeline variant; vanilla layout and bitmap fallback are retained
+# SDF text is a glyph raster and pipeline variant; vanilla layout and bitmap fallback are retained
 
 Minecraft's exact-size bitmap is the baseline at native scale; nearest sampling shows pixels under a larger pose.
-Aurora's Smooth Scaling (SDF) toggle is off by default until the owner accepts side-by-side comparisons.
-It applies to bundled custom faces wherever Text Renderer selects them in the GUI: Aurora windows only in
+Aurora shipped SDF text behind an off-by-default Smooth Scaling (SDF) toggle until the owner accepted it.
+On 2026-11-19 the owner made SDF the only rendering path for text, hitboxes and block outlines and the
+toggles were removed (see Amendment). It applies to bundled custom faces wherever Text Renderer selects them in the GUI: Aurora windows only in
 Aurora UI Only, and also HUD and vanilla GUI text in All Text. The fixed Aurora wordmark can use the same path.
 
 ## Decision
@@ -22,5 +24,13 @@ Aurora UI Only, and also HUD and vanilla GUI text in All Text. The fixed Aurora 
   text, OIT and outline render types on the bitmap path; a world-text variant would need separate validation.
 - If compilation, font initialization or upload fails, use raster text for the rest of the session.
   Keep all SDF hooks fail-soft, and stand them down for ModernUI and Caxton.
+
+## Amendment, 2026-11-19
+
+- Smooth Scaling (SDF) and the Smooth Lines (SDF) options for Hitboxes and Block Overlay are gone, with their
+  config fields (`textSdf`, `hitboxSdfLines`, `blockOverlaySdfLines`). Saved values are ignored.
+- SDF is used whenever it is available. The bitmap text path and vanilla line pipeline remain only as the
+  session fallback described above: a failed or stood-down SDF hook, a failed shader or atlas, ModernUI or
+  Caxton installed. They are not a user choice.
 
 See [phase 1](../reports/2026-11-17-sdf-spike.md) for geometry, overhead and the native acceptance checklist.
