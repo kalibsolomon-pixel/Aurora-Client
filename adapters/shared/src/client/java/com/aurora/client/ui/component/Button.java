@@ -74,8 +74,8 @@ public class Button extends Widget {
      *       {@code MATERIAL_BORDER_STRONG}; the window's own {@code BORDER}
      *       barely differs from a card fill): feature-detail Reset/Done.</li>
      *   <li>{@code BACKGROUND} — Background Color fill at the window opacity
-     *       with that same lighter edge: title cards and the Aurora-styled
-     *       vanilla menu buttons.</li>
+     *       with that same lighter edge. Unused since title cards and the
+     *       Aurora-styled vanilla menu buttons took the raised default.</li>
      *   <li>{@code BACKGROUND_ACCENT} — Background Color fill with a density
      *       floor (a low opacity never leaves a blank glass slab over the world)
      *       and the accent outline: the HUD editor's two actions.</li>

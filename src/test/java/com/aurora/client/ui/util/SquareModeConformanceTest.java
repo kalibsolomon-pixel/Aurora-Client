@@ -177,7 +177,9 @@ class SquareModeConformanceTest {
             java.util.Map.entry("hud/module/ToggleIndividualModule.java", "toggleSprintSneakThemeCorners"),
             java.util.Map.entry("hud/module/KeystrokesModule.java", "keystrokesThemeCorners"),
             java.util.Map.entry("hud/module/ArmorAlertHudModule.java", "armorAlertThemeCorners"),
-            java.util.Map.entry("hud/module/EffectExpiryHudModule.java", "effectExpiryThemeCorners"));
+            java.util.Map.entry("hud/module/EffectExpiryHudModule.java", "effectExpiryThemeCorners"),
+            java.util.Map.entry("hud/module/HealthHudModule.java", "playerHealthHudThemeCorners"),
+            java.util.Map.entry("hud/module/PingModule.java", "pingHudThemeCorners"));
 
     @Test
     void hudShapesKeepFixedCornersUntilTheirSwitchIsOn() {

@@ -228,7 +228,6 @@ public class AuroraConfig {
     }
 
     public TextRendererMode textRendererMode = TextRendererMode.AURORA_ONLY;
-    public boolean textSdf = false;
     public FontType activeFont = FontType.INTER;
 
     // ---- Text options (Settings → Appearance → Text, 2026-11-12) ----
@@ -400,6 +399,36 @@ public class AuroraConfig {
     /** Movement curve shaping the idle sway oscillation. */
     public IdleSwayCurve idleSwayCurve = IdleSwayCurve.SINE_BREATH;
 
+    // ---- Animations, 2026-11-18 pass (OverflowAnimations research, items 1-4) ----
+    // Every option is display-only and its default is vanilla. The shared
+    // "anim" prefix is the Animations reset prefix for all of them.
+    /** Share of vanilla's view-lag hand sway kept when turning: 1 = vanilla, 0 = the hands follow the view rigidly. */
+    public double animHandSway = 1.0;
+    /** How the first-person eat/drink motion is drawn. */
+    public EatStyle animEatStyle = EatStyle.VANILLA;
+    /** How a non-shield item in a blocking use is held in first person. */
+    public BlockStyle animBlockStyle = BlockStyle.VANILLA;
+    /** Keep drawing a swing that is still running when a non-shield block starts (1.7 block-hit look). */
+    public boolean animBlockHitSwing = false;
+    /** Skip the hand dip vanilla plays after a successful item use. */
+    public boolean animNoUseDip = false;
+    /** Skip the main-hand dip that follows the attack cooldown. */
+    public boolean animNoCooldownDip = false;
+    /** When the main-hand item re-equips (dips and rises). */
+    public ReequipMode animReequip = ReequipMode.VANILLA;
+    /** Every drawn player turns its body toward the way it walks, backwards too (1.8). */
+    public boolean animRetroBackwardsWalk = false;
+    /** Your own avatar crouches with 1.8's taller pose. */
+    public boolean animClassicSneak = false;
+
+    public enum EatStyle { VANILLA, COMPACT }
+    public enum BlockStyle { VANILLA, CLASSIC }
+    public enum ReequipMode {
+        VANILLA,
+        /** Dip only on a hotbar slot change; same-slot count, durability and component updates show at once. */
+        SLOT_ONLY
+    }
+
     /**
      * Movement curves for idle held-item sway. Each shapes the oscillation
      * differently, from a gentle breath to dramatic figure-8 drifts.
@@ -568,6 +597,10 @@ public class AuroraConfig {
     // ---- Module enables ----
     public boolean infoEnabled        = true;
     public boolean pingHudEnabled = true;
+    /** The ping HUD's backdrop and corners (it had none before 2026-11-19, so NONE keeps its look). */
+    public HudBackground pingHudBgMode = HudBackground.NONE;
+    public int pingHudBgColor = 0x80000000;
+    public boolean pingHudThemeCorners = false;
     public boolean nametagPingEnabled = true;
     public boolean cpsEnabled         = true;
     public boolean armorHudEnabled    = true;
@@ -692,7 +725,6 @@ public class AuroraConfig {
     public BlockOverlayMode blockOverlayMode = BlockOverlayMode.SOLID;
     public float   blockOverlayRainbowSpeed = 1.0f;        // cycles per second
     public double blockOverlayLineWidth = 2.0;    // line width in pixels (GPU-expanded)
-    public boolean blockOverlaySdfLines = false;  // anti-aliased SDF outline with round corners
 
     public boolean potionHudEnabled = true;
 
@@ -810,6 +842,11 @@ public class AuroraConfig {
      * (the labels above entities); the card is on while either is.
      */
     public boolean playerHealthHudEnabled = false;
+    /** The health HUD's own backdrop, text color (null follows the HUD color) and corners, like every HUD module. */
+    public HudBackground playerHealthHudBgMode = HudBackground.NONE;
+    public int playerHealthHudBgColor = 0x80000000;
+    public boolean playerHealthHudThemeCorners = false;
+    public Integer playerHealthHudTextColor = null;
 
     public enum HealthDisplayMode {
         NUMBER("Number"),
@@ -1059,7 +1096,6 @@ public class AuroraConfig {
     public double hitboxLookLength = 2.0;
     public int hitboxColor = 0xFFFFFFFF;
     public double hitboxLineWidth = 2.0;          // line width in pixels (GPU-expanded)
-    public boolean hitboxSdfLines = false;        // anti-aliased SDF lines with round corners
     public boolean hitboxProjectileColorEnabled = false;
     public int hitboxProjectileColor = 0xFFFFFF00;
     public double hitboxProjectileLineWidth = 2.0;
@@ -1210,6 +1246,8 @@ public class AuroraConfig {
     public HudBackground scoreboardBackground = HudBackground.VANILLA;
     /** Flat panel color used when the background is SOLID. */
     public int scoreboardBgColor = -14543302; // 0xFF212121, the theme panel default
+    /** Base color for scoreboard text; null keeps vanilla's white. Server formatting still wins where a line has its own color. */
+    public Integer scoreboardTextColor = null;
     /** Extra content scale on top of the universal layout scale, 0.5..3. */
     public double scoreboardScale = 1.0;
 

@@ -57,7 +57,40 @@ public abstract class AbstractButtonMixin {
         // directly and would match it.
         // Button here is Aurora's shared component; the vanilla class is
         // qualified at the gate so both can coexist in this file.
-        return ((Object) this).getClass() == net.minecraft.client.gui.components.Button.Plain.class;
+        // The one ImageButton taken on purpose is In-Game Account Switcher's
+        // account button on the multiplayer screen (owner, 2026-11-18).
+        return ((Object) this).getClass() == net.minecraft.client.gui.components.Button.Plain.class
+                || aurora$isAccountSwitcher();
+    }
+
+    /**
+     * IAS places its button at {@code height - 30}, 2 px above vanilla's bottom
+     * row, which a raised face makes visible. Snap it onto the row of the
+     * vanilla button it sits beside (within 4 px); a position the player set
+     * in IAS's config that is not beside a row stays where it is. Moves the
+     * widget, not only the face, so the hit area matches.
+     */
+    @Unique
+    private static void aurora$alignToRow(AbstractButton self) {
+        Minecraft mc = Minecraft.getInstance();
+        if (!(com.aurora.client.adapter.NativeUi.screen(mc) instanceof JoinMultiplayerScreen screen)) return;
+        for (var child : screen.children()) {
+            if (child.getClass() != net.minecraft.client.gui.components.Button.Plain.class) continue;
+            var row = (AbstractButton) child;
+            int dy = row.getY() - self.getY();
+            if (dy != 0 && Math.abs(dy) <= 4 && row.getX() + row.getWidth() <= self.getX()) {
+                self.setY(row.getY());
+                return;
+            }
+        }
+    }
+
+    /** IAS's multiplayer-screen button: drawn as an icon-only Aurora button, still IAS's widget. */
+    @Unique
+    private boolean aurora$isAccountSwitcher() {
+        Minecraft mc = Minecraft.getInstance();
+        return com.aurora.client.adapter.NativeUi.screen(mc) instanceof JoinMultiplayerScreen
+                && com.aurora.client.screen.AuroraAccountSwitcherApi.isMultiplayerButton((AbstractButton) (Object) this);
     }
 
     @Inject(method = "extractWidgetRenderState", at = @At("HEAD"), cancellable = true)
@@ -69,9 +102,18 @@ public abstract class AbstractButtonMixin {
             // shared Button's contract; an in-flight hover eases back to
             // rest on the enable→disable transition).
             // The whole visual — press-scale pose, token radius, colors,
-            // focus hairline, centered label — is the shared painter's.
-            if (aurora$painter == null) aurora$painter = new Button(self.getMessage(), () -> {}).theming(Button.Theming.BACKGROUND);
-            aurora$painter.label(self.getMessage()).focused(self.isFocused()).disabled(!self.active);
+            // focus hairline, centered label — is the shared painter's. Its
+            // default treatment is the opaque raised face with baked bevels,
+            // the same as the title cards (owner, 2026-11-18).
+            // The account switcher shows only a glyph; IAS keeps its tooltip.
+            boolean account = aurora$isAccountSwitcher();
+            if (aurora$painter == null) {
+                aurora$painter = new Button(account ? net.minecraft.network.chat.Component.empty() : self.getMessage(), () -> {});
+                if (account) aurora$painter.icon(com.aurora.client.screen.IconCatalog.glyph("switch_account"));
+            }
+            if (account) aurora$alignToRow(self);
+            else aurora$painter.label(self.getMessage());
+            aurora$painter.focused(self.isFocused()).disabled(!self.active);
             aurora$painter.renderOverlay(ctx,self.getX(),self.getY(),self.getWidth(),self.getHeight(),mouseX,mouseY);
             ci.cancel();
         }

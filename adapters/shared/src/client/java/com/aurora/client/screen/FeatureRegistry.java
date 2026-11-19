@@ -298,7 +298,18 @@ public final class FeatureRegistry {
                         new BooleanSetting("Show on HUD",
                                 () -> cfg.playerHealthHudEnabled,
                                 v -> cfg.playerHealthHudEnabled = v).resetDefault("playerHealthHudEnabled", () -> defaults.playerHealthHudEnabled)
-                                .description("Shows your own health as an exact number with two decimals (20.00 at full health), with absorption after it in gold. Works with or without the health above entities. Move it in the HUD editor.")
+                                .description("Shows your own health as an exact number with two decimals (20.00 at full health), with absorption after it in gold. Works with or without the health above entities. Move it in the HUD editor."),
+                        new ColorSetting("Text Color", () -> cfg.playerHealthHudTextColor == null ? com.aurora.client.theme.HudText.color(cfg.hudColor) : cfg.playerHealthHudTextColor, v -> cfg.playerHealthHudTextColor = v).resetDefault(() -> cfg.playerHealthHudTextColor, () -> defaults.playerHealthHudTextColor, () -> defaults.playerHealthHudTextColor == null ? (defaults.hudColor == 0 ? defaultTheme.color(com.aurora.client.theme.ThemeToken.ACCENT) : defaults.hudColor) : defaults.playerHealthHudTextColor)
+                                .description("Text color for the health number. Absorption stays gold. Reset restores its default color.")
+                                .disabled(() -> !cfg.playerHealthHudEnabled),
+                        new EnumSetting<>("Background", FLAT_BACKGROUNDS,
+                                () -> cfg.playerHealthHudBgMode, v -> cfg.playerHealthHudBgMode = v).resetDefault(() -> defaults.playerHealthHudBgMode)
+                                .disabled(() -> !cfg.playerHealthHudEnabled),
+                        new ColorSetting("Background Color (when SOLID)",
+                                () -> cfg.playerHealthHudBgColor, v -> cfg.playerHealthHudBgColor = v).resetDefault(() -> defaults.playerHealthHudBgColor)
+                                .disabled(() -> !cfg.playerHealthHudEnabled || cfg.playerHealthHudBgMode != AuroraConfig.HudBackground.SOLID),
+                        hudThemeCorners(() -> cfg.playerHealthHudThemeCorners, v -> cfg.playerHealthHudThemeCorners = v, () -> defaults.playerHealthHudThemeCorners)
+                                .disabled(() -> !cfg.playerHealthHudEnabled || cfg.playerHealthHudBgMode != AuroraConfig.HudBackground.SOLID)
                 ));
 
         addWithSettings("free_look",
@@ -334,10 +345,6 @@ public final class FeatureRegistry {
                                 () -> cfg.blockOverlayLineWidth,
                                 v -> cfg.blockOverlayLineWidth = v, 1.0, 6.0).resetDefault(() -> defaults.blockOverlayLineWidth)
                                 .description("Thickness of the outline in screen pixels. Uses a GPU-side line expansion shader, so lines render cleanly at any width on all GPUs."),
-                        new BooleanSetting("Smooth Lines (SDF)",
-                                () -> cfg.blockOverlaySdfLines,
-                                v -> cfg.blockOverlaySdfLines = v).resetDefault("blockOverlaySdfLines", () -> defaults.blockOverlaySdfLines)
-                                .description("Draws the outline with a distance-field shader: soft, anti-aliased edges and rounded corners where edges meet, instead of hard pixel steps. Falls back to standard lines if the shader can't load."),
                         new BooleanSetting("Show Fill",
                                 () -> cfg.blockOverlayFillEnabled,
                                 v -> cfg.blockOverlayFillEnabled = v).resetDefault("blockOverlayFillEnabled", () -> defaults.blockOverlayFillEnabled)
@@ -565,9 +572,6 @@ addWithSettings("hitbox",
                                 () -> cfg.hitboxLineWidth,
                                 v -> cfg.hitboxLineWidth = v, 0.1, 6.0).resetDefault(() -> defaults.hitboxLineWidth)
                                 .description("Thickness of the hitbox outline in screen pixels. Uses a GPU-side line expansion shader, so lines render cleanly at any width on all GPUs."),
-                        new BooleanSetting("Smooth Lines (SDF)",
-                                () -> cfg.hitboxSdfLines, v -> cfg.hitboxSdfLines = v).resetDefault("hitboxSdfLines", () -> defaults.hitboxSdfLines)
-                                .description("Draws hitbox lines with a distance-field shader: soft, anti-aliased edges and rounded corners where edges meet, instead of hard pixel steps. Falls back to standard lines if the shader can't load."),
                         new ColorSetting("Hitbox Color",
                                 () -> cfg.hitboxColor, v -> cfg.hitboxColor = v).resetDefault(() -> defaults.hitboxColor),
 
@@ -789,7 +793,14 @@ addWithSettings("hitbox",
                 v -> { cfg.pingHudEnabled = v; cfg.tabPingEnabled = v; },
                 List.of(
                         new ColorSetting("Text Color", () -> cfg.pingHudTextColor == null ? com.aurora.client.theme.HudText.color(cfg.hudColor) : cfg.pingHudTextColor, v -> cfg.pingHudTextColor = v).resetDefault(() -> cfg.pingHudTextColor, () -> defaults.pingHudTextColor, () -> defaults.pingHudTextColor == null ? (defaults.hudColor == 0 ? defaultTheme.color(com.aurora.client.theme.ThemeToken.ACCENT) : defaults.hudColor) : defaults.pingHudTextColor)
-                                .description("Text color for this HUD only. Reset restores its default color."),
+                                .description("Text color for the ping HUD. Until you pick one it follows your latency: green, yellow, then red. Reset restores that."),
+                        new EnumSetting<>("Background", FLAT_BACKGROUNDS,
+                                () -> cfg.pingHudBgMode, v -> cfg.pingHudBgMode = v).resetDefault(() -> defaults.pingHudBgMode),
+                        new ColorSetting("Background Color (when SOLID)",
+                                () -> cfg.pingHudBgColor, v -> cfg.pingHudBgColor = v).resetDefault(() -> defaults.pingHudBgColor)
+                                .disabled(() -> cfg.pingHudBgMode != AuroraConfig.HudBackground.SOLID),
+                        hudThemeCorners(() -> cfg.pingHudThemeCorners, v -> cfg.pingHudThemeCorners = v, () -> defaults.pingHudThemeCorners)
+                                .disabled(() -> cfg.pingHudBgMode != AuroraConfig.HudBackground.SOLID),
                         new BooleanSetting("Show Ping HUD",
                                 () -> cfg.pingHudEnabled,
                                 v -> cfg.pingHudEnabled = v).resetDefault("pingHudEnabled", () -> defaults.pingHudEnabled)
@@ -1023,6 +1034,8 @@ addWithSettings("hitbox",
                         new ColorSetting("Background Color (when SOLID)",
                                 () -> cfg.scoreboardBgColor, v -> cfg.scoreboardBgColor = v).resetDefault(() -> defaults.scoreboardBgColor)
                                 .description("The fill color and opacity used when Background is set to SOLID. Ignored for other background modes."),
+                        new ColorSetting("Text Color", () -> cfg.scoreboardTextColor == null ? 0xFFFFFFFF : cfg.scoreboardTextColor, v -> cfg.scoreboardTextColor = v).resetDefault(() -> cfg.scoreboardTextColor, () -> defaults.scoreboardTextColor, () -> defaults.scoreboardTextColor == null ? 0xFFFFFFFF : defaults.scoreboardTextColor)
+                                .description("Base color for the title and names. Score numbers keep vanilla's red, and text the server colors keeps its own color. Reset restores white."),
                         SliderSetting.of("Scale", () -> cfg.scoreboardScale,
                                 v -> cfg.scoreboardScale = v, 0.5, 3.0).resetDefault(() -> defaults.scoreboardScale)
                                 .description("Extra size on top of the universal HUD scale, which the HUD editor controls. The scoreboard's width and height follow its live rows, so this only enlarges everything uniformly."),
@@ -1121,7 +1134,7 @@ addWithSettings("hitbox",
                 List.of("fixHeldItemSeams", "heldItemInflation"));
 
         add("custom_title",
-                "Replaces Minecraft's default main menu with Aurora's title screen — your logo, buttons, player model and account over a softly animated gradient — and themes the buttons and search field on the world-select and multiplayer screens. Purely cosmetic; turn it off to restore the vanilla menu. Takes effect the next time you return to the main menu.",
+                "Replaces Minecraft's default main menu with Aurora's title screen — your logo, buttons, player model and account over a softly animated gradient — and themes the buttons and search field on the world-select and multiplayer screens, including In-Game Account Switcher's account button when that mod is installed. Purely cosmetic; turn it off to restore the vanilla look on all of them. The main menu changes the next time you return to it; the other screens change at once.",
                 () -> cfg.customTitleScreen, v -> cfg.customTitleScreen = v);
 
         addWithSettings("resourcepack_browser",
@@ -1163,9 +1176,6 @@ addWithSettings("hitbox",
                                 () -> cfg.textWeight, v -> { cfg.textWeight = v; persistThemeChange(); }).resetDefault(() -> defaults.textWeight)
                                 .labels(AuroraConfig.TextWeight::getLabel)
                                 .description("How heavy the letters are. Every weight is a real font file, not a smeared bold; Quicksand has one weight."),
-                        new BooleanSetting("Smooth Scaling (SDF)", () -> cfg.textSdf,
-                                v -> { cfg.textSdf = v; persistThemeChange(); }).resetDefault(() -> defaults.textSdf)
-                                .description("Renders the custom font with distance-field glyphs so scaled text stays sharp."),
                         new ToggleGroupSetting("Modifiers", List.of(
                                 new ToggleGroupSetting.Toggle("Italic", () -> cfg.textItalic, v -> { cfg.textItalic = v; persistThemeChange(); }),
                                 new ToggleGroupSetting.Toggle("Underline", () -> cfg.textUnderline, v -> { cfg.textUnderline = v; persistThemeChange(); })))
@@ -1250,11 +1260,15 @@ addWithSettings("hitbox",
                 v -> cfg.guiFpsLimit = v ? 60 : 1000,
                 List.of(uiFpsLimit));
 
+        // Three categories, each covering several animations (owner, 2026-11-18): the hands
+        // and held items, using and switching items, and the camera and your own avatar.
+        // Small choices are segmented rows and related switches share a row, so Swing Curve
+        // and Idle Sway Curve stay the only dropdowns.
         addWithSettings("animations",
-                "Animation & movement polish: swing curves, view-bob strength, classic 1.8-style damage camera tilt, and configurable idle held-item sway with multiple movement curves.",
+                "Animation & movement polish: swing curves, hand sway, idle held-item sway, compact eating and drinking, a classic block pose, equip dips, view bob, 1.8-style damage tilt, and 1.8 walking and sneaking poses. Everything here is visual: item use, attacks and movement stay vanilla.",
                 () -> cfg.smoothAnimationsEnabled, v -> cfg.smoothAnimationsEnabled = v,
                 List.of(
-                        new SectionHeaderSetting("Swing"),
+                        new SectionHeaderSetting("Hands & Held Items"),
                         new EnumSetting<>("Swing Curve",
                                 AuroraConfig.AnimationCurve.class,
                                 () -> cfg.swingAnimationCurve,
@@ -1268,26 +1282,10 @@ addWithSettings("hitbox",
                                     case CUBIC_OUT -> "Cubic ease-out. Fast windup, slow follow-through. Combat-snappy.";
                                     case QUARTIC_OUT -> "Quartic ease-out. Very snappy windup, long follow-through. The most 'punchy' curve. Recommended for swings.";
                                 }),
-                        // "Swing Style" (vanilla vs Legacy 1.8 arc) was removed
-                        // by owner ruling 2026-10-30; the persisted choice keeps
-                        // applying (the mixin reads cfg.swingStyle unchanged).
-
-                        new SectionHeaderSetting("View Bob"),
-                        SliderSetting.of("View Bob Amplitude",
-                                () -> cfg.viewBobAmplitude,
-                                v -> cfg.viewBobAmplitude = v, 0.0, 2.0).resetDefault(() -> defaults.viewBobAmplitude).percent()
-                                .description("Scales the camera head-bob strength. 100% is vanilla, 0% cancels the bob, 200% doubles it. Requires vanilla View Bobbing to be on."),
-
-                        new SectionHeaderSetting("Damage Tilt"),
-                        new BooleanSetting("Enable Damage Tilt",
-                                () -> cfg.damageTiltEnabled, v -> cfg.damageTiltEnabled = v).resetDefault("damageTiltEnabled", () -> defaults.damageTiltEnabled)
-                                .description("Enable classic 1.7/1.8-style damage camera roll. The roll direction follows where the hit came from."),
-                        SliderSetting.of("Damage Tilt Strength",
-                                () -> cfg.damageTiltStrength,
-                                v -> cfg.damageTiltStrength = v, 0.0, 1.0).resetDefault(() -> defaults.damageTiltStrength).percent()
-                                .description("How far the camera rolls on each hit. 100% matches the pronounced 1.8 tilt."),
-
-                        new SectionHeaderSetting("Idle Sway"),
+                        SliderSetting.of("Hand Sway",
+                                () -> cfg.animHandSway,
+                                v -> cfg.animHandSway = v, 0.0, 1.0).resetDefault(() -> defaults.animHandSway).percent()
+                                .description("How far your hands lag behind when you turn or look up and down. 100% is vanilla; 0% keeps them fixed to the view."),
                         new BooleanSetting("Idle Sway",
                                 () -> cfg.idleSwayEnabled, v -> cfg.idleSwayEnabled = v).resetDefault("idleSwayEnabled", () -> defaults.idleSwayEnabled)
                                 .description("Adds a breathing/float to your held items while standing still. Pauses during swings so it never fights the attack animation. Supports very high intensities for dramatic drift."),
@@ -1309,12 +1307,50 @@ addWithSettings("hitbox",
                                 v -> cfg.idleSwayStrength = v, 0.0, 10.0).resetDefault(() -> defaults.idleSwayStrength)
                                 .description("How pronounced the idle sway is. 1.0 is a gentle breath; 5.0+ is dramatic drift. Some curves (Circular, Lissajous) shine at high values."),
 
-                        new SectionHeaderSetting("Hotbar"),
+                        new SectionHeaderSetting("Using & Switching Items"),
+                        new SegmentedSetting<>("Eating & Drinking", AuroraConfig.EatStyle.class,
+                                () -> cfg.animEatStyle, v -> { cfg.animEatStyle = v; AuroraConfig.save(); })
+                                .resetDefault(() -> defaults.animEatStyle)
+                                .description("Compact keeps food and potions lower and to the side while you eat or drink, so the crosshair stays clear. The item still comes up toward your face, and eating takes exactly as long."),
+                        new SegmentedSetting<>("Block Pose", AuroraConfig.BlockStyle.class,
+                                () -> cfg.animBlockStyle, v -> { cfg.animBlockStyle = v; AuroraConfig.save(); })
+                                .resetDefault(() -> defaults.animBlockStyle)
+                                .description("How a sword or other non-shield item is held while blocking, on servers that let it block. Classic angles it up across your body as 1.7 and 1.8 did. Shields keep their Shield Style."),
+                        new BooleanSetting("Block-Hit Swing",
+                                () -> cfg.animBlockHitSwing, v -> cfg.animBlockHitSwing = v).resetDefault("animBlockHitSwing", () -> defaults.animBlockHitSwing)
+                                .description("When you start blocking during a swing, the swing keeps playing over the block pose instead of stopping, as block-hitting looked in 1.7. It only shows swings that really happened."),
+                        new ToggleGroupSetting("Skip Hand Dip", List.of(
+                                new ToggleGroupSetting.Toggle("After Use", () -> cfg.animNoUseDip, v -> { cfg.animNoUseDip = v; AuroraConfig.save(); }),
+                                new ToggleGroupSetting.Toggle("On Cooldown", () -> cfg.animNoCooldownDip, v -> { cfg.animNoCooldownDip = v; AuroraConfig.save(); })))
+                                .description("After Use: your hand no longer drops and rises again after placing a block or using an item. On Cooldown: the main hand stays up after an attack instead of sinking while the attack recharges. The attack cooldown itself is unchanged."),
+                        new SegmentedSetting<>("Re-equip On", AuroraConfig.ReequipMode.class,
+                                () -> cfg.animReequip, v -> { cfg.animReequip = v; AuroraConfig.save(); },
+                                m -> m == AuroraConfig.ReequipMode.SLOT_ONLY ? "Slot Change" : "Item Change")
+                                .resetDefault(() -> defaults.animReequip)
+                                .description("When the main-hand item lowers and raises again. Item Change is vanilla. Slot Change re-equips whenever you change hotbar slots, even between two identical stacks, and shows count or durability changes in the same slot at once."),
                         new BooleanSetting("Hotbar Bounce", () -> cfg.hotbarBounceEnabled, v -> cfg.hotbarBounceEnabled = v).resetDefault("hotbarBounceEnabled", () -> defaults.hotbarBounceEnabled)
-                                .description("Pulses the hotbar slot when a pickup adds an item or grows its stack. Requires Animations to be enabled.")
+                                .description("Pulses the hotbar slot when a pickup adds an item or grows its stack."),
+
+                        new SectionHeaderSetting("Camera & Body"),
+                        SliderSetting.of("View Bob Amplitude",
+                                () -> cfg.viewBobAmplitude,
+                                v -> cfg.viewBobAmplitude = v, 0.0, 2.0).resetDefault(() -> defaults.viewBobAmplitude).percent()
+                                .description("Scales the camera head-bob strength. 100% is vanilla, 0% cancels the bob, 200% doubles it. Requires vanilla View Bobbing to be on."),
+                        new BooleanSetting("Classic Damage Tilt",
+                                () -> cfg.damageTiltEnabled, v -> cfg.damageTiltEnabled = v).resetDefault("damageTiltEnabled", () -> defaults.damageTiltEnabled)
+                                .description("When you are hurt, the camera always rolls the same way, as in 1.7 and 1.8, instead of toward the hit."),
+                        SliderSetting.of("Damage Tilt Strength",
+                                () -> cfg.damageTiltStrength,
+                                v -> cfg.damageTiltStrength = v, 0.0, 1.0).resetDefault(() -> defaults.damageTiltStrength).percent()
+                                .description("How far the classic tilt rolls. 100% is the full 1.8 roll; Minecraft's own Damage Tilt option still scales it.")
+                                .disabled(() -> !cfg.damageTiltEnabled),
+                        new ToggleGroupSetting("Player Models", List.of(
+                                new ToggleGroupSetting.Toggle("1.8 Backwards Walk", () -> cfg.animRetroBackwardsWalk, v -> { cfg.animRetroBackwardsWalk = v; AuroraConfig.save(); }),
+                                new ToggleGroupSetting.Toggle("1.8 Sneak", () -> cfg.animClassicSneak, v -> { cfg.animClassicSneak = v; AuroraConfig.save(); })))
+                                .description("Backwards Walk: players' bodies turn toward the way they walk, backwards too, with the head turning further, as in 1.8. It applies to every player you see, you included. Sneak: your own crouch keeps 1.8's taller silhouette, in third person and in your inventory. Only how models are drawn on your screen changes; hitboxes and movement are vanilla.")
                 ),
                 java.util.List.of(
-                        "smoothAnimations", "swingStyle",
+                        "smoothAnimations", "swingStyle", "anim",
                         "viewBobAmplitude", "idleSway",
                         "damageTilt", "hotbarBounce"));
 

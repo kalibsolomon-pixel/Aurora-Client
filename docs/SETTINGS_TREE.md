@@ -78,7 +78,7 @@ Other things drawn on the HUD that are not movable modules:
 - **Crosshair** (Mods → Crosshair). `{hud:crosshair}`
 - **Saturation on the food bar** (Mods → Saturation Bar). `{hud:saturation}`
 - **Alert popups** (Mods → Alerts). `{hud:alerts}`
-- **Hotbar bounce** on pickup (Mods → Animations → Hotbar). `{hud:hotbarBounce}`
+- **Hotbar bounce** on pickup (Mods → Animations → Using & Switching Items). `{hud:hotbarBounce}`
 
 ---
 
@@ -138,6 +138,10 @@ Health shown above mobs (and optionally players), and your own on the HUD; each 
   - **Show Players**: toggle · off · include other players. `{playerHealthShowPlayers}`
 - *Your Health*
   - **Show on HUD**: toggle · off · your health to two decimals (20.00), a draggable HUD module; works without the labels above entities. `{playerHealthHudEnabled}`
+  - **Text Color**: color · HUD default; absorption stays gold. `{playerHealthHudTextColor}`
+  - **Background**: dropdown None / Solid · None. `{playerHealthHudBgMode}`
+  - **Background Color (when SOLID)**: color · 50% black. `{playerHealthHudBgColor}`
+  - **Theme Corners**: toggle · off; Solid only. `{playerHealthHudThemeCorners}`
 
 #### Free Look · off `{card:free_look}`
 Look around without turning your character.
@@ -152,7 +156,6 @@ Restyles the outline of the block you are looking at.
 - **Show Outline**: toggle · on. `{blockOverlayOutlineEnabled}`
 - **Outline Color**: color · black. `{blockOverlayOutlineColor}`
 - **Outline Width**: slider 1–6 · 2. `{blockOverlayLineWidth}`
-- **Smooth Lines (SDF)**: toggle · off · anti-aliased outline with round corners; vanilla lines if the shader cannot load. `{blockOverlaySdfLines}`
 - **Show Fill**: toggle · off. `{blockOverlayFillEnabled}`
 - **Fill Color**: color · white, 25% opacity. `{blockOverlayFillColor}`
 - **Color Mode**: dropdown Solid / Rainbow · Solid. `{blockOverlayMode}`
@@ -224,7 +227,6 @@ Draws entity hitboxes like F3+B, with your colors.
   - **Look Length**: slider 0.1–20 blocks · 0.1. `{hitboxLookLength}`
 - *Appearance*
   - **Line Width**: slider 0.1–6 · 2. `{hitboxLineWidth}`
-  - **Smooth Lines (SDF)**: toggle · off · anti-aliased lines with round corners; vanilla lines if the shader cannot load. `{hitboxSdfLines}`
   - **Hitbox Color**: color · yellow. `{hitboxColor}`
 - *Projectiles*
   - **Separate Projectile Color**: toggle · on. `{hitboxProjectileColorEnabled}`
@@ -319,7 +321,10 @@ Active effects with timers (replaces vanilla's effect icons).
 
 #### Ping · off · combined `{card:ping}`
 Latency as numbers.
-- **Text Color**: color · HUD default. `{pingHudTextColor}`
+- **Text Color**: color · follows latency (green, yellow, red) until set. `{pingHudTextColor}`
+- **Background**: dropdown None / Solid · None. `{pingHudBgMode}`
+- **Background Color (when SOLID)**: color · 50% black. `{pingHudBgColor}`
+- **Theme Corners**: toggle · off; Solid only. `{pingHudThemeCorners}`
 - **Show Ping HUD**: toggle · off. `{pingHudEnabled}`
 - **Show in Tab List**: toggle · off. `{tabPingEnabled}`
 - **Show in Player Nametags**: toggle · off. `{nametagPingEnabled}`
@@ -385,20 +390,25 @@ Hides hairline seams on held items.
 - **Fix Strength**: slider 0–50 (thousandths) · 1. `{heldItemInflation}`
 
 #### Animations · on `{card:animations}`
-Swing, view bob, damage tilt, idle sway, entity smoothing.
-- *Swing*
+Three categories (2026-11-19 regroup): hands and held items, using and switching items, camera and player models. Every option is visual and its default is vanilla.
+- *Hands & Held Items*
   - **Swing Curve**: dropdown Linear / Sine / Smoothstep / Quartic / Quintic / Cubic Out / Quartic Out · Linear. `{swingAnimationCurve}`
-- *View Bob*
-  - **View Bob Amplitude**: slider 0–200% · 100%. `{viewBobAmplitude}`
-- *Damage Tilt*
-  - **Enable Damage Tilt**: toggle · off · 1.8-style camera roll. `{damageTiltEnabled}`
-  - **Damage Tilt Strength**: slider 0–100% · 100%. `{damageTiltStrength}`
-- *Idle Sway*
+  - **Hand Sway**: slider 0–100% · 100%. View-lag sway kept when turning. `{animHandSway}`
   - **Idle Sway**: toggle · off. `{idleSwayEnabled}`
   - **Idle Sway Curve**: dropdown Sine Breath / Lissajous / Smoothstep Drift / Double Sine / Pendulum / Circular · Sine Breath. `{idleSwayCurve}`
   - **Idle Sway Strength**: slider 0–10 · 1. `{idleSwayStrength}`
-- *Hotbar*
+- *Using & Switching Items*
+  - **Eating & Drinking**: segmented Vanilla / Compact · Vanilla. `{animEatStyle}`
+  - **Block Pose**: segmented Vanilla / Classic · Vanilla. Non-shield items in a blocking use. `{animBlockStyle}`
+  - **Block-Hit Swing**: toggle · off. `{animBlockHitSwing}`
+  - **Skip Hand Dip**: toggle group After Use / On Cooldown · both off. `{animNoUseDip}` `{animNoCooldownDip}`
+  - **Re-equip On**: segmented Item Change / Slot Change · Item Change. `{animReequip}`
   - **Hotbar Bounce**: toggle · off. `{hotbarBounceEnabled}`
+- *Camera & Body*
+  - **View Bob Amplitude**: slider 0–200% · 100%. `{viewBobAmplitude}`
+  - **Classic Damage Tilt**: toggle · off · the hurt roll always rolls one way, as in 1.8. `{damageTiltEnabled}`
+  - **Damage Tilt Strength**: slider 0–100% · 100%; disabled while Classic Damage Tilt is off. `{damageTiltStrength}`
+  - **Player Models**: toggle group 1.8 Backwards Walk (every player) / 1.8 Sneak (your own model) · both off. `{animRetroBackwardsWalk}` `{animClassicSneak}`
 
 #### Keystrokes · on `{card:keystrokes}`
 Shows your key and mouse presses.
@@ -492,7 +502,6 @@ Simple config-backed setting rows here and on module detail pages show a small r
     - **Corner Radius**: slider 0–20 px · 10 px · every shape: windows, buttons, fields, toggles, sliders, scrollbars. Replaced Corner Style (Round = 10, Slightly Round = 6, Square = 0). `{theme.cornerRadius}`
 - *Text & Fonts* · no toggle `{card:text_fonts}` · font, weight, modifiers and case apply wherever the Text Renderer does
   - **Text Renderer**: dropdown Off / Aurora UI Only / All Text · All Text · Aurora UI Only styles text on Aurora's own windows (Pulsar's dashboard included), never the in-game HUD or vanilla screens; All Text adds the HUD and every vanilla string. `{textRendererMode}`
-  - **Smooth Scaling (SDF)**: toggle · off · draws the custom font with distance-field glyphs so scaled GUI text stays sharp. Follows Text Renderer scope, retains raster metrics and yields to ModernUI or Caxton. `{textSdf}`
   - **Font**: dropdown Inter / JetBrains Mono / Roboto / Poppins / Oswald / Nunito / Quicksand / Fira Sans / SansSerif · Fira Sans. Inter Italic is now Inter with Italic on (migrated). `{activeFont}`
   - **Weight**: dropdown Regular / Medium / SemiBold / Bold · Medium · real font files; Quicksand has one weight. `{textWeight}`
   - **Modifiers**: toggles Italic · off, Underline · off · italic is the family's own where it has one (Oswald and Quicksand slant). `{textItalic}` `{textUnderline}`

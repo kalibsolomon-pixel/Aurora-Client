@@ -60,10 +60,13 @@ exchange atomically and refuses an unmarked fixture or a pending command.
 | `create-world` | Open vanilla's fresh Create World screen (for lines with no matching fixture world) |
 | `press Create New World` | Press the open screen's button with exactly that label |
 | `server time set noon` | Run a server command in the disposable world |
-| `expect-config hitboxSdfLines true` | Fail unless the live config field equals the JSON value |
+| `expect-config hitboxEnabled true` | Fail unless the live config field equals the JSON value |
 | `expect-screen FeatureDetailScreen` | Fail unless the open screen has that simple class name (`none` for no screen) |
 | `look -90 30` | Close any screen and point the player's view (yaw, pitch in degrees) |
-| `hold forward on` | Hold a vanilla key mapping down (`forward left back right jump attack use`, `on`/`off`) |
+| `perspective back` | Set the camera to `first`, `back` (third person) or `front` |
+| `slot 3` | Select a hotbar slot (0-8) |
+| `key-press attack` | Queue one press of the attack (or `use`) key, as a mouse click does |
+| `hold forward on` | Hold a vanilla key mapping down (`forward left back right jump attack use sneak`, `on`/`off`) |
 | `type <text>` | Send each code point through the active screen's character handler |
 | `key z ctrl shift` | Send one key (`z y a left right home end backspace enter`, optional `ctrl`/`shift`) through the screen's key handler |
 | `field-state` | Log the focused text field's value, caret and selected text |

@@ -1,7 +1,6 @@
 package com.aurora.client.ui.text;
 
 import com.aurora.client.AuroraClient;
-import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.health.MixinHealth;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
@@ -17,12 +16,16 @@ public final class SdfTextSupport {
 
     private SdfTextSupport() {}
 
-    public static boolean enabled(AuroraConfig config) {
-        return config.textSdf && available();
+    /**
+     * Distance-field text is the only text path (owner, 2026-11-19); raster text remains only
+     * as the fallback when the SDF hooks failed, stood down or the atlas could not be built.
+     */
+    public static boolean enabled() {
+        return available();
     }
 
-    public static boolean resolveSdfStyle(AuroraConfig config) {
-        return enabled(config) && (RenderSystem.isOnRenderThread() || Minecraft.getInstance() == null);
+    public static boolean resolveSdfStyle() {
+        return enabled() && (RenderSystem.isOnRenderThread() || Minecraft.getInstance() == null);
     }
 
     public static boolean available() {
@@ -49,7 +52,7 @@ public final class SdfTextSupport {
     static void recordWarmup(long start) { warmupNanos += System.nanoTime() - start; }
 
     static boolean drawing() {
-        return RenderSystem.isOnRenderThread() && gui && enabled(AuroraConfig.get());
+        return RenderSystem.isOnRenderThread() && gui && enabled();
     }
 
     public static Identifier rasterId(Identifier id) {

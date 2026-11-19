@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 
 PREFIXES = tuple("""
-zoom fullBright smoothCamera smoothAnimations swing viewBob idleSway animationCurve
+zoom fullBright smoothCamera smoothAnimations swing viewBob idleSway animationCurve anim
 hitColor glintColor info armor effectExpiry toolDurability freeLook saturationBar
 tabPing toggleSprint toggleSneak blockOverlay potion totem shield itemScale
 mainHand offHand playerHealth noFog fogDistance underwater lava
@@ -17,9 +17,9 @@ waypointShow deathWaypoint crosshair hitbox particle containerPreview itemPhysic
 keystrokes minimap worldMapShow resourcepackBrowser pulsar scoreboard
 """.split())
 EXACT = set("""
-keybindVersion customTitleScreen moduleGridView textRendererMode textSdf activeFont textWeight textItalic
+keybindVersion customTitleScreen moduleGridView textRendererMode activeFont textWeight textItalic
 textUnderline textCase textHudShadow searchInstant searchTypoTolerance reducedMotion themeEnabled theme
-showFps showCoords showTime hudColor pingHudEnabled nametagPingEnabled nametagTotemPopsEnabled
+showFps showCoords showTime hudColor pingHudEnabled pingHudBgMode pingHudBgColor nametagPingEnabled nametagTotemPopsEnabled
 hudEditorKey waypointDropKey waypointManagerKey waypointMaxVisible
 waypointWorldMarkerLimit waypointMaxDistance waypointsEnabled worldMapEnabled
 worldMapKey damageTiltEnabled damageTiltStrength smoothFovEnabled smoothFovSpeed
