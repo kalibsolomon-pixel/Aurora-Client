@@ -298,8 +298,9 @@ public class KeyListSetting extends FeatureSetting {
         int borderTint = disabled
                 ? ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_BACKGROUND), 0x33)
                 : AuroraAnim.lerpArgb(AuroraTheme.BORDER_OFF, AuroraTheme.BORDER_ON_HOVER, hT);
-        int textColor  = disabled ? AuroraTheme.TEXT_DIM
-                : AuroraAnim.lerpArgb(AuroraTheme.TEXT_SECONDARY, AuroraTheme.TEXT_PRIMARY, hT);
+        // An action, not a value: primary text at rest (council 2026-11-18: secondary on the raised
+        // face read as an inert control).
+        int textColor  = disabled ? AuroraTheme.TEXT_DIM : AuroraTheme.TEXT_PRIMARY;
 
         // Glass: same contract as KeybindSetting's pill — raised glass,
         // neutral tint at rest, accent-stained tint while listening, and
