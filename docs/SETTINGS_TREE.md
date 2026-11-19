@@ -314,7 +314,8 @@ Distance of your last hit.
 #### Potion HUD · on `{card:potion_hud}`
 Active effects with timers (replaces vanilla's effect icons).
 - **Text Color**: color · white. `{potionHudTextColor}`
-- **Background**: dropdown · Vanilla (vanilla status-effect slots; VANILLA is offered only here and on Armor HUD). `{potionBgMode}`
+- **Background**: dropdown · Vanilla (vanilla's status-effect container behind each icon; VANILLA is offered only here and on Armor HUD). `{potionBgMode}`
+- **Vanilla Layout**: segmented Standard / Condensed · Standard; Vanilla background only. Standard lists names and timers beside the icons; Condensed is a vanilla-style row with the time in each container's corner (4m, then 59s). `{potionVanillaLayout}`
 - **Background Color (when SOLID)**: color · black, 50%. `{potionBgColor}`
 - **Theme Corner Radius**: toggle · off · round this HUD's corners with the theme's Corner Radius instead of its fixed corners. `{potionHudThemeCorners}`
 

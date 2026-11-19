@@ -180,6 +180,7 @@
   "sprintHudBgMode": "NONE",
   "sprintHudBgColor": -2147483648,
   "potionBgMode": "VANILLA",
+  "potionVanillaLayout": "STANDARD",
   "potionBgColor": -2147483648,
   "totemPopEnabled": false,
   "totemShowOthers": false,

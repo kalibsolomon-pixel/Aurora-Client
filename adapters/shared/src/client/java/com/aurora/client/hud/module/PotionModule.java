@@ -2,7 +2,6 @@ package com.aurora.client.hud.module;
 
 import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.util.CachedValue;
-import com.aurora.client.util.HudBackgrounds;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -21,6 +20,12 @@ import java.util.Map;
  * Status effect (potion) HUD module. Stacked rows of icon, name, level
  * (Roman numeral), and a smart countdown.
  *
+ * <p>With the VANILLA background each icon sits in vanilla's own status-effect
+ * container ({@code hud/effect_background}, the ambient one for beacon effects),
+ * in one of two layouts: Standard keeps the list with names and timers beside
+ * the icons; Condensed is a row of containers, as vanilla's HUD draws them, with
+ * the time remaining over each one's bottom-left corner ("4m", then "59s").
+ *
  * <p>Width and height are driven by the active effects' name/timer Component.
  * They're cached with a 100ms TTL so getWidth/getHeight stay cheap even
  * when called many times per frame.
@@ -34,6 +39,11 @@ public class PotionModule extends HudModule {
     public static final String ID = "potion";
 
     private static final int ICON       = 18;
+    /** Vanilla's status-effect container, and the step between containers in a vanilla row. */
+    private static final int CONTAINER  = 24;
+    private static final int CONTAINER_STEP = 25;
+    private static final Identifier CONTAINER_SPRITE = Identifier.withDefaultNamespace("hud/effect_background");
+    private static final Identifier CONTAINER_AMBIENT_SPRITE = Identifier.withDefaultNamespace("hud/effect_background_ambient");
     private static final int ICON_GAP   = 5;
     /** Per-row height. Icon is 18 px tall; two text lines (name + timer)
      *  fit comfortably inside that same band, matching Inventory HUD+. */
@@ -82,9 +92,12 @@ public class PotionModule extends HudModule {
     }
 
     private static boolean vanillaSlots() { return AuroraConfig.get().potionBgMode == AuroraConfig.HudBackground.VANILLA; }
-    private static int iconWidth() { return vanillaSlots() ? HudBackgrounds.iconSlotSize(ICON) : ICON; }
-    private static int rowHeight() { return vanillaSlots() ? iconWidth() : ROW_H; }
-    private static int rowStride() { return vanillaSlots() ? rowHeight() : ROW_H + ROW_GAP; }
+    private static boolean condensed() {
+        return vanillaSlots() && AuroraConfig.get().potionVanillaLayout == AuroraConfig.PotionVanillaLayout.CONDENSED;
+    }
+    private static int iconWidth() { return vanillaSlots() ? CONTAINER : ICON; }
+    private static int rowHeight() { return vanillaSlots() ? CONTAINER : ROW_H; }
+    private static int rowStride() { return vanillaSlots() ? CONTAINER_STEP : ROW_H + ROW_GAP; }
     @Override protected AuroraConfig.HudBackground backgroundMode() {
         return vanillaSlots() ? AuroraConfig.HudBackground.NONE : AuroraConfig.get().potionBgMode;
     }
@@ -103,6 +116,10 @@ public class PotionModule extends HudModule {
         Font tr = client.font;
         int maxTextW = MIN_NAME_W;
         Collection<MobEffectInstance> active = effects();
+        if (condensed()) {
+            int count = Math.max(1, active.size());
+            return new int[] { count * CONTAINER_STEP - (CONTAINER_STEP - CONTAINER), CONTAINER };
+        }
         for (MobEffectInstance e : active) {
             // Per row, the text column has to fit either the effect
             // name + level on the top line or the timer on the bottom
@@ -183,12 +200,25 @@ public class PotionModule extends HudModule {
         Font tr = client.font;
         int row = 0;
 
+        if (condensed()) {
+            // A vanilla row: containers left to right, each with its time in the bottom-left corner.
+            for (MobEffectInstance e : active) {
+                int cx = x + row * CONTAINER_STEP;
+                drawContainer(ctx, e, cx, y);
+                drawEffectIcon(ctx, e, cx + (CONTAINER - ICON) / 2, y + (CONTAINER - ICON) / 2);
+                com.aurora.client.hud.HudTextPainter.draw(ctx, tr, condensedTime(e), cx + 2,
+                        y + CONTAINER - tr.lineHeight, textColor(0xFFFFFFFF));
+                row++;
+            }
+            return;
+        }
+
         for (MobEffectInstance e : active) {
             int rowY = y + row * rowStride();
 
             // Real vanilla 18×18 status-effect sprite, vertically centered
             // inside the row band.
-            if (vanillaSlots()) HudBackgrounds.slot(ctx, x, rowY, iconWidth(), rowHeight(), 1);
+            if (vanillaSlots()) drawContainer(ctx, e, x, rowY);
             drawEffectIcon(ctx, e, x + (iconWidth() - ICON) / 2, rowY + (rowHeight() - ICON) / 2);
 
             // Two-line text column (Inventory HUD+ style):
@@ -234,6 +264,25 @@ public class PotionModule extends HudModule {
             cx += tr.width(mins);
         }
         com.aurora.client.hud.HudTextPainter.draw(ctx,tr, secs, cx, y, textColor(0xFFFFFFFF));     // seconds / infinity — white
+    }
+
+    /** Vanilla's status-effect container; beacon (ambient) effects get the ambient one, as in vanilla. */
+    private static void drawContainer(GuiGraphicsExtractor ctx, MobEffectInstance e, int x, int y) {
+        ctx.blitSprite(RenderPipelines.GUI_TEXTURED, e.isAmbient() ? CONTAINER_AMBIENT_SPRITE : CONTAINER_SPRITE,
+                x, y, CONTAINER, CONTAINER);
+    }
+
+    /**
+     * Condensed time: whole minutes ("4m") while a minute or more remains, then
+     * seconds counting down ("59s"); "\u221E" for an infinite effect.
+     */
+    static String condensedTime(MobEffectInstance e) {
+        if (e.isInfiniteDuration()) return "\u221E";
+        return condensedTime((e.getDuration() + 19) / 20);
+    }
+
+    static String condensedTime(int seconds) {
+        return seconds >= 60 ? (seconds / 60) + "m" : seconds + "s";
     }
 
     /**
