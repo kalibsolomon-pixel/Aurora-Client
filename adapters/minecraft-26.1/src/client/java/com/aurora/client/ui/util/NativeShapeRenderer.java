@@ -28,7 +28,10 @@ public final class NativeShapeRenderer {
     }
 
     private static boolean shaderUnavailable;
+    /** Set once the pipeline compiled: some devices (VulkanMod) recompile on every precompile call. */
+    private static boolean shaderReady;
     private static boolean pipelineAvailable() {
+        if (shaderReady) return true;
         // A failed compile can be retried on every lookup by the backend.
         // Disable it for this session to avoid repeated compilation and logs.
         if (shaderUnavailable) return false;
@@ -45,6 +48,7 @@ public final class NativeShapeRenderer {
             shaderUnavailable = true;
             com.aurora.client.AuroraClient.LOGGER.warn("UI shape shader unavailable; using CPU rasterization for this session");
         }
+        shaderReady = available;
         return available;
     }
 

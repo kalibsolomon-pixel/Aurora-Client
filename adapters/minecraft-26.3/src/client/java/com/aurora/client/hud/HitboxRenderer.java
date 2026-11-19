@@ -67,6 +67,9 @@ public final class HitboxRenderer {
         HitboxPositionSmoother.clearAll();
     }
 
+    /** Blocks around an entity's box still counted as visible (eye and look lines reach past it). */
+    private static final double CULL_MARGIN = 1.0;
+
     public void render(LevelRenderContext ctx) {
         Minecraft client = Minecraft.getInstance();
         if (client == null || client.level == null) return;
@@ -105,9 +108,13 @@ public final class HitboxRenderer {
             matrices.pushPose();
             Matrix4f model = matrices.last().pose();
 
+            net.minecraft.client.renderer.culling.Frustum frustum = cam.getCullFrustum();
             for (Entity entity : client.level.entitiesForRendering()) {
                 if (entity == null || entity.isSpectator()) continue;
                 if (entity == client.getCameraEntity() && !cam.isDetached()) continue;
+                // Only entities the camera can see, as vanilla culls entity rendering; the
+                // margin keeps eye and look lines whose box is just off screen.
+                if (frustum != null && !frustum.isVisible(entity.getBoundingBox().inflate(CULL_MARGIN))) continue;
 
                 // Anti-cheat: never reveal entities that are invisible to the local
                 // player. Aurora's hitboxes are a visualization aid, not a wallhack --

@@ -96,6 +96,17 @@ zero fills and glass ([evidence](releases/evidence/3.5.1-parity.json)). A first 
 attempt found that profiles saved before 3.5.1 logged a warning per removed field; restore
 now skips those retired fields quietly.
 
+3.6.0 follows: the Animations pass and regroup (PR #67), SDF-only text, hitboxes and block
+outlines (PR #68), HUD colour options (PR #69), Potion HUD vanilla layouts (PR #71), the
+rounded-tip logo (PR #70) and the UI depth/bevel/polish work since 3.5.1
+([notes](releases/RELEASE_NOTES_3.6.0.md)). The matrix found three release blockers from
+SDF-only lines and text, fixed before publication: hitboxes for every loaded entity (now
+frustum-culled, with cheaper boxes), VulkanMod recompiling the line and shape shaders every
+frame (now cached), and ImmediatelyFast garbling vanilla text with SDF text (SDF text now
+stands down for it). Fixtures are now native worlds per line. All fourteen rows passed with
+six reports each; judged runs at most 0.222 ms mean and 0.290 ms p95, zero fills and glass
+([evidence](releases/evidence/3.6.0-parity.json)).
+
 Window frames now use a cached, content-clipped bevel with one fixed strength, a little lighter than the former Subtle level (the Window Bevel setting and its levels were retired on 2026-11-18). Below full opacity the rim stays as clear as the window and the glass pass bends the backdrop across the frame band; glass, gem and metal were captured in the 26.3 client on OpenGL and Vulkan and await owner review. Since 2026-11-18 every window keeps a 10 px frame room, so the band is never squeezed by content (it may take up to 6 px) and content keeps a 4 px gap from it (DESIGN_LANGUAGE "Frame room").
 
 ## Acceptance and contributor readiness
