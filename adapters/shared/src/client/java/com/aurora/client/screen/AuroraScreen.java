@@ -1337,7 +1337,10 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
                 if (cue > 0f && !isSettingsResult(m)) {
                     FeatureMetadata fm = findMeta(m.id);
                     if (fm != null && fm.hasDetail()) {
-                        int muted = MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY);
+                        // Halfway from secondary to primary text: still quieter than the label, but
+                        // legible on a lit face (council 2026-11-18).
+                        int muted = com.aurora.client.util.AuroraAnim.lerpArgb(MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY),
+                                MaterialSurface.color(ThemeToken.ON_BACKGROUND), .5f);
                         MaterialIconRenderer.drawIcon(g, tr, com.aurora.client.screen.IconCatalog.glyph("chevron_right"),
                                 chevronX(cx, cw) + CHEVRON_BOX / 2f, chevronY(cy, ch) + CHEVRON_BOX / 2f,
                                 CHEVRON, ThemeManager.withAlpha(muted, Math.round((muted >>> 24) * cue)));

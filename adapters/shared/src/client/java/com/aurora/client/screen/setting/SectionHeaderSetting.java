@@ -162,8 +162,12 @@ public class SectionHeaderSetting extends FeatureSetting {
         // Unified windows: a collapsed caption is secondary text, readable on the glass (2026-11-14);
         // an open one reads as the heading of the rows under it, in primary text (council
         // 2026-11-18: open and closed captions looked alike but for the chevron).
+        // Collapsed sits between secondary and primary, so a closed section never reads as a
+        // disabled row (council 2026-11-18).
         int rest = !MaterialSurface.unified() ? AuroraTheme.sectionCaption()
-                : MaterialSurface.color(collapsed ? ThemeToken.ON_BACKGROUND_SECONDARY : ThemeToken.ON_BACKGROUND);
+                : collapsed ? AuroraAnim.lerpArgb(MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY),
+                        MaterialSurface.color(ThemeToken.ON_BACKGROUND), .4f)
+                : MaterialSurface.color(ThemeToken.ON_BACKGROUND);
         int color = AuroraAnim.lerpArgb(rest, MaterialSurface.color(ThemeToken.ON_BACKGROUND), emphasis * .6f);
         int textY = AuroraFontRenderer.roleTextY(tr, top, h, AuroraFontRenderer.Role.HEADING);
         // The heading role in the caption colour (2026-11-14): a sub-section reads as the same

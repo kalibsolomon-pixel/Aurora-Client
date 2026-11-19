@@ -111,6 +111,14 @@ public final class MaterialSurface {
                 (Math.round(visibility * 255) << 24) | 0xffffff);
     }
 
+    /** A panel-tone fill under a floating container's text (the HUD editor guide), at {@code alpha}
+     * of opaque: keeps its contrast steady where the world behind the window tint changes. */
+    public static void panelBacking(GuiGraphicsExtractor g, float x, float y, float w, float h, float radius, float alpha) {
+        if (alpha <= 0f) return;
+        RenderUtil.drawRoundedRectAA(g, x, y, w, h, radius,
+                ThemeManager.withAlpha(color(ThemeToken.MATERIAL_PANEL), Math.round(255 * Math.min(1f, alpha))));
+    }
+
     /** Fixed outline attenuation; independent of Background Opacity. */
     public static final float WINDOW_OUTLINE_ALPHA = .55f;
     public static int windowOutline() {

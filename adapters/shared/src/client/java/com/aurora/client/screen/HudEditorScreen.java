@@ -299,6 +299,9 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
         float radius = Math.min(ThemeManager.current().roundness().radiusSmall(), Math.min(pillW, pillH) * .5f);
         MaterialSurface.overlayFace(ctx, pillX, pillY, pillW, pillH, radius,
                 MaterialSurface.windowCornerClearance(radius, 8, 5), visibility);
+        // A near-opaque panel under the text: the window tint alone let snow, shield and grass
+        // change the legend's contrast from one word to the next.
+        MaterialSurface.panelBacking(ctx, pillX, pillY, pillW, pillH, radius, .85f * visibility);
         // Primary text: the pill floats over bright terrain, where secondary grey washed out.
         int text = MaterialSurface.color(ThemeToken.ON_BACKGROUND);
         int textAlpha = Math.round((text >>> 24) * visibility);
@@ -401,11 +404,14 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
                     : m.locked ? outlineLocked()
                       : !m.enabled ? outlineDisabled()
                         : outlineEnabled();
+            // A dark keyline just outside the frame keeps it visible over white sky and snow.
+            outline(ctx, x - 2, y - 2, x + w + 2, y + h + 2, emphasized ? 0x80000000 : 0x40000000);
             outline(ctx, x - 1, y - 1, x + w + 1, y + h + 1,
                     ThemeManager.withAlpha(color, emphasized ? 0xFF : 0x66));
 
-            // Corner handles (only on the emphasized enabled, unlocked module).
-            if (emphasized && m.enabled && !m.locked) {
+            // Corner handles on every enabled, unlocked module (council 2026-11-18: the legend
+            // says "Corner: resize", so the corners show where to grab before any hover).
+            if (m.enabled && !m.locked) {
                 drawCornerHandle(ctx, x - 2, y - 2);                  // TL
                 drawCornerHandle(ctx, x + w - 2, y - 2);              // TR
                 drawCornerHandle(ctx, x - 2, y + h - 2);              // BL
