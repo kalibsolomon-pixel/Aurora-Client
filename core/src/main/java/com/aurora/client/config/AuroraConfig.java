@@ -870,6 +870,13 @@ public class AuroraConfig {
     public boolean toggleSprintSneakThemeCorners = false;
 
     public HudBackground potionBgMode = HudBackground.NONE;
+    /** With the VANILLA background: a list with names (STANDARD) or a row of icons with their time (CONDENSED). */
+    public PotionVanillaLayout potionVanillaLayout = PotionVanillaLayout.STANDARD;
+
+    public enum PotionVanillaLayout {
+        STANDARD, CONDENSED;
+        public String getLabel() { return this == STANDARD ? "Standard" : "Condensed"; }
+    }
     public int potionBgColor = 0x80000000;
     public boolean potionHudThemeCorners = false;
 

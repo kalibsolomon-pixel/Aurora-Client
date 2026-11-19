@@ -772,6 +772,11 @@ addWithSettings("hitbox",
                                 .description("Text color for this HUD only. Reset restores its default color."),
                         new EnumSetting<>("Background", AuroraConfig.HudBackground.class,
                                 () -> cfg.potionBgMode, v -> cfg.potionBgMode = v).resetDefault(() -> defaults.potionBgMode),
+                        new SegmentedSetting<>("Vanilla Layout", AuroraConfig.PotionVanillaLayout.class,
+                                () -> cfg.potionVanillaLayout, v -> { cfg.potionVanillaLayout = v; AuroraConfig.save(); },
+                                AuroraConfig.PotionVanillaLayout::getLabel).resetDefault(() -> defaults.potionVanillaLayout)
+                                .description("With the Vanilla background. Standard lists each effect in vanilla's container with its name, tier and timer beside it. Condensed is a row of containers like vanilla's own, with the time left in each one's corner: minutes (4m), then seconds (59s) in the last minute.")
+                                .disabled(() -> cfg.potionBgMode != AuroraConfig.HudBackground.VANILLA),
                         new ColorSetting("Background Color (when SOLID)",
                                 () -> cfg.potionBgColor, v -> cfg.potionBgColor = v).resetDefault(() -> defaults.potionBgColor),
                         hudThemeCorners(() -> cfg.potionHudThemeCorners, v -> cfg.potionHudThemeCorners = v, () -> defaults.potionHudThemeCorners)
