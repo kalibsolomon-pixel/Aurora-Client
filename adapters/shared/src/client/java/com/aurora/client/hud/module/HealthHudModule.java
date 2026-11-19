@@ -37,6 +37,10 @@ public class HealthHudModule extends HudModule {
         return AuroraConfig.get().playerHealthHudEnabled;
     }
 
+    @Override protected AuroraConfig.HudBackground backgroundMode() { return AuroraConfig.get().playerHealthHudBgMode; }
+    @Override protected int backgroundColor() { return AuroraConfig.get().playerHealthHudBgColor; }
+    @Override protected boolean themeCorners() { return AuroraConfig.get().playerHealthHudThemeCorners; }
+
     @Override public String displayName() { return "Health"; }
     @Override public String featureRegistryId() { return "player_health"; }
 
@@ -72,7 +76,7 @@ public class HealthHudModule extends HudModule {
         ctx.blitSprite(RenderPipelines.GUI_TEXTURED, HEART, x, y + (h - ICON) / 2, ICON, ICON);
         int tx = x + ICON + ICON_GAP;
         int ty = y + (h - font.lineHeight) / 2 + 1;
-        int color = com.aurora.client.theme.HudText.color(AuroraConfig.get().hudColor);
+        int color = com.aurora.client.theme.HudText.color(AuroraConfig.get().playerHealthHudTextColor, AuroraConfig.get().hudColor);
         com.aurora.client.hud.HudTextPainter.draw(ctx, font, readout.health(), tx, ty, color);
         if (!readout.absorption().isEmpty()) {
             com.aurora.client.hud.HudTextPainter.draw(ctx, font, readout.absorption(),

@@ -105,6 +105,12 @@ public final class ScoreboardModule extends HudModule {
 
     @Override protected int backgroundColor() { return AuroraConfig.get().scoreboardBgColor; }
 
+    /** Base text color: vanilla's white unless set; a line's own formatting colors still apply. */
+    private static int aurora$textColor() {
+        Integer color = AuroraConfig.get().scoreboardTextColor;
+        return color == null ? -1 : color;
+    }
+
     /** Extra content scale on top of the universal layout scale. */
     private static float contentScale() {
         double raw = AuroraConfig.get().scoreboardScale;
@@ -194,12 +200,12 @@ public final class ScoreboardModule extends HudModule {
         g.pose().translate(x, y);
         g.pose().scale(s, s);
         int contentWidth = dataWidth() + 4;
-        g.text(mc.font, title, (contentWidth - titleWidth) / 2, 0, -1, false);
+        g.text(mc.font, title, (contentWidth - titleWidth) / 2, 0, aurora$textColor(), false);
         for (int i = 0; i < rows; i++) {
             int rowY = 10 + i * 9;
-            g.text(mc.font, names[i], 2, rowY, -1, false);
+            g.text(mc.font, names[i], 2, rowY, aurora$textColor(), false);
             if (scoreWidths[i] > 0) {
-                g.text(mc.font, scores[i], contentWidth - 2 - scoreWidths[i], rowY, -1, false);
+                g.text(mc.font, scores[i], contentWidth - 2 - scoreWidths[i], rowY, aurora$textColor(), false);
             }
         }
         g.pose().popMatrix();
@@ -211,12 +217,12 @@ public final class ScoreboardModule extends HudModule {
         g.pose().scale(s, s);
         Component sampleTitle = Component.literal("Scoreboard");
         int contentWidth = sampleWidth() + 4;
-        g.text(mc.font, sampleTitle, (contentWidth - mc.font.width(sampleTitle)) / 2, 0, -1, false);
+        g.text(mc.font, sampleTitle, (contentWidth - mc.font.width(sampleTitle)) / 2, 0, aurora$textColor(), false);
         for (int i = 0; i < SAMPLE_NAMES.length; i++) {
             int rowY = 10 + i * 9;
-            g.text(mc.font, SAMPLE_NAMES[i], 2, rowY, -1, false);
+            g.text(mc.font, SAMPLE_NAMES[i], 2, rowY, aurora$textColor(), false);
             String score = Integer.toString(SAMPLE_SCORES[i]);
-            g.text(mc.font, score, contentWidth - 2 - mc.font.width(score), rowY, -1, false);
+            g.text(mc.font, score, contentWidth - 2 - mc.font.width(score), rowY, aurora$textColor(), false);
         }
         g.pose().popMatrix();
     }

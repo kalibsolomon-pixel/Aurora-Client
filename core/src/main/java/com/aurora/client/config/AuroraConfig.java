@@ -568,6 +568,10 @@ public class AuroraConfig {
     // ---- Module enables ----
     public boolean infoEnabled        = true;
     public boolean pingHudEnabled = true;
+    /** The ping HUD's backdrop and corners (it had none before 2026-11-19, so NONE keeps its look). */
+    public HudBackground pingHudBgMode = HudBackground.NONE;
+    public int pingHudBgColor = 0x80000000;
+    public boolean pingHudThemeCorners = false;
     public boolean nametagPingEnabled = true;
     public boolean cpsEnabled         = true;
     public boolean armorHudEnabled    = true;
@@ -810,6 +814,11 @@ public class AuroraConfig {
      * (the labels above entities); the card is on while either is.
      */
     public boolean playerHealthHudEnabled = false;
+    /** The health HUD's own backdrop, text color (null follows the HUD color) and corners, like every HUD module. */
+    public HudBackground playerHealthHudBgMode = HudBackground.NONE;
+    public int playerHealthHudBgColor = 0x80000000;
+    public boolean playerHealthHudThemeCorners = false;
+    public Integer playerHealthHudTextColor = null;
 
     public enum HealthDisplayMode {
         NUMBER("Number"),
@@ -1203,6 +1212,8 @@ public class AuroraConfig {
     public HudBackground scoreboardBackground = HudBackground.VANILLA;
     /** Flat panel color used when the background is SOLID. */
     public int scoreboardBgColor = -14543302; // 0xFF212121, the theme panel default
+    /** Base color for scoreboard text; null keeps vanilla's white. Server formatting still wins where a line has its own color. */
+    public Integer scoreboardTextColor = null;
     /** Extra content scale on top of the universal layout scale, 0.5..3. */
     public double scoreboardScale = 1.0;
 

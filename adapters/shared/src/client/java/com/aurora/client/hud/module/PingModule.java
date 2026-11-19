@@ -58,8 +58,9 @@ public class PingModule extends HudModule {
         return client.font.lineHeight;
     }
 
-    @Override protected AuroraConfig.HudBackground backgroundMode() { return AuroraConfig.HudBackground.NONE; }
-    @Override protected int backgroundColor() { return 0x80000000; }
+    @Override protected AuroraConfig.HudBackground backgroundMode() { return AuroraConfig.get().pingHudBgMode; }
+    @Override protected int backgroundColor() { return AuroraConfig.get().pingHudBgColor; }
+    @Override protected boolean themeCorners() { return AuroraConfig.get().pingHudThemeCorners; }
 
     @Override
     protected void renderContent(GuiGraphicsExtractor ctx, Minecraft client, int x, int y) {
