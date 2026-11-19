@@ -78,7 +78,7 @@ Other things drawn on the HUD that are not movable modules:
 - **Crosshair** (Mods → Crosshair). `{hud:crosshair}`
 - **Saturation on the food bar** (Mods → Saturation Bar). `{hud:saturation}`
 - **Alert popups** (Mods → Alerts). `{hud:alerts}`
-- **Hotbar bounce** on pickup (Mods → Animations → Hotbar). `{hud:hotbarBounce}`
+- **Hotbar bounce** on pickup (Mods → Animations → Using & Switching Items). `{hud:hotbarBounce}`
 
 ---
 
@@ -384,20 +384,25 @@ Hides hairline seams on held items.
 - **Fix Strength**: slider 0–50 (thousandths) · 1. `{heldItemInflation}`
 
 #### Animations · on `{card:animations}`
-Swing, view bob, damage tilt, idle sway, entity smoothing.
-- *Swing*
+Three categories (2026-11-19 regroup): hands and held items, using and switching items, camera and player models. Every option is visual and its default is vanilla.
+- *Hands & Held Items*
   - **Swing Curve**: dropdown Linear / Sine / Smoothstep / Quartic / Quintic / Cubic Out / Quartic Out · Linear. `{swingAnimationCurve}`
-- *View Bob*
-  - **View Bob Amplitude**: slider 0–200% · 100%. `{viewBobAmplitude}`
-- *Damage Tilt*
-  - **Enable Damage Tilt**: toggle · off · 1.8-style camera roll. `{damageTiltEnabled}`
-  - **Damage Tilt Strength**: slider 0–100% · 100%. `{damageTiltStrength}`
-- *Idle Sway*
+  - **Hand Sway**: slider 0–100% · 100%. View-lag sway kept when turning. `{animHandSway}`
   - **Idle Sway**: toggle · off. `{idleSwayEnabled}`
   - **Idle Sway Curve**: dropdown Sine Breath / Lissajous / Smoothstep Drift / Double Sine / Pendulum / Circular · Sine Breath. `{idleSwayCurve}`
   - **Idle Sway Strength**: slider 0–10 · 1. `{idleSwayStrength}`
-- *Hotbar*
+- *Using & Switching Items*
+  - **Eating & Drinking**: segmented Vanilla / Compact · Vanilla. `{animEatStyle}`
+  - **Block Pose**: segmented Vanilla / Classic · Vanilla. Non-shield items in a blocking use. `{animBlockStyle}`
+  - **Block-Hit Swing**: toggle · off. `{animBlockHitSwing}`
+  - **Skip Hand Dip**: toggle group After Use / On Cooldown · both off. `{animNoUseDip}` `{animNoCooldownDip}`
+  - **Re-equip On**: segmented Item Change / Slot Change · Item Change. `{animReequip}`
   - **Hotbar Bounce**: toggle · off. `{hotbarBounceEnabled}`
+- *Camera & Body*
+  - **View Bob Amplitude**: slider 0–200% · 100%. `{viewBobAmplitude}`
+  - **Classic Damage Tilt**: toggle · off · the hurt roll always rolls one way, as in 1.8. `{damageTiltEnabled}`
+  - **Damage Tilt Strength**: slider 0–100% · 100%; disabled while Classic Damage Tilt is off. `{damageTiltStrength}`
+  - **Player Models**: toggle group 1.8 Backwards Walk (every player) / 1.8 Sneak (your own model) · both off. `{animRetroBackwardsWalk}` `{animClassicSneak}`
 
 #### Keystrokes · on `{card:keystrokes}`
 Shows your key and mouse presses.

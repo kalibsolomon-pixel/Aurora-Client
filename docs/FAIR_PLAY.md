@@ -71,7 +71,7 @@ Changing a default does not change an existing install: a player who already had
 | Particles | Cosmetic | Hides, resizes or recolors particle types on your screen. |
 | Item Scale | Cosmetic | Changes the size and position of the item in your hand. |
 | Held Item Seam Fix | Cosmetic | Hides texture seams on the item in your hand. |
-| Animations | Cosmetic | Changes swing, view-bob and damage-tilt animations. |
+| Animations | Cosmetic | Changes how your own hands, items, camera bob and damage tilt are drawn, players' backwards-walking pose and your own sneaking pose. Use timing, attacks and what is sent to the server are unchanged. |
 | Keystrokes | Vanilla equivalent | Shows your own key and mouse presses. |
 | Minimap | Vanilla equivalent | A map of terrain your client has loaded, with your waypoints and dots for nearby mobs. Dots for other players are an information advantage and ship off. |
 | Scoreboard HUD | Vanilla equivalent | Replaces the vanilla scoreboard sidebar with a movable, resizable module that shows the same rows and scores as vanilla. Off in a fresh install. |

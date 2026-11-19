@@ -226,7 +226,7 @@ public final class FeatureCatalog {
         module("particles", "Particles", "Per-particle control over every vanilla particle type — hide ones you find distracting and resize the rest.");
         module("item_scale", "Item Scale", "Customize the scale, rotation, and screen translation of individual item models.");
         module("held_item_seams", "Held Item Seam Fix", "Hides the hairline seams that can appear between the faces of your first-person held items at certain camera angles.");
-        module("animations", "Animations", "Swing curves, view-bob strength, classic 1.8-style damage camera tilt, retro backwards-walking & sneak poses, and idle held-item sway.");
+        module("animations", "Animations", "Swing curves, hand sway, compact eating, classic block poses, equip dips, view bob, 1.8-style damage tilt, retro backwards walking and sneak poses, and idle held-item sway.");
         module("keystrokes", "Keystrokes", "Displays your WASD, mouse, jump, and sneak keys as a HUD overlay that lights up in real time as you press them.");
         module("minimap", "Minimap", "A top-down map of the world around you, shown as a HUD overlay. Renders terrain, waypoints, and nearby entities as colored dots.");
         module("scoreboard", "Scoreboard HUD", "Replaces the vanilla scoreboard sidebar with a HUD module you can move, resize and restyle. Off in a fresh install, so existing installs keep vanilla's sidebar.");
@@ -283,7 +283,7 @@ public final class FeatureCatalog {
         classify("particles", FairPlay.COSMETIC, "Hides, resizes or recolors particle types on your screen.");
         classify("item_scale", FairPlay.COSMETIC, "Changes the size and position of the item in your hand.");
         classify("held_item_seams", FairPlay.COSMETIC, "Hides texture seams on the item in your hand.");
-        classify("animations", FairPlay.COSMETIC, "Changes swing, view-bob and damage-tilt animations.");
+        classify("animations", FairPlay.COSMETIC, "Changes how your own hands, items, camera bob and damage tilt are drawn, players' backwards-walking pose and your own sneaking pose. Use timing, attacks and what is sent to the server are unchanged.");
         classify("keystrokes", FairPlay.VANILLA_INFORMATION, "Shows your own key and mouse presses.");
         classify("minimap", FairPlay.VANILLA_INFORMATION, "A map of terrain your client has loaded, with your waypoints and dots for nearby mobs. Dots for other players are an information advantage and ship off.", "minimapShowPlayers");
         classify("scoreboard", FairPlay.VANILLA_INFORMATION, "Replaces the vanilla scoreboard sidebar with a movable, resizable module that shows the same rows and scores as vanilla. Off in a fresh install.", "scoreboardEnabled");
@@ -337,6 +337,10 @@ public final class FeatureCatalog {
         mixin("UnderwaterClarityMixin", "underwater clarity", "pack_tweaks").gates("underwaterClarityEnabled");
         mixin("MouseClickTrackerMixin", "counting clicks for the CPS readouts", "cps", "keystrokes", "info_module");
         mixin("DamageTiltMixin", "the 1.8-style damage tilt", "animations").gates("damageTiltEnabled");
+        mixin("HandMotionMixin", "hand sway, compact eating and classic block poses", "animations").gates("animBlockHitSwing");
+        mixin("HandEquipMixin", "skipping equip dips and slot-only re-equip", "animations").gates("animNoUseDip", "animNoCooldownDip");
+        mixin("RetroBodyTurnMixin", "retro backwards walking", "animations").gates("animRetroBackwardsWalk");
+        mixin("ClassicSneakPoseMixin", "the classic sneak pose", "animations").gates("animClassicSneak");
         mixin("HotbarItemBounceMixin", "the hotbar item bounce", "animations").gates("hotbarBounceEnabled");
         mixin("PlayerEntityRendererMixin", "ping and totem pops under nametags", "ping", "totem_pop")
                 .gates("nametagPingEnabled", "nametagTotemPopsEnabled");
