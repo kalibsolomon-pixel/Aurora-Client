@@ -17,7 +17,7 @@ public abstract class SdfGuiTextMixin {
             require = 1)
     private Font.PreparedText aurora$prepareGui(Font font, FormattedCharSequence text, float x, float y,
                                                int color, boolean shadow, boolean includeEmpty, int background) {
-        if (!SdfTextSupport.enabled(AuroraConfig.get()) || !RenderSystem.isOnRenderThread()) {
+        if (!SdfTextSupport.enabled() || !RenderSystem.isOnRenderThread()) {
             return font.prepareText(text, x, y, color, shadow, includeEmpty, background);
         }
         boolean previous = SdfTextSupport.beginGui();

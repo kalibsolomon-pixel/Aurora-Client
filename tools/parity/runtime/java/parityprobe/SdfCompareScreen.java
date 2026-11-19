@@ -25,20 +25,12 @@ final class SdfCompareScreen extends Screen {
 
     private final float scale;
     private final String scaleLabel;
-    private boolean previousSdf;
 
     SdfCompareScreen(String requestedScale) {
         super(Component.literal("Raster / SDF comparison"));
         this.scale = parseScale(requestedScale);
         this.scaleLabel = String.format(Locale.ROOT, "%sx", scale);
     }
-
-    @Override public void added() {
-        previousSdf = AuroraConfig.get().textSdf;
-        AuroraConfig.get().textSdf = true;
-    }
-
-    @Override public void removed() { AuroraConfig.get().textSdf = previousSdf; }
 
     private static float parseScale(String value) {
         float parsed = Float.parseFloat(value);

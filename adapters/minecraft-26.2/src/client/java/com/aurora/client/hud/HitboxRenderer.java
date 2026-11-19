@@ -88,7 +88,7 @@ public final class HitboxRenderer {
             // Use the proper lines() render type with per-vertex line width.
             // The see-through wireframe option is gone (owner ruling 2026-10-30);
             // the wireframe keeps the see-through (translucent) default.
-            boolean sdf = cfg.hitboxSdfLines && WorldLineRenderer.sdfAvailable();
+            boolean sdf = WorldLineRenderer.sdfAvailable();
             VertexConsumer buf = WorldLineRenderer.getLineBuffer(consumers, sdf);
 
             // Match vanilla LevelRenderer: use the game-time partial tick (false) so

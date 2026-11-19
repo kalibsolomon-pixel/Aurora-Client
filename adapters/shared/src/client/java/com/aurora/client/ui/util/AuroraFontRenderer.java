@@ -323,7 +323,7 @@ public class AuroraFontRenderer {
     }
 
     private static boolean useSdf(AuroraConfig cfg) {
-        return com.aurora.client.ui.text.SdfTextSupport.resolveSdfStyle(cfg);
+        return com.aurora.client.ui.text.SdfTextSupport.resolveSdfStyle();
     }
 
     private static int styleKey(AuroraConfig cfg, boolean compact, boolean sdf) {

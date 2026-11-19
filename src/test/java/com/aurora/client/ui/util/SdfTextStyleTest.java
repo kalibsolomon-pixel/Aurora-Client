@@ -18,7 +18,7 @@ class SdfTextStyleTest {
     private AuroraConfig.FontType font;
     private AuroraConfig.TextWeight weight;
     private AuroraConfig.TextRendererMode mode;
-    private boolean italic, underline, sdf;
+    private boolean italic, underline;
 
     @BeforeEach void setUp() {
         config = AuroraConfig.get();
@@ -27,8 +27,6 @@ class SdfTextStyleTest {
         mode = config.textRendererMode;
         italic = config.textItalic;
         underline = config.textUnderline;
-        sdf = config.textSdf;
-        config.textSdf = false;
         config.textRendererMode = AuroraConfig.TextRendererMode.ALL_TEXT;
         config.textUnderline = false;
     }
@@ -39,10 +37,9 @@ class SdfTextStyleTest {
         config.textRendererMode = mode;
         config.textItalic = italic;
         config.textUnderline = underline;
-        config.textSdf = sdf;
     }
 
-    @Test void toggleChangesOnlyTheRasterIdSuffix() {
+    @Test void sdfAliasAddsOnlyTheSuffixToTheRasterId() {
         assertRaster(AuroraConfig.FontType.INTER, AuroraConfig.TextWeight.MEDIUM, false,
                 "inter_medium");
         assertRaster(AuroraConfig.FontType.ROBOTO, AuroraConfig.TextWeight.SEMIBOLD, false,
@@ -54,7 +51,6 @@ class SdfTextStyleTest {
     }
 
     @Test void offAndWindowOnlyOutsideAWindowDoNotSubstitute() {
-        config.textSdf = true;
         config.activeFont = AuroraConfig.FontType.INTER;
         config.textRendererMode = AuroraConfig.TextRendererMode.OFF;
         assertEquals(null, AuroraFontRenderer.getActiveStyle());
@@ -63,7 +59,6 @@ class SdfTextStyleTest {
     }
 
     @Test void failedOrYieldedSdfHookPreservesTheRasterStyle() {
-        config.textSdf = true;
         config.activeFont = AuroraConfig.FontType.INTER;
         config.textWeight = AuroraConfig.TextWeight.MEDIUM;
         config.textItalic = false;
@@ -88,8 +83,6 @@ class SdfTextStyleTest {
         boolean wasDrawingHud = AuroraFontRenderer.isDrawingHud();
         AuroraFontRenderer.setDrawingHud(true);
         try {
-            assertFalse(SdfTextSupport.isSdfStyle(AuroraFontRenderer.getActiveStyle()));
-            config.textSdf = true;
             assertTrue(SdfTextSupport.isSdfStyle(AuroraFontRenderer.getActiveStyle()));
             config.activeFont = AuroraConfig.FontType.SANSSERIF;
             assertFalse(SdfTextSupport.isSdfStyle(AuroraFontRenderer.getActiveStyle()));
@@ -106,11 +99,14 @@ class SdfTextStyleTest {
         config.activeFont = family;
         config.textWeight = textWeight;
         config.textItalic = textItalic;
-        config.textSdf = false;
-        assertEquals(new FontDescription.Resource(Identifier.fromNamespaceAndPath("aurora", expected)),
-                AuroraFontRenderer.getActiveStyle().getFont());
-        config.textSdf = true;
         assertEquals(new FontDescription.Resource(Identifier.fromNamespaceAndPath("aurora", expected + "_sdf")),
                 AuroraFontRenderer.getActiveStyle().getFont());
+        try {
+            HealthTestAccess.fail("SdfGlyphRenderStateMixin");
+            assertEquals(new FontDescription.Resource(Identifier.fromNamespaceAndPath("aurora", expected)),
+                    AuroraFontRenderer.getActiveStyle().getFont(), "raster is the fallback when SDF is not working");
+        } finally {
+            HealthTestAccess.reset(null);
+        }
     }
 }

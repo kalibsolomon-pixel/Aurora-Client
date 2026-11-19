@@ -228,7 +228,6 @@ public class AuroraConfig {
     }
 
     public TextRendererMode textRendererMode = TextRendererMode.AURORA_ONLY;
-    public boolean textSdf = false;
     public FontType activeFont = FontType.INTER;
 
     // ---- Text options (Settings → Appearance → Text, 2026-11-12) ----
@@ -692,7 +691,6 @@ public class AuroraConfig {
     public BlockOverlayMode blockOverlayMode = BlockOverlayMode.SOLID;
     public float   blockOverlayRainbowSpeed = 1.0f;        // cycles per second
     public double blockOverlayLineWidth = 2.0;    // line width in pixels (GPU-expanded)
-    public boolean blockOverlaySdfLines = false;  // anti-aliased SDF outline with round corners
 
     public boolean potionHudEnabled = true;
 
@@ -1052,7 +1050,6 @@ public class AuroraConfig {
     public double hitboxLookLength = 2.0;
     public int hitboxColor = 0xFFFFFFFF;
     public double hitboxLineWidth = 2.0;          // line width in pixels (GPU-expanded)
-    public boolean hitboxSdfLines = false;        // anti-aliased SDF lines with round corners
     public boolean hitboxProjectileColorEnabled = false;
     public int hitboxProjectileColor = 0xFFFFFF00;
     public double hitboxProjectileLineWidth = 2.0;

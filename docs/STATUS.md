@@ -12,11 +12,11 @@ native probe now measures open-screen extraction and cache payload separately
 from gameplay overhead. [Implementation and measured limits](reports/2026-11-17-ui-cache-refinement.md).
 Keystrokes has two key styles: Flat (default, Lunar-style legend on a flat coloured face) and cached Cherry-profile 3D keycaps; legends are row-sized and centred on their visible ink.
 
-Smooth Scaling (SDF) is opt-in on all three lines. It preserves raster layout and still needs
-[native visual acceptance](reports/2026-11-17-sdf-spike.md#phase-1-acceptance) before a default change.
-Hitboxes and Block Overlay have an opt-in Smooth Lines (SDF) option: vanilla's translucent line
-pipeline with Aurora's distance-field shader (anti-aliased edge, round caps), falling back to
-vanilla lines for the session if it cannot compile. Checked in-world on 26.1.2, 26.2 and 26.3
+SDF rendering is the only path for Aurora's custom text, hitboxes and block outlines on all three
+lines (owner, 2026-11-19; the opt-in toggles were removed). Text keeps raster layout; hitboxes and
+block outlines use vanilla's translucent line pipeline with Aurora's distance-field shader
+(anti-aliased edge, round caps). Bitmap text and vanilla lines remain only as the session fallback
+when SDF cannot run ([ADR 0010](adr/0010-opt-in-sdf-text-with-vanilla-layout.md)). Checked in-world on 26.1.2, 26.2 and 26.3
 (OpenGL; 26.3 also native Vulkan) at widths 0.5, 2 and 5.
 
 Pulsar integration adds Phenomena's analytics and recording as Aurora's 40th
