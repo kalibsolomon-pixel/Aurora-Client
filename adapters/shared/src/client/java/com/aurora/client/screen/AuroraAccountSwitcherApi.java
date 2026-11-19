@@ -14,6 +14,8 @@ import net.minecraft.client.gui.screens.Screen;
 public final class AuroraAccountSwitcherApi {
 
     private static final String ACCOUNT_SCREEN = "ru.vidtu.ias.screen.AccountScreen";
+    /** IAS's multiplayer button is a plain ImageButton carrying this literal message (IAS 9.0.8). */
+    private static final String BUTTON_MESSAGE = "In-Game Account Switcher";
 
     private AuroraAccountSwitcherApi() {}
 
@@ -26,6 +28,17 @@ public final class AuroraAccountSwitcherApi {
         } catch (ClassNotFoundException e) {
             return false;
         }
+    }
+
+    /**
+     * Whether {@code button} is the account button IAS adds to the multiplayer
+     * screen, so Aurora can repaint it. Only its look changes: IAS keeps the
+     * widget, its position, tooltip and press action.
+     */
+    public static boolean isMultiplayerButton(net.minecraft.client.gui.components.AbstractButton button) {
+        return button.getClass() == net.minecraft.client.gui.components.ImageButton.class
+                && BUTTON_MESSAGE.equals(button.getMessage().getString())
+                && FabricLoader.getInstance().isModLoaded("ias");
     }
 
     /** IAS's account list over {@code parent}, or null when IAS is not installed or the screen cannot be built. */
