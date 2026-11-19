@@ -203,7 +203,7 @@ public final class FeatureCatalog {
         module("no_fog", "No Fog", "Pushes back the distance fog that normally hides far terrain. You see further across oceans and open landscapes.");
         module("pack_tweaks", "Pack Tweaks", "A bundle of small quality-of-life visual tweaks — totem particle size, shield rendering, and water/lava clarity.");
         module("player_health", "Health Indicators", "Shows the health of mobs and players above them, as a number or as vanilla's heart bar, and your own health as an exact number on the HUD.");
-        module("free_look", "FreeLook", "Hold a key to swivel the camera around your character without changing the direction you're actually moving or facing.");
+        module("free_look", "Free Look", "Hold a key to swivel the camera around your character without changing the direction you're actually moving or facing.");
         module("saturation_bar", "Saturation Bar", "Overlays your hidden saturation level on top of the food bar.");
         module("block_overlay", "Block Overlay", "Replaces the thin vanilla block-selection box with a customizable outline and/or colored fill.");
         module("toggle_sprint_sneak", "Sprint & Sneak", "Turns sprint and sneak into press-once toggles instead of hold-to-keep keys.");
@@ -306,8 +306,8 @@ public final class FeatureCatalog {
         mixin("PlayerListHudMixin", "numeric ping in the tab list", "ping").gates("tabPingEnabled");
         mixin("InGameHudFoodMixin", "the saturation overlay on the food bar", "saturation_bar").gates("saturationBarEnabled");
         mixin("MouseMixin", "adjusting zoom with the scroll wheel", "zoom");
-        mixin("EntityMixin", "the FreeLook camera", "free_look").gates("freeLookEnabled");
-        mixin("CameraUpdateMixin", "the FreeLook camera and camera smoothing", "free_look", "miscellaneous")
+        mixin("EntityMixin", "the Free Look camera", "free_look").gates("freeLookEnabled");
+        mixin("CameraUpdateMixin", "the Free Look camera and camera smoothing", "free_look", "miscellaneous")
                 .gates("freeLookEnabled", "smoothCamera");
         mixin("VertexRenderingMixin", "replacing the vanilla block outline", "block_overlay").gates("blockOverlayEnabled");
         mixin("SimpleOptionMixin", "raising brightness past the vanilla limit", "full_bright").gates("fullBright");

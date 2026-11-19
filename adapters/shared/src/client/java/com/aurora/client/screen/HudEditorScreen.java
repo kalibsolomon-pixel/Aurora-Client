@@ -412,10 +412,13 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
             // Corner handles on every enabled, unlocked module (council 2026-11-18: the legend
             // says "Corner: resize", so the corners show where to grab before any hover).
             if (m.enabled && !m.locked) {
-                drawCornerHandle(ctx, x - 2, y - 2);                  // TL
-                drawCornerHandle(ctx, x + w - 2, y - 2);              // TR
-                drawCornerHandle(ctx, x - 2, y + h - 2);              // BL
-                drawCornerHandle(ctx, x + w - 2, y + h - 2);          // BR
+                // Clamped on-screen: a module docked to an edge keeps all four grips visible.
+                int left = Math.max(1, x - 2), right = Math.min(this.width - 5, x + w - 2);
+                int top = Math.max(1, y - 2), bottom = Math.min(this.height - 5, y + h - 2);
+                drawCornerHandle(ctx, left, top);                     // TL
+                drawCornerHandle(ctx, right, top);                    // TR
+                drawCornerHandle(ctx, left, bottom);                  // BL
+                drawCornerHandle(ctx, right, bottom);                 // BR
             }
 
             // X icon (top-right INSIDE the AABB). Only on enabled modules — clicking

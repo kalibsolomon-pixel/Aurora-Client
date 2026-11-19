@@ -23,7 +23,7 @@ Nothing in the mod sends anything of its own to a server: no chat messages and n
 
 A new install has these off. A player has to turn each one on.
 
-- FreeLook
+- Free Look
 - Health Indicators, which shows the health of mobs and your own exact health; showing other players' health is a second switch, also off
 - Other players' totem pop counts, on the HUD and on nametags
 - Dots for other players on the minimap
@@ -48,7 +48,7 @@ Changing a default does not change an existing install: a player who already had
 | No Fog | Vanilla equivalent | Pushes distance fog back, so terrain inside your render distance is visible sooner than in vanilla. Off in a fresh install. |
 | Pack Tweaks | Cosmetic | Totem particle size, first-person shield position and a tint for your own shield's cooldown. Its water and lava clarity switches improve visibility inside fluids and ship off. |
 | Health Indicators | Information advantage | Shows the health of nearby mobs and players above them, and your own health to two decimals. Vanilla does not show other players' health. Players have their own switch, also off. |
-| FreeLook | Information advantage | Lets the camera look around without turning the character, a view vanilla does not allow. |
+| Free Look | Information advantage | Lets the camera look around without turning the character, a view vanilla does not allow. |
 | Saturation Bar | Vanilla equivalent | Shows your own saturation on the food bar. |
 | Block Overlay | Cosmetic | Restyles the outline of the block you are looking at. |
 | Sprint & Sneak | Vanilla equivalent | Press-once sprint and sneak, as vanilla's accessibility options offer. |
