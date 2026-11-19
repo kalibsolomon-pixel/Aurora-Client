@@ -121,8 +121,8 @@ class DepthPassContractTest {
         assertTrue(material.contains("PRIMARY(6,-4,Profile.RAISED), PRIMARY_LIGHT(3,-4,Profile.RAISED)"));
         assertTrue(material.contains("UnifiedPalette.contrast(ThemeManager.color(ThemeToken.ON_ACTION),0xff000000)>11"));
         assertTrue(material.contains("KNOB(0,0,Profile.DOME,1,.23f)"));
-        assertTrue(material.contains("MODULE_SHADOW(0,0,Profile.FLAT,2,.15f)"));
-        assertTrue(material.contains("CONTROL_SHADOW(0,0,Profile.FLAT,1,.11f)"));
+        assertTrue(material.contains("MODULE_SHADOW(0,0,Profile.FLAT,2,.11f)"));
+        assertTrue(material.contains("CONTROL_SHADOW(0,0,Profile.FLAT,1,.08f)"));
         assertTrue(material.contains("light.elevation*scale,2*light.elevation*scale,light.shadowAlpha"));
         assertTrue(material.contains("disabled ? Light.FLAT : Light.KNOB"));
         assertTrue(material.contains("if(!disabled && press<1)"),"disabled/fully pressed faces cast no shadow");

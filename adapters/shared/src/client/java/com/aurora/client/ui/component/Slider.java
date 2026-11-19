@@ -228,7 +228,10 @@ public class Slider extends Widget {
     }
 
     private int knob() {
-        return disabled ? MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED) : 0xFFFFFFFF;
+        // Disabled: halfway from muted text to the raised face, so the knob recedes with its row
+        // instead of reading as a live grip (council 2026-11-18).
+        return disabled ? com.aurora.client.util.AuroraAnim.lerpArgb(MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED),
+                MaterialSurface.color(ThemeToken.MATERIAL_RAISED), .5f) : 0xFFFFFFFF;
     }
 
     /** The pointer target: the track and knob, padded 6 px above and below and 4 px at the ends, as laid out last. */

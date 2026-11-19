@@ -413,8 +413,8 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
             // says "Corner: resize", so the corners show where to grab before any hover).
             if (m.enabled && !m.locked) {
                 // Clamped on-screen: a module docked to an edge keeps all four grips visible.
-                int left = Math.max(3, x - 2), right = Math.min(this.width - 7, x + w - 2);
-                int top = Math.max(3, y - 2), bottom = Math.min(this.height - 7, y + h - 2);
+                int left = Math.max(3, x - 3), right = Math.min(this.width - 8, x + w - 2);
+                int top = Math.max(3, y - 3), bottom = Math.min(this.height - 8, y + h - 2);
                 // Resting grips are half strength, so the hovered or selected module stays clear.
                 float grip = emphasized ? 1f : .5f;
                 drawCornerHandle(ctx, left, top, grip);               // TL
@@ -480,8 +480,9 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
 
     private static void drawCornerHandle(GuiGraphicsExtractor ctx, int cx, int cy, float strength) {
         // A dark 1px ring keeps the white handle legible over bright terrain/sky.
-        ctx.fill(cx - 1, cy - 1, cx + 5, cy + 5, ThemeManager.withAlpha(0xFF000000, Math.round(0xA0 * strength)));
-        ctx.fill(cx, cy, cx + 4, cy + 4, ThemeManager.withAlpha(CORNER_HANDLE, Math.round((CORNER_HANDLE >>> 24) * strength)));
+        // 5 px light centre in a 1 px dark ring (council 2026-11-18: 4 px read as a speck).
+        ctx.fill(cx - 1, cy - 1, cx + 6, cy + 6, ThemeManager.withAlpha(0xFF000000, Math.round(0xB0 * strength)));
+        ctx.fill(cx, cy, cx + 5, cy + 5, ThemeManager.withAlpha(CORNER_HANDLE, Math.round((CORNER_HANDLE >>> 24) * strength)));
     }
 
     private void drawXIcon(GuiGraphicsExtractor ctx, int x, int y, float hoverT) {

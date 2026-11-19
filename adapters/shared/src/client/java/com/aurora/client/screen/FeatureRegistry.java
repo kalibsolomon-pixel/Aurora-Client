@@ -1508,10 +1508,10 @@ addWithSettings("hitbox",
         // Client optimizations Aurora owns (ADR 0009). Only the switches
         // with a visible trade-off have rows; the rest are config-only
         // perf* gates that ship on.
-        FeatureSetting debugEntryCache = new BooleanSetting("Debug Entry Cache",
+        FeatureSetting debugEntryCache = new BooleanSetting("Update F3 at Tick Rate",
                 () -> cfg.perfDebugEntryCache, v -> cfg.perfDebugEntryCache = v).resetDefault("perfDebugEntryCache", () -> defaults.perfDebugEntryCache)
                 .description("Updates the lines of the F3 debug screen 20 times a second, as often as the game itself changes, instead of on every frame. Raises the frame rate while F3 is open; values such as your coordinates update in steps of a game tick.");
-        FeatureSetting minimapRefreshCap = new BooleanSetting("Minimap Refresh Cap",
+        FeatureSetting minimapRefreshCap = new BooleanSetting("Cap Minimap Redraws",
                 () -> cfg.perfMinimapRefreshCap, v -> cfg.perfMinimapRefreshCap = v).resetDefault("perfMinimapRefreshCap", () -> defaults.perfMinimapRefreshCap)
                 .description("While you move or turn, the minimap redraws its terrain at most 60 times a second instead of on every frame, which saves time at high frame rates. Markers stay lined up with the terrain. On screens faster than 60 Hz the terrain scrolls in small steps.");
         addWithSettings("performance",

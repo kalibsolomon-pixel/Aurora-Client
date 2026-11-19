@@ -137,7 +137,7 @@ public final class MaterialSurface {
         MODULE_ON(14,6,Profile.RAISED), MODULE_OFF(-5,-5,Profile.FLAT),
         MODULE_ON_HOVER(19,11,Profile.RAISED), MODULE_OFF_HOVER(0,0,Profile.FLAT),
         KNOB(0,0,Profile.DOME,1,.23f), OVERLAY(5,-3,Profile.RAISED,2,.28f),
-        MODULE_SHADOW(0,0,Profile.FLAT,2,.15f), CONTROL_SHADOW(0,0,Profile.FLAT,1,.11f);
+        MODULE_SHADOW(0,0,Profile.FLAT,2,.11f), CONTROL_SHADOW(0,0,Profile.FLAT,1,.08f);
         final float top, bottom, elevation, shadowAlpha;
         final Profile profile;
         Light(float top,float bottom,Profile profile) { this(top,bottom,profile,0,0); }
