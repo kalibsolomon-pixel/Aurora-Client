@@ -53,7 +53,7 @@ public final class UnifiedPalette {
         put(c, ThemeToken.MATERIAL_BORDER, dark ? 0xff24262f : c[ThemeToken.BORDER.ordinal()]);
         put(c, ThemeToken.MATERIAL_BORDER_STRONG, dark ? 0xff343743 : c[ThemeToken.BORDER_HOVER.ordinal()]);
         put(c, ThemeToken.MATERIAL_TEXT, dark ? 0xffedf1fb : c[ThemeToken.ON_BACKGROUND.ordinal()]);
-        put(c, ThemeToken.MATERIAL_TEXT_SECONDARY, dark ? 0xffb4bccf : c[ThemeToken.ON_BACKGROUND_SECONDARY.ordinal()]);
+        put(c, ThemeToken.MATERIAL_TEXT_SECONDARY, dark ? 0xffbec5d6 : c[ThemeToken.ON_BACKGROUND_SECONDARY.ordinal()]);
         put(c, ThemeToken.MATERIAL_TEXT_MUTED, dark ? 0xff939db4 : c[ThemeToken.ON_BACKGROUND_MUTED.ordinal()]);
         AccentRoles a = accent(accent, mode);
         put(c, ThemeToken.ACTION_STRONG, a.strong); put(c, ThemeToken.ACTION_HOVER, a.hover);

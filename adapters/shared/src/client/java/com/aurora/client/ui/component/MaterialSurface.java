@@ -192,6 +192,10 @@ public final class MaterialSurface {
                                    float on,float hover,boolean disabled) {
         if(disabled || on<1) inset(g,x,y,w,h,radius,disabled);
         if(disabled) return;
+        // The OFF well a step lighter than the glass it sits in, so its outline reads at GUI scale 2
+        // without a stroke (council 2026-11-18: near-black on near-black left only the knob).
+        if(on<1) RenderUtil.drawRoundedRectAA(g,x,y,w,h,radius,
+                ThemeManager.withAlpha(color(ThemeToken.ON_BACKGROUND),Math.round(0x16*(1-on))));
         // ON is the same recessed well filled with the accent (2026-11-17): a flat accent over
         // a dished OFF track read as two different materials.
         if(on>0) depth(g,x,y,w,h,radius,color(ThemeToken.ACCENT),0,280,Light.INSET,on);
