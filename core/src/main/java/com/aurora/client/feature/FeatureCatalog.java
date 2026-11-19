@@ -377,11 +377,11 @@ public final class FeatureCatalog {
         mixin("TrueTypeProviderDefinitionMixin", "crisp Aurora fonts at every GUI scale", "text_fonts");
         // Distance-field text is the only text path; raster text is the fallback while these are not working.
         mixin("SdfFontManagerMixin", "smooth scaling for custom text", "text_fonts")
-                .yieldsTo("modernui", "caxton");
+                .yieldsTo("modernui", "caxton", "immediatelyfast");
         mixin("SdfGlyphRenderStateMixin", "smooth scaling for custom text", "text_fonts")
-                .yieldsTo("modernui", "caxton");
+                .yieldsTo("modernui", "caxton", "immediatelyfast");
         mixin("SdfGuiTextMixin", "smooth scaling for custom text", "text_fonts")
-                .yieldsTo("modernui", "caxton");
+                .yieldsTo("modernui", "caxton", "immediatelyfast");
         mixin("FontManagerAccessor", "crisp Aurora fonts at every GUI scale", "text_fonts");
         mixin("FontSetAccessor", "crisp Aurora fonts at every GUI scale", "text_fonts");
         mixin("MinecraftFontManagerAccessor", "crisp Aurora fonts at every GUI scale", "text_fonts");
