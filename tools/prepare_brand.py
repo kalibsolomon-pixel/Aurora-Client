@@ -4,14 +4,14 @@ Install build-time dependencies with: python -m pip install resvg-py==0.5.0 Pill
 The original SVG stays bundled; no runtime SVG library or rendering pass is needed.
 """
 
-from source_tree import client_path
 from io import BytesIO
 from pathlib import Path
 
 from PIL import Image
 import resvg_py
 
-ROOT = client_path("resources/assets/aurora")
+# The brand assets are shared by every line (adapters/shared), not a native adapter.
+ROOT = Path(__file__).resolve().parents[1] / "adapters/shared/src/client/resources/assets/aurora"
 
 
 def main():
