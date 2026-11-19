@@ -124,6 +124,9 @@ public final class WorldLineRenderer {
         }
     }
 
+    /** Blocks beyond which SDF box corners are drawn without round caps. */
+    private static final double CAP_DISTANCE = 16.0;
+
     /** Role step packed above the width in the SDF shader's LineWidth attribute. */
     private static final float SDF_ROLE = 1024f;
 
@@ -175,6 +178,9 @@ public final class WorldLineRenderer {
                 emit(buf, CORNERS[i | 4], r, g, b, a, 0, 0, sz, width);
             }
         }
+        // Past CAP_DISTANCE a corner's round cap is under a pixel wide; skip its 32 vertices.
+        double mx = (x1 + x2) * 0.5 - camPos.x, my = (y1 + y2) * 0.5 - camPos.y, mz = (z1 + z2) * 0.5 - camPos.z;
+        if (mx * mx + my * my + mz * mz > CAP_DISTANCE * CAP_DISTANCE) return;
         // A degenerate box has no edges to cap.
         float cx = sx != 0 ? sx : 0, cy = sx != 0 ? 0 : (sy != 0 ? sy : 0), cz = (sx == 0 && sy == 0) ? sz : 0;
         if (cx == 0 && cy == 0 && cz == 0) return;
