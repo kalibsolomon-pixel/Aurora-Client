@@ -18,9 +18,12 @@ final class SdfLineRenderTypes {
     private SdfLineRenderTypes() {}
 
     private static boolean shaderUnavailable;
+    /** Set once the pipeline compiled: some devices (VulkanMod) recompile on every precompile call. */
+    private static boolean shaderReady;
 
     /** The SDF line type, or null when its shader cannot be used this session. */
     static RenderType linesOrNull() {
+        if (shaderReady) return Holder.TYPE;
         if (shaderUnavailable) return null;
         boolean available;
         try {
@@ -36,6 +39,7 @@ final class SdfLineRenderTypes {
             com.aurora.client.AuroraClient.LOGGER.warn("SDF line shader unavailable; using vanilla lines for this session");
             return null;
         }
+        shaderReady = true;
         return Holder.TYPE;
     }
 
