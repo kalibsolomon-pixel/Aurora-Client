@@ -5,26 +5,23 @@ keep their shape, with gem-like shading similar to Nova Studio's icon.
 
 ## What changed
 
-The owner's ribbon is kept: its curves, its teal upper band and violet lower band
-with their gradients, the fold and the edge light. (A first, faceted redesign was
-rejected; it broke the bands into a checkerboard and lost the flowing shape.)
+The mark is the owner's 2026-11-02 ribbon, unchanged (curves, bands, gradients,
+fold and edge light), except for its two needle points. Earlier faceted and
+reshaped versions were rejected on 2026-11-19.
 
-- **Tips.** The ribbon never gets thinner than 34 units. The original points are
-  kept wherever the ribbon is wider than about 120 units; below that, the edges
-  ease apart to the minimum and close in round caps. Small icons keep both ends.
-- **Shading.** Smooth bevel gradients over each band, no facets: each band is lit
-  along its upper side and shaded along its lower side.
-- **Size.** The mark fills 78% of the app-icon tile's width (it filled about 60%),
-  and `aurora.svg`'s viewport is now fitted to the mark.
-- **Source.** `tools/gen_aurora_brand.py` generates `branding/aurora.svg`,
-  `branding/aurora-icon.svg` (the dark Spxctra tile with the mark), the 1024 px
-  `icon.png` and, through `tools/prepare_brand.py`, `textures/ui/aurora_mark.png`.
-  `prepare_brand.py` now writes to the shared adapter, where the brand assets
-  live (it resolved to the 26.3 adapter after the multi-version split).
+- **Tips.** Each point is cut where the ribbon is 18 units wide (measured on the
+  real curves) and closed with a half circle, so both ends survive small sizes.
+  The half circle lies inside the original shape and takes the original colours.
+- **Size.** The ribbon fills 78% of the app-icon tile's width (it filled about 60%).
+- **Source.** `tools/gen_aurora_brand.py` writes `branding/aurora.svg` (original
+  640x512 viewport), `branding/aurora-icon.svg` (the dark Spxctra tile with the
+  mark), the 1024 px `icon.png` and, through `tools/prepare_brand.py`,
+  `textures/ui/aurora_mark.png`. `prepare_brand.py` now writes to the shared
+  adapter, where the brand assets live.
 
 | Before | After |
 | --- | --- |
-| ![Before: mark, icon, Nova Studio](before.png) | ![After: icon; original and new mark; 16/24/32/48/64 px icons](after.png) |
+| ![Before: mark, icon, Nova Studio](before.png) | ![After: icon; original and new mark; small icons; both tips enlarged](after.png) |
 
 [Title screen, 26.3, 1600x900](title-after.png).
 
