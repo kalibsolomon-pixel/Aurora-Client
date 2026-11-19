@@ -413,8 +413,8 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
             // says "Corner: resize", so the corners show where to grab before any hover).
             if (m.enabled && !m.locked) {
                 // Clamped on-screen: a module docked to an edge keeps all four grips visible.
-                int left = Math.max(1, x - 2), right = Math.min(this.width - 5, x + w - 2);
-                int top = Math.max(1, y - 2), bottom = Math.min(this.height - 5, y + h - 2);
+                int left = Math.max(3, x - 2), right = Math.min(this.width - 7, x + w - 2);
+                int top = Math.max(3, y - 2), bottom = Math.min(this.height - 7, y + h - 2);
                 // Resting grips are half strength, so the hovered or selected module stays clear.
                 float grip = emphasized ? 1f : .5f;
                 drawCornerHandle(ctx, left, top, grip);               // TL

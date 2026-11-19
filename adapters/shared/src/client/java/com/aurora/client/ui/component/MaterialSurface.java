@@ -130,8 +130,8 @@ public final class MaterialSurface {
     private static final float PEER_HOVER_ALPHA = .16f, SWITCH_HOVER_ALPHA = .08f;
 
     private enum Light {
-        FLAT(0,0,Profile.FLAT), RAISED(5,-3,Profile.RAISED),
-        HOVER(5,-3,Profile.RAISED), PRESSED(-3,2,Profile.PRESSED),
+        FLAT(0,0,Profile.FLAT), RAISED(6,0,Profile.RAISED),
+        HOVER(8,2,Profile.RAISED), PRESSED(-3,2,Profile.PRESSED),
         INSET(1,5,Profile.INSET), TRACK(3,7,Profile.INSET),
         PRIMARY(6,-4,Profile.RAISED), PRIMARY_LIGHT(3,-4,Profile.RAISED),
         MODULE_ON(14,6,Profile.RAISED), MODULE_OFF(-5,-5,Profile.FLAT),

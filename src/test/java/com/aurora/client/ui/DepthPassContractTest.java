@@ -116,8 +116,8 @@ class DepthPassContractTest {
     @Test void councilRecipesKeepInsetDomePressedAndPrimaryPoliciesDistinct() throws Exception {
         String material=read("ui/component/MaterialSurface.java");
         assertTrue(material.contains("INSET(1,5,Profile.INSET), TRACK(3,7,Profile.INSET)"));
-        assertTrue(material.contains("RAISED(5,-3,Profile.RAISED)"));
-        assertTrue(material.contains("HOVER(5,-3,Profile.RAISED), PRESSED(-3,2,Profile.PRESSED)"));
+        assertTrue(material.contains("RAISED(6,0,Profile.RAISED)"));
+        assertTrue(material.contains("HOVER(8,2,Profile.RAISED), PRESSED(-3,2,Profile.PRESSED)"));
         assertTrue(material.contains("PRIMARY(6,-4,Profile.RAISED), PRIMARY_LIGHT(3,-4,Profile.RAISED)"));
         assertTrue(material.contains("UnifiedPalette.contrast(ThemeManager.color(ThemeToken.ON_ACTION),0xff000000)>11"));
         assertTrue(material.contains("KNOB(0,0,Profile.DOME,1,.23f)"));

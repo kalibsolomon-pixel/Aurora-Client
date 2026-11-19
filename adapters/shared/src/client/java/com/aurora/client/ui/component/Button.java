@@ -158,7 +158,10 @@ public class Button extends Widget {
         if(ghost) {
             edge=0;
             fill=ThemeManager.withAlpha(ThemeManager.color(ThemeToken.MATERIAL_HOVER),disabled ? 0 : Math.round(255*Math.max(hover,press)));
-            if(!disabled) text=AuroraAnim.lerpArgb(ThemeManager.color(ThemeToken.MATERIAL_TEXT_SECONDARY),ThemeManager.color(ThemeToken.MATERIAL_TEXT),hover);
+            // A ghost carrying a trailing control is a settings row: its label is primary text, as
+            // row labels are; a plain ghost action rests in secondary.
+            if(!disabled) text=trailingSlot>0 ? ThemeManager.color(ThemeToken.MATERIAL_TEXT)
+                    : AuroraAnim.lerpArgb(ThemeManager.color(ThemeToken.MATERIAL_TEXT_SECONDARY),ThemeManager.color(ThemeToken.MATERIAL_TEXT),hover);
         }
         float py=y; // Card, blur mask, focus and label share one stationary geometry.
         int kind=(destructive ? 30 : primary ? 20 : asField ? 170 : ghost ? 190 : 130+10*look.ordinal())+(disabled ? 4 : hover==1 ? 1 : 0);

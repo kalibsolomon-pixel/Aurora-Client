@@ -426,7 +426,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
 
     @Override
     protected void prepareRowFocus(String name, int x, int y, int width) {
-        locateRowFocus(optionsControl(name), x + width - GEAR - 2, y + 2, GEAR, GEAR);
+        locateRowFocus(optionsControl(name), x + width - GEAR - 3, y + 3, GEAR, GEAR);
         locateRowFocus(hotkeyControl(name), x + INSET, y + LOWER_BTN_Y, btnW(), BTN_H);
     }
 
@@ -457,7 +457,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         }
 
         // Settings glyph — opens the profile's options.
-        int gearX = x + w - GEAR - 2, gearY = y + 2;
+        int gearX = x + w - GEAR - 3, gearY = y + 3;
         SemanticActionControl options = optionsControl(name);
         options.setBounds(gearX, gearY, GEAR, GEAR);
         options.setAvailable(inBand(y));
@@ -466,7 +466,11 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         if (pointerIn(mouseX, mouseY, gearX, gearY, GEAR, GEAR)) {
             com.aurora.client.ui.component.TooltipPresenter.offer(options, options.action().accessibleName().getString(), gearX, gearY, GEAR, GEAR);
         }
-        MaterialIconRenderer.drawIcon(ctx, this.font, GEAR_GLYPH, gearX + GEAR / 2f, gearY + GEAR / 2f, 10f,
+        // A hover face behind the gear and a 12 em glyph (was 10): it reads as the card's one
+        // settings control rather than a corner ornament (council 2026-11-18).
+        if (gearHot) com.aurora.client.ui.util.RenderUtil.drawRoundedRectAA(ctx, gearX, gearY, GEAR, GEAR, radius,
+                ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_BACKGROUND), 0x1F));
+        MaterialIconRenderer.drawIcon(ctx, this.font, GEAR_GLYPH, gearX + GEAR / 2f, gearY + GEAR / 2f, 12f,
                 ThemeManager.color(gearHot ? ThemeToken.ON_BACKGROUND : ThemeToken.ON_BACKGROUND_SECONDARY));
         if (options.isFocused()) {
             com.aurora.client.ui.util.RenderUtil.drawRoundedOutlineAA(ctx, gearX, gearY, GEAR, GEAR, radius, 1f,
