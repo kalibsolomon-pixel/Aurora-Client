@@ -152,6 +152,7 @@ Restyles the outline of the block you are looking at.
 - **Show Outline**: toggle · on. `{blockOverlayOutlineEnabled}`
 - **Outline Color**: color · black. `{blockOverlayOutlineColor}`
 - **Outline Width**: slider 1–6 · 2. `{blockOverlayLineWidth}`
+- **Smooth Lines (SDF)**: toggle · off · anti-aliased outline with round corners; vanilla lines if the shader cannot load. `{blockOverlaySdfLines}`
 - **Show Fill**: toggle · off. `{blockOverlayFillEnabled}`
 - **Fill Color**: color · white, 25% opacity. `{blockOverlayFillColor}`
 - **Color Mode**: dropdown Solid / Rainbow · Solid. `{blockOverlayMode}`
@@ -223,6 +224,7 @@ Draws entity hitboxes like F3+B, with your colors.
   - **Look Length**: slider 0.1–20 blocks · 0.1. `{hitboxLookLength}`
 - *Appearance*
   - **Line Width**: slider 0.1–6 · 2. `{hitboxLineWidth}`
+  - **Smooth Lines (SDF)**: toggle · off · anti-aliased lines with round corners; vanilla lines if the shader cannot load. `{hitboxSdfLines}`
   - **Hitbox Color**: color · yellow. `{hitboxColor}`
 - *Projectiles*
   - **Separate Projectile Color**: toggle · on. `{hitboxProjectileColorEnabled}`

@@ -96,7 +96,8 @@ public final class BlockOverlayRenderer {
 
                 // The see-through outline option is gone (owner ruling
                 // 2026-10-30); the outline keeps the see-through default.
-                VertexConsumer lineBuf = WorldLineRenderer.getLineBuffer(consumers);
+                boolean sdf = cfg.blockOverlaySdfLines && WorldLineRenderer.sdfAvailable();
+                VertexConsumer lineBuf = WorldLineRenderer.getLineBuffer(consumers, sdf);
 
                 double blockX = pos.getX();
                 double blockY = pos.getY();
@@ -110,7 +111,7 @@ public final class BlockOverlayRenderer {
                     double y2 = blockY + maxY + EPSILON;
                     double z2 = blockZ + maxZ + EPSILON;
                     WorldLineRenderer.drawBoxOutline(lineBuf, lineModel, camPos,
-                            x1, y1, z1, x2, y2, z2, or, og, ob, oa, widthPx);
+                            x1, y1, z1, x2, y2, z2, or, og, ob, oa, widthPx, sdf);
                 });
 
                 matrices.popPose();
