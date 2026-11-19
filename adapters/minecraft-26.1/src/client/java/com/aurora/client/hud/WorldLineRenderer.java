@@ -6,6 +6,7 @@ import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
+import org.joml.Vector3f;
 
 /**
  * Shared world-space line rendering utility used by both {@link HitboxRenderer}
@@ -107,28 +108,82 @@ public final class WorldLineRenderer {
         double rz2 = z2 - camPos.z;
 
         if (sdf) width = Math.min(width, SDF_ROLE - 1f);
-        vertex(buf, m, rx1, ry1, rz1, r, g, b, a, nx, ny, nz, width);
-        vertex(buf, m, rx2, ry2, rz2, r, g, b, a, nx, ny, nz, width);
+        // Each end is transformed once into a reused vector (addVertex(Matrix4f, ...)
+        // allocates per call) and shared by the segment and its cap.
+        Vector3f p1 = m.transformPosition((float) rx1, (float) ry1, (float) rz1, END_A);
+        Vector3f p2 = m.transformPosition((float) rx2, (float) ry2, (float) rz2, END_B);
+        emit(buf, p1, r, g, b, a, nx, ny, nz, width);
+        emit(buf, p2, r, g, b, a, nx, ny, nz, width);
         if (sdf) {
             // Zero-length segments at each end; the shader pushes the second
             // vertex outward (role 1 back, role 2 forward) into a half disc.
-            vertex(buf, m, rx1, ry1, rz1, r, g, b, a, nx, ny, nz, width);
-            vertex(buf, m, rx1, ry1, rz1, r, g, b, a, nx, ny, nz, width + SDF_ROLE);
-            vertex(buf, m, rx2, ry2, rz2, r, g, b, a, nx, ny, nz, width);
-            vertex(buf, m, rx2, ry2, rz2, r, g, b, a, nx, ny, nz, width + 2 * SDF_ROLE);
+            emit(buf, p1, r, g, b, a, nx, ny, nz, width);
+            emit(buf, p1, r, g, b, a, nx, ny, nz, width + SDF_ROLE);
+            emit(buf, p2, r, g, b, a, nx, ny, nz, width);
+            emit(buf, p2, r, g, b, a, nx, ny, nz, width + 2 * SDF_ROLE);
         }
     }
 
     /** Role step packed above the width in the SDF shader's LineWidth attribute. */
     private static final float SDF_ROLE = 1024f;
 
-    private static void vertex(VertexConsumer buf, Matrix4f m, double x, double y, double z,
-                               float r, float g, float b, float a,
-                               float nx, float ny, float nz, float width) {
-        buf.addVertex(m, (float) x, (float) y, (float) z)
+    /** Reused transformed positions; world lines are drawn on the render thread only. */
+    private static final Vector3f END_A = new Vector3f(), END_B = new Vector3f();
+    private static final Vector3f[] CORNERS = new Vector3f[8];
+    static {
+        for (int i = 0; i < CORNERS.length; i++) CORNERS[i] = new Vector3f();
+    }
+
+    /** One vertex at an already transformed position. */
+    private static void emit(VertexConsumer buf, Vector3f p, float r, float g, float b, float a,
+                             float nx, float ny, float nz, float width) {
+        buf.addVertex(p.x, p.y, p.z)
                 .setColor(r, g, b, a)
                 .setNormal(nx, ny, nz)
                 .setLineWidth(width);
+    }
+
+    /**
+     * An SDF box: each corner is transformed once and closed with one full round cap (the
+     * shader's back and forward half discs together), instead of a half cap per edge end.
+     * 40 vertices and 8 transforms per box rather than 72 of each, with the same look:
+     * the edges' own caps at a corner already filled the same disc.
+     */
+    private static void drawSdfBox(VertexConsumer buf, Matrix4f m, Vec3 camPos,
+                                   double x1, double y1, double z1,
+                                   double x2, double y2, double z2,
+                                   float r, float g, float b, float a, float width) {
+        width = Math.min(width, SDF_ROLE - 1f);
+        for (int i = 0; i < 8; i++) {
+            m.transformPosition((float) (((i & 1) == 0 ? x1 : x2) - camPos.x),
+                    (float) (((i & 2) == 0 ? y1 : y2) - camPos.y),
+                    (float) (((i & 4) == 0 ? z1 : z2) - camPos.z), CORNERS[i]);
+        }
+        // Edges along each axis: corner i to the corner differing in that axis' bit.
+        float sx = Math.signum((float) (x2 - x1)), sy = Math.signum((float) (y2 - y1)), sz = Math.signum((float) (z2 - z1));
+        for (int i = 0; i < 8; i++) {
+            if ((i & 1) == 0 && sx != 0) {
+                emit(buf, CORNERS[i], r, g, b, a, sx, 0, 0, width);
+                emit(buf, CORNERS[i | 1], r, g, b, a, sx, 0, 0, width);
+            }
+            if ((i & 2) == 0 && sy != 0) {
+                emit(buf, CORNERS[i], r, g, b, a, 0, sy, 0, width);
+                emit(buf, CORNERS[i | 2], r, g, b, a, 0, sy, 0, width);
+            }
+            if ((i & 4) == 0 && sz != 0) {
+                emit(buf, CORNERS[i], r, g, b, a, 0, 0, sz, width);
+                emit(buf, CORNERS[i | 4], r, g, b, a, 0, 0, sz, width);
+            }
+        }
+        // A degenerate box has no edges to cap.
+        float cx = sx != 0 ? sx : 0, cy = sx != 0 ? 0 : (sy != 0 ? sy : 0), cz = (sx == 0 && sy == 0) ? sz : 0;
+        if (cx == 0 && cy == 0 && cz == 0) return;
+        for (Vector3f c : CORNERS) {
+            emit(buf, c, r, g, b, a, cx, cy, cz, width);
+            emit(buf, c, r, g, b, a, cx, cy, cz, width + SDF_ROLE);
+            emit(buf, c, r, g, b, a, cx, cy, cz, width);
+            emit(buf, c, r, g, b, a, cx, cy, cz, width + 2 * SDF_ROLE);
+        }
     }
 
     /**
@@ -172,6 +227,10 @@ public final class WorldLineRenderer {
                                       double x1, double y1, double z1,
                                       double x2, double y2, double z2,
                                       float r, float g, float b, float a, float width, boolean sdf) {
+        if (sdf) {
+            drawSdfBox(buf, m, camPos, x1, y1, z1, x2, y2, z2, r, g, b, a, width);
+            return;
+        }
         // Bottom 4 edges
         drawLine(buf, m, camPos, x1, y1, z1, x2, y1, z1, r, g, b, a, width, sdf);
         drawLine(buf, m, camPos, x2, y1, z1, x2, y1, z2, r, g, b, a, width, sdf);
