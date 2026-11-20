@@ -82,6 +82,23 @@ Fresh in-world profile of the owner's config after the second pass, compared wit
 - **Measured.** With the window marked unfocused (the probe's new `window-focused` command), 30.0 fps on and 2,312 fps off.
 - **Layout.** Checked at 854×480 and at 1440×2560.
 
+**Allocation and GC.**
+- **Pauses.** Uncapped on the owner's config, G1 runs about one young pause a second, median 5 ms and up to 25 ms.
+- **Aurora's share.** About 13% of the HUD scene's render-thread allocation. Most of it is the vanilla render-pass objects behind Aurora's world-overlay draws, plus the GUI Layering bounds arrays.
+- **Trims.** The bounds arrays are now allocated on first use at 8 ints instead of 32, and the armor HUD counts its slots without building a list.
+
+**Compact object headers (`-XX:+UseCompactObjectHeaders`, JDK 25).** Six alternating boots, runs 3 to 6:
+
+| | Default | Compact headers |
+|---|---|---|
+| Average fps | 2,305 / 2,424 / 2,434 | 2,291 / 2,352 / 2,115 |
+| Young pauses, mean | 5.7–7.1 ms | 5.9–7.2 ms |
+| Heap after GC | 538–563 MB | 509–524 MB |
+
+No frame-rate benefit, about 5% less heap. Not recommended as a performance flag.
+
+**For the owner's 26.3 profile.** EntityCulling issue #324 reports frame spikes every 0.3–0.5 s on servers with many players. They come from a main-thread copy of entity data. EntityCulling 1.11.3 exposes that copy as `safeMode` (true in the owner's `config/entityculling.json`). Turning it off may remove the spikes, but EntityCulling warns it can crash with some mods. This report does not change the instance.
+
 **Not changed.**
 - **Blaze3D's OpenGL dispatch.** `trySetup`, `bindVertexArray` and `createRenderPass` cost 6–8% of render-thread samples on the HUD, on uniform and sampler hash maps per draw.
 - **Particle Core.** It allocates about 22 MB/s boxing doubles at 2,600 fps.
