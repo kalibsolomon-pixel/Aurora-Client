@@ -26,27 +26,24 @@ public final class HudBackgrounds {
     private static final int HOTBAR_SPRITE_H = 22;
     public static final int CELL_PITCH = 20;
 
+    public static int hotbarStripWidth(int cells) {
+        return (cells - 1) * CELL_PITCH + SLOT_SIZE;
+    }
+
     /**
-     * One continuous vanilla hotbar strip of {@code cells} slots, drawn
-     * 22 px tall at (x, y) and uniformly scaled horizontally by
-     * {@code scaleX} (1.0 = native 20 px cells). One blit of the strip's
-     * sub-region of the hotbar sprite and its right end cap — the armor HUD's VANILLA backing,
-     * replacing the per-piece offhand-slot boxes.
+     * One continuous vanilla hotbar strip of {@code cells} slots drawn
+     * at its native size, including the sprite's right end cap.
      */
-    public static void hotbarStrip(GuiGraphicsExtractor ctx, int x, int y, int cells, float scaleX, float alpha) {
+    public static void hotbarStrip(GuiGraphicsExtractor ctx, int x, int y, int cells, float alpha) {
         if (cells <= 0 || alpha <= 0.001f) return;
-        int srcW = cells * CELL_PITCH + 2;
-        ctx.pose().pushMatrix();
-        ctx.pose().translate(x, y);
-        ctx.pose().scale(scaleX, 1.0f);
+        int srcW = hotbarStripWidth(cells);
         // Uku's Armor HUD HOTBAR style retains the original right edge instead
         // of ending the crop inside a slot. See THIRD_PARTY_NOTICES.md.
         int color = scaleAlpha(0xFFFFFFFF, alpha);
         ctx.blitSprite(RenderPipelines.GUI_TEXTURED, HOTBAR, HOTBAR_SPRITE_W, HOTBAR_SPRITE_H,
-                0, 0, 0, 0, srcW - 3, HOTBAR_SPRITE_H, color);
+                0, 0, x, y, srcW - 3, HOTBAR_SPRITE_H, color);
         ctx.blitSprite(RenderPipelines.GUI_TEXTURED, HOTBAR, HOTBAR_SPRITE_W, HOTBAR_SPRITE_H,
-                HOTBAR_SPRITE_W - 3, 0, srcW - 3, 0, 3, HOTBAR_SPRITE_H, color);
-        ctx.pose().popMatrix();
+                HOTBAR_SPRITE_W - 3, 0, x + srcW - 3, y, 3, HOTBAR_SPRITE_H, color);
     }
 
     /**
@@ -58,7 +55,7 @@ public final class HudBackgrounds {
         ctx.pose().translate(x, y);
         ctx.pose().rotate((float) (Math.PI / 2));
         ctx.pose().translate(0, -HOTBAR_SPRITE_H);
-        hotbarStrip(ctx, 0, 0, cells, 1f, alpha);
+        hotbarStrip(ctx, 0, 0, cells, alpha);
         ctx.pose().popMatrix();
     }
 

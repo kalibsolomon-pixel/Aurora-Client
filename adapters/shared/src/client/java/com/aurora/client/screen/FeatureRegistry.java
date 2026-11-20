@@ -726,7 +726,8 @@ addWithSettings("hitbox",
                         new EnumSetting<>("Durability Format",
                                 AuroraConfig.ArmorDurabilityFormat.class,
                                 () -> cfg.armorDurabilityFormat,
-                                v -> cfg.armorDurabilityFormat = v).resetDefault(() -> defaults.armorDurabilityFormat),
+                                v -> cfg.armorDurabilityFormat = v).resetDefault(() -> defaults.armorDurabilityFormat)
+                                .description("Remaining of Max stacks the numbers as a fraction in horizontal layout and shows them side by side in vertical layout."),
                         new BooleanSetting("Show Durability Bars",
                                 () -> cfg.armorShowDurabilityBars,
                                 v -> cfg.armorShowDurabilityBars = v).resetDefault("armorShowDurabilityBars", () -> defaults.armorShowDurabilityBars),
@@ -746,7 +747,7 @@ addWithSettings("hitbox",
                                 .valueDescriptions(bg -> switch (bg) {
                                     case NONE -> "No background behind the armor icons.";
                                     case SOLID -> "Fills a panel behind the armor icons with the color below.";
-                                    case VANILLA -> "The pieces sit on one continuous Minecraft hotbar-strip graphic, exactly where vanilla draws hotbar items; durability text appears beside it.";
+                                    case VANILLA -> "The pieces sit in square slots on a continuous Minecraft hotbar strip. Durability text appears above the horizontal strip or beside the vertical strip.";
                                 }),
                         new ColorSetting("Background Color (when SOLID)",
                                 () -> cfg.armorHudBgColor, v -> cfg.armorHudBgColor = v).resetDefault(() -> defaults.armorHudBgColor),
