@@ -421,6 +421,8 @@ public final class FeatureCatalog {
                 .gates("perfGuiItemBaking").yieldsTo("immediatelyfast");
         mixin("GuiItemAtlasBakingMixin", "redrawing animated GUI items only when they change", "performance")
                 .gates("perfGuiItemBaking").yieldsTo("immediatelyfast");
+        mixin("RecipeBookCraftabilityMixin", "short-circuiting recipe-book craftability checks", "performance")
+                .gates("perfRecipeBookCraftability").yieldsTo("fastbench", "fastworkbench", "recipeessentials");
         mixin("SpriteContentsMipsAccessor", "freeing uploaded sprite mipmaps", "performance").gates("perfFreeSpriteMipmaps");
         mixin("TextureAtlasFreeMipsMixin", "freeing uploaded sprite mipmaps", "performance").gates("perfFreeSpriteMipmaps");
         for (String hitreg : List.of("AttackMixin", "DamageMixin", "EntityAccessor", "NetworkMixin",

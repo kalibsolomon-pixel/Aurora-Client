@@ -1,5 +1,7 @@
 package com.aurora.client.ui.text;
 
+import com.aurora.client.ui.text.SdfInstance.Bounds;
+import com.aurora.client.ui.text.SdfInstance.Geometry;
 import com.aurora.client.ui.util.SdfTextMath;
 import com.mojang.blaze3d.font.GlyphBitmap;
 import com.mojang.blaze3d.font.GlyphInfo;
@@ -36,17 +38,11 @@ final class SdfGlyphProvider implements GlyphProvider {
         return glyph;
     }
 
-    private record Bounds(float left, float top, float right, float bottom) {
-        static Bounds of(GlyphBitmap bitmap) {
-            return new Bounds(bitmap.getLeft(), bitmap.getTop(), bitmap.getRight(), bitmap.getBottom());
-        }
-
-        Bounds padded(SdfAtlas.Cell cell) {
-            int pad = SdfTextMath.SPREAD + SdfTextMath.PADDING;
-            float dx = pad * ((right - left) / (cell.width() - 2 * pad));
-            float dy = pad * ((bottom - top) / (cell.height() - 2 * pad));
-            return new Bounds(left - dx, top - dy, right + dx, bottom + dy);
-        }
+    private static Bounds padded(Bounds ink, SdfAtlas.Cell cell) {
+        int pad = SdfTextMath.SPREAD + SdfTextMath.PADDING;
+        float dx = pad * ((ink.right() - ink.left()) / (cell.width() - 2 * pad));
+        float dy = pad * ((ink.bottom() - ink.top()) / (cell.height() - 2 * pad));
+        return new Bounds(ink.left() - dx, ink.top() - dy, ink.right() + dx, ink.bottom() + dy);
     }
 
     private final class Glyph implements UnbakedGlyph {
@@ -63,7 +59,9 @@ final class SdfGlyphProvider implements GlyphProvider {
         @Override public BakedGlyph bake(Stitcher stitcher) {
             return original.bake(new Stitcher() {
                 @Override public BakedGlyph stitch(GlyphInfo info, GlyphBitmap bitmap) {
-                    return new Pair(stitcher.stitch(info, bitmap), Bounds.of(bitmap), codePoint);
+                    BakedGlyph baked = stitcher.stitch(info, bitmap);
+                    var ink = new Bounds(bitmap.getLeft(), bitmap.getTop(), bitmap.getRight(), bitmap.getBottom());
+                    return new Pair(baked, ink, codePoint);
                 }
 
                 @Override public BakedGlyph getMissing() { return stitcher.getMissing(); }
@@ -76,8 +74,7 @@ final class SdfGlyphProvider implements GlyphProvider {
         private final Bounds bounds;
         private final int codePoint;
         private boolean attempted;
-        private SdfAtlas.Cell cell;
-        private Bounds quad;
+        private Geometry geometry;
 
         private Pair(BakedGlyph raster, Bounds bounds, int codePoint) {
             this.raster = raster;
@@ -91,10 +88,9 @@ final class SdfGlyphProvider implements GlyphProvider {
                                                            Style style, float boldOffset, float shadowOffset) {
             if (SdfTextSupport.drawing() && NativeSdfText.pipelineAvailable()) {
                 if (!attempted) prepareCell();
-                if (quad != null) {
-                    return NativeSdfText.glyph(cell, penX, penY, color, shadowColor, style, info().getAdvance(style.isBold()),
-                            boldOffset, shadowOffset, bounds.left, bounds.top, bounds.right, bounds.bottom,
-                            quad.left, quad.top, quad.right, quad.bottom);
+                if (geometry != null) {
+                    return NativeSdfText.glyph(geometry, penX, penY, color, shadowColor, style,
+                            info().getAdvance(style.isBold()), boldOffset, shadowOffset);
                 }
             }
             return raster.createGlyph(penX, penY, color, shadowColor, style, boldOffset, shadowOffset);
@@ -106,8 +102,8 @@ final class SdfGlyphProvider implements GlyphProvider {
             attempted = true;
             long start = warm ? System.nanoTime() : 0;
             try {
-                cell = face.cell(codePoint);
-                if (cell != null) quad = bounds.padded(cell);
+                SdfAtlas.Cell cell = face.cell(codePoint);
+                if (cell != null) geometry = new Geometry(cell, bounds, padded(bounds, cell));
             } catch (IOException | RuntimeException | LinkageError failure) {
                 SdfTextSupport.fail("glyph rasterization or atlas upload", failure);
             } finally {
