@@ -321,7 +321,27 @@ public final class CrosshairRenderer {
         ctx.pose().scale(scaleFactor, scaleFactor);
         ctx.pose().translate(-gridW / 2.0f, -gridH / 2.0f);
 
+        // GPU matrix perfectly aligns integer vertices, preventing subpixel seams.
+        int[] rects = customRects(pixels, gridW, gridH);
+        for (int i = 0; i < rects.length; i += 4) fill(ctx, invert, rects[i], rects[i + 1], rects[i + 2], rects[i + 3], color);
+
+        ctx.pose().popMatrix();
+    }
+
+    /**
+     * The lit cells as disjoint rectangles: each row's runs, and a run identical to one in the
+     * row above extends that rectangle down. A plus-shaped grid is 3 fills instead of one per
+     * row. Neighbouring rectangles share exact edges, so the coverage (and an inverting blend)
+     * is the same as one fill per run.
+     */
+    static int[] customRects(boolean[] pixels, int gridW, int gridH) {
+        int[] out = new int[16];
+        int count = 0;
+        // Index into out of the rectangle each run of the previous row ended, by its start column.
+        int[] open = new int[gridW], next = new int[gridW];
+        java.util.Arrays.fill(open, -1);
         for (int gy = 0; gy < gridH; gy++) {
+            java.util.Arrays.fill(next, -1);
             int rowBase = gy * gridW;
             int gx = 0;
             while (gx < gridW) {
@@ -331,11 +351,19 @@ public final class CrosshairRenderer {
                 }
                 int runStart = gx;
                 while (gx < gridW && pixels[rowBase + gx]) gx++;
-                // GPU matrix perfectly aligns integer vertices, preventing subpixel seams.
-                fill(ctx, invert, runStart, gy, gx, gy + 1, color);
+                int above = open[runStart];
+                if (above >= 0 && out[above + 2] == gx) {
+                    out[above + 3] = gy + 1;
+                    next[runStart] = above;
+                } else {
+                    if (count + 4 > out.length) out = java.util.Arrays.copyOf(out, out.length * 2);
+                    out[count] = runStart; out[count + 1] = gy; out[count + 2] = gx; out[count + 3] = gy + 1;
+                    next[runStart] = count;
+                    count += 4;
+                }
             }
+            int[] swap = open; open = next; next = swap;
         }
-
-        ctx.pose().popMatrix();
+        return java.util.Arrays.copyOf(out, count);
     }
 }
