@@ -298,9 +298,9 @@ public final class FeatureRegistry {
                         new BooleanSetting("Show on HUD",
                                 () -> cfg.playerHealthHudEnabled,
                                 v -> cfg.playerHealthHudEnabled = v).resetDefault("playerHealthHudEnabled", () -> defaults.playerHealthHudEnabled)
-                                .description("Shows your own health as an exact number with two decimals (20.00 at full health), with absorption after it in gold. Works with or without the health above entities. Move it in the HUD editor."),
+                                .description("Shows your total health, including absorption hearts, to two decimals. Move it in the HUD editor."),
                         new ColorSetting("Text Color", () -> cfg.playerHealthHudTextColor == null ? com.aurora.client.theme.HudText.color(cfg.hudColor) : cfg.playerHealthHudTextColor, v -> cfg.playerHealthHudTextColor = v).resetDefault(() -> cfg.playerHealthHudTextColor, () -> defaults.playerHealthHudTextColor, () -> defaults.playerHealthHudTextColor == null ? (defaults.hudColor == 0 ? defaultTheme.color(com.aurora.client.theme.ThemeToken.ACCENT) : defaults.hudColor) : defaults.playerHealthHudTextColor)
-                                .description("Text color for the health number. Absorption stays gold. Reset restores its default color.")
+                                .description("Text color for your total health. Reset restores the default color.")
                                 .disabled(() -> !cfg.playerHealthHudEnabled),
                         new EnumSetting<>("Background", FLAT_BACKGROUNDS,
                                 () -> cfg.playerHealthHudBgMode, v -> cfg.playerHealthHudBgMode = v).resetDefault(() -> defaults.playerHealthHudBgMode)

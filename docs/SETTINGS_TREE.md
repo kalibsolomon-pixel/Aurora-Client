@@ -137,8 +137,8 @@ Health shown above mobs (and optionally players), and your own on the HUD; each 
   - **Only Attacked**: toggle · off · only entities you have hit. `{playerHealthOnlyAttacked}`
   - **Show Players**: toggle · off · include other players. `{playerHealthShowPlayers}`
 - *Your Health*
-  - **Show on HUD**: toggle · off · your health to two decimals (20.00), a draggable HUD module; works without the labels above entities. `{playerHealthHudEnabled}`
-  - **Text Color**: color · HUD default; absorption stays gold. `{playerHealthHudTextColor}`
+  - **Show on HUD**: toggle · off · your total health to two decimals, including absorption hearts. Move the readout in the HUD editor. `{playerHealthHudEnabled}`
+  - **Text Color**: color · HUD default. `{playerHealthHudTextColor}`
   - **Background**: dropdown None / Solid · None. `{playerHealthHudBgMode}`
   - **Background Color (when SOLID)**: color · 50% black. `{playerHealthHudBgColor}`
   - **Theme Corners**: toggle · off; Solid only. `{playerHealthHudThemeCorners}`

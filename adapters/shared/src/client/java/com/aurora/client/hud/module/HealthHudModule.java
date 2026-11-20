@@ -10,9 +10,8 @@ import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.resources.Identifier;
 
 /**
- * Health Indicators' HUD readout: vanilla's heart sprite and your own health
- * to two decimals ("19.47"), with absorption after it in gold. Its own switch,
- * independent of the health drawn above entities.
+ * Health Indicators' HUD readout: vanilla's heart sprite and your total
+ * health, including absorption, to two decimal places.
  */
 public class HealthHudModule extends HudModule {
     public static final String ID = "health";
@@ -20,7 +19,6 @@ public class HealthHudModule extends HudModule {
     private static final Identifier HEART = Identifier.withDefaultNamespace("hud/heart/full");
     private static final int ICON = 9;
     private static final int ICON_GAP = 2;
-    private static final int ABSORPTION_COLOR = 0xFFFFAA00;
 
     private final HealthReadout readout = new HealthReadout();
 
@@ -55,9 +53,7 @@ public class HealthHudModule extends HudModule {
         Minecraft client = Minecraft.getInstance();
         if (client == null || client.font == null) return 40;
         refresh();
-        int w = ICON + ICON_GAP + client.font.width(readout.health());
-        if (!readout.absorption().isEmpty()) w += 2 + client.font.width(readout.absorption());
-        return w;
+        return ICON + ICON_GAP + client.font.width(readout.total());
     }
 
     @Override
@@ -77,10 +73,6 @@ public class HealthHudModule extends HudModule {
         int tx = x + ICON + ICON_GAP;
         int ty = y + (h - font.lineHeight) / 2 + 1;
         int color = com.aurora.client.theme.HudText.color(AuroraConfig.get().playerHealthHudTextColor, AuroraConfig.get().hudColor);
-        com.aurora.client.hud.HudTextPainter.draw(ctx, font, readout.health(), tx, ty, color);
-        if (!readout.absorption().isEmpty()) {
-            com.aurora.client.hud.HudTextPainter.draw(ctx, font, readout.absorption(),
-                    tx + font.width(readout.health()) + 2, ty, ABSORPTION_COLOR);
-        }
+        com.aurora.client.hud.HudTextPainter.draw(ctx, font, readout.total(), tx, ty, color);
     }
 }

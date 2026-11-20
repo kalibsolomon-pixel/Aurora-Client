@@ -111,20 +111,23 @@ class HealthIndicatorsTest {
         assertEquals(1, all.size());
     }
 
-    @Test void readoutShowsTwoDecimalsAndAbsorption() {
+    @Test void readoutShowsTotalHealthToTwoDecimals() {
         assertEquals("20.00", HealthReadout.format(20));
         assertEquals("19.47", HealthReadout.format(19.4700f));
         assertEquals("0.50", HealthReadout.format(0.5f));
         assertEquals("0.00", HealthReadout.format(-1));
         var r = new HealthReadout();
         r.update(13.25f, 0);
-        assertEquals("13.25", r.health());
-        assertEquals("", r.absorption());
+        assertEquals("13.25", r.total());
         r.update(13.25f, 4);
-        assertEquals("+4.00", r.absorption());
-        String same = r.health();
-        r.update(13.25f, 4);
-        assertSame(same, r.health(), "an unchanged value formats nothing");
+        assertEquals("17.25", r.total());
+        String same = r.total();
+        r.update(14.25f, 3);
+        assertSame(same, r.total(), "an unchanged total formats nothing");
+        r.update(14.25f, 0);
+        assertEquals("14.25", r.total());
+        r.update(19.124f, 0.124f);
+        assertEquals("19.25", r.total(), "round the sum once");
     }
 
     @Test void rectUnionCoversEachPixelOnce() {
