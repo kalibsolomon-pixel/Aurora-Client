@@ -68,6 +68,15 @@ The same in-boot ABBA on the other lines, render-thread samples in each HUD wind
 
 The first "on" Settings run of each boot is warm-up and left out.
 
+**End to end (master vs this branch).** PvP loadout on the owner's 26.2 config and mods, six boots alternating master and branch, runs 3 to 6 of six diagnostics reports:
+
+| | Average fps per boot | Aurora CPU per frame |
+|---|---|---|
+| master | 1,775 / 1,737 / 1,644 | 0.066–0.070 ms |
+| branch | 1,620 / 1,765 / 1,736 | 0.058 ms |
+
+Total frame rate is unchanged within boot-to-boot noise (about ±5%). In this scene the glint-item atlas and vanilla entity work dominate the frame, and neither changed. Aurora's own cost is consistently 13% lower.
+
 **HUD and screen trims (exact).**
 - **Scoreboard.** With no sidebar it returns before sizing its ten-line editor sample, which it did twice a frame (1.1% of render-thread samples).
 - **Health HUD.** Measures its readout once per frame.
