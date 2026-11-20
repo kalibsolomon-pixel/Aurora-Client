@@ -423,6 +423,11 @@ public final class FeatureCatalog {
                 .gates("perfGuiItemBaking").yieldsTo("immediatelyfast");
         mixin("SpriteContentsMipsAccessor", "freeing uploaded sprite mipmaps", "performance").gates("perfFreeSpriteMipmaps");
         mixin("TextureAtlasFreeMipsMixin", "freeing uploaded sprite mipmaps", "performance").gates("perfFreeSpriteMipmaps");
+        mixin("GuiRenderStateNodeMixin", "faster GUI layering", "performance").gates("perfGuiLayering");
+        mixin("GuiRenderStateLayeringMixin", "faster GUI layering", "performance").gates("perfGuiLayering");
+        mixin("GuiRendererElementOrderMixin", "faster GUI layering", "performance").gates("perfGuiLayering");
+        mixin("FormattedBidiReorderMixin", "skipping bidirectional reordering for left-to-right text", "performance")
+                .gates("perfLeftToRightText");
         for (String hitreg : List.of("AttackMixin", "DamageMixin", "EntityAccessor", "NetworkMixin",
                 "PlayerMixin", "ServerMixin")) {
             // Better Hitreg's timing core only works whole: one missing piece
