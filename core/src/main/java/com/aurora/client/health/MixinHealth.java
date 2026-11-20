@@ -57,7 +57,10 @@ public final class MixinHealth {
     public static long generation() { return GENERATION.get(); }
 
     /** True when this mixin is known not to be working. False while still unknown. */
-    public static boolean failed(String mixin) { return FAILURES.containsKey(mixin); }
+    public static boolean failed(String mixin) {
+        // Render paths ask this many times a frame; with no failure (the normal case) skip the hash.
+        return !FAILURES.isEmpty() && FAILURES.containsKey(mixin);
+    }
 
     /** True once Mixin reported this mixin applied to a target without error. */
     public static boolean applied(String mixin) { return APPLIED.contains(mixin); }
