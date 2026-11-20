@@ -201,22 +201,33 @@ Warnings for expiring effects and low durability, shown as two HUD modules (Armo
 
 #### Crosshair · on `{card:crosshair}`
 Replaces the crosshair.
+
+**Normal Crosshair**
+
 - **Style**: dropdown Cross / Dot / Circle / Square / Custom · Dot. `{crosshairStyle}`
-- **Size**: slider 1–20 · 2. `{crosshairSize}`
+- **Custom Canvas**: pixel editor, shown immediately below Style when Custom is selected · vanilla 15×15 cross. `{crosshairCustomPixels}`
+- **Size**: slider 1–20 · 2 · applies to presets and custom designs. `{crosshairSize}`
 - **Thickness**: slider 1–6 · 1 · hidden for Custom. `{crosshairThickness}`
 - **Gap**: slider 0–10 · 0 · hidden for Custom. `{crosshairGap}`
 - **Color**: color · white. `{crosshairColor}`
-- **Vanilla Blending**: toggle · off · inverts what is behind the crosshair, like vanilla's. `{crosshairVanillaBlend}`
-- **Custom Canvas**: pixel editor, shown only for Custom · vanilla 15×15 cross. `{crosshairCustomPixels}`
-- **Vanilla Attack Indicator**: toggle · on · attack cooldown under the crosshair. `{crosshairAttackIndicatorEnabled}`
-- **Attack Indicator Size %**: slider 25–300 · 100%. `{crosshairAttackIndicatorSize}`
-- **Indicator (entity in reach)**: toggle · off · a second crosshair shown when aiming at an entity. `{crosshairIndicatorEnabled}`
-  - **Indicator Style**: dropdown (same five) · Custom. `{crosshairIndicatorStyle}`
-  - **Indicator Size**: slider 1–20 · 4. `{crosshairIndicatorSize}`
-  - **Indicator Thickness**: slider 1–6 · 1. `{crosshairIndicatorThickness}`
-  - **Indicator Gap**: slider 0–10 · 0. `{crosshairIndicatorGap}`
-  - **Indicator Color**: color · red, about 50%. `{crosshairIndicatorColor}`
-  - **Indicator Custom Canvas**: pixel editor. `{crosshairIndicatorCustomPixels}`
+- **Invert Background**: toggle · off · applies vanilla blending to both crosshairs. `{crosshairVanillaBlend}`
+
+**Attack Cooldown**
+
+- **Show Cooldown**: toggle · on · shows the bar under the crosshair. `{crosshairAttackIndicatorEnabled}`
+- **Cooldown Size**: slider 25–300% · 100%. `{crosshairAttackIndicatorSize}`
+
+**Reach Crosshair**
+
+- **Use Reach Crosshair**: toggle · off · replaces the normal crosshair when aiming at a living entity within reach. `{crosshairIndicatorEnabled}`
+  - **Reach Style**: dropdown Cross / Dot / Circle / Square / Custom · Custom. `{crosshairIndicatorStyle}`
+  - **Reach Canvas**: pixel editor, shown immediately below Reach Style when the reach crosshair is enabled and Custom is selected. `{crosshairIndicatorCustomPixels}`
+  - **Reach Size**: slider 1–20 · 4. `{crosshairIndicatorSize}`
+  - **Reach Thickness**: slider 1–6 · 1 · hidden for Custom. `{crosshairIndicatorThickness}`
+  - **Reach Gap**: slider 0–10 · 0 · hidden for Custom. `{crosshairIndicatorGap}`
+  - **Reach Color**: color · red, about 50%. `{crosshairIndicatorColor}`
+
+The preview labels the normal and in-reach samples when the reach crosshair is enabled. Small shapes use whole-number zoom and large shapes shrink to fit.
 
 #### Hitbox · on · combined `{card:hitbox}`
 Draws entity hitboxes like F3+B, with your colors.

@@ -12,15 +12,13 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 /**
- * The Crosshair page's live sample (UI polish 2026-11-14): the crosshair as the HUD draws it,
- * on a dark well at the control edge, and beside it the in-reach indicator while that is on.
- * Style, size, thickness, gap and colour changes show before the player leaves the menu.
- * Read-only; it reuses {@link CrosshairRenderer#drawShape}, so the sample cannot drift from
- * the real crosshair.
+ * Live samples of the normal and in-reach crosshair shapes and colors.
+ * Both samples reuse {@link CrosshairRenderer#drawShape}.
  */
 public class CrosshairPreviewSetting extends FeatureSetting {
-    private static final int ROW_H = 34, WELL = 30, GAP = 6, PAD = 8; // was 44/38: the well dwarfed a dot crosshair
-    private static final int MIN_ZOOM = 3, MAX_ZOOM = 8, TARGET_EXTENT = 24;
+    private static final int ROW_H = 34, WELL = 30, PAD = 8;
+    private static final int SAMPLE_PITCH = 86;
+    private static final int MAX_ZOOM = 8, TARGET_EXTENT = 24;
 
     public CrosshairPreviewSetting() {
         super("Preview");
@@ -38,17 +36,30 @@ public class CrosshairPreviewSetting extends FeatureSetting {
         Font font = Minecraft.getInstance().font;
         if (font == null) return;
         AuroraConfig cfg = AuroraConfig.get();
-        ctx.text(font, label, x + PAD + 4, AuroraFontRenderer.textY(font, y, ROW_H), MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
         int wellY = y + (ROW_H - WELL) / 2;
-        int right = x + width - PAD;
+        int wellX = x + width - PAD - WELL;
+        int labelEnd = wellX - PAD;
         if (cfg.crosshairIndicatorEnabled) {
-            drawWell(ctx, right - WELL, wellY, cfg.crosshairIndicatorStyle, cfg.crosshairIndicatorSize,
+            int pitch = Math.clamp((width - PAD * 3) / 2, WELL + PAD, SAMPLE_PITCH);
+            drawCaption(ctx, font, "In Reach", wellX, wellY, pitch - WELL - PAD);
+            drawWell(ctx, wellX, wellY, cfg.crosshairIndicatorStyle, cfg.crosshairIndicatorSize,
                     cfg.crosshairIndicatorThickness, cfg.crosshairIndicatorGap, cfg.crosshairIndicatorColor,
                     cfg.crosshairIndicatorCustomPixels, cfg.crosshairIndicatorCustomWidth, cfg.crosshairIndicatorCustomHeight);
-            right -= WELL + GAP;
+            wellX -= pitch;
+            drawCaption(ctx, font, "Normal", wellX, wellY, pitch - WELL - PAD);
+            labelEnd = wellX - pitch + WELL;
         }
-        drawWell(ctx, right - WELL, wellY, cfg.crosshairStyle, cfg.crosshairSize, cfg.crosshairThickness,
+        int labelX = x + PAD + 4;
+        String title = AuroraFontRenderer.ellipsize(font, label, Math.max(0, labelEnd - labelX), 0);
+        ctx.text(font, title, labelX, AuroraFontRenderer.textY(font, wellY, WELL), MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
+        drawWell(ctx, wellX, wellY, cfg.crosshairStyle, cfg.crosshairSize, cfg.crosshairThickness,
                 cfg.crosshairGap, cfg.crosshairColor, cfg.crosshairCustomPixels, cfg.crosshairCustomWidth, cfg.crosshairCustomHeight);
+    }
+
+    private static void drawCaption(GuiGraphicsExtractor ctx, Font font, String text, int wellX, int wellY, int maxWidth) {
+        String fitted = AuroraFontRenderer.ellipsize(font, text, maxWidth, 0);
+        ctx.text(font, fitted, wellX - PAD - font.width(fitted), AuroraFontRenderer.textY(font, wellY, WELL),
+                MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
     }
 
     private static void drawWell(GuiGraphicsExtractor ctx, int x, int y, AuroraConfig.CrosshairStyle style, int size,
@@ -61,18 +72,19 @@ public class CrosshairPreviewSetting extends FeatureSetting {
         }
         ctx.enableScissor(x + 1, y + 1, x + WELL - 1, y + WELL - 1);
         ctx.pose().pushMatrix();
-        // Drawn at a whole-number zoom about the well's centre: small shapes step up to fill about
-        // two thirds of the well (a 2 px dot at 3x still read as a speck, council review
-        // 2026-11-14), larger ones stay at 3x; shape, proportions and colour are the HUD's own.
-        float zoom = zoomFor(size, gap);
-        ctx.pose().translate(x + WELL / 2f, y + WELL / 2f);
+        size = Math.max(1, size);
+        thick = Math.max(1, thick);
+        gap = Math.max(0, gap);
+        float zoom = zoomFor(style, size, thick, gap);
+        // A subpixel stroke can vanish on the seam when shrunk. Center it on a device pixel.
+        float offset = zoom < 1f ? 0.5f / Minecraft.getInstance().getWindow().getGuiScale() : 0f;
+        ctx.pose().translate(x + WELL / 2f + offset, y + WELL / 2f + offset);
         ctx.pose().scale(zoom, zoom);
         // Centre the shape's own bounds on the well, not the HUD's seam: the HUD's half-pixel bias
         // pushed every sample up and left by half a zoomed pixel (owner report 2026-11-15).
-        float bias = centreBias(style, Math.max(1, thick));
+        float bias = centreBias(style, thick);
         ctx.pose().translate(-bias, -bias);
-        CrosshairRenderer.drawShape(ctx, style, 0, 0, Math.max(1, size), Math.max(1, thick),
-                Math.max(0, gap), color, pixels, w, h);
+        CrosshairRenderer.drawShape(ctx, style, 0, 0, size, thick, gap, color, pixels, w, h);
         ctx.pose().popMatrix();
         ctx.disableScissor();
     }
@@ -92,9 +104,16 @@ public class CrosshairPreviewSetting extends FeatureSetting {
         };
     }
 
-    static int zoomFor(int size, int gap) {
-        int extent = Math.max(1, size * 2 + Math.max(0, gap));
-        return Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, TARGET_EXTENT / extent));
+    static float zoomFor(AuroraConfig.CrosshairStyle style, int size, int thick, int gap) {
+        float extent = switch (style == null ? AuroraConfig.CrosshairStyle.CROSS : style) {
+            case CROSS -> Math.max(thick, 2f * (size + (float) gap) + (thick % 2));
+            case DOT -> size + (float) thick + 1f;
+            case CIRCLE, SQUARE -> size * 2f + 3f;
+            case CUSTOM -> size * 3f;
+        };
+        float fit = TARGET_EXTENT / extent;
+        // Magnify in whole steps for crisp small samples. Shrink large shapes to fit the well.
+        return fit < 1f ? fit : Math.min(MAX_ZOOM, (int) fit);
     }
 
     @Override
