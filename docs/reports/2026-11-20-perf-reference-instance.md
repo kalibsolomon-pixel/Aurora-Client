@@ -34,7 +34,53 @@ Profile setup: a disposable copy of the owner's 26.2 instance (its `config/`, `o
 - **Capture queue:** one primitive linked set, with the same order, dedup and capacity rules.
 - **Font scale check:** re-scans the providers only after one registers, instead of iterating a synchronized weak map of 170 entries every frame. A real scale change still re-rasterizes: verified by moving the window from GUI scale 3 to 4.
 
-## Measured and dropped
+## Second pass (owner: "any gain is a good one")
+
+The owner approved the hitbox change and asked for every UI gain. GUI Layering, first measured and dropped (below), came back with the Left-to-Right Text change, whose gain was larger. Measurements alternate a gate on and off inside one boot unless noted.
+
+**Hitboxes at render distance.** Each entity now passes vanilla's `Entity.shouldRender(camera)` before the frustum test, as vanilla does before drawing it, so a box no longer appears for a model the game does not draw. Spectator over a coast (separate boots, runs 3 to 6):
+
+| | Before | After |
+|---|---|---|
+| Aurora CPU per frame, mean | 0.051–0.054 ms | 0.033–0.034 ms |
+| `HitboxRenderer.render`, render-thread samples | 20.4% | 11.5% |
+| Average fps | 2,055–2,224 | 2,154–2,338 |
+
+**GUI Layering and Left-to-Right Text.** Both are exact.
+- **GUI Layering (`perfGuiLayering`).** Layer lists index their elements' bounds as flat ints with a union box. The element sort uses a written-out comparator with the same keys, without boxing.
+- **Left-to-Right Text (`perfLeftToRightText`).** In a left-to-right language, text with no right-to-left letters, Arabic digits or direction controls skips ICU's bidirectional pass, and its pieces are built directly.
+- **Tests.** Random layers, every comparator pair, the stable sort, and 5,000 random styled strings (visit index, style and code point) all match vanilla.
+
+| | Off | On |
+|---|---|---|
+| `GuiRenderState.sortElements` | 1.77–1.79% | 0.67–0.90% |
+| `FormattedBidiReorder.reorder` | 0.86–1.57% | 0.31–0.45% |
+| Aurora Settings screen extraction, mean | 0.047–0.052 ms | 0.038–0.039 ms |
+
+Render-thread allocation on the HUD fell from 180 to 163 MB/s at about 2,600 fps.
+
+**HUD and screen trims (exact).**
+- **Scoreboard.** With no sidebar it returns before sizing its ten-line editor sample, which it did twice a frame (1.1% of render-thread samples).
+- **Health HUD.** Measures its readout once per frame.
+- **`MixinHealth.failed`.** Skips the map lookup while nothing has failed.
+- **SDF text health.** The answer is cached until mixin health changes. Together with the line above, 0.9% on the feature detail screen.
+- **Custom crosshairs.** Rows merge into rectangles: the owner's crosshair is 3 fills instead of 9. A 160 px crop around the crosshair is pixel-identical.
+
+Fresh in-world profile of the owner's config after the second pass, compared with the first A/B window:
+
+| | Before | After |
+|---|---|---|
+| Aurora HUD renderer | 7.7% | 2.8% |
+| `Font.width` | 2.1% | 0.3% |
+| `Gui.extractRenderState` | 10.7% | 7.4% |
+| `GuiRenderer.render` | 7.5% | 4.5% |
+
+**Not changed.**
+- **Blaze3D's OpenGL dispatch.** `trySetup`, `bindVertexArray` and `createRenderPass` cost 6–8% of render-thread samples on the HUD, on uniform and sampler hash maps per draw.
+- **Particle Core.** It allocates about 22 MB/s boxing doubles at 2,600 fps.
+- **The owner's launcher settings.** The instance runs with a 2 GB heap and default G1; its JVM crashed with a native out-of-memory error on 2026-11-13. The launcher's own JVM policy is evidence-gated (`aurora-launcher/docs/performance-p1`), so this report only records it.
+
+## Measured and dropped (first pass)
 
 **GUI Layering:** a `GuiRenderState` layer list that indexed its elements' bounds as flat ints plus a union box, and a comparator with the same element order as `GuiRenderer`'s, without boxing. Both are exact; the tests compared them with vanilla's scan and stable sort.
 
@@ -60,5 +106,5 @@ On a full panel the union box cannot prune anything, so the search stays linear.
 
 ## Not changed; for the owner
 
-- **Hitboxes beyond render distance.** The hitbox renderer draws every loaded entity inside the view frustum. Vanilla stops drawing entities past their render distance: about 64 blocks for a player at the default Entity Distance. On a server that tracks players farther than that, Aurora still draws boxes for players whose models are not drawn. Limiting hitboxes to rendered entities would cut hitbox cost and close an information gap. It is a visible change, so it waits for a decision.
+- **Hitboxes beyond render distance.** Resolved in the second pass (above): the owner approved limiting hitboxes to entities the game draws.
 - **GPU-side items.** The deferred list in the [world-render report](2026-11-12-perf-world-render.md) still needs GPU-bound evidence. This machine runs the owner's instance at about 2,000 fps.
