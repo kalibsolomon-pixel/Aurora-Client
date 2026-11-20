@@ -85,8 +85,13 @@ class TextOptionsTest {
         // had its GUI scale (blocky headings and titles, 2026-11-18). Each keeps its own.
         assertTrue(quality.contains("SCALES.put(provider, scale != null ? scale : rasterScale);"),
                 "each provider records the scale it was rasterized at");
-        assertTrue(quality.contains("(scale == rasterScale && !anyStale(scale))"),
+        assertTrue(quality.contains("if (!anyStale(scale)) {"),
                 "a provider left at another scale is re-rasterized even when the last load matched");
+        // The scan of every provider runs after a registration, not every frame (2026-11-20 profile:
+        // 1.3% of render-thread samples).
+        assertTrue(quality.contains("REGISTRATIONS.incrementAndGet();")
+                        && quality.contains("if (registered == checkedRegistrations && scale == checkedScale) return;"),
+                "providers are re-checked after each registration");
         assertTrue(SourceTree.read("ui/component/GlassSurface.java").contains("com.aurora.client.ui.util.AuroraFontQuality.beginFrame();"),
                 "the swap runs at the frame boundary (glass rule 10)");
         for (String v : new String[]{"26.1", "26.2", "26.3"}) {

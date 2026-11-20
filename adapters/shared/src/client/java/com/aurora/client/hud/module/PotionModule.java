@@ -362,7 +362,7 @@ public class PotionModule extends HudModule {
         if (seconds >= 3600) return null; // ≥ 1h → infinity, no minutes column
         int m = seconds / 60;
         if (m <= 0) return null;
-        return String.format("%02d", m);
+        return twoDigits(m, false);
     }
 
     /**
@@ -380,8 +380,18 @@ public class PotionModule extends HudModule {
         if (seconds >= 3600) return "\u221E";
         int m = seconds / 60;
         int s = seconds % 60;
-        if (m > 0) return String.format(":%02d", s);
-        return String.format("%02d", s);
+        if (m > 0) return twoDigits(s, true);
+        return twoDigits(s, false);
+    }
+
+    /** {@code String.format("%02d")} (or {@code ":%02d"}) per value 0-59, formatted once: the HUD asks every frame. */
+    private static final String[] TWO_DIGITS = new String[60], COLON_TWO_DIGITS = new String[60];
+
+    private static String twoDigits(int value, boolean colon) {
+        String[] memo = colon ? COLON_TWO_DIGITS : TWO_DIGITS;
+        String text = memo[value];
+        if (text == null) memo[value] = text = String.format(colon ? ":%02d" : "%02d", value);
+        return text;
     }
     @Override public String featureRegistryId() { return "potion_hud"; }
 }

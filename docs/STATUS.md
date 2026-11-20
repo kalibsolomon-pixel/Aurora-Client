@@ -153,6 +153,10 @@ repaints at 60 Hz and drops two map ideas that had nothing to save; [evidence](r
 PR 5 (`feat/perf-world-render`)
 records the world-render measurements: the section copy cache and particle culling were dropped,
 and the GPU-side items wait for GPU-bound tester evidence; [evidence](reports/2026-11-12-perf-world-render.md).
+`perf/client-throughput` profiles the owner's reference instance: faster world map region I/O,
+capture queue and north-up repaints, no per-frame font scale scan, hitboxes only at vanilla render
+distance, GUI Layering and Left-to-Right Text fast paths, and HUD/crosshair trims;
+[evidence](reports/2026-11-20-perf-reference-instance.md).
 
 ## Next work
 

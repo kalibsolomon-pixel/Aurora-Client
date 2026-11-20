@@ -29,8 +29,22 @@ public final class SdfTextSupport {
     }
 
     public static boolean available() {
-        return !failed && healthy("SdfFontManagerMixin") && healthy("SdfGuiTextMixin")
-                && healthy("SdfGlyphRenderStateMixin");
+        return !failed && hooksHealthy();
+    }
+
+    /**
+     * The hooks' health, re-read only when {@link MixinHealth#generation()} moves: text asks every
+     * draw. One volatile word (generation shifted left, health in bit 0) so no thread pairs a new
+     * generation with an old answer.
+     */
+    private static volatile long hooksHealth = -1;
+
+    private static boolean hooksHealthy() {
+        long generation = MixinHealth.generation(), cached = hooksHealth;
+        if (cached >= 0 && cached >>> 1 == generation) return (cached & 1) != 0;
+        boolean healthy = healthy("SdfFontManagerMixin") && healthy("SdfGuiTextMixin") && healthy("SdfGlyphRenderStateMixin");
+        hooksHealth = generation << 1 | (healthy ? 1 : 0);
+        return healthy;
     }
 
     private static boolean healthy(String mixin) {

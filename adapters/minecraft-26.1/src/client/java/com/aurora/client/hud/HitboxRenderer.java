@@ -111,9 +111,15 @@ public final class HitboxRenderer {
         Matrix4f model = matrices.last().pose();
 
         net.minecraft.client.renderer.culling.Frustum frustum = cam.getCullFrustum();
-        for (Entity entity : client.level.entitiesForRendering()) {
+        // With only the target box on, the target is the one candidate; it passes the same checks.
+        Iterable<Entity> candidates = cfg.hitboxEnabled ? client.level.entitiesForRendering()
+                : activeTarget != null && !activeTarget.isRemoved() ? java.util.List.of(activeTarget) : java.util.List.of();
+        for (Entity entity : candidates) {
             if (entity == null || entity.isSpectator()) continue;
             if (entity == client.getCameraEntity() && !cam.isDetached()) continue;
+            // Only entities the game draws at this distance (the Entity Distance option and each
+            // type's own range): a box whose model is not drawn would show what the game hides.
+            if (!entity.shouldRender(camPos.x, camPos.y, camPos.z)) continue;
             // Only entities the camera can see, as vanilla culls entity rendering; the
             // margin keeps eye and look lines whose box is just off screen.
             if (frustum != null && !frustum.isVisible(entity.getBoundingBox().inflate(CULL_MARGIN))) continue;

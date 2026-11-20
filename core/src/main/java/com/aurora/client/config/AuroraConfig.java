@@ -494,6 +494,13 @@ public class AuroraConfig {
     public boolean perfMinimapRefreshCap = true;
     /** Prepare unused Aurora font faces on first text lookup instead of every reload. */
     public boolean perfDeferAuroraFonts = true;
+    /** GUI layers index their elements' bounds, and GUI elements sort on unboxed keys: the same layers and order, found faster. */
+    public boolean perfGuiLayering = true;
+    /** Text with no right-to-left characters skips the bidirectional reordering pass; its visual order is the same. */
+    public boolean perfLeftToRightText = true;
+    /** While another window has focus, the game draws at most {@link #perfUnfocusedFps} frames a second. */
+    public boolean perfUnfocusedLimit = false;
+    public int perfUnfocusedFps = 30;
 
     // ---- Late-Stage Responsive Features ----
     public boolean adaptiveRenderSleeping = false;

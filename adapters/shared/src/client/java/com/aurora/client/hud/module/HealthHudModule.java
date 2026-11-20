@@ -50,13 +50,21 @@ public class HealthHudModule extends HudModule {
         else readout.update(player.getHealth(), player.getAbsorptionAmount());
     }
 
+    /** Layout and the background ask for the width several times a frame; measure once per frame. */
+    private long widthFrame = Long.MIN_VALUE;
+    private int frameWidth;
+
     @Override
     public int getWidth() {
         Minecraft client = Minecraft.getInstance();
         if (client == null || client.font == null) return 40;
+        long frame = com.aurora.client.ui.component.GlassSurface.frame();
+        if (frame == widthFrame) return frameWidth;
         refresh();
         int w = ICON + ICON_GAP + client.font.width(readout.health());
         if (!readout.absorption().isEmpty()) w += 2 + client.font.width(readout.absorption());
+        widthFrame = frame;
+        frameWidth = w;
         return w;
     }
 
