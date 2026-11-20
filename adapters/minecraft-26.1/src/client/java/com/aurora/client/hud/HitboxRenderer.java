@@ -111,7 +111,10 @@ public final class HitboxRenderer {
         Matrix4f model = matrices.last().pose();
 
         net.minecraft.client.renderer.culling.Frustum frustum = cam.getCullFrustum();
-        for (Entity entity : client.level.entitiesForRendering()) {
+        // With only the target box on, the target is the one candidate; it passes the same checks.
+        Iterable<Entity> candidates = cfg.hitboxEnabled ? client.level.entitiesForRendering()
+                : activeTarget != null && !activeTarget.isRemoved() ? java.util.List.of(activeTarget) : java.util.List.of();
+        for (Entity entity : candidates) {
             if (entity == null || entity.isSpectator()) continue;
             if (entity == client.getCameraEntity() && !cam.isDetached()) continue;
             // Only entities the game draws at this distance (the Entity Distance option and each
