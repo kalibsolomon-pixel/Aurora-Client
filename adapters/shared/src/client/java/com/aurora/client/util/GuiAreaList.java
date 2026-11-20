@@ -76,10 +76,10 @@ public final class GuiAreaList<E extends ScreenArea> extends ArrayList<E> {
     @Override public E removeLast() { indexed = false; return super.removeLast(); }
     @Override public void addFirst(E element) { indexed = false; super.addFirst(element); }
     @Override public void addLast(E element) { indexed = false; super.addLast(element); }
-    /** A copy shares the bounds array, so it falls back to vanilla's scan. */
+    /** A copy gets its own bounds array, so later changes to either list stay apart. */
     @Override public Object clone() {
         GuiAreaList<?> copy = (GuiAreaList<?>) super.clone();
-        copy.indexed = false;
+        if (rects != null) copy.rects = rects.clone();
         return copy;
     }
     @Override public void clear() {

@@ -63,8 +63,13 @@ public final class LeftToRightText {
         return FormattedCharSequence.composite(parts);
     }
 
-    /** Bidi classes that resolve to level 0 in a left-to-right paragraph with no right-to-left text. */
+    /**
+     * Bidi classes that resolve to level 0 in a left-to-right paragraph with no right-to-left text.
+     * The Hebrew-to-Arabic blocks and the presentation forms always go to vanilla: its Arabic
+     * shaping rewrites some of their marks (harakat) even in left-to-right text.
+     */
     private static boolean leftToRight(int codePoint) {
+        if (codePoint <= 0x08FF || (codePoint >= 0xFB1D && codePoint <= 0xFEFF)) return false;
         return switch (UCharacter.getDirection(codePoint)) {
             case UCharacterDirection.LEFT_TO_RIGHT, UCharacterDirection.EUROPEAN_NUMBER,
                  UCharacterDirection.EUROPEAN_NUMBER_SEPARATOR, UCharacterDirection.EUROPEAN_NUMBER_TERMINATOR,

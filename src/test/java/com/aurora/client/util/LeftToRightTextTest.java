@@ -58,6 +58,21 @@ class LeftToRightTextTest {
         }
     }
 
+    /** Every BMP code point the fast path accepts, between two letters, comes out as vanilla orders and shapes it. */
+    @Test void everyAcceptedCodePointMatchesVanilla() {
+        int accepted = 0;
+        for (int cp = 0; cp <= 0xFFFF; cp++) {
+            if (Character.isSurrogate((char) cp) || cp == '§') continue;
+            FormattedText text = FormattedText.of("a" + Character.toString(cp) + "b");
+            FormattedCharSequence fast = LeftToRightText.reorder(text);
+            if (fast == null) continue;
+            accepted++;
+            final int point = cp;
+            assertEquals(visits(FormattedBidiReorder.reorder(text, false)), visits(fast), () -> Integer.toHexString(point));
+        }
+        assertTrue(accepted > 50_000, "most of the BMP takes the fast path: " + accepted);
+    }
+
     @Test void anythingThatCouldReorderGoesToVanilla() {
         Random random = new Random(43);
         for (int i = 0; i < 2000; i++) {

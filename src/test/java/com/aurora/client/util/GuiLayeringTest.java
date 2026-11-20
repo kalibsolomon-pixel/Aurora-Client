@@ -92,8 +92,12 @@ class GuiLayeringTest {
         list.clear();
         list.add(e);
         @SuppressWarnings("unchecked") var copy = (GuiAreaList<GuiElementRenderState>) list.clone();
-        assertFalse(copy.indexed(), "a copy shares the bounds array");
+        copy.clear();
+        copy.add(element(RenderPipelines.GUI, null, null, new ScreenRectangle(100, 100, 5, 5), 1));
         assertTrue(list.indexed());
+        assertTrue(list.intersects(new ScreenRectangle(0, 0, 10, 10)), "a copy's changes stay out of the original");
+        assertFalse(list.intersects(new ScreenRectangle(100, 100, 5, 5)));
+        assertTrue(copy.intersects(new ScreenRectangle(100, 100, 5, 5)));
     }
 
     @Test void elementOrderMatchesVanillaComparator() throws Exception {
