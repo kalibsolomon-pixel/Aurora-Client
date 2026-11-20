@@ -295,12 +295,12 @@ Clicks-per-second counter.
 #### Armor HUD · on `{card:armor_hud}`
 Your armor — and optionally your hands — and its durability.
 - **Text Color**: color · white. `{armorHudTextColor}`
-- **Durability Format**: dropdown Remaining / Remaining of Max / Percentage / None · Remaining. `{armorDurabilityFormat}`
+- **Durability Format**: dropdown Remaining / Remaining of Max / Percentage / None · Remaining. Remaining of Max uses a stacked fraction in horizontal layout and `x/x` in vertical layout. `{armorDurabilityFormat}`
 - **Show Durability Bars**: toggle · on (since 2026-11-14). `{armorShowDurabilityBars}`
 - **Horizontal Layout**: toggle · on. `{armorHorizontal}`
 - **Show Main Hand**: toggle · off · the main hand in the strip when it holds something. `{armorHudShowMainHand}`
 - **Show Off Hand**: toggle · off · the off hand in the strip when it holds something. `{armorHudShowOffHand}`
-- **Background**: dropdown None / Solid / Vanilla · Vanilla (one hotbar-strip graphic; VANILLA is offered only here and on Potion HUD). `{armorHudBgMode}`
+- **Background**: dropdown None / Solid / Vanilla · Vanilla uses one continuous hotbar strip with square slots. Wide durability readouts scale the horizontal strip uniformly. `{armorHudBgMode}`
 - **Background Color (when SOLID)**: color · black, 50%. `{armorHudBgColor}`
 - **Theme Corner Radius**: toggle · off · round this HUD's corners with the theme's Corner Radius instead of its fixed corners. `{armorHudThemeCorners}`
 
