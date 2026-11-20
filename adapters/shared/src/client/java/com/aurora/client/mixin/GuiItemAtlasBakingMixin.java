@@ -2,6 +2,7 @@ package com.aurora.client.mixin;
 
 import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.util.GuiItemAnimation;
+import com.aurora.client.util.GuiItemGlint;
 import com.aurora.client.util.SpriteAnimationClock;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
@@ -36,8 +37,10 @@ public abstract class GuiItemAtlasBakingMixin {
     private DynamicAtlasAllocator.@Nullable Slot aurora$keepSpriteAnimated(DynamicAtlasAllocator<Object> allocator, Object key,
             boolean discardAfterFrame, Operation<DynamicAtlasAllocator.Slot> original,
             @Local(argsOnly = true) TrackingItemStackRenderState item) {
+        // A glint GUI Glint Baking left out of setAnimated() still moves every frame.
         if (!discardAfterFrame || !AuroraConfig.get().perfGuiItemBaking
-                || !(item instanceof GuiItemAnimation animation) || animation.aurora$everyFrame()) {
+                || !(item instanceof GuiItemAnimation animation) || animation.aurora$everyFrame()
+                || item instanceof GuiItemGlint glint && glint.aurora$glint()) {
             return original.call(allocator, key, discardAfterFrame);
         }
         DynamicAtlasAllocator.Slot slot = original.call(allocator, key, false);

@@ -421,6 +421,18 @@ public final class FeatureCatalog {
                 .gates("perfGuiItemBaking").yieldsTo("immediatelyfast");
         mixin("GuiItemAtlasBakingMixin", "redrawing animated GUI items only when they change", "performance")
                 .gates("perfGuiItemBaking").yieldsTo("immediatelyfast");
+        // Glint-only items leave the animated set, so ImmediatelyFast's
+        // animated atlas never sees them and needs no stand-down.
+        mixin("ItemStackRenderStateGlintMixin", "redrawing glinting GUI items only when the glint moves", "performance")
+                .gates("perfGuiGlintBaking");
+        mixin("CuboidItemModelGlintMixin", "redrawing glinting GUI items only when the glint moves", "performance")
+                .gates("perfGuiGlintBaking");
+        mixin("GuiItemAtlasGlintMixin", "redrawing glinting GUI items only when the glint moves", "performance")
+                .gates("perfGuiGlintBaking");
+        mixin("OversizedItemGlintMixin", "redrawing glinting GUI items only when the glint moves", "performance")
+                .gates("perfGuiGlintBaking");
+        mixin("TextureTransformAccessor", "redrawing glinting GUI items only when the glint moves", "performance")
+                .gates("perfGuiGlintBaking");
         mixin("SpriteContentsMipsAccessor", "freeing uploaded sprite mipmaps", "performance").gates("perfFreeSpriteMipmaps");
         mixin("TextureAtlasFreeMipsMixin", "freeing uploaded sprite mipmaps", "performance").gates("perfFreeSpriteMipmaps");
         // Polytone selects custom depth nodes; Gnetum routes HUD submissions into its own layers.

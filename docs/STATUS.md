@@ -160,6 +160,8 @@ distance, GUI Layering and Left-to-Right Text fast paths, and HUD/crosshair trim
 block-transferred map regions, fewer GUI layer and text allocations, and startup stand-down of those
 optimizations for Dynamic FPS, Polytone, Gnetum, Modern UI and Caxton;
 [evidence](reports/2026-11-20-gui-text-map.md).
+GUI Glint Baking redraws glint-only GUI items when the glint has moved, not every frame
+(never at glint strength 0), pixel-identical; [evidence](reports/2026-11-20-gui-glint-baking.md).
 
 ## Next work
 

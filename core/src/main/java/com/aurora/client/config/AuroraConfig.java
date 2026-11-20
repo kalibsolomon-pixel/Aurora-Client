@@ -488,6 +488,8 @@ public class AuroraConfig {
     public boolean perfMergeTextDecorations = true;
     /** GUI items animated only by their sprites are redrawn when the sprites advance, not every frame. */
     public boolean perfGuiItemBaking = true;
+    /** GUI items whose only animation is an enchantment glint are redrawn when the glint has moved, not every frame. */
+    public boolean perfGuiGlintBaking = true;
     /** Sprites drop their CPU copies of mip levels above 0 once the atlas is uploaded. */
     public boolean perfFreeSpriteMipmaps = true;
     /** A moving camera repaints the minimap's terrain at most 60 times a second. */

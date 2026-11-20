@@ -1,5 +1,6 @@
 package com.aurora.client.mixin;
 
+import com.aurora.client.util.GlintBakeTracker;
 import com.aurora.client.util.GlintColor;
 import net.minecraft.client.renderer.texture.ReloadableTexture;
 import net.minecraft.client.renderer.texture.TextureContents;
@@ -43,6 +44,9 @@ public abstract class ReloadableTextureMixin {
 
     @Inject(method = "apply", at = @At("HEAD"))
     private void aurora$tintGlintTexture(TextureContents contents, CallbackInfo ci) {
-        GlintColor.applyToLoadedContents(this.resourceId(), contents);
+        Identifier id = this.resourceId();
+        // GUI Glint Baking keeps glint items drawn with the old pixels.
+        if (GlintColor.GLINT_ITEM.equals(id)) GlintBakeTracker.glintTextureChanged();
+        GlintColor.applyToLoadedContents(id, contents);
     }
 }
