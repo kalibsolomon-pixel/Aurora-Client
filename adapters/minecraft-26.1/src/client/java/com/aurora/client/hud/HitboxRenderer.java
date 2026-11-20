@@ -114,6 +114,9 @@ public final class HitboxRenderer {
         for (Entity entity : client.level.entitiesForRendering()) {
             if (entity == null || entity.isSpectator()) continue;
             if (entity == client.getCameraEntity() && !cam.isDetached()) continue;
+            // Only entities the game draws at this distance (the Entity Distance option and each
+            // type's own range): a box whose model is not drawn would show what the game hides.
+            if (!entity.shouldRender(camPos.x, camPos.y, camPos.z)) continue;
             // Only entities the camera can see, as vanilla culls entity rendering; the
             // margin keeps eye and look lines whose box is just off screen.
             if (frustum != null && !frustum.isVisible(entity.getBoundingBox().inflate(CULL_MARGIN))) continue;

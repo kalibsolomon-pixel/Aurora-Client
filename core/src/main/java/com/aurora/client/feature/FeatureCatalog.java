@@ -266,7 +266,7 @@ public final class FeatureCatalog {
         classify("toggle_sprint_sneak", FairPlay.VANILLA_INFORMATION, "Press-once sprint and sneak, as vanilla's accessibility options offer.");
         classify("alerts", FairPlay.VANILLA_INFORMATION, "Warns about your own armor durability and your own expiring effects, as two HUD modules.");
         classify("crosshair", FairPlay.COSMETIC, "Replaces the crosshair's shape and color.");
-        classify("hitbox", FairPlay.VANILLA_INFORMATION, "Draws entity hitboxes, as vanilla's F3+B does, with custom colors.");
+        classify("hitbox", FairPlay.VANILLA_INFORMATION, "Draws the hitboxes of the entities the game draws, as vanilla's F3+B does, with custom colors.");
         classify("better_hitreg", FairPlay.LOCAL_TIMING, "Plays your hit's sound, hurt animation and particles on your screen after a delay you choose instead of waiting for the server's copy. It does not change what the game sends for movement or combat, or when, and it sends nothing of its own. The feature is off in a fresh install.", "hitregEnabled");
         classify("hit_color", FairPlay.COSMETIC, "Recolors the flash on an entity that takes damage. A flash that follows the hurt entity's health is an information advantage and ships off.", "hitColorHealthGradient");
         classify("glint_color", FairPlay.COSMETIC, "Recolors the enchantment glint.");

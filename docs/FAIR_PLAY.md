@@ -54,7 +54,7 @@ Changing a default does not change an existing install: a player who already had
 | Sprint & Sneak | Vanilla equivalent | Press-once sprint and sneak, as vanilla's accessibility options offer. |
 | Alerts | Vanilla equivalent | Warns about your own armor durability and your own expiring effects, as two HUD modules. |
 | Crosshair | Cosmetic | Replaces the crosshair's shape and color. |
-| Hitbox | Vanilla equivalent | Draws entity hitboxes, as vanilla's F3+B does, with custom colors. |
+| Hitbox | Vanilla equivalent | Draws the hitboxes of the entities the game draws, as vanilla's F3+B does, with custom colors. |
 | Better Hitreg | Local timing | Plays your hit's sound, hurt animation and particles on your screen after a delay you choose instead of waiting for the server's copy. It does not change what the game sends for movement or combat, or when, and it sends nothing of its own. The feature is off in a fresh install. |
 | Hit Color | Cosmetic | Recolors the flash on an entity that takes damage. A flash that follows the hurt entity's health is an information advantage and ships off. |
 | Glint Color | Cosmetic | Recolors the enchantment glint. |
