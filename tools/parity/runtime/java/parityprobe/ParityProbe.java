@@ -937,6 +937,31 @@ public final class ParityProbe implements ClientModInitializer {
                 reloadStarted = System.nanoTime();
                 client.reloadResourcePacks();
             }
+            // `chat-open`: the chat screen over recent lines (add lines with `server tellraw @a ...`).
+            case "chat-open" -> NativeUi.setScreen(client, new net.minecraft.client.gui.screens.ChatScreen("", false));
+            case "multiplayer" -> NativeUi.setScreen(client,
+                    new net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen(NativeUi.screen(client)));
+            // `inventory`: the survival inventory screen; `hover-slot <n>` parks the pointer on inventory slot n.
+            case "inventory" -> NativeUi.setScreen(client,
+                    new net.minecraft.client.gui.screens.inventory.InventoryScreen(client.player));
+            case "hover-slot" -> {
+                var screen = (net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?>) NativeUi.screen(client);
+                var type = net.minecraft.client.gui.screens.inventory.AbstractContainerScreen.class;
+                var left = type.getDeclaredField("leftPos");
+                var top = type.getDeclaredField("topPos");
+                left.setAccessible(true); top.setAccessible(true);
+                int index = Integer.parseInt(args[1]);
+                var slot = screen.getMenu().slots.stream()
+                        .filter(s -> s.container == client.player.getInventory() && s.getContainerSlot() == index)
+                        .findFirst().orElseThrow();
+                float scale = client.getWindow().getGuiScale();
+                var mouse = client.mouseHandler;
+                var x = mouse.getClass().getDeclaredField("xpos");
+                var y = mouse.getClass().getDeclaredField("ypos");
+                x.setAccessible(true); y.setAccessible(true);
+                x.setDouble(mouse, (left.getInt(screen) + slot.x + 8) * scale);
+                y.setDouble(mouse, (top.getInt(screen) + slot.y + 8) * scale);
+            }
             default -> throw new IllegalArgumentException(text);
         }
         System.out.println("[parity-probe] " + text);

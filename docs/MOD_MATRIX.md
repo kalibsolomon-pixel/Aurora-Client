@@ -21,9 +21,22 @@ when the owning mod is absent.
 | Polytone (`polytone`) | GUI layering | Selects GUI depth nodes |
 | Gnetum (`gnetum`) | GUI layering | Routes HUD submissions into cached and live layers |
 | Modern UI (`modernui`) or Caxton (`caxton`) | Left-to-right text | Owns visual ordering of styled text |
+| ImmediatelyFast (`immediatelyfast`) | GUI Item Baking | Redraws animated GUI items in its own atlas |
 
 The [GUI, text and map measurements](reports/2026-11-20-gui-text-map.md) record
 the mod combinations and backends exercised.
+
+## Text rendering
+
+Modern UI and Caxton replace text rendering, so Aurora's SDF text stands down
+for them and Aurora text uses its bitmap fallback. Two former stand-downs were
+removed on 2026-11-20 after their causes were read in source and the result was
+checked in the owner's instances ([report](reports/2026-11-20-sdf-immediatelyfast.md)):
+
+| Installed mod | Runs alongside | Why there is no conflict |
+|---|---|---|
+| ImmediatelyFast 1.16.5 (26.2), 1.17.1 (26.3) | SDF text | `font_atlas_resizing` also enlarges Aurora's SDF pages; SDF glyphs use each page's actual size |
+| ModernFix 5.27.20 (26.3) | Deferred Aurora font preparation | Its only font patch makes unihex providers lazy; it owns no `FontManager` or `FontSet` work |
 
 ## How to run it
 

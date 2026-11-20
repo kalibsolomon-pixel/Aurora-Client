@@ -31,4 +31,11 @@ class SdfTextMathTest {
         assertEquals(0f, SdfTextMath.insetUv(-1, false, 256));
         assertEquals(1f, SdfTextMath.insetUv(257, true, 256));
     }
+
+    @Test void texelCentresFollowThePagesOwnSize() {
+        // ImmediatelyFast's default font atlas: the same cell sits at a quarter of the 256-page coordinate.
+        assertEquals(16.5f / 1024, SdfTextMath.insetUv(16, false, 1024));
+        assertEquals(43.5f / 1024, SdfTextMath.insetUv(44, true, 1024));
+        assertEquals(1f, SdfTextMath.insetUv(1025, true, 1024));
+    }
 }
