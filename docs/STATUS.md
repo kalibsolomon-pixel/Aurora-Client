@@ -157,6 +157,8 @@ and the GPU-side items wait for GPU-bound tester evidence; [evidence](reports/20
 capture queue and north-up repaints, no per-frame font scale scan, hitboxes only at vanilla render
 distance, GUI Layering and Left-to-Right Text fast paths, and HUD/crosshair trims;
 [evidence](reports/2026-11-20-perf-reference-instance.md).
+GUI Glint Baking redraws glint-only GUI items when the glint has moved, not every frame
+(never at glint strength 0), pixel-identical; [evidence](reports/2026-11-20-gui-glint-baking.md).
 
 ## Next work
 
