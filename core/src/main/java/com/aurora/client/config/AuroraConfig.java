@@ -488,6 +488,10 @@ public class AuroraConfig {
     public boolean perfMergeTextDecorations = true;
     /** GUI items animated only by their sprites are redrawn when the sprites advance, not every frame. */
     public boolean perfGuiItemBaking = true;
+    /** Recipe-book checks skip the assignment solver when an ingredient is unavailable. */
+    public boolean perfRecipeBookCraftability = true;
+    /** Link the inventory screen classes during startup to reduce first-open stutter. */
+    public boolean perfPreloadInventory = true;
     /** Sprites drop their CPU copies of mip levels above 0 once the atlas is uploaded. */
     public boolean perfFreeSpriteMipmaps = true;
     /** A moving camera repaints the minimap's terrain at most 60 times a second. */

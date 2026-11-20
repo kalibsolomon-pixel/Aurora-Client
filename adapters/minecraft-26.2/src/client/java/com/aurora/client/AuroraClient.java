@@ -87,6 +87,7 @@ public class AuroraClient implements ClientModInitializer {
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents.CLIENT_STARTED.register(client -> {
             com.aurora.client.health.MixinAudit.run(AuroraClient.class.getClassLoader());
             com.aurora.client.health.FeatureHealth.enforce(AuroraConfig.get());
+            com.aurora.client.util.InventoryWarmup.preload();
         });
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.START_CLIENT_TICK.register(Timed.startTick(
                 client -> com.aurora.client.health.FeatureHealth.enforce(AuroraConfig.get())));

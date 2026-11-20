@@ -97,6 +97,7 @@
     "ItemStackRenderStateAnimationMixin",
     "CuboidItemModelAnimationMixin",
     "GuiItemAtlasBakingMixin",
+    "RecipeBookCraftabilityMixin",
     "SpriteContentsMipsAccessor",
     "TextureAtlasFreeMipsMixin",
     "hitreg.AttackMixin",

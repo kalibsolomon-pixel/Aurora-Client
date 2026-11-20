@@ -62,23 +62,19 @@ public final class NativeSdfText {
 
     public static boolean isSdf(TextRenderable renderable) { return renderable instanceof Instance; }
 
-    static TextRenderable.Styled glyph(SdfAtlas.Cell cell, float penX, float penY, int color, int shadowColor,
-            Style style, float advance, float boldOffset, float shadowOffset, float left, float top, float right,
-            float bottom, float quadLeft, float quadTop, float quadRight, float quadBottom) {
-        return new Instance(cell, penX, penY, color, shadowColor, style, advance, boldOffset, shadowOffset,
-                left, top, right, bottom, quadLeft, quadTop, quadRight, quadBottom);
+    static TextRenderable.Styled glyph(SdfInstance.Geometry geometry, float penX, float penY, int color,
+            int shadowColor, Style style, float advance, float boldOffset, float shadowOffset) {
+        return new Instance(geometry, penX, penY, color, shadowColor, style, advance, boldOffset, shadowOffset);
     }
 
     private static final class Instance extends SdfInstance {
-        Instance(SdfAtlas.Cell cell, float penX, float penY, int color, int shadowColor, Style style, float advance,
-                 float boldOffset, float shadowOffset, float left, float top, float right, float bottom,
-                 float quadLeft, float quadTop, float quadRight, float quadBottom) {
-            super(cell, penX, penY, color, shadowColor, style, advance, boldOffset, shadowOffset,
-                    left, top, right, bottom, quadLeft, quadTop, quadRight, quadBottom);
+        Instance(Geometry geometry, float penX, float penY, int color, int shadowColor, Style style,
+                 float advance, float boldOffset, float shadowOffset) {
+            super(geometry, penX, penY, color, shadowColor, style, advance, boldOffset, shadowOffset);
         }
 
         @Override public RenderPipeline guiPipeline() { return Pipeline.INSTANCE; }
-        @Override public GpuTextureView textureView() { return cell.page().getTextureView(); }
+        @Override public GpuTextureView textureView() { return geometry.cell().page().getTextureView(); }
         @Override public RenderType renderType(Font.DisplayMode mode) {
             throw new IllegalStateException("SDF glyph instances are GUI-only");
         }

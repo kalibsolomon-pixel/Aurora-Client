@@ -92,7 +92,7 @@ public final class HitboxRenderer {
             // The see-through wireframe option is gone (owner ruling 2026-10-30);
             // the wireframe keeps the see-through (translucent) default.
             boolean sdf = WorldLineRenderer.sdfAvailable();
-            VertexConsumer buf = WorldLineRenderer.getLineBuffer(consumers, sdf);
+            VertexConsumer buf = null;
 
             // Match vanilla LevelRenderer: use the game-time partial tick (false) so
             // our interpolated AABB lines up with the camera and the entity model.
@@ -105,13 +105,15 @@ public final class HitboxRenderer {
             // WorldLineRenderer subtracts the camera position in double precision
             // before casting to float, which prevents precision loss at large world
             // coordinates. The matrix here is the raw model-view matrix.
-            matrices.pushPose();
             Matrix4f model = matrices.last().pose();
 
             net.minecraft.client.renderer.culling.Frustum frustum = cam.getCullFrustum();
             for (Entity entity : client.level.entitiesForRendering()) {
                 if (entity == null || entity.isSpectator()) continue;
                 if (entity == client.getCameraEntity() && !cam.isDetached()) continue;
+                boolean isTarget = (entity == activeTarget);
+                boolean drawThisOne = isTarget ? cfg.hitboxTargetEnabled : cfg.hitboxEnabled;
+                if (!drawThisOne) continue;
                 // Only entities the camera can see, as vanilla culls entity rendering; the
                 // margin keeps eye and look lines whose box is just off screen.
                 if (frustum != null && !frustum.isVisible(entity.getBoundingBox().inflate(CULL_MARGIN))) continue;
@@ -128,10 +130,6 @@ public final class HitboxRenderer {
                     if (entity.isInvisible() || entity.isInvisibleTo(client.player)) continue;
                 }
 
-                boolean isTarget = (entity == activeTarget);
-                boolean drawThisOne = isTarget ? cfg.hitboxTargetEnabled : cfg.hitboxEnabled;
-                if (!drawThisOne) continue;
-
                 int color;
                 float widthPx;
                 if (entity instanceof Projectile && cfg.hitboxProjectileColorEnabled) {
@@ -144,11 +142,10 @@ public final class HitboxRenderer {
                 boolean drawEyeLine  = isTarget ? cfg.hitboxTargetEyeLine       : cfg.hitboxEyeLine;
                 boolean drawLookLine = isTarget ? cfg.hitboxTargetLookDirection : cfg.hitboxLookDirection;
 
+                if (buf == null) buf = WorldLineRenderer.getLineBuffer(consumers, sdf);
                 drawEntity(buf, model, camPos, entity, tickDelta, color,
                         drawEyeLine, drawLookLine, cfg.hitboxLookLength, widthPx, sdf);
             }
-
-            matrices.popPose();
         }
     }
 

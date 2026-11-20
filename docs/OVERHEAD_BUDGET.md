@@ -79,6 +79,34 @@ budget, or prove GPU/FPS gains. See the
 [bounded-cache audit](reports/2026-11-17-ui-cache-refinement.md) for paired
 payload measurements and their limits.
 
+### Inventory frame pacing
+
+Aurora links the vanilla inventory and recipe-book screen classes during
+startup so Fabric applies their mixins before the player first opens inventory.
+`perfPreloadInventory` controls this one-time work. In paired 26.3 OpenGL
+singleplayer runs at 1100 × 750, first-open setup went from 16.3 ms to 6.2 ms
+and the full opening frame went from 27.0 ms to 13.4 ms, with the recipe book
+closed. With preloading enabled, steady frame time was 1.82 ms p95 in the world
+and 1.81 ms p95 in inventory. The player preview still renders on first open.
+
+`perfRecipeBookCraftability` skips the recipe assignment solver when an
+ingredient is unavailable or the recipe has only one ingredient. Recipes with
+multiple available ingredients still go through vanilla's solver, which
+accounts for competing uses of the same item. In a 26.3 Vulkan client on the
+same host, warmed sweeps of all 1,746 unlocked recipe entries took about
+0.08 ms before and 0.03 ms after with an empty inventory, and 0.31 ms before
+and 0.14 ms after with a mix of planks, ingots and other ingredients. Craftable
+results matched entry by entry. In six warm 26.3 OpenGL inventory openings
+with the book visible, median screen setup went from 1.50 ms to 1.07 ms.
+
+The same pass shares bounds and texture coordinates across draws of each
+baked SDF glyph and acquires hitbox geometry buffers only after an entity
+passes the draw checks. An empty world-overlay batch skips submission.
+
+With factory defaults on 26.3 OpenGL, the four judged gameplay runs averaged
+0.081–0.097 ms of Aurora CPU time per frame and measured 0.131–0.181 ms at
+p95. All four stayed within the fill and glass limits.
+
 ## Minecraft 26.3 validation
 
 The step 5 candidate passes the unchanged gate on native OpenGL and Vulkan,
