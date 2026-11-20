@@ -21,7 +21,8 @@ import java.util.function.UnaryOperator;
  * vanilla's own scan, so the answer is always the one vanilla would give.
  */
 public final class GuiAreaList<E extends ScreenArea> extends ArrayList<E> {
-    private int[] rects = new int[32];
+    /** Allocated on the first bounds: most layers hold one or two elements, and lists live one frame. */
+    private int[] rects;
     private int count;
     private int left = Integer.MAX_VALUE, top = Integer.MAX_VALUE, right = Integer.MIN_VALUE, bottom = Integer.MIN_VALUE;
     private boolean indexed = true;
@@ -35,7 +36,8 @@ public final class GuiAreaList<E extends ScreenArea> extends ArrayList<E> {
     private void record(ScreenRectangle bounds) {
         if (bounds == null) return;
         int i = count * 4;
-        if (i == rects.length) rects = java.util.Arrays.copyOf(rects, i * 2);
+        if (rects == null) rects = new int[8];
+        else if (i == rects.length) rects = java.util.Arrays.copyOf(rects, i * 2);
         int l = bounds.left(), t = bounds.top(), r = bounds.right(), b = bounds.bottom();
         rects[i] = l; rects[i + 1] = t; rects[i + 2] = r; rects[i + 3] = b;
         count++;

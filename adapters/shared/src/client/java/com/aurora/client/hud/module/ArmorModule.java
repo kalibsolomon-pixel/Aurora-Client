@@ -78,6 +78,22 @@ public class ArmorModule extends HudModule {
         return out;
     }
 
+    /** The size of {@link #visibleSlots} without building the list: sizing asks every frame. */
+    private static int visibleSlotCount(Minecraft client) {
+        if (client.player == null) return 0;
+        AuroraConfig cfg = AuroraConfig.get();
+        int n = occupied(client, EquipmentSlot.HEAD) + occupied(client, EquipmentSlot.CHEST)
+                + occupied(client, EquipmentSlot.LEGS) + occupied(client, EquipmentSlot.FEET);
+        if (cfg.armorHudShowMainHand) n += occupied(client, EquipmentSlot.MAINHAND);
+        if (cfg.armorHudShowOffHand) n += occupied(client, EquipmentSlot.OFFHAND);
+        return n;
+    }
+
+    private static int occupied(Minecraft client, EquipmentSlot slot) {
+        ItemStack s = client.player.getItemBySlot(slot);
+        return s != null && !s.isEmpty() ? 1 : 0;
+    }
+
     private static void add(Minecraft client, List<ItemStack> out, EquipmentSlot slot) {
         ItemStack s = client.player.getItemBySlot(slot);
         if (s != null && !s.isEmpty()) out.add(s);
@@ -155,7 +171,7 @@ public class ArmorModule extends HudModule {
         int lineH = (client != null && client.font != null) ? client.font.lineHeight : 9;
         AuroraConfig.ArmorDurabilityFormat fmt = cfg.armorDurabilityFormat;
         boolean hasText = fmt != null && fmt != AuroraConfig.ArmorDurabilityFormat.NONE;
-        int n = (client != null) ? visibleSlots(client).size() : 0;
+        int n = (client != null) ? visibleSlotCount(client) : 0;
         if (n == 0) return ROW_H;
 
         if (isVanillaBg()) {
@@ -196,7 +212,7 @@ public class ArmorModule extends HudModule {
     @Override protected float backgroundAlpha() {
         Minecraft client = Minecraft.getInstance();
         if (client == null || client.player == null) return 0f;
-        return visibleSlots(client).isEmpty() ? 0f : 1f;
+        return visibleSlotCount(client) == 0 ? 0f : 1f;
     }
 
     @Override
