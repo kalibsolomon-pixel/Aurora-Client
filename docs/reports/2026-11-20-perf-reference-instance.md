@@ -59,6 +59,15 @@ The owner approved the hitbox change and asked for every UI gain. GUI Layering, 
 
 Render-thread allocation on the HUD fell from 180 to 163 MB/s at about 2,600 fps.
 
+The same in-boot ABBA on the other lines, render-thread samples in each HUD window:
+
+| Line | Sort, on / off | Bidi reorder, on / off | Settings extraction, on / off |
+|---|---|---|---|
+| 26.1.2, no mods, OpenGL | 0.20–0.31% / 0.66–0.79% | 0.04–0.10% / 0.24–0.82% | 0.054–0.056 / 0.065–0.074 ms |
+| 26.3, owner's profile, native Vulkan | 0.39–0.72% / 0.86–2.14% | 0.49–0.85% / 1.67–2.83% | 0.050–0.054 / 0.066–0.075 ms |
+
+The first "on" Settings run of each boot is warm-up and left out.
+
 **HUD and screen trims (exact).**
 - **Scoreboard.** With no sidebar it returns before sizing its ten-line editor sample, which it did twice a frame (1.1% of render-thread samples).
 - **Health HUD.** Measures its readout once per frame.
