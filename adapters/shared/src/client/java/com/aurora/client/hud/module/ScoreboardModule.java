@@ -90,6 +90,14 @@ public final class ScoreboardModule extends HudModule {
 
     @Override public boolean isConfigEnabled() { return AuroraConfig.get().scoreboardEnabled; }
 
+    @Override public void render(GuiGraphicsExtractor ctx, Minecraft client, int screenW, int screenH) {
+        // No sidebar, none last frame and no editor sample: nothing to draw, so skip sizing
+        // the sample text (twice a frame, 1.1% of the render thread on 2026-11-20).
+        if (rows == 0 && currentObjective == null && renderedObjective == null
+                && !(com.aurora.client.adapter.NativeUi.screen(client) instanceof com.aurora.client.screen.HudEditorScreen)) return;
+        super.render(ctx, client, screenW, screenH);
+    }
+
     @Override public String featureRegistryId() { return ID; }
 
     @Override protected AuroraConfig.HudBackground backgroundMode() {
