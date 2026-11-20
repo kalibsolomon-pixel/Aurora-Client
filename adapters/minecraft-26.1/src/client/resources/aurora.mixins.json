@@ -103,6 +103,7 @@
     "GuiRenderStateLayeringMixin",
     "GuiRendererElementOrderMixin",
     "FormattedBidiReorderMixin",
+    "FramerateLimitUnfocusedMixin",
     "hitreg.AttackMixin",
     "hitreg.DamageMixin",
     "hitreg.EntityAccessor",

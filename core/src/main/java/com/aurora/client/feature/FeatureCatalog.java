@@ -428,6 +428,7 @@ public final class FeatureCatalog {
         mixin("GuiRendererElementOrderMixin", "faster GUI layering", "performance").gates("perfGuiLayering");
         mixin("FormattedBidiReorderMixin", "skipping bidirectional reordering for left-to-right text", "performance")
                 .gates("perfLeftToRightText");
+        mixin("FramerateLimitUnfocusedMixin", "the unfocused frame limit", "performance").gates("perfUnfocusedLimit");
         for (String hitreg : List.of("AttackMixin", "DamageMixin", "EntityAccessor", "NetworkMixin",
                 "PlayerMixin", "ServerMixin")) {
             // Better Hitreg's timing core only works whole: one missing piece

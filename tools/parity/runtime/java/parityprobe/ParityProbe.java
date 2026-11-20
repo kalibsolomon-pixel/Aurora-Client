@@ -400,6 +400,13 @@ public final class ParityProbe implements ClientModInitializer {
                 @Override public boolean isPauseScreen() { return true; }
             });
             case "world" -> NativeUi.setScreen(client, null);
+            // `window-focused false`: what the window's focus callback records, without moving real focus
+            // (tests of focus-dependent behaviour while the owner keeps working in another window).
+            case "window-focused" -> {
+                var field = client.getWindow().getClass().getDeclaredField("focused");
+                field.setAccessible(true);
+                field.setBoolean(client.getWindow(), Boolean.parseBoolean(args[1]));
+            }
             // `create-world`: open vanilla's fresh Create World screen (then `press Create New World`).
             case "create-world" -> {
                 var type = net.minecraft.client.gui.screens.worldselection.CreateWorldScreen.class;

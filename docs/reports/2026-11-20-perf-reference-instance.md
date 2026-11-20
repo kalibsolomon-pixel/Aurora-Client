@@ -75,6 +75,13 @@ Fresh in-world profile of the owner's config after the second pass, compared wit
 | `Gui.extractRenderState` | 10.7% | 7.4% |
 | `GuiRenderer.render` | 7.5% | 4.5% |
 
+**Background Frame Limit (new, off by default).**
+- **What it does.** `perfUnfocusedLimit` and `perfUnfocusedFps` (5 to 120, default 30) cap the frame rate while another window has focus, as Dynamic FPS does. Vanilla only slows down when minimized or after a minute idle.
+- **Visible.** It is a visible trade-off, so it has rows on Settings → Performance and ships off.
+- **Pacing.** It lowers the vanilla tracker's limit, which Aurora's frame pacer already reads.
+- **Measured.** With the window marked unfocused (the probe's new `window-focused` command), 30.0 fps on and 2,312 fps off.
+- **Layout.** Checked at 854×480 and at 1440×2560.
+
 **Not changed.**
 - **Blaze3D's OpenGL dispatch.** `trySetup`, `bindVertexArray` and `createRenderPass` cost 6–8% of render-thread samples on the HUD, on uniform and sampler hash maps per draw.
 - **Particle Core.** It allocates about 22 MB/s boxing doubles at 2,600 fps.

@@ -25,6 +25,7 @@ exchange atomically and refuses an unmarked fixture or a pending command.
 | Command | Action |
 |---|---|
 | `world` | Wait for a loaded world, then close the current screen |
+| `window-focused false` | Set the window's recorded focus (as its focus callback would) without moving real focus |
 | `waypoints40` | Seed 40 rows in an empty disposable waypoint scope and open their manager |
 | `waypoints-screen` | Open the waypoint manager without changing its rows |
 | `shape-benchmark` | Measure 120 warm-up and 600 sampled manager extraction frames; write `shape-benchmark.json` |

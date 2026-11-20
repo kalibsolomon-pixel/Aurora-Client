@@ -1555,14 +1555,22 @@ addWithSettings("hitbox",
         FeatureSetting minimapRefreshCap = new BooleanSetting("Cap Minimap Redraws",
                 () -> cfg.perfMinimapRefreshCap, v -> cfg.perfMinimapRefreshCap = v).resetDefault("perfMinimapRefreshCap", () -> defaults.perfMinimapRefreshCap)
                 .description("While you move or turn, the minimap redraws its terrain at most 60 times a second instead of on every frame, which saves time at high frame rates. Markers stay lined up with the terrain. On screens faster than 60 Hz the terrain scrolls in small steps.");
+        FeatureSetting unfocusedLimit = new BooleanSetting("Background Frame Limit",
+                () -> cfg.perfUnfocusedLimit, v -> cfg.perfUnfocusedLimit = v).resetDefault("perfUnfocusedLimit", () -> defaults.perfUnfocusedLimit)
+                .description("While another window has focus, the game draws fewer frames a second, which frees your CPU and GPU for that window and saves power. Minecraft itself only slows down when minimized or after a minute without input. The game keeps running at full speed; only drawing slows.");
+        FeatureSetting unfocusedFps = SliderSetting.ofInt("Background FPS",
+                () -> cfg.perfUnfocusedFps, v -> cfg.perfUnfocusedFps = v, 5, 120).resetDefault(() -> defaults.perfUnfocusedFps)
+                .visibleWhen(() -> cfg.perfUnfocusedLimit)
+                .description("The most frames a second the game draws while another window has focus.");
         addWithSettings("performance",
                 "Loading, caching and drawing optimizations. Most are always on; the switches here are the ones you might notice.",
-                () -> cfg.perfDebugEntryCache || cfg.perfMinimapRefreshCap,
+                () -> cfg.perfDebugEntryCache || cfg.perfMinimapRefreshCap || cfg.perfUnfocusedLimit,
                 v -> {
                     cfg.perfDebugEntryCache = v;
                     cfg.perfMinimapRefreshCap = v;
+                    cfg.perfUnfocusedLimit = v;
                 },
-                List.of(debugEntryCache, minimapRefreshCap),
+                List.of(debugEntryCache, minimapRefreshCap, unfocusedLimit, unfocusedFps),
                 List.of("perf"));
 
         // ============ SETTINGS TAB PAGES ============

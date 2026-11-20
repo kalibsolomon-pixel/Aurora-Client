@@ -498,6 +498,9 @@ public class AuroraConfig {
     public boolean perfGuiLayering = true;
     /** Text with no right-to-left characters skips the bidirectional reordering pass; its visual order is the same. */
     public boolean perfLeftToRightText = true;
+    /** While another window has focus, the game draws at most {@link #perfUnfocusedFps} frames a second. */
+    public boolean perfUnfocusedLimit = false;
+    public int perfUnfocusedFps = 30;
 
     // ---- Late-Stage Responsive Features ----
     public boolean adaptiveRenderSleeping = false;
