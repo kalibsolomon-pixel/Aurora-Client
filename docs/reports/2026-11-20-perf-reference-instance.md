@@ -99,6 +99,13 @@ No frame-rate benefit, about 5% less heap. Not recommended as a performance flag
 
 **For the owner's 26.3 profile.** EntityCulling issue #324 reports frame spikes every 0.3–0.5 s on servers with many players. They come from a main-thread copy of entity data. EntityCulling 1.11.3 exposes that copy as `safeMode` (true in the owner's `config/entityculling.json`). Turning it off may remove the spikes, but EntityCulling warns it can crash with some mods. This report does not change the instance.
 
+**Delegated investigations (2026-11-20).**
+- **HUD frame cache (Exordium-style).** Prototype on 26.2 OpenGL: median frame 0.3537–0.3747 ms with the cache on against 0.3664–0.3839 ms off (about 5%), and Aurora CPU about 20% lower. Refresh frames were within 1/255 per channel. Stopped before production: native Vulkan did not complete, 26.1.2 and 26.3 are untested, and the crosshair, vignette, scene overlays, glass and picture-in-picture must stay live. Blend inventory and freshness rules: [hud-frame-cache](2026-11-20-hud-frame-cache.md).
+- **Sodium 0.9.2.** Two `.requires("sodium")` prototypes, both dropped.
+  - *Ordered expiry in `ClonedChunkSectionCache.cleanup`:* no consistent gain.
+  - *`Integer.expand` interleave in Sodium's section tree:* noisy results with three dev clients sharing the machine. It also compiles to PDEP, which is microcoded and very slow on AMD Zen 1 and Zen 2, so it could regress on those CPUs.
+- **GUI item atlas (the largest cost in a real PvP loadout).** With enchanted weapons, golden apples and enchanted armor in the hotbar and armor HUD on the owner's 26.2 config, `GuiRenderer.prepareItemElements` takes 15.3% of render-thread samples. Every glint item is redrawn into the atlas each frame, with a full feature pass per item. ImmediatelyFast batches only the clears. Batching the draws is in progress on its own branch.
+
 **Not changed.**
 - **Blaze3D's OpenGL dispatch.** `trySetup`, `bindVertexArray` and `createRenderPass` cost 6–8% of render-thread samples on the HUD, on uniform and sampler hash maps per draw.
 - **Particle Core.** It allocates about 22 MB/s boxing doubles at 2,600 fps.
