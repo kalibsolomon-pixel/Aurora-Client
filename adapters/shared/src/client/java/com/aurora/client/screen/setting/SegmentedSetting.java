@@ -12,15 +12,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
- * Segmented control for a small enum — an iOS-style split track where the
- * selected segment is filled with the accent. Stage 3 uses it for the
- * theme's Mode (Dark/Light) and Corner Style (Round/Slightly Round/Square)
- * rows, matching COSMIC's Appearance settings.
- *
- * <p>Reads the same projected token cache as every other control
- * ({@code AuroraTheme.*}); the track's corner radius follows
- * {@link AuroraTheme#RADIUS_SMALL}, so the roundness setting is reflected
- * live in the control itself.
+ * Segmented control for a small enum with an accent-filled selected segment.
  *
  * <p>Clicking a segment commits exactly once per genuine change: clicking
  * the already-selected segment is a no-op (no reload, no save).

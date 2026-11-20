@@ -373,7 +373,7 @@ public class ItemScaleSetting extends FeatureSetting {
         if (searchField instanceof GlassEditBox glassField) glassField.aurora$renderGlassPass(ctx);
         int plusX = x + width - 36;
         int plusY = y + 5;
-        float plusR = Math.min(20 / 2f, ThemeManager.current().roundness().radiusSmall());
+        float plusR = Math.min(20 / 2f, AuroraTheme.RADIUS_SMALL);
         passDrewPlus = GlassSurface.control(ctx, plusX, plusY, 24, 20, plusR);
     }
 
@@ -621,7 +621,7 @@ public class ItemScaleSetting extends FeatureSetting {
                 (int) (0x2E + (0x66 - 0x2E) * plusT));
         int plusBorder = AuroraAnim.lerpArgb(
                 AuroraTheme.BORDER_OFF, AuroraTheme.BORDER_ON_HOVER, plusT);
-        float plusR = Math.min(20 / 2f, ThemeManager.current().roundness().radiusSmall());
+        float plusR = Math.min(20 / 2f, AuroraTheme.RADIUS_SMALL);
         boolean plusGlass;
         if (glassPassFrame == GlassSurface.frame()) {
             plusGlass = passDrewPlus;

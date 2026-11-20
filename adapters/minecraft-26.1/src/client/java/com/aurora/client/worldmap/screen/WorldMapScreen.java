@@ -17,6 +17,7 @@ import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.worldmap.*;
 import com.aurora.client.worldmap.cache.OverviewCache;
 import com.aurora.client.worldmap.cache.RegionCache;
+import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
@@ -196,10 +197,10 @@ public final class WorldMapScreen extends Screen implements ThemedScreen {
         }
         g.disableScissor();
         // Opaque semantic surfaces keep controls readable over deferred terrain tiles.
-        int barR = Math.round(ThemeManager.current().roundness().radius());
+        int barR = Math.round(AuroraTheme.RADIUS);
         MaterialSurface.floatingPanel(g, BAR_PAD, BAR_PAD, width - 2 * BAR_PAD, topBarH, barR);
         MaterialSurface.floatingPanel(g, BAR_PAD, statusTop(), width - 2 * BAR_PAD, STATUS_H,
-                Math.round(ThemeManager.current().roundness().radiusSmall()));
+                Math.round(AuroraTheme.RADIUS_SMALL));
         int textY = statusTop() + (STATUS_H - font.lineHeight) / 2 + 1;
         String position = (int) Math.floor(viewport.worldX(mx, width)) + ", "
                 + (int) Math.floor(viewport.worldZ(my, height)) + "  \u00b7  " +

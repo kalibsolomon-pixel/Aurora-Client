@@ -192,7 +192,7 @@ public final class FightList extends AbstractWidget {
       boolean isSel = row.fight.id().equals(sel);
       if (isSel) {
         Pixel.rounded(g, x + 1, ry + 1, width - 2, rowHeight - 2, Theme.radiusSmall(), Theme.SURFACE_HOVER());
-        Pixel.rounded(g, x + 1, ry + 2, 2, rowHeight - 4, 1, Theme.accent());
+        Pixel.rounded(g, x + 1, ry + 2, 2, rowHeight - 4, Theme.radiusSmall(), Theme.accent());
       } else if (i == hovered)
         Pixel.rounded(g, x + 1, ry + 1, width - 2, rowHeight - 2, Theme.radiusSmall(), Theme.SURFACE_2());
       else if (i % 2 == 1) Pixel.fillLogical(g, x + 1, ry, x + width - 1, ry + rowHeight, 0x0CFFFFFF);

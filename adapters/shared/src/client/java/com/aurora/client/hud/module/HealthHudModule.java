@@ -39,7 +39,6 @@ public class HealthHudModule extends HudModule {
 
     @Override protected AuroraConfig.HudBackground backgroundMode() { return AuroraConfig.get().playerHealthHudBgMode; }
     @Override protected int backgroundColor() { return AuroraConfig.get().playerHealthHudBgColor; }
-    @Override protected boolean themeCorners() { return AuroraConfig.get().playerHealthHudThemeCorners; }
 
     @Override public String displayName() { return "Health"; }
     @Override public String featureRegistryId() { return "player_health"; }

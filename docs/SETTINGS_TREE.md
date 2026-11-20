@@ -26,7 +26,7 @@ A map of everything a player can see, turn on or change in Aurora, as of 2026-11
 These run without a setting of their own, or are part of how Aurora works rather than features.
 
 - **Fail-soft startup**: if one of Aurora's hooks cannot attach (usually a mod conflict), only the feature that needs it turns off for the session and Aurora says which; the game still starts. `{always:mixinHealth}`
-- **Glass material**: the blurred-glass look of Aurora's windows and buttons. Shape and strength follow the Theme settings; there is no separate on/off. Paused for a moment when you take an F2 screenshot. `{always:glass}`
+- **Glass material**: the blurred-glass look of Aurora's windows and buttons. Rectangular surfaces have square corners. Background Opacity and Blur Radius control the glass. Paused for a moment when you take an F2 screenshot. `{always:glass}`
 - **Aurora styling on vanilla buttons and text fields**: themed buttons on world select, multiplayer and other vanilla screens (tied to Custom Title's hook). `{always:vanillaButtonStyle}`
 - **Flat item icons in Aurora screens**: item icons in Aurora's own lists are drawn flat. `{always:flatItemIcons}`
 - **Numeric ping in the server list**: part of the Ping feature's hook; shows ping as a number in Multiplayer. `{always:serverListPing}`
@@ -141,7 +141,6 @@ Health shown above mobs (and optionally players), and your own on the HUD; each 
   - **Text Color**: color · HUD default; absorption stays gold. `{playerHealthHudTextColor}`
   - **Background**: dropdown None / Solid · None. `{playerHealthHudBgMode}`
   - **Background Color (when SOLID)**: color · 50% black. `{playerHealthHudBgColor}`
-  - **Theme Corners**: toggle · off; Solid only. `{playerHealthHudThemeCorners}`
 
 #### Free Look · off `{card:free_look}`
 Look around without turning your character.
@@ -170,7 +169,6 @@ Press once to sprint or sneak instead of holding.
 - **HUD Display Mode**: dropdown Both / Individual / Bracketed Text · Both. `{toggleSprintSneakDisplayMode}`
 - **HUD Background**: dropdown None / Solid · None. `{sprintHudBgMode}` *(VANILLA folded to Solid; see Armor HUD.)*
 - **HUD Background Color (when SOLID)**: color · black, 50%. `{sprintHudBgColor}`
-- **Theme Corner Radius**: toggle · off · round this HUD's corners with the theme's Corner Radius instead of its fixed corners. `{toggleSprintSneakThemeCorners}`
 
 #### Alerts · off · combined `{card:alerts}`
 Warnings for expiring effects and low durability, shown as two HUD modules (Armor Alert, Potion Alert) instead of a shared popup.
@@ -188,12 +186,10 @@ Warnings for expiring effects and low durability, shown as two HUD modules (Armo
   - **Armor Module Background**: dropdown None / Solid · None. `{armorAlertBgMode}`
   - **Armor Module Background Color (when SOLID)**: color · black, 50%. `{armorAlertBgColor}`
   - **Armor Module Text Color**: color · HUD default. `{armorAlertTextColor}`
-  - **Theme Corner Radius**: toggle · off · Solid only. `{armorAlertThemeCorners}`
   - **Effect Alert Module**: toggle · off · the Potion Alert row in the HUD editor, one row per latched effect with its sprite, name and seconds left. `{effectExpiryHudEnabled}`
   - **Effect Module Background**: dropdown None / Solid · None. `{effectExpiryBgMode}`
   - **Effect Module Background Color (when SOLID)**: color · black, 50%. `{effectExpiryBgColor}`
   - **Effect Module Text Color**: color · HUD default. `{effectExpiryTextColor}`
-  - **Theme Corner Radius**: toggle · off · Solid only. `{effectExpiryThemeCorners}`
 - *Sound*
   - **Play Sound**: toggle · on. `{armorAlertSound}`
   - **Sound Choice**: dropdown Pling / Experience Orb / Bell / Armor Equip / Anvil Land / Note Bass · Pling. `{armorAlertSoundChoice}`
@@ -263,7 +259,6 @@ Corner readout of FPS, coordinates and more.
 - **Text Color**: color · orange. `{infoModuleTextColor}`
 - **Background**: dropdown None / Solid · None. `{infoBgMode}` *(VANILLA folded to Solid; see Armor HUD.)*
 - **Background Color (when SOLID)**: color · black, 50%. `{infoBgColor}`
-- **Theme Corner Radius**: toggle · off · round this HUD's corners with the theme's Corner Radius instead of its fixed corners. `{infoModuleThemeCorners}`
 - *Performance*
   - **Show FPS**: toggle · on. `{showFps}`
   - **Show Frame Time**: toggle · off. `{infoShowFrameTime}`
@@ -290,7 +285,6 @@ Clicks-per-second counter.
 - **Text Color**: color · HUD default. `{cpsTextColor}`
 - **Background**: dropdown · None. `{cpsBgMode}`
 - **Background Color (when SOLID)**: color · black, 50%. `{cpsBgColor}`
-- **Theme Corner Radius**: toggle · off · round this HUD's corners with the theme's Corner Radius instead of its fixed corners. `{cpsThemeCorners}`
 
 #### Armor HUD · on `{card:armor_hud}`
 Your armor — and optionally your hands — and its durability.
@@ -302,14 +296,12 @@ Your armor — and optionally your hands — and its durability.
 - **Show Off Hand**: toggle · off · the off hand in the strip when it holds something. `{armorHudShowOffHand}`
 - **Background**: dropdown None / Solid / Vanilla · Vanilla (one hotbar-strip graphic; VANILLA is offered only here and on Potion HUD). `{armorHudBgMode}`
 - **Background Color (when SOLID)**: color · black, 50%. `{armorHudBgColor}`
-- **Theme Corner Radius**: toggle · off · round this HUD's corners with the theme's Corner Radius instead of its fixed corners. `{armorHudThemeCorners}`
 
 #### Reach Display · off `{card:reach_display}`
 Distance of your last hit.
 - **Text Color**: color · HUD default. `{reachDisplayTextColor}`
 - **Background**: dropdown · None. `{reachBgMode}`
 - **Background Color (when SOLID)**: color · black, 50%. `{reachBgColor}`
-- **Theme Corner Radius**: toggle · off · round this HUD's corners with the theme's Corner Radius instead of its fixed corners. `{reachDisplayThemeCorners}`
 
 #### Potion HUD · on `{card:potion_hud}`
 Active effects with timers (replaces vanilla's effect icons).
@@ -317,14 +309,12 @@ Active effects with timers (replaces vanilla's effect icons).
 - **Background**: dropdown · Vanilla (vanilla's status-effect container behind each icon; VANILLA is offered only here and on Armor HUD). `{potionBgMode}`
 - **Vanilla Layout**: segmented Standard / Condensed · Standard; Vanilla background only. Standard lists names and timers beside the icons; Condensed is a vanilla-style row with the time in each container's corner (4m, then 59s). `{potionVanillaLayout}`
 - **Background Color (when SOLID)**: color · black, 50%. `{potionBgColor}`
-- **Theme Corner Radius**: toggle · off · round this HUD's corners with the theme's Corner Radius instead of its fixed corners. `{potionHudThemeCorners}`
 
 #### Ping · off · combined `{card:ping}`
 Latency as numbers.
 - **Text Color**: color · follows latency (green, yellow, red) until set. `{pingHudTextColor}`
 - **Background**: dropdown None / Solid · None. `{pingHudBgMode}`
 - **Background Color (when SOLID)**: color · 50% black. `{pingHudBgColor}`
-- **Theme Corners**: toggle · off; Solid only. `{pingHudThemeCorners}`
 - **Show Ping HUD**: toggle · off. `{pingHudEnabled}`
 - **Show in Tab List**: toggle · off. `{tabPingEnabled}`
 - **Show in Player Nametags**: toggle · off. `{nametagPingEnabled}`
@@ -339,7 +329,6 @@ Counts totem pops.
 - **Show in Player Nametags**: toggle · off. `{nametagTotemPopsEnabled}`
 - **Background**: dropdown · None. `{totemPopBgMode}`
 - **Background Color (when SOLID)**: color · black, 50%. `{totemPopBgColor}`
-- **Theme Corner Radius**: toggle · off · round this HUD's corners with the theme's Corner Radius instead of its fixed corners. `{totemPopThemeCorners}`
 - **Reset Now**: button · clears all counts. `{action:totemResetNow}`
 
 #### Waypoints · off `{card:waypoints}`
@@ -426,7 +415,6 @@ Shows your key and mouse presses.
 - **Scale**: slider · about 1.29 (same as resizing in the HUD Editor). `{hud:keystrokes.scale}`
 - **Background**: dropdown · Solid. `{keystrokesBgMode}`
 - **Background Color (when SOLID)**: color · near-black. `{keystrokesBgColor}`
-- **Theme Corner Radius**: toggle · off · shown for 3D Keycap; uses the theme's control corner radius instead of the 2 px Cherry radius, and continues to control the backing panel and other styles' compact corners. `{keystrokesThemeCorners}`
 
 #### Minimap · off `{card:minimap}`
 Top-down map in a HUD corner.
@@ -434,7 +422,6 @@ Top-down map in a HUD corner.
 - *Shape & Size*
   - **Size (px)**: slider 64–256 · 128. `{minimapSize}`
   - **Circular**: toggle · off. `{minimapCircular}`
-  - **Theme Corner Radius**: toggle · off · round this HUD's corners with the theme's Corner Radius instead of its fixed corners. `{minimapThemeCorners}`
   - **Rotate with Player**: toggle · off. `{minimapRotateWithPlayer}`
 - *Terrain*
   - **Show Terrain**: toggle · on. `{minimapShowTerrain}`
@@ -499,7 +486,6 @@ Simple config-backed setting rows here and on module detail pages show a small r
   - *Surfaces* (the three sliders grouped under one caption)
     - **Background Opacity**: slider 0–100% · 42% (new installs; was 33%) · the tint's density only. `{theme.backgroundOpacity}`
     - **Blur Radius**: slider Off–32 px (GUI pixels) · 12 px (new installs; was 9) · how blurred the backdrop behind glass is. `{theme.blurRadius}`
-    - **Corner Radius**: slider 0–20 px · 10 px · every shape: windows, buttons, fields, toggles, sliders, scrollbars. Replaced Corner Style (Round = 10, Slightly Round = 6, Square = 0). `{theme.cornerRadius}`
 - *Text & Fonts* · no toggle `{card:text_fonts}` · font, weight, modifiers and case apply wherever the Text Renderer does
   - **Text Renderer**: dropdown Off / Aurora UI Only / All Text · All Text · Aurora UI Only styles text on Aurora's own windows (Pulsar's dashboard included), never the in-game HUD or vanilla screens; All Text adds the HUD and every vanilla string. `{textRendererMode}`
   - **Font**: dropdown Inter / JetBrains Mono / Roboto / Poppins / Oswald / Nunito / Quicksand / Fira Sans / SansSerif · Fira Sans. Inter Italic is now Inter with Italic on (migrated). `{activeFont}`

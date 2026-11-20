@@ -17,6 +17,7 @@ import com.aurora.client.ui.interaction.SemanticAction;
 import com.aurora.client.ui.interaction.SemanticActionControl;
 import com.aurora.client.ui.render.blur.BlurPanelRenderer;
 import com.aurora.client.util.WorldScope;
+import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
@@ -339,9 +340,9 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
                 () -> {
                     paintRowShadow(ctx, x, y, w);
                     rowGlassDrawn.put(wp, MaterialSurface.unified()
-                            ? GlassSurface.card(ctx,x,y,w,ROW_H,ThemeManager.current().roundness().radiusSmall())
+                            ? GlassSurface.card(ctx,x,y,w,ROW_H,AuroraTheme.RADIUS_SMALL)
                             : GlassSurface.control(ctx, x, y, w, ROW_H,
-                                ThemeManager.current().roundness().radiusSmall(), BlurPanelRenderer.Priority.ROW));
+                                AuroraTheme.RADIUS_SMALL, BlurPanelRenderer.Priority.ROW));
                 },
                 () -> {
                     int by = y + 4;

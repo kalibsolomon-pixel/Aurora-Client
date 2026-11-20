@@ -9,6 +9,7 @@ import com.aurora.client.ui.util.MaterialIconRenderer;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.util.AuroraAnim;
 import com.aurora.client.util.HoverAnim;
+import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 
@@ -207,7 +208,7 @@ public final class IconAction {
     public void paintHairline(GuiGraphicsExtractor g, int x, int y, int w, int h) {
         if (control == null || !control.isFocused()) return;
         float radius = Math.min(Math.min(w, h) / 2f,
-                ThemeManager.current().roundness().radiusSmall());
+                AuroraTheme.RADIUS_SMALL);
         RenderUtil.drawRoundedOutlineAA(g, x, y, w, h, radius, 1.0f,
                 ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
     }

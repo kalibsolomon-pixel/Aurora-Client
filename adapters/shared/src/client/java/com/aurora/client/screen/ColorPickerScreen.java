@@ -13,6 +13,7 @@ import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.ui.util.FieldMessage;
 import com.aurora.client.ui.util.UiLayerCache;
+import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -257,7 +258,7 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
     @Override
     public void extractRenderState(GuiGraphicsExtractor ctx, int mouseX, int mouseY, float delta) {
         // Themed overlay dim (token-driven; dark in both modes by design).
-        var radius = ThemeManager.current().roundness().radiusLarge();
+        var radius = AuroraTheme.RADIUS_LARGE;
         com.aurora.client.ui.component.GlassSurface.beginGlassPass();
         if (pickerSupportable) com.aurora.client.ui.component.GlassSurface.container(ctx,panelX,panelY,panelW,panelH,radius);
         com.aurora.client.ui.component.GlassSurface.overlayDim(ctx,this.width,this.height);
@@ -316,15 +317,9 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
                 scale * 31L ^ previewW * 7919L ^ previewH * 17L, previewX, previewY, previewW, previewH,
                 () -> drawCheckerboard(ctx, 0, 0, previewW, previewH));
         ctx.fill(previewX, previewY, previewX + previewW, previewY + previewH, currentArgb());
-        // Content-frame white on the preview — structural neutral (see class
-        // javadoc). The PREVIEW is a represented-color sample like every
-        // ColorSetting swatch: its clipping follows theme roundness when
-        // rectangular (C-7 — was a literal 4 that ignored Square mode; the
-        // ColorSwatch min(h/2, radiusSmall) pattern). The pad/hue/alpha
-        // strips follow the same small radius (owner ruling 2026-11-12: the
-        // Corner Radius slider applies to every shape).
+        // The preview, pad and strips use the same square frame as other color samples.
         RenderUtil.drawRoundedOutlineAA(ctx, previewX, previewY, previewW, previewH,
-                Math.min(previewH / 2f, ThemeManager.current().roundness().radiusSmall()), 1.0f, 0xFFFFFFFF);
+                Math.min(previewH / 2f, AuroraTheme.RADIUS_SMALL), 1.0f, 0xFFFFFFFF);
 
         // Strip captions centered over their strips; field captions share the content column.
         AuroraFontRenderer.drawCentered(ctx, tr, Component.literal("Hue"), hueX + hueW / 2, hueY - 12, labelCol);
@@ -407,9 +402,9 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
         RenderUtil.drawRoundedOutlineAA(ctx, ox, oy, alphaW, alphaH, radius, 1.0f, 0xFFFFFFFF);
     }
 
-    /** Corner radius of the pad and strips: the theme's small radius (6 at the default). */
+    /** Shared corner radius for the pad and strips. */
     private static int stripRadius() {
-        return ThemeManager.current().roundness().radiusSmall();
+        return AuroraTheme.RADIUS_SMALL;
     }
 
     /** Source-over composite of {@code src} (ARGB) over opaque {@code bg} —

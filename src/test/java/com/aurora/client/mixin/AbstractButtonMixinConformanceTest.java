@@ -171,7 +171,7 @@ class AbstractButtonMixinConformanceTest {
         String b = src(BUTTON);
         int start = b.indexOf("public static void paintFlatSecondary");
         String painter = b.substring(start, b.indexOf("private float currentScale()", start));
-        assertTrue(painter.contains("roundness().radiusSmall()"),
+        assertTrue(painter.contains("AuroraTheme.RADIUS_SMALL"),
                 "the painter resolves the C-7 radius token");
         assertEquals(1, count(painter, "float radius ="),
                 "one radius derivation, and it is the token line above");

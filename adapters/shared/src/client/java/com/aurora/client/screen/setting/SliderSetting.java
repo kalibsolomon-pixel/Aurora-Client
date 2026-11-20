@@ -263,7 +263,7 @@ public class SliderSetting extends FeatureSetting {
         ctx.text(tr, cachedStr, compactRow == null ? x + width - cachedStrW - 14 : x + compactRow.value().x() + compactRow.value().width() - cachedStrW, AuroraFontRenderer.textY(tr, y, compactRow == null ? 20 : compactRow.value().height()), valueColor, false);
     }
 
-    /** Cacheable static track layer (depends only on the roundness token). */
+    /** Cacheable static track layer. */
     protected void drawTrackShapes(GuiGraphicsExtractor ctx, int x, int y, int width) {
         layoutTrack(x, y, width);
         slider.disabled(isDisabled());

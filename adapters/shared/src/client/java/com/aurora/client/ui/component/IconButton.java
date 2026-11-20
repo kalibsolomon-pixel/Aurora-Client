@@ -8,6 +8,7 @@ import com.aurora.client.ui.util.MaterialIconRenderer;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.ui.util.TimedTransition;
 import com.aurora.client.util.AuroraAnim;
+import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -59,7 +60,7 @@ public class IconButton extends AbstractButton {
         if (isHovered()) TooltipPresenter.offer(this, getMessage().getString(), getX(), getY(), getWidth(), getHeight());
         float t = (float) hover.update(this.active && isHovered() ? 1 : 0, System.nanoTime());
         float x = getX(), y = getY(), w = getWidth(), h = getHeight();
-        float r = ThemeManager.current().roundness().radiusSmall();
+        float r = AuroraTheme.RADIUS_SMALL;
         MaterialSurface.control(g, x, y, w, h, r, false, !this.active, false, t, 0f);
         // The ring is for keyboard focus; a mouse click focuses too, and must not leave a ring behind.
         if (isFocused() && this.active && Minecraft.getInstance().getLastInputType().isKeyboard()) RenderUtil.drawRoundedOutlineAA(g, x - 2, y - 2, w + 4, h + 4,

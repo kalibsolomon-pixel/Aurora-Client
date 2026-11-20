@@ -69,8 +69,6 @@ public final class ResolvedTheme {
     /** Source window tint (opaque RGB). */
     public int background() { return source.background; }
 
-    /** Corner radius this theme renders with (interned; never null). */
-    public ThemeRoundness roundness() { return ThemeRoundness.of(source.cornerRadius); }
 
     /** Glass blur radius in GUI pixels (always normalized). */
     public int blurRadius() { return source.blurRadius; }
@@ -166,14 +164,5 @@ public final class ResolvedTheme {
         AuroraTheme.SEMANTIC_WARNING        = color(ThemeToken.SEMANTIC_WARNING);
         AuroraTheme.OVERLAY_DIM             = color(ThemeToken.OVERLAY_DIM);
         AuroraTheme.ON_OVERLAY              = color(ThemeToken.ON_OVERLAY);
-
-        // Sizes (Stage 3): corner radii project from the corner-radius token
-        // the same way the colors above project from the color tokens — this
-        // is the only writer of these statics. Capsule shapes (knobs, thumbs,
-        // switch and slider tracks) read ThemeRoundness.capsule() instead.
-        ThemeRoundness corners = roundness();
-        AuroraTheme.RADIUS                  = corners.radius();
-        AuroraTheme.RADIUS_LARGE            = corners.radiusLarge();
-        AuroraTheme.RADIUS_SMALL            = corners.radiusSmall();
     }
 }

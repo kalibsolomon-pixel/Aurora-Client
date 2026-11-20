@@ -1,7 +1,6 @@
 package com.aurora.client.ui.util;
 
 import com.aurora.client.SourceTree;
-import com.aurora.client.theme.ThemeRoundness;
 import com.aurora.client.theme.WindowBevel;
 import org.junit.jupiter.api.Test;
 
@@ -23,7 +22,7 @@ class WindowFrameRoomTest {
         assertEquals(UiDensity.FRAME_EDGE + UiDensity.SCROLLBAR_W + UiDensity.SCROLLBAR_GAP, UiDensity.scrollRightInset());
         // A round theme's band takes the whole cap; a very round one narrows where the corner bends.
         assertEquals(UiDensity.FRAME_BAND, WindowBevel.frameInset(0), 1e-6);
-        assertEquals(UiDensity.FRAME_BAND, WindowBevel.frameInset(ThemeRoundness.DEFAULT_RADIUS), 1e-6);
+        assertEquals(UiDensity.FRAME_BAND, WindowBevel.frameInset(10), 1e-6);
         assertTrue(WindowBevel.frameInset(20) < UiDensity.FRAME_BAND);
         assertTrue(WindowBevel.frameInset(20) > 0);
     }
@@ -31,15 +30,14 @@ class WindowFrameRoomTest {
     @Test void theBandFitsTheFrameRoomWithoutCrowdingIt() {
         // Before 2026-11-18 the main window passed 4 and details 3 as the cap. The frame room
         // caps the band at FRAME_BAND; the one strength draws a share of it.
-        double band = WindowBevel.bandWidth(UiDensity.WINDOW_HEIGHT, ThemeRoundness.DEFAULT_RADIUS,
-                WindowBevel.frameInset(ThemeRoundness.DEFAULT_RADIUS));
+        double band = WindowBevel.bandWidth(UiDensity.WINDOW_HEIGHT, 0, WindowBevel.frameInset(0));
         assertTrue(band <= UiDensity.FRAME_BAND, "band " + band);
         assertTrue(band >= UiDensity.FRAME_BAND * .5, "band " + band);
     }
 
     @Test void contentAtTheFrameRoomStaysClearOfTheBandAtEveryRadius() {
         var frame = UiDensity.window(640, 360);
-        for (int radius : new int[]{0, ThemeRoundness.DEFAULT_RADIUS, 14, 20}) {
+        for (int radius : new int[]{0, 10, 14, 20}) {
             double cap = WindowBevel.frameInset(radius);
             var finish = WindowBevel.finish(0x5416171d, OUTLINE, 9);
             for (double pixel : new double[]{1, 1d / 3, .5}) {

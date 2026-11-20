@@ -14,6 +14,7 @@ import com.aurora.client.ui.util.MaterialIconRenderer;
 import com.aurora.client.ui.util.UiDensity;
 import com.aurora.client.util.SmoothScroll;
 import com.mojang.blaze3d.platform.InputConstants;
+import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
@@ -138,7 +139,7 @@ public class IconPickerScreen extends Screen implements ThemedScreen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor ctx, int mouseX, int mouseY, float delta) {
-        float radius = ThemeManager.current().roundness().radiusLarge();
+        float radius = AuroraTheme.RADIUS_LARGE;
         GlassSurface.beginGlassPass();
         GlassSurface.container(ctx, panelX, panelY, panelW, panelH, radius);
         GlassSurface.overlayDim(ctx, this.width, this.height);
@@ -159,7 +160,7 @@ public class IconPickerScreen extends Screen implements ThemedScreen {
                 onBackground, false);
 
         // The grid: only the rows the viewport shows.
-        float small = ThemeManager.current().roundness().radiusSmall();
+        float small = AuroraTheme.RADIUS_SMALL;
         double offset = scroll.current();
         int firstRow = (int) Math.floor(offset / STEP);
         int lastRow = (int) Math.floor((offset + gridH) / STEP);

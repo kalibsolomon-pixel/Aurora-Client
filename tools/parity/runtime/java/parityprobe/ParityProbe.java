@@ -7,7 +7,6 @@ import com.aurora.client.feature.impl.WaypointFeature;
 import com.aurora.client.screen.*;
 import com.aurora.client.screen.setting.KeybindSetting;
 import com.aurora.client.theme.ThemeManager;
-import com.aurora.client.theme.ThemeRoundness;
 import com.aurora.client.ui.interaction.SemanticFeedback;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -598,13 +597,6 @@ public final class ParityProbe implements ClientModInitializer {
             case "layout" -> {
                 config.moduleGridView = args[1].equals("grid");
                 NativeUi.setScreen(client, AuroraScreen.create());
-            }
-            case "theme" -> {
-                // A pixel radius, or a retired Corner Style name (ROUND, SLIGHTLY_ROUND, SQUARE).
-                config.themeOrDefault().cornerRadius = args[1].chars().allMatch(Character::isDigit)
-                        ? ThemeRoundness.clamp(Integer.parseInt(args[1])) : ThemeRoundness.legacyRadius(args[1]);
-                config.themeOrDefault().backgroundOpacity = Double.parseDouble(args[2]);
-                ThemeManager.reload();
             }
             // `theme-set <field> <json>` sets one ThemeDefinition field and reloads the theme.
             case "theme-set" -> {

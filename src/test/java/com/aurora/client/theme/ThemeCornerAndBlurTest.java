@@ -1,6 +1,7 @@
 package com.aurora.client.theme;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.junit.jupiter.api.Test;
@@ -12,110 +13,67 @@ import java.util.HashMap;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/** The Corner Radius and Blur Radius theme values (2026-11-12) and their migration. */
 class ThemeCornerAndBlurTest {
-    private static final org.slf4j.Logger LOG = LoggerFactory.getLogger("ThemeCornerAndBlurTest");
+    private static final org.slf4j.Logger LOG = LoggerFactory.getLogger(ThemeCornerAndBlurTest.class);
 
-    @Test void radiiKeepTheRetiredCornerStylesExactly() {
-        assertEquals(10, ThemeRoundness.ROUND.radius());
-        assertEquals(14, ThemeRoundness.ROUND.radiusLarge());
-        assertEquals(6, ThemeRoundness.ROUND.radiusSmall());
-        assertEquals(6, ThemeRoundness.SLIGHTLY_ROUND.radius());
-        assertEquals(8, ThemeRoundness.SLIGHTLY_ROUND.radiusLarge());
-        assertEquals(3, ThemeRoundness.SLIGHTLY_ROUND.radiusSmall());
-        assertEquals(0, ThemeRoundness.SQUARE.radiusLarge());
-        assertEquals(ThemeRoundness.DEFAULT_RADIUS, ThemeRoundness.ROUND.radius());
+    @Test void configDropsRetiredCornersAndKeepsTheEffectiveBlur() {
+        String json = """
+                {"zoomEnabled":true,"keystrokesThemeCorners":true,"theme":{
+                  "cornerRadius":15,"roundness":"ROUND","backgroundOpacity":0.19,"accent":-1
+                }}
+                """;
+        String migrated = ThemeMigrator.migrateConfigJson(json, LOG);
+        JsonObject config = JsonParser.parseString(migrated).getAsJsonObject();
+        JsonObject theme = config.getAsJsonObject("theme");
+
+        assertFalse(config.has("keystrokesThemeCorners"));
+        assertTrue(config.get("zoomEnabled").getAsBoolean());
+        assertFalse(theme.has("roundness"));
+        assertFalse(theme.has("cornerRadius"));
+        assertEquals(-1, theme.get("accent").getAsInt());
+        // Before the slider, 28 GUI px at 19% opacity rounded to 5 px.
+        assertEquals(5, ThemeResolver.resolve(new Gson().fromJson(theme, ThemeDefinition.class), true).blurRadius());
+        assertEquals(migrated, ThemeMigrator.migrateConfigJson(migrated, LOG));
     }
 
-    @Test void valuesAreInternedAndClamped() {
-        assertSame(ThemeRoundness.of(7), ThemeRoundness.of(7));
-        assertEquals(ThemeRoundness.MAX_RADIUS, ThemeRoundness.of(999).radius());
-        assertEquals(0, ThemeRoundness.of(-4).radius());
+    @Test void profilesDropRetiredCornersAndKeepSavedBlur() {
+        var fields = new HashMap<String, JsonElement>();
+        fields.put("minimapThemeCorners", JsonParser.parseString("true"));
+        fields.put("minimapCircular", JsonParser.parseString("true"));
+        fields.put("theme", JsonParser.parseString("""
+                {"roundness":"SLIGHTLY_ROUND","cornerRadius":{"invalid":true},"blurRadius":9}
+                """));
+        ThemeMigrator.migrateProfileFields(fields, LOG);
+        JsonObject theme = fields.get("theme").getAsJsonObject();
+
+        assertFalse(fields.containsKey("minimapThemeCorners"));
+        assertTrue(fields.get("minimapCircular").getAsBoolean());
+        assertFalse(theme.has("roundness"));
+        assertFalse(theme.has("cornerRadius"));
+        assertEquals(9, theme.get("blurRadius").getAsInt());
     }
 
-    @Test void capsulesAreFullAtTheDefaultAndSquareAtZero() {
-        assertEquals(6f, ThemeRoundness.ROUND.capsule(12f));
-        assertEquals(6f, ThemeRoundness.of(ThemeRoundness.MAX_RADIUS).capsule(12f), "never rounder than a capsule");
-        assertEquals(3f, ThemeRoundness.of(5).capsule(12f));
-        assertEquals(0f, ThemeRoundness.SQUARE.capsule(12f));
-        float previous = -1;
-        for (int r = 0; r <= ThemeRoundness.MAX_RADIUS; r++) {
-            float c = ThemeRoundness.of(r).capsule(4f);
-            assertTrue(c >= previous, "the capsule rule grows with the radius");
-            previous = c;
-        }
-    }
-
-    @Test void legacyNamesMapToTheirRadii() {
-        assertEquals(10, ThemeRoundness.legacyRadius("ROUND"));
-        assertEquals(6, ThemeRoundness.legacyRadius("slightly_round"));
-        assertEquals(0, ThemeRoundness.legacyRadius("SQUARE"));
-        assertEquals(10, ThemeRoundness.legacyRadius("BOGUS"));
-        assertEquals(10, ThemeRoundness.legacyRadius(null));
-    }
-
-    @Test void configMigrationKeepsTheCornerStyleAndTheEffectiveBlur() {
-        String json = "{\"zoomEnabled\":true,\"theme\":{\"mode\":\"DARK\",\"roundness\":\"SQUARE\","
-                + "\"backgroundOpacity\":0.19,\"accent\":-1,\"background\":-14543302}}";
-        JsonObject theme = JsonParser.parseString(ThemeMigrator.migrateConfigJson(json, LOG))
-                .getAsJsonObject().getAsJsonObject("theme");
-        assertFalse(theme.has("roundness"), "the retired member is dropped");
-        assertEquals(0, theme.get("cornerRadius").getAsInt());
-        // Before the slider: 28 GUI px x 0.19 opacity = 5.32 -> 5.
-        assertEquals(5, theme.get("blurRadius").getAsInt());
-        ThemeDefinition loaded = new Gson().fromJson(theme, ThemeDefinition.class);
-        assertEquals(0, ThemeResolver.resolve(loaded, true).roundness().radius());
-        assertEquals(5, ThemeResolver.resolve(loaded, true).blurRadius());
-    }
-
-    @Test void slightlyRoundAndMissingOpacityMigrate() {
+    @Test void missingOpacitySeedsTheOriginalBlurRadius() {
         String json = "{\"theme\":{\"roundness\":\"SLIGHTLY_ROUND\"}}";
         JsonObject theme = JsonParser.parseString(ThemeMigrator.migrateConfigJson(json, LOG))
                 .getAsJsonObject().getAsJsonObject("theme");
-        assertEquals(6, theme.get("cornerRadius").getAsInt());
-        assertEquals(ThemeDefinition.DEFAULT_BLUR_RADIUS, theme.get("blurRadius").getAsInt(),
-                "the initializer opacity (1.0) blurred at the full 28");
+        assertEquals(ThemeDefinition.DEFAULT_BLUR_RADIUS, theme.get("blurRadius").getAsInt());
     }
 
-    @Test void savedRadiiAreNeverOverwritten() {
-        String json = "{\"theme\":{\"roundness\":\"SQUARE\",\"cornerRadius\":15,\"blurRadius\":3,"
-                + "\"backgroundOpacity\":1.0}}";
-        JsonObject theme = JsonParser.parseString(ThemeMigrator.migrateConfigJson(json, LOG))
-                .getAsJsonObject().getAsJsonObject("theme");
-        assertFalse(theme.has("roundness"));
-        assertEquals(15, theme.get("cornerRadius").getAsInt());
-        assertEquals(3, theme.get("blurRadius").getAsInt());
-        String current = "{\"theme\":{\"cornerRadius\":4,\"blurRadius\":12,\"backgroundOpacity\":0.5}}";
-        assertEquals(current, ThemeMigrator.migrateConfigJson(current, LOG), "a current theme is left untouched");
-    }
-
-    @Test void profilesMigrateTheSameWay() {
-        var fields = new HashMap<String, com.google.gson.JsonElement>();
-        fields.put("theme", JsonParser.parseString("{\"roundness\":\"ROUND\",\"backgroundOpacity\":0.33}"));
-        ThemeMigrator.migrateProfileFields(fields, LOG);
-        JsonObject theme = fields.get("theme").getAsJsonObject();
-        assertEquals(10, theme.get("cornerRadius").getAsInt());
-        assertEquals(9, theme.get("blurRadius").getAsInt());
-        assertFalse(theme.has("roundness"));
-    }
-
-    @Test void copiesClampHandEditedRadii() {
+    @Test void copiesClampHandEditedBlur() {
         ThemeDefinition def = new ThemeDefinition();
-        def.cornerRadius = 500;
         def.blurRadius = -3;
-        ThemeDefinition copy = def.copy();
-        assertEquals(ThemeRoundness.MAX_RADIUS, copy.cornerRadius);
-        assertEquals(ThemeDefinition.MIN_BLUR_RADIUS, copy.blurRadius);
+        assertEquals(ThemeDefinition.MIN_BLUR_RADIUS, def.copy().blurRadius);
     }
 
-    @Test void releaseDefaultsKeepTheFactoryLook() throws Exception {
+    @Test void releaseDefaultsKeepFactoryBlurAndHaveNoCornerSetting() throws Exception {
         try (var in = ThemeCornerAndBlurTest.class.getResourceAsStream("/assets/aurora/defaults/3.2.0.json")) {
             assertNotNull(in);
             JsonObject theme = JsonParser.parseReader(new InputStreamReader(in, StandardCharsets.UTF_8))
                     .getAsJsonObject().getAsJsonObject("theme");
             assertFalse(theme.has("roundness"));
-            assertEquals(ThemeRoundness.DEFAULT_RADIUS, theme.get("cornerRadius").getAsInt());
-            // The factory blur before the slider: 28 GUI px x 0.42 opacity = 11.76 -> 12.
+            assertFalse(theme.has("cornerRadius"));
+            // The original factory blur at 42% opacity rounded to 12 px.
             assertEquals(Math.round(ThemeDefinition.DEFAULT_BLUR_RADIUS * theme.get("backgroundOpacity").getAsDouble()),
                     theme.get("blurRadius").getAsInt());
         }

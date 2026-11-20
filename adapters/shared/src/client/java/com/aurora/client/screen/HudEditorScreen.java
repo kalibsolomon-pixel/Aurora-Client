@@ -13,6 +13,7 @@ import com.aurora.client.ui.component.ButtonWidget;
 import com.aurora.client.ui.component.ThemedScreen;
 import com.aurora.client.ui.component.Widget;
 
+import com.aurora.client.util.AuroraTheme;
 import java.util.HashMap;
 import java.util.Map;
 import net.minecraft.client.Minecraft;
@@ -263,7 +264,7 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
 
         // Post-reset confirmation (the manager screens' toast): 1.5 s, bottom-center.
         resetToast.render(ctx, this.font, this.width, this.height,
-                ThemeManager.current().roundness().radiusSmall());
+                AuroraTheme.RADIUS_SMALL);
 
         // Instructions: one compact floating pill above the hotbar instead of a
         // full-width line across the top that collided with corner modules.
@@ -299,7 +300,7 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
         float visibility = guideFade.update(over ? 0 : 1, System.nanoTime());
         if (visibility <= 0.01f) return;
         // A container: the window frame bevel over the window tint, like tooltips.
-        float radius = Math.min(ThemeManager.current().roundness().radiusSmall(), Math.min(pillW, pillH) * .5f);
+        float radius = Math.min(AuroraTheme.RADIUS_SMALL, Math.min(pillW, pillH) * .5f);
         MaterialSurface.overlayFace(ctx, pillX, pillY, pillW, pillH, radius,
                 MaterialSurface.windowCornerClearance(radius, 8, 5), visibility);
         // A near-opaque panel under the text: the window tint alone let snow, shield and grass

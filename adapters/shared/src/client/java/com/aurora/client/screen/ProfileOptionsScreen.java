@@ -15,6 +15,7 @@ import com.aurora.client.ui.util.MaterialIconRenderer;
 import com.aurora.client.ui.util.UiDensity;
 import com.aurora.client.util.AuroraKey;
 import com.mojang.blaze3d.platform.InputConstants;
+import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
@@ -313,7 +314,7 @@ public class ProfileOptionsScreen extends Screen implements ThemedScreen {
     @Override
     public void extractRenderState(GuiGraphicsExtractor ctx, int mouseX, int mouseY, float delta) {
         syncDeleteButton(); // the confirm timeout restores the label with no timer
-        float radius = ThemeManager.current().roundness().radiusLarge();
+        float radius = AuroraTheme.RADIUS_LARGE;
         GlassSurface.beginGlassPass();
         GlassSurface.container(ctx, panelX, panelY, panelW, panelH, radius);
         GlassSurface.overlayDim(ctx, this.width, this.height);
@@ -325,7 +326,7 @@ public class ProfileOptionsScreen extends Screen implements ThemedScreen {
                 panelX + 12, panelY + UiDensity.headerTop(this.font.lineHeight) + 1, onBackground, false);
 
         // The icon in a well, its name under the Change icon button.
-        float small = ThemeManager.current().roundness().radiusSmall();
+        float small = AuroraTheme.RADIUS_SMALL;
         MaterialSurface.selection(ctx, colX, iconRowY, ICON_WELL, ICON_WELL, small, false, 0);
         String icon = ProfileManager.getInstance().icon(name);
         MaterialIconRenderer.drawIcon(ctx, this.font, ProfileManagerScreen.profileGlyph(icon),

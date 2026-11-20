@@ -10,6 +10,7 @@ import com.aurora.client.ui.component.ButtonWidget;
 import com.aurora.client.ui.component.MaterialSurface;
 import com.aurora.client.ui.component.ThemedScreen;
 import com.aurora.client.util.HexText;
+import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
@@ -196,7 +197,7 @@ public final class WaypointEditScreen extends Screen implements ThemedScreen {
         return super.keyPressed(event);
     }
     @Override public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float delta) {
-        int radius = ThemeManager.current().roundness().radius();
+        int radius = AuroraTheme.RADIUS;
         com.aurora.client.ui.component.GlassSurface.window(g, left, top, panelWidth, frameHeight, radius, com.aurora.client.ui.component.MaterialSurface.frameInset(radius), width, height);
         int headerMid = top + com.aurora.client.ui.util.UiDensity.HEADER_TOP + com.aurora.client.ui.util.UiDensity.TOOL / 2;
         com.aurora.client.worldmap.MapMarkers.waypoint(g, left + 16, headerMid, draft, false);

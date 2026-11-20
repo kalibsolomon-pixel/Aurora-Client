@@ -93,7 +93,7 @@ public final class Blocks {
     @Override
     public void render(GuiGraphicsExtractor g, int x, int y, int w, int h, int mx, int my) {
       Pixel.rounded(g, x, y, w, h, Theme.radiusSmall(), Theme.alpha(Theme.SURFACE_2(), 0xA0));
-      Pixel.rounded(g, x, y, 2.5f, h, 1.25f, rule);
+      Pixel.rounded(g, x, y, 2.5f, h, Theme.radiusSmall(), rule);
       for (int i = 0; i < lines.size(); i++)
         g.text(font(), lines.get(i), x + 8, y + 5 + i * 10, Theme.MUTED(), false);
     }
@@ -249,7 +249,7 @@ public final class Blocks {
     @Override
     public void render(GuiGraphicsExtractor g, int x, int y, int w, int h, int mx, int my) {
       var f = font();
-      Pixel.rounded(g, x, y, w, 10, 5, Theme.SURFACE_2());
+      Pixel.rounded(g, x, y, w, 10, Theme.radiusSmall(), Theme.SURFACE_2());
       int cx = x;
       for (int i = 0; i < values.length; i++) {
         if (total == 0 || values[i] == 0) continue;

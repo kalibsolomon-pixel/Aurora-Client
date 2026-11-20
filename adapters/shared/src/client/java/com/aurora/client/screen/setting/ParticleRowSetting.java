@@ -15,6 +15,7 @@ import com.aurora.client.ui.util.MaterialIconRenderer;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.ui.util.UiDensity;
 import com.aurora.client.util.HoverAnim;
+import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -193,7 +194,7 @@ public class ParticleRowSetting extends FeatureSetting {
     public void render(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {
         Font tr = Minecraft.getInstance().font;
         float cx = x + INSET, cw = width - 2f * INSET, right = cx + cw;
-        float radius = ThemeManager.current().roundness().radiusSmall();
+        float radius = AuroraTheme.RADIUS_SMALL;
 
         // Right cluster, right to left: chevron, switch, On/Off label.
         float tw = UiDensity.TOGGLE_W, th = UiDensity.TOGGLE_H;

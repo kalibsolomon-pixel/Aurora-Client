@@ -1,8 +1,8 @@
 package com.aurora.client.ui.component;
 
-import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.util.RenderUtil;
+import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 /**
@@ -12,7 +12,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
  * roundness token it reads).
  *
  * <p>Fill and outline come from the {@code WINDOW_FILL} / {@code WINDOW_OUTLINE}
- * tokens; the corner radius follows the theme's roundness family. The
+ * tokens. The
  * optional drop glow is a stack of black AA outline rings (a structural
  * neutral — correct in both modes).
  */
@@ -48,7 +48,7 @@ public class RoundedPanel extends Widget {
      * drawn (they read as a drop shadow around the panel, not an outline).
      */
     public void renderShapes(GuiGraphicsExtractor g, float x, float y, float w, float h, boolean glassActive) {
-        float radius = ThemeManager.current().roundness().radius();
+        float radius = AuroraTheme.RADIUS;
 
         if (glow && !MaterialSurface.unified()) {
             for (int i = 1; i <= 8; i++) {

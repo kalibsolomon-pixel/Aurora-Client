@@ -466,7 +466,7 @@ final class SettingsPage implements PhenomenaScreen.Page {
   private void ui(Content c) {
     var cfg = c();
     c.heading("Appearance");
-    c.text("Pulsar follows Aurora's theme, font, corner radius and compact controls. Change these in Aurora Settings, Appearance.");
+    c.text("Pulsar follows Aurora's theme, font and compact controls. Change these in Aurora Settings, Appearance.");
     c.setting(
         "Reduced motion",
         "Reduces motion in offline reports.",

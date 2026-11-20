@@ -19,6 +19,7 @@ import com.aurora.client.util.AuroraAnim;
 import com.aurora.client.util.ModInfo;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.realmsclient.RealmsMainScreen;
+import com.aurora.client.util.AuroraTheme;
 import net.minecraft.SharedConstants;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -275,7 +276,7 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
         var r = dropdown();
         int pivot = r.y() < account.getY() ? r.y() + r.height() : r.y();
         boolean posed = com.aurora.client.ui.component.OverlayPose.push(ctx, r.x() + r.width(), pivot, progress);
-        int radius = Math.round(ThemeManager.current().roundness().radiusSmall());
+        int radius = Math.round(AuroraTheme.RADIUS_SMALL);
         MaterialSurface.overlayFace(ctx, r.x(), r.y(), r.width(), r.height(), radius, DROPDOWN_PAD, progress);
         int rowY = r.y() + DROPDOWN_PAD;
         int face = 12;
@@ -380,7 +381,7 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
         protected void extractContents(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
             if (switcher && isHovered()) TooltipPresenter.offer(this, switchTooltip.getString(), getX(), getY(), getWidth(), getHeight());
             float x = getX(), y = getY(), w = getWidth(), h = getHeight();
-            float r = ThemeManager.current().roundness().radiusSmall();
+            float r = AuroraTheme.RADIUS_SMALL;
             boolean hot = isHovered() || accountOpen;
             // The raised, bevelled control face; hover blends cached state templates.
             float hoverT = hover.update(hot ? 1 : 0, System.nanoTime());

@@ -50,7 +50,6 @@ exchange atomically and refuses an unmarked fixture or a pending command.
 | `benchmark label` | Export an exploratory eight-second frame sample; not release overhead evidence |
 | `resize 854 480` | Set the native window size |
 | `layout grid` / `layout list` | Open the selected feature layout |
-| `theme ROUND 0.33` / `theme SQUARE 0.19` | Apply factory/live appearance |
 | `font INTER AURORA_ONLY` / `font SANSSERIF OFF` | Change the live HUD font policy |
 | `detail animations` | Open a feature's native detail screen by ID |
 | `search <text>` | Focus and fill the native search field |
@@ -97,8 +96,8 @@ two 8-bit intensity levels. Supply a body ROI matching the window and GUI scale;
 the default ROI is for 1280x960 at scale 3, and scale 2 uses
 `--box 440,500,840,610`.
 
-Check both layouts at small and large sizes, factory ROUND/33% and live
-SQUARE/19%, details, focused search, and menu settings without a world. Repeat
+Check both layouts at small and large sizes, at factory and live background
+opacity, plus details, focused search, and menu settings without a world. Repeat
 on OpenGL and native Vulkan (VulkanMod on 26.1.2). Run `capture`, then `bindings`
 on a later tick; restart the same fixture and run `persisted` and `bindings`.
 This verifies native handlers and persistence; it does not synthesize OS keys

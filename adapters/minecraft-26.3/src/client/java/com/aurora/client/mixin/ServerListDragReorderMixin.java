@@ -7,6 +7,7 @@ import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.component.MaterialSurface;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.util.AuroraShapes;
+import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
@@ -381,7 +382,7 @@ public abstract class ServerListDragReorderMixin extends Screen {
             int accent = ThemeManager.color(ThemeToken.ACCENT_MARKER);
             int left = serverSelectionList.getRowLeft() - 2;
             int width = serverSelectionList.getRowWidth() + 4;
-            float radius = ThemeManager.current().roundness().radiusSmall();
+            float radius = AuroraTheme.RADIUS_SMALL;
             double lift = aurora$liftProgress();
             ctx.enableScissor(serverSelectionList.getX(), serverSelectionList.getY(),
                     serverSelectionList.getRight(), serverSelectionList.getBottom());

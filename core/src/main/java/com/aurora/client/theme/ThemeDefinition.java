@@ -1,6 +1,6 @@
 package com.aurora.client.theme;
 
-/** Persisted accent, mode, corner radius, blur radius and background density.
+/** Persisted accent, mode, blur radius and background density.
  * UnifiedPalette derives the material/action/selection roles; neutral Dark chrome
  * is independent of accent. ThemeMigrator retires legacy glassStyle values in
  * configs and profiles without changing the remaining preferences.
@@ -29,14 +29,6 @@ public class ThemeDefinition {
 
     /** Legacy persistence member; supported rendering and migrated preferences are DARK. */
     public ThemeMode mode = ThemeMode.DARK;
-
-    /**
-     * Corner radius in pixels ({@link ThemeRoundness#MIN_RADIUS}..
-     * {@link ThemeRoundness#MAX_RADIUS}), the Corner Radius slider. Every
-     * UI radius derives from it through {@link ThemeRoundness}. Replaced the
-     * {@code roundness} family name, which {@link ThemeMigrator} converts.
-     */
-    public int cornerRadius = ThemeRoundness.DEFAULT_RADIUS;
 
     /**
      * Blur radius of glass surfaces in GUI pixels
@@ -104,7 +96,6 @@ public class ThemeDefinition {
             copy.mode = ThemeMode.DARK; // legacy LIGHT preferences resolve to the supported appearance
             copy.accent = other.accent;
             copy.background = 0xFF000000 | other.background;
-            copy.cornerRadius = ThemeRoundness.clamp(other.cornerRadius);
             copy.blurRadius = normalizedBlurRadius(other.blurRadius);
             copy.backgroundOpacity = normalizedOpacity(other.backgroundOpacity);
         }

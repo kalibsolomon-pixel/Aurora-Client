@@ -147,7 +147,7 @@ public class KeybindSetting extends FeatureSetting {
         glassPassFrame = GlassSurface.frame();
         int btnX = controlX(x, width, BTN_W);
         int btnY = controlY(y, CONTROL_H, BTN_H);
-        float glassR = Math.min(BTN_H / 2f, ThemeManager.current().roundness().radiusSmall());
+        float glassR = Math.min(BTN_H / 2f, AuroraTheme.RADIUS_SMALL);
         passDrewPill = !disabled
                 && GlassSurface.control(ctx, btnX, btnY, BTN_W, BTN_H, glassR, listening);
     }
@@ -198,7 +198,7 @@ public class KeybindSetting extends FeatureSetting {
         // already on screen UNDER the dim and only its result matters
         // here; otherwise (legacy frame order) it is painted in place now
         // through the shared GlassSurface helper (identical calls).
-        float glassR = Math.min(BTN_H / 2f, ThemeManager.current().roundness().radiusSmall());
+        float glassR = Math.min(BTN_H / 2f, AuroraTheme.RADIUS_SMALL);
         boolean glassOk;
         if (glassPassFrame == GlassSurface.frame()) {
             glassOk = passDrewPill;

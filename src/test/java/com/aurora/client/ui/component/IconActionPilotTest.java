@@ -137,7 +137,7 @@ class IconActionPilotTest {
         assertTrue(s.contains("SemanticActionControl"), "semantic control backbone");
         assertTrue(s.contains("withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99)"),
                 "Button-family focus hairline");
-        assertTrue(s.contains("roundness().radiusSmall()"), "C-7 radius token");
+        assertTrue(s.contains("AuroraTheme.RADIUS_SMALL"), "C-7 radius token");
         assertTrue(s.contains("NATURAL_EM_GUI, Math.min(w, h) - 2"), "explicit finite per-instance em");
         assertFalse(s.contains("MinecraftSemanticFeedback.INSTANCE.play"),
                 "no local click sound — ownership lives in the SemanticAction");

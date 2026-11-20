@@ -366,30 +366,10 @@ public final class AuroraTheme {
     //  Sizes
     // ============================================================
 
-    /**
-     * Standard chamfer (corner radius) in pixels. Because corners are
-     * rendered as a binary-thresholded staircase of straight-line fills
-     * (no AA in the redesign), the only knob for "curve smoothness" is
-     * the number of stair steps along the arc, which equals this
-     * radius. At {@code 72} a panel corner spans 72 distinct stair
-     * steps — at GUI scale 3 that's 216 screen pixels of arc, which
-     * reads as a continuously curving silhouette indistinguishable
-     * from a true rounded rectangle.
-     *
-     * <p><b>Stage 3:</b> no longer a compile-time constant — this is a
-     * projection of the theme's {@link com.aurora.client.theme.ThemeRoundness}
-     * token, written exclusively by {@code ResolvedTheme.project()} (see the
-     * token-projection note above). The initializer mirrors the
-     * {@code ROUND} factory default so any read that races the first
-     * reload sees sane values.
-     */
-    public static int RADIUS = 10;
-
-    /** Larger chamfer for major page panels and sheets (theme-projected — see {@link #RADIUS}). */
-    public static int RADIUS_LARGE = 14;
-
-    /** Tight chamfer for compact controls (theme-projected — see {@link #RADIUS}). */
-    public static int RADIUS_SMALL = 6;
+    /** Rectangular UI chrome always has square corners. */
+    public static final int RADIUS = 0;
+    public static final int RADIUS_LARGE = RADIUS;
+    public static final int RADIUS_SMALL = RADIUS;
 
     /** Slider / toggle thumb radius — iOS UISwitch knob is 27 pt; we scale to the GUI. */
     public static final int KNOB_RADIUS = 8;

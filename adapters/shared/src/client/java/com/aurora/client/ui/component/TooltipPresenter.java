@@ -9,6 +9,7 @@ import com.aurora.client.ui.util.OverlayLayout;
 import com.aurora.client.ui.util.WordWrap;
 import com.aurora.client.util.AuroraAnim;
 import com.aurora.client.util.HoverAnim;
+import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -154,7 +155,7 @@ public final class TooltipPresenter {
         if (position == OverlayLayout.NO_POSITION) return;
         int x = OverlayLayout.x(position), y = OverlayLayout.y(position);
         graphics.nextStratum();
-        float radius = Math.min(ThemeManager.current().roundness().radius(), Math.min(boxWidth, boxHeight) * .5f);
+        float radius = Math.min(AuroraTheme.RADIUS, Math.min(boxWidth, boxHeight) * .5f);
         MaterialSurface.overlayFace(graphics, x, y, boxWidth, boxHeight, radius,
                 MaterialSurface.windowCornerClearance(radius, PAD_X, PAD_Y), alpha);
         int color = AuroraAnim.scaleAlpha(MaterialSurface.color(ThemeToken.ON_BACKGROUND), alpha);

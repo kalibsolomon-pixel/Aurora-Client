@@ -33,6 +33,7 @@ import com.aurora.client.util.AuroraAnim;
 import com.aurora.client.util.HoverAnim;
 import com.aurora.client.util.ScrollFade;
 import com.aurora.client.util.SmoothScroll;
+import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
@@ -105,12 +106,8 @@ import java.util.Map;
  * remain the only selection paths (selection has side effects like the
  * per-tab scroll reset), and cross-axis keys fall through to vanilla.
  *
- * <p>Phase C-5 (2026-09-20): SegmentedControl conformance closed the last
- * deferred peer-selection surface on this screen. The Theme entry's three
- * segmented rows (Mode, Corner Style, Glass Style — 7 peers) materialize
- * their component-owned controls through the same generic C-2 hosting loop
- * (zero screen-side segment logic) and rove via the C-3 seam; the layout
- * pair adopted the peer semantic primitive on its existing 20×20 painter
+ * <p>The list/grid pair shares the segmented control's peer semantics and
+ * keeps its 20?20 painter
  * (canonical 140 ms hover, focus hairline, one-click selection with a
  * silent no-op on the active layout, Left/Right ring).
  */
@@ -455,7 +452,7 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
 
         // HOSTABLE_NOW only: ask every inline component on every Settings
         // page for the semantic controls it already owns, in page order
-        // (Accent's peers, the Corner Style segments and the Text & Fonts
+        // (Accent's peers and the Text & Fonts
         // enums on Appearance; the Display Settings toggles, enums, HUD
         // Editor key and Copy Diagnostics on the other pages). Controls on
         // pages not shown stay unavailable through the availability sweep.
@@ -1013,7 +1010,7 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
         // the renderer declines (menu context with no world, screenshot
         // suppression, failure), the bevel frame keeps the same cached face.
         GlassSurface.beginGlassPass();
-        float radius = ThemeManager.current().roundness().radius();
+        float radius = AuroraTheme.RADIUS;
         GlassSurface.container(g, boxX(), boxY(), BOX_W, BOX_H, radius);
 
         // Chrome + tab materials. Tiles and the Settings tab's inline rows
@@ -1084,13 +1081,8 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
     private void paintGlassPass(GuiGraphicsExtractor g, List<Module> mods) {
         float bx = boxX(), by = boxY();
         ClipBand vp = contentViewport();
-        // C-7: every control-scaled chrome radius on this screen (chips,
-        // layout buttons, tiles) resolves through the SAME theme token in
-        // BOTH parent-owned and fallback paths — Square mode squares them all.
-        // The former literals (5/4/6) were pre-token survivals; the tile
-        // literal 6 equals radiusSmall's ROUND value, so only the chips
-        // (5→6) and layout buttons (4→6) shift one/two ROUND corner pixels.
-        float ctrlRadius = ThemeManager.current().roundness().radiusSmall();
+        // The parent-owned and fallback paths share the compact-control radius.
+        float ctrlRadius = AuroraTheme.RADIUS_SMALL;
         for (int i = 0; i < 2; i++) {
             float catY = navY(i);
             float catX = navX(i);
@@ -1156,7 +1148,7 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
         Font tr = this.font;
         // Same token as paintGlassPass's glass surfaces — the flat fallback
         // corners and the glass corners derive from one radius (C-7).
-        float ctrlRadius = ThemeManager.current().roundness().radiusSmall();
+        float ctrlRadius = AuroraTheme.RADIUS_SMALL;
 
         // Window identity: AURORA text only (owner ruling 2026-10-06), in the title role so it
         // reads as the window's name rather than one more label (UI polish 2026-11-14).
@@ -1300,7 +1292,7 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
         // Same theme-resolved control radius the glass pass paints the tiles
         // with (C-7 — the former literal 6 equals radiusSmall's ROUND value,
         // so ROUND pixels are unchanged and SQUARE squares the tiles).
-        float tileRadius = ThemeManager.current().roundness().radiusSmall();
+        float tileRadius = AuroraTheme.RADIUS_SMALL;
         for (int i = 0; i < mods.size(); i++) {
             Module m = mods.get(i);
             var bounds = cardBounds(i);
@@ -1657,7 +1649,7 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
                                   float hoverT, boolean focused, boolean list, boolean btnGlass) {
         // Same theme-resolved control radius as the glass pass's surfaces of
         // this pair (C-7 — was a literal 4 that ignored Square mode).
-        float ctrlRadius = ThemeManager.current().roundness().radiusSmall();
+        float ctrlRadius = AuroraTheme.RADIUS_SMALL;
         // Surface: the list/grid pair is a segmented control — RAISED glass
         // (painted pre-dim by paintGlassPass), accent-STAINED on the active
         // one. Content here: the canonical hover wash on glass (both peers),
@@ -1991,8 +1983,6 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
         double maxScroll = computeMaxScroll();
         if (maxScroll <= 0) return;
         ScrollbarChrome.Thumb thumb = thumb(maxScroll);
-        // The thumb is a capsule in the toggle-track/slider-track family; its
-        // corners follow the theme's Corner Radius like theirs (ScrollbarChrome).
         ScrollbarChrome.track(g, (int) mainX() + contentWidth() + UiDensity.SCROLLBAR_GAP, viewTop(), viewBot() - viewTop(), ThemeToken.ON_BACKGROUND);
         ScrollbarChrome.draw(g, (int) mainX() + contentWidth() + UiDensity.SCROLLBAR_GAP, thumb,
                 scrolls[selectedCategory].isDragging(), ThemeToken.ON_BACKGROUND);

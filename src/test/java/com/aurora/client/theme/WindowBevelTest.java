@@ -77,10 +77,10 @@ class WindowBevelTest {
         for (int viewport : new int[]{300, 500}) {
             var frame = UiDensity.window(viewport, viewport);
             assertEquals(viewport == 300, frame.width() < 320);
-            for (int radius : new int[]{0, ThemeRoundness.DEFAULT_RADIUS}) {
+            for (int radius : new int[]{0, 10}) {
                 // Main window content keeps the shared frame room (2026-11-18).
                 assertContentClear(frame.width(), frame.height(), radius, UiDensity.FRAME_EDGE, UiDensity.FRAME_EDGE);
-                assertContentClear(84, 48, ThemeRoundness.of(radius).radiusSmall(), 2, 2);
+                assertContentClear(84, 48, radius * 3 / 5, 2, 2);
             }
         }
     }
@@ -123,10 +123,10 @@ class WindowBevelTest {
     @Test void retiredBevelLevelsLeaveConfigsAndProfiles() {
         var log = LoggerFactory.getLogger(WindowBevelTest.class);
         for (String member : new String[]{"", ",\"windowBevel\":null", ",\"windowBevel\":{}", ",\"windowBevel\":\"DEEP\""}) {
-            String theme = "{\"cornerRadius\":10,\"blurRadius\":9" + member + "}";
+            String theme = "{\"blurRadius\":9" + member + "}";
             var config = JsonParser.parseString(ThemeMigrator.migrateConfigJson("{\"theme\":" + theme + "}", log)).getAsJsonObject();
             assertFalse(config.getAsJsonObject("theme").has("windowBevel"), member);
-            assertEquals(10, config.getAsJsonObject("theme").get("cornerRadius").getAsInt());
+            assertEquals(9, config.getAsJsonObject("theme").get("blurRadius").getAsInt());
             var fields = new HashMap<>(java.util.Map.of("theme", JsonParser.parseString(theme)));
             ThemeMigrator.migrateProfileFields(fields, log);
             assertFalse(fields.get("theme").getAsJsonObject().has("windowBevel"), member);
