@@ -113,7 +113,12 @@ No frame-rate benefit, about 5% less heap. Not recommended as a performance flag
 - **Sodium 0.9.2.** Two `.requires("sodium")` prototypes, both dropped.
   - *Ordered expiry in `ClonedChunkSectionCache.cleanup`:* no consistent gain.
   - *`Integer.expand` interleave in Sodium's section tree:* noisy results with three dev clients sharing the machine. It also compiles to PDEP, which is microcoded and very slow on AMD Zen 1 and Zen 2, so it could regress on those CPUs.
-- **GUI item atlas (the largest cost in a real PvP loadout).** With enchanted weapons, golden apples and enchanted armor in the hotbar and armor HUD on the owner's 26.2 config, `GuiRenderer.prepareItemElements` takes 15.3% of render-thread samples. Every glint item is redrawn into the atlas each frame, with a full feature pass per item. ImmediatelyFast batches only the clears. Batching the draws is in progress on its own branch.
+- **GUI item atlas (the largest cost in a real PvP loadout).** With enchanted weapons, golden apples and enchanted armor in the hotbar and armor HUD on the owner's 26.2 config, `GuiRenderer.prepareItemElements` takes 15.3% of render-thread samples. Every glint item is redrawn into the atlas each frame, with a full feature pass per item. ImmediatelyFast batches only the clears.
+  - *Batching prototype* (local branch `perf/gui-item-batch`, not pushed). The per-slot scissor and glint preparation have to stay per slot: the oversized flag comes from the model, and glint reads the clock while it prepares. That leaves upload and execution to batch.
+  - *Measured* (26.2 OpenGL ABBA): atlas preparation 18.4% and 19.6% off, 17.0% and 18.0% on. The animated atlas was byte-identical at GUI scales 3 and 4.
+  - *Not shippable yet.* A static-atlas difference in a mixed loadout and a Vulkan startup crash are unresolved, and the prototype drives vanilla's feature internals directly.
+  - *A larger lever* is a visible, default-off option that redraws glint items at a capped rate. It would need ImmediatelyFast's animated atlas, which clears every frame, to step aside.
+- **Blaze3D dispatch** (local branch `perf/blaze-dispatch-retry`, not pushed). Prototypes reuse `FrameBufferCache`'s lookup key while the attachments are unchanged, plus a Vulkan barrier change. Both are unmeasured: the agent hit its usage limit.
 
 **Not changed.**
 - **Blaze3D's OpenGL dispatch.** `trySetup`, `bindVertexArray` and `createRenderPass` cost 6–8% of render-thread samples on the HUD, on uniform and sampler hash maps per draw.
@@ -148,3 +153,6 @@ On a full panel the union box cannot prune anything, so the search stays linear.
 
 - **Hitboxes beyond render distance.** Resolved in the second pass (above): the owner approved limiting hitboxes to entities the game draws.
 - **GPU-side items.** The deferred list in the [world-render report](2026-11-12-perf-world-render.md) still needs GPU-bound evidence. This machine runs the owner's instance at about 2,000 fps.
+- **Item Physics never smooths.** `ItemEntityRendererExtractMixin` reads the previous frame's ground factor from a map keyed by render state, but vanilla extracts a new `ItemEntityRenderState` every frame. So the landing ease and the "settled" latch never carry over: landings snap, and a settled item that starts to fall tumbles again. A fix would key the carried state by the item entity. Its 0.15-per-frame step is also frame-rate dependent. It is a visible change, so it waits for a decision.
+- **Crosshair indicator through walls.** `CrosshairRenderer.isAimingAtEntity` raycasts for living entities within reach and ignores blocks, so the indicator can light up for an entity behind a wall. Vanilla's pick respects blocks. It also costs about 1% in crowds. Using vanilla's pick would change its behaviour during attack swings.
+- **Hitboxes and occlusion.** Hitboxes now follow vanilla's render distance. They could also follow vanilla's visible-entity list after Sodium and EntityCulling occlusion: boxes in occluded sections would disappear, as F3+B's do, and hitbox cost in crowds would fall further. That is a visible change for the owner to decide.
