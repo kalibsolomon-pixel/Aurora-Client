@@ -1,6 +1,5 @@
 package com.aurora.client.util;
 
-import com.mojang.blaze3d.pipeline.RenderPipeline;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.client.gui.render.TextureSetup;
 import net.minecraft.client.renderer.state.gui.GuiElementRenderState;
@@ -30,7 +29,9 @@ public final class GuiElementOrder implements Comparator<GuiElementRenderState> 
             if (c == 0) c = Integer.compare(sa.right(), sb.right());
             if (c != 0) return c;
         }
-        RenderPipeline pa = a.pipeline(), pb = b.pipeline();
+        // var: the pipeline class moved package in 26.3.
+        var pa = a.pipeline();
+        var pb = b.pipeline();
         if (pa != pb) {
             int c = Integer.compare(pa.getSortKey(), pb.getSortKey());
             if (c != 0) return c;
