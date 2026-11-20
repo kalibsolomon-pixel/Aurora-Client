@@ -49,6 +49,9 @@ public final class AuroraFontQuality {
      * the ones left at scale 1 (blocky section headings and titles, council 2026-11-18). */
     private static final Map<GlyphProvider, Integer> SCALES = Collections.synchronizedMap(new WeakHashMap<>());
     private static final ThreadLocal<Integer> LOADING_SCALE = new ThreadLocal<>();
+    /** Counts registrations, so a frame re-reads {@link #SCALES} only after one (or a scale change), not every frame. */
+    private static final java.util.concurrent.atomic.AtomicInteger REGISTRATIONS = new java.util.concurrent.atomic.AtomicInteger();
+    private static int checkedRegistrations = -1, checkedScale;
 
     private static int guiScale() {
         Minecraft mc = Minecraft.getInstance();
@@ -69,6 +72,7 @@ public final class AuroraFontQuality {
         Integer scale = LOADING_SCALE.get();
         LOADING_SCALE.remove();
         SCALES.put(provider, scale != null ? scale : rasterScale);
+        REGISTRATIONS.incrementAndGet();
     }
 
     /** Whether any live provider was rasterized for a scale other than {@code scale}. */
@@ -91,7 +95,17 @@ public final class AuroraFontQuality {
     /** Frame boundary (from {@code GlassSurface.beginFrame()}): re-rasterize when the GUI scale has changed. */
     public static void beginFrame() {
         int scale = guiScale();
-        if (rasterScale == 0 || PROVIDERS.isEmpty() || (scale == rasterScale && !anyStale(scale))) return;
+        if (rasterScale == 0 || PROVIDERS.isEmpty()) return;
+        if (scale == rasterScale) {
+            // Read before the scan: a provider registered during it bumps the count, so the next frame looks again.
+            int registered = REGISTRATIONS.get();
+            if (registered == checkedRegistrations && scale == checkedScale) return;
+            if (!anyStale(scale)) {
+                checkedRegistrations = registered;
+                checkedScale = scale;
+                return;
+            }
+        }
         if (MixinHealth.failed("TrueTypeProviderDefinitionMixin") || MixinHealth.failed("FontManagerAccessor")
                 || MixinHealth.failed("FontSetAccessor") || MixinHealth.failed("MinecraftFontManagerAccessor")) {
             rasterScale = scale; // cannot swap; stop retrying every frame
