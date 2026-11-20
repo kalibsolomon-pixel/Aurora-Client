@@ -11,21 +11,24 @@ import java.util.function.UnaryOperator;
 
 /**
  * GUI Layering (ADR 0009): a {@code GuiRenderState} layer list that also
- * keeps its elements' bounds as flat ints and their union. Vanilla finds an
- * element's layer by asking every element of every layer above it whether
- * their bounds intersect; this list answers the same question from the union
- * and the int array, without a call per element.
+ * tracks the union of its elements' bounds. Queries outside the union can
+ * skip the entire layer. Within the union, the first two elements use their
+ * existing rectangles and additional elements use packed coordinates.
  *
  * <p>Bounds are read once, when an element is appended. Any other change to
  * the list stops the index, and {@link #indexed()} sends the caller back to
  * vanilla's own scan, so the answer is always the one vanilla would give.
  */
 public final class GuiAreaList<E extends ScreenArea> extends ArrayList<E> {
-    /** Allocated on the first bounds: most layers hold one or two elements, and lists live one frame. */
+    // Most HUD layers hold only a couple of elements. Their immutable bounds
+    // already exist; allocate the flat index only for additional rectangles.
+    private ScreenRectangle first, second;
     private int[] rects;
     private int count;
     private int left = Integer.MAX_VALUE, top = Integer.MAX_VALUE, right = Integer.MIN_VALUE, bottom = Integer.MIN_VALUE;
     private boolean indexed = true;
+
+    public GuiAreaList() { super(3); }
 
     @Override public boolean add(E element) {
         super.add(element);
@@ -35,11 +38,20 @@ public final class GuiAreaList<E extends ScreenArea> extends ArrayList<E> {
 
     private void record(ScreenRectangle bounds) {
         if (bounds == null) return;
-        int i = count * 4;
-        if (rects == null) rects = new int[8];
-        else if (i == rects.length) rects = java.util.Arrays.copyOf(rects, i * 2);
         int l = bounds.left(), t = bounds.top(), r = bounds.right(), b = bounds.bottom();
-        rects[i] = l; rects[i + 1] = t; rects[i + 2] = r; rects[i + 3] = b;
+        if (count == 0) {
+            first = bounds;
+            left = l; top = t; right = r; bottom = b;
+            count = 1;
+            return;
+        }
+        if (count == 1) second = bounds;
+        else {
+            int i = (count - 2) * 4;
+            if (rects == null) rects = new int[8];
+            else if (i == rects.length) rects = java.util.Arrays.copyOf(rects, i * 2);
+            rects[i] = l; rects[i + 1] = t; rects[i + 2] = r; rects[i + 3] = b;
+        }
         count++;
         left = Math.min(left, l); top = Math.min(top, t);
         right = Math.max(right, r); bottom = Math.max(bottom, b);
@@ -52,11 +64,12 @@ public final class GuiAreaList<E extends ScreenArea> extends ArrayList<E> {
     public boolean intersects(ScreenRectangle query) {
         int ql = query.left(), qt = query.top(), qr = query.right(), qb = query.bottom();
         if (left >= qr || right <= ql || top >= qb || bottom <= qt) return false;
+        if (count == 1) return true; // The union is the only rectangle.
         // Newest first: an element usually lands on or next to what was just drawn.
-        for (int i = count * 4 - 4; i >= 0; i -= 4) {
+        for (int i = (count - 3) * 4; i >= 0; i -= 4) {
             if (rects[i] < qr && rects[i + 2] > ql && rects[i + 1] < qb && rects[i + 3] > qt) return true;
         }
-        return false;
+        return second.intersects(query) || first.intersects(query);
     }
 
     // Anything but appending (or reordering) makes the index stale.
@@ -84,6 +97,7 @@ public final class GuiAreaList<E extends ScreenArea> extends ArrayList<E> {
     }
     @Override public void clear() {
         super.clear();
+        first = second = null;
         count = 0;
         left = top = Integer.MAX_VALUE;
         right = bottom = Integer.MIN_VALUE;

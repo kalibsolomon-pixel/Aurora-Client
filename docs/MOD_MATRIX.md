@@ -9,6 +9,22 @@ The port-checkpoint measurements below are retained as historical evidence.
 Iris applies only to OpenGL; native Vulkan shader mods need separate pins and
 acceptance. Forced-Iris Vulkan failures below are excluded from required rows.
 
+## Performance mod ownership
+
+Fabric checks these mod IDs at startup. Aurora skips the listed hooks for the
+session and records the owner in diagnostics. Each saved preference still applies
+when the owning mod is absent.
+
+| Installed mod | Aurora optimization that yields | Shared work |
+|---|---|---|
+| Dynamic FPS (`dynamic_fps`) | Unfocused frame limit | Chooses the effective limit when the window loses focus |
+| Polytone (`polytone`) | GUI layering | Selects GUI depth nodes |
+| Gnetum (`gnetum`) | GUI layering | Routes HUD submissions into cached and live layers |
+| Modern UI (`modernui`) or Caxton (`caxton`) | Left-to-right text | Owns visual ordering of styled text |
+
+The [GUI, text and map measurements](reports/2026-11-20-gui-text-map.md) record
+the mod combinations and backends exercised.
+
 ## How to run it
 
 1. Back up `run/config/aurora.json`, `run/config/profiles/` and `run/options.txt`.

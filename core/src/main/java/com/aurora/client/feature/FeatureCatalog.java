@@ -435,12 +435,17 @@ public final class FeatureCatalog {
                 .gates("perfGuiGlintBaking");
         mixin("SpriteContentsMipsAccessor", "freeing uploaded sprite mipmaps", "performance").gates("perfFreeSpriteMipmaps");
         mixin("TextureAtlasFreeMipsMixin", "freeing uploaded sprite mipmaps", "performance").gates("perfFreeSpriteMipmaps");
-        mixin("GuiRenderStateNodeMixin", "faster GUI layering", "performance").gates("perfGuiLayering");
-        mixin("GuiRenderStateLayeringMixin", "faster GUI layering", "performance").gates("perfGuiLayering");
-        mixin("GuiRendererElementOrderMixin", "faster GUI layering", "performance").gates("perfGuiLayering");
+        // Polytone selects custom depth nodes; Gnetum routes HUD submissions into its own layers.
+        mixin("GuiRenderStateNodeMixin", "faster GUI layering", "performance")
+                .gates("perfGuiLayering").yieldsTo("polytone", "gnetum");
+        mixin("GuiRenderStateLayeringMixin", "faster GUI layering", "performance")
+                .gates("perfGuiLayering").yieldsTo("polytone", "gnetum");
+        mixin("GuiRendererElementOrderMixin", "faster GUI layering", "performance")
+                .gates("perfGuiLayering").yieldsTo("polytone", "gnetum");
         mixin("FormattedBidiReorderMixin", "skipping bidirectional reordering for left-to-right text", "performance")
-                .gates("perfLeftToRightText");
-        mixin("FramerateLimitUnfocusedMixin", "the unfocused frame limit", "performance").gates("perfUnfocusedLimit");
+                .gates("perfLeftToRightText").yieldsTo("modernui", "caxton");
+        mixin("FramerateLimitUnfocusedMixin", "the unfocused frame limit", "performance")
+                .gates("perfUnfocusedLimit").yieldsTo("dynamic_fps");
         for (String hitreg : List.of("AttackMixin", "DamageMixin", "EntityAccessor", "NetworkMixin",
                 "PlayerMixin", "ServerMixin")) {
             // Better Hitreg's timing core only works whole: one missing piece
