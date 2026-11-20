@@ -71,6 +71,7 @@ public final class WorldMapStorage {
     public static final int BLOCKS = CHUNKS * 16;              // 512
     public static final int PIXELS = BLOCKS * BLOCKS;          // 262144
     public static final int STAMP_COUNT = CHUNKS * CHUNKS;     // 1024
+    private static final int IO_BUFFER_BYTES = 64 * 1024;
     // Immutable borrowed zero payload for missing files; avoids 1 MiB allocation per
     // unexplored region while panning. Consumers only read/copy these arrays.
     private static final long[] EMPTY_STAMPS = new long[STAMP_COUNT];
@@ -242,8 +243,10 @@ public final class WorldMapStorage {
     private static void writeRegion(Path target, long[] stamps, int[] pixels) throws IOException {
         Files.createDirectories(target.getParent());
         Path tmp = target.resolveSibling(target.getFileName() + ".tmp");
-        try (DataOutputStream out = new DataOutputStream(new GZIPOutputStream(
-                new BufferedOutputStream(Files.newOutputStream(tmp), 1 << 16)))) {
+        // Batch the primitive writes before they reach the compressor.
+        try (var file = Files.newOutputStream(tmp);
+             var out = new DataOutputStream(new BufferedOutputStream(
+                     new GZIPOutputStream(file, IO_BUFFER_BYTES), IO_BUFFER_BYTES))) {
             out.writeInt(MAGIC);
             out.writeByte(VERSION);
             for (long stamp : stamps) out.writeLong(stamp);
@@ -260,8 +263,9 @@ public final class WorldMapStorage {
 
     private static LoadedRegion readRegion(long key, Path target) throws IOException {
         if (!Files.exists(target)) return null;
-        try (DataInputStream in = new DataInputStream(new GZIPInputStream(
-                new BufferedInputStream(Files.newInputStream(target), 1 << 16)))) {
+        try (var file = Files.newInputStream(target);
+             var in = new DataInputStream(new BufferedInputStream(
+                     new GZIPInputStream(file, IO_BUFFER_BYTES), IO_BUFFER_BYTES))) {
             if (in.readInt() != MAGIC) throw new IOException("Wrong region magic");
             byte version = in.readByte();
             if (version != 1 && version != 2) throw new IOException("Unsupported region version " + version);

@@ -57,4 +57,26 @@ class MinimapGridTest {
             }
         } finally { cache.dispose(); }
     }
+
+    @Test void northUpRepaintMatchesAffineSteppingAtCellAndGridEdges() throws Exception {
+        int[] grid = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+        UiLayerCache cache = new UiLayerCache();
+        try {
+            cache.ensureSize(41, 27);
+            var field = UiLayerCache.class.getDeclaredField("image");
+            field.setAccessible(true);
+            for (double step : new double[]{0.1, 0.25, 1.0, -0.3}) {
+                double start = step > 0 ? -0.15 : 3.25;
+                cache.writeAffineAbgr(grid, 3, start, start, step, 0, -0.0, step, 137, 42);
+                int[] result = ((NativeImage) field.get(cache)).getPixelsABGR();
+                for (int y = 0; y < 27; y++) {
+                    double v = start + y * step, u = start;
+                    for (int x = 0; x < 41; x++, u += step) {
+                        int color = u < 0 || v < 0 || u >= 3 || v >= 3 ? 42 : grid[(int)v * 3 + (int)u];
+                        assertEquals(137 << 24 | color, result[y * 41 + x]);
+                    }
+                }
+            }
+        } finally { cache.dispose(); }
+    }
 }

@@ -52,6 +52,7 @@ public final class UiLayerCache implements RenderUtil.RectSink {
     private int captureX, captureY;
     private long version = Long.MIN_VALUE;
     private int[] scaledRow;
+    private int[] gridColumns;
     private int[] maskRuns;
     private int maskW, maskH;
     private float maskRadius;
@@ -298,6 +299,34 @@ public final class UiLayerCache implements RenderUtil.RectSink {
         if (scaledRow == null || scaledRow.length != w) scaledRow = new int[w];
         IntBuffer pixels = MemoryUtil.memIntBuffer(image.getPointer(), w * h);
         int a = alpha << 24, outside = a | (fallback & 0xFFFFFF);
+        if (duY == 0 && dvX == 0) {
+            // North-up: every device row uses the same columns, and consecutive
+            // rows often sample the same terrain cells at device resolution.
+            if (gridColumns == null || gridColumns.length != w) gridColumns = new int[w];
+            double u = u0;
+            for (int x = 0; x < w; x++, u += duX) {
+                gridColumns[x] = u < 0 || (int) u >= n ? -1 : (int) u;
+            }
+            int previousRow = -2;
+            for (int y = 0; y < h; y++) {
+                double v = v0 + y * dvY;
+                int row = v < 0 || (int) v >= n ? -1 : (int) v;
+                if (row != previousRow) {
+                    if (row < 0) {
+                        Arrays.fill(scaledRow, outside);
+                    } else {
+                        int offset = row * n;
+                        for (int x = 0; x < w; x++) {
+                            int col = gridColumns[x];
+                            scaledRow[x] = col < 0 ? outside : a | (grid[offset + col] & 0xFFFFFF);
+                        }
+                    }
+                    previousRow = row;
+                }
+                pixels.put(scaledRow);
+            }
+            return;
+        }
         for (int y = 0; y < h; y++) {
             double u = u0 + y * duY, v = v0 + y * dvY;
             for (int x = 0; x < w; x++, u += duX, v += dvX) {
@@ -460,7 +489,7 @@ public final class UiLayerCache implements RenderUtil.RectSink {
         h = -1;
         captureX = captureY = 0;
         version = Long.MIN_VALUE;
-        scaledRow = null; maskRuns = null;
+        scaledRow = null; gridColumns = null; maskRuns = null;
     }
 
     private void releaseTexture() {
