@@ -156,7 +156,10 @@ and the GPU-side items wait for GPU-bound tester evidence; [evidence](reports/20
 `perf/client-throughput` profiles the owner's reference instance: faster world map region I/O,
 capture queue and north-up repaints, no per-frame font scale scan, hitboxes only at vanilla render
 distance, GUI Layering and Left-to-Right Text fast paths, and HUD/crosshair trims;
-[evidence](reports/2026-11-20-perf-reference-instance.md).
+[evidence](reports/2026-11-20-perf-reference-instance.md). `perf/vanilla-hotpaths-2` follows with
+block-transferred map regions, fewer GUI layer and text allocations, and startup stand-down of those
+optimizations for Dynamic FPS, Polytone, Gnetum, Modern UI and Caxton;
+[evidence](reports/2026-11-20-gui-text-map.md).
 
 ## Next work
 

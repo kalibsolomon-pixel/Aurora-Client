@@ -3,11 +3,10 @@ package com.aurora.client.worldmap.storage;
 import com.aurora.client.AuroraClient;
 import net.fabricmc.loader.api.FabricLoader;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -243,14 +242,20 @@ public final class WorldMapStorage {
     private static void writeRegion(Path target, long[] stamps, int[] pixels) throws IOException {
         Files.createDirectories(target.getParent());
         Path tmp = target.resolveSibling(target.getFileName() + ".tmp");
-        // Batch the primitive writes before they reach the compressor.
         try (var file = Files.newOutputStream(tmp);
-             var out = new DataOutputStream(new BufferedOutputStream(
-                     new GZIPOutputStream(file, IO_BUFFER_BYTES), IO_BUFFER_BYTES))) {
+             var out = new DataOutputStream(new GZIPOutputStream(file, IO_BUFFER_BYTES))) {
             out.writeInt(MAGIC);
             out.writeByte(VERSION);
-            for (long stamp : stamps) out.writeLong(stamp);
-            for (int pixel : pixels) out.writeInt(pixel);
+            // ByteBuffer's default big-endian order matches the original DataOutput format.
+            var block = ByteBuffer.allocate(IO_BUFFER_BYTES);
+            block.asLongBuffer().put(stamps);
+            out.write(block.array(), 0, stamps.length * Long.BYTES);
+            var ints = block.asIntBuffer();
+            for (int offset = 0; offset < pixels.length; offset += ints.capacity()) {
+                int count = Math.min(ints.capacity(), pixels.length - offset);
+                ints.put(0, pixels, offset, count);
+                out.write(block.array(), 0, count * Integer.BYTES);
+            }
         }
         try {
             Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
@@ -264,15 +269,21 @@ public final class WorldMapStorage {
     private static LoadedRegion readRegion(long key, Path target) throws IOException {
         if (!Files.exists(target)) return null;
         try (var file = Files.newInputStream(target);
-             var in = new DataInputStream(new BufferedInputStream(
-                     new GZIPInputStream(file, IO_BUFFER_BYTES), IO_BUFFER_BYTES))) {
+             var in = new DataInputStream(new GZIPInputStream(file, IO_BUFFER_BYTES))) {
             if (in.readInt() != MAGIC) throw new IOException("Wrong region magic");
             byte version = in.readByte();
             if (version != 1 && version != 2) throw new IOException("Unsupported region version " + version);
             long[] stamps = new long[STAMP_COUNT];
-            for (int i = 0; i < STAMP_COUNT; i++) stamps[i] = in.readLong();
+            var block = ByteBuffer.allocate(IO_BUFFER_BYTES);
+            in.readFully(block.array(), 0, stamps.length * Long.BYTES);
+            block.asLongBuffer().get(stamps);
             int[] pixels = new int[PIXELS];
-            for (int i = 0; i < PIXELS; i++) pixels[i] = in.readInt();
+            var ints = block.asIntBuffer();
+            for (int offset = 0; offset < pixels.length; offset += ints.capacity()) {
+                int count = Math.min(ints.capacity(), pixels.length - offset);
+                in.readFully(block.array(), 0, count * Integer.BYTES);
+                ints.get(0, pixels, offset, count);
+            }
             if (version == 2) {
                 // Legacy experimental cave-layer build: a trailing optional
                 // second layer follows. Skip it (nothing is read after this

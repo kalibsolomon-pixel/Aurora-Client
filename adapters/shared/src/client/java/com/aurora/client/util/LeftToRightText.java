@@ -30,37 +30,75 @@ public final class LeftToRightText {
      * or null when the text has a character that could change it.
      */
     public static @Nullable FormattedCharSequence reorder(FormattedText text) {
-        StringBuilder plain = new StringBuilder();
-        List<Style> styles = new ArrayList<>();
-        int[][] starts = {new int[8]};
-        boolean[] leftToRight = {true};
-        text.visit((style, contents) -> {
-            boolean whole = StringDecomposer.iterateFormatted(contents, style, (position, charStyle, codePoint) -> {
-                if (codePoint >= 0x0590 && !leftToRight(codePoint)) {
-                    leftToRight[0] = false;
-                    return false;
-                }
-                int runs = styles.size();
-                // A run continues while each character's style equals the run's first one,
-                // as SubStringSource.substring compares them.
-                if (runs == 0 || !charStyle.equals(styles.get(runs - 1))) {
-                    if (runs == starts[0].length) starts[0] = java.util.Arrays.copyOf(starts[0], runs * 2);
-                    starts[0][runs] = plain.length();
-                    styles.add(charStyle);
-                }
-                plain.appendCodePoint(codePoint);
-                return true;
-            });
-            return whole ? Optional.empty() : STOP;
-        }, Style.EMPTY);
-        if (!leftToRight[0]) return null;
-        String all = plain.toString();
-        List<FormattedCharSequence> parts = new ArrayList<>(styles.size());
-        for (int i = 0; i < styles.size(); i++) {
-            int end = i + 1 < styles.size() ? starts[0][i + 1] : all.length();
-            parts.add(FormattedCharSequence.forward(all.substring(starts[0][i], end), styles.get(i)));
+        var runs = new Runs();
+        return text.visit(runs, Style.EMPTY).isPresent() ? null : runs.finish();
+    }
+
+    private static final class Runs implements FormattedText.StyledContentConsumer<Boolean> {
+        private Style style;
+        private String literal;
+        private StringBuilder buffer;
+        private List<FormattedCharSequence> completed;
+
+        @Override public Optional<Boolean> accept(Style next, String contents) {
+            if (contents.isEmpty()) return Optional.empty();
+            for (int i = 0; i < contents.length(); i++) {
+                char ch = contents.charAt(i);
+                if (ch == '\u00a7') return formatted(next, contents);
+                if (ch < 0x0590) continue;
+                int cp = contents.codePointAt(i);
+                if (Character.isSupplementaryCodePoint(cp)) i++;
+                else if (Character.isSurrogate(ch)) return formatted(next, contents);
+                if (!leftToRight(cp)) return STOP;
+            }
+            select(next);
+            if (literal == null && buffer == null) literal = contents;
+            else writable().append(contents);
+            return Optional.empty();
         }
-        return FormattedCharSequence.composite(parts);
+
+        // Let vanilla interpret section codes and replace unpaired surrogates
+        // inside their original component before joining any neighbouring text.
+        private Optional<Boolean> formatted(Style next, String contents) {
+            return StringDecomposer.iterateFormatted(contents, next, (position, charStyle, cp) -> {
+                if (cp >= 0x0590 && !leftToRight(cp)) return false;
+                select(charStyle);
+                writable().appendCodePoint(cp);
+                return true;
+            }) ? Optional.empty() : STOP;
+        }
+
+        // Sequences restart character indices on a style change. Adjacent equal
+        // styles must share a run even across component boundaries.
+        private void select(Style next) {
+            if (style == next || next.equals(style)) return;
+            if (style != null) {
+                if (completed == null) completed = new ArrayList<>();
+                completed.add(sequence());
+                literal = null;
+                buffer = null;
+            }
+            style = next;
+        }
+
+        private StringBuilder writable() {
+            if (buffer == null) {
+                buffer = literal == null ? new StringBuilder() : new StringBuilder(literal);
+                literal = null;
+            }
+            return buffer;
+        }
+
+        private FormattedCharSequence sequence() {
+            return FormattedCharSequence.forward(buffer == null ? literal : buffer.toString(), style);
+        }
+
+        private FormattedCharSequence finish() {
+            if (style == null) return FormattedCharSequence.EMPTY;
+            if (completed == null) return sequence();
+            completed.add(sequence());
+            return FormattedCharSequence.composite(completed);
+        }
     }
 
     /**

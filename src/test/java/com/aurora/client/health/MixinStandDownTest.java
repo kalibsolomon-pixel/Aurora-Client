@@ -56,6 +56,29 @@ class MixinStandDownTest {
         }
     }
 
+    @Test void dynamicFpsOwnsTheUnfocusedFrameLimit() {
+        var limit = FeatureCatalog.mixin("FramerateLimitUnfocusedMixin");
+        assertNull(limit.standDownReason(Set.of("sodium", "immediatelyfast")::contains));
+        assertEquals("handled by dynamic_fps", limit.standDownReason(Set.of("dynamic_fps")::contains));
+    }
+
+    @Test void guiAndTextOptimizationsYieldIndependently() {
+        var text = FeatureCatalog.mixin("FormattedBidiReorderMixin");
+        var layers = List.of("GuiRenderStateNodeMixin", "GuiRenderStateLayeringMixin", "GuiRendererElementOrderMixin");
+        for (String owner : List.of("polytone", "gnetum")) {
+            var loaded = Set.of(owner);
+            assertNull(text.standDownReason(loaded::contains));
+            for (String layer : layers) {
+                assertEquals("handled by " + owner, FeatureCatalog.mixin(layer).standDownReason(loaded::contains));
+            }
+        }
+        for (String owner : List.of("modernui", "caxton")) {
+            var loaded = Set.of(owner);
+            assertEquals("handled by " + owner, text.standDownReason(loaded::contains));
+            for (String layer : layers) assertNull(FeatureCatalog.mixin(layer).standDownReason(loaded::contains));
+        }
+    }
+
     @Test void everyPerformanceGateIsAPerfFieldKeptOutOfProfiles() {
         for (FeatureCatalog.MixinBinding b : FeatureCatalog.mixins()) {
             if (!b.features().contains("performance")) continue;

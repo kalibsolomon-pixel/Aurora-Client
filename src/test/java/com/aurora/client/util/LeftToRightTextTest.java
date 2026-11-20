@@ -85,4 +85,15 @@ class LeftToRightTextTest {
         assertNotNull(LeftToRightText.reorder(FormattedText.of("")));
         assertEquals(visits(FormattedBidiReorder.reorder(FormattedText.of(""), false)), visits(LeftToRightText.reorder(FormattedText.of(""))));
     }
+
+    @Test void sameStyleFragmentsRetainVanillaFormattingAndVisitIndices() {
+        for (FormattedText text : List.of(
+                Component.literal("A\ud83d").append(Component.literal("\ude00B")),
+                Component.literal("A").append("漢字").append("😀").append("B"),
+                Component.literal("prefix").append("§c").append("suffix"),
+                Component.literal("one §a").append(Component.literal("two").withStyle(ChatFormatting.GREEN))
+                        .append("§rthree"))) {
+            assertEquals(visits(FormattedBidiReorder.reorder(text, false)), visits(LeftToRightText.reorder(text)));
+        }
+    }
 }
