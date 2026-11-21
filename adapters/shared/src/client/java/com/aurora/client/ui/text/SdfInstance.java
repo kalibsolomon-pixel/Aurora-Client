@@ -1,7 +1,6 @@
 package com.aurora.client.ui.text;
 
 import com.aurora.client.compat.EphemeraBridge;
-import com.aurora.client.ui.util.SdfTextMath;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.gui.font.TextRenderable;
 import net.minecraft.network.chat.Style;
@@ -12,6 +11,7 @@ abstract class SdfInstance implements TextRenderable.Styled {
     private final float penX, penY, advance, boldOffset, shadowOffset;
     private final float left, top, right, bottom, quadLeft, quadTop, quadRight, quadBottom;
     private final Style style;
+    private final boolean bold, italic;
     private final int color, shadowColor;
 
     SdfInstance(SdfAtlas.Cell cell, float penX, float penY, int color, int shadowColor, Style style,
@@ -23,6 +23,8 @@ abstract class SdfInstance implements TextRenderable.Styled {
         this.color = color;
         this.shadowColor = shadowColor;
         this.style = style;
+        this.bold = style.isBold();
+        this.italic = style.isItalic();
         this.advance = advance;
         this.boldOffset = boldOffset;
         this.shadowOffset = shadowOffset;
@@ -39,27 +41,22 @@ abstract class SdfInstance implements TextRenderable.Styled {
     @Override public Style style() { return style; }
     @Override public float activeRight() { return penX + advance; }
     @Override public float left() {
-        return penX + left + (style.isItalic() ? Math.min(shear(top), shear(bottom)) : 0) - thickness();
+        return penX + left + (italic ? Math.min(shear(top), shear(bottom)) : 0) - thickness();
     }
     @Override public float top() { return penY + top - thickness(); }
     @Override public float right() {
         return penX + right + (shadowColor != 0 ? shadowOffset : 0)
-                + (style.isItalic() ? Math.max(shear(top), shear(bottom)) : 0) + thickness();
+                + (italic ? Math.max(shear(top), shear(bottom)) : 0) + thickness();
     }
     @Override public float bottom() {
         return penY + bottom + (shadowColor != 0 ? shadowOffset : 0) + thickness();
     }
 
     private static float shear(float height) { return 1f - 0.25f * height; }
-    private float thickness() { return style.isBold() ? 0.1f : 0; }
+    private float thickness() { return bold ? 0.1f : 0; }
 
     @Override public void render(Matrix4fc pose, VertexConsumer out, int light, boolean noDepth) {
-        float u0 = SdfTextMath.insetUv(cell.x(), false, cell.pageWidth());
-        float u1 = SdfTextMath.insetUv(cell.x() + cell.width(), true, cell.pageWidth());
-        float v0 = SdfTextMath.insetUv(cell.y(), false, cell.pageHeight());
-        float v1 = SdfTextMath.insetUv(cell.y() + cell.height(), true, cell.pageHeight());
-        boolean italic = style.isItalic();
-        boolean bold = style.isBold();
+        float u0 = cell.u0(), u1 = cell.u1(), v0 = cell.v0(), v1 = cell.v1();
         if (EphemeraBridge.writeSdfGlyph(out, pose, light, penX, penY,
                 quadLeft, quadTop, quadRight, quadBottom, boldOffset, shadowOffset,
                 color, shadowColor, bold, italic, u0, u1, v0, v1)) {

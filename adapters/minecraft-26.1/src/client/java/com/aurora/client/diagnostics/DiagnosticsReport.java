@@ -83,7 +83,8 @@ public final class DiagnosticsReport {
                 mc.getWindow().getWidth() + "x" + mc.getWindow().getHeight() + ", GUI scale " + mc.getWindow().getGuiScale(),
                 measuredOn(mc),
                 mc.level != null && com.aurora.client.adapter.NativeUi.screen(mc) == null,
-                settings(mc));
+                settings(mc),
+                com.aurora.client.compat.EphemeraBridge.diagnosticsLine());
         return DiagnosticsText.format(env, mods(loader), stats, RecentErrors.lines());
     }
 
