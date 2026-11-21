@@ -54,6 +54,8 @@ Acceptance and council review are tracked in
 
 Aurora and Pulsar text fields share bounded undo/redo history; see [text-field behavior](DESIGN_LANGUAGE.md#1112-text-field). Dev-client acceptance remains pending.
 
+Keybind conflict warnings (`KeybindConflicts`, `KeybindConflictLookup`, `KeyBindsListEntryConflictMixin`) surface duplicate bindings across Aurora's `KeybindSetting` rows, profile hotkeys (`ProfileManagerScreen`, `ProfileOptionsScreen`), and Minecraft's vanilla Controls screen (including profile hotkeys and default-vs-default collisions involving Aurora bindings, while leaving F3 debug sub-keys and plain-vs-combo `KeyCombo` pairs distinct). Checked in a disposable 26.3 dev client at factory (0.42) and high (0.85) opacity plus 854×480 narrow viewport across Zoom, Sprint & Sneak, Pulsar, Profiles, Profile Options, and vanilla Controls.
+
 Roadmap steps 1–3 and the 26.1.2, 26.2 and 26.3 ports are merged through PRs
 #1–#12. The owner authorized autonomous GitHub integration and publication.
 

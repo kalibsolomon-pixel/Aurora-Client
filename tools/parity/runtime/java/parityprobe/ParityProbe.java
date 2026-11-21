@@ -1008,6 +1008,26 @@ public final class ParityProbe implements ClientModInitializer {
             case "chat-open" -> NativeUi.setScreen(client, new net.minecraft.client.gui.screens.ChatScreen("", false));
             case "multiplayer" -> NativeUi.setScreen(client,
                     new net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen(NativeUi.screen(client)));
+            case "profile-options" -> NativeUi.setScreen(client, new ProfileOptionsScreen(AuroraScreen.create(), args[1]));
+            case "profile-hotkey" -> {
+                var mgr = com.aurora.client.config.profile.ProfileManager.getInstance();
+                if (!mgr.listProfileNames().contains(args[1])) mgr.create(args[1]);
+                mgr.setHotkey(args[1], Integer.parseInt(args[2]));
+                System.out.println("[parity-probe] profile-hotkey " + args[1] + "=" + args[2]);
+            }
+            case "controls" -> {
+                var kbs = new net.minecraft.client.gui.screens.options.controls.KeyBindsScreen(AuroraScreen.create(), client.options);
+                NativeUi.setScreen(client, kbs);
+                for (var mapping : client.options.keyMappings) {
+                    if (mapping.getName().equals("key.aurora.zoom") || mapping.getName().equals("key.saveToolbarActivator")
+                            || mapping.getName().equals("key.sprint") || mapping.getName().equals("key.aurora.toggle_sprint")) {
+                        var extra = com.aurora.client.util.KeybindConflictLookup.extraVanillaControlsConflicts(mapping);
+                        System.out.println("[parity-probe] controls " + mapping.getName()
+                                + " key=" + mapping.getTranslatedKeyMessage().getString()
+                                + " default=" + mapping.isDefault() + " extra=" + extra);
+                    }
+                }
+            }
             // `inventory`: the survival inventory screen; `hover-slot <n>` parks the pointer on inventory slot n.
             case "inventory" -> NativeUi.setScreen(client,
                     new net.minecraft.client.gui.screens.inventory.InventoryScreen(client.player));

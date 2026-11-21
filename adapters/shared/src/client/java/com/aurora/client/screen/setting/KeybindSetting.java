@@ -4,6 +4,7 @@ import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.component.GlassSurface;
 import com.aurora.client.ui.component.MaterialSurface;
+import com.aurora.client.ui.component.TooltipPresenter;
 import com.aurora.client.ui.component.Widget;
 import com.aurora.client.ui.interaction.MinecraftSemanticFeedback;
 import com.aurora.client.ui.interaction.SemanticAction;
@@ -14,12 +15,15 @@ import com.aurora.client.util.AuroraAnim;
 import com.aurora.client.util.AuroraKey;
 import com.aurora.client.util.AuroraTheme;
 import com.aurora.client.util.HoverAnim;
+import com.aurora.client.util.KeybindConflictLookup;
+import com.aurora.client.util.KeybindConflicts;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 
+import java.util.List;
 import java.util.function.IntConsumer;
 import java.util.function.IntSupplier;
 import java.util.function.Supplier;
@@ -108,6 +112,12 @@ public class KeybindSetting extends FeatureSetting {
     private int cachedKey = Integer.MIN_VALUE;
     private String cachedKeyName = "Unbound";
 
+    /** Optional translation key (e.g. {@code "key.aurora.zoom"}) for live conflict detection. */
+    private String keyId;
+    /** Package-private test seam overriding live conflict lookup. */
+    private Supplier<List<String>> conflictOverride;
+    private int lastWarnX, lastWarnY, lastWarnW, lastWarnH;
+
     /** Em size of the leading keyboard glyph. */
     private static final int KEY_GLYPH = 10;
 
@@ -129,10 +139,63 @@ public class KeybindSetting extends FeatureSetting {
         return this;
     }
 
+    /** Binds this row to its registered Aurora translation key so duplicate bindings warn. */
+    public KeybindSetting keyId(String translationKey) {
+        this.keyId = translationKey;
+        return this;
+    }
+
+    /** Package-private conflict seam for headless tests. */
+    KeybindSetting conflictSupplier(Supplier<List<String>> supplier) {
+        this.conflictOverride = supplier;
+        return this;
+    }
+
+    List<String> currentConflicts() {
+        if (conflictOverride != null) {
+            List<String> list = conflictOverride.get();
+            return list == null ? List.of() : list;
+        }
+        if (keyId == null) return List.of();
+        return KeybindConflictLookup.conflictsForAurora(keyId, getter.getAsInt());
+    }
+
     @Override public KeybindSetting description(String desc) { super.description(desc); return this; }
     @Override public KeybindSetting description(Supplier<String> desc) { super.description(desc); return this; }
 
-    @Override public int baseHeight() { return compactRow == null ? CONTROL_H : compactRow.height(); }
+    @Override
+    protected int valueLineHeight(Font tr) {
+        if (tr == null || isDisabled() || currentConflicts().isEmpty()) return 0;
+        return AuroraFontRenderer.linePitch(tr);
+    }
+
+    @Override
+    protected void drawValueLine(GuiGraphicsExtractor ctx, int x, int y, boolean disabled) {
+        lastWarnW = 0;
+        if (disabled) return;
+        String summary = KeybindConflicts.summary(currentConflicts());
+        if (summary == null) return;
+        Font font = Minecraft.getInstance().font;
+        if (font == null) return;
+        int maxW = compactRow != null ? compactRow.label().width() : Math.max(0, lastWidth - BTN_W - 38);
+        if (maxW <= 0) return;
+        String fitted = AuroraFontRenderer.ellipsize(font, summary, maxW, 0);
+        int warnCol = MaterialSurface.color(ThemeToken.STATUS_WARNING);
+        ctx.text(font, fitted, x, y, warnCol, false);
+        lastWarnX = x;
+        lastWarnY = y - 1;
+        lastWarnW = font.width(fitted);
+        lastWarnH = font.lineHeight + 2;
+    }
+
+    @Override
+    public int baseHeight() {
+        if (compactRow != null) return compactRow.height();
+        if (isDisabled() || currentConflicts().isEmpty()) return CONTROL_H;
+        Minecraft mc = Minecraft.getInstance();
+        Font tr = mc == null ? null : mc.font;
+        return tr == null ? CONTROL_H : CONTROL_H + AuroraFontRenderer.linePitch(tr);
+    }
     @Override public int height()     { return baseHeight() + descriptionHeight(lastWidth); }
 
     /**
@@ -158,10 +221,14 @@ public class KeybindSetting extends FeatureSetting {
         Font tr = Minecraft.getInstance().font;
         if (tr == null) return;
         boolean disabled = reconcileDisabledState();
+        List<String> conflicts = disabled ? List.of() : currentConflicts();
+        boolean hasConflict = !conflicts.isEmpty();
+        lastWarnW = 0;
 
         if (compactRow != null) renderCompactLabel(ctx, x, y, mouseX, mouseY, AuroraTheme.TEXT_PRIMARY);
         else renderWrappedLabel(ctx, label, x + 12, AuroraFontRenderer.textY(tr, y, CONTROL_H),
                 Math.max(0, width - BTN_W - 38), AuroraTheme.TEXT_PRIMARY, mouseX, mouseY, disabled);
+        if (compactRow == null && hasConflict) drawValueLine(ctx, x + 12, y + CONTROL_H - 2, disabled);
 
         int btnX = controlX(x, width, BTN_W);
         int btnY = controlY(y, CONTROL_H, BTN_H);
@@ -224,12 +291,17 @@ public class KeybindSetting extends FeatureSetting {
             RenderUtil.drawRoundedOutlineAA(ctx, btnX, btnY, BTN_W, BTN_H,
                     AuroraTheme.RADIUS_SMALL, 1.0f,
                     ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ACCENT), 0x99));
+        } else if (hasConflict && !listening && !disabled) {
+            RenderUtil.drawRoundedOutlineAA(ctx, btnX, btnY, BTN_W, BTN_H,
+                    AuroraTheme.RADIUS_SMALL, 1.0f,
+                    ThemeManager.withAlpha(MaterialSurface.color(ThemeToken.STATUS_WARNING), 0xCC));
         }
 
         String labelText = listening ? com.aurora.client.util.KeyCombo.captureLabel(capture.pending(), "> press key <") : currentKeyName();
         // A keyboard glyph leads the key name (UI polish 2026-11-14), so a binding reads as a
         // key to capture and not as a dropdown or a label; the pair centres as one group and
-        // the glyph steps aside while listening.
+        // the glyph steps aside while listening. When the key conflicts with another binding,
+        // the leading glyph turns into an amber warning icon so duplicates scan at a glance.
         boolean glyph = MaterialSurface.unified() && !listening;
         int glyphW = glyph ? KEY_GLYPH + 4 : 0;
         // Trim long names so they fit in the pill (keep at least 3 chars + ellipsis).
@@ -237,13 +309,30 @@ public class KeybindSetting extends FeatureSetting {
         int labelW = tr.width(labelText);
         int textCol = listening ? MaterialSurface.color(ThemeToken.ON_BACKGROUND) : textColor;
         int groupX = btnX + (BTN_W - labelW - glyphW) / 2;
-        if (glyph) com.aurora.client.ui.util.MaterialIconRenderer.drawIcon(ctx, tr,
-                com.aurora.client.screen.IconCatalog.glyph("keyboard"), groupX + KEY_GLYPH / 2f, com.aurora.client.ui.util.TextAlignment.iconCenter(btnY, BTN_H), KEY_GLYPH,
-                disabled ? MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED) : MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY));
+        if (glyph) {
+            String iconGlyph = hasConflict && !disabled
+                    ? com.aurora.client.screen.IconCatalog.glyph("warning")
+                    : com.aurora.client.screen.IconCatalog.glyph("keyboard");
+            int iconColor = disabled ? MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED)
+                    : hasConflict ? MaterialSurface.color(ThemeToken.STATUS_WARNING)
+                    : MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY);
+            com.aurora.client.ui.util.MaterialIconRenderer.drawIcon(ctx, tr,
+                    iconGlyph, groupX + KEY_GLYPH / 2f, com.aurora.client.ui.util.TextAlignment.iconCenter(btnY, BTN_H), KEY_GLYPH,
+                    iconColor);
+        }
         ctx.text(tr, labelText,
                 groupX + glyphW,
                 AuroraFontRenderer.textY(tr, btnY, BTN_H),
                 textCol, false);
+
+        if (hasConflict && !listening && !disabled && hostBand().contains(mouseX, mouseY)) {
+            boolean warnHover = lastWarnW > 0 && Widget.inBounds(mouseX, mouseY, lastWarnX, lastWarnY, lastWarnW, lastWarnH);
+            if (hover || warnHover) {
+                TooltipPresenter.offer(this, 1, KeybindConflicts.tooltip(conflicts),
+                        hover ? btnX : lastWarnX, hover ? btnY : lastWarnY,
+                        hover ? BTN_W : lastWarnW, hover ? BTN_H : lastWarnH);
+            }
+        }
 
         renderDescription(ctx, x, y + CONTROL_H, width);
     }
@@ -338,9 +427,15 @@ public class KeybindSetting extends FeatureSetting {
                         String description = currentDescription();
                         return description != null ? Component.literal(description) : Component.empty();
                     },
-                    () -> Component.literal(listening
-                            ? "Waiting for key input. Current binding: " + currentKeyName()
-                            : "Bound to " + currentKeyName()),
+                    () -> {
+                        if (listening) {
+                            return Component.literal("Waiting for key input. Current binding: " + currentKeyName());
+                        }
+                        String conflict = KeybindConflicts.tooltip(currentConflicts());
+                        return Component.literal(conflict != null
+                                ? "Bound to " + currentKeyName() + ". " + conflict
+                                : "Bound to " + currentKeyName());
+                    },
                     () -> !isDisabled(),
                     this::beginListening),
                     MinecraftSemanticFeedback.INSTANCE,

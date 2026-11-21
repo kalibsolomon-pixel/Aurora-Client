@@ -346,6 +346,29 @@ public class ProfileOptionsScreen extends Screen implements ThemedScreen {
         if (nameError != null) {
             FieldMessage.draw(ctx, this.font, nameError, colX + LABEL_W, nameRowY + ROW_H, colW - LABEL_W);
         }
+
+        if (!listening && hotkeyBtn != null) {
+            int hk = ProfileManager.getInstance().hotkey(name);
+            var conflicts = hk >= 0
+                    ? com.aurora.client.util.KeybindConflictLookup.conflictsForProfile(name, hk)
+                    : java.util.List.<String>of();
+            if (!conflicts.isEmpty()) {
+                int warnCol = MaterialSurface.color(ThemeToken.STATUS_WARNING);
+                if (!hotkeyBtn.isFocused()) {
+                    com.aurora.client.ui.util.RenderUtil.drawRoundedOutlineAA(ctx,
+                            hotkeyBtn.getX(), hotkeyBtn.getY(), hotkeyBtn.getWidth(), hotkeyBtn.getHeight(),
+                            AuroraTheme.RADIUS_SMALL, 1f, ThemeManager.withAlpha(warnCol, 0xCC));
+                }
+                String summary = com.aurora.client.util.KeybindConflicts.summary(conflicts);
+                int msgX = colX + LABEL_W, msgY = hotkeyRowY + ROW_H + 2, msgW = colW - LABEL_W;
+                String fitted = AuroraFontRenderer.ellipsize(this.font, summary, msgW, 0);
+                ctx.text(this.font, fitted, msgX, msgY, warnCol, false);
+                com.aurora.client.screen.setting.FeatureSetting.hoverTooltip(hotkeyBtn,
+                        com.aurora.client.util.KeybindConflicts.tooltip(conflicts),
+                        msgX, hotkeyRowY, msgW, ROW_H + 2 + this.font.lineHeight, mouseX, mouseY);
+            }
+        }
+        com.aurora.client.screen.setting.FeatureSetting.drawPendingTooltip(ctx, panelX, panelY, panelW, panelH);
     }
 
     @Override

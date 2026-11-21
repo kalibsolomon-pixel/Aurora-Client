@@ -47,6 +47,7 @@ public abstract class FeatureSetting {
     protected com.aurora.client.ui.util.SettingRowLayout compactRow;
     private int compactWidth = -1;
     private long compactFontKey = Long.MIN_VALUE;
+    private int compactSubtitleH = -1;
     /** The track length its page gave this slider row ({@link #pageTrackWidth}); 0 = its own. */
     private int pageTrackW;
 
@@ -78,7 +79,8 @@ public abstract class FeatureSetting {
                 || this instanceof SectionHeaderSetting)) return;
         Font font = Minecraft.getInstance().font;
         long key = compactMeasurementKey();
-        if (compactRow != null && compactWidth == width && compactFontKey == key) return;
+        int subH = (this instanceof BooleanSetting || this instanceof KeybindSetting) ? valueLineHeight(font) : 0;
+        if (compactRow != null && compactWidth == width && compactFontKey == key && compactSubtitleH == subH) return;
         var kind = this instanceof BooleanSetting ? com.aurora.client.ui.util.SettingRowLayout.Kind.BOOLEAN
                 : this instanceof SliderSetting ? com.aurora.client.ui.util.SettingRowLayout.Kind.SLIDER
                 : this instanceof EnumSetting<?> ? com.aurora.client.ui.util.SettingRowLayout.Kind.ENUM
@@ -90,11 +92,12 @@ public abstract class FeatureSetting {
                 : this instanceof SliderSetting ss ? com.aurora.client.ui.util.SettingRowLayout.trackWidth(ss.steps())
                 : com.aurora.client.ui.util.SettingRowLayout.TRACK_W;
         compactRow = com.aurora.client.ui.util.SettingRowLayout.measure(kind, label, width, font.lineHeight, font::width, trackW);
-        if (this instanceof BooleanSetting) compactRow = compactRow.withSubtitle(valueLineHeight(font), font.lineHeight);
+        if (subH > 0) compactRow = compactRow.withSubtitle(subH, font.lineHeight);
         compactWidth = width;
         compactFontKey = key;
+        compactSubtitleH = subH;
     }
-    public final void clearCompactMeasurement() { compactRow = null; compactWidth = -1; clearCompactChildren(); }
+    public final void clearCompactMeasurement() { compactRow = null; compactWidth = -1; compactSubtitleH = -1; clearCompactChildren(); }
     protected void measureCompactChildren(int width) {}
     protected void clearCompactChildren() {}
     protected final int controlX(int x, int width, int controlWidth) {

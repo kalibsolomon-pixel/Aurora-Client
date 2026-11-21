@@ -87,6 +87,7 @@
     "ScreenPanoramaAccessor",
     "KeyMappingComboMixin",
     "KeyBindsScreenComboMixin",
+    "KeyBindsListEntryConflictMixin",
     "LevelLoadTrackerMixin",
     "OcclusionFrameMixin",
     "OcclusionBodyMixin",

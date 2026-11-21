@@ -412,6 +412,7 @@ public final class FeatureCatalog {
         mixin("ScreenPanoramaAccessor", "blurred glass over the menu panorama");
         mixin("KeyMappingComboMixin", "Ctrl, Shift and Alt combos on key bindings");
         mixin("KeyBindsScreenComboMixin", "Ctrl, Shift and Alt combos in the Controls screen");
+        mixin("KeyBindsListEntryConflictMixin", "keybind conflict warnings for Aurora and profile hotkeys in Controls");
         // ---- Performance (ADR 0009) ----
         mixin("LevelLoadTrackerMixin", "skipping the level loading delay", "performance").gates("perfSkipLevelLoadDelay");
         // Entity Culling owns occlusion culling of entities and block
