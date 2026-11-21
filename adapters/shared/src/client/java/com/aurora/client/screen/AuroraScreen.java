@@ -140,16 +140,15 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
     private float BOX_W = com.aurora.client.ui.util.UiDensity.MAIN_WIDTH;
     private float BOX_H = com.aurora.client.ui.util.UiDensity.MAIN_HEIGHT;
 
-    // Sidebar nav tabs: one pitch drives every tab's Y (24px tab + 4px gap),
-    // so the three gaps cannot drift apart. TAB_H must stay in sync with the
-    // painted chip height below.
-    private static final float TAB_FIRST_Y = com.aurora.client.ui.util.UiDensity.HEADER + com.aurora.client.ui.util.UiDensity.FRAME_GAP;
+    // Sidebar nav tabs: one pitch drives every tab's Y (22px tab + 4px gap),
+    // with SIDEBAR_GROUP_GAP separating the navigation tabs from the Profiles action.
+    private static final float TAB_FIRST_Y = com.aurora.client.ui.util.UiDensity.HEADER + com.aurora.client.ui.util.UiDensity.HEADER_BODY_GAP;
     private static final float TAB_PITCH = com.aurora.client.ui.util.UiDensity.TAB_PITCH;
     private static final float TAB_H = com.aurora.client.ui.util.UiDensity.TAB_H;
     private static final float TAB_W = com.aurora.client.ui.util.UiDensity.TAB_W;
     /** Toolbar icon buttons (list/grid) and the step between them. */
     private static final float TOOL = com.aurora.client.ui.util.UiDensity.TOOL, TOOL_STEP = TOOL + 4;
-    private static final int SEARCH_GAP = 4;
+    private static final int SEARCH_GAP = 8;
 
     /**
      * Height of the muted "Click to configure" hint row drawn under a
@@ -162,26 +161,32 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
 
     /**
      * Blank band after each Settings-tab entry, before the next entry's
-     * header (design language §6: spacing between groups must clearly
-     * exceed the 4px row-to-row gap inside a group, so entries read as
-     * distinct clusters — was a bare 8, only twice the row gap). The
-     * render, scroll-height, and click walks must all use this.
+     * header (design language §5.3: spacing between groups must clearly
+     * exceed the row-to-row gap inside a group, so entries read as
+     * distinct clusters). The render, scroll-height, and click walks must
+     * all use this.
      */
-    private static final int SETTINGS_ENTRY_GAP = 10;
+    private static final int SETTINGS_ENTRY_GAP = 18;
     /** Settings-tab entry header row (caption + master toggle). */
-    private static final int SETTINGS_HEADER_H = 18;
+    private static final int SETTINGS_HEADER_H = 20;
     /** The one-line group summary under a settings heading (UI polish 2026-11-14). */
-    private static final int SUMMARY_H = 12;
+    private static final int SUMMARY_H = 14;
+    /** Breathing room between a settings group's heading/summary and its first row. */
+    private static final int SETTINGS_SUMMARY_GAP = 4;
+    /** SettingRowLayout's outer pad (8 px); subtracting it aligns row labels with group headings and controls with the right edge. */
+    private static final int SETTING_PAD = 8;
+    private static int settingX(float boxX) { return (int) boxX - SETTING_PAD; }
+    private static int settingW(float boxW) { return (int) boxW + 2 * SETTING_PAD; }
 
     /** A settings group's heading row plus its summary line, the height every walk advances by. */
     private int headerBlockH(FeatureMetadata m) {
-        return SETTINGS_HEADER_H + (m.pageSummary == null || m.pageSummary.isEmpty() ? 0 : SUMMARY_H);
+        return SETTINGS_HEADER_H + (m.pageSummary == null || m.pageSummary.isEmpty() ? SETTINGS_SUMMARY_GAP : SUMMARY_H + SETTINGS_SUMMARY_GAP);
     }
 
     /** The summary fitted to the content column (the shared ellipsize memo caches it). */
     private String pageSummaryLine(FeatureMetadata m, Font tr) {
         if (m.pageSummary == null || m.pageSummary.isEmpty()) return null;
-        return com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(tr, m.pageSummary, contentWidth() - 12, 1);
+        return com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(tr, m.pageSummary, contentWidth() - 8, 1);
     }
 
     /** Gap between inline rows inside an entry. */
@@ -200,11 +205,11 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
     private final List<FeatureMetadata> allPageEntries = pages.stream()
             .flatMap(page -> page.entries().stream()).toList();
     /** Sub-tab height and the gap between sub-tabs (the toolbar row's metrics). */
-    private static final float PAGE_TAB_H = com.aurora.client.ui.util.UiDensity.TOOL, PAGE_TAB_GAP = 4;
+    private static final float PAGE_TAB_H = com.aurora.client.ui.util.UiDensity.TOOL, PAGE_TAB_GAP = 10;
     /** Thickness of the selected sub-tab's underline; its ends are always round, it is a mark, not chrome. */
     private static final float TAB_RULE = 1.5f;
-    /** Horizontal label padding inside a sub-tab, per side. */
-    private static final int PAGE_TAB_PAD = 8;
+    /** Horizontal label padding inside a sub-tab, per side (4 px aligns "Appearance" with group headings at mx + 4). */
+    private static final int PAGE_TAB_PAD = 4;
     private boolean gridLayout = AuroraConfig.get().moduleGridView; // false: list, true: grid
     private final Map<String, List<String>> moduleLabelLines = new java.util.HashMap<>();
     private long moduleLabelVersion = Long.MIN_VALUE;
@@ -771,7 +776,8 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
         for (int index = 0; index < 3; index++) {
             String id = index == 2 ? "toolbar/profiles" : "toolbar/category/" + index;
             float left = boxX() + UiDensity.FRAME_EDGE + (narrowNavigation() ? index * (TAB_W + 4) : 0);
-            float top = boxY() + (narrowNavigation() ? TAB_FIRST_Y : TAB_FIRST_Y + index * TAB_PITCH);
+            float top = boxY() + (narrowNavigation() ? TAB_FIRST_Y
+                    : TAB_FIRST_Y + index * TAB_PITCH + (index == 2 ? UiDensity.SIDEBAR_GROUP_GAP : 0));
             chromeLayout.place(id, id, left, top, TAB_W, TAB_H, true);
         }
         float left = boxX() + UiDensity.SIDEBAR + UiDensity.INSET;
@@ -902,15 +908,17 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
         laidOutGrid = gridLayout;
         modulesScale = scale;
         int columns = gridLayout ? gridColumns() : 1;
-        int width = gridLayout ? Math.min(UiDensity.CARD_WIDTH, measuredContent.width) : measuredContent.width;
-        int height = gridLayout ? UiDensity.CARD_HEIGHT : UiDensity.LIST_HEIGHT;
-        int gap = gridLayout ? UiDensity.GRID_GAP : UiDensity.LIST_GAP;
+        int width = gridLayout ? UiDensity.gridCardWidth(measuredContent.width, columns) : measuredContent.width;
+        int height = gridLayout ? UiDensity.gridCardHeight(width) : UiDensity.LIST_HEIGHT;
+        int rowGap = gridLayout ? UiDensity.GRID_GAP : UiDensity.LIST_GAP;
+        int colGap = gridLayout ? UiDensity.gridColumnGap(measuredContent.width, columns, width) : rowGap;
+        float left = mainX() + (gridLayout ? UiDensity.gridOffsetX(measuredContent.width, columns, width, colGap) : 0);
         modulesLayout.begin(measuredContent);
         for (int index = 0; index < modules.size(); index++) {
             Module module = modules.get(index);
-            modulesLayout.cell(module, module.id, index, columns, mainX(), measuredContent.y, width, height, gap, gap);
+            modulesLayout.cell(module, module.id, index, columns, left, measuredContent.y, width, height, colGap, rowGap);
         }
-        modulesLayout.finish(measuredContent, UiDensity.extent((modules.size() + columns - 1) / columns, height, gap));
+        modulesLayout.finish(measuredContent, UiDensity.extent((modules.size() + columns - 1) / columns, height, rowGap));
     }
 
     private void arrangeSettings() {
@@ -919,7 +927,7 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
         long fontKey = FeatureSetting.compactMeasurementKey();
         boolean changed = laidOutPage != entries || laidOutSettingsBand != measuredContent
                 || settingsFontKey != fontKey || settingsScale != scale;
-        int width = Math.max(1, measuredContent.width - 8);
+        int width = settingW(measuredContent.width);
         int count = 0, track = 0;
         for (int index = 0; index < entries.size(); index++) {
             FeatureMetadata entry = entries.get(index);
@@ -958,8 +966,8 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
         for (int index = 0; index < entries.size(); index++) {
             FeatureMetadata entry = entries.get(index);
             int header = headerBlockH(entry);
-            settingsLayout.place(entry, entry.id, mainX() + 4, measuredContent.y + offset,
-                    measuredContent.width - 8, header + (entry.settingsDetailOnly ? SETTINGS_HINT_H : 0), true);
+            settingsLayout.place(entry, entry.id, mainX(), measuredContent.y + offset,
+                    measuredContent.width, header + (entry.settingsDetailOnly ? SETTINGS_HINT_H : 0), true);
             offset += header;
             if (entry.settingsDetailOnly) {
                 offset += SETTINGS_HINT_H;
@@ -972,13 +980,13 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
                     hiddenSettingOffsets.put(setting, offset);
                     continue;
                 }
-                int nextTop = settingsLayout.stack(setting, entry.id + "/" + settingIndex, mainX() + 4,
-                        measuredContent.y + offset, measuredContent.width - 8, height, SETTINGS_ROW_GAP, true);
+                int nextTop = settingsLayout.stack(setting, entry.id + "/" + settingIndex, mainX(),
+                        measuredContent.y + offset, measuredContent.width, height, SETTINGS_ROW_GAP, true);
                 overflow |= offset + height > measuredContent.height;
                 if (!overflow) fit = offset + height;
                 offset = nextTop - measuredContent.y;
             }
-            offset += SETTINGS_ENTRY_GAP;
+            if (index + 1 < entries.size()) offset += SETTINGS_ENTRY_GAP;
         }
         ClipBand viewport = overflow && fit > 0 ? new ClipBand(measuredContent.x, measuredContent.y, measuredContent.width, fit)
                 : measuredContent;
@@ -1136,7 +1144,7 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
                 for (FeatureSetting setting : entry.settings) {
                     var box = settingsLayout.bounds(setting);
                     if (box != null && settingsLayout.visible(box, layoutScroll()))
-                        setting.renderGlassPass(g, (int) box.x(), (int) box.y(layoutScroll()), (int) box.width());
+                        setting.renderGlassPass(g, settingX(box.x()), (int) box.y(layoutScroll()), settingW(box.width()));
                 }
             }
             GlassSurface.disableScissor(g);
@@ -1150,10 +1158,10 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
         // corners and the glass corners derive from one radius (C-7).
         float ctrlRadius = AuroraTheme.RADIUS_SMALL;
 
-        // Window identity: AURORA text only (owner ruling 2026-10-06), in the title role so it
-        // reads as the window's name rather than one more label (UI polish 2026-11-14).
+        // Window identity: AURORA text only (owner ruling 2026-10-06), in the title role,
+        // left-aligned to the sidebar items' label column and optically centred on the toolbar row.
         g.text(tr, com.aurora.client.ui.util.AuroraFontRenderer.role("AURORA", com.aurora.client.ui.util.AuroraFontRenderer.Role.TITLE),
-                (int) bx + UiDensity.TITLE_X, (int) AuroraFontRenderer.textY(tr, by + UiDensity.HEADER_TOP, TOOL), MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
+                (int) bx + UiDensity.FRAME_EDGE + 8, AuroraFontRenderer.roleTextY(tr, by + UiDensity.HEADER_TOP, TOOL, com.aurora.client.ui.util.AuroraFontRenderer.Role.TITLE), MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
 
         String[] cats = {"Features", "Settings"};
         for (int i = 0; i < 2; i++) {
@@ -1203,6 +1211,13 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
                 RenderUtil.drawRoundedOutlineAA(g, catX, catY, TAB_W, TAB_H, ctrlRadius, 1.0f,
                         ThemeManager.withAlpha(MaterialSurface.color(ThemeToken.ACCENT), 0x99));
             }
+        }
+
+        if (!narrowNavigation() && MaterialSurface.unified()) {
+            // Subtle rule between the navigation tabs and the Profiles manager action.
+            int ruleY = Math.round(navY(1) + TAB_H + (navY(2) - (navY(1) + TAB_H)) / 2f);
+            g.fill((int) (navX(0) + 8), ruleY, (int) (navX(0) + TAB_W - 8), ruleY + 1,
+                    ThemeManager.withAlpha(MaterialSurface.color(ThemeToken.ON_BACKGROUND), 0x1A));
         }
 
         float profY = navY(2);
@@ -1480,8 +1495,17 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
         }
 
         g.enableScissor(vp.x, vp.y, vp.xEnd(), vp.yEnd());
-        for (FeatureMetadata m : pageEntries()) {
+        List<FeatureMetadata> visibleEntries = pageEntries();
+        for (int entryIndex = 0; entryIndex < visibleEntries.size(); entryIndex++) {
+            FeatureMetadata m = visibleEntries.get(entryIndex);
             float y = settingsLayout.bounds(m).y(layoutScroll());
+            if (entryIndex > 0 && MaterialSurface.unified()) {
+                int ruleY = Math.round(y - SETTINGS_ENTRY_GAP / 2f);
+                if (vp.intersects(mx + 4, ruleY, contentWidth() - 4, 1)) {
+                    g.fill((int) (mx + 4), ruleY, (int) (mx + contentWidth()), ruleY + 1,
+                            ThemeManager.withAlpha(MaterialSurface.color(ThemeToken.ON_BACKGROUND), 0x1A));
+                }
+            }
             // Section headings and spacing provide grouping, without nested frames.
             int headerH = SETTINGS_HEADER_H;
             var headerNav = headerNavControls.get(m.id);
@@ -1507,7 +1531,7 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
                 float navT = m.hasDetail() ? (MaterialSurface.unified() ? pilotHover(pilotHeaderHovers,m.id,navHover) : headerHover(m.id).update(navHover)) : 0f;
                 // Group heading in the heading role, so a group reads apart from its own rows.
                 g.text(tr, com.aurora.client.ui.util.AuroraFontRenderer.role(m.displayName, com.aurora.client.ui.util.AuroraFontRenderer.Role.HEADING),
-                        (int) (mx + 4), AuroraFontRenderer.textY(tr, y, SETTINGS_HEADER_H), MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
+                        (int) (mx + 4), AuroraFontRenderer.roleTextY(tr, y, SETTINGS_HEADER_H, com.aurora.client.ui.util.AuroraFontRenderer.Role.HEADING), MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
                 // Detail-screen affordance: a header click opens the entry's
                 // detail screen (the Settings tab's counterpart of the
                 // Modules tab's right-click-to-detail) — the chevron marks
@@ -1535,9 +1559,8 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
                 ToggleSwitch t = sectionToggles.get(m.id);
                 if (t != null) {
                     float tw = com.aurora.client.ui.util.UiDensity.TOGGLE_W, th = com.aurora.client.ui.util.UiDensity.TOGGLE_H;
-                    // Ends on the rows' control edge (2026-11-14: it stood 1.5 px proud of the
-                    // swatches and switches below it).
-                    float tx = mx + contentWidth() - tw - 11.5f;
+                    // Ends flush on the rows' control right edge (mx + contentWidth()).
+                    float tx = mx + contentWidth() - tw;
                     t.layout(tx, y + (headerH - th) / 2, tw, th);
                     t.renderShapes(g, tx, y + (headerH - th) / 2, tw, th);
                     t.renderOverlay(g, tx, y + (headerH - th) / 2, tw, th, mouseX, mouseY);
@@ -1554,10 +1577,10 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
                     }
                 }
             }
-            if (settingsReveal == m) paintReveal(g, mx + 4, y, contentWidth() - 8, headerH, ctrlRadius);
+            if (settingsReveal == m) paintReveal(g, mx + 4, y, contentWidth() - 4, headerH, ctrlRadius);
             String summary = pageSummaryLine(m, tr);
             if (summary != null && vp.intersects(mx + 4, y + headerH, contentWidth() - 4, SUMMARY_H))
-                g.text(tr, summary, (int) (mx + 4), (int) (y + headerH - 1), MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
+                g.text(tr, summary, (int) (mx + 4), AuroraFontRenderer.textY(tr, y + headerH, SUMMARY_H), MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
             if (m.settingsDetailOnly) {
                 y = settingsLayout.bounds(m).y(layoutScroll()) + headerBlockH(m);
                 // Detail-only entry: one muted hint line in place of the
@@ -1585,14 +1608,14 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
                     int rh = (int) box.height();
                     boolean visible = settingsLayout.visible(box, layoutScroll());
                     if (visible) {
-                        s.render(g, (int) box.x(), (int) y, (int) box.width(), mouseX, mouseY);
+                        s.render(g, settingX(box.x()), (int) y, settingW(box.width()), mouseX, mouseY);
                         if (settingsReveal == s) paintReveal(g, box.x(), y, box.width(), rh, ctrlRadius);
                     }
                     boolean anyControlAvailable = false;
                     List<SemanticActionControl> controls = hostedSettingControls.getOrDefault(s, List.of());
                     for (SemanticActionControl control : controls) {
                         control.setScrollFocusTarget(s.controlVisible(control));
-                        if (!visible) control.setBounds((int) mx + 4, (int) y, contentWidth() - 8, rh);
+                        if (!visible) control.setBounds((int) mx, (int) y, contentWidth(), rh);
                         // Partial-visibility policy: any non-empty
                         // intersection of the ACTIONABLE control rect with
                         // C-1's authoritative viewport is available. Edge
@@ -2005,8 +2028,8 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
             if (selectedCategory == 1 && contentViewport().contains(mouseX, mouseY)
                     && button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) {
                 var box = settingsLayout.bounds(owner);
-                if (box != null && owner.mouseClicked(mouseX, mouseY, button, (int) box.x(),
-                        (int) box.y(layoutScroll()), (int) box.width())) {
+                if (box != null && owner.mouseClicked(mouseX, mouseY, button, settingX(box.x()),
+                        (int) box.y(layoutScroll()), settingW(box.width()))) {
                     if (owner instanceof com.aurora.client.screen.setting.ColorSetting) activeDragSetting = owner;
                     return true;
                 }
@@ -2147,7 +2170,7 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
             }
             var box = settingsLayout.hitTest(mouseX, mouseY, layoutScroll());
             if (box != null && box.key() instanceof FeatureSetting setting
-                    && setting.mouseClicked(mouseX, mouseY, button, (int) box.x(), (int) box.y(layoutScroll()), (int) box.width())) {
+                    && setting.mouseClicked(mouseX, mouseY, button, settingX(box.x()), (int) box.y(layoutScroll()), settingW(box.width()))) {
                 activeDragSetting = setting;
                 semanticHost.focusAt(mouseX, mouseY);
                 return true;
@@ -2155,7 +2178,7 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
         }
 
         double maxScroll = computeMaxScroll();
-        if (maxScroll > 0 && button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT && mouseX >= mx + contentWidth() && mouseX < mx + contentWidth() + 10 && mouseY >= viewTop() && mouseY <= viewBot()) {
+        if (maxScroll > 0 && button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT && mouseX >= mx + contentWidth() && mouseX < mx + contentWidth() + UiDensity.SCROLLBAR_GAP + UiDensity.SCROLLBAR_W + 4 && mouseY >= viewTop() && mouseY <= viewBot()) {
             // Grab-where-clicked: the grab offset is the cursor's distance
             // from the thumb's top at click time — the screen's historical
             // drag semantics.
@@ -2178,7 +2201,7 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
             scroll.dragThumb(mouseY, viewTop(), viewBot() - viewTop(), computeMaxScroll(), 24, false);
             return true;
         }
-        if (activeDragSetting != null && activeDragSetting.mouseDragged(mouseX, mouseY, button, dx, dy, 0, 0, (contentWidth() - 8))) {
+        if (activeDragSetting != null && activeDragSetting.mouseDragged(mouseX, mouseY, button, dx, dy, 0, 0, settingW(contentWidth()))) {
             return true;
         }
         return super.mouseDragged(_ev, dx, dy);

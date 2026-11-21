@@ -38,9 +38,9 @@ public class ProfileOptionsScreen extends Screen implements ThemedScreen {
     /** The window owns the one backdrop capture; its buttons use cached faces. */
     @Override public boolean parentGlassOnly() { return true; }
 
-    private static final int ROW_H = 16;
-    private static final int LABEL_W = 56;
-    private static final int ICON_WELL = 40;
+    private static final int ROW_H = UiDensity.HEADER_BUTTON_H;
+    private static final int LABEL_W = 68;
+    private static final int ICON_WELL = 48;
 
     private final Screen parent;
     private String name;
@@ -75,16 +75,16 @@ public class ProfileOptionsScreen extends Screen implements ThemedScreen {
     protected void init() {
         var frame = UiDensity.window(this.width, this.height);
         panelX = frame.x(); panelY = frame.y(); panelW = frame.width(); panelH = frame.height();
-        colW = Math.min(panelW - 32, 300);
+        colW = Math.min(panelW - 2 * UiDensity.TITLE_X, 340);
         colX = panelX + (panelW - colW) / 2;
-        iconRowY = panelY + UiDensity.HEADER + 12;
-        nameRowY = iconRowY + ICON_WELL + 14;
-        hotkeyRowY = nameRowY + ROW_H + 10;
-        int actionsY = hotkeyRowY + ROW_H + 14;
+        iconRowY = panelY + UiDensity.HEADER + 14;
+        nameRowY = iconRowY + ICON_WELL + 16;
+        hotkeyRowY = nameRowY + ROW_H + 12;
+        int actionsY = hotkeyRowY + ROW_H + 16;
         int fieldX = colX + LABEL_W, fieldW = colW - LABEL_W;
 
-        this.addRenderableWidget(ButtonWidget.semantic(colX + ICON_WELL + 12, iconRowY + 4,
-                colW - ICON_WELL - 12, ROW_H, Component.literal("Change icon"),
+        this.addRenderableWidget(ButtonWidget.semantic(colX + ICON_WELL + 14, iconRowY + 4,
+                colW - ICON_WELL - 14, ROW_H, Component.literal("Change icon"),
                 "Opens the icon browser.", this::openIconPicker).glassBackground(true));
 
         nameField = new EditBox(this.font, fieldX, nameRowY, fieldW, ROW_H, Component.literal("Name"));
@@ -322,22 +322,22 @@ public class ProfileOptionsScreen extends Screen implements ThemedScreen {
 
         int onBackground = MaterialSurface.color(ThemeToken.ON_BACKGROUND);
         int secondary = ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY);
-        ctx.text(this.font, AuroraFontRenderer.ellipsize(this.font, name, panelW - 24, 0),
-                panelX + 12, panelY + UiDensity.headerTop(this.font.lineHeight) + 1, onBackground, false);
+        String fittedTitle = AuroraFontRenderer.ellipsizeRole(this.font, name, Math.max(0, panelW - 2 * UiDensity.TITLE_X), AuroraFontRenderer.Role.TITLE);
+        ctx.text(this.font, AuroraFontRenderer.role(fittedTitle, AuroraFontRenderer.Role.TITLE),
+                panelX + UiDensity.TITLE_X, AuroraFontRenderer.roleTextY(this.font, panelY + UiDensity.HEADER_TOP, UiDensity.TOOL, AuroraFontRenderer.Role.TITLE), onBackground, false);
 
         // The icon in a well, its name under the Change icon button.
         float small = AuroraTheme.RADIUS_SMALL;
         MaterialSurface.selection(ctx, colX, iconRowY, ICON_WELL, ICON_WELL, small, false, 0);
         String icon = ProfileManager.getInstance().icon(name);
         MaterialIconRenderer.drawIcon(ctx, this.font, ProfileManagerScreen.profileGlyph(icon),
-                colX + ICON_WELL / 2f, iconRowY + ICON_WELL / 2f, 26f, ThemeManager.color(ThemeToken.ACCENT));
+                colX + ICON_WELL / 2f, iconRowY + ICON_WELL / 2f, 28f, ThemeManager.color(ThemeToken.ACCENT));
         String iconName = IconCatalog.glyph(icon).isEmpty() ? "Default" : icon.replace('_', ' ');
-        ctx.text(this.font, AuroraFontRenderer.ellipsize(this.font, iconName, colW - ICON_WELL - 12, 0),
-                colX + ICON_WELL + 12, iconRowY + 4 + ROW_H + 6, secondary, false);
+        ctx.text(this.font, AuroraFontRenderer.ellipsize(this.font, iconName, colW - ICON_WELL - 14, 0),
+                colX + ICON_WELL + 14, iconRowY + 4 + ROW_H + 6, secondary, false);
 
-        int labelDy = (ROW_H - this.font.lineHeight) / 2 + 1;
-        ctx.text(this.font, "Name", colX, nameRowY + labelDy, secondary, false);
-        ctx.text(this.font, "Hotkey", colX, hotkeyRowY + labelDy, secondary, false);
+        ctx.text(this.font, "Name", colX, AuroraFontRenderer.textY(this.font, nameRowY, ROW_H), secondary, false);
+        ctx.text(this.font, "Hotkey", colX, AuroraFontRenderer.textY(this.font, hotkeyRowY, ROW_H), secondary, false);
 
         super.extractRenderState(ctx, mouseX, mouseY, delta);
 

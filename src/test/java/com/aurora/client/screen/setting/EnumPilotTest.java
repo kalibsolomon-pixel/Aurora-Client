@@ -31,7 +31,7 @@ class EnumPilotTest {
     private static final int ROW_X = 0, ROW_Y = 0, ROW_W = 320;
     private static final int BTN_W = com.aurora.client.ui.util.UiDensity.ENUM_W;
     private static final int BTN_H = com.aurora.client.ui.util.UiDensity.FIELD_H;
-    private static final int OPT_H = 14;
+    private static final int OPT_H = com.aurora.client.ui.util.UiDensity.FIELD_H;
     private static final int BTN_X = ROW_X + ROW_W - BTN_W - 14;
     private static final int BTN_Y = ROW_Y + (28 - BTN_H) / 2;
 

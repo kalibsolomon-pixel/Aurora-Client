@@ -152,7 +152,7 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
         // measures wider at both rasters, but the max is explicit).
         int resetW = Math.min(w, Math.max(this.font.width("Reset Positions"),
                 this.font.width("Confirm reset")) + 22);
-        int resetH = 16;
+        int resetH = com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_H;
         // Bottom-right corner (2026-11-18 council pass): the top-right corner is the default
         // Potion Effects anchor, whose editor frame ran through the button.
         resetBtn = ButtonWidget.semantic(

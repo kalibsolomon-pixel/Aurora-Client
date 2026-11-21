@@ -265,17 +265,17 @@ class KeyListPilotTest {
 
     /** Entry i's "−" button center in the headless (0,0,240) frame. */
     private static boolean clickRemove(Fixture f, int i) {
-        return f.row.mouseClicked(219.0, 26.0 + 18.0 * i, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT, 0, 0, 240); // (ROW_H + 2)(i + 1) + ROW_H / 2, ROW_H = 16
+        return f.row.mouseClicked(218.0, 32.0 + 22.0 * i, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT, 0, 0, 240); // (ROW_H + 2)(i + 1) + ROW_H / 2, ROW_H = 20
     }
 
     private static void begin(Fixture f) {
         // Add-pill center in the headless (0,0,240) frame: x = 14 + 212/2,
-        // y = 18 + n*18 + 4 + 8 (compact ROW_H 16 / ADD_H 16). The semantic control (if a test created
+        // y = 22 + n*22 + 4 + 9 (ROW_H 20 / ADD_H 18). The semantic control (if a test created
         // one) has no render-driven bounds yet — mark it unavailable so the
         // headless direct path runs, exactly like an unhosted row.
         f.row.interactionControl().setAvailable(false);
         int n = f.list.size();
-        assertTrue(f.row.mouseClicked(120.0, 30.0 + 18.0 * n, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT, 0, 0, 240),
+        assertTrue(f.row.mouseClicked(120.0, 35.0 + 22.0 * n, com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT, 0, 0, 240),
                 "headless direct add-pill activation");
         assertTrue(f.row.listeningState());
     }

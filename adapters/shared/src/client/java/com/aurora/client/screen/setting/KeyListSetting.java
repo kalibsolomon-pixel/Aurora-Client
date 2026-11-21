@@ -95,9 +95,9 @@ import java.util.function.Supplier;
  * the established Enum-style muted fill (complete flat pill on decline).
  */
 public class KeyListSetting extends FeatureSetting {
-    private static final int ROW_H = 16;
-    private static final int ADD_H = 16;
-    private static final int BTN_SIZE = 14;
+    private static final int ROW_H = 20;
+    private static final int ADD_H = com.aurora.client.ui.util.UiDensity.FIELD_H;
+    private static final int BTN_SIZE = 16;
 
     private final Supplier<List<Integer>> getter;
     private final Consumer<List<Integer>> setter;

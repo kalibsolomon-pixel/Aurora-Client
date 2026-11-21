@@ -21,8 +21,9 @@ public class SegmentedSetting<E extends Enum<E>> extends FeatureSetting {
 
     private static final int CONTROL_H = 44;
     private static final int TRACK_H = 20;
-    /** Track indent — label above, full-width control below (slider row layout). */
-    private static final int TRACK_PAD_X = 12;
+    /** Track left inset matches SettingRowLayout label.x() (12); right inset matches control edge (8). */
+    private static final int TRACK_PAD_LEFT = 12;
+    private static final int TRACK_PAD_RIGHT = 8;
 
     private final Supplier<E> getter;
     private final Consumer<E> setter;
@@ -125,8 +126,9 @@ public class SegmentedSetting<E extends Enum<E>> extends FeatureSetting {
     public void renderGlassPass(GuiGraphicsExtractor ctx, int x, int y, int width) {
         if (!com.aurora.client.ui.component.GlassSurface.passOpen()) return; // legacy frame order
         control.glassEnabled(glass);
-        control.layout(x + TRACK_PAD_X, y + 22, width - TRACK_PAD_X * 2, TRACK_H);
-        control.renderGlassPass(ctx, x + TRACK_PAD_X, y + 22, width - TRACK_PAD_X * 2, TRACK_H);
+        int trackW = Math.max(1, width - TRACK_PAD_LEFT - TRACK_PAD_RIGHT);
+        control.layout(x + TRACK_PAD_LEFT, y + 22, trackW, TRACK_H);
+        control.renderGlassPass(ctx, x + TRACK_PAD_LEFT, y + 22, trackW, TRACK_H);
     }
 
     @Override
@@ -138,8 +140,8 @@ public class SegmentedSetting<E extends Enum<E>> extends FeatureSetting {
     @Override
     public void renderShapes(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {
         lastWidth = width;
-        lastTrackX = x + TRACK_PAD_X;
-        lastTrackW = width - TRACK_PAD_X * 2;
+        lastTrackX = x + TRACK_PAD_LEFT;
+        lastTrackW = Math.max(1, width - TRACK_PAD_LEFT - TRACK_PAD_RIGHT);
         lastTrackY = y + 22;
         control.glassEnabled(glass);
         control.layout(lastTrackX, lastTrackY, lastTrackW, TRACK_H);
@@ -151,10 +153,10 @@ public class SegmentedSetting<E extends Enum<E>> extends FeatureSetting {
         lastWidth = width;
         Font tr = Minecraft.getInstance().font;
         boolean disabled = isDisabled();
-        renderWrappedLabel(ctx, label, x + TRACK_PAD_X, y + 5, Math.max(0, width - 24), AuroraTheme.IOS_LABEL, mouseX, mouseY, disabled);
+        renderWrappedLabel(ctx, label, x + TRACK_PAD_LEFT, y + 5, Math.max(0, width - TRACK_PAD_LEFT - TRACK_PAD_RIGHT), AuroraTheme.IOS_LABEL, mouseX, mouseY, disabled);
 
-        lastTrackX = x + TRACK_PAD_X;
-        lastTrackW = width - TRACK_PAD_X * 2;
+        lastTrackX = x + TRACK_PAD_LEFT;
+        lastTrackW = Math.max(1, width - TRACK_PAD_LEFT - TRACK_PAD_RIGHT);
         lastTrackY = y + 22;
         control.disabled(disabled);
         control.layout(lastTrackX, lastTrackY, lastTrackW, TRACK_H);

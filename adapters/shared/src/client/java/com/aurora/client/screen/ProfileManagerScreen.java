@@ -63,16 +63,16 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
     // available width (at least one).
     // 88 (was 84, 2026-11-17): room for a refusal message between the name field and the
     // bottom action line (design language §11.12).
-    private static final int CARD_H = 88;
-    private static final int CARD_MIN_W = 104;
-    private static final int CARD_GAP = 8;
-    private static final int INSET = 6;
-    private static final int BTN_H = 14;
-    private static final int ICON_Y = 24;
-    private static final float ICON_EM = 24f;
-    private static final int NAME_Y = 44;
+    private static final int CARD_H = 100;
+    private static final int CARD_MIN_W = 124;
+    private static final int CARD_GAP = 10;
+    private static final int INSET = 8;
+    private static final int BTN_H = UiDensity.FIELD_H;
+    private static final int ICON_Y = 29;
+    private static final float ICON_EM = 26f;
+    private static final int NAME_Y = 51;
     /** The settings glyph's hit square, inset from the card's top-right corner. */
-    private static final int GEAR = 16;
+    private static final int GEAR = 18;
     /** The bottom action line: the hotkey chip, or the create card's Create button. */
     private static final int LOWER_BTN_Y = CARD_H - INSET - BTN_H;
     private static final String GEAR_GLYPH = IconCatalog.glyph("settings");
@@ -202,9 +202,9 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
     }
 
     /** The second header row, under the title and Done: search, Separate controls, Open folder. */
-    private static final int TOOLS_ROW = UiDensity.HEADER_BUTTON_H + 6;
+    private static final int TOOLS_ROW = UiDensity.HEADER_BUTTON_H + 8;
     @Override protected String headerTitle() { return "Profiles"; }
-    @Override protected int listTop() { return super.listTop() + TOOLS_ROW; }
+    @Override protected int listTop() { return super.listTop() + TOOLS_ROW + 2; }
 
     /**
      * Tools row under the titled header, left to right: search (takes what is
@@ -216,7 +216,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         if (searchField == null) return;
         // pad: Button keeps 20 px around its label (it ellipsizes past w - 20), plus 2 of air;
         // the controls chip also reserves the settings switch's trailing slot.
-        final int gap = 10, searchMin = 56, pad = 22, iconPad = UiDensity.TOGGLE_W + 6;
+        final int gap = 12, searchMin = 64, pad = 22, iconPad = UiDensity.TOGGLE_W + 8;
         int left = listX();
         int right = windowX() + windowWidth() - UiDensity.scrollRightInset();
         String chipLabel = "Separate controls", folderLabel = "Open folder";
@@ -510,10 +510,10 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         // An unbound hotkey is an invitation, not a disabled field: primary text, "Set hotkey".
         int textCol = ThemeManager.color(ThemeToken.ON_BACKGROUND);
         String fitted = AuroraFontRenderer.ellipsize(this.font, label, chipW - 20, 0);
-        int contentW = 12 + this.font.width(fitted);
+        int contentW = 14 + this.font.width(fitted);
         int cx = chipX + (chipW - contentW) / 2;
-        MaterialIconRenderer.drawIcon(ctx, this.font, KEYBOARD_GLYPH, cx + 4.5f, chipY + BTN_H / 2f, 9f, textCol);
-        ctx.text(this.font, fitted, cx + 12, chipY + (BTN_H - this.font.lineHeight) / 2 + 1, textCol, false);
+        MaterialIconRenderer.drawIcon(ctx, this.font, KEYBOARD_GLYPH, cx + 5f, chipY + BTN_H / 2f, 10f, textCol);
+        ctx.text(this.font, fitted, cx + 14, AuroraFontRenderer.textY(this.font, chipY, BTN_H), textCol, false);
         if (chipHot) {
             hoveredChip = name;
             hoveredChipX = chipX;

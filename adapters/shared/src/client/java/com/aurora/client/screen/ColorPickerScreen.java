@@ -136,22 +136,23 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
         // on the bottom edge.
         var frame = com.aurora.client.ui.util.UiDensity.window(cw, ch);
         panelX = frame.x(); panelY = frame.y(); panelW = frame.width(); panelH = frame.height();
+        int edge = com.aurora.client.ui.util.UiDensity.TITLE_X;
         int header = com.aurora.client.ui.util.UiDensity.HEADER;
         int bh = com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_H;
-        int maxPad = Math.min(panelH - header - 16 - bh - 16, panelW - 24 - 2 * 18 - 28 - 120);
+        int maxPad = Math.min(panelH - header - 20 - bh - com.aurora.client.ui.util.UiDensity.FRAME_EDGE - 12, panelW - 2 * edge - 2 * 20 - 30 - 128);
         pickerSupportable = maxPad >= MIN_PAD;
         padSize = pickerSupportable ? maxPad : MIN_PAD; // unused when unsupported
-        padX = panelX + 12;
-        padY = panelY + header + 16;
+        padX = panelX + edge;
+        padY = panelY + header + 20;
 
-        hueW = 18;
+        hueW = 20;
         hueH = padSize;
         hueX = padX + padSize + 14;
         hueY = padY;
 
-        alphaW = 18;
+        alphaW = 20;
         alphaH = padSize;
-        alphaX = hueX + hueW + 12;
+        alphaX = hueX + hueW + 14;
         alphaY = padY;
 
         previewX = alphaX + alphaW + 20;
@@ -159,15 +160,15 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
         // The preview is a SQUARE sample (owner ruling, 2026-10-30 — was a
         // wide previewW×24 rectangle); the hex field keeps the right
         // column's full width, not the sample's.
-        int rightColW = panelX + panelW - 12 - previewX;
-        previewW = Math.max(24, Math.min(48, rightColW));
+        int rightColW = panelX + panelW - edge - previewX;
+        previewW = Math.max(28, Math.min(60, rightColW));
         previewH = previewW;
 
         int hexY = previewY + previewH + 22;
         if (pickerSupportable) {
             hexField = new EditBox(
                     this.font,
-                    previewX, hexY, Math.min(96, Math.max(previewW, rightColW)), 14,
+                    previewX, hexY, Math.min(108, Math.max(previewW, rightColW)), com.aurora.client.ui.util.UiDensity.FIELD_H,
                     Component.literal("Hex")
             );
             hexField.setMaxLength(9);
@@ -271,8 +272,13 @@ public class ColorPickerScreen extends Screen implements ThemedScreen {
         int labelCol = pickerSupportable ? ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY)
                 : ThemeManager.withAlpha(onOverlay, 0x99);
 
-        if (pickerSupportable) ctx.text(tr, AuroraFontRenderer.ellipsize(tr, this.title.getString(), panelW - 24, 0),
-                panelX + 12, panelY + com.aurora.client.ui.util.UiDensity.headerTop(tr.lineHeight) + 1, MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
+        if (pickerSupportable) {
+            String fittedTitle = AuroraFontRenderer.ellipsizeRole(tr, this.title.getString(), Math.max(0, panelW - 2 * com.aurora.client.ui.util.UiDensity.TITLE_X), AuroraFontRenderer.Role.TITLE);
+            ctx.text(tr, AuroraFontRenderer.role(fittedTitle, AuroraFontRenderer.Role.TITLE),
+                    panelX + com.aurora.client.ui.util.UiDensity.TITLE_X,
+                    AuroraFontRenderer.roleTextY(tr, panelY + com.aurora.client.ui.util.UiDensity.HEADER_TOP, com.aurora.client.ui.util.UiDensity.TOOL, AuroraFontRenderer.Role.TITLE),
+                    MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
+        }
         else AuroraFontRenderer.drawCentered(ctx, tr, this.title, this.width / 2, 20, onOverlay);
 
         // C-8 short-window graceful fail: below the supportable minimum the

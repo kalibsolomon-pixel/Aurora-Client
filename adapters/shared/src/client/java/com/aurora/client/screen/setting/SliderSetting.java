@@ -310,8 +310,8 @@ public class SliderSetting extends FeatureSetting {
     //  Editable value (opt-in; see class doc)
     // ------------------------------------------------------------------
 
-    private static final int VALUE_FIELD_W = 46;
-    private static final int VALUE_FIELD_H = 16;
+    private static final int VALUE_FIELD_W = 50;
+    private static final int VALUE_FIELD_H = com.aurora.client.ui.util.UiDensity.FIELD_H;
 
     /** Lazily creates the value EditBox (theme rendering comes from EditBoxMixin like every other field). */
     private void ensureValueField() {

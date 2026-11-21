@@ -75,11 +75,11 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen, LayoutS
     private int headerH = com.aurora.client.ui.util.UiDensity.HEADER;
     private List<String> descriptionLines = List.of();
     private String headerLine;
-    private int bodyOffset() { return headerH + 4; }
+    private int bodyOffset() { return headerH + 10; }
 
     /** Wraps the description (at most two lines, whole words) and the health/credit line. */
     private void layoutHeader() {
-        int width = LIST_W - 24;
+        int width = Math.max(1, LIST_W - 2 * com.aurora.client.ui.util.UiDensity.TITLE_X);
         // The catalog's one-sentence summary where there is one: the long registry description
         // is written for tooltips and would push the first setting down by a paragraph.
         var catalog = com.aurora.client.feature.FeatureCatalog.feature(meta.id);
@@ -89,7 +89,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen, LayoutS
         headerLine = meta.headerLine() == null || meta.headerLine().isEmpty() || this.font == null ? null
                 : AuroraFontRenderer.ellipsize(this.font, meta.headerLine(), width, 0);
         int lines = descriptionLines.size() + (headerLine == null ? 0 : 1);
-        headerH = com.aurora.client.ui.util.UiDensity.HEADER + (lines == 0 ? 0 : lines * descriptionPitch() + com.aurora.client.ui.util.TextAlignment.DESCRIPTOR_GAP);
+        headerH = com.aurora.client.ui.util.UiDensity.HEADER + (lines == 0 ? 0 : 4 + lines * descriptionPitch());
     }
     private int descriptionPitch() { return AuroraFontRenderer.linePitch(this.font); }
 
@@ -237,8 +237,8 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen, LayoutS
         else restCut = true;
     }
     private int bodyBottom() { return compact() ? bodyTop() + restBody + 2 : Math.max(bodyTop() + 1, this.height - 30); }
-    /** Inset below the last row, clear of the window's corner radius (12, was 8; 2026-11-14). */
-    private static final int BODY_BOTTOM = 12;
+    /** Inset below the last row, matching the window's frame room. */
+    private static final int BODY_BOTTOM = com.aurora.client.ui.util.UiDensity.FRAME_EDGE;
     private int settingY(FeatureSetting setting, int bodyY) { return bodyY - (setting == fixedHeaderSetting ? setting.fixedHeaderHeight() : 0); }
 
 
@@ -485,11 +485,11 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen, LayoutS
         if (compact()) placeReset();
     }
 
-    /** Reset's width follows its label; its right edge stays 4 px left of Done. */
+    /** Reset's width follows its label; its right edge stays 6 px left of Done. */
     private void placeReset() {
         int resetBw = this.font.width(resetBtn.getMessage()) + 22; // the painter ellipsizes past w - 20
         resetBtn.setWidth(resetBw);
-        resetBtn.setX(doneBtn.getX() - resetBw - 4);
+        resetBtn.setX(doneBtn.getX() - resetBw - 6);
     }
 
     @Override
@@ -511,7 +511,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen, LayoutS
         syncResetButton(); // the confirm timeout restores the label with no timer
         if (pendingReveal != null) expandRevealSection();
         refreshLayout();
-        int listX = rowsLayout.viewport().x - 8;
+        int listX = rowsLayout.viewport().x - ROW_LEFT;
         int totalRowsH = rowsLayout.extent();
         double maxScroll = rowsLayout.maxScroll();
         if (pendingReveal != null) {
@@ -698,7 +698,8 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen, LayoutS
             // Rows fade into the window tint at both clip edges while more content lies beyond.
             int fadeSurface = MaterialSurface.color(ThemeToken.WINDOW_FILL);
             if (totalRowsH == 0)
-                ctx.text(this.font, "This feature has no additional settings.", listX + 12, bodyTop() + 2,
+                ctx.text(this.font, "This feature has no additional settings.",
+                        com.aurora.client.ui.util.UiDensity.detailTitleX(compactFrame), bodyTop() + 2,
                         MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED), false);
             com.aurora.client.util.ScrollFade.drawTop(ctx, listX + ROW_LEFT, LIST_W - ROW_LEFT - ROW_RIGHT, bodyTop(),
                     com.aurora.client.util.ScrollFade.FADE_PX, scroll.current(), fadeSurface);
@@ -715,8 +716,8 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen, LayoutS
             ctx.text(this.font, AuroraFontRenderer.role(breadcrumb, AuroraFontRenderer.Role.TITLE), titleX,
                     AuroraFontRenderer.roleTextY(this.font, compactFrame.y() + com.aurora.client.ui.util.UiDensity.HEADER_TOP, com.aurora.client.ui.util.UiDensity.TOOL, AuroraFontRenderer.Role.TITLE),
                     MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
-            int lineY = AuroraFontRenderer.textY(this.font, compactFrame.y() + com.aurora.client.ui.util.UiDensity.HEADER
-                    + com.aurora.client.ui.util.TextAlignment.DESCRIPTOR_GAP, this.font.lineHeight);
+            int lineY = AuroraFontRenderer.textY(this.font, compactFrame.y() + com.aurora.client.ui.util.UiDensity.HEADER + 4,
+                    this.font.lineHeight);
             for (String line : descriptionLines) {
                 ctx.text(this.font, line, titleX, lineY, MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
                 lineY += descriptionPitch();
@@ -724,6 +725,9 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen, LayoutS
             if (headerLine != null) ctx.text(this.font, headerLine, titleX, lineY,
                     com.aurora.client.health.FeatureHealth.headlineFor(meta.id) != null
                             ? ThemeManager.color(ThemeToken.STATUS_WARNING) : MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED), false);
+            int ruleY = compactFrame.y() + headerH + 5;
+            ctx.fill(titleX, ruleY, listX + LIST_W - ROW_RIGHT, ruleY + 1,
+                    ThemeManager.withAlpha(MaterialSurface.color(ThemeToken.ON_BACKGROUND), 0x18));
             if (maxScroll > 0) {
                 var thumb = com.aurora.client.ui.component.ScrollbarChrome.thumb(scroll, bodyTop(), bodyBottom() - bodyTop(), maxScroll, 24, this.minecraft.getWindow().getGuiScale());
                 // Centred in the 8 px band between the control edge and the window border
@@ -808,7 +812,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen, LayoutS
         // never both cancel capture and activate an unrelated control.
         if (com.aurora.client.screen.setting.FeatureSetting.cancelActiveCapture()) return true;
         refreshLayout();
-        int listX = rowsLayout.viewport().x - 8;
+        int listX = rowsLayout.viewport().x - ROW_LEFT;
         FeatureSetting owner = FeatureSetting.getFocused();
         if (owner instanceof com.aurora.client.screen.setting.EnumSetting<?>
                 || owner instanceof com.aurora.client.screen.setting.ColorSetting) {
