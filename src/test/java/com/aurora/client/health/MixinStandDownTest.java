@@ -117,6 +117,33 @@ class MixinStandDownTest {
         }
     }
 
+    @Test void ephemeraOwnsEnginePerformanceHooksWhileKeepingAuroraFeaturesActive() {
+        Set<String> loaded = Set.of("ephemera");
+        for (String name : List.of(
+                "LevelLoadTrackerMixin",
+                "OcclusionFrameMixin", "OcclusionBodyMixin", "OcclusionChestMixin",
+                "OcclusionDirtyMixin", "OcclusionLeashMixin",
+                "SoundEngineListenerMixin", "DebugScreenEntryCacheMixin",
+                "GlTextureMipCacheMixin", "GlCommandEncoderDispatchMixin",
+                "FrameBufferCacheMixin", "VertexArrayCacheSeparateMixin",
+                "SpriteContentsMipsAccessor", "TextureAtlasFreeMipsMixin",
+                "GuiRenderStateNodeMixin", "GuiRenderStateLayeringMixin", "GuiRendererElementOrderMixin",
+                "FormattedBidiReorderMixin", "FramerateLimitUnfocusedMixin")) {
+            assertEquals("handled by ephemera", FeatureCatalog.mixin(name).standDownReason(loaded::contains),
+                    name + " must yield to ephemera");
+        }
+        // Aurora keeps SDF text, world shader cosmetics, deferred Aurora fonts, and GUI item baking/glint/flat-faces.
+        for (String kept : List.of(
+                "SdfFontManagerMixin", "SdfGlyphRenderStateMixin", "SdfGuiTextMixin",
+                "GradientDitherSourceMixin", "GradientDitherPipelineMixin",
+                "SmoothFogSourceMixin", "SmoothFogPipelineMixin",
+                "FontManagerDeferredMixin", "FontSetDeferredMixin",
+                "GuiItemAtlasBakingMixin", "GuiItemAtlasGlintMixin", "GuiItemAtlasFlatFacesMixin")) {
+            assertNull(FeatureCatalog.mixin(kept).standDownReason(loaded::contains),
+                    kept + " must remain active alongside ephemera");
+        }
+    }
+
     @Test void everyPerformanceGateIsAPerfFieldKeptOutOfProfiles() {
         for (FeatureCatalog.MixinBinding b : FeatureCatalog.mixins()) {
             if (!b.features().contains("performance")) continue;

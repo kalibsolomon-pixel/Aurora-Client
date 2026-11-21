@@ -33,6 +33,7 @@ public final class FeatureRegistry {
     private static final List<FeatureMetadata> SETTINGS = new ArrayList<>();
     private static final List<SettingsPage> SETTINGS_PAGES = new ArrayList<>();
     private static boolean initialized = false;
+    private static boolean ephemeraSettingsAttached = false;
 
     /**
      * Background options for modules with no vanilla texture behind them.
@@ -68,7 +69,39 @@ public final class FeatureRegistry {
     /** The Settings tab's pages, in sub-tab order. */
     public static List<SettingsPage> settingsPages() {
         if (!initialized) init();
+        if (!ephemeraSettingsAttached && com.aurora.client.compat.EphemeraBridge.hasSettings()) {
+            attachEphemeraSettings();
+        }
         return SETTINGS_PAGES;
+    }
+
+    private static void attachEphemeraSettings() {
+        ephemeraSettingsAttached = true;
+        List<FeatureSetting> rows = new ArrayList<>();
+        rows.add(ButtonSetting.semantic("Open Ephemera Settings", () ->
+                com.aurora.client.compat.EphemeraBridge.openConfigScreen(
+                        com.aurora.client.adapter.NativeUi.screen(net.minecraft.client.Minecraft.getInstance())))
+                .description(com.aurora.client.compat.EphemeraBridge::statusSummary));
+        for (com.aurora.client.compat.EphemeraBridge.OptionInfo opt : com.aurora.client.compat.EphemeraBridge.options()) {
+            String key = opt.key();
+            rows.add(new BooleanSetting(opt.label(),
+                    () -> com.aurora.client.compat.EphemeraBridge.getBoolean(key),
+                    v -> com.aurora.client.compat.EphemeraBridge.setBoolean(key, v))
+                    .resetDefault(opt::defaultValue)
+                    .description(opt.description()));
+        }
+        FeatureMetadata ephemeraGroup = group("ephemera_engine", "Ephemera Engine",
+                rows.toArray(FeatureSetting[]::new))
+                .pageSummary("Hardware-accelerated terrain, culling, and visuals provided by Ephemera.");
+        for (int i = 0; i < SETTINGS_PAGES.size(); i++) {
+            SettingsPage page = SETTINGS_PAGES.get(i);
+            if ("Performance".equals(page.label())) {
+                List<FeatureMetadata> entries = new ArrayList<>(page.entries());
+                entries.add(ephemeraGroup);
+                SETTINGS_PAGES.set(i, new SettingsPage(page.label(), List.copyOf(entries)));
+                return;
+            }
+        }
     }
 
     /** A registered Settings-tab feature, by id. */

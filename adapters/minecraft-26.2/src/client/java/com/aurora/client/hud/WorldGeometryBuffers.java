@@ -10,7 +10,7 @@ import java.util.LinkedHashMap;
 /** Immediate world overlays through 26.2's staged vertex and prepared render APIs. */
 public final class WorldGeometryBuffers implements AutoCloseable {
     private static WorldGeometryBuffers instance;
-    private final StagedVertexBuffer vertices = new StagedVertexBuffer(() -> "Aurora world overlays", 16384);
+    private final StagedVertexBuffer vertices = new StagedVertexBuffer(() -> "Aurora world overlays", 65536);
     private final LinkedHashMap<RenderType, Batch> batches = new LinkedHashMap<>();
 
     static WorldGeometryBuffers begin() {

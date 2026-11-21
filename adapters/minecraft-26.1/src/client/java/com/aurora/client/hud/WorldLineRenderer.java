@@ -1,5 +1,6 @@
 package com.aurora.client.hud;
 
+import com.aurora.client.compat.EphemeraBridge;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
@@ -86,6 +87,9 @@ public final class WorldLineRenderer {
                                 double x2, double y2, double z2,
                                 float r, float g, float b, float a,
                                 float width, boolean sdf) {
+        if (EphemeraBridge.writeLine(buf, m, camPos, x1, y1, z1, x2, y2, z2, r, g, b, a, width, sdf)) {
+            return;
+        }
         // Normalized direction of the line segment — the GPU shader uses this
         // to expand the line perpendicular to both the direction and the view.
         double dx = x2 - x1;
@@ -156,6 +160,9 @@ public final class WorldLineRenderer {
                                    double x1, double y1, double z1,
                                    double x2, double y2, double z2,
                                    float r, float g, float b, float a, float width) {
+        if (EphemeraBridge.writeSdfBox(buf, m, camPos, x1, y1, z1, x2, y2, z2, r, g, b, a, width)) {
+            return;
+        }
         width = Math.min(width, SDF_ROLE - 1f);
         float rx1 = (float) (x1 - camPos.x), rx2 = (float) (x2 - camPos.x);
         float ry1 = (float) (y1 - camPos.y), ry2 = (float) (y2 - camPos.y);
