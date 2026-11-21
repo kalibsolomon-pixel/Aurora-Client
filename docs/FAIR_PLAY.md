@@ -75,6 +75,7 @@ Changing a default does not change an existing install: a player who already had
 | Keystrokes | Vanilla equivalent | Shows your own key and mouse presses. |
 | Minimap | Vanilla equivalent | A map of terrain your client has loaded, with your waypoints and dots for nearby mobs. Dots for other players are an information advantage and ship off. |
 | Scoreboard HUD | Vanilla equivalent | Replaces the vanilla scoreboard sidebar with a movable, resizable module that shows the same rows and scores as vanilla. Off in a fresh install. |
+| Vanilla HUD | Vanilla equivalent | Moves, scales or hides vanilla's boss bar, action bar, titles, subtitles, toasts and advancement pop-ups without adding new information. Off in a fresh install. |
 | World Map | Vanilla equivalent | A full-screen map of terrain you have already visited. |
 | Resourcepack Browser | Cosmetic | Downloads resource packs from Modrinth. |
 | Display Settings | Local timing | Frame pacing, a frame cap, vsync control and the point within a frame where mouse movement is applied. The rate and content of what is sent to the server are unchanged. |

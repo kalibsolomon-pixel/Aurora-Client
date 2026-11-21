@@ -54,6 +54,8 @@ Acceptance and council review are tracked in
 
 Aurora and Pulsar text fields share bounded undo/redo history; see [text-field behavior](DESIGN_LANGUAGE.md#1112-text-field). Dev-client acceptance remains pending.
 
+Vanilla HUD control (`vanilla_hud`, off by default, vanilla-equivalent) exposes Minecraft's boss bar, action bar, titles, subtitles, toasts, and advancement pop-ups in Aurora's HUD editor (`VanillaHudLayout`, `VanillaHudModule`, `VanillaBossBarMixin`, `VanillaHudOverlayMixin`, `VanillaToastMixin`) so each can be moved, scaled, or hidden independently across 26.1.2, 26.2, and 26.3. Checked in a disposable 26.3 singleplayer dev client across settings detail (0.42/0.85 opacity and 854×480), HUD editor off/on, live moved & scaled overlays, and selective hiding.
+
 Roadmap steps 1–3 and the 26.1.2, 26.2 and 26.3 ports are merged through PRs
 #1–#12. The owner authorized autonomous GitHub integration and publication.
 

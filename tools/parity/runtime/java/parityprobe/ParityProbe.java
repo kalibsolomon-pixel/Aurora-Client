@@ -1008,6 +1008,25 @@ public final class ParityProbe implements ClientModInitializer {
             case "chat-open" -> NativeUi.setScreen(client, new net.minecraft.client.gui.screens.ChatScreen("", false));
             case "multiplayer" -> NativeUi.setScreen(client,
                     new net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen(NativeUi.screen(client)));
+            case "vhud-layout" -> {
+                String[] parts = text.split(" ");
+                var mod = com.aurora.client.AuroraClient.modules().get(parts[1]);
+                if (mod == null) throw new IllegalArgumentException("Unknown module " + parts[1]);
+                mod.anchor = com.aurora.client.hud.HudAnchor.valueOf(parts[2]);
+                mod.offsetX = Integer.parseInt(parts[3]);
+                mod.offsetY = Integer.parseInt(parts[4]);
+                mod.scale = Float.parseFloat(parts[5]);
+                if (parts.length > 6) mod.enabled = Boolean.parseBoolean(parts[6]);
+            }
+            case "vhud-toast" -> {
+                var mgr = (net.minecraft.client.gui.components.toasts.ToastManager) (hasMethod(Minecraft.class, "getToastManager")
+                        ? Minecraft.class.getMethod("getToastManager").invoke(client)
+                        : client.gui.getClass().getMethod("toastManager").invoke(client.gui));
+                mgr.addToast(new net.minecraft.client.gui.components.toasts.SystemToast(
+                        net.minecraft.client.gui.components.toasts.SystemToast.SystemToastId.NARRATOR_TOGGLE,
+                        Component.literal("Aurora Toast Test"),
+                        Component.literal("Moved & scaled toast")));
+            }
             // `inventory`: the survival inventory screen; `hover-slot <n>` parks the pointer on inventory slot n.
             case "inventory" -> NativeUi.setScreen(client,
                     new net.minecraft.client.gui.screens.inventory.InventoryScreen(client.player));

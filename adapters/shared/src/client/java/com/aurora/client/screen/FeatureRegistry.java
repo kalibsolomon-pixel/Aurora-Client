@@ -1023,6 +1023,43 @@ addWithSettings("hitbox",
                 ),
                 List.of("scoreboard"));
 
+        addWithSettings("vanilla_hud",
+                "Move, scale or hide vanilla's boss bar, action bar, titles, subtitles, toasts and advancement pop-ups from Aurora's HUD editor. Off in a fresh install so vanilla HUD placement stays unchanged until enabled.",
+                () -> cfg.vanillaHudEnabled, v -> cfg.vanillaHudEnabled = v,
+                List.of(
+                        new SectionHeaderSetting("Visibility"),
+                        new BooleanSetting("Show Boss Bar",
+                                () -> cfg.vanillaHudShowBossBar, v -> cfg.vanillaHudShowBossBar = v)
+                                .resetDefault("vanillaHudShowBossBar", () -> defaults.vanillaHudShowBossBar)
+                                .description("Show or hide the vanilla boss health bar. When shown, drag and scale it in the HUD editor."),
+                        new BooleanSetting("Show Action Bar",
+                                () -> cfg.vanillaHudShowActionBar, v -> cfg.vanillaHudShowActionBar = v)
+                                .resetDefault("vanillaHudShowActionBar", () -> defaults.vanillaHudShowActionBar)
+                                .description("Show or hide action bar messages (such as hotbar alerts and server status lines)."),
+                        new BooleanSetting("Show Titles",
+                                () -> cfg.vanillaHudShowTitles, v -> cfg.vanillaHudShowTitles = v)
+                                .resetDefault("vanillaHudShowTitles", () -> defaults.vanillaHudShowTitles)
+                                .description("Show or hide center-screen titles independently of subtitles."),
+                        new BooleanSetting("Show Subtitles",
+                                () -> cfg.vanillaHudShowSubtitles, v -> cfg.vanillaHudShowSubtitles = v)
+                                .resetDefault("vanillaHudShowSubtitles", () -> defaults.vanillaHudShowSubtitles)
+                                .description("Show or hide center-screen subtitles independently of titles."),
+                        new BooleanSetting("Show Toasts",
+                                () -> cfg.vanillaHudShowToasts, v -> cfg.vanillaHudShowToasts = v)
+                                .resetDefault("vanillaHudShowToasts", () -> defaults.vanillaHudShowToasts)
+                                .description("Show or hide vanilla system, recipe, tutorial and music toasts."),
+                        new BooleanSetting("Show Advancements",
+                                () -> cfg.vanillaHudShowAdvancements, v -> cfg.vanillaHudShowAdvancements = v)
+                                .resetDefault("vanillaHudShowAdvancements", () -> defaults.vanillaHudShowAdvancements)
+                                .description("Show or hide advancement pop-up toasts separately from other toasts."),
+                        new SectionHeaderSetting("Layout"),
+                        ButtonSetting.semantic("Open HUD Editor", () -> {
+                            var mc = net.minecraft.client.Minecraft.getInstance();
+                            com.aurora.client.adapter.NativeUi.setScreen(mc, new com.aurora.client.screen.HudEditorScreen());
+                        }).description("Drag, resize, lock or right-click to hide each vanilla HUD element in the HUD editor.")
+                ),
+                List.of("vanillaHud"));
+
         addWithSettings("container_preview",
                 "Hover over a shulker box (or your ender chest) in any inventory to see its full contents in a grid tooltip — no need to place and open it. Massively speeds up sorting storage and finding the right shulker at a glance.",
                 () -> cfg.containerPreviewEnabled, v -> cfg.containerPreviewEnabled = v,

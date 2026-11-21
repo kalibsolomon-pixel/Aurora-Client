@@ -95,6 +95,8 @@ lookup must wait, not fail.
 | `menu` | Disconnect to Aurora's title screen |
 | `chat-open` | Open the chat screen over recent lines (add lines with `server tellraw @a ...`) |
 | `multiplayer` | Open vanilla's server list |
+| `vhud-layout <id> <anchor> <ox> <oy> <scale> [enabled]` | Position/scale/hide a HUD module in memory |
+| `vhud-toast` | Push a sample `SystemToast` onto the client's `ToastManager` |
 | `inventory` / `hover-slot 0` | Open the survival inventory / park the GUI pointer on an inventory slot, showing its tooltip |
 | `reload-resources` | Start the reload F3+T starts (`Minecraft.reloadResourcePacks()`); logs `reload-resources finished` once every listener has applied |
 | `stop` | Shut down normally |

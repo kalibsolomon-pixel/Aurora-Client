@@ -1259,6 +1259,21 @@ public class AuroraConfig {
     /** Extra content scale on top of the universal layout scale, 0.5..3. */
     public double scoreboardScale = 1.0;
 
+    // ---- Vanilla HUD Control ----
+    /**
+     * Master toggle for Vanilla HUD control: exposes vanilla's boss bar,
+     * action bar, titles, subtitles, toasts and advancement pop-ups in the
+     * HUD editor so they can be moved, scaled or hidden. Off in a fresh
+     * install so existing installs stay untouched until enabled.
+     */
+    public boolean vanillaHudEnabled = false;
+    public boolean vanillaHudShowBossBar = true;
+    public boolean vanillaHudShowActionBar = true;
+    public boolean vanillaHudShowTitles = true;
+    public boolean vanillaHudShowSubtitles = true;
+    public boolean vanillaHudShowToasts = true;
+    public boolean vanillaHudShowAdvancements = true;
+
     // ---- Better Hitreg (BetterHitreg by Jass, integrated) ----
     // Only the custom client-side hitreg remains (owner direction
     // 2026-11-15); the tracking, audio, render, practice-arena, color and

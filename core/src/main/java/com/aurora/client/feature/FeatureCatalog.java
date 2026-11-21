@@ -230,6 +230,7 @@ public final class FeatureCatalog {
         module("keystrokes", "Keystrokes", "Displays your WASD, mouse, jump, and sneak keys as a HUD overlay that lights up in real time as you press them.");
         module("minimap", "Minimap", "A top-down map of the world around you, shown as a HUD overlay. Renders terrain, waypoints, and nearby entities as colored dots.");
         module("scoreboard", "Scoreboard HUD", "Replaces the vanilla scoreboard sidebar with a HUD module you can move, resize and restyle. Off in a fresh install, so existing installs keep vanilla's sidebar.");
+        module("vanilla_hud", "Vanilla HUD", "Move, scale or hide vanilla's boss bar, action bar, titles, subtitles, toasts and advancement pop-ups from the HUD editor.");
         module("world_map", "World Map", "A full-screen, pannable world map of your explored terrain.");
         module("resourcepack_browser", "Resourcepack Browser", "Browse and install community resource packs directly from Modrinth. Search, preview, and one-click install straight into your resourcepacks folder.");
 
@@ -290,6 +291,7 @@ public final class FeatureCatalog {
         classify("keystrokes", FairPlay.VANILLA_INFORMATION, "Shows your own key and mouse presses.");
         classify("minimap", FairPlay.VANILLA_INFORMATION, "A map of terrain your client has loaded, with your waypoints and dots for nearby mobs. Dots for other players are an information advantage and ship off.", "minimapShowPlayers");
         classify("scoreboard", FairPlay.VANILLA_INFORMATION, "Replaces the vanilla scoreboard sidebar with a movable, resizable module that shows the same rows and scores as vanilla. Off in a fresh install.", "scoreboardEnabled");
+        classify("vanilla_hud", FairPlay.VANILLA_INFORMATION, "Moves, scales or hides vanilla's boss bar, action bar, titles, subtitles, toasts and advancement pop-ups without adding new information. Off in a fresh install.", "vanillaHudEnabled");
         classify("world_map", FairPlay.VANILLA_INFORMATION, "A full-screen map of terrain you have already visited.");
         classify("resourcepack_browser", FairPlay.COSMETIC, "Downloads resource packs from Modrinth.");
         classify("miscellaneous", FairPlay.LOCAL_TIMING, "Frame pacing, a frame cap, vsync control and the point within a frame where mouse movement is applied. The rate and content of what is sent to the server are unchanged.");
@@ -306,6 +308,9 @@ public final class FeatureCatalog {
         mixin("TitleScreenMixin", "the Aurora title screen", "custom_title").gates("customTitleScreen");
         mixin("InGameHudMixin", "hiding the vanilla crosshair under Aurora's", "crosshair").gates("crosshairEnabled");
         mixin("ScoreboardSidebarMixin", "replacing the vanilla scoreboard sidebar", "scoreboard").gates("scoreboardEnabled");
+        mixin("VanillaBossBarMixin", "moving, scaling or hiding the boss bar", "vanilla_hud").gates("vanillaHudEnabled");
+        mixin("VanillaHudOverlayMixin", "moving, scaling or hiding the action bar, titles and subtitles", "vanilla_hud").gates("vanillaHudEnabled");
+        mixin("VanillaToastMixin", "moving, scaling or hiding toasts and advancement pop-ups", "vanilla_hud").gates("vanillaHudEnabled");
         mixin("GameRendererMixin", "zooming the view", "zoom").gates("zoomEnabled");
         mixin("RenderTargetMixin", "nothing (kept empty for compatibility)");
         mixin("PlayerListHudMixin", "numeric ping in the tab list", "ping").gates("tabPingEnabled");
