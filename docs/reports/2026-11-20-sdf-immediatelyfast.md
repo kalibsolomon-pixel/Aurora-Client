@@ -74,7 +74,43 @@ One 26.3 boot logged `Couldn't find source for FRAGMENT shader (aurora:core/gui_
 2. RRLS lets screens draw during the reload. The first SDF draw can therefore compile Aurora's pipeline before Aurora's shader is visible.
 3. `NativeSdfText.pipelineAvailable` treats the resulting null as a permanent failure.
 
-This happened in 1 of the 9 boots in this pass, all of which ran RRLS. A fix would postpone that decision until the shader manager has applied once, for example with a hook on `ShaderManager.apply` / `RenderSystem.setCurrentPipelineCache` on 26.3 and the equivalent on the other lines. That is left for a separate change.
+This happened in 1 of the 9 boots in this pass, all of which ran RRLS. That follow-up is resolved below.
+
+## RRLS, SDF text and the first shader apply
+
+### Root cause per line
+
+RRLS (Remove Reloading Screen 5.2.8 on 26.3 and 26.2; 5.2.6 on 26.1.2) intercepts `ReloadableResourceManager.registerReloadListener` (`ReloadableResourceManagerMixin.rrls$initReloader`) to kick off asynchronous quick reloads for `FontManager`, `LanguageManager`, `SplashManager`, GUI `AtlasManager`, and `ShaderManager` onto the main-thread executor, while `MinecraftClientMixin` hides the loading overlay and triggers `onResourceLoadFinished` early so screens draw during the first reload. When the first SDF text or UI shape draw runs before `ShaderManager.apply` executes on the main thread, pipeline compilation fails for version-specific reasons:
+
+- **Minecraft 26.3 (OpenGL and native Vulkan):** `GameRenderer.preloadUiShader` creates `RenderSystem.fallbackPipelineCache` from `vanillaPackResources` (vanilla-only startup resources). Until `ShaderManager.apply` installs the real cache via `RenderSystem.setCurrentPipelineCache(pipelineCache)`, `RenderSystem.getCompiledPipelineNullable` falls through to `fallbackPipelineCache`, which finds vanilla shaders but cannot find Aurora's (`Couldn't find source for FRAGMENT shader (aurora:core/gui_text_sdf)`, `VERTEX shader (aurora:core/ui_shape)`) and returns `null`.
+- **Minecraft 26.2 (OpenGL and native Vulkan) and 26.1.2 (OpenGL):** `GpuDevice` (`GlDevice` / `VulkanDevice`) is initialized with `defaultShaderSource = this.shaderManager::getShader`, and `ShaderManager.compilationCache` starts as `ShaderManager.Configs.EMPTY` until `ShaderManager.apply` replaces it (`GameRenderer.preloadUiShader` only precompiles vanilla's `GUI`, `GUI_TEXTURED` and `TRACY_BLIT` through a local lambda). Any `precompilePipeline` call before `ShaderManager.apply` misses both the vanilla vertex shader (`minecraft:core/text` on 26.2; `minecraft:core/rendertype_text_intensity_see_through` on 26.1.2) and `aurora:core/gui_text_sdf`, returning an invalid compiled pipeline (`!isValid()`).
+
+Before this fix, both `NativeSdfText.pipelineAvailable()` and `NativeShapeRenderer.pipelineAvailable()` latched that early miss as a permanent session failure (`SDF text disabled (shader unavailable)` / `UI shape shader unavailable`).
+
+### Fix and hook
+
+- **`ShaderManagerAppliedMixin`** (`adapters/shared`, `@Mixin(ShaderManager.class)`, `@Inject(method = "apply", at = @At("RETURN"), require = 1)`) calls `ShaderLoad.markApplied()` on all three lines. A failed `ShaderManager.apply` throws before returning, so `RETURN` guarantees shaders were applied (`setCurrentPipelineCache` on 26.3; `this.compilationCache = newCompilationCache` on 26.1.2 and 26.2).
+- **`ShaderLoad.settled()`** returns `applied || MixinHealth.failed("ShaderManagerAppliedMixin")`. The mixin is gateless (harmless alone per ADR 0004), listed immediately after `SdfGlyphRenderStateMixin` in all three `aurora.mixins.json` files, and registered under `text_fonts` in `FeatureCatalog`. If the mixin cannot apply or is disabled (`-Daurora.mixin.disable=ShaderManagerAppliedMixin`), `settled()` returns `true` immediately, preserving pre-fix behavior.
+- **Callers:** `SdfTextSupport.checkPipeline` (used by `NativeSdfText.pipelineAvailable()` on all three adapters) and `NativeShapeRenderer.pipelineAvailable()` return `false` without compiling or setting their session failure latch while `!ShaderLoad.settled()`. Text keeps its exact bitmap and shapes use the CPU rasterizer until the first apply finishes; genuine failures after the first apply still fall back for the session with a warning. Later resource reloads (F3+T) leave `applied` set so old pipelines stay usable while `SdfFontManagerMixin` invalidates and re-checks `NativeSdfText` on font reload.
+
+### Verification
+
+- **Pre-fix reproduction (`-Daurora.parity.earlySdf=true`):** `EarlySdfLookup` (parity probe mixin on `Minecraft.<init>` tail, before main-thread reload tasks can run) deterministically reproduced `SDF text disabled (shader unavailable)` on 26.3 OpenGL, 26.3 native Vulkan, 26.2 OpenGL, 26.2 Vulkan, and 26.1.2 OpenGL, and reproduced both `SDF text disabled (shader unavailable)` and `UI shape shader unavailable` on 26.3 OpenGL with `ShaderManagerAppliedMixin` disabled.
+- **Post-fix boots** with RRLS and the owner's instance mods (26.3 `bdbb2f26…`, 26.2 `0cb60dca…`, leaving out Spark, Simple Voice Chat, Crash Assistant, installed Aurora jars, and Fabric API; Iris also omitted on 26.3 native Vulkan; 26.1.2 with RRLS 5.2.6), on the secondary portrait monitor at factory settings:
+
+| Line and backend | RRLS | Clean boots | Forced early lookup (`--early`) | F3+T reloads (`reload-resources`) | Result |
+|---|---|---:|---:|---:|---|
+| 26.3 OpenGL | 5.2.8 | 11 / 11 | 3 (1 title, 2 world) | 5 total (1 title + 2×2 world) | `SDF text pipeline ready` in all 11; 0 Aurora warnings; 111 mixins applied/stood down (4 stood down) |
+| 26.3 native Vulkan | 5.2.8 | 11 / 11 | 3 (1 title, 2 world) | 5 total (1 title + 2×2 world) | `SDF text pipeline ready` in all 11; 0 Aurora warnings; 111 mixins applied/stood down (4 stood down) |
+| 26.2 OpenGL | 5.2.8 | 5 / 5 | 2 (1 title, 1 world) | 2 total (1 title + 1 world) | `SDF text pipeline ready` in all 5; 0 Aurora warnings; 110 mixins applied/stood down (4 stood down) |
+| 26.1.2 OpenGL | 5.2.6 | 3 / 3 | 1 (title) | 1 (title) | `SDF text pipeline ready` in all 3; 0 Aurora warnings; 111 mixins applied |
+
+- **Forced early lookup logs:** Every `--early` boot logged `early-sdf pipelineAvailable=false`, `early-shape pipelineAvailable=false`, zero `Couldn't find source for ... shader` errors, and then `[Fonts] SDF text pipeline ready (after waiting for the shader loader)`, followed by `[Fonts] SDF text pipeline ready` after each F3+T reload.
+- **Visual checks:** Clean Settings, HUD (Keystrokes, hotbar, chat), and post-reload screenshots on 26.3 OpenGL, 26.3 native Vulkan (sky platform at noon, not inside terrain), 26.2 OpenGL (in-world and title Settings), and 26.1.2 OpenGL (title Settings) all show crisp SDF text before and after F3+T reloads.
+- **Fail-soft control (`-Daurora.mixin.disable=ShaderManagerAppliedMixin`, 26.3 OpenGL):** 10/10 natural title boots succeeded with SDF text active (confirming fail-soft behavior and that the natural race is timing-dependent), while `--early` with the hook disabled reproduced both `SDF text disabled (shader unavailable)` and `UI shape shader unavailable`.
+- **Unrelated 26.2 RRLS observation:** One additional 26.2 title boot crashed on a mid-reload window resize (`AuroraTitleScreen.init` → `PlayerSkinWidget`: `No model for layer minecraft:player#main`) before `EntityModelSet` finished reloading; unrelated to shaders or SDF text and left outside this change.
+
+![26.3 OpenGL and native Vulkan after forced early lookup and two F3+T reloads](evidence/sdf-immediatelyfast/rrls-26.3-after-reload.png)
 
 ## Tests
 
@@ -83,4 +119,6 @@ This happened in 1 of the 9 boots in this pass, all of which ran RRLS. A fix wou
   - Font deferral no longer yields to ModernFix.
 - `SdfAtlasPageSizeSourceContractTest` (new): cells carry their page's texture size, and the texture coordinates divide by it.
 - `SdfTextMathTest`: texel centres on a 1024 page.
-- The parity probe gains `chat-open`, `multiplayer`, `inventory` and `hover-slot` for these scenes.
+- `SdfPipelineCheckTest` (new): waits without compiling or failing before `ShaderLoad.markApplied()`, compiles once settled, fails for the session on post-apply `false` or throw, stays settled across reloads, and falls back to pre-hook behavior when `ShaderManagerAppliedMixin` fails.
+- `ShaderLoadSourceContractTest` (new): verifies `ShaderManagerAppliedMixin` targets `ShaderManager.apply` at `RETURN`, matches `ShaderLoad.HOOK`, is listed on all three lines, and gates both `NativeSdfText` and `NativeShapeRenderer` on all three adapters.
+- The parity probe gains `chat-open`, `multiplayer`, `inventory`, `hover-slot`, `reload-resources`, and `-Daurora.parity.earlySdf=true` (`EarlySdfLookup`).

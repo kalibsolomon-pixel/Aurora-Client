@@ -38,6 +38,14 @@ checked in the owner's instances ([report](reports/2026-11-20-sdf-immediatelyfas
 | ImmediatelyFast 1.16.5 (26.2), 1.17.1 (26.3) | SDF text | `font_atlas_resizing` also enlarges Aurora's SDF pages; SDF glyphs use each page's actual size |
 | ModernFix 5.27.20 (26.3) | Deferred Aurora font preparation | Its only font patch makes unihex providers lazy; it owns no `FontManager` or `FontSet` work |
 
+RRLS (Remove Reloading Screen 5.2.8 on 26.3 and 26.2, 5.2.6 on 26.1.2) is in both of the owner's
+instances. It reloads the Shader Loader early and lets screens draw before it applies, when Minecraft still
+compiles from the vanilla-only startup fallback cache (26.3) or an empty shader table (26.1.2, 26.2) and
+Aurora's shaders do not exist. Aurora waits for that first apply before it judges its own shaders, so a first
+draw that comes first no longer turns SDF text (or shader-drawn shapes) off for the session; a failure after
+the apply still does
+([report](reports/2026-11-20-sdf-immediatelyfast.md#rrls-sdf-text-and-the-first-shader-apply)).
+
 ## How to run it
 
 1. Back up `run/config/aurora.json`, `run/config/profiles/` and `run/options.txt`.

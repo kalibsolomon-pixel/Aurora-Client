@@ -540,6 +540,9 @@ public final class ParityProbe implements ClientModInitializer {
                     throw new AssertionError("Inactivity FPS option was not restored");
             }
             case "stop" -> { UiCacheBenchmark.cancel(); ShapeBenchmark.cancel(); restoreFpsOptions(client); client.stop(); }
+            // The reload F3+T starts; the log line marks when every listener, the Shader Loader included, has applied.
+            case "reload-resources" -> client.reloadResourcePacks()
+                    .thenRun(() -> System.out.println("[parity-probe] reload-resources finished"));
             case "resize" -> client.getWindow().setWindowed(Integer.parseInt(args[1]), Integer.parseInt(args[2]));
             // `semantic <label>`: every semantic control's pointer rect on the current screen.
             case "semantic" -> {

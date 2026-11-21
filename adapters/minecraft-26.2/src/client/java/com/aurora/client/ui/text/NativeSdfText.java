@@ -33,17 +33,13 @@ public final class NativeSdfText {
 
     static boolean pipelineAvailable() {
         if (validated) return true;
-        try {
-            var compiled = RenderSystem.getDevice().precompilePipeline(Pipeline.INSTANCE);
-            if (compiled != null && compiled.isValid()) {
-                validated = true;
-                return true;
-            }
-            SdfTextSupport.fail("shader unavailable", null);
-        } catch (RuntimeException | LinkageError failure) {
-            SdfTextSupport.fail("shader compilation", failure);
-        }
-        return false;
+        validated = SdfTextSupport.checkPipeline(NativeSdfText::compiles);
+        return validated;
+    }
+
+    private static boolean compiles() {
+        var compiled = RenderSystem.getDevice().precompilePipeline(Pipeline.INSTANCE);
+        return compiled != null && compiled.isValid();
     }
 
     static void invalidatePipeline() { validated = false; }
