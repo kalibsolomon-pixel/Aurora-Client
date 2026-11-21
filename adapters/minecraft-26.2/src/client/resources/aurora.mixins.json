@@ -23,6 +23,7 @@
     "VertexRenderingMixin",
     "SimpleOptionMixin",
     "EntityRenderDispatcherMixin",
+    "HitboxVisibleEntitiesMixin",
     "RenderSystemMixin",
     "GameRendererBobMixin",
     "HeldItemRendererMixin",

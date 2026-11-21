@@ -183,6 +183,11 @@ camera, stands down for `entityculling`, and is pixel-identical across all 11 ve
 on 26.1.2 OpenGL, 26.2 OpenGL and 26.3 native Vulkan; [evidence](reports/2026-11-20-entity-occlusion.md).
 GUI Flat Faces skips exact zero-area (edge-on) quads inside GUI item atlas draws across all three
 lines, pixel-identical; [evidence](reports/2026-11-20-gui-flat-faces.md).
+Performance follow-ups (`fix/perf-followups`): `HitboxRenderer` follows main-world visible entities after
+vanilla, Sodium, EntityCulling and Aurora occlusion (`HitboxVisibleEntitiesMixin`); `CrosshairRenderer` and
+target hitboxes reuse vanilla's block-clipped `crosshairPickEntity`; Item Physics tracks frame-rate-independent
+landing ease and settled state per `ItemEntity` (`ItemPhysicsSmoothing`); and `AuroraTitleScreen` waits for
+`EntityModelSet` under RRLS.
 
 ## Next work
 

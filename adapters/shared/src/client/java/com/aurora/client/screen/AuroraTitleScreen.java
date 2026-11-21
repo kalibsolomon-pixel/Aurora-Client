@@ -34,6 +34,7 @@ import net.minecraft.client.gui.screens.worldselection.SelectWorldScreen;
 import net.minecraft.client.input.InputWithModifiers;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.model.geom.EntityModelSet;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FontDescription;
 import net.minecraft.network.chat.Style;
@@ -76,8 +77,9 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
     private boolean accountOpen;
     /** In-Game Account Switcher is installed: the card opens its account list instead of the dropdown. */
     private boolean switcher;
-    /** Reload-screen mods can open the menu before the initial model bake. */
+    /** Reload-screen mods can open or resize the menu before ModelManager finishes baking EntityModelSet. */
     private boolean waitingForResources;
+    private EntityModelSet failedModels;
     // Text fitted once per layout and text style (overflow rule; no per-frame measuring).
     private FormattedCharSequence[] wordmarkGlyphs;
     private int[] wordmarkAdvances;
@@ -93,7 +95,10 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
 
     @Override
     protected void init() {
-        waitingForResources = !this.minecraft.isGameLoadFinished();
+        EntityModelSet models = this.minecraft.getEntityModels();
+        boolean modelsReady = this.minecraft.isGameLoadFinished()
+                && models != null && models != EntityModelSet.EMPTY && models != failedModels;
+        waitingForResources = !modelsReady;
         composition = MenuComposition.layout(this.width, this.height);
         accountOpen = false;
         accountMotion.reset();
@@ -150,9 +155,16 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
                 () -> { if (NativeUi.screen(this.minecraft) == this) rebuildWidgets(); }), false);
         var model = composition.model();
         if (model.width() > 0 && !waitingForResources) {
-            PlayerSkinWidget figure = new PlayerSkinWidget(model.width(), model.height(), this.minecraft.getEntityModels(), skin);
-            figure.setPosition(model.x(), model.y());
-            addRenderableWidget(figure);
+            try {
+                PlayerSkinWidget figure = new PlayerSkinWidget(model.width(), model.height(), models, skin);
+                figure.setPosition(model.x(), model.y());
+                addRenderableWidget(figure);
+                failedModels = null;
+            } catch (IllegalArgumentException missingModelLayer) {
+                // RRLS can finish game load before ModelManager finishes baking EntityModelSet.
+                failedModels = models;
+                waitingForResources = true;
+            }
         }
         var card = composition.account();
         switcher = AuroraAccountSwitcherApi.available();
@@ -170,7 +182,12 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
     @Override
     public void tick() {
         super.tick();
-        if (waitingForResources && this.minecraft.isGameLoadFinished()) rebuildWidgets();
+        if (waitingForResources && this.minecraft.isGameLoadFinished()) {
+            EntityModelSet models = this.minecraft.getEntityModels();
+            if (models != null && models != EntityModelSet.EMPTY && models != failedModels) {
+                rebuildWidgets();
+            }
+        }
     }
 
     private ButtonWidget addCard(int index, Component label, String icon, String description, Runnable onPress) {

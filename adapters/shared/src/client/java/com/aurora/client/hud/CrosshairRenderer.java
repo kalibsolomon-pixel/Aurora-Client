@@ -10,12 +10,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.phys.EntityHitResult;
-import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.Vec3;
-
-import java.util.function.Predicate;
 
 /**
  * Draws Aurora's custom crosshair on top of the (mixin-suppressed) vanilla one.
@@ -178,24 +173,16 @@ public final class CrosshairRenderer {
     }
 
     private static boolean isAimingAtEntity(Minecraft client) {
-        LocalPlayer player = client.player;
-        if (player == null || client.level == null) return false;
-
-        double reach = player.entityInteractionRange();
-        if (reach <= 0) reach = 3.0;
-
-        Vec3 eye = player.getEyePosition(1.0f);
-        Vec3 look = player.getViewVector(1.0f);
-        Vec3 end = eye.add(look.x * reach, look.y * reach, look.z * reach);
-        AABB searchBox = player.getBoundingBox().expandTowards(look.scale(reach)).inflate(1.0);
-
-        Predicate<Entity> filter = e ->
-                !e.isSpectator() && e.isPickable() && e != player && e instanceof LivingEntity;
-
-        EntityHitResult hit = ProjectileUtil.getEntityHitResult(
-                player, eye, end, searchBox, filter, reach * reach);
-
-        return hit != null && hit.getEntity() != null;
+        if (client.player == null || client.level == null) return false;
+        // Vanilla's Minecraft.pick already clips entity raycasts against solid blocks
+        // at player.entityInteractionRange(), so reusing crosshairPickEntity prevents
+        // lighting up through walls and avoids a per-frame entity scan in crowds.
+        Entity target = client.crosshairPickEntity;
+        if (target == null && client.hitResult instanceof EntityHitResult ehr) {
+            target = ehr.getEntity();
+        }
+        return target instanceof LivingEntity living && living.isAlive()
+                && !living.isSpectator() && target != client.player;
     }
 
     // ===== Shape drawing =====

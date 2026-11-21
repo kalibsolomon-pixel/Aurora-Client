@@ -316,6 +316,8 @@ public final class FeatureCatalog {
         mixin("SimpleOptionMixin", "raising brightness past the vanilla limit", "full_bright").gates("fullBright");
         mixin("EntityRenderDispatcherMixin", "replacing the vanilla hitboxes", "hitbox")
                 .gates("hitboxEnabled", "hitboxTargetEnabled");
+        mixin("HitboxVisibleEntitiesMixin", "matching hitboxes to visible entities", "hitbox")
+                .gates("hitboxEnabled", "hitboxTargetEnabled");
         mixin("RenderSystemMixin", "Aurora's frame limiter after each frame", "miscellaneous")
                 .gates("smoothFramePacer", "adaptiveRenderSleeping");
         mixin("GameRendererBobMixin", "the view-bob strength", "animations");

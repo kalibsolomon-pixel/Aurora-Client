@@ -2,7 +2,9 @@ package com.aurora.client.mixin;
 
 import com.aurora.client.feature.impl.HitboxPositionSmoother;
 import com.aurora.client.hud.HitboxRenderer;
+import com.aurora.client.hud.HitboxVisibleEntities;
 import com.aurora.client.util.AttackedPlayerTracker;
+import com.aurora.client.util.AuroraItemPhysicsSnapshots;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.protocol.game.ClientboundLoginPacket;
 import net.minecraft.network.protocol.game.ClientboundRespawnPacket;
@@ -62,6 +64,8 @@ public abstract class ClientPlayNetworkHandlerWorldJoinMixin {
         // Hitbox position smoother: stale (x,y,z) per UUID would otherwise
         // ease from the old world's location on the first rendered frames.
         HitboxPositionSmoother.clearAll();
+        HitboxVisibleEntities.clear();
+        AuroraItemPhysicsSnapshots.clearTracks();
         // Reset the frame-rate-independent easing clock so a stale timestamp
         // from the previous world doesn't poison the first frame's dtSec.
         HitboxRenderer.resetFrameTiming();
