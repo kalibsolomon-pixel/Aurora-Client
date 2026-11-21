@@ -108,9 +108,15 @@ public final class SmoothFogPipelines {
                 String.valueOf(pipeline.getFragmentShader()), names);
     }
 
+    /** Preserves "sodium" in the namespace so Sodium 0.9.2's 26.2 VulkanPipelineMixin attaches push constants. */
+    private static Identifier twinLocation(Identifier base) {
+        String ns = base.getNamespace().contains("sodium") ? "aurora_sodium" : "aurora";
+        return Identifier.fromNamespaceAndPath(ns, "smooth_fog/" + base.getNamespace() + "/" + base.getPath());
+    }
+
     private static final class Smoothed extends RenderPipeline {
         Smoothed(RenderPipeline base) {
-            super(Identifier.fromNamespaceAndPath("aurora", "smooth_fog/" + base.getLocation().getNamespace() + "/" + base.getLocation().getPath()),
+            super(twinLocation(base.getLocation()),
                     base.getVertexShader(),
                     base.getFragmentShader(),
                     base.getShaderDefines().withOverrides(ShaderDefines.builder().define(SmoothFog.DEFINE).build()),

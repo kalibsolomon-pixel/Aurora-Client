@@ -199,26 +199,58 @@ public final class CrosshairRenderer {
                 }
             };
 
+    private static AuroraConfig.CrosshairStyle lastRasterStyle;
+    private static int lastRasterSize, lastRasterThick, lastRasterGap;
+    private static double lastRasterScale = Double.NaN;
+    private static java.util.List<CrosshairRaster.Run> lastRasterRuns;
+
     private static void drawRaster(GuiGraphicsExtractor ctx, AuroraConfig.CrosshairStyle style,
                                    int cx, int cy, int size, int thickness, int gap, int color, boolean invert) {
         double scale = Minecraft.getInstance().getWindow().getGuiScale();
-        var key = new RasterKey(style, size, thickness, gap, scale);
-        var runs = RASTERS.computeIfAbsent(key,
-                k -> CrosshairRaster.raster(k.style(), k.size(), k.thickness(), k.gap(), k.scale()));
+        java.util.List<CrosshairRaster.Run> runs;
+        if (lastRasterRuns != null && style == lastRasterStyle && size == lastRasterSize
+                && thickness == lastRasterThick && gap == lastRasterGap && scale == lastRasterScale) {
+            runs = lastRasterRuns;
+        } else {
+            var key = new RasterKey(style, size, thickness, gap, scale);
+            runs = RASTERS.computeIfAbsent(key,
+                    k -> CrosshairRaster.raster(k.style(), k.size(), k.thickness(), k.gap(), k.scale()));
+            lastRasterStyle = style;
+            lastRasterSize = size;
+            lastRasterThick = thickness;
+            lastRasterGap = gap;
+            lastRasterScale = scale;
+            lastRasterRuns = runs;
+        }
         ctx.pose().pushMatrix();
         // Undo the caller's half-pixel bias for symmetric even device-pixel bounds.
         ctx.pose().translate(cx + 0.5f, cy + 0.5f);
         ctx.pose().scale((float) (1.0 / scale), (float) (1.0 / scale));
-        for (var run : runs) {
+        for (int i = 0, n = runs.size(); i < n; i++) {
+            var run = runs.get(i);
             int alpha = ((color >>> 24) * run.alpha() + 127) / 255;
             if (alpha > 0) fill(ctx, invert, run.x(), run.y(), run.x() + run.width(), run.y() + 1,
                     (alpha << 24) | (color & 0x00ffffff));
         }
         ctx.pose().popMatrix();
     }
+
+    private static int plainCrossKey = -1;
+    private static int[] plainCrossRects;
+
     private static void drawCross(GuiGraphicsExtractor ctx, int cx, int cy, int size, int thick, int gap, int color,
                                   boolean invert) {
-        int[] rects = invert ? crossUnion(size, thick, gap) : crossRects(size, thick, gap);
+        int[] rects;
+        if (invert) {
+            rects = crossUnion(size, thick, gap);
+        } else {
+            int key = (size << 20) | (thick << 10) | gap;
+            if (key != plainCrossKey || plainCrossRects == null) {
+                plainCrossRects = crossRects(size, thick, gap);
+                plainCrossKey = key;
+            }
+            rects = plainCrossRects;
+        }
         for (int i = 0; i < rects.length; i += 4) {
             fill(ctx, invert, cx + rects[i], cy + rects[i + 1], cx + rects[i + 2], cy + rects[i + 3], color);
         }
@@ -309,10 +341,28 @@ public final class CrosshairRenderer {
         ctx.pose().translate(-gridW / 2.0f, -gridH / 2.0f);
 
         // GPU matrix perfectly aligns integer vertices, preventing subpixel seams.
-        int[] rects = customRects(pixels, gridW, gridH);
+        int[] rects = cachedCustomRects(pixels, gridW, gridH);
         for (int i = 0; i < rects.length; i += 4) fill(ctx, invert, rects[i], rects[i + 1], rects[i + 2], rects[i + 3], color);
 
         ctx.pose().popMatrix();
+    }
+
+    private static boolean[] lastCustomPixels;
+    private static int lastCustomW, lastCustomH, lastCustomHash;
+    private static int[] lastCustomRects;
+
+    private static int[] cachedCustomRects(boolean[] pixels, int gridW, int gridH) {
+        int hash = java.util.Arrays.hashCode(pixels);
+        if (lastCustomRects != null && pixels == lastCustomPixels
+                && gridW == lastCustomW && gridH == lastCustomH && hash == lastCustomHash) {
+            return lastCustomRects;
+        }
+        lastCustomPixels = pixels;
+        lastCustomW = gridW;
+        lastCustomH = gridH;
+        lastCustomHash = hash;
+        lastCustomRects = customRects(pixels, gridW, gridH);
+        return lastCustomRects;
     }
 
     /**

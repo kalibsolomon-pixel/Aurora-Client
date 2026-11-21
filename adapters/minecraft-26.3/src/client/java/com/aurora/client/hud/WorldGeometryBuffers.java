@@ -25,17 +25,16 @@ public final class WorldGeometryBuffers implements AutoCloseable {
     }
 
     @Override public void close() {
+        if (batches.isEmpty()) return;
         try {
             vertices.upload();
-            if (!batches.isEmpty()) {
-                var target = com.aurora.client.adapter.NativeUi.mainTarget(net.minecraft.client.Minecraft.getInstance());
-                try (var pass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(
-                        () -> "Aurora world overlays", target.getColorTextureView(), java.util.Optional.empty(),
-                        target.getDepthTextureView(), java.util.OptionalDouble.empty())) {
-                    for (Batch batch : batches.values()) {
-                        var info = vertices.getExecuteInfo(batch.draw());
-                        if (info != null) batch.type().drawFromBuffer(info, pass);
-                    }
+            var target = com.aurora.client.adapter.NativeUi.mainTarget(net.minecraft.client.Minecraft.getInstance());
+            try (var pass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(
+                    () -> "Aurora world overlays", target.getColorTextureView(), java.util.Optional.empty(),
+                    target.getDepthTextureView(), java.util.OptionalDouble.empty())) {
+                for (Batch batch : batches.values()) {
+                    var info = vertices.getExecuteInfo(batch.draw());
+                    if (info != null) batch.type().drawFromBuffer(info, pass);
                 }
             }
         } finally {

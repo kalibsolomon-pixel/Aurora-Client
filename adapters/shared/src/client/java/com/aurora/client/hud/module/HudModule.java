@@ -156,15 +156,18 @@ public abstract class HudModule {
         if (!enabled) return;
         if (!isConfigEnabled()) return;
 
-        int sw = getScaledWidth();
-        int sh = getScaledHeight();
+        int w = getWidth();
+        int h = getHeight();
+        boolean unitScale = Math.abs(scale - 1.0f) < 0.001f;
+        int sw = unitScale ? w : Math.round(w * scale);
+        int sh = unitScale ? h : Math.round(h * scale);
         int x = anchor.applyX(screenW, sw) + offsetX;
         int y = anchor.applyY(screenH, sh) + offsetY;
         float bgAlpha = backgroundAlpha();
 
-        if (Math.abs(scale - 1.0f) < 0.001f) {
-            // Fast path â€” no matrix push if scale is effectively 1.
-            HudBackgrounds.draw(ctx, x, y, getWidth(), getHeight(), backgroundMode(), backgroundColor(), bgAlpha);
+        if (unitScale) {
+            // Fast path — no matrix push if scale is effectively 1.
+            HudBackgrounds.draw(ctx, x, y, w, h, backgroundMode(), backgroundColor(), bgAlpha);
             renderContent(ctx, client, x, y);
             return;
         }
@@ -174,7 +177,7 @@ public abstract class HudModule {
         ctx.pose().pushMatrix();
         ctx.pose().translate(x, y);
         ctx.pose().scale(scale, scale);
-        HudBackgrounds.draw(ctx, 0, 0, getWidth(), getHeight(), backgroundMode(), backgroundColor(), bgAlpha);
+        HudBackgrounds.draw(ctx, 0, 0, w, h, backgroundMode(), backgroundColor(), bgAlpha);
         renderContent(ctx, client, 0, 0);
         ctx.pose().popMatrix();
     }

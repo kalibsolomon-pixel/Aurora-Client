@@ -157,11 +157,17 @@ public final class WorldLineRenderer {
                                    double x2, double y2, double z2,
                                    float r, float g, float b, float a, float width) {
         width = Math.min(width, SDF_ROLE - 1f);
-        for (int i = 0; i < 8; i++) {
-            m.transformPosition((float) (((i & 1) == 0 ? x1 : x2) - camPos.x),
-                    (float) (((i & 2) == 0 ? y1 : y2) - camPos.y),
-                    (float) (((i & 4) == 0 ? z1 : z2) - camPos.z), CORNERS[i]);
-        }
+        float rx1 = (float) (x1 - camPos.x), rx2 = (float) (x2 - camPos.x);
+        float ry1 = (float) (y1 - camPos.y), ry2 = (float) (y2 - camPos.y);
+        float rz1 = (float) (z1 - camPos.z), rz2 = (float) (z2 - camPos.z);
+        m.transformPosition(rx1, ry1, rz1, CORNERS[0]);
+        m.transformPosition(rx2, ry1, rz1, CORNERS[1]);
+        m.transformPosition(rx1, ry2, rz1, CORNERS[2]);
+        m.transformPosition(rx2, ry2, rz1, CORNERS[3]);
+        m.transformPosition(rx1, ry1, rz2, CORNERS[4]);
+        m.transformPosition(rx2, ry1, rz2, CORNERS[5]);
+        m.transformPosition(rx1, ry2, rz2, CORNERS[6]);
+        m.transformPosition(rx2, ry2, rz2, CORNERS[7]);
         // Edges along each axis: corner i to the corner differing in that axis' bit.
         float sx = Math.signum((float) (x2 - x1)), sy = Math.signum((float) (y2 - y1)), sz = Math.signum((float) (z2 - z1));
         for (int i = 0; i < 8; i++) {

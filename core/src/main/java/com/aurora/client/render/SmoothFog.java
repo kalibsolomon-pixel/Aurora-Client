@@ -57,7 +57,8 @@ public final class SmoothFog {
     public static boolean appliesTo(String namespace, String path, String fragmentShader, Set<String> defineNames) {
         boolean eligibleOwner = "minecraft".equals(namespace)
                 || "sodium".equals(namespace)
-                || ("aurora".equals(namespace) && path.startsWith("gradient_dither/"));
+                || (("aurora".equals(namespace) || "aurora_sodium".equals(namespace))
+                        && path.startsWith("gradient_dither/"));
         if (!eligibleOwner) return false;
         if (path.contains("gui") || path.contains("outline") || path.contains("debug")) return false;
         int colon = fragmentShader.indexOf(':');

@@ -25,6 +25,7 @@ public final class WorldGeometryBuffers implements AutoCloseable {
     }
 
     @Override public void close() {
+        if (batches.isEmpty()) return;
         try {
             vertices.upload();
             for (Batch batch : batches.values()) {

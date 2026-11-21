@@ -53,21 +53,26 @@ abstract class SdfInstance implements TextRenderable.Styled {
     private float thickness() { return style.isBold() ? 0.1f : 0; }
 
     @Override public void render(Matrix4fc pose, VertexConsumer out, int light, boolean noDepth) {
-        if (shadowColor != 0) {
-            quad(pose, out, light, penX + shadowOffset, penY + shadowOffset, shadowColor);
-            if (style.isBold()) quad(pose, out, light, penX + shadowOffset + boldOffset, penY + shadowOffset, shadowColor);
-        }
-        quad(pose, out, light, penX, penY, color);
-        if (style.isBold()) quad(pose, out, light, penX + boldOffset, penY, color);
-    }
-
-    private void quad(Matrix4fc pose, VertexConsumer out, int light, float x, float y, int argb) {
         float u0 = SdfTextMath.insetUv(cell.x(), false, cell.pageWidth());
         float u1 = SdfTextMath.insetUv(cell.x() + cell.width(), true, cell.pageWidth());
         float v0 = SdfTextMath.insetUv(cell.y(), false, cell.pageHeight());
         float v1 = SdfTextMath.insetUv(cell.y() + cell.height(), true, cell.pageHeight());
-        float topShift = style.isItalic() ? shear(quadTop) : 0;
-        float bottomShift = style.isItalic() ? shear(quadBottom) : 0;
+        boolean italic = style.isItalic();
+        boolean bold = style.isBold();
+        float topShift = italic ? shear(quadTop) : 0;
+        float bottomShift = italic ? shear(quadBottom) : 0;
+        if (shadowColor != 0) {
+            quad(pose, out, light, penX + shadowOffset, penY + shadowOffset, shadowColor,
+                    u0, u1, v0, v1, topShift, bottomShift);
+            if (bold) quad(pose, out, light, penX + shadowOffset + boldOffset, penY + shadowOffset, shadowColor,
+                    u0, u1, v0, v1, topShift, bottomShift);
+        }
+        quad(pose, out, light, penX, penY, color, u0, u1, v0, v1, topShift, bottomShift);
+        if (bold) quad(pose, out, light, penX + boldOffset, penY, color, u0, u1, v0, v1, topShift, bottomShift);
+    }
+
+    private void quad(Matrix4fc pose, VertexConsumer out, int light, float x, float y, int argb,
+                      float u0, float u1, float v0, float v1, float topShift, float bottomShift) {
         float x0 = x + quadLeft, x1 = x + quadRight, y0 = y + quadTop, y1 = y + quadBottom;
         vertex(pose, out, light, argb, x0 + topShift, y0, u0, v0);
         vertex(pose, out, light, argb, x0 + bottomShift, y1, u0, v1);

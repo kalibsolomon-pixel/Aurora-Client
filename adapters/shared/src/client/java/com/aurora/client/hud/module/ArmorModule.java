@@ -52,6 +52,8 @@ public class ArmorModule extends HudModule {
 
     private final CachedValue<Integer> cachedWidth = new CachedValue<>(150L, this::computeWidth);
     private final HudTextCache textCache = new HudTextCache(6);
+    /** Reused per-frame scratch (render thread only) to avoid ArrayList allocations in HUD ticks. */
+    private final ItemStack[] scratchSlots = new ItemStack[6];
 
     public ArmorModule() {
         super(ID);
@@ -61,24 +63,23 @@ public class ArmorModule extends HudModule {
     }
 
     /**
-     * The occupied slots this module renders, in display order: worn armor
-     * (head → feet), then main hand, then off hand. Empty slots drop out;
-     * the hands only join when their config switch is on.
+     * Populates {@code out} with occupied slots in display order: worn armor
+     * (head → feet), then main hand, then off hand, returning the slot count.
      */
-    private static List<ItemStack> visibleSlots(Minecraft client) {
-        List<ItemStack> out = new ArrayList<>(6);
-        if (client.player == null) return out;
+    private static int fillVisibleSlots(Minecraft client, ItemStack[] out) {
+        if (client.player == null) return 0;
         AuroraConfig cfg = AuroraConfig.get();
-        add(client, out, EquipmentSlot.HEAD);
-        add(client, out, EquipmentSlot.CHEST);
-        add(client, out, EquipmentSlot.LEGS);
-        add(client, out, EquipmentSlot.FEET);
-        if (cfg.armorHudShowMainHand) add(client, out, EquipmentSlot.MAINHAND);
-        if (cfg.armorHudShowOffHand) add(client, out, EquipmentSlot.OFFHAND);
-        return out;
+        int n = 0;
+        n = addSlot(client, out, n, EquipmentSlot.HEAD);
+        n = addSlot(client, out, n, EquipmentSlot.CHEST);
+        n = addSlot(client, out, n, EquipmentSlot.LEGS);
+        n = addSlot(client, out, n, EquipmentSlot.FEET);
+        if (cfg.armorHudShowMainHand) n = addSlot(client, out, n, EquipmentSlot.MAINHAND);
+        if (cfg.armorHudShowOffHand) n = addSlot(client, out, n, EquipmentSlot.OFFHAND);
+        return n;
     }
 
-    /** The size of {@link #visibleSlots} without building the list: sizing asks every frame. */
+    /** The size of {@link #fillVisibleSlots} without populating an array. */
     private static int visibleSlotCount(Minecraft client) {
         if (client.player == null) return 0;
         AuroraConfig cfg = AuroraConfig.get();
@@ -94,9 +95,10 @@ public class ArmorModule extends HudModule {
         return s != null && !s.isEmpty() ? 1 : 0;
     }
 
-    private static void add(Minecraft client, List<ItemStack> out, EquipmentSlot slot) {
+    private static int addSlot(Minecraft client, ItemStack[] out, int n, EquipmentSlot slot) {
         ItemStack s = client.player.getItemBySlot(slot);
-        if (s != null && !s.isEmpty()) out.add(s);
+        if (s != null && !s.isEmpty()) out[n++] = s;
+        return n;
     }
 
     private static String formatDurability(ItemStack s, AuroraConfig.ArmorDurabilityFormat fmt) {
@@ -122,12 +124,11 @@ public class ArmorModule extends HudModule {
         AuroraConfig.ArmorDurabilityFormat fmt = cfg.armorDurabilityFormat;
         if (fmt == null) fmt = AuroraConfig.ArmorDurabilityFormat.REMAINING;
         Font tr = client.font;
-        List<ItemStack> stacks = visibleSlots(client);
-        int n = stacks.size();
+        int n = fillVisibleSlots(client, scratchSlots);
         if (n == 0) return STRIP_CELL_W;
         int maxText = 0;
-        for (ItemStack s : stacks) {
-            maxText = Math.max(maxText, tr.width(formatDurability(s, fmt)));
+        for (int i = 0; i < n; i++) {
+            maxText = Math.max(maxText, tr.width(formatDurability(scratchSlots[i], fmt)));
         }
 
         if (isVanillaBg()) {
@@ -193,10 +194,19 @@ public class ArmorModule extends HudModule {
 
     /** Whether any visible slot actually has a durability reading (format != NONE). */
     private static boolean anyDurabilityText(Minecraft client, AuroraConfig.ArmorDurabilityFormat fmt) {
-        for (ItemStack s : visibleSlots(client)) {
-            if (!formatDurability(s, fmt).isEmpty()) return true;
-        }
-        return false;
+        if (fmt == AuroraConfig.ArmorDurabilityFormat.NONE || client.player == null) return false;
+        AuroraConfig cfg = AuroraConfig.get();
+        return hasDamage(client, EquipmentSlot.HEAD)
+                || hasDamage(client, EquipmentSlot.CHEST)
+                || hasDamage(client, EquipmentSlot.LEGS)
+                || hasDamage(client, EquipmentSlot.FEET)
+                || (cfg.armorHudShowMainHand && hasDamage(client, EquipmentSlot.MAINHAND))
+                || (cfg.armorHudShowOffHand && hasDamage(client, EquipmentSlot.OFFHAND));
+    }
+
+    private static boolean hasDamage(Minecraft client, EquipmentSlot slot) {
+        ItemStack s = client.player.getItemBySlot(slot);
+        return s != null && !s.isEmpty() && s.getMaxDamage() > 0;
     }
 
     @Override protected AuroraConfig.HudBackground backgroundMode() {
@@ -230,10 +240,9 @@ public class ArmorModule extends HudModule {
 
         AuroraConfig.ArmorDurabilityFormat fmt = cfg.armorDurabilityFormat;
         if (fmt == null) fmt = AuroraConfig.ArmorDurabilityFormat.REMAINING;
-        List<ItemStack> stacks = visibleSlots(client);
+        int n = fillVisibleSlots(client, scratchSlots);
         int color = com.aurora.client.theme.HudText.color(cfg.armorHudTextColor, cfg.hudColor);
         boolean drawBars = cfg.armorShowDurabilityBars;
-        int n = stacks.size();
         if (n == 0) return;
 
         if (cfg.armorHorizontal) {
@@ -246,7 +255,7 @@ public class ArmorModule extends HudModule {
             int cellW = Math.max(ICON, (cachedWidth.get() - (n - 1) * COL_GAP) / n);
             int textSpace = (fmt != AuroraConfig.ArmorDurabilityFormat.NONE) ? tr.lineHeight + TEXT_GAP : 0;
             for (int i = 0; i < n; i++) {
-                ItemStack s = stacks.get(i);
+                ItemStack s = scratchSlots[i];
                 int cellX = x + i * (cellW + COL_GAP);
                 int iconX = cellX + (cellW - ICON) / 2;
                 int iconY = y + textSpace;
@@ -268,7 +277,7 @@ public class ArmorModule extends HudModule {
         }
 
         for (int i = 0; i < n; i++) {
-            ItemStack s = stacks.get(i);
+            ItemStack s = scratchSlots[i];
             int rowY = y + i * ROW_H;
             int iconY = rowY + (ROW_H - ICON) / 2;
             ctx.item(s, x, iconY);
@@ -306,8 +315,7 @@ public class ArmorModule extends HudModule {
         boolean drawBars = cfg.armorShowDurabilityBars;
         boolean horizontal = cfg.armorHorizontal;
 
-        List<ItemStack> stacks = visibleSlots(client);
-        int n = stacks.size();
+        int n = fillVisibleSlots(client, scratchSlots);
         if (n == 0) return;
 
         boolean hasText = fmt != AuroraConfig.ArmorDurabilityFormat.NONE;
@@ -317,7 +325,7 @@ public class ArmorModule extends HudModule {
             // needs more than its 20 px column (native cells otherwise).
             int maxText = 0;
             if (hasText) {
-                for (ItemStack s : stacks) maxText = Math.max(maxText, tr.width(formatDurability(s, fmt)));
+                for (int i = 0; i < n; i++) maxText = Math.max(maxText, tr.width(formatDurability(scratchSlots[i], fmt)));
             }
             // 6 px of air between neighbouring readouts (was 2, where "528 495" ran together).
             float s = hasText && maxText > 0 ? Math.max(1f, (maxText + 6) / (float) HudBackgrounds.CELL_PITCH) : 1f;
@@ -327,7 +335,7 @@ public class ArmorModule extends HudModule {
             HudBackgrounds.hotbarStrip(ctx, x, stripY, n, s, 1f);
 
             for (int i = 0; i < n; i++) {
-                ItemStack stack = stacks.get(i);
+                ItemStack stack = scratchSlots[i];
                 // Cell k's center sits at sprite x = 10.5 + k*20 (1 px left
                 // border + 18 px interior + shared right border, pitch 20).
                 float centerX = (10.5f + i * HudBackgrounds.CELL_PITCH) * s;
@@ -355,7 +363,7 @@ public class ArmorModule extends HudModule {
         // Rotate the same capped strip so the outer outline stays continuous.
         HudBackgrounds.hotbarVerticalStrip(ctx, x, y, n, 1f);
         for (int i = 0; i < n; i++) {
-            ItemStack stack = stacks.get(i);
+            ItemStack stack = scratchSlots[i];
             int rowY = y + i * HudBackgrounds.CELL_PITCH;
 
             int iconX = x + 3;

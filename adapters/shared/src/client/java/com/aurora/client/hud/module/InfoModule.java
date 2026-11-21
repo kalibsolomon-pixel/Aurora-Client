@@ -182,18 +182,31 @@ public class InfoModule extends HudModule {
         return AuroraConfig.get().infoEnabled;
     }
 
+    private List<String> widthLinesRef;
+    private Font widthFontRef;
+    private int widthStyleKey = Integer.MIN_VALUE;
+    private int cachedMaxWidth = 80;
+
     @Override
     public int getWidth() {
         Minecraft client = Minecraft.getInstance();
         if (client == null || client.font == null) return 80;
         Font tr = client.font;
-        int max = 0;
         List<String> lines = linesCache.get();
+        int sk = com.aurora.client.ui.util.AuroraFontRenderer.styleKey();
+        if (lines == widthLinesRef && tr == widthFontRef && sk == widthStyleKey) {
+            return cachedMaxWidth;
+        }
+        int max = 0;
         for (int i = 0; i < lines.size(); i++) {
             int w = tr.width(lines.get(i));
             if (w > max) max = w;
         }
-        return Math.max(max, 40);
+        cachedMaxWidth = Math.max(max, 40);
+        widthLinesRef = lines;
+        widthFontRef = tr;
+        widthStyleKey = sk;
+        return cachedMaxWidth;
     }
 
 

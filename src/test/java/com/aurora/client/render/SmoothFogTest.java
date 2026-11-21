@@ -84,6 +84,7 @@ class SmoothFogTest {
         assertTrue(SmoothFog.appliesTo("sodium", "pipeline/solid_terrain", "sodium:blocks/block_layer_opaque", Set.of("USE_FOG")));
         assertTrue(SmoothFog.appliesTo("aurora", "gradient_dither/minecraft/pipeline/sky", "minecraft:core/sky", Set.of("AURORA_GRADIENT_DITHER")));
         assertTrue(SmoothFog.appliesTo("aurora", "gradient_dither/sodium/pipeline/solid_terrain", "sodium:blocks/block_layer_opaque", Set.of("AURORA_GRADIENT_DITHER")));
+        assertTrue(SmoothFog.appliesTo("aurora_sodium", "gradient_dither/sodium/pipeline/solid_terrain", "sodium:blocks/block_layer_opaque", Set.of("AURORA_GRADIENT_DITHER")));
 
         assertFalse(SmoothFog.appliesTo("minecraft", "pipeline/gui", "minecraft:core/position_color", Set.of()));
         assertFalse(SmoothFog.appliesTo("minecraft", "pipeline/entity_outline_blit", "minecraft:core/entity", Set.of()));

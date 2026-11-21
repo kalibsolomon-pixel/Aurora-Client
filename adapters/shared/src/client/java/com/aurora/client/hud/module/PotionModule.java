@@ -54,12 +54,14 @@ public class PotionModule extends HudModule {
 
     private final CachedValue<int[]> dimsCache = new CachedValue<>(100L, this::computeDims);
 
-    /**
-     * Cache of formatted "Effect Name [Level]" strings.
-     * Key = translationKey + "@" + amplifier. Tiny key space (a few dozen
-     * effects Ã— 0â€“9 amplifier), so unbounded HashMap is fine.
-     */
+    /** Cache of formatted "Effect Name [Level]" strings keyed by MobEffect identity + amplifier (0..15). */
+    private static final Map<MobEffect, String[]> FAST_NAME_CACHE = new java.util.IdentityHashMap<>();
     private static final Map<String, String> NAME_CACHE = new HashMap<>();
+    /** Cache of effect sprite Identifiers keyed by MobEffect identity; null sentinel = no registry key. */
+    private static final Identifier NO_SPRITE = Identifier.fromNamespaceAndPath("aurora", "__none");
+    private static final Map<MobEffect, Identifier> SPRITE_CACHE = new java.util.IdentityHashMap<>();
+    private static final String[] CONDENSED_SECS = new String[60];
+    private static final String[] CONDENSED_MINS = new String[60];
 
     /** How long the background takes to fade out after the last effect expires. */
     private static final long FADE_MS = 300L;
@@ -281,7 +283,21 @@ public class PotionModule extends HudModule {
     }
 
     static String condensedTime(int seconds) {
-        return seconds >= 60 ? (seconds / 60) + "m" : seconds + "s";
+        if (seconds >= 60) {
+            int m = seconds / 60;
+            if (m < CONDENSED_MINS.length) {
+                String cached = CONDENSED_MINS[m];
+                if (cached == null) CONDENSED_MINS[m] = cached = m + "m";
+                return cached;
+            }
+            return m + "m";
+        }
+        if (seconds >= 0 && seconds < CONDENSED_SECS.length) {
+            String cached = CONDENSED_SECS[seconds];
+            if (cached == null) CONDENSED_SECS[seconds] = cached = seconds + "s";
+            return cached;
+        }
+        return seconds + "s";
     }
 
     /**
@@ -293,26 +309,44 @@ public class PotionModule extends HudModule {
      */
     private static void drawEffectIcon(GuiGraphicsExtractor ctx, MobEffectInstance e, int x, int y) {
         Holder<MobEffect> holder = e.getEffect();
-        Identifier loc = holder.unwrapKey().map(k -> k.identifier()).orElse(null);
-        if (loc != null) {
-            Identifier sprite = Identifier.fromNamespaceAndPath(
-                    loc.getNamespace(), "mob_effect/" + loc.getPath());
+        MobEffect effect = holder.value();
+        Identifier sprite = SPRITE_CACHE.get(effect);
+        if (sprite == null) {
+            Identifier loc = holder.unwrapKey().map(k -> k.identifier()).orElse(null);
+            sprite = loc != null
+                    ? Identifier.fromNamespaceAndPath(loc.getNamespace(), "mob_effect/" + loc.getPath())
+                    : NO_SPRITE;
+            SPRITE_CACHE.put(effect, sprite);
+        }
+        if (sprite != NO_SPRITE) {
             ctx.blitSprite(RenderPipelines.GUI_TEXTURED, sprite, x, y, ICON, ICON);
             return;
         }
-        int color = 0xFF000000 | holder.value().getColor();
+        int color = 0xFF000000 | effect.getColor();
         ctx.fill(x, y, x + ICON, y + ICON, color);
     }
 
     /**
-     * Localized name + Roman-numeral level, cached by (translationKey, amp).
-     * Key cardinality is tiny (active effect types Ã— amplifiers), so the
-     * cache never grows beyond a few dozen entries.
+     * Localized name + Roman-numeral level, cached by (MobEffect identity, amp)
+     * so per-frame HUD draws avoid allocating {@code key + "@" + amp} strings.
      */
     private static String nameWithLevel(MobEffectInstance e) {
-        Holder<MobEffect> type = e.getEffect();
-        String key = type.value().getDescriptionId();
+        MobEffect effect = e.getEffect().value();
         int amp = e.getAmplifier();
+        if (amp >= 0 && amp < 16) {
+            String[] byAmp = FAST_NAME_CACHE.get(effect);
+            if (byAmp == null) {
+                byAmp = new String[16];
+                FAST_NAME_CACHE.put(effect, byAmp);
+            }
+            String cached = byAmp[amp];
+            if (cached != null) return cached;
+            String base = Component.translatable(effect.getDescriptionId()).getString();
+            String result = (amp <= 0) ? base : base + " " + roman(amp + 1);
+            byAmp[amp] = result;
+            return result;
+        }
+        String key = effect.getDescriptionId();
         String cacheKey = key + "@" + amp;
         String cached = NAME_CACHE.get(cacheKey);
         if (cached != null) return cached;

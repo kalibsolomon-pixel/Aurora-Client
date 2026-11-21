@@ -134,6 +134,18 @@ stands down for it). Fixtures are now native worlds per line. All fourteen rows 
 six reports each; judged runs at most 0.222 ms mean and 0.290 ms p95, zero fills and glass
 ([evidence](releases/evidence/3.6.0-parity.json)).
 
+3.7.0 follows: Gradient Dithering (PR #83), Smooth Fog and the 26.2 performance pass (PR #89),
+Entity & Block-Entity Occlusion Culling (PR #84), GUI Glint Baking, Flat Faces, Layering and
+Left-to-Right Text fast paths (PR #78–#80, #85, #87), SDF compatibility with ImmediatelyFast
+and RRLS (PR #81, #86), fixed square corners and layout/spacing polish (PR #73, #88), the
+Pulsar PvP analytics/performance/layout/v7 HTML report overhaul (PR #90), and an overall world,
+HUD, font and UI-baking efficiency pass ([notes](releases/RELEASE_NOTES_3.7.0.md)). The release
+matrix caught a 26.2 native Vulkan crash under Sodium 0.9.2 when Gradient Dithering/Smooth Fog
+twins dropped `"sodium"` from their pipeline namespace (fixed by preserving `aurora_sodium` so
+Sodium's `VulkanPipelineMixin` attaches push constants). All fourteen rows passed with six
+reports each; judged runs 0.034–0.089 ms mean and at most 0.167 ms p95, zero fills and glass
+([evidence](releases/evidence/3.7.0-parity.json)).
+
 Window frames now use a cached, content-clipped bevel with one fixed strength, a little lighter than the former Subtle level (the Window Bevel setting and its levels were retired on 2026-11-18). Below full opacity the rim stays as clear as the window and the glass pass bends the backdrop across the frame band; glass, gem and metal were captured in the 26.3 client on OpenGL and Vulkan and await owner review. Since 2026-11-18 every window keeps a 10 px frame room, so the band is never squeezed by content (it may take up to 6 px) and content keeps a 4 px gap from it (DESIGN_LANGUAGE "Frame room").
 
 ## Acceptance and contributor readiness
