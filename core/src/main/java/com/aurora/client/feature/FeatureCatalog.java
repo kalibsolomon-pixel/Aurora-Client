@@ -384,6 +384,10 @@ public final class FeatureCatalog {
                 .yieldsTo("modernui", "caxton");
         mixin("SdfGuiTextMixin", "smooth scaling for custom text", "text_fonts")
                 .yieldsTo("modernui", "caxton");
+        // Gateless on purpose (ADR 0004's "harmless alone" arm): it only records that the Shader Loader applied, so
+        // SDF text and shader-drawn shapes do not judge a compile made before Aurora's shaders were visible (RRLS).
+        // When it is not working they decide as they did before it existed.
+        mixin("ShaderManagerAppliedMixin", "waiting for the shader loader before compiling Aurora's shaders", "text_fonts");
         mixin("FontManagerAccessor", "crisp Aurora fonts at every GUI scale", "text_fonts");
         mixin("FontSetAccessor", "crisp Aurora fonts at every GUI scale", "text_fonts");
         mixin("MinecraftFontManagerAccessor", "crisp Aurora fonts at every GUI scale", "text_fonts");

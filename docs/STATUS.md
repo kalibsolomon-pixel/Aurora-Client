@@ -22,6 +22,11 @@ Since 2026-11-20 SDF text also runs with ImmediatelyFast, which 3.6.0 stood it d
 font atlas resizing enlarges Aurora's SDF pages too, and glyph texture coordinates now use each page's actual
 size. Deferred font preparation no longer stands down for ModernFix, which owns no font set work
 ([report](reports/2026-11-20-sdf-immediatelyfast.md)).
+SDF text and shader-drawn UI shapes also wait for the Shader Loader's first apply before judging their
+shaders: with RRLS, a first draw that came before it turned both off for the session (observed in 1 of 9 boots
+in the initial 26.3 pass, and deterministically under an early lookup on all three lines), and now only a
+failure after the apply does ([ADR 0010](adr/0010-opt-in-sdf-text-with-vanilla-layout.md),
+[report](reports/2026-11-20-sdf-immediatelyfast.md#rrls-sdf-text-and-the-first-shader-apply)).
 
 Pulsar integration adds Phenomena's analytics and recording as Aurora's 40th
 feature, off by default. Its configuration and six-tab dashboard follow Aurora's

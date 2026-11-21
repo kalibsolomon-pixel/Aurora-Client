@@ -68,6 +68,7 @@
     "SdfFontManagerMixin",
     "SdfGuiTextMixin",
     "SdfGlyphRenderStateMixin",
+    "ShaderManagerAppliedMixin",
     "FontManagerAccessor",
     "FontSetAccessor",
     "MinecraftFontManagerAccessor",
