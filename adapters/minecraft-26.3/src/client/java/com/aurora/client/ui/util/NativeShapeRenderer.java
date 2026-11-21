@@ -35,6 +35,8 @@ public final class NativeShapeRenderer {
         // A failed compile can be retried on every lookup by the backend.
         // Disable it for this session to avoid repeated compilation and logs.
         if (shaderUnavailable) return false;
+        // Not a failure before the Shader Loader has applied: Aurora's shader is not visible to the compile yet.
+        if (!ShaderLoad.settled()) return false;
         boolean available;
         try {
             var compiled = RenderSystem.getCompiledPipelineNullable(PipelineHolder.PIPELINE);

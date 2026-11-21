@@ -33,17 +33,13 @@ public final class NativeSdfText {
 
     static boolean pipelineAvailable() {
         if (validated) return true;
-        try {
-            var compiled = RenderSystem.getDevice().precompilePipeline(Pipeline.INSTANCE);
-            if (compiled != null && compiled.isValid()) {
-                validated = true;
-                return true;
-            }
-            SdfTextSupport.fail("shader unavailable", null);
-        } catch (RuntimeException | LinkageError failure) {
-            SdfTextSupport.fail("shader compilation", failure);
-        }
-        return false;
+        validated = SdfTextSupport.checkPipeline(NativeSdfText::compiles);
+        return validated;
+    }
+
+    private static boolean compiles() {
+        var compiled = RenderSystem.getDevice().precompilePipeline(Pipeline.INSTANCE);
+        return compiled != null && compiled.isValid();
     }
 
     static void invalidatePipeline() { validated = false; }
@@ -53,10 +49,13 @@ public final class NativeSdfText {
         return new FontTexture(name::toString, GlyphRenderTypes.createForGrayscaleTexture(name), false);
     }
 
+    /** The page's own texture size, not vanilla's 256: ImmediatelyFast resizes every font page. */
     static SdfAtlas.Cell insert(FontTexture page, SdfStrike.Bitmap bitmap) {
         Upload upload = new Upload(bitmap);
-        return page.add(UNUSED_INFO, upload) == null ? null
-                : new SdfAtlas.Cell(page, upload.x, upload.y, bitmap.width(), bitmap.height());
+        if (page.add(UNUSED_INFO, upload) == null) return null;
+        GpuTexture texture = page.getTexture();
+        return new SdfAtlas.Cell(page, upload.x, upload.y, bitmap.width(), bitmap.height(),
+                texture.getWidth(0), texture.getHeight(0));
     }
 
     public static boolean isSdf(TextRenderable renderable) { return renderable instanceof Instance; }
