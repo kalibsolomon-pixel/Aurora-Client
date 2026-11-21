@@ -1,5 +1,6 @@
 package com.aurora.client.ui.text;
 
+import com.aurora.client.compat.EphemeraBridge;
 import com.aurora.client.ui.util.SdfTextMath;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.gui.font.TextRenderable;
@@ -59,6 +60,11 @@ abstract class SdfInstance implements TextRenderable.Styled {
         float v1 = SdfTextMath.insetUv(cell.y() + cell.height(), true, cell.pageHeight());
         boolean italic = style.isItalic();
         boolean bold = style.isBold();
+        if (EphemeraBridge.writeSdfGlyph(out, pose, light, penX, penY,
+                quadLeft, quadTop, quadRight, quadBottom, boldOffset, shadowOffset,
+                color, shadowColor, bold, italic, u0, u1, v0, v1)) {
+            return;
+        }
         float topShift = italic ? shear(quadTop) : 0;
         float bottomShift = italic ? shear(quadBottom) : 0;
         if (shadowColor != 0) {

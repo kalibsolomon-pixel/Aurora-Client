@@ -413,24 +413,27 @@ public final class FeatureCatalog {
         mixin("KeyMappingComboMixin", "Ctrl, Shift and Alt combos on key bindings");
         mixin("KeyBindsScreenComboMixin", "Ctrl, Shift and Alt combos in the Controls screen");
         // ---- Performance (ADR 0009) ----
-        mixin("LevelLoadTrackerMixin", "skipping the level loading delay", "performance").gates("perfSkipLevelLoadDelay");
-        // Entity Culling owns occlusion culling of entities and block
+        mixin("LevelLoadTrackerMixin", "skipping the level loading delay", "performance")
+                .gates("perfSkipLevelLoadDelay").yieldsTo("ephemera");
+        // Entity Culling and Ephemera own occlusion culling of entities and block
         // entities. Sodium's entity culling works per section and composes
         // with this; MoreCulling, ImmediatelyFast and EMF use neither seam.
         mixin("OcclusionFrameMixin", "skipping entities hidden behind terrain", "performance")
-                .gates("perfEntityOcclusion").yieldsTo("entityculling");
+                .gates("perfEntityOcclusion").yieldsTo("entityculling", "ephemera");
         mixin("OcclusionBodyMixin", "skipping entities hidden behind terrain", "performance")
-                .gates("perfEntityOcclusion").yieldsTo("entityculling");
+                .gates("perfEntityOcclusion").yieldsTo("entityculling", "ephemera");
         mixin("OcclusionChestMixin", "skipping entities hidden behind terrain", "performance")
-                .gates("perfEntityOcclusion").yieldsTo("entityculling");
+                .gates("perfEntityOcclusion").yieldsTo("entityculling", "ephemera");
         mixin("OcclusionDirtyMixin", "skipping entities hidden behind terrain", "performance")
-                .gates("perfEntityOcclusion").yieldsTo("entityculling");
+                .gates("perfEntityOcclusion").yieldsTo("entityculling", "ephemera");
         mixin("OcclusionLeashMixin", "skipping entities hidden behind terrain", "performance")
-                .gates("perfEntityOcclusion").yieldsTo("entityculling");
+                .gates("perfEntityOcclusion").yieldsTo("entityculling", "ephemera");
         mixin("MinecraftProfileAccessor", "startup without waiting for the profile", "performance").gates("perfNoProfileWait");
         mixin("InitialScreensProfileMixin", "startup without waiting for the profile", "performance").gates("perfNoProfileWait");
-        mixin("SoundEngineListenerMixin", "skipping unchanged sound listener updates", "performance").gates("perfSoundListenerThrottle");
-        mixin("DebugScreenEntryCacheMixin", "the F3 entry cache", "performance").gates("perfDebugEntryCache");
+        mixin("SoundEngineListenerMixin", "skipping unchanged sound listener updates", "performance")
+                .gates("perfSoundListenerThrottle").yieldsTo("ephemera");
+        mixin("DebugScreenEntryCacheMixin", "the F3 entry cache", "performance")
+                .gates("perfDebugEntryCache").yieldsTo("ephemera");
         mixin("FontDecorationMergeMixin", "merged underline and strikethrough quads", "performance").gates("perfMergeTextDecorations");
         // ModernFix (5.27.20) only makes unihex providers lazy; it owns no FontManager or FontSet work.
         mixin("FontManagerDeferredMixin", "preparing unused Aurora fonts on first use", "performance")
@@ -472,28 +475,32 @@ public final class FeatureCatalog {
                 .gates("perfGuiFlatFaces");
         mixin("ItemFeatureRendererFlatFacesMixin", "leaving out GUI item faces that cover no pixel", "performance")
                 .gates("perfGuiFlatFaces");
-        // VulkanMod (26.1) replaces OpenGL rendering; an Iris shader pack is checked at draw time.
+        // VulkanMod (26.1) replaces OpenGL rendering; Ephemera owns engine GL dispatch caching;
+        // an Iris shader pack is checked at draw time.
         mixin("GlTextureMipCacheMixin", "caching OpenGL texture mip-range parameters", "performance")
-                .gates("perfGlDispatch").yieldsTo("vulkanmod");
+                .gates("perfGlDispatch").yieldsTo("vulkanmod", "ephemera");
         mixin("GlCommandEncoderDispatchMixin", "skipping redundant OpenGL draw-setup driver calls", "performance")
-                .gates("perfGlDispatch").yieldsTo("vulkanmod");
+                .gates("perfGlDispatch").yieldsTo("vulkanmod", "ephemera");
         mixin("FrameBufferCacheMixin", "caching single-target OpenGL framebuffer lookups", "performance")
-                .gates("perfGlDispatch").yieldsTo("vulkanmod");
+                .gates("perfGlDispatch").yieldsTo("vulkanmod", "ephemera");
         mixin("VertexArrayCacheSeparateMixin", "caching OpenGL vertex array lookups by format array identity", "performance")
-                .gates("perfGlDispatch").yieldsTo("vulkanmod");
-        mixin("SpriteContentsMipsAccessor", "freeing uploaded sprite mipmaps", "performance").gates("perfFreeSpriteMipmaps");
-        mixin("TextureAtlasFreeMipsMixin", "freeing uploaded sprite mipmaps", "performance").gates("perfFreeSpriteMipmaps");
-        // Polytone selects custom depth nodes; Gnetum routes HUD submissions into its own layers.
+                .gates("perfGlDispatch").yieldsTo("vulkanmod", "ephemera");
+        mixin("SpriteContentsMipsAccessor", "freeing uploaded sprite mipmaps", "performance")
+                .gates("perfFreeSpriteMipmaps").yieldsTo("ephemera");
+        mixin("TextureAtlasFreeMipsMixin", "freeing uploaded sprite mipmaps", "performance")
+                .gates("perfFreeSpriteMipmaps").yieldsTo("ephemera");
+        // Polytone selects custom depth nodes; Gnetum routes HUD submissions into its own layers;
+        // Ephemera owns GUI render-state layering optimizations.
         mixin("GuiRenderStateNodeMixin", "faster GUI layering", "performance")
-                .gates("perfGuiLayering").yieldsTo("polytone", "gnetum");
+                .gates("perfGuiLayering").yieldsTo("polytone", "gnetum", "ephemera");
         mixin("GuiRenderStateLayeringMixin", "faster GUI layering", "performance")
-                .gates("perfGuiLayering").yieldsTo("polytone", "gnetum");
+                .gates("perfGuiLayering").yieldsTo("polytone", "gnetum", "ephemera");
         mixin("GuiRendererElementOrderMixin", "faster GUI layering", "performance")
-                .gates("perfGuiLayering").yieldsTo("polytone", "gnetum");
+                .gates("perfGuiLayering").yieldsTo("polytone", "gnetum", "ephemera");
         mixin("FormattedBidiReorderMixin", "skipping bidirectional reordering for left-to-right text", "performance")
-                .gates("perfLeftToRightText").yieldsTo("modernui", "caxton");
+                .gates("perfLeftToRightText").yieldsTo("modernui", "caxton", "ephemera");
         mixin("FramerateLimitUnfocusedMixin", "the unfocused frame limit", "performance")
-                .gates("perfUnfocusedLimit").yieldsTo("dynamic_fps");
+                .gates("perfUnfocusedLimit").yieldsTo("dynamic_fps", "ephemera");
         // VulkanMod (26.1) compiles shaders its own way; an Iris shader pack is checked at draw time.
         mixin("GradientDitherSourceMixin", "dithered sky, fog and terrain shaders", "gradient_dither")
                 .gates("gradientDither").yieldsTo("vulkanmod");

@@ -219,6 +219,11 @@ owner's 26.2 instance; added 26.2 OpenGL dispatch caching (`perfGlDispatch`: tex
 `glDrawBuffers`, single-target `FrameBufferCache`, `VertexArrayCache$Separate` identity lookup; -3.6% to -7.8%
 median frame time, pixel-identical); measured and dropped `DynamicAtlasAllocator` and 26.1/26.3 OpenGL dispatch
 hooks that showed no reliable gain; [evidence](reports/2026-11-21-aurora-262-perf-and-smooth-fog.md).
+Ephemera integration (`feat/ephemera-integration`): yields overlapping ADR 0009 engine hooks to `ephemera`,
+connects zero-compile-coupling Fabric `ObjectShare` bridges (`EphemeraBridge`) for direct SDF glyph/line
+native fast-write delegation and live `Ephemera Engine` controls under Settings → Performance, eliminates
+steady-state `WeakHashMap` locking in `AuroraFontQuality.beginFrame`, increases `WorldGeometryBuffers`
+staging capacity (`64 KiB`), and hoists config/stationary-entity checks in `HitboxRenderer`.
 
 ## Next work
 

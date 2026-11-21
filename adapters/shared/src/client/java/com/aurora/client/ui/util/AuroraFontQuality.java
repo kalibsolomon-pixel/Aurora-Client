@@ -95,16 +95,20 @@ public final class AuroraFontQuality {
     /** Frame boundary (from {@code GlassSurface.beginFrame()}): re-rasterize when the GUI scale has changed. */
     public static void beginFrame() {
         int scale = guiScale();
-        if (rasterScale == 0 || PROVIDERS.isEmpty()) return;
+        if (rasterScale == 0) return;
         if (scale == rasterScale) {
             // Read before the scan: a provider registered during it bumps the count, so the next frame looks again.
+            // Checked before PROVIDERS.isEmpty() so steady-state frames avoid synchronizing on WeakHashMap.
             int registered = REGISTRATIONS.get();
             if (registered == checkedRegistrations && scale == checkedScale) return;
+            if (PROVIDERS.isEmpty()) return;
             if (!anyStale(scale)) {
                 checkedRegistrations = registered;
                 checkedScale = scale;
                 return;
             }
+        } else if (PROVIDERS.isEmpty()) {
+            return;
         }
         if (MixinHealth.failed("TrueTypeProviderDefinitionMixin") || MixinHealth.failed("FontManagerAccessor")
                 || MixinHealth.failed("FontSetAccessor") || MixinHealth.failed("MinecraftFontManagerAccessor")) {

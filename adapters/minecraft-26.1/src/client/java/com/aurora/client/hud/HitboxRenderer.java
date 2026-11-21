@@ -100,6 +100,15 @@ public final class HitboxRenderer {
         boolean detached = cam.isDetached();
         LocalPlayer player = client.player;
 
+        float normalWidth = (float) Math.max(0.1, cfg.hitboxLineWidth);
+        float projWidth = (float) Math.max(0.1, cfg.hitboxProjectileLineWidth);
+        int normalColor = cfg.hitboxColor;
+        float normalA = ((normalColor >>> 24) & 0xFF) / 255f;
+        float normalR = ((normalColor >> 16) & 0xFF) / 255f;
+        float normalG = ((normalColor >> 8)  & 0xFF) / 255f;
+        float normalB = ( normalColor        & 0xFF) / 255f;
+        boolean projColorEnabled = cfg.hitboxProjectileColorEnabled;
+
         // Prefer the exact entities that survived main-world culling (vanilla, Sodium,
         // EntityCulling, and Aurora occlusion), matching F3+B; fall back if the hook did not run.
         if (cfg.hitboxEnabled && HitboxVisibleEntities.hasSnapshot()) {
@@ -113,7 +122,8 @@ public final class HitboxRenderer {
                 }
                 if (!shouldDraw(entity, activeTarget, cfg)) continue;
                 if (buf == null) buf = WorldLineRenderer.getLineBuffer(consumers, sdf);
-                renderCandidate(buf, model, camPos, entity, activeTarget, tickDelta, cfg, sdf);
+                renderCandidate(buf, model, camPos, entity, activeTarget, tickDelta, cfg, sdf,
+                        normalWidth, projWidth, normalR, normalG, normalB, normalA, projColorEnabled);
             }
         } else if (!cfg.hitboxEnabled) {
             if (activeTarget != null && !activeTarget.isRemoved() && !activeTarget.isSpectator()
@@ -124,7 +134,8 @@ public final class HitboxRenderer {
                         && (player == null || activeTarget == player
                                 || (!activeTarget.isInvisible() && !activeTarget.isInvisibleTo(player)))) {
                     buf = WorldLineRenderer.getLineBuffer(consumers, sdf);
-                    renderCandidate(buf, model, camPos, activeTarget, activeTarget, tickDelta, cfg, sdf);
+                    renderCandidate(buf, model, camPos, activeTarget, activeTarget, tickDelta, cfg, sdf,
+                            normalWidth, projWidth, normalR, normalG, normalB, normalA, projColorEnabled);
                 }
             }
         } else {
@@ -139,7 +150,8 @@ public final class HitboxRenderer {
                 }
                 if (!shouldDraw(entity, activeTarget, cfg)) continue;
                 if (buf == null) buf = WorldLineRenderer.getLineBuffer(consumers, sdf);
-                renderCandidate(buf, model, camPos, entity, activeTarget, tickDelta, cfg, sdf);
+                renderCandidate(buf, model, camPos, entity, activeTarget, tickDelta, cfg, sdf,
+                        normalWidth, projWidth, normalR, normalG, normalB, normalA, projColorEnabled);
             }
         }
     }
@@ -150,22 +162,38 @@ public final class HitboxRenderer {
 
     private static void renderCandidate(VertexConsumer buf, Matrix4f model, Vec3 camPos,
                                         Entity entity, Entity activeTarget, float tickDelta,
-                                        AuroraConfig cfg, boolean sdf) {
+                                        AuroraConfig cfg, boolean sdf,
+                                        float normalWidth, float projWidth,
+                                        float normalR, float normalG, float normalB, float normalA,
+                                        boolean projColorEnabled) {
         boolean isTarget = (entity == activeTarget);
 
-        int color;
-        float widthPx;
-        if (entity instanceof Projectile && cfg.hitboxProjectileColorEnabled) {
-            color = cfg.hitboxProjectileColor;
-            widthPx = (float) Math.max(0.1, cfg.hitboxProjectileLineWidth);
+        float r, g, b, a, widthPx;
+        if (projColorEnabled && entity instanceof Projectile) {
+            int color = cfg.hitboxProjectileColor;
+            a = ((color >>> 24) & 0xFF) / 255f;
+            r = ((color >> 16) & 0xFF) / 255f;
+            g = ((color >> 8)  & 0xFF) / 255f;
+            b = ( color        & 0xFF) / 255f;
+            widthPx = projWidth;
+        } else if (isTarget) {
+            int color = cfg.hitboxTargetColor;
+            a = ((color >>> 24) & 0xFF) / 255f;
+            r = ((color >> 16) & 0xFF) / 255f;
+            g = ((color >> 8)  & 0xFF) / 255f;
+            b = ( color        & 0xFF) / 255f;
+            widthPx = normalWidth;
         } else {
-            color = isTarget ? cfg.hitboxTargetColor : cfg.hitboxColor;
-            widthPx = (float) Math.max(0.1, cfg.hitboxLineWidth);
+            r = normalR;
+            g = normalG;
+            b = normalB;
+            a = normalA;
+            widthPx = normalWidth;
         }
         boolean drawEyeLine  = isTarget ? cfg.hitboxTargetEyeLine       : cfg.hitboxEyeLine;
         boolean drawLookLine = isTarget ? cfg.hitboxTargetLookDirection : cfg.hitboxLookDirection;
 
-        drawEntity(buf, model, camPos, entity, tickDelta, color,
+        drawEntity(buf, model, camPos, entity, tickDelta, r, g, b, a,
                 drawEyeLine, drawLookLine, cfg.hitboxLookLength, widthPx, sdf);
     }
 
@@ -178,25 +206,26 @@ public final class HitboxRenderer {
 
     private static void drawEntity(VertexConsumer buf, Matrix4f model, Vec3 camPos,
                                    Entity e, float tickDelta,
-                                   int color, boolean eyeLine, boolean lookLine, double lookLen,
+                                   float r, float g, float b, float a,
+                                   boolean eyeLine, boolean lookLine, double lookLen,
                                    float widthPx, boolean sdf) {
         // Tick-interpolated position — EXACTLY what vanilla entity rendering uses.
-        double ix = Mth.lerp((double) tickDelta, e.xOld, e.getX());
-        double iy = Mth.lerp((double) tickDelta, e.yOld, e.getY());
-        double iz = Mth.lerp((double) tickDelta, e.zOld, e.getZ());
-
-        // Offset raw AABB in primitives to avoid a per-entity AABB allocation each frame.
+        double ex = e.getX(), ey = e.getY(), ez = e.getZ();
         AABB raw = e.getBoundingBox();
-        double dx = ix - e.getX();
-        double dy = iy - e.getY();
-        double dz = iz - e.getZ();
-        double minX = raw.minX + dx, minY = raw.minY + dy, minZ = raw.minZ + dz;
-        double maxX = raw.maxX + dx, maxY = raw.maxY + dy, maxZ = raw.maxZ + dz;
-
-        float a = ((color >>> 24) & 0xFF) / 255f;
-        float r = ((color >> 16) & 0xFF) / 255f;
-        float g = ((color >> 8)  & 0xFF) / 255f;
-        float b = ( color        & 0xFF) / 255f;
+        double ix, iy, iz, minX, minY, minZ, maxX, maxY, maxZ;
+        if (e.xOld == ex && e.yOld == ey && e.zOld == ez) {
+            ix = ex; iy = ey; iz = ez;
+            minX = raw.minX; minY = raw.minY; minZ = raw.minZ;
+            maxX = raw.maxX; maxY = raw.maxY; maxZ = raw.maxZ;
+        } else {
+            ix = Mth.lerp((double) tickDelta, e.xOld, ex);
+            iy = Mth.lerp((double) tickDelta, e.yOld, ey);
+            iz = Mth.lerp((double) tickDelta, e.zOld, ez);
+            // Offset raw AABB in primitives to avoid a per-entity AABB allocation each frame.
+            double dx = ix - ex, dy = iy - ey, dz = iz - ez;
+            minX = raw.minX + dx; minY = raw.minY + dy; minZ = raw.minZ + dz;
+            maxX = raw.maxX + dx; maxY = raw.maxY + dy; maxZ = raw.maxZ + dz;
+        }
 
         WorldLineRenderer.drawBoxOutline(buf, model, camPos, minX, minY, minZ, maxX, maxY, maxZ, r, g, b, a, widthPx, sdf);
 
