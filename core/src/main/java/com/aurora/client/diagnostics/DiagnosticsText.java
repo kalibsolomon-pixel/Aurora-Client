@@ -18,7 +18,7 @@ public final class DiagnosticsText {
     /** Facts about the session that only the running game knows. */
     public record Environment(String auroraVersion, String minecraftVersion, String loaderVersion,
                               String renderBackend, String gpu, String window, String measuredOn,
-                              boolean budgetApplies, List<String> settings) {}
+                              boolean budgetApplies, List<String> settings, String ephemera) {}
 
     public static String format(Environment env, List<String> mods, FrameBenchmark.Stats stats,
                                 List<String> recentErrors) {
@@ -34,6 +34,8 @@ public final class DiagnosticsText {
                 .append(runtime.maxMemory() / (1024 * 1024)).append(" MB max memory\n");
         out.append("Renderer: ").append(env.renderBackend()).append(" | ").append(env.gpu()).append('\n');
         out.append("Window: ").append(env.window()).append('\n');
+        // Empty unless the Ephemera engine is installed.
+        if (!env.ephemera().isEmpty()) out.append("Ephemera: ").append(env.ephemera()).append('\n');
 
         appendHealth(out);
         appendBenchmark(out, env, stats);

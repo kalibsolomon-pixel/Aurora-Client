@@ -112,19 +112,20 @@ public final class WorldLineRenderer {
         double rz2 = z2 - camPos.z;
 
         if (sdf) width = Math.min(width, SDF_ROLE - 1f);
+        int argb = argb(r, g, b, a);
         // Each end is transformed once into a reused vector (addVertex(Matrix4f, ...)
         // allocates per call) and shared by the segment and its cap.
         Vector3f p1 = m.transformPosition((float) rx1, (float) ry1, (float) rz1, END_A);
         Vector3f p2 = m.transformPosition((float) rx2, (float) ry2, (float) rz2, END_B);
-        emit(buf, p1, r, g, b, a, nx, ny, nz, width);
-        emit(buf, p2, r, g, b, a, nx, ny, nz, width);
+        emit(buf, p1, argb, nx, ny, nz, width);
+        emit(buf, p2, argb, nx, ny, nz, width);
         if (sdf) {
             // Zero-length segments at each end; the shader pushes the second
             // vertex outward (role 1 back, role 2 forward) into a half disc.
-            emit(buf, p1, r, g, b, a, nx, ny, nz, width);
-            emit(buf, p1, r, g, b, a, nx, ny, nz, width + SDF_ROLE);
-            emit(buf, p2, r, g, b, a, nx, ny, nz, width);
-            emit(buf, p2, r, g, b, a, nx, ny, nz, width + 2 * SDF_ROLE);
+            emit(buf, p1, argb, nx, ny, nz, width);
+            emit(buf, p1, argb, nx, ny, nz, width + SDF_ROLE);
+            emit(buf, p2, argb, nx, ny, nz, width);
+            emit(buf, p2, argb, nx, ny, nz, width + 2 * SDF_ROLE);
         }
     }
 
@@ -141,11 +142,20 @@ public final class WorldLineRenderer {
         for (int i = 0; i < CORNERS.length; i++) CORNERS[i] = new Vector3f();
     }
 
-    /** One vertex at an already transformed position. */
-    private static void emit(VertexConsumer buf, Vector3f p, float r, float g, float b, float a,
+    /**
+     * Packs the colour once per line or box, byte for byte what
+     * {@code setColor(float, float, float, float)} would write on every vertex.
+     */
+    private static int argb(float r, float g, float b, float a) {
+        return ((int) (a * 255.0F) & 0xFF) << 24 | ((int) (r * 255.0F) & 0xFF) << 16
+                | ((int) (g * 255.0F) & 0xFF) << 8 | ((int) (b * 255.0F) & 0xFF);
+    }
+
+    /** One vertex at an already transformed position; {@code argb} from {@link #argb}. */
+    private static void emit(VertexConsumer buf, Vector3f p, int argb,
                              float nx, float ny, float nz, float width) {
         buf.addVertex(p.x, p.y, p.z)
-                .setColor(r, g, b, a)
+                .setColor(argb)
                 .setNormal(nx, ny, nz)
                 .setLineWidth(width);
     }
@@ -164,9 +174,11 @@ public final class WorldLineRenderer {
             return;
         }
         width = Math.min(width, SDF_ROLE - 1f);
-        float rx1 = (float) (x1 - camPos.x), rx2 = (float) (x2 - camPos.x);
-        float ry1 = (float) (y1 - camPos.y), ry2 = (float) (y2 - camPos.y);
-        float rz1 = (float) (z1 - camPos.z), rz2 = (float) (z2 - camPos.z);
+        int argb = argb(r, g, b, a);
+        double camX = camPos.x, camY = camPos.y, camZ = camPos.z;
+        float rx1 = (float) (x1 - camX), rx2 = (float) (x2 - camX);
+        float ry1 = (float) (y1 - camY), ry2 = (float) (y2 - camY);
+        float rz1 = (float) (z1 - camZ), rz2 = (float) (z2 - camZ);
         m.transformPosition(rx1, ry1, rz1, CORNERS[0]);
         m.transformPosition(rx2, ry1, rz1, CORNERS[1]);
         m.transformPosition(rx1, ry2, rz1, CORNERS[2]);
@@ -179,29 +191,29 @@ public final class WorldLineRenderer {
         float sx = Math.signum((float) (x2 - x1)), sy = Math.signum((float) (y2 - y1)), sz = Math.signum((float) (z2 - z1));
         for (int i = 0; i < 8; i++) {
             if ((i & 1) == 0 && sx != 0) {
-                emit(buf, CORNERS[i], r, g, b, a, sx, 0, 0, width);
-                emit(buf, CORNERS[i | 1], r, g, b, a, sx, 0, 0, width);
+                emit(buf, CORNERS[i], argb, sx, 0, 0, width);
+                emit(buf, CORNERS[i | 1], argb, sx, 0, 0, width);
             }
             if ((i & 2) == 0 && sy != 0) {
-                emit(buf, CORNERS[i], r, g, b, a, 0, sy, 0, width);
-                emit(buf, CORNERS[i | 2], r, g, b, a, 0, sy, 0, width);
+                emit(buf, CORNERS[i], argb, 0, sy, 0, width);
+                emit(buf, CORNERS[i | 2], argb, 0, sy, 0, width);
             }
             if ((i & 4) == 0 && sz != 0) {
-                emit(buf, CORNERS[i], r, g, b, a, 0, 0, sz, width);
-                emit(buf, CORNERS[i | 4], r, g, b, a, 0, 0, sz, width);
+                emit(buf, CORNERS[i], argb, 0, 0, sz, width);
+                emit(buf, CORNERS[i | 4], argb, 0, 0, sz, width);
             }
         }
         // Past CAP_DISTANCE a corner's round cap is under a pixel wide; skip its 32 vertices.
-        double mx = (x1 + x2) * 0.5 - camPos.x, my = (y1 + y2) * 0.5 - camPos.y, mz = (z1 + z2) * 0.5 - camPos.z;
+        double mx = (x1 + x2) * 0.5 - camX, my = (y1 + y2) * 0.5 - camY, mz = (z1 + z2) * 0.5 - camZ;
         if (mx * mx + my * my + mz * mz > CAP_DISTANCE * CAP_DISTANCE) return;
         // A degenerate box has no edges to cap.
         float cx = sx != 0 ? sx : 0, cy = sx != 0 ? 0 : (sy != 0 ? sy : 0), cz = (sx == 0 && sy == 0) ? sz : 0;
         if (cx == 0 && cy == 0 && cz == 0) return;
         for (Vector3f c : CORNERS) {
-            emit(buf, c, r, g, b, a, cx, cy, cz, width);
-            emit(buf, c, r, g, b, a, cx, cy, cz, width + SDF_ROLE);
-            emit(buf, c, r, g, b, a, cx, cy, cz, width);
-            emit(buf, c, r, g, b, a, cx, cy, cz, width + 2 * SDF_ROLE);
+            emit(buf, c, argb, cx, cy, cz, width);
+            emit(buf, c, argb, cx, cy, cz, width + SDF_ROLE);
+            emit(buf, c, argb, cx, cy, cz, width);
+            emit(buf, c, argb, cx, cy, cz, width + 2 * SDF_ROLE);
         }
     }
 
