@@ -17,12 +17,14 @@ import java.util.Map;
  */
 public class HudModuleManager {
     private final Map<String, HudModule> modules = new LinkedHashMap<>();
+    private HudModule[] ordered = new HudModule[0];
 
     public void register(HudModule m) {
         m.captureDefaultLayout(); // before AuroraClient applies saved layouts
         if (modules.put(m.id(), m) != null) {
             AuroraClient.LOGGER.warn("HUD module {} registered twice", m.id());
         }
+        ordered = modules.values().toArray(new HudModule[0]);
     }
 
     public HudModule get(String id) { return modules.get(id); }
@@ -60,7 +62,9 @@ public class HudModuleManager {
         boolean wasDrawingHud = com.aurora.client.ui.util.AuroraFontRenderer.isDrawingHud();
         com.aurora.client.ui.util.AuroraFontRenderer.setDrawingHud(true);
         try {
-            for (HudModule m : modules.values()) {
+            HudModule[] list = ordered;
+            for (int i = 0; i < list.length; i++) {
+                HudModule m = list[i];
                 try {
                     m.render(ctx, client, sw, sh);
                 } catch (Exception e) {

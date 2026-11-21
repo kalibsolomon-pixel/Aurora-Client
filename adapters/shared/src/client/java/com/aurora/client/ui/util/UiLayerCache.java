@@ -448,32 +448,51 @@ public final class UiLayerCache implements RenderUtil.RectSink {
 
         int srcA = (argb >>> 24) & 0xFF;
         if (srcA == 0) return;
+        int srcAbgr = argbToAbgr(argb);
+        IntBuffer pixels = MemoryUtil.memIntBuffer(image.getPointer(), w * h);
+        int span = x3 - x0;
+
+        if (srcA == 255) {
+            // Opaque source-over overwrites destination identically: fill in bulk rows.
+            if (scaledRow == null || scaledRow.length < span) scaledRow = new int[Math.max(w, span)];
+            Arrays.fill(scaledRow, 0, span, srcAbgr);
+            for (int y = y0; y < y3; y++) {
+                pixels.put(y * w + x0, scaledRow, 0, span);
+            }
+            return;
+        }
+
         int srcR = (argb >>> 16) & 0xFF;
         int srcG = (argb >>> 8) & 0xFF;
         int srcB = argb & 0xFF;
         int invA = 255 - srcA;
-
         int srcPr = srcR * srcA;
         int srcPg = srcG * srcA;
         int srcPb = srcB * srcA;
 
         for (int y = y0; y < y3; y++) {
+            int rowBase = y * w;
             for (int x = x0; x < x3; x++) {
-                int d = image.getPixel(x, y); // ARGB
+                int idx = rowBase + x;
+                int d = pixels.get(idx); // ABGR
                 int dstA = (d >>> 24) & 0xFF;
-                int dstR = (d >>> 16) & 0xFF;
+                if (dstA == 0) {
+                    pixels.put(idx, srcAbgr);
+                    continue;
+                }
+                int dstR = d & 0xFF;
                 int dstG = (d >>> 8) & 0xFF;
-                int dstB = d & 0xFF;
+                int dstB = (d >>> 16) & 0xFF;
 
                 int outA = srcA + Math.round(dstA * invA / 255f);
                 if (outA == 0) {
-                    image.setPixel(x, y, 0);
+                    pixels.put(idx, 0);
                     continue;
                 }
                 int r = Math.min(255, Math.round((srcPr + Math.round(dstR * dstA * invA / 255f)) / (float) outA));
                 int g = Math.min(255, Math.round((srcPg + Math.round(dstG * dstA * invA / 255f)) / (float) outA));
                 int b = Math.min(255, Math.round((srcPb + Math.round(dstB * dstA * invA / 255f)) / (float) outA));
-                image.setPixel(x, y, (outA << 24) | (r << 16) | (g << 8) | b);
+                pixels.put(idx, (outA << 24) | (b << 16) | (g << 8) | r);
             }
         }
     }

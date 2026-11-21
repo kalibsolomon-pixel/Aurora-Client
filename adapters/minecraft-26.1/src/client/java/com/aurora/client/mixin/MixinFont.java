@@ -248,35 +248,44 @@ public abstract class MixinFont {
         Style style = AuroraFontRenderer.getActiveStyle();
         if (style == null || text == null || text.isEmpty() || maxWidth <= 0) return;
         Font self = (Font) (Object) this;
-
-        if (!tail) {
-            // Keep leading characters while they fit.
-            StringBuilder sb = new StringBuilder();
-            int width = 0;
-            for (int i = 0; i < text.length(); ) {
-                int cp = text.codePointAt(i);
-                String ch = new String(Character.toChars(cp));
-                int charW = self.width(AuroraFontRenderer.styledLiteral(ch, style));
-                if (width + charW > maxWidth) break;
-                sb.append(ch);
-                width += charW;
-                i += Character.charCount(cp);
+        int len = text.length();
+        MEASURING.get()[0]++;
+        try {
+            if (self.width(AuroraFontRenderer.styledLiteral(text, style)) <= maxWidth) {
+                cir.setReturnValue(text);
+                return;
             }
-            cir.setReturnValue(sb.toString());
-        } else {
-            // Keep trailing characters while they fit.
-            StringBuilder sb = new StringBuilder();
-            int width = 0;
-            for (int i = text.length(); i > 0; ) {
-                int cp = text.codePointBefore(i);
-                String ch = new String(Character.toChars(cp));
-                int charW = self.width(AuroraFontRenderer.styledLiteral(ch, style));
-                if (width + charW > maxWidth) break;
-                sb.insert(0, ch);
-                width += charW;
-                i -= Character.charCount(cp);
+            int lo = 0, hi = len;
+            while (lo < hi) {
+                int mid = (lo + hi + 1) >>> 1;
+                if (!tail) {
+                    int split = mid;
+                    if (split > 0 && split < len && Character.isLowSurrogate(text.charAt(split))) split--;
+                    if (split <= lo) split = mid + 1;
+                    if (self.width(AuroraFontRenderer.styledLiteral(text.substring(0, split), style)) <= maxWidth) {
+                        lo = split;
+                    } else {
+                        hi = mid - 1;
+                    }
+                } else {
+                    int start = len - mid;
+                    if (start > 0 && start < len && Character.isLowSurrogate(text.charAt(start))) start++;
+                    int actualLen = len - start;
+                    if (actualLen <= lo) {
+                        start = len - (mid + 1);
+                        if (start < 0) { hi = mid - 1; continue; }
+                        actualLen = len - start;
+                    }
+                    if (self.width(AuroraFontRenderer.styledLiteral(text.substring(start), style)) <= maxWidth) {
+                        lo = actualLen;
+                    } else {
+                        hi = mid - 1;
+                    }
+                }
             }
-            cir.setReturnValue(sb.toString());
+            cir.setReturnValue(tail ? text.substring(len - lo) : text.substring(0, lo));
+        } finally {
+            MEASURING.get()[0]--;
         }
     }
 
@@ -284,23 +293,31 @@ public abstract class MixinFont {
     //  Helpers
     // ========================================================================
 
+    private static final class CustomFontCheck implements net.minecraft.util.FormattedCharSink {
+        boolean found;
+        @Override public boolean accept(int index, Style style, int codePoint) {
+            if (style.getFont() != AuroraFontRenderer.DEFAULT_FONT) {
+                found = true;
+                return false;
+            }
+            return true;
+        }
+    }
+
+    private static final ThreadLocal<CustomFontCheck> CUSTOM_FONT_CHECK =
+            ThreadLocal.withInitial(CustomFontCheck::new);
+
     /**
      * Returns true if any character in the sequence already has a non-default
      * font set (e.g. Material Symbols icon glyphs), meaning we must NOT
-     * override the font for that text.
+     * override the font for that text. Reuses a ThreadLocal sink to avoid
+     * per-call lambda and array allocations on every text draw.
      */
     private static boolean sequenceHasCustomFont(FormattedCharSequence sequence) {
-        boolean[] found = { false };
-        sequence.accept((index, style, codePoint) -> {
-            // "Custom font" = any font that differs from the default empty
-            // style's font (e.g. Material Symbols icon glyphs).
-            if (style.getFont() != AuroraFontRenderer.DEFAULT_FONT) {
-                found[0] = true;
-                return false; // stop iterating
-            }
-            return true;
-        });
-        return found[0];
+        CustomFontCheck check = CUSTOM_FONT_CHECK.get();
+        check.found = false;
+        sequence.accept(check);
+        return check.found;
     }
 
 }

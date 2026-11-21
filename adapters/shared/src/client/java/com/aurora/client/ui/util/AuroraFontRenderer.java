@@ -52,6 +52,8 @@ public class AuroraFontRenderer {
     private static final java.util.HashMap<Object, Float> INK_MID_VANILLA = new java.util.HashMap<>();
     private static Font inkMidFont;
     private static net.minecraft.locale.Language inkMidLanguage;
+    private static net.minecraft.network.chat.Style lastInkMidStyle;
+    private static java.util.HashMap<Object, Float> lastInkMidMap;
 
     /**
      * Horizontal midpoint of the visible ink of {@code text} (a String, Component or FormattedCharSequence)
@@ -64,9 +66,19 @@ public class AuroraFontRenderer {
         var language = net.minecraft.locale.Language.getInstance();
         if (inkMidFont != font || inkMidLanguage != language) {
             INK_MID.clear(); INK_MID_VANILLA.clear(); inkMidFont = font; inkMidLanguage = language;
+            lastInkMidStyle = null; lastInkMidMap = null;
         }
         var style = getActiveStyle();
-        var cache = style == null ? INK_MID_VANILLA : INK_MID.computeIfAbsent(style, k -> new java.util.HashMap<>());
+        java.util.HashMap<Object, Float> cache;
+        if (style == null) {
+            cache = INK_MID_VANILLA;
+        } else if (style == lastInkMidStyle && lastInkMidMap != null) {
+            cache = lastInkMidMap;
+        } else {
+            cache = INK_MID.computeIfAbsent(style, k -> new java.util.HashMap<>());
+            lastInkMidStyle = style;
+            lastInkMidMap = cache;
+        }
         Float cached = cache.get(text);
         if (cached != null) return cached;
         if (cache.size() > 1024) cache.clear();
@@ -192,12 +204,17 @@ public class AuroraFontRenderer {
      * (search bars, the server-list latency label) are deliberately not
      * windows: their text stays vanilla in AURORA_ONLY.
      */
+    private static Class<?> lastScreenClass;
+    private static boolean lastScreenIsAurora;
+
     static boolean isAuroraWindow(net.minecraft.client.gui.screens.Screen screen) {
         if (screen instanceof com.aurora.client.ui.component.ThemedScreen) return true;
-        // Screens Aurora implements without the marker (and any future
-        // sub-package) still count; matching the package root keeps this
-        // robust as new screens are added anywhere in the mod.
-        return screen.getClass().getName().startsWith("com.aurora.client.");
+        Class<?> cls = screen.getClass();
+        if (cls == lastScreenClass) return lastScreenIsAurora;
+        boolean aurora = cls.getName().startsWith("com.aurora.client.");
+        lastScreenClass = cls;
+        lastScreenIsAurora = aurora;
+        return aurora;
     }
 
     /**

@@ -88,25 +88,17 @@ public final class HitboxRenderer {
         MultiBufferSource consumers = ctx.bufferSource();
         if (consumers == null) return;
 
-        // Use the proper lines() render type with per-vertex line width.
-        // The see-through wireframe option is gone (owner ruling 2026-10-30);
-        // the wireframe keeps the see-through (translucent) default.
         boolean sdf = WorldLineRenderer.sdfAvailable();
-        VertexConsumer buf = WorldLineRenderer.getLineBuffer(consumers, sdf);
+        VertexConsumer buf = null;
 
         // Match vanilla LevelRenderer: use the game-time partial tick (false) so
         // our interpolated AABB lines up with the camera and the entity model.
         float tickDelta = client.getDeltaTracker().getGameTimeDeltaPartialTick(false);
-
-
         Entity activeTarget = resolveTarget(client);
-
-        // IMPORTANT: Do NOT translate the pose stack by the camera position.
-        // WorldLineRenderer subtracts the camera position in double precision
-        // before casting to float, which prevents precision loss at large world
-        // coordinates. The matrix here is the raw model-view matrix.
-        matrices.pushPose();
         Matrix4f model = matrices.last().pose();
+        Entity cameraEntity = client.getCameraEntity();
+        boolean detached = cam.isDetached();
+        LocalPlayer player = client.player;
 
         // Prefer the exact entities that survived main-world culling (vanilla, Sodium,
         // EntityCulling, and Aurora occlusion), matching F3+B; fall back if the hook did not run.
@@ -115,38 +107,51 @@ public final class HitboxRenderer {
             for (int i = 0; i < n; i++) {
                 Entity entity = HitboxVisibleEntities.get(i);
                 if (entity == null || entity.isRemoved() || entity.isSpectator()) continue;
-                if (entity == client.getCameraEntity() && !cam.isDetached()) continue;
-                if (client.player != null && entity != client.player) {
-                    if (entity.isInvisible() || entity.isInvisibleTo(client.player)) continue;
+                if (entity == cameraEntity && !detached) continue;
+                if (player != null && entity != player) {
+                    if (entity.isInvisible() || entity.isInvisibleTo(player)) continue;
                 }
+                if (!shouldDraw(entity, activeTarget, cfg)) continue;
+                if (buf == null) buf = WorldLineRenderer.getLineBuffer(consumers, sdf);
                 renderCandidate(buf, model, camPos, entity, activeTarget, tickDelta, cfg, sdf);
+            }
+        } else if (!cfg.hitboxEnabled) {
+            if (activeTarget != null && !activeTarget.isRemoved() && !activeTarget.isSpectator()
+                    && (activeTarget != cameraEntity || detached)
+                    && activeTarget.shouldRender(camPos.x, camPos.y, camPos.z)) {
+                net.minecraft.client.renderer.culling.Frustum frustum = cam.getCullFrustum();
+                if ((frustum == null || frustum.isVisible(activeTarget.getBoundingBox().inflate(CULL_MARGIN)))
+                        && (player == null || activeTarget == player
+                                || (!activeTarget.isInvisible() && !activeTarget.isInvisibleTo(player)))) {
+                    buf = WorldLineRenderer.getLineBuffer(consumers, sdf);
+                    renderCandidate(buf, model, camPos, activeTarget, activeTarget, tickDelta, cfg, sdf);
+                }
             }
         } else {
             net.minecraft.client.renderer.culling.Frustum frustum = cam.getCullFrustum();
-            // With only the target box on, the target is the one candidate; it passes the same checks.
-            Iterable<Entity> candidates = cfg.hitboxEnabled ? client.level.entitiesForRendering()
-                    : activeTarget != null && !activeTarget.isRemoved() ? java.util.List.of(activeTarget) : java.util.List.of();
-            for (Entity entity : candidates) {
+            for (Entity entity : client.level.entitiesForRendering()) {
                 if (entity == null || entity.isSpectator()) continue;
-                if (entity == client.getCameraEntity() && !cam.isDetached()) continue;
+                if (entity == cameraEntity && !detached) continue;
                 if (!entity.shouldRender(camPos.x, camPos.y, camPos.z)) continue;
                 if (frustum != null && !frustum.isVisible(entity.getBoundingBox().inflate(CULL_MARGIN))) continue;
-                if (client.player != null && entity != client.player) {
-                    if (entity.isInvisible() || entity.isInvisibleTo(client.player)) continue;
+                if (player != null && entity != player) {
+                    if (entity.isInvisible() || entity.isInvisibleTo(player)) continue;
                 }
+                if (!shouldDraw(entity, activeTarget, cfg)) continue;
+                if (buf == null) buf = WorldLineRenderer.getLineBuffer(consumers, sdf);
                 renderCandidate(buf, model, camPos, entity, activeTarget, tickDelta, cfg, sdf);
             }
         }
+    }
 
-        matrices.popPose();
+    private static boolean shouldDraw(Entity entity, Entity activeTarget, AuroraConfig cfg) {
+        return (entity == activeTarget) ? cfg.hitboxTargetEnabled : cfg.hitboxEnabled;
     }
 
     private static void renderCandidate(VertexConsumer buf, Matrix4f model, Vec3 camPos,
                                         Entity entity, Entity activeTarget, float tickDelta,
                                         AuroraConfig cfg, boolean sdf) {
         boolean isTarget = (entity == activeTarget);
-        boolean drawThisOne = isTarget ? cfg.hitboxTargetEnabled : cfg.hitboxEnabled;
-        if (!drawThisOne) return;
 
         int color;
         float widthPx;
@@ -176,50 +181,50 @@ public final class HitboxRenderer {
                                    int color, boolean eyeLine, boolean lookLine, double lookLen,
                                    float widthPx, boolean sdf) {
         // Tick-interpolated position — EXACTLY what vanilla entity rendering uses.
-        // This keeps the hitbox perfectly overlaid on the entity model. We do NOT
-        // apply any additional smoothing (which would desync the hitbox from the
-        // model and make hitboxes "feel off").
         double ix = Mth.lerp((double) tickDelta, e.xOld, e.getX());
         double iy = Mth.lerp((double) tickDelta, e.yOld, e.getY());
         double iz = Mth.lerp((double) tickDelta, e.zOld, e.getZ());
 
-        // Build the AABB at the tick-interpolated render position.
+        // Offset raw AABB in primitives to avoid a per-entity AABB allocation each frame.
         AABB raw = e.getBoundingBox();
         double dx = ix - e.getX();
         double dy = iy - e.getY();
         double dz = iz - e.getZ();
-        AABB box = raw.move(dx, dy, dz);
+        double minX = raw.minX + dx, minY = raw.minY + dy, minZ = raw.minZ + dz;
+        double maxX = raw.maxX + dx, maxY = raw.maxY + dy, maxZ = raw.maxZ + dz;
 
         float a = ((color >>> 24) & 0xFF) / 255f;
         float r = ((color >> 16) & 0xFF) / 255f;
         float g = ((color >> 8)  & 0xFF) / 255f;
         float b = ( color        & 0xFF) / 255f;
 
-        // All edges use the same clean line technique — no more cuboid bars.
-        // Camera position passed separately for double-precision subtraction.
-        WorldLineRenderer.drawBoxOutline(buf, model, camPos, box, r, g, b, a, widthPx, sdf);
+        WorldLineRenderer.drawBoxOutline(buf, model, camPos, minX, minY, minZ, maxX, maxY, maxZ, r, g, b, a, widthPx, sdf);
 
         if (eyeLine) {
             double eyeY = iy + e.getEyeHeight();
-            WorldLineRenderer.drawLine(buf, model, camPos, box.minX, eyeY, box.minZ, box.maxX, eyeY, box.minZ, r, g, b, a, widthPx, sdf);
-            WorldLineRenderer.drawLine(buf, model, camPos, box.maxX, eyeY, box.minZ, box.maxX, eyeY, box.maxZ, r, g, b, a, widthPx, sdf);
-            WorldLineRenderer.drawLine(buf, model, camPos, box.maxX, eyeY, box.maxZ, box.minX, eyeY, box.maxZ, r, g, b, a, widthPx, sdf);
-            WorldLineRenderer.drawLine(buf, model, camPos, box.minX, eyeY, box.maxZ, box.minX, eyeY, box.minZ, r, g, b, a, widthPx, sdf);
+            WorldLineRenderer.drawLine(buf, model, camPos, minX, eyeY, minZ, maxX, eyeY, minZ, r, g, b, a, widthPx, sdf);
+            WorldLineRenderer.drawLine(buf, model, camPos, maxX, eyeY, minZ, maxX, eyeY, maxZ, r, g, b, a, widthPx, sdf);
+            WorldLineRenderer.drawLine(buf, model, camPos, maxX, eyeY, maxZ, minX, eyeY, maxZ, r, g, b, a, widthPx, sdf);
+            WorldLineRenderer.drawLine(buf, model, camPos, minX, eyeY, maxZ, minX, eyeY, minZ, r, g, b, a, widthPx, sdf);
         }
 
         if (lookLine) {
             float lerpYaw   = Mth.rotLerp(tickDelta, e.yRotO,   e.getYRot());
             float lerpPitch = Mth.lerp(tickDelta, e.xRotO, e.getXRot());
-            Vec3 look = Vec3.directionFromRotation(lerpPitch, lerpYaw);
+            float yawRad = -lerpYaw * Mth.DEG_TO_RAD - (float) Math.PI;
+            float pitchRad = -lerpPitch * Mth.DEG_TO_RAD;
+            float cosYaw = Mth.cos(yawRad);
+            float sinYaw = Mth.sin(yawRad);
+            float negCosPitch = -Mth.cos(pitchRad);
+            double lookX = (double) (sinYaw * negCosPitch);
+            double lookY = (double) Mth.sin(pitchRad);
+            double lookZ = (double) (cosYaw * negCosPitch);
 
-            double eyeStartX = ix;
             double eyeStartY = iy + e.getEyeHeight();
-            double eyeStartZ = iz;
-
-            double endX = eyeStartX + look.x * lookLen;
-            double endY = eyeStartY + look.y * lookLen;
-            double endZ = eyeStartZ + look.z * lookLen;
-            WorldLineRenderer.drawLine(buf, model, camPos, eyeStartX, eyeStartY, eyeStartZ, endX, endY, endZ, r, g, b, a, widthPx, sdf);
+            WorldLineRenderer.drawLine(buf, model, camPos,
+                    ix, eyeStartY, iz,
+                    ix + lookX * lookLen, eyeStartY + lookY * lookLen, iz + lookZ * lookLen,
+                    r, g, b, a, widthPx, sdf);
         }
     }
 }
