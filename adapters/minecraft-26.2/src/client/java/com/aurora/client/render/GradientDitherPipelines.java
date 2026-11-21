@@ -139,10 +139,20 @@ public final class GradientDitherPipelines {
                 ? GradientDither.Blend.STRAIGHT_ALPHA : GradientDither.Blend.OTHER;
     }
 
+    /**
+     * Preserves "sodium" in the twin's namespace when wrapping a Sodium pipeline: Sodium 0.9.2's
+     * 26.2 {@code VulkanPipelineMixin} attaches its 20-byte push-constant range only when
+     * {@code location.getNamespace().contains("sodium")}.
+     */
+    private static Identifier twinLocation(Identifier base) {
+        String ns = base.getNamespace().contains("sodium") ? "aurora_sodium" : "aurora";
+        return Identifier.fromNamespaceAndPath(ns, "gradient_dither/" + base.getNamespace() + "/" + base.getPath());
+    }
+
     /** The original with the dither define added; same shaders, layouts, state and sort key. */
     private static final class Dithered extends RenderPipeline {
         Dithered(RenderPipeline base, GradientDither.Mode mode) {
-            super(Identifier.fromNamespaceAndPath("aurora", "gradient_dither/" + base.getLocation().getNamespace() + "/" + base.getLocation().getPath()),
+            super(twinLocation(base.getLocation()),
                     base.getVertexShader(),
                     base.getFragmentShader(),
                     base.getShaderDefines().withOverrides(ShaderDefines.builder().define(GradientDither.DEFINE, mode.value).build()),
