@@ -46,6 +46,21 @@ draw that comes first no longer turns SDF text (or shader-drawn shapes) off for 
 the apply still does
 ([report](reports/2026-11-20-sdf-immediatelyfast.md#rrls-sdf-text-and-the-first-shader-apply)).
 
+## World shader stand-downs
+
+Gradient Dithering patches the world's fragment shaders, so it steps aside where
+something else owns them. Its switch keeps its saved value throughout.
+
+| Installed mod or state | What stands down | How |
+|---|---|---|
+| VulkanMod (`vulkanmod`, 26.1.2) | Gradient Dithering, both mixins | Skipped at startup for the session; diagnostics list it as stood down |
+| Iris (`iris`) with a shader pack in use | Gradient Dithering's dithered pipelines | Checked on every pipeline lookup; vanilla's pipelines draw, and the pack replaces them as usual. Dithering resumes when the pack is turned off |
+| Iris with no shader pack | Nothing | The world is dithered as without Iris |
+| A resource pack whose replacement sky, terrain, cloud or sunrise shader has no single `main` writing `fragColor` | That shader only | Left as the pack wrote it; its pipelines draw undithered |
+
+The [Gradient Dithering report](reports/2026-11-20-gradient-dither.md) records
+the boots that checked these rows.
+
 ## How to run it
 
 1. Back up `run/config/aurora.json`, `run/config/profiles/` and `run/options.txt`.

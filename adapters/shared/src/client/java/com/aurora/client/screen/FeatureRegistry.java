@@ -1573,6 +1573,10 @@ addWithSettings("hitbox",
                 List.of(debugEntryCache, minimapRefreshCap, unfocusedLimit, unfocusedFps),
                 List.of("perf"));
 
+        add("gradient_dither",
+                "Smooths the color bands in skies, sunsets, fog, underwater views, clouds and dark scenes by adding a fine, fixed pattern of less than one color step. Average colors are unchanged, and menus and the HUD are never touched. Turns itself off while an Iris shader pack is active.",
+                () -> cfg.gradientDither, v -> cfg.gradientDither = v);
+
         // ============ SETTINGS TAB PAGES ============
         // The Settings tab shows one page at a time, chosen from the row of
         // sub-tabs at its top. A page is a list of entries; each entry is a
@@ -1591,7 +1595,8 @@ addWithSettings("hitbox",
                 group("frame_rate", "Frame Rate", globalFrameCap, uiFpsLimit).pageSummary("Framerate caps for the game and for Aurora's menus."),
                 group("frame_pacer", "Frame Pacer", framePacerEnabled, framePacingStrategy,
                         framePacerLowCpu, framePacerSpinThreshold, framePacerParkThreshold).pageSummary("Holds each frame to an even interval for smoother motion."),
-                group("low_latency", "Low Latency", lowLatencyEnabled, disableVSync, adaptiveRenderSleeping).pageSummary("Shortens the delay between your input and the screen."))));
+                group("low_latency", "Low Latency", lowLatencyEnabled, disableVSync, adaptiveRenderSleeping).pageSummary("Shortens the delay between your input and the screen."),
+                settingsEntry("gradient_dither").pageSummary("Removes color banding from skies, fog and dark scenes."))));
         SETTINGS_PAGES.add(new SettingsPage("Controls", List.of(
                 group("smooth_camera", "Smooth Camera", smoothCameraEnabled, smoothCameraStrength).pageSummary("Eases mouse look into and out of movement."),
                 group("decoupled_input", "Decoupled Input", decoupledInputEnabled).pageSummary("Applies mouse movement at the very start of each frame."),
