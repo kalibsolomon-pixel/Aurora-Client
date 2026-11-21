@@ -473,6 +473,12 @@ public class AuroraConfig {
      * while an Iris shader pack draws the world.
      */
     public boolean gradientDither = true;
+    /**
+     * Smooth Fog: replaces Minecraft's piecewise-linear fog ramp with a smooth
+     * cubic Hermite curve across the exact same fog start/end bounds
+     * (render/SmoothFog). Stands down while an Iris shader pack draws the world.
+     */
+    public boolean smoothFog = false;
 
     // ---- Performance (ADR 0009) ----
     // Client optimizations Aurora owns. Every field is named perf*, so
@@ -500,6 +506,8 @@ public class AuroraConfig {
     public boolean perfEntityOcclusion = true;
     /** GUI item drawings leave out faces that cover no pixel head-on, such as the side faces of flat items. */
     public boolean perfGuiFlatFaces = true;
+    /** Blaze3D OpenGL draw setup caches texture mip ranges, single-target FBO lookups, VAO array bindings and per-pass draw buffers. */
+    public boolean perfGlDispatch = true;
     /** Sprites drop their CPU copies of mip levels above 0 once the atlas is uploaded. */
     public boolean perfFreeSpriteMipmaps = true;
     /** A moving camera repaints the minimap's terrain at most 60 times a second. */

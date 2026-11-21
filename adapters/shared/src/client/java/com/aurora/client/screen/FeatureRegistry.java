@@ -1535,6 +1535,10 @@ addWithSettings("hitbox",
                 "Smooths the color bands in skies, sunsets, fog, underwater views, clouds and dark scenes by adding a fine, fixed pattern of less than one color step. Average colors are unchanged, and menus and the HUD are never touched. Turns itself off while an Iris shader pack is active.",
                 () -> cfg.gradientDither, v -> cfg.gradientDither = v);
 
+        add("smooth_fog",
+                "Replaces Minecraft's linear distance fog with a smooth S-curve over the exact same start and end distances, softening harsh fog edges on terrain, sky, clouds and entities. Composes with Gradient Dithering and turns itself off while an Iris shader pack is active.",
+                () -> cfg.smoothFog, v -> cfg.smoothFog = v);
+
         // ============ SETTINGS TAB PAGES ============
         // The Settings tab shows one page at a time, chosen from the row of
         // sub-tabs at its top. A page is a list of entries; each entry is a
@@ -1554,7 +1558,8 @@ addWithSettings("hitbox",
                 group("frame_pacer", "Frame Pacer", framePacerEnabled, framePacingStrategy,
                         framePacerLowCpu, framePacerSpinThreshold, framePacerParkThreshold).pageSummary("Holds each frame to an even interval for smoother motion."),
                 group("low_latency", "Low Latency", lowLatencyEnabled, disableVSync, adaptiveRenderSleeping).pageSummary("Shortens the delay between your input and the screen."),
-                settingsEntry("gradient_dither").pageSummary("Removes color banding from skies, fog and dark scenes."))));
+                settingsEntry("gradient_dither").pageSummary("Removes color banding from skies, fog and dark scenes."),
+                settingsEntry("smooth_fog").pageSummary("Softens harsh linear distance fog edges across the horizon."))));
         SETTINGS_PAGES.add(new SettingsPage("Controls", List.of(
                 group("smooth_camera", "Smooth Camera", smoothCameraEnabled, smoothCameraStrength).pageSummary("Eases mouse look into and out of movement."),
                 group("decoupled_input", "Decoupled Input", decoupledInputEnabled).pageSummary("Applies mouse movement at the very start of each frame."),

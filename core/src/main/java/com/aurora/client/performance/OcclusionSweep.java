@@ -63,13 +63,29 @@ public final class OcclusionSweep {
         if (!(eyeRadius >= 0) || eyeRadius > MAX_COORD || !inRange(ex, ey, ez) || !inRange(x0, y0, z0)
                 || !inRange(x1, y1, z1) || x1 < x0 || y1 < y0 || z1 < z0) return false;
         // Try the axes in order of how far the box lies from the eye along them.
+        // Skip any axis whose gap is smaller than NEAR, since no integer plane
+        // can satisfy eyeFar + NEAR <= p <= boxNear - EDGE.
         double gx = gap(ex, eyeRadius, x0, x1), gy = gap(ey, eyeRadius, y0, y1), gz = gap(ez, eyeRadius, z0, z1);
-        int first = gx >= gy ? (gx >= gz ? 0 : 2) : (gy >= gz ? 1 : 2);
-        int last = gx < gy ? (gx < gz ? 0 : 2) : (gy < gz ? 1 : 2);
-        int middle = 3 - first - last;
-        return axis(cells, first, ex, ey, ez, eyeRadius, x0, y0, z0, x1, y1, z1)
-                || axis(cells, middle, ex, ey, ez, eyeRadius, x0, y0, z0, x1, y1, z1)
-                || axis(cells, last, ex, ey, ez, eyeRadius, x0, y0, z0, x1, y1, z1);
+        int first, middle, last;
+        double gFirst, gMiddle, gLast;
+        if (gx >= gy) {
+            if (gx >= gz) {
+                first = 0; gFirst = gx;
+                if (gy >= gz) { middle = 1; gMiddle = gy; last = 2; gLast = gz; }
+                else { middle = 2; gMiddle = gz; last = 1; gLast = gy; }
+            } else {
+                first = 2; gFirst = gz; middle = 0; gMiddle = gx; last = 1; gLast = gy;
+            }
+        } else if (gy >= gz) {
+            first = 1; gFirst = gy;
+            if (gx >= gz) { middle = 0; gMiddle = gx; last = 2; gLast = gz; }
+            else { middle = 2; gMiddle = gz; last = 0; gLast = gx; }
+        } else {
+            first = 2; gFirst = gz; middle = 1; gMiddle = gy; last = 0; gLast = gx;
+        }
+        return (gFirst >= NEAR && axis(cells, first, ex, ey, ez, eyeRadius, x0, y0, z0, x1, y1, z1))
+                || (gMiddle >= NEAR && axis(cells, middle, ex, ey, ez, eyeRadius, x0, y0, z0, x1, y1, z1))
+                || (gLast >= NEAR && axis(cells, last, ex, ey, ez, eyeRadius, x0, y0, z0, x1, y1, z1));
     }
 
     private static boolean inRange(double a, double b, double c) {

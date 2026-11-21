@@ -251,6 +251,7 @@ public final class FeatureCatalog {
         setting("performance", "Performance");
         // Shown on the Settings tab's Display page with its switch in the header.
         setting("gradient_dither", "Gradient Dithering");
+        setting("smooth_fog", "Smooth Fog");
 
         // ---- Fair play (ADR 0007). docs/FAIR_PLAY.md repeats these lines. ----
         classify("pulsar", FairPlay.INFORMATION_ADVANTAGE, "Records locally observed combat, including opponents, and derives fight analytics and offline reports. It never changes attacks or sends packets.", "pulsarEnabled");
@@ -298,6 +299,7 @@ public final class FeatureCatalog {
         classify("interface", FairPlay.COSMETIC, "Limits the frame rate of Aurora's own screens.");
         classify("performance", FairPlay.LOCAL_TIMING, "Caches, skips or reschedules work your own client does to load, draw and play sound. A new singleplayer world's loading screen closes half a second sooner; what is sent to a multiplayer server, and when, is unchanged.");
         classify("gradient_dither", FairPlay.COSMETIC, "Adds a fixed pattern of less than half a color step to the sky, fog, clouds and terrain, so smooth gradients do not show bands. Average colors stay the same and nothing becomes easier to see.");
+        classify("smooth_fog", FairPlay.COSMETIC, "Replaces Minecraft's linear fog ramp with a smooth S-curve across the exact same fog start and end distances, removing harsh fog rings on distant terrain, sky, clouds and entities.");
 
         // ---- Mixins, in aurora.mixins.json order ----
         mixin("WindowMixin", "nothing (kept empty for compatibility)");
@@ -423,6 +425,8 @@ public final class FeatureCatalog {
                 .gates("perfEntityOcclusion").yieldsTo("entityculling");
         mixin("OcclusionDirtyMixin", "skipping entities hidden behind terrain", "performance")
                 .gates("perfEntityOcclusion").yieldsTo("entityculling");
+        mixin("OcclusionLeashMixin", "skipping entities hidden behind terrain", "performance")
+                .gates("perfEntityOcclusion").yieldsTo("entityculling");
         mixin("MinecraftProfileAccessor", "startup without waiting for the profile", "performance").gates("perfNoProfileWait");
         mixin("InitialScreensProfileMixin", "startup without waiting for the profile", "performance").gates("perfNoProfileWait");
         mixin("SoundEngineListenerMixin", "skipping unchanged sound listener updates", "performance").gates("perfSoundListenerThrottle");
@@ -468,6 +472,15 @@ public final class FeatureCatalog {
                 .gates("perfGuiFlatFaces");
         mixin("ItemFeatureRendererFlatFacesMixin", "leaving out GUI item faces that cover no pixel", "performance")
                 .gates("perfGuiFlatFaces");
+        // VulkanMod (26.1) replaces OpenGL rendering; an Iris shader pack is checked at draw time.
+        mixin("GlTextureMipCacheMixin", "caching OpenGL texture mip-range parameters", "performance")
+                .gates("perfGlDispatch").yieldsTo("vulkanmod");
+        mixin("GlCommandEncoderDispatchMixin", "skipping redundant OpenGL draw-setup driver calls", "performance")
+                .gates("perfGlDispatch").yieldsTo("vulkanmod");
+        mixin("FrameBufferCacheMixin", "caching single-target OpenGL framebuffer lookups", "performance")
+                .gates("perfGlDispatch").yieldsTo("vulkanmod");
+        mixin("VertexArrayCacheSeparateMixin", "caching OpenGL vertex array lookups by format array identity", "performance")
+                .gates("perfGlDispatch").yieldsTo("vulkanmod");
         mixin("SpriteContentsMipsAccessor", "freeing uploaded sprite mipmaps", "performance").gates("perfFreeSpriteMipmaps");
         mixin("TextureAtlasFreeMipsMixin", "freeing uploaded sprite mipmaps", "performance").gates("perfFreeSpriteMipmaps");
         // Polytone selects custom depth nodes; Gnetum routes HUD submissions into its own layers.
@@ -486,6 +499,10 @@ public final class FeatureCatalog {
                 .gates("gradientDither").yieldsTo("vulkanmod");
         mixin("GradientDitherPipelineMixin", "dithered sky, fog and terrain shaders", "gradient_dither")
                 .gates("gradientDither").yieldsTo("vulkanmod");
+        mixin("SmoothFogSourceMixin", "smooth fog curve in world shaders", "smooth_fog")
+                .gates("smoothFog").yieldsTo("vulkanmod");
+        mixin("SmoothFogPipelineMixin", "smooth fog curve in world shaders", "smooth_fog")
+                .gates("smoothFog").yieldsTo("vulkanmod");
         for (String hitreg : List.of("AttackMixin", "DamageMixin", "EntityAccessor", "NetworkMixin",
                 "PlayerMixin", "ServerMixin")) {
             // Better Hitreg's timing core only works whole: one missing piece

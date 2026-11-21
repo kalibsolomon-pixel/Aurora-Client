@@ -106,6 +106,10 @@ class EntityOcclusionCoreTest {
         assertTrue(sweep.probes() > 0 && sweep.probes() <= 9);
         sweep.resetProbes();
         assertEquals(0, sweep.probes());
+
+        // Overlapping or closer-than-NEAR boxes on all three axes skip every axis with zero probes.
+        assertFalse(sweep.hidden(allSolid, 0.5, 0.5, 0.5, 0.25, 0.0, 0.0, 1.0, 1.0, 1.0, 2.0));
+        assertEquals(0, sweep.probes());
     }
 
     // ---- SectionStability ----

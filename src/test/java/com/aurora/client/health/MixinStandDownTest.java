@@ -74,12 +74,29 @@ class MixinStandDownTest {
 
     @Test void entityCullingOwnsEveryOcclusionHook() {
         for (String name : List.of("OcclusionFrameMixin", "OcclusionBodyMixin", "OcclusionChestMixin",
-                "OcclusionDirtyMixin")) {
+                "OcclusionDirtyMixin", "OcclusionLeashMixin")) {
             var binding = FeatureCatalog.mixin(name);
             assertEquals(List.of("perfEntityOcclusion"), binding.gates());
             assertEquals("handled by entityculling", binding.standDownReason(Set.of("entityculling")::contains));
             assertNull(binding.standDownReason(Set.of("sodium", "moreculling", "immediatelyfast",
                     "entity_model_features")::contains));
+        }
+    }
+
+    @Test void glDispatchAndSmoothFogYieldToVulkanMod() {
+        for (String name : List.of("GlTextureMipCacheMixin", "GlCommandEncoderDispatchMixin",
+                "FrameBufferCacheMixin", "VertexArrayCacheSeparateMixin")) {
+            var binding = FeatureCatalog.mixin(name);
+            assertEquals(List.of("perfGlDispatch"), binding.gates());
+            assertEquals("handled by vulkanmod", binding.standDownReason(Set.of("vulkanmod")::contains));
+            assertNull(binding.standDownReason(Set.of("sodium", "iris", "immediatelyfast", "moreculling",
+                    "entityculling")::contains));
+        }
+        for (String name : List.of("SmoothFogSourceMixin", "SmoothFogPipelineMixin")) {
+            var binding = FeatureCatalog.mixin(name);
+            assertEquals(List.of("smoothFog"), binding.gates());
+            assertEquals("handled by vulkanmod", binding.standDownReason(Set.of("vulkanmod")::contains));
+            assertNull(binding.standDownReason(Set.of("sodium", "iris", "immediatelyfast")::contains));
         }
     }
 

@@ -1,6 +1,6 @@
 # Aurora Client status
 
-Updated 2026-11-20. See [ROADMAP](ROADMAP.md) for the order of work,
+Updated 2026-11-21. See [ROADMAP](ROADMAP.md) for the order of work,
 [architecture](ARCHITECTURE.md) for ownership, and [ADRs](adr/) for decisions.
 
 ## Structure and integration
@@ -33,6 +33,12 @@ under half an 8-bit step to the sky, sunrise glow, End sky, clouds and terrain (
 Sodium), so dusk skies, fog and dark scenes stop banding; GUI and HUD are never dithered. It
 stands down for VulkanMod and while an Iris shader pack is in use. Checked on 26.1.2, 26.2 and
 26.3 (OpenGL; 26.3 also native Vulkan); [evidence](reports/2026-11-20-gradient-dither.md).
+
+Smooth Fog (Settings → Display, off by default, cosmetic) replaces Minecraft's linear distance fog
+ramp with a cubic Hermite S-curve over the exact same start and end distances, composing cleanly
+with Sodium and Gradient Dithering in one pass; it stands down for VulkanMod and while an Iris
+shader pack is in use. Checked on 26.1.2, 26.2 and 26.3 (OpenGL; 26.2 and 26.3 also native
+Vulkan); [evidence](reports/2026-11-21-aurora-262-perf-and-smooth-fog.md).
 
 Pulsar integration adds Phenomena's analytics and recording as Aurora's 40th
 feature, off by default. Its configuration and six-tab dashboard follow Aurora's
@@ -188,6 +194,13 @@ vanilla, Sodium, EntityCulling and Aurora occlusion (`HitboxVisibleEntitiesMixin
 target hitboxes reuse vanilla's block-clipped `crosshairPickEntity`; Item Physics tracks frame-rate-independent
 landing ease and settled state per `ItemEntity` (`ItemPhysicsSmoothing`); and `AuroraTitleScreen` waits for
 `EntityModelSet` under RRLS.
+Aurora 26.2 performance pass (`perf/aurora-262-pass`): upgraded `EntityOcclusion` with direct chunk-section
+reads, cross-frame `terrainStamp` block-solidity caching, exact sweep-decision caching and tick/packet-invalidated
+leash tracking (`OcclusionLeashMixin`), cutting its render-thread share from 8.8–12.9% to 0.0–1.0% on the
+owner's 26.2 instance; added 26.2 OpenGL dispatch caching (`perfGlDispatch`: texture mip-range, per-pass
+`glDrawBuffers`, single-target `FrameBufferCache`, `VertexArrayCache$Separate` identity lookup; -3.6% to -7.8%
+median frame time, pixel-identical); measured and dropped `DynamicAtlasAllocator` and 26.1/26.3 OpenGL dispatch
+hooks that showed no reliable gain; [evidence](reports/2026-11-21-aurora-262-perf-and-smooth-fog.md).
 
 ## Next work
 
