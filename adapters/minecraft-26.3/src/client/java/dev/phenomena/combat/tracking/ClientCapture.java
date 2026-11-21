@@ -21,6 +21,7 @@ import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.phys.*;
 
 /**
@@ -38,6 +39,13 @@ public final class ClientCapture {
   private static double lastHealth = -1, lastAbsorption = -1;
   private static Vec3 lastPosition;
   private static String deadTarget, removedTarget;
+  private static Item cachedWeaponItem;
+  private static int cachedWeaponSlot = -1, cachedWeaponAttrHash;
+  private static String cachedWeaponKey;
+  private static net.minecraft.client.multiplayer.ClientLevel cachedWorldLevel;
+  private static String cachedWorldKey;
+  private static Player cachedPlayer;
+  private static String cachedPlayerName;
   private static final long ORIGIN = System.nanoTime();
 
   /** Bounded entity UUID to display label (type or player name); local display metadata only. */
@@ -61,8 +69,9 @@ public final class ClientCapture {
       jumpConsumed = false;
       return;
     }
-    TIMING.held(weaponKey(mc.player));
-    if (PhenomenaClient.engine != null) PhenomenaClient.engine.heldWeapon(weaponKey(mc.player));
+    String weapon = weaponKey(mc.player);
+    TIMING.held(weapon);
+    if (PhenomenaClient.engine != null) PhenomenaClient.engine.heldWeapon(weapon);
     boolean down = mc.options.keyJump.isDown();
     if (down && !jumpHeld) {
       jumpConsumed = false;
@@ -80,11 +89,24 @@ public final class ClientCapture {
 
   private static String weaponKey(Player p) {
     var stack = p.getMainHandItem();
-    return (stack.isEmpty() ? "fist" : BuiltInRegistries.ITEM.getKey(stack.getItem()).toString())
-        + ";slot="
-        + p.getInventory().getSelectedSlot()
-        + ";attributes="
-        + Objects.hashCode(stack.get(DataComponents.ATTRIBUTE_MODIFIERS));
+    Item item = stack.isEmpty() ? null : stack.getItem();
+    int slot = p.getInventory().getSelectedSlot();
+    int attrHash = Objects.hashCode(stack.get(DataComponents.ATTRIBUTE_MODIFIERS));
+    if (cachedWeaponKey != null
+        && item == cachedWeaponItem
+        && slot == cachedWeaponSlot
+        && attrHash == cachedWeaponAttrHash) return cachedWeaponKey;
+    String key =
+        (item == null ? "fist" : BuiltInRegistries.ITEM.getKey(item).toString())
+            + ";slot="
+            + slot
+            + ";attributes="
+            + attrHash;
+    cachedWeaponItem = item;
+    cachedWeaponSlot = slot;
+    cachedWeaponAttrHash = attrHash;
+    cachedWeaponKey = key;
+    return key;
   }
 
   /**
@@ -122,7 +144,20 @@ public final class ClientCapture {
 
   public static String currentWorld() {
     var mc = Minecraft.getInstance();
-    return mc.level == null ? null : mc.level.dimension().identifier().toString();
+    if (mc.level == null) return null;
+    if (mc.level != cachedWorldLevel) {
+      cachedWorldLevel = mc.level;
+      cachedWorldKey = mc.level.dimension().identifier().toString();
+    }
+    return cachedWorldKey;
+  }
+
+  private static String playerName(Player player) {
+    if (player != cachedPlayer || cachedPlayerName == null) {
+      cachedPlayer = player;
+      cachedPlayerName = player.getName().getString();
+    }
+    return cachedPlayerName;
   }
 
   public static long clientTick() {
@@ -213,6 +248,7 @@ public final class ClientCapture {
 
   public static void emptySwing() {
     if (!AuroraConfig.get().pulsarEnabled || !PhenomenaClient.isInitialized()) return;
+    if (!PhenomenaClient.config.tracking && !PhenomenaClient.recording.manual()) return;
     var mc = Minecraft.getInstance();
     if (mc.player != null
         && mc.level != null
@@ -540,7 +576,7 @@ public final class ClientCapture {
       lastPosition = null;
     }
     PhenomenaClient.recording.context(
-        host(mc), mc.player.getName().getString(), currentWorld(), now(), clientTick);
+        host(mc), playerName(mc.player), currentWorld(), now(), clientTick);
     lastLevel = mc.level;
     if (!connected) {
       wasGround = mc.player.onGround();
@@ -638,6 +674,13 @@ public final class ClientCapture {
     lastPosition = null;
     deadTarget = removedTarget = null;
     lastHealth = lastAbsorption = -1;
+    cachedWeaponItem = null;
+    cachedWeaponSlot = -1;
+    cachedWeaponKey = null;
+    cachedWorldLevel = null;
+    cachedWorldKey = null;
+    cachedPlayer = null;
+    cachedPlayerName = null;
     jumpHeld = jumpConsumed = localDeathReported = wasGround = sprinting = false;
     TIMING.reset();
     LABELS.clear();

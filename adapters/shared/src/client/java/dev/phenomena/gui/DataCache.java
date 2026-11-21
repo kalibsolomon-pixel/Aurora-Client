@@ -15,6 +15,7 @@ public final class DataCache {
 
   private static long version = -1;
   private static final Map<Integer, Aggregate> AGGREGATES = new HashMap<>();
+  private static final Map<String, FightRecord> BY_ID = new HashMap<>();
   private static final Map<String, FightAnalytics> ANALYTICS =
       new LinkedHashMap<>(64, .75f, true) {
         @Override
@@ -37,6 +38,8 @@ public final class DataCache {
     if (version != PhenomenaClient.historyVersion) {
       version = PhenomenaClient.historyVersion;
       AGGREGATES.clear();
+      BY_ID.clear();
+      for (var f : PhenomenaClient.history) BY_ID.put(f.id(), f);
     }
   }
 
@@ -58,8 +61,8 @@ public final class DataCache {
 
   public static FightRecord summary(String id) {
     if (id == null) return null;
-    for (var f : PhenomenaClient.history) if (f.id().equals(id)) return f;
-    return null;
+    sync();
+    return BY_ID.get(id);
   }
 
   /** The record with timeline if available now: in history or the on-demand LRU. */

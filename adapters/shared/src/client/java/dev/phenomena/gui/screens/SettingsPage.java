@@ -73,15 +73,21 @@ final class SettingsPage implements PhenomenaScreen.Page {
   @Override
   public void build(Content c) {
     switch (s.state.settings) {
-      case RECORDING -> recording(c);
-      case SERVER_CAPTURE -> serverCapture(c);
-      case EXCHANGES -> exchanges(c);
-      case CLASSIFICATION -> classification(c);
+      case CAPTURE -> {
+        recording(c);
+        serverCapture(c);
+      }
+      case COMBAT -> {
+        exchanges(c);
+        classification(c);
+      }
       case AUDIO -> feedback(c);
       case APPEARANCE -> ui(c);
       case DATA -> data(c);
-      case DIAGNOSTICS -> diagnostics(c);
-      case CONTROLS -> controls(c);
+      case CONTROLS -> {
+        controls(c);
+        diagnostics(c);
+      }
     }
   }
 

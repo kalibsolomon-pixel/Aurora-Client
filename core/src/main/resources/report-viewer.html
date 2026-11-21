@@ -6,18 +6,18 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="color-scheme" content="dark">
-<meta name="generator" content="Phenomena">
-<title>Phenomena Fight Report</title>
+<meta name="generator" content="Aurora Pulsar">
+<title>Aurora Pulsar Fight Report</title>
 <style>
-/* Spxctra tokens, mirrored from dev.phenomena.gui.theme.Theme (named by role, not value). */
+/* Aurora Pulsar tokens (dark obsidian palette, semantic PvP colors). */
 :root{
   color-scheme:dark;
-  --bg:#101316;--header:#141920;--surface:#171c21;--surface-2:#1d2329;--hover:#262d34;--pressed:#12161a;--inset:#12161a;
-  --border:#39424b;--border-soft:#2a3138;--grid:#252c33;
-  --text:#e8edeb;--muted:#9ba7ad;--dim:#7a848b;
-  --accent:#88c8aa;--warn:#e4c46e;--error:#e49790;
-  --you:#3987e5;--opp:#d95926;--good:#199e70;
-  --radius:4px;--radius-sm:3px;
+  --bg:#0d1015;--header:#121720;--surface:#151b24;--surface-2:#1b222e;--hover:#232c3b;--pressed:#10151d;--inset:#0f141c;
+  --border:#2e3847;--border-soft:#222a36;--grid:#1e2633;
+  --text:#edf2f7;--muted:#9aa6b5;--dim:#738091;
+  --accent:#58c7a3;--warn:#f0c35a;--error:#f07474;
+  --you:#4c9aff;--opp:#f06543;--good:#2ec28b;--abs:#e6b84c;
+  --radius:6px;--radius-sm:4px;
   --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
   --mono:ui-monospace,"Cascadia Mono",Consolas,"DejaVu Sans Mono",monospace;
   --ease:120ms cubic-bezier(.2,0,0,1);
@@ -27,13 +27,13 @@
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 html,body{margin:0;background:var(--bg);color:var(--text)}
 body{font:15px/1.5 var(--sans);font-variant-numeric:tabular-nums;overflow-x:hidden}
-.wrap{max-width:1200px;margin:0 auto;padding:0 var(--gutter)}
+.wrap{max-width:1220px;margin:0 auto;padding:0 var(--gutter)}
 .skip{position:absolute;left:-9999px;top:0}
 .skip:focus{left:8px;top:8px;z-index:10;background:var(--surface-2);color:var(--text);padding:6px 10px;border-radius:var(--radius)}
 a{color:var(--accent)}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
-/* App bar: the same quiet wordmark row as the native dashboard. */
+/* App bar */
 .appbar{background:var(--header);border-bottom:1px solid var(--border-soft)}
 .appbar .wrap{display:flex;align-items:baseline;gap:12px;min-height:48px;padding-top:11px;padding-bottom:11px;flex-wrap:wrap}
 .brand{font-weight:700;font-size:17px;letter-spacing:.02em;color:var(--accent)}
@@ -41,7 +41,7 @@ a{color:var(--accent)}
 .appbar .status{margin-left:auto;color:var(--muted);font-size:13px;display:flex;align-items:center;gap:6px}
 .appbar .status::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--accent);display:inline-block}
 
-/* Report header: the result first, then who, where and when. One static tonal band, no effects. */
+/* Report header */
 .hero{background:linear-gradient(180deg,var(--header) 0%,var(--bg) 100%);padding:22px 0 18px}
 .result-line{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 6px}
 .result{display:inline-flex;align-items:center;gap:7px;font-weight:700;font-size:14px;padding:3px 10px;border-radius:var(--radius);border:1px solid currentColor;line-height:1.3}
@@ -57,12 +57,12 @@ dl.meta dd{margin:1px 0 0;font-size:14px;overflow-wrap:anywhere}
 .coverage li{color:var(--muted);font-size:13px;padding-left:14px;position:relative;max-width:90ch}
 .coverage li::before{content:"";position:absolute;left:2px;top:.6em;width:6px;height:6px;border-radius:1px;background:var(--warn)}
 
-/* Manual session scope. */
+/* Manual session scope */
 .scope{display:flex;gap:8px 14px;align-items:center;flex-wrap:wrap;padding:10px 12px;margin:0 0 14px;background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--radius)}
 .scope:empty{display:none}
 .scope .lead{color:var(--muted);font-size:13px;margin-right:2px}
 
-/* Tabs: flat at rest, accent underline when selected; sticky so navigation stays in reach. */
+/* Tabs */
 .tabs-bar{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--border-soft)}
 nav.tabs{display:flex;overflow-x:auto;scrollbar-width:none}
 nav.tabs::-webkit-scrollbar{display:none}
@@ -78,13 +78,13 @@ section[role=tabpanel]{display:none}
 section[role=tabpanel].on{display:block}
 section[role=tabpanel]:focus{outline:none}
 
-/* Section chips (jump links) as in the native sub-navigation. */
+/* Section chips */
 nav.chips{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 6px}
 nav.chips a{color:var(--muted);border:1px solid var(--border);border-radius:14px;padding:3px 12px;text-decoration:none;font-size:13px;line-height:20px;transition:color var(--ease),background-color var(--ease),border-color var(--ease)}
 nav.chips a:hover{color:var(--text);background:var(--surface-2)}
-nav.chips a[aria-current=true]{color:var(--text);border-color:var(--accent);background:rgba(136,200,170,.08)}
+nav.chips a[aria-current=true]{color:var(--text);border-color:var(--accent);background:rgba(88,199,163,.10)}
 
-h2{font-size:17px;font-weight:600;margin:30px 0 10px;display:flex;align-items:baseline;gap:12px;scroll-margin-top:calc(var(--tabs-h) + 14px)}
+h2{font-size:17px;font-weight:600;margin:28px 0 10px;display:flex;align-items:baseline;gap:12px;scroll-margin-top:calc(var(--tabs-h) + 14px)}
 h2::after{content:"";flex:1;height:1px;background:var(--border-soft);align-self:center;min-width:16px}
 h2 small{color:var(--dim);font-weight:400;font-size:13px;order:2;text-align:right}
 .chips+h2,section>h2:first-child{margin-top:12px}
@@ -92,8 +92,32 @@ h3{font-size:14px;margin:18px 0 6px;color:var(--muted);font-weight:600}
 p{margin:6px 0}
 p.muted{color:var(--muted);max-width:90ch}
 
-/* Metric cards: label, value with unit, caption, and the measurement's confidence in words. */
-.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(176px,1fr));gap:8px;margin:8px 0}
+/* Takeaways & turning points */
+.takes{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin:8px 0 12px}
+.take{background:var(--surface);border:1px solid var(--border-soft);border-left:3px solid var(--border);border-radius:var(--radius);padding:11px 13px;display:flex;flex-direction:column;gap:4px}
+.take.POSITIVE{border-left-color:var(--good)}
+.take.NEGATIVE{border-left-color:var(--opp)}
+.take.NEUTRAL{border-left-color:var(--you)}
+.take .cat{font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--dim)}
+.take.POSITIVE .cat{color:var(--good)}
+.take.NEGATIVE .cat{color:var(--error)}
+.take.NEUTRAL .cat{color:var(--you)}
+.take .hl{font-size:15px;font-weight:600;color:var(--text);line-height:1.3}
+.take .dt{font-size:13px;color:var(--muted);line-height:1.45}
+
+.tp-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px;margin:8px 0 10px}
+button.tp{text-align:left;background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--radius);padding:9px 11px;color:var(--text);font:inherit;cursor:pointer;display:flex;flex-direction:column;gap:3px;transition:background-color var(--ease),border-color var(--ease)}
+button.tp:hover{background:var(--surface-2);border-color:var(--border)}
+button.tp .tp-top{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted)}
+button.tp .tp-dot{width:7px;height:7px;border-radius:50%;flex:none;background:var(--you)}
+button.tp.POSITIVE .tp-dot{background:var(--good)}
+button.tp.NEGATIVE .tp-dot{background:var(--opp)}
+button.tp .tp-t{font-family:var(--mono);color:var(--accent);font-weight:600}
+button.tp .tp-title{font-size:14px;font-weight:600;line-height:1.3}
+button.tp .tp-dt{font-size:12.5px;color:var(--muted);line-height:1.35}
+
+/* Metric cards */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(162px,1fr));gap:8px;margin:8px 0}
 .card{background:var(--surface-2);border:1px solid var(--border-soft);border-radius:var(--radius);padding:10px 12px;min-width:0;display:flex;flex-direction:column;gap:2px}
 @supports (grid-template-rows:subgrid){.cards .card{display:grid;grid-row:span 3;grid-template-rows:subgrid;gap:2px;align-content:start}.cards .card .foot{align-self:end}}
 .card .top{display:flex;align-items:flex-start;gap:6px}
@@ -105,16 +129,16 @@ p.muted{color:var(--muted);max-width:90ch}
 .card .foot{margin-top:auto;min-width:0}
 .card .c{color:var(--dim);font-size:12.5px;display:flex;flex-wrap:wrap;gap:2px 8px;align-items:baseline;padding-top:2px}
 .card .c span:first-child{flex:1 1 auto;min-width:0}
-.conf{font-size:12px;line-height:17px;border:1px solid var(--border);color:var(--muted);padding:0 5px;border-radius:var(--radius-sm);max-width:100%;overflow-wrap:anywhere}
-.conf.confirmed{color:var(--accent);border-color:rgba(136,200,170,.55)}
+.conf{font-size:11.5px;line-height:17px;border:1px solid var(--border);color:var(--muted);padding:0 5px;border-radius:var(--radius-sm);max-width:100%;overflow-wrap:anywhere}
+.conf.confirmed{color:var(--accent);border-color:rgba(88,199,163,.5)}
 .conf.inferred{border-style:dashed}
-.conf.estimated{color:var(--warn);border-color:rgba(228,196,110,.5)}
+.conf.estimated{color:var(--warn);border-color:rgba(240,195,90,.5)}
 button.info{flex:none;width:22px;height:22px;margin:-2px -4px 0 0;border:1px solid transparent;border-radius:var(--radius-sm);background:transparent;color:var(--dim);font:600 12px/1 var(--sans);cursor:pointer;padding:0}
 button.info:hover{color:var(--text);background:var(--hover)}
 button.info[aria-expanded=true]{color:var(--text);border-color:var(--border)}
 .card .def{margin:6px 0 0;padding-top:6px;border-top:1px solid var(--border-soft);color:var(--muted);font-size:12.5px;line-height:1.45}
 
-/* Compact secondary statistics: one row each, lighter than cards. */
+/* Compact secondary statistics */
 dl.kv{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:0 24px;margin:6px 0 10px}
 dl.kv div{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:0 12px;padding:6px 0;border-bottom:1px solid var(--border-soft);align-items:baseline}
 dl.kv dt{color:var(--muted);font-size:13.5px;margin:0}
@@ -122,7 +146,7 @@ dl.kv dd{margin:0;font-weight:600;text-align:right}
 dl.kv dd.none{color:var(--dim)}
 dl.kv small{grid-column:1/-1;color:var(--dim);font-size:12px}
 
-/* Notes: visible callouts for caveats, collapsible blocks for methodology. */
+/* Notes & methodology */
 .note{background:var(--surface);border-left:2px solid var(--border);border-radius:0 var(--radius) var(--radius) 0;padding:9px 13px;color:var(--muted);margin:10px 0;font-size:14px;max-width:110ch}
 .note.warn{border-left-color:var(--warn)}
 details{margin:10px 0}
@@ -137,19 +161,19 @@ details.method p{margin:0 0 6px}
 ul.facts{margin:6px 0 0;padding-left:20px;max-width:100ch}
 ul.facts li{margin:4px 0}
 
-/* Controls. */
+/* Controls */
 button.btn,select{background:var(--surface-2);color:var(--text);border:1px solid var(--border);border-radius:var(--radius);min-height:34px;padding:5px 12px;font:inherit;font-size:14px;cursor:pointer;max-width:100%;transition:background-color var(--ease)}
 select{padding-right:8px}
 button.btn:hover,select:hover{background:var(--hover)}
 button.btn:active{background:var(--pressed)}
-button.btn.primary{border-color:rgba(136,200,170,.6)}
+button.btn.primary{border-color:rgba(88,199,163,.6)}
 .controls{display:flex;gap:8px 14px;align-items:center;flex-wrap:wrap;margin:8px 0 10px}
 .controls label{color:var(--muted);font-size:13px;display:flex;gap:8px;align-items:center;min-width:0}
 .controls .pair{display:inline-flex;gap:8px}
 .controls output{color:var(--muted);font-size:14px;min-width:118px}
 input[type=range]{flex:1 1 160px;min-width:120px;accent-color:var(--accent);height:28px;margin:0}
 
-/* Charts are drawn at their real pixel width, so text stays at its stated size. */
+/* Charts */
 .chart{position:relative;margin:6px 0;touch-action:pan-y}
 .chart svg{display:block;width:100%;height:auto;overflow:visible;font-family:var(--sans)}
 .legend{display:flex;gap:4px 16px;flex-wrap:wrap;color:var(--muted);font-size:13px;margin:6px 0 4px}
@@ -157,25 +181,25 @@ input[type=range]{flex:1 1 160px;min-width:120px;accent-color:var(--accent);heig
 .legend i{display:inline-block;width:10px;height:10px;margin-right:6px;border-radius:2px;flex:none}
 .legend i.hollow{background:transparent!important;border:2px solid}
 .legend i.dotted{background:repeating-linear-gradient(45deg,#5e676d 0 2px,transparent 2px 4px)!important}
-.tip{position:absolute;pointer-events:none;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 4px 14px rgba(0,0,0,.35);padding:5px 9px;font-size:13px;line-height:1.4;display:none;z-index:4;max-width:min(360px,calc(100% - 8px));white-space:normal;color:var(--text)}
+.tip{position:absolute;pointer-events:none;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 4px 14px rgba(0,0,0,.45);padding:6px 10px;font-size:13px;line-height:1.4;display:none;z-index:4;max-width:min(360px,calc(100% - 8px));white-space:normal;color:var(--text)}
 .bar{display:flex;height:14px;border-radius:var(--radius-sm);overflow:hidden;background:var(--inset);margin:8px 0 2px}
 .bar span{display:block;height:100%;min-width:2px}
 .bar span+span{border-left:2px solid var(--surface)}
 .empty{color:var(--muted);padding:18px;text-align:center;background:var(--inset);border-radius:var(--radius);margin:6px 0}
 
-/* Tables scroll inside their own frame, never the page. */
+/* Tables */
 .scroll{max-height:380px;overflow:auto;border:1px solid var(--border-soft);border-radius:var(--radius);margin:6px 0;-webkit-overflow-scrolling:touch}
 table{border-collapse:collapse;width:100%;font-size:13.5px}
 th,td{text-align:left;padding:6px 10px;border-bottom:1px solid var(--border-soft);vertical-align:top}
 tr:last-child td{border-bottom:0}
 th{color:var(--muted);font-weight:500;background:var(--surface-2);position:sticky;top:0;z-index:1;white-space:nowrap}
 td.r,th.r{text-align:right;white-space:nowrap}
-tbody tr:hover td{background:rgba(38,45,52,.55)}
+tbody tr:hover td{background:rgba(35,44,59,.6)}
 tr.cur td,tr.sel td{background:var(--hover)}
 tr.sel td:first-child,tr.cur td:first-child{box-shadow:inset 2px 0 0 var(--accent)}
-.ink-win{color:var(--accent)}.ink-loss{color:var(--error)}.ink-warn{color:var(--warn)}.ink-dim{color:var(--dim)}
+.ink-win{color:var(--accent);font-weight:600}.ink-loss{color:var(--error);font-weight:600}.ink-warn{color:var(--warn)}.ink-dim{color:var(--dim)}
 
-.now{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin:10px 0}
+.now{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:8px;margin:10px 0}
 .now .card .v{font-size:19px}
 .annot{background:var(--surface);border-left:2px solid var(--accent);border-radius:0 var(--radius) var(--radius) 0;padding:9px 13px;min-height:42px;font-size:14px}
 .annot b{font-weight:600}
@@ -221,7 +245,7 @@ footer p{margin:2px 0}
 </head>
 <body>
 <a class="skip" href="#main">Skip to report</a>
-<header class="appbar"><div class="wrap"><span class="brand">Phenomena</span><span class="sub">Fight report</span><span class="status" id="status">Offline file</span></div></header>
+<header class="appbar"><div class="wrap"><span class="brand">Aurora Pulsar</span><span class="sub">PvP fight report</span><span class="status" id="status">Offline file</span></div></header>
 <section class="hero" aria-labelledby="title"><div class="wrap">
 <p class="result-line" id="result-line"></p>
 <h1 id="title">Fight report</h1>
@@ -238,7 +262,7 @@ footer p{margin:2px 0}
 <section role="tabpanel" id="p-flow" aria-labelledby="t-flow" tabindex="-1"></section>
 <section role="tabpanel" id="p-timeline" aria-labelledby="t-timeline" tabindex="-1"></section>
 </main>
-<footer><p>Generated locally by Phenomena. This file makes no network requests and nothing was uploaded; share it yourself if you choose.</p><p id="facts"></p></footer>
+<footer><p>Generated locally by Aurora Pulsar. This file makes no network requests and nothing was uploaded; share it yourself if you choose.</p><p id="facts"></p></footer>
 </div>
 <script id="data" type="application/json">__PHENOMENA_PAYLOAD__</script>
 <script>
@@ -247,15 +271,14 @@ footer p{margin:2px 0}
 const ROOT=JSON.parse(document.getElementById('data').textContent);
 const NS='http://www.w3.org/2000/svg';
 const $=id=>document.getElementById(id);
-/* Chart inks resolved once (SVG presentation attributes do not reliably accept CSS variables). */
-const C={text:'#e8edeb',muted:'#9ba7ad',dim:'#7a848b',grid:'#252c33',axis:'#39424b',lane:'#12161a',plot:'#141a1f',
-  you:'#3987e5',opp:'#d95926',good:'#199e70',warn:'#e4c46e',accent:'#88c8aa',neutral:'#8a949a',incomplete:'#5e676d',
-  unknown:'#6c767c',estimated:'#2f7f63',ideal:'#56b4e9',goodaim:'#009e73',peripheral:'#e69f00',poor:'#cc79a7',
-  youBand:'rgba(57,135,229,.38)',oppBand:'rgba(217,89,38,.38)',window:'rgba(25,158,112,.18)'};
+const C={text:'#edf2f7',muted:'#9aa6b5',dim:'#738091',grid:'#1e2633',axis:'#2e3847',lane:'#0f141c',plot:'#131922',
+  you:'#4c9aff',opp:'#f06543',good:'#2ec28b',warn:'#f0c35a',accent:'#58c7a3',neutral:'#8a96a6',incomplete:'#5e676d',
+  unknown:'#6c7888',estimated:'#2f8c6c',abs:'#e6b84c',ideal:'#56b4e9',goodaim:'#2ec28b',peripheral:'#f0c35a',poor:'#d97ab3',
+  youBand:'rgba(76,154,255,.38)',oppBand:'rgba(240,101,67,.38)',window:'rgba(46,194,139,.18)',burst:'rgba(240,101,67,.18)',hpFill:'rgba(46,194,139,.20)',absFill:'rgba(230,184,76,.28)'};
 const reduceMotion=ROOT.reducedMotion||matchMedia('(prefers-reduced-motion: reduce)').matches;
 if(ROOT.reducedMotion)document.documentElement.classList.add('reduced');
 
-// ---- formatting (mirrors analytics.Format; missing values are never shown as zero) ----
+// ---- formatting ----
 const NONE='—';
 const fin=v=>typeof v==='number'&&isFinite(v);
 const pct=v=>fin(v)?v.toFixed(1)+'%':NONE;
@@ -271,12 +294,9 @@ function el(tag,attrs,text){const n=document.createElement(tag);if(attrs)for(con
 function sv(tag,attrs){const n=document.createElementNS(NS,tag);if(attrs)for(const k in attrs)n.setAttribute(k,attrs[k]);return n;}
 function svgText(svg,x,y,text,attrs){const t=sv('text',Object.assign({x,y,fill:C.muted,'font-size':12},attrs||{}));t.textContent=text;svg.append(t);return t;}
 let uid=0;
-/** Greedy label placement: returns false when a label would collide with one already placed. */
 function slots(){const used=[];return(cx,text,size,anchor)=>{const w=String(text).length*(size||12)*.58+6,x0=anchor==='start'?cx:anchor==='end'?cx-w:cx-w/2;if(used.some(([a,b])=>x0<b&&a<x0+w))return false;used.push([x0,x0+w]);return true;};}
 
-/** Content width of the report panel; charts are laid out in real pixels at this width. */
 function cw(){const p=$('main'),cs=getComputedStyle(p);return Math.max(280,Math.floor(p.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight)));}
-/** 1-2-5 tick spacing aiming at roughly `px` pixels between labels. */
 function niceStep(range,span,px){const raw=range*px/Math.max(1,span),p=Math.pow(10,Math.floor(Math.log10(raw||1)));for(const m of[1,2,5,10])if(m*p>=raw)return m*p;return 10*p;}
 function clock(v,step){if(v>=60){const m=Math.floor(v/60),s=v-60*m;return m+':'+(step<1?s.toFixed(1).padStart(4,'0'):Math.round(s).toString().padStart(2,'0'));}return(step<1?v.toFixed(1):v.toFixed(0))+' s';}
 function timeAxis(svg,x0,x1,y,maxT,opts){const step=niceStep(maxT,x1-x0,(opts&&opts.px)||86);const tx=v=>x0+(x1-x0)*v/maxT;
@@ -285,7 +305,7 @@ function timeAxis(svg,x0,x1,y,maxT,opts){const step=niceStep(maxT,x1-x0,(opts&&o
     if(k>0&&x1-x<36)continue;svgText(svg,x,y+17,clock(v,step),{'text-anchor':k===0?'start':'middle'});lastX=x;}
   if(x1-lastX>=64)svgText(svg,x1,y+17,clock(maxT,step<1?.1:1),{'text-anchor':'end',fill:C.dim});}
 
-// ---- tooltips: pointer, touch and keyboard focus ----
+// ---- tooltips ----
 function tip(box){const t=el('div',{class:'tip'});box.append(t);return t;}
 function place(t,box,x,y,text){t.textContent=text;t.style.display='block';const r=box.getBoundingClientRect();let left=x-r.left+12;if(left+t.offsetWidth>r.width)left=Math.max(0,x-r.left-t.offsetWidth-12);t.style.left=Math.max(0,Math.min(left,r.width-t.offsetWidth))+'px';let top=y-r.top-t.offsetHeight-10;if(top<0)top=y-r.top+16;t.style.top=top+'px';}
 function hoverTip(node,t,box,text){const show=ev=>place(t,box,ev.clientX,ev.clientY,typeof text==='function'?text():text);
@@ -302,24 +322,25 @@ if(renderAbort)renderAbort.abort();
 renderAbort=new AbortController();const signal=renderAbort.signal;
 for(const id of['tabs','meta','coverage','result-line','facts','p-overview','p-offense','p-defense','p-flow','p-timeline'])$(id).replaceChildren();
 const F=P.fight, D=P.derived, S=D.summary, E=F.events||[];
+const B=D.breakdown||null;
 const base=F.matchEvidence?.timelineStartNanos??(E.length?E[0].nanoTime:0), dur=Math.max(S.duration||0,.001);
 const METRIC={};for(const m of P.metrics||[])METRIC[m.key]=m;
 const V3=!!S.contextAvailable;
 const sec=e=>(e.nanoTime-base)/1e9;
 const isEmpty=e=>!e.attack||(e.detail||'').startsWith('empty-swing');
+let timelineSeek=null,pendingTimelineTime=null;
 
 // ---- building blocks ----
 function h2(parent,text,small,id){const h=el('h2',id?{id}:null,text);if(small)h.append(el('small',null,small));parent.append(h);return h;}
 function h3Text(parent,text){parent.append(el('h3',null,text));}
 function note(parent,text,warn){parent.append(el('div',{class:'note'+(warn?' warn':'')},text));}
-/** Methodology stays one click away instead of interrupting the figures. */
 function method(parent,text,title){const d=el('details',{class:'method'});d.append(el('summary',null,title||'How this is measured'));const b=el('div');for(const para of[].concat(text))b.append(el('p',null,para));d.append(b);parent.append(d);return d;}
 function collapsible(parent,title,count,open){const d=el('details',open?{open:''}:null);const s=el('summary',null,title);if(count!=null)s.append(el('span',{class:'count'},'('+count+')'));d.append(s);parent.append(d);return d;}
 function confClass(c){c=(c||'').toLowerCase();return c.startsWith('confirmed')?'confirmed':c.startsWith('estimated')||c.startsWith('legacy')?'estimated':c.startsWith('inferred')?'inferred':'observed';}
 function valueNode(value){const v=el('div',{class:'v'});const s=String(value);
   if(s===NONE){v.classList.add('none');v.textContent=NONE;v.setAttribute('aria-label','Unavailable');v.title='Unavailable in this recording';return v;}
-  const m=/^([−+-]?[\d.,]+)\s?(%|m|s|HP|t)$/.exec(s);if(m){v.append(document.createTextNode(m[1]),el('span',{class:'u'},m[2]));return v;}
-  if(!/^[\d−+\-.,\s/×()%]+$/.test(s))v.classList.add('text');v.textContent=s;return v;}
+  const m=/^([−+-]?[\d.,]+)\s?(%|m|s|HP|HP\/s|t|x)$/.exec(s);if(m){v.append(document.createTextNode(m[1]),el('span',{class:'u'},m[2]));return v;}
+  if(!/^[\d−+\-.,\s/×()%x]+$/.test(s))v.classList.add('text');v.textContent=s;return v;}
 function card(label,value,caption,key,extra){const c=el('div',{class:'card'+(extra?' '+extra:'')});const d=key&&METRIC[key];
   const top=el('div',{class:'top'});top.append(el('div',{class:'l'},label));c.append(top,valueNode(value));
   const foot=el('div',{class:'foot'}),cap0=el('div',{class:'c'});cap0.append(el('span',null,caption||''));foot.append(cap0);c.append(foot);
@@ -328,13 +349,11 @@ function card(label,value,caption,key,extra){const c=el('div',{class:'card'+(ext
     const def=el('p',{class:'def',id,hidden:''},d.help+(d.unit?' Unit: '+d.unit+'.':''));b.onclick=()=>{const open=b.getAttribute('aria-expanded')!=='true';b.setAttribute('aria-expanded',open);def.hidden=!open;};top.append(b);foot.append(def);}
   return c;}
 function cards(parent,list){const g=el('div',{class:'cards'});for(const x of list)g.append(card(...x));parent.append(g);return g;}
-/** Secondary statistics as a compact list: [label, value, caption?]. */
 function kv(parent,list){const d=el('dl',{class:'kv'});for(const[l,v,c]of list){const r=el('div');r.append(el('dt',null,l),el('dd',v===NONE?{class:'none','aria-label':'Unavailable'}:null,v));if(c)r.append(el('small',null,c));d.append(r);}parent.append(d);return d;}
 function label(key,fallback){return METRIC[key]?METRIC[key].label:fallback;}
 function facts(parent,lines){const u=el('ul',{class:'facts'});for(const l of lines)u.append(el('li',null,l));parent.append(u);}
 function select(parent,labelText,options,onchange){const l=el('label',null,labelText);const s=el('select');for(const[v,t]of options)s.append(el('option',{value:v},t));s.onchange=()=>onchange(s.value);l.append(s);parent.append(l);return s;}
 function controls(parent){const c=el('div',{class:'controls'});parent.append(c);return c;}
-/** Section jump links with a lightweight current-section indicator. */
 function chips(parent,list){const n=el('nav',{class:'chips','aria-label':'Sections in this tab'});const links={};
   for(const[id,name]of list){const a=el('a',{href:'#'+id},name);links[id]=a;a.onclick=e=>{e.preventDefault();const t=$(id);if(t)t.scrollIntoView({block:'start',behavior:reduceMotion?'auto':'smooth'});};n.append(a);}
   parent.prepend(n);
@@ -347,6 +366,29 @@ function stack(parent,items,aria){const total=items.reduce((a,b)=>a+(b.v||0),0);
   const l=el('div',{class:'legend'});for(const it of items){const s=el('span');const i=el('i');i.style.background=it.color;s.append(i,document.createTextNode(it.name+' '+(it.v??0)+(total?' · '+pct(100*(it.v||0)/total):'')));l.append(s);}parent.append(l);if(!total)parent.append(el('p',{class:'muted'},'No observations.'));}
 function table(parent,heads,rows,right,max){const wrap=el('div',{class:'scroll'});const t=el('table');const tr=el('tr');heads.forEach((h,i)=>tr.append(el('th',right&&right[i]?{class:'r',scope:'col'}:{scope:'col'},h)));const th=el('thead');th.append(tr);t.append(th);const tb=el('tbody');for(const r of rows.slice(0,max||rows.length)){const row=el('tr');r.forEach((c,i)=>{const td=el('td',right&&right[i]?{class:'r'}:null);if(c instanceof Node)td.append(c);else td.textContent=c;row.append(td);});tb.append(row);}t.append(tb);wrap.append(t);if(rows.length)parent.append(wrap);else parent.append(el('p',{class:'muted'},'No rows.'));return tb;}
 function ink(text,cls){return el('span',{class:cls},text);}
+function jumpToTimeline(timeSec){pendingTimelineTime=timeSec;show('timeline',true);if(timelineSeek)timelineSeek(timeSec);}
+
+function takeawayCards(parent,list){
+  const wrap=el('div',{class:'takes'});
+  for(const tk of list){
+    const c=el('div',{class:'take '+(tk.tone||'NEUTRAL')});
+    c.append(el('div',{class:'cat'},tk.category||'Insight'),el('div',{class:'hl'},tk.headline),el('div',{class:'dt'},tk.detail));
+    wrap.append(c);
+  }
+  parent.append(wrap);
+}
+function turningPointStrip(parent,list){
+  const wrap=el('div',{class:'tp-list'});
+  for(const tp of list){
+    const b=el('button',{type:'button',class:'tp '+(tp.tone||'NEUTRAL')});
+    const top=el('div',{class:'tp-top'});
+    top.append(el('span',{class:'tp-dot'}),el('span',{class:'tp-t'},s2(tp.t)),el('span',null,'Jump to timeline'));
+    b.append(top,el('div',{class:'tp-title'},tp.title),el('div',{class:'tp-dt'},tp.detail));
+    b.onclick=()=>jumpToTimeline(tp.t);
+    wrap.append(b);
+  }
+  parent.append(wrap);
+}
 
 // ---- report header ----
 const R=D.resolution||{classification:String(F.outcome||'UNKNOWN'),label:cap(F.outcome),source:'',confidence:'OBSERVED',notes:[]};
@@ -357,7 +399,7 @@ const opp=P.opponentLabel||'Opponent';
 $('result-line').append(el('span',{class:'result '+tone},short),el('span',{class:'result-detail'},[R.label,R.source].filter(Boolean).join(' · ')+(R.derived&&!/0\.1\.3/.test(R.source||'')?' · derived from a pre-0.1.3 recording':'')));
 const title=scopeTitle||(F.session?'Manual recording session':'Fight vs '+opp);
 $('title').textContent=title;
-document.title=title+' · '+short+' · Phenomena';
+document.title=title+' · '+short+' · Aurora Pulsar';
 const server=F.matchEvidence?.server||ROOT.fight.matchEvidence?.server;
 const when=new Date(F.startEpochMillis);
 const whenText=isNaN(when)?NONE:when.toLocaleString(undefined,{year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',timeZoneName:'short'});
@@ -378,7 +420,7 @@ for(const c of coverage)$('coverage').append(el('li',null,c));
 $('facts').textContent=['Report format v'+P.version,'recording schema '+D.schema,P.anonymized?'names and server anonymized':'names not anonymized',E.length+' events'].join(' · ');
 $('status').textContent=P.anonymized?'Offline · anonymized':'Offline';
 
-// ---- tabs (hash routed, arrow-key navigation) ----
+// ---- tabs ----
 const TABS=[['overview','Overview'],['offense','Offense'],['defense','Defense'],['flow','Fight Flow'],['timeline','Timeline']];
 const built={};
 for(const[id,name]of TABS){const b=el('button',{role:'tab',type:'button',id:'t-'+id,'aria-controls':'p-'+id,'aria-selected':'false',tabindex:'-1'},name);b.onclick=()=>show(id,true);$('tabs').append(b);}
@@ -388,7 +430,6 @@ function show(id,push){if(!TABS.some(t=>t[0]===id))id='overview';current=id;for(
   if(!built[id]){built[id]=true;if(!builtWidth)builtWidth=cw();BUILD[id]($('p-'+id));}
   if(push){try{if(location.hash!=='#'+id)history.replaceState(null,'','#'+id);}catch(e){}const bar=document.querySelector('.tabs-bar');if(bar.getBoundingClientRect().top<=0)window.scrollTo({top:$('main').getBoundingClientRect().top+window.scrollY-bar.offsetHeight,behavior:'auto'});}}
 window.onhashchange=()=>show(location.hash.slice(1));
-/** Charts are pixel-true, so a material width change rebuilds the visible tab and keeps its control values. */
 rebuildTab=()=>{const w=cw();if(!current||Math.abs(w-builtWidth)<24)return;builtWidth=w;const p=$('p-'+current);
   const vals=[...p.querySelectorAll('select,input')].map(x=>x.value);const y=window.scrollY;
   for(const k in built)delete built[k];p.replaceChildren();built[current]=true;BUILD[current](p);
@@ -414,9 +455,50 @@ const gradeColor={IDEAL:C.ideal,GOOD:C.goodaim,PERIPHERAL:C.peripheral,POOR:C.po
 const timingColor={PERFECT:C.good,TOO_FAST:C.opp,TOO_SLOW:C.you};
 function unavailable(parent,what){note(parent,'This recording was made before 0.1.3 and has no '+what+'. Shown as unavailable rather than zero.');}
 function roundInk(o){if(!o)return ink('Not announced','ink-dim');const s=String(o);return ink(/^[A-Z_]+$/.test(s)?cap(s):s,/win|won/i.test(s)?'ink-win':/loss|lost/i.test(s)?'ink-loss':'');}
+function sideInk(s){if(s==='YOU')return ink('You','ink-win');if(s==='OPPONENT')return ink('Opponent','ink-loss');if(s==='TRADE')return ink('Trade','ink-warn');return ink(cap(s)||NONE,'ink-dim');}
 
 // ---- charts ----
-/** Two-lane combo timeline; combos are selectable (click, Enter) and listed in the select. */
+function healthChart(parent){
+  const hp=B&&B.health;const trace=(hp&&hp.trace)||[];
+  if(!trace.length){if(!V3)unavailable(parent,'health observations');else note(parent,'No client health samples recorded in this fight.');return;}
+  const W=cw(),narrow=W<560,H=208,L=narrow?40:54,R=12,T=12,B0=36,PH=H-T-B0;
+  const{box,svg,t}=chartBox(parent,W,H,'Local health and absorption over time');
+  let maxHp=20;for(const p of trace)maxHp=Math.max(maxHp,p.total);maxHp=Math.ceil(maxHp/4)*4;
+  const tx=v=>L+(W-L-R)*Math.max(0,Math.min(1,v/dur));
+  const ty=v=>T+PH*(1-Math.max(0,Math.min(maxHp,v))/maxHp);
+  laneBg(svg,L,T,W-L-R,PH);
+  if(hp.worstBurstDamage>=6&&fin(hp.worstBurstTime)){
+    const bx0=tx(hp.worstBurstTime),bx1=tx(Math.min(dur,hp.worstBurstTime+3));
+    svg.append(sv('rect',{x:bx0,y:T,width:Math.max(2,bx1-bx0),height:PH,fill:C.burst}));
+  }
+  for(const v of[0,maxHp/2,maxHp]){const y=ty(v);if(v>0)svg.append(sv('line',{x1:L,x2:W-R,y1:y,y2:y,stroke:C.grid}));svgText(svg,L-6,y+4,v.toFixed(0),{'text-anchor':'end'});}
+  // Build stepped paths (health only changes on HEALTH events)
+  const pts=[...trace];
+  if(pts[pts.length-1].t<dur)pts.push(Object.assign({},pts[pts.length-1],{t:dur}));
+  let hpLine='',totLine='',hpArea='',absArea='';
+  for(let i=0;i<pts.length;i++){
+    const p=pts[i],x=tx(p.t),yHp=ty(p.hp),yTot=ty(p.total);
+    if(i===0){hpLine=`M${x.toFixed(1)} ${yHp.toFixed(1)}`;totLine=`M${x.toFixed(1)} ${yTot.toFixed(1)}`;hpArea=`M${x.toFixed(1)} ${ty(0).toFixed(1)}L${x.toFixed(1)} ${yHp.toFixed(1)}`;absArea=`M${x.toFixed(1)} ${yHp.toFixed(1)}L${x.toFixed(1)} ${yTot.toFixed(1)}`;}
+    else{hpLine+=`H${x.toFixed(1)}V${yHp.toFixed(1)}`;totLine+=`H${x.toFixed(1)}V${yTot.toFixed(1)}`;hpArea+=`H${x.toFixed(1)}V${yHp.toFixed(1)}`;absArea+=`H${x.toFixed(1)}V${yTot.toFixed(1)}`;}
+  }
+  hpArea+=`L${tx(pts[pts.length-1].t).toFixed(1)} ${ty(0).toFixed(1)}Z`;
+  let absBack=`L${tx(pts[pts.length-1].t).toFixed(1)} ${ty(pts[pts.length-1].hp).toFixed(1)}`;
+  for(let i=pts.length-2;i>=0;i--){absBack+=`V${ty(pts[i].hp).toFixed(1)}H${tx(pts[i].t).toFixed(1)}`;}
+  svg.append(sv('path',{d:hpArea,fill:C.hpFill}));
+  if(hp.absorptionGained>0||trace.some(p=>p.abs>0))svg.append(sv('path',{d:absArea+absBack+'Z',fill:C.absFill}));
+  svg.append(sv('path',{d:hpLine,fill:'none',stroke:C.good,'stroke-width':1.8}));
+  if(hp.absorptionGained>0||trace.some(p=>p.abs>0))svg.append(sv('path',{d:totLine,fill:'none',stroke:C.abs,'stroke-width':1.4,'stroke-dasharray':'4 2'}));
+  for(const inc of incoming)if(inc.attributed)svg.append(sv('rect',{x:tx(inc.time)-.75,y:T+PH-5,width:1.5,height:5,fill:C.opp}));
+  timeAxis(svg,L,W-R,T+PH,dur);
+  const cross=sv('line',{y1:T,y2:T+PH,stroke:'rgba(237,242,247,.45)',visibility:'hidden'});svg.append(cross);
+  svg.addEventListener('pointermove',ev=>{const r=svg.getBoundingClientRect(),mx=(ev.clientX-r.left)*W/r.width;if(mx<L||mx>W-R){t.style.display='none';cross.setAttribute('visibility','hidden');return;}
+    const tm=(mx-L)/(W-L-R)*dur;let cur=trace[0];for(const p of trace){if(p.t<=tm+1e-6)cur=p;else break;}
+    cross.setAttribute('x1',mx);cross.setAttribute('x2',mx);cross.setAttribute('visibility','visible');
+    place(t,box,ev.clientX,ev.clientY,num(tm,2)+' s · '+num(cur.hp,1)+' HP'+(cur.abs>0?' + '+num(cur.abs,1)+' abs ('+num(cur.total,1)+' total)':''));});
+  svg.addEventListener('pointerleave',()=>{t.style.display='none';cross.setAttribute('visibility','hidden');});
+  legend(parent,[{name:'Health (HP)',color:C.good},...(hp.absorptionGained>0||trace.some(p=>p.abs>0)?[{name:'Absorption',color:C.abs}]:[]),{name:'Incoming opponent hit',color:C.opp},...(hp.worstBurstDamage>=6?[{name:'Worst 3 s burst (-'+num(hp.worstBurstDamage,1)+' HP)',color:'rgba(240,101,67,.45)'}]:[])]);
+}
+
 function comboTimeline(parent,onSelect){
   const W=cw(),narrow=W<560,H=158,L=narrow?60:92,R=10,T=18,LH=38,G=16;const{box,svg,t}=chartBox(parent,W,H,'Combo timeline: your confirmed hits above, attributed opponent hits below; combos are bands labeled with their length');
   const tx=v=>L+(W-L-R)*Math.max(0,Math.min(1,v/dur));const top=T,bot=T+LH+G;
@@ -435,10 +517,9 @@ function comboTimeline(parent,onSelect){
     hoverTip(n,t,box,(local?'Your confirmed hit':'Attributed opponent hit')+' at '+num(m.t,2)+' s'+(m.traded?' (same-tick trade)':''));svg.append(n);}
   timeAxis(svg,L,W-R,bot+LH+6,dur);
   if(!(combos.marks||[]).length)emptyText(svg,W,H-24,'No confirmed hits in this fight');
-  legend(parent,[{name:'Your hit',color:C.you},{name:'Attributed opponent hit',color:C.opp},{name:'Same-tick trade',color:C.muted,hollow:true},{name:'Combo band (×length)',color:'rgba(57,135,229,.6)'},...(rounds.length>1?[{name:'Round start',color:C.axis}]:[])]);
+  legend(parent,[{name:'Your hit',color:C.you},{name:'Attributed opponent hit',color:C.opp},{name:'Same-tick trade',color:C.muted,hollow:true},{name:'Combo band (×length)',color:'rgba(76,154,255,.6)'},...(rounds.length>1?[{name:'Round start',color:C.axis}]:[])]);
   return i=>bands.forEach((b,k)=>{const on=k===i;b.setAttribute('stroke',on?C.text:'none');b.setAttribute('stroke-width',on?2:0);});
 }
-/** Dominance: positive = you, negative = opponent; gaps where evidence is insufficient. */
 function dominanceChart(parent){
   if(!dom){note(parent,'Dominance data unavailable in this report version.');return;}
   const W=cw(),narrow=W<560,H=280,L=narrow?44:70,R=10,T=14,PH=H-T-58;const{box,svg,t}=chartBox(parent,W,H,'Encounter dominance over time. Above the centerline favors you, below favors the opponent. Empty columns have no evidence; dotted columns have unattributed incoming damage.');
@@ -449,7 +530,7 @@ function dominanceChart(parent){
   for(const v of[.5,-.5])svg.append(sv('line',{x1:L,x2:W-R,y1:ty(v),y2:ty(v),stroke:C.grid}));
   svgText(svg,L-6,T+12,narrow?'+1':'+1 you',{'text-anchor':'end',fill:C.you});svgText(svg,L-6,zero+4,'0',{'text-anchor':'end'});svgText(svg,L-6,T+PH-3,narrow?'−1':'−1 opp.',{'text-anchor':'end',fill:C.opp});
   const fitB=slots(),bounds=(D.boundaries||[]).filter(b=>b.accepted&&['START','ROUND_START','RESULT'].includes(b.kind)&&fin(b.time)&&b.time>=-1e-6&&b.time<=maxT+1e-6),dense=bounds.length>12;for(const b of bounds){const x=tx(b.time);svg.append(sv('line',{x1:x,x2:x,y1:T,y2:T+PH,stroke:'#59636b','stroke-dasharray':'3 3','stroke-opacity':dense?.45:1}));if(!dense){const right=x>W-R-70,lab=b.kind==='ROUND_START'?'Round':cap(b.kind);if(fitB(right?x-3:x+3,lab,11,right?'end':'start'))svgText(svg,right?x-3:x+3,T+11,lab,{'font-size':11,'text-anchor':right?'end':'start',fill:C.dim});}}
-  const color={L:'rgba(57,135,229,.55)',O:'rgba(217,89,38,.55)',N:'rgba(138,148,154,.45)'};
+  const color={L:'rgba(76,154,255,.55)',O:'rgba(240,101,67,.55)',N:'rgba(138,150,166,.45)'};
   let d='',pen=false;const cw0=Math.max(1,tx(step)-tx(0)+.5);
   for(let k=0;k<vals.length;k++){const v=vals[k],s=st[k];const x=tx(k*step);
     if(v==null||s==='I'){pen=false;continue;}
@@ -461,20 +542,19 @@ function dominanceChart(parent){
   for(const m of combos.marks||[]){const x=tx(m.t);svg.append(m.side==='LOCAL'?sv('rect',{x:x-.5,y:T,width:1.5,height:6,fill:C.you}):sv('rect',{x:x-.5,y:T+PH-6,width:1.5,height:6,fill:C.opp}));}
   const sy=T+PH+5;for(let k=0;k<st.length;k++){const s=st[k];if(s==='I')continue;svg.append(sv('rect',{x:tx(k*step),y:sy,width:cw0,height:6,fill:s==='C'?C.incomplete:color[s]||C.incomplete}));}
   timeAxis(svg,L,W-R,sy+12,maxT);
-  const cross=sv('line',{y1:T,y2:T+PH,stroke:'rgba(232,237,235,.45)',visibility:'hidden'});svg.append(cross);
+  const cross=sv('line',{y1:T,y2:T+PH,stroke:'rgba(237,242,247,.45)',visibility:'hidden'});svg.append(cross);
   const name={L:'advantage: you',O:'advantage: opponent',N:'neutral',C:'incomplete attribution',I:'no evidence'};
   svg.addEventListener('pointermove',ev=>{const r=svg.getBoundingClientRect(),mx=(ev.clientX-r.left)*W/r.width;if(mx<L||mx>W-R){t.style.display='none';cross.setAttribute('visibility','hidden');return;}const tm=(mx-L)/(W-L-R)*maxT,k=Math.min(vals.length-1,Math.max(0,Math.round(tm/step)));cross.setAttribute('x1',mx);cross.setAttribute('x2',mx);cross.setAttribute('visibility','visible');place(t,box,ev.clientX,ev.clientY,num(tm,2)+' s: '+(vals[k]==null?'':num(vals[k],2)+', ')+name[st[k]||'I']);});
   svg.addEventListener('pointerleave',()=>{t.style.display='none';cross.setAttribute('visibility','hidden');});
-  legend(parent,[{name:'Advantage: you',color:'rgba(57,135,229,.85)'},{name:'Advantage: opponent',color:'rgba(217,89,38,.85)'},{name:'Neutral',color:'rgba(138,148,154,.85)'},{name:'Incomplete attribution',color:C.incomplete,dotted:true},{name:'No evidence (empty)',color:C.axis,hollow:true}]);
+  legend(parent,[{name:'Advantage: you',color:'rgba(76,154,255,.85)'},{name:'Advantage: opponent',color:'rgba(240,101,67,.85)'},{name:'Neutral',color:'rgba(138,150,166,.85)'},{name:'Incomplete attribution',color:C.incomplete,dotted:true},{name:'No evidence (empty)',color:C.axis,hollow:true}]);
 }
-/** Reach histogram with weapon filter, shaded target window and individual hit strip. */
 function reachHistogram(parent){
   const r=D.reach||{values:[],weapons:[],target:3,tolerance:.06};
   const ctl=controls(parent);const weapons=[...new Set(r.weapons||[])].sort();
   const holder=el('div');parent.append(holder);
   function draw(w){holder.replaceChildren();const vals=(r.values||[]).filter((v,i)=>w==='all'||r.weapons[i]===w);
     const LO=2,HI=4,BIN=.05,n=Math.round((HI-LO)/BIN)+2,bins=new Array(n).fill(0);const bin=v=>v<LO?0:v>=HI?n-1:1+Math.floor((v-LO)/BIN+1e-9);for(const v of vals)bins[bin(v)]++;
-    const W=cw(),narrow=W<560,H=244,L=34,R=8,T=12,B=70,PH=H-T-B;const{box,svg,t}=chartBox(holder,W,H,'Reach histogram in blocks with the target window shaded');
+    const W=cw(),narrow=W<560,H=244,L=34,R=8,T=12,B0=70,PH=H-T-B0;const{box,svg,t}=chartBox(holder,W,H,'Reach histogram in blocks with the target window shaded');
     const max=Math.max(1,...bins),slot=(W-L-R)/n,xOf=v=>v<LO?.5:v>HI?n-.5:1+(v-LO)/BIN,px=v=>L+xOf(v)*slot;
     laneBg(svg,L,T,W-L-R,PH);
     svg.append(sv('rect',{x:px(r.target-r.tolerance),y:T,width:Math.max(2,px(r.target+r.tolerance)-px(r.target-r.tolerance)),height:PH,fill:C.window}));
@@ -489,15 +569,14 @@ function reachHistogram(parent){
     vals.forEach((v,i)=>{const c=sv('circle',{cx:px(Math.max(LO-.04,Math.min(HI+.04,v))),cy:sy+((i%3)-1)*5,r:3.5,fill:Math.abs(v-r.target)<=r.tolerance+1e-9?C.good:C.you,stroke:C.lane});hoverTip(c,t,box,'Hit: '+v.toFixed(3)+' blocks');svg.append(c);});
     svgText(svg,W-R,H-4,narrow?'reach (blocks)':'reach in blocks, eye to hitbox contact; dots are individual hits',{'text-anchor':'end',fill:C.dim});
     if(!vals.length)emptyText(svg,W,PH+T,'No eligible confirmed hits for this filter');
-    legend(holder,[{name:'In target window ('+num(r.target,2)+' ± '+num(r.tolerance,2)+')',color:C.good},{name:'Outside window',color:C.you},{name:'Shaded: target window',color:'rgba(25,158,112,.4)'}]);}
+    legend(holder,[{name:'In target window ('+num(r.target,2)+' ± '+num(r.tolerance,2)+')',color:C.good},{name:'Outside window',color:C.you},{name:'Shaded: target window',color:'rgba(46,194,139,.4)'}]);}
   select(ctl,'Weapon',[['all','All weapons'],...weapons.map(w=>[w,item(w)])],draw);draw('all');
 }
-/** Weapon timing scatter: interval minus expected cooldown per attempt, filtered. */
 function timingChart(parent){
   const all=D.timingSamples||[];const ctl=controls(parent);const holder=el('div');parent.append(holder);
   const weapons=[...new Set(all.map(t=>t.weapon))].sort();let w='all',o='all';
   function draw(){holder.replaceChildren();const pts=all.filter(t=>(w==='all'||t.weapon===w)&&(o==='all'||(o==='hit'?t.outcome==='HIT':t.outcome!=='HIT')));
-    const W=cw(),narrow=W<560,H=252,L=narrow?40:58,R=10,T=12,B=40,PH=H-T-B;const{box,svg,t}=chartBox(holder,W,H,'Attack interval minus expected cooldown in ticks for each attempt');
+    const W=cw(),narrow=W<560,H=252,L=narrow?40:58,R=10,T=12,B0=40,PH=H-T-B0;const{box,svg,t}=chartBox(holder,W,H,'Attack interval minus expected cooldown in ticks for each attempt');
     let m=4;for(const p of pts)if(fin(p.delta))m=Math.max(m,Math.abs(p.delta));const range=Math.min(40,Math.ceil(m+1));const tol=F.policy?.timingToleranceTicks??1;
     const tx=v=>L+(W-L-R)*v/dur,ty=v=>T+PH/2-Math.max(-range,Math.min(range,v))/range*(PH/2-4);
     laneBg(svg,L,T,W-L-R,PH);
@@ -519,7 +598,6 @@ function timingChart(parent){
   select(ctl,'Weapon',[['all','All weapons'],...weapons.map(x=>[x,item(x)])],v=>{w=v;draw();});
   select(ctl,'Result',[['all','All attempts'],['hit','Hits'],['miss','No hit']],v=>{o=v;draw();});draw();
 }
-/** Shared tick-aligned timeline of attributed incoming hits and actual jumps, with zoom. */
 function jumpTimeline(parent){
   const att=incoming.filter(i=>i.attributed&&i.tick!=null);const jumps=E.filter(e=>e.kind==='JUMP'&&e.clientTick!=null);
   if(!att.length){note(parent,'No attributed incoming hits with client ticks in this recording.');return;}
@@ -540,7 +618,6 @@ function jumpTimeline(parent){
     legend(holder,[{name:'Same tick (ideal-timing candidate)',color:C.good},{name:'Within ±'+(D.jumpWindowTicks??4)+' (attempt candidate)',color:C.you},{name:'Outside window',color:C.neutral},{name:'Excluded movement state',color:C.poor},{name:'No jump',color:'#59636b'}]);}
   span.oninput=draw;pos.oninput=draw;draw();
 }
-/** Hitbox face with measured hit coordinates and derived region colors, filterable. */
 function aimView(parent){
   const all=(D.aim?.samples||[]).filter(s=>s.hit);const measured=hits.filter(h=>h.measurement?.idealRegion&&h.contact);
   if(!all.length){note(parent,'No ray-contact hits with measurement data. Recordings before 0.1.2 have normalized placement only.');return;}
@@ -561,7 +638,6 @@ function aimView(parent){
       for(let y=0;y<rows;y++)for(let x=0;x<cols;x++){const d=dist(x,y);const k=!r.reachable?'POOR':d<=r.idealRadius?'IDEAL':d<=r.goodRadius?'GOOD':d<=r.peripheralRadius?'PERIPHERAL':'POOR';grade[y*cols+x]=k;
         g.append(sv('rect',{x:bx+x*bw/cols,y:by+y*bh/rows,width:bw/cols+.1,height:bh/rows+.1,fill:gradeColor[k]}));}
       svg.append(g);
-      // One listener for the whole region grid instead of one per cell.
       g.addEventListener('pointermove',ev=>{const rc=svg.getBoundingClientRect(),mx=(ev.clientX-rc.left)*W/rc.width,my=(ev.clientY-rc.top)*H/rc.height;const x=Math.min(cols-1,Math.max(0,Math.floor((mx-bx)/bw*cols))),y=Math.min(rows-1,Math.max(0,Math.floor((my-by)/bh*rows)));place(t,box,ev.clientX,ev.clientY,'Derived region: '+cap(grade[y*cols+x])+' · '+dist(x,y).toFixed(3)+' blocks from the ideal point');});}
     svg.append(sv('rect',{x:bx,y:by,width:bw,height:bh,fill:'none',stroke:C.muted,rx:2}));
     for(const s of faceList){const p=[s.x,s.y,s.z],cx=bx+p[u]*bw,cy=by+(1-p[v])*bh;const on=s.seq===pick.seq;const c=sv('circle',{cx,cy,r:on?7:5,fill:gradeColor[s.grade]||C.muted,stroke:on?'#fff':C.lane,'stroke-width':on?2.5:1.5,tabindex:0,role:'button','aria-label':'Hit at '+num(s.t,2)+' s, '+cap(s.grade)+(on?', selected':'')});
@@ -579,10 +655,9 @@ function shieldTimeline(parent){const ev=shields.events||[];if(!ev.length)return
   const color={BLOCK:C.good,DISABLE:C.warn,ESTIMATED_BLOCK:C.estimated};
   for(const e of ev){const y=e.subject==='local'?49:23,x=tx(e.time);const n=e.type==='ESTIMATED_BLOCK'?sv('rect',{x:x-4.5,y:y-4.5,width:9,height:9,fill:'none',stroke:color[e.type],'stroke-width':2}):sv('rect',{x:x-4.5,y:y-4.5,width:9,height:9,rx:1,fill:color[e.type]||C.muted});hoverTip(n,t,box,cap(e.type)+' at '+num(e.time,2)+' s'+(e.weapon?' · '+item(e.weapon):''));svg.append(n);}
   timeAxis(svg,L,W-R,64,dur);legend(parent,[{name:'Block',color:C.good},{name:'Disable',color:C.warn},{name:'Estimated block',color:C.estimated,hollow:true}]);}
-/** Combat-active intervals on one strip, numbered to match the exchange table. */
 function exchangeStrip(parent){const W=cw(),H=58,L=0,R=2;const{box,svg,t}=chartBox(parent,W,H,'Combat exchanges and breaks');const x=v=>L+(W-L-R)*v/dur;
   laneBg(svg,L,6,W-L-R,24);
-  active.forEach((e,i)=>{const x0=x(e.start),w=Math.max(2,x(e.end)-x0);const r=sv('rect',{x:x0,y:6,width:w,height:24,rx:2,fill:C.you,tabindex:0,'aria-label':'Exchange '+(i+1)+': '+num(e.start,1)+' to '+num(e.end,1)+' s'});hoverTip(r,t,box,'Exchange #'+(i+1)+' · '+num(e.start,2)+'–'+num(e.end,2)+' s · '+e.hits+' hits, '+e.misses+' misses');svg.append(r);if(w>22)svgText(svg,x0+w/2,22,'#'+(i+1),{'text-anchor':'middle',fill:'#fff','font-size':11,'font-weight':600});});
+  active.forEach((e,i)=>{const x0=x(e.start),w=Math.max(2,x(e.end)-x0);const exB=B&&B.exchanges&&B.exchanges[i];const fill=exB&&exB.winner==='OPPONENT'?C.opp:exB&&exB.winner==='EVEN'?C.neutral:C.you;const r=sv('rect',{x:x0,y:6,width:w,height:24,rx:2,fill,tabindex:0,'aria-label':'Exchange '+(i+1)+': '+num(e.start,1)+' to '+num(e.end,1)+' s'});hoverTip(r,t,box,'Exchange #'+(i+1)+' · '+num(e.start,2)+'–'+num(e.end,2)+' s · '+e.hits+' hits, '+e.misses+' misses'+(exB?' · opener: '+cap(exB.opener):''));svg.append(r);if(w>22)svgText(svg,x0+w/2,22,'#'+(i+1),{'text-anchor':'middle',fill:'#fff','font-size':11,'font-weight':600});});
   timeAxis(svg,L,W-R,32,dur);}
 
 // ---- tab builders ----
@@ -595,16 +670,33 @@ overview(p){
     const ann=collapsible(p,'Round and match announcement timeline',F.session.announcements.length);
     table(ann,['Time','Kind','Rule','Evidence'],F.session.announcements.map(x=>[s2((x.nanoTime-base)/1e9),cap(x.kind),x.rule,x.text]),[true,false,false,false]);
   }
-  h2(p,'Summary','key measurements; select ? for a definition');
+  const takes=(B&&B.takeaways)||[];
+  if(takes.length){
+    h2(p,'Key takeaways','strictly derived from recorded measurements');
+    takeawayCards(p,takes);
+  }
+  h2(p,'Summary','key PvP measurements; select ? for a definition');
   const reachOk=D.reach&&D.reach.eligible;
+  const exS=B&&B.exchangeSummary,sw=B&&B.sword,hp=B&&B.health;
   cards(p,[[label('accuracy','Combat accuracy'),pct(S.accuracy),S.hits+' / '+(S.accuracyDenominator??S.attempts)+' attempts','accuracy'],
-    [label('hits','Correlated hits'),String(S.hits),'confirmed by the server','hits'],
-    [label('incoming','Attributed incoming hits'),cnt(S.attributedIncoming??S.incoming),'from the tracked opponent','incoming'],
-    [label('reachWithin','Reach in target window'),reachOk?D.reach.within+' / '+D.reach.eligible:NONE,reachOk?pct(D.reach.withinPercent)+' of eligible hits':'no eligible hits','reachWithin'],
-    [label('longestCombo','Longest combo'),String(S.longestCombo),(S.comboCount??0)+' combos','longestCombo'],
-    [label('dominanceShare','Advantage share'),dom&&dom.availability==='AVAILABLE'?pct(dom.localShare):NONE,dom?dom.availabilityLabel:'unavailable','dominanceShare']]);
-  h2(p,'What the measurements say','generated from recorded values');
-  const lines=(D.interpretations||[]).slice(1);if(lines.length)facts(p,lines);else p.append(el('p',{class:'muted'},'Not enough evidence for a written summary.'));
+    [label('firstHitRate','First-hit rate'),exS&&exS.contested?pct(exS.firstHitRate):NONE,exS&&exS.contested?exS.openedByYou+' / '+exS.contested+' openers'+(exS.openersConverted?' ('+exS.openersConverted+' combo)':'') :'no contested exchanges','firstHitRate'],
+    [label('sprintResetRate','Sprint-reset rate'),sw&&sw.sprintResetOpportunities?pct(sw.sprintResetRate):NONE,sw&&sw.sprintResetOpportunities?sw.sprintResets+' / '+sw.sprintResetOpportunities+' follow-ups':'needs sprinting follow-ups','sprintResetRate'],
+    [label('longestCombo','Longest combo'),String(S.longestCombo),(S.comboCount??0)+' combos · '+(exS&&fin(exS.tradeRatio)?num(exS.tradeRatio,2)+'x trade':S.hits+' hits'),'longestCombo'],
+    [label('dominanceShare','Advantage share'),dom&&dom.availability==='AVAILABLE'?pct(dom.localShare):NONE,dom?dom.availabilityLabel:'unavailable','dominanceShare'],
+    [label('damageTaken','Health lost'),V3?num(S.damageTaken,1)+' HP':NONE,hp&&hp.totalHealing>0?'+'+num(hp.totalHealing,1)+' HP healed ('+hp.burstHeals+' burst'+(hp.burstHeals===1?'':'s')+')':'health + absorption','damageTaken']]);
+  if(hp&&hp.trace&&hp.trace.length){
+    h2(p,'Health & absorption timeline','local HP, absorption and incoming pressure');
+    healthChart(p);
+  }
+  const tps=(B&&B.turningPoints)||[];
+  if(tps.length){
+    h2(p,'Key turning points','click any moment to inspect on Timeline');
+    turningPointStrip(p,tps);
+  }
+  if(!takes.length){
+    h2(p,'What the measurements say','generated from recorded values');
+    const lines=(D.interpretations||[]).slice(1);if(lines.length)facts(p,lines);else p.append(el('p',{class:'muted'},'Not enough evidence for a written summary.'));
+  }
   h2(p,'Attack outcomes','every eligible attempt');
   stack(p,[{name:'Hits',v:S.hits,color:C.you},{name:'Empty swings',v:S.emptyMisses,color:C.opp},{name:'Uncertain',v:S.uncertain,color:C.unknown},...(V3?[{name:'Shield blocks',v:shields.confirmedBlocks||0,color:C.good}]:[])],'Attack outcomes');
   if(!V3)p.append(el('p',{class:'muted'},'Shield blocks were not observable before 0.1.3, so blocked attacks of this recording remain counted as uncertain.'));
@@ -619,7 +711,7 @@ overview(p){
   }
   const evidence=F.matchEvidence?.entries||[];
   if(evidence.length){const d=collapsible(p,'Match evidence (establishing entry highlighted)',evidence.length);const tb=table(d,['Kind','Origin','Rule','Accepted','Original text'],evidence.map(e=>[cap(e.kind),cap(e.origin),e.rule,e.accepted?'Yes':'No',e.text]));if(R.evidenceIndex!=null&&tb.children[R.evidenceIndex]){tb.children[R.evidenceIndex].className='sel';d.open=true;}}
-  method(p,'Confirmed results need an exact server announcement naming both players in the current round. Kill messages, deaths and generic text are inferred at most; an opponent death with no announcement stays Unknown. Hits are server-reported local melee damage matched to observed attacks. Reach, aim and critical conditions are client observations.','How results and hits are established');
+  method(p,'Confirmed results need an exact server announcement naming both players in the current round. Kill messages, deaths and generic text are inferred at most; an opponent death with no announcement stays Unknown. Hits are server-reported local melee damage matched to observed attacks. Reach, aim, sprint resets and critical conditions are client observations.','How results and hits are established');
 },
 offense(p){
   h2(p,'Accuracy','denominator excludes confirmed shield blocks','o-acc');
@@ -644,10 +736,22 @@ offense(p){
   h2(p,'Weapon timing','interval minus each weapon\'s expected cooldown','o-timing');
   timingChart(p);
   method(p,'The previous attack\'s effective cooldown (20 / attack speed, from client attributes) defines the next interval. Within '+num(F.policy?.timingToleranceTicks,2)+' ticks is perfect; earlier is too fast; later, up to two cooldowns, is too slow. A weapon switch or a longer gap resets the sequence and the first attack is ungraded. Weapons are never pooled into one raw average. Cooldown readiness is mechanical, not a judgement of tactical timing.');
-  h2(p,'Critical & sprint hits',null,'o-crit');
-  cards(p,[[label('criticalRate','Critical-hit rate'),pct(S.criticalRate),S.criticalConditions+' with conditions','criticalRate'],[label('serverCrits','Server critical hits'),V3?String(S.serverCrits??0):NONE,V3?'server animation':'unavailable','serverCrits'],[label('sprintRate','Sprint-hit rate'),pct(S.sprintRate),S.sprintHits+' of '+S.hits+' hits','sprintRate']]);
-  method(p,'Critical conditions are observed client state. A server critical-hit animation on the opponent within one tick of a confirmed hit is counted separately. Neither reports the damage multiplier.');
-  chips(p,[['o-acc','Accuracy'],['o-reach','Reach & spacing'],['o-aim','Aim'],['o-timing','Weapon timing'],['o-crit','Critical & sprint']]);
+  h2(p,'Sword mechanics, sprint reset & crits','1.9+ W-tap cadence, charge discipline and weapon swaps','o-crit');
+  const sw=B&&B.sword,shB=B&&B.shields;
+  cards(p,[
+    [label('sprintResetRate','Sprint-reset rate'),sw&&sw.sprintResetOpportunities?pct(sw.sprintResetRate):NONE,sw&&sw.sprintResetOpportunities?sw.sprintResets+' / '+sw.sprintResetOpportunities+' follow-ups':'needs sprinting follow-ups','sprintResetRate'],
+    ['Combo sprint-reset',sw&&sw.comboSprintResetOpportunities?pct(sw.comboSprintResetRate):NONE,sw&&sw.comboSprintResetOpportunities?sw.comboSprintResets+' / '+sw.comboSprintResetOpportunities+' combo hits':'no sprinting combos'],
+    [label('earlySwingRate','Early swing rate'),sw&&(sw.fullChargeHits+sw.earlyHits)?pct(sw.earlySwingRate):NONE,sw?(sw.earlyHits===1?'1 hit':sw.earlyHits+' hits')+' < 90% · mean '+num(sw.meanHitCooldown,2):'unavailable','earlySwingRate'],
+    [label('axeToSwordSwap','Axe-to-sword swap'),shB&&shB.axeToSwordSwaps?s2(shB.meanAxeToSwordSeconds):NONE,shB&&shB.axeToSwordSwaps?(shB.axeToSwordSwaps===1?'1 swap':shB.axeToSwordSwaps+' swaps')+' · best '+s2(shB.bestAxeToSwordSeconds):'no axe-to-sword swaps','axeToSwordSwap'],
+    [label('criticalRate','Critical-hit rate'),pct(S.criticalRate),S.criticalConditions+' with conditions'+(sw&&sw.critChains?' · '+sw.critChains+' chains':''),'criticalRate'],
+    [label('serverCrits','Server critical hits'),V3?String(S.serverCrits??0):NONE,V3?'server animation':'unavailable','serverCrits'],
+    [label('sprintRate','Sprint-hit rate'),pct(S.sprintRate),S.sprintHits+' of '+S.hits+' hits','sprintRate']]);
+  if(sw&&(sw.fullChargeHits+sw.earlyHits)>0){
+    h3Text(p,'Hit charge discipline');
+    stack(p,[{name:'Full charge (≥ 90%)',v:sw.fullChargeHits,color:C.good},{name:'Early swing (< 90%)',v:sw.earlyHits,color:C.opp}],'Hit attack charge discipline');
+  }
+  method(p,'Sprint-reset rate checks whether a sprinting follow-up hit within 2.5 s of a prior sprinting hit was preceded by a recorded sprint release (W-tap / S-tap). Axe-to-sword swap measures the elapsed time from an axe hit or shield disable to the immediately following sword hit within 3 s. Critical conditions and server crit animations are counted separately; neither reports the damage multiplier.');
+  chips(p,[['o-acc','Accuracy'],['o-reach','Reach & spacing'],['o-aim','Aim'],['o-timing','Weapon timing'],['o-crit','Sword & crits']]);
 },
 defense(p){
   h2(p,'Incoming hits',null,'d-in');
@@ -655,14 +759,15 @@ defense(p){
   stack(p,[{name:'Attributed to opponent',v:S.attributedIncoming??0,color:C.opp},{name:'Unattributed',v:S.unattributedIncoming??0,color:C.incomplete},{name:'Third party',v:S.thirdPartyIncoming??0,color:C.unknown}],'Incoming damage attribution');
   if(incoming.length){const d=collapsible(p,'Incoming hit list',incoming.length);table(d,['Time','Attribution','Type','Health lost','Knockback','Crit on you'],incoming.map(i=>[s2(i.time),attrName[i.attribution]||i.attribution,i.damageType?item(i.damageType):NONE,i.damage!=null?num(i.damage,1)+' HP':NONE,i.knockback!=null?num(i.knockback,2):NONE,i.crit?'Yes':NONE]),[true,false,false,true,true,false]);}
   method(p,'Only damage whose server-reported cause is the tracked opponent counts as an opponent hit. Fall, fire, environmental and third-party damage is listed but never breaks your combos or moves dominance.');
-  h2(p,'Shields','confirmed, estimated and unknown kept apart','d-shield');
+  h2(p,'Shields & axe punish','confirmed blocks, disables and follow-up speed','d-shield');
+  const shB=B&&B.shields;
   if(!shields.available)unavailable(p,'shield observations');
-  else{cards(p,[[label('attacksIntoShield','Attacks into a raised shield'),String(shields.attacksIntoShield),'observed state','attacksIntoShield'],[label('shieldBlocks','Confirmed shield blocks'),String(shields.confirmedBlocks),'sound + no damage','shieldBlocks'],[label('estimatedShieldBlocks','Estimated shield blocks'),String(shields.estimatedBlocks),'no sound','estimatedShieldBlocks'],[label('shieldDisables','Shield disables'),String(shields.disables),'disable sound','shieldDisables']]);
-    kv(p,[[label('hitsAfterDisable','Hits after a disable'),String(shields.hitsAfterDisable),'within 5 s'],['Hits past a raised shield',String(shields.bypassed),'behind or after disable'],[label('localShieldBlocks','Your shield blocks'),String(shields.localBlocks),'attacker not reported'],['Your shield disabled',String(shields.localDisabled),'disable sound at you']]);
+  else{cards(p,[[label('attacksIntoShield','Attacks into a raised shield'),String(shields.attacksIntoShield),'observed state','attacksIntoShield'],[label('shieldBlocks','Confirmed shield blocks'),String(shields.confirmedBlocks),'sound + no damage','shieldBlocks'],[label('shieldDisables','Shield disables'),String(shields.disables),'disable sound','shieldDisables'],[label('disableConversionRate','Disable conversion'),shB&&shB.disablesInflicted?pct(shB.disableConversionRate):NONE,shB&&shB.disablesInflicted?shB.disablesConverted+' / '+shB.disablesInflicted+' punished':'no disables inflicted','disableConversionRate'],[label('disablePunishDelay','Disable punish delay'),shB&&fin(shB.meanDisablePunishDelay)?s2(shB.meanDisablePunishDelay):NONE,shB&&fin(shB.meanPunishHitsPerDisable)?num(shB.meanPunishHitsPerDisable,1)+' hits / disable':'no punish hits','disablePunishDelay'],[label('axeToSwordSwap','Axe-to-sword swap'),shB&&shB.axeToSwordSwaps?s2(shB.meanAxeToSwordSeconds):NONE,shB&&shB.axeToSwordSwaps?'best '+s2(shB.bestAxeToSwordSeconds):'no swaps','axeToSwordSwap']]);
+    kv(p,[[label('hitsAfterDisable','Hits after a disable'),String(shields.hitsAfterDisable),'within 5 s'],['Hits past a raised shield',String(shields.bypassed),'behind or after disable'],[label('estimatedShieldBlocks','Estimated shield blocks'),String(shields.estimatedBlocks),'no sound'],[label('localShieldBlocks','Your shield blocks'),String(shields.localBlocks),'attacker not reported'],['Your shield disabled',String(shields.localDisabled),shB&&shB.localDisables?shB.hitsTakenAfterLocalDisable+' hits (-'+num(shB.damageTakenAfterLocalDisable,1)+' HP) in 5 s windows':'disable sound at you']]);
     const est=shields.estimatedBlocks||0;stack(p,[{name:'Hit',v:S.hits,color:C.you},{name:'Block',v:shields.confirmedBlocks-shields.disables,color:C.good},{name:'Shield disable',v:shields.disables,color:C.warn},{name:'Estimated block',v:est,color:C.estimated},{name:'Unknown result',v:Math.max(0,S.uncertain-est),color:C.unknown},{name:'Miss (empty swing)',v:S.emptyMisses,color:C.opp}],'Attack results against shields');
     shieldTimeline(p);
     if((shields.events||[]).length){const d=collapsible(p,'Shield event list',shields.events.length);table(d,['Time','Event','Shield of','Your weapon'],shields.events.map(e=>[s2(e.time),cap(e.type),e.subject==='local'?'You':'Opponent',e.weapon?item(e.weapon):NONE]),[true,false,false,false]);}}
-  method(p,'Minecraft 1.21.11 sends no damage event for a blocked melee hit; it plays the shield-block sound at the blocker. A confirmed block needs a visibly blocking target, no damage report and that sound at the target. Blocking state with no sound is an estimate and stays uncertain. Damage prevented is never inferred.');
+  method(p,'Minecraft sends no damage event for a blocked melee hit; it plays the shield-block sound at the blocker. A confirmed block needs a visibly blocking target, no damage report and that sound at the target. Blocking state with no sound is an estimate and stays uncertain. Damage prevented is never inferred.');
   h2(p,'Jump resets','signed client ticks; candidates only','d-jump');
   const cls={};for(const i of incoming)if(i.attributed)cls[i.jumpClass]=(cls[i.jumpClass]||0)+1;
   const attTotal=incoming.filter(i=>i.attributed).length,ticked=attTotal-(cls.UNAVAILABLE||0)>0,jc=k=>ticked?String(cls[k]||0):NONE;
@@ -671,11 +776,17 @@ defense(p){
   jumpTimeline(p);
   const attIn=incoming.filter(i=>i.attributed);if(attIn.length){const d=collapsible(p,'Jump timing per attributed hit',attIn.length);table(d,['Hit time','Tick offset','Category','Movement','Knockback','Confidence'],attIn.map(i=>[s2(i.time),i.jumpOffsetTicks==null?NONE:sgn(i.jumpOffsetTicks,0),cap(i.jumpClass),i.ground==null?NONE:(i.ground?'ground':'air')+(i.sprinting?', sprint':''),i.knockback!=null?num(i.knockback,2):NONE,i.tick==null?'unavailable':'observed ticks']),[true,true,false,false,true,false]);}
   note(p,'Offsets compare client ticks of the actual jump action and the incoming-hit observation; network delay can shift the server\'s view. A candidate is not a successful reset. The experimental speed comparison is descriptive only and confounded by attacker sprint, enchantments, terrain and input.',true);
-  h2(p,'Damage & knockback',null,'d-dmg');
-  const att=incoming.filter(i=>i.attributed),kb=att.filter(i=>i.knockback!=null);
-  cards(p,[[label('damageTaken','Health lost'),V3?num(S.damageTaken,1)+' HP':NONE,'health + absorption','damageTaken'],['Hits with a health drop',V3?att.filter(i=>i.damage!=null).length+' / '+att.length:NONE,'within 2 ticks'],[label('knockback','Knockback observed'),V3?kb.length+' / '+att.length:NONE,'velocity within 1 tick','knockback'],['Mean knockback',kb.length?num(kb.reduce((a,b)=>a+b.knockback,0)/kb.length,2):NONE,'blocks/tick, horizontal'],['Damage dealt','Unavailable','opponent health not trusted']]);
-  if(!V3)unavailable(p,'health or knockback observations');
-  chips(p,[['d-in','Incoming hits'],['d-shield','Shields'],['d-jump','Jump resets'],['d-dmg','Damage & knockback']]);
+  h2(p,'Health, damage pacing & knockback','HP timeline, healing recovery and burst pressure','d-dmg');
+  const att=incoming.filter(i=>i.attributed),kb=att.filter(i=>i.knockback!=null),hp=B&&B.health;
+  cards(p,[
+    [label('damageTaken','Health lost'),V3?num(S.damageTaken,1)+' HP':NONE,'health + absorption','damageTaken'],
+    [label('totalHealing','Health recovered'),hp&&hp.trace.length?num(hp.totalHealing,1)+' HP':NONE,hp&&hp.trace.length?(hp.burstHeals===1?'1 burst heal':hp.burstHeals+' burst heals')+(hp.absorptionGained>0.05?' · +'+num(hp.absorptionGained,1)+' abs':''):'unavailable','totalHealing'],
+    [label('damageTakenPerSec','Damage taken / s'),hp&&fin(hp.damageTakenPerSec)?num(hp.damageTakenPerSec,2)+' HP/s':NONE,hp&&fin(hp.minHp)?'min '+num(hp.minHp,1)+' HP at '+num(hp.minHpTime,1)+' s':'unavailable','damageTakenPerSec'],
+    ['Worst 3 s burst',hp&&hp.worstBurstDamage>0?num(hp.worstBurstDamage,1)+' HP':NONE,hp&&fin(hp.worstBurstTime)?'starting at '+s2(hp.worstBurstTime):'no health drops'],
+    [label('knockback','Knockback observed'),V3?kb.length+' / '+att.length:NONE,'velocity within 1 tick','knockback'],
+    ['Mean knockback',kb.length?num(kb.reduce((a,b)=>a+b.knockback,0)/kb.length,2):NONE,'blocks/tick, horizontal']]);
+  healthChart(p);
+  chips(p,[['d-in','Incoming hits'],['d-shield','Shields & punish'],['d-jump','Jump resets'],['d-dmg','Health & damage']]);
 },
 flow(p){
   if(F.session){h2(p,'Session exchanges');note(p,'Session-wide dominance and combo timelines are unavailable. Choose a participant and exchange above to inspect its own evidence, combos, dominance, shields, reach, aim, timing and jump resets.');
@@ -698,17 +809,26 @@ flow(p){
   if(dom){cards(p,[[label('dominanceShare','Advantage share'),pct(dom.localShare),'you, of '+num(dom.active,1)+' s active','dominanceShare'],['Opponent advantage',pct(dom.opponentShare),'of active time'],['Neutral',pct(dom.neutralShare),'balanced evidence']]);
     kv(p,[['Longest advantage',dom.longest?num(dom.longest.end-dom.longest.start,1)+' s':NONE,dom.longest?(dom.longest.side==='LOCAL'?'you':'opponent')+' from '+num(dom.longest.start,1)+' s':'none'],['Largest swing',dom.swing?sgn(dom.swing.toValue-dom.swing.fromValue,2):NONE,dom.swing?'within 3 s at '+num(dom.swing.from,1)+' s':'none'],['Dominance changes',String(dom.changes),'you ↔ opponent'],['No evidence / incomplete',num(dom.insufficient,1)+' s / '+num(dom.incomplete,1)+' s','excluded from shares']]);
     const m=dom.model;method(p,'Model: each confirmed hit weighs '+m.hit+' (+'+m.streakBonus+' when it continues a combo); opponent blocks −'+m.shieldBlocked+', shield disables ±'+m.shieldDisabled+', your blocks +'+m.localBlock+'; every input decays with a '+m.tau+' s time constant. D = (you − opponent) / (you + opponent + 1), so thin evidence stays near zero and one event reaches at most 0.5. States: above +'+m.threshold+' you, below −'+m.threshold+' opponent; evidence mass under '+m.minMass+' is "no evidence"; unattributed damage mass of '+m.maxUnattributed+' or more is "incomplete". Accuracy, aim and reach are not inputs. This is combat advantage from observed hits, not physical momentum and not a win probability.','How dominance is modelled');}
-  h2(p,'Exchanges','separated by gaps over '+num(combos.gap,1)+' s','f-ex');
+  h2(p,'Exchanges, openers & trades','first-hit control, combo conversion and HP pacing','f-ex');
+  const exS=B&&B.exchangeSummary,exRows=(B&&B.exchanges)||[];
+  if(exS){
+    cards(p,[
+      [label('firstHitRate','First-hit rate'),exS.contested?pct(exS.firstHitRate):NONE,exS.openedByYou+' / '+exS.contested+' contested ('+exS.openedByTrade+' trades)','firstHitRate'],
+      [label('firstHitConversionRate','Opener conversion'),exS.openedByYou?pct(exS.firstHitConversionRate):NONE,exS.openersConverted+' / '+exS.openedByYou+' into 2+ hit combos','firstHitConversionRate'],
+      ['Exchanges W / L / E',exS.won+' / '+exS.lost+' / '+exS.even,exS.contested+' contested exchanges'],
+      [label('tradeRatio','Hit trade ratio'),fin(exS.tradeRatio)?num(exS.tradeRatio,2)+'x':NONE,S.hits+' dealt / '+(S.attributedIncoming??S.incoming)+' taken','tradeRatio']]);
+  }
   if(S.measurementVersion){h3Text(p,'Combat-active intervals');
     exchangeStrip(p);
-    p.append(el('p',{class:'muted'},num(S.combatActiveSeconds,1)+' s combat-active in '+num(dur,1)+' s recorded. Filled intervals are combat; the background shows breaks. Exchange timeout: '+num(D.exchangeTimeoutSeconds,1)+' s, independent of recording timeout.'));
-    table(p,['Exchange','Start / end (s)','Duration','Hits','Misses','Combos','Momentum turns','End'],active.map((e,i)=>['#'+(i+1),num(e.start,2)+' / '+num(e.end,2),num(e.end-e.start,2),String(e.hits),String(e.misses),String(e.combos),String(e.momentumChanges),cap(e.endedBy)]),[false,true,true,true,true,true,true,false]);
-    method(p,'Hit-only streak segments below retain the combo timeout. Exchange and round boundaries also split combos and reset dominance. Finalization: '+(F.reason||'unavailable'),'How exchanges are separated');}
-  const ex=combos.exchanges||[];
-  h3Text(p,'Hit streak segments');
-  table(p,['Segment','Time','Your hits','Opponent hits','Best combo (you / opp)','Advantage'],ex.map((e,i)=>['#'+(i+1),num(e.start,1)+'–'+num(e.end,1)+' s',String(e.local),String(e.opponent),e.longestLocal+' / '+e.longestOpponent,sgn(e.local-e.opponent,0)]),[false,true,true,true,true,true]);
-  if(dom&&(dom.turningPoints||[]).length){h3Text(p,'Key turning points');table(p,['Time','Change','Dominance'],dom.turningPoints.map(t=>[s2(t[0]),t[1]>0?'Advantage to you':'Advantage to opponent',num(t[1],2)]),[true,false,true]);}
-  chips(p,[['f-combo','Combos'],['f-dom','Dominance'],['f-ex','Exchanges']]);
+    p.append(el('p',{class:'muted'},num(S.combatActiveSeconds,1)+' s combat-active in '+num(dur,1)+' s recorded. Filled intervals show exchanges (blue won, orange lost, grey even). Exchange timeout: '+num(D.exchangeTimeoutSeconds,1)+' s.'));}
+  if(exRows.length){
+    h3Text(p,'Exchange breakdown');
+    table(p,['#','Time','Opener','Conv.','Hits (Y/O)','Diff','HP lost','Healed','Disables','Winner'],exRows.map(e=>['#'+e.index,num(e.start,1)+'–'+num(e.end,1)+' s',sideInk(e.opener),e.openerConverted?'Yes':NONE,e.localHits+' / '+e.opponentHits,sgn(e.hitDiff,0),e.damageTaken>0?num(e.damageTaken,1)+' HP':NONE,e.healingGained>0?'+'+num(e.healingGained,1)+' HP':NONE,(e.opponentDisables||e.localDisables)?e.opponentDisables+' / '+e.localDisables:NONE,sideInk(e.winner)]),[false,true,false,false,true,true,true,true,true,false]);
+  }
+  const tps=(B&&B.turningPoints)||[];
+  if(tps.length){h3Text(p,'Key turning points');turningPointStrip(p,tps);}
+  else if(dom&&(dom.turningPoints||[]).length){h3Text(p,'Key turning points');table(p,['Time','Change','Dominance'],dom.turningPoints.map(t=>[s2(t[0]),t[1]>0?'Advantage to you':'Advantage to opponent',num(t[1],2)]),[true,false,true]);}
+  chips(p,[['f-combo','Combos'],['f-dom','Dominance'],['f-ex','Openers & exchanges']]);
 },
 timeline(p){
   h2(p,'Playback','recorded event timestamps; no world-state replay');
@@ -716,21 +836,23 @@ timeline(p){
   const speed=el('select',{'aria-label':'Playback speed'});for(const s of[.25,.5,1,2,4]){const o=el('option',{value:s},s+'×');if(s===1)o.selected=true;speed.append(o);}
   const seek=el('input',{type:'range',min:0,max:1000,step:1,value:0,'aria-label':'Playback position'});const clk=el('output',{'aria-live':'off'});
   ctl.append(play,prev,next,speed,seek,clk);p.append(ctl);
-  // Round and exchange navigation.
-  const jumps=[['','Jump to…'],['0','Start of recording'],...rounds.map(r=>['r'+r.n,'Round '+r.n+' · '+s2(r.start)]),...active.map((e,i)=>['e'+i,'Exchange #'+(i+1)+' · '+s2(e.start)])];
-  if(jumps.length>2){const nav=controls(p);const js=select(nav,'Go to',jumps,v=>{if(!v)return;setT(v==='0'?0:v[0]==='r'?rounds.find(r=>'r'+r.n===v).start:active[Number(v.slice(1))].start);js.value='';});js.setAttribute('aria-label','Jump to round or exchange');}
+  const tps=(B&&B.turningPoints)||[];
+  const jumps=[['','Jump to…'],['0','Start of recording'],...tps.map((tp,i)=>['tp'+i,'Turning point · '+tp.title+' ('+s2(tp.t)+')']),...rounds.map(r=>['r'+r.n,'Round '+r.n+' · '+s2(r.start)]),...active.map((e,i)=>['e'+i,'Exchange #'+(i+1)+' · '+s2(e.start)])];
+  if(jumps.length>2){const nav=controls(p);const js=select(nav,'Go to',jumps,v=>{if(!v)return;setT(v==='0'?0:v.startsWith('tp')?tps[Number(v.slice(2))].t:v[0]==='r'?rounds.find(r=>'r'+r.n===v).start:active[Number(v.slice(1))].start);js.value='';});js.setAttribute('aria-label','Jump to round or exchange');}
   const W=cw(),narrow=W<560,L=narrow?74:112,R=10,LH=narrow?26:24;
-  const lanes=[...(rounds.length?[['Rounds','rounds']]:[]),...(active.length?[['Exchanges','exch']]:[]),['Your attacks','atk'],['Incoming','in'],['Shields','sh'],['Jumps','jump'],['Sprint','spr']];
+  const hpTrace=(B&&B.health&&B.health.trace)||[];
+  const lanes=[...(rounds.length?[['Rounds','rounds']]:[]),...(active.length?[['Exchanges','exch']]:[]),['Your attacks','atk'],['Incoming','in'],...(hpTrace.length?[['Health','hp']]:[]),['Shields','sh'],['Jumps','jump'],['Sprint','spr']];
   const LY={};lanes.forEach(([,k],i)=>LY[k]=8+i*LH);const H=8+lanes.length*LH+30;
   const{box,svg,t}=chartBox(p,W,H,'Event track: '+lanes.map(l=>l[0]).join(', '));
   const tx=v=>L+(W-L-R)*Math.max(0,Math.min(1,v/dur));
   for(const[name,k]of lanes){const y=LY[k];svg.append(sv('line',{x1:L,x2:W-R,y1:y+LH/2,y2:y+LH/2,stroke:C.grid}));svgText(svg,0,y+LH/2+4,narrow&&name==='Your attacks'?'Attacks':name);}
-  for(const r of rounds){const x0=tx(r.start),x1=tx(r.end??dur),y=LY.rounds;const b=sv('rect',{x:x0,y:y+4,width:Math.max(2,x1-x0-1),height:LH-8,rx:2,fill:r.n%2?'#2b3540':'#222a32'});b.dataset.seg='1';hoverTip(b,t,box,'Round '+r.n+' · '+s2(r.start)+'–'+(r.end==null?'unknown':s2(r.end))+' · '+(r.outcome||'not announced'));svg.append(b);if(x1-x0>26)svgText(svg,x0+4,y+LH/2+4,'R'+r.n,{fill:C.text,'font-size':11});}
-  active.forEach((e,i)=>{const x0=tx(e.start),y=LY.exch;const b=sv('rect',{x:x0,y:y+6,width:Math.max(2,tx(e.end)-x0),height:LH-12,rx:2,fill:'rgba(57,135,229,.55)'});b.dataset.seg='1';hoverTip(b,t,box,'Exchange #'+(i+1)+' · '+s2(e.start)+'–'+s2(e.end)+' · '+e.hits+' hits');svg.append(b);});
-  const marks=[];let sprintOn=null;const sprint=(a,b)=>svg.append(sv('rect',{x:tx(a),y:LY.spr+LH/2-3,width:Math.max(1,tx(b)-tx(a)),height:6,rx:1,fill:C.unknown}));
+  for(const r of rounds){const x0=tx(r.start),x1=tx(r.end??dur),y=LY.rounds;const b=sv('rect',{x:x0,y:y+4,width:Math.max(2,x1-x0-1),height:LH-8,rx:2,fill:r.n%2?'#232c3b':'#1a2230'});b.dataset.seg='1';hoverTip(b,t,box,'Round '+r.n+' · '+s2(r.start)+'–'+(r.end==null?'unknown':s2(r.end))+' · '+(r.outcome||'not announced'));svg.append(b);if(x1-x0>26)svgText(svg,x0+4,y+LH/2+4,'R'+r.n,{fill:C.text,'font-size':11});}
+  active.forEach((e,i)=>{const x0=tx(e.start),y=LY.exch;const b=sv('rect',{x:x0,y:y+6,width:Math.max(2,tx(e.end)-x0),height:LH-12,rx:2,fill:'rgba(76,154,255,.55)'});b.dataset.seg='1';hoverTip(b,t,box,'Exchange #'+(i+1)+' · '+s2(e.start)+'–'+s2(e.end)+' · '+e.hits+' hits');svg.append(b);});
+  const marks=[];let sprintOn=null,prevHp=null;const sprint=(a,b)=>svg.append(sv('rect',{x:tx(a),y:LY.spr+LH/2-3,width:Math.max(1,tx(b)-tx(a)),height:6,rx:1,fill:C.unknown}));
   for(const e of E){if(e.kind==='ATTACK'&&!isCanonical(e))continue;const x=tx(sec(e));let m=null;const o=outcomes[e.sequence];
     if(e.kind==='ATTACK'){const y=LY.atk+LH/2;const h=hitBySeq[e.sequence];m=h?sv('circle',{cx:x,cy:y,r:5,fill:C.you}):o&&o.startsWith('SHIELD')?sv('path',{d:`M${x} ${y-6}L${x+6} ${y}L${x} ${y+6}L${x-6} ${y}Z`,fill:C.good}):!isEmpty(e)?sv('circle',{cx:x,cy:y,r:4.5,fill:'none',stroke:C.opp,'stroke-width':2}):sv('rect',{x:x-1,y:y-6,width:2,height:12,fill:C.muted});m.dataset.k=h?'Correlated hit':o&&o.startsWith('SHIELD')?'Shield block':!isEmpty(e)?'No server report':'Empty swing';}
     else if(e.kind==='DAMAGE_IN'){const att=e.context?.attribution;const attributed=att?att.startsWith('OPPONENT'):!!e.actor;const y=LY.in+LH/2;m=attributed?sv('rect',{x:x-4,y:y-4,width:8,height:8,fill:C.opp}):sv('rect',{x:x-4,y:y-4,width:8,height:8,fill:'none',stroke:C.muted,'stroke-width':1.5});m.dataset.k=attributed?'Attributed incoming hit':'Unattributed damage';}
+    else if(e.kind==='HEALTH'&&LY.hp!=null&&e.context&&e.context.health!=null){const tot=e.context.health+(e.context.absorption||0);if(prevHp!=null){const delta=tot-prevHp;if(delta<=-1||delta>=2){const y=LY.hp+LH/2;m=sv('circle',{cx:x,cy:y,r:delta>=2?4:3,fill:delta>=2?C.good:C.opp});m.dataset.k=(delta>=2?'Heal +':'Health ')+num(delta,1)+' HP (now '+num(tot,1)+')';}}prevHp=tot;}
     else if(e.kind==='SHIELD'){const y=LY.sh+LH/2;m=sv('rect',{x:x-3,y:y-5,width:6,height:10,fill:e.context?.shield==='DISABLE'?C.warn:C.good});m.dataset.k='Shield '+(e.context?.shield||'').toLowerCase()+' ('+(e.context?.subject==='local'?'you':'opponent')+')';}
     else if(e.kind==='CRIT'){const y=(e.context?.subject==='local'?LY.in:LY.atk)+LH/2;m=sv('path',{d:`M${x-4} ${y-9}L${x+4} ${y-9}L${x} ${y-4}Z`,fill:C.warn});m.dataset.k='Server critical hit on '+(e.context?.subject==='local'?'you':'opponent');}
     else if(e.kind==='JUMP'){const y=LY.jump+LH/2;m=sv('path',{d:`M${x-5} ${y+4}L${x} ${y-5}L${x+5} ${y+4}Z`,fill:C.muted});m.dataset.k='Jump';}
@@ -743,13 +865,12 @@ timeline(p){
   const head=sv('line',{y1:2,y2:8+lanes.length*LH+2,stroke:C.warn,'stroke-width':2});svg.append(head);
   svg.addEventListener('pointermove',ev=>{if(ev.target.dataset&&ev.target.dataset.seg)return;const r=svg.getBoundingClientRect(),mx=(ev.clientX-r.left)*W/r.width;let best=null,bd=8;const i=upper(markT,(mx-L)/(W-L-R)*dur);for(let k=Math.max(0,i-12);k<Math.min(marks.length,i+12);k++){const d=Math.abs(tx(markT[k])-mx);if(d<bd){bd=d;best=marks[k];}}if(best)place(t,box,ev.clientX,ev.clientY,best.dataset.k+' · '+(+best.dataset.t).toFixed(2)+' s');else t.style.display='none';});
   svg.addEventListener('click',ev=>{const r=svg.getBoundingClientRect(),mx=(ev.clientX-r.left)*W/r.width;if(mx>=L)setT((mx-L)/(W-L-R)*dur);});
-  legend(p,[{name:'Correlated hit',color:C.you},{name:'No server report',color:C.opp,hollow:true},{name:'Shield block',color:C.good},{name:'Empty swing',color:C.muted},{name:'Attributed incoming',color:C.opp},{name:'Unattributed damage',color:C.muted,hollow:true},{name:'Server crit',color:C.warn},{name:'Playhead',color:C.warn}]);
+  legend(p,[{name:'Correlated hit',color:C.you},{name:'No server report',color:C.opp,hollow:true},{name:'Shield block / heal',color:C.good},{name:'Empty swing',color:C.muted},{name:'Attributed incoming / HP drop',color:C.opp},{name:'Unattributed damage',color:C.muted,hollow:true},{name:'Server crit / playhead',color:C.warn}]);
   const now=el('div',{class:'now'});p.append(now);
   const annot=el('div',{class:'annot','aria-live':'polite'});p.append(annot);
   h2(p,'Events up to playhead');
   const fl=controls(p);const filter=el('select',{'aria-label':'Event filter'});for(const k of['All','ATTACK','HURT','DAMAGE_IN','SHIELD','CRIT','JUMP','SPRINT','HEALTH','VELOCITY','DEATH','MOTION'])filter.append(el('option',{value:k},k==='All'?'All events':cap(k)));const fll=el('label',null,'Show');fll.append(filter);fl.append(fll);
   const wrap=el('div',{class:'scroll'});const tbl=el('table');const hr=el('tr');for(const[h,r]of[['Time',1],['Event',0],['Confidence',0],['Details',0]])hr.append(el('th',r?{class:'r',scope:'col'}:{scope:'col'},h));const thd=el('thead');thd.append(hr);tbl.append(thd);const tb=el('tbody');tbl.append(tb);wrap.append(tbl);p.append(wrap);
-  // Sorted indexes make each playhead update proportional to what changed, not to the recording size.
   const ET=E.map(sec);const ORDER=E.map((e,i)=>i).sort((a,b)=>ET[a]-ET[b]||a-b);const OT=ORDER.map(i=>ET[i]);
   const times=OT.filter((x,k)=>E[ORDER[k]].kind!=='MOTION');
   function upper(arr,v){let lo=0,hi=arr.length;while(lo<hi){const m=(lo+hi)>>1;if(arr[m]<=v+1e-9)lo=m+1;else hi=m;}return lo;}
@@ -757,6 +878,7 @@ timeline(p){
   const atT=ORDER.filter(i=>E[i].kind==='ATTACK'&&isCanonical(E[i])&&outcomes[E[i].sequence]!=='EXCLUDED').map(i=>ET[i]);
   const inT=(D.incoming||[]).slice().sort((a,b)=>a-b);
   const cmarks=(combos.marks||[]).slice().sort((a,b)=>a.t-b.t);const cmT=cmarks.map(m=>m.t);
+  const hpT=hpTrace.map(x=>x.t);
   let T=0,playing=false,last=0,lastIdx=-1,lastKind=null,shownMarks=marks.length;
   function describe(e){if(!e)return['Start of recording',''];const h=hitBySeq[e.sequence];const o=outcomes[e.sequence];
     if(e.kind==='ATTACK'&&S.measurementVersion&&isCanonical(e)&&o==='UNRESOLVED')return['Unresolved attack','Outcome evidence is insufficient; included in the accuracy denominator.'];
@@ -777,8 +899,10 @@ timeline(p){
     let lastEv=null;for(let j=idx-1;j>=0;j--){const e=E[ORDER[j]];if(e.kind!=='MOTION'){lastEv=e;break;}}const[a,b]=describe(lastEv);annot.replaceChildren(el('b',null,a),document.createTextNode(b?' — '+b:''));
     const k2=dom?Math.min((dom.values||[]).length-1,Math.max(0,Math.round(T/dom.step))):-1;const dv=dom&&k2>=0?dom.values[k2]:null;
     let run=0;for(let i=upper(cmT,T)-1;i>=0&&cmarks[i].side==='LOCAL'&&!cmarks[i].traded;i--)run++;
-    now.replaceChildren(card('Hits so far',String(upper(hitT,T)),upper(atT,T)+' attempts'),card('Attributed incoming',String(upper(inT,T)),'opponent hits'),card('Current streak',String(run),'your unanswered hits'),card('Dominance',dv==null?NONE:num(dv,2),dom?{L:'you',O:'opponent',N:'neutral',C:'incomplete',I:'no evidence'}[(dom.states||'')[k2]]||'':'unavailable','dominance'));}
+    const hi=upper(hpT,T)-1;const curHp=hi>=0?hpTrace[hi]:null;
+    now.replaceChildren(card('Hits so far',String(upper(hitT,T)),upper(atT,T)+' attempts'),card('Attributed incoming',String(upper(inT,T)),'opponent hits'),card('Current streak',String(run),'your unanswered hits'),...(curHp?[card('Health',num(curHp.hp,1)+' HP',curHp.abs>0?'+'+num(curHp.abs,1)+' absorption':'local client HP')]:[]),card('Dominance',dv==null?NONE:num(dv,2),dom?{L:'you',O:'opponent',N:'neutral',C:'incomplete',I:'no evidence'}[(dom.states||'')[k2]]||'':'unavailable','dominance'));}
   function setT(v){T=Math.max(0,Math.min(dur,v));update();}
+  timelineSeek=setT;
   function frame(ts){if(!playing||signal.aborted)return;if(last)setT(T+(ts-last)/1000*Number(speed.value));last=ts;if(T>=dur){toggle(false);return;}requestAnimationFrame(frame);}
   function toggle(on){playing=on;play.textContent=on?'Pause':'Play';play.setAttribute('aria-label',on?'Pause':'Play');last=0;if(on){if(T>=dur)T=0;requestAnimationFrame(frame);}}
   play.onclick=()=>toggle(!playing);
@@ -786,8 +910,9 @@ timeline(p){
   prev.onclick=()=>{const i=upper(times,T-1e-6)-1;let j=i;while(j>=0&&times[j]>=T-1e-6)j--;setT(j>=0?times[j]:0);};
   seek.oninput=()=>setT(Number(seek.value)/1000*dur);filter.onchange=()=>{lastIdx=-1;update();};
   document.addEventListener('keydown',e=>{if(!$('p-timeline').classList.contains('on')||['SELECT','INPUT','BUTTON','TEXTAREA','SUMMARY'].includes(e.target.tagName))return;if(e.key===' '){e.preventDefault();toggle(!playing);}else if(e.key==='.')next.click();else if(e.key===',')prev.click();},{signal});
+  if(pendingTimelineTime!=null){T=Math.max(0,Math.min(dur,pendingTimelineTime));pendingTimelineTime=null;}
   update();
-  method(p,'Playback advances through the recorded timestamps at the chosen speed. It annotates what Phenomena observed; it does not reconstruct positions or the Minecraft world. Space plays or pauses; comma and period step between events. Select a point on the track to move the playhead.','About playback and shortcuts');
+  method(p,'Playback advances through the recorded timestamps at the chosen speed. It annotates what Aurora Pulsar observed; it does not reconstruct positions or the Minecraft world. Space plays or pauses; comma and period step between events. Select a point on the track to move the playhead.','About playback and shortcuts');
 }};
 show(location.hash.slice(1)||'overview');
 }
@@ -798,18 +923,20 @@ if(ROOT.scopes){
   const participant=document.createElement('select');participant.setAttribute('aria-label','Participant filter');
   const exchange=document.createElement('select');exchange.setAttribute('aria-label','Exchange filter');
   function option(s,value,text){const o=document.createElement('option');o.value=value;o.textContent=text;s.append(o);}
-  function labelled(text,control){const l=document.createElement('label');l.className='lead';l.append(document.createTextNode(text+' '),control);return l;}
-  option(participant,'','All participants');
-  for(const p of ROOT.fight.session.participants)option(participant,p.id,p.label||p.id);
-  const lead=document.createElement('span');lead.className='lead';lead.textContent='Viewing';
-  host.append(lead,labelled('Participant',participant),labelled('Exchange',exchange));
-  function current(){const v=exchange.value;return v===''?[ROOT,null]:[ROOT.scopes[Number(v)],'Exchange '+(Number(v)+1)+' vs '+(ROOT.scopes[Number(v)].opponentLabel||ROOT.scopes[Number(v)].fight.opponent||'Unknown')];}
-  function refresh(){exchange.replaceChildren();if(!participant.value)option(exchange,'','Entire manual session');
-    ROOT.scopes.forEach((p,i)=>{if(!participant.value||p.fight.opponent===participant.value)option(exchange,String(i),'Exchange '+(i+1)+' vs '+(p.opponentLabel||p.fight.opponent||'Unknown'));});
-    if(!exchange.options.length){option(exchange,'','No attributed exchange; session overview');}
-    render(...current());}
-  participant.onchange=refresh;exchange.onchange=()=>render(...current());refresh();
-}else render(ROOT);
+  const participants=ROOT.fight.session.participants||[];
+  option(participant,'all','All participants');
+  participants.forEach(p=>option(participant,p.id,p.label||p.id));
+  function rebuildExchanges(){
+    exchange.replaceChildren();
+    option(exchange,'session','Whole manual session');
+    ROOT.scopes.forEach((s,i)=>{if(participant.value==='all'||s.fight.opponent===participant.value)
+      option(exchange,String(i),'Exchange #'+(i+1)+' vs '+(s.opponentLabel||s.fight.opponent)+' ('+s.derived.resolution.label+')');});
+  }
+  function apply(){const v=exchange.value;if(v==='session')render(ROOT);else render(ROOT.scopes[Number(v)],'Manual session · Exchange #'+(Number(v)+1)+' vs '+(ROOT.scopes[Number(v)].opponentLabel||'Opponent'));}
+  participant.onchange=()=>{rebuildExchanges();apply();};exchange.onchange=apply;
+  const lead=document.createElement('span');lead.className='lead';lead.textContent='Scope';
+  host.append(lead,participant,exchange);rebuildExchanges();render(ROOT);
+} else render(ROOT);
 })();
 </script>
 </body>

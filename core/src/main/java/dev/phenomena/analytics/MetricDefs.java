@@ -259,7 +259,72 @@ public final class MetricDefs {
               "",
               "Observed",
               "Incoming hits with a server velocity update for you within one tick."),
-          new Def("fights", "Recordings", "", "Observed", "Fights and manual sessions in local history."));
+          new Def("fights", "Recordings", "", "Observed", "Fights and manual sessions in local history."),
+          new Def(
+              "firstHitRate",
+              "First-hit rate",
+              "%",
+              "Inferred",
+              "Share of contested exchanges where your confirmed hit landed before the opponent's"
+                  + " attributed return hit (excluding simultaneous 2-tick trades)."),
+          new Def(
+              "firstHitConversionRate",
+              "Opener conversion",
+              "%",
+              "Inferred",
+              "Share of exchanges you opened where your first hit turned into a 2+ hit combo"
+                  + " before the opponent landed a hit."),
+          new Def(
+              "sprintResetRate",
+              "Sprint-reset rate",
+              "%",
+              "Observed",
+              "Sprinting follow-up hits (within 2.5 s of a sprinting hit) preceded by a recorded"
+                  + " sprint release (W-tap / S-tap reset)."),
+          new Def(
+              "earlySwingRate",
+              "Early swing rate",
+              "%",
+              "Observed",
+              "Confirmed hits landed below 90% melee attack charge."),
+          new Def(
+              "disableConversionRate",
+              "Disable conversion",
+              "%",
+              "Confirmed source / inferred match",
+              "Share of opponent shield disables you caused that were followed by at least one"
+                  + " confirmed hit within 5 s."),
+          new Def(
+              "disablePunishDelay",
+              "Disable punish delay",
+              "s",
+              "Observed",
+              "Mean seconds from an opponent shield disable to your first confirmed follow-up hit."),
+          new Def(
+              "axeToSwordSwap",
+              "Axe-to-sword swap",
+              "s",
+              "Observed",
+              "Mean seconds from an axe hit or shield disable to the immediately following sword"
+                  + " hit within 3 s."),
+          new Def(
+              "totalHealing",
+              "Health recovered",
+              "HP",
+              "Observed",
+              "Sum of observed increases in your health plus absorption during the recording."),
+          new Def(
+              "damageTakenPerSec",
+              "Damage taken / s",
+              "HP/s",
+              "Observed",
+              "Health lost divided by active combat time."),
+          new Def(
+              "tradeRatio",
+              "Hit trade ratio",
+              "x",
+              "Inferred",
+              "Confirmed hits dealt divided by attributed incoming opponent hits."));
 
   private static final Map<String, Def> BY_KEY = new HashMap<>();
 

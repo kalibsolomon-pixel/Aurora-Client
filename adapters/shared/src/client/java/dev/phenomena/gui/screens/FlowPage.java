@@ -377,114 +377,76 @@ final class FlowPage implements PhenomenaScreen.Page {
   }
 
   private void exchanges(Content c, FightAnalytics f) {
+    var br = f.breakdown;
+    var es = br.exchangeSummary;
+    c.heading(
+        "Exchange openers & trades",
+        es.contested() + " contested / " + number(f.combatActiveSeconds > 0 ? f.combatActiveSeconds : f.duration, 1) + " s active");
+    c.stats(
+        List.of(
+            stat(
+                "firstHitRate",
+                percent(es.firstHitRate()),
+                es.openedByYou() + " / " + es.contested() + " (" + es.openedByTrade() + " trades)"),
+            stat(
+                "firstHitConversionRate",
+                percent(es.firstHitConversionRate()),
+                es.openersConverted() + " / " + es.openedByYou() + " into combos"),
+            new Stat(
+                "Exchanges W / L / E",
+                es.won() + " / " + es.lost() + " / " + es.even(),
+                "by hit differential",
+                "Contested exchanges where you landed more, fewer, or equal hits vs attributed"
+                    + " opponent hits."),
+            stat(
+                "tradeRatio",
+                Double.isFinite(es.tradeRatio()) ? number(es.tradeRatio(), 2) + "x" : NONE,
+                f.hits.size() + " dealt / " + f.attributedIncoming + " taken")));
     if (f.fight.statistics().measurementVersion > 0) {
-      c.heading(
-          "Combat exchanges",
-          f.activeExchanges.size()
-              + " exchanges / "
-              + number(f.combatActiveSeconds, 1)
-              + " s combat-active / "
-              + number(f.duration, 1)
-              + " s recorded");
       c.block(48, new FlowCharts.ExchangeTimeline(f.duration, f.activeExchanges));
-      c.note(
-          "Filled intervals show combat; empty intervals show breaks. The independent exchange"
-              + " timeout is "
-              + number(f.fight.statistics().exchangeTimeoutSeconds, 1)
-              + " s. Ending an exchange keeps the recording active.");
-      List<String[]> measuredRows = new ArrayList<>();
-      int i = 1;
-      for (var e : f.activeExchanges)
-        measuredRows.add(
+    }
+    if (!br.exchanges.isEmpty()) {
+      c.heading("Exchange breakdown", "opener, hits, HP delta and winner");
+      List<String[]> rows = new ArrayList<>();
+      for (var e : br.exchanges)
+        rows.add(
             new String[] {
-              "#" + i++,
-              number(e.start(), 1) + "-" + number(e.end(), 1),
-              number(e.end() - e.start(), 1),
-              "" + e.hits(),
-              "" + e.misses(),
-              "" + e.combos(),
-              "" + e.momentumChanges()
+              "#" + e.index(),
+              number(e.start(), 1) + "-" + number(e.end(), 1) + "s",
+              OffensePage.title(e.opener()),
+              e.openerConverted() ? "Yes" : NONE,
+              e.localHits() + "/" + e.opponentHits(),
+              (e.hitDiff() > 0 ? "+" : "") + e.hitDiff(),
+              e.damageTaken() > 0 ? "-" + number(e.damageTaken(), 1) : NONE,
+              e.healingGained() > 0 ? "+" + number(e.healingGained(), 1) : NONE,
+              OffensePage.title(e.winner())
             });
       c.block(
-          Table.height(measuredRows.size()),
+          Table.height(rows.size()),
           new Table(
-              new String[] {
-                "Exchange", "Time (s)", "Duration", "Hits", "Misses", "Combos", "Turns"
-              },
-              new float[] {1, 1.6f, 1, .7f, .7f, .8f, .7f},
-              new boolean[] {false, true, true, true, true, true, true},
-              measuredRows));
+              new String[] {"#", "Time", "Opener", "Conv", "Hits", "Diff", "Lost", "Heal", "Win"},
+              new float[] {.5f, 1.4f, 1.0f, .6f, .9f, .7f, .8f, .8f, .9f},
+              new boolean[] {false, true, false, false, true, true, true, true, false},
+              rows));
+    }
+    if (!br.turningPoints.isEmpty()) {
+      c.heading("Key turning points");
+      List<String[]> trows = new ArrayList<>();
+      for (var tp : br.turningPoints)
+        trows.add(new String[] {seconds(tp.time()), tp.title(), tp.detail()});
+      c.block(
+          Table.height(trows.size()),
+          new Table(
+              new String[] {"Time", "Moment", "Evidence"},
+              new float[] {.8f, 1.8f, 2.8f},
+              new boolean[] {true, false, false},
+              trows));
+    }
+    if (f.fight.statistics().measurementVersion > 0) {
       c.block(FlowCharts.ComboTimeline.height(), timeline(f, -1));
       c.block(FlowCharts.DominanceChart.height(c.compact), chart(f));
       c.text("Finalization: " + f.fight.reason());
       return;
-    }
-    var ex = f.combos.exchanges();
-    c.heading(
-        "Exchanges",
-        "focused recording; separated by gaps over "
-            + number(f.fight.policy().comboSeconds(), 1)
-            + " s");
-    int won = 0, lost = 0;
-    for (var e : ex) {
-      if (e.advantage() > 0) won++;
-      else if (e.advantage() < 0) lost++;
-    }
-    c.stats(
-        List.of(
-            new Stat(
-                "Exchanges",
-                Integer.toString(ex.size()),
-                "observed",
-                "Runs of hits without a disengagement gap."),
-            new Stat(
-                "Ahead / behind",
-                won + " / " + lost,
-                (ex.size() - won - lost) + " even",
-                "Exchanges where you landed more / fewer confirmed hits than attributed opponent"
-                    + " hits."),
-            new Stat(
-                "Turning points",
-                Integer.toString(f.dominance.turningPoints().size()),
-                "dominance changes",
-                "Times the advantage passed from one side to the other.")));
-    List<String[]> rows = new ArrayList<>();
-    int k = 1;
-    for (var e : ex)
-      rows.add(
-          new String[] {
-            "#" + k++,
-            number(f.time(e.startNanos()), 1) + "-" + number(f.time(e.endNanos()), 1) + " s",
-            Integer.toString(e.localHits()),
-            Integer.toString(e.opponentHits()),
-            e.longestLocal() + " / " + e.longestOpponent(),
-            (e.advantage() > 0 ? "+" : "") + e.advantage()
-          });
-    c.block(
-        Table.height(rows.size()),
-        new Table(
-            new String[] {"Exchange", "Time", "Your hits", "Opp. hits", "Best combo", "Advantage"},
-            new float[] {.9f, 1.6f, .9f, .9f, 1.1f, 1},
-            new boolean[] {false, true, true, true, true, true},
-            rows));
-    var tp = f.dominance.turningPoints();
-    if (!tp.isEmpty()) {
-      c.heading("Key turning points");
-      List<String[]> trows = new ArrayList<>();
-      for (var p : tp)
-        trows.add(
-            new String[] {
-              seconds(p[0]),
-              p[1] > 0 ? "Advantage to you" : "Advantage to opponent",
-              number(p[1], 2)
-            });
-      c.block(
-          Table.height(trows.size()),
-          new Table(
-              new String[] {"Time", "Change", "Dominance"},
-              new float[] {1, 2, 1},
-              new boolean[] {true, false, true},
-              trows));
     }
     c.heading("Interpretation");
     for (var line : Interpretation.of(f)) c.text(line);

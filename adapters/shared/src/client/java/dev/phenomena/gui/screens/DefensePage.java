@@ -128,20 +128,26 @@ final class DefensePage implements PhenomenaScreen.Page {
   }
 
   private void shields(Content c, Aggregate a, String coverage) {
-    c.heading("Your attacks against shields", coverage);
+    c.heading("Shields & axe punish", coverage);
     c.stats(
         List.of(
             stat("attacksIntoShield", Integer.toString(a.attacksIntoShield), "raised shield"),
             stat("shieldBlocks", Integer.toString(a.shieldBlocks), "sound + no damage"),
-            stat("estimatedShieldBlocks", Integer.toString(a.estimatedShieldBlocks), "no sound"),
             stat("shieldDisables", Integer.toString(a.shieldDisables), "disable sound"),
-            stat("hitsAfterDisable", Integer.toString(a.hitsAfterDisable), "within 5 s"),
-            new Stat(
-                "Hits past a shield",
-                Integer.toString(a.bypassedShields),
-                "target blocking",
-                "Confirmed hits while the target showed a raised shield (behind or after a"
-                    + " disable).")));
+            stat(
+                "disableConversionRate",
+                percent(a.disableConversionRate()),
+                a.disablesConverted + " / " + a.disablesInflicted + " punished"),
+            stat(
+                "disablePunishDelay",
+                seconds(a.meanDisablePunishDelay()),
+                Double.isFinite(a.meanPunishHitsPerDisable())
+                    ? number(a.meanPunishHitsPerDisable(), 1) + " hits / disable"
+                    : "no punish hits"),
+            stat(
+                "axeToSwordSwap",
+                seconds(a.meanAxeToSwordSeconds()),
+                a.axeToSwordSwaps == 1 ? "1 swap" : a.axeToSwordSwaps + " swaps")));
     int otherUncertain = Math.max(0, a.uncertain - a.estimatedShieldBlocks);
     c.block(
         StackBar.height(),
@@ -161,10 +167,22 @@ final class DefensePage implements PhenomenaScreen.Page {
             new Stat(
                 "Your shield disabled",
                 Integer.toString(a.localShieldDisabled),
-                "disable sound at you",
-                "Shield-disable sounds at your position.")));
+                a.localShieldDisables > 0
+                    ? a.hitsTakenAfterLocalDisable
+                        + " hits (-"
+                        + number(a.damageTakenAfterLocalDisable, 1)
+                        + " HP)"
+                    : "disable sound at you",
+                "Shield-disable sounds at your position and incoming punish hits within 5 s."),
+            stat("hitsAfterDisable", Integer.toString(a.hitsAfterDisable), "your hits within 5 s"),
+            new Stat(
+                "Hits past a shield",
+                Integer.toString(a.bypassedShields),
+                "target blocking",
+                "Confirmed hits while the target showed a raised shield (behind or after a"
+                    + " disable).")));
     c.note(
-        "Minecraft 1.21.11 sends no damage event for a blocked melee hit; it plays the shield-block"
+        "Minecraft sends no damage event for a blocked melee hit; it plays the shield-block"
             + " sound at the blocker. A confirmed block needs a target that was visibly blocking,"
             + " no damage report and that sound at the target. Blocking with no sound is only an"
             + " estimate and stays uncertain. Exact damage prevented is never inferred.");
@@ -302,7 +320,7 @@ final class DefensePage implements PhenomenaScreen.Page {
   }
 
   private void damage(Content c, Aggregate a, String coverage) {
-    c.heading("Damage and knockback", coverage);
+    c.heading("Health, damage pacing & knockback", coverage);
     int withDamage = 0, withKnockback = 0, attributed = 0;
     double kbSum = 0;
     for (var in : a.incomingSamples) {
@@ -314,32 +332,53 @@ final class DefensePage implements PhenomenaScreen.Page {
         kbSum += in.knockback();
       }
     }
+    var latest = a.latestTimeline;
+    var hp = latest == null ? null : latest.breakdown.health;
     c.stats(
         List.of(
             stat(
                 "damageTaken",
-                a.contextFights == 0 ? NONE : number(a.damageTaken, 1),
+                a.contextFights == 0 ? NONE : number(a.damageTaken, 1) + " HP",
                 "health + absorption"),
+            stat(
+                "totalHealing",
+                a.contextFights == 0 ? NONE : number(a.totalHealing, 1) + " HP",
+                (a.burstHeals == 1 ? "1 burst heal" : a.burstHeals + " burst heals")
+                    + (a.absorptionGained > 0.05
+                        ? " · +" + number(a.absorptionGained, 1) + " abs"
+                        : "")),
+            stat(
+                "damageTakenPerSec",
+                a.contextFights == 0 || !Double.isFinite(a.damageTakenPerSec())
+                    ? NONE
+                    : number(a.damageTakenPerSec(), 2) + " HP/s",
+                "active combat pace"),
             new Stat(
-                "Hits with health drop",
-                withDamage + " / " + attributed,
-                "attributed hits",
-                "Attributed hits followed by a local health decrease within two ticks."),
+                "Worst 3 s burst (latest)",
+                hp == null || hp.worstBurstDamage() <= 0
+                    ? NONE
+                    : "-" + number(hp.worstBurstDamage(), 1) + " HP",
+                hp != null && Double.isFinite(hp.worstBurstTime())
+                    ? "at " + seconds(hp.worstBurstTime())
+                    : "no health drops",
+                "Largest cumulative HP + absorption drop within any 3-second window."),
             stat("knockback", withKnockback + " / " + attributed, "velocity within 1 tick"),
             new Stat(
                 "Mean knockback",
                 withKnockback == 0 ? NONE : number(kbSum / withKnockback, 2),
                 "blocks/tick, horizontal",
-                "Horizontal speed of the server velocity update after an attributed hit."),
-            new Stat(
-                "Damage dealt",
-                "Unavailable",
-                "not observable",
-                "Servers commonly hide or alter opponent health; Phenomena does not estimate it.")));
+                "Horizontal speed of the server velocity update after an attributed hit.")));
+    if (latest != null && !latest.breakdown.health.trace().isEmpty()) {
+      c.heading(latestLabel(latest) + " health timeline", dateTime(latest.fight.startEpochMillis()));
+      c.block(
+          FlowCharts.HealthTimeline.height(c.compact),
+          new FlowCharts.HealthTimeline(
+              latest.duration, latest.breakdown.health, latest.incomingTimes));
+    }
     c.note(
-        "Health is your own client value. Absorption, regeneration and armor are reflected only"
-            + " through it; the server's damage amount is not reported. Velocity updates are"
-            + " recorded as observed, without assuming what caused them.");
+        "Health is your own client value. Absorption, potions, gapples and armor are reflected"
+            + " through it; server damage amounts and opponent health are not reported. Velocity"
+            + " updates are recorded as observed, without assuming what caused them.");
     contextNote(c, a, "health or knockback observations");
   }
 }

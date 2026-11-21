@@ -78,11 +78,18 @@ public final class Content {
     block(n.height(), n);
   }
 
+  public void takeaway(dev.phenomena.analytics.CombatBreakdown.Takeaway tk) {
+    var card =
+        new Blocks.TakeawayCard(tk.tone(), tk.category(), tk.headline(), tk.detail(), width);
+    block(card.height(), card);
+  }
+
   public void stats(List<Blocks.Stat> stats) {
     int max = Layout.columns(width, compact ? 96 : 104, Blocks.StatGrid.GAP, 5);
-    // Prefer the widest column count whose last row holds more than one card; fall back
-    // to fewer columns rather than leaving a lone orphan on its own row.
-    int cols = 1;
+    // Prefer the widest column count whose last row holds more than one card; if every multi-column
+    // width leaves a remainder of 1 (e.g., 7 cards with max=3), keep max columns rather than
+    // collapsing the entire grid into a single vertical stack.
+    int cols = Math.max(1, Math.min(max, stats.size()));
     for (int c = max; c >= 2; c--) {
       int rem = stats.size() % c;
       if (rem == 0 || rem >= 2 || stats.size() <= c) {

@@ -8,12 +8,12 @@ Pulsar ships **off**, classified as an information advantage because its measure
 
 | Surface | Available workflows |
 |---|---|
-| Overview | Start/end manual recording, recording/export folders, latest result and evidence, recent aggregate metrics, interpretations, trend chart, recent fights |
-| Offense | Accuracy, reach and spacing, aim, weapon timing, critical and sprint hits; scope/weapon filters |
-| Defense | Incoming attribution, shield evidence, jump timing, damage and knockback |
-| Fight Flow | Combos, encounter dominance, exchanges, older/newer loaded fight; participant scopes remain available in manual-session reports |
-| History | Sort, outcome and hits-only filters; selection, details, offline report, export and confirmed delete |
-| Settings | Recording, server capture and diagnostics, combat exchanges, attack classification, audio feedback, chart appearance, data/exports, reset, Aurora key settings |
+| Overview | Start/end manual recording, recording/export folders, latest result and PvP snapshot (first-hit rate, sprint-reset rate, combos, dominance), fact-backed key takeaways, recent aggregate metrics, trend chart, recent fights |
+| Offense | Accuracy, reach and spacing, aim, weapon timing, critical hits & charge discipline, sprint-reset / W-tap cadence & axe-to-sword swap; scope/weapon filters |
+| Defense | Incoming attribution, shield evidence & axe-disable punish metrics (conversion, delay, swap speed, local-disable punish), jump timing, health & absorption timeline with burst/healing pacing and knockback |
+| Fight Flow | Combos, encounter dominance, exchange openers & trades breakdown, key turning points, older/newer loaded fight; participant scopes remain available in manual-session reports |
+| History | Sort, outcome and hits-only filters; selection, details (with key takeaways, PvP breakdown and health timeline), offline report, export and confirmed delete |
+| Settings | Capture (recording, retention, server capture & diagnostics), Combat & thresholds (timeouts, windows, reach/timing policy), Audio feedback, Appearance, Data & exports, Controls & reset |
 
 Keys 1–6 select tabs. Tab navigates controls; arrow keys operate sliders, lists and tab peers; Enter activates; Page Up/Down and Home/End scroll. Escape and Done return to the invoking Aurora screen. Local command aliases `/phenomena` and `/kwm` remain available with the same recording and diagnostics subcommands. No additional network sends are introduced.
 
@@ -37,10 +37,10 @@ Existing `phenomena/` recordings and exports are reused in place. Upstream `kwam
 
 Nothing is uploaded. Export anonymization is on by default; local recordings retain their known opponent labels. Source-compatible recording and report formats allow standalone history to remain readable. Recovery is performed on the bounded storage worker, with the upstream 512 MiB individual-recording limit and a bounded startup pass. Additional preserved checkpoints can recover on a later startup.
 
-The retired upstream HUD, summary popup and movement indicator remain absent. Aurora supplies the existing theme, font, roundness and window material; standalone palette/density/key settings do not create a second design system. The offline viewer remains the upstream self-contained report, with its payload format and privacy behavior unchanged; only its reach explanation was updated for the pick-based measurement.
+The retired upstream HUD, summary popup and movement indicator remain absent. Aurora supplies the existing theme, font, roundness and window material; standalone palette/density/key settings do not create a second design system. The offline viewer (`report-viewer.html`, format version 7) stays self-contained and offline-only with strict CSP, and embeds `derived.breakdown` (exchange openers & trades, 1.9+ sword sprint-reset & charge discipline, shield/axe disable punish & swap speed, health/absorption pacing, clickable turning points and fact-backed takeaways) derived purely from existing schema-3+ recordings so historical recordings gain the new analysis automatically.
 
 ## Engineering and verification
 
-Pure analytics and storage reside in core; native capture, feedback and fail-soft mixins reside in each version adapter; dashboard/runtime glue is shared. The feature gate is checked fresh by every native hook. Tick callbacks use `Timed`. Disabled startup does not initialize storage. Shapes use Aurora's renderer; the dense dominance area is rasterized once into a native-resolution layer, and texture retirement waits for a frame boundary.
+Pure analytics (`FightAnalytics`, `CombatBreakdown`, `Aggregate`) and storage reside in core; native capture, feedback and fail-soft mixins reside in each version adapter; dashboard/runtime glue is shared. The feature gate is checked fresh by every native hook. Tick callbacks use `Timed`; `ClientCapture` caches held weapon keys, world IDs and player names to avoid per-tick allocations; `FightAnalytics.incoming` uses pre-extracted O(N) sweeps; `DataCache` indexes history by ID; and `AutoReports` streams receipt digests and reuses export digests without re-reading written files from disk. Disabled startup does not initialize storage. Shapes use Aurora's renderer; the dense dominance area is rasterized once into a native-resolution layer, and texture retirement waits for a frame boundary.
 
 See the integration report in `docs/reports/2026-11-14-pulsar-integration.md` for actual tests, screenshots, performance measurements and independent council results. Upstream source provenance is also recorded in THIRD_PARTY_NOTICES.md; its pinned repository contains no LICENSE file, so no upstream license is asserted here.

@@ -75,7 +75,7 @@ class StorageTest {
   void exportIsPortableAndAnonymized() throws Exception {
     ReportExporter.export(dir, sample(1), true);
     String html = Files.readString(dir.resolve("index.html"));
-    assertTrue(html.contains("Phenomena Fight Report"));
+    assertTrue(html.contains("Aurora Pulsar Fight Report"));
     assertFalse(html.contains("private-opponent"));
     assertFalse(html.contains(ReportExporter.PLACEHOLDER));
     assertFalse(Files.readString(dir.resolve("report.json")).contains("private-opponent"));

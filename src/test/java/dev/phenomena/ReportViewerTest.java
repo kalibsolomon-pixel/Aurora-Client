@@ -250,12 +250,29 @@ class ReportViewerTest {
   }
 
   /**
-   * The format version is part of every receipt digest. Bumping it re-exports every historical
-   * recording on the next start, so visual-only template changes must leave it alone.
+   * Format version 7 adds {@code derived.breakdown} (exchange openers, sprint-reset cadence,
+   * shield/axe punish, health & absorption pacing, takeaways and turning points).
    */
   @Test
-  void formatVersionIsUnchangedByTheRedesign() {
-    assertEquals(6, ReportExporter.FORMAT_VERSION);
+  void formatVersionIncludesPvpBreakdownPayload() throws Exception {
+    assertEquals(7, ReportExporter.FORMAT_VERSION);
+    var p = payload(export("breakdown", Fixtures.sample()));
+    var br = p.getAsJsonObject("derived").getAsJsonObject("breakdown");
+    assertNotNull(br, "derived.breakdown must be present");
+    for (String key :
+        List.of(
+            "health",
+            "sword",
+            "shields",
+            "exchangeSummary",
+            "exchanges",
+            "turningPoints",
+            "takeaways")) {
+      assertTrue(br.has(key), "breakdown missing " + key);
+    }
+    String html = Files.readString(dir.resolve("breakdown/index.html"));
+    assertTrue(html.contains("Aurora Pulsar"), "report branded as Aurora Pulsar");
+    assertFalse(html.contains("Minecraft 1.21.11"), "no stale Minecraft version reference");
   }
 
   @Test

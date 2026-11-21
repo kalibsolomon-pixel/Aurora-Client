@@ -99,6 +99,56 @@ public final class Blocks {
     }
   }
 
+  /** Concise fact-backed takeaway card with semantic tone accent strip. */
+  public static final class TakeawayCard implements Block {
+    private final String category, headline, detail;
+    private final List<FormattedCharSequence> detailLines;
+    private final int rule;
+
+    public TakeawayCard(String tone, String category, String headline, String detail, int width) {
+      this.category = category;
+      this.headline = headline;
+      this.detail = detail;
+      this.detailLines = TextLayout.wrap(font(), detail, Math.max(20, width - 14));
+      this.rule =
+          "POSITIVE".equals(tone)
+              ? Theme.SERIES_3
+              : "NEGATIVE".equals(tone) ? Theme.SERIES_2 : Theme.SERIES_1;
+    }
+
+    public int height() {
+      return 21 + detailLines.size() * 10 + 4;
+    }
+
+    @Override
+    public List<String> narration() {
+      return List.of(category + ": " + headline + ". " + detail);
+    }
+
+    @Override
+    public void render(GuiGraphicsExtractor g, int x, int y, int w, int h, int mx, int my) {
+      var f = font();
+      Pixel.rounded(g, x, y, w, h, Theme.radius(), Theme.INSET());
+      Pixel.rounded(g, x, y, 2.5f, h, Theme.radiusSmall(), rule);
+      String tag = category.toUpperCase(Locale.ROOT);
+      int tagW = f.width(tag);
+      g.text(f, tag, x + 8, y + 4, rule, false);
+      int hlX = x + 8 + tagW + 6;
+      int hlW = Math.max(20, w - (hlX - x) - 6);
+      g.text(
+          f,
+          com.aurora.client.ui.util.AuroraFontRenderer.role(
+              KButton.fit(f, headline, hlW),
+              com.aurora.client.ui.util.AuroraFontRenderer.Role.HEADING),
+          hlX,
+          y + 4,
+          Theme.TEXT(),
+          false);
+      for (int i = 0; i < detailLines.size(); i++)
+        g.text(f, detailLines.get(i), x + 8, y + 17 + i * 10, Theme.MUTED(), false);
+    }
+  }
+
   /** Section heading inside the content area. */
   public static final class Heading implements Block {
     private final String text, right;

@@ -12,6 +12,8 @@ import dev.phenomena.recording.storage.AtomicJson;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.*;
 
 /**
@@ -22,12 +24,15 @@ import java.util.*;
  */
 public final class ReportExporter {
   public static final String PLACEHOLDER = "__PHENOMENA_PAYLOAD__";
-  public static final int FORMAT_VERSION = 6;
+  public static final int FORMAT_VERSION = 7;
   private static final Gson COMPACT = new GsonBuilder().disableHtmlEscaping().create();
+  private static volatile String cachedTemplate;
 
   public record Options(boolean anonymize, boolean includeMotion, boolean reducedMotion) {
     public static final Options DEFAULT = new Options(true, true, false);
   }
+
+  public record ExportResult(Path index, String htmlDigest, String jsonDigest) {}
 
   private ReportExporter() {}
 
@@ -37,21 +42,50 @@ public final class ReportExporter {
   }
 
   public static Path export(Path folder, FightRecord fight, Options options) throws IOException {
+    return exportWithDigests(folder, fight, options).index();
+  }
+
+  /**
+   * Exports {@code report.json} and {@code index.html} and returns their SHA-256 digests computed
+   * from the exact written strings, avoiding redundant disk reads by {@link
+   * dev.phenomena.recording.storage.AutoReports}.
+   */
+  public static ExportResult exportWithDigests(Path folder, FightRecord fight, Options options)
+      throws IOException {
     Files.createDirectories(folder);
     AtomicJson.writeString(
         folder.resolve(".phenomena-owner"), dev.phenomena.platform.SafePaths.requireUuid(fight.id()));
     FightRecord shared = prepare(fight, options);
-    AtomicJson.write(folder.resolve("report.json"), shared);
-    String template;
-    try (var in = ReportExporter.class.getResourceAsStream("/report-viewer.html")) {
-      if (in == null) throw new IOException("Missing viewer template");
-      template = new String(in.readAllBytes(), StandardCharsets.UTF_8);
-    }
+    String jsonText = AtomicJson.GSON.toJson(shared);
+    AtomicJson.writeString(folder.resolve("report.json"), jsonText);
+    String template = loadTemplate();
     // Derived values use the complete timeline; motion traces may be omitted from the copy.
     String payload = scriptSafe(COMPACT.toJson(payload(fight, shared, options)));
+    String htmlText = template.replace(PLACEHOLDER, payload);
     Path index = folder.resolve("index.html");
-    AtomicJson.writeString(index, template.replace(PLACEHOLDER, payload));
-    return index;
+    AtomicJson.writeString(index, htmlText);
+    return new ExportResult(index, sha256(htmlText), sha256(jsonText));
+  }
+
+  private static String loadTemplate() throws IOException {
+    String t = cachedTemplate;
+    if (t != null) return t;
+    try (var in = ReportExporter.class.getResourceAsStream("/report-viewer.html")) {
+      if (in == null) throw new IOException("Missing viewer template");
+      t = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+      cachedTemplate = t;
+      return t;
+    }
+  }
+
+  private static String sha256(String text) {
+    try {
+      return HexFormat.of()
+          .formatHex(
+              MessageDigest.getInstance("SHA-256").digest(text.getBytes(StandardCharsets.UTF_8)));
+    } catch (NoSuchAlgorithmException ex) {
+      throw new IllegalStateException(ex);
+    }
   }
 
   /** Applies privacy and size options without mutating the recording. */
@@ -393,6 +427,134 @@ public final class ReportExporter {
     return aim;
   }
 
+  private static Map<String, Object> breakdown(CombatBreakdown b) {
+    Map<String, Object> root = new LinkedHashMap<>();
+    var hp = b.health;
+    Map<String, Object> health = new LinkedHashMap<>();
+    List<Map<String, Object>> trace = new ArrayList<>(hp.trace().size());
+    for (var pt : hp.trace()) {
+      Map<String, Object> m = new LinkedHashMap<>();
+      m.put("t", pt.time());
+      m.put("hp", pt.health());
+      m.put("abs", pt.absorption());
+      m.put("total", pt.total());
+      trace.add(m);
+    }
+    health.put("trace", trace);
+    health.put("startHp", n(hp.startHp()));
+    health.put("minHp", n(hp.minHp()));
+    health.put("minHpTime", n(hp.minHpTime()));
+    health.put("endHp", n(hp.endHp()));
+    health.put("totalDamageTaken", hp.totalDamageTaken());
+    health.put("totalHealing", hp.totalHealing());
+    health.put("burstHeals", hp.burstHeals());
+    health.put("absorptionGained", hp.absorptionGained());
+    health.put("damageTakenPerSec", n(hp.damageTakenPerSec()));
+    health.put("hitsPerSec", n(hp.hitsPerSec()));
+    health.put("worstBurstDamage", hp.worstBurstDamage());
+    health.put("worstBurstTime", n(hp.worstBurstTime()));
+    root.put("health", health);
+
+    var sw = b.sword;
+    Map<String, Object> sword = new LinkedHashMap<>();
+    sword.put("sprintResetOpportunities", sw.sprintResetOpportunities());
+    sword.put("sprintResets", sw.sprintResets());
+    sword.put("sprintResetRate", n(sw.sprintResetRate()));
+    sword.put("comboSprintResetOpportunities", sw.comboSprintResetOpportunities());
+    sword.put("comboSprintResets", sw.comboSprintResets());
+    sword.put("comboSprintResetRate", n(sw.comboSprintResetRate()));
+    sword.put("fullChargeHits", sw.fullChargeHits());
+    sword.put("earlyHits", sw.earlyHits());
+    sword.put("earlySwingRate", n(sw.earlySwingRate()));
+    sword.put("meanHitCooldown", n(sw.meanHitCooldown()));
+    sword.put("critHits", sw.critHits());
+    sword.put("critRate", n(sw.critRate()));
+    sword.put("critChains", sw.critChains());
+    root.put("sword", sword);
+
+    var sh = b.shields;
+    Map<String, Object> shields = new LinkedHashMap<>();
+    shields.put("disablesInflicted", sh.disablesInflicted());
+    shields.put("disablesConverted", sh.disablesConverted());
+    shields.put("disableConversionRate", n(sh.disableConversionRate()));
+    shields.put("meanDisablePunishDelay", n(sh.meanDisablePunishDelay()));
+    shields.put("meanPunishHitsPerDisable", n(sh.meanPunishHitsPerDisable()));
+    shields.put("axeToSwordSwaps", sh.axeToSwordSwaps());
+    shields.put("meanAxeToSwordSeconds", n(sh.meanAxeToSwordSeconds()));
+    shields.put("bestAxeToSwordSeconds", n(sh.bestAxeToSwordSeconds()));
+    shields.put("localDisables", sh.localDisables());
+    shields.put("hitsTakenAfterLocalDisable", sh.hitsTakenAfterLocalDisable());
+    shields.put("damageTakenAfterLocalDisable", sh.damageTakenAfterLocalDisable());
+    root.put("shields", shields);
+
+    var es = b.exchangeSummary;
+    Map<String, Object> exSum = new LinkedHashMap<>();
+    exSum.put("total", es.total());
+    exSum.put("contested", es.contested());
+    exSum.put("openedByYou", es.openedByYou());
+    exSum.put("openedByOpponent", es.openedByOpponent());
+    exSum.put("openedByTrade", es.openedByTrade());
+    exSum.put("firstHitRate", n(es.firstHitRate()));
+    exSum.put("openersConverted", es.openersConverted());
+    exSum.put("firstHitConversionRate", n(es.firstHitConversionRate()));
+    exSum.put("won", es.won());
+    exSum.put("lost", es.lost());
+    exSum.put("even", es.even());
+    exSum.put("tradeRatio", n(es.tradeRatio()));
+    root.put("exchangeSummary", exSum);
+
+    List<Map<String, Object>> exList = new ArrayList<>(b.exchanges.size());
+    for (var ex : b.exchanges) {
+      Map<String, Object> m = new LinkedHashMap<>();
+      m.put("index", ex.index());
+      m.put("start", ex.start());
+      m.put("end", ex.end());
+      m.put("duration", ex.duration());
+      m.put("opener", ex.opener());
+      m.put("openerConverted", ex.openerConverted());
+      m.put("localHits", ex.localHits());
+      m.put("opponentHits", ex.opponentHits());
+      m.put("hitDiff", ex.hitDiff());
+      m.put("damageTaken", ex.damageTaken());
+      m.put("healingGained", ex.healingGained());
+      m.put("netHpDelta", ex.netHpDelta());
+      m.put("dpsTaken", n(ex.dpsTaken()));
+      m.put("hitsPerSec", n(ex.hitsPerSec()));
+      m.put("crits", ex.crits());
+      m.put("sprintResets", ex.sprintResets());
+      m.put("opponentDisables", ex.opponentDisables());
+      m.put("localDisables", ex.localDisables());
+      m.put("winner", ex.winner());
+      m.put("endedBy", ex.endedBy());
+      exList.add(m);
+    }
+    root.put("exchanges", exList);
+
+    List<Map<String, Object>> tps = new ArrayList<>(b.turningPoints.size());
+    for (var tp : b.turningPoints) {
+      Map<String, Object> m = new LinkedHashMap<>();
+      m.put("t", tp.time());
+      m.put("kind", tp.kind());
+      m.put("tone", tp.tone());
+      m.put("title", tp.title());
+      m.put("detail", tp.detail());
+      tps.add(m);
+    }
+    root.put("turningPoints", tps);
+
+    List<Map<String, Object>> takes = new ArrayList<>(b.takeaways.size());
+    for (var tk : b.takeaways) {
+      Map<String, Object> m = new LinkedHashMap<>();
+      m.put("tone", tk.tone());
+      m.put("category", tk.category());
+      m.put("headline", tk.headline());
+      m.put("detail", tk.detail());
+      takes.add(m);
+    }
+    root.put("takeaways", takes);
+    return root;
+  }
+
   static Map<String, Object> payload(FightRecord full, FightRecord shared, Options options) {
     var a = FightAnalytics.of(full);
     var s = full.statistics();
@@ -557,6 +719,7 @@ public final class ReportExporter {
                 "otherSpeed", a.jumpEffect.otherSpeed()));
     derived.put("jumpWindowTicks", full.policy().jumpWindowTicks());
     derived.put("boundaries", a.boundaries);
+    derived.put("breakdown", breakdown(a.breakdown));
 
     Map<String, Object> payload = new LinkedHashMap<>();
     payload.put("format", "phenomena-report");

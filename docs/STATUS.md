@@ -42,9 +42,15 @@ Vulkan); [evidence](reports/2026-11-21-aurora-262-perf-and-smooth-fog.md).
 
 Pulsar integration adds Phenomena's analytics and recording as Aurora's 40th
 feature, off by default. Its configuration and six-tab dashboard follow Aurora's
-profile, input and theme contracts. See [Pulsar](PULSAR.md) for workflows,
-source provenance and storage compatibility. Acceptance and council review are
-tracked in [the integration report](reports/2026-11-14-pulsar-integration.md).
+profile, input and theme contracts. `CombatBreakdown` adds PvP analysis for 1.9+
+Sword/NethPot/SMP and Shield/Axe combat (exchange openers & trades, sprint-reset
+cadence, attack-charge discipline, shield-disable punish & axe-to-sword swap speed,
+health/absorption timeline & burst pacing, turning points and fact-backed takeaways)
+across the in-game dashboard, format-v7 offline HTML reports and Aurora Launcher,
+paired with tick-capture caching, O(N) incoming sweeps and single-pass report hashing.
+See [Pulsar](PULSAR.md) for workflows, source provenance and storage compatibility.
+Acceptance and council review are tracked in
+[the integration report](reports/2026-11-14-pulsar-integration.md).
 
 Aurora and Pulsar text fields share bounded undo/redo history; see [text-field behavior](DESIGN_LANGUAGE.md#1112-text-field). Dev-client acceptance remains pending.
 

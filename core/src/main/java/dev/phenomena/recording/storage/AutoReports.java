@@ -32,6 +32,7 @@ public final class AutoReports {
   private final Path data;
   private final Consumer<String> status;
   private final Exporter exporter;
+  private final boolean defaultExporter;
   private final Consumer<ExportNotifications.Completion> completed;
   private final Map<String, Pending> pending = new ConcurrentHashMap<>();
   private final Set<String> running = ConcurrentHashMap.newKeySet();
@@ -49,11 +50,13 @@ public final class AutoReports {
         store,
         data,
         status,
-        (folder, fight, options) -> ReportExporter.export(folder, fight, options));
+        (folder, fight, options) -> ReportExporter.export(folder, fight, options),
+        event -> status.accept(ExportNotifications.MESSAGE),
+        true);
   }
 
   public AutoReports(FightStore store, Path data, Consumer<String> status, Exporter exporter) {
-    this(store, data, status, exporter, event -> status.accept(ExportNotifications.MESSAGE));
+    this(store, data, status, exporter, event -> status.accept(ExportNotifications.MESSAGE), false);
   }
 
   public AutoReports(
@@ -62,11 +65,22 @@ public final class AutoReports {
       Consumer<String> status,
       Exporter exporter,
       Consumer<ExportNotifications.Completion> completed) {
+    this(store, data, status, exporter, completed, false);
+  }
+
+  private AutoReports(
+      FightStore store,
+      Path data,
+      Consumer<String> status,
+      Exporter exporter,
+      Consumer<ExportNotifications.Completion> completed,
+      boolean defaultExporter) {
     this.store = store;
     this.data = data;
     this.status = status;
     this.exporter = exporter;
     this.completed = completed;
+    this.defaultExporter = defaultExporter;
   }
 
   public String availability(String id) {
@@ -149,8 +163,7 @@ public final class AutoReports {
     Path receipts = data.resolve("report-state");
     Files.createDirectories(receipts);
     Path receipt = receipts.resolve(SafePaths.requireUuid(fight.id()) + ".json");
-    String digest =
-        digest(AtomicJson.GSON.toJson(fight) + options.toString() + ReportExporter.FORMAT_VERSION);
+    String digest = fightDigest(fight, options);
     Path folder = SafePaths.exportFolder(data, fight, options.anonymize());
     if (Files.isRegularFile(receipt) && !Files.isSymbolicLink(receipt)) {
       try {
@@ -171,18 +184,40 @@ public final class AutoReports {
         /* Incomplete receipts are repaired without deleting the report. */
       }
     }
-    exporter.export(folder, fight, options);
+    String htmlDigest, jsonDigest;
+    if (defaultExporter) {
+      var result = ReportExporter.exportWithDigests(folder, fight, options);
+      htmlDigest = result.htmlDigest();
+      jsonDigest = result.jsonDigest();
+    } else {
+      exporter.export(folder, fight, options);
+      htmlDigest = fileDigest(folder.resolve("index.html"));
+      jsonDigest = fileDigest(folder.resolve("report.json"));
+    }
     SafePaths.reportFile(folder);
     AtomicJson.write(
         receipt,
         new Receipt(
-            fight.id(),
-            digest,
-            folder.getFileName().toString(),
-            fileDigest(folder.resolve("index.html")),
-            fileDigest(folder.resolve("report.json"))));
+            fight.id(), digest, folder.getFileName().toString(), htmlDigest, jsonDigest));
     available.put(fight.id(), "Report ready: " + data.relativize(folder.resolve("index.html")));
     if (notify) completed.accept(new ExportNotifications.Completion(fight.id(), digest));
+  }
+
+  /** Streams fight JSON directly into SHA-256 without retaining a full JSON string in memory. */
+  private static String fightDigest(FightRecord fight, ReportExporter.Options options)
+      throws IOException {
+    try {
+      var md = MessageDigest.getInstance("SHA-256");
+      try (var out = new DigestOutputStream(java.io.OutputStream.nullOutputStream(), md);
+          var writer = new java.io.OutputStreamWriter(out, StandardCharsets.UTF_8)) {
+        AtomicJson.GSON.toJson(fight, writer);
+        writer.write(options.toString());
+        writer.write(Integer.toString(ReportExporter.FORMAT_VERSION));
+      }
+      return HexFormat.of().formatHex(md.digest());
+    } catch (NoSuchAlgorithmException ex) {
+      throw new IllegalStateException(ex);
+    }
   }
 
   private static String fileDigest(Path p) throws IOException {
@@ -196,16 +231,6 @@ public final class AutoReports {
         while ((n = in.read(buffer)) != -1) digest.update(buffer, 0, n);
       }
       return HexFormat.of().formatHex(digest.digest());
-    } catch (NoSuchAlgorithmException ex) {
-      throw new IllegalStateException(ex);
-    }
-  }
-
-  private static String digest(String s) {
-    try {
-      return HexFormat.of()
-          .formatHex(
-              MessageDigest.getInstance("SHA-256").digest(s.getBytes(StandardCharsets.UTF_8)));
     } catch (NoSuchAlgorithmException ex) {
       throw new IllegalStateException(ex);
     }

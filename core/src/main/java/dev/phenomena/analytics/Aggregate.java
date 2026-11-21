@@ -71,6 +71,21 @@ public final class Aggregate {
   public final int[] dominanceAvailability = new int[3];
   public final List<FightAnalytics> timelines;
 
+  // ---- PvP breakdown pooled across timeline fights
+  public final int exchangesContested, exchangesOpenedByYou, exchangesOpenersConverted;
+  public final int exchangesWon, exchangesLost, exchangesEven;
+  public final int sprintResetOpportunities, sprintResets;
+  public final int comboSprintResetOpportunities, comboSprintResets;
+  public final int fullChargeHits, earlyHits;
+  public final int disablesInflicted, disablesConverted;
+  public final double disablePunishDelaySum, disablePunishHitsSum;
+  public final int axeToSwordSwaps;
+  public final double axeToSwordDelaySum;
+  public final int localShieldDisables, hitsTakenAfterLocalDisable;
+  public final double damageTakenAfterLocalDisable;
+  public final double totalHealing, absorptionGained, activeCombatSeconds;
+  public final int burstHeals;
+
   /**
    * @param newestFirst fights as kept in history (newest first)
    * @param analytics resolves timeline analytics for a fight with events (may cache)
@@ -202,12 +217,46 @@ public final class Aggregate {
     double target = Double.NaN, tolerance = Double.NaN;
     boolean mixed = false;
     double dl = 0, dop = 0, dn = 0, di = 0, dins = 0;
+    int exCont = 0, exYou = 0, exConv = 0, exWon = 0, exLost = 0, exEven = 0;
+    int srOpp = 0, srHit = 0, csrOpp = 0, csrHit = 0, fcHits = 0, erHits = 0;
+    int disInf = 0, disConv = 0, swaps = 0, locDis = 0, locDisHits = 0, bHeals = 0;
+    double disDelaySum = 0, disHitsSum = 0, swapDelaySum = 0, locDisDmg = 0;
+    double healSum = 0, absSum = 0, activeSpanSum = 0;
     for (var f : chrono) {
       if (!f.hasTimeline()) continue;
       var a = analytics.apply(f);
       tf++;
       latest = a;
       tl.add(a);
+      var b = a.breakdown;
+      exCont += b.exchangeSummary.contested();
+      exYou += b.exchangeSummary.openedByYou();
+      exConv += b.exchangeSummary.openersConverted();
+      exWon += b.exchangeSummary.won();
+      exLost += b.exchangeSummary.lost();
+      exEven += b.exchangeSummary.even();
+      srOpp += b.sword.sprintResetOpportunities();
+      srHit += b.sword.sprintResets();
+      csrOpp += b.sword.comboSprintResetOpportunities();
+      csrHit += b.sword.comboSprintResets();
+      fcHits += b.sword.fullChargeHits();
+      erHits += b.sword.earlyHits();
+      disInf += b.shields.disablesInflicted();
+      disConv += b.shields.disablesConverted();
+      if (Double.isFinite(b.shields.meanDisablePunishDelay()))
+        disDelaySum += b.shields.meanDisablePunishDelay() * b.shields.disablesConverted();
+      if (Double.isFinite(b.shields.meanPunishHitsPerDisable()))
+        disHitsSum += b.shields.meanPunishHitsPerDisable() * b.shields.disablesInflicted();
+      swaps += b.shields.axeToSwordSwaps();
+      if (Double.isFinite(b.shields.meanAxeToSwordSeconds()))
+        swapDelaySum += b.shields.meanAxeToSwordSeconds() * b.shields.axeToSwordSwaps();
+      locDis += b.shields.localDisables();
+      locDisHits += b.shields.hitsTakenAfterLocalDisable();
+      locDisDmg += b.shields.damageTakenAfterLocalDisable();
+      healSum += b.health.totalHealing();
+      absSum += b.health.absorptionGained();
+      bHeals += b.health.burstHeals();
+      activeSpanSum += a.combatActiveSeconds > 0 ? a.combatActiveSeconds : a.duration;
       if (a.contextAvailable) ctx++;
       tsl.addAll(a.timingSamples);
       inl.addAll(a.incoming);
@@ -287,6 +336,31 @@ public final class Aggregate {
     edge = ed;
     high = hi;
     low = lo;
+    exchangesContested = exCont;
+    exchangesOpenedByYou = exYou;
+    exchangesOpenersConverted = exConv;
+    exchangesWon = exWon;
+    exchangesLost = exLost;
+    exchangesEven = exEven;
+    sprintResetOpportunities = srOpp;
+    sprintResets = srHit;
+    comboSprintResetOpportunities = csrOpp;
+    comboSprintResets = csrHit;
+    fullChargeHits = fcHits;
+    earlyHits = erHits;
+    disablesInflicted = disInf;
+    disablesConverted = disConv;
+    disablePunishDelaySum = disDelaySum;
+    disablePunishHitsSum = disHitsSum;
+    axeToSwordSwaps = swaps;
+    axeToSwordDelaySum = swapDelaySum;
+    localShieldDisables = locDis;
+    hitsTakenAfterLocalDisable = locDisHits;
+    damageTakenAfterLocalDisable = locDisDmg;
+    totalHealing = healSum;
+    absorptionGained = absSum;
+    burstHeals = bHeals;
+    activeCombatSeconds = activeSpanSum;
   }
 
   private static void add(int[] into, int[] from) {
@@ -341,6 +415,50 @@ public final class Aggregate {
 
   public double sprintRate() {
     return 100 * ratio(sprintHits, hits);
+  }
+
+  public double firstHitRate() {
+    return 100 * ratio(exchangesOpenedByYou, exchangesContested);
+  }
+
+  public double firstHitConversionRate() {
+    return 100 * ratio(exchangesOpenersConverted, exchangesOpenedByYou);
+  }
+
+  public double sprintResetRate() {
+    return 100 * ratio(sprintResets, sprintResetOpportunities);
+  }
+
+  public double comboSprintResetRate() {
+    return 100 * ratio(comboSprintResets, comboSprintResetOpportunities);
+  }
+
+  public double earlySwingRate() {
+    return 100 * ratio(earlyHits, fullChargeHits + earlyHits);
+  }
+
+  public double disableConversionRate() {
+    return 100 * ratio(disablesConverted, disablesInflicted);
+  }
+
+  public double meanDisablePunishDelay() {
+    return ratio(disablePunishDelaySum, disablesConverted);
+  }
+
+  public double meanPunishHitsPerDisable() {
+    return ratio(disablePunishHitsSum, disablesInflicted);
+  }
+
+  public double meanAxeToSwordSeconds() {
+    return ratio(axeToSwordDelaySum, axeToSwordSwaps);
+  }
+
+  public double tradeRatio() {
+    return ratio(hits, incoming);
+  }
+
+  public double damageTakenPerSec() {
+    return ratio(damageTaken, activeCombatSeconds);
   }
 
   public double averageInterval() {
