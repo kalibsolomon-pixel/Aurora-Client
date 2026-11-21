@@ -6,10 +6,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 final class SdfAtlas implements AutoCloseable {
-    static final int SIZE = 256;
+    /**
+     * The largest cell generated: vanilla's font page size. Pages need not be that size
+     * (ImmediatelyFast's font_atlas_resizing rewrites every 256 in {@link FontTexture}, default
+     * 1024), so cells carry their page's actual size for texture coordinates.
+     */
+    static final int MAX_CELL = 256;
     static final int MAX_PAGES = 128;
 
-    record Cell(FontTexture page, int x, int y, int width, int height) {}
+    record Cell(FontTexture page, int x, int y, int width, int height, int pageWidth, int pageHeight) {}
 
     private final List<FontTexture> pages = new ArrayList<>();
 
@@ -22,7 +27,11 @@ final class SdfAtlas implements AutoCloseable {
         FontTexture page = NativeSdfText.createPage(pages.size());
         try {
             Cell cell = NativeSdfText.insert(page, bitmap);
-            if (cell == null) throw new IllegalStateException("SDF cell did not fit an empty atlas page");
+            if (cell == null) {
+                // A page smaller than the cell (a font atlas size below vanilla's): this glyph keeps its bitmap.
+                SdfFontSets.closeOne(page);
+                return null;
+            }
             pages.add(page);
             return cell;
         } catch (RuntimeException | LinkageError failure) {

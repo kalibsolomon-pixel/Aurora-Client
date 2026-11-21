@@ -2,17 +2,22 @@ package com.aurora.client.ui.text;
 
 import com.aurora.client.AuroraClient;
 import com.aurora.client.health.MixinHealth;
+import com.aurora.client.ui.util.ShaderLoad;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.FontDescription;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.Identifier;
 
+import java.util.function.BooleanSupplier;
+
 public final class SdfTextSupport {
     private static final long WARMUP_NANOS = 2_000_000;
     private static volatile boolean failed;
     private static boolean gui;
     private static long warmupNanos;
+    /** A pipeline look was answered "not yet", so the log can say the shader loader was waited for. */
+    private static boolean pipelineWaited;
 
     private SdfTextSupport() {}
 
@@ -88,5 +93,35 @@ public final class SdfTextSupport {
         if (failed) return;
         failed = true;
         AuroraClient.LOGGER.warn("[Fonts] SDF text disabled ({}); using raster text for this session", stage, failure);
+    }
+
+    /**
+     * One look at the SDF text pipeline for an adapter, which supplies the compile. Before the Shader Loader has
+     * applied, a compile can only fail because Aurora's shader is not visible yet (RRLS lets screens draw during
+     * the first reload), so this answers "not yet" without compiling or failing and the glyph keeps its bitmap.
+     * After it, a compile that fails is the real thing: raster text for the session.
+     */
+    static boolean checkPipeline(BooleanSupplier compiles) {
+        if (!ShaderLoad.settled()) {
+            pipelineWaited = true;
+            return false;
+        }
+        try {
+            if (compiles.getAsBoolean()) {
+                AuroraClient.LOGGER.info("[Fonts] SDF text pipeline ready{}",
+                        pipelineWaited ? " (after waiting for the shader loader)" : "");
+                pipelineWaited = false;
+                return true;
+            }
+            fail("shader unavailable", null);
+        } catch (RuntimeException | LinkageError failure) {
+            fail("shader compilation", failure);
+        }
+        return false;
+    }
+
+    static void resetForTests() {
+        failed = false;
+        pipelineWaited = false;
     }
 }

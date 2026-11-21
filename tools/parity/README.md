@@ -21,6 +21,10 @@ in `OK`. A `FAILED` result must be investigated; commands are consumed once.
 Use native desktop screenshots to inspect the resulting screen.
 `python tools/parity/command.py <control-directory> '<command>'` performs that
 exchange atomically and refuses an unmarked fixture or a pending command.
+`-Daurora.parity.earlySdf=true` makes the Minecraft constructor ask for Aurora's SDF text pipeline as it
+returns, the lookup a first draw makes when a mod such as RRLS lets screens draw during the first reload;
+it logs `early-sdf pipelineAvailable=…`. The Shader Loader's first apply cannot have run by then, so the
+lookup must wait, not fail.
 
 | Command | Action |
 |---|---|
@@ -54,6 +58,7 @@ exchange atomically and refuses an unmarked fixture or a pending command.
 | `theme ROUND 0.33` / `theme SQUARE 0.19` | Apply factory/live appearance |
 | `font INTER AURORA_ONLY` / `font SANSSERIF OFF` | Change the live HUD font policy |
 | `detail animations` | Open a feature's native detail screen by ID |
+| `settings-reveal gradient_dither` | Open the Settings tab scrolled to that entry, as its search result does |
 | `search <text>` | Focus and fill the native search field |
 | `escape` | Send Escape through the active screen's key handler |
 | `theme-set field json` | Set one theme field in memory and reload the theme (e.g. `theme-set backgroundOpacity 0.5`) |
@@ -68,6 +73,7 @@ exchange atomically and refuses an unmarked fixture or a pending command.
 | `occlusion-scene` | Write loaded entity, leashed, glowing and custom-named counts to `occlusion-scene.txt` |
 | `occlusion-image <name>` | Capture the main render target into `<name>.png` in the probe directory |
 | `perspective back` | Set the camera to `first`, `back` (third person) or `front` |
+| `toggle-gui` | Press the F1 mapping once: hides (or shows again) the HUD and hand, for world-only captures |
 | `slot 3` | Select a hotbar slot (0-8) |
 | `key-press attack` | Queue one press of the attack (or `use`) key, as a mouse click does |
 | `hold forward on` | Hold a vanilla key mapping down (`forward left back right jump attack use sneak`, `on`/`off`) |
@@ -83,6 +89,10 @@ exchange atomically and refuses an unmarked fixture or a pending command.
 | `pulsar-delete` | Select the second-newest recording in History and press its Delete button (opens the real confirmation; Escape cancels) |
 | `pulsar-reach-stats [creative]` | After `pulsar-end`, assert the newest recording's hit reach statistics never exceed 3.0 (creative: hold no reach samples) |
 | `menu` | Disconnect to Aurora's title screen |
+| `chat-open` | Open the chat screen over recent lines (add lines with `server tellraw @a ...`) |
+| `multiplayer` | Open vanilla's server list |
+| `inventory` / `hover-slot 0` | Open the survival inventory / park the GUI pointer on an inventory slot, showing its tooltip |
+| `reload-resources` | Start the reload F3+T starts (`Minecraft.reloadResourcePacks()`); logs `reload-resources finished` once every listener has applied |
 | `stop` | Shut down normally |
 
 For an Aurora-absent/installed/candidate FPS comparison, `fpsObserverJar` builds

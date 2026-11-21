@@ -452,6 +452,8 @@ public final class ParityProbe implements ClientModInitializer {
                 client.player.yRotO = client.player.getYRot();
                 client.player.xRotO = client.player.getXRot();
             }
+            // `toggle-gui`: one press of the F1 mapping, which hides or shows the HUD and hand.
+            case "toggle-gui" -> net.minecraft.client.KeyMapping.click(InputConstants.getKey(client.options.keyToggleGui.saveString()));
             // `occlusion-counts`: entities and block entities skipped so far, and frames the test ran.
             case "occlusion-counts" -> Files.writeString(root.resolve("occlusion-counts.txt"),
                     com.aurora.client.performance.EntityOcclusion.bodiesSkipped + " "
@@ -567,6 +569,9 @@ public final class ParityProbe implements ClientModInitializer {
                     throw new AssertionError("Inactivity FPS option was not restored");
             }
             case "stop" -> { UiCacheBenchmark.cancel(); ShapeBenchmark.cancel(); restoreFpsOptions(client); client.stop(); }
+            // The reload F3+T starts; the log line marks when every listener, the Shader Loader included, has applied.
+            case "reload-resources" -> client.reloadResourcePacks()
+                    .thenRun(() -> System.out.println("[parity-probe] reload-resources finished"));
             case "resize" -> client.getWindow().setWindowed(Integer.parseInt(args[1]), Integer.parseInt(args[2]));
             // `semantic <label>`: every semantic control's pointer rect on the current screen.
             case "semantic" -> {
@@ -818,6 +823,15 @@ public final class ParityProbe implements ClientModInitializer {
                 category.invoke(screen, 1);
                 select.invoke(screen, page);
             }
+            // `settings-reveal <id>`: the Settings tab scrolled to that entry, as its search result opens it.
+            case "settings-reveal" -> {
+                var screen = AuroraScreen.create();
+                NativeUi.setScreen(client, screen);
+                var feature = FeatureRegistry.settings().stream().filter(f -> f.id.equals(args[1])).findFirst().orElseThrow();
+                var open = AuroraScreen.class.getDeclaredMethod("openSettingsResult", com.aurora.client.module.Module.class);
+                open.setAccessible(true);
+                open.invoke(screen, new com.aurora.client.module.Module(feature.id, feature.displayName, ""));
+            }
             case "perf-loading" -> {
                 // ADR 0009 loading switches, checked on the live classes.
                 var tracker = new net.minecraft.client.multiplayer.LevelLoadTracker(500L);
@@ -963,6 +977,31 @@ public final class ParityProbe implements ClientModInitializer {
             case "reload" -> {
                 reloadStarted = System.nanoTime();
                 client.reloadResourcePacks();
+            }
+            // `chat-open`: the chat screen over recent lines (add lines with `server tellraw @a ...`).
+            case "chat-open" -> NativeUi.setScreen(client, new net.minecraft.client.gui.screens.ChatScreen("", false));
+            case "multiplayer" -> NativeUi.setScreen(client,
+                    new net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen(NativeUi.screen(client)));
+            // `inventory`: the survival inventory screen; `hover-slot <n>` parks the pointer on inventory slot n.
+            case "inventory" -> NativeUi.setScreen(client,
+                    new net.minecraft.client.gui.screens.inventory.InventoryScreen(client.player));
+            case "hover-slot" -> {
+                var screen = (net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?>) NativeUi.screen(client);
+                var type = net.minecraft.client.gui.screens.inventory.AbstractContainerScreen.class;
+                var left = type.getDeclaredField("leftPos");
+                var top = type.getDeclaredField("topPos");
+                left.setAccessible(true); top.setAccessible(true);
+                int index = Integer.parseInt(args[1]);
+                var slot = screen.getMenu().slots.stream()
+                        .filter(s -> s.container == client.player.getInventory() && s.getContainerSlot() == index)
+                        .findFirst().orElseThrow();
+                float scale = client.getWindow().getGuiScale();
+                var mouse = client.mouseHandler;
+                var x = mouse.getClass().getDeclaredField("xpos");
+                var y = mouse.getClass().getDeclaredField("ypos");
+                x.setAccessible(true); y.setAccessible(true);
+                x.setDouble(mouse, (left.getInt(screen) + slot.x + 8) * scale);
+                y.setDouble(mouse, (top.getInt(screen) + slot.y + 8) * scale);
             }
             default -> throw new IllegalArgumentException(text);
         }
