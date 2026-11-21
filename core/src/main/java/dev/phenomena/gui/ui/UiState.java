@@ -69,15 +69,12 @@ public final class UiState {
 
   /** Functional settings groups; every setting appears in exactly one group. */
   public enum SettingsSection {
-    RECORDING("Recording"),
-    SERVER_CAPTURE("Server capture"),
-    EXCHANGES("Combat exchanges"),
-    CLASSIFICATION("Attack classification"),
+    CAPTURE("Capture"),
+    COMBAT("Combat & thresholds"),
     AUDIO("Audio feedback"),
     APPEARANCE("Appearance"),
     DATA("Data & exports"),
-    DIAGNOSTICS("Diagnostics"),
-    CONTROLS("Controls");
+    CONTROLS("Controls & reset");
 
     public final String label;
 
@@ -120,7 +117,7 @@ public final class UiState {
   public OffenseSection offense = OffenseSection.ACCURACY;
   public DefenseSection defense = DefenseSection.INCOMING;
   public FlowSection flow = FlowSection.COMBOS;
-  public SettingsSection settings = SettingsSection.RECORDING;
+  public SettingsSection settings = SettingsSection.CAPTURE;
   public Scope scope = Scope.LAST_25;
   public TrendMetric trend = TrendMetric.ACCURACY;
   public HistoryQuery.OutcomeFilter outcome = HistoryQuery.OutcomeFilter.ALL;

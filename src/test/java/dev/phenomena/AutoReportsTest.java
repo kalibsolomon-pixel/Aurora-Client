@@ -88,7 +88,7 @@ class AutoReportsTest {
       assertEquals(3, calls.get());
       assertTrue(
           Files.readString(SafePaths.exportFolder(data, f, true).resolve("index.html"))
-              .contains("Phenomena Fight Report"));
+              .contains("Aurora Pulsar Fight Report"));
       try (var dirs = Files.list(data.resolve("exports"))) {
         assertEquals(1, dirs.count());
       }
@@ -161,7 +161,7 @@ class AutoReportsTest {
       var file = SafePaths.exportFolder(data, f, true).resolve("index.html");
       Files.writeString(file, "truncated");
       auto.recover(store.readAll(), ReportExporter.Options.DEFAULT);
-      assertTrue(Files.readString(file).contains("Phenomena Fight Report"));
+      assertTrue(Files.readString(file).contains("Aurora Pulsar Fight Report"));
     }
   }
 

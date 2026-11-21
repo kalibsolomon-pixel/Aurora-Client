@@ -54,6 +54,8 @@ final class OverviewPage implements PhenomenaScreen.Page {
             ? PhenomenaClient.recording.manual() ? "Previous manual session" : "Latest manual session"
             : "Latest fight",
         dateTime(latest.startEpochMillis())
+            + " · "
+            + duration(latest.durationNanos())
             + (latest.manual()
                 ? ""
                 : " vs " + opponent(latest.opponentLabel(), latest.opponent())));
@@ -70,6 +72,7 @@ final class OverviewPage implements PhenomenaScreen.Page {
     }
     var full = DataCache.full(latest.id());
     var fa = full == null ? null : DataCache.analytics(full);
+    var br = fa == null ? null : fa.breakdown;
     c.stats(
         List.of(
             new Stat(
@@ -82,23 +85,30 @@ final class OverviewPage implements PhenomenaScreen.Page {
                 "Result, evidence source and confidence are stored separately. Confidence: "
                     + r.confidence().name().toLowerCase(Locale.ROOT)
                     + "."),
-            new Stat(
-                "Duration",
-                duration(latest.durationNanos()),
-                ls.attempts + " attempts",
-                "Recorded engagement length."),
             stat(
                 "accuracy",
                 percent(Aggregate.trendValue(latest, TrendMetric.ACCURACY)),
                 ls.hits + " / " + ls.accuracyDenominator()),
             stat(
-                "reachWithin",
-                fa == null || fa.reach.eligible() == 0
+                "firstHitRate",
+                br == null || br.exchangeSummary.contested() == 0
                     ? NONE
-                    : fa.reach.within() + " / " + fa.reach.eligible(),
-                fa == null
+                    : percent(br.exchangeSummary.firstHitRate()),
+                br == null
                     ? "timeline not loaded"
-                    : fa.reach.eligible() == 0 ? "no eligible hits" : "eligible hits"),
+                    : br.exchangeSummary.contested() == 0
+                        ? "no contested exchanges"
+                        : br.exchangeSummary.openedByYou() + " / " + br.exchangeSummary.contested() + " openers"),
+            stat(
+                "sprintResetRate",
+                br == null || br.sword.sprintResetOpportunities() == 0
+                    ? NONE
+                    : percent(br.sword.sprintResetRate()),
+                br == null
+                    ? "timeline not loaded"
+                    : br.sword.sprintResetOpportunities() == 0
+                        ? "no sprint follow-ups"
+                        : br.sword.sprintResets() + " / " + br.sword.sprintResetOpportunities() + " resets"),
             stat("longestCombo", Integer.toString(ls.longestCombo), ls.comboCount + " combos"),
             stat(
                 "dominanceShare",
@@ -108,9 +118,12 @@ final class OverviewPage implements PhenomenaScreen.Page {
                 fa == null
                     ? "timeline not loaded"
                     : fa.dominance.availability.label.toLowerCase(Locale.ROOT))));
-    if (fa != null) {
+    if (br != null && !br.takeaways.isEmpty()) {
+      c.heading("Key takeaways", "from latest fight");
+      for (var tk : br.takeaways) c.takeaway(tk);
+    } else if (fa != null) {
       var lines = dev.phenomena.analytics.Interpretation.of(fa);
-      for (int i = 1; i < Math.min(5, lines.size()); i++) c.text(lines.get(i));
+      for (int i = 1; i < Math.min(4, lines.size()); i++) c.text(lines.get(i));
     }
     recent(c, a);
   }
@@ -123,8 +136,14 @@ final class OverviewPage implements PhenomenaScreen.Page {
                 "accuracy",
                 percent(a.accuracy()),
                 a.hits + " of " + a.accuracyDenominator() + " counted"),
-            stat("hits", Integer.toString(a.hits), "server-confirmed source"),
-            // The eligible ray-contact hits Offense uses, so both tabs show one average.
+            stat(
+                "firstHitRate",
+                percent(a.firstHitRate()),
+                a.exchangesOpenedByYou + " / " + a.exchangesContested + " openers"),
+            stat(
+                "sprintResetRate",
+                percent(a.sprintResetRate()),
+                a.sprintResets + " / " + a.sprintResetOpportunities + " resets"),
             stat(
                 "averageReach",
                 meters(Arrays.stream(a.reachValues).average().orElse(Double.NaN)),
@@ -133,10 +152,6 @@ final class OverviewPage implements PhenomenaScreen.Page {
                 "reachWithin",
                 percent(a.reachWithinPercent()),
                 a.reachWithin + " of " + a.reachEligible),
-            stat(
-                "criticalRate",
-                percent(a.criticalRate()),
-                a.criticalConditions + " with crit conditions"),
             stat("averageCombo", number(a.averageLocalCombo(), 2), "longest " + a.longestCombo),
             stat(
                 "dominanceShare",
@@ -144,9 +159,9 @@ final class OverviewPage implements PhenomenaScreen.Page {
                 "opponent "
                     + percent(a.dominanceShare(dev.phenomena.analytics.Dominance.State.OPPONENT))),
             stat(
-                "averageInterval",
-                seconds(a.averageInterval()),
-                "SD " + seconds(a.intervalDeviation())),
+                "tradeRatio",
+                Double.isFinite(a.tradeRatio()) ? number(a.tradeRatio(), 2) + "x" : NONE,
+                a.hits + " dealt / " + a.incoming + " taken"),
             stat(
                 "fights",
                 Integer.toString(PhenomenaClient.history.size()),

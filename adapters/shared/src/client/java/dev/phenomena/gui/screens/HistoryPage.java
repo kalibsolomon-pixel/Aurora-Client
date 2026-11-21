@@ -284,6 +284,43 @@ final class HistoryPage implements PhenomenaScreen.Page {
       return;
     }
     var a = DataCache.analytics(full);
+    var br = a.breakdown;
+    if (!br.takeaways.isEmpty()) {
+      c.heading("Key takeaways", "derived from recorded events");
+      for (var tk : br.takeaways) c.takeaway(tk);
+    }
+    if (!full.manual()) {
+      c.heading("PvP breakdown", "openers, sprint resets, shields and health");
+      c.stats(
+          List.of(
+              stat(
+                  "firstHitRate",
+                  percent(br.exchangeSummary.firstHitRate()),
+                  br.exchangeSummary.openedByYou()
+                      + " / "
+                      + br.exchangeSummary.contested()
+                      + " openers"),
+              stat(
+                  "sprintResetRate",
+                  percent(br.sword.sprintResetRate()),
+                  br.sword.sprintResets()
+                      + " / "
+                      + br.sword.sprintResetOpportunities()
+                      + " follow-ups"),
+              stat(
+                  "disableConversionRate",
+                  percent(br.shields.disableConversionRate()),
+                  br.shields.disablesConverted()
+                      + " / "
+                      + br.shields.disablesInflicted()
+                      + " disables"),
+              stat(
+                  "totalHealing",
+                  br.health.trace().isEmpty() ? NONE : number(br.health.totalHealing(), 1) + " HP",
+                  br.health.burstHeals() == 1
+                      ? "1 burst heal"
+                      : br.health.burstHeals() + " burst heals")));
+    }
     if (full.manual()) {
       c.heading("Manual session");
       c.text(
@@ -295,6 +332,12 @@ final class HistoryPage implements PhenomenaScreen.Page {
       c.note(
           "Open the browser report to filter by participant or exchange. Session-wide dominance is"
               + " unavailable.");
+    }
+    if (!br.health.trace().isEmpty()) {
+      c.heading("Health & absorption", "lost " + number(br.health.totalDamageTaken(), 1) + " HP");
+      c.block(
+          FlowCharts.HealthTimeline.height(c.compact),
+          new FlowCharts.HealthTimeline(a.duration, br.health, a.incomingTimes));
     }
     var cfg = PhenomenaClient.config;
     c.heading("Reach per hit", "seconds into the recording");

@@ -506,7 +506,7 @@ final class OffensePage implements PhenomenaScreen.Page {
   }
 
   private void rate(Content c, Aggregate a, String coverage, boolean critical) {
-    c.heading(critical ? "Critical hits" : "Sprint hits", coverage);
+    c.heading(critical ? "Critical hits" : "Sprint hits & W-tap cadence", coverage);
     int count = critical ? a.criticalConditions : a.sprintHits;
     double rate = critical ? a.criticalRate() : a.sprintRate();
     var list = new ArrayList<Stat>();
@@ -521,13 +521,50 @@ final class OffensePage implements PhenomenaScreen.Page {
                 : "Hits made while sprinting at the attack. Evidence: observed."));
     list.add(
         stat(critical ? "criticalRate" : "sprintRate", percent(rate), "of " + hits(a.hits)));
-    if (critical)
+    if (critical) {
       list.add(
           stat(
               "serverCrits",
               a.contextFights == 0 ? NONE : Integer.toString(a.serverCrits),
               a.contextFights == 0 ? "needs newer recordings" : "critical animation seen"));
+      list.add(
+          stat(
+              "earlySwingRate",
+              percent(a.earlySwingRate()),
+              a.earlyHits + " of " + (a.fullChargeHits + a.earlyHits) + " hits < 90%"));
+    } else {
+      list.add(
+          stat(
+              "sprintResetRate",
+              percent(a.sprintResetRate()),
+              a.sprintResets + " / " + a.sprintResetOpportunities + " follow-ups"));
+      list.add(
+          new Stat(
+              "Combo sprint-reset",
+              percent(a.comboSprintResetRate()),
+              a.comboSprintResets + " / " + a.comboSprintResetOpportunities + " combo hits",
+              "Sprint-reset rate specifically during 2+ hit combos."));
+      list.add(
+          stat(
+              "earlySwingRate",
+              percent(a.earlySwingRate()),
+              (a.earlyHits == 1 ? "1 hit" : a.earlyHits + " hits") + " < 90% charge"));
+      list.add(
+          stat(
+              "axeToSwordSwap",
+              seconds(a.meanAxeToSwordSeconds()),
+              a.axeToSwordSwaps == 1 ? "1 swap" : a.axeToSwordSwaps + " swaps"));
+    }
     c.stats(list);
+    if (!critical && a.fullChargeHits + a.earlyHits > 0) {
+      c.heading("Attack charge discipline", "confirmed hits at >= 90% vs < 90% charge");
+      c.block(
+          StackBar.height(),
+          new StackBar(
+              new String[] {"Full charge (>=90%)", "Early swing (<90%)"},
+              new int[] {a.fullChargeHits, a.earlyHits},
+              new int[] {Theme.SERIES_3, Theme.SERIES_2}));
+    }
     c.heading("Rate per recording");
     double[] series = a.perFightHitRate(st -> critical ? st.criticalConditions : st.sprintHits);
     c.block(
@@ -553,7 +590,9 @@ final class OffensePage implements PhenomenaScreen.Page {
             ? "Critical conditions mirror vanilla eligibility observed on the client. The"
                 + " server's critical-hit animation on the opponent within one tick of a confirmed"
                 + " hit is also counted. Neither reports the damage multiplier."
-            : "Sprint state is observed at the attack. Extra knockback is not measured.");
+            : "Sprint-reset rate checks whether a sprinting follow-up hit within 2.5 s of a prior"
+                + " sprinting hit was preceded by a recorded sprint release (W-tap / S-tap). Extra"
+                + " knockback is not measured directly.");
     if (critical) contextNote(c, a, "server critical-hit observations");
   }
 

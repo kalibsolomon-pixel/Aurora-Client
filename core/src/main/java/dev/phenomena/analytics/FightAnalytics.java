@@ -244,6 +244,7 @@ public final class FightAnalytics {
 
   public final List<ActiveExchange> activeExchanges;
   public final double combatActiveSeconds;
+  public final CombatBreakdown breakdown;
 
   /** Monotonic origin of every "seconds since fight start" value in this instance. */
   public final long baseNanos;
@@ -410,6 +411,7 @@ public final class FightAnalytics {
     int noDamage = 0, motion = 0, sprint = 0;
     int intoShield = 0, estimated = 0, bypassed = 0, localBlocks = 0, localDisabled = 0;
     var attributedDamage = events.stream().filter(e -> e.attributedTo(opponent)).toList();
+    int attrDamagePtr = 0;
     for (var e : events) {
       double t = seconds(e.nanoTime(), base);
       switch (e.kind()) {
@@ -472,10 +474,18 @@ public final class FightAnalytics {
         }
         case JUMP -> {
           var sample = byJump.get(e.sequence());
-          var nearest =
-              attributedDamage.stream()
-                  .min(Comparator.comparingLong(d -> Math.abs(e.nanoTime() - d.nanoTime())))
-                  .orElse(null);
+          CombatEvent nearest = null;
+          if (!attributedDamage.isEmpty()) {
+            long tNano = e.nanoTime();
+            while (attrDamagePtr + 1 < attributedDamage.size()
+                && attributedDamage.get(attrDamagePtr + 1).nanoTime() <= tNano) attrDamagePtr++;
+            nearest = attributedDamage.get(attrDamagePtr);
+            if (attrDamagePtr + 1 < attributedDamage.size()) {
+              var next = attributedDamage.get(attrDamagePtr + 1);
+              if (Math.abs(tNano - next.nanoTime()) < Math.abs(tNano - nearest.nanoTime()))
+                nearest = next;
+            }
+          }
           if (nearest == null
               || (sample.offsetTicks() == null
                   && Math.abs(e.nanoTime() - nearest.nanoTime()) > 1_000_000_000L)) noDamage++;
@@ -658,24 +668,35 @@ public final class FightAnalytics {
     for (var entry : f.matchEvidence().entries())
       bs.add(new Boundary(seconds(entry.nanoTime(), base), entry.kind(), entry.accepted()));
     boundaries = List.copyOf(bs);
+    breakdown = CombatBreakdown.analyze(this, events);
   }
 
   private record IncomingBuild(List<Incoming> list, List<Double> unexplained) {}
 
   private static IncomingBuild incoming(
       List<CombatEvent> events, long base, String opponent, int window) {
-    List<CombatEvent> damage = new ArrayList<>(), jumpsEv = new ArrayList<>();
-    List<CombatEvent> velocity = new ArrayList<>(),
-        health = new ArrayList<>(),
-        motion = new ArrayList<>();
+    List<CombatEvent> damage = new ArrayList<>();
+    List<CombatEvent> healthRaw = new ArrayList<>();
+    List<CombatEvent> velocityRaw = new ArrayList<>();
+    List<CombatEvent> motionRaw = new ArrayList<>();
+    List<CombatEvent> jumpsRaw = new ArrayList<>();
     Set<Long> localCrits = new HashSet<>();
     for (var e : events)
       switch (e.kind()) {
         case DAMAGE_IN -> damage.add(e);
-        case JUMP -> jumpsEv.add(e);
-        case VELOCITY -> velocity.add(e);
-        case HEALTH -> health.add(e);
-        case MOTION -> motion.add(e);
+        case JUMP -> {
+          if (e.clientTick() != null) jumpsRaw.add(e);
+        }
+        case VELOCITY -> {
+          if (e.clientTick() != null && e.context() != null && e.context().vx() != null)
+            velocityRaw.add(e);
+        }
+        case HEALTH -> {
+          if (e.context() != null && e.context().health() != null) healthRaw.add(e);
+        }
+        case MOTION -> {
+          if (e.clientTick() != null) motionRaw.add(e);
+        }
         case CRIT -> {
           if (e.context() != null
               && "local".equals(e.context().subject())
@@ -683,9 +704,84 @@ public final class FightAnalytics {
         }
         default -> {}
       }
-    List<Incoming> out = new ArrayList<>();
-    Set<Long> damageTicks = new HashSet<>();
-    for (var d : damage) if (d.clientTick() != null) damageTicks.add(d.clientTick());
+
+    // Pre-extract primitive arrays once (avoids O(D * (H + V + M + J)) scans and repeated MOTION
+    // string parsing on long fights).
+    int hCount = 0;
+    long[] hTick = new long[healthRaw.size()];
+    long[] hSeq = new long[healthRaw.size()];
+    double[] hVal = new double[healthRaw.size()];
+    boolean hMonotonic = true;
+    for (var h : healthRaw) {
+      if (h.clientTick() == null) continue;
+      long tk = h.clientTick();
+      long sq = h.sequence();
+      if (hCount > 0 && (tk < hTick[hCount - 1] || sq < hSeq[hCount - 1])) hMonotonic = false;
+      hTick[hCount] = tk;
+      hSeq[hCount] = sq;
+      hVal[hCount] = h.context().health() + nz(h.context().absorption());
+      hCount++;
+    }
+
+    int vCount = velocityRaw.size();
+    long[] vTick = new long[vCount];
+    double[] vKb = new double[vCount];
+    boolean vMonotonic = true;
+    for (int i = 0; i < vCount; i++) {
+      var v = velocityRaw.get(i);
+      long tk = v.clientTick();
+      if (i > 0 && tk < vTick[i - 1]) vMonotonic = false;
+      vTick[i] = tk;
+      vKb[i] = Math.hypot(v.context().vx(), v.context().vz());
+    }
+
+    int mCount = 0;
+    long[] mTick = new long[motionRaw.size()];
+    double[] mSpeed = new double[motionRaw.size()];
+    boolean mMonotonic = true;
+    for (var m : motionRaw) {
+      double[] vel = parseMotion(m.detail());
+      if (vel == null) continue;
+      long tk = m.clientTick();
+      if (mCount > 0 && tk < mTick[mCount - 1]) mMonotonic = false;
+      mTick[mCount] = tk;
+      mSpeed[mCount] = Math.hypot(vel[0], vel[1]);
+      mCount++;
+    }
+
+    int jCount = jumpsRaw.size();
+    long[] jTick = new long[jCount];
+    long[] jSeq = new long[jCount];
+    boolean jMonotonic = true;
+    for (int i = 0; i < jCount; i++) {
+      var j = jumpsRaw.get(i);
+      long tk = j.clientTick();
+      long sq = j.sequence();
+      if (i > 0 && (tk < jTick[i - 1] || sq < jSeq[i - 1])) jMonotonic = false;
+      jTick[i] = tk;
+      jSeq[i] = sq;
+    }
+
+    boolean dMonotonic = true;
+    long prevDTick = Long.MIN_VALUE, prevDSeq = Long.MIN_VALUE;
+    Set<Long> damageTicks = new HashSet<>(damage.size() * 2 + 1);
+    for (var d : damage) {
+      if (d.clientTick() != null) {
+        long tk = d.clientTick();
+        damageTicks.add(tk);
+        if (tk < prevDTick || d.sequence() < prevDSeq) dMonotonic = false;
+        prevDTick = tk;
+        prevDSeq = d.sequence();
+      }
+    }
+
+    boolean fastHealth = dMonotonic && hMonotonic;
+    boolean fastVel = dMonotonic && vMonotonic;
+    boolean fastMotion = dMonotonic && mMonotonic;
+    boolean fastJumps = dMonotonic && jMonotonic;
+
+    int hBeforePtr = -1, hMinStart = 0, vPtr = 0, mStart = 0, jPtr = 0;
+    List<Incoming> out = new ArrayList<>(damage.size());
     for (var d : damage) {
       var ctx = d.context();
       boolean attributed = d.attributedTo(opponent);
@@ -695,60 +791,98 @@ public final class FightAnalytics {
               : attributed
                   ? "OPPONENT_LEGACY"
                   : d.actor() == null ? "UNATTRIBUTED" : "OTHER_ENTITY";
-      Long tick = d.clientTick();
+      Long tickObj = d.clientTick();
       Double dmg = null, kb = null, after = null;
-      if (tick != null) {
+      if (tickObj != null) {
+        long tick = tickObj;
+        long dSeq = d.sequence();
         Double before = null, min = null;
-        for (var h : health) {
-          if (h.clientTick() == null || h.context() == null || h.context().health() == null)
-            continue;
-          double v = h.context().health() + nz(h.context().absorption());
-          if (h.sequence() < d.sequence() && h.clientTick() <= tick) before = v;
-          else if (h.clientTick() >= tick && h.clientTick() <= tick + 2)
+        if (fastHealth) {
+          while (hBeforePtr + 1 < hCount
+              && hSeq[hBeforePtr + 1] < dSeq
+              && hTick[hBeforePtr + 1] <= tick) hBeforePtr++;
+          if (hBeforePtr >= 0) before = hVal[hBeforePtr];
+          while (hMinStart < hCount
+              && (hTick[hMinStart] < tick || (hTick[hMinStart] == tick && hSeq[hMinStart] < dSeq)))
+            hMinStart++;
+          for (int k = hMinStart; k < hCount && hTick[k] <= tick + 2; k++) {
+            double v = hVal[k];
             min = min == null ? v : Math.min(min, v);
+          }
+        } else {
+          for (int k = 0; k < hCount; k++) {
+            double v = hVal[k];
+            if (hSeq[k] < dSeq && hTick[k] <= tick) before = v;
+            else if (hTick[k] >= tick && hTick[k] <= tick + 2)
+              min = min == null ? v : Math.min(min, v);
+          }
         }
         if (before != null && min != null && before - min > 1e-6) dmg = before - min;
-        for (var v : velocity)
-          if (v.clientTick() != null
-              && v.clientTick() >= tick
-              && v.clientTick() <= tick + 1
-              && v.context() != null
-              && v.context().vx() != null) {
-            kb = Math.hypot(v.context().vx(), v.context().vz());
-            break;
-          }
+
+        if (fastVel) {
+          while (vPtr < vCount && vTick[vPtr] < tick) vPtr++;
+          if (vPtr < vCount && vTick[vPtr] <= tick + 1) kb = vKb[vPtr];
+        } else {
+          for (int k = 0; k < vCount; k++)
+            if (vTick[k] >= tick && vTick[k] <= tick + 1) {
+              kb = vKb[k];
+              break;
+            }
+        }
+
         double sum = 0;
         int n = 0;
-        for (var m : motion)
-          if (m.clientTick() != null && m.clientTick() >= tick + 2 && m.clientTick() <= tick + 8) {
-            double[] vel = parseMotion(m.detail());
-            if (vel != null) {
-              sum += Math.hypot(vel[0], vel[1]);
+        if (fastMotion) {
+          while (mStart < mCount && mTick[mStart] < tick + 2) mStart++;
+          for (int k = mStart; k < mCount && mTick[k] <= tick + 8; k++) {
+            sum += mSpeed[k];
+            n++;
+          }
+        } else {
+          for (int k = 0; k < mCount; k++)
+            if (mTick[k] >= tick + 2 && mTick[k] <= tick + 8) {
+              sum += mSpeed[k];
               n++;
             }
-          }
+        }
         if (n > 0) after = sum / n;
       }
       String jumpClass;
       Long offset = null;
       if (!attributed) jumpClass = "NOT_APPLICABLE";
-      else if (tick == null) jumpClass = "UNAVAILABLE";
+      else if (tickObj == null) jumpClass = "UNAVAILABLE";
       else if (ctx != null && Boolean.FALSE.equals(ctx.movementValid())) jumpClass = "EXCLUDED";
       else {
-        CombatEvent nearest = null;
+        long tick = tickObj;
+        int bestIdx = -1;
         long best = Long.MAX_VALUE;
-        for (var j : jumpsEv) {
-          if (j.clientTick() == null) continue;
-          long delta = Math.abs(j.clientTick() - tick);
-          if (delta < best
-              || (delta == best && nearest != null && j.sequence() < nearest.sequence())) {
-            best = delta;
-            nearest = j;
+        if (fastJumps && jCount > 0) {
+          while (jPtr + 1 < jCount && jTick[jPtr + 1] <= tick) jPtr++;
+          // Check earliest entry with jTick[lo] == jTick[jPtr] (lowest sequence tie-break)
+          int lo = jPtr;
+          while (lo > 0 && jTick[lo - 1] == jTick[jPtr]) lo--;
+          bestIdx = lo;
+          best = Math.abs(jTick[lo] - tick);
+          if (jPtr + 1 < jCount) {
+            int hi = jPtr + 1;
+            long dHi = Math.abs(jTick[hi] - tick);
+            if (dHi < best || (dHi == best && jSeq[hi] < jSeq[bestIdx])) {
+              best = dHi;
+              bestIdx = hi;
+            }
+          }
+        } else {
+          for (int k = 0; k < jCount; k++) {
+            long delta = Math.abs(jTick[k] - tick);
+            if (delta < best || (delta == best && bestIdx >= 0 && jSeq[k] < jSeq[bestIdx])) {
+              best = delta;
+              bestIdx = k;
+            }
           }
         }
-        if (nearest == null || best > 20) jumpClass = "NO_JUMP";
+        if (bestIdx < 0 || best > 20) jumpClass = "NO_JUMP";
         else {
-          offset = nearest.clientTick() - tick;
+          offset = jTick[bestIdx] - tick;
           jumpClass =
               offset == 0
                   ? "IDEAL_CANDIDATE"
@@ -756,15 +890,15 @@ public final class FightAnalytics {
         }
       }
       boolean crit =
-          tick != null
-              && (localCrits.contains(tick)
-                  || localCrits.contains(tick - 1)
-                  || localCrits.contains(tick + 1));
+          tickObj != null
+              && (localCrits.contains(tickObj)
+                  || localCrits.contains(tickObj - 1)
+                  || localCrits.contains(tickObj + 1));
       out.add(
           new Incoming(
               d.sequence(),
               seconds(d.nanoTime(), base),
-              tick,
+              tickObj,
               attribution,
               attributed,
               ctx == null ? null : ctx.damageType(),
@@ -782,8 +916,7 @@ public final class FightAnalytics {
     // attribute.
     List<Double> unexplained = new ArrayList<>();
     Double previous = null;
-    for (var h : health) {
-      if (h.context() == null || h.context().health() == null) continue;
+    for (var h : healthRaw) {
       double v = h.context().health() + nz(h.context().absorption());
       if (previous != null && v < previous - 1e-6 && h.clientTick() != null) {
         long t = h.clientTick();

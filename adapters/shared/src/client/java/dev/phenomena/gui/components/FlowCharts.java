@@ -649,4 +649,153 @@ public final class FlowCharts {
       if (max == 0) emptyState(g, px, py, pw, ph, "No actual jumps near attributed incoming hits");
     }
   }
+
+  // ---- health & absorption timeline --------------------------------------------------------
+
+  /**
+   * Stepped local health + absorption curve over fight time, highlighting the worst 3 s burst
+   * window and marking incoming opponent hits along the baseline.
+   */
+  public static final class HealthTimeline implements Blocks.Block {
+    private final double duration;
+    private final dev.phenomena.analytics.CombatBreakdown.HealthPacing health;
+    private final List<Double> incoming;
+    private final double maxHp;
+
+    public HealthTimeline(
+        double duration,
+        dev.phenomena.analytics.CombatBreakdown.HealthPacing health,
+        List<Double> incoming) {
+      this.duration = Math.max(duration, .001);
+      this.health = health;
+      this.incoming = incoming;
+      double m = 20.0;
+      for (var p : health.trace()) m = Math.max(m, p.total());
+      this.maxHp = Math.ceil(m / 4.0) * 4.0;
+    }
+
+    public static int height(boolean compact) {
+      return compact ? 92 : 108;
+    }
+
+    @Override
+    public List<String> narration() {
+      if (health.trace().isEmpty()) return List.of("No health samples recorded.");
+      return List.of(
+          "Health timeline over "
+              + secs(duration)
+              + ". Lost "
+              + Format.number(health.totalDamageTaken(), 1)
+              + " HP, recovered "
+              + Format.number(health.totalHealing(), 1)
+              + " HP. Minimum "
+              + Format.number(health.minHp(), 1)
+              + " HP at "
+              + secs(health.minHpTime())
+              + ".");
+    }
+
+    @Override
+    public void render(GuiGraphicsExtractor g, int x, int y, int w, int h, int mx, int my) {
+      var f = font();
+      String top = Format.number(maxHp, 0) + " HP", mid = Format.number(maxHp / 2, 0), bot = "0";
+      int gutter = f.width(top) + 6;
+      int px = x + gutter, py = y + 4, pw = Math.max(20, w - gutter - 4), ph = Math.max(24, h - 32);
+      Pixel.rounded(g, px, py, pw, ph, Theme.radiusSmall(), Theme.INSET());
+      Pixel.line(g, px, py + ph / 2f, px + pw, py + ph / 2f, 1, Theme.GRID());
+      g.text(f, top, px - 4 - f.width(top), py - 2, Theme.DIM(), false);
+      g.text(f, mid, px - 4 - f.width(mid), py + ph / 2 - 4, Theme.DIM(), false);
+      g.text(f, bot, px - 4 - f.width(bot), py + ph - 6, Theme.DIM(), false);
+
+      var trace = health.trace();
+      if (trace.isEmpty()) {
+        emptyState(g, px, py, pw, ph, "No client health samples recorded");
+        timeAxis(g, px, py + ph + 2, pw, duration);
+        return;
+      }
+
+      if (health.worstBurstDamage() >= 6.0 && Double.isFinite(health.worstBurstTime())) {
+        int bx0 = sx(health.worstBurstTime(), px, pw);
+        int bx1 = Math.max(bx0 + 2, sx(Math.min(duration, health.worstBurstTime() + 3.0), px, pw));
+        Pixel.fillLogical(g, bx0, py, bx1, py + ph, Theme.alpha(OPPONENT, 0x30));
+      }
+
+      boolean hasAbs = health.absorptionGained() > 0;
+      for (int i = 0; i < trace.size(); i++) {
+        var cur = trace.get(i);
+        if (cur.absorption() > 0) hasAbs = true;
+        double nextT = i + 1 < trace.size() ? trace.get(i + 1).time() : duration;
+        int x0 = sx(cur.time(), px, pw);
+        int x1 = Math.max(x0 + 1, sx(nextT, px, pw));
+        int yHp = sy(cur.health(), py, ph);
+        int yTot = sy(cur.total(), py, ph);
+        Pixel.fillLogical(g, x0, yHp, x1, py + ph, Theme.alpha(GOOD, 0x2A));
+        if (cur.absorption() > 0.01)
+          Pixel.fillLogical(g, x0, yTot, x1, yHp, Theme.alpha(0xFFE6B84C, 0x48));
+        Pixel.fillLogical(g, x0, yHp, x1, yHp + 1, GOOD);
+        if (cur.absorption() > 0.01) Pixel.fillLogical(g, x0, yTot, x1, yTot + 1, 0xFFE6B84C);
+        if (i + 1 < trace.size()) {
+          int nyHp = sy(trace.get(i + 1).health(), py, ph);
+          Pixel.fillLogical(g, x1, Math.min(yHp, nyHp), x1 + 1, Math.max(yHp, nyHp) + 1, GOOD);
+        }
+      }
+      for (double tIn : incoming) {
+        int ix = sx(tIn, px, pw);
+        Pixel.fillLogical(g, ix, py + ph - 3, ix + 1, py + ph, OPPONENT);
+      }
+      timeAxis(g, px, py + ph + 2, pw, duration);
+      if (hasAbs)
+        legend(
+            g,
+            px,
+            py + ph + 14,
+            px + pw,
+            new String[] {"Health", "Absorption", "Incoming hit"},
+            new int[] {GOOD, 0xFFE6B84C, OPPONENT},
+            null);
+      else
+        legend(
+            g,
+            px,
+            py + ph + 14,
+            px + pw,
+            new String[] {"Health", "Incoming hit"},
+            new int[] {GOOD, OPPONENT},
+            null);
+
+      if (hover(mx, my, px, py, pw, ph)) {
+        double t = duration * (mx - px) / Math.max(1, pw - 1);
+        var cur = trace.getFirst();
+        for (var pt : trace) {
+          if (pt.time() <= t + 1e-6) cur = pt;
+          else break;
+        }
+        int cx = sx(t, px, pw);
+        Pixel.fillLogical(g, cx, py, cx + 1, py + ph, Theme.alpha(Theme.TEXT(), 0x50));
+        tooltip(
+            this,
+            cx,
+            secs(t)
+                + ": "
+                + Format.number(cur.health(), 1)
+                + " HP"
+                + (cur.absorption() > 0.01
+                    ? " + " + Format.number(cur.absorption(), 1) + " abs"
+                    : ""),
+            cx,
+            py,
+            1,
+            ph);
+      }
+    }
+
+    private int sx(double t, int px, int pw) {
+      return px + (int) Math.round((pw - 1) * Math.max(0, Math.min(1, t / duration)));
+    }
+
+    private int sy(double hp, int py, int ph) {
+      double t = Math.max(0.0, Math.min(1.0, hp / maxHp));
+      return py + ph - 1 - (int) Math.round((ph - 2) * t);
+    }
+  }
 }
