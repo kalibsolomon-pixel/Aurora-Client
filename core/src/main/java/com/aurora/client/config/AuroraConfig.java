@@ -498,6 +498,8 @@ public class AuroraConfig {
     public boolean perfGuiGlintBaking = true;
     /** Entities and block entities that opaque terrain certainly hides are not extracted (ADR 0009). */
     public boolean perfEntityOcclusion = true;
+    /** GUI item drawings leave out faces that cover no pixel head-on, such as the side faces of flat items. */
+    public boolean perfGuiFlatFaces = true;
     /** Sprites drop their CPU copies of mip levels above 0 once the atlas is uploaded. */
     public boolean perfFreeSpriteMipmaps = true;
     /** A moving camera repaints the minimap's terrain at most 60 times a second. */

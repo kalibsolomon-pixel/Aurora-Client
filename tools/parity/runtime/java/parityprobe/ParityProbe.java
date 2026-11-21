@@ -94,9 +94,12 @@ public final class ParityProbe implements ClientModInitializer {
                     long now = System.nanoTime();
                     if (now >= countUntil) {
                         double seconds = (now - countStart) / 1e9;
-                        System.out.println(String.format(java.util.Locale.ROOT, "[parity-probe] count %s: %.1f listener updates/s, %.1f text effects/s, %.1f atlas draws/s, %.1f animation steps/s, %.1f fps",
+                        System.out.println(String.format(java.util.Locale.ROOT, "[parity-probe] count %s: %.1f listener updates/s, %.1f text effects/s, %.1f atlas draws/s, %.2f us per atlas draw, %.3f atlas ms/s, %.1f atlas quads/s, %.1f left out/s, %.1f animation steps/s, %.1f fps",
                                 countLabel, Counters.LISTENER_UPDATES.get() / seconds, Counters.TEXT_EFFECTS.get() / seconds,
                                 Counters.ATLAS_DRAWS.get() / seconds,
+                                Counters.ATLAS_NANOS.get() / 1000.0 / Math.max(1, Counters.ATLAS_DRAWS.get()),
+                                Counters.ATLAS_NANOS.get() / 1e6 / seconds, Counters.ATLAS_QUADS.get() / seconds,
+                                Counters.ATLAS_QUADS_SKIPPED.get() / seconds,
                                 (com.aurora.client.util.SpriteAnimationClock.ticks() - countSteps) / seconds, (double) client.getFps()));
                         countLabel = null;
                     }
@@ -141,6 +144,11 @@ public final class ParityProbe implements ClientModInitializer {
         player.setSprinting(true);
         player.setDeltaMovement(dx / length * .28, player.getDeltaMovement().y, dz / length * .28);
         net.minecraft.client.KeyMapping.click(InputConstants.getKey(client.options.keyAttack.saveString()));
+    }
+
+    private static boolean hasMethod(Class<?> type, String name) {
+        for (var method : type.getMethods()) if (method.getName().equals(name) && method.getParameterCount() == 0) return true;
+        return false;
     }
 
     /** The native modifier bit for `ctrl`/`shift`: GLFW bits on 26.1/26.2, SDL pairs on 26.3. */
@@ -717,6 +725,29 @@ public final class ParityProbe implements ClientModInitializer {
                     throw new IllegalStateException("Benchmark already running");
                 }
             }
+            case "grab" -> {
+                // "grab <label>": reads the main render target (the last finished frame) back into <label>.png.
+                var output = root.resolve(args[1] + ".png");
+                if (Files.exists(output)) throw new IllegalStateException("Capture already exists");
+                // Minecraft.getMainRenderTarget() on 26.1; GameRenderer.mainRenderTarget() from 26.2.
+                var target = (com.mojang.blaze3d.pipeline.RenderTarget) (hasMethod(Minecraft.class, "getMainRenderTarget")
+                        ? Minecraft.class.getMethod("getMainRenderTarget").invoke(client)
+                        : client.gameRenderer.getClass().getMethod("mainRenderTarget").invoke(client.gameRenderer));
+                net.minecraft.client.Screenshot.takeScreenshot(target, image -> {
+                    try (image) { image.writeToFile(output); }
+                    catch (java.io.IOException failure) { throw new RuntimeException(failure); }
+                    System.out.println("[parity-probe] grab " + args[1]);
+                });
+            }
+            case "flat-faces-mode" -> Counters.FLAT_FACES_MODE = Integer.parseInt(args[1]);
+            case "option" -> {
+                // "option <name> <json>": sets one vanilla option in memory, e.g. "option glintSpeed 0.5"; not saved.
+                @SuppressWarnings("unchecked")
+                var option = (net.minecraft.client.OptionInstance<Object>) net.minecraft.client.Options.class
+                        .getMethod(args[1]).invoke(client.options);
+                option.set(new com.google.gson.Gson().fromJson(args[2], option.get().getClass()));
+                System.out.println("[parity-probe] option " + args[1] + "=" + option.get());
+            }
             case "detail" -> {
                 FeatureRegistry.modules();
                 var feature = FeatureRegistry.all().stream().filter(f -> f.id.equals(args[1])).findFirst().orElseThrow();
@@ -908,6 +939,9 @@ public final class ParityProbe implements ClientModInitializer {
                 Counters.LISTENER_UPDATES.set(0);
                 Counters.TEXT_EFFECTS.set(0);
                 Counters.ATLAS_DRAWS.set(0);
+                Counters.ATLAS_NANOS.set(0);
+                Counters.ATLAS_QUADS.set(0);
+                Counters.ATLAS_QUADS_SKIPPED.set(0);
                 countSteps = com.aurora.client.util.SpriteAnimationClock.ticks();
                 countStart = System.nanoTime();
                 countUntil = countStart + Long.parseLong(args[1]) * 1_000_000_000L;

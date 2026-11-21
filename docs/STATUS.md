@@ -181,6 +181,8 @@ Entity & Block-Entity Occlusion Culling (`perfEntityOcclusion`) skips extracting
 contained block entities that a settled full-cube opaque terrain layer certainly hides from the
 camera, stands down for `entityculling`, and is pixel-identical across all 11 verification scenes
 on 26.1.2 OpenGL, 26.2 OpenGL and 26.3 native Vulkan; [evidence](reports/2026-11-20-entity-occlusion.md).
+GUI Flat Faces skips exact zero-area (edge-on) quads inside GUI item atlas draws across all three
+lines, pixel-identical; [evidence](reports/2026-11-20-gui-flat-faces.md).
 
 ## Next work
 

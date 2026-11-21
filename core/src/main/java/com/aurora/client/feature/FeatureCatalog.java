@@ -454,6 +454,18 @@ public final class FeatureCatalog {
                 .gates("perfGuiGlintBaking");
         mixin("TextureTransformAccessor", "redrawing glinting GUI items only when the glint moves", "performance")
                 .gates("perfGuiGlintBaking");
+        // No mod owns this. ImmediatelyFast's animated atlas draws through
+        // GuiItemAtlas.drawToSlot, the scope. Sodium bakes flat items with its
+        // ImprovedItemModelBuilder (the side faces stay ordinary quads) and
+        // writes quads in BufferBuilder.putBakedQuad, below the call site
+        // wrapped here. EMF/ETF, Iris and Continuity do not touch these quads,
+        // and MoreCulling's item culling is for item frames.
+        mixin("BakedQuadEdgeOnMixin", "leaving out GUI item faces that cover no pixel", "performance")
+                .gates("perfGuiFlatFaces");
+        mixin("GuiItemAtlasFlatFacesMixin", "leaving out GUI item faces that cover no pixel", "performance")
+                .gates("perfGuiFlatFaces");
+        mixin("ItemFeatureRendererFlatFacesMixin", "leaving out GUI item faces that cover no pixel", "performance")
+                .gates("perfGuiFlatFaces");
         mixin("SpriteContentsMipsAccessor", "freeing uploaded sprite mipmaps", "performance").gates("perfFreeSpriteMipmaps");
         mixin("TextureAtlasFreeMipsMixin", "freeing uploaded sprite mipmaps", "performance").gates("perfFreeSpriteMipmaps");
         // Polytone selects custom depth nodes; Gnetum routes HUD submissions into its own layers.
