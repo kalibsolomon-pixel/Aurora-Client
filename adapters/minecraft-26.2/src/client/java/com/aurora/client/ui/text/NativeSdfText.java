@@ -53,10 +53,13 @@ public final class NativeSdfText {
         return new FontTexture(name::toString, GlyphRenderTypes.createForGrayscaleTexture(name), false);
     }
 
+    /** The page's own texture size, not vanilla's 256: ImmediatelyFast resizes every font page. */
     static SdfAtlas.Cell insert(FontTexture page, SdfStrike.Bitmap bitmap) {
         Upload upload = new Upload(bitmap);
-        return page.add(UNUSED_INFO, upload) == null ? null
-                : new SdfAtlas.Cell(page, upload.x, upload.y, bitmap.width(), bitmap.height());
+        if (page.add(UNUSED_INFO, upload) == null) return null;
+        GpuTexture texture = page.getTexture();
+        return new SdfAtlas.Cell(page, upload.x, upload.y, bitmap.width(), bitmap.height(),
+                texture.getWidth(0), texture.getHeight(0));
     }
 
     public static boolean isSdf(TextRenderable renderable) { return renderable instanceof Instance; }

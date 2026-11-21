@@ -62,10 +62,10 @@ abstract class SdfInstance implements TextRenderable.Styled {
     }
 
     private void quad(Matrix4fc pose, VertexConsumer out, int light, float x, float y, int argb) {
-        float u0 = SdfTextMath.insetUv(cell.x(), false, SdfAtlas.SIZE);
-        float u1 = SdfTextMath.insetUv(cell.x() + cell.width(), true, SdfAtlas.SIZE);
-        float v0 = SdfTextMath.insetUv(cell.y(), false, SdfAtlas.SIZE);
-        float v1 = SdfTextMath.insetUv(cell.y() + cell.height(), true, SdfAtlas.SIZE);
+        float u0 = SdfTextMath.insetUv(cell.x(), false, cell.pageWidth());
+        float u1 = SdfTextMath.insetUv(cell.x() + cell.width(), true, cell.pageWidth());
+        float v0 = SdfTextMath.insetUv(cell.y(), false, cell.pageHeight());
+        float v1 = SdfTextMath.insetUv(cell.y() + cell.height(), true, cell.pageHeight());
         float topShift = style.isItalic() ? shear(quadTop) : 0;
         float bottomShift = style.isItalic() ? shear(quadBottom) : 0;
         float x0 = x + quadLeft, x1 = x + quadRight, y0 = y + quadTop, y1 = y + quadBottom;

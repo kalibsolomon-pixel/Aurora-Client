@@ -33,4 +33,13 @@ Aurora UI Only, and also HUD and vanilla GUI text in All Text. The fixed Aurora 
   session fallback described above: a failed or stood-down SDF hook, a failed shader or atlas, ModernUI or
   Caxton installed. They are not a user choice.
 
-See [phase 1](../reports/2026-11-17-sdf-spike.md) for geometry, overhead and the native acceptance checklist.
+## Amendment, 2026-11-20
+
+- SDF pages are vanilla `FontTexture`s, so a mod that resizes font atlases resizes them too. Texture
+  coordinates use each page's actual texture size, never vanilla's 256. ImmediatelyFast's
+  `font_atlas_resizing` (1024 by default) garbled SDF text until this changed, and 3.6.0 stood SDF text
+  down for ImmediatelyFast. That stand-down is removed; ModernUI and Caxton remain the only text owners.
+- A glyph whose cell is larger than an empty page keeps its exact bitmap, as an oversized glyph already did.
+
+See [phase 1](../reports/2026-11-17-sdf-spike.md) for geometry, overhead and the native acceptance checklist,
+and [the ImmediatelyFast report](../reports/2026-11-20-sdf-immediatelyfast.md) for the atlas-size fix.

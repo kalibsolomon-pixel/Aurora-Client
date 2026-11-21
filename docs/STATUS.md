@@ -1,6 +1,6 @@
 # Aurora Client status
 
-Updated 2026-11-17. See [ROADMAP](ROADMAP.md) for the order of work,
+Updated 2026-11-20. See [ROADMAP](ROADMAP.md) for the order of work,
 [architecture](ARCHITECTURE.md) for ownership, and [ADRs](adr/) for decisions.
 
 ## Structure and integration
@@ -18,6 +18,10 @@ block outlines use vanilla's translucent line pipeline with Aurora's distance-fi
 (anti-aliased edge, round caps). Bitmap text and vanilla lines remain only as the session fallback
 when SDF cannot run ([ADR 0010](adr/0010-opt-in-sdf-text-with-vanilla-layout.md)). Checked in-world on 26.1.2, 26.2 and 26.3
 (OpenGL; 26.3 also native Vulkan) at widths 0.5, 2 and 5.
+Since 2026-11-20 SDF text also runs with ImmediatelyFast, which 3.6.0 stood it down for: ImmediatelyFast's
+font atlas resizing enlarges Aurora's SDF pages too, and glyph texture coordinates now use each page's actual
+size. Deferred font preparation no longer stands down for ModernFix, which owns no font set work
+([report](reports/2026-11-20-sdf-immediatelyfast.md)).
 
 Pulsar integration adds Phenomena's analytics and recording as Aurora's 40th
 feature, off by default. Its configuration and six-tab dashboard follow Aurora's

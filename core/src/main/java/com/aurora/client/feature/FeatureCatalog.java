@@ -376,12 +376,14 @@ public final class FeatureCatalog {
         mixin("ScreenTextScopeMixin", "scoping the custom font to Aurora windows", "text_fonts");
         mixin("TrueTypeProviderDefinitionMixin", "crisp Aurora fonts at every GUI scale", "text_fonts");
         // Distance-field text is the only text path; raster text is the fallback while these are not working.
+        // ImmediatelyFast needs no stand-down: its font_atlas_resizing enlarges Aurora's SDF pages too,
+        // and SDF glyphs use each page's actual size (2026-11-20).
         mixin("SdfFontManagerMixin", "smooth scaling for custom text", "text_fonts")
-                .yieldsTo("modernui", "caxton", "immediatelyfast");
+                .yieldsTo("modernui", "caxton");
         mixin("SdfGlyphRenderStateMixin", "smooth scaling for custom text", "text_fonts")
-                .yieldsTo("modernui", "caxton", "immediatelyfast");
+                .yieldsTo("modernui", "caxton");
         mixin("SdfGuiTextMixin", "smooth scaling for custom text", "text_fonts")
-                .yieldsTo("modernui", "caxton", "immediatelyfast");
+                .yieldsTo("modernui", "caxton");
         mixin("FontManagerAccessor", "crisp Aurora fonts at every GUI scale", "text_fonts");
         mixin("FontSetAccessor", "crisp Aurora fonts at every GUI scale", "text_fonts");
         mixin("MinecraftFontManagerAccessor", "crisp Aurora fonts at every GUI scale", "text_fonts");
@@ -406,10 +408,11 @@ public final class FeatureCatalog {
         mixin("SoundEngineListenerMixin", "skipping unchanged sound listener updates", "performance").gates("perfSoundListenerThrottle");
         mixin("DebugScreenEntryCacheMixin", "the F3 entry cache", "performance").gates("perfDebugEntryCache");
         mixin("FontDecorationMergeMixin", "merged underline and strikethrough quads", "performance").gates("perfMergeTextDecorations");
+        // ModernFix (5.27.20) only makes unihex providers lazy; it owns no FontManager or FontSet work.
         mixin("FontManagerDeferredMixin", "preparing unused Aurora fonts on first use", "performance")
-                .gates("perfDeferAuroraFonts").yieldsTo("modernfix");
+                .gates("perfDeferAuroraFonts");
         mixin("FontSetDeferredMixin", "preparing unused Aurora fonts on first use", "performance")
-                .gates("perfDeferAuroraFonts").yieldsTo("modernfix");
+                .gates("perfDeferAuroraFonts");
         // ImmediatelyFast's batch_animated_item_updates moves animated items
         // into its own atlas subclass and redraws them in one batch; keeping
         // their slots there freezes them (26.3 set A, 2026-11-12).

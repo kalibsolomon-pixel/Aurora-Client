@@ -80,6 +80,9 @@ exchange atomically and refuses an unmarked fixture or a pending command.
 | `pulsar-delete` | Select the second-newest recording in History and press its Delete button (opens the real confirmation; Escape cancels) |
 | `pulsar-reach-stats [creative]` | After `pulsar-end`, assert the newest recording's hit reach statistics never exceed 3.0 (creative: hold no reach samples) |
 | `menu` | Disconnect to Aurora's title screen |
+| `chat-open` | Open the chat screen over recent lines (add lines with `server tellraw @a ...`) |
+| `multiplayer` | Open vanilla's server list |
+| `inventory` / `hover-slot 0` | Open the survival inventory / park the GUI pointer on an inventory slot, showing its tooltip |
 | `stop` | Shut down normally |
 
 For an Aurora-absent/installed/candidate FPS comparison, `fpsObserverJar` builds
