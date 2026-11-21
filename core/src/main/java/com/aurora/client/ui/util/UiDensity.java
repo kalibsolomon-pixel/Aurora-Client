@@ -48,6 +48,8 @@ public final class UiDensity {
     // ---- Content ----
     /** Feature cards keep their original size (owner ruling, 2026-10-30). */
     public static final int CARD_WIDTH = 80, CARD_HEIGHT = CARD_WIDTH, GRID_GAP = 6;
+    /** Minimum responsive feature-card width when the window shrinks below {@link #WINDOW_WIDTH}. */
+    public static final int MIN_CARD_WIDTH = 72;
     /** List rows 28 px with 4 px gap: eight full rows fit the 252 px well cleanly. */
     public static final int LIST_HEIGHT = 28, LIST_GAP = 4, ROW_GAP = 4;
     public static final int SIMPLE_ROW = 22, STACKED_ROW = 34, INLINE_SLIDER = 24;
@@ -95,6 +97,28 @@ public final class UiDensity {
         return new Rect(frame.x() + left, frame.y() + top, Math.max(1, frame.width() - left - scrollRightInset()),
                 Math.max(1, frame.height() - top - FRAME_EDGE));
     }
-    public static int columns(int width) { return Math.max(1, Math.min(8, (width + GRID_GAP) / (CARD_WIDTH + GRID_GAP))); }
+    public static int columns(int width) {
+        if (width >= extent(4, CARD_WIDTH, GRID_GAP)) {
+            return Math.max(1, Math.min(8, (width + GRID_GAP) / (CARD_WIDTH + GRID_GAP)));
+        }
+        return Math.max(1, Math.min(4, (width + GRID_GAP) / (MIN_CARD_WIDTH + GRID_GAP)));
+    }
+    /** Responsive feature-card width that fills {@code width} across {@code columns} without trailing gaps. */
+    public static int gridCardWidth(int width, int columns) {
+        int cols = Math.max(1, columns);
+        return Math.max(1, (width - (cols - 1) * GRID_GAP) / cols);
+    }
+    /** Keeps feature cards square as they scale down, never taller than {@link #CARD_HEIGHT}. */
+    public static int gridCardHeight(int cardWidth) { return Math.min(CARD_HEIGHT, Math.max(1, cardWidth)); }
+    /** Column gap for the responsive feature grid: absorbs a full extra pixel per gap when divisible. */
+    public static int gridColumnGap(int width, int columns, int cardWidth) {
+        if (columns <= 1) return GRID_GAP;
+        int rem = width - extent(columns, cardWidth, GRID_GAP);
+        return GRID_GAP + Math.max(0, rem / (columns - 1));
+    }
+    /** Horizontal centering inset (0 or 1 px) for any odd remainder left after {@link #gridColumnGap}. */
+    public static int gridOffsetX(int width, int columns, int cardWidth, int columnGap) {
+        return Math.max(0, (width - extent(columns, cardWidth, columnGap)) / 2);
+    }
     public static int extent(int count, int height, int gap) { return count == 0 ? 0 : count * height + (count - 1) * gap; }
 }

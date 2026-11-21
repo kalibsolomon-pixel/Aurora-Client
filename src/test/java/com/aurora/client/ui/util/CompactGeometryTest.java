@@ -16,6 +16,27 @@ class CompactGeometryTest {
         assertEquals(body.height(), UiDensity.extent(3, UiDensity.CARD_HEIGHT, UiDensity.GRID_GAP));
         assertEquals(body.height(), UiDensity.extent(8, UiDensity.LIST_HEIGHT, UiDensity.LIST_GAP));
     }
+    @Test void responsiveGridFillsContentWidthWithoutRightChasm() {
+        for (int[] size : new int[][]{{640,360},{460,257},{420,257},{380,240},{320,240},{260,220}}) {
+            var body = UiDensity.mainContent(UiDensity.mainFrame(size[0], size[1]));
+            int cols = UiDensity.columns(body.width());
+            int cardW = UiDensity.gridCardWidth(body.width(), cols);
+            int cardH = UiDensity.gridCardHeight(cardW);
+            int colGap = UiDensity.gridColumnGap(body.width(), cols, cardW);
+            int offsetX = UiDensity.gridOffsetX(body.width(), cols, cardW, colGap);
+            int span = UiDensity.extent(cols, cardW, colGap);
+            assertTrue(cardH <= UiDensity.CARD_HEIGHT && cardH > 0);
+            assertTrue(offsetX >= 0 && offsetX + span <= body.width());
+            assertTrue(body.width() - span <= Math.max(1, cols - 2),
+                    "viewport " + size[0] + "x" + size[1] + " left " + (body.width() - span) + "px slack");
+        }
+        // Standard 460x308 frame keeps exact 80x80 cards with 0 offset.
+        var full = UiDensity.mainContent(UiDensity.mainFrame(640, 360));
+        assertEquals(80, UiDensity.gridCardWidth(full.width(), 4));
+        assertEquals(80, UiDensity.gridCardHeight(80));
+        assertEquals(6, UiDensity.gridColumnGap(full.width(), 4, 80));
+        assertEquals(0, UiDensity.gridOffsetX(full.width(), 4, 80, 6));
+    }
     @Test void everyWindowedScreenSharesOneFrame() {
         for (int[] size : new int[][]{{640,360},{480,270},{960,540},{1280,720}}) {
             var main = UiDensity.mainFrame(size[0], size[1]);

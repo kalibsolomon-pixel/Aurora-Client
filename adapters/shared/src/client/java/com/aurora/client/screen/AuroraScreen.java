@@ -908,15 +908,17 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
         laidOutGrid = gridLayout;
         modulesScale = scale;
         int columns = gridLayout ? gridColumns() : 1;
-        int width = gridLayout ? Math.min(UiDensity.CARD_WIDTH, measuredContent.width) : measuredContent.width;
-        int height = gridLayout ? UiDensity.CARD_HEIGHT : UiDensity.LIST_HEIGHT;
-        int gap = gridLayout ? UiDensity.GRID_GAP : UiDensity.LIST_GAP;
+        int width = gridLayout ? UiDensity.gridCardWidth(measuredContent.width, columns) : measuredContent.width;
+        int height = gridLayout ? UiDensity.gridCardHeight(width) : UiDensity.LIST_HEIGHT;
+        int rowGap = gridLayout ? UiDensity.GRID_GAP : UiDensity.LIST_GAP;
+        int colGap = gridLayout ? UiDensity.gridColumnGap(measuredContent.width, columns, width) : rowGap;
+        float left = mainX() + (gridLayout ? UiDensity.gridOffsetX(measuredContent.width, columns, width, colGap) : 0);
         modulesLayout.begin(measuredContent);
         for (int index = 0; index < modules.size(); index++) {
             Module module = modules.get(index);
-            modulesLayout.cell(module, module.id, index, columns, mainX(), measuredContent.y, width, height, gap, gap);
+            modulesLayout.cell(module, module.id, index, columns, left, measuredContent.y, width, height, colGap, rowGap);
         }
-        modulesLayout.finish(measuredContent, UiDensity.extent((modules.size() + columns - 1) / columns, height, gap));
+        modulesLayout.finish(measuredContent, UiDensity.extent((modules.size() + columns - 1) / columns, height, rowGap));
     }
 
     private void arrangeSettings() {
