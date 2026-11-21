@@ -4,19 +4,17 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class CompactGeometryTest {
-    @Test void uniformWindowShowsAThreeByThreeCardGridAndNineListRows() {
+    @Test void uniformWindowShowsAFourByThreeCardGridAndEightListRowsWithNoClipping() {
         var frame = UiDensity.mainFrame(640, 360);
         var body = UiDensity.mainContent(frame);
-        assertEquals(336, frame.width()); assertEquals(292, frame.height());
-        // The frame room (2026-11-18) keeps 10 px on every edge for the bevel band and its gap.
-        assertEquals(252, body.width()); assertEquals(248, body.height());
+        assertEquals(460, frame.width()); assertEquals(308, frame.height());
+        // The frame room keeps 12 px on every edge for the bevel band and its gap.
+        assertEquals(338, body.width()); assertEquals(252, body.height());
         assertEquals(80, UiDensity.CARD_WIDTH); // feature cards keep their original size
-        assertEquals(3, UiDensity.columns(body.width()));
-        // the owner's "approximately 3×3" target: the third card row shows all but its last 4 px
-        assertTrue(UiDensity.extent(3, UiDensity.CARD_HEIGHT, UiDensity.GRID_GAP) - body.height() <= 4);
-        assertTrue(UiDensity.extent(2, UiDensity.CARD_HEIGHT, UiDensity.GRID_GAP) + UiDensity.GRID_GAP < body.height());
-        assertTrue(UiDensity.extent(9, UiDensity.LIST_HEIGHT, UiDensity.LIST_GAP) <= body.height());
-        assertTrue(UiDensity.extent(10, UiDensity.LIST_HEIGHT, UiDensity.LIST_GAP) > body.height());
+        assertEquals(4, UiDensity.columns(body.width()));
+        assertEquals(body.width(), UiDensity.extent(4, UiDensity.CARD_WIDTH, UiDensity.GRID_GAP));
+        assertEquals(body.height(), UiDensity.extent(3, UiDensity.CARD_HEIGHT, UiDensity.GRID_GAP));
+        assertEquals(body.height(), UiDensity.extent(8, UiDensity.LIST_HEIGHT, UiDensity.LIST_GAP));
     }
     @Test void everyWindowedScreenSharesOneFrame() {
         for (int[] size : new int[][]{{640,360},{480,270},{960,540},{1280,720}}) {

@@ -24,9 +24,10 @@ public class ToggleGroupSetting extends FeatureSetting {
     /** One segment: its label and the switch it reads and writes. */
     public record Toggle(String label, BooleanSupplier getter, Consumer<Boolean> setter) {}
 
-    private static final int CONTROL_H = 40;
+    private static final int CONTROL_H = 44;
     private static final int TRACK_H = 20;
-    private static final int TRACK_PAD_X = 12;
+    private static final int TRACK_PAD_LEFT = 12;
+    private static final int TRACK_PAD_RIGHT = 8;
 
     private final SegmentedControl control;
     private boolean glass = true;
@@ -60,8 +61,9 @@ public class ToggleGroupSetting extends FeatureSetting {
     public void renderGlassPass(GuiGraphicsExtractor ctx, int x, int y, int width) {
         if (!com.aurora.client.ui.component.GlassSurface.passOpen()) return;
         control.glassEnabled(glass);
-        control.layout(x + TRACK_PAD_X, y + 16, width - TRACK_PAD_X * 2, TRACK_H);
-        control.renderGlassPass(ctx, x + TRACK_PAD_X, y + 16, width - TRACK_PAD_X * 2, TRACK_H);
+        int trackW = Math.max(1, width - TRACK_PAD_LEFT - TRACK_PAD_RIGHT);
+        control.layout(x + TRACK_PAD_LEFT, y + 20, trackW, TRACK_H);
+        control.renderGlassPass(ctx, x + TRACK_PAD_LEFT, y + 20, trackW, TRACK_H);
     }
 
     @Override
@@ -73,10 +75,10 @@ public class ToggleGroupSetting extends FeatureSetting {
     @Override
     public void renderShapes(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {
         lastWidth = width;
-        lastTrackW = width - TRACK_PAD_X * 2;
+        lastTrackW = Math.max(1, width - TRACK_PAD_LEFT - TRACK_PAD_RIGHT);
         control.glassEnabled(glass);
-        control.layout(x + TRACK_PAD_X, y + 16, lastTrackW, TRACK_H);
-        control.renderShapes(ctx, x + TRACK_PAD_X, y + 16, lastTrackW, TRACK_H);
+        control.layout(x + TRACK_PAD_LEFT, y + 20, lastTrackW, TRACK_H);
+        control.renderShapes(ctx, x + TRACK_PAD_LEFT, y + 20, lastTrackW, TRACK_H);
     }
 
     @Override
@@ -84,12 +86,13 @@ public class ToggleGroupSetting extends FeatureSetting {
         lastWidth = width;
         Font tr = Minecraft.getInstance().font;
         boolean disabled = isDisabled();
-        renderLabelWithTooltip(ctx, com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(tr, label, Math.max(0, width - 24), 0),
-                x + TRACK_PAD_X, AuroraFontRenderer.textY(tr, y, 16), AuroraTheme.IOS_LABEL, mouseX, mouseY, disabled);
-        lastTrackW = width - TRACK_PAD_X * 2;
+        int trackW = Math.max(1, width - TRACK_PAD_LEFT - TRACK_PAD_RIGHT);
+        renderLabelWithTooltip(ctx, com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(tr, label, trackW, 0),
+                x + TRACK_PAD_LEFT, AuroraFontRenderer.textY(tr, y, 18), AuroraTheme.IOS_LABEL, mouseX, mouseY, disabled);
+        lastTrackW = trackW;
         control.disabled(disabled);
-        control.layout(x + TRACK_PAD_X, y + 16, lastTrackW, TRACK_H);
-        control.renderOverlay(ctx, x + TRACK_PAD_X, y + 16, lastTrackW, TRACK_H, mouseX, mouseY);
+        control.layout(x + TRACK_PAD_LEFT, y + 20, lastTrackW, TRACK_H);
+        control.renderOverlay(ctx, x + TRACK_PAD_LEFT, y + 20, lastTrackW, TRACK_H, mouseX, mouseY);
     }
 
     @Override

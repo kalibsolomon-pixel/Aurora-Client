@@ -8,9 +8,9 @@ public record SettingRowLayout(int height, List<String> lines, UiDensity.Rect la
                                UiDensity.Rect control, UiDensity.Rect value, boolean inline) {
     public enum Kind { BOOLEAN, SLIDER, ENUM, KEYBIND, COLOR, BUTTON, ACTION, SECTION }
     /** Slider value readout column. */
-    public static final int VALUE_W = 36;
+    public static final int VALUE_W = 42;
     /** A colour row's hex value column, wide enough for {@code #RRGGBBAA}. */
-    public static final int HEX_W = 50;
+    public static final int HEX_W = 56;
     /** Track inset for the knob's radius, so a knob at either end lands on the row's control edge,
      * the same right edge every toggle, field and swatch ends on (UI polish 2026-11-14; was 8). */
     public static final int KNOB_RESERVE = 5;
@@ -32,7 +32,7 @@ public record SettingRowLayout(int height, List<String> lines, UiDensity.Rect la
     /** {@code trackW}: a slider's track length ({@link #trackWidth}); other kinds ignore it. */
     public static SettingRowLayout measure(Kind kind, String text, int width, int lineHeight,
                                            TextMetrics measure, int trackW) {
-        int pad = 8, gap = 6;
+        int pad = 8, gap = 8;
         int controlW = switch (kind) {
             case BOOLEAN -> UiDensity.TOGGLE_W; case ENUM -> UiDensity.ENUM_W; case KEYBIND, BUTTON -> UiDensity.KEY_W;
             case ACTION -> UiDensity.ACTION_W;

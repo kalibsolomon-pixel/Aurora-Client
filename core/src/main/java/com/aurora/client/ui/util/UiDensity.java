@@ -13,10 +13,10 @@ public final class UiDensity {
     private UiDensity() {}
 
     // ---- The one window frame ----
-    /** 336×292: the content well (252×248) shows a 3×3 grid of the 80×80 cards, the
-     * third row just under its last 4 px — the owner's "approximately 3×3" target (2026-10-30).
-     * The 4 px over 288 hold the header's {@link #HEADER_TOP} inset (owner, 2026-11-18). */
-    public static final int WINDOW_WIDTH = 336, WINDOW_HEIGHT = 292, WINDOW_MARGIN = 12;
+    /** 460×308: balanced 3:2 landscape window; the content well (338×252) fits an exact 4×3 grid
+     * of 80×80 cards (zero bottom clipping) and an exact 8-row list, while giving Settings tabs,
+     * detail pages and the Profiles tools row generous breathing room. */
+    public static final int WINDOW_WIDTH = 460, WINDOW_HEIGHT = 308, WINDOW_MARGIN = 12;
     /** Legacy names for the frame; kept so existing callers read the uniform size. */
     public static final int MAIN_WIDTH = WINDOW_WIDTH, MAIN_HEIGHT = WINDOW_HEIGHT;
 
@@ -24,40 +24,43 @@ public final class UiDensity {
     /** Every window keeps its controls, text and scroll clips {@value #FRAME_EDGE} px inside
      * its outer edge. The bevel band takes up to {@value #FRAME_BAND} px of that; the rest is
      * the gap to content, so a full-width band never crowds a control. */
-    public static final int FRAME_EDGE = 10, FRAME_GAP = 4, FRAME_BAND = FRAME_EDGE - FRAME_GAP;
+    public static final int FRAME_EDGE = 12, FRAME_GAP = 6, FRAME_BAND = FRAME_EDGE - FRAME_GAP;
     /** Scrollbar track and its gap from the content it scrolls; the track ends at FRAME_EDGE. */
-    public static final int SCROLLBAR_W = 3, SCROLLBAR_GAP = 3;
+    public static final int SCROLLBAR_W = 3, SCROLLBAR_GAP = 5;
 
     // ---- Chrome ----
     /** Header buttons (Reset/Done/New/Done…) and toolbar icon buttons. */
-    public static final int HEADER_BUTTON_H = 16, HEADER_BUTTON_W = 48, TOOL = 16;
+    public static final int HEADER_BUTTON_H = 20, HEADER_BUTTON_W = 54, TOOL = 20;
     /** Top of the header row: the frame room plus a row's 4 px inset, the same inset as the title
      * column and the row controls, so a header button clears the lit top band as far as the title
      * does (owner, 2026-11-18: Done sat 4 px closer to the border than everything else). */
     public static final int HEADER_TOP = FRAME_EDGE + 4;
     /** Title/toolbar band at the top of every window: the header inset, then one toolbar row. */
     public static final int HEADER = HEADER_TOP + TOOL;
+    /** Breathing band between the header/toolbar row and the scrolling body. */
+    public static final int HEADER_BODY_GAP = 8;
     /** Sidebar navigation items. */
-    public static final int TAB_W = 52, TAB_H = 18, TAB_PITCH = 20;
-    public static final int SIDEBAR = FRAME_EDGE + TAB_W, INSET = 6;
+    public static final int TAB_W = 76, TAB_H = 22, TAB_PITCH = 26;
+    /** Extra vertical separation between navigation tabs and the Profiles action. */
+    public static final int SIDEBAR_GROUP_GAP = 10;
+    public static final int SIDEBAR = FRAME_EDGE + TAB_W, INSET = 14;
 
     // ---- Content ----
     /** Feature cards keep their original size (owner ruling, 2026-10-30). */
     public static final int CARD_WIDTH = 80, CARD_HEIGHT = CARD_WIDTH, GRID_GAP = 6;
-    /** List rows 24 px (owner decision 2026-11-14; 32 left half of each row empty): nine visible. */
-    public static final int LIST_HEIGHT = 24, LIST_GAP = 4, ROW_GAP = 2;
-    public static final int SIMPLE_ROW = 18, STACKED_ROW = 28, INLINE_SLIDER = 20;
+    /** List rows 28 px with 4 px gap: eight full rows fit the 252 px well cleanly. */
+    public static final int LIST_HEIGHT = 28, LIST_GAP = 4, ROW_GAP = 4;
+    public static final int SIMPLE_ROW = 22, STACKED_ROW = 34, INLINE_SLIDER = 24;
     public static final int MIN_TRACK = 96, MARK = 28;
     /** Trailing field controls (dropdown, keybind, action button) and their widths. */
-    public static final int FIELD_H = 14, ENUM_W = 84, KEY_W = 72;
+    public static final int FIELD_H = 18, ENUM_W = 104, KEY_W = 88;
     /** Icon-only navigation action (arrow_forward glyph, no text). */
-    public static final int ACTION_W = 28;
-    public static final int TOGGLE_W = 24, TOGGLE_H = 12;
-    /** Color swatches are small SQUARES (owner ruling, 2026-10-30) — one
-     * size for the field-height family, matching FIELD_H rows. */
-    public static final int SWATCH_W = 14, SWATCH_H = 14;
+    public static final int ACTION_W = 32;
+    public static final int TOGGLE_W = 28, TOGGLE_H = 14;
+    /** Color swatches are small SQUARES (owner ruling, 2026-10-30) — balanced with FIELD_H rows. */
+    public static final int SWATCH_W = 16, SWATCH_H = 16;
     /** Section caption row and the band above a non-leading caption. */
-    public static final int SECTION_ROW = 14, SECTION_GAP = 8;
+    public static final int SECTION_ROW = 18, SECTION_GAP = 14;
 
     public record Rect(int x, int y, int width, int height) {
         public boolean contains(double px, double py) {
@@ -88,7 +91,7 @@ public final class UiDensity {
     public static Rect mainContent(Rect frame) {
         boolean horizontal = frame.width() < 320;
         int left = horizontal ? FRAME_EDGE : SIDEBAR + INSET;
-        int top = horizontal ? HEADER + FRAME_GAP + TAB_H + INSET : HEADER + FRAME_GAP;
+        int top = horizontal ? HEADER + HEADER_BODY_GAP + TAB_H + HEADER_BODY_GAP : HEADER + HEADER_BODY_GAP;
         return new Rect(frame.x() + left, frame.y() + top, Math.max(1, frame.width() - left - scrollRightInset()),
                 Math.max(1, frame.height() - top - FRAME_EDGE));
     }

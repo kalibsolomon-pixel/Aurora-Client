@@ -20,7 +20,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
  * the real crosshair.
  */
 public class CrosshairPreviewSetting extends FeatureSetting {
-    private static final int ROW_H = 34, WELL = 30, GAP = 6, PAD = 8; // was 44/38: the well dwarfed a dot crosshair
+    private static final int ROW_H = 40, WELL = 36, GAP = 8, PAD = 8; // crisp preview well balanced with lifted row height
     private static final int MIN_ZOOM = 3, MAX_ZOOM = 8, TARGET_EXTENT = 24;
 
     public CrosshairPreviewSetting() {

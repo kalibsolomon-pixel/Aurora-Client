@@ -431,20 +431,21 @@ upper-left light shades the square frame's planar facets. The directional baked 
 falls down and right. Only the frame band is shaded. The bevel replaces the old window
 outline rather than stacking over it.
 
-**Frame room** (owner, 2026-11-18). Windows pad their content for the band instead of
+**Frame room** (updated 2026-11-21). Windows pad their content for the band instead of
 thinning the band to fit the content. Every window keeps its boxes (controls, rows, fields,
-scroll clips and scrollbars) `UiDensity.FRAME_EDGE` = 10 GUI px inside its outer edge. The
-band may take up to `FRAME_BAND` = 6 px of that, and the remaining 4 px is the gap to
+scroll clips and scrollbars) `UiDensity.FRAME_EDGE` = 12 GUI px inside its outer edge. The
+band may take up to `FRAME_BAND` = 6 px of that, and the remaining 6 px is the gap to
 content. Callers pass `MaterialSurface.frameInset(radius)` as the band cap. Header buttons and
-toolbars sit on one row from 14 to 30 px (`UiDensity.HEADER_TOP` to `UiDensity.HEADER`), and
-the body starts 4 px below it. The header row takes the title column's 14 px inset rather than
-the bare frame room, because a filled Done 10 px under the lit top band read as tighter than
-everything else (owner, 2026-11-18); the window grew from 288 to 292 px tall to hold it. A scrolling column ends 16 px from the right edge: the 3 px scrollbar, its 3 px
-gap and the frame room. Free text in a window's own column (window titles) starts at
-`UiDensity.TITLE_X` = 14 px, where labels inside full-width rows start, so a title and the
-rows under it share one column. Small dialogs keep their 12 px control column. A modal
-padded wider than the frame room, such as the pack browser's detail modal, may cap its band
-at its own clearance. `WindowFrameRoomTest` checks these rules.
+toolbars sit on one row from 16 to 36 px (`UiDensity.HEADER_TOP` to `UiDensity.HEADER`,
+20 px tall), and the body starts `UiDensity.HEADER_BODY_GAP` = 8 px below it. The uniform
+window is 460×308 px so the main content well (338×252 px) holds an exact 4×3 grid of 80×80
+cards and an exact 8-row list with zero resting clip, while Settings sub-tabs, detail screens
+and the Profiles tools row breathe cleanly. A scrolling column ends 20 px from the right edge:
+the 3 px scrollbar, its 5 px gap and the 12 px frame room. Free text in a window's own column
+(window titles) starts at `UiDensity.TITLE_X` = 16 px, where labels inside full-width rows
+start, so a title and the rows under it share one column. Small dialogs share the same frame
+room and `TITLE` role. A modal padded wider than the frame room, such as the pack browser's
+detail modal, may cap its band at its own clearance. `WindowFrameRoomTest` checks these rules.
 
 The finish is continuous, not a preset selector. Dark low-density fills with higher blur
 give a clear glass edge; saturated fills around 50% give a coloured gem highlight; dense

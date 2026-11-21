@@ -41,10 +41,10 @@ public class IconPickerScreen extends Screen implements ThemedScreen {
     /** The window owns the one backdrop capture; its buttons use cached faces. */
     @Override public boolean parentGlassOnly() { return true; }
 
-    private static final int CELL = 26;
-    private static final int GAP = 2;
+    private static final int CELL = 30;
+    private static final int GAP = 4;
     private static final int STEP = CELL + GAP;
-    private static final float ICON_EM = 15f;
+    private static final float ICON_EM = 16f;
 
     private final Screen parent;
     private final Consumer<String> onApply;
@@ -72,15 +72,15 @@ public class IconPickerScreen extends Screen implements ThemedScreen {
         panelX = frame.x(); panelY = frame.y(); panelW = frame.width(); panelH = frame.height();
         int bh = UiDensity.HEADER_BUTTON_H;
         footerY = panelY + panelH - UiDensity.FRAME_EDGE - bh;
-        gridY = panelY + UiDensity.HEADER + 6;
-        gridH = Math.max(STEP, footerY - 8 - gridY);
-        int usable = panelW - 24 - 8; // 8 for the scrollbar lane
+        gridY = panelY + UiDensity.HEADER + UiDensity.HEADER_BODY_GAP;
+        gridH = Math.max(STEP, footerY - 10 - gridY);
+        int usable = panelW - UiDensity.TITLE_X - UiDensity.scrollRightInset();
         cols = Math.max(1, (usable + GAP) / STEP);
         gridW = cols * STEP - GAP;
-        gridX = panelX + (panelW - 8 - gridW) / 2;
+        gridX = panelX + UiDensity.TITLE_X + (usable - gridW) / 2;
 
         String query = searchField != null ? searchField.getValue() : "";
-        int searchW = Math.min(160, Math.max(80, panelW / 3));
+        int searchW = Math.min(180, Math.max(96, panelW / 3));
         searchField = new EditBox(this.font, panelX + panelW - UiDensity.FRAME_EDGE - searchW,
                 panelY + UiDensity.headerTop(bh), searchW, bh, Component.literal("Search icons"));
         searchField.setMaxLength(48);
@@ -156,7 +156,8 @@ public class IconPickerScreen extends Screen implements ThemedScreen {
 
         int onBackground = MaterialSurface.color(ThemeToken.ON_BACKGROUND);
         int muted = ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED);
-        ctx.text(this.font, title(icons.size()), panelX + 12, panelY + UiDensity.headerTop(this.font.lineHeight) + 1,
+        ctx.text(this.font, AuroraFontRenderer.role(title(icons.size()), AuroraFontRenderer.Role.TITLE),
+                panelX + UiDensity.TITLE_X, AuroraFontRenderer.roleTextY(this.font, panelY + UiDensity.HEADER_TOP, UiDensity.TOOL, AuroraFontRenderer.Role.TITLE),
                 onBackground, false);
 
         // The grid: only the rows the viewport shows.
@@ -200,20 +201,22 @@ public class IconPickerScreen extends Screen implements ThemedScreen {
         }
         if (maxScroll > 0) {
             int scale = Math.max(1, (int) Minecraft.getInstance().getWindow().getGuiScale());
-            ScrollbarChrome.draw(ctx, gridX + gridW + 4,
-                    ScrollbarChrome.thumb(scroll, gridY, gridH, maxScroll, 16, scale), false, ThemeToken.ON_BACKGROUND);
+            int barX = panelX + panelW - UiDensity.FRAME_EDGE - UiDensity.SCROLLBAR_W;
+            ScrollbarChrome.track(ctx, barX, gridY, gridH, ThemeToken.ON_BACKGROUND);
+            ScrollbarChrome.draw(ctx, barX,
+                    ScrollbarChrome.thumb(scroll, gridY, gridH, maxScroll, 20, scale), false, ThemeToken.ON_BACKGROUND);
         }
 
         // Footer: the selected icon and its name.
         String glyph = IconCatalog.glyph(selected);
-        int footerText = footerY + (UiDensity.HEADER_BUTTON_H - this.font.lineHeight) / 2 + 1;
-        int labelX = panelX + 12;
+        int footerText = AuroraFontRenderer.textY(this.font, footerY, UiDensity.HEADER_BUTTON_H);
+        int labelX = panelX + UiDensity.TITLE_X;
         if (!glyph.isEmpty()) {
             MaterialIconRenderer.drawIcon(ctx, this.font, glyph, labelX + 7, footerY + UiDensity.HEADER_BUTTON_H / 2f, 14f,
                     ThemeManager.color(ThemeToken.ACCENT));
-            labelX += 18;
+            labelX += 20;
         }
-        int labelW = Math.max(0, panelX + panelW - 12 - 64 - 6 - 64 - 8 - labelX);
+        int labelW = Math.max(0, panelX + panelW - UiDensity.FRAME_EDGE - 64 - 6 - 64 - 8 - labelX);
         String label = glyph.isEmpty() ? "Default icon" : selected.replace('_', ' ');
         ctx.text(this.font, AuroraFontRenderer.ellipsize(this.font, label, labelW, 0), labelX, footerText,
                 ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
@@ -227,12 +230,12 @@ public class IconPickerScreen extends Screen implements ThemedScreen {
 
     /** The header title with the result count, rebuilt only when the count or width changes. */
     private String title(int count) {
-        int width = Math.max(0, searchField.getX() - 12 - (panelX + 12));
+        int width = Math.max(0, searchField.getX() - 12 - (panelX + UiDensity.TITLE_X));
         if (count != titleCount || width != titleWidth) {
             titleCount = count;
             titleWidth = width;
             String counted = count == 1 ? "1 icon" : String.format("%,d icons", count);
-            titleText = AuroraFontRenderer.ellipsize(this.font, this.title.getString() + "  ·  " + counted, width, 0);
+            titleText = AuroraFontRenderer.ellipsizeRole(this.font, this.title.getString() + "  ·  " + counted, width, AuroraFontRenderer.Role.TITLE);
         }
         return titleText;
     }

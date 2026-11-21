@@ -344,8 +344,8 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
     // toolbar used to float in the viewport corners, unaligned with the list
     // frame and colliding with HUD modules; every chrome element now shares
     // the list's column edges.
-    /** Header band height: 8 inset + 22 toolbar row + 8 inset. */
-    protected static final int HEADER_H = com.aurora.client.ui.util.UiDensity.HEADER + 4;
+    /** Header band height: matches the main window's header + body gap. */
+    protected static final int HEADER_H = com.aurora.client.ui.util.UiDensity.HEADER + com.aurora.client.ui.util.UiDensity.HEADER_BODY_GAP;
     /** Uniform window (compact pass, 2026-10-30): the same frame as every Aurora window. */
     protected com.aurora.client.ui.util.UiDensity.Rect frame() { return com.aurora.client.ui.util.UiDensity.window(this.width, this.height); }
     protected int windowHeight() { return frame().height(); }
@@ -354,7 +354,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
     protected int windowX() { return frame().x(); }
     protected int windowWidth() { return frame().width(); }
     protected int toolbarY() { return windowTop() + Math.round(com.aurora.client.ui.util.UiDensity.headerY(com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_H)); }
-    protected int listTop() { return windowTop() + HEADER_H + 2; }
+    protected int listTop() { return windowTop() + HEADER_H; }
     protected int listBottomPad() { return this.height - (windowBottom() - com.aurora.client.ui.util.UiDensity.FRAME_EDGE); }
     /** Rows start {@value #CLIP_PAD} px inside the frame room, so their clip (rings, shadows) stays out of the band. */
     protected static final int CLIP_PAD = 2;
@@ -395,7 +395,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         if (headerTitle() != null && toolbarActionBtn != null) {
             int w = this.font.width(toolbarActionBtn.getMessage()) + 24;
             toolbarActionBtn.setWidth(w);
-            toolbarActionBtn.setX(doneBtn.getX() - 4 - w);
+            toolbarActionBtn.setX(doneBtn.getX() - 6 - w);
         }
 
         // Custom-painted semantic controls join vanilla's child/narratable
@@ -417,7 +417,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         return emptyActionBtn != null && rows.isEmpty() && emptyHint() != null;
     }
 
-    private static final int EMPTY_ACTION_GAP = 10;
+    private static final int EMPTY_ACTION_GAP = 14;
 
     /** The screen's name in the header's leading slot (title role); null keeps the action button there. */
     protected String headerTitle() { return null; }
@@ -541,11 +541,14 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
 
         // ---- 3. Content ----
         if (headerTitle() != null) {
-            int titleRight = toolbarActionBtn != null ? toolbarActionBtn.getX() - 8 : doneBtn.getX() - 8;
-            ctx.text(this.font, com.aurora.client.ui.util.AuroraFontRenderer.role(
-                            com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(this.font, headerTitle(), titleRight - windowX() - 12, 0),
+            int titleRight = toolbarActionBtn != null && toolbarActionBtn.visible ? toolbarActionBtn.getX() - 8 : doneBtn.getX() - 8;
+            String fittedTitle = com.aurora.client.ui.util.AuroraFontRenderer.ellipsizeRole(this.font, headerTitle(),
+                    Math.max(0, titleRight - (windowX() + com.aurora.client.ui.util.UiDensity.TITLE_X)),
+                    com.aurora.client.ui.util.AuroraFontRenderer.Role.TITLE);
+            ctx.text(this.font, com.aurora.client.ui.util.AuroraFontRenderer.role(fittedTitle,
                             com.aurora.client.ui.util.AuroraFontRenderer.Role.TITLE),
-                    windowX() + com.aurora.client.ui.util.UiDensity.TITLE_X, toolbarY() + (com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_H - this.font.lineHeight) / 2 + 2,
+                    windowX() + com.aurora.client.ui.util.UiDensity.TITLE_X,
+                    com.aurora.client.ui.util.AuroraFontRenderer.roleTextY(this.font, toolbarY(), com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_H, com.aurora.client.ui.util.AuroraFontRenderer.Role.TITLE),
                     MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
         }
 

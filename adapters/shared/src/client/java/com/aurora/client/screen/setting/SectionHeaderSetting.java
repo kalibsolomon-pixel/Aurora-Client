@@ -148,8 +148,16 @@ public class SectionHeaderSetting extends FeatureSetting {
     @Override
     public void render(GuiGraphicsExtractor ctx, int x, int y, int width, int mouseX, int mouseY) {
         Font tr = Minecraft.getInstance().font;
-        int top = y + gapAbove();
-        int h = baseHeight() - gapAbove();
+        int gap = gapAbove();
+        int top = y + gap;
+        int h = baseHeight() - gap;
+        if (gap > 0 && MaterialSurface.unified()) {
+            // Subtle structural rule in the gap above a non-leading section so groups separate clearly
+            // without boxing rows in cards.
+            int ruleY = y + gap / 2;
+            ctx.fill(x + LABEL_PAD, ruleY, x + width - 8, ruleY + 1,
+                    ThemeManager.withAlpha(MaterialSurface.color(ThemeToken.ON_BACKGROUND), 0x1A));
+        }
         interactionControl.setBounds(x, top, width, h);
         interactionControl.updatePointer(mouseX, mouseY);
         boolean over = mouseX >= x && mouseX < x + width && mouseY >= top && mouseY < top + h;
@@ -159,27 +167,27 @@ public class SectionHeaderSetting extends FeatureSetting {
         // mode that outline degenerated to four straight rules reading as a
         // doubled divider around the section — owner ruling 2026-10-30).
         float emphasis = Math.max(t, interactionControl.isFocused() ? 1f : 0f);
-        // Unified windows: a collapsed caption is secondary text, readable on the glass (2026-11-14);
-        // an open one reads as the heading of the rows under it, in primary text (council
-        // 2026-11-18: open and closed captions looked alike but for the chevron).
-        // Collapsed sits between secondary and primary, so a closed section never reads as a
-        // disabled row (council 2026-11-18).
+        if (MaterialSurface.unified() && t > 0f) {
+            MaterialSurface.peerHover(ctx, x + LABEL_PAD - 4, top, Math.max(0, width - LABEL_PAD - 4), h,
+                    AuroraTheme.RADIUS_SMALL, t);
+        }
+        // Unified windows: a collapsed caption sits clearly readable between secondary and primary;
+        // an open one reads as the heading of the rows under it, in primary text.
         int rest = !MaterialSurface.unified() ? AuroraTheme.sectionCaption()
                 : collapsed ? AuroraAnim.lerpArgb(MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY),
                         MaterialSurface.color(ThemeToken.ON_BACKGROUND), .4f)
                 : MaterialSurface.color(ThemeToken.ON_BACKGROUND);
         int color = AuroraAnim.lerpArgb(rest, MaterialSurface.color(ThemeToken.ON_BACKGROUND), emphasis * .6f);
         int textY = AuroraFontRenderer.roleTextY(tr, top, h, AuroraFontRenderer.Role.HEADING);
-        // The heading role in the caption colour (2026-11-14): a sub-section reads as the same
-        // family as the group headings above it, one step quieter.
+        // The heading role in the caption colour: a sub-section reads as the same
+        // family as the group headings above it, clearly distinct from setting rows.
         ctx.text(tr, com.aurora.client.ui.util.AuroraFontRenderer.role(AuroraFontRenderer.ellipsizeRole(tr, label, Math.max(0, width - LABEL_PAD - 24), AuroraFontRenderer.Role.HEADING), com.aurora.client.ui.util.AuroraFontRenderer.Role.HEADING),
                 x + LABEL_PAD, textY, color, false);
         // Trailing chevron (native-resolution icon): down = collapsed, up = expanded. Its visible
-        // stroke ends on the rows' control edge, 8 px in (2026-11-14: it sat 6 px short of the
-        // toggles and values below it).
+        // stroke ends on the rows' control edge, 8 px in.
         com.aurora.client.ui.util.MaterialIconRenderer.drawIcon(ctx, tr,
                 com.aurora.client.screen.FeatureIcons.get(collapsed ? "_dropdown_expand_more" : "_dropdown_expand_less"),
-                x + width - 11, top + h / 2f, 9, color);
+                x + width - 11, top + h / 2f, 10, color);
     }
 
     @Override

@@ -121,24 +121,24 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
     // The frame room (com.aurora.client.ui.util.UiDensity.FRAME_EDGE) sits outside the sidebar, the
     // top bar and the scrollbar, so the window bevel never crowds them.
     private static final int SIDEBAR_PAD    = com.aurora.client.ui.util.UiDensity.FRAME_EDGE;
-    private static final int SIDEBAR_W      = 88 + 2 * SIDEBAR_PAD;
-    private static final int TOP_BAR_H      = com.aurora.client.ui.util.UiDensity.HEADER + 8;
+    private static final int SIDEBAR_W      = 100 + 2 * SIDEBAR_PAD;
+    private static final int TOP_BAR_H      = com.aurora.client.ui.util.UiDensity.HEADER + com.aurora.client.ui.util.UiDensity.HEADER_BODY_GAP;
     /** Card grid: one column that DERIVES from the frame (owner ruling
-     *  2026-10-30 — the old fixed 260 px cards overflowed the 336-wide
-     *  uniform window; everything below keys off {@link #cardW()}). */
+     *  2026-10-30 — the old fixed 260 px cards overflowed the uniform window;
+     *  everything below keys off {@link #cardW()}). */
     private static final int CARD_MIN_W     = 180;
-    private static final int CARD_H         = 72;
-    private static final int CARD_GAP       = 6;
+    private static final int CARD_H         = 76;
+    private static final int CARD_GAP       = 8;
     /** Right gutter inside the frame: the frame room, the 4 px scrollbar
      *  track and its gap from the cards. */
     private static final int RIGHT_PAD      = com.aurora.client.ui.util.UiDensity.FRAME_EDGE + 4 + com.aurora.client.ui.util.UiDensity.SCROLLBAR_GAP;
-    private static final int LIST_TOP       = TOP_BAR_H + 10;
-    private static final int LIST_BOTTOM_PAD = 16;
+    private static final int LIST_TOP       = TOP_BAR_H + 4;
+    private static final int LIST_BOTTOM_PAD = com.aurora.client.ui.util.UiDensity.FRAME_EDGE;
     private static final int THUMB_SIZE     = 48;
-    private static final int THUMB_PAD      = 8;
-    private static final int TAB_H          = 16;
-    private static final int TAB_GAP        = 2;
-    private static final int HEADER_H       = 14;
+    private static final int THUMB_PAD      = 10;
+    private static final int TAB_H          = 18;
+    private static final int TAB_GAP        = 3;
+    private static final int HEADER_H       = 16;
 
     // ---- Uniform window (compact pass, 2026-10-30) ----
     // The browser keeps its own frame-relative layout but runs inside the shared Aurora
@@ -583,9 +583,10 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         frameViewport();
         // Search bar — positioned to the right of the sidebar.
         int fieldX = SIDEBAR_W + 12;
-        int fieldW = Math.max(40, this.width - fieldX - com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_W - 6 - com.aurora.client.ui.util.UiDensity.FRAME_EDGE);
+        int fieldH = com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_H;
+        int fieldW = Math.max(40, this.width - fieldX - com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_W - 8 - com.aurora.client.ui.util.UiDensity.FRAME_EDGE);
         searchField = new EditBox(Minecraft.getInstance().font,
-                fieldX, com.aurora.client.ui.util.UiDensity.headerTop(16), fieldW, 16, Component.literal("Search resource packs"));
+                fieldX, com.aurora.client.ui.util.UiDensity.headerTop(fieldH), fieldW, fieldH, Component.literal("Search resource packs"));
         searchField.setMaxLength(80);
         searchField.setHint(Component.literal("Search resource packs on Modrinth…"));
         searchField.setResponder(s -> { lastTypedMs = System.currentTimeMillis(); });
@@ -1409,7 +1410,7 @@ public class ResourcePackBrowserScreen extends Screen implements ThemedScreen {
         // did before this screen migrated. On decline the flat fill + outline
         // return.
         MaterialSurface.parent(g, modalX, modalY, modalW, modalH, AuroraTheme.RADIUS_LARGE,
-                MaterialSurface.windowCornerClearance(AuroraTheme.RADIUS_LARGE, 18, 10));
+                MaterialSurface.windowCornerClearance(AuroraTheme.RADIUS_LARGE, 18, 18));
 
         if (detailProject != null) {
             // The modal's own buttons are component-driven surfaces that must

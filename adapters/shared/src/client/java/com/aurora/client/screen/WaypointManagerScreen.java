@@ -59,17 +59,17 @@ import java.util.Set;
  */
 public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
 
-    private static final int ROW_H        = 28;
+    private static final int ROW_H        = 34;
     private static final int LIST_W       = 460;
 
-    private static final int SWATCH_W     = 12;
-    private int nameWidth() { return Math.max(48, listWidth() - 16 - 22 - BTN_COPY_W - BTN_COLOR_W - BTN_DEL_W - 18); }
+    private static final int SWATCH_W     = 14;
+    private int nameWidth() { return Math.max(48, listWidth() - 2 * ROW_INSET - SWATCH_W - BTN_COPY_W - BTN_COLOR_W - BTN_DEL_W - 4 * CONTROL_GAP); }
     private static final int COORDS_W     = 0;
-    private static final int BTN_COPY_W   = 40;
-    private static final int BTN_COLOR_W  = 40;
-    private static final int BTN_DEL_W    = 48;
+    private static final int BTN_COPY_W   = 46;
+    private static final int BTN_COLOR_W  = 46;
+    private static final int BTN_DEL_W    = 54;
     private static final int CONTROL_GAP  = 6;
-    private static final int ROW_INSET    = 8;
+    private static final int ROW_INSET    = 10;
 
     // Shared per-row widgets, keyed by the waypoint INSTANCE — the same
     // identity WaypointFeature.remove() matches, and the objects in the
@@ -119,8 +119,9 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
     private List<Waypoint> reconciledRows;
     private int reconciledStart = -1;
 
-    /** Search (18) + gap (6) + filter row (20) + gap (6) under the header band, while shown. */
-    @Override protected int listTop() { return toolbarShown ? windowTop() + HEADER_H + 38 : super.listTop(); }
+    /** Search (20) + gap (6) + filter row (20) + gap (8) under the header band, while shown. */
+    @Override protected int listTop() { return toolbarShown ? windowTop() + HEADER_H + 54 : super.listTop(); }
+    @Override protected int rowGap() { return 6; }
 
     /**
      * Search and filters exist only while this world has a waypoint (2026-11-14): with none
@@ -144,7 +145,8 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
         super.init();
         if (!toolbarShown) return;
         int left = listX();
-        search = new EditBox(font, left, windowTop() + HEADER_H, listWidth(), 14, Component.literal("Search waypoints"));
+        int searchH = com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_H;
+        search = new EditBox(font, left, windowTop() + HEADER_H, listWidth(), searchH, Component.literal("Search waypoints"));
         search.setHint(Component.literal("Search name, group, dimension or description"));
         search.setValue(query);
         search.setResponder(value -> { commitEditors(); query = value; invalidateRows(); });
@@ -153,15 +155,16 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
         // permanently disabled chip read as a bug, so the other three share the row instead.
         int cells = group.isEmpty() ? 3 : 4;
         int cell = (listWidth() - 6 * (cells - 1)) / cells;
-        ButtonWidget sortChip = addRenderableWidget(ButtonWidget.semantic(left, windowTop() + HEADER_H + 18, cell, 16,
+        int filterY = windowTop() + HEADER_H + searchH + 6;
+        ButtonWidget sortChip = addRenderableWidget(ButtonWidget.semantic(left, filterY, cell, searchH,
                 Component.literal(sortLabel()), "Cycles name, distance, creation and group sorting.",
                 () -> { commitEditors(); sort = (sort + 1) % 4; invalidateRows(); rebuildWidgets(); })
                 .icon(IconCatalog.glyph("sort"))); // filter chips lead with their kind (2026-11-14)
-        ButtonWidget dimensionChip = addRenderableWidget(ButtonWidget.semantic(left + cell + 6, windowTop() + HEADER_H + 18, cell, 16,
+        ButtonWidget dimensionChip = addRenderableWidget(ButtonWidget.semantic(left + cell + 6, filterY, cell, searchH,
                 Component.literal(currentDimensionOnly ? "This dimension" : "All dimensions"), "Filters the current dimension.",
                 () -> { commitEditors(); currentDimensionOnly = !currentDimensionOnly; invalidateRows(); rebuildWidgets(); })
                 .icon(IconCatalog.glyph("public")));
-        ButtonWidget groupChip = addRenderableWidget(ButtonWidget.semantic(left + 2 * (cell + 6), windowTop() + HEADER_H + 18, cell, 16,
+        ButtonWidget groupChip = addRenderableWidget(ButtonWidget.semantic(left + 2 * (cell + 6), filterY, cell, searchH,
                 Component.literal(font.plainSubstrByWidth(group.isEmpty() ? "All groups" : group, cell - 8)),
                 "Cycles waypoint groups. Edit a waypoint to assign its group.", () -> {
                     commitEditors();
@@ -175,7 +178,7 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
                 }).icon(IconCatalog.glyph("folder")));
         if (group.isEmpty()) return;
         boolean hidden = AuroraConfig.get().waypointHiddenGroups != null && AuroraConfig.get().waypointHiddenGroups.contains(group);
-        addRenderableWidget(ButtonWidget.semantic(left + 3 * (cell + 6), windowTop() + HEADER_H + 18, cell, 16,
+        addRenderableWidget(ButtonWidget.semantic(left + 3 * (cell + 6), filterY, cell, searchH,
                 Component.literal(hidden ? "Show group" : "Hide group"), "Shows or hides the selected group on every map.", () -> {
                     var cfg = AuroraConfig.get();
                     if (cfg.waypointHiddenGroups == null) cfg.waypointHiddenGroups = new java.util.HashSet<>();
@@ -246,7 +249,7 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
     @Override protected String headerTitle() { return "Waypoints"; }
 
     @Override protected ButtonWidget createEmptyAction() {
-        ButtonWidget drop = ButtonWidget.semantic(0, 0, font.width("Drop Waypoint") + 48, 18, // label + icon + Button insets
+        ButtonWidget drop = ButtonWidget.semantic(0, 0, font.width("Drop Waypoint") + 52, 22, // label + icon + Button insets
                 Component.literal("Drop Waypoint"),
                 "Drops a new waypoint at your current position.",
                 () -> {
@@ -345,8 +348,8 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
                                 AuroraTheme.RADIUS_SMALL, BlurPanelRenderer.Priority.ROW));
                 },
                 () -> {
-                    int by = y + 4;
-                    int bh = ROW_H - 8;
+                    int by = y + (ROW_H - com.aurora.client.ui.util.UiDensity.FIELD_H) / 2;
+                    int bh = com.aurora.client.ui.util.UiDensity.FIELD_H;
                     Button b = copyBtn(wp);
                     b.layout(x + copyDx(), by, BTN_COPY_W, bh);
                     // Same clip-band rule the content pass and the base hit
@@ -404,10 +407,10 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
         // for that index).
         if (!editing(wp)) {
             String name = fitName(wp.name == null ? "" : wp.name);
-            com.aurora.client.worldmap.MapMarkers.waypoint(ctx, cx + 6, y + 8, wp,
+            com.aurora.client.worldmap.MapMarkers.waypoint(ctx, cx + 6, y + 10, wp,
                     WaypointFeature.get() != null && wp.id.equals(WaypointFeature.get().navigationId()));
             ctx.text(this.font, name,
-                    cx + 16, y + 4,
+                    cx + 16, y + 6,
                     ThemeManager.color(ThemeToken.ON_BACKGROUND), false);
         }
         cx += nameWidth() + CONTROL_GAP;
@@ -422,7 +425,7 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
         else coords += " · " + wp.dimension;
         coords = this.font.plainSubstrByWidth(coords, nameWidth());
         ctx.text(this.font, coords,
-                x + ROW_INSET + SWATCH_W + CONTROL_GAP, y + 16,
+                x + ROW_INSET + SWATCH_W + CONTROL_GAP, y + 19,
                 ThemeManager.withAlpha(ThemeManager.color(ThemeToken.ON_BACKGROUND), 0x88), false);
         cx += COORDS_W + CONTROL_GAP;
 
@@ -432,48 +435,54 @@ public class WaypointManagerScreen extends ManagerListScreen<Waypoint> {
         // pass computed): pointer-hover state for narration, availability
         // from the same clip band the base hit test clamps to, and the
         // provisional focus ring on the shared Button.
+        int btnH = com.aurora.client.ui.util.UiDensity.FIELD_H;
+        int btnY = y + (ROW_H - btnH) / 2;
         Button copyBtn = copyBtn(wp);
-        copyBtn.layout(x + copyDx(), y + 4, BTN_COPY_W, ROW_H - 8);
+        copyBtn.layout(x + copyDx(), btnY, BTN_COPY_W, btnH);
         SemanticActionControl copyControl = copyControl(wp);
         syncRowControl(copyControl, x + copyDx(), BTN_COPY_W, y, mouseX, mouseY);
         copyBtn.focused(copyControl.isFocused());
-        copyBtn.render(ctx, x + copyDx(), y + 4, BTN_COPY_W, ROW_H - 8, mouseX, mouseY);
+        copyBtn.render(ctx, x + copyDx(), btnY, BTN_COPY_W, btnH, mouseX, mouseY);
 
         Button colorBtn = colorBtn(wp);
-        colorBtn.layout(x + colorDx(), y + 4, BTN_COLOR_W, ROW_H - 8);
+        colorBtn.layout(x + colorDx(), btnY, BTN_COLOR_W, btnH);
         SemanticActionControl colorControl = colorControl(wp);
         syncRowControl(colorControl, x + colorDx(), BTN_COLOR_W, y, mouseX, mouseY);
         colorBtn.focused(colorControl.isFocused());
-        colorBtn.render(ctx, x + colorDx(), y + 4, BTN_COLOR_W, ROW_H - 8, mouseX, mouseY);
+        colorBtn.render(ctx, x + colorDx(), btnY, BTN_COLOR_W, btnH, mouseX, mouseY);
 
         Button delBtn = deleteBtn(wp);
-        delBtn.layout(x + delDx(), y + 4, BTN_DEL_W, ROW_H - 8);
+        delBtn.layout(x + delDx(), btnY, BTN_DEL_W, btnH);
         SemanticActionControl delControl = deleteControl(wp);
         syncRowControl(delControl, x + delDx(), BTN_DEL_W, y, mouseX, mouseY);
         delBtn.focused(delControl.isFocused());
-        delBtn.render(ctx, x + delDx(), y + 4, BTN_DEL_W, ROW_H - 8, mouseX, mouseY);
+        delBtn.render(ctx, x + delDx(), btnY, BTN_DEL_W, btnH, mouseX, mouseY);
     }
 
     /** Shared per-frame row-control sync: bounds + clip-band availability + pointer hover for narration. */
     private void syncRowControl(SemanticActionControl control, int btnX, int btnW, int rowY,
                                 int mouseX, int mouseY) {
-        control.setBounds(btnX, rowY + 4, btnW, ROW_H - 8);
+        int btnH = com.aurora.client.ui.util.UiDensity.FIELD_H;
+        int btnY = rowY + (ROW_H - btnH) / 2;
+        control.setBounds(btnX, btnY, btnW, btnH);
         control.setAvailable(rowY + ROW_H > listClipTop() && rowY < listClipBottom());
         control.updatePointer(mouseX, mouseY);
         if (mouseY >= listClipTop() && mouseY < listClipBottom()) {
             com.aurora.client.screen.setting.FeatureSetting.hoverTooltip(control, control.action().accessibleName().getString(),
-                    btnX, rowY + 4, btnW, ROW_H - 8, mouseX, mouseY);
+                    btnX, btnY, btnW, btnH, mouseX, mouseY);
         }
     }
 
     @Override
     protected void prepareRowFocus(Waypoint waypoint, int x, int y, int width) {
+        int btnH = com.aurora.client.ui.util.UiDensity.FIELD_H;
+        int btnY = y + (ROW_H - btnH) / 2;
         copyBtn(waypoint);
         colorBtn(waypoint);
         deleteBtn(waypoint);
-        locateRowFocus(copyControl(waypoint), x + copyDx(), y + 4, BTN_COPY_W, ROW_H - 8);
-        locateRowFocus(colorControl(waypoint), x + colorDx(), y + 4, BTN_COLOR_W, ROW_H - 8);
-        locateRowFocus(deleteControl(waypoint), x + delDx(), y + 4, BTN_DEL_W, ROW_H - 8);
+        locateRowFocus(copyControl(waypoint), x + copyDx(), btnY, BTN_COPY_W, btnH);
+        locateRowFocus(colorControl(waypoint), x + colorDx(), btnY, BTN_COLOR_W, btnH);
+        locateRowFocus(deleteControl(waypoint), x + delDx(), btnY, BTN_DEL_W, btnH);
     }
 
     /** Copy — the shared themed Button in neutral raised glass, with its Phase A semantic control. */

@@ -1573,7 +1573,8 @@ addWithSettings("hitbox",
                 group("interface_motion", "Interface", new BooleanSetting("Reduced Motion",
                         () -> cfg.reducedMotion, value -> { cfg.reducedMotion = value; AuroraConfig.save(); })
                         .resetDefault("reducedMotion", () -> defaults.reducedMotion)
-                        .description("Skip overlay fades and make keyboard focus scrolling instant.")),
+                        .description("Skip overlay fades and make keyboard focus scrolling instant."))
+                        .pageSummary("Animation and motion preferences for Aurora's menus."),
                 group("search", "Search", searchInstant, searchTolerance).pageSummary("How the search bar finds features and settings."),
                 settingsEntry("custom_title").pageSummary("Aurora's own title screen in place of the vanilla one."),
                 group("server_list", "Drag-to-Reorder Servers", serverListDragEnabled).pageSummary("Reorder servers in the Multiplayer list by dragging."),
