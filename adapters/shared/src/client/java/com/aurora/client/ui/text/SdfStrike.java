@@ -58,7 +58,7 @@ final class SdfStrike implements AutoCloseable {
         var bitmap = slot.bitmap();
         int inkWidth = bitmap.width(), inkHeight = bitmap.rows();
         if (inkWidth == 0 || inkHeight == 0) return null;
-        if (SdfTextMath.paddedSize(Math.max(inkWidth, inkHeight), SdfTextMath.SPREAD + SdfTextMath.PADDING) > SdfAtlas.SIZE) {
+        if (SdfTextMath.paddedSize(Math.max(inkWidth, inkHeight), SdfTextMath.SPREAD + SdfTextMath.PADDING) > SdfAtlas.MAX_CELL) {
             return null;
         }
         FreeTypeUtil.assertError(FreeType.FT_Render_Glyph(slot, FreeType.FT_RENDER_MODE_SDF), "Rendering bitmap SDF");

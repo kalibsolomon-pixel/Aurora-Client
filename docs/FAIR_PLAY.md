@@ -83,3 +83,4 @@ Changing a default does not change an existing install: a player who already had
 | Theme | Cosmetic | Changes the colors of Aurora's own screens. |
 | Interface | Cosmetic | Limits the frame rate of Aurora's own screens. |
 | Performance | Local timing | Caches, skips or reschedules work your own client does to load, draw and play sound. A new singleplayer world's loading screen closes half a second sooner; what is sent to a multiplayer server, and when, is unchanged. |
+| Gradient Dithering | Cosmetic | Adds a fixed pattern of less than half a color step to the sky, fog, clouds and terrain, so smooth gradients do not show bands. Average colors stay the same and nothing becomes easier to see. |

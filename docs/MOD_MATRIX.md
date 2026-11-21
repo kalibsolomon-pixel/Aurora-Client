@@ -21,9 +21,46 @@ when the owning mod is absent.
 | Polytone (`polytone`) | GUI layering | Selects GUI depth nodes |
 | Gnetum (`gnetum`) | GUI layering | Routes HUD submissions into cached and live layers |
 | Modern UI (`modernui`) or Caxton (`caxton`) | Left-to-right text | Owns visual ordering of styled text |
+| ImmediatelyFast (`immediatelyfast`) | GUI Item Baking | Redraws animated GUI items in its own atlas |
+| Entity Culling (`entityculling`) | Entity and block-entity occlusion culling | Skips terrain-occluded entities and block entities during extraction |
 
 The [GUI, text and map measurements](reports/2026-11-20-gui-text-map.md) record
 the mod combinations and backends exercised.
+
+## Text rendering
+
+Modern UI and Caxton replace text rendering, so Aurora's SDF text stands down
+for them and Aurora text uses its bitmap fallback. Two former stand-downs were
+removed on 2026-11-20 after their causes were read in source and the result was
+checked in the owner's instances ([report](reports/2026-11-20-sdf-immediatelyfast.md)):
+
+| Installed mod | Runs alongside | Why there is no conflict |
+|---|---|---|
+| ImmediatelyFast 1.16.5 (26.2), 1.17.1 (26.3) | SDF text | `font_atlas_resizing` also enlarges Aurora's SDF pages; SDF glyphs use each page's actual size |
+| ModernFix 5.27.20 (26.3) | Deferred Aurora font preparation | Its only font patch makes unihex providers lazy; it owns no `FontManager` or `FontSet` work |
+
+RRLS (Remove Reloading Screen 5.2.8 on 26.3 and 26.2, 5.2.6 on 26.1.2) is in both of the owner's
+instances. It reloads the Shader Loader early and lets screens draw before it applies, when Minecraft still
+compiles from the vanilla-only startup fallback cache (26.3) or an empty shader table (26.1.2, 26.2) and
+Aurora's shaders do not exist. Aurora waits for that first apply before it judges its own shaders, so a first
+draw that comes first no longer turns SDF text (or shader-drawn shapes) off for the session; a failure after
+the apply still does
+([report](reports/2026-11-20-sdf-immediatelyfast.md#rrls-sdf-text-and-the-first-shader-apply)).
+
+## World shader stand-downs
+
+Gradient Dithering patches the world's fragment shaders, so it steps aside where
+something else owns them. Its switch keeps its saved value throughout.
+
+| Installed mod or state | What stands down | How |
+|---|---|---|
+| VulkanMod (`vulkanmod`, 26.1.2) | Gradient Dithering, both mixins | Skipped at startup for the session; diagnostics list it as stood down |
+| Iris (`iris`) with a shader pack in use | Gradient Dithering's dithered pipelines | Checked on every pipeline lookup; vanilla's pipelines draw, and the pack replaces them as usual. Dithering resumes when the pack is turned off |
+| Iris with no shader pack | Nothing | The world is dithered as without Iris |
+| A resource pack whose replacement sky, terrain, cloud or sunrise shader has no single `main` writing `fragColor` | That shader only | Left as the pack wrote it; its pipelines draw undithered |
+
+The [Gradient Dithering report](reports/2026-11-20-gradient-dither.md) records
+the boots that checked these rows.
 
 ## How to run it
 

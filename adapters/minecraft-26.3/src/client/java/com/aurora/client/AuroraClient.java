@@ -70,6 +70,8 @@ public class AuroraClient implements ClientModInitializer {
         // registers its tick hook. Needs the config + active profile loaded
         // (its settings layer reads AuroraConfig).
         com.aurora.client.hitreg.BetterHitreg.initialize();
+        // Entity occlusion must see every entity and chunk load from the start.
+        com.aurora.client.performance.EntityOcclusion.initialize();
 
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
             com.aurora.client.hud.WorldGeometryBuffers.shutdown();

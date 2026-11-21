@@ -47,12 +47,22 @@ class MixinStandDownTest {
         assertEquals("All 80 Aurora mixins applied.", MixinAudit.summary(80, 0));
     }
 
-    @Test void fontPreparationYieldsAsAPairToModernFix() {
+    /** ModernFix 5.27.20 only makes unihex providers lazy; font set preparation stays Aurora's. */
+    @Test void fontPreparationRunsAlongsideModernFix() {
         for (String name : List.of("FontManagerDeferredMixin", "FontSetDeferredMixin")) {
-            var binding = FeatureCatalog.mixins().stream()
-                    .filter(candidate -> candidate.mixin().equals(name)).findFirst().orElseThrow();
+            var binding = FeatureCatalog.mixin(name);
             assertNull(binding.standDownReason(Set.of()::contains));
-            assertEquals("handled by modernfix", binding.standDownReason(Set.of("modernfix")::contains));
+            assertNull(binding.standDownReason(Set.of("modernfix")::contains));
+        }
+    }
+
+    /** SDF text uses each atlas page's own size, so ImmediatelyFast's larger font pages need no stand-down. */
+    @Test void sdfTextYieldsOnlyToModsThatOwnTextRendering() {
+        for (String name : List.of("SdfFontManagerMixin", "SdfGlyphRenderStateMixin", "SdfGuiTextMixin")) {
+            var binding = FeatureCatalog.mixin(name);
+            assertNull(binding.standDownReason(Set.of("immediatelyfast", "modernfix", "sodium")::contains));
+            assertEquals("handled by modernui", binding.standDownReason(Set.of("modernui")::contains));
+            assertEquals("handled by caxton", binding.standDownReason(Set.of("caxton")::contains));
         }
     }
 
@@ -60,6 +70,17 @@ class MixinStandDownTest {
         var limit = FeatureCatalog.mixin("FramerateLimitUnfocusedMixin");
         assertNull(limit.standDownReason(Set.of("sodium", "immediatelyfast")::contains));
         assertEquals("handled by dynamic_fps", limit.standDownReason(Set.of("dynamic_fps")::contains));
+    }
+
+    @Test void entityCullingOwnsEveryOcclusionHook() {
+        for (String name : List.of("OcclusionFrameMixin", "OcclusionBodyMixin", "OcclusionChestMixin",
+                "OcclusionDirtyMixin")) {
+            var binding = FeatureCatalog.mixin(name);
+            assertEquals(List.of("perfEntityOcclusion"), binding.gates());
+            assertEquals("handled by entityculling", binding.standDownReason(Set.of("entityculling")::contains));
+            assertNull(binding.standDownReason(Set.of("sodium", "moreculling", "immediatelyfast",
+                    "entity_model_features")::contains));
+        }
     }
 
     @Test void guiAndTextOptimizationsYieldIndependently() {

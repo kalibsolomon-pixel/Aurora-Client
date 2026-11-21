@@ -467,6 +467,12 @@ public class AuroraConfig {
     public boolean inputSamplingDecoupled = false;
     public boolean lowLatencyRender = true;
     public boolean disableVSync = false;
+    /**
+     * Gradient Dithering: the sky, fog, clouds and terrain get an ordered dither of under half
+     * an 8-bit step, so smooth gradients stop banding (render/GradientDither). Stands down
+     * while an Iris shader pack draws the world.
+     */
+    public boolean gradientDither = true;
 
     // ---- Performance (ADR 0009) ----
     // Client optimizations Aurora owns. Every field is named perf*, so
@@ -490,6 +496,8 @@ public class AuroraConfig {
     public boolean perfGuiItemBaking = true;
     /** GUI items whose only animation is an enchantment glint are redrawn when the glint has moved, not every frame. */
     public boolean perfGuiGlintBaking = true;
+    /** Entities and block entities that opaque terrain certainly hides are not extracted (ADR 0009). */
+    public boolean perfEntityOcclusion = true;
     /** GUI item drawings leave out faces that cover no pixel head-on, such as the side faces of flat items. */
     public boolean perfGuiFlatFaces = true;
     /** Sprites drop their CPU copies of mip levels above 0 once the atlas is uploaded. */

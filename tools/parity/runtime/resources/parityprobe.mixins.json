@@ -2,6 +2,6 @@
   "required": true,
   "package": "parityprobe.mixin",
   "compatibilityLevel": "JAVA_25",
-  "client": ["ManagerListTiming", "PulsarTiming", "PulsarReachCheck", "WorkCounters", "EffectCounter", "AtlasDrawCounter", "FlatFacesCounter", "UiScreenTiming", "LayerCacheCounters", "UiBoundsText", "UiBoundsFaces", "UiBoundsIcons", "UiBoundsLabels", "UiBoundsSliders"],
+  "client": ["ManagerListTiming", "PulsarTiming", "PulsarReachCheck", "WorkCounters", "EffectCounter", "AtlasDrawCounter", "FlatFacesCounter", "UiScreenTiming", "LayerCacheCounters", "UiBoundsText", "UiBoundsFaces", "UiBoundsIcons", "UiBoundsLabels", "UiBoundsSliders", "EarlySdfLookup"],
   "injectors": {"defaultRequire": 1}
 }

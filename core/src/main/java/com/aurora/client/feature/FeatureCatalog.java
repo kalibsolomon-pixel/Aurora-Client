@@ -249,6 +249,8 @@ public final class FeatureCatalog {
         // their own; the Settings tab's Performance page shows the few with
         // a visible trade-off.
         setting("performance", "Performance");
+        // Shown on the Settings tab's Display page with its switch in the header.
+        setting("gradient_dither", "Gradient Dithering");
 
         // ---- Fair play (ADR 0007). docs/FAIR_PLAY.md repeats these lines. ----
         classify("pulsar", FairPlay.INFORMATION_ADVANTAGE, "Records locally observed combat, including opponents, and derives fight analytics and offline reports. It never changes attacks or sends packets.", "pulsarEnabled");
@@ -295,6 +297,7 @@ public final class FeatureCatalog {
         classify("theme", FairPlay.COSMETIC, "Changes the colors of Aurora's own screens.");
         classify("interface", FairPlay.COSMETIC, "Limits the frame rate of Aurora's own screens.");
         classify("performance", FairPlay.LOCAL_TIMING, "Caches, skips or reschedules work your own client does to load, draw and play sound. A new singleplayer world's loading screen closes half a second sooner; what is sent to a multiplayer server, and when, is unchanged.");
+        classify("gradient_dither", FairPlay.COSMETIC, "Adds a fixed pattern of less than half a color step to the sky, fog, clouds and terrain, so smooth gradients do not show bands. Average colors stay the same and nothing becomes easier to see.");
 
         // ---- Mixins, in aurora.mixins.json order ----
         mixin("WindowMixin", "nothing (kept empty for compatibility)");
@@ -376,12 +379,18 @@ public final class FeatureCatalog {
         mixin("ScreenTextScopeMixin", "scoping the custom font to Aurora windows", "text_fonts");
         mixin("TrueTypeProviderDefinitionMixin", "crisp Aurora fonts at every GUI scale", "text_fonts");
         // Distance-field text is the only text path; raster text is the fallback while these are not working.
+        // ImmediatelyFast needs no stand-down: its font_atlas_resizing enlarges Aurora's SDF pages too,
+        // and SDF glyphs use each page's actual size (2026-11-20).
         mixin("SdfFontManagerMixin", "smooth scaling for custom text", "text_fonts")
-                .yieldsTo("modernui", "caxton", "immediatelyfast");
+                .yieldsTo("modernui", "caxton");
         mixin("SdfGlyphRenderStateMixin", "smooth scaling for custom text", "text_fonts")
-                .yieldsTo("modernui", "caxton", "immediatelyfast");
+                .yieldsTo("modernui", "caxton");
         mixin("SdfGuiTextMixin", "smooth scaling for custom text", "text_fonts")
-                .yieldsTo("modernui", "caxton", "immediatelyfast");
+                .yieldsTo("modernui", "caxton");
+        // Gateless on purpose (ADR 0004's "harmless alone" arm): it only records that the Shader Loader applied, so
+        // SDF text and shader-drawn shapes do not judge a compile made before Aurora's shaders were visible (RRLS).
+        // When it is not working they decide as they did before it existed.
+        mixin("ShaderManagerAppliedMixin", "waiting for the shader loader before compiling Aurora's shaders", "text_fonts");
         mixin("FontManagerAccessor", "crisp Aurora fonts at every GUI scale", "text_fonts");
         mixin("FontSetAccessor", "crisp Aurora fonts at every GUI scale", "text_fonts");
         mixin("MinecraftFontManagerAccessor", "crisp Aurora fonts at every GUI scale", "text_fonts");
@@ -401,15 +410,27 @@ public final class FeatureCatalog {
         mixin("KeyBindsScreenComboMixin", "Ctrl, Shift and Alt combos in the Controls screen");
         // ---- Performance (ADR 0009) ----
         mixin("LevelLoadTrackerMixin", "skipping the level loading delay", "performance").gates("perfSkipLevelLoadDelay");
+        // Entity Culling owns occlusion culling of entities and block
+        // entities. Sodium's entity culling works per section and composes
+        // with this; MoreCulling, ImmediatelyFast and EMF use neither seam.
+        mixin("OcclusionFrameMixin", "skipping entities hidden behind terrain", "performance")
+                .gates("perfEntityOcclusion").yieldsTo("entityculling");
+        mixin("OcclusionBodyMixin", "skipping entities hidden behind terrain", "performance")
+                .gates("perfEntityOcclusion").yieldsTo("entityculling");
+        mixin("OcclusionChestMixin", "skipping entities hidden behind terrain", "performance")
+                .gates("perfEntityOcclusion").yieldsTo("entityculling");
+        mixin("OcclusionDirtyMixin", "skipping entities hidden behind terrain", "performance")
+                .gates("perfEntityOcclusion").yieldsTo("entityculling");
         mixin("MinecraftProfileAccessor", "startup without waiting for the profile", "performance").gates("perfNoProfileWait");
         mixin("InitialScreensProfileMixin", "startup without waiting for the profile", "performance").gates("perfNoProfileWait");
         mixin("SoundEngineListenerMixin", "skipping unchanged sound listener updates", "performance").gates("perfSoundListenerThrottle");
         mixin("DebugScreenEntryCacheMixin", "the F3 entry cache", "performance").gates("perfDebugEntryCache");
         mixin("FontDecorationMergeMixin", "merged underline and strikethrough quads", "performance").gates("perfMergeTextDecorations");
+        // ModernFix (5.27.20) only makes unihex providers lazy; it owns no FontManager or FontSet work.
         mixin("FontManagerDeferredMixin", "preparing unused Aurora fonts on first use", "performance")
-                .gates("perfDeferAuroraFonts").yieldsTo("modernfix");
+                .gates("perfDeferAuroraFonts");
         mixin("FontSetDeferredMixin", "preparing unused Aurora fonts on first use", "performance")
-                .gates("perfDeferAuroraFonts").yieldsTo("modernfix");
+                .gates("perfDeferAuroraFonts");
         // ImmediatelyFast's batch_animated_item_updates moves animated items
         // into its own atlas subclass and redraws them in one batch; keeping
         // their slots there freezes them (26.3 set A, 2026-11-12).
@@ -458,6 +479,11 @@ public final class FeatureCatalog {
                 .gates("perfLeftToRightText").yieldsTo("modernui", "caxton");
         mixin("FramerateLimitUnfocusedMixin", "the unfocused frame limit", "performance")
                 .gates("perfUnfocusedLimit").yieldsTo("dynamic_fps");
+        // VulkanMod (26.1) compiles shaders its own way; an Iris shader pack is checked at draw time.
+        mixin("GradientDitherSourceMixin", "dithered sky, fog and terrain shaders", "gradient_dither")
+                .gates("gradientDither").yieldsTo("vulkanmod");
+        mixin("GradientDitherPipelineMixin", "dithered sky, fog and terrain shaders", "gradient_dither")
+                .gates("gradientDither").yieldsTo("vulkanmod");
         for (String hitreg : List.of("AttackMixin", "DamageMixin", "EntityAccessor", "NetworkMixin",
                 "PlayerMixin", "ServerMixin")) {
             // Better Hitreg's timing core only works whole: one missing piece
