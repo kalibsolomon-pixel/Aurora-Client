@@ -72,6 +72,17 @@ class MixinStandDownTest {
         assertEquals("handled by dynamic_fps", limit.standDownReason(Set.of("dynamic_fps")::contains));
     }
 
+    @Test void entityCullingOwnsEveryOcclusionHook() {
+        for (String name : List.of("OcclusionFrameMixin", "OcclusionBodyMixin", "OcclusionChestMixin",
+                "OcclusionDirtyMixin")) {
+            var binding = FeatureCatalog.mixin(name);
+            assertEquals(List.of("perfEntityOcclusion"), binding.gates());
+            assertEquals("handled by entityculling", binding.standDownReason(Set.of("entityculling")::contains));
+            assertNull(binding.standDownReason(Set.of("sodium", "moreculling", "immediatelyfast",
+                    "entity_model_features")::contains));
+        }
+    }
+
     @Test void guiAndTextOptimizationsYieldIndependently() {
         var text = FeatureCatalog.mixin("FormattedBidiReorderMixin");
         var layers = List.of("GuiRenderStateNodeMixin", "GuiRenderStateLayeringMixin", "GuiRendererElementOrderMixin");

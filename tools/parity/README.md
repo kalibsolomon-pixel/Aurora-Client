@@ -69,6 +69,9 @@ lookup must wait, not fail.
 | `expect-config hitboxEnabled true` | Fail unless the live config field equals the JSON value |
 | `expect-screen FeatureDetailScreen` | Fail unless the open screen has that simple class name (`none` for no screen) |
 | `look -90 30` | Close any screen and point the player's view (yaw, pitch in degrees) |
+| `occlusion-counts` | Write cumulative skipped entities, skipped block entities and active occlusion frames to `occlusion-counts.txt` |
+| `occlusion-scene` | Write loaded entity, leashed, glowing and custom-named counts to `occlusion-scene.txt` |
+| `occlusion-image <name>` | Capture the main render target into `<name>.png` in the probe directory |
 | `perspective back` | Set the camera to `first`, `back` (third person) or `front` |
 | `toggle-gui` | Press the F1 mapping once: hides (or shows again) the HUD and hand, for world-only captures |
 | `slot 3` | Select a hotbar slot (0-8) |

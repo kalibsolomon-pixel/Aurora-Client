@@ -22,6 +22,7 @@ when the owning mod is absent.
 | Gnetum (`gnetum`) | GUI layering | Routes HUD submissions into cached and live layers |
 | Modern UI (`modernui`) or Caxton (`caxton`) | Left-to-right text | Owns visual ordering of styled text |
 | ImmediatelyFast (`immediatelyfast`) | GUI Item Baking | Redraws animated GUI items in its own atlas |
+| Entity Culling (`entityculling`) | Entity and block-entity occlusion culling | Skips terrain-occluded entities and block entities during extraction |
 
 The [GUI, text and map measurements](reports/2026-11-20-gui-text-map.md) record
 the mod combinations and backends exercised.
