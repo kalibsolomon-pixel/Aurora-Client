@@ -108,6 +108,8 @@
     "GuiRendererElementOrderMixin",
     "FormattedBidiReorderMixin",
     "FramerateLimitUnfocusedMixin",
+    "GradientDitherSourceMixin",
+    "GradientDitherPipelineMixin",
     "hitreg.AttackMixin",
     "hitreg.DamageMixin",
     "hitreg.EntityAccessor",

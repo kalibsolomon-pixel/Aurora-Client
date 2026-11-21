@@ -249,6 +249,8 @@ public final class FeatureCatalog {
         // their own; the Settings tab's Performance page shows the few with
         // a visible trade-off.
         setting("performance", "Performance");
+        // Shown on the Settings tab's Display page with its switch in the header.
+        setting("gradient_dither", "Gradient Dithering");
 
         // ---- Fair play (ADR 0007). docs/FAIR_PLAY.md repeats these lines. ----
         classify("pulsar", FairPlay.INFORMATION_ADVANTAGE, "Records locally observed combat, including opponents, and derives fight analytics and offline reports. It never changes attacks or sends packets.", "pulsarEnabled");
@@ -295,6 +297,7 @@ public final class FeatureCatalog {
         classify("theme", FairPlay.COSMETIC, "Changes the colors of Aurora's own screens.");
         classify("interface", FairPlay.COSMETIC, "Limits the frame rate of Aurora's own screens.");
         classify("performance", FairPlay.LOCAL_TIMING, "Caches, skips or reschedules work your own client does to load, draw and play sound. A new singleplayer world's loading screen closes half a second sooner; what is sent to a multiplayer server, and when, is unchanged.");
+        classify("gradient_dither", FairPlay.COSMETIC, "Adds a fixed pattern of less than half a color step to the sky, fog, clouds and terrain, so smooth gradients do not show bands. Average colors stay the same and nothing becomes easier to see.");
 
         // ---- Mixins, in aurora.mixins.json order ----
         mixin("WindowMixin", "nothing (kept empty for compatibility)");
@@ -446,6 +449,11 @@ public final class FeatureCatalog {
                 .gates("perfLeftToRightText").yieldsTo("modernui", "caxton");
         mixin("FramerateLimitUnfocusedMixin", "the unfocused frame limit", "performance")
                 .gates("perfUnfocusedLimit").yieldsTo("dynamic_fps");
+        // VulkanMod (26.1) compiles shaders its own way; an Iris shader pack is checked at draw time.
+        mixin("GradientDitherSourceMixin", "dithered sky, fog and terrain shaders", "gradient_dither")
+                .gates("gradientDither").yieldsTo("vulkanmod");
+        mixin("GradientDitherPipelineMixin", "dithered sky, fog and terrain shaders", "gradient_dither")
+                .gates("gradientDither").yieldsTo("vulkanmod");
         for (String hitreg : List.of("AttackMixin", "DamageMixin", "EntityAccessor", "NetworkMixin",
                 "PlayerMixin", "ServerMixin")) {
             // Better Hitreg's timing core only works whole: one missing piece

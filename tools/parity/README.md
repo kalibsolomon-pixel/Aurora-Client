@@ -54,6 +54,7 @@ exchange atomically and refuses an unmarked fixture or a pending command.
 | `theme ROUND 0.33` / `theme SQUARE 0.19` | Apply factory/live appearance |
 | `font INTER AURORA_ONLY` / `font SANSSERIF OFF` | Change the live HUD font policy |
 | `detail animations` | Open a feature's native detail screen by ID |
+| `settings-reveal gradient_dither` | Open the Settings tab scrolled to that entry, as its search result does |
 | `search <text>` | Focus and fill the native search field |
 | `escape` | Send Escape through the active screen's key handler |
 | `theme-set field json` | Set one theme field in memory and reload the theme (e.g. `theme-set backgroundOpacity 0.5`) |
@@ -65,6 +66,7 @@ exchange atomically and refuses an unmarked fixture or a pending command.
 | `expect-screen FeatureDetailScreen` | Fail unless the open screen has that simple class name (`none` for no screen) |
 | `look -90 30` | Close any screen and point the player's view (yaw, pitch in degrees) |
 | `perspective back` | Set the camera to `first`, `back` (third person) or `front` |
+| `toggle-gui` | Press the F1 mapping once: hides (or shows again) the HUD and hand, for world-only captures |
 | `slot 3` | Select a hotbar slot (0-8) |
 | `key-press attack` | Queue one press of the attack (or `use`) key, as a mouse click does |
 | `hold forward on` | Hold a vanilla key mapping down (`forward left back right jump attack use sneak`, `on`/`off`) |

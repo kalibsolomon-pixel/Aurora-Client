@@ -467,6 +467,12 @@ public class AuroraConfig {
     public boolean inputSamplingDecoupled = false;
     public boolean lowLatencyRender = true;
     public boolean disableVSync = false;
+    /**
+     * Gradient Dithering: the sky, fog, clouds and terrain get an ordered dither of under half
+     * an 8-bit step, so smooth gradients stop banding (render/GradientDither). Stands down
+     * while an Iris shader pack draws the world.
+     */
+    public boolean gradientDither = true;
 
     // ---- Performance (ADR 0009) ----
     // Client optimizations Aurora owns. Every field is named perf*, so

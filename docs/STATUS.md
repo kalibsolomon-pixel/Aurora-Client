@@ -19,6 +19,12 @@ block outlines use vanilla's translucent line pipeline with Aurora's distance-fi
 when SDF cannot run ([ADR 0010](adr/0010-opt-in-sdf-text-with-vanilla-layout.md)). Checked in-world on 26.1.2, 26.2 and 26.3
 (OpenGL; 26.3 also native Vulkan) at widths 0.5, 2 and 5.
 
+Gradient Dithering (Settings → Display, on by default, cosmetic) adds an 8x8 ordered dither of
+under half an 8-bit step to the sky, sunrise glow, End sky, clouds and terrain (vanilla and
+Sodium), so dusk skies, fog and dark scenes stop banding; GUI and HUD are never dithered. It
+stands down for VulkanMod and while an Iris shader pack is in use. Checked on 26.1.2, 26.2 and
+26.3 (OpenGL; 26.3 also native Vulkan); [evidence](reports/2026-11-20-gradient-dither.md).
+
 Pulsar integration adds Phenomena's analytics and recording as Aurora's 40th
 feature, off by default. Its configuration and six-tab dashboard follow Aurora's
 profile, input and theme contracts. See [Pulsar](PULSAR.md) for workflows,

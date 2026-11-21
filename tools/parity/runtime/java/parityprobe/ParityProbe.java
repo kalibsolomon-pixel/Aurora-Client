@@ -452,6 +452,8 @@ public final class ParityProbe implements ClientModInitializer {
                 client.player.yRotO = client.player.getYRot();
                 client.player.xRotO = client.player.getXRot();
             }
+            // `toggle-gui`: one press of the F1 mapping, which hides or shows the HUD and hand.
+            case "toggle-gui" -> net.minecraft.client.KeyMapping.click(InputConstants.getKey(client.options.keyToggleGui.saveString()));
             // `perspective first|back|front`: the camera type F5 cycles through.
             case "perspective" -> client.options.setCameraType(switch (args[1]) {
                 case "back" -> net.minecraft.client.CameraType.THIRD_PERSON_BACK;
@@ -790,6 +792,15 @@ public final class ParityProbe implements ClientModInitializer {
                 select.setAccessible(true);
                 category.invoke(screen, 1);
                 select.invoke(screen, page);
+            }
+            // `settings-reveal <id>`: the Settings tab scrolled to that entry, as its search result opens it.
+            case "settings-reveal" -> {
+                var screen = AuroraScreen.create();
+                NativeUi.setScreen(client, screen);
+                var feature = FeatureRegistry.settings().stream().filter(f -> f.id.equals(args[1])).findFirst().orElseThrow();
+                var open = AuroraScreen.class.getDeclaredMethod("openSettingsResult", com.aurora.client.module.Module.class);
+                open.setAccessible(true);
+                open.invoke(screen, new com.aurora.client.module.Module(feature.id, feature.displayName, ""));
             }
             case "perf-loading" -> {
                 // ADR 0009 loading switches, checked on the live classes.

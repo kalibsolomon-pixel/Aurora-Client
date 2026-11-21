@@ -62,6 +62,7 @@ public final class FeatureIcons {
 
         // ============ SETTINGS TAB ============
         ICONS.put("custom_title",          "\uE264"); // title
+        ICONS.put("gradient_dither",       "\uE3E9"); // gradient
 
         // Dropdown chevrons (EnumSetting). The bundled font carries every
         // Material Symbols Rounded icon (2026-11-12), so any codepoint works.
