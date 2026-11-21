@@ -17,8 +17,6 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 import net.minecraft.world.entity.projectile.Projectile;
-import net.minecraft.world.entity.projectile.ProjectileUtil;
-import java.util.function.Predicate;
 
 /**
  * Draws Aurora's custom hitbox visualization in the world. The Aurora feature
@@ -110,84 +108,67 @@ public final class HitboxRenderer {
         matrices.pushPose();
         Matrix4f model = matrices.last().pose();
 
-        net.minecraft.client.renderer.culling.Frustum frustum = cam.getCullFrustum();
-        // With only the target box on, the target is the one candidate; it passes the same checks.
-        Iterable<Entity> candidates = cfg.hitboxEnabled ? client.level.entitiesForRendering()
-                : activeTarget != null && !activeTarget.isRemoved() ? java.util.List.of(activeTarget) : java.util.List.of();
-        for (Entity entity : candidates) {
-            if (entity == null || entity.isSpectator()) continue;
-            if (entity == client.getCameraEntity() && !cam.isDetached()) continue;
-            // Only entities the game draws at this distance (the Entity Distance option and each
-            // type's own range): a box whose model is not drawn would show what the game hides.
-            if (!entity.shouldRender(camPos.x, camPos.y, camPos.z)) continue;
-            // Only entities the camera can see, as vanilla culls entity rendering; the
-            // margin keeps eye and look lines whose box is just off screen.
-            if (frustum != null && !frustum.isVisible(entity.getBoundingBox().inflate(CULL_MARGIN))) continue;
-
-            // Anti-cheat: never reveal entities that are invisible to the local
-            // player. Aurora's hitboxes are a visualization aid, not a wallhack --
-            // showing the box of an entity under the Invisibility effect (or one
-            // the player can't otherwise see) would betray its exact position,
-            // size and orientation. The local player is exempt so you can still
-            // see your own box in third person / while invisible yourself.
-            // Mirrors the isInvisible / isInvisibleToPlayer gate already used by
-            // PlayerHealthLabelMixin, but read off the live Entity.
-            if (client.player != null && entity != client.player) {
-                if (entity.isInvisible() || entity.isInvisibleTo(client.player)) continue;
+        // Prefer the exact entities that survived main-world culling (vanilla, Sodium,
+        // EntityCulling, and Aurora occlusion), matching F3+B; fall back if the hook did not run.
+        if (cfg.hitboxEnabled && HitboxVisibleEntities.hasSnapshot()) {
+            int n = HitboxVisibleEntities.count();
+            for (int i = 0; i < n; i++) {
+                Entity entity = HitboxVisibleEntities.get(i);
+                if (entity == null || entity.isRemoved() || entity.isSpectator()) continue;
+                if (entity == client.getCameraEntity() && !cam.isDetached()) continue;
+                if (client.player != null && entity != client.player) {
+                    if (entity.isInvisible() || entity.isInvisibleTo(client.player)) continue;
+                }
+                renderCandidate(buf, model, camPos, entity, activeTarget, tickDelta, cfg, sdf);
             }
-
-            boolean isTarget = (entity == activeTarget);
-            boolean drawThisOne = isTarget ? cfg.hitboxTargetEnabled : cfg.hitboxEnabled;
-            if (!drawThisOne) continue;
-
-            int color;
-            float widthPx;
-            if (entity instanceof Projectile && cfg.hitboxProjectileColorEnabled) {
-                color = cfg.hitboxProjectileColor;
-                widthPx = (float) Math.max(0.1, cfg.hitboxProjectileLineWidth);
-            } else {
-                color = isTarget ? cfg.hitboxTargetColor : cfg.hitboxColor;
-                widthPx = (float) Math.max(0.1, cfg.hitboxLineWidth);
+        } else {
+            net.minecraft.client.renderer.culling.Frustum frustum = cam.getCullFrustum();
+            // With only the target box on, the target is the one candidate; it passes the same checks.
+            Iterable<Entity> candidates = cfg.hitboxEnabled ? client.level.entitiesForRendering()
+                    : activeTarget != null && !activeTarget.isRemoved() ? java.util.List.of(activeTarget) : java.util.List.of();
+            for (Entity entity : candidates) {
+                if (entity == null || entity.isSpectator()) continue;
+                if (entity == client.getCameraEntity() && !cam.isDetached()) continue;
+                if (!entity.shouldRender(camPos.x, camPos.y, camPos.z)) continue;
+                if (frustum != null && !frustum.isVisible(entity.getBoundingBox().inflate(CULL_MARGIN))) continue;
+                if (client.player != null && entity != client.player) {
+                    if (entity.isInvisible() || entity.isInvisibleTo(client.player)) continue;
+                }
+                renderCandidate(buf, model, camPos, entity, activeTarget, tickDelta, cfg, sdf);
             }
-            boolean drawEyeLine  = isTarget ? cfg.hitboxTargetEyeLine       : cfg.hitboxEyeLine;
-            boolean drawLookLine = isTarget ? cfg.hitboxTargetLookDirection : cfg.hitboxLookDirection;
-
-            drawEntity(buf, model, camPos, entity, tickDelta, color,
-                    drawEyeLine, drawLookLine, cfg.hitboxLookLength, widthPx, sdf);
         }
 
         matrices.popPose();
     }
 
+    private static void renderCandidate(VertexConsumer buf, Matrix4f model, Vec3 camPos,
+                                        Entity entity, Entity activeTarget, float tickDelta,
+                                        AuroraConfig cfg, boolean sdf) {
+        boolean isTarget = (entity == activeTarget);
+        boolean drawThisOne = isTarget ? cfg.hitboxTargetEnabled : cfg.hitboxEnabled;
+        if (!drawThisOne) return;
+
+        int color;
+        float widthPx;
+        if (entity instanceof Projectile && cfg.hitboxProjectileColorEnabled) {
+            color = cfg.hitboxProjectileColor;
+            widthPx = (float) Math.max(0.1, cfg.hitboxProjectileLineWidth);
+        } else {
+            color = isTarget ? cfg.hitboxTargetColor : cfg.hitboxColor;
+            widthPx = (float) Math.max(0.1, cfg.hitboxLineWidth);
+        }
+        boolean drawEyeLine  = isTarget ? cfg.hitboxTargetEyeLine       : cfg.hitboxEyeLine;
+        boolean drawLookLine = isTarget ? cfg.hitboxTargetLookDirection : cfg.hitboxLookDirection;
+
+        drawEntity(buf, model, camPos, entity, tickDelta, color,
+                drawEyeLine, drawLookLine, cfg.hitboxLookLength, widthPx, sdf);
+    }
+
     private static Entity resolveTarget(Minecraft client) {
-        LocalPlayer p = client.player;
-        if (p == null || client.level == null) return null;
-
-        // 1. Try vanilla's active crosshair/hit result target
+        if (client.player == null || client.level == null) return null;
+        if (client.crosshairPickEntity != null) return client.crosshairPickEntity;
         HitResult hr = client.hitResult;
-        if (hr instanceof EntityHitResult ehr) {
-            return ehr.getEntity();
-        }
-
-        // 2. Perform a direct raycast to bypass temporary clearing of client.hitResult during swing/attack ticks
-        double reach = p.entityInteractionRange();
-        if (reach <= 0) reach = 3.0;
-
-        Vec3 eye = p.getEyePosition(1.0f);
-        Vec3 look = p.getViewVector(1.0f);
-        Vec3 end = eye.add(look.x * reach, look.y * reach, look.z * reach);
-        AABB searchBox = p.getBoundingBox().expandTowards(look.scale(reach)).inflate(1.0);
-
-        Predicate<Entity> filter = e ->
-                !e.isSpectator() && e.isPickable() && e != p;
-
-        EntityHitResult hit = ProjectileUtil.getEntityHitResult(
-                p, eye, end, searchBox, filter, reach * reach);
-
-        if (hit != null) {
-            return hit.getEntity();
-        }
-        return null;
+        return hr instanceof EntityHitResult ehr ? ehr.getEntity() : null;
     }
 
     private static void drawEntity(VertexConsumer buf, Matrix4f model, Vec3 camPos,

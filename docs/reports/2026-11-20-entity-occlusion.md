@@ -25,7 +25,7 @@ Entities never skipped:
 - Glowing entities (`Minecraft.shouldEntityAppearGlowing`);
 - Leashed entities (`Leashable.isLeashed()` / `getLeashData() != null`), leash fence knots, fishing hooks, and both ends of every active leash or fishing line (tracked via `ClientEntityEvents` in `LINKERS`/`ENDS`);
 - Oversized or beam/off-box renderers: `EnderDragon`, `EndCrystal`, `WitherBoss`, `Giant`, `Guardian` (and `ElderGuardian`), `Shulker`, `Display`, `LightningBolt`, `AbstractMinecart`, and any entity whose bounding box exceeds `3.0` wide or `4.0` tall;
-- All `LivingEntity` instances while Aurora's `playerHealthIndicators` is enabled (draws health labels through walls). Aurora's `HitboxRenderer` iterates `level.entitiesForRendering()` directly and is unaffected; `HitColor` tints only the entity's depth-tested model.
+- All `LivingEntity` instances while Aurora's `playerHealthIndicators` is enabled (draws health labels through walls). `HitboxRenderer` follows the visible-entity list after culling (matching `F3+B`); `HitColor` tints only the entity's depth-tested model.
 
 Block entities: allowlisted in per-version `OcclusionTerrain.contained` to renderers that stay within `[pos - 1, pos + 2]` (`CHEST`, `TRAPPED_CHEST`, `ENDER_CHEST`, `SHULKER_BOX`, `BED` on 26.1.2, `SIGN`, `HANGING_SIGN`, `SKULL`, `DECORATED_POT`, `CAMPFIRE`, `LECTERN`, `ENCHANTING_TABLE`, `BELL`, `BRUSHABLE_BLOCK`, `SHELF`). Beacons, banners, conduits, end gateways, end portals, spawners, pistons, structure/jigsaw blocks and all modded block entities are never culled.
 

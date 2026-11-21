@@ -158,10 +158,13 @@ A model of the same search on an item panel (slot, item and count per slot):
 
 On a full panel the union box cannot prune anything, so the search stays linear. The gain is a few microseconds on real screens and is not visible in frame time. That does not pay for three mixins in GUI code other mods also hook, so it was dropped.
 
-## Not changed; for the owner
+## Follow-ups resolved (2026-11-20)
 
-- **Hitboxes beyond render distance.** Resolved in the second pass (above): the owner approved limiting hitboxes to entities the game draws.
+- **Hitboxes beyond render distance & occlusion.** Hitboxes now follow the main-world visible-entity list (`HitboxVisibleEntitiesMixin` → `HitboxVisibleEntities`) after vanilla distance/frustum, Sodium, EntityCulling and Aurora's `perfEntityOcclusion` culling, matching `F3+B` and cutting crowd hitbox cost further.
+- **Crosshair and target hitbox through walls.** `CrosshairRenderer.isAimingAtEntity` and `HitboxRenderer.resolveTarget` now reuse vanilla's block-clipped `client.crosshairPickEntity` / `client.hitResult` instead of running an unclipped `ProjectileUtil.getEntityHitResult` raycast every frame.
+- **Item Physics smoothing.** `AuroraItemPhysicsSnapshots` now tracks landing ease (`120 ms`, frame-rate-independent via `ItemPhysicsSmoothing`) and the sticky `settled` latch per `ItemEntity` instead of per freshly allocated `ItemEntityRenderState`, and clears tracks on world join/respawn.
+- **RRLS title-screen resize guard.** `AuroraTitleScreen` now waits for `EntityModelSet` to finish loading (`models != EntityModelSet.EMPTY`) and catches missing-layer `IllegalArgumentException` so mid-reload window resizes under RRLS cannot crash `PlayerSkinWidget`.
+
+## Still deferred; for the owner
+
 - **GPU-side items.** The deferred list in the [world-render report](2026-11-12-perf-world-render.md) still needs GPU-bound evidence. This machine runs the owner's instance at about 2,000 fps.
-- **Item Physics never smooths.** `ItemEntityRendererExtractMixin` reads the previous frame's ground factor from a map keyed by render state, but vanilla extracts a new `ItemEntityRenderState` every frame. So the landing ease and the "settled" latch never carry over: landings snap, and a settled item that starts to fall tumbles again. A fix would key the carried state by the item entity. Its 0.15-per-frame step is also frame-rate dependent. It is a visible change, so it waits for a decision.
-- **Crosshair indicator through walls.** `CrosshairRenderer.isAimingAtEntity` raycasts for living entities within reach and ignores blocks, so the indicator can light up for an entity behind a wall. Vanilla's pick respects blocks. It also costs about 1% in crowds. Using vanilla's pick would change its behaviour during attack swings.
-- **Hitboxes and occlusion.** Hitboxes now follow vanilla's render distance. They could also follow vanilla's visible-entity list after Sodium and EntityCulling occlusion: boxes in occluded sections would disappear, as F3+B's do, and hitbox cost in crowds would fall further. That is a visible change for the owner to decide.
