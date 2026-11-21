@@ -401,6 +401,17 @@ public final class FeatureCatalog {
         mixin("KeyBindsScreenComboMixin", "Ctrl, Shift and Alt combos in the Controls screen");
         // ---- Performance (ADR 0009) ----
         mixin("LevelLoadTrackerMixin", "skipping the level loading delay", "performance").gates("perfSkipLevelLoadDelay");
+        // Entity Culling owns occlusion culling of entities and block
+        // entities. Sodium's entity culling works per section and composes
+        // with this; MoreCulling, ImmediatelyFast and EMF use neither seam.
+        mixin("OcclusionFrameMixin", "skipping entities hidden behind terrain", "performance")
+                .gates("perfEntityOcclusion").yieldsTo("entityculling");
+        mixin("OcclusionBodyMixin", "skipping entities hidden behind terrain", "performance")
+                .gates("perfEntityOcclusion").yieldsTo("entityculling");
+        mixin("OcclusionChestMixin", "skipping entities hidden behind terrain", "performance")
+                .gates("perfEntityOcclusion").yieldsTo("entityculling");
+        mixin("OcclusionDirtyMixin", "skipping entities hidden behind terrain", "performance")
+                .gates("perfEntityOcclusion").yieldsTo("entityculling");
         mixin("MinecraftProfileAccessor", "startup without waiting for the profile", "performance").gates("perfNoProfileWait");
         mixin("InitialScreensProfileMixin", "startup without waiting for the profile", "performance").gates("perfNoProfileWait");
         mixin("SoundEngineListenerMixin", "skipping unchanged sound listener updates", "performance").gates("perfSoundListenerThrottle");

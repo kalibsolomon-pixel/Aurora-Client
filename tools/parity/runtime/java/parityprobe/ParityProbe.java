@@ -452,6 +452,33 @@ public final class ParityProbe implements ClientModInitializer {
                 client.player.yRotO = client.player.getYRot();
                 client.player.xRotO = client.player.getXRot();
             }
+            // `occlusion-counts`: entities and block entities skipped so far, and frames the test ran.
+            case "occlusion-counts" -> Files.writeString(root.resolve("occlusion-counts.txt"),
+                    com.aurora.client.performance.EntityOcclusion.bodiesSkipped + " "
+                            + com.aurora.client.performance.EntityOcclusion.chestsSkipped + " "
+                            + com.aurora.client.performance.EntityOcclusion.framesActive);
+            // `occlusion-scene`: entities in the level, then leashed, glowing and named ones.
+            case "occlusion-scene" -> {
+                int entities = 0, leashed = 0, glowing = 0, named = 0;
+                for (var entity : client.level.entitiesForRendering()) {
+                    entities++;
+                    if (entity instanceof net.minecraft.world.entity.Leashable l && l.getLeashHolder() != null) leashed++;
+                    if (client.shouldEntityAppearGlowing(entity)) glowing++;
+                    if (entity.hasCustomName()) named++;
+                }
+                Files.writeString(root.resolve("occlusion-scene.txt"), entities + " " + leashed + " " + glowing + " " + named);
+            }
+            // `occlusion-image <name>`: read the last frame back into <name>.png.
+            case "occlusion-image" -> {
+                Path out = root.resolve(args[1] + ".png");
+                net.minecraft.client.Screenshot.takeScreenshot(NativeUi.mainTarget(client), image -> {
+                    try (image) {
+                        image.writeToFile(out);
+                    } catch (java.io.IOException failure) {
+                        throw new java.io.UncheckedIOException(failure);
+                    }
+                });
+            }
             // `perspective first|back|front`: the camera type F5 cycles through.
             case "perspective" -> client.options.setCameraType(switch (args[1]) {
                 case "back" -> net.minecraft.client.CameraType.THIRD_PERSON_BACK;

@@ -64,6 +64,9 @@ exchange atomically and refuses an unmarked fixture or a pending command.
 | `expect-config hitboxEnabled true` | Fail unless the live config field equals the JSON value |
 | `expect-screen FeatureDetailScreen` | Fail unless the open screen has that simple class name (`none` for no screen) |
 | `look -90 30` | Close any screen and point the player's view (yaw, pitch in degrees) |
+| `occlusion-counts` | Write cumulative skipped entities, skipped block entities and active occlusion frames to `occlusion-counts.txt` |
+| `occlusion-scene` | Write loaded entity, leashed, glowing and custom-named counts to `occlusion-scene.txt` |
+| `occlusion-image <name>` | Capture the main render target into `<name>.png` in the probe directory |
 | `perspective back` | Set the camera to `first`, `back` (third person) or `front` |
 | `slot 3` | Select a hotbar slot (0-8) |
 | `key-press attack` | Queue one press of the attack (or `use`) key, as a mouse click does |

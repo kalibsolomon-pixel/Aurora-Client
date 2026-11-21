@@ -1,6 +1,6 @@
 # Aurora Client status
 
-Updated 2026-11-17. See [ROADMAP](ROADMAP.md) for the order of work,
+Updated 2026-11-20. See [ROADMAP](ROADMAP.md) for the order of work,
 [architecture](ARCHITECTURE.md) for ownership, and [ADRs](adr/) for decisions.
 
 ## Structure and integration
@@ -162,6 +162,10 @@ optimizations for Dynamic FPS, Polytone, Gnetum, Modern UI and Caxton;
 [evidence](reports/2026-11-20-gui-text-map.md).
 GUI Glint Baking redraws glint-only GUI items when the glint has moved, not every frame
 (never at glint strength 0), pixel-identical; [evidence](reports/2026-11-20-gui-glint-baking.md).
+Entity & Block-Entity Occlusion Culling (`perfEntityOcclusion`) skips extracting entities and
+contained block entities that a settled full-cube opaque terrain layer certainly hides from the
+camera, stands down for `entityculling`, and is pixel-identical across all 11 verification scenes
+on 26.1.2 OpenGL, 26.2 OpenGL and 26.3 native Vulkan; [evidence](reports/2026-11-20-entity-occlusion.md).
 
 ## Next work
 
