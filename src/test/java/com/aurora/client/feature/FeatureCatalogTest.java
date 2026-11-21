@@ -221,7 +221,7 @@ class FeatureCatalogTest {
         }
         // Display Settings left the grid for the Settings tab's pages (2026-11-12).
         assertEquals(35, FeatureCatalog.featuresOn(FeatureCatalog.Tab.MODULES).size());
-        // Gradient Dithering joined the Display page (2026-11-20).
-        assertEquals(7, FeatureCatalog.featuresOn(FeatureCatalog.Tab.SETTINGS).size());
+        // Gradient Dithering and Smooth Fog joined the Display page (2026-11-20/21).
+        assertEquals(8, FeatureCatalog.featuresOn(FeatureCatalog.Tab.SETTINGS).size());
     }
 }

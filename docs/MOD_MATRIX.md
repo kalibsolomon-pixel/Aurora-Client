@@ -23,6 +23,7 @@ when the owning mod is absent.
 | Modern UI (`modernui`) or Caxton (`caxton`) | Left-to-right text | Owns visual ordering of styled text |
 | ImmediatelyFast (`immediatelyfast`) | GUI Item Baking | Redraws animated GUI items in its own atlas |
 | Entity Culling (`entityculling`) | Entity and block-entity occlusion culling | Skips terrain-occluded entities and block entities during extraction |
+| VulkanMod (`vulkanmod`) | Blaze3D OpenGL dispatch caching (`perfGlDispatch`, 26.2) | Replaces OpenGL draw dispatch |
 
 The [GUI, text and map measurements](reports/2026-11-20-gui-text-map.md) record
 the mod combinations and backends exercised.
@@ -49,17 +50,17 @@ the apply still does
 
 ## World shader stand-downs
 
-Gradient Dithering patches the world's fragment shaders, so it steps aside where
-something else owns them. Its switch keeps its saved value throughout.
+Gradient Dithering and Smooth Fog patch world shaders, so both step aside where
+something else owns them. Their switches keep their saved values throughout.
 
 | Installed mod or state | What stands down | How |
 |---|---|---|
-| VulkanMod (`vulkanmod`, 26.1.2) | Gradient Dithering, both mixins | Skipped at startup for the session; diagnostics list it as stood down |
-| Iris (`iris`) with a shader pack in use | Gradient Dithering's dithered pipelines | Checked on every pipeline lookup; vanilla's pipelines draw, and the pack replaces them as usual. Dithering resumes when the pack is turned off |
-| Iris with no shader pack | Nothing | The world is dithered as without Iris |
-| A resource pack whose replacement sky, terrain, cloud or sunrise shader has no single `main` writing `fragColor` | That shader only | Left as the pack wrote it; its pipelines draw undithered |
+| VulkanMod (`vulkanmod`, 26.1.2) | Gradient Dithering and Smooth Fog mixins | Skipped at startup for the session; diagnostics list them as stood down |
+| Iris (`iris`) with a shader pack in use | Gradient Dithering and Smooth Fog pipelines (and 26.2 `perfGlDispatch` GL skips) | Checked on every pipeline/draw lookup; vanilla's pipelines draw, and the pack replaces them as usual. Resumes when the pack is turned off |
+| Iris with no shader pack | Nothing | The world uses Gradient Dithering and Smooth Fog as without Iris |
+| A resource pack whose replacement sky, terrain, cloud, sunrise or fog shader lacks the expected hook | That shader only | Left as the pack wrote it; its pipelines draw unpatched |
 
-The [Gradient Dithering report](reports/2026-11-20-gradient-dither.md) records
+The [Gradient Dithering report](reports/2026-11-20-gradient-dither.md) and [Aurora 26.2 performance & Smooth Fog report](reports/2026-11-21-aurora-262-perf-and-smooth-fog.md) record
 the boots that checked these rows.
 
 ## How to run it
