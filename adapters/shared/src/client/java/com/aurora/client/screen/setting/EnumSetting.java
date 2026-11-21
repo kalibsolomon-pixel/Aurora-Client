@@ -283,7 +283,7 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
         glassPassFrame = GlassSurface.frame();
         int btnX = controlX(x, width, BTN_W);
         int btnY = controlY(y, CONTROL_H, BTN_H);
-        float glassR = Math.min(BTN_H / 2f, ThemeManager.current().roundness().radiusSmall());
+        float glassR = Math.min(BTN_H / 2f, AuroraTheme.RADIUS_SMALL);
         passDrewButton = glassButton && !isDisabled()
                 && GlassSurface.control(ctx, btnX, btnY, BTN_W, BTN_H, glassR);
     }
@@ -362,7 +362,7 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
         if (glassPassFrame == GlassSurface.frame()) {
             glassOk = passDrewButton;
         } else if (glassButton && !disabled) {
-            float glassR = Math.min(BTN_H / 2f, ThemeManager.current().roundness().radiusSmall());
+            float glassR = Math.min(BTN_H / 2f, AuroraTheme.RADIUS_SMALL);
             glassOk = GlassSurface.control(ctx, btnX, btnY, BTN_W, BTN_H, glassR);
         } else {
             glassOk = false;
@@ -440,7 +440,7 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
                 mouseX = (int) Math.floor(com.aurora.client.ui.util.OverlayMotion.unscale(mouseX, btnX, progress));
                 mouseY = (int) Math.floor(com.aurora.client.ui.util.OverlayMotion.unscale(mouseY, pivot, progress));
             }
-            float popR = Math.min(dropdownH / 2f, ThemeManager.current().roundness().radiusSmall());
+            float popR = Math.min(dropdownH / 2f, AuroraTheme.RADIUS_SMALL);
             MaterialSurface.overlayFace(ctx, btnX, dropdownY, BTN_W, dropdownH, popR,
                     MaterialSurface.windowCornerClearance(popR, 2, 2), progress);
             for (int vIdx = 0; vIdx < visibleCount; vIdx++) {
@@ -454,7 +454,7 @@ public class EnumSetting<E extends Enum<E>> extends FeatureSetting {
 
                     if (MaterialSurface.unified() && !posed) {
                         MaterialSurface.selection(ctx,btnX+2,optY,BTN_W-4,OPT_H,
-                                ThemeManager.current().roundness().radiusSmall(),val==current,optHover ? 1 : 0);
+                                AuroraTheme.RADIUS_SMALL,val==current,optHover ? 1 : 0);
                     }
 
                     int optTextY = AuroraFontRenderer.textY(tr, optY, OPT_H);

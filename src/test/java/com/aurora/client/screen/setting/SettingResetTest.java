@@ -153,8 +153,7 @@ class SettingResetTest {
         }
         assertTrue(count > 200, "The manifest must scan the full registry");
         assertEquals(1, exemptions);
-        // Helpers forward field-specific defaults, instead of baking in today's initializer.
-        assertTrue(registry.contains("setter).resetDefault(defaultValue::getAsBoolean)"));
+        // The Hitreg helper forwards field-specific defaults.
         assertTrue(registry.contains("toggle::set).resetDefault(defaultValue::getAsBoolean)"));
     }
 

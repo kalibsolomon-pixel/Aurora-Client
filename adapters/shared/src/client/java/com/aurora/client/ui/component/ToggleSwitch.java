@@ -9,6 +9,7 @@ import com.aurora.client.ui.util.CubicBezier;
 import com.aurora.client.ui.util.TimedTransition;
 import com.aurora.client.util.AuroraAnim;
 import com.aurora.client.util.HoverAnim;
+import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 import java.util.function.BooleanSupplier;
@@ -93,7 +94,7 @@ public class ToggleSwitch extends Widget {
     private final TimedTransition pilotHover=new TimedTransition(120,CubicBezier.EASE);
     private boolean pilotPrimed;
 
-    /** Pack switch recipe: solid accent, cached domed thumb, theme-radius capsule, no pulse. */
+    /** Pack switch recipe: solid accent, cached domed thumb, square track, no pulse. */
     private void renderUnified(GuiGraphicsExtractor g,float x,float y,float w,float h,int mx,int my) {
         long now=System.nanoTime(); boolean on=getter.getAsBoolean();
         if(!pilotPrimed) { pilotSlide.update(on ? 1 : 0,now);pilotHover.update(0,now);pilotPrimed=true; }
@@ -112,10 +113,7 @@ public class ToggleSwitch extends Widget {
         from=AuroraAnim.lerpArgb(from,wash,.08f*hover);
         to=AuroraAnim.lerpArgb(to,wash,.08f*hover);
         if(disabled) { from=AuroraAnim.lerpArgb(inactive,active,.35f*t); to=from; }
-        // Track and thumb follow the theme's Corner Radius: full capsules at
-        // the default radius, square at 0 (owner ruling 2026-11-12).
-        var corners=com.aurora.client.theme.ThemeManager.current().roundness();
-        float r=corners.capsule(h);
+        float r=AuroraTheme.RADIUS;
         if(previewMode) RenderUtil.drawRoundedRectGradientAA(g,x,y,w,h,r,from,to,true);
         else MaterialSurface.switchTrack(g,x,y,w,h,r,t,hover,disabled);
         // No outlines in either state (owner ruling 2026-11-12 for ON; the filled OFF track
@@ -127,8 +125,8 @@ public class ToggleSwitch extends Widget {
         // exactly centred; the former 2.5 px margin was snapped half a pixel off by the cached face.
         float d=h-2*KNOB_MARGIN+grow, tx=x+KNOB_MARGIN+(w-h)*t-grow/2f, ty=y+KNOB_MARGIN-grow/2f;
         int thumb=disabled ? MaterialSurface.color(ThemeToken.ON_BACKGROUND_MUTED) : 0xffffffff;
-        if(previewMode) RenderUtil.drawRoundedRectAA(g,tx,ty,d,d,corners.capsule(d),thumb);
-        else MaterialSurface.knob(g,tx,ty,d,corners.capsule(d),thumb,disabled); // shared dome
+        if(previewMode) RenderUtil.drawRoundedRectAA(g,tx,ty,d,d,AuroraTheme.RADIUS,thumb);
+        else MaterialSurface.knob(g,tx,ty,d,AuroraTheme.RADIUS,thumb,disabled); // shared dome
     }
 
     /** §8.3 symmetric hover — 140 ms enter, 140 ms exit, continuous reversal. */
@@ -217,7 +215,7 @@ public class ToggleSwitch extends Widget {
                 ? ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED)
                 : 0xFFFFFFFF;
         RenderUtil.drawRoundedRectAA(g, knobX, knobY, thumbD, thumbD,
-                com.aurora.client.theme.ThemeManager.current().roundness().capsule(thumbD), thumbCol);
+                AuroraTheme.RADIUS, thumbCol);
 
 
     }
@@ -248,11 +246,7 @@ public class ToggleSwitch extends Widget {
         int pill = AuroraAnim.lerpArgb(base, washTarget, HOVER_WASH * hoverT);
         int pillTo = AuroraAnim.lerpArgb(baseTo, washTarget, HOVER_WASH * hoverT);
 
-        // The track follows the theme's Corner Radius through the capsule
-        // rule: a full capsule at the default radius, flattening in
-        // proportion below it, square at 0 (owner ruling 2026-11-12, which
-        // retired the earlier always-a-capsule convention).
-        float radius = com.aurora.client.theme.ThemeManager.current().roundness().capsule(h);
+        float radius = AuroraTheme.RADIUS;
 
         RenderUtil.drawRoundedRectGradientAA(g, x, y, w, h, radius, pill, pillTo, true);
         // Hairline edge on the OFF track only: it fades out as the switch turns

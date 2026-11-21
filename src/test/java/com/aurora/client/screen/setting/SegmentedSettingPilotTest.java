@@ -2,7 +2,6 @@ package com.aurora.client.screen.setting;
 
 import com.aurora.client.SourceTree;
 import com.aurora.client.theme.ThemeMode;
-import com.aurora.client.theme.ThemeRoundness;
 import com.aurora.client.ui.component.SegmentedControl;
 import com.aurora.client.ui.interaction.SemanticActionControl;
 import com.aurora.client.ui.interaction.SemanticControlGroup;
@@ -118,7 +117,7 @@ class SegmentedSettingPilotTest {
 
     @Test
     void productionInventoryHasNoSegmentedRows() throws Exception {
-        // Corner Style became the Corner Radius slider (2026-11-12); the
+        // Appearance uses fixed square corners. The
         // Text section's Case and HUD Text Shadow and Search's Typo Tolerance
         // are the production rows since (2026-11-12, after the owner's
         // OneConfig references). This class still covers the component

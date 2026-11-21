@@ -4,9 +4,9 @@ import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.theme.ThemeDefinition;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeMode;
-import com.aurora.client.theme.ThemeRoundness;
 import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.util.RenderUtil;
+import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
@@ -18,8 +18,8 @@ import org.lwjgl.opengl.GL33;
 
 /**
  * Blur + lighting verification screen — one panel, three backdrops, a
- * radius knob, and the four toggles needed to exercise the lighting
- * phase: on/off, raised/depressed, corner style, and theme mode.
+ * radius knob, and the toggles needed to exercise the lighting
+ * phase: on/off, raised/depressed, and theme mode.
  * Deliberately nothing beyond that: no probes, no shader dumps, no
  * benchmarks. A one-line fps log every 5 s is the only instrumentation
  * (it doubles as the frame-cost check for the lighting math).
@@ -27,11 +27,10 @@ import org.lwjgl.opengl.GL33;
  * <p>Verification protocol: confirm on the STATIC backdrops first (SOLID
  * is the negative control; STRIPES is the positive control), with plain
  * before/after captures (lighting off vs on) for both raised and
- * depressed, then across corner styles ([C] cycles the theme roundness)
- * and both theme modes ([N] flips Dark/Light), then finally the live
+ * depressed, then across both theme modes ([N] flips Dark/Light), then finally the live
  * world.
  *
- * <p>[C], [N], and the [O]/[P] opacity knob mutate the theme IN MEMORY
+ * <p>[N] and the [O]/[P] opacity knob mutate the theme IN MEMORY
  * ONLY (never persisted); {@link #removed()} restores whatever was active
  * when the screen opened.
  *
@@ -86,8 +85,7 @@ public class BlurTestScreen extends Screen {
     private static final int STRESS_COLS = 12;
     private static final float STRESS_W = 56f, STRESS_H = 14f;
 
-    // Theme state captured on open so [C]/[N]/[O][P] mutations can be restored.
-    private int originalCornerRadius;
+    // Theme state captured on open so [N]/[O]/[P] mutations can be restored.
     private ThemeMode originalMode;
     private double originalOpacity;
 
@@ -138,26 +136,16 @@ public class BlurTestScreen extends Screen {
         super(Component.literal("Blur Panel Test"));
     }
 
-    /** A {@code corner} argument: a pixel radius, or a retired Corner Style name. */
-    private static int cornerArg(String v) {
-        try {
-            return ThemeRoundness.clamp(Integer.parseInt(v.trim()));
-        } catch (NumberFormatException e) {
-            return ThemeRoundness.legacyRadius(v);
-        }
-    }
-
     @Override
     protected void init() {
         AuroraConfig cfg = AuroraConfig.get();
         ThemeMode m = cfg.themeOrDefault().mode;
-        originalCornerRadius = cfg.themeOrDefault().cornerRadius;
         originalMode = m != null ? m : ThemeMode.DARK;
         originalOpacity = ThemeDefinition.normalizedOpacity(cfg.themeOrDefault().backgroundOpacity);
         com.aurora.client.AuroraClient.LOGGER.info(
-                "[BlurTest] opened (lighting={} depressed={} backdrop={} radius={} corner={} theme={} opacity={})",
+                "[BlurTest] opened (lighting={} depressed={} backdrop={} radius={} theme={} opacity={})",
                 lightingOn, depressedMode, mode, (int) blurRadius,
-                originalCornerRadius + " px", originalMode,
+                originalMode,
                 String.format(java.util.Locale.ROOT, "%.2f", originalOpacity));
     }
 
@@ -199,7 +187,7 @@ public class BlurTestScreen extends Screen {
         }
     }
 
-    /** Apply {@code k=v} tokens: backdrop, lighting, depressed, radius, edge, grad, corner, theme, opacity. */
+    /** Apply {@code k=v} tokens: backdrop, lighting, depressed, radius, edge, grad, theme, opacity. */
     private void applyState(String s) {
         AuroraConfig cfg = AuroraConfig.get();
         boolean themeChanged = false;
@@ -222,9 +210,6 @@ public class BlurTestScreen extends Screen {
                 }
                 case "grad" -> {
                     try { gradStrength = Math.max(0f, Math.min(1f, Float.parseFloat(v))); } catch (NumberFormatException ignored) {}
-                }
-                case "corner" -> {
-                    try { cfg.themeOrDefault().cornerRadius = cornerArg(v); themeChanged = true; } catch (IllegalArgumentException ignored) {}
                 }
                 case "theme" -> {
                     try { cfg.themeOrDefault().mode = ThemeMode.valueOf(v); themeChanged = true; } catch (IllegalArgumentException ignored) {}
@@ -289,7 +274,7 @@ public class BlurTestScreen extends Screen {
 
         // 2. The blur panel itself, with the lighting impression when on.
         //    RAISED/DEPRESSED only inverts the two lighting terms.
-        float radius = ThemeManager.current().roundness().radius();
+        float radius = AuroraTheme.RADIUS;
         float px = (this.width - PANEL_W) / 2f;
         float py = (this.height - PANEL_H) / 2f - 20f;
         BlurPanelRenderer.Lighting lighting = lightingOn
@@ -324,11 +309,10 @@ public class BlurTestScreen extends Screen {
                            : "Panel: FALLBACK - " + BlurPanelRenderer.lastOutcome();
         g.text(this.font, status, tx, ty, body, false);
         g.text(this.font, "Backdrop: " + mode.label
-                        + " | Corner: " + ThemeManager.current().roundness()
                         + " | Theme: " + ThemeManager.current().mode()
                         + " | Op: " + Math.round(ThemeManager.current().backgroundOpacity() * 100) + "%",
                 tx, ty + 12, dim, false);
-        g.text(this.font, "[B]ackdrop  [L]ighting  [M] raised/depressed  [C]orner  [N] theme  [+/-] radius  [O/P] opacity",
+        g.text(this.font, "[B]ackdrop  [L]ighting  [M] raised/depressed  [N] theme  [+/-] radius  [O/P] opacity",
                 tx, ty + 26, dim, false);
         g.text(this.font, "Light: fixed top, ~14 deg right. Opacity = WINDOW_FILL alpha (single application point).",
                 tx, ty + 38, dim, false);
@@ -375,17 +359,6 @@ public class BlurTestScreen extends Screen {
         if (keyCode == com.mojang.blaze3d.platform.InputConstants.KEY_M) {
             depressedMode = !depressedMode;
             com.aurora.client.AuroraClient.LOGGER.info("[BlurTest] M: depressed={}", depressedMode);
-            return true;
-        }
-        if (keyCode == com.mojang.blaze3d.platform.InputConstants.KEY_C) {
-            // Cycle corner style IN MEMORY (restored on close, never saved).
-            // Steps through the radii the retired Corner Style choices stood for.
-            int cur = AuroraConfig.get().themeOrDefault().cornerRadius;
-            int next = cur > ThemeRoundness.SLIGHTLY_ROUND.radius() ? ThemeRoundness.SLIGHTLY_ROUND.radius()
-                    : cur > 0 ? 0 : ThemeRoundness.DEFAULT_RADIUS;
-            AuroraConfig.get().themeOrDefault().cornerRadius = next;
-            ThemeManager.reload();
-            com.aurora.client.AuroraClient.LOGGER.info("[BlurTest] C: corner={} px", next);
             return true;
         }
         if (keyCode == com.mojang.blaze3d.platform.InputConstants.KEY_N) {
@@ -475,7 +448,7 @@ public class BlurTestScreen extends Screen {
         BlurPanelRenderer.Priority[] order = BlurPanelRenderer.Priority.values();
         int[] asked = new int[order.length];
         int[] drew = new int[order.length];
-        float r = ThemeManager.current().roundness().radiusSmall();
+        float r = AuroraTheme.RADIUS_SMALL;
         int tint = ThemeManager.color(ThemeToken.WINDOW_FILL);
         for (int i = 0; i < stressN; i++) {
             int tier = order.length - 1 - (int) ((long) i * order.length / stressN);
@@ -513,14 +486,10 @@ public class BlurTestScreen extends Screen {
         slideDetailAmp = 0f;
         patternScale = 0f;
         // Restore the theme values this screen may have cycled in memory —
-        // [C]/[N] deliberately never persist, so the user's saved theme is
+        // [N] and [O]/[P] deliberately never persist, so the user's saved theme is
         // exactly what it was before the harness opened.
         AuroraConfig cfg = AuroraConfig.get();
         boolean changed = false;
-        if (cfg.themeOrDefault().cornerRadius != originalCornerRadius) {
-            cfg.themeOrDefault().cornerRadius = originalCornerRadius;
-            changed = true;
-        }
         ThemeMode m = cfg.themeOrDefault().mode;
         if (m != originalMode) { cfg.themeOrDefault().mode = originalMode; changed = true; }
         double o = ThemeDefinition.normalizedOpacity(cfg.themeOrDefault().backgroundOpacity);

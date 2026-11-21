@@ -6,6 +6,7 @@ import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.ui.util.UiLayerCache;
 import com.aurora.client.util.HoverAnim;
+import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 
@@ -153,10 +154,7 @@ public class ColorSwatch extends Widget {
     public void renderOverlay(GuiGraphicsExtractor g, float x, float y, float w, float h, int mouseX, int mouseY) {
         x=Math.round(x); y=Math.round(y); w=Math.round(w); h=Math.round(h);
         int color = getter.getAsInt();
-        // A rounded square at every Corner Radius (owner ruling 2026-10-30: swatches are squares;
-        // 2026-11-14: at the factory radius a 14 px sample had become a disc that read as a
-        // switch knob).
-        float radius = Math.min(h / 4f, ThemeManager.current().roundness().radiusSmall());
+        float radius = Math.min(h / 4f, AuroraTheme.RADIUS_SMALL);
 
         if (dataOnly) {
             // Display-only data sample: the neutral at-rest look, nothing
@@ -199,13 +197,13 @@ public class ColorSwatch extends Widget {
                                 : edgeFor(color));
             }
             if (selected) {
-                RenderUtil.drawRoundedOutlineAA(g, x - 2, y - 2, w + 4, h + 4, radius + 2, 1.5f,
+                RenderUtil.drawRoundedOutlineAA(g, x - 2, y - 2, w + 4, h + 4, MaterialSurface.outsetRadius(radius, 2), 1.5f,
                         ThemeManager.color(ThemeToken.ACCENT));
             }
             if (hT > 0f) {
                 int haloA = Math.round(90 * hT);
                 int onBg = ThemeManager.color(ThemeToken.ON_BACKGROUND) & 0x00FFFFFF;
-                RenderUtil.drawRoundedOutlineAA(g, x - 1, y - 1, w + 2, h + 2, radius + 1, 1.0f,
+                RenderUtil.drawRoundedOutlineAA(g, x - 1, y - 1, w + 2, h + 2, MaterialSurface.outsetRadius(radius, 1), 1.0f,
                         (haloA << 24) | onBg);
             }
             // Focus: the Button-family hairline ON the rect — radius and
@@ -220,7 +218,7 @@ public class ColorSwatch extends Widget {
 
         // Legacy composition, byte-identical to the pre-pilot render.
         if (selected) {
-            RenderUtil.drawRoundedOutlineAA(g, x - 2, y - 2, w + 4, h + 4, radius + 2, 1.5f,
+            RenderUtil.drawRoundedOutlineAA(g, x - 2, y - 2, w + 4, h + 4, MaterialSurface.outsetRadius(radius, 2), 1.5f,
                     ThemeManager.color(ThemeToken.ACCENT));
         } else {
             if (!rest) {
@@ -229,7 +227,7 @@ public class ColorSwatch extends Widget {
             if (hT > 0f) {
                 int haloA = Math.round(90 * hT);
                 int onBg = ThemeManager.color(ThemeToken.ON_BACKGROUND) & 0x00FFFFFF;
-                RenderUtil.drawRoundedOutlineAA(g, x - 1, y - 1, w + 2, h + 2, radius + 1, 1.0f,
+                RenderUtil.drawRoundedOutlineAA(g, x - 1, y - 1, w + 2, h + 2, MaterialSurface.outsetRadius(radius, 1), 1.0f,
                         (haloA << 24) | onBg);
             }
         }

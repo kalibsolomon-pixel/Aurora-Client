@@ -125,7 +125,7 @@ public final class UiCacheBenchmark {
             report.put("guiScale", mc.getWindow().getGuiScale());
             report.put("worldLoaded", mc.level != null);
             report.put("backgroundOpacity", cfg.themeOrDefault().backgroundOpacity);
-            report.put("cornerRadius", cfg.themeOrDefault().cornerRadius);
+            report.put("cornerRadius", com.aurora.client.util.AuroraTheme.RADIUS);
             report.put("guiFpsLimit", cfg.guiFpsLimit);
             report.put("nativeFpsOption", mc.options.framerateLimit().get());
             report.put("effectiveNativeFpsLimit", mc.getFramerateLimitTracker().getFramerateLimit());

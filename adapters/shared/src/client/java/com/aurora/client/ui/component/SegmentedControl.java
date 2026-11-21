@@ -14,6 +14,7 @@ import com.aurora.client.ui.util.TimedTransition;
 import com.aurora.client.ui.util.CubicBezier;
 import com.aurora.client.util.AuroraAnim;
 import com.aurora.client.util.HoverAnim;
+import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -25,14 +26,12 @@ import java.util.function.IntSupplier;
 
 /**
  * Segmented control — an iOS-style split track where the selected segment is
- * filled with the accent. Used for the Theme screen's Mode and Corner Style
- * rows, and the main screen's tab strip.
+ * filled with the accent.
  *
  * <p>The track renders in the cacheable shape layer; the selected/hover
  * segment fills and labels render live. The selected fill is {@code ACCENT};
  * text uses {@code ON_ACCENT} (selected) and {@code ON_BACKGROUND_SECONDARY}
- * / {@code ON_BACKGROUND} (hover). Track corner radius follows the roundness
- * token. Labels are centered and non-shadowed.
+ * / {@code ON_BACKGROUND} (hover). The track has square corners. Labels are centered and non-shadowed.
  *
  * <p>Phase C-5 (2026-09-20): the canonical peer-selection contract — the
  * AccentSetting family. Hover is pointer-only {@code HoverAnim.symmetric(140)}
@@ -164,7 +163,7 @@ public class SegmentedControl extends Widget {
     @Override
     public void renderShapes(GuiGraphicsExtractor g, float x, float y, float w, float h) {
         if (MaterialSurface.unified() || glassEnabled) return; // segments are live glass; track base suppressed
-        float radius = Math.min(trackH / 2f, ThemeManager.current().roundness().radiusSmall());
+        float radius = Math.min(trackH / 2f, AuroraTheme.RADIUS_SMALL);
         RenderUtil.drawRoundedRectAA(g, x, y, w, trackH, radius,
                 MaterialSurface.color(ThemeToken.SURFACE_VARIANT));
     }
@@ -179,7 +178,7 @@ public class SegmentedControl extends Widget {
         glassPassFrame = GlassSurface.frame();
         passDrewSegments = false;
         if (MaterialSurface.unified() || !glassEnabled) return;
-        float radius = Math.min(trackH / 2f, ThemeManager.current().roundness().radiusSmall());
+        float radius = Math.min(trackH / 2f, AuroraTheme.RADIUS_SMALL);
         passDrewSegments = true;
         for (int i = 0; i < options.length; i++) {
             int sx = segStart(i, x, w);
@@ -196,7 +195,7 @@ public class SegmentedControl extends Widget {
         Font tr = Minecraft.getInstance().font;
         if (tr == null) return;
 
-        float radius = Math.min(trackH / 2f, ThemeManager.current().roundness().radiusSmall());
+        float radius = Math.min(trackH / 2f, AuroraTheme.RADIUS_SMALL);
 
         // Glass pilot path: every segment is a live raised-glass panel with
         // the tint carrying the selection state. Hover feedback stays in the

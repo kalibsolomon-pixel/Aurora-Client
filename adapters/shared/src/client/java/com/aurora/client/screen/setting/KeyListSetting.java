@@ -225,7 +225,7 @@ public class KeyListSetting extends FeatureSetting {
         glassPassFrame = GlassSurface.frame();
         int[] add = addRect(x, y, width);
         int addX = add[0], addY = add[1], addW = add[2];
-        float glassR = Math.min(ADD_H / 2f, ThemeManager.current().roundness().radiusSmall());
+        float glassR = Math.min(ADD_H / 2f, AuroraTheme.RADIUS_SMALL);
         passDrewPill = !isDisabled()
                 && GlassSurface.control(ctx, addX, addY, addW, ADD_H, glassR, listening);
     }
@@ -309,7 +309,7 @@ public class KeyListSetting extends FeatureSetting {
         // dim and only its result matters here; otherwise (legacy frame
         // order) it is painted in place now through the shared GlassSurface
         // helper (identical calls).
-        float glassR = Math.min(ADD_H / 2f, ThemeManager.current().roundness().radiusSmall());
+        float glassR = Math.min(ADD_H / 2f, AuroraTheme.RADIUS_SMALL);
         boolean glassOk;
         if (glassPassFrame == GlassSurface.frame()) {
             glassOk = passDrewPill;

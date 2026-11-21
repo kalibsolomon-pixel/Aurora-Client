@@ -18,6 +18,7 @@ import com.aurora.client.ui.layout.ScreenLayout;
 import com.aurora.client.ui.util.ClipBand;
 import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.ui.util.UiLayerCache;
+import com.aurora.client.util.AuroraTheme;
 import java.util.List;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
@@ -337,7 +338,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen, LayoutS
         float fade = Math.min(1f, 2f * (1f - age / (float) REVEAL_MS));
         int accent = MaterialSurface.color(ThemeToken.ACCENT);
         com.aurora.client.ui.util.RenderUtil.drawRoundedOutlineAA(ctx, x, y, w, h,
-                ThemeManager.current().roundness().radiusSmall(), 1f,
+                AuroraTheme.RADIUS_SMALL, 1f,
                 ThemeManager.withAlpha(accent, Math.round((accent >>> 24) * fade)));
     }
 
@@ -546,7 +547,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen, LayoutS
         // suppression, tiny/clipped panel, failure), the unified material's
         // cached face stays the same. Legacy chrome includes that fallback.
         GlassSurface.beginGlassPass();
-        float frameRadius = ThemeManager.current().roundness().radius();
+        float frameRadius = AuroraTheme.RADIUS;
         GlassSurface.container(ctx, listX, windowY, LIST_W, windowH, frameRadius);
 
         // ---- Static-layer caches: window chrome + rows' cacheable shapes ----
@@ -774,7 +775,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen, LayoutS
 
         // Post-reset confirmation (the manager screens' toast): 1.5 s, bottom-center.
         resetToast.render(ctx, this.font, this.width, this.height,
-                ThemeManager.current().roundness().radiusSmall());
+                AuroraTheme.RADIUS_SMALL);
 
         logFramePerf();
     }

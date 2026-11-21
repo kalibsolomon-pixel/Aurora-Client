@@ -17,6 +17,7 @@ import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.ui.util.UiLayerCache;
 import com.aurora.client.util.ScrollFade;
 import com.aurora.client.util.SmoothScroll;
+import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
@@ -500,7 +501,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         // dim (painted by overlayDim); the tracked scissor lets the deferred
         // row rims keep the list clip.
         GlassSurface.beginGlassPass();
-        float frameRadius = ThemeManager.current().roundness().radius();
+        float frameRadius = AuroraTheme.RADIUS;
         GlassSurface.container(ctx, windowX(), windowTop(), windowWidth(), windowHeight(), frameRadius);
 
         rowGlassDrawn.clear();
@@ -699,7 +700,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
 
     /** The soft glow rings — the row's drop shadow (structural black), part of the surface pass. */
     protected void paintRowShadow(GuiGraphicsExtractor ctx, int x, int y, int w) {
-        float radius = ThemeManager.current().roundness().radiusSmall();
+        float radius = AuroraTheme.RADIUS_SMALL;
         for (int i = 1; i <= 6; i++) {
             int shadowAlpha = Math.max(0, 30 - i * 5);
             RenderUtil.drawRoundedOutlineAA(ctx, x - i, y - i, w + i * 2, rowHeight() + i * 2, radius + i, 1.0f, (shadowAlpha << 24));
@@ -712,7 +713,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
      * by the container surface on either screen.
      */
     protected void paintFlatRow(GuiGraphicsExtractor ctx, int x, int y, int w) {
-        float radius = ThemeManager.current().roundness().radiusSmall();
+        float radius = AuroraTheme.RADIUS_SMALL;
         // Rows separate by spacing and tone; the window already owns the one outline
         // (Spxctra 2026-10-30: no repeated per-row border inside a bordered window).
         MaterialSurface.cached(ctx,x,y,w,rowHeight(),radius,
@@ -821,7 +822,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         paintRowShadow(ctx, (int) x, (int) y, (int) w);
         if (tinted) {
             RenderUtil.drawRoundedRectAA(ctx, x, y, w, rowHeight(),
-                    ThemeManager.current().roundness().radiusSmall(),
+                    AuroraTheme.RADIUS_SMALL,
                     ThemeManager.color(ThemeToken.WINDOW_FILL));
         }
     }
@@ -1177,7 +1178,7 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         // resolves through the theme (was a literal 4 that ignored Square
         // mode). The pack browser's toast already passes the same token.
         toast.render(ctx, this.font, this.width, this.height,
-                ThemeManager.current().roundness().radiusSmall());
+                AuroraTheme.RADIUS_SMALL);
     }
 
     /** Persist screen state on close if the screen owns any (the Waypoint screen saves the config). */

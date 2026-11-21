@@ -4,11 +4,11 @@ import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.feature.impl.ClickTrackerFeature;
 import com.aurora.client.hud.HudAnchor;
 import com.aurora.client.hud.KeycapRenderer;
-import com.aurora.client.theme.KeycapProfile;
 import com.aurora.client.ui.text.SdfTextSupport;
 import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.util.AuroraKey;
 import com.aurora.client.util.CachedValue;
+import com.aurora.client.theme.KeycapProfile;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
 import com.mojang.blaze3d.platform.InputConstants;
@@ -57,16 +57,6 @@ public class KeystrokesModule extends HudModule {
     private static final int GAP = 3;
     /** Cluster width: three key columns. */
     private static final int WIDTH = CELL * 3 + GAP * 2;
-    /**
-     * Fixed keycap corner radius — REPRESENTATIONAL HUD geometry (C-7): the
-     * cells draw physical keyboard keycaps (a drawn keycap reads as a key
-     * BECAUSE of its slightly rounded corners), in the HUD floating-content
-     * exception domain (DESIGN_LANGUAGE §16). The keystrokesThemeCorners
-     * switch hands the keycaps and panel the theme's Corner Radius instead
-     * (owner ruling 2026-11-12). Normal rectangular chrome must not copy
-     * this pattern — tokenize instead.
-     */
-    private static final int KEY_RADIUS = 3;
     private static final int SPACE_H = 16;
     private static final int CPS_H = 11;
     private static final int EXTRA_COLS = 3;
@@ -148,22 +138,6 @@ public class KeystrokesModule extends HudModule {
     @Override
     protected int backgroundColor() {
         return AuroraConfig.get().keystrokesBgColor;
-    }
-
-    @Override
-    protected boolean themeCorners() {
-        return AuroraConfig.get().keystrokesThemeCorners;
-    }
-
-    /** Keycap radius: fixed, or the theme's compact radius when the switch is on. */
-    private float keyRadius() {
-        return com.aurora.client.util.HudBackgrounds.radius(themeCorners(), KEY_RADIUS);
-    }
-
-    /** KEYCAP uses the UI's control corner radius (radiusSmall: a key is a control, not a window,
-     * so ROUND gives rounded caps rather than circles); the switch also stays the panel's. */
-    private float keycapRadius() {
-        return themeCorners() ? ThemeManager.current().roundness().radiusSmall() : KeycapProfile.DEFAULT_RADIUS;
     }
 
     /**
@@ -274,7 +248,7 @@ public class KeystrokesModule extends HudModule {
             String text = cpsText.get();
             var cpsComponent = textCache.text(SLOTS, text);
             if (cfg.keystrokesKeyStyle == AuroraConfig.KeystrokesKeyStyle.KEYCAP) {
-                keycaps.draw(ctx, x, cy, WIDTH, CPS_H, keycapRadius(), 0, idleBackground(), accent);
+                keycaps.draw(ctx, x, cy, WIDTH, CPS_H, 0f, 0, idleBackground(), accent);
                 drawLegend(ctx, font, cpsComponent, x + KeycapProfile.topX(WIDTH), cy + KeycapProfile.topY(CPS_H, 0),
                         KeycapProfile.topWidth(WIDTH), KeycapProfile.topHeight(CPS_H),
                         fitScale(KeycapProfile.topWidth(WIDTH), font.width(cpsComponent)), labelColor);
@@ -348,8 +322,7 @@ public class KeystrokesModule extends HudModule {
         int idle = idleBackground();
         int outline = ThemeManager.color(ThemeToken.TILE_OUTLINE);
         long version = ThemeManager.generation() * 1_000_003L ^ Float.floatToIntBits(density) * 7919L
-                ^ (long) accent * 31L ^ (long) idle * 131L ^ (long) outline * 524287L
-                ^ (long) Float.floatToIntBits(keyRadius()) * 2147483647L;
+                ^ (long) accent * 31L ^ (long) idle * 131L ^ (long) outline * 524287L;
         if (!cache.isCurrent(version)) {
             float gui = (float) Minecraft.getInstance().getWindow().getGuiScale();
             float f = density / gui; // logical units that land on device pixels at this density
@@ -359,7 +332,7 @@ public class KeystrokesModule extends HudModule {
             cache.clear();
             var previous = com.aurora.client.ui.util.RenderUtil.beginCapture(cache.sink());
             try {
-                float x = TPL_PAD * f, y = TPL_PAD * f, cw = w * f, chh = h * f, r = keyRadius() * f;
+                float x = TPL_PAD * f, y = TPL_PAD * f, cw = w * f, chh = h * f, r = 0;
                 int cap = idle | 0xFF000000;
                 switch (kind) {
                     case TPL_CAP -> com.aurora.client.ui.util.RenderUtil.drawRoundedRectAA(ctx, x, y, cw, chh, r, cap);
@@ -400,7 +373,7 @@ public class KeystrokesModule extends HudModule {
         boolean keycap = AuroraConfig.get().keystrokesKeyStyle == AuroraConfig.KeystrokesKeyStyle.KEYCAP;
         float ax, ay, aw, ah;
         if (keycap) {
-            keycaps.draw(ctx, x, y, w, h, keycapRadius(), t, idleBackground(), accent);
+            keycaps.draw(ctx, x, y, w, h, 0f, t, idleBackground(), accent);
             ax = x + KeycapProfile.topX(w); ay = y + KeycapProfile.topY(h, t);
             aw = KeycapProfile.topWidth(w); ah = KeycapProfile.topHeight(h);
         } else {

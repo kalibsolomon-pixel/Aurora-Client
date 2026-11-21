@@ -260,7 +260,7 @@ public abstract class EditBoxMixin implements GlassEditBox {
         // (owner report 2026-11-17).
         aurora$glassPassDrew = self.visible && aurora$themedScreen(Minecraft.getInstance())
                 && GlassSurface.control(ctx, self.getX(), self.getY(), self.getWidth(), self.getHeight(),
-                        ThemeManager.current().roundness().radiusSmall());
+                        AuroraTheme.RADIUS_SMALL);
     }
 
     @Inject(method = "extractWidgetRenderState", at = @At("HEAD"), cancellable = true)
@@ -291,7 +291,7 @@ public abstract class EditBoxMixin implements GlassEditBox {
             fillCol=MaterialSurface.color(ThemeToken.SURFACE_INSET);
             borderCol=MaterialSurface.color(ThemeToken.BORDER_HOVER);
         }
-        float radius = ThemeManager.current().roundness().radiusSmall();
+        float radius = AuroraTheme.RADIUS_SMALL;
         boolean opaqueInset = MaterialSurface.unified();
         boolean glassOk = !opaqueInset && (aurora$glassPassFrame == GlassSurface.frame()
                 ? aurora$glassPassDrew

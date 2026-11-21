@@ -57,7 +57,6 @@ public class EffectExpiryHudModule extends HudModule {
 
     @Override protected AuroraConfig.HudBackground backgroundMode() { return AuroraConfig.get().effectExpiryBgMode; }
     @Override protected int backgroundColor() { return AuroraConfig.get().effectExpiryBgColor; }
-    @Override protected boolean themeCorners() { return AuroraConfig.get().effectExpiryThemeCorners; }
 
     private List<AlertHudState.EffectRow> rows() { return AlertHudState.effects(); }
 

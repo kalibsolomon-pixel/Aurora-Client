@@ -37,10 +37,11 @@ class AuroraScreenSemanticHostingTest {
         assertEquals(4, count(settings, "new EnumSetting<>("), "hostable enum triggers (Window Bevel retired 2026-11-18)");
         assertEquals(2, count(settings, "new AccentSetting("), "two theme colour rows (Accent, Background) — single-picker swatches since the 2026-10-30 ruling");
         assertEquals(2, count(settings, "new SegmentedSetting<>("),
-                "Text's Case and HUD Text Shadow (2026-11-12; Corner Style became the Corner Radius slider)");
+                "Text's Case and HUD Text Shadow");
         assertEquals(1, count(settings, "new ToggleGroupSetting("), "the Text section's Modifiers");
         assertEquals(1, count(settings, "new ThemeOpacitySetting("), "deferred continuous control");
-        assertEquals(2, count(settings, "new ThemeSliderSetting("), "Blur Radius and Corner Radius");
+        assertEquals(1, count(settings, "new ThemeSliderSetting("), "Blur Radius");
+        assertFalse(settings.contains("Corner Radius"));
         assertEquals(0, count(settings, "new ThemePreviewSetting("), "preview retired");
     }
 

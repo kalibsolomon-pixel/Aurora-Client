@@ -7,6 +7,7 @@ import com.aurora.client.ui.component.ButtonWidget;
 import com.aurora.client.ui.component.MaterialSurface;
 import com.aurora.client.ui.component.ThemedScreen;
 import com.aurora.client.worldmap.WorldMapClient;
+import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -45,7 +46,7 @@ public final class MappingDataScreen extends Screen implements ThemedScreen {
                 Component.literal("Done"), "Return to map settings.", this::onClose));
     }
     @Override public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float delta) {
-        int radius = ThemeManager.current().roundness().radius();
+        int radius = AuroraTheme.RADIUS;
         com.aurora.client.ui.component.GlassSurface.window(g, x, y, w, h, radius, com.aurora.client.ui.component.MaterialSurface.frameInset(radius), width, height);
         // Title shares the dialog's left content edge (no centered, shadowed heading).
         g.text(font, title, x + 12, y + com.aurora.client.ui.util.UiDensity.headerTop(font.lineHeight) + 1, ThemeManager.color(ThemeToken.ON_SURFACE), false);

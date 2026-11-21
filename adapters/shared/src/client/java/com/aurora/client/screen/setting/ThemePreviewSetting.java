@@ -1,6 +1,5 @@
 package com.aurora.client.screen.setting;
 
-import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.component.Button;
 import com.aurora.client.ui.component.MaterialSurface;
@@ -21,7 +20,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
  *
  * <p>Renders a mock card holding the four control archetypes — primary and
  * secondary buttons, an on-state toggle, a slider, and primary/secondary
- * text — so any accent/mode/roundness/opacity change is visible instantly.
+ * text — so any accent, background or opacity change is visible instantly.
  *
  * <p><b>Zero separate color logic:</b> every color and radius is read from
  * the same cached, re-projected token facade ({@code AuroraTheme.*}) the
@@ -157,7 +156,7 @@ public class ThemePreviewSetting extends FeatureSetting {
         int cardW = width - PAD_X * 2;
         int cardH = PREVIEW_H - PAD_Y;
         if (cardW <= 0 || cardH <= 0) return;
-        float radius = ThemeManager.current().roundness().radius();
+        float radius = AuroraTheme.RADIUS;
         // Through the shared GlassSurface helper since the §6-convention-6
         // rollout: identical gate/tint/lighting, and on a screen running the
         // structural pass the rim finish defers past the dim like every
@@ -175,7 +174,7 @@ public class ThemePreviewSetting extends FeatureSetting {
         // Accent chip — stained family; draws its own flat fallback on decline.
         int chipX = cardX + cardW - 12 - 26;
         int chipY = cardY + cardH - 16;
-        float chipR = Math.min(CHIP_H / 2.0f, ThemeManager.current().roundness().radiusSmall());
+        float chipR = Math.min(CHIP_H / 2.0f, AuroraTheme.RADIUS_SMALL);
         if (!com.aurora.client.ui.component.GlassSurface.stainedControl(ctx,
                 chipX, chipY, CHIP_W, CHIP_H, chipR)) {
             RenderUtil.drawRoundedRectAA(ctx, chipX, chipY, CHIP_W, CHIP_H, chipR,
@@ -201,7 +200,7 @@ public class ThemePreviewSetting extends FeatureSetting {
 
         if(MaterialSurface.unified()) {
             MaterialSurface.cached(ctx,px,py,pw,PREVIEW_H-PAD_Y,
-                    ThemeManager.current().roundness().radius(),MaterialSurface.color(ThemeToken.SURFACE_VARIANT),
+                    AuroraTheme.RADIUS,MaterialSurface.color(ThemeToken.SURFACE_VARIANT),
                     MaterialSurface.color(ThemeToken.BORDER),40,false);
             toggle.renderOverlay(ctx,px+12,py+52,TOGGLE_W,TOGGLE_H,-1,-1);
             slider.layout(px+12+TOGGLE_W+14,py+52+TOGGLE_H/2-6,64,16);

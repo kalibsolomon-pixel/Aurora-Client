@@ -176,7 +176,6 @@ public class InfoModule extends HudModule {
 
     @Override protected AuroraConfig.HudBackground backgroundMode() { return AuroraConfig.get().infoBgMode; }
     @Override protected int backgroundColor() { return AuroraConfig.get().infoBgColor; }
-    @Override protected boolean themeCorners() { return AuroraConfig.get().infoModuleThemeCorners; }
 
     @Override
     public boolean isConfigEnabled() {

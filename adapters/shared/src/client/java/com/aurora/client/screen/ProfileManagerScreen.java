@@ -20,6 +20,7 @@ import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.ui.util.MaterialIconRenderer;
 import com.aurora.client.ui.util.UiDensity;
 import com.aurora.client.util.AuroraKey;
+import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
@@ -447,7 +448,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
                             int mouseX, int mouseY) {
         ProfileManager manager = ProfileManager.getInstance();
         boolean isActive = name.equals(active);
-        float radius = ThemeManager.current().roundness().radiusSmall();
+        float radius = AuroraTheme.RADIUS_SMALL;
         boolean pointerIn = pointerIn(mouseX, mouseY, x, y, w, CARD_H);
         float hover = cardHover.computeIfAbsent(name, k -> com.aurora.client.util.HoverAnim.symmetric(140L))
                 .update(pointerIn && !isActive);
@@ -675,7 +676,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
                                   int mouseX, int mouseY) {
         // A neutral card like the others; its surface was painted in the
         // glass pass, so only the flat fallback and the hover lift draw here.
-        float radius = ThemeManager.current().roundness().radiusSmall();
+        float radius = AuroraTheme.RADIUS_SMALL;
         boolean hot = !creatingNew && pointerIn(mouseX, mouseY, x, y, w, CARD_H);
         if (MaterialSurface.unified()) {
             MaterialSurface.selection(ctx, x, y, w, CARD_H, radius, false, hot ? 1f : 0f);
@@ -683,14 +684,12 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
             paintFlatRow(ctx, x, y, w);
         }
 
-        // A plus in a circle (a capsule, so it follows Corner Radius) over
-        // the label, or over the open name field. At rest the card has no
-        // bottom line, so circle and label centre in it as one group (owner
-        // 2026-11-12); while editing they keep the profile cards' lines.
+        // Center the plus and label as a group at rest. While editing, align
+        // the plus and name field with the other profile cards.
         int ink = ThemeManager.color(hot || creatingNew ? ThemeToken.ON_BACKGROUND : ThemeToken.ON_BACKGROUND_SECONDARY);
         int lift = creatingNew ? 0 : createCardCentreOffset(this.font.lineHeight);
         com.aurora.client.ui.util.RenderUtil.drawRoundedOutlineAA(ctx, x + w / 2f - 11, y + lift + ICON_Y - 11, 22, 22,
-                ThemeManager.current().roundness().capsule(22f), 1.2f, ink);
+                AuroraTheme.RADIUS, 1.2f, ink);
         MaterialIconRenderer.drawIcon(ctx, this.font, ADD_GLYPH, x + w / 2f, y + lift + ICON_Y, 16f, ink);
         if (!creatingNew) {
             AuroraFontRenderer.drawCentered(ctx, this.font, fitName("New profile"), x + w / 2, y + lift + NAME_Y, ink);
@@ -724,10 +723,10 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
      */
     private boolean renderRowSurface(GuiGraphicsExtractor ctx, int x, int y, int w) {
         if (MaterialSurface.unified()) return GlassSurface.card(ctx,x,y,w,CARD_H,
-                ThemeManager.current().roundness().radiusSmall());
+                AuroraTheme.RADIUS_SMALL);
         paintRowShadow(ctx, x, y, w);
         return GlassSurface.container(ctx, x, y, w, CARD_H,
-                ThemeManager.current().roundness().radiusSmall(), BlurPanelRenderer.Priority.ROW);
+                AuroraTheme.RADIUS_SMALL, BlurPanelRenderer.Priority.ROW);
     }
 
     // ------------------------------------------------------------------

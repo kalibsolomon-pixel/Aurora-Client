@@ -5,6 +5,7 @@ import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.util.AuroraAnim;
 import com.aurora.client.util.AuroraShapes;
+import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.Minecraft;
 import com.aurora.client.theme.MaterialLighting.Profile;
@@ -288,8 +289,7 @@ public final class MaterialSurface {
     private static int templateScale, templateRadius;
     private static long templateGeneration=Long.MIN_VALUE;
 
-    /** Keep geometry across screens/resizes; the LRU bounds it. Theme, scale and
-     * roundness changes invalidate every template at an extraction boundary, and
+    /** Keep geometry across screens/resizes; the LRU bounds it. Theme and scale changes invalidate every template at an extraction boundary, and
      * returning to gameplay releases them: no HUD draws these faces, so nothing is
      * held while playing (2026-11-17). */
     public static void beginFrame() {
@@ -301,7 +301,7 @@ public final class MaterialSurface {
         }
         var window=mc.getWindow();
         int scale=Math.max(1,(int)window.getGuiScale());
-        int radius=ThemeManager.current().roundness().radius();
+        int radius=AuroraTheme.RADIUS;
         long generation=ThemeManager.generation();
         if(templateScale!=scale || templateRadius!=radius || templateGeneration!=generation) {
             disposeTemplates();
@@ -396,7 +396,7 @@ public final class MaterialSurface {
 
     public static void floatingTooltip(GuiGraphicsExtractor g, int x, int y, int w, int h, int legacyRadius,
                                        float textInsetX, float textInsetY) {
-        float radius = Math.min(ThemeManager.current().roundness().radiusSmall(), Math.min(w, h) * .5f);
+        float radius = Math.min(AuroraTheme.RADIUS_SMALL, Math.min(w, h) * .5f);
         windowFinish(g, x, y, w, h, radius, windowCornerClearance(radius, textInsetX, textInsetY), 1, true);
     }
 

@@ -178,7 +178,7 @@ public final class ShapeRasterizer {
      * than a circle), this has no partitions to seam and no squircle
      * geometry, so it renders a perfect, seamless circle at any size. Use it
      * for toggle knobs and other shapes that must stay fully round
-     * regardless of the theme's corner-roundness setting.
+     * independent of rectangle geometry.
      */
     public static void drawCircleAA(DrawSurface sink, float scale, float x, float y, float width, float height, int color) {
         if (width <= 0 || height <= 0) return;

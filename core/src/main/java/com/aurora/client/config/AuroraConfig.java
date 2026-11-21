@@ -616,10 +616,9 @@ public class AuroraConfig {
     // ---- Module enables ----
     public boolean infoEnabled        = true;
     public boolean pingHudEnabled = true;
-    /** The ping HUD's backdrop and corners (it had none before 2026-11-19, so NONE keeps its look). */
+    /** The ping HUD's backdrop (it had none before 2026-11-19, so NONE keeps its look). */
     public HudBackground pingHudBgMode = HudBackground.NONE;
     public int pingHudBgColor = 0x80000000;
-    public boolean pingHudThemeCorners = false;
     public boolean nametagPingEnabled = true;
     public boolean cpsEnabled         = true;
     public boolean armorHudEnabled    = true;
@@ -694,14 +693,12 @@ public class AuroraConfig {
     public int armorAlertBgColor = 0x80000000;
     /** Null follows the shared hudColor; any non-zero ARGB overrides it. */
     public Integer armorAlertTextColor = null;
-    public boolean armorAlertThemeCorners = false;
     /** Effect-expiry alert rows render as a HUD module (module id potion_alert). */
     public boolean effectExpiryHudEnabled = true;
     public HudBackground effectExpiryBgMode = HudBackground.NONE;
     public int effectExpiryBgColor = 0x80000000;
     /** Null follows the shared hudColor; any non-zero ARGB overrides it. */
     public Integer effectExpiryTextColor = null;
-    public boolean effectExpiryThemeCorners = false;
 
     // ---- Batch 2 features ----
     /** Off in a fresh install: an information advantage (ADR 0007). */
@@ -861,10 +858,9 @@ public class AuroraConfig {
      * (the labels above entities); the card is on while either is.
      */
     public boolean playerHealthHudEnabled = false;
-    /** The health HUD's own backdrop, text color (null follows the HUD color) and corners, like every HUD module. */
+    /** The health HUD's own backdrop and text color (null follows the HUD color), like every HUD module. */
     public HudBackground playerHealthHudBgMode = HudBackground.NONE;
     public int playerHealthHudBgColor = 0x80000000;
-    public boolean playerHealthHudThemeCorners = false;
     public Integer playerHealthHudTextColor = null;
 
     public enum HealthDisplayMode {
@@ -893,37 +889,24 @@ public class AuroraConfig {
     public boolean lavaHideOverlay = false;   // true = cancel orange overlay entirely
 
     // Per-module background settings
-    //
-    // The *ThemeCorners switches (2026-11-12): HUD shapes keep their fixed
-    // corners unless the module's switch hands them the theme's Corner
-    // Radius (HudBackgrounds.radius). Off in a fresh install and for
-    // existing configs alike, so nothing changes until a player opts in.
-    // Each name starts with its feature's reset prefix.
     /** Default plain HUD backdrop; legacy AURORA modes migrate to SOLID. */
     public HudBackground infoBgMode = HudBackground.SOLID;
     public int infoBgColor = 0x80000000;
-    public boolean infoModuleThemeCorners = false;
 
     public HudBackground keystrokesBgMode = HudBackground.NONE;
     public int keystrokesBgColor = 0xFF14141C;
-    /** Also rounds keys: KEYCAP uses the full UI radius; other styles keep their compact radius. */
-    public boolean keystrokesThemeCorners = false;
 
     public HudBackground cpsBgMode = HudBackground.NONE;
     public int cpsBgColor = 0x80000000;
-    public boolean cpsThemeCorners = false;
 
     public HudBackground armorHudBgMode = HudBackground.NONE;
     public int armorHudBgColor = 0x80000000;
-    public boolean armorHudThemeCorners = false;
 
     public HudBackground reachBgMode = HudBackground.NONE;
     public int reachBgColor = 0x80000000;
-    public boolean reachDisplayThemeCorners = false;
 
     public HudBackground sprintHudBgMode = HudBackground.NONE;
     public int sprintHudBgColor = 0x80000000;
-    public boolean toggleSprintSneakThemeCorners = false;
 
     public HudBackground potionBgMode = HudBackground.NONE;
     /** With the VANILLA background: a list with names (STANDARD) or a row of icons with their time (CONDENSED). */
@@ -934,7 +917,6 @@ public class AuroraConfig {
         public String getLabel() { return this == STANDARD ? "Standard" : "Condensed"; }
     }
     public int potionBgColor = 0x80000000;
-    public boolean potionHudThemeCorners = false;
 
     // ---- Totem pop counter ----
     public boolean totemPopEnabled  = false;
@@ -946,7 +928,6 @@ public class AuroraConfig {
     public boolean totemResetOnDeath = true;
     public HudBackground totemPopBgMode = HudBackground.NONE;
     public int totemPopBgColor = 0x80000000;
-    public boolean totemPopThemeCorners = false;
     /** Append "[N]" to other players' nametags showing their totem pop count. */
     public boolean nametagTotemPopsEnabled = false; // off in a fresh install (ADR 0007)
 
@@ -1370,8 +1351,6 @@ public class AuroraConfig {
     public int minimapBorderColor = 0;
     /** Minimap coordinate text color (ARGB). */
     public int minimapCoordColor = 0xFFFFFFFF;
-    /** Square frame takes the theme's Corner Radius instead of its fixed corners. */
-    public boolean minimapThemeCorners = false;
 
     // ---- World Map ----
     /**

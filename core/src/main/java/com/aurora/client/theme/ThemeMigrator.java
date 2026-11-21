@@ -6,6 +6,7 @@ import com.google.gson.JsonParser;
 import org.slf4j.Logger;
 
 import java.util.Map;
+import java.util.Set;
 
 /**
  * One-way upgrades of persisted theme data into the Stage 1 token format,
@@ -31,6 +32,13 @@ import java.util.Map;
  */
 public final class ThemeMigrator {
 
+    private static final Set<String> RETIRED_HUD_CORNER_FIELDS = Set.of(
+            "pingHudThemeCorners", "armorAlertThemeCorners", "effectExpiryThemeCorners",
+            "playerHealthHudThemeCorners", "infoModuleThemeCorners", "keystrokesThemeCorners",
+            "cpsThemeCorners", "armorHudThemeCorners", "reachDisplayThemeCorners",
+            "toggleSprintSneakThemeCorners", "potionHudThemeCorners", "totemPopThemeCorners",
+            "minimapThemeCorners");
+
     private ThemeMigrator() {}
 
     /**
@@ -46,7 +54,7 @@ public final class ThemeMigrator {
                 return json; // let normal deserialization surface/fallback on it
             }
             JsonObject root = rootEl.getAsJsonObject();
-            boolean dirty = false;
+            boolean dirty = root.asMap().keySet().removeAll(RETIRED_HUD_CORNER_FIELDS);
 
             // 1) Sanitize an existing "theme" member.
             JsonElement themeEl = root.get("theme");
@@ -94,6 +102,7 @@ public final class ThemeMigrator {
     public static void migrateProfileFields(Map<String, JsonElement> fields, Logger log) {
         if (fields == null) return;
         try {
+            fields.keySet().removeAll(RETIRED_HUD_CORNER_FIELDS);
             JsonElement themeEl = fields.get("theme");
             boolean hasTheme = themeEl != null && themeEl.isJsonObject();
 
@@ -146,31 +155,13 @@ public final class ThemeMigrator {
 
         dirty |= sanitizeIntMember(theme, "accent", log);
         dirty |= sanitizeIntMember(theme, "background", log);
-        dirty |= sanitizeIntMember(theme, "cornerRadius", log);
+        dirty |= theme.remove("cornerRadius") != null;
+        dirty |= theme.remove("roundness") != null;
         dirty |= sanitizeIntMember(theme, "blurRadius", log);
-        dirty |= migrateCornerStyle(theme, log);
         dirty |= seedBlurRadius(theme, log);
         // Window Bevel levels were retired on 2026-11-18: the frame has one strength.
         dirty |= theme.remove("windowBevel") != null;
         return dirty;
-    }
-
-    /**
-     * The retired Corner Style choice ({@code roundness}: ROUND,
-     * SLIGHTLY_ROUND or SQUARE) becomes the pixel radius it rendered with,
-     * unless a {@code cornerRadius} is already present. The old member is
-     * removed either way.
-     */
-    private static boolean migrateCornerStyle(JsonObject theme, Logger log) {
-        JsonElement legacy = theme.remove("roundness");
-        if (legacy == null) return false;
-        if (!theme.has("cornerRadius")) {
-            String name = legacy.isJsonPrimitive() ? legacy.getAsString() : null;
-            int radius = ThemeRoundness.legacyRadius(name);
-            theme.addProperty("cornerRadius", radius);
-            log.info("Theme config: Corner Style {} migrated to a {} px corner radius", name, radius);
-        }
-        return true;
     }
 
     /**

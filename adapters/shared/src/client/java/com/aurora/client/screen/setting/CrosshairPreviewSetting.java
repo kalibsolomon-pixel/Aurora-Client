@@ -7,6 +7,7 @@ import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.component.MaterialSurface;
 import com.aurora.client.ui.util.RenderUtil;
+import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -53,7 +54,7 @@ public class CrosshairPreviewSetting extends FeatureSetting {
 
     private static void drawWell(GuiGraphicsExtractor ctx, int x, int y, AuroraConfig.CrosshairStyle style, int size,
                                  int thick, int gap, int color, boolean[] pixels, int w, int h) {
-        float r = ThemeManager.current().roundness().radiusSmall();
+        float r = AuroraTheme.RADIUS_SMALL;
         if(MaterialSurface.unified()) MaterialSurface.inset(ctx,x,y,WELL,WELL,r,false);
         else {
             RenderUtil.drawRoundedRectAA(ctx, x, y, WELL, WELL, r, ThemeManager.color(ThemeToken.MATERIAL_SUNKEN));

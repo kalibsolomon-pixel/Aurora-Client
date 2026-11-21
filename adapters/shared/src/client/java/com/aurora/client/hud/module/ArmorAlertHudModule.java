@@ -58,7 +58,6 @@ public class ArmorAlertHudModule extends HudModule {
 
     @Override protected AuroraConfig.HudBackground backgroundMode() { return AuroraConfig.get().armorAlertBgMode; }
     @Override protected int backgroundColor() { return AuroraConfig.get().armorAlertBgColor; }
-    @Override protected boolean themeCorners() { return AuroraConfig.get().armorAlertThemeCorners; }
 
     private List<AlertHudState.ArmorRow> rows() { return AlertHudState.armor(); }
 

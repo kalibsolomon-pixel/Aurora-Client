@@ -58,7 +58,7 @@ effects do not make an interface more Aurora.
 
 ### 1.6 User customization is authoritative
 
-The user's accent, light/dark mode, roundness, glass style, and opacity remain meaningful.
+The user's accent, light/dark mode, glass style, and opacity remain meaningful.
 Implementation may adapt a rendered treatment for usability, but must not silently rewrite
 the stored preference merely to simplify rendering.
 
@@ -256,37 +256,18 @@ gain a shadow merely to imitate vanilla chrome.
 
 ## 5. Geometry and spacing
 
-### 5.1 Roundness ownership
+### 5.1 Square UI corners
 
-Theme roundness governs rectangular UI chrome, including:
+Aurora uses a fixed 0 px corner radius for rectangular chrome. The rule covers windows and
+containers, cards and rows, buttons and icon actions, tabs and sidebar items, text fields,
+dropdowns, popups, and preview frames. It also covers toggle and slider tracks and thumbs,
+scrollbars, colour swatches and picker strips, solid HUD backgrounds, Keystrokes key faces,
+and the square minimap frame.
 
-- windows and ordinary containers;
-- cards and rows;
-- buttons and icon actions;
-- tabs and sidebar items;
-- text-field chrome;
-- dropdowns, popups, and modals;
-- previews when their boundary is chrome rather than represented data.
-
-Roundness is one pixel value, the Corner Radius slider (0–20, factory 10; it replaced the
-Round / Slightly Round / Square choice on 2026-11-12). Panels and buttons use it directly,
-major sheets ×7/5, compact controls ×3/5. Radius 0 means square UI chrome. A screen-local
-radius must not survive only because that screen predates resolved roundness.
-
-Capsule shapes follow it too (owner ruling 2026-11-12): toggle tracks and thumbs, slider
-tracks and knobs, scrollbar thumbs and the colour picker's pad and strips. A capsule shape is
-a full capsule at the factory radius or above and flattens in proportion below it, square at 0
-(`ThemeRoundness.capsule`). The remaining exceptions are represented data and game geometry
-that is not theme chrome: colour wheels, represented game shapes and map markers.
-
-In-game HUD shapes keep fixed corners by default (panel backgrounds 2 px, flat/translucent
-keystroke keys 3 px, Cherry-profile keycaps 2 px, the square minimap frame 0 px). Each HUD
-feature's detail screen has a **Theme Corner Radius** switch, off by default, that hands its
-shapes the theme's compact radius (Corner Radius × 3/5) instead (owner ruling 2026-11-12).
-Keystrokes' existing **Theme Corner Radius** row is shown for **3D Keycap**: it gives the
-sculpted caps the theme's control radius (`radiusSmall`) instead, including exact square facets
-at radius 0 (the window radius turned 20 px keys into circles), while
-continuing to control the panel and the other key styles' compact corners.
+Represented shapes retain their own geometry, including the circular minimap mode, map
+markers, game shapes, and vanilla HUD textures. Aurora discards the retired Corner Radius,
+Corner Style, and per-HUD Theme Corner Radius fields when loading a config or applying a
+profile. Later saves omit those fields.
 
 ### 5.2 Compact spacing vocabulary
 
@@ -338,7 +319,7 @@ A future shared icon-action primitive must define:
 - tooltip behavior where the icon alone is not self-explanatory;
 - an accessible/narrated label independent of the visible glyph;
 - semantic sound behavior;
-- theme roundness for its rectangular chrome.
+- square corners for its rectangular chrome.
 
 The exact focus treatment and final small-action icon replacements require a component pilot.
 
@@ -384,7 +365,7 @@ Aurora glass currently consists of:
 - a captured backdrop;
 - Gaussian blur in Frosted mode;
 - semantic tint;
-- rounded masking governed by theme geometry;
+- rectangular masking with square corners;
 - directional face lighting;
 - directional rim lighting;
 - raised/depressed role inversion.
@@ -446,18 +427,15 @@ fixed strength is about 15% lighter still: band width 0.62 of the natural width,
 0.61, elevation 1.3 and a 0.6 GUI px bend (`WindowBevel.WIDTH`, `GAIN`, `ELEVATION`, `BEND`).
 The retired Off, Standard and Deep levels and the flat legacy window trim are gone;
 `ThemeMigrator` drops the old `windowBevel` key from configs and profiles. The shared
-upper-left light rounds the outer frame into a pillow on round themes
-and makes planar facets as Corner Radius approaches zero. The directional baked shadow
+upper-left light shades the square frame's planar facets. The directional baked shadow
 falls down and right. Only the frame band is shaded. The bevel replaces the old window
 outline rather than stacking over it.
 
 **Frame room** (owner, 2026-11-18). Windows pad their content for the band instead of
 thinning the band to fit the content. Every window keeps its boxes (controls, rows, fields,
 scroll clips and scrollbars) `UiDensity.FRAME_EDGE` = 10 GUI px inside its outer edge. The
-band may take up to `FRAME_BAND` = 6 px of that (at the one strength it draws about 3.7 px on a
-round theme), and the remaining 4 px is the gap to content.
-Callers pass `MaterialSurface.frameInset(radius)` as the band cap. That cap narrows only
-where a large Corner Radius bends the corner toward the content. Header buttons and
+band may take up to `FRAME_BAND` = 6 px of that, and the remaining 4 px is the gap to
+content. Callers pass `MaterialSurface.frameInset(radius)` as the band cap. Header buttons and
 toolbars sit on one row from 14 to 30 px (`UiDensity.HEADER_TOP` to `UiDensity.HEADER`), and
 the body starts 4 px below it. The header row takes the title column's 14 px inset rather than
 the bare frame room, because a filled Done 10 px under the lit top band read as tighter than
@@ -785,9 +763,8 @@ the accent-filled call to action under its hint.
 - **Purpose:** directly switch one persistent Boolean state.
 - **Material (2026-11-17):** opaque inset `MATERIAL_SUNKEN` OFF track. ON keeps the existing
   flat accent fill and interpolation; no accent outline. The same-size white thumb gets a
-  curvature-lit dome and a down-right shadow (1 GUI px elevation, 2 GUI px softness, 18% black). Track/thumb follow the
-  Corner Radius capsule rule, including exactly square geometry at zero. Focus still grows
-  the thumb; the non-interactive represented preview retains its existing appearance.
+  curvature-lit dome and a down-right shadow (1 GUI px elevation, 2 GUI px softness, 18% black).
+  The track and thumb have square corners. Focus grows the thumb.
 - **States:** off/on must be unambiguous; hover, accepted press, focus, and disabled must each
   be defined. Disabled must not look like interactive rest.
 - **Input/accessibility:** clicking its associated row may toggle only when that enlarged hit
@@ -799,10 +776,10 @@ the accent-filled call to action under its hint.
 ### 11.5 Slider
 
 - **Purpose:** choose a value from a continuous or stepped range.
-- **Material (2026-11-17):** opaque dished `MATERIAL_SUNKEN` track (+3 → +7 HSL points) and same-size domed knob
-  with a down-right shadow (1 GUI px elevation, 2 GUI px softness, 18% black). Accent fill behaviour is unchanged (flat accent since
-  2026-11-14); the depth pass adds no AccentGradient changes. Track and knob follow Corner
-  Radius. Value text never scales; numeric entry uses the inset field recipe.
+- **Material (2026-11-17):** opaque dished `MATERIAL_SUNKEN` track (+3 → +7 HSL points), flat
+  accent fill, and a domed knob with a down-right shadow (1 GUI px elevation, 2 GUI px softness,
+  18% black). The track and knob have square corners. Value text stays at its natural size.
+  Numeric entry uses the inset field recipe.
 - **Layout (owner direction, 2026-11-14):** one inline row everywhere: the label on the left,
   then the value right-aligned against a bounded track in the control column. The track is a
   dropdown's width (`SettingRowLayout.TRACK_W`, 84 px), or half that (`SHORT_TRACK_W`) for a
@@ -870,13 +847,12 @@ the accent-filled call to action under its hint.
 ### 11.9 ColorSwatch
 
 - **Purpose:** display/select a color or open a color editor.
-- **Shape (2026-11-14):** a rounded square at every Corner Radius (radius at most a quarter of
-  its height), so a sample never reads as a switch knob.
+- **Shape:** a square color sample.
 - **Value (2026-11-14):** a colour setting row shows `#RRGGBB` (`#RRGGBBAA` when translucent)
   in secondary text just before the swatch (`SettingRowLayout.HEX_W` reserved); a
   swatch near the window tone (the factory graphite background) read as an empty box.
 - **Material:** represented color is data; surrounding selection/action chrome follows theme.
-- **Geometry:** swatch clipping follows theme roundness when rectangular; checkerboard is an
+- **Geometry:** swatch clipping uses square corners; checkerboard is an
   implementation/data pattern.
 - **Editor:** an opaque floating panel attached to the swatch; it does not reflow the list.
   It flips upward near the bottom and reduces the editing pad on short or narrow viewports.
@@ -1076,7 +1052,7 @@ effect. Do not add a preview when the control already makes the result self-evid
 swatch-bearing color rows needs no separate preview merely because it contains colors; each
 swatch already exposes its value.
 
-Shape and combined-treatment controls—such as crosshair/hitbox form, roundness, or derived
+Shape and combined-treatment controls—such as crosshair/hitbox form or derived
 theme appearance—are strong preview candidates. The existing Crosshair preview demonstrates
 the real-shape-path rule; Theme Preview demonstrates the valid trailing cumulative-result
 case.
@@ -1217,7 +1193,7 @@ environment.
 A new or migrated component/screen should answer:
 
 - Which semantic color, text, material, and interaction roles does each element have?
-- Does theme roundness govern all rectangular chrome?
+- Does all rectangular chrome use square corners?
 - Are rest, hover, pressed/manipulating, selected/on, focus, and disabled explicitly handled?
 - Do button-like actions receive pointer, keyboard, narration, disabled, sound, and press
   services consistently?
@@ -1239,7 +1215,7 @@ Sliders: rest / hover / dragging / focus / disabled
 Cards: rest / hover / pressed / selected / focus
 Text: primary / secondary / muted / faint / accent
 Glass: container / secondary / control / stained / above-dim
-Theme: dark / light; corner radius 0 / 6 / 10 / 20;
+Theme: dark / light;
        high / low opacity; representative difficult accents
 ```
 
@@ -1254,7 +1230,7 @@ remains the appropriate untracked development automation mechanism where applica
 - Use pixel/color measurement for measurable claims.
 - Vision-model judgment must never be the sole proof of visual correctness.
 - Theme-dependent claims must test at least the user's live configuration and the relevant
-  factory/default axis; include dark/light, roundness, opacity, and difficult accents when
+  factory/default axis; include dark/light, opacity, and difficult accents when
   they are causal.
 - Risky visible changes should pilot on one to three representative components/screens before
   mod-wide rollout.
@@ -1382,7 +1358,7 @@ frozen component contracts recorded there.
 
 ### Phase C — Geometry and conformance — **COMPLETE (2026-09-21)**
 
-Move rectangular chrome to resolved roundness, establish the icon-action primitive, and
+Apply the shared corner geometry to rectangular chrome, establish the icon-action primitive, and
 couple render clipping with input bounds.
 
 ### Phase D — Color and contrast robustness — **REVERTED / DEFERRED (2026-09-24)**
@@ -1427,7 +1403,7 @@ Status subtitles reserve room. Specialized editors preserve their semantics;
 Item Scale's nested ordinary sliders use the same layout rules. No text/pose
 scaling, extra blur/glow, theme taxonomy removal or gameplay change. Search add
 icons use native-pixel FreeType ink without resampling and unchanged button
-geometry. Existing focus, switch, slider, roundness, opacity and tooltip policy
+geometry. Existing focus, switch, slider, corner geometry, opacity and tooltip policy
 remain. Owner visual acceptance remains open; see OWNER_UI_CORRECTIONS.md.
 
 
@@ -1454,7 +1430,7 @@ at least 240×160. The original white 256px asset and textured rendering remain.
 FeatureDetailScreen headers are feature identity only: no Aurora mark, title
 and attached subtitle at the same frame-left +12px inset as row labels, with
 Reset/Done retained. Main settings branding/cards, compact rows, theme recipes,
-roundness/motion, behavior and parent-only capture ownership remain unchanged.
+corner geometry, motion, behavior and parent-only capture ownership remain unchanged.
 GUI scales 3/4 and a constrained window were reviewed; the 421-test build passed.
 See OWNER_MENU_GEOMETRY.md for exact geometry, files and fresh screenshots.
 This supersedes the previous menu dimensions; UX-4 and broader rollout remain deferred.
@@ -1525,8 +1501,7 @@ recipe, 18px section band between groups). These rules are now normative:
 - **Focus never hides under selection.** A focused element that already wears the accent
   selection edge (selected tab, enabled tile, selected layout peer) draws its focus ring
   2 px outside that edge.
-- **Previews follow roundness.** The crosshair preview is a rounded inset tone, not a
-  square outlined box. It draws at a whole-number zoom (3x to 6x) chosen so small shapes fill
+- **Preview framing.** The crosshair preview uses an inset tone with square corners. It draws at a whole-number zoom (3x to 6x) chosen so small shapes fill
   about two thirds of the well; a 2 px dot at a fixed 3x read as a speck.
 
 Evidence, measurements and limits: `SPXCTRA_UI_SIMPLIFICATION_REPORT.md`.
@@ -1594,7 +1569,7 @@ rulings it supersedes.
 - **One accent selection per screen** (§11.11): the sidebar keeps it; sub-tabs mark selection
   by text weight, the layout pair by the neutral field face.
 - **Controls** — filled OFF track shared by switches and slider tracks (§11.4); one inline
-  slider row with a bounded track and the unit in the value (§11.5); rounded-square swatches with a light hairline
+  slider row with a bounded track and the unit in the value (§11.5); square swatches with a light hairline
   on dark samples (§11.9); ghost Reset beside an accent-filled Done, one primary per header
   (§11.2a);
   disabled rows mute their label.
@@ -1628,7 +1603,7 @@ The rounded bevel band is `clamp(round(radiusDevice * .8), round(1.5 * scale), 4
 chamfer whose four sides are flat 45-degree facets, each lit at its own angle (top brightest,
 then left, right, bottom), with crisp creases on the corner diagonals. `facetBlend =
 clamp(radius / (2 * scale), 0, 1)` blends band width and slope from the facet (0) to the
-pillowed roll-off (1), so dragging Corner Radius never jumps. The pillow's slope is its own
+pillowed roll-off (1) for generic rounded shapes. The pillow's slope is its own
 `h'(t)` (the bevel is as tall as it is wide), capped at 3 at the silhouette. The band never exceeds 22% of the face's shorter side
 (domes exempt), so small controls keep a flat plateau for their text: a 14 px field gets about
 3 px of bevel. With `t = clamp(-d / band, 0, 1)`, height is
@@ -1715,7 +1690,7 @@ border. Templates survive screen changes and resizes in a primitive LRU capped a
 and 16 MiB of RGBA image backing (at most another 16 MiB of texture pixel backing; driver
 overhead is not measured). Identity includes exact fractional geometry and colours; hash
 collisions are checked against the full identity and treated as misses. Theme generation,
-GUI scale and roundness changes invalidate the pool, and returning to gameplay (no screen
+GUI scale changes invalidate the pool, and returning to gameplay (no screen
 open) releases it: no HUD draws these faces, so nothing is retained while playing. Evictions and oversized, unretained
 rasters wait until the next extraction boundary to be freed, so transient backing for the
 current frame is additional to the retention cap. Reusing a template never mutates its pixels.
@@ -1746,7 +1721,7 @@ those probes run; a headless test only verifies the raster passes submit zero GU
 3D design or anything", the way Lunar Client does it) is one face per key in the key colour with
 its legend; pressing swaps the face to the accent. No shell, rim, outline or travel. The former
 Translucent shell-and-rim style is retired; saved `TRANSLUCENT` values load as Flat.
-**3D Keycap** is the opt-in represented-keyboard material: an outer rounded skirt,
+**3D Keycap** is the opt-in represented-keyboard material: an outer square skirt,
 8% back / 18% front / 12% side planar walls, and a shallow concave cylindrical top dish. The
 single upper-left material light shades every facet; radius 0 keeps crisp gem-like corner facets.
 Pressing sinks the top by 1 GUI px, shortens the front wall by the same amount, tightens the

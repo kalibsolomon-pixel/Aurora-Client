@@ -12,6 +12,7 @@ import com.aurora.client.ui.util.TimedTransition;
 import com.aurora.client.ui.util.UiLayerCache;
 import com.aurora.client.util.AuroraAnim;
 import com.aurora.client.util.HoverAnim;
+import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -118,7 +119,7 @@ public class Button extends Widget {
         float hover=(float)pilotHover.update(!disabled && inBounds(mx,my,x,y,w,h) ? 1 : 0,now);
         boolean pulse=System.currentTimeMillis()-pressDownStartMs < 120 && pressDownStartMs>=0;
         float press=(float)pilotPress.update(!disabled && (pointerHeld || pulse) ? 1 : 0,now);
-        float r=ThemeManager.current().roundness().radiusSmall();
+        float r=AuroraTheme.RADIUS_SMALL;
         if(glassPassFrame != GlassSurface.frame() && !disabled && theming != Theming.GHOST) {
             GlassSurface.beginAboveDim();
             try { GlassSurface.card(g,x,y,w,h,r); } finally { GlassSurface.endAboveDim(); }
@@ -411,10 +412,10 @@ public class Button extends Widget {
     public void renderGlassPass(GuiGraphicsExtractor g, float x, float y, float w, float h) {
         glassPassFrame = GlassSurface.frame();
         if(MaterialSurface.unified()) {
-            glassPassDrew = !disabled && GlassSurface.card(g,x,y,w,h,ThemeManager.current().roundness().radiusSmall());
+            glassPassDrew = !disabled && GlassSurface.card(g,x,y,w,h,AuroraTheme.RADIUS_SMALL);
             return;
         }
-        float radius = ThemeManager.current().roundness().radiusSmall();
+        float radius = AuroraTheme.RADIUS_SMALL;
         boolean eligible = glassEligible(currentScale());
         if (eligible) {
             // The tint fill comes from the resting-surface template (one blit)
@@ -455,7 +456,7 @@ public class Button extends Widget {
             g.pose().translate(-cx, -cy);
         }
 
-        float radius = ThemeManager.current().roundness().radiusSmall();
+        float radius = AuroraTheme.RADIUS_SMALL;
 
         int bg, border, text;
         if (disabled) {
@@ -617,7 +618,7 @@ public class Button extends Widget {
             g.pose().translate(-cx, -cy);
         }
 
-        float radius = ThemeManager.current().roundness().radiusSmall();
+        float radius = AuroraTheme.RADIUS_SMALL;
         int bg = active ? secondaryFlatFill(hoverT)
                 : ThemeManager.color(ThemeToken.SURFACE_INSET);
         int border = active ? secondaryFlatBorder(hoverT)

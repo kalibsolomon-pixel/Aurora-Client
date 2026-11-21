@@ -1,5 +1,6 @@
 package dev.phenomena.gui.theme;
 
+import com.aurora.client.util.AuroraTheme;
 import dev.phenomena.PhenomenaClient;
 
 /**
@@ -34,8 +35,8 @@ public final class Theme {
   public static final int SEQ_HIGH = 0xFF86B6EF;
 
   // ---- geometry vocabulary (logical px) ----
-  public static float radius() { return com.aurora.client.theme.ThemeManager.current().roundness().radius(); }
-  public static float radiusSmall() { return com.aurora.client.theme.ThemeManager.current().roundness().radiusSmall(); }
+  public static float radius() { return AuroraTheme.RADIUS; }
+  public static float radiusSmall() { return AuroraTheme.RADIUS_SMALL; }
   /** Focus ring sits one gap outside the control edge so it stays visible on selected peers. */
   public static final float FOCUS_GAP = 1f;
 

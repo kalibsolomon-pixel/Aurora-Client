@@ -6,6 +6,7 @@ import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.ui.util.TimedTransition;
 import com.aurora.client.ui.util.CubicBezier;
 import com.aurora.client.util.HoverAnim;
+import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import com.mojang.blaze3d.platform.InputConstants;
 
@@ -13,13 +14,10 @@ import java.util.function.DoubleConsumer;
 import java.util.function.DoubleSupplier;
 
 /**
- * Themed slider — flat capsule track, accent fill, round knob; track and
- * knob follow the theme's Corner Radius ({@code ThemeRoundness#capsule}),
- * square at 0.
+ * Themed slider with an accent fill and square corners on the track and knob.
  *
  * <p>Consolidates the near-identical int/double/opacity sliders into one
- * control. The track renders in the cacheable shape layer (it depends only
- * on the roundness token); the fill + knob + focus ring render live since
+ * control. The track renders in the cacheable shape layer; the fill + knob + focus ring render live since
  * they track the value and hover. Colors are token-driven; the knob is pure
  * white (a structural neutral). Drag snaps to {@code step}; arrow keys nudge
  * by one step (Shift ×10, Ctrl ×0.1).
@@ -45,7 +43,7 @@ import java.util.function.DoubleSupplier;
  *       center stays exactly at the value coordinate through the
  *       deformation.</li>
  *   <li><b>focused</b> — opt-in {@link #focusedVisual(boolean)}: a 1 px
- *       accent capsule hairline 3 px outside the track, the same
+ *       accent hairline 3 px outside the track, the same
  *       geometry-following family as the toggle/button pilots. Visible
  *       without hover, hue-distinct from the white hover halo, never
  *       touching the value pixels.</li>
@@ -189,7 +187,7 @@ public class Slider extends Widget {
                     MaterialSurface.outsetRadius(trackRadius(), 3f), 1.0f, (a << 24) | onBg);
         }
 
-        // Canonical focus treatment: accent capsule hairline 3 px outside the
+        // Canonical focus treatment: accent hairline 3 px outside the
         // track — the geometry-following family (toggle/button pilots),
         // hue-distinct from the white hover halo and from the accent FILL
         // (which stays inside the track at the value).
@@ -200,14 +198,14 @@ public class Slider extends Widget {
         }
         // Baked shallow dome and down-right shadow; radius/size/value centre stay unchanged.
         if (MaterialSurface.unified()) MaterialSurface.knob(g,knobX-knobR,knobY-knobR,knobR*2,
-                ThemeManager.current().roundness().capsule(knobR*2),knob(),disabled);
+                AuroraTheme.RADIUS,knob(),disabled);
         else RenderUtil.drawRoundedRectAA(g, knobX - knobR, knobY - knobR, knobR * 2f, knobR * 2f,
-                ThemeManager.current().roundness().capsule(knobR * 2f), knob());
+                AuroraTheme.RADIUS, knob());
     }
 
-    /** Track corner radius: the theme's capsule rule for the track's thickness. */
+    /** Shared slider track radius. */
     private static float trackRadius() {
-        return ThemeManager.current().roundness().capsule(TRACK_H);
+        return AuroraTheme.RADIUS;
     }
 
     private int trackBase() {

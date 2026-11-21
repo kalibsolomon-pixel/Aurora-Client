@@ -4,6 +4,7 @@ import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.util.SmoothScroll;
+import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 /** Shared material and pixel-stable geometry for Aurora scrollbar thumbs. */
@@ -40,15 +41,15 @@ public final class ScrollbarChrome {
      */
     public static void track(GuiGraphicsExtractor g, int x, double trackY, double trackH, ThemeToken foreground) {
         RenderUtil.drawRoundedRectAA(g, x, (float) trackY, 3, (float) trackH,
-                ThemeManager.current().roundness().capsule(3f), ThemeManager.withAlpha(ThemeManager.color(foreground), 0x1A));
+                AuroraTheme.RADIUS, ThemeManager.withAlpha(ThemeManager.color(foreground), 0x1A));
     }
 
-    /** Paint the canonical 3 px capsule; its corners follow the theme's Corner Radius. */
+    /** Paint the 3 px scrollbar thumb. */
     public static void draw(GuiGraphicsExtractor g, int x, Thumb thumb, boolean emphasized,
                             ThemeToken foreground) {
         int alpha = emphasized ? 0x80 : 0x50; // readable at rest on the graphite window (2026-11-14; was 0x55/0x30)
         int color = ThemeManager.withAlpha(ThemeManager.color(foreground), alpha);
         RenderUtil.drawRoundedRectAA(g, x, (float) thumb.y(), 3, (float) thumb.height(),
-                ThemeManager.current().roundness().capsule(3f), color);
+                AuroraTheme.RADIUS, color);
     }
 }

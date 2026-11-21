@@ -35,8 +35,6 @@ import java.util.List;
  * Shape/background/border share the same masked texture (one blit). */
 public final class MinimapModule extends HudModule {
     public static final String ID = "minimap";
-    /** Square-frame corner radius when the frame does not follow the theme: square (owner ruling 2026-11-12). */
-    private static final float FIXED_FRAME_RADIUS = 0f;
     private static final String[] CARDINALS = {"N", "E", "S", "W"};
     /** Shortest interval between repaints caused only by camera motion (60 Hz). */
     private static final long MOTION_REPAINT_NANOS = 1_000_000_000L / 60;
@@ -98,10 +96,8 @@ public final class MinimapModule extends HudModule {
         var cfg = AuroraConfig.get();
         int size = size(), zoom = zoom();
         int border = HudText.color(cfg.minimapBorderColor);
-        // Square frame: square corners unless minimapThemeCorners hands it the
-        // theme's Corner Radius (owner ruling 2026-11-12).
         float shapeRadius = cfg.minimapCircular ? size * .5f
-                : com.aurora.client.util.HudBackgrounds.radius(cfg.minimapThemeCorners, FIXED_FRAME_RADIUS);
+                : 0f;
         int alpha = (int) (MapTransform.bounded(cfg.minimapTerrainAlpha, 0, 1) * 255);
         // Interpolate to the frame's camera pose (the same partial tick the camera
         // uses), otherwise everything on the map steps at 20 TPS.

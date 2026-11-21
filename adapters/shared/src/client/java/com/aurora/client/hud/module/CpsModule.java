@@ -34,7 +34,6 @@ public class CpsModule extends HudModule {
 
     @Override protected AuroraConfig.HudBackground backgroundMode() { return AuroraConfig.get().cpsBgMode; }
     @Override protected int backgroundColor() { return AuroraConfig.get().cpsBgColor; }
-    @Override protected boolean themeCorners() { return AuroraConfig.get().cpsThemeCorners; }
 
     @Override
     public int getWidth() {

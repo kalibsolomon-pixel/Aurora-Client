@@ -548,9 +548,9 @@ public final class PhenomenaScreen extends Screen implements com.aurora.client.u
         com.aurora.client.util.ScrollFade.BOTTOM_FADE_PX, Math.max(0, contentHeight - viewport.h()) - scroll, surface);
     var track = scrollTrack();
     if (track != null) {
-      Pixel.rounded(g, track.x(), track.y(), 3, track.h(), 1.5f, Theme.INSET());
+      Pixel.rounded(g, track.x(), track.y(), 3, track.h(), Theme.radiusSmall(), Theme.INSET());
       var thumb = Layout.thumb(track, contentHeight, scroll);
-      if (thumb != null) Pixel.rounded(g, track.x(), thumb.y(), 3, thumb.h(), 1.5f, Theme.MUTED());
+      if (thumb != null) Pixel.rounded(g, track.x(), thumb.y(), 3, thumb.h(), Theme.radiusSmall(), Theme.MUTED());
     }
     // Hairline at the top of the footer band: the status line is not clipped content.
     int rule = viewport.y() + viewport.h() + 2;

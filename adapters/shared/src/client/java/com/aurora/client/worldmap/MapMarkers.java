@@ -6,6 +6,7 @@ import com.aurora.client.ui.component.GlassSurface;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.ui.util.UiLayerCache;
 import com.aurora.client.ui.util.NativeIconGeometry;
+import com.aurora.client.util.AuroraTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
@@ -128,7 +129,7 @@ public final class MapMarkers {
     }
     public static void dot(GuiGraphicsExtractor g, float x, float y, int color) { layer(g, x, y, 3, 3, 1.5f, 0, color); }
     public static void labelPlate(GuiGraphicsExtractor g, float cx, float cy, float width, float height, int color) {
-        float radius = com.aurora.client.theme.ThemeManager.current().roundness().radiusSmall() * .5f;
+        float radius = AuroraTheme.RADIUS_SMALL * .5f;
         layer(g, cx, cy, width, height, radius, 0, 0xB0181A1F);
         layer(g, cx, cy, width, height, radius, 1, 0xD0000000 | (color & 0xffffff));
     }

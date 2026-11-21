@@ -206,7 +206,6 @@ public class ArmorModule extends HudModule {
         return AuroraConfig.get().armorHudBgMode;
     }
     @Override protected int backgroundColor() { return AuroraConfig.get().armorHudBgColor; }
-    @Override protected boolean themeCorners() { return AuroraConfig.get().armorHudThemeCorners; }
 
     /** Hide the panel entirely when the player has nothing in the shown slots. */
     @Override protected float backgroundAlpha() {
