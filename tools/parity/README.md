@@ -49,6 +49,11 @@ exchange atomically and refuses an unmarked fixture or a pending command.
 | `hud-editor` | Open the universal HUD editor |
 | `factory` | Replace the disposable client's in-memory settings with field initializers (does not overlay the shipped defaults JSON) |
 | `benchmark label` | Export an exploratory eight-second frame sample; not release overhead evidence |
+| `grab label` | Read the main render target (the last finished frame) back into `label.png` in the control directory |
+| `inventory` | Open the player's survival inventory screen |
+| `flat-faces-mode 1` | With `perfGuiFlatFaces` on, GUI atlas drawings write only the quads GUI Flat Faces leaves out (`1`), no item quads (`2`) or as shipped (`0`): `1` and `2` must give identical pixels |
+| `option glintSpeed 0.5` | Set one vanilla option in memory by its `Options` method name; not saved |
+| `count 8 label` | Log work counters over a window: listener updates, text effects, atlas draws and CPU time (`us per draw`, `ms/s`), quads offered inside atlas drawings and those GUI Flat Faces left out, sprite steps |
 | `resize 854 480` | Set the native window size |
 | `layout grid` / `layout list` | Open the selected feature layout |
 | `theme ROUND 0.33` / `theme SQUARE 0.19` | Apply factory/live appearance |

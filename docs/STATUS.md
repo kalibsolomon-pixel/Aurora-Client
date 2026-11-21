@@ -162,6 +162,8 @@ optimizations for Dynamic FPS, Polytone, Gnetum, Modern UI and Caxton;
 [evidence](reports/2026-11-20-gui-text-map.md).
 GUI Glint Baking redraws glint-only GUI items when the glint has moved, not every frame
 (never at glint strength 0), pixel-identical; [evidence](reports/2026-11-20-gui-glint-baking.md).
+GUI Flat Faces skips exact zero-area (edge-on) quads inside GUI item atlas draws across all three
+lines, pixel-identical; [evidence](reports/2026-11-20-gui-flat-faces.md).
 
 ## Next work
 
