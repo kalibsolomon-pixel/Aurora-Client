@@ -96,8 +96,8 @@ public class InfoModule extends HudModule {
         // Performance & input telemetry.
         if (cfg.infoShowFrameTime) {
             int fps = client.getFps();
-            double ms = fps > 0 ? 1000.0 / fps : 0.0;
-            lines.add(String.format(java.util.Locale.ROOT, "Frame: %.1f ms", ms));
+            int tenths = fps > 0 ? (int) Math.round(10_000.0 / fps) : 0;
+            lines.add("Frame: " + (tenths / 10) + '.' + (tenths % 10) + " ms");
         }
         if (cfg.infoShowMemory) {
             Runtime rt = Runtime.getRuntime();

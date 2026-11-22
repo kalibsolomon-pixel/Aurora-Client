@@ -54,11 +54,20 @@ public abstract class MinecraftClientRenderMixin {
             com.aurora.client.util.ParkDiagnosticsControl.observe(limit, cfg, customPacer,
                     self.isWindowActive(), pacingNow);
         }
+        com.aurora.client.compat.EphemeraPacingBridge.ensureBound();
         double target = FramePacing.INSTANCE.beginFrame(limit, pacingNow);
+        boolean auroraOwnsWait = limit.owner() == FramePacing.Owner.FRAME_HEAD
+                || limit.owner() == FramePacing.Owner.POST_SWAP;
+        long headWaitNanos = 0L;
         if (target != 0.0) {
+            long waitStart = System.nanoTime();
+            com.aurora.client.util.EphemeraPacingHook.onBeforeWait(
+                    Math.max(0L, (long) ((target - pacingNow) * 1_000_000_000.0)));
             if (customPacer) FramePacer.waitUntil(target, cfg);
             else FramePacer.waitUntilHybrid(target, 2000);
+            headWaitNanos = Math.max(0L, System.nanoTime() - waitStart);
         }
+        com.aurora.client.util.EphemeraPacingHook.reportAurora(auroraOwnsWait, limit.fps(), headWaitNanos);
 
         if (!cfg.inputSamplingDecoupled) return;
 

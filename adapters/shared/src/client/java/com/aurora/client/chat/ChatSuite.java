@@ -85,7 +85,8 @@ public final class ChatSuite {
     public static void putMeta(GuiMessage message, MessageMeta meta) {
         if (message == null || meta == null) return;
         synchronized (MESSAGE_META) {
-            if (MESSAGE_META.size() > 6000) MESSAGE_META.clear();
+            int maxEntries = Math.max(256, AuroraConfig.get().chatHistoryLimit + 64);
+            if (MESSAGE_META.size() > maxEntries) MESSAGE_META.clear();
             MESSAGE_META.put(message, meta);
         }
     }

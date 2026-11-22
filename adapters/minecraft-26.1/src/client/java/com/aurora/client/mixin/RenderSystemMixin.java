@@ -33,8 +33,13 @@ public abstract class RenderSystemMixin {
         var wait = FramePacing.INSTANCE.postSwap(limit, pacingNow);
         if (!wait.cancelNative()) return;
         if (wait.waitTarget() != 0.0) {
+            long waitStart = System.nanoTime();
+            com.aurora.client.util.EphemeraPacingHook.onBeforeWait(
+                    Math.max(0L, (long) ((wait.waitTarget() - pacingNow) * 1_000_000_000.0)));
             if (customPacer) FramePacer.waitUntil(wait.waitTarget(), cfg);
             else FramePacer.waitUntilHybrid(wait.waitTarget(), 2000);
+            com.aurora.client.util.EphemeraPacingHook.reportAurora(true, limit.fps(),
+                    Math.max(0L, System.nanoTime() - waitStart));
         }
         ci.cancel();
     }

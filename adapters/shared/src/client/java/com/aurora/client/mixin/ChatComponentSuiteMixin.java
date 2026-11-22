@@ -128,7 +128,7 @@ public abstract class ChatComponentSuiteMixin implements ChatSuiteAccess {
             ordinal = 0
     )
     private ChatComponent.DisplayMode aurora$peekDisplayMode(ChatComponent.DisplayMode mode) {
-        if (mode == ChatComponent.DisplayMode.BACKGROUND && ChatSuite.isPeeking()) {
+        if (mode == ChatComponent.DisplayMode.BACKGROUND && AuroraConfig.get().chatEnabled && ChatSuite.isPeeking()) {
             return ChatComponent.DisplayMode.FOREGROUND;
         }
         return mode;
@@ -136,7 +136,7 @@ public abstract class ChatComponentSuiteMixin implements ChatSuiteAccess {
 
     @Inject(method = "isChatFocused", at = @At("HEAD"), cancellable = true)
     private void aurora$peekFocusedHeight(CallbackInfoReturnable<Boolean> cir) {
-        if (ChatSuite.isPeeking()) {
+        if (AuroraConfig.get().chatEnabled && ChatSuite.isPeeking()) {
             cir.setReturnValue(true);
         }
     }

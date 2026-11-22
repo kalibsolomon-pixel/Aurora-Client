@@ -31,6 +31,9 @@ public final class KeybindConflictLookup {
     private static Map<Integer, List<KeybindConflicts.Entry>> byBinding = Map.of();
     private static final Map<String, List<String>> resolvedCache = new HashMap<>();
 
+    private static long controlsFingerprint = Long.MIN_VALUE;
+    private static Map<Integer, List<KeybindConflicts.Entry>> controlsByBinding = Map.of();
+
     private KeybindConflictLookup() {}
 
     /** True for F3+&lt;key&gt; debug sub-keys that never fire on a standalone press. */
@@ -62,41 +65,76 @@ public final class KeybindConflictLookup {
         int selfBinding = VanillaKeyCombos.binding(self);
         if (selfBinding < 0) return List.of();
 
-        KeybindConflicts.Entry selfEntry = new KeybindConflicts.Entry(
-                self.getName(),
-                Component.translatable(self.getName()).getString(),
-                selfBinding,
-                false,
-                self.getCategory() == AuroraKeybinds.CATEGORY,
-                self.isDefault());
+        ensureControlsSnapshot(mc);
+        List<KeybindConflicts.Entry> bucket = controlsByBinding.get(selfBinding);
+        if (bucket == null || bucket.size() < 2) return List.of();
 
-        List<KeybindConflicts.Entry> candidates = new ArrayList<>();
-        for (KeyMapping other : mc.options.keyMappings) {
-            if (other == self || other.isUnbound() || isDebugChord(other)) continue;
-            if (!self.same(other)) continue;
-            int otherBinding = VanillaKeyCombos.binding(other);
-            if (otherBinding != selfBinding) continue;
-            candidates.add(new KeybindConflicts.Entry(
-                    other.getName(),
-                    Component.translatable(other.getName()).getString(),
-                    otherBinding,
-                    false,
-                    other.getCategory() == AuroraKeybinds.CATEGORY,
-                    other.isDefault()));
+        String selfId = self.getName();
+        KeybindConflicts.Entry selfEntry = null;
+        List<KeybindConflicts.Entry> candidates = new ArrayList<>(bucket.size() - 1);
+        for (int i = 0; i < bucket.size(); i++) {
+            KeybindConflicts.Entry e = bucket.get(i);
+            if (selfEntry == null && selfId.equals(e.id())) {
+                selfEntry = e;
+            } else {
+                candidates.add(e);
+            }
         }
+        if (selfEntry == null) {
+            selfEntry = new KeybindConflicts.Entry(
+                    selfId,
+                    Component.translatable(selfId).getString(),
+                    selfBinding,
+                    false,
+                    self.getCategory() == AuroraKeybinds.CATEGORY,
+                    self.isDefault());
+        }
+        return KeybindConflicts.extraVanillaControlsConflicts(selfEntry, candidates);
+    }
+
+    private static void ensureControlsSnapshot(Minecraft mc) {
+        KeyMapping[] mappings = mc.options.keyMappings;
         Map<String, Integer> hotkeys = ProfileManager.getInstance().hotkeys();
+        long h = 0x9E3779B97F4A7C15L;
+        for (KeyMapping m : mappings) {
+            h = h * 31L + VanillaKeyCombos.binding(m);
+            h = h * 31L + (m.isDefault() ? 1 : 0);
+        }
+        h = h * 31L + hotkeys.size();
+        for (Map.Entry<String, Integer> e : hotkeys.entrySet()) {
+            h = h * 31L + e.getKey().hashCode();
+            h = h * 31L + e.getValue();
+        }
+        if (h == controlsFingerprint) return;
+
+        Map<Integer, List<KeybindConflicts.Entry>> next = new HashMap<>();
+        for (KeyMapping m : mappings) {
+            if (m.isUnbound() || isDebugChord(m)) continue;
+            int b = VanillaKeyCombos.binding(m);
+            if (b < 0) continue;
+            String id = m.getName();
+            next.computeIfAbsent(b, k -> new ArrayList<>(2))
+                    .add(new KeybindConflicts.Entry(
+                            id,
+                            Component.translatable(id).getString(),
+                            b,
+                            false,
+                            m.getCategory() == AuroraKeybinds.CATEGORY,
+                            m.isDefault()));
+        }
         if (!hotkeys.isEmpty()) {
             for (Map.Entry<String, Integer> e : hotkeys.entrySet()) {
                 int hk = e.getValue();
-                if (hk == selfBinding) {
-                    candidates.add(new KeybindConflicts.Entry(
-                            "profile:" + e.getKey(),
-                            "Profile: " + e.getKey(),
-                            hk, false, true, false));
-                }
+                if (hk < 0) continue;
+                next.computeIfAbsent(hk, k -> new ArrayList<>(2))
+                        .add(new KeybindConflicts.Entry(
+                                "profile:" + e.getKey(),
+                                "Profile: " + e.getKey(),
+                                hk, false, true, false));
             }
         }
-        return KeybindConflicts.extraVanillaControlsConflicts(selfEntry, candidates);
+        controlsByBinding = next;
+        controlsFingerprint = h;
     }
 
     /** Clears the snapshot cache (used by tests or after bulk profile changes). */
@@ -104,6 +142,8 @@ public final class KeybindConflictLookup {
         cachedFingerprint = Long.MIN_VALUE;
         byBinding = Map.of();
         resolvedCache.clear();
+        controlsFingerprint = Long.MIN_VALUE;
+        controlsByBinding = Map.of();
     }
 
     private static List<String> lookupCached(String selfId, int binding) {

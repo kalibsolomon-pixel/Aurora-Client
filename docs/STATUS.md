@@ -1,9 +1,11 @@
 # Aurora Client status
 
-Updated 2026-11-21. See [ROADMAP](ROADMAP.md) for the order of work,
+Updated 2026-11-22. See [ROADMAP](ROADMAP.md) for the order of work,
 [architecture](ARCHITECTURE.md) for ownership, and [ADRs](adr/) for decisions.
 
 ## Structure and integration
+
+Ephemera 1.0.0 compatibility & optimization pass adds the zero-allocation `ephemera:frame_pacer` ObjectShare handshake (`EphemeraPacingBridge`, `EphemeraPacingHook`, `AdaptivePacerCalibrator`) with Vulkan Async Present awareness in `ReflexScheduler`, soft phase recovery in `FramePacing`, categorized Ephemera rendering controls in Settings → Performance, immutable cached UBOs and saturation-only single-buffer VRAM savings in `WorldPostEffectRenderer`, zero-allocation Sound Volume / Chat Peek / Info HUD / Inventory HUD / Now Playing HUD / Controls conflict hot paths, and fixes `AuroraFontQuality` retrying `rescale()` every frame after a GUI-scale change with deferred fonts. Verified live on Minecraft 26.2 with Ephemera 1.0.0 across OpenGL Multi-Draw (`0.061–0.065 ms` mean, `0.01 ms` pacer jitter), Native Vulkan `VK_EXT_mesh_shader` (`0.079–0.127 ms` mean, `0.01 ms` jitter), and a full all-features Vulkan stress pass (`0.084 ms` mean, 0 warnings/errors).
 
 Pulsar accuracy pass fixes inclusive exchange/round end-boundary combo splitting (`Combos`), prevents live same-tick trade combo inflation (`CombatEngine`), pairs knockback `VELOCITY` packets across `[tick - 1, tick + 1]` without double-claiming and with strongest-impulse tie-breaking (`FightAnalytics`), aligns combo sprint-reset attribution with post-fight `Combos` streaks, and exposes fact-backed **Combo Rating** and **Jump-Reset / Knockback Control Rating** (`CombatBreakdown.ComboProfile` & `KnockbackControl`) across the in-game dashboard (`FlowPage`, `DefensePage`) and offline HTML reports (`ReportExporter`).
 

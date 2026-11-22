@@ -31,6 +31,14 @@ public class NowPlayingModule extends HudModule {
     private static final String ICON_PAUSE = "\uE034";
     private static final String ICON_MUSIC = "\uE405";
 
+    private String cachedTitleIn;
+    private String cachedTitleOut;
+    private String cachedSubIn;
+    private String cachedSubOut;
+    private int cachedTextMax = -1;
+    private Font cachedFont;
+    private int cachedStyleKey = Integer.MIN_VALUE;
+
     public NowPlayingModule() {
         super(ID);
         this.anchor = HudAnchor.TOP_CENTER;
@@ -82,9 +90,38 @@ public class NowPlayingModule extends HudModule {
     }
 
     @Override
+    public void render(GuiGraphicsExtractor ctx, Minecraft client, int screenW, int screenH) {
+        if (!enabled || !isConfigEnabled()) return;
+        boolean editing = client != null && com.aurora.client.adapter.NativeUi.screen(client) instanceof com.aurora.client.screen.HudEditorScreen;
+        if (!editing && !SystemMediaBridge.currentTrack().active() && AuroraConfig.get().mediaHudHideWhenIdle) {
+            return;
+        }
+        super.render(ctx, client, screenW, screenH);
+    }
+
+    @Override
     protected void renderContent(GuiGraphicsExtractor ctx, Minecraft client, int x, int y) {
         boolean editing = client != null && com.aurora.client.adapter.NativeUi.screen(client) instanceof com.aurora.client.screen.HudEditorScreen;
         drawTrack(ctx, client, x, y, editing);
+    }
+
+    private String fitCached(Font tr, String raw, int maxW, boolean isTitle) {
+        int sk = AuroraFontRenderer.styleKey();
+        if (tr != cachedFont || maxW != cachedTextMax || sk != cachedStyleKey) {
+            cachedFont = tr;
+            cachedTextMax = maxW;
+            cachedStyleKey = sk;
+            cachedTitleIn = null;
+            cachedSubIn = null;
+        }
+        if (isTitle) {
+            if (raw.equals(cachedTitleIn)) return cachedTitleOut;
+            cachedTitleIn = raw;
+            return cachedTitleOut = AuroraFontRenderer.ellipsize(tr, raw, maxW, 0);
+        }
+        if (raw.equals(cachedSubIn)) return cachedSubOut;
+        cachedSubIn = raw;
+        return cachedSubOut = AuroraFontRenderer.ellipsize(tr, raw, maxW, 0);
     }
 
     private void drawTrack(GuiGraphicsExtractor ctx, Minecraft client, int x, int y, boolean editing) {
@@ -119,14 +156,13 @@ public class NowPlayingModule extends HudModule {
         int textX = x + ICON_COL;
         int textMax = Math.max(24, w - ICON_COL - PAD_X);
 
-        String title = AuroraFontRenderer.ellipsize(tr, state.title().isEmpty() ? "Unknown Track" : state.title(), textMax, 0);
-        HudTextPainter.draw(ctx, tr, title, textX, y + 1, primaryColor);
+        String rawTitle = state.title().isEmpty() ? "Unknown Track" : state.title();
+        HudTextPainter.draw(ctx, tr, fitCached(tr, rawTitle, textMax, true), textX, y + 1, primaryColor);
 
         int curY = y + 12;
         if (cfg.mediaHudShowArtist) {
             String sub = state.artist().isEmpty() ? (state.playing() ? "Playing" : "Paused") : state.artist();
-            String fittedArtist = AuroraFontRenderer.ellipsize(tr, sub, textMax, 0);
-            HudTextPainter.draw(ctx, tr, fittedArtist, textX, curY, secondaryColor);
+            HudTextPainter.draw(ctx, tr, fitCached(tr, sub, textMax, false), textX, curY, secondaryColor);
             curY += 10;
         }
 
