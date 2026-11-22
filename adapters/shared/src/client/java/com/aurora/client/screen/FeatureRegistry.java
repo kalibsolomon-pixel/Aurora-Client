@@ -1389,19 +1389,19 @@ addWithSettings("hitbox",
                                 .description("Returns to the previous track."),
                         new SectionHeaderSetting("Keybinds"),
                         new KeybindSetting("Play / Pause Key",
-                                () -> cfg.mediaPlayPauseKey, v -> cfg.mediaPlayPauseKey = v).resetDefault(() -> defaults.mediaPlayPauseKey)
+                                () -> cfg.mediaPlayPauseKey, v -> cfg.mediaPlayPauseKey = v).resetDefault(() -> defaults.mediaPlayPauseKey).keyId("key.aurora.media_play_pause")
                                 .description("Toggles desktop media playback in-game."),
                         new KeybindSetting("Next Track Key",
-                                () -> cfg.mediaNextKey, v -> cfg.mediaNextKey = v).resetDefault(() -> defaults.mediaNextKey)
+                                () -> cfg.mediaNextKey, v -> cfg.mediaNextKey = v).resetDefault(() -> defaults.mediaNextKey).keyId("key.aurora.media_next")
                                 .description("Skips to the next track."),
                         new KeybindSetting("Previous Track Key",
-                                () -> cfg.mediaPrevKey, v -> cfg.mediaPrevKey = v).resetDefault(() -> defaults.mediaPrevKey)
+                                () -> cfg.mediaPrevKey, v -> cfg.mediaPrevKey = v).resetDefault(() -> defaults.mediaPrevKey).keyId("key.aurora.media_prev")
                                 .description("Goes back to the previous track."),
                         new KeybindSetting("Volume Up Key",
-                                () -> cfg.mediaVolUpKey, v -> cfg.mediaVolUpKey = v).resetDefault(() -> defaults.mediaVolUpKey)
+                                () -> cfg.mediaVolUpKey, v -> cfg.mediaVolUpKey = v).resetDefault(() -> defaults.mediaVolUpKey).keyId("key.aurora.media_vol_up")
                                 .description("Raises desktop media volume."),
                         new KeybindSetting("Volume Down Key",
-                                () -> cfg.mediaVolDownKey, v -> cfg.mediaVolDownKey = v).resetDefault(() -> defaults.mediaVolDownKey)
+                                () -> cfg.mediaVolDownKey, v -> cfg.mediaVolDownKey = v).resetDefault(() -> defaults.mediaVolDownKey).keyId("key.aurora.media_vol_down")
                                 .description("Lowers desktop media volume."),
                         new SectionHeaderSetting("Now Playing HUD (Windows)"),
                         new BooleanSetting("Show Now Playing HUD",
@@ -1747,7 +1747,7 @@ addWithSettings("hitbox",
                                 .description("Hold the Chat Peek key while playing to view full focused-height chat without opening the chat screen or stopping movement."),
                         new KeybindSetting("Chat Peek Key",
                                 () -> cfg.chatPeekKey,
-                                v -> cfg.chatPeekKey = v).resetDefault(() -> defaults.chatPeekKey)
+                                v -> cfg.chatPeekKey = v).resetDefault(() -> defaults.chatPeekKey).keyId("key.aurora.chat_peek")
                                 .description("Hold this key in-world to peek at full chat while keeping full movement control. Press ESC or Backspace while rebinding to clear it.")
                                 .disabled(() -> !cfg.chatPeekEnabled),
                         new SectionHeaderSetting("History"),
