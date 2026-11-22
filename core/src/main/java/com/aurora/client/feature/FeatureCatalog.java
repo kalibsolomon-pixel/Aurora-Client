@@ -216,6 +216,7 @@ public final class FeatureCatalog {
         module("info_module", "Info HUD", "A configurable corner readout of useful at-a-glance info — FPS, coordinates, time of day, facing, biome, dimension, light level, playtime and more.");
         module("cps", "CPS", "Shows your current clicks-per-second as a HUD counter.");
         module("armor_hud", "Armor HUD", "Displays your equipped armor pieces — and optionally your main and off hands — with their remaining durability on the HUD.");
+        module("inventory_hud", "Inventory HUD", "Displays your main inventory grid on the HUD — and optionally your hotbar — so you can check supplies at a glance.");
         module("reach_display", "Reach Display", "Shows the exact distance to the last entity you attacked.");
         module("potion_hud", "Potion HUD", "A cleaner replacement for the default status-effect icons, listing your active potion effects with a readable countdown timer.");
         module("ping", "Ping", "Surfaces connection latency as real numbers — as a HUD readout, as a value in the tab list, and optionally under player nametags.");
@@ -276,6 +277,7 @@ public final class FeatureCatalog {
         classify("info_module", FairPlay.VANILLA_INFORMATION, "Shows FPS, coordinates, time, biome and similar readouts that the F3 screen also has.");
         classify("cps", FairPlay.VANILLA_INFORMATION, "Counts your own clicks.");
         classify("armor_hud", FairPlay.VANILLA_INFORMATION, "Shows your own armor, hands and their durability.");
+        classify("inventory_hud", FairPlay.VANILLA_INFORMATION, "Shows your own inventory slots on the HUD. Off in a fresh install.", "inventoryHudEnabled");
         classify("reach_display", FairPlay.VANILLA_INFORMATION, "Shows the distance of your own last hit.");
         classify("potion_hud", FairPlay.VANILLA_INFORMATION, "Lists your own active effects, as the vanilla effect icons do.");
         classify("ping", FairPlay.VANILLA_INFORMATION, "Shows latency as numbers: your own, and other players' as the tab list already reports it.");

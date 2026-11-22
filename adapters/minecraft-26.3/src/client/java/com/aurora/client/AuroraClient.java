@@ -103,6 +103,7 @@ public class AuroraClient implements ClientModInitializer {
         moduleManager.register(new InfoModule());
         moduleManager.register(new CpsModule());
         moduleManager.register(new ArmorModule());
+        moduleManager.register(new InventoryModule());
         moduleManager.register(new ReachModule());
         moduleManager.register(new ToggleSprintSneakModule());
         // Two independent single-row modules (sprint / sneak) used only

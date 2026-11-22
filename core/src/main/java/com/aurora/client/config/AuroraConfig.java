@@ -1259,6 +1259,22 @@ public class AuroraConfig {
     /** Extra content scale on top of the universal layout scale, 0.5..3. */
     public double scoreboardScale = 1.0;
 
+    // ---- Inventory HUD ----
+    /** Master toggle for the Inventory HUD overlay. Off in a fresh install to keep factory overhead at zero. */
+    public boolean inventoryHudEnabled = false;
+    /** Background style of the Inventory HUD (VANILLA = inventory.png grid, SOLID = tinted panel, NONE = floating items). */
+    public HudBackground inventoryHudBgMode = HudBackground.VANILLA;
+    /** Panel fill color used when {@link #inventoryHudBgMode} is {@link HudBackground#SOLID}. */
+    public int inventoryHudBgColor = 0x80000000;
+    /** Show stack count numbers on items (durability bars and cooldowns remain visible). */
+    public boolean inventoryHudShowCounts = true;
+    /** Include the 9 hotbar slots below the 27-slot main inventory. */
+    public boolean inventoryHudShowHotbar = false;
+    /** Pack only occupied slots into a tight grid instead of keeping the fixed 9x3 layout. */
+    public boolean inventoryHudCompact = false;
+    /** Hide the Inventory HUD completely when all displayed slots are empty. */
+    public boolean inventoryHudHideWhenEmpty = false;
+
     // ---- Better Hitreg (BetterHitreg by Jass, integrated) ----
     // Only the custom client-side hitreg remains (owner direction
     // 2026-11-15); the tracking, audio, render, practice-arena, color and
