@@ -54,6 +54,7 @@ public final class FeatureIcons {
         ICONS.put("pulsar", "\uE26B"); // insights
         ICONS.put("world_map",             "\uF3CA"); // map_search
         ICONS.put("resourcepack_browser",  "\uE8B0"); // browse_gallery (grid of tiles)
+        ICONS.put("chat",                  "\uE0C9"); // chat
         // Moved to the Modules grid 2026-09-10 (was a Settings-tab entry).
         // The eight former Settings-tab tiles merged into "miscellaneous"
         // (2026-09-09) had their own glyphs (videocam, av_timer, flash_on,

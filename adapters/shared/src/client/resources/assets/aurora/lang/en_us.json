@@ -38,6 +38,7 @@
   "key.aurora.waypoint_manager": "Waypoint Manager",
   "key.aurora.world_map": "Open World Map",
   "key.aurora.minimap_toggle": "Toggle Minimap",
-  "key.aurora.blur_test": "Blur Panel Test"
+  "key.aurora.blur_test": "Blur Panel Test",
+  "key.aurora.chat_peek": "Chat Peek"
 }
 

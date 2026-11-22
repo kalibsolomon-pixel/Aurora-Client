@@ -932,5 +932,18 @@
   "streamerOpponentLabel": "Opponent",
   "streamerOpponentNumbered": true,
   "streamerOpponentColorEnabled": false,
-  "streamerOpponentColor": -1
+  "streamerOpponentColor": -1,
+  "chatEnabled": false,
+  "chatCompactDuplicates": true,
+  "chatCompactWindow": 8,
+  "chatTimestampsEnabled": true,
+  "chatTimestampFormat": "HH_MM",
+  "chatSearchEnabled": true,
+  "chatCopyEnabled": true,
+  "chatHeadsEnabled": true,
+  "chatPeekEnabled": true,
+  "chatPeekKey": -1,
+  "chatHistoryLimit": 1000,
+  "chatPerServerHistory": true,
+  "chatPerServerMaxSaved": 200
 }

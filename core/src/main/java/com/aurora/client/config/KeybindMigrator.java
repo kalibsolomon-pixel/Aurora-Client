@@ -22,7 +22,8 @@ public final class KeybindMigrator {
             "waypointManagerKey",
             "minimapToggleKey",
             "blurTestKey",
-            "worldMapKey");
+            "worldMapKey",
+            "chatPeekKey");
 
     private KeybindMigrator() {}
 

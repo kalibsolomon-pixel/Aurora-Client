@@ -104,8 +104,8 @@ class RolloutStatesTest {
             String src = new String(java.nio.file.Files.readAllBytes(SourceTree.resolve(
                     SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/FeatureRegistry.java")));
             int count = src.split("new EnumSetting<>", -1).length - 1;
-            assertEquals(34, count,
-                    "production EnumSetting construction sites (inventory drift guard; 31→32 with Inventory HUD, 32→34 with Pack Tweaks' Local Weather and Sky Style, 2026-11-21)");
+            assertEquals(35, count,
+                    "production EnumSetting construction sites (inventory drift guard; 31→32 Inventory HUD, 32→34 Pack Tweaks, 34→35 Chat Timestamp Format, 2026-11-21)");
         } catch (java.io.IOException e) {
             fail("FeatureRegistry.java not readable from the test working dir: " + e.getMessage());
         }
@@ -209,7 +209,8 @@ class RolloutStatesTest {
             // Settings tab's Controls page (it was vanilla-Controls-only).
             // 18 → 12 on 2026-11-15: Better Hitreg's six keybind rows were
             // removed with everything but its custom hitreg.
-            assertEquals(12, count,
+            // 12 → 13 on 2026-11-21: Chat Peek Key added with Chat Suite.
+            assertEquals(13, count,
                     "production KeybindSetting construction sites (inventory drift guard)");
         } catch (java.io.IOException e) {
             fail("FeatureRegistry.java not readable from the test working dir: " + e.getMessage());

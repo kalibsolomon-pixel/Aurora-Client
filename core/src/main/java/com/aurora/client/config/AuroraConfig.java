@@ -480,6 +480,31 @@ public class AuroraConfig {
     public boolean streamerOpponentNumbered = true;
     public boolean streamerOpponentColorEnabled = false;
     public int     streamerOpponentColor = 0xFFFFFFFF;
+
+    // ---- Chat Suite ----
+    public enum ChatTimestampFormat {
+        HH_MM("24-hour (HH:mm)"),
+        HH_MM_SS("24-hour (HH:mm:ss)"),
+        H_MM_A("12-hour (h:mm AM/PM)");
+
+        private final String label;
+        ChatTimestampFormat(String label) { this.label = label; }
+        public String getLabel() { return label; }
+    }
+
+    public boolean chatEnabled = false;
+    public boolean chatCompactDuplicates = true;
+    public int     chatCompactWindow = 8;
+    public boolean chatTimestampsEnabled = true;
+    public ChatTimestampFormat chatTimestampFormat = ChatTimestampFormat.HH_MM;
+    public boolean chatSearchEnabled = true;
+    public boolean chatCopyEnabled = true;
+    public boolean chatHeadsEnabled = true;
+    public boolean chatPeekEnabled = true;
+    public int chatPeekKey = -1; // SDL scancode; unbound by default
+    public int     chatHistoryLimit = 1000;
+    public boolean chatPerServerHistory = true;
+    public int     chatPerServerMaxSaved = 200;
     /**
      * Gradient Dithering: the sky, fog, clouds and terrain get an ordered dither of under half
      * an 8-bit step, so smooth gradients stop banding (render/GradientDither). Stands down

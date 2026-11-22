@@ -332,5 +332,10 @@ public class AuroraClient implements ClientModInitializer {
                 "key.aurora.blur_test",
                 com.aurora.client.util.AuroraKey.UNBOUND,
                 () -> cfg.blurTestKey,         v -> cfg.blurTestKey = v);
+        com.aurora.client.util.AuroraKeybinds.register(
+                "key.aurora.chat_peek",
+                com.aurora.client.util.AuroraKey.UNBOUND,
+                () -> cfg.chatPeekKey,         v -> cfg.chatPeekKey = v);
+        com.aurora.client.chat.ChatSuite.registerLifecycle();
     }
 }

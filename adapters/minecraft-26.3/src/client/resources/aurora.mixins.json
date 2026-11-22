@@ -98,6 +98,8 @@
     "StreamerManageServerMixin",
     "StreamerConnectScreenMixin",
     "StreamerServerEntryMixin",
+    "ChatComponentSuiteMixin",
+    "ChatScreenSuiteMixin",
     "MultiplayerServerListWidgetMixin",
     "ClientLevelWorldMapMixin",
     "ReflexMinecraftMixin",

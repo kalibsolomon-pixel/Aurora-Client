@@ -234,6 +234,7 @@ public final class FeatureCatalog {
         module("vanilla_hud", "Vanilla HUD", "Move, scale or hide vanilla's boss bar, action bar, titles, subtitles, toasts and advancement pop-ups from the HUD editor.");
         module("world_map", "World Map", "A full-screen, pannable world map of your explored terrain.");
         module("resourcepack_browser", "Resourcepack Browser", "Browse and install community resource packs directly from Modrinth. Search, preview, and one-click install straight into your resourcepacks folder.");
+        module("chat", "Chat", "Compact duplicate messages, local timestamps, in-chat search, click-to-copy, player chat heads, chat peek keybind, and per-server chat history.");
 
         module("pulsar", "Pulsar", "Review local combat recordings, compare them and export offline reports.");
 
@@ -296,6 +297,7 @@ public final class FeatureCatalog {
         classify("vanilla_hud", FairPlay.VANILLA_INFORMATION, "Moves, scales or hides vanilla's boss bar, action bar, titles, subtitles, toasts and advancement pop-ups without adding new information. Off in a fresh install.", "vanillaHudEnabled");
         classify("world_map", FairPlay.VANILLA_INFORMATION, "A full-screen map of terrain you have already visited.");
         classify("resourcepack_browser", FairPlay.COSMETIC, "Downloads resource packs from Modrinth.");
+        classify("chat", FairPlay.VANILLA_INFORMATION, "Reformats incoming chat locally (compacting duplicates, adding local timestamps and online player heads, searching, copying, peeking, and keeping longer per-server history). Off in a fresh install; never sends messages or packets.", "chatEnabled");
         classify("miscellaneous", FairPlay.LOCAL_TIMING, "Frame pacing, a frame cap, vsync control, the point within a frame where mouse movement is applied, cosmetic tab-list and nametag styling (including your own nametag in third person), cosmetic per-sound volume attenuation (0–100% only), and Streamer Mode privacy masking (hides your own name, skin, coordinates, server address, and optionally replaces other players' nametags on your own screen). The rate and content of what is sent to the server are unchanged.");
         classify("custom_title", FairPlay.COSMETIC, "Aurora's title screen and menu styling.");
         classify("text_fonts", FairPlay.COSMETIC, "Changes the font.");
@@ -358,19 +360,14 @@ public final class FeatureCatalog {
         mixin("RetroBodyTurnMixin", "retro backwards walking", "animations").gates("animRetroBackwardsWalk");
         mixin("ClassicSneakPoseMixin", "the classic sneak pose", "animations").gates("animClassicSneak");
         mixin("HotbarItemBounceMixin", "the hotbar item bounce", "animations").gates("hotbarBounceEnabled");
-<<<<<<< HEAD
-        mixin("PlayerEntityRendererMixin", "ping and totem pops under nametags", "ping", "totem_pop")
-                .gates("nametagPingEnabled", "nametagTotemPopsEnabled");
+        mixin("PlayerEntityRendererMixin", "ping, totem pops and Streamer Mode nametag masking", "ping", "totem_pop", "miscellaneous")
+                .gates("nametagPingEnabled", "nametagTotemPopsEnabled", "streamerModeEnabled");
         mixin("LivingEntityRendererNameTagMixin", "showing your own nametag in third person", "miscellaneous")
                 .gates("nametagStyleShowSelf");
         mixin("NameTagStyleMixin", "nametag scale and background opacity", "miscellaneous")
                 .gates("nametagStyleCustomBackground");
         mixin("NameTagShadowMixin", "drop shadow on nametag text", "miscellaneous")
                 .gates("nametagStyleTextShadow");
-=======
-        mixin("PlayerEntityRendererMixin", "ping, totem pops and Streamer Mode nametag masking", "ping", "totem_pop", "miscellaneous")
-                .gates("nametagPingEnabled", "nametagTotemPopsEnabled", "streamerModeEnabled");
->>>>>>> origin/feat/streamer-mode
         mixin("LivingEntityRendererExtractMixin", "entity health labels and hit-color health capture", "player_health", "hit_color")
                 .gates("playerHealthIndicators", "hitColorHealthGradient");
         mixin("LavaClarityMixin", "lava clarity", "pack_tweaks").gates("lavaClarityEnabled");
@@ -438,6 +435,8 @@ public final class FeatureCatalog {
         mixin("StreamerManageServerMixin", "masking the Edit Server IP field in Streamer Mode", "miscellaneous").gates("streamerModeEnabled");
         mixin("StreamerConnectScreenMixin", "redacting server addresses while connecting in Streamer Mode", "miscellaneous").gates("streamerModeEnabled");
         mixin("StreamerServerEntryMixin", "masking raw IP titles in the server list in Streamer Mode", "miscellaneous").gates("streamerModeEnabled");
+        mixin("ChatComponentSuiteMixin", "Chat Suite formatting, compact duplicates, chat heads, longer history and Chat Peek", "chat").gates("chatEnabled");
+        mixin("ChatScreenSuiteMixin", "Chat Suite in-chat search and click-to-copy", "chat").gates("chatEnabled");
         mixin("MultiplayerServerListWidgetMixin", "numeric ping in the server list", "ping");
         mixin("ClientLevelWorldMapMixin", "refreshing the maps when a block changes", "world_map", "minimap");
         mixin("ReflexMinecraftMixin", "automatic latency reduction");
