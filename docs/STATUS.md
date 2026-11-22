@@ -224,6 +224,13 @@ connects zero-compile-coupling Fabric `ObjectShare` bridges (`EphemeraBridge`) f
 native fast-write delegation and live `Ephemera Engine` controls under Settings → Performance, eliminates
 steady-state `WeakHashMap` locking in `AuroraFontQuality.beginFrame`, increases `WorldGeometryBuffers`
 staging capacity (`64 KiB`), and hoists config/stationary-entity checks in `HitboxRenderer`.
+In-house hot paths (`perf/inhouse-hot-paths`, stacked on the Ephemera integration): SDF glyph texture
+coordinates are computed once per atlas cell instead of per draw; world lines pack their colour once per
+line or box (`setColor(int)`, byte-identical); `WorldGeometryBuffers` reuses per-type slots instead of a map
+rebuilt every frame (`RenderType.prepare()` still runs per frame: it captures the model-view and scissor);
+the Ping HUD keeps its label until the latency changes; and the copied diagnostics report gains an
+`Ephemera:` line with its status and whether the direct fast-write bridge is active. The allocation-free
+frustum fallback was not done: 26.2/26.3 expose only `Frustum.isVisible(AABB)`, so it would need a new mixin.
 
 ## Next work
 

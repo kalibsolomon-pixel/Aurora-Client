@@ -19,11 +19,14 @@ class SdfAtlasPageSizeSourceContractTest {
     }
 
     @Test void texelCoordinatesDivideByThePageSize() {
+        // Computed once per cell (a page keeps its size) and read by every glyph draw.
+        String atlas = SourceTree.read("ui/text/SdfAtlas.java");
+        assertTrue(atlas.contains("insetUv(x, false, pageWidth)"), atlas);
+        assertTrue(atlas.contains("insetUv(x + width, true, pageWidth)"), atlas);
+        assertTrue(atlas.contains("insetUv(y, false, pageHeight)"), atlas);
+        assertTrue(atlas.contains("insetUv(y + height, true, pageHeight)"), atlas);
         String instance = SourceTree.read("ui/text/SdfInstance.java");
-        assertTrue(instance.contains("insetUv(cell.x(), false, cell.pageWidth())"), instance);
-        assertTrue(instance.contains("insetUv(cell.x() + cell.width(), true, cell.pageWidth())"), instance);
-        assertTrue(instance.contains("insetUv(cell.y(), false, cell.pageHeight())"), instance);
-        assertTrue(instance.contains("insetUv(cell.y() + cell.height(), true, cell.pageHeight())"), instance);
+        assertTrue(instance.contains("float u0 = cell.u0(), u1 = cell.u1(), v0 = cell.v0(), v1 = cell.v1();"), instance);
         assertFalse(instance.contains("SdfAtlas.MAX_CELL"), "the cell limit is not a page size");
     }
 }

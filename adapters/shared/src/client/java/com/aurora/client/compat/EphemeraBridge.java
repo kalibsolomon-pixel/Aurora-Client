@@ -184,6 +184,25 @@ public final class EphemeraBridge {
         return s != null && !s.isBlank() ? s : "Ephemera rendering engine";
     }
 
+    /**
+     * One line for the copied diagnostics report: Ephemera's own summary and whether the
+     * direct fast-write bridge is carrying Aurora's glyph and line writes. Empty when
+     * Ephemera is not installed.
+     */
+    public static String diagnosticsLine() {
+        if (!MOD_LOADED) return "";
+        String fastWrite;
+        if (fastWriteDisabled) {
+            fastWrite = "off after a failure";
+        } else if (sdfGlyphHandle == null && sdfBoxHandle == null && lineHandle == null) {
+            fastWrite = "not connected";
+        } else {
+            fastWrite = "on (sdfGlyph=" + (sdfGlyphHandle != null) + ", sdfBox=" + (sdfBoxHandle != null)
+                    + ", line=" + (lineHandle != null) + ")";
+        }
+        return (hasSettings() ? statusSummary() : "settings bridge not connected") + " | direct fast-write " + fastWrite;
+    }
+
     public static String backend() {
         String s = readStringSupplier("backend");
         return s != null ? s : "UNKNOWN";

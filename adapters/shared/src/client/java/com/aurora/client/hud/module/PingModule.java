@@ -36,10 +36,17 @@ public class PingModule extends HudModule {
         return entry == null ? -1 : entry.getLatency();
     }
 
+    /** The last label and the latency it shows: width and draw both ask every frame. */
+    private int textMs = Integer.MIN_VALUE;
+    private String text;
+
     private String buildText() {
         int ms = cachedLatency.get();
-        if (ms < 0) return "Ping: —";
-        return "Ping: " + ms + " ms";
+        if (ms != textMs || text == null) {
+            textMs = ms;
+            text = ms < 0 ? "Ping: —" : "Ping: " + ms + " ms";
+        }
+        return text;
     }
 
     @Override public boolean isConfigEnabled() { return AuroraConfig.get().pingHudEnabled; }

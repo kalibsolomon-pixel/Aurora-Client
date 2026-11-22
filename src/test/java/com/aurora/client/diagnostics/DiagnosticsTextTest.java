@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class DiagnosticsTextTest {
     private static final DiagnosticsText.Environment ENV = new DiagnosticsText.Environment(
             "3.2.0", "1.21.11", "0.19.2", "OpenGL", "Some GPU (4.6)", "2560x1440, GUI scale 3",
-            "in a singleplayer world", true, List.of("fps limit 260", "vsync off"));
+            "in a singleplayer world", true, List.of("fps limit 260", "vsync off"), "");
 
     @BeforeEach @AfterEach void clean() {
         HealthTestAccess.reset(null);
@@ -104,6 +104,16 @@ class DiagnosticsTextTest {
         assertTrue(report.contains("Recent Aurora warnings and errors (0)\n- none\n"));
         assertTrue(report.contains("Mods (2)\n- aurora 3.2.0\n- sodium 0.6.0\n"));
         assertTrue(report.endsWith("This report contains no account, world or server names.\n"));
+        assertFalse(report.contains("Ephemera: "), "no Ephemera line without Ephemera");
+    }
+
+    @Test void anEphemeraSessionSaysWhetherTheBridgeIsCarryingWrites() {
+        DiagnosticsText.Environment env = new DiagnosticsText.Environment("3.7.0", "26.2", "0.19.2", "Vulkan",
+                "Some GPU (1.0)", "2560x1440, GUI scale 3", "in a singleplayer world", true, List.of(),
+                "Ephemera 0.4.0 | direct fast-write on (sdfGlyph=true, sdfBox=true, line=true)");
+        String report = DiagnosticsText.format(env, List.of(), null, List.of());
+        assertTrue(report.contains("Window: 2560x1440, GUI scale 3\n"
+                + "Ephemera: Ephemera 0.4.0 | direct fast-write on (sdfGlyph=true, sdfBox=true, line=true)\n"), report);
     }
 
     @Test void aBrokenSessionSaysWhichFeaturesAndMixins() {
@@ -162,7 +172,7 @@ class DiagnosticsTextTest {
                 + "glass captures 1.000 > 0.000\n"), over);
 
         DiagnosticsText.Environment menu = new DiagnosticsText.Environment("3.2.0", "1.21.11", "0.19.2", "OpenGL",
-                "Some GPU (4.6)", "2560x1440, GUI scale 3", "in a menu", false, List.of());
+                "Some GPU (4.6)", "2560x1440, GUI scale 3", "in a menu", false, List.of(), "");
         String notJudged = DiagnosticsText.format(menu, List.of(), FrameBenchmark.Stats.of(intervals, costly, 4, 0, 4), List.of());
         assertTrue(notJudged.contains("- overhead budget: not judged"), notJudged);
     }
