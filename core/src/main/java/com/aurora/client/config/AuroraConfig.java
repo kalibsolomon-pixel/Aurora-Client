@@ -1549,6 +1549,24 @@ public class AuroraConfig {
      */
     public boolean resourcepackFoldersEnabled = true;
 
+    // ---- Media Controls & Now Playing HUD ----
+    /** Master toggle for cross-platform OS media control keybinds and Windows Now Playing HUD. */
+    public boolean mediaControlsEnabled = false;
+    /** Displays the Now Playing HUD overlay (Windows GSMTC). */
+    public boolean mediaNowPlayingHudEnabled = false;
+    public boolean mediaHudShowArtist = true;
+    public boolean mediaHudShowProgress = true;
+    public boolean mediaHudHideWhenIdle = true;
+    public int mediaHudMaxWidth = 180;
+    public HudBackground mediaHudBgMode = HudBackground.SOLID;
+    public int mediaHudBgColor = 0x90000000;
+    public int mediaHudTextColor = 0xFFFFFFFF;
+    public int mediaPlayPauseKey = -1;
+    public int mediaNextKey = -1;
+    public int mediaPrevKey = -1;
+    public int mediaVolUpKey = -1;
+    public int mediaVolDownKey = -1;
+
 
     public static AuroraConfig get() { return INSTANCE; }
 

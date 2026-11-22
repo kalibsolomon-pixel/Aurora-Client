@@ -42,6 +42,7 @@ public class FeatureManager {
         register(new ShieldStatusFeature());
         register(new ThemeFeature());
         register(new StatusAlertFeature());
+        register(new MediaControlsFeature());
         for (Feature f : features.values()) {
             try {
                 f.onRegister();

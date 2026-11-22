@@ -235,6 +235,7 @@ public final class FeatureCatalog {
         module("world_map", "World Map", "A full-screen, pannable world map of your explored terrain.");
         module("resourcepack_browser", "Resourcepack Browser", "Browse and install community resource packs directly from Modrinth. Search, preview, and one-click install straight into your resourcepacks folder.");
         module("chat", "Chat", "Compact duplicate messages, local timestamps, in-chat search, click-to-copy, player chat heads, chat peek keybind, and per-server chat history.");
+        module("media_controls", "Media Controls", "Control desktop media playback with in-game keybinds and show a Now Playing HUD overlay (Windows).");
 
         module("pulsar", "Pulsar", "Review local combat recordings, compare them and export offline reports.");
 
@@ -298,6 +299,7 @@ public final class FeatureCatalog {
         classify("world_map", FairPlay.VANILLA_INFORMATION, "A full-screen map of terrain you have already visited.");
         classify("resourcepack_browser", FairPlay.COSMETIC, "Downloads resource packs from Modrinth.");
         classify("chat", FairPlay.VANILLA_INFORMATION, "Reformats incoming chat locally (compacting duplicates, adding local timestamps and online player heads, searching, copying, peeking, and keeping longer per-server history). Off in a fresh install; never sends messages or packets.", "chatEnabled");
+        classify("media_controls", FairPlay.COSMETIC, "Controls local desktop media playback and displays the currently playing track locally.");
         classify("miscellaneous", FairPlay.LOCAL_TIMING, "Frame pacing, a frame cap, vsync control, the point within a frame where mouse movement is applied, cosmetic tab-list and nametag styling (including your own nametag in third person), cosmetic per-sound volume attenuation (0–100% only), and Streamer Mode privacy masking (hides your own name, skin, coordinates, server address, and optionally replaces other players' nametags on your own screen). The rate and content of what is sent to the server are unchanged.");
         classify("custom_title", FairPlay.COSMETIC, "Aurora's title screen and menu styling.");
         classify("text_fonts", FairPlay.COSMETIC, "Changes the font.");

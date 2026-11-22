@@ -80,6 +80,7 @@ Changing a default does not change an existing install: a player who already had
 | World Map | Vanilla equivalent | A full-screen map of terrain you have already visited. |
 | Resourcepack Browser | Cosmetic | Downloads resource packs from Modrinth. |
 | Chat | Vanilla equivalent | Reformats incoming chat locally (compacting duplicates, adding local timestamps and online player heads, searching, copying, peeking, and keeping longer per-server history). Off in a fresh install; never sends messages or packets. |
+| Media Controls | Cosmetic | Controls local desktop media playback and displays the currently playing track locally. |
 | Display Settings | Local timing | Frame pacing, a frame cap, vsync control, the point within a frame where mouse movement is applied, cosmetic tab-list and nametag styling (including your own nametag in third person), cosmetic per-sound volume attenuation (0–100% only), and Streamer Mode privacy masking (hides your own name, skin, coordinates, server address, and optionally replaces other players' nametags on your own screen). The rate and content of what is sent to the server are unchanged. |
 | Custom Title | Cosmetic | Aurora's title screen and menu styling. |
 | Text & Fonts | Cosmetic | Changes the font. |

@@ -290,10 +290,10 @@ class ConformanceManifestTest {
         int hosted = 4 + 10 + 1 + 8 + 1 + 1 + 2 + 1;
         int pages = 4;                                      // Appearance, Display, Controls, General
         int screenOwned = 2 + 1 + 2 + pages + modules + 0 + 2; // tabs, profiles, layout, sub-tabs, tiles, nav, toggles
-        assertEquals(38, modules, "FeatureCatalog module tile count");
+        assertEquals(39, modules, "FeatureCatalog module tile count");
         assertEquals(28, hosted, "component-owned hosted controls");
-        assertEquals(49, screenOwned, "screen-owned chrome controls");
-        assertEquals(77, hosted + screenOwned, "AuroraScreen total semantic controls");
+        assertEquals(50, screenOwned, "screen-owned chrome controls");
+        assertEquals(78, hosted + screenOwned, "AuroraScreen total semantic controls");
 
         String src = read(SRC + "screen/AuroraScreen.java");
         assertEquals(8, countOccurrences(src, "semanticHost.register("),

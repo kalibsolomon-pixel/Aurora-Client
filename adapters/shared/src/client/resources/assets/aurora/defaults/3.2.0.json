@@ -946,5 +946,19 @@
   "chatHistoryLimit": 1000,
   "chatPerServerHistory": true,
   "chatPerServerMaxSaved": 200,
-  "resourcepackFoldersEnabled": true
+  "resourcepackFoldersEnabled": true,
+  "mediaControlsEnabled": false,
+  "mediaNowPlayingHudEnabled": false,
+  "mediaHudShowArtist": true,
+  "mediaHudShowProgress": true,
+  "mediaHudHideWhenIdle": true,
+  "mediaHudMaxWidth": 180,
+  "mediaHudBgMode": "SOLID",
+  "mediaHudBgColor": -1879048192,
+  "mediaHudTextColor": -1,
+  "mediaPlayPauseKey": -1,
+  "mediaNextKey": -1,
+  "mediaPrevKey": -1,
+  "mediaVolUpKey": -1,
+  "mediaVolDownKey": -1
 }

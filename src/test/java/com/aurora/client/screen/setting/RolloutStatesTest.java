@@ -104,8 +104,8 @@ class RolloutStatesTest {
             String src = new String(java.nio.file.Files.readAllBytes(SourceTree.resolve(
                     SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/FeatureRegistry.java")));
             int count = src.split("new EnumSetting<>", -1).length - 1;
-            assertEquals(35, count,
-                    "production EnumSetting construction sites (inventory drift guard; 31→32 Inventory HUD, 32→34 Pack Tweaks, 34→35 Chat Timestamp Format, 2026-11-21)");
+            assertEquals(36, count,
+                    "production EnumSetting construction sites (inventory drift guard; 31→32 Inventory HUD, 32→34 Pack Tweaks, 34→35 Chat, 35→36 Media Controls, 2026-11-21/22)");
         } catch (java.io.IOException e) {
             fail("FeatureRegistry.java not readable from the test working dir: " + e.getMessage());
         }
@@ -141,8 +141,8 @@ class RolloutStatesTest {
             String src = new String(java.nio.file.Files.readAllBytes(SourceTree.resolve(
                     SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/FeatureRegistry.java")));
             int count = src.split("new ColorSetting", -1).length - 1;
-            assertEquals(44, count,
-                    "production ColorSetting construction sites (inventory drift guard; 41→42 with Inventory HUD, 42→43 with Pack Tweaks' Custom Sky Color, 43→44 with Streamer Mode's Opponent Tag Color, 2026-11-21)");
+            assertEquals(46, count,
+                    "production ColorSetting construction sites (inventory drift guard; 41→42 Inventory HUD, 42→43 Pack Tweaks, 43→44 Streamer Mode, 44→46 Media Controls, 2026-11-21/22)");
         } catch (java.io.IOException e) {
             fail("FeatureRegistry.java not readable from the test working dir: " + e.getMessage());
         }
@@ -209,8 +209,8 @@ class RolloutStatesTest {
             // Settings tab's Controls page (it was vanilla-Controls-only).
             // 18 → 12 on 2026-11-15: Better Hitreg's six keybind rows were
             // removed with everything but its custom hitreg.
-            // 12 → 13 on 2026-11-21: Chat Peek Key added with Chat Suite.
-            assertEquals(13, count,
+            // 12 → 13 Chat Peek Key; 13 → 18 Media Controls' five keybind rows (2026-11-21/22).
+            assertEquals(18, count,
                     "production KeybindSetting construction sites (inventory drift guard)");
         } catch (java.io.IOException e) {
             fail("FeatureRegistry.java not readable from the test working dir: " + e.getMessage());
