@@ -80,16 +80,25 @@ public final class FeatureCatalog {
      *                 mixin is not applied and stands down (ADR 0009)
      * @param requires mod id the mixin patches into; without it the mixin is
      *                 not applied and stands down; empty for vanilla targets
+     * @param ephemeraCapability startup capability advertised by Ephemera when it owns this hook
      */
     public record MixinBinding(String mixin, String provides, List<String> features, List<String> gates,
-                               List<String> yieldsTo, String requires) {
+                               List<String> yieldsTo, String requires, String ephemeraCapability) {
         /**
          * Why this mixin should not be applied, or null when it should.
          * {@code loaded} answers whether a mod id is installed.
          */
         public String standDownReason(java.util.function.Predicate<String> loaded) {
+            return standDownReason(loaded, capability -> false);
+        }
+
+        public String standDownReason(java.util.function.Predicate<String> loaded,
+                                      java.util.function.Predicate<String> ephemeraCapabilities) {
             if (!requires.isEmpty() && !loaded.test(requires)) return "only patches " + requires + ", which is not installed";
             for (String mod : yieldsTo) if (loaded.test(mod)) return "handled by " + mod;
+            if (!ephemeraCapability.isEmpty() && loaded.test("ephemera") && ephemeraCapabilities.test(ephemeraCapability)) {
+                return "handled by ephemera";
+            }
             return null;
         }
     }
@@ -172,26 +181,32 @@ public final class FeatureCatalog {
      */
     private static Binding mixin(String name, String provides, String... features) {
         Binding b = new Binding(name);
-        MIXINS.put(name, new MixinBinding(name, provides, List.of(features), List.of(), List.of(), ""));
+        MIXINS.put(name, new MixinBinding(name, provides, List.of(features), List.of(), List.of(), "", ""));
         return b;
     }
 
     private record Binding(String name) {
         Binding gates(String... gates) {
             MixinBinding m = MIXINS.get(name);
-            MIXINS.put(name, new MixinBinding(name, m.provides(), m.features(), List.of(gates), m.yieldsTo(), m.requires()));
+            MIXINS.put(name, new MixinBinding(name, m.provides(), m.features(), List.of(gates), m.yieldsTo(), m.requires(), m.ephemeraCapability()));
             return this;
         }
 
         Binding yieldsTo(String... mods) {
             MixinBinding m = MIXINS.get(name);
-            MIXINS.put(name, new MixinBinding(name, m.provides(), m.features(), m.gates(), List.of(mods), m.requires()));
+            MIXINS.put(name, new MixinBinding(name, m.provides(), m.features(), m.gates(), List.of(mods), m.requires(), m.ephemeraCapability()));
             return this;
         }
 
         Binding requires(String mod) {
             MixinBinding m = MIXINS.get(name);
-            MIXINS.put(name, new MixinBinding(name, m.provides(), m.features(), m.gates(), m.yieldsTo(), mod));
+            MIXINS.put(name, new MixinBinding(name, m.provides(), m.features(), m.gates(), m.yieldsTo(), mod, m.ephemeraCapability()));
+            return this;
+        }
+
+        Binding yieldsToEphemera(String capability) {
+            MixinBinding m = MIXINS.get(name);
+            MIXINS.put(name, new MixinBinding(name, m.provides(), m.features(), m.gates(), m.yieldsTo(), m.requires(), capability));
             return this;
         }
     }
@@ -441,8 +456,8 @@ public final class FeatureCatalog {
         mixin("ChatScreenSuiteMixin", "Chat Suite in-chat search and click-to-copy", "chat").gates("chatEnabled");
         mixin("MultiplayerServerListWidgetMixin", "numeric ping in the server list", "ping");
         mixin("ClientLevelWorldMapMixin", "refreshing the maps when a block changes", "world_map", "minimap");
-        mixin("ReflexMinecraftMixin", "automatic latency reduction");
-        mixin("GpuDeviceTimestampAccessor", "automatic latency reduction");
+        mixin("ReflexMinecraftMixin", "automatic latency reduction").yieldsToEphemera("engine_ownership");
+        mixin("GpuDeviceTimestampAccessor", "automatic latency reduction").yieldsToEphemera("engine_ownership");
         mixin("ItemStackRenderStateAccessor", "flat item icons in Aurora screens");
         mixin("ItemLayerQuadsAccessor", "flat item icons in Aurora screens");
         mixin("ScreenPanoramaAccessor", "blurred glass over the menu panorama");
@@ -481,29 +496,30 @@ public final class FeatureCatalog {
                 .gates("perfDeferAuroraFonts");
         mixin("FontSetDeferredMixin", "preparing unused Aurora fonts on first use", "performance")
                 .gates("perfDeferAuroraFonts");
-        // ImmediatelyFast's batch_animated_item_updates moves animated items
+        // Updated Ephemera owns both sprite and glint redraw cadence. ImmediatelyFast's
+        // batch_animated_item_updates moves animated items
         // into its own atlas subclass and redraws them in one batch; keeping
         // their slots there freezes them (26.3 set A, 2026-11-12).
         mixin("TextureManagerAnimationMixin", "redrawing animated GUI items only when they change", "performance")
-                .gates("perfGuiItemBaking").yieldsTo("immediatelyfast");
+                .gates("perfGuiItemBaking").yieldsTo("immediatelyfast").yieldsToEphemera("engine_ownership");
         mixin("ItemStackRenderStateAnimationMixin", "redrawing animated GUI items only when they change", "performance")
-                .gates("perfGuiItemBaking").yieldsTo("immediatelyfast");
+                .gates("perfGuiItemBaking").yieldsTo("immediatelyfast").yieldsToEphemera("engine_ownership");
         mixin("CuboidItemModelAnimationMixin", "redrawing animated GUI items only when they change", "performance")
-                .gates("perfGuiItemBaking").yieldsTo("immediatelyfast");
+                .gates("perfGuiItemBaking").yieldsTo("immediatelyfast").yieldsToEphemera("engine_ownership");
         mixin("GuiItemAtlasBakingMixin", "redrawing animated GUI items only when they change", "performance")
-                .gates("perfGuiItemBaking").yieldsTo("immediatelyfast");
+                .gates("perfGuiItemBaking").yieldsTo("immediatelyfast").yieldsToEphemera("engine_ownership");
         // Glint-only items leave the animated set, so ImmediatelyFast's
         // animated atlas never sees them and needs no stand-down.
         mixin("ItemStackRenderStateGlintMixin", "redrawing glinting GUI items only when the glint moves", "performance")
-                .gates("perfGuiGlintBaking");
+                .gates("perfGuiGlintBaking").yieldsToEphemera("engine_ownership");
         mixin("CuboidItemModelGlintMixin", "redrawing glinting GUI items only when the glint moves", "performance")
-                .gates("perfGuiGlintBaking");
+                .gates("perfGuiGlintBaking").yieldsToEphemera("engine_ownership");
         mixin("GuiItemAtlasGlintMixin", "redrawing glinting GUI items only when the glint moves", "performance")
-                .gates("perfGuiGlintBaking");
+                .gates("perfGuiGlintBaking").yieldsToEphemera("engine_ownership");
         mixin("OversizedItemGlintMixin", "redrawing glinting GUI items only when the glint moves", "performance")
-                .gates("perfGuiGlintBaking");
+                .gates("perfGuiGlintBaking").yieldsToEphemera("engine_ownership");
         mixin("TextureTransformAccessor", "redrawing glinting GUI items only when the glint moves", "performance")
-                .gates("perfGuiGlintBaking");
+                .gates("perfGuiGlintBaking").yieldsToEphemera("engine_ownership");
         // No mod owns this. ImmediatelyFast's animated atlas draws through
         // GuiItemAtlas.drawToSlot, the scope. Sodium bakes flat items with its
         // ImprovedItemModelBuilder (the side faces stay ordinary quads) and
@@ -544,13 +560,13 @@ public final class FeatureCatalog {
                 .gates("perfUnfocusedLimit").yieldsTo("dynamic_fps", "ephemera");
         // VulkanMod (26.1) compiles shaders its own way; an Iris shader pack is checked at draw time.
         mixin("GradientDitherSourceMixin", "dithered sky, fog and terrain shaders", "gradient_dither")
-                .gates("gradientDither").yieldsTo("vulkanmod");
+                .gates("gradientDither").yieldsTo("vulkanmod").yieldsToEphemera("world_visual_ownership");
         mixin("GradientDitherPipelineMixin", "dithered sky, fog and terrain shaders", "gradient_dither")
-                .gates("gradientDither").yieldsTo("vulkanmod");
+                .gates("gradientDither").yieldsTo("vulkanmod").yieldsToEphemera("world_visual_ownership");
         mixin("SmoothFogSourceMixin", "smooth fog curve in world shaders", "smooth_fog")
-                .gates("smoothFog").yieldsTo("vulkanmod");
+                .gates("smoothFog").yieldsTo("vulkanmod").yieldsToEphemera("world_visual_ownership");
         mixin("SmoothFogPipelineMixin", "smooth fog curve in world shaders", "smooth_fog")
-                .gates("smoothFog").yieldsTo("vulkanmod");
+                .gates("smoothFog").yieldsTo("vulkanmod").yieldsToEphemera("world_visual_ownership");
         for (String hitreg : List.of("AttackMixin", "DamageMixin", "EntityAccessor", "NetworkMixin",
                 "PlayerMixin", "ServerMixin")) {
             // Better Hitreg's timing core only works whole: one missing piece

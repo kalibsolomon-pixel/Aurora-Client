@@ -1,6 +1,7 @@
 package com.aurora.client.mixin;
 
 import com.aurora.client.config.AuroraConfig;
+import com.aurora.client.util.EphemeraPacingHook;
 import com.aurora.client.util.FramePacer;
 import com.aurora.client.util.FramePacing;
 import net.minecraft.client.FramerateLimiter;
@@ -16,6 +17,7 @@ public abstract class RenderSystemMixin {
 
     @Inject(method = "limitDisplayFPS(I)V", at = @At("HEAD"), cancellable = true)
     private static void aurora$preciseLimit(int fps, CallbackInfo ci) {
+        if (EphemeraPacingHook.ownsFramePacing()) return;
         AuroraConfig cfg = AuroraConfig.get();
         net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
         boolean auroraGui = mc != null && com.aurora.client.adapter.NativeUi.screen(mc) != null
@@ -33,11 +35,11 @@ public abstract class RenderSystemMixin {
         if (!wait.cancelNative()) return;
         if (wait.waitTarget() != 0.0) {
             long waitStart = System.nanoTime();
-            com.aurora.client.util.EphemeraPacingHook.onBeforeWait(
+            EphemeraPacingHook.onBeforeWait(
                     Math.max(0L, (long) ((wait.waitTarget() - pacingNow) * 1_000_000_000.0)));
             if (customPacer) FramePacer.waitUntil(wait.waitTarget(), cfg);
             else FramePacer.waitUntilHybrid(wait.waitTarget(), 2000);
-            com.aurora.client.util.EphemeraPacingHook.reportAurora(true, limit.fps(),
+            EphemeraPacingHook.reportAurora(true, limit.fps(),
                     Math.max(0L, System.nanoTime() - waitStart));
         }
         ci.cancel();

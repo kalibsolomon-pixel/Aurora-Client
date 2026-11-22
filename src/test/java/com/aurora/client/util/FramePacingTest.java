@@ -48,6 +48,18 @@ class FramePacingTest {
                                   boolean pacer, boolean adaptive, FramePacing.Owner owner, int fps) {
         assertEquals(new FramePacing.Decision(owner, fps),
                 FramePacing.resolve(nativeFps, global, gui, auroraGui, pacer, adaptive));
+        assertEquals(fps, FramePacing.effectiveFps(nativeFps, global, gui, auroraGui));
+    }
+
+    @Test void framePacingResumesWithAFreshDeadlineAfterEphemeraReturnsControl() {
+        var pacing = new FramePacing();
+        var limit = FramePacing.resolve(260, 120, 60, false, true, true);
+        assertEquals(0, pacing.beginFrame(limit, 1));
+        assertTrue(pacing.beginFrame(limit, 1.001) > 0);
+        pacing.relinquish();
+        assertFalse(pacing.didHeadWaitThisFrame());
+        assertEquals(0, pacing.beginFrame(limit, 1.002));
+        assertTrue(pacing.beginFrame(limit, 1.003) > 0);
     }
 
     @Test void oneHeadWaitSuppressesTheCorrespondingPostSwapWait() {
